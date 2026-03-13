@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@packages/api-client": "workspace:*",
+    "@packages/auth-ui": "workspace:*",
     "@packages/ui": "workspace:*",
     "@tanstack/react-query": "^5.60.0",
     "react": "^19.1.0",

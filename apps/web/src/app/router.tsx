@@ -1,5 +1,32 @@
+import { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router';
 import { AuthLayout } from './layout/AuthLayout';
+import { AuthGuard } from '@modules/users/auth/components/AuthGuard';
+
+const LoginPage = lazy(() =>
+  import('@modules/users/auth/pages/LoginPage').then((m) => ({ default: m.LoginPage })),
+);
+const RegisterPage = lazy(() =>
+  import('@modules/users/auth/pages/RegisterPage').then((m) => ({ default: m.RegisterPage })),
+);
+const ForgotPasswordPage = lazy(() =>
+  import('@modules/users/auth/pages/ForgotPasswordPage').then((m) => ({
+    default: m.ForgotPasswordPage,
+  })),
+);
+const ResetPasswordPage = lazy(() =>
+  import('@modules/users/auth/pages/ResetPasswordPage').then((m) => ({
+    default: m.ResetPasswordPage,
+  })),
+);
+
+function PageSkeleton() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+    </div>
+  );
+}
 
 function DashboardPlaceholder() {
   return (
@@ -11,14 +38,18 @@ function DashboardPlaceholder() {
 
 export function AppRouter() {
   return (
-    <Routes>
-      <Route element={<AuthLayout />}>
-        <Route path="/login" element={<div>Login</div>} />
-        <Route path="/register" element={<div>Register</div>} />
-        <Route path="/forgot-password" element={<div>Forgot Password</div>} />
-        <Route path="/reset-password" element={<div>Reset Password</div>} />
-      </Route>
-      <Route path="/" element={<DashboardPlaceholder />} />
-    </Routes>
+    <Suspense fallback={<PageSkeleton />}>
+      <Routes>
+        <Route element={<AuthLayout />}>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+        </Route>
+        <Route element={<AuthGuard />}>
+          <Route path="/" element={<DashboardPlaceholder />} />
+        </Route>
+      </Routes>
+    </Suspense>
   );
 }

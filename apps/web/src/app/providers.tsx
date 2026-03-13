@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter } from 'react-router';
+import { SessionExpiredProvider } from '@modules/users/auth/components/SessionExpiredProvider';
 import type { ReactNode } from 'react';
 
 const queryClient = new QueryClient({
@@ -18,7 +19,9 @@ const queryClient = new QueryClient({
 export function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>{children}</BrowserRouter>
+      <BrowserRouter>
+        <SessionExpiredProvider>{children}</SessionExpiredProvider>
+      </BrowserRouter>
     </QueryClientProvider>
   );
 }
