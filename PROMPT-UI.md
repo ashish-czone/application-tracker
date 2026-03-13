@@ -188,7 +188,7 @@ Lazy load at the route level. Each feature's pages load only when navigated to:
 
 ```tsx
 const CandidateListPage = React.lazy(
-  () => import("@features/candidates/pages/CandidateListPage")
+  () => import("@modules/candidates/pages/CandidateListPage")
 );
 ```
 

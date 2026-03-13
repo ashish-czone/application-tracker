@@ -59,6 +59,10 @@ export class AuthService {
       },
     });
 
+    if (this.config.onUserCreated) {
+      await this.config.onUserCreated(user);
+    }
+
     return this.generateTokensAndStore(user);
   }
 
@@ -178,6 +182,13 @@ export class AuthService {
 
     // Strip sensitive fields
     const { passwordHash: _, refreshToken: __, ...profile } = user;
+
+    // Enrich with additional data (e.g., permissions)
+    if (this.config.enrichUserProfile) {
+      const extra = await this.config.enrichUserProfile(user);
+      return { ...profile, ...extra };
+    }
+
     return profile;
   }
 

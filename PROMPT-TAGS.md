@@ -46,7 +46,7 @@ Depends on infrastructure that must be built first:
 - `packages/rbac` (guards, decorators)
 - `packages/auth-nestjs` (auth guard)
 - `packages/common` (`PaginatedResponse<T>`)
-- `modules/admin` (module shell for CRUD controllers)
+- `apps/api/src/modules/admin` (module shell for CRUD controllers)
 - Test infrastructure (`test/utils/`, `test/factories/`, `test/setup/`)
 
 ---
@@ -97,7 +97,7 @@ model Tag {
 **Module-side join table example:**
 
 ```prisma
-// modules/candidates/schema.prisma (add to existing)
+// apps/api/src/modules/candidates/schema.prisma (add to existing)
 
 model CandidateTag {
   id          String    @id @default(uuid())
@@ -309,7 +309,7 @@ export const TAXONOMY_PERMISSIONS = {
 ## Admin Files
 
 ```
-modules/admin/
+apps/api/src/modules/admin/
   controllers/
     tag-types.controller.ts
     tags.controller.ts
@@ -345,7 +345,7 @@ System tag types seeded via `packages/database/prisma/seeds/taxonomy.seed.ts`. U
 ## Module Registration Example
 
 ```ts
-// modules/candidates/candidates.module.ts
+// apps/api/src/modules/candidates/candidates.module.ts
 @Module({ imports: [TaxonomyModule], providers: [CandidatesService] })
 export class CandidatesModule implements OnModuleInit {
   constructor(
@@ -362,7 +362,7 @@ export class CandidatesModule implements OnModuleInit {
   }
 }
 
-// modules/candidates/services/candidatesService.ts
+// apps/api/src/modules/candidates/services/candidatesService.ts
 async addTags(candidateId: string, tagIds: string[]) {
   await this.taggingService.assign('candidate', candidateId, tagIds);
 }

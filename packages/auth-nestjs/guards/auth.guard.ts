@@ -81,6 +81,7 @@ export class AuthGuard implements CanActivate {
     }
 
     request.user = user;
+    request.authEntityName = payload.entityName;
     return true;
   }
 }
