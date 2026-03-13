@@ -1,0 +1,25 @@
+model User {
+  id             String          @id @default(uuid())
+  email          String          @unique
+  passwordHash   String
+  refreshToken   String?
+  timezone       String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  deletedAt      DateTime?
+  passwordTokens PasswordToken[]
+
+  @@map("users")
+}
+
+model PasswordToken {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@map("password_tokens")
+}
