@@ -1,4 +1,4 @@
-import jwt from 'jsonwebtoken';
+import jwt, { type SignOptions } from 'jsonwebtoken';
 import crypto from 'crypto';
 import type { TokenPayload } from './types';
 
@@ -7,7 +7,7 @@ export function generateAccessToken(
   secret: string,
   expiresIn: string,
 ): string {
-  return jwt.sign(payload, secret, { expiresIn });
+  return jwt.sign(payload, secret, { expiresIn } as SignOptions);
 }
 
 export function generateRefreshToken(
@@ -18,7 +18,7 @@ export function generateRefreshToken(
   return jwt.sign(
     { ...payload, jti: crypto.randomUUID() },
     secret,
-    { expiresIn },
+    { expiresIn } as SignOptions,
   );
 }
 

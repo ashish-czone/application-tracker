@@ -1,4 +1,4 @@
-import { DynamicModule, Module } from '@nestjs/common';
+import { DynamicModule, Module, type InjectionToken, type OptionalFactoryDependency } from '@nestjs/common';
 import { RouterModule } from '@nestjs/core';
 import type { AuthModuleConfig } from '@packages/auth';
 import { AUTH_MODULE_CONFIG, AUTH_CONFIGS_MAP } from './constants';
@@ -7,8 +7,9 @@ import { AuthController } from './controllers/auth.controller';
 
 interface AuthNestjsModuleAsyncOptions {
   imports?: DynamicModule['imports'];
-  useFactory: (...args: unknown[]) => AuthModuleConfig | Promise<AuthModuleConfig>;
-  inject?: unknown[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  useFactory: (...args: any[]) => AuthModuleConfig | Promise<AuthModuleConfig>;
+  inject?: (InjectionToken | OptionalFactoryDependency)[];
 }
 
 @Module({})
@@ -50,7 +51,8 @@ export class AuthNestjsModule {
       providers: [
         {
           provide: AUTH_MODULE_CONFIG,
-          useFactory: async (...args: unknown[]) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          useFactory: async (...args: any[]) => {
             const config = await options.useFactory(...args);
             AUTH_CONFIGS_MAP.set(config.entityName, config);
             return config;
