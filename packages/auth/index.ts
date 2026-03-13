@@ -1,4 +1,4 @@
-export { hashPassword, verifyPassword } from './hashing';
+export { hashPassword, verifyPassword, hashToken, verifyTokenHash } from './hashing';
 export {
   generateAccessToken,
   generateRefreshToken,
