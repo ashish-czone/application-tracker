@@ -25,6 +25,7 @@ export async function createTestApp() {
   const { PrismaService } = await import('@packages/database');
   return {
     app,
+    module,
     prisma: module.get(PrismaService),
     httpServer: app.getHttpServer(),
   };

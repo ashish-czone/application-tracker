@@ -15,7 +15,11 @@ export function generateRefreshToken(
   secret: string,
   expiresIn: string,
 ): string {
-  return jwt.sign(payload, secret, { expiresIn });
+  return jwt.sign(
+    { ...payload, jti: crypto.randomUUID() },
+    secret,
+    { expiresIn },
+  );
 }
 
 export function verifyToken(token: string, secret: string): TokenPayload {

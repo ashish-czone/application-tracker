@@ -8,6 +8,8 @@ import {
 import {
   hashPassword,
   verifyPassword,
+  hashToken,
+  verifyTokenHash,
   generateAccessToken,
   generateRefreshToken,
   verifyToken,
@@ -87,7 +89,7 @@ export class AuthService {
       throw new UnauthorizedException('Refresh token invalidated');
     }
 
-    const storedHashValid = await verifyPassword(refreshTokenValue, user.refreshToken);
+    const storedHashValid = verifyTokenHash(refreshTokenValue, user.refreshToken);
     if (!storedHashValid) {
       // Token rotation: old token used after new one was issued
       // Invalidate all refresh tokens for security
@@ -197,8 +199,8 @@ export class AuthService {
       this.config.refreshTokenExpiresIn,
     );
 
-    // Hash and store refresh token
-    const refreshTokenHash = await hashPassword(refreshToken);
+    // SHA-256 hash for refresh token (bcrypt truncates at 72 bytes, JWTs are longer)
+    const refreshTokenHash = hashToken(refreshToken);
     const userDelegate = this.config.getUserDelegate();
     await userDelegate.update({
       where: { id: user.id },
