@@ -38,8 +38,8 @@ export function FormInput<T extends FieldValues>({
     <Controller
       control={control}
       name={name}
-      render={({ field, fieldState }) => {
-        const hasError = fieldState.isTouched && !!fieldState.error;
+      render={({ field, fieldState, formState }) => {
+        const hasError = (fieldState.isTouched || formState.isSubmitted) && !!fieldState.error;
         const describedBy = [
           hasError ? errorId : null,
           description ? descriptionId : null,
