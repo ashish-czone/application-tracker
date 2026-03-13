@@ -1,0 +1,19 @@
+{
+  "name": "starter-template",
+  "private": true,
+  "packageManager": "pnpm@9.15.4",
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "db:generate": "turbo run db:generate",
+    "db:migrate": "pnpm --filter @packages/database db:migrate"
+  },
+  "devDependencies": {
+    "@faker-js/faker": "^10.3.0",
+    "turbo": "^2.4.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}
