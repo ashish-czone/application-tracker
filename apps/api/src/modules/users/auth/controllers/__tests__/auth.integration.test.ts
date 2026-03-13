@@ -2,10 +2,10 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
 import type { INestApplication } from '@nestjs/common';
 import type { PrismaClient } from '@prisma/client';
-import { createTestApp } from '../../../../../../../test/utils/app';
-import { cleanDatabase } from '../../../../../../../test/utils/db';
-import { tokenFor } from '../../../../../../../test/utils/auth';
-import { UserFactory } from '../../../../../../../test/factories/userFactory';
+import { createTestApp } from '../../../../../../../../test/utils/app';
+import { cleanDatabase } from '../../../../../../../../test/utils/db';
+import { tokenFor } from '../../../../../../../../test/utils/auth';
+import { UserFactory } from '../../../../../../../../test/factories/userFactory';
 
 function extractRefreshCookie(res: request.Response): string {
   const cookies = res.headers['set-cookie'];

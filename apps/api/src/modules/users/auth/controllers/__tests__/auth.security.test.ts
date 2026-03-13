@@ -3,10 +3,10 @@ import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import type { INestApplication } from '@nestjs/common';
 import type { PrismaClient } from '@prisma/client';
-import { createTestApp } from '../../../../../../../test/utils/app';
-import { cleanDatabase } from '../../../../../../../test/utils/db';
-import { tokenFor, expiredTokenFor } from '../../../../../../../test/utils/auth';
-import { UserFactory } from '../../../../../../../test/factories/userFactory';
+import { createTestApp } from '../../../../../../../../test/utils/app';
+import { cleanDatabase } from '../../../../../../../../test/utils/db';
+import { tokenFor, expiredTokenFor } from '../../../../../../../../test/utils/auth';
+import { UserFactory } from '../../../../../../../../test/factories/userFactory';
 
 describe('Auth Security Tests', () => {
   let app: INestApplication;
