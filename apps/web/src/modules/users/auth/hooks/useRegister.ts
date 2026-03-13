@@ -9,8 +9,8 @@ export function useRegister() {
 
   return useMutation({
     mutationFn: register,
-    onSuccess: (data) => {
-      queryClient.setQueryData(['auth', 'me'], data.user);
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
       navigate('/', { replace: true });
     },
     onError: (error) => {
