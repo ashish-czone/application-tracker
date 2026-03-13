@@ -164,12 +164,18 @@ export class RbacService {
   async bootstrapSuperadmin(userId: string) {
     const roleDelegate = this.config.getRoleDelegate();
 
-    // Create superadmin role if it doesn't exist
+    // Find or create superadmin role
     let superadminRole = await roleDelegate.findUnique({ where: { name: 'superadmin' } });
     if (!superadminRole) {
-      superadminRole = await roleDelegate.create({
-        data: { name: 'superadmin', description: 'Full system access' },
-      });
+      try {
+        superadminRole = await roleDelegate.create({
+          data: { name: 'superadmin', description: 'Full system access' },
+        });
+      } catch {
+        // Race condition: another request created it first
+        superadminRole = await roleDelegate.findUnique({ where: { name: 'superadmin' } });
+        if (!superadminRole) throw new Error('Failed to create or find superadmin role');
+      }
     }
 
     // Check if any user already has superadmin role
@@ -179,9 +185,13 @@ export class RbacService {
     });
 
     if (existingSuperadmins.length === 0) {
-      await urDelegate.create({
-        data: { userId, roleId: superadminRole.id },
-      });
+      try {
+        await urDelegate.create({
+          data: { userId, roleId: superadminRole.id },
+        });
+      } catch {
+        // Race condition: another request assigned it first — safe to ignore
+      }
     }
   }
 }

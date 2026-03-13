@@ -28,6 +28,8 @@ export interface AuthModuleConfig {
   jwtSecret: string;
   getUserDelegate: () => AuthUserDelegate;
   getPasswordTokenDelegate: () => AuthPasswordTokenDelegate;
+  enrichUserProfile?: (user: AuthenticableUser) => Promise<Record<string, unknown>>;
+  onUserCreated?: (user: AuthenticableUser) => Promise<void>;
 }
 
 export interface AuthUserDelegate {

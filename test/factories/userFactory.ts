@@ -29,5 +29,23 @@ export const UserFactory = {
     });
   },
 
+  async createWithRole(prisma: PrismaClient, roleName: string, overrides: Record<string, unknown> = {}) {
+    const user = await this.create(prisma, overrides);
+
+    // Find or create role
+    let role = await prisma.role.findUnique({ where: { name: roleName } });
+    if (!role) {
+      role = await prisma.role.create({
+        data: { name: roleName, description: `${roleName} role` },
+      });
+    }
+
+    await prisma.userRole.create({
+      data: { userId: user.id, roleId: role.id },
+    });
+
+    return user;
+  },
+
   DEFAULT_PASSWORD,
 };

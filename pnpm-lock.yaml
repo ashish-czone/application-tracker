@@ -104,6 +104,9 @@ importers:
       '@packages/events':
         specifier: workspace:*
         version: link:../../packages/events
+      '@packages/rbac-nestjs':
+        specifier: workspace:*
+        version: link:../../packages/rbac-nestjs
       class-transformer:
         specifier: ^0.5.1
         version: 0.5.1
