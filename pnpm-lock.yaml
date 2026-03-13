@@ -171,6 +171,9 @@ importers:
       '@packages/api-client':
         specifier: workspace:*
         version: link:../../packages/api-client
+      '@packages/auth-ui':
+        specifier: workspace:*
+        version: link:../../packages/auth-ui
       '@packages/ui':
         specifier: workspace:*
         version: link:../../packages/ui
