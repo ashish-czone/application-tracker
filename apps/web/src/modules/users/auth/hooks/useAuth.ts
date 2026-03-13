@@ -13,5 +13,6 @@ export function useAuth() {
     user: user ?? null,
     isAuthenticated: !!user,
     isLoading,
+    permissions: user?.permissions ?? [],
   };
 }
