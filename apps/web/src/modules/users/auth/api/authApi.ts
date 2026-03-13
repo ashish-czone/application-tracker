@@ -2,20 +2,19 @@ import { api } from '../../../../lib/api';
 import { tokenStore } from '@packages/api-client';
 import type { AuthUser } from '../../types';
 
-interface AuthResponse {
+interface TokenResponse {
   accessToken: string;
-  user: AuthUser;
 }
 
-export function login(data: { email: string; password: string }): Promise<AuthResponse> {
-  return api.post<AuthResponse>('/auth/login', data).then((res) => {
+export function login(data: { email: string; password: string }): Promise<TokenResponse> {
+  return api.post<TokenResponse>('/auth/login', data).then((res) => {
     tokenStore.setToken(res.accessToken);
     return res;
   });
 }
 
-export function register(data: { email: string; password: string }): Promise<AuthResponse> {
-  return api.post<AuthResponse>('/auth/register', data).then((res) => {
+export function register(data: { email: string; password: string }): Promise<TokenResponse> {
+  return api.post<TokenResponse>('/auth/register', data).then((res) => {
     tokenStore.setToken(res.accessToken);
     return res;
   });

@@ -23,3 +23,7 @@ Thumbs.db
 
 # Test
 coverage/
+test-results/
+
+# Playwright
+.playwright-mcp/

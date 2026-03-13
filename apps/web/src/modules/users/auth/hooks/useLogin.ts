@@ -10,8 +10,8 @@ export function useLogin() {
 
   return useMutation({
     mutationFn: login,
-    onSuccess: (data) => {
-      queryClient.setQueryData(['auth', 'me'], data.user);
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
       const from = (location.state as { from?: string })?.from || '/';
       navigate(from, { replace: true });
     },

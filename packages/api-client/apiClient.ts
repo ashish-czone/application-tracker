@@ -5,6 +5,7 @@ export function createApiClient(config: ApiClientConfig) {
   let refreshPromise: Promise<boolean> | null = null;
 
   async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+    const hadToken = !!tokenStore.getToken();
     const response = await doFetch(method, path, body);
 
     if (response.ok) {
@@ -22,7 +23,11 @@ export function createApiClient(config: ApiClientConfig) {
         }
         throw await buildError(retryResponse);
       }
-      config.onSessionExpired();
+      // Only fire session expired when user had an active session
+      // (not for unauthenticated visitors who never logged in)
+      if (hadToken) {
+        config.onSessionExpired();
+      }
       throw await buildError(response);
     }
 
