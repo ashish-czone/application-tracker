@@ -45,8 +45,9 @@ function main() {
   if (fs.existsSync(SCHEMA_DIR)) {
     const existing = fs.readdirSync(SCHEMA_DIR);
     for (const file of existing) {
-      if (file !== 'base.prisma') {
-        fs.unlinkSync(path.join(SCHEMA_DIR, file));
+      const filePath = path.join(SCHEMA_DIR, file);
+      if (file !== 'base.prisma' && !fs.statSync(filePath).isDirectory()) {
+        fs.unlinkSync(filePath);
       }
     }
   }
