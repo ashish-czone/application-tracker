@@ -1,0 +1,13 @@
+{
+  "name": "@packages/events",
+  "version": "0.0.1",
+  "private": true,
+  "main": "index.ts",
+  "dependencies": {
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/event-emitter": "^3.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  }
+}

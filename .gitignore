@@ -1,0 +1,25 @@
+node_modules/
+dist/
+.env
+.env.local
+*.log
+
+# Prisma collected schemas (derived from source schemas)
+packages/database/prisma/schema/*.prisma
+!packages/database/prisma/schema/base.prisma
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Turborepo
+.turbo/
+
+# Test
+coverage/

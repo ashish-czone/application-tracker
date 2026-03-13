@@ -1,0 +1,57 @@
+import 'reflect-metadata';
+import { NestFactory } from '@nestjs/core';
+import { ValidationPipe } from '@nestjs/common';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
+import { AppModule } from './app.module';
+
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+
+  const API_ENABLED = process.env.API_ENABLED !== 'false';
+
+  if (API_ENABLED) {
+    app.use(helmet());
+    app.use(cookieParser());
+
+    app.enableCors({
+      origin: process.env.ALLOWED_ORIGINS?.split(','),
+      credentials: true,
+    });
+
+    app.setGlobalPrefix('api/v1', {
+      exclude: ['health'],
+    });
+
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+      }),
+    );
+
+    if (process.env.NODE_ENV !== 'production') {
+      const config = new DocumentBuilder()
+        .setTitle('Starter Template API')
+        .setVersion('1.0')
+        .addBearerAuth()
+        .build();
+      const document = SwaggerModule.createDocument(app, config);
+      SwaggerModule.setup('docs', app, document);
+    }
+
+    // Health endpoint
+    const expressApp = app.getHttpAdapter();
+    expressApp.get('/health', (_req: unknown, res: { json: (body: unknown) => void }) => {
+      res.json({ status: 'ok', timestamp: new Date().toISOString() });
+    });
+
+    await app.listen(process.env.PORT ?? 3000);
+  } else {
+    await app.init();
+  }
+}
+
+bootstrap();
