@@ -22,8 +22,10 @@ This document defines the architecture, rules, and conventions for building a mo
 ```
 starter-template/
 ├── apps/                   # Deployable applications (thin orchestrators only)
-├── modules/                # Backend domain modules (business logic)
-├── features/               # Frontend domain features (UI logic)
+│   ├── api/                # NestJS backend
+│   │   └── src/modules/    # Backend domain modules (business logic)
+│   └── web/                # React + Vite frontend
+│       └── src/modules/    # Frontend domain features (UI logic)
 ├── packages/               # Reusable, domain-agnostic packages
 ├── pnpm-workspace.yaml
 ├── turbo.json
@@ -36,8 +38,6 @@ starter-template/
 ```yaml
 packages:
   - "apps/*"
-  - "modules/*"
-  - "features/*"
   - "packages/*"
 ```
 
@@ -48,13 +48,14 @@ packages:
 Strictly enforced. Violations are build errors.
 
 ```
-apps/api     →  modules/*,  packages/* (backend — runs as API, worker, or both via env flags)
-apps/web     →  features/*, packages/ui, packages/api-client, packages/common
-modules/*    →  packages/* (infrastructure + platform)
-modules/*    →  other modules' public API (services, event types, enums) — no circular deps
-features/*   →  packages/ui, packages/api-client, packages/common
-packages/*   →  other infrastructure packages only. NEVER import from modules/ or features/
+apps/api     →  packages/* (backend — runs as API, worker, or both via env flags)
+apps/web     →  packages/ui, packages/api-client, packages/common
+packages/*   →  other infrastructure packages only. NEVER import from apps/
 ```
+
+Backend modules (`apps/api/src/modules/`) may import from `packages/*` and from other modules' public API (services, event types, enums) — no circular deps.
+
+Frontend modules (`apps/web/src/modules/`) may import from `packages/ui`, `packages/api-client`, `packages/common`.
 
 ### When to use direct calls vs events
 
@@ -108,22 +109,18 @@ apps/api/
 export class AppModule {}
 ```
 
-### modules/admin/ — Platform Configuration
+### apps/api/src/modules/admin/ — Platform Configuration
 
 A thin module that provides CRUD endpoints for configuring platform capability packages (notification rules, reminder schedules, workflow definitions). It also exposes the event registry so the frontend can discover available events and their payload schemas.
 
 ```
-modules/admin/
+apps/api/src/modules/admin/
   controllers/
-    roles.controller.ts                 # CRUD → rbacService
-    permissions.controller.ts           # CRUD → rbacService
     notification-rules.controller.ts    # CRUD → notificationsService
     reminder-rules.controller.ts        # CRUD → reminderService
     workflow-definitions.controller.ts  # CRUD → workflowService
     event-registry.controller.ts        # read-only → eventRegistryService
   admin.module.ts
-  index.ts
-  package.json
 ```
 
 Each controller is a thin delegation layer — no business logic. The actual logic lives in the platform packages.
@@ -147,14 +144,13 @@ apps/web/
   tsconfig.json
 ```
 
-`router.tsx` merges feature routes. Each feature plugs itself in:
+`router.tsx` merges frontend module routes. Each module plugs itself in:
 
 ```ts
-import { candidateRoutes } from "@features/candidates/routes";
-import { orderRoutes } from "@features/orders/routes";
-import { adminRoutes } from "@features/admin/routes";
+import { candidateRoutes } from "@modules/candidates/routes";
+import { orderRoutes } from "@modules/orders/routes";
 
-export const routes = [...candidateRoutes, ...orderRoutes, ...adminRoutes];
+export const routes = [...candidateRoutes, ...orderRoutes];
 ```
 
 ### Worker — Background Job Processing
@@ -195,7 +191,7 @@ Each module represents a real-world business entity. Each module is a standalone
 ### Module Structure
 
 ```
-modules/<module-name>/
+apps/api/src/modules/<module-name>/
   controllers/              # NestJS controllers (REST endpoints)
   services/                 # Business logic + repository (DB access)
   events/
@@ -205,14 +201,13 @@ modules/<module-name>/
   <module-name>.module.ts   # NestJS module definition + event/permission registration
   schema.prisma             # Prisma models owned by this module
   index.ts                  # Public API surface (only this gets imported externally)
-  package.json
 ```
 
 ### Module Rules
 
 1. **A module owns its DB tables.** Its `services/` layer is the only code that queries those tables via Prisma. No other module may query another module's tables directly. If `orders` needs client data, it calls `clientsService.getById()`, never `prisma.client.findUnique()`.
 
-2. **A module exports a minimal public API via `index.ts`.** This is the only file other code may import from. Only export what consumer modules actually need: service classes, event types, event name constants, and enums. DTOs are internal to the controller layer and are never exported. Within exported service classes, only methods intended for cross-module use are `public` — everything else is `private` or `protected`. The public API is a deliberate, narrow contract. Note: this `index.ts` pattern applies to **backend modules and packages** as a cross-module API boundary. Frontend features do NOT use barrel exports (see PROMPT-UI.md) — frontend code uses direct file imports to avoid circular dependencies and slow builds.
+2. **A module exports a minimal public API via `index.ts`.** This is the only file other code may import from. Only export what consumer modules actually need: service classes, event types, event name constants, and enums. DTOs are internal to the controller layer and are never exported. Within exported service classes, only methods intended for cross-module use are `public` — everything else is `private` or `protected`. The public API is a deliberate, narrow contract. Note: this `index.ts` pattern applies to **backend modules and packages** as a cross-module API boundary. Frontend modules do NOT use barrel exports (see PROMPT-UI.md) — frontend code uses direct file imports to avoid circular dependencies and slow builds.
 
 3. **Modules may import other modules' public APIs** for direct queries and commands. No circular dependencies — if `A → B` and `B → A`, extract shared logic into a third module or use events.
 
@@ -225,7 +220,7 @@ modules/<module-name>/
 7. **Permissions are namespaced by module name.** Format: `module.action` (e.g., `candidates.create`, `candidates.read`, `orders.update`, `orders.delete`). Each module defines its own permission constants and registers them with `packages/rbac`'s permission registry in `onModuleInit`.
 
 ```ts
-// modules/candidates/permissions.ts
+// apps/api/src/modules/candidates/permissions.ts
 export const CANDIDATES_PERMISSIONS = {
   CREATE: 'candidates.create',
   READ: 'candidates.read',
@@ -235,7 +230,7 @@ export const CANDIDATES_PERMISSIONS = {
 ```
 
 ```ts
-// modules/candidates/candidates.module.ts
+// apps/api/src/modules/candidates/candidates.module.ts
 onModuleInit() {
   // Register events
   this.eventRegistry.register({ ... });
@@ -307,7 +302,7 @@ export interface DomainEvent {
 `packages/events/` also provides an event registry service. Modules register their events as metadata in `onModuleInit` so that platform UIs (notification rule builder, workflow editor) can discover available events and their payload schemas at runtime.
 
 ```ts
-// modules/candidates/candidates.module.ts
+// apps/api/src/modules/candidates/candidates.module.ts
 onModuleInit() {
   this.eventRegistry.register({
     eventName: CANDIDATES_CANDIDATE_SUBMITTED,
@@ -321,12 +316,12 @@ onModuleInit() {
 }
 ```
 
-The event registry is exposed via `modules/admin/controllers/event-registry.controller.ts` as a read-only API (`GET /admin/events`).
+The event registry is exposed via `apps/api/src/modules/admin/controllers/event-registry.controller.ts` as a read-only API (`GET /admin/events`).
 
 ### Event Producer (Domain Module)
 
 ```ts
-// modules/candidates/events/types.ts
+// apps/api/src/modules/candidates/events/types.ts
 import type { DomainEvent } from "@packages/events";
 
 export const CANDIDATES_CANDIDATE_SUBMITTED = "candidates.CandidateSubmitted" as const;
@@ -344,7 +339,7 @@ export interface CandidateSubmittedEvent extends DomainEvent {
 Exported via the module's public API:
 
 ```ts
-// modules/candidates/index.ts
+// apps/api/src/modules/candidates/index.ts
 export { CANDIDATES_CANDIDATE_SUBMITTED } from "./events/types";
 export type { CandidateSubmittedEvent } from "./events/types";
 ```
@@ -352,7 +347,7 @@ export type { CandidateSubmittedEvent } from "./events/types";
 The domain service emits the event **after** the core operation completes:
 
 ```ts
-// modules/candidates/services/candidatesService.ts
+// apps/api/src/modules/candidates/services/candidatesService.ts
 async submitCandidate(dto: SubmitCandidateDto, actorId: string) {
   // 1. Domain logic — direct call to another module if needed
   const order = await this.ordersService.getById(dto.orderId);
@@ -432,7 +427,7 @@ Event emitted
 ### Dependency Direction for Events
 
 - **Emitting module** → knows nothing about subscribers. Emits and moves on.
-- **Side-effect packages** → subscribe generically using the base `DomainEvent` interface from `packages/events`. They do NOT import from `modules/`. They use DB-driven configuration (notification rules, reminder schedules) to decide how to react.
+- **Side-effect packages** → subscribe generically using the base `DomainEvent` interface from `packages/events`. They do NOT import from app modules. They use DB-driven configuration (notification rules, reminder schedules) to decide how to react.
 
 
 ### Event Flow Example
@@ -440,7 +435,7 @@ Event emitted
 A candidate is submitted to an order:
 
 ```
-1. API call → modules/candidates/controllers → calls candidatesService.submitCandidate()
+1. API call → candidates controller → calls candidatesService.submitCandidate()
 2. candidatesService → calls ordersService.getById() (direct call — needs the result)
 3. candidatesService → updates candidate status in DB (own domain operation)
 4. candidatesService → emits CANDIDATES_CANDIDATE_SUBMITTED event
@@ -453,39 +448,38 @@ Domain-to-domain communication used direct calls (step 2). Side effects used eve
 
 ---
 
-## 4. Features Layer — Frontend Domain Logic
+## 4. Frontend Modules Layer — Frontend Domain Logic
 
-Each feature owns everything it needs for the UI. Features map 1:1 to backend modules by name.
+Each frontend module owns everything it needs for the UI. Frontend modules map 1:1 to backend modules by name.
 
-### Feature Structure
+### Frontend Module Structure
 
 ```
-features/<feature-name>/
+apps/web/src/modules/<module-name>/
   api/                      # API calls using packages/api-client
-  components/               # Feature-specific React components
-  hooks/                    # Feature-specific hooks (TanStack Query wrappers)
+  components/               # Module-specific React components
+  hooks/                    # Module-specific hooks (TanStack Query wrappers)
   pages/                    # Route-level page containers
-  routes.ts                 # Route definitions for this feature
+  routes.ts                 # Route definitions for this module
   types.ts                  # Frontend-specific types
-  package.json
 ```
 
-### Feature Rules
+### Frontend Module Rules
 
-1. **A feature owns its pages, components, hooks, and API calls.** Nothing leaks outside.
+1. **A frontend module owns its pages, components, hooks, and API calls.** Nothing leaks outside.
 
 2. **Pages are route-level containers. Components are reusable pieces.**
 
    ```
    pages/CandidateListPage.tsx       # route-level
-   components/CandidateTable.tsx      # reusable within feature
+   components/CandidateTable.tsx      # reusable within module
    components/CandidateForm.tsx
    ```
 
-3. **Each feature defines its own routes:**
+3. **Each frontend module defines its own routes:**
 
    ```ts
-   // features/candidates/routes.ts
+   // apps/web/src/modules/candidates/routes.ts
    export const candidateRoutes = [
      { path: "/candidates", element: <CandidateListPage /> },
      { path: "/candidates/:id", element: <CandidateProfilePage /> },
@@ -495,28 +489,28 @@ features/<feature-name>/
 4. **API layer uses TanStack Query:**
 
    ```ts
-   // features/candidates/api/candidateApi.ts
-   import { api } from "@packages/api-client";
+   // apps/web/src/modules/candidates/api/candidateApi.ts
+   import { api } from "@modules/lib/api";
    export const getCandidates = () => api.get("/candidates");
    ```
 
    ```ts
-   // features/candidates/hooks/useCandidates.ts
+   // apps/web/src/modules/candidates/hooks/useCandidates.ts
    import { useQuery } from "@tanstack/react-query";
    import { getCandidates } from "../api/candidateApi";
    export const useCandidates = () =>
      useQuery({ queryKey: ["candidates"], queryFn: getCandidates });
    ```
 
-5. **Features may import from:**
+5. **Frontend modules may import from:**
    - `@packages/ui` — shared design system components
    - `@packages/api-client` — base HTTP client
    - `@packages/common` — generic types like `PaginatedResponse<T>`
-   - **Never from `@modules/*`.** The API is the boundary. Frontend defines its own types based on the API contract (e.g., `type CandidateStatus = "active" | "submitted" | "rejected"`).
+   - **Never from backend modules.** The API is the boundary. Frontend defines its own types based on the API contract (e.g., `type CandidateStatus = "active" | "submitted" | "rejected"`).
 
-6. **Cross-feature reads are allowed for aggregate views.** A `features/dashboard/` may import hooks from other features for read-only display. Dashboard never modifies other features' state.
+6. **Cross-module reads are allowed for aggregate views.** A dashboard module may import hooks from other modules for read-only display. Dashboard never modifies other modules' state.
 
-7. **`features/admin/` is the frontend for platform configuration.** It provides pages for managing notification rules, reminder schedules, workflow definitions, and the event registry. Its pages are thin wrappers that fetch data via `modules/admin` endpoints and compose components from platform UI packages (`@packages/notifications-ui`, `@packages/workflow-engine-ui`, etc.).
+7. **Admin pages** for platform configuration live alongside relevant frontend modules. Pages are thin wrappers that fetch data via API endpoints and compose components from platform UI packages (`@packages/notifications-ui`, `@packages/workflow-engine-ui`, etc.).
 
 ---
 
@@ -537,20 +531,20 @@ Examples: auth + auth-nestjs (config-driven authentication — see PROMPT-AUTH.m
 Usage example — RBAC in domain modules:
 
 ```ts
-// modules/candidates/controllers/candidatesController.ts
+// apps/api/src/modules/candidates/controllers/candidatesController.ts
 @UseGuards(RbacGuard)
 @RequirePermission('candidates.create')
 @Post()
 async create(@Body() dto: CreateCandidateDto) { ... }
 ```
 
-`packages/rbac` exports guards and decorators. `RbacModule` is imported in `app.module.ts`, making them available globally. Management of roles, permissions, and user-role assignments is handled by `modules/admin/controllers/roles.controller.ts` and `permissions.controller.ts`, which delegate to `rbacService`. If the configuration UI is complex, it gets a `packages/rbac-ui` package with thin wrapper pages in `features/admin`.
+`packages/rbac-nestjs` exports guards and decorators. `RbacNestjsModule` is registered per entity type (like auth), making guards available globally. Management of roles, permissions, and user-role assignments is handled by RBAC controllers within the relevant module (e.g., `apps/api/src/modules/users/rbac/`), which delegate to `rbacService`.
 
 **Side-Effect Packages (backend, event-driven):** Cross-cutting engines that subscribe to domain events and react generically. No module calls them directly — they listen and act independently. They contain no domain knowledge — all behavior is configured via DB rules, not hardcoded `if/else` chains. No controllers — CRUD endpoints for configuring these packages live in `modules/admin`.
 
 Examples: notifications (DB-driven templates + delivery), activity-log (event-driven feed), reminder-engine (scheduled side-effects).
 
-These packages self-register their event subscriptions using `@OnEvent()` decorators. They process domain events using the base `DomainEvent` interface from `packages/events` — they never import from `modules/`.
+These packages self-register their event subscriptions using `@OnEvent()` decorators. They process domain events using the base `DomainEvent` interface from `packages/events` — they never import from app modules.
 
 **Platform UI Packages (frontend):** Reusable React components for configuring platform capabilities. These are props-driven building blocks — no API calls, no routing, no data-fetching hooks. The consuming feature (`features/admin`) owns data fetching and wires these components into pages.
 
@@ -568,7 +562,7 @@ Example: common — contains ONLY truly generic types (`PaginatedResponse<T>`, `
 
 ### Package Design Rules
 
-1. **No domain knowledge.** A package never imports from `modules/` or `features/`.
+1. **No domain knowledge.** A package never imports from app modules.
 2. **Swappable implementations.** Infrastructure packages define interfaces. The in-memory event bus can be swapped to Redis/NATS. Local file storage can be swapped to S3. Modules never depend on the implementation, only the interface.
 3. **Self-contained.** Each package has its own `package.json` and dependencies.
 4. **Platform packages use DB for configuration, not code.** Notification rules, workflow definitions, RBAC permissions — all stored in DB. No hardcoded `if/else` chains.
@@ -582,28 +576,24 @@ Example: common — contains ONLY truly generic types (`PaginatedResponse<T>`, `
 Each module and platform package defines its own `schema.prisma` file within its directory. This is the source of truth for that module/package's DB structure. A build task in `packages/database` collects all schema files into a single directory for Prisma to consume using the `prismaSchemaFolder` feature.
 
 ```
-modules/candidates/
+apps/api/src/modules/candidates/
   schema.prisma                         # defines Candidate model
 
-modules/orders/
+apps/api/src/modules/orders/
   schema.prisma                         # defines Order model
 
 packages/notifications/
   schema.prisma                         # defines NotificationRule, NotificationLog
 
-packages/rbac/
-  schema.prisma                         # defines Role, Permission, RolePermission
-
 packages/database/
   prisma/
     schema/
       base.prisma                       # datasource + generator config only
-      candidates.prisma                 # ← collected from modules/candidates/
-      orders.prisma                     # ← collected from modules/orders/
+      candidates.prisma                 # ← collected from apps/api/src/modules/candidates/
+      orders.prisma                     # ← collected from apps/api/src/modules/orders/
       notifications.prisma              # ← collected from packages/notifications/
-      rbac.prisma                       # ← collected from packages/rbac/
   scripts/
-    collect-schemas.js                  # globs for schema.prisma across modules/ and packages/
+    collect-schemas.js                  # globs for schema.prisma across apps/api/src/modules/ and packages/
 ```
 
 Collected files in `packages/database/prisma/schema/` (except `base.prisma`) are gitignored — they are derived from the source files in each module/package.
@@ -673,8 +663,6 @@ Shared TypeScript config at root. All packages, modules, features, and apps exte
   "compilerOptions": {
     "strict": true,
     "paths": {
-      "@modules/*": ["./modules/*"],
-      "@features/*": ["./features/*"],
       "@packages/*": ["./packages/*"]
     }
   }
@@ -689,7 +677,7 @@ Shared TypeScript config at root. All packages, modules, features, and apps exte
 - Every package, module, and feature has its own `package.json` with correct dependencies.
 - No circular dependencies between modules.
 - No domain logic in packages. No side effects in domain services.
-- No direct DB access outside a module's own services. No Prisma `include`/`select` across module boundaries.
+- No direct DB access outside a module's own service layer. No Prisma `include`/`select` across module boundaries.
 - Event names are namespaced, past-tense, exported constants — never magic strings.
 - Side-effect event handlers must be idempotent. Unreliable I/O is enqueued via `packages/queue`, never done inline.
 - Every module's public API is exported via `index.ts` — kept intentionally narrow.
