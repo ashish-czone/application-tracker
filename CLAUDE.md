@@ -61,6 +61,19 @@ git checkout main && git pull
 
 **Never move to the next task until the current task's PR is merged.**
 
+### Step 3: Audit (after all tasks are complete)
+
+After the final task is merged, run a **supervisor audit agent** to verify the entire feature. Launch a subagent (using the Agent tool) that checks:
+
+1. **Naming consistency** — grep the entire codebase for stale references to old naming (e.g., renamed types, delegates, routes, factories).
+2. **Domain boundary violations** — no module accesses another module's database tables or services directly.
+3. **Import path correctness** — no broken imports pointing to old/moved file locations.
+4. **Type safety** — exported types in package `index.ts` files match what's defined in `types.ts`.
+5. **Test coverage** — all new endpoints have security tests (401 + 403), factories and helpers use correct terminology.
+6. **Documentation drift** — PROMPT-*.md files reflect current code patterns.
+
+If the audit finds violations, fix them in a new branch, PR, and merge before considering the feature done.
+
 ---
 
 ## Task Breakdown Pattern
