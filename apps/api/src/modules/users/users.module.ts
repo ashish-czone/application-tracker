@@ -1,8 +1,10 @@
 import { Module, type OnModuleInit } from '@nestjs/common';
 import { PermissionRegistryService } from '@packages/rbac-nestjs';
 import { UsersService } from './services/users.service';
+import { UsersController } from './controllers/users.controller';
 
 @Module({
+  controllers: [UsersController],
   providers: [UsersService],
   exports: [UsersService],
 })
