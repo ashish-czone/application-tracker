@@ -7,14 +7,14 @@ import {
 import { Reflector } from '@nestjs/core';
 import { verifyToken, TokenExpiredError, InvalidTokenError } from '@packages/auth';
 import type { TokenPayload } from '@packages/auth';
-import { PrismaService } from '@packages/database';
+import { DatabaseService, identities, eq } from '@packages/database';
 import { IS_PUBLIC_KEY, AUTH_CONFIGS_MAP } from '../constants';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
-    private readonly prisma: PrismaService,
+    private readonly database: DatabaseService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -72,7 +72,11 @@ export class AuthGuard implements CanActivate {
       throw new UnauthorizedException('Unknown auth context');
     }
 
-    const identity = await this.prisma.identity.findUnique({ where: { id: payload.sub } });
+    const [identity] = await this.database.db
+      .select()
+      .from(identities)
+      .where(eq(identities.id, payload.sub))
+      .limit(1);
 
     if (!identity) {
       throw new UnauthorizedException('Identity not found');

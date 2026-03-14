@@ -2,7 +2,19 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { PrismaService } from '@packages/database';
+import {
+  DatabaseService,
+  users,
+  identities,
+  eq,
+  and,
+  or,
+  isNull,
+  ilike,
+  asc,
+  desc,
+  count,
+} from '@packages/database';
 import { AuthService } from '@packages/auth-nestjs';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
@@ -38,10 +50,14 @@ interface ListUsersQuery {
 @Injectable()
 export class UsersService {
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly database: DatabaseService,
     private readonly authService: AuthService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
+
+  private get db() {
+    return this.database.db;
+  }
 
   async create(input: CreateUserInput, actorId: string | null) {
     const { accessToken, refreshToken, identity } = await this.authService.register(
@@ -49,14 +65,15 @@ export class UsersService {
       input.password,
     );
 
-    const user = await this.prisma.user.create({
-      data: {
+    const [user] = await this.db
+      .insert(users)
+      .values({
         identityId: identity.id,
         firstName: input.firstName,
         lastName: input.lastName,
         phone: input.phone,
-      },
-    });
+      })
+      .returning();
 
     this.emitEvent(USERS_USER_CREATED, {
       entityId: user.id,
@@ -78,38 +95,53 @@ export class UsersService {
     const sort = query.sort ?? 'createdAt';
     const order = query.order ?? 'desc';
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const where: any = { deletedAt: null };
+    const orderFn = order === 'desc' ? desc : asc;
+    const sortColumn = sort === 'email' ? identities.email
+      : sort === 'firstName' ? users.firstName
+      : sort === 'lastName' ? users.lastName
+      : users.createdAt;
 
-    if (query.search) {
-      where.OR = [
-        { firstName: { contains: query.search, mode: 'insensitive' } },
-        { lastName: { contains: query.search, mode: 'insensitive' } },
-        { identity: { email: { contains: query.search, mode: 'insensitive' } } },
-      ];
-    }
+    const searchCondition = query.search
+      ? or(
+          ilike(users.firstName, `%${query.search}%`),
+          ilike(users.lastName, `%${query.search}%`),
+          ilike(identities.email, `%${query.search}%`),
+        )
+      : undefined;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let orderBy: any;
-    if (sort === 'email') {
-      orderBy = { identity: { email: order } };
-    } else {
-      orderBy = { [sort]: order };
-    }
+    const whereCondition = searchCondition
+      ? and(isNull(users.deletedAt), searchCondition)
+      : isNull(users.deletedAt);
 
-    const [data, total] = await Promise.all([
-      this.prisma.user.findMany({
-        where,
-        include: { identity: { select: { email: true } } },
-        orderBy,
-        skip,
-        take: limit,
-      }),
-      this.prisma.user.count({ where }),
+    const [data, [{ total }]] = await Promise.all([
+      this.db
+        .select({
+          id: users.id,
+          identityId: users.identityId,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          phone: users.phone,
+          avatarUrl: users.avatarUrl,
+          timezone: users.timezone,
+          createdAt: users.createdAt,
+          updatedAt: users.updatedAt,
+          email: identities.email,
+        })
+        .from(users)
+        .innerJoin(identities, eq(users.identityId, identities.id))
+        .where(whereCondition)
+        .orderBy(orderFn(sortColumn))
+        .offset(skip)
+        .limit(limit),
+      this.db
+        .select({ total: count() })
+        .from(users)
+        .innerJoin(identities, eq(users.identityId, identities.id))
+        .where(whereCondition),
     ]);
 
     return {
-      data: data.map((u) => this.toUserResponse(u, u.identity.email)),
+      data: data.map((u) => this.toUserResponse(u, u.email)),
       meta: {
         total,
         page,
@@ -120,32 +152,53 @@ export class UsersService {
   }
 
   async findOneOrFail(id: string) {
-    const user = await this.prisma.user.findFirst({
-      where: { id, deletedAt: null },
-      include: { identity: { select: { email: true } } },
-    });
+    const [result] = await this.db
+      .select({
+        id: users.id,
+        identityId: users.identityId,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        phone: users.phone,
+        avatarUrl: users.avatarUrl,
+        timezone: users.timezone,
+        createdAt: users.createdAt,
+        updatedAt: users.updatedAt,
+        email: identities.email,
+      })
+      .from(users)
+      .innerJoin(identities, eq(users.identityId, identities.id))
+      .where(and(eq(users.id, id), isNull(users.deletedAt)))
+      .limit(1);
 
-    if (!user) {
+    if (!result) {
       throw new NotFoundException('User not found');
     }
 
-    return this.toUserResponse(user, user.identity.email);
+    return this.toUserResponse(result, result.email);
   }
 
   async update(id: string, input: UpdateUserInput, actorId: string) {
-    const user = await this.prisma.user.findFirst({
-      where: { id, deletedAt: null },
-    });
+    const [existing] = await this.db
+      .select({ id: users.id })
+      .from(users)
+      .where(and(eq(users.id, id), isNull(users.deletedAt)))
+      .limit(1);
 
-    if (!user) {
+    if (!existing) {
       throw new NotFoundException('User not found');
     }
 
-    const updated = await this.prisma.user.update({
-      where: { id },
-      data: input,
-      include: { identity: { select: { email: true } } },
-    });
+    const [updated] = await this.db
+      .update(users)
+      .set(input)
+      .where(eq(users.id, id))
+      .returning();
+
+    const [withEmail] = await this.db
+      .select({ email: identities.email })
+      .from(identities)
+      .where(eq(identities.id, updated.identityId))
+      .limit(1);
 
     const updatedFields = Object.keys(input).filter((k) => input[k as keyof UpdateUserInput] !== undefined);
     this.emitEvent(USERS_USER_UPDATED, {
@@ -154,30 +207,36 @@ export class UsersService {
       payload: { updatedFields },
     });
 
-    return this.toUserResponse(updated, updated.identity.email);
+    return this.toUserResponse(updated, withEmail.email);
   }
 
   async softDelete(id: string, actorId: string) {
-    const user = await this.prisma.user.findFirst({
-      where: { id, deletedAt: null },
-      include: { identity: { select: { email: true } } },
-    });
+    const [user] = await this.db
+      .select({
+        id: users.id,
+        identityId: users.identityId,
+        email: identities.email,
+      })
+      .from(users)
+      .innerJoin(identities, eq(users.identityId, identities.id))
+      .where(and(eq(users.id, id), isNull(users.deletedAt)))
+      .limit(1);
 
     if (!user) {
       throw new NotFoundException('User not found');
     }
 
-    await this.prisma.user.update({
-      where: { id },
-      data: { deletedAt: new Date() },
-    });
+    await this.db
+      .update(users)
+      .set({ deletedAt: new Date() })
+      .where(eq(users.id, id));
 
     await this.authService.logout(user.identityId);
 
     this.emitEvent(USERS_USER_DELETED, {
       entityId: id,
       actorId,
-      payload: { email: user.identity.email },
+      payload: { email: user.email },
     });
   }
 

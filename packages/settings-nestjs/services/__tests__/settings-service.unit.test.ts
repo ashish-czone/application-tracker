@@ -11,34 +11,30 @@ function createMockDelegate() {
 
   return {
     store,
-    findMany: vi.fn(async (args?: { where?: { module?: string } }) => {
+    findByModule: vi.fn(async (module: string) => {
       const records: SettingRecord[] = [];
       for (const record of store.values()) {
-        if (!args?.where?.module || record.module === args.where.module) {
+        if (record.module === module) {
           records.push(record);
         }
       }
       return records;
     }),
     upsert: vi.fn(
-      async (args: {
-        where: { module_key: { module: string; key: string } };
-        update: { value: unknown; updatedBy: string | null };
-        create: { module: string; key: string; value: unknown; updatedBy: string | null };
-      }) => {
-        const compositeKey = `${args.where.module_key.module}:${args.where.module_key.key}`;
+      async (data: { module: string; key: string; value: unknown; updatedBy: string }) => {
+        const compositeKey = `${data.module}:${data.key}`;
         const existing = store.get(compositeKey);
         if (existing) {
-          const updated = { ...existing, value: args.update.value, updatedBy: args.update.updatedBy, updatedAt: new Date() };
+          const updated = { ...existing, value: data.value, updatedBy: data.updatedBy, updatedAt: new Date() };
           store.set(compositeKey, updated);
           return updated;
         }
         const created: SettingRecord = {
           id: `id-${compositeKey}`,
-          module: args.create.module,
-          key: args.create.key,
-          value: args.create.value,
-          updatedBy: args.create.updatedBy,
+          module: data.module,
+          key: data.key,
+          value: data.value,
+          updatedBy: data.updatedBy,
           createdAt: new Date(),
           updatedAt: new Date(),
         };
@@ -46,12 +42,11 @@ function createMockDelegate() {
         return created;
       },
     ),
-    delete: vi.fn(async (args: { where: { module_key: { module: string; key: string } } }) => {
-      const compositeKey = `${args.where.module_key.module}:${args.where.module_key.key}`;
+    deleteByModuleAndKey: vi.fn(async (module: string, key: string) => {
+      const compositeKey = `${module}:${key}`;
       const record = store.get(compositeKey);
       if (!record) throw new Error('Record to delete does not exist.');
       store.delete(compositeKey);
-      return record;
     }),
   };
 }
@@ -122,7 +117,7 @@ describe('SettingsService', () => {
       await service.get('test', 'timeout', 30);
       await service.get('test', 'timeout', 30);
 
-      expect(mockDelegate.findMany).toHaveBeenCalledTimes(1);
+      expect(mockDelegate.findByModule).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -213,7 +208,7 @@ describe('SettingsService', () => {
     it('should invalidate cache after upsert', async () => {
       // Populate cache
       await service.get('test', 'timeout', 30);
-      expect(mockDelegate.findMany).toHaveBeenCalledTimes(1);
+      expect(mockDelegate.findByModule).toHaveBeenCalledTimes(1);
 
       // Upsert invalidates cache, then getModuleSettings reloads it
       await service.upsertSettings(
@@ -221,14 +216,10 @@ describe('SettingsService', () => {
         [{ key: 'timeout', value: 60 }],
         'actor-1',
       );
-      const callsAfterUpsert = mockDelegate.findMany.mock.calls.length;
 
       // Next get should use the cache populated by getModuleSettings OR hit DB if invalidated
-      mockDelegate.findMany.mockClear();
+      mockDelegate.findByModule.mockClear();
       await service.get('test', 'timeout', 30);
-      // If cache was properly refreshed by getModuleSettings, this is 0 (cache hit)
-      // If cache was not refreshed, this is 1 (cache miss → DB)
-      // Either way, the key test is that the old cached value (30) is gone
       const result = await service.get('test', 'timeout', 30);
       expect(result).toBe(60); // Must reflect the upserted value, not the old default
     });
@@ -280,7 +271,7 @@ describe('SettingsService', () => {
 
       expect(timeoutField.value).toBe(30); // Back to default
       expect(timeoutField.isOverridden).toBe(false);
-      expect(mockDelegate.delete).toHaveBeenCalled();
+      expect(mockDelegate.deleteByModuleAndKey).toHaveBeenCalled();
     });
 
     it('should not throw if setting was not overridden', async () => {

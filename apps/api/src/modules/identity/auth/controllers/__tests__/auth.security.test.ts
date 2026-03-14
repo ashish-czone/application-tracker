@@ -2,7 +2,8 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import type { INestApplication } from '@nestjs/common';
-import type { PrismaClient } from '@packages/database';
+import type { DrizzleDB } from '@packages/database';
+import { identities, eq } from '@packages/database';
 import { createTestApp } from '../../../../../../../../test/utils/app';
 import { cleanDatabase } from '../../../../../../../../test/utils/db';
 import { tokenFor, expiredTokenFor } from '../../../../../../../../test/utils/auth';
@@ -10,18 +11,18 @@ import { IdentityFactory } from '../../../../../../../../test/factories/identity
 
 describe('Auth Security Tests', () => {
   let app: INestApplication;
-  let prisma: PrismaClient;
+  let db: DrizzleDB;
   let httpServer: ReturnType<INestApplication['getHttpServer']>;
 
   beforeAll(async () => {
     const testApp = await createTestApp();
     app = testApp.app;
-    prisma = testApp.prisma;
+    db = testApp.db;
     httpServer = testApp.httpServer;
   });
 
   afterAll(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase(db);
     await app.close();
   });
 
@@ -32,7 +33,7 @@ describe('Auth Security Tests', () => {
     });
 
     it('should return 401 with expired token', async () => {
-      const identity = await IdentityFactory.create(prisma);
+      const identity = await IdentityFactory.create(db);
       const res = await request(httpServer)
         .get('/api/v1/users/auth/me')
         .set('Authorization', `Bearer ${expiredTokenFor(identity)}`);
@@ -52,7 +53,7 @@ describe('Auth Security Tests', () => {
     });
 
     it('should never contain passwordHash in response', async () => {
-      const identity = await IdentityFactory.create(prisma);
+      const identity = await IdentityFactory.create(db);
       const res = await request(httpServer)
         .get('/api/v1/users/auth/me')
         .set('Authorization', `Bearer ${tokenFor(identity)}`);
@@ -62,7 +63,7 @@ describe('Auth Security Tests', () => {
     });
 
     it('should never contain refreshToken in response', async () => {
-      const identity = await IdentityFactory.create(prisma);
+      const identity = await IdentityFactory.create(db);
       const res = await request(httpServer)
         .get('/api/v1/users/auth/me')
         .set('Authorization', `Bearer ${tokenFor(identity)}`);
@@ -80,9 +81,8 @@ describe('Auth Security Tests', () => {
         .post('/api/v1/users/auth/register')
         .send(body);
 
-      const dbIdentity = await prisma.identity.findUnique({
-        where: { email: body.email.toLowerCase() },
-      });
+      const [dbIdentity] = await db.select().from(identities)
+        .where(eq(identities.email, body.email.toLowerCase())).limit(1);
       expect(dbIdentity).not.toBeNull();
       expect(dbIdentity!.passwordHash).not.toBe(body.password);
       expect(dbIdentity!.passwordHash).toMatch(/^\$2[aby]?\$/);
@@ -103,7 +103,7 @@ describe('Auth Security Tests', () => {
 
   describe('POST /api/v1/users/auth/login — security', () => {
     it('should return consistent error message for wrong password vs nonexistent email', async () => {
-      const identity = await IdentityFactory.create(prisma);
+      const identity = await IdentityFactory.create(db);
 
       const wrongPwRes = await request(httpServer)
         .post('/api/v1/users/auth/login')

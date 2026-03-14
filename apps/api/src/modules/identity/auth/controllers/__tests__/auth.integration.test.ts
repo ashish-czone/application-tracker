@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
 import type { INestApplication } from '@nestjs/common';
-import type { PrismaClient } from '@packages/database';
+import type { DrizzleDB } from '@packages/database';
+import { identities, passwordTokens, eq } from '@packages/database';
 import { createTestApp } from '../../../../../../../../test/utils/app';
 import { cleanDatabase } from '../../../../../../../../test/utils/db';
 import { tokenFor } from '../../../../../../../../test/utils/auth';
@@ -17,18 +18,18 @@ function extractRefreshCookie(res: request.Response): string {
 
 describe('Auth Integration Tests', () => {
   let app: INestApplication;
-  let prisma: PrismaClient;
+  let db: DrizzleDB;
   let httpServer: ReturnType<INestApplication['getHttpServer']>;
 
   beforeAll(async () => {
     const testApp = await createTestApp();
     app = testApp.app;
-    prisma = testApp.prisma;
+    db = testApp.db;
     httpServer = testApp.httpServer;
   });
 
   afterAll(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase(db);
     await app.close();
   });
 
@@ -97,7 +98,7 @@ describe('Auth Integration Tests', () => {
 
   describe('POST /api/v1/users/auth/login', () => {
     it('should return tokens for valid credentials', async () => {
-      const identity = await IdentityFactory.create(prisma);
+      const identity = await IdentityFactory.create(db);
 
       const res = await request(httpServer)
         .post('/api/v1/users/auth/login')
@@ -108,7 +109,7 @@ describe('Auth Integration Tests', () => {
     });
 
     it('should return 401 for wrong password', async () => {
-      const identity = await IdentityFactory.create(prisma);
+      const identity = await IdentityFactory.create(db);
 
       const res = await request(httpServer)
         .post('/api/v1/users/auth/login')
@@ -130,7 +131,7 @@ describe('Auth Integration Tests', () => {
 
   describe('POST /api/v1/users/auth/refresh', () => {
     it('should issue new tokens from valid refresh cookie', async () => {
-      const identity = await IdentityFactory.create(prisma);
+      const identity = await IdentityFactory.create(db);
 
       // Login to get a refresh cookie
       const loginRes = await request(httpServer)
@@ -156,7 +157,7 @@ describe('Auth Integration Tests', () => {
     });
 
     it('should invalidate old refresh token after rotation', async () => {
-      const identity = await IdentityFactory.create(prisma);
+      const identity = await IdentityFactory.create(db);
 
       const loginRes = await request(httpServer)
         .post('/api/v1/users/auth/login')
@@ -164,7 +165,8 @@ describe('Auth Integration Tests', () => {
 
       const oldCookie = extractRefreshCookie(loginRes);
 
-      const hashBefore = (await prisma.identity.findUnique({ where: { id: identity.id } }))!.refreshToken;
+      const [beforeIdentity] = await db.select().from(identities).where(eq(identities.id, identity.id)).limit(1);
+      const hashBefore = beforeIdentity!.refreshToken;
 
       // First refresh — should succeed and rotate the token
       const firstRefresh = await request(httpServer)
@@ -173,7 +175,8 @@ describe('Auth Integration Tests', () => {
 
       expect(firstRefresh.status).toBe(200);
 
-      const hashAfter = (await prisma.identity.findUnique({ where: { id: identity.id } }))!.refreshToken;
+      const [afterIdentity] = await db.select().from(identities).where(eq(identities.id, identity.id)).limit(1);
+      const hashAfter = afterIdentity!.refreshToken;
       expect(hashAfter).not.toBe(hashBefore);
 
       // Second refresh with OLD cookie — should fail (rotation detected)
@@ -187,7 +190,7 @@ describe('Auth Integration Tests', () => {
 
   describe('POST /api/v1/users/auth/logout', () => {
     it('should clear refresh token', async () => {
-      const identity = await IdentityFactory.create(prisma);
+      const identity = await IdentityFactory.create(db);
       const token = tokenFor(identity);
 
       const res = await request(httpServer)
@@ -196,7 +199,7 @@ describe('Auth Integration Tests', () => {
 
       expect(res.status).toBe(200);
 
-      const dbIdentity = await prisma.identity.findUnique({ where: { id: identity.id } });
+      const [dbIdentity] = await db.select().from(identities).where(eq(identities.id, identity.id)).limit(1);
       expect(dbIdentity!.refreshToken).toBeNull();
     });
   });
@@ -211,31 +214,29 @@ describe('Auth Integration Tests', () => {
     });
 
     it('should create PasswordToken record in DB', async () => {
-      const identity = await IdentityFactory.create(prisma);
+      const identity = await IdentityFactory.create(db);
 
       await request(httpServer)
         .post('/api/v1/users/auth/forgot-password')
         .send({ email: identity.email });
 
-      const tokens = await prisma.passwordToken.findMany({
-        where: { identityId: identity.id },
-      });
+      const tokens = await db.select().from(passwordTokens)
+        .where(eq(passwordTokens.identityId, identity.id));
       expect(tokens.length).toBeGreaterThan(0);
     });
   });
 
   describe('POST /api/v1/users/auth/reset-password', () => {
     it('should update password with valid token', async () => {
-      const identity = await IdentityFactory.create(prisma);
-      const oldHash = (await prisma.identity.findUnique({ where: { id: identity.id } }))!.passwordHash;
+      const identity = await IdentityFactory.create(db);
+      const [beforeIdentity] = await db.select().from(identities).where(eq(identities.id, identity.id)).limit(1);
+      const oldHash = beforeIdentity!.passwordHash;
 
-      const token = await prisma.passwordToken.create({
-        data: {
-          identityId: identity.id,
-          token: 'valid-reset-token-' + Date.now(),
-          expiresAt: new Date(Date.now() + 60 * 60 * 1000),
-        },
-      });
+      const [token] = await db.insert(passwordTokens).values({
+        identityId: identity.id,
+        token: 'valid-reset-token-' + Date.now(),
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      }).returning();
 
       const res = await request(httpServer)
         .post('/api/v1/users/auth/reset-password')
@@ -244,24 +245,22 @@ describe('Auth Integration Tests', () => {
       expect(res.status).toBe(200);
 
       // Verify password hash changed in DB
-      const updated = await prisma.identity.findUnique({ where: { id: identity.id } });
+      const [updated] = await db.select().from(identities).where(eq(identities.id, identity.id)).limit(1);
       expect(updated!.passwordHash).not.toBe(oldHash);
 
       // Verify token is marked as used
-      const usedToken = await prisma.passwordToken.findUnique({ where: { id: token.id } });
+      const [usedToken] = await db.select().from(passwordTokens).where(eq(passwordTokens.id, token.id)).limit(1);
       expect(usedToken!.usedAt).not.toBeNull();
     });
 
     it('should return 400 for expired token', async () => {
-      const identity = await IdentityFactory.create(prisma);
+      const identity = await IdentityFactory.create(db);
 
-      const token = await prisma.passwordToken.create({
-        data: {
-          identityId: identity.id,
-          token: 'expired-token-' + Date.now(),
-          expiresAt: new Date(Date.now() - 1000),
-        },
-      });
+      const [token] = await db.insert(passwordTokens).values({
+        identityId: identity.id,
+        token: 'expired-token-' + Date.now(),
+        expiresAt: new Date(Date.now() - 1000),
+      }).returning();
 
       const res = await request(httpServer)
         .post('/api/v1/users/auth/reset-password')
@@ -271,16 +270,14 @@ describe('Auth Integration Tests', () => {
     });
 
     it('should return 400 for already-used token', async () => {
-      const identity = await IdentityFactory.create(prisma);
+      const identity = await IdentityFactory.create(db);
 
-      const token = await prisma.passwordToken.create({
-        data: {
-          identityId: identity.id,
-          token: 'used-token-' + Date.now(),
-          expiresAt: new Date(Date.now() + 60 * 60 * 1000),
-          usedAt: new Date(),
-        },
-      });
+      const [token] = await db.insert(passwordTokens).values({
+        identityId: identity.id,
+        token: 'used-token-' + Date.now(),
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+        usedAt: new Date(),
+      }).returning();
 
       const res = await request(httpServer)
         .post('/api/v1/users/auth/reset-password')

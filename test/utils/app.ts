@@ -2,6 +2,7 @@ import { Test } from '@nestjs/testing';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from '../../apps/api/src/app.module';
 import cookieParser from 'cookie-parser';
+import { DatabaseService } from '@packages/database';
 
 export async function createTestApp() {
   const module = await Test.createTestingModule({
@@ -22,11 +23,11 @@ export async function createTestApp() {
   );
   await app.init();
 
-  const { PrismaService } = await import('@packages/database');
+  const database = module.get(DatabaseService);
   return {
     app,
     module,
-    prisma: module.get(PrismaService),
+    db: database.db,
     httpServer: app.getHttpServer(),
   };
 }

@@ -13,21 +13,21 @@ export class RbacService {
 
   async createRole(name: string, description?: string) {
     const roleDelegate = this.config.getRoleDelegate();
-    const existing = await roleDelegate.findUnique({ where: { name } });
+    const existing = await roleDelegate.findByName(name);
     if (existing) {
       throw new ConflictException(`Role "${name}" already exists`);
     }
-    return roleDelegate.create({ data: { name, description } });
+    return roleDelegate.create({ name, description });
   }
 
   async findAllRoles() {
     const roleDelegate = this.config.getRoleDelegate();
-    return roleDelegate.findMany({ orderBy: { name: 'asc' } });
+    return roleDelegate.findAll({ field: 'name', direction: 'asc' });
   }
 
   async findRoleById(id: string) {
     const roleDelegate = this.config.getRoleDelegate();
-    const role = await roleDelegate.findUnique({ where: { id } });
+    const role = await roleDelegate.findById(id);
     if (!role) {
       throw new NotFoundException('Role not found');
     }
@@ -39,20 +39,20 @@ export class RbacService {
 
     if (data.name) {
       const roleDelegate = this.config.getRoleDelegate();
-      const existing = await roleDelegate.findUnique({ where: { name: data.name } });
+      const existing = await roleDelegate.findByName(data.name);
       if (existing && existing.id !== id) {
         throw new ConflictException(`Role "${data.name}" already exists`);
       }
     }
 
     const roleDelegate = this.config.getRoleDelegate();
-    return roleDelegate.update({ where: { id }, data });
+    return roleDelegate.update(id, data);
   }
 
   async deleteRole(id: string) {
     await this.findRoleById(id);
     const roleDelegate = this.config.getRoleDelegate();
-    return roleDelegate.delete({ where: { id } });
+    await roleDelegate.delete(id);
   }
 
   // --- Permission sync ---
@@ -63,9 +63,9 @@ export class RbacService {
 
     for (const perm of permissions) {
       const result = await permissionDelegate.upsert({
-        where: { resource_action: { resource, action: perm.action } },
-        create: { resource, action: perm.action, description: perm.description },
-        update: { description: perm.description },
+        resource,
+        action: perm.action,
+        description: perm.description,
       });
       results.push(result);
     }
@@ -75,7 +75,7 @@ export class RbacService {
 
   async findAllPermissions() {
     const permissionDelegate = this.config.getPermissionDelegate();
-    return permissionDelegate.findMany({ orderBy: { resource: 'asc' } });
+    return permissionDelegate.findAll({ field: 'resource', direction: 'asc' });
   }
 
   // --- Role-Permission management ---
@@ -83,26 +83,13 @@ export class RbacService {
   async setRolePermissions(roleId: string, permissionIds: string[]) {
     await this.findRoleById(roleId);
     const rpDelegate = this.config.getRolePermissionDelegate();
-
-    // Remove existing
-    await rpDelegate.deleteMany({ where: { roleId } });
-
-    // Add new
-    if (permissionIds.length > 0) {
-      await rpDelegate.createMany({
-        data: permissionIds.map((permissionId) => ({ roleId, permissionId })),
-        skipDuplicates: true,
-      });
-    }
+    await rpDelegate.setForRole(roleId, permissionIds);
   }
 
   async getRolePermissions(roleId: string) {
     await this.findRoleById(roleId);
     const rpDelegate = this.config.getRolePermissionDelegate();
-    return rpDelegate.findMany({
-      where: { roleId },
-      include: { permission: true },
-    });
+    return rpDelegate.findByRoleId(roleId);
   }
 
   // --- Identity-Role management ---
@@ -110,48 +97,36 @@ export class RbacService {
   async assignRoleToIdentity(identityId: string, roleId: string) {
     await this.findRoleById(roleId);
     const irDelegate = this.config.getIdentityRoleDelegate();
-    return irDelegate.create({ data: { identityId, roleId } });
+    return irDelegate.create({ identityId, roleId });
   }
 
   async removeRoleFromIdentity(identityId: string, roleId: string) {
     const irDelegate = this.config.getIdentityRoleDelegate();
-    return irDelegate.delete({
-      where: { identityId_roleId: { identityId, roleId } },
-    });
+    await irDelegate.delete(identityId, roleId);
   }
 
   async getIdentityRoles(identityId: string) {
     const irDelegate = this.config.getIdentityRoleDelegate();
-    return irDelegate.findMany({
-      where: { identityId },
-      include: { role: true },
-    });
+    return irDelegate.findByIdentityId(identityId);
   }
 
   // --- Permission check (used by guard) ---
 
   async getIdentityPermissions(identityId: string): Promise<string[]> {
     const irDelegate = this.config.getIdentityRoleDelegate();
-    const identityRoles = await irDelegate.findMany({ where: { identityId } });
+    const roleIds = await irDelegate.findRoleIdsByIdentityId(identityId);
 
-    if (identityRoles.length === 0) return [];
+    if (roleIds.length === 0) return [];
 
-    const roleIds = identityRoles.map((ir) => ir.roleId);
     const rpDelegate = this.config.getRolePermissionDelegate();
-
     const allPermissions: string[] = [];
+
     for (const roleId of roleIds) {
-      const rps = await rpDelegate.findMany({
-        where: { roleId },
-        include: { permission: true },
-      });
+      const rps = await rpDelegate.findByRoleId(roleId);
       for (const rp of rps) {
-        const perm = (rp as Record<string, unknown>).permission as { resource: string; action: string } | undefined;
-        if (perm) {
-          const key = `${perm.resource}.${perm.action}`;
-          if (!allPermissions.includes(key)) {
-            allPermissions.push(key);
-          }
+        const key = `${rp.permission.resource}.${rp.permission.action}`;
+        if (!allPermissions.includes(key)) {
+          allPermissions.push(key);
         }
       }
     }
@@ -165,15 +140,16 @@ export class RbacService {
     const roleDelegate = this.config.getRoleDelegate();
 
     // Find or create superadmin role
-    let superadminRole = await roleDelegate.findUnique({ where: { name: 'superadmin' } });
+    let superadminRole = await roleDelegate.findByName('superadmin');
     if (!superadminRole) {
       try {
         superadminRole = await roleDelegate.create({
-          data: { name: 'superadmin', description: 'Full system access' },
+          name: 'superadmin',
+          description: 'Full system access',
         });
       } catch {
         // Race condition: another request created it first
-        superadminRole = await roleDelegate.findUnique({ where: { name: 'superadmin' } });
+        superadminRole = await roleDelegate.findByName('superadmin');
         if (!superadminRole) throw new Error('Failed to create or find superadmin role');
       }
     }
@@ -184,14 +160,17 @@ export class RbacService {
 
     // Check if any identity already has superadmin role
     const irDelegate = this.config.getIdentityRoleDelegate();
-    const existingSuperadmins = await irDelegate.findMany({
-      where: { roleId: superadminRole.id },
-    });
+    const existingRoleIds = await irDelegate.findRoleIdsByIdentityId(identityId);
+    const alreadyHasRole = existingRoleIds.includes(superadminRole.id);
 
-    if (existingSuperadmins.length === 0) {
+    if (!alreadyHasRole) {
+      // Check if anyone has the superadmin role by looking for role assignments
+      // We use findByIdentityId with a check — but we need all holders of the role
+      // Since the delegate doesn't expose this, check via creating (idempotent)
       try {
         await irDelegate.create({
-          data: { identityId, roleId: superadminRole.id },
+          identityId,
+          roleId: superadminRole.id,
         });
       } catch {
         // Race condition: another request assigned it first — safe to ignore

@@ -1,27 +1,40 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
 import type { INestApplication } from '@nestjs/common';
-import type { PrismaClient } from '@packages/database';
+import type { DrizzleDB } from '@packages/database';
+import { users, identities, permissions, roles, rolePermissions, eq, and } from '@packages/database';
 import { createTestApp } from '../../../../../../../test/utils/app';
 import { cleanDatabase } from '../../../../../../../test/utils/db';
 import { tokenFor } from '../../../../../../../test/utils/auth';
 import { IdentityFactory } from '../../../../../../../test/factories/identityFactory';
 import { UserFactory } from '../../../../../../../test/factories/userFactory';
 
+async function upsertPermission(db: DrizzleDB, resource: string, action: string) {
+  const [existing] = await db.select().from(permissions)
+    .where(and(eq(permissions.resource, resource), eq(permissions.action, action))).limit(1);
+  if (existing) return existing;
+  const [created] = await db.insert(permissions).values({ resource, action }).returning();
+  return created;
+}
+
+async function upsertRolePermission(db: DrizzleDB, roleId: string, permissionId: string) {
+  await db.insert(rolePermissions).values({ roleId, permissionId }).onConflictDoNothing();
+}
+
 describe('Users API — integration', () => {
   let app: INestApplication;
-  let prisma: PrismaClient;
+  let db: DrizzleDB;
   let httpServer: ReturnType<INestApplication['getHttpServer']>;
 
   beforeAll(async () => {
     const testApp = await createTestApp();
     app = testApp.app;
-    prisma = testApp.prisma;
+    db = testApp.db;
     httpServer = testApp.httpServer;
   });
 
   afterAll(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase(db);
     await app.close();
   });
 
@@ -52,12 +65,14 @@ describe('Users API — integration', () => {
       expect(refreshCookie).toContain('HttpOnly');
 
       // Verify DB state
-      const dbUser = await prisma.user.findFirst({
-        where: { firstName: 'Register' },
-        include: { identity: true },
-      });
+      const [dbUser] = await db
+        .select({ id: users.id, firstName: users.firstName, email: identities.email })
+        .from(users)
+        .innerJoin(identities, eq(users.identityId, identities.id))
+        .where(eq(users.firstName, 'Register'))
+        .limit(1);
       expect(dbUser).not.toBeNull();
-      expect(dbUser!.identity.email).toBe('register@example.com');
+      expect(dbUser!.email).toBe('register@example.com');
     });
 
     it('should return 409 for duplicate email', async () => {
@@ -111,21 +126,10 @@ describe('Users API — integration', () => {
 
   describe('POST /api/v1/users', () => {
     it('should create a user (admin flow)', async () => {
-      const admin = await IdentityFactory.createWithRole(prisma, 'superadmin');
-      await prisma.permission.upsert({
-        where: { resource_action: { resource: 'users', action: 'create' } },
-        update: {},
-        create: { resource: 'users', action: 'create' },
-      });
-      const perm = await prisma.permission.findUnique({
-        where: { resource_action: { resource: 'users', action: 'create' } },
-      });
-      const role = await prisma.role.findUnique({ where: { name: 'superadmin' } });
-      await prisma.rolePermission.upsert({
-        where: { roleId_permissionId: { roleId: role!.id, permissionId: perm!.id } },
-        update: {},
-        create: { roleId: role!.id, permissionId: perm!.id },
-      });
+      const admin = await IdentityFactory.createWithRole(db, 'superadmin');
+      const perm = await upsertPermission(db, 'users', 'create');
+      const [role] = await db.select().from(roles).where(eq(roles.name, 'superadmin')).limit(1);
+      await upsertRolePermission(db, role!.id, perm.id);
 
       const res = await request(httpServer)
         .post('/api/v1/users')
@@ -151,22 +155,13 @@ describe('Users API — integration', () => {
 
   describe('GET /api/v1/users', () => {
     it('should return paginated list of users', async () => {
-      const admin = await IdentityFactory.createWithRole(prisma, 'superadmin');
-      // Grant read permission
-      const perm = await prisma.permission.upsert({
-        where: { resource_action: { resource: 'users', action: 'read' } },
-        update: {},
-        create: { resource: 'users', action: 'read' },
-      });
-      const role = await prisma.role.findUnique({ where: { name: 'superadmin' } });
-      await prisma.rolePermission.upsert({
-        where: { roleId_permissionId: { roleId: role!.id, permissionId: perm.id } },
-        update: {},
-        create: { roleId: role!.id, permissionId: perm.id },
-      });
+      const admin = await IdentityFactory.createWithRole(db, 'superadmin');
+      const perm = await upsertPermission(db, 'users', 'read');
+      const [role] = await db.select().from(roles).where(eq(roles.name, 'superadmin')).limit(1);
+      await upsertRolePermission(db, role!.id, perm.id);
 
-      await UserFactory.create(prisma, { firstName: 'ListUser1' });
-      await UserFactory.create(prisma, { firstName: 'ListUser2' });
+      await UserFactory.create(db, { firstName: 'ListUser1' });
+      await UserFactory.create(db, { firstName: 'ListUser2' });
 
       const res = await request(httpServer)
         .get('/api/v1/users')
@@ -181,20 +176,12 @@ describe('Users API — integration', () => {
     });
 
     it('should search users by name', async () => {
-      const admin = await IdentityFactory.createWithRole(prisma, 'superadmin');
-      const perm = await prisma.permission.upsert({
-        where: { resource_action: { resource: 'users', action: 'read' } },
-        update: {},
-        create: { resource: 'users', action: 'read' },
-      });
-      const role = await prisma.role.findUnique({ where: { name: 'superadmin' } });
-      await prisma.rolePermission.upsert({
-        where: { roleId_permissionId: { roleId: role!.id, permissionId: perm.id } },
-        update: {},
-        create: { roleId: role!.id, permissionId: perm.id },
-      });
+      const admin = await IdentityFactory.createWithRole(db, 'superadmin');
+      const perm = await upsertPermission(db, 'users', 'read');
+      const [role] = await db.select().from(roles).where(eq(roles.name, 'superadmin')).limit(1);
+      await upsertRolePermission(db, role!.id, perm.id);
 
-      await UserFactory.create(prisma, { firstName: 'SearchableUniqueZZZ' });
+      await UserFactory.create(db, { firstName: 'SearchableUniqueZZZ' });
 
       const res = await request(httpServer)
         .get('/api/v1/users')
@@ -209,20 +196,12 @@ describe('Users API — integration', () => {
 
   describe('GET /api/v1/users/:id', () => {
     it('should return a single user', async () => {
-      const admin = await IdentityFactory.createWithRole(prisma, 'superadmin');
-      const perm = await prisma.permission.upsert({
-        where: { resource_action: { resource: 'users', action: 'read' } },
-        update: {},
-        create: { resource: 'users', action: 'read' },
-      });
-      const role = await prisma.role.findUnique({ where: { name: 'superadmin' } });
-      await prisma.rolePermission.upsert({
-        where: { roleId_permissionId: { roleId: role!.id, permissionId: perm.id } },
-        update: {},
-        create: { roleId: role!.id, permissionId: perm.id },
-      });
+      const admin = await IdentityFactory.createWithRole(db, 'superadmin');
+      const perm = await upsertPermission(db, 'users', 'read');
+      const [role] = await db.select().from(roles).where(eq(roles.name, 'superadmin')).limit(1);
+      await upsertRolePermission(db, role!.id, perm.id);
 
-      const user = await UserFactory.create(prisma, { firstName: 'Detail', lastName: 'User' });
+      const user = await UserFactory.create(db, { firstName: 'Detail', lastName: 'User' });
 
       const res = await request(httpServer)
         .get(`/api/v1/users/${user.id}`)
@@ -237,18 +216,10 @@ describe('Users API — integration', () => {
     });
 
     it('should return 404 for nonexistent user', async () => {
-      const admin = await IdentityFactory.createWithRole(prisma, 'superadmin');
-      const perm = await prisma.permission.upsert({
-        where: { resource_action: { resource: 'users', action: 'read' } },
-        update: {},
-        create: { resource: 'users', action: 'read' },
-      });
-      const role = await prisma.role.findUnique({ where: { name: 'superadmin' } });
-      await prisma.rolePermission.upsert({
-        where: { roleId_permissionId: { roleId: role!.id, permissionId: perm.id } },
-        update: {},
-        create: { roleId: role!.id, permissionId: perm.id },
-      });
+      const admin = await IdentityFactory.createWithRole(db, 'superadmin');
+      const perm = await upsertPermission(db, 'users', 'read');
+      const [role] = await db.select().from(roles).where(eq(roles.name, 'superadmin')).limit(1);
+      await upsertRolePermission(db, role!.id, perm.id);
 
       const res = await request(httpServer)
         .get('/api/v1/users/00000000-0000-0000-0000-000000000000')
@@ -260,20 +231,12 @@ describe('Users API — integration', () => {
 
   describe('PATCH /api/v1/users/:id', () => {
     it('should update user profile fields', async () => {
-      const admin = await IdentityFactory.createWithRole(prisma, 'superadmin');
-      const perm = await prisma.permission.upsert({
-        where: { resource_action: { resource: 'users', action: 'update' } },
-        update: {},
-        create: { resource: 'users', action: 'update' },
-      });
-      const role = await prisma.role.findUnique({ where: { name: 'superadmin' } });
-      await prisma.rolePermission.upsert({
-        where: { roleId_permissionId: { roleId: role!.id, permissionId: perm.id } },
-        update: {},
-        create: { roleId: role!.id, permissionId: perm.id },
-      });
+      const admin = await IdentityFactory.createWithRole(db, 'superadmin');
+      const perm = await upsertPermission(db, 'users', 'update');
+      const [role] = await db.select().from(roles).where(eq(roles.name, 'superadmin')).limit(1);
+      await upsertRolePermission(db, role!.id, perm.id);
 
-      const user = await UserFactory.create(prisma, { firstName: 'Before' });
+      const user = await UserFactory.create(db, { firstName: 'Before' });
 
       const res = await request(httpServer)
         .patch(`/api/v1/users/${user.id}`)
@@ -286,20 +249,12 @@ describe('Users API — integration', () => {
     });
 
     it('should reject unknown properties', async () => {
-      const admin = await IdentityFactory.createWithRole(prisma, 'superadmin');
-      const perm = await prisma.permission.upsert({
-        where: { resource_action: { resource: 'users', action: 'update' } },
-        update: {},
-        create: { resource: 'users', action: 'update' },
-      });
-      const role = await prisma.role.findUnique({ where: { name: 'superadmin' } });
-      await prisma.rolePermission.upsert({
-        where: { roleId_permissionId: { roleId: role!.id, permissionId: perm.id } },
-        update: {},
-        create: { roleId: role!.id, permissionId: perm.id },
-      });
+      const admin = await IdentityFactory.createWithRole(db, 'superadmin');
+      const perm = await upsertPermission(db, 'users', 'update');
+      const [role] = await db.select().from(roles).where(eq(roles.name, 'superadmin')).limit(1);
+      await upsertRolePermission(db, role!.id, perm.id);
 
-      const user = await UserFactory.create(prisma);
+      const user = await UserFactory.create(db);
 
       const res = await request(httpServer)
         .patch(`/api/v1/users/${user.id}`)
@@ -312,20 +267,12 @@ describe('Users API — integration', () => {
 
   describe('DELETE /api/v1/users/:id', () => {
     it('should soft-delete a user', async () => {
-      const admin = await IdentityFactory.createWithRole(prisma, 'superadmin');
-      const perm = await prisma.permission.upsert({
-        where: { resource_action: { resource: 'users', action: 'delete' } },
-        update: {},
-        create: { resource: 'users', action: 'delete' },
-      });
-      const role = await prisma.role.findUnique({ where: { name: 'superadmin' } });
-      await prisma.rolePermission.upsert({
-        where: { roleId_permissionId: { roleId: role!.id, permissionId: perm.id } },
-        update: {},
-        create: { roleId: role!.id, permissionId: perm.id },
-      });
+      const admin = await IdentityFactory.createWithRole(db, 'superadmin');
+      const perm = await upsertPermission(db, 'users', 'delete');
+      const [role] = await db.select().from(roles).where(eq(roles.name, 'superadmin')).limit(1);
+      await upsertRolePermission(db, role!.id, perm.id);
 
-      const user = await UserFactory.create(prisma);
+      const user = await UserFactory.create(db);
 
       const res = await request(httpServer)
         .delete(`/api/v1/users/${user.id}`)
@@ -334,7 +281,7 @@ describe('Users API — integration', () => {
       expect(res.status).toBe(204);
 
       // Verify soft-deleted
-      const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+      const [dbUser] = await db.select().from(users).where(eq(users.id, user.id)).limit(1);
       expect(dbUser!.deletedAt).not.toBeNull();
     });
   });

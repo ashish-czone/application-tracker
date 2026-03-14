@@ -4,19 +4,19 @@
   "private": true,
   "main": "index.ts",
   "scripts": {
-    "db:generate": "node scripts/collect-schemas.js && prisma generate",
-    "db:migrate": "node scripts/collect-schemas.js && prisma migrate dev",
-    "db:migrate:deploy": "node scripts/collect-schemas.js && prisma migrate deploy"
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
-    "@prisma/client": "^6.5.0"
-  },
-  "prisma": {
-    "schema": "prisma/schema"
+    "drizzle-orm": "^0.45.1",
+    "pg": "^8.20.0"
   },
   "devDependencies": {
-    "prisma": "^6.5.0",
+    "@types/pg": "^8.18.0",
+    "drizzle-kit": "^0.31.9",
     "typescript": "^5.7.0"
   }
 }

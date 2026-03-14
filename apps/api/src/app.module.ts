@@ -4,15 +4,49 @@ import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { z } from 'zod';
 import path from 'path';
-import { DatabaseModule, PrismaService } from '@packages/database';
+import { DatabaseModule, DatabaseService, settings, eq, and } from '@packages/database';
 import { EventsModule } from '@packages/events';
 import { AuthGuard } from '@packages/auth-nestjs';
 import { RbacGuard } from '@packages/rbac-nestjs';
 import { SettingsNestjsModule, SettingsService, SettingsRegistryService } from '@packages/settings-nestjs';
+import type { SettingDelegate } from '@packages/settings-nestjs';
+import type { DrizzleDB } from '@packages/database';
 import { SettingsModule } from './modules/settings/settings.module';
 import { IdentityModule } from './modules/identity/identity.module';
 import { UsersModule } from './modules/users/users.module';
 import { validate } from './config/env.validation';
+
+function createSettingDelegate(db: DrizzleDB): SettingDelegate {
+  return {
+    async findByModule(module) {
+      return db.select().from(settings).where(eq(settings.module, module));
+    },
+    async upsert(data) {
+      const [existing] = await db
+        .select()
+        .from(settings)
+        .where(and(eq(settings.module, data.module), eq(settings.key, data.key)))
+        .limit(1);
+
+      if (existing) {
+        const [updated] = await db
+          .update(settings)
+          .set({ value: data.value, updatedBy: data.updatedBy })
+          .where(eq(settings.id, existing.id))
+          .returning();
+        return updated;
+      }
+
+      const [created] = await db.insert(settings).values(data).returning();
+      return created;
+    },
+    async deleteByModuleAndKey(module, key) {
+      await db
+        .delete(settings)
+        .where(and(eq(settings.module, module), eq(settings.key, key)));
+    },
+  };
+}
 
 const throttlerSettingsSchema = z.object({
   rateLimitTtl: z.number().min(1000).max(600000).default(60000),
@@ -29,10 +63,10 @@ const throttlerSettingsSchema = z.object({
     DatabaseModule,
     EventsModule,
     SettingsNestjsModule.registerAsync({
-      useFactory: (prisma: PrismaService) => ({
-        getSettingDelegate: () => prisma.setting,
+      useFactory: (database: DatabaseService) => ({
+        getSettingDelegate: () => createSettingDelegate(database.db),
       }),
-      inject: [PrismaService],
+      inject: [DatabaseService],
     }),
     ThrottlerModule.forRootAsync({
       useFactory: async (settingsService: SettingsService) => ([{

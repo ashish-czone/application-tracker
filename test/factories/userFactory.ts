@@ -1,5 +1,6 @@
 import { faker } from '@faker-js/faker';
-import type { PrismaClient } from '@packages/database';
+import type { DrizzleDB } from '@packages/database';
+import { users, identities, eq } from '@packages/database';
 import { IdentityFactory } from './identityFactory';
 
 interface UserOverrides {
@@ -22,16 +23,24 @@ export const UserFactory = {
     };
   },
 
-  async create(prisma: PrismaClient, overrides: UserOverrides = {}) {
-    const identityId = overrides.identityId ?? (await IdentityFactory.create(prisma)).id;
+  async create(db: DrizzleDB, overrides: UserOverrides = {}) {
+    const identityId = overrides.identityId ?? (await IdentityFactory.create(db)).id;
     const profile = this.buildProfile(overrides);
 
-    return prisma.user.create({
-      data: {
+    const [user] = await db
+      .insert(users)
+      .values({
         identityId,
         ...profile,
-      },
-      include: { identity: { select: { email: true } } },
-    });
+      })
+      .returning();
+
+    const [identity] = await db
+      .select({ email: identities.email })
+      .from(identities)
+      .where(eq(identities.id, user.identityId))
+      .limit(1);
+
+    return { ...user, identity: { email: identity.email } };
   },
 };

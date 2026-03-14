@@ -1,6 +1,7 @@
 import { faker } from '@faker-js/faker';
 import { generateRandomToken } from '@packages/auth';
-import type { PrismaClient } from '@packages/database';
+import type { DrizzleDB } from '@packages/database';
+import { passwordTokens } from '@packages/database';
 
 export const PasswordTokenFactory = {
   build(overrides: Record<string, unknown> = {}) {
@@ -12,14 +13,16 @@ export const PasswordTokenFactory = {
     };
   },
 
-  async create(prisma: PrismaClient, overrides: Record<string, unknown> = {}) {
+  async create(db: DrizzleDB, overrides: Record<string, unknown> = {}) {
     const data = this.build(overrides);
-    return prisma.passwordToken.create({
-      data: {
+    const [result] = await db
+      .insert(passwordTokens)
+      .values({
         identityId: data.identityId as string,
         token: data.token as string,
         expiresAt: data.expiresAt as Date,
-      },
-    });
+      })
+      .returning();
+    return result;
   },
 };

@@ -1,48 +1,45 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
 import type { INestApplication } from '@nestjs/common';
-import type { PrismaClient } from '@packages/database';
+import type { DrizzleDB } from '@packages/database';
+import { roles, permissions, rolePermissions, identityRoles, eq, and } from '@packages/database';
 import { createTestApp } from '../../../../../../../../test/utils/app';
 import { cleanDatabase } from '../../../../../../../../test/utils/db';
 import { tokenFor } from '../../../../../../../../test/utils/auth';
 import { IdentityFactory } from '../../../../../../../../test/factories/identityFactory';
 
+async function upsertPermission(db: DrizzleDB, resource: string, action: string, description?: string) {
+  const [existing] = await db.select().from(permissions)
+    .where(and(eq(permissions.resource, resource), eq(permissions.action, action))).limit(1);
+  if (existing) return existing;
+  const [created] = await db.insert(permissions).values({ resource, action, description }).returning();
+  return created;
+}
+
 describe('Roles API — integration', () => {
   let app: INestApplication;
-  let prisma: PrismaClient;
+  let db: DrizzleDB;
   let httpServer: ReturnType<INestApplication['getHttpServer']>;
 
   beforeAll(async () => {
     const testApp = await createTestApp();
     app = testApp.app;
-    prisma = testApp.prisma;
+    db = testApp.db;
     httpServer = testApp.httpServer;
   });
 
   afterAll(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase(db);
     await app.close();
   });
 
   async function createAdminIdentity() {
-    const identity = await IdentityFactory.create(prisma);
+    const identity = await IdentityFactory.create(db);
     const roleName = `admin-${identity.id.slice(0, 8)}`;
-    const role = await prisma.role.create({
-      data: { name: roleName, description: 'Test admin' },
-    });
-    const permission = await prisma.permission.upsert({
-      where: { resource_action: { resource: 'rbac.roles', action: 'manage' } },
-      create: { resource: 'rbac.roles', action: 'manage', description: 'Manage roles' },
-      update: {},
-    });
-    await prisma.rolePermission.upsert({
-      where: { roleId_permissionId: { roleId: role.id, permissionId: permission.id } },
-      create: { roleId: role.id, permissionId: permission.id },
-      update: {},
-    });
-    await prisma.identityRole.create({
-      data: { identityId: identity.id, roleId: role.id },
-    });
+    const [role] = await db.insert(roles).values({ name: roleName, description: 'Test admin' }).returning();
+    const permission = await upsertPermission(db, 'rbac.roles', 'manage', 'Manage roles');
+    await db.insert(rolePermissions).values({ roleId: role.id, permissionId: permission.id }).onConflictDoNothing();
+    await db.insert(identityRoles).values({ identityId: identity.id, roleId: role.id });
     return identity;
   }
 
@@ -63,14 +60,14 @@ describe('Roles API — integration', () => {
         description: 'Can edit content',
       });
 
-      const saved = await prisma.role.findUnique({ where: { id: res.body.id } });
+      const [saved] = await db.select().from(roles).where(eq(roles.id, res.body.id)).limit(1);
       expect(saved).not.toBeNull();
     });
 
     it('should return 409 for duplicate role name', async () => {
       const admin = await createAdminIdentity();
       const name = `dup-${Date.now()}`;
-      await prisma.role.create({ data: { name } });
+      await db.insert(roles).values({ name });
 
       const res = await request(httpServer)
         .post('/api/v1/roles')
@@ -109,7 +106,7 @@ describe('Roles API — integration', () => {
   describe('GET /api/v1/roles/:id', () => {
     it('should return a role by id', async () => {
       const admin = await createAdminIdentity();
-      const role = await prisma.role.create({ data: { name: `viewer-${Date.now()}` } });
+      const [role] = await db.insert(roles).values({ name: `viewer-${Date.now()}` }).returning();
 
       const res = await request(httpServer)
         .get(`/api/v1/roles/${role.id}`)
@@ -133,7 +130,7 @@ describe('Roles API — integration', () => {
   describe('PATCH /api/v1/roles/:id', () => {
     it('should update a role', async () => {
       const admin = await createAdminIdentity();
-      const role = await prisma.role.create({ data: { name: `upd-${Date.now()}` } });
+      const [role] = await db.insert(roles).values({ name: `upd-${Date.now()}` }).returning();
 
       const res = await request(httpServer)
         .patch(`/api/v1/roles/${role.id}`)
@@ -148,7 +145,7 @@ describe('Roles API — integration', () => {
   describe('DELETE /api/v1/roles/:id', () => {
     it('should delete a role and return 204', async () => {
       const admin = await createAdminIdentity();
-      const role = await prisma.role.create({ data: { name: `del-${Date.now()}` } });
+      const [role] = await db.insert(roles).values({ name: `del-${Date.now()}` }).returning();
 
       const res = await request(httpServer)
         .delete(`/api/v1/roles/${role.id}`)
@@ -156,20 +153,16 @@ describe('Roles API — integration', () => {
 
       expect(res.status).toBe(204);
 
-      const deleted = await prisma.role.findUnique({ where: { id: role.id } });
-      expect(deleted).toBeNull();
+      const [deleted] = await db.select().from(roles).where(eq(roles.id, role.id)).limit(1);
+      expect(deleted).toBeUndefined();
     });
   });
 
   describe('PUT /api/v1/roles/:id/permissions', () => {
     it('should set role permissions', async () => {
       const admin = await createAdminIdentity();
-      const role = await prisma.role.create({ data: { name: `perm-${Date.now()}` } });
-      const perm = await prisma.permission.upsert({
-        where: { resource_action: { resource: 'test', action: 'read' } },
-        create: { resource: 'test', action: 'read', description: 'Test read' },
-        update: {},
-      });
+      const [role] = await db.insert(roles).values({ name: `perm-${Date.now()}` }).returning();
+      const perm = await upsertPermission(db, 'test', 'read', 'Test read');
 
       const res = await request(httpServer)
         .put(`/api/v1/roles/${role.id}/permissions`)
@@ -185,7 +178,7 @@ describe('Roles API — integration', () => {
   describe('GET /api/v1/roles/:id/permissions', () => {
     it('should get role permissions', async () => {
       const admin = await createAdminIdentity();
-      const role = await prisma.role.create({ data: { name: `getp-${Date.now()}` } });
+      const [role] = await db.insert(roles).values({ name: `getp-${Date.now()}` }).returning();
 
       const res = await request(httpServer)
         .get(`/api/v1/roles/${role.id}/permissions`)
@@ -199,8 +192,8 @@ describe('Roles API — integration', () => {
   describe('POST /api/v1/roles/identities/:identityId/roles', () => {
     it('should assign role to identity', async () => {
       const admin = await createAdminIdentity();
-      const targetIdentity = await IdentityFactory.create(prisma);
-      const role = await prisma.role.create({ data: { name: `assign-${Date.now()}` } });
+      const targetIdentity = await IdentityFactory.create(db);
+      const [role] = await db.insert(roles).values({ name: `assign-${Date.now()}` }).returning();
 
       const res = await request(httpServer)
         .post(`/api/v1/roles/identities/${targetIdentity.id}/roles`)
@@ -214,9 +207,9 @@ describe('Roles API — integration', () => {
   describe('DELETE /api/v1/roles/identities/:identityId/roles/:roleId', () => {
     it('should remove role from identity', async () => {
       const admin = await createAdminIdentity();
-      const targetIdentity = await IdentityFactory.create(prisma);
-      const role = await prisma.role.create({ data: { name: `rem-${Date.now()}` } });
-      await prisma.identityRole.create({ data: { identityId: targetIdentity.id, roleId: role.id } });
+      const targetIdentity = await IdentityFactory.create(db);
+      const [role] = await db.insert(roles).values({ name: `rem-${Date.now()}` }).returning();
+      await db.insert(identityRoles).values({ identityId: targetIdentity.id, roleId: role.id });
 
       const res = await request(httpServer)
         .delete(`/api/v1/roles/identities/${targetIdentity.id}/roles/${role.id}`)

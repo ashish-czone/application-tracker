@@ -1,11 +1,17 @@
 import { Module, type OnModuleInit } from '@nestjs/common';
 import { AuthNestjsModule } from '@packages/auth-nestjs';
 import { RbacNestjsModule, RbacService, PermissionRegistryService } from '@packages/rbac-nestjs';
-import { PrismaService } from '@packages/database';
+import { DatabaseService } from '@packages/database';
 import { SettingsRegistryService, SettingsService } from '@packages/settings-nestjs';
 import { z } from 'zod';
 import { RolesController } from './rbac/controllers/roles.controller';
 import { PermissionsController } from './rbac/controllers/permissions.controller';
+import {
+  createRoleDelegate,
+  createPermissionDelegate,
+  createRolePermissionDelegate,
+  createIdentityRoleDelegate,
+} from './rbac-delegates';
 
 const identitySettingsSchema = z.object({
   accessTokenExpiresIn: z.string().default('15m'),
@@ -16,14 +22,14 @@ const identitySettingsSchema = z.object({
 @Module({
   imports: [
     RbacNestjsModule.registerAsync({
-      useFactory: (prisma: PrismaService) => ({
+      useFactory: (database: DatabaseService) => ({
         entityName: 'identity',
-        getRoleDelegate: () => prisma.role,
-        getPermissionDelegate: () => prisma.permission,
-        getRolePermissionDelegate: () => prisma.rolePermission,
-        getIdentityRoleDelegate: () => prisma.identityRole,
+        getRoleDelegate: () => createRoleDelegate(database.db),
+        getPermissionDelegate: () => createPermissionDelegate(database.db),
+        getRolePermissionDelegate: () => createRolePermissionDelegate(database.db),
+        getIdentityRoleDelegate: () => createIdentityRoleDelegate(database.db),
       }),
-      inject: [PrismaService],
+      inject: [DatabaseService],
     }),
     AuthNestjsModule.forEntity({
       basePath: 'users/auth',

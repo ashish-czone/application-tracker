@@ -18,7 +18,7 @@ import {
   InvalidTokenError,
 } from '@packages/auth';
 import type { AuthModuleConfig, AuthenticableIdentity } from '@packages/auth';
-import { PrismaService } from '@packages/database';
+import { DatabaseService, identities, passwordTokens, eq } from '@packages/database';
 import { AUTH_MODULE_CONFIG } from '../constants';
 
 @Injectable()
@@ -26,11 +26,19 @@ export class AuthService {
   constructor(
     @Inject(AUTH_MODULE_CONFIG)
     private readonly config: AuthModuleConfig,
-    private readonly prisma: PrismaService,
+    private readonly database: DatabaseService,
   ) {}
 
+  private get db() {
+    return this.database.db;
+  }
+
   async login(email: string, password: string) {
-    const identity = await this.prisma.identity.findUnique({ where: { email: email.toLowerCase() } });
+    const [identity] = await this.db
+      .select()
+      .from(identities)
+      .where(eq(identities.email, email.toLowerCase()))
+      .limit(1);
 
     if (!identity) {
       throw new UnauthorizedException('Invalid email or password');
@@ -45,19 +53,24 @@ export class AuthService {
   }
 
   async register(email: string, password: string) {
-    const existing = await this.prisma.identity.findUnique({ where: { email: email.toLowerCase() } });
+    const [existing] = await this.db
+      .select()
+      .from(identities)
+      .where(eq(identities.email, email.toLowerCase()))
+      .limit(1);
 
     if (existing) {
       throw new ConflictException('Email already registered');
     }
 
     const passwordHash = await hashPassword(password);
-    const identity = await this.prisma.identity.create({
-      data: {
+    const [identity] = await this.db
+      .insert(identities)
+      .values({
         email: email.toLowerCase(),
         passwordHash,
-      },
-    });
+      })
+      .returning();
 
     if (this.config.onIdentityCreated) {
       await this.config.onIdentityCreated(identity);
@@ -82,7 +95,11 @@ export class AuthService {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
-    const identity = await this.prisma.identity.findUnique({ where: { id: payload.sub } });
+    const [identity] = await this.db
+      .select()
+      .from(identities)
+      .where(eq(identities.id, payload.sub))
+      .limit(1);
 
     if (!identity) {
       throw new UnauthorizedException('Identity not found');
@@ -97,10 +114,10 @@ export class AuthService {
     if (!storedHashValid) {
       // Token rotation: old token used after new one was issued
       // Invalidate all refresh tokens for security
-      await this.prisma.identity.update({
-        where: { id: identity.id },
-        data: { refreshToken: null },
-      });
+      await this.db
+        .update(identities)
+        .set({ refreshToken: null })
+        .where(eq(identities.id, identity.id));
       throw new UnauthorizedException('Refresh token reuse detected');
     }
 
@@ -108,14 +125,18 @@ export class AuthService {
   }
 
   async logout(identityId: string) {
-    await this.prisma.identity.update({
-      where: { id: identityId },
-      data: { refreshToken: null },
-    });
+    await this.db
+      .update(identities)
+      .set({ refreshToken: null })
+      .where(eq(identities.id, identityId));
   }
 
   async forgotPassword(email: string) {
-    const identity = await this.prisma.identity.findUnique({ where: { email: email.toLowerCase() } });
+    const [identity] = await this.db
+      .select()
+      .from(identities)
+      .where(eq(identities.email, email.toLowerCase()))
+      .limit(1);
 
     // Always return 200 — don't reveal whether the email exists
     if (!identity) {
@@ -125,12 +146,10 @@ export class AuthService {
     const token = generateRandomToken();
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
-    await this.prisma.passwordToken.create({
-      data: {
-        identityId: identity.id,
-        token,
-        expiresAt,
-      },
+    await this.db.insert(passwordTokens).values({
+      identityId: identity.id,
+      token,
+      expiresAt,
     });
 
     // TODO: enqueue email job via packages/queue
@@ -138,7 +157,11 @@ export class AuthService {
   }
 
   async resetPassword(token: string, newPassword: string) {
-    const record = await this.prisma.passwordToken.findUnique({ where: { token } });
+    const [record] = await this.db
+      .select()
+      .from(passwordTokens)
+      .where(eq(passwordTokens.token, token))
+      .limit(1);
 
     if (!record) {
       throw new BadRequestException('Invalid reset token');
@@ -154,21 +177,25 @@ export class AuthService {
 
     const passwordHash = await hashPassword(newPassword);
 
-    await this.prisma.identity.update({
-      where: { id: record.identityId },
-      data: { passwordHash, refreshToken: null },
-    });
+    await this.db
+      .update(identities)
+      .set({ passwordHash, refreshToken: null })
+      .where(eq(identities.id, record.identityId));
 
-    await this.prisma.passwordToken.update({
-      where: { id: record.id },
-      data: { usedAt: new Date() },
-    });
+    await this.db
+      .update(passwordTokens)
+      .set({ usedAt: new Date() })
+      .where(eq(passwordTokens.id, record.id));
 
     return { message: 'Password reset successfully' };
   }
 
   async getMe(identityId: string) {
-    const identity = await this.prisma.identity.findUnique({ where: { id: identityId } });
+    const [identity] = await this.db
+      .select()
+      .from(identities)
+      .where(eq(identities.id, identityId))
+      .limit(1);
 
     if (!identity) {
       throw new UnauthorizedException('Identity not found');
@@ -206,10 +233,10 @@ export class AuthService {
 
     // SHA-256 hash for refresh token (bcrypt truncates at 72 bytes, JWTs are longer)
     const refreshTokenHash = hashToken(refreshToken);
-    await this.prisma.identity.update({
-      where: { id: identity.id },
-      data: { refreshToken: refreshTokenHash },
-    });
+    await this.db
+      .update(identities)
+      .set({ refreshToken: refreshTokenHash })
+      .where(eq(identities.id, identity.id));
 
     return { accessToken, refreshToken };
   }

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
 import type { INestApplication } from '@nestjs/common';
-import type { PrismaClient } from '@packages/database';
+import type { DrizzleDB } from '@packages/database';
 import { createTestApp } from '../../../../../../../test/utils/app';
 import { cleanDatabase } from '../../../../../../../test/utils/db';
 import { tokenFor, expiredTokenFor } from '../../../../../../../test/utils/auth';
@@ -9,18 +9,18 @@ import { IdentityFactory } from '../../../../../../../test/factories/identityFac
 
 describe('Settings API — security', () => {
   let app: INestApplication;
-  let prisma: PrismaClient;
+  let db: DrizzleDB;
   let httpServer: ReturnType<INestApplication['getHttpServer']>;
 
   beforeAll(async () => {
     const testApp = await createTestApp();
     app = testApp.app;
-    prisma = testApp.prisma;
+    db = testApp.db;
     httpServer = testApp.httpServer;
   });
 
   afterAll(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase(db);
     await app.close();
   });
 
@@ -48,7 +48,7 @@ describe('Settings API — security', () => {
     });
 
     it('should reject expired token', async () => {
-      const identity = await IdentityFactory.create(prisma);
+      const identity = await IdentityFactory.create(db);
 
       const res = await request(httpServer)
         .get('/api/v1/settings')
@@ -60,7 +60,7 @@ describe('Settings API — security', () => {
 
   describe('403 — missing permission', () => {
     it('GET /api/v1/settings — should reject without settings.read permission', async () => {
-      const identity = await IdentityFactory.create(prisma);
+      const identity = await IdentityFactory.create(db);
 
       const res = await request(httpServer)
         .get('/api/v1/settings')
@@ -70,7 +70,7 @@ describe('Settings API — security', () => {
     });
 
     it('PATCH /api/v1/settings/:module — should reject without settings.manage permission', async () => {
-      const identity = await IdentityFactory.create(prisma);
+      const identity = await IdentityFactory.create(db);
 
       const res = await request(httpServer)
         .patch('/api/v1/settings/identity')
@@ -81,7 +81,7 @@ describe('Settings API — security', () => {
     });
 
     it('DELETE /api/v1/settings/:module/:key — should reject without settings.manage permission', async () => {
-      const identity = await IdentityFactory.create(prisma);
+      const identity = await IdentityFactory.create(db);
 
       const res = await request(httpServer)
         .delete('/api/v1/settings/identity/timeout')

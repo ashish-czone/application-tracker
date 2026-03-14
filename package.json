@@ -7,8 +7,10 @@
     "dev": "turbo run dev",
     "lint": "turbo run lint",
     "test": "turbo run test",
-    "db:generate": "turbo run db:generate",
-    "db:migrate": "pnpm --filter @packages/database db:migrate"
+    "db:generate": "pnpm --filter @packages/database db:generate",
+    "db:migrate": "pnpm --filter @packages/database db:migrate",
+    "db:push": "pnpm --filter @packages/database db:push",
+    "db:studio": "pnpm --filter @packages/database db:studio"
   },
   "devDependencies": {
     "@faker-js/faker": "^10.3.0",

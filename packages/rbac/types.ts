@@ -1,57 +1,56 @@
 export interface RoleRecord {
   id: string;
   name: string;
-  description?: string | null;
+  description: string | null;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface PermissionRecord {
   id: string;
   resource: string;
   action: string;
-  description?: string | null;
+  description: string | null;
+  createdAt: Date;
 }
 
 export interface RolePermissionRecord {
   roleId: string;
   permissionId: string;
+  createdAt: Date;
 }
 
 export interface IdentityRoleRecord {
   identityId: string;
   roleId: string;
+  createdAt: Date;
 }
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 export interface RoleDelegate {
-  findUnique(args: any): Promise<any>;
-  findMany(args?: any): Promise<any[]>;
-  create(args: any): Promise<any>;
-  update(args: any): Promise<any>;
-  delete(args: any): Promise<any>;
+  findById(id: string): Promise<RoleRecord | null>;
+  findByName(name: string): Promise<RoleRecord | null>;
+  findAll(orderBy?: { field: string; direction: 'asc' | 'desc' }): Promise<RoleRecord[]>;
+  create(data: { name: string; description?: string }): Promise<RoleRecord>;
+  update(id: string, data: { name?: string; description?: string }): Promise<RoleRecord>;
+  delete(id: string): Promise<void>;
 }
 
 export interface PermissionDelegate {
-  findUnique(args: any): Promise<any>;
-  findMany(args?: any): Promise<any[]>;
-  create(args: any): Promise<any>;
-  upsert(args: any): Promise<any>;
+  findAll(orderBy?: { field: string; direction: 'asc' | 'desc' }): Promise<PermissionRecord[]>;
+  upsert(data: { resource: string; action: string; description?: string }): Promise<PermissionRecord>;
 }
 
 export interface RolePermissionDelegate {
-  findMany(args?: any): Promise<any[]>;
-  createMany(args: any): Promise<{ count: number }>;
-  deleteMany(args: any): Promise<{ count: number }>;
+  findByRoleId(roleId: string): Promise<(RolePermissionRecord & { permission: PermissionRecord })[]>;
+  setForRole(roleId: string, permissionIds: string[]): Promise<void>;
 }
 
 export interface IdentityRoleDelegate {
-  findMany(args?: any): Promise<any[]>;
-  create(args: any): Promise<any>;
-  delete(args: any): Promise<any>;
-  deleteMany(args: any): Promise<{ count: number }>;
+  findByIdentityId(identityId: string): Promise<(IdentityRoleRecord & { role: RoleRecord })[]>;
+  findRoleIdsByIdentityId(identityId: string): Promise<string[]>;
+  create(data: { identityId: string; roleId: string }): Promise<IdentityRoleRecord>;
+  delete(identityId: string, roleId: string): Promise<void>;
 }
-
-/* eslint-enable @typescript-eslint/no-explicit-any */
 
 export interface RbacModuleConfig {
   entityName: string;
