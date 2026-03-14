@@ -63,13 +63,14 @@ describe('UsersService', () => {
     );
   });
 
-  describe('register', () => {
+  describe('create', () => {
     it('should delegate identity creation to AuthService and create user', async () => {
-      const result = await service.register({
+      const result = await service.create({
         email: 'test@example.com',
         password: 'Password123!',
         firstName: 'John',
         lastName: 'Doe',
+        phone: '+15551234567',
       });
 
       expect(mockAuthService.register).toHaveBeenCalledWith('test@example.com', 'Password123!');
@@ -77,76 +78,40 @@ describe('UsersService', () => {
         email: 'test@example.com',
         firstName: 'John',
         lastName: 'Doe',
+        phone: '+15551234567',
       });
       expect(result.accessToken).toBeDefined();
       expect(result.refreshToken).toBeDefined();
 
-      // Verify User record in DB
-      const dbUser = await prisma.user.findFirst({
-        where: { firstName: 'John' },
-      });
+      const dbUser = await prisma.user.findFirst({ where: { firstName: 'John' } });
       expect(dbUser).not.toBeNull();
 
-      // Verify event
       expect(mockEventEmitter.emit).toHaveBeenCalledWith(
         USERS_USER_CREATED,
         expect.objectContaining({
-          payload: expect.objectContaining({
-            registeredSelf: true,
-            firstName: 'John',
-          }),
+          payload: expect.objectContaining({ firstName: 'John', email: 'test@example.com' }),
         }),
       );
     });
 
     it('should propagate ConflictException from AuthService for duplicate email', async () => {
-      await service.register({
+      await service.create({
         email: 'dup@example.com',
         password: 'Password123!',
         firstName: 'First',
         lastName: 'User',
       });
 
-      // AuthService.register will throw ConflictException on duplicate
       mockAuthService.register.mockRejectedValueOnce(new ConflictException('Email already registered'));
 
       await expect(
-        service.register({
+        service.create({
           email: 'dup@example.com',
           password: 'Password123!',
           firstName: 'Second',
           lastName: 'User',
         }),
       ).rejects.toThrow(ConflictException);
-    });
-  });
-
-  describe('create', () => {
-    it('should delegate identity creation to AuthService and return user without tokens', async () => {
-      const result = await service.create({
-        email: 'admin-created@example.com',
-        password: 'Password123!',
-        firstName: 'Admin',
-        lastName: 'Created',
-        phone: '+15551234567',
-      });
-
-      expect(mockAuthService.register).toHaveBeenCalledWith('admin-created@example.com', 'Password123!');
-      expect(result).toMatchObject({
-        email: 'admin-created@example.com',
-        firstName: 'Admin',
-        lastName: 'Created',
-        phone: '+15551234567',
-      });
-      expect(result).not.toHaveProperty('accessToken');
-      expect(result).not.toHaveProperty('refreshToken');
-
-      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
-        USERS_USER_CREATED,
-        expect.objectContaining({
-          payload: expect.objectContaining({ registeredSelf: false }),
-        }),
-      );
     });
   });
 

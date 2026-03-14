@@ -15,7 +15,7 @@ import {
 import { Throttle } from '@nestjs/throttler';
 import type { Response } from 'express';
 import { RequirePermission } from '@packages/rbac-nestjs';
-import { Public } from '@packages/auth-nestjs';
+import { Public, setRefreshCookie } from '@packages/auth-nestjs';
 import { UsersService } from '../services/users.service';
 import { USERS_PERMISSIONS } from '../permissions';
 import { RegisterUserDto } from '../dto/register-user.dto';
@@ -35,16 +35,17 @@ export class UsersController {
     @Body() dto: RegisterUserDto,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const result = await this.usersService.register(dto);
-    this.setRefreshCookie(res, result.refreshToken);
-    return { user: result.user, accessToken: result.accessToken };
+    const { user, accessToken, refreshToken } = await this.usersService.create(dto);
+    setRefreshCookie(res, 'user', refreshToken);
+    return { user, accessToken };
   }
 
   @Post()
   @RequirePermission(USERS_PERMISSIONS.CREATE)
   @HttpCode(HttpStatus.CREATED)
   async create(@Body() dto: CreateUserDto) {
-    return this.usersService.create(dto);
+    const { user } = await this.usersService.create(dto);
+    return user;
   }
 
   @Get()
@@ -73,15 +74,5 @@ export class UsersController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(@Param('id', ParseUUIDPipe) id: string) {
     await this.usersService.softDelete(id);
-  }
-
-  private setRefreshCookie(res: Response, token: string) {
-    res.cookie('refresh_token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      path: '/',
-    });
   }
 }

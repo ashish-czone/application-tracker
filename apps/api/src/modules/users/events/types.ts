@@ -11,7 +11,6 @@ export interface UserCreatedEvent extends DomainEvent {
     email: string;
     firstName: string;
     lastName: string;
-    registeredSelf: boolean;
   };
 }
 

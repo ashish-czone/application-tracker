@@ -21,6 +21,7 @@ import { RegisterDto } from '../dto/register.dto';
 import { ForgotPasswordDto } from '../dto/forgot-password.dto';
 import { ResetPasswordDto } from '../dto/reset-password.dto';
 import { AUTH_MODULE_CONFIG } from '../constants';
+import { setRefreshCookie, getRefreshCookie, clearRefreshCookie } from '../utils/refresh-cookie';
 
 @Controller()
 export class AuthController {
@@ -42,7 +43,7 @@ export class AuthController {
       dto.email,
       dto.password,
     );
-    this.setRefreshCookie(res, refreshToken);
+    setRefreshCookie(res, this.config.entityName, refreshToken);
     return { accessToken };
   }
 
@@ -61,7 +62,7 @@ export class AuthController {
       dto.email,
       dto.password,
     );
-    this.setRefreshCookie(res, refreshToken);
+    setRefreshCookie(res, this.config.entityName, refreshToken);
     return { accessToken };
   }
 
@@ -72,11 +73,11 @@ export class AuthController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const refreshTokenValue = req.cookies?.['refresh_token'];
+    const refreshTokenValue = getRefreshCookie(req, this.config.entityName);
     const { accessToken, refreshToken } = await this.authService.refresh(
       refreshTokenValue,
     );
-    this.setRefreshCookie(res, refreshToken);
+    setRefreshCookie(res, this.config.entityName, refreshToken);
     return { accessToken };
   }
 
@@ -87,7 +88,7 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     await this.authService.logout(identity.id);
-    res.clearCookie('refresh_token');
+    clearRefreshCookie(res, this.config.entityName);
     return { message: 'Logged out' };
   }
 
@@ -109,15 +110,5 @@ export class AuthController {
   @Get('me')
   async getMe(@CurrentIdentity() identity: AuthenticableIdentity) {
     return this.authService.getMe(identity.id);
-  }
-
-  private setRefreshCookie(res: Response, token: string) {
-    res.cookie('refresh_token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      path: '/',
-    });
   }
 }

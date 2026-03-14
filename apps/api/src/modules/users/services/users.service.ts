@@ -11,13 +11,6 @@ import {
   USERS_USER_DELETED,
 } from '../events/types';
 
-interface RegisterInput {
-  email: string;
-  password: string;
-  firstName: string;
-  lastName: string;
-}
-
 interface CreateUserInput {
   email: string;
   password: string;
@@ -50,35 +43,8 @@ export class UsersService {
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
-  async register(input: RegisterInput) {
-    const { accessToken, refreshToken, identity } = await this.authService.register(
-      input.email,
-      input.password,
-    );
-
-    const user = await this.prisma.user.create({
-      data: {
-        identityId: identity.id,
-        firstName: input.firstName,
-        lastName: input.lastName,
-      },
-    });
-
-    this.emitEvent(USERS_USER_CREATED, {
-      entityId: user.id,
-      actorId: identity.id,
-      payload: { email: identity.email, firstName: input.firstName, lastName: input.lastName, registeredSelf: true },
-    });
-
-    return {
-      user: this.toUserResponse(user, identity.email),
-      accessToken,
-      refreshToken,
-    };
-  }
-
   async create(input: CreateUserInput) {
-    const { identity } = await this.authService.register(
+    const { accessToken, refreshToken, identity } = await this.authService.register(
       input.email,
       input.password,
     );
@@ -95,10 +61,14 @@ export class UsersService {
     this.emitEvent(USERS_USER_CREATED, {
       entityId: user.id,
       actorId: identity.id,
-      payload: { email: identity.email, firstName: input.firstName, lastName: input.lastName, registeredSelf: false },
+      payload: { email: identity.email, firstName: input.firstName, lastName: input.lastName },
     });
 
-    return this.toUserResponse(user, identity.email);
+    return {
+      user: this.toUserResponse(user, identity.email),
+      accessToken,
+      refreshToken,
+    };
   }
 
   async findAll(query: ListUsersQuery) {
