@@ -5,7 +5,7 @@ import type { PrismaClient } from '@prisma/client';
 import { createTestApp } from '../../../../../../../../test/utils/app';
 import { cleanDatabase } from '../../../../../../../../test/utils/db';
 import { tokenFor, expiredTokenFor } from '../../../../../../../../test/utils/auth';
-import { UserFactory } from '../../../../../../../../test/factories/userFactory';
+import { IdentityFactory } from '../../../../../../../../test/factories/identityFactory';
 
 describe('Roles API — security', () => {
   let app: INestApplication;
@@ -33,31 +33,31 @@ describe('Roles API — security', () => {
   });
 
   it('should return 401 with expired token', async () => {
-    const user = await UserFactory.create(prisma);
+    const identity = await IdentityFactory.create(prisma);
 
     const res = await request(httpServer)
       .get('/api/v1/roles')
-      .set('Authorization', `Bearer ${expiredTokenFor(user)}`);
+      .set('Authorization', `Bearer ${expiredTokenFor(identity)}`);
 
     expect(res.status).toBe(401);
   });
 
   it('should return 403 without rbac.roles.manage permission', async () => {
-    const user = await UserFactory.create(prisma);
+    const identity = await IdentityFactory.create(prisma);
 
     const res = await request(httpServer)
       .get('/api/v1/roles')
-      .set('Authorization', `Bearer ${tokenFor(user)}`);
+      .set('Authorization', `Bearer ${tokenFor(identity)}`);
 
     expect(res.status).toBe(403);
   });
 
   it('should include permissions array in GET /auth/me response', async () => {
-    const user = await UserFactory.create(prisma);
+    const identity = await IdentityFactory.create(prisma);
 
     const res = await request(httpServer)
       .get('/api/v1/auth/me')
-      .set('Authorization', `Bearer ${tokenFor(user)}`);
+      .set('Authorization', `Bearer ${tokenFor(identity)}`);
 
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('permissions');
