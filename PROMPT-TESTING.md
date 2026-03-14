@@ -9,7 +9,7 @@ This document defines the testing stack, test types, patterns, and coverage expe
 - **Test runner:** Vitest (backend + frontend — one runner, one config pattern)
 - **Backend integration:** Vitest + `@nestjs/testing` + Supertest
 - **Frontend components:** Vitest + React Testing Library + happy-dom
-- **E2E:** Playwright (critical flows only)
+- **E2E:** Playwright (comprehensive per-module coverage)
 - **Test data:** Factory functions with Faker.js
 - **Database:** Real Postgres + Redis in all tests. Never mock the database.
 - **No Jest. No Enzyme. No snapshot testing.**
@@ -64,19 +64,35 @@ features/candidates/components/__tests__/CandidateForm.test.tsx
 
 ### E2E tests (Playwright)
 
-Only the most critical user flows. Not comprehensive. These protect against full-stack integration regressions that other test types miss.
+Every module gets E2E tests. These protect against full-stack integration regressions that unit and integration tests miss — broken wiring, incorrect API responses rendered in the UI, navigation failures, and cross-module interactions.
 
 ```
 e2e/auth.spec.ts
-e2e/candidate-submission.spec.ts
+e2e/candidates.spec.ts
+e2e/orders.spec.ts
+e2e/settings.spec.ts
 ```
 
-Typical E2E scope:
+#### Required E2E coverage per module
+
+Every module that has a UI surface must have E2E tests covering:
+
+- **CRUD happy path** — create → read (list + detail) → update → delete for every primary entity
+- **Validation** — submit forms with invalid/missing data → verify error messages render correctly
+- **RBAC** — unauthorized user tries to access module pages → redirected or shown 403
+- **Navigation** — sidebar/breadcrumb navigation to and within the module works
+- **Search & filtering** — if the module has list views with search/filter, test at least one filter combination
+- **Pagination** — if the module has paginated lists, test page navigation (next, previous, specific page)
+- **State transitions** — if the module has status/workflow changes, test each transition through the UI
+- **Cross-module interactions** — if the module references entities from another module (e.g., assigning a candidate to an order), test the full flow
+
+#### Platform-wide E2E flows (always required)
 
 - Login → session → logout
-- Core CRUD happy path (create → read → update → delete) for the primary entity
+- Login with invalid credentials → error message
+- Session expiry → modal or redirect
 - RBAC redirect (unauthorized user tries protected page → redirected)
-- One or two critical business flows specific to the application
+- Settings changes propagate to affected modules
 
 ---
 
@@ -137,7 +153,7 @@ e2e/
 
 ### Real database, no mocks
 
-All integration and security tests run against a real Postgres and Redis instance. CI provides these as service containers (see PROMPT-INFRA.md). Never mock the database — mock/prod divergence masks real bugs.
+All integration and security tests run against a real Postgres and Redis instance. Never mock the database — mock/prod divergence masks real bugs.
 
 ### Cleanup via truncation
 
@@ -649,7 +665,25 @@ describe('CandidateForm', () => {
 
 ## 10. E2E Test Pattern (Playwright)
 
-E2E tests cover critical user flows end-to-end. They run against a fully deployed stack (API + web + DB + Redis).
+E2E tests cover every module's user flows end-to-end. They run against a fully deployed stack (API + web + DB + Redis). Every module with a UI surface gets its own E2E spec file.
+
+### File organization
+
+One spec file per module, plus shared platform specs:
+
+```
+e2e/
+  fixtures/
+    auth.fixture.ts         # login helper, role-based user sessions
+    seed.ts                 # seed data for E2E (users, roles, sample entities)
+  auth.spec.ts              # platform: login, logout, session expiry
+  candidates.spec.ts        # module: full CRUD + module-specific flows
+  orders.spec.ts            # module: full CRUD + module-specific flows
+  settings.spec.ts          # module: settings CRUD + propagation
+  playwright.config.ts
+```
+
+### Platform E2E example
 
 ```ts
 // e2e/auth.spec.ts
@@ -666,6 +700,16 @@ test.describe('Authentication', () => {
     await expect(page.getByText('Welcome')).toBeVisible();
   });
 
+  test('should show error for invalid credentials', async ({ page }) => {
+    await page.goto('/login');
+    await page.getByLabel('Email').fill('admin@example.com');
+    await page.getByLabel('Password').fill('wrongpassword');
+    await page.getByRole('button', { name: 'Sign in' }).click();
+
+    await expect(page.getByText(/invalid/i)).toBeVisible();
+    await expect(page).toHaveURL('/login');
+  });
+
   test('should redirect unauthenticated user to login', async ({ page }) => {
     await page.goto('/candidates');
     await expect(page).toHaveURL(/\/login/);
@@ -678,13 +722,189 @@ test.describe('Authentication', () => {
 });
 ```
 
+### Module E2E example
+
+Every module spec follows this structure — CRUD, validation, RBAC, filtering, and module-specific flows:
+
+```ts
+// e2e/candidates.spec.ts
+import { test, expect } from '@playwright/test';
+import { loginAs } from './fixtures/auth.fixture';
+
+test.describe('Candidates module', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, 'recruiter');
+  });
+
+  // --- CRUD ---
+
+  test('should create a new candidate', async ({ page }) => {
+    await page.goto('/candidates');
+    await page.getByRole('button', { name: /create/i }).click();
+
+    await page.getByLabel('Name').fill('Jane Doe');
+    await page.getByLabel('Email').fill('jane@example.com');
+    await page.getByRole('button', { name: /save/i }).click();
+
+    await expect(page.getByText('Jane Doe')).toBeVisible();
+  });
+
+  test('should view candidate details', async ({ page }) => {
+    await page.goto('/candidates');
+    await page.getByRole('link', { name: /jane doe/i }).click();
+
+    await expect(page).toHaveURL(/\/candidates\/[\w-]+/);
+    await expect(page.getByText('jane@example.com')).toBeVisible();
+  });
+
+  test('should update a candidate', async ({ page }) => {
+    await page.goto('/candidates');
+    await page.getByRole('link', { name: /jane doe/i }).click();
+    await page.getByRole('button', { name: /edit/i }).click();
+
+    await page.getByLabel('Name').clear();
+    await page.getByLabel('Name').fill('Jane Smith');
+    await page.getByRole('button', { name: /save/i }).click();
+
+    await expect(page.getByText('Jane Smith')).toBeVisible();
+  });
+
+  test('should delete a candidate', async ({ page }) => {
+    await page.goto('/candidates');
+    await page.getByRole('link', { name: /jane smith/i }).click();
+    await page.getByRole('button', { name: /delete/i }).click();
+    await page.getByRole('button', { name: /confirm/i }).click();
+
+    await expect(page).toHaveURL('/candidates');
+    await expect(page.getByText('Jane Smith')).not.toBeVisible();
+  });
+
+  // --- Validation ---
+
+  test('should show validation errors for empty form', async ({ page }) => {
+    await page.goto('/candidates');
+    await page.getByRole('button', { name: /create/i }).click();
+    await page.getByRole('button', { name: /save/i }).click();
+
+    await expect(page.getByText(/name is required/i)).toBeVisible();
+    await expect(page.getByText(/email is required/i)).toBeVisible();
+  });
+
+  test('should show error for invalid email format', async ({ page }) => {
+    await page.goto('/candidates');
+    await page.getByRole('button', { name: /create/i }).click();
+    await page.getByLabel('Name').fill('Test User');
+    await page.getByLabel('Email').fill('not-an-email');
+    await page.getByRole('button', { name: /save/i }).click();
+
+    await expect(page.getByText(/valid email/i)).toBeVisible();
+  });
+
+  // --- RBAC ---
+
+  test('should deny access to viewer role', async ({ page }) => {
+    await loginAs(page, 'viewer');
+    await page.goto('/candidates');
+
+    // Verify create button is not visible or page shows 403
+    await expect(page.getByRole('button', { name: /create/i })).not.toBeVisible();
+  });
+
+  // --- Search & filtering ---
+
+  test('should filter candidates by status', async ({ page }) => {
+    await page.goto('/candidates');
+    await page.getByRole('combobox', { name: /status/i }).selectOption('active');
+
+    // Verify filtered results
+    const rows = page.getByRole('row');
+    await expect(rows).not.toHaveCount(0);
+  });
+
+  test('should search candidates by name', async ({ page }) => {
+    await page.goto('/candidates');
+    await page.getByPlaceholder(/search/i).fill('Jane');
+
+    await expect(page.getByText('Jane')).toBeVisible();
+  });
+
+  // --- Pagination ---
+
+  test('should navigate between pages', async ({ page }) => {
+    await page.goto('/candidates');
+    await page.getByRole('button', { name: /next/i }).click();
+
+    await expect(page.getByText(/page 2/i)).toBeVisible();
+  });
+
+  // --- Module-specific flows ---
+
+  test('should submit candidate to an order', async ({ page }) => {
+    await page.goto('/candidates');
+    await page.getByRole('link', { name: /jane doe/i }).click();
+    await page.getByRole('button', { name: /submit to order/i }).click();
+    await page.getByRole('combobox', { name: /order/i }).selectOption('Order #1');
+    await page.getByRole('button', { name: /confirm/i }).click();
+
+    await expect(page.getByText(/submitted/i)).toBeVisible();
+  });
+
+  // --- Cross-module interactions ---
+
+  test('should navigate from candidate to linked order', async ({ page }) => {
+    await page.goto('/candidates');
+    await page.getByRole('link', { name: /jane doe/i }).click();
+    await page.getByRole('link', { name: /order #1/i }).click();
+
+    await expect(page).toHaveURL(/\/orders\/[\w-]+/);
+  });
+});
+```
+
+### E2E fixtures
+
+Shared helpers reduce duplication across spec files:
+
+```ts
+// e2e/fixtures/auth.fixture.ts
+import { Page } from '@playwright/test';
+
+const USERS = {
+  admin: { email: 'admin@example.com', password: 'password123' },
+  recruiter: { email: 'recruiter@example.com', password: 'password123' },
+  viewer: { email: 'viewer@example.com', password: 'password123' },
+};
+
+export async function loginAs(page: Page, role: keyof typeof USERS) {
+  const user = USERS[role];
+  await page.goto('/login');
+  await page.getByLabel('Email').fill(user.email);
+  await page.getByLabel('Password').fill(user.password);
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  await page.waitForURL('/dashboard');
+}
+```
+
+```ts
+// e2e/fixtures/seed.ts
+// Seed script that runs before E2E suite — creates users, roles, and sample entities
+// Run via playwright.config.ts globalSetup
+export async function seedE2E() {
+  // Create test users with known credentials and roles
+  // Create sample entities for each module (enough to test pagination, filtering, etc.)
+}
+```
+
 ### Rules
 
-1. **Only test critical flows.** Auth, core CRUD, RBAC redirect, one or two business-critical flows. Not every feature.
-2. **Use a seeded test environment.** E2E tests run against a known state — seed specific users and data before the suite.
-3. **Tests must be independent.** Each test sets up its own preconditions. Never depend on execution order.
+1. **Every module with a UI gets E2E tests.** Not just critical flows — cover CRUD, validation, RBAC, search/filter, pagination, state transitions, and cross-module interactions.
+2. **Use a seeded test environment.** E2E tests run against a known state — seed specific users, roles, and sample entities before the suite via `globalSetup`.
+3. **Tests must be independent.** Each test sets up its own preconditions or relies on seed data. Never depend on execution order.
 4. **Use Playwright locators** — `getByRole`, `getByLabel`, `getByText`. Same philosophy as React Testing Library.
-5. **Run E2E in CI but not on every push.** Run on merge to main or on a schedule. They're slow and flaky-prone.
+5. **All E2E tests must pass before merging to main.** A pre-merge hook enforces this — no skipping.
+6. **Use fixtures for common operations.** Login, navigation, entity creation — extract to `e2e/fixtures/` to avoid duplication.
+7. **Test error states, not just happy paths.** Network errors, empty states, concurrent edits, and form validation failures should all be exercised.
+8. **One spec file per module.** Keep module E2E tests cohesive. Use `test.describe` blocks within the file to group by concern (CRUD, validation, RBAC, etc.).
 
 ---
 
@@ -763,16 +983,22 @@ No hard percentage targets. Coverage metrics incentivize testing trivial code wh
 | Validation (400) | Every POST/PATCH endpoint tested with invalid input |
 | Happy path | Every endpoint has at least one success case |
 | Race conditions | Every endpoint with uniqueness/capacity constraints |
-| E2E | Auth flow + core business flow |
+| E2E — platform | Auth flow (login, logout, session expiry, invalid credentials) |
+| E2E — per module | CRUD, validation, RBAC, search/filter, pagination, state transitions, cross-module interactions |
 
-### CI enforcement
+### Pre-merge enforcement
 
-- All tests must pass. No exceptions.
-- No `it.skip` on security tests — lint rule to catch this.
-- Coverage report is generated and uploaded as a PR artifact for review. **No minimum threshold gate.**
+There is no CI pipeline. Instead, a hook ensures Claude runs all tests before merging any PR to main. Before merging:
+
+1. **Run all unit tests** — `npx turbo run test --filter='@packages/*'`
+2. **Run all integration tests** — `pnpm --filter @apps/api test`
+3. **Run all E2E tests** — `pnpm --filter @apps/web e2e` (or `npx playwright test`)
+4. **All tests must pass. No exceptions.** Do not merge if any test fails — fix the failure first.
+5. **Never skip tests.** No `it.skip`, no `describe.skip`, no `test.skip`, no `xtest`, no `xit` — not even temporarily. If a test fails because of a previous change, fix the test or fix the code that broke it. Skipping masks regressions.
 
 ### PR discipline
 
 - Every PR that adds an endpoint also adds its integration + security tests.
+- Every PR that adds a new module with a UI surface also adds its E2E spec file covering CRUD, validation, and RBAC at minimum.
 - Every PR that fixes a bug adds a regression test proving the fix.
 - Tests are reviewed with the same scrutiny as production code.
