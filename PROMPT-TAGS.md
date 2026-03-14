@@ -46,7 +46,7 @@ Depends on infrastructure that must be built first:
 - `packages/rbac` (guards, decorators)
 - `packages/auth-nestjs` (auth guard)
 - `packages/common` (`PaginatedResponse<T>`)
-- `apps/api/src/modules/admin` (module shell for CRUD controllers)
+- A dedicated module under `apps/api/src/modules/` for the taxonomy CRUD controllers
 - Test infrastructure (`test/utils/`, `test/factories/`, `test/setup/`)
 
 ---
@@ -262,21 +262,21 @@ interface ListTagsFilter {
 
 ---
 
-## Admin API Endpoints
+## Taxonomy API Endpoints
 
 ```
-GET    /api/v1/admin/tag-types                     # List (paginated)
-POST   /api/v1/admin/tag-types                     # Create
-GET    /api/v1/admin/tag-types/:id                 # Get by ID
-PATCH  /api/v1/admin/tag-types/:id                 # Update
-DELETE /api/v1/admin/tag-types/:id                 # Soft delete
+GET    /api/v1/tag-types                     # List (paginated)
+POST   /api/v1/tag-types                     # Create
+GET    /api/v1/tag-types/:id                 # Get by ID
+PATCH  /api/v1/tag-types/:id                 # Update
+DELETE /api/v1/tag-types/:id                 # Soft delete
 
-GET    /api/v1/admin/tag-types/:slug/tags          # List tags for type
-POST   /api/v1/admin/tag-types/:slug/tags          # Create tag under type
-GET    /api/v1/admin/tags/:id                      # Get tag by ID
-PATCH  /api/v1/admin/tags/:id                      # Update tag
-DELETE /api/v1/admin/tags/:id                      # Soft delete tag
-PATCH  /api/v1/admin/tag-types/:slug/tags/reorder  # Reorder tags
+GET    /api/v1/tag-types/:slug/tags          # List tags for type
+POST   /api/v1/tag-types/:slug/tags          # Create tag under type
+GET    /api/v1/tags/:id                      # Get tag by ID
+PATCH  /api/v1/tags/:id                      # Update tag
+DELETE /api/v1/tags/:id                      # Soft delete tag
+PATCH  /api/v1/tag-types/:slug/tags/reorder  # Reorder tags
 ```
 
 ### Permissions
@@ -294,7 +294,7 @@ export const TAXONOMY_PERMISSIONS = {
 } as const;
 ```
 
-### DTOs (in modules/admin/dto/)
+### DTOs (in modules/taxonomy/dto/)
 
 **CreateTagTypeDto:** slug (`@Matches(/^[a-z0-9-]+$/)`), name, description?, isSystem?, allowMultiple?, isHierarchical?
 
@@ -306,10 +306,10 @@ export const TAXONOMY_PERMISSIONS = {
 
 ---
 
-## Admin Files
+## Taxonomy Module Files
 
 ```
-apps/api/src/modules/admin/
+apps/api/src/modules/taxonomy/
   controllers/
     tag-types.controller.ts
     tags.controller.ts
@@ -328,6 +328,8 @@ apps/api/src/modules/admin/
       update-tag.dto.ts
       list-tags-query.dto.ts
       reorder-tags.dto.ts
+  permissions.ts
+  taxonomy.module.ts
 ```
 
 ---
@@ -380,12 +382,12 @@ Each task = its own branch -> implement -> PR -> merge -> next task.
 
 | # | Branch | What | Tests |
 |---|---|---|---|
-| 0 | `chore/monorepo-foundation` | Root config, packages/database, apps/api, rbac, auth stubs, admin shell, test infra | — |
+| 0 | `chore/monorepo-foundation` | Root config, packages/database, apps/api, rbac, auth stubs, test infra | — |
 | 1 | `feat/taxonomy-schema` | schema.prisma + migration | — |
 | 2 | `feat/taxonomy-tag-type-service` | TagTypeService + types + NestJS module | 12 unit tests |
 | 3 | `feat/taxonomy-tag-service` | TagService | 15 unit tests |
 | 4 | `feat/taxonomy-tagging-service` | TaggingService (delegate pattern) | 16 unit tests |
-| 5 | `feat/taxonomy-admin-api` | Controllers + DTOs + permissions | 20 integration + 14 security tests |
+| 5 | `feat/taxonomy-api` | Controllers + DTOs + permissions in `modules/taxonomy/` | 20 integration + 14 security tests |
 | 6 | `feat/taxonomy-seed-data` | Seed script for system tag types | — |
 
 **Dependency chain:** `0 → 1 → 2 → 3 → 4 → 5 → 6` (strictly sequential)
