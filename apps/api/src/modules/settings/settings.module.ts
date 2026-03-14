@@ -5,7 +5,7 @@ import { SettingsController } from './controllers/settings.controller';
 @Module({
   controllers: [SettingsController],
 })
-export class AdminModule implements OnModuleInit {
+export class SettingsModule implements OnModuleInit {
   constructor(private readonly permissionRegistry: PermissionRegistryService) {}
 
   onModuleInit() {

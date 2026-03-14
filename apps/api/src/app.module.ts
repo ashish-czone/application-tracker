@@ -9,7 +9,7 @@ import { EventsModule } from '@packages/events';
 import { AuthGuard } from '@packages/auth-nestjs';
 import { RbacGuard } from '@packages/rbac-nestjs';
 import { SettingsNestjsModule, SettingsService, SettingsRegistryService } from '@packages/settings';
-import { AdminModule } from './modules/admin/admin.module';
+import { SettingsModule } from './modules/settings/settings.module';
 import { IdentityModule } from './modules/identity/identity.module';
 import { UsersModule } from './modules/users/users.module';
 import { validate } from './config/env.validation';
@@ -43,7 +43,7 @@ const throttlerSettingsSchema = z.object({
     }),
     IdentityModule,
     UsersModule,
-    AdminModule,
+    SettingsModule,
   ],
   providers: [
     {

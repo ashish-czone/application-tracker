@@ -20,6 +20,11 @@ const ResetPasswordPage = lazy(() =>
     default: m.ResetPasswordPage,
   })),
 );
+const SettingsPage = lazy(() =>
+  import('@modules/settings/pages/SettingsPage').then((m) => ({
+    default: m.SettingsPage,
+  })),
+);
 
 function PageSkeleton() {
   return (
@@ -97,6 +102,7 @@ export function AppRouter() {
         <Route element={<AuthGuard />}>
           <Route element={<AppLayout />}>
             <Route path="/" element={<DashboardPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
           </Route>
         </Route>
       </Routes>
