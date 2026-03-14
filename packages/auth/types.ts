@@ -30,36 +30,8 @@ export interface AuthModuleConfig {
   accessTokenExpiresIn: string;
   refreshTokenExpiresIn: string;
   jwtSecret: string;
-  getIdentityDelegate: () => AuthIdentityDelegate;
-  getPasswordTokenDelegate: () => AuthPasswordTokenDelegate;
   enrichIdentityProfile?: (identity: AuthenticableIdentity) => Promise<Record<string, unknown>>;
   onIdentityCreated?: (identity: AuthenticableIdentity) => Promise<void>;
   /** Configure which built-in routes are enabled. All enabled by default. */
   routes?: AuthRouteConfig;
-}
-
-export interface AuthIdentityDelegate {
-  findUnique(args: {
-    where: { id?: string; email?: string };
-  }): Promise<AuthenticableIdentity | null>;
-  update(args: {
-    where: { id: string };
-    data: Partial<AuthenticableIdentity>;
-  }): Promise<AuthenticableIdentity>;
-  create(args: {
-    data: Omit<AuthenticableIdentity, 'id'>;
-  }): Promise<AuthenticableIdentity>;
-}
-
-export interface AuthPasswordTokenDelegate {
-  findUnique(args: {
-    where: { token?: string; id?: string };
-  }): Promise<PasswordTokenRecord | null>;
-  create(args: {
-    data: Omit<PasswordTokenRecord, 'id' | 'usedAt'>;
-  }): Promise<PasswordTokenRecord>;
-  update(args: {
-    where: { id: string };
-    data: Partial<PasswordTokenRecord>;
-  }): Promise<PasswordTokenRecord>;
 }

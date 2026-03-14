@@ -18,6 +18,7 @@ import {
   InvalidTokenError,
 } from '@packages/auth';
 import type { AuthModuleConfig, AuthenticableIdentity } from '@packages/auth';
+import { PrismaService } from '@packages/database';
 import { AUTH_MODULE_CONFIG } from '../constants';
 
 @Injectable()
@@ -25,11 +26,11 @@ export class AuthService {
   constructor(
     @Inject(AUTH_MODULE_CONFIG)
     private readonly config: AuthModuleConfig,
+    private readonly prisma: PrismaService,
   ) {}
 
   async login(email: string, password: string) {
-    const identityDelegate = this.config.getIdentityDelegate();
-    const identity = await identityDelegate.findUnique({ where: { email: email.toLowerCase() } });
+    const identity = await this.prisma.identity.findUnique({ where: { email: email.toLowerCase() } });
 
     if (!identity) {
       throw new UnauthorizedException('Invalid email or password');
@@ -44,15 +45,14 @@ export class AuthService {
   }
 
   async register(email: string, password: string) {
-    const identityDelegate = this.config.getIdentityDelegate();
-    const existing = await identityDelegate.findUnique({ where: { email: email.toLowerCase() } });
+    const existing = await this.prisma.identity.findUnique({ where: { email: email.toLowerCase() } });
 
     if (existing) {
       throw new ConflictException('Email already registered');
     }
 
     const passwordHash = await hashPassword(password);
-    const identity = await identityDelegate.create({
+    const identity = await this.prisma.identity.create({
       data: {
         email: email.toLowerCase(),
         passwordHash,
@@ -82,8 +82,7 @@ export class AuthService {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
-    const identityDelegate = this.config.getIdentityDelegate();
-    const identity = await identityDelegate.findUnique({ where: { id: payload.sub } });
+    const identity = await this.prisma.identity.findUnique({ where: { id: payload.sub } });
 
     if (!identity) {
       throw new UnauthorizedException('Identity not found');
@@ -98,7 +97,7 @@ export class AuthService {
     if (!storedHashValid) {
       // Token rotation: old token used after new one was issued
       // Invalidate all refresh tokens for security
-      await identityDelegate.update({
+      await this.prisma.identity.update({
         where: { id: identity.id },
         data: { refreshToken: null },
       });
@@ -109,16 +108,14 @@ export class AuthService {
   }
 
   async logout(identityId: string) {
-    const identityDelegate = this.config.getIdentityDelegate();
-    await identityDelegate.update({
+    await this.prisma.identity.update({
       where: { id: identityId },
       data: { refreshToken: null },
     });
   }
 
   async forgotPassword(email: string) {
-    const identityDelegate = this.config.getIdentityDelegate();
-    const identity = await identityDelegate.findUnique({ where: { email: email.toLowerCase() } });
+    const identity = await this.prisma.identity.findUnique({ where: { email: email.toLowerCase() } });
 
     // Always return 200 — don't reveal whether the email exists
     if (!identity) {
@@ -128,8 +125,7 @@ export class AuthService {
     const token = generateRandomToken();
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
-    const passwordTokenDelegate = this.config.getPasswordTokenDelegate();
-    await passwordTokenDelegate.create({
+    await this.prisma.passwordToken.create({
       data: {
         identityId: identity.id,
         token,
@@ -142,8 +138,7 @@ export class AuthService {
   }
 
   async resetPassword(token: string, newPassword: string) {
-    const passwordTokenDelegate = this.config.getPasswordTokenDelegate();
-    const record = await passwordTokenDelegate.findUnique({ where: { token } });
+    const record = await this.prisma.passwordToken.findUnique({ where: { token } });
 
     if (!record) {
       throw new BadRequestException('Invalid reset token');
@@ -158,14 +153,13 @@ export class AuthService {
     }
 
     const passwordHash = await hashPassword(newPassword);
-    const identityDelegate = this.config.getIdentityDelegate();
 
-    await identityDelegate.update({
+    await this.prisma.identity.update({
       where: { id: record.identityId },
       data: { passwordHash, refreshToken: null },
     });
 
-    await passwordTokenDelegate.update({
+    await this.prisma.passwordToken.update({
       where: { id: record.id },
       data: { usedAt: new Date() },
     });
@@ -174,8 +168,7 @@ export class AuthService {
   }
 
   async getMe(identityId: string) {
-    const identityDelegate = this.config.getIdentityDelegate();
-    const identity = await identityDelegate.findUnique({ where: { id: identityId } });
+    const identity = await this.prisma.identity.findUnique({ where: { id: identityId } });
 
     if (!identity) {
       throw new UnauthorizedException('Identity not found');
@@ -213,8 +206,7 @@ export class AuthService {
 
     // SHA-256 hash for refresh token (bcrypt truncates at 72 bytes, JWTs are longer)
     const refreshTokenHash = hashToken(refreshToken);
-    const identityDelegate = this.config.getIdentityDelegate();
-    await identityDelegate.update({
+    await this.prisma.identity.update({
       where: { id: identity.id },
       data: { refreshToken: refreshTokenHash },
     });

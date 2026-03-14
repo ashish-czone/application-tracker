@@ -39,18 +39,16 @@ export class AuthNestjsModule {
    * AuthNestjsModule.forEntity({
    *   basePath: 'users/auth',
    *   routes: { register: false },
-   *   useFactory: (prisma, rbacService) => ({
-   *     entityName: 'user',
+   *   useFactory: (rbacService, settingsService) => ({
+   *     entityName: 'identity',
    *     jwtSecret: process.env.JWT_SECRET!,
    *     accessTokenExpiresIn: '15m',
    *     refreshTokenExpiresIn: '7d',
-   *     getIdentityDelegate: () => prisma.identity,
-   *     getPasswordTokenDelegate: () => prisma.passwordToken,
    *     enrichIdentityProfile: async (identity) => ({
    *       permissions: await rbacService.getIdentityPermissions(identity.id),
    *     }),
    *   }),
-   *   inject: [PrismaService, RbacService],
+   *   inject: [RbacService, SettingsService],
    * })
    */
   static forEntity(options: ForEntityOptions): DynamicModule {

@@ -13,6 +13,4 @@ export type {
   TokenPayload,
   AuthModuleConfig,
   AuthRouteConfig,
-  AuthIdentityDelegate,
-  AuthPasswordTokenDelegate,
 } from './types';
