@@ -137,7 +137,7 @@ Break features into these standard tasks. Skip tasks that don't apply. Never com
 
 | Task | What's included | Tests included |
 |---|---|---|
-| 1. Schema | Prisma schema + migration | — |
+| 1. Schema | Drizzle schema + migration | — |
 | 2. Service | Service layer + business logic | Unit tests |
 | 3. API | Controller + DTOs + route wiring | Integration tests + security tests |
 | 4. Events | Event types + emission in service + side-effect wiring | Race condition tests (if applicable) |

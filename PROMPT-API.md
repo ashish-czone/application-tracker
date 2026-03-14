@@ -180,7 +180,7 @@ Use a standard paginated wrapper:
 
 ### Rules
 
-1. **Timestamps are ISO 8601 UTC strings** (`2026-03-12T14:30:00.000Z`). Stored as `timestamptz` in Postgres, `DateTime` in Prisma. Used for: `createdAt`, `updatedAt`, `deletedAt`, event times, login times — anything that represents a moment in time. **Calendar dates** (date of birth, start date, anniversary) are plain `DATE` in Postgres, `String` in Prisma (`@db.Date`), transmitted as `YYYY-MM-DD` strings (`"2026-03-12"`). No timezone conversion — a DOB of March 12 is March 12 everywhere. Never store calendar dates as `timestamptz`.
+1. **Timestamps are ISO 8601 UTC strings** (`2026-03-12T14:30:00.000Z`). Stored as `timestamptz` in Postgres, `timestamp('...', { withTimezone: true, mode: 'date' })` in Drizzle. Used for: `createdAt`, `updatedAt`, `deletedAt`, event times, login times — anything that represents a moment in time. **Calendar dates** (date of birth, start date, anniversary) are plain `DATE` in Postgres, `date('...', { mode: 'string' })` in Drizzle, transmitted as `YYYY-MM-DD` strings (`"2026-03-12"`). No timezone conversion — a DOB of March 12 is March 12 everywhere. Never store calendar dates as `timestamptz`.
 2. **All IDs are UUIDs.** Never expose auto-increment IDs.
 3. **Never expose internal fields** — passwords, hashes, internal flags, soft-delete timestamps (unless the consumer needs them).
 4. **Null vs absent:** Include the field with `null` if the field exists but has no value. Omit the field only if it genuinely doesn't apply to this resource type.
@@ -516,7 +516,7 @@ app.enableCors({
 1. **HTTPS only in production.** Enforce via reverse proxy or `hsts` header.
 2. **Never put sensitive data in URLs** — no tokens, passwords, or PII in query params. They appear in logs, browser history, and referrer headers.
 3. **Sanitize all string inputs.** Strip HTML/script tags to prevent stored XSS. Use a sanitization pipe or interceptor.
-4. **Parameterized queries only.** Prisma handles this by default — never concatenate user input into raw SQL.
+4. **Parameterized queries only.** Drizzle handles this by default via its query builder — never concatenate user input into raw SQL.
 5. **Validate file uploads:** check MIME type, file extension, and file size at the controller level before passing to `packages/files`.
 6. **Environment variables** for all secrets. Never hardcode credentials, API keys, or connection strings.
 
@@ -574,17 +574,17 @@ SwaggerModule.setup('docs', app, document);
 
 Never hard-delete user-facing data. Use a `deletedAt` timestamp:
 
-```prisma
-model Candidate {
-  id        String    @id @default(uuid())
-  name      String
-  deletedAt DateTime?
-}
+```ts
+export const candidates = pgTable('candidates', {
+  id: text('id').primaryKey().$defaultFn(() => randomUUID()),
+  name: text('name').notNull(),
+  deletedAt: timestamp('deletedAt', { withTimezone: true, mode: 'date' }),
+});
 ```
 
 ### Rules
 
-1. **All queries filter out soft-deleted records by default.** Use Prisma middleware or a base query helper that adds `where: { deletedAt: null }`.
+1. **All queries filter out soft-deleted records by default.** Add `isNull(table.deletedAt)` to all query where clauses.
 2. **DELETE endpoints set `deletedAt = now()`.** They return 204.
 3. **Soft-deleted records are excluded from unique constraints** in application logic (DB-level unique indexes may need partial indexes).
 4. **Hard deletes are admin-only** — used only for GDPR/compliance data erasure requests, via a dedicated admin endpoint.

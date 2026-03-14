@@ -644,14 +644,14 @@ jobs:
           script: |
             cd /app
             docker compose pull
-            docker compose run --rm api npx prisma migrate deploy
+            docker compose run --rm api npx drizzle-kit migrate
             docker compose up -d --remove-orphans
             docker image prune -f
 ```
 
 ### Rules
 
-1. **Migrations run before the new code starts.** The deploy script pulls new images, runs `prisma migrate deploy`, then restarts services.
+1. **Migrations run before the new code starts.** The deploy script pulls new images, runs `drizzle-kit migrate`, then restarts services.
 2. **Never skip lint or tests.** A merge to main is blocked unless all stages pass.
 3. **Docker images are tagged with `latest` and the git SHA** for rollback capability.
 4. **Secrets (server host, SSH key) are stored in GitHub Actions secrets**, never in the workflow file.
@@ -662,14 +662,14 @@ jobs:
 
 ### Migration workflow
 
-- Developers create migrations locally: `pnpm --filter @packages/database db:migrate`.
-- Migration files are committed to git in `packages/database/prisma/migrations/`.
-- CI/deploy runs `prisma migrate deploy` (applies pending migrations, never creates new ones).
+- Developers create migrations locally: `pnpm --filter @packages/database db:generate` (generates SQL), then `pnpm --filter @packages/database db:migrate` (applies it).
+- Migration files are committed to git in `packages/database/drizzle/`.
+- CI/deploy runs `drizzle-kit migrate` (applies pending migrations, never creates new ones).
 - **Migrations are forward-only.** Never edit a deployed migration. Create a new migration to fix issues.
 
 ### Connection pooling
 
-For production with multiple API instances, use Prisma's built-in connection pooling or PgBouncer to avoid exhausting the database connection limit.
+For production with multiple API instances, use PgBouncer or the `pg` Pool's `max` configuration to avoid exhausting the database connection limit.
 
 ### Backups (production)
 
