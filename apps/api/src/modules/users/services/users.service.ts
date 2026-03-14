@@ -1,24 +1,15 @@
 import {
   Injectable,
-  ConflictException,
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '@packages/database';
-import {
-  hashPassword,
-  generateAccessToken,
-  generateRefreshToken,
-  hashToken,
-} from '@packages/auth';
+import { AuthService } from '@packages/auth-nestjs';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { RbacService } from '@packages/rbac-nestjs';
-import { SettingsService } from '@packages/settings-nestjs';
 import {
   USERS_USER_CREATED,
   USERS_USER_UPDATED,
   USERS_USER_DELETED,
 } from '../events/types';
-import type { UserCreatedEvent } from '../events/types';
 
 interface RegisterInput {
   email: string;
@@ -55,35 +46,57 @@ interface ListUsersQuery {
 export class UsersService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rbacService: RbacService,
-    private readonly settingsService: SettingsService,
+    private readonly authService: AuthService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async register(input: RegisterInput) {
-    const { identity, user } = await this.createIdentityAndUser({
-      email: input.email,
-      password: input.password,
-      firstName: input.firstName,
-      lastName: input.lastName,
+    const { accessToken, refreshToken, identity } = await this.authService.register(
+      input.email,
+      input.password,
+    );
+
+    const user = await this.prisma.user.create({
+      data: {
+        identityId: identity.id,
+        firstName: input.firstName,
+        lastName: input.lastName,
+      },
     });
 
-    await this.rbacService.bootstrapSuperadmin(identity.id);
-
-    const tokens = await this.generateTokensAndStore(identity);
-
-    this.emitCreatedEvent(user.id, identity.id, identity.email, input.firstName, input.lastName, true);
+    this.emitEvent(USERS_USER_CREATED, {
+      entityId: user.id,
+      actorId: identity.id,
+      payload: { email: identity.email, firstName: input.firstName, lastName: input.lastName, registeredSelf: true },
+    });
 
     return {
       user: this.toUserResponse(user, identity.email),
-      ...tokens,
+      accessToken,
+      refreshToken,
     };
   }
 
   async create(input: CreateUserInput) {
-    const { identity, user } = await this.createIdentityAndUser(input);
+    const { identity } = await this.authService.register(
+      input.email,
+      input.password,
+    );
 
-    this.emitCreatedEvent(user.id, identity.id, identity.email, input.firstName, input.lastName, false);
+    const user = await this.prisma.user.create({
+      data: {
+        identityId: identity.id,
+        firstName: input.firstName,
+        lastName: input.lastName,
+        phone: input.phone,
+      },
+    });
+
+    this.emitEvent(USERS_USER_CREATED, {
+      entityId: user.id,
+      actorId: identity.id,
+      payload: { email: identity.email, firstName: input.firstName, lastName: input.lastName, registeredSelf: false },
+    });
 
     return this.toUserResponse(user, identity.email);
   }
@@ -106,7 +119,6 @@ export class UsersService {
       ];
     }
 
-    // Build orderBy — handle email sorting via identity relation
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let orderBy: any;
     if (sort === 'email') {
@@ -185,18 +197,12 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
-    const now = new Date();
+    await this.prisma.user.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
 
-    await this.prisma.$transaction([
-      this.prisma.user.update({
-        where: { id },
-        data: { deletedAt: now },
-      }),
-      this.prisma.identity.update({
-        where: { id: user.identityId },
-        data: { refreshToken: null },
-      }),
-    ]);
+    await this.authService.logout(user.identityId);
 
     this.emitEvent(USERS_USER_DELETED, {
       entityId: id,
@@ -205,95 +211,11 @@ export class UsersService {
     });
   }
 
-  private async createIdentityAndUser(input: {
-    email: string;
-    password: string;
-    firstName: string;
-    lastName: string;
-    phone?: string;
-  }) {
-    const existing = await this.prisma.identity.findUnique({
-      where: { email: input.email.toLowerCase() },
-    });
-
-    if (existing) {
-      throw new ConflictException('Email already registered');
-    }
-
-    const passwordHash = await hashPassword(input.password);
-
-    return this.prisma.$transaction(async (tx) => {
-      const identity = await tx.identity.create({
-        data: {
-          email: input.email.toLowerCase(),
-          passwordHash,
-        },
-      });
-
-      const user = await tx.user.create({
-        data: {
-          identityId: identity.id,
-          firstName: input.firstName,
-          lastName: input.lastName,
-          phone: input.phone,
-        },
-      });
-
-      return { identity, user };
-    });
-  }
-
-  private async generateTokensAndStore(identity: { id: string; email: string }) {
-    const jwtSecret = process.env.JWT_SECRET!;
-    const accessTokenExpiresIn = await this.settingsService.get(
-      'identity',
-      'accessTokenExpiresIn',
-      '15m',
-    );
-    const refreshTokenExpiresIn = await this.settingsService.get(
-      'identity',
-      'refreshTokenExpiresIn',
-      '7d',
-    );
-
-    const payload = {
-      sub: identity.id,
-      email: identity.email,
-      entityName: 'identity',
-    };
-
-    const accessToken = generateAccessToken(payload, jwtSecret, accessTokenExpiresIn);
-    const refreshToken = generateRefreshToken(payload, jwtSecret, refreshTokenExpiresIn);
-
-    const refreshTokenHash = hashToken(refreshToken);
-    await this.prisma.identity.update({
-      where: { id: identity.id },
-      data: { refreshToken: refreshTokenHash },
-    });
-
-    return { accessToken, refreshToken };
-  }
-
-  private emitCreatedEvent(
-    userId: string,
-    actorId: string,
-    email: string,
-    firstName: string,
-    lastName: string,
-    registeredSelf: boolean,
-  ) {
-    this.emitEvent<UserCreatedEvent>(USERS_USER_CREATED, {
-      entityId: userId,
-      actorId,
-      payload: { email, firstName, lastName, registeredSelf },
-    });
-  }
-
   private emitEvent(
     eventName: string,
     data: { entityId: string; actorId: string; payload: Record<string, unknown> },
   ) {
-    const event = {
+    this.eventEmitter.emit(eventName, {
       eventName,
       entityType: 'user',
       entityId: data.entityId,
@@ -301,8 +223,7 @@ export class UsersService {
       correlationId: '',
       occurredAt: new Date().toISOString(),
       payload: data.payload,
-    };
-    this.eventEmitter.emit(eventName, event);
+    });
   }
 
   private toUserResponse(

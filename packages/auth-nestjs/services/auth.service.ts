@@ -63,7 +63,8 @@ export class AuthService {
       await this.config.onIdentityCreated(identity);
     }
 
-    return this.generateTokensAndStore(identity);
+    const tokens = await this.generateTokensAndStore(identity);
+    return { ...tokens, identity: { id: identity.id, email: identity.email } };
   }
 
   async refresh(refreshTokenValue: string | undefined) {
