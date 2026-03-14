@@ -256,12 +256,12 @@ describe('POST /api/v1/candidates', () => {
 
   describe('happy path', () => {
     it('should create a candidate and return 201', async () => {
-      const user = await UserFactory.create(prisma, { role: 'recruiter' });
+      const identity = await IdentityFactory.createWithRole(prisma, 'recruiter');
       const body = CandidateFactory.build();
 
       const res = await request(app.getHttpServer())
         .post('/api/v1/candidates')
-        .set('Authorization', `Bearer ${tokenFor(user)}`)
+        .set('Authorization', `Bearer ${tokenFor(identity)}`)
         .send(body);
 
       expect(res.status).toBe(201);
@@ -280,11 +280,11 @@ describe('POST /api/v1/candidates', () => {
 
   describe('validation', () => {
     it('should return 400 for missing required fields', async () => {
-      const user = await UserFactory.create(prisma, { role: 'recruiter' });
+      const identity = await IdentityFactory.createWithRole(prisma, 'recruiter');
 
       const res = await request(app.getHttpServer())
         .post('/api/v1/candidates')
-        .set('Authorization', `Bearer ${tokenFor(user)}`)
+        .set('Authorization', `Bearer ${tokenFor(identity)}`)
         .send({});
 
       expect(res.status).toBe(400);
@@ -297,12 +297,12 @@ describe('POST /api/v1/candidates', () => {
     });
 
     it('should return 400 for unknown properties', async () => {
-      const user = await UserFactory.create(prisma, { role: 'recruiter' });
+      const identity = await IdentityFactory.createWithRole(prisma, 'recruiter');
       const body = { ...CandidateFactory.build(), hackerField: 'injected' };
 
       const res = await request(app.getHttpServer())
         .post('/api/v1/candidates')
-        .set('Authorization', `Bearer ${tokenFor(user)}`)
+        .set('Authorization', `Bearer ${tokenFor(identity)}`)
         .send(body);
 
       expect(res.status).toBe(400);
@@ -316,7 +316,7 @@ describe('POST /api/v1/candidates', () => {
 1. **Configure the test app identically to production.** Same global prefix, pipes, guards, interceptors. Tests that skip production middleware give false confidence.
 2. **Verify both the HTTP response AND the DB state.** A 201 response means nothing if the data wasn't actually persisted correctly.
 3. **Test validation thoroughly.** Missing fields, invalid formats, boundary values (min/max length), unknown properties (should be rejected by `forbidNonWhitelisted`).
-4. **Use a `tokenFor(user)` helper** that generates a valid JWT for any test user. Never hardcode tokens.
+4. **Use a `tokenFor(identity)` helper** that generates a valid JWT for any test user. Never hardcode tokens.
 
 ---
 
@@ -335,36 +335,36 @@ describe('POST /api/v1/candidates — security', () => {
   });
 
   it('should return 401 with expired token', async () => {
-    const user = await UserFactory.create(prisma, { role: 'recruiter' });
+    const identity = await IdentityFactory.createWithRole(prisma, 'recruiter');
 
     const res = await request(app.getHttpServer())
       .post('/api/v1/candidates')
-      .set('Authorization', `Bearer ${expiredTokenFor(user)}`)
+      .set('Authorization', `Bearer ${expiredTokenFor(identity)}`)
       .send(CandidateFactory.build());
 
     expect(res.status).toBe(401);
   });
 
   it('should return 403 without candidates.create permission', async () => {
-    const user = await UserFactory.create(prisma, { role: 'viewer' });
+    const identity = await IdentityFactory.createWithRole(prisma, 'viewer');
 
     const res = await request(app.getHttpServer())
       .post('/api/v1/candidates')
-      .set('Authorization', `Bearer ${tokenFor(user)}`)
+      .set('Authorization', `Bearer ${tokenFor(identity)}`)
       .send(CandidateFactory.build());
 
     expect(res.status).toBe(403);
   });
 
   it('should not expose soft-deleted records', async () => {
-    const user = await UserFactory.create(prisma, { role: 'recruiter' });
+    const identity = await IdentityFactory.createWithRole(prisma, 'recruiter');
     const candidate = await CandidateFactory.create(prisma, {
       deletedAt: new Date(),
     });
 
     const res = await request(app.getHttpServer())
       .get(`/api/v1/candidates/${candidate.id}`)
-      .set('Authorization', `Bearer ${tokenFor(user)}`);
+      .set('Authorization', `Bearer ${tokenFor(identity)}`);
 
     expect(res.status).toBe(404);
   });
@@ -395,7 +395,7 @@ Any endpoint that accepts or returns user data must verify:
 it('should never return password in user response', async () => {
   const res = await request(app.getHttpServer())
     .get('/api/v1/auth/me')
-    .set('Authorization', `Bearer ${tokenFor(user)}`);
+    .set('Authorization', `Bearer ${tokenFor(identity)}`);
 
   expect(res.body).not.toHaveProperty('password');
   expect(res.body).not.toHaveProperty('passwordHash');
@@ -420,7 +420,7 @@ Test concurrent access to shared resources. These catch bugs that only appear un
 ```ts
 describe('POST /api/v1/candidates/:id/submit — race conditions', () => {
   it('should not double-submit a candidate to the same order', async () => {
-    const user = await UserFactory.create(prisma, { role: 'recruiter' });
+    const identity = await IdentityFactory.createWithRole(prisma, 'recruiter');
     const order = await OrderFactory.create(prisma);
     const candidate = await CandidateFactory.create(prisma);
 
@@ -428,11 +428,11 @@ describe('POST /api/v1/candidates/:id/submit — race conditions', () => {
     const [res1, res2] = await Promise.all([
       request(app.getHttpServer())
         .post(`/api/v1/candidates/${candidate.id}/submit`)
-        .set('Authorization', `Bearer ${tokenFor(user)}`)
+        .set('Authorization', `Bearer ${tokenFor(identity)}`)
         .send({ orderId: order.id }),
       request(app.getHttpServer())
         .post(`/api/v1/candidates/${candidate.id}/submit`)
-        .set('Authorization', `Bearer ${tokenFor(user)}`)
+        .set('Authorization', `Bearer ${tokenFor(identity)}`)
         .send({ orderId: order.id }),
     ]);
 
@@ -448,7 +448,7 @@ describe('POST /api/v1/candidates/:id/submit — race conditions', () => {
   });
 
   it('should not exceed order capacity under concurrent submissions', async () => {
-    const user = await UserFactory.create(prisma, { role: 'recruiter' });
+    const identity = await IdentityFactory.createWithRole(prisma, 'recruiter');
     const order = await OrderFactory.create(prisma, { capacity: 1 });
     const candidates = await Promise.all(
       Array.from({ length: 5 }, () => CandidateFactory.create(prisma)),
@@ -458,7 +458,7 @@ describe('POST /api/v1/candidates/:id/submit — race conditions', () => {
       candidates.map((c) =>
         request(app.getHttpServer())
           .post(`/api/v1/candidates/${c.id}/submit`)
-          .set('Authorization', `Bearer ${tokenFor(user)}`)
+          .set('Authorization', `Bearer ${tokenFor(identity)}`)
           .send({ orderId: order.id }),
       ),
     );
@@ -695,12 +695,12 @@ Shared test utilities live in `test/` at the root:
 ```
 test/
   factories/
-    userFactory.ts
+    identityFactory.ts
     candidateFactory.ts
     orderFactory.ts
   utils/
     db.ts              # cleanDatabase()
-    auth.ts            # tokenFor(user), expiredTokenFor(user)
+    auth.ts            # tokenFor(identity), expiredTokenFor(identity)
     app.ts             # createTestApp() — bootstraps NestJS with production config
   setup/
     globalSetup.ts     # runs migrations, seeds RBAC

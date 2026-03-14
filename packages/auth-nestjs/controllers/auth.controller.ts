@@ -13,7 +13,7 @@ import { Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
 import type { AuthModuleConfig, AuthenticableIdentity } from '@packages/auth';
 import { Public } from '../decorators/public.decorator';
-import { CurrentIdentity } from '../decorators/current-user.decorator';
+import { CurrentIdentity } from '../decorators/current-identity.decorator';
 import { AuthService } from '../services/auth.service';
 import { LoginDto } from '../dto/login.dto';
 import { RegisterDto } from '../dto/register.dto';

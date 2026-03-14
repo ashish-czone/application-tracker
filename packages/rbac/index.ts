@@ -3,10 +3,10 @@ export type {
   RoleRecord,
   PermissionRecord,
   RolePermissionRecord,
-  UserRoleRecord,
+  IdentityRoleRecord,
   RoleDelegate,
   PermissionDelegate,
   RolePermissionDelegate,
-  UserRoleDelegate,
+  IdentityRoleDelegate,
   RbacModuleConfig,
 } from './types';

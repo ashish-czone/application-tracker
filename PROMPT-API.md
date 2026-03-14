@@ -66,9 +66,9 @@ export class CandidatesController {
   @HttpCode(HttpStatus.CREATED)
   async create(
     @Body() dto: CreateCandidateDto,
-    @CurrentUser() user: AuthUser,
+    @CurrentIdentity() identity: AuthenticableIdentity,
   ) {
-    return this.candidatesService.create(dto, user.id);
+    return this.candidatesService.create(dto, identity.id);
   }
 
   @Get(':id')
@@ -85,7 +85,7 @@ export class CandidatesController {
 2. **Inject only the module's own services.** Controllers never import services from other modules — that cross-module call belongs in the service layer.
 3. **Use parameter pipes** for path params: `ParseUUIDPipe`, `ParseIntPipe`, etc.
 4. **Use `@HttpCode()`** to set correct status codes when they differ from NestJS defaults (e.g., `POST` defaults to 201, which is correct; `DELETE` should return 204).
-5. **Extract the authenticated user** via a `@CurrentUser()` decorator, never from the raw request object.
+5. **Extract the authenticated identity** via a `@CurrentIdentity()` decorator, never from the raw request object.
 
 ---
 
@@ -349,14 +349,14 @@ A global `AuthGuard` validates the access token on every request except explicit
 async login(@Body() dto: LoginDto) { ... }
 ```
 
-### `@CurrentUser()` decorator
+### `@CurrentIdentity()` decorator
 
-Extracts the authenticated user from the request. Every authenticated endpoint receives the user without manual request parsing:
+Extracts the authenticated identity from the request. Every authenticated endpoint receives the identity without manual request parsing:
 
 ```ts
 @Get('me')
-async getProfile(@CurrentUser() user: AuthUser) {
-  return user;
+async getProfile(@CurrentIdentity() identity: AuthenticableIdentity) {
+  return identity;
 }
 ```
 
