@@ -149,10 +149,11 @@ Break features into these standard tasks. Skip tasks that don't apply. Never com
 | 5. API layer | API functions + TanStack Query hooks | — |
 | 6. Components | Feature components (forms, tables, cards) | Component tests (for complex components) |
 | 7. Pages | Page containers + route wiring | — |
+| 8. E2E | Playwright spec covering CRUD, validation, RBAC, search/filter, pagination, state transitions, cross-module interactions | E2E tests |
 
 ### Full-stack feature
 
-Tasks 1–7 in order. Backend first, then frontend.
+Tasks 1–8 in order. Backend first, then frontend, then E2E.
 
 ### Infrastructure change
 
