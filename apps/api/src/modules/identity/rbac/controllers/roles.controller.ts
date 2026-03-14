@@ -12,6 +12,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { RbacService, RequirePermission } from '@packages/rbac-nestjs';
+import { IDENTITY_PERMISSIONS } from '../../permissions';
 import { CreateRoleDto } from '../dto/create-role.dto';
 import { UpdateRoleDto } from '../dto/update-role.dto';
 import { SetRolePermissionsDto } from '../dto/set-role-permissions.dto';
@@ -22,26 +23,26 @@ export class RolesController {
   constructor(private readonly rbacService: RbacService) {}
 
   @Post()
-  @RequirePermission('rbac.roles.manage')
+  @RequirePermission(IDENTITY_PERMISSIONS.ROLES_MANAGE)
   @HttpCode(HttpStatus.CREATED)
   async create(@Body() dto: CreateRoleDto) {
     return this.rbacService.createRole(dto.name, dto.description);
   }
 
   @Get()
-  @RequirePermission('rbac.roles.manage')
+  @RequirePermission(IDENTITY_PERMISSIONS.ROLES_MANAGE)
   async findAll() {
     return this.rbacService.findAllRoles();
   }
 
   @Get(':id')
-  @RequirePermission('rbac.roles.manage')
+  @RequirePermission(IDENTITY_PERMISSIONS.ROLES_MANAGE)
   async findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.rbacService.findRoleById(id);
   }
 
   @Patch(':id')
-  @RequirePermission('rbac.roles.manage')
+  @RequirePermission(IDENTITY_PERMISSIONS.ROLES_MANAGE)
   async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateRoleDto,
@@ -50,20 +51,20 @@ export class RolesController {
   }
 
   @Delete(':id')
-  @RequirePermission('rbac.roles.manage')
+  @RequirePermission(IDENTITY_PERMISSIONS.ROLES_MANAGE)
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(@Param('id', ParseUUIDPipe) id: string) {
     await this.rbacService.deleteRole(id);
   }
 
   @Get(':id/permissions')
-  @RequirePermission('rbac.roles.manage')
+  @RequirePermission(IDENTITY_PERMISSIONS.ROLES_MANAGE)
   async getRolePermissions(@Param('id', ParseUUIDPipe) id: string) {
     return this.rbacService.getRolePermissions(id);
   }
 
   @Put(':id/permissions')
-  @RequirePermission('rbac.roles.manage')
+  @RequirePermission(IDENTITY_PERMISSIONS.ROLES_MANAGE)
   @HttpCode(HttpStatus.OK)
   async setRolePermissions(
     @Param('id', ParseUUIDPipe) id: string,
@@ -74,13 +75,13 @@ export class RolesController {
   }
 
   @Get('/identities/:identityId/roles')
-  @RequirePermission('rbac.roles.manage')
+  @RequirePermission(IDENTITY_PERMISSIONS.ROLES_MANAGE)
   async getIdentityRoles(@Param('identityId', ParseUUIDPipe) identityId: string) {
     return this.rbacService.getIdentityRoles(identityId);
   }
 
   @Post('/identities/:identityId/roles')
-  @RequirePermission('rbac.roles.manage')
+  @RequirePermission(IDENTITY_PERMISSIONS.ROLES_MANAGE)
   @HttpCode(HttpStatus.CREATED)
   async assignRole(
     @Param('identityId', ParseUUIDPipe) identityId: string,
@@ -90,7 +91,7 @@ export class RolesController {
   }
 
   @Delete('/identities/:identityId/roles/:roleId')
-  @RequirePermission('rbac.roles.manage')
+  @RequirePermission(IDENTITY_PERMISSIONS.ROLES_MANAGE)
   @HttpCode(HttpStatus.NO_CONTENT)
   async removeRole(
     @Param('identityId', ParseUUIDPipe) identityId: string,
