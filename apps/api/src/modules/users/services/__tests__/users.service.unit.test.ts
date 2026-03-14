@@ -1,7 +1,8 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { PrismaClient } from '@packages/database';
 import { UsersService } from '../users.service';
+import { USERS_USER_CREATED, USERS_USER_UPDATED, USERS_USER_DELETED } from '../../events/types';
 import { UserFactory } from '../../../../../../../test/factories/userFactory';
 import { cleanDatabase } from '../../../../../../../test/utils/db';
 
@@ -18,11 +19,16 @@ const mockSettingsService = {
   get: async (_module: string, _key: string, defaultValue: string) => defaultValue,
 };
 
+const mockEventEmitter = {
+  emit: vi.fn(),
+};
+
 function createService() {
   return new UsersService(
     prisma as any,
     mockRbacService as any,
     mockSettingsService as any,
+    mockEventEmitter as any,
   );
 }
 
@@ -40,6 +46,7 @@ describe('UsersService', () => {
 
   beforeEach(async () => {
     await cleanDatabase(prisma);
+    mockEventEmitter.emit.mockClear();
     service = createService();
   });
 
@@ -68,6 +75,21 @@ describe('UsersService', () => {
       expect(dbUser).not.toBeNull();
       expect(dbUser!.identity.email).toBe('test@example.com');
       expect(dbUser!.identity.passwordHash).not.toBe('Password123!');
+
+      // Verify event emitted
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+        USERS_USER_CREATED,
+        expect.objectContaining({
+          eventName: USERS_USER_CREATED,
+          entityType: 'user',
+          payload: expect.objectContaining({
+            email: 'test@example.com',
+            firstName: 'John',
+            lastName: 'Doe',
+            registeredSelf: true,
+          }),
+        }),
+      );
     });
 
     it('should lowercase email', async () => {
@@ -118,6 +140,14 @@ describe('UsersService', () => {
       });
       expect(result).not.toHaveProperty('accessToken');
       expect(result).not.toHaveProperty('refreshToken');
+
+      // Verify event emitted with registeredSelf: false
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+        USERS_USER_CREATED,
+        expect.objectContaining({
+          payload: expect.objectContaining({ registeredSelf: false }),
+        }),
+      );
     });
 
     it('should throw ConflictException for duplicate email', async () => {
@@ -244,6 +274,16 @@ describe('UsersService', () => {
         phone: '+15559876543',
         timezone: 'America/New_York',
       });
+
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+        USERS_USER_UPDATED,
+        expect.objectContaining({
+          entityId: user.id,
+          payload: expect.objectContaining({
+            updatedFields: expect.arrayContaining(['firstName', 'lastName', 'phone', 'timezone']),
+          }),
+        }),
+      );
     });
 
     it('should throw NotFoundException for nonexistent user', async () => {
@@ -280,12 +320,22 @@ describe('UsersService', () => {
         where: { id: user.identityId },
       });
       expect(dbIdentity!.refreshToken).toBeNull();
+
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+        USERS_USER_DELETED,
+        expect.objectContaining({
+          entityId: user.id,
+          payload: expect.objectContaining({ email: user.identity.email }),
+        }),
+      );
     });
 
-    it('should throw NotFoundException for nonexistent user', async () => {
+    it('should not emit event on failure', async () => {
       await expect(
         service.softDelete('00000000-0000-0000-0000-000000000000'),
       ).rejects.toThrow(NotFoundException);
+
+      expect(mockEventEmitter.emit).not.toHaveBeenCalled();
     });
 
     it('should throw NotFoundException for already-deleted user', async () => {

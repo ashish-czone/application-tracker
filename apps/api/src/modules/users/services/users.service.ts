@@ -10,8 +10,15 @@ import {
   generateRefreshToken,
   hashToken,
 } from '@packages/auth';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { RbacService } from '@packages/rbac-nestjs';
 import { SettingsService } from '@packages/settings-nestjs';
+import {
+  USERS_USER_CREATED,
+  USERS_USER_UPDATED,
+  USERS_USER_DELETED,
+} from '../events/types';
+import type { UserCreatedEvent } from '../events/types';
 
 interface RegisterInput {
   email: string;
@@ -50,6 +57,7 @@ export class UsersService {
     private readonly prisma: PrismaService,
     private readonly rbacService: RbacService,
     private readonly settingsService: SettingsService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async register(input: RegisterInput) {
@@ -64,6 +72,8 @@ export class UsersService {
 
     const tokens = await this.generateTokensAndStore(identity);
 
+    this.emitCreatedEvent(user.id, identity.id, identity.email, input.firstName, input.lastName, true);
+
     return {
       user: this.toUserResponse(user, identity.email),
       ...tokens,
@@ -72,6 +82,8 @@ export class UsersService {
 
   async create(input: CreateUserInput) {
     const { identity, user } = await this.createIdentityAndUser(input);
+
+    this.emitCreatedEvent(user.id, identity.id, identity.email, input.firstName, input.lastName, false);
 
     return this.toUserResponse(user, identity.email);
   }
@@ -153,12 +165,20 @@ export class UsersService {
       include: { identity: { select: { email: true } } },
     });
 
+    const updatedFields = Object.keys(input).filter((k) => input[k as keyof UpdateUserInput] !== undefined);
+    this.emitEvent(USERS_USER_UPDATED, {
+      entityId: id,
+      actorId: id,
+      payload: { updatedFields },
+    });
+
     return this.toUserResponse(updated, updated.identity.email);
   }
 
   async softDelete(id: string) {
     const user = await this.prisma.user.findFirst({
       where: { id, deletedAt: null },
+      include: { identity: { select: { email: true } } },
     });
 
     if (!user) {
@@ -177,6 +197,12 @@ export class UsersService {
         data: { refreshToken: null },
       }),
     ]);
+
+    this.emitEvent(USERS_USER_DELETED, {
+      entityId: id,
+      actorId: id,
+      payload: { email: user.identity.email },
+    });
   }
 
   private async createIdentityAndUser(input: {
@@ -246,6 +272,37 @@ export class UsersService {
     });
 
     return { accessToken, refreshToken };
+  }
+
+  private emitCreatedEvent(
+    userId: string,
+    actorId: string,
+    email: string,
+    firstName: string,
+    lastName: string,
+    registeredSelf: boolean,
+  ) {
+    this.emitEvent<UserCreatedEvent>(USERS_USER_CREATED, {
+      entityId: userId,
+      actorId,
+      payload: { email, firstName, lastName, registeredSelf },
+    });
+  }
+
+  private emitEvent(
+    eventName: string,
+    data: { entityId: string; actorId: string; payload: Record<string, unknown> },
+  ) {
+    const event = {
+      eventName,
+      entityType: 'user',
+      entityId: data.entityId,
+      actorId: data.actorId,
+      correlationId: '',
+      occurredAt: new Date().toISOString(),
+      payload: data.payload,
+    };
+    this.eventEmitter.emit(eventName, event);
   }
 
   private toUserResponse(
