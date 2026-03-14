@@ -1,21 +1,21 @@
 import { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router';
 import { AuthLayout } from './layout/AuthLayout';
-import { AuthGuard } from '@modules/users/auth/components/AuthGuard';
+import { AuthGuard } from '@modules/identity/auth/components/AuthGuard';
 
 const LoginPage = lazy(() =>
-  import('@modules/users/auth/pages/LoginPage').then((m) => ({ default: m.LoginPage })),
+  import('@modules/identity/auth/pages/LoginPage').then((m) => ({ default: m.LoginPage })),
 );
 const RegisterPage = lazy(() =>
-  import('@modules/users/auth/pages/RegisterPage').then((m) => ({ default: m.RegisterPage })),
+  import('@modules/identity/auth/pages/RegisterPage').then((m) => ({ default: m.RegisterPage })),
 );
 const ForgotPasswordPage = lazy(() =>
-  import('@modules/users/auth/pages/ForgotPasswordPage').then((m) => ({
+  import('@modules/identity/auth/pages/ForgotPasswordPage').then((m) => ({
     default: m.ForgotPasswordPage,
   })),
 );
 const ResetPasswordPage = lazy(() =>
-  import('@modules/users/auth/pages/ResetPasswordPage').then((m) => ({
+  import('@modules/identity/auth/pages/ResetPasswordPage').then((m) => ({
     default: m.ResetPasswordPage,
   })),
 );

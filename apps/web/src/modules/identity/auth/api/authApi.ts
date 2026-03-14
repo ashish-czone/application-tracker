@@ -1,6 +1,6 @@
 import { api } from '../../../../lib/api';
 import { tokenStore } from '@packages/api-client';
-import type { AuthUser } from '../../types';
+import type { AuthIdentity } from '../../types';
 
 interface TokenResponse {
   accessToken: string;
@@ -34,6 +34,6 @@ export function resetPassword(data: { token: string; password: string }): Promis
   return api.post<void>('/auth/reset-password', data);
 }
 
-export function getMe(): Promise<AuthUser> {
-  return api.get<AuthUser>('/auth/me');
+export function getMe(): Promise<AuthIdentity> {
+  return api.get<AuthIdentity>('/auth/me');
 }
