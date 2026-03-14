@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
 import type { INestApplication } from '@nestjs/common';
 import type { PrismaClient } from '@packages/database';
-import { SettingsRegistryService } from '@packages/settings';
+import { SettingsRegistryService } from '@packages/settings-nestjs';
 import { z } from 'zod';
 import { createTestApp } from '../../../../../../../test/utils/app';
 import { cleanDatabase } from '../../../../../../../test/utils/db';

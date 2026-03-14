@@ -8,7 +8,7 @@ import { DatabaseModule, PrismaService } from '@packages/database';
 import { EventsModule } from '@packages/events';
 import { AuthGuard } from '@packages/auth-nestjs';
 import { RbacGuard } from '@packages/rbac-nestjs';
-import { SettingsNestjsModule, SettingsService, SettingsRegistryService } from '@packages/settings';
+import { SettingsNestjsModule, SettingsService, SettingsRegistryService } from '@packages/settings-nestjs';
 import { SettingsModule } from './modules/settings/settings.module';
 import { IdentityModule } from './modules/identity/identity.module';
 import { UsersModule } from './modules/users/users.module';

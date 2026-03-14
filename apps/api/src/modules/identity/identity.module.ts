@@ -3,7 +3,7 @@ import { RouterModule } from '@nestjs/core';
 import { AuthNestjsModule } from '@packages/auth-nestjs';
 import { RbacNestjsModule, RbacService, PermissionRegistryService } from '@packages/rbac-nestjs';
 import { PrismaService } from '@packages/database';
-import { SettingsRegistryService, SettingsService } from '@packages/settings';
+import { SettingsRegistryService, SettingsService } from '@packages/settings-nestjs';
 import { z } from 'zod';
 import { RolesController } from './rbac/controllers/roles.controller';
 import { PermissionsController } from './rbac/controllers/permissions.controller';
