@@ -90,7 +90,11 @@ test.describe('Authentication', () => {
     await expect(page.getByRole('status')).toContainText('Check your email');
   });
 
-  test('should preserve intended destination after login', async ({ page }) => {
+  test('should preserve intended destination after login', async ({ browser }) => {
+    // Use a fresh browser context so no cookies/tokens linger from prior tests
+    const context = await browser.newContext({ baseURL: 'http://localhost:5173' });
+    const page = await context.newPage();
+
     // Visit a protected page while unauthenticated
     await page.goto('/');
 
@@ -105,5 +109,7 @@ test.describe('Authentication', () => {
     // Should return to the originally intended page
     await expect(page).toHaveURL('/');
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+
+    await context.close();
   });
 });
