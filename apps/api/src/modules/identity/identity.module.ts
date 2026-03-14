@@ -1,7 +1,7 @@
-import { Module } from '@nestjs/common';
+import { Module, type OnModuleInit } from '@nestjs/common';
 import { RouterModule } from '@nestjs/core';
 import { AuthNestjsModule } from '@packages/auth-nestjs';
-import { RbacNestjsModule, RbacService } from '@packages/rbac-nestjs';
+import { RbacNestjsModule, RbacService, PermissionRegistryService } from '@packages/rbac-nestjs';
 import { PrismaService } from '@packages/database';
 import { RolesController } from './rbac/controllers/roles.controller';
 import { PermissionsController } from './rbac/controllers/permissions.controller';
@@ -45,4 +45,16 @@ import { PermissionsController } from './rbac/controllers/permissions.controller
   ],
   controllers: [RolesController, PermissionsController],
 })
-export class IdentityModule {}
+export class IdentityModule implements OnModuleInit {
+  constructor(private readonly permissionRegistry: PermissionRegistryService) {}
+
+  onModuleInit() {
+    this.permissionRegistry.register('rbac.roles', [
+      { action: 'manage', description: 'Manage roles and role assignments' },
+    ]);
+
+    this.permissionRegistry.register('rbac.permissions', [
+      { action: 'read', description: 'View permissions and permission registry' },
+    ]);
+  }
+}
