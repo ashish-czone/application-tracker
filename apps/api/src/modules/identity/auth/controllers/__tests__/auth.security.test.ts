@@ -6,7 +6,7 @@ import type { PrismaClient } from '@prisma/client';
 import { createTestApp } from '../../../../../../../../test/utils/app';
 import { cleanDatabase } from '../../../../../../../../test/utils/db';
 import { tokenFor, expiredTokenFor } from '../../../../../../../../test/utils/auth';
-import { UserFactory } from '../../../../../../../../test/factories/userFactory';
+import { IdentityFactory } from '../../../../../../../../test/factories/identityFactory';
 
 describe('Auth Security Tests', () => {
   let app: INestApplication;
@@ -32,16 +32,16 @@ describe('Auth Security Tests', () => {
     });
 
     it('should return 401 with expired token', async () => {
-      const user = await UserFactory.create(prisma);
+      const identity = await IdentityFactory.create(prisma);
       const res = await request(httpServer)
         .get('/api/v1/auth/me')
-        .set('Authorization', `Bearer ${expiredTokenFor(user)}`);
+        .set('Authorization', `Bearer ${expiredTokenFor(identity)}`);
       expect(res.status).toBe(401);
     });
 
     it('should return 401 with wrong JWT secret', async () => {
       const token = jwt.sign(
-        { sub: 'user-123', email: 'test@example.com', entityName: 'user' },
+        { sub: 'identity-123', email: 'test@example.com', entityName: 'identity' },
         'wrong-secret',
         { expiresIn: '15m' },
       );
@@ -52,20 +52,20 @@ describe('Auth Security Tests', () => {
     });
 
     it('should never contain passwordHash in response', async () => {
-      const user = await UserFactory.create(prisma);
+      const identity = await IdentityFactory.create(prisma);
       const res = await request(httpServer)
         .get('/api/v1/auth/me')
-        .set('Authorization', `Bearer ${tokenFor(user)}`);
+        .set('Authorization', `Bearer ${tokenFor(identity)}`);
 
       expect(res.status).toBe(200);
       expect(res.body).not.toHaveProperty('passwordHash');
     });
 
     it('should never contain refreshToken in response', async () => {
-      const user = await UserFactory.create(prisma);
+      const identity = await IdentityFactory.create(prisma);
       const res = await request(httpServer)
         .get('/api/v1/auth/me')
-        .set('Authorization', `Bearer ${tokenFor(user)}`);
+        .set('Authorization', `Bearer ${tokenFor(identity)}`);
 
       expect(res.status).toBe(200);
       expect(res.body).not.toHaveProperty('refreshToken');
@@ -74,18 +74,18 @@ describe('Auth Security Tests', () => {
 
   describe('POST /api/v1/auth/register — security', () => {
     it('should store password as bcrypt hash in DB', async () => {
-      const body = UserFactory.build();
+      const body = IdentityFactory.build();
 
       await request(httpServer)
         .post('/api/v1/auth/register')
         .send(body);
 
-      const dbUser = await prisma.user.findUnique({
+      const dbIdentity = await prisma.identity.findUnique({
         where: { email: body.email.toLowerCase() },
       });
-      expect(dbUser).not.toBeNull();
-      expect(dbUser!.passwordHash).not.toBe(body.password);
-      expect(dbUser!.passwordHash).toMatch(/^\$2[aby]?\$/);
+      expect(dbIdentity).not.toBeNull();
+      expect(dbIdentity!.passwordHash).not.toBe(body.password);
+      expect(dbIdentity!.passwordHash).toMatch(/^\$2[aby]?\$/);
     });
 
     it('should reject unknown fields', async () => {
@@ -103,17 +103,17 @@ describe('Auth Security Tests', () => {
 
   describe('POST /api/v1/auth/login — security', () => {
     it('should return consistent error message for wrong password vs nonexistent email', async () => {
-      const user = await UserFactory.create(prisma);
+      const identity = await IdentityFactory.create(prisma);
 
       const wrongPwRes = await request(httpServer)
         .post('/api/v1/auth/login')
-        .send({ email: user.email, password: 'WrongPassword123!' });
+        .send({ email: identity.email, password: 'WrongPassword123!' });
 
-      const noUserRes = await request(httpServer)
+      const noIdentityRes = await request(httpServer)
         .post('/api/v1/auth/login')
         .send({ email: 'nonexistent@example.com', password: 'Password123!' });
 
-      expect(wrongPwRes.body.message).toBe(noUserRes.body.message);
+      expect(wrongPwRes.body.message).toBe(noIdentityRes.body.message);
     });
 
     it('should reject unknown fields', async () => {

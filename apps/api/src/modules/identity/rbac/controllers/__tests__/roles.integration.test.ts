@@ -5,7 +5,7 @@ import type { PrismaClient } from '@prisma/client';
 import { createTestApp } from '../../../../../../../../test/utils/app';
 import { cleanDatabase } from '../../../../../../../../test/utils/db';
 import { tokenFor } from '../../../../../../../../test/utils/auth';
-import { UserFactory } from '../../../../../../../../test/factories/userFactory';
+import { IdentityFactory } from '../../../../../../../../test/factories/identityFactory';
 
 describe('Roles API — integration', () => {
   let app: INestApplication;
@@ -24,9 +24,9 @@ describe('Roles API — integration', () => {
     await app.close();
   });
 
-  async function createAdminUser() {
-    const user = await UserFactory.create(prisma);
-    const roleName = `admin-${user.id.slice(0, 8)}`;
+  async function createAdminIdentity() {
+    const identity = await IdentityFactory.create(prisma);
+    const roleName = `admin-${identity.id.slice(0, 8)}`;
     const role = await prisma.role.create({
       data: { name: roleName, description: 'Test admin' },
     });
@@ -40,15 +40,15 @@ describe('Roles API — integration', () => {
       create: { roleId: role.id, permissionId: permission.id },
       update: {},
     });
-    await prisma.userRole.create({
-      data: { userId: user.id, roleId: role.id },
+    await prisma.identityRole.create({
+      data: { identityId: identity.id, roleId: role.id },
     });
-    return user;
+    return identity;
   }
 
   describe('POST /api/v1/roles', () => {
     it('should create a role and return 201', async () => {
-      const admin = await createAdminUser();
+      const admin = await createAdminIdentity();
       const name = `editor-${Date.now()}`;
 
       const res = await request(httpServer)
@@ -68,7 +68,7 @@ describe('Roles API — integration', () => {
     });
 
     it('should return 409 for duplicate role name', async () => {
-      const admin = await createAdminUser();
+      const admin = await createAdminIdentity();
       const name = `dup-${Date.now()}`;
       await prisma.role.create({ data: { name } });
 
@@ -81,7 +81,7 @@ describe('Roles API — integration', () => {
     });
 
     it('should return 400 for missing name', async () => {
-      const admin = await createAdminUser();
+      const admin = await createAdminIdentity();
 
       const res = await request(httpServer)
         .post('/api/v1/roles')
@@ -94,7 +94,7 @@ describe('Roles API — integration', () => {
 
   describe('GET /api/v1/roles', () => {
     it('should list all roles', async () => {
-      const admin = await createAdminUser();
+      const admin = await createAdminIdentity();
 
       const res = await request(httpServer)
         .get('/api/v1/roles')
@@ -108,7 +108,7 @@ describe('Roles API — integration', () => {
 
   describe('GET /api/v1/roles/:id', () => {
     it('should return a role by id', async () => {
-      const admin = await createAdminUser();
+      const admin = await createAdminIdentity();
       const role = await prisma.role.create({ data: { name: `viewer-${Date.now()}` } });
 
       const res = await request(httpServer)
@@ -120,7 +120,7 @@ describe('Roles API — integration', () => {
     });
 
     it('should return 404 for nonexistent role', async () => {
-      const admin = await createAdminUser();
+      const admin = await createAdminIdentity();
 
       const res = await request(httpServer)
         .get('/api/v1/roles/00000000-0000-0000-0000-000000000000')
@@ -132,7 +132,7 @@ describe('Roles API — integration', () => {
 
   describe('PATCH /api/v1/roles/:id', () => {
     it('should update a role', async () => {
-      const admin = await createAdminUser();
+      const admin = await createAdminIdentity();
       const role = await prisma.role.create({ data: { name: `upd-${Date.now()}` } });
 
       const res = await request(httpServer)
@@ -147,7 +147,7 @@ describe('Roles API — integration', () => {
 
   describe('DELETE /api/v1/roles/:id', () => {
     it('should delete a role and return 204', async () => {
-      const admin = await createAdminUser();
+      const admin = await createAdminIdentity();
       const role = await prisma.role.create({ data: { name: `del-${Date.now()}` } });
 
       const res = await request(httpServer)
@@ -163,7 +163,7 @@ describe('Roles API — integration', () => {
 
   describe('PUT /api/v1/roles/:id/permissions', () => {
     it('should set role permissions', async () => {
-      const admin = await createAdminUser();
+      const admin = await createAdminIdentity();
       const role = await prisma.role.create({ data: { name: `perm-${Date.now()}` } });
       const perm = await prisma.permission.upsert({
         where: { resource_action: { resource: 'test', action: 'read' } },
@@ -184,7 +184,7 @@ describe('Roles API — integration', () => {
 
   describe('GET /api/v1/roles/:id/permissions', () => {
     it('should get role permissions', async () => {
-      const admin = await createAdminUser();
+      const admin = await createAdminIdentity();
       const role = await prisma.role.create({ data: { name: `getp-${Date.now()}` } });
 
       const res = await request(httpServer)
@@ -196,14 +196,14 @@ describe('Roles API — integration', () => {
     });
   });
 
-  describe('POST /api/v1/roles/users/:userId/roles', () => {
-    it('should assign role to user', async () => {
-      const admin = await createAdminUser();
-      const targetUser = await UserFactory.create(prisma);
+  describe('POST /api/v1/roles/identities/:identityId/roles', () => {
+    it('should assign role to identity', async () => {
+      const admin = await createAdminIdentity();
+      const targetIdentity = await IdentityFactory.create(prisma);
       const role = await prisma.role.create({ data: { name: `assign-${Date.now()}` } });
 
       const res = await request(httpServer)
-        .post(`/api/v1/roles/users/${targetUser.id}/roles`)
+        .post(`/api/v1/roles/identities/${targetIdentity.id}/roles`)
         .set('Authorization', `Bearer ${tokenFor(admin)}`)
         .send({ roleId: role.id });
 
@@ -211,15 +211,15 @@ describe('Roles API — integration', () => {
     });
   });
 
-  describe('DELETE /api/v1/roles/users/:userId/roles/:roleId', () => {
-    it('should remove role from user', async () => {
-      const admin = await createAdminUser();
-      const targetUser = await UserFactory.create(prisma);
+  describe('DELETE /api/v1/roles/identities/:identityId/roles/:roleId', () => {
+    it('should remove role from identity', async () => {
+      const admin = await createAdminIdentity();
+      const targetIdentity = await IdentityFactory.create(prisma);
       const role = await prisma.role.create({ data: { name: `rem-${Date.now()}` } });
-      await prisma.userRole.create({ data: { userId: targetUser.id, roleId: role.id } });
+      await prisma.identityRole.create({ data: { identityId: targetIdentity.id, roleId: role.id } });
 
       const res = await request(httpServer)
-        .delete(`/api/v1/roles/users/${targetUser.id}/roles/${role.id}`)
+        .delete(`/api/v1/roles/identities/${targetIdentity.id}/roles/${role.id}`)
         .set('Authorization', `Bearer ${tokenFor(admin)}`);
 
       expect(res.status).toBe(204);

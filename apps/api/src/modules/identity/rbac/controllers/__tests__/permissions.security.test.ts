@@ -5,7 +5,7 @@ import type { PrismaClient } from '@prisma/client';
 import { createTestApp } from '../../../../../../../../test/utils/app';
 import { cleanDatabase } from '../../../../../../../../test/utils/db';
 import { expiredTokenFor } from '../../../../../../../../test/utils/auth';
-import { UserFactory } from '../../../../../../../../test/factories/userFactory';
+import { IdentityFactory } from '../../../../../../../../test/factories/identityFactory';
 
 describe('Permissions API — security', () => {
   let app: INestApplication;
@@ -33,11 +33,11 @@ describe('Permissions API — security', () => {
   });
 
   it('should return 401 with expired token', async () => {
-    const user = await UserFactory.create(prisma);
+    const identity = await IdentityFactory.create(prisma);
 
     const res = await request(httpServer)
       .get('/api/v1/permissions')
-      .set('Authorization', `Bearer ${expiredTokenFor(user)}`);
+      .set('Authorization', `Bearer ${expiredTokenFor(identity)}`);
 
     expect(res.status).toBe(401);
   });

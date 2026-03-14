@@ -5,7 +5,7 @@ import type { PrismaClient } from '@prisma/client';
 import { createTestApp } from '../../../../../../../../test/utils/app';
 import { cleanDatabase } from '../../../../../../../../test/utils/db';
 import { tokenFor } from '../../../../../../../../test/utils/auth';
-import { UserFactory } from '../../../../../../../../test/factories/userFactory';
+import { IdentityFactory } from '../../../../../../../../test/factories/identityFactory';
 
 function extractRefreshCookie(res: request.Response): string {
   const cookies = res.headers['set-cookie'];
@@ -34,8 +34,8 @@ describe('Auth Integration Tests', () => {
   });
 
   describe('POST /api/v1/auth/register', () => {
-    it('should create user, return accessToken, and set refresh cookie', async () => {
-      const body = UserFactory.build();
+    it('should create identity, return accessToken, and set refresh cookie', async () => {
+      const body = IdentityFactory.build();
 
       const res = await request(httpServer)
         .post('/api/v1/auth/register')
@@ -55,7 +55,7 @@ describe('Auth Integration Tests', () => {
     });
 
     it('should return 409 for duplicate email', async () => {
-      const body = UserFactory.build();
+      const body = IdentityFactory.build();
 
       await request(httpServer)
         .post('/api/v1/auth/register')
@@ -99,22 +99,22 @@ describe('Auth Integration Tests', () => {
 
   describe('POST /api/v1/auth/login', () => {
     it('should return tokens for valid credentials', async () => {
-      const user = await UserFactory.create(prisma);
+      const identity = await IdentityFactory.create(prisma);
 
       const res = await request(httpServer)
         .post('/api/v1/auth/login')
-        .send({ email: user.email, password: UserFactory.DEFAULT_PASSWORD });
+        .send({ email: identity.email, password: IdentityFactory.DEFAULT_PASSWORD });
 
       expect(res.status).toBe(200);
       expect(res.body).toHaveProperty('accessToken');
     });
 
     it('should return 401 for wrong password', async () => {
-      const user = await UserFactory.create(prisma);
+      const identity = await IdentityFactory.create(prisma);
 
       const res = await request(httpServer)
         .post('/api/v1/auth/login')
-        .send({ email: user.email, password: 'WrongPassword123!' });
+        .send({ email: identity.email, password: 'WrongPassword123!' });
 
       expect(res.status).toBe(401);
       expect(res.body.message).toBe('Invalid email or password');
@@ -132,7 +132,7 @@ describe('Auth Integration Tests', () => {
 
   describe('POST /api/v1/auth/refresh', () => {
     it('should issue new tokens from valid refresh cookie', async () => {
-      const body = UserFactory.build();
+      const body = IdentityFactory.build();
       const registerRes = await request(httpServer)
         .post('/api/v1/auth/register')
         .send(body);
@@ -156,18 +156,17 @@ describe('Auth Integration Tests', () => {
     });
 
     it('should invalidate old refresh token after rotation', async () => {
-      const body = UserFactory.build();
+      const body = IdentityFactory.build();
       const registerRes = await request(httpServer)
         .post('/api/v1/auth/register')
         .send(body);
 
       const oldCookie = extractRefreshCookie(registerRes);
-      const oldTokenValue = oldCookie.split('=')[1];
 
-      // Get the user to check initial state
+      // Get the identity to check initial state
       const email = body.email.toLowerCase();
-      const userBefore = await prisma.user.findUnique({ where: { email } });
-      const hashBefore = userBefore!.refreshToken;
+      const identityBefore = await prisma.identity.findUnique({ where: { email } });
+      const hashBefore = identityBefore!.refreshToken;
 
       // First refresh — should succeed and rotate the token
       const firstRefresh = await request(httpServer)
@@ -177,8 +176,8 @@ describe('Auth Integration Tests', () => {
       expect(firstRefresh.status).toBe(200);
 
       // Check that the stored hash changed
-      const userAfter = await prisma.user.findUnique({ where: { email } });
-      const hashAfter = userAfter!.refreshToken;
+      const identityAfter = await prisma.identity.findUnique({ where: { email } });
+      const hashAfter = identityAfter!.refreshToken;
 
       // Hash should have changed (new token = new hash)
       expect(hashAfter).not.toBe(hashBefore);
@@ -194,8 +193,8 @@ describe('Auth Integration Tests', () => {
 
   describe('POST /api/v1/auth/logout', () => {
     it('should clear refresh token', async () => {
-      const user = await UserFactory.create(prisma);
-      const token = tokenFor(user);
+      const identity = await IdentityFactory.create(prisma);
+      const token = tokenFor(identity);
 
       const res = await request(httpServer)
         .post('/api/v1/auth/logout')
@@ -204,8 +203,8 @@ describe('Auth Integration Tests', () => {
       expect(res.status).toBe(200);
 
       // Verify refresh token is cleared in DB
-      const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
-      expect(dbUser!.refreshToken).toBeNull();
+      const dbIdentity = await prisma.identity.findUnique({ where: { id: identity.id } });
+      expect(dbIdentity!.refreshToken).toBeNull();
     });
   });
 
@@ -219,14 +218,14 @@ describe('Auth Integration Tests', () => {
     });
 
     it('should create PasswordToken record in DB', async () => {
-      const user = await UserFactory.create(prisma);
+      const identity = await IdentityFactory.create(prisma);
 
       await request(httpServer)
         .post('/api/v1/auth/forgot-password')
-        .send({ email: user.email });
+        .send({ email: identity.email });
 
       const tokens = await prisma.passwordToken.findMany({
-        where: { userId: user.id },
+        where: { identityId: identity.id },
       });
       expect(tokens.length).toBeGreaterThan(0);
     });
@@ -234,12 +233,12 @@ describe('Auth Integration Tests', () => {
 
   describe('POST /api/v1/auth/reset-password', () => {
     it('should update password with valid token', async () => {
-      const user = await UserFactory.create(prisma);
+      const identity = await IdentityFactory.create(prisma);
 
       // Create a password reset token directly
       const token = await prisma.passwordToken.create({
         data: {
-          userId: user.id,
+          identityId: identity.id,
           token: 'valid-reset-token-' + Date.now(),
           expiresAt: new Date(Date.now() + 60 * 60 * 1000),
         },
@@ -254,16 +253,16 @@ describe('Auth Integration Tests', () => {
       // Verify can login with new password
       const loginRes = await request(httpServer)
         .post('/api/v1/auth/login')
-        .send({ email: user.email, password: 'NewPassword123!' });
+        .send({ email: identity.email, password: 'NewPassword123!' });
       expect(loginRes.status).toBe(200);
     });
 
     it('should return 400 for expired token', async () => {
-      const user = await UserFactory.create(prisma);
+      const identity = await IdentityFactory.create(prisma);
 
       const token = await prisma.passwordToken.create({
         data: {
-          userId: user.id,
+          identityId: identity.id,
           token: 'expired-token-' + Date.now(),
           expiresAt: new Date(Date.now() - 1000), // already expired
         },
@@ -277,11 +276,11 @@ describe('Auth Integration Tests', () => {
     });
 
     it('should return 400 for already-used token', async () => {
-      const user = await UserFactory.create(prisma);
+      const identity = await IdentityFactory.create(prisma);
 
       const token = await prisma.passwordToken.create({
         data: {
-          userId: user.id,
+          identityId: identity.id,
           token: 'used-token-' + Date.now(),
           expiresAt: new Date(Date.now() + 60 * 60 * 1000),
           usedAt: new Date(),
