@@ -59,7 +59,8 @@ export function createApiClient(config: ApiClientConfig) {
 
     refreshPromise = (async () => {
       try {
-        const response = await fetch(`${config.baseUrl}/auth/refresh`, {
+        const refreshPath = config.refreshPath ?? '/users/auth/refresh';
+        const response = await fetch(`${config.baseUrl}${refreshPath}`, {
           method: 'POST',
           credentials: 'include',
           headers: { 'Content-Type': 'application/json' },

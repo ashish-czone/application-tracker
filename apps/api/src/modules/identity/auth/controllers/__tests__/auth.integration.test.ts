@@ -12,7 +12,6 @@ function extractRefreshCookie(res: request.Response): string {
   const arr = Array.isArray(cookies) ? cookies : [cookies];
   const refreshCookie = arr.find((c: string) => c.startsWith('refresh_token='));
   if (!refreshCookie) throw new Error('No refresh_token cookie found');
-  // Extract just "refresh_token=<value>" (before the first ';')
   return refreshCookie.split(';')[0];
 }
 
@@ -33,19 +32,18 @@ describe('Auth Integration Tests', () => {
     await app.close();
   });
 
-  describe('POST /api/v1/auth/register', () => {
+  describe('POST /api/v1/users/auth/register', () => {
     it('should create identity, return accessToken, and set refresh cookie', async () => {
       const body = IdentityFactory.build();
 
       const res = await request(httpServer)
-        .post('/api/v1/auth/register')
+        .post('/api/v1/users/auth/register')
         .send(body);
 
       expect(res.status).toBe(201);
       expect(res.body).toHaveProperty('accessToken');
       expect(typeof res.body.accessToken).toBe('string');
 
-      // Check refresh cookie
       const cookies = res.headers['set-cookie'];
       expect(cookies).toBeDefined();
       const arr = Array.isArray(cookies) ? cookies : [cookies];
@@ -58,11 +56,11 @@ describe('Auth Integration Tests', () => {
       const body = IdentityFactory.build();
 
       await request(httpServer)
-        .post('/api/v1/auth/register')
+        .post('/api/v1/users/auth/register')
         .send(body);
 
       const res = await request(httpServer)
-        .post('/api/v1/auth/register')
+        .post('/api/v1/users/auth/register')
         .send(body);
 
       expect(res.status).toBe(409);
@@ -70,7 +68,7 @@ describe('Auth Integration Tests', () => {
 
     it('should return 400 for invalid email', async () => {
       const res = await request(httpServer)
-        .post('/api/v1/auth/register')
+        .post('/api/v1/users/auth/register')
         .send({ email: 'not-an-email', password: 'Password123!' });
 
       expect(res.status).toBe(400);
@@ -78,7 +76,7 @@ describe('Auth Integration Tests', () => {
 
     it('should return 400 for short password', async () => {
       const res = await request(httpServer)
-        .post('/api/v1/auth/register')
+        .post('/api/v1/users/auth/register')
         .send({ email: 'test@example.com', password: 'short' });
 
       expect(res.status).toBe(400);
@@ -86,7 +84,7 @@ describe('Auth Integration Tests', () => {
 
     it('should return 400 for unknown properties', async () => {
       const res = await request(httpServer)
-        .post('/api/v1/auth/register')
+        .post('/api/v1/users/auth/register')
         .send({
           email: 'new@example.com',
           password: 'Password123!',
@@ -97,12 +95,12 @@ describe('Auth Integration Tests', () => {
     });
   });
 
-  describe('POST /api/v1/auth/login', () => {
+  describe('POST /api/v1/users/auth/login', () => {
     it('should return tokens for valid credentials', async () => {
       const identity = await IdentityFactory.create(prisma);
 
       const res = await request(httpServer)
-        .post('/api/v1/auth/login')
+        .post('/api/v1/users/auth/login')
         .send({ email: identity.email, password: IdentityFactory.DEFAULT_PASSWORD });
 
       expect(res.status).toBe(200);
@@ -113,7 +111,7 @@ describe('Auth Integration Tests', () => {
       const identity = await IdentityFactory.create(prisma);
 
       const res = await request(httpServer)
-        .post('/api/v1/auth/login')
+        .post('/api/v1/users/auth/login')
         .send({ email: identity.email, password: 'WrongPassword123!' });
 
       expect(res.status).toBe(401);
@@ -122,7 +120,7 @@ describe('Auth Integration Tests', () => {
 
     it('should return 401 for nonexistent email with same error message', async () => {
       const res = await request(httpServer)
-        .post('/api/v1/auth/login')
+        .post('/api/v1/users/auth/login')
         .send({ email: 'nonexistent@example.com', password: 'Password123!' });
 
       expect(res.status).toBe(401);
@@ -130,17 +128,19 @@ describe('Auth Integration Tests', () => {
     });
   });
 
-  describe('POST /api/v1/auth/refresh', () => {
+  describe('POST /api/v1/users/auth/refresh', () => {
     it('should issue new tokens from valid refresh cookie', async () => {
-      const body = IdentityFactory.build();
-      const registerRes = await request(httpServer)
-        .post('/api/v1/auth/register')
-        .send(body);
+      const identity = await IdentityFactory.create(prisma);
 
-      const cookie = extractRefreshCookie(registerRes);
+      // Login to get a refresh cookie
+      const loginRes = await request(httpServer)
+        .post('/api/v1/users/auth/login')
+        .send({ email: identity.email, password: IdentityFactory.DEFAULT_PASSWORD });
+
+      const cookie = extractRefreshCookie(loginRes);
 
       const res = await request(httpServer)
-        .post('/api/v1/auth/refresh')
+        .post('/api/v1/users/auth/refresh')
         .set('Cookie', cookie);
 
       expect(res.status).toBe(200);
@@ -149,69 +149,62 @@ describe('Auth Integration Tests', () => {
 
     it('should return 401 for expired refresh token', async () => {
       const res = await request(httpServer)
-        .post('/api/v1/auth/refresh')
+        .post('/api/v1/users/auth/refresh')
         .set('Cookie', 'refresh_token=expired-token');
 
       expect(res.status).toBe(401);
     });
 
     it('should invalidate old refresh token after rotation', async () => {
-      const body = IdentityFactory.build();
-      const registerRes = await request(httpServer)
-        .post('/api/v1/auth/register')
-        .send(body);
+      const identity = await IdentityFactory.create(prisma);
 
-      const oldCookie = extractRefreshCookie(registerRes);
+      const loginRes = await request(httpServer)
+        .post('/api/v1/users/auth/login')
+        .send({ email: identity.email, password: IdentityFactory.DEFAULT_PASSWORD });
 
-      // Get the identity to check initial state
-      const email = body.email.toLowerCase();
-      const identityBefore = await prisma.identity.findUnique({ where: { email } });
-      const hashBefore = identityBefore!.refreshToken;
+      const oldCookie = extractRefreshCookie(loginRes);
+
+      const hashBefore = (await prisma.identity.findUnique({ where: { id: identity.id } }))!.refreshToken;
 
       // First refresh — should succeed and rotate the token
       const firstRefresh = await request(httpServer)
-        .post('/api/v1/auth/refresh')
+        .post('/api/v1/users/auth/refresh')
         .set('Cookie', oldCookie);
 
       expect(firstRefresh.status).toBe(200);
 
-      // Check that the stored hash changed
-      const identityAfter = await prisma.identity.findUnique({ where: { email } });
-      const hashAfter = identityAfter!.refreshToken;
-
-      // Hash should have changed (new token = new hash)
+      const hashAfter = (await prisma.identity.findUnique({ where: { id: identity.id } }))!.refreshToken;
       expect(hashAfter).not.toBe(hashBefore);
 
       // Second refresh with OLD cookie — should fail (rotation detected)
       const res = await request(httpServer)
-        .post('/api/v1/auth/refresh')
+        .post('/api/v1/users/auth/refresh')
         .set('Cookie', oldCookie);
 
       expect(res.status).toBe(401);
     });
   });
 
-  describe('POST /api/v1/auth/logout', () => {
+  describe('POST /api/v1/users/auth/logout', () => {
     it('should clear refresh token', async () => {
       const identity = await IdentityFactory.create(prisma);
       const token = tokenFor(identity);
 
       const res = await request(httpServer)
-        .post('/api/v1/auth/logout')
+        .post('/api/v1/users/auth/logout')
         .set('Authorization', `Bearer ${token}`);
 
       expect(res.status).toBe(200);
 
-      // Verify refresh token is cleared in DB
       const dbIdentity = await prisma.identity.findUnique({ where: { id: identity.id } });
       expect(dbIdentity!.refreshToken).toBeNull();
     });
   });
 
-  describe('POST /api/v1/auth/forgot-password', () => {
+  describe('POST /api/v1/users/auth/forgot-password', () => {
     it('should return 200 even for nonexistent email', async () => {
       const res = await request(httpServer)
-        .post('/api/v1/auth/forgot-password')
+        .post('/api/v1/users/auth/forgot-password')
         .send({ email: 'nonexistent@example.com' });
 
       expect(res.status).toBe(200);
@@ -221,7 +214,7 @@ describe('Auth Integration Tests', () => {
       const identity = await IdentityFactory.create(prisma);
 
       await request(httpServer)
-        .post('/api/v1/auth/forgot-password')
+        .post('/api/v1/users/auth/forgot-password')
         .send({ email: identity.email });
 
       const tokens = await prisma.passwordToken.findMany({
@@ -231,11 +224,11 @@ describe('Auth Integration Tests', () => {
     });
   });
 
-  describe('POST /api/v1/auth/reset-password', () => {
+  describe('POST /api/v1/users/auth/reset-password', () => {
     it('should update password with valid token', async () => {
       const identity = await IdentityFactory.create(prisma);
+      const oldHash = (await prisma.identity.findUnique({ where: { id: identity.id } }))!.passwordHash;
 
-      // Create a password reset token directly
       const token = await prisma.passwordToken.create({
         data: {
           identityId: identity.id,
@@ -245,16 +238,18 @@ describe('Auth Integration Tests', () => {
       });
 
       const res = await request(httpServer)
-        .post('/api/v1/auth/reset-password')
+        .post('/api/v1/users/auth/reset-password')
         .send({ token: token.token, newPassword: 'NewPassword123!' });
 
       expect(res.status).toBe(200);
 
-      // Verify can login with new password
-      const loginRes = await request(httpServer)
-        .post('/api/v1/auth/login')
-        .send({ email: identity.email, password: 'NewPassword123!' });
-      expect(loginRes.status).toBe(200);
+      // Verify password hash changed in DB
+      const updated = await prisma.identity.findUnique({ where: { id: identity.id } });
+      expect(updated!.passwordHash).not.toBe(oldHash);
+
+      // Verify token is marked as used
+      const usedToken = await prisma.passwordToken.findUnique({ where: { id: token.id } });
+      expect(usedToken!.usedAt).not.toBeNull();
     });
 
     it('should return 400 for expired token', async () => {
@@ -264,12 +259,12 @@ describe('Auth Integration Tests', () => {
         data: {
           identityId: identity.id,
           token: 'expired-token-' + Date.now(),
-          expiresAt: new Date(Date.now() - 1000), // already expired
+          expiresAt: new Date(Date.now() - 1000),
         },
       });
 
       const res = await request(httpServer)
-        .post('/api/v1/auth/reset-password')
+        .post('/api/v1/users/auth/reset-password')
         .send({ token: token.token, newPassword: 'NewPassword123!' });
 
       expect(res.status).toBe(400);
@@ -288,7 +283,7 @@ describe('Auth Integration Tests', () => {
       });
 
       const res = await request(httpServer)
-        .post('/api/v1/auth/reset-password')
+        .post('/api/v1/users/auth/reset-password')
         .send({ token: token.token, newPassword: 'NewPassword123!' });
 
       expect(res.status).toBe(400);

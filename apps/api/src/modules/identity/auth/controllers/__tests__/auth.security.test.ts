@@ -25,16 +25,16 @@ describe('Auth Security Tests', () => {
     await app.close();
   });
 
-  describe('GET /api/v1/auth/me', () => {
+  describe('GET /api/v1/users/auth/me', () => {
     it('should return 401 without token', async () => {
-      const res = await request(httpServer).get('/api/v1/auth/me');
+      const res = await request(httpServer).get('/api/v1/users/auth/me');
       expect(res.status).toBe(401);
     });
 
     it('should return 401 with expired token', async () => {
       const identity = await IdentityFactory.create(prisma);
       const res = await request(httpServer)
-        .get('/api/v1/auth/me')
+        .get('/api/v1/users/auth/me')
         .set('Authorization', `Bearer ${expiredTokenFor(identity)}`);
       expect(res.status).toBe(401);
     });
@@ -46,7 +46,7 @@ describe('Auth Security Tests', () => {
         { expiresIn: '15m' },
       );
       const res = await request(httpServer)
-        .get('/api/v1/auth/me')
+        .get('/api/v1/users/auth/me')
         .set('Authorization', `Bearer ${token}`);
       expect(res.status).toBe(401);
     });
@@ -54,7 +54,7 @@ describe('Auth Security Tests', () => {
     it('should never contain passwordHash in response', async () => {
       const identity = await IdentityFactory.create(prisma);
       const res = await request(httpServer)
-        .get('/api/v1/auth/me')
+        .get('/api/v1/users/auth/me')
         .set('Authorization', `Bearer ${tokenFor(identity)}`);
 
       expect(res.status).toBe(200);
@@ -64,7 +64,7 @@ describe('Auth Security Tests', () => {
     it('should never contain refreshToken in response', async () => {
       const identity = await IdentityFactory.create(prisma);
       const res = await request(httpServer)
-        .get('/api/v1/auth/me')
+        .get('/api/v1/users/auth/me')
         .set('Authorization', `Bearer ${tokenFor(identity)}`);
 
       expect(res.status).toBe(200);
@@ -72,12 +72,12 @@ describe('Auth Security Tests', () => {
     });
   });
 
-  describe('POST /api/v1/auth/register — security', () => {
+  describe('POST /api/v1/users/auth/register — security', () => {
     it('should store password as bcrypt hash in DB', async () => {
       const body = IdentityFactory.build();
 
       await request(httpServer)
-        .post('/api/v1/auth/register')
+        .post('/api/v1/users/auth/register')
         .send(body);
 
       const dbIdentity = await prisma.identity.findUnique({
@@ -90,7 +90,7 @@ describe('Auth Security Tests', () => {
 
     it('should reject unknown fields', async () => {
       const res = await request(httpServer)
-        .post('/api/v1/auth/register')
+        .post('/api/v1/users/auth/register')
         .send({
           email: 'security-test@example.com',
           password: 'Password123!',
@@ -101,16 +101,16 @@ describe('Auth Security Tests', () => {
     });
   });
 
-  describe('POST /api/v1/auth/login — security', () => {
+  describe('POST /api/v1/users/auth/login — security', () => {
     it('should return consistent error message for wrong password vs nonexistent email', async () => {
       const identity = await IdentityFactory.create(prisma);
 
       const wrongPwRes = await request(httpServer)
-        .post('/api/v1/auth/login')
+        .post('/api/v1/users/auth/login')
         .send({ email: identity.email, password: 'WrongPassword123!' });
 
       const noIdentityRes = await request(httpServer)
-        .post('/api/v1/auth/login')
+        .post('/api/v1/users/auth/login')
         .send({ email: 'nonexistent@example.com', password: 'Password123!' });
 
       expect(wrongPwRes.body.message).toBe(noIdentityRes.body.message);
@@ -118,7 +118,7 @@ describe('Auth Security Tests', () => {
 
     it('should reject unknown fields', async () => {
       const res = await request(httpServer)
-        .post('/api/v1/auth/login')
+        .post('/api/v1/users/auth/login')
         .send({
           email: 'test@example.com',
           password: 'Password123!',
@@ -132,7 +132,7 @@ describe('Auth Security Tests', () => {
       const results = [];
       for (let i = 0; i < 7; i++) {
         const res = await request(httpServer)
-          .post('/api/v1/auth/login')
+          .post('/api/v1/users/auth/login')
           .send({ email: `ratelimit${i}@example.com`, password: 'Password123!' });
         results.push(res.status);
       }

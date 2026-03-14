@@ -23,14 +23,14 @@ test.describe('RBAC', () => {
   let firstIdentityIsSuperadmin = false;
 
   test('register first identity and check for superadmin role', async ({ request }) => {
-    const registerRes = await request.post(`${API_BASE}/auth/register`, {
+    const registerRes = await request.post(`${API_BASE}/users/auth/register`, {
       data: FIRST_IDENTITY,
     });
     expect(registerRes.ok()).toBe(true);
     const { accessToken } = await registerRes.json();
     firstIdentityToken = accessToken;
 
-    const meRes = await request.get(`${API_BASE}/auth/me`, {
+    const meRes = await request.get(`${API_BASE}/users/auth/me`, {
       headers: { Authorization: `Bearer ${firstIdentityToken}` },
     });
     expect(meRes.ok()).toBe(true);
@@ -47,8 +47,8 @@ test.describe('RBAC', () => {
     firstIdentityIsSuperadmin = rolesRes.ok();
   });
 
-  test('/auth/me should return permissions array', async ({ request }) => {
-    const meRes = await request.get(`${API_BASE}/auth/me`, {
+  test('/users/auth/me should return permissions array', async ({ request }) => {
+    const meRes = await request.get(`${API_BASE}/users/auth/me`, {
       headers: { Authorization: `Bearer ${firstIdentityToken}` },
     });
     const me = await meRes.json();
@@ -57,14 +57,14 @@ test.describe('RBAC', () => {
   });
 
   test('second registered identity should have no roles/permissions', async ({ request }) => {
-    const registerRes = await request.post(`${API_BASE}/auth/register`, {
+    const registerRes = await request.post(`${API_BASE}/users/auth/register`, {
       data: SECOND_IDENTITY,
     });
     expect(registerRes.ok()).toBe(true);
     const { accessToken } = await registerRes.json();
     secondIdentityToken = accessToken;
 
-    const meRes = await request.get(`${API_BASE}/auth/me`, {
+    const meRes = await request.get(`${API_BASE}/users/auth/me`, {
       headers: { Authorization: `Bearer ${secondIdentityToken}` },
     });
     const me = await meRes.json();
@@ -111,13 +111,13 @@ test.describe('RBAC', () => {
     expect(assignRes.ok()).toBe(true);
   });
 
-  test('assigned identity should have their role reflected in /auth/me', async ({ request }) => {
+  test('assigned identity should have their role reflected in /users/auth/me', async ({ request }) => {
     if (!firstIdentityIsSuperadmin) {
       test.skip();
       return;
     }
 
-    const meRes = await request.get(`${API_BASE}/auth/me`, {
+    const meRes = await request.get(`${API_BASE}/users/auth/me`, {
       headers: { Authorization: `Bearer ${secondIdentityToken}` },
     });
     const me = await meRes.json();
