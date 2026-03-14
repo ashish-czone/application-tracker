@@ -49,13 +49,13 @@ Strictly enforced. Violations are build errors.
 
 ```
 apps/api     →  packages/* (backend — runs as API, worker, or both via env flags)
-apps/web     →  packages/ui, packages/api-client, packages/common
+apps/web     →  packages/* (frontend — UI, API client, auth-ui, common, etc.)
 packages/*   →  other infrastructure packages only. NEVER import from apps/
 ```
 
 Backend modules (`apps/api/src/modules/`) may import from `packages/*` and from other modules' public API (services, event types, enums) — no circular deps.
 
-Frontend modules (`apps/web/src/modules/`) may import from `packages/ui`, `packages/api-client`, `packages/common`.
+Frontend modules (`apps/web/src/modules/`) may import from `packages/*` (e.g., `packages/ui`, `packages/api-client`, `packages/auth-ui`, `packages/common`).
 
 ### When to use direct calls vs events
 
@@ -217,7 +217,7 @@ apps/api/src/modules/<module-name>/
 
 6. **Domain-specific enums live in their own module**, not in a shared package. Example: `CandidateStatus` lives in `modules/candidates/`, not in `packages/common/`.
 
-7. **Permissions are namespaced by module name.** Format: `module.action` (e.g., `candidates.create`, `candidates.read`, `orders.update`, `orders.delete`). Each module defines its own permission constants and registers them with `packages/rbac`'s permission registry in `onModuleInit`.
+7. **Permissions are namespaced by module name.** Format: `module.action` (e.g., `candidates.create`, `candidates.read`) or `module.sub-resource.action` for modules with distinct sub-resources (e.g., `rbac.roles.manage`, `rbac.permissions.read`). Each module defines its own permission constants and registers them with `packages/rbac`'s permission registry in `onModuleInit`.
 
 ```ts
 // apps/api/src/modules/candidates/permissions.ts
@@ -503,9 +503,7 @@ apps/web/src/modules/<module-name>/
    ```
 
 5. **Frontend modules may import from:**
-   - `@packages/ui` — shared design system components
-   - `@packages/api-client` — base HTTP client
-   - `@packages/common` — generic types like `PaginatedResponse<T>`
+   - `@packages/*` — any shared package (ui, api-client, auth-ui, common, etc.)
    - **Never from backend modules.** The API is the boundary. Frontend defines its own types based on the API contract (e.g., `type CandidateStatus = "active" | "submitted" | "rejected"`).
 
 6. **Cross-module reads are allowed for aggregate views.** A dashboard module may import hooks from other modules for read-only display. Dashboard never modifies other modules' state.
