@@ -1,6 +1,6 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Button, FormInput } from '@packages/ui';
+import { Button, Form, FormInput } from '@packages/ui';
 import {
   forgotPasswordSchema,
   type ForgotPasswordFormValues,
@@ -31,7 +31,7 @@ export function ForgotPasswordForm({
   });
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+    <Form onSubmit={handleSubmit(onSubmit)}>
       <div className="space-y-2 text-center">
         <h1 className="text-2xl font-semibold tracking-tight">Forgot password</h1>
         <p className="text-sm text-muted-foreground">
@@ -71,6 +71,6 @@ export function ForgotPasswordForm({
           Back to {loginLink}
         </p>
       )}
-    </form>
+    </Form>
   );
 }

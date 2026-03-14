@@ -14,5 +14,6 @@ export {
   DialogTitle,
   DialogDescription,
 } from './components/Dialog';
+export { Form } from './components/Form';
 export { FormInput } from './components/FormInput';
 export { cn } from './lib/utils';
