@@ -12,7 +12,7 @@ import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { SettingsService } from '@packages/settings';
 import { RequirePermission } from '@packages/rbac-nestjs';
 import { CurrentIdentity } from '@packages/auth-nestjs';
-import { ADMIN_PERMISSIONS } from '../permissions';
+import { SETTINGS_PERMISSIONS } from '../permissions';
 import { UpdateModuleSettingsDto } from '../dto/update-module-settings.dto';
 
 @ApiTags('settings')
@@ -21,21 +21,21 @@ export class SettingsController {
   constructor(private readonly settingsService: SettingsService) {}
 
   @Get()
-  @RequirePermission(ADMIN_PERMISSIONS.SETTINGS_READ)
+  @RequirePermission(SETTINGS_PERMISSIONS.READ)
   @ApiOperation({ summary: 'List all module settings' })
   async findAll() {
     return this.settingsService.getAllModuleSettings();
   }
 
   @Get(':module')
-  @RequirePermission(ADMIN_PERMISSIONS.SETTINGS_READ)
+  @RequirePermission(SETTINGS_PERMISSIONS.READ)
   @ApiOperation({ summary: 'Get settings for a specific module' })
   async findByModule(@Param('module') module: string) {
     return this.settingsService.getModuleSettings(module);
   }
 
   @Patch(':module')
-  @RequirePermission(ADMIN_PERMISSIONS.SETTINGS_MANAGE)
+  @RequirePermission(SETTINGS_PERMISSIONS.MANAGE)
   @ApiOperation({ summary: 'Update settings for a module' })
   async update(
     @Param('module') module: string,
@@ -46,7 +46,7 @@ export class SettingsController {
   }
 
   @Delete(':module/:key')
-  @RequirePermission(ADMIN_PERMISSIONS.SETTINGS_MANAGE)
+  @RequirePermission(SETTINGS_PERMISSIONS.MANAGE)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Reset a setting to its default value' })
   async reset(
