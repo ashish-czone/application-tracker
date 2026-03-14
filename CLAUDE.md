@@ -24,6 +24,16 @@ This project has detailed architectural and coding prompts. **PROMPT.md is manda
 
 Every feature request follows this exact workflow. No shortcuts.
 
+### Step 0: Ensure you are on `main`
+
+Before starting any work, verify you are on the `main` branch with the latest changes:
+
+```bash
+git checkout main && git pull
+```
+
+**Never start a new feature branch from another feature branch.** Always branch from an up-to-date `main`.
+
 ### Step 1: Plan
 
 Before writing any code:
@@ -33,19 +43,23 @@ Before writing any code:
 3. Break the feature into **atomic tasks**. Each task is independently testable and results in one commit.
 4. Present the task breakdown to the user for approval before proceeding.
 
-### Step 2: Implement → Test → Commit (per task)
+### Step 2: Implement → Test → Commit → PR → Merge (per task)
 
 Work through tasks one at a time, in order. For each task:
 
 ```
-Implement → Write tests → Run tests → Fix if failing → Commit
+Implement → Write tests → Run tests → Fix if failing → Commit → Push → Create PR → Merge to main
 ```
 
-**Never move to the next task until the current task's tests pass.**
+**After each task is done, immediately create a PR and merge it to `main`.** Do not accumulate multiple tasks on one branch. Each task gets its own branch, its own PR, and is merged before starting the next task.
 
-### Step 3: PR
+Before starting the next task, switch back to `main` and pull:
 
-After all tasks are committed, push the branch and create a PR.
+```bash
+git checkout main && git pull
+```
+
+**Never move to the next task until the current task's PR is merged.**
 
 ---
 
@@ -137,11 +151,13 @@ Rules:
 
 ### Pull requests
 
-After all tasks are committed:
+Each task gets its own PR, created and merged immediately after the task is done:
 
 1. Push the branch: `git push -u origin feat/add-candidate-submission`
-2. Create PR with a summary of all changes, referencing the task breakdown.
+2. Create PR with a summary of the task's changes.
 3. PR title follows the same conventional format: `feat: add candidate submission`
+4. Merge the PR to `main` immediately.
+5. Switch back to `main` and pull before starting the next task.
 
 ### Rules
 
@@ -149,6 +165,8 @@ After all tasks are committed:
 - **Never force-push** unless explicitly asked.
 - **Never amend a commit** unless explicitly asked. Create new commits.
 - **Code and tests are committed together** — never commit code in one commit and its tests in another.
+- **Always start from `main`.** Every new task branches from an up-to-date `main`, never from another feature branch.
+- **Merge PRs immediately.** Do not wait for all tasks to finish — merge each PR as soon as its task is complete.
 
 ---
 
