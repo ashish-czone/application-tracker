@@ -1,6 +1,6 @@
 import { faker } from '@faker-js/faker';
 import { generateRandomToken } from '@packages/auth';
-import type { PrismaClient } from '@prisma/client';
+import type { PrismaClient } from '@packages/database';
 
 export const PasswordTokenFactory = {
   build(overrides: Record<string, unknown> = {}) {

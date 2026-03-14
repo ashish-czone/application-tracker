@@ -1,6 +1,6 @@
 import { faker } from '@faker-js/faker';
 import { hashPassword } from '@packages/auth';
-import type { PrismaClient } from '@prisma/client';
+import type { PrismaClient } from '@packages/database';
 
 const DEFAULT_PASSWORD = 'Password123!';
 

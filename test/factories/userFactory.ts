@@ -1,5 +1,5 @@
 import { faker } from '@faker-js/faker';
-import type { PrismaClient } from '@prisma/client';
+import type { PrismaClient } from '@packages/database';
 import { IdentityFactory } from './identityFactory';
 
 export const UserFactory = {

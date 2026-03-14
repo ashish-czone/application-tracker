@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@packages/database';
 
 export async function cleanDatabase(prisma: PrismaClient) {
   const tables = await prisma.$queryRaw<{ tablename: string }[]>`
