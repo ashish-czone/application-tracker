@@ -16,8 +16,8 @@ export interface RolePermissionRecord {
   permissionId: string;
 }
 
-export interface UserRoleRecord {
-  userId: string;
+export interface IdentityRoleRecord {
+  identityId: string;
   roleId: string;
 }
 
@@ -44,7 +44,7 @@ export interface RolePermissionDelegate {
   deleteMany(args: any): Promise<{ count: number }>;
 }
 
-export interface UserRoleDelegate {
+export interface IdentityRoleDelegate {
   findMany(args?: any): Promise<any[]>;
   create(args: any): Promise<any>;
   delete(args: any): Promise<any>;
@@ -58,5 +58,5 @@ export interface RbacModuleConfig {
   getRoleDelegate: () => RoleDelegate;
   getPermissionDelegate: () => PermissionDelegate;
   getRolePermissionDelegate: () => RolePermissionDelegate;
-  getUserRoleDelegate: () => UserRoleDelegate;
+  getIdentityRoleDelegate: () => IdentityRoleDelegate;
 }

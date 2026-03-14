@@ -8,10 +8,10 @@ export {
   InvalidTokenError,
 } from './tokens';
 export type {
-  AuthenticableUser,
+  AuthenticableIdentity,
   PasswordTokenRecord,
   TokenPayload,
   AuthModuleConfig,
-  AuthUserDelegate,
+  AuthIdentityDelegate,
   AuthPasswordTokenDelegate,
 } from './types';
