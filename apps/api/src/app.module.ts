@@ -8,6 +8,7 @@ import { EventsModule } from '@packages/events';
 import { AuthGuard } from '@packages/auth-nestjs';
 import { RbacGuard } from '@packages/rbac-nestjs';
 import { AdminModule } from './modules/admin/admin.module';
+import { IdentityModule } from './modules/identity/identity.module';
 import { UsersModule } from './modules/users/users.module';
 import { validate } from './config/env.validation';
 
@@ -26,6 +27,7 @@ import { validate } from './config/env.validation';
     ]),
     DatabaseModule,
     EventsModule,
+    IdentityModule,
     UsersModule,
     AdminModule,
   ],

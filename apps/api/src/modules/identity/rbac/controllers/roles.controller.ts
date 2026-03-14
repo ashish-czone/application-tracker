@@ -73,29 +73,29 @@ export class RolesController {
     return this.rbacService.getRolePermissions(id);
   }
 
-  @Get('/users/:userId/roles')
+  @Get('/identities/:identityId/roles')
   @RequirePermission('rbac.roles.manage')
-  async getUserRoles(@Param('userId', ParseUUIDPipe) userId: string) {
-    return this.rbacService.getUserRoles(userId);
+  async getIdentityRoles(@Param('identityId', ParseUUIDPipe) identityId: string) {
+    return this.rbacService.getIdentityRoles(identityId);
   }
 
-  @Post('/users/:userId/roles')
+  @Post('/identities/:identityId/roles')
   @RequirePermission('rbac.roles.manage')
   @HttpCode(HttpStatus.CREATED)
   async assignRole(
-    @Param('userId', ParseUUIDPipe) userId: string,
+    @Param('identityId', ParseUUIDPipe) identityId: string,
     @Body() dto: AssignRoleDto,
   ) {
-    return this.rbacService.assignRoleToUser(userId, dto.roleId);
+    return this.rbacService.assignRoleToIdentity(identityId, dto.roleId);
   }
 
-  @Delete('/users/:userId/roles/:roleId')
+  @Delete('/identities/:identityId/roles/:roleId')
   @RequirePermission('rbac.roles.manage')
   @HttpCode(HttpStatus.NO_CONTENT)
   async removeRole(
-    @Param('userId', ParseUUIDPipe) userId: string,
+    @Param('identityId', ParseUUIDPipe) identityId: string,
     @Param('roleId', ParseUUIDPipe) roleId: string,
   ) {
-    await this.rbacService.removeRoleFromUser(userId, roleId);
+    await this.rbacService.removeRoleFromIdentity(identityId, roleId);
   }
 }
