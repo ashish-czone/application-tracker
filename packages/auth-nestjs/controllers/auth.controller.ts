@@ -11,9 +11,9 @@ import {
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
-import type { AuthModuleConfig, AuthenticableUser } from '@packages/auth';
+import type { AuthModuleConfig, AuthenticableIdentity } from '@packages/auth';
 import { Public } from '../decorators/public.decorator';
-import { CurrentUser } from '../decorators/current-user.decorator';
+import { CurrentIdentity } from '../decorators/current-user.decorator';
 import { AuthService } from '../services/auth.service';
 import { LoginDto } from '../dto/login.dto';
 import { RegisterDto } from '../dto/register.dto';
@@ -78,10 +78,10 @@ export class AuthController {
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   async logout(
-    @CurrentUser() user: AuthenticableUser,
+    @CurrentIdentity() identity: AuthenticableIdentity,
     @Res({ passthrough: true }) res: Response,
   ) {
-    await this.authService.logout(user.id);
+    await this.authService.logout(identity.id);
     res.clearCookie('refresh_token');
     return { message: 'Logged out' };
   }
@@ -102,8 +102,8 @@ export class AuthController {
   }
 
   @Get('me')
-  async getMe(@CurrentUser() user: AuthenticableUser) {
-    return this.authService.getMe(user.id);
+  async getMe(@CurrentIdentity() identity: AuthenticableIdentity) {
+    return this.authService.getMe(identity.id);
   }
 
   private setRefreshCookie(res: Response, token: string) {

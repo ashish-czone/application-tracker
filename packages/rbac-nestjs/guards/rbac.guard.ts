@@ -28,10 +28,10 @@ export class RbacGuard implements CanActivate {
     }
 
     const request = context.switchToHttp().getRequest();
-    const user = request.user;
+    const identity = request.identity;
 
-    if (!user) {
-      throw new ForbiddenException('No authenticated user');
+    if (!identity) {
+      throw new ForbiddenException('No authenticated identity');
     }
 
     const entityName = request.authEntityName;
@@ -41,16 +41,16 @@ export class RbacGuard implements CanActivate {
       return true;
     }
 
-    // Superadmin bypass — users with the superadmin role skip permission checks
-    const userRoles = await this.rbacService.getUserRoles(user.id);
-    const isSuperadmin = userRoles.some(
-      (ur) => (ur as Record<string, unknown> & { role?: { name?: string } }).role?.name === 'superadmin',
+    // Superadmin bypass — identities with the superadmin role skip permission checks
+    const identityRoles = await this.rbacService.getIdentityRoles(identity.id);
+    const isSuperadmin = identityRoles.some(
+      (ir) => (ir as Record<string, unknown> & { role?: { name?: string } }).role?.name === 'superadmin',
     );
     if (isSuperadmin) {
       return true;
     }
 
-    const permissions = await this.rbacService.getUserPermissions(user.id);
+    const permissions = await this.rbacService.getIdentityPermissions(identity.id);
 
     if (!hasPermission(permissions, requiredPermission)) {
       throw new ForbiddenException('Insufficient permissions');

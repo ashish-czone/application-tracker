@@ -68,19 +68,19 @@ export class AuthGuard implements CanActivate {
       throw new UnauthorizedException('Unknown auth context');
     }
 
-    const userDelegate = config.getUserDelegate();
-    const user = await userDelegate.findUnique({ where: { id: payload.sub } });
+    const identityDelegate = config.getIdentityDelegate();
+    const identity = await identityDelegate.findUnique({ where: { id: payload.sub } });
 
-    if (!user) {
-      throw new UnauthorizedException('User not found');
+    if (!identity) {
+      throw new UnauthorizedException('Identity not found');
     }
 
     // Check soft-delete
-    if ('deletedAt' in user && (user as Record<string, unknown>).deletedAt !== null) {
-      throw new UnauthorizedException('User account is deactivated');
+    if ('deletedAt' in identity && (identity as Record<string, unknown>).deletedAt !== null) {
+      throw new UnauthorizedException('Account is deactivated');
     }
 
-    request.user = user;
+    request.identity = identity;
     request.authEntityName = payload.entityName;
     return true;
   }

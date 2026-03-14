@@ -17,7 +17,7 @@ import {
   TokenExpiredError,
   InvalidTokenError,
 } from '@packages/auth';
-import type { AuthModuleConfig, AuthenticableUser } from '@packages/auth';
+import type { AuthModuleConfig, AuthenticableIdentity } from '@packages/auth';
 import { AUTH_MODULE_CONFIG } from '../constants';
 
 @Injectable()
@@ -28,42 +28,42 @@ export class AuthService {
   ) {}
 
   async login(email: string, password: string) {
-    const userDelegate = this.config.getUserDelegate();
-    const user = await userDelegate.findUnique({ where: { email: email.toLowerCase() } });
+    const identityDelegate = this.config.getIdentityDelegate();
+    const identity = await identityDelegate.findUnique({ where: { email: email.toLowerCase() } });
 
-    if (!user) {
+    if (!identity) {
       throw new UnauthorizedException('Invalid email or password');
     }
 
-    const valid = await verifyPassword(password, user.passwordHash);
+    const valid = await verifyPassword(password, identity.passwordHash);
     if (!valid) {
       throw new UnauthorizedException('Invalid email or password');
     }
 
-    return this.generateTokensAndStore(user);
+    return this.generateTokensAndStore(identity);
   }
 
   async register(email: string, password: string) {
-    const userDelegate = this.config.getUserDelegate();
-    const existing = await userDelegate.findUnique({ where: { email: email.toLowerCase() } });
+    const identityDelegate = this.config.getIdentityDelegate();
+    const existing = await identityDelegate.findUnique({ where: { email: email.toLowerCase() } });
 
     if (existing) {
       throw new ConflictException('Email already registered');
     }
 
     const passwordHash = await hashPassword(password);
-    const user = await userDelegate.create({
+    const identity = await identityDelegate.create({
       data: {
         email: email.toLowerCase(),
         passwordHash,
       },
     });
 
-    if (this.config.onUserCreated) {
-      await this.config.onUserCreated(user);
+    if (this.config.onIdentityCreated) {
+      await this.config.onIdentityCreated(identity);
     }
 
-    return this.generateTokensAndStore(user);
+    return this.generateTokensAndStore(identity);
   }
 
   async refresh(refreshTokenValue: string | undefined) {
@@ -81,46 +81,46 @@ export class AuthService {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
-    const userDelegate = this.config.getUserDelegate();
-    const user = await userDelegate.findUnique({ where: { id: payload.sub } });
+    const identityDelegate = this.config.getIdentityDelegate();
+    const identity = await identityDelegate.findUnique({ where: { id: payload.sub } });
 
-    if (!user) {
-      throw new UnauthorizedException('User not found');
+    if (!identity) {
+      throw new UnauthorizedException('Identity not found');
     }
 
     // Verify stored refresh token hash matches
-    if (!user.refreshToken) {
+    if (!identity.refreshToken) {
       throw new UnauthorizedException('Refresh token invalidated');
     }
 
-    const storedHashValid = verifyTokenHash(refreshTokenValue, user.refreshToken);
+    const storedHashValid = verifyTokenHash(refreshTokenValue, identity.refreshToken);
     if (!storedHashValid) {
       // Token rotation: old token used after new one was issued
       // Invalidate all refresh tokens for security
-      await userDelegate.update({
-        where: { id: user.id },
+      await identityDelegate.update({
+        where: { id: identity.id },
         data: { refreshToken: null },
       });
       throw new UnauthorizedException('Refresh token reuse detected');
     }
 
-    return this.generateTokensAndStore(user);
+    return this.generateTokensAndStore(identity);
   }
 
-  async logout(userId: string) {
-    const userDelegate = this.config.getUserDelegate();
-    await userDelegate.update({
-      where: { id: userId },
+  async logout(identityId: string) {
+    const identityDelegate = this.config.getIdentityDelegate();
+    await identityDelegate.update({
+      where: { id: identityId },
       data: { refreshToken: null },
     });
   }
 
   async forgotPassword(email: string) {
-    const userDelegate = this.config.getUserDelegate();
-    const user = await userDelegate.findUnique({ where: { email: email.toLowerCase() } });
+    const identityDelegate = this.config.getIdentityDelegate();
+    const identity = await identityDelegate.findUnique({ where: { email: email.toLowerCase() } });
 
     // Always return 200 — don't reveal whether the email exists
-    if (!user) {
+    if (!identity) {
       return { message: 'If an account exists, a password reset link has been sent' };
     }
 
@@ -130,7 +130,7 @@ export class AuthService {
     const passwordTokenDelegate = this.config.getPasswordTokenDelegate();
     await passwordTokenDelegate.create({
       data: {
-        userId: user.id,
+        identityId: identity.id,
         token,
         expiresAt,
       },
@@ -157,10 +157,10 @@ export class AuthService {
     }
 
     const passwordHash = await hashPassword(newPassword);
-    const userDelegate = this.config.getUserDelegate();
+    const identityDelegate = this.config.getIdentityDelegate();
 
-    await userDelegate.update({
-      where: { id: record.userId },
+    await identityDelegate.update({
+      where: { id: record.identityId },
       data: { passwordHash, refreshToken: null },
     });
 
@@ -172,30 +172,30 @@ export class AuthService {
     return { message: 'Password reset successfully' };
   }
 
-  async getMe(userId: string) {
-    const userDelegate = this.config.getUserDelegate();
-    const user = await userDelegate.findUnique({ where: { id: userId } });
+  async getMe(identityId: string) {
+    const identityDelegate = this.config.getIdentityDelegate();
+    const identity = await identityDelegate.findUnique({ where: { id: identityId } });
 
-    if (!user) {
-      throw new UnauthorizedException('User not found');
+    if (!identity) {
+      throw new UnauthorizedException('Identity not found');
     }
 
     // Strip sensitive fields
-    const { passwordHash: _, refreshToken: __, ...profile } = user;
+    const { passwordHash: _, refreshToken: __, ...profile } = identity;
 
     // Enrich with additional data (e.g., permissions)
-    if (this.config.enrichUserProfile) {
-      const extra = await this.config.enrichUserProfile(user);
+    if (this.config.enrichIdentityProfile) {
+      const extra = await this.config.enrichIdentityProfile(identity);
       return { ...profile, ...extra };
     }
 
     return profile;
   }
 
-  private async generateTokensAndStore(user: AuthenticableUser) {
+  private async generateTokensAndStore(identity: AuthenticableIdentity) {
     const payload = {
-      sub: user.id,
-      email: user.email,
+      sub: identity.id,
+      email: identity.email,
       entityName: this.config.entityName,
     };
 
@@ -212,9 +212,9 @@ export class AuthService {
 
     // SHA-256 hash for refresh token (bcrypt truncates at 72 bytes, JWTs are longer)
     const refreshTokenHash = hashToken(refreshToken);
-    const userDelegate = this.config.getUserDelegate();
-    await userDelegate.update({
-      where: { id: user.id },
+    const identityDelegate = this.config.getIdentityDelegate();
+    await identityDelegate.update({
+      where: { id: identity.id },
       data: { refreshToken: refreshTokenHash },
     });
 

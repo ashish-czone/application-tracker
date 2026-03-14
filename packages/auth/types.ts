@@ -1,14 +1,13 @@
-export interface AuthenticableUser {
+export interface AuthenticableIdentity {
   id: string;
   email: string;
   passwordHash: string;
   refreshToken?: string | null;
-  timezone?: string | null;
 }
 
 export interface PasswordTokenRecord {
   id: string;
-  userId: string;
+  identityId: string;
   token: string;
   expiresAt: Date;
   usedAt: Date | null;
@@ -26,23 +25,23 @@ export interface AuthModuleConfig {
   accessTokenExpiresIn: string;
   refreshTokenExpiresIn: string;
   jwtSecret: string;
-  getUserDelegate: () => AuthUserDelegate;
+  getIdentityDelegate: () => AuthIdentityDelegate;
   getPasswordTokenDelegate: () => AuthPasswordTokenDelegate;
-  enrichUserProfile?: (user: AuthenticableUser) => Promise<Record<string, unknown>>;
-  onUserCreated?: (user: AuthenticableUser) => Promise<void>;
+  enrichIdentityProfile?: (identity: AuthenticableIdentity) => Promise<Record<string, unknown>>;
+  onIdentityCreated?: (identity: AuthenticableIdentity) => Promise<void>;
 }
 
-export interface AuthUserDelegate {
+export interface AuthIdentityDelegate {
   findUnique(args: {
     where: { id?: string; email?: string };
-  }): Promise<AuthenticableUser | null>;
+  }): Promise<AuthenticableIdentity | null>;
   update(args: {
     where: { id: string };
-    data: Partial<AuthenticableUser>;
-  }): Promise<AuthenticableUser>;
+    data: Partial<AuthenticableIdentity>;
+  }): Promise<AuthenticableIdentity>;
   create(args: {
-    data: Omit<AuthenticableUser, 'id'>;
-  }): Promise<AuthenticableUser>;
+    data: Omit<AuthenticableIdentity, 'id'>;
+  }): Promise<AuthenticableIdentity>;
 }
 
 export interface AuthPasswordTokenDelegate {

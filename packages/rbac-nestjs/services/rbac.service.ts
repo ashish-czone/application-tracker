@@ -105,38 +105,38 @@ export class RbacService {
     });
   }
 
-  // --- User-Role management ---
+  // --- Identity-Role management ---
 
-  async assignRoleToUser(userId: string, roleId: string) {
+  async assignRoleToIdentity(identityId: string, roleId: string) {
     await this.findRoleById(roleId);
-    const urDelegate = this.config.getUserRoleDelegate();
-    return urDelegate.create({ data: { userId, roleId } });
+    const irDelegate = this.config.getIdentityRoleDelegate();
+    return irDelegate.create({ data: { identityId, roleId } });
   }
 
-  async removeRoleFromUser(userId: string, roleId: string) {
-    const urDelegate = this.config.getUserRoleDelegate();
-    return urDelegate.delete({
-      where: { userId_roleId: { userId, roleId } },
+  async removeRoleFromIdentity(identityId: string, roleId: string) {
+    const irDelegate = this.config.getIdentityRoleDelegate();
+    return irDelegate.delete({
+      where: { identityId_roleId: { identityId, roleId } },
     });
   }
 
-  async getUserRoles(userId: string) {
-    const urDelegate = this.config.getUserRoleDelegate();
-    return urDelegate.findMany({
-      where: { userId },
+  async getIdentityRoles(identityId: string) {
+    const irDelegate = this.config.getIdentityRoleDelegate();
+    return irDelegate.findMany({
+      where: { identityId },
       include: { role: true },
     });
   }
 
   // --- Permission check (used by guard) ---
 
-  async getUserPermissions(userId: string): Promise<string[]> {
-    const urDelegate = this.config.getUserRoleDelegate();
-    const userRoles = await urDelegate.findMany({ where: { userId } });
+  async getIdentityPermissions(identityId: string): Promise<string[]> {
+    const irDelegate = this.config.getIdentityRoleDelegate();
+    const identityRoles = await irDelegate.findMany({ where: { identityId } });
 
-    if (userRoles.length === 0) return [];
+    if (identityRoles.length === 0) return [];
 
-    const roleIds = userRoles.map((ur) => ur.roleId);
+    const roleIds = identityRoles.map((ir) => ir.roleId);
     const rpDelegate = this.config.getRolePermissionDelegate();
 
     const allPermissions: string[] = [];
@@ -161,7 +161,7 @@ export class RbacService {
 
   // --- Superadmin bootstrap ---
 
-  async bootstrapSuperadmin(userId: string) {
+  async bootstrapSuperadmin(identityId: string) {
     const roleDelegate = this.config.getRoleDelegate();
 
     // Find or create superadmin role
@@ -182,16 +182,16 @@ export class RbacService {
       throw new Error('Failed to create or find superadmin role');
     }
 
-    // Check if any user already has superadmin role
-    const urDelegate = this.config.getUserRoleDelegate();
-    const existingSuperadmins = await urDelegate.findMany({
+    // Check if any identity already has superadmin role
+    const irDelegate = this.config.getIdentityRoleDelegate();
+    const existingSuperadmins = await irDelegate.findMany({
       where: { roleId: superadminRole.id },
     });
 
     if (existingSuperadmins.length === 0) {
       try {
-        await urDelegate.create({
-          data: { userId, roleId: superadminRole.id },
+        await irDelegate.create({
+          data: { identityId, roleId: superadminRole.id },
         });
       } catch {
         // Race condition: another request assigned it first — safe to ignore
