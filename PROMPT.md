@@ -93,8 +93,8 @@ apps/api/
     DatabaseModule,
     EventsModule,
     // Platform capability packages
-    UserAuthModule,      // registers AuthNestjsModule with user config
-    AdminAuthModule,     // registers AuthNestjsModule with admin config
+    SettingsNestjsModule, // module config + admin-editable settings
+    UserAuthModule,       // registers AuthNestjsModule with user config
     RbacModule,
     NotificationsModule,
     ActivityLogModule,
@@ -102,28 +102,16 @@ apps/api/
     // Domain modules
     CandidatesModule,
     OrdersModule,
-    // Platform configuration (thin CRUD for platform packages)
-    AdminModule,
+    // Platform configuration modules (each capability owns its own module)
+    SettingsModule,
+    NotificationRulesModule,
+    WorkflowDefinitionsModule,
   ],
 })
 export class AppModule {}
 ```
 
-### apps/api/src/modules/admin/ — Platform Configuration
-
-A thin module that provides CRUD endpoints for configuring platform capability packages (notification rules, reminder schedules, workflow definitions). It also exposes the event registry so the frontend can discover available events and their payload schemas.
-
-```
-apps/api/src/modules/admin/
-  controllers/
-    notification-rules.controller.ts    # CRUD → notificationsService
-    reminder-rules.controller.ts        # CRUD → reminderService
-    workflow-definitions.controller.ts  # CRUD → workflowService
-    event-registry.controller.ts        # read-only → eventRegistryService
-  admin.module.ts
-```
-
-Each controller is a thin delegation layer — no business logic. The actual logic lives in the platform packages.
+Each platform capability that needs CRUD configuration gets its own module under `modules/` (e.g., `modules/settings/`, `modules/notification-rules/`). There is no catch-all "admin" module — RBAC handles access control, and each module owns its own controllers, DTOs, and permissions.
 
 ### apps/web/ — React + Vite Frontend
 
@@ -253,7 +241,7 @@ Controllers use the constants:
 async create(@Body() dto: CreateCandidateDto) { ... }
 ```
 
-The admin UI discovers all permissions via `GET /admin/permissions` (served by `modules/admin`), grouped by module, for assigning to roles.
+The UI discovers all permissions via `GET /api/v1/permissions/registry` (served by the identity module's RBAC controllers), grouped by module, for assigning to roles.
 
 ### Domain vs Side-Effect Decision
 
@@ -316,7 +304,7 @@ onModuleInit() {
 }
 ```
 
-The event registry is exposed via `apps/api/src/modules/admin/controllers/event-registry.controller.ts` as a read-only API (`GET /admin/events`).
+The event registry is exposed as a read-only API endpoint. The controller for this lives in the module that owns the event system (e.g., `modules/events/controllers/event-registry.controller.ts`).
 
 ### Event Producer (Domain Module)
 
@@ -508,7 +496,7 @@ apps/web/src/modules/<module-name>/
 
 6. **Cross-module reads are allowed for aggregate views.** A dashboard module may import hooks from other modules for read-only display. Dashboard never modifies other modules' state.
 
-7. **Admin pages** for platform configuration live alongside relevant frontend modules. Pages are thin wrappers that fetch data via API endpoints and compose components from platform UI packages (`@packages/notifications-ui`, `@packages/workflow-engine-ui`, etc.).
+7. **Configuration pages** for platform capabilities live in their own frontend modules (e.g., `modules/settings/`, `modules/notification-rules/`). Pages are thin wrappers that fetch data via API endpoints and compose components from platform UI packages (`@packages/notifications-ui`, `@packages/workflow-engine-ui`, etc.).
 
 ---
 
@@ -522,7 +510,7 @@ Packages have ZERO knowledge of business domains. They never reference "candidat
 
 Examples: database (Prisma client + config), events (in-memory event bus), queue (durable async jobs via BullMQ, including repeatable/cron jobs).
 
-**Platform Capabilities (backend, invoked directly):** Cross-cutting engines that domain services call directly via their public API. They provide capabilities that modules need during their domain operations. CRUD endpoints for managing their configuration (roles, workflow definitions, etc.) live in `modules/admin`.
+**Platform Capabilities (backend, invoked directly):** Cross-cutting engines that domain services call directly via their public API. They provide capabilities that modules need during their domain operations. CRUD endpoints for managing their configuration (roles, workflow definitions, etc.) live in their own modules (e.g., `modules/settings/`, `modules/workflow-definitions/`).
 
 Examples: auth + auth-nestjs (config-driven authentication — see PROMPT-AUTH.md), rbac (roles + permissions + guards), workflow-engine (DB-driven state machine), files (storage abstraction), search (search abstraction).
 
@@ -538,13 +526,13 @@ async create(@Body() dto: CreateCandidateDto) { ... }
 
 `packages/rbac-nestjs` exports guards and decorators. `RbacNestjsModule` is registered per entity type (like auth), making guards available globally. Management of roles, permissions, and user-role assignments is handled by RBAC controllers within the relevant module (e.g., `apps/api/src/modules/users/rbac/`), which delegate to `rbacService`.
 
-**Side-Effect Packages (backend, event-driven):** Cross-cutting engines that subscribe to domain events and react generically. No module calls them directly — they listen and act independently. They contain no domain knowledge — all behavior is configured via DB rules, not hardcoded `if/else` chains. No controllers — CRUD endpoints for configuring these packages live in `modules/admin`.
+**Side-Effect Packages (backend, event-driven):** Cross-cutting engines that subscribe to domain events and react generically. No module calls them directly — they listen and act independently. They contain no domain knowledge — all behavior is configured via DB rules, not hardcoded `if/else` chains. CRUD endpoints for configuring these packages live in their own modules (e.g., `modules/notification-rules/`, `modules/reminder-rules/`).
 
 Examples: notifications (DB-driven templates + delivery), activity-log (event-driven feed), reminder-engine (scheduled side-effects).
 
 These packages self-register their event subscriptions using `@OnEvent()` decorators. They process domain events using the base `DomainEvent` interface from `packages/events` — they never import from app modules.
 
-**Platform UI Packages (frontend):** Reusable React components for configuring platform capabilities. These are props-driven building blocks — no API calls, no routing, no data-fetching hooks. The consuming feature (`features/admin`) owns data fetching and wires these components into pages.
+**Platform UI Packages (frontend):** Reusable React components for configuring platform capabilities. These are props-driven building blocks — no API calls, no routing, no data-fetching hooks. The consuming frontend module (e.g., `modules/settings/`, `modules/notification-rules/`) owns data fetching and wires these components into pages.
 
 Examples: auth-ui (login form, register form, password reset, session expired modal), notifications-ui (rule builder, template editor, channel selector), workflow-engine-ui (state machine editor, transition builder), reminder-engine-ui (schedule builder).
 
