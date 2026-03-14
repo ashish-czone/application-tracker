@@ -51,6 +51,22 @@ Work through tasks one at a time, in order. For each task:
 Implement → Write tests → Run tests → Fix if failing → Commit → Push → Create PR → Merge to main
 ```
 
+**Tests must pass before committing.** After implementing, run the relevant tests for the module/package you changed:
+
+```bash
+# Backend module tests (unit tests in the package + integration tests in apps/api)
+pnpm --filter @packages/<package-name> test    # unit tests for the package
+pnpm --filter @apps/api test                   # integration tests (requires DB)
+
+# Frontend package tests
+pnpm --filter @packages/auth-ui test           # component tests
+
+# All package unit tests (no DB required)
+npx turbo run test --filter='@packages/*'
+```
+
+If any test fails, fix the issue before committing. Do not skip failing tests.
+
 **After each task is done, immediately create a PR and merge it to `main`.** Do not accumulate multiple tasks on one branch. Each task gets its own branch, its own PR, and is merged before starting the next task.
 
 Before starting the next task, switch back to `main` and pull:
@@ -188,7 +204,7 @@ Each task gets its own PR, created and merged immediately after the task is done
 Before considering any task complete, verify:
 
 - [ ] Code follows the relevant prompt conventions (architecture, API, UI)
-- [ ] Tests are written and passing
+- [ ] Tests are written and passing (`pnpm --filter <package> test` for affected packages)
 - [ ] Security tests exist for every new endpoint (401 + 403)
 - [ ] No `console.log` in production code — use structured logger
 - [ ] No hardcoded colors — use semantic tokens
