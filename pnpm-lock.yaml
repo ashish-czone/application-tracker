@@ -107,6 +107,9 @@ importers:
       '@packages/rbac-nestjs':
         specifier: workspace:*
         version: link:../../packages/rbac-nestjs
+      '@packages/settings':
+        specifier: workspace:*
+        version: link:../../packages/settings
       class-transformer:
         specifier: ^0.5.1
         version: 0.5.1
@@ -171,6 +174,9 @@ importers:
       webpack-node-externals:
         specifier: ^3.0.0
         version: 3.0.0
+      zod:
+        specifier: ^3.25.0
+        version: 3.25.76
 
   apps/web:
     dependencies:
