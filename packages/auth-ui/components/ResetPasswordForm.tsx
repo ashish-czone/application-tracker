@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Button, FormInput } from '@packages/ui';
+import { Button, Form, FormInput } from '@packages/ui';
 import { resetPasswordSchema, type ResetPasswordFormValues } from '../schemas/resetPasswordSchema';
 import { PasswordStrengthMeter } from './PasswordStrengthMeter';
 import type { ReactNode } from 'react';
@@ -44,7 +44,7 @@ export function ResetPasswordForm({
   }
 
   return (
-    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4" noValidate>
+    <Form onSubmit={handleSubmit(handleFormSubmit)}>
       <div className="space-y-2 text-center">
         <h1 className="text-2xl font-semibold tracking-tight">Reset password</h1>
         <p className="text-sm text-muted-foreground">Enter your new password</p>
@@ -91,6 +91,6 @@ export function ResetPasswordForm({
           Back to {loginLink}
         </p>
       )}
-    </form>
+    </Form>
   );
 }

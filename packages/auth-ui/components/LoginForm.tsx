@@ -1,6 +1,6 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Button, FormInput } from '@packages/ui';
+import { Button, Form, FormInput } from '@packages/ui';
 import { loginSchema, type LoginFormValues } from '../schemas/loginSchema';
 import type { ReactNode } from 'react';
 
@@ -29,7 +29,7 @@ export function LoginForm({
   });
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+    <Form onSubmit={handleSubmit(onSubmit)}>
       <div className="space-y-2 text-center">
         <h1 className="text-2xl font-semibold tracking-tight">Sign in</h1>
         <p className="text-sm text-muted-foreground">Enter your credentials to continue</p>
@@ -71,6 +71,6 @@ export function LoginForm({
           Don't have an account? {registerLink}
         </p>
       )}
-    </form>
+    </Form>
   );
 }
