@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter } from 'react-router';
-import { SessionExpiredProvider } from '@modules/users/auth/components/SessionExpiredProvider';
-import { PermissionsProvider } from '@modules/users/auth/components/PermissionsProvider';
+import { SessionExpiredProvider } from '@modules/identity/auth/components/SessionExpiredProvider';
+import { PermissionsProvider } from '@modules/identity/auth/components/PermissionsProvider';
 import type { ReactNode } from 'react';
 
 const queryClient = new QueryClient({
