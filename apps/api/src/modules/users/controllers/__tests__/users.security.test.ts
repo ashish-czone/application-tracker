@@ -1,27 +1,40 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
 import type { INestApplication } from '@nestjs/common';
-import type { PrismaClient } from '@packages/database';
+import type { DrizzleDB } from '@packages/database';
+import { identities, users, permissions, roles, rolePermissions, eq, and } from '@packages/database';
 import { createTestApp } from '../../../../../../../test/utils/app';
 import { cleanDatabase } from '../../../../../../../test/utils/db';
 import { tokenFor, expiredTokenFor } from '../../../../../../../test/utils/auth';
 import { IdentityFactory } from '../../../../../../../test/factories/identityFactory';
 import { UserFactory } from '../../../../../../../test/factories/userFactory';
 
+async function upsertPermission(db: DrizzleDB, resource: string, action: string) {
+  const [existing] = await db.select().from(permissions)
+    .where(and(eq(permissions.resource, resource), eq(permissions.action, action))).limit(1);
+  if (existing) return existing;
+  const [created] = await db.insert(permissions).values({ resource, action }).returning();
+  return created;
+}
+
+async function upsertRolePermission(db: DrizzleDB, roleId: string, permissionId: string) {
+  await db.insert(rolePermissions).values({ roleId, permissionId }).onConflictDoNothing();
+}
+
 describe('Users API — security', () => {
   let app: INestApplication;
-  let prisma: PrismaClient;
+  let db: DrizzleDB;
   let httpServer: ReturnType<INestApplication['getHttpServer']>;
 
   beforeAll(async () => {
     const testApp = await createTestApp();
     app = testApp.app;
-    prisma = testApp.prisma;
+    db = testApp.db;
     httpServer = testApp.httpServer;
   });
 
   afterAll(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase(db);
     await app.close();
   });
 
@@ -32,7 +45,7 @@ describe('Users API — security', () => {
     });
 
     it('should return 401 with expired token', async () => {
-      const identity = await IdentityFactory.create(prisma);
+      const identity = await IdentityFactory.create(db);
       const res = await request(httpServer)
         .get('/api/v1/users')
         .set('Authorization', `Bearer ${expiredTokenFor(identity)}`);
@@ -40,7 +53,7 @@ describe('Users API — security', () => {
     });
 
     it('should return 403 without users.read permission', async () => {
-      const identity = await IdentityFactory.create(prisma);
+      const identity = await IdentityFactory.create(db);
       const res = await request(httpServer)
         .get('/api/v1/users')
         .set('Authorization', `Bearer ${tokenFor(identity)}`);
@@ -62,7 +75,7 @@ describe('Users API — security', () => {
     });
 
     it('should return 403 without users.create permission', async () => {
-      const identity = await IdentityFactory.create(prisma);
+      const identity = await IdentityFactory.create(db);
       const res = await request(httpServer)
         .post('/api/v1/users')
         .set('Authorization', `Bearer ${tokenFor(identity)}`)
@@ -84,7 +97,7 @@ describe('Users API — security', () => {
     });
 
     it('should return 403 without users.read permission', async () => {
-      const identity = await IdentityFactory.create(prisma);
+      const identity = await IdentityFactory.create(db);
       const res = await request(httpServer)
         .get('/api/v1/users/00000000-0000-0000-0000-000000000000')
         .set('Authorization', `Bearer ${tokenFor(identity)}`);
@@ -101,7 +114,7 @@ describe('Users API — security', () => {
     });
 
     it('should return 403 without users.update permission', async () => {
-      const identity = await IdentityFactory.create(prisma);
+      const identity = await IdentityFactory.create(db);
       const res = await request(httpServer)
         .patch('/api/v1/users/00000000-0000-0000-0000-000000000000')
         .set('Authorization', `Bearer ${tokenFor(identity)}`)
@@ -118,7 +131,7 @@ describe('Users API — security', () => {
     });
 
     it('should return 403 without users.delete permission', async () => {
-      const identity = await IdentityFactory.create(prisma);
+      const identity = await IdentityFactory.create(db);
       const res = await request(httpServer)
         .delete('/api/v1/users/00000000-0000-0000-0000-000000000000')
         .set('Authorization', `Bearer ${tokenFor(identity)}`);
@@ -137,9 +150,8 @@ describe('Users API — security', () => {
           lastName: 'Check',
         });
 
-      const identity = await prisma.identity.findUnique({
-        where: { email: 'hash-check@example.com' },
-      });
+      const [identity] = await db.select().from(identities)
+        .where(eq(identities.email, 'hash-check@example.com')).limit(1);
       expect(identity).not.toBeNull();
       expect(identity!.passwordHash).not.toBe('Password123!');
       expect(identity!.passwordHash).toMatch(/^\$2[aby]?\$/);
@@ -163,24 +175,13 @@ describe('Users API — security', () => {
 
     it('should not expose soft-deleted users via GET', async () => {
       // Grant read permission
-      const admin = await IdentityFactory.createWithRole(prisma, 'superadmin');
-      const perm = await prisma.permission.upsert({
-        where: { resource_action: { resource: 'users', action: 'read' } },
-        update: {},
-        create: { resource: 'users', action: 'read' },
-      });
-      const role = await prisma.role.findUnique({ where: { name: 'superadmin' } });
-      await prisma.rolePermission.upsert({
-        where: { roleId_permissionId: { roleId: role!.id, permissionId: perm.id } },
-        update: {},
-        create: { roleId: role!.id, permissionId: perm.id },
-      });
+      const admin = await IdentityFactory.createWithRole(db, 'superadmin');
+      const perm = await upsertPermission(db, 'users', 'read');
+      const [role] = await db.select().from(roles).where(eq(roles.name, 'superadmin')).limit(1);
+      await upsertRolePermission(db, role!.id, perm.id);
 
-      const user = await UserFactory.create(prisma);
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { deletedAt: new Date() },
-      });
+      const user = await UserFactory.create(db);
+      await db.update(users).set({ deletedAt: new Date() }).where(eq(users.id, user.id));
 
       const res = await request(httpServer)
         .get(`/api/v1/users/${user.id}`)

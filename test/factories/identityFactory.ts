@@ -1,6 +1,7 @@
 import { faker } from '@faker-js/faker';
 import { hashPassword } from '@packages/auth';
-import type { PrismaClient } from '@packages/database';
+import type { DrizzleDB } from '@packages/database';
+import { identities, roles, identityRoles, eq } from '@packages/database';
 
 const DEFAULT_PASSWORD = 'Password123!';
 
@@ -13,32 +14,34 @@ export const IdentityFactory = {
     };
   },
 
-  async create(prisma: PrismaClient, overrides: Record<string, unknown> = {}) {
+  async create(db: DrizzleDB, overrides: Record<string, unknown> = {}) {
     const { password, ...rest } = { ...this.build(), ...overrides };
     const passwordHash = await hashPassword(password as string);
 
-    return prisma.identity.create({
-      data: {
+    const [identity] = await db
+      .insert(identities)
+      .values({
         email: (rest.email as string) ?? faker.internet.email().toLowerCase(),
         passwordHash,
-      },
-    });
+      })
+      .returning();
+
+    return identity;
   },
 
-  async createWithRole(prisma: PrismaClient, roleName: string, overrides: Record<string, unknown> = {}) {
-    const identity = await this.create(prisma, overrides);
+  async createWithRole(db: DrizzleDB, roleName: string, overrides: Record<string, unknown> = {}) {
+    const identity = await this.create(db, overrides);
 
     // Find or create role
-    let role = await prisma.role.findUnique({ where: { name: roleName } });
+    let [role] = await db.select().from(roles).where(eq(roles.name, roleName)).limit(1);
     if (!role) {
-      role = await prisma.role.create({
-        data: { name: roleName, description: `${roleName} role` },
-      });
+      [role] = await db
+        .insert(roles)
+        .values({ name: roleName, description: `${roleName} role` })
+        .returning();
     }
 
-    await prisma.identityRole.create({
-      data: { identityId: identity.id, roleId: role.id },
-    });
+    await db.insert(identityRoles).values({ identityId: identity.id, roleId: role.id });
 
     return identity;
   },

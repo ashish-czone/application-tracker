@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
 import type { INestApplication } from '@nestjs/common';
-import type { PrismaClient } from '@packages/database';
+import type { DrizzleDB } from '@packages/database';
+import { roles, permissions, rolePermissions, identityRoles, eq, and } from '@packages/database';
 import { SettingsRegistryService } from '@packages/settings-nestjs';
 import { z } from 'zod';
 import { createTestApp } from '../../../../../../../test/utils/app';
@@ -9,16 +10,24 @@ import { cleanDatabase } from '../../../../../../../test/utils/db';
 import { tokenFor } from '../../../../../../../test/utils/auth';
 import { IdentityFactory } from '../../../../../../../test/factories/identityFactory';
 
+async function upsertPermission(db: DrizzleDB, resource: string, action: string) {
+  const [existing] = await db.select().from(permissions)
+    .where(and(eq(permissions.resource, resource), eq(permissions.action, action))).limit(1);
+  if (existing) return existing;
+  const [created] = await db.insert(permissions).values({ resource, action }).returning();
+  return created;
+}
+
 describe('Settings API — integration', () => {
   let app: INestApplication;
-  let prisma: PrismaClient;
+  let db: DrizzleDB;
   let httpServer: ReturnType<INestApplication['getHttpServer']>;
   let registry: SettingsRegistryService;
 
   beforeAll(async () => {
     const testApp = await createTestApp();
     app = testApp.app;
-    prisma = testApp.prisma;
+    db = testApp.db;
     httpServer = testApp.httpServer;
     registry = testApp.module.get(SettingsRegistryService);
 
@@ -40,43 +49,19 @@ describe('Settings API — integration', () => {
   });
 
   afterAll(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase(db);
     await app.close();
   });
 
   async function createSettingsAdmin() {
-    const identity = await IdentityFactory.create(prisma);
+    const identity = await IdentityFactory.create(db);
     const roleName = `settings-admin-${identity.id.slice(0, 8)}`;
-    const role = await prisma.role.create({
-      data: { name: roleName, description: 'Settings admin' },
-    });
-
-    const readPerm = await prisma.permission.upsert({
-      where: { resource_action: { resource: 'settings', action: 'read' } },
-      create: { resource: 'settings', action: 'read' },
-      update: {},
-    });
-    const managePerm = await prisma.permission.upsert({
-      where: { resource_action: { resource: 'settings', action: 'manage' } },
-      create: { resource: 'settings', action: 'manage' },
-      update: {},
-    });
-
-    await prisma.rolePermission.upsert({
-      where: { roleId_permissionId: { roleId: role.id, permissionId: readPerm.id } },
-      create: { roleId: role.id, permissionId: readPerm.id },
-      update: {},
-    });
-    await prisma.rolePermission.upsert({
-      where: { roleId_permissionId: { roleId: role.id, permissionId: managePerm.id } },
-      create: { roleId: role.id, permissionId: managePerm.id },
-      update: {},
-    });
-
-    await prisma.identityRole.create({
-      data: { identityId: identity.id, roleId: role.id },
-    });
-
+    const [role] = await db.insert(roles).values({ name: roleName, description: 'Settings admin' }).returning();
+    const readPerm = await upsertPermission(db, 'settings', 'read');
+    const managePerm = await upsertPermission(db, 'settings', 'manage');
+    await db.insert(rolePermissions).values({ roleId: role.id, permissionId: readPerm.id }).onConflictDoNothing();
+    await db.insert(rolePermissions).values({ roleId: role.id, permissionId: managePerm.id }).onConflictDoNothing();
+    await db.insert(identityRoles).values({ identityId: identity.id, roleId: role.id });
     return identity;
   }
 

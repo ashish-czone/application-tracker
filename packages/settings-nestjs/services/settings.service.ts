@@ -112,9 +112,10 @@ export class SettingsService {
 
     for (const { key, value } of settings) {
       await delegate.upsert({
-        where: { module_key: { module, key } },
-        update: { value: value as never, updatedBy: actorId },
-        create: { module, key, value: value as never, updatedBy: actorId },
+        module,
+        key,
+        value: value as never,
+        updatedBy: actorId,
       });
     }
 
@@ -152,9 +153,7 @@ export class SettingsService {
     const delegate = this.config.getSettingDelegate();
 
     try {
-      await delegate.delete({
-        where: { module_key: { module, key } },
-      });
+      await delegate.deleteByModuleAndKey(module, key);
     } catch {
       // Setting was not overridden — nothing to delete
     }
@@ -178,7 +177,7 @@ export class SettingsService {
     let records: SettingRecord[];
 
     try {
-      records = await delegate.findMany({ where: { module } });
+      records = await delegate.findByModule(module);
     } catch {
       this.logger.warn(`Failed to load settings for module "${module}" from DB, using defaults`);
       records = [];

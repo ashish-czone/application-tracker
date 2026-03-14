@@ -1,23 +1,34 @@
-import { PrismaClient } from '@prisma/client';
-import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
-import { Module, Global } from '@nestjs/common';
+import { Injectable, OnModuleDestroy, Module, Global } from '@nestjs/common';
+import { drizzle, NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { Pool } from 'pg';
+import * as schema from './schema';
+
+export type DrizzleDB = NodePgDatabase<typeof schema>;
 
 @Injectable()
-export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
-  async onModuleInit() {
-    await this.$connect();
+export class DatabaseService implements OnModuleDestroy {
+  private readonly pool: Pool;
+  readonly db: DrizzleDB;
+
+  constructor() {
+    this.pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    this.db = drizzle(this.pool, { schema });
   }
 
   async onModuleDestroy() {
-    await this.$disconnect();
+    await this.pool.end();
   }
 }
 
 @Global()
 @Module({
-  providers: [PrismaService],
-  exports: [PrismaService],
+  providers: [DatabaseService],
+  exports: [DatabaseService],
 })
 export class DatabaseModule {}
 
-export { PrismaClient };
+// Re-export schema tables and types for use by services
+export * from './schema';
+
+// Re-export commonly used drizzle operators
+export { eq, and, or, not, isNull, isNotNull, ilike, like, sql, asc, desc, inArray, count } from 'drizzle-orm';

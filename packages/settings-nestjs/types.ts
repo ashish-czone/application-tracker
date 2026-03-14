@@ -42,11 +42,10 @@ export interface SettingRecord {
   updatedAt: Date;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export interface SettingDelegate {
-  findMany(args?: any): Promise<any[]>;
-  upsert(args: any): Promise<any>;
-  delete(args: any): Promise<any>;
+  findByModule(module: string): Promise<SettingRecord[]>;
+  upsert(data: { module: string; key: string; value: unknown; updatedBy: string }): Promise<SettingRecord>;
+  deleteByModuleAndKey(module: string, key: string): Promise<void>;
 }
 
 export interface SettingsModuleConfig {
