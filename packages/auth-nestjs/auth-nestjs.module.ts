@@ -1,4 +1,4 @@
-import { DynamicModule, Module, type InjectionToken, type OptionalFactoryDependency } from '@nestjs/common';
+import { DynamicModule, Global, Module, type InjectionToken, type OptionalFactoryDependency } from '@nestjs/common';
 import { RouterModule } from '@nestjs/core';
 import type { AuthModuleConfig, AuthRouteConfig } from '@packages/auth';
 import { AUTH_MODULE_CONFIG, AUTH_CONFIGS_MAP } from './constants';
@@ -24,6 +24,7 @@ interface ForEntityOptions {
   inject?: (InjectionToken | OptionalFactoryDependency)[];
 }
 
+@Global()
 @Module({})
 export class AuthNestjsModule {
   /**

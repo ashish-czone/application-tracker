@@ -10,8 +10,8 @@ import { IdentityFactory } from '../../../../../../../../test/factories/identity
 function extractRefreshCookie(res: request.Response): string {
   const cookies = res.headers['set-cookie'];
   const arr = Array.isArray(cookies) ? cookies : [cookies];
-  const refreshCookie = arr.find((c: string) => c.startsWith('refresh_token='));
-  if (!refreshCookie) throw new Error('No refresh_token cookie found');
+  const refreshCookie = arr.find((c: string) => c.startsWith('identity_refresh_token='));
+  if (!refreshCookie) throw new Error('No identity_refresh_token cookie found');
   return refreshCookie.split(';')[0];
 }
 
@@ -47,7 +47,7 @@ describe('Auth Integration Tests', () => {
       const cookies = res.headers['set-cookie'];
       expect(cookies).toBeDefined();
       const arr = Array.isArray(cookies) ? cookies : [cookies];
-      const refreshCookie = arr.find((c: string) => c.startsWith('refresh_token='));
+      const refreshCookie = arr.find((c: string) => c.startsWith('identity_refresh_token='));
       expect(refreshCookie).toBeDefined();
       expect(refreshCookie).toContain('HttpOnly');
     });
@@ -150,7 +150,7 @@ describe('Auth Integration Tests', () => {
     it('should return 401 for expired refresh token', async () => {
       const res = await request(httpServer)
         .post('/api/v1/users/auth/refresh')
-        .set('Cookie', 'refresh_token=expired-token');
+        .set('Cookie', 'identity_refresh_token=expired-token');
 
       expect(res.status).toBe(401);
     });

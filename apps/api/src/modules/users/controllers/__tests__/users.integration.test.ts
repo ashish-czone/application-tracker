@@ -47,7 +47,7 @@ describe('Users API — integration', () => {
       // Refresh cookie
       const cookies = res.headers['set-cookie'];
       const arr = Array.isArray(cookies) ? cookies : [cookies];
-      const refreshCookie = arr.find((c: string) => c.startsWith('refresh_token='));
+      const refreshCookie = arr.find((c: string) => c.startsWith('user_refresh_token='));
       expect(refreshCookie).toBeDefined();
       expect(refreshCookie).toContain('HttpOnly');
 

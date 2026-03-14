@@ -15,7 +15,8 @@ import {
 import { Throttle } from '@nestjs/throttler';
 import type { Response } from 'express';
 import { RequirePermission } from '@packages/rbac-nestjs';
-import { Public } from '@packages/auth-nestjs';
+import { Public, CurrentIdentity, setRefreshCookie } from '@packages/auth-nestjs';
+import type { AuthenticableIdentity } from '@packages/auth';
 import { UsersService } from '../services/users.service';
 import { USERS_PERMISSIONS } from '../permissions';
 import { RegisterUserDto } from '../dto/register-user.dto';
@@ -35,16 +36,20 @@ export class UsersController {
     @Body() dto: RegisterUserDto,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const result = await this.usersService.register(dto);
-    this.setRefreshCookie(res, result.refreshToken);
-    return { user: result.user, accessToken: result.accessToken };
+    const { user, accessToken, refreshToken } = await this.usersService.create(dto, null);
+    setRefreshCookie(res, 'user', refreshToken);
+    return { user, accessToken };
   }
 
   @Post()
   @RequirePermission(USERS_PERMISSIONS.CREATE)
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() dto: CreateUserDto) {
-    return this.usersService.create(dto);
+  async create(
+    @Body() dto: CreateUserDto,
+    @CurrentIdentity() identity: AuthenticableIdentity,
+  ) {
+    const { user } = await this.usersService.create(dto, identity.id);
+    return user;
   }
 
   @Get()
@@ -64,24 +69,18 @@ export class UsersController {
   async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateUserDto,
+    @CurrentIdentity() identity: AuthenticableIdentity,
   ) {
-    return this.usersService.update(id, dto);
+    return this.usersService.update(id, dto, identity.id);
   }
 
   @Delete(':id')
   @RequirePermission(USERS_PERMISSIONS.DELETE)
   @HttpCode(HttpStatus.NO_CONTENT)
-  async remove(@Param('id', ParseUUIDPipe) id: string) {
-    await this.usersService.softDelete(id);
-  }
-
-  private setRefreshCookie(res: Response, token: string) {
-    res.cookie('refresh_token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      path: '/',
-    });
+  async remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentIdentity() identity: AuthenticableIdentity,
+  ) {
+    await this.usersService.softDelete(id, identity.id);
   }
 }
