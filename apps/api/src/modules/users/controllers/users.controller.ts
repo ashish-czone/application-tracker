@@ -15,7 +15,8 @@ import {
 import { Throttle } from '@nestjs/throttler';
 import type { Response } from 'express';
 import { RequirePermission } from '@packages/rbac-nestjs';
-import { Public, setRefreshCookie } from '@packages/auth-nestjs';
+import { Public, CurrentIdentity, setRefreshCookie } from '@packages/auth-nestjs';
+import type { AuthenticableIdentity } from '@packages/auth';
 import { UsersService } from '../services/users.service';
 import { USERS_PERMISSIONS } from '../permissions';
 import { RegisterUserDto } from '../dto/register-user.dto';
@@ -35,7 +36,7 @@ export class UsersController {
     @Body() dto: RegisterUserDto,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const { user, accessToken, refreshToken } = await this.usersService.create(dto);
+    const { user, accessToken, refreshToken } = await this.usersService.create(dto, null);
     setRefreshCookie(res, 'user', refreshToken);
     return { user, accessToken };
   }
@@ -43,8 +44,11 @@ export class UsersController {
   @Post()
   @RequirePermission(USERS_PERMISSIONS.CREATE)
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() dto: CreateUserDto) {
-    const { user } = await this.usersService.create(dto);
+  async create(
+    @Body() dto: CreateUserDto,
+    @CurrentIdentity() identity: AuthenticableIdentity,
+  ) {
+    const { user } = await this.usersService.create(dto, identity.id);
     return user;
   }
 
@@ -65,14 +69,18 @@ export class UsersController {
   async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateUserDto,
+    @CurrentIdentity() identity: AuthenticableIdentity,
   ) {
-    return this.usersService.update(id, dto);
+    return this.usersService.update(id, dto, identity.id);
   }
 
   @Delete(':id')
   @RequirePermission(USERS_PERMISSIONS.DELETE)
   @HttpCode(HttpStatus.NO_CONTENT)
-  async remove(@Param('id', ParseUUIDPipe) id: string) {
-    await this.usersService.softDelete(id);
+  async remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentIdentity() identity: AuthenticableIdentity,
+  ) {
+    await this.usersService.softDelete(id, identity.id);
   }
 }

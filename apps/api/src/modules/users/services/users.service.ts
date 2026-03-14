@@ -43,7 +43,7 @@ export class UsersService {
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
-  async create(input: CreateUserInput) {
+  async create(input: CreateUserInput, actorId: string | null) {
     const { accessToken, refreshToken, identity } = await this.authService.register(
       input.email,
       input.password,
@@ -60,7 +60,7 @@ export class UsersService {
 
     this.emitEvent(USERS_USER_CREATED, {
       entityId: user.id,
-      actorId: identity.id,
+      actorId: actorId,
       payload: { email: identity.email, firstName: input.firstName, lastName: input.lastName },
     });
 
@@ -132,7 +132,7 @@ export class UsersService {
     return this.toUserResponse(user, user.identity.email);
   }
 
-  async update(id: string, input: UpdateUserInput) {
+  async update(id: string, input: UpdateUserInput, actorId: string) {
     const user = await this.prisma.user.findFirst({
       where: { id, deletedAt: null },
     });
@@ -150,14 +150,14 @@ export class UsersService {
     const updatedFields = Object.keys(input).filter((k) => input[k as keyof UpdateUserInput] !== undefined);
     this.emitEvent(USERS_USER_UPDATED, {
       entityId: id,
-      actorId: id,
+      actorId,
       payload: { updatedFields },
     });
 
     return this.toUserResponse(updated, updated.identity.email);
   }
 
-  async softDelete(id: string) {
+  async softDelete(id: string, actorId: string) {
     const user = await this.prisma.user.findFirst({
       where: { id, deletedAt: null },
       include: { identity: { select: { email: true } } },
@@ -176,14 +176,14 @@ export class UsersService {
 
     this.emitEvent(USERS_USER_DELETED, {
       entityId: id,
-      actorId: id,
+      actorId,
       payload: { email: user.identity.email },
     });
   }
 
   private emitEvent(
     eventName: string,
-    data: { entityId: string; actorId: string; payload: Record<string, unknown> },
+    data: { entityId: string; actorId: string | null; payload: Record<string, unknown> },
   ) {
     this.eventEmitter.emit(eventName, {
       eventName,

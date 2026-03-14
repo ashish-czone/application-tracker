@@ -71,7 +71,7 @@ describe('UsersService', () => {
         firstName: 'John',
         lastName: 'Doe',
         phone: '+15551234567',
-      });
+      }, 'admin-actor-id');
 
       expect(mockAuthService.register).toHaveBeenCalledWith('test@example.com', 'Password123!');
       expect(result.user).toMatchObject({
@@ -89,6 +89,7 @@ describe('UsersService', () => {
       expect(mockEventEmitter.emit).toHaveBeenCalledWith(
         USERS_USER_CREATED,
         expect.objectContaining({
+          actorId: 'admin-actor-id',
           payload: expect.objectContaining({ firstName: 'John', email: 'test@example.com' }),
         }),
       );
@@ -100,7 +101,7 @@ describe('UsersService', () => {
         password: 'Password123!',
         firstName: 'First',
         lastName: 'User',
-      });
+      }, null);
 
       mockAuthService.register.mockRejectedValueOnce(new ConflictException('Email already registered'));
 
@@ -110,7 +111,7 @@ describe('UsersService', () => {
           password: 'Password123!',
           firstName: 'Second',
           lastName: 'User',
-        }),
+        }, null),
       ).rejects.toThrow(ConflictException);
     });
   });
@@ -209,7 +210,7 @@ describe('UsersService', () => {
         lastName: 'Name',
         phone: '+15559876543',
         timezone: 'America/New_York',
-      });
+      }, 'admin-actor-id');
 
       expect(result).toMatchObject({
         firstName: 'New',
@@ -221,6 +222,7 @@ describe('UsersService', () => {
         USERS_USER_UPDATED,
         expect.objectContaining({
           entityId: user.id,
+          actorId: 'admin-actor-id',
           payload: expect.objectContaining({
             updatedFields: expect.arrayContaining(['firstName', 'lastName', 'phone', 'timezone']),
           }),
@@ -230,7 +232,7 @@ describe('UsersService', () => {
 
     it('should throw NotFoundException for nonexistent user', async () => {
       await expect(
-        service.update('00000000-0000-0000-0000-000000000000', { firstName: 'Nope' }),
+        service.update('00000000-0000-0000-0000-000000000000', { firstName: 'Nope' }, 'actor'),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -238,7 +240,7 @@ describe('UsersService', () => {
       const user = await UserFactory.create(prisma);
       await prisma.user.update({ where: { id: user.id }, data: { deletedAt: new Date() } });
 
-      await expect(service.update(user.id, { firstName: 'Nope' })).rejects.toThrow(NotFoundException);
+      await expect(service.update(user.id, { firstName: 'Nope' }, 'actor')).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -246,7 +248,7 @@ describe('UsersService', () => {
     it('should set deletedAt and delegate refresh token invalidation to AuthService', async () => {
       const user = await UserFactory.create(prisma);
 
-      await service.softDelete(user.id);
+      await service.softDelete(user.id, 'admin-actor-id');
 
       const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
       expect(dbUser!.deletedAt).not.toBeNull();
@@ -257,6 +259,7 @@ describe('UsersService', () => {
         USERS_USER_DELETED,
         expect.objectContaining({
           entityId: user.id,
+          actorId: 'admin-actor-id',
           payload: expect.objectContaining({ email: user.identity.email }),
         }),
       );
@@ -264,7 +267,7 @@ describe('UsersService', () => {
 
     it('should not emit event on failure', async () => {
       await expect(
-        service.softDelete('00000000-0000-0000-0000-000000000000'),
+        service.softDelete('00000000-0000-0000-0000-000000000000', 'actor'),
       ).rejects.toThrow(NotFoundException);
 
       expect(mockEventEmitter.emit).not.toHaveBeenCalled();
@@ -274,7 +277,7 @@ describe('UsersService', () => {
       const user = await UserFactory.create(prisma);
       await prisma.user.update({ where: { id: user.id }, data: { deletedAt: new Date() } });
 
-      await expect(service.softDelete(user.id)).rejects.toThrow(NotFoundException);
+      await expect(service.softDelete(user.id, 'actor')).rejects.toThrow(NotFoundException);
     });
   });
 });
