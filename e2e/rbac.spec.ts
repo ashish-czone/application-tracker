@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const API_PORT = process.env.API_PORT ?? '3001';
+const API_PORT = process.env.API_PORT ?? '3000';
 const API_BASE = `http://localhost:${API_PORT}/api/v1`;
 
 const FIRST_IDENTITY = {
