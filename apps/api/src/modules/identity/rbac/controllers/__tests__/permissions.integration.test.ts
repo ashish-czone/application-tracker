@@ -30,14 +30,24 @@ describe('Permissions API — integration', () => {
     const role = await prisma.role.create({
       data: { name: roleName, description: 'Test admin' },
     });
-    const permission = await prisma.permission.upsert({
+    const rolesManage = await prisma.permission.upsert({
       where: { resource_action: { resource: 'rbac.roles', action: 'manage' } },
       create: { resource: 'rbac.roles', action: 'manage' },
       update: {},
     });
+    const permissionsRead = await prisma.permission.upsert({
+      where: { resource_action: { resource: 'rbac.permissions', action: 'read' } },
+      create: { resource: 'rbac.permissions', action: 'read' },
+      update: {},
+    });
     await prisma.rolePermission.upsert({
-      where: { roleId_permissionId: { roleId: role.id, permissionId: permission.id } },
-      create: { roleId: role.id, permissionId: permission.id },
+      where: { roleId_permissionId: { roleId: role.id, permissionId: rolesManage.id } },
+      create: { roleId: role.id, permissionId: rolesManage.id },
+      update: {},
+    });
+    await prisma.rolePermission.upsert({
+      where: { roleId_permissionId: { roleId: role.id, permissionId: permissionsRead.id } },
+      create: { roleId: role.id, permissionId: permissionsRead.id },
       update: {},
     });
     await prisma.identityRole.create({
