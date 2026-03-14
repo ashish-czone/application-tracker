@@ -3,6 +3,7 @@ import { AuthGuard } from '../auth.guard';
 import { AUTH_CONFIGS_MAP } from '../../constants';
 import { generateAccessToken, generateRefreshToken } from '@packages/auth';
 import type { AuthModuleConfig, AuthenticableIdentity } from '@packages/auth';
+import type { PrismaService } from '@packages/database';
 import { Reflector } from '@nestjs/core';
 import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
 
@@ -41,18 +42,16 @@ function createMockConfig(overrides: Partial<AuthModuleConfig> = {}): AuthModule
     accessTokenExpiresIn: '15m',
     refreshTokenExpiresIn: '7d',
     jwtSecret: SECRET,
-    getIdentityDelegate: () => ({
-      findUnique: async () => mockIdentity,
-      update: async () => mockIdentity,
-      create: async () => mockIdentity,
-    }),
-    getPasswordTokenDelegate: () => ({
-      findUnique: async () => null,
-      create: async () => ({} as never),
-      update: async () => ({} as never),
-    }),
     ...overrides,
   };
+}
+
+function createMockPrisma(identityResult: AuthenticableIdentity | null = mockIdentity) {
+  return {
+    identity: {
+      findUnique: async () => identityResult,
+    },
+  } as unknown as PrismaService;
 }
 
 describe('AuthGuard', () => {
@@ -61,7 +60,7 @@ describe('AuthGuard', () => {
 
   beforeEach(() => {
     reflector = new Reflector();
-    guard = new AuthGuard(reflector);
+    guard = new AuthGuard(reflector, createMockPrisma());
     AUTH_CONFIGS_MAP.set(ENTITY_NAME, createMockConfig());
   });
 

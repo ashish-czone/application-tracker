@@ -28,7 +28,6 @@ const identitySettingsSchema = z.object({
     AuthNestjsModule.forEntity({
       basePath: 'users/auth',
       useFactory: async (
-        prisma: PrismaService,
         rbacService: RbacService,
         settingsService: SettingsService,
       ) => ({
@@ -36,8 +35,6 @@ const identitySettingsSchema = z.object({
         accessTokenExpiresIn: await settingsService.get('identity', 'accessTokenExpiresIn', '15m'),
         refreshTokenExpiresIn: await settingsService.get('identity', 'refreshTokenExpiresIn', '7d'),
         jwtSecret: process.env.JWT_SECRET!,
-        getIdentityDelegate: () => prisma.identity,
-        getPasswordTokenDelegate: () => prisma.passwordToken,
         enrichIdentityProfile: async (identity) => ({
           permissions: await rbacService.getIdentityPermissions(identity.id),
         }),
@@ -45,7 +42,7 @@ const identitySettingsSchema = z.object({
           await rbacService.bootstrapSuperadmin(identity.id);
         },
       }),
-      inject: [PrismaService, RbacService, SettingsService],
+      inject: [RbacService, SettingsService],
     }),
   ],
   controllers: [RolesController, PermissionsController],
