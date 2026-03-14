@@ -9,7 +9,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
-import { SettingsService } from '@packages/settings';
+import { SettingsService } from '@packages/settings-nestjs';
 import { RequirePermission } from '@packages/rbac-nestjs';
 import { CurrentIdentity } from '@packages/auth-nestjs';
 import { SETTINGS_PERMISSIONS } from '../permissions';
