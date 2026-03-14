@@ -12,9 +12,9 @@ import type { TokenPayload } from '../types';
 
 const SECRET = 'test-secret-key';
 const PAYLOAD: TokenPayload = {
-  sub: 'user-123',
+  sub: 'identity-123',
   email: 'test@example.com',
-  entityName: 'user',
+  entityName: 'identity',
 };
 
 describe('tokens', () => {

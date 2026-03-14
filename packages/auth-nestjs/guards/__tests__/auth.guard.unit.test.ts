@@ -2,23 +2,22 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { AuthGuard } from '../auth.guard';
 import { AUTH_CONFIGS_MAP } from '../../constants';
 import { generateAccessToken, generateRefreshToken } from '@packages/auth';
-import type { AuthModuleConfig, AuthenticableUser } from '@packages/auth';
+import type { AuthModuleConfig, AuthenticableIdentity } from '@packages/auth';
 import { Reflector } from '@nestjs/core';
 import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
 
 const SECRET = 'test-secret';
-const ENTITY_NAME = 'user';
+const ENTITY_NAME = 'identity';
 
-const mockUser: AuthenticableUser = {
-  id: 'user-123',
+const mockIdentity: AuthenticableIdentity = {
+  id: 'identity-123',
   email: 'test@example.com',
   passwordHash: 'hashed',
   refreshToken: null,
-  timezone: null,
 };
 
 function createMockContext(headers: Record<string, string> = {}): ExecutionContext {
-  const request: Record<string, unknown> = { headers, user: undefined };
+  const request: Record<string, unknown> = { headers, identity: undefined };
   return {
     switchToHttp: () => ({
       getRequest: () => request,
@@ -42,10 +41,10 @@ function createMockConfig(overrides: Partial<AuthModuleConfig> = {}): AuthModule
     accessTokenExpiresIn: '15m',
     refreshTokenExpiresIn: '7d',
     jwtSecret: SECRET,
-    getUserDelegate: () => ({
-      findUnique: async () => mockUser,
-      update: async () => mockUser,
-      create: async () => mockUser,
+    getIdentityDelegate: () => ({
+      findUnique: async () => mockIdentity,
+      update: async () => mockIdentity,
+      create: async () => mockIdentity,
     }),
     getPasswordTokenDelegate: () => ({
       findUnique: async () => null,
@@ -92,7 +91,7 @@ describe('AuthGuard', () => {
   it('should return 401 for expired token', async () => {
     reflector.getAllAndOverride = () => false;
     const token = generateAccessToken(
-      { sub: 'user-123', email: 'test@example.com', entityName: ENTITY_NAME },
+      { sub: 'identity-123', email: 'test@example.com', entityName: ENTITY_NAME },
       SECRET,
       '0s',
     );
@@ -103,7 +102,7 @@ describe('AuthGuard', () => {
   it('should return 401 for unregistered entityName', async () => {
     reflector.getAllAndOverride = () => false;
     const token = generateAccessToken(
-      { sub: 'user-123', email: 'test@example.com', entityName: 'unknown' },
+      { sub: 'identity-123', email: 'test@example.com', entityName: 'unknown' },
       SECRET,
       '15m',
     );
@@ -111,10 +110,10 @@ describe('AuthGuard', () => {
     await expect(guard.canActivate(context)).rejects.toThrow(UnauthorizedException);
   });
 
-  it('should attach user to request for valid token', async () => {
+  it('should attach identity to request for valid token', async () => {
     reflector.getAllAndOverride = () => false;
     const token = generateAccessToken(
-      { sub: mockUser.id, email: mockUser.email, entityName: ENTITY_NAME },
+      { sub: mockIdentity.id, email: mockIdentity.email, entityName: ENTITY_NAME },
       SECRET,
       '15m',
     );
@@ -122,6 +121,6 @@ describe('AuthGuard', () => {
     await guard.canActivate(context);
 
     const request = context.switchToHttp().getRequest();
-    expect(request.user).toEqual(mockUser);
+    expect(request.identity).toEqual(mockIdentity);
   });
 });
