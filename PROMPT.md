@@ -10,7 +10,7 @@ This document defines the architecture, rules, and conventions for building a mo
 - **Backend framework:** NestJS
 - **Frontend:** React + Vite + React Router
 - **Database:** PostgreSQL
-- **ORM:** Prisma
+- **ORM:** Drizzle ORM
 - **Monorepo:** pnpm workspaces + Turborepo
 - **Frontend state:** TanStack Query (server state) + React local state (UI state)
 - **No Redux. No Next.js. No SSR.**
@@ -187,13 +187,13 @@ apps/api/src/modules/<module-name>/
   dto/                      # Request/response validation (class-validator)
   permissions.ts            # Permission constants for this module
   <module-name>.module.ts   # NestJS module definition + event/permission registration
-  schema.prisma             # Prisma models owned by this module
+  schema.ts                 # Drizzle table definitions owned by this module (source of truth; centralized in packages/database/schema/)
   index.ts                  # Public API surface (only this gets imported externally)
 ```
 
 ### Module Rules
 
-1. **A module owns its DB tables.** Its `services/` layer is the only code that queries those tables via Prisma. No other module may query another module's tables directly. If `orders` needs client data, it calls `clientsService.getById()`, never `prisma.client.findUnique()`.
+1. **A module owns its DB tables.** Its `services/` layer is the only code that queries those tables via Drizzle. No other module may query another module's tables directly. If `orders` needs client data, it calls `clientsService.getById()`, never `db.select().from(clients).where(...)`.
 
 2. **A module exports a minimal public API via `index.ts`.** This is the only file other code may import from. Only export what consumer modules actually need: service classes, event types, event name constants, and enums. DTOs are internal to the controller layer and are never exported. Within exported service classes, only methods intended for cross-module use are `public` — everything else is `private` or `protected`. The public API is a deliberate, narrow contract. Note: this `index.ts` pattern applies to **backend modules and packages** as a cross-module API boundary. Frontend modules do NOT use barrel exports (see PROMPT-UI.md) — frontend code uses direct file imports to avoid circular dependencies and slow builds.
 
@@ -342,10 +342,11 @@ async submitCandidate(dto: SubmitCandidateDto, actorId: string) {
   if (!order) throw new NotFoundException("Order not found");
 
   // 2. Own domain operation
-  const candidate = await this.prisma.candidate.update({
-    where: { id: dto.candidateId },
-    data: { status: "submitted" },
-  });
+  const [candidate] = await this.database.db
+    .update(candidates)
+    .set({ status: "submitted" })
+    .where(eq(candidates.id, dto.candidateId))
+    .returning();
 
   // 3. Emit event — side-effect packages handle the rest
   this.eventEmitter.emit(CANDIDATES_CANDIDATE_SUBMITTED, {
@@ -508,7 +509,7 @@ Packages have ZERO knowledge of business domains. They never reference "candidat
 
 **Infrastructure (backend):** Low-level plumbing.
 
-Examples: database (Prisma client + config), events (in-memory event bus), queue (durable async jobs via BullMQ, including repeatable/cron jobs).
+Examples: database (Drizzle ORM + pg Pool + schema definitions), events (in-memory event bus), queue (durable async jobs via BullMQ, including repeatable/cron jobs).
 
 **Platform Capabilities (backend, invoked directly):** Cross-cutting engines that domain services call directly via their public API. They provide capabilities that modules need during their domain operations. CRUD endpoints for managing their configuration (roles, workflow definitions, etc.) live in their own modules (e.g., `modules/settings/`, `modules/workflow-definitions/`).
 
@@ -557,57 +558,48 @@ Example: common — contains ONLY truly generic types (`PaginatedResponse<T>`, `
 
 ## 6. Database
 
-### Distributed Prisma Schemas
+### Drizzle Schema Organization
 
-Each module and platform package defines its own `schema.prisma` file within its directory. This is the source of truth for that module/package's DB structure. A build task in `packages/database` collects all schema files into a single directory for Prisma to consume using the `prismaSchemaFolder` feature.
+All Drizzle table definitions live in `packages/database/schema/`, organized by module. Each module conceptually "owns" its schema file. Since Drizzle schemas are TypeScript files with import dependencies (unlike Prisma's text-based schemas), they must be centralized in the database package so that all packages can import table definitions.
 
 ```
-apps/api/src/modules/candidates/
-  schema.prisma                         # defines Candidate model
-
-apps/api/src/modules/orders/
-  schema.prisma                         # defines Order model
-
-packages/notifications/
-  schema.prisma                         # defines NotificationRule, NotificationLog
-
 packages/database/
-  prisma/
-    schema/
-      base.prisma                       # datasource + generator config only
-      candidates.prisma                 # ← collected from apps/api/src/modules/candidates/
-      orders.prisma                     # ← collected from apps/api/src/modules/orders/
-      notifications.prisma              # ← collected from packages/notifications/
-  scripts/
-    collect-schemas.js                  # globs for schema.prisma across apps/api/src/modules/ and packages/
+  schema/
+    identity.ts                         # identities, passwordTokens, roles, permissions, rolePermissions, identityRoles
+    users.ts                            # users (imports identities for FK)
+    settings.ts                         # settings
+    relations.ts                        # all Drizzle relations (for relational query API)
+    index.ts                            # barrel export
+  drizzle/                              # generated migration files (committed to git)
+  drizzle.config.ts                     # drizzle-kit configuration
+  index.ts                              # DatabaseService + DatabaseModule + re-exports
 ```
 
-Collected files in `packages/database/prisma/schema/` (except `base.prisma`) are gitignored — they are derived from the source files in each module/package.
-
-### Schema Collection & Generation
-
-Wired into Turborepo so it runs automatically before `build` and `dev` (see full `turbo.json` in section 7):
+### Schema & Migration Commands
 
 ```json
 // packages/database/package.json (relevant entries)
 {
   "scripts": {
-    "db:generate": "node scripts/collect-schemas.js && prisma generate",
-    "db:migrate": "node scripts/collect-schemas.js && prisma migrate dev"
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio"
   }
 }
 ```
 
-- `pnpm dev` or `pnpm build` → Turborepo runs `db:generate` first → schemas collected → Prisma client generated → everything starts.
-- Adding/modifying a module's `schema.prisma` → next `dev`/`build` picks it up automatically.
-- Creating a migration → `pnpm --filter @packages/database db:migrate`.
+- `pnpm db:generate` → generates a new migration SQL file from schema changes.
+- `pnpm db:migrate` → applies pending migrations to the database.
+- `pnpm db:push` → pushes schema directly to the database (dev only, no migration file).
+- Adding a new table → create/update the schema file in `packages/database/schema/`, then `pnpm db:generate`.
 
 ### DB Access Rules
 
 - Each module's `services/` layer is a repository that only queries its own tables. Each package's service layer only queries its own tables.
-- Cross-module data access goes through the other module's public service API, never direct Prisma queries.
-- Foreign key columns across modules are allowed (they're data integrity constraints). The model that holds the FK column owns it (e.g., `Candidate.orderId` is owned by the candidates module).
-- Prisma `include`/`select` across module boundaries is NOT allowed. Never `prisma.candidate.findMany({ include: { order: true } })`. Fetch the related data via the other module's service instead.
+- Cross-module data access goes through the other module's public service API, never direct Drizzle queries.
+- Foreign key columns across modules are allowed (they're data integrity constraints). The model that holds the FK column owns it (e.g., `candidates.orderId` is owned by the candidates module).
+- Cross-module joins in Drizzle are NOT allowed. Never join another module's table in your query. Fetch the related data via the other module's service instead.
 - Shared DB, no schema-per-module isolation. Boundaries are enforced at the code layer.
 
 ---
@@ -620,22 +612,16 @@ Wired into Turborepo so it runs automatically before `build` and `dev` (see full
 {
   "$schema": "https://turbo.build/schema.json",
   "tasks": {
-    "db:generate": {
-      "outputs": ["packages/database/prisma/schema/*.prisma"]
-    },
     "build": {
-      "dependsOn": ["db:generate", "^build"],
+      "dependsOn": ["^build"],
       "outputs": ["dist/**"]
     },
     "dev": {
-      "dependsOn": ["db:generate"],
       "cache": false,
       "persistent": true
     },
     "lint": {},
-    "test": {
-      "dependsOn": ["build"]
-    }
+    "test": {}
   }
 }
 ```
@@ -663,7 +649,7 @@ Shared TypeScript config at root. All packages, modules, features, and apps exte
 - Every package, module, and feature has its own `package.json` with correct dependencies.
 - No circular dependencies between modules.
 - No domain logic in packages. No side effects in domain services.
-- No direct DB access outside a module's own service layer. No Prisma `include`/`select` across module boundaries.
+- No direct DB access outside a module's own service layer. No cross-module joins in Drizzle queries.
 - Event names are namespaced, past-tense, exported constants — never magic strings.
 - Side-effect event handlers must be idempotent. Unreliable I/O is enqueued via `packages/queue`, never done inline.
 - Every module's public API is exported via `index.ts` — kept intentionally narrow.

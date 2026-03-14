@@ -10,7 +10,7 @@ The project needs a centralized, reusable taxonomy/categorization system so that
 
 ### Naming
 
-| Concept | Prisma Model | DB Table | FK field |
+| Concept | Drizzle Table | DB Table | FK field |
 |---|---|---|---|
 | Category group | `TagType` | `tag_types` | `tagTypeSlug` |
 | Category item | `Tag` | `tags` | `tagId` |
@@ -20,8 +20,8 @@ The project needs a centralized, reusable taxonomy/categorization system so that
 ### Delegate Pattern
 
 Each module that wants tagging:
-1. Defines its own join table in its `schema.prisma` (e.g., `CandidateTag`)
-2. Registers its Prisma delegate with `TaggingService` in `onModuleInit()`
+1. Defines its own join table in `packages/database/schema/` (e.g., `candidateTags`)
+2. Registers its delegate with `TaggingService` in `onModuleInit()`
 3. Calls `TaggingService` methods (assign, remove, replace, list) in its service layer
 
 The `TaggingService` never knows the concrete model name — it operates on the delegate interface.
@@ -41,7 +41,7 @@ The `TaggingService` never knows the concrete model name — it operates on the 
 Depends on infrastructure that must be built first:
 
 - Root monorepo config (`package.json`, `pnpm-workspace.yaml`, `turbo.json`, `tsconfig.base.json`)
-- `packages/database` (Prisma client, `collect-schemas.js`, `base.prisma`)
+- `packages/database` (Drizzle ORM, DatabaseService, schema definitions)
 - `apps/api` (NestJS shell)
 - `packages/rbac` (guards, decorators)
 - `packages/auth-nestjs` (auth guard)
@@ -53,64 +53,60 @@ Depends on infrastructure that must be built first:
 
 ## Schema
 
-```prisma
-// packages/taxonomy/schema.prisma
+```ts
+// packages/database/schema/taxonomy.ts
+import { pgTable, text, timestamp, boolean, integer, jsonb, uniqueIndex, index } from 'drizzle-orm/pg-core';
+import { randomUUID } from 'crypto';
 
-model TagType {
-  id             String    @id @default(uuid())
-  slug           String    @unique
-  name           String
-  description    String?
-  isSystem       Boolean   @default(false)
-  allowMultiple  Boolean   @default(false)
-  isHierarchical Boolean   @default(false)
-  tags           Tag[]
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-  deletedAt      DateTime?
+export const tagTypes = pgTable('tag_types', {
+  id: text('id').primaryKey().$defaultFn(() => randomUUID()),
+  slug: text('slug').notNull().unique(),
+  name: text('name').notNull(),
+  description: text('description'),
+  isSystem: boolean('isSystem').notNull().default(false),
+  allowMultiple: boolean('allowMultiple').notNull().default(false),
+  isHierarchical: boolean('isHierarchical').notNull().default(false),
+  createdAt: timestamp('createdAt', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
+  updatedAt: timestamp('updatedAt', { withTimezone: true, mode: 'date' }).notNull().$defaultFn(() => new Date()).$onUpdate(() => new Date()),
+  deletedAt: timestamp('deletedAt', { withTimezone: true, mode: 'date' }),
+});
 
-  @@map("tag_types")
-}
-
-model Tag {
-  id          String    @id @default(uuid())
-  tagTypeSlug String
-  tagType     TagType   @relation(fields: [tagTypeSlug], references: [slug])
-  value       String
-  label       String
-  sortOrder   Int       @default(0)
-  isActive    Boolean   @default(true)
-  metadata    Json?
-  parentId    String?
-  parent      Tag?      @relation("TagHierarchy", fields: [parentId], references: [id])
-  children    Tag[]     @relation("TagHierarchy")
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  deletedAt   DateTime?
-
-  @@unique([tagTypeSlug, value])
-  @@index([tagTypeSlug, isActive, sortOrder])
-  @@map("tags")
-}
+export const tags = pgTable('tags', {
+  id: text('id').primaryKey().$defaultFn(() => randomUUID()),
+  tagTypeSlug: text('tagTypeSlug').notNull().references(() => tagTypes.slug),
+  value: text('value').notNull(),
+  label: text('label').notNull(),
+  sortOrder: integer('sortOrder').notNull().default(0),
+  isActive: boolean('isActive').notNull().default(true),
+  metadata: jsonb('metadata'),
+  parentId: text('parentId'),
+  createdAt: timestamp('createdAt', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
+  updatedAt: timestamp('updatedAt', { withTimezone: true, mode: 'date' }).notNull().$defaultFn(() => new Date()).$onUpdate(() => new Date()),
+  deletedAt: timestamp('deletedAt', { withTimezone: true, mode: 'date' }),
+}, (table) => [
+  uniqueIndex('tags_tagTypeSlug_value_key').on(table.tagTypeSlug, table.value),
+  index('tags_tagTypeSlug_isActive_sortOrder_idx').on(table.tagTypeSlug, table.isActive, table.sortOrder),
+]);
 ```
 
 **Module-side join table example:**
 
-```prisma
-// apps/api/src/modules/candidates/schema.prisma (add to existing)
+```ts
+// packages/database/schema/candidates.ts (add to existing)
+import { pgTable, text, timestamp, uniqueIndex, index } from 'drizzle-orm/pg-core';
+import { randomUUID } from 'crypto';
+import { candidates } from './candidates';
+import { tags } from './taxonomy';
 
-model CandidateTag {
-  id          String    @id @default(uuid())
-  candidateId String
-  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
-  tagId       String
-  tag         Tag       @relation(fields: [tagId], references: [id])
-  createdAt   DateTime  @default(now())
-
-  @@unique([candidateId, tagId])
-  @@index([tagId])
-  @@map("candidate_tags")
-}
+export const candidateTags = pgTable('candidate_tags', {
+  id: text('id').primaryKey().$defaultFn(() => randomUUID()),
+  candidateId: text('candidateId').notNull().references(() => candidates.id, { onDelete: 'cascade' }),
+  tagId: text('tagId').notNull().references(() => tags.id),
+  createdAt: timestamp('createdAt', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex('candidate_tags_candidateId_tagId_key').on(table.candidateId, table.tagId),
+  index('candidate_tags_tagId_idx').on(table.tagId),
+]);
 ```
 
 ---
@@ -121,7 +117,6 @@ model CandidateTag {
 packages/taxonomy/
   package.json
   tsconfig.json
-  schema.prisma
   types.ts                            # All interfaces: EntityTagConfig, inputs, filters
   permissions.ts                      # TAXONOMY_PERMISSIONS constant
   services/
@@ -144,7 +139,7 @@ packages/taxonomy/
 // packages/taxonomy/types.ts
 
 interface EntityTagConfig {
-  delegate: any;           // Prisma delegate (prisma.candidateTag, prisma.jobTag, etc.)
+  delegate: any;           // Drizzle-backed delegate (created in module's onModuleInit)
   entityIdField: string;   // "candidateId", "jobId"
   tagIdField: string;      // defaults to "tagId"
 }
@@ -336,7 +331,7 @@ apps/api/src/modules/taxonomy/
 
 ## Seed Data
 
-System tag types seeded via `packages/database/prisma/seeds/taxonomy.seed.ts`. Uses upsert for idempotency. Initial types:
+System tag types seeded via `packages/database/seeds/taxonomy.seed.ts`. Uses upsert for idempotency. Initial types:
 
 - `industry` — Technology, Healthcare, Finance, Manufacturing, Retail, Education
 - `skill` — JavaScript, TypeScript, Python, Project Management (hierarchical)
@@ -352,12 +347,12 @@ System tag types seeded via `packages/database/prisma/seeds/taxonomy.seed.ts`. U
 export class CandidatesModule implements OnModuleInit {
   constructor(
     private taggingService: TaggingService,
-    private prisma: PrismaService,
+    private database: DatabaseService,
   ) {}
 
   onModuleInit() {
     this.taggingService.registerEntity('candidate', {
-      delegate: this.prisma.candidateTag,
+      delegate: createCandidateTagDelegate(this.database.db),
       entityIdField: 'candidateId',
       tagIdField: 'tagId',
     });
@@ -383,7 +378,7 @@ Each task = its own branch -> implement -> PR -> merge -> next task.
 | # | Branch | What | Tests |
 |---|---|---|---|
 | 0 | `chore/monorepo-foundation` | Root config, packages/database, apps/api, rbac, auth stubs, test infra | — |
-| 1 | `feat/taxonomy-schema` | schema.prisma + migration | — |
+| 1 | `feat/taxonomy-schema` | Drizzle schema + migration | — |
 | 2 | `feat/taxonomy-tag-type-service` | TagTypeService + types + NestJS module | 12 unit tests |
 | 3 | `feat/taxonomy-tag-service` | TagService | 15 unit tests |
 | 4 | `feat/taxonomy-tagging-service` | TaggingService (delegate pattern) | 16 unit tests |

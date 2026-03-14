@@ -161,14 +161,15 @@ After each test suite (file), truncate all tables. This is fast and ensures full
 
 ```ts
 // test/utils/db.ts
-export async function cleanDatabase(prisma: PrismaClient) {
-  const tables = await prisma.$queryRaw<{ tablename: string }[]>`
-    SELECT tablename FROM pg_tables WHERE schemaname = 'public'
-  `;
-  for (const { tablename } of tables) {
-    if (tablename !== '_prisma_migrations') {
-      await prisma.$executeRawUnsafe(`TRUNCATE TABLE "${tablename}" CASCADE`);
-    }
+import type { DrizzleDB } from '@packages/database';
+import { sql } from '@packages/database';
+
+export async function cleanDatabase(db: DrizzleDB) {
+  const tables = await db.execute<{ tablename: string }>(
+    sql`SELECT tablename FROM pg_tables WHERE schemaname = 'public'`
+  );
+  for (const { tablename } of tables.rows) {
+    await db.execute(sql.raw(`TRUNCATE TABLE "${tablename}" CASCADE`));
   }
 }
 ```
@@ -176,7 +177,7 @@ export async function cleanDatabase(prisma: PrismaClient) {
 ```ts
 // In test files
 afterAll(async () => {
-  await cleanDatabase(prisma);
+  await cleanDatabase(db);
 });
 ```
 
@@ -188,7 +189,7 @@ Each test creates exactly what it needs using factories. No shared seed that cre
 
 ```ts
 // test/setup/rbac.ts
-export async function seedRbac(prisma: PrismaClient) {
+export async function seedRbac(db: DrizzleDB) {
   // Insert standard roles and permissions
   // This runs once before all test suites
 }
@@ -201,7 +202,7 @@ globalSetup: ['./test/setup/globalSetup.ts'],
 
 ### Migrations
 
-Run `prisma migrate deploy` once before the test suite starts (in global setup), not per test file.
+Run `drizzle-kit migrate` once before the test suite starts (in global setup), not per test file.
 
 ---
 
@@ -224,10 +225,9 @@ export const CandidateFactory = {
     };
   },
 
-  async create(prisma: PrismaClient, overrides: Partial<CreateCandidateInput> = {}) {
-    return prisma.candidate.create({
-      data: this.build(overrides),
-    });
+  async create(db: DrizzleDB, overrides: Partial<CreateCandidateInput> = {}) {
+    const [result] = await db.insert(candidates).values(this.build(overrides)).returning();
+    return result;
   },
 };
 ```
@@ -249,30 +249,22 @@ Every API endpoint follows this structure:
 ```ts
 describe('POST /api/v1/candidates', () => {
   let app: INestApplication;
-  let prisma: PrismaClient;
+  let db: DrizzleDB;
 
   beforeAll(async () => {
-    const module = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
-
-    app = module.createNestApplication();
-    // Apply the same pipes, guards, interceptors as production
-    app.setGlobalPrefix('api/v1');
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
-    await app.init();
-
-    prisma = module.get(PrismaClient);
+    const testApp = await createTestApp();
+    app = testApp.app;
+    db = testApp.db;
   });
 
   afterAll(async () => {
-    await cleanDatabase(prisma);
+    await cleanDatabase(db);
     await app.close();
   });
 
   describe('happy path', () => {
     it('should create a candidate and return 201', async () => {
-      const identity = await IdentityFactory.createWithRole(prisma, 'recruiter');
+      const identity = await IdentityFactory.createWithRole(db, 'recruiter');
       const body = CandidateFactory.build();
 
       const res = await request(app.getHttpServer())
@@ -288,7 +280,7 @@ describe('POST /api/v1/candidates', () => {
       });
 
       // Verify DB state
-      const saved = await prisma.candidate.findUnique({ where: { id: res.body.id } });
+      const [saved] = await db.select().from(candidates).where(eq(candidates.id, res.body.id)).limit(1);
       expect(saved).not.toBeNull();
       expect(saved!.name).toBe(body.name);
     });
@@ -296,7 +288,7 @@ describe('POST /api/v1/candidates', () => {
 
   describe('validation', () => {
     it('should return 400 for missing required fields', async () => {
-      const identity = await IdentityFactory.createWithRole(prisma, 'recruiter');
+      const identity = await IdentityFactory.createWithRole(db, 'recruiter');
 
       const res = await request(app.getHttpServer())
         .post('/api/v1/candidates')
@@ -313,7 +305,7 @@ describe('POST /api/v1/candidates', () => {
     });
 
     it('should return 400 for unknown properties', async () => {
-      const identity = await IdentityFactory.createWithRole(prisma, 'recruiter');
+      const identity = await IdentityFactory.createWithRole(db, 'recruiter');
       const body = { ...CandidateFactory.build(), hackerField: 'injected' };
 
       const res = await request(app.getHttpServer())
@@ -351,7 +343,7 @@ describe('POST /api/v1/candidates — security', () => {
   });
 
   it('should return 401 with expired token', async () => {
-    const identity = await IdentityFactory.createWithRole(prisma, 'recruiter');
+    const identity = await IdentityFactory.createWithRole(db, 'recruiter');
 
     const res = await request(app.getHttpServer())
       .post('/api/v1/candidates')
@@ -362,7 +354,7 @@ describe('POST /api/v1/candidates — security', () => {
   });
 
   it('should return 403 without candidates.create permission', async () => {
-    const identity = await IdentityFactory.createWithRole(prisma, 'viewer');
+    const identity = await IdentityFactory.createWithRole(db, 'viewer');
 
     const res = await request(app.getHttpServer())
       .post('/api/v1/candidates')
@@ -373,8 +365,8 @@ describe('POST /api/v1/candidates — security', () => {
   });
 
   it('should not expose soft-deleted records', async () => {
-    const identity = await IdentityFactory.createWithRole(prisma, 'recruiter');
-    const candidate = await CandidateFactory.create(prisma, {
+    const identity = await IdentityFactory.createWithRole(db, 'recruiter');
+    const candidate = await CandidateFactory.create(db, {
       deletedAt: new Date(),
     });
 
@@ -422,7 +414,7 @@ it('should store password as hash, not plain text', async () => {
     .post('/api/v1/auth/register')
     .send({ email: 'test@example.com', password: 'SecurePass123!' });
 
-  const dbUser = await prisma.user.findUnique({ where: { email: 'test@example.com' } });
+  const [dbUser] = await db.select().from(users).where(eq(users.email, 'test@example.com')).limit(1);
   expect(dbUser!.passwordHash).not.toBe('SecurePass123!');
 });
 ```
@@ -436,9 +428,9 @@ Test concurrent access to shared resources. These catch bugs that only appear un
 ```ts
 describe('POST /api/v1/candidates/:id/submit — race conditions', () => {
   it('should not double-submit a candidate to the same order', async () => {
-    const identity = await IdentityFactory.createWithRole(prisma, 'recruiter');
-    const order = await OrderFactory.create(prisma);
-    const candidate = await CandidateFactory.create(prisma);
+    const identity = await IdentityFactory.createWithRole(db, 'recruiter');
+    const order = await OrderFactory.create(db);
+    const candidate = await CandidateFactory.create(db);
 
     // Fire two identical requests concurrently
     const [res1, res2] = await Promise.all([
@@ -457,17 +449,16 @@ describe('POST /api/v1/candidates/:id/submit — race conditions', () => {
     expect(statuses).toEqual([201, 409]);
 
     // Verify only one submission exists in DB
-    const submissions = await prisma.submission.findMany({
-      where: { candidateId: candidate.id, orderId: order.id },
-    });
+    const submissions = await db.select().from(submissions_table)
+      .where(and(eq(submissions_table.candidateId, candidate.id), eq(submissions_table.orderId, order.id)));
     expect(submissions).toHaveLength(1);
   });
 
   it('should not exceed order capacity under concurrent submissions', async () => {
-    const identity = await IdentityFactory.createWithRole(prisma, 'recruiter');
-    const order = await OrderFactory.create(prisma, { capacity: 1 });
+    const identity = await IdentityFactory.createWithRole(db, 'recruiter');
+    const order = await OrderFactory.create(db, { capacity: 1 });
     const candidates = await Promise.all(
-      Array.from({ length: 5 }, () => CandidateFactory.create(prisma)),
+      Array.from({ length: 5 }, () => CandidateFactory.create(db)),
     );
 
     const results = await Promise.all(
@@ -510,8 +501,8 @@ When a service emits domain events, verify the right event was emitted with the 
 ```ts
 describe('candidatesService.submitCandidate — events', () => {
   it('should emit CANDIDATES_CANDIDATE_SUBMITTED with correct payload', async () => {
-    const order = await OrderFactory.create(prisma);
-    const candidate = await CandidateFactory.create(prisma);
+    const order = await OrderFactory.create(db);
+    const candidate = await CandidateFactory.create(db);
 
     await candidatesService.submitCandidate(
       { candidateId: candidate.id, orderId: order.id },
@@ -554,7 +545,7 @@ When a listener handles domain events, verify it produces the expected side effe
 describe('notificationListener.handleAnyEvent', () => {
   it('should enqueue a job when matching rules exist', async () => {
     // Setup: create a notification rule that matches the event
-    await NotificationRuleFactory.create(prisma, {
+    await NotificationRuleFactory.create(db, {
       eventName: CANDIDATES_CANDIDATE_SUBMITTED,
       templateId: 'submission-email',
     });
@@ -949,9 +940,10 @@ export async function createTestApp() {
   );
   await app.init();
 
+  const database = module.get(DatabaseService);
   return {
     app,
-    prisma: module.get(PrismaClient),
+    db: database.db,
     httpServer: app.getHttpServer(),
   };
 }
@@ -961,9 +953,9 @@ export async function createTestApp() {
 
 ## 12. What NOT to Test
 
-- **Prisma queries** — you're testing the ORM, not your code.
+- **Drizzle queries** — you're testing the ORM, not your code.
 - **NestJS decorators and pipes** — framework internals. Trust them.
-- **Simple CRUD with no business logic** — if the service just calls `prisma.create()` and returns the result, the integration test covers it. No separate unit test needed.
+- **Simple CRUD with no business logic** — if the service just calls `db.insert()` and returns the result, the integration test covers it. No separate unit test needed.
 - **Simple display components** — a component that renders props has nothing to test.
 - **Third-party libraries** — don't test that `date-fns` formats dates correctly.
 - **Implementation details** — internal method calls, state shape, render counts.
