@@ -2,7 +2,7 @@ import type { DomainEvent } from '@packages/events';
 
 export const SETTINGS_SETTING_UPDATED = 'settings.SettingUpdated';
 
-export interface SettingUpdatedPayload {
+export interface SettingUpdatedPayload extends Record<string, unknown> {
   module: string;
   keys: string[];
 }
