@@ -25,6 +25,11 @@ const SettingsPage = lazy(() =>
     default: m.SettingsPage,
   })),
 );
+const RolesPage = lazy(() =>
+  import('@modules/identity/rbac/pages/RolesPage').then((m) => ({
+    default: m.RolesPage,
+  })),
+);
 
 function PageSkeleton() {
   return (
@@ -103,6 +108,7 @@ export function AppRouter() {
           <Route element={<AppLayout />}>
             <Route path="/" element={<DashboardPage />} />
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/roles" element={<RolesPage />} />
           </Route>
         </Route>
       </Routes>

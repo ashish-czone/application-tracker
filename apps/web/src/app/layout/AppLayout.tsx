@@ -5,6 +5,7 @@ import { useLogout } from '@modules/identity/auth/hooks/useLogout';
 import {
   LayoutDashboard,
   Users,
+  Shield,
   Settings,
   LogOut,
   ChevronsLeft,
@@ -20,6 +21,7 @@ import { cn } from '@packages/ui/lib/utils';
 const navItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/users', label: 'Users', icon: Users },
+  { path: '/roles', label: 'Roles', icon: Shield },
   { path: '/settings', label: 'Settings', icon: Settings },
 ];
 
