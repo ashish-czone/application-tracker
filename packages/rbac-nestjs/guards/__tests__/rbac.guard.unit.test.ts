@@ -36,6 +36,7 @@ describe('RbacGuard', () => {
 
     rbacService = {
       getUserPermissions: vi.fn().mockResolvedValue([]),
+      getUserRoles: vi.fn().mockResolvedValue([]),
     } as unknown as RbacService;
 
     guard = new RbacGuard(reflector, rbacService);
@@ -60,6 +61,7 @@ describe('RbacGuard', () => {
   it('should throw ForbiddenException when user has no roles', async () => {
     RBAC_CONFIGS_MAP.set('user', {} as never);
     vi.mocked(reflector.getAllAndOverride).mockReturnValue('roles.manage');
+    vi.mocked(rbacService.getUserRoles).mockResolvedValue([]);
     vi.mocked(rbacService.getUserPermissions).mockResolvedValue([]);
 
     const context = createMockContext({
@@ -73,6 +75,7 @@ describe('RbacGuard', () => {
   it('should throw ForbiddenException when user lacks required permission', async () => {
     RBAC_CONFIGS_MAP.set('user', {} as never);
     vi.mocked(reflector.getAllAndOverride).mockReturnValue('roles.manage');
+    vi.mocked(rbacService.getUserRoles).mockResolvedValue([]);
     vi.mocked(rbacService.getUserPermissions).mockResolvedValue(['candidates.read']);
 
     const context = createMockContext({
@@ -86,6 +89,7 @@ describe('RbacGuard', () => {
   it('should pass when user has the required permission', async () => {
     RBAC_CONFIGS_MAP.set('user', {} as never);
     vi.mocked(reflector.getAllAndOverride).mockReturnValue('roles.manage');
+    vi.mocked(rbacService.getUserRoles).mockResolvedValue([]);
     vi.mocked(rbacService.getUserPermissions).mockResolvedValue(['roles.manage', 'candidates.read']);
 
     const context = createMockContext({
@@ -109,6 +113,7 @@ describe('RbacGuard', () => {
   it('should look up correct entityName from request', async () => {
     RBAC_CONFIGS_MAP.set('admin', {} as never);
     vi.mocked(reflector.getAllAndOverride).mockReturnValue('admin.manage');
+    vi.mocked(rbacService.getUserRoles).mockResolvedValue([]);
     vi.mocked(rbacService.getUserPermissions).mockResolvedValue(['admin.manage']);
 
     const context = createMockContext({
@@ -119,5 +124,23 @@ describe('RbacGuard', () => {
     const result = await guard.canActivate(context);
     expect(result).toBe(true);
     expect(rbacService.getUserPermissions).toHaveBeenCalledWith('admin-1');
+  });
+
+  it('should bypass permission check for superadmin role', async () => {
+    RBAC_CONFIGS_MAP.set('user', {} as never);
+    vi.mocked(reflector.getAllAndOverride).mockReturnValue('some.permission');
+    vi.mocked(rbacService.getUserRoles).mockResolvedValue([
+      { userId: 'user-1', roleId: 'role-1', role: { name: 'superadmin' } },
+    ] as never);
+
+    const context = createMockContext({
+      user: { id: 'user-1' },
+      authEntityName: 'user',
+    });
+
+    const result = await guard.canActivate(context);
+    expect(result).toBe(true);
+    // Should NOT call getUserPermissions — bypassed
+    expect(rbacService.getUserPermissions).not.toHaveBeenCalled();
   });
 });

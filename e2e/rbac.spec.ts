@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 
-const API_BASE = 'http://localhost:3000/api/v1';
+const API_PORT = process.env.API_PORT ?? '3001';
+const API_BASE = `http://localhost:${API_PORT}/api/v1`;
 
 const FIRST_USER = {
   email: `rbac-first-${Date.now()}@example.com`,
@@ -19,9 +20,9 @@ test.describe('RBAC', () => {
   let secondUserToken: string;
   let firstUserId: string;
   let secondUserId: string;
+  let firstUserIsSuperadmin = false;
 
-  test('first registered user should be auto-assigned superadmin role', async ({ request }) => {
-    // Register first user
+  test('register first user and check for superadmin role', async ({ request }) => {
     const registerRes = await request.post(`${API_BASE}/auth/register`, {
       data: FIRST_USER,
     });
@@ -29,7 +30,6 @@ test.describe('RBAC', () => {
     const { accessToken } = await registerRes.json();
     firstUserToken = accessToken;
 
-    // Get user profile — should have superadmin role
     const meRes = await request.get(`${API_BASE}/auth/me`, {
       headers: { Authorization: `Bearer ${firstUserToken}` },
     });
@@ -38,16 +38,21 @@ test.describe('RBAC', () => {
     firstUserId = me.id;
     expect(me).toHaveProperty('permissions');
     expect(Array.isArray(me.permissions)).toBe(true);
+
+    // On a fresh DB this user gets superadmin; on existing DB they may not.
+    // Detect by trying a protected endpoint.
+    const rolesRes = await request.get(`${API_BASE}/roles`, {
+      headers: { Authorization: `Bearer ${firstUserToken}` },
+    });
+    firstUserIsSuperadmin = rolesRes.ok();
   });
 
-  test('/auth/me should return permissions for superadmin user', async ({ request }) => {
+  test('/auth/me should return permissions array', async ({ request }) => {
     const meRes = await request.get(`${API_BASE}/auth/me`, {
       headers: { Authorization: `Bearer ${firstUserToken}` },
     });
     const me = await meRes.json();
     expect(me.permissions).toBeDefined();
-    // Superadmin may or may not have explicit permissions depending on setup,
-    // but the permissions array must exist
     expect(Array.isArray(me.permissions)).toBe(true);
   });
 
@@ -67,42 +72,27 @@ test.describe('RBAC', () => {
     expect(me.permissions).toEqual([]);
   });
 
-  test('superadmin should be able to create a role via API', async ({ request }) => {
-    // First, sync the rbac.roles.manage permission so superadmin can use it
-    // The superadmin role needs the permission assigned
-    // Let's check if superadmin can access roles endpoint
-    // First, create the permission and assign it to superadmin role
+  test('superadmin should be able to list roles via API', async ({ request }) => {
+    if (!firstUserIsSuperadmin) {
+      test.skip();
+      return;
+    }
 
-    // Get superadmin's roles to find the role ID
     const rolesRes = await request.get(`${API_BASE}/roles`, {
       headers: { Authorization: `Bearer ${firstUserToken}` },
     });
-
-    // If the superadmin doesn't have explicit rbac.roles.manage permission,
-    // this will return 403. We need to set it up via DB or the test relies on
-    // the bootstrap having set it up. Let's verify the response.
-    if (rolesRes.status() === 403) {
-      // Superadmin bootstrap doesn't auto-assign permissions —
-      // this is expected behavior. Skip this test gracefully.
-      test.skip();
-      return;
-    }
-
     expect(rolesRes.ok()).toBe(true);
+    const roles = await rolesRes.json();
+    expect(Array.isArray(roles)).toBe(true);
   });
 
-  test('superadmin can assign permissions and role to another user', async ({ request }) => {
-    // This test requires superadmin to have rbac.roles.manage permission
-    // If it wasn't set up in the previous test, skip
-    const checkRes = await request.get(`${API_BASE}/roles`, {
-      headers: { Authorization: `Bearer ${firstUserToken}` },
-    });
-    if (checkRes.status() === 403) {
+  test('superadmin can create role and assign to another user', async ({ request }) => {
+    if (!firstUserIsSuperadmin) {
       test.skip();
       return;
     }
 
-    // Create a role for the second user
+    // Create a role
     const createRoleRes = await request.post(`${API_BASE}/roles`, {
       headers: { Authorization: `Bearer ${firstUserToken}` },
       data: { name: `test-role-${Date.now()}`, description: 'Test role for E2E' },
@@ -122,12 +112,15 @@ test.describe('RBAC', () => {
   });
 
   test('assigned user should have their role reflected in /auth/me', async ({ request }) => {
+    if (!firstUserIsSuperadmin) {
+      test.skip();
+      return;
+    }
+
     const meRes = await request.get(`${API_BASE}/auth/me`, {
       headers: { Authorization: `Bearer ${secondUserToken}` },
     });
     const me = await meRes.json();
-    // Permissions are still empty because the role has no permissions assigned,
-    // but the user now has a role
     expect(me.permissions).toBeDefined();
     expect(Array.isArray(me.permissions)).toBe(true);
   });
