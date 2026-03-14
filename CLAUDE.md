@@ -4,6 +4,43 @@ This file is read automatically at the start of every conversation. It defines h
 
 ---
 
+## Project Vision
+
+This is a **configurable platform base** — not a simple starter template. It is designed to serve as the foundation for building various types of business applications: ERPs, CRMs, marketplaces, project management tools, HR systems, and more.
+
+**Core principle:** Everything should be modular, configurable, and extensible. The platform provides solid infrastructure so that domain-specific features can be built on top without reinventing the wheel.
+
+**Design for:**
+- **Configurability** — modules expose config with sensible defaults; runtime settings override them via an admin panel.
+- **Extensibility** — new modules can be added without modifying core infrastructure.
+- **Multi-tenancy readiness** — data isolation, tenant-scoped config, and per-tenant customization.
+- **Enterprise patterns** — audit logging, event-driven side effects, permission-based access control.
+
+Every architectural decision should ask: "Would this work if someone is building a CRM with this? An ERP? A marketplace?" If the answer is no, the approach is too narrow.
+
+### Platform Capabilities Roadmap
+
+**Tier 1 — Core plumbing (build first, everything depends on these):**
+1. **Module config + settings system** — typed config per module with defaults; admin-editable overrides stored in DB, cached in memory, invalidated via events.
+2. **Multi-tenancy** — tenant model, row-level data isolation, tenant context middleware, tenant-scoped config.
+3. **Audit logging** — generic event listener capturing who/what/when/which entity. Built on the event system.
+4. **Entity framework / dynamic fields** — extend any entity with custom fields per tenant.
+
+**Tier 2 — Platform capabilities (build alongside features):**
+5. **Taxonomy / tags** — polymorphic tagging system attachable to any entity for metadata.
+6. **Categories** — hierarchical category trees, attachable to any entity.
+7. **State + transitions engine** — admin-configurable workflow states and transitions, attachable to any entity field. Defines allowed transitions, guards, and side effects.
+8. **Notification system** — in-app, email. Modules emit events, notification module routes based on user/tenant preferences.
+9. **File / media management** — upload, storage abstraction (local/S3), attachments on any entity.
+10. **Task / job queue** — background processing for imports, exports, reports, emails (Bull/BullMQ on Redis).
+
+**Tier 3 — UX infrastructure:**
+11. **Dynamic navigation** — sidebar items driven by module registration + permissions, not hardcoded.
+12. **Table / list framework** — reusable server-side pagination, filtering, sorting patterns.
+13. **Form builder foundations** — schema-driven forms that render from config (for dynamic fields + settings).
+
+---
+
 ## Project Prompts
 
 This project has detailed architectural and coding prompts. **PROMPT.md is mandatory for every task** — it defines the modular architecture, dependency rules, event system, and database conventions that all code must follow.
