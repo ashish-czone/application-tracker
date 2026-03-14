@@ -178,6 +178,10 @@ export class RbacService {
       }
     }
 
+    if (!superadminRole) {
+      throw new Error('Failed to create or find superadmin role');
+    }
+
     // Check if any user already has superadmin role
     const urDelegate = this.config.getUserRoleDelegate();
     const existingSuperadmins = await urDelegate.findMany({

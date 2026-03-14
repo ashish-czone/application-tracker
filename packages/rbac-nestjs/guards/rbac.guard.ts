@@ -41,6 +41,15 @@ export class RbacGuard implements CanActivate {
       return true;
     }
 
+    // Superadmin bypass — users with the superadmin role skip permission checks
+    const userRoles = await this.rbacService.getUserRoles(user.id);
+    const isSuperadmin = userRoles.some(
+      (ur) => (ur as Record<string, unknown> & { role?: { name?: string } }).role?.name === 'superadmin',
+    );
+    if (isSuperadmin) {
+      return true;
+    }
+
     const permissions = await this.rbacService.getUserPermissions(user.id);
 
     if (!hasPermission(permissions, requiredPermission)) {
