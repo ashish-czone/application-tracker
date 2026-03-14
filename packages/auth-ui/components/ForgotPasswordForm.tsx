@@ -46,7 +46,7 @@ export function ForgotPasswordForm({
       )}
 
       {isSuccess ? (
-        <div className="rounded-md bg-green-50 p-3 text-sm text-green-800" role="status">
+        <div className="rounded-md bg-success/10 p-3 text-sm text-success-foreground" role="status">
           Check your email for a password reset link.
         </div>
       ) : (

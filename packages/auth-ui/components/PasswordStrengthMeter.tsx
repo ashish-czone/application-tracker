@@ -8,8 +8,8 @@ interface PasswordStrengthMeterProps {
 
 const scoreColors = {
   weak: 'bg-destructive',
-  medium: 'bg-yellow-500',
-  strong: 'bg-green-500',
+  medium: 'bg-warning',
+  strong: 'bg-success',
 } as const;
 
 const scoreWidths = {
@@ -30,8 +30,8 @@ export function PasswordStrengthMeter({ password }: PasswordStrengthMeterProps) 
             className={cn(
               'font-medium capitalize',
               score === 'weak' && 'text-destructive',
-              score === 'medium' && 'text-yellow-600',
-              score === 'strong' && 'text-green-600',
+              score === 'medium' && 'text-warning-foreground',
+              score === 'strong' && 'text-success-foreground',
             )}
           >
             {score}
@@ -47,7 +47,7 @@ export function PasswordStrengthMeter({ password }: PasswordStrengthMeterProps) 
         {requirements.map((req) => (
           <li key={req.label} className="flex items-center gap-2 text-xs">
             {req.met ? (
-              <Check className="h-3 w-3 text-green-600" />
+              <Check className="h-3 w-3 text-success-foreground" />
             ) : (
               <X className="h-3 w-3 text-muted-foreground" />
             )}
