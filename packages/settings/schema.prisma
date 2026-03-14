@@ -1,0 +1,13 @@
+model Setting {
+  id        String   @id @default(uuid())
+  module    String
+  key       String
+  value     Json
+  updatedBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([module, key])
+  @@index([module])
+  @@map("settings")
+}
