@@ -19,6 +19,11 @@ export interface TokenPayload {
   entityName: string;
 }
 
+export interface AuthRouteConfig {
+  /** Enable/disable the built-in register route. Default: true. Disable when the entity module provides its own registration endpoint. */
+  register?: boolean;
+}
+
 export interface AuthModuleConfig {
   entityName: string;
   routePrefix: string;
@@ -29,6 +34,8 @@ export interface AuthModuleConfig {
   getPasswordTokenDelegate: () => AuthPasswordTokenDelegate;
   enrichIdentityProfile?: (identity: AuthenticableIdentity) => Promise<Record<string, unknown>>;
   onIdentityCreated?: (identity: AuthenticableIdentity) => Promise<void>;
+  /** Configure which built-in routes are enabled. All enabled by default. */
+  routes?: AuthRouteConfig;
 }
 
 export interface AuthIdentityDelegate {

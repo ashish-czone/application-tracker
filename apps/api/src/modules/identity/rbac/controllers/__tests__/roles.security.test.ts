@@ -52,11 +52,11 @@ describe('Roles API — security', () => {
     expect(res.status).toBe(403);
   });
 
-  it('should include permissions array in GET /auth/me response', async () => {
+  it('should include permissions array in GET /users/auth/me response', async () => {
     const identity = await IdentityFactory.create(prisma);
 
     const res = await request(httpServer)
-      .get('/api/v1/auth/me')
+      .get('/api/v1/users/auth/me')
       .set('Authorization', `Bearer ${tokenFor(identity)}`);
 
     expect(res.status).toBe(200);

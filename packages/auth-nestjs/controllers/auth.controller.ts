@@ -8,6 +8,7 @@ import {
   HttpCode,
   HttpStatus,
   Inject,
+  NotFoundException,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
@@ -52,6 +53,10 @@ export class AuthController {
     @Body() dto: RegisterDto,
     @Res({ passthrough: true }) res: Response,
   ) {
+    if (this.config.routes?.register === false) {
+      throw new NotFoundException();
+    }
+
     const { accessToken, refreshToken } = await this.authService.register(
       dto.email,
       dto.password,

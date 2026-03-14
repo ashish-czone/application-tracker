@@ -1,5 +1,4 @@
 import { Module, type OnModuleInit } from '@nestjs/common';
-import { RouterModule } from '@nestjs/core';
 import { AuthNestjsModule } from '@packages/auth-nestjs';
 import { RbacNestjsModule, RbacService, PermissionRegistryService } from '@packages/rbac-nestjs';
 import { PrismaService } from '@packages/database';
@@ -26,14 +25,14 @@ const identitySettingsSchema = z.object({
       }),
       inject: [PrismaService],
     }),
-    AuthNestjsModule.registerAsync({
+    AuthNestjsModule.forEntity({
+      basePath: 'users/auth',
       useFactory: async (
         prisma: PrismaService,
         rbacService: RbacService,
         settingsService: SettingsService,
       ) => ({
         entityName: 'identity',
-        routePrefix: 'auth',
         accessTokenExpiresIn: await settingsService.get('identity', 'accessTokenExpiresIn', '15m'),
         refreshTokenExpiresIn: await settingsService.get('identity', 'refreshTokenExpiresIn', '7d'),
         jwtSecret: process.env.JWT_SECRET!,
@@ -48,12 +47,6 @@ const identitySettingsSchema = z.object({
       }),
       inject: [PrismaService, RbacService, SettingsService],
     }),
-    RouterModule.register([
-      {
-        path: 'auth',
-        module: AuthNestjsModule,
-      },
-    ]),
   ],
   controllers: [RolesController, PermissionsController],
 })
