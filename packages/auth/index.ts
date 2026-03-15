@@ -1,16 +1,7 @@
-export { hashPassword, verifyPassword, hashToken, verifyTokenHash } from './hashing';
-export {
-  generateAccessToken,
-  generateRefreshToken,
-  verifyToken,
-  generateRandomToken,
-  TokenExpiredError,
-  InvalidTokenError,
-} from './tokens';
-export type {
-  AuthenticableIdentity,
-  PasswordTokenRecord,
-  TokenPayload,
-  AuthModuleConfig,
-  AuthRouteConfig,
-} from './types';
+export { AuthModule } from './auth.module';
+export { AuthService } from './services/auth.service';
+export { AuthGuard } from './guards/auth.guard';
+export { Public } from './decorators/public.decorator';
+export { CurrentUser } from './decorators/current-user.decorator';
+export type { Credential, AuthToken, JwtPayload, AuthModuleConfig } from './types';
+export { credentials, authTokens } from './schema';
