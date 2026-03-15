@@ -1,19 +1,15 @@
 import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AuthService } from '@packages/auth';
 import { RbacService } from '@packages/rbac';
 import { DatabaseService, users, eq } from '@packages/database';
-import { randomUUID } from 'crypto';
+import { DomainEventEmitter } from '@packages/events';
 import {
   AUTH_USER_REGISTERED,
   AUTH_USER_LOGGED_IN,
   AUTH_PASSWORD_RESET_REQUESTED,
   AUTH_PASSWORD_RESET_COMPLETED,
   AUTH_PASSWORD_CHANGED,
-  type AuthEventPayloads,
 } from '../events/types';
-
-const ENTITY_TYPE = 'users';
 
 @Injectable()
 export class BaseAuthOrchestratorService {
@@ -23,7 +19,7 @@ export class BaseAuthOrchestratorService {
     protected readonly authService: AuthService,
     protected readonly rbacService: RbacService,
     protected readonly database: DatabaseService,
-    protected readonly eventEmitter: EventEmitter2,
+    protected readonly domainEventEmitter: DomainEventEmitter,
   ) {}
 
   async login(identifier: string, password: string, userType: string) {
@@ -42,7 +38,8 @@ export class BaseAuthOrchestratorService {
     const { token: refreshToken } = await this.authService.createRefreshToken(userId);
 
     const user = await this.loadUser(userId);
-    this.emitEvent(AUTH_USER_LOGGED_IN, {
+    this.domainEventEmitter.emit(AUTH_USER_LOGGED_IN, {
+      entityType: 'users',
       entityId: userId,
       actorId: userId,
       payload: {
@@ -79,7 +76,8 @@ export class BaseAuthOrchestratorService {
     await this.authService.changePassword(userId, oldPassword, newPassword);
 
     const user = await this.loadUser(userId);
-    this.emitEvent(AUTH_PASSWORD_CHANGED, {
+    this.domainEventEmitter.emit(AUTH_PASSWORD_CHANGED, {
+      entityType: 'users',
       entityId: userId,
       actorId: userId,
       payload: {
@@ -95,7 +93,8 @@ export class BaseAuthOrchestratorService {
     const { token, expiresAt } = await this.authService.createPasswordResetToken(identifier);
 
     if (token) {
-      this.emitEvent(AUTH_PASSWORD_RESET_REQUESTED, {
+      this.domainEventEmitter.emit(AUTH_PASSWORD_RESET_REQUESTED, {
+        entityType: 'users',
         entityId: '',
         actorId: null,
         payload: {
@@ -113,7 +112,8 @@ export class BaseAuthOrchestratorService {
   async resetPassword(token: string, newPassword: string) {
     await this.authService.resetPassword(token, newPassword);
 
-    this.emitEvent(AUTH_PASSWORD_RESET_COMPLETED, {
+    this.domainEventEmitter.emit(AUTH_PASSWORD_RESET_COMPLETED, {
+      entityType: 'users',
       entityId: '',
       actorId: null,
       payload: {
@@ -159,7 +159,8 @@ export class BaseAuthOrchestratorService {
     const accessToken = this.authService.generateAccessToken({ userId: user.id, userType, permissions });
     const { token: refreshToken } = await this.authService.createRefreshToken(user.id);
 
-    this.emitEvent(AUTH_USER_REGISTERED, {
+    this.domainEventEmitter.emit(AUTH_USER_REGISTERED, {
+      entityType: 'users',
       entityId: user.id,
       actorId: user.id,
       payload: {
@@ -183,24 +184,5 @@ export class BaseAuthOrchestratorService {
       .limit(1);
 
     return user ?? null;
-  }
-
-  private emitEvent<T extends keyof AuthEventPayloads>(
-    eventName: T,
-    params: {
-      entityId: string;
-      actorId: string | null;
-      payload: AuthEventPayloads[T];
-    },
-  ) {
-    this.eventEmitter.emit(eventName, {
-      eventName,
-      entityType: ENTITY_TYPE,
-      entityId: params.entityId,
-      actorId: params.actorId,
-      correlationId: randomUUID(),
-      occurredAt: new Date().toISOString(),
-      payload: params.payload,
-    });
   }
 }
