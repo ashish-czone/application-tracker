@@ -19,7 +19,13 @@ import {
   desc,
   count,
 } from '@packages/database';
+import { DomainEventEmitter } from '@packages/events';
 import type { PaginatedResponse } from '@packages/common';
+import {
+  USERS_USER_CREATED,
+  USERS_USER_UPDATED,
+  USERS_USER_DELETED,
+} from '../events/types';
 
 export interface CreateUserInput {
   email: string;
@@ -60,6 +66,7 @@ export class UsersService {
     private readonly authService: AuthService,
     private readonly rbacService: RbacService,
     private readonly database: DatabaseService,
+    private readonly domainEventEmitter: DomainEventEmitter,
   ) {}
 
   async list(query: ListUsersQuery): Promise<PaginatedResponse<UserWithTypes>> {
@@ -200,6 +207,18 @@ export class UsersService {
       return newUser;
     });
 
+    this.domainEventEmitter.emit(USERS_USER_CREATED, {
+      entityType: 'users',
+      entityId: user.id,
+      actorId,
+      payload: {
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        userTypes: data.userTypes,
+      },
+    });
+
     return {
       id: user.id,
       email: user.email,
@@ -246,6 +265,15 @@ export class UsersService {
       .where(eq(users.id, id))
       .returning();
 
+    this.domainEventEmitter.emit(USERS_USER_UPDATED, {
+      entityType: 'users',
+      entityId: id,
+      actorId,
+      payload: {
+        changes: Object.keys(updateValues),
+      },
+    });
+
     return {
       id: updated.id,
       email: updated.email,
@@ -258,13 +286,24 @@ export class UsersService {
   }
 
   async softDelete(id: string, actorId: string): Promise<void> {
-    // Verify user exists
-    await this.findOneOrFail(id);
+    // Verify user exists and capture details for event
+    const user = await this.findOneOrFail(id);
 
     await this.database.db
       .update(users)
       .set({ deletedAt: new Date(), deletedBy: actorId })
       .where(eq(users.id, id));
+
+    this.domainEventEmitter.emit(USERS_USER_DELETED, {
+      entityType: 'users',
+      entityId: id,
+      actorId,
+      payload: {
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+      },
+    });
   }
 
   // --- Private helpers ---

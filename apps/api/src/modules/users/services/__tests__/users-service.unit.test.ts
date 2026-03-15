@@ -51,6 +51,12 @@ function createMockRbacService() {
   } as any;
 }
 
+function createMockEventEmitter() {
+  return {
+    emit: vi.fn(),
+  } as any;
+}
+
 const now = new Date('2026-01-01T00:00:00Z');
 
 function buildUser(overrides: Record<string, unknown> = {}) {
@@ -72,13 +78,15 @@ describe('UsersService', () => {
   let mockDb: ReturnType<typeof createMockDb>;
   let mockAuthService: ReturnType<typeof createMockAuthService>;
   let mockRbacService: ReturnType<typeof createMockRbacService>;
+  let mockEventEmitter: ReturnType<typeof createMockEventEmitter>;
 
   beforeEach(() => {
     mockDb = createMockDb();
     mockAuthService = createMockAuthService();
     mockRbacService = createMockRbacService();
+    mockEventEmitter = createMockEventEmitter();
     const databaseService = createMockDatabaseService(mockDb);
-    service = new UsersService(mockAuthService, mockRbacService, databaseService);
+    service = new UsersService(mockAuthService, mockRbacService, databaseService, mockEventEmitter);
   });
 
   describe('findOneOrFail', () => {
@@ -148,6 +156,19 @@ describe('UsersService', () => {
       expect(mockRbacService.assignUserType).toHaveBeenCalledTimes(2);
       expect(mockRbacService.assignUserType).toHaveBeenCalledWith('user-1', 'admin', mockTx);
       expect(mockRbacService.assignUserType).toHaveBeenCalledWith('user-1', 'client', mockTx);
+
+      // Verify event emitted
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith('users.UserCreated', {
+        entityType: 'users',
+        entityId: 'user-1',
+        actorId: 'actor-1',
+        payload: {
+          email: 'test@example.com',
+          firstName: 'John',
+          lastName: 'Doe',
+          userTypes: ['admin', 'client'],
+        },
+      });
     });
 
     it('should throw ConflictException if email already exists', async () => {
@@ -212,6 +233,16 @@ describe('UsersService', () => {
 
       expect(result.firstName).toBe('Jane');
       expect(mockDb.update).toHaveBeenCalled();
+
+      // Verify event emitted
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith('users.UserUpdated', {
+        entityType: 'users',
+        entityId: 'user-1',
+        actorId: 'actor-1',
+        payload: {
+          changes: ['firstName'],
+        },
+      });
     });
 
     it('should throw NotFoundException when user does not exist', async () => {
@@ -242,6 +273,7 @@ describe('UsersService', () => {
 
       expect(result.id).toBe('user-1');
       expect(mockDb.update).not.toHaveBeenCalled();
+      expect(mockEventEmitter.emit).not.toHaveBeenCalled();
     });
   });
 
@@ -254,6 +286,18 @@ describe('UsersService', () => {
       await service.softDelete('user-1', 'actor-1');
 
       expect(mockDb.update).toHaveBeenCalled();
+
+      // Verify event emitted
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith('users.UserDeleted', {
+        entityType: 'users',
+        entityId: 'user-1',
+        actorId: 'actor-1',
+        payload: {
+          email: 'test@example.com',
+          firstName: 'John',
+          lastName: 'Doe',
+        },
+      });
     });
 
     it('should throw NotFoundException when user does not exist', async () => {
