@@ -132,7 +132,12 @@ export class RbacService {
   }
 
   async getUserRoles(userId: string, userType?: string): Promise<Role[]> {
-    const query = this.database.db
+    const conditions = [eq(userRoles.userId, userId)];
+    if (userType) {
+      conditions.push(eq(roles.userType, userType));
+    }
+
+    return this.database.db
       .select({
         id: roles.id,
         name: roles.name,
@@ -142,13 +147,7 @@ export class RbacService {
       })
       .from(userRoles)
       .innerJoin(roles, eq(roles.id, userRoles.roleId))
-      .where(eq(userRoles.userId, userId));
-
-    if (userType) {
-      return query.where(and(eq(userRoles.userId, userId), eq(roles.userType, userType)));
-    }
-
-    return query;
+      .where(and(...conditions));
   }
 
   // --- User type management ---
