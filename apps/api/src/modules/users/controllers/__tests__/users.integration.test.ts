@@ -3,7 +3,6 @@ import request from 'supertest';
 import type { INestApplication } from '@nestjs/common';
 import type { TestingModule } from '@nestjs/testing';
 import type { DrizzleDB } from '@packages/database';
-import { users, eq } from '@packages/database';
 import { createTestApp } from '../../../../../../../test/utils/app';
 import { cleanDatabase } from '../../../../../../../test/utils/db';
 import { createTestIdentity, type TestIdentity } from '../../../../../../../test/utils/identity';
