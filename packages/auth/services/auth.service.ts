@@ -1,4 +1,5 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
+import type { DrizzleDB } from '@packages/database';
 import { CredentialsService } from './credentials.service';
 import { TokensService } from './tokens.service';
 import { AUTH_TOKEN_TYPES, type JwtPayload, type Credential } from '../types';
@@ -67,8 +68,8 @@ export class AuthService {
 
   // --- Password credential management ---
 
-  async createPasswordCredential(userId: string, identifier: string, password: string): Promise<Credential> {
-    const credential = await this.credentialsService.createPasswordCredential(userId, identifier, password);
+  async createPasswordCredential(userId: string, identifier: string, password: string, tx?: DrizzleDB): Promise<Credential> {
+    const credential = await this.credentialsService.createPasswordCredential(userId, identifier, password, tx);
     return {
       id: credential.id,
       userId: credential.userId,

@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
-import { DatabaseService, eq, and, inArray } from '@packages/database';
+import { DatabaseService, eq, and, inArray, type DrizzleDB } from '@packages/database';
 import { userUserTypes } from '@packages/database';
 import { roles } from '../schema/roles';
 import { permissions } from '../schema/permissions';
@@ -161,8 +161,9 @@ export class RbacService {
     return results.map((r) => r.userType);
   }
 
-  async assignUserType(userId: string, userType: string): Promise<void> {
-    await this.database.db
+  async assignUserType(userId: string, userType: string, tx?: DrizzleDB): Promise<void> {
+    const db = tx ?? this.database.db;
+    await db
       .insert(userUserTypes)
       .values({ userId, userType })
       .onConflictDoNothing();

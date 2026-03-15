@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { DatabaseService, eq, and } from '@packages/database';
+import { DatabaseService, eq, and, type DrizzleDB } from '@packages/database';
 import * as bcrypt from 'bcrypt';
 import { credentials } from '../schema';
 
@@ -26,10 +26,11 @@ export class CredentialsService {
       .where(eq(credentials.userId, userId));
   }
 
-  async createPasswordCredential(userId: string, identifier: string, password: string) {
+  async createPasswordCredential(userId: string, identifier: string, password: string, tx?: DrizzleDB) {
+    const db = tx ?? this.database.db;
     const secretHash = await bcrypt.hash(password, SALT_ROUNDS);
 
-    const [credential] = await this.database.db
+    const [credential] = await db
       .insert(credentials)
       .values({
         userId,
