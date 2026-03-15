@@ -29,14 +29,16 @@ export interface PasswordResetCompletedPayload {
   [key: string]: unknown;
 }
 
-// --- Type map: event name → payload ---
+// --- Augment global EventPayloadMap for compile-time safety ---
 
-export interface AuthEventPayloads {
-  [AUTH_USER_REGISTERED]: UserPayload;
-  [AUTH_USER_LOGGED_IN]: UserPayload;
-  [AUTH_PASSWORD_RESET_REQUESTED]: PasswordResetRequestedPayload;
-  [AUTH_PASSWORD_RESET_COMPLETED]: PasswordResetCompletedPayload;
-  [AUTH_PASSWORD_CHANGED]: UserPayload;
+declare module '@packages/events' {
+  interface EventPayloadMap {
+    [AUTH_USER_REGISTERED]: UserPayload;
+    [AUTH_USER_LOGGED_IN]: UserPayload;
+    [AUTH_PASSWORD_RESET_REQUESTED]: PasswordResetRequestedPayload;
+    [AUTH_PASSWORD_RESET_COMPLETED]: PasswordResetCompletedPayload;
+    [AUTH_PASSWORD_CHANGED]: UserPayload;
+  }
 }
 
 // --- Full event interfaces (for consumers/listeners) ---
