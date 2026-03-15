@@ -9,6 +9,8 @@ module.exports = function (options) {
         allowlist: [/^@packages\//, /^@modules\//],
         modulesDir: path.resolve(__dirname, '../../node_modules'),
       }),
+      // Native modules inside @packages/* must be externalized
+      { bcrypt: 'commonjs bcrypt' },
     ],
     resolve: {
       ...options.resolve,

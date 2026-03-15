@@ -14,7 +14,7 @@ export class TokensService {
 
   generateAccessToken(payload: JwtPayload): string {
     return jwt.sign(payload, this.config.jwtSecret, {
-      expiresIn: this.config.accessTokenExpiresIn,
+      expiresIn: this.config.accessTokenExpiresIn as any,
     });
   }
 
