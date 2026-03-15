@@ -9,6 +9,7 @@ import { SettingsModule } from '@packages/settings';
 import { AuthGuard } from '@packages/auth';
 import { RbacGuard } from '@packages/rbac';
 import { AuthOrchestratorModule } from './modules/auth/auth.module';
+import { UsersModule } from './modules/users/users.module';
 import { validate } from './config/env.validation';
 
 @Module({
@@ -26,6 +27,7 @@ import { validate } from './config/env.validation';
       limit: 100,
     }]),
     AuthOrchestratorModule,
+    UsersModule,
   ],
   providers: [
     {

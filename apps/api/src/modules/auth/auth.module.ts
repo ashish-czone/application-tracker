@@ -32,6 +32,7 @@ import {
   ],
   controllers: [ClientAuthController, AdminAuthController],
   providers: [BaseAuthOrchestratorService, ClientAuthService, AdminAuthService],
+  exports: [AuthPackageModule],
 })
 export class AuthOrchestratorModule implements OnModuleInit {
   constructor(
