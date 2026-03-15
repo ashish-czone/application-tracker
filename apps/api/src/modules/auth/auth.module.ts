@@ -38,7 +38,7 @@ export class AuthOrchestratorModule implements OnModuleInit {
   onModuleInit() {
     this.eventRegistry.register({
       eventName: AUTH_USER_REGISTERED,
-      entityType: 'user',
+      group: 'auth',
       description: 'Fired when a new user registers',
       payloadSchema: {
         email: { type: 'string', label: 'Email' },
@@ -48,7 +48,7 @@ export class AuthOrchestratorModule implements OnModuleInit {
 
     this.eventRegistry.register({
       eventName: AUTH_USER_LOGGED_IN,
-      entityType: 'user',
+      group: 'auth',
       description: 'Fired when a user logs in',
       payloadSchema: {
         userType: { type: 'string', label: 'User Type' },
@@ -57,7 +57,7 @@ export class AuthOrchestratorModule implements OnModuleInit {
 
     this.eventRegistry.register({
       eventName: AUTH_PASSWORD_RESET_REQUESTED,
-      entityType: 'user',
+      group: 'auth',
       description: 'Fired when a password reset is requested',
       payloadSchema: {
         token: { type: 'string', label: 'Reset Token' },
@@ -67,14 +67,14 @@ export class AuthOrchestratorModule implements OnModuleInit {
 
     this.eventRegistry.register({
       eventName: AUTH_PASSWORD_RESET_COMPLETED,
-      entityType: 'user',
+      group: 'auth',
       description: 'Fired when a password is reset via token',
       payloadSchema: {},
     });
 
     this.eventRegistry.register({
       eventName: AUTH_PASSWORD_CHANGED,
-      entityType: 'user',
+      group: 'auth',
       description: 'Fired when a user changes their password',
       payloadSchema: {},
     });

@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 
 export interface EventMetadata {
   eventName: string;
-  entityType: string;
+  group: string;
   description: string;
   payloadSchema: Record<string, { type: string; label: string }>;
 }
