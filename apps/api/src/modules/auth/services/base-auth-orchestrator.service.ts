@@ -1,7 +1,16 @@
 import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AuthService } from '@packages/auth';
 import { RbacService } from '@packages/rbac';
 import { DatabaseService, users, eq } from '@packages/database';
+import { randomUUID } from 'crypto';
+import {
+  AUTH_USER_REGISTERED,
+  AUTH_USER_LOGGED_IN,
+  AUTH_PASSWORD_RESET_REQUESTED,
+  AUTH_PASSWORD_RESET_COMPLETED,
+  AUTH_PASSWORD_CHANGED,
+} from '../events/types';
 
 @Injectable()
 export class BaseAuthOrchestratorService {
@@ -9,6 +18,7 @@ export class BaseAuthOrchestratorService {
     protected readonly authService: AuthService,
     protected readonly rbacService: RbacService,
     protected readonly database: DatabaseService,
+    protected readonly eventEmitter: EventEmitter2,
   ) {}
 
   async login(identifier: string, password: string, userType: string) {
@@ -25,6 +35,16 @@ export class BaseAuthOrchestratorService {
 
     const accessToken = this.authService.generateAccessToken({ userId, userType, permissions });
     const { token: refreshToken } = await this.authService.createRefreshToken(userId);
+
+    this.eventEmitter.emit(AUTH_USER_LOGGED_IN, {
+      eventName: AUTH_USER_LOGGED_IN,
+      entityType: 'user',
+      entityId: userId,
+      actorId: userId,
+      correlationId: randomUUID(),
+      occurredAt: new Date().toISOString(),
+      payload: { userType },
+    });
 
     return { accessToken, refreshToken, userId };
   }
@@ -50,16 +70,49 @@ export class BaseAuthOrchestratorService {
 
   async changePassword(userId: string, oldPassword: string, newPassword: string) {
     await this.authService.changePassword(userId, oldPassword, newPassword);
+
+    this.eventEmitter.emit(AUTH_PASSWORD_CHANGED, {
+      eventName: AUTH_PASSWORD_CHANGED,
+      entityType: 'user',
+      entityId: userId,
+      actorId: userId,
+      correlationId: randomUUID(),
+      occurredAt: new Date().toISOString(),
+      payload: {},
+    });
   }
 
   async forgotPassword(identifier: string) {
     const { token, expiresAt } = await this.authService.createPasswordResetToken(identifier);
-    // TODO: emit event for email delivery
+
+    // Only emit if a token was actually created (non-empty means user exists)
+    if (token) {
+      this.eventEmitter.emit(AUTH_PASSWORD_RESET_REQUESTED, {
+        eventName: AUTH_PASSWORD_RESET_REQUESTED,
+        entityType: 'user',
+        entityId: '',
+        actorId: null,
+        correlationId: randomUUID(),
+        occurredAt: new Date().toISOString(),
+        payload: { token, expiresAt: expiresAt.toISOString() },
+      });
+    }
+
     return { token, expiresAt };
   }
 
   async resetPassword(token: string, newPassword: string) {
     await this.authService.resetPassword(token, newPassword);
+
+    this.eventEmitter.emit(AUTH_PASSWORD_RESET_COMPLETED, {
+      eventName: AUTH_PASSWORD_RESET_COMPLETED,
+      entityType: 'user',
+      entityId: '',
+      actorId: null,
+      correlationId: randomUUID(),
+      occurredAt: new Date().toISOString(),
+      payload: {},
+    });
   }
 
   async register(
@@ -98,6 +151,16 @@ export class BaseAuthOrchestratorService {
     const permissions = await this.rbacService.getPermissionsForUser(user.id, userType);
     const accessToken = this.authService.generateAccessToken({ userId: user.id, userType, permissions });
     const { token: refreshToken } = await this.authService.createRefreshToken(user.id);
+
+    this.eventEmitter.emit(AUTH_USER_REGISTERED, {
+      eventName: AUTH_USER_REGISTERED,
+      entityType: 'user',
+      entityId: user.id,
+      actorId: user.id,
+      correlationId: randomUUID(),
+      occurredAt: new Date().toISOString(),
+      payload: { email: data.email.toLowerCase(), userType },
+    });
 
     return { accessToken, refreshToken, userId: user.id };
   }
