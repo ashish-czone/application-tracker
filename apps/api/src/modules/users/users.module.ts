@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { AuthModule as AuthPackageModule } from '@packages/auth';
 import { RbacModule } from '@packages/rbac';
 import { AppConfigService } from '@packages/settings';
+import { UsersController } from './controllers/users.controller';
 import { UsersService } from './services/users.service';
 
 @Module({
@@ -18,6 +19,7 @@ import { UsersService } from './services/users.service';
     }),
     RbacModule,
   ],
+  controllers: [UsersController],
   providers: [UsersService],
   exports: [UsersService],
 })
