@@ -25,7 +25,7 @@ starter-template/
 │   ├── api/                # NestJS backend
 │   │   └── src/modules/    # Backend domain modules (business logic)
 │   └── web/                # React + Vite frontend
-│       └── src/modules/    # Frontend domain features (UI logic)
+│       └── src/            # features/, portals/ (see PROMPT-UI.md)
 ├── packages/               # Reusable, domain-agnostic packages
 ├── pnpm-workspace.yaml
 ├── turbo.json
@@ -49,13 +49,13 @@ Strictly enforced. Violations are build errors.
 
 ```
 apps/api     →  packages/* (backend — runs as API, worker, or both via env flags)
-apps/web     →  packages/* (frontend — UI, API client, auth-ui, common, etc.)
+apps/web     →  packages/* (frontend — UI components, hooks, API client, common, etc.)
 packages/*   →  other infrastructure packages only. NEVER import from apps/
 ```
 
 Backend modules (`apps/api/src/modules/`) may import from `packages/*` and from other modules' public API (services, event types, enums) — no circular deps.
 
-Frontend modules (`apps/web/src/modules/`) may import from `packages/*` (e.g., `packages/ui`, `packages/api-client`, `packages/auth-ui`, `packages/common`).
+Frontend code (`apps/web/src/`) may import from `packages/ui` (components, hooks, services, types) and `packages/common`. See PROMPT-UI.md for the full frontend architecture.
 
 ### When to use direct calls vs events
 
@@ -92,39 +92,24 @@ apps/api/
     // Infrastructure packages
     DatabaseModule,
     EventsModule,
-    // Platform capability packages
-    SettingsNestjsModule, // module config + admin-editable settings
-    UserAuthModule,       // registers AuthNestjsModule with user config
-    RbacModule,
-    NotificationsModule,
-    ActivityLogModule,
-    ReminderEngineModule,
-    // Domain modules
-    CandidatesModule,
-    OrdersModule,
-    // Platform configuration modules (each capability owns its own module)
-    SettingsModule,
-    NotificationRulesModule,
-    WorkflowDefinitionsModule,
+    ThrottlerModule,
+    // Domain modules (added as they are built)
   ],
 })
 export class AppModule {}
 ```
 
-Each platform capability that needs CRUD configuration gets its own module under `modules/` (e.g., `modules/settings/`, `modules/notification-rules/`). There is no catch-all "admin" module — RBAC handles access control, and each module owns its own controllers, DTOs, and permissions.
+Each domain module is a standalone NestJS module imported into `AppModule`. There is no catch-all "admin" module — RBAC handles access control, and each module owns its own controllers, DTOs, and permissions.
 
 ### apps/web/ — React + Vite Frontend
+
+The frontend uses a portal-based architecture, not domain modules. See PROMPT-UI.md for the full structure, folder conventions, and dependency rules.
 
 ```
 apps/web/
   src/
-    app/
-      router.tsx            # merges all feature routes
-      providers.tsx         # QueryClient, auth context, theme provider
-      layout/
-        AppLayout.tsx
-        Sidebar.tsx
-        Topbar.tsx
+    features/               # Cross-portal business logic (auth)
+    portals/                # Portal-specific UI (admin, client)
     main.tsx
   index.html
   vite.config.ts
@@ -132,14 +117,7 @@ apps/web/
   tsconfig.json
 ```
 
-`router.tsx` merges frontend module routes. Each module plugs itself in:
-
-```ts
-import { candidateRoutes } from "@modules/candidates/routes";
-import { orderRoutes } from "@modules/orders/routes";
-
-export const routes = [...candidateRoutes, ...orderRoutes];
-```
+Each portal owns its own `routes.tsx` entry point. There is no shared top-level router.
 
 ### Worker — Background Job Processing
 
@@ -437,67 +415,16 @@ Domain-to-domain communication used direct calls (step 2). Side effects used eve
 
 ---
 
-## 4. Frontend Modules Layer — Frontend Domain Logic
+## 4. Frontend Architecture
 
-Each frontend module owns everything it needs for the UI. Frontend modules map 1:1 to backend modules by name.
+The frontend does **not** follow the same modular/domain-separated architecture as the backend. It is organized by **layers and portals**. See PROMPT-UI.md for the full frontend architecture, folder structure, and rules.
 
-### Frontend Module Structure
-
-```
-apps/web/src/modules/<module-name>/
-  api/                      # API calls using packages/api-client
-  components/               # Module-specific React components
-  hooks/                    # Module-specific hooks (TanStack Query wrappers)
-  pages/                    # Route-level page containers
-  routes.ts                 # Route definitions for this module
-  types.ts                  # Frontend-specific types
-```
-
-### Frontend Module Rules
-
-1. **A frontend module owns its pages, components, hooks, and API calls.** Nothing leaks outside.
-
-2. **Pages are route-level containers. Components are reusable pieces.**
-
-   ```
-   pages/CandidateListPage.tsx       # route-level
-   components/CandidateTable.tsx      # reusable within module
-   components/CandidateForm.tsx
-   ```
-
-3. **Each frontend module defines its own routes:**
-
-   ```ts
-   // apps/web/src/modules/candidates/routes.ts
-   export const candidateRoutes = [
-     { path: "/candidates", element: <CandidateListPage /> },
-     { path: "/candidates/:id", element: <CandidateProfilePage /> },
-   ];
-   ```
-
-4. **API layer uses TanStack Query:**
-
-   ```ts
-   // apps/web/src/modules/candidates/api/candidateApi.ts
-   import { api } from "@modules/lib/api";
-   export const getCandidates = () => api.get("/candidates");
-   ```
-
-   ```ts
-   // apps/web/src/modules/candidates/hooks/useCandidates.ts
-   import { useQuery } from "@tanstack/react-query";
-   import { getCandidates } from "../api/candidateApi";
-   export const useCandidates = () =>
-     useQuery({ queryKey: ["candidates"], queryFn: getCandidates });
-   ```
-
-5. **Frontend modules may import from:**
-   - `@packages/*` — any shared package (ui, api-client, auth-ui, common, etc.)
-   - **Never from backend modules.** The API is the boundary. Frontend defines its own types based on the API contract (e.g., `type CandidateStatus = "active" | "submitted" | "rejected"`).
-
-6. **Cross-module reads are allowed for aggregate views.** A dashboard module may import hooks from other modules for read-only display. Dashboard never modifies other modules' state.
-
-7. **Configuration pages** for platform capabilities live in their own frontend modules (e.g., `modules/settings/`, `modules/notification-rules/`). Pages are thin wrappers that fetch data via API endpoints and compose components from platform UI packages (`@packages/notifications-ui`, `@packages/workflow-engine-ui`, etc.).
+**Key points:**
+- `packages/ui` is the only shared frontend package (components, hooks, services, types).
+- `apps/web/src/features/` holds cross-portal business logic (auth only, for now).
+- `apps/web/src/portals/` holds portal-specific pages, components, services, types, routes, and menu.
+- Portals never import from each other. Features can import from `packages/ui`. Portals can import from both.
+- **Never import from backend modules.** The API is the boundary. Frontend defines its own types based on the API contract.
 
 ---
 
@@ -511,21 +438,7 @@ Packages have ZERO knowledge of business domains. They never reference "candidat
 
 Examples: database (Drizzle ORM + pg Pool + schema definitions), events (in-memory event bus), queue (durable async jobs via BullMQ, including repeatable/cron jobs).
 
-**Platform Capabilities (backend, invoked directly):** Cross-cutting engines that domain services call directly via their public API. They provide capabilities that modules need during their domain operations. CRUD endpoints for managing their configuration (roles, workflow definitions, etc.) live in their own modules (e.g., `modules/settings/`, `modules/workflow-definitions/`).
-
-Examples: auth + auth-nestjs (config-driven authentication — see PROMPT-AUTH.md), rbac (roles + permissions + guards), workflow-engine (DB-driven state machine), files (storage abstraction), search (search abstraction).
-
-Usage example — RBAC in domain modules:
-
-```ts
-// apps/api/src/modules/candidates/controllers/candidatesController.ts
-@UseGuards(RbacGuard)
-@RequirePermission('candidates.create')
-@Post()
-async create(@Body() dto: CreateCandidateDto) { ... }
-```
-
-`packages/rbac-nestjs` exports guards and decorators. `RbacNestjsModule` is registered per entity type (like auth), making guards available globally. Management of roles, permissions, and user-role assignments is handled by RBAC controllers within the relevant module (e.g., `apps/api/src/modules/users/rbac/`), which delegate to `rbacService`.
+**Platform Capabilities (backend, invoked directly):** Cross-cutting engines that domain services call directly via their public API. They provide capabilities that modules need during their domain operations. See PROMPT-AUTH.md for the authentication, identity, and RBAC architecture.
 
 **Side-Effect Packages (backend, event-driven):** Cross-cutting engines that subscribe to domain events and react generically. No module calls them directly — they listen and act independently. They contain no domain knowledge — all behavior is configured via DB rules, not hardcoded `if/else` chains. CRUD endpoints for configuring these packages live in their own modules (e.g., `modules/notification-rules/`, `modules/reminder-rules/`).
 
@@ -533,15 +446,7 @@ Examples: notifications (DB-driven templates + delivery), activity-log (event-dr
 
 These packages self-register their event subscriptions using `@OnEvent()` decorators. They process domain events using the base `DomainEvent` interface from `packages/events` — they never import from app modules.
 
-**Platform UI Packages (frontend):** Reusable React components for configuring platform capabilities. These are props-driven building blocks — no API calls, no routing, no data-fetching hooks. The consuming frontend module (e.g., `modules/settings/`, `modules/notification-rules/`) owns data fetching and wires these components into pages.
-
-Examples: auth-ui (login form, register form, password reset, session expired modal), notifications-ui (rule builder, template editor, channel selector), workflow-engine-ui (state machine editor, transition builder), reminder-engine-ui (schedule builder).
-
-A platform capability only gets a `-ui` package when it has a complex configuration surface. Simple packages (activity-log, search) may not need one.
-
-**Frontend:** Shared UI and client utilities.
-
-Examples: ui (design system components — Button, Modal, Table, etc.), api-client (typed HTTP client with auth interceptors).
+**Frontend:** `packages/ui` is the single shared frontend package. It contains reusable components (grouped by category), generic utility hooks, HTTP client infrastructure, and generic types. See PROMPT-UI.md for the full structure and rules. No other frontend packages exist — domain-specific UI (auth forms, etc.) lives in `apps/web/src/features/` or `apps/web/src/portals/`.
 
 **Shared (both):** Pure types and constants.
 
@@ -565,11 +470,8 @@ All Drizzle table definitions live in `packages/database/schema/`, organized by 
 ```
 packages/database/
   schema/
-    identity.ts                         # identities, passwordTokens, roles, permissions, rolePermissions, identityRoles
-    users.ts                            # users (imports identities for FK)
     settings.ts                         # settings
-    relations.ts                        # all Drizzle relations (for relational query API)
-    index.ts                            # barrel export
+    index.ts                            # barrel export (add new schema files here)
   drizzle/                              # generated migration files (committed to git)
   drizzle.config.ts                     # drizzle-kit configuration
   index.ts                              # DatabaseService + DatabaseModule + re-exports
@@ -653,6 +555,6 @@ Shared TypeScript config at root. All packages, modules, features, and apps exte
 - Event names are namespaced, past-tense, exported constants — never magic strings.
 - Side-effect event handlers must be idempotent. Unreliable I/O is enqueued via `packages/queue`, never done inline.
 - Every module's public API is exported via `index.ts` — kept intentionally narrow.
-- Frontend components use `@packages/ui` for shared UI. Platform UI packages (`*-ui`) are props-driven — no data fetching.
-- API calls always go through `@packages/api-client`, never raw fetch/axios in features.
+- Frontend components use `@packages/ui` for shared UI. See PROMPT-UI.md for frontend architecture.
+- API calls always go through `@packages/ui/services/apiClient`, never raw fetch/axios.
 - Side-effect package behavior is configured via DB rules, not hardcoded logic. Domain module config is defined within each module.

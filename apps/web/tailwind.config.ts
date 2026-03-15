@@ -6,7 +6,6 @@ const config: Config = {
   content: [
     './src/**/*.{ts,tsx}',
     '../../packages/ui/**/*.{ts,tsx}',
-    '../../packages/auth-ui/**/*.{ts,tsx}',
   ],
 };
 
