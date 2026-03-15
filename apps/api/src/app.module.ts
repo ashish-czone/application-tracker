@@ -5,6 +5,7 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import path from 'path';
 import { DatabaseModule } from '@packages/database';
 import { EventsModule } from '@packages/events';
+import { SettingsModule } from '@packages/settings';
 import { AuthGuard } from '@packages/auth';
 import { RbacGuard } from '@packages/rbac';
 import { AuthOrchestratorModule } from './modules/auth/auth.module';
@@ -19,6 +20,7 @@ import { validate } from './config/env.validation';
     }),
     DatabaseModule,
     EventsModule,
+    SettingsModule,
     ThrottlerModule.forRoot([{
       ttl: 60000,
       limit: 100,
