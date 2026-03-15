@@ -10,6 +10,7 @@ import {
   AUTH_PASSWORD_RESET_REQUESTED,
   AUTH_PASSWORD_RESET_COMPLETED,
   AUTH_PASSWORD_CHANGED,
+  type AuthEventPayloads,
 } from '../events/types';
 
 const ENTITY_TYPE = 'users';
@@ -164,11 +165,11 @@ export class BaseAuthOrchestratorService {
     return user ?? null;
   }
 
-  private emitEvent(
-    eventName: string,
+  private emitEvent<T extends keyof AuthEventPayloads>(
+    eventName: T,
     entityId: string,
     actorId: string | null,
-    payload: Record<string, unknown>,
+    payload: AuthEventPayloads[T],
   ) {
     this.eventEmitter.emit(eventName, {
       eventName,

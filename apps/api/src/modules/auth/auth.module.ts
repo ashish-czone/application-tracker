@@ -42,6 +42,8 @@ export class AuthOrchestratorModule implements OnModuleInit {
       description: 'Fired when a new user registers',
       payloadSchema: {
         email: { type: 'string', label: 'Email' },
+        firstName: { type: 'string', label: 'First Name' },
+        lastName: { type: 'string', label: 'Last Name' },
         userType: { type: 'string', label: 'User Type' },
       },
     });
@@ -51,6 +53,9 @@ export class AuthOrchestratorModule implements OnModuleInit {
       group: 'auth',
       description: 'Fired when a user logs in',
       payloadSchema: {
+        email: { type: 'string', label: 'Email' },
+        firstName: { type: 'string', label: 'First Name' },
+        lastName: { type: 'string', label: 'Last Name' },
         userType: { type: 'string', label: 'User Type' },
       },
     });
@@ -60,8 +65,10 @@ export class AuthOrchestratorModule implements OnModuleInit {
       group: 'auth',
       description: 'Fired when a password reset is requested',
       payloadSchema: {
+        identifier: { type: 'string', label: 'Identifier' },
         token: { type: 'string', label: 'Reset Token' },
         expiresAt: { type: 'string', label: 'Expires At' },
+        userType: { type: 'string', label: 'User Type' },
       },
     });
 
@@ -69,14 +76,21 @@ export class AuthOrchestratorModule implements OnModuleInit {
       eventName: AUTH_PASSWORD_RESET_COMPLETED,
       group: 'auth',
       description: 'Fired when a password is reset via token',
-      payloadSchema: {},
+      payloadSchema: {
+        userType: { type: 'string', label: 'User Type' },
+      },
     });
 
     this.eventRegistry.register({
       eventName: AUTH_PASSWORD_CHANGED,
       group: 'auth',
       description: 'Fired when a user changes their password',
-      payloadSchema: {},
+      payloadSchema: {
+        email: { type: 'string', label: 'Email' },
+        firstName: { type: 'string', label: 'First Name' },
+        lastName: { type: 'string', label: 'Last Name' },
+        userType: { type: 'string', label: 'User Type' },
+      },
     });
   }
 }
