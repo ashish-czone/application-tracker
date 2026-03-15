@@ -19,6 +19,106 @@ This document defines the frontend stack, component rules, form behavior, data f
 
 ---
 
+## Frontend Architecture
+
+The backend API follows a strict modular/domain-separated architecture. **The frontend does not.** The frontend is organized by **layers and portals**, not by domain modules.
+
+### Shared package: `packages/ui`
+
+`packages/ui` is the shared frontend toolkit — reusable across any app in the monorepo. It contains components, hooks, services, and types. **Nothing in this package may import from `apps/`.**
+
+```
+packages/ui/
+ ├ components/
+ │   ├ form/                — Form wrappers (Input, Select, Checkbox, DatePicker)
+ │   ├ feedback/            — User feedback (Toast, Alert)
+ │   ├ layout/              — Layout primitives (Card, Stack)
+ │   └ Button/              — Ungrouped components at root
+ ├ hooks/                   — Generic utility hooks (useDebounce, useLocalStorage, usePagination)
+ ├ services/                — HTTP infrastructure (apiClient, tokenStore)
+ ├ types.ts                 — Generic utility types (PaginatedResponse, ApiError)
+ └ index.ts
+```
+
+**Component grouping rules:**
+- Group related components into subfolders (`form/`, `feedback/`, `layout/`).
+- Components that don't fit a group sit at the `components/` root.
+- All components are built on shadcn/ui primitives + Radix UI + TailwindCSS.
+
+**What belongs in `packages/ui`:**
+- Pure, reusable UI components with no business logic
+- Generic utility hooks (no domain knowledge)
+- HTTP client infrastructure (apiClient, token management, interceptors)
+- Generic TypeScript types used across the app
+
+**What does NOT belong in `packages/ui`:**
+- Domain-specific components, hooks, types, or services
+- Auth forms, business validation schemas, domain API calls
+- Anything that references a specific entity (User, Order, Role, etc.)
+
+### App structure: `apps/web/src/`
+
+```
+apps/web/src/
+ ├ features/
+ │   └ auth/
+ │       ├ components/      — AuthGuard, LoginForm, SessionExpiredModal
+ │       ├ hooks/           — useAuth, useCurrentUser, useLogin, useCan
+ │       └ services/        — Auth API calls
+ │
+ ├ portals/
+ │   ├ admin/
+ │   │   ├ pages/
+ │   │   ├ components/
+ │   │   ├ services/
+ │   │   ├ types/
+ │   │   ├ routes.tsx       — Portal entry point + route definitions
+ │   │   └ menu.ts          — Sidebar navigation config
+ │   │
+ │   └ client/
+ │       ├ pages/
+ │       ├ components/
+ │       ├ services/
+ │       ├ types/
+ │       ├ routes.tsx
+ │       └ menu.ts
+```
+
+### Layers
+
+| Layer | Scope | Business logic? | Example |
+|---|---|---|---|
+| `packages/ui` | Global (shared package) | No | Button, FormInput, useDebounce, apiClient |
+| `features/` | Cross-portal (app-level) | Yes | auth (components, hooks, services) |
+| `portals/` | Portal-specific | Yes | pages, components, services, types, menu |
+
+### Dependency rules
+
+```
+packages/ui  ←  features/  ←  portals/
+```
+
+- **Portals** can import from `packages/ui` and `features/`.
+- **Features** can import from `packages/ui`.
+- **`packages/ui`** imports nothing from the app.
+- **Portals never import from each other.** No cross-portal dependencies.
+
+### Portal rules
+
+- Each portal is **self-contained** — it owns its pages, components, services, types, routes, and menu.
+- Each portal has its own `routes.tsx` (entry point) and `menu.ts` (navigation config).
+- Domain types (e.g., `User`, `Order`, `Role`) live in the portal that uses them (`portals/admin/types/`), not at a shared level.
+- If both portals need the same type, define it in each portal independently — do not hoist to a shared location unless it's truly generic (like `PaginatedResponse`).
+
+### Feature rules
+
+- `features/` is **strictly** for cross-portal shared business logic.
+- Currently only `auth` lives here. Do not add features unless they are genuinely needed by multiple portals.
+- If something is only used in one portal, it stays in that portal.
+- Promotion to `features/` only happens when a second portal actually needs the code.
+
+---
+
 ## 1. Naming & File Conventions
 
 - **Components:** `PascalCase.tsx` (`CandidateTable.tsx`)
@@ -35,7 +135,7 @@ This document defines the frontend stack, component rules, form behavior, data f
 
 ### Always use shared wrappers
 
-Never use native HTML form elements (`<input>`, `<select>`, `<textarea>`) directly. Always use the shared wrapper components from `@packages/ui`. These wrappers integrate:
+Never use native HTML form elements (`<input>`, `<select>`, `<textarea>`) directly. Always use the shared wrapper components from `@packages/ui/components/form/`. These wrappers integrate:
 
 - React Hook Form's `Controller`
 - Error message display
@@ -184,11 +284,11 @@ Opening a modal does NOT change the URL. Modals are transient UI state managed v
 
 ### Code splitting
 
-Lazy load at the route level. Each feature's pages load only when navigated to:
+Lazy load at the route level. Each portal's pages load only when navigated to:
 
 ```tsx
-const CandidateListPage = React.lazy(
-  () => import("@modules/candidates/pages/CandidateListPage")
+const UsersPage = React.lazy(
+  () => import("@portals/admin/pages/UsersPage")
 );
 ```
 
@@ -232,10 +332,10 @@ Something went wrong loading candidates.
 
 Use React error boundaries at **two levels**:
 
-1. **Per-feature** — wraps each feature's routes. A crash in candidates doesn't take down orders.
-2. **App root** — last-resort fallback for anything that escapes feature boundaries.
+1. **Per-portal** — wraps each portal's routes. A crash in admin doesn't take down client.
+2. **App root** — last-resort fallback for anything that escapes portal boundaries.
 
-Feature-level fallback shows "Something went wrong in this section" with a "Reload" button. App-level fallback shows a full-page error with a "Reload app" button.
+Portal-level fallback shows "Something went wrong in this section" with a "Reload" button. App-level fallback shows a full-page error with a "Reload app" button.
 
 ---
 
@@ -270,7 +370,7 @@ Wrap protected routes in an `AuthGuard` component. Public routes (login, forgot 
 
 ### Token refresh
 
-Silent refresh via `packages/api-client` interceptor:
+Silent refresh via `packages/ui/services` interceptor:
 
 - Access token expires → API returns 401
 - Interceptor calls `/auth/refresh` with refresh token
@@ -315,7 +415,7 @@ If the user lacks the permission, the element is not rendered. This applies to b
 
 ## 11. Global API Error Handling
 
-Handled in `packages/api-client` response interceptor:
+Handled in `packages/ui/services` response interceptor:
 
 | Status | Behavior |
 |---|---|
@@ -325,7 +425,7 @@ Handled in `packages/api-client` response interceptor:
 | 500 | Toast: "Something went wrong. Please try again." |
 | Network error | Show an "You're offline" banner. |
 
-The interceptor handles generic errors globally. Features can still catch specific errors (e.g., 409 "email already taken") in their own mutation's `onError`.
+The interceptor handles generic errors globally. Portals and features can still catch specific errors (e.g., 409 "email already taken") in their own mutation's `onError`.
 
 ---
 
@@ -362,7 +462,7 @@ See PROMPT-API.md for backend date rules. Two types of date fields come from the
 | Timestamps | Parse UTC from API. Display in the user's local timezone. |
 | Calendar dates | Display as-is. **No timezone conversion.** A DOB of `2026-03-12` displays as March 12 everywhere. |
 | Form state | Store date values as ISO strings (timestamps) or `YYYY-MM-DD` strings (calendar dates), never as `Date` objects. |
-| Date pickers | Always use the shared `FormDatePicker` from `@packages/ui`. |
+| Date pickers | Always use the shared `FormDatePicker` from `@packages/ui/components/form/`. |
 
 ### Display formats
 
@@ -409,11 +509,11 @@ See PROMPT-API.md for storage rules. Key contract: API stores and returns E.164 
 
 | Concern | Rule |
 |---|---|
-| Input | Use the shared `FormPhoneInput` component from `@packages/ui`. |
+| Input | Use the shared `FormPhoneInput` component from `@packages/ui/components/form/`. |
 | Display | Format per locale using `libphonenumber-js`. `+15551234567` → `(555) 123-4567` for US. |
 | Form state | Store the raw user input during editing. Convert to E.164 before sending to API. |
 
-### `FormPhoneInput` component (`@packages/ui`)
+### `FormPhoneInput` component (`@packages/ui/components/form/`)
 
 A shared phone input component used everywhere a phone number is collected. Never build a one-off phone input in a feature.
 
@@ -421,7 +521,7 @@ A shared phone input component used everywhere a phone number is collected. Neve
 - **Number input** — standard text input for the local number.
 - **Validation** — integrates with `libphonenumber-js` to validate the combined country code + number. Shows inline error for invalid numbers.
 - **Output** — produces E.164 format (`+15551234567`) for form state.
-- **React Hook Form integration** — works with `Controller` like all other `Form*` components in `@packages/ui`.
+- **React Hook Form integration** — works with `Controller` like all other `Form*` components in `@packages/ui/components/form/`.
 
 ---
 

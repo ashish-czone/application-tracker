@@ -85,7 +85,7 @@ Before writing any code:
 Work through tasks one at a time, in order. For each task:
 
 ```
-Implement → Write tests → Run tests → Fix if failing → Commit → Push → Create PR → Merge to main
+Implement → Write tests → Run tests → Fix if failing → Commit → Push → Create PR → Wait for user review → Merge to main
 ```
 
 **Tests must pass before committing.** After implementing, run the relevant tests for the module/package you changed:
@@ -95,16 +95,13 @@ Implement → Write tests → Run tests → Fix if failing → Commit → Push �
 pnpm --filter @packages/<package-name> test    # unit tests for the package
 pnpm --filter @apps/api test                   # integration tests (requires DB)
 
-# Frontend package tests
-pnpm --filter @packages/auth-ui test           # component tests
-
 # All package unit tests (no DB required)
 npx turbo run test --filter='@packages/*'
 ```
 
 If any test fails, fix the issue before committing. Do not skip failing tests.
 
-**After each task is done, immediately create a PR and merge it to `main`.** Do not accumulate multiple tasks on one branch. Each task gets its own branch, its own PR, and is merged before starting the next task.
+**After each task is done, immediately create a PR and ask the user to review it.** Do not accumulate multiple tasks on one branch. Each task gets its own branch, its own PR, and is merged before starting the next task. **Do not merge the PR until the user explicitly confirms approval.**
 
 Before starting the next task, switch back to `main` and pull:
 
@@ -218,13 +215,14 @@ Rules:
 
 ### Pull requests
 
-Each task gets its own PR, created and merged immediately after the task is done:
+Each task gets its own PR, created immediately after the task is done. **Never merge without user approval:**
 
 1. Push the branch: `git push -u origin feat/add-candidate-submission`
 2. Create PR with a summary of the task's changes.
 3. PR title follows the same conventional format: `feat: add candidate submission`
-4. Merge the PR to `main` immediately.
-5. Switch back to `main` and pull before starting the next task.
+4. **Ask the user to review the PR.** Share the PR URL and wait for explicit confirmation before merging.
+5. **Only after the user confirms approval**, merge the PR to `main`.
+6. Switch back to `main` and pull before starting the next task.
 
 ### Rules
 
@@ -233,7 +231,7 @@ Each task gets its own PR, created and merged immediately after the task is done
 - **Never amend a commit** unless explicitly asked. Create new commits.
 - **Code and tests are committed together** — never commit code in one commit and its tests in another.
 - **Always start from `main`.** Every new task branches from an up-to-date `main`, never from another feature branch.
-- **Merge PRs immediately.** Do not wait for all tasks to finish — merge each PR as soon as its task is complete.
+- **Never merge PRs without user approval.** After creating a PR, always ask the user to review it. Only merge after receiving explicit confirmation. Do not auto-merge.
 
 ---
 
@@ -246,7 +244,7 @@ Before considering any task complete, verify:
 - [ ] Security tests exist for every new endpoint (401 + 403)
 - [ ] No `console.log` in production code — use structured logger
 - [ ] No hardcoded colors — use semantic tokens
-- [ ] No raw HTML form elements — use `Form*` wrappers from `@packages/ui`
+- [ ] No raw HTML form elements — use `Form*` wrappers from `@packages/ui/components/form/`
 - [ ] No database access outside the owning module's service layer
 - [ ] No side effects in domain services — emit events instead
 - [ ] Lint passes

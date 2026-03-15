@@ -10,8 +10,6 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.0.0",
-    "@packages/api-client": "workspace:*",
-    "@packages/auth-ui": "workspace:*",
     "@packages/ui": "workspace:*",
     "@tanstack/react-query": "^5.60.0",
     "lucide-react": "^0.400.0",

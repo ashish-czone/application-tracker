@@ -43,8 +43,7 @@ Depends on infrastructure that must be built first:
 - Root monorepo config (`package.json`, `pnpm-workspace.yaml`, `turbo.json`, `tsconfig.base.json`)
 - `packages/database` (Drizzle ORM, DatabaseService, schema definitions)
 - `apps/api` (NestJS shell)
-- `packages/rbac` (guards, decorators)
-- `packages/auth-nestjs` (auth guard)
+- Auth + RBAC (see PROMPT-AUTH.md)
 - `packages/common` (`PaginatedResponse<T>`)
 - A dedicated module under `apps/api/src/modules/` for the taxonomy CRUD controllers
 - Test infrastructure (`test/utils/`, `test/factories/`, `test/setup/`)

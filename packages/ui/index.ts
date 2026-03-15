@@ -1,7 +1,13 @@
+// Components — ungrouped
 export { Button, type ButtonProps, buttonVariants } from './components/Button';
-export { Input, type InputProps } from './components/Input';
-export { Label } from './components/Label';
-export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent } from './components/Card';
+
+// Components — form
+export { Input, type InputProps } from './components/form/Input';
+export { Label } from './components/form/Label';
+export { Form } from './components/form/Form';
+export { FormInput } from './components/form/FormInput';
+
+// Components — feedback
 export {
   Dialog,
   DialogPortal,
@@ -13,7 +19,10 @@ export {
   DialogFooter,
   DialogTitle,
   DialogDescription,
-} from './components/Dialog';
-export { Form } from './components/Form';
-export { FormInput } from './components/FormInput';
+} from './components/feedback/Dialog';
+
+// Components — layout
+export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent } from './components/layout/Card';
+
+// Utilities
 export { cn } from './lib/utils';
