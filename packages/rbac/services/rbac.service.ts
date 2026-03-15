@@ -161,8 +161,9 @@ export class RbacService {
     return results.map((r) => r.userType);
   }
 
-  async assignUserType(tx: DrizzleDB, userId: string, userType: string): Promise<void> {
-    await tx
+  async assignUserType(userId: string, userType: string, tx?: DrizzleDB): Promise<void> {
+    const db = tx ?? this.database.db;
+    await db
       .insert(userUserTypes)
       .values({ userId, userType })
       .onConflictDoNothing();

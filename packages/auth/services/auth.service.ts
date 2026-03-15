@@ -68,8 +68,8 @@ export class AuthService {
 
   // --- Password credential management ---
 
-  async createPasswordCredential(tx: DrizzleDB, userId: string, identifier: string, password: string): Promise<Credential> {
-    const credential = await this.credentialsService.createPasswordCredential(tx, userId, identifier, password);
+  async createPasswordCredential(userId: string, identifier: string, password: string, tx?: DrizzleDB): Promise<Credential> {
+    const credential = await this.credentialsService.createPasswordCredential(userId, identifier, password, tx);
     return {
       id: credential.id,
       userId: credential.userId,

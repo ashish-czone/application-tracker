@@ -26,10 +26,11 @@ export class CredentialsService {
       .where(eq(credentials.userId, userId));
   }
 
-  async createPasswordCredential(tx: DrizzleDB, userId: string, identifier: string, password: string) {
+  async createPasswordCredential(userId: string, identifier: string, password: string, tx?: DrizzleDB) {
+    const db = tx ?? this.database.db;
     const secretHash = await bcrypt.hash(password, SALT_ROUNDS);
 
-    const [credential] = await tx
+    const [credential] = await db
       .insert(credentials)
       .values({
         userId,

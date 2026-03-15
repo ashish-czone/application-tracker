@@ -88,8 +88,8 @@ export class BaseAuthOrchestratorService {
         })
         .returning();
 
-      await this.authService.createPasswordCredential(tx, newUser.id, data.email.toLowerCase(), data.password);
-      await this.rbacService.assignUserType(tx, newUser.id, userType);
+      await this.authService.createPasswordCredential(newUser.id, data.email.toLowerCase(), data.password, tx);
+      await this.rbacService.assignUserType(newUser.id, userType, tx);
 
       return newUser;
     });
