@@ -4,6 +4,7 @@ export default defineConfig({
   schema: [
     './schema/index.ts',
     '../auth/schema/index.ts',
+    '../rbac/schema/index.ts',
   ],
   out: './drizzle',
   dialect: 'postgresql',
