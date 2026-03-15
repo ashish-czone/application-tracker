@@ -5,6 +5,8 @@ const USER_TYPE = 'admin';
 
 @Injectable()
 export class AdminAuthService extends BaseAuthOrchestratorService {
+  protected readonly userType = USER_TYPE;
+
   async adminLogin(identifier: string, password: string) {
     return this.login(identifier, password, USER_TYPE);
   }

@@ -12,8 +12,12 @@ import {
   AUTH_PASSWORD_CHANGED,
 } from '../events/types';
 
+const ENTITY_TYPE = 'users';
+
 @Injectable()
 export class BaseAuthOrchestratorService {
+  protected readonly userType!: string;
+
   constructor(
     protected readonly authService: AuthService,
     protected readonly rbacService: RbacService,
@@ -36,14 +40,12 @@ export class BaseAuthOrchestratorService {
     const accessToken = this.authService.generateAccessToken({ userId, userType, permissions });
     const { token: refreshToken } = await this.authService.createRefreshToken(userId);
 
-    this.eventEmitter.emit(AUTH_USER_LOGGED_IN, {
-      eventName: AUTH_USER_LOGGED_IN,
-      entityType: 'user',
-      entityId: userId,
-      actorId: userId,
-      correlationId: randomUUID(),
-      occurredAt: new Date().toISOString(),
-      payload: { userType },
+    const user = await this.loadUser(userId);
+    this.emitEvent(AUTH_USER_LOGGED_IN, userId, userId, {
+      email: user?.email,
+      firstName: user?.firstName,
+      lastName: user?.lastName,
+      userType: this.userType,
     });
 
     return { accessToken, refreshToken, userId };
@@ -71,30 +73,24 @@ export class BaseAuthOrchestratorService {
   async changePassword(userId: string, oldPassword: string, newPassword: string) {
     await this.authService.changePassword(userId, oldPassword, newPassword);
 
-    this.eventEmitter.emit(AUTH_PASSWORD_CHANGED, {
-      eventName: AUTH_PASSWORD_CHANGED,
-      entityType: 'user',
-      entityId: userId,
-      actorId: userId,
-      correlationId: randomUUID(),
-      occurredAt: new Date().toISOString(),
-      payload: {},
+    const user = await this.loadUser(userId);
+    this.emitEvent(AUTH_PASSWORD_CHANGED, userId, userId, {
+      email: user?.email,
+      firstName: user?.firstName,
+      lastName: user?.lastName,
+      userType: this.userType,
     });
   }
 
   async forgotPassword(identifier: string) {
     const { token, expiresAt } = await this.authService.createPasswordResetToken(identifier);
 
-    // Only emit if a token was actually created (non-empty means user exists)
     if (token) {
-      this.eventEmitter.emit(AUTH_PASSWORD_RESET_REQUESTED, {
-        eventName: AUTH_PASSWORD_RESET_REQUESTED,
-        entityType: 'user',
-        entityId: '',
-        actorId: null,
-        correlationId: randomUUID(),
-        occurredAt: new Date().toISOString(),
-        payload: { token, expiresAt: expiresAt.toISOString() },
+      this.emitEvent(AUTH_PASSWORD_RESET_REQUESTED, '', null, {
+        identifier,
+        token,
+        expiresAt: expiresAt.toISOString(),
+        userType: this.userType,
       });
     }
 
@@ -104,14 +100,8 @@ export class BaseAuthOrchestratorService {
   async resetPassword(token: string, newPassword: string) {
     await this.authService.resetPassword(token, newPassword);
 
-    this.eventEmitter.emit(AUTH_PASSWORD_RESET_COMPLETED, {
-      eventName: AUTH_PASSWORD_RESET_COMPLETED,
-      entityType: 'user',
-      entityId: '',
-      actorId: null,
-      correlationId: randomUUID(),
-      occurredAt: new Date().toISOString(),
-      payload: {},
+    this.emitEvent(AUTH_PASSWORD_RESET_COMPLETED, '', null, {
+      userType: this.userType,
     });
   }
 
@@ -152,16 +142,42 @@ export class BaseAuthOrchestratorService {
     const accessToken = this.authService.generateAccessToken({ userId: user.id, userType, permissions });
     const { token: refreshToken } = await this.authService.createRefreshToken(user.id);
 
-    this.eventEmitter.emit(AUTH_USER_REGISTERED, {
-      eventName: AUTH_USER_REGISTERED,
-      entityType: 'user',
-      entityId: user.id,
-      actorId: user.id,
-      correlationId: randomUUID(),
-      occurredAt: new Date().toISOString(),
-      payload: { email: data.email.toLowerCase(), userType },
+    this.emitEvent(AUTH_USER_REGISTERED, user.id, user.id, {
+      email: data.email.toLowerCase(),
+      firstName: data.firstName,
+      lastName: data.lastName,
+      userType: this.userType,
     });
 
     return { accessToken, refreshToken, userId: user.id };
+  }
+
+  // --- Private helpers ---
+
+  private async loadUser(userId: string) {
+    const [user] = await this.database.db
+      .select({ email: users.email, firstName: users.firstName, lastName: users.lastName })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    return user ?? null;
+  }
+
+  private emitEvent(
+    eventName: string,
+    entityId: string,
+    actorId: string | null,
+    payload: Record<string, unknown>,
+  ) {
+    this.eventEmitter.emit(eventName, {
+      eventName,
+      entityType: ENTITY_TYPE,
+      entityId,
+      actorId,
+      correlationId: randomUUID(),
+      occurredAt: new Date().toISOString(),
+      payload,
+    });
   }
 }
