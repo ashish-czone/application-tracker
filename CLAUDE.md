@@ -4,6 +4,20 @@ This file is read automatically at the start of every conversation. It defines h
 
 ---
 
+## CRITICAL: Never Make Architectural Decisions Automatically
+
+**This is the single most important rule.** When multiple approaches exist for implementing something — especially when it involves:
+- Bypassing established service layers or patterns
+- Crossing package/module boundaries
+- Introducing a new pattern that doesn't already exist in the codebase
+- Choosing between "quick hack" and "proper implementation"
+
+**STOP. Present the options with trade-offs. Ask the user explicitly. Wait for their answer before writing any code.**
+
+Never default to the simplest/easiest approach. Never decide unilaterally. Even if one option seems obviously better, explain the trade-offs and let the user choose. This is a platform codebase — architectural consistency matters more than speed.
+
+---
+
 ## Project Vision
 
 This is a **configurable platform base** — not a simple starter template. It is designed to serve as the foundation for building various types of business applications: ERPs, CRMs, marketplaces, project management tools, HR systems, and more.
@@ -261,4 +275,4 @@ Before considering any task complete, verify:
 - **Don't add dependencies without justification.** Check if the need is already covered by the existing stack.
 - **Don't deviate from the data handling rules.** Dates, currency, phone numbers, emails, passwords, percentages, and timezones all have specific storage/display rules defined in the prompts.
 - **Don't modify packages to add domain-specific logic.** Packages (`packages/*`) must remain domain-agnostic. Never add entity-specific fields, types, or behavior to a package. If a feature requires domain-specific changes (e.g., adding `firstName`/`lastName` to a registration form), build it in the domain module (`apps/*/src/modules/`), not in the package. If the boundary is unclear, **always present options to the user and ask** — do not decide unilaterally.
-- **Don't make architectural decisions without asking.** When a task crosses module/package boundaries, introduces new patterns, or could be implemented multiple ways, always present the options with trade-offs and let the user decide. Never silently pick an approach that affects the architecture.
+- **Don't make architectural decisions without asking.** See the CRITICAL rule at the top of this file.

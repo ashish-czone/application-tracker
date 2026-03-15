@@ -30,7 +30,7 @@ export class BaseAuthOrchestratorService {
   }
 
   async refresh(refreshToken: string, userType: string) {
-    const { userId, token: newRefreshToken, expiresAt } = await this.authService.refresh(refreshToken);
+    const { userId, token: newRefreshToken } = await this.authService.refresh(refreshToken);
 
     // Reload permissions (may have changed since last token)
     const permissions = await this.rbacService.getPermissionsForUser(userId, userType);
@@ -77,23 +77,24 @@ export class BaseAuthOrchestratorService {
       throw new ConflictException('Email already in use');
     }
 
-    // Create user
-    const [user] = await this.database.db
-      .insert(users)
-      .values({
-        email: data.email.toLowerCase(),
-        firstName: data.firstName,
-        lastName: data.lastName,
-      })
-      .returning();
+    // Create user + credential + user type in a transaction
+    const user = await this.database.db.transaction(async (tx) => {
+      const [newUser] = await tx
+        .insert(users)
+        .values({
+          email: data.email.toLowerCase(),
+          firstName: data.firstName,
+          lastName: data.lastName,
+        })
+        .returning();
 
-    // Create credential
-    await this.authService.createPasswordCredential(user.id, data.email.toLowerCase(), data.password);
+      await this.authService.createPasswordCredential(tx, newUser.id, data.email.toLowerCase(), data.password);
+      await this.rbacService.assignUserType(tx, newUser.id, userType);
 
-    // Assign user type
-    await this.rbacService.assignUserType(user.id, userType);
+      return newUser;
+    });
 
-    // Generate tokens
+    // Generate tokens (outside transaction — not critical for atomicity)
     const permissions = await this.rbacService.getPermissionsForUser(user.id, userType);
     const accessToken = this.authService.generateAccessToken({ userId: user.id, userType, permissions });
     const { token: refreshToken } = await this.authService.createRefreshToken(user.id);
