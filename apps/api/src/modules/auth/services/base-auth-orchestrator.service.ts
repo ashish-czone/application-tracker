@@ -42,11 +42,15 @@ export class BaseAuthOrchestratorService {
     const { token: refreshToken } = await this.authService.createRefreshToken(userId);
 
     const user = await this.loadUser(userId);
-    this.emitEvent(AUTH_USER_LOGGED_IN, userId, userId, {
-      email: user?.email,
-      firstName: user?.firstName,
-      lastName: user?.lastName,
-      userType: this.userType,
+    this.emitEvent(AUTH_USER_LOGGED_IN, {
+      entityId: userId,
+      actorId: userId,
+      payload: {
+        email: user?.email ?? null,
+        firstName: user?.firstName ?? null,
+        lastName: user?.lastName ?? null,
+        userType: this.userType,
+      },
     });
 
     return { accessToken, refreshToken, userId };
@@ -75,11 +79,15 @@ export class BaseAuthOrchestratorService {
     await this.authService.changePassword(userId, oldPassword, newPassword);
 
     const user = await this.loadUser(userId);
-    this.emitEvent(AUTH_PASSWORD_CHANGED, userId, userId, {
-      email: user?.email,
-      firstName: user?.firstName,
-      lastName: user?.lastName,
-      userType: this.userType,
+    this.emitEvent(AUTH_PASSWORD_CHANGED, {
+      entityId: userId,
+      actorId: userId,
+      payload: {
+        email: user?.email ?? null,
+        firstName: user?.firstName ?? null,
+        lastName: user?.lastName ?? null,
+        userType: this.userType,
+      },
     });
   }
 
@@ -87,11 +95,15 @@ export class BaseAuthOrchestratorService {
     const { token, expiresAt } = await this.authService.createPasswordResetToken(identifier);
 
     if (token) {
-      this.emitEvent(AUTH_PASSWORD_RESET_REQUESTED, '', null, {
-        identifier,
-        token,
-        expiresAt: expiresAt.toISOString(),
-        userType: this.userType,
+      this.emitEvent(AUTH_PASSWORD_RESET_REQUESTED, {
+        entityId: '',
+        actorId: null,
+        payload: {
+          identifier,
+          token,
+          expiresAt: expiresAt.toISOString(),
+          userType: this.userType,
+        },
       });
     }
 
@@ -101,8 +113,12 @@ export class BaseAuthOrchestratorService {
   async resetPassword(token: string, newPassword: string) {
     await this.authService.resetPassword(token, newPassword);
 
-    this.emitEvent(AUTH_PASSWORD_RESET_COMPLETED, '', null, {
-      userType: this.userType,
+    this.emitEvent(AUTH_PASSWORD_RESET_COMPLETED, {
+      entityId: '',
+      actorId: null,
+      payload: {
+        userType: this.userType,
+      },
     });
   }
 
@@ -143,11 +159,15 @@ export class BaseAuthOrchestratorService {
     const accessToken = this.authService.generateAccessToken({ userId: user.id, userType, permissions });
     const { token: refreshToken } = await this.authService.createRefreshToken(user.id);
 
-    this.emitEvent(AUTH_USER_REGISTERED, user.id, user.id, {
-      email: data.email.toLowerCase(),
-      firstName: data.firstName,
-      lastName: data.lastName,
-      userType: this.userType,
+    this.emitEvent(AUTH_USER_REGISTERED, {
+      entityId: user.id,
+      actorId: user.id,
+      payload: {
+        email: data.email.toLowerCase(),
+        firstName: data.firstName,
+        lastName: data.lastName,
+        userType: this.userType,
+      },
     });
 
     return { accessToken, refreshToken, userId: user.id };
@@ -167,18 +187,20 @@ export class BaseAuthOrchestratorService {
 
   private emitEvent<T extends keyof AuthEventPayloads>(
     eventName: T,
-    entityId: string,
-    actorId: string | null,
-    payload: AuthEventPayloads[T],
+    params: {
+      entityId: string;
+      actorId: string | null;
+      payload: AuthEventPayloads[T];
+    },
   ) {
     this.eventEmitter.emit(eventName, {
       eventName,
       entityType: ENTITY_TYPE,
-      entityId,
-      actorId,
+      entityId: params.entityId,
+      actorId: params.actorId,
       correlationId: randomUUID(),
       occurredAt: new Date().toISOString(),
-      payload,
+      payload: params.payload,
     });
   }
 }
