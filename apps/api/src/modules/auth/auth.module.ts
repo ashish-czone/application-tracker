@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { AuthModule as AuthPackageModule } from '@packages/auth';
 import { RbacModule } from '@packages/rbac';
 import { EventRegistryService } from '@packages/events';
+import { AppConfigService } from '@packages/settings';
 import { ClientAuthController } from './controllers/client-auth.controller';
 import { AdminAuthController } from './controllers/admin-auth.controller';
 import { BaseAuthOrchestratorService } from './services/base-auth-orchestrator.service';
@@ -19,13 +20,13 @@ import {
 @Module({
   imports: [
     AuthPackageModule.registerAsync({
-      useFactory: (config: ConfigService) => ({
+      useFactory: (config: ConfigService, appConfig: AppConfigService) => ({
         jwtSecret: config.get<string>('JWT_SECRET')!,
-        accessTokenExpiresIn: '15m',
-        refreshTokenExpiresIn: '7d',
-        resetTokenExpiresIn: '1h',
+        accessTokenExpiresIn: appConfig.get('auth', 'accessTokenExpiresIn', '15m'),
+        refreshTokenExpiresIn: appConfig.get('auth', 'refreshTokenExpiresIn', '7d'),
+        resetTokenExpiresIn: appConfig.get('auth', 'resetTokenExpiresIn', '1h'),
       }),
-      inject: [ConfigService],
+      inject: [ConfigService, AppConfigService],
     }),
     RbacModule,
   ],
@@ -33,9 +34,28 @@ import {
   providers: [BaseAuthOrchestratorService, ClientAuthService, AdminAuthService],
 })
 export class AuthOrchestratorModule implements OnModuleInit {
-  constructor(private readonly eventRegistry: EventRegistryService) {}
+  constructor(
+    private readonly eventRegistry: EventRegistryService,
+    private readonly appConfig: AppConfigService,
+  ) {}
 
   onModuleInit() {
+    // Register config metadata for admin UI
+    this.appConfig.register('auth', {
+      label: 'Authentication',
+      defaults: {
+        accessTokenExpiresIn: '15m',
+        refreshTokenExpiresIn: '7d',
+        resetTokenExpiresIn: '1h',
+      },
+      metadata: {
+        accessTokenExpiresIn: { label: 'Access Token Lifetime', type: 'string', description: 'Duration string (e.g., 15m, 1h, 1d)' },
+        refreshTokenExpiresIn: { label: 'Refresh Token Lifetime', type: 'string', description: 'Duration string (e.g., 7d, 30d)' },
+        resetTokenExpiresIn: { label: 'Password Reset Token Lifetime', type: 'string', description: 'Duration string (e.g., 1h, 24h)' },
+      },
+    });
+
+    // Register events
     this.eventRegistry.register({
       eventName: AUTH_USER_REGISTERED,
       group: 'auth',
