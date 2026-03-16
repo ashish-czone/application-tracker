@@ -7,9 +7,9 @@ export const USERS_USER_DELETED = 'users.UserDeleted' as const;
 // --- Payload types ---
 
 export interface UserCreatedPayload {
-  email: string | null;
-  firstName: string | null;
-  lastName: string | null;
+  email: string;
+  firstName: string;
+  lastName: string;
   userType: string;
   [key: string]: unknown;
 }
@@ -20,9 +20,9 @@ export interface UserUpdatedPayload {
 }
 
 export interface UserDeletedPayload {
-  email: string | null;
-  firstName: string | null;
-  lastName: string | null;
+  email: string;
+  firstName: string;
+  lastName: string;
   [key: string]: unknown;
 }
 

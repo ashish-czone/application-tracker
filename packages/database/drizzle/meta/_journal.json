@@ -5,43 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1773508905405,
-      "tag": "0000_late_banshee",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1773926400000,
-      "tag": "0001_user_type_column",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1773926500000,
-      "tag": "0002_roles_is_default",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1773926600000,
-      "tag": "0003_role_permissions_scope",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1773926700000,
-      "tag": "0004_notifications",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
       "when": 1773926800000,
-      "tag": "0005_notification_scheduling",
+      "tag": "0000_initial",
       "breakpoints": true
     }
   ]
