@@ -225,22 +225,33 @@ export class ScheduleScanner {
     const column = (table as Record<string, any>)[dateField];
     if (!column) return undefined;
 
-    const interval = `${amount} ${unit}`;
+    // Use make_interval() with parameterized values — no sql.raw(), no injection risk
+    const interval = this.makeInterval(amount, unit);
 
     if (operator === 'before') {
       if (exactMatch) {
-        // schedule_once: dateField - interval falls within today
-        return sql`DATE(${column} - INTERVAL '${sql.raw(interval)}') = CURRENT_DATE`;
+        return sql`DATE(${column} - ${interval}) = CURRENT_DATE`;
       }
-      // schedule_recurring: dateField - interval <= now (due soon or overdue)
-      return sql`${column} - INTERVAL '${sql.raw(interval)}' <= NOW()`;
+      return sql`${column} - ${interval} <= NOW()`;
     }
 
     // after
     if (exactMatch) {
-      return sql`DATE(${column} + INTERVAL '${sql.raw(interval)}') = CURRENT_DATE`;
+      return sql`DATE(${column} + ${interval}) = CURRENT_DATE`;
     }
-    return sql`${column} + INTERVAL '${sql.raw(interval)}' <= NOW()`;
+    return sql`${column} + ${interval} <= NOW()`;
+  }
+
+  /**
+   * Build a parameterized PostgreSQL interval using make_interval().
+   * Avoids sql.raw() — all values are bound parameters.
+   */
+  private makeInterval(amount: number, unit: ScheduleUnit) {
+    switch (unit) {
+      case 'minutes': return sql`make_interval(mins => ${amount})`;
+      case 'hours': return sql`make_interval(hours => ${amount})`;
+      case 'days': return sql`make_interval(days => ${amount})`;
+    }
   }
 
   private async dispatchForRule(rule: RuleWithChannels, event: DomainEvent): Promise<void> {
