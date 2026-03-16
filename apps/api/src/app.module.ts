@@ -7,6 +7,7 @@ import { DatabaseModule } from '@packages/database';
 import { EventsModule } from '@packages/events';
 import { SettingsModule } from '@packages/settings';
 import { QueueModule } from '@packages/queue';
+import { NotificationsModule } from '@packages/notifications';
 import { AuthGuard } from '@packages/auth';
 import { RbacGuard } from '@packages/rbac';
 import { AuthOrchestratorModule } from './modules/auth/auth.module';
@@ -34,6 +35,7 @@ import { validate } from './config/env.validation';
       ttl: 60000,
       limit: 100,
     }]),
+    NotificationsModule,
     AuthOrchestratorModule,
     UsersModule,
     RbacManagementModule,
