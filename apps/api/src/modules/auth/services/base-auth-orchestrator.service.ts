@@ -26,8 +26,8 @@ export class BaseAuthOrchestratorService {
     const { userId } = await this.authService.verifyPasswordCredential(identifier, password);
 
     // Validate user has the required user type
-    const types = await this.rbacService.getUserTypes(userId);
-    if (!types.includes(userType)) {
+    const user = await this.loadUser(userId);
+    if (!user || user.userType !== userType) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
@@ -37,15 +37,14 @@ export class BaseAuthOrchestratorService {
     const accessToken = this.authService.generateAccessToken({ userId, userType, permissions });
     const { token: refreshToken } = await this.authService.createRefreshToken(userId);
 
-    const user = await this.loadUser(userId);
     this.domainEventEmitter.emit(AUTH_USER_LOGGED_IN, {
       entityType: 'users',
       entityId: userId,
       actorId: userId,
       payload: {
-        email: user?.email ?? null,
-        firstName: user?.firstName ?? null,
-        lastName: user?.lastName ?? null,
+        email: user.email ?? null,
+        firstName: user.firstName ?? null,
+        lastName: user.lastName ?? null,
         userType: this.userType,
       },
     });
@@ -137,7 +136,7 @@ export class BaseAuthOrchestratorService {
       throw new ConflictException('Email already in use');
     }
 
-    // Create user + credential + user type in a transaction
+    // Create user + credential in a transaction
     const user = await this.database.db.transaction(async (tx) => {
       const [newUser] = await tx
         .insert(users)
@@ -145,11 +144,11 @@ export class BaseAuthOrchestratorService {
           email: data.email.toLowerCase(),
           firstName: data.firstName,
           lastName: data.lastName,
+          userType,
         })
         .returning();
 
       await this.authService.createPasswordCredential(newUser.id, data.email.toLowerCase(), data.password, tx);
-      await this.rbacService.assignUserType(newUser.id, userType, tx);
 
       return newUser;
     });
@@ -178,7 +177,12 @@ export class BaseAuthOrchestratorService {
 
   private async loadUser(userId: string) {
     const [user] = await this.database.db
-      .select({ email: users.email, firstName: users.firstName, lastName: users.lastName })
+      .select({
+        email: users.email,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        userType: users.userType,
+      })
       .from(users)
       .where(eq(users.id, userId))
       .limit(1);

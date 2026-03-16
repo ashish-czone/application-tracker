@@ -6,6 +6,7 @@ export const users = pgTable('users', {
   email: text('email').unique(),
   firstName: text('first_name'),
   lastName: text('last_name'),
+  userType: text('user_type').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }).notNull().$defaultFn(() => new Date()).$onUpdate(() => new Date()),
   deletedAt: timestamp('deleted_at', { withTimezone: true, mode: 'date' }),

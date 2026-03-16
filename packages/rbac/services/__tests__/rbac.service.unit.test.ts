@@ -114,19 +114,28 @@ describe('RbacService', () => {
         .rejects.toThrow(NotFoundException);
     });
 
-    it('should throw ConflictException if user lacks the role user type', async () => {
+    it('should throw NotFoundException if user not found', async () => {
       const role = { id: 'role-1', name: 'admin', userType: 'admin', createdAt: new Date(), updatedAt: new Date() };
       vi.spyOn(service, 'findRoleById').mockResolvedValueOnce(role);
-      vi.spyOn(service, 'getUserTypes').mockResolvedValueOnce(['client']);
+      mockDb._chain.limit.mockResolvedValueOnce([]);
+
+      await expect(service.assignRoleToUser('user-1', 'role-1'))
+        .rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw ConflictException if user type does not match role type', async () => {
+      const role = { id: 'role-1', name: 'admin', userType: 'admin', createdAt: new Date(), updatedAt: new Date() };
+      vi.spyOn(service, 'findRoleById').mockResolvedValueOnce(role);
+      mockDb._chain.limit.mockResolvedValueOnce([{ userType: 'client' }]);
 
       await expect(service.assignRoleToUser('user-1', 'role-1'))
         .rejects.toThrow(ConflictException);
     });
 
-    it('should succeed when user has the matching user type', async () => {
+    it('should succeed when user type matches role type', async () => {
       const role = { id: 'role-1', name: 'admin', userType: 'admin', createdAt: new Date(), updatedAt: new Date() };
       vi.spyOn(service, 'findRoleById').mockResolvedValueOnce(role);
-      vi.spyOn(service, 'getUserTypes').mockResolvedValueOnce(['admin']);
+      mockDb._chain.limit.mockResolvedValueOnce([{ userType: 'admin' }]);
 
       await expect(service.assignRoleToUser('user-1', 'role-1')).resolves.toBeUndefined();
       expect(mockDb.insert).toHaveBeenCalled();

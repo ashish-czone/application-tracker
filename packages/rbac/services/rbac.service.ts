@@ -1,6 +1,5 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
-import { DatabaseService, eq, and, inArray, type DrizzleDB } from '@packages/database';
-import { userUserTypes } from '@packages/database';
+import { DatabaseService, eq, and, inArray, users } from '@packages/database';
 import { roles } from '../schema/roles';
 import { permissions } from '../schema/permissions';
 import { rolePermissions } from '../schema/role-permissions';
@@ -111,11 +110,18 @@ export class RbacService {
     const role = await this.findRoleById(roleId);
     if (!role) throw new NotFoundException('Role not found');
 
-    // Validate user has the matching user type
-    const types = await this.getUserTypes(userId);
-    if (!types.includes(role.userType)) {
+    // Validate user's type matches the role's type
+    const [user] = await this.database.db
+      .select({ userType: users.userType })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    if (!user) throw new NotFoundException('User not found');
+
+    if (user.userType !== role.userType) {
       throw new ConflictException(
-        `Cannot assign role scoped to '${role.userType}' — user does not have this type`,
+        `Cannot assign role scoped to '${role.userType}' — user type is '${user.userType}'`,
       );
     }
 
@@ -148,31 +154,6 @@ export class RbacService {
       .from(userRoles)
       .innerJoin(roles, eq(roles.id, userRoles.roleId))
       .where(and(...conditions));
-  }
-
-  // --- User type management ---
-
-  async getUserTypes(userId: string): Promise<string[]> {
-    const results = await this.database.db
-      .select({ userType: userUserTypes.userType })
-      .from(userUserTypes)
-      .where(eq(userUserTypes.userId, userId));
-
-    return results.map((r) => r.userType);
-  }
-
-  async assignUserType(userId: string, userType: string, tx?: DrizzleDB): Promise<void> {
-    const db = tx ?? this.database.db;
-    await db
-      .insert(userUserTypes)
-      .values({ userId, userType })
-      .onConflictDoNothing();
-  }
-
-  async removeUserType(userId: string, userType: string): Promise<void> {
-    await this.database.db
-      .delete(userUserTypes)
-      .where(and(eq(userUserTypes.userId, userId), eq(userUserTypes.userType, userType)));
   }
 
   // --- Permission registry (delegates to internal service) ---

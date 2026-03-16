@@ -1,5 +1,5 @@
 import type { DrizzleDB } from '@packages/database';
-import { users, userUserTypes } from '@packages/database';
+import { users } from '@packages/database';
 import { AuthService } from '@packages/auth';
 import { RbacService } from '@packages/rbac';
 import type { TestingModule } from '@nestjs/testing';
@@ -34,17 +34,14 @@ export async function createTestIdentity(
   const firstName = options.firstName ?? 'Test';
   const lastName = options.lastName ?? 'User';
 
-  // Create user
+  // Create user with userType directly on the row
   const [user] = await db
     .insert(users)
-    .values({ email, firstName, lastName })
+    .values({ email, firstName, lastName, userType: options.userType })
     .returning();
 
   // Create password credential
   await authService.createPasswordCredential(user.id, email, 'TestPassword1!');
-
-  // Assign user type
-  await rbacService.assignUserType(user.id, options.userType);
 
   // Create role with permissions
   const role = await rbacService.createRole({

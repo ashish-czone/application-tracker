@@ -10,7 +10,7 @@ export interface UserCreatedPayload {
   email: string | null;
   firstName: string | null;
   lastName: string | null;
-  userTypes: string[];
+  userType: string;
   [key: string]: unknown;
 }
 

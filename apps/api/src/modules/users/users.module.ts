@@ -54,7 +54,7 @@ export class UsersModule implements OnModuleInit {
         email: { type: 'string', label: 'Email' },
         firstName: { type: 'string', label: 'First Name' },
         lastName: { type: 'string', label: 'Last Name' },
-        userTypes: { type: 'array', label: 'User Types' },
+        userType: { type: 'string', label: 'User Type' },
       },
     });
 
