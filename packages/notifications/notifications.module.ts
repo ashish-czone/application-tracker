@@ -1,6 +1,8 @@
 import { Module, type OnModuleInit } from '@nestjs/common';
 import { QueueService } from '@packages/queue';
 import { NotificationRuleService } from './services/notification-rule.service';
+import { NotificationRulesService } from './services/notification-rules.service';
+import { NotificationTemplatesService } from './services/notification-templates.service';
 import { RecipientResolver } from './services/recipient-resolver';
 import { PreferenceService } from './services/preference.service';
 import { TemplateRenderer } from './services/template-renderer';
@@ -14,6 +16,8 @@ import { Logger } from '@nestjs/common';
 @Module({
   providers: [
     NotificationRuleService,
+    NotificationRulesService,
+    NotificationTemplatesService,
     RecipientResolver,
     PreferenceService,
     TemplateRenderer,
@@ -23,7 +27,7 @@ import { Logger } from '@nestjs/common';
     EmailChannel,
     WhatsAppChannel,
   ],
-  exports: [NotificationDispatcher, PreferenceService],
+  exports: [NotificationDispatcher, PreferenceService, NotificationRulesService, NotificationTemplatesService],
 })
 export class NotificationsModule implements OnModuleInit {
   private readonly logger = new Logger(NotificationsModule.name);
