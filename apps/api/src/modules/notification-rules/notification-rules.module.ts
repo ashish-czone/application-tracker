@@ -1,11 +1,11 @@
 import { Module, type OnModuleInit } from '@nestjs/common';
 import { NotificationsModule } from '@packages/notifications';
-import { RbacService } from '@packages/rbac';
+import { RbacModule, RbacService } from '@packages/rbac';
 import { NotificationRulesController } from './controllers/notification-rules.controller';
 import { NotificationTemplatesController } from './controllers/notification-templates.controller';
 
 @Module({
-  imports: [NotificationsModule],
+  imports: [NotificationsModule, RbacModule],
   controllers: [NotificationRulesController, NotificationTemplatesController],
 })
 export class NotificationRulesModule implements OnModuleInit {
