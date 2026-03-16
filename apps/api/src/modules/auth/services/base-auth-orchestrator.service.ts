@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, InternalServerErrorException } from '@nestjs/common';
 import { AuthService } from '@packages/auth';
 import { RbacService } from '@packages/rbac';
 import { DatabaseService, users, eq } from '@packages/database';
@@ -136,6 +136,12 @@ export class BaseAuthOrchestratorService {
       throw new ConflictException('Email already in use');
     }
 
+    // Look up the default role for this user type
+    const defaultRole = await this.rbacService.findDefaultRoleForUserType(userType);
+    if (!defaultRole) {
+      throw new InternalServerErrorException(`No default role configured for user type '${userType}'`);
+    }
+
     // Create user + credential in a transaction
     const user = await this.database.db.transaction(async (tx) => {
       const [newUser] = await tx
@@ -153,7 +159,10 @@ export class BaseAuthOrchestratorService {
       return newUser;
     });
 
-    // Generate tokens (outside transaction — not critical for atomicity)
+    // Assign the default role (outside transaction — role assignment is idempotent)
+    await this.rbacService.assignRoleToUser(user.id, defaultRole.id);
+
+    // Generate tokens with permissions from the default role
     const permissions = await this.rbacService.getPermissionsForUser(user.id, userType);
     const accessToken = this.authService.generateAccessToken({ userId: user.id, userType, permissions });
     const { token: refreshToken } = await this.authService.createRefreshToken(user.id);

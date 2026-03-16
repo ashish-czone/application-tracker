@@ -3,6 +3,7 @@ import request from 'supertest';
 import type { INestApplication } from '@nestjs/common';
 import type { TestingModule } from '@nestjs/testing';
 import type { DrizzleDB } from '@packages/database';
+import { RbacService } from '@packages/rbac';
 import { createTestApp } from '../../../../../../../test/utils/app';
 import { cleanDatabase } from '../../../../../../../test/utils/db';
 import { createTestIdentity, type TestIdentity } from '../../../../../../../test/utils/identity';
@@ -16,6 +17,7 @@ describe('UsersController (security)', () => {
   let authorizedIdentity: TestIdentity;
   let noPermissionIdentity: TestIdentity;
   let readOnlyIdentity: TestIdentity;
+  let clientRoleId: string;
 
   beforeAll(async () => {
     const testApp = await createTestApp();
@@ -23,6 +25,11 @@ describe('UsersController (security)', () => {
     module = testApp.module;
     db = testApp.db;
     httpServer = testApp.httpServer;
+
+    // Create a client role for user creation tests
+    const rbacService = module.get(RbacService);
+    const clientRole = await rbacService.createRole({ name: 'sec-client-default', userType: 'client' });
+    clientRoleId = clientRole.id;
 
     // Identity with all user permissions
     authorizedIdentity = await createTestIdentity(module, db, {
@@ -75,6 +82,7 @@ describe('UsersController (security)', () => {
           lastName: 'Auth',
           password: 'Password123!',
           userType: 'client',
+          roleId: clientRoleId,
         });
       expect(res.status).toBe(401);
     });
@@ -126,6 +134,7 @@ describe('UsersController (security)', () => {
           lastName: 'Perm',
           password: 'Password123!',
           userType: 'client',
+          roleId: clientRoleId,
         });
       expect(res.status).toBe(403);
     });
@@ -159,6 +168,7 @@ describe('UsersController (security)', () => {
           lastName: 'Only',
           password: 'Password123!',
           userType: 'client',
+          roleId: clientRoleId,
         });
       expect(res.status).toBe(403);
     });
@@ -200,6 +210,7 @@ describe('UsersController (security)', () => {
           lastName: 'Deleted',
           password: 'Password123!',
           userType: 'client',
+          roleId: clientRoleId,
         });
 
       await request(httpServer)
@@ -225,6 +236,7 @@ describe('UsersController (security)', () => {
           lastName: 'Get',
           password: 'Password123!',
           userType: 'client',
+          roleId: clientRoleId,
         });
 
       await request(httpServer)

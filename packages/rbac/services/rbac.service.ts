@@ -16,10 +16,14 @@ export class RbacService {
 
   // --- Roles ---
 
-  async createRole(data: { name: string; userType: string }): Promise<Role> {
+  async createRole(data: { name: string; userType: string; isDefault?: boolean }): Promise<Role> {
     const [role] = await this.database.db
       .insert(roles)
-      .values(data)
+      .values({
+        name: data.name,
+        userType: data.userType,
+        isDefault: data.isDefault ?? false,
+      })
       .returning();
     return role;
   }
@@ -36,12 +40,16 @@ export class RbacService {
   }
 
   async deleteRole(id: string): Promise<void> {
-    const [role] = await this.database.db
-      .delete(roles)
-      .where(eq(roles.id, id))
-      .returning();
-
+    const role = await this.findRoleById(id);
     if (!role) throw new NotFoundException('Role not found');
+
+    if (role.isDefault) {
+      throw new ConflictException('Cannot delete a default role');
+    }
+
+    await this.database.db
+      .delete(roles)
+      .where(eq(roles.id, id));
   }
 
   async findRoleById(id: string): Promise<Role | null> {
@@ -59,6 +67,16 @@ export class RbacService {
       .select()
       .from(roles)
       .where(eq(roles.userType, userType));
+  }
+
+  async findDefaultRoleForUserType(userType: string): Promise<Role | null> {
+    const [role] = await this.database.db
+      .select()
+      .from(roles)
+      .where(and(eq(roles.userType, userType), eq(roles.isDefault, true)))
+      .limit(1);
+
+    return role ?? null;
   }
 
   // --- Permissions ---
@@ -148,6 +166,7 @@ export class RbacService {
         id: roles.id,
         name: roles.name,
         userType: roles.userType,
+        isDefault: roles.isDefault,
         createdAt: roles.createdAt,
         updatedAt: roles.updatedAt,
       })

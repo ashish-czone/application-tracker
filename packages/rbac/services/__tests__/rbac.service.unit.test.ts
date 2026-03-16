@@ -43,13 +43,22 @@ describe('RbacService', () => {
 
   describe('createRole', () => {
     it('should insert a role and return it', async () => {
-      const role = { id: 'role-1', name: 'admin', userType: 'admin', createdAt: new Date(), updatedAt: new Date() };
+      const role = { id: 'role-1', name: 'admin', userType: 'admin', isDefault: false, createdAt: new Date(), updatedAt: new Date() };
       mockDb._chain.returning.mockResolvedValueOnce([role]);
 
       const result = await service.createRole({ name: 'admin', userType: 'admin' });
 
       expect(result).toEqual(role);
       expect(mockDb.insert).toHaveBeenCalled();
+    });
+
+    it('should create a default role when isDefault is true', async () => {
+      const role = { id: 'role-1', name: 'client', userType: 'client', isDefault: true, createdAt: new Date(), updatedAt: new Date() };
+      mockDb._chain.returning.mockResolvedValueOnce([role]);
+
+      const result = await service.createRole({ name: 'client', userType: 'client', isDefault: true });
+
+      expect(result.isDefault).toBe(true);
     });
   });
 
@@ -73,17 +82,26 @@ describe('RbacService', () => {
 
   describe('deleteRole', () => {
     it('should delete the role', async () => {
-      const role = { id: 'role-1' };
-      mockDb._chain.returning.mockResolvedValueOnce([role]);
+      const role = { id: 'role-1', name: 'custom', userType: 'admin', isDefault: false, createdAt: new Date(), updatedAt: new Date() };
+      vi.spyOn(service, 'findRoleById').mockResolvedValueOnce(role);
 
       await expect(service.deleteRole('role-1')).resolves.toBeUndefined();
+      expect(mockDb.delete).toHaveBeenCalled();
     });
 
     it('should throw NotFoundException if role not found', async () => {
-      mockDb._chain.returning.mockResolvedValueOnce([]);
+      vi.spyOn(service, 'findRoleById').mockResolvedValueOnce(null);
 
       await expect(service.deleteRole('nonexistent'))
         .rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw ConflictException when deleting a default role', async () => {
+      const role = { id: 'role-1', name: 'client', userType: 'client', isDefault: true, createdAt: new Date(), updatedAt: new Date() };
+      vi.spyOn(service, 'findRoleById').mockResolvedValueOnce(role);
+
+      await expect(service.deleteRole('role-1'))
+        .rejects.toThrow(ConflictException);
     });
   });
 
@@ -101,6 +119,25 @@ describe('RbacService', () => {
       mockDb._chain.limit.mockResolvedValueOnce([]);
 
       const result = await service.findRoleById('nonexistent');
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('findDefaultRoleForUserType', () => {
+    it('should return the default role for a user type', async () => {
+      const role = { id: 'role-1', name: 'client', userType: 'client', isDefault: true, createdAt: new Date(), updatedAt: new Date() };
+      mockDb._chain.limit.mockResolvedValueOnce([role]);
+
+      const result = await service.findDefaultRoleForUserType('client');
+
+      expect(result).toEqual(role);
+    });
+
+    it('should return null if no default role exists', async () => {
+      mockDb._chain.limit.mockResolvedValueOnce([]);
+
+      const result = await service.findDefaultRoleForUserType('client');
 
       expect(result).toBeNull();
     });
