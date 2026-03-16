@@ -1,7 +1,8 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import type { DrizzleDB } from '@packages/database';
+import { DatabaseService, eq, and, isNull, gt, type DrizzleDB } from '@packages/database';
 import { CredentialsService } from './credentials.service';
 import { TokensService } from './tokens.service';
+import { authTokens } from '../schema';
 import { AUTH_TOKEN_TYPES, type JwtPayload, type Credential } from '../types';
 
 @Injectable()
@@ -9,6 +10,7 @@ export class AuthService {
   constructor(
     private readonly credentialsService: CredentialsService,
     private readonly tokensService: TokensService,
+    private readonly database: DatabaseService,
   ) {}
 
   // --- Credential verification ---
@@ -44,15 +46,35 @@ export class AuthService {
   }
 
   async refresh(refreshToken: string): Promise<{ userId: string; token: string; expiresAt: Date }> {
-    const existing = await this.tokensService.validateToken(refreshToken, AUTH_TOKEN_TYPES.REFRESH);
-    if (!existing) {
-      throw new UnauthorizedException('Invalid or expired refresh token');
-    }
+    const tokenHash = this.tokensService.hashToken(refreshToken);
 
-    await this.tokensService.revokeToken(existing.id);
+    return this.database.db.transaction(async (tx) => {
+      // Lock the token row — second concurrent request waits here
+      const [existing] = await tx
+        .select()
+        .from(authTokens)
+        .where(and(
+          eq(authTokens.tokenHash, tokenHash),
+          eq(authTokens.type, AUTH_TOKEN_TYPES.REFRESH),
+          isNull(authTokens.revokedAt),
+          gt(authTokens.expiresAt, new Date()),
+        ))
+        .for('update')
+        .limit(1);
 
-    const newToken = await this.tokensService.createRefreshToken(existing.userId);
-    return { userId: existing.userId, token: newToken.token, expiresAt: newToken.expiresAt };
+      if (!existing) throw new UnauthorizedException('Invalid or expired refresh token');
+
+      // Create new token first
+      const newToken = await this.tokensService.createRefreshToken(existing.userId, tx);
+
+      // Then revoke old token
+      await tx
+        .update(authTokens)
+        .set({ revokedAt: new Date() })
+        .where(eq(authTokens.id, existing.id));
+
+      return { userId: existing.userId, token: newToken.token, expiresAt: newToken.expiresAt };
+    });
   }
 
   async logout(refreshToken: string): Promise<void> {
@@ -113,15 +135,38 @@ export class AuthService {
   }
 
   async resetPassword(token: string, newPassword: string): Promise<void> {
-    const existing = await this.tokensService.validateToken(token, AUTH_TOKEN_TYPES.PASSWORD_RESET);
-    if (!existing) {
-      throw new UnauthorizedException('Invalid or expired reset token');
-    }
+    const tokenHash = this.tokensService.hashToken(token);
 
-    await this.credentialsService.updateSecretHash(existing.userId, 'password', newPassword);
-    await this.tokensService.markTokenUsed(existing.id);
+    const existing = await this.database.db.transaction(async (tx) => {
+      // Lock the token row — second concurrent request waits here
+      const [record] = await tx
+        .select()
+        .from(authTokens)
+        .where(and(
+          eq(authTokens.tokenHash, tokenHash),
+          eq(authTokens.type, AUTH_TOKEN_TYPES.PASSWORD_RESET),
+          isNull(authTokens.revokedAt),
+          isNull(authTokens.usedAt),
+          gt(authTokens.expiresAt, new Date()),
+        ))
+        .for('update')
+        .limit(1);
 
-    // Revoke all refresh tokens so user must re-login
+      if (!record) throw new UnauthorizedException('Invalid or expired reset token');
+
+      // Do the work
+      await this.credentialsService.updateSecretHash(record.userId, 'password', newPassword, tx);
+
+      // Then consume
+      await tx
+        .update(authTokens)
+        .set({ usedAt: new Date() })
+        .where(eq(authTokens.id, record.id));
+
+      return record;
+    });
+
+    // Outside transaction — non-critical
     await this.tokensService.revokeAllUserTokens(existing.userId, AUTH_TOKEN_TYPES.REFRESH);
   }
 }

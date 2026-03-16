@@ -47,10 +47,11 @@ export class CredentialsService {
     return bcrypt.compare(plaintext, secretHash);
   }
 
-  async updateSecretHash(userId: string, provider: string, newPassword: string) {
+  async updateSecretHash(userId: string, provider: string, newPassword: string, tx?: DrizzleDB) {
+    const db = tx ?? this.database.db;
     const secretHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
 
-    await this.database.db
+    await db
       .update(credentials)
       .set({ secretHash })
       .where(and(eq(credentials.userId, userId), eq(credentials.provider, provider)));

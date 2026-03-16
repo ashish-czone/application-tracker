@@ -53,6 +53,8 @@ CREATE TABLE "auth_tokens" (
 --> statement-breakpoint
 CREATE INDEX "auth_tokens_user_id_type_idx" ON "auth_tokens" ("user_id", "type");
 --> statement-breakpoint
+CREATE UNIQUE INDEX "auth_tokens_token_hash_unique" ON "auth_tokens" ("token_hash");
+--> statement-breakpoint
 
 -- ===================
 -- 3. RBAC (roles, permissions, assignments)

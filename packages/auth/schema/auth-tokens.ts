@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, index } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, index, uniqueIndex } from 'drizzle-orm/pg-core';
 import { randomUUID } from 'crypto';
 import { users } from '@packages/database';
 
@@ -13,4 +13,5 @@ export const authTokens = pgTable('auth_tokens', {
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
 }, (table) => [
   index('auth_tokens_user_id_type_idx').on(table.userId, table.type),
+  uniqueIndex('auth_tokens_token_hash_unique').on(table.tokenHash),
 ]);
