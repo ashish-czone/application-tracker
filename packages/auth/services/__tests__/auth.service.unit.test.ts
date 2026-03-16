@@ -24,18 +24,48 @@ function createMockTokensService(): TokensService {
     revokeToken: vi.fn().mockResolvedValue(undefined),
     revokeAllUserTokens: vi.fn().mockResolvedValue(undefined),
     markTokenUsed: vi.fn().mockResolvedValue(undefined),
+    hashToken: vi.fn().mockReturnValue('hashed-token'),
   } as any;
+}
+
+function createMockDatabaseService(txResults: { select?: unknown[] } = {}) {
+  const txChain = {
+    from: vi.fn().mockReturnThis(),
+    where: vi.fn().mockReturnThis(),
+    for: vi.fn().mockReturnThis(),
+    limit: vi.fn().mockResolvedValue(txResults.select ?? []),
+    update: vi.fn().mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockResolvedValue(undefined),
+      }),
+    }),
+    insert: vi.fn().mockReturnValue({
+      values: vi.fn().mockReturnValue({
+        returning: vi.fn().mockResolvedValue([{ id: 'new-rt', token: 'new-token' }]),
+      }),
+    }),
+    select: vi.fn().mockReturnThis(),
+  };
+
+  return {
+    db: {
+      transaction: vi.fn().mockImplementation(async (cb: any) => cb(txChain)),
+    },
+    _txChain: txChain,
+  };
 }
 
 describe('AuthService', () => {
   let service: AuthService;
   let credentialsService: ReturnType<typeof createMockCredentialsService>;
   let tokensService: ReturnType<typeof createMockTokensService>;
+  let mockDatabase: ReturnType<typeof createMockDatabaseService>;
 
   beforeEach(() => {
     credentialsService = createMockCredentialsService();
     tokensService = createMockTokensService();
-    service = new AuthService(credentialsService as any, tokensService as any);
+    mockDatabase = createMockDatabaseService();
+    service = new AuthService(credentialsService as any, tokensService as any, mockDatabase as any);
   });
 
   describe('verifyPasswordCredential', () => {
@@ -103,21 +133,25 @@ describe('AuthService', () => {
   });
 
   describe('refresh', () => {
-    it('should rotate refresh token and return new one', async () => {
-      tokensService.validateToken = vi.fn().mockResolvedValue({
-        id: 'old-rt', userId: 'u1', type: 'refresh',
+    it('should rotate refresh token within a transaction', async () => {
+      // Mock: SELECT FOR UPDATE finds the token
+      mockDatabase = createMockDatabaseService({
+        select: [{ id: 'old-rt', userId: 'u1', type: 'refresh', expiresAt: new Date(Date.now() + 100000) }],
       });
+      service = new AuthService(credentialsService as any, tokensService as any, mockDatabase as any);
 
       const result = await service.refresh('old-refresh-token');
 
-      expect(tokensService.revokeToken).toHaveBeenCalledWith('old-rt');
-      expect(tokensService.createRefreshToken).toHaveBeenCalledWith('u1');
+      expect(tokensService.hashToken).toHaveBeenCalledWith('old-refresh-token');
+      expect(mockDatabase.db.transaction).toHaveBeenCalled();
+      expect(tokensService.createRefreshToken).toHaveBeenCalled();
       expect(result.userId).toBe('u1');
-      expect(result.token).toBe('refresh-token');
     });
 
-    it('should throw UnauthorizedException for invalid refresh token', async () => {
-      tokensService.validateToken = vi.fn().mockResolvedValue(null);
+    it('should throw UnauthorizedException when token not found in transaction', async () => {
+      // Mock: SELECT FOR UPDATE finds nothing
+      mockDatabase = createMockDatabaseService({ select: [] });
+      service = new AuthService(credentialsService as any, tokensService as any, mockDatabase as any);
 
       await expect(service.refresh('bad-token'))
         .rejects.toThrow(UnauthorizedException);
@@ -204,20 +238,23 @@ describe('AuthService', () => {
   });
 
   describe('resetPassword', () => {
-    it('should reset password and revoke all refresh tokens', async () => {
-      tokensService.validateToken = vi.fn().mockResolvedValue({
-        id: 'prt-1', userId: 'u1', type: 'password_reset',
+    it('should reset password within a transaction and revoke refresh tokens', async () => {
+      mockDatabase = createMockDatabaseService({
+        select: [{ id: 'prt-1', userId: 'u1', type: 'password_reset', expiresAt: new Date(Date.now() + 100000) }],
       });
+      service = new AuthService(credentialsService as any, tokensService as any, mockDatabase as any);
 
       await service.resetPassword('valid-reset-token', 'new-password');
 
-      expect(credentialsService.updateSecretHash).toHaveBeenCalledWith('u1', 'password', 'new-password');
-      expect(tokensService.markTokenUsed).toHaveBeenCalledWith('prt-1');
+      expect(tokensService.hashToken).toHaveBeenCalledWith('valid-reset-token');
+      expect(mockDatabase.db.transaction).toHaveBeenCalled();
+      expect(credentialsService.updateSecretHash).toHaveBeenCalled();
       expect(tokensService.revokeAllUserTokens).toHaveBeenCalledWith('u1', 'refresh');
     });
 
-    it('should throw UnauthorizedException for invalid reset token', async () => {
-      tokensService.validateToken = vi.fn().mockResolvedValue(null);
+    it('should throw UnauthorizedException when token not found in transaction', async () => {
+      mockDatabase = createMockDatabaseService({ select: [] });
+      service = new AuthService(credentialsService as any, tokensService as any, mockDatabase as any);
 
       await expect(service.resetPassword('bad-token', 'new-pass'))
         .rejects.toThrow(UnauthorizedException);

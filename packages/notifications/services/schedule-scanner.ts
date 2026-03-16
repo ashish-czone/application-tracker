@@ -177,10 +177,21 @@ export class ScheduleScanner {
       if (dateCondition) conditions.push(dateCondition);
     }
 
-    // Query matching entities
+    // Build select columns from registered fields + recipient fields + id
     const idColumn = (entityResolver.table as Record<string, any>).id;
+    const selectColumns: Record<string, any> = { id: idColumn };
+    for (const fieldName of Object.keys(entityResolver.fields)) {
+      const col = (entityResolver.table as Record<string, any>)[fieldName];
+      if (col) selectColumns[fieldName] = col;
+    }
+    for (const fieldName of Object.keys(entityResolver.recipientFields)) {
+      const col = (entityResolver.table as Record<string, any>)[fieldName];
+      if (col) selectColumns[fieldName] = col;
+    }
+
+    // Query matching entities with all registered fields
     const entities = await this.database.db
-      .select({ id: idColumn })
+      .select(selectColumns)
       .from(entityResolver.table)
       .where(conditions.length > 0 ? and(...conditions) : undefined);
 

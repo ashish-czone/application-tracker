@@ -8,7 +8,7 @@ export class QueueService implements OnModuleDestroy {
   private readonly logger = new Logger(QueueService.name);
   private readonly queues = new Map<string, Queue>();
   private readonly workers = new Map<string, Worker>();
-  private readonly connection: { host: string; port: number };
+  private readonly connection: Record<string, unknown>;
   private workerEnabled: boolean;
 
   constructor(
@@ -18,6 +18,9 @@ export class QueueService implements OnModuleDestroy {
     this.connection = {
       host: url.hostname,
       port: Number(url.port) || 6379,
+      ...(url.password && { password: decodeURIComponent(url.password) }),
+      ...(url.username && { username: decodeURIComponent(url.username) }),
+      ...(url.pathname && url.pathname.length > 1 && { db: Number(url.pathname.slice(1)) }),
     };
     this.workerEnabled = process.env.WORKER_ENABLED !== 'false';
   }
@@ -114,18 +117,23 @@ export class QueueService implements OnModuleDestroy {
   }
 
   async onModuleDestroy() {
-    const closePromises: Promise<void>[] = [];
+    const closePromises: Promise<PromiseSettledResult<void>>[] = [];
 
     for (const [name, worker] of this.workers) {
       this.logger.log(`Closing worker for queue "${name}"`);
-      closePromises.push(worker.close());
+      closePromises.push(worker.close().then(() => ({ status: 'fulfilled' as const, value: undefined })).catch((reason) => ({ status: 'rejected' as const, reason })));
     }
 
     for (const [name, queue] of this.queues) {
       this.logger.log(`Closing queue "${name}"`);
-      closePromises.push(queue.close());
+      closePromises.push(queue.close().then(() => ({ status: 'fulfilled' as const, value: undefined })).catch((reason) => ({ status: 'rejected' as const, reason })));
     }
 
-    await Promise.all(closePromises);
+    const results = await Promise.all(closePromises);
+    for (const result of results) {
+      if (result.status === 'rejected') {
+        this.logger.error({ error: result.reason?.message ?? String(result.reason) }, 'Failed to close queue/worker');
+      }
+    }
   }
 }

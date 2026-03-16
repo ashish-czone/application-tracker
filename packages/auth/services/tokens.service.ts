@@ -1,5 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { DatabaseService, eq, and, isNull } from '@packages/database';
+import { DatabaseService, eq, and, isNull, type DrizzleDB } from '@packages/database';
 import * as jwt from 'jsonwebtoken';
 import { randomBytes, createHash } from 'crypto';
 import { authTokens } from '../schema';
@@ -22,12 +22,13 @@ export class TokensService {
     return jwt.verify(token, this.config.jwtSecret) as JwtPayload;
   }
 
-  async createToken(userId: string, type: string, expiresIn: string) {
+  async createToken(userId: string, type: string, expiresIn: string, tx?: DrizzleDB) {
     const token = randomBytes(32).toString('hex');
     const tokenHash = this.hashToken(token);
     const expiresAt = this.calculateExpiry(expiresIn);
 
-    const [record] = await this.database.db
+    const db = tx ?? this.database.db;
+    const [record] = await db
       .insert(authTokens)
       .values({ userId, type, tokenHash, expiresAt })
       .returning();
@@ -35,8 +36,8 @@ export class TokensService {
     return { token, expiresAt, id: record.id };
   }
 
-  async createRefreshToken(userId: string) {
-    return this.createToken(userId, AUTH_TOKEN_TYPES.REFRESH, this.config.refreshTokenExpiresIn);
+  async createRefreshToken(userId: string, tx?: DrizzleDB) {
+    return this.createToken(userId, AUTH_TOKEN_TYPES.REFRESH, this.config.refreshTokenExpiresIn, tx);
   }
 
   async createPasswordResetToken(userId: string) {
@@ -89,7 +90,7 @@ export class TokensService {
       .where(eq(authTokens.id, tokenId));
   }
 
-  private hashToken(token: string): string {
+  hashToken(token: string): string {
     return createHash('sha256').update(token).digest('hex');
   }
 

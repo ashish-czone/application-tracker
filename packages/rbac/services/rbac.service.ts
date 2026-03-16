@@ -189,20 +189,22 @@ export class RbacService {
     // Build a name→scope map for lookup
     const scopeByName = new Map(entries.map((e) => [e.name, e.scope]));
 
-    // Replace: delete existing, insert new
-    await this.database.db
-      .delete(rolePermissions)
-      .where(eq(rolePermissions.roleId, roleId));
+    // Replace: delete existing, insert new — in a transaction so partial failure rolls back
+    await this.database.db.transaction(async (tx) => {
+      await tx
+        .delete(rolePermissions)
+        .where(eq(rolePermissions.roleId, roleId));
 
-    if (permissionRecords.length > 0) {
-      await this.database.db
-        .insert(rolePermissions)
-        .values(permissionRecords.map((p) => ({
-          roleId,
-          permissionId: p.id,
-          scope: scopeByName.get(p.name) ?? 'all',
-        })));
-    }
+      if (permissionRecords.length > 0) {
+        await tx
+          .insert(rolePermissions)
+          .values(permissionRecords.map((p) => ({
+            roleId,
+            permissionId: p.id,
+            scope: scopeByName.get(p.name) ?? 'all',
+          })));
+      }
+    });
   }
 
   async getRolePermissions(roleId: string): Promise<ScopedPermissions> {

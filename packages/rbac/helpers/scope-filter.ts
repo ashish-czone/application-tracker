@@ -4,9 +4,11 @@ import type { PermissionScope } from '../types';
 
 /**
  * Returns a SQL filter condition based on the permission scope.
+ * Fails closed: only 'all' explicitly grants unrestricted access.
+ * Any unrecognized or undefined scope defaults to 'own' (restricted).
  *
- * - 'own' → filters to rows where ownerColumn matches actorId
  * - 'all' → no filter (returns undefined)
+ * - 'own', undefined, or any unrecognized value → filters to own records
  *
  * Usage in services:
  * ```ts
@@ -20,7 +22,7 @@ export function scopeFilter(
   scope: PermissionScope | undefined,
   actorId: string,
 ): SQL | undefined {
-  if (scope === 'own') return eq(ownerColumn, actorId);
-  // 'all' or undefined → no filter
-  return undefined;
+  if (scope === 'all') return undefined;
+  // 'own', undefined, or any unrecognized value → restrict to own records
+  return eq(ownerColumn, actorId);
 }
