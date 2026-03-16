@@ -1,4 +1,4 @@
-import { IsString, MinLength, MaxLength, IsIn, IsOptional, IsArray, ValidateNested, IsUUID, IsObject, IsInt, Min } from 'class-validator';
+import { IsString, MinLength, MaxLength, IsIn, IsOptional, IsArray, ValidateNested, IsUUID, IsObject, IsInt, Min, ValidateIf, IsNotEmpty } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -41,10 +41,12 @@ export class CreateRuleDto {
   @IsIn(['event', 'schedule_once', 'schedule_recurring'])
   triggerType!: string;
 
-  // Event trigger fields
+  // --- Event trigger fields (required when triggerType = 'event') ---
+
   @ApiPropertyOptional({ example: 'users.UserCreated' })
-  @IsOptional()
+  @ValidateIf((o) => o.triggerType === 'event')
   @IsString()
+  @IsNotEmpty()
   @MaxLength(200)
   eventName?: string;
 
@@ -60,38 +62,44 @@ export class CreateRuleDto {
   @IsIn(['minutes', 'hours', 'days'])
   delayUnit?: string;
 
-  // Schedule trigger fields
+  // --- Schedule trigger fields ---
+
+  // Required for schedule_once and schedule_recurring
   @ApiPropertyOptional({ example: 'tasks' })
-  @IsOptional()
+  @ValidateIf((o) => o.triggerType === 'schedule_once' || o.triggerType === 'schedule_recurring')
   @IsString()
+  @IsNotEmpty()
   @MaxLength(100)
   scheduleEntityType?: string;
 
+  // Required for schedule_once (must have a date anchor)
   @ApiPropertyOptional({ example: 'dueDate' })
-  @IsOptional()
+  @ValidateIf((o) => o.triggerType === 'schedule_once')
   @IsString()
+  @IsNotEmpty()
   @MaxLength(100)
   scheduleDateField?: string;
 
   @ApiPropertyOptional({ example: 'before', enum: ['before', 'after'] })
-  @IsOptional()
+  @ValidateIf((o) => o.triggerType === 'schedule_once')
   @IsString()
   @IsIn(['before', 'after'])
   scheduleDateOperator?: string;
 
   @ApiPropertyOptional({ example: 7 })
-  @IsOptional()
+  @ValidateIf((o) => o.triggerType === 'schedule_once')
   @IsInt()
   @Min(0)
   scheduleDateAmount?: number;
 
   @ApiPropertyOptional({ example: 'days', enum: ['minutes', 'hours', 'days'] })
-  @IsOptional()
+  @ValidateIf((o) => o.triggerType === 'schedule_once')
   @IsString()
   @IsIn(['minutes', 'hours', 'days'])
   scheduleDateUnit?: string;
 
-  // Shared
+  // --- Shared ---
+
   @ApiPropertyOptional({ type: [ConditionDto] })
   @IsOptional()
   @IsArray()
