@@ -6,6 +6,9 @@ export class EnvironmentVariables {
   DATABASE_URL!: string;
 
   @IsString()
+  REDIS_URL!: string;
+
+  @IsString()
   JWT_SECRET!: string;
 
   @IsIn(['development', 'staging', 'production', 'test'])
