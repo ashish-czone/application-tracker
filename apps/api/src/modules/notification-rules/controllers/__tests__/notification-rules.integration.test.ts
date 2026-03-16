@@ -145,6 +145,7 @@ describe('NotificationRulesController + TemplatesController (integration)', () =
         .set('Authorization', `Bearer ${adminIdentity.accessToken}`)
         .send({
           name: 'Welcome Rule',
+          triggerType: 'event',
           eventName: 'users.UserCreated',
           recipientStrategy: 'actor',
           channels: [{ channel: 'email', templateId: template.id }],

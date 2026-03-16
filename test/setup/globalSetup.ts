@@ -5,8 +5,7 @@ export default function globalSetup() {
   const databaseDir = path.resolve(__dirname, '../../packages/database');
 
   try {
-    // Collect schemas and run migrations
-    execSync('node scripts/collect-schemas.js && npx prisma migrate deploy', {
+    execSync('npx drizzle-kit migrate', {
       cwd: databaseDir,
       stdio: 'inherit',
       env: {
