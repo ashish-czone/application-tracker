@@ -45,7 +45,10 @@ function createMockAuthService() {
 }
 
 function createMockRbacService() {
-  return {} as any;
+  return {
+    findRoleById: vi.fn().mockResolvedValue(null),
+    assignRoleToUser: vi.fn().mockResolvedValue(undefined),
+  } as any;
 }
 
 function createMockEventEmitter() {
@@ -114,8 +117,11 @@ describe('UsersService', () => {
   });
 
   describe('create', () => {
-    it('should create user with credential and userType in a transaction', async () => {
+    const adminRole = { id: 'role-1', name: 'admin', userType: 'admin', isDefault: true, createdAt: now, updatedAt: now };
+
+    it('should create user with credential, assign role, and emit event', async () => {
       const user = buildUser();
+      mockRbacService.findRoleById.mockResolvedValueOnce(adminRole);
 
       // No existing user with same email
       mockDb._chain.limit.mockResolvedValueOnce([]);
@@ -132,6 +138,7 @@ describe('UsersService', () => {
           lastName: 'Doe',
           password: 'Password123!',
           userType: 'admin',
+          roleId: 'role-1',
         },
         'actor-1',
       );
@@ -148,6 +155,9 @@ describe('UsersService', () => {
         mockTx,
       );
 
+      // Verify role was assigned
+      expect(mockRbacService.assignRoleToUser).toHaveBeenCalledWith('user-1', 'role-1');
+
       // Verify event emitted
       expect(mockEventEmitter.emit).toHaveBeenCalledWith('users.UserCreated', {
         entityType: 'users',
@@ -162,7 +172,45 @@ describe('UsersService', () => {
       });
     });
 
+    it('should throw NotFoundException if role does not exist', async () => {
+      mockRbacService.findRoleById.mockResolvedValueOnce(null);
+
+      await expect(
+        service.create(
+          {
+            email: 'test@example.com',
+            firstName: 'John',
+            lastName: 'Doe',
+            password: 'Password123!',
+            userType: 'admin',
+            roleId: 'nonexistent',
+          },
+          'actor-1',
+        ),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw ConflictException if role userType does not match', async () => {
+      const clientRole = { id: 'role-2', name: 'client', userType: 'client', isDefault: true, createdAt: now, updatedAt: now };
+      mockRbacService.findRoleById.mockResolvedValueOnce(clientRole);
+
+      await expect(
+        service.create(
+          {
+            email: 'test@example.com',
+            firstName: 'John',
+            lastName: 'Doe',
+            password: 'Password123!',
+            userType: 'admin',
+            roleId: 'role-2',
+          },
+          'actor-1',
+        ),
+      ).rejects.toThrow(ConflictException);
+    });
+
     it('should throw ConflictException if email already exists', async () => {
+      mockRbacService.findRoleById.mockResolvedValueOnce(adminRole);
       mockDb._chain.limit.mockResolvedValueOnce([{ id: 'existing-user' }]);
 
       await expect(
@@ -173,6 +221,7 @@ describe('UsersService', () => {
             lastName: 'Doe',
             password: 'Password123!',
             userType: 'admin',
+            roleId: 'role-1',
           },
           'actor-1',
         ),
@@ -181,6 +230,7 @@ describe('UsersService', () => {
 
     it('should lowercase the email', async () => {
       const user = buildUser({ email: 'test@example.com' });
+      mockRbacService.findRoleById.mockResolvedValueOnce(adminRole);
       mockDb._chain.limit.mockResolvedValueOnce([]);
 
       const mockTx = createMockDb();
@@ -194,6 +244,7 @@ describe('UsersService', () => {
           lastName: 'Doe',
           password: 'Password123!',
           userType: 'admin',
+          roleId: 'role-1',
         },
         'actor-1',
       );

@@ -1,4 +1,4 @@
-import { IsEmail, IsString, MinLength, MaxLength, IsIn } from 'class-validator';
+import { IsEmail, IsString, MinLength, MaxLength, IsIn, IsUUID } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateUserDto {
@@ -28,4 +28,8 @@ export class CreateUserDto {
   @IsString()
   @IsIn(['admin', 'client'])
   userType!: string;
+
+  @ApiProperty({ example: '00000000-0000-0000-0000-000000000000', description: 'Role to assign to the user' })
+  @IsUUID()
+  roleId!: string;
 }

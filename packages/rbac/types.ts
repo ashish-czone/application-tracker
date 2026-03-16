@@ -2,6 +2,7 @@ export interface Role {
   id: string;
   name: string;
   userType: string;
+  isDefault: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
