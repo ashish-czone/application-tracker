@@ -1,4 +1,4 @@
-import { IsString, MinLength, MaxLength, IsIn, IsOptional, IsArray, ValidateNested, IsUUID, IsObject } from 'class-validator';
+import { IsString, MinLength, MaxLength, IsIn, IsOptional, IsArray, ValidateNested, IsUUID, IsObject, IsInt, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -13,6 +13,22 @@ class RuleChannelDto {
   templateId!: string;
 }
 
+class ConditionDto {
+  @ApiProperty({ example: 'status' })
+  @IsString()
+  @MaxLength(100)
+  field!: string;
+
+  @ApiProperty({ example: 'eq', enum: ['eq', 'neq', 'in', 'gt', 'lt', 'is_null', 'is_not_null'] })
+  @IsString()
+  @IsIn(['eq', 'neq', 'in', 'gt', 'lt', 'is_null', 'is_not_null'])
+  operator!: string;
+
+  @ApiPropertyOptional({ example: 'pending' })
+  @IsOptional()
+  value?: unknown;
+}
+
 export class CreateRuleDto {
   @ApiProperty({ example: 'Welcome notification' })
   @IsString()
@@ -20,11 +36,68 @@ export class CreateRuleDto {
   @MaxLength(200)
   name!: string;
 
-  @ApiProperty({ example: 'users.UserCreated' })
+  @ApiProperty({ example: 'event', enum: ['event', 'schedule_once', 'schedule_recurring'] })
   @IsString()
-  @MinLength(3)
+  @IsIn(['event', 'schedule_once', 'schedule_recurring'])
+  triggerType!: string;
+
+  // Event trigger fields
+  @ApiPropertyOptional({ example: 'users.UserCreated' })
+  @IsOptional()
+  @IsString()
   @MaxLength(200)
-  eventName!: string;
+  eventName?: string;
+
+  @ApiPropertyOptional({ example: 4 })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  delayAmount?: number;
+
+  @ApiPropertyOptional({ example: 'days', enum: ['minutes', 'hours', 'days'] })
+  @IsOptional()
+  @IsString()
+  @IsIn(['minutes', 'hours', 'days'])
+  delayUnit?: string;
+
+  // Schedule trigger fields
+  @ApiPropertyOptional({ example: 'tasks' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  scheduleEntityType?: string;
+
+  @ApiPropertyOptional({ example: 'dueDate' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  scheduleDateField?: string;
+
+  @ApiPropertyOptional({ example: 'before', enum: ['before', 'after'] })
+  @IsOptional()
+  @IsString()
+  @IsIn(['before', 'after'])
+  scheduleDateOperator?: string;
+
+  @ApiPropertyOptional({ example: 7 })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  scheduleDateAmount?: number;
+
+  @ApiPropertyOptional({ example: 'days', enum: ['minutes', 'hours', 'days'] })
+  @IsOptional()
+  @IsString()
+  @IsIn(['minutes', 'hours', 'days'])
+  scheduleDateUnit?: string;
+
+  // Shared
+  @ApiPropertyOptional({ type: [ConditionDto] })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ConditionDto)
+  conditions?: ConditionDto[];
 
   @ApiProperty({ example: 'actor', enum: ['actor', 'entity_owner', 'role'] })
   @IsString()

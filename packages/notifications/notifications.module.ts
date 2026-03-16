@@ -1,4 +1,4 @@
-import { Module, type OnModuleInit } from '@nestjs/common';
+import { Module, type OnModuleInit, Logger } from '@nestjs/common';
 import { QueueService } from '@packages/queue';
 import { NotificationRuleService } from './services/notification-rule.service';
 import { NotificationRulesService } from './services/notification-rules.service';
@@ -8,10 +8,13 @@ import { PreferenceService } from './services/preference.service';
 import { TemplateRenderer } from './services/template-renderer';
 import { NotificationDispatcher } from './services/notification-dispatcher';
 import { NotificationListener } from './listeners/notification.listener';
+import { EntityResolverRegistry } from './services/entity-resolver-registry';
+import { ScheduleScanner } from './services/schedule-scanner';
 import { InAppChannel } from './channels/in-app.channel';
 import { EmailChannel, EMAIL_QUEUE_NAME } from './channels/email.channel';
 import { WhatsAppChannel, WHATSAPP_QUEUE_NAME } from './channels/whatsapp.channel';
-import { Logger } from '@nestjs/common';
+
+export const SCHEDULE_SCAN_QUEUE = 'notification.schedule-scan';
 
 @Module({
   providers: [
@@ -23,11 +26,19 @@ import { Logger } from '@nestjs/common';
     TemplateRenderer,
     NotificationDispatcher,
     NotificationListener,
+    EntityResolverRegistry,
+    ScheduleScanner,
     InAppChannel,
     EmailChannel,
     WhatsAppChannel,
   ],
-  exports: [NotificationDispatcher, PreferenceService, NotificationRulesService, NotificationTemplatesService],
+  exports: [
+    NotificationDispatcher,
+    PreferenceService,
+    NotificationRulesService,
+    NotificationTemplatesService,
+    EntityResolverRegistry,
+  ],
 })
 export class NotificationsModule implements OnModuleInit {
   private readonly logger = new Logger(NotificationsModule.name);
@@ -38,10 +49,11 @@ export class NotificationsModule implements OnModuleInit {
     private readonly emailChannel: EmailChannel,
     private readonly whatsAppChannel: WhatsAppChannel,
     private readonly queueService: QueueService,
+    private readonly scheduleScanner: ScheduleScanner,
   ) {}
 
   onModuleInit() {
-    // Register channel providers with the dispatcher
+    // Register channel providers
     this.dispatcher.registerChannel(this.inAppChannel);
     this.dispatcher.registerChannel(this.emailChannel);
     this.dispatcher.registerChannel(this.whatsAppChannel);
@@ -62,5 +74,27 @@ export class NotificationsModule implements OnModuleInit {
         this.logger.log({ ...data as Record<string, unknown> }, 'WhatsApp job processed (provider not configured)');
       },
     });
+
+    // Register hourly cron job for schedule scanner
+    this.queueService.registerProcessor({
+      name: SCHEDULE_SCAN_QUEUE,
+      handler: async () => {
+        await this.scheduleScanner.scan();
+      },
+    });
+
+    // Enqueue repeatable scan — runs at the top of every hour
+    const queue = this.queueService.getQueue(SCHEDULE_SCAN_QUEUE);
+    if (queue) {
+      queue.upsertJobScheduler(
+        'notification-schedule-scan',
+        { pattern: '0 * * * *' },
+        { name: SCHEDULE_SCAN_QUEUE, data: {} },
+      ).then(() => {
+        this.logger.log('Notification schedule scanner registered (hourly)');
+      }).catch((err) => {
+        this.logger.error({ error: err.message }, 'Failed to register schedule scanner');
+      });
+    }
   }
 }

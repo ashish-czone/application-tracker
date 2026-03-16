@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { RecipientResolver } from '../recipient-resolver';
+import { EntityResolverRegistry } from '../entity-resolver-registry';
 import type { DomainEvent } from '@packages/events';
 import type { NotificationRule } from '../../types';
 
@@ -20,7 +21,16 @@ function buildRule(overrides: Partial<NotificationRule> = {}): NotificationRule 
   return {
     id: 'rule-1',
     name: 'Test Rule',
+    triggerType: 'event',
     eventName: 'users.UserCreated',
+    delayAmount: null,
+    delayUnit: null,
+    scheduleEntityType: null,
+    scheduleDateField: null,
+    scheduleDateOperator: null,
+    scheduleDateAmount: null,
+    scheduleDateUnit: null,
+    conditions: null,
     recipientStrategy: 'actor',
     recipientConfig: null,
     isActive: true,
@@ -32,7 +42,8 @@ function buildRule(overrides: Partial<NotificationRule> = {}): NotificationRule 
 function createMockDb() {
   const mockChain = {
     from: vi.fn().mockReturnThis(),
-    where: vi.fn().mockResolvedValue([]),
+    where: vi.fn().mockReturnThis(),
+    limit: vi.fn().mockResolvedValue([]),
   };
   return {
     select: vi.fn().mockReturnValue(mockChain),
@@ -43,7 +54,8 @@ function createMockDb() {
 describe('RecipientResolver', () => {
   it('should resolve actor from event', async () => {
     const mockDb = createMockDb();
-    const resolver = new RecipientResolver({ db: mockDb } as any);
+    const registry = new EntityResolverRegistry();
+    const resolver = new RecipientResolver({ db: mockDb } as any, registry);
 
     const result = await resolver.resolve(buildRule(), buildEvent());
 
@@ -52,31 +64,37 @@ describe('RecipientResolver', () => {
 
   it('should return empty array when actor is null', async () => {
     const mockDb = createMockDb();
-    const resolver = new RecipientResolver({ db: mockDb } as any);
+    const registry = new EntityResolverRegistry();
+    const resolver = new RecipientResolver({ db: mockDb } as any, registry);
 
     const result = await resolver.resolve(buildRule(), buildEvent({ actorId: null }));
 
     expect(result).toEqual([]);
   });
 
-  it('should resolve entity_owner from payload', async () => {
+  it('should resolve entity_owner from event payload using configured field', async () => {
     const mockDb = createMockDb();
-    const resolver = new RecipientResolver({ db: mockDb } as any);
+    const registry = new EntityResolverRegistry();
+    const resolver = new RecipientResolver({ db: mockDb } as any, registry);
 
     const result = await resolver.resolve(
-      buildRule({ recipientStrategy: 'entity_owner' }),
-      buildEvent({ payload: { ownerId: 'owner-1' } }),
+      buildRule({
+        recipientStrategy: 'entity_owner',
+        recipientConfig: { field: 'assigneeId' },
+      }),
+      buildEvent({ payload: { assigneeId: 'user-42' } }),
     );
 
-    expect(result).toEqual(['owner-1']);
+    expect(result).toEqual(['user-42']);
   });
 
-  it('should return empty for entity_owner with no ownerId in payload', async () => {
+  it('should return empty for entity_owner with no field in recipientConfig', async () => {
     const mockDb = createMockDb();
-    const resolver = new RecipientResolver({ db: mockDb } as any);
+    const registry = new EntityResolverRegistry();
+    const resolver = new RecipientResolver({ db: mockDb } as any, registry);
 
     const result = await resolver.resolve(
-      buildRule({ recipientStrategy: 'entity_owner' }),
+      buildRule({ recipientStrategy: 'entity_owner', recipientConfig: {} }),
       buildEvent(),
     );
 
@@ -89,7 +107,8 @@ describe('RecipientResolver', () => {
       { userId: 'user-1' },
       { userId: 'user-2' },
     ]);
-    const resolver = new RecipientResolver({ db: mockDb } as any);
+    const registry = new EntityResolverRegistry();
+    const resolver = new RecipientResolver({ db: mockDb } as any, registry);
 
     const result = await resolver.resolve(
       buildRule({ recipientStrategy: 'role', recipientConfig: { roleId: 'role-1' } }),
@@ -101,7 +120,8 @@ describe('RecipientResolver', () => {
 
   it('should return empty for role strategy with no roleId config', async () => {
     const mockDb = createMockDb();
-    const resolver = new RecipientResolver({ db: mockDb } as any);
+    const registry = new EntityResolverRegistry();
+    const resolver = new RecipientResolver({ db: mockDb } as any, registry);
 
     const result = await resolver.resolve(
       buildRule({ recipientStrategy: 'role', recipientConfig: {} }),
@@ -113,7 +133,8 @@ describe('RecipientResolver', () => {
 
   it('should return empty for unknown strategy', async () => {
     const mockDb = createMockDb();
-    const resolver = new RecipientResolver({ db: mockDb } as any);
+    const registry = new EntityResolverRegistry();
+    const resolver = new RecipientResolver({ db: mockDb } as any, registry);
 
     const result = await resolver.resolve(
       buildRule({ recipientStrategy: 'unknown' as any }),

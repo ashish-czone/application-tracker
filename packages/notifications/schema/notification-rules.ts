@@ -1,10 +1,25 @@
-import { pgTable, text, boolean, timestamp, jsonb } from 'drizzle-orm/pg-core';
+import { pgTable, text, boolean, timestamp, jsonb, integer } from 'drizzle-orm/pg-core';
 import { randomUUID } from 'crypto';
 
 export const notificationRules = pgTable('notification_rules', {
   id: text('id').primaryKey().$defaultFn(() => randomUUID()),
   name: text('name').notNull(),
-  eventName: text('event_name').notNull(),
+  triggerType: text('trigger_type').notNull().default('event'),
+
+  // Event trigger fields
+  eventName: text('event_name'),
+  delayAmount: integer('delay_amount'),
+  delayUnit: text('delay_unit'),
+
+  // Schedule trigger fields
+  scheduleEntityType: text('schedule_entity_type'),
+  scheduleDateField: text('schedule_date_field'),
+  scheduleDateOperator: text('schedule_date_operator'),
+  scheduleDateAmount: integer('schedule_date_amount'),
+  scheduleDateUnit: text('schedule_date_unit'),
+
+  // Shared
+  conditions: jsonb('conditions'),
   recipientStrategy: text('recipient_strategy').notNull(),
   recipientConfig: jsonb('recipient_config'),
   isActive: boolean('is_active').notNull().default(true),
