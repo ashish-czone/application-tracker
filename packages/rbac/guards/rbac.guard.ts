@@ -23,9 +23,9 @@ export class RbacGuard implements CanActivate {
       throw new ForbiddenException('Access denied');
     }
 
-    const userPermissions: string[] = user.permissions ?? [];
+    const userPermissions: Record<string, string> = user.permissions ?? {};
 
-    if (!userPermissions.includes(requiredPermission)) {
+    if (!(requiredPermission in userPermissions)) {
       throw new ForbiddenException('You do not have permission to perform this action');
     }
 
