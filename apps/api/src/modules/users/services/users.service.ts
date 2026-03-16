@@ -8,13 +8,11 @@ import { RbacService } from '@packages/rbac';
 import {
   DatabaseService,
   users,
-  userUserTypes,
   eq,
   and,
   or,
   isNull,
   ilike,
-  sql,
   asc,
   desc,
   count,
@@ -32,7 +30,7 @@ export interface CreateUserInput {
   firstName: string;
   lastName: string;
   password: string;
-  userTypes: string[];
+  userType: string;
 }
 
 export interface UpdateUserInput {
@@ -50,14 +48,14 @@ export interface ListUsersQuery {
   order?: 'asc' | 'desc';
 }
 
-export interface UserWithTypes {
+export interface UserWithType {
   id: string;
   email: string | null;
   firstName: string | null;
   lastName: string | null;
+  userType: string;
   createdAt: Date;
   updatedAt: Date;
-  userTypes: string[];
 }
 
 @Injectable()
@@ -69,7 +67,7 @@ export class UsersService {
     private readonly domainEventEmitter: DomainEventEmitter,
   ) {}
 
-  async list(query: ListUsersQuery): Promise<PaginatedResponse<UserWithTypes>> {
+  async list(query: ListUsersQuery): Promise<PaginatedResponse<UserWithType>> {
     const page = query.page ?? 1;
     const limit = query.limit ?? 25;
     const offset = (page - 1) * limit;
@@ -88,14 +86,8 @@ export class UsersService {
       );
     }
 
-    // If filtering by userType, join with userUserTypes
     if (query.userType) {
-      const userIdsWithType = this.database.db
-        .select({ userId: userUserTypes.userId })
-        .from(userUserTypes)
-        .where(eq(userUserTypes.userType, query.userType));
-
-      conditions.push(sql`${users.id} IN (${userIdsWithType})`);
+      conditions.push(eq(users.userType, query.userType));
     }
 
     const whereClause = and(...conditions);
@@ -124,18 +116,14 @@ export class UsersService {
       .limit(limit)
       .offset(offset);
 
-    // Load userTypes for each user
-    const userIds = rows.map((r) => r.id);
-    const typesMap = await this.loadUserTypesMap(userIds);
-
-    const data: UserWithTypes[] = rows.map((row) => ({
+    const data: UserWithType[] = rows.map((row) => ({
       id: row.id,
       email: row.email,
       firstName: row.firstName,
       lastName: row.lastName,
+      userType: row.userType,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
-      userTypes: typesMap.get(row.id) ?? [],
     }));
 
     return {
@@ -149,7 +137,7 @@ export class UsersService {
     };
   }
 
-  async findOneOrFail(id: string): Promise<UserWithTypes> {
+  async findOneOrFail(id: string): Promise<UserWithType> {
     const [user] = await this.database.db
       .select()
       .from(users)
@@ -158,20 +146,18 @@ export class UsersService {
 
     if (!user) throw new NotFoundException('User not found');
 
-    const userTypes = await this.rbacService.getUserTypes(user.id);
-
     return {
       id: user.id,
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
+      userType: user.userType,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
-      userTypes,
     };
   }
 
-  async create(data: CreateUserInput, actorId: string): Promise<UserWithTypes> {
+  async create(data: CreateUserInput, actorId: string): Promise<UserWithType> {
     // Check email uniqueness
     const [existing] = await this.database.db
       .select({ id: users.id })
@@ -188,6 +174,7 @@ export class UsersService {
           email: data.email.toLowerCase(),
           firstName: data.firstName,
           lastName: data.lastName,
+          userType: data.userType,
         })
         .returning();
 
@@ -198,11 +185,6 @@ export class UsersService {
         data.password,
         tx,
       );
-
-      // Assign user types
-      for (const userType of data.userTypes) {
-        await this.rbacService.assignUserType(newUser.id, userType, tx);
-      }
 
       return newUser;
     });
@@ -215,7 +197,7 @@ export class UsersService {
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
-        userTypes: data.userTypes,
+        userType: data.userType,
       },
     });
 
@@ -224,13 +206,13 @@ export class UsersService {
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
+      userType: user.userType,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
-      userTypes: data.userTypes,
     };
   }
 
-  async update(id: string, data: UpdateUserInput, actorId: string): Promise<UserWithTypes> {
+  async update(id: string, data: UpdateUserInput, actorId: string): Promise<UserWithType> {
     // Verify user exists
     const existing = await this.findOneOrFail(id);
 
@@ -279,9 +261,9 @@ export class UsersService {
       email: updated.email,
       firstName: updated.firstName,
       lastName: updated.lastName,
+      userType: updated.userType,
       createdAt: updated.createdAt,
       updatedAt: updated.updatedAt,
-      userTypes: existing.userTypes,
     };
   }
 
@@ -304,24 +286,5 @@ export class UsersService {
         lastName: user.lastName,
       },
     });
-  }
-
-  // --- Private helpers ---
-
-  private async loadUserTypesMap(userIds: string[]): Promise<Map<string, string[]>> {
-    if (userIds.length === 0) return new Map();
-
-    const rows = await this.database.db
-      .select()
-      .from(userUserTypes)
-      .where(sql`${userUserTypes.userId} IN (${sql.join(userIds.map((id) => sql`${id}`), sql`, `)})`);
-
-    const map = new Map<string, string[]>();
-    for (const row of rows) {
-      const types = map.get(row.userId) ?? [];
-      types.push(row.userType);
-      map.set(row.userId, types);
-    }
-    return map;
   }
 }

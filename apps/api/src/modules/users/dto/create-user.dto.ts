@@ -1,4 +1,4 @@
-import { IsEmail, IsString, MinLength, MaxLength, IsArray, IsIn, ArrayMinSize } from 'class-validator';
+import { IsEmail, IsString, MinLength, MaxLength, IsIn } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateUserDto {
@@ -24,10 +24,8 @@ export class CreateUserDto {
   @MaxLength(128)
   password!: string;
 
-  @ApiProperty({ example: ['admin'], enum: ['admin', 'client'] })
-  @IsArray()
-  @ArrayMinSize(1)
-  @IsString({ each: true })
-  @IsIn(['admin', 'client'], { each: true })
-  userTypes!: string[];
+  @ApiProperty({ example: 'admin', enum: ['admin', 'client'] })
+  @IsString()
+  @IsIn(['admin', 'client'])
+  userType!: string;
 }

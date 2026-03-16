@@ -74,7 +74,7 @@ describe('UsersController (security)', () => {
           firstName: 'No',
           lastName: 'Auth',
           password: 'Password123!',
-          userTypes: ['client'],
+          userType: 'client',
         });
       expect(res.status).toBe(401);
     });
@@ -125,7 +125,7 @@ describe('UsersController (security)', () => {
           firstName: 'No',
           lastName: 'Perm',
           password: 'Password123!',
-          userTypes: ['client'],
+          userType: 'client',
         });
       expect(res.status).toBe(403);
     });
@@ -158,7 +158,7 @@ describe('UsersController (security)', () => {
           firstName: 'Read',
           lastName: 'Only',
           password: 'Password123!',
-          userTypes: ['client'],
+          userType: 'client',
         });
       expect(res.status).toBe(403);
     });
@@ -199,7 +199,7 @@ describe('UsersController (security)', () => {
           firstName: 'Soft',
           lastName: 'Deleted',
           password: 'Password123!',
-          userTypes: ['client'],
+          userType: 'client',
         });
 
       await request(httpServer)
@@ -224,7 +224,7 @@ describe('UsersController (security)', () => {
           firstName: 'Soft',
           lastName: 'Get',
           password: 'Password123!',
-          userTypes: ['client'],
+          userType: 'client',
         });
 
       await request(httpServer)

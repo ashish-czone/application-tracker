@@ -45,10 +45,7 @@ function createMockAuthService() {
 }
 
 function createMockRbacService() {
-  return {
-    getUserTypes: vi.fn().mockResolvedValue([]),
-    assignUserType: vi.fn().mockResolvedValue(undefined),
-  } as any;
+  return {} as any;
 }
 
 function createMockEventEmitter() {
@@ -65,6 +62,7 @@ function buildUser(overrides: Record<string, unknown> = {}) {
     email: 'test@example.com',
     firstName: 'John',
     lastName: 'Doe',
+    userType: 'admin',
     createdAt: now,
     updatedAt: now,
     deletedAt: null,
@@ -90,10 +88,9 @@ describe('UsersService', () => {
   });
 
   describe('findOneOrFail', () => {
-    it('should return user with user types when found', async () => {
+    it('should return user with userType when found', async () => {
       const user = buildUser();
       mockDb._chain.limit.mockResolvedValueOnce([user]);
-      mockRbacService.getUserTypes.mockResolvedValueOnce(['admin', 'client']);
 
       const result = await service.findOneOrFail('user-1');
 
@@ -102,11 +99,10 @@ describe('UsersService', () => {
         email: 'test@example.com',
         firstName: 'John',
         lastName: 'Doe',
+        userType: 'admin',
         createdAt: now,
         updatedAt: now,
-        userTypes: ['admin', 'client'],
       });
-      expect(mockRbacService.getUserTypes).toHaveBeenCalledWith('user-1');
     });
 
     it('should throw NotFoundException when user does not exist', async () => {
@@ -118,7 +114,7 @@ describe('UsersService', () => {
   });
 
   describe('create', () => {
-    it('should create user with credential and user types in a transaction', async () => {
+    it('should create user with credential and userType in a transaction', async () => {
       const user = buildUser();
 
       // No existing user with same email
@@ -135,14 +131,14 @@ describe('UsersService', () => {
           firstName: 'John',
           lastName: 'Doe',
           password: 'Password123!',
-          userTypes: ['admin', 'client'],
+          userType: 'admin',
         },
         'actor-1',
       );
 
       expect(result.id).toBe('user-1');
       expect(result.email).toBe('test@example.com');
-      expect(result.userTypes).toEqual(['admin', 'client']);
+      expect(result.userType).toBe('admin');
 
       // Verify credential was created
       expect(mockAuthService.createPasswordCredential).toHaveBeenCalledWith(
@@ -151,11 +147,6 @@ describe('UsersService', () => {
         'Password123!',
         mockTx,
       );
-
-      // Verify user types were assigned
-      expect(mockRbacService.assignUserType).toHaveBeenCalledTimes(2);
-      expect(mockRbacService.assignUserType).toHaveBeenCalledWith('user-1', 'admin', mockTx);
-      expect(mockRbacService.assignUserType).toHaveBeenCalledWith('user-1', 'client', mockTx);
 
       // Verify event emitted
       expect(mockEventEmitter.emit).toHaveBeenCalledWith('users.UserCreated', {
@@ -166,7 +157,7 @@ describe('UsersService', () => {
           email: 'test@example.com',
           firstName: 'John',
           lastName: 'Doe',
-          userTypes: ['admin', 'client'],
+          userType: 'admin',
         },
       });
     });
@@ -181,7 +172,7 @@ describe('UsersService', () => {
             firstName: 'John',
             lastName: 'Doe',
             password: 'Password123!',
-            userTypes: ['admin'],
+            userType: 'admin',
           },
           'actor-1',
         ),
@@ -202,7 +193,7 @@ describe('UsersService', () => {
           firstName: 'John',
           lastName: 'Doe',
           password: 'Password123!',
-          userTypes: ['admin'],
+          userType: 'admin',
         },
         'actor-1',
       );
@@ -222,9 +213,8 @@ describe('UsersService', () => {
       const existingUser = buildUser();
       const updatedUser = buildUser({ firstName: 'Jane' });
 
-      // findOneOrFail mock: select → limit returns user, then getUserTypes
+      // findOneOrFail mock: select → limit returns user
       mockDb._chain.limit.mockResolvedValueOnce([existingUser]);
-      mockRbacService.getUserTypes.mockResolvedValueOnce(['admin']);
 
       // update → returning
       mockDb._chain.returning.mockResolvedValueOnce([updatedUser]);
@@ -257,7 +247,6 @@ describe('UsersService', () => {
       mockDb._chain.limit
         .mockResolvedValueOnce([existingUser])  // findOneOrFail
         .mockResolvedValueOnce([{ id: 'other-user' }]);  // email uniqueness check
-      mockRbacService.getUserTypes.mockResolvedValueOnce(['admin']);
 
       await expect(
         service.update('user-1', { email: 'taken@example.com' }, 'actor-1'),
@@ -267,7 +256,6 @@ describe('UsersService', () => {
     it('should return existing user unchanged if no fields provided', async () => {
       const existingUser = buildUser();
       mockDb._chain.limit.mockResolvedValueOnce([existingUser]);
-      mockRbacService.getUserTypes.mockResolvedValueOnce(['admin']);
 
       const result = await service.update('user-1', {}, 'actor-1');
 
@@ -281,7 +269,6 @@ describe('UsersService', () => {
     it('should set deletedAt and deletedBy', async () => {
       const existingUser = buildUser();
       mockDb._chain.limit.mockResolvedValueOnce([existingUser]);
-      mockRbacService.getUserTypes.mockResolvedValueOnce(['admin']);
 
       await service.softDelete('user-1', 'actor-1');
 
@@ -309,7 +296,7 @@ describe('UsersService', () => {
   });
 
   describe('list', () => {
-    it('should return paginated users with user types', async () => {
+    it('should return paginated users with userType', async () => {
       const user = buildUser();
 
       // count query
@@ -331,20 +318,12 @@ describe('UsersService', () => {
               }),
             }),
           }),
-        })
-        // userTypes query (loadUserTypesMap)
-        .mockReturnValueOnce({
-          from: vi.fn().mockReturnValue({
-            where: vi.fn().mockResolvedValue([
-              { userId: 'user-1', userType: 'admin' },
-            ]),
-          }),
         });
 
       const result = await service.list({ page: 1, limit: 25 });
 
       expect(result.data).toHaveLength(1);
-      expect(result.data[0].userTypes).toEqual(['admin']);
+      expect(result.data[0].userType).toBe('admin');
       expect(result.meta).toEqual({
         total: 1,
         page: 1,

@@ -47,7 +47,7 @@ describe('UsersController (integration)', () => {
         firstName: 'New',
         lastName: 'User',
         password: 'Password123!',
-        userTypes: ['client'],
+        userType: 'client',
       };
 
       const res = await request(httpServer)
@@ -61,7 +61,7 @@ describe('UsersController (integration)', () => {
         email: 'newuser@example.com',
         firstName: 'New',
         lastName: 'User',
-        userTypes: ['client'],
+        userType: 'client',
       });
     });
 
@@ -71,7 +71,7 @@ describe('UsersController (integration)', () => {
         firstName: 'First',
         lastName: 'User',
         password: 'Password123!',
-        userTypes: ['client'],
+        userType: 'client',
       };
 
       await request(httpServer)
@@ -105,7 +105,7 @@ describe('UsersController (integration)', () => {
           firstName: 'Test',
           lastName: 'User',
           password: 'Password123!',
-          userTypes: ['client'],
+          userType: 'client',
         });
 
       expect(res.status).toBe(400);
@@ -120,7 +120,7 @@ describe('UsersController (integration)', () => {
           firstName: 'Test',
           lastName: 'User',
           password: 'short',
-          userTypes: ['client'],
+          userType: 'client',
         });
 
       expect(res.status).toBe(400);
@@ -135,13 +135,13 @@ describe('UsersController (integration)', () => {
           firstName: 'Test',
           lastName: 'User',
           password: 'Password123!',
-          userTypes: ['invalid'],
+          userType: 'invalid',
         });
 
       expect(res.status).toBe(400);
     });
 
-    it('should return 400 for empty userTypes array', async () => {
+    it('should return 400 for missing userType', async () => {
       const res = await request(httpServer)
         .post('/api/v1/users')
         .set('Authorization', `Bearer ${adminIdentity.accessToken}`)
@@ -150,7 +150,6 @@ describe('UsersController (integration)', () => {
           firstName: 'Test',
           lastName: 'User',
           password: 'Password123!',
-          userTypes: [],
         });
 
       expect(res.status).toBe(400);
@@ -165,29 +164,11 @@ describe('UsersController (integration)', () => {
           firstName: 'Test',
           lastName: 'User',
           password: 'Password123!',
-          userTypes: ['client'],
+          userType: 'client',
           isAdmin: true,
         });
 
       expect(res.status).toBe(400);
-    });
-
-    it('should create a user with multiple user types', async () => {
-      const body = {
-        email: 'multi-type@example.com',
-        firstName: 'Multi',
-        lastName: 'Type',
-        password: 'Password123!',
-        userTypes: ['admin', 'client'],
-      };
-
-      const res = await request(httpServer)
-        .post('/api/v1/users')
-        .set('Authorization', `Bearer ${adminIdentity.accessToken}`)
-        .send(body);
-
-      expect(res.status).toBe(201);
-      expect(res.body.userTypes).toEqual(expect.arrayContaining(['admin', 'client']));
     });
   });
 
@@ -218,18 +199,18 @@ describe('UsersController (integration)', () => {
 
       expect(res.status).toBe(200);
       for (const user of res.body.data) {
-        expect(user.userTypes).toContain('client');
+        expect(user.userType).toBe('client');
       }
     });
 
     it('should search by name', async () => {
       const res = await request(httpServer)
-        .get('/api/v1/users?search=Multi')
+        .get('/api/v1/users?search=New')
         .set('Authorization', `Bearer ${adminIdentity.accessToken}`);
 
       expect(res.status).toBe(200);
       expect(res.body.data.length).toBeGreaterThanOrEqual(1);
-      expect(res.body.data.some((u: any) => u.firstName === 'Multi')).toBe(true);
+      expect(res.body.data.some((u: any) => u.firstName === 'New')).toBe(true);
     });
 
     it('should respect pagination parameters', async () => {
@@ -272,7 +253,7 @@ describe('UsersController (integration)', () => {
           firstName: 'Find',
           lastName: 'Me',
           password: 'Password123!',
-          userTypes: ['client'],
+          userType: 'client',
         });
 
       const res = await request(httpServer)
@@ -317,7 +298,7 @@ describe('UsersController (integration)', () => {
           firstName: 'Before',
           lastName: 'Update',
           password: 'Password123!',
-          userTypes: ['client'],
+          userType: 'client',
         });
 
       const res = await request(httpServer)
@@ -349,7 +330,7 @@ describe('UsersController (integration)', () => {
           firstName: 'Taken',
           lastName: 'Email',
           password: 'Password123!',
-          userTypes: ['client'],
+          userType: 'client',
         });
 
       const createRes = await request(httpServer)
@@ -360,7 +341,7 @@ describe('UsersController (integration)', () => {
           firstName: 'Other',
           lastName: 'User',
           password: 'Password123!',
-          userTypes: ['client'],
+          userType: 'client',
         });
 
       const res = await request(httpServer)
@@ -380,7 +361,7 @@ describe('UsersController (integration)', () => {
           firstName: 'Reject',
           lastName: 'Unknown',
           password: 'Password123!',
-          userTypes: ['client'],
+          userType: 'client',
         });
 
       const res = await request(httpServer)
@@ -404,7 +385,7 @@ describe('UsersController (integration)', () => {
           firstName: 'Delete',
           lastName: 'Me',
           password: 'Password123!',
-          userTypes: ['client'],
+          userType: 'client',
         });
 
       const res = await request(httpServer)
