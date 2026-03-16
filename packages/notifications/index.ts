@@ -19,6 +19,9 @@ export type {
   ChannelProvider,
   ChannelContext,
   EntityResolverConfig,
+  FieldType,
+  FieldConfig,
+  RecipientFieldConfig,
 } from './types';
 export {
   notificationTemplates,

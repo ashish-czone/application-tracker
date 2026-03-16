@@ -69,8 +69,20 @@ export interface ChannelContext {
   correlationId: string;
 }
 
+export type FieldType = 'text' | 'number' | 'date' | 'enum' | 'uuid' | 'boolean';
+
+export interface FieldConfig {
+  type: FieldType;
+  label: string;
+  options?: string[];
+}
+
+export interface RecipientFieldConfig {
+  label: string;
+}
+
 export interface EntityResolverConfig {
   table: any;
-  ownerField: string;
-  filterableFields: string[];
+  fields: Record<string, FieldConfig>;
+  recipientFields: Record<string, RecipientFieldConfig>;
 }

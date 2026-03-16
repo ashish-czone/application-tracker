@@ -83,7 +83,7 @@ export class ScheduleScanner {
             const conditionSql = buildConditions(
               entityResolver.table,
               rule.conditions as Condition[],
-              entityResolver.filterableFields,
+              Object.keys(entityResolver.fields),
             );
             const idColumn = (entityResolver.table as Record<string, any>).id;
             const [entity] = await this.database.db
@@ -161,7 +161,7 @@ export class ScheduleScanner {
 
     // User-defined conditions from JSON
     if (rule.conditions && (rule.conditions as Condition[]).length > 0) {
-      conditions.push(...buildConditions(entityResolver.table, rule.conditions as Condition[], entityResolver.filterableFields));
+      conditions.push(...buildConditions(entityResolver.table, rule.conditions as Condition[], Object.keys(entityResolver.fields)));
     }
 
     // Date-based condition
