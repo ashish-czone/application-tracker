@@ -83,15 +83,15 @@ export class NotificationsModule implements OnModuleInit {
       },
     });
 
-    // Enqueue repeatable scan — runs at the top of every hour
+    // Enqueue repeatable scan — runs daily at 2:00 AM
     const queue = this.queueService.getQueue(SCHEDULE_SCAN_QUEUE);
     if (queue) {
       queue.upsertJobScheduler(
         'notification-schedule-scan',
-        { pattern: '0 * * * *' },
+        { pattern: '0 2 * * *' },
         { name: SCHEDULE_SCAN_QUEUE, data: {} },
       ).then(() => {
-        this.logger.log('Notification schedule scanner registered (hourly)');
+        this.logger.log('Notification schedule scanner registered (daily at 2:00 AM)');
       }).catch((err) => {
         this.logger.error({ error: err.message }, 'Failed to register schedule scanner');
       });
