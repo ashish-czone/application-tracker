@@ -13,6 +13,7 @@ import { RbacGuard } from '@packages/rbac';
 import { AuthOrchestratorModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { RbacManagementModule } from './modules/rbac/rbac.module';
+import { NotificationRulesModule } from './modules/notification-rules/notification-rules.module';
 import { validate } from './config/env.validation';
 
 @Module({
@@ -39,6 +40,7 @@ import { validate } from './config/env.validation';
     AuthOrchestratorModule,
     UsersModule,
     RbacManagementModule,
+    NotificationRulesModule,
   ],
   providers: [
     {
