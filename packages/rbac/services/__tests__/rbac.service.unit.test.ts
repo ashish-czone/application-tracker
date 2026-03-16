@@ -81,9 +81,11 @@ describe('RbacService', () => {
   });
 
   describe('deleteRole', () => {
-    it('should delete the role', async () => {
+    it('should delete the role when no users assigned', async () => {
       const role = { id: 'role-1', name: 'custom', userType: 'admin', isDefault: false, createdAt: new Date(), updatedAt: new Date() };
       vi.spyOn(service, 'findRoleById').mockResolvedValueOnce(role);
+      // Mock count query — no users assigned
+      mockDb._chain.where.mockResolvedValueOnce([{ total: 0 }]);
 
       await expect(service.deleteRole('role-1')).resolves.toBeUndefined();
       expect(mockDb.delete).toHaveBeenCalled();
@@ -102,6 +104,33 @@ describe('RbacService', () => {
 
       await expect(service.deleteRole('role-1'))
         .rejects.toThrow(ConflictException);
+    });
+
+    it('should throw ConflictException when role has assigned users', async () => {
+      const role = { id: 'role-1', name: 'custom', userType: 'admin', isDefault: false, createdAt: new Date(), updatedAt: new Date() };
+      vi.spyOn(service, 'findRoleById').mockResolvedValueOnce(role);
+      // Mock count query — 3 users assigned
+      mockDb._chain.where.mockResolvedValueOnce([{ total: 3 }]);
+
+      await expect(service.deleteRole('role-1'))
+        .rejects.toThrow(ConflictException);
+    });
+  });
+
+  describe('findRoleByIdOrFail', () => {
+    it('should return role if found', async () => {
+      const role = { id: 'role-1', name: 'admin', userType: 'admin', isDefault: false, createdAt: new Date(), updatedAt: new Date() };
+      vi.spyOn(service, 'findRoleById').mockResolvedValueOnce(role);
+
+      const result = await service.findRoleByIdOrFail('role-1');
+      expect(result).toEqual(role);
+    });
+
+    it('should throw NotFoundException if not found', async () => {
+      vi.spyOn(service, 'findRoleById').mockResolvedValueOnce(null);
+
+      await expect(service.findRoleByIdOrFail('nonexistent'))
+        .rejects.toThrow(NotFoundException);
     });
   });
 

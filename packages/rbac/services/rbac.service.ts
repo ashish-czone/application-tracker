@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
-import { DatabaseService, eq, and, inArray, users } from '@packages/database';
+import { DatabaseService, eq, and, inArray, ilike, or, asc, desc, count, users } from '@packages/database';
+import type { PaginatedResponse } from '@packages/common';
 import { roles } from '../schema/roles';
 import { permissions } from '../schema/permissions';
 import { rolePermissions } from '../schema/role-permissions';
@@ -47,6 +48,16 @@ export class RbacService {
       throw new ConflictException('Cannot delete a default role');
     }
 
+    // Check if any users are assigned this role
+    const [{ total }] = await this.database.db
+      .select({ total: count() })
+      .from(userRoles)
+      .where(eq(userRoles.roleId, id));
+
+    if (Number(total) > 0) {
+      throw new ConflictException('Cannot delete a role that is assigned to users. Remove the role from all users first.');
+    }
+
     await this.database.db
       .delete(roles)
       .where(eq(roles.id, id));
@@ -77,6 +88,67 @@ export class RbacService {
       .limit(1);
 
     return role ?? null;
+  }
+
+  async findRoleByIdOrFail(id: string): Promise<Role> {
+    const role = await this.findRoleById(id);
+    if (!role) throw new NotFoundException('Role not found');
+    return role;
+  }
+
+  async listRoles(query: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    userType?: string;
+    sort?: 'name' | 'createdAt';
+    order?: 'asc' | 'desc';
+  }): Promise<PaginatedResponse<Role>> {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 25;
+    const offset = (page - 1) * limit;
+
+    const conditions = [];
+
+    if (query.userType) {
+      conditions.push(eq(roles.userType, query.userType));
+    }
+
+    if (query.search) {
+      conditions.push(ilike(roles.name, `%${query.search}%`));
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const sortColumn = {
+      name: roles.name,
+      createdAt: roles.createdAt,
+    }[query.sort ?? 'createdAt'];
+
+    const orderFn = query.order === 'asc' ? asc : desc;
+
+    const [{ total }] = await this.database.db
+      .select({ total: count() })
+      .from(roles)
+      .where(whereClause);
+
+    const data = await this.database.db
+      .select()
+      .from(roles)
+      .where(whereClause)
+      .orderBy(orderFn(sortColumn))
+      .limit(limit)
+      .offset(offset);
+
+    return {
+      data,
+      meta: {
+        total: Number(total),
+        page,
+        limit,
+        totalPages: Math.ceil(Number(total) / limit),
+      },
+    };
   }
 
   // --- Permissions ---
