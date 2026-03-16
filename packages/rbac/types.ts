@@ -12,6 +12,11 @@ export interface Permission {
   name: string;
 }
 
+export type PermissionScope = 'own' | 'all';
+
+/** Map of permission name → scope (e.g. { "users.read": "all", "users.update": "own" }) */
+export type ScopedPermissions = Record<string, PermissionScope>;
+
 export interface PermissionRegistryEntry {
   module: string;
   action: string;

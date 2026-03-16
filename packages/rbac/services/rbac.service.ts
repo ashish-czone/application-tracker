@@ -5,7 +5,7 @@ import { permissions } from '../schema/permissions';
 import { rolePermissions } from '../schema/role-permissions';
 import { userRoles } from '../schema/user-roles';
 import { PermissionRegistryService } from './permission-registry.service';
-import type { Role, Permission } from '../types';
+import type { Role, Permission, ScopedPermissions, PermissionScope } from '../types';
 
 @Injectable()
 export class RbacService {
@@ -81,24 +81,41 @@ export class RbacService {
 
   // --- Permissions ---
 
-  async getPermissionsForUser(userId: string, userType: string): Promise<string[]> {
+  async getPermissionsForUser(userId: string, userType: string): Promise<ScopedPermissions> {
     const results = await this.database.db
-      .select({ name: permissions.name })
+      .select({ name: permissions.name, scope: rolePermissions.scope })
       .from(userRoles)
       .innerJoin(roles, and(eq(roles.id, userRoles.roleId), eq(roles.userType, userType)))
       .innerJoin(rolePermissions, eq(rolePermissions.roleId, roles.id))
       .innerJoin(permissions, eq(permissions.id, rolePermissions.permissionId))
       .where(eq(userRoles.userId, userId));
 
-    return [...new Set(results.map((r) => r.name))];
+    // If user has same permission from multiple roles, highest scope wins (all > own)
+    const scopedPermissions: ScopedPermissions = {};
+    for (const r of results) {
+      const existing = scopedPermissions[r.name];
+      const incoming = r.scope as PermissionScope;
+      if (!existing || this.scopeRank(incoming) > this.scopeRank(existing)) {
+        scopedPermissions[r.name] = incoming;
+      }
+    }
+    return scopedPermissions;
   }
 
-  async setRolePermissions(roleId: string, permissionNames: string[]): Promise<void> {
+  async setRolePermissions(roleId: string, permissionEntries: string[] | { name: string; scope?: PermissionScope }[]): Promise<void> {
     const role = await this.findRoleById(roleId);
     if (!role) throw new NotFoundException('Role not found');
 
+    // Normalize to { name, scope } format
+    const entries = permissionEntries.map((e) =>
+      typeof e === 'string' ? { name: e, scope: 'all' as PermissionScope } : { name: e.name, scope: e.scope ?? 'all' },
+    );
+
     // Ensure all permissions exist in DB, create missing ones
-    const permissionRecords = await this.ensurePermissionsExist(permissionNames);
+    const permissionRecords = await this.ensurePermissionsExist(entries.map((e) => e.name));
+
+    // Build a name→scope map for lookup
+    const scopeByName = new Map(entries.map((e) => [e.name, e.scope]));
 
     // Replace: delete existing, insert new
     await this.database.db
@@ -108,18 +125,26 @@ export class RbacService {
     if (permissionRecords.length > 0) {
       await this.database.db
         .insert(rolePermissions)
-        .values(permissionRecords.map((p) => ({ roleId, permissionId: p.id })));
+        .values(permissionRecords.map((p) => ({
+          roleId,
+          permissionId: p.id,
+          scope: scopeByName.get(p.name) ?? 'all',
+        })));
     }
   }
 
-  async getRolePermissions(roleId: string): Promise<string[]> {
+  async getRolePermissions(roleId: string): Promise<ScopedPermissions> {
     const results = await this.database.db
-      .select({ name: permissions.name })
+      .select({ name: permissions.name, scope: rolePermissions.scope })
       .from(rolePermissions)
       .innerJoin(permissions, eq(permissions.id, rolePermissions.permissionId))
       .where(eq(rolePermissions.roleId, roleId));
 
-    return results.map((r) => r.name);
+    const scopedPermissions: ScopedPermissions = {};
+    for (const r of results) {
+      scopedPermissions[r.name] = r.scope as PermissionScope;
+    }
+    return scopedPermissions;
   }
 
   // --- User-role assignment ---
@@ -186,6 +211,11 @@ export class RbacService {
   }
 
   // --- Private helpers ---
+
+  private scopeRank(scope: PermissionScope): number {
+    const ranks: Record<PermissionScope, number> = { own: 1, all: 2 };
+    return ranks[scope] ?? 0;
+  }
 
   private async ensurePermissionsExist(names: string[]): Promise<Permission[]> {
     if (names.length === 0) return [];

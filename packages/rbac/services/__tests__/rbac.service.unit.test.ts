@@ -143,6 +143,45 @@ describe('RbacService', () => {
     });
   });
 
+  describe('getPermissionsForUser', () => {
+    it('should return scoped permissions as Record<string, scope>', async () => {
+      mockDb._chain.where.mockResolvedValueOnce([
+        { name: 'users.read', scope: 'all' },
+        { name: 'users.update', scope: 'own' },
+      ]);
+
+      const result = await service.getPermissionsForUser('user-1', 'admin');
+
+      expect(result).toEqual({
+        'users.read': 'all',
+        'users.update': 'own',
+      });
+    });
+
+    it('should resolve highest scope when same permission from multiple roles', async () => {
+      mockDb._chain.where.mockResolvedValueOnce([
+        { name: 'users.read', scope: 'own' },
+        { name: 'users.read', scope: 'all' },
+        { name: 'users.update', scope: 'own' },
+      ]);
+
+      const result = await service.getPermissionsForUser('user-1', 'admin');
+
+      expect(result).toEqual({
+        'users.read': 'all',
+        'users.update': 'own',
+      });
+    });
+
+    it('should return empty object when user has no permissions', async () => {
+      mockDb._chain.where.mockResolvedValueOnce([]);
+
+      const result = await service.getPermissionsForUser('user-1', 'admin');
+
+      expect(result).toEqual({});
+    });
+  });
+
   describe('assignRoleToUser', () => {
     it('should throw NotFoundException if role not found', async () => {
       vi.spyOn(service, 'findRoleById').mockResolvedValueOnce(null);

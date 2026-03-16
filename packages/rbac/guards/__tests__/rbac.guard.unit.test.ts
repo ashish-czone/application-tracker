@@ -25,14 +25,14 @@ describe('RbacGuard', () => {
   });
 
   it('should allow access when user has the required permission', () => {
-    const user = { userId: 'u1', permissions: ['candidates.create', 'candidates.read'] };
+    const user = { userId: 'u1', permissions: { 'candidates.create': 'all', 'candidates.read': 'own' } };
     const { guard, context } = createMockContext(user, 'candidates.create');
 
     expect(guard.canActivate(context)).toBe(true);
   });
 
   it('should throw ForbiddenException when user lacks the required permission', () => {
-    const user = { userId: 'u1', permissions: ['candidates.read'] };
+    const user = { userId: 'u1', permissions: { 'candidates.read': 'all' } };
     const { guard, context } = createMockContext(user, 'candidates.create');
 
     expect(() => guard.canActivate(context)).toThrow(ForbiddenException);
