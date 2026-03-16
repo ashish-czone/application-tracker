@@ -1,11 +1,12 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import path from 'path';
 import { DatabaseModule } from '@packages/database';
 import { EventsModule } from '@packages/events';
 import { SettingsModule } from '@packages/settings';
+import { QueueModule } from '@packages/queue';
 import { AuthGuard } from '@packages/auth';
 import { RbacGuard } from '@packages/rbac';
 import { AuthOrchestratorModule } from './modules/auth/auth.module';
@@ -23,6 +24,12 @@ import { validate } from './config/env.validation';
     DatabaseModule,
     EventsModule,
     SettingsModule,
+    QueueModule.registerAsync({
+      useFactory: (config: ConfigService) => ({
+        redisUrl: config.get<string>('REDIS_URL')!,
+      }),
+      inject: [ConfigService],
+    }),
     ThrottlerModule.forRoot([{
       ttl: 60000,
       limit: 100,
