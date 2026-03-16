@@ -3,14 +3,22 @@ export { NotificationDispatcher } from './services/notification-dispatcher';
 export { PreferenceService } from './services/preference.service';
 export { NotificationTemplatesService } from './services/notification-templates.service';
 export { NotificationRulesService } from './services/notification-rules.service';
+export { EntityResolverRegistry } from './services/entity-resolver-registry';
+export { buildConditions } from './helpers/condition-builder';
 export type {
   NotificationChannel,
   RecipientStrategy,
+  TriggerType,
+  ScheduleDateOperator,
+  ScheduleUnit,
+  Condition,
+  ConditionOperator,
   NotificationRule,
   NotificationTemplate,
   RenderedNotification,
   ChannelProvider,
   ChannelContext,
+  EntityResolverConfig,
 } from './types';
 export {
   notificationTemplates,
@@ -18,4 +26,6 @@ export {
   notificationRuleChannels,
   notifications,
   notificationPreferences,
+  notificationScheduled,
+  notificationSentLog,
 } from './schema';

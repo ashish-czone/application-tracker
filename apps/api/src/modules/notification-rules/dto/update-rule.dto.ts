@@ -1,5 +1,19 @@
-import { IsString, MinLength, MaxLength, IsIn, IsOptional, IsBoolean, IsObject } from 'class-validator';
+import { IsString, MinLength, MaxLength, IsIn, IsOptional, IsBoolean, IsObject, IsArray, ValidateNested, IsInt, Min } from 'class-validator';
+import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+
+class ConditionDto {
+  @IsString()
+  @MaxLength(100)
+  field!: string;
+
+  @IsString()
+  @IsIn(['eq', 'neq', 'in', 'gt', 'lt', 'is_null', 'is_not_null'])
+  operator!: string;
+
+  @IsOptional()
+  value?: unknown;
+}
 
 export class UpdateRuleDto {
   @ApiPropertyOptional({ example: 'Updated rule name' })
@@ -24,4 +38,11 @@ export class UpdateRuleDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @ApiPropertyOptional({ type: [ConditionDto] })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ConditionDto)
+  conditions?: ConditionDto[];
 }

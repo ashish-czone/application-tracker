@@ -71,7 +71,16 @@ export class NotificationRulesService {
 
   async create(data: {
     name: string;
-    eventName: string;
+    triggerType?: string;
+    eventName?: string;
+    delayAmount?: number;
+    delayUnit?: string;
+    scheduleEntityType?: string;
+    scheduleDateField?: string;
+    scheduleDateOperator?: string;
+    scheduleDateAmount?: number;
+    scheduleDateUnit?: string;
+    conditions?: Record<string, unknown>[];
     recipientStrategy: RecipientStrategy;
     recipientConfig?: Record<string, unknown>;
     channels: { channel: NotificationChannel; templateId: string }[];
@@ -80,7 +89,16 @@ export class NotificationRulesService {
       .insert(notificationRules)
       .values({
         name: data.name,
-        eventName: data.eventName,
+        triggerType: data.triggerType ?? 'event',
+        eventName: data.eventName ?? null,
+        delayAmount: data.delayAmount ?? null,
+        delayUnit: data.delayUnit ?? null,
+        scheduleEntityType: data.scheduleEntityType ?? null,
+        scheduleDateField: data.scheduleDateField ?? null,
+        scheduleDateOperator: data.scheduleDateOperator ?? null,
+        scheduleDateAmount: data.scheduleDateAmount ?? null,
+        scheduleDateUnit: data.scheduleDateUnit ?? null,
+        conditions: data.conditions ?? null,
         recipientStrategy: data.recipientStrategy,
         recipientConfig: data.recipientConfig ?? null,
       })
@@ -106,6 +124,7 @@ export class NotificationRulesService {
     recipientStrategy?: RecipientStrategy;
     recipientConfig?: Record<string, unknown>;
     isActive?: boolean;
+    conditions?: Record<string, unknown>[];
   }): Promise<RuleWithChannels> {
     await this.findByIdOrFail(id);
 
@@ -114,6 +133,7 @@ export class NotificationRulesService {
     if (data.recipientStrategy !== undefined) updateValues.recipientStrategy = data.recipientStrategy;
     if (data.recipientConfig !== undefined) updateValues.recipientConfig = data.recipientConfig;
     if (data.isActive !== undefined) updateValues.isActive = data.isActive;
+    if (data.conditions !== undefined) updateValues.conditions = data.conditions;
 
     if (Object.keys(updateValues).length > 0) {
       await this.database.db
