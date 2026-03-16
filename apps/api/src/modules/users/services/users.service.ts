@@ -51,9 +51,9 @@ export interface ListUsersQuery {
 
 export interface UserWithType {
   id: string;
-  email: string | null;
-  firstName: string | null;
-  lastName: string | null;
+  email: string;
+  firstName: string;
+  lastName: string;
   userType: string;
   createdAt: Date;
   updatedAt: Date;
