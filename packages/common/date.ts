@@ -1,5 +1,5 @@
 import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
-import { getHours } from 'date-fns';
+import { getHours, addDays } from 'date-fns';
 
 /**
  * Get today's date as YYYY-MM-DD in the given IANA timezone.
@@ -37,4 +37,30 @@ export function localHourToUtcHour(localHour: number, timezone: string): number 
 export function cronForLocalHour(localHour: number, timezone: string): string {
   const utcHour = localHourToUtcHour(localHour, timezone);
   return `0 ${utcHour} * * *`;
+}
+
+/**
+ * Get the UTC start of day for a calendar date string in a given timezone.
+ * Use this when filtering timestamptz columns by a user-selected date.
+ *
+ * @example
+ * // User in Dubai selects March 17
+ * startOfDayInTimezone('2026-03-17', 'Asia/Dubai')
+ * // → 2026-03-16T20:00:00.000Z (midnight Dubai = 8 PM UTC previous day)
+ */
+export function startOfDayInTimezone(dateStr: string, timezone: string): Date {
+  return fromZonedTime(`${dateStr}T00:00:00`, timezone);
+}
+
+/**
+ * Get the UTC start of the next day for a calendar date string in a given timezone.
+ * Use as the exclusive upper bound: WHERE created_at >= start AND created_at < end.
+ *
+ * @example
+ * endOfDayInTimezone('2026-03-17', 'Asia/Dubai')
+ * // → 2026-03-17T20:00:00.000Z (midnight March 18 Dubai = 8 PM UTC March 17)
+ */
+export function endOfDayInTimezone(dateStr: string, timezone: string): Date {
+  const startOfDay = fromZonedTime(`${dateStr}T00:00:00`, timezone);
+  return addDays(startOfDay, 1);
 }

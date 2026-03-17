@@ -219,6 +219,32 @@ GET /candidates?status=active&orderId=uuid
 - Date range filters: `?createdAfter=2026-01-01&createdBefore=2026-03-01`
 - Search (text match): `?search=john` — always server-side, always debounced on the frontend.
 
+**Timezone-aware date filtering on `timestamptz` columns:**
+
+The frontend sends plain calendar date strings (e.g., `createdAfter=2026-03-17`). It never converts to UTC — the server is the single source of truth for timezone interpretation via `APP_TIMEZONE`.
+
+The server interprets the date in the app timezone and converts to a UTC range before querying:
+
+```ts
+import { startOfDayInTimezone, endOfDayInTimezone } from '@packages/common';
+
+const tz = process.env.APP_TIMEZONE ?? 'UTC';
+
+// createdAfter=2026-03-17 in Dubai (UTC+4) →
+//   >= 2026-03-16T20:00:00Z (midnight Dubai in UTC)
+if (query.createdAfter) {
+  conditions.push(gte(table.createdAt, startOfDayInTimezone(query.createdAfter, tz)));
+}
+
+// createdBefore=2026-03-17 in Dubai →
+//   < 2026-03-17T20:00:00Z (midnight March 18 Dubai in UTC)
+if (query.createdBefore) {
+  conditions.push(lt(table.createdAt, endOfDayInTimezone(query.createdBefore, tz)));
+}
+```
+
+This rule applies to **every** filter on a `timestamptz` column (`createdAt`, `updatedAt`, or any column stored with timezone). It does **not** apply to `DATE` columns (`dueDate`, `startDate`, `birthDate`) — those are plain calendar dates and are filtered directly without conversion.
+
 ### Sorting
 
 ```
