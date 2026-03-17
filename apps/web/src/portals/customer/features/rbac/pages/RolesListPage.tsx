@@ -3,13 +3,14 @@ import { Shield, Plus, Pencil, Trash2, ShieldCheck } from 'lucide-react';
 import { format } from 'date-fns';
 import {
   DataGrid, Badge, Button, useDataGridParams,
-  Dialog, DialogContent, ConfirmDialog,
+  Dialog, DialogContent,
   type ColumnDef, type DataGridFilter,
 } from '@packages/ui';
-import { useRolesList, useDeleteRole } from '../hooks';
+import { useRolesList } from '../hooks';
 import { AddRoleForm } from '../components/AddRoleForm';
 import { EditRoleForm } from '../components/EditRoleForm';
 import { PermissionsModal } from '../components/PermissionsModal';
+import { DeleteRoleDialog } from '../components/DeleteRoleDialog';
 import type { Role } from '../types';
 
 const USER_TYPE_LABELS: Record<string, string> = {
@@ -39,10 +40,6 @@ export default function RolesListPage() {
   } = useDataGridParams({ defaultSort: 'createdAt', defaultOrder: 'desc' });
 
   const userType = getFilter('userType');
-
-  const deleteMutation = useDeleteRole({
-    onSuccess: () => setDeletingRole(null),
-  });
 
   const { data, isLoading, isError, refetch } = useRolesList({
     page,
@@ -265,18 +262,9 @@ export default function RolesListPage() {
       </Dialog>
 
       {/* Delete Confirmation */}
-      <ConfirmDialog
-        open={!!deletingRole}
-        onOpenChange={(open) => !open && setDeletingRole(null)}
-        title="Delete role"
-        description={
-          deletingRole
-            ? `This will permanently delete the "${deletingRole.name}" role. Users assigned to this role will lose their permissions.`
-            : ''
-        }
-        confirmLabel="Delete role"
-        isPending={deleteMutation.isPending}
-        onConfirm={() => deletingRole && deleteMutation.mutate(deletingRole.id)}
+      <DeleteRoleDialog
+        role={deletingRole}
+        onClose={() => setDeletingRole(null)}
       />
 
       {/* Permissions Modal */}

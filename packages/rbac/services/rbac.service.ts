@@ -62,6 +62,14 @@ export class RbacService {
       .where(eq(roles.id, id));
   }
 
+  async getRoleUserCount(id: string): Promise<number> {
+    const [{ total }] = await this.database.db
+      .select({ total: count() })
+      .from(userRoles)
+      .where(eq(userRoles.roleId, id));
+    return Number(total);
+  }
+
   async findRoleById(id: string): Promise<Role | null> {
     const [role] = await this.database.db
       .select()

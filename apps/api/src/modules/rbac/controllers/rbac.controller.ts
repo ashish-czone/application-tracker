@@ -67,6 +67,15 @@ export class RbacController {
     await this.rbacService.deleteRole(id);
   }
 
+  @Get('roles/:id/user-count')
+  @RequirePermission(RBAC_PERMISSIONS.ROLES_READ)
+  @ApiOperation({ summary: 'Get number of users assigned to a role' })
+  async getRoleUserCount(@Param('id', ParseUUIDPipe) id: string) {
+    await this.rbacService.findRoleByIdOrFail(id);
+    const count = await this.rbacService.getRoleUserCount(id);
+    return { count };
+  }
+
   // --- Role Permissions ---
 
   @Get('roles/:id/permissions')
