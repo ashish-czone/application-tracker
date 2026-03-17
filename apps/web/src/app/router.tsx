@@ -2,7 +2,7 @@ import { Suspense, lazy } from 'react';
 import { Routes, Route, Navigate } from 'react-router';
 import { AppLayout } from './layout/AppLayout';
 import { AuthGuard } from '../shared/auth/components/AuthGuard';
-import { UsersListPage } from '../portals/customer/routes';
+import { UsersListPage, RolesListPage } from '../portals/customer/routes';
 
 const LoginPage = lazy(() => import('../shared/auth/pages/LoginPage'));
 const RegisterPage = lazy(() => import('../shared/auth/pages/RegisterPage'));
@@ -47,6 +47,14 @@ export function AppRouter() {
             element={
               <Suspense fallback={<PageSkeleton />}>
                 <UsersListPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/roles"
+            element={
+              <Suspense fallback={<PageSkeleton />}>
+                <RolesListPage />
               </Suspense>
             }
           />

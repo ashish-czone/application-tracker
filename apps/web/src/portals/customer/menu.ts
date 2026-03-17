@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users } from 'lucide-react';
+import { LayoutDashboard, Users, Shield } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 export interface MenuItem {
@@ -10,4 +10,5 @@ export interface MenuItem {
 export const customerMenu: MenuItem[] = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/users', label: 'Users', icon: Users },
+  { path: '/roles', label: 'Roles', icon: Shield },
 ];
