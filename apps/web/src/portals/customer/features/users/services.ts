@@ -1,6 +1,6 @@
 import { api } from '../../../../lib/api';
 import type { PaginatedResponse } from '@packages/common';
-import type { User, Role, CreateUserRequest, ListUsersParams } from './types';
+import type { User, Role, CreateUserRequest, UpdateUserRequest, ListUsersParams } from './types';
 
 export function listUsers(params: ListUsersParams): Promise<PaginatedResponse<User>> {
   const searchParams = new URLSearchParams();
@@ -18,6 +18,14 @@ export function listUsers(params: ListUsersParams): Promise<PaginatedResponse<Us
 
 export function createUser(data: CreateUserRequest): Promise<User> {
   return api.post<User>('/users', data);
+}
+
+export function updateUser(id: string, data: UpdateUserRequest): Promise<User> {
+  return api.patch<User>(`/users/${id}`, data);
+}
+
+export function deleteUser(id: string): Promise<void> {
+  return api.delete<void>(`/users/${id}`);
 }
 
 export function checkUnique(entity: string, field: string, value: string, excludeId?: string): Promise<{ unique: boolean }> {

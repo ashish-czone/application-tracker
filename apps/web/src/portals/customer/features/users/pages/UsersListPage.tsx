@@ -1,13 +1,14 @@
 import { useMemo, useState } from 'react';
-import { Users, Plus } from 'lucide-react';
+import { Users, Plus, Pencil, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import {
   DataGrid, Badge, Button, useDataGridParams,
-  Dialog, DialogContent,
+  Dialog, DialogContent, ConfirmDialog,
   type ColumnDef, type DataGridFilter,
 } from '@packages/ui';
-import { useUsers } from '../hooks';
+import { useUsers, useDeleteUser } from '../hooks';
 import { AddUserForm } from '../components/AddUserForm';
+import { EditUserForm } from '../components/EditUserForm';
 import type { User } from '../types';
 
 const USER_TYPE_LABELS: Record<string, string> = {
@@ -15,63 +16,10 @@ const USER_TYPE_LABELS: Record<string, string> = {
   client: 'Client',
 };
 
-const columns: ColumnDef<User, unknown>[] = [
-  {
-    id: 'firstName',
-    header: 'Name',
-    accessorFn: (row) => `${row.firstName} ${row.lastName}`,
-    cell: ({ row }) => (
-      <div>
-        <div className="font-medium text-foreground">
-          {row.original.firstName} {row.original.lastName}
-        </div>
-        <div className="text-xs text-muted-foreground">{row.original.email}</div>
-      </div>
-    ),
-    enableSorting: true,
-  },
-  {
-    id: 'email',
-    header: 'Email',
-    accessorKey: 'email',
-    enableSorting: true,
-    enableHiding: true,
-  },
-  {
-    id: 'phone',
-    header: 'Phone',
-    accessorKey: 'phone',
-    cell: ({ getValue }) => getValue() || '-',
-    enableSorting: false,
-    enableHiding: true,
-  },
-  {
-    id: 'userType',
-    header: 'Type',
-    accessorKey: 'userType',
-    cell: ({ getValue }) => {
-      const type = getValue() as string;
-      return (
-        <Badge variant={type === 'admin' ? 'default' : 'secondary'}>
-          {USER_TYPE_LABELS[type] ?? type}
-        </Badge>
-      );
-    },
-    enableSorting: false,
-    enableHiding: true,
-  },
-  {
-    id: 'createdAt',
-    header: 'Created',
-    accessorKey: 'createdAt',
-    cell: ({ getValue }) => format(new Date(getValue() as string), 'MMM d, yyyy'),
-    enableSorting: true,
-    enableHiding: true,
-  },
-];
-
 export default function UsersListPage() {
   const [addModalOpen, setAddModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [deletingUser, setDeletingUser] = useState<User | null>(null);
   const {
     page,
     pageSize,
@@ -89,6 +37,10 @@ export default function UsersListPage() {
 
   const userType = getFilter('userType');
 
+  const deleteMutation = useDeleteUser({
+    onSuccess: () => setDeletingUser(null),
+  });
+
   const { data, isLoading, isError, refetch } = useUsers({
     page,
     limit: pageSize,
@@ -97,6 +49,91 @@ export default function UsersListPage() {
     order,
     userType,
   });
+
+  const columns = useMemo<ColumnDef<User, unknown>[]>(
+    () => [
+      {
+        id: 'firstName',
+        header: 'Name',
+        accessorFn: (row) => `${row.firstName} ${row.lastName}`,
+        cell: ({ row }) => (
+          <div>
+            <div className="font-medium text-foreground">
+              {row.original.firstName} {row.original.lastName}
+            </div>
+            <div className="text-xs text-muted-foreground">{row.original.email}</div>
+          </div>
+        ),
+        enableSorting: true,
+      },
+      {
+        id: 'email',
+        header: 'Email',
+        accessorKey: 'email',
+        enableSorting: true,
+        enableHiding: true,
+      },
+      {
+        id: 'phone',
+        header: 'Phone',
+        accessorKey: 'phone',
+        cell: ({ getValue }) => getValue() || '-',
+        enableSorting: false,
+        enableHiding: true,
+      },
+      {
+        id: 'userType',
+        header: 'Type',
+        accessorKey: 'userType',
+        cell: ({ getValue }) => {
+          const type = getValue() as string;
+          return (
+            <Badge variant={type === 'admin' ? 'default' : 'secondary'}>
+              {USER_TYPE_LABELS[type] ?? type}
+            </Badge>
+          );
+        },
+        enableSorting: false,
+        enableHiding: true,
+      },
+      {
+        id: 'createdAt',
+        header: 'Created',
+        accessorKey: 'createdAt',
+        cell: ({ getValue }) => format(new Date(getValue() as string), 'MMM d, yyyy'),
+        enableSorting: true,
+        enableHiding: true,
+      },
+      {
+        id: 'actions',
+        header: '',
+        size: 80,
+        enableHiding: false,
+        enableSorting: false,
+        cell: ({ row }) => (
+          <div className="flex items-center gap-1 justify-end">
+            <button
+              type="button"
+              onClick={() => setEditingUser(row.original)}
+              className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+              aria-label={`Edit ${row.original.firstName}`}
+            >
+              <Pencil className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setDeletingUser(row.original)}
+              className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+              aria-label={`Delete ${row.original.firstName}`}
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
+        ),
+      },
+    ],
+    [],
+  );
 
   const activeFilters = useMemo<DataGridFilter[]>(() => {
     const filters: DataGridFilter[] = [];
@@ -168,9 +205,27 @@ export default function UsersListPage() {
               <div className="font-medium text-foreground">
                 {user.firstName} {user.lastName}
               </div>
-              <Badge variant={user.userType === 'admin' ? 'default' : 'secondary'}>
-                {USER_TYPE_LABELS[user.userType] ?? user.userType}
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Badge variant={user.userType === 'admin' ? 'default' : 'secondary'}>
+                  {USER_TYPE_LABELS[user.userType] ?? user.userType}
+                </Badge>
+                <button
+                  type="button"
+                  onClick={() => setEditingUser(user)}
+                  className="p-1 text-muted-foreground hover:text-foreground"
+                  aria-label="Edit"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDeletingUser(user)}
+                  className="p-1 text-muted-foreground hover:text-destructive"
+                  aria-label="Delete"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
             </div>
             <div className="text-sm text-muted-foreground">{user.email}</div>
             {user.phone && (
@@ -183,11 +238,36 @@ export default function UsersListPage() {
         )}
       />
 
+      {/* Add User Modal */}
       <Dialog open={addModalOpen} onOpenChange={setAddModalOpen}>
         <DialogContent className="sm:max-w-lg">
           <AddUserForm onClose={() => setAddModalOpen(false)} />
         </DialogContent>
       </Dialog>
+
+      {/* Edit User Modal */}
+      <Dialog open={!!editingUser} onOpenChange={(open) => !open && setEditingUser(null)}>
+        <DialogContent className="sm:max-w-lg">
+          {editingUser && (
+            <EditUserForm user={editingUser} onClose={() => setEditingUser(null)} />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <ConfirmDialog
+        open={!!deletingUser}
+        onOpenChange={(open) => !open && setDeletingUser(null)}
+        title="Delete user"
+        description={
+          deletingUser
+            ? `This will permanently delete ${deletingUser.firstName} ${deletingUser.lastName} and all associated data.`
+            : ''
+        }
+        confirmLabel="Delete user"
+        isPending={deleteMutation.isPending}
+        onConfirm={() => deletingUser && deleteMutation.mutate(deletingUser.id)}
+      />
     </div>
   );
 }
