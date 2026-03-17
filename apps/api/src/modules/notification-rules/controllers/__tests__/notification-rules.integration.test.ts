@@ -162,6 +162,56 @@ describe('NotificationRulesController + TemplatesController (integration)', () =
       expect(res.body.channels[0].channel).toBe('email');
     });
 
+    it('should create a schedule_once rule with multiple date amounts', async () => {
+      const template = await templatesService.create({ name: 'Reminder Template', channel: 'email', body: '{{#entities}}{{name}}{{/entities}}' });
+
+      const res = await request(httpServer)
+        .post('/api/v1/notification-rules')
+        .set('Authorization', `Bearer ${adminIdentity.accessToken}`)
+        .send({
+          name: 'Multi-day reminder',
+          triggerType: 'schedule_once',
+          scheduleEntityType: 'tasks',
+          scheduleDateField: 'dueDate',
+          scheduleDateOperator: 'before',
+          scheduleDateAmounts: [7, 3, 1],
+          scheduleDateUnit: 'days',
+          recipientStrategy: 'entity_owner',
+          recipientConfig: { field: 'ownerId' },
+          channels: [{ channel: 'email', templateId: template.id }],
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body).toMatchObject({
+        id: expect.any(String),
+        name: 'Multi-day reminder',
+        triggerType: 'schedule_once',
+        scheduleDateAmounts: [7, 3, 1],
+        scheduleDateUnit: 'days',
+      });
+    });
+
+    it('should return 400 for non-integer scheduleDateAmounts', async () => {
+      const template = await templatesService.create({ name: 'Bad Amounts Template', channel: 'email', body: 'test' });
+
+      const res = await request(httpServer)
+        .post('/api/v1/notification-rules')
+        .set('Authorization', `Bearer ${adminIdentity.accessToken}`)
+        .send({
+          name: 'Bad amounts rule',
+          triggerType: 'schedule_once',
+          scheduleEntityType: 'tasks',
+          scheduleDateField: 'dueDate',
+          scheduleDateOperator: 'before',
+          scheduleDateAmounts: ['abc', 'def'],
+          scheduleDateUnit: 'days',
+          recipientStrategy: 'actor',
+          channels: [{ channel: 'email', templateId: template.id }],
+        });
+
+      expect(res.status).toBe(400);
+    });
+
     it('should return 400 for missing fields', async () => {
       const res = await request(httpServer)
         .post('/api/v1/notification-rules')
