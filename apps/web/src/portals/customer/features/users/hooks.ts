@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from '@packages/ui';
 import { listUsers, listRoles, createUser } from './services';
 import type { ListUsersParams, CreateUserRequest } from './types';
 
@@ -23,7 +24,11 @@ export function useCreateUser(options?: { onSuccess?: () => void }) {
     mutationFn: (data: CreateUserRequest) => createUser(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast.success('User created');
       options?.onSuccess?.();
+    },
+    onError: (error: any) => {
+      toast.error(error?.body?.message || 'Failed to create user');
     },
   });
 }
