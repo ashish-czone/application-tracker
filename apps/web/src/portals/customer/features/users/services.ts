@@ -11,6 +11,7 @@ export function listUsers(params: ListUsersParams): Promise<PaginatedResponse<Us
   if (params.sort) searchParams.set('sort', params.sort);
   if (params.order) searchParams.set('order', params.order);
   if (params.userType) searchParams.set('userType', params.userType);
+  if (params.includeDeleted) searchParams.set('includeDeleted', 'true');
 
   const qs = searchParams.toString();
   return api.get<PaginatedResponse<User>>(`/users${qs ? `?${qs}` : ''}`);
@@ -26,6 +27,10 @@ export function updateUser(id: string, data: UpdateUserRequest): Promise<User> {
 
 export function deleteUser(id: string): Promise<void> {
   return api.delete<void>(`/users/${id}`);
+}
+
+export function restoreUser(id: string): Promise<User> {
+  return api.patch<User>(`/users/${id}/restore`);
 }
 
 export function checkUnique(entity: string, field: string, value: string, excludeId?: string): Promise<{ unique: boolean }> {

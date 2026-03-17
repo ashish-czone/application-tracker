@@ -49,6 +49,7 @@ export interface ListUsersQuery {
   userType?: string;
   sort?: 'firstName' | 'email' | 'createdAt';
   order?: 'asc' | 'desc';
+  includeDeleted?: boolean;
 }
 
 export interface UserWithType {
@@ -60,6 +61,7 @@ export interface UserWithType {
   userType: string;
   createdAt: Date;
   updatedAt: Date;
+  deletedAt: Date | null;
 }
 
 @Injectable()
@@ -77,7 +79,10 @@ export class UsersService {
     const offset = (page - 1) * limit;
 
     // Build where conditions
-    const conditions = [isNull(users.deletedAt)];
+    const conditions: any[] = [];
+    if (!query.includeDeleted) {
+      conditions.push(isNull(users.deletedAt));
+    }
 
     if (query.search) {
       const pattern = `%${query.search}%`;
@@ -129,6 +134,7 @@ export class UsersService {
       userType: row.userType,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
+      deletedAt: row.deletedAt,
     }));
 
     return {
@@ -328,5 +334,35 @@ export class UsersService {
         lastName: user.lastName,
       },
     });
+  }
+
+  async restore(id: string): Promise<UserWithType> {
+    // Find user including deleted
+    const [row] = await this.database.db
+      .select()
+      .from(users)
+      .where(eq(users.id, id))
+      .limit(1);
+
+    if (!row) throw new NotFoundException('User not found');
+    if (!row.deletedAt) throw new ConflictException('User is not deleted');
+
+    const [restored] = await this.database.db
+      .update(users)
+      .set({ deletedAt: null, deletedBy: null })
+      .where(eq(users.id, id))
+      .returning();
+
+    return {
+      id: restored.id,
+      email: restored.email,
+      phone: restored.phone,
+      firstName: restored.firstName,
+      lastName: restored.lastName,
+      userType: restored.userType,
+      createdAt: restored.createdAt,
+      updatedAt: restored.updatedAt,
+      deletedAt: restored.deletedAt,
+    };
   }
 }

@@ -29,7 +29,10 @@ export class UsersController {
   @RequirePermission(USERS_PERMISSIONS.READ)
   @ApiOperation({ summary: 'List users with pagination, search, and filtering' })
   async list(@Query() query: ListUsersQueryDto) {
-    return this.usersService.list(query);
+    return this.usersService.list({
+      ...query,
+      includeDeleted: query.includeDeleted === 'true',
+    });
   }
 
   @Get(':id')
@@ -64,5 +67,12 @@ export class UsersController {
   @ApiOperation({ summary: 'Soft delete a user' })
   async delete(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: JwtPayload) {
     await this.usersService.softDelete(id, user.userId);
+  }
+
+  @Patch(':id/restore')
+  @RequirePermission(USERS_PERMISSIONS.UPDATE)
+  @ApiOperation({ summary: 'Restore a soft-deleted user' })
+  async restore(@Param('id', ParseUUIDPipe) id: string) {
+    return this.usersService.restore(id);
   }
 }
