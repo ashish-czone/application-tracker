@@ -28,6 +28,8 @@ export {
   DialogDescription,
 } from './components/feedback/Dialog';
 
+export { Toaster, toast } from './components/feedback/Toast';
+
 export {
   DropdownMenu,
   DropdownMenuTrigger,
