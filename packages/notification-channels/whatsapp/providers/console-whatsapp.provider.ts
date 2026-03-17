@@ -8,7 +8,7 @@ export class ConsoleWhatsAppProvider implements WhatsAppProvider {
 
   async send(payload: WhatsAppPayload): Promise<SendResult> {
     this.logger.log({
-      to: payload.to,
+      recipientId: payload.recipientId,
       correlationId: payload.correlationId,
     }, 'WhatsApp sent (console provider — no actual delivery)');
 

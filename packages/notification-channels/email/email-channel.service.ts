@@ -33,7 +33,7 @@ export class EmailChannelService {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error({
         provider: provider.name,
-        to: payload.to,
+        recipientId: payload.recipientId,
         correlationId: payload.correlationId,
         error: message,
       }, 'Email send failed');

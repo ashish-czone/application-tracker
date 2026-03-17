@@ -5,7 +5,7 @@ import type { EmailProvider, EmailPayload } from '../types';
 
 function buildPayload(overrides: Partial<EmailPayload> = {}): EmailPayload {
   return {
-    to: 'user@example.com',
+    recipientId: 'user-1',
     subject: 'Test Subject',
     body: '<p>Hello</p>',
     correlationId: 'corr-1',
