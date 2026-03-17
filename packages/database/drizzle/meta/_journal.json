@@ -15,6 +15,13 @@
       "when": 1774004400000,
       "tag": "0001_multi_day_reminders",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1774090800000,
+      "tag": "0002_workflow_tables",
+      "breakpoints": true
     }
   ]
 }
