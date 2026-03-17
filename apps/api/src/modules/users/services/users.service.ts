@@ -33,7 +33,7 @@ export interface CreateUserInput {
   lastName: string;
   password: string;
   userType: string;
-  roleId: string;
+  roleIds: string[];
 }
 
 export interface UpdateUserInput {
@@ -216,13 +216,15 @@ export class UsersService {
   }
 
   async create(data: CreateUserInput, actorId: string): Promise<UserWithType> {
-    // Validate role exists and matches userType
-    const role = await this.rbacService.findRoleById(data.roleId);
-    if (!role) throw new NotFoundException('Role not found');
-    if (role.userType !== data.userType) {
-      throw new ConflictException(
-        `Role '${role.name}' is scoped to '${role.userType}', but user type is '${data.userType}'`,
-      );
+    // Validate all roles exist and match userType
+    for (const roleId of data.roleIds) {
+      const role = await this.rbacService.findRoleById(roleId);
+      if (!role) throw new NotFoundException(`Role '${roleId}' not found`);
+      if (role.userType !== data.userType) {
+        throw new ConflictException(
+          `Role '${role.name}' is scoped to '${role.userType}', but user type is '${data.userType}'`,
+        );
+      }
     }
 
     // Check email uniqueness
@@ -257,8 +259,10 @@ export class UsersService {
       return newUser;
     });
 
-    // Assign role (outside transaction — idempotent)
-    await this.rbacService.assignRoleToUser(user.id, data.roleId);
+    // Assign roles (outside transaction — idempotent)
+    for (const roleId of data.roleIds) {
+      await this.rbacService.assignRoleToUser(user.id, roleId);
+    }
 
     this.domainEventEmitter.emit(USERS_USER_CREATED, {
       entityType: 'users',
