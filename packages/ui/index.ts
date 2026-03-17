@@ -23,6 +23,17 @@ export {
   DialogDescription,
 } from './components/feedback/Dialog';
 
+export {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuGroup,
+  DropdownMenuPortal,
+} from './components/feedback/DropdownMenu';
+
 // Components — layout
 export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent } from './components/layout/Card';
 

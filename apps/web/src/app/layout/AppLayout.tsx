@@ -7,9 +7,21 @@ import {
   X,
   Search,
   Bell,
+  LogOut,
+  ChevronDown,
 } from 'lucide-react';
 import { cn } from '@packages/ui/lib/utils';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from '@packages/ui';
 import { customerMenu } from '../../portals/customer/menu';
+import { useAuth } from '../../shared/auth/hooks/useAuth';
+import { useLogout } from '../../shared/auth/hooks/useLogout';
 
 const navItems = customerMenu;
 
@@ -159,6 +171,9 @@ export function AppLayout() {
             <Bell className="w-[18px] h-[18px]" strokeWidth={1.75} />
             <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-primary" />
           </button>
+
+          {/* User menu */}
+          <UserMenu />
         </header>
 
         {/* Page content */}
@@ -167,5 +182,41 @@ export function AppLayout() {
         </main>
       </div>
     </div>
+  );
+}
+
+function UserMenu() {
+  const { user } = useAuth();
+  const logoutMutation = useLogout();
+
+  if (!user) return null;
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 hover:bg-accent transition-colors">
+          <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
+            <span className="text-xs font-medium text-primary">
+              {user.userType.charAt(0).toUpperCase()}
+            </span>
+          </div>
+          <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-48">
+        <DropdownMenuLabel className="font-normal">
+          <p className="text-sm font-medium capitalize">{user.userType}</p>
+          <p className="text-xs text-muted-foreground">ID: {user.userId.slice(0, 8)}...</p>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={() => logoutMutation.mutate()}
+          disabled={logoutMutation.isPending}
+        >
+          <LogOut className="w-4 h-4 mr-2" />
+          {logoutMutation.isPending ? 'Logging out...' : 'Log out'}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
