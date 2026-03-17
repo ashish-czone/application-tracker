@@ -558,3 +558,4 @@ Shared TypeScript config at root. All packages, modules, features, and apps exte
 - Frontend components use `@packages/ui` for shared UI. See PROMPT-UI.md for frontend architecture.
 - API calls always go through `@packages/ui/services/apiClient`, never raw fetch/axios.
 - Side-effect package behavior is configured via DB rules, not hardcoded logic. Domain module config is defined within each module.
+- **Cron jobs must be timezone-aware.** Never hardcode UTC cron patterns like `0 2 * * *`. Use `cronForLocalHour(hour, timezone)` from `@packages/common` to convert a business-local hour to the correct UTC cron pattern based on `APP_TIMEZONE`. The app operates in a single business timezone configured via the `APP_TIMEZONE` env var (IANA format, e.g., `Asia/Dubai`). All "today" comparisons on the server use `todayInTimezone()` from `@packages/common` — never `new Date().toISOString().split('T')[0]` or `toLocaleDateString`.
