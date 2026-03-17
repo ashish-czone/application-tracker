@@ -48,8 +48,7 @@ export class SeedService implements OnModuleInit {
     } else {
       const role = await this.rbacService.createRole({
         name: 'Super Admin',
-        userType: 'admin',
-        isDefault: true,
+        userType: 'client',
         isSuperadmin: true,
       });
       roleId = role.id;
@@ -60,19 +59,19 @@ export class SeedService implements OnModuleInit {
     const [existingUser] = await this.database.db
       .select()
       .from(users)
-      .where(and(eq(users.email, SUPERADMIN_EMAIL), eq(users.userType, 'admin')))
+      .where(eq(users.email, SUPERADMIN_EMAIL))
       .limit(1);
 
     if (existingUser) return;
 
-    // Create superadmin user
+    // Create superadmin user as client type (uses client login flow)
     const [user] = await this.database.db
       .insert(users)
       .values({
         email: SUPERADMIN_EMAIL,
         firstName: 'Super',
         lastName: 'Admin',
-        userType: 'admin',
+        userType: 'client',
       })
       .returning();
 
