@@ -21,7 +21,7 @@ This document defines the frontend stack, component rules, form behavior, data f
 
 ## Frontend Architecture
 
-The backend API follows a strict modular/domain-separated architecture. **The frontend does not.** The frontend is organized by **layers and portals**, not by domain modules.
+The backend API follows a strict modular/domain-separated architecture. **The frontend does not.** The frontend is organized by **layers**: a shared UI package, a shared app layer for cross-cutting concerns, and a single portal with feature-based grouping.
 
 ### Shared package: `packages/ui`
 
@@ -33,15 +33,16 @@ packages/ui/
  │   ├ form/                — Form wrappers (Input, Select, Checkbox, DatePicker)
  │   ├ feedback/            — User feedback (Toast, Alert)
  │   ├ layout/              — Layout primitives (Card, Stack)
- │   └ Button/              — Ungrouped components at root
- ├ hooks/                   — Generic utility hooks (useDebounce, useLocalStorage, usePagination)
+ │   ├ data-grid/           — DataGrid, DataGridToolbar, DataGridPagination, etc.
+ │   └ Button.tsx           — Ungrouped components at root
+ ├ hooks/                   — Generic utility hooks (useDebounce, useDataGridParams)
  ├ services/                — HTTP infrastructure (apiClient, tokenStore)
  ├ types.ts                 — Generic utility types (PaginatedResponse, ApiError)
  └ index.ts
 ```
 
 **Component grouping rules:**
-- Group related components into subfolders (`form/`, `feedback/`, `layout/`).
+- Group related components into subfolders (`form/`, `feedback/`, `layout/`, `data-grid/`).
 - Components that don't fit a group sit at the `components/` root.
 - All components are built on shadcn/ui primitives + Radix UI + TailwindCSS.
 
@@ -60,62 +61,56 @@ packages/ui/
 
 ```
 apps/web/src/
- ├ features/
+ ├ shared/                     — Cross-cutting concerns (full stack: components, hooks, services)
  │   └ auth/
- │       ├ components/      — AuthGuard, LoginForm, SessionExpiredModal
- │       ├ hooks/           — useAuth, useCurrentUser, useLogin, useCan
- │       └ services/        — Auth API calls
+ │       ├ components/         — AuthGuard, LoginForm, SessionExpiredModal
+ │       ├ hooks/              — useAuth, useCurrentUser, useLogin, useCan
+ │       └ services/           — Auth API calls, token management
  │
  ├ portals/
- │   ├ admin/
- │   │   ├ pages/
- │   │   ├ components/
- │   │   ├ services/
- │   │   ├ types/
- │   │   ├ routes.tsx       — Portal entry point + route definitions
- │   │   └ menu.ts          — Sidebar navigation config
- │   │
- │   └ client/
- │       ├ pages/
- │       ├ components/
- │       ├ services/
- │       ├ types/
- │       ├ routes.tsx
- │       └ menu.ts
+ │   └ customer/               — Single portal (no multi-portal split)
+ │       ├ features/
+ │       │   └ users/          — Feature-based grouping
+ │       │       ├ components/ — UsersTable, UserFilters
+ │       │       ├ hooks/      — useUsers
+ │       │       ├ services/   — User API calls
+ │       │       ├ types/      — User, ListUsersParams
+ │       │       └ pages/      — UsersListPage
+ │       ├ routes.tsx          — Lazy-loaded route exports
+ │       └ menu.ts             — Sidebar navigation config
 ```
 
 ### Layers
 
 | Layer | Scope | Business logic? | Example |
 |---|---|---|---|
-| `packages/ui` | Global (shared package) | No | Button, FormInput, useDebounce, apiClient |
-| `features/` | Cross-portal (app-level) | Yes | auth (components, hooks, services) |
-| `portals/` | Portal-specific | Yes | pages, components, services, types, menu |
+| `packages/ui` | Global (shared package) | No | Button, DataGrid, useDebounce, apiClient |
+| `shared/` | Cross-cutting (app-level) | Yes | auth (components, hooks, services, token management) |
+| `portals/customer/features/` | Feature-specific | Yes | users (pages, components, hooks, services, types) |
 
 ### Dependency rules
 
 ```
-packages/ui  ←  features/  ←  portals/
+packages/ui  ←  shared/  ←  portals/customer/features/
 ```
 
-- **Portals** can import from `packages/ui` and `features/`.
-- **Features** can import from `packages/ui`.
+- **Portal features** can import from `packages/ui` and `shared/`.
+- **`shared/`** can import from `packages/ui`.
 - **`packages/ui`** imports nothing from the app.
-- **Portals never import from each other.** No cross-portal dependencies.
+
+### Shared rules (`shared/`)
+
+- `shared/` holds **cross-cutting concerns** — logic that is not specific to any one feature and would be needed across multiple features or a future second portal.
+- Each concern is a **full-stack folder** with its own components, hooks, services, and types. Not limited to presentational/dumb components.
+- Examples: `auth` (login, session, tokens, permissions), `notifications` (toasts, in-app notifications), `error-handling` (error boundaries, global error state).
+- Do not add a concern to `shared/` if it is only used by one feature. Keep it in the feature until a second consumer needs it.
 
 ### Portal rules
 
-- Each portal is **self-contained** — it owns its pages, components, services, types, routes, and menu.
-- Each portal has its own `routes.tsx` (entry point) and `menu.ts` (navigation config).
-- Domain types (e.g., `User`, `Order`, `Role`) live in the portal that uses them (`portals/admin/types/`), not at a shared level.
-- If both portals need the same type, define it in each portal independently — do not hoist to a shared location unless it's truly generic (like `PaginatedResponse`).
-
-### Feature rules
-
-- `features/` is **strictly** for cross-portal shared business logic.
-- Currently only `auth` lives here. Do not add features unless they are genuinely needed by multiple portals.
-- If something is only used in one portal, it stays in that portal.
-- Promotion to `features/` only happens when a second portal actually needs the code.
+- There is a **single portal** (`customer`). No multi-portal architecture.
+- The portal uses **feature-based grouping** — each domain feature (users, orders, etc.) gets its own folder under `features/` with pages, components, hooks, services, and types.
+- The portal has a `routes.tsx` (lazy-loaded page exports) and `menu.ts` (sidebar navigation config).
+- Domain types (e.g., `User`, `ListUsersParams`) live in the feature that owns them (`features/users/types/`), not at a shared level.
 
 ---
 
