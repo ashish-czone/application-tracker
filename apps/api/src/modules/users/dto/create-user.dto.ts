@@ -1,4 +1,4 @@
-import { IsEmail, IsString, MinLength, MaxLength, IsIn, IsUUID, IsOptional } from 'class-validator';
+import { IsEmail, IsString, MinLength, MaxLength, IsIn, IsUUID, IsOptional, IsArray, ArrayMinSize } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateUserDto {
@@ -35,7 +35,9 @@ export class CreateUserDto {
   @IsIn(['admin', 'client'])
   userType!: string;
 
-  @ApiProperty({ example: '00000000-0000-0000-0000-000000000000', description: 'Role to assign to the user' })
-  @IsUUID()
-  roleId!: string;
+  @ApiProperty({ example: ['00000000-0000-0000-0000-000000000000'], description: 'Roles to assign to the user' })
+  @IsArray()
+  @ArrayMinSize(1, { message: 'At least one role is required' })
+  @IsUUID('4', { each: true })
+  roleIds!: string[];
 }

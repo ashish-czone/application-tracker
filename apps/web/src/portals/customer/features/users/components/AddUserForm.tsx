@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -9,6 +9,7 @@ import {
   FormPasswordInput,
   FormPhoneInput,
   FormSelect,
+  Label,
   Button,
   DialogHeader,
   DialogTitle,
@@ -32,7 +33,6 @@ const createUserSchema = z.object({
     .refine((p) => /[a-z]/.test(p), 'Lowercase letter required')
     .refine((p) => /[0-9]/.test(p), 'Number required'),
   userType: z.enum(['admin', 'client'], { message: 'User type is required' }),
-  roleId: z.string().min(1, 'Role is required'),
 });
 
 type CreateUserFormValues = z.infer<typeof createUserSchema>;
@@ -42,7 +42,10 @@ interface AddUserFormProps {
 }
 
 export function AddUserForm({ onClose }: AddUserFormProps) {
-  const { control, handleSubmit, setValue } = useForm<CreateUserFormValues>({
+  const [selectedRoleIds, setSelectedRoleIds] = useState<Set<string>>(new Set());
+  const [rolesError, setRolesError] = useState<string | null>(null);
+
+  const { control, handleSubmit } = useForm<CreateUserFormValues>({
     resolver: zodResolver(createUserSchema),
     defaultValues: {
       firstName: '',
@@ -51,13 +54,11 @@ export function AddUserForm({ onClose }: AddUserFormProps) {
       phone: '',
       password: '',
       userType: '' as 'admin' | 'client',
-      roleId: '',
     },
   });
 
   const selectedUserType = useWatch({ control, name: 'userType' });
 
-  // Email uniqueness check
   const emailValidator = useAsyncValidator({
     checkFn: useCallback(
       (value: string) => checkUnique('users', 'email', value).then((r) => r.unique),
@@ -68,28 +69,33 @@ export function AddUserForm({ onClose }: AddUserFormProps) {
 
   const { data: rolesData } = useRoles(selectedUserType || undefined);
 
-  const roleOptions = useMemo(() => {
-    if (!rolesData?.data) return [];
-    return rolesData.data.map((role) => ({
-      label: role.name,
-      value: role.id,
-    }));
-  }, [rolesData]);
+  // Reset selected roles when userType changes
+  useEffect(() => {
+    setSelectedRoleIds(new Set());
+    setRolesError(null);
+  }, [selectedUserType]);
 
-  // Reset roleId when userType changes (selected role may not be valid for new type)
-  const prevUserType = useMemo(() => selectedUserType, [selectedUserType]);
-  useMemo(() => {
-    if (prevUserType !== selectedUserType) {
-      setValue('roleId', '');
-    }
-  }, [selectedUserType, prevUserType, setValue]);
+  function toggleRole(roleId: string) {
+    setSelectedRoleIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(roleId)) next.delete(roleId);
+      else next.add(roleId);
+      return next;
+    });
+    setRolesError(null);
+  }
 
   const createMutation = useCreateUser({ onSuccess: onClose });
 
   function onSubmit(data: CreateUserFormValues) {
+    if (selectedRoleIds.size === 0) {
+      setRolesError('Select at least one role');
+      return;
+    }
     createMutation.mutate({
       ...data,
       phone: data.phone || undefined,
+      roleIds: Array.from(selectedRoleIds),
     });
   }
 
@@ -154,14 +160,38 @@ export function AddUserForm({ onClose }: AddUserFormProps) {
           ]}
         />
 
-        <FormSelect
-          control={control}
-          name="roleId"
-          label="Role"
-          placeholder={selectedUserType ? 'Select role' : 'Select user type first'}
-          disabled={!selectedUserType}
-          options={roleOptions}
-        />
+        {/* Multi-select roles as checkboxes */}
+        <div className="space-y-2">
+          <Label>{selectedUserType ? 'Roles' : 'Roles (select user type first)'}</Label>
+          {!selectedUserType ? (
+            <p className="text-sm text-muted-foreground">Select a user type to see available roles</p>
+          ) : !rolesData?.data?.length ? (
+            <p className="text-sm text-muted-foreground">No roles available for this user type</p>
+          ) : (
+            <div className="space-y-1 rounded-md border border-input p-2">
+              {rolesData.data.map((role) => (
+                <label
+                  key={role.id}
+                  className="flex items-center gap-2.5 rounded-sm px-2 py-1.5 text-sm cursor-pointer hover:bg-muted/50"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedRoleIds.has(role.id)}
+                    onChange={() => toggleRole(role.id)}
+                    className="rounded border-input"
+                  />
+                  <span className="text-foreground">{role.name}</span>
+                  {role.isSuperadmin && (
+                    <span className="text-[10px] text-muted-foreground">(Superadmin)</span>
+                  )}
+                </label>
+              ))}
+            </div>
+          )}
+          {rolesError && (
+            <p className="text-sm text-destructive" aria-live="polite">{rolesError}</p>
+          )}
+        </div>
 
         {createMutation.isError && (
           <p className="text-sm text-destructive" aria-live="polite">

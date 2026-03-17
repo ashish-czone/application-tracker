@@ -17,7 +17,7 @@ export interface CreateUserRequest {
   lastName: string;
   password: string;
   userType: 'admin' | 'client';
-  roleId: string;
+  roleIds: string[];
   phone?: string;
 }
 
