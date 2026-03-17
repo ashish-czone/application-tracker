@@ -9,6 +9,7 @@ import { AdminAuthController } from './controllers/admin-auth.controller';
 import { BaseAuthOrchestratorService } from './services/base-auth-orchestrator.service';
 import { ClientAuthService } from './services/client-auth.service';
 import { AdminAuthService } from './services/admin-auth.service';
+import { SeedService } from './services/seed.service';
 import {
   AUTH_USER_REGISTERED,
   AUTH_USER_LOGGED_IN,
@@ -31,7 +32,7 @@ import {
     RbacModule,
   ],
   controllers: [ClientAuthController, AdminAuthController],
-  providers: [BaseAuthOrchestratorService, ClientAuthService, AdminAuthService],
+  providers: [BaseAuthOrchestratorService, ClientAuthService, AdminAuthService, SeedService],
   exports: [AuthPackageModule],
 })
 export class AuthOrchestratorModule implements OnModuleInit {
