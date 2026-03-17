@@ -53,6 +53,25 @@ export class NotificationsModule implements OnModuleInit {
     private readonly whatsAppChannelService: WhatsAppChannelService,
   ) {}
 
+  /**
+   * Convert a local hour (in APP_TIMEZONE) to a UTC cron pattern.
+   * E.g., 2:00 AM in Asia/Dubai (UTC+4) → "0 22 * * *" (10 PM UTC previous day)
+   */
+  private buildCronForLocalHour(localHour: number): string {
+    const tz = process.env.APP_TIMEZONE ?? 'UTC';
+    // Create a date at the desired local hour today, then read its UTC hour
+    const now = new Date();
+    const localDateStr = now.toLocaleDateString('en-CA', { timeZone: tz }); // YYYY-MM-DD
+    const localDateTime = new Date(`${localDateStr}T${String(localHour).padStart(2, '0')}:00:00`);
+    // Interpret this as a time in the target timezone by computing the offset
+    const utcEquivalent = new Date(localDateTime.toLocaleString('en-US', { timeZone: 'UTC' }));
+    const tzEquivalent = new Date(localDateTime.toLocaleString('en-US', { timeZone: tz }));
+    const offsetMs = utcEquivalent.getTime() - tzEquivalent.getTime();
+    const utcTime = new Date(localDateTime.getTime() + offsetMs);
+    const utcHour = utcTime.getUTCHours();
+    return `0 ${utcHour} * * *`;
+  }
+
   onModuleInit() {
     // Register inline channels
     this.dispatcher.registerInlineChannel(this.inAppChannel);
@@ -88,15 +107,16 @@ export class NotificationsModule implements OnModuleInit {
       },
     });
 
-    // Enqueue repeatable scan — runs daily at 2:00 AM
+    // Enqueue repeatable scan — runs daily at 2:00 AM in the app timezone
     const queue = this.queueService.getQueue(SCHEDULE_SCAN_QUEUE);
     if (queue) {
+      const cronPattern = this.buildCronForLocalHour(2);
       queue.upsertJobScheduler(
         'notification-schedule-scan',
-        { pattern: '0 2 * * *' },
+        { pattern: cronPattern },
         { name: SCHEDULE_SCAN_QUEUE, data: {} },
       ).then(() => {
-        this.logger.log('Notification schedule scanner registered (daily at 2:00 AM)');
+        this.logger.log(`Notification schedule scanner registered (${cronPattern}, 2:00 AM ${process.env.APP_TIMEZONE ?? 'UTC'})`);
       }).catch((err) => {
         this.logger.error({ error: err.message }, 'Failed to register schedule scanner');
       });
