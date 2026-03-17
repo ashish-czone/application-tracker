@@ -28,7 +28,7 @@ function buildRule(overrides: Partial<NotificationRule> = {}): NotificationRule 
     scheduleEntityType: null,
     scheduleDateField: null,
     scheduleDateOperator: null,
-    scheduleDateAmount: null,
+    scheduleDateAmounts: null,
     scheduleDateUnit: null,
     conditions: null,
     recipientStrategy: 'actor',

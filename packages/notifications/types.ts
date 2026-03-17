@@ -26,7 +26,7 @@ export interface NotificationRule {
   scheduleEntityType: string | null;
   scheduleDateField: string | null;
   scheduleDateOperator: ScheduleDateOperator | null;
-  scheduleDateAmount: number | null;
+  scheduleDateAmounts: number[] | null;
   scheduleDateUnit: ScheduleUnit | null;
   conditions: Condition[] | null;
   recipientStrategy: RecipientStrategy;

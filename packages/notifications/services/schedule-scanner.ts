@@ -156,26 +156,8 @@ export class ScheduleScanner {
       return;
     }
 
-    // Build query conditions
-    const conditions = [];
-
-    // User-defined conditions from JSON
-    if (rule.conditions && (rule.conditions as Condition[]).length > 0) {
-      conditions.push(...buildConditions(entityResolver.table, rule.conditions as Condition[], Object.keys(entityResolver.fields)));
-    }
-
-    // Date-based condition
-    if (rule.scheduleDateField && rule.scheduleDateOperator && rule.scheduleDateAmount !== null && rule.scheduleDateUnit) {
-      const dateCondition = this.buildDateCondition(
-        entityResolver.table,
-        rule.scheduleDateField,
-        rule.scheduleDateOperator as ScheduleDateOperator,
-        rule.scheduleDateAmount,
-        rule.scheduleDateUnit as ScheduleUnit,
-        rule.triggerType === 'schedule_once',
-      );
-      if (dateCondition) conditions.push(dateCondition);
-    }
+    const amounts = rule.scheduleDateAmounts;
+    const hasDateConfig = rule.scheduleDateField && rule.scheduleDateOperator && amounts && amounts.length > 0 && rule.scheduleDateUnit;
 
     // Build select columns from registered fields + recipient fields + id
     const idColumn = (entityResolver.table as Record<string, any>).id;
@@ -189,39 +171,133 @@ export class ScheduleScanner {
       if (col) selectColumns[fieldName] = col;
     }
 
-    // Query matching entities with all registered fields
-    const entities = await this.database.db
-      .select(selectColumns)
-      .from(entityResolver.table)
-      .where(conditions.length > 0 ? and(...conditions) : undefined);
+    // Base conditions (user-defined JSON conditions, shared across all offsets)
+    const baseConditions: any[] = [];
+    if (rule.conditions && (rule.conditions as Condition[]).length > 0) {
+      baseConditions.push(...buildConditions(entityResolver.table, rule.conditions as Condition[], Object.keys(entityResolver.fields)));
+    }
 
-    if (entities.length === 0) return;
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    const targetDate = rule.triggerType === 'schedule_once' ? '9999-12-31' : today;
+
+    // 1. Query matching entities for each offset, dedup, and collect
+    const matchedEntities: Array<{ entity: Record<string, unknown> & { id: string }; offset: number }> = [];
+    const seenEntityIds = new Set<string>();
+
+    const offsetsToQuery = hasDateConfig ? amounts : [0];
+    for (const amount of offsetsToQuery) {
+      const conditions = [...baseConditions];
+
+      if (hasDateConfig) {
+        const dateCondition = this.buildDateCondition(
+          entityResolver.table,
+          rule.scheduleDateField!,
+          rule.scheduleDateOperator as ScheduleDateOperator,
+          amount,
+          rule.scheduleDateUnit as ScheduleUnit,
+          rule.triggerType === 'schedule_once',
+        );
+        if (dateCondition) conditions.push(dateCondition);
+      }
+
+      const entities = await this.database.db
+        .select(selectColumns)
+        .from(entityResolver.table)
+        .where(conditions.length > 0 ? and(...conditions) : undefined);
+
+      for (const entity of entities) {
+        const entityId = (entity as Record<string, any>).id as string;
+
+        // Skip if already matched by another offset (same entity, different offset)
+        if (seenEntityIds.has(entityId)) continue;
+        seenEntityIds.add(entityId);
+
+        // Dedup against sent log
+        const alreadySent = await this.checkSentLog(rule.id, rule.scheduleEntityType!, entityId, targetDate);
+        if (alreadySent) continue;
+
+        matchedEntities.push({
+          entity: entity as Record<string, unknown> & { id: string },
+          offset: amount,
+        });
+      }
+    }
+
+    if (matchedEntities.length === 0) return;
 
     // Load rule with channels
     const ruleWithChannels = await this.loadRuleWithChannels(rule.id);
     if (!ruleWithChannels || ruleWithChannels.channels.length === 0) return;
 
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    // 2. Resolve recipients for each entity and group by recipient
+    const recipientEntities = new Map<string, Array<{ entity: Record<string, unknown> & { id: string }; offset: number }>>();
 
-    for (const entity of entities) {
-      // Dedup check
-      const targetDate = rule.triggerType === 'schedule_once' ? '9999-12-31' : today;
-      const alreadySent = await this.checkSentLog(rule.id, rule.scheduleEntityType, entity.id, targetDate);
-      if (alreadySent) continue;
-
-      // Build event-like context for rendering
-      const event: DomainEvent = {
+    for (const match of matchedEntities) {
+      const syntheticEvent: DomainEvent = {
         eventName: `schedule.${rule.scheduleEntityType}`,
-        entityType: rule.scheduleEntityType,
-        entityId: entity.id,
+        entityType: rule.scheduleEntityType!,
+        entityId: match.entity.id,
         actorId: null,
-        correlationId: `schedule-${rule.id}-${entity.id}`,
+        correlationId: `schedule-${rule.id}-${match.entity.id}`,
         occurredAt: new Date().toISOString(),
-        payload: entity as Record<string, unknown>,
+        payload: match.entity as Record<string, unknown>,
       };
 
-      await this.dispatchForRule(ruleWithChannels, event);
-      await this.logSent(rule.id, rule.scheduleEntityType, entity.id, targetDate);
+      const recipients = await this.recipientResolver.resolve(rule, syntheticEvent);
+      for (const recipientId of recipients) {
+        if (!recipientEntities.has(recipientId)) {
+          recipientEntities.set(recipientId, []);
+        }
+        recipientEntities.get(recipientId)!.push(match);
+      }
+    }
+
+    // 3. Dispatch one aggregated notification per recipient
+    for (const [recipientId, entities] of recipientEntities) {
+      await this.dispatchAggregatedForRecipient(
+        ruleWithChannels,
+        recipientId,
+        rule.scheduleEntityType!,
+        entities,
+      );
+    }
+
+    // 4. Log sent for each matched entity
+    for (const { entity } of matchedEntities) {
+      await this.logSent(rule.id, rule.scheduleEntityType!, entity.id, targetDate);
+    }
+  }
+
+  /**
+   * Dispatch one notification per channel for a single recipient,
+   * with all their matching entities aggregated into the template context.
+   */
+  private async dispatchAggregatedForRecipient(
+    rule: RuleWithChannels,
+    recipientId: string,
+    entityType: string,
+    entities: Array<{ entity: Record<string, unknown>; offset: number }>,
+  ): Promise<void> {
+    const today = new Date().toISOString().split('T')[0];
+
+    for (const ruleChannel of rule.channels) {
+      const enabled = await this.preferenceService.isEnabled(recipientId, ruleChannel.channel);
+      if (!enabled) continue;
+
+      const context = {
+        eventName: `schedule.${entityType}`,
+        entityType,
+        entityId: entities.map((e) => e.entity.id).join(','),
+        correlationId: `schedule-${rule.id}-${recipientId}-${today}`,
+      };
+
+      const content = this.templateRenderer.renderAggregated(
+        ruleChannel.template,
+        entityType,
+        entities.map(({ entity, offset }) => ({ ...entity, scheduleDateOffset: offset })),
+      );
+
+      await this.dispatcher.dispatch(ruleChannel.channel, recipientId, content, context);
     }
   }
 

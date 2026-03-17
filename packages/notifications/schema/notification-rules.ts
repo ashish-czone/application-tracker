@@ -15,7 +15,7 @@ export const notificationRules = pgTable('notification_rules', {
   scheduleEntityType: text('schedule_entity_type'),
   scheduleDateField: text('schedule_date_field'),
   scheduleDateOperator: text('schedule_date_operator'),
-  scheduleDateAmount: integer('schedule_date_amount'),
+  scheduleDateAmounts: jsonb('schedule_date_amounts'),
   scheduleDateUnit: text('schedule_date_unit'),
 
   // Shared

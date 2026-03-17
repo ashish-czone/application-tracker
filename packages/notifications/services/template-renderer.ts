@@ -23,4 +23,26 @@ export class TemplateRenderer {
       subject: template.subject ? Mustache.render(template.subject, context) : undefined,
     };
   }
+
+  /**
+   * Render a template with multiple entities aggregated by recipient.
+   * Template context: { entityType, entityCount, entities: [{ ...fields, scheduleDateOffset }] }
+   */
+  renderAggregated(
+    template: NotificationTemplate,
+    entityType: string,
+    entities: Array<Record<string, unknown>>,
+  ): RenderedNotification {
+    const context = {
+      entityType,
+      entityCount: entities.length,
+      entities,
+    };
+
+    return {
+      title: template.subject ? Mustache.render(template.subject, context) : template.name,
+      body: Mustache.render(template.body, context),
+      subject: template.subject ? Mustache.render(template.subject, context) : undefined,
+    };
+  }
 }
