@@ -29,9 +29,10 @@ export class UsersController {
   @RequirePermission(USERS_PERMISSIONS.READ)
   @ApiOperation({ summary: 'List users with pagination, search, and filtering' })
   async list(@Query() query: ListUsersQueryDto) {
+    const { includeDeleted, ...rest } = query;
     return this.usersService.list({
-      ...query,
-      includeDeleted: query.includeDeleted === 'true',
+      ...rest,
+      includeDeleted: includeDeleted === 'true',
     });
   }
 
