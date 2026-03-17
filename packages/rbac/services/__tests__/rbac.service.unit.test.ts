@@ -43,7 +43,7 @@ describe('RbacService', () => {
 
   describe('createRole', () => {
     it('should insert a role and return it', async () => {
-      const role = { id: 'role-1', name: 'admin', userType: 'admin', isDefault: false, createdAt: new Date(), updatedAt: new Date() };
+      const role = { id: 'role-1', name: 'admin', userType: 'admin', isDefault: false, isSuperadmin: false, createdAt: new Date(), updatedAt: new Date() };
       mockDb._chain.returning.mockResolvedValueOnce([role]);
 
       const result = await service.createRole({ name: 'admin', userType: 'admin' });
@@ -53,7 +53,7 @@ describe('RbacService', () => {
     });
 
     it('should create a default role when isDefault is true', async () => {
-      const role = { id: 'role-1', name: 'client', userType: 'client', isDefault: true, createdAt: new Date(), updatedAt: new Date() };
+      const role = { id: 'role-1', name: 'client', userType: 'client', isDefault: true, isSuperadmin: false, createdAt: new Date(), updatedAt: new Date() };
       mockDb._chain.returning.mockResolvedValueOnce([role]);
 
       const result = await service.createRole({ name: 'client', userType: 'client', isDefault: true });
@@ -82,7 +82,7 @@ describe('RbacService', () => {
 
   describe('deleteRole', () => {
     it('should delete the role when no users assigned', async () => {
-      const role = { id: 'role-1', name: 'custom', userType: 'admin', isDefault: false, createdAt: new Date(), updatedAt: new Date() };
+      const role = { id: 'role-1', name: 'custom', userType: 'admin', isDefault: false, isSuperadmin: false, createdAt: new Date(), updatedAt: new Date() };
       vi.spyOn(service, 'findRoleById').mockResolvedValueOnce(role);
       // Mock count query — no users assigned
       mockDb._chain.where.mockResolvedValueOnce([{ total: 0 }]);
@@ -99,7 +99,7 @@ describe('RbacService', () => {
     });
 
     it('should throw ConflictException when deleting a default role', async () => {
-      const role = { id: 'role-1', name: 'client', userType: 'client', isDefault: true, createdAt: new Date(), updatedAt: new Date() };
+      const role = { id: 'role-1', name: 'client', userType: 'client', isDefault: true, isSuperadmin: false, createdAt: new Date(), updatedAt: new Date() };
       vi.spyOn(service, 'findRoleById').mockResolvedValueOnce(role);
 
       await expect(service.deleteRole('role-1'))
@@ -107,7 +107,7 @@ describe('RbacService', () => {
     });
 
     it('should throw ConflictException when role has assigned users', async () => {
-      const role = { id: 'role-1', name: 'custom', userType: 'admin', isDefault: false, createdAt: new Date(), updatedAt: new Date() };
+      const role = { id: 'role-1', name: 'custom', userType: 'admin', isDefault: false, isSuperadmin: false, createdAt: new Date(), updatedAt: new Date() };
       vi.spyOn(service, 'findRoleById').mockResolvedValueOnce(role);
       // Mock count query — 3 users assigned
       mockDb._chain.where.mockResolvedValueOnce([{ total: 3 }]);
@@ -119,7 +119,7 @@ describe('RbacService', () => {
 
   describe('findRoleByIdOrFail', () => {
     it('should return role if found', async () => {
-      const role = { id: 'role-1', name: 'admin', userType: 'admin', isDefault: false, createdAt: new Date(), updatedAt: new Date() };
+      const role = { id: 'role-1', name: 'admin', userType: 'admin', isDefault: false, isSuperadmin: false, createdAt: new Date(), updatedAt: new Date() };
       vi.spyOn(service, 'findRoleById').mockResolvedValueOnce(role);
 
       const result = await service.findRoleByIdOrFail('role-1');
@@ -155,7 +155,7 @@ describe('RbacService', () => {
 
   describe('findDefaultRoleForUserType', () => {
     it('should return the default role for a user type', async () => {
-      const role = { id: 'role-1', name: 'client', userType: 'client', isDefault: true, createdAt: new Date(), updatedAt: new Date() };
+      const role = { id: 'role-1', name: 'client', userType: 'client', isDefault: true, isSuperadmin: false, createdAt: new Date(), updatedAt: new Date() };
       mockDb._chain.limit.mockResolvedValueOnce([role]);
 
       const result = await service.findDefaultRoleForUserType('client');
