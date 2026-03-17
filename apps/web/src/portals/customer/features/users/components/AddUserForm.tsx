@@ -6,6 +6,7 @@ import {
   Form,
   FormInput,
   FormSelect,
+  PasswordStrength,
   Button,
   DialogHeader,
   DialogTitle,
@@ -21,8 +22,11 @@ const createUserSchema = z.object({
   phone: z.string().max(20).optional().or(z.literal('')),
   password: z
     .string()
-    .min(8, 'Password must be at least 8 characters')
-    .max(128),
+    .max(128)
+    .refine((p) => p.length >= 8, 'At least 8 characters')
+    .refine((p) => /[A-Z]/.test(p), 'Uppercase letter required')
+    .refine((p) => /[a-z]/.test(p), 'Lowercase letter required')
+    .refine((p) => /[0-9]/.test(p), 'Number required'),
   userType: z.enum(['admin', 'client'], { message: 'User type is required' }),
   roleId: z.string().min(1, 'Role is required'),
 });
@@ -47,7 +51,7 @@ export function AddUserForm({ onClose }: AddUserFormProps) {
     },
   });
 
-  // Watch userType to filter roles dynamically
+  const passwordValue = useWatch({ control, name: 'password' });
   const selectedUserType = useWatch({ control, name: 'userType' });
 
   const { data: rolesData } = useRoles(selectedUserType || undefined);
@@ -119,14 +123,17 @@ export function AddUserForm({ onClose }: AddUserFormProps) {
           autoComplete="off"
         />
 
-        <FormInput
-          control={control}
-          name="password"
-          label="Password"
-          type="password"
-          placeholder="At least 8 characters"
-          autoComplete="new-password"
-        />
+        <div className="space-y-2">
+          <FormInput
+            control={control}
+            name="password"
+            label="Password"
+            type="password"
+            placeholder="Enter password"
+            autoComplete="new-password"
+          />
+          <PasswordStrength password={passwordValue ?? ''} />
+        </div>
 
         <FormSelect
           control={control}

@@ -9,6 +9,7 @@ export { Label } from './components/form/Label';
 export { Form } from './components/form/Form';
 export { FormInput } from './components/form/FormInput';
 export { FormSelect } from './components/form/FormSelect';
+export { PasswordStrength } from './components/form/PasswordStrength';
 
 // Components — feedback
 export {
