@@ -78,7 +78,7 @@ export class NotificationRulesService {
     scheduleEntityType?: string;
     scheduleDateField?: string;
     scheduleDateOperator?: string;
-    scheduleDateAmount?: number;
+    scheduleDateAmounts?: number[];
     scheduleDateUnit?: string;
     conditions?: Record<string, unknown>[];
     recipientStrategy: RecipientStrategy;
@@ -96,7 +96,7 @@ export class NotificationRulesService {
         scheduleEntityType: data.scheduleEntityType ?? null,
         scheduleDateField: data.scheduleDateField ?? null,
         scheduleDateOperator: data.scheduleDateOperator ?? null,
-        scheduleDateAmount: data.scheduleDateAmount ?? null,
+        scheduleDateAmounts: data.scheduleDateAmounts ?? null,
         scheduleDateUnit: data.scheduleDateUnit ?? null,
         conditions: data.conditions ?? null,
         recipientStrategy: data.recipientStrategy,

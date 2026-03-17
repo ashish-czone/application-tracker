@@ -86,11 +86,12 @@ export class CreateRuleDto {
   @IsIn(['before', 'after'])
   scheduleDateOperator?: string;
 
-  @ApiPropertyOptional({ example: 7 })
+  @ApiPropertyOptional({ example: [7, 3, 1] })
   @ValidateIf((o) => o.triggerType === 'schedule_once')
-  @IsInt()
-  @Min(0)
-  scheduleDateAmount?: number;
+  @IsArray()
+  @IsInt({ each: true })
+  @Min(0, { each: true })
+  scheduleDateAmounts?: number[];
 
   @ApiPropertyOptional({ example: 'days', enum: ['minutes', 'hours', 'days'] })
   @ValidateIf((o) => o.triggerType === 'schedule_once')

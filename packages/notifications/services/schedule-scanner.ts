@@ -164,13 +164,14 @@ export class ScheduleScanner {
       conditions.push(...buildConditions(entityResolver.table, rule.conditions as Condition[], Object.keys(entityResolver.fields)));
     }
 
-    // Date-based condition
-    if (rule.scheduleDateField && rule.scheduleDateOperator && rule.scheduleDateAmount !== null && rule.scheduleDateUnit) {
+    // Date-based condition (uses first amount for now; multi-offset aggregation in next task)
+    const amounts = rule.scheduleDateAmounts;
+    if (rule.scheduleDateField && rule.scheduleDateOperator && amounts && amounts.length > 0 && rule.scheduleDateUnit) {
       const dateCondition = this.buildDateCondition(
         entityResolver.table,
         rule.scheduleDateField,
         rule.scheduleDateOperator as ScheduleDateOperator,
-        rule.scheduleDateAmount,
+        amounts[0],
         rule.scheduleDateUnit as ScheduleUnit,
         rule.triggerType === 'schedule_once',
       );
