@@ -186,6 +186,7 @@ export class UsersService {
       userType: user.userType,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
+      deletedAt: user.deletedAt,
     };
   }
 
@@ -255,6 +256,7 @@ export class UsersService {
       userType: user.userType,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
+      deletedAt: user.deletedAt,
     };
   }
 
@@ -312,6 +314,7 @@ export class UsersService {
       userType: updated.userType,
       createdAt: updated.createdAt,
       updatedAt: updated.updatedAt,
+      deletedAt: updated.deletedAt,
     };
   }
 
