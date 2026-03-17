@@ -16,6 +16,7 @@ import type { DomainEvent } from '@packages/events';
 @Injectable()
 export class ScheduleScanner {
   private readonly logger = new Logger(ScheduleScanner.name);
+  private readonly appTimezone: string;
 
   constructor(
     private readonly database: DatabaseService,
@@ -25,7 +26,14 @@ export class ScheduleScanner {
     private readonly preferenceService: PreferenceService,
     private readonly templateRenderer: TemplateRenderer,
     private readonly dispatcher: NotificationDispatcher,
-  ) {}
+  ) {
+    this.appTimezone = process.env.APP_TIMEZONE ?? 'UTC';
+  }
+
+  /** Get today's date (YYYY-MM-DD) in the app timezone. */
+  private getTodayInAppTimezone(): string {
+    return new Date().toLocaleDateString('en-CA', { timeZone: this.appTimezone });
+  }
 
   /**
    * Main scan method — called by the hourly cron job.
@@ -177,7 +185,7 @@ export class ScheduleScanner {
       baseConditions.push(...buildConditions(entityResolver.table, rule.conditions as Condition[], Object.keys(entityResolver.fields)));
     }
 
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    const today = this.getTodayInAppTimezone();
     const targetDate = rule.triggerType === 'schedule_once' ? '9999-12-31' : today;
 
     // 1. Query matching entities for each offset, dedup, and collect
@@ -278,7 +286,7 @@ export class ScheduleScanner {
     entityType: string,
     entities: Array<{ entity: Record<string, unknown>; offset: number }>,
   ): Promise<void> {
-    const today = new Date().toISOString().split('T')[0];
+    const today = this.getTodayInAppTimezone();
 
     for (const ruleChannel of rule.channels) {
       const enabled = await this.preferenceService.isEnabled(recipientId, ruleChannel.channel);
@@ -314,19 +322,22 @@ export class ScheduleScanner {
 
     // Use make_interval() with parameterized values — no sql.raw(), no injection risk
     const interval = this.makeInterval(amount, unit);
+    const tz = this.appTimezone;
 
+    // Use timezone-aware "today" and "now" so date comparisons work correctly
+    // regardless of server timezone. APP_TIMEZONE controls the business timezone.
     if (operator === 'before') {
       if (exactMatch) {
-        return sql`DATE(${column} - ${interval}) = CURRENT_DATE`;
+        return sql`DATE(${column} - ${interval}) = (NOW() AT TIME ZONE ${tz})::date`;
       }
-      return sql`${column} - ${interval} <= NOW()`;
+      return sql`${column} - ${interval} <= (NOW() AT TIME ZONE ${tz})`;
     }
 
     // after
     if (exactMatch) {
-      return sql`DATE(${column} + ${interval}) = CURRENT_DATE`;
+      return sql`DATE(${column} + ${interval}) = (NOW() AT TIME ZONE ${tz})::date`;
     }
-    return sql`${column} + ${interval} <= NOW()`;
+    return sql`${column} + ${interval} <= (NOW() AT TIME ZONE ${tz})`;
   }
 
   /**
