@@ -1,5 +1,7 @@
 import { Module, type OnModuleInit, Logger } from '@nestjs/common';
 import { QueueService } from '@packages/queue';
+import { EmailChannelService, WhatsAppChannelService } from '@packages/notification-channels';
+import type { EmailPayload, WhatsAppPayload } from '@packages/notification-channels';
 import { NotificationRuleService } from './services/notification-rule.service';
 import { NotificationRulesService } from './services/notification-rules.service';
 import { NotificationTemplatesService } from './services/notification-templates.service';
@@ -50,6 +52,8 @@ export class NotificationsModule implements OnModuleInit {
     private readonly whatsAppChannel: WhatsAppChannel,
     private readonly queueService: QueueService,
     private readonly scheduleScanner: ScheduleScanner,
+    private readonly emailChannelService: EmailChannelService,
+    private readonly whatsAppChannelService: WhatsAppChannelService,
   ) {}
 
   onModuleInit() {
@@ -58,20 +62,26 @@ export class NotificationsModule implements OnModuleInit {
     this.dispatcher.registerChannel(this.emailChannel);
     this.dispatcher.registerChannel(this.whatsAppChannel);
 
-    // Register queue processors for async channels
+    // Register queue processors — delegate to notification-channels package
     this.queueService.registerProcessor({
       name: EMAIL_QUEUE_NAME,
       handler: async (data) => {
-        // TODO: Integrate with actual email provider (SMTP/SendGrid/SES)
-        this.logger.log({ ...data as Record<string, unknown> }, 'Email job processed (provider not configured)');
+        const payload = data as EmailPayload;
+        const result = await this.emailChannelService.send(payload);
+        if (!result.success) {
+          throw new Error(`Email delivery failed: ${result.error}`);
+        }
       },
     });
 
     this.queueService.registerProcessor({
       name: WHATSAPP_QUEUE_NAME,
       handler: async (data) => {
-        // TODO: Integrate with actual WhatsApp provider (Twilio/WhatsApp Business API)
-        this.logger.log({ ...data as Record<string, unknown> }, 'WhatsApp job processed (provider not configured)');
+        const payload = data as WhatsAppPayload;
+        const result = await this.whatsAppChannelService.send(payload);
+        if (!result.success) {
+          throw new Error(`WhatsApp delivery failed: ${result.error}`);
+        }
       },
     });
 
