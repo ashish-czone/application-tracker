@@ -1,7 +1,13 @@
-import { Suspense } from 'react';
-import { Routes, Route } from 'react-router';
+import { Suspense, lazy } from 'react';
+import { Routes, Route, Navigate } from 'react-router';
 import { AppLayout } from './layout/AppLayout';
+import { AuthGuard } from '../shared/auth/components/AuthGuard';
 import { UsersListPage } from '../portals/customer/routes';
+
+const LoginPage = lazy(() => import('../shared/auth/pages/LoginPage'));
+const RegisterPage = lazy(() => import('../shared/auth/pages/RegisterPage'));
+const ForgotPasswordPage = lazy(() => import('../shared/auth/pages/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('../shared/auth/pages/ResetPasswordPage'));
 
 function DashboardPage() {
   return (
@@ -26,17 +32,29 @@ function PageSkeleton() {
 export function AppRouter() {
   return (
     <Routes>
-      <Route element={<AppLayout />}>
-        <Route path="/" element={<DashboardPage />} />
-        <Route
-          path="/users"
-          element={
-            <Suspense fallback={<PageSkeleton />}>
-              <UsersListPage />
-            </Suspense>
-          }
-        />
+      {/* Public routes */}
+      <Route path="/login" element={<Suspense fallback={null}><LoginPage /></Suspense>} />
+      <Route path="/register" element={<Suspense fallback={null}><RegisterPage /></Suspense>} />
+      <Route path="/forgot-password" element={<Suspense fallback={null}><ForgotPasswordPage /></Suspense>} />
+      <Route path="/reset-password" element={<Suspense fallback={null}><ResetPasswordPage /></Suspense>} />
+
+      {/* Protected routes */}
+      <Route element={<AuthGuard />}>
+        <Route element={<AppLayout />}>
+          <Route path="/" element={<DashboardPage />} />
+          <Route
+            path="/users"
+            element={
+              <Suspense fallback={<PageSkeleton />}>
+                <UsersListPage />
+              </Suspense>
+            }
+          />
+        </Route>
       </Route>
+
+      {/* Catch-all */}
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
