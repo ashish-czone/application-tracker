@@ -18,6 +18,7 @@ import { RbacManagementModule } from './modules/rbac/rbac.module';
 import { NotificationRulesModule } from './modules/notification-rules/notification-rules.module';
 import { TasksModule } from './modules/tasks/tasks.module';
 import { WorkflowsManagementModule } from './modules/workflows/workflows.module';
+import { SharedModule } from './modules/shared/shared.module';
 import { validate } from './config/env.validation';
 
 @Module({
@@ -40,6 +41,7 @@ import { validate } from './config/env.validation';
       ttl: 60000,
       limit: 100,
     }]),
+    SharedModule,
     NotificationChannelsModule,
     NotificationsModule,
     WorkflowsModule,

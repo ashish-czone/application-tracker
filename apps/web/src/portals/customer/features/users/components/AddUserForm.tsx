@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -12,8 +12,10 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
+  type AsyncValidationStatus,
 } from '@packages/ui';
 import { useCreateUser, useRoles } from '../hooks';
+import { checkUnique } from '../services';
 
 const createUserSchema = z.object({
   firstName: z.string().min(2, 'First name must be at least 2 characters').max(100),
@@ -53,6 +55,20 @@ export function AddUserForm({ onClose }: AddUserFormProps) {
 
   const passwordValue = useWatch({ control, name: 'password' });
   const selectedUserType = useWatch({ control, name: 'userType' });
+
+  // Email uniqueness check on blur
+  const [emailStatus, setEmailStatus] = useState<AsyncValidationStatus>('idle');
+
+  const handleEmailBlur = useCallback(async (value: string) => {
+    if (!value || !value.includes('@')) return;
+    setEmailStatus('checking');
+    try {
+      const result = await checkUnique('users', 'email', value);
+      setEmailStatus(result.unique ? 'valid' : 'invalid');
+    } catch {
+      setEmailStatus('idle');
+    }
+  }, []);
 
   const { data: rolesData } = useRoles(selectedUserType || undefined);
 
@@ -113,6 +129,9 @@ export function AddUserForm({ onClose }: AddUserFormProps) {
           type="email"
           placeholder="john@example.com"
           autoComplete="off"
+          asyncStatus={emailStatus}
+          asyncError="This email is already in use"
+          onBlurValidate={handleEmailBlur}
         />
 
         <FormInput
