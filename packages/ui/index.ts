@@ -1,5 +1,7 @@
 // Components — ungrouped
 export { Button, type ButtonProps, buttonVariants } from './components/Button';
+export { Badge, type BadgeProps, badgeVariants } from './components/Badge';
+export { Skeleton } from './components/Skeleton';
 
 // Components — form
 export { Input, type InputProps } from './components/form/Input';
@@ -24,5 +26,19 @@ export {
 // Components — layout
 export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent } from './components/layout/Card';
 
+// Components — data-grid
+export { DataGrid } from './components/data-grid/DataGrid';
+export type {
+  DataGridProps,
+  DataGridFilter,
+  DataGridEmptyState,
+} from './components/data-grid/types';
+
+// Hooks
+export { useDebounce } from './hooks/useDebounce';
+
 // Utilities
 export { cn } from './lib/utils';
+
+// Re-export TanStack Table types for column definitions
+export { type ColumnDef, createColumnHelper } from '@tanstack/react-table';
