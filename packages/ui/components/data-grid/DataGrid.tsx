@@ -37,6 +37,7 @@ export function DataGrid<TData>({
   storageKey,
   renderCard,
   toolbarActions,
+  rowClassName,
 }: DataGridProps<TData>) {
   // Column visibility state persisted to localStorage
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(() => {
@@ -124,6 +125,7 @@ export function DataGrid<TData>({
               onSortChange={onSortChange}
               sortColumn={sortColumn}
               sortDirection={sortDirection}
+              rowClassName={rowClassName}
             />
           </div>
         </>

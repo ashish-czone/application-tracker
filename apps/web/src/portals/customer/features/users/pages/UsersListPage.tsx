@@ -59,22 +59,19 @@ export default function UsersListPage() {
         id: 'firstName',
         header: 'Name',
         accessorFn: (row) => `${row.firstName} ${row.lastName}`,
-        cell: ({ row }) => {
-          const isDeleted = !!row.original.deletedAt;
-          return (
-            <div className={isDeleted ? 'opacity-50' : ''}>
-              <div className="flex items-center gap-2">
-                <span className="font-medium text-foreground">
-                  {row.original.firstName} {row.original.lastName}
-                </span>
-                {isDeleted && (
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">Deleted</Badge>
-                )}
-              </div>
-              <div className="text-xs text-muted-foreground">{row.original.email}</div>
+        cell: ({ row }) => (
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-foreground">
+                {row.original.firstName} {row.original.lastName}
+              </span>
+              {row.original.deletedAt && (
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0">Deleted</Badge>
+              )}
             </div>
-          );
-        },
+            <div className="text-xs text-muted-foreground">{row.original.email}</div>
+          </div>
+        ),
         enableSorting: true,
       },
       {
@@ -111,7 +108,8 @@ export default function UsersListPage() {
         id: 'createdAt',
         header: 'Created',
         accessorKey: 'createdAt',
-        cell: ({ getValue }) => format(new Date(getValue() as string), 'MMM d, yyyy'),
+        cell: ({ getValue }) => format(new Date(getValue() as string), 'MMM d, yyyy'
+        ),
         enableSorting: true,
         enableHiding: true,
       },
@@ -211,6 +209,7 @@ export default function UsersListPage() {
           action: { label: 'Add User', onClick: () => setAddModalOpen(true) },
         }}
         storageKey="users-list"
+        rowClassName={(user) => user.deletedAt ? 'bg-muted/30 text-muted-foreground' : undefined}
         toolbarActions={
           <div className="flex items-center gap-2">
             <label className="flex items-center gap-1.5 text-sm text-muted-foreground cursor-pointer select-none">
@@ -220,7 +219,7 @@ export default function UsersListPage() {
                 onChange={(e) => setShowDeleted(e.target.checked)}
                 className="rounded border-input"
               />
-              Show deleted
+              Include deleted
             </label>
             <select
               value={userType || ''}

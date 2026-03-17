@@ -77,4 +77,7 @@ export interface DataGridProps<TData> {
 
   /** Additional actions rendered in the toolbar (e.g., "Add" button) */
   toolbarActions?: ReactNode;
+
+  /** Optional callback to add CSS classes to table rows based on row data */
+  rowClassName?: (row: TData) => string | undefined;
 }
