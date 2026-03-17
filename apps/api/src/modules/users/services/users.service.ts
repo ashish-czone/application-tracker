@@ -27,6 +27,7 @@ import {
 
 export interface CreateUserInput {
   email: string;
+  phone?: string;
   firstName: string;
   lastName: string;
   password: string;
@@ -36,6 +37,7 @@ export interface CreateUserInput {
 
 export interface UpdateUserInput {
   email?: string;
+  phone?: string;
   firstName?: string;
   lastName?: string;
 }
@@ -52,6 +54,7 @@ export interface ListUsersQuery {
 export interface UserWithType {
   id: string;
   email: string;
+  phone: string | null;
   firstName: string;
   lastName: string;
   userType: string;
@@ -120,6 +123,7 @@ export class UsersService {
     const data: UserWithType[] = rows.map((row) => ({
       id: row.id,
       email: row.email,
+      phone: row.phone,
       firstName: row.firstName,
       lastName: row.lastName,
       userType: row.userType,
@@ -148,6 +152,16 @@ export class UsersService {
     return user?.email ?? null;
   }
 
+  async getPhone(id: string): Promise<string | null> {
+    const [user] = await this.database.db
+      .select({ phone: users.phone })
+      .from(users)
+      .where(and(eq(users.id, id), isNull(users.deletedAt)))
+      .limit(1);
+
+    return user?.phone ?? null;
+  }
+
   async findOneOrFail(id: string): Promise<UserWithType> {
     const [user] = await this.database.db
       .select()
@@ -160,6 +174,7 @@ export class UsersService {
     return {
       id: user.id,
       email: user.email,
+      phone: user.phone,
       firstName: user.firstName,
       lastName: user.lastName,
       userType: user.userType,
@@ -192,6 +207,7 @@ export class UsersService {
         .insert(users)
         .values({
           email: data.email.toLowerCase(),
+          phone: data.phone ?? null,
           firstName: data.firstName,
           lastName: data.lastName,
           userType: data.userType,
@@ -227,6 +243,7 @@ export class UsersService {
     return {
       id: user.id,
       email: user.email,
+      phone: user.phone,
       firstName: user.firstName,
       lastName: user.lastName,
       userType: user.userType,
@@ -257,6 +274,7 @@ export class UsersService {
 
     const updateValues: Record<string, unknown> = {};
     if (data.email !== undefined) updateValues.email = data.email.toLowerCase();
+    if (data.phone !== undefined) updateValues.phone = data.phone;
     if (data.firstName !== undefined) updateValues.firstName = data.firstName;
     if (data.lastName !== undefined) updateValues.lastName = data.lastName;
 
@@ -282,6 +300,7 @@ export class UsersService {
     return {
       id: updated.id,
       email: updated.email,
+      phone: updated.phone,
       firstName: updated.firstName,
       lastName: updated.lastName,
       userType: updated.userType,

@@ -40,8 +40,9 @@ export class UsersModule implements OnModuleInit {
   ) {}
 
   onModuleInit() {
-    // Register contact resolver for email channel
+    // Register contact resolvers for notification channels
     this.contactResolverRegistry.register('email', (userId) => this.usersService.getEmail(userId));
+    this.contactResolverRegistry.register('whatsapp', (userId) => this.usersService.getPhone(userId));
 
     // Register permissions
     this.rbacService.registerPermissions('users', [
