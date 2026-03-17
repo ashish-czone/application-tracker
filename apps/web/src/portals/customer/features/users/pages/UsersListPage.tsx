@@ -1,8 +1,7 @@
 import { useMemo } from 'react';
 import { Users, Plus } from 'lucide-react';
 import { format } from 'date-fns';
-import { DataGrid, Badge, Button, type ColumnDef, type DataGridFilter } from '@packages/ui';
-import { useDataGridParams } from '../../../../../hooks/useDataGridParams';
+import { DataGrid, Badge, Button, useDataGridParams, type ColumnDef, type DataGridFilter } from '@packages/ui';
 import { useUsers } from '../hooks';
 import type { User } from '../types';
 
