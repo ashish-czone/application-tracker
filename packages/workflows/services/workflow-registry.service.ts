@@ -1,0 +1,255 @@
+import { Injectable, NotFoundException, type OnModuleInit } from '@nestjs/common';
+import { DatabaseService, eq, and, isNull } from '@packages/database';
+import { workflowDefinitions } from '../schema/workflow-definitions';
+import { workflowStates } from '../schema/workflow-states';
+import { workflowTransitions } from '../schema/workflow-transitions';
+import type { CachedWorkflowDefinition, CachedWorkflowState, CachedWorkflowTransition } from '../types';
+
+@Injectable()
+export class WorkflowRegistryService implements OnModuleInit {
+  private cache = new Map<string, CachedWorkflowDefinition>();
+
+  constructor(private readonly database: DatabaseService) {}
+
+  async onModuleInit() {
+    await this.loadAll();
+  }
+
+  async loadAll() {
+    const definitions = await this.database.db
+      .select()
+      .from(workflowDefinitions)
+      .where(and(eq(workflowDefinitions.isActive, true), isNull(workflowDefinitions.deletedAt)));
+
+    const allStates = await this.database.db
+      .select()
+      .from(workflowStates);
+
+    const allTransitions = await this.database.db
+      .select()
+      .from(workflowTransitions);
+
+    // Index states and transitions by definition ID
+    const statesByDef = new Map<string, typeof allStates>();
+    for (const state of allStates) {
+      const list = statesByDef.get(state.workflowDefinitionId) ?? [];
+      list.push(state);
+      statesByDef.set(state.workflowDefinitionId, list);
+    }
+
+    const transitionsByDef = new Map<string, typeof allTransitions>();
+    for (const transition of allTransitions) {
+      const list = transitionsByDef.get(transition.workflowDefinitionId) ?? [];
+      list.push(transition);
+      transitionsByDef.set(transition.workflowDefinitionId, list);
+    }
+
+    this.cache.clear();
+
+    for (const def of definitions) {
+      const defStates = statesByDef.get(def.id) ?? [];
+      const defTransitions = transitionsByDef.get(def.id) ?? [];
+
+      // Build state name lookup for transitions
+      const stateNameById = new Map<string, string>();
+      for (const s of defStates) {
+        stateNameById.set(s.id, s.name);
+      }
+
+      const cachedStates: CachedWorkflowState[] = defStates.map((s) => ({
+        id: s.id,
+        name: s.name,
+        label: s.label,
+        color: s.color,
+        sortOrder: s.sortOrder,
+        metadata: s.metadata as Record<string, unknown> | null,
+      }));
+
+      const cachedTransitions: CachedWorkflowTransition[] = defTransitions.map((t) => ({
+        id: t.id,
+        fromStateName: stateNameById.get(t.fromStateId) ?? '',
+        toStateName: stateNameById.get(t.toStateId) ?? '',
+        name: t.name,
+        requiredPermissions: (t.requiredPermissions as string[] | null) ?? [],
+        guardNames: (t.guardNames as string[] | null) ?? [],
+        sortOrder: t.sortOrder,
+        metadata: t.metadata as Record<string, unknown> | null,
+      }));
+
+      const cached: CachedWorkflowDefinition = {
+        id: def.id,
+        slug: def.slug,
+        name: def.name,
+        entityType: def.entityType,
+        fieldName: def.fieldName,
+        initialState: def.initialState,
+        isActive: def.isActive,
+        states: cachedStates,
+        transitions: cachedTransitions,
+      };
+
+      this.cache.set(def.slug, cached);
+    }
+  }
+
+  getBySlug(slug: string): CachedWorkflowDefinition | undefined {
+    return this.cache.get(slug);
+  }
+
+  getByEntityType(entityType: string): CachedWorkflowDefinition[] {
+    const results: CachedWorkflowDefinition[] = [];
+    for (const def of this.cache.values()) {
+      if (def.entityType === entityType) {
+        results.push(def);
+      }
+    }
+    return results;
+  }
+
+  getByEntityField(entityType: string, fieldName: string): CachedWorkflowDefinition | undefined {
+    for (const def of this.cache.values()) {
+      if (def.entityType === entityType && def.fieldName === fieldName) {
+        return def;
+      }
+    }
+    return undefined;
+  }
+
+  // --- CRUD Operations ---
+
+  async createDefinition(data: {
+    slug: string;
+    name: string;
+    entityType: string;
+    fieldName: string;
+    initialState: string;
+  }) {
+    const [row] = await this.database.db
+      .insert(workflowDefinitions)
+      .values(data)
+      .returning();
+    await this.loadAll();
+    return row;
+  }
+
+  async updateDefinition(id: string, data: Partial<{
+    name: string;
+    entityType: string;
+    fieldName: string;
+    initialState: string;
+    isActive: boolean;
+  }>) {
+    const [row] = await this.database.db
+      .update(workflowDefinitions)
+      .set(data)
+      .where(eq(workflowDefinitions.id, id))
+      .returning();
+
+    if (!row) throw new NotFoundException('Workflow definition not found');
+    await this.loadAll();
+    return row;
+  }
+
+  async deleteDefinition(id: string): Promise<void> {
+    const [row] = await this.database.db
+      .update(workflowDefinitions)
+      .set({ deletedAt: new Date() })
+      .where(eq(workflowDefinitions.id, id))
+      .returning();
+
+    if (!row) throw new NotFoundException('Workflow definition not found');
+    await this.loadAll();
+  }
+
+  async createState(definitionId: string, data: {
+    name: string;
+    label: string;
+    color?: string;
+    sortOrder?: number;
+    metadata?: Record<string, unknown>;
+  }) {
+    const [row] = await this.database.db
+      .insert(workflowStates)
+      .values({ workflowDefinitionId: definitionId, ...data })
+      .returning();
+    await this.loadAll();
+    return row;
+  }
+
+  async updateState(id: string, data: Partial<{
+    name: string;
+    label: string;
+    color: string | null;
+    sortOrder: number;
+    metadata: Record<string, unknown> | null;
+  }>) {
+    const [row] = await this.database.db
+      .update(workflowStates)
+      .set(data)
+      .where(eq(workflowStates.id, id))
+      .returning();
+
+    if (!row) throw new NotFoundException('Workflow state not found');
+    await this.loadAll();
+    return row;
+  }
+
+  async deleteState(id: string): Promise<void> {
+    const [row] = await this.database.db
+      .delete(workflowStates)
+      .where(eq(workflowStates.id, id))
+      .returning();
+
+    if (!row) throw new NotFoundException('Workflow state not found');
+    await this.loadAll();
+  }
+
+  async createTransition(definitionId: string, data: {
+    fromStateId: string;
+    toStateId: string;
+    name: string;
+    requiredPermissions?: string[];
+    guardNames?: string[];
+    sortOrder?: number;
+    metadata?: Record<string, unknown>;
+  }) {
+    const [row] = await this.database.db
+      .insert(workflowTransitions)
+      .values({ workflowDefinitionId: definitionId, ...data })
+      .returning();
+    await this.loadAll();
+    return row;
+  }
+
+  async updateTransition(id: string, data: Partial<{
+    name: string;
+    requiredPermissions: string[] | null;
+    guardNames: string[] | null;
+    sortOrder: number;
+    metadata: Record<string, unknown> | null;
+  }>) {
+    const [row] = await this.database.db
+      .update(workflowTransitions)
+      .set(data)
+      .where(eq(workflowTransitions.id, id))
+      .returning();
+
+    if (!row) throw new NotFoundException('Workflow transition not found');
+    await this.loadAll();
+    return row;
+  }
+
+  async deleteTransition(id: string): Promise<void> {
+    const [row] = await this.database.db
+      .delete(workflowTransitions)
+      .where(eq(workflowTransitions.id, id))
+      .returning();
+
+    if (!row) throw new NotFoundException('Workflow transition not found');
+    await this.loadAll();
+  }
+
+  async invalidateCache(): Promise<void> {
+    await this.loadAll();
+  }
+}
