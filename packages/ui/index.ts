@@ -7,7 +7,7 @@ export { Skeleton } from './components/Skeleton';
 export { Input, type InputProps } from './components/form/Input';
 export { Label } from './components/form/Label';
 export { Form } from './components/form/Form';
-export { FormInput } from './components/form/FormInput';
+export { FormInput, type AsyncValidationStatus } from './components/form/FormInput';
 export { FormSelect } from './components/form/FormSelect';
 export { PasswordStrength } from './components/form/PasswordStrength';
 

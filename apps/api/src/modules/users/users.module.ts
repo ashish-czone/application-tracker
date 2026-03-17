@@ -3,10 +3,12 @@ import { ConfigService } from '@nestjs/config';
 import { AuthModule as AuthPackageModule } from '@packages/auth';
 import { RbacModule, RbacService } from '@packages/rbac';
 import { EventRegistryService } from '@packages/events';
+import { DatabaseService, users, isNull } from '@packages/database';
 import { AppConfigService } from '@packages/settings';
 import { ContactResolverRegistry } from '@packages/notifications';
 import { UsersController } from './controllers/users.controller';
 import { UsersService } from './services/users.service';
+import { UniqueCheckService } from '../shared/services/unique-check.service';
 import { USERS_PERMISSIONS } from './permissions';
 import {
   USERS_USER_CREATED,
@@ -37,12 +39,23 @@ export class UsersModule implements OnModuleInit {
     private readonly rbacService: RbacService,
     private readonly contactResolverRegistry: ContactResolverRegistry,
     private readonly usersService: UsersService,
+    private readonly uniqueCheckService: UniqueCheckService,
   ) {}
 
   onModuleInit() {
     // Register contact resolvers for notification channels
     this.contactResolverRegistry.register('email', (userId) => this.usersService.getEmail(userId));
     this.contactResolverRegistry.register('whatsapp', (userId) => this.usersService.getPhone(userId));
+
+    // Register unique fields for check-unique endpoint
+    this.uniqueCheckService.register('users', {
+      table: users,
+      idColumn: users.id,
+      readPermission: USERS_PERMISSIONS.READ,
+      fields: {
+        email: { column: users.email, extraCondition: isNull(users.deletedAt) },
+      },
+    });
 
     // Register permissions
     this.rbacService.registerPermissions('users', [

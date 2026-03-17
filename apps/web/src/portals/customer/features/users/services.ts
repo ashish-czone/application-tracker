@@ -20,6 +20,12 @@ export function createUser(data: CreateUserRequest): Promise<User> {
   return api.post<User>('/users', data);
 }
 
+export function checkUnique(entity: string, field: string, value: string, excludeId?: string): Promise<{ unique: boolean }> {
+  const params = new URLSearchParams({ entity, field, value });
+  if (excludeId) params.set('excludeId', excludeId);
+  return api.get<{ unique: boolean }>(`/check-unique?${params.toString()}`);
+}
+
 export function listRoles(userType?: string): Promise<PaginatedResponse<Role>> {
   const params = new URLSearchParams({ limit: '100' });
   if (userType) params.set('userType', userType);
