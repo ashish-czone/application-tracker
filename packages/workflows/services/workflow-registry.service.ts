@@ -92,6 +92,10 @@ export class WorkflowRegistryService implements OnModuleInit {
     }
   }
 
+  getAll(): CachedWorkflowDefinition[] {
+    return Array.from(this.cache.values());
+  }
+
   getBySlug(slug: string): CachedWorkflowDefinition | undefined {
     return this.cache.get(slug);
   }
