@@ -220,7 +220,7 @@ export default function UsersListPage() {
                 onChange={(e) => setShowDeleted(e.target.checked)}
                 className="rounded border-input"
               />
-              Show deleted
+              Include deleted
             </label>
             <select
               value={userType || ''}
