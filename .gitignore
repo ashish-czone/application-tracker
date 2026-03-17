@@ -23,3 +23,6 @@ test-results/
 
 # Playwright
 .playwright-mcp/
+
+# Claude Code worktrees
+.claude/worktrees/
