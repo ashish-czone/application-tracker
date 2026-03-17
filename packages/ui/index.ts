@@ -36,6 +36,7 @@ export type {
 
 // Hooks
 export { useDebounce } from './hooks/useDebounce';
+export { useDataGridParams } from './hooks/useDataGridParams';
 
 // Utilities
 export { cn } from './lib/utils';
