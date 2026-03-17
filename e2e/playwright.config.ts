@@ -18,4 +18,11 @@ export default defineConfig({
       use: { browserName: 'chromium' },
     },
   ],
+  webServer: {
+    command: 'pnpm --filter @apps/web dev',
+    url: 'http://localhost:5173',
+    reuseExistingServer: true,
+    timeout: 30_000,
+    cwd: '..',
+  },
 });
