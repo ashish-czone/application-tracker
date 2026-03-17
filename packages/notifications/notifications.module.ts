@@ -1,5 +1,6 @@
 import { Module, type OnModuleInit, Logger } from '@nestjs/common';
 import { QueueService } from '@packages/queue';
+import { cronForLocalHour } from '@packages/common';
 import { EmailChannelService, WhatsAppChannelService } from '@packages/notification-channels';
 import type { EmailPayload, WhatsAppPayload } from '@packages/notification-channels';
 import { NotificationRuleService } from './services/notification-rule.service';
@@ -53,25 +54,6 @@ export class NotificationsModule implements OnModuleInit {
     private readonly whatsAppChannelService: WhatsAppChannelService,
   ) {}
 
-  /**
-   * Convert a local hour (in APP_TIMEZONE) to a UTC cron pattern.
-   * E.g., 2:00 AM in Asia/Dubai (UTC+4) → "0 22 * * *" (10 PM UTC previous day)
-   */
-  private buildCronForLocalHour(localHour: number): string {
-    const tz = process.env.APP_TIMEZONE ?? 'UTC';
-    // Create a date at the desired local hour today, then read its UTC hour
-    const now = new Date();
-    const localDateStr = now.toLocaleDateString('en-CA', { timeZone: tz }); // YYYY-MM-DD
-    const localDateTime = new Date(`${localDateStr}T${String(localHour).padStart(2, '0')}:00:00`);
-    // Interpret this as a time in the target timezone by computing the offset
-    const utcEquivalent = new Date(localDateTime.toLocaleString('en-US', { timeZone: 'UTC' }));
-    const tzEquivalent = new Date(localDateTime.toLocaleString('en-US', { timeZone: tz }));
-    const offsetMs = utcEquivalent.getTime() - tzEquivalent.getTime();
-    const utcTime = new Date(localDateTime.getTime() + offsetMs);
-    const utcHour = utcTime.getUTCHours();
-    return `0 ${utcHour} * * *`;
-  }
-
   onModuleInit() {
     // Register inline channels
     this.dispatcher.registerInlineChannel(this.inAppChannel);
@@ -110,7 +92,8 @@ export class NotificationsModule implements OnModuleInit {
     // Enqueue repeatable scan — runs daily at 2:00 AM in the app timezone
     const queue = this.queueService.getQueue(SCHEDULE_SCAN_QUEUE);
     if (queue) {
-      const cronPattern = this.buildCronForLocalHour(2);
+      const appTimezone = process.env.APP_TIMEZONE ?? 'UTC';
+      const cronPattern = cronForLocalHour(2, appTimezone);
       queue.upsertJobScheduler(
         'notification-schedule-scan',
         { pattern: cronPattern },

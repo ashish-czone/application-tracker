@@ -10,6 +10,7 @@ import { PreferenceService } from './preference.service';
 import { TemplateRenderer } from './template-renderer';
 import { NotificationDispatcher } from './notification-dispatcher';
 import { buildConditions } from '../helpers/condition-builder';
+import { todayInTimezone } from '@packages/common';
 import type { Condition, NotificationRule, ScheduleDateOperator, ScheduleUnit } from '../types';
 import type { DomainEvent } from '@packages/events';
 
@@ -30,9 +31,8 @@ export class ScheduleScanner {
     this.appTimezone = process.env.APP_TIMEZONE ?? 'UTC';
   }
 
-  /** Get today's date (YYYY-MM-DD) in the app timezone. */
   private getTodayInAppTimezone(): string {
-    return new Date().toLocaleDateString('en-CA', { timeZone: this.appTimezone });
+    return todayInTimezone(this.appTimezone);
   }
 
   /**
