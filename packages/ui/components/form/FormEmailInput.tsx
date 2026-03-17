@@ -1,44 +1,42 @@
-import * as React from 'react';
 import { Controller, type Control, type FieldValues, type Path } from 'react-hook-form';
 import { Check, X, Loader2 } from 'lucide-react';
 import { Input } from './Input';
 import { Label } from './Label';
 import { cn } from '../../lib/utils';
+import type { AsyncValidationStatus } from './FormInput';
 
-export type AsyncValidationStatus = 'idle' | 'checking' | 'valid' | 'invalid';
-
-interface FormInputProps<T extends FieldValues> {
+interface FormEmailInputProps<T extends FieldValues> {
   control: Control<T>;
   name: Path<T>;
   label: string;
-  type?: string;
   placeholder?: string;
   description?: string;
   autoComplete?: string;
   disabled?: boolean;
   className?: string;
-  /** Async validation status — shows inline icon (spinner, check, cross) */
+  /** Async validation status (e.g., from useAsyncValidator) */
   asyncStatus?: AsyncValidationStatus;
-  /** Error message for async validation (shown when asyncStatus is 'invalid') */
+  /** Error message when asyncStatus is 'invalid' */
   asyncError?: string;
-  /** Called on blur with the current value — use for async validation */
+  /** Called on blur for async validation (e.g., uniqueness check) */
   onBlurValidate?: (value: string) => void;
 }
 
-export function FormInput<T extends FieldValues>({
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export function FormEmailInput<T extends FieldValues>({
   control,
   name,
   label,
-  type = 'text',
-  placeholder,
+  placeholder = 'you@example.com',
   description,
-  autoComplete,
+  autoComplete = 'email',
   disabled,
   className,
   asyncStatus,
   asyncError,
   onBlurValidate,
-}: FormInputProps<T>) {
+}: FormEmailInputProps<T>) {
   const errorId = `${name}-error`;
   const descriptionId = `${name}-description`;
   const hasAsyncIcon = asyncStatus && asyncStatus !== 'idle';
@@ -64,7 +62,7 @@ export function FormInput<T extends FieldValues>({
               <Input
                 {...field}
                 id={name}
-                type={type}
+                type="email"
                 placeholder={placeholder}
                 autoComplete={autoComplete}
                 disabled={disabled}
@@ -73,8 +71,10 @@ export function FormInput<T extends FieldValues>({
                 className={cn(hasAsyncIcon && 'pr-10')}
                 onBlur={(e) => {
                   field.onBlur();
-                  if (onBlurValidate && e.target.value) {
-                    onBlurValidate(e.target.value);
+                  const value = e.target.value;
+                  // Only fire async validation if value is a valid email format
+                  if (onBlurValidate && value && EMAIL_REGEX.test(value)) {
+                    onBlurValidate(value);
                   }
                 }}
               />

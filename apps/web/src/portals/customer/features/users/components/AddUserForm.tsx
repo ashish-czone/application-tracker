@@ -1,18 +1,20 @@
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useCallback } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
   Form,
   FormInput,
+  FormEmailInput,
+  FormPasswordInput,
+  FormPhoneInput,
   FormSelect,
-  PasswordStrength,
   Button,
   DialogHeader,
   DialogTitle,
   DialogDescription,
   DialogFooter,
-  type AsyncValidationStatus,
+  useAsyncValidator,
 } from '@packages/ui';
 import { useCreateUser, useRoles } from '../hooks';
 import { checkUnique } from '../services';
@@ -21,7 +23,7 @@ const createUserSchema = z.object({
   firstName: z.string().min(2, 'First name must be at least 2 characters').max(100),
   lastName: z.string().min(2, 'Last name must be at least 2 characters').max(100),
   email: z.string().min(1, 'Email is required').email('Invalid email address'),
-  phone: z.string().max(20).optional().or(z.literal('')),
+  phone: z.string().optional().or(z.literal('')),
   password: z
     .string()
     .max(128)
@@ -53,22 +55,16 @@ export function AddUserForm({ onClose }: AddUserFormProps) {
     },
   });
 
-  const passwordValue = useWatch({ control, name: 'password' });
   const selectedUserType = useWatch({ control, name: 'userType' });
 
-  // Email uniqueness check on blur
-  const [emailStatus, setEmailStatus] = useState<AsyncValidationStatus>('idle');
-
-  const handleEmailBlur = useCallback(async (value: string) => {
-    if (!value || !value.includes('@')) return;
-    setEmailStatus('checking');
-    try {
-      const result = await checkUnique('users', 'email', value);
-      setEmailStatus(result.unique ? 'valid' : 'invalid');
-    } catch {
-      setEmailStatus('idle');
-    }
-  }, []);
+  // Email uniqueness check
+  const emailValidator = useAsyncValidator({
+    checkFn: useCallback(
+      (value: string) => checkUnique('users', 'email', value).then((r) => r.unique),
+      [],
+    ),
+    errorMessage: 'This email is already in use',
+  });
 
   const { data: rolesData } = useRoles(selectedUserType || undefined);
 
@@ -122,37 +118,30 @@ export function AddUserForm({ onClose }: AddUserFormProps) {
           />
         </div>
 
-        <FormInput
+        <FormEmailInput
           control={control}
           name="email"
           label="Email"
-          type="email"
-          placeholder="john@example.com"
           autoComplete="off"
-          asyncStatus={emailStatus}
-          asyncError="This email is already in use"
-          onBlurValidate={handleEmailBlur}
+          asyncStatus={emailValidator.status}
+          asyncError={emailValidator.error ?? undefined}
+          onBlurValidate={emailValidator.validate}
         />
 
-        <FormInput
+        <FormPhoneInput
           control={control}
           name="phone"
           label="Phone (optional)"
-          placeholder="+15551234567"
-          autoComplete="off"
+          defaultCountry="AE"
         />
 
-        <div className="space-y-2">
-          <FormInput
-            control={control}
-            name="password"
-            label="Password"
-            type="password"
-            placeholder="Enter password"
-            autoComplete="new-password"
-          />
-          <PasswordStrength password={passwordValue ?? ''} />
-        </div>
+        <FormPasswordInput
+          control={control}
+          name="password"
+          label="Password"
+          autoComplete="new-password"
+          showStrength
+        />
 
         <FormSelect
           control={control}
