@@ -7,6 +7,7 @@ export default defineConfig({
     '../rbac/schema/index.ts',
     '../settings/schema/index.ts',
     '../notifications/schema/index.ts',
+    '../workflows/schema/index.ts',
   ],
   out: './drizzle',
   dialect: 'postgresql',
