@@ -107,9 +107,9 @@ export default function UsersListPage() {
       {
         id: 'roles',
         header: 'Role',
-        accessorFn: (row) => row.roles.map((r) => r.name).join(', '),
+        accessorFn: (row) => (row.roles ?? []).map((r) => r.name).join(', '),
         cell: ({ row }) => {
-          const userRoles = row.original.roles;
+          const userRoles = row.original.roles ?? [];
           if (!userRoles.length) return <span className="text-muted-foreground">—</span>;
           return (
             <div className="flex flex-wrap gap-1">
