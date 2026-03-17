@@ -10,6 +10,7 @@ interface DataGridTableProps<TData> {
   onSortChange?: (column: string, direction: 'asc' | 'desc') => void;
   sortColumn?: string;
   sortDirection?: 'asc' | 'desc';
+  rowClassName?: (row: TData) => string | undefined;
 }
 
 function SortIcon({
@@ -38,6 +39,7 @@ export function DataGridTable<TData>({
   onSortChange,
   sortColumn,
   sortDirection,
+  rowClassName,
 }: DataGridTableProps<TData>) {
   const handleSort = (header: Header<TData, unknown>) => {
     if (!header.column.getCanSort() || !onSortChange) return;
@@ -97,7 +99,10 @@ export function DataGridTable<TData>({
             : table.getRowModel().rows.map((row) => (
                 <tr
                   key={row.id}
-                  className="border-b last:border-0 hover:bg-muted/50 transition-colors"
+                  className={cn(
+                    'border-b last:border-0 hover:bg-muted/50 transition-colors',
+                    rowClassName?.(row.original),
+                  )}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <td key={cell.id} className="h-12 px-4 align-middle">
