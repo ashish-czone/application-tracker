@@ -22,6 +22,13 @@
       "when": 1774090800000,
       "tag": "0002_workflow_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1774177200000,
+      "tag": "0003_add_users_phone",
+      "breakpoints": true
     }
   ]
 }

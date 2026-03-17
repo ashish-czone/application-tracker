@@ -33,7 +33,7 @@ export class WhatsAppChannelService {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error({
         provider: provider.name,
-        recipientId: payload.recipientId,
+        to: payload.to,
         correlationId: payload.correlationId,
         error: message,
       }, 'WhatsApp send failed');

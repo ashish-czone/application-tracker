@@ -1,0 +1,58 @@
+import { Injectable, Logger } from '@nestjs/common';
+import type { EmailProvider, EmailPayload, SendResult } from '../../types';
+
+export interface SmtpConfig {
+  host: string;
+  port: number;
+  secure: boolean;
+  auth: { user: string; pass: string };
+  from: string;
+}
+
+@Injectable()
+export class SmtpEmailProvider implements EmailProvider {
+  readonly name = 'smtp';
+  private readonly logger = new Logger(SmtpEmailProvider.name);
+  private config: SmtpConfig | null = null;
+  private transporter: any = null;
+
+  configure(config: SmtpConfig): void {
+    this.config = config;
+    try {
+      const nodemailer = require('nodemailer');
+      this.transporter = nodemailer.createTransport({
+        host: config.host,
+        port: config.port,
+        secure: config.secure,
+        auth: config.auth,
+      });
+    } catch {
+      this.logger.error('nodemailer is not installed — run: pnpm add nodemailer');
+    }
+  }
+
+  async send(payload: EmailPayload): Promise<SendResult> {
+    if (!this.config || !this.transporter) {
+      return { success: false, error: 'SMTP provider not configured' };
+    }
+
+    try {
+      const info = await this.transporter.sendMail({
+        from: this.config.from,
+        to: payload.to,
+        subject: payload.subject,
+        html: payload.body,
+      });
+
+      return { success: true, providerMessageId: info.messageId };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error({
+        to: payload.to,
+        correlationId: payload.correlationId,
+        error: message,
+      }, 'SMTP email send failed');
+      return { success: false, error: message };
+    }
+  }
+}

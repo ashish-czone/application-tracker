@@ -4,6 +4,7 @@ import { AuthModule as AuthPackageModule } from '@packages/auth';
 import { RbacModule, RbacService } from '@packages/rbac';
 import { EventRegistryService } from '@packages/events';
 import { AppConfigService } from '@packages/settings';
+import { ContactResolverRegistry } from '@packages/notifications';
 import { UsersController } from './controllers/users.controller';
 import { UsersService } from './services/users.service';
 import { USERS_PERMISSIONS } from './permissions';
@@ -34,9 +35,15 @@ export class UsersModule implements OnModuleInit {
   constructor(
     private readonly eventRegistry: EventRegistryService,
     private readonly rbacService: RbacService,
+    private readonly contactResolverRegistry: ContactResolverRegistry,
+    private readonly usersService: UsersService,
   ) {}
 
   onModuleInit() {
+    // Register contact resolvers for notification channels
+    this.contactResolverRegistry.register('email', (userId) => this.usersService.getEmail(userId));
+    this.contactResolverRegistry.register('whatsapp', (userId) => this.usersService.getPhone(userId));
+
     // Register permissions
     this.rbacService.registerPermissions('users', [
       { action: 'create', description: 'Create users' },
