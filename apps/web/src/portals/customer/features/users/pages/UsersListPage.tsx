@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react';
-import { Users, Plus, Pencil, Trash2 } from 'lucide-react';
+import { Users, Plus, Pencil, Trash2, RotateCcw } from 'lucide-react';
 import { format } from 'date-fns';
 import {
   DataGrid, Badge, Button, useDataGridParams,
   Dialog, DialogContent, ConfirmDialog,
   type ColumnDef, type DataGridFilter,
 } from '@packages/ui';
-import { useUsers, useDeleteUser } from '../hooks';
+import { useUsers, useDeleteUser, useRestoreUser } from '../hooks';
 import { AddUserForm } from '../components/AddUserForm';
 import { EditUserForm } from '../components/EditUserForm';
 import type { User } from '../types';
@@ -20,6 +20,7 @@ export default function UsersListPage() {
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [deletingUser, setDeletingUser] = useState<User | null>(null);
+  const [showDeleted, setShowDeleted] = useState(false);
   const {
     page,
     pageSize,
@@ -40,6 +41,7 @@ export default function UsersListPage() {
   const deleteMutation = useDeleteUser({
     onSuccess: () => setDeletingUser(null),
   });
+  const restoreMutation = useRestoreUser();
 
   const { data, isLoading, isError, refetch } = useUsers({
     page,
@@ -48,6 +50,7 @@ export default function UsersListPage() {
     sort: sort || undefined,
     order,
     userType,
+    includeDeleted: showDeleted,
   });
 
   const columns = useMemo<ColumnDef<User, unknown>[]>(
@@ -56,14 +59,22 @@ export default function UsersListPage() {
         id: 'firstName',
         header: 'Name',
         accessorFn: (row) => `${row.firstName} ${row.lastName}`,
-        cell: ({ row }) => (
-          <div>
-            <div className="font-medium text-foreground">
-              {row.original.firstName} {row.original.lastName}
+        cell: ({ row }) => {
+          const isDeleted = !!row.original.deletedAt;
+          return (
+            <div className={isDeleted ? 'opacity-50' : ''}>
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-foreground">
+                  {row.original.firstName} {row.original.lastName}
+                </span>
+                {isDeleted && (
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">Deleted</Badge>
+                )}
+              </div>
+              <div className="text-xs text-muted-foreground">{row.original.email}</div>
             </div>
-            <div className="text-xs text-muted-foreground">{row.original.email}</div>
-          </div>
-        ),
+          );
+        },
         enableSorting: true,
       },
       {
@@ -110,26 +121,44 @@ export default function UsersListPage() {
         size: 80,
         enableHiding: false,
         enableSorting: false,
-        cell: ({ row }) => (
-          <div className="flex items-center gap-1 justify-end">
-            <button
-              type="button"
-              onClick={() => setEditingUser(row.original)}
-              className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-              aria-label={`Edit ${row.original.firstName}`}
-            >
-              <Pencil className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => setDeletingUser(row.original)}
-              className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-              aria-label={`Delete ${row.original.firstName}`}
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
-          </div>
-        ),
+        cell: ({ row }) => {
+          const isDeleted = !!row.original.deletedAt;
+          if (isDeleted) {
+            return (
+              <div className="flex items-center justify-end">
+                <button
+                  type="button"
+                  onClick={() => restoreMutation.mutate(row.original.id)}
+                  disabled={restoreMutation.isPending}
+                  className="p-1.5 rounded-md text-muted-foreground hover:text-success hover:bg-success/10 transition-colors"
+                  aria-label={`Restore ${row.original.firstName}`}
+                >
+                  <RotateCcw className="h-4 w-4" />
+                </button>
+              </div>
+            );
+          }
+          return (
+            <div className="flex items-center gap-1 justify-end">
+              <button
+                type="button"
+                onClick={() => setEditingUser(row.original)}
+                className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                aria-label={`Edit ${row.original.firstName}`}
+              >
+                <Pencil className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setDeletingUser(row.original)}
+                className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                aria-label={`Delete ${row.original.firstName}`}
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+          );
+        },
       },
     ],
     [],
@@ -184,6 +213,15 @@ export default function UsersListPage() {
         storageKey="users-list"
         toolbarActions={
           <div className="flex items-center gap-2">
+            <label className="flex items-center gap-1.5 text-sm text-muted-foreground cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={showDeleted}
+                onChange={(e) => setShowDeleted(e.target.checked)}
+                className="rounded border-input"
+              />
+              Show deleted
+            </label>
             <select
               value={userType || ''}
               onChange={(e) => setFilter('userType', e.target.value || undefined)}

@@ -38,4 +38,9 @@ export class ListUsersQueryDto {
   @IsOptional()
   @IsIn(['asc', 'desc'])
   order?: 'asc' | 'desc' = 'desc';
+
+  @ApiPropertyOptional({ description: 'Include soft-deleted users in the list' })
+  @IsOptional()
+  @IsIn(['true', 'false'])
+  includeDeleted?: string;
 }

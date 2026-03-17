@@ -7,6 +7,7 @@ export interface User {
   userType: 'admin' | 'client';
   createdAt: string;
   updatedAt: string;
+  deletedAt: string | null;
 }
 
 export interface CreateUserRequest {
@@ -43,4 +44,5 @@ export interface ListUsersParams {
   sort?: string;
   order?: 'asc' | 'desc';
   userType?: string;
+  includeDeleted?: boolean;
 }
