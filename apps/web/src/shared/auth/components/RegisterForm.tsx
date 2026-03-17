@@ -1,10 +1,11 @@
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Link } from 'react-router';
 import {
   Form,
   FormInput,
+  PasswordStrength,
   Button,
   Card,
   CardHeader,
@@ -20,11 +21,11 @@ const registerSchema = z.object({
   email: z.string().min(1, 'Email is required').email('Invalid email address'),
   password: z
     .string()
-    .min(8, 'Password must be at least 8 characters')
     .max(128)
-    .regex(/[A-Z]/, 'Must contain an uppercase letter')
-    .regex(/[a-z]/, 'Must contain a lowercase letter')
-    .regex(/[0-9]/, 'Must contain a number'),
+    .refine((p) => p.length >= 8, 'At least 8 characters')
+    .refine((p) => /[A-Z]/.test(p), 'Uppercase letter required')
+    .refine((p) => /[a-z]/.test(p), 'Lowercase letter required')
+    .refine((p) => /[0-9]/.test(p), 'Number required'),
 });
 
 type RegisterFormValues = z.infer<typeof registerSchema>;
@@ -34,6 +35,7 @@ export function RegisterForm() {
     resolver: zodResolver(registerSchema),
     defaultValues: { firstName: '', lastName: '', email: '', password: '' },
   });
+  const passwordValue = useWatch({ control, name: 'password' });
   const registerMutation = useRegister();
 
   function onSubmit(data: RegisterFormValues) {
@@ -72,15 +74,17 @@ export function RegisterForm() {
             placeholder="you@example.com"
             autoComplete="email"
           />
-          <FormInput
-            control={control}
-            name="password"
-            label="Password"
-            type="password"
-            placeholder="At least 8 characters"
-            autoComplete="new-password"
-            description="Must contain uppercase, lowercase, and a number"
-          />
+          <div className="space-y-2">
+            <FormInput
+              control={control}
+              name="password"
+              label="Password"
+              type="password"
+              placeholder="Enter password"
+              autoComplete="new-password"
+            />
+            <PasswordStrength password={passwordValue ?? ''} />
+          </div>
 
           {registerMutation.isError && (
             <p className="text-sm text-destructive" aria-live="polite">
