@@ -19,6 +19,16 @@ export interface CreateUserRequest {
   phone?: string;
 }
 
+export interface Role {
+  id: string;
+  name: string;
+  userType: string;
+  isDefault: boolean;
+  isSuperadmin: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ListUsersParams {
   page?: number;
   limit?: number;

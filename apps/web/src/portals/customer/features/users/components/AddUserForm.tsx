@@ -1,4 +1,5 @@
-import { useForm } from 'react-hook-form';
+import { useMemo } from 'react';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
@@ -11,7 +12,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@packages/ui';
-import { useCreateUser } from '../hooks';
+import { useCreateUser, useRoles } from '../hooks';
 
 const createUserSchema = z.object({
   firstName: z.string().min(2, 'First name must be at least 2 characters').max(100),
@@ -33,7 +34,7 @@ interface AddUserFormProps {
 }
 
 export function AddUserForm({ onClose }: AddUserFormProps) {
-  const { control, handleSubmit } = useForm<CreateUserFormValues>({
+  const { control, handleSubmit, setValue } = useForm<CreateUserFormValues>({
     resolver: zodResolver(createUserSchema),
     defaultValues: {
       firstName: '',
@@ -45,6 +46,27 @@ export function AddUserForm({ onClose }: AddUserFormProps) {
       roleId: '',
     },
   });
+
+  // Watch userType to filter roles dynamically
+  const selectedUserType = useWatch({ control, name: 'userType' });
+
+  const { data: rolesData } = useRoles(selectedUserType || undefined);
+
+  const roleOptions = useMemo(() => {
+    if (!rolesData?.data) return [];
+    return rolesData.data.map((role) => ({
+      label: role.name,
+      value: role.id,
+    }));
+  }, [rolesData]);
+
+  // Reset roleId when userType changes (selected role may not be valid for new type)
+  const prevUserType = useMemo(() => selectedUserType, [selectedUserType]);
+  useMemo(() => {
+    if (prevUserType !== selectedUserType) {
+      setValue('roleId', '');
+    }
+  }, [selectedUserType, prevUserType, setValue]);
 
   const createMutation = useCreateUser({ onSuccess: onClose });
 
@@ -121,9 +143,9 @@ export function AddUserForm({ onClose }: AddUserFormProps) {
           control={control}
           name="roleId"
           label="Role"
-          placeholder="Select role"
-          description="Roles can be managed in the RBAC settings"
-          options={[]}
+          placeholder={selectedUserType ? 'Select role' : 'Select user type first'}
+          disabled={!selectedUserType}
+          options={roleOptions}
         />
 
         {createMutation.isError && (
