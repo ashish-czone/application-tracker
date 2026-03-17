@@ -4,6 +4,7 @@ export { PreferenceService } from './services/preference.service';
 export { NotificationTemplatesService } from './services/notification-templates.service';
 export { NotificationRulesService } from './services/notification-rules.service';
 export { EntityResolverRegistry } from './services/entity-resolver-registry';
+export { ContactResolverRegistry, type ContactResolverFn } from './services/contact-resolver-registry';
 export { buildConditions } from './helpers/condition-builder';
 export type {
   NotificationChannel,

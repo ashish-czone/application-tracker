@@ -34,7 +34,7 @@ export class TwilioWhatsAppProvider implements WhatsAppProvider {
         },
         body: new URLSearchParams({
           From: `whatsapp:${fromNumber}`,
-          To: `whatsapp:${payload.recipientId}`,
+          To: `whatsapp:${payload.to}`,
           Body: payload.body,
         }),
       });

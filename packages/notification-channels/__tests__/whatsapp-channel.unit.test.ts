@@ -6,7 +6,7 @@ import type { WhatsAppProvider, WhatsAppPayload } from '../types';
 
 function buildPayload(overrides: Partial<WhatsAppPayload> = {}): WhatsAppPayload {
   return {
-    recipientId: '+15551234567',
+    to: '+15551234567',
     body: 'Hello from WhatsApp',
     correlationId: 'corr-1',
     ...overrides,

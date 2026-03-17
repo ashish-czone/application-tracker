@@ -138,6 +138,16 @@ export class UsersService {
     };
   }
 
+  async getEmail(id: string): Promise<string | null> {
+    const [user] = await this.database.db
+      .select({ email: users.email })
+      .from(users)
+      .where(and(eq(users.id, id), isNull(users.deletedAt)))
+      .limit(1);
+
+    return user?.email ?? null;
+  }
+
   async findOneOrFail(id: string): Promise<UserWithType> {
     const [user] = await this.database.db
       .select()

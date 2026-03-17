@@ -8,7 +8,7 @@ export class ConsoleEmailProvider implements EmailProvider {
 
   async send(payload: EmailPayload): Promise<SendResult> {
     this.logger.log({
-      recipientId: payload.recipientId,
+      to: payload.to,
       subject: payload.subject,
       correlationId: payload.correlationId,
     }, 'Email sent (console provider — no actual delivery)');

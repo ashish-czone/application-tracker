@@ -9,7 +9,7 @@ export interface SendResult {
 // ---- Email ----
 
 export interface EmailPayload {
-  recipientId: string;
+  to: string;
   subject: string;
   body: string;
   correlationId: string;
@@ -23,7 +23,7 @@ export interface EmailProvider {
 // ---- WhatsApp ----
 
 export interface WhatsAppPayload {
-  recipientId: string;
+  to: string;
   body: string;
   correlationId: string;
 }

@@ -8,13 +8,12 @@ import { NotificationTemplatesService } from './services/notification-templates.
 import { RecipientResolver } from './services/recipient-resolver';
 import { PreferenceService } from './services/preference.service';
 import { TemplateRenderer } from './services/template-renderer';
-import { NotificationDispatcher } from './services/notification-dispatcher';
+import { NotificationDispatcher, EMAIL_QUEUE_NAME, WHATSAPP_QUEUE_NAME } from './services/notification-dispatcher';
 import { NotificationListener } from './listeners/notification.listener';
 import { EntityResolverRegistry } from './services/entity-resolver-registry';
+import { ContactResolverRegistry } from './services/contact-resolver-registry';
 import { ScheduleScanner } from './services/schedule-scanner';
 import { InAppChannel } from './channels/in-app.channel';
-import { EmailChannel, EMAIL_QUEUE_NAME } from './channels/email.channel';
-import { WhatsAppChannel, WHATSAPP_QUEUE_NAME } from './channels/whatsapp.channel';
 
 export const SCHEDULE_SCAN_QUEUE = 'notification.schedule-scan';
 
@@ -29,10 +28,9 @@ export const SCHEDULE_SCAN_QUEUE = 'notification.schedule-scan';
     NotificationDispatcher,
     NotificationListener,
     EntityResolverRegistry,
+    ContactResolverRegistry,
     ScheduleScanner,
     InAppChannel,
-    EmailChannel,
-    WhatsAppChannel,
   ],
   exports: [
     NotificationDispatcher,
@@ -40,6 +38,7 @@ export const SCHEDULE_SCAN_QUEUE = 'notification.schedule-scan';
     NotificationRulesService,
     NotificationTemplatesService,
     EntityResolverRegistry,
+    ContactResolverRegistry,
   ],
 })
 export class NotificationsModule implements OnModuleInit {
@@ -48,8 +47,6 @@ export class NotificationsModule implements OnModuleInit {
   constructor(
     private readonly dispatcher: NotificationDispatcher,
     private readonly inAppChannel: InAppChannel,
-    private readonly emailChannel: EmailChannel,
-    private readonly whatsAppChannel: WhatsAppChannel,
     private readonly queueService: QueueService,
     private readonly scheduleScanner: ScheduleScanner,
     private readonly emailChannelService: EmailChannelService,
@@ -57,10 +54,8 @@ export class NotificationsModule implements OnModuleInit {
   ) {}
 
   onModuleInit() {
-    // Register channel providers
-    this.dispatcher.registerChannel(this.inAppChannel);
-    this.dispatcher.registerChannel(this.emailChannel);
-    this.dispatcher.registerChannel(this.whatsAppChannel);
+    // Register inline channels
+    this.dispatcher.registerInlineChannel(this.inAppChannel);
 
     // Register queue processors — delegate to notification-channels package
     this.queueService.registerProcessor({
