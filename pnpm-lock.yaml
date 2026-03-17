@@ -225,6 +225,9 @@ importers:
       react-hook-form:
         specifier: ^7.0.0
         version: 7.71.2(react@19.2.4)
+      react-phone-number-input:
+        specifier: ^3.4.16
+        version: 3.4.16(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       react-router:
         specifier: ^7.6.1
         version: 7.13.1(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -490,6 +493,9 @@ importers:
       react-hook-form:
         specifier: ^7.0.0
         version: 7.71.2(react@19.2.4)
+      react-phone-number-input:
+        specifier: ^3.4.16
+        version: 3.4.16(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       tailwind-merge:
         specifier: ^2.5.0
         version: 2.6.1
@@ -2622,6 +2628,9 @@ packages:
   class-variance-authority@0.7.1:
     resolution: {integrity: sha512-Ka+9Trutv7G8M6WT6SeiRWz792K5qEqIGEGzXKhAE6xOWAY6pPH8U+9IY3oCMv6kqTmLsv7Xh/2w2RigkePMsg==}
 
+  classnames@2.5.1:
+    resolution: {integrity: sha512-saHYOzhIQs6wy2sVxTM6bUDsQO4F50V9RQ22qBpEdCW+I+/Wmke2HOl6lS6dTpdxVhb88/I6+Hs+438c3lfUow==}
+
   cli-boxes@2.2.1:
     resolution: {integrity: sha512-y4coMcylgSCdVinjiDBuR8PCC2bLjyGTwEmPb9NHR/QaNU6EUOXcTY/s6VjGMD6ENSEaeQYHCY0GNGS5jfMwPw==}
     engines: {node: '>=6'}
@@ -2748,6 +2757,9 @@ packages:
     peerDependenciesMeta:
       typescript:
         optional: true
+
+  country-flag-icons@1.6.15:
+    resolution: {integrity: sha512-92HoA8l6DluEidku8tKBftjuFRj4Rv3zDW1lXxCuNnqAxhUSkvso9gM/Afj4F5BnK+wneHIe3ydI+s+4NA29/Q==}
 
   cron-parser@4.9.0:
     resolution: {integrity: sha512-p0SaNjrHOnQeR8/VnfGbmg9te2kfyYSQ7Sc/j/6DtPL3JQvKxmjO9TSjNFpujqV3vEYYBvNNvXSxzyksBWAx1Q==}
@@ -3274,6 +3286,17 @@ packages:
   inherits@2.0.4:
     resolution: {integrity: sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ==}
 
+  input-format@0.3.14:
+    resolution: {integrity: sha512-gHMrgrbCgmT4uK5Um5eVDUohuV9lcs95ZUUN9Px2Y0VIfjTzT2wF8Q3Z4fwLFm7c5Z2OXCm53FHoovj6SlOKdg==}
+    peerDependencies:
+      react: '>=18.1.0'
+      react-dom: '>=18.1.0'
+    peerDependenciesMeta:
+      react:
+        optional: true
+      react-dom:
+        optional: true
+
   ioredis@5.9.3:
     resolution: {integrity: sha512-VI5tMCdeoxZWU5vjHWsiE/Su76JGhBvWF1MJnV9ZtGltHk9BmD48oDq8Tj8haZ85aceXZMxLNDQZRVo5QKNgXA==}
     engines: {node: '>=12.22.0'}
@@ -3436,6 +3459,10 @@ packages:
   log-symbols@4.1.0:
     resolution: {integrity: sha512-8XPvpAA8uyhfteu8pIvQxpJZ7SYYdpUivZpGy6sFsBuKRY/7rQGavedeB8aK+Zkyq6upMFVL/9AW6vOYzfRyLg==}
     engines: {node: '>=10'}
+
+  loose-envify@1.4.0:
+    resolution: {integrity: sha512-lyuxPGr/Wfhrlem2CL/UcnUc1zcqKAImBDzukY7Y5F/yQiNdko6+fRLevlw1HgMySw7f611UIY408EtxRSoK3Q==}
+    hasBin: true
 
   loupe@3.2.1:
     resolution: {integrity: sha512-CdzqowRJCeLU72bHvWqwRBBlLcMEtIvGrlvef74kMnV2AolS9Y8xUv1I0U/MNAWMhBlKIoyuEgoJ0t/bbwHbLQ==}
@@ -3861,6 +3888,9 @@ packages:
       typescript:
         optional: true
 
+  prop-types@15.8.1:
+    resolution: {integrity: sha512-oj87CgZICdulUohogVAR7AjlC0327U4el4L6eAvOqCeudMDVU0NThNaV+b9Df4dXgSP1gXMTnPdhfe/2qDH5cg==}
+
   proxy-addr@2.0.7:
     resolution: {integrity: sha512-llQsMLSUDUPT44jdrU/O37qlnifitDP+ZwrmmZcoSKyLKvtZxpyV0n2/bD/N4tBAAZ/gJEdZU7KMraoK1+XYAg==}
     engines: {node: '>= 0.10'}
@@ -3900,6 +3930,15 @@ packages:
     engines: {node: '>=18.0.0'}
     peerDependencies:
       react: ^16.8.0 || ^17 || ^18 || ^19
+
+  react-is@16.13.1:
+    resolution: {integrity: sha512-24e6ynE2H+OKt4kqsOvNd8kBpV65zoxbA4BVsEOB3ARVWQki/DHzaUoC5KuON/BiccDaCCTZBuOcfZs70kR8bQ==}
+
+  react-phone-number-input@3.4.16:
+    resolution: {integrity: sha512-ix1+SIyGuLxnlAeW+XQNhwOmmDd4Zmr6Ng1eQl0E2XS8xIuue3gdZeBG4LGTMjTIFneOTO9pUPL+AEDhV6+r+A==}
+    peerDependencies:
+      react: '>=16.8'
+      react-dom: '>=16.8'
 
   react-refresh@0.17.0:
     resolution: {integrity: sha512-z6F7K9bV85EfseRCp2bzrpyQ0Gkw1uLoCel9XBVWPg/TjRj94SkJzUTGfOa4bs7iJvBWtQG0Wq7wnI0syw3EBQ==}
@@ -6512,6 +6551,8 @@ snapshots:
     dependencies:
       clsx: 2.1.1
 
+  classnames@2.5.1: {}
+
   cli-boxes@2.2.1: {}
 
   cli-cursor@3.1.0:
@@ -6610,6 +6651,8 @@ snapshots:
       path-type: 4.0.0
     optionalDependencies:
       typescript: 5.9.3
+
+  country-flag-icons@1.6.15: {}
 
   cron-parser@4.9.0:
     dependencies:
@@ -7150,6 +7193,13 @@ snapshots:
 
   inherits@2.0.4: {}
 
+  input-format@0.3.14(react-dom@19.2.4(react@19.2.4))(react@19.2.4):
+    dependencies:
+      prop-types: 15.8.1
+    optionalDependencies:
+      react: 19.2.4
+      react-dom: 19.2.4(react@19.2.4)
+
   ioredis@5.9.3:
     dependencies:
       '@ioredis/commands': 1.5.0
@@ -7291,6 +7341,10 @@ snapshots:
     dependencies:
       chalk: 4.1.2
       is-unicode-supported: 0.1.0
+
+  loose-envify@1.4.0:
+    dependencies:
+      js-tokens: 4.0.0
 
   loupe@3.2.1: {}
 
@@ -7654,6 +7708,12 @@ snapshots:
       - magicast
     optional: true
 
+  prop-types@15.8.1:
+    dependencies:
+      loose-envify: 1.4.0
+      object-assign: 4.1.1
+      react-is: 16.13.1
+
   proxy-addr@2.0.7:
     dependencies:
       forwarded: 0.2.0
@@ -7693,6 +7753,18 @@ snapshots:
   react-hook-form@7.71.2(react@19.2.4):
     dependencies:
       react: 19.2.4
+
+  react-is@16.13.1: {}
+
+  react-phone-number-input@3.4.16(react-dom@19.2.4(react@19.2.4))(react@19.2.4):
+    dependencies:
+      classnames: 2.5.1
+      country-flag-icons: 1.6.15
+      input-format: 0.3.14(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      libphonenumber-js: 1.12.40
+      prop-types: 15.8.1
+      react: 19.2.4
+      react-dom: 19.2.4(react@19.2.4)
 
   react-refresh@0.17.0: {}
 
