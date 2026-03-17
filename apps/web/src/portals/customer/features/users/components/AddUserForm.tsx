@@ -23,7 +23,7 @@ const createUserSchema = z.object({
     .string()
     .min(8, 'Password must be at least 8 characters')
     .max(128),
-  userType: z.enum(['admin', 'client'], { required_error: 'User type is required' }),
+  userType: z.enum(['admin', 'client'], { message: 'User type is required' }),
   roleId: z.string().min(1, 'Role is required'),
 });
 
