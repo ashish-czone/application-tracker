@@ -4,7 +4,7 @@ import type { PaginatedResponse } from '@packages/common';
 import { notificationRules } from '../schema/notification-rules';
 import { notificationRuleChannels } from '../schema/notification-rule-channels';
 import { notificationTemplates } from '../schema/notification-templates';
-import type { NotificationRule, NotificationChannel, NotificationTemplate, RecipientStrategy } from '../types';
+import type { NotificationRule, NotificationChannel, NotificationTemplate, RecipientStrategy, TriggerType } from '../types';
 
 export interface RuleWithChannels extends NotificationRule {
   channels: { channel: NotificationChannel; templateId: string; template: NotificationTemplate }[];
@@ -66,7 +66,7 @@ export class NotificationRulesService {
 
     const channels = await this.loadRuleChannels(id);
 
-    return { ...rule, recipientStrategy: rule.recipientStrategy as RecipientStrategy, recipientConfig: rule.recipientConfig as Record<string, unknown> | null, channels };
+    return { ...rule, channels } as RuleWithChannels;
   }
 
   async create(data: {
@@ -116,7 +116,7 @@ export class NotificationRulesService {
 
     const channels = await this.loadRuleChannels(rule.id);
 
-    return { ...rule, recipientStrategy: rule.recipientStrategy as RecipientStrategy, recipientConfig: rule.recipientConfig as Record<string, unknown> | null, channels };
+    return { ...rule, channels } as RuleWithChannels;
   }
 
   async update(id: string, data: {

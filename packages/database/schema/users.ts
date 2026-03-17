@@ -1,4 +1,5 @@
 import { pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 
 export const users = pgTable('users', {
@@ -13,5 +14,5 @@ export const users = pgTable('users', {
   deletedAt: timestamp('deleted_at', { withTimezone: true, mode: 'date' }),
   deletedBy: text('deleted_by'),
 }, (table) => [
-  uniqueIndex('users_email_unique').on(table.email).where('deleted_at IS NULL'),
+  uniqueIndex('users_email_unique').on(table.email).where(sql`deleted_at IS NULL`),
 ]);

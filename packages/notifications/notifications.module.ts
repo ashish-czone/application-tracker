@@ -1,7 +1,7 @@
-import { Module, type OnModuleInit, Logger } from '@nestjs/common';
+import { Global, Module, type OnModuleInit, Logger } from '@nestjs/common';
 import { QueueService } from '@packages/queue';
 import { cronForLocalHour } from '@packages/common';
-import { EmailChannelService, WhatsAppChannelService } from '@packages/notification-channels';
+import { NotificationChannelsModule, EmailChannelService, WhatsAppChannelService } from '@packages/notification-channels';
 import type { EmailPayload, WhatsAppPayload } from '@packages/notification-channels';
 import { NotificationRuleService } from './services/notification-rule.service';
 import { NotificationRulesService } from './services/notification-rules.service';
@@ -18,7 +18,9 @@ import { InAppChannel } from './channels/in-app.channel';
 
 export const SCHEDULE_SCAN_QUEUE = 'notification.schedule-scan';
 
+@Global()
 @Module({
+  imports: [NotificationChannelsModule],
   providers: [
     NotificationRuleService,
     NotificationRulesService,

@@ -21,8 +21,8 @@ export class QueueModule {
   }
 
   static registerAsync(options: {
-    useFactory: (...args: unknown[]) => QueueModuleConfig;
-    inject?: unknown[];
+    useFactory: (...args: any[]) => QueueModuleConfig;
+    inject?: any[];
   }): DynamicModule {
     return {
       module: QueueModule,
