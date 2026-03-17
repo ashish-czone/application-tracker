@@ -36,6 +36,10 @@ export function deleteRole(id: string): Promise<void> {
   return api.delete<void>(`/roles/${id}`);
 }
 
+export function getRoleUserCount(roleId: string): Promise<{ count: number }> {
+  return api.get<{ count: number }>(`/roles/${roleId}/user-count`);
+}
+
 export function getRolePermissions(roleId: string): Promise<ScopedPermissions> {
   return api.get<ScopedPermissions>(`/roles/${roleId}/permissions`);
 }
