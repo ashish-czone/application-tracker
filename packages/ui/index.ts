@@ -29,6 +29,7 @@ export {
 } from './components/feedback/Dialog';
 
 export { Toaster, toast } from './components/feedback/Toast';
+export { ConfirmDialog } from './components/feedback/ConfirmDialog';
 
 export {
   DropdownMenu,

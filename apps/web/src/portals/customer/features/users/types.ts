@@ -29,6 +29,13 @@ export interface Role {
   updatedAt: string;
 }
 
+export interface UpdateUserRequest {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
+}
+
 export interface ListUsersParams {
   page?: number;
   limit?: number;
