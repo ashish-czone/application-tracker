@@ -99,7 +99,7 @@ Before writing any code:
 Work through tasks one at a time, in order. For each task:
 
 ```
-Implement → Write tests → Run tests → Fix if failing → Commit → Push → Create PR → Wait for user review → Merge to main
+Implement → Write tests → Run tests → Fix if failing → Commit → Push → Create PR → Merge to main
 ```
 
 **Tests must pass before committing.** After implementing, run the relevant tests for the module/package you changed:
@@ -115,7 +115,7 @@ npx turbo run test --filter='@packages/*'
 
 If any test fails, fix the issue before committing. Do not skip failing tests.
 
-**After each task is done, immediately create a PR and ask the user to review it.** Do not accumulate multiple tasks on one branch. Each task gets its own branch, its own PR, and is merged before starting the next task. **Do not merge the PR until the user explicitly confirms approval.**
+**After each task is done, immediately create a PR and merge it.** Do not accumulate multiple tasks on one branch. Each task gets its own branch, its own PR, and is merged before starting the next task.
 
 Before starting the next task, switch back to `main` and pull:
 
@@ -229,14 +229,13 @@ Rules:
 
 ### Pull requests
 
-Each task gets its own PR, created immediately after the task is done. **Never merge without user approval:**
+Each task gets its own PR, created and merged immediately after the task is done:
 
 1. Push the branch: `git push -u origin feat/add-candidate-submission`
 2. Create PR with a summary of the task's changes.
 3. PR title follows the same conventional format: `feat: add candidate submission`
-4. **Ask the user to review the PR.** Share the PR URL and wait for explicit confirmation before merging.
-5. **Only after the user confirms approval**, merge the PR to `main`.
-6. Switch back to `main` and pull before starting the next task.
+4. Merge the PR to `main` immediately after creation.
+5. Switch back to `main` and pull before starting the next task.
 
 ### Rules
 
@@ -245,7 +244,7 @@ Each task gets its own PR, created immediately after the task is done. **Never m
 - **Never amend a commit** unless explicitly asked. Create new commits.
 - **Code and tests are committed together** — never commit code in one commit and its tests in another.
 - **Always start from `main`.** Every new task branches from an up-to-date `main`, never from another feature branch.
-- **Never merge PRs without user approval.** After creating a PR, always ask the user to review it. Only merge after receiving explicit confirmation. Do not auto-merge.
+- **Merge PRs immediately after creation.** Do not wait for manual approval — tests must pass before committing, and the PR is the review record.
 
 ---
 
