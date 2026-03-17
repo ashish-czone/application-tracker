@@ -27,7 +27,7 @@ export class ListTemplatesQueryDto {
   @ApiPropertyOptional({ enum: ['email', 'in_app', 'whatsapp'] })
   @IsOptional()
   @IsIn(['email', 'in_app', 'whatsapp'])
-  channel?: string;
+  channel?: 'email' | 'in_app' | 'whatsapp';
 
   @ApiPropertyOptional({ enum: ['name', 'createdAt'], default: 'createdAt' })
   @IsOptional()

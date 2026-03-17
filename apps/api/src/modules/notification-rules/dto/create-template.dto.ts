@@ -11,7 +11,7 @@ export class CreateTemplateDto {
   @ApiProperty({ example: 'email', enum: ['email', 'in_app', 'whatsapp'] })
   @IsString()
   @IsIn(['email', 'in_app', 'whatsapp'])
-  channel!: string;
+  channel!: 'email' | 'in_app' | 'whatsapp';
 
   @ApiPropertyOptional({ example: 'Welcome {{payload.firstName}}!' })
   @IsOptional()
