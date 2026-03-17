@@ -1,6 +1,6 @@
 import { api } from '../../../../lib/api';
 import type { PaginatedResponse } from '@packages/common';
-import type { User, ListUsersParams } from './types';
+import type { User, CreateUserRequest, ListUsersParams } from './types';
 
 export function listUsers(params: ListUsersParams): Promise<PaginatedResponse<User>> {
   const searchParams = new URLSearchParams();
@@ -14,4 +14,8 @@ export function listUsers(params: ListUsersParams): Promise<PaginatedResponse<Us
 
   const qs = searchParams.toString();
   return api.get<PaginatedResponse<User>>(`/users${qs ? `?${qs}` : ''}`);
+}
+
+export function createUser(data: CreateUserRequest): Promise<User> {
+  return api.post<User>('/users', data);
 }

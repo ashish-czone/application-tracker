@@ -1,8 +1,13 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Users, Plus } from 'lucide-react';
 import { format } from 'date-fns';
-import { DataGrid, Badge, Button, useDataGridParams, type ColumnDef, type DataGridFilter } from '@packages/ui';
+import {
+  DataGrid, Badge, Button, useDataGridParams,
+  Dialog, DialogContent,
+  type ColumnDef, type DataGridFilter,
+} from '@packages/ui';
 import { useUsers } from '../hooks';
+import { AddUserForm } from '../components/AddUserForm';
 import type { User } from '../types';
 
 const USER_TYPE_LABELS: Record<string, string> = {
@@ -66,6 +71,7 @@ const columns: ColumnDef<User, unknown>[] = [
 ];
 
 export default function UsersListPage() {
+  const [addModalOpen, setAddModalOpen] = useState(false);
   const {
     page,
     pageSize,
@@ -136,7 +142,7 @@ export default function UsersListPage() {
           icon: Users,
           title: 'No users yet',
           description: 'Add your first user to get started.',
-          action: { label: 'Add User', onClick: () => {} },
+          action: { label: 'Add User', onClick: () => setAddModalOpen(true) },
         }}
         storageKey="users-list"
         toolbarActions={
@@ -150,7 +156,7 @@ export default function UsersListPage() {
               <option value="admin">Admin</option>
               <option value="client">Client</option>
             </select>
-            <Button size="sm">
+            <Button size="sm" onClick={() => setAddModalOpen(true)}>
               <Plus className="h-4 w-4 mr-1" />
               Add User
             </Button>
@@ -176,6 +182,12 @@ export default function UsersListPage() {
           </div>
         )}
       />
+
+      <Dialog open={addModalOpen} onOpenChange={setAddModalOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <AddUserForm onClose={() => setAddModalOpen(false)} />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
