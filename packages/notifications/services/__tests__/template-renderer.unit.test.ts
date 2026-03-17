@@ -69,4 +69,59 @@ describe('TemplateRenderer', () => {
 
     expect(result.body).toBe('Hello !');
   });
+
+  describe('renderAggregated', () => {
+    it('should render template with multiple entities', () => {
+      const template = buildTemplate({
+        subject: 'You have {{entityCount}} reminders',
+        body: '{{#entities}}{{name}} (due in {{scheduleDateOffset}} days)\n{{/entities}}',
+      });
+
+      const result = renderer.renderAggregated(template, 'tasks', [
+        { id: 'task-1', name: 'Fix bug', scheduleDateOffset: 7 },
+        { id: 'task-2', name: 'Review PR', scheduleDateOffset: 3 },
+      ]);
+
+      expect(result.subject).toBe('You have 2 reminders');
+      expect(result.title).toBe('You have 2 reminders');
+      expect(result.body).toContain('Fix bug (due in 7 days)');
+      expect(result.body).toContain('Review PR (due in 3 days)');
+    });
+
+    it('should render entityType in context', () => {
+      const template = buildTemplate({
+        subject: null,
+        body: 'Reminders for {{entityType}}',
+      });
+
+      const result = renderer.renderAggregated(template, 'tasks', [
+        { id: 'task-1', scheduleDateOffset: 7 },
+      ]);
+
+      expect(result.body).toBe('Reminders for tasks');
+    });
+
+    it('should use template name as title when no subject', () => {
+      const template = buildTemplate({ name: 'Daily Digest', subject: null, body: 'test' });
+
+      const result = renderer.renderAggregated(template, 'tasks', []);
+
+      expect(result.title).toBe('Daily Digest');
+      expect(result.subject).toBeUndefined();
+    });
+
+    it('should render single entity aggregated context', () => {
+      const template = buildTemplate({
+        subject: '{{entityCount}} item due',
+        body: '{{#entities}}{{name}}{{/entities}}',
+      });
+
+      const result = renderer.renderAggregated(template, 'tasks', [
+        { id: 'task-1', name: 'Deploy', scheduleDateOffset: 1 },
+      ]);
+
+      expect(result.subject).toBe('1 item due');
+      expect(result.body).toBe('Deploy');
+    });
+  });
 });
