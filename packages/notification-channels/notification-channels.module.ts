@@ -1,6 +1,7 @@
 import { Module, type OnModuleInit, Logger } from '@nestjs/common';
 import { EmailChannelService } from './email/email-channel.service';
 import { ConsoleEmailProvider } from './email/providers/console-email.provider';
+import { SmtpEmailProvider } from './email/providers/smtp-email.provider';
 import { WhatsAppChannelService } from './whatsapp/whatsapp-channel.service';
 import { ConsoleWhatsAppProvider } from './whatsapp/providers/console-whatsapp.provider';
 import { TwilioWhatsAppProvider } from './whatsapp/providers/twilio-whatsapp.provider';
@@ -9,6 +10,7 @@ import { TwilioWhatsAppProvider } from './whatsapp/providers/twilio-whatsapp.pro
   providers: [
     EmailChannelService,
     ConsoleEmailProvider,
+    SmtpEmailProvider,
     WhatsAppChannelService,
     ConsoleWhatsAppProvider,
     TwilioWhatsAppProvider,
@@ -24,6 +26,7 @@ export class NotificationChannelsModule implements OnModuleInit {
   constructor(
     private readonly emailChannel: EmailChannelService,
     private readonly consoleEmailProvider: ConsoleEmailProvider,
+    private readonly smtpEmailProvider: SmtpEmailProvider,
     private readonly whatsAppChannel: WhatsAppChannelService,
     private readonly consoleWhatsAppProvider: ConsoleWhatsAppProvider,
     private readonly twilioWhatsAppProvider: TwilioWhatsAppProvider,
@@ -32,6 +35,23 @@ export class NotificationChannelsModule implements OnModuleInit {
   onModuleInit() {
     // Register email providers
     this.emailChannel.registerProvider(this.consoleEmailProvider);
+
+    // Configure and register SMTP if env vars are present
+    const smtpHost = process.env.SMTP_HOST;
+    const smtpPort = process.env.SMTP_PORT;
+    const smtpUser = process.env.SMTP_USER;
+    const smtpPass = process.env.SMTP_PASS;
+    const smtpFrom = process.env.SMTP_FROM;
+    if (smtpHost && smtpPort && smtpUser && smtpPass && smtpFrom) {
+      this.smtpEmailProvider.configure({
+        host: smtpHost,
+        port: parseInt(smtpPort, 10),
+        secure: parseInt(smtpPort, 10) === 465,
+        auth: { user: smtpUser, pass: smtpPass },
+        from: smtpFrom,
+      });
+      this.emailChannel.registerProvider(this.smtpEmailProvider);
+    }
 
     // Register WhatsApp providers
     this.whatsAppChannel.registerProvider(this.consoleWhatsAppProvider);
