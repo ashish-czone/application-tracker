@@ -1,11 +1,12 @@
-import { useForm, useWatch } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Link } from 'react-router';
 import {
   Form,
   FormInput,
-  PasswordStrength,
+  FormEmailInput,
+  FormPasswordInput,
   Button,
   Card,
   CardHeader,
@@ -35,7 +36,6 @@ export function RegisterForm() {
     resolver: zodResolver(registerSchema),
     defaultValues: { firstName: '', lastName: '', email: '', password: '' },
   });
-  const passwordValue = useWatch({ control, name: 'password' });
   const registerMutation = useRegister();
 
   function onSubmit(data: RegisterFormValues) {
@@ -66,25 +66,19 @@ export function RegisterForm() {
               autoComplete="family-name"
             />
           </div>
-          <FormInput
+          <FormEmailInput
             control={control}
             name="email"
             label="Email"
-            type="email"
-            placeholder="you@example.com"
             autoComplete="email"
           />
-          <div className="space-y-2">
-            <FormInput
-              control={control}
-              name="password"
-              label="Password"
-              type="password"
-              placeholder="Enter password"
-              autoComplete="new-password"
-            />
-            <PasswordStrength password={passwordValue ?? ''} />
-          </div>
+          <FormPasswordInput
+            control={control}
+            name="password"
+            label="Password"
+            autoComplete="new-password"
+            showStrength
+          />
 
           {registerMutation.isError && (
             <p className="text-sm text-destructive" aria-live="polite">

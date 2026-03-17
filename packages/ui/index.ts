@@ -8,6 +8,9 @@ export { Input, type InputProps } from './components/form/Input';
 export { Label } from './components/form/Label';
 export { Form } from './components/form/Form';
 export { FormInput, type AsyncValidationStatus } from './components/form/FormInput';
+export { FormEmailInput } from './components/form/FormEmailInput';
+export { FormPasswordInput } from './components/form/FormPasswordInput';
+export { FormPhoneInput } from './components/form/FormPhoneInput';
 export { FormSelect } from './components/form/FormSelect';
 export { PasswordStrength } from './components/form/PasswordStrength';
 
@@ -50,6 +53,7 @@ export type {
 // Hooks
 export { useDebounce } from './hooks/useDebounce';
 export { useDataGridParams } from './hooks/useDataGridParams';
+export { useAsyncValidator } from './hooks/useAsyncValidator';
 
 // Utilities
 export { cn } from './lib/utils';

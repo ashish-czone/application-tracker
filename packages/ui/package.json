@@ -12,6 +12,7 @@
     "@tanstack/react-table": "^8.21.3",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
+    "libphonenumber-js": "^1.12.40",
     "lucide-react": "^0.400.0",
     "tailwind-merge": "^2.5.0"
   },
