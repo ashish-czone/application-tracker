@@ -7,14 +7,12 @@ import { Toaster as SonnerToaster, toast } from 'sonner';
 function Toaster() {
   return (
     <SonnerToaster
-      position="top-right"
+      position="bottom-center"
+      richColors
       toastOptions={{
         classNames: {
-          toast: 'bg-background text-foreground border-border shadow-lg',
           title: 'text-sm font-medium',
-          description: 'text-sm text-muted-foreground',
-          success: 'border-success/30 [&_[data-icon]]:text-success',
-          error: 'border-destructive/30 [&_[data-icon]]:text-destructive',
+          description: 'text-sm',
         },
       }}
     />
