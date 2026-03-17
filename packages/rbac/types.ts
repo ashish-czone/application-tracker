@@ -3,13 +3,9 @@ export interface Role {
   name: string;
   userType: string;
   isDefault: boolean;
+  isSuperadmin: boolean;
   createdAt: Date;
   updatedAt: Date;
-}
-
-export interface Permission {
-  id: string;
-  name: string;
 }
 
 export type PermissionScope = 'own' | 'all';

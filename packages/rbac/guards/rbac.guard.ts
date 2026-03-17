@@ -25,6 +25,9 @@ export class RbacGuard implements CanActivate {
 
     const userPermissions: Record<string, string> = user.permissions ?? {};
 
+    // Superadmin bypass — wildcard permission grants access to everything
+    if ('*' in userPermissions) return true;
+
     if (!(requiredPermission in userPermissions)) {
       throw new ForbiddenException('You do not have permission to perform this action');
     }
