@@ -8,6 +8,7 @@ export interface User {
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
+  roles: { id: string; name: string }[];
 }
 
 export interface CreateUserRequest {

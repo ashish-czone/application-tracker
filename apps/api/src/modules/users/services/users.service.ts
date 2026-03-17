@@ -4,7 +4,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { AuthService } from '@packages/auth';
-import { RbacService } from '@packages/rbac';
+import { RbacService, userRoles, roles } from '@packages/rbac';
 import {
   DatabaseService,
   users,
@@ -13,6 +13,7 @@ import {
   or,
   isNull,
   ilike,
+  inArray,
   asc,
   desc,
   count,
@@ -62,6 +63,7 @@ export interface UserWithType {
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
+  roles: { id: string; name: string }[];
 }
 
 @Injectable()
@@ -125,6 +127,27 @@ export class UsersService {
       .limit(limit)
       .offset(offset);
 
+    // Batch-load roles for all users on this page
+    const userIds = rows.map((r) => r.id);
+    const userRoleRows = userIds.length > 0
+      ? await this.database.db
+          .select({
+            userId: userRoles.userId,
+            roleId: roles.id,
+            roleName: roles.name,
+          })
+          .from(userRoles)
+          .innerJoin(roles, eq(roles.id, userRoles.roleId))
+          .where(inArray(userRoles.userId, userIds))
+      : [];
+
+    const rolesByUserId = new Map<string, { id: string; name: string }[]>();
+    for (const row of userRoleRows) {
+      const list = rolesByUserId.get(row.userId) ?? [];
+      list.push({ id: row.roleId, name: row.roleName });
+      rolesByUserId.set(row.userId, list);
+    }
+
     const data: UserWithType[] = rows.map((row) => ({
       id: row.id,
       email: row.email,
@@ -135,6 +158,7 @@ export class UsersService {
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
       deletedAt: row.deletedAt,
+      roles: rolesByUserId.get(row.id) ?? [],
     }));
 
     return {
@@ -187,6 +211,7 @@ export class UsersService {
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
       deletedAt: user.deletedAt,
+      roles: [],
     };
   }
 
@@ -257,6 +282,7 @@ export class UsersService {
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
       deletedAt: user.deletedAt,
+      roles: [],
     };
   }
 
@@ -315,6 +341,7 @@ export class UsersService {
       createdAt: updated.createdAt,
       updatedAt: updated.updatedAt,
       deletedAt: updated.deletedAt,
+      roles: [],
     };
   }
 
@@ -366,6 +393,7 @@ export class UsersService {
       createdAt: restored.createdAt,
       updatedAt: restored.updatedAt,
       deletedAt: restored.deletedAt,
+      roles: [],
     };
   }
 }
