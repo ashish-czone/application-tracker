@@ -9,6 +9,7 @@ import { SettingsModule } from '@packages/settings';
 import { QueueModule } from '@packages/queue';
 import { NotificationsModule } from '@packages/notifications';
 import { NotificationChannelsModule } from '@packages/notification-channels';
+import { WorkflowsModule } from '@packages/workflows';
 import { AuthGuard } from '@packages/auth';
 import { RbacGuard } from '@packages/rbac';
 import { AuthOrchestratorModule } from './modules/auth/auth.module';
@@ -39,6 +40,7 @@ import { validate } from './config/env.validation';
     }]),
     NotificationChannelsModule,
     NotificationsModule,
+    WorkflowsModule,
     AuthOrchestratorModule,
     UsersModule,
     RbacManagementModule,
