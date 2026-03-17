@@ -207,6 +207,9 @@ importers:
       '@tanstack/react-query':
         specifier: ^5.60.0
         version: 5.90.21(react@19.2.4)
+      date-fns:
+        specifier: ^4.1.0
+        version: 4.1.0
       lucide-react:
         specifier: ^0.400.0
         version: 0.400.0(react@19.2.4)
@@ -234,7 +237,7 @@ importers:
         version: 19.2.3(@types/react@19.2.14)
       '@vitejs/plugin-react':
         specifier: ^4.6.0
-        version: 4.7.0(vite@6.4.1(@types/node@22.19.15)(jiti@2.6.1)(terser@5.46.0))
+        version: 4.7.0(vite@6.4.1(@types/node@22.19.15)(jiti@1.21.7)(terser@5.46.0))
       autoprefixer:
         specifier: ^10.4.20
         version: 10.4.27(postcss@8.5.8)
@@ -249,7 +252,7 @@ importers:
         version: 5.9.3
       vite:
         specifier: ^6.4.0
-        version: 6.4.1(@types/node@22.19.15)(jiti@2.6.1)(terser@5.46.0)
+        version: 6.4.1(@types/node@22.19.15)(jiti@1.21.7)(terser@5.46.0)
 
   packages/auth:
     dependencies:
@@ -5800,7 +5803,7 @@ snapshots:
   '@types/whatwg-mimetype@3.0.2':
     optional: true
 
-  '@vitejs/plugin-react@4.7.0(vite@6.4.1(@types/node@22.19.15)(jiti@2.6.1)(terser@5.46.0))':
+  '@vitejs/plugin-react@4.7.0(vite@6.4.1(@types/node@22.19.15)(jiti@1.21.7)(terser@5.46.0))':
     dependencies:
       '@babel/core': 7.29.0
       '@babel/plugin-transform-react-jsx-self': 7.27.1(@babel/core@7.29.0)
@@ -5808,7 +5811,7 @@ snapshots:
       '@rolldown/pluginutils': 1.0.0-beta.27
       '@types/babel__core': 7.20.5
       react-refresh: 0.17.0
-      vite: 6.4.1(@types/node@22.19.15)(jiti@2.6.1)(terser@5.46.0)
+      vite: 6.4.1(@types/node@22.19.15)(jiti@1.21.7)(terser@5.46.0)
     transitivePeerDependencies:
       - supports-color
 
@@ -8002,6 +8005,20 @@ snapshots:
       - terser
       - tsx
       - yaml
+
+  vite@6.4.1(@types/node@22.19.15)(jiti@1.21.7)(terser@5.46.0):
+    dependencies:
+      esbuild: 0.25.12
+      fdir: 6.5.0(picomatch@4.0.3)
+      picomatch: 4.0.3
+      postcss: 8.5.8
+      rollup: 4.59.0
+      tinyglobby: 0.2.15
+    optionalDependencies:
+      '@types/node': 22.19.15
+      fsevents: 2.3.3
+      jiti: 1.21.7
+      terser: 5.46.0
 
   vite@6.4.1(@types/node@22.19.15)(jiti@2.6.1)(terser@5.46.0):
     dependencies:

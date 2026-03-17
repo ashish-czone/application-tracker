@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router';
 import {
-  LayoutDashboard,
   ChevronsLeft,
   ChevronsRight,
   Menu,
@@ -10,10 +9,9 @@ import {
   Bell,
 } from 'lucide-react';
 import { cn } from '@packages/ui/lib/utils';
+import { customerMenu } from '../../portals/customer/menu';
 
-const navItems = [
-  { path: '/', label: 'Dashboard', icon: LayoutDashboard },
-];
+const navItems = customerMenu;
 
 export function AppLayout() {
   const [collapsed, setCollapsed] = useState(false);
