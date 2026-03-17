@@ -105,6 +105,26 @@ export default function UsersListPage() {
         enableHiding: true,
       },
       {
+        id: 'roles',
+        header: 'Role',
+        accessorFn: (row) => row.roles.map((r) => r.name).join(', '),
+        cell: ({ row }) => {
+          const userRoles = row.original.roles;
+          if (!userRoles.length) return <span className="text-muted-foreground">—</span>;
+          return (
+            <div className="flex flex-wrap gap-1">
+              {userRoles.map((r) => (
+                <Badge key={r.id} variant="outline" className="text-xs">
+                  {r.name}
+                </Badge>
+              ))}
+            </div>
+          );
+        },
+        enableSorting: false,
+        enableHiding: true,
+      },
+      {
         id: 'createdAt',
         header: 'Created',
         accessorKey: 'createdAt',
