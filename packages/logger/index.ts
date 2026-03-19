@@ -14,3 +14,4 @@ export { LOGGER_PROVIDER, LOGGER_MODULE_CONFIG } from './types';
 
 // Providers
 export { NestjsLoggerProvider } from './providers/nestjs.provider';
+export { PinoLoggerProvider } from './providers/pino.provider';

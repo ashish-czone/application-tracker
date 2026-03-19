@@ -6,10 +6,13 @@ import {
   type LoggerModuleAsyncOptions,
 } from './types';
 import { NestjsLoggerProvider } from './providers/nestjs.provider';
+import { PinoLoggerProvider } from './providers/pino.provider';
 import { AppLoggerService } from './services/logger.service';
 
 function createProviderFactory(config: LoggerModuleConfig) {
-  switch (config.provider ?? 'nestjs') {
+  switch (config.provider) {
+    case 'pino':
+      return new PinoLoggerProvider();
     case 'nestjs':
     default:
       return new NestjsLoggerProvider();
