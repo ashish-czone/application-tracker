@@ -3,10 +3,11 @@ import { NotificationsModule } from '@packages/notifications';
 import { RbacModule, RbacService } from '@packages/rbac';
 import { NotificationRulesController } from './controllers/notification-rules.controller';
 import { NotificationTemplatesController } from './controllers/notification-templates.controller';
+import { AutomationsMetadataController } from './controllers/automations-metadata.controller';
 
 @Module({
   imports: [NotificationsModule, RbacModule],
-  controllers: [NotificationRulesController, NotificationTemplatesController],
+  controllers: [NotificationRulesController, NotificationTemplatesController, AutomationsMetadataController],
 })
 export class NotificationRulesModule implements OnModuleInit {
   constructor(private readonly rbacService: RbacService) {}
