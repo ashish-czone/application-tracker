@@ -1,9 +1,10 @@
 import type { LoggerProvider, LogEntry } from '../types';
 
 /**
- * Production logging provider that outputs structured JSON via pino.
- * Each log line is a single JSON object — ideal for log aggregation
- * (ELK, Datadog, CloudWatch, etc.).
+ * Structured JSON logging provider via pino.
+ *
+ * - In production: outputs JSON lines for log aggregation (ELK, Datadog, etc.)
+ * - In development: uses pino-pretty for readable colored output (if installed)
  */
 export class PinoLoggerProvider implements LoggerProvider {
   readonly name = 'pino';
@@ -13,12 +14,27 @@ export class PinoLoggerProvider implements LoggerProvider {
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const pino = require('pino');
+      const isDev = process.env.NODE_ENV !== 'production';
+
       this.logger = pino({
         level: 'debug',
         formatters: {
           level: (label: string) => ({ level: label }),
         },
-        timestamp: false, // We provide our own timestamp in LogEntry
+        timestamp: false,
+        ...(isDev && hasPinoPretty()
+          ? {
+              transport: {
+                target: 'pino-pretty',
+                options: {
+                  colorize: true,
+                  ignore: 'pid,hostname',
+                  translateTime: false,
+                  messageFormat: '{context} | {msg}',
+                },
+              },
+            }
+          : {}),
       });
     } catch {
       throw new Error(
@@ -38,7 +54,6 @@ export class PinoLoggerProvider implements LoggerProvider {
       ...data,
     };
 
-    // Map our LogLevel to pino levels ('log' → 'info')
     const pinoLevel = level === 'log' ? 'info' : level;
 
     if (typeof this.logger[pinoLevel] === 'function') {
@@ -46,5 +61,14 @@ export class PinoLoggerProvider implements LoggerProvider {
     } else {
       this.logger.info(logObject, message);
     }
+  }
+}
+
+function hasPinoPretty(): boolean {
+  try {
+    require.resolve('pino-pretty');
+    return true;
+  } catch {
+    return false;
   }
 }
