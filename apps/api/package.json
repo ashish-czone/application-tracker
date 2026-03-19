@@ -22,6 +22,7 @@
     "@packages/common": "workspace:*",
     "@packages/database": "workspace:*",
     "@packages/events": "workspace:*",
+    "@packages/logger": "workspace:*",
     "@packages/media": "workspace:*",
     "@packages/notification-channels": "workspace:*",
     "@packages/notifications": "workspace:*",

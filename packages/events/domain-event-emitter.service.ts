@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { randomUUID } from 'crypto';
+import { getCorrelationId } from '@packages/logger';
 import type { EventPayloadMap } from './types';
 
 @Injectable()
@@ -21,7 +21,7 @@ export class DomainEventEmitter {
       entityType: params.entityType,
       entityId: params.entityId,
       actorId: params.actorId,
-      correlationId: randomUUID(),
+      correlationId: getCorrelationId(),
       occurredAt: new Date().toISOString(),
       payload: params.payload,
     });

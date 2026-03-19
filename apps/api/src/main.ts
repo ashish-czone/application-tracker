@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { GlobalExceptionFilter } from './filters/global-exception.filter';
+import { correlationIdMiddleware } from '@packages/logger';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
@@ -13,6 +14,7 @@ async function bootstrap() {
   const API_ENABLED = process.env.API_ENABLED !== 'false';
 
   if (API_ENABLED) {
+    app.use(correlationIdMiddleware);
     app.use(helmet());
     app.use(cookieParser());
 

@@ -5,7 +5,8 @@
   "main": "index.ts",
   "dependencies": {
     "@nestjs/common": "^11.0.0",
-    "@nestjs/event-emitter": "^3.0.0"
+    "@nestjs/event-emitter": "^3.0.0",
+    "@packages/logger": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.7.0"

@@ -3,6 +3,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import path from 'path';
+import { LoggerModule } from '@packages/logger';
 import { DatabaseModule } from '@packages/database';
 import { EventsModule } from '@packages/events';
 import { SettingsModule } from '@packages/settings';
@@ -32,6 +33,7 @@ import { validate } from './config/env.validation';
       validate,
       envFilePath: path.resolve(__dirname, '../.env'),
     }),
+    LoggerModule.register(),
     DatabaseModule,
     EventsModule,
     SettingsModule,

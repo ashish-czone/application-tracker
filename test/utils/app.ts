@@ -2,6 +2,7 @@ import { Test } from '@nestjs/testing';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from '../../apps/api/src/app.module';
 import { GlobalExceptionFilter } from '../../apps/api/src/filters/global-exception.filter';
+import { correlationIdMiddleware } from '@packages/logger';
 import cookieParser from 'cookie-parser';
 import { DatabaseService } from '@packages/database';
 
@@ -11,6 +12,7 @@ export async function createTestApp() {
   }).compile();
 
   const app = module.createNestApplication();
+  app.use(correlationIdMiddleware);
   app.use(cookieParser());
   app.setGlobalPrefix('api/v1', {
     exclude: ['health'],
