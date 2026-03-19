@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -65,7 +64,7 @@ export default function ProfilePage() {
 }
 
 function ProfileForm({ profile, onSuccess }: { profile: { firstName: string; lastName: string; email: string; phone: string | null; roles: { id: string; name: string }[] }; onSuccess: () => void }) {
-  const form = useForm<ProfileFormValues>({
+  const { control, handleSubmit } = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
       firstName: profile.firstName,
@@ -86,7 +85,7 @@ function ProfileForm({ profile, onSuccess }: { profile: { firstName: string; las
     },
   });
 
-  const onSubmit = form.handleSubmit((values) => {
+  const onSubmit = handleSubmit((values) => {
     mutation.mutate({
       firstName: values.firstName,
       lastName: values.lastName,
@@ -100,21 +99,21 @@ function ProfileForm({ profile, onSuccess }: { profile: { firstName: string; las
       <CardHeader>
         <CardTitle className="text-sm">Profile Details</CardTitle>
         <CardDescription>
-          <div className="flex gap-1 mt-1">
+          <span className="flex gap-1 mt-1">
             {profile.roles.map((r) => (
               <Badge key={r.id} variant="outline" className="text-xs">{r.name}</Badge>
             ))}
-          </div>
+          </span>
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Form form={form} onSubmit={onSubmit} className="space-y-4">
+        <Form onSubmit={onSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <FormInput name="firstName" label="First Name" />
-            <FormInput name="lastName" label="Last Name" />
+            <FormInput control={control} name="firstName" label="First Name" />
+            <FormInput control={control} name="lastName" label="Last Name" />
           </div>
-          <FormEmailInput name="email" label="Email" />
-          <FormPhoneInput name="phone" label="Phone" />
+          <FormEmailInput control={control} name="email" label="Email" />
+          <FormPhoneInput control={control} name="phone" label="Phone" />
           <div className="flex justify-end">
             <Button type="submit" disabled={mutation.isPending}>
               {mutation.isPending ? 'Saving...' : 'Save Changes'}
@@ -127,7 +126,7 @@ function ProfileForm({ profile, onSuccess }: { profile: { firstName: string; las
 }
 
 function ChangePasswordForm() {
-  const form = useForm<PasswordFormValues>({
+  const { control, handleSubmit, reset } = useForm<PasswordFormValues>({
     resolver: zodResolver(passwordSchema),
     defaultValues: { oldPassword: '', newPassword: '', confirmPassword: '' },
   });
@@ -136,14 +135,14 @@ function ChangePasswordForm() {
     mutationFn: (data: { oldPassword: string; newPassword: string }) => changePassword(data),
     onSuccess: () => {
       toast.success('Password changed');
-      form.reset();
+      reset();
     },
     onError: (error: any) => {
       toast.error(error?.body?.message || 'Failed to change password');
     },
   });
 
-  const onSubmit = form.handleSubmit((values) => {
+  const onSubmit = handleSubmit((values) => {
     mutation.mutate({ oldPassword: values.oldPassword, newPassword: values.newPassword });
   });
 
@@ -154,10 +153,10 @@ function ChangePasswordForm() {
         <CardDescription>Update your password. You'll need your current password.</CardDescription>
       </CardHeader>
       <CardContent>
-        <Form form={form} onSubmit={onSubmit} className="space-y-4">
-          <FormPasswordInput name="oldPassword" label="Current Password" />
-          <FormPasswordInput name="newPassword" label="New Password" />
-          <FormPasswordInput name="confirmPassword" label="Confirm New Password" />
+        <Form onSubmit={onSubmit} className="space-y-4">
+          <FormPasswordInput control={control} name="oldPassword" label="Current Password" />
+          <FormPasswordInput control={control} name="newPassword" label="New Password" />
+          <FormPasswordInput control={control} name="confirmPassword" label="Confirm New Password" />
           <div className="flex justify-end">
             <Button type="submit" disabled={mutation.isPending}>
               {mutation.isPending ? 'Updating...' : 'Change Password'}
