@@ -65,7 +65,7 @@ export function WorkflowCanvas({ workflow, slug }: WorkflowCanvasProps) {
         markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16 },
         style: { strokeWidth: 2 },
         labelStyle: { fontSize: 11, fontWeight: 500 },
-        labelBgStyle: { fill: 'var(--background)', fillOpacity: 0.9 },
+        labelBgStyle: { fill: '#ffffff', fillOpacity: 0.95 },
         labelBgPadding: [6, 3] as [number, number],
         labelBgBorderRadius: 4,
       })),
