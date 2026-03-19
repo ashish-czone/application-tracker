@@ -45,3 +45,29 @@ export function resetPassword(data: ResetPasswordRequest): Promise<MessageRespon
 export function changePassword(data: ChangePasswordRequest): Promise<MessageResponse> {
   return api.post<MessageResponse>(`${AUTH_BASE}/change-password`, data);
 }
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  phone: string | null;
+  firstName: string;
+  lastName: string;
+  userType: string;
+  createdAt: string;
+  roles: { id: string; name: string }[];
+}
+
+export interface UpdateProfileRequest {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
+}
+
+export function getProfile(): Promise<UserProfile> {
+  return api.get<UserProfile>(`${AUTH_BASE}/me`);
+}
+
+export function updateProfile(data: UpdateProfileRequest): Promise<UserProfile> {
+  return api.patch<UserProfile>(`${AUTH_BASE}/me`, data);
+}

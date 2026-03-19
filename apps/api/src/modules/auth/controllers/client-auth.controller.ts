@@ -1,7 +1,9 @@
-import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { Public, CurrentUser, type JwtPayload } from '@packages/auth';
+import { DatabaseService, users, eq, and, isNull } from '@packages/database';
+import { RbacService } from '@packages/rbac';
 import { ClientAuthService } from '../services/client-auth.service';
 import { RegisterDto } from '../dto/register.dto';
 import { LoginDto } from '../dto/login.dto';
@@ -9,11 +11,16 @@ import { RefreshDto } from '../dto/refresh.dto';
 import { ForgotPasswordDto } from '../dto/forgot-password.dto';
 import { ResetPasswordDto } from '../dto/reset-password.dto';
 import { ChangePasswordDto } from '../dto/change-password.dto';
+import { UpdateProfileDto } from '../dto/update-profile.dto';
 
 @ApiTags('auth/client')
 @Controller('auth/client')
 export class ClientAuthController {
-  constructor(private readonly clientAuth: ClientAuthService) {}
+  constructor(
+    private readonly clientAuth: ClientAuthService,
+    private readonly database: DatabaseService,
+    private readonly rbacService: RbacService,
+  ) {}
 
   @Public()
   @Throttle({ default: { ttl: 60000, limit: 5 } })
@@ -73,6 +80,52 @@ export class ClientAuthController {
   async resetPassword(@Body() dto: ResetPasswordDto) {
     await this.clientAuth.resetPassword(dto.token, dto.newPassword);
     return { message: 'Password has been reset' };
+  }
+
+  @Get('me')
+  @ApiOperation({ summary: 'Get current user profile' })
+  async getProfile(@CurrentUser() user: JwtPayload) {
+    const [row] = await this.database.db
+      .select({
+        id: users.id,
+        email: users.email,
+        phone: users.phone,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        userType: users.userType,
+        createdAt: users.createdAt,
+      })
+      .from(users)
+      .where(and(eq(users.id, user.userId), isNull(users.deletedAt)))
+      .limit(1);
+
+    if (!row) return null;
+
+    const userRoles = await this.rbacService.getUserRoles(user.userId);
+
+    return {
+      ...row,
+      roles: userRoles.map((r) => ({ id: r.id, name: r.name })),
+    };
+  }
+
+  @Patch('me')
+  @ApiOperation({ summary: 'Update current user profile' })
+  async updateProfile(@CurrentUser() user: JwtPayload, @Body() dto: UpdateProfileDto) {
+    const updateValues: Record<string, unknown> = {};
+    if (dto.firstName !== undefined) updateValues.firstName = dto.firstName;
+    if (dto.lastName !== undefined) updateValues.lastName = dto.lastName;
+    if (dto.email !== undefined) updateValues.email = dto.email.toLowerCase();
+    if (dto.phone !== undefined) updateValues.phone = dto.phone;
+
+    if (Object.keys(updateValues).length > 0) {
+      await this.database.db
+        .update(users)
+        .set(updateValues)
+        .where(eq(users.id, user.userId));
+    }
+
+    return this.getProfile(user);
   }
 
   @Post('change-password')
