@@ -29,6 +29,10 @@ export class RbacService {
   }
 
   async updateRole(id: string, data: { name: string }): Promise<Role> {
+    if (await this.isSystemRole(id)) {
+      throw new ConflictException('Cannot modify the system admin role');
+    }
+
     const [role] = await this.database.db
       .update(roles)
       .set(data)
@@ -42,6 +46,10 @@ export class RbacService {
   async deleteRole(id: string): Promise<void> {
     const role = await this.findRoleById(id);
     if (!role) throw new NotFoundException('Role not found');
+
+    if (await this.isSystemRole(id)) {
+      throw new ConflictException('Cannot delete the system admin role');
+    }
 
     if (role.isDefault) {
       throw new ConflictException('Cannot delete a default role');
@@ -194,6 +202,11 @@ export class RbacService {
     // Load current permissions once for enforcement checks
     const currentPermissions = await this.getRolePermissions(roleId);
 
+    // System role protection: roles with '*' cannot have their permissions modified
+    if ('*' in currentPermissions && actorPermissions) {
+      throw new ConflictException('Cannot modify permissions of the system admin role');
+    }
+
     // Enforce "grant only what you hold" when actor permissions are provided
     if (actorPermissions) {
       const isWildcard = '*' in actorPermissions;
@@ -326,6 +339,15 @@ export class RbacService {
   }
 
   // --- Private helpers ---
+
+  /**
+   * Check if a role is a system role (has wildcard '*' permission).
+   * System roles cannot be edited, deleted, or have their permissions modified.
+   */
+  async isSystemRole(roleId: string): Promise<boolean> {
+    const perms = await this.getRolePermissions(roleId);
+    return '*' in perms;
+  }
 
   /**
    * Count users who have the wildcard '*' permission through any of their roles.
