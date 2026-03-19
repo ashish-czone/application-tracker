@@ -35,8 +35,9 @@ export function SettingField({ field, module }: SettingFieldProps) {
   }
 
   return (
-    <div className="flex items-start gap-4 py-4 border-b border-border last:border-b-0">
-      <div className="flex-1 min-w-0">
+    <div className="grid grid-cols-[1fr,auto] gap-6 py-4 border-b border-border last:border-b-0 items-center">
+      {/* Left: label + description */}
+      <div className="min-w-0">
         <div className="flex items-center gap-2 mb-0.5">
           <label className="text-sm font-medium text-foreground">{field.metadata.label}</label>
           <code className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{field.key}</code>
@@ -47,15 +48,16 @@ export function SettingField({ field, module }: SettingFieldProps) {
           )}
         </div>
         {field.metadata.description && (
-          <p className="text-xs text-muted-foreground mb-2">{field.metadata.description}</p>
+          <p className="text-xs text-muted-foreground">{field.metadata.description}</p>
         )}
-        <div className="text-[10px] text-muted-foreground">
+        <div className="text-[10px] text-muted-foreground mt-1">
           Default: <code className="bg-muted px-1 py-0.5 rounded">{JSON.stringify(field.default)}</code>
         </div>
       </div>
 
-      <div className="flex items-center gap-2 shrink-0">
-        {/* Render input based on type */}
+      {/* Right: input + actions — fixed width to prevent layout shifts */}
+      <div className="flex items-center gap-2 w-[220px] justify-end">
+        {/* Input */}
         {field.metadata.type === 'boolean' ? (
           <button
             type="button"
@@ -64,7 +66,7 @@ export function SettingField({ field, module }: SettingFieldProps) {
               setValue(newVal);
               updateMutation.mutate({ module, key: field.key, value: newVal });
             }}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
               value ? 'bg-primary' : 'bg-muted'
             }`}
           >
@@ -81,7 +83,7 @@ export function SettingField({ field, module }: SettingFieldProps) {
               setValue(e.target.value);
               updateMutation.mutate({ module, key: field.key, value: e.target.value });
             }}
-            className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            className="h-9 flex-1 min-w-0 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
           >
             {field.metadata.options.map((opt) => (
               <option key={opt} value={opt}>{opt}</option>
@@ -95,7 +97,7 @@ export function SettingField({ field, module }: SettingFieldProps) {
             onKeyDown={handleKeyDown}
             min={field.metadata.min}
             max={field.metadata.max}
-            className="h-9 w-32 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            className="h-9 flex-1 min-w-0 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
           />
         ) : (
           <input
@@ -103,28 +105,30 @@ export function SettingField({ field, module }: SettingFieldProps) {
             value={String(value ?? '')}
             onChange={(e) => setValue(e.target.value)}
             onKeyDown={handleKeyDown}
-            className="h-9 w-48 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            className="h-9 flex-1 min-w-0 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
           />
         )}
 
-        {/* Save button for non-auto-save fields */}
-        {hasLocalChange && field.metadata.type !== 'boolean' && !field.metadata.options && (
-          <Button size="sm" onClick={handleSave} disabled={updateMutation.isPending}>
+        {/* Save button */}
+        {hasLocalChange && field.metadata.type !== 'boolean' && !field.metadata.options ? (
+          <Button size="sm" className="shrink-0" onClick={handleSave} disabled={updateMutation.isPending}>
             {updateMutation.isPending ? '...' : 'Save'}
           </Button>
-        )}
-
-        {/* Reset button */}
-        {field.isOverridden && (
-          <button
-            type="button"
-            onClick={handleReset}
-            disabled={resetMutation.isPending}
-            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-            title="Reset to default"
-          >
-            <RotateCcw className="h-4 w-4" />
-          </button>
+        ) : (
+          /* Reset button — always reserve space for consistent layout */
+          <div className="w-8 shrink-0 flex justify-center">
+            {field.isOverridden && (
+              <button
+                type="button"
+                onClick={handleReset}
+                disabled={resetMutation.isPending}
+                className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                title="Reset to default"
+              >
+                <RotateCcw className="h-4 w-4" />
+              </button>
+            )}
+          </div>
         )}
       </div>
     </div>
