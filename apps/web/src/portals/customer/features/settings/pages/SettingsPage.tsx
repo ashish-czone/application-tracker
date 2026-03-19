@@ -38,33 +38,32 @@ export default function SettingsPage() {
         <p className="text-sm text-muted-foreground">Configure module settings</p>
       </div>
 
-      <div className="flex gap-6 min-h-[500px]">
-        {/* Module tabs (left sidebar) */}
-        <nav className="w-48 shrink-0">
-          <div className="space-y-1">
-            {groups.map((group) => (
-              <button
-                key={group.module}
-                type="button"
-                onClick={() => setActiveModule(group.module)}
-                className={cn(
-                  'w-full text-left px-3 py-2 rounded-md text-sm transition-colors',
-                  selectedModule === group.module
-                    ? 'bg-primary/10 text-primary font-medium'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-accent',
-                )}
-              >
-                {group.label}
-                <span className="ml-1 text-[10px] text-muted-foreground">
-                  ({group.fields.length})
-                </span>
-              </button>
-            ))}
-          </div>
+      {/* Horizontal tabs */}
+      <div className="border-b border-border mb-6">
+        <nav className="flex gap-0 -mb-px">
+          {groups.map((group) => (
+            <button
+              key={group.module}
+              type="button"
+              onClick={() => setActiveModule(group.module)}
+              className={cn(
+                'px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap',
+                selectedModule === group.module
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border',
+              )}
+            >
+              {group.label}
+              <span className="ml-1.5 text-[10px] text-muted-foreground">
+                ({group.fields.length})
+              </span>
+            </button>
+          ))}
         </nav>
+      </div>
 
-        {/* Settings fields (right content) */}
-        <div className="flex-1 min-w-0">
+      {/* Settings fields */}
+      <div>
           {selectedGroup ? (
             <div className="rounded-lg border bg-card">
               <div className="px-5 py-4 border-b border-border">
@@ -86,7 +85,6 @@ export default function SettingsPage() {
           ) : (
             <div className="text-sm text-muted-foreground">Select a module</div>
           )}
-        </div>
       </div>
     </div>
   );
