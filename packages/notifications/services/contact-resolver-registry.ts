@@ -1,11 +1,16 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppLoggerService, type ContextLogger } from '@packages/logger';
 
 export type ContactResolverFn = (userId: string) => Promise<string | null>;
 
 @Injectable()
 export class ContactResolverRegistry {
-  private readonly logger = new Logger(ContactResolverRegistry.name);
+  private readonly logger: ContextLogger;
   private readonly resolvers = new Map<string, ContactResolverFn>();
+
+  constructor(appLogger: AppLoggerService) {
+    this.logger = appLogger.forContext(ContactResolverRegistry.name);
+  }
 
   /**
    * Register a contact resolver for a notification channel.

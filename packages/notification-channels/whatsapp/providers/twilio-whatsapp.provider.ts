@@ -1,4 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import type { WhatsAppProvider, WhatsAppPayload, SendResult } from '../../types';
 
 export interface TwilioWhatsAppConfig {
@@ -10,8 +11,12 @@ export interface TwilioWhatsAppConfig {
 @Injectable()
 export class TwilioWhatsAppProvider implements WhatsAppProvider {
   readonly name = 'twilio';
-  private readonly logger = new Logger(TwilioWhatsAppProvider.name);
+  private readonly logger: ContextLogger;
   private config: TwilioWhatsAppConfig | null = null;
+
+  constructor(appLogger: AppLoggerService) {
+    this.logger = appLogger.forContext(TwilioWhatsAppProvider.name);
+  }
 
   configure(config: TwilioWhatsAppConfig): void {
     this.config = config;

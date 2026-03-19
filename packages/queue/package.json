@@ -9,6 +9,7 @@
   "dependencies": {
     "@nestjs/common": "^11.0.0",
     "@nestjs/bullmq": "^11.0.0",
+    "@packages/logger": "workspace:*",
     "bullmq": "^5.0.0"
   },
   "devDependencies": {

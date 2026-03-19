@@ -1,10 +1,15 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import type { EmailProvider, EmailPayload, SendResult } from '../types';
 
 @Injectable()
 export class EmailChannelService {
-  private readonly logger = new Logger(EmailChannelService.name);
+  private readonly logger: ContextLogger;
   private readonly providers = new Map<string, EmailProvider>();
+
+  constructor(appLogger: AppLoggerService) {
+    this.logger = appLogger.forContext(EmailChannelService.name);
+  }
   private activeProviderName: string | null = null;
 
   registerProvider(provider: EmailProvider): void {

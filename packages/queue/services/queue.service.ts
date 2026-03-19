@@ -1,11 +1,12 @@
-import { Injectable, Inject, Logger, type OnModuleDestroy } from '@nestjs/common';
+import { Injectable, Inject, type OnModuleDestroy } from '@nestjs/common';
+import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { Queue, Worker, type Job } from 'bullmq';
 import type { QueueModuleConfig, EnqueueOptions, JobDefinition } from '../types';
 import { QUEUE_MODULE_CONFIG } from '../types';
 
 @Injectable()
 export class QueueService implements OnModuleDestroy {
-  private readonly logger = new Logger(QueueService.name);
+  private readonly logger: ContextLogger;
   private readonly queues = new Map<string, Queue>();
   private readonly workers = new Map<string, Worker>();
   private readonly connection: Record<string, unknown>;
@@ -13,7 +14,9 @@ export class QueueService implements OnModuleDestroy {
 
   constructor(
     @Inject(QUEUE_MODULE_CONFIG) private readonly config: QueueModuleConfig,
+    appLogger: AppLoggerService,
   ) {
+    this.logger = appLogger.forContext(QueueService.name);
     const url = new URL(this.config.redisUrl);
     this.connection = {
       host: url.hostname,

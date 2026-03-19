@@ -1,10 +1,15 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import type { WorkflowGuardFn, WorkflowGuardContext } from '../types';
 
 @Injectable()
 export class WorkflowGuardRegistry {
-  private readonly logger = new Logger(WorkflowGuardRegistry.name);
+  private readonly logger: ContextLogger;
   private readonly guards = new Map<string, WorkflowGuardFn>();
+
+  constructor(appLogger: AppLoggerService) {
+    this.logger = appLogger.forContext(WorkflowGuardRegistry.name);
+  }
 
   register(name: string, guard: WorkflowGuardFn): void {
     this.guards.set(name, guard);

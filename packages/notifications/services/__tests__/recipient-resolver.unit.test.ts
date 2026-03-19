@@ -3,6 +3,12 @@ import { RecipientResolver } from '../recipient-resolver';
 import { EntityResolverRegistry } from '../entity-resolver-registry';
 import type { DomainEvent } from '@packages/events';
 import type { NotificationRule } from '../../types';
+import type { AppLoggerService } from '@packages/logger';
+
+function createMockAppLogger(): AppLoggerService {
+  const ctx = { log: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
+  return { forContext: vi.fn().mockReturnValue(ctx), log: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } as any;
+}
 
 function buildEvent(overrides: Partial<DomainEvent> = {}): DomainEvent {
   return {
@@ -54,8 +60,9 @@ function createMockDb() {
 describe('RecipientResolver', () => {
   it('should resolve actor from event', async () => {
     const mockDb = createMockDb();
-    const registry = new EntityResolverRegistry();
-    const resolver = new RecipientResolver({ db: mockDb } as any, registry);
+    const mockLogger = createMockAppLogger();
+    const registry = new EntityResolverRegistry(mockLogger);
+    const resolver = new RecipientResolver({ db: mockDb } as any, registry, mockLogger);
 
     const result = await resolver.resolve(buildRule(), buildEvent());
 
@@ -64,8 +71,9 @@ describe('RecipientResolver', () => {
 
   it('should return empty array when actor is null', async () => {
     const mockDb = createMockDb();
-    const registry = new EntityResolverRegistry();
-    const resolver = new RecipientResolver({ db: mockDb } as any, registry);
+    const mockLogger = createMockAppLogger();
+    const registry = new EntityResolverRegistry(mockLogger);
+    const resolver = new RecipientResolver({ db: mockDb } as any, registry, mockLogger);
 
     const result = await resolver.resolve(buildRule(), buildEvent({ actorId: null }));
 
@@ -74,8 +82,9 @@ describe('RecipientResolver', () => {
 
   it('should resolve entity_owner from event payload using configured field', async () => {
     const mockDb = createMockDb();
-    const registry = new EntityResolverRegistry();
-    const resolver = new RecipientResolver({ db: mockDb } as any, registry);
+    const mockLogger = createMockAppLogger();
+    const registry = new EntityResolverRegistry(mockLogger);
+    const resolver = new RecipientResolver({ db: mockDb } as any, registry, mockLogger);
 
     const result = await resolver.resolve(
       buildRule({
@@ -90,8 +99,9 @@ describe('RecipientResolver', () => {
 
   it('should return empty for entity_owner with no field in recipientConfig', async () => {
     const mockDb = createMockDb();
-    const registry = new EntityResolverRegistry();
-    const resolver = new RecipientResolver({ db: mockDb } as any, registry);
+    const mockLogger = createMockAppLogger();
+    const registry = new EntityResolverRegistry(mockLogger);
+    const resolver = new RecipientResolver({ db: mockDb } as any, registry, mockLogger);
 
     const result = await resolver.resolve(
       buildRule({ recipientStrategy: 'entity_owner', recipientConfig: {} }),
@@ -107,8 +117,9 @@ describe('RecipientResolver', () => {
       { userId: 'user-1' },
       { userId: 'user-2' },
     ]);
-    const registry = new EntityResolverRegistry();
-    const resolver = new RecipientResolver({ db: mockDb } as any, registry);
+    const mockLogger = createMockAppLogger();
+    const registry = new EntityResolverRegistry(mockLogger);
+    const resolver = new RecipientResolver({ db: mockDb } as any, registry, mockLogger);
 
     const result = await resolver.resolve(
       buildRule({ recipientStrategy: 'role', recipientConfig: { roleId: 'role-1' } }),
@@ -120,8 +131,9 @@ describe('RecipientResolver', () => {
 
   it('should return empty for role strategy with no roleId config', async () => {
     const mockDb = createMockDb();
-    const registry = new EntityResolverRegistry();
-    const resolver = new RecipientResolver({ db: mockDb } as any, registry);
+    const mockLogger = createMockAppLogger();
+    const registry = new EntityResolverRegistry(mockLogger);
+    const resolver = new RecipientResolver({ db: mockDb } as any, registry, mockLogger);
 
     const result = await resolver.resolve(
       buildRule({ recipientStrategy: 'role', recipientConfig: {} }),
@@ -133,8 +145,9 @@ describe('RecipientResolver', () => {
 
   it('should return empty for unknown strategy', async () => {
     const mockDb = createMockDb();
-    const registry = new EntityResolverRegistry();
-    const resolver = new RecipientResolver({ db: mockDb } as any, registry);
+    const mockLogger = createMockAppLogger();
+    const registry = new EntityResolverRegistry(mockLogger);
+    const resolver = new RecipientResolver({ db: mockDb } as any, registry, mockLogger);
 
     const result = await resolver.resolve(
       buildRule({ recipientStrategy: 'unknown' as any }),

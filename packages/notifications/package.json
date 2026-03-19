@@ -12,6 +12,7 @@
     "@packages/common": "workspace:*",
     "@packages/database": "workspace:*",
     "@packages/events": "workspace:*",
+    "@packages/logger": "workspace:*",
     "@packages/queue": "workspace:*",
     "@packages/notification-channels": "workspace:*",
     "@packages/rbac": "workspace:*",

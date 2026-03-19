@@ -1,4 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import type { EmailProvider, EmailPayload, SendResult } from '../../types';
 
 export interface SmtpConfig {
@@ -12,8 +13,12 @@ export interface SmtpConfig {
 @Injectable()
 export class SmtpEmailProvider implements EmailProvider {
   readonly name = 'smtp';
-  private readonly logger = new Logger(SmtpEmailProvider.name);
+  private readonly logger: ContextLogger;
   private config: SmtpConfig | null = null;
+
+  constructor(appLogger: AppLoggerService) {
+    this.logger = appLogger.forContext(SmtpEmailProvider.name);
+  }
   private transporter: any = null;
 
   configure(config: SmtpConfig): void {

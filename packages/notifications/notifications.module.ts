@@ -1,4 +1,5 @@
-import { Global, Module, type OnModuleInit, Logger } from '@nestjs/common';
+import { Global, Module, type OnModuleInit } from '@nestjs/common';
+import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { QueueService } from '@packages/queue';
 import { cronForLocalHour } from '@packages/common';
 import { NotificationChannelsModule, EmailChannelService, WhatsAppChannelService } from '@packages/notification-channels';
@@ -48,7 +49,7 @@ export const SCHEDULE_SCAN_QUEUE = 'notification.schedule-scan';
   ],
 })
 export class NotificationsModule implements OnModuleInit {
-  private readonly logger = new Logger(NotificationsModule.name);
+  private readonly logger: ContextLogger;
 
   constructor(
     private readonly dispatcher: NotificationDispatcher,
@@ -57,7 +58,10 @@ export class NotificationsModule implements OnModuleInit {
     private readonly scheduleScanner: ScheduleScanner,
     private readonly emailChannelService: EmailChannelService,
     private readonly whatsAppChannelService: WhatsAppChannelService,
-  ) {}
+    appLogger: AppLoggerService,
+  ) {
+    this.logger = appLogger.forContext(NotificationsModule.name);
+  }
 
   onModuleInit() {
     // Register inline channels

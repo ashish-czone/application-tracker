@@ -1,4 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { QueueService } from '@packages/queue';
 import type { ChannelProvider, ChannelContext, NotificationChannel, RenderedNotification } from '../types';
 import { ContactResolverRegistry } from './contact-resolver-registry';
@@ -8,13 +9,16 @@ export const WHATSAPP_QUEUE_NAME = 'notification.whatsapp';
 
 @Injectable()
 export class NotificationDispatcher {
-  private readonly logger = new Logger(NotificationDispatcher.name);
+  private readonly logger: ContextLogger;
   private readonly inlineChannels = new Map<NotificationChannel, ChannelProvider>();
 
   constructor(
     private readonly queueService: QueueService,
     private readonly contactResolverRegistry: ContactResolverRegistry,
-  ) {}
+    appLogger: AppLoggerService,
+  ) {
+    this.logger = appLogger.forContext(NotificationDispatcher.name);
+  }
 
   /**
    * Register an inline channel (e.g., in_app) that processes synchronously.

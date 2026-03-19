@@ -2,6 +2,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { BadRequestException } from '@nestjs/common';
 import { MediaService } from '../media.service';
 import type { MediaModuleConfig, UploadedFile, MediaFieldConfig, MediaFile } from '../../types';
+import type { AppLoggerService } from '@packages/logger';
+
+function createMockAppLogger(): AppLoggerService {
+  const ctx = { log: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
+  return { forContext: vi.fn().mockReturnValue(ctx), log: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } as any;
+}
 
 function createService(config?: Partial<MediaModuleConfig>): MediaService {
   const fullConfig: MediaModuleConfig = {
@@ -10,7 +16,7 @@ function createService(config?: Partial<MediaModuleConfig>): MediaService {
     baseUrl: 'http://localhost:3000/uploads',
     ...config,
   };
-  return new MediaService(fullConfig);
+  return new MediaService(fullConfig, createMockAppLogger());
 }
 
 function createFile(overrides?: Partial<UploadedFile>): UploadedFile {

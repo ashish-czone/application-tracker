@@ -1,4 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { DatabaseService, eq, and, isNull, sql, lte } from '@packages/database';
 import { notificationRules } from '../schema/notification-rules';
 import { notificationScheduled } from '../schema/notification-scheduled';
@@ -16,7 +17,7 @@ import type { DomainEvent } from '@packages/events';
 
 @Injectable()
 export class ScheduleScanner {
-  private readonly logger = new Logger(ScheduleScanner.name);
+  private readonly logger: ContextLogger;
   private readonly appTimezone: string;
 
   constructor(
@@ -27,7 +28,9 @@ export class ScheduleScanner {
     private readonly preferenceService: PreferenceService,
     private readonly templateRenderer: TemplateRenderer,
     private readonly dispatcher: NotificationDispatcher,
+    appLogger: AppLoggerService,
   ) {
+    this.logger = appLogger.forContext(ScheduleScanner.name);
     this.appTimezone = process.env.APP_TIMEZONE ?? 'UTC';
   }
 
