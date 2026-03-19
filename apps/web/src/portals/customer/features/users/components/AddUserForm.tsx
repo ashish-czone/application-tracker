@@ -45,7 +45,7 @@ export function AddUserForm({ onClose }: AddUserFormProps) {
   const [selectedRoleIds, setSelectedRoleIds] = useState<Set<string>>(new Set());
   const [rolesError, setRolesError] = useState<string | null>(null);
 
-  const { control, handleSubmit } = useForm<CreateUserFormValues>({
+  const form = useForm<CreateUserFormValues>({
     resolver: zodResolver(createUserSchema),
     defaultValues: {
       firstName: '',
@@ -57,7 +57,7 @@ export function AddUserForm({ onClose }: AddUserFormProps) {
     },
   });
 
-  const selectedUserType = useWatch({ control, name: 'userType' });
+  const selectedUserType = useWatch({ name: 'userType', control: form.control });
 
   const emailValidator = useAsyncValidator({
     checkFn: useCallback(
@@ -106,17 +106,15 @@ export function AddUserForm({ onClose }: AddUserFormProps) {
         <DialogDescription>Create a new user account</DialogDescription>
       </DialogHeader>
 
-      <Form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <Form form={form} onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <FormInput
-            control={control}
             name="firstName"
             label="First name"
             placeholder="John"
             autoComplete="off"
           />
           <FormInput
-            control={control}
             name="lastName"
             label="Last name"
             placeholder="Doe"
@@ -125,7 +123,6 @@ export function AddUserForm({ onClose }: AddUserFormProps) {
         </div>
 
         <FormEmailInput
-          control={control}
           name="email"
           label="Email"
           autoComplete="off"
@@ -135,14 +132,12 @@ export function AddUserForm({ onClose }: AddUserFormProps) {
         />
 
         <FormPhoneInput
-          control={control}
           name="phone"
           label="Phone (optional)"
           defaultCountry="AE"
         />
 
         <FormPasswordInput
-          control={control}
           name="password"
           label="Password"
           autoComplete="new-password"
@@ -150,7 +145,6 @@ export function AddUserForm({ onClose }: AddUserFormProps) {
         />
 
         <FormSelect
-          control={control}
           name="userType"
           label="User type"
           placeholder="Select type"

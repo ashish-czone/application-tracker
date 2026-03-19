@@ -33,7 +33,7 @@ interface EditUserFormProps {
 }
 
 export function EditUserForm({ user, onClose }: EditUserFormProps) {
-  const { control, handleSubmit } = useForm<EditUserFormValues>({
+  const form = useForm<EditUserFormValues>({
     resolver: zodResolver(editUserSchema),
     defaultValues: {
       firstName: user.firstName,
@@ -72,16 +72,14 @@ export function EditUserForm({ user, onClose }: EditUserFormProps) {
         </DialogDescription>
       </DialogHeader>
 
-      <Form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <Form form={form} onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <FormInput
-            control={control}
             name="firstName"
             label="First name"
             placeholder="John"
           />
           <FormInput
-            control={control}
             name="lastName"
             label="Last name"
             placeholder="Doe"
@@ -89,7 +87,6 @@ export function EditUserForm({ user, onClose }: EditUserFormProps) {
         </div>
 
         <FormEmailInput
-          control={control}
           name="email"
           label="Email"
           asyncStatus={emailValidator.status}
@@ -98,7 +95,6 @@ export function EditUserForm({ user, onClose }: EditUserFormProps) {
         />
 
         <FormPhoneInput
-          control={control}
           name="phone"
           label="Phone (optional)"
           defaultCountry="AE"

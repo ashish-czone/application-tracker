@@ -1,13 +1,12 @@
-import { Controller, type Control, type FieldValues, type Path } from 'react-hook-form';
+import { useFormContext, Controller } from 'react-hook-form';
 import { Check, X, Loader2 } from 'lucide-react';
 import { Input } from './Input';
 import { Label } from './Label';
 import { cn } from '../../lib/utils';
 import type { AsyncValidationStatus } from './FormInput';
 
-interface FormEmailInputProps<T extends FieldValues> {
-  control: Control<T>;
-  name: Path<T>;
+interface FormEmailInputProps {
+  name: string;
   label: string;
   placeholder?: string;
   description?: string;
@@ -24,8 +23,7 @@ interface FormEmailInputProps<T extends FieldValues> {
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export function FormEmailInput<T extends FieldValues>({
-  control,
+export function FormEmailInput({
   name,
   label,
   placeholder = 'you@example.com',
@@ -36,7 +34,8 @@ export function FormEmailInput<T extends FieldValues>({
   asyncStatus,
   asyncError,
   onBlurValidate,
-}: FormEmailInputProps<T>) {
+}: FormEmailInputProps) {
+  const { control } = useFormContext();
   const errorId = `${name}-error`;
   const descriptionId = `${name}-description`;
   const hasAsyncIcon = asyncStatus && asyncStatus !== 'idle';

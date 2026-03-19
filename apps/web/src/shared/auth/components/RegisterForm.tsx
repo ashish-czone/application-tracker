@@ -32,7 +32,7 @@ const registerSchema = z.object({
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export function RegisterForm() {
-  const { control, handleSubmit } = useForm<RegisterFormValues>({
+  const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: { firstName: '', lastName: '', email: '', password: '' },
   });
@@ -49,17 +49,15 @@ export function RegisterForm() {
         <CardDescription>Enter your details to get started</CardDescription>
       </CardHeader>
       <CardContent>
-        <Form onSubmit={handleSubmit(onSubmit)}>
+        <Form form={form} onSubmit={form.handleSubmit(onSubmit)}>
           <div className="grid grid-cols-2 gap-4">
             <FormInput
-              control={control}
               name="firstName"
               label="First name"
               placeholder="John"
               autoComplete="given-name"
             />
             <FormInput
-              control={control}
               name="lastName"
               label="Last name"
               placeholder="Doe"
@@ -67,13 +65,11 @@ export function RegisterForm() {
             />
           </div>
           <FormEmailInput
-            control={control}
             name="email"
             label="Email"
             autoComplete="email"
           />
           <FormPasswordInput
-            control={control}
             name="password"
             label="Password"
             autoComplete="new-password"

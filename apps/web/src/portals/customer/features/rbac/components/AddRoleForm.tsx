@@ -38,7 +38,7 @@ export function AddRoleForm({ onClose }: AddRoleFormProps) {
   const [error, setError] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
-  const { control, handleSubmit } = useForm<CreateRoleFormValues>({
+  const form = useForm<CreateRoleFormValues>({
     resolver: zodResolver(createRoleSchema),
     defaultValues: {
       name: '',
@@ -125,9 +125,8 @@ export function AddRoleForm({ onClose }: AddRoleFormProps) {
         <DialogDescription>Create a new role for user access control</DialogDescription>
       </DialogHeader>
 
-      <Form onSubmit={handleSubmit(handleStep1)} className="space-y-4">
+      <Form form={form} onSubmit={form.handleSubmit(handleStep1)} className="space-y-4">
         <FormInput
-          control={control}
           name="name"
           label="Role name"
           placeholder="e.g. Manager"
@@ -135,7 +134,6 @@ export function AddRoleForm({ onClose }: AddRoleFormProps) {
         />
 
         <FormSelect
-          control={control}
           name="userType"
           label="User type"
           placeholder="Select type"
@@ -146,7 +144,6 @@ export function AddRoleForm({ onClose }: AddRoleFormProps) {
         />
 
         <FormSelect
-          control={control}
           name="isDefault"
           label="Default role"
           description="New users of this type will be assigned this role automatically"

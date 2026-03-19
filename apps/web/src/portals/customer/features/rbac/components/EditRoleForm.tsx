@@ -25,7 +25,7 @@ interface EditRoleFormProps {
 }
 
 export function EditRoleForm({ role, onClose }: EditRoleFormProps) {
-  const { control, handleSubmit } = useForm<EditRoleFormValues>({
+  const form = useForm<EditRoleFormValues>({
     resolver: zodResolver(editRoleSchema),
     defaultValues: { name: role.name },
   });
@@ -43,9 +43,8 @@ export function EditRoleForm({ role, onClose }: EditRoleFormProps) {
         <DialogDescription>Update the name for "{role.name}"</DialogDescription>
       </DialogHeader>
 
-      <Form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <Form form={form} onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <FormInput
-          control={control}
           name="name"
           label="Role name"
           placeholder="e.g. Manager"

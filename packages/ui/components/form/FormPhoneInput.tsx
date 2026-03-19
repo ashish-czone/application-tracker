@@ -1,13 +1,12 @@
-import { Controller, type Control, type FieldValues, type Path } from 'react-hook-form';
+import { useFormContext, Controller } from 'react-hook-form';
 import PhoneInput from 'react-phone-number-input';
 import type { CountryCode } from 'libphonenumber-js';
 import { Label } from './Label';
 import { cn } from '../../lib/utils';
 import 'react-phone-number-input/style.css';
 
-interface FormPhoneInputProps<T extends FieldValues> {
-  control: Control<T>;
-  name: Path<T>;
+interface FormPhoneInputProps {
+  name: string;
   label: string;
   placeholder?: string;
   description?: string;
@@ -19,8 +18,7 @@ interface FormPhoneInputProps<T extends FieldValues> {
   showCountrySelect?: boolean;
 }
 
-export function FormPhoneInput<T extends FieldValues>({
-  control,
+export function FormPhoneInput({
   name,
   label,
   placeholder = 'Phone number',
@@ -29,7 +27,8 @@ export function FormPhoneInput<T extends FieldValues>({
   className,
   defaultCountry = 'US',
   showCountrySelect = true,
-}: FormPhoneInputProps<T>) {
+}: FormPhoneInputProps) {
+  const { control } = useFormContext();
   const errorId = `${name}-error`;
   const descriptionId = `${name}-description`;
 

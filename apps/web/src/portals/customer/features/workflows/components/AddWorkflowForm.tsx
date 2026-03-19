@@ -31,7 +31,7 @@ interface AddWorkflowFormProps {
 }
 
 export function AddWorkflowForm({ onClose }: AddWorkflowFormProps) {
-  const { control, handleSubmit } = useForm<CreateWorkflowFormValues>({
+  const form = useForm<CreateWorkflowFormValues>({
     resolver: zodResolver(createWorkflowSchema),
     defaultValues: {
       slug: '',
@@ -55,17 +55,15 @@ export function AddWorkflowForm({ onClose }: AddWorkflowFormProps) {
         <DialogDescription>Create a new workflow definition</DialogDescription>
       </DialogHeader>
 
-      <Form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <Form form={form} onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <FormInput
-            control={control}
             name="slug"
             label="Slug"
             placeholder="order-status"
             description="Unique identifier (kebab-case)"
           />
           <FormInput
-            control={control}
             name="name"
             label="Name"
             placeholder="Order Status"
@@ -74,13 +72,11 @@ export function AddWorkflowForm({ onClose }: AddWorkflowFormProps) {
 
         <div className="grid grid-cols-2 gap-4">
           <FormInput
-            control={control}
             name="entityType"
             label="Entity type"
             placeholder="order"
           />
           <FormInput
-            control={control}
             name="fieldName"
             label="Field name"
             placeholder="status"
@@ -88,7 +84,6 @@ export function AddWorkflowForm({ onClose }: AddWorkflowFormProps) {
         </div>
 
         <FormInput
-          control={control}
           name="initialState"
           label="Initial state"
           placeholder="open"

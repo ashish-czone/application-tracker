@@ -31,7 +31,7 @@ interface EditTaskFormProps {
 }
 
 export function EditTaskForm({ task, onClose }: EditTaskFormProps) {
-  const { control, handleSubmit } = useForm<EditTaskFormValues>({
+  const form = useForm<EditTaskFormValues>({
     resolver: zodResolver(editTaskSchema),
     defaultValues: {
       title: task.title,
@@ -64,9 +64,8 @@ export function EditTaskForm({ task, onClose }: EditTaskFormProps) {
         <DialogDescription>Update task details</DialogDescription>
       </DialogHeader>
 
-      <Form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <Form form={form} onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <FormInput
-          control={control}
           name="title"
           label="Title"
           placeholder="Task title"
@@ -74,7 +73,6 @@ export function EditTaskForm({ task, onClose }: EditTaskFormProps) {
         />
 
         <FormTextarea
-          control={control}
           name="description"
           label="Description (optional)"
           placeholder="Describe the task..."
@@ -83,7 +81,6 @@ export function EditTaskForm({ task, onClose }: EditTaskFormProps) {
 
         <div className="grid grid-cols-2 gap-4">
           <FormSelect
-            control={control}
             name="priority"
             label="Priority"
             options={[
@@ -95,7 +92,6 @@ export function EditTaskForm({ task, onClose }: EditTaskFormProps) {
           />
 
           <FormInput
-            control={control}
             name="dueDate"
             label="Due date (optional)"
             type="date"
