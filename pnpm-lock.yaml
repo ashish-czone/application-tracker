@@ -107,6 +107,9 @@ importers:
       '@packages/events':
         specifier: workspace:*
         version: link:../../packages/events
+      '@packages/logger':
+        specifier: workspace:*
+        version: link:../../packages/logger
       '@packages/media':
         specifier: workspace:*
         version: link:../../packages/media
@@ -352,10 +355,26 @@ importers:
       '@nestjs/event-emitter':
         specifier: ^3.0.0
         version: 3.0.1(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)
+      '@packages/logger':
+        specifier: workspace:*
+        version: link:../logger
     devDependencies:
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
+
+  packages/logger:
+    dependencies:
+      '@nestjs/common':
+        specifier: ^11.0.0
+        version: 11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+    devDependencies:
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.2.0
+        version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(terser@5.46.0)
 
   packages/media:
     dependencies:
@@ -368,6 +387,9 @@ importers:
       '@nestjs/common':
         specifier: ^11.0.0
         version: 11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@packages/logger':
+        specifier: workspace:*
+        version: link:../logger
     devDependencies:
       typescript:
         specifier: ^5.7.0
@@ -381,6 +403,9 @@ importers:
       '@nestjs/common':
         specifier: ^11.0.0
         version: 11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@packages/logger':
+        specifier: workspace:*
+        version: link:../logger
       nodemailer:
         specifier: ^6.0.0
         version: 6.10.1
@@ -409,6 +434,9 @@ importers:
       '@packages/events':
         specifier: workspace:*
         version: link:../events
+      '@packages/logger':
+        specifier: workspace:*
+        version: link:../logger
       '@packages/notification-channels':
         specifier: workspace:*
         version: link:../notification-channels
@@ -443,6 +471,9 @@ importers:
       '@nestjs/common':
         specifier: ^11.0.0
         version: 11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@packages/logger':
+        specifier: workspace:*
+        version: link:../logger
       bullmq:
         specifier: ^5.0.0
         version: 5.71.0
@@ -589,6 +620,9 @@ importers:
       '@packages/events':
         specifier: workspace:*
         version: link:../events
+      '@packages/logger':
+        specifier: workspace:*
+        version: link:../logger
       '@packages/rbac':
         specifier: workspace:*
         version: link:../rbac

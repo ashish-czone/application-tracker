@@ -1,4 +1,5 @@
-import { Inject, Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { Inject, Injectable, BadRequestException } from '@nestjs/common';
+import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import type { MediaProvider } from '../providers/media-provider.interface';
 import { LocalMediaProvider } from '../providers/local.provider';
 import { S3MediaProvider } from '../providers/s3.provider';
@@ -14,12 +15,14 @@ import { isMimeTypeAccepted, isFileSizeValid, generateStorageKey } from '../help
 
 @Injectable()
 export class MediaService {
-  private readonly logger = new Logger(MediaService.name);
+  private readonly logger: ContextLogger;
   private readonly provider: MediaProvider;
 
   constructor(
     @Inject(MEDIA_MODULE_CONFIG) private readonly config: MediaModuleConfig,
+    appLogger: AppLoggerService,
   ) {
+    this.logger = appLogger.forContext(MediaService.name);
     if (config.provider === 's3') {
       this.provider = new S3MediaProvider(config);
     } else {

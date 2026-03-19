@@ -1,4 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { DatabaseService } from '@packages/database';
 import { notifications } from '../schema/notifications';
 import type { ChannelProvider, ChannelContext, RenderedNotification, NotificationChannel } from '../types';
@@ -6,9 +7,14 @@ import type { ChannelProvider, ChannelContext, RenderedNotification, Notificatio
 @Injectable()
 export class InAppChannel implements ChannelProvider {
   readonly channel: NotificationChannel = 'in_app';
-  private readonly logger = new Logger(InAppChannel.name);
+  private readonly logger: ContextLogger;
 
-  constructor(private readonly database: DatabaseService) {}
+  constructor(
+    private readonly database: DatabaseService,
+    appLogger: AppLoggerService,
+  ) {
+    this.logger = appLogger.forContext(InAppChannel.name);
+  }
 
   async send(recipientId: string, content: RenderedNotification, context: ChannelContext): Promise<void> {
     await this.database.db

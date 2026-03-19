@@ -1,11 +1,17 @@
-import { Injectable, Logger, type OnModuleInit } from '@nestjs/common';
+import { Injectable, type OnModuleInit } from '@nestjs/common';
+import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { WorkflowRegistryService } from '@packages/workflows';
 
 @Injectable()
 export class TasksWorkflowSeederService implements OnModuleInit {
-  private readonly logger = new Logger(TasksWorkflowSeederService.name);
+  private readonly logger: ContextLogger;
 
-  constructor(private readonly workflowRegistry: WorkflowRegistryService) {}
+  constructor(
+    private readonly workflowRegistry: WorkflowRegistryService,
+    appLogger: AppLoggerService,
+  ) {
+    this.logger = appLogger.forContext(TasksWorkflowSeederService.name);
+  }
 
   async onModuleInit() {
     await this.seedTaskStatusWorkflow();

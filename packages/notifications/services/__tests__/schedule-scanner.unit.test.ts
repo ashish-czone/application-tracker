@@ -3,6 +3,12 @@ import { ScheduleScanner } from '../schedule-scanner';
 import { EntityResolverRegistry } from '../entity-resolver-registry';
 import { TemplateRenderer } from '../template-renderer';
 import type { NotificationRule } from '../../types';
+import type { AppLoggerService } from '@packages/logger';
+
+function createMockAppLogger(): AppLoggerService {
+  const ctx = { log: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
+  return { forContext: vi.fn().mockReturnValue(ctx), log: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } as any;
+}
 
 /**
  * Tests for multi-offset aggregation and recipient grouping in ScheduleScanner.
@@ -80,7 +86,8 @@ function createMockDeps() {
     }),
   };
 
-  const registry = new EntityResolverRegistry();
+  const mockLogger = createMockAppLogger();
+  const registry = new EntityResolverRegistry(mockLogger);
   const mockTable = {
     id: { name: 'id' },
     dueDate: { name: 'due_date' },
@@ -134,6 +141,7 @@ function createMockDeps() {
     preferenceService as any,
     templateRenderer,
     dispatcher as any,
+    mockLogger,
   );
 
   return {

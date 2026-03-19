@@ -1,4 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { OnEvent } from '@nestjs/event-emitter';
 import { DatabaseService, eq, and } from '@packages/database';
 import type { DomainEvent } from '@packages/events';
@@ -14,7 +15,7 @@ import type { ScheduleUnit, Condition } from '../types';
 
 @Injectable()
 export class NotificationListener {
-  private readonly logger = new Logger(NotificationListener.name);
+  private readonly logger: ContextLogger;
 
   constructor(
     private readonly ruleService: NotificationRuleService,
@@ -24,7 +25,10 @@ export class NotificationListener {
     private readonly dispatcher: NotificationDispatcher,
     private readonly database: DatabaseService,
     private readonly entityResolverRegistry: EntityResolverRegistry,
-  ) {}
+    appLogger: AppLoggerService,
+  ) {
+    this.logger = appLogger.forContext(NotificationListener.name);
+  }
 
   @OnEvent('**')
   async handleDomainEvent(event: DomainEvent): Promise<void> {

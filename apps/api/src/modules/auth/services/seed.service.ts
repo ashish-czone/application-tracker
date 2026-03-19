@@ -1,4 +1,5 @@
-import { Injectable, Logger, type OnModuleInit } from '@nestjs/common';
+import { Injectable, type OnModuleInit } from '@nestjs/common';
+import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { DatabaseService, eq, users } from '@packages/database';
 import { AuthService } from '@packages/auth';
 import { RbacService, rolePermissions } from '@packages/rbac';
@@ -9,13 +10,16 @@ const ADMIN_PASSWORD = 'Admin1234';
 
 @Injectable()
 export class SeedService implements OnModuleInit {
-  private readonly logger = new Logger(SeedService.name);
+  private readonly logger: ContextLogger;
 
   constructor(
     private readonly database: DatabaseService,
     private readonly authService: AuthService,
     private readonly rbacService: RbacService,
-  ) {}
+    appLogger: AppLoggerService,
+  ) {
+    this.logger = appLogger.forContext(SeedService.name);
+  }
 
   async onModuleInit() {
     await this.ensureDefaultClientRole();

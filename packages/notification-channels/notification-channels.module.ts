@@ -1,4 +1,5 @@
-import { Module, type OnModuleInit, Logger } from '@nestjs/common';
+import { Module, type OnModuleInit } from '@nestjs/common';
+import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { EmailChannelService } from './email/email-channel.service';
 import { ConsoleEmailProvider } from './email/providers/console-email.provider';
 import { SmtpEmailProvider } from './email/providers/smtp-email.provider';
@@ -21,7 +22,7 @@ import { TwilioWhatsAppProvider } from './whatsapp/providers/twilio-whatsapp.pro
   ],
 })
 export class NotificationChannelsModule implements OnModuleInit {
-  private readonly logger = new Logger(NotificationChannelsModule.name);
+  private readonly logger: ContextLogger;
 
   constructor(
     private readonly emailChannel: EmailChannelService,
@@ -30,7 +31,10 @@ export class NotificationChannelsModule implements OnModuleInit {
     private readonly whatsAppChannel: WhatsAppChannelService,
     private readonly consoleWhatsAppProvider: ConsoleWhatsAppProvider,
     private readonly twilioWhatsAppProvider: TwilioWhatsAppProvider,
-  ) {}
+    appLogger: AppLoggerService,
+  ) {
+    this.logger = appLogger.forContext(NotificationChannelsModule.name);
+  }
 
   onModuleInit() {
     // Register email providers

@@ -1,10 +1,15 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import type { EmailProvider, EmailPayload, SendResult } from '../../types';
 
 @Injectable()
 export class ConsoleEmailProvider implements EmailProvider {
   readonly name = 'console';
-  private readonly logger = new Logger(ConsoleEmailProvider.name);
+  private readonly logger: ContextLogger;
+
+  constructor(appLogger: AppLoggerService) {
+    this.logger = appLogger.forContext(ConsoleEmailProvider.name);
+  }
 
   async send(payload: EmailPayload): Promise<SendResult> {
     this.logger.log({

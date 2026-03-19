@@ -1,4 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { DatabaseService, eq } from '@packages/database';
 import { userRoles } from '@packages/rbac';
 import type { DomainEvent } from '@packages/events';
@@ -7,12 +8,15 @@ import { EntityResolverRegistry } from './entity-resolver-registry';
 
 @Injectable()
 export class RecipientResolver {
-  private readonly logger = new Logger(RecipientResolver.name);
+  private readonly logger: ContextLogger;
 
   constructor(
     private readonly database: DatabaseService,
     private readonly entityResolverRegistry: EntityResolverRegistry,
-  ) {}
+    appLogger: AppLoggerService,
+  ) {
+    this.logger = appLogger.forContext(RecipientResolver.name);
+  }
 
   /**
    * Resolve recipient user IDs based on the rule's strategy and the event context.

@@ -1,10 +1,15 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import type { WhatsAppProvider, WhatsAppPayload, SendResult } from '../types';
 
 @Injectable()
 export class WhatsAppChannelService {
-  private readonly logger = new Logger(WhatsAppChannelService.name);
+  private readonly logger: ContextLogger;
   private readonly providers = new Map<string, WhatsAppProvider>();
+
+  constructor(appLogger: AppLoggerService) {
+    this.logger = appLogger.forContext(WhatsAppChannelService.name);
+  }
   private activeProviderName: string | null = null;
 
   registerProvider(provider: WhatsAppProvider): void {

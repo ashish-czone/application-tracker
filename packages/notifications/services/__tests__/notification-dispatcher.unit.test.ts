@@ -2,6 +2,12 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { NotificationDispatcher } from '../notification-dispatcher';
 import { ContactResolverRegistry } from '../contact-resolver-registry';
 import type { ChannelProvider, ChannelContext, RenderedNotification } from '../../types';
+import type { AppLoggerService } from '@packages/logger';
+
+function createMockAppLogger(): AppLoggerService {
+  const ctx = { log: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
+  return { forContext: vi.fn().mockReturnValue(ctx), log: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } as any;
+}
 
 function buildContext(): ChannelContext {
   return {
@@ -28,9 +34,10 @@ describe('NotificationDispatcher', () => {
   let queueService: ReturnType<typeof createMockQueueService>;
 
   beforeEach(() => {
-    contactRegistry = new ContactResolverRegistry();
+    const mockLogger = createMockAppLogger();
+    contactRegistry = new ContactResolverRegistry(mockLogger);
     queueService = createMockQueueService();
-    dispatcher = new NotificationDispatcher(queueService as any, contactRegistry);
+    dispatcher = new NotificationDispatcher(queueService as any, contactRegistry, mockLogger);
   });
 
   it('should dispatch in_app to inline channel provider', async () => {

@@ -1,10 +1,15 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import type { EntityResolverConfig, ResolvedFieldConfig, RecipientFieldConfig } from '../types';
 
 @Injectable()
 export class EntityResolverRegistry {
-  private readonly logger = new Logger(EntityResolverRegistry.name);
+  private readonly logger: ContextLogger;
   private readonly resolvers = new Map<string, EntityResolverConfig>();
+
+  constructor(appLogger: AppLoggerService) {
+    this.logger = appLogger.forContext(EntityResolverRegistry.name);
+  }
 
   /**
    * Register an entity type with its Drizzle table, field metadata, and recipient fields.
