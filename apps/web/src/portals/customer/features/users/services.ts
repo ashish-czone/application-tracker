@@ -33,6 +33,10 @@ export function restoreUser(id: string): Promise<User> {
   return api.patch<User>(`/users/${id}/restore`);
 }
 
+export function resetUserPassword(id: string, password: string): Promise<void> {
+  return api.post<void>(`/users/${id}/reset-password`, { password });
+}
+
 export function checkUnique(entity: string, field: string, value: string, excludeId?: string): Promise<{ unique: boolean }> {
   const params = new URLSearchParams({ entity, field, value });
   if (excludeId) params.set('excludeId', excludeId);

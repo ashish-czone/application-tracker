@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Users, Plus, Pencil, Trash2, RotateCcw } from 'lucide-react';
+import { Users, Plus, Pencil, Trash2, RotateCcw, KeyRound } from 'lucide-react';
 import { format } from 'date-fns';
 import {
   DataGrid, Badge, Button, useDataGridParams,
@@ -9,6 +9,7 @@ import {
 import { useUsers, useDeleteUser, useRestoreUser } from '../hooks';
 import { AddUserForm } from '../components/AddUserForm';
 import { EditUserForm } from '../components/EditUserForm';
+import { ResetPasswordForm } from '../components/ResetPasswordForm';
 import type { User } from '../types';
 
 const USER_TYPE_LABELS: Record<string, string> = {
@@ -20,6 +21,7 @@ export default function UsersListPage() {
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [deletingUser, setDeletingUser] = useState<User | null>(null);
+  const [resettingPasswordUser, setResettingPasswordUser] = useState<User | null>(null);
   const [showDeleted, setShowDeleted] = useState(false);
   const {
     page,
@@ -136,7 +138,7 @@ export default function UsersListPage() {
       {
         id: 'actions',
         header: '',
-        size: 80,
+        size: 110,
         enableHiding: false,
         enableSorting: false,
         cell: ({ row }) => {
@@ -165,6 +167,15 @@ export default function UsersListPage() {
                 aria-label={`Edit ${row.original.firstName}`}
               >
                 <Pencil className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setResettingPasswordUser(row.original)}
+                className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                aria-label={`Reset password for ${row.original.firstName}`}
+                title="Reset password"
+              >
+                <KeyRound className="h-4 w-4" />
               </button>
               <button
                 type="button"
@@ -276,6 +287,14 @@ export default function UsersListPage() {
                 </button>
                 <button
                   type="button"
+                  onClick={() => setResettingPasswordUser(user)}
+                  className="p-1 text-muted-foreground hover:text-foreground"
+                  aria-label="Reset password"
+                >
+                  <KeyRound className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
                   onClick={() => setDeletingUser(user)}
                   className="p-1 text-muted-foreground hover:text-destructive"
                   aria-label="Delete"
@@ -307,6 +326,15 @@ export default function UsersListPage() {
         <DialogContent className="sm:max-w-lg">
           {editingUser && (
             <EditUserForm user={editingUser} onClose={() => setEditingUser(null)} />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Reset Password Modal */}
+      <Dialog open={!!resettingPasswordUser} onOpenChange={(open) => !open && setResettingPasswordUser(null)}>
+        <DialogContent className="sm:max-w-md">
+          {resettingPasswordUser && (
+            <ResetPasswordForm user={resettingPasswordUser} onClose={() => setResettingPasswordUser(null)} />
           )}
         </DialogContent>
       </Dialog>

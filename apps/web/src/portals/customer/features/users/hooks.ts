@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@packages/ui';
-import { listUsers, listRoles, createUser, updateUser, deleteUser, restoreUser } from './services';
+import { listUsers, listRoles, createUser, updateUser, deleteUser, restoreUser, resetUserPassword } from './services';
 import type { ListUsersParams, CreateUserRequest, UpdateUserRequest } from './types';
 
 export function useUsers(params: ListUsersParams) {
@@ -61,6 +61,19 @@ export function useDeleteUser(options?: { onSuccess?: () => void }) {
     },
     onError: (error: any) => {
       toast.error(error?.body?.message || 'Failed to delete user');
+    },
+  });
+}
+
+export function useResetUserPassword(options?: { onSuccess?: () => void }) {
+  return useMutation({
+    mutationFn: ({ id, password }: { id: string; password: string }) => resetUserPassword(id, password),
+    onSuccess: () => {
+      toast.success('Password updated');
+      options?.onSuccess?.();
+    },
+    onError: (error: any) => {
+      toast.error(error?.body?.message || 'Failed to reset password');
     },
   });
 }
