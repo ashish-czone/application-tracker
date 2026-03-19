@@ -23,7 +23,7 @@ import { TAXONOMY_PERMISSIONS } from '../permissions';
 
 @ApiTags('taxonomy')
 @Controller()
-export class TaxonomyController {
+export class TagsController {
   constructor(private readonly taxonomyService: TaxonomyService) {}
 
   // --- Tag Groups ---
