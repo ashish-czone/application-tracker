@@ -64,6 +64,7 @@ describe('RbacService', () => {
 
   describe('updateRole', () => {
     it('should update and return the role', async () => {
+      vi.spyOn(service, 'isSystemRole').mockResolvedValueOnce(false);
       const role = { id: 'role-1', name: 'updated', userType: 'admin', createdAt: new Date(), updatedAt: new Date() };
       mockDb._chain.returning.mockResolvedValueOnce([role]);
 
@@ -73,10 +74,18 @@ describe('RbacService', () => {
     });
 
     it('should throw NotFoundException if role not found', async () => {
+      vi.spyOn(service, 'isSystemRole').mockResolvedValueOnce(false);
       mockDb._chain.returning.mockResolvedValueOnce([]);
 
       await expect(service.updateRole('nonexistent', { name: 'x' }))
         .rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw ConflictException when updating a system role', async () => {
+      vi.spyOn(service, 'isSystemRole').mockResolvedValueOnce(true);
+
+      await expect(service.updateRole('admin-role', { name: 'renamed' }))
+        .rejects.toThrow(ConflictException);
     });
   });
 
@@ -84,6 +93,7 @@ describe('RbacService', () => {
     it('should delete the role when no users assigned', async () => {
       const role = { id: 'role-1', name: 'custom', userType: 'admin', isDefault: false, createdAt: new Date(), updatedAt: new Date() };
       vi.spyOn(service, 'findRoleById').mockResolvedValueOnce(role);
+      vi.spyOn(service, 'isSystemRole').mockResolvedValueOnce(false);
       // Mock count query — no users assigned
       mockDb._chain.where.mockResolvedValueOnce([{ total: 0 }]);
 
@@ -98,9 +108,19 @@ describe('RbacService', () => {
         .rejects.toThrow(NotFoundException);
     });
 
+    it('should throw ConflictException when deleting a system role', async () => {
+      const role = { id: 'admin-role', name: 'Admin', userType: 'client', isDefault: false, createdAt: new Date(), updatedAt: new Date() };
+      vi.spyOn(service, 'findRoleById').mockResolvedValueOnce(role);
+      vi.spyOn(service, 'isSystemRole').mockResolvedValueOnce(true);
+
+      await expect(service.deleteRole('admin-role'))
+        .rejects.toThrow(ConflictException);
+    });
+
     it('should throw ConflictException when deleting a default role', async () => {
       const role = { id: 'role-1', name: 'client', userType: 'client', isDefault: true, createdAt: new Date(), updatedAt: new Date() };
       vi.spyOn(service, 'findRoleById').mockResolvedValueOnce(role);
+      vi.spyOn(service, 'isSystemRole').mockResolvedValueOnce(false);
 
       await expect(service.deleteRole('role-1'))
         .rejects.toThrow(ConflictException);
@@ -109,6 +129,7 @@ describe('RbacService', () => {
     it('should throw ConflictException when role has assigned users', async () => {
       const role = { id: 'role-1', name: 'custom', userType: 'admin', isDefault: false, createdAt: new Date(), updatedAt: new Date() };
       vi.spyOn(service, 'findRoleById').mockResolvedValueOnce(role);
+      vi.spyOn(service, 'isSystemRole').mockResolvedValueOnce(false);
       // Mock count query — 3 users assigned
       mockDb._chain.where.mockResolvedValueOnce([{ total: 3 }]);
 
@@ -254,6 +275,29 @@ describe('RbacService', () => {
 
       await expect(service.assignRoleToUser('user-1', 'role-1')).resolves.toBeUndefined();
       expect(mockDb.insert).toHaveBeenCalled();
+    });
+  });
+
+  describe('setRolePermissions — system role protection', () => {
+    it('should block permission changes on system roles via API', async () => {
+      const role = { id: 'admin-role', name: 'Admin', userType: 'client', isDefault: false, createdAt: new Date(), updatedAt: new Date() };
+      vi.spyOn(service, 'findRoleById').mockResolvedValueOnce(role);
+      vi.spyOn(service, 'getRolePermissions').mockResolvedValueOnce({ '*': 'all' });
+
+      await expect(
+        service.setRolePermissions('admin-role', [{ name: 'users.read' }], { '*': 'all' }),
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it('should allow internal permission changes on system roles (no actorPermissions)', async () => {
+      const role = { id: 'admin-role', name: 'Admin', userType: 'client', isDefault: false, createdAt: new Date(), updatedAt: new Date() };
+      vi.spyOn(service, 'findRoleById').mockResolvedValueOnce(role);
+      vi.spyOn(service, 'getRolePermissions').mockResolvedValueOnce({ '*': 'all' });
+      (service as any).database.db.transaction = vi.fn().mockImplementation(async (fn: any) => fn(mockDb));
+
+      await expect(
+        service.setRolePermissions('admin-role', [{ name: '*' }]),
+      ).resolves.toBeUndefined();
     });
   });
 
