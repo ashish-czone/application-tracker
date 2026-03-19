@@ -20,9 +20,10 @@ This applies to **every** type of change:
 ## Workflow
 
 1. **Enter worktree** — use `EnterWorktree` with a descriptive name before making any changes
-2. **Create feature branch** — `git checkout -b <prefix>/<short-description>`
+2. **Create feature branch** — `git fetch origin main && git checkout -b <prefix>/<short-description> origin/main`
 3. **Make changes, commit, push, create PR, merge**
 4. **Exit worktree** — use `ExitWorktree` with `action: "remove"` after merge (work is on main)
+5. **Pull main** — immediately after exiting, run `git pull origin main` so the main checkout has the merged changes
 
 ## Why
 
