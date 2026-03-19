@@ -2,16 +2,30 @@
 export type LogLevel = 'error' | 'warn' | 'log' | 'debug';
 
 /**
+ * Common structured log entry that all providers receive.
+ * The service layer builds this; each provider formats/outputs it however it wants.
+ */
+export interface LogEntry {
+  level: LogLevel;
+  message: string;
+  timestamp: string;
+  context?: string;
+  correlationId?: string;
+  trace?: string;
+  data?: Record<string, unknown>;
+}
+
+/**
  * Provider interface for pluggable logging backends.
- * Ships with NestJS Logger by default; swap to pino, winston, etc. by
- * implementing this interface and passing it via module config.
+ * Each provider receives a structured LogEntry and decides how to format/output it.
+ *
+ * - NestJS provider: colored text output (dev)
+ * - Pino provider: JSON lines (production)
+ * - Console provider: simple console.log (testing)
  */
 export interface LoggerProvider {
   readonly name: string;
-  log(message: string, context?: Record<string, unknown>): void;
-  warn(message: string, context?: Record<string, unknown>): void;
-  error(message: string, context?: Record<string, unknown>, trace?: string): void;
-  debug(message: string, context?: Record<string, unknown>): void;
+  write(entry: LogEntry): void;
 }
 
 /** Module configuration */

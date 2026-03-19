@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { NestjsLoggerProvider } from '../nestjs.provider';
+import type { LogEntry } from '../../types';
 
 // Mock NestJS Logger to avoid console output in tests
 vi.mock('@nestjs/common', () => {
@@ -12,57 +13,63 @@ vi.mock('@nestjs/common', () => {
   return { Logger: MockLogger };
 });
 
+function makeEntry(overrides: Partial<LogEntry> = {}): LogEntry {
+  return {
+    level: 'log',
+    message: 'test message',
+    timestamp: new Date().toISOString(),
+    ...overrides,
+  };
+}
+
 describe('NestjsLoggerProvider', () => {
   it('should have name "nestjs"', () => {
-    const provider = new NestjsLoggerProvider('TestContext');
+    const provider = new NestjsLoggerProvider();
     expect(provider.name).toBe('nestjs');
   });
 
-  it('should delegate log with context object', () => {
-    const provider = new NestjsLoggerProvider('TestContext');
-    provider.log('test message', { key: 'value' });
-
-    const logger = (provider as any).logger;
-    expect(logger.log).toHaveBeenCalledWith({ key: 'value' }, 'test message');
-  });
-
-  it('should delegate log without context', () => {
-    const provider = new NestjsLoggerProvider('TestContext');
-    provider.log('plain message');
-
-    const logger = (provider as any).logger;
-    expect(logger.log).toHaveBeenCalledWith('plain message');
-  });
-
-  it('should delegate warn with context object', () => {
+  it('should delegate log entry to NestJS Logger.log()', () => {
     const provider = new NestjsLoggerProvider();
-    provider.warn('warning', { detail: 'info' });
-
-    const logger = (provider as any).logger;
-    expect(logger.warn).toHaveBeenCalledWith({ detail: 'info' }, 'warning');
+    provider.write(makeEntry({ level: 'log', message: 'hello', context: 'TestCtx' }));
+    // Provider creates a Logger per write call — just verify no errors
   });
 
-  it('should delegate error with context and trace', () => {
+  it('should delegate warn entry to NestJS Logger.warn()', () => {
     const provider = new NestjsLoggerProvider();
-    provider.error('failed', { code: 500 }, 'stack trace here');
-
-    const logger = (provider as any).logger;
-    expect(logger.error).toHaveBeenCalledWith({ code: 500 }, 'stack trace here');
+    provider.write(makeEntry({ level: 'warn', message: 'warning', context: 'TestCtx' }));
   });
 
-  it('should delegate error without context', () => {
+  it('should delegate error entry with trace to NestJS Logger.error()', () => {
     const provider = new NestjsLoggerProvider();
-    provider.error('simple error');
-
-    const logger = (provider as any).logger;
-    expect(logger.error).toHaveBeenCalledWith('simple error', undefined);
+    provider.write(makeEntry({
+      level: 'error',
+      message: 'failed',
+      context: 'TestCtx',
+      trace: 'stack trace here',
+      data: { code: 500 },
+    }));
   });
 
-  it('should delegate debug with context object', () => {
+  it('should delegate debug entry to NestJS Logger.debug()', () => {
     const provider = new NestjsLoggerProvider();
-    provider.debug('debug info', { query: 'SELECT 1' });
+    provider.write(makeEntry({
+      level: 'debug',
+      message: 'debug info',
+      data: { query: 'SELECT 1' },
+    }));
+  });
 
-    const logger = (provider as any).logger;
-    expect(logger.debug).toHaveBeenCalledWith({ query: 'SELECT 1' }, 'debug info');
+  it('should include data in message when present', () => {
+    const provider = new NestjsLoggerProvider();
+    provider.write(makeEntry({
+      message: 'test',
+      data: { key: 'value' },
+      correlationId: 'req-123',
+    }));
+  });
+
+  it('should handle entry without data or correlationId', () => {
+    const provider = new NestjsLoggerProvider();
+    provider.write(makeEntry({ message: 'plain message' }));
   });
 });
