@@ -63,7 +63,7 @@ export class NotificationsModule implements OnModuleInit {
     this.logger = appLogger.forContext(NotificationsModule.name);
   }
 
-  onModuleInit() {
+  async onModuleInit() {
     // Register inline channels
     this.dispatcher.registerInlineChannel(this.inAppChannel);
 
@@ -103,15 +103,16 @@ export class NotificationsModule implements OnModuleInit {
     if (queue) {
       const appTimezone = process.env.APP_TIMEZONE ?? 'UTC';
       const cronPattern = cronForLocalHour(2, appTimezone);
-      queue.upsertJobScheduler(
-        'notification-schedule-scan',
-        { pattern: cronPattern },
-        { name: SCHEDULE_SCAN_QUEUE, data: {} },
-      ).then(() => {
-        this.logger.log(`Notification schedule scanner registered (${cronPattern}, 2:00 AM ${process.env.APP_TIMEZONE ?? 'UTC'})`);
-      }).catch((err) => {
-        this.logger.error({ error: err.message }, 'Failed to register schedule scanner');
-      });
+      try {
+        await queue.upsertJobScheduler(
+          'notification-schedule-scan',
+          { pattern: cronPattern },
+          { name: SCHEDULE_SCAN_QUEUE, data: {} },
+        );
+        this.logger.log(`Notification schedule scanner registered (${cronPattern}, 2:00 AM ${appTimezone})`);
+      } catch (err) {
+        this.logger.error({ error: err instanceof Error ? err.message : String(err) }, 'Failed to register schedule scanner');
+      }
     }
   }
 }
