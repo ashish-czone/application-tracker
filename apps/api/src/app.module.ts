@@ -20,6 +20,7 @@ import { NotificationRulesModule } from './modules/notification-rules/notificati
 import { TasksModule } from './modules/tasks/tasks.module';
 import { WorkflowsManagementModule } from './modules/workflows/workflows.module';
 import { TaxonomyManagementModule } from './modules/taxonomy/taxonomy.module';
+import { SettingsManagementModule } from './modules/settings/settings.module';
 import { SharedModule } from './modules/shared/shared.module';
 import { validate } from './config/env.validation';
 
@@ -69,6 +70,7 @@ import { validate } from './config/env.validation';
     TasksModule,
     WorkflowsManagementModule,
     TaxonomyManagementModule,
+    SettingsManagementModule,
   ],
   providers: [
     {
