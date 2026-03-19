@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { NotFoundException, ConflictException } from '@nestjs/common';
+import { NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { RbacService } from '../rbac.service';
 import { PermissionRegistryService } from '../permission-registry.service';
 
@@ -254,6 +254,73 @@ describe('RbacService', () => {
 
       await expect(service.assignRoleToUser('user-1', 'role-1')).resolves.toBeUndefined();
       expect(mockDb.insert).toHaveBeenCalled();
+    });
+  });
+
+  describe('setRolePermissions — grant only what you hold', () => {
+    it('should allow setting permissions without actor check when actorPermissions not provided', async () => {
+      const role = { id: 'role-1', name: 'manager', userType: 'client', isDefault: false, createdAt: new Date(), updatedAt: new Date() };
+      vi.spyOn(service, 'findRoleById').mockResolvedValueOnce(role);
+      // Mock transaction
+      mockDb.transaction = vi.fn().mockImplementation(async (fn: any) => fn(mockDb));
+      (mockDb as any).transaction = mockDb.transaction;
+      (service as any).database.db.transaction = mockDb.transaction;
+
+      await expect(
+        service.setRolePermissions('role-1', [{ name: 'users.read' }]),
+      ).resolves.toBeUndefined();
+    });
+
+    it('should allow wildcard actor to grant any permission', async () => {
+      const role = { id: 'role-1', name: 'manager', userType: 'client', isDefault: false, createdAt: new Date(), updatedAt: new Date() };
+      vi.spyOn(service, 'findRoleById').mockResolvedValueOnce(role);
+      vi.spyOn(service, 'getRolePermissions').mockResolvedValueOnce({});
+      (service as any).database.db.transaction = vi.fn().mockImplementation(async (fn: any) => fn(mockDb));
+
+      await expect(
+        service.setRolePermissions('role-1', [{ name: 'anything.do' }], { '*': 'all' }),
+      ).resolves.toBeUndefined();
+    });
+
+    it('should reject granting permissions the actor does not hold', async () => {
+      const role = { id: 'role-1', name: 'staff', userType: 'client', isDefault: false, createdAt: new Date(), updatedAt: new Date() };
+      vi.spyOn(service, 'findRoleById').mockResolvedValueOnce(role);
+
+      const actorPermissions = { 'orders.read': 'all' as const, 'orders.write': 'all' as const };
+
+      await expect(
+        service.setRolePermissions('role-1', [{ name: 'users.manage' }], actorPermissions),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should allow granting permissions the actor holds', async () => {
+      const role = { id: 'role-1', name: 'staff', userType: 'client', isDefault: false, createdAt: new Date(), updatedAt: new Date() };
+      vi.spyOn(service, 'findRoleById').mockResolvedValueOnce(role);
+      vi.spyOn(service, 'getRolePermissions').mockResolvedValueOnce({});
+      (service as any).database.db.transaction = vi.fn().mockImplementation(async (fn: any) => fn(mockDb));
+
+      const actorPermissions = { 'orders.read': 'all' as const, 'orders.write': 'all' as const };
+
+      await expect(
+        service.setRolePermissions('role-1', [{ name: 'orders.read' }], actorPermissions),
+      ).resolves.toBeUndefined();
+    });
+
+    it('should reject removing permissions the actor does not hold', async () => {
+      const role = { id: 'role-1', name: 'staff', userType: 'client', isDefault: false, createdAt: new Date(), updatedAt: new Date() };
+      vi.spyOn(service, 'findRoleById').mockResolvedValueOnce(role);
+      // Role currently has users.manage — actor does not hold it
+      vi.spyOn(service, 'getRolePermissions').mockResolvedValueOnce({
+        'orders.read': 'all',
+        'users.manage': 'all',
+      });
+
+      const actorPermissions = { 'orders.read': 'all' as const };
+
+      // Actor tries to set only orders.read — removing users.manage which they don't hold
+      await expect(
+        service.setRolePermissions('role-1', [{ name: 'orders.read' }], actorPermissions),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 
