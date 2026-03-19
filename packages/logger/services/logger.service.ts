@@ -1,11 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { LOGGER_PROVIDER, type LoggerProvider } from '../types';
+import { LOGGER_PROVIDER, type LoggerProvider, type LogEntry, type LogLevel } from '../types';
 import { getCorrelationId } from '../correlation/store';
 
 /**
  * Injectable logging service that:
- * 1. Delegates to the configured LoggerProvider
- * 2. Automatically attaches the current request's correlationId to every log entry
+ * 1. Builds structured LogEntry objects
+ * 2. Attaches correlationId from async context
+ * 3. Delegates to the configured LoggerProvider
  *
  * Usage:
  *   constructor(private readonly logger: AppLoggerService) {}
@@ -19,33 +20,38 @@ export class AppLoggerService {
 
   /**
    * Create a child logger with a fixed context name (e.g., service/class name).
-   * This returns a new instance that logs with that context.
    */
   forContext(context: string): ContextLogger {
     return new ContextLogger(context, this.provider);
   }
 
-  log(message: string, context?: Record<string, unknown>): void {
-    this.provider.log(message, this.enrich(context));
+  log(message: string, data?: Record<string, unknown>): void {
+    this.write('log', message, data);
   }
 
-  warn(message: string, context?: Record<string, unknown>): void {
-    this.provider.warn(message, this.enrich(context));
+  warn(message: string, data?: Record<string, unknown>): void {
+    this.write('warn', message, data);
   }
 
-  error(message: string, context?: Record<string, unknown>, trace?: string): void {
-    this.provider.error(message, this.enrich(context), trace);
+  error(message: string, data?: Record<string, unknown>, trace?: string): void {
+    this.write('error', message, data, undefined, trace);
   }
 
-  debug(message: string, context?: Record<string, unknown>): void {
-    this.provider.debug(message, this.enrich(context));
+  debug(message: string, data?: Record<string, unknown>): void {
+    this.write('debug', message, data);
   }
 
-  private enrich(context?: Record<string, unknown>): Record<string, unknown> {
-    return {
+  private write(level: LogLevel, message: string, data?: Record<string, unknown>, context?: string, trace?: string): void {
+    const entry: LogEntry = {
+      level,
+      message,
+      timestamp: new Date().toISOString(),
       correlationId: getCorrelationId(),
-      ...context,
+      context,
+      trace,
+      data,
     };
+    this.provider.write(entry);
   }
 }
 
@@ -60,26 +66,31 @@ export class ContextLogger {
   ) {}
 
   log(message: string, data?: Record<string, unknown>): void {
-    this.provider.log(message, this.enrich(data));
+    this.write('log', message, data);
   }
 
   warn(message: string, data?: Record<string, unknown>): void {
-    this.provider.warn(message, this.enrich(data));
+    this.write('warn', message, data);
   }
 
   error(message: string, data?: Record<string, unknown>, trace?: string): void {
-    this.provider.error(message, this.enrich(data), trace);
+    this.write('error', message, data, trace);
   }
 
   debug(message: string, data?: Record<string, unknown>): void {
-    this.provider.debug(message, this.enrich(data));
+    this.write('debug', message, data);
   }
 
-  private enrich(data?: Record<string, unknown>): Record<string, unknown> {
-    return {
+  private write(level: LogLevel, message: string, data?: Record<string, unknown>, trace?: string): void {
+    const entry: LogEntry = {
+      level,
+      message,
+      timestamp: new Date().toISOString(),
       correlationId: getCorrelationId(),
       context: this.context,
-      ...data,
+      trace,
+      data,
     };
+    this.provider.write(entry);
   }
 }

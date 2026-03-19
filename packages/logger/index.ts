@@ -9,7 +9,7 @@ export { getCorrelationId, runWithCorrelationId } from './correlation/store';
 export { correlationIdMiddleware } from './correlation/middleware';
 
 // Types & tokens
-export type { LoggerProvider, LoggerModuleConfig, LoggerModuleAsyncOptions, LogLevel } from './types';
+export type { LoggerProvider, LoggerModuleConfig, LoggerModuleAsyncOptions, LogLevel, LogEntry } from './types';
 export { LOGGER_PROVIDER, LOGGER_MODULE_CONFIG } from './types';
 
 // Providers
