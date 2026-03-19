@@ -2,12 +2,12 @@ import { Controller, Get } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { RequirePermission } from '@packages/rbac';
 import { EventRegistryService, type EventMetadata } from '@packages/events';
-import { EntityResolverRegistry, type FieldConfig, type RecipientFieldConfig } from '@packages/notifications';
+import { EntityResolverRegistry, type ResolvedFieldConfig, type RecipientFieldConfig } from '@packages/notifications';
 import { NOTIFICATION_RULES_PERMISSIONS } from '../permissions';
 
 interface EntityResolverResponse {
   entityType: string;
-  fields: Record<string, FieldConfig>;
+  fields: Record<string, ResolvedFieldConfig>;
   recipientFields: Record<string, RecipientFieldConfig>;
 }
 
@@ -28,17 +28,16 @@ export class AutomationsMetadataController {
 
   @Get('entities')
   @RequirePermission(NOTIFICATION_RULES_PERMISSIONS.RULES_READ)
-  @ApiOperation({ summary: 'List registered entity types with filterable fields and recipient fields' })
-  listEntities(): EntityResolverResponse[] {
+  @ApiOperation({ summary: 'List registered entity types with filterable fields and recipient fields (options resolved dynamically)' })
+  async listEntities(): Promise<EntityResolverResponse[]> {
     const all = this.entityResolverRegistry.getAll();
     const result: EntityResolverResponse[] = [];
 
-    for (const [entityType, config] of all) {
-      result.push({
-        entityType,
-        fields: config.fields,
-        recipientFields: config.recipientFields,
-      });
+    for (const [entityType] of all) {
+      const resolved = await this.entityResolverRegistry.resolveAllFields(entityType);
+      if (resolved) {
+        result.push({ entityType, ...resolved });
+      }
     }
 
     return result;

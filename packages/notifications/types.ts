@@ -76,6 +76,14 @@ export interface FieldConfig {
   type: FieldType;
   label: string;
   options?: string[];
+  resolveOptions?: () => Promise<string[]> | string[];
+}
+
+/** FieldConfig with options resolved — returned by the metadata API */
+export interface ResolvedFieldConfig {
+  type: FieldType;
+  label: string;
+  options?: string[];
 }
 
 export interface RecipientFieldConfig {
