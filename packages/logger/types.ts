@@ -31,7 +31,7 @@ export interface LoggerProvider {
 /** Module configuration */
 export interface LoggerModuleConfig {
   /** The logging provider to use. Defaults to 'nestjs'. */
-  provider?: 'nestjs';
+  provider?: 'nestjs' | 'pino';
 }
 
 export interface LoggerModuleAsyncOptions {

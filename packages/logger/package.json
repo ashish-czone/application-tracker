@@ -9,6 +9,12 @@
   "dependencies": {
     "@nestjs/common": "^11.0.0"
   },
+  "peerDependencies": {
+    "pino": "^9.0.0"
+  },
+  "peerDependenciesMeta": {
+    "pino": { "optional": true }
+  },
   "devDependencies": {
     "typescript": "^5.7.0",
     "vitest": "^3.2.0"
