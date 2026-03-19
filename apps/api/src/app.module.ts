@@ -34,7 +34,7 @@ import { validate } from './config/env.validation';
       validate,
       envFilePath: path.resolve(__dirname, '../.env'),
     }),
-    LoggerModule.register(),
+    LoggerModule.register({ provider: 'pino' }),
     DatabaseModule,
     EventsModule,
     SettingsModule,
