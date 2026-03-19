@@ -13,7 +13,8 @@ import {
   ParseUUIDPipe,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
-import { RbacService, RequirePermission } from '@packages/rbac';
+import { CurrentUser, type JwtPayload } from '@packages/auth';
+import { RbacService, RequirePermission, type ScopedPermissions } from '@packages/rbac';
 import { CreateRoleDto } from '../dto/create-role.dto';
 import { UpdateRoleDto } from '../dto/update-role.dto';
 import { ListRolesQueryDto } from '../dto/list-roles-query.dto';
@@ -92,8 +93,10 @@ export class RbacController {
   async setRolePermissions(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: SetRolePermissionsDto,
+    @CurrentUser() user: JwtPayload,
   ) {
-    await this.rbacService.setRolePermissions(id, dto.permissions);
+    const actorPermissions = (user.permissions ?? {}) as ScopedPermissions;
+    await this.rbacService.setRolePermissions(id, dto.permissions, actorPermissions);
     return this.rbacService.getRolePermissions(id);
   }
 
