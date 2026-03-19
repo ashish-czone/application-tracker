@@ -39,6 +39,7 @@ export function WorkflowCanvas({ workflow, slug }: WorkflowCanvasProps) {
   const [selectedItem, setSelectedItem] = useState<SelectedItem | null>(null);
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
+  const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
   const isInitialLayout = useRef(true);
 
   const createTransitionMutation = useCreateTransition(slug);
@@ -203,6 +204,59 @@ export function WorkflowCanvas({ workflow, slug }: WorkflowCanvasProps) {
 
   const onPaneClick = useCallback(() => setSelectedItem(null), []);
 
+  // Apply hover highlight to connected nodes and the hovered edge
+  const displayNodes = useMemo(() => {
+    if (!hoveredEdgeId) {
+      // Clear highlights
+      return nodes.map((n) => ({
+        ...n,
+        data: { ...n.data, highlighted: false },
+      }));
+    }
+    const hoveredEdge = edges.find((e) => e.id === hoveredEdgeId);
+    if (!hoveredEdge) return nodes;
+    const connectedNodeIds = new Set([hoveredEdge.source, hoveredEdge.target]);
+    return nodes.map((n) => ({
+      ...n,
+      data: { ...n.data, highlighted: connectedNodeIds.has(n.id) },
+    }));
+  }, [nodes, edges, hoveredEdgeId]);
+
+  const displayEdges = useMemo(() => {
+    if (!hoveredEdgeId) return edges;
+    return edges.map((e) => {
+      if (e.id === hoveredEdgeId) {
+        return {
+          ...e,
+          style: { ...e.style, strokeWidth: 3, stroke: '#6366f1' },
+          markerEnd: { type: MarkerType.ArrowClosed as const, width: 18, height: 18, color: '#6366f1' },
+          labelStyle: { ...e.labelStyle, fill: '#4338ca' },
+          labelBgStyle: { ...e.labelBgStyle, fill: '#eef2ff', stroke: '#a5b4fc' },
+        };
+      }
+      // Dim other edges
+      if (e.id !== '__entry_edge__') {
+        return {
+          ...e,
+          style: { ...e.style, opacity: 0.3 },
+          labelStyle: { ...e.labelStyle, opacity: 0.3 },
+          labelBgStyle: { ...e.labelBgStyle, fillOpacity: 0.3 },
+        };
+      }
+      return { ...e, style: { ...e.style, opacity: 0.3 } };
+    });
+  }, [edges, hoveredEdgeId]);
+
+  // Edge hover handlers
+  const onEdgeMouseEnter = useCallback((_: React.MouseEvent, edge: Edge) => {
+    if (edge.id === '__entry_edge__') return;
+    setHoveredEdgeId(edge.id);
+  }, []);
+
+  const onEdgeMouseLeave = useCallback(() => {
+    setHoveredEdgeId(null);
+  }, []);
+
   // Delete key handler
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {
@@ -237,13 +291,15 @@ export function WorkflowCanvas({ workflow, slug }: WorkflowCanvasProps) {
     <div className="flex h-full">
       <div className="flex-1 h-full workflow-canvas">
         <ReactFlow
-          nodes={nodes}
-          edges={edges}
+          nodes={displayNodes}
+          edges={displayEdges}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           onNodeClick={onNodeClick}
           onEdgeClick={onEdgeClick}
+          onEdgeMouseEnter={onEdgeMouseEnter}
+          onEdgeMouseLeave={onEdgeMouseLeave}
           onPaneClick={onPaneClick}
           nodeTypes={nodeTypes}
           fitView

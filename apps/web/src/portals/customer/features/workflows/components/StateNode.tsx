@@ -8,18 +8,25 @@ export interface StateNodeData {
   color: string | null;
   isInitial: boolean;
   stateId: string;
+  highlighted?: boolean;
 }
 
 export const StateNode = memo(function StateNode({ data, selected }: NodeProps<StateNodeData>) {
   const color = data.color ?? '#6B7280';
+  const glowing = data.highlighted && !selected;
 
   return (
     <div
-      className="relative px-5 py-3 rounded-lg border-2 min-w-[120px] text-center shadow-sm transition-shadow"
+      className="relative px-5 py-3 rounded-lg border-2 min-w-[120px] text-center shadow-sm transition-all duration-200"
       style={{
-        backgroundColor: `${color}15`,
-        borderColor: selected ? color : `${color}50`,
-        boxShadow: selected ? `0 0 0 2px ${color}40` : undefined,
+        backgroundColor: `${color}${glowing ? '25' : '15'}`,
+        borderColor: selected || glowing ? color : `${color}50`,
+        boxShadow: selected
+          ? `0 0 0 2px ${color}40`
+          : glowing
+            ? `0 0 12px ${color}50, 0 0 4px ${color}30`
+            : undefined,
+        transform: glowing ? 'scale(1.03)' : undefined,
       }}
     >
       <Handle
