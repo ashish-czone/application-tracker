@@ -19,6 +19,7 @@ import {
   count,
 } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
+import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import type { PaginatedResponse } from '@packages/common';
 import {
   USERS_USER_CREATED,
@@ -68,12 +69,17 @@ export interface UserWithType {
 
 @Injectable()
 export class UsersService {
+  private readonly logger: ContextLogger;
+
   constructor(
     private readonly authService: AuthService,
     private readonly rbacService: RbacService,
     private readonly database: DatabaseService,
     private readonly domainEventEmitter: DomainEventEmitter,
-  ) {}
+    appLogger: AppLoggerService,
+  ) {
+    this.logger = appLogger.forContext(UsersService.name);
+  }
 
   async list(query: ListUsersQuery): Promise<PaginatedResponse<UserWithType>> {
     const page = query.page ?? 1;
@@ -264,6 +270,8 @@ export class UsersService {
       await this.rbacService.assignRoleToUser(user.id, roleId);
     }
 
+    this.logger.log('User created', { userId: user.id, actorId, userType: data.userType });
+
     this.domainEventEmitter.emit(USERS_USER_CREATED, {
       entityType: 'users',
       entityId: user.id,
@@ -326,6 +334,8 @@ export class UsersService {
       .where(eq(users.id, id))
       .returning();
 
+    this.logger.log('User updated', { userId: id, actorId, changes: Object.keys(updateValues) });
+
     this.domainEventEmitter.emit(USERS_USER_UPDATED, {
       entityType: 'users',
       entityId: id,
@@ -358,6 +368,8 @@ export class UsersService {
       .set({ deletedAt: new Date(), deletedBy: actorId })
       .where(eq(users.id, id));
 
+    this.logger.log('User deleted', { userId: id, actorId });
+
     this.domainEventEmitter.emit(USERS_USER_DELETED, {
       entityType: 'users',
       entityId: id,
@@ -373,6 +385,7 @@ export class UsersService {
   async resetPassword(id: string, newPassword: string): Promise<void> {
     const user = await this.findOneOrFail(id);
     await this.authService.changePasswordDirect(user.id, newPassword);
+    this.logger.log('User password reset', { userId: id });
   }
 
   async restore(id: string): Promise<UserWithType> {
@@ -391,6 +404,8 @@ export class UsersService {
       .set({ deletedAt: null, deletedBy: null })
       .where(eq(users.id, id))
       .returning();
+
+    this.logger.log('User restored', { userId: id });
 
     return {
       id: restored.id,
