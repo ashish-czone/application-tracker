@@ -76,7 +76,7 @@ export class TasksModule implements OnModuleInit {
           type: 'enum',
           label: 'Status',
           resolveOptions: () => {
-            const workflow = workflowRegistry.getByEntityField('tasks', 'status');
+            const workflow = workflowRegistry.getByEntityField('task', 'status');
             return workflow ? workflow.states.map((s) => s.name) : [];
           },
         },
