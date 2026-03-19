@@ -6,7 +6,8 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
-import type { Response } from 'express';
+import type { Response, Request } from 'express';
+import { getCorrelationId } from '@packages/logger';
 
 interface ErrorResponseBody {
   statusCode: number;
@@ -25,6 +26,13 @@ const STATUS_CODE_TO_ERROR: Record<number, string> = {
   [HttpStatus.TOO_MANY_REQUESTS]: 'TOO_MANY_REQUESTS',
   [HttpStatus.INTERNAL_SERVER_ERROR]: 'INTERNAL_SERVER_ERROR',
 };
+
+/** Status codes that should be logged at warn level (auth failures, rate limiting) */
+const WARN_STATUS_CODES = new Set([
+  HttpStatus.UNAUTHORIZED,
+  HttpStatus.FORBIDDEN,
+  HttpStatus.TOO_MANY_REQUESTS,
+]);
 
 function errorCodeFromStatus(status: number): string {
   return STATUS_CODE_TO_ERROR[status] ?? 'INTERNAL_SERVER_ERROR';
@@ -55,6 +63,10 @@ export class GlobalExceptionFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
+    const request = ctx.getRequest<Request>();
+    const correlationId = getCorrelationId();
+    const method = request?.method;
+    const url = request?.url;
 
     if (exception instanceof HttpException) {
       const status = exception.getStatus();
@@ -80,12 +92,13 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         }
       }
 
-      // Log 5xx server errors with full stack
+      const logContext = { correlationId, statusCode: status, method, url, message: body.message };
+
+      // Log at appropriate level per PROMPT-API.md
       if (status >= 500) {
-        this.logger.error(
-          { statusCode: status, message: body.message },
-          exception.stack ?? 'HttpException (5xx)',
-        );
+        this.logger.error(logContext, exception.stack ?? 'HttpException (5xx)');
+      } else if (WARN_STATUS_CODES.has(status)) {
+        this.logger.warn(logContext, body.error);
       }
 
       response.status(status).json(body);
@@ -99,7 +112,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       exception instanceof Error ? exception.stack : undefined;
 
     this.logger.error(
-      { statusCode: 500, message },
+      { correlationId, statusCode: 500, method, url, message },
       stack ?? 'Unhandled exception',
     );
 
