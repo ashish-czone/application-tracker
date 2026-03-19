@@ -1,11 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { getCorrelationId } from '@packages/logger';
+import { AppLoggerService, type ContextLogger, getCorrelationId } from '@packages/logger';
 import type { EventPayloadMap } from './types';
 
 @Injectable()
 export class DomainEventEmitter {
-  constructor(private readonly eventEmitter: EventEmitter2) {}
+  private readonly logger: ContextLogger;
+
+  constructor(
+    private readonly eventEmitter: EventEmitter2,
+    appLogger: AppLoggerService,
+  ) {
+    this.logger = appLogger.forContext(DomainEventEmitter.name);
+  }
 
   emit<T extends keyof EventPayloadMap>(
     eventName: T,
@@ -16,7 +23,7 @@ export class DomainEventEmitter {
       payload: EventPayloadMap[T];
     },
   ) {
-    this.eventEmitter.emit(eventName as string, {
+    const event = {
       eventName,
       entityType: params.entityType,
       entityId: params.entityId,
@@ -24,6 +31,19 @@ export class DomainEventEmitter {
       correlationId: getCorrelationId(),
       occurredAt: new Date().toISOString(),
       payload: params.payload,
+    };
+
+    // Use emitAsync so async listener errors are caught here instead of
+    // becoming unhandled promise rejections. The catch ensures listener
+    // failures never propagate back to the emitting service — the domain
+    // operation already succeeded.
+    this.eventEmitter.emitAsync(eventName as string, event).catch((error) => {
+      this.logger.error('Event listener failed', {
+        eventName: eventName as string,
+        entityType: params.entityType,
+        entityId: params.entityId,
+        error: error instanceof Error ? error.message : String(error),
+      }, error instanceof Error ? error.stack : undefined);
     });
   }
 }
