@@ -1,10 +1,11 @@
 import { Injectable, Logger, type OnModuleInit } from '@nestjs/common';
-import { DatabaseService, eq, and, users } from '@packages/database';
+import { DatabaseService, eq, users } from '@packages/database';
 import { AuthService } from '@packages/auth';
-import { RbacService, roles } from '@packages/rbac';
+import { RbacService, rolePermissions } from '@packages/rbac';
 
-const SUPERADMIN_EMAIL = 'admin@admin.com';
-const SUPERADMIN_PASSWORD = 'Admin1234';
+const ADMIN_ROLE_NAME = 'Admin';
+const ADMIN_EMAIL = 'admin@admin.com';
+const ADMIN_PASSWORD = 'Admin1234';
 
 @Injectable()
 export class SeedService implements OnModuleInit {
@@ -18,7 +19,7 @@ export class SeedService implements OnModuleInit {
 
   async onModuleInit() {
     await this.ensureDefaultClientRole();
-    await this.ensureSuperadmin();
+    await this.ensureAdminRole();
   }
 
   private async ensureDefaultClientRole() {
@@ -33,54 +34,56 @@ export class SeedService implements OnModuleInit {
     this.logger.log('Default "Client" role created');
   }
 
-  private async ensureSuperadmin() {
-    // Check if superadmin role exists
-    const [existingRole] = await this.database.db
-      .select()
-      .from(roles)
-      .where(eq(roles.isSuperadmin, true))
+  private async ensureAdminRole() {
+    // Check if any role has the wildcard '*' permission (admin role)
+    const [existingAdminPerm] = await this.database.db
+      .select({ roleId: rolePermissions.roleId })
+      .from(rolePermissions)
+      .where(eq(rolePermissions.permission, '*'))
       .limit(1);
 
     let roleId: string;
 
-    if (existingRole) {
-      roleId = existingRole.id;
+    if (existingAdminPerm) {
+      roleId = existingAdminPerm.roleId;
     } else {
       const role = await this.rbacService.createRole({
-        name: 'Super Admin',
+        name: ADMIN_ROLE_NAME,
         userType: 'client',
-        isSuperadmin: true,
       });
       roleId = role.id;
-      this.logger.log('Super Admin role created');
+
+      // Grant wildcard permission — this is what makes the role an admin
+      await this.rbacService.setRolePermissions(roleId, [{ name: '*', scope: 'all' }]);
+      this.logger.log('Admin role created with wildcard (*) permission');
     }
 
-    // Check if superadmin user exists
+    // Check if admin user exists
     const [existingUser] = await this.database.db
       .select()
       .from(users)
-      .where(eq(users.email, SUPERADMIN_EMAIL))
+      .where(eq(users.email, ADMIN_EMAIL))
       .limit(1);
 
     if (existingUser) return;
 
-    // Create superadmin user as client type (uses client login flow)
+    // Create admin user
     const [user] = await this.database.db
       .insert(users)
       .values({
-        email: SUPERADMIN_EMAIL,
-        firstName: 'Super',
-        lastName: 'Admin',
+        email: ADMIN_EMAIL,
+        firstName: 'Admin',
+        lastName: 'User',
         userType: 'client',
       })
       .returning();
 
     // Create password credential
-    await this.authService.createPasswordCredential(user.id, SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD);
+    await this.authService.createPasswordCredential(user.id, ADMIN_EMAIL, ADMIN_PASSWORD);
 
-    // Assign superadmin role
+    // Assign admin role
     await this.rbacService.assignRoleToUser(user.id, roleId);
 
-    this.logger.log(`Superadmin user created: ${SUPERADMIN_EMAIL} / ${SUPERADMIN_PASSWORD}`);
+    this.logger.log(`Admin user created: ${ADMIN_EMAIL} / ${ADMIN_PASSWORD}`);
   }
 }

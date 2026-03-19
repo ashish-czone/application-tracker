@@ -16,14 +16,13 @@ export class RbacService {
 
   // --- Roles ---
 
-  async createRole(data: { name: string; userType: string; isDefault?: boolean; isSuperadmin?: boolean }): Promise<Role> {
+  async createRole(data: { name: string; userType: string; isDefault?: boolean }): Promise<Role> {
     const [role] = await this.database.db
       .insert(roles)
       .values({
         name: data.name,
         userType: data.userType,
         isDefault: data.isDefault ?? false,
-        isSuperadmin: data.isSuperadmin ?? false,
       })
       .returning();
     return role;
@@ -161,18 +160,7 @@ export class RbacService {
   // --- Permissions ---
 
   async getPermissionsForUser(userId: string, userType: string): Promise<ScopedPermissions> {
-    // Check if user has a superadmin role — bypass all permission checks
-    const userRoleRows = await this.database.db
-      .select({ isSuperadmin: roles.isSuperadmin })
-      .from(userRoles)
-      .innerJoin(roles, and(eq(roles.id, userRoles.roleId), eq(roles.userType, userType)))
-      .where(eq(userRoles.userId, userId));
-
-    if (userRoleRows.some((r) => r.isSuperadmin)) {
-      return { '*': 'all' };
-    }
-
-    // Load permissions directly from role_permissions (no join through permissions table)
+    // Load permissions from role_permissions — wildcard '*' is stored as a regular permission
     const results = await this.database.db
       .select({ permission: rolePermissions.permission, scope: rolePermissions.scope })
       .from(userRoles)
@@ -273,7 +261,6 @@ export class RbacService {
         name: roles.name,
         userType: roles.userType,
         isDefault: roles.isDefault,
-        isSuperadmin: roles.isSuperadmin,
         createdAt: roles.createdAt,
         updatedAt: roles.updatedAt,
       })
