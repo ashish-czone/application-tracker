@@ -36,6 +36,20 @@
       "when": 1774263600000,
       "tag": "0004_tasks",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1774350000000,
+      "tag": "0005_rbac_simplification",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1774436400000,
+      "tag": "0006_remove_is_superadmin",
+      "breakpoints": true
     }
   ]
 }
