@@ -119,6 +119,9 @@ importers:
       '@packages/settings':
         specifier: workspace:*
         version: link:../../packages/settings
+      '@packages/taxonomy':
+        specifier: workspace:*
+        version: link:../../packages/taxonomy
       class-transformer:
         specifier: ^0.5.1
         version: 0.5.1
