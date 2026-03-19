@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ReactFlow, {
   Background,
   Controls,
@@ -8,6 +8,7 @@ import ReactFlow, {
   type Connection,
   type OnNodesChange,
   type OnEdgesChange,
+  type KeyCode,
   applyNodeChanges,
   applyEdgeChanges,
   MarkerType,
@@ -17,10 +18,13 @@ import { StateNode, type StateNodeData } from './StateNode';
 import { StateConfigPanel } from './StateConfigPanel';
 import { TransitionConfigPanel } from './TransitionConfigPanel';
 import { getLayoutedElements } from './auto-layout';
-import { useCreateTransition } from '../hooks';
+import { useCreateTransition, useDeleteState, useDeleteTransition } from '../hooks';
 import type { WorkflowDefinition, WorkflowState, WorkflowTransition } from '../types';
 
 const nodeTypes = { stateNode: StateNode };
+
+// Entry point node — small filled circle before initial state
+const ENTRY_NODE_ID = '__entry__';
 
 interface WorkflowCanvasProps {
   workflow: WorkflowDefinition;
@@ -33,60 +37,111 @@ type SelectedItem =
 
 export function WorkflowCanvas({ workflow, slug }: WorkflowCanvasProps) {
   const [selectedItem, setSelectedItem] = useState<SelectedItem | null>(null);
+  const [nodes, setNodes] = useState<Node[]>([]);
+  const [edges, setEdges] = useState<Edge[]>([]);
+  const isInitialLayout = useRef(true);
 
   const createTransitionMutation = useCreateTransition(slug);
+  const deleteStateMutation = useDeleteState(slug);
+  const deleteTransitionMutation = useDeleteTransition(slug);
 
-  // Build reactflow nodes from workflow states
-  const initialNodes: Node<StateNodeData>[] = useMemo(
-    () =>
-      workflow.states.map((state) => ({
-        id: state.name,
-        type: 'stateNode',
-        position: { x: 0, y: 0 },
-        data: {
-          label: state.label,
-          name: state.name,
-          color: state.color,
-          isInitial: state.name === workflow.initialState,
-          stateId: state.id,
-        },
-      })),
-    [workflow.states, workflow.initialState],
-  );
+  // Build nodes + edges from workflow data and apply layout
+  useEffect(() => {
+    const stateNodes: Node<StateNodeData>[] = workflow.states.map((state) => ({
+      id: state.name,
+      type: 'stateNode',
+      position: { x: 0, y: 0 },
+      data: {
+        label: state.label,
+        name: state.name,
+        color: state.color,
+        isInitial: state.name === workflow.initialState,
+        stateId: state.id,
+      },
+    }));
 
-  // Build reactflow edges from workflow transitions
-  const initialEdges: Edge[] = useMemo(
-    () =>
-      workflow.transitions.map((t) => ({
-        id: t.id,
-        source: t.fromStateName,
-        target: t.toStateName,
-        label: t.name,
-        markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16 },
-        style: { strokeWidth: 2 },
-        labelStyle: { fontSize: 11, fontWeight: 500 },
-        labelBgStyle: { fill: '#ffffff', fillOpacity: 0.95 },
-        labelBgPadding: [6, 3] as [number, number],
-        labelBgBorderRadius: 4,
-      })),
-    [workflow.transitions],
-  );
+    // Entry point dot
+    const entryNode: Node = {
+      id: ENTRY_NODE_ID,
+      type: 'input',
+      position: { x: 0, y: 0 },
+      data: {},
+      style: {
+        width: 16,
+        height: 16,
+        minWidth: 16,
+        minHeight: 16,
+        borderRadius: '50%',
+        backgroundColor: '#6B7280',
+        border: 'none',
+        padding: 0,
+      },
+      selectable: false,
+      draggable: false,
+    };
 
-  // Apply auto-layout
-  const { nodes: layoutedNodes, edges: layoutedEdges } = useMemo(
-    () => getLayoutedElements(initialNodes, initialEdges),
-    [initialNodes, initialEdges],
-  );
+    const allNodes = [entryNode, ...stateNodes];
 
-  const [nodes, setNodes] = useState(layoutedNodes);
-  const [edges, setEdges] = useState(layoutedEdges);
+    const transitionEdges: Edge[] = workflow.transitions.map((t) => ({
+      id: t.id,
+      source: t.fromStateName,
+      target: t.toStateName,
+      label: t.name,
+      type: 'smoothstep',
+      markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16, color: '#94a3b8' },
+      style: { strokeWidth: 2, stroke: '#94a3b8' },
+      labelStyle: {
+        fontSize: 10,
+        fontWeight: 600,
+        fill: '#475569',
+        letterSpacing: '0.02em',
+      },
+      labelBgStyle: {
+        fill: '#f1f5f9',
+        fillOpacity: 1,
+        stroke: '#cbd5e1',
+        strokeWidth: 1,
+        rx: 10,
+        ry: 10,
+      },
+      labelBgPadding: [8, 4] as [number, number],
+      labelBgBorderRadius: 10,
+    }));
 
-  // Re-layout when workflow data changes
-  useMemo(() => {
-    const { nodes: newNodes, edges: newEdges } = getLayoutedElements(initialNodes, initialEdges);
-    setNodes(newNodes);
-    setEdges(newEdges);
-  }, [initialNodes, initialEdges]);
+    // Entry → initial state edge
+    const entryEdge: Edge = {
+      id: '__entry_edge__',
+      source: ENTRY_NODE_ID,
+      target: workflow.initialState,
+      type: 'smoothstep',
+      markerEnd: { type: MarkerType.ArrowClosed, width: 14, height: 14, color: '#6B7280' },
+      style: { strokeWidth: 2, stroke: '#6B7280', strokeDasharray: '4 4' },
+      deletable: false,
+    };
+
+    const allEdges = [entryEdge, ...transitionEdges];
+
+    const { nodes: layouted, edges: layoutedEdges } = getLayoutedElements(allNodes, allEdges);
+
+    // Preserve user-dragged positions on data updates (not initial load)
+    if (isInitialLayout.current) {
+      setNodes(layouted);
+      isInitialLayout.current = false;
+    } else {
+      // Merge: keep existing positions for known nodes, add new ones from layout
+      setNodes((prev) => {
+        const prevMap = new Map(prev.map((n) => [n.id, n]));
+        return layouted.map((n) => {
+          const existing = prevMap.get(n.id);
+          if (existing) {
+            return { ...n, position: existing.position };
+          }
+          return n;
+        });
+      });
+    }
+    setEdges(layoutedEdges);
+  }, [workflow]);
 
   const onNodesChange: OnNodesChange = useCallback(
     (changes) => setNodes((nds) => applyNodeChanges(changes, nds)),
@@ -103,13 +158,12 @@ export function WorkflowCanvas({ workflow, slug }: WorkflowCanvasProps) {
     (connection: Connection) => {
       if (!connection.source || !connection.target) return;
       if (connection.source === connection.target) return;
+      if (connection.source === ENTRY_NODE_ID) return;
 
-      // Find state IDs from names
       const fromState = workflow.states.find((s) => s.name === connection.source);
       const toState = workflow.states.find((s) => s.name === connection.target);
       if (!fromState || !toState) return;
 
-      // Check if transition already exists
       const existing = workflow.transitions.find(
         (t) => t.fromStateName === connection.source && t.toStateName === connection.target,
       );
@@ -130,6 +184,7 @@ export function WorkflowCanvas({ workflow, slug }: WorkflowCanvasProps) {
   // Handle node click (select state)
   const onNodeClick = useCallback(
     (_: React.MouseEvent, node: Node) => {
+      if (node.id === ENTRY_NODE_ID) return;
       const state = workflow.states.find((s) => s.name === node.id);
       if (state) setSelectedItem({ type: 'state', state });
     },
@@ -139,6 +194,7 @@ export function WorkflowCanvas({ workflow, slug }: WorkflowCanvasProps) {
   // Handle edge click (select transition)
   const onEdgeClick = useCallback(
     (_: React.MouseEvent, edge: Edge) => {
+      if (edge.id === '__entry_edge__') return;
       const transition = workflow.transitions.find((t) => t.id === edge.id);
       if (transition) setSelectedItem({ type: 'transition', transition });
     },
@@ -147,9 +203,39 @@ export function WorkflowCanvas({ workflow, slug }: WorkflowCanvasProps) {
 
   const onPaneClick = useCallback(() => setSelectedItem(null), []);
 
+  // Delete key handler
+  const handleKeyDown = useCallback(
+    (event: KeyboardEvent) => {
+      if (event.key === 'Delete' || event.key === 'Backspace') {
+        if (!selectedItem) return;
+        // Don't delete if user is typing in an input
+        if (
+          event.target instanceof HTMLInputElement ||
+          event.target instanceof HTMLTextAreaElement
+        )
+          return;
+
+        if (selectedItem.type === 'state') {
+          if (selectedItem.state.name === workflow.initialState) return; // Can't delete initial
+          deleteStateMutation.mutate(selectedItem.state.id);
+          setSelectedItem(null);
+        } else {
+          deleteTransitionMutation.mutate(selectedItem.transition.id);
+          setSelectedItem(null);
+        }
+      }
+    },
+    [selectedItem, workflow.initialState, deleteStateMutation, deleteTransitionMutation],
+  );
+
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [handleKeyDown]);
+
   return (
     <div className="flex h-full">
-      <div className="flex-1 h-full">
+      <div className="flex-1 h-full workflow-canvas">
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -161,18 +247,22 @@ export function WorkflowCanvas({ workflow, slug }: WorkflowCanvasProps) {
           onPaneClick={onPaneClick}
           nodeTypes={nodeTypes}
           fitView
-          fitViewOptions={{ padding: 0.2 }}
+          fitViewOptions={{ padding: 0.3 }}
           connectionLineStyle={{ strokeWidth: 2 }}
+          deleteKeyCode={null as unknown as KeyCode}
           defaultEdgeOptions={{
-            markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16 },
-            style: { strokeWidth: 2 },
+            type: 'smoothstep',
+            markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16, color: '#94a3b8' },
+            style: { strokeWidth: 2, stroke: '#94a3b8' },
           }}
+          proOptions={{ hideAttribution: true }}
         >
           <Background gap={16} size={1} />
-          <Controls />
+          <Controls showInteractive={false} />
           <MiniMap
             nodeStrokeWidth={3}
             nodeColor={(node) => {
+              if (node.id === ENTRY_NODE_ID) return '#6B7280';
               const data = node.data as StateNodeData;
               return data.color ?? '#6B7280';
             }}
