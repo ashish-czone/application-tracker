@@ -8,7 +8,11 @@
     "@nestjs/event-emitter": "^3.0.0",
     "@packages/logger": "workspace:*"
   },
+  "scripts": {
+    "test": "vitest run"
+  },
   "devDependencies": {
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "vitest": "^3.2.0"
   }
 }
