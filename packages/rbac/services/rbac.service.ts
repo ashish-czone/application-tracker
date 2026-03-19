@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { DatabaseService, eq, and, ilike, asc, desc, count, users } from '@packages/database';
 import type { PaginatedResponse } from '@packages/common';
 import { roles } from '../schema/roles';
@@ -179,13 +179,44 @@ export class RbacService {
     return scopedPermissions;
   }
 
-  async setRolePermissions(roleId: string, permissionEntries: string[] | { name: string; scope?: PermissionScope }[]): Promise<void> {
+  async setRolePermissions(
+    roleId: string,
+    permissionEntries: string[] | { name: string; scope?: PermissionScope }[],
+    actorPermissions?: ScopedPermissions,
+  ): Promise<void> {
     const role = await this.findRoleById(roleId);
     if (!role) throw new NotFoundException('Role not found');
 
     const entries = permissionEntries.map((e) =>
       typeof e === 'string' ? { name: e, scope: 'all' as PermissionScope } : { name: e.name, scope: e.scope ?? 'all' },
     );
+
+    // Enforce "grant only what you hold" when actor permissions are provided
+    if (actorPermissions) {
+      const isWildcard = '*' in actorPermissions;
+
+      if (!isWildcard) {
+        // Actor must hold every permission being granted
+        const unauthorized = entries.filter((e) => !(e.name in actorPermissions));
+        if (unauthorized.length > 0) {
+          throw new ForbiddenException(
+            `You cannot grant permissions you do not hold: ${unauthorized.map((e) => e.name).join(', ')}`,
+          );
+        }
+
+        // Actor can only remove permissions they hold (check current role permissions)
+        const currentPermissions = await this.getRolePermissions(roleId);
+        const beingRemoved = Object.keys(currentPermissions).filter(
+          (perm) => !entries.some((e) => e.name === perm),
+        );
+        const unauthorizedRemovals = beingRemoved.filter((perm) => !(perm in actorPermissions));
+        if (unauthorizedRemovals.length > 0) {
+          throw new ForbiddenException(
+            `You cannot remove permissions you do not hold: ${unauthorizedRemovals.join(', ')}`,
+          );
+        }
+      }
+    }
 
     await this.database.db.transaction(async (tx) => {
       await tx
