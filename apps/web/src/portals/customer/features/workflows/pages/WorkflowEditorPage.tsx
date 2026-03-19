@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { ArrowLeft, Plus } from 'lucide-react';
+import { ArrowLeft, Plus, AlertTriangle, XCircle } from 'lucide-react';
 import {
   Badge, Button,
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
@@ -11,6 +11,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useWorkflow, useCreateState } from '../hooks';
 import { WorkflowCanvas } from '../components/WorkflowCanvas';
+import { validateWorkflow } from '../components/workflow-validation';
 
 const addStateSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100).regex(/^[a-z0-9_]+$/, 'Lowercase alphanumeric + underscores'),
@@ -45,6 +46,11 @@ export default function WorkflowEditorPage() {
       },
     );
   }
+
+  const warnings = useMemo(
+    () => (workflow ? validateWorkflow(workflow) : []),
+    [workflow],
+  );
 
   if (isLoading) {
     return (
@@ -98,6 +104,29 @@ export default function WorkflowEditorPage() {
           </Button>
         </div>
       </div>
+
+      {/* Validation warnings */}
+      {warnings.length > 0 && (
+        <div className="mb-3 space-y-1.5 shrink-0">
+          {warnings.map((w, i) => (
+            <div
+              key={i}
+              className={`flex items-start gap-2 rounded-md px-3 py-2 text-sm ${
+                w.severity === 'error'
+                  ? 'bg-destructive/10 text-destructive border border-destructive/20'
+                  : 'bg-yellow-500/10 text-yellow-700 border border-yellow-500/20'
+              }`}
+            >
+              {w.severity === 'error' ? (
+                <XCircle className="h-4 w-4 mt-0.5 shrink-0" />
+              ) : (
+                <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+              )}
+              <span>{w.message}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Canvas */}
       <div className="flex-1 rounded-lg border bg-card overflow-hidden">
