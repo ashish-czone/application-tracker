@@ -6,12 +6,12 @@ import {
   Menu,
   X,
   Search,
-  Bell,
   LogOut,
   UserCircle,
   ChevronDown,
 } from 'lucide-react';
 import { cn } from '@packages/ui/lib/utils';
+import { NotificationBell } from '../../shared/notifications/components/NotificationBell';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -168,10 +168,7 @@ export function AppLayout() {
           </div>
 
           {/* Notifications */}
-          <button className="relative p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors">
-            <Bell className="w-[18px] h-[18px]" strokeWidth={1.75} />
-            <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-primary" />
-          </button>
+          <NotificationBell />
 
           {/* User menu */}
           <UserMenu />
