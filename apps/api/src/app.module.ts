@@ -18,6 +18,7 @@ import { RbacManagementModule } from './modules/rbac/rbac.module';
 import { NotificationRulesModule } from './modules/notification-rules/notification-rules.module';
 import { TasksModule } from './modules/tasks/tasks.module';
 import { WorkflowsManagementModule } from './modules/workflows/workflows.module';
+import { TaxonomyManagementModule } from './modules/taxonomy/taxonomy.module';
 import { SharedModule } from './modules/shared/shared.module';
 import { validate } from './config/env.validation';
 
@@ -51,6 +52,7 @@ import { validate } from './config/env.validation';
     NotificationRulesModule,
     TasksModule,
     WorkflowsManagementModule,
+    TaxonomyManagementModule,
   ],
   providers: [
     {

@@ -26,6 +26,7 @@
     "@packages/notifications": "workspace:*",
     "@packages/rbac": "workspace:*",
     "@packages/settings": "workspace:*",
+    "@packages/taxonomy": "workspace:*",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "cookie-parser": "^1.4.7",
