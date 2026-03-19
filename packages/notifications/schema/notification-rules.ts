@@ -18,6 +18,8 @@ export const notificationRules = pgTable('notification_rules', {
   scheduleDateAmounts: jsonb('schedule_date_amounts'),
   scheduleDateUnit: text('schedule_date_unit'),
 
+  scheduleDaysOfWeek: jsonb('schedule_days_of_week'),
+
   // Shared
   conditions: jsonb('conditions'),
   recipientStrategy: text('recipient_strategy').notNull(),

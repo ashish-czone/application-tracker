@@ -1,4 +1,4 @@
-import { IsString, MinLength, MaxLength, IsIn, IsOptional, IsBoolean, IsObject, IsArray, ValidateNested, IsInt, Min } from 'class-validator';
+import { IsString, MinLength, MaxLength, IsIn, IsOptional, IsBoolean, IsObject, IsArray, ValidateNested, IsInt, Min, Max } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -45,4 +45,12 @@ export class UpdateRuleDto {
   @ValidateNested({ each: true })
   @Type(() => ConditionDto)
   conditions?: ConditionDto[];
+
+  @ApiPropertyOptional({ example: [1, 3, 5], description: 'Days of week to run (0=Sun, 1=Mon, ..., 6=Sat)' })
+  @IsOptional()
+  @IsArray()
+  @IsInt({ each: true })
+  @Min(0, { each: true })
+  @Max(6, { each: true })
+  scheduleDaysOfWeek?: number[];
 }

@@ -28,6 +28,7 @@ export interface NotificationRule {
   scheduleDateOperator: ScheduleDateOperator | null;
   scheduleDateAmounts: number[] | null;
   scheduleDateUnit: ScheduleUnit | null;
+  scheduleDaysOfWeek: number[] | null;
   conditions: Condition[] | null;
   recipientStrategy: RecipientStrategy;
   recipientConfig: Record<string, unknown> | null;
