@@ -18,6 +18,7 @@ import { StateNode, type StateNodeData } from './StateNode';
 import { StateConfigPanel } from './StateConfigPanel';
 import { TransitionConfigPanel } from './TransitionConfigPanel';
 import { getLayoutedElements } from './auto-layout';
+import { validateWorkflow } from './workflow-validation';
 import { useCreateTransition, useDeleteState, useDeleteTransition } from '../hooks';
 import type { WorkflowDefinition, WorkflowState, WorkflowTransition } from '../types';
 
@@ -48,6 +49,17 @@ export function WorkflowCanvas({ workflow, slug }: WorkflowCanvasProps) {
 
   // Build nodes + edges from workflow data and apply layout
   useEffect(() => {
+    // Compute warnings to tag nodes
+    const warnings = validateWorkflow(workflow);
+    const warnedStates = new Map<string, string>();
+    for (const w of warnings) {
+      if (w.stateNames) {
+        for (const name of w.stateNames) {
+          warnedStates.set(name, w.message);
+        }
+      }
+    }
+
     const stateNodes: Node<StateNodeData>[] = workflow.states.map((state) => ({
       id: state.name,
       type: 'stateNode',
@@ -58,6 +70,7 @@ export function WorkflowCanvas({ workflow, slug }: WorkflowCanvasProps) {
         color: state.color,
         isInitial: state.name === workflow.initialState,
         stateId: state.id,
+        warning: warnedStates.get(state.name) ?? null,
       },
     }));
 
