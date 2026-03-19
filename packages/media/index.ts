@@ -1,3 +1,7 @@
+// Module & Service
+export { MediaModule } from './media.module';
+export { MediaService } from './services/media.service';
+
 // Types
 export type {
   MediaFile,

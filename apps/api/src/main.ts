@@ -24,6 +24,12 @@ async function bootstrap() {
       exclude: ['health'],
     });
 
+    // Serve uploaded files for local media provider
+    if (process.env.MEDIA_PROVIDER !== 's3') {
+      const uploadPath = process.env.MEDIA_LOCAL_PATH ?? './uploads';
+      (app as any).useStaticAssets(uploadPath, { prefix: '/uploads' });
+    }
+
     app.useGlobalPipes(
       new ValidationPipe({
         whitelist: true,
