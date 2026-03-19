@@ -26,7 +26,6 @@ export interface Role {
   name: string;
   userType: string;
   isDefault: boolean;
-  isSuperadmin: boolean;
   createdAt: string;
   updatedAt: string;
 }
