@@ -1,12 +1,15 @@
 import { useState } from 'react';
-import { Settings } from 'lucide-react';
-import { cn } from '@packages/ui';
-import { useSettings } from '../hooks';
+import { Settings, RotateCcw } from 'lucide-react';
+import { cn, Button, ConfirmDialog } from '@packages/ui';
+import { useSettings, useResetSetting } from '../hooks';
 import { SettingField } from '../components/SettingField';
 
 export default function SettingsPage() {
   const { data: groups, isLoading } = useSettings();
   const [activeModule, setActiveModule] = useState<string | null>(null);
+  const [resetAllOpen, setResetAllOpen] = useState(false);
+  const [resettingAll, setResettingAll] = useState(false);
+  const resetMutation = useResetSetting();
 
   // Auto-select first module
   const selectedModule = activeModule ?? groups?.[0]?.module ?? null;
@@ -66,11 +69,23 @@ export default function SettingsPage() {
       <div>
           {selectedGroup ? (
             <div className="rounded-lg border bg-card">
-              <div className="px-5 py-4 border-b border-border">
-                <h2 className="text-sm font-medium text-foreground">{selectedGroup.label}</h2>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {selectedGroup.fields.filter((f) => f.isOverridden).length} of {selectedGroup.fields.length} settings overridden
-                </p>
+              <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+                <div>
+                  <h2 className="text-sm font-medium text-foreground">{selectedGroup.label}</h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {selectedGroup.fields.filter((f) => f.isOverridden).length} of {selectedGroup.fields.length} settings overridden
+                  </p>
+                </div>
+                {selectedGroup.fields.some((f) => f.isOverridden) && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setResetAllOpen(true)}
+                  >
+                    <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+                    Reset all to defaults
+                  </Button>
+                )}
               </div>
               <div className="px-5">
                 {selectedGroup.fields.map((field) => (
@@ -86,6 +101,30 @@ export default function SettingsPage() {
             <div className="text-sm text-muted-foreground">Select a module</div>
           )}
       </div>
+
+      {/* Reset all confirmation */}
+      <ConfirmDialog
+        open={resetAllOpen}
+        onOpenChange={setResetAllOpen}
+        title="Reset all settings"
+        description={
+          selectedGroup
+            ? `This will reset all ${selectedGroup.fields.filter((f) => f.isOverridden).length} overridden settings in "${selectedGroup.label}" to their default values.`
+            : ''
+        }
+        confirmLabel="Reset all"
+        isPending={resettingAll}
+        onConfirm={async () => {
+          if (!selectedGroup) return;
+          setResettingAll(true);
+          const overridden = selectedGroup.fields.filter((f) => f.isOverridden);
+          for (const field of overridden) {
+            await resetMutation.mutateAsync({ module: selectedGroup.module, key: field.key });
+          }
+          setResettingAll(false);
+          setResetAllOpen(false);
+        }}
+      />
     </div>
   );
 }
