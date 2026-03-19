@@ -7,6 +7,11 @@ export interface Role {
   updatedAt: Date;
 }
 
+/** Role with computed isSystem flag (true when role has wildcard '*' permission) */
+export interface RoleWithSystem extends Role {
+  isSystem: boolean;
+}
+
 export type PermissionScope = 'own' | 'all';
 
 /** Map of permission name → scope (e.g. { "users.read": "all", "users.update": "own" }) */

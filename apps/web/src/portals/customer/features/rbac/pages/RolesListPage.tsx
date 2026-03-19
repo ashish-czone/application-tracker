@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Shield, Plus, Pencil, Trash2, ShieldCheck } from 'lucide-react';
+import { Shield, Plus, Pencil, Trash2, ShieldCheck, Lock } from 'lucide-react';
 import { format } from 'date-fns';
 import {
   DataGrid, Badge, Button, useDataGridParams,
@@ -59,7 +59,13 @@ export default function RolesListPage() {
         cell: ({ row }) => (
           <div className="flex items-center gap-2">
             <span className="font-medium text-foreground">{row.original.name}</span>
-            {row.original.isDefault && (
+            {row.original.isSystem && (
+              <Badge variant="default" className="text-[10px] px-1.5 py-0 gap-0.5">
+                <Lock className="h-2.5 w-2.5" />
+                System
+              </Badge>
+            )}
+            {row.original.isDefault && !row.original.isSystem && (
               <Badge variant="outline" className="text-[10px] px-1.5 py-0">Default</Badge>
             )}
           </div>
@@ -95,35 +101,42 @@ export default function RolesListPage() {
         size: 110,
         enableHiding: false,
         enableSorting: false,
-        cell: ({ row }) => (
-          <div className="flex items-center gap-1 justify-end">
-            <button
-              type="button"
-              onClick={() => setPermissionsRole(row.original)}
-              className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
-              aria-label={`Permissions for ${row.original.name}`}
-              title="Permissions"
-            >
-              <ShieldCheck className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => setEditingRole(row.original)}
-              className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-              aria-label={`Edit ${row.original.name}`}
-            >
-              <Pencil className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => setDeletingRole(row.original)}
-              className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-              aria-label={`Delete ${row.original.name}`}
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
-          </div>
-        ),
+        cell: ({ row }) => {
+          const isSystem = row.original.isSystem;
+          return (
+            <div className="flex items-center gap-1 justify-end">
+              <button
+                type="button"
+                onClick={() => setPermissionsRole(row.original)}
+                className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                aria-label={`Permissions for ${row.original.name}`}
+                title="Permissions"
+              >
+                <ShieldCheck className="h-4 w-4" />
+              </button>
+              {!isSystem && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setEditingRole(row.original)}
+                    className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                    aria-label={`Edit ${row.original.name}`}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDeletingRole(row.original)}
+                    className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                    aria-label={`Delete ${row.original.name}`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </>
+              )}
+            </div>
+          );
+        },
       },
     ],
     [],
@@ -198,7 +211,13 @@ export default function RolesListPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="font-medium text-foreground">{role.name}</span>
-                {role.isDefault && (
+                {role.isSystem && (
+                  <Badge variant="default" className="text-[10px] px-1.5 py-0 gap-0.5">
+                    <Lock className="h-2.5 w-2.5" />
+                    System
+                  </Badge>
+                )}
+                {role.isDefault && !role.isSystem && (
                   <Badge variant="outline" className="text-[10px] px-1.5 py-0">Default</Badge>
                 )}
               </div>
@@ -211,22 +230,26 @@ export default function RolesListPage() {
                 >
                   <ShieldCheck className="h-3.5 w-3.5" />
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setEditingRole(role)}
-                  className="p-1 text-muted-foreground hover:text-foreground"
-                  aria-label="Edit"
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDeletingRole(role)}
-                  className="p-1 text-muted-foreground hover:text-destructive"
-                  aria-label="Delete"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
+                {!role.isSystem && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setEditingRole(role)}
+                      className="p-1 text-muted-foreground hover:text-foreground"
+                      aria-label="Edit"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDeletingRole(role)}
+                      className="p-1 text-muted-foreground hover:text-destructive"
+                      aria-label="Delete"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </>
+                )}
               </div>
             </div>
             <Badge variant={role.userType === 'admin' ? 'default' : 'secondary'}>
