@@ -370,6 +370,11 @@ export class UsersService {
     });
   }
 
+  async resetPassword(id: string, newPassword: string): Promise<void> {
+    const user = await this.findOneOrFail(id);
+    await this.authService.changePasswordDirect(user.id, newPassword);
+  }
+
   async restore(id: string): Promise<UserWithType> {
     // Find user including deleted
     const [row] = await this.database.db

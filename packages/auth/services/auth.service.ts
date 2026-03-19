@@ -102,6 +102,10 @@ export class AuthService {
     };
   }
 
+  async changePasswordDirect(userId: string, newPassword: string): Promise<void> {
+    await this.credentialsService.updateSecretHash(userId, 'password', newPassword);
+  }
+
   async changePassword(userId: string, oldPassword: string, newPassword: string): Promise<void> {
     const userCredentials = await this.credentialsService.findByUserId(userId);
     const passwordCredential = userCredentials.find((c) => c.provider === 'password');

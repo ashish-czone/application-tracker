@@ -17,6 +17,7 @@ import { RequirePermission } from '@packages/rbac';
 import { UsersService } from '../services/users.service';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
+import { ResetPasswordDto } from '../dto/reset-password.dto';
 import { ListUsersQueryDto } from '../dto/list-users-query.dto';
 import { USERS_PERMISSIONS } from '../permissions';
 
@@ -68,6 +69,17 @@ export class UsersController {
   @ApiOperation({ summary: 'Soft delete a user' })
   async delete(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: JwtPayload) {
     await this.usersService.softDelete(id, user.userId);
+  }
+
+  @Post(':id/reset-password')
+  @RequirePermission(USERS_PERMISSIONS.UPDATE)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Reset a user\'s password (admin action)' })
+  async resetPassword(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ResetPasswordDto,
+  ) {
+    await this.usersService.resetPassword(id, dto.password);
   }
 
   @Patch(':id/restore')
