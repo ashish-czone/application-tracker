@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router';
 import { ArrowLeft } from 'lucide-react';
 import { Button, Badge, Card, CardContent, CardHeader, CardTitle } from '@packages/ui';
 import { useRule, useCreateRule, useUpdateRule, useEvents, useEntities, useTemplates } from '../hooks';
