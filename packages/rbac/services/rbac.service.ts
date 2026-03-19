@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
-import { DatabaseService, eq, and, ilike, asc, desc, count, users } from '@packages/database';
+import { DatabaseService, eq, and, ilike, asc, desc, count, inArray, users } from '@packages/database';
 import type { PaginatedResponse } from '@packages/common';
 import { roles } from '../schema/roles';
 import { rolePermissions } from '../schema/role-permissions';
@@ -191,6 +191,9 @@ export class RbacService {
       typeof e === 'string' ? { name: e, scope: 'all' as PermissionScope } : { name: e.name, scope: e.scope ?? 'all' },
     );
 
+    // Load current permissions once for enforcement checks
+    const currentPermissions = await this.getRolePermissions(roleId);
+
     // Enforce "grant only what you hold" when actor permissions are provided
     if (actorPermissions) {
       const isWildcard = '*' in actorPermissions;
@@ -204,8 +207,7 @@ export class RbacService {
           );
         }
 
-        // Actor can only remove permissions they hold (check current role permissions)
-        const currentPermissions = await this.getRolePermissions(roleId);
+        // Actor can only remove permissions they hold
         const beingRemoved = Object.keys(currentPermissions).filter(
           (perm) => !entries.some((e) => e.name === perm),
         );
@@ -215,6 +217,19 @@ export class RbacService {
             `You cannot remove permissions you do not hold: ${unauthorizedRemovals.join(', ')}`,
           );
         }
+      }
+    }
+
+    // Lockout prevention: if '*' is being removed from this role, ensure at least one other user still has '*'
+    const hadWildcard = '*' in currentPermissions;
+    const willHaveWildcard = entries.some((e) => e.name === '*');
+
+    if (hadWildcard && !willHaveWildcard) {
+      const remainingWildcardUsers = await this.countWildcardUsers(roleId);
+      if (remainingWildcardUsers === 0) {
+        throw new ConflictException(
+          'Cannot remove wildcard (*) permission — at least one user must retain admin access',
+        );
       }
     }
 
@@ -311,6 +326,32 @@ export class RbacService {
   }
 
   // --- Private helpers ---
+
+  /**
+   * Count users who have the wildcard '*' permission through any of their roles.
+   * Optionally exclude a specific role from the count (to check "what if this role lost *?").
+   */
+  async countWildcardUsers(excludeRoleId?: string): Promise<number> {
+    const wildcardRoleRows = await this.database.db
+      .select({ roleId: rolePermissions.roleId })
+      .from(rolePermissions)
+      .where(eq(rolePermissions.permission, '*'));
+
+    let wildcardRoleIds = wildcardRoleRows.map((r) => r.roleId);
+
+    if (excludeRoleId) {
+      wildcardRoleIds = wildcardRoleIds.filter((id) => id !== excludeRoleId);
+    }
+
+    if (wildcardRoleIds.length === 0) return 0;
+
+    const [{ total }] = await this.database.db
+      .select({ total: count() })
+      .from(userRoles)
+      .where(inArray(userRoles.roleId, wildcardRoleIds));
+
+    return Number(total);
+  }
 
   private scopeRank(scope: PermissionScope): number {
     const ranks: Record<PermissionScope, number> = { own: 1, all: 2 };
