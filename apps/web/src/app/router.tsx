@@ -2,7 +2,7 @@ import { Suspense, lazy } from 'react';
 import { Routes, Route, Navigate } from 'react-router';
 import { AppLayout } from './layout/AppLayout';
 import { AuthGuard } from '../shared/auth/components/AuthGuard';
-import { UsersListPage, RolesListPage, TasksListPage } from '../portals/customer/routes';
+import { UsersListPage, RolesListPage, TasksListPage, WorkflowsListPage, WorkflowEditorPage } from '../portals/customer/routes';
 
 const LoginPage = lazy(() => import('../shared/auth/pages/LoginPage'));
 const RegisterPage = lazy(() => import('../shared/auth/pages/RegisterPage'));
@@ -63,6 +63,22 @@ export function AppRouter() {
             element={
               <Suspense fallback={<PageSkeleton />}>
                 <TasksListPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/workflows"
+            element={
+              <Suspense fallback={<PageSkeleton />}>
+                <WorkflowsListPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/workflows/:slug"
+            element={
+              <Suspense fallback={<PageSkeleton />}>
+                <WorkflowEditorPage />
               </Suspense>
             }
           />

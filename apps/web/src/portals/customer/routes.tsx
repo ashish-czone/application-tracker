@@ -11,3 +11,11 @@ export const RolesListPage = lazy(
 export const TasksListPage = lazy(
   () => import('./features/tasks/pages/TasksListPage'),
 );
+
+export const WorkflowsListPage = lazy(
+  () => import('./features/workflows/pages/WorkflowsListPage'),
+);
+
+export const WorkflowEditorPage = lazy(
+  () => import('./features/workflows/pages/WorkflowEditorPage'),
+);
