@@ -10,7 +10,24 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { GlobalExceptionFilter } from '../global-exception.filter';
-import { runWithCorrelationId } from '@packages/logger';
+import { runWithCorrelationId, type AppLoggerService } from '@packages/logger';
+
+function createMockAppLogger() {
+  const contextLogger = {
+    log: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  };
+  const appLogger = {
+    forContext: vi.fn().mockReturnValue(contextLogger),
+    log: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  } as unknown as AppLoggerService;
+  return { appLogger, contextLogger };
+}
 
 function createMockHost() {
   const json = vi.fn();
@@ -27,9 +44,12 @@ function createMockHost() {
 
 describe('GlobalExceptionFilter', () => {
   let filter: GlobalExceptionFilter;
+  let contextLogger: ReturnType<typeof createMockAppLogger>['contextLogger'];
 
   beforeEach(() => {
-    filter = new GlobalExceptionFilter();
+    const mock = createMockAppLogger();
+    contextLogger = mock.contextLogger;
+    filter = new GlobalExceptionFilter(mock.appLogger);
   });
 
   // --- Standard HttpExceptions ---
@@ -119,72 +139,60 @@ describe('GlobalExceptionFilter', () => {
     });
   });
 
-  // --- 5xx logging ---
+  // --- 5xx logging via AppLoggerService ---
 
-  it('should log server errors at error level with correlationId', () => {
+  it('should log server errors at error level', () => {
     const { host } = createMockHost();
-    const logSpy = vi.spyOn((filter as any).logger, 'error').mockImplementation(() => {});
 
     runWithCorrelationId('req-5xx', () => {
       filter.catch(new InternalServerErrorException('DB connection lost'), host);
     });
 
-    expect(logSpy).toHaveBeenCalled();
-    const [context] = logSpy.mock.calls[0];
-    expect(context).toMatchObject({
-      correlationId: 'req-5xx',
-      statusCode: 500,
-      message: 'DB connection lost',
-      method: 'GET',
-      url: '/test',
-    });
+    expect(contextLogger.error).toHaveBeenCalledWith(
+      'INTERNAL_SERVER_ERROR',
+      expect.objectContaining({
+        statusCode: 500,
+        message: 'DB connection lost',
+        method: 'GET',
+        url: '/test',
+      }),
+      expect.any(String), // stack trace
+    );
   });
 
   // --- Warn-level logging (401, 403, 429) ---
 
   it('should log UnauthorizedException at warn level', () => {
     const { host } = createMockHost();
-    const warnSpy = vi.spyOn((filter as any).logger, 'warn').mockImplementation(() => {});
 
-    runWithCorrelationId('req-401', () => {
-      filter.catch(new UnauthorizedException('Invalid token'), host);
-    });
+    filter.catch(new UnauthorizedException('Invalid token'), host);
 
-    expect(warnSpy).toHaveBeenCalled();
-    const [context] = warnSpy.mock.calls[0];
-    expect(context).toMatchObject({
-      correlationId: 'req-401',
-      statusCode: 401,
-    });
+    expect(contextLogger.warn).toHaveBeenCalledWith(
+      'UNAUTHORIZED',
+      expect.objectContaining({ statusCode: 401 }),
+    );
   });
 
   it('should log ForbiddenException at warn level', () => {
     const { host } = createMockHost();
-    const warnSpy = vi.spyOn((filter as any).logger, 'warn').mockImplementation(() => {});
 
-    runWithCorrelationId('req-403', () => {
-      filter.catch(new ForbiddenException('No permission'), host);
-    });
+    filter.catch(new ForbiddenException('No permission'), host);
 
-    expect(warnSpy).toHaveBeenCalled();
-    const [context] = warnSpy.mock.calls[0];
-    expect(context).toMatchObject({
-      correlationId: 'req-403',
-      statusCode: 403,
-    });
+    expect(contextLogger.warn).toHaveBeenCalledWith(
+      'FORBIDDEN',
+      expect.objectContaining({ statusCode: 403 }),
+    );
   });
 
   it('should not log 400/404/409 at warn or error level', () => {
     const { host } = createMockHost();
-    const errorSpy = vi.spyOn((filter as any).logger, 'error').mockImplementation(() => {});
-    const warnSpy = vi.spyOn((filter as any).logger, 'warn').mockImplementation(() => {});
 
     filter.catch(new BadRequestException('Bad input'), host);
     filter.catch(new NotFoundException('Not found'), host);
     filter.catch(new ConflictException('Conflict'), host);
 
-    expect(errorSpy).not.toHaveBeenCalled();
-    expect(warnSpy).not.toHaveBeenCalled();
+    expect(contextLogger.error).not.toHaveBeenCalled();
+    expect(contextLogger.warn).not.toHaveBeenCalled();
   });
 
   // --- Unknown exceptions ---
@@ -199,21 +207,16 @@ describe('GlobalExceptionFilter', () => {
     expect(body.error).toBe('INTERNAL_SERVER_ERROR');
   });
 
-  it('should log non-HttpException errors with correlationId', () => {
+  it('should log non-HttpException errors via AppLoggerService', () => {
     const { host } = createMockHost();
-    const logSpy = vi.spyOn((filter as any).logger, 'error').mockImplementation(() => {});
 
-    runWithCorrelationId('req-crash', () => {
-      filter.catch(new Error('Unexpected crash'), host);
-    });
+    filter.catch(new Error('Unexpected crash'), host);
 
-    expect(logSpy).toHaveBeenCalled();
-    const [context] = logSpy.mock.calls[0];
-    expect(context).toMatchObject({
-      correlationId: 'req-crash',
-      statusCode: 500,
-      message: 'Unexpected crash',
-    });
+    expect(contextLogger.error).toHaveBeenCalledWith(
+      'Unhandled exception',
+      expect.objectContaining({ statusCode: 500, message: 'Unexpected crash' }),
+      expect.any(String), // stack trace
+    );
   });
 
   it('should hide error details in production for unknown exceptions', () => {
