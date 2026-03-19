@@ -15,6 +15,7 @@ import { EntityResolverRegistry } from './services/entity-resolver-registry';
 import { ContactResolverRegistry } from './services/contact-resolver-registry';
 import { ScheduleScanner } from './services/schedule-scanner';
 import { InAppChannel } from './channels/in-app.channel';
+import { NotificationQueryService } from './services/notification-query.service';
 
 export const SCHEDULE_SCAN_QUEUE = 'notification.schedule-scan';
 
@@ -34,6 +35,7 @@ export const SCHEDULE_SCAN_QUEUE = 'notification.schedule-scan';
     ContactResolverRegistry,
     ScheduleScanner,
     InAppChannel,
+    NotificationQueryService,
   ],
   exports: [
     NotificationDispatcher,
@@ -42,6 +44,7 @@ export const SCHEDULE_SCAN_QUEUE = 'notification.schedule-scan';
     NotificationTemplatesService,
     EntityResolverRegistry,
     ContactResolverRegistry,
+    NotificationQueryService,
   ],
 })
 export class NotificationsModule implements OnModuleInit {

@@ -21,6 +21,7 @@ import { TasksModule } from './modules/tasks/tasks.module';
 import { WorkflowsManagementModule } from './modules/workflows/workflows.module';
 import { TaxonomyManagementModule } from './modules/taxonomy/taxonomy.module';
 import { SettingsManagementModule } from './modules/settings/settings.module';
+import { UserNotificationsModule } from './modules/user-notifications/user-notifications.module';
 import { SharedModule } from './modules/shared/shared.module';
 import { validate } from './config/env.validation';
 
@@ -71,6 +72,7 @@ import { validate } from './config/env.validation';
     WorkflowsManagementModule,
     TaxonomyManagementModule,
     SettingsManagementModule,
+    UserNotificationsModule,
   ],
   providers: [
     {
