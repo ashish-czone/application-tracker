@@ -4,10 +4,10 @@ import {
   type ArgumentsHost,
   HttpException,
   HttpStatus,
-  Logger,
+  Injectable,
 } from '@nestjs/common';
 import type { Response, Request } from 'express';
-import { getCorrelationId } from '@packages/logger';
+import { AppLoggerService, type ContextLogger } from '@packages/logger';
 
 interface ErrorResponseBody {
   statusCode: number;
@@ -57,14 +57,18 @@ function parseValidationMessages(
 }
 
 @Catch()
+@Injectable()
 export class GlobalExceptionFilter implements ExceptionFilter {
-  private readonly logger = new Logger(GlobalExceptionFilter.name);
+  private readonly logger: ContextLogger;
+
+  constructor(appLogger: AppLoggerService) {
+    this.logger = appLogger.forContext(GlobalExceptionFilter.name);
+  }
 
   catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
-    const correlationId = getCorrelationId();
     const method = request?.method;
     const url = request?.url;
 
@@ -92,13 +96,13 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         }
       }
 
-      const logContext = { correlationId, statusCode: status, method, url, message: body.message };
+      const logContext = { statusCode: status, method, url, message: body.message };
 
       // Log at appropriate level per PROMPT-API.md
       if (status >= 500) {
-        this.logger.error(logContext, exception.stack ?? 'HttpException (5xx)');
+        this.logger.error(body.error, logContext, exception.stack);
       } else if (WARN_STATUS_CODES.has(status)) {
-        this.logger.warn(logContext, body.error);
+        this.logger.warn(body.error, logContext);
       }
 
       response.status(status).json(body);
@@ -112,8 +116,9 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       exception instanceof Error ? exception.stack : undefined;
 
     this.logger.error(
-      { correlationId, statusCode: 500, method, url, message },
-      stack ?? 'Unhandled exception',
+      'Unhandled exception',
+      { statusCode: 500, method, url, message },
+      stack,
     );
 
     const body: ErrorResponseBody = {
