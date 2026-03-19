@@ -1,4 +1,4 @@
-import { Controller, type Control, type FieldValues, type Path } from 'react-hook-form';
+import { useFormContext, Controller } from 'react-hook-form';
 import { Label } from './Label';
 import { cn } from '../../lib/utils';
 
@@ -7,9 +7,8 @@ interface SelectOption {
   value: string;
 }
 
-interface FormSelectProps<T extends FieldValues> {
-  control: Control<T>;
-  name: Path<T>;
+interface FormSelectProps {
+  name: string;
   label: string;
   options: SelectOption[];
   placeholder?: string;
@@ -18,8 +17,7 @@ interface FormSelectProps<T extends FieldValues> {
   className?: string;
 }
 
-export function FormSelect<T extends FieldValues>({
-  control,
+export function FormSelect({
   name,
   label,
   options,
@@ -27,7 +25,8 @@ export function FormSelect<T extends FieldValues>({
   description,
   disabled,
   className,
-}: FormSelectProps<T>) {
+}: FormSelectProps) {
+  const { control } = useFormContext();
   const errorId = `${name}-error`;
   const descriptionId = `${name}-description`;
 

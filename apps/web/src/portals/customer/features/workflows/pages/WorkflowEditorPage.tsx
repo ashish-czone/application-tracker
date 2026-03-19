@@ -29,7 +29,7 @@ export default function WorkflowEditorPage() {
   const { data: workflow, isLoading, isError } = useWorkflow(slug!);
   const createStateMutation = useCreateState(slug!);
 
-  const { control, handleSubmit, reset } = useForm<AddStateFormValues>({
+  const form = useForm<AddStateFormValues>({
     resolver: zodResolver(addStateSchema),
     defaultValues: { name: '', label: '', color: '#6B7280' },
   });
@@ -41,7 +41,7 @@ export default function WorkflowEditorPage() {
       {
         onSuccess: () => {
           setAddStateOpen(false);
-          reset();
+          form.reset();
         },
       },
     );
@@ -140,22 +140,19 @@ export default function WorkflowEditorPage() {
             <DialogTitle>Add State</DialogTitle>
             <DialogDescription>Add a new state to this workflow</DialogDescription>
           </DialogHeader>
-          <Form onSubmit={handleSubmit(onAddState)} className="space-y-4">
+          <Form form={form} onSubmit={form.handleSubmit(onAddState)} className="space-y-4">
             <FormInput
-              control={control}
               name="name"
               label="Name (identifier)"
               placeholder="e.g., in_review"
               description="Lowercase with underscores"
             />
             <FormInput
-              control={control}
               name="label"
               label="Label (display)"
               placeholder="e.g., In Review"
             />
             <FormInput
-              control={control}
               name="color"
               label="Color"
               type="color"

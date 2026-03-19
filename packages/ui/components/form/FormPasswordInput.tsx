@@ -1,14 +1,13 @@
 import { useState } from 'react';
-import { Controller, useWatch, type Control, type FieldValues, type Path } from 'react-hook-form';
+import { useFormContext, Controller, useWatch } from 'react-hook-form';
 import { Eye, EyeOff } from 'lucide-react';
 import { Input } from './Input';
 import { Label } from './Label';
 import { PasswordStrength } from './PasswordStrength';
 import { cn } from '../../lib/utils';
 
-interface FormPasswordInputProps<T extends FieldValues> {
-  control: Control<T>;
-  name: Path<T>;
+interface FormPasswordInputProps {
+  name: string;
   label: string;
   placeholder?: string;
   description?: string;
@@ -19,8 +18,7 @@ interface FormPasswordInputProps<T extends FieldValues> {
   showStrength?: boolean;
 }
 
-export function FormPasswordInput<T extends FieldValues>({
-  control,
+export function FormPasswordInput({
   name,
   label,
   placeholder = 'Enter password',
@@ -29,7 +27,8 @@ export function FormPasswordInput<T extends FieldValues>({
   disabled,
   className,
   showStrength = false,
-}: FormPasswordInputProps<T>) {
+}: FormPasswordInputProps) {
+  const { control } = useFormContext();
   const [showPassword, setShowPassword] = useState(false);
   const passwordValue = useWatch({ control, name });
   const errorId = `${name}-error`;

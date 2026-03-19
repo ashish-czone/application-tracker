@@ -29,7 +29,7 @@ interface AddTaskFormProps {
 }
 
 export function AddTaskForm({ onClose }: AddTaskFormProps) {
-  const { control, handleSubmit } = useForm<CreateTaskFormValues>({
+  const form = useForm<CreateTaskFormValues>({
     resolver: zodResolver(createTaskSchema),
     defaultValues: {
       title: '',
@@ -59,9 +59,8 @@ export function AddTaskForm({ onClose }: AddTaskFormProps) {
         <DialogDescription>Create a new task</DialogDescription>
       </DialogHeader>
 
-      <Form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <Form form={form} onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <FormInput
-          control={control}
           name="title"
           label="Title"
           placeholder="Task title"
@@ -69,7 +68,6 @@ export function AddTaskForm({ onClose }: AddTaskFormProps) {
         />
 
         <FormTextarea
-          control={control}
           name="description"
           label="Description (optional)"
           placeholder="Describe the task..."
@@ -78,7 +76,6 @@ export function AddTaskForm({ onClose }: AddTaskFormProps) {
 
         <div className="grid grid-cols-2 gap-4">
           <FormSelect
-            control={control}
             name="priority"
             label="Priority"
             options={[
@@ -90,7 +87,6 @@ export function AddTaskForm({ onClose }: AddTaskFormProps) {
           />
 
           <FormInput
-            control={control}
             name="dueDate"
             label="Due date (optional)"
             type="date"

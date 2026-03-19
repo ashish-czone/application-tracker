@@ -24,7 +24,7 @@ type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
 
 export function ForgotPasswordForm() {
   const [submitted, setSubmitted] = useState(false);
-  const { control, handleSubmit } = useForm<ForgotPasswordFormValues>({
+  const form = useForm<ForgotPasswordFormValues>({
     resolver: zodResolver(forgotPasswordSchema),
     defaultValues: { identifier: '' },
   });
@@ -66,9 +66,8 @@ export function ForgotPasswordForm() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Form onSubmit={handleSubmit(onSubmit)}>
+        <Form form={form} onSubmit={form.handleSubmit(onSubmit)}>
           <FormInput
-            control={control}
             name="identifier"
             label="Email"
             type="email"

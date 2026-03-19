@@ -22,7 +22,7 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 export function LoginForm() {
-  const { control, handleSubmit } = useForm<LoginFormValues>({
+  const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: { identifier: '', password: '' },
   });
@@ -39,9 +39,8 @@ export function LoginForm() {
         <CardDescription>Enter your credentials to access your account</CardDescription>
       </CardHeader>
       <CardContent>
-        <Form onSubmit={handleSubmit(onSubmit)}>
+        <Form form={form} onSubmit={form.handleSubmit(onSubmit)}>
           <FormInput
-            control={control}
             name="identifier"
             label="Email"
             type="email"
@@ -49,7 +48,6 @@ export function LoginForm() {
             autoComplete="email"
           />
           <FormInput
-            control={control}
             name="password"
             label="Password"
             type="password"

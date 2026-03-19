@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Controller, type Control, type FieldValues, type Path } from 'react-hook-form';
+import { useFormContext, Controller } from 'react-hook-form';
 import { Check, X, Loader2 } from 'lucide-react';
 import { Input } from './Input';
 import { Label } from './Label';
@@ -7,9 +7,8 @@ import { cn } from '../../lib/utils';
 
 export type AsyncValidationStatus = 'idle' | 'checking' | 'valid' | 'invalid';
 
-interface FormInputProps<T extends FieldValues> {
-  control: Control<T>;
-  name: Path<T>;
+interface FormInputProps {
+  name: string;
   label: string;
   type?: string;
   placeholder?: string;
@@ -25,8 +24,7 @@ interface FormInputProps<T extends FieldValues> {
   onBlurValidate?: (value: string) => void;
 }
 
-export function FormInput<T extends FieldValues>({
-  control,
+export function FormInput({
   name,
   label,
   type = 'text',
@@ -38,7 +36,8 @@ export function FormInput<T extends FieldValues>({
   asyncStatus,
   asyncError,
   onBlurValidate,
-}: FormInputProps<T>) {
+}: FormInputProps) {
+  const { control } = useFormContext();
   const errorId = `${name}-error`;
   const descriptionId = `${name}-description`;
   const hasAsyncIcon = asyncStatus && asyncStatus !== 'idle';

@@ -1,10 +1,9 @@
-import { Controller, type Control, type FieldValues, type Path } from 'react-hook-form';
+import { useFormContext, Controller } from 'react-hook-form';
 import { Label } from './Label';
 import { cn } from '../../lib/utils';
 
-interface FormTextareaProps<T extends FieldValues> {
-  control: Control<T>;
-  name: Path<T>;
+interface FormTextareaProps {
+  name: string;
   label: string;
   placeholder?: string;
   description?: string;
@@ -13,8 +12,7 @@ interface FormTextareaProps<T extends FieldValues> {
   className?: string;
 }
 
-export function FormTextarea<T extends FieldValues>({
-  control,
+export function FormTextarea({
   name,
   label,
   placeholder,
@@ -22,7 +20,8 @@ export function FormTextarea<T extends FieldValues>({
   disabled,
   rows = 3,
   className,
-}: FormTextareaProps<T>) {
+}: FormTextareaProps) {
+  const { control } = useFormContext();
   const errorId = `${name}-error`;
   const descriptionId = `${name}-description`;
 

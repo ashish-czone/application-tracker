@@ -29,7 +29,7 @@ interface ResetPasswordFormProps {
 }
 
 export function ResetPasswordForm({ user, onClose }: ResetPasswordFormProps) {
-  const { control, handleSubmit } = useForm<ResetPasswordFormValues>({
+  const form = useForm<ResetPasswordFormValues>({
     resolver: zodResolver(resetPasswordSchema),
     defaultValues: { password: '', confirmPassword: '' },
   });
@@ -49,16 +49,14 @@ export function ResetPasswordForm({ user, onClose }: ResetPasswordFormProps) {
         </DialogDescription>
       </DialogHeader>
 
-      <Form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <Form form={form} onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <FormInput
-          control={control}
           name="password"
           label="New Password"
           type="password"
           placeholder="Enter new password"
         />
         <FormInput
-          control={control}
           name="confirmPassword"
           label="Confirm Password"
           type="password"

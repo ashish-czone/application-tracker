@@ -29,7 +29,7 @@ type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>;
 export function ResetPasswordForm() {
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token');
-  const { control, handleSubmit } = useForm<ResetPasswordFormValues>({
+  const form = useForm<ResetPasswordFormValues>({
     resolver: zodResolver(resetPasswordSchema),
     defaultValues: { newPassword: '' },
   });
@@ -64,9 +64,8 @@ export function ResetPasswordForm() {
         <CardDescription>Enter your new password</CardDescription>
       </CardHeader>
       <CardContent>
-        <Form onSubmit={handleSubmit(onSubmit)}>
+        <Form form={form} onSubmit={form.handleSubmit(onSubmit)}>
           <FormInput
-            control={control}
             name="newPassword"
             label="New password"
             type="password"
