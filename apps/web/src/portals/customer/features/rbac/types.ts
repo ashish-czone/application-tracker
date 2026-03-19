@@ -3,6 +3,7 @@ export interface Role {
   name: string;
   userType: 'admin' | 'client';
   isDefault: boolean;
+  isSystem: boolean;
   createdAt: string;
   updatedAt: string;
 }

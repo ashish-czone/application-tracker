@@ -5,7 +5,7 @@ import { roles } from '../schema/roles';
 import { rolePermissions } from '../schema/role-permissions';
 import { userRoles } from '../schema/user-roles';
 import { PermissionRegistryService } from './permission-registry.service';
-import type { Role, ScopedPermissions, PermissionScope } from '../types';
+import type { Role, RoleWithSystem, ScopedPermissions, PermissionScope } from '../types';
 
 @Injectable()
 export class RbacService {
@@ -117,7 +117,7 @@ export class RbacService {
     userType?: string;
     sort?: 'name' | 'createdAt';
     order?: 'asc' | 'desc';
-  }): Promise<PaginatedResponse<Role>> {
+  }): Promise<PaginatedResponse<RoleWithSystem>> {
     const page = query.page ?? 1;
     const limit = query.limit ?? 25;
     const offset = (page - 1) * limit;
@@ -146,13 +146,15 @@ export class RbacService {
       .from(roles)
       .where(whereClause);
 
-    const data = await this.database.db
+    const rawData = await this.database.db
       .select()
       .from(roles)
       .where(whereClause)
       .orderBy(orderFn(sortColumn))
       .limit(limit)
       .offset(offset);
+
+    const data = await this.withSystemFlag(rawData);
 
     return {
       data,
@@ -347,6 +349,26 @@ export class RbacService {
   async isSystemRole(roleId: string): Promise<boolean> {
     const perms = await this.getRolePermissions(roleId);
     return '*' in perms;
+  }
+
+  /**
+   * Get the set of role IDs that have the wildcard '*' permission.
+   */
+  private async getSystemRoleIds(): Promise<Set<string>> {
+    const rows = await this.database.db
+      .select({ roleId: rolePermissions.roleId })
+      .from(rolePermissions)
+      .where(eq(rolePermissions.permission, '*'));
+    return new Set(rows.map((r) => r.roleId));
+  }
+
+  /**
+   * Enrich roles with computed isSystem flag.
+   */
+  private async withSystemFlag(roleList: Role[]): Promise<RoleWithSystem[]> {
+    if (roleList.length === 0) return [];
+    const systemIds = await this.getSystemRoleIds();
+    return roleList.map((role) => ({ ...role, isSystem: systemIds.has(role.id) }));
   }
 
   /**
