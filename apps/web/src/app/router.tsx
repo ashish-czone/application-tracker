@@ -8,6 +8,7 @@ const LoginPage = lazy(() => import('../shared/auth/pages/LoginPage'));
 const RegisterPage = lazy(() => import('../shared/auth/pages/RegisterPage'));
 const ForgotPasswordPage = lazy(() => import('../shared/auth/pages/ForgotPasswordPage'));
 const ResetPasswordPage = lazy(() => import('../shared/auth/pages/ResetPasswordPage'));
+const ProfilePage = lazy(() => import('../shared/auth/pages/ProfilePage'));
 
 function DashboardPage() {
   return (
@@ -42,6 +43,14 @@ export function AppRouter() {
       <Route element={<AuthGuard />}>
         <Route element={<AppLayout />}>
           <Route path="/" element={<DashboardPage />} />
+          <Route
+            path="/profile"
+            element={
+              <Suspense fallback={<PageSkeleton />}>
+                <ProfilePage />
+              </Suspense>
+            }
+          />
           <Route
             path="/users"
             element={

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router';
 import {
   ChevronsLeft,
   ChevronsRight,
@@ -8,6 +8,7 @@ import {
   Search,
   Bell,
   LogOut,
+  UserCircle,
   ChevronDown,
 } from 'lucide-react';
 import { cn } from '@packages/ui/lib/utils';
@@ -188,6 +189,7 @@ export function AppLayout() {
 function UserMenu() {
   const { user } = useAuth();
   const logoutMutation = useLogout();
+  const navigate = useNavigate();
 
   if (!user) return null;
 
@@ -209,6 +211,10 @@ function UserMenu() {
           <p className="text-xs text-muted-foreground">ID: {user.userId.slice(0, 8)}...</p>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => navigate('/profile')}>
+          <UserCircle className="w-4 h-4 mr-2" />
+          Profile
+        </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => logoutMutation.mutate()}
           disabled={logoutMutation.isPending}
