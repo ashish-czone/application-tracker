@@ -1,14 +1,16 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
-import { DatabaseService } from '@packages/database';
+import { DatabaseService, eq, and } from '@packages/database';
 import type { DomainEvent } from '@packages/events';
 import { NotificationRuleService } from '../services/notification-rule.service';
 import { RecipientResolver } from '../services/recipient-resolver';
 import { PreferenceService } from '../services/preference.service';
 import { TemplateRenderer } from '../services/template-renderer';
 import { NotificationDispatcher } from '../services/notification-dispatcher';
+import { EntityResolverRegistry } from '../services/entity-resolver-registry';
+import { buildConditions } from '../helpers/condition-builder';
 import { notificationScheduled } from '../schema/notification-scheduled';
-import type { ScheduleUnit } from '../types';
+import type { ScheduleUnit, Condition } from '../types';
 
 @Injectable()
 export class NotificationListener {
@@ -21,6 +23,7 @@ export class NotificationListener {
     private readonly templateRenderer: TemplateRenderer,
     private readonly dispatcher: NotificationDispatcher,
     private readonly database: DatabaseService,
+    private readonly entityResolverRegistry: EntityResolverRegistry,
   ) {}
 
   @OnEvent('**')
@@ -34,6 +37,26 @@ export class NotificationListener {
         if (rule.delayAmount && rule.delayUnit) {
           await this.scheduleDelayed(rule.id, event, rule.delayAmount, rule.delayUnit as ScheduleUnit);
           continue;
+        }
+
+        // Check conditions against the entity before dispatching
+        if (rule.conditions && (rule.conditions as Condition[]).length > 0) {
+          const entityResolver = this.entityResolverRegistry.get(event.entityType);
+          if (entityResolver) {
+            const conditionSql = buildConditions(
+              entityResolver.table,
+              rule.conditions as Condition[],
+              Object.keys(entityResolver.fields),
+            );
+            const idColumn = (entityResolver.table as Record<string, any>).id;
+            const [entity] = await this.database.db
+              .select({ id: idColumn })
+              .from(entityResolver.table)
+              .where(and(eq(idColumn, event.entityId), ...conditionSql))
+              .limit(1);
+
+            if (!entity) continue; // Entity doesn't match conditions — skip rule
+          }
         }
 
         // Immediate event rule → dispatch now
