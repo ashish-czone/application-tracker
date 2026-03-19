@@ -181,9 +181,6 @@ export function AddUserForm({ onClose }: AddUserFormProps) {
                     className="rounded border-input"
                   />
                   <span className="text-foreground">{role.name}</span>
-                  {role.isSuperadmin && (
-                    <span className="text-[10px] text-muted-foreground">(Superadmin)</span>
-                  )}
                 </label>
               ))}
             </div>

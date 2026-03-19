@@ -59,10 +59,7 @@ export default function RolesListPage() {
         cell: ({ row }) => (
           <div className="flex items-center gap-2">
             <span className="font-medium text-foreground">{row.original.name}</span>
-            {row.original.isSuperadmin && (
-              <Badge variant="default" className="text-[10px] px-1.5 py-0">Superadmin</Badge>
-            )}
-            {row.original.isDefault && !row.original.isSuperadmin && (
+            {row.original.isDefault && (
               <Badge variant="outline" className="text-[10px] px-1.5 py-0">Default</Badge>
             )}
           </div>
@@ -201,10 +198,7 @@ export default function RolesListPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="font-medium text-foreground">{role.name}</span>
-                {role.isSuperadmin && (
-                  <Badge variant="default" className="text-[10px] px-1.5 py-0">Superadmin</Badge>
-                )}
-                {role.isDefault && !role.isSuperadmin && (
+                {role.isDefault && (
                   <Badge variant="outline" className="text-[10px] px-1.5 py-0">Default</Badge>
                 )}
               </div>
