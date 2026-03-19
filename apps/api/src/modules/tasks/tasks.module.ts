@@ -1,6 +1,8 @@
 import { Module, type OnModuleInit } from '@nestjs/common';
 import { RbacService } from '@packages/rbac';
 import { EventRegistryService } from '@packages/events';
+import { EntityResolverRegistry } from '@packages/notifications';
+import { tasks } from '@packages/database';
 import { TasksController } from './controllers/tasks.controller';
 import { TasksService } from './services/tasks.service';
 import { TasksWorkflowSeederService } from './services/tasks-workflow-seeder.service';
@@ -19,6 +21,7 @@ export class TasksModule implements OnModuleInit {
   constructor(
     private readonly eventRegistry: EventRegistryService,
     private readonly rbacService: RbacService,
+    private readonly entityResolverRegistry: EntityResolverRegistry,
   ) {}
 
   onModuleInit() {
@@ -59,6 +62,21 @@ export class TasksModule implements OnModuleInit {
       description: 'Fired when a task is soft-deleted',
       payloadSchema: {
         title: { type: 'string', label: 'Title' },
+      },
+    });
+
+    // Register entity resolver for schedule-based notifications and conditions
+    this.entityResolverRegistry.register('tasks', {
+      table: tasks,
+      fields: {
+        status: { type: 'enum', label: 'Status', options: ['open', 'in_progress', 'completed', 'cancelled'] },
+        priority: { type: 'enum', label: 'Priority', options: ['low', 'medium', 'high', 'urgent'] },
+        dueDate: { type: 'date', label: 'Due Date' },
+        title: { type: 'text', label: 'Title' },
+      },
+      recipientFields: {
+        assigneeId: { label: 'Assignee' },
+        createdBy: { label: 'Creator' },
       },
     });
   }
