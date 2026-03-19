@@ -27,3 +27,7 @@ export const AutomationsPage = lazy(
 export const RuleBuilderPage = lazy(
   () => import('./features/automations/pages/RuleBuilderPage'),
 );
+
+export const SettingsPage = lazy(
+  () => import('./features/settings/pages/SettingsPage'),
+);
