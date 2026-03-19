@@ -158,6 +158,20 @@ export class ScheduleScanner {
   private async evaluateScheduleRule(rule: NotificationRule): Promise<void> {
     if (!rule.scheduleEntityType) return;
 
+    // Check day-of-week filter for recurring rules (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
+    if (rule.scheduleDaysOfWeek && rule.scheduleDaysOfWeek.length > 0) {
+      const now = new Date();
+      // Get current day of week in the app timezone
+      const formatter = new Intl.DateTimeFormat('en-US', { weekday: 'short', timeZone: this.appTimezone });
+      const dayName = formatter.format(now);
+      const dayMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+      const currentDay = dayMap[dayName] ?? now.getDay();
+
+      if (!rule.scheduleDaysOfWeek.includes(currentDay)) {
+        return; // Not a matching day — skip
+      }
+    }
+
     const entityResolver = this.entityResolverRegistry.get(rule.scheduleEntityType);
     if (!entityResolver) {
       this.logger.warn(`No entity resolver registered for "${rule.scheduleEntityType}" — skipping rule ${rule.id}`);

@@ -1,4 +1,4 @@
-import { IsString, MinLength, MaxLength, IsIn, IsOptional, IsArray, ValidateNested, IsUUID, IsObject, IsInt, Min, ValidateIf, IsNotEmpty } from 'class-validator';
+import { IsString, MinLength, MaxLength, IsIn, IsOptional, IsArray, ValidateNested, IsUUID, IsObject, IsInt, Min, Max, ValidateIf, IsNotEmpty } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -98,6 +98,14 @@ export class CreateRuleDto {
   @IsString()
   @IsIn(['minutes', 'hours', 'days'])
   scheduleDateUnit?: string;
+
+  @ApiPropertyOptional({ example: [1, 3, 5], description: 'Days of week to run (0=Sun, 1=Mon, ..., 6=Sat). Recurring rules only.' })
+  @IsOptional()
+  @IsArray()
+  @IsInt({ each: true })
+  @Min(0, { each: true })
+  @Max(6, { each: true })
+  scheduleDaysOfWeek?: number[];
 
   // --- Shared ---
 
