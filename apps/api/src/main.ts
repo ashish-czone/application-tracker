@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import { GlobalExceptionFilter } from './filters/global-exception.filter';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
@@ -30,6 +31,7 @@ async function bootstrap() {
       (app as any).useStaticAssets(uploadPath, { prefix: '/uploads' });
     }
 
+    app.useGlobalFilters(new GlobalExceptionFilter());
     app.useGlobalPipes(
       new ValidationPipe({
         whitelist: true,

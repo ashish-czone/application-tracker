@@ -1,6 +1,7 @@
 import { Test } from '@nestjs/testing';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from '../../apps/api/src/app.module';
+import { GlobalExceptionFilter } from '../../apps/api/src/filters/global-exception.filter';
 import cookieParser from 'cookie-parser';
 import { DatabaseService } from '@packages/database';
 
@@ -14,6 +15,7 @@ export async function createTestApp() {
   app.setGlobalPrefix('api/v1', {
     exclude: ['health'],
   });
+  app.useGlobalFilters(new GlobalExceptionFilter());
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
