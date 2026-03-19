@@ -30,3 +30,29 @@ export interface EntityTag {
   tagId: string;
   createdAt: Date;
 }
+
+export interface CategoryGroup {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  sortOrder: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Category {
+  id: string;
+  groupId: string;
+  parentId: string | null;
+  name: string;
+  slug: string;
+  sortOrder: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/** Category with nested children — returned by getTree */
+export interface CategoryTreeNode extends Category {
+  children: CategoryTreeNode[];
+}
