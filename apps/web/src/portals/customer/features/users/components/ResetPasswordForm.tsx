@@ -29,19 +29,19 @@ interface ResetPasswordFormProps {
 }
 
 export function ResetPasswordForm({ user, onClose }: ResetPasswordFormProps) {
-  const form = useForm<ResetPasswordFormValues>({
+  const { control, handleSubmit } = useForm<ResetPasswordFormValues>({
     resolver: zodResolver(resetPasswordSchema),
     defaultValues: { password: '', confirmPassword: '' },
   });
 
   const resetMutation = useResetUserPassword({ onSuccess: onClose });
 
-  const onSubmit = form.handleSubmit((values) => {
-    resetMutation.mutate({ id: user.id, password: values.password });
-  });
+  function onSubmit(data: ResetPasswordFormValues) {
+    resetMutation.mutate({ id: user.id, password: data.password });
+  }
 
   return (
-    <Form form={form} onSubmit={onSubmit}>
+    <>
       <DialogHeader>
         <DialogTitle>Reset Password</DialogTitle>
         <DialogDescription>
@@ -49,29 +49,37 @@ export function ResetPasswordForm({ user, onClose }: ResetPasswordFormProps) {
         </DialogDescription>
       </DialogHeader>
 
-      <div className="space-y-4 py-4">
+      <Form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <FormInput
+          control={control}
           name="password"
           label="New Password"
           type="password"
           placeholder="Enter new password"
         />
         <FormInput
+          control={control}
           name="confirmPassword"
           label="Confirm Password"
           type="password"
           placeholder="Confirm new password"
         />
-      </div>
 
-      <DialogFooter>
-        <Button type="button" variant="outline" onClick={onClose}>
-          Cancel
-        </Button>
-        <Button type="submit" disabled={resetMutation.isPending}>
-          {resetMutation.isPending ? 'Updating...' : 'Update Password'}
-        </Button>
-      </DialogFooter>
-    </Form>
+        {resetMutation.isError && (
+          <p className="text-sm text-destructive" aria-live="polite">
+            {(resetMutation.error as any)?.body?.message || 'Failed to reset password.'}
+          </p>
+        )}
+
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={onClose} disabled={resetMutation.isPending}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={resetMutation.isPending}>
+            {resetMutation.isPending ? 'Updating...' : 'Update Password'}
+          </Button>
+        </DialogFooter>
+      </Form>
+    </>
   );
 }
