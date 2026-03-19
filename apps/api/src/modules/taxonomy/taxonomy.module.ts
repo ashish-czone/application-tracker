@@ -1,11 +1,11 @@
 import { Module, type OnModuleInit } from '@nestjs/common';
 import { TaxonomyModule as TaxonomyPackageModule, TaxonomyService } from '@packages/taxonomy';
 import { RbacService } from '@packages/rbac';
-import { TaxonomyController } from './controllers/taxonomy.controller';
+import { TagsController } from './controllers/tags.controller';
 
 @Module({
   imports: [TaxonomyPackageModule],
-  controllers: [TaxonomyController],
+  controllers: [TagsController],
 })
 export class TaxonomyManagementModule implements OnModuleInit {
   constructor(private readonly rbacService: RbacService) {}
