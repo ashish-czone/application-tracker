@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { DatabaseService, eq, and, or, isNull, ilike, asc, desc, count, tasks } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
 import { WorkflowEngineService, WorkflowRegistryService, type AvailableTransition } from '@packages/workflows';
+import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import type { PaginatedResponse } from '@packages/common';
 import { TASKS_TASK_CREATED, TASKS_TASK_UPDATED, TASKS_TASK_DELETED } from '../events/types';
 
@@ -49,12 +50,17 @@ export interface UpdateTaskInput {
 
 @Injectable()
 export class TasksService {
+  private readonly logger: ContextLogger;
+
   constructor(
     private readonly database: DatabaseService,
     private readonly domainEventEmitter: DomainEventEmitter,
     private readonly workflowEngine: WorkflowEngineService,
     private readonly workflowRegistry: WorkflowRegistryService,
-  ) {}
+    appLogger: AppLoggerService,
+  ) {
+    this.logger = appLogger.forContext(TasksService.name);
+  }
 
   async list(query: ListTasksQuery): Promise<PaginatedResponse<TaskResponse>> {
     const page = query.page ?? 1;
@@ -147,6 +153,8 @@ export class TasksService {
       })
       .returning();
 
+    this.logger.log('Task created', { taskId: task.id, actorId });
+
     this.domainEventEmitter.emit(TASKS_TASK_CREATED, {
       entityType: 'tasks',
       entityId: task.id,
@@ -182,6 +190,8 @@ export class TasksService {
       .where(eq(tasks.id, id))
       .returning();
 
+    this.logger.log('Task updated', { taskId: id, actorId, changes: Object.keys(updateValues) });
+
     this.domainEventEmitter.emit(TASKS_TASK_UPDATED, {
       entityType: 'tasks',
       entityId: id,
@@ -201,6 +211,8 @@ export class TasksService {
       .update(tasks)
       .set({ deletedAt: new Date(), deletedBy: actorId })
       .where(eq(tasks.id, id));
+
+    this.logger.log('Task deleted', { taskId: id, actorId });
 
     this.domainEventEmitter.emit(TASKS_TASK_DELETED, {
       entityType: 'tasks',
@@ -237,6 +249,8 @@ export class TasksService {
       .set({ status: toState })
       .where(eq(tasks.id, id))
       .returning();
+
+    this.logger.log('Task status transitioned', { taskId: id, actorId, fromState: task.status, toState });
 
     return this.toResponse(updated);
   }

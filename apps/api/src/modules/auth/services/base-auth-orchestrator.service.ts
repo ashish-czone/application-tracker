@@ -3,6 +3,7 @@ import { AuthService } from '@packages/auth';
 import { RbacService } from '@packages/rbac';
 import { DatabaseService, users, eq } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
+import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import {
   AUTH_USER_REGISTERED,
   AUTH_USER_LOGGED_IN,
@@ -14,13 +15,17 @@ import {
 @Injectable()
 export class BaseAuthOrchestratorService {
   protected readonly userType!: string;
+  protected readonly logger: ContextLogger;
 
   constructor(
     protected readonly authService: AuthService,
     protected readonly rbacService: RbacService,
     protected readonly database: DatabaseService,
     protected readonly domainEventEmitter: DomainEventEmitter,
-  ) {}
+    appLogger: AppLoggerService,
+  ) {
+    this.logger = appLogger.forContext(BaseAuthOrchestratorService.name);
+  }
 
   async login(identifier: string, password: string, userType: string) {
     const { userId } = await this.authService.verifyPasswordCredential(identifier, password);
@@ -36,6 +41,8 @@ export class BaseAuthOrchestratorService {
 
     const accessToken = this.authService.generateAccessToken({ userId, userType, permissions });
     const { token: refreshToken } = await this.authService.createRefreshToken(userId);
+
+    this.logger.log('User logged in', { userId, userType });
 
     this.domainEventEmitter.emit(AUTH_USER_LOGGED_IN, {
       entityType: 'users',
@@ -65,14 +72,18 @@ export class BaseAuthOrchestratorService {
 
   async logout(refreshToken: string) {
     await this.authService.logout(refreshToken);
+    this.logger.log('User logged out', {});
   }
 
   async logoutAll(userId: string) {
     await this.authService.logoutAll(userId);
+    this.logger.log('All sessions revoked', { userId });
   }
 
   async changePassword(userId: string, oldPassword: string, newPassword: string) {
     await this.authService.changePassword(userId, oldPassword, newPassword);
+
+    this.logger.log('Password changed', { userId });
 
     const user = await this.loadUser(userId);
     this.domainEventEmitter.emit(AUTH_PASSWORD_CHANGED, {
@@ -90,6 +101,8 @@ export class BaseAuthOrchestratorService {
 
   async forgotPassword(identifier: string) {
     const { token, expiresAt } = await this.authService.createPasswordResetToken(identifier);
+
+    this.logger.log('Password reset requested', { userType: this.userType });
 
     if (token) {
       this.domainEventEmitter.emit(AUTH_PASSWORD_RESET_REQUESTED, {
@@ -110,6 +123,8 @@ export class BaseAuthOrchestratorService {
 
   async resetPassword(token: string, newPassword: string) {
     await this.authService.resetPassword(token, newPassword);
+
+    this.logger.log('Password reset completed', { userType: this.userType });
 
     this.domainEventEmitter.emit(AUTH_PASSWORD_RESET_COMPLETED, {
       entityType: 'users',
@@ -166,6 +181,8 @@ export class BaseAuthOrchestratorService {
     const permissions = await this.rbacService.getPermissionsForUser(user.id, userType);
     const accessToken = this.authService.generateAccessToken({ userId: user.id, userType, permissions });
     const { token: refreshToken } = await this.authService.createRefreshToken(user.id);
+
+    this.logger.log('User registered', { userId: user.id, userType });
 
     this.domainEventEmitter.emit(AUTH_USER_REGISTERED, {
       entityType: 'users',

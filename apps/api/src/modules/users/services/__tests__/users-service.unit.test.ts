@@ -1,6 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { NotFoundException, ConflictException } from '@nestjs/common';
 import { UsersService } from '../users.service';
+import type { AppLoggerService } from '@packages/logger';
+
+function createMockAppLogger(): AppLoggerService {
+  const ctx = { log: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
+  return { forContext: vi.fn().mockReturnValue(ctx), log: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } as any;
+}
 
 // Mock database helpers
 function createMockDb() {
@@ -87,7 +93,7 @@ describe('UsersService', () => {
     mockRbacService = createMockRbacService();
     mockEventEmitter = createMockEventEmitter();
     const databaseService = createMockDatabaseService(mockDb);
-    service = new UsersService(mockAuthService, mockRbacService, databaseService, mockEventEmitter);
+    service = new UsersService(mockAuthService, mockRbacService, databaseService, mockEventEmitter, createMockAppLogger());
   });
 
   describe('findOneOrFail', () => {

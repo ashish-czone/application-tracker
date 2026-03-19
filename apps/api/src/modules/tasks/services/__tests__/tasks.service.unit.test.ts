@@ -1,6 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { NotFoundException } from '@nestjs/common';
 import { TasksService } from '../tasks.service';
+import type { AppLoggerService } from '@packages/logger';
+
+function createMockAppLogger(): AppLoggerService {
+  const ctx = { log: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
+  return { forContext: vi.fn().mockReturnValue(ctx), log: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } as any;
+}
 
 function createMockChain() {
   const chain: any = {};
@@ -88,6 +94,7 @@ describe('TasksService', () => {
       eventEmitterMock as any,
       workflowEngineMock as any,
       workflowRegistryMock as any,
+      createMockAppLogger(),
     );
   });
 
