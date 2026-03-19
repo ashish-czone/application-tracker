@@ -19,3 +19,11 @@ export const WorkflowsListPage = lazy(
 export const WorkflowEditorPage = lazy(
   () => import('./features/workflows/pages/WorkflowEditorPage'),
 );
+
+export const AutomationsPage = lazy(
+  () => import('./features/automations/pages/AutomationsPage'),
+);
+
+export const RuleBuilderPage = lazy(
+  () => import('./features/automations/pages/RuleBuilderPage'),
+);
