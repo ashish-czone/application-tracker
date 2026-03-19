@@ -10,6 +10,7 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { GlobalExceptionFilter } from '../global-exception.filter';
+import { runWithCorrelationId } from '@packages/logger';
 
 function createMockHost() {
   const json = vi.fn();
@@ -85,7 +86,6 @@ describe('GlobalExceptionFilter', () => {
 
   it('should normalize ValidationPipe errors into details array', () => {
     const { host, status, json } = createMockHost();
-    // ValidationPipe creates BadRequestException with { message: string[], error: 'Bad Request' }
     const exception = new BadRequestException({
       message: [
         'email must be an email',
@@ -121,14 +121,70 @@ describe('GlobalExceptionFilter', () => {
 
   // --- 5xx logging ---
 
-  it('should log server errors with stack trace', () => {
+  it('should log server errors at error level with correlationId', () => {
     const { host } = createMockHost();
     const logSpy = vi.spyOn((filter as any).logger, 'error').mockImplementation(() => {});
-    filter.catch(new InternalServerErrorException('DB connection lost'), host);
+
+    runWithCorrelationId('req-5xx', () => {
+      filter.catch(new InternalServerErrorException('DB connection lost'), host);
+    });
 
     expect(logSpy).toHaveBeenCalled();
     const [context] = logSpy.mock.calls[0];
-    expect(context).toMatchObject({ statusCode: 500, message: 'DB connection lost' });
+    expect(context).toMatchObject({
+      correlationId: 'req-5xx',
+      statusCode: 500,
+      message: 'DB connection lost',
+      method: 'GET',
+      url: '/test',
+    });
+  });
+
+  // --- Warn-level logging (401, 403, 429) ---
+
+  it('should log UnauthorizedException at warn level', () => {
+    const { host } = createMockHost();
+    const warnSpy = vi.spyOn((filter as any).logger, 'warn').mockImplementation(() => {});
+
+    runWithCorrelationId('req-401', () => {
+      filter.catch(new UnauthorizedException('Invalid token'), host);
+    });
+
+    expect(warnSpy).toHaveBeenCalled();
+    const [context] = warnSpy.mock.calls[0];
+    expect(context).toMatchObject({
+      correlationId: 'req-401',
+      statusCode: 401,
+    });
+  });
+
+  it('should log ForbiddenException at warn level', () => {
+    const { host } = createMockHost();
+    const warnSpy = vi.spyOn((filter as any).logger, 'warn').mockImplementation(() => {});
+
+    runWithCorrelationId('req-403', () => {
+      filter.catch(new ForbiddenException('No permission'), host);
+    });
+
+    expect(warnSpy).toHaveBeenCalled();
+    const [context] = warnSpy.mock.calls[0];
+    expect(context).toMatchObject({
+      correlationId: 'req-403',
+      statusCode: 403,
+    });
+  });
+
+  it('should not log 400/404/409 at warn or error level', () => {
+    const { host } = createMockHost();
+    const errorSpy = vi.spyOn((filter as any).logger, 'error').mockImplementation(() => {});
+    const warnSpy = vi.spyOn((filter as any).logger, 'warn').mockImplementation(() => {});
+
+    filter.catch(new BadRequestException('Bad input'), host);
+    filter.catch(new NotFoundException('Not found'), host);
+    filter.catch(new ConflictException('Conflict'), host);
+
+    expect(errorSpy).not.toHaveBeenCalled();
+    expect(warnSpy).not.toHaveBeenCalled();
   });
 
   // --- Unknown exceptions ---
@@ -143,14 +199,21 @@ describe('GlobalExceptionFilter', () => {
     expect(body.error).toBe('INTERNAL_SERVER_ERROR');
   });
 
-  it('should log non-HttpException errors', () => {
+  it('should log non-HttpException errors with correlationId', () => {
     const { host } = createMockHost();
     const logSpy = vi.spyOn((filter as any).logger, 'error').mockImplementation(() => {});
-    filter.catch(new Error('Unexpected crash'), host);
+
+    runWithCorrelationId('req-crash', () => {
+      filter.catch(new Error('Unexpected crash'), host);
+    });
 
     expect(logSpy).toHaveBeenCalled();
     const [context] = logSpy.mock.calls[0];
-    expect(context).toMatchObject({ statusCode: 500, message: 'Unexpected crash' });
+    expect(context).toMatchObject({
+      correlationId: 'req-crash',
+      statusCode: 500,
+      message: 'Unexpected crash',
+    });
   });
 
   it('should hide error details in production for unknown exceptions', () => {
