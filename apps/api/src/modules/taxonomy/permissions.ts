@@ -3,4 +3,6 @@ export const TAXONOMY_PERMISSIONS = {
   TAG_GROUPS_MANAGE: 'taxonomy.tag-groups.manage',
   TAGS_READ: 'taxonomy.tags.read',
   TAGS_MANAGE: 'taxonomy.tags.manage',
+  CATEGORIES_READ: 'taxonomy.categories.read',
+  CATEGORIES_MANAGE: 'taxonomy.categories.manage',
 } as const;
