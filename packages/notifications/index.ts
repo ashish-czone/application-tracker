@@ -22,6 +22,7 @@ export type {
   EntityResolverConfig,
   FieldType,
   FieldConfig,
+  ResolvedFieldConfig,
   RecipientFieldConfig,
 } from './types';
 export {

@@ -2,6 +2,7 @@ import { Module, type OnModuleInit } from '@nestjs/common';
 import { RbacService } from '@packages/rbac';
 import { EventRegistryService } from '@packages/events';
 import { EntityResolverRegistry } from '@packages/notifications';
+import { WorkflowRegistryService } from '@packages/workflows';
 import { tasks } from '@packages/database';
 import { TasksController } from './controllers/tasks.controller';
 import { TasksService } from './services/tasks.service';
@@ -22,6 +23,7 @@ export class TasksModule implements OnModuleInit {
     private readonly eventRegistry: EventRegistryService,
     private readonly rbacService: RbacService,
     private readonly entityResolverRegistry: EntityResolverRegistry,
+    private readonly workflowRegistry: WorkflowRegistryService,
   ) {}
 
   onModuleInit() {
@@ -66,10 +68,18 @@ export class TasksModule implements OnModuleInit {
     });
 
     // Register entity resolver for schedule-based notifications and conditions
+    const workflowRegistry = this.workflowRegistry;
     this.entityResolverRegistry.register('tasks', {
       table: tasks,
       fields: {
-        status: { type: 'enum', label: 'Status', options: ['open', 'in_progress', 'completed', 'cancelled'] },
+        status: {
+          type: 'enum',
+          label: 'Status',
+          resolveOptions: () => {
+            const workflow = workflowRegistry.getByEntityField('tasks', 'status');
+            return workflow ? workflow.states.map((s) => s.name) : [];
+          },
+        },
         priority: { type: 'enum', label: 'Priority', options: ['low', 'medium', 'high', 'urgent'] },
         dueDate: { type: 'date', label: 'Due Date' },
         title: { type: 'text', label: 'Title' },

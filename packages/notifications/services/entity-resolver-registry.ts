@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import type { EntityResolverConfig } from '../types';
+import type { EntityResolverConfig, ResolvedFieldConfig, RecipientFieldConfig } from '../types';
 
 @Injectable()
 export class EntityResolverRegistry {
@@ -47,5 +47,43 @@ export class EntityResolverRegistry {
 
   getAll(): Map<string, EntityResolverConfig> {
     return this.resolvers;
+  }
+
+  /**
+   * Resolve all dynamic options for an entity's fields.
+   * Calls resolveOptions() where configured, returns a clean config without functions.
+   */
+  async resolveAllFields(entityType: string): Promise<{
+    fields: Record<string, ResolvedFieldConfig>;
+    recipientFields: Record<string, RecipientFieldConfig>;
+  } | null> {
+    const config = this.resolvers.get(entityType);
+    if (!config) return null;
+
+    const resolvedFields: Record<string, ResolvedFieldConfig> = {};
+
+    for (const [fieldName, fieldConfig] of Object.entries(config.fields)) {
+      let options = fieldConfig.options;
+
+      if (fieldConfig.resolveOptions) {
+        try {
+          options = await fieldConfig.resolveOptions();
+        } catch (error) {
+          this.logger.warn(`Failed to resolve options for ${entityType}.${fieldName}: ${error}`);
+          options = [];
+        }
+      }
+
+      resolvedFields[fieldName] = {
+        type: fieldConfig.type,
+        label: fieldConfig.label,
+        ...(options && options.length > 0 ? { options } : {}),
+      };
+    }
+
+    return {
+      fields: resolvedFields,
+      recipientFields: config.recipientFields,
+    };
   }
 }
