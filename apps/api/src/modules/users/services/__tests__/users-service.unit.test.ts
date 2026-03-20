@@ -69,6 +69,7 @@ function buildUser(overrides: Record<string, unknown> = {}) {
   return {
     id: 'user-1',
     email: 'test@example.com',
+    phone: null,
     firstName: 'John',
     lastName: 'Doe',
     userType: 'admin',
@@ -174,6 +175,12 @@ describe('UsersService', () => {
           firstName: 'John',
           lastName: 'Doe',
           userType: 'admin',
+          after: expect.objectContaining({
+            email: 'test@example.com',
+            firstName: 'John',
+            lastName: 'Doe',
+            userType: 'admin',
+          }),
         },
       });
     });
@@ -288,6 +295,8 @@ describe('UsersService', () => {
         actorId: 'actor-1',
         payload: {
           changes: ['firstName'],
+          before: expect.objectContaining({ firstName: 'John' }),
+          after: expect.objectContaining({ firstName: 'Jane' }),
         },
       });
     });
@@ -340,6 +349,11 @@ describe('UsersService', () => {
           email: 'test@example.com',
           firstName: 'John',
           lastName: 'Doe',
+          before: expect.objectContaining({
+            email: 'test@example.com',
+            firstName: 'John',
+            lastName: 'Doe',
+          }),
         },
       });
     });

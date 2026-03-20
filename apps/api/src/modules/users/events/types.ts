@@ -6,16 +6,28 @@ export const USERS_USER_DELETED = 'users.UserDeleted' as const;
 
 // --- Payload types ---
 
-export interface UserCreatedPayload {
+export interface UserSnapshot {
   email: string;
+  phone: string | null;
   firstName: string;
   lastName: string;
   userType: string;
   [key: string]: unknown;
 }
 
+export interface UserCreatedPayload {
+  email: string;
+  firstName: string;
+  lastName: string;
+  userType: string;
+  after: UserSnapshot;
+  [key: string]: unknown;
+}
+
 export interface UserUpdatedPayload {
   changes: string[];
+  before: UserSnapshot;
+  after: UserSnapshot;
   [key: string]: unknown;
 }
 
@@ -23,6 +35,7 @@ export interface UserDeletedPayload {
   email: string;
   firstName: string;
   lastName: string;
+  before: UserSnapshot;
   [key: string]: unknown;
 }
 

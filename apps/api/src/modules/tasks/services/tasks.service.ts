@@ -4,7 +4,7 @@ import { DomainEventEmitter } from '@packages/events';
 import { WorkflowEngineService, WorkflowRegistryService, type AvailableTransition } from '@packages/workflows';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import type { PaginatedResponse } from '@packages/common';
-import { TASKS_TASK_CREATED, TASKS_TASK_UPDATED, TASKS_TASK_DELETED } from '../events/types';
+import { TASKS_TASK_CREATED, TASKS_TASK_UPDATED, TASKS_TASK_DELETED, type TaskSnapshot } from '../events/types';
 
 const TASK_WORKFLOW_SLUG = 'task-status';
 
@@ -164,6 +164,7 @@ export class TasksService {
         status: task.status,
         priority: task.priority,
         assigneeId: task.assigneeId,
+        after: this.toSnapshot(task),
       },
     });
 
@@ -171,7 +172,7 @@ export class TasksService {
   }
 
   async update(id: string, data: UpdateTaskInput, actorId: string): Promise<TaskResponse> {
-    await this.findOneOrFail(id);
+    const existing = await this.findOneOrFail(id);
 
     const updateValues: Record<string, unknown> = {};
     if (data.title !== undefined) updateValues.title = data.title;
@@ -181,7 +182,7 @@ export class TasksService {
     if (data.dueDate !== undefined) updateValues.dueDate = data.dueDate;
 
     if (Object.keys(updateValues).length === 0) {
-      return this.findOneOrFail(id);
+      return existing;
     }
 
     const [updated] = await this.database.db
@@ -198,6 +199,8 @@ export class TasksService {
       actorId,
       payload: {
         changes: Object.keys(updateValues),
+        before: this.toSnapshot(existing),
+        after: this.toSnapshot(updated),
       },
     });
 
@@ -220,6 +223,7 @@ export class TasksService {
       actorId,
       payload: {
         title: task.title,
+        before: this.toSnapshot(task),
       },
     });
   }
@@ -258,6 +262,17 @@ export class TasksService {
   async getAvailableTransitions(id: string): Promise<AvailableTransition[]> {
     const task = await this.findOneOrFail(id);
     return this.workflowEngine.getAvailableTransitions(TASK_WORKFLOW_SLUG, task.status);
+  }
+
+  private toSnapshot(entity: TaskResponse | typeof tasks.$inferSelect): TaskSnapshot {
+    return {
+      title: entity.title,
+      description: entity.description,
+      status: entity.status,
+      priority: entity.priority,
+      assigneeId: entity.assigneeId,
+      dueDate: entity.dueDate,
+    };
   }
 
   private toResponse(row: typeof tasks.$inferSelect): TaskResponse {
