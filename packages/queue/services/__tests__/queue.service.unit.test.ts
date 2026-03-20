@@ -23,13 +23,25 @@ vi.mock('bullmq', () => ({
 
 import { QueueService } from '../queue.service';
 
+const mockContextLogger = {
+  log: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  debug: vi.fn(),
+};
+
+const mockAppLogger = {
+  forContext: vi.fn().mockReturnValue(mockContextLogger),
+} as any;
+
 function createQueueService(workerEnabled = 'true') {
   const originalEnv = process.env.WORKER_ENABLED;
   process.env.WORKER_ENABLED = workerEnabled;
 
-  const service = new QueueService({
-    redisUrl: 'redis://localhost:6379',
-  });
+  const service = new QueueService(
+    { redisUrl: 'redis://localhost:6379' },
+    mockAppLogger,
+  );
 
   process.env.WORKER_ENABLED = originalEnv;
   return service;

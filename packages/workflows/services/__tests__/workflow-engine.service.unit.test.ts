@@ -3,7 +3,19 @@ import { NotFoundException, UnprocessableEntityException, ForbiddenException } f
 import { WorkflowEngineService } from '../workflow-engine.service';
 import { WorkflowRegistryService } from '../workflow-registry.service';
 import { WorkflowGuardRegistry } from '../workflow-guard-registry.service';
+import type { RbacService } from '@packages/rbac';
 import type { CachedWorkflowDefinition } from '../../types';
+
+const mockContextLogger = {
+  log: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  debug: vi.fn(),
+};
+
+const mockAppLogger = {
+  forContext: vi.fn().mockReturnValue(mockContextLogger),
+} as any;
 
 const mockDefinition: CachedWorkflowDefinition = {
   id: 'def-1',
@@ -66,7 +78,7 @@ describe('WorkflowEngineService', () => {
       getBySlug: vi.fn().mockReturnValue(mockDefinition),
     };
 
-    guardRegistryMock = new WorkflowGuardRegistry();
+    guardRegistryMock = new WorkflowGuardRegistry(mockAppLogger);
 
     const mockReturning = vi.fn().mockResolvedValue([
       {

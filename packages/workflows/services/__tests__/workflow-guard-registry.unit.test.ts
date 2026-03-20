@@ -1,6 +1,17 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { WorkflowGuardRegistry } from '../workflow-guard-registry.service';
 import type { WorkflowGuardContext } from '../../types';
+
+const mockContextLogger = {
+  log: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  debug: vi.fn(),
+};
+
+const mockAppLogger = {
+  forContext: vi.fn().mockReturnValue(mockContextLogger),
+} as any;
 
 describe('WorkflowGuardRegistry', () => {
   let registry: WorkflowGuardRegistry;
@@ -16,7 +27,7 @@ describe('WorkflowGuardRegistry', () => {
   };
 
   beforeEach(() => {
-    registry = new WorkflowGuardRegistry();
+    registry = new WorkflowGuardRegistry(mockAppLogger);
   });
 
   describe('register', () => {
