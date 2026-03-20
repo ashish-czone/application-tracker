@@ -3,12 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "main": "index.ts",
-  "scripts": {
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
-    "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio"
-  },
+  "scripts": {},
   "dependencies": {
     "@nestjs/common": "^11.0.0",
     "drizzle-orm": "^0.45.1",
