@@ -7,6 +7,18 @@ export interface DataGridFilter {
   value: string;
 }
 
+export interface DataGridFilterOption {
+  label: string;
+  value: string;
+}
+
+export interface DataGridFilterConfig {
+  key: string;
+  label: string;
+  placeholder?: string;
+  options: DataGridFilterOption[];
+}
+
 export interface DataGridEmptyState {
   icon?: ComponentType<{ className?: string }>;
   title: string;
