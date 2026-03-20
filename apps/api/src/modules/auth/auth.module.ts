@@ -4,6 +4,7 @@ import { AuthModule as AuthPackageModule } from '@packages/auth';
 import { RbacModule } from '@packages/rbac';
 import { EventRegistryService } from '@packages/events';
 import { AppConfigService } from '@packages/settings';
+import { AuditRegistryService } from '@packages/audit';
 import { ClientAuthController } from './controllers/client-auth.controller';
 import { AdminAuthController } from './controllers/admin-auth.controller';
 import { BaseAuthOrchestratorService } from './services/base-auth-orchestrator.service';
@@ -39,6 +40,7 @@ export class AuthOrchestratorModule implements OnModuleInit {
   constructor(
     private readonly eventRegistry: EventRegistryService,
     private readonly appConfig: AppConfigService,
+    private readonly auditRegistry: AuditRegistryService,
   ) {}
 
   onModuleInit() {
@@ -55,6 +57,12 @@ export class AuthOrchestratorModule implements OnModuleInit {
         refreshTokenExpiresIn: { label: 'Refresh Token Lifetime', type: 'string', description: 'Duration string (e.g., 7d, 30d)' },
         resetTokenExpiresIn: { label: 'Password Reset Token Lifetime', type: 'string', description: 'Duration string (e.g., 1h, 24h)' },
       },
+    });
+
+    // Register auditable events
+    this.auditRegistry.register('auth', {
+      events: [AUTH_USER_REGISTERED, AUTH_USER_LOGGED_IN, AUTH_PASSWORD_CHANGED],
+      sensitiveFields: ['token', 'password', 'identifier'],
     });
 
     // Register events

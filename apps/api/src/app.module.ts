@@ -12,6 +12,7 @@ import { QueueModule } from '@packages/queue';
 import { NotificationsModule } from '@packages/notifications';
 import { NotificationChannelsModule } from '@packages/notification-channels';
 import { WorkflowsModule } from '@packages/workflows';
+import { AuditModule } from '@packages/audit';
 import { MediaModule } from '@packages/media';
 import { AuthGuard } from '@packages/auth';
 import { RbacGuard } from '@packages/rbac';
@@ -24,6 +25,7 @@ import { WorkflowsManagementModule } from './modules/workflows/workflows.module'
 import { TaxonomyManagementModule } from './modules/taxonomy/taxonomy.module';
 import { SettingsManagementModule } from './modules/settings/settings.module';
 import { UserNotificationsModule } from './modules/user-notifications/user-notifications.module';
+import { AuditManagementModule } from './modules/audit/audit.module';
 import { SharedModule } from './modules/shared/shared.module';
 import { validate } from './config/env.validation';
 
@@ -66,6 +68,7 @@ import { validate } from './config/env.validation';
     SharedModule,
     NotificationChannelsModule,
     NotificationsModule,
+    AuditModule,
     WorkflowsModule,
     AuthOrchestratorModule,
     UsersModule,
@@ -76,6 +79,7 @@ import { validate } from './config/env.validation';
     TaxonomyManagementModule,
     SettingsManagementModule,
     UserNotificationsModule,
+    AuditManagementModule,
   ],
   providers: [
     {
