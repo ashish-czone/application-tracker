@@ -2,12 +2,18 @@
   "version": "7",
   "dialect": "postgresql",
   "entries": [
-    {
-      "idx": 0,
-      "version": "7",
-      "when": 1774000000000,
-      "tag": "0000_initial",
-      "breakpoints": true
-    }
+    { "idx": 0, "version": "7", "when": 1773926800000, "tag": "0000_initial", "breakpoints": true },
+    { "idx": 1, "version": "7", "when": 1774004400000, "tag": "0001_multi_day_reminders", "breakpoints": true },
+    { "idx": 2, "version": "7", "when": 1774090800000, "tag": "0002_workflow_tables", "breakpoints": true },
+    { "idx": 3, "version": "7", "when": 1774177200000, "tag": "0003_add_users_phone", "breakpoints": true },
+    { "idx": 4, "version": "7", "when": 1774350000000, "tag": "0004_rbac_simplification", "breakpoints": true },
+    { "idx": 5, "version": "7", "when": 1774436400000, "tag": "0005_remove_is_superadmin", "breakpoints": true },
+    { "idx": 6, "version": "7", "when": 1774522800000, "tag": "0006_rename_super_admin", "breakpoints": true },
+    { "idx": 7, "version": "7", "when": 1774609200000, "tag": "0007_taxonomy_tables", "breakpoints": true },
+    { "idx": 8, "version": "7", "when": 1774695600000, "tag": "0008_category_tables", "breakpoints": true },
+    { "idx": 9, "version": "7", "when": 1774782000000, "tag": "0009_schedule_days_of_week", "breakpoints": true },
+    { "idx": 10, "version": "7", "when": 1774868400000, "tag": "0010_audit_logs", "breakpoints": true },
+    { "idx": 11, "version": "7", "when": 1774954800000, "tag": "0011_categories_hierarchy", "breakpoints": true },
+    { "idx": 12, "version": "7", "when": 1775041200000, "tag": "0012_candidates", "breakpoints": true }
   ]
 }

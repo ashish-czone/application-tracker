@@ -21,6 +21,7 @@ import { TaxonomyModule } from '@packages/taxonomy';
 import { HierarchyModule } from '@packages/hierarchy';
 import { AuthOrchestratorModule } from './modules/auth/auth.module';
 import { SharedModule } from './modules/shared/shared.module';
+import { CandidatesModule } from './modules/candidates/candidates.module';
 import { validate } from './config/env.validation';
 
 @Module({
@@ -67,7 +68,8 @@ import { validate } from './config/env.validation';
     HierarchyModule,
     TaxonomyModule,
     AuthOrchestratorModule,
-    // Domain modules (added as they are built)
+    // Domain modules
+    CandidatesModule,
   ],
   providers: [
     {
