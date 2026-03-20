@@ -4,7 +4,7 @@ import { EventRegistryService } from '@packages/events';
 import { EntityResolverRegistry } from '@packages/notifications';
 import { WorkflowRegistryService } from '@packages/workflows';
 import { AuditRegistryService } from '@packages/audit';
-import { tasks } from '@packages/database';
+import { tasks } from './schema/tasks';
 import { TasksController } from './controllers/tasks.controller';
 import { TasksService } from './services/tasks.service';
 import { TasksWorkflowSeederService } from './services/tasks-workflow-seeder.service';

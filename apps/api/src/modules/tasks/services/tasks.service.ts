@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { DatabaseService, eq, and, or, isNull, ilike, asc, desc, count, tasks } from '@packages/database';
+import { DatabaseService, eq, and, or, isNull, ilike, asc, desc, count } from '@packages/database';
+import { tasks } from '../schema/tasks';
 import { DomainEventEmitter } from '@packages/events';
 import { WorkflowEngineService, WorkflowRegistryService, type AvailableTransition } from '@packages/workflows';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
