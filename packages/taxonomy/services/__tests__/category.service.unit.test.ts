@@ -23,14 +23,26 @@ function createMockDb() {
   };
 }
 
+function createMockHierarchyService() {
+  return {
+    computeInsertValues: vi.fn().mockReturnValue({ path: '/c1', depth: 0 }),
+    getAncestors: vi.fn().mockResolvedValue([]),
+    getDescendants: vi.fn().mockResolvedValue([]),
+    move: vi.fn().mockResolvedValue(undefined),
+    backfillPaths: vi.fn().mockResolvedValue(0),
+  };
+}
+
 describe('CategoryService', () => {
   let service: CategoryService;
   let mockDb: ReturnType<typeof createMockDb>;
+  let mockHierarchy: ReturnType<typeof createMockHierarchyService>;
 
   beforeEach(() => {
     mockDb = createMockDb();
+    mockHierarchy = createMockHierarchyService();
     const databaseService = { db: mockDb } as any;
-    service = new CategoryService(databaseService);
+    service = new CategoryService(databaseService, mockHierarchy as any);
   });
 
   // --- Category Groups ---
@@ -71,18 +83,21 @@ describe('CategoryService', () => {
     it('should create a root category', async () => {
       const group = { id: 'g1', name: 'Departments', slug: 'departments', description: null, sortOrder: 0, createdAt: new Date(), updatedAt: new Date() };
       vi.spyOn(service, 'findCategoryGroupByIdOrFail').mockResolvedValueOnce(group);
-      const cat = { id: 'c1', groupId: 'g1', parentId: null, name: 'Engineering', slug: 'engineering', sortOrder: 0, createdAt: new Date(), updatedAt: new Date() };
-      mockDb._chain.returning.mockResolvedValueOnce([cat]);
+      const cat = { id: 'c1', groupId: 'g1', parentId: null, path: '/', depth: 0, name: 'Engineering', slug: 'engineering', sortOrder: 0, createdAt: new Date(), updatedAt: new Date() };
+      const catWithPath = { ...cat, path: '/c1', depth: 0 };
+      // First returning: insert, second returning: update with path
+      mockDb._chain.returning.mockResolvedValueOnce([cat]).mockResolvedValueOnce([catWithPath]);
 
       const result = await service.createCategory({ groupId: 'g1', name: 'Engineering', slug: 'engineering' });
 
-      expect(result).toEqual(cat);
+      expect(result).toEqual(catWithPath);
+      expect(mockHierarchy.computeInsertValues).toHaveBeenCalledWith(null, 'c1');
     });
 
     it('should reject parent from different group', async () => {
       const group = { id: 'g1', name: 'Departments', slug: 'departments', description: null, sortOrder: 0, createdAt: new Date(), updatedAt: new Date() };
       vi.spyOn(service, 'findCategoryGroupByIdOrFail').mockResolvedValueOnce(group);
-      const parent = { id: 'c2', groupId: 'g2', parentId: null, name: 'Other', slug: 'other', sortOrder: 0, createdAt: new Date(), updatedAt: new Date() };
+      const parent = { id: 'c2', groupId: 'g2', parentId: null, path: '/c2', depth: 0, name: 'Other', slug: 'other', sortOrder: 0, createdAt: new Date(), updatedAt: new Date() };
       vi.spyOn(service, 'findCategoryByIdOrFail').mockResolvedValueOnce(parent);
 
       await expect(service.createCategory({ groupId: 'g1', parentId: 'c2', name: 'X', slug: 'x' }))
@@ -92,7 +107,7 @@ describe('CategoryService', () => {
 
   describe('deleteCategory', () => {
     it('should throw ConflictException if category has children', async () => {
-      const cat = { id: 'c1', groupId: 'g1', parentId: null, name: 'Eng', slug: 'eng', sortOrder: 0, createdAt: new Date(), updatedAt: new Date() };
+      const cat = { id: 'c1', groupId: 'g1', parentId: null, path: '/c1', depth: 0, name: 'Eng', slug: 'eng', sortOrder: 0, createdAt: new Date(), updatedAt: new Date() };
       vi.spyOn(service, 'findCategoryById').mockResolvedValueOnce(cat);
       mockDb._chain.where.mockResolvedValueOnce([{ total: 2 }]);
 
@@ -103,16 +118,19 @@ describe('CategoryService', () => {
 
   describe('moveCategory', () => {
     it('should reject moving category to itself', async () => {
-      const cat = { id: 'c1', groupId: 'g1', parentId: null, name: 'Eng', slug: 'eng', sortOrder: 0, createdAt: new Date(), updatedAt: new Date() };
-      vi.spyOn(service, 'findCategoryByIdOrFail').mockResolvedValueOnce(cat);
+      const cat = { id: 'c1', groupId: 'g1', parentId: null, path: '/c1', depth: 0, name: 'Eng', slug: 'eng', sortOrder: 0, createdAt: new Date(), updatedAt: new Date() };
+      vi.spyOn(service, 'findCategoryByIdOrFail')
+        .mockResolvedValueOnce(cat)   // the category being moved
+        .mockResolvedValueOnce(cat);  // the new parent (same id)
+      mockHierarchy.move.mockRejectedValueOnce(new ConflictException('A node cannot be its own parent'));
 
       await expect(service.moveCategory('c1', 'c1'))
         .rejects.toThrow(ConflictException);
     });
 
     it('should reject moving to a different group', async () => {
-      const cat = { id: 'c1', groupId: 'g1', parentId: null, name: 'Eng', slug: 'eng', sortOrder: 0, createdAt: new Date(), updatedAt: new Date() };
-      const target = { id: 'c2', groupId: 'g2', parentId: null, name: 'Other', slug: 'other', sortOrder: 0, createdAt: new Date(), updatedAt: new Date() };
+      const cat = { id: 'c1', groupId: 'g1', parentId: null, path: '/c1', depth: 0, name: 'Eng', slug: 'eng', sortOrder: 0, createdAt: new Date(), updatedAt: new Date() };
+      const target = { id: 'c2', groupId: 'g2', parentId: null, path: '/c2', depth: 0, name: 'Other', slug: 'other', sortOrder: 0, createdAt: new Date(), updatedAt: new Date() };
       vi.spyOn(service, 'findCategoryByIdOrFail')
         .mockResolvedValueOnce(cat)
         .mockResolvedValueOnce(target);
@@ -152,7 +170,7 @@ describe('CategoryService', () => {
 
   describe('validateCategoryInGroup', () => {
     it('should throw if category belongs to wrong group', async () => {
-      const cat = { id: 'c1', groupId: 'g1', parentId: null, name: 'Eng', slug: 'eng', sortOrder: 0, createdAt: new Date(), updatedAt: new Date() };
+      const cat = { id: 'c1', groupId: 'g1', parentId: null, path: '/c1', depth: 0, name: 'Eng', slug: 'eng', sortOrder: 0, createdAt: new Date(), updatedAt: new Date() };
       vi.spyOn(service, 'findCategoryByIdOrFail').mockResolvedValueOnce(cat);
       // Return group with different slug
       mockDb._chain.limit.mockResolvedValueOnce([{ id: 'g1', slug: 'locations' }]);

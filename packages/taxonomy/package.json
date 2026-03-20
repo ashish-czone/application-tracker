@@ -8,7 +8,8 @@
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
-    "@packages/database": "workspace:*"
+    "@packages/database": "workspace:*",
+    "@packages/hierarchy": "workspace:*"
   },
   "devDependencies": {
     "drizzle-orm": "^0.45.1",

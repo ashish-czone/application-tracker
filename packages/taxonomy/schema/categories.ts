@@ -1,11 +1,12 @@
 import { pgTable, text, timestamp, integer, uniqueIndex, index } from 'drizzle-orm/pg-core';
 import { randomUUID } from 'crypto';
 import { categoryGroups } from './category-groups';
+import { hierarchyColumns } from '@packages/hierarchy';
 
 export const categories = pgTable('categories', {
   id: text('id').primaryKey().$defaultFn(() => randomUUID()),
   groupId: text('group_id').notNull().references(() => categoryGroups.id, { onDelete: 'cascade' }),
-  parentId: text('parent_id').references((): any => categories.id, { onDelete: 'cascade' }),
+  ...hierarchyColumns(),
   name: text('name').notNull(),
   slug: text('slug').notNull(),
   sortOrder: integer('sort_order').notNull().default(0),
@@ -15,4 +16,5 @@ export const categories = pgTable('categories', {
   uniqueIndex('categories_slug_group_id_parent_id_key').on(table.slug, table.groupId, table.parentId),
   index('categories_group_id_idx').on(table.groupId),
   index('categories_parent_id_idx').on(table.parentId),
+  index('categories_path_idx').on(table.path),
 ]);

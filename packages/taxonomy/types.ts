@@ -45,6 +45,8 @@ export interface Category {
   id: string;
   groupId: string;
   parentId: string | null;
+  path: string;
+  depth: number;
   name: string;
   slug: string;
   sortOrder: number;

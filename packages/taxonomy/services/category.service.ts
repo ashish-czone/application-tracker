@@ -1,12 +1,16 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
-import { DatabaseService, eq, and, isNull, asc, count } from '@packages/database';
+import { DatabaseService, eq, asc, count } from '@packages/database';
+import { HierarchyService, buildTree } from '@packages/hierarchy';
 import { categoryGroups } from '../schema/category-groups';
 import { categories } from '../schema/categories';
 import type { CategoryGroup, Category, CategoryTreeNode } from '../types';
 
 @Injectable()
 export class CategoryService {
-  constructor(private readonly database: DatabaseService) {}
+  constructor(
+    private readonly database: DatabaseService,
+    private readonly hierarchyService: HierarchyService,
+  ) {}
 
   // --- Category Groups ---
 
@@ -87,13 +91,17 @@ export class CategoryService {
   async createCategory(data: { groupId: string; parentId?: string; name: string; slug: string; sortOrder?: number }): Promise<Category> {
     await this.findCategoryGroupByIdOrFail(data.groupId);
 
+    let parentPath: string | null = null;
+
     if (data.parentId) {
       const parent = await this.findCategoryByIdOrFail(data.parentId);
       if (parent.groupId !== data.groupId) {
         throw new ConflictException('Parent category must belong to the same group');
       }
+      parentPath = parent.path;
     }
 
+    // Insert with a temporary path, then update with the real path using the generated ID
     const [category] = await this.database.db
       .insert(categories)
       .values({
@@ -102,9 +110,20 @@ export class CategoryService {
         name: data.name,
         slug: data.slug,
         sortOrder: data.sortOrder ?? 0,
+        path: '/',
+        depth: 0,
       })
       .returning();
-    return category;
+
+    const { path, depth } = this.hierarchyService.computeInsertValues(parentPath, category.id);
+
+    const [updated] = await this.database.db
+      .update(categories)
+      .set({ path, depth })
+      .where(eq(categories.id, category.id))
+      .returning();
+
+    return updated;
   }
 
   async updateCategory(id: string, data: { name?: string; slug?: string; sortOrder?: number }): Promise<Category> {
@@ -130,30 +149,25 @@ export class CategoryService {
   async moveCategory(id: string, newParentId: string | null): Promise<Category> {
     const category = await this.findCategoryByIdOrFail(id);
 
-    if (newParentId) {
-      // Prevent moving to itself
-      if (newParentId === id) {
-        throw new ConflictException('A category cannot be its own parent');
-      }
+    let newParentPath: string | null = null;
 
+    if (newParentId) {
       const newParent = await this.findCategoryByIdOrFail(newParentId);
 
-      // Must be in the same group
       if (newParent.groupId !== category.groupId) {
         throw new ConflictException('Cannot move category to a different group');
       }
 
-      // Prevent cycles: walk up from newParent, ensure we don't hit the category being moved
-      await this.ensureNoCycle(id, newParentId);
+      newParentPath = newParent.path;
     }
 
-    const [updated] = await this.database.db
-      .update(categories)
-      .set({ parentId: newParentId })
-      .where(eq(categories.id, id))
-      .returning();
+    // HierarchyService handles cycle detection + path updates for entire subtree
+    await this.hierarchyService.move(
+      categories, categories.id, categories.parentId, categories.path, categories.depth,
+      id, category.path, newParentId, newParentPath,
+    );
 
-    return updated;
+    return this.findCategoryByIdOrFail(id);
   }
 
   async deleteCategory(id: string): Promise<void> {
@@ -199,21 +213,17 @@ export class CategoryService {
       .where(eq(categories.groupId, groupId))
       .orderBy(asc(categories.sortOrder), asc(categories.name));
 
-    return this.buildTree(allCategories);
+    return buildTree(allCategories) as CategoryTreeNode[];
   }
 
   async getAncestors(id: string): Promise<Category[]> {
-    const ancestors: Category[] = [];
-    let current = await this.findCategoryByIdOrFail(id);
+    const category = await this.findCategoryByIdOrFail(id);
+    return this.hierarchyService.getAncestors(categories, categories.id, categories.path, category.path);
+  }
 
-    while (current.parentId) {
-      const parent = await this.findCategoryById(current.parentId);
-      if (!parent) break;
-      ancestors.unshift(parent);
-      current = parent;
-    }
-
-    return ancestors;
+  async getDescendants(id: string): Promise<Category[]> {
+    const category = await this.findCategoryByIdOrFail(id);
+    return this.hierarchyService.getDescendants(categories, categories.path, category.path);
   }
 
   // --- Validation (for domain modules) ---
@@ -234,39 +244,4 @@ export class CategoryService {
     return category;
   }
 
-  // --- Private helpers ---
-
-  private buildTree(flatCategories: Category[]): CategoryTreeNode[] {
-    const nodeMap = new Map<string, CategoryTreeNode>();
-    const roots: CategoryTreeNode[] = [];
-
-    // Create nodes
-    for (const cat of flatCategories) {
-      nodeMap.set(cat.id, { ...cat, children: [] });
-    }
-
-    // Build tree
-    for (const cat of flatCategories) {
-      const node = nodeMap.get(cat.id)!;
-      if (cat.parentId && nodeMap.has(cat.parentId)) {
-        nodeMap.get(cat.parentId)!.children.push(node);
-      } else {
-        roots.push(node);
-      }
-    }
-
-    return roots;
-  }
-
-  private async ensureNoCycle(movingId: string, targetParentId: string): Promise<void> {
-    let currentId: string | null = targetParentId;
-
-    while (currentId) {
-      if (currentId === movingId) {
-        throw new ConflictException('Moving this category would create a cycle');
-      }
-      const parent = await this.findCategoryById(currentId);
-      currentId = parent?.parentId ?? null;
-    }
-  }
 }
