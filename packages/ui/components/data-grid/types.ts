@@ -106,4 +106,14 @@ export interface DataGridProps<TData> {
 
   /** Optional callback to add CSS classes to table rows based on row data */
   rowClassName?: (row: TData) => string | undefined;
+
+  /** Enable export button in toolbar. Exports visible columns from current page data. */
+  enableExport?: boolean;
+  /** Filename prefix for exported files (without extension). Defaults to 'export'. */
+  exportFilename?: string;
+}
+
+export interface DataGridExportColumn {
+  id: string;
+  header: string;
 }
