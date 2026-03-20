@@ -31,6 +31,9 @@ describe('RbacController (integration)', () => {
         RBAC_PERMISSIONS.ROLES_READ,
         RBAC_PERMISSIONS.ROLES_MANAGE,
         RBAC_PERMISSIONS.PERMISSIONS_READ,
+        'users.create',
+        'users.read',
+        'users.delete',
       ],
     });
   });
@@ -198,7 +201,7 @@ describe('RbacController (integration)', () => {
     });
 
     it('should return 409 for default role', async () => {
-      const role = await rbacService.createRole({ name: 'default-no-delete', userType: 'client', isDefault: true });
+      const role = await rbacService.createRole({ name: 'default-no-delete', userType: 'admin', isDefault: true });
 
       const res = await request(httpServer)
         .delete(`/api/v1/roles/${role.id}`)
