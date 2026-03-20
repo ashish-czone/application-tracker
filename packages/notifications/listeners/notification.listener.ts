@@ -87,10 +87,10 @@ export class NotificationListener {
       }
     } catch (error) {
       // Never let notification failures crash the process
-      this.logger.error({
+      this.logger.error('Notification listener error', {
         eventName: event.eventName,
         error: error instanceof Error ? error.message : String(error),
-      }, 'Notification listener error');
+      });
     }
   }
 
@@ -117,11 +117,11 @@ export class NotificationListener {
         scheduledFor,
       });
 
-    this.logger.debug({
+    this.logger.debug('Delayed notification scheduled', {
       ruleId,
       entityId: event.entityId,
       scheduledFor: scheduledFor.toISOString(),
-    }, 'Delayed notification scheduled');
+    });
   }
 
   private calculateScheduledFor(from: Date, amount: number, unit: ScheduleUnit): Date {

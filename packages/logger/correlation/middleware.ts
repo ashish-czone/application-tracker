@@ -1,4 +1,4 @@
-import type { Request, Response, NextFunction } from 'express';
+import type { IncomingMessage, ServerResponse } from 'http';
 import { randomUUID } from 'crypto';
 import { runWithCorrelationId } from './store';
 
@@ -11,7 +11,7 @@ const HEADER_NAME = 'x-correlation-id';
  * - Sets the correlation ID on the response header
  * - Wraps the rest of the request in AsyncLocalStorage so getCorrelationId() works everywhere
  */
-export function correlationIdMiddleware(req: Request, res: Response, next: NextFunction): void {
+export function correlationIdMiddleware(req: IncomingMessage, res: ServerResponse, next: () => void): void {
   const correlationId = (req.headers[HEADER_NAME] as string) || randomUUID();
   res.setHeader('X-Correlation-Id', correlationId);
   runWithCorrelationId(correlationId, () => next());

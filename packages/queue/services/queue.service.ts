@@ -48,28 +48,28 @@ export class QueueService implements OnModuleDestroy {
       const worker = new Worker(
         name,
         async (job: Job<T>) => {
-          this.logger.log({
+          this.logger.log('Job started', {
             jobName: name,
             jobId: job.id,
             correlationId: (job.data as Record<string, unknown>)?.correlationId,
             attempt: job.attemptsMade + 1,
-          }, 'Job started');
+          });
 
           try {
             await handler(job.data);
-            this.logger.log({
+            this.logger.log('Job completed', {
               jobName: name,
               jobId: job.id,
               correlationId: (job.data as Record<string, unknown>)?.correlationId,
-            }, 'Job completed');
+            });
           } catch (error) {
-            this.logger.error({
+            this.logger.error('Job failed', {
               jobName: name,
               jobId: job.id,
               correlationId: (job.data as Record<string, unknown>)?.correlationId,
               attempt: job.attemptsMade + 1,
               error: error instanceof Error ? error.message : String(error),
-            }, 'Job failed');
+            });
             throw error;
           }
         },
@@ -77,7 +77,7 @@ export class QueueService implements OnModuleDestroy {
       );
 
       worker.on('error', (err) => {
-        this.logger.error({ queue: name, error: err.message }, 'Worker error');
+        this.logger.error('Worker error', { queue: name, error: err.message });
       });
 
       this.workers.set(name, worker);
@@ -103,11 +103,11 @@ export class QueueService implements OnModuleDestroy {
       jobId: options?.jobId,
     });
 
-    this.logger.debug({
+    this.logger.debug('Job enqueued', {
       queueName,
       jobId: job.id,
       correlationId: (data as Record<string, unknown>)?.correlationId,
-    }, 'Job enqueued');
+    });
 
     return job.id!;
   }
@@ -135,7 +135,7 @@ export class QueueService implements OnModuleDestroy {
     const results = await Promise.all(closePromises);
     for (const result of results) {
       if (result.status === 'rejected') {
-        this.logger.error({ error: result.reason?.message ?? String(result.reason) }, 'Failed to close queue/worker');
+        this.logger.error('Failed to close queue/worker', { error: result.reason?.message ?? String(result.reason) });
       }
     }
   }

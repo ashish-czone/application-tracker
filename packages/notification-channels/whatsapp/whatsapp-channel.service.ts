@@ -36,12 +36,12 @@ export class WhatsAppChannelService {
       return await provider.send(payload);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      this.logger.error({
+      this.logger.error('WhatsApp send failed', {
         provider: provider.name,
         to: payload.to,
         correlationId: payload.correlationId,
         error: message,
-      }, 'WhatsApp send failed');
+      });
       return { success: false, error: message };
     }
   }

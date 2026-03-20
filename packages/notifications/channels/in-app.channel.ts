@@ -28,10 +28,10 @@ export class InAppChannel implements ChannelProvider {
         entityId: context.entityId,
       });
 
-    this.logger.debug({
+    this.logger.debug('In-app notification created', {
       channel: this.channel,
       recipientId,
       eventName: context.eventName,
-    }, 'In-app notification created');
+    });
   }
 }

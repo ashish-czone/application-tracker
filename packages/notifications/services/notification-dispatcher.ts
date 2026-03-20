@@ -50,7 +50,7 @@ export class NotificationDispatcher {
         case 'email': {
           const to = await this.contactResolverRegistry.resolve('email', recipientId);
           if (!to) {
-            this.logger.warn({ recipientId, eventName: context.eventName }, 'No email found for recipient — skipping');
+            this.logger.warn('No email found for recipient — skipping', { recipientId, eventName: context.eventName });
             return;
           }
           await this.queueService.enqueue(EMAIL_QUEUE_NAME, {
@@ -59,14 +59,14 @@ export class NotificationDispatcher {
             body: content.body,
             correlationId: context.correlationId,
           });
-          this.logger.debug({ channel, recipientId, to, eventName: context.eventName }, 'Email notification enqueued');
+          this.logger.debug('Email notification enqueued', { channel, recipientId, to, eventName: context.eventName });
           break;
         }
 
         case 'whatsapp': {
           const to = await this.contactResolverRegistry.resolve('whatsapp', recipientId);
           if (!to) {
-            this.logger.warn({ recipientId, eventName: context.eventName }, 'No phone found for recipient — skipping');
+            this.logger.warn('No phone found for recipient — skipping', { recipientId, eventName: context.eventName });
             return;
           }
           await this.queueService.enqueue(WHATSAPP_QUEUE_NAME, {
@@ -74,7 +74,7 @@ export class NotificationDispatcher {
             body: content.body,
             correlationId: context.correlationId,
           });
-          this.logger.debug({ channel, recipientId, to, eventName: context.eventName }, 'WhatsApp notification enqueued');
+          this.logger.debug('WhatsApp notification enqueued', { channel, recipientId, to, eventName: context.eventName });
           break;
         }
 
@@ -82,12 +82,12 @@ export class NotificationDispatcher {
           this.logger.warn(`Unknown channel "${channel}" — skipping`);
       }
     } catch (error) {
-      this.logger.error({
+      this.logger.error('Failed to dispatch notification', {
         channel,
         recipientId,
         eventName: context.eventName,
         error: error instanceof Error ? error.message : String(error),
-      }, 'Failed to dispatch notification');
+      });
     }
   }
 }

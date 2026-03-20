@@ -111,7 +111,7 @@ export class NotificationsModule implements OnModuleInit {
         );
         this.logger.log(`Notification schedule scanner registered (${cronPattern}, 2:00 AM ${appTimezone})`);
       } catch (err) {
-        this.logger.error({ error: err instanceof Error ? err.message : String(err) }, 'Failed to register schedule scanner');
+        this.logger.error('Failed to register schedule scanner', { error: err instanceof Error ? err.message : String(err) });
       }
     }
   }

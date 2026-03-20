@@ -12,10 +12,10 @@ export class ConsoleWhatsAppProvider implements WhatsAppProvider {
   }
 
   async send(payload: WhatsAppPayload): Promise<SendResult> {
-    this.logger.log({
+    this.logger.log('WhatsApp sent (console provider — no actual delivery)', {
       to: payload.to,
       correlationId: payload.correlationId,
-    }, 'WhatsApp sent (console provider — no actual delivery)');
+    });
 
     return { success: true };
   }

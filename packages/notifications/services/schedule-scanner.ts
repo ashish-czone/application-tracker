@@ -50,9 +50,9 @@ export class ScheduleScanner {
       await this.processDelayedEvents();
       await this.processScheduleRules();
     } catch (error) {
-      this.logger.error({
+      this.logger.error('Schedule scan error', {
         error: error instanceof Error ? error.message : String(error),
-      }, 'Schedule scan error');
+      });
     }
 
     this.logger.log('Notification schedule scan complete');
@@ -124,10 +124,10 @@ export class ScheduleScanner {
         await this.dispatchForRule(rule, event);
         await this.markSent(scheduled.id);
       } catch (error) {
-        this.logger.error({
+        this.logger.error('Error processing delayed notification', {
           scheduledId: scheduled.id,
           error: error instanceof Error ? error.message : String(error),
-        }, 'Error processing delayed notification');
+        });
       }
     }
   }
@@ -150,10 +150,10 @@ export class ScheduleScanner {
       try {
         await this.evaluateScheduleRule(rule as unknown as NotificationRule);
       } catch (error) {
-        this.logger.error({
+        this.logger.error('Error evaluating schedule rule', {
           ruleId: rule.id,
           error: error instanceof Error ? error.message : String(error),
-        }, 'Error evaluating schedule rule');
+        });
       }
     }
   }
