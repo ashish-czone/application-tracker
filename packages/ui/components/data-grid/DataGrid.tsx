@@ -48,6 +48,8 @@ export function DataGrid<TData>({
   renderCard,
   toolbarActions,
   rowClassName,
+  enableExport = false,
+  exportFilename,
 }: DataGridProps<TData>) {
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(() => {
     if (!storageKey) return {};
@@ -143,6 +145,8 @@ export function DataGrid<TData>({
         onFilterRemove={onFilterRemove}
         onFiltersClear={onFiltersClear}
         toolbarActions={toolbarActions}
+        enableExport={enableExport}
+        exportFilename={exportFilename}
       />
 
       {/* Bulk action bar */}

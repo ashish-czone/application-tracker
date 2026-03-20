@@ -5,6 +5,7 @@ import { cn } from '../../lib/utils';
 import { Badge } from '../Badge';
 import { useDebounce } from '../../hooks/useDebounce';
 import type { DataGridFilter } from './types';
+import { DataGridExport } from './DataGridExport';
 
 interface DataGridToolbarProps<TData> {
   table: Table<TData>;
@@ -15,6 +16,8 @@ interface DataGridToolbarProps<TData> {
   onFilterRemove?: (key: string) => void;
   onFiltersClear?: () => void;
   toolbarActions?: React.ReactNode;
+  enableExport?: boolean;
+  exportFilename?: string;
 }
 
 export function DataGridToolbar<TData>({
@@ -26,6 +29,8 @@ export function DataGridToolbar<TData>({
   onFilterRemove,
   onFiltersClear,
   toolbarActions,
+  enableExport,
+  exportFilename,
 }: DataGridToolbarProps<TData>) {
   const [localSearch, setLocalSearch] = useState(search ?? '');
   const [columnMenuOpen, setColumnMenuOpen] = useState(false);
@@ -129,6 +134,11 @@ export function DataGridToolbar<TData>({
             </div>
           )}
         </div>
+
+        {/* Export */}
+        {enableExport && (
+          <DataGridExport table={table} filename={exportFilename} />
+        )}
 
         {/* Toolbar actions */}
         {toolbarActions}
