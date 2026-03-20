@@ -494,6 +494,8 @@ Examples: database (Drizzle ORM + pg Pool + schema definitions), events (in-memo
 
 **Platform Capabilities (backend, invoked directly):** Cross-cutting engines that domain services call directly via their public API. They provide capabilities that modules need during their domain operations. See PROMPT-AUTH.md for the authentication, identity, and RBAC architecture.
 
+Examples: hierarchy (materialized path tree operations for any entity), rbac (role-based access control), settings (typed config per module with admin overrides).
+
 **Side-Effect Packages (backend, event-driven):** Cross-cutting engines that subscribe to domain events and react generically. No module calls them directly — they listen and act independently. They contain no domain knowledge — all behavior is configured via DB rules, not hardcoded `if/else` chains. CRUD endpoints for configuring these packages live in their own modules (e.g., `modules/notification-rules/`, `modules/reminder-rules/`).
 
 Examples: notifications (DB-driven templates + delivery), audit (event-driven immutable change log), reminder-engine (scheduled side-effects).
@@ -512,6 +514,80 @@ Example: common — contains ONLY truly generic types (`PaginatedResponse<T>`, `
 2. **Swappable implementations.** Infrastructure packages define interfaces. The in-memory event bus can be swapped to Redis/NATS. Local file storage can be swapped to S3. Modules never depend on the implementation, only the interface.
 3. **Self-contained.** Each package has its own `package.json` and dependencies.
 4. **Platform packages use DB for configuration, not code.** Notification rules, workflow definitions, RBAC permissions — all stored in DB. No hardcoded `if/else` chains.
+
+### Hierarchy Package (`@packages/hierarchy`)
+
+Use this package for any entity that needs tree/hierarchical structure (categories, org charts, folder trees, nested comments, menu items). It provides materialized path columns and generic tree operations — no hand-rolled parent walks.
+
+**Schema — add hierarchy columns to your table:**
+
+```typescript
+import { hierarchyColumns } from '@packages/hierarchy';
+
+export const categories = pgTable('categories', {
+  id: text('id').primaryKey().$defaultFn(() => randomUUID()),
+  name: text('name').notNull(),
+  ...hierarchyColumns(),   // adds: parentId (text), path (text), depth (integer)
+  ...timestamps(),
+});
+```
+
+**Service — delegate tree operations to `HierarchyService`:**
+
+```typescript
+import { HierarchyService, buildTree } from '@packages/hierarchy';
+
+@Injectable()
+export class CategoryService {
+  constructor(
+    private readonly database: DatabaseService,
+    private readonly hierarchyService: HierarchyService,
+  ) {}
+
+  async createCategory(data: { parentId?: string; name: string }): Promise<Category> {
+    let parentPath: string | null = null;
+    if (data.parentId) {
+      const parent = await this.findByIdOrFail(data.parentId);
+      parentPath = parent.path;
+    }
+
+    // Insert, then compute and set path from the generated ID
+    const [row] = await this.database.db.insert(table).values({ ... }).returning();
+    const { path, depth } = this.hierarchyService.computeInsertValues(parentPath, row.id);
+    const [updated] = await this.database.db.update(table).set({ path, depth }).where(eq(table.id, row.id)).returning();
+    return updated;
+  }
+
+  async getTree(groupId: string): Promise<TreeNode[]> {
+    const flat = await this.database.db.select().from(table).where(...);
+    return buildTree(flat);  // pure in-memory, no DB calls
+  }
+
+  async getAncestors(id: string): Promise<Entity[]> {
+    const node = await this.findByIdOrFail(id);
+    return this.hierarchyService.getAncestors(table, table.id, table.path, node.path);
+  }
+
+  async getDescendants(id: string): Promise<Entity[]> {
+    const node = await this.findByIdOrFail(id);
+    return this.hierarchyService.getDescendants(table, table.path, node.path);
+  }
+
+  async move(id: string, newParentId: string | null): Promise<Entity> {
+    const node = await this.findByIdOrFail(id);
+    const newParentPath = newParentId ? (await this.findByIdOrFail(newParentId)).path : null;
+    // Handles cycle detection + subtree path updates
+    await this.hierarchyService.move(table, table.id, table.parentId, table.path, table.depth, id, node.path, newParentId, newParentPath);
+    return this.findByIdOrFail(id);
+  }
+}
+```
+
+**Rules:**
+- Always use `hierarchyColumns()` for tree-structured tables — never hand-code `parentId` alone.
+- Always use `HierarchyService` for ancestors, descendants, and move operations — never walk parents in a loop.
+- Use `buildTree()` from `@packages/hierarchy` for in-memory tree construction — never duplicate the algorithm.
+- Add an index on the `path` column for LIKE-based descendant queries.
 
 ---
 
