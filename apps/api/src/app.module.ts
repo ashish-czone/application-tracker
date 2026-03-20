@@ -2,7 +2,8 @@ import { Module } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { GlobalExceptionFilter } from './filters/global-exception.filter';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { ConfigurableThrottlerGuard } from './guards/configurable-throttler.guard';
 import path from 'path';
 import { LoggerModule } from '@packages/logger';
 import { DatabaseModule } from '@packages/database';
@@ -98,7 +99,7 @@ import { validate } from './config/env.validation';
     },
     {
       provide: APP_GUARD,
-      useClass: ThrottlerGuard,
+      useClass: ConfigurableThrottlerGuard,
     },
   ],
 })
