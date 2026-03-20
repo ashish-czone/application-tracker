@@ -13,6 +13,7 @@ import { NotificationsModule } from '@packages/notifications';
 import { NotificationChannelsModule } from '@packages/notification-channels';
 import { WorkflowsModule } from '@packages/workflows';
 import { AuditModule } from '@packages/audit';
+import { HierarchyModule } from '@packages/hierarchy';
 import { MediaModule } from '@packages/media';
 import { AuthGuard } from '@packages/auth';
 import { RbacGuard } from '@packages/rbac';
@@ -69,6 +70,7 @@ import { validate } from './config/env.validation';
     NotificationChannelsModule,
     NotificationsModule,
     AuditModule,
+    HierarchyModule,
     WorkflowsModule,
     AuthOrchestratorModule,
     UsersModule,

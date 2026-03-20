@@ -107,6 +107,9 @@ importers:
       '@packages/events':
         specifier: workspace:*
         version: link:../../packages/events
+      '@packages/hierarchy':
+        specifier: workspace:*
+        version: link:../../packages/hierarchy
       '@packages/logger':
         specifier: workspace:*
         version: link:../../packages/logger
@@ -596,6 +599,9 @@ importers:
       '@packages/database':
         specifier: workspace:*
         version: link:../database
+      '@packages/hierarchy':
+        specifier: workspace:*
+        version: link:../hierarchy
     devDependencies:
       drizzle-orm:
         specifier: ^0.45.1
