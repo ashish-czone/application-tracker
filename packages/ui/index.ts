@@ -48,15 +48,19 @@ export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent }
 
 // Components — data-grid
 export { DataGrid } from './components/data-grid/DataGrid';
+export { DataGridFilters } from './components/data-grid/DataGridFilters';
 export type {
   DataGridProps,
   DataGridFilter,
+  DataGridFilterConfig,
+  DataGridFilterOption,
   DataGridEmptyState,
 } from './components/data-grid/types';
 
 // Hooks
 export { useDebounce } from './hooks/useDebounce';
 export { useDataGridParams } from './hooks/useDataGridParams';
+export { useActiveFilters } from './hooks/useActiveFilters';
 export { useAsyncValidator } from './hooks/useAsyncValidator';
 
 // Utilities
