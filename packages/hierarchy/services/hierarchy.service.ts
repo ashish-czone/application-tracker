@@ -59,7 +59,7 @@ export class HierarchyService {
 
     const rows = await this.database.db
       .select()
-      .from(table)
+      .from(table as any)
       .where(inArray(idCol, ancestorIds))
       .orderBy(asc(pathCol));
 
@@ -82,7 +82,7 @@ export class HierarchyService {
 
     return this.database.db
       .select()
-      .from(table)
+      .from(table as any)
       .where(like(pathCol, prefix));
   }
 
@@ -140,7 +140,7 @@ export class HierarchyService {
       // Update all descendants: replace old path prefix with new path prefix
       const descendants = await tx
         .select()
-        .from(table)
+        .from(table as any)
         .where(like(pathCol, descendantPrefix(oldPath)));
 
       for (const descendant of descendants) {
@@ -175,7 +175,7 @@ export class HierarchyService {
     depthCol: any,
   ): Promise<number> {
     // Fetch all rows
-    const allRows = await this.database.db.select().from(table);
+    const allRows = await this.database.db.select().from(table as any);
 
     const rowMap = new Map<string, any>();
     for (const row of allRows) {
