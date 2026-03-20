@@ -4,6 +4,17 @@ import { ConsoleWhatsAppProvider } from '../whatsapp/providers/console-whatsapp.
 import { TwilioWhatsAppProvider } from '../whatsapp/providers/twilio-whatsapp.provider';
 import type { WhatsAppProvider, WhatsAppPayload } from '../types';
 
+const mockContextLogger = {
+  log: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  debug: vi.fn(),
+};
+
+const mockAppLogger = {
+  forContext: vi.fn().mockReturnValue(mockContextLogger),
+} as any;
+
 function buildPayload(overrides: Partial<WhatsAppPayload> = {}): WhatsAppPayload {
   return {
     to: '+15551234567',
@@ -17,7 +28,7 @@ describe('WhatsAppChannelService', () => {
   let service: WhatsAppChannelService;
 
   beforeEach(() => {
-    service = new WhatsAppChannelService();
+    service = new WhatsAppChannelService(mockAppLogger);
   });
 
   it('should register and use a provider', async () => {
@@ -67,7 +78,7 @@ describe('WhatsAppChannelService', () => {
 
 describe('ConsoleWhatsAppProvider', () => {
   it('should return success without actually sending', async () => {
-    const provider = new ConsoleWhatsAppProvider();
+    const provider = new ConsoleWhatsAppProvider(mockAppLogger);
 
     const result = await provider.send(buildPayload());
 
@@ -78,7 +89,7 @@ describe('ConsoleWhatsAppProvider', () => {
 
 describe('TwilioWhatsAppProvider', () => {
   it('should fail when not configured', async () => {
-    const provider = new TwilioWhatsAppProvider();
+    const provider = new TwilioWhatsAppProvider(mockAppLogger);
 
     const result = await provider.send(buildPayload());
 
@@ -87,7 +98,7 @@ describe('TwilioWhatsAppProvider', () => {
   });
 
   it('should call Twilio API when configured', async () => {
-    const provider = new TwilioWhatsAppProvider();
+    const provider = new TwilioWhatsAppProvider(mockAppLogger);
     provider.configure({
       accountSid: 'AC_TEST',
       authToken: 'test_token',
@@ -113,7 +124,7 @@ describe('TwilioWhatsAppProvider', () => {
   });
 
   it('should handle Twilio API errors', async () => {
-    const provider = new TwilioWhatsAppProvider();
+    const provider = new TwilioWhatsAppProvider(mockAppLogger);
     provider.configure({
       accountSid: 'AC_TEST',
       authToken: 'test_token',
@@ -135,7 +146,7 @@ describe('TwilioWhatsAppProvider', () => {
   });
 
   it('should handle network errors', async () => {
-    const provider = new TwilioWhatsAppProvider();
+    const provider = new TwilioWhatsAppProvider(mockAppLogger);
     provider.configure({
       accountSid: 'AC_TEST',
       authToken: 'test_token',

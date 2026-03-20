@@ -4,6 +4,17 @@ import { ConsoleEmailProvider } from '../email/providers/console-email.provider'
 import { SmtpEmailProvider } from '../email/providers/smtp-email.provider';
 import type { EmailProvider, EmailPayload } from '../types';
 
+const mockContextLogger = {
+  log: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  debug: vi.fn(),
+};
+
+const mockAppLogger = {
+  forContext: vi.fn().mockReturnValue(mockContextLogger),
+} as any;
+
 function buildPayload(overrides: Partial<EmailPayload> = {}): EmailPayload {
   return {
     to: 'user@example.com',
@@ -18,7 +29,7 @@ describe('EmailChannelService', () => {
   let service: EmailChannelService;
 
   beforeEach(() => {
-    service = new EmailChannelService();
+    service = new EmailChannelService(mockAppLogger);
   });
 
   it('should register and use a provider', async () => {
@@ -91,7 +102,7 @@ describe('EmailChannelService', () => {
 
 describe('ConsoleEmailProvider', () => {
   it('should return success without actually sending', async () => {
-    const provider = new ConsoleEmailProvider();
+    const provider = new ConsoleEmailProvider(mockAppLogger);
 
     const result = await provider.send(buildPayload());
 
@@ -102,7 +113,7 @@ describe('ConsoleEmailProvider', () => {
 
 describe('SmtpEmailProvider', () => {
   it('should fail when not configured', async () => {
-    const provider = new SmtpEmailProvider();
+    const provider = new SmtpEmailProvider(mockAppLogger);
 
     const result = await provider.send(buildPayload());
 
@@ -111,7 +122,7 @@ describe('SmtpEmailProvider', () => {
   });
 
   it('should send via nodemailer transporter when configured', async () => {
-    const provider = new SmtpEmailProvider();
+    const provider = new SmtpEmailProvider(mockAppLogger);
     const mockSendMail = vi.fn().mockResolvedValue({ messageId: '<msg-123@smtp>' });
     const mockCreateTransport = vi.fn().mockReturnValue({ sendMail: mockSendMail });
 
@@ -141,7 +152,7 @@ describe('SmtpEmailProvider', () => {
   });
 
   it('should handle transporter errors', async () => {
-    const provider = new SmtpEmailProvider();
+    const provider = new SmtpEmailProvider(mockAppLogger);
     const mockSendMail = vi.fn().mockRejectedValue(new Error('Connection refused'));
 
     (provider as any).config = { from: 'noreply@test.com' };
