@@ -2,7 +2,7 @@ import { execSync } from 'child_process';
 import path from 'path';
 
 export default function globalSetup() {
-  const databaseDir = path.resolve(__dirname, '../../packages/database');
+  const databaseDir = path.resolve(__dirname, '../../apps/api');
 
   try {
     execSync('npx drizzle-kit migrate', {
