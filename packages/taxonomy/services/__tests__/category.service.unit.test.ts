@@ -149,10 +149,10 @@ describe('CategoryService', () => {
 
       const now = new Date();
       const flatList = [
-        { id: 'c1', groupId: 'g1', parentId: null, name: 'Engineering', slug: 'engineering', sortOrder: 0, createdAt: now, updatedAt: now },
-        { id: 'c2', groupId: 'g1', parentId: 'c1', name: 'Frontend', slug: 'frontend', sortOrder: 0, createdAt: now, updatedAt: now },
-        { id: 'c3', groupId: 'g1', parentId: 'c1', name: 'Backend', slug: 'backend', sortOrder: 1, createdAt: now, updatedAt: now },
-        { id: 'c4', groupId: 'g1', parentId: null, name: 'Sales', slug: 'sales', sortOrder: 1, createdAt: now, updatedAt: now },
+        { id: 'c1', groupId: 'g1', parentId: null, path: '/c1', depth: 0, name: 'Engineering', slug: 'engineering', sortOrder: 0, createdAt: now, updatedAt: now },
+        { id: 'c2', groupId: 'g1', parentId: 'c1', path: '/c1/c2', depth: 1, name: 'Frontend', slug: 'frontend', sortOrder: 0, createdAt: now, updatedAt: now },
+        { id: 'c3', groupId: 'g1', parentId: 'c1', path: '/c1/c3', depth: 1, name: 'Backend', slug: 'backend', sortOrder: 1, createdAt: now, updatedAt: now },
+        { id: 'c4', groupId: 'g1', parentId: null, path: '/c4', depth: 0, name: 'Sales', slug: 'sales', sortOrder: 1, createdAt: now, updatedAt: now },
       ];
       mockDb._chain.orderBy.mockResolvedValueOnce(flatList);
 

@@ -1,5 +1,5 @@
 import { Injectable, ConflictException } from '@nestjs/common';
-import { DatabaseService, eq, like, inArray, asc, sql } from '@packages/database';
+import { DatabaseService, eq, like, inArray, asc } from '@packages/database';
 import {
   computePath,
   computeDepth,
@@ -125,33 +125,34 @@ export class HierarchyService {
     const newPath = computePath(newParentPath, nodeId);
     const newDepth = computeDepth(newPath);
 
-    // Update the node itself
-    await this.database.db
-      .update(table)
-      .set({
-        parentId: newParentId,
-        path: newPath,
-        depth: newDepth,
-      })
-      .where(eq(idCol, nodeId));
+    // Wrap in a transaction to prevent concurrent moves from corrupting paths
+    await this.database.db.transaction(async (tx) => {
+      // Update the node itself
+      await tx
+        .update(table)
+        .set({
+          parentId: newParentId,
+          path: newPath,
+          depth: newDepth,
+        })
+        .where(eq(idCol, nodeId));
 
-    // Update all descendants: replace old path prefix with new path prefix
-    const descendants = await this.database.db
-      .select()
-      .from(table)
-      .where(like(pathCol, descendantPrefix(oldPath)));
+      // Update all descendants: replace old path prefix with new path prefix
+      const descendants = await tx
+        .select()
+        .from(table)
+        .where(like(pathCol, descendantPrefix(oldPath)));
 
-    if (descendants.length > 0) {
       for (const descendant of descendants) {
         const updatedPath = rebasePath(descendant.path, oldPath, newPath);
         const updatedDepth = computeDepth(updatedPath);
 
-        await this.database.db
+        await tx
           .update(table)
           .set({ path: updatedPath, depth: updatedDepth })
           .where(eq(idCol, descendant.id));
       }
-    }
+    });
   }
 
   /**
