@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router';
 import {
   ChevronsLeft,
@@ -24,12 +24,16 @@ import { customerMenu } from '../../portals/customer/menu';
 import { useAuth } from '../../shared/auth/hooks/useAuth';
 import { useLogout } from '../../shared/auth/hooks/useLogout';
 
-const navItems = customerMenu;
-
 export function AppLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
+  const { can } = useAuth();
+
+  const navItems = useMemo(
+    () => customerMenu.filter((item) => !item.permission || can(item.permission)),
+    [can],
+  );
 
   useEffect(() => {
     setMobileOpen(false);
