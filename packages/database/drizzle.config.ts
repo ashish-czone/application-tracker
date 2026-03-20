@@ -10,6 +10,7 @@ export default defineConfig({
     '../workflows/schema/index.ts',
     '../taxonomy/schema/index.ts',
     '../audit/schema/index.ts',
+    '../../apps/api/src/modules/tasks/schema/tasks.ts',
   ],
   out: './drizzle',
   dialect: 'postgresql',
