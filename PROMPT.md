@@ -413,6 +413,60 @@ A candidate is submitted to an order:
 
 Domain-to-domain communication used direct calls (step 2). Side effects used events (steps 5–7). The candidates module has no knowledge of who listens to its events.
 
+### Audit Logging
+
+The audit system (`packages/audit`) automatically captures domain events as immutable audit records. It follows the same event-driven side-effect pattern as notifications — it listens to `@OnEvent('**')` and writes to the `audit_logs` table.
+
+**How modules opt in:**
+
+Each module registers its auditable events in `onModuleInit()`:
+
+```typescript
+import { AuditRegistryService } from '@packages/audit';
+
+// In the module constructor:
+private readonly auditRegistry: AuditRegistryService,
+
+// In onModuleInit():
+this.auditRegistry.register('tasks', {
+  events: [TASKS_TASK_CREATED, TASKS_TASK_UPDATED, TASKS_TASK_DELETED],
+  // Optional: redact fields from before/after snapshots
+  sensitiveFields: ['passwordHash', 'token'],
+});
+
+// Use '*' to audit all events with this module's prefix:
+this.auditRegistry.register('tasks', { events: '*' });
+```
+
+**Before/after snapshots in event payloads:**
+
+For audit to capture what changed, update events must include `before` and `after` snapshots. Create events include `after`, delete events include `before`:
+
+```typescript
+// In the service — define a snapshot helper:
+private toSnapshot(entity: TaskResponse): TaskSnapshot {
+  return { title: entity.title, status: entity.status, priority: entity.priority, ... };
+}
+
+// Create → include after:
+payload: { title: task.title, after: this.toSnapshot(task) }
+
+// Update → include before + after:
+payload: { changes: Object.keys(updateValues), before: this.toSnapshot(existing), after: this.toSnapshot(updated) }
+
+// Delete → include before:
+payload: { title: task.title, before: this.toSnapshot(task) }
+```
+
+The listener compares `before`/`after` and skips writes when nothing actually changed (no-op updates). Events without snapshots (e.g., `auth.UserLoggedIn`) are still audited — they record the action, actor, and timestamp with null snapshot data.
+
+**Rules:**
+- Every new module with CRUD operations should register its events with `AuditRegistryService`.
+- Define a `Snapshot` interface (e.g., `TaskSnapshot`) in the module's `events/types.ts`.
+- Add a private `toSnapshot()` method in the service to create snapshot objects.
+- Use `sensitiveFields` to prevent passwords, tokens, or secrets from being stored in audit logs.
+- Never query `audit_logs` directly — use `AuditQueryService` from `@packages/audit`.
+
 ---
 
 ## 4. Frontend Architecture
@@ -442,7 +496,7 @@ Examples: database (Drizzle ORM + pg Pool + schema definitions), events (in-memo
 
 **Side-Effect Packages (backend, event-driven):** Cross-cutting engines that subscribe to domain events and react generically. No module calls them directly — they listen and act independently. They contain no domain knowledge — all behavior is configured via DB rules, not hardcoded `if/else` chains. CRUD endpoints for configuring these packages live in their own modules (e.g., `modules/notification-rules/`, `modules/reminder-rules/`).
 
-Examples: notifications (DB-driven templates + delivery), activity-log (event-driven feed), reminder-engine (scheduled side-effects).
+Examples: notifications (DB-driven templates + delivery), audit (event-driven immutable change log), reminder-engine (scheduled side-effects).
 
 These packages self-register their event subscriptions using `@OnEvent()` decorators. They process domain events using the base `DomainEvent` interface from `packages/events` — they never import from app modules.
 
