@@ -2,9 +2,9 @@ import { useMemo, useState } from 'react';
 import { Users, Plus, Pencil, Trash2, RotateCcw, KeyRound } from 'lucide-react';
 import { format } from 'date-fns';
 import {
-  DataGrid, Badge, Button, useDataGridParams,
+  DataGrid, DataGridFilters, Badge, Button, useDataGridParams, useActiveFilters,
   Dialog, DialogContent, ConfirmDialog,
-  type ColumnDef, type DataGridFilter,
+  type ColumnDef, type DataGridFilterConfig,
 } from '@packages/ui';
 import { useUsers, useDeleteUser, useRestoreUser } from '../hooks';
 import { AddUserForm } from '../components/AddUserForm';
@@ -17,6 +17,18 @@ const USER_TYPE_LABELS: Record<string, string> = {
   client: 'Client',
 };
 
+const USER_FILTERS: DataGridFilterConfig[] = [
+  {
+    key: 'userType',
+    label: 'Type',
+    placeholder: 'All types',
+    options: [
+      { label: 'Admin', value: 'admin' },
+      { label: 'Client', value: 'client' },
+    ],
+  },
+];
+
 export default function UsersListPage() {
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -24,21 +36,13 @@ export default function UsersListPage() {
   const [resettingPasswordUser, setResettingPasswordUser] = useState<User | null>(null);
   const [showDeleted, setShowDeleted] = useState(false);
   const {
-    page,
-    pageSize,
-    search,
-    sort,
-    order,
-    setPage,
-    setPageSize,
-    setSearch,
-    setSort,
-    getFilter,
-    setFilter,
-    clearFilters,
+    page, pageSize, search, sort, order,
+    setPage, setPageSize, setSearch, setSort,
+    getFilter, setFilter, clearFilters,
   } = useDataGridParams({ defaultSort: 'createdAt', defaultOrder: 'desc' });
 
   const userType = getFilter('userType');
+  const activeFilters = useActiveFilters(USER_FILTERS, getFilter);
 
   const deleteMutation = useDeleteUser({
     onSuccess: () => setDeletingUser(null),
@@ -130,8 +134,7 @@ export default function UsersListPage() {
         id: 'createdAt',
         header: 'Created',
         accessorKey: 'createdAt',
-        cell: ({ getValue }) => format(new Date(getValue() as string), 'MMM d, yyyy'
-        ),
+        cell: ({ getValue }) => format(new Date(getValue() as string), 'MMM d, yyyy'),
         enableSorting: true,
         enableHiding: true,
       },
@@ -193,18 +196,6 @@ export default function UsersListPage() {
     [],
   );
 
-  const activeFilters = useMemo<DataGridFilter[]>(() => {
-    const filters: DataGridFilter[] = [];
-    if (userType) {
-      filters.push({
-        key: 'userType',
-        label: 'Type',
-        value: USER_TYPE_LABELS[userType] ?? userType,
-      });
-    }
-    return filters;
-  }, [userType]);
-
   return (
     <div>
       <div className="mb-6">
@@ -233,6 +224,8 @@ export default function UsersListPage() {
         isLoading={isLoading}
         isError={isError}
         onRetry={refetch}
+        enableExport
+        exportFilename="users"
         emptyState={{
           icon: Users,
           title: 'No users yet',
@@ -252,15 +245,7 @@ export default function UsersListPage() {
               />
               Include deleted
             </label>
-            <select
-              value={userType || ''}
-              onChange={(e) => setFilter('userType', e.target.value || undefined)}
-              className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-            >
-              <option value="">All types</option>
-              <option value="admin">Admin</option>
-              <option value="client">Client</option>
-            </select>
+            <DataGridFilters filters={USER_FILTERS} getFilter={getFilter} setFilter={setFilter} />
             <Button size="sm" onClick={() => setAddModalOpen(true)}>
               <Plus className="h-4 w-4 mr-1" />
               Add User
