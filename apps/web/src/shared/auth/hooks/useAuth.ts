@@ -57,7 +57,8 @@ export function useAuth() {
   const isAuthenticated = !!user;
 
   function can(permission: string): boolean {
-    return user?.permissions.includes(permission) ?? false;
+    if (!user?.permissions) return false;
+    return permission in user.permissions || '*' in user.permissions;
   }
 
   function setSession(authUser: AuthUser | null): void {
