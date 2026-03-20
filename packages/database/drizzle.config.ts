@@ -9,6 +9,7 @@ export default defineConfig({
     '../notifications/schema/index.ts',
     '../workflows/schema/index.ts',
     '../taxonomy/schema/index.ts',
+    '../audit/schema/index.ts',
   ],
   out: './drizzle',
   dialect: 'postgresql',
