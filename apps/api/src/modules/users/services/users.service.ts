@@ -25,6 +25,7 @@ import {
   USERS_USER_CREATED,
   USERS_USER_UPDATED,
   USERS_USER_DELETED,
+  type UserSnapshot,
 } from '../events/types';
 
 export interface CreateUserInput {
@@ -281,6 +282,7 @@ export class UsersService {
         firstName: user.firstName,
         lastName: user.lastName,
         userType: data.userType,
+        after: this.toSnapshot(user),
       },
     });
 
@@ -342,6 +344,8 @@ export class UsersService {
       actorId,
       payload: {
         changes: Object.keys(updateValues),
+        before: this.toSnapshot(existing),
+        after: this.toSnapshot(updated),
       },
     });
 
@@ -378,8 +382,19 @@ export class UsersService {
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
+        before: this.toSnapshot(user),
       },
     });
+  }
+
+  private toSnapshot(entity: UserWithType | typeof users.$inferSelect): UserSnapshot {
+    return {
+      email: entity.email,
+      phone: entity.phone,
+      firstName: entity.firstName,
+      lastName: entity.lastName,
+      userType: entity.userType,
+    };
   }
 
   async resetPassword(id: string, newPassword: string): Promise<void> {

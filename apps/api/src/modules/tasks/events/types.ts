@@ -6,21 +6,35 @@ export const TASKS_TASK_DELETED = 'tasks.TaskDeleted' as const;
 
 // --- Payload types ---
 
+export interface TaskSnapshot {
+  title: string;
+  description: string | null;
+  status: string;
+  priority: string;
+  assigneeId: string | null;
+  dueDate: string | null;
+  [key: string]: unknown;
+}
+
 export interface TaskCreatedPayload {
   title: string;
   status: string;
   priority: string;
   assigneeId: string | null;
+  after: TaskSnapshot;
   [key: string]: unknown;
 }
 
 export interface TaskUpdatedPayload {
   changes: string[];
+  before: TaskSnapshot;
+  after: TaskSnapshot;
   [key: string]: unknown;
 }
 
 export interface TaskDeletedPayload {
   title: string;
+  before: TaskSnapshot;
   [key: string]: unknown;
 }
 

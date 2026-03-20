@@ -157,7 +157,11 @@ describe('TasksService', () => {
       expect(eventEmitterMock.emit).toHaveBeenCalledWith(
         'tasks.TaskUpdated',
         expect.objectContaining({
-          payload: { changes: ['title'] },
+          payload: expect.objectContaining({
+            changes: ['title'],
+            before: expect.objectContaining({ title: 'Test Task' }),
+            after: expect.objectContaining({ title: 'Updated Title' }),
+          }),
         }),
       );
     });
@@ -185,7 +189,10 @@ describe('TasksService', () => {
         expect.objectContaining({
           entityType: 'tasks',
           entityId: 'task-1',
-          payload: { title: 'Test Task' },
+          payload: expect.objectContaining({
+            title: 'Test Task',
+            before: expect.objectContaining({ title: 'Test Task', status: 'open' }),
+          }),
         }),
       );
     });
