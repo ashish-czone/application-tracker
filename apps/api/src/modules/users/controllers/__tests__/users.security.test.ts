@@ -82,7 +82,7 @@ describe('UsersController (security)', () => {
           lastName: 'Auth',
           password: 'Password123!',
           userType: 'client',
-          roleId: clientRoleId,
+          roleIds: [clientRoleId],
         });
       expect(res.status).toBe(401);
     });
@@ -134,7 +134,7 @@ describe('UsersController (security)', () => {
           lastName: 'Perm',
           password: 'Password123!',
           userType: 'client',
-          roleId: clientRoleId,
+          roleIds: [clientRoleId],
         });
       expect(res.status).toBe(403);
     });
@@ -168,7 +168,7 @@ describe('UsersController (security)', () => {
           lastName: 'Only',
           password: 'Password123!',
           userType: 'client',
-          roleId: clientRoleId,
+          roleIds: [clientRoleId],
         });
       expect(res.status).toBe(403);
     });
@@ -210,7 +210,7 @@ describe('UsersController (security)', () => {
           lastName: 'Deleted',
           password: 'Password123!',
           userType: 'client',
-          roleId: clientRoleId,
+          roleIds: [clientRoleId],
         });
 
       await request(httpServer)
@@ -236,7 +236,7 @@ describe('UsersController (security)', () => {
           lastName: 'Get',
           password: 'Password123!',
           userType: 'client',
-          roleId: clientRoleId,
+          roleIds: [clientRoleId],
         });
 
       await request(httpServer)

@@ -35,11 +35,11 @@ describe('UsersController (integration)', () => {
       ],
     });
 
-    // Create roles for user creation tests
+    // Create roles for user creation tests (use unique names to avoid collision with seed)
     const rbacService = module.get(RbacService);
-    const clientRole = await rbacService.createRole({ name: 'client-default', userType: 'client', isDefault: true });
+    const clientRole = await rbacService.createRole({ name: 'test-client-role', userType: 'client' });
     clientRoleId = clientRole.id;
-    const adminRole = await rbacService.createRole({ name: 'admin-default', userType: 'admin', isDefault: true });
+    const adminRole = await rbacService.createRole({ name: 'test-admin-role', userType: 'admin' });
     adminRoleId = adminRole.id;
   });
 
@@ -58,7 +58,7 @@ describe('UsersController (integration)', () => {
         lastName: 'User',
         password: 'Password123!',
         userType: 'client',
-        roleId: clientRoleId,
+        roleIds: [clientRoleId],
       };
 
       const res = await request(httpServer)
@@ -83,7 +83,7 @@ describe('UsersController (integration)', () => {
         lastName: 'User',
         password: 'Password123!',
         userType: 'client',
-        roleId: clientRoleId,
+        roleIds: [clientRoleId],
       };
 
       await request(httpServer)
@@ -118,7 +118,7 @@ describe('UsersController (integration)', () => {
           lastName: 'User',
           password: 'Password123!',
           userType: 'client',
-          roleId: clientRoleId,
+          roleIds: [clientRoleId],
         });
 
       expect(res.status).toBe(400);
@@ -134,7 +134,7 @@ describe('UsersController (integration)', () => {
           lastName: 'User',
           password: 'short',
           userType: 'client',
-          roleId: clientRoleId,
+          roleIds: [clientRoleId],
         });
 
       expect(res.status).toBe(400);
@@ -150,7 +150,7 @@ describe('UsersController (integration)', () => {
           lastName: 'User',
           password: 'Password123!',
           userType: 'invalid',
-          roleId: clientRoleId,
+          roleIds: [clientRoleId],
         });
 
       expect(res.status).toBe(400);
@@ -165,13 +165,13 @@ describe('UsersController (integration)', () => {
           firstName: 'Test',
           lastName: 'User',
           password: 'Password123!',
-          roleId: clientRoleId,
+          roleIds: [clientRoleId],
         });
 
       expect(res.status).toBe(400);
     });
 
-    it('should return 400 for missing roleId', async () => {
+    it('should return 400 for missing roleIds', async () => {
       const res = await request(httpServer)
         .post('/api/v1/users')
         .set('Authorization', `Bearer ${adminIdentity.accessToken}`)
@@ -186,7 +186,7 @@ describe('UsersController (integration)', () => {
       expect(res.status).toBe(400);
     });
 
-    it('should return 400 for invalid roleId format', async () => {
+    it('should return 400 for invalid roleIds format', async () => {
       const res = await request(httpServer)
         .post('/api/v1/users')
         .set('Authorization', `Bearer ${adminIdentity.accessToken}`)
@@ -196,7 +196,7 @@ describe('UsersController (integration)', () => {
           lastName: 'User',
           password: 'Password123!',
           userType: 'client',
-          roleId: 'not-a-uuid',
+          roleIds: ['not-a-uuid'],
         });
 
       expect(res.status).toBe(400);
@@ -212,7 +212,7 @@ describe('UsersController (integration)', () => {
           lastName: 'User',
           password: 'Password123!',
           userType: 'client',
-          roleId: clientRoleId,
+          roleIds: [clientRoleId],
           isAdmin: true,
         });
 
@@ -302,7 +302,7 @@ describe('UsersController (integration)', () => {
           lastName: 'Me',
           password: 'Password123!',
           userType: 'client',
-          roleId: clientRoleId,
+          roleIds: [clientRoleId],
         });
 
       const res = await request(httpServer)
@@ -348,7 +348,7 @@ describe('UsersController (integration)', () => {
           lastName: 'Update',
           password: 'Password123!',
           userType: 'client',
-          roleId: clientRoleId,
+          roleIds: [clientRoleId],
         });
 
       const res = await request(httpServer)
@@ -381,7 +381,7 @@ describe('UsersController (integration)', () => {
           lastName: 'Email',
           password: 'Password123!',
           userType: 'client',
-          roleId: clientRoleId,
+          roleIds: [clientRoleId],
         });
 
       const createRes = await request(httpServer)
@@ -393,7 +393,7 @@ describe('UsersController (integration)', () => {
           lastName: 'User',
           password: 'Password123!',
           userType: 'client',
-          roleId: clientRoleId,
+          roleIds: [clientRoleId],
         });
 
       const res = await request(httpServer)
@@ -414,7 +414,7 @@ describe('UsersController (integration)', () => {
           lastName: 'Unknown',
           password: 'Password123!',
           userType: 'client',
-          roleId: clientRoleId,
+          roleIds: [clientRoleId],
         });
 
       const res = await request(httpServer)
@@ -439,7 +439,7 @@ describe('UsersController (integration)', () => {
           lastName: 'Me',
           password: 'Password123!',
           userType: 'client',
-          roleId: clientRoleId,
+          roleIds: [clientRoleId],
         });
 
       const res = await request(httpServer)
