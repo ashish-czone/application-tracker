@@ -52,11 +52,11 @@ export class SmtpEmailProvider implements EmailProvider {
       return { success: true, providerMessageId: info.messageId };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      this.logger.error({
+      this.logger.error('SMTP email send failed', {
         to: payload.to,
         correlationId: payload.correlationId,
         error: message,
-      }, 'SMTP email send failed');
+      });
       return { success: false, error: message };
     }
   }

@@ -46,11 +46,11 @@ export class TwilioWhatsAppProvider implements WhatsAppProvider {
 
       if (!response.ok) {
         const errorBody = await response.text();
-        this.logger.error({
+        this.logger.error('Twilio WhatsApp API error', {
           status: response.status,
           correlationId: payload.correlationId,
           error: errorBody,
-        }, 'Twilio WhatsApp API error');
+        });
         return { success: false, error: `Twilio API error: ${response.status}` };
       }
 
@@ -59,10 +59,10 @@ export class TwilioWhatsAppProvider implements WhatsAppProvider {
       return { success: true, providerMessageId: data.sid };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      this.logger.error({
+      this.logger.error('Twilio WhatsApp send failed', {
         correlationId: payload.correlationId,
         error: message,
-      }, 'Twilio WhatsApp send failed');
+      });
       return { success: false, error: message };
     }
   }

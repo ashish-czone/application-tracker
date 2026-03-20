@@ -12,11 +12,11 @@ export class ConsoleEmailProvider implements EmailProvider {
   }
 
   async send(payload: EmailPayload): Promise<SendResult> {
-    this.logger.log({
+    this.logger.log('Email sent (console provider — no actual delivery)', {
       to: payload.to,
       subject: payload.subject,
       correlationId: payload.correlationId,
-    }, 'Email sent (console provider — no actual delivery)');
+    });
 
     return { success: true };
   }
