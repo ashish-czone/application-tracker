@@ -3,6 +3,7 @@ import { RbacService } from '@packages/rbac';
 import { EventRegistryService } from '@packages/events';
 import { EntityResolverRegistry } from '@packages/notifications';
 import { WorkflowRegistryService } from '@packages/workflows';
+import { AuditRegistryService } from '@packages/audit';
 import { tasks } from '@packages/database';
 import { TasksController } from './controllers/tasks.controller';
 import { TasksService } from './services/tasks.service';
@@ -24,6 +25,7 @@ export class TasksModule implements OnModuleInit {
     private readonly rbacService: RbacService,
     private readonly entityResolverRegistry: EntityResolverRegistry,
     private readonly workflowRegistry: WorkflowRegistryService,
+    private readonly auditRegistry: AuditRegistryService,
   ) {}
 
   onModuleInit() {
@@ -65,6 +67,11 @@ export class TasksModule implements OnModuleInit {
       payloadSchema: {
         title: { type: 'string', label: 'Title' },
       },
+    });
+
+    // Register auditable events
+    this.auditRegistry.register('tasks', {
+      events: [TASKS_TASK_CREATED, TASKS_TASK_UPDATED, TASKS_TASK_DELETED],
     });
 
     // Register entity resolver for schedule-based notifications and conditions

@@ -6,6 +6,7 @@ import { EventRegistryService } from '@packages/events';
 import { DatabaseService, users, isNull } from '@packages/database';
 import { AppConfigService } from '@packages/settings';
 import { ContactResolverRegistry } from '@packages/notifications';
+import { AuditRegistryService } from '@packages/audit';
 import { UsersController } from './controllers/users.controller';
 import { UsersService } from './services/users.service';
 import { UniqueCheckService } from '../shared/services/unique-check.service';
@@ -40,6 +41,7 @@ export class UsersModule implements OnModuleInit {
     private readonly contactResolverRegistry: ContactResolverRegistry,
     private readonly usersService: UsersService,
     private readonly uniqueCheckService: UniqueCheckService,
+    private readonly auditRegistry: AuditRegistryService,
   ) {}
 
   onModuleInit() {
@@ -64,6 +66,12 @@ export class UsersModule implements OnModuleInit {
       { action: 'update', description: 'Update users' },
       { action: 'delete', description: 'Delete users' },
     ]);
+
+    // Register auditable events
+    this.auditRegistry.register('users', {
+      events: [USERS_USER_CREATED, USERS_USER_UPDATED, USERS_USER_DELETED],
+      sensitiveFields: ['passwordHash', 'token'],
+    });
 
     // Register events
     this.eventRegistry.register({
