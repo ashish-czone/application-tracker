@@ -42,7 +42,7 @@ export class AuditListener {
 
       let changes: Record<string, { from: unknown; to: unknown }> | null = null;
       if (action === 'updated' && before && after) {
-        changes = computeDiff(before, after, sensitiveFields);
+        changes = computeDiff(before, after);
         if (!changes) {
           this.logger.debug('Skipping no-op audit entry', {
             eventName: event.eventName,

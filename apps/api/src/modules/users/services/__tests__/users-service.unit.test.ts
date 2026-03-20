@@ -107,11 +107,14 @@ describe('UsersService', () => {
       expect(result).toEqual({
         id: 'user-1',
         email: 'test@example.com',
+        phone: null,
         firstName: 'John',
         lastName: 'Doe',
         userType: 'admin',
         createdAt: now,
         updatedAt: now,
+        deletedAt: null,
+        roles: [],
       });
     });
 
@@ -145,7 +148,7 @@ describe('UsersService', () => {
           lastName: 'Doe',
           password: 'Password123!',
           userType: 'admin',
-          roleId: 'role-1',
+          roleIds: ['role-1'],
         },
         'actor-1',
       );
@@ -196,7 +199,7 @@ describe('UsersService', () => {
             lastName: 'Doe',
             password: 'Password123!',
             userType: 'admin',
-            roleId: 'nonexistent',
+            roleIds: ['nonexistent'],
           },
           'actor-1',
         ),
@@ -215,7 +218,7 @@ describe('UsersService', () => {
             lastName: 'Doe',
             password: 'Password123!',
             userType: 'admin',
-            roleId: 'role-2',
+            roleIds: ['role-2'],
           },
           'actor-1',
         ),
@@ -234,7 +237,7 @@ describe('UsersService', () => {
             lastName: 'Doe',
             password: 'Password123!',
             userType: 'admin',
-            roleId: 'role-1',
+            roleIds: ['role-1'],
           },
           'actor-1',
         ),
@@ -257,7 +260,7 @@ describe('UsersService', () => {
           lastName: 'Doe',
           password: 'Password123!',
           userType: 'admin',
-          roleId: 'role-1',
+          roleIds: ['role-1'],
         },
         'actor-1',
       );
@@ -387,6 +390,14 @@ describe('UsersService', () => {
                   offset: vi.fn().mockResolvedValue([user]),
                 }),
               }),
+            }),
+          }),
+        })
+        // roles batch-load query
+        .mockReturnValueOnce({
+          from: vi.fn().mockReturnValue({
+            innerJoin: vi.fn().mockReturnValue({
+              where: vi.fn().mockResolvedValue([]),
             }),
           }),
         });
