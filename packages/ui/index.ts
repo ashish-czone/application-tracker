@@ -55,6 +55,7 @@ export type {
   DataGridFilterConfig,
   DataGridFilterOption,
   DataGridEmptyState,
+  DataGridBulkAction,
 } from './components/data-grid/types';
 
 // Hooks

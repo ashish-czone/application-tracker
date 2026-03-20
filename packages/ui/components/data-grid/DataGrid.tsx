@@ -1,19 +1,29 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
   type VisibilityState,
+  type RowSelectionState,
+  type ColumnDef,
 } from '@tanstack/react-table';
 import type { DataGridProps } from './types';
 import { DataGridToolbar } from './DataGridToolbar';
 import { DataGridTable } from './DataGridTable';
 import { DataGridPagination } from './DataGridPagination';
 import { DataGridEmpty } from './DataGridEmpty';
+import { DataGridBulkBar } from './DataGridBulkBar';
 import { Skeleton } from '../Skeleton';
+
+function defaultGetRowId(row: unknown): string {
+  return (row as Record<string, unknown>).id as string;
+}
 
 export function DataGrid<TData>({
   columns,
   data,
+  enableSelection = false,
+  getRowId = defaultGetRowId as (row: TData) => string,
+  bulkActions,
   page,
   pageSize,
   pageCount,
@@ -39,7 +49,6 @@ export function DataGrid<TData>({
   toolbarActions,
   rowClassName,
 }: DataGridProps<TData>) {
-  // Column visibility state persisted to localStorage
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(() => {
     if (!storageKey) return {};
     try {
@@ -50,26 +59,78 @@ export function DataGrid<TData>({
     }
   });
 
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+
   useEffect(() => {
     if (!storageKey) return;
     localStorage.setItem(`datagrid-columns-${storageKey}`, JSON.stringify(columnVisibility));
   }, [columnVisibility, storageKey]);
 
+  // Clear selection when data changes (page change, filter, etc.)
+  useEffect(() => {
+    setRowSelection({});
+  }, [page, search, sortColumn, sortDirection]);
+
+  // Prepend checkbox column when selection is enabled
+  const allColumns = useMemo<ColumnDef<TData, unknown>[]>(() => {
+    if (!enableSelection) return columns;
+
+    const selectColumn: ColumnDef<TData, unknown> = {
+      id: '_select',
+      size: 40,
+      enableSorting: false,
+      enableHiding: false,
+      header: ({ table }) => (
+        <input
+          type="checkbox"
+          checked={table.getIsAllPageRowsSelected()}
+          ref={(el) => {
+            if (el) el.indeterminate = table.getIsSomePageRowsSelected();
+          }}
+          onChange={table.getToggleAllPageRowsSelectedHandler()}
+          className="rounded border-input"
+          aria-label="Select all rows"
+        />
+      ),
+      cell: ({ row }) => (
+        <input
+          type="checkbox"
+          checked={row.getIsSelected()}
+          onChange={row.getToggleSelectedHandler()}
+          className="rounded border-input"
+          aria-label="Select row"
+        />
+      ),
+    };
+
+    return [selectColumn, ...columns];
+  }, [columns, enableSelection]);
+
   const table = useReactTable({
     data,
-    columns,
+    columns: allColumns,
     pageCount,
     state: {
       columnVisibility,
       pagination: { pageIndex: page - 1, pageSize },
+      rowSelection: enableSelection ? rowSelection : undefined,
     },
     onColumnVisibilityChange: setColumnVisibility,
+    onRowSelectionChange: enableSelection ? setRowSelection : undefined,
+    enableRowSelection: enableSelection,
+    getRowId: enableSelection ? (row: TData) => getRowId(row) : undefined,
     getCoreRowModel: getCoreRowModel(),
     manualPagination: true,
     manualSorting: true,
   });
 
   const isEmpty = !isLoading && !isError && data.length === 0;
+
+  const selectedRowIds = useMemo(() => {
+    return Object.keys(rowSelection).filter((key) => rowSelection[key]);
+  }, [rowSelection]);
+
+  const clearSelection = useCallback(() => setRowSelection({}), []);
 
   return (
     <div className="space-y-4">
@@ -83,6 +144,16 @@ export function DataGrid<TData>({
         onFiltersClear={onFiltersClear}
         toolbarActions={toolbarActions}
       />
+
+      {/* Bulk action bar */}
+      {enableSelection && selectedRowIds.length > 0 && bulkActions && (
+        <DataGridBulkBar
+          selectedCount={selectedRowIds.length}
+          actions={bulkActions}
+          selectedRowIds={selectedRowIds}
+          onClearSelection={clearSelection}
+        />
+      )}
 
       {/* Error state */}
       {isError && (

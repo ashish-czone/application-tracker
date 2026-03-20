@@ -29,11 +29,25 @@ export interface DataGridEmptyState {
   };
 }
 
+export interface DataGridBulkAction {
+  label: string;
+  icon?: ComponentType<{ className?: string }>;
+  onClick: (selectedRows: string[]) => void;
+  variant?: 'default' | 'destructive';
+}
+
 export interface DataGridProps<TData> {
   /** TanStack Table column definitions */
   columns: ColumnDef<TData, unknown>[];
   /** Row data for the current page */
   data: TData[];
+
+  /** Enable row selection checkboxes */
+  enableSelection?: boolean;
+  /** Extract a unique ID from each row for selection tracking. Defaults to (row as any).id */
+  getRowId?: (row: TData) => string;
+  /** Actions shown in the bulk action bar when rows are selected */
+  bulkActions?: DataGridBulkAction[];
 
   /** Current page number (1-based) */
   page: number;
