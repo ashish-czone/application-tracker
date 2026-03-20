@@ -51,12 +51,15 @@ export interface MessageResponse {
   message: string;
 }
 
+// Scoped permissions as stored in JWT (matches backend ScopedPermissions type)
+export type ScopedPermissions = Record<string, string>;
+
 // JWT payload (decoded from access token — not verified client-side)
 
 export interface JwtPayload {
   userId: string;
   userType: string;
-  permissions: string[];
+  permissions: ScopedPermissions;
   iat: number;
   exp: number;
 }
@@ -66,5 +69,5 @@ export interface JwtPayload {
 export interface AuthUser {
   userId: string;
   userType: string;
-  permissions: string[];
+  permissions: ScopedPermissions;
 }
