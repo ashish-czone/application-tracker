@@ -5,6 +5,7 @@ import { EntityResolverRegistry } from '@packages/notifications';
 import { AuditRegistryService } from '@packages/audit';
 import { CandidatesController } from './controllers/candidates.controller';
 import { CandidatesService } from './services/candidates.service';
+import { CandidatesSeedService } from './services/candidates-seed.service';
 import { candidates } from './schema/candidates';
 import {
   CANDIDATES_CANDIDATE_CREATED,
@@ -14,7 +15,7 @@ import {
 
 @Module({
   controllers: [CandidatesController],
-  providers: [CandidatesService],
+  providers: [CandidatesService, CandidatesSeedService],
   exports: [CandidatesService],
 })
 export class CandidatesModule implements OnModuleInit {
