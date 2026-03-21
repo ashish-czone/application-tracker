@@ -1,7 +1,7 @@
 import { pgTable, text, timestamp, integer, uniqueIndex, index } from 'drizzle-orm/pg-core';
 import { randomUUID } from 'crypto';
 import { categoryGroups } from './category-groups';
-import { hierarchyColumns } from '@packages/hierarchy';
+import { hierarchyColumns } from '@packages/hierarchy/schema';
 
 export const categories = pgTable('categories', {
   id: text('id').primaryKey().$defaultFn(() => randomUUID()),

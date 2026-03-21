@@ -1,6 +1,6 @@
 import { pgTable, text, date, timestamp, index } from 'drizzle-orm/pg-core';
 import { randomUUID } from 'crypto';
-import { users } from '@packages/database';
+import { users } from '@packages/database/schema';
 
 export const tasks = pgTable('tasks', {
   id: text('id').primaryKey().$defaultFn(() => randomUUID()),
