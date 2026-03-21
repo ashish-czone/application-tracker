@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { Users, Plus, Pencil, Trash2, RotateCcw } from 'lucide-react';
+import { useNavigate } from 'react-router';
+import { Users, Plus, Trash2, RotateCcw } from 'lucide-react';
 import { format } from 'date-fns';
 import {
   DataGrid, DataGridFilters, Badge, Button, useDataGridParams, useActiveFilters,
@@ -8,7 +9,6 @@ import {
 } from '@packages/ui';
 import { useCandidates, useDeleteCandidate, useRestoreCandidate } from '../hooks';
 import { AddCandidateForm } from '../components/AddCandidateForm';
-import { EditCandidateForm } from '../components/EditCandidateForm';
 import type { Candidate } from '../types';
 import { SOURCE_OPTIONS } from '../types';
 
@@ -26,8 +26,8 @@ const CANDIDATE_FILTERS: DataGridFilterConfig[] = [
 ];
 
 export default function CandidatesListPage() {
+  const navigate = useNavigate();
   const [addModalOpen, setAddModalOpen] = useState(false);
-  const [editingCandidate, setEditingCandidate] = useState<Candidate | null>(null);
   const [deletingCandidate, setDeletingCandidate] = useState<Candidate | null>(null);
   const [showDeleted, setShowDeleted] = useState(false);
 
@@ -59,19 +59,33 @@ export default function CandidatesListPage() {
         id: 'firstName',
         header: 'Name',
         accessorFn: (row) => `${row.firstName} ${row.lastName}`,
-        cell: ({ row }) => (
-          <div className={row.original.deletedAt ? 'opacity-50' : ''}>
-            <div className="flex items-center gap-2">
-              <span className="font-medium text-foreground">
-                {row.original.firstName} {row.original.lastName}
-              </span>
-              {row.original.deletedAt && (
-                <Badge variant="outline" className="text-[10px] px-1.5 py-0">Deleted</Badge>
-              )}
+        cell: ({ row }) => {
+          const c = row.original;
+          const isDeleted = !!c.deletedAt;
+          return (
+            <div className={isDeleted ? 'opacity-50' : ''}>
+              <div className="flex items-center gap-2">
+                {isDeleted ? (
+                  <span className="font-medium text-foreground">
+                    {c.firstName} {c.lastName}
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/candidates/${c.id}`)}
+                    className="font-medium text-primary hover:underline text-left"
+                  >
+                    {c.firstName} {c.lastName}
+                  </button>
+                )}
+                {isDeleted && (
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">Deleted</Badge>
+                )}
+              </div>
+              <div className="text-xs text-muted-foreground">{c.email}</div>
             </div>
-            <div className="text-xs text-muted-foreground">{row.original.email}</div>
-          </div>
-        ),
+          );
+        },
         enableSorting: true,
       },
       {
@@ -119,17 +133,6 @@ export default function CandidatesListPage() {
         enableHiding: true,
       },
       {
-        id: 'highestQualification',
-        header: 'Qualification',
-        accessorKey: 'highestQualification',
-        cell: ({ getValue }) => {
-          const q = getValue() as string;
-          return q ? <Badge variant="outline">{q}</Badge> : '-';
-        },
-        enableSorting: false,
-        enableHiding: true,
-      },
-      {
         id: 'createdAt',
         header: 'Created',
         accessorKey: 'createdAt',
@@ -140,7 +143,7 @@ export default function CandidatesListPage() {
       {
         id: 'actions',
         header: '',
-        size: 80,
+        size: 60,
         enableHiding: false,
         enableSorting: false,
         cell: ({ row }) => {
@@ -161,15 +164,7 @@ export default function CandidatesListPage() {
             );
           }
           return (
-            <div className="flex items-center gap-1 justify-end">
-              <button
-                type="button"
-                onClick={() => setEditingCandidate(row.original)}
-                className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-                aria-label={`Edit ${row.original.firstName}`}
-              >
-                <Pencil className="h-4 w-4" />
-              </button>
+            <div className="flex items-center justify-end">
               <button
                 type="button"
                 onClick={() => setDeletingCandidate(row.original)}
@@ -183,7 +178,7 @@ export default function CandidatesListPage() {
         },
       },
     ],
-    [],
+    [navigate],
   );
 
   return (
@@ -246,17 +241,11 @@ export default function CandidatesListPage() {
 
       {/* Add Candidate Modal */}
       <Dialog open={addModalOpen} onOpenChange={setAddModalOpen}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-          <AddCandidateForm onClose={() => setAddModalOpen(false)} />
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Candidate Modal */}
-      <Dialog open={!!editingCandidate} onOpenChange={(open) => !open && setEditingCandidate(null)}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-          {editingCandidate && (
-            <EditCandidateForm candidate={editingCandidate} onClose={() => setEditingCandidate(null)} />
-          )}
+        <DialogContent className="sm:max-w-lg">
+          <AddCandidateForm
+            onClose={() => setAddModalOpen(false)}
+            onSuccess={(id) => navigate(`/candidates/${id}`)}
+          />
         </DialogContent>
       </Dialog>
 
