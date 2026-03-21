@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@packages/ui';
 import { listCandidates, getCandidate, createCandidate, updateCandidate, deleteCandidate, restoreCandidate } from './services';
-import type { ListCandidatesParams, CreateCandidateRequest, UpdateCandidateRequest } from './types';
+import type { Candidate, ListCandidatesParams, CreateCandidateRequest, UpdateCandidateRequest } from './types';
 
 export function useCandidates(params: ListCandidatesParams) {
   return useQuery({
@@ -18,15 +18,15 @@ export function useCandidate(id: string | null) {
   });
 }
 
-export function useCreateCandidate(options?: { onSuccess?: () => void }) {
+export function useCreateCandidate(options?: { onSuccess?: (candidate: Candidate) => void }) {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (data: CreateCandidateRequest) => createCandidate(data),
-    onSuccess: () => {
+    onSuccess: (candidate) => {
       queryClient.invalidateQueries({ queryKey: ['candidates'] });
       toast.success('Candidate created');
-      options?.onSuccess?.();
+      options?.onSuccess?.(candidate);
     },
     onError: (error: any) => {
       toast.error(error?.body?.message || 'Failed to create candidate');
@@ -41,6 +41,7 @@ export function useUpdateCandidate(options?: { onSuccess?: () => void }) {
     mutationFn: ({ id, data }: { id: string; data: UpdateCandidateRequest }) => updateCandidate(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['candidates'] });
+      queryClient.invalidateQueries({ queryKey: ['candidate'] });
       toast.success('Candidate updated');
       options?.onSuccess?.();
     },
