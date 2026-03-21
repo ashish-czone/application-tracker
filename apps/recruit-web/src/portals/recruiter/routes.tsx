@@ -7,3 +7,7 @@ export const CandidatesListPage = lazy(
 export const CandidateDetailPage = lazy(
   () => import('./features/candidates/pages/CandidateDetailPage'),
 );
+
+export const SettingsPage = lazy(
+  () => import('./features/settings/pages/SettingsPage'),
+);
