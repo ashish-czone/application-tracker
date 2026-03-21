@@ -23,6 +23,7 @@ import { EavAttributesModule } from '@packages/eav-attributes';
 import { AuthOrchestratorModule } from './modules/auth/auth.module';
 import { SharedModule } from './modules/shared/shared.module';
 import { CandidatesModule } from './modules/candidates/candidates.module';
+import { EavManagementModule } from './modules/eav-management/eav-management.module';
 import { validate } from './config/env.validation';
 
 @Module({
@@ -72,6 +73,7 @@ import { validate } from './config/env.validation';
     AuthOrchestratorModule,
     // Domain modules
     CandidatesModule,
+    EavManagementModule,
   ],
   providers: [
     {
