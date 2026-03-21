@@ -11,6 +11,7 @@ export default defineConfig({
     '../../packages/workflows/schema/index.ts',
     '../../packages/taxonomy/schema/index.ts',
     '../../packages/audit/schema/index.ts',
+    '../../packages/eav-attributes/schema/index.ts',
     // Recruit-specific modules
     './src/modules/candidates/schema/candidates.ts',
   ],

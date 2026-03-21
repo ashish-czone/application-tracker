@@ -1,6 +1,6 @@
 import { pgTable, text, timestamp, index, uniqueIndex } from 'drizzle-orm/pg-core';
 import { randomUUID } from 'crypto';
-import { users } from '@packages/database';
+import { users } from '@packages/database/schema';
 
 export const authTokens = pgTable('auth_tokens', {
   id: text('id').primaryKey().$defaultFn(() => randomUUID()),

@@ -1,5 +1,5 @@
 import { pgTable, text, boolean, primaryKey } from 'drizzle-orm/pg-core';
-import { users } from '@packages/database';
+import { users } from '@packages/database/schema';
 
 export const notificationPreferences = pgTable('notification_preferences', {
   userId: text('user_id').notNull().references(() => users.id),

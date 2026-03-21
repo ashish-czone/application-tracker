@@ -19,6 +19,7 @@ import { AuthGuard } from '@packages/auth';
 import { RbacGuard } from '@packages/rbac';
 import { TaxonomyModule } from '@packages/taxonomy';
 import { HierarchyModule } from '@packages/hierarchy';
+import { EavAttributesModule } from '@packages/eav-attributes';
 import { AuthOrchestratorModule } from './modules/auth/auth.module';
 import { SharedModule } from './modules/shared/shared.module';
 import { CandidatesModule } from './modules/candidates/candidates.module';
@@ -67,6 +68,7 @@ import { validate } from './config/env.validation';
     WorkflowsModule,
     HierarchyModule,
     TaxonomyModule,
+    EavAttributesModule,
     AuthOrchestratorModule,
     // Domain modules
     CandidatesModule,

@@ -1,7 +1,7 @@
 import { pgTable, text, integer, date, boolean, timestamp, index, uniqueIndex, jsonb } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
-import { users } from '@packages/database';
+import { users } from '@packages/database/schema';
 
 export const candidates = pgTable('candidates', {
   id: text('id').primaryKey().$defaultFn(() => randomUUID()),

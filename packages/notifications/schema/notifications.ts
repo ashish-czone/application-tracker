@@ -1,5 +1,5 @@
 import { pgTable, text, boolean, timestamp } from 'drizzle-orm/pg-core';
-import { users } from '@packages/database';
+import { users } from '@packages/database/schema';
 import { randomUUID } from 'crypto';
 
 export const notifications = pgTable('notifications', {
