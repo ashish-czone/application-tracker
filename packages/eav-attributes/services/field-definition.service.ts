@@ -1,9 +1,9 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
-import { DatabaseService, eq, and, count } from '@packages/database';
+import { DatabaseService, eq, and, count, inArray } from '@packages/database';
 import { fieldDefinitions } from '../schema/field-definitions';
 import { picklistOptions } from '../schema/picklist-options';
 import { entityFieldValues } from '../schema/entity-field-values';
-import type { FieldDefinition, PicklistOption, FieldType, RegisterFieldInput, SetPicklistOptionInput } from '../types';
+import type { FieldDefinition, PicklistOption, FieldType, FullLayoutField, RegisterFieldInput, SetPicklistOptionInput } from '../types';
 
 @Injectable()
 export class FieldDefinitionService {
@@ -152,6 +152,46 @@ export class FieldDefinitionService {
     return fields as FieldDefinition[];
   }
 
+  /**
+   * List all field definitions for an entity with picklist options attached.
+   * Used by payload validation to check picklist membership.
+   */
+  async listByEntityWithOptions(entityType: string): Promise<FullLayoutField[]> {
+    const fields = await this.listByEntity(entityType);
+    if (fields.length === 0) return [];
+
+    const fieldIds = fields.map(f => f.id);
+    const allOptions = await this.database.db
+      .select()
+      .from(picklistOptions)
+      .where(inArray(picklistOptions.fieldId, fieldIds))
+      .orderBy(picklistOptions.sortOrder);
+
+    const optionsMap = new Map<string, PicklistOption[]>();
+    for (const opt of allOptions) {
+      const existing = optionsMap.get(opt.fieldId) ?? [];
+      existing.push(opt as PicklistOption);
+      optionsMap.set(opt.fieldId, existing);
+    }
+
+    return fields.map(f => ({
+      ...f,
+      picklistOptions: optionsMap.get(f.id) ?? [],
+    }));
+  }
+
+  async findByEntityAndColumn(entityType: string, columnName: string): Promise<FieldDefinition | null> {
+    const [field] = await this.database.db
+      .select()
+      .from(fieldDefinitions)
+      .where(and(
+        eq(fieldDefinitions.entityType, entityType),
+        eq(fieldDefinitions.columnName, columnName),
+      ))
+      .limit(1);
+    return (field as FieldDefinition) ?? null;
+  }
+
   async getPicklistOptions(fieldId: string): Promise<PicklistOption[]> {
     const options = await this.database.db
       .select()
@@ -194,15 +234,22 @@ export class FieldDefinitionService {
   /**
    * Idempotent registration of standard fields for a module.
    * Called in onModuleInit — upserts by (entityType, fieldKey).
+   * Falls back to (entityType, columnName) lookup to handle fieldKey renames gracefully.
    */
   async registerStandardFields(entityType: string, fields: RegisterFieldInput[]): Promise<void> {
     for (let i = 0; i < fields.length; i++) {
       const f = fields[i];
-      const existing = await this.findByEntityAndKey(entityType, f.fieldKey);
+      let existing = await this.findByEntityAndKey(entityType, f.fieldKey);
+
+      // If not found by fieldKey, try by columnName — handles fieldKey renames (e.g., snake_case → camelCase)
+      if (!existing && f.columnName) {
+        existing = await this.findByEntityAndColumn(entityType, f.columnName);
+      }
 
       if (existing) {
-        // Update sortOrder and column mapping if changed, but don't override admin customizations
         const updates: Record<string, unknown> = {};
+        // Update fieldKey if it changed (rename migration)
+        if (existing.fieldKey !== f.fieldKey) updates.fieldKey = f.fieldKey;
         if (f.columnName && existing.columnName !== f.columnName) updates.columnName = f.columnName;
         if (f.sortOrder !== undefined && existing.sortOrder !== f.sortOrder) updates.sortOrder = f.sortOrder;
         if (existing.sortOrder === 0 && f.sortOrder === undefined) updates.sortOrder = i;
