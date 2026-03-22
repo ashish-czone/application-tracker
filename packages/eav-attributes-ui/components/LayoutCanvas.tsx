@@ -1,5 +1,5 @@
-import { DndContext, DragOverlay, closestCenter, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core';
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { DndContext, DragOverlay, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { Button } from '@packages/ui';
@@ -36,6 +36,15 @@ export function LayoutCanvas({
   onMoveFieldToSection,
 }: LayoutCanvasProps) {
   const [activeField, setActiveField] = useState<FieldDefinition | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 5 },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
 
   function handleDragStart(event: DragStartEvent) {
     const { active } = event;
@@ -119,6 +128,7 @@ export function LayoutCanvas({
 
   return (
     <DndContext
+      sensors={sensors}
       collisionDetection={closestCenter}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
