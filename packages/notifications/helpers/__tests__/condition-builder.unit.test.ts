@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { buildConditions, isPayloadCondition, evaluatePayloadConditions, evaluateConditionsInMemory } from '../condition-builder';
+import { buildConditions, buildEavConditions, isPayloadCondition, evaluatePayloadConditions, evaluateConditionsInMemory } from '../condition-builder';
 import { pgTable, text, integer } from 'drizzle-orm/pg-core';
+import type { SQL } from 'drizzle-orm';
 import type { Condition } from '../../types';
 
 // Fake table for testing
@@ -10,6 +11,27 @@ const testTable = pgTable('test', {
   priority: text('priority'),
   amount: integer('amount'),
 });
+
+/**
+ * Helper to extract raw SQL text fragments from a Drizzle SQL object.
+ * Only walks StringChunk values (safe — avoids infinite recursion from Column.getSQL).
+ * Parameters are omitted; the result contains SQL keywords and table/column references.
+ */
+function extractSqlText(sqlObj: SQL): string {
+  const parts: string[] = [];
+  const chunks = (sqlObj as any).queryChunks ?? [];
+  for (const chunk of chunks) {
+    if (chunk && chunk.constructor?.name === 'StringChunk' && Array.isArray(chunk.value)) {
+      for (const v of chunk.value) {
+        if (typeof v === 'string') parts.push(v);
+      }
+    } else if (chunk && chunk.constructor?.name === 'SQL') {
+      // Recurse into nested SQL objects (e.g. from sql.raw()) but NOT Column objects
+      parts.push(extractSqlText(chunk));
+    }
+  }
+  return parts.join('');
+}
 
 describe('isPayloadCondition', () => {
   it('should return true for changed operator', () => {
@@ -404,5 +426,161 @@ describe('buildConditions', () => {
     ], allowedFields);
 
     expect(result).toHaveLength(0);
+  });
+});
+
+describe('buildEavConditions', () => {
+  const entityType = 'candidates';
+  const entityIdColumn = testTable.id;
+
+  it('should generate EXISTS subquery for eq condition with string value', () => {
+    const result = buildEavConditions(entityType, entityIdColumn, [
+      { field: 'cf_department', operator: 'eq', value: 'engineering' },
+    ]);
+
+    expect(result).toHaveLength(1);
+    const sqlText = extractSqlText(result[0]);
+    expect(sqlText).toContain('EXISTS');
+    expect(sqlText).toContain('entity_field_values');
+    expect(sqlText).toContain('efv.value_text');
+  });
+
+  it('should generate EXISTS subquery for eq condition with number value', () => {
+    const result = buildEavConditions(entityType, entityIdColumn, [
+      { field: 'cf_experience_years', operator: 'eq', value: 5 },
+    ]);
+
+    expect(result).toHaveLength(1);
+    const sqlText = extractSqlText(result[0]);
+    expect(sqlText).toContain('EXISTS');
+    expect(sqlText).toContain('efv.value_number');
+  });
+
+  it('should generate EXISTS subquery for neq condition', () => {
+    const result = buildEavConditions(entityType, entityIdColumn, [
+      { field: 'cf_department', operator: 'neq', value: 'sales' },
+    ]);
+
+    expect(result).toHaveLength(1);
+    const sqlText = extractSqlText(result[0]);
+    expect(sqlText).toContain('EXISTS');
+    expect(sqlText).toContain('!=');
+  });
+
+  it('should generate EXISTS subquery for gt condition with number', () => {
+    const result = buildEavConditions(entityType, entityIdColumn, [
+      { field: 'cf_salary', operator: 'gt', value: 50000 },
+    ]);
+
+    expect(result).toHaveLength(1);
+    const sqlText = extractSqlText(result[0]);
+    expect(sqlText).toContain('EXISTS');
+    expect(sqlText).toContain('efv.value_number >');
+  });
+
+  it('should generate EXISTS subquery for lt condition with number', () => {
+    const result = buildEavConditions(entityType, entityIdColumn, [
+      { field: 'cf_age', operator: 'lt', value: 30 },
+    ]);
+
+    expect(result).toHaveLength(1);
+    const sqlText = extractSqlText(result[0]);
+    expect(sqlText).toContain('EXISTS');
+    expect(sqlText).toContain('efv.value_number <');
+  });
+
+  it('should skip gt condition with non-number value', () => {
+    const result = buildEavConditions(entityType, entityIdColumn, [
+      { field: 'cf_name', operator: 'gt', value: 'abc' },
+    ]);
+
+    expect(result).toHaveLength(0);
+  });
+
+  it('should skip lt condition with non-number value', () => {
+    const result = buildEavConditions(entityType, entityIdColumn, [
+      { field: 'cf_name', operator: 'lt', value: 'abc' },
+    ]);
+
+    expect(result).toHaveLength(0);
+  });
+
+  it('should generate EXISTS subquery for in condition', () => {
+    const result = buildEavConditions(entityType, entityIdColumn, [
+      { field: 'cf_level', operator: 'in', value: ['senior', 'lead'] },
+    ]);
+
+    expect(result).toHaveLength(1);
+    const sqlText = extractSqlText(result[0]);
+    expect(sqlText).toContain('EXISTS');
+    expect(sqlText).toContain('IN');
+  });
+
+  it('should skip in condition with non-array value', () => {
+    const result = buildEavConditions(entityType, entityIdColumn, [
+      { field: 'cf_level', operator: 'in', value: 'not-an-array' },
+    ]);
+
+    expect(result).toHaveLength(0);
+  });
+
+  it('should generate NOT EXISTS subquery for is_null condition', () => {
+    const result = buildEavConditions(entityType, entityIdColumn, [
+      { field: 'cf_notes', operator: 'is_null' },
+    ]);
+
+    expect(result).toHaveLength(1);
+    const sqlText = extractSqlText(result[0]);
+    expect(sqlText).toContain('NOT EXISTS');
+  });
+
+  it('should generate EXISTS subquery for is_not_null condition', () => {
+    const result = buildEavConditions(entityType, entityIdColumn, [
+      { field: 'cf_notes', operator: 'is_not_null' },
+    ]);
+
+    expect(result).toHaveLength(1);
+    const sqlText = extractSqlText(result[0]);
+    expect(sqlText).toContain('EXISTS');
+    expect(sqlText).not.toContain('NOT EXISTS');
+  });
+
+  it('should generate multiple EXISTS clauses for multiple conditions', () => {
+    const result = buildEavConditions(entityType, entityIdColumn, [
+      { field: 'cf_department', operator: 'eq', value: 'engineering' },
+      { field: 'cf_salary', operator: 'gt', value: 50000 },
+      { field: 'cf_notes', operator: 'is_not_null' },
+    ]);
+
+    expect(result).toHaveLength(3);
+    for (const sqlFragment of result) {
+      const sqlText = extractSqlText(sqlFragment);
+      expect(sqlText).toContain('EXISTS');
+    }
+  });
+
+  it('should return empty array for empty conditions', () => {
+    const result = buildEavConditions(entityType, entityIdColumn, []);
+    expect(result).toHaveLength(0);
+  });
+
+  it('should skip payload operators', () => {
+    const result = buildEavConditions(entityType, entityIdColumn, [
+      { field: 'cf_status', operator: 'changed' },
+      { field: 'cf_status', operator: 'changed_to', value: 'active' },
+    ]);
+
+    expect(result).toHaveLength(0);
+  });
+
+  it('should handle boolean eq condition', () => {
+    const result = buildEavConditions(entityType, entityIdColumn, [
+      { field: 'cf_is_remote', operator: 'eq', value: true },
+    ]);
+
+    expect(result).toHaveLength(1);
+    const sqlText = extractSqlText(result[0]);
+    expect(sqlText).toContain('EXISTS');
+    expect(sqlText).toContain('efv.value_boolean');
   });
 });
