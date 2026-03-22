@@ -7,8 +7,16 @@ export function getLayout(entityType: string): Promise<FullLayout> {
 }
 
 // Fields
-export function createField(entityType: string, data: CreateFieldInput): Promise<FieldDefinition> {
-  return api.post<FieldDefinition>('/fields', { entityType, ...data });
+export async function createField(entityType: string, data: CreateFieldInput): Promise<FieldDefinition> {
+  const { picklistOptions, ...fieldData } = data;
+  const field = await api.post<FieldDefinition>('/fields', { entityType, ...fieldData });
+
+  // Picklist options are set via a separate endpoint after field creation
+  if (picklistOptions && picklistOptions.length > 0) {
+    await setPicklistOptions(field.id, picklistOptions);
+  }
+
+  return field;
 }
 
 export function updateField(fieldId: string, data: UpdateFieldInput): Promise<FieldDefinition> {
