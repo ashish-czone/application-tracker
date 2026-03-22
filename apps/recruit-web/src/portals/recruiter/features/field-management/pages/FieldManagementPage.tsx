@@ -81,10 +81,10 @@ export default function FieldManagementPage({ entityType }: FieldManagementPageP
       <LayoutCanvas
         sections={layout.sections}
         onAddFieldToSection={(sectionId, fieldId) =>
-          addFieldMutation.mutate({ sectionId, fieldId })
+          addFieldMutation.mutateAsync({ sectionId, fieldId })
         }
         onRemoveFieldFromSection={(sectionId, fieldId) =>
-          removeFieldMutation.mutate({ sectionId, fieldId })
+          removeFieldMutation.mutateAsync({ sectionId, fieldId })
         }
         onReorderFields={(sectionId, orderedFieldIds) =>
           reorderFieldsMutation.mutate({ sectionId, orderedFieldIds })
@@ -92,12 +92,15 @@ export default function FieldManagementPage({ entityType }: FieldManagementPageP
         onReorderSections={(orderedSectionIds) =>
           reorderSectionsMutation.mutate(orderedSectionIds)
         }
+        onMoveFieldToSection={async (sourceSectionId, targetSectionId, fieldId) => {
+          await removeFieldMutation.mutateAsync({ sectionId: sourceSectionId, fieldId });
+          await addFieldMutation.mutateAsync({ sectionId: targetSectionId, fieldId });
+        }}
         onEditSection={() => setEditSectionOpen(true)}
         onDeleteSection={(sectionId) => deleteSectionMutation.mutate(sectionId)}
         onEditField={(field) => setEditingField(field)}
         onAddSectionClick={() => setCreateSectionOpen(true)}
         onAddFieldClick={(sectionId) => {
-          // For now, open create field dialog. Could also show a dropdown of unassigned fields.
           setCreateFieldType(undefined);
           setCreateFieldOpen(true);
         }}
