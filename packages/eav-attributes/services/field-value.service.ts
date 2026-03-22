@@ -12,9 +12,12 @@ export class FieldValueService {
   /**
    * Get all custom field values for a single entity instance.
    * Returns { fieldKey: typedValue } map.
+   * Accepts optional Drizzle transaction for transactional reads.
    */
-  async getValues(entityType: string, entityId: string): Promise<Record<string, unknown>> {
-    const rows = await this.database.db
+  async getValues(entityType: string, entityId: string, tx?: any): Promise<Record<string, unknown>> {
+    const db = tx ?? this.database.db;
+
+    const rows = await db
       .select()
       .from(entityFieldValues)
       .where(and(
@@ -68,17 +71,24 @@ export class FieldValueService {
   /**
    * Set custom field values for an entity instance.
    * Upserts into EAV table, routing values to the correct typed column.
+   * Accepts optional Drizzle transaction for transactional writes.
+   * Returns { before, after } snapshots of EAV values.
    */
   async setValues(
     entityType: string,
     entityId: string,
     values: Record<string, unknown>,
-  ): Promise<void> {
-    // Look up field definitions to determine types
-    const fieldKeys = Object.keys(values);
-    if (fieldKeys.length === 0) return;
+    tx?: any,
+  ): Promise<{ before: Record<string, unknown>; after: Record<string, unknown> }> {
+    const db = tx ?? this.database.db;
 
-    const fields = await this.database.db
+    // Read current EAV values before mutation
+    const before = await this.getValues(entityType, entityId, db);
+
+    const fieldKeys = Object.keys(values);
+    if (fieldKeys.length === 0) return { before, after: { ...before } };
+
+    const fields = await db
       .select()
       .from(fieldDefinitions)
       .where(and(
@@ -86,7 +96,10 @@ export class FieldValueService {
         inArray(fieldDefinitions.fieldKey, fieldKeys),
       ));
 
-    const fieldTypeMap = new Map(fields.map(f => [f.fieldKey, f.fieldType as FieldType]));
+    const fieldTypeMap = new Map<string, FieldType>(fields.map((f: { fieldKey: string; fieldType: string }) => [f.fieldKey, f.fieldType as FieldType]));
+
+    // Compute after by cloning before and applying changes
+    const after = { ...before };
 
     for (const [key, value] of Object.entries(values)) {
       const fieldType = fieldTypeMap.get(key);
@@ -94,13 +107,14 @@ export class FieldValueService {
 
       if (value === null || value === undefined || value === '') {
         // Delete the value row
-        await this.database.db
+        await db
           .delete(entityFieldValues)
           .where(and(
             eq(entityFieldValues.entityType, entityType),
             eq(entityFieldValues.entityId, entityId),
             eq(entityFieldValues.fieldKey, key),
           ));
+        delete after[key];
         continue;
       }
 
@@ -108,7 +122,7 @@ export class FieldValueService {
       const typedValues = this.buildTypedValues(valueColumn, value);
 
       // Upsert
-      await this.database.db
+      await db
         .insert(entityFieldValues)
         .values({
           entityType,
@@ -120,7 +134,12 @@ export class FieldValueService {
           target: [entityFieldValues.entityType, entityFieldValues.entityId, entityFieldValues.fieldKey],
           set: typedValues,
         });
+
+      // Record the applied value in after snapshot
+      after[key] = this.extractTypedValue(valueColumn, typedValues);
     }
+
+    return { before, after };
   }
 
   /**
@@ -261,6 +280,20 @@ export class FieldValueService {
     if (row.valueDate !== null) return row.valueDate;
     if (row.valueText !== null) return row.valueText;
     return null;
+  }
+
+  /**
+   * Extract the typed value from a set of typed column values.
+   * Used to compute the "after" snapshot without re-reading from DB.
+   */
+  private extractTypedValue(column: EavValueColumn, typedValues: Record<string, unknown>): unknown {
+    switch (column) {
+      case 'valueText': return typedValues.valueText;
+      case 'valueNumber': return Number(typedValues.valueNumber);
+      case 'valueDate': return typedValues.valueDate;
+      case 'valueDatetime': return typedValues.valueDatetime;
+      case 'valueBoolean': return typedValues.valueBoolean;
+    }
   }
 
   private buildTypedValues(column: EavValueColumn, value: unknown): Record<string, unknown> {

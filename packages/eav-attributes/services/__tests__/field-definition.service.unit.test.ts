@@ -93,6 +93,34 @@ describe('FieldDefinitionService', () => {
       expect(result.isCustom).toBe(true);
     });
 
+    it('should throw ConflictException for standard field collision with descriptive message', async () => {
+      const existing = makeFieldDef({ isCustom: false, fieldKey: 'first_name' });
+      // findByEntityAndKey returns existing standard field
+      mockDb._chain.limit.mockResolvedValueOnce([existing]);
+
+      await expect(
+        service.create('candidates', {
+          fieldKey: 'first_name',
+          label: 'First Name',
+          fieldType: 'text',
+        }),
+      ).rejects.toThrow(/conflicts with a standard field/);
+    });
+
+    it('should throw ConflictException for custom field collision with descriptive message', async () => {
+      const existing = makeFieldDef({ isCustom: true, fieldKey: 'custom_field' });
+      // findByEntityAndKey returns existing custom field
+      mockDb._chain.limit.mockResolvedValueOnce([existing]);
+
+      await expect(
+        service.create('candidates', {
+          fieldKey: 'custom_field',
+          label: 'Custom Field',
+          fieldType: 'text',
+        }),
+      ).rejects.toThrow(/already exists for/);
+    });
+
     it('should throw ConflictException on duplicate field_key', async () => {
       const existing = makeFieldDef();
       // findByEntityAndKey returns existing field

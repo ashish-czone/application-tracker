@@ -14,8 +14,21 @@ export interface CandidateSnapshot {
   source: string | null;
   currentCompany: string | null;
   currentTitle: string | null;
+  expectedSalary: number | null;
+  currency: string | null;
+  gender: string | null;
+  nationality: string | null;
+  dateOfBirth: string | null;
+  address: string | null;
+  city: string | null;
+  state: string | null;
   country: string | null;
+  zipCode: string | null;
+  linkedinUrl: string | null;
   highestQualification: string | null;
+  availableFrom: string | null;
+  isWillingToRelocate: boolean | null;
+  notes: string | null;
   [key: string]: unknown;
 }
 
