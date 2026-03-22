@@ -11,3 +11,11 @@ export const CandidateDetailPage = lazy(
 export const SettingsPage = lazy(
   () => import('./features/settings/pages/SettingsPage'),
 );
+
+export const AutomationsPage = lazy(
+  () => import('./features/automations/pages/AutomationsPage'),
+);
+
+export const RuleBuilderPage = lazy(
+  () => import('./features/automations/pages/RuleBuilderPage'),
+);

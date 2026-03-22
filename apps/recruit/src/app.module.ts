@@ -24,6 +24,7 @@ import { AuthOrchestratorModule } from './modules/auth/auth.module';
 import { SharedModule } from './modules/shared/shared.module';
 import { CandidatesModule } from './modules/candidates/candidates.module';
 import { EavManagementModule } from './modules/eav-management/eav-management.module';
+import { NotificationRulesModule } from './modules/notification-rules/notification-rules.module';
 import { validate } from './config/env.validation';
 
 @Module({
@@ -74,6 +75,7 @@ import { validate } from './config/env.validation';
     // Domain modules
     CandidatesModule,
     EavManagementModule,
+    NotificationRulesModule,
   ],
   providers: [
     {

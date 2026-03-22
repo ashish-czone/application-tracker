@@ -2,7 +2,7 @@ import { Suspense, lazy } from 'react';
 import { Routes, Route, Navigate } from 'react-router';
 import { AppLayout } from './layout/AppLayout';
 import { AuthGuard } from '../shared/auth/components/AuthGuard';
-import { CandidatesListPage, CandidateDetailPage, SettingsPage } from '../portals/recruiter/routes';
+import { CandidatesListPage, CandidateDetailPage, SettingsPage, AutomationsPage, RuleBuilderPage } from '../portals/recruiter/routes';
 
 const LoginPage = lazy(() => import('../shared/auth/pages/LoginPage'));
 const RegisterPage = lazy(() => import('../shared/auth/pages/RegisterPage'));
@@ -72,6 +72,30 @@ export function AppRouter() {
             element={
               <Suspense fallback={<PageSkeleton />}>
                 <CandidateDetailPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/automations"
+            element={
+              <Suspense fallback={<PageSkeleton />}>
+                <AutomationsPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/automations/create"
+            element={
+              <Suspense fallback={<PageSkeleton />}>
+                <RuleBuilderPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/automations/:id/edit"
+            element={
+              <Suspense fallback={<PageSkeleton />}>
+                <RuleBuilderPage />
               </Suspense>
             }
           />
