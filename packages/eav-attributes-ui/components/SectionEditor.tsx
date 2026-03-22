@@ -78,16 +78,14 @@ export function SectionEditor({
             strategy={verticalListSortingStrategy}
           >
             {section.fields.length > 0 ? (
-              <div className="grid grid-cols-2 gap-1">
-                {section.fields.map((field) => (
-                  <FieldCard
-                    key={field.id}
-                    field={field}
-                    onClick={onEditField}
-                    onRemove={(fieldId) => onRemoveField(section.id, fieldId)}
-                  />
-                ))}
-              </div>
+              section.fields.map((field) => (
+                <FieldCard
+                  key={field.id}
+                  field={field}
+                  onClick={onEditField}
+                  onRemove={(fieldId) => onRemoveField(section.id, fieldId)}
+                />
+              ))
             ) : (
               <div className="flex items-center justify-center py-4 text-xs text-muted-foreground border border-dashed rounded">
                 Drag fields here or click "Add field"
