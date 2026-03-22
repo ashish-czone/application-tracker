@@ -6,31 +6,8 @@ export const CANDIDATES_CANDIDATE_DELETED = 'candidates.CandidateDeleted' as con
 
 // --- Payload types ---
 
-export interface CandidateSnapshot {
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string | null;
-  source: string | null;
-  currentCompany: string | null;
-  currentTitle: string | null;
-  expectedSalary: number | null;
-  currency: string | null;
-  gender: string | null;
-  nationality: string | null;
-  dateOfBirth: string | null;
-  address: string | null;
-  city: string | null;
-  state: string | null;
-  country: string | null;
-  zipCode: string | null;
-  linkedinUrl: string | null;
-  highestQualification: string | null;
-  availableFrom: string | null;
-  isWillingToRelocate: boolean | null;
-  notes: string | null;
-  [key: string]: unknown;
-}
+/** Flat snapshot of all candidate fields (base + EAV). */
+export type CandidateSnapshot = Record<string, unknown>;
 
 export interface CandidateCreatedPayload {
   firstName: string;

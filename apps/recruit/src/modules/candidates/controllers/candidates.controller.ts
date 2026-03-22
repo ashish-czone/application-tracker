@@ -18,8 +18,6 @@ import { ApiTags, ApiOperation, ApiConsumes } from '@nestjs/swagger';
 import { CurrentUser, type JwtPayload } from '@packages/auth';
 import { RequirePermission } from '@packages/rbac';
 import { CandidatesService } from '../services/candidates.service';
-import { CreateCandidateDto } from '../dto/create-candidate.dto';
-import { UpdateCandidateDto } from '../dto/update-candidate.dto';
 import { ListCandidatesQueryDto } from '../dto/list-candidates-query.dto';
 import { CANDIDATES_PERMISSIONS } from '../permissions';
 
@@ -46,8 +44,8 @@ export class CandidatesController {
   @RequirePermission(CANDIDATES_PERMISSIONS.CREATE)
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a new candidate' })
-  async create(@Body() dto: CreateCandidateDto, @CurrentUser() user: JwtPayload) {
-    return this.candidatesService.create(dto, user.userId);
+  async create(@Body() body: Record<string, unknown>, @CurrentUser() user: JwtPayload) {
+    return this.candidatesService.create(body, user.userId);
   }
 
   @Patch(':id')
@@ -55,10 +53,10 @@ export class CandidatesController {
   @ApiOperation({ summary: 'Update a candidate' })
   async update(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: UpdateCandidateDto,
+    @Body() body: Record<string, unknown>,
     @CurrentUser() user: JwtPayload,
   ) {
-    return this.candidatesService.update(id, dto, user.userId);
+    return this.candidatesService.update(id, body, user.userId);
   }
 
   @Delete(':id')
