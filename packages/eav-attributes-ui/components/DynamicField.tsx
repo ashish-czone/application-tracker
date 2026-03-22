@@ -1,8 +1,7 @@
-import { useFormContext, Controller } from 'react-hook-form';
 import { FormInput } from '@packages/ui/components/form/FormInput';
 import { FormSelect } from '@packages/ui/components/form/FormSelect';
 import { FormTextarea } from '@packages/ui/components/form/FormTextarea';
-import { Label } from '@packages/ui/components/form/Label';
+import { FormCheckbox } from '@packages/ui/components/form/FormCheckbox';
 import type { FieldDefinition } from '../types';
 
 interface DynamicFieldProps {
@@ -133,7 +132,7 @@ function DynamicFieldEdit({ field }: { field: FieldDefinition }) {
       );
 
     case 'boolean':
-      return <BooleanField fieldKey={field.fieldKey} label={label} disabled={disabled} />;
+      return <FormCheckbox name={field.fieldKey} label={label} disabled={disabled} className="pt-6" />;
 
     case 'lookup':
     case 'user':
@@ -153,26 +152,3 @@ function DynamicFieldEdit({ field }: { field: FieldDefinition }) {
   }
 }
 
-function BooleanField({ fieldKey, label, disabled }: { fieldKey: string; label: string; disabled?: boolean }) {
-  const { control } = useFormContext();
-
-  return (
-    <Controller
-      control={control}
-      name={fieldKey}
-      render={({ field }) => (
-        <div className="flex items-center gap-2 pt-6">
-          <input
-            type="checkbox"
-            id={fieldKey}
-            checked={!!field.value}
-            onChange={(e) => field.onChange(e.target.checked)}
-            disabled={disabled}
-            className="h-4 w-4 rounded border-input"
-          />
-          <Label htmlFor={fieldKey}>{label}</Label>
-        </div>
-      )}
-    />
-  );
-}

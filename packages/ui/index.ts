@@ -13,6 +13,7 @@ export { FormPasswordInput } from './components/form/FormPasswordInput';
 export { FormPhoneInput } from './components/form/FormPhoneInput';
 export { FormSelect } from './components/form/FormSelect';
 export { FormTextarea } from './components/form/FormTextarea';
+export { FormCheckbox } from './components/form/FormCheckbox';
 export { PasswordStrength } from './components/form/PasswordStrength';
 
 // Components — feedback
