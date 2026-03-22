@@ -19,9 +19,9 @@ class ConditionDto {
   @MaxLength(100)
   field!: string;
 
-  @ApiProperty({ example: 'eq', enum: ['eq', 'neq', 'in', 'gt', 'lt', 'is_null', 'is_not_null'] })
+  @ApiProperty({ example: 'eq', enum: ['eq', 'neq', 'in', 'gt', 'lt', 'is_null', 'is_not_null', 'changed', 'changed_to', 'changed_from_to'] })
   @IsString()
-  @IsIn(['eq', 'neq', 'in', 'gt', 'lt', 'is_null', 'is_not_null'])
+  @IsIn(['eq', 'neq', 'in', 'gt', 'lt', 'is_null', 'is_not_null', 'changed', 'changed_to', 'changed_from_to'])
   operator!: string;
 
   @ApiPropertyOptional({ example: 'pending' })

@@ -8,7 +8,7 @@ class ConditionDto {
   field!: string;
 
   @IsString()
-  @IsIn(['eq', 'neq', 'in', 'gt', 'lt', 'is_null', 'is_not_null'])
+  @IsIn(['eq', 'neq', 'in', 'gt', 'lt', 'is_null', 'is_not_null', 'changed', 'changed_to', 'changed_from_to'])
   operator!: string;
 
   @IsOptional()
