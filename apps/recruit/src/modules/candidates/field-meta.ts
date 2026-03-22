@@ -69,10 +69,10 @@ export const CANDIDATE_FIELD_META: Record<string, {
 /** Fields to skip — internal/system columns that admins don't interact with */
 export const SKIP_FIELDS = ['id', 'deletedAt', 'deletedBy', 'resumeFile', 'createdAt', 'updatedAt', 'createdBy'];
 
-/** Section definitions for the default layout (field keys use snake_case to match fieldKey convention) */
+/** Section definitions for the default layout (field keys use camelCase to match Drizzle property names) */
 export const CANDIDATE_SECTIONS = [
-  { name: 'Basic Info', fields: ['first_name', 'last_name', 'email', 'phone', 'gender', 'date_of_birth', 'nationality'] },
-  { name: 'Professional Details', fields: ['current_title', 'current_company', 'expected_salary', 'source', 'available_from', 'is_willing_to_relocate', 'linkedin_url'] },
-  { name: 'Education', fields: ['highest_qualification'] },
-  { name: 'Address', fields: ['address', 'city', 'state', 'country', 'zip_code'] },
+  { name: 'Basic Info', fields: ['firstName', 'lastName', 'email', 'phone', 'gender', 'dateOfBirth', 'nationality'] },
+  { name: 'Professional Details', fields: ['currentTitle', 'currentCompany', 'expectedSalary', 'source', 'availableFrom', 'isWillingToRelocate', 'linkedinUrl'] },
+  { name: 'Education', fields: ['highestQualification'] },
+  { name: 'Address', fields: ['address', 'city', 'state', 'country', 'zipCode'] },
 ];

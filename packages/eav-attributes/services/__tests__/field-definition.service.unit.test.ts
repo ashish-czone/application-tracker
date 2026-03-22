@@ -276,10 +276,12 @@ describe('FieldDefinitionService', () => {
 
   describe('registerStandardFields', () => {
     it('should create new fields that do not exist', async () => {
-      // findByEntityAndKey returns null for each field (not found)
+      // For each field: findByEntityAndKey returns [] (not found), then findByEntityAndColumn returns [] (not found)
       mockDb._chain.limit
-        .mockResolvedValueOnce([])
-        .mockResolvedValueOnce([]);
+        .mockResolvedValueOnce([])   // findByEntityAndKey for first_name
+        .mockResolvedValueOnce([])   // findByEntityAndColumn for first_name
+        .mockResolvedValueOnce([])   // findByEntityAndKey for last_name
+        .mockResolvedValueOnce([]);  // findByEntityAndColumn for last_name
 
       await service.registerStandardFields('candidates', [
         { fieldKey: 'first_name', label: 'First Name', fieldType: 'text', columnName: 'first_name' },

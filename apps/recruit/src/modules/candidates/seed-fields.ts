@@ -31,7 +31,7 @@ export async function seedCandidateFields(
     .map(([key, col], index) => {
       const meta = CANDIDATE_FIELD_META[key];
       return {
-        fieldKey: col.name, // snake_case DB column name used as the fieldKey
+        fieldKey: key, // camelCase Drizzle property name — matches API payload keys
         label: meta?.label ?? key,
         fieldType: meta?.fieldType ?? mapDrizzleType(col.dataType),
         columnName: col.name,
@@ -50,7 +50,7 @@ export async function seedCandidateFields(
   // Set picklist options for fields that have them
   for (const [, meta] of Object.entries(CANDIDATE_FIELD_META)) {
     if (meta.picklistOptions) {
-      // Find the matching field entry to get its fieldKey (snake_case)
+      // Find the matching field entry to get its fieldKey (camelCase)
       const fieldEntry = fields.find(f => f.label === meta.label);
       if (fieldEntry) {
         await fieldDefinitionService.setPicklistOptions(
