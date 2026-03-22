@@ -1,10 +1,12 @@
 import { Injectable, type OnModuleInit } from '@nestjs/common';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { DatabaseService, eq, users } from '@packages/database';
+import { FieldDefinitionService, LayoutService } from '@packages/eav-attributes';
 import { TaxonomyService } from '@packages/taxonomy';
 import { tagGroups } from '@packages/taxonomy';
 import { CandidatesService } from './candidates.service';
 import { candidates } from '../schema/candidates';
+import { seedCandidateFields } from '../seed-fields';
 
 const SKILLS_GROUP_SLUG = 'recruit-skills';
 
@@ -107,12 +109,15 @@ export class CandidatesSeedService implements OnModuleInit {
     private readonly database: DatabaseService,
     private readonly taxonomyService: TaxonomyService,
     private readonly candidatesService: CandidatesService,
+    private readonly fieldDefinitionService: FieldDefinitionService,
+    private readonly layoutService: LayoutService,
     appLogger: AppLoggerService,
   ) {
     this.logger = appLogger.forContext(CandidatesSeedService.name);
   }
 
   async onModuleInit() {
+    await seedCandidateFields(this.fieldDefinitionService, this.layoutService);
     await this.ensureSkillTags();
     await this.ensureSampleCandidates();
   }
