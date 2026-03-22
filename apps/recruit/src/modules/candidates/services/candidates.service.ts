@@ -1,17 +1,23 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { DatabaseService, eq, and, or, isNull, ilike, asc, desc, count } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
 import { MediaService, type MediaFile, type MediaFieldConfig, type UploadedFile } from '@packages/media';
 import { TaxonomyService } from '@packages/taxonomy';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
-import { FieldValueService, buildSnapshot, diffSnapshot } from '@packages/eav-attributes';
+import {
+  FieldValueService,
+  FieldDefinitionService,
+  buildSnapshot,
+  diffSnapshot,
+  validatePayload,
+  splitPayload,
+} from '@packages/eav-attributes';
 import type { PaginatedResponse } from '@packages/common';
 import { candidates } from '../schema/candidates';
 import {
   CANDIDATES_CANDIDATE_CREATED,
   CANDIDATES_CANDIDATE_UPDATED,
   CANDIDATES_CANDIDATE_DELETED,
-  type CandidateSnapshot,
 } from '../events/types';
 
 function resumeFieldConfig(candidateId: string): MediaFieldConfig {
@@ -30,38 +36,10 @@ function resumeFieldConfig(candidateId: string): MediaFieldConfig {
 }
 
 const ENTITY_TYPE = 'candidate';
+const EAV_ENTITY_TYPE = 'candidates';
 
-export interface CandidateResponse {
-  id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string | null;
-  source: string | null;
-  currentCompany: string | null;
-  currentTitle: string | null;
-  expectedSalary: number | null;
-  currency: string | null;
-  highestQualification: string | null;
-  dateOfBirth: string | null;
-  gender: string | null;
-  nationality: string | null;
-  address: string | null;
-  city: string | null;
-  state: string | null;
-  country: string | null;
-  zipCode: string | null;
-  isWillingToRelocate: boolean | null;
-  availableFrom: string | null;
-  linkedinUrl: string | null;
-  notes: string | null;
-  resumeFile: MediaFile | null;
-  skills: { id: string; name: string; slug: string }[];
-  createdBy: string;
-  createdAt: Date;
-  updatedAt: Date;
-  deletedAt: Date | null;
-}
+/** System columns excluded from field-level operations (snapshot, toResponse field spread) */
+const SYSTEM_COLUMNS = new Set(['id', 'createdAt', 'updatedAt', 'deletedAt', 'deletedBy', 'resumeFile', 'createdBy']);
 
 export interface ListCandidatesQuery {
   page?: number;
@@ -75,56 +53,6 @@ export interface ListCandidatesQuery {
   includeDeleted?: boolean;
 }
 
-export interface CreateCandidateInput {
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone?: string;
-  source?: string;
-  currentCompany?: string;
-  currentTitle?: string;
-  expectedSalary?: number;
-  currency?: string;
-  highestQualification?: string;
-  dateOfBirth?: string;
-  gender?: string;
-  nationality?: string;
-  address?: string;
-  city?: string;
-  state?: string;
-  country?: string;
-  zipCode?: string;
-  isWillingToRelocate?: boolean;
-  availableFrom?: string;
-  linkedinUrl?: string;
-  notes?: string;
-}
-
-export interface UpdateCandidateInput {
-  firstName?: string;
-  lastName?: string;
-  email?: string;
-  phone?: string | null;
-  source?: string;
-  currentCompany?: string | null;
-  currentTitle?: string | null;
-  expectedSalary?: number | null;
-  currency?: string;
-  highestQualification?: string | null;
-  dateOfBirth?: string | null;
-  gender?: string | null;
-  nationality?: string | null;
-  address?: string | null;
-  city?: string | null;
-  state?: string | null;
-  country?: string | null;
-  zipCode?: string | null;
-  isWillingToRelocate?: boolean;
-  availableFrom?: string | null;
-  linkedinUrl?: string | null;
-  notes?: string | null;
-}
-
 @Injectable()
 export class CandidatesService {
   private readonly logger: ContextLogger;
@@ -135,12 +63,13 @@ export class CandidatesService {
     private readonly mediaService: MediaService,
     private readonly taxonomyService: TaxonomyService,
     private readonly fieldValueService: FieldValueService,
+    private readonly fieldDefinitionService: FieldDefinitionService,
     appLogger: AppLoggerService,
   ) {
     this.logger = appLogger.forContext(CandidatesService.name);
   }
 
-  async list(query: ListCandidatesQuery): Promise<PaginatedResponse<CandidateResponse>> {
+  async list(query: ListCandidatesQuery): Promise<PaginatedResponse<Record<string, unknown>>> {
     const page = query.page ?? 1;
     const limit = query.limit ?? 25;
     const offset = (page - 1) * limit;
@@ -198,7 +127,13 @@ export class CandidatesService {
       .limit(limit)
       .offset(offset);
 
-    const data = await Promise.all(rows.map((row) => this.toResponse(row)));
+    // Batch-hydrate EAV values for all candidates on this page
+    const entityIds = rows.map(r => r.id);
+    const eavMap = entityIds.length > 0
+      ? await this.fieldValueService.getBatchValues(EAV_ENTITY_TYPE, entityIds)
+      : new Map<string, Record<string, unknown>>();
+
+    const data = await Promise.all(rows.map((row) => this.toResponse(row, eavMap.get(row.id))));
 
     return {
       data,
@@ -211,7 +146,7 @@ export class CandidatesService {
     };
   }
 
-  async findOneOrFail(id: string): Promise<CandidateResponse> {
+  async findOneOrFail(id: string): Promise<Record<string, unknown>> {
     const [candidate] = await this.database.db
       .select()
       .from(candidates)
@@ -223,49 +158,66 @@ export class CandidatesService {
     return this.toResponse(candidate);
   }
 
-  async create(data: CreateCandidateInput, actorId: string): Promise<CandidateResponse> {
-    // Check email uniqueness
-    const [existing] = await this.database.db
-      .select({ id: candidates.id })
-      .from(candidates)
-      .where(and(eq(candidates.email, data.email.toLowerCase()), isNull(candidates.deletedAt)))
-      .limit(1);
+  async create(payload: Record<string, unknown>, actorId: string): Promise<Record<string, unknown>> {
+    // 1. Load field definitions with picklist options for validation
+    const defs = await this.fieldDefinitionService.listByEntityWithOptions(EAV_ENTITY_TYPE);
 
-    if (existing) throw new ConflictException('A candidate with this email already exists');
+    // 2. Validate
+    const result = validatePayload(defs, payload, { partial: false });
+    if (!result.valid) {
+      throw new BadRequestException({ message: 'Validation failed', errors: result.errors });
+    }
 
-    const [candidate] = await this.database.db
-      .insert(candidates)
-      .values({
-        firstName: data.firstName,
-        lastName: data.lastName,
-        email: data.email.toLowerCase(),
-        phone: data.phone,
-        source: data.source,
-        currentCompany: data.currentCompany,
-        currentTitle: data.currentTitle,
-        expectedSalary: data.expectedSalary,
-        currency: data.currency,
-        highestQualification: data.highestQualification,
-        dateOfBirth: data.dateOfBirth,
-        gender: data.gender,
-        nationality: data.nationality,
-        address: data.address,
-        city: data.city,
-        state: data.state,
-        country: data.country,
-        zipCode: data.zipCode,
-        isWillingToRelocate: data.isWillingToRelocate,
-        availableFrom: data.availableFrom,
-        linkedinUrl: data.linkedinUrl,
-        notes: data.notes,
-        createdBy: actorId,
-      })
-      .returning();
+    // 3. Split into standard DB columns vs custom EAV fields
+    const { standardFields, customFields } = splitPayload(defs, payload);
+
+    // 4. Email normalization
+    if (standardFields.email) {
+      standardFields.email = (standardFields.email as string).toLowerCase();
+    }
+
+    // 5. Check email uniqueness
+    if (standardFields.email) {
+      const [existing] = await this.database.db
+        .select({ id: candidates.id })
+        .from(candidates)
+        .where(and(eq(candidates.email, standardFields.email as string), isNull(candidates.deletedAt)))
+        .limit(1);
+
+      if (existing) throw new ConflictException('A candidate with this email already exists');
+    }
+
+    // 6. Check uniqueness for unique custom EAV fields
+    for (const def of defs.filter(d => d.isUnique && !d.columnName)) {
+      if (customFields[def.fieldKey] != null) {
+        const isUnique = await this.fieldValueService.checkUniqueness(
+          EAV_ENTITY_TYPE, def.fieldKey, customFields[def.fieldKey],
+        );
+        if (!isUnique) throw new ConflictException(`Value for '${def.label}' must be unique`);
+      }
+    }
+
+    // 7. Insert standard fields + set EAV values in transaction
+    const candidate = await this.database.db.transaction(async (tx) => {
+      const [row] = await tx
+        .insert(candidates)
+        .values({ ...standardFields, createdBy: actorId } as any)
+        .returning();
+
+      if (Object.keys(customFields).length > 0) {
+        await this.fieldValueService.setValues(EAV_ENTITY_TYPE, row.id, customFields, tx);
+      }
+
+      return row;
+    });
 
     this.logger.log('Candidate created', { candidateId: candidate.id, actorId });
 
+    const response = await this.toResponse(candidate);
+    const snapshot = await this.buildEntitySnapshot(candidate);
+
     this.domainEventEmitter.emit(CANDIDATES_CANDIDATE_CREATED, {
-      entityType: 'candidates',
+      entityType: EAV_ENTITY_TYPE,
       entityId: candidate.id,
       actorId,
       payload: {
@@ -273,30 +225,46 @@ export class CandidatesService {
         lastName: candidate.lastName,
         email: candidate.email,
         source: candidate.source,
-        after: this.toSnapshot(candidate),
+        after: snapshot,
       },
     });
 
-    return this.toResponse(candidate);
+    return response;
   }
 
-  async update(id: string, data: UpdateCandidateInput, actorId: string): Promise<CandidateResponse> {
-    // Validate the candidate exists before entering the transaction
-    const existingResponse = await this.findOneOrFail(id);
+  async update(id: string, payload: Record<string, unknown>, actorId: string): Promise<Record<string, unknown>> {
+    // Validate the candidate exists
+    await this.findOneOrFail(id);
 
+    // 1. Load field definitions
+    const defs = await this.fieldDefinitionService.listByEntityWithOptions(EAV_ENTITY_TYPE);
+
+    // 2. Validate (partial mode — missing required fields OK)
+    const result = validatePayload(defs, payload, { partial: true });
+    if (!result.valid) {
+      throw new BadRequestException({ message: 'Validation failed', errors: result.errors });
+    }
+
+    // 3. Split
+    const { standardFields, customFields } = splitPayload(defs, payload);
+
+    // Filter out undefined values from standard fields
     const updateValues: Record<string, unknown> = {};
-    for (const [key, value] of Object.entries(data)) {
+    for (const [key, value] of Object.entries(standardFields)) {
       if (value !== undefined) {
         updateValues[key] = key === 'email' && typeof value === 'string' ? value.toLowerCase() : value;
       }
     }
 
-    if (Object.keys(updateValues).length === 0) {
-      return existingResponse;
+    const hasStandardChanges = Object.keys(updateValues).length > 0;
+    const hasCustomChanges = Object.keys(customFields).length > 0;
+
+    if (!hasStandardChanges && !hasCustomChanges) {
+      return this.findOneOrFail(id);
     }
 
-    // If email changed, check uniqueness
-    if (updateValues.email && updateValues.email !== existingResponse.email) {
+    // 4. If email changed, check uniqueness
+    if (updateValues.email) {
       const [conflict] = await this.database.db
         .select({ id: candidates.id })
         .from(candidates)
@@ -311,11 +279,21 @@ export class CandidatesService {
       }
     }
 
+    // 5. Check uniqueness for unique custom EAV fields
+    for (const def of defs.filter(d => d.isUnique && !d.columnName)) {
+      if (customFields[def.fieldKey] != null) {
+        const isUnique = await this.fieldValueService.checkUniqueness(
+          EAV_ENTITY_TYPE, def.fieldKey, customFields[def.fieldKey], id,
+        );
+        if (!isUnique) throw new ConflictException(`Value for '${def.label}' must be unique`);
+      }
+    }
+
     let eventPayload: { changes: string[]; before: Record<string, unknown>; after: Record<string, unknown> } | null = null;
 
     const updated = await this.database.db.transaction(async (tx) => {
       // Read EAV values before mutation (inside tx for consistency)
-      const eavBefore = await this.fieldValueService.getValues('candidates', id, tx);
+      const eavBefore = await this.fieldValueService.getValues(EAV_ENTITY_TYPE, id, tx);
 
       // Re-read the raw row inside the transaction to get a consistent snapshot
       const [existingRow] = await tx
@@ -324,19 +302,27 @@ export class CandidatesService {
         .where(eq(candidates.id, id))
         .limit(1);
 
-      const before = buildSnapshot(this.toSnapshot(existingRow), eavBefore);
+      const before = buildSnapshot(this.rowToSnapshot(existingRow), eavBefore);
 
-      // Update standard columns
-      const [row] = await tx
-        .update(candidates)
-        .set(updateValues)
-        .where(eq(candidates.id, id))
-        .returning();
+      // Update standard columns (if any)
+      let row = existingRow;
+      if (hasStandardChanges) {
+        const [updatedRow] = await tx
+          .update(candidates)
+          .set(updateValues)
+          .where(eq(candidates.id, id))
+          .returning();
+        row = updatedRow;
+      }
 
-      // Update EAV (returns before/after of EAV values)
-      const eavResult = await this.fieldValueService.setValues('candidates', id, {}, tx);
+      // Update EAV values (if any)
+      let eavAfter = eavBefore;
+      if (hasCustomChanges) {
+        const eavResult = await this.fieldValueService.setValues(EAV_ENTITY_TYPE, id, customFields, tx);
+        eavAfter = eavResult.after;
+      }
 
-      const after = buildSnapshot(this.toSnapshot(row), eavResult.after);
+      const after = buildSnapshot(this.rowToSnapshot(row), eavAfter);
       const changes = diffSnapshot(before, after);
 
       if (changes.length > 0) {
@@ -346,12 +332,16 @@ export class CandidatesService {
       return row;
     });
 
-    this.logger.log('Candidate updated', { candidateId: id, actorId, changes: Object.keys(updateValues) });
+    this.logger.log('Candidate updated', {
+      candidateId: id,
+      actorId,
+      changes: [...Object.keys(updateValues), ...Object.keys(customFields)],
+    });
 
     // Emit AFTER transaction commits
     if (eventPayload) {
       this.domainEventEmitter.emit(CANDIDATES_CANDIDATE_UPDATED, {
-        entityType: 'candidates',
+        entityType: EAV_ENTITY_TYPE,
         entityId: id,
         actorId,
         payload: eventPayload,
@@ -372,19 +362,19 @@ export class CandidatesService {
     this.logger.log('Candidate deleted', { candidateId: id, actorId });
 
     this.domainEventEmitter.emit(CANDIDATES_CANDIDATE_DELETED, {
-      entityType: 'candidates',
+      entityType: EAV_ENTITY_TYPE,
       entityId: id,
       actorId,
       payload: {
-        firstName: candidate.firstName,
-        lastName: candidate.lastName,
-        email: candidate.email,
-        before: this.toSnapshot(candidate),
+        firstName: candidate.firstName as string,
+        lastName: candidate.lastName as string,
+        email: candidate.email as string,
+        before: candidate as Record<string, unknown>,
       },
     });
   }
 
-  async restore(id: string): Promise<CandidateResponse> {
+  async restore(id: string): Promise<Record<string, unknown>> {
     const [candidate] = await this.database.db
       .select()
       .from(candidates)
@@ -404,7 +394,7 @@ export class CandidatesService {
     return this.toResponse(restored);
   }
 
-  async uploadResume(id: string, file: UploadedFile, actorId: string): Promise<CandidateResponse> {
+  async uploadResume(id: string, file: UploadedFile, actorId: string): Promise<Record<string, unknown>> {
     const candidate = await this.findOneOrFail(id);
     const existingResume = candidate.resumeFile as MediaFile | null;
 
@@ -431,60 +421,46 @@ export class CandidatesService {
     await this.taxonomyService.detachTag(ENTITY_TYPE, id, tagId);
   }
 
-  private toSnapshot(entity: CandidateResponse | typeof candidates.$inferSelect): CandidateSnapshot {
-    return {
-      firstName: entity.firstName,
-      lastName: entity.lastName,
-      email: entity.email,
-      phone: entity.phone,
-      source: entity.source,
-      currentCompany: entity.currentCompany,
-      currentTitle: entity.currentTitle,
-      expectedSalary: entity.expectedSalary,
-      currency: entity.currency,
-      gender: entity.gender,
-      nationality: entity.nationality,
-      dateOfBirth: entity.dateOfBirth,
-      address: entity.address,
-      city: entity.city,
-      state: entity.state,
-      country: entity.country,
-      zipCode: entity.zipCode,
-      linkedinUrl: entity.linkedinUrl,
-      highestQualification: entity.highestQualification,
-      availableFrom: entity.availableFrom,
-      isWillingToRelocate: entity.isWillingToRelocate,
-      notes: entity.notes,
-    };
+  /**
+   * Extract field-level data from a raw DB row (excludes system columns).
+   * Used for building before/after snapshots for events.
+   */
+  private rowToSnapshot(row: typeof candidates.$inferSelect): Record<string, unknown> {
+    const snapshot: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(row)) {
+      if (!SYSTEM_COLUMNS.has(key)) {
+        snapshot[key] = value;
+      }
+    }
+    return snapshot;
   }
 
-  private async toResponse(row: typeof candidates.$inferSelect): Promise<CandidateResponse> {
+  /**
+   * Build a full entity snapshot (standard + EAV) for event payloads.
+   */
+  private async buildEntitySnapshot(row: typeof candidates.$inferSelect): Promise<Record<string, unknown>> {
+    const eavValues = await this.fieldValueService.getValues(EAV_ENTITY_TYPE, row.id);
+    return buildSnapshot(this.rowToSnapshot(row), eavValues);
+  }
+
+  /**
+   * Build the API response by merging standard DB columns with EAV values.
+   * Standard fields take precedence over EAV on key collision.
+   * Optionally accepts pre-fetched EAV values for batch hydration (list view).
+   */
+  private async toResponse(
+    row: typeof candidates.$inferSelect,
+    preloadedEavValues?: Record<string, unknown>,
+  ): Promise<Record<string, unknown>> {
+    const eavValues = preloadedEavValues ?? await this.fieldValueService.getValues(EAV_ENTITY_TYPE, row.id);
     const skills = await this.taxonomyService.getTagsForEntity(ENTITY_TYPE, row.id);
 
+    const standardFields = this.rowToSnapshot(row);
+
     return {
+      ...eavValues,
+      ...standardFields,
       id: row.id,
-      firstName: row.firstName,
-      lastName: row.lastName,
-      email: row.email,
-      phone: row.phone,
-      source: row.source,
-      currentCompany: row.currentCompany,
-      currentTitle: row.currentTitle,
-      expectedSalary: row.expectedSalary,
-      currency: row.currency,
-      highestQualification: row.highestQualification,
-      dateOfBirth: row.dateOfBirth,
-      gender: row.gender,
-      nationality: row.nationality,
-      address: row.address,
-      city: row.city,
-      state: row.state,
-      country: row.country,
-      zipCode: row.zipCode,
-      isWillingToRelocate: row.isWillingToRelocate,
-      availableFrom: row.availableFrom,
-      linkedinUrl: row.linkedinUrl,
-      notes: row.notes,
       resumeFile: row.resumeFile as MediaFile | null,
       skills: skills.map((t) => ({ id: t.id, name: t.name, slug: t.slug })),
       createdBy: row.createdBy,
