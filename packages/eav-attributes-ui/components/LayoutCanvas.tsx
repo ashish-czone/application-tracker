@@ -1,6 +1,17 @@
-import { DndContext, DragOverlay, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core';
+import {
+  DndContext,
+  DragOverlay,
+  closestCorners,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+  type DragOverEvent,
+} from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Plus } from 'lucide-react';
 import { Button } from '@packages/ui';
 import { SectionEditor } from './SectionEditor';
@@ -18,7 +29,6 @@ interface LayoutCanvasProps {
   onEditField: (field: FieldDefinition) => void;
   onAddSectionClick: () => void;
   onAddFieldClick: (sectionId: string) => void;
-  /** Called for cross-section moves: remove from source, add to target in sequence */
   onMoveFieldToSection?: (sourceSectionId: string, targetSectionId: string, fieldId: string) => void | Promise<void>;
 }
 
@@ -46,13 +56,19 @@ export function LayoutCanvas({
     }),
   );
 
+  const findSectionByFieldId = useCallback(
+    (fieldId: string): LayoutSection | undefined => {
+      return sections.find((s) => s.fields.some((f) => f.id === fieldId));
+    },
+    [sections],
+  );
+
   function handleDragStart(event: DragStartEvent) {
     const { active } = event;
     const data = active.data.current;
     if (data?.type === 'palette-field') {
       setActiveField(data.field);
     } else {
-      // Find field in sections
       for (const section of sections) {
         const field = section.fields.find((f) => f.id === active.id);
         if (field) {
@@ -71,13 +87,13 @@ export function LayoutCanvas({
     const activeData = active.data.current;
     const overData = over.data.current;
 
-    // Palette field dropped on a section
+    // Palette field dropped on a section droppable
     if (activeData?.type === 'palette-field' && overData?.type === 'section') {
       onAddFieldToSection(overData.sectionId, activeData.field.id);
       return;
     }
 
-    // Palette field dropped on a field in a section — add to that section
+    // Palette field dropped on a field inside a section
     if (activeData?.type === 'palette-field') {
       const targetSection = findSectionByFieldId(over.id as string);
       if (targetSection) {
@@ -88,9 +104,14 @@ export function LayoutCanvas({
 
     // Field reorder within/across sections
     const sourceSection = findSectionByFieldId(active.id as string);
-    const targetSection = overData?.type === 'section'
-      ? sections.find((s) => s.id === overData.sectionId)
-      : findSectionByFieldId(over.id as string);
+
+    // Determine target: could be a section droppable or a field within a section
+    let targetSection: LayoutSection | undefined;
+    if (overData?.type === 'section') {
+      targetSection = sections.find((s) => s.id === overData.sectionId);
+    } else {
+      targetSection = findSectionByFieldId(over.id as string);
+    }
 
     if (!sourceSection || !targetSection) return;
 
@@ -106,21 +127,16 @@ export function LayoutCanvas({
       reordered.splice(newIndex, 0, active.id as string);
       onReorderFields(sourceSection.id, reordered);
     } else {
-      // Move between sections — use dedicated handler if available, otherwise sequential calls
+      // Move between sections
       if (onMoveFieldToSection) {
         onMoveFieldToSection(sourceSection.id, targetSection.id, active.id as string);
       } else {
-        // Fallback: fire sequentially using async
         (async () => {
           await onRemoveFieldFromSection(sourceSection.id, active.id as string);
-          await onAddFieldToSection(targetSection.id, active.id as string);
+          await onAddFieldToSection(targetSection!.id, active.id as string);
         })();
       }
     }
-  }
-
-  function findSectionByFieldId(fieldId: string): LayoutSection | undefined {
-    return sections.find((s) => s.fields.some((f) => f.id === fieldId));
   }
 
   // Filter out the virtual __unassigned__ section from the canvas
@@ -129,27 +145,22 @@ export function LayoutCanvas({
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCenter}
+      collisionDetection={closestCorners}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
       <div className="flex-1 space-y-3">
-        <SortableContext
-          items={displaySections.map((s) => s.id)}
-          strategy={verticalListSortingStrategy}
-        >
-          {displaySections.map((section) => (
-            <SectionEditor
-              key={section.id}
-              section={section}
-              onEditSection={onEditSection}
-              onDeleteSection={onDeleteSection}
-              onRemoveField={onRemoveFieldFromSection}
-              onEditField={onEditField}
-              onAddFieldClick={onAddFieldClick}
-            />
-          ))}
-        </SortableContext>
+        {displaySections.map((section) => (
+          <SectionEditor
+            key={section.id}
+            section={section}
+            onEditSection={onEditSection}
+            onDeleteSection={onDeleteSection}
+            onRemoveField={onRemoveFieldFromSection}
+            onEditField={onEditField}
+            onAddFieldClick={onAddFieldClick}
+          />
+        ))}
 
         <Button
           type="button"

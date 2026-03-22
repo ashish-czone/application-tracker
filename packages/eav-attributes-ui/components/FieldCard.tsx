@@ -1,7 +1,6 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, X } from 'lucide-react';
-import { Badge } from '@packages/ui';
 import { FIELD_TYPE_CONFIG } from '../types';
 import type { FieldDefinition } from '../types';
 
@@ -17,6 +16,7 @@ export function FieldCard({ field, onRemove, onClick, isDragDisabled }: FieldCar
     attributes,
     listeners,
     setNodeRef,
+    setActivatorNodeRef,
     transform,
     transition,
     isDragging,
@@ -40,6 +40,7 @@ export function FieldCard({ field, onRemove, onClick, isDragDisabled }: FieldCar
     >
       <button
         type="button"
+        ref={setActivatorNodeRef}
         {...attributes}
         {...listeners}
         className="cursor-grab text-muted-foreground hover:text-foreground touch-none"

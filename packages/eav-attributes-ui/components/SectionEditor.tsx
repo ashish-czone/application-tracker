@@ -26,7 +26,7 @@ export function SectionEditor({
   const [collapsed, setCollapsed] = useState(false);
 
   const { setNodeRef, isOver } = useDroppable({
-    id: `section-${section.id}`,
+    id: section.id,
     data: { type: 'section', sectionId: section.id },
   });
 
@@ -74,6 +74,7 @@ export function SectionEditor({
       {!collapsed && (
         <div ref={setNodeRef} className="p-2 space-y-1 min-h-[40px]">
           <SortableContext
+            id={section.id}
             items={section.fields.map((f) => f.id)}
             strategy={verticalListSortingStrategy}
           >
