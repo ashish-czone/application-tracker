@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
-  Form, FormInput, FormSelect, Button,
+  Form, FormInput, FormSelect, FormCheckbox, Button,
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@packages/ui';
 import { PicklistOptionsEditor } from './PicklistOptionsEditor';
@@ -59,6 +59,25 @@ export function CreateFieldDialog({
       lookupEntity: '',
     },
   });
+
+  // Reset form when dialog opens (ensures preselectedType and clean state)
+  useEffect(() => {
+    if (open) {
+      form.reset({
+        fieldKey: '',
+        label: '',
+        fieldType: preselectedType ?? '',
+        isRequired: false,
+        isUnique: false,
+        isQuickCreate: false,
+        isReadonly: false,
+        maxLength: '',
+        defaultValue: '',
+        lookupEntity: '',
+      });
+      setPicklistOptions([]);
+    }
+  }, [open, preselectedType, form]);
 
   const selectedType = form.watch('fieldType') as FieldType;
   const isPicklistType = selectedType === 'picklist' || selectedType === 'multi_select';
@@ -124,22 +143,10 @@ export function CreateFieldDialog({
           />
 
           <div className="grid grid-cols-2 gap-3">
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
-              <input type="checkbox" {...form.register('isRequired')} className="rounded border-input" />
-              Required
-            </label>
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
-              <input type="checkbox" {...form.register('isUnique')} className="rounded border-input" />
-              Unique
-            </label>
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
-              <input type="checkbox" {...form.register('isQuickCreate')} className="rounded border-input" />
-              Quick Create
-            </label>
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
-              <input type="checkbox" {...form.register('isReadonly')} className="rounded border-input" />
-              Read-only
-            </label>
+            <FormCheckbox name="isRequired" label="Required" />
+            <FormCheckbox name="isUnique" label="Unique" />
+            <FormCheckbox name="isQuickCreate" label="Quick Create" />
+            <FormCheckbox name="isReadonly" label="Read-only" />
           </div>
 
           {(selectedType === 'text' || selectedType === 'email' || selectedType === 'url' || selectedType === 'textarea') && (
