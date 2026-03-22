@@ -787,9 +787,6 @@ importers:
       '@packages/database':
         specifier: workspace:*
         version: link:../database
-      '@packages/eav-attributes':
-        specifier: workspace:*
-        version: link:../eav-attributes
       '@packages/events':
         specifier: workspace:*
         version: link:../events
