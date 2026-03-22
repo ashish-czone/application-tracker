@@ -71,12 +71,48 @@ describe('FieldValueService', () => {
       expect(result.birth_date).toBe('2024-01-15');
       expect(result.created_at).toEqual(dt);
     });
+
+    it('should use provided tx instead of default db', async () => {
+      const txMockChain = {
+        from: vi.fn().mockReturnThis(),
+        where: vi.fn().mockResolvedValue([]),
+      };
+      const txMock = {
+        select: vi.fn().mockReturnValue(txMockChain),
+      };
+
+      await service.getValues('candidates', 'c1', txMock);
+
+      // Should use the tx, not the default db
+      expect(txMock.select).toHaveBeenCalled();
+      expect(mockDb.select).not.toHaveBeenCalled();
+    });
   });
 
   // --- setValues ---
 
   describe('setValues', () => {
+    it('should return { before, after } with applied changes', async () => {
+      // First call: getValues reads existing EAV (from where)
+      mockDb._chain.where
+        .mockResolvedValueOnce([
+          { fieldKey: 'name', valueText: 'Old Name', valueNumber: null, valueDate: null, valueDatetime: null, valueBoolean: null },
+        ])
+        // Second call: field definition lookup
+        .mockResolvedValueOnce([
+          { fieldKey: 'name', fieldType: 'text' },
+        ]);
+
+      const result = await service.setValues('candidates', 'c1', { name: 'New Name' });
+
+      expect(result.before).toEqual({ name: 'Old Name' });
+      expect(result.after).toEqual({ name: 'New Name' });
+    });
+
     it('should route text field to valueText column', async () => {
+      // getValues (empty)
+      mockDb._chain.where.mockResolvedValueOnce([]);
+      // field defs
       const fieldDefs = [
         { fieldKey: 'name', fieldType: 'text' },
       ];
@@ -88,104 +124,137 @@ describe('FieldValueService', () => {
     });
 
     it('should route number field to valueNumber column', async () => {
+      mockDb._chain.where.mockResolvedValueOnce([]);
       const fieldDefs = [
         { fieldKey: 'age', fieldType: 'number' },
       ];
       mockDb._chain.where.mockResolvedValueOnce(fieldDefs);
 
-      await service.setValues('candidates', 'c1', { age: 30 });
+      const result = await service.setValues('candidates', 'c1', { age: 30 });
 
       expect(mockDb.insert).toHaveBeenCalled();
+      expect(result.after.age).toBe(30);
     });
 
     it('should route boolean field to valueBoolean column', async () => {
+      mockDb._chain.where.mockResolvedValueOnce([]);
       const fieldDefs = [
         { fieldKey: 'active', fieldType: 'boolean' },
       ];
       mockDb._chain.where.mockResolvedValueOnce(fieldDefs);
 
-      await service.setValues('candidates', 'c1', { active: true });
+      const result = await service.setValues('candidates', 'c1', { active: true });
 
       expect(mockDb.insert).toHaveBeenCalled();
+      expect(result.after.active).toBe(true);
     });
 
     it('should route date field to valueDate column', async () => {
+      mockDb._chain.where.mockResolvedValueOnce([]);
       const fieldDefs = [
         { fieldKey: 'dob', fieldType: 'date' },
       ];
       mockDb._chain.where.mockResolvedValueOnce(fieldDefs);
 
-      await service.setValues('candidates', 'c1', { dob: '2024-01-15' });
+      const result = await service.setValues('candidates', 'c1', { dob: '2024-01-15' });
 
       expect(mockDb.insert).toHaveBeenCalled();
+      expect(result.after.dob).toBe('2024-01-15');
     });
 
     it('should route datetime field to valueDatetime column', async () => {
+      mockDb._chain.where.mockResolvedValueOnce([]);
+      const dt = new Date('2024-01-15T10:00:00Z');
       const fieldDefs = [
         { fieldKey: 'start', fieldType: 'datetime' },
       ];
       mockDb._chain.where.mockResolvedValueOnce(fieldDefs);
 
-      await service.setValues('candidates', 'c1', { start: new Date() });
+      const result = await service.setValues('candidates', 'c1', { start: dt });
 
       expect(mockDb.insert).toHaveBeenCalled();
+      expect(result.after.start).toEqual(dt);
     });
 
-    it('should delete value row when value is null', async () => {
+    it('should delete value row when value is null and remove from after', async () => {
+      // getValues returns existing value
+      mockDb._chain.where.mockResolvedValueOnce([
+        { fieldKey: 'name', valueText: 'Alice', valueNumber: null, valueDate: null, valueDatetime: null, valueBoolean: null },
+      ]);
       const fieldDefs = [
         { fieldKey: 'name', fieldType: 'text' },
       ];
       mockDb._chain.where.mockResolvedValueOnce(fieldDefs);
 
-      await service.setValues('candidates', 'c1', { name: null });
+      const result = await service.setValues('candidates', 'c1', { name: null });
 
       expect(mockDb.delete).toHaveBeenCalled();
       expect(mockDb.insert).not.toHaveBeenCalled();
+      expect(result.before).toEqual({ name: 'Alice' });
+      expect(result.after).toEqual({});
     });
 
     it('should delete value row when value is empty string', async () => {
+      mockDb._chain.where.mockResolvedValueOnce([
+        { fieldKey: 'name', valueText: 'Alice', valueNumber: null, valueDate: null, valueDatetime: null, valueBoolean: null },
+      ]);
       const fieldDefs = [
         { fieldKey: 'name', fieldType: 'text' },
       ];
       mockDb._chain.where.mockResolvedValueOnce(fieldDefs);
 
-      await service.setValues('candidates', 'c1', { name: '' });
+      const result = await service.setValues('candidates', 'c1', { name: '' });
 
       expect(mockDb.delete).toHaveBeenCalled();
       expect(mockDb.insert).not.toHaveBeenCalled();
+      expect(result.after.name).toBeUndefined();
     });
 
     it('should delete value row when value is undefined', async () => {
+      mockDb._chain.where.mockResolvedValueOnce([
+        { fieldKey: 'name', valueText: 'Alice', valueNumber: null, valueDate: null, valueDatetime: null, valueBoolean: null },
+      ]);
       const fieldDefs = [
         { fieldKey: 'name', fieldType: 'text' },
       ];
       mockDb._chain.where.mockResolvedValueOnce(fieldDefs);
 
-      await service.setValues('candidates', 'c1', { name: undefined });
+      const result = await service.setValues('candidates', 'c1', { name: undefined });
 
       expect(mockDb.delete).toHaveBeenCalled();
       expect(mockDb.insert).not.toHaveBeenCalled();
     });
 
-    it('should do nothing when values object is empty', async () => {
-      await service.setValues('candidates', 'c1', {});
+    it('should return { before, after } with same values when values object is empty', async () => {
+      // getValues reads current values
+      mockDb._chain.where.mockResolvedValueOnce([
+        { fieldKey: 'name', valueText: 'Alice', valueNumber: null, valueDate: null, valueDatetime: null, valueBoolean: null },
+      ]);
 
-      expect(mockDb.select).not.toHaveBeenCalled();
-      expect(mockDb.insert).not.toHaveBeenCalled();
+      const result = await service.setValues('candidates', 'c1', {});
+
+      expect(result.before).toEqual({ name: 'Alice' });
+      expect(result.after).toEqual({ name: 'Alice' });
+      // Should not try to look up field definitions
+      expect(mockDb.select).toHaveBeenCalledTimes(1); // only getValues
     });
 
     it('should skip unknown fields', async () => {
+      mockDb._chain.where.mockResolvedValueOnce([]);
       // Field definition lookup returns no matching fields
       mockDb._chain.where.mockResolvedValueOnce([]);
 
-      await service.setValues('candidates', 'c1', { unknown_field: 'value' });
+      const result = await service.setValues('candidates', 'c1', { unknown_field: 'value' });
 
       // Should not insert or delete since field type is unknown
       expect(mockDb.insert).not.toHaveBeenCalled();
       expect(mockDb.delete).not.toHaveBeenCalled();
+      expect(result.before).toEqual({});
+      expect(result.after).toEqual({});
     });
 
     it('should handle multiple values in a single call (upsert)', async () => {
+      mockDb._chain.where.mockResolvedValueOnce([]);
       const fieldDefs = [
         { fieldKey: 'name', fieldType: 'text' },
         { fieldKey: 'age', fieldType: 'number' },
@@ -193,7 +262,7 @@ describe('FieldValueService', () => {
       ];
       mockDb._chain.where.mockResolvedValueOnce(fieldDefs);
 
-      await service.setValues('candidates', 'c1', {
+      const result = await service.setValues('candidates', 'c1', {
         name: 'Alice',
         age: 30,
         active: true,
@@ -201,6 +270,34 @@ describe('FieldValueService', () => {
 
       // Should call insert 3 times (one per field)
       expect(mockDb.insert).toHaveBeenCalledTimes(3);
+      expect(result.after).toEqual({ name: 'Alice', age: 30, active: true });
+    });
+
+    it('should use provided tx instead of default db', async () => {
+      const txMockChain = {
+        from: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        values: vi.fn().mockReturnThis(),
+        onConflictDoUpdate: vi.fn().mockResolvedValue(undefined),
+      };
+      const txMock = {
+        select: vi.fn().mockReturnValue(txMockChain),
+        insert: vi.fn().mockReturnValue(txMockChain),
+        delete: vi.fn().mockReturnValue(txMockChain),
+      };
+
+      // getValues inside setValues will use tx
+      txMockChain.where
+        .mockResolvedValueOnce([]) // getValues returns empty
+        .mockResolvedValueOnce([{ fieldKey: 'name', fieldType: 'text' }]); // field defs
+
+      await service.setValues('candidates', 'c1', { name: 'Alice' }, txMock);
+
+      // Should use the tx, not the default db
+      expect(txMock.select).toHaveBeenCalled();
+      expect(txMock.insert).toHaveBeenCalled();
+      expect(mockDb.select).not.toHaveBeenCalled();
+      expect(mockDb.insert).not.toHaveBeenCalled();
     });
   });
 

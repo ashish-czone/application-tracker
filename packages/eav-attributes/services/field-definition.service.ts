@@ -24,10 +24,17 @@ export class FieldDefinitionService {
     lookupLabelField?: string;
     lookupSearchFields?: string[];
   }): Promise<FieldDefinition> {
-    // Check field_key uniqueness
+    // Check field_key uniqueness — provide a clear error distinguishing standard vs custom collisions
     const existing = await this.findByEntityAndKey(entityType, data.fieldKey);
     if (existing) {
-      throw new ConflictException(`Field '${data.fieldKey}' already exists for entity '${entityType}'`);
+      if (!existing.isCustom) {
+        throw new ConflictException(
+          `Cannot create custom field '${data.fieldKey}' — it conflicts with a standard field on '${entityType}'`,
+        );
+      }
+      throw new ConflictException(
+        `Custom field '${data.fieldKey}' already exists for '${entityType}'`,
+      );
     }
 
     const [field] = await this.database.db

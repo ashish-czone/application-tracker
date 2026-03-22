@@ -25,6 +25,8 @@ export type {
 
 export { FIELD_TYPE_TO_VALUE_COLUMN } from './types';
 
+export { buildSnapshot, diffSnapshot } from './helpers/snapshot';
+
 export {
   fieldDefinitions,
   picklistOptions,

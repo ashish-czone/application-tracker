@@ -4,6 +4,7 @@ import { DomainEventEmitter } from '@packages/events';
 import { MediaService, type MediaFile, type MediaFieldConfig, type UploadedFile } from '@packages/media';
 import { TaxonomyService } from '@packages/taxonomy';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
+import { FieldValueService, buildSnapshot, diffSnapshot } from '@packages/eav-attributes';
 import type { PaginatedResponse } from '@packages/common';
 import { candidates } from '../schema/candidates';
 import {
@@ -133,6 +134,7 @@ export class CandidatesService {
     private readonly domainEventEmitter: DomainEventEmitter,
     private readonly mediaService: MediaService,
     private readonly taxonomyService: TaxonomyService,
+    private readonly fieldValueService: FieldValueService,
     appLogger: AppLoggerService,
   ) {
     this.logger = appLogger.forContext(CandidatesService.name);
@@ -279,7 +281,8 @@ export class CandidatesService {
   }
 
   async update(id: string, data: UpdateCandidateInput, actorId: string): Promise<CandidateResponse> {
-    const existing = await this.findOneOrFail(id);
+    // Validate the candidate exists before entering the transaction
+    const existingResponse = await this.findOneOrFail(id);
 
     const updateValues: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(data)) {
@@ -289,11 +292,11 @@ export class CandidatesService {
     }
 
     if (Object.keys(updateValues).length === 0) {
-      return existing;
+      return existingResponse;
     }
 
     // If email changed, check uniqueness
-    if (updateValues.email && updateValues.email !== existing.email) {
+    if (updateValues.email && updateValues.email !== existingResponse.email) {
       const [conflict] = await this.database.db
         .select({ id: candidates.id })
         .from(candidates)
@@ -308,24 +311,52 @@ export class CandidatesService {
       }
     }
 
-    const [updated] = await this.database.db
-      .update(candidates)
-      .set(updateValues)
-      .where(eq(candidates.id, id))
-      .returning();
+    let eventPayload: { changes: string[]; before: Record<string, unknown>; after: Record<string, unknown> } | null = null;
+
+    const updated = await this.database.db.transaction(async (tx) => {
+      // Read EAV values before mutation (inside tx for consistency)
+      const eavBefore = await this.fieldValueService.getValues('candidates', id, tx);
+
+      // Re-read the raw row inside the transaction to get a consistent snapshot
+      const [existingRow] = await tx
+        .select()
+        .from(candidates)
+        .where(eq(candidates.id, id))
+        .limit(1);
+
+      const before = buildSnapshot(this.toSnapshot(existingRow), eavBefore);
+
+      // Update standard columns
+      const [row] = await tx
+        .update(candidates)
+        .set(updateValues)
+        .where(eq(candidates.id, id))
+        .returning();
+
+      // Update EAV (returns before/after of EAV values)
+      const eavResult = await this.fieldValueService.setValues('candidates', id, {}, tx);
+
+      const after = buildSnapshot(this.toSnapshot(row), eavResult.after);
+      const changes = diffSnapshot(before, after);
+
+      if (changes.length > 0) {
+        eventPayload = { changes, before, after };
+      }
+
+      return row;
+    });
 
     this.logger.log('Candidate updated', { candidateId: id, actorId, changes: Object.keys(updateValues) });
 
-    this.domainEventEmitter.emit(CANDIDATES_CANDIDATE_UPDATED, {
-      entityType: 'candidates',
-      entityId: id,
-      actorId,
-      payload: {
-        changes: Object.keys(updateValues),
-        before: this.toSnapshot(existing),
-        after: this.toSnapshot(updated),
-      },
-    });
+    // Emit AFTER transaction commits
+    if (eventPayload) {
+      this.domainEventEmitter.emit(CANDIDATES_CANDIDATE_UPDATED, {
+        entityType: 'candidates',
+        entityId: id,
+        actorId,
+        payload: eventPayload,
+      });
+    }
 
     return this.toResponse(updated);
   }
@@ -409,8 +440,21 @@ export class CandidatesService {
       source: entity.source,
       currentCompany: entity.currentCompany,
       currentTitle: entity.currentTitle,
+      expectedSalary: entity.expectedSalary,
+      currency: entity.currency,
+      gender: entity.gender,
+      nationality: entity.nationality,
+      dateOfBirth: entity.dateOfBirth,
+      address: entity.address,
+      city: entity.city,
+      state: entity.state,
       country: entity.country,
+      zipCode: entity.zipCode,
+      linkedinUrl: entity.linkedinUrl,
       highestQualification: entity.highestQualification,
+      availableFrom: entity.availableFrom,
+      isWillingToRelocate: entity.isWillingToRelocate,
+      notes: entity.notes,
     };
   }
 
