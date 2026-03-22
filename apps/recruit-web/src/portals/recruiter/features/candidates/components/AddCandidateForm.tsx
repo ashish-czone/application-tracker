@@ -1,28 +1,17 @@
+import { useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import {
   Form,
-  FormInput,
-  FormSelect,
   Button,
   DialogHeader,
   DialogTitle,
   DialogDescription,
   DialogFooter,
 } from '@packages/ui';
+import { DynamicField, buildFormSchema } from '@packages/eav-attributes-ui';
 import { useCreateCandidate } from '../hooks';
-import { SOURCE_OPTIONS } from '../types';
-
-const quickCreateSchema = z.object({
-  firstName: z.string().min(1, 'First name is required').max(100),
-  lastName: z.string().min(1, 'Last name is required').max(100),
-  email: z.string().min(1, 'Email is required').email('Invalid email'),
-  phone: z.string().max(20).optional().or(z.literal('')),
-  source: z.string().optional().or(z.literal('')),
-});
-
-type FormValues = z.infer<typeof quickCreateSchema>;
+import { useLayout } from '../../field-management/hooks';
 
 interface AddCandidateFormProps {
   onSuccess?: (id: string) => void;
@@ -30,15 +19,29 @@ interface AddCandidateFormProps {
 }
 
 export function AddCandidateForm({ onSuccess, onClose }: AddCandidateFormProps) {
-  const form = useForm<FormValues>({
-    resolver: zodResolver(quickCreateSchema),
-    defaultValues: {
-      firstName: '',
-      lastName: '',
-      email: '',
-      phone: '',
-      source: '',
-    },
+  const { data: layout, isLoading: layoutLoading } = useLayout('candidates');
+
+  const quickCreateFields = useMemo(
+    () => layout?.quickCreateFields ?? [],
+    [layout],
+  );
+
+  const schema = useMemo(
+    () => buildFormSchema(quickCreateFields),
+    [quickCreateFields],
+  );
+
+  const defaultValues = useMemo(() => {
+    const defaults: Record<string, unknown> = {};
+    for (const field of quickCreateFields) {
+      defaults[field.fieldKey] = field.defaultValue ?? '';
+    }
+    return defaults;
+  }, [quickCreateFields]);
+
+  const form = useForm({
+    resolver: zodResolver(schema),
+    defaultValues,
   });
 
   const createMutation = useCreateCandidate({
@@ -48,14 +51,48 @@ export function AddCandidateForm({ onSuccess, onClose }: AddCandidateFormProps) 
     },
   });
 
-  function onSubmit(data: FormValues) {
-    createMutation.mutate({
-      firstName: data.firstName,
-      lastName: data.lastName,
-      email: data.email,
-      phone: data.phone || undefined,
-      source: data.source || undefined,
-    });
+  function onSubmit(data: Record<string, unknown>) {
+    // Coerce empty strings to undefined so they're not sent
+    const cleaned: Record<string, unknown> = {};
+    for (const [key, val] of Object.entries(data)) {
+      if (val !== '' && val !== undefined) {
+        cleaned[key] = val;
+      }
+    }
+    createMutation.mutate(cleaned);
+  }
+
+  if (layoutLoading) {
+    return (
+      <>
+        <DialogHeader>
+          <DialogTitle>Add Candidate</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3 py-4">
+          <div className="h-10 animate-pulse rounded bg-muted" />
+          <div className="h-10 animate-pulse rounded bg-muted" />
+          <div className="h-10 animate-pulse rounded bg-muted" />
+        </div>
+      </>
+    );
+  }
+
+  if (quickCreateFields.length === 0) {
+    return (
+      <>
+        <DialogHeader>
+          <DialogTitle>Add Candidate</DialogTitle>
+          <DialogDescription>
+            No quick create fields configured. Please set up quick create fields in Settings.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={onClose}>
+            Close
+          </Button>
+        </DialogFooter>
+      </>
+    );
   }
 
   return (
@@ -67,20 +104,9 @@ export function AddCandidateForm({ onSuccess, onClose }: AddCandidateFormProps) 
 
       <Form form={form} onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
-          <FormInput name="firstName" label="First name" placeholder="John" />
-          <FormInput name="lastName" label="Last name" placeholder="Doe" />
-        </div>
-
-        <FormInput name="email" label="Email" placeholder="john@example.com" type="email" />
-
-        <div className="grid grid-cols-2 gap-3">
-          <FormInput name="phone" label="Phone (optional)" placeholder="+1 555 123 4567" />
-          <FormSelect
-            name="source"
-            label="Source (optional)"
-            placeholder="Select"
-            options={[...SOURCE_OPTIONS]}
-          />
+          {quickCreateFields.map(field => (
+            <DynamicField key={field.fieldKey} field={field} mode="edit" />
+          ))}
         </div>
 
         {createMutation.isError && (

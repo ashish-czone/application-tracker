@@ -1,6 +1,6 @@
 import { api } from '../../../../lib/api';
 import type { PaginatedResponse } from '@packages/common';
-import type { Candidate, CreateCandidateRequest, UpdateCandidateRequest, ListCandidatesParams } from './types';
+import type { Candidate, ListCandidatesParams } from './types';
 
 export function listCandidates(params: ListCandidatesParams): Promise<PaginatedResponse<Candidate>> {
   const searchParams = new URLSearchParams();
@@ -23,11 +23,11 @@ export function getCandidate(id: string): Promise<Candidate> {
   return api.get<Candidate>(`/candidates/${id}`);
 }
 
-export function createCandidate(data: CreateCandidateRequest): Promise<Candidate> {
+export function createCandidate(data: Record<string, unknown>): Promise<Candidate> {
   return api.post<Candidate>('/candidates', data);
 }
 
-export function updateCandidate(id: string, data: UpdateCandidateRequest): Promise<Candidate> {
+export function updateCandidate(id: string, data: Record<string, unknown>): Promise<Candidate> {
   return api.patch<Candidate>(`/candidates/${id}`, data);
 }
 
