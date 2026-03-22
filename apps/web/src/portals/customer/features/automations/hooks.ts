@@ -3,7 +3,7 @@ import { toast } from '@packages/ui';
 import {
   listRules, getRule, createRule, updateRule, deleteRule,
   listTemplates, getTemplate, createTemplate, updateTemplate, deleteTemplate,
-  listEvents, listEntities,
+  listEvents, listEntities, getEntityFields,
 } from './services';
 import type {
   ListRulesParams, CreateRuleRequest, UpdateRuleRequest,
@@ -164,5 +164,15 @@ export function useEntities() {
     queryKey: ['automations-entities'],
     queryFn: listEntities,
     staleTime: 5 * 60 * 1000,
+  });
+}
+
+// --- Entity fields (generic endpoint) ---
+
+export function useEntityFields(entityType: string | undefined) {
+  return useQuery({
+    queryKey: ['entity-fields', entityType],
+    queryFn: () => getEntityFields(entityType!),
+    enabled: !!entityType,
   });
 }

@@ -12,6 +12,7 @@ import type {
   ListTemplatesParams,
   EventMetadata,
   EntityMetadata,
+  EntityField,
 } from './types';
 
 // --- Rules ---
@@ -87,4 +88,10 @@ export function listEvents(): Promise<EventMetadata[]> {
 
 export function listEntities(): Promise<EntityMetadata[]> {
   return api.get<EntityMetadata[]>('/automations/entities');
+}
+
+// --- Entity fields (generic endpoint) ---
+
+export function getEntityFields(entityType: string): Promise<EntityField[]> {
+  return api.get<EntityField[]>(`/entities/${entityType}/fields`);
 }
