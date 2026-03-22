@@ -9,8 +9,8 @@ import type { LayoutSection, FieldDefinition } from '../types';
 
 interface LayoutCanvasProps {
   sections: LayoutSection[];
-  onAddFieldToSection: (sectionId: string, fieldId: string) => void;
-  onRemoveFieldFromSection: (sectionId: string, fieldId: string) => void;
+  onAddFieldToSection: (sectionId: string, fieldId: string) => void | Promise<void>;
+  onRemoveFieldFromSection: (sectionId: string, fieldId: string) => void | Promise<void>;
   onReorderFields: (sectionId: string, orderedFieldIds: string[]) => void;
   onReorderSections: (orderedSectionIds: string[]) => void;
   onEditSection: (section: LayoutSection) => void;
@@ -18,6 +18,8 @@ interface LayoutCanvasProps {
   onEditField: (field: FieldDefinition) => void;
   onAddSectionClick: () => void;
   onAddFieldClick: (sectionId: string) => void;
+  /** Called for cross-section moves: remove from source, add to target in sequence */
+  onMoveFieldToSection?: (sourceSectionId: string, targetSectionId: string, fieldId: string) => void | Promise<void>;
 }
 
 export function LayoutCanvas({
@@ -31,6 +33,7 @@ export function LayoutCanvas({
   onEditField,
   onAddSectionClick,
   onAddFieldClick,
+  onMoveFieldToSection,
 }: LayoutCanvasProps) {
   const [activeField, setActiveField] = useState<FieldDefinition | null>(null);
 
@@ -94,9 +97,16 @@ export function LayoutCanvas({
       reordered.splice(newIndex, 0, active.id as string);
       onReorderFields(sourceSection.id, reordered);
     } else {
-      // Move between sections
-      onRemoveFieldFromSection(sourceSection.id, active.id as string);
-      onAddFieldToSection(targetSection.id, active.id as string);
+      // Move between sections — use dedicated handler if available, otherwise sequential calls
+      if (onMoveFieldToSection) {
+        onMoveFieldToSection(sourceSection.id, targetSection.id, active.id as string);
+      } else {
+        // Fallback: fire sequentially using async
+        (async () => {
+          await onRemoveFieldFromSection(sourceSection.id, active.id as string);
+          await onAddFieldToSection(targetSection.id, active.id as string);
+        })();
+      }
     }
   }
 
