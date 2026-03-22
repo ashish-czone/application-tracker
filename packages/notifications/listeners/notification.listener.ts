@@ -9,7 +9,7 @@ import { PreferenceService } from '../services/preference.service';
 import { TemplateRenderer } from '../services/template-renderer';
 import { NotificationDispatcher } from '../services/notification-dispatcher';
 import { EntityResolverRegistry } from '../services/entity-resolver-registry';
-import { buildConditions } from '../helpers/condition-builder';
+import { buildConditions, isPayloadCondition, evaluatePayloadConditions, evaluateConditionsInMemory } from '../helpers/condition-builder';
 import { notificationScheduled } from '../schema/notification-scheduled';
 import type { ScheduleUnit, Condition } from '../types';
 
@@ -45,21 +45,50 @@ export class NotificationListener {
 
         // Check conditions against the entity before dispatching
         if (rule.conditions && (rule.conditions as Condition[]).length > 0) {
-          const entityResolver = this.entityResolverRegistry.get(event.entityType);
-          if (entityResolver) {
-            const conditionSql = buildConditions(
-              entityResolver.table,
-              rule.conditions as Condition[],
-              Object.keys(entityResolver.fields),
-            );
-            const idColumn = (entityResolver.table as Record<string, any>).id;
-            const [entity] = await this.database.db
-              .select({ id: idColumn })
-              .from(entityResolver.table)
-              .where(and(eq(idColumn, event.entityId), ...conditionSql))
-              .limit(1);
+          const conditions = rule.conditions as Condition[];
 
-            if (!entity) continue; // Entity doesn't match conditions — skip rule
+          // 1. Evaluate payload conditions (changed, changed_to, changed_from_to)
+          const payloadConds = conditions.filter(isPayloadCondition);
+          if (payloadConds.length > 0) {
+            const payloadMatch = evaluatePayloadConditions(payloadConds, event.payload as {
+              changes?: string[];
+              before?: Record<string, unknown>;
+              after?: Record<string, unknown>;
+            });
+            if (!payloadMatch) continue; // Payload conditions failed — skip rule
+          }
+
+          // 2. Evaluate state conditions
+          const stateConds = conditions.filter((c) => !isPayloadCondition(c));
+          if (stateConds.length > 0) {
+            const payload = event.payload as Record<string, unknown> | undefined;
+            const afterData = payload?.after as Record<string, unknown> | undefined;
+
+            if (afterData) {
+              // Use in-memory evaluation against payload.after (avoids DB query)
+              const stateMatch = evaluateConditionsInMemory(stateConds, afterData);
+              if (!stateMatch) continue;
+            } else {
+              // Fall back to DB query
+              const entityResolver = this.entityResolverRegistry.get(event.entityType);
+              if (entityResolver) {
+                const conditionSql = buildConditions(
+                  entityResolver.table,
+                  stateConds,
+                  Object.keys(entityResolver.fields),
+                );
+                if (conditionSql.length > 0) {
+                  const idColumn = (entityResolver.table as Record<string, any>).id;
+                  const [entity] = await this.database.db
+                    .select({ id: idColumn })
+                    .from(entityResolver.table)
+                    .where(and(eq(idColumn, event.entityId), ...conditionSql))
+                    .limit(1);
+
+                  if (!entity) continue; // Entity doesn't match conditions — skip rule
+                }
+              }
+            }
           }
         }
 

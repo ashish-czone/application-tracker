@@ -10,7 +10,7 @@ import { RecipientResolver } from './recipient-resolver';
 import { PreferenceService } from './preference.service';
 import { TemplateRenderer } from './template-renderer';
 import { NotificationDispatcher } from './notification-dispatcher';
-import { buildConditions } from '../helpers/condition-builder';
+import { buildConditions, isPayloadCondition } from '../helpers/condition-builder';
 import { todayInTimezone } from '@packages/common';
 import type { Condition, NotificationRule, ScheduleDateOperator, ScheduleUnit } from '../types';
 import type { DomainEvent } from '@packages/events';
@@ -87,25 +87,28 @@ export class ScheduleScanner {
           continue;
         }
 
-        // Re-check conditions if configured
-        if (rule.conditions && (rule.conditions as Condition[]).length > 0) {
+        // Re-check conditions if configured — filter out payload operators (not applicable to DB queries)
+        const sqlConditions = ((rule.conditions as Condition[]) ?? []).filter((c) => !isPayloadCondition(c));
+        if (sqlConditions.length > 0) {
           const entityResolver = this.entityResolverRegistry.get(scheduled.entityType);
           if (entityResolver) {
             const conditionSql = buildConditions(
               entityResolver.table,
-              rule.conditions as Condition[],
+              sqlConditions,
               Object.keys(entityResolver.fields),
             );
-            const idColumn = (entityResolver.table as Record<string, any>).id;
-            const [entity] = await this.database.db
-              .select({ id: idColumn })
-              .from(entityResolver.table)
-              .where(and(eq(idColumn, scheduled.entityId), ...conditionSql))
-              .limit(1);
+            if (conditionSql.length > 0) {
+              const idColumn = (entityResolver.table as Record<string, any>).id;
+              const [entity] = await this.database.db
+                .select({ id: idColumn })
+                .from(entityResolver.table)
+                .where(and(eq(idColumn, scheduled.entityId), ...conditionSql))
+                .limit(1);
 
-            if (!entity) {
-              await this.markSent(scheduled.id);
-              continue;
+              if (!entity) {
+                await this.markSent(scheduled.id);
+                continue;
+              }
             }
           }
         }
@@ -196,10 +199,11 @@ export class ScheduleScanner {
       if (col) selectColumns[fieldName] = col;
     }
 
-    // Base conditions (user-defined JSON conditions, shared across all offsets)
+    // Base conditions — filter out payload operators (not applicable to schedule DB queries)
     const baseConditions: any[] = [];
     if (rule.conditions && (rule.conditions as Condition[]).length > 0) {
-      baseConditions.push(...buildConditions(entityResolver.table, rule.conditions as Condition[], Object.keys(entityResolver.fields)));
+      const sqlConditions = (rule.conditions as Condition[]).filter((c) => !isPayloadCondition(c));
+      baseConditions.push(...buildConditions(entityResolver.table, sqlConditions, Object.keys(entityResolver.fields)));
     }
 
     const today = this.getTodayInAppTimezone();
