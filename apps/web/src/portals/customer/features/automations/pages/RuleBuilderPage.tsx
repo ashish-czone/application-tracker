@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { ArrowLeft } from 'lucide-react';
 import { Button, Badge, Card, CardContent, CardHeader, CardTitle } from '@packages/ui';
-import { useRule, useCreateRule, useUpdateRule, useEvents, useEntities, useTemplates } from '../hooks';
+import { useRule, useCreateRule, useUpdateRule, useEvents, useEntities, useTemplates, useEntityFields } from '../hooks';
 import { setRuleChannels } from '../services';
 import { ConditionBuilder } from '../components/ConditionBuilder';
 import type {
@@ -96,9 +96,15 @@ export default function RuleBuilderPage() {
     return entities?.find((e) => e.entityType === entityType);
   }, [entities, entityType]);
 
+  // Fetch entity fields from the generic endpoint for the condition builder
+  const { data: entityFields } = useEntityFields(entityType || undefined);
+
   const conditionFields = useMemo<Record<string, FieldConfig>>(() => {
     return entityMeta?.fields ?? {};
   }, [entityMeta]);
+
+  // Show conditions card if we have fields from either source
+  const hasConditionFields = Object.keys(conditionFields).length > 0 || (entityFields && entityFields.length > 0);
 
   const dateFields = useMemo(() => {
     if (!entityMeta) return [];
@@ -376,11 +382,17 @@ export default function RuleBuilderPage() {
         </Card>
 
         {/* Conditions */}
-        {Object.keys(conditionFields).length > 0 && (
+        {hasConditionFields && (
           <Card>
             <CardHeader><CardTitle className="text-sm">Conditions (optional)</CardTitle></CardHeader>
             <CardContent>
-              <ConditionBuilder conditions={conditions} onChange={setConditions} fields={conditionFields} />
+              <ConditionBuilder
+                conditions={conditions}
+                onChange={setConditions}
+                fields={conditionFields}
+                entityType={entityType || undefined}
+                triggerType={triggerType}
+              />
             </CardContent>
           </Card>
         )}

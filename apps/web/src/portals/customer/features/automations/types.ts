@@ -3,7 +3,7 @@
 export type TriggerType = 'event' | 'schedule_once' | 'schedule_recurring';
 export type NotificationChannel = 'email' | 'in_app' | 'whatsapp';
 export type RecipientStrategy = 'actor' | 'entity_owner' | 'role';
-export type ConditionOperator = 'eq' | 'neq' | 'in' | 'gt' | 'lt' | 'is_null' | 'is_not_null';
+export type ConditionOperator = 'eq' | 'neq' | 'in' | 'gt' | 'lt' | 'is_null' | 'is_not_null' | 'changed' | 'changed_to' | 'changed_from_to';
 export type ScheduleDateOperator = 'before' | 'after';
 export type ScheduleUnit = 'minutes' | 'hours' | 'days';
 
@@ -135,4 +135,19 @@ export interface EntityMetadata {
   entityType: string;
   fields: Record<string, FieldConfig>;
   recipientFields: Record<string, RecipientFieldConfig>;
+}
+
+// --- Entity fields (generic endpoint) ---
+
+export interface EntityField {
+  key: string;
+  label: string;
+  type: string;
+  required: boolean;
+  isSystem: boolean;
+  isCustom: boolean;
+  isUnique: boolean;
+  maxLength: number | null;
+  defaultValue: string | null;
+  options?: string[];
 }
