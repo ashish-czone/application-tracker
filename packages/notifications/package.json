@@ -11,7 +11,6 @@
     "@nestjs/event-emitter": "^3.0.0",
     "@packages/common": "workspace:*",
     "@packages/database": "workspace:*",
-    "@packages/eav-attributes": "workspace:*",
     "@packages/events": "workspace:*",
     "@packages/logger": "workspace:*",
     "@packages/queue": "workspace:*",

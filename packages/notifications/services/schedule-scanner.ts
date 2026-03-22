@@ -10,7 +10,7 @@ import { RecipientResolver } from './recipient-resolver';
 import { PreferenceService } from './preference.service';
 import { TemplateRenderer } from './template-renderer';
 import { NotificationDispatcher } from './notification-dispatcher';
-import { buildConditions, buildEavConditions, isPayloadCondition } from '../helpers/condition-builder';
+import { buildConditions, isPayloadCondition } from '../helpers/condition-builder';
 import { todayInTimezone } from '@packages/common';
 import type { Condition, NotificationRule, ScheduleDateOperator, ScheduleUnit } from '../types';
 import type { DomainEvent } from '@packages/events';
@@ -92,25 +92,17 @@ export class ScheduleScanner {
         if (sqlConditions.length > 0) {
           const entityResolver = this.entityResolverRegistry.get(scheduled.entityType);
           if (entityResolver) {
-            const standardFieldNames = Object.keys(entityResolver.fields);
-            const standardConds = sqlConditions.filter((c) => standardFieldNames.includes(c.field));
-            const eavConds = sqlConditions.filter((c) => !standardFieldNames.includes(c.field));
-
-            const idColumn = (entityResolver.table as Record<string, any>).id;
-            const allConditions: any[] = [];
-
-            if (standardConds.length > 0) {
-              allConditions.push(...buildConditions(entityResolver.table, standardConds, standardFieldNames));
-            }
-            if (eavConds.length > 0) {
-              allConditions.push(...buildEavConditions(scheduled.entityType, idColumn, eavConds));
-            }
-
-            if (allConditions.length > 0) {
+            const conditionSql = buildConditions(
+              entityResolver.table,
+              sqlConditions,
+              Object.keys(entityResolver.fields),
+            );
+            if (conditionSql.length > 0) {
+              const idColumn = (entityResolver.table as Record<string, any>).id;
               const [entity] = await this.database.db
                 .select({ id: idColumn })
                 .from(entityResolver.table)
-                .where(and(eq(idColumn, scheduled.entityId), ...allConditions))
+                .where(and(eq(idColumn, scheduled.entityId), ...conditionSql))
                 .limit(1);
 
               if (!entity) {
@@ -208,20 +200,10 @@ export class ScheduleScanner {
     }
 
     // Base conditions — filter out payload operators (not applicable to schedule DB queries)
-    // Split into standard (table column) conditions and EAV (custom field) conditions
     const baseConditions: any[] = [];
     if (rule.conditions && (rule.conditions as Condition[]).length > 0) {
       const sqlConditions = (rule.conditions as Condition[]).filter((c) => !isPayloadCondition(c));
-      const standardFieldNames = Object.keys(entityResolver.fields);
-      const standardConds = sqlConditions.filter((c) => standardFieldNames.includes(c.field));
-      const eavConds = sqlConditions.filter((c) => !standardFieldNames.includes(c.field));
-
-      if (standardConds.length > 0) {
-        baseConditions.push(...buildConditions(entityResolver.table, standardConds, standardFieldNames));
-      }
-      if (eavConds.length > 0) {
-        baseConditions.push(...buildEavConditions(rule.scheduleEntityType, idColumn, eavConds));
-      }
+      baseConditions.push(...buildConditions(entityResolver.table, sqlConditions, Object.keys(entityResolver.fields)));
     }
 
     const today = this.getTodayInAppTimezone();
