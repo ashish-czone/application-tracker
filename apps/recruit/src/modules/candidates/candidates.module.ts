@@ -79,22 +79,12 @@ export class CandidatesModule implements OnModuleInit {
       ],
     });
 
-    // 4. Entity resolver — for notification rules to reference candidate fields
+    // 4. Entity resolver — recipientFields only; field metadata comes from EAV
+    //    (ConditionBuilder falls back to GET /entities/candidates/fields which
+    //    returns all base + custom fields dynamically from field definitions)
     this.entityResolverRegistry.register('candidates', {
       table: candidates,
-      fields: {
-        source: {
-          type: 'enum',
-          label: 'Source',
-          options: ['referral', 'job-board', 'website', 'direct', 'linkedin'],
-        },
-        country: { type: 'text', label: 'Country' },
-        highestQualification: {
-          type: 'enum',
-          label: 'Qualification',
-          options: ['high-school', 'bachelors', 'masters', 'phd', 'other'],
-        },
-      },
+      fields: {},
       recipientFields: {
         createdBy: { label: 'Created By (recruiter)' },
       },
