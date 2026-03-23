@@ -1,4 +1,4 @@
-import { Injectable, Inject, type OnModuleInit } from '@nestjs/common';
+import { Injectable, Inject, type OnApplicationBootstrap } from '@nestjs/common';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { DatabaseService, users } from '@packages/database';
 import { EntityService } from '@packages/entity-engine';
@@ -71,7 +71,7 @@ const SAMPLE_VENDORS = [
 ];
 
 @Injectable()
-export class ClientsSeedService implements OnModuleInit {
+export class ClientsSeedService implements OnApplicationBootstrap {
   private readonly logger: ContextLogger;
 
   constructor(
@@ -85,7 +85,7 @@ export class ClientsSeedService implements OnModuleInit {
     this.logger = appLogger.forContext(ClientsSeedService.name);
   }
 
-  async onModuleInit() {
+  async onApplicationBootstrap() {
     await this.ensureSampleClients();
     await this.ensureSampleContacts();
     await this.ensureSampleVendors();

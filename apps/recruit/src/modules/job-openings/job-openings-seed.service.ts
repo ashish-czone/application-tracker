@@ -1,4 +1,4 @@
-import { Injectable, Inject, type OnModuleInit } from '@nestjs/common';
+import { Injectable, Inject, type OnApplicationBootstrap } from '@nestjs/common';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { DatabaseService, eq, users } from '@packages/database';
 import { EntityService } from '@packages/entity-engine';
@@ -15,75 +15,66 @@ const SAMPLE_JOB_OPENINGS = [
     department: 'Engineering',
     location: 'San Francisco, CA',
     employmentType: 'full-time',
-    experience: 'senior',
-    salaryMin: 15000000,
-    salaryMax: 22000000,
-    currency: 'USD',
-    description: 'We are looking for a Senior Frontend Engineer to lead our React-based web applications.',
+    experience: '5-plus-years',
+    salary: '$150,000 - $220,000',
+    industry: 'technology',
     requirements: '5+ years React experience, TypeScript, state management, testing.',
     numberOfPositions: 2,
-    status: 'open',
+    status: 'in-progress',
   },
   {
     title: 'DevOps Engineer',
     department: 'Infrastructure',
     location: 'Remote',
     employmentType: 'full-time',
-    experience: 'mid',
-    salaryMin: 12000000,
-    salaryMax: 18000000,
-    currency: 'USD',
-    description: 'Join our infrastructure team to build and maintain CI/CD pipelines and cloud infrastructure.',
+    experience: '4-5-years',
+    salary: '$120,000 - $180,000',
+    industry: 'technology',
     requirements: 'AWS/GCP, Docker, Kubernetes, Terraform, CI/CD pipelines.',
     numberOfPositions: 1,
-    status: 'open',
+    status: 'in-progress',
+    remoteJob: true,
   },
   {
     title: 'Product Designer',
     department: 'Design',
     location: 'New York, NY',
     employmentType: 'full-time',
-    experience: 'mid',
-    salaryMin: 11000000,
-    salaryMax: 16000000,
-    currency: 'USD',
-    description: 'Design intuitive user experiences for our SaaS platform.',
+    experience: '4-5-years',
+    salary: '$110,000 - $160,000',
+    industry: 'design',
     requirements: 'Figma, user research, design systems, prototyping.',
     numberOfPositions: 1,
-    status: 'open',
+    status: 'in-progress',
   },
   {
     title: 'Backend Engineer Intern',
     department: 'Engineering',
     location: 'San Francisco, CA',
     employmentType: 'internship',
-    experience: 'entry',
-    salaryMin: 4000000,
-    salaryMax: 6000000,
-    currency: 'USD',
-    description: 'Summer internship working on our NestJS backend services.',
+    experience: 'fresher',
+    salary: '$40,000 - $60,000',
+    industry: 'technology',
     requirements: 'CS student, basic Node.js/TypeScript knowledge.',
     numberOfPositions: 3,
-    status: 'draft',
+    status: 'waiting-for-approval',
   },
   {
     title: 'Data Analyst (Contract)',
     department: 'Analytics',
     location: 'London, UK',
     employmentType: 'contract',
-    experience: 'mid',
-    salaryMin: 8000000,
-    salaryMax: 12000000,
-    currency: 'GBP',
-    description: '6-month contract to build analytics dashboards and data pipelines.',
+    experience: '1-3-years',
+    salary: '£80,000 - £120,000',
+    industry: 'analytics',
     requirements: 'SQL, Python, Tableau/Looker, ETL pipelines.',
     numberOfPositions: 1,
-    status: 'open',
+    status: 'in-progress',
   },
 ];
 
 @Injectable()
-export class JobOpeningsSeedService implements OnModuleInit {
+export class JobOpeningsSeedService implements OnApplicationBootstrap {
   private readonly logger: ContextLogger;
 
   constructor(
@@ -95,7 +86,7 @@ export class JobOpeningsSeedService implements OnModuleInit {
     this.logger = appLogger.forContext(JobOpeningsSeedService.name);
   }
 
-  async onModuleInit() {
+  async onApplicationBootstrap() {
     await this.ensureSampleJobOpenings();
     await this.ensureSampleApplications();
   }
