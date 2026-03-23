@@ -63,9 +63,11 @@ export function AppRouter() {
             element={<Suspense fallback={<PageSkeleton />}><ProfilePage /></Suspense>}
           />
 
-          {/* Entity engine routes — each entity = 1 line */}
+          {/* Entity engine routes — each entity = 2 lines */}
           <Route path="/candidates" element={<EntityListPage entityType="candidates" />} />
           <Route path="/candidates/:id" element={<EntityDetailPage entityType="candidates" />} />
+          <Route path="/job-openings" element={<EntityListPage entityType="job_openings" />} />
+          <Route path="/job-openings/:id" element={<EntityDetailPage entityType="job_openings" />} />
 
           {/* Non-entity routes */}
           <Route

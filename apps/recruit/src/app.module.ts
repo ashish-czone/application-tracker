@@ -25,6 +25,7 @@ import { AuthOrchestratorModule } from './modules/auth/auth.module';
 import { SharedModule } from './modules/shared/shared.module';
 import { CandidatesModule } from './modules/candidates/candidates.module';
 import { CANDIDATES_CONFIG } from './modules/candidates/candidates.config';
+import { JOB_OPENINGS_CONFIG } from './modules/job-openings/job-openings.config';
 import { EavManagementModule } from './modules/eav-management/eav-management.module';
 import { NotificationRulesModule } from './modules/notification-rules/notification-rules.module';
 import { validate } from './config/env.validation';
@@ -77,6 +78,7 @@ import { validate } from './config/env.validation';
     AuthOrchestratorModule,
     // Domain modules — entity engine handles CRUD/routing/RBAC/events/audit/seeding
     EntityEngineModule.forEntity(CANDIDATES_CONFIG),
+    EntityEngineModule.forEntity(JOB_OPENINGS_CONFIG),
     CandidatesModule, // extras: resume upload, skill tags, sample data seeding
     EavManagementModule,
     NotificationRulesModule,
