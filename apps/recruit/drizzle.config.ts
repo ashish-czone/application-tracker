@@ -13,9 +13,13 @@ export default defineConfig({
     '../../packages/audit/schema/index.ts',
     '../../packages/eav-attributes/schema/index.ts',
     // Recruit-specific modules
+    './src/modules/clients/schema/clients.ts',
+    './src/modules/contacts/schema/contacts.ts',
+    './src/modules/vendors/schema/vendors.ts',
     './src/modules/candidates/schema/candidates.ts',
     './src/modules/job-openings/schema/job-openings.ts',
     './src/modules/applications/schema/applications.ts',
+    './src/modules/interviews/schema/interviews.ts',
   ],
   out: './drizzle',
   dialect: 'postgresql',

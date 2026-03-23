@@ -24,9 +24,13 @@ import { EntityEngineModule } from '@packages/entity-engine';
 import { AuthOrchestratorModule } from './modules/auth/auth.module';
 import { SharedModule } from './modules/shared/shared.module';
 import { CandidatesModule } from './modules/candidates/candidates.module';
+import { CLIENTS_CONFIG } from './modules/clients/clients.config';
+import { CONTACTS_CONFIG } from './modules/contacts/contacts.config';
+import { VENDORS_CONFIG } from './modules/vendors/vendors.config';
 import { CANDIDATES_CONFIG } from './modules/candidates/candidates.config';
 import { JOB_OPENINGS_CONFIG } from './modules/job-openings/job-openings.config';
 import { APPLICATIONS_CONFIG } from './modules/applications/applications.config';
+import { INTERVIEWS_CONFIG } from './modules/interviews/interviews.config';
 import { JobOpeningsModule } from './modules/job-openings/job-openings.module';
 import { EavManagementModule } from './modules/eav-management/eav-management.module';
 import { NotificationRulesModule } from './modules/notification-rules/notification-rules.module';
@@ -79,9 +83,13 @@ import { validate } from './config/env.validation';
     EntityEngineModule,
     AuthOrchestratorModule,
     // Domain modules — entity engine handles CRUD/routing/RBAC/events/audit/seeding
+    EntityEngineModule.forEntity(CLIENTS_CONFIG),
+    EntityEngineModule.forEntity(CONTACTS_CONFIG),
+    EntityEngineModule.forEntity(VENDORS_CONFIG),
     EntityEngineModule.forEntity(CANDIDATES_CONFIG),
     EntityEngineModule.forEntity(JOB_OPENINGS_CONFIG),
     EntityEngineModule.forEntity(APPLICATIONS_CONFIG),
+    EntityEngineModule.forEntity(INTERVIEWS_CONFIG),
     CandidatesModule, // extras: resume upload, skill tags, sample data seeding
     JobOpeningsModule, // sample data seeding
     EavManagementModule,
