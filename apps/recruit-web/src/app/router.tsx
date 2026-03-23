@@ -2,7 +2,8 @@ import { Suspense, lazy } from 'react';
 import { Routes, Route, Navigate } from 'react-router';
 import { AppLayout } from './layout/AppLayout';
 import { AuthGuard } from '../shared/auth/components/AuthGuard';
-import { CandidatesListPage, CandidateDetailPage, SettingsPage, AutomationsPage, RuleBuilderPage } from '../portals/recruiter/routes';
+import { EntityListPage, EntityDetailPage } from '@packages/entity-engine-ui';
+import { SettingsPage, AutomationsPage, RuleBuilderPage } from '../portals/recruiter/routes';
 
 const LoginPage = lazy(() => import('../shared/auth/pages/LoginPage'));
 const RegisterPage = lazy(() => import('../shared/auth/pages/RegisterPage'));
@@ -30,6 +31,20 @@ function PageSkeleton() {
   );
 }
 
+/**
+ * Entity routes rendered via the engine's generic pages.
+ * Each entity gets /{slug} (list) and /{slug}/:id (detail) automatically.
+ * Adding a new entity here = 2 lines.
+ */
+function EntityRoutes({ entityType }: { entityType: string }) {
+  return (
+    <>
+      <Route path={`/${entityType}`} element={<EntityListPage entityType={entityType} />} />
+      <Route path={`/${entityType}/:id`} element={<EntityDetailPage entityType={entityType} />} />
+    </>
+  );
+}
+
 export function AppRouter() {
   return (
     <Routes>
@@ -45,59 +60,29 @@ export function AppRouter() {
           <Route path="/" element={<DashboardPage />} />
           <Route
             path="/profile"
-            element={
-              <Suspense fallback={<PageSkeleton />}>
-                <ProfilePage />
-              </Suspense>
-            }
+            element={<Suspense fallback={<PageSkeleton />}><ProfilePage /></Suspense>}
           />
-          <Route
-            path="/candidates"
-            element={
-              <Suspense fallback={<PageSkeleton />}>
-                <CandidatesListPage />
-              </Suspense>
-            }
-          />
+
+          {/* Entity engine routes — each entity = 1 line */}
+          <Route path="/candidates" element={<EntityListPage entityType="candidates" />} />
+          <Route path="/candidates/:id" element={<EntityDetailPage entityType="candidates" />} />
+
+          {/* Non-entity routes */}
           <Route
             path="/settings"
-            element={
-              <Suspense fallback={<PageSkeleton />}>
-                <SettingsPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="/candidates/:id"
-            element={
-              <Suspense fallback={<PageSkeleton />}>
-                <CandidateDetailPage />
-              </Suspense>
-            }
+            element={<Suspense fallback={<PageSkeleton />}><SettingsPage /></Suspense>}
           />
           <Route
             path="/automations"
-            element={
-              <Suspense fallback={<PageSkeleton />}>
-                <AutomationsPage />
-              </Suspense>
-            }
+            element={<Suspense fallback={<PageSkeleton />}><AutomationsPage /></Suspense>}
           />
           <Route
             path="/automations/create"
-            element={
-              <Suspense fallback={<PageSkeleton />}>
-                <RuleBuilderPage />
-              </Suspense>
-            }
+            element={<Suspense fallback={<PageSkeleton />}><RuleBuilderPage /></Suspense>}
           />
           <Route
             path="/automations/:id/edit"
-            element={
-              <Suspense fallback={<PageSkeleton />}>
-                <RuleBuilderPage />
-              </Suspense>
-            }
+            element={<Suspense fallback={<PageSkeleton />}><RuleBuilderPage /></Suspense>}
           />
         </Route>
       </Route>

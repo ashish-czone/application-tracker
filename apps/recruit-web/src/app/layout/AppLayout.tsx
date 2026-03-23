@@ -11,6 +11,7 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { cn } from '@packages/ui/lib/utils';
+import { EntityNavItems } from '@packages/entity-engine-ui';
 import { NotificationBell } from '../../shared/notifications/components/NotificationBell';
 import {
   DropdownMenu,
@@ -82,7 +83,8 @@ export function AppLayout() {
 
         {/* Nav items */}
         <nav className="flex-1 px-2.5 pt-2 space-y-0.5 overflow-y-auto">
-          {navItems.map(({ path, label, icon: Icon }) => (
+          {/* Before-entity items (Dashboard) */}
+          {navItems.filter((i) => i.position !== 'after').map(({ path, label, icon: Icon }) => (
             <NavLink
               key={path}
               to={path}
@@ -99,12 +101,33 @@ export function AppLayout() {
               title={collapsed ? label : undefined}
             >
               <Icon className="w-4 h-4 shrink-0" strokeWidth={1.75} />
-              <span
-                className={cn(
-                  'transition-[opacity,width] duration-200',
-                  collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100',
-                )}
-              >
+              <span className={cn('transition-[opacity,width] duration-200', collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100')}>
+                {label}
+              </span>
+            </NavLink>
+          ))}
+
+          {/* Entity nav items — auto-generated from registry */}
+          <EntityNavItems collapsed={collapsed} />
+
+          {/* After-entity items (Automations, Settings) */}
+          {navItems.filter((i) => i.position === 'after').map(({ path, label, icon: Icon }) => (
+            <NavLink
+              key={path}
+              to={path}
+              className={({ isActive }) =>
+                cn(
+                  'group flex items-center gap-2.5 rounded-lg h-9 text-[13px] font-medium transition-colors duration-150',
+                  collapsed ? 'justify-center w-full' : 'px-2.5',
+                  isActive
+                    ? 'bg-primary/[0.08] text-primary'
+                    : 'text-sidebar-muted hover:text-sidebar-foreground hover:bg-black/[0.03]',
+                )
+              }
+              title={collapsed ? label : undefined}
+            >
+              <Icon className="w-4 h-4 shrink-0" strokeWidth={1.75} />
+              <span className={cn('transition-[opacity,width] duration-200', collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100')}>
                 {label}
               </span>
             </NavLink>

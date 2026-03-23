@@ -1,12 +1,7 @@
 import { lazy } from 'react';
 
-export const CandidatesListPage = lazy(
-  () => import('./features/candidates/pages/CandidatesListPage'),
-);
-
-export const CandidateDetailPage = lazy(
-  () => import('./features/candidates/pages/CandidateDetailPage'),
-);
+// Candidates list/detail are now rendered by EntityListPage/EntityDetailPage
+// via the entity engine — no lazy imports needed
 
 export const SettingsPage = lazy(
   () => import('./features/settings/pages/SettingsPage'),

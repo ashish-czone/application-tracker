@@ -17,6 +17,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@hookform/resolvers": "^5.0.0",
     "@packages/eav-attributes-ui": "workspace:*",
+    "@packages/entity-engine-ui": "workspace:*",
     "@packages/ui": "workspace:*",
     "@tanstack/react-query": "^5.60.0",
     "dagre": "^0.8.5",

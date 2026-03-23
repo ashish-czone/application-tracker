@@ -4,7 +4,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast, Badge, Button } from '@packages/ui';
 import { attachSkill, detachSkill } from '../services';
 import { api } from '../../../../../lib/api';
-import type { Candidate } from '../types';
 
 interface TagGroup {
   id: string;
@@ -36,35 +35,38 @@ function useTagsByGroup(groupId: string | undefined) {
 }
 
 interface SkillsManagerProps {
-  candidate: Candidate;
+  entity: Record<string, unknown>;
 }
 
-export function SkillsManager({ candidate }: SkillsManagerProps) {
+export function SkillsManager({ entity: candidate }: SkillsManagerProps) {
   const [showPicker, setShowPicker] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: skillGroup } = useSkillTagGroup();
   const { data: allTags } = useTagsByGroup(skillGroup?.id);
 
+  const id = candidate.id as string;
+  const skills = (candidate.skills ?? []) as { id: string; name: string; slug: string }[];
+
   const attachMutation = useMutation({
-    mutationFn: (tagId: string) => attachSkill(candidate.id, tagId),
+    mutationFn: (tagId: string) => attachSkill(id, tagId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['candidate', candidate.id] });
+      queryClient.invalidateQueries({ queryKey: ['candidates', 'detail', id] });
       toast.success('Skill added');
     },
     onError: () => toast.error('Failed to add skill'),
   });
 
   const detachMutation = useMutation({
-    mutationFn: (tagId: string) => detachSkill(candidate.id, tagId),
+    mutationFn: (tagId: string) => detachSkill(id, tagId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['candidate', candidate.id] });
+      queryClient.invalidateQueries({ queryKey: ['candidates', 'detail', id] });
       toast.success('Skill removed');
     },
     onError: () => toast.error('Failed to remove skill'),
   });
 
-  const currentSkillIds = new Set(candidate.skills?.map((s) => s.id) ?? []);
+  const currentSkillIds = new Set(skills.map((s) => s.id));
   const availableTags = allTags?.filter((t) => !currentSkillIds.has(t.id)) ?? [];
 
   return (
@@ -84,9 +86,9 @@ export function SkillsManager({ candidate }: SkillsManagerProps) {
       </div>
 
       <div className="px-4 py-3">
-        {candidate.skills?.length > 0 ? (
+        {skills.length > 0 ? (
           <div className="flex flex-wrap gap-1.5">
-            {candidate.skills.map((skill) => (
+            {skills.map((skill) => (
               <Badge key={skill.id} variant="secondary" className="gap-1 pr-1">
                 {skill.name}
                 <button
