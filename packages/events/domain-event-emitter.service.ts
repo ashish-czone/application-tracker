@@ -14,6 +14,22 @@ export class DomainEventEmitter {
     this.logger = appLogger.forContext(DomainEventEmitter.name);
   }
 
+  /**
+   * Emit a dynamically-named event (for entity engine where event names
+   * are derived from config at runtime, not compile-time).
+   */
+  emitDynamic(
+    eventName: string,
+    params: {
+      entityType: string;
+      entityId: string;
+      actorId: string | null;
+      payload: Record<string, unknown>;
+    },
+  ) {
+    return this.emit(eventName as keyof EventPayloadMap, params as any);
+  }
+
   emit<T extends keyof EventPayloadMap>(
     eventName: T,
     params: {

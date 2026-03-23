@@ -20,9 +20,11 @@ import { RbacGuard } from '@packages/rbac';
 import { TaxonomyModule } from '@packages/taxonomy';
 import { HierarchyModule } from '@packages/hierarchy';
 import { EavAttributesModule } from '@packages/eav-attributes';
+import { EntityEngineModule } from '@packages/entity-engine';
 import { AuthOrchestratorModule } from './modules/auth/auth.module';
 import { SharedModule } from './modules/shared/shared.module';
 import { CandidatesModule } from './modules/candidates/candidates.module';
+import { CANDIDATES_CONFIG } from './modules/candidates/candidates.config';
 import { EavManagementModule } from './modules/eav-management/eav-management.module';
 import { NotificationRulesModule } from './modules/notification-rules/notification-rules.module';
 import { validate } from './config/env.validation';
@@ -71,9 +73,11 @@ import { validate } from './config/env.validation';
     HierarchyModule,
     TaxonomyModule,
     EavAttributesModule,
+    EntityEngineModule,
     AuthOrchestratorModule,
-    // Domain modules
-    CandidatesModule,
+    // Domain modules — entity engine handles CRUD/routing/RBAC/events/audit/seeding
+    EntityEngineModule.forEntity(CANDIDATES_CONFIG),
+    CandidatesModule, // extras: resume upload, skill tags, sample data seeding
     EavManagementModule,
     NotificationRulesModule,
   ],
