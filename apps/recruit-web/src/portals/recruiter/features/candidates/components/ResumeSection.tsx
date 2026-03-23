@@ -3,20 +3,29 @@ import { Upload, Download, FileText } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast, Button } from '@packages/ui';
 import { uploadResume } from '../services';
-import type { Candidate } from '../types';
 
-interface ResumeSectionProps {
-  candidate: Candidate;
+interface ResumeFile {
+  key: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  uploadedAt: string;
 }
 
-export function ResumeSection({ candidate }: ResumeSectionProps) {
+interface ResumeSectionProps {
+  entity: Record<string, unknown>;
+}
+
+export function ResumeSection({ entity: candidate }: ResumeSectionProps) {
   const fileRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
+  const id = candidate.id as string;
+  const resumeFile = candidate.resumeFile as ResumeFile | null;
 
   const uploadMutation = useMutation({
-    mutationFn: (file: File) => uploadResume(candidate.id, file),
+    mutationFn: (file: File) => uploadResume(id, file),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['candidate', candidate.id] });
+      queryClient.invalidateQueries({ queryKey: ['candidates', 'detail', id] });
       toast.success('Resume uploaded');
     },
     onError: () => toast.error('Failed to upload resume'),
@@ -29,8 +38,8 @@ export function ResumeSection({ candidate }: ResumeSectionProps) {
   }
 
   function handleDownload() {
-    if (!candidate.resumeFile) return;
-    const url = `/api/v1/candidates/${candidate.id}/resume/download`;
+    if (!resumeFile) return;
+    const url = `/api/v1/candidates/${id}/resume/download`;
     window.open(url, '_blank');
   }
 
@@ -53,7 +62,7 @@ export function ResumeSection({ candidate }: ResumeSectionProps) {
           className="h-7 px-2 text-xs"
         >
           <Upload className="h-3.5 w-3.5 mr-1" />
-          {candidate.resumeFile ? 'Replace' : 'Upload'}
+          {resumeFile ? 'Replace' : 'Upload'}
         </Button>
         <input
           ref={fileRef}
@@ -70,13 +79,13 @@ export function ResumeSection({ candidate }: ResumeSectionProps) {
             <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
             Uploading...
           </div>
-        ) : candidate.resumeFile ? (
+        ) : resumeFile ? (
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <FileText className="h-5 w-5 text-muted-foreground" />
               <div>
-                <p className="text-sm text-foreground">{candidate.resumeFile.originalName}</p>
-                <p className="text-xs text-muted-foreground">{formatFileSize(candidate.resumeFile.size)}</p>
+                <p className="text-sm text-foreground">{resumeFile.originalName}</p>
+                <p className="text-xs text-muted-foreground">{formatFileSize(resumeFile.size)}</p>
               </div>
             </div>
             <Button

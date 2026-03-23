@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, Settings, Bell } from 'lucide-react';
+import { LayoutDashboard, Settings, Bell } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 export interface MenuItem {
@@ -6,11 +6,13 @@ export interface MenuItem {
   label: string;
   icon: LucideIcon;
   permission?: string;
+  /** Position: 'before' renders before entity nav items, 'after' renders after */
+  position?: 'before' | 'after';
 }
 
 export const recruiterMenu: MenuItem[] = [
-  { path: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { path: '/candidates', label: 'Candidates', icon: Users, permission: 'candidates.read' },
-  { path: '/automations', label: 'Automations', icon: Bell, permission: 'notifications.rules.read' },
-  { path: '/settings', label: 'Settings', icon: Settings },
+  { path: '/', label: 'Dashboard', icon: LayoutDashboard, position: 'before' },
+  // Entity nav items (Candidates, Job Openings, etc.) are auto-generated here
+  { path: '/automations', label: 'Automations', icon: Bell, permission: 'notifications.rules.read', position: 'after' },
+  { path: '/settings', label: 'Settings', icon: Settings, position: 'after' },
 ];
