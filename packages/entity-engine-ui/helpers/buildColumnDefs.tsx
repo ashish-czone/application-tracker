@@ -79,9 +79,10 @@ export function buildColumnDefs(
   const displayFields = fields.filter((f) => {
     if (excludeSet.has(f.fieldKey)) return false;
     if (includeSet.has(f.fieldKey)) return true;
-    // Skip auto-generated and large text fields
+    // Skip auto-generated, large text, and file fields from table display
     if (f.fieldType === 'auto_number') return false;
     if (f.fieldType === 'textarea') return false;
+    if (f.fieldType === 'file') return false;
     // Skip system fields
     if (f.isSystem && !f.isQuickCreate) return false;
     return true;
@@ -97,10 +98,18 @@ export function buildColumnDefs(
     // Only standard DB columns can sort server-side
     enableSorting: !!field.columnName,
     cell: ({ row }) => {
-      // For lookup fields, display the resolved __label if available
-      if (field.fieldType === 'lookup' || field.fieldType === 'user') {
+      // For lookup/category fields, display the resolved __label if available
+      if (field.fieldType === 'lookup' || field.fieldType === 'user' || field.fieldType === 'category') {
         const label = row.original[`${field.fieldKey}__label`];
         if (label != null && label !== '') return String(label);
+      }
+      // For tags fields, show tag names as comma-separated list
+      if (field.fieldType === 'tags') {
+        const tags = row.original[field.fieldKey];
+        if (Array.isArray(tags) && tags.length > 0) {
+          return tags.map((t: { name: string }) => t.name).join(', ');
+        }
+        return '-';
       }
       const value = row.original[field.fieldKey];
       return formatCellValue(field, value);
