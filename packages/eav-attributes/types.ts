@@ -14,13 +14,19 @@ export type FieldType =
   | 'multi_select'
   | 'lookup'
   | 'user'
-  | 'auto_number';
+  | 'auto_number'
+  | 'tags'
+  | 'file'
+  | 'category';
+
+/** Field types that bypass the standard EAV pipeline (use join tables, external storage, or special handling) */
+export const RELATIONAL_FIELD_TYPES = new Set<FieldType>(['tags', 'file', 'category']);
 
 /** Maps field types to EAV value columns */
 export type EavValueColumn = 'valueText' | 'valueNumber' | 'valueDate' | 'valueDatetime' | 'valueBoolean';
 
-/** Which EAV column each field type writes to */
-export const FIELD_TYPE_TO_VALUE_COLUMN: Record<FieldType, EavValueColumn> = {
+/** Which EAV column each field type writes to (relational types not included — they bypass EAV) */
+export const FIELD_TYPE_TO_VALUE_COLUMN: Partial<Record<FieldType, EavValueColumn>> = {
   text: 'valueText',
   email: 'valueText',
   phone: 'valueText',
@@ -58,6 +64,11 @@ export interface FieldDefinition {
   lookupEntity: string | null;
   lookupLabelField: string | null;
   lookupSearchFields: string[] | null;
+  // Relational field config
+  tagGroupSlug: string | null;
+  categoryGroupSlug: string | null;
+  fileAccept: string[] | null;
+  fileMaxSize: number | null;
   sortOrder: number;
   createdAt: Date;
   updatedAt: Date;
@@ -160,6 +171,11 @@ export interface RegisterFieldInput {
   lookupEntity?: string;
   lookupLabelField?: string;
   lookupSearchFields?: string[];
+  // Relational field config
+  tagGroupSlug?: string;
+  categoryGroupSlug?: string;
+  fileAccept?: string[];
+  fileMaxSize?: number;
   sortOrder?: number;
 }
 

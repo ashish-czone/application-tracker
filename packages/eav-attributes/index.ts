@@ -23,7 +23,7 @@ export type {
   SetPicklistOptionInput,
 } from './types';
 
-export { FIELD_TYPE_TO_VALUE_COLUMN } from './types';
+export { FIELD_TYPE_TO_VALUE_COLUMN, RELATIONAL_FIELD_TYPES } from './types';
 
 export { buildSnapshot, diffSnapshot } from './helpers/snapshot';
 

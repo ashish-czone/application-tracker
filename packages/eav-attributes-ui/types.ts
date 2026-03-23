@@ -3,7 +3,8 @@
 export type FieldType =
   | 'text' | 'email' | 'phone' | 'number' | 'currency' | 'decimal'
   | 'date' | 'datetime' | 'boolean' | 'url' | 'textarea'
-  | 'picklist' | 'multi_select' | 'lookup' | 'user' | 'auto_number';
+  | 'picklist' | 'multi_select' | 'lookup' | 'user' | 'auto_number'
+  | 'tags' | 'file' | 'category';
 
 export interface PicklistOption {
   id: string;
@@ -33,6 +34,10 @@ export interface FieldDefinition {
   lookupEntity: string | null;
   lookupLabelField: string | null;
   lookupSearchFields: string[] | null;
+  tagGroupSlug: string | null;
+  categoryGroupSlug: string | null;
+  fileAccept: string[] | null;
+  fileMaxSize: number | null;
   sortOrder: number;
   picklistOptions: PicklistOption[];
 }
@@ -73,6 +78,9 @@ export const FIELD_TYPE_CONFIG: Record<FieldType, { label: string; color: string
   lookup: { label: 'Lookup', color: 'bg-rose-100 text-rose-800' },
   user: { label: 'User', color: 'bg-red-100 text-red-800' },
   auto_number: { label: 'Auto #', color: 'bg-gray-100 text-gray-800' },
+  tags: { label: 'Tags', color: 'bg-lime-100 text-lime-800' },
+  file: { label: 'File', color: 'bg-stone-100 text-stone-800' },
+  category: { label: 'Category', color: 'bg-yellow-100 text-yellow-800' },
 };
 
 // Creatable field types (shown in palette)

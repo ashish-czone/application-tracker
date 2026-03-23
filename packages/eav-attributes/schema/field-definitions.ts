@@ -27,6 +27,12 @@ export const fieldDefinitions = pgTable('field_definitions', {
   lookupLabelField: text('lookup_label_field'),
   lookupSearchFields: text('lookup_search_fields').array(),
 
+  // Relational field config (tags, file, category)
+  tagGroupSlug: text('tag_group_slug'),
+  categoryGroupSlug: text('category_group_slug'),
+  fileAccept: text('file_accept').array(),
+  fileMaxSize: integer('file_max_size'),
+
   // Metadata
   sortOrder: integer('sort_order').notNull().default(0),
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),

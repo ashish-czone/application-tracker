@@ -193,6 +193,25 @@ function validateFieldValue(
       // Already handled above
       return null;
 
+    case 'tags': {
+      if (!Array.isArray(value)) return { message: `${def.label} must be an array of tag IDs`, code: 'type' };
+      for (const v of value) {
+        if (typeof v !== 'string') return { message: `${def.label} values must be strings`, code: 'type' };
+        if (!UUID_RE.test(v)) return { message: `${def.label} values must be valid UUIDs`, code: 'format' };
+      }
+      return null;
+    }
+
+    case 'file':
+      // File uploads are handled via separate multipart endpoint, skip validation here
+      return null;
+
+    case 'category': {
+      if (typeof value !== 'string') return { message: `${def.label} must be a string`, code: 'type' };
+      if (!UUID_RE.test(value)) return { message: `${def.label} must be a valid UUID`, code: 'format' };
+      return null;
+    }
+
     default:
       return null;
   }
