@@ -8,6 +8,8 @@ interface DynamicFieldProps {
   field: FieldDefinition;
   mode: 'view' | 'edit';
   value?: unknown;
+  /** Resolved display label for lookup/user fields (from __label suffix) */
+  resolvedLabel?: string | null;
   /** Pre-fetched lookup options for lookup/user fields (label → value pairs) */
   lookupOptions?: { label: string; value: string }[];
 }
@@ -50,8 +52,13 @@ function formatViewValue(field: FieldDefinition, value: unknown): string {
  * In view mode: displays the formatted value with label.
  * In edit mode: renders the appropriate form component (must be inside a FormProvider).
  */
-export function DynamicField({ field, mode, value, lookupOptions }: DynamicFieldProps) {
+export function DynamicField({ field, mode, value, resolvedLabel, lookupOptions }: DynamicFieldProps) {
   if (mode === 'view') {
+    // For lookup fields, prefer the resolved label over the raw ID
+    const displayValue = (field.fieldType === 'lookup' || field.fieldType === 'user') && resolvedLabel
+      ? resolvedLabel
+      : value;
+
     return (
       <div className="flex flex-col gap-1">
         <span className="text-xs font-medium text-muted-foreground">{field.label}</span>
@@ -65,7 +72,7 @@ export function DynamicField({ field, mode, value, lookupOptions }: DynamicField
             {formatViewValue(field, value)}
           </a>
         ) : (
-          <span className="text-sm text-foreground">{formatViewValue(field, value)}</span>
+          <span className="text-sm text-foreground">{formatViewValue(field, displayValue)}</span>
         )}
       </div>
     );

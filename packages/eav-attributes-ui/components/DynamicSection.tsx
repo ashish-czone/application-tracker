@@ -136,6 +136,7 @@ export function DynamicSection({ section, values, onSave, isSaving }: DynamicSec
                   field={field}
                   mode="view"
                   value={values[field.fieldKey]}
+                  resolvedLabel={values[`${field.fieldKey}__label`] as string | undefined}
                 />
               ))}
             </div>
