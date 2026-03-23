@@ -31,6 +31,7 @@ import { CANDIDATES_CONFIG } from './modules/candidates/candidates.config';
 import { JOB_OPENINGS_CONFIG } from './modules/job-openings/job-openings.config';
 import { APPLICATIONS_CONFIG } from './modules/applications/applications.config';
 import { INTERVIEWS_CONFIG } from './modules/interviews/interviews.config';
+import { ClientsModule } from './modules/clients/clients.module';
 import { JobOpeningsModule } from './modules/job-openings/job-openings.module';
 import { EavManagementModule } from './modules/eav-management/eav-management.module';
 import { NotificationRulesModule } from './modules/notification-rules/notification-rules.module';
@@ -91,7 +92,8 @@ import { validate } from './config/env.validation';
     EntityEngineModule.forEntity(APPLICATIONS_CONFIG),
     EntityEngineModule.forEntity(INTERVIEWS_CONFIG),
     CandidatesModule, // extras: resume upload, skill tags, sample data seeding
-    JobOpeningsModule, // sample data seeding
+    ClientsModule, // sample data seeding: clients, contacts, vendors, interviews
+    JobOpeningsModule, // sample data seeding: job openings, applications
     EavManagementModule,
     NotificationRulesModule,
   ],
