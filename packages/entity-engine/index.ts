@@ -1,6 +1,8 @@
 export { EntityEngineModule } from './entity-engine.module';
 export { EntityRegistryService } from './entity-registry.service';
 export { EntityService } from './entity.service';
+export { createEntityController } from './create-entity-controller';
+export { seedEntityFields } from './seed-entity-fields';
 
 export type {
   EntityConfig,
