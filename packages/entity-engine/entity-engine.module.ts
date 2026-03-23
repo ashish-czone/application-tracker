@@ -8,6 +8,7 @@ import { EntityResolverRegistry } from '@packages/notifications';
 import { AppLoggerService } from '@packages/logger';
 import { EntityRegistryService } from './entity-registry.service';
 import { EntityService } from './entity.service';
+import { EntityEngineApiController } from './entity-engine-api.controller';
 import { createEntityController } from './create-entity-controller';
 import { seedEntityFields } from './seed-entity-fields';
 import type { EntityConfig } from './types';
@@ -27,6 +28,7 @@ import type { EntityConfig } from './types';
  */
 @Global()
 @Module({
+  controllers: [EntityEngineApiController],
   providers: [EntityRegistryService],
   exports: [EntityRegistryService],
 })
