@@ -77,7 +77,11 @@ export class EntityService {
       conditions.push(or(...searchConditions));
     }
 
-    // Custom filters from hooks
+    // Generic field-level filters (standard columns + EAV fields)
+    const genericFilters = await this.buildGenericFilters(query, config);
+    conditions.push(...genericFilters);
+
+    // Custom filters from hooks (for anything not covered by generic filtering)
     if (config.hooks?.buildListFilters) {
       const extraFilters = config.hooks.buildListFilters(query);
       conditions.push(...extraFilters);
@@ -393,6 +397,63 @@ export class EntityService {
   // ---------------------------------------------------------------------------
   // HELPERS (private)
   // ---------------------------------------------------------------------------
+
+  /** Query params that are NOT field filters — skip these in generic filtering. */
+  private static readonly SYSTEM_QUERY_PARAMS = new Set([
+    'page', 'limit', 'search', 'sort', 'order', 'includeDeleted',
+  ]);
+
+  /**
+   * Build WHERE conditions from query params that match field definitions.
+   * - Standard DB columns: eq(column, value)
+   * - EAV fields: EXISTS subquery via FieldValueService.buildFilterCondition()
+   */
+  private async buildGenericFilters(
+    query: BaseListQuery,
+    config: EntityConfig,
+  ): Promise<any[]> {
+    // Collect filter params (exclude system params)
+    const filterEntries = Object.entries(query).filter(
+      ([key, value]) => !EntityService.SYSTEM_QUERY_PARAMS.has(key) && value != null && value !== '',
+    );
+    if (filterEntries.length === 0) return [];
+
+    // Load field definitions to distinguish standard vs EAV
+    const defs = await this.fieldDefinitionService.listByEntityWithOptions(config.entityType);
+    const defsByKey = new Map(defs.map((d) => [d.fieldKey, d]));
+
+    const conditions: any[] = [];
+    const eavFilters: { fieldKey: string; operator: 'eq'; value: unknown }[] = [];
+    const table = config.table as any;
+
+    for (const [key, value] of filterEntries) {
+      const def = defsByKey.get(key);
+      if (!def) continue; // Not a known field — skip (let hooks handle it)
+
+      if (def.columnName) {
+        // Standard DB column — direct equality filter
+        const col = table[key];
+        if (col) {
+          conditions.push(eq(col, value as any));
+        }
+      } else {
+        // EAV field — collect for batch EXISTS subquery
+        eavFilters.push({ fieldKey: key, operator: 'eq', value });
+      }
+    }
+
+    // Build EAV filter conditions
+    if (eavFilters.length > 0) {
+      const eavCondition = this.fieldValueService.buildFilterCondition(
+        config.entityType,
+        table.id,
+        eavFilters,
+      );
+      conditions.push(eavCondition);
+    }
+
+    return conditions;
+  }
 
   /**
    * Resolve lookup field IDs to display labels in-place.

@@ -1,4 +1,3 @@
-import { eq } from 'drizzle-orm';
 import type { EntityConfig } from '@packages/entity-engine';
 import { applications } from './schema/applications';
 
@@ -76,13 +75,4 @@ export const APPLICATIONS_CONFIG: EntityConfig = {
     navOrder: 3,
   },
 
-  hooks: {
-    buildListFilters: (query) => {
-      const filters: any[] = [];
-      if (query.status) filters.push(eq(applications.status, query.status as string));
-      if (query.candidateId) filters.push(eq(applications.candidateId, query.candidateId as string));
-      if (query.jobOpeningId) filters.push(eq(applications.jobOpeningId, query.jobOpeningId as string));
-      return filters;
-    },
-  },
 };

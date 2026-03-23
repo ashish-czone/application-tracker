@@ -81,10 +81,10 @@ export const CANDIDATES_CONFIG: EntityConfig = {
   },
 
   hooks: {
+    // source, country are handled by generic field filtering.
+    // qualification → highestQualification is a custom param mapping.
     buildListFilters: (query) => {
       const filters: any[] = [];
-      if (query.source) filters.push(eq(candidates.source, query.source as string));
-      if (query.country) filters.push(eq(candidates.country, query.country as string));
       if (query.qualification) filters.push(eq(candidates.highestQualification, query.qualification as string));
       return filters;
     },
