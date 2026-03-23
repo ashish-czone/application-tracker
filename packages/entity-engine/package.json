@@ -8,11 +8,16 @@
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
+    "@nestjs/swagger": "^11.0.0",
+    "@packages/auth": "workspace:*",
+    "@packages/audit": "workspace:*",
+    "@packages/common": "workspace:*",
     "@packages/database": "workspace:*",
     "@packages/eav-attributes": "workspace:*",
     "@packages/events": "workspace:*",
     "@packages/logger": "workspace:*",
-    "@packages/common": "workspace:*"
+    "@packages/notifications": "workspace:*",
+    "@packages/rbac": "workspace:*"
   },
   "devDependencies": {
     "drizzle-orm": "^0.45.1",
