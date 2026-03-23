@@ -5,6 +5,7 @@ import { Button, ConfirmDialog } from '@packages/ui';
 import { DynamicSection } from '@packages/eav-attributes-ui';
 import { useEntityEngine, useEntityHooks, useEntityConfig } from '../EntityEngineProvider';
 import { useEntityLayout } from '../helpers/useEntityLayout';
+import { EntityRelatedList } from './EntityRelatedList';
 
 interface EntityDetailPageProps {
   entityType: string;
@@ -124,6 +125,19 @@ export function EntityDetailPage({ entityType }: EntityDetailPageProps) {
         {plugins.map((plugin) => (
           <plugin.component key={plugin.label} entity={item} />
         ))}
+
+        {/* Related lists (from entity relationships config) */}
+        {entity.relationships
+          .filter((r) => r.type === 'hasMany')
+          .map((rel) => (
+            <EntityRelatedList
+              key={rel.name}
+              targetEntityType={rel.targetEntity}
+              foreignKey={rel.foreignKey ?? `${entityType}Id`}
+              parentId={item.id as string}
+              label={rel.label}
+            />
+          ))}
       </div>
 
       {/* Delete confirmation */}

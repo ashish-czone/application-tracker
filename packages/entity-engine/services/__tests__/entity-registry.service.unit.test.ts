@@ -111,8 +111,8 @@ describe('EntityRegistryService', () => {
     expect(entry.features.hasWorkflow).toBe(false);
     expect(entry.relationships).toHaveLength(1);
     expect(entry.relationships[0].name).toBe('applications');
-    // Ensure internal fields are NOT serialized
-    expect((entry.relationships[0] as any).foreignKey).toBeUndefined();
+    // foreignKey IS serialized (needed for related list filtering)
+    expect(entry.relationships[0].foreignKey).toBe('candidateId');
   });
 
   it('defaults softDelete and restore to true', () => {

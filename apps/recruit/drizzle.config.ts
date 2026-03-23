@@ -15,6 +15,7 @@ export default defineConfig({
     // Recruit-specific modules
     './src/modules/candidates/schema/candidates.ts',
     './src/modules/job-openings/schema/job-openings.ts',
+    './src/modules/applications/schema/applications.ts',
   ],
   out: './drizzle',
   dialect: 'postgresql',

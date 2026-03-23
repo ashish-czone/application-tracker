@@ -57,6 +57,17 @@ export const CANDIDATES_CONFIG: EntityConfig = {
     searchFields: ['firstName', 'lastName', 'email'],
   },
 
+  relationships: [
+    {
+      name: 'applications',
+      type: 'hasMany',
+      targetEntity: 'applications',
+      foreignKey: 'candidateId',
+      label: 'Applications',
+      displayFields: ['status', 'stage', 'createdAt'],
+    },
+  ],
+
   recipientFields: {
     createdBy: { label: 'Created By (recruiter)' },
   },
