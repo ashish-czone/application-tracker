@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
-import { eq, and, or, isNull, ilike, asc, desc, count } from 'drizzle-orm';
+import { eq, and, or, isNull, ilike, asc, desc, count, sql } from 'drizzle-orm';
 import type { PgColumn } from 'drizzle-orm/pg-core';
 import { DatabaseService } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
@@ -89,10 +89,10 @@ export class EntityService {
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-    // Sort
+    // Sort — check if the sort key is a lookup field, use label subquery if so
     const sortKey = query.sort ?? config.defaultSort;
-    const sortColumn = config.sortableColumns[sortKey] ?? config.sortableColumns[config.defaultSort];
-    const orderFn = query.order === 'asc' ? asc : desc;
+    const orderDirection = query.order === 'asc' ? 'ASC' : 'DESC';
+    const orderByExpr = this.buildSortExpression(sortKey, orderDirection, config);
 
     // Count
     const [{ total }] = await this.database.db
@@ -105,7 +105,7 @@ export class EntityService {
       .select()
       .from(config.table as any)
       .where(whereClause)
-      .orderBy(orderFn(sortColumn))
+      .orderBy(orderByExpr)
       .limit(limit)
       .offset(offset);
 
@@ -397,6 +397,37 @@ export class EntityService {
   // ---------------------------------------------------------------------------
   // HELPERS (private)
   // ---------------------------------------------------------------------------
+
+  /**
+   * Build the ORDER BY expression for list queries.
+   * For lookup fields, uses a subquery to sort by the related entity's label.
+   * For standard columns, uses the direct column reference.
+   */
+  private buildSortExpression(sortKey: string, direction: 'ASC' | 'DESC', config: EntityConfig): any {
+    const orderFn = direction === 'ASC' ? asc : desc;
+
+    // Check if the sort key is a lookup field (from fieldMeta config)
+    const meta = config.fieldMeta[sortKey];
+    if (meta?.lookupEntity) {
+      const lookupConfig = this.lookupResolver.getConfig(meta.lookupEntity);
+      if (lookupConfig) {
+        // Sort by the related entity's label via a scalar subquery
+        // e.g. ORDER BY (SELECT first_name FROM candidates WHERE candidates.id = applications.candidate_id) ASC
+        const targetTable = lookupConfig.table;
+        const labelCol = targetTable[lookupConfig.labelField];
+        const valueCol = targetTable[lookupConfig.valueField];
+        const fkCol = (config.table as any)[sortKey];
+
+        if (labelCol && valueCol && fkCol) {
+          return sql`(SELECT ${labelCol} FROM ${targetTable} WHERE ${valueCol} = ${fkCol}) ${sql.raw(direction)}`;
+        }
+      }
+    }
+
+    // Standard column sort
+    const sortColumn = config.sortableColumns[sortKey] ?? config.sortableColumns[config.defaultSort];
+    return orderFn(sortColumn);
+  }
 
   /** Query params that are NOT field filters — skip these in generic filtering. */
   private static readonly SYSTEM_QUERY_PARAMS = new Set([
