@@ -3,6 +3,7 @@ export { LayoutCanvas } from './components/LayoutCanvas';
 export { CreateFieldDialog } from './components/CreateFieldDialog';
 export { EditFieldDialog } from './components/EditFieldDialog';
 export { CreateSectionDialog } from './components/CreateSectionDialog';
+export { EditSectionDialog } from './components/EditSectionDialog';
 export { PicklistOptionsEditor } from './components/PicklistOptionsEditor';
 export { DynamicField } from './components/DynamicField';
 export { DynamicSection } from './components/DynamicSection';
