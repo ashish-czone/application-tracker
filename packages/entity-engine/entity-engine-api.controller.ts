@@ -1,5 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { Public } from '@packages/auth';
 import { EntityRegistryService } from './entity-registry.service';
 import type { EntityRegistryEntry } from './types';
 
@@ -13,6 +14,7 @@ export class EntityEngineApiController {
   constructor(private readonly registry: EntityRegistryService) {}
 
   @Get('registry')
+  @Public()
   @ApiOperation({ summary: 'Get all registered entity types (for frontend auto-rendering)' })
   getRegistry(): EntityRegistryEntry[] {
     return this.registry.getRegistryEntries();
