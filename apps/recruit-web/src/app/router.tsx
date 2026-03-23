@@ -64,10 +64,18 @@ export function AppRouter() {
           />
 
           {/* Entity engine routes — each entity = 2 lines */}
-          <Route path="/candidates" element={<EntityListPage entityType="candidates" />} />
-          <Route path="/candidates/:id" element={<EntityDetailPage entityType="candidates" />} />
           <Route path="/job-openings" element={<EntityListPage entityType="job_openings" />} />
           <Route path="/job-openings/:id" element={<EntityDetailPage entityType="job_openings" />} />
+          <Route path="/candidates" element={<EntityListPage entityType="candidates" />} />
+          <Route path="/candidates/:id" element={<EntityDetailPage entityType="candidates" />} />
+          <Route path="/interviews" element={<EntityListPage entityType="interviews" />} />
+          <Route path="/interviews/:id" element={<EntityDetailPage entityType="interviews" />} />
+          <Route path="/clients" element={<EntityListPage entityType="clients" />} />
+          <Route path="/clients/:id" element={<EntityDetailPage entityType="clients" />} />
+          <Route path="/contacts" element={<EntityListPage entityType="contacts" />} />
+          <Route path="/contacts/:id" element={<EntityDetailPage entityType="contacts" />} />
+          <Route path="/vendors" element={<EntityListPage entityType="vendors" />} />
+          <Route path="/vendors/:id" element={<EntityDetailPage entityType="vendors" />} />
           <Route path="/applications" element={<EntityListPage entityType="applications" />} />
           <Route path="/applications/:id" element={<EntityDetailPage entityType="applications" />} />
 
