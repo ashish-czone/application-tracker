@@ -1,7 +1,7 @@
 import type { FieldType } from '@packages/eav-attributes';
 
 /**
- * Presentation metadata that can't be derived from the Drizzle schema.
+ * Presentation metadata matching Zoho Recruit Candidates standard fields.
  * Keys must match the camelCase property names in the candidates table.
  */
 export const CANDIDATE_FIELD_META: Record<string, {
@@ -16,12 +16,88 @@ export const CANDIDATE_FIELD_META: Record<string, {
   picklistOptions?: { label: string; value: string }[];
   maxLength?: number;
 }> = {
-  firstName: { label: 'First Name', section: 'basic', sortOrder: 0, isQuickCreate: true, isSystem: true, maxLength: 100 },
-  lastName: { label: 'Last Name', section: 'basic', sortOrder: 1, isQuickCreate: true, isSystem: true, maxLength: 100 },
-  email: { label: 'Email', section: 'basic', sortOrder: 2, isQuickCreate: true, isUnique: true, fieldType: 'email', maxLength: 255 },
-  phone: { label: 'Phone', section: 'basic', sortOrder: 3, isQuickCreate: true, fieldType: 'phone', maxLength: 20 },
+  // Basic Info
+  email: { label: 'Email', section: 'basic', sortOrder: 0, isQuickCreate: true, isUnique: true, fieldType: 'email', maxLength: 255 },
+  firstName: { label: 'First Name', section: 'basic', sortOrder: 1, isQuickCreate: true, isSystem: true, maxLength: 125 },
+  phone: { label: 'Phone', section: 'basic', sortOrder: 2, fieldType: 'phone' },
+  lastName: { label: 'Last Name', section: 'basic', sortOrder: 3, isQuickCreate: true, isSystem: true, maxLength: 125 },
+  website: { label: 'Website', section: 'basic', sortOrder: 4, fieldType: 'url' },
+  mobile: { label: 'Mobile', section: 'basic', sortOrder: 5, isQuickCreate: true, fieldType: 'phone' },
+  secondaryEmail: { label: 'Secondary Email', section: 'basic', sortOrder: 6, fieldType: 'email' },
+  fax: { label: 'Fax', section: 'basic', sortOrder: 7 },
+  // Address
+  street: { label: 'Street', section: 'address', sortOrder: 0, maxLength: 250 },
+  postalCode: { label: 'Postal Code', section: 'address', sortOrder: 1, maxLength: 30 },
+  city: { label: 'City', section: 'address', sortOrder: 2 },
+  state: { label: 'Province', section: 'address', sortOrder: 3 },
+  country: { label: 'Country', section: 'address', sortOrder: 4 },
+  // Professional Details
+  experienceInYears: { label: 'Experience in Years', section: 'professional', sortOrder: 0, fieldType: 'decimal' },
+  highestQualification: {
+    label: 'Highest Qualification Held', section: 'professional', sortOrder: 1, fieldType: 'picklist',
+    picklistOptions: [
+      { label: 'M.C.A.', value: 'mca' },
+      { label: 'B.E.', value: 'be' },
+      { label: 'B.SC.', value: 'bsc' },
+      { label: 'M.S.', value: 'ms' },
+      { label: 'B.Tech', value: 'btech' },
+    ],
+  },
+  currentTitle: {
+    label: 'Current Job Title', section: 'professional', sortOrder: 2, fieldType: 'picklist',
+    picklistOptions: [
+      { label: 'Fresher', value: 'fresher' },
+      { label: 'Project Lead', value: 'project-lead' },
+      { label: 'Project Manager', value: 'project-manager' },
+    ],
+  },
+  currentCompany: { label: 'Current Employer', section: 'professional', sortOrder: 3, isQuickCreate: true, maxLength: 100 },
+  expectedSalary: { label: 'Expected Salary', section: 'professional', sortOrder: 4, fieldType: 'currency' },
+  currentSalary: { label: 'Current Salary', section: 'professional', sortOrder: 5, fieldType: 'currency' },
+  currency: { label: 'Currency', section: 'professional', sortOrder: 6, maxLength: 3 },
+  skillSet: { label: 'Skill Set', section: 'professional', sortOrder: 7, fieldType: 'textarea', maxLength: 6000 },
+  additionalInfo: { label: 'Additional Info', section: 'professional', sortOrder: 8, fieldType: 'textarea', maxLength: 6000 },
+  skypeId: { label: 'Skype ID', section: 'professional', sortOrder: 9 },
+  // Social Links
+  linkedinUrl: { label: 'LinkedIn', section: 'social', sortOrder: 0, fieldType: 'url' },
+  facebookUrl: { label: 'Facebook', section: 'social', sortOrder: 1, fieldType: 'url' },
+  twitterHandle: { label: 'Twitter', section: 'social', sortOrder: 2, maxLength: 50 },
+  // Other Info
+  candidateStatus: {
+    label: 'Candidate Status', section: 'other', sortOrder: 0, fieldType: 'picklist',
+    picklistOptions: [
+      { label: 'New', value: 'new' },
+      { label: 'In Review', value: 'in-review' },
+      { label: 'Qualified', value: 'qualified' },
+      { label: 'Unqualified', value: 'unqualified' },
+      { label: 'Junk Candidate', value: 'junk-candidate' },
+      { label: 'Contacted', value: 'contacted' },
+      { label: 'Contact in Future', value: 'contact-in-future' },
+      { label: 'Not Contacted', value: 'not-contacted' },
+      { label: 'Attempted to Contact', value: 'attempted-to-contact' },
+      { label: 'Reviewed', value: 'reviewed' },
+    ],
+  },
+  source: {
+    label: 'Source', section: 'other', sortOrder: 1, isQuickCreate: true, fieldType: 'picklist',
+    picklistOptions: [
+      { label: 'Added by User', value: 'added-by-user' },
+      { label: 'Advertisement', value: 'advertisement' },
+      { label: 'API', value: 'api' },
+      { label: 'Career Site', value: 'career-site' },
+      { label: 'Cold Call', value: 'cold-call' },
+      { label: 'Employee Referral', value: 'employee-referral' },
+      { label: 'External Referral', value: 'external-referral' },
+      { label: 'Import', value: 'import' },
+      { label: 'Partner', value: 'partner' },
+      { label: 'Vendor', value: 'vendor' },
+    ],
+  },
+  emailOptOut: { label: 'Email Opt Out', section: 'other', sortOrder: 2, fieldType: 'boolean' },
+  // Legacy fields (kept from original schema)
+  dateOfBirth: { label: 'Date of Birth', section: 'other', sortOrder: 3, fieldType: 'date' },
   gender: {
-    label: 'Gender', section: 'basic', sortOrder: 4, fieldType: 'picklist',
+    label: 'Gender', section: 'other', sortOrder: 4, fieldType: 'picklist',
     picklistOptions: [
       { label: 'Male', value: 'male' },
       { label: 'Female', value: 'female' },
@@ -29,50 +105,20 @@ export const CANDIDATE_FIELD_META: Record<string, {
       { label: 'Prefer not to say', value: 'prefer-not-to-say' },
     ],
   },
-  dateOfBirth: { label: 'Date of Birth', section: 'basic', sortOrder: 5, fieldType: 'date' },
-  nationality: { label: 'Nationality', section: 'basic', sortOrder: 6, maxLength: 100 },
-  currentTitle: { label: 'Current Title', section: 'professional', sortOrder: 0, maxLength: 200 },
-  currentCompany: { label: 'Current Company', section: 'professional', sortOrder: 1, maxLength: 200 },
-  expectedSalary: { label: 'Expected Salary', section: 'professional', sortOrder: 2, fieldType: 'currency' },
-  currency: { label: 'Currency', section: 'professional', sortOrder: 3, maxLength: 3 },
-  source: {
-    label: 'Source', section: 'professional', sortOrder: 4, isQuickCreate: true, fieldType: 'picklist',
-    picklistOptions: [
-      { label: 'Referral', value: 'referral' },
-      { label: 'Job Board', value: 'job-board' },
-      { label: 'LinkedIn', value: 'linkedin' },
-      { label: 'Direct', value: 'direct' },
-      { label: 'Website', value: 'website' },
-    ],
-  },
-  availableFrom: { label: 'Available From', section: 'professional', sortOrder: 5, fieldType: 'date' },
-  isWillingToRelocate: { label: 'Willing to Relocate', section: 'professional', sortOrder: 6, fieldType: 'boolean' },
-  linkedinUrl: { label: 'LinkedIn URL', section: 'professional', sortOrder: 7, fieldType: 'url', maxLength: 500 },
-  highestQualification: {
-    label: 'Highest Qualification', section: 'education', sortOrder: 0, fieldType: 'picklist',
-    picklistOptions: [
-      { label: 'High School', value: 'high-school' },
-      { label: 'Bachelors', value: 'bachelors' },
-      { label: 'Masters', value: 'masters' },
-      { label: 'PhD', value: 'phd' },
-      { label: 'Other', value: 'other' },
-    ],
-  },
-  address: { label: 'Street Address', section: 'address', sortOrder: 0, maxLength: 500 },
-  city: { label: 'City', section: 'address', sortOrder: 1, maxLength: 100 },
-  state: { label: 'State', section: 'address', sortOrder: 2, maxLength: 100 },
-  country: { label: 'Country', section: 'address', sortOrder: 3, maxLength: 100 },
-  zipCode: { label: 'Zip Code', section: 'address', sortOrder: 4, maxLength: 20 },
-  notes: { label: 'Notes', section: 'other', sortOrder: 0, fieldType: 'textarea', maxLength: 5000 },
+  nationality: { label: 'Nationality', section: 'other', sortOrder: 5 },
+  isWillingToRelocate: { label: 'Willing to Relocate', section: 'other', sortOrder: 6, fieldType: 'boolean' },
+  availableFrom: { label: 'Available From', section: 'other', sortOrder: 7, fieldType: 'date' },
+  notes: { label: 'Notes', section: 'other', sortOrder: 8, fieldType: 'textarea', maxLength: 5000 },
 };
 
 /** Fields to skip — internal/system columns that admins don't interact with */
 export const SKIP_FIELDS = ['id', 'deletedAt', 'deletedBy', 'resumeFile', 'createdAt', 'updatedAt', 'createdBy'];
 
-/** Section definitions for the default layout (field keys use camelCase to match Drizzle property names) */
+/** Section definitions matching Zoho Recruit layout */
 export const CANDIDATE_SECTIONS = [
-  { name: 'Basic Info', fields: ['firstName', 'lastName', 'email', 'phone', 'gender', 'dateOfBirth', 'nationality'] },
-  { name: 'Professional Details', fields: ['currentTitle', 'currentCompany', 'expectedSalary', 'source', 'availableFrom', 'isWillingToRelocate', 'linkedinUrl'] },
-  { name: 'Education', fields: ['highestQualification'] },
-  { name: 'Address', fields: ['address', 'city', 'state', 'country', 'zipCode'] },
+  { name: 'Basic Info', fields: ['email', 'firstName', 'phone', 'lastName', 'website', 'mobile', 'secondaryEmail', 'fax'] },
+  { name: 'Address Information', fields: ['street', 'postalCode', 'city', 'state', 'country'] },
+  { name: 'Professional Details', fields: ['experienceInYears', 'highestQualification', 'currentTitle', 'currentCompany', 'expectedSalary', 'currentSalary', 'currency', 'skillSet', 'additionalInfo', 'skypeId'] },
+  { name: 'Social Links', fields: ['linkedinUrl', 'facebookUrl', 'twitterHandle'] },
+  { name: 'Other Info', fields: ['candidateStatus', 'source', 'emailOptOut', 'dateOfBirth', 'gender', 'nationality', 'isWillingToRelocate', 'availableFrom', 'notes'] },
 ];
