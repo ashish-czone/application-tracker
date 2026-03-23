@@ -2,6 +2,7 @@ export { EntityEngineProvider, useEntityEngine, useEntityHooks, useEntityConfig 
 export { createEntityApi } from './helpers/createEntityApi';
 export { createEntityHooks } from './helpers/createEntityHooks';
 export type { EntityHooks } from './helpers/createEntityHooks';
+export { buildColumnDefs, buildFilterConfigs } from './helpers/buildColumnDefs';
 
 export type {
   EntityRegistryEntry,
