@@ -1,12 +1,13 @@
 import { useMemo } from 'react';
 import { useForm } from 'react-hook-form';
+import { useQuery } from '@tanstack/react-query';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   Form, Button,
   DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@packages/ui';
 import { DynamicField, buildFormSchema } from '@packages/eav-attributes-ui';
-import { useEntityHooks } from '../EntityEngineProvider';
+import { useEntityEngine, useEntityHooks } from '../EntityEngineProvider';
 import { useEntityLayout } from '../helpers/useEntityLayout';
 
 interface EntityQuickCreateFormProps {
@@ -23,7 +24,33 @@ interface EntityQuickCreateFormProps {
  */
 export function EntityQuickCreateForm({ entityType, singularName, onClose, onSuccess }: EntityQuickCreateFormProps) {
   const { data: layout, isLoading: layoutLoading } = useEntityLayout(entityType);
+  const { apiFn } = useEntityEngine();
   const hooks = useEntityHooks(entityType);
+
+  // Fetch lookup options for all lookup fields
+  const lookupEntities = useMemo(() => {
+    if (!layout) return [];
+    return layout.quickCreateFields
+      .filter((f) => (f.fieldType === 'lookup' || f.fieldType === 'user') && f.lookupEntity)
+      .map((f) => f.lookupEntity!);
+  }, [layout]);
+
+  const { data: lookupOptionsMap } = useQuery({
+    queryKey: ['lookups', ...lookupEntities],
+    queryFn: async () => {
+      const map: Record<string, { label: string; value: string }[]> = {};
+      for (const entity of lookupEntities) {
+        try {
+          const results = await apiFn.get<{ label: string; value: string }[]>(`/lookups/${entity}?limit=100`);
+          map[entity] = results;
+        } catch {
+          map[entity] = [];
+        }
+      }
+      return map;
+    },
+    enabled: lookupEntities.length > 0,
+  });
 
   const quickCreateFields = useMemo(
     () => layout?.quickCreateFields ?? [],
@@ -106,7 +133,12 @@ export function EntityQuickCreateForm({ entityType, singularName, onClose, onSuc
       <Form form={form} onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
           {quickCreateFields.map((field) => (
-            <DynamicField key={field.fieldKey} field={field} mode="edit" />
+            <DynamicField
+              key={field.fieldKey}
+              field={field}
+              mode="edit"
+              lookupOptions={field.lookupEntity ? lookupOptionsMap?.[field.lookupEntity] : undefined}
+            />
           ))}
         </div>
 

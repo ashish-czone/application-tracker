@@ -8,6 +8,8 @@ interface DynamicFieldProps {
   field: FieldDefinition;
   mode: 'view' | 'edit';
   value?: unknown;
+  /** Pre-fetched lookup options for lookup/user fields (label → value pairs) */
+  lookupOptions?: { label: string; value: string }[];
 }
 
 /** Format a field value for display in view mode */
@@ -48,7 +50,7 @@ function formatViewValue(field: FieldDefinition, value: unknown): string {
  * In view mode: displays the formatted value with label.
  * In edit mode: renders the appropriate form component (must be inside a FormProvider).
  */
-export function DynamicField({ field, mode, value }: DynamicFieldProps) {
+export function DynamicField({ field, mode, value, lookupOptions }: DynamicFieldProps) {
   if (mode === 'view') {
     return (
       <div className="flex flex-col gap-1">
@@ -70,10 +72,10 @@ export function DynamicField({ field, mode, value }: DynamicFieldProps) {
   }
 
   // Edit mode — render appropriate form control
-  return <DynamicFieldEdit field={field} />;
+  return <DynamicFieldEdit field={field} lookupOptions={lookupOptions} />;
 }
 
-function DynamicFieldEdit({ field }: { field: FieldDefinition }) {
+function DynamicFieldEdit({ field, lookupOptions }: { field: FieldDefinition; lookupOptions?: { label: string; value: string }[] }) {
   const disabled = field.isReadonly;
   const label = field.isRequired ? `${field.label} *` : field.label;
 
@@ -136,7 +138,17 @@ function DynamicFieldEdit({ field }: { field: FieldDefinition }) {
 
     case 'lookup':
     case 'user':
-      // Basic text input for now — proper lookup search can be added later
+      if (lookupOptions && lookupOptions.length > 0) {
+        return (
+          <FormSelect
+            name={field.fieldKey}
+            label={label}
+            placeholder={`Select ${field.label}`}
+            options={lookupOptions}
+            disabled={disabled}
+          />
+        );
+      }
       return <FormInput name={field.fieldKey} label={label} disabled={disabled} placeholder="Enter ID" />;
 
     case 'auto_number':
