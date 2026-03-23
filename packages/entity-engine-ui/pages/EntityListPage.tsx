@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
+import { useQuery } from '@tanstack/react-query';
 import { Plus, Trash2, RotateCcw, Database } from 'lucide-react';
 import {
   DataGrid, DataGridFilters, Badge, Button, useDataGridParams, useActiveFilters,
@@ -8,7 +9,7 @@ import {
 } from '@packages/ui';
 import { useEntityEngine, useEntityHooks, useEntityConfig } from '../EntityEngineProvider';
 import { useEntityLayout } from '../helpers/useEntityLayout';
-import { buildColumnDefs, buildFilterConfigs } from '../helpers/buildColumnDefs';
+import { buildColumnDefs, buildFilterConfigs, buildLookupFilterFields } from '../helpers/buildColumnDefs';
 import { EntityQuickCreateForm } from './EntityQuickCreateForm';
 
 type Row = Record<string, unknown>;
@@ -26,7 +27,7 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
   const navigate = useNavigate();
   const entity = useEntityConfig(entityType);
   const hooks = useEntityHooks(entityType);
-  const { getDetailPlugins } = useEntityEngine();
+  const { apiFn, getDetailPlugins } = useEntityEngine();
   const { data: layout } = useEntityLayout(entityType);
 
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -39,12 +40,51 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
     getFilter, setFilter, clearFilters,
   } = useDataGridParams({ defaultSort: 'createdAt', defaultOrder: 'desc' });
 
-  // Build filter configs from picklist fields
-  const filterConfigs = useMemo(() => {
+  // Build picklist filter configs
+  const picklistFilterConfigs = useMemo(() => {
     if (!layout) return [];
     const allFields = layout.sections.flatMap((s) => s.fields);
     return buildFilterConfigs(allFields);
   }, [layout]);
+
+  // Identify lookup fields that need async option fetching
+  const lookupFilterFields = useMemo(() => {
+    if (!layout) return [];
+    const allFields = layout.sections.flatMap((s) => s.fields);
+    return buildLookupFilterFields(allFields);
+  }, [layout]);
+
+  // Fetch lookup options for all lookup filter fields
+  const { data: lookupOptionsMap } = useQuery({
+    queryKey: ['lookup-filter-options', entityType, lookupFilterFields.map((f) => f.lookupEntity)],
+    queryFn: async () => {
+      const map: Record<string, { label: string; value: string }[]> = {};
+      for (const field of lookupFilterFields) {
+        try {
+          const results = await apiFn.get<{ label: string; value: string }[]>(
+            `/lookups/${field.lookupEntity}?limit=200`,
+          );
+          map[field.fieldKey] = results;
+        } catch {
+          map[field.fieldKey] = [];
+        }
+      }
+      return map;
+    },
+    enabled: lookupFilterFields.length > 0,
+  });
+
+  // Merge picklist + lookup filter configs
+  const filterConfigs = useMemo(() => {
+    const lookupConfigs = lookupFilterFields
+      .filter((f) => lookupOptionsMap?.[f.fieldKey]?.length)
+      .map((f) => ({
+        key: f.fieldKey,
+        label: f.label,
+        options: lookupOptionsMap![f.fieldKey],
+      }));
+    return [...lookupConfigs, ...picklistFilterConfigs];
+  }, [picklistFilterConfigs, lookupFilterFields, lookupOptionsMap]);
 
   const activeFilters = useActiveFilters(filterConfigs, getFilter);
 
