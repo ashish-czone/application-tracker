@@ -19,6 +19,8 @@ interface EntityEngineContextValue {
   getEntityBySlug: (slug: string) => EntityRegistryEntry | undefined;
   /** Get detail plugins for an entity type */
   getDetailPlugins: (entityType: string) => EntityDetailPlugin[];
+  /** Raw API client (for layout and other non-entity endpoints) */
+  apiFn: EntityEngineProviderProps['apiFn'];
 }
 
 const EntityEngineContext = createContext<EntityEngineContextValue | null>(null);
@@ -75,7 +77,8 @@ export function EntityEngineProvider({ children, apiFn, entityUIConfigs = [] }: 
     getEntity: (entityType: string) => entities.find((e) => e.entityType === entityType),
     getEntityBySlug: (slug: string) => entities.find((e) => e.slug === slug),
     getDetailPlugins: (entityType: string) => pluginMap.get(entityType) ?? [],
-  }), [entities, isLoading, apiMap, hooksMap, pluginMap]);
+    apiFn,
+  }), [entities, isLoading, apiMap, hooksMap, pluginMap, apiFn]);
 
   return (
     <EntityEngineContext.Provider value={value}>
