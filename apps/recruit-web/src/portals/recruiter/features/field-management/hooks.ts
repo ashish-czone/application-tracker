@@ -69,38 +69,127 @@ export function useDeleteSection(entityType: string) {
 }
 
 export function useAddFieldToSection(entityType: string) {
-  const invalidate = useInvalidateLayout(entityType);
+  const qc = useQueryClient();
+  const key = ['layout', entityType];
   return useMutation({
     mutationFn: ({ sectionId, fieldId }: { sectionId: string; fieldId: string }) =>
       svc.addFieldToSection(entityType, sectionId, fieldId),
-    onSuccess: () => invalidate(),
-    onError: (e: any) => toast.error(e?.body?.message || 'Failed to add field'),
+    onMutate: async ({ sectionId, fieldId }) => {
+      await qc.cancelQueries({ queryKey: key });
+      const previous = qc.getQueryData<any>(key);
+      if (previous) {
+        const unassigned = previous.sections.find((s: any) => s.id === '__unassigned__');
+        const field = unassigned?.fields?.find((f: any) => f.id === fieldId);
+        if (field) {
+          qc.setQueryData(key, {
+            ...previous,
+            sections: previous.sections.map((s: any) => {
+              if (s.id === '__unassigned__') return { ...s, fields: s.fields.filter((f: any) => f.id !== fieldId) };
+              if (s.id === sectionId) return { ...s, fields: [...s.fields, field] };
+              return s;
+            }),
+          });
+        }
+      }
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) qc.setQueryData(key, context.previous);
+      toast.error('Failed to add field');
+    },
+    onSettled: () => {
+      setTimeout(() => qc.invalidateQueries({ queryKey: key }), 1500);
+    },
   });
 }
 
 export function useRemoveFieldFromSection(entityType: string) {
-  const invalidate = useInvalidateLayout(entityType);
+  const qc = useQueryClient();
+  const key = ['layout', entityType];
   return useMutation({
     mutationFn: ({ sectionId, fieldId }: { sectionId: string; fieldId: string }) =>
       svc.removeFieldFromSection(entityType, sectionId, fieldId),
-    onSuccess: () => invalidate(),
-    onError: (e: any) => toast.error(e?.body?.message || 'Failed to remove field'),
+    onMutate: async ({ sectionId, fieldId }) => {
+      await qc.cancelQueries({ queryKey: key });
+      const previous = qc.getQueryData<any>(key);
+      if (previous) {
+        const section = previous.sections.find((s: any) => s.id === sectionId);
+        const field = section?.fields?.find((f: any) => f.id === fieldId);
+        if (field) {
+          qc.setQueryData(key, {
+            ...previous,
+            sections: previous.sections.map((s: any) => {
+              if (s.id === sectionId) return { ...s, fields: s.fields.filter((f: any) => f.id !== fieldId) };
+              if (s.id === '__unassigned__') return { ...s, fields: [...s.fields, field] };
+              return s;
+            }),
+          });
+        }
+      }
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) qc.setQueryData(key, context.previous);
+      toast.error('Failed to remove field');
+    },
+    onSettled: () => {
+      setTimeout(() => qc.invalidateQueries({ queryKey: key }), 1500);
+    },
   });
 }
 
 export function useReorderSections(entityType: string) {
-  const invalidate = useInvalidateLayout(entityType);
+  const qc = useQueryClient();
+  const key = ['layout', entityType];
   return useMutation({
     mutationFn: (orderedIds: string[]) => svc.reorderSections(entityType, orderedIds),
-    onSuccess: () => invalidate(),
+    onMutate: async (orderedIds) => {
+      await qc.cancelQueries({ queryKey: key });
+      const previous = qc.getQueryData<any>(key);
+      if (previous) {
+        const sectionMap = new Map(previous.sections.map((s: any) => [s.id, s]));
+        qc.setQueryData(key, {
+          ...previous,
+          sections: orderedIds.map((id: string) => sectionMap.get(id)).filter(Boolean),
+        });
+      }
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) qc.setQueryData(key, context.previous);
+    },
+    onSettled: () => {
+      setTimeout(() => qc.invalidateQueries({ queryKey: key }), 1500);
+    },
   });
 }
 
 export function useReorderFields(entityType: string) {
-  const invalidate = useInvalidateLayout(entityType);
+  const qc = useQueryClient();
+  const key = ['layout', entityType];
   return useMutation({
     mutationFn: ({ sectionId, orderedFieldIds }: { sectionId: string; orderedFieldIds: string[] }) =>
       svc.reorderFields(entityType, sectionId, orderedFieldIds),
-    onSuccess: () => invalidate(),
+    onMutate: async ({ sectionId, orderedFieldIds }) => {
+      await qc.cancelQueries({ queryKey: key });
+      const previous = qc.getQueryData<any>(key);
+      if (previous) {
+        qc.setQueryData(key, {
+          ...previous,
+          sections: previous.sections.map((s: any) => {
+            if (s.id !== sectionId) return s;
+            const fieldMap = new Map(s.fields.map((f: any) => [f.id, f]));
+            return { ...s, fields: orderedFieldIds.map((id: string) => fieldMap.get(id)).filter(Boolean) };
+          }),
+        });
+      }
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) qc.setQueryData(key, context.previous);
+    },
+    onSettled: () => {
+      setTimeout(() => qc.invalidateQueries({ queryKey: key }), 1500);
+    },
   });
 }
