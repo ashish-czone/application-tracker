@@ -6,7 +6,7 @@ import {
   EditFieldDialog,
   CreateSectionDialog,
 } from '@packages/eav-attributes-ui';
-import type { FieldDefinition, FieldType, LayoutSection } from '@packages/eav-attributes-ui';
+import type { FieldDefinition, FieldType } from '@packages/eav-attributes-ui';
 import {
   useLayout,
   useCreateField,
@@ -58,13 +58,11 @@ export default function FieldManagementPage({ entityType }: FieldManagementPageP
     return <p className="text-sm text-muted-foreground">No layout configuration found for this entity.</p>;
   }
 
-  // Extract unassigned fields from the virtual section
   const unassignedSection = layout.sections.find((s) => s.id === '__unassigned__');
   const unassignedFields = unassignedSection?.fields ?? [];
 
   return (
     <div className="flex gap-6">
-      {/* Left: Field Palette */}
       <FieldPalette
         unassignedFields={unassignedFields}
         onCreateField={(type) => {
@@ -77,7 +75,6 @@ export default function FieldManagementPage({ entityType }: FieldManagementPageP
         }}
       />
 
-      {/* Right: Layout Canvas */}
       <LayoutCanvas
         sections={layout.sections}
         onAddFieldToSection={(sectionId, fieldId) =>
@@ -106,7 +103,6 @@ export default function FieldManagementPage({ entityType }: FieldManagementPageP
         }}
       />
 
-      {/* Dialogs */}
       <CreateFieldDialog
         open={createFieldOpen}
         onOpenChange={setCreateFieldOpen}

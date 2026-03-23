@@ -1,16 +1,13 @@
-import { useDraggable } from '@dnd-kit/core';
+import { useDraggable } from '@dnd-kit/react';
 import { GripVertical, Plus } from 'lucide-react';
-import { Badge, Button } from '@packages/ui';
+import { Button } from '@packages/ui';
 import { FIELD_TYPE_CONFIG, CREATABLE_FIELD_TYPES } from '../types';
 import type { FieldDefinition, FieldType } from '../types';
 
-interface DraggablePaletteFieldProps {
-  field: FieldDefinition;
-}
-
-function DraggablePaletteField({ field }: DraggablePaletteFieldProps) {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+function DraggablePaletteField({ field }: { field: FieldDefinition }) {
+  const { ref, isDragSource } = useDraggable({
     id: `palette-${field.id}`,
+    type: 'palette-field',
     data: { type: 'palette-field', field },
   });
 
@@ -18,10 +15,10 @@ function DraggablePaletteField({ field }: DraggablePaletteFieldProps) {
 
   return (
     <div
-      ref={setNodeRef}
-      {...attributes}
-      {...listeners}
-      className={`flex items-center gap-2 rounded-md border bg-background px-2 py-1.5 text-sm cursor-grab hover:border-primary/30 transition-colors ${isDragging ? 'opacity-50' : ''}`}
+      ref={ref}
+      className={`flex items-center gap-2 rounded-md border px-2 py-1.5 text-sm cursor-grab active:cursor-grabbing hover:border-primary/30 transition-colors ${
+        isDragSource ? 'bg-amber-50 border-amber-300 shadow-md' : 'bg-background'
+      }`}
     >
       <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
       <span className="flex-1 truncate text-foreground">{field.label}</span>

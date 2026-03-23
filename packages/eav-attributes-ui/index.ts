@@ -1,6 +1,4 @@
-export { FieldCard } from './components/FieldCard';
 export { FieldPalette } from './components/FieldPalette';
-export { SectionEditor } from './components/SectionEditor';
 export { LayoutCanvas } from './components/LayoutCanvas';
 export { CreateFieldDialog } from './components/CreateFieldDialog';
 export { EditFieldDialog } from './components/EditFieldDialog';

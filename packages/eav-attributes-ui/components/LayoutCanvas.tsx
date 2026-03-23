@@ -1,21 +1,12 @@
-import {
-  DndContext,
-  DragOverlay,
-  closestCorners,
-  PointerSensor,
-  KeyboardSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-  type DragStartEvent,
-  type DragOverEvent,
-} from '@dnd-kit/core';
-import { SortableContext, verticalListSortingStrategy, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
-import { useState, useCallback } from 'react';
-import { Plus } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { DragDropProvider } from '@dnd-kit/react';
+import { useSortable } from '@dnd-kit/react/sortable';
+import { useDroppable } from '@dnd-kit/react';
+import { CollisionPriority } from '@dnd-kit/abstract';
+import { move } from '@dnd-kit/helpers';
+import { Plus, GripVertical, X, ChevronDown, ChevronRight, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@packages/ui';
-import { SectionEditor } from './SectionEditor';
-import { FieldCard } from './FieldCard';
+import { FIELD_TYPE_CONFIG } from '../types';
 import type { LayoutSection, FieldDefinition } from '../types';
 
 interface LayoutCanvasProps {
@@ -32,8 +23,211 @@ interface LayoutCanvasProps {
   onMoveFieldToSection?: (sourceSectionId: string, targetSectionId: string, fieldId: string) => void | Promise<void>;
 }
 
+// --- Structure fingerprint: order-independent snapshot of which fields are in which sections ---
+
+function structureFingerprint(sectionOrder: string[], fieldMap: Record<string, string[]>): string {
+  return Object.entries(fieldMap)
+    .map(([sId, fIds]) => `${sId}:${[...fIds].sort().join(',')}`)
+    .sort()
+    .join('|');
+}
+
+// --- Convert between LayoutSection[] and the Record<sectionId, fieldId[]> shape dnd-kit expects ---
+// Excludes __unassigned__ from the field map so move() doesn't corrupt it
+
+function toFieldMap(sections: LayoutSection[]): Record<string, string[]> {
+  const map: Record<string, string[]> = {};
+  for (const s of sections) {
+    if (s.id === '__unassigned__') continue;
+    map[s.id] = s.fields.map((f) => f.id);
+  }
+  return map;
+}
+
+function toSectionOrder(sections: LayoutSection[]): string[] {
+  return sections.filter((s) => s.id !== '__unassigned__').map((s) => s.id);
+}
+
+function buildFieldDefs(sections: LayoutSection[]) {
+  const map = new Map<string, FieldDefinition>();
+  for (const s of sections) for (const f of s.fields) map.set(f.id, f);
+  return map;
+}
+
+function buildSectionMeta(sections: LayoutSection[]) {
+  const map = new Map<string, LayoutSection>();
+  for (const s of sections) map.set(s.id, s);
+  return map;
+}
+
+// --- Sortable field item ---
+
+function SortableField({
+  field,
+  index,
+  sectionId,
+  onEditField,
+  onRemove,
+}: {
+  field: FieldDefinition;
+  index: number;
+  sectionId: string;
+  onEditField: (f: FieldDefinition) => void;
+  onRemove?: (sectionId: string, fieldId: string) => void;
+}) {
+  const { ref, isDragSource } = useSortable({
+    id: field.id,
+    index,
+    type: 'field',
+    accept: 'field',
+    group: sectionId,
+  });
+
+  const tc = FIELD_TYPE_CONFIG[field.fieldType] ?? { label: field.fieldType, color: 'bg-gray-100 text-gray-800' };
+  const tierLabel = field.isSystem ? 'System' : field.isCustom ? 'Custom' : 'Standard';
+  const tierColor = field.isSystem ? 'bg-slate-200 text-slate-700' : field.isCustom ? 'bg-amber-100 text-amber-700' : 'bg-blue-50 text-blue-600';
+
+  return (
+    <div
+      ref={ref}
+      className={`flex items-center gap-2 rounded-md border px-2 py-1.5 text-sm group hover:border-primary/30 transition-colors cursor-grab active:cursor-grabbing ${isDragSource ? 'bg-amber-50 border-amber-300 shadow-md' : 'bg-background'}`}
+    >
+      <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
+      <button
+        type="button"
+        onClick={() => onEditField(field)}
+        className="flex-1 flex items-center gap-2 text-left min-w-0"
+      >
+        <span className="font-medium text-foreground truncate">{field.label}</span>
+        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${tc.color}`}>
+          {tc.label}
+        </span>
+        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${tierColor}`}>
+          {tierLabel}
+        </span>
+        {field.isRequired && <span className="text-destructive text-xs">*</span>}
+      </button>
+      {onRemove && !field.isSystem && (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onRemove(sectionId, field.id); }}
+          className="p-0.5 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-all"
+          aria-label={`Remove ${field.label}`}
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      )}
+    </div>
+  );
+}
+
+// --- Sortable section (reorderable + droppable for fields) ---
+
+function SortableSection({
+  section,
+  index,
+  fieldDefs,
+  onEditSection,
+  onDeleteSection,
+  onRemoveField,
+  onEditField,
+  onAddFieldClick,
+}: {
+  section: LayoutSection;
+  index: number;
+  fieldDefs: FieldDefinition[];
+  onEditSection: (s: LayoutSection) => void;
+  onDeleteSection: (id: string) => void;
+  onRemoveField: (sectionId: string, fieldId: string) => void;
+  onEditField: (f: FieldDefinition) => void;
+  onAddFieldClick: (sectionId: string) => void;
+}) {
+  const [collapsed, setCollapsed] = useState(false);
+
+  const { ref: sectionRef, handleRef, isDragging: isSectionDragging } = useSortable({
+    id: section.id,
+    index,
+    type: 'section',
+    accept: ['field', 'section'],
+    collisionPriority: CollisionPriority.Low,
+  });
+
+  const { ref: dropRef, isDropTarget } = useDroppable({
+    id: `drop-${section.id}`,
+    type: 'section-drop',
+    accept: 'field',
+    collisionPriority: CollisionPriority.Low,
+  });
+
+  return (
+    <div
+      ref={sectionRef}
+      className={`border rounded-lg transition-colors ${isDropTarget ? 'border-primary border-dashed bg-primary/5' : ''} ${isSectionDragging ? 'bg-amber-50 border-amber-300 shadow-md' : ''}`}
+    >
+      <div className="flex items-center justify-between px-3 py-2 bg-muted/40 rounded-t-lg">
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            ref={handleRef}
+            className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground touch-none p-0.5"
+            aria-label={`Drag ${section.name}`}
+          >
+            <GripVertical className="h-4 w-4" />
+          </button>
+          <button type="button" onClick={() => setCollapsed(!collapsed)}
+            className="flex items-center gap-1.5 text-sm font-medium text-foreground hover:text-foreground/80">
+            {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            {section.name}
+            <span className="text-xs text-muted-foreground font-normal">({fieldDefs.length} fields)</span>
+          </button>
+        </div>
+        <div className="flex items-center gap-0.5">
+          <button type="button" onClick={() => onEditSection(section)}
+            className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+            aria-label={`Edit ${section.name}`}><Pencil className="h-3.5 w-3.5" /></button>
+          {section.id !== '__unassigned__' && (
+            <button type="button" onClick={() => onDeleteSection(section.id)}
+              className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+              aria-label={`Delete ${section.name}`}><Trash2 className="h-3.5 w-3.5" /></button>
+          )}
+        </div>
+      </div>
+
+      {!collapsed && (
+        <div ref={dropRef} className="p-2 space-y-1 min-h-[40px]">
+          {fieldDefs.length > 0 ? (
+            fieldDefs.map((field, fieldIndex) => (
+              <SortableField
+                key={field.id}
+                field={field}
+                index={fieldIndex}
+                sectionId={section.id}
+                onEditField={onEditField}
+                onRemove={onRemoveField}
+              />
+            ))
+          ) : (
+            <div className={`flex items-center justify-center py-4 text-xs text-muted-foreground border rounded ${isDropTarget ? 'border-primary border-dashed' : 'border-dashed'}`}>
+              Drop fields here
+            </div>
+          )}
+
+          <Button type="button" variant="ghost" size="sm"
+            className="w-full mt-1 text-xs text-muted-foreground"
+            onClick={() => onAddFieldClick(section.id)}>
+            <Plus className="h-3 w-3 mr-1" />
+            Add field to section
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// --- Main LayoutCanvas ---
+
 export function LayoutCanvas({
-  sections,
+  sections: propSections,
   onAddFieldToSection,
   onRemoveFieldFromSection,
   onReorderFields,
@@ -45,142 +239,132 @@ export function LayoutCanvas({
   onAddFieldClick,
   onMoveFieldToSection,
 }: LayoutCanvasProps) {
-  const [activeField, setActiveField] = useState<FieldDefinition | null>(null);
+  const allFieldDefs = useRef(buildFieldDefs(propSections));
+  const sectionMeta = useRef(buildSectionMeta(propSections));
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: { distance: 5 },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    }),
-  );
+  // Local state: section order + which field IDs are in which section
+  const [sectionOrder, setSectionOrder] = useState(() => toSectionOrder(propSections));
+  const [fieldMap, setFieldMap] = useState(() => toFieldMap(propSections));
+  const localFingerprintRef = useRef(structureFingerprint(toSectionOrder(propSections), toFieldMap(propSections)));
 
-  const findSectionByFieldId = useCallback(
-    (fieldId: string): LayoutSection | undefined => {
-      return sections.find((s) => s.fields.some((f) => f.id === fieldId));
-    },
-    [sections],
-  );
+  // Refs for latest values (avoids stale closures in drag handlers)
+  const fieldMapRef = useRef(fieldMap);
+  fieldMapRef.current = fieldMap;
+  const sectionOrderRef = useRef(sectionOrder);
+  sectionOrderRef.current = sectionOrder;
 
-  function handleDragStart(event: DragStartEvent) {
-    const { active } = event;
-    const data = active.data.current;
-    if (data?.type === 'palette-field') {
-      setActiveField(data.field);
-    } else {
-      for (const section of sections) {
-        const field = section.fields.find((f) => f.id === active.id);
-        if (field) {
-          setActiveField(field);
-          break;
-        }
-      }
+  // Track pre-drag state for cancel rollback + diffing on dragEnd
+  const preDragFieldMap = useRef(fieldMap);
+  const preDragSectionOrder = useRef(sectionOrder);
+
+  // Keep lookups in sync when props change
+  useEffect(() => {
+    allFieldDefs.current = buildFieldDefs(propSections);
+    sectionMeta.current = buildSectionMeta(propSections);
+  }, [propSections]);
+
+  // Sync from props only on structural changes (fields added/removed)
+  useEffect(() => {
+    const newOrder = toSectionOrder(propSections);
+    const newMap = toFieldMap(propSections);
+    const propFingerprint = structureFingerprint(newOrder, newMap);
+    if (propFingerprint !== localFingerprintRef.current) {
+      localFingerprintRef.current = propFingerprint;
+      setSectionOrder(newOrder);
+      setFieldMap(newMap);
     }
-  }
+  }, [propSections]);
 
-  function handleDragEnd(event: DragEndEvent) {
-    setActiveField(null);
-    const { active, over } = event;
-    if (!over) return;
+  // --- Drag handlers (use refs to avoid stale closures) ---
 
-    const activeData = active.data.current;
-    const overData = over.data.current;
+  const handleDragStart = useCallback(() => {
+    preDragFieldMap.current = fieldMapRef.current;
+    preDragSectionOrder.current = sectionOrderRef.current;
+  }, []);
 
-    // Palette field dropped on a section droppable
-    if (activeData?.type === 'palette-field' && overData?.type === 'section') {
-      onAddFieldToSection(overData.sectionId, activeData.field.id);
+  const handleDragOver = useCallback((event: any) => {
+    const { source } = event.operation;
+    if (source?.type === 'section') return;
+    setFieldMap((current) => move(current, event));
+  }, []);
+
+  const handleDragEnd = useCallback((event: any) => {
+    const { source } = event.operation;
+
+    if (event.canceled) {
+      setFieldMap(preDragFieldMap.current);
+      setSectionOrder(preDragSectionOrder.current);
       return;
     }
 
-    // Palette field dropped on a field inside a section
-    if (activeData?.type === 'palette-field') {
-      const targetSection = findSectionByFieldId(over.id as string);
-      if (targetSection) {
-        onAddFieldToSection(targetSection.id, activeData.field.id);
-      }
+    if (source?.type === 'section') {
+      setSectionOrder((current) => move(current, event));
+      setTimeout(() => {
+        onReorderSections(sectionOrderRef.current);
+      }, 0);
       return;
     }
 
-    // Field reorder within/across sections
-    const sourceSection = findSectionByFieldId(active.id as string);
+    // Field drag ended — compare pre-drag vs current to determine what changed
+    const fieldId = String(source?.id ?? '');
+    const preMap = preDragFieldMap.current;
+    const currentMap = fieldMapRef.current;
 
-    // Determine target: could be a section droppable or a field within a section
-    let targetSection: LayoutSection | undefined;
-    if (overData?.type === 'section') {
-      targetSection = sections.find((s) => s.id === overData.sectionId);
+    const prevSection = Object.entries(preMap).find(([, ids]) => ids.includes(fieldId))?.[0];
+    const currSection = Object.entries(currentMap).find(([, ids]) => ids.includes(fieldId))?.[0];
+
+    if (!prevSection || !currSection) return;
+
+    // Update fingerprint to match current local state
+    localFingerprintRef.current = structureFingerprint(sectionOrderRef.current, currentMap);
+
+    if (prevSection === currSection) {
+      onReorderFields(currSection, currentMap[currSection]);
     } else {
-      targetSection = findSectionByFieldId(over.id as string);
-    }
-
-    if (!sourceSection || !targetSection) return;
-
-    if (sourceSection.id === targetSection.id) {
-      // Reorder within same section
-      const fieldIds = sourceSection.fields.map((f) => f.id);
-      const oldIndex = fieldIds.indexOf(active.id as string);
-      const newIndex = fieldIds.indexOf(over.id as string);
-      if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return;
-
-      const reordered = [...fieldIds];
-      reordered.splice(oldIndex, 1);
-      reordered.splice(newIndex, 0, active.id as string);
-      onReorderFields(sourceSection.id, reordered);
-    } else {
-      // Move between sections
       if (onMoveFieldToSection) {
-        onMoveFieldToSection(sourceSection.id, targetSection.id, active.id as string);
+        onMoveFieldToSection(prevSection, currSection, fieldId);
       } else {
         (async () => {
-          await onRemoveFieldFromSection(sourceSection.id, active.id as string);
-          await onAddFieldToSection(targetSection!.id, active.id as string);
+          await onRemoveFieldFromSection(prevSection, fieldId);
+          await onAddFieldToSection(currSection, fieldId);
         })();
       }
     }
-  }
-
-  // Filter out the virtual __unassigned__ section from the canvas
-  const displaySections = sections.filter((s) => s.id !== '__unassigned__');
+  }, [onReorderFields, onReorderSections, onMoveFieldToSection, onRemoveFieldFromSection, onAddFieldToSection]);
 
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCorners}
+    <DragDropProvider
       onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
       <div className="flex-1 space-y-3">
-        {displaySections.map((section) => (
-          <SectionEditor
-            key={section.id}
-            section={section}
-            onEditSection={onEditSection}
-            onDeleteSection={onDeleteSection}
-            onRemoveField={onRemoveFieldFromSection}
-            onEditField={onEditField}
-            onAddFieldClick={onAddFieldClick}
-          />
-        ))}
+        {sectionOrder.map((sectionId, index) => {
+          const section = sectionMeta.current.get(sectionId);
+          if (!section) return null;
+          const fieldIds = fieldMap[sectionId] ?? [];
+          const fields = fieldIds.map((id) => allFieldDefs.current.get(id)).filter(Boolean) as FieldDefinition[];
 
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="w-full"
-          onClick={onAddSectionClick}
-        >
+          return (
+            <SortableSection
+              key={sectionId}
+              section={section}
+              index={index}
+              fieldDefs={fields}
+              onEditSection={onEditSection}
+              onDeleteSection={onDeleteSection}
+              onRemoveField={onRemoveFieldFromSection}
+              onEditField={onEditField}
+              onAddFieldClick={onAddFieldClick}
+            />
+          );
+        })}
+
+        <Button type="button" variant="outline" size="sm" className="w-full" onClick={onAddSectionClick}>
           <Plus className="h-4 w-4 mr-1" />
           Add Section
         </Button>
       </div>
-
-      <DragOverlay>
-        {activeField && (
-          <div className="opacity-90">
-            <FieldCard field={activeField} isDragDisabled />
-          </div>
-        )}
-      </DragOverlay>
-    </DndContext>
+    </DragDropProvider>
   );
 }
