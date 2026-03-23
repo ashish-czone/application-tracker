@@ -121,3 +121,24 @@ export function buildFilterConfigs(fields: FieldDefinition[]) {
       options: f.picklistOptions!.map((o) => ({ label: o.label, value: o.value })),
     }));
 }
+
+/** Metadata for a lookup field that needs async option fetching. */
+export interface LookupFilterField {
+  fieldKey: string;
+  label: string;
+  lookupEntity: string;
+}
+
+/**
+ * Extracts lookup fields that can be used as filters.
+ * Options must be fetched asynchronously via the /lookups endpoint.
+ */
+export function buildLookupFilterFields(fields: FieldDefinition[]): LookupFilterField[] {
+  return fields
+    .filter((f) => (f.fieldType === 'lookup' || f.fieldType === 'user') && f.lookupEntity)
+    .map((f) => ({
+      fieldKey: f.fieldKey,
+      label: f.label,
+      lookupEntity: f.lookupEntity!,
+    }));
+}
