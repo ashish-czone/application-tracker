@@ -75,6 +75,8 @@ function SortableField({
   onEditField: (f: FieldDefinition) => void;
   onRemove?: (sectionId: string, fieldId: string) => void;
 }) {
+  const [hovered, setHovered] = useState(false);
+
   const { ref, isDragSource } = useSortable({
     id: field.id,
     index,
@@ -90,7 +92,9 @@ function SortableField({
   return (
     <div
       ref={ref}
-      className={`flex items-center gap-2 rounded-md border px-2 py-1.5 text-sm group hover:border-primary/30 transition-colors cursor-grab active:cursor-grabbing ${isDragSource ? 'bg-amber-50 border-amber-300 shadow-md' : 'bg-background'}`}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      className={`flex items-center gap-2 rounded-md border px-2 py-1.5 text-sm transition-colors cursor-grab active:cursor-grabbing ${isDragSource ? 'bg-amber-50 border-amber-300 shadow-md' : 'bg-background'} ${hovered && !isDragSource ? 'border-primary/30' : ''}`}
     >
       <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
       <button
@@ -111,7 +115,7 @@ function SortableField({
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); onRemove(sectionId, field.id); }}
-          className="p-0.5 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-all"
+          className={`p-0.5 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-opacity ${hovered ? 'opacity-100' : 'opacity-0'}`}
           aria-label={`Remove ${field.label}`}
         >
           <X className="h-3.5 w-3.5" />

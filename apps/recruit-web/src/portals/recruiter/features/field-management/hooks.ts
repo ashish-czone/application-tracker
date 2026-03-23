@@ -59,11 +59,21 @@ export function useCreateSection(entityType: string, options?: { onSuccess?: () 
   });
 }
 
-export function useDeleteSection(entityType: string) {
+export function useUpdateSection(entityType: string, options?: { onSuccess?: () => void }) {
+  const invalidate = useInvalidateLayout(entityType);
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<CreateSectionInput> }) =>
+      svc.updateSection(entityType, id, data),
+    onSuccess: () => { invalidate(); toast.success('Section updated'); options?.onSuccess?.(); },
+    onError: (e: any) => toast.error(e?.body?.message || 'Failed to update section'),
+  });
+}
+
+export function useDeleteSection(entityType: string, options?: { onSuccess?: () => void }) {
   const invalidate = useInvalidateLayout(entityType);
   return useMutation({
     mutationFn: (sectionId: string) => svc.deleteSection(entityType, sectionId),
-    onSuccess: () => { invalidate(); toast.success('Section deleted'); },
+    onSuccess: () => { invalidate(); toast.success('Section deleted'); options?.onSuccess?.(); },
     onError: (e: any) => toast.error(e?.body?.message || 'Failed to delete section'),
   });
 }
