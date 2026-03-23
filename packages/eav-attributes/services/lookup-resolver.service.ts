@@ -39,6 +39,14 @@ export class LookupResolverService {
   }
 
   /**
+   * Get the lookup config for a registered entity.
+   * Returns undefined if the entity is not registered.
+   */
+  getConfig(entity: string): LookupConfig | undefined {
+    return this.registry.get(entity);
+  }
+
+  /**
    * Search for lookup values by query string.
    * Returns label/value pairs for dropdown population.
    */
