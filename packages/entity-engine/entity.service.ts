@@ -8,12 +8,14 @@ import {
   FieldValueService,
   FieldDefinitionService,
   LookupResolverService,
+  RELATIONAL_FIELD_TYPES,
   buildSnapshot,
   diffSnapshot,
   validatePayload,
   splitPayload,
 } from '@packages/eav-attributes';
 import type { FieldDefinition } from '@packages/eav-attributes';
+import { TaxonomyService, type TagWithGroup } from '@packages/taxonomy';
 import type { PaginatedResponse } from '@packages/common';
 import type { EntityConfig, BaseListQuery } from './types';
 
@@ -40,6 +42,7 @@ export class EntityService {
     private readonly fieldValueService: FieldValueService,
     private readonly fieldDefinitionService: FieldDefinitionService,
     private readonly lookupResolver: LookupResolverService,
+    private readonly taxonomyService: TaxonomyService,
     appLogger: AppLoggerService,
   ) {
     this.logger = appLogger.forContext(`EntityService[${config.entityType}]`);
@@ -122,6 +125,9 @@ export class EntityService {
     // Resolve lookup field labels (candidateId → candidateId__label: "Jane Smith")
     await this.resolveLookupLabels(data);
 
+    // Hydrate relational fields (tags → tag objects with name/color)
+    await this.hydrateRelationalFields(data);
+
     return {
       data,
       meta: {
@@ -159,6 +165,7 @@ export class EntityService {
 
     const response = await this.toResponse(row);
     await this.resolveLookupLabels([response]);
+    await this.hydrateRelationalFields([response]);
     return response;
   }
 
@@ -184,8 +191,8 @@ export class EntityService {
       throw new BadRequestException({ message: 'Validation failed', errors: result.errors });
     }
 
-    // Split standard vs custom
-    const { standardFields, customFields } = splitPayload(defs, data);
+    // Split standard vs custom vs relational
+    const { standardFields, customFields, relationalFields } = splitPayload(defs, data);
 
     // Email normalization (if email field exists)
     if (standardFields.email && typeof standardFields.email === 'string') {
@@ -212,6 +219,11 @@ export class EntityService {
 
       return inserted;
     });
+
+    // Handle relational fields (tags, category, file) after entity exists
+    if (Object.keys(relationalFields).length > 0) {
+      await this.handleRelationalCreate(row.id, relationalFields, defs);
+    }
 
     this.logger.log(`${config.singularName} created`, { entityId: row.id, actorId });
 
@@ -260,7 +272,7 @@ export class EntityService {
     }
 
     // Split
-    const { standardFields, customFields } = splitPayload(defs, data);
+    const { standardFields, customFields, relationalFields } = splitPayload(defs, data);
 
     // Filter out undefined values
     const updateValues: Record<string, unknown> = {};
@@ -272,8 +284,9 @@ export class EntityService {
 
     const hasStandardChanges = Object.keys(updateValues).length > 0;
     const hasCustomChanges = Object.keys(customFields).length > 0;
+    const hasRelationalChanges = Object.keys(relationalFields).length > 0;
 
-    if (!hasStandardChanges && !hasCustomChanges) {
+    if (!hasStandardChanges && !hasCustomChanges && !hasRelationalChanges) {
       return this.findOneOrFail(id);
     }
 
@@ -316,6 +329,11 @@ export class EntityService {
 
       return row;
     });
+
+    // Handle relational fields (tags, category) after transaction
+    if (hasRelationalChanges) {
+      await this.handleRelationalUpdate(id, relationalFields, defs);
+    }
 
     this.logger.log(`${config.singularName} updated`, { entityId: id, actorId });
 
@@ -484,6 +502,114 @@ export class EntityService {
     }
 
     return conditions;
+  }
+
+  // ---------------------------------------------------------------------------
+  // RELATIONAL FIELD HELPERS (tags, file, category)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * After creating an entity, handle relational fields:
+   * - tags: attach each tag ID via TaxonomyService
+   * - category: stored as standard/EAV field (handled by splitPayload)
+   * - file: handled by separate upload endpoint
+   */
+  private async handleRelationalCreate(
+    entityId: string,
+    relationalFields: Record<string, unknown>,
+    defs: FieldDefinition[],
+  ): Promise<void> {
+    const defMap = new Map(defs.map(d => [d.fieldKey, d]));
+
+    for (const [key, value] of Object.entries(relationalFields)) {
+      const def = defMap.get(key);
+      if (!def) continue;
+
+      if (def.fieldType === 'tags' && Array.isArray(value)) {
+        for (const tagId of value) {
+          if (typeof tagId === 'string') {
+            try {
+              await this.taxonomyService.attachTag(this.config.entityType, entityId, tagId);
+            } catch {
+              this.logger.warn(`Failed to attach tag ${tagId} to ${entityId}`);
+            }
+          }
+        }
+      }
+      // category: stored as a lookup-like text value — handled in standard/EAV flow
+      // file: handled by separate upload endpoint
+    }
+  }
+
+  /**
+   * After updating an entity, sync relational fields:
+   * - tags: diff current vs new, attach/detach accordingly
+   */
+  private async handleRelationalUpdate(
+    entityId: string,
+    relationalFields: Record<string, unknown>,
+    defs: FieldDefinition[],
+  ): Promise<void> {
+    const defMap = new Map(defs.map(d => [d.fieldKey, d]));
+
+    for (const [key, value] of Object.entries(relationalFields)) {
+      const def = defMap.get(key);
+      if (!def) continue;
+
+      if (def.fieldType === 'tags' && Array.isArray(value)) {
+        // Get current tags for this entity filtered by tag group
+        const currentTags = await this.taxonomyService.getTagsForEntity(this.config.entityType, entityId);
+        const groupTags = def.tagGroupSlug
+          ? currentTags.filter(t => t.groupSlug === def.tagGroupSlug)
+          : currentTags;
+        const currentIds = new Set(groupTags.map(t => t.id));
+        const newIds = new Set(value.filter((v): v is string => typeof v === 'string'));
+
+        // Detach removed tags
+        for (const id of currentIds) {
+          if (!newIds.has(id)) {
+            await this.taxonomyService.detachTag(this.config.entityType, entityId, id);
+          }
+        }
+        // Attach new tags
+        for (const id of newIds) {
+          if (!currentIds.has(id)) {
+            try {
+              await this.taxonomyService.attachTag(this.config.entityType, entityId, id);
+            } catch {
+              this.logger.warn(`Failed to attach tag ${id} to ${entityId}`);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Hydrate relational fields in response rows:
+   * - tags: fetch tags for each entity, group by tagGroupSlug, assign to correct field
+   */
+  private async hydrateRelationalFields(rows: Record<string, unknown>[]): Promise<void> {
+    if (rows.length === 0) return;
+
+    const defs = await this.fieldDefinitionService.listByEntityWithOptions(this.config.entityType);
+    const tagFields = defs.filter(d => d.fieldType === 'tags');
+    if (tagFields.length === 0) return;
+
+    // Batch load tags for all entity IDs
+    for (const row of rows) {
+      const entityId = row.id as string;
+      if (!entityId) continue;
+
+      const allTags = await this.taxonomyService.getTagsForEntity(this.config.entityType, entityId);
+
+      for (const field of tagFields) {
+        const fieldTags = field.tagGroupSlug
+          ? allTags.filter(t => t.groupSlug === field.tagGroupSlug)
+          : allTags;
+        row[field.fieldKey] = fieldTags.map(t => ({ id: t.id, name: t.name, color: t.color }));
+      }
+    }
   }
 
   /**

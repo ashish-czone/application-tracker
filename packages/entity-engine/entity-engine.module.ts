@@ -5,6 +5,7 @@ import { RbacService } from '@packages/rbac';
 import { AuditRegistryService } from '@packages/audit';
 import { FieldValueService, FieldDefinitionService, LayoutService, LookupResolverService } from '@packages/eav-attributes';
 import { EntityResolverRegistry } from '@packages/notifications';
+import { TaxonomyService } from '@packages/taxonomy';
 import { AppLoggerService } from '@packages/logger';
 import { EntityRegistryService } from './entity-registry.service';
 import { EntityService } from './entity.service';
@@ -71,9 +72,10 @@ export class EntityEngineModule implements OnApplicationBootstrap {
             fieldValueService: FieldValueService,
             fieldDefinitionService: FieldDefinitionService,
             lookupResolver: LookupResolverService,
+            taxonomyService: TaxonomyService,
             appLogger: AppLoggerService,
-          ) => new EntityService(config, database, domainEventEmitter, fieldValueService, fieldDefinitionService, lookupResolver, appLogger),
-          inject: [DatabaseService, DomainEventEmitter, FieldValueService, FieldDefinitionService, LookupResolverService, AppLoggerService],
+          ) => new EntityService(config, database, domainEventEmitter, fieldValueService, fieldDefinitionService, lookupResolver, taxonomyService, appLogger),
+          inject: [DatabaseService, DomainEventEmitter, FieldValueService, FieldDefinitionService, LookupResolverService, TaxonomyService, AppLoggerService],
         },
       ],
       exports: [serviceToken],

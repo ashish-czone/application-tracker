@@ -15,6 +15,9 @@ export const CANDIDATE_FIELD_META: Record<string, {
   uiType?: string;
   picklistOptions?: { label: string; value: string }[];
   maxLength?: number;
+  tagGroupSlug?: string;
+  accept?: string[];
+  maxFileSize?: number;
 }> = {
   // Basic Info
   email: { label: 'Email', section: 'basic', sortOrder: 0, isQuickCreate: true, isUnique: true, fieldType: 'email', maxLength: 255 },
@@ -109,6 +112,16 @@ export const CANDIDATE_FIELD_META: Record<string, {
   isWillingToRelocate: { label: 'Willing to Relocate', section: 'other', sortOrder: 6, fieldType: 'boolean' },
   availableFrom: { label: 'Available From', section: 'other', sortOrder: 7, fieldType: 'date' },
   notes: { label: 'Notes', section: 'other', sortOrder: 8, fieldType: 'textarea', maxLength: 5000 },
+  // Relational fields (tags, files)
+  skills: {
+    label: 'Skills', section: 'professional', sortOrder: 10, fieldType: 'tags',
+    tagGroupSlug: 'recruit-skills',
+  },
+  resume: {
+    label: 'Resume', section: 'attachments', sortOrder: 0, fieldType: 'file',
+    accept: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+    maxFileSize: 10485760,
+  },
 };
 
 /** Fields to skip — internal/system columns that admins don't interact with */
@@ -118,7 +131,8 @@ export const SKIP_FIELDS = ['id', 'deletedAt', 'deletedBy', 'resumeFile', 'creat
 export const CANDIDATE_SECTIONS = [
   { name: 'Basic Info', fields: ['email', 'firstName', 'phone', 'lastName', 'website', 'mobile', 'secondaryEmail', 'fax'] },
   { name: 'Address Information', fields: ['street', 'postalCode', 'city', 'state', 'country'] },
-  { name: 'Professional Details', fields: ['experienceInYears', 'highestQualification', 'currentTitle', 'currentCompany', 'expectedSalary', 'currentSalary', 'currency', 'skillSet', 'additionalInfo', 'skypeId'] },
+  { name: 'Professional Details', fields: ['experienceInYears', 'highestQualification', 'currentTitle', 'currentCompany', 'expectedSalary', 'currentSalary', 'currency', 'skillSet', 'additionalInfo', 'skypeId', 'skills'] },
   { name: 'Social Links', fields: ['linkedinUrl', 'facebookUrl', 'twitterHandle'] },
   { name: 'Other Info', fields: ['candidateStatus', 'source', 'emailOptOut', 'dateOfBirth', 'gender', 'nationality', 'isWillingToRelocate', 'availableFrom', 'notes'] },
+  { name: 'Attachments', fields: ['resume'] },
 ];

@@ -54,8 +54,44 @@ function formatViewValue(field: FieldDefinition, value: unknown): string {
  */
 export function DynamicField({ field, mode, value, resolvedLabel, lookupOptions }: DynamicFieldProps) {
   if (mode === 'view') {
+    // Tags: render as colored badges
+    if (field.fieldType === 'tags' && Array.isArray(value)) {
+      return (
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-medium text-muted-foreground">{field.label}</span>
+          <div className="flex flex-wrap gap-1">
+            {value.length === 0 && <span className="text-sm text-muted-foreground">-</span>}
+            {value.map((tag: { id: string; name: string; color?: string }) => (
+              <span
+                key={tag.id}
+                className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
+                style={{ backgroundColor: tag.color ? `${tag.color}20` : '#e5e7eb', color: tag.color || '#374151' }}
+              >
+                {tag.name}
+              </span>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    // File: render as filename with size
+    if (field.fieldType === 'file') {
+      const file = value as { originalName?: string; size?: number } | null;
+      return (
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-medium text-muted-foreground">{field.label}</span>
+          {file?.originalName ? (
+            <span className="text-sm text-foreground">{file.originalName} {file.size ? `(${(file.size / 1024).toFixed(0)} KB)` : ''}</span>
+          ) : (
+            <span className="text-sm text-muted-foreground">-</span>
+          )}
+        </div>
+      );
+    }
+
     // For lookup fields, prefer the resolved label over the raw ID
-    const displayValue = (field.fieldType === 'lookup' || field.fieldType === 'user') && resolvedLabel
+    const displayValue = (field.fieldType === 'lookup' || field.fieldType === 'user' || field.fieldType === 'category') && resolvedLabel
       ? resolvedLabel
       : value;
 
@@ -165,6 +201,39 @@ function DynamicFieldEdit({ field, lookupOptions }: { field: FieldDefinition; lo
           <span className="text-sm text-muted-foreground italic">Auto-generated</span>
         </div>
       );
+
+    case 'tags':
+      // Tags are rendered as read-only badges in forms (managed via detail page)
+      return (
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-medium text-muted-foreground">{label}</span>
+          <span className="text-sm text-muted-foreground italic">Manage on detail page</span>
+        </div>
+      );
+
+    case 'file':
+      // File uploads are handled via separate endpoint (managed via detail page)
+      return (
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-medium text-muted-foreground">{label}</span>
+          <span className="text-sm text-muted-foreground italic">Upload on detail page</span>
+        </div>
+      );
+
+    case 'category':
+      // Category acts like a lookup — render as select if options provided
+      if (lookupOptions && lookupOptions.length > 0) {
+        return (
+          <FormSelect
+            name={field.fieldKey}
+            label={label}
+            placeholder={`Select ${field.label}`}
+            options={lookupOptions}
+            disabled={disabled}
+          />
+        );
+      }
+      return <FormInput name={field.fieldKey} label={label} disabled={disabled} placeholder="Select category" />;
 
     default:
       return <FormInput name={field.fieldKey} label={label} disabled={disabled} />;
