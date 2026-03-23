@@ -104,7 +104,7 @@ export class EntityEngineModule {
  * Created via factory provider and initialized by NestJS lifecycle.
  */
 class EntityInitializer implements OnModuleInit {
-  private readonly logger = new Logger(`EntityInit[${this.config.entityType}]`);
+  private readonly logger: Logger;
 
   constructor(
     private readonly config: EntityConfig,
@@ -116,7 +116,9 @@ class EntityInitializer implements OnModuleInit {
     private readonly entityResolver: EntityResolverRegistry,
     private readonly fieldDefService: FieldDefinitionService,
     private readonly layoutService: LayoutService,
-  ) {}
+  ) {
+    this.logger = new Logger(`EntityInit[${config.entityType}]`);
+  }
 
   async onModuleInit(): Promise<void> {
     const { config } = this;

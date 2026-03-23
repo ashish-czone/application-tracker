@@ -91,7 +91,7 @@ export class EntityService {
     const [{ total }] = await this.database.db
       .select({ total: count() })
       .from(config.table as any)
-      .where(whereClause);
+      .where(whereClause) as any[];
 
     // Fetch rows
     const rows = await this.database.db
@@ -141,7 +141,7 @@ export class EntityService {
       .select()
       .from(table)
       .where(and(...conditions))
-      .limit(1);
+      .limit(1) as any[];
 
     if (!row) {
       throw new NotFoundException(`${config.singularName} not found`);
@@ -188,10 +188,11 @@ export class EntityService {
 
     // Insert in transaction
     const row = await this.database.db.transaction(async (tx) => {
-      const [inserted] = await tx
+      const result = await tx
         .insert(config.table as any)
         .values({ ...standardFields, createdBy: actorId } as any)
-        .returning();
+        .returning() as any[];
+      const inserted = result[0];
 
       if (Object.keys(customFields).length > 0) {
         await this.fieldValueService.setValues(config.entityType, inserted.id, customFields, tx);
@@ -209,7 +210,7 @@ export class EntityService {
 
     // Emit event
     const snapshot = await this.buildEntitySnapshot(row);
-    this.domainEventEmitter.emit(`${config.entityType}.Created`, {
+    this.domainEventEmitter.emitDynamic(`${config.entityType}.Created`, {
       entityType: config.entityType,
       entityId: row.id,
       actorId,
@@ -273,7 +274,7 @@ export class EntityService {
     const updated = await this.database.db.transaction(async (tx) => {
       // Read before snapshot inside tx for consistency
       const eavBefore = await this.fieldValueService.getValues(config.entityType, id, tx);
-      const [existingRow] = await tx.select().from(table).where(eq(table.id, id)).limit(1);
+      const [existingRow] = await tx.select().from(table).where(eq(table.id, id)).limit(1) as any[];
       const before = buildSnapshot(this.rowToSnapshot(existingRow), eavBefore);
 
       // Update standard columns
@@ -283,7 +284,7 @@ export class EntityService {
           .update(table)
           .set(updateValues)
           .where(eq(table.id, id))
-          .returning();
+          .returning() as any[];
         row = updatedRow;
       }
 
@@ -313,7 +314,7 @@ export class EntityService {
 
     // Emit event after transaction
     if (eventPayload) {
-      this.domainEventEmitter.emit(`${config.entityType}.Updated`, {
+      this.domainEventEmitter.emitDynamic(`${config.entityType}.Updated`, {
         entityType: config.entityType,
         entityId: id,
         actorId,
@@ -344,7 +345,7 @@ export class EntityService {
 
     this.logger.log(`${config.singularName} deleted`, { entityId: id, actorId });
 
-    this.domainEventEmitter.emit(`${config.entityType}.Deleted`, {
+    this.domainEventEmitter.emitDynamic(`${config.entityType}.Deleted`, {
       entityType: config.entityType,
       entityId: id,
       actorId,
@@ -364,7 +365,7 @@ export class EntityService {
       .select()
       .from(table)
       .where(eq(table.id, id))
-      .limit(1);
+      .limit(1) as any[];
 
     if (!row) {
       throw new NotFoundException(`${config.singularName} not found`);
@@ -374,7 +375,7 @@ export class EntityService {
       .update(table)
       .set({ deletedAt: null, deletedBy: null } as any)
       .where(eq(table.id, id))
-      .returning();
+      .returning() as any[];
 
     this.logger.log(`${config.singularName} restored`, { entityId: id });
 
@@ -453,7 +454,7 @@ export class EntityService {
         .select({ id: table.id })
         .from(table)
         .where(and(...conditions))
-        .limit(1);
+        .limit(1) as any[];
 
       if (existing && existing.id !== excludeId) {
         throw new ConflictException(`A ${this.config.singularName.toLowerCase()} with this ${def.label.toLowerCase()} already exists`);

@@ -1,14 +1,12 @@
-import { Injectable, type OnModuleInit } from '@nestjs/common';
+import { Injectable, Inject, type OnModuleInit } from '@nestjs/common';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { DatabaseService, eq, users } from '@packages/database';
-import { FieldDefinitionService, LayoutService } from '@packages/eav-attributes';
-import { TaxonomyService } from '@packages/taxonomy';
-import { tagGroups } from '@packages/taxonomy';
-import { CandidatesService } from './candidates.service';
+import { TaxonomyService, tagGroups } from '@packages/taxonomy';
+import { EntityService } from '@packages/entity-engine';
 import { candidates } from '../schema/candidates';
-import { seedCandidateFields } from '../seed-fields';
 
 const SKILLS_GROUP_SLUG = 'recruit-skills';
+const SERVICE_TOKEN = 'ENTITY_SERVICE_candidates';
 
 const SKILL_TAGS = [
   { name: 'JavaScript', slug: 'javascript', color: '#F7DF1E' },
@@ -39,12 +37,12 @@ const SAMPLE_CANDIDATES = [
     lastName: 'Johnson',
     email: 'alice.johnson@example.com',
     phone: '+14155551234',
-    source: 'linkedin' as const,
+    source: 'linkedin',
     currentCompany: 'Google',
     currentTitle: 'Senior Software Engineer',
-    expectedSalary: 18000000, // $180,000
+    expectedSalary: 18000000,
     currency: 'USD',
-    highestQualification: 'masters' as const,
+    highestQualification: 'masters',
     nationality: 'US',
     city: 'San Francisco',
     state: 'CA',
@@ -57,12 +55,12 @@ const SAMPLE_CANDIDATES = [
     lastName: 'Chen',
     email: 'bob.chen@example.com',
     phone: '+442071234567',
-    source: 'referral' as const,
+    source: 'referral',
     currentCompany: 'Amazon',
     currentTitle: 'DevOps Lead',
-    expectedSalary: 15000000, // $150,000
+    expectedSalary: 15000000,
     currency: 'USD',
-    highestQualification: 'bachelors' as const,
+    highestQualification: 'bachelors',
     nationality: 'UK',
     city: 'London',
     country: 'UK',
@@ -73,12 +71,12 @@ const SAMPLE_CANDIDATES = [
     firstName: 'Priya',
     lastName: 'Sharma',
     email: 'priya.sharma@example.com',
-    source: 'job-board' as const,
+    source: 'job-board',
     currentCompany: 'Infosys',
     currentTitle: 'Full Stack Developer',
-    expectedSalary: 8000000, // $80,000
+    expectedSalary: 8000000,
     currency: 'USD',
-    highestQualification: 'bachelors' as const,
+    highestQualification: 'bachelors',
     nationality: 'IN',
     city: 'Bangalore',
     country: 'IN',
@@ -90,9 +88,9 @@ const SAMPLE_CANDIDATES = [
     firstName: 'Marco',
     lastName: 'Rossi',
     email: 'marco.rossi@example.com',
-    source: 'direct' as const,
+    source: 'direct',
     currentTitle: 'Freelance Consultant',
-    highestQualification: 'phd' as const,
+    highestQualification: 'phd',
     nationality: 'IT',
     city: 'Milan',
     country: 'IT',
@@ -108,22 +106,19 @@ export class CandidatesSeedService implements OnModuleInit {
   constructor(
     private readonly database: DatabaseService,
     private readonly taxonomyService: TaxonomyService,
-    private readonly candidatesService: CandidatesService,
-    private readonly fieldDefinitionService: FieldDefinitionService,
-    private readonly layoutService: LayoutService,
+    @Inject(SERVICE_TOKEN) private readonly entityService: EntityService,
     appLogger: AppLoggerService,
   ) {
     this.logger = appLogger.forContext(CandidatesSeedService.name);
   }
 
   async onModuleInit() {
-    await seedCandidateFields(this.fieldDefinitionService, this.layoutService);
+    // Field definitions + layout seeding is now handled by EntityEngineModule.forEntity()
     await this.ensureSkillTags();
     await this.ensureSampleCandidates();
   }
 
   private async ensureSkillTags() {
-    // Check if skills tag group exists
     const [existing] = await this.database.db
       .select()
       .from(tagGroups)
@@ -152,7 +147,6 @@ export class CandidatesSeedService implements OnModuleInit {
   }
 
   private async ensureSampleCandidates() {
-    // Check if any candidates exist
     const [existing] = await this.database.db
       .select({ email: candidates.email })
       .from(candidates)
@@ -160,7 +154,6 @@ export class CandidatesSeedService implements OnModuleInit {
 
     if (existing) return;
 
-    // Get admin user as the creator
     const [admin] = await this.database.db
       .select({ id: users.id })
       .from(users)
@@ -172,7 +165,7 @@ export class CandidatesSeedService implements OnModuleInit {
     }
 
     for (const data of SAMPLE_CANDIDATES) {
-      await this.candidatesService.create(data, admin.id);
+      await this.entityService.create(data, admin.id);
     }
 
     this.logger.log(`Created ${SAMPLE_CANDIDATES.length} sample candidates`);
