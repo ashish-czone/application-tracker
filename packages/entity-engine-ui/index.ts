@@ -8,6 +8,8 @@ export { useEntityLayout } from './helpers/useEntityLayout';
 export { EntityListPage } from './pages/EntityListPage';
 export { EntityDetailPage } from './pages/EntityDetailPage';
 export { EntityQuickCreateForm } from './pages/EntityQuickCreateForm';
+export { EntityRouter } from './EntityRouter';
+export { EntityNavItems } from './EntityNavItems';
 
 export type {
   EntityRegistryEntry,
