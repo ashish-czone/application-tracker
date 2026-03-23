@@ -36,6 +36,14 @@ export interface FieldMeta {
   lookupLabelField?: string;
   /** Lookup search fields */
   lookupSearchFields?: string[];
+  /** Tag group slug (for tags field type) */
+  tagGroupSlug?: string;
+  /** Category group slug (for category field type) */
+  categoryGroupSlug?: string;
+  /** Accepted MIME types (for file field type) */
+  accept?: string[];
+  /** Max file size in bytes (for file field type) */
+  maxFileSize?: number;
 }
 
 // ---------------------------------------------------------------------------

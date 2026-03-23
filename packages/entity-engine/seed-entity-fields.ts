@@ -1,5 +1,6 @@
 import { getTableColumns } from 'drizzle-orm';
-import type { FieldDefinitionService, LayoutService, FieldType } from '@packages/eav-attributes';
+import type { FieldDefinitionService, LayoutService, FieldType, RegisterFieldInput } from '@packages/eav-attributes';
+import { RELATIONAL_FIELD_TYPES } from '@packages/eav-attributes';
 import type { EntityConfig } from './types';
 
 /** Map Drizzle column dataType to EAV FieldType. */
@@ -16,6 +17,7 @@ function mapDrizzleType(dataType: string): FieldType {
 /**
  * Seeds field definitions, picklist options, and default layout for an entity.
  * Derives the field list from the Drizzle table schema and merges with fieldMeta.
+ * Virtual fields (tags, file, category) defined only in fieldMeta are also registered.
  *
  * This is idempotent — safe to call on every app startup.
  */
@@ -27,7 +29,8 @@ export async function seedEntityFields(
   const skipSet = new Set(config.systemColumns);
   const columns = getTableColumns(config.table);
 
-  const fields = Object.entries(columns)
+  // Standard fields derived from Drizzle schema
+  const fields: RegisterFieldInput[] = Object.entries(columns)
     .filter(([key]) => !skipSet.has(key))
     .map(([key, col], index) => {
       const meta = config.fieldMeta[key];
@@ -47,11 +50,37 @@ export async function seedEntityFields(
         lookupEntity: meta?.lookupEntity ?? undefined,
         lookupLabelField: meta?.lookupLabelField ?? undefined,
         lookupSearchFields: meta?.lookupSearchFields ?? undefined,
+        tagGroupSlug: meta?.tagGroupSlug ?? undefined,
+        categoryGroupSlug: meta?.categoryGroupSlug ?? undefined,
+        fileAccept: meta?.accept ?? undefined,
+        fileMaxSize: meta?.maxFileSize ?? undefined,
         sortOrder: meta?.sortOrder ?? index,
       };
     });
 
-  // Register all standard fields (idempotent upsert)
+  // Virtual fields from fieldMeta that don't have DB columns (tags, file, category without a column)
+  const registeredKeys = new Set(fields.map(f => f.fieldKey));
+  for (const [key, meta] of Object.entries(config.fieldMeta)) {
+    if (registeredKeys.has(key) || skipSet.has(key)) continue;
+    if (!meta.fieldType || !RELATIONAL_FIELD_TYPES.has(meta.fieldType)) continue;
+
+    fields.push({
+      fieldKey: key,
+      label: meta.label,
+      fieldType: meta.fieldType,
+      // No columnName — these are virtual/relational fields
+      isSystem: meta.isSystem ?? false,
+      isQuickCreate: meta.isQuickCreate ?? false,
+      isReadonly: meta.isReadonly ?? false,
+      tagGroupSlug: meta.tagGroupSlug ?? undefined,
+      categoryGroupSlug: meta.categoryGroupSlug ?? undefined,
+      fileAccept: meta.accept ?? undefined,
+      fileMaxSize: meta.maxFileSize ?? undefined,
+      sortOrder: meta.sortOrder,
+    });
+  }
+
+  // Register all fields (idempotent upsert)
   await fieldDefinitionService.registerStandardFields(config.entityType, fields);
 
   // Set picklist options for fields that have them

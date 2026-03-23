@@ -281,6 +281,10 @@ export class FieldDefinitionService {
             lookupEntity: f.lookupEntity ?? null,
             lookupLabelField: f.lookupLabelField ?? null,
             lookupSearchFields: f.lookupSearchFields ?? null,
+            tagGroupSlug: f.tagGroupSlug ?? null,
+            categoryGroupSlug: f.categoryGroupSlug ?? null,
+            fileAccept: f.fileAccept ?? null,
+            fileMaxSize: f.fileMaxSize ?? null,
             sortOrder: f.sortOrder ?? i,
           });
       }
