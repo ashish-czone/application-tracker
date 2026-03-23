@@ -97,6 +97,11 @@ export function buildColumnDefs(
     // Only standard DB columns can sort server-side
     enableSorting: !!field.columnName,
     cell: ({ row }) => {
+      // For lookup fields, display the resolved __label if available
+      if (field.fieldType === 'lookup' || field.fieldType === 'user') {
+        const label = row.original[`${field.fieldKey}__label`];
+        if (label != null && label !== '') return String(label);
+      }
       const value = row.original[field.fieldKey];
       return formatCellValue(field, value);
     },
