@@ -7,11 +7,13 @@ import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import {
   FieldValueService,
   FieldDefinitionService,
+  LookupResolverService,
   buildSnapshot,
   diffSnapshot,
   validatePayload,
   splitPayload,
 } from '@packages/eav-attributes';
+import type { FieldDefinition } from '@packages/eav-attributes';
 import type { PaginatedResponse } from '@packages/common';
 import type { EntityConfig, BaseListQuery } from './types';
 
@@ -37,6 +39,7 @@ export class EntityService {
     private readonly domainEventEmitter: DomainEventEmitter,
     private readonly fieldValueService: FieldValueService,
     private readonly fieldDefinitionService: FieldDefinitionService,
+    private readonly lookupResolver: LookupResolverService,
     appLogger: AppLoggerService,
   ) {
     this.logger = appLogger.forContext(`EntityService[${config.entityType}]`);
@@ -112,6 +115,9 @@ export class EntityService {
       rows.map((row: any) => this.toResponse(row, eavMap.get(row.id))),
     );
 
+    // Resolve lookup field labels (candidateId → candidateId__label: "Jane Smith")
+    await this.resolveLookupLabels(data);
+
     return {
       data,
       meta: {
@@ -147,7 +153,9 @@ export class EntityService {
       throw new NotFoundException(`${config.singularName} not found`);
     }
 
-    return this.toResponse(row);
+    const response = await this.toResponse(row);
+    await this.resolveLookupLabels([response]);
+    return response;
   }
 
   // ---------------------------------------------------------------------------
@@ -385,6 +393,59 @@ export class EntityService {
   // ---------------------------------------------------------------------------
   // HELPERS (private)
   // ---------------------------------------------------------------------------
+
+  /**
+   * Resolve lookup field IDs to display labels in-place.
+   * Adds `{fieldKey}__label` alongside the raw ID for each lookup field.
+   * Uses batch resolution to minimize DB queries.
+   */
+  private async resolveLookupLabels(rows: Record<string, unknown>[]): Promise<void> {
+    if (rows.length === 0) return;
+
+    // Get field definitions to identify lookup fields
+    const defs = await this.fieldDefinitionService.listByEntityWithOptions(this.config.entityType);
+    const lookupFields = defs.filter(
+      (d: FieldDefinition) => d.fieldType === 'lookup' && d.lookupEntity,
+    );
+    if (lookupFields.length === 0) return;
+
+    // Collect unique IDs per lookup entity
+    const idsByEntity = new Map<string, { fieldKey: string; ids: Set<string> }>();
+    for (const field of lookupFields) {
+      const entity = field.lookupEntity!;
+      if (!idsByEntity.has(entity)) {
+        idsByEntity.set(entity, { fieldKey: field.fieldKey, ids: new Set() });
+      }
+      const entry = idsByEntity.get(entity)!;
+      for (const row of rows) {
+        const value = row[field.fieldKey];
+        if (typeof value === 'string' && value.length > 0) {
+          entry.ids.add(value);
+        }
+      }
+    }
+
+    // Batch resolve all lookup entities in parallel
+    const labelMaps = new Map<string, Map<string, string>>();
+    await Promise.all(
+      Array.from(idsByEntity.entries()).map(async ([entity, { ids }]) => {
+        if (ids.size === 0) return;
+        const labels = await this.lookupResolver.getBatchLabels(entity, Array.from(ids));
+        labelMaps.set(entity, labels);
+      }),
+    );
+
+    // Inject __label fields into each row
+    for (const row of rows) {
+      for (const field of lookupFields) {
+        const value = row[field.fieldKey];
+        const labelMap = labelMaps.get(field.lookupEntity!);
+        if (typeof value === 'string' && labelMap) {
+          row[`${field.fieldKey}__label`] = labelMap.get(value) ?? null;
+        }
+      }
+    }
+  }
 
   /** Extract field-level data from a DB row, excluding system columns. */
   private rowToSnapshot(row: Record<string, unknown>): Record<string, unknown> {
