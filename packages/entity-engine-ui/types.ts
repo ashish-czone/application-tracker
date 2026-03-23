@@ -25,6 +25,7 @@ export interface EntityRegistryEntry {
     name: string;
     type: 'hasMany' | 'belongsTo' | 'manyToMany';
     targetEntity: string;
+    foreignKey?: string;
     label: string;
     displayFields?: string[];
   }[];

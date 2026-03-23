@@ -82,6 +82,17 @@ export const JOB_OPENINGS_CONFIG: EntityConfig = {
     searchFields: ['title', 'department'],
   },
 
+  relationships: [
+    {
+      name: 'applications',
+      type: 'hasMany',
+      targetEntity: 'applications',
+      foreignKey: 'jobOpeningId',
+      label: 'Applications',
+      displayFields: ['status', 'stage', 'createdAt'],
+    },
+  ],
+
   recipientFields: {
     createdBy: { label: 'Created By (recruiter)' },
   },

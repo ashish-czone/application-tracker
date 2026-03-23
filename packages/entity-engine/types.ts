@@ -243,5 +243,5 @@ export interface EntityRegistryEntry {
     hasWorkflow: boolean;
     hasMedia: boolean;
   };
-  relationships: Omit<EntityRelationship, 'foreignKey' | 'inverseForeignKey' | 'junctionEntity'>[];
+  relationships: Omit<EntityRelationship, 'inverseForeignKey' | 'junctionEntity'>[];
 }

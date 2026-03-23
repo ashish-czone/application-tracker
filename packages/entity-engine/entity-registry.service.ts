@@ -65,8 +65,9 @@ export class EntityRegistryService {
         hasWorkflow: !!config.features?.workflow,
         hasMedia: !!config.features?.media && Object.keys(config.features.media).length > 0,
       },
-      relationships: (config.relationships ?? []).map(({ name, type, targetEntity, label, displayFields }) => ({
+      relationships: (config.relationships ?? []).map(({ name, type, targetEntity, foreignKey, label, displayFields }) => ({
         name,
+        foreignKey,
         type,
         targetEntity,
         label,
