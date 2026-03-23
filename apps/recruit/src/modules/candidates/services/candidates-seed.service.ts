@@ -1,4 +1,4 @@
-import { Injectable, Inject, type OnModuleInit } from '@nestjs/common';
+import { Injectable, Inject, type OnApplicationBootstrap } from '@nestjs/common';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { DatabaseService, eq, users } from '@packages/database';
 import { TaxonomyService, tagGroups } from '@packages/taxonomy';
@@ -37,70 +37,74 @@ const SAMPLE_CANDIDATES = [
     lastName: 'Johnson',
     email: 'alice.johnson@example.com',
     phone: '+14155551234',
-    source: 'linkedin',
+    source: 'added-by-user',
     currentCompany: 'Google',
-    currentTitle: 'Senior Software Engineer',
+    currentTitle: 'project-lead',
     expectedSalary: 18000000,
     currency: 'USD',
-    highestQualification: 'masters',
+    highestQualification: 'ms',
     nationality: 'US',
     city: 'San Francisco',
     state: 'CA',
     country: 'US',
     isWillingToRelocate: true,
     linkedinUrl: 'https://linkedin.com/in/alicejohnson',
+    candidateStatus: 'qualified',
   },
   {
     firstName: 'Bob',
     lastName: 'Chen',
     email: 'bob.chen@example.com',
     phone: '+442071234567',
-    source: 'referral',
+    source: 'employee-referral',
     currentCompany: 'Amazon',
-    currentTitle: 'DevOps Lead',
+    currentTitle: 'project-manager',
     expectedSalary: 15000000,
     currency: 'USD',
-    highestQualification: 'bachelors',
+    highestQualification: 'btech',
     nationality: 'UK',
     city: 'London',
     country: 'UK',
     isWillingToRelocate: false,
     availableFrom: '2026-05-01',
+    candidateStatus: 'contacted',
   },
   {
     firstName: 'Priya',
     lastName: 'Sharma',
     email: 'priya.sharma@example.com',
-    source: 'job-board',
+    source: 'career-site',
     currentCompany: 'Infosys',
-    currentTitle: 'Full Stack Developer',
+    currentTitle: 'fresher',
     expectedSalary: 8000000,
     currency: 'USD',
-    highestQualification: 'bachelors',
+    highestQualification: 'be',
     nationality: 'IN',
     city: 'Bangalore',
     country: 'IN',
     isWillingToRelocate: true,
     availableFrom: '2026-04-15',
     linkedinUrl: 'https://linkedin.com/in/priyasharma',
+    candidateStatus: 'new',
   },
   {
     firstName: 'Marco',
     lastName: 'Rossi',
     email: 'marco.rossi@example.com',
-    source: 'direct',
-    currentTitle: 'Freelance Consultant',
-    highestQualification: 'phd',
+    source: 'added-by-user',
+    currentTitle: 'project-lead',
+    highestQualification: 'mca',
     nationality: 'IT',
     city: 'Milan',
     country: 'IT',
     isWillingToRelocate: true,
     notes: 'Strong background in machine learning and data science.',
+    candidateStatus: 'in-review',
   },
 ];
 
 @Injectable()
-export class CandidatesSeedService implements OnModuleInit {
+export class CandidatesSeedService implements OnApplicationBootstrap {
   private readonly logger: ContextLogger;
 
   constructor(
@@ -112,7 +116,7 @@ export class CandidatesSeedService implements OnModuleInit {
     this.logger = appLogger.forContext(CandidatesSeedService.name);
   }
 
-  async onModuleInit() {
+  async onApplicationBootstrap() {
     // Field definitions + layout seeding is now handled by EntityEngineModule.forEntity()
     await this.ensureSkillTags();
     await this.ensureSampleCandidates();
