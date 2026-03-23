@@ -263,8 +263,12 @@ export function LayoutCanvas({
     sectionMeta.current = buildSectionMeta(propSections);
   }, [propSections]);
 
+  // Block prop sync during multi-step server operations (cross-section move)
+  const syncBlockedRef = useRef(false);
+
   // Sync from props only on structural changes (fields added/removed)
   useEffect(() => {
+    if (syncBlockedRef.current) return;
     const newOrder = toSectionOrder(propSections);
     const newMap = toFieldMap(propSections);
     const propFingerprint = structureFingerprint(newOrder, newMap);
@@ -321,14 +325,24 @@ export function LayoutCanvas({
     if (prevSection === currSection) {
       onReorderFields(currSection, currentMap[currSection]);
     } else {
-      if (onMoveFieldToSection) {
-        onMoveFieldToSection(prevSection, currSection, fieldId);
-      } else {
-        (async () => {
-          await onRemoveFieldFromSection(prevSection, fieldId);
-          await onAddFieldToSection(currSection, fieldId);
-        })();
-      }
+      // Cross-section move: block prop sync during the entire operation
+      // to prevent intermediate refetches from overwriting local state
+      const targetOrder = currentMap[currSection];
+      syncBlockedRef.current = true;
+      (async () => {
+        try {
+          if (onMoveFieldToSection) {
+            await onMoveFieldToSection(prevSection, currSection, fieldId);
+          } else {
+            await onRemoveFieldFromSection(prevSection, fieldId);
+            await onAddFieldToSection(currSection, fieldId);
+          }
+          // Server appends to end — reorder to match where the user actually dropped it
+          onReorderFields(currSection, targetOrder);
+        } finally {
+          syncBlockedRef.current = false;
+        }
+      })();
     }
   }, [onReorderFields, onReorderSections, onMoveFieldToSection, onRemoveFieldFromSection, onAddFieldToSection]);
 
