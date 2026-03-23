@@ -1,4 +1,4 @@
-import { Module, Global, type DynamicModule, type OnModuleInit, Logger } from '@nestjs/common';
+import { Module, Global, type DynamicModule, type OnModuleInit, Logger, Inject, type OnApplicationBootstrap } from '@nestjs/common';
 import { DatabaseService } from '@packages/database';
 import { DomainEventEmitter, EventRegistryService } from '@packages/events';
 import { RbacService } from '@packages/rbac';
@@ -13,6 +13,9 @@ import { createEntityController } from './create-entity-controller';
 import { seedEntityFields } from './seed-entity-fields';
 import type { EntityConfig } from './types';
 
+// Collect configs that need initialization — populated by forEntity(), consumed by EntityEngineModule.onModuleInit()
+const pendingConfigs: EntityConfig[] = [];
+
 /**
  * Core entity engine module.
  *
@@ -20,8 +23,8 @@ import type { EntityConfig } from './types';
  * ```
  * @Module({
  *   imports: [
- *     EntityEngineModule,                           // once in root
- *     EntityEngineModule.forEntity(CANDIDATES_CONFIG),  // per entity
+ *     EntityEngineModule,                               // once in root
+ *     EntityEngineModule.forEntity(CANDIDATES_CONFIG),   // per entity
  *   ],
  * })
  * ```
@@ -32,27 +35,34 @@ import type { EntityConfig } from './types';
   providers: [EntityRegistryService],
   exports: [EntityRegistryService],
 })
-export class EntityEngineModule {
+export class EntityEngineModule implements OnApplicationBootstrap {
+  private readonly logger = new Logger('EntityEngineModule');
+
+  constructor(
+    private readonly registry: EntityRegistryService,
+    private readonly rbac: RbacService,
+    private readonly eventRegistry: EventRegistryService,
+    private readonly auditRegistry: AuditRegistryService,
+    private readonly lookupResolver: LookupResolverService,
+    private readonly entityResolver: EntityResolverRegistry,
+    private readonly fieldDefService: FieldDefinitionService,
+    private readonly layoutService: LayoutService,
+  ) {}
+
   /**
    * Register a single entity with the engine.
-   * Creates a dynamic module with:
-   * - An EntityService instance bound to this config
-   * - An auto-generated REST controller
-   * - Auto-registration of RBAC, events, audit, lookup on init
-   * - Field definition + layout seeding
    */
   static forEntity(config: EntityConfig): DynamicModule {
     const serviceToken = `ENTITY_SERVICE_${config.entityType}`;
     const ControllerClass = createEntityController(config, serviceToken);
 
-    // Create an init provider that handles all registrations + seeding
-    const initProviderToken = `ENTITY_INIT_${config.entityType}`;
+    // Queue config for initialization (happens in onApplicationBootstrap)
+    pendingConfigs.push(config);
 
     return {
       module: EntityEngineModule,
       controllers: [ControllerClass],
       providers: [
-        // EntityService instance for this entity
         {
           provide: serviceToken,
           useFactory: (
@@ -64,69 +74,24 @@ export class EntityEngineModule {
           ) => new EntityService(config, database, domainEventEmitter, fieldValueService, fieldDefinitionService, appLogger),
           inject: [DatabaseService, DomainEventEmitter, FieldValueService, FieldDefinitionService, AppLoggerService],
         },
-        // Init provider: registers RBAC, events, audit, lookup, seeds fields
-        {
-          provide: initProviderToken,
-          useFactory: (
-            registry: EntityRegistryService,
-            rbac: RbacService,
-            eventRegistry: EventRegistryService,
-            auditRegistry: AuditRegistryService,
-            lookupResolver: LookupResolverService,
-            entityResolver: EntityResolverRegistry,
-            fieldDefService: FieldDefinitionService,
-            layoutService: LayoutService,
-          ) => {
-            return new EntityInitializer(
-              config, registry, rbac, eventRegistry, auditRegistry,
-              lookupResolver, entityResolver, fieldDefService, layoutService,
-            );
-          },
-          inject: [
-            EntityRegistryService,
-            RbacService,
-            EventRegistryService,
-            AuditRegistryService,
-            LookupResolverService,
-            EntityResolverRegistry,
-            FieldDefinitionService,
-            LayoutService,
-          ],
-        },
       ],
       exports: [serviceToken],
     };
   }
-}
 
-/**
- * Handles all one-time registrations and seeding for an entity.
- * Created via factory provider and initialized by NestJS lifecycle.
- */
-class EntityInitializer implements OnModuleInit {
-  private readonly logger: Logger;
-
-  constructor(
-    private readonly config: EntityConfig,
-    private readonly registry: EntityRegistryService,
-    private readonly rbac: RbacService,
-    private readonly eventRegistry: EventRegistryService,
-    private readonly auditRegistry: AuditRegistryService,
-    private readonly lookupResolver: LookupResolverService,
-    private readonly entityResolver: EntityResolverRegistry,
-    private readonly fieldDefService: FieldDefinitionService,
-    private readonly layoutService: LayoutService,
-  ) {
-    this.logger = new Logger(`EntityInit[${config.entityType}]`);
+  async onApplicationBootstrap(): Promise<void> {
+    // Process all queued entity configs
+    while (pendingConfigs.length > 0) {
+      const config = pendingConfigs.shift()!;
+      await this.initializeEntity(config);
+    }
   }
 
-  async onModuleInit(): Promise<void> {
-    const { config } = this;
-
+  private async initializeEntity(config: EntityConfig): Promise<void> {
     // 1. Register in entity registry
     this.registry.register(config);
 
-    // 2. RBAC — register CRUD permissions + any extras
+    // 2. RBAC
     const permissions = [
       { action: 'create', description: `Create ${config.pluralName.toLowerCase()}` },
       { action: 'read', description: `View ${config.pluralName.toLowerCase()}` },
@@ -136,7 +101,7 @@ class EntityInitializer implements OnModuleInit {
     ];
     this.rbac.registerPermissions(config.slug, permissions);
 
-    // 3. Events — register created/updated/deleted + any extras
+    // 3. Events
     const createdEvent = `${config.entityType}.Created`;
     const updatedEvent = `${config.entityType}.Updated`;
     const deletedEvent = `${config.entityType}.Deleted`;
@@ -147,14 +112,12 @@ class EntityInitializer implements OnModuleInit {
       description: `Fired when a new ${config.singularName.toLowerCase()} is created`,
       payloadSchema: {},
     });
-
     this.eventRegistry.register({
       eventName: updatedEvent,
       group: config.entityType,
       description: `Fired when a ${config.singularName.toLowerCase()} is updated`,
       payloadSchema: { changes: { type: 'string', label: 'Changed Fields' } },
     });
-
     this.eventRegistry.register({
       eventName: deletedEvent,
       group: config.entityType,
@@ -162,12 +125,12 @@ class EntityInitializer implements OnModuleInit {
       payloadSchema: {},
     });
 
-    // 4. Audit — register events to log
+    // 4. Audit
     this.auditRegistry.register(config.entityType, {
       events: [createdEvent, updatedEvent, deletedEvent],
     });
 
-    // 5. Entity resolver — for notification conditions
+    // 5. Entity resolver
     if (config.recipientFields) {
       this.entityResolver.register(config.entityType, {
         table: config.table,
@@ -176,7 +139,7 @@ class EntityInitializer implements OnModuleInit {
       });
     }
 
-    // 6. Lookup — register as lookup target
+    // 6. Lookup
     if (config.lookup) {
       this.lookupResolver.register({
         entity: config.entityType,
@@ -187,10 +150,10 @@ class EntityInitializer implements OnModuleInit {
       });
     }
 
-    // 7. Seed field definitions + layout
+    // 7. Seed fields + layout
     try {
       await seedEntityFields(config, this.fieldDefService, this.layoutService);
-      this.logger.log(`Seeded field definitions and layout for ${config.entityType}`);
+      this.logger.log(`Initialized entity: ${config.entityType} (/${config.slug})`);
     } catch (error) {
       this.logger.warn(`Failed to seed fields for ${config.entityType}: ${(error as Error).message}`);
     }
