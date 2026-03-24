@@ -99,6 +99,8 @@ export interface EntityUIHints {
   navGroup?: string;
   /** Sidebar ordering within group */
   navOrder?: number;
+  /** How the "Add" button works: 'modal' = quick-create dialog, 'page' = full create form page. Default: 'modal' */
+  createMode?: 'modal' | 'page';
 }
 
 // ---------------------------------------------------------------------------
