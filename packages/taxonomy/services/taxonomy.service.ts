@@ -195,6 +195,22 @@ export class TaxonomyService {
       .orderBy(asc(tags.name));
   }
 
+  async listTagsByGroupSlug(slug: string): Promise<Tag[]> {
+    const [group] = await this.database.db
+      .select({ id: tagGroups.id })
+      .from(tagGroups)
+      .where(eq(tagGroups.slug, slug))
+      .limit(1);
+
+    if (!group) return [];
+
+    return this.database.db
+      .select()
+      .from(tags)
+      .where(eq(tags.tagGroupId, group.id))
+      .orderBy(asc(tags.name));
+  }
+
   // --- Entity Tags ---
 
   async attachTag(entityType: string, entityId: string, tagId: string): Promise<void> {

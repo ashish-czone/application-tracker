@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Controller, Get, Param } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { RequirePermission } from '@packages/rbac';
 import { TaxonomyService } from '@packages/taxonomy';
@@ -13,10 +13,7 @@ export class TagsController {
   @RequirePermission(EAV_PERMISSIONS.READ)
   @ApiOperation({ summary: 'List tags by group slug (for chip input options)' })
   async getTagsByGroupSlug(@Param('slug') slug: string) {
-    const groups = await this.taxonomyService.listTagGroups();
-    const group = groups.find(g => g.slug === slug);
-    if (!group) return [];
-    const tags = await this.taxonomyService.listTagsByGroup(group.id);
+    const tags = await this.taxonomyService.listTagsByGroupSlug(slug);
     return tags.map(t => ({
       value: t.id,
       label: t.name,
