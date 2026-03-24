@@ -14,6 +14,8 @@ export { FormPhoneInput } from './components/form/FormPhoneInput';
 export { FormSelect } from './components/form/FormSelect';
 export { FormTextarea } from './components/form/FormTextarea';
 export { FormCheckbox } from './components/form/FormCheckbox';
+export { FormCurrencyInput } from './components/form/FormCurrencyInput';
+export { FormRichText } from './components/form/FormRichText';
 export { PasswordStrength } from './components/form/PasswordStrength';
 
 // Components — feedback

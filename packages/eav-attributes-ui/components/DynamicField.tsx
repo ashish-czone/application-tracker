@@ -2,6 +2,8 @@ import { FormInput } from '@packages/ui/components/form/FormInput';
 import { FormSelect } from '@packages/ui/components/form/FormSelect';
 import { FormTextarea } from '@packages/ui/components/form/FormTextarea';
 import { FormCheckbox } from '@packages/ui/components/form/FormCheckbox';
+import { FormCurrencyInput } from '@packages/ui/components/form/FormCurrencyInput';
+import { FormRichText } from '@packages/ui/components/form/FormRichText';
 import type { FieldDefinition } from '../types';
 
 interface DynamicFieldProps {
@@ -91,6 +93,20 @@ export function DynamicField({ field, mode, value, resolvedLabel, lookupOptions 
       );
     }
 
+    // Rich text: render as HTML
+    if (field.fieldType === 'rich_text') {
+      return (
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-medium text-muted-foreground">{field.label}</span>
+          {value && typeof value === 'string' ? (
+            <div className="prose prose-sm max-w-none text-foreground" dangerouslySetInnerHTML={{ __html: value }} />
+          ) : (
+            <span className="text-sm text-muted-foreground">-</span>
+          )}
+        </div>
+      );
+    }
+
     // File: render as filename with size
     if (field.fieldType === 'file') {
       const file = value as { originalName?: string; size?: number } | null;
@@ -152,7 +168,7 @@ function DynamicFieldEdit({ field, lookupOptions }: { field: FieldDefinition; lo
       return <FormInput name={field.fieldKey} label={label} type="number" disabled={disabled} />;
 
     case 'currency':
-      return <FormInput name={field.fieldKey} label={label} type="number" disabled={disabled} description="Value in cents" />;
+      return <FormCurrencyInput name={field.fieldKey} label={label} disabled={disabled} />;
 
     case 'decimal':
       return <FormInput name={field.fieldKey} label={label} type="number" disabled={disabled} />;
@@ -168,6 +184,9 @@ function DynamicFieldEdit({ field, lookupOptions }: { field: FieldDefinition; lo
 
     case 'textarea':
       return <FormTextarea name={field.fieldKey} label={label} disabled={disabled} />;
+
+    case 'rich_text':
+      return <FormRichText name={field.fieldKey} label={label} disabled={disabled} maxLength={field.maxLength ?? undefined} />;
 
     case 'picklist':
       return (
