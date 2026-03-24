@@ -18,7 +18,8 @@ export function buildFormSchema(fields: FieldDefinition[]): z.ZodObject<Record<s
     switch (field.fieldType) {
       case 'text':
       case 'phone':
-      case 'textarea': {
+      case 'textarea':
+      case 'rich_text': {
         let s = z.string();
         if (field.maxLength) s = s.max(field.maxLength);
         fieldSchema = s;

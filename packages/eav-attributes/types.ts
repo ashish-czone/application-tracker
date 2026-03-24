@@ -19,7 +19,8 @@ export type FieldType =
   | 'file'
   | 'category'
   | 'multi_user'
-  | 'multi_lookup';
+  | 'multi_lookup'
+  | 'rich_text';
 
 /** Field types that bypass the standard EAV pipeline (use join tables, external storage, or special handling) */
 export const RELATIONAL_FIELD_TYPES = new Set<FieldType>(['tags', 'file', 'category', 'multi_user', 'multi_lookup']);
@@ -34,6 +35,7 @@ export const FIELD_TYPE_TO_VALUE_COLUMN: Partial<Record<FieldType, EavValueColum
   phone: 'valueText',
   url: 'valueText',
   textarea: 'valueText',
+  rich_text: 'valueText',  // stored as HTML string
   picklist: 'valueText',
   multi_select: 'valueText', // stored as JSON array string
   lookup: 'valueText',       // stores the referenced entity ID
