@@ -75,7 +75,7 @@ export class EntityService {
         label: d.label,
         fieldType: d.fieldType,
         sortable: !!config.sortableColumns[d.fieldKey],
-        lookupEntity: d.lookupEntity,
+        lookupEntity: d.lookupEntity ?? undefined,
       }));
 
     // Build filterable fields (picklists, lookups, booleans, tags)

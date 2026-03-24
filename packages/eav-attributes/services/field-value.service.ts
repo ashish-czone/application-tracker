@@ -119,6 +119,10 @@ export class FieldValueService {
       }
 
       const valueColumn = FIELD_TYPE_TO_VALUE_COLUMN[fieldType];
+      if (!valueColumn) {
+        // Relational field types (tags, file, category) don't use EAV storage
+        continue;
+      }
       const typedValues = this.buildTypedValues(valueColumn, value);
 
       // Upsert
@@ -177,6 +181,7 @@ export class FieldValueService {
     if (!field[0] || !field[0].isUnique) return true;
 
     const valueColumn = FIELD_TYPE_TO_VALUE_COLUMN[field[0].fieldType as FieldType];
+    if (!valueColumn) return true; // Relational types don't have EAV uniqueness
     const columnRef = this.getColumnRef(valueColumn);
 
     const conditions = [
