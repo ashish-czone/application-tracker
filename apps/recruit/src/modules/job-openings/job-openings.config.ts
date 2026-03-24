@@ -218,5 +218,6 @@ export const JOB_OPENINGS_CONFIG: EntityConfig = {
     subtitleField: 'department',
     navGroup: 'recruit',
     navOrder: 1,
+    createMode: 'page',
   },
 };

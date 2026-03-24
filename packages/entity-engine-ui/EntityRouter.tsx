@@ -2,6 +2,7 @@ import { Suspense, type ReactNode } from 'react';
 import { Routes, Route } from 'react-router';
 import { useEntityEngine } from './EntityEngineProvider';
 import { EntityListPage } from './pages/EntityListPage';
+import { EntityCreatePage } from './pages/EntityCreatePage';
 import { EntityDetailPage } from './pages/EntityDetailPage';
 
 interface EntityRouterProps {
@@ -51,6 +52,16 @@ export function EntityRouter({ extraRoutes, fallback }: EntityRouterProps) {
               </Suspense>
             }
           />
+          {entity.ui.createMode === 'page' && (
+            <Route
+              path="new"
+              element={
+                <Suspense fallback={fallback ?? <DefaultFallback />}>
+                  <EntityCreatePage entityType={entity.entityType} />
+                </Suspense>
+              }
+            />
+          )}
           <Route
             path=":id"
             element={

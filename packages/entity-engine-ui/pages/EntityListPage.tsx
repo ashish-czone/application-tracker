@@ -296,7 +296,13 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
           icon: Database,
           title: `No ${entity.pluralName.toLowerCase()} yet`,
           description: `Add your first ${entity.singularName.toLowerCase()} to get started.`,
-          action: { label: `Add ${entity.singularName}`, onClick: () => setAddModalOpen(true) },
+          action: { label: `Add ${entity.singularName}`, onClick: () => {
+            if (entity.ui.createMode === 'page') {
+              navigate(`/${entity.slug}/new`);
+            } else {
+              setAddModalOpen(true);
+            }
+          }},
         }}
         storageKey={`${entity.slug}-list`}
         rowClassName={(row) => (row as Row).deletedAt ? 'bg-muted/30 text-muted-foreground' : undefined}
@@ -316,7 +322,13 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
             {filterConfigs.length > 0 && (
               <DataGridFilters filters={filterConfigs} getFilter={getFilter} setFilter={setFilter} />
             )}
-            <Button size="sm" onClick={() => setAddModalOpen(true)}>
+            <Button size="sm" onClick={() => {
+              if (entity.ui.createMode === 'page') {
+                navigate(`/${entity.slug}/new`);
+              } else {
+                setAddModalOpen(true);
+              }
+            }}>
               <Plus className="h-4 w-4 mr-1" />
               Add {entity.singularName}
             </Button>
