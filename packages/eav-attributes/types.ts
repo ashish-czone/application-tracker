@@ -20,7 +20,8 @@ export type FieldType =
   | 'category'
   | 'multi_user'
   | 'multi_lookup'
-  | 'rich_text';
+  | 'rich_text'
+  | 'workflow';
 
 /** Field types that bypass the standard EAV pipeline (use join tables, external storage, or special handling) */
 export const RELATIONAL_FIELD_TYPES = new Set<FieldType>(['tags', 'category', 'multi_user', 'multi_lookup']);
@@ -42,6 +43,7 @@ export const FIELD_TYPE_TO_VALUE_COLUMN: Partial<Record<FieldType, EavValueColum
   user: 'valueText',         // stores the user ID
   auto_number: 'valueText',
   file: 'valueText',          // stored as JSON string (MediaFile object)
+  workflow: 'valueText',     // stores current state name as string
   number: 'valueNumber',
   currency: 'valueNumber',
   decimal: 'valueNumber',

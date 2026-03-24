@@ -1,6 +1,8 @@
 import type { PgTable, PgColumn } from 'drizzle-orm/pg-core';
 import type { SQL } from 'drizzle-orm';
 import type { FieldType, SeedSectionInput, SetPicklistOptionInput } from '@packages/eav-attributes';
+import type { Condition } from '@packages/notifications';
+import type { WorkflowGuardFn } from '@packages/workflows';
 
 // ---------------------------------------------------------------------------
 // Field metadata — presentation info that can't be derived from Drizzle schema
@@ -44,6 +46,50 @@ export interface FieldMeta {
   accept?: string[];
   /** Max file size in bytes (for file field type) */
   maxFileSize?: number;
+  /** Workflow config (for workflow field type) */
+  workflow?: WorkflowFieldConfig;
+}
+
+// ---------------------------------------------------------------------------
+// Workflow field configuration
+// ---------------------------------------------------------------------------
+
+export interface WorkflowFieldConfig {
+  /** Unique slug for the workflow definition (e.g., 'application-status') */
+  slug: string;
+  /** The initial state for new entities */
+  initialState: string;
+  /** All possible states */
+  states: WorkflowStateDef[];
+  /** Allowed transitions between states */
+  transitions: WorkflowTransitionDef[];
+}
+
+export interface WorkflowStateDef {
+  /** State identifier (stored in DB) */
+  name: string;
+  /** Display label */
+  label: string;
+  /** Color for UI badges */
+  color?: string;
+}
+
+export interface WorkflowTransitionDef {
+  /** Source state name */
+  from: string;
+  /** Possible target states — plain string (no conditions) or object (with conditions/permissions/guards) */
+  to: (string | WorkflowTargetDef)[];
+}
+
+export interface WorkflowTargetDef {
+  /** Target state name */
+  state: string;
+  /** Additional permissions required for this transition */
+  requiredPermissions?: string[];
+  /** Named guard functions to execute (registered in hooks.workflowGuards) */
+  guardNames?: string[];
+  /** Declarative conditions evaluated against entity field values */
+  conditions?: Condition[];
 }
 
 // ---------------------------------------------------------------------------
@@ -194,6 +240,8 @@ export interface EntityHooks {
   buildListFilters?: (query: Record<string, unknown>) => SQL[];
   /** Custom response transformation (merge DB row + EAV values). Overrides default merge. */
   toResponse?: (dbRow: Record<string, unknown>, eavValues: Record<string, unknown>) => Record<string, unknown>;
+  /** Custom workflow guard functions, keyed by name. Referenced by guardNames in transition config. */
+  workflowGuards?: Record<string, WorkflowGuardFn>;
 }
 
 // ---------------------------------------------------------------------------

@@ -744,6 +744,9 @@ importers:
       '@packages/rbac':
         specifier: workspace:*
         version: link:../rbac
+      '@packages/workflows':
+        specifier: workspace:*
+        version: link:../workflows
     devDependencies:
       drizzle-orm:
         specifier: ^0.45.1
