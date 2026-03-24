@@ -75,6 +75,22 @@ export function DynamicField({ field, mode, value, resolvedLabel, lookupOptions 
       );
     }
 
+    // Multi-value fields: render as comma-separated labels
+    if ((field.fieldType === 'multi_user' || field.fieldType === 'multi_lookup') && Array.isArray(value)) {
+      return (
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-medium text-muted-foreground">{field.label}</span>
+          {value.length === 0 ? (
+            <span className="text-sm text-muted-foreground">-</span>
+          ) : (
+            <span className="text-sm text-foreground">
+              {value.map((v: { id: string; label: string }) => v.label).join(', ')}
+            </span>
+          )}
+        </div>
+      );
+    }
+
     // File: render as filename with size
     if (field.fieldType === 'file') {
       const file = value as { originalName?: string; size?: number } | null;
@@ -217,6 +233,16 @@ function DynamicFieldEdit({ field, lookupOptions }: { field: FieldDefinition; lo
         <div className="flex flex-col gap-1">
           <span className="text-xs font-medium text-muted-foreground">{label}</span>
           <span className="text-sm text-muted-foreground italic">Upload on detail page</span>
+        </div>
+      );
+
+    case 'multi_user':
+    case 'multi_lookup':
+      // Multi-value fields — managed on detail page for now
+      return (
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-medium text-muted-foreground">{label}</span>
+          <span className="text-sm text-muted-foreground italic">Manage on detail page</span>
         </div>
       );
 
