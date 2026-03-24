@@ -82,10 +82,10 @@ describe('EntityRegistryService', () => {
       singularName: 'Candidate',
       pluralName: 'Candidates',
       slug: 'candidates',
+      table: { deletedAt: {} } as any,
       ui: { icon: 'users', nameField: ['firstName', 'lastName'] },
-      features: {
-        softDelete: true,
-        taxonomy: { tagGroupSlug: 'candidate-skills', label: 'Skills' },
+      fieldMeta: {
+        skills: { label: 'Skills', section: 'details', sortOrder: 0, fieldType: 'tags', tagGroupSlug: 'candidate-skills' },
       },
       relationships: [
         {
@@ -115,11 +115,30 @@ describe('EntityRegistryService', () => {
     expect(entry.relationships[0].foreignKey).toBe('candidateId');
   });
 
-  it('defaults softDelete and restore to true', () => {
-    registry.register(mockConfig({ features: undefined }));
+  it('derives softDelete from table schema', () => {
+    registry.register(mockConfig({ table: { deletedAt: {} } as any }));
 
     const entries = registry.getRegistryEntries();
     expect(entries[0].features.softDelete).toBe(true);
     expect(entries[0].features.restore).toBe(true);
+  });
+
+  it('softDelete is false when table has no deletedAt column', () => {
+    registry.register(mockConfig({ table: {} as any }));
+
+    const entries = registry.getRegistryEntries();
+    expect(entries[0].features.softDelete).toBe(false);
+    expect(entries[0].features.restore).toBe(false);
+  });
+
+  it('derives hasMedia from fieldMeta', () => {
+    registry.register(mockConfig({
+      fieldMeta: {
+        resume: { label: 'Resume', section: 'attachments', sortOrder: 0, fieldType: 'file' },
+      },
+    }));
+
+    const entries = registry.getRegistryEntries();
+    expect(entries[0].features.hasMedia).toBe(true);
   });
 });

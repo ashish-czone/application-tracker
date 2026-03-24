@@ -78,8 +78,6 @@ export const CONTACTS_CONFIG: EntityConfig = {
     { name: 'Other Info', fields: ['source', 'isPrimaryContact', 'emailOptOut'] },
   ],
 
-  features: { softDelete: true, restore: true },
-
   lookup: {
     labelField: 'lastName',
     searchFields: ['firstName', 'lastName', 'email'],

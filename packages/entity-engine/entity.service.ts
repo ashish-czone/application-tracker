@@ -122,11 +122,9 @@ export class EntityService {
     const conditions: any[] = [];
 
     // Soft delete filter
-    if (!query.includeDeleted && config.features?.softDelete !== false) {
-      const deletedAtCol = (config.table as any).deletedAt as PgColumn | undefined;
-      if (deletedAtCol) {
-        conditions.push(isNull(deletedAtCol));
-      }
+    const deletedAtCol = (config.table as any).deletedAt as PgColumn | undefined;
+    if (!query.includeDeleted && deletedAtCol) {
+      conditions.push(isNull(deletedAtCol));
     }
 
     // Search across configured columns
@@ -205,7 +203,7 @@ export class EntityService {
 
     const conditions: any[] = [eq(table.id, id)];
 
-    if (config.features?.softDelete !== false && table.deletedAt) {
+    if (table.deletedAt) {
       conditions.push(isNull(table.deletedAt));
     }
 

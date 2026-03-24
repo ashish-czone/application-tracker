@@ -59,11 +59,11 @@ export class EntityRegistryService {
       slug: config.slug,
       ui: config.ui,
       features: {
-        softDelete: config.features?.softDelete !== false,
-        restore: config.features?.restore !== false,
-        hasTaxonomy: !!config.features?.taxonomy,
-        hasWorkflow: !!config.features?.workflow,
-        hasMedia: !!config.features?.media && Object.keys(config.features.media).length > 0,
+        softDelete: !!(config.table as any).deletedAt,
+        restore: !!(config.table as any).deletedAt,
+        hasTaxonomy: Object.values(config.fieldMeta).some(f => f.fieldType === 'tags'),
+        hasWorkflow: Object.values(config.fieldMeta).some(f => f.fieldType === 'workflow'),
+        hasMedia: Object.values(config.fieldMeta).some(f => f.fieldType === 'file'),
       },
       relationships: (config.relationships ?? []).map(({ name, type, targetEntity, foreignKey, label, displayFields }) => ({
         name,

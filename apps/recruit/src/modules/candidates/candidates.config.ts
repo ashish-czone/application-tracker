@@ -1,6 +1,5 @@
 import { eq, ilike } from 'drizzle-orm';
 import type { EntityConfig } from '@packages/entity-engine';
-import type { MediaFile } from '@packages/media';
 import { candidates } from './schema/candidates';
 import { CANDIDATE_FIELD_META, CANDIDATE_SECTIONS } from './field-meta';
 
@@ -33,23 +32,6 @@ export const CANDIDATES_CONFIG: EntityConfig = {
 
   fieldMeta: CANDIDATE_FIELD_META,
   sections: CANDIDATE_SECTIONS,
-
-  features: {
-    softDelete: true,
-    restore: true,
-    taxonomy: { tagGroupSlug: 'recruit-skills', label: 'Skills' },
-    media: {
-      resume: {
-        accept: [
-          'application/pdf',
-          'application/msword',
-          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        ],
-        label: 'Resume',
-        maxFileSize: 10 * 1024 * 1024,
-      },
-    },
-  },
 
   lookup: {
     labelField: 'firstName',

@@ -38,11 +38,6 @@ export const VENDORS_CONFIG: EntityConfig = {
     { name: 'Address Information', fields: ['street', 'city', 'province', 'postalCode', 'country'] },
   ],
 
-  features: {
-    softDelete: true,
-    restore: true,
-  },
-
   lookup: {
     labelField: 'vendorName',
     searchFields: ['vendorName', 'email'],
