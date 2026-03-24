@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
-import { Plus, Trash2, RotateCcw, Database, MoreHorizontal } from 'lucide-react';
+import { Plus, Trash2, RotateCcw, Database, MoreHorizontal, PenLine, Download } from 'lucide-react';
 import {
   DataGrid, DataGridFilters, Badge, Button, useDataGridParams, useActiveFilters,
   Dialog, DialogContent, ConfirmDialog,
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,
-  type ColumnDef,
+  type ColumnDef, type DataGridBulkAction,
 } from '@packages/ui';
 import type { EntityAction } from '@packages/entity-engine';
 import { useEntityEngine, useEntityHooks, useEntityConfig } from '../EntityEngineProvider';
@@ -36,6 +36,7 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
 
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [deletingItem, setDeletingItem] = useState<Row | null>(null);
+  const [bulkDeleteIds, setBulkDeleteIds] = useState<string[]>([]);
   const [showDeleted, setShowDeleted] = useState(false);
 
   const {
@@ -114,6 +115,54 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
     includeDeleted: showDeleted,
     ...filterParams,
   });
+
+  // ---------------------------------------------------------------------------
+  // Bulk actions — driven by listLayout.actions.bulk config
+  // ---------------------------------------------------------------------------
+
+  const entityApi = useEntityEngine().getApi(entityType);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+
+  const handleBulkDelete = async (ids: string[]) => {
+    setBulkDeleting(true);
+    try {
+      for (const id of ids) {
+        await entityApi?.delete(id);
+      }
+    } finally {
+      setBulkDeleting(false);
+      setBulkDeleteIds([]);
+      refetch();
+    }
+  };
+
+  const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
+    PenLine, Trash2, Download,
+  };
+
+  const bulkActions = useMemo<DataGridBulkAction[]>(() => {
+    const configActions = listLayout?.actions.bulk ?? [];
+    return configActions.map((action) => ({
+      label: action.label,
+      icon: action.icon ? ICON_MAP[action.icon] : undefined,
+      variant: action.variant,
+      onClick: (selectedIds: string[]) => {
+        switch (action.key) {
+          case 'massDelete':
+            setBulkDeleteIds(selectedIds);
+            break;
+          case 'export':
+            // Handled by DataGrid's built-in export button
+            break;
+          case 'massUpdate':
+            // TODO: mass update modal
+            break;
+          default:
+            break;
+        }
+      },
+    }));
+  }, [listLayout]);
 
   // Get entity display name from a row
   const getDisplayName = (row: Row): string => {
@@ -221,6 +270,8 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
       <DataGrid
         columns={columns}
         data={data?.data ?? []}
+        enableSelection={bulkActions.length > 0}
+        bulkActions={bulkActions}
         page={page}
         pageSize={pageSize}
         pageCount={data?.meta.totalPages ?? 0}
@@ -285,7 +336,7 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation */}
+      {/* Single Delete Confirmation */}
       <ConfirmDialog
         open={!!deletingItem}
         onOpenChange={(open) => !open && setDeletingItem(null)}
@@ -298,6 +349,17 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
         confirmLabel={`Delete ${entity.singularName.toLowerCase()}`}
         isPending={deleteMutation.isPending}
         onConfirm={() => deletingItem && deleteMutation.mutate(deletingItem.id as string)}
+      />
+
+      {/* Bulk Delete Confirmation */}
+      <ConfirmDialog
+        open={bulkDeleteIds.length > 0}
+        onOpenChange={(open) => !open && setBulkDeleteIds([])}
+        title={`Delete ${bulkDeleteIds.length} ${bulkDeleteIds.length === 1 ? entity.singularName.toLowerCase() : entity.pluralName.toLowerCase()}`}
+        description={`This will delete ${bulkDeleteIds.length} selected ${bulkDeleteIds.length === 1 ? 'record' : 'records'}. This action cannot be undone.`}
+        confirmLabel={`Delete ${bulkDeleteIds.length} ${bulkDeleteIds.length === 1 ? 'record' : 'records'}`}
+        isPending={bulkDeleting}
+        onConfirm={() => handleBulkDelete(bulkDeleteIds)}
       />
     </div>
   );
