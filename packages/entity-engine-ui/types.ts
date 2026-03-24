@@ -14,6 +14,7 @@ export interface EntityRegistryEntry {
     navGroup?: string;
     navOrder?: number;
     createMode?: 'modal' | 'page';
+    boardFields?: string[];
   };
   features: {
     softDelete: boolean;

@@ -132,6 +132,8 @@ export interface EntityUIHints {
   navOrder?: number;
   /** How the "Add" button works: 'modal' = quick-create dialog, 'page' = full create form page. Default: 'modal' */
   createMode?: 'modal' | 'page';
+  /** Picklist field keys that can be used as board/kanban grouping. Enables board view toggle on list page. */
+  boardFields?: string[];
 }
 
 // ---------------------------------------------------------------------------
