@@ -1,6 +1,7 @@
-// Module & Service
+// Module, Service & Controller
 export { MediaModule } from './media.module';
 export { MediaService } from './services/media.service';
+export { MediaUploadController } from './controllers/media-upload.controller';
 
 // Types
 export type {
@@ -21,4 +22,5 @@ export {
   isFileSizeValid,
   getExtension,
   generateStorageKey,
+  generateTmpKey,
 } from './helpers/validation';
