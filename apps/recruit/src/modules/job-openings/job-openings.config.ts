@@ -1,7 +1,7 @@
 import type { EntityConfig } from '@packages/entity-engine';
 import { jobOpenings } from './schema/job-openings';
 
-export const JOB_OPENINGS_CONFIG: EntityConfig = {
+export const jobOpeningsConfig: EntityConfig = {
   entityType: 'job_openings',
   singularName: 'Job Opening',
   pluralName: 'Job Openings',

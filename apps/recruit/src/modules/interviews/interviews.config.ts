@@ -1,7 +1,7 @@
 import type { EntityConfig } from '@packages/entity-engine';
 import { interviews } from './schema/interviews';
 
-export const INTERVIEWS_CONFIG: EntityConfig = {
+export const interviewsConfig: EntityConfig = {
   entityType: 'interviews',
   singularName: 'Interview',
   pluralName: 'Interviews',

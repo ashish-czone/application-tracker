@@ -11,7 +11,7 @@ import { CANDIDATE_FIELD_META, CANDIDATE_SECTIONS } from './field-meta';
  *
  * Domain-specific logic is handled via hooks.
  */
-export const CANDIDATES_CONFIG: EntityConfig = {
+export const candidatesConfig: EntityConfig = {
   entityType: 'candidates',
   singularName: 'Candidate',
   pluralName: 'Candidates',

@@ -1,7 +1,7 @@
 import type { EntityConfig } from '@packages/entity-engine';
 import { applications } from './schema/applications';
 
-export const APPLICATIONS_CONFIG: EntityConfig = {
+export const applicationsConfig: EntityConfig = {
   entityType: 'applications',
   singularName: 'Application',
   pluralName: 'Applications',
