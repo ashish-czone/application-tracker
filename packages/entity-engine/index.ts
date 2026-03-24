@@ -17,4 +17,8 @@ export type {
   ListLayoutResponse,
   BaseListQuery,
   FieldMeta,
+  WorkflowFieldConfig,
+  WorkflowStateDef,
+  WorkflowTransitionDef,
+  WorkflowTargetDef,
 } from './types';
