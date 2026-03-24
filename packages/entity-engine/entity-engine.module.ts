@@ -7,7 +7,7 @@ import { FieldValueService, FieldDefinitionService, LayoutService, LookupResolve
 import { EntityResolverRegistry } from '@packages/notifications';
 import { TaxonomyService } from '@packages/taxonomy';
 import { MediaService } from '@packages/media';
-import { WorkflowRegistryService, WorkflowGuardRegistry } from '@packages/workflows';
+import { WorkflowEngineService, WorkflowRegistryService, WorkflowGuardRegistry } from '@packages/workflows';
 import { AppLoggerService } from '@packages/logger';
 import { EntityRegistryService } from './entity-registry.service';
 import { EntityService } from './entity.service';
@@ -79,9 +79,11 @@ export class EntityEngineModule implements OnApplicationBootstrap {
             taxonomyService: TaxonomyService,
             multiValueService: MultiValueService,
             mediaService: MediaService,
+            workflowEngine: WorkflowEngineService,
+            workflowRegistry: WorkflowRegistryService,
             appLogger: AppLoggerService,
-          ) => new EntityService(config, database, domainEventEmitter, fieldValueService, fieldDefinitionService, lookupResolver, taxonomyService, multiValueService, mediaService, appLogger),
-          inject: [DatabaseService, DomainEventEmitter, FieldValueService, FieldDefinitionService, LookupResolverService, TaxonomyService, MultiValueService, MediaService, AppLoggerService],
+          ) => new EntityService(config, database, domainEventEmitter, fieldValueService, fieldDefinitionService, lookupResolver, taxonomyService, multiValueService, mediaService, workflowEngine, workflowRegistry, appLogger),
+          inject: [DatabaseService, DomainEventEmitter, FieldValueService, FieldDefinitionService, LookupResolverService, TaxonomyService, MultiValueService, MediaService, WorkflowEngineService, WorkflowRegistryService, AppLoggerService],
         },
       ],
       exports: [serviceToken],
