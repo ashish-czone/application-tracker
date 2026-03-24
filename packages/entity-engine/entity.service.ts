@@ -17,6 +17,7 @@ import {
 } from '@packages/eav-attributes';
 import type { FieldDefinition } from '@packages/eav-attributes';
 import { TaxonomyService, type TagWithGroup } from '@packages/taxonomy';
+import { MediaService, type MediaFile } from '@packages/media';
 import type { PaginatedResponse } from '@packages/common';
 import type { EntityConfig, BaseListQuery } from './types';
 
@@ -45,6 +46,7 @@ export class EntityService {
     private readonly lookupResolver: LookupResolverService,
     private readonly taxonomyService: TaxonomyService,
     private readonly multiValueService: MultiValueService,
+    private readonly mediaService: MediaService,
     appLogger: AppLoggerService,
   ) {
     this.logger = appLogger.forContext(`EntityService[${config.entityType}]`);
@@ -274,9 +276,14 @@ export class EntityService {
       return inserted;
     });
 
-    // Handle relational fields (tags, category, file) after entity exists
+    // Handle relational fields (tags, category, multi) after entity exists
     if (Object.keys(relationalFields).length > 0) {
       await this.handleRelationalCreate(row.id, relationalFields, defs);
+    }
+
+    // Move tmp files to permanent storage and update EAV values
+    if (Object.keys(customFields).length > 0) {
+      await this.processFileFields(customFields, row.id, defs);
     }
 
     this.logger.log(`${config.singularName} created`, { entityId: row.id, actorId });
@@ -384,9 +391,14 @@ export class EntityService {
       return row;
     });
 
-    // Handle relational fields (tags, category) after transaction
+    // Handle relational fields (tags, category, multi) after transaction
     if (hasRelationalChanges) {
       await this.handleRelationalUpdate(id, relationalFields, defs);
+    }
+
+    // Move tmp files to permanent storage and update EAV values
+    if (hasCustomChanges) {
+      await this.processFileFields(customFields, id, defs);
     }
 
     this.logger.log(`${config.singularName} updated`, { entityId: id, actorId });
@@ -559,14 +571,13 @@ export class EntityService {
   }
 
   // ---------------------------------------------------------------------------
-  // RELATIONAL FIELD HELPERS (tags, file, category)
+  // RELATIONAL FIELD HELPERS (tags, category, multi)
   // ---------------------------------------------------------------------------
 
   /**
    * After creating an entity, handle relational fields:
    * - tags: attach each tag ID via TaxonomyService
    * - category: stored as standard/EAV field (handled by splitPayload)
-   * - file: handled by separate upload endpoint
    */
   private async handleRelationalCreate(
     entityId: string,
@@ -597,7 +608,6 @@ export class EntityService {
         await this.multiValueService.setValues(this.config.entityType, entityId, key, targetIds);
       }
       // category: stored as a lookup-like text value — handled in standard/EAV flow
-      // file: handled by separate upload endpoint
     }
   }
 
@@ -651,6 +661,81 @@ export class EntityService {
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // FILE FIELD HELPERS
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Check if a value looks like a MediaFile object.
+   */
+  private isMediaFile(value: unknown): value is MediaFile {
+    return (
+      typeof value === 'object' &&
+      value !== null &&
+      typeof (value as any).key === 'string' &&
+      typeof (value as any).originalName === 'string'
+    );
+  }
+
+  /**
+   * After entity create/update, move any tmp files to permanent storage
+   * and update the EAV values with the new keys.
+   */
+  private async processFileFields(
+    customFields: Record<string, unknown>,
+    entityId: string,
+    defs: FieldDefinition[],
+  ): Promise<void> {
+    const defMap = new Map(defs.map(d => [d.fieldKey, d]));
+    const updates: Record<string, unknown> = {};
+
+    for (const [key, value] of Object.entries(customFields)) {
+      const def = defMap.get(key);
+      if (!def || def.fieldType !== 'file') continue;
+
+      if (this.isMediaFile(value) && value.key.startsWith('tmp/')) {
+        try {
+          const moved = await this.mediaService.moveFromTmp(
+            value,
+            this.config.entityType,
+            entityId,
+            key,
+          );
+          updates[key] = moved;
+        } catch (err) {
+          this.logger.warn(`Failed to move tmp file for ${key}: ${err}`);
+        }
+      }
+    }
+
+    if (Object.keys(updates).length > 0) {
+      await this.fieldValueService.setValues(this.config.entityType, entityId, updates);
+    }
+  }
+
+  /**
+   * Parse file field EAV values from JSON strings back to objects in response rows.
+   */
+  private parseFileFields(rows: Record<string, unknown>[], defs: FieldDefinition[]): void {
+    const fileFieldKeys = new Set(defs.filter(d => d.fieldType === 'file').map(d => d.fieldKey));
+    if (fileFieldKeys.size === 0) return;
+
+    for (const row of rows) {
+      for (const key of fileFieldKeys) {
+        const val = row[key];
+        if (typeof val === 'string') {
+          try {
+            row[key] = JSON.parse(val);
+          } catch { /* leave as-is */ }
+        }
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // RESPONSE HYDRATION
+  // ---------------------------------------------------------------------------
+
   /**
    * Hydrate relational fields in response rows:
    * - tags: fetch tags for each entity, group by tagGroupSlug, assign to correct field
@@ -661,6 +746,9 @@ export class EntityService {
     const defs = await this.fieldDefinitionService.listByEntityWithOptions(this.config.entityType);
     const tagFields = defs.filter(d => d.fieldType === 'tags');
     const multiFields = defs.filter(d => d.fieldType === 'multi_user' || d.fieldType === 'multi_lookup');
+
+    // Parse file field JSON strings back to objects
+    this.parseFileFields(rows, defs);
 
     if (tagFields.length === 0 && multiFields.length === 0) return;
 

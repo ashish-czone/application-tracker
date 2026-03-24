@@ -23,7 +23,7 @@ export type FieldType =
   | 'rich_text';
 
 /** Field types that bypass the standard EAV pipeline (use join tables, external storage, or special handling) */
-export const RELATIONAL_FIELD_TYPES = new Set<FieldType>(['tags', 'file', 'category', 'multi_user', 'multi_lookup']);
+export const RELATIONAL_FIELD_TYPES = new Set<FieldType>(['tags', 'category', 'multi_user', 'multi_lookup']);
 
 /** Maps field types to EAV value columns */
 export type EavValueColumn = 'valueText' | 'valueNumber' | 'valueDate' | 'valueDatetime' | 'valueBoolean';
@@ -41,6 +41,7 @@ export const FIELD_TYPE_TO_VALUE_COLUMN: Partial<Record<FieldType, EavValueColum
   lookup: 'valueText',       // stores the referenced entity ID
   user: 'valueText',         // stores the user ID
   auto_number: 'valueText',
+  file: 'valueText',          // stored as JSON string (MediaFile object)
   number: 'valueNumber',
   currency: 'valueNumber',
   decimal: 'valueNumber',

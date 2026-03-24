@@ -16,6 +16,7 @@
     "@packages/eav-attributes": "workspace:*",
     "@packages/events": "workspace:*",
     "@packages/logger": "workspace:*",
+    "@packages/media": "workspace:*",
     "@packages/notifications": "workspace:*",
     "@packages/rbac": "workspace:*"
   },

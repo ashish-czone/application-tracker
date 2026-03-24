@@ -62,7 +62,7 @@ export class EntityRegistryService {
         softDelete: !!(config.table as any).deletedAt,
         restore: !!(config.table as any).deletedAt,
         hasTaxonomy: Object.values(config.fieldMeta).some(f => f.fieldType === 'tags'),
-        hasWorkflow: Object.values(config.fieldMeta).some(f => f.fieldType === 'workflow'),
+        hasWorkflow: false, // TODO: derive from workflow config when implemented
         hasMedia: Object.values(config.fieldMeta).some(f => f.fieldType === 'file'),
       },
       relationships: (config.relationships ?? []).map(({ name, type, targetEntity, foreignKey, label, displayFields }) => ({

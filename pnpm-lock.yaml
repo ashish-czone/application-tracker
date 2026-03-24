@@ -735,6 +735,9 @@ importers:
       '@packages/logger':
         specifier: workspace:*
         version: link:../logger
+      '@packages/media':
+        specifier: workspace:*
+        version: link:../media
       '@packages/notifications':
         specifier: workspace:*
         version: link:../notifications

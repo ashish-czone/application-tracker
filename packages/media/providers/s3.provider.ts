@@ -57,6 +57,24 @@ export class S3MediaProvider implements MediaProvider {
     );
   }
 
+  async move(fromKey: string, toKey: string): Promise<void> {
+    const client = await this.getClient();
+    const { CopyObjectCommand, DeleteObjectCommand } = await import('@aws-sdk/client-s3');
+    await client.send(
+      new CopyObjectCommand({
+        Bucket: this.bucket,
+        CopySource: `${this.bucket}/${fromKey}`,
+        Key: toKey,
+      }),
+    );
+    await client.send(
+      new DeleteObjectCommand({
+        Bucket: this.bucket,
+        Key: fromKey,
+      }),
+    );
+  }
+
   async delete(key: string): Promise<void> {
     const client = await this.getClient();
     const { DeleteObjectCommand } = await import('@aws-sdk/client-s3');
