@@ -52,12 +52,21 @@ export class EntityRegistryService {
 
   /** Get all entity types as serializable registry entries (for frontend consumption). */
   getRegistryEntries(): EntityRegistryEntry[] {
-    return this.getAll().map((config) => ({
+    return this.getAll().map((config) => {
+      // Derive boardFields: workflow fields automatically qualify as board grouping fields
+      const workflowFields = Object.entries(config.fieldMeta)
+        .filter(([, meta]) => meta.fieldType === 'workflow')
+        .map(([key]) => key);
+      const boardFields = [...workflowFields, ...(config.ui.boardFields ?? [])];
+      // Deduplicate in case a workflow field is also explicitly listed
+      const uniqueBoardFields = [...new Set(boardFields)];
+
+      return {
       entityType: config.entityType,
       singularName: config.singularName,
       pluralName: config.pluralName,
       slug: config.slug,
-      ui: config.ui,
+      ui: { ...config.ui, boardFields: uniqueBoardFields.length > 0 ? uniqueBoardFields : undefined },
       features: {
         softDelete: !!(config.table as any).deletedAt,
         restore: !!(config.table as any).deletedAt,
@@ -73,7 +82,8 @@ export class EntityRegistryService {
         label,
         displayFields,
       })),
-    }));
+      };
+    });
   }
 
   /** Get count of registered entities. */
