@@ -3,7 +3,7 @@ import { JobOpeningsSeedService } from './job-openings-seed.service';
 
 /**
  * Job Openings domain module.
- * CRUD/routing/RBAC/events handled by EntityEngineModule.forEntity(JOB_OPENINGS_CONFIG).
+ * CRUD/routing/RBAC/events handled by EntityEngineModule.forEntity(jobOpeningsConfig).
  * This module provides sample data seeding only.
  */
 @Module({

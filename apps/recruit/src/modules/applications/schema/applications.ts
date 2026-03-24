@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, index } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, index, uniqueIndex } from 'drizzle-orm/pg-core';
 import { randomUUID } from 'crypto';
 import { users } from '@packages/database/schema';
 
@@ -8,7 +8,6 @@ export const applications = pgTable('applications', {
   candidateId: text('candidate_id').notNull(),
   jobOpeningId: text('job_opening_id').notNull(),
   // Core
-  status: text('status').default('applied'),
   stage: text('stage').default('new'),
   notes: text('notes'),
   // Audit
@@ -20,5 +19,6 @@ export const applications = pgTable('applications', {
 }, (table) => [
   index('applications_candidate_id_idx').on(table.candidateId),
   index('applications_job_opening_id_idx').on(table.jobOpeningId),
-  index('applications_status_idx').on(table.status),
+  index('applications_stage_idx').on(table.stage),
+  uniqueIndex('applications_candidate_job_unique_idx').on(table.candidateId, table.jobOpeningId),
 ]);

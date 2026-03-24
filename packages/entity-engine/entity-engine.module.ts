@@ -27,7 +27,7 @@ const pendingConfigs: EntityConfig[] = [];
  * @Module({
  *   imports: [
  *     EntityEngineModule,                               // once in root
- *     EntityEngineModule.forEntity(CANDIDATES_CONFIG),   // per entity
+ *     EntityEngineModule.forEntity(candidatesConfig),     // per entity
  *   ],
  * })
  * ```

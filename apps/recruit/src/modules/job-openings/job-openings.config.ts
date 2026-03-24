@@ -1,7 +1,7 @@
 import type { EntityConfig } from '@packages/entity-engine';
 import { jobOpenings } from './schema/job-openings';
 
-export const JOB_OPENINGS_CONFIG: EntityConfig = {
+export const jobOpeningsConfig: EntityConfig = {
   entityType: 'job_openings',
   singularName: 'Job Opening',
   pluralName: 'Job Openings',
@@ -204,7 +204,7 @@ export const JOB_OPENINGS_CONFIG: EntityConfig = {
   },
 
   relationships: [
-    { name: 'applications', type: 'hasMany', targetEntity: 'applications', foreignKey: 'jobOpeningId', label: 'Applications', displayFields: ['status', 'stage', 'createdAt'] },
+    { name: 'applications', type: 'hasMany', targetEntity: 'applications', foreignKey: 'jobOpeningId', label: 'Applications', displayFields: ['stage', 'createdAt'] },
     { name: 'interviews', type: 'hasMany', targetEntity: 'interviews', foreignKey: 'jobOpeningId', label: 'Interviews', displayFields: ['interviewName', 'interviewFrom', 'status'] },
   ],
 

@@ -1,7 +1,7 @@
 import type { EntityConfig } from '@packages/entity-engine';
 import { contacts } from './schema/contacts';
 
-export const CONTACTS_CONFIG: EntityConfig = {
+export const contactsConfig: EntityConfig = {
   entityType: 'contacts',
   singularName: 'Contact',
   pluralName: 'Contacts',
