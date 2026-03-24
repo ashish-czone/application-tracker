@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { DatabaseService, eq, and, or, isNull, ilike, asc, desc, count } from '@packages/database';
 import { tasks } from '../schema/tasks';
 import { DomainEventEmitter } from '@packages/events';
-import { WorkflowEngineService, WorkflowRegistryService, WORKFLOWS_TRANSITION_COMPLETED, type AvailableTransition } from '@packages/workflows';
+import { WorkflowEngineService, WorkflowRegistryService, type AvailableTransition } from '@packages/workflows';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import type { PaginatedResponse } from '@packages/common';
 import { TASKS_TASK_CREATED, TASKS_TASK_UPDATED, TASKS_TASK_DELETED, type TaskSnapshot } from '../events/types';
@@ -272,14 +272,13 @@ export class TasksService {
 
     this.logger.log('Task status transitioned', { taskId: id, actorId, fromState: task.status, toState });
 
-    // 3. Emit event after transaction commits
-    this.domainEventEmitter.emit(WORKFLOWS_TRANSITION_COMPLETED, {
+    // 3. Emit entity-specific event after transaction commits (e.g. "task.StatusChanged")
+    this.domainEventEmitter.emitDynamic('task.StatusChanged', {
       entityType: 'task',
       entityId: id,
       actorId,
       payload: {
         workflowSlug: TASK_WORKFLOW_SLUG,
-        workflowName: validated.workflowName,
         fieldName: validated.fieldName,
         fromState: task.status,
         toState,

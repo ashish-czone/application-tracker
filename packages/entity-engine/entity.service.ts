@@ -18,7 +18,7 @@ import {
 import type { FieldDefinition } from '@packages/eav-attributes';
 import { TaxonomyService, type TagWithGroup } from '@packages/taxonomy';
 import { MediaService, type MediaFile } from '@packages/media';
-import { WorkflowEngineService, WorkflowRegistryService, WORKFLOWS_TRANSITION_COMPLETED } from '@packages/workflows';
+import { WorkflowEngineService, WorkflowRegistryService } from '@packages/workflows';
 import type { PaginatedResponse } from '@packages/common';
 import type { EntityConfig, BaseListQuery } from './types';
 
@@ -502,14 +502,15 @@ export class EntityService {
       entityId: id, fieldKey, from: currentState, to: toState, actorId,
     });
 
-    // 5. Emit event after transaction commits
-    this.domainEventEmitter.emit(WORKFLOWS_TRANSITION_COMPLETED, {
+    // 5. Emit entity-specific event after transaction commits
+    // e.g. "applications.StageChanged", "tasks.StatusChanged"
+    const pascalField = fieldKey.charAt(0).toUpperCase() + fieldKey.slice(1);
+    this.domainEventEmitter.emitDynamic(`${config.entityType}.${pascalField}Changed`, {
       entityType: config.entityType,
       entityId: id,
       actorId,
       payload: {
         workflowSlug: workflow.slug,
-        workflowName: validated.workflowName,
         fieldName: validated.fieldName,
         fromState: currentState,
         toState,
