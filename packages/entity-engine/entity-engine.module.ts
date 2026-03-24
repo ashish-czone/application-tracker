@@ -3,7 +3,7 @@ import { DatabaseService } from '@packages/database';
 import { DomainEventEmitter, EventRegistryService } from '@packages/events';
 import { RbacService } from '@packages/rbac';
 import { AuditRegistryService } from '@packages/audit';
-import { FieldValueService, FieldDefinitionService, LayoutService, LookupResolverService } from '@packages/eav-attributes';
+import { FieldValueService, FieldDefinitionService, LayoutService, LookupResolverService, MultiValueService } from '@packages/eav-attributes';
 import { EntityResolverRegistry } from '@packages/notifications';
 import { TaxonomyService } from '@packages/taxonomy';
 import { AppLoggerService } from '@packages/logger';
@@ -73,9 +73,10 @@ export class EntityEngineModule implements OnApplicationBootstrap {
             fieldDefinitionService: FieldDefinitionService,
             lookupResolver: LookupResolverService,
             taxonomyService: TaxonomyService,
+            multiValueService: MultiValueService,
             appLogger: AppLoggerService,
-          ) => new EntityService(config, database, domainEventEmitter, fieldValueService, fieldDefinitionService, lookupResolver, taxonomyService, appLogger),
-          inject: [DatabaseService, DomainEventEmitter, FieldValueService, FieldDefinitionService, LookupResolverService, TaxonomyService, AppLoggerService],
+          ) => new EntityService(config, database, domainEventEmitter, fieldValueService, fieldDefinitionService, lookupResolver, taxonomyService, multiValueService, appLogger),
+          inject: [DatabaseService, DomainEventEmitter, FieldValueService, FieldDefinitionService, LookupResolverService, TaxonomyService, MultiValueService, AppLoggerService],
         },
       ],
       exports: [serviceToken],

@@ -39,4 +39,7 @@ export {
   layoutSections,
   layoutFields,
   entityFieldValues,
+  entityMultiValues,
 } from './schema';
+
+export { MultiValueService } from './services/multi-value.service';

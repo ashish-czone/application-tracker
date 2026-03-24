@@ -111,6 +111,14 @@ export function buildColumnDefs(
         }
         return '-';
       }
+      // For multi_user/multi_lookup fields, show labels as comma-separated list
+      if (field.fieldType === 'multi_user' || field.fieldType === 'multi_lookup') {
+        const items = row.original[field.fieldKey];
+        if (Array.isArray(items) && items.length > 0) {
+          return items.map((i: { label: string }) => i.label).join(', ');
+        }
+        return '-';
+      }
       const value = row.original[field.fieldKey];
       return formatCellValue(field, value);
     },

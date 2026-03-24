@@ -8,6 +8,7 @@ import {
   FieldValueService,
   FieldDefinitionService,
   LookupResolverService,
+  MultiValueService,
   RELATIONAL_FIELD_TYPES,
   buildSnapshot,
   diffSnapshot,
@@ -43,6 +44,7 @@ export class EntityService {
     private readonly fieldDefinitionService: FieldDefinitionService,
     private readonly lookupResolver: LookupResolverService,
     private readonly taxonomyService: TaxonomyService,
+    private readonly multiValueService: MultiValueService,
     appLogger: AppLoggerService,
   ) {
     this.logger = appLogger.forContext(`EntityService[${config.entityType}]`);
@@ -590,6 +592,12 @@ export class EntityService {
           }
         }
       }
+
+      // multi_user / multi_lookup: store target IDs in junction table
+      if ((def.fieldType === 'multi_user' || def.fieldType === 'multi_lookup') && Array.isArray(value)) {
+        const targetIds = value.filter((v): v is string => typeof v === 'string');
+        await this.multiValueService.setValues(this.config.entityType, entityId, key, targetIds);
+      }
       // category: stored as a lookup-like text value — handled in standard/EAV flow
       // file: handled by separate upload endpoint
     }
@@ -636,6 +644,12 @@ export class EntityService {
           }
         }
       }
+
+      // multi_user / multi_lookup: replace all target IDs
+      if ((def.fieldType === 'multi_user' || def.fieldType === 'multi_lookup') && Array.isArray(value)) {
+        const targetIds = value.filter((v): v is string => typeof v === 'string');
+        await this.multiValueService.setValues(this.config.entityType, entityId, key, targetIds);
+      }
     }
   }
 
@@ -648,20 +662,47 @@ export class EntityService {
 
     const defs = await this.fieldDefinitionService.listByEntityWithOptions(this.config.entityType);
     const tagFields = defs.filter(d => d.fieldType === 'tags');
-    if (tagFields.length === 0) return;
+    const multiFields = defs.filter(d => d.fieldType === 'multi_user' || d.fieldType === 'multi_lookup');
 
-    // Batch load tags for all entity IDs
+    if (tagFields.length === 0 && multiFields.length === 0) return;
+
     for (const row of rows) {
       const entityId = row.id as string;
       if (!entityId) continue;
 
-      const allTags = await this.taxonomyService.getTagsForEntity(this.config.entityType, entityId);
+      // Hydrate tag fields
+      if (tagFields.length > 0) {
+        const allTags = await this.taxonomyService.getTagsForEntity(this.config.entityType, entityId);
+        for (const field of tagFields) {
+          const fieldTags = field.tagGroupSlug
+            ? allTags.filter(t => t.groupSlug === field.tagGroupSlug)
+            : allTags;
+          row[field.fieldKey] = fieldTags.map(t => ({ id: t.id, name: t.name, color: t.color }));
+        }
+      }
 
-      for (const field of tagFields) {
-        const fieldTags = field.tagGroupSlug
-          ? allTags.filter(t => t.groupSlug === field.tagGroupSlug)
-          : allTags;
-        row[field.fieldKey] = fieldTags.map(t => ({ id: t.id, name: t.name, color: t.color }));
+      // Hydrate multi-value fields (multi_user, multi_lookup)
+      if (multiFields.length > 0) {
+        const allMulti = await this.multiValueService.getAllForEntity(this.config.entityType, entityId);
+        for (const field of multiFields) {
+          const targetIds = allMulti[field.fieldKey] ?? [];
+          if (targetIds.length === 0) {
+            row[field.fieldKey] = [];
+            continue;
+          }
+
+          // Resolve target IDs to labels via lookup resolver
+          if (field.lookupEntity) {
+            const labels = await this.lookupResolver.getBatchLabels(field.lookupEntity, targetIds);
+            row[field.fieldKey] = targetIds.map(id => ({
+              id,
+              label: labels.get(id) ?? id,
+            }));
+          } else {
+            // multi_user without lookupEntity — just return IDs
+            row[field.fieldKey] = targetIds.map(id => ({ id, label: id }));
+          }
+        }
       }
     }
   }

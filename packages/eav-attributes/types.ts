@@ -17,10 +17,12 @@ export type FieldType =
   | 'auto_number'
   | 'tags'
   | 'file'
-  | 'category';
+  | 'category'
+  | 'multi_user'
+  | 'multi_lookup';
 
 /** Field types that bypass the standard EAV pipeline (use join tables, external storage, or special handling) */
-export const RELATIONAL_FIELD_TYPES = new Set<FieldType>(['tags', 'file', 'category']);
+export const RELATIONAL_FIELD_TYPES = new Set<FieldType>(['tags', 'file', 'category', 'multi_user', 'multi_lookup']);
 
 /** Maps field types to EAV value columns */
 export type EavValueColumn = 'valueText' | 'valueNumber' | 'valueDate' | 'valueDatetime' | 'valueBoolean';
