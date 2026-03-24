@@ -11,9 +11,8 @@ interface SelectOption {
   value: string;
 }
 
-interface FormSelectProps {
-  name: string;
-  label: string;
+interface FormSelectBaseProps {
+  label?: string;
   options: SelectOption[];
   placeholder?: string;
   description?: string;
@@ -21,7 +20,50 @@ interface FormSelectProps {
   className?: string;
 }
 
-export function FormSelect({
+interface FormSelectControlledProps extends FormSelectBaseProps {
+  name: string;
+  value?: never;
+  onChange?: never;
+}
+
+interface FormSelectStandaloneProps extends FormSelectBaseProps {
+  name?: never;
+  value: string;
+  onChange: (value: string) => void;
+}
+
+export type FormSelectProps = FormSelectControlledProps | FormSelectStandaloneProps;
+
+export function FormSelect(props: FormSelectProps) {
+  const { label, options, placeholder = 'Select...', description, disabled, className } = props;
+
+  // Standalone mode: value + onChange provided, no form context needed
+  if ('value' in props && props.onChange) {
+    const selectedOption = options.find((o) => o.value === props.value);
+
+    return (
+      <div className={cn('space-y-2', className)}>
+        {label && <Label>{label}</Label>}
+        <SearchableSelect
+          options={options}
+          value={props.value}
+          onChange={props.onChange}
+          placeholder={placeholder}
+          disabled={disabled}
+          displayValue={selectedOption?.label}
+        />
+        {description && (
+          <p className="text-sm text-muted-foreground">{description}</p>
+        )}
+      </div>
+    );
+  }
+
+  // Form mode: uses react-hook-form context
+  return <FormContextSelect {...props as FormSelectControlledProps} />;
+}
+
+function FormContextSelect({
   name,
   label,
   options,
@@ -29,7 +71,7 @@ export function FormSelect({
   description,
   disabled,
   className,
-}: FormSelectProps) {
+}: FormSelectControlledProps) {
   const { control } = useFormContext();
   const errorId = `${name}-error`;
   const descriptionId = `${name}-description`;
@@ -51,10 +93,10 @@ export function FormSelect({
 
         return (
           <div className={cn('space-y-2', className)}>
-            <Label htmlFor={name}>{label}</Label>
+            {label && <Label htmlFor={name}>{label}</Label>}
             <SearchableSelect
               options={options}
-              value={field.value}
+              value={field.value ?? ''}
               onChange={(val) => {
                 field.onChange(val);
                 field.onBlur();
