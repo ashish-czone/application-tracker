@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { DatabaseService, eq, and, or, isNull, ilike, asc, desc, count } from '@packages/database';
 import { tasks } from '../schema/tasks';
 import { DomainEventEmitter } from '@packages/events';
-import { WorkflowEngineService, WorkflowRegistryService, type AvailableTransition } from '@packages/workflows';
+import { WorkflowEngineService, WorkflowRegistryService, WORKFLOWS_TRANSITION_COMPLETED, type AvailableTransition } from '@packages/workflows';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import type { PaginatedResponse } from '@packages/common';
 import { TASKS_TASK_CREATED, TASKS_TASK_UPDATED, TASKS_TASK_DELETED, type TaskSnapshot } from '../events/types';
@@ -237,25 +237,57 @@ export class TasksService {
   ): Promise<TaskResponse> {
     const task = await this.findOneOrFail(id);
 
-    // Validate and record transition via workflow engine
-    await this.workflowEngine.transition({
+    // 1. Validate transition (permissions, guards, conditions) — throws on failure
+    const validated = await this.workflowEngine.validateAndThrow({
       workflowSlug: TASK_WORKFLOW_SLUG,
       entityType: 'task',
       entityId: id,
       fromState: task.status,
       toState,
       actorId,
-      comment,
     });
 
-    // Update the entity's status field
-    const [updated] = await this.database.db
-      .update(tasks)
-      .set({ status: toState })
-      .where(eq(tasks.id, id))
-      .returning();
+    // 2. Update entity + record history in a single transaction
+    const [updated] = await this.database.db.transaction(async (tx) => {
+      const result = await tx
+        .update(tasks)
+        .set({ status: toState })
+        .where(eq(tasks.id, id))
+        .returning();
+
+      await this.workflowEngine.recordHistory({
+        workflowDefinitionId: validated.workflowDefinitionId,
+        entityType: 'task',
+        entityId: id,
+        fieldName: validated.fieldName,
+        fromState: task.status,
+        toState,
+        transitionId: validated.transitionId,
+        actorId,
+        comment,
+      }, tx);
+
+      return result;
+    });
 
     this.logger.log('Task status transitioned', { taskId: id, actorId, fromState: task.status, toState });
+
+    // 3. Emit event after transaction commits
+    this.domainEventEmitter.emit(WORKFLOWS_TRANSITION_COMPLETED, {
+      entityType: 'task',
+      entityId: id,
+      actorId,
+      payload: {
+        workflowSlug: TASK_WORKFLOW_SLUG,
+        workflowName: validated.workflowName,
+        fieldName: validated.fieldName,
+        fromState: task.status,
+        toState,
+        transitionId: validated.transitionId,
+        transitionName: validated.transitionName,
+        comment,
+      },
+    });
 
     return this.toResponse(updated);
   }

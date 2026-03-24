@@ -18,7 +18,7 @@ import {
 import type { FieldDefinition } from '@packages/eav-attributes';
 import { TaxonomyService, type TagWithGroup } from '@packages/taxonomy';
 import { MediaService, type MediaFile } from '@packages/media';
-import { WorkflowEngineService, WorkflowRegistryService } from '@packages/workflows';
+import { WorkflowEngineService, WorkflowRegistryService, WORKFLOWS_TRANSITION_COMPLETED } from '@packages/workflows';
 import type { PaginatedResponse } from '@packages/common';
 import type { EntityConfig, BaseListQuery } from './types';
 
@@ -462,31 +462,61 @@ export class EntityService {
       throw new BadRequestException(`Entity has no current state for field '${fieldKey}'`);
     }
 
-    // 3. Validate + evaluate conditions + execute guards + record history
-    await this.workflowEngine.transition({
+    // 3. Validate transition (permissions, guards, conditions) — throws on failure
+    const validated = await this.workflowEngine.validateAndThrow({
       workflowSlug: workflow.slug,
       entityType: config.entityType,
       entityId: id,
       fromState: currentState,
       toState,
       actorId,
-      comment,
       entityData: entity as Record<string, unknown>,
     });
 
-    // 4. Update the field value
+    // 4. Update entity field + record history in a single transaction
     const col = table[fieldKey];
-    if (col) {
-      await this.database.db
-        .update(table)
-        .set({ [fieldKey]: toState })
-        .where(eq(table.id, id));
-    } else {
-      await this.fieldValueService.setValues(config.entityType, id, { [fieldKey]: toState });
-    }
+    await this.database.db.transaction(async (tx) => {
+      if (col) {
+        await tx
+          .update(table)
+          .set({ [fieldKey]: toState })
+          .where(eq(table.id, id));
+      } else {
+        await this.fieldValueService.setValues(config.entityType, id, { [fieldKey]: toState }, tx);
+      }
+
+      await this.workflowEngine.recordHistory({
+        workflowDefinitionId: validated.workflowDefinitionId,
+        entityType: config.entityType,
+        entityId: id,
+        fieldName: validated.fieldName,
+        fromState: currentState,
+        toState,
+        transitionId: validated.transitionId,
+        actorId,
+        comment,
+      }, tx);
+    });
 
     this.logger.log(`${config.singularName} transitioned`, {
       entityId: id, fieldKey, from: currentState, to: toState, actorId,
+    });
+
+    // 5. Emit event after transaction commits
+    this.domainEventEmitter.emit(WORKFLOWS_TRANSITION_COMPLETED, {
+      entityType: config.entityType,
+      entityId: id,
+      actorId,
+      payload: {
+        workflowSlug: workflow.slug,
+        workflowName: validated.workflowName,
+        fieldName: validated.fieldName,
+        fromState: currentState,
+        toState,
+        transitionId: validated.transitionId,
+        transitionName: validated.transitionName,
+        comment,
+      },
     });
 
     return this.findOneOrFail(id);

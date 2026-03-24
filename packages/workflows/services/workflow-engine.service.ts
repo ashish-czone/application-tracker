@@ -1,19 +1,18 @@
 import { Injectable, NotFoundException, UnprocessableEntityException, ForbiddenException } from '@nestjs/common';
 import { DatabaseService, desc, eq, and } from '@packages/database';
-import { DomainEventEmitter } from '@packages/events';
 import { RbacService } from '@packages/rbac';
 import { evaluateConditionsInMemory, type Condition } from '@packages/notifications';
 import { workflowTransitionHistory } from '../schema/workflow-transition-history';
 import { WorkflowRegistryService } from './workflow-registry.service';
 import { WorkflowGuardRegistry } from './workflow-guard-registry.service';
 import {
-  WORKFLOWS_TRANSITION_COMPLETED,
   type AvailableTransition,
-  type TransitionParams,
-  type TransitionResult,
+  type ValidatedTransition,
+  type RecordHistoryParams,
   type TransitionHistoryEntry,
   type ValidationResult,
   type WorkflowGuardContext,
+  type WorkflowGuardFn,
 } from '../types';
 
 @Injectable()
@@ -22,7 +21,6 @@ export class WorkflowEngineService {
     private readonly registry: WorkflowRegistryService,
     private readonly guardRegistry: WorkflowGuardRegistry,
     private readonly database: DatabaseService,
-    private readonly eventEmitter: DomainEventEmitter,
     private readonly rbacService: RbacService,
   ) {}
 
@@ -99,7 +97,25 @@ export class WorkflowEngineService {
     return { valid: true, transitionId: transition.id };
   }
 
-  async transition(params: TransitionParams): Promise<TransitionResult> {
+  /**
+   * Validate a transition fully (permissions, guards, conditions, inline guards).
+   * Throws on failure. Returns transition metadata on success.
+   *
+   * Does NOT record history or emit events — the caller is responsible for
+   * wrapping the entity update + history recording in a single transaction,
+   * then emitting the event after the transaction commits.
+   */
+  async validateAndThrow(params: {
+    workflowSlug: string;
+    entityType: string;
+    entityId: string;
+    fromState: string;
+    toState: string;
+    actorId: string | null;
+    metadata?: Record<string, unknown>;
+    entityData?: Record<string, unknown>;
+    additionalGuards?: WorkflowGuardFn[];
+  }): Promise<ValidatedTransition> {
     const definition = this.registry.getBySlug(params.workflowSlug);
     if (!definition) {
       throw new NotFoundException(`Workflow '${params.workflowSlug}' not found`);
@@ -173,49 +189,40 @@ export class WorkflowEngineService {
       }
     }
 
-    // Record history
-    const db = params.tx ?? this.database.db;
-    const [historyRow] = await (db as typeof this.database.db)
+    const transition = definition.transitions.find((t) => t.id === validation.transitionId);
+
+    return {
+      transitionId: validation.transitionId!,
+      transitionName: transition?.name ?? '',
+      workflowDefinitionId: definition.id,
+      workflowName: definition.name,
+      fieldName: definition.fieldName,
+    };
+  }
+
+  /**
+   * Record a transition in the history table.
+   * Call this inside the same transaction that updates the entity field.
+   */
+  async recordHistory(params: RecordHistoryParams, tx: any): Promise<{ historyId: string; recordedAt: string }> {
+    const [historyRow] = await tx
       .insert(workflowTransitionHistory)
       .values({
-        workflowDefinitionId: definition.id,
+        workflowDefinitionId: params.workflowDefinitionId,
         entityType: params.entityType,
         entityId: params.entityId,
-        fieldName: definition.fieldName,
+        fieldName: params.fieldName,
         fromState: params.fromState,
         toState: params.toState,
-        transitionId: validation.transitionId!,
+        transitionId: params.transitionId,
         actorId: params.actorId,
         comment: params.comment,
         metadata: params.metadata,
       })
       .returning();
 
-    // Find transition name for the event
-    const transition = definition.transitions.find((t) => t.id === validation.transitionId);
-
-    // Emit event
-    this.eventEmitter.emit(WORKFLOWS_TRANSITION_COMPLETED, {
-      entityType: params.entityType,
-      entityId: params.entityId,
-      actorId: params.actorId,
-      payload: {
-        workflowSlug: params.workflowSlug,
-        workflowName: definition.name,
-        fieldName: definition.fieldName,
-        fromState: params.fromState,
-        toState: params.toState,
-        transitionId: validation.transitionId!,
-        transitionName: transition?.name ?? '',
-        comment: params.comment,
-      },
-    });
-
     return {
       historyId: historyRow.id,
-      fromState: params.fromState,
-      toState: params.toState,
-      transitionId: validation.transitionId!,
       recordedAt: historyRow.createdAt.toISOString(),
     };
   }
