@@ -52,16 +52,14 @@ export function EntityRouter({ extraRoutes, fallback }: EntityRouterProps) {
               </Suspense>
             }
           />
-          {entity.ui.createMode === 'page' && (
-            <Route
-              path="new"
-              element={
-                <Suspense fallback={fallback ?? <DefaultFallback />}>
-                  <EntityCreatePage entityType={entity.entityType} />
-                </Suspense>
-              }
-            />
-          )}
+          <Route
+            path="new"
+            element={
+              <Suspense fallback={fallback ?? <DefaultFallback />}>
+                <EntityCreatePage entityType={entity.entityType} />
+              </Suspense>
+            }
+          />
           <Route
             path=":id"
             element={

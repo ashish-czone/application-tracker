@@ -2,7 +2,7 @@ import { Suspense, lazy } from 'react';
 import { Routes, Route, Navigate } from 'react-router';
 import { AppLayout } from './layout/AppLayout';
 import { AuthGuard } from '../shared/auth/components/AuthGuard';
-import { EntityListPage, EntityDetailPage } from '@packages/entity-engine-ui';
+import { EntityListPage, EntityCreatePage, EntityDetailPage } from '@packages/entity-engine-ui';
 import { SettingsPage, AutomationsPage, RuleBuilderPage } from '../portals/recruiter/routes';
 
 const LoginPage = lazy(() => import('../shared/auth/pages/LoginPage'));
@@ -65,6 +65,7 @@ export function AppRouter() {
 
           {/* Entity engine routes — each entity = 2 lines */}
           <Route path="/job-openings" element={<EntityListPage entityType="job_openings" />} />
+          <Route path="/job-openings/new" element={<EntityCreatePage entityType="job_openings" />} />
           <Route path="/job-openings/:id" element={<EntityDetailPage entityType="job_openings" />} />
           <Route path="/candidates" element={<EntityListPage entityType="candidates" />} />
           <Route path="/candidates/:id" element={<EntityDetailPage entityType="candidates" />} />

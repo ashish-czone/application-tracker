@@ -13,6 +13,7 @@ export interface EntityRegistryEntry {
     subtitleField?: string;
     navGroup?: string;
     navOrder?: number;
+    createMode?: 'modal' | 'page';
   };
   features: {
     softDelete: boolean;
