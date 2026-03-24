@@ -136,9 +136,28 @@ export class EntityEngineModule implements OnApplicationBootstrap {
       payloadSchema: {},
     });
 
+    // 3b. Workflow field transition events (e.g. "applications.StageChanged")
+    const transitionEvents: string[] = [];
+    for (const [fieldKey, meta] of Object.entries(config.fieldMeta)) {
+      if (meta.fieldType !== 'workflow') continue;
+      const pascalField = fieldKey.charAt(0).toUpperCase() + fieldKey.slice(1);
+      const eventName = `${config.entityType}.${pascalField}Changed`;
+      transitionEvents.push(eventName);
+      this.eventRegistry.register({
+        eventName,
+        group: config.entityType,
+        description: `Fired when a ${config.singularName.toLowerCase()}'s ${meta.label.toLowerCase()} changes`,
+        payloadSchema: {
+          fromState: { type: 'string', label: `Previous ${meta.label}` },
+          toState: { type: 'string', label: `New ${meta.label}` },
+          transitionName: { type: 'string', label: 'Transition' },
+        },
+      });
+    }
+
     // 4. Audit
     this.auditRegistry.register(config.entityType, {
-      events: [createdEvent, updatedEvent, deletedEvent],
+      events: [createdEvent, updatedEvent, deletedEvent, ...transitionEvents],
     });
 
     // 5. Entity resolver
