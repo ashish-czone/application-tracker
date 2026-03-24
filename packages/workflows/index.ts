@@ -18,11 +18,7 @@ export type {
   RecordHistoryParams,
   TransitionHistoryEntry,
   ValidationResult,
-  WorkflowTransitionCompletedEvent,
 } from './types';
-
-// Event constant
-export { WORKFLOWS_TRANSITION_COMPLETED } from './types';
 
 // Schema tables
 export {

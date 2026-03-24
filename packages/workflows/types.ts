@@ -100,22 +100,3 @@ export interface RecordHistoryParams {
   metadata?: Record<string, unknown>;
 }
 
-// Event types
-export const WORKFLOWS_TRANSITION_COMPLETED = 'workflows.TransitionCompleted' as const;
-
-export interface WorkflowTransitionCompletedEvent {
-  workflowSlug: string;
-  workflowName: string;
-  fieldName: string;
-  fromState: string;
-  toState: string;
-  transitionId: string;
-  transitionName: string;
-  comment?: string;
-}
-
-declare module '@packages/events' {
-  interface EventPayloadMap {
-    [WORKFLOWS_TRANSITION_COMPLETED]: WorkflowTransitionCompletedEvent;
-  }
-}
