@@ -48,3 +48,13 @@ export function generateStorageKey(
   const uuid = randomUUID();
   return `${entityType}/${entityId}/${fieldName}/${uuid}${ext}`;
 }
+
+/**
+ * Generate a temporary storage key: tmp/{uuid}{ext}
+ * Files in tmp/ are auto-cleaned after 24 hours.
+ */
+export function generateTmpKey(originalName: string): string {
+  const ext = getExtension(originalName);
+  const uuid = randomUUID();
+  return `tmp/${uuid}${ext}`;
+}

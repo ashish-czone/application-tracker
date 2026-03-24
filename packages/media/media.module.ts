@@ -1,5 +1,6 @@
 import { Module, type DynamicModule } from '@nestjs/common';
 import { MediaService } from './services/media.service';
+import { MediaUploadController } from './controllers/media-upload.controller';
 import { MEDIA_MODULE_CONFIG, type MediaModuleConfig, type MediaModuleAsyncOptions } from './types';
 
 @Module({})
@@ -8,6 +9,7 @@ export class MediaModule {
     return {
       module: MediaModule,
       global: true,
+      controllers: [MediaUploadController],
       providers: [
         { provide: MEDIA_MODULE_CONFIG, useValue: config },
         MediaService,
@@ -20,6 +22,7 @@ export class MediaModule {
     return {
       module: MediaModule,
       global: true,
+      controllers: [MediaUploadController],
       providers: [
         {
           provide: MEDIA_MODULE_CONFIG,

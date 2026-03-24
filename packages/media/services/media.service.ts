@@ -11,7 +11,7 @@ import {
   type MediaFieldConfig,
   type UploadedFile,
 } from '../types';
-import { isMimeTypeAccepted, isFileSizeValid, generateStorageKey } from '../helpers/validation';
+import { isMimeTypeAccepted, isFileSizeValid, generateStorageKey, generateTmpKey } from '../helpers/validation';
 
 @Injectable()
 export class MediaService {
@@ -105,6 +105,41 @@ export class MediaService {
     }
 
     return this.upload(file, fieldConfig);
+  }
+
+  /**
+   * Upload a file to temporary storage. Validates MIME type and size.
+   * Files in tmp/ are auto-cleaned after 24 hours.
+   */
+  async uploadToTmp(
+    file: UploadedFile,
+    accept: string[],
+    maxFileSize?: number,
+  ): Promise<MediaFile> {
+    const maxSize = maxFileSize ?? this.config.maxFileSize ?? DEFAULT_MAX_FILE_SIZE;
+
+    if (!isMimeTypeAccepted(file.mimetype, accept)) {
+      throw new BadRequestException(
+        `File type '${file.mimetype}' is not accepted. Allowed: ${accept.join(', ')}`,
+      );
+    }
+
+    if (!isFileSizeValid(file.size, maxSize)) {
+      const maxMB = (maxSize / (1024 * 1024)).toFixed(1);
+      throw new BadRequestException(`File size exceeds maximum of ${maxMB}MB`);
+    }
+
+    const key = generateTmpKey(file.originalname);
+
+    await this.provider.upload(key, file.buffer, file.mimetype);
+
+    return {
+      key,
+      originalName: file.originalname,
+      mimeType: file.mimetype,
+      size: file.size,
+      uploadedAt: new Date().toISOString(),
+    };
   }
 
   async delete(key: string): Promise<void> {
