@@ -38,13 +38,21 @@ export function KanbanBoard({
 
   if (isLoading) {
     return (
-      <div className="flex gap-4 overflow-x-auto pb-4">
-        {columns.map((col) => (
-          <div key={col.id} className="w-72 shrink-0 space-y-2">
-            <div className="h-8 bg-muted/50 rounded animate-pulse" />
-            <div className="space-y-2">
-              <div className="h-20 bg-muted/30 rounded animate-pulse" />
-              <div className="h-20 bg-muted/30 rounded animate-pulse" />
+      <div className="flex gap-3 overflow-x-auto pb-4 pt-1">
+        {(columns.length > 0 ? columns : Array.from({ length: 5 })).map((col, i) => (
+          <div key={(col as any)?.id ?? i} className="w-[280px] shrink-0">
+            <div className="flex items-center gap-2 px-1 pb-3">
+              <div className="h-2 w-2 rounded-full bg-muted animate-pulse" />
+              <div className="h-4 w-20 rounded bg-muted animate-pulse" />
+              <div className="h-5 w-6 rounded-md bg-muted/60 animate-pulse" />
+            </div>
+            <div className="rounded-xl bg-muted/20 p-1.5 space-y-1.5">
+              {Array.from({ length: 2 + (i % 2) }).map((_, j) => (
+                <div key={j} className="rounded-lg bg-card border border-border/40 p-3.5">
+                  <div className="h-4 w-3/4 rounded bg-muted/60 animate-pulse" />
+                  <div className="h-3 w-1/2 rounded bg-muted/40 animate-pulse mt-2" />
+                </div>
+              ))}
             </div>
           </div>
         ))}
@@ -84,7 +92,7 @@ export function KanbanBoard({
         }
       }}
     >
-      <div className="flex gap-4 overflow-x-auto pb-4">
+      <div className="flex gap-3 overflow-x-auto pb-4 pt-1">
         {columns.map((col) => {
           const columnCardIds = groups[col.id] ?? [];
           return (

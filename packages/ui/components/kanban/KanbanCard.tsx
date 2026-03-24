@@ -21,8 +21,10 @@ export function KanbanCard({ id, index, column, children }: KanbanCardProps) {
     <div
       ref={ref}
       className={cn(
-        'rounded-lg border bg-card p-3 shadow-sm cursor-grab active:cursor-grabbing transition-all',
-        isDragSource && 'opacity-50 shadow-lg ring-2 ring-primary/20',
+        'group rounded-lg border border-border/60 bg-card px-3.5 py-3 cursor-grab active:cursor-grabbing',
+        'shadow-[0_1px_2px_0_rgb(0_0_0/0.04)] hover:shadow-[0_2px_8px_0_rgb(0_0_0/0.08)]',
+        'hover:border-border transition-all duration-150',
+        isDragSource && 'opacity-40 scale-[0.97] shadow-lg ring-2 ring-primary/25 rotate-[1deg]',
       )}
     >
       {children}

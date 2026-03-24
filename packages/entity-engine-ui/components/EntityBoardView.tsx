@@ -59,6 +59,20 @@ export function EntityBoardView({ entityType, groupByField }: EntityBoardViewPro
     return val ? String(val) : null;
   };
 
+  // Format relative time
+  const getTimeAgo = (card: KanbanCardData): string | null => {
+    const created = card.createdAt;
+    if (!created) return null;
+    const date = new Date(created as string);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 30) return `${diffDays}d ago`;
+    return `${Math.floor(diffDays / 30)}mo ago`;
+  };
+
   // Handle card move — update the groupBy field value
   const handleCardMove = (cardId: string, toColumnId: string) => {
     updateMutation.mutate({ id: cardId, data: { [groupByField]: toColumnId } });
@@ -74,11 +88,20 @@ export function EntityBoardView({ entityType, groupByField }: EntityBoardViewPro
         <button
           type="button"
           onClick={() => navigate(`/${entity.slug}/${card.id}`)}
-          className="w-full text-left"
+          className="w-full text-left group/card"
         >
-          <div className="text-sm font-medium text-foreground">{getDisplayName(card)}</div>
+          <div className="text-[13px] font-medium text-foreground group-hover/card:text-primary transition-colors leading-snug">
+            {getDisplayName(card)}
+          </div>
           {getSubtitle(card) && (
-            <div className="text-xs text-muted-foreground mt-1">{getSubtitle(card)}</div>
+            <div className="text-[11px] text-muted-foreground mt-1 truncate">
+              {getSubtitle(card)}
+            </div>
+          )}
+          {getTimeAgo(card) && (
+            <div className="text-[10px] text-muted-foreground/60 mt-1.5">
+              {getTimeAgo(card)}
+            </div>
           )}
         </button>
       )}
