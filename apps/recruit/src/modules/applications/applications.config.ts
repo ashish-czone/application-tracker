@@ -60,10 +60,6 @@ export const APPLICATIONS_CONFIG: EntityConfig = {
     { name: 'Details', fields: ['notes'] },
   ],
 
-  features: {
-    softDelete: true,
-  },
-
   recipientFields: {
     createdBy: { label: 'Created By' },
   },

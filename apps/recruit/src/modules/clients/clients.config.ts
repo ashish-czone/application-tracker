@@ -75,8 +75,6 @@ export const CLIENTS_CONFIG: EntityConfig = {
     { name: 'Shipping Address', fields: ['shippingStreet', 'shippingCity', 'shippingProvince', 'shippingCode', 'shippingCountry'] },
   ],
 
-  features: { softDelete: true, restore: true },
-
   lookup: {
     labelField: 'clientName',
     searchFields: ['clientName'],

@@ -17,5 +17,4 @@ export type {
   ListLayoutResponse,
   BaseListQuery,
   FieldMeta,
-  MediaFieldConfig,
 } from './types';

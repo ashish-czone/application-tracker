@@ -47,21 +47,6 @@ export interface FieldMeta {
 }
 
 // ---------------------------------------------------------------------------
-// Media field configuration
-// ---------------------------------------------------------------------------
-
-export interface MediaFieldConfig {
-  /** MIME types accepted */
-  accept: string[];
-  /** Display label */
-  label: string;
-  /** Max file size in bytes */
-  maxFileSize?: number;
-  /** Max number of files (default 1) */
-  maxFiles?: number;
-}
-
-// ---------------------------------------------------------------------------
 // Entity relationships
 // ---------------------------------------------------------------------------
 
@@ -144,21 +129,6 @@ export interface EntityConfig<TTable extends PgTable = PgTable> {
   fieldMeta: Record<string, FieldMeta>;
   /** Default layout sections with field assignments */
   sections: SeedSectionInput[];
-
-  // --- Features (opt-in) ---
-
-  features?: {
-    /** Enable soft delete (default true) */
-    softDelete?: boolean;
-    /** Enable restore from soft delete (default true) */
-    restore?: boolean;
-    /** Enable taxonomy (tags) — specify the tag group slug */
-    taxonomy?: { tagGroupSlug: string; label: string };
-    /** Enable workflow state machine — specify workflow slug and status column */
-    workflow?: { slug: string; statusColumn: PgColumn };
-    /** Enable media/file fields — map of field name to config */
-    media?: Record<string, MediaFieldConfig>;
-  };
 
   // --- Lookup ---
 

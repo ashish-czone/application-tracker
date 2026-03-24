@@ -198,8 +198,6 @@ export const JOB_OPENINGS_CONFIG: EntityConfig = {
     },
   ],
 
-  features: { softDelete: true, restore: true },
-
   lookup: {
     labelField: 'title',
     searchFields: ['title', 'department'],

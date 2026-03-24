@@ -69,11 +69,6 @@ export const INTERVIEWS_CONFIG: EntityConfig = {
     { name: 'Interview Information', fields: ['interviewName', 'candidateId', 'clientId', 'jobOpeningId', 'interviewFrom', 'interviewTo', 'location', 'scheduleComments', 'status'] },
   ],
 
-  features: {
-    softDelete: true,
-    restore: true,
-  },
-
   recipientFields: {
     createdBy: { label: 'Created By' },
   },
