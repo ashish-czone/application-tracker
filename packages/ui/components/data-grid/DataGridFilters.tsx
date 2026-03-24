@@ -1,3 +1,4 @@
+import { FormSelect } from '../form/FormSelect';
 import type { DataGridFilterConfig } from './types';
 
 interface DataGridFiltersProps {
@@ -10,19 +11,16 @@ export function DataGridFilters({ filters, getFilter, setFilter }: DataGridFilte
   return (
     <>
       {filters.map((filter) => (
-        <select
+        <FormSelect
           key={filter.key}
+          options={[
+            { label: filter.placeholder ?? `All ${filter.label.toLowerCase()}`, value: '' },
+            ...filter.options,
+          ]}
           value={getFilter(filter.key) || ''}
-          onChange={(e) => setFilter(filter.key, e.target.value || undefined)}
-          className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-        >
-          <option value="">{filter.placeholder ?? `All ${filter.label.toLowerCase()}`}</option>
-          {filter.options.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
+          onChange={(val) => setFilter(filter.key, val || undefined)}
+          placeholder={filter.placeholder ?? `All ${filter.label.toLowerCase()}`}
+        />
       ))}
     </>
   );
