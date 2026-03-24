@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, useSearchParams } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
-import { Plus, Trash2, RotateCcw, Database, MoreHorizontal, PenLine, Download } from 'lucide-react';
+import { Plus, Trash2, RotateCcw, Database, MoreHorizontal, PenLine, Download, LayoutGrid, Table2 } from 'lucide-react';
 import {
   DataGrid, DataGridFilters, Badge, Button, useDataGridParams, useActiveFilters,
   Dialog, DialogContent, ConfirmDialog,
@@ -14,6 +14,7 @@ import { useEntityLayout } from '../helpers/useEntityLayout';
 import { useListLayout } from '../helpers/useListLayout';
 import { buildColumnDefs, buildFilterConfigs, buildLookupFilterFields } from '../helpers/buildColumnDefs';
 import { EntityQuickCreateForm } from './EntityQuickCreateForm';
+import { EntityBoardView } from '../components/EntityBoardView';
 
 type Row = Record<string, unknown>;
 
@@ -38,6 +39,23 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
   const [deletingItem, setDeletingItem] = useState<Row | null>(null);
   const [bulkDeleteIds, setBulkDeleteIds] = useState<string[]>([]);
   const [showDeleted, setShowDeleted] = useState(false);
+
+  // Board view state
+  const boardFields = entity.ui.boardFields ?? [];
+  const hasBoardView = boardFields.length > 0;
+  const [searchParams, setSearchParams] = useSearchParams();
+  const view = hasBoardView && searchParams.get('view') === 'board' ? 'board' : 'table';
+  const boardGroupBy = searchParams.get('groupBy') ?? boardFields[0] ?? '';
+
+  const setView = (v: 'table' | 'board') => {
+    setSearchParams((prev) => {
+      if (v === 'board') { prev.set('view', 'board'); } else { prev.delete('view'); prev.delete('groupBy'); }
+      return prev;
+    }, { replace: true });
+  };
+  const setBoardGroupBy = (field: string) => {
+    setSearchParams((prev) => { prev.set('groupBy', field); return prev; }, { replace: true });
+  };
 
   const {
     page, pageSize, search, sort, order,
@@ -267,6 +285,44 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
         <p className="text-sm text-muted-foreground">Manage {entity.pluralName.toLowerCase()}</p>
       </div>
 
+      {/* View Toggle + Board GroupBy */}
+      {hasBoardView && (
+        <div className="flex items-center gap-2 mb-4">
+          <div className="flex items-center rounded-md border border-input bg-background">
+            <button
+              type="button"
+              onClick={() => setView('table')}
+              className={`p-1.5 rounded-l-md transition-colors ${view === 'table' ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+              aria-label="Table view"
+            >
+              <Table2 className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setView('board')}
+              className={`p-1.5 rounded-r-md transition-colors ${view === 'board' ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+              aria-label="Board view"
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </button>
+          </div>
+          {view === 'board' && boardFields.length > 1 && (
+            <select
+              value={boardGroupBy}
+              onChange={(e) => setBoardGroupBy(e.target.value)}
+              className="h-8 rounded-md border border-input bg-background px-2 text-sm"
+            >
+              {boardFields.map((f) => (
+                <option key={f} value={f}>{f}</option>
+              ))}
+            </select>
+          )}
+        </div>
+      )}
+
+      {view === 'board' ? (
+        <EntityBoardView entityType={entityType} groupByField={boardGroupBy} />
+      ) : (
       <DataGrid
         columns={columns}
         data={data?.data ?? []}
@@ -335,6 +391,7 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
           </div>
         }
       />
+      )}
 
       {/* Quick Create Modal */}
       <Dialog open={addModalOpen} onOpenChange={setAddModalOpen}>

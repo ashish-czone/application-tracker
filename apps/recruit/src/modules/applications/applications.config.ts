@@ -69,6 +69,7 @@ export const APPLICATIONS_CONFIG: EntityConfig = {
     nameField: 'status',
     navGroup: 'recruit',
     navOrder: 3,
+    boardFields: ['status', 'stage'],
   },
 
 };
