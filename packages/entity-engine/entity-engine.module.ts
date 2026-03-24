@@ -7,12 +7,13 @@ import { FieldValueService, FieldDefinitionService, LayoutService, LookupResolve
 import { EntityResolverRegistry } from '@packages/notifications';
 import { TaxonomyService } from '@packages/taxonomy';
 import { MediaService } from '@packages/media';
+import { WorkflowRegistryService, WorkflowGuardRegistry } from '@packages/workflows';
 import { AppLoggerService } from '@packages/logger';
 import { EntityRegistryService } from './entity-registry.service';
 import { EntityService } from './entity.service';
 import { EntityEngineApiController } from './entity-engine-api.controller';
 import { createEntityController } from './create-entity-controller';
-import { seedEntityFields } from './seed-entity-fields';
+import { seedEntityFields, seedWorkflows } from './seed-entity-fields';
 import type { EntityConfig } from './types';
 
 // Collect configs that need initialization — populated by forEntity(), consumed by EntityEngineModule.onModuleInit()
@@ -49,6 +50,8 @@ export class EntityEngineModule implements OnApplicationBootstrap {
     private readonly entityResolver: EntityResolverRegistry,
     private readonly fieldDefService: FieldDefinitionService,
     private readonly layoutService: LayoutService,
+    private readonly workflowRegistry: WorkflowRegistryService,
+    private readonly workflowGuardRegistry: WorkflowGuardRegistry,
   ) {}
 
   /**
@@ -159,9 +162,24 @@ export class EntityEngineModule implements OnApplicationBootstrap {
     // 7. Seed fields + layout
     try {
       await seedEntityFields(config, this.fieldDefService, this.layoutService);
-      this.logger.log(`Initialized entity: ${config.entityType} (/${config.slug})`);
     } catch (error) {
       this.logger.warn(`Failed to seed fields for ${config.entityType}: ${(error as Error).message}`);
     }
+
+    // 8. Seed workflows from fieldMeta
+    try {
+      await seedWorkflows(config, this.workflowRegistry);
+    } catch (error) {
+      this.logger.warn(`Failed to seed workflows for ${config.entityType}: ${(error as Error).message}`);
+    }
+
+    // 9. Register custom workflow guards from hooks
+    if (config.hooks?.workflowGuards) {
+      for (const [name, fn] of Object.entries(config.hooks.workflowGuards)) {
+        this.workflowGuardRegistry.register(name, fn);
+      }
+    }
+
+    this.logger.log(`Initialized entity: ${config.entityType} (/${config.slug})`);
   }
 }

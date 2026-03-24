@@ -1,6 +1,7 @@
 import { getTableColumns } from 'drizzle-orm';
 import type { FieldDefinitionService, LayoutService, FieldType, RegisterFieldInput } from '@packages/eav-attributes';
-import type { EntityConfig } from './types';
+import type { WorkflowRegistryService } from '@packages/workflows';
+import type { EntityConfig, WorkflowTargetDef } from './types';
 
 /** Map Drizzle column dataType to EAV FieldType. */
 function mapDrizzleType(dataType: string): FieldType {
@@ -87,5 +88,76 @@ export async function seedEntityFields(
   // Seed default layout sections
   if (config.sections.length > 0) {
     await layoutService.seedDefaultLayout(config.entityType, config.sections);
+  }
+}
+
+/**
+ * Seeds workflow definitions, states, and transitions from fieldMeta.
+ * Idempotent — skips workflows that already exist (by slug).
+ */
+export async function seedWorkflows(
+  config: EntityConfig,
+  workflowRegistry: WorkflowRegistryService,
+): Promise<void> {
+  for (const [fieldKey, meta] of Object.entries(config.fieldMeta)) {
+    if (meta.fieldType !== 'workflow' || !meta.workflow) continue;
+
+    const wf = meta.workflow;
+
+    // Skip if already seeded
+    const existing = workflowRegistry.getBySlug(wf.slug);
+    if (existing) continue;
+
+    // Create definition
+    const definition = await workflowRegistry.createDefinition({
+      slug: wf.slug,
+      name: `${meta.label} Workflow`,
+      entityType: config.entityType,
+      fieldName: fieldKey,
+      initialState: wf.initialState,
+    });
+
+    // Create states
+    const stateIdByName = new Map<string, string>();
+    for (let i = 0; i < wf.states.length; i++) {
+      const s = wf.states[i];
+      const state = await workflowRegistry.createState(definition.id, {
+        name: s.name,
+        label: s.label,
+        color: s.color,
+        sortOrder: i,
+      });
+      stateIdByName.set(s.name, state.id);
+    }
+
+    // Create transitions — flatten { from, to: [...] } into individual rows
+    for (const transition of wf.transitions) {
+      const fromStateId = stateIdByName.get(transition.from);
+      if (!fromStateId) continue;
+
+      for (let i = 0; i < transition.to.length; i++) {
+        const target = transition.to[i];
+        const isString = typeof target === 'string';
+        const targetName = isString ? target : (target as WorkflowTargetDef).state;
+        const targetDef = isString ? undefined : (target as WorkflowTargetDef);
+
+        const toStateId = stateIdByName.get(targetName);
+        if (!toStateId) continue;
+
+        // Auto-derive transition name from target state label
+        const targetState = wf.states.find(s => s.name === targetName);
+        const name = targetState?.label ?? targetName;
+
+        await workflowRegistry.createTransition(definition.id, {
+          fromStateId,
+          toStateId,
+          name,
+          requiredPermissions: targetDef?.requiredPermissions,
+          guardNames: targetDef?.guardNames,
+          sortOrder: i,
+          metadata: targetDef?.conditions ? { conditions: targetDef.conditions } : undefined,
+        });
+      }
+    }
   }
 }
