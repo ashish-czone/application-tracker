@@ -150,11 +150,11 @@ export class JobOpeningsSeedService implements OnApplicationBootstrap {
     }
 
     const sampleApps = [
-      { candidateId: candidateRows[0]?.id, jobOpeningId: joRows[0]?.id, status: 'interview', stage: 'technical' },
-      { candidateId: candidateRows[1]?.id, jobOpeningId: joRows[0]?.id, status: 'screening', stage: 'phone-screen' },
-      { candidateId: candidateRows[2]?.id, jobOpeningId: joRows[1]?.id, status: 'applied', stage: 'new' },
-      { candidateId: candidateRows[0]?.id, jobOpeningId: joRows[2]?.id, status: 'offered', stage: 'final' },
-      { candidateId: candidateRows[3]?.id, jobOpeningId: joRows[1]?.id, status: 'interview', stage: 'on-site' },
+      { candidateId: candidateRows[0]?.id, jobOpeningId: joRows[0]?.id, stage: 'technical' },
+      { candidateId: candidateRows[1]?.id, jobOpeningId: joRows[0]?.id, stage: 'phone-screen' },
+      { candidateId: candidateRows[2]?.id, jobOpeningId: joRows[1]?.id, stage: 'new' },
+      { candidateId: candidateRows[0]?.id, jobOpeningId: joRows[2]?.id, stage: 'final' },
+      { candidateId: candidateRows[3]?.id, jobOpeningId: joRows[1]?.id, stage: 'on-site' },
     ].filter((a) => a.candidateId && a.jobOpeningId);
 
     for (const data of sampleApps) {
