@@ -27,6 +27,7 @@ import type { EntityConfig, ListLayoutResponse, EntityActions } from './types';
  * - POST   /{slug}            → create
  * - PATCH  /{slug}/:id        → update
  * - DELETE /{slug}/:id        → softDelete
+ * - POST   /{slug}/:id/transition → workflow state transition
  * - POST   /{slug}/:id/restore → restore
  *
  * Each route is guarded by @RequirePermission using the entity's slug.
@@ -95,6 +96,17 @@ export function createEntityController(config: EntityConfig, serviceToken: strin
     @ApiOperation({ summary: `Soft delete a ${config.singularName.toLowerCase()}` })
     async delete(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: JwtPayload) {
       await this.entityService.softDelete(id, user.userId);
+    }
+
+    @Post(':id/transition')
+    @RequirePermission(updatePermission)
+    @ApiOperation({ summary: `Transition a workflow field on a ${config.singularName.toLowerCase()}` })
+    async transition(
+      @Param('id', ParseUUIDPipe) id: string,
+      @Body() body: { fieldKey: string; to: string; comment?: string },
+      @CurrentUser() user: JwtPayload,
+    ) {
+      return this.entityService.transition(id, body.fieldKey, body.to, user.userId, body.comment);
     }
 
     @Post(':id/restore')
