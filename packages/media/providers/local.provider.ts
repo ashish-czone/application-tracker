@@ -1,4 +1,4 @@
-import { mkdir, writeFile, unlink } from 'fs/promises';
+import { mkdir, writeFile, unlink, rename } from 'fs/promises';
 import { dirname, join } from 'path';
 import type { MediaProvider } from './media-provider.interface';
 
@@ -14,6 +14,13 @@ export class LocalMediaProvider implements MediaProvider {
     const filePath = join(this.basePath, key);
     await mkdir(dirname(filePath), { recursive: true });
     await writeFile(filePath, buffer);
+  }
+
+  async move(fromKey: string, toKey: string): Promise<void> {
+    const fromPath = join(this.basePath, fromKey);
+    const toPath = join(this.basePath, toKey);
+    await mkdir(dirname(toPath), { recursive: true });
+    await rename(fromPath, toPath);
   }
 
   async delete(key: string): Promise<void> {

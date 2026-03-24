@@ -142,6 +142,29 @@ export class MediaService {
     };
   }
 
+  /**
+   * Move a file from one key to another. Returns updated MediaFile.
+   */
+  async move(mediaFile: MediaFile, toKey: string): Promise<MediaFile> {
+    await this.provider.move(mediaFile.key, toKey);
+    return { ...mediaFile, key: toKey };
+  }
+
+  /**
+   * Move a file from tmp/ to its permanent location.
+   * Returns updated MediaFile with the new key.
+   */
+  async moveFromTmp(
+    mediaFile: MediaFile,
+    entityType: string,
+    entityId: string,
+    fieldName: string,
+  ): Promise<MediaFile> {
+    if (!mediaFile.key.startsWith('tmp/')) return mediaFile;
+    const permanentKey = generateStorageKey(entityType, entityId, fieldName, mediaFile.originalName);
+    return this.move(mediaFile, permanentKey);
+  }
+
   async delete(key: string): Promise<void> {
     await this.provider.delete(key);
   }
