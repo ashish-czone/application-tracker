@@ -1126,6 +1126,9 @@ importers:
       '@packages/logger':
         specifier: workspace:*
         version: link:../logger
+      '@packages/notifications':
+        specifier: workspace:*
+        version: link:../notifications
       '@packages/rbac':
         specifier: workspace:*
         version: link:../rbac
