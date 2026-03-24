@@ -135,7 +135,10 @@ export function EntityCreatePage({ entityType }: EntityCreatePageProps) {
                 <div className="px-4 py-3 border-b border-border bg-muted/30">
                   <h2 className="text-sm font-medium text-foreground">{section.name}</h2>
                 </div>
-                <div className={`grid gap-4 p-4 ${section.columns === 1 ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'}`}>
+                <div
+                  className="grid gap-4 p-4"
+                  style={{ gridTemplateColumns: section.columns === 1 ? '1fr' : 'repeat(2, 1fr)' }}
+                >
                   {sectionFields.map((field: FullLayoutField) => (
                     <DynamicField
                       key={field.fieldKey}
