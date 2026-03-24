@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { DatabaseService, eq, and, or, isNull, ilike, asc, desc, count } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
-import { MediaService, type MediaFile, type MediaFieldConfig, type UploadedFile } from '@packages/media';
+import { type MediaFile } from '@packages/media';
 import { TaxonomyService } from '@packages/taxonomy';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import {
@@ -19,21 +19,6 @@ import {
   CANDIDATES_CANDIDATE_UPDATED,
   CANDIDATES_CANDIDATE_DELETED,
 } from '../events/types';
-
-function resumeFieldConfig(candidateId: string): MediaFieldConfig {
-  return {
-    entityType: ENTITY_TYPE,
-    entityId: candidateId,
-    fieldName: 'resume',
-    maxFiles: 1,
-    accept: [
-      'application/pdf',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    ],
-    maxFileSize: 10 * 1024 * 1024, // 10MB
-  };
-}
 
 const ENTITY_TYPE = 'candidate';
 const EAV_ENTITY_TYPE = 'candidates';
@@ -60,7 +45,6 @@ export class CandidatesService {
   constructor(
     private readonly database: DatabaseService,
     private readonly domainEventEmitter: DomainEventEmitter,
-    private readonly mediaService: MediaService,
     private readonly taxonomyService: TaxonomyService,
     private readonly fieldValueService: FieldValueService,
     private readonly fieldDefinitionService: FieldDefinitionService,
@@ -392,33 +376,6 @@ export class CandidatesService {
     this.logger.log('Candidate restored', { candidateId: id });
 
     return this.toResponse(restored);
-  }
-
-  async uploadResume(id: string, file: UploadedFile, actorId: string): Promise<Record<string, unknown>> {
-    const candidate = await this.findOneOrFail(id);
-    const existingResume = candidate.resumeFile as MediaFile | null;
-
-    const mediaFile = await this.mediaService.uploadSingle(file, resumeFieldConfig(id), existingResume);
-
-    const [updated] = await this.database.db
-      .update(candidates)
-      .set({ resumeFile: mediaFile })
-      .where(eq(candidates.id, id))
-      .returning();
-
-    this.logger.log('Resume uploaded', { candidateId: id, actorId, key: mediaFile.key });
-
-    return this.toResponse(updated);
-  }
-
-  async attachSkill(id: string, tagId: string): Promise<void> {
-    await this.findOneOrFail(id);
-    await this.taxonomyService.attachTag(ENTITY_TYPE, id, tagId);
-  }
-
-  async detachSkill(id: string, tagId: string): Promise<void> {
-    await this.findOneOrFail(id);
-    await this.taxonomyService.detachTag(ENTITY_TYPE, id, tagId);
   }
 
   /**

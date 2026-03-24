@@ -10,8 +10,7 @@ import { CANDIDATE_FIELD_META, CANDIDATE_SECTIONS } from './field-meta';
  * This is the single config object that drives all CRUD, routing,
  * RBAC, events, audit, field seeding, and layout for candidates.
  *
- * Domain-specific logic (resume, skills) is handled via hooks
- * and the CandidatesExtrasController.
+ * Domain-specific logic is handled via hooks.
  */
 export const CANDIDATES_CONFIG: EntityConfig = {
   entityType: 'candidates',

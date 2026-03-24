@@ -10,11 +10,8 @@ import {
   HttpCode,
   HttpStatus,
   ParseUUIDPipe,
-  UseInterceptors,
-  UploadedFile,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiTags, ApiOperation, ApiConsumes } from '@nestjs/swagger';
+import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { CurrentUser, type JwtPayload } from '@packages/auth';
 import { RequirePermission } from '@packages/rbac';
 import { CandidatesService } from '../services/candidates.service';
@@ -74,47 +71,4 @@ export class CandidatesController {
     return this.candidatesService.restore(id);
   }
 
-  @Post(':id/resume')
-  @RequirePermission(CANDIDATES_PERMISSIONS.UPDATE)
-  @UseInterceptors(FileInterceptor('file'))
-  @ApiConsumes('multipart/form-data')
-  @ApiOperation({ summary: 'Upload or replace candidate resume' })
-  async uploadResume(
-    @Param('id', ParseUUIDPipe) id: string,
-    @UploadedFile() file: Express.Multer.File,
-    @CurrentUser() user: JwtPayload,
-  ) {
-    return this.candidatesService.uploadResume(
-      id,
-      {
-        originalname: file.originalname,
-        mimetype: file.mimetype,
-        buffer: file.buffer,
-        size: file.size,
-      },
-      user.userId,
-    );
-  }
-
-  @Post(':id/skills/:tagId')
-  @RequirePermission(CANDIDATES_PERMISSIONS.UPDATE)
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Attach a skill tag to a candidate' })
-  async attachSkill(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Param('tagId', ParseUUIDPipe) tagId: string,
-  ) {
-    await this.candidatesService.attachSkill(id, tagId);
-  }
-
-  @Delete(':id/skills/:tagId')
-  @RequirePermission(CANDIDATES_PERMISSIONS.UPDATE)
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Detach a skill tag from a candidate' })
-  async detachSkill(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Param('tagId', ParseUUIDPipe) tagId: string,
-  ) {
-    await this.candidatesService.detachSkill(id, tagId);
-  }
 }
