@@ -52,6 +52,35 @@ export function EntityQuickCreateForm({ entityType, singularName, onClose, onSuc
     enabled: lookupEntities.length > 0,
   });
 
+  // Fetch chip options for tags/multi fields in quick create
+  const chipFields = useMemo(() => {
+    if (!layout) return [];
+    return layout.quickCreateFields.filter(
+      (f) => f.fieldType === 'tags' || f.fieldType === 'multi_user' || f.fieldType === 'multi_lookup',
+    );
+  }, [layout]);
+
+  const { data: chipOptionsMap } = useQuery({
+    queryKey: ['chip-options-quick', chipFields.map(f => f.fieldKey)],
+    queryFn: async () => {
+      const map: Record<string, { label: string; value: string; color?: string }[]> = {};
+      for (const field of chipFields) {
+        try {
+          if (field.fieldType === 'tags' && field.tagGroupSlug) {
+            map[field.fieldKey] = await apiFn.get(`/tags/group/${field.tagGroupSlug}`);
+          } else if ((field.fieldType === 'multi_user' || field.fieldType === 'multi_lookup') && field.lookupEntity) {
+            const results = await apiFn.get<{ label: string; value: string }[]>(`/lookups/${field.lookupEntity}?limit=200`);
+            map[field.fieldKey] = results;
+          }
+        } catch {
+          map[field.fieldKey] = [];
+        }
+      }
+      return map;
+    },
+    enabled: chipFields.length > 0,
+  });
+
   const quickCreateFields = useMemo(
     () => layout?.quickCreateFields ?? [],
     [layout],
@@ -138,6 +167,7 @@ export function EntityQuickCreateForm({ entityType, singularName, onClose, onSuc
               field={field}
               mode="edit"
               lookupOptions={field.lookupEntity ? lookupOptionsMap?.[field.lookupEntity] : undefined}
+              chipOptions={chipOptionsMap?.[field.fieldKey]}
             />
           ))}
         </div>
