@@ -63,6 +63,12 @@ export type {
   DataGridBulkAction,
 } from './components/data-grid/types';
 
+// Components — kanban
+export { KanbanBoard } from './components/kanban/KanbanBoard';
+export { KanbanColumn } from './components/kanban/KanbanColumn';
+export { KanbanCard } from './components/kanban/KanbanCard';
+export type { KanbanBoardProps, KanbanColumnDef, KanbanCardData } from './components/kanban/types';
+
 // Hooks
 export { useDebounce } from './hooks/useDebounce';
 export { useDataGridParams } from './hooks/useDataGridParams';
