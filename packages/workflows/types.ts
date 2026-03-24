@@ -55,14 +55,6 @@ export interface AvailableTransition {
   requiredPermissions: string[];
 }
 
-export interface TransitionResult {
-  historyId: string;
-  fromState: string;
-  toState: string;
-  transitionId: string;
-  recordedAt: string;
-}
-
 export interface TransitionHistoryEntry {
   id: string;
   workflowDefinitionId: string;
@@ -78,26 +70,34 @@ export interface TransitionHistoryEntry {
   createdAt: Date;
 }
 
-export interface TransitionParams {
-  workflowSlug: string;
-  entityType: string;
-  entityId: string;
-  fromState: string;
-  toState: string;
-  actorId: string | null;
-  comment?: string;
-  metadata?: Record<string, unknown>;
-  /** Current entity data for evaluating declarative conditions on the transition */
-  entityData?: Record<string, unknown>;
-  additionalGuards?: WorkflowGuardFn[];
-  tx?: unknown;
-}
-
 export interface ValidationResult {
   valid: boolean;
   transitionId?: string;
   failedGuard?: string;
   missingPermissions?: string[];
+}
+
+/** Returned by validateAndThrow() — everything the caller needs to record history and emit events */
+export interface ValidatedTransition {
+  transitionId: string;
+  transitionName: string;
+  workflowDefinitionId: string;
+  workflowName: string;
+  fieldName: string;
+}
+
+/** Parameters for recording a transition in the history table */
+export interface RecordHistoryParams {
+  workflowDefinitionId: string;
+  entityType: string;
+  entityId: string;
+  fieldName: string;
+  fromState: string;
+  toState: string;
+  transitionId: string;
+  actorId: string | null;
+  comment?: string;
+  metadata?: Record<string, unknown>;
 }
 
 // Event types

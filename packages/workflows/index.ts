@@ -14,9 +14,9 @@ export type {
   CachedWorkflowState,
   CachedWorkflowTransition,
   AvailableTransition,
-  TransitionResult,
+  ValidatedTransition,
+  RecordHistoryParams,
   TransitionHistoryEntry,
-  TransitionParams,
   ValidationResult,
   WorkflowTransitionCompletedEvent,
 } from './types';

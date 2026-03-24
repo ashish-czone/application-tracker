@@ -70,7 +70,6 @@ describe('WorkflowEngineService', () => {
   let registryMock: { getBySlug: ReturnType<typeof vi.fn> };
   let guardRegistryMock: WorkflowGuardRegistry;
   let mockDb: any;
-  let eventEmitterMock: { emit: ReturnType<typeof vi.fn> };
   let rbacServiceMock: { getPermissionsForUser: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
@@ -80,27 +79,7 @@ describe('WorkflowEngineService', () => {
 
     guardRegistryMock = new WorkflowGuardRegistry(mockAppLogger);
 
-    const mockReturning = vi.fn().mockResolvedValue([
-      {
-        id: 'history-1',
-        workflowDefinitionId: 'def-1',
-        entityType: 'task',
-        entityId: 'entity-1',
-        fieldName: 'status',
-        fromState: 'draft',
-        toState: 'submitted',
-        transitionId: 'trans-1',
-        actorId: 'user-1',
-        comment: null,
-        metadata: null,
-        createdAt: new Date('2026-03-17T00:00:00Z'),
-      },
-    ]);
-
     mockDb = {
-      insert: vi.fn().mockReturnValue({
-        values: vi.fn().mockReturnValue({ returning: mockReturning }),
-      }),
       select: vi.fn().mockReturnValue({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockReturnValue({
@@ -114,8 +93,6 @@ describe('WorkflowEngineService', () => {
       }),
     };
 
-    eventEmitterMock = { emit: vi.fn() };
-
     rbacServiceMock = {
       getPermissionsForUser: vi.fn().mockResolvedValue({
         'tasks.approve': 'all',
@@ -127,7 +104,6 @@ describe('WorkflowEngineService', () => {
       registryMock as unknown as WorkflowRegistryService,
       guardRegistryMock,
       { db: mockDb } as any,
-      eventEmitterMock as any,
       rbacServiceMock as unknown as RbacService,
     );
   });
@@ -206,9 +182,9 @@ describe('WorkflowEngineService', () => {
     });
   });
 
-  describe('transition', () => {
-    it('should validate, record history, and emit event', async () => {
-      const result = await engine.transition({
+  describe('validateAndThrow', () => {
+    it('should return validated transition for allowed transition', async () => {
+      const result = await engine.validateAndThrow({
         workflowSlug: 'task-status',
         entityType: 'task',
         entityId: 'entity-1',
@@ -217,30 +193,16 @@ describe('WorkflowEngineService', () => {
         actorId: 'user-1',
       });
 
-      expect(result.historyId).toBe('history-1');
-      expect(result.fromState).toBe('draft');
-      expect(result.toState).toBe('submitted');
       expect(result.transitionId).toBe('trans-1');
-      expect(mockDb.insert).toHaveBeenCalled();
-      expect(eventEmitterMock.emit).toHaveBeenCalledWith(
-        'workflows.TransitionCompleted',
-        expect.objectContaining({
-          entityType: 'task',
-          entityId: 'entity-1',
-          actorId: 'user-1',
-          payload: expect.objectContaining({
-            workflowSlug: 'task-status',
-            fromState: 'draft',
-            toState: 'submitted',
-            fieldName: 'status',
-          }),
-        }),
-      );
+      expect(result.transitionName).toBe('Submit');
+      expect(result.workflowDefinitionId).toBe('def-1');
+      expect(result.workflowName).toBe('Task Status');
+      expect(result.fieldName).toBe('status');
     });
 
     it('should throw UnprocessableEntityException for invalid transition', async () => {
       await expect(
-        engine.transition({
+        engine.validateAndThrow({
           workflowSlug: 'task-status',
           entityType: 'task',
           entityId: 'entity-1',
@@ -255,7 +217,7 @@ describe('WorkflowEngineService', () => {
       rbacServiceMock.getPermissionsForUser.mockResolvedValue({});
 
       await expect(
-        engine.transition({
+        engine.validateAndThrow({
           workflowSlug: 'task-status',
           entityType: 'task',
           entityId: 'entity-1',
@@ -270,7 +232,7 @@ describe('WorkflowEngineService', () => {
       guardRegistryMock.register('not-same-actor', async () => false);
 
       await expect(
-        engine.transition({
+        engine.validateAndThrow({
           workflowSlug: 'task-status',
           entityType: 'task',
           entityId: 'entity-1',
@@ -283,7 +245,7 @@ describe('WorkflowEngineService', () => {
 
     it('should execute additionalGuards and throw on failure', async () => {
       await expect(
-        engine.transition({
+        engine.validateAndThrow({
           workflowSlug: 'task-status',
           entityType: 'task',
           entityId: 'entity-1',
@@ -295,20 +257,51 @@ describe('WorkflowEngineService', () => {
       ).rejects.toThrow(UnprocessableEntityException);
     });
 
-    it('should not emit event if validation fails', async () => {
-      try {
-        await engine.transition({
-          workflowSlug: 'task-status',
+    it('should throw NotFoundException for unknown workflow', async () => {
+      registryMock.getBySlug.mockReturnValue(undefined);
+
+      await expect(
+        engine.validateAndThrow({
+          workflowSlug: 'unknown',
           entityType: 'task',
           entityId: 'entity-1',
           fromState: 'draft',
-          toState: 'approved',
+          toState: 'submitted',
           actorId: 'user-1',
-        });
-      } catch {
-        // expected
-      }
-      expect(eventEmitterMock.emit).not.toHaveBeenCalled();
+        }),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('recordHistory', () => {
+    it('should insert history row using provided transaction', async () => {
+      const mockReturning = vi.fn().mockResolvedValue([
+        {
+          id: 'history-1',
+          createdAt: new Date('2026-03-17T00:00:00Z'),
+        },
+      ]);
+      const mockTx = {
+        insert: vi.fn().mockReturnValue({
+          values: vi.fn().mockReturnValue({ returning: mockReturning }),
+        }),
+      };
+
+      const result = await engine.recordHistory({
+        workflowDefinitionId: 'def-1',
+        entityType: 'task',
+        entityId: 'entity-1',
+        fieldName: 'status',
+        fromState: 'draft',
+        toState: 'submitted',
+        transitionId: 'trans-1',
+        actorId: 'user-1',
+        comment: 'Submitting task',
+      }, mockTx);
+
+      expect(result.historyId).toBe('history-1');
+      expect(result.recordedAt).toBe('2026-03-17T00:00:00.000Z');
+      expect(mockTx.insert).toHaveBeenCalled();
     });
   });
 
