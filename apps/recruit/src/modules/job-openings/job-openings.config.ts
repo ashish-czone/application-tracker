@@ -21,25 +21,33 @@ export const JOB_OPENINGS_CONFIG: EntityConfig = {
   },
 
   fieldMeta: {
-    // Job Opening Information
-    title: { label: 'Posting Title', section: 'basic', sortOrder: 0, isQuickCreate: true, isSystem: true, maxLength: 250 },
+    // ── Job Opening Information ──────────────────────────────────────────
+    title: { label: 'Posting Title', section: 'jobOpeningInfo', sortOrder: 0, isQuickCreate: true, isSystem: true, maxLength: 250 },
     clientId: {
-      label: 'Client Name', section: 'basic', sortOrder: 1, isQuickCreate: true,
+      label: 'Client Name', section: 'jobOpeningInfo', sortOrder: 1, isQuickCreate: true,
       fieldType: 'lookup', lookupEntity: 'clients', lookupLabelField: 'clientName',
       lookupSearchFields: ['clientName'],
     },
     contactId: {
-      label: 'Contact Name', section: 'basic', sortOrder: 2,
+      label: 'Contact Name', section: 'jobOpeningInfo', sortOrder: 2,
       fieldType: 'lookup', lookupEntity: 'contacts', lookupLabelField: 'lastName',
       lookupSearchFields: ['firstName', 'lastName', 'email'],
     },
-    dateOpened: { label: 'Date Opened', section: 'basic', sortOrder: 3, fieldType: 'date' },
-    targetDate: { label: 'Target Date', section: 'basic', sortOrder: 4, isQuickCreate: true, fieldType: 'date' },
+    accountManager: {
+      label: 'Account Manager', section: 'jobOpeningInfo', sortOrder: 3,
+      fieldType: 'user',
+    },
+    assignedRecruiters: {
+      label: 'Assigned Recruiter(s)', section: 'jobOpeningInfo', sortOrder: 4, isQuickCreate: true,
+      fieldType: 'multi_user',
+    },
+    dateOpened: { label: 'Date Opened', section: 'jobOpeningInfo', sortOrder: 5, fieldType: 'date' },
+    targetDate: { label: 'Target Date', section: 'jobOpeningInfo', sortOrder: 6, isQuickCreate: true, fieldType: 'date' },
     employmentType: {
-      label: 'Job Type', section: 'basic', sortOrder: 5, fieldType: 'picklist',
+      label: 'Job Type', section: 'jobOpeningInfo', sortOrder: 7, fieldType: 'picklist',
       picklistOptions: [
-        { label: 'Full Time', value: 'full-time' },
-        { label: 'Part Time', value: 'part-time' },
+        { label: 'Full time', value: 'full-time' },
+        { label: 'Part time', value: 'part-time' },
         { label: 'Temporary', value: 'temporary' },
         { label: 'Contract', value: 'contract' },
         { label: 'Any', value: 'any' },
@@ -51,7 +59,7 @@ export const JOB_OPENINGS_CONFIG: EntityConfig = {
       ],
     },
     status: {
-      label: 'Job Opening Status', section: 'basic', sortOrder: 6, fieldType: 'picklist', isSystem: true,
+      label: 'Job Opening Status', section: 'jobOpeningInfo', sortOrder: 8, fieldType: 'picklist', isSystem: true,
       picklistOptions: [
         { label: 'In-progress', value: 'in-progress' },
         { label: 'Waiting for Approval', value: 'waiting-for-approval' },
@@ -60,10 +68,11 @@ export const JOB_OPENINGS_CONFIG: EntityConfig = {
         { label: 'Cancelled', value: 'cancelled' },
         { label: 'Declined', value: 'declined' },
         { label: 'Inactive', value: 'inactive' },
+        { label: 'Submitted by Client', value: 'submitted-by-client' },
       ],
     },
     experience: {
-      label: 'Work Experience', section: 'basic', sortOrder: 7, fieldType: 'picklist',
+      label: 'Work Experience', section: 'jobOpeningInfo', sortOrder: 9, fieldType: 'picklist',
       picklistOptions: [
         { label: 'Fresher', value: 'fresher' },
         { label: '0-1 year', value: '0-1-year' },
@@ -73,7 +82,7 @@ export const JOB_OPENINGS_CONFIG: EntityConfig = {
       ],
     },
     industry: {
-      label: 'Industry', section: 'basic', sortOrder: 8, fieldType: 'picklist',
+      label: 'Industry', section: 'jobOpeningInfo', sortOrder: 10, fieldType: 'picklist',
       picklistOptions: [
         { label: 'Communications', value: 'communications' },
         { label: 'Technology', value: 'technology' },
@@ -86,36 +95,107 @@ export const JOB_OPENINGS_CONFIG: EntityConfig = {
         { label: 'Real Estate', value: 'real-estate' },
         { label: 'Consulting', value: 'consulting' },
         { label: 'Health Care', value: 'health-care' },
+        { label: 'Administration', value: 'administration' },
+        { label: 'Advertising', value: 'advertising' },
+        { label: 'Agriculture', value: 'agriculture' },
+        { label: 'Banking', value: 'banking' },
+        { label: 'Biotechnology', value: 'biotechnology' },
+        { label: 'Construction', value: 'construction' },
+        { label: 'Defence', value: 'defence' },
+        { label: 'Electronics', value: 'electronics' },
+        { label: 'Engineering', value: 'engineering' },
+        { label: 'Entertainment', value: 'entertainment' },
+        { label: 'Hospitality', value: 'hospitality' },
+        { label: 'Insurance', value: 'insurance' },
+        { label: 'Legal', value: 'legal' },
+        { label: 'Logistics', value: 'logistics' },
+        { label: 'Media', value: 'media' },
+        { label: 'Retail', value: 'retail' },
+        { label: 'Telecommunications', value: 'telecommunications' },
+        { label: 'Transportation', value: 'transportation' },
+        { label: 'Other', value: 'other' },
       ],
     },
-    requirements: { label: 'Required Skills', section: 'basic', sortOrder: 9, isQuickCreate: true, fieldType: 'textarea', maxLength: 6000 },
-    salary: { label: 'Salary', section: 'basic', sortOrder: 10 },
-    // Address Information
+    requiredSkills: {
+      label: 'Required Skills', section: 'jobOpeningInfo', sortOrder: 11, isQuickCreate: true,
+      fieldType: 'tags', tagGroupSlug: 'recruit-skills',
+    },
+    salary: { label: 'Salary', section: 'jobOpeningInfo', sortOrder: 12, maxLength: 120 },
+
+    // ── Address Information ──────────────────────────────────────────────
     location: { label: 'City', section: 'address', sortOrder: 0, maxLength: 120 },
-    department: { label: 'Department', section: 'address', sortOrder: 1, maxLength: 120 },
-    country: { label: 'Country', section: 'address', sortOrder: 2 },
+    department: { label: 'Province', section: 'address', sortOrder: 1, maxLength: 120 },
+    country: {
+      label: 'Country', section: 'address', sortOrder: 2, fieldType: 'picklist',
+      picklistOptions: [
+        { label: 'United States', value: 'united-states' },
+        { label: 'United Kingdom', value: 'united-kingdom' },
+        { label: 'Canada', value: 'canada' },
+        { label: 'Australia', value: 'australia' },
+        { label: 'Germany', value: 'germany' },
+        { label: 'France', value: 'france' },
+        { label: 'India', value: 'india' },
+        { label: 'Japan', value: 'japan' },
+        { label: 'China', value: 'china' },
+        { label: 'Brazil', value: 'brazil' },
+        { label: 'Singapore', value: 'singapore' },
+        { label: 'Netherlands', value: 'netherlands' },
+        { label: 'Switzerland', value: 'switzerland' },
+        { label: 'Sweden', value: 'sweden' },
+        { label: 'Ireland', value: 'ireland' },
+        { label: 'Israel', value: 'israel' },
+        { label: 'South Korea', value: 'south-korea' },
+        { label: 'Spain', value: 'spain' },
+        { label: 'Italy', value: 'italy' },
+        { label: 'Mexico', value: 'mexico' },
+        { label: 'Other', value: 'other' },
+      ],
+    },
     postalCode: { label: 'Postal Code', section: 'address', sortOrder: 3, maxLength: 30 },
     remoteJob: { label: 'Remote Job', section: 'address', sortOrder: 4, fieldType: 'boolean' },
-    // Forecast Details
+
+    // ── Forecast Details ─────────────────────────────────────────────────
     numberOfPositions: { label: 'Number of Positions', section: 'forecast', sortOrder: 0, fieldType: 'number' },
     revenuePerPosition: { label: 'Revenue per Position', section: 'forecast', sortOrder: 1, fieldType: 'currency' },
-    expectedRevenue: { label: 'Expected Revenue', section: 'forecast', sortOrder: 2, fieldType: 'currency' },
-    actualRevenue: { label: 'Actual Revenue', section: 'forecast', sortOrder: 3, fieldType: 'currency' },
-    missedRevenue: { label: 'Missed Revenue', section: 'forecast', sortOrder: 4, fieldType: 'currency' },
-    // Legacy fields
-    description: { label: 'Description', section: 'details', sortOrder: 0, fieldType: 'textarea', maxLength: 10000 },
-    salaryMin: { label: 'Salary Min', section: 'details', sortOrder: 1, fieldType: 'currency' },
-    salaryMax: { label: 'Salary Max', section: 'details', sortOrder: 2, fieldType: 'currency' },
-    currency: { label: 'Currency', section: 'details', sortOrder: 3, maxLength: 3 },
-    publishedAt: { label: 'Published Date', section: 'details', sortOrder: 4, fieldType: 'date' },
-    closingDate: { label: 'Closing Date', section: 'details', sortOrder: 5, fieldType: 'date' },
+
+    // ── Description Information ──────────────────────────────────────────
+    jobDescription: { label: 'Job Description', section: 'description', sortOrder: 0, fieldType: 'rich_text', maxLength: 32000 },
+    jobRequirements: { label: 'Requirements', section: 'description', sortOrder: 1, fieldType: 'rich_text', maxLength: 32000 },
+    benefits: { label: 'Benefits', section: 'description', sortOrder: 2, fieldType: 'rich_text', maxLength: 32000 },
+
+    // ── Attachment Information ────────────────────────────────────────────
+    jobSummary: {
+      label: 'Job Summary', section: 'attachments', sortOrder: 0, fieldType: 'file',
+      accept: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+      maxFileSize: 10485760,
+    },
+    otherAttachments: {
+      label: 'Others', section: 'attachments', sortOrder: 1, fieldType: 'file',
+      maxFileSize: 10485760,
+    },
   },
 
   sections: [
-    { name: 'Job Opening Information', fields: ['title', 'clientId', 'contactId', 'dateOpened', 'targetDate', 'employmentType', 'status', 'experience', 'industry', 'requirements', 'salary'] },
-    { name: 'Address Information', fields: ['location', 'department', 'country', 'postalCode', 'remoteJob'] },
-    { name: 'Forecast Details', fields: ['numberOfPositions', 'revenuePerPosition', 'expectedRevenue', 'actualRevenue', 'missedRevenue'] },
-    { name: 'Details', fields: ['description', 'salaryMin', 'salaryMax', 'currency', 'publishedAt', 'closingDate'] },
+    {
+      name: 'Job Opening Information', columns: 2,
+      fields: ['title', 'clientId', 'contactId', 'accountManager', 'assignedRecruiters', 'dateOpened', 'targetDate', 'employmentType', 'status', 'experience', 'industry', 'requiredSkills', 'salary'],
+    },
+    {
+      name: 'Address Information', columns: 2,
+      fields: ['location', 'department', 'country', 'postalCode', 'remoteJob'],
+    },
+    {
+      name: 'Forecast Details', columns: 2,
+      fields: ['numberOfPositions', 'revenuePerPosition'],
+    },
+    {
+      name: 'Description Information', columns: 1,
+      fields: ['jobDescription', 'jobRequirements', 'benefits'],
+    },
+    {
+      name: 'Attachment Information', columns: 1,
+      fields: ['jobSummary', 'otherAttachments'],
+    },
   ],
 
   features: { softDelete: true, restore: true },
