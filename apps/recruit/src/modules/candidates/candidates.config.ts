@@ -45,7 +45,7 @@ export const CANDIDATES_CONFIG: EntityConfig = {
       targetEntity: 'applications',
       foreignKey: 'candidateId',
       label: 'Applications',
-      displayFields: ['status', 'stage', 'createdAt'],
+      displayFields: ['stage', 'createdAt'],
     },
   ],
 

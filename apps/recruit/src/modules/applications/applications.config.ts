@@ -15,7 +15,6 @@ export const APPLICATIONS_CONFIG: EntityConfig = {
   defaultSort: 'createdAt',
   sortableColumns: {
     createdAt: applications.createdAt,
-    status: applications.status,
     stage: applications.stage,
   },
 
@@ -30,33 +29,37 @@ export const APPLICATIONS_CONFIG: EntityConfig = {
       fieldType: 'lookup', lookupEntity: 'job_openings', lookupLabelField: 'title',
       lookupSearchFields: ['title', 'department'],
     },
-    status: {
-      label: 'Status', section: 'basic', sortOrder: 2, isQuickCreate: true, fieldType: 'picklist',
-      picklistOptions: [
-        { label: 'Applied', value: 'applied' },
-        { label: 'Screening', value: 'screening' },
-        { label: 'Interview', value: 'interview' },
-        { label: 'Offered', value: 'offered' },
-        { label: 'Hired', value: 'hired' },
-        { label: 'Rejected', value: 'rejected' },
-        { label: 'Withdrawn', value: 'withdrawn' },
-      ],
-    },
     stage: {
-      label: 'Stage', section: 'basic', sortOrder: 3, fieldType: 'picklist',
-      picklistOptions: [
-        { label: 'New', value: 'new' },
-        { label: 'Phone Screen', value: 'phone-screen' },
-        { label: 'Technical', value: 'technical' },
-        { label: 'On-site', value: 'on-site' },
-        { label: 'Final', value: 'final' },
-      ],
+      label: 'Stage', section: 'basic', sortOrder: 2, isSystem: true, fieldType: 'workflow',
+      workflow: {
+        slug: 'application-stage',
+        initialState: 'new',
+        states: [
+          { name: 'new', label: 'New', color: '#6B7280' },
+          { name: 'phone-screen', label: 'Phone Screen', color: '#3B82F6' },
+          { name: 'technical', label: 'Technical', color: '#8B5CF6' },
+          { name: 'on-site', label: 'On-site', color: '#F59E0B' },
+          { name: 'final', label: 'Final', color: '#EC4899' },
+          { name: 'offer', label: 'Offer', color: '#10B981' },
+          { name: 'hired', label: 'Hired', color: '#059669' },
+          { name: 'rejected', label: 'Rejected', color: '#EF4444' },
+          { name: 'withdrawn', label: 'Withdrawn', color: '#9CA3AF' },
+        ],
+        transitions: [
+          { from: 'new', to: ['phone-screen', 'rejected', 'withdrawn'] },
+          { from: 'phone-screen', to: ['technical', 'rejected', 'withdrawn'] },
+          { from: 'technical', to: ['on-site', 'rejected', 'withdrawn'] },
+          { from: 'on-site', to: ['final', 'rejected', 'withdrawn'] },
+          { from: 'final', to: ['offer', 'rejected', 'withdrawn'] },
+          { from: 'offer', to: ['hired', 'rejected', 'withdrawn'] },
+        ],
+      },
     },
     notes: { label: 'Notes', section: 'details', sortOrder: 0, fieldType: 'textarea', maxLength: 5000 },
   },
 
   sections: [
-    { name: 'Basic Info', fields: ['candidateId', 'jobOpeningId', 'status', 'stage'] },
+    { name: 'Basic Info', fields: ['candidateId', 'jobOpeningId', 'stage'] },
     { name: 'Details', fields: ['notes'] },
   ],
 
@@ -66,10 +69,9 @@ export const APPLICATIONS_CONFIG: EntityConfig = {
 
   ui: {
     icon: 'file-text',
-    nameField: 'status',
+    nameField: 'stage',
     navGroup: 'recruit',
     navOrder: 3,
-    boardFields: ['status', 'stage'],
   },
 
 };
