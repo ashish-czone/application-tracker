@@ -188,6 +188,11 @@ export interface EntityConfig<TTable extends PgTable = PgTable> {
   /** Additional events beyond created/updated/deleted (those are auto-generated) */
   extraEvents?: { name: string; description: string }[];
 
+  // --- Actions ---
+
+  /** Configurable actions for list pages (row-level and bulk) */
+  actions?: EntityActions;
+
   // --- UI ---
 
   /** Frontend rendering hints (serialized to registry API) */
@@ -232,6 +237,62 @@ export interface BaseListQuery {
   includeDeleted?: boolean;
   /** Additional filter params (entity-specific, passed to hooks.buildListFilters) */
   [key: string]: unknown;
+}
+
+// ---------------------------------------------------------------------------
+// Actions — configurable per-entity actions for list pages
+// ---------------------------------------------------------------------------
+
+export type ActionVariant = 'default' | 'destructive';
+
+export interface EntityAction {
+  /** Unique key identifying the action */
+  key: string;
+  /** Display label */
+  label: string;
+  /** Lucide icon name */
+  icon?: string;
+  /** CRUD permission required (maps to existing slug.{permission}) */
+  permission: 'create' | 'read' | 'update' | 'delete';
+  /** Visual variant */
+  variant?: ActionVariant;
+}
+
+export interface EntityActions {
+  /** Actions shown in the per-row "..." dropdown menu */
+  row: EntityAction[];
+  /** Actions shown in the bulk toolbar when rows are selected */
+  bulk: EntityAction[];
+}
+
+// ---------------------------------------------------------------------------
+// List layout — config returned by GET /{slug}/layout/list
+// ---------------------------------------------------------------------------
+
+export interface ListLayoutColumn {
+  /** Field key */
+  fieldKey: string;
+  /** Display label */
+  label: string;
+  /** Field type (for formatting) */
+  fieldType: string;
+  /** Whether the column is sortable */
+  sortable: boolean;
+  /** Lookup entity (for lookup columns) */
+  lookupEntity?: string;
+}
+
+export interface ListLayoutResponse {
+  /** Columns to display in the list table */
+  columns: ListLayoutColumn[];
+  /** Available actions */
+  actions: EntityActions;
+  /** Filterable field keys */
+  filters: string[];
+  /** Default sort field */
+  defaultSort: string;
+  /** Default sort direction */
+  defaultOrder: 'asc' | 'desc';
 }
 
 // ---------------------------------------------------------------------------

@@ -54,6 +54,60 @@ export class EntityService {
   }
 
   // ---------------------------------------------------------------------------
+  // LIST LAYOUT
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Returns list page layout config: columns, actions, filters, sort defaults.
+   * Cached by the frontend — this is config, not data.
+   */
+  async getListLayout(): Promise<import('./types').ListLayoutResponse> {
+    const { config } = this;
+    const defs = await this.fieldDefinitionService.listByEntityWithOptions(config.entityType);
+
+    // Build columns from field definitions (skip textarea, file, auto_number)
+    const skipTypes = new Set(['textarea', 'file', 'auto_number']);
+    const columns = defs
+      .filter(d => !skipTypes.has(d.fieldType) && !d.isSystem)
+      .slice(0, 10) // Reasonable default column limit
+      .map(d => ({
+        fieldKey: d.fieldKey,
+        label: d.label,
+        fieldType: d.fieldType,
+        sortable: !!config.sortableColumns[d.fieldKey],
+        lookupEntity: d.lookupEntity,
+      }));
+
+    // Build filterable fields (picklists, lookups, booleans, tags)
+    const filterableTypes = new Set(['picklist', 'multi_select', 'lookup', 'user', 'boolean', 'tags', 'category']);
+    const filters = defs
+      .filter(d => filterableTypes.has(d.fieldType))
+      .map(d => d.fieldKey);
+
+    // Default actions if none configured
+    const defaultActions: import('./types').EntityActions = {
+      row: [
+        { key: 'edit', label: 'Edit', icon: 'Pencil', permission: 'update' },
+        { key: 'clone', label: 'Clone', icon: 'Copy', permission: 'create' },
+        { key: 'delete', label: 'Delete', icon: 'Trash2', permission: 'delete', variant: 'destructive' },
+      ],
+      bulk: [
+        { key: 'massUpdate', label: 'Mass Update', icon: 'PenLine', permission: 'update' },
+        { key: 'massDelete', label: 'Mass Delete', icon: 'Trash2', permission: 'delete', variant: 'destructive' },
+        { key: 'export', label: 'Export', icon: 'Download', permission: 'read' },
+      ],
+    };
+
+    return {
+      columns,
+      actions: config.actions ?? defaultActions,
+      filters,
+      defaultSort: config.defaultSort,
+      defaultOrder: 'desc',
+    };
+  }
+
+  // ---------------------------------------------------------------------------
   // LIST
   // ---------------------------------------------------------------------------
 
