@@ -4,6 +4,9 @@ import { FormTextarea } from '@packages/ui/components/form/FormTextarea';
 import { FormCheckbox } from '@packages/ui/components/form/FormCheckbox';
 import { FormCurrencyInput } from '@packages/ui/components/form/FormCurrencyInput';
 import { FormRichText } from '@packages/ui/components/form/FormRichText';
+import { FormChipInput } from '@packages/ui/components/form/FormChipInput';
+import { FormFileInput } from '@packages/ui/components/form/FormFileInput';
+import type { ChipOption } from '@packages/ui/components/form/FormChipInput';
 import type { FieldDefinition } from '../types';
 
 interface DynamicFieldProps {
@@ -14,6 +17,8 @@ interface DynamicFieldProps {
   resolvedLabel?: string | null;
   /** Pre-fetched lookup options for lookup/user fields (label → value pairs) */
   lookupOptions?: { label: string; value: string }[];
+  /** Pre-fetched options for chip input fields (tags, multi_user, multi_lookup) */
+  chipOptions?: ChipOption[];
 }
 
 /** Format a field value for display in view mode */
@@ -54,7 +59,7 @@ function formatViewValue(field: FieldDefinition, value: unknown): string {
  * In view mode: displays the formatted value with label.
  * In edit mode: renders the appropriate form component (must be inside a FormProvider).
  */
-export function DynamicField({ field, mode, value, resolvedLabel, lookupOptions }: DynamicFieldProps) {
+export function DynamicField({ field, mode, value, resolvedLabel, lookupOptions, chipOptions }: DynamicFieldProps) {
   if (mode === 'view') {
     // Tags: render as colored badges
     if (field.fieldType === 'tags' && Array.isArray(value)) {
@@ -147,10 +152,10 @@ export function DynamicField({ field, mode, value, resolvedLabel, lookupOptions 
   }
 
   // Edit mode — render appropriate form control
-  return <DynamicFieldEdit field={field} lookupOptions={lookupOptions} />;
+  return <DynamicFieldEdit field={field} lookupOptions={lookupOptions} chipOptions={chipOptions} />;
 }
 
-function DynamicFieldEdit({ field, lookupOptions }: { field: FieldDefinition; lookupOptions?: { label: string; value: string }[] }) {
+function DynamicFieldEdit({ field, lookupOptions, chipOptions }: { field: FieldDefinition; lookupOptions?: { label: string; value: string }[]; chipOptions?: ChipOption[] }) {
   const disabled = field.isReadonly;
   const label = field.isRequired ? `${field.label} *` : field.label;
 
@@ -238,31 +243,37 @@ function DynamicFieldEdit({ field, lookupOptions }: { field: FieldDefinition; lo
       );
 
     case 'tags':
-      // Tags are rendered as read-only badges in forms (managed via detail page)
       return (
-        <div className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-muted-foreground">{label}</span>
-          <span className="text-sm text-muted-foreground italic">Manage on detail page</span>
-        </div>
+        <FormChipInput
+          name={field.fieldKey}
+          label={label}
+          options={chipOptions ?? []}
+          placeholder={`Search and add ${field.label.toLowerCase()}...`}
+          disabled={disabled}
+        />
       );
 
     case 'file':
-      // File uploads are handled via separate endpoint (managed via detail page)
       return (
-        <div className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-muted-foreground">{label}</span>
-          <span className="text-sm text-muted-foreground italic">Upload on detail page</span>
-        </div>
+        <FormFileInput
+          name={field.fieldKey}
+          label={label}
+          accept={field.fileAccept ?? undefined}
+          maxFileSize={field.fileMaxSize ?? undefined}
+          disabled={disabled}
+        />
       );
 
     case 'multi_user':
     case 'multi_lookup':
-      // Multi-value fields — managed on detail page for now
       return (
-        <div className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-muted-foreground">{label}</span>
-          <span className="text-sm text-muted-foreground italic">Manage on detail page</span>
-        </div>
+        <FormChipInput
+          name={field.fieldKey}
+          label={label}
+          options={chipOptions ?? []}
+          placeholder={`Search and add ${field.label.toLowerCase()}...`}
+          disabled={disabled}
+        />
       );
 
     case 'category':

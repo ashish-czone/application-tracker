@@ -9,9 +9,8 @@ export function buildFormSchema(fields: FieldDefinition[]): z.ZodObject<Record<s
   const shape: Record<string, z.ZodTypeAny> = {};
 
   for (const field of fields) {
-    // Skip non-editable and relational types handled by separate UI
+    // Skip non-editable fields
     if (field.fieldType === 'auto_number' || field.isReadonly) continue;
-    if (field.fieldType === 'tags' || field.fieldType === 'file' || field.fieldType === 'multi_user' || field.fieldType === 'multi_lookup') continue;
 
     let fieldSchema: z.ZodTypeAny;
 
@@ -73,6 +72,16 @@ export function buildFormSchema(fields: FieldDefinition[]): z.ZodObject<Record<s
       case 'user':
       case 'category':
         fieldSchema = z.string();
+        break;
+
+      case 'tags':
+      case 'multi_user':
+      case 'multi_lookup':
+        fieldSchema = z.array(z.string());
+        break;
+
+      case 'file':
+        fieldSchema = z.any(); // File object or null
         break;
 
       default:
