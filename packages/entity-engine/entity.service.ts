@@ -19,7 +19,6 @@ import type { FieldDefinition } from '@packages/eav-attributes';
 import { TaxonomyService, type TagWithGroup } from '@packages/taxonomy';
 import { MediaService, type MediaFile } from '@packages/media';
 import { WorkflowEngineService, WorkflowRegistryService } from '@packages/workflows';
-import { evaluateConditionsInMemory, type Condition } from '@packages/notifications';
 import type { PaginatedResponse } from '@packages/common';
 import type { EntityConfig, BaseListQuery } from './types';
 
@@ -463,56 +462,7 @@ export class EntityService {
       throw new BadRequestException(`Entity has no current state for field '${fieldKey}'`);
     }
 
-    // 3. Validate transition (permissions + guards)
-    const validation = await this.workflowEngine.validateTransition(
-      workflow.slug,
-      currentState,
-      toState,
-      { entityId: id, entityType: config.entityType, actorId },
-    );
-
-    if (!validation.valid) {
-      if (validation.missingPermissions) {
-        throw new BadRequestException(`Missing permissions: ${validation.missingPermissions.join(', ')}`);
-      }
-      if (validation.failedGuard) {
-        throw new BadRequestException(`Guard '${validation.failedGuard}' rejected the transition`);
-      }
-      throw new BadRequestException(
-        `Transition from '${currentState}' to '${toState}' is not allowed for field '${fieldKey}'`,
-      );
-    }
-
-    // 4. Evaluate declarative conditions from transition metadata
-    const transitionDef = workflow.transitions.find(
-      t => t.fromStateName === currentState && t.toStateName === toState,
-    );
-    if (transitionDef?.metadata) {
-      const conditions = (transitionDef.metadata as Record<string, unknown>).conditions as Condition[] | undefined;
-      if (conditions && conditions.length > 0) {
-        const conditionsPassed = evaluateConditionsInMemory(conditions, entity as Record<string, unknown>);
-        if (!conditionsPassed) {
-          throw new BadRequestException(
-            `Conditions not met for transition from '${currentState}' to '${toState}'`,
-          );
-        }
-      }
-    }
-
-    // 5. Update the field value
-    const col = table[fieldKey];
-    if (col) {
-      // Standard column
-      await this.database.db
-        .update(table)
-        .set({ [fieldKey]: toState })
-        .where(eq(table.id, id));
-    } else {
-      // EAV field
-      await this.fieldValueService.setValues(config.entityType, id, { [fieldKey]: toState });
-    }
-
-    // 6. Record transition history
+    // 3. Validate + evaluate conditions + execute guards + record history
     await this.workflowEngine.transition({
       workflowSlug: workflow.slug,
       entityType: config.entityType,
@@ -521,7 +471,19 @@ export class EntityService {
       toState,
       actorId,
       comment,
+      entityData: entity as Record<string, unknown>,
     });
+
+    // 4. Update the field value
+    const col = table[fieldKey];
+    if (col) {
+      await this.database.db
+        .update(table)
+        .set({ [fieldKey]: toState })
+        .where(eq(table.id, id));
+    } else {
+      await this.fieldValueService.setValues(config.entityType, id, { [fieldKey]: toState });
+    }
 
     this.logger.log(`${config.singularName} transitioned`, {
       entityId: id, fieldKey, from: currentState, to: toState, actorId,

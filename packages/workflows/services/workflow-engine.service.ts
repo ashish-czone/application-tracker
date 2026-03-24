@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, UnprocessableEntityException, ForbiddenE
 import { DatabaseService, desc, eq, and } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
 import { RbacService } from '@packages/rbac';
+import { evaluateConditionsInMemory, type Condition } from '@packages/notifications';
 import { workflowTransitionHistory } from '../schema/workflow-transition-history';
 import { WorkflowRegistryService } from './workflow-registry.service';
 import { WorkflowGuardRegistry } from './workflow-guard-registry.service';
@@ -131,6 +132,22 @@ export class WorkflowEngineService {
       throw new UnprocessableEntityException(
         `Transition from '${params.fromState}' to '${params.toState}' is not allowed in workflow '${params.workflowSlug}'`,
       );
+    }
+
+    // Evaluate declarative conditions from transition metadata
+    const matchedTransition = definition.transitions.find(
+      (t) => t.fromStateName === params.fromState && t.toStateName === params.toState,
+    );
+    if (matchedTransition?.metadata && params.entityData) {
+      const conditions = (matchedTransition.metadata as Record<string, unknown>).conditions as Condition[] | undefined;
+      if (conditions && conditions.length > 0) {
+        const conditionsPassed = evaluateConditionsInMemory(conditions, params.entityData);
+        if (!conditionsPassed) {
+          throw new UnprocessableEntityException(
+            `Conditions not met for transition from '${params.fromState}' to '${params.toState}'`,
+          );
+        }
+      }
     }
 
     // Execute additional inline guards

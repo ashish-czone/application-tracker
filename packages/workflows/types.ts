@@ -87,6 +87,8 @@ export interface TransitionParams {
   actorId: string | null;
   comment?: string;
   metadata?: Record<string, unknown>;
+  /** Current entity data for evaluating declarative conditions on the transition */
+  entityData?: Record<string, unknown>;
   additionalGuards?: WorkflowGuardFn[];
   tx?: unknown;
 }

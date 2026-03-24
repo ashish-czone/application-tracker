@@ -12,6 +12,7 @@
     "@packages/database": "workspace:*",
     "@packages/events": "workspace:*",
     "@packages/logger": "workspace:*",
+    "@packages/notifications": "workspace:*",
     "@packages/rbac": "workspace:*",
     "drizzle-orm": "^0.45.1"
   },
