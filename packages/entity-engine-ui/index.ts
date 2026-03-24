@@ -4,6 +4,7 @@ export { createEntityHooks } from './helpers/createEntityHooks';
 export type { EntityHooks } from './helpers/createEntityHooks';
 export { buildColumnDefs, buildFilterConfigs } from './helpers/buildColumnDefs';
 export { useEntityLayout } from './helpers/useEntityLayout';
+export { useListLayout } from './helpers/useListLayout';
 
 export { EntityListPage } from './pages/EntityListPage';
 export { EntityDetailPage } from './pages/EntityDetailPage';

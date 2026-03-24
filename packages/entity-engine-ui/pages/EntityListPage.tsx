@@ -1,14 +1,17 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
-import { Plus, Trash2, RotateCcw, Database } from 'lucide-react';
+import { Plus, Trash2, RotateCcw, Database, MoreHorizontal } from 'lucide-react';
 import {
   DataGrid, DataGridFilters, Badge, Button, useDataGridParams, useActiveFilters,
   Dialog, DialogContent, ConfirmDialog,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,
   type ColumnDef,
 } from '@packages/ui';
+import type { EntityAction } from '@packages/entity-engine';
 import { useEntityEngine, useEntityHooks, useEntityConfig } from '../EntityEngineProvider';
 import { useEntityLayout } from '../helpers/useEntityLayout';
+import { useListLayout } from '../helpers/useListLayout';
 import { buildColumnDefs, buildFilterConfigs, buildLookupFilterFields } from '../helpers/buildColumnDefs';
 import { EntityQuickCreateForm } from './EntityQuickCreateForm';
 
@@ -27,8 +30,9 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
   const navigate = useNavigate();
   const entity = useEntityConfig(entityType);
   const hooks = useEntityHooks(entityType);
-  const { apiFn, getDetailPlugins } = useEntityEngine();
+  const { apiFn } = useEntityEngine();
   const { data: layout } = useEntityLayout(entityType);
+  const { data: listLayout } = useListLayout(entityType);
 
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [deletingItem, setDeletingItem] = useState<Row | null>(null);
@@ -165,7 +169,8 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
       { maxColumns: 6 },
     );
 
-    // Actions column
+    // Row actions column — driven by listLayout.actions.row config
+    const rowActions = listLayout?.actions.row ?? [];
     const actionsCol: ColumnDef<Row, unknown> = {
       id: '__actions__',
       header: '',
@@ -173,13 +178,14 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
       enableHiding: false,
       enableSorting: false,
       cell: ({ row }) => {
-        const isDeleted = !!row.original.deletedAt;
+        const item = row.original;
+        const isDeleted = !!item.deletedAt;
         if (isDeleted) {
           return (
             <div className="flex items-center justify-end">
               <button
                 type="button"
-                onClick={() => restoreMutation.mutate(row.original.id as string)}
+                onClick={() => restoreMutation.mutate(item.id as string)}
                 disabled={restoreMutation.isPending}
                 className="p-1.5 rounded-md text-muted-foreground hover:text-success hover:bg-success/10 transition-colors"
                 aria-label="Restore"
@@ -190,22 +196,20 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
           );
         }
         return (
-          <div className="flex items-center justify-end">
-            <button
-              type="button"
-              onClick={() => setDeletingItem(row.original)}
-              className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-              aria-label="Delete"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
-          </div>
+          <RowActionsMenu
+            actions={rowActions}
+            row={item}
+            entitySlug={entity.slug}
+            onEdit={() => navigate(`/${entity.slug}/${item.id}`)}
+            onDelete={() => setDeletingItem(item)}
+            onClone={() => {/* TODO: clone */}}
+          />
         );
       },
     };
 
     return [nameCol, ...dynamicCols, actionsCol];
-  }, [layout, entity, navigate]);
+  }, [layout, listLayout, entity, navigate]);
 
   return (
     <div>
@@ -295,6 +299,75 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
         isPending={deleteMutation.isPending}
         onConfirm={() => deletingItem && deleteMutation.mutate(deletingItem.id as string)}
       />
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Row Actions Dropdown Menu
+// ---------------------------------------------------------------------------
+
+function RowActionsMenu({
+  actions,
+  row,
+  entitySlug,
+  onEdit,
+  onDelete,
+  onClone,
+}: {
+  actions: EntityAction[];
+  row: Row;
+  entitySlug: string;
+  onEdit: () => void;
+  onDelete: () => void;
+  onClone: () => void;
+}) {
+  const handleAction = (action: EntityAction) => {
+    switch (action.key) {
+      case 'edit': return onEdit();
+      case 'delete': return onDelete();
+      case 'clone': return onClone();
+      default:
+        // Custom actions can be handled via event dispatch or callback
+        break;
+    }
+  };
+
+  if (actions.length === 0) return null;
+
+  const normalActions = actions.filter((a) => a.variant !== 'destructive');
+  const destructiveActions = actions.filter((a) => a.variant === 'destructive');
+
+  return (
+    <div className="flex items-center justify-end">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+            aria-label="Row actions"
+          >
+            <MoreHorizontal className="h-4 w-4" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          {normalActions.map((action) => (
+            <DropdownMenuItem key={action.key} onClick={() => handleAction(action)}>
+              {action.label}
+            </DropdownMenuItem>
+          ))}
+          {destructiveActions.length > 0 && normalActions.length > 0 && <DropdownMenuSeparator />}
+          {destructiveActions.map((action) => (
+            <DropdownMenuItem
+              key={action.key}
+              onClick={() => handleAction(action)}
+              className="text-destructive focus:text-destructive"
+            >
+              {action.label}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }

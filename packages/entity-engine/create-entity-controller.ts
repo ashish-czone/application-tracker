@@ -16,7 +16,7 @@ import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { CurrentUser, type JwtPayload } from '@packages/auth';
 import { RequirePermission } from '@packages/rbac';
 import { EntityService } from './entity.service';
-import type { EntityConfig } from './types';
+import type { EntityConfig, ListLayoutResponse, EntityActions } from './types';
 
 /**
  * Creates a NestJS controller class dynamically for an entity.
@@ -41,6 +41,13 @@ export function createEntityController(config: EntityConfig, serviceToken: strin
   @Controller(config.slug)
   class DynamicEntityController {
     constructor(@Inject(serviceToken) private readonly entityService: EntityService) {}
+
+    @Get('layout/list')
+    @RequirePermission(readPermission)
+    @ApiOperation({ summary: `Get list layout config for ${config.pluralName.toLowerCase()}` })
+    async getListLayout(): Promise<ListLayoutResponse> {
+      return this.entityService.getListLayout();
+    }
 
     @Get()
     @RequirePermission(readPermission)
