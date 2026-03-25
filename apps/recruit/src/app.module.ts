@@ -35,6 +35,7 @@ import { ClientsModule } from './modules/clients/clients.module';
 import { JobOpeningsModule } from './modules/job-openings/job-openings.module';
 import { EavManagementModule } from './modules/eav-management/eav-management.module';
 import { NotificationRulesModule } from './modules/notification-rules/notification-rules.module';
+import { RbacManagementModule } from './modules/rbac/rbac.module';
 import { validate } from './config/env.validation';
 
 @Module({
@@ -96,6 +97,7 @@ import { validate } from './config/env.validation';
     JobOpeningsModule, // sample data seeding: job openings, applications
     EavManagementModule,
     NotificationRulesModule,
+    RbacManagementModule,
   ],
   providers: [
     {
