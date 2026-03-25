@@ -98,9 +98,9 @@ export default function FieldManagementPage({ entityType }: FieldManagementPageP
         onReorderSections={(orderedSectionIds) =>
           reorderSectionsMutation.mutate(orderedSectionIds)
         }
-        onMoveFieldToSection={async (sourceSectionId, targetSectionId, fieldId) => {
+        onMoveFieldToSection={async (sourceSectionId, targetSectionId, fieldId, targetColumnIndex) => {
           await removeFieldMutation.mutateAsync({ sectionId: sourceSectionId, fieldId });
-          await addFieldMutation.mutateAsync({ sectionId: targetSectionId, fieldId });
+          await addFieldMutation.mutateAsync({ sectionId: targetSectionId, fieldId, columnIndex: targetColumnIndex });
         }}
         onEditSection={(section) => setEditingSection(section)}
         onDeleteSection={(sectionId) => setDeletingSectionId(sectionId)}

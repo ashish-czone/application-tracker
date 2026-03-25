@@ -81,8 +81,8 @@ export function useDeleteSection(entityType: string, options?: { onSuccess?: () 
 export function useAddFieldToSection(entityType: string) {
   const invalidate = useInvalidateLayout(entityType);
   return useMutation({
-    mutationFn: ({ sectionId, fieldId }: { sectionId: string; fieldId: string }) =>
-      svc.addFieldToSection(entityType, sectionId, fieldId),
+    mutationFn: ({ sectionId, fieldId, columnIndex }: { sectionId: string; fieldId: string; columnIndex?: number }) =>
+      svc.addFieldToSection(entityType, sectionId, fieldId, columnIndex),
     onSuccess: () => invalidate(),
     onError: (e: any) => toast.error(e?.body?.message || 'Failed to add field'),
   });
