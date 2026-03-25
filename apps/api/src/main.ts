@@ -56,7 +56,7 @@ async function bootstrap() {
       res.json({ status: 'ok', timestamp: new Date().toISOString() });
     });
 
-    await app.listen(process.env.PORT ?? 3000);
+    await app.listen(process.env.PORT ?? 3012);
   } else {
     await app.init();
   }
