@@ -25,7 +25,7 @@ export function EntityDetailPage({ entityType }: EntityDetailPageProps) {
   const { getDetailPlugins } = useEntityEngine();
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [activeRelTab, setActiveRelTab] = useState('');
+  const [activeTab, setActiveTab] = useState('detail');
 
   const { data: item, isLoading, isError } = hooks.useDetail(id ?? null);
   const { data: layout, isLoading: layoutLoading } = useEntityLayout(entityType);
@@ -38,12 +38,6 @@ export function EntityDetailPage({ entityType }: EntityDetailPageProps) {
     () => entity.relationships.filter((r) => r.type === 'hasMany'),
     [entity.relationships],
   );
-
-  // Set default active tab on first render
-  const defaultTab = hasManyRelationships[0]?.name ?? '';
-  if (activeRelTab === '' && defaultTab !== '') {
-    setActiveRelTab(defaultTab);
-  }
 
   // Get display name from entity
   const getDisplayName = (row: Record<string, unknown>): string => {
@@ -128,64 +122,70 @@ export function EntityDetailPage({ entityType }: EntityDetailPageProps) {
         </div>
       </div>
 
-      {/* Layout-driven sections */}
-      <div className="space-y-4">
-        {layout?.sections
-          .filter((s) => s.fields.length > 0)
-          .map((section) => (
-            <DynamicSection
-              key={section.id}
-              section={section}
-              values={item}
-              onSave={async (values) => {
-                await updateMutation.mutateAsync({ id: item.id as string, data: values });
-              }}
-              isSaving={updateMutation.isPending}
-            />
+      {/* Tabs: Detail + Related Lists */}
+      <div className="border-b mb-6">
+        <nav className="flex gap-0 -mb-px">
+          <button
+            type="button"
+            onClick={() => setActiveTab('detail')}
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'detail'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/30'
+            }`}
+          >
+            Detail
+          </button>
+          {hasManyRelationships.map((rel) => (
+            <button
+              key={rel.name}
+              type="button"
+              onClick={() => setActiveTab(rel.name)}
+              className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === rel.name
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/30'
+              }`}
+            >
+              {rel.label}
+            </button>
           ))}
-
-        {/* Plugin sections (entity-specific: skills, resume, etc.) */}
-        {plugins.map((plugin) => (
-          <plugin.component key={plugin.label} entity={item} />
-        ))}
+        </nav>
       </div>
 
-      {/* Related lists — tabbed */}
-      {hasManyRelationships.length > 0 && (
-        <div className="mt-8">
-          <div className="border-b">
-            <nav className="flex gap-0 -mb-px">
-              {hasManyRelationships.map((rel) => (
-                <button
-                  key={rel.name}
-                  type="button"
-                  onClick={() => setActiveRelTab(rel.name)}
-                  className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-                    activeRelTab === rel.name
-                      ? 'border-primary text-primary'
-                      : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/30'
-                  }`}
-                >
-                  {rel.label}
-                </button>
-              ))}
-            </nav>
-          </div>
+      {/* Tab content */}
+      {activeTab === 'detail' ? (
+        <div className="space-y-4">
+          {layout?.sections
+            .filter((s) => s.fields.length > 0)
+            .map((section) => (
+              <DynamicSection
+                key={section.id}
+                section={section}
+                values={item}
+                onSave={async (values) => {
+                  await updateMutation.mutateAsync({ id: item.id as string, data: values });
+                }}
+                isSaving={updateMutation.isPending}
+              />
+            ))}
 
-          <div className="pt-4">
-            {hasManyRelationships
-              .filter((rel) => rel.name === activeRelTab)
-              .map((rel) => (
-                <EntityRelatedList
-                  key={rel.name}
-                  targetEntityType={rel.targetEntity}
-                  foreignKey={rel.foreignKey ?? `${entityType}Id`}
-                  parentId={item.id as string}
-                  label={rel.label}
-                />
-              ))}
-          </div>
+          {plugins.map((plugin) => (
+            <plugin.component key={plugin.label} entity={item} />
+          ))}
         </div>
+      ) : (
+        hasManyRelationships
+          .filter((rel) => rel.name === activeTab)
+          .map((rel) => (
+            <EntityRelatedList
+              key={rel.name}
+              targetEntityType={rel.targetEntity}
+              foreignKey={rel.foreignKey ?? `${entityType}Id`}
+              parentId={item.id as string}
+              label={rel.label}
+            />
+          ))
       )}
 
       {/* Delete confirmation */}
