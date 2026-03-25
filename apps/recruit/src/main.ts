@@ -52,7 +52,7 @@ async function bootstrap() {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
-  const port = process.env.PORT ?? 3001;
+  const port = process.env.PORT ?? 3011;
   await app.listen(port);
 }
 
