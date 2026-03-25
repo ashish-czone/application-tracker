@@ -12,6 +12,7 @@ import { AppLoggerService } from '@packages/logger';
 import { EntityRegistryService } from './entity-registry.service';
 import { EntityService } from './entity.service';
 import { EntityEngineApiController } from './entity-engine-api.controller';
+import { FieldPermissionsController } from './field-permissions.controller';
 import { createEntityController } from './create-entity-controller';
 import { seedEntityFields, seedWorkflows } from './seed-entity-fields';
 import type { EntityConfig } from './types';
@@ -34,7 +35,7 @@ const pendingConfigs: EntityConfig[] = [];
  */
 @Global()
 @Module({
-  controllers: [EntityEngineApiController],
+  controllers: [EntityEngineApiController, FieldPermissionsController],
   providers: [EntityRegistryService],
   exports: [EntityRegistryService],
 })
