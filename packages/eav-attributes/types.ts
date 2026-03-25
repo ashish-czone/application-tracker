@@ -193,7 +193,8 @@ export interface SeedSectionInput {
   isCollapsible?: boolean;
   isTabular?: boolean;
   tabularMaxRows?: number;
-  fields: string[]; // field_keys in order
+  /** Field keys in order. Use [key, columnIndex] tuples for explicit column assignment. */
+  fields: (string | [string, number])[];
 }
 
 export interface SetPicklistOptionInput {
