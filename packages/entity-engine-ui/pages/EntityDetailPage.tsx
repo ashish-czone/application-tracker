@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router';
 import { ArrowLeft, Trash2, Settings } from 'lucide-react';
 import { Button, ConfirmDialog } from '@packages/ui';
@@ -73,6 +73,11 @@ export function EntityDetailPage({ entityType }: EntityDetailPageProps) {
   const displayName = getDisplayName(item);
   const subtitle = getSubtitle(item);
   const plugins = getDetailPlugins(entityType).sort((a, b) => a.order - b.order);
+  const hasManyRelationships = useMemo(
+    () => entity.relationships.filter((r) => r.type === 'hasMany'),
+    [entity.relationships],
+  );
+  const [activeRelTab, setActiveRelTab] = useState(hasManyRelationships[0]?.name ?? '');
 
   return (
     <div className="max-w-4xl">
@@ -136,20 +141,45 @@ export function EntityDetailPage({ entityType }: EntityDetailPageProps) {
         {plugins.map((plugin) => (
           <plugin.component key={plugin.label} entity={item} />
         ))}
-
-        {/* Related lists (from entity relationships config) */}
-        {entity.relationships
-          .filter((r) => r.type === 'hasMany')
-          .map((rel) => (
-            <EntityRelatedList
-              key={rel.name}
-              targetEntityType={rel.targetEntity}
-              foreignKey={rel.foreignKey ?? `${entityType}Id`}
-              parentId={item.id as string}
-              label={rel.label}
-            />
-          ))}
       </div>
+
+      {/* Related lists — tabbed */}
+      {hasManyRelationships.length > 0 && (
+        <div className="mt-8">
+          <div className="border-b">
+            <nav className="flex gap-0 -mb-px">
+              {hasManyRelationships.map((rel) => (
+                <button
+                  key={rel.name}
+                  type="button"
+                  onClick={() => setActiveRelTab(rel.name)}
+                  className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                    activeRelTab === rel.name
+                      ? 'border-primary text-primary'
+                      : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/30'
+                  }`}
+                >
+                  {rel.label}
+                </button>
+              ))}
+            </nav>
+          </div>
+
+          <div className="pt-4">
+            {hasManyRelationships
+              .filter((rel) => rel.name === activeRelTab)
+              .map((rel) => (
+                <EntityRelatedList
+                  key={rel.name}
+                  targetEntityType={rel.targetEntity}
+                  foreignKey={rel.foreignKey ?? `${entityType}Id`}
+                  parentId={item.id as string}
+                  label={rel.label}
+                />
+              ))}
+          </div>
+        </div>
+      )}
 
       {/* Delete confirmation */}
       <ConfirmDialog
