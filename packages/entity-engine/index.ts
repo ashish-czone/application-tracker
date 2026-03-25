@@ -3,6 +3,7 @@ export { EntityRegistryService } from './entity-registry.service';
 export { EntityService } from './entity.service';
 export { EntityEngineApiController } from './entity-engine-api.controller';
 export { createEntityController } from './create-entity-controller';
+export { createFieldPermissionInterceptor } from './interceptors/field-permission.interceptor';
 export { seedEntityFields, seedWorkflows } from './seed-entity-fields';
 
 export type {
