@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { DragDropProvider } from '@dnd-kit/react';
+import { DragDropProvider, useDroppable } from '@dnd-kit/react';
 import { useSortable } from '@dnd-kit/react/sortable';
 import { CollisionPriority } from '@dnd-kit/abstract';
 import { move } from '@dnd-kit/helpers';
@@ -148,7 +148,6 @@ function SortableField({
 
 function SortableColumn({
   columnKey,
-  columnIndex,
   fieldIds,
   allFieldDefs,
   sectionId,
@@ -156,21 +155,20 @@ function SortableColumn({
   onRemoveField,
 }: {
   columnKey: string;
-  columnIndex: number;
   fieldIds: string[];
   allFieldDefs: React.MutableRefObject<Map<string, FieldDefinition>>;
   sectionId: string;
   onEditField: (f: FieldDefinition) => void;
   onRemoveField: (sectionId: string, fieldId: string) => void;
 }) {
-  // useSortable registers this column as a container that move() can resolve.
-  // CollisionPriority.Normal ensures this wins over the parent section (which only accepts 'section').
-  const { ref: colRef, isDropTarget } = useSortable({
+  // useDroppable (not useSortable) for columns — columns are passive drop targets.
+  // Using useSortable would register them in the OptimisticSortingPlugin's group system,
+  // which corrupts field group values during cross-section drags (the plugin would mix
+  // field sortables with column sortables when they collide).
+  const { ref: colRef, isDropTarget } = useDroppable({
     id: columnKey,
-    index: columnIndex,
     type: 'column',
     accept: 'field',
-    group: sectionId,
     collisionPriority: CollisionPriority.Normal,
   });
 
@@ -283,7 +281,6 @@ function SortableSection({
             <div className="grid grid-cols-2 gap-2">
               <SortableColumn
                 columnKey={`${section.id}-col0`}
-                columnIndex={0}
                 fieldIds={col0FieldIds}
                 allFieldDefs={allFieldDefs}
                 sectionId={section.id}
@@ -292,7 +289,6 @@ function SortableSection({
               />
               <SortableColumn
                 columnKey={`${section.id}-col1`}
-                columnIndex={1}
                 fieldIds={col1FieldIds}
                 allFieldDefs={allFieldDefs}
                 sectionId={section.id}
@@ -303,7 +299,6 @@ function SortableSection({
           ) : (
             <SortableColumn
               columnKey={`${section.id}-col0`}
-              columnIndex={0}
               fieldIds={col0FieldIds}
               allFieldDefs={allFieldDefs}
               sectionId={section.id}
