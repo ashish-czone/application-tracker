@@ -13,7 +13,7 @@ export interface EntityRegistryEntry {
     subtitleField?: string;
     navGroup?: string;
     navOrder?: number;
-    createMode?: 'modal' | 'page';
+    createMode?: 'modal' | 'page' | 'wizard';
     boardFields?: string[];
   };
   features: {

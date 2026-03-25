@@ -130,8 +130,8 @@ export interface EntityUIHints {
   navGroup?: string;
   /** Sidebar ordering within group */
   navOrder?: number;
-  /** How the "Add" button works: 'modal' = quick-create dialog, 'page' = full create form page. Default: 'modal' */
-  createMode?: 'modal' | 'page';
+  /** How the "Add" button works: 'modal' = quick-create dialog, 'page' = full create form page, 'wizard' = multi-step (one section per step). Default: 'modal' */
+  createMode?: 'modal' | 'page' | 'wizard';
   /** Picklist field keys that can be used as board/kanban grouping. Enables board view toggle on list page. */
   boardFields?: string[];
 }

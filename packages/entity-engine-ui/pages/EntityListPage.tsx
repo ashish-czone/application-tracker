@@ -353,7 +353,7 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
           title: `No ${entity.pluralName.toLowerCase()} yet`,
           description: `Add your first ${entity.singularName.toLowerCase()} to get started.`,
           action: { label: `Add ${entity.singularName}`, onClick: () => {
-            if (entity.ui.createMode === 'page') {
+            if (entity.ui.createMode === 'page' || entity.ui.createMode === 'wizard') {
               navigate(`/${entity.slug}/new`);
             } else {
               setAddModalOpen(true);
@@ -379,7 +379,7 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
               <DataGridFilters filters={filterConfigs} getFilter={getFilter} setFilter={setFilter} />
             )}
             <Button size="sm" onClick={() => {
-              if (entity.ui.createMode === 'page') {
+              if (entity.ui.createMode === 'page' || entity.ui.createMode === 'wizard') {
                 navigate(`/${entity.slug}/new`);
               } else {
                 setAddModalOpen(true);

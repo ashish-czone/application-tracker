@@ -1,12 +1,12 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useForm } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Check } from 'lucide-react';
 import { Form, Button } from '@packages/ui';
 import { DynamicField, buildFormSchema } from '@packages/eav-attributes-ui';
-import type { FullLayoutField } from '@packages/eav-attributes';
+import type { LayoutSection, FullLayoutField } from '@packages/eav-attributes';
 import { useEntityEngine, useEntityHooks, useEntityConfig } from '../EntityEngineProvider';
 import { useEntityLayout } from '../helpers/useEntityLayout';
 
@@ -15,8 +15,9 @@ interface EntityCreatePageProps {
 }
 
 /**
- * Full-page create form for entities with createMode: 'page'.
- * Renders ALL fields organized by layout sections (not just quick-create fields).
+ * Full-page create form for entities with createMode: 'page' or 'wizard'.
+ * - 'page': all sections on one page
+ * - 'wizard': one section per step with Next/Back/Submit navigation
  */
 export function EntityCreatePage({ entityType }: EntityCreatePageProps) {
   const navigate = useNavigate();
@@ -25,15 +26,26 @@ export function EntityCreatePage({ entityType }: EntityCreatePageProps) {
   const { apiFn } = useEntityEngine();
   const { data: layout, isLoading: layoutLoading } = useEntityLayout(entityType);
 
-  // All editable fields (exclude auto_number, readonly, file, tags, multi_user, multi_lookup)
-  const editableFields = useMemo(() => {
+  const isWizard = entity.ui.createMode === 'wizard';
+  const [currentStep, setCurrentStep] = useState(0);
+
+  // Filter sections with editable fields
+  const steps = useMemo(() => {
     if (!layout) return [];
-    return layout.sections.flatMap((s) => s.fields).filter(
-      (f) => !f.isReadonly && f.fieldType !== 'auto_number',
-    );
+    return layout.sections
+      .map((s) => ({
+        ...s,
+        editableFields: s.fields.filter((f) => !f.isReadonly && f.fieldType !== 'auto_number'),
+      }))
+      .filter((s) => s.editableFields.length > 0);
   }, [layout]);
 
-  // Fetch lookup options for lookup/user fields
+  // All editable fields across all sections
+  const editableFields = useMemo(() => {
+    return steps.flatMap((s) => s.editableFields);
+  }, [steps]);
+
+  // Fetch lookup options
   const lookupEntities = useMemo(() => {
     if (!editableFields.length) return [];
     return editableFields
@@ -47,18 +59,15 @@ export function EntityCreatePage({ entityType }: EntityCreatePageProps) {
       const map: Record<string, { label: string; value: string }[]> = {};
       for (const ent of lookupEntities) {
         try {
-          const results = await apiFn.get<{ label: string; value: string }[]>(`/lookups/${ent}?limit=200`);
-          map[ent] = results;
-        } catch {
-          map[ent] = [];
-        }
+          map[ent] = await apiFn.get<{ label: string; value: string }[]>(`/lookups/${ent}?limit=200`);
+        } catch { map[ent] = []; }
       }
       return map;
     },
     enabled: lookupEntities.length > 0,
   });
 
-  // Fetch chip options for tags, multi_user, multi_lookup fields
+  // Fetch chip options
   const chipFields = useMemo(() => {
     return editableFields.filter(
       (f) => f.fieldType === 'tags' || f.fieldType === 'multi_user' || f.fieldType === 'multi_lookup',
@@ -74,12 +83,9 @@ export function EntityCreatePage({ entityType }: EntityCreatePageProps) {
           if (field.fieldType === 'tags' && field.tagGroupSlug) {
             map[field.fieldKey] = await apiFn.get(`/tags/group/${field.tagGroupSlug}`);
           } else if ((field.fieldType === 'multi_user' || field.fieldType === 'multi_lookup') && field.lookupEntity) {
-            const results = await apiFn.get<{ label: string; value: string }[]>(`/lookups/${field.lookupEntity}?limit=200`);
-            map[field.fieldKey] = results;
+            map[field.fieldKey] = await apiFn.get<{ label: string; value: string }[]>(`/lookups/${field.lookupEntity}?limit=200`);
           }
-        } catch {
-          map[field.fieldKey] = [];
-        }
+        } catch { map[field.fieldKey] = []; }
       }
       return map;
     },
@@ -117,6 +123,18 @@ export function EntityCreatePage({ entityType }: EntityCreatePageProps) {
     createMutation.mutate(cleaned);
   }
 
+  // Wizard: validate current step fields before advancing
+  async function handleNext() {
+    const stepFields = steps[currentStep]?.editableFields ?? [];
+    const fieldKeys = stepFields.map((f) => f.fieldKey);
+    const isValid = await form.trigger(fieldKeys);
+    if (isValid) setCurrentStep((s) => Math.min(s + 1, steps.length - 1));
+  }
+
+  function handleBack() {
+    setCurrentStep((s) => Math.max(s - 1, 0));
+  }
+
   if (layoutLoading) {
     return (
       <div>
@@ -127,6 +145,32 @@ export function EntityCreatePage({ entityType }: EntityCreatePageProps) {
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
             <div key={i} className="h-20 animate-pulse rounded bg-muted" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const isLastStep = currentStep === steps.length - 1;
+
+  function renderSection(step: typeof steps[number]) {
+    return (
+      <div key={step.id} className="rounded-lg border border-border bg-card">
+        <div className="px-4 py-3 border-b border-border bg-muted/30">
+          <h2 className="text-sm font-medium text-foreground">{step.name}</h2>
+        </div>
+        <div
+          className="grid gap-4 p-4"
+          style={{ gridTemplateColumns: step.columns === 1 ? '1fr' : 'repeat(2, 1fr)' }}
+        >
+          {step.editableFields.map((field: FullLayoutField) => (
+            <DynamicField
+              key={field.fieldKey}
+              field={field}
+              mode="edit"
+              lookupOptions={field.lookupEntity ? lookupOptionsMap?.[field.lookupEntity] : undefined}
+              chipOptions={chipOptionsMap?.[field.fieldKey]}
+            />
           ))}
         </div>
       </div>
@@ -146,41 +190,54 @@ export function EntityCreatePage({ entityType }: EntityCreatePageProps) {
         </button>
         <div>
           <h1 className="text-lg font-semibold text-foreground">Create {entity.singularName}</h1>
-          <p className="text-sm text-muted-foreground">Fill in the details below</p>
+          <p className="text-sm text-muted-foreground">
+            {isWizard ? `Step ${currentStep + 1} of ${steps.length}` : 'Fill in the details below'}
+          </p>
         </div>
       </div>
 
-      <Form form={form} onSubmit={form.handleSubmit(onSubmit)}>
-        <div className="space-y-8">
-          {layout?.sections.map((section) => {
-            const sectionFields = section.fields.filter(
-              (f) => !f.isReadonly && f.fieldType !== 'auto_number',
-            );
-            if (sectionFields.length === 0) return null;
+      {/* Wizard step indicator */}
+      {isWizard && steps.length > 1 && (
+        <nav className="mb-6">
+          <ol className="flex items-center gap-2">
+            {steps.map((step, i) => {
+              const isActive = i === currentStep;
+              const isComplete = i < currentStep;
+              return (
+                <li key={step.id} className="flex items-center gap-2">
+                  {i > 0 && <div className={`h-px w-6 ${isComplete ? 'bg-primary' : 'bg-border'}`} />}
+                  <button
+                    type="button"
+                    onClick={() => i < currentStep && setCurrentStep(i)}
+                    disabled={i > currentStep}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                      isActive
+                        ? 'bg-primary text-primary-foreground'
+                        : isComplete
+                          ? 'bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer'
+                          : 'bg-muted text-muted-foreground'
+                    }`}
+                  >
+                    {isComplete && <Check className="h-3 w-3" />}
+                    {step.name}
+                  </button>
+                </li>
+              );
+            })}
+          </ol>
+        </nav>
+      )}
 
-            return (
-              <div key={section.id} className="rounded-lg border border-border bg-card">
-                <div className="px-4 py-3 border-b border-border bg-muted/30">
-                  <h2 className="text-sm font-medium text-foreground">{section.name}</h2>
-                </div>
-                <div
-                  className="grid gap-4 p-4"
-                  style={{ gridTemplateColumns: section.columns === 1 ? '1fr' : 'repeat(2, 1fr)' }}
-                >
-                  {sectionFields.map((field: FullLayoutField) => (
-                    <DynamicField
-                      key={field.fieldKey}
-                      field={field}
-                      mode="edit"
-                      lookupOptions={field.lookupEntity ? lookupOptionsMap?.[field.lookupEntity] : undefined}
-                      chipOptions={chipOptionsMap?.[field.fieldKey]}
-                    />
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+      <Form form={form} onSubmit={form.handleSubmit(onSubmit)}>
+        {isWizard ? (
+          // Wizard: show only current step
+          steps[currentStep] && renderSection(steps[currentStep])
+        ) : (
+          // Page: show all sections
+          <div className="space-y-8">
+            {steps.map((step) => renderSection(step))}
+          </div>
+        )}
 
         {createMutation.isError && (
           <p className="text-sm text-destructive mt-4" aria-live="polite">
@@ -188,13 +245,28 @@ export function EntityCreatePage({ entityType }: EntityCreatePageProps) {
           </p>
         )}
 
-        <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-border">
-          <Button type="button" variant="outline" onClick={() => navigate(`/${entity.slug}`)} disabled={createMutation.isPending}>
-            Cancel
-          </Button>
-          <Button type="submit" disabled={createMutation.isPending}>
-            {createMutation.isPending ? 'Creating...' : `Save`}
-          </Button>
+        <div className="flex items-center justify-between mt-6 pt-4 border-t border-border">
+          <div>
+            {isWizard && currentStep > 0 && (
+              <Button type="button" variant="outline" onClick={handleBack}>
+                Back
+              </Button>
+            )}
+          </div>
+          <div className="flex items-center gap-3">
+            <Button type="button" variant="outline" onClick={() => navigate(`/${entity.slug}`)} disabled={createMutation.isPending}>
+              Cancel
+            </Button>
+            {isWizard && !isLastStep ? (
+              <Button type="button" onClick={handleNext}>
+                Next
+              </Button>
+            ) : (
+              <Button type="submit" disabled={createMutation.isPending}>
+                {createMutation.isPending ? 'Creating...' : 'Save'}
+              </Button>
+            )}
+          </div>
         </div>
       </Form>
     </div>
