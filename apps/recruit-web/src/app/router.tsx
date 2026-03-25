@@ -82,7 +82,7 @@ export function AppRouter() {
 
           {/* Non-entity routes */}
           <Route
-            path="/settings"
+            path="/settings/:entityType?"
             element={<Suspense fallback={<PageSkeleton />}><SettingsPage /></Suspense>}
           />
           <Route
