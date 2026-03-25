@@ -11,11 +11,13 @@ import {
   HttpStatus,
   ParseUUIDPipe,
   Inject,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { CurrentUser, type JwtPayload } from '@packages/auth';
 import { RequirePermission } from '@packages/rbac';
 import { EntityService } from './entity.service';
+import { createFieldPermissionInterceptor } from './interceptors/field-permission.interceptor';
 import type { EntityConfig, ListLayoutResponse, EntityActions } from './types';
 
 /**
@@ -38,8 +40,11 @@ export function createEntityController(config: EntityConfig, serviceToken: strin
   const updatePermission = `${config.slug}.update`;
   const deletePermission = `${config.slug}.delete`;
 
+  const FieldPermissionInterceptor = createFieldPermissionInterceptor(config.fieldMeta);
+
   @ApiTags(config.slug)
   @Controller(config.slug)
+  @UseInterceptors(FieldPermissionInterceptor)
   class DynamicEntityController {
     constructor(@Inject(serviceToken) private readonly entityService: EntityService) {}
 

@@ -48,6 +48,10 @@ export interface FieldMeta {
   maxFileSize?: number;
   /** Workflow config (for workflow field type) */
   workflow?: WorkflowFieldConfig;
+  /** Permission required to read this field. If unset, anyone with entity-level read access can see it. */
+  readPermission?: string;
+  /** Permission required to write this field. If unset, anyone with entity-level create/update access can write it. */
+  writePermission?: string;
 }
 
 // ---------------------------------------------------------------------------
