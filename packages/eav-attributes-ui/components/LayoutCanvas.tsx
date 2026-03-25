@@ -147,6 +147,7 @@ function SortableSection({
   onAddFieldClick: (sectionId: string) => void;
 }) {
   const [collapsed, setCollapsed] = useState(false);
+  const gridCols = section.columns === 1 ? 'grid-cols-1' : 'grid-cols-2';
 
   const { ref: sectionRef, handleRef, isDragging: isSectionDragging } = useSortable({
     id: section.id,
@@ -182,7 +183,7 @@ function SortableSection({
             className="flex items-center gap-1.5 text-sm font-medium text-foreground hover:text-foreground/80">
             {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             {section.name}
-            <span className="text-xs text-muted-foreground font-normal">({fieldDefs.length} fields)</span>
+            <span className="text-xs text-muted-foreground font-normal">({fieldDefs.length} fields · {section.columns} col)</span>
           </button>
         </div>
         <div className="flex items-center gap-0.5">
@@ -198,18 +199,20 @@ function SortableSection({
       </div>
 
       {!collapsed && (
-        <div ref={dropRef} className="p-2 space-y-1 min-h-[40px]">
+        <div ref={dropRef} className="p-2 min-h-[40px]">
           {fieldDefs.length > 0 ? (
-            fieldDefs.map((field, fieldIndex) => (
-              <SortableField
-                key={field.id}
-                field={field}
-                index={fieldIndex}
-                sectionId={section.id}
-                onEditField={onEditField}
-                onRemove={onRemoveField}
-              />
-            ))
+            <div className={`grid ${gridCols} gap-1`}>
+              {fieldDefs.map((field, fieldIndex) => (
+                <SortableField
+                  key={field.id}
+                  field={field}
+                  index={fieldIndex}
+                  sectionId={section.id}
+                  onEditField={onEditField}
+                  onRemove={onRemoveField}
+                />
+              ))}
+            </div>
           ) : (
             <div className={`flex items-center justify-center py-4 text-xs text-muted-foreground border rounded ${isDropTarget ? 'border-primary border-dashed' : 'border-dashed'}`}>
               Drop fields here
