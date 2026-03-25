@@ -177,7 +177,11 @@ function SortableColumn({
   return (
     <div
       ref={colRef}
-      className={`flex-1 space-y-1 min-h-[40px] p-1 rounded ${isDropTarget ? 'bg-primary/5 border border-primary border-dashed' : ''}`}
+      className={`flex-1 space-y-1 min-h-[60px] max-h-[400px] overflow-y-auto p-2 rounded-md border transition-colors ${
+        isDropTarget
+          ? 'bg-primary/5 border-primary border-dashed'
+          : 'border-border/50 bg-muted/20'
+      }`}
     >
       {fields.length > 0 ? (
         fields.map((field, fieldIndex) => (
@@ -192,7 +196,7 @@ function SortableColumn({
           />
         ))
       ) : (
-        <div className={`flex items-center justify-center py-4 text-xs text-muted-foreground border rounded ${isDropTarget ? 'border-primary border-dashed' : 'border-dashed'}`}>
+        <div className={`flex items-center justify-center h-full min-h-[44px] text-xs text-muted-foreground border rounded ${isDropTarget ? 'border-primary border-dashed' : 'border-dashed'}`}>
           Drop fields here
         </div>
       )}
