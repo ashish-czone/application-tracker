@@ -40,7 +40,7 @@ export function createEntityController(config: EntityConfig, serviceToken: strin
   const updatePermission = `${config.slug}.update`;
   const deletePermission = `${config.slug}.delete`;
 
-  const FieldPermissionInterceptor = createFieldPermissionInterceptor(config.fieldMeta);
+  const FieldPermissionInterceptor = createFieldPermissionInterceptor(config);
 
   @ApiTags(config.slug)
   @Controller(config.slug)
