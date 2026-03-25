@@ -1,96 +1,98 @@
 import { Injectable, type CallHandler, type ExecutionContext, type NestInterceptor } from '@nestjs/common';
 import { Observable, map } from 'rxjs';
-import type { FieldMeta } from '../types';
+import type { EntityConfig } from '../types';
 
 /**
- * Intercepts entity CRUD requests to enforce field-level permissions.
+ * Restriction-based field permission interceptor.
  *
- * - **Writes** (POST/PATCH): strips fields from request body where the user
- *   lacks the required `writePermission`.
- * - **Reads** (response): strips fields from the response where the user
- *   lacks the required `readPermission`.
+ * All fields are accessible by default (Read & Write). Restrictions are
+ * stored as permission entries on the user's role:
  *
- * Fields without readPermission/writePermission are unrestricted —
- * anyone with entity-level access can read/write them.
+ * - `{slug}.hide-{fieldKey}`     → field is hidden (stripped from reads and writes)
+ * - `{slug}.readonly-{fieldKey}` → field is read-only (stripped from writes only)
  *
- * Applied per-entity by the auto-generated controller. The entity's fieldMeta
- * is passed via the factory function, so no runtime registry lookup is needed.
+ * System and required fields cannot be restricted — they always remain Read & Write.
+ * Superadmin (wildcard `*` permission) bypasses all restrictions.
+ *
+ * Applied per-entity by the auto-generated controller.
  */
-export function createFieldPermissionInterceptor(fieldMeta: Record<string, FieldMeta>) {
-  // Pre-compute which fields have permissions so we skip the loop for entities with no restrictions
-  const readRestrictedFields = Object.entries(fieldMeta)
-    .filter(([, meta]) => meta.readPermission)
-    .map(([key, meta]) => ({ key, permission: meta.readPermission! }));
+export function createFieldPermissionInterceptor(config: EntityConfig) {
+  const slug = config.slug;
 
-  const writeRestrictedFields = Object.entries(fieldMeta)
-    .filter(([, meta]) => meta.writePermission)
-    .map(([key, meta]) => ({ key, permission: meta.writePermission! }));
-
-  const hasReadRestrictions = readRestrictedFields.length > 0;
-  const hasWriteRestrictions = writeRestrictedFields.length > 0;
+  // Pre-compute which field keys can be restricted (exclude system/required)
+  const restrictableFields: string[] = Object.entries(config.fieldMeta)
+    .filter(([, meta]) => !meta.isSystem)
+    .map(([key]) => key);
 
   @Injectable()
   class FieldPermissionInterceptor implements NestInterceptor {
     intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
-      // Skip entirely if no field-level permissions are configured
-      if (!hasReadRestrictions && !hasWriteRestrictions) {
-        return next.handle();
-      }
-
       const request = context.switchToHttp().getRequest();
       const userPermissions: Record<string, string> = request.user?.permissions ?? {};
 
-      // Superadmin bypass — wildcard grants all field permissions
+      // Superadmin bypass
       if ('*' in userPermissions) {
         return next.handle();
       }
 
-      // Strip write-restricted fields from request body
-      if (hasWriteRestrictions && request.body && typeof request.body === 'object') {
-        for (const { key, permission } of writeRestrictedFields) {
-          if (key in request.body && !(permission in userPermissions)) {
+      // Compute hidden and readonly sets for this request
+      const hiddenFields = new Set<string>();
+      const readonlyFields = new Set<string>();
+
+      for (const fieldKey of restrictableFields) {
+        if (`${slug}.hide-${fieldKey}` in userPermissions) {
+          hiddenFields.add(fieldKey);
+        } else if (`${slug}.readonly-${fieldKey}` in userPermissions) {
+          readonlyFields.add(fieldKey);
+        }
+      }
+
+      // No restrictions for this user — skip filtering
+      if (hiddenFields.size === 0 && readonlyFields.size === 0) {
+        return next.handle();
+      }
+
+      // Strip hidden + readonly fields from writes
+      const writeRestricted = new Set([...hiddenFields, ...readonlyFields]);
+      if (writeRestricted.size > 0 && request.body && typeof request.body === 'object') {
+        for (const key of writeRestricted) {
+          if (key in request.body) {
             delete request.body[key];
           }
         }
       }
 
-      // Skip read filtering if no read restrictions
-      if (!hasReadRestrictions) {
+      // Strip hidden fields from reads
+      if (hiddenFields.size === 0) {
         return next.handle();
       }
 
-      // Strip read-restricted fields from response
       return next.handle().pipe(
         map((response: any) => {
           if (response == null) return response;
-          return this.filterResponse(response, userPermissions);
+          return this.filterResponse(response, hiddenFields);
         }),
       );
     }
 
-    private filterResponse(response: any, userPermissions: Record<string, string>): any {
-      // Paginated list: { data: [...], meta: {...} }
+    private filterResponse(response: any, hiddenFields: Set<string>): any {
       if (response.data && Array.isArray(response.data)) {
         return {
           ...response,
-          data: response.data.map((item: any) => this.stripFields(item, userPermissions)),
+          data: response.data.map((item: any) => this.stripFields(item, hiddenFields)),
         };
       }
-
-      // Single entity object
       if (typeof response === 'object' && !Array.isArray(response)) {
-        return this.stripFields(response, userPermissions);
+        return this.stripFields(response, hiddenFields);
       }
-
       return response;
     }
 
-    private stripFields(entity: Record<string, unknown>, userPermissions: Record<string, string>): Record<string, unknown> {
+    private stripFields(entity: Record<string, unknown>, hiddenFields: Set<string>): Record<string, unknown> {
       const result = { ...entity };
-      for (const { key, permission } of readRestrictedFields) {
-        if (key in result && !(permission in userPermissions)) {
-          delete result[key];
-        }
+      for (const key of hiddenFields) {
+        delete result[key];
+        delete result[`${key}__label`]; // Also strip resolved lookup labels
       }
       return result;
     }
