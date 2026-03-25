@@ -64,28 +64,64 @@ export class EntityService {
   // LIST LAYOUT
   // ---------------------------------------------------------------------------
 
+  /** Field types excluded from list view columns. */
+  private static readonly LIST_SKIP_TYPES = new Set(['textarea', 'file', 'auto_number']);
+
+  /** System columns always included in list queries. */
+  private static readonly LIST_SYSTEM_COLUMNS = ['id', 'createdAt', 'updatedAt', 'deletedAt', 'createdBy'];
+
+  /**
+   * Get the field definitions visible on the list page.
+   * Shared between getListLayout() and list() to keep column selection in sync.
+   */
+  private async getListFieldDefs(): Promise<FieldDefinition[]> {
+    const defs = await this.fieldDefinitionService.listByEntityWithOptions(this.config.entityType);
+    return defs
+      .filter(d => !EntityService.LIST_SKIP_TYPES.has(d.fieldType) && !d.isSystem)
+      .slice(0, 10);
+  }
+
+  /**
+   * Build a Drizzle select map for list queries — only standard DB columns
+   * that appear in the list layout + required system columns.
+   */
+  private buildListSelectMap(listDefs: FieldDefinition[]): Record<string, PgColumn> {
+    const table = this.config.table as any;
+    const selectMap: Record<string, PgColumn> = {};
+
+    for (const key of EntityService.LIST_SYSTEM_COLUMNS) {
+      if (table[key]) {
+        selectMap[key] = table[key];
+      }
+    }
+
+    for (const def of listDefs) {
+      if (def.columnName !== null && table[def.fieldKey]) {
+        selectMap[def.fieldKey] = table[def.fieldKey];
+      }
+    }
+
+    return selectMap;
+  }
+
   /**
    * Returns list page layout config: columns, actions, filters, sort defaults.
    * Cached by the frontend — this is config, not data.
    */
   async getListLayout(): Promise<import('./types').ListLayoutResponse> {
     const { config } = this;
-    const defs = await this.fieldDefinitionService.listByEntityWithOptions(config.entityType);
+    const listDefs = await this.getListFieldDefs();
 
-    // Build columns from field definitions (skip textarea, file, auto_number)
-    const skipTypes = new Set(['textarea', 'file', 'auto_number']);
-    const columns = defs
-      .filter(d => !skipTypes.has(d.fieldType) && !d.isSystem)
-      .slice(0, 10) // Reasonable default column limit
-      .map(d => ({
-        fieldKey: d.fieldKey,
-        label: d.label,
-        fieldType: d.fieldType,
-        sortable: !!config.sortableColumns[d.fieldKey],
-        lookupEntity: d.lookupEntity ?? undefined,
-      }));
+    const columns = listDefs.map(d => ({
+      fieldKey: d.fieldKey,
+      label: d.label,
+      fieldType: d.fieldType,
+      sortable: !!config.sortableColumns[d.fieldKey],
+      lookupEntity: d.lookupEntity ?? undefined,
+    }));
 
     // Build filterable fields (picklists, lookups, booleans, tags)
+    const defs = await this.fieldDefinitionService.listByEntityWithOptions(config.entityType);
     const filterableTypes = new Set(['picklist', 'multi_select', 'lookup', 'user', 'boolean', 'tags', 'category']);
     const filters = defs
       .filter(d => filterableTypes.has(d.fieldType))
@@ -162,9 +198,12 @@ export class EntityService {
       .from(config.table as any)
       .where(whereClause) as any[];
 
-    // Fetch rows
+    // Fetch only list-relevant columns instead of SELECT *
+    const listDefs = await this.getListFieldDefs();
+    const selectMap = this.buildListSelectMap(listDefs);
+
     const rows = await this.database.db
-      .select()
+      .select(selectMap)
       .from(config.table as any)
       .where(whereClause)
       .orderBy(orderByExpr)
