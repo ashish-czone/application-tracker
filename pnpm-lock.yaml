@@ -750,13 +750,13 @@ importers:
       '@packages/workflows':
         specifier: workspace:*
         version: link:../workflows
+      rxjs:
+        specifier: ^7.0.0
+        version: 7.8.2
     devDependencies:
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3))
-      rxjs:
-        specifier: ^7.0.0
-        version: 7.8.2
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
