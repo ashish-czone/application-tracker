@@ -57,8 +57,21 @@ export function removeFieldFromSection(entityType: string, sectionId: string, fi
   return api.delete<void>(`/layouts/${entityType}/sections/${sectionId}/fields/${fieldId}`);
 }
 
-export function reorderFields(entityType: string, sectionId: string, orderedFieldIds: string[]): Promise<void> {
-  return api.put<void>(`/layouts/${entityType}/sections/${sectionId}/fields/reorder`, { orderedFieldIds });
+export function reorderFields(
+  entityType: string,
+  sectionId: string,
+  orderedFields: { fieldId: string; columnIndex: number }[],
+): Promise<void> {
+  return api.put<void>(`/layouts/${entityType}/sections/${sectionId}/fields/reorder`, { orderedFields });
+}
+
+export function addFieldToSectionWithColumn(
+  entityType: string,
+  sectionId: string,
+  fieldId: string,
+  columnIndex: number,
+): Promise<void> {
+  return api.post<void>(`/layouts/${entityType}/sections/${sectionId}/fields`, { fieldId, columnIndex });
 }
 
 // Lookups

@@ -40,6 +40,7 @@ export interface FieldDefinition {
   fileMaxSize: number | null;
   sortOrder: number;
   picklistOptions: PicklistOption[];
+  columnIndex: number;
 }
 
 export interface LayoutSection {

@@ -115,6 +115,7 @@ export interface LayoutField {
 
 export interface FullLayoutField extends FieldDefinition {
   picklistOptions: PicklistOption[];
+  columnIndex: number;
 }
 
 export interface FullLayoutSection {

@@ -71,7 +71,41 @@ export function DynamicSection({ section, values, onSave, isSaving }: DynamicSec
     setIsEditing(true);
   };
 
-  const gridCols = section.columns === 1 ? 'grid-cols-1' : 'grid-cols-2';
+  const isTwoColumn = section.columns >= 2;
+
+  // Split fields by column assignment
+  const col0Fields = useMemo(
+    () => section.fields.filter(f => f.columnIndex !== 1),
+    [section.fields],
+  );
+  const col1Fields = useMemo(
+    () => section.fields.filter(f => f.columnIndex === 1),
+    [section.fields],
+  );
+  const col0Editable = useMemo(
+    () => editableFields.filter(f => f.columnIndex !== 1),
+    [editableFields],
+  );
+  const col1Editable = useMemo(
+    () => editableFields.filter(f => f.columnIndex === 1),
+    [editableFields],
+  );
+
+  const renderViewColumn = (fields: typeof section.fields) =>
+    fields.map(field => (
+      <DynamicField
+        key={field.fieldKey}
+        field={field}
+        mode="view"
+        value={values[field.fieldKey]}
+        resolvedLabel={values[`${field.fieldKey}__label`] as string | undefined}
+      />
+    ));
+
+  const renderEditColumn = (fields: typeof editableFields) =>
+    fields.map(field => (
+      <DynamicField key={field.fieldKey} field={field} mode="edit" />
+    ));
 
   return (
     <div className="rounded-lg border border-border bg-card">
@@ -106,11 +140,14 @@ export function DynamicSection({ section, values, onSave, isSaving }: DynamicSec
         <div className="p-4">
           {isEditing ? (
             <Form form={form} onSubmit={form.handleSubmit(handleSave)}>
-              <div className={`grid ${gridCols} gap-4`}>
-                {editableFields.map(field => (
-                  <DynamicField key={field.fieldKey} field={field} mode="edit" />
-                ))}
-              </div>
+              {isTwoColumn ? (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-4">{renderEditColumn(col0Editable)}</div>
+                  <div className="space-y-4">{renderEditColumn(col1Editable)}</div>
+                </div>
+              ) : (
+                <div className="space-y-4">{renderEditColumn(editableFields)}</div>
+              )}
               <div className="flex justify-end gap-2 pt-4">
                 <button
                   type="button"
@@ -129,17 +166,14 @@ export function DynamicSection({ section, values, onSave, isSaving }: DynamicSec
               </div>
             </Form>
           ) : (
-            <div className={`grid ${gridCols} gap-4`}>
-              {section.fields.map(field => (
-                <DynamicField
-                  key={field.fieldKey}
-                  field={field}
-                  mode="view"
-                  value={values[field.fieldKey]}
-                  resolvedLabel={values[`${field.fieldKey}__label`] as string | undefined}
-                />
-              ))}
-            </div>
+            isTwoColumn ? (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-4">{renderViewColumn(col0Fields)}</div>
+                <div className="space-y-4">{renderViewColumn(col1Fields)}</div>
+              </div>
+            ) : (
+              <div className="space-y-4">{renderViewColumn(section.fields)}</div>
+            )
           )}
         </div>
       )}

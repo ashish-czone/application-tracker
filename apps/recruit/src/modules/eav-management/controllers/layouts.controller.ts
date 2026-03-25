@@ -81,11 +81,17 @@ export class LayoutsController {
 
   @Put(':entityType/sections/:sectionId/fields/reorder')
   @RequirePermission(EAV_PERMISSIONS.MANAGE)
-  @ApiOperation({ summary: 'Reorder fields within a section' })
+  @ApiOperation({ summary: 'Reorder fields within a section (supports column-aware ordering)' })
   async reorderFields(
     @Param('sectionId') sectionId: string,
-    @Body() body: { orderedFieldIds: string[] },
+    @Body() body: {
+      orderedFieldIds?: string[];
+      orderedFields?: { fieldId: string; columnIndex: number }[];
+    },
   ) {
-    await this.layoutService.reorderFieldsInSection(sectionId, body.orderedFieldIds);
+    await this.layoutService.reorderFieldsInSection(
+      sectionId,
+      body.orderedFields ?? body.orderedFieldIds ?? [],
+    );
   }
 }
