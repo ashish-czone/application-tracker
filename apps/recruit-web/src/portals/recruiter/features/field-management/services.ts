@@ -65,15 +65,6 @@ export function reorderFields(
   return api.put<void>(`/layouts/${entityType}/sections/${sectionId}/fields/reorder`, { orderedFields });
 }
 
-export function addFieldToSectionWithColumn(
-  entityType: string,
-  sectionId: string,
-  fieldId: string,
-  columnIndex: number,
-): Promise<void> {
-  return api.post<void>(`/layouts/${entityType}/sections/${sectionId}/fields`, { fieldId, columnIndex });
-}
-
 // Lookups
 export function getLookupEntities(): Promise<string[]> {
   return api.get<string[]>('/lookups');

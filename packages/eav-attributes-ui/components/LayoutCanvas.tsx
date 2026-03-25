@@ -12,7 +12,7 @@ interface LayoutCanvasProps {
   sections: LayoutSection[];
   onAddFieldToSection: (sectionId: string, fieldId: string, columnIndex?: number) => void | Promise<void>;
   onRemoveFieldFromSection: (sectionId: string, fieldId: string) => void | Promise<void>;
-  onReorderFields: (sectionId: string, orderedFields: { fieldId: string; columnIndex: number }[]) => void;
+  onReorderFields: (sectionId: string, orderedFields: { fieldId: string; columnIndex: number }[]) => void | Promise<void>;
   onReorderSections: (orderedSectionIds: string[]) => void;
   onEditSection: (section: LayoutSection) => void;
   onDeleteSection: (sectionId: string) => void;
@@ -65,10 +65,12 @@ function toColumnFieldMap(sections: LayoutSection[]): Record<string, string[]> {
 }
 
 function fingerprint(sectionOrder: string[], fieldMap: Record<string, string[]>): string {
-  return Object.entries(fieldMap)
-    .map(([key, ids]) => `${key}:${[...ids].sort().join(',')}`)
-    .sort()
+  const sections = sectionOrder.join(',');
+  const fields = Object.entries(fieldMap)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, ids]) => `${key}:${ids.join(',')}`)
     .join('|');
+  return `${sections}||${fields}`;
 }
 
 function getSectionId(columnKey: string): string {
@@ -415,14 +417,13 @@ export function LayoutCanvas({
 
     if (!prevColumnKey || !currColumnKey) return;
 
-    localFingerprintRef.current = fingerprint(sectionOrderRef.current, currentMap);
-
     const prevSectionId = getSectionId(prevColumnKey);
     const currSectionId = getSectionId(currColumnKey);
     const targetColumnIndex = currColumnKey.endsWith('-col1') ? 1 : 0;
 
     if (prevSectionId === currSectionId) {
       // Same section — reorder (may have moved between columns)
+      localFingerprintRef.current = fingerprint(sectionOrderRef.current, currentMap);
       onReorderFields(currSectionId, buildReorderPayload(currSectionId));
     } else {
       // Cross-section move — pass target column so the field is added to the correct column
@@ -435,8 +436,15 @@ export function LayoutCanvas({
             await onRemoveFieldFromSection(prevSectionId, fieldId);
             await onAddFieldToSection(currSectionId, fieldId, targetColumnIndex);
           }
-          onReorderFields(currSectionId, buildReorderPayload(currSectionId));
-          onReorderFields(prevSectionId, buildReorderPayload(prevSectionId));
+          await onReorderFields(currSectionId, buildReorderPayload(currSectionId));
+          await onReorderFields(prevSectionId, buildReorderPayload(prevSectionId));
+          // Update fingerprint only after all mutations succeed
+          localFingerprintRef.current = fingerprint(sectionOrderRef.current, fieldMapRef.current);
+        } catch {
+          // Rollback to pre-drag state on any failure
+          setFieldMap(preDragFieldMap.current);
+          setSectionOrder(preDragSectionOrder.current);
+          localFingerprintRef.current = fingerprint(preDragSectionOrder.current, preDragFieldMap.current);
         } finally {
           syncBlockedRef.current = false;
         }
