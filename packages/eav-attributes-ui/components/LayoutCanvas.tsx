@@ -79,7 +79,7 @@ function getSectionId(columnKey: string): string {
 
 // --- Field type placeholder rendering ---
 
-const PLACEHOLDER_MAP: Partial<Record<FieldType, string>> = {
+const INPUT_PLACEHOLDER: Partial<Record<FieldType, string>> = {
   text: 'Single line',
   email: 'user@example.com',
   phone: '+1 (555) 000-0000',
@@ -89,21 +89,17 @@ const PLACEHOLDER_MAP: Partial<Record<FieldType, string>> = {
   decimal: '0.00',
   date: 'MM/DD/YYYY',
   datetime: 'MM/DD/YYYY HH:MM',
-  textarea: 'Multi-line text',
   auto_number: 'Auto generated',
 };
 
-function FieldPlaceholder({ fieldType }: { fieldType: FieldType }) {
-  const isSelect = fieldType === 'picklist' || fieldType === 'multi_select' || fieldType === 'lookup' || fieldType === 'user' || fieldType === 'category';
-  const isCheckbox = fieldType === 'boolean';
-  const isTags = fieldType === 'tags';
-  const isFile = fieldType === 'file';
-  const placeholder = PLACEHOLDER_MAP[fieldType];
+const SELECT_TYPES = new Set<FieldType>(['picklist', 'multi_select', 'lookup', 'multi_lookup', 'user', 'multi_user', 'category', 'workflow']);
+const TEXTAREA_TYPES = new Set<FieldType>(['textarea', 'rich_text']);
 
-  if (isCheckbox) {
+function FieldPlaceholder({ fieldType }: { fieldType: FieldType }) {
+  if (fieldType === 'boolean') {
     return <div className="h-4 w-4 rounded border border-input bg-background" />;
   }
-  if (isTags) {
+  if (fieldType === 'tags') {
     return (
       <div className="flex gap-1">
         <span className="px-1.5 py-0.5 rounded-full bg-muted text-[10px] text-muted-foreground">tag</span>
@@ -111,20 +107,28 @@ function FieldPlaceholder({ fieldType }: { fieldType: FieldType }) {
       </div>
     );
   }
-  if (isFile) {
+  if (fieldType === 'file') {
     return <span className="text-xs text-muted-foreground/60 italic">Attach file</span>;
   }
-  if (isSelect) {
+  if (TEXTAREA_TYPES.has(fieldType)) {
+    return (
+      <div className="w-full rounded border border-input bg-background px-2 pt-1 pb-3 min-h-[42px]">
+        <span className="text-xs text-muted-foreground/60">{fieldType === 'rich_text' ? 'Rich text editor' : 'Multi-line text'}</span>
+      </div>
+    );
+  }
+  if (SELECT_TYPES.has(fieldType)) {
+    const label = FIELD_TYPE_CONFIG[fieldType]?.label ?? 'Select';
     return (
       <div className="flex items-center justify-between w-full rounded border border-input bg-background px-2 py-1">
-        <span className="text-xs text-muted-foreground/60">Select...</span>
+        <span className="text-xs text-muted-foreground/60">{label}...</span>
         <ChevronDown className="h-3 w-3 text-muted-foreground/40" />
       </div>
     );
   }
   return (
     <div className="w-full rounded border border-input bg-background px-2 py-1">
-      <span className="text-xs text-muted-foreground/60">{placeholder ?? 'Text'}</span>
+      <span className="text-xs text-muted-foreground/60">{INPUT_PLACEHOLDER[fieldType] ?? 'Text'}</span>
     </div>
   );
 }
