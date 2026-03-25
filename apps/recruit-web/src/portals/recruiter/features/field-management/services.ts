@@ -49,8 +49,8 @@ export function reorderSections(entityType: string, orderedIds: string[]): Promi
 }
 
 // Field placement
-export function addFieldToSection(entityType: string, sectionId: string, fieldId: string): Promise<void> {
-  return api.post<void>(`/layouts/${entityType}/sections/${sectionId}/fields`, { fieldId });
+export function addFieldToSection(entityType: string, sectionId: string, fieldId: string, columnIndex?: number): Promise<void> {
+  return api.post<void>(`/layouts/${entityType}/sections/${sectionId}/fields`, { fieldId, columnIndex });
 }
 
 export function removeFieldFromSection(entityType: string, sectionId: string, fieldId: string): Promise<void> {

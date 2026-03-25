@@ -10,7 +10,7 @@ import type { LayoutSection, FieldDefinition } from '../types';
 
 interface LayoutCanvasProps {
   sections: LayoutSection[];
-  onAddFieldToSection: (sectionId: string, fieldId: string) => void | Promise<void>;
+  onAddFieldToSection: (sectionId: string, fieldId: string, columnIndex?: number) => void | Promise<void>;
   onRemoveFieldFromSection: (sectionId: string, fieldId: string) => void | Promise<void>;
   onReorderFields: (sectionId: string, orderedFields: { fieldId: string; columnIndex: number }[]) => void;
   onReorderSections: (orderedSectionIds: string[]) => void;
@@ -19,7 +19,7 @@ interface LayoutCanvasProps {
   onEditField: (field: FieldDefinition) => void;
   onAddSectionClick: () => void;
   onAddFieldClick: (sectionId: string) => void;
-  onMoveFieldToSection?: (sourceSectionId: string, targetSectionId: string, fieldId: string) => void | Promise<void>;
+  onMoveFieldToSection?: (sourceSectionId: string, targetSectionId: string, fieldId: string, targetColumnIndex: number) => void | Promise<void>;
 }
 
 // --- Helpers ---
@@ -419,20 +419,21 @@ export function LayoutCanvas({
 
     const prevSectionId = getSectionId(prevColumnKey);
     const currSectionId = getSectionId(currColumnKey);
+    const targetColumnIndex = currColumnKey.endsWith('-col1') ? 1 : 0;
 
     if (prevSectionId === currSectionId) {
       // Same section — reorder (may have moved between columns)
       onReorderFields(currSectionId, buildReorderPayload(currSectionId));
     } else {
-      // Cross-section move
+      // Cross-section move — pass target column so the field is added to the correct column
       syncBlockedRef.current = true;
       (async () => {
         try {
           if (onMoveFieldToSection) {
-            await onMoveFieldToSection(prevSectionId, currSectionId, fieldId);
+            await onMoveFieldToSection(prevSectionId, currSectionId, fieldId, targetColumnIndex);
           } else {
             await onRemoveFieldFromSection(prevSectionId, fieldId);
-            await onAddFieldToSection(currSectionId, fieldId);
+            await onAddFieldToSection(currSectionId, fieldId, targetColumnIndex);
           }
           onReorderFields(currSectionId, buildReorderPayload(currSectionId));
           onReorderFields(prevSectionId, buildReorderPayload(prevSectionId));
