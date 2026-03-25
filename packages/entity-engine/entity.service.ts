@@ -95,6 +95,14 @@ export class EntityService {
       }
     }
 
+    // Always include nameField and subtitleField (needed for display even if system/hidden)
+    const { nameField, subtitleField } = this.config.ui;
+    const displayFields = Array.isArray(nameField) ? [...nameField] : [nameField];
+    if (subtitleField) displayFields.push(subtitleField);
+    for (const key of displayFields) {
+      if (table[key]) selectMap[key] = table[key];
+    }
+
     for (const def of listDefs) {
       if (def.columnName !== null && table[def.fieldKey]) {
         selectMap[def.fieldKey] = table[def.fieldKey];
