@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { DragDropProvider } from '@dnd-kit/react';
 import { useSortable } from '@dnd-kit/react/sortable';
-import { useDroppable } from '@dnd-kit/react';
 import { CollisionPriority } from '@dnd-kit/abstract';
 import { move } from '@dnd-kit/helpers';
 import { Plus, GripVertical, X, ChevronDown, ChevronRight, Pencil, Trash2 } from 'lucide-react';
@@ -162,37 +161,22 @@ function SortableColumn({
   onEditField: (f: FieldDefinition) => void;
   onRemoveField: (sectionId: string, fieldId: string) => void;
 }) {
-  // useSortable registers this as a container for move() resolution
-  const { ref: sortableRef, isDropTarget: isSortableTarget } = useSortable({
+  // useSortable registers this column as a container that move() can resolve.
+  // CollisionPriority.Normal ensures this wins over the parent section (which only accepts 'section').
+  const { ref: colRef, isDropTarget } = useSortable({
     id: columnKey,
     index: columnIndex,
     type: 'column',
     accept: 'field',
     group: sectionId,
-    collisionPriority: CollisionPriority.Low,
-  });
-
-  // useDroppable provides full-area collision detection (not just narrow sortable zone)
-  const { ref: droppableRef, isDropTarget: isDroppableTarget } = useDroppable({
-    id: `drop-${columnKey}`,
-    type: 'column-drop',
-    accept: 'field',
     collisionPriority: CollisionPriority.Normal,
   });
-
-  const isDropTarget = isSortableTarget || isDroppableTarget;
-
-  // Merge both refs onto the same element
-  const mergedRef = useCallback((node: HTMLElement | null) => {
-    sortableRef(node);
-    droppableRef(node);
-  }, [sortableRef, droppableRef]);
 
   const fields = fieldIds.map((id) => allFieldDefs.current.get(id)).filter(Boolean) as FieldDefinition[];
 
   return (
     <div
-      ref={mergedRef}
+      ref={colRef}
       className={`flex-1 space-y-1 min-h-[60px] max-h-[400px] overflow-y-auto p-2 rounded-md border transition-colors ${
         isDropTarget
           ? 'bg-primary/5 border-primary border-dashed'
@@ -253,7 +237,7 @@ function SortableSection({
     id: section.id,
     index,
     type: 'section',
-    accept: ['field', 'section'],
+    accept: 'section',
     collisionPriority: CollisionPriority.Low,
   });
 
