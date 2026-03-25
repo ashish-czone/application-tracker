@@ -135,17 +135,28 @@ export class LayoutService {
     this.invalidateCache(section.entityType, section.layoutName);
   }
 
-  async reorderFieldsInSection(sectionId: string, orderedFieldIds: string[]): Promise<void> {
+  async reorderFieldsInSection(
+    sectionId: string,
+    orderedFields: string[] | { fieldId: string; columnIndex: number }[],
+  ): Promise<void> {
     const section = await this.findSectionById(sectionId);
     if (!section) throw new NotFoundException('Section not found');
 
-    for (let i = 0; i < orderedFieldIds.length; i++) {
+    for (let i = 0; i < orderedFields.length; i++) {
+      const item = orderedFields[i];
+      const isObject = typeof item === 'object';
+      const fieldId = isObject ? item.fieldId : item;
+      const columnIndex = isObject ? item.columnIndex : undefined;
+
+      const setValues: Record<string, unknown> = { sortOrder: i };
+      if (columnIndex !== undefined) setValues.columnIndex = columnIndex;
+
       await this.database.db
         .update(layoutFields)
-        .set({ sortOrder: i })
+        .set(setValues)
         .where(and(
           eq(layoutFields.sectionId, sectionId),
-          eq(layoutFields.fieldId, orderedFieldIds[i]),
+          eq(layoutFields.fieldId, fieldId),
         ));
     }
     this.invalidateCache(section.entityType, section.layoutName);
@@ -223,6 +234,7 @@ export class LayoutService {
           return {
             ...(field as FullLayoutField),
             picklistOptions: picklistMap.get(field.id) ?? [],
+            columnIndex: lf.columnIndex,
           };
         })
         .filter(Boolean) as FullLayoutField[];
@@ -245,6 +257,7 @@ export class LayoutService {
       .map(f => ({
         ...(f as FullLayoutField),
         picklistOptions: picklistMap.get(f.id) ?? [],
+        columnIndex: 0,
       }));
 
     if (unassignedFields.length > 0) {
@@ -266,6 +279,7 @@ export class LayoutService {
       .map(f => ({
         ...(f as FullLayoutField),
         picklistOptions: picklistMap.get(f.id) ?? [],
+        columnIndex: 0,
       }));
 
     const layout: FullLayout = {

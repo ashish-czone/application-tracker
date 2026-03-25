@@ -13,7 +13,7 @@ interface LayoutCanvasProps {
   sections: LayoutSection[];
   onAddFieldToSection: (sectionId: string, fieldId: string) => void | Promise<void>;
   onRemoveFieldFromSection: (sectionId: string, fieldId: string) => void | Promise<void>;
-  onReorderFields: (sectionId: string, orderedFieldIds: string[]) => void;
+  onReorderFields: (sectionId: string, orderedFields: { fieldId: string; columnIndex: number }[]) => void;
   onReorderSections: (orderedSectionIds: string[]) => void;
   onEditSection: (section: LayoutSection) => void;
   onDeleteSection: (sectionId: string) => void;
@@ -23,30 +23,7 @@ interface LayoutCanvasProps {
   onMoveFieldToSection?: (sourceSectionId: string, targetSectionId: string, fieldId: string) => void | Promise<void>;
 }
 
-// --- Structure fingerprint: order-independent snapshot of which fields are in which sections ---
-
-function structureFingerprint(sectionOrder: string[], fieldMap: Record<string, string[]>): string {
-  return Object.entries(fieldMap)
-    .map(([sId, fIds]) => `${sId}:${[...fIds].sort().join(',')}`)
-    .sort()
-    .join('|');
-}
-
-// --- Convert between LayoutSection[] and the Record<sectionId, fieldId[]> shape dnd-kit expects ---
-// Excludes __unassigned__ from the field map so move() doesn't corrupt it
-
-function toFieldMap(sections: LayoutSection[]): Record<string, string[]> {
-  const map: Record<string, string[]> = {};
-  for (const s of sections) {
-    if (s.id === '__unassigned__') continue;
-    map[s.id] = s.fields.map((f) => f.id);
-  }
-  return map;
-}
-
-function toSectionOrder(sections: LayoutSection[]): string[] {
-  return sections.filter((s) => s.id !== '__unassigned__').map((s) => s.id);
-}
+// --- Helpers ---
 
 function buildFieldDefs(sections: LayoutSection[]) {
   const map = new Map<string, FieldDefinition>();
@@ -60,17 +37,58 @@ function buildSectionMeta(sections: LayoutSection[]) {
   return map;
 }
 
+function toSectionOrder(sections: LayoutSection[]): string[] {
+  return sections.filter((s) => s.id !== '__unassigned__').map((s) => s.id);
+}
+
+/**
+ * Column-aware field map: "sectionId-col0" → fieldId[], "sectionId-col1" → fieldId[]
+ * For single-column sections, only col0 exists.
+ */
+function toColumnFieldMap(sections: LayoutSection[]): Record<string, string[]> {
+  const map: Record<string, string[]> = {};
+  for (const s of sections) {
+    if (s.id === '__unassigned__') continue;
+    if (s.columns <= 1) {
+      map[`${s.id}-col0`] = s.fields.map((f) => f.id);
+    } else {
+      const col0: string[] = [];
+      const col1: string[] = [];
+      for (const f of s.fields) {
+        if (f.columnIndex === 1) col1.push(f.id);
+        else col0.push(f.id);
+      }
+      map[`${s.id}-col0`] = col0;
+      map[`${s.id}-col1`] = col1;
+    }
+  }
+  return map;
+}
+
+function fingerprint(sectionOrder: string[], fieldMap: Record<string, string[]>): string {
+  return Object.entries(fieldMap)
+    .map(([key, ids]) => `${key}:${[...ids].sort().join(',')}`)
+    .sort()
+    .join('|');
+}
+
+function getSectionId(columnKey: string): string {
+  return columnKey.replace(/-col[01]$/, '');
+}
+
 // --- Sortable field item ---
 
 function SortableField({
   field,
   index,
+  groupId,
   sectionId,
   onEditField,
   onRemove,
 }: {
   field: FieldDefinition;
   index: number;
+  groupId: string;
   sectionId: string;
   onEditField: (f: FieldDefinition) => void;
   onRemove?: (sectionId: string, fieldId: string) => void;
@@ -82,7 +100,7 @@ function SortableField({
     index,
     type: 'field',
     accept: 'field',
-    group: sectionId,
+    group: groupId,
   });
 
   const tc = FIELD_TYPE_CONFIG[field.fieldType] ?? { label: field.fieldType, color: 'bg-gray-100 text-gray-800' };
@@ -125,12 +143,66 @@ function SortableField({
   );
 }
 
-// --- Sortable section (reorderable + droppable for fields) ---
+// --- Droppable column ---
+
+function DroppableColumn({
+  columnKey,
+  fieldIds,
+  allFieldDefs,
+  sectionId,
+  onEditField,
+  onRemoveField,
+}: {
+  columnKey: string;
+  fieldIds: string[];
+  allFieldDefs: React.MutableRefObject<Map<string, FieldDefinition>>;
+  sectionId: string;
+  onEditField: (f: FieldDefinition) => void;
+  onRemoveField: (sectionId: string, fieldId: string) => void;
+}) {
+  const { ref: dropRef, isDropTarget } = useDroppable({
+    id: `drop-${columnKey}`,
+    type: 'column-drop',
+    accept: 'field',
+    collisionPriority: CollisionPriority.Low,
+  });
+
+  const fields = fieldIds.map((id) => allFieldDefs.current.get(id)).filter(Boolean) as FieldDefinition[];
+
+  return (
+    <div
+      ref={dropRef}
+      className={`flex-1 space-y-1 min-h-[40px] p-1 rounded ${isDropTarget ? 'bg-primary/5 border border-primary border-dashed' : ''}`}
+    >
+      {fields.length > 0 ? (
+        fields.map((field, fieldIndex) => (
+          <SortableField
+            key={field.id}
+            field={field}
+            index={fieldIndex}
+            groupId={columnKey}
+            sectionId={sectionId}
+            onEditField={onEditField}
+            onRemove={onRemoveField}
+          />
+        ))
+      ) : (
+        <div className={`flex items-center justify-center py-4 text-xs text-muted-foreground border rounded ${isDropTarget ? 'border-primary border-dashed' : 'border-dashed'}`}>
+          Drop fields here
+        </div>
+      )}
+    </div>
+  );
+}
+
+// --- Sortable section ---
 
 function SortableSection({
   section,
   index,
-  fieldDefs,
+  col0FieldIds,
+  col1FieldIds,
+  allFieldDefs,
   onEditSection,
   onDeleteSection,
   onRemoveField,
@@ -139,7 +211,9 @@ function SortableSection({
 }: {
   section: LayoutSection;
   index: number;
-  fieldDefs: FieldDefinition[];
+  col0FieldIds: string[];
+  col1FieldIds: string[];
+  allFieldDefs: React.MutableRefObject<Map<string, FieldDefinition>>;
   onEditSection: (s: LayoutSection) => void;
   onDeleteSection: (id: string) => void;
   onRemoveField: (sectionId: string, fieldId: string) => void;
@@ -147,7 +221,8 @@ function SortableSection({
   onAddFieldClick: (sectionId: string) => void;
 }) {
   const [collapsed, setCollapsed] = useState(false);
-  const gridCols = section.columns === 1 ? 'grid-cols-1' : 'grid-cols-2';
+  const isTwoColumn = section.columns >= 2;
+  const totalFields = col0FieldIds.length + col1FieldIds.length;
 
   const { ref: sectionRef, handleRef, isDragging: isSectionDragging } = useSortable({
     id: section.id,
@@ -157,17 +232,10 @@ function SortableSection({
     collisionPriority: CollisionPriority.Low,
   });
 
-  const { ref: dropRef, isDropTarget } = useDroppable({
-    id: `drop-${section.id}`,
-    type: 'section-drop',
-    accept: 'field',
-    collisionPriority: CollisionPriority.Low,
-  });
-
   return (
     <div
       ref={sectionRef}
-      className={`border rounded-lg transition-colors ${isDropTarget ? 'border-primary border-dashed bg-primary/5' : ''} ${isSectionDragging ? 'bg-amber-50 border-amber-300 shadow-md' : ''}`}
+      className={`border rounded-lg transition-colors ${isSectionDragging ? 'bg-amber-50 border-amber-300 shadow-md' : ''}`}
     >
       <div className="flex items-center justify-between px-3 py-2 bg-muted/40 rounded-t-lg">
         <div className="flex items-center gap-1.5">
@@ -183,7 +251,7 @@ function SortableSection({
             className="flex items-center gap-1.5 text-sm font-medium text-foreground hover:text-foreground/80">
             {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             {section.name}
-            <span className="text-xs text-muted-foreground font-normal">({fieldDefs.length} fields · {section.columns} col)</span>
+            <span className="text-xs text-muted-foreground font-normal">({totalFields} fields · {section.columns} col)</span>
           </button>
         </div>
         <div className="flex items-center gap-0.5">
@@ -199,24 +267,35 @@ function SortableSection({
       </div>
 
       {!collapsed && (
-        <div ref={dropRef} className="p-2 min-h-[40px]">
-          {fieldDefs.length > 0 ? (
-            <div className={`grid ${gridCols} gap-1`}>
-              {fieldDefs.map((field, fieldIndex) => (
-                <SortableField
-                  key={field.id}
-                  field={field}
-                  index={fieldIndex}
-                  sectionId={section.id}
-                  onEditField={onEditField}
-                  onRemove={onRemoveField}
-                />
-              ))}
+        <div className="p-2">
+          {isTwoColumn ? (
+            <div className="grid grid-cols-2 gap-2">
+              <DroppableColumn
+                columnKey={`${section.id}-col0`}
+                fieldIds={col0FieldIds}
+                allFieldDefs={allFieldDefs}
+                sectionId={section.id}
+                onEditField={onEditField}
+                onRemoveField={onRemoveField}
+              />
+              <DroppableColumn
+                columnKey={`${section.id}-col1`}
+                fieldIds={col1FieldIds}
+                allFieldDefs={allFieldDefs}
+                sectionId={section.id}
+                onEditField={onEditField}
+                onRemoveField={onRemoveField}
+              />
             </div>
           ) : (
-            <div className={`flex items-center justify-center py-4 text-xs text-muted-foreground border rounded ${isDropTarget ? 'border-primary border-dashed' : 'border-dashed'}`}>
-              Drop fields here
-            </div>
+            <DroppableColumn
+              columnKey={`${section.id}-col0`}
+              fieldIds={col0FieldIds}
+              allFieldDefs={allFieldDefs}
+              sectionId={section.id}
+              onEditField={onEditField}
+              onRemoveField={onRemoveField}
+            />
           )}
 
           <Button type="button" variant="ghost" size="sm"
@@ -249,44 +328,43 @@ export function LayoutCanvas({
   const allFieldDefs = useRef(buildFieldDefs(propSections));
   const sectionMeta = useRef(buildSectionMeta(propSections));
 
-  // Local state: section order + which field IDs are in which section
   const [sectionOrder, setSectionOrder] = useState(() => toSectionOrder(propSections));
-  const [fieldMap, setFieldMap] = useState(() => toFieldMap(propSections));
-  const localFingerprintRef = useRef(structureFingerprint(toSectionOrder(propSections), toFieldMap(propSections)));
+  const [fieldMap, setFieldMap] = useState(() => toColumnFieldMap(propSections));
+  const localFingerprintRef = useRef(fingerprint(toSectionOrder(propSections), toColumnFieldMap(propSections)));
 
-  // Refs for latest values (avoids stale closures in drag handlers)
   const fieldMapRef = useRef(fieldMap);
   fieldMapRef.current = fieldMap;
   const sectionOrderRef = useRef(sectionOrder);
   sectionOrderRef.current = sectionOrder;
 
-  // Track pre-drag state for cancel rollback + diffing on dragEnd
   const preDragFieldMap = useRef(fieldMap);
   const preDragSectionOrder = useRef(sectionOrder);
 
-  // Keep lookups in sync when props change
   useEffect(() => {
     allFieldDefs.current = buildFieldDefs(propSections);
     sectionMeta.current = buildSectionMeta(propSections);
   }, [propSections]);
 
-  // Block prop sync during multi-step server operations (cross-section move)
   const syncBlockedRef = useRef(false);
 
-  // Sync from props only on structural changes (fields added/removed)
   useEffect(() => {
     if (syncBlockedRef.current) return;
     const newOrder = toSectionOrder(propSections);
-    const newMap = toFieldMap(propSections);
-    const propFingerprint = structureFingerprint(newOrder, newMap);
-    if (propFingerprint !== localFingerprintRef.current) {
-      localFingerprintRef.current = propFingerprint;
+    const newMap = toColumnFieldMap(propSections);
+    const propFp = fingerprint(newOrder, newMap);
+    if (propFp !== localFingerprintRef.current) {
+      localFingerprintRef.current = propFp;
       setSectionOrder(newOrder);
       setFieldMap(newMap);
     }
   }, [propSections]);
 
-  // --- Drag handlers (use refs to avoid stale closures) ---
+  const buildReorderPayload = useCallback((sectionId: string): { fieldId: string; columnIndex: number }[] => {
+    const currentMap = fieldMapRef.current;
+    const col0 = (currentMap[`${sectionId}-col0`] ?? []).map((id) => ({ fieldId: id, columnIndex: 0 }));
+    const col1 = (currentMap[`${sectionId}-col1`] ?? []).map((id) => ({ fieldId: id, columnIndex: 1 }));
+    return [...col0, ...col1];
+  }, []);
 
   const handleDragStart = useCallback(() => {
     preDragFieldMap.current = fieldMapRef.current;
@@ -316,42 +394,42 @@ export function LayoutCanvas({
       return;
     }
 
-    // Field drag ended — compare pre-drag vs current to determine what changed
     const fieldId = String(source?.id ?? '');
     const preMap = preDragFieldMap.current;
     const currentMap = fieldMapRef.current;
 
-    const prevSection = Object.entries(preMap).find(([, ids]) => ids.includes(fieldId))?.[0];
-    const currSection = Object.entries(currentMap).find(([, ids]) => ids.includes(fieldId))?.[0];
+    const prevColumnKey = Object.entries(preMap).find(([, ids]) => ids.includes(fieldId))?.[0];
+    const currColumnKey = Object.entries(currentMap).find(([, ids]) => ids.includes(fieldId))?.[0];
 
-    if (!prevSection || !currSection) return;
+    if (!prevColumnKey || !currColumnKey) return;
 
-    // Update fingerprint to match current local state
-    localFingerprintRef.current = structureFingerprint(sectionOrderRef.current, currentMap);
+    localFingerprintRef.current = fingerprint(sectionOrderRef.current, currentMap);
 
-    if (prevSection === currSection) {
-      onReorderFields(currSection, currentMap[currSection]);
+    const prevSectionId = getSectionId(prevColumnKey);
+    const currSectionId = getSectionId(currColumnKey);
+
+    if (prevSectionId === currSectionId) {
+      // Same section — reorder (may have moved between columns)
+      onReorderFields(currSectionId, buildReorderPayload(currSectionId));
     } else {
-      // Cross-section move: block prop sync during the entire operation
-      // to prevent intermediate refetches from overwriting local state
-      const targetOrder = currentMap[currSection];
+      // Cross-section move
       syncBlockedRef.current = true;
       (async () => {
         try {
           if (onMoveFieldToSection) {
-            await onMoveFieldToSection(prevSection, currSection, fieldId);
+            await onMoveFieldToSection(prevSectionId, currSectionId, fieldId);
           } else {
-            await onRemoveFieldFromSection(prevSection, fieldId);
-            await onAddFieldToSection(currSection, fieldId);
+            await onRemoveFieldFromSection(prevSectionId, fieldId);
+            await onAddFieldToSection(currSectionId, fieldId);
           }
-          // Server appends to end — reorder to match where the user actually dropped it
-          onReorderFields(currSection, targetOrder);
+          onReorderFields(currSectionId, buildReorderPayload(currSectionId));
+          onReorderFields(prevSectionId, buildReorderPayload(prevSectionId));
         } finally {
           syncBlockedRef.current = false;
         }
       })();
     }
-  }, [onReorderFields, onReorderSections, onMoveFieldToSection, onRemoveFieldFromSection, onAddFieldToSection]);
+  }, [onReorderFields, onReorderSections, onMoveFieldToSection, onRemoveFieldFromSection, onAddFieldToSection, buildReorderPayload]);
 
   return (
     <DragDropProvider
@@ -363,15 +441,15 @@ export function LayoutCanvas({
         {sectionOrder.map((sectionId, index) => {
           const section = sectionMeta.current.get(sectionId);
           if (!section) return null;
-          const fieldIds = fieldMap[sectionId] ?? [];
-          const fields = fieldIds.map((id) => allFieldDefs.current.get(id)).filter(Boolean) as FieldDefinition[];
 
           return (
             <SortableSection
               key={sectionId}
               section={section}
               index={index}
-              fieldDefs={fields}
+              col0FieldIds={fieldMap[`${sectionId}-col0`] ?? []}
+              col1FieldIds={fieldMap[`${sectionId}-col1`] ?? []}
+              allFieldDefs={allFieldDefs}
               onEditSection={onEditSection}
               onDeleteSection={onDeleteSection}
               onRemoveField={onRemoveFieldFromSection}

@@ -109,8 +109,8 @@ export function useReorderSections(entityType: string) {
 export function useReorderFields(entityType: string) {
   const invalidate = useInvalidateLayout(entityType);
   return useMutation({
-    mutationFn: ({ sectionId, orderedFieldIds }: { sectionId: string; orderedFieldIds: string[] }) =>
-      svc.reorderFields(entityType, sectionId, orderedFieldIds),
+    mutationFn: ({ sectionId, orderedFields }: { sectionId: string; orderedFields: { fieldId: string; columnIndex: number }[] }) =>
+      svc.reorderFields(entityType, sectionId, orderedFields),
     onSuccess: () => invalidate(),
   });
 }
