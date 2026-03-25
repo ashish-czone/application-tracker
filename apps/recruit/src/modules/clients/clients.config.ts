@@ -1,7 +1,7 @@
 import type { EntityConfig } from '@packages/entity-engine';
 import { clients } from './schema/clients';
 
-export const clientsConfig: EntityConfig = {
+export const CLIENTS_CONFIG: EntityConfig = {
   entityType: 'clients',
   singularName: 'Client',
   pluralName: 'Clients',
