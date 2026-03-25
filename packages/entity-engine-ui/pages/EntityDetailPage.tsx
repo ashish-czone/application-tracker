@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router';
-import { ArrowLeft, Trash2 } from 'lucide-react';
+import { useParams, useNavigate, useLocation, Link } from 'react-router';
+import { ArrowLeft, Trash2, Settings } from 'lucide-react';
 import { Button, ConfirmDialog } from '@packages/ui';
 import { DynamicSection } from '@packages/eav-attributes-ui';
 import { useEntityEngine, useEntityHooks, useEntityConfig } from '../EntityEngineProvider';
@@ -19,6 +19,7 @@ interface EntityDetailPageProps {
 export function EntityDetailPage({ entityType }: EntityDetailPageProps) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const entity = useEntityConfig(entityType);
   const hooks = useEntityHooks(entityType);
   const { getDetailPlugins } = useEntityEngine();
@@ -93,15 +94,25 @@ export function EntityDetailPage({ entityType }: EntityDetailPageProps) {
             )}
           </div>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowDeleteConfirm(true)}
-            className="text-destructive hover:text-destructive"
-          >
-            <Trash2 className="h-4 w-4 mr-1" />
-            Delete
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate(`/settings/${entityType}`, { state: { from: location.pathname } })}
+            >
+              <Settings className="h-4 w-4 mr-1" />
+              Edit Layout
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowDeleteConfirm(true)}
+              className="text-destructive hover:text-destructive"
+            >
+              <Trash2 className="h-4 w-4 mr-1" />
+              Delete
+            </Button>
+          </div>
         </div>
       </div>
 
