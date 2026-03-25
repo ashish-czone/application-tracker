@@ -2,9 +2,9 @@
 
 export type FieldType =
   | 'text' | 'email' | 'phone' | 'number' | 'currency' | 'decimal'
-  | 'date' | 'datetime' | 'boolean' | 'url' | 'textarea'
-  | 'picklist' | 'multi_select' | 'lookup' | 'user' | 'auto_number'
-  | 'tags' | 'file' | 'category';
+  | 'date' | 'datetime' | 'boolean' | 'url' | 'textarea' | 'rich_text'
+  | 'picklist' | 'multi_select' | 'lookup' | 'multi_lookup' | 'user' | 'multi_user'
+  | 'auto_number' | 'tags' | 'file' | 'category' | 'workflow';
 
 export interface PicklistOption {
   id: string;
@@ -74,14 +74,18 @@ export const FIELD_TYPE_CONFIG: Record<FieldType, { label: string; color: string
   boolean: { label: 'Checkbox', color: 'bg-pink-100 text-pink-800' },
   url: { label: 'URL', color: 'bg-sky-100 text-sky-800' },
   textarea: { label: 'Multi-line', color: 'bg-cyan-100 text-cyan-800' },
+  rich_text: { label: 'Rich Text', color: 'bg-cyan-100 text-cyan-800' },
   picklist: { label: 'Picklist', color: 'bg-purple-100 text-purple-800' },
   multi_select: { label: 'Multi-select', color: 'bg-fuchsia-100 text-fuchsia-800' },
   lookup: { label: 'Lookup', color: 'bg-rose-100 text-rose-800' },
+  multi_lookup: { label: 'Multi-lookup', color: 'bg-rose-100 text-rose-800' },
   user: { label: 'User', color: 'bg-red-100 text-red-800' },
+  multi_user: { label: 'Multi-user', color: 'bg-red-100 text-red-800' },
   auto_number: { label: 'Auto #', color: 'bg-gray-100 text-gray-800' },
   tags: { label: 'Tags', color: 'bg-lime-100 text-lime-800' },
   file: { label: 'File', color: 'bg-stone-100 text-stone-800' },
   category: { label: 'Category', color: 'bg-yellow-100 text-yellow-800' },
+  workflow: { label: 'Workflow', color: 'bg-blue-100 text-blue-800' },
 };
 
 // Creatable field types (shown in palette)
