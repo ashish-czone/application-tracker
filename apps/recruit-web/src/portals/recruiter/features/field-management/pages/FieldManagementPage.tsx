@@ -93,7 +93,7 @@ export default function FieldManagementPage({ entityType }: FieldManagementPageP
           removeFieldMutation.mutateAsync({ sectionId, fieldId })
         }
         onReorderFields={(sectionId, orderedFields) =>
-          reorderFieldsMutation.mutate({ sectionId, orderedFields })
+          reorderFieldsMutation.mutateAsync({ sectionId, orderedFields })
         }
         onReorderSections={(orderedSectionIds) =>
           reorderSectionsMutation.mutate(orderedSectionIds)
