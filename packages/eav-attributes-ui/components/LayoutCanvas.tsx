@@ -3,10 +3,10 @@ import { DragDropProvider, useDroppable } from '@dnd-kit/react';
 import { useSortable } from '@dnd-kit/react/sortable';
 import { CollisionPriority } from '@dnd-kit/abstract';
 import { move } from '@dnd-kit/helpers';
-import { Plus, GripVertical, X, ChevronDown, ChevronRight, Pencil, Trash2 } from 'lucide-react';
+import { Plus, GripVertical, ChevronDown, ChevronRight, Pencil, Trash2, Settings2 } from 'lucide-react';
 import { Button } from '@packages/ui';
 import { FIELD_TYPE_CONFIG } from '../types';
-import type { LayoutSection, FieldDefinition } from '../types';
+import type { LayoutSection, FieldDefinition, FieldType } from '../types';
 
 interface LayoutCanvasProps {
   sections: LayoutSection[];
@@ -77,6 +77,58 @@ function getSectionId(columnKey: string): string {
   return columnKey.replace(/-col[01]$/, '');
 }
 
+// --- Field type placeholder rendering ---
+
+const PLACEHOLDER_MAP: Partial<Record<FieldType, string>> = {
+  text: 'Single line',
+  email: 'user@example.com',
+  phone: '+1 (555) 000-0000',
+  url: 'https://',
+  number: '0',
+  currency: '$0.00',
+  decimal: '0.00',
+  date: 'MM/DD/YYYY',
+  datetime: 'MM/DD/YYYY HH:MM',
+  textarea: 'Multi-line text',
+  auto_number: 'Auto generated',
+};
+
+function FieldPlaceholder({ fieldType }: { fieldType: FieldType }) {
+  const isSelect = fieldType === 'picklist' || fieldType === 'multi_select' || fieldType === 'lookup' || fieldType === 'user' || fieldType === 'category';
+  const isCheckbox = fieldType === 'boolean';
+  const isTags = fieldType === 'tags';
+  const isFile = fieldType === 'file';
+  const placeholder = PLACEHOLDER_MAP[fieldType];
+
+  if (isCheckbox) {
+    return <div className="h-4 w-4 rounded border border-input bg-background" />;
+  }
+  if (isTags) {
+    return (
+      <div className="flex gap-1">
+        <span className="px-1.5 py-0.5 rounded-full bg-muted text-[10px] text-muted-foreground">tag</span>
+        <span className="px-1.5 py-0.5 rounded-full bg-muted text-[10px] text-muted-foreground">tag</span>
+      </div>
+    );
+  }
+  if (isFile) {
+    return <span className="text-xs text-muted-foreground/60 italic">Attach file</span>;
+  }
+  if (isSelect) {
+    return (
+      <div className="flex items-center justify-between w-full rounded border border-input bg-background px-2 py-1">
+        <span className="text-xs text-muted-foreground/60">Select...</span>
+        <ChevronDown className="h-3 w-3 text-muted-foreground/40" />
+      </div>
+    );
+  }
+  return (
+    <div className="w-full rounded border border-input bg-background px-2 py-1">
+      <span className="text-xs text-muted-foreground/60">{placeholder ?? 'Text'}</span>
+    </div>
+  );
+}
+
 // --- Sortable field item ---
 
 function SortableField({
@@ -104,42 +156,49 @@ function SortableField({
     group: groupId,
   });
 
-  const tc = FIELD_TYPE_CONFIG[field.fieldType] ?? { label: field.fieldType, color: 'bg-gray-100 text-gray-800' };
-  const tierLabel = field.isSystem ? 'System' : field.isCustom ? 'Custom' : 'Standard';
-  const tierColor = field.isSystem ? 'bg-slate-200 text-slate-700' : field.isCustom ? 'bg-amber-100 text-amber-700' : 'bg-blue-50 text-blue-600';
-
   return (
     <div
       ref={ref}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      className={`flex items-center gap-2 rounded-md border px-2 py-1.5 text-sm transition-colors cursor-grab active:cursor-grabbing ${isDragSource ? 'bg-amber-50 border-amber-300 shadow-md' : 'bg-background'} ${hovered && !isDragSource ? 'border-primary/30' : ''}`}
+      className={`group relative flex items-center gap-3 rounded-md border px-2 py-2 text-sm transition-colors cursor-grab active:cursor-grabbing ${
+        isDragSource ? 'bg-amber-50 border-amber-300 shadow-md' : 'bg-background'
+      } ${hovered && !isDragSource ? 'border-primary/30 bg-accent/30' : ''}`}
     >
-      <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
-      <button
-        type="button"
-        onClick={() => onEditField(field)}
-        className="flex-1 flex items-center gap-2 text-left min-w-0"
-      >
-        <span className="font-medium text-foreground truncate">{field.label}</span>
-        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${tc.color}`}>
-          {tc.label}
-        </span>
-        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${tierColor}`}>
-          {tierLabel}
-        </span>
-        {field.isRequired && <span className="text-destructive text-xs">*</span>}
-      </button>
-      {onRemove && !field.isSystem && (
+      <GripVertical className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50" />
+
+      {/* Label */}
+      <span className="w-[120px] shrink-0 text-xs font-medium text-foreground truncate">
+        {field.label}
+        {field.isRequired && <span className="text-destructive ml-0.5">*</span>}
+      </span>
+
+      {/* Input placeholder */}
+      <div className="flex-1 min-w-0">
+        <FieldPlaceholder fieldType={field.fieldType} />
+      </div>
+
+      {/* Hover actions: settings + trash */}
+      <div className={`flex items-center gap-0.5 shrink-0 transition-opacity ${hovered && !isDragSource ? 'opacity-100' : 'opacity-0'}`}>
         <button
           type="button"
-          onClick={(e) => { e.stopPropagation(); onRemove(sectionId, field.id); }}
-          className={`p-0.5 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-opacity ${hovered ? 'opacity-100' : 'opacity-0'}`}
-          aria-label={`Remove ${field.label}`}
+          onClick={(e) => { e.stopPropagation(); onEditField(field); }}
+          className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-accent"
+          aria-label={`Edit ${field.label}`}
         >
-          <X className="h-3.5 w-3.5" />
+          <Settings2 className="h-3.5 w-3.5" />
         </button>
-      )}
+        {onRemove && !field.isSystem && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onRemove(sectionId, field.id); }}
+            className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+            aria-label={`Remove ${field.label}`}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
     </div>
   );
 }
