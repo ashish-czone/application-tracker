@@ -1,6 +1,6 @@
 import { Controller, Get, Put, Param, Body, ParseUUIDPipe, NotFoundException } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
-import { RequirePermission, RbacService } from '@packages/rbac';
+import { RequirePermission, RbacService, type PermissionScope } from '@packages/rbac';
 import { FieldDefinitionService } from '@packages/eav-attributes';
 import { EntityRegistryService } from './entity-registry.service';
 
@@ -97,7 +97,7 @@ export class FieldPermissionsController {
     const hidePrefix = `${config.slug}.hide-`;
     const readonlyPrefix = `${config.slug}.readonly-`;
 
-    const updatedList: { name: string; scope: string }[] = [];
+    const updatedList: { name: string; scope: PermissionScope }[] = [];
 
     // Keep existing permissions that aren't field restrictions for this entity
     for (const [perm, scope] of Object.entries(existingPerms)) {
