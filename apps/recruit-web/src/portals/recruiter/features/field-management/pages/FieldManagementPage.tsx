@@ -86,8 +86,8 @@ export default function FieldManagementPage({ entityType }: FieldManagementPageP
 
       <LayoutCanvas
         sections={layout.sections}
-        onAddFieldToSection={(sectionId, fieldId) =>
-          addFieldMutation.mutateAsync({ sectionId, fieldId })
+        onAddFieldToSection={(sectionId, fieldId, columnIndex) =>
+          addFieldMutation.mutateAsync({ sectionId, fieldId, columnIndex })
         }
         onRemoveFieldFromSection={(sectionId, fieldId) =>
           removeFieldMutation.mutateAsync({ sectionId, fieldId })
