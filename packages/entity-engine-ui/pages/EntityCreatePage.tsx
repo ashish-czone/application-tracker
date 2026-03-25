@@ -123,12 +123,18 @@ export function EntityCreatePage({ entityType }: EntityCreatePageProps) {
     createMutation.mutate(cleaned);
   }
 
+  // Wizard has N section steps + 1 review step
+  const totalSteps = isWizard ? steps.length + 1 : steps.length;
+  const isReviewStep = isWizard && currentStep === steps.length;
+  const isLastSectionStep = isWizard && currentStep === steps.length - 1;
+
   // Wizard: validate current step fields before advancing
   async function handleNext() {
+    if (isReviewStep) return;
     const stepFields = steps[currentStep]?.editableFields ?? [];
     const fieldKeys = stepFields.map((f) => f.fieldKey);
     const isValid = await form.trigger(fieldKeys);
-    if (isValid) setCurrentStep((s) => Math.min(s + 1, steps.length - 1));
+    if (isValid) setCurrentStep((s) => Math.min(s + 1, totalSteps - 1));
   }
 
   function handleBack() {
@@ -151,7 +157,7 @@ export function EntityCreatePage({ entityType }: EntityCreatePageProps) {
     );
   }
 
-  const isLastStep = currentStep === steps.length - 1;
+  const isLastStep = currentStep === totalSteps - 1;
 
   function renderSection(step: typeof steps[number]) {
     return (
@@ -191,20 +197,22 @@ export function EntityCreatePage({ entityType }: EntityCreatePageProps) {
         <div>
           <h1 className="text-lg font-semibold text-foreground">Create {entity.singularName}</h1>
           <p className="text-sm text-muted-foreground">
-            {isWizard ? `Step ${currentStep + 1} of ${steps.length}` : 'Fill in the details below'}
+            {isWizard
+              ? isReviewStep ? 'Review your details before saving' : `Step ${currentStep + 1} of ${totalSteps}`
+              : 'Fill in the details below'}
           </p>
         </div>
       </div>
 
       {/* Wizard step indicator */}
-      {isWizard && steps.length > 1 && (
+      {isWizard && steps.length > 0 && (
         <nav className="mb-6">
           <ol className="flex items-center gap-2">
-            {steps.map((step, i) => {
+            {[...steps.map((s) => s.name), 'Review'].map((label, i) => {
               const isActive = i === currentStep;
               const isComplete = i < currentStep;
               return (
-                <li key={step.id} className="flex items-center gap-2">
+                <li key={label} className="flex items-center gap-2">
                   {i > 0 && <div className={`h-px w-6 ${isComplete ? 'bg-primary' : 'bg-border'}`} />}
                   <button
                     type="button"
@@ -219,7 +227,7 @@ export function EntityCreatePage({ entityType }: EntityCreatePageProps) {
                     }`}
                   >
                     {isComplete && <Check className="h-3 w-3" />}
-                    {step.name}
+                    {label}
                   </button>
                 </li>
               );
@@ -230,8 +238,44 @@ export function EntityCreatePage({ entityType }: EntityCreatePageProps) {
 
       <Form form={form} onSubmit={form.handleSubmit(onSubmit)}>
         {isWizard ? (
-          // Wizard: show only current step
-          steps[currentStep] && renderSection(steps[currentStep])
+          isReviewStep ? (
+            // Wizard review: all sections read-only
+            <div className="space-y-6">
+              {steps.map((step) => (
+                <div key={step.id} className="rounded-lg border border-border bg-card">
+                  <div className="px-4 py-3 border-b border-border bg-muted/30 flex items-center justify-between">
+                    <h2 className="text-sm font-medium text-foreground">{step.name}</h2>
+                    <button
+                      type="button"
+                      onClick={() => setCurrentStep(steps.indexOf(step))}
+                      className="text-xs text-primary hover:underline"
+                    >
+                      Edit
+                    </button>
+                  </div>
+                  <div
+                    className="grid gap-4 p-4"
+                    style={{ gridTemplateColumns: step.columns === 1 ? '1fr' : 'repeat(2, 1fr)' }}
+                  >
+                    {step.editableFields.map((field) => {
+                      const val = form.getValues(field.fieldKey);
+                      return (
+                        <DynamicField
+                          key={field.fieldKey}
+                          field={field}
+                          mode="view"
+                          value={val === '' ? null : val}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            // Wizard: show only current step
+            steps[currentStep] && renderSection(steps[currentStep])
+          )
         ) : (
           // Page: show all sections
           <div className="space-y-8">
