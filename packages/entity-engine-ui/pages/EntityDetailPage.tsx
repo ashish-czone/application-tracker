@@ -25,6 +25,7 @@ export function EntityDetailPage({ entityType }: EntityDetailPageProps) {
   const { getDetailPlugins } = useEntityEngine();
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [activeRelTab, setActiveRelTab] = useState('');
 
   const { data: item, isLoading, isError } = hooks.useDetail(id ?? null);
   const { data: layout, isLoading: layoutLoading } = useEntityLayout(entityType);
@@ -32,6 +33,17 @@ export function EntityDetailPage({ entityType }: EntityDetailPageProps) {
   const deleteMutation = hooks.useDelete({
     onSuccess: () => navigate(`/${entity.slug}`),
   });
+
+  const hasManyRelationships = useMemo(
+    () => entity.relationships.filter((r) => r.type === 'hasMany'),
+    [entity.relationships],
+  );
+
+  // Set default active tab on first render
+  const defaultTab = hasManyRelationships[0]?.name ?? '';
+  if (activeRelTab === '' && defaultTab !== '') {
+    setActiveRelTab(defaultTab);
+  }
 
   // Get display name from entity
   const getDisplayName = (row: Record<string, unknown>): string => {
@@ -73,11 +85,6 @@ export function EntityDetailPage({ entityType }: EntityDetailPageProps) {
   const displayName = getDisplayName(item);
   const subtitle = getSubtitle(item);
   const plugins = getDetailPlugins(entityType).sort((a, b) => a.order - b.order);
-  const hasManyRelationships = useMemo(
-    () => entity.relationships.filter((r) => r.type === 'hasMany'),
-    [entity.relationships],
-  );
-  const [activeRelTab, setActiveRelTab] = useState(hasManyRelationships[0]?.name ?? '');
 
   return (
     <div className="max-w-4xl">
