@@ -331,7 +331,9 @@ export class LayoutService {
 
       // Assign fields to section
       for (let fIdx = 0; fIdx < sec.fields.length; fIdx++) {
-        const fieldKey = sec.fields[fIdx];
+        const entry = sec.fields[fIdx];
+        const fieldKey = Array.isArray(entry) ? entry[0] : entry;
+        const columnIndex = Array.isArray(entry) ? entry[1] : (fIdx % 2);
 
         // Look up field definition by key
         const [field] = await this.database.db
@@ -350,7 +352,7 @@ export class LayoutService {
               sectionId: section.id,
               fieldId: field.id,
               sortOrder: fIdx,
-              columnIndex: fIdx % 2, // Alternate left/right
+              columnIndex,
             });
         }
       }

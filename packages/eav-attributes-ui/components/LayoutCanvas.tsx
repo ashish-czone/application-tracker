@@ -161,7 +161,7 @@ function DroppableColumn({
   onRemoveField: (sectionId: string, fieldId: string) => void;
 }) {
   const { ref: dropRef, isDropTarget } = useDroppable({
-    id: `drop-${columnKey}`,
+    id: columnKey,
     type: 'column-drop',
     accept: 'field',
     collisionPriority: CollisionPriority.Low,
