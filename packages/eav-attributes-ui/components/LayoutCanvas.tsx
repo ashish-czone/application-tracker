@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { DragDropProvider } from '@dnd-kit/react';
 import { useSortable } from '@dnd-kit/react/sortable';
-import { useDroppable } from '@dnd-kit/react';
 import { CollisionPriority } from '@dnd-kit/abstract';
 import { move } from '@dnd-kit/helpers';
 import { Plus, GripVertical, X, ChevronDown, ChevronRight, Pencil, Trash2 } from 'lucide-react';
@@ -143,10 +142,11 @@ function SortableField({
   );
 }
 
-// --- Droppable column ---
+// --- Sortable column container ---
 
-function DroppableColumn({
+function SortableColumn({
   columnKey,
+  columnIndex,
   fieldIds,
   allFieldDefs,
   sectionId,
@@ -154,16 +154,21 @@ function DroppableColumn({
   onRemoveField,
 }: {
   columnKey: string;
+  columnIndex: number;
   fieldIds: string[];
   allFieldDefs: React.MutableRefObject<Map<string, FieldDefinition>>;
   sectionId: string;
   onEditField: (f: FieldDefinition) => void;
   onRemoveField: (sectionId: string, fieldId: string) => void;
 }) {
-  const { ref: dropRef, isDropTarget } = useDroppable({
+  // Use useSortable so this container participates in move() resolution.
+  // Fields with group={columnKey} are children of this container.
+  const { ref: colRef, isDropTarget } = useSortable({
     id: columnKey,
-    type: 'column-drop',
+    index: columnIndex,
+    type: 'column',
     accept: 'field',
+    group: sectionId,
     collisionPriority: CollisionPriority.Low,
   });
 
@@ -171,7 +176,7 @@ function DroppableColumn({
 
   return (
     <div
-      ref={dropRef}
+      ref={colRef}
       className={`flex-1 space-y-1 min-h-[40px] p-1 rounded ${isDropTarget ? 'bg-primary/5 border border-primary border-dashed' : ''}`}
     >
       {fields.length > 0 ? (
@@ -270,16 +275,18 @@ function SortableSection({
         <div className="p-2">
           {isTwoColumn ? (
             <div className="grid grid-cols-2 gap-2">
-              <DroppableColumn
+              <SortableColumn
                 columnKey={`${section.id}-col0`}
+                columnIndex={0}
                 fieldIds={col0FieldIds}
                 allFieldDefs={allFieldDefs}
                 sectionId={section.id}
                 onEditField={onEditField}
                 onRemoveField={onRemoveField}
               />
-              <DroppableColumn
+              <SortableColumn
                 columnKey={`${section.id}-col1`}
+                columnIndex={1}
                 fieldIds={col1FieldIds}
                 allFieldDefs={allFieldDefs}
                 sectionId={section.id}
@@ -288,8 +295,9 @@ function SortableSection({
               />
             </div>
           ) : (
-            <DroppableColumn
+            <SortableColumn
               columnKey={`${section.id}-col0`}
+              columnIndex={0}
               fieldIds={col0FieldIds}
               allFieldDefs={allFieldDefs}
               sectionId={section.id}
