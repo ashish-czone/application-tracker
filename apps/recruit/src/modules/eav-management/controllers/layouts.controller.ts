@@ -5,6 +5,9 @@ import { LayoutService } from '@packages/eav-attributes';
 import { EAV_PERMISSIONS } from '../permissions';
 import { CreateSectionDto } from '../dto/create-section.dto';
 import { UpdateSectionDto } from '../dto/update-section.dto';
+import { ReorderFieldsDto } from '../dto/reorder-fields.dto';
+import { AddFieldToSectionDto } from '../dto/add-field-to-section.dto';
+import { ReorderSectionsDto } from '../dto/reorder-sections.dto';
 
 @ApiTags('layouts')
 @Controller('layouts')
@@ -52,9 +55,9 @@ export class LayoutsController {
   @ApiOperation({ summary: 'Reorder sections' })
   async reorderSections(
     @Param('entityType') entityType: string,
-    @Body() body: { orderedIds: string[] },
+    @Body() dto: ReorderSectionsDto,
   ) {
-    await this.layoutService.reorderSections(entityType, 'Standard', body.orderedIds);
+    await this.layoutService.reorderSections(entityType, 'Standard', dto.orderedIds);
   }
 
   @Post(':entityType/sections/:sectionId/fields')
@@ -63,9 +66,9 @@ export class LayoutsController {
   @ApiOperation({ summary: 'Assign a field to a section' })
   async addFieldToSection(
     @Param('sectionId') sectionId: string,
-    @Body() body: { fieldId: string; columnIndex?: number },
+    @Body() dto: AddFieldToSectionDto,
   ) {
-    await this.layoutService.addFieldToSection(sectionId, body.fieldId, body.columnIndex);
+    await this.layoutService.addFieldToSection(sectionId, dto.fieldId, dto.columnIndex);
   }
 
   @Delete(':entityType/sections/:sectionId/fields/:fieldId')
@@ -84,14 +87,11 @@ export class LayoutsController {
   @ApiOperation({ summary: 'Reorder fields within a section (supports column-aware ordering)' })
   async reorderFields(
     @Param('sectionId') sectionId: string,
-    @Body() body: {
-      orderedFieldIds?: string[];
-      orderedFields?: { fieldId: string; columnIndex: number }[];
-    },
+    @Body() dto: ReorderFieldsDto,
   ) {
     await this.layoutService.reorderFieldsInSection(
       sectionId,
-      body.orderedFields ?? body.orderedFieldIds ?? [],
+      dto.orderedFields ?? dto.orderedFieldIds ?? [],
     );
   }
 }

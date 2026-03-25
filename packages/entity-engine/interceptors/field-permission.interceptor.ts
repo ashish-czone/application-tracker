@@ -1,5 +1,5 @@
 import { Injectable, type CallHandler, type ExecutionContext, type NestInterceptor } from '@nestjs/common';
-import { type Observable, map } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import type { FieldMeta } from '../types';
 
 /**
@@ -31,7 +31,7 @@ export function createFieldPermissionInterceptor(fieldMeta: Record<string, Field
 
   @Injectable()
   class FieldPermissionInterceptor implements NestInterceptor {
-    intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+    intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
       // Skip entirely if no field-level permissions are configured
       if (!hasReadRestrictions && !hasWriteRestrictions) {
         return next.handle();
@@ -61,7 +61,7 @@ export function createFieldPermissionInterceptor(fieldMeta: Record<string, Field
 
       // Strip read-restricted fields from response
       return next.handle().pipe(
-        map((response) => {
+        map((response: any) => {
           if (response == null) return response;
           return this.filterResponse(response, userPermissions);
         }),

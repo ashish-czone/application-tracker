@@ -177,6 +177,7 @@ export class FieldDefinitionService {
     return fields.map(f => ({
       ...f,
       picklistOptions: optionsMap.get(f.id) ?? [],
+      columnIndex: 0,
     }));
   }
 

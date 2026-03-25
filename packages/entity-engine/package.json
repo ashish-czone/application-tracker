@@ -19,11 +19,11 @@
     "@packages/media": "workspace:*",
     "@packages/notifications": "workspace:*",
     "@packages/rbac": "workspace:*",
-    "@packages/workflows": "workspace:*"
+    "@packages/workflows": "workspace:*",
+    "rxjs": "^7.0.0"
   },
   "devDependencies": {
     "drizzle-orm": "^0.45.1",
-    "rxjs": "^7.0.0",
     "typescript": "^5.7.0",
     "vitest": "^3.0.0"
   }
