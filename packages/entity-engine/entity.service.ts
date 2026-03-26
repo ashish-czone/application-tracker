@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
-import { eq, and, or, isNull, ilike, asc, desc, count, sql } from 'drizzle-orm';
+import { eq, and, or, isNull, ilike, asc, desc, count, sql, getTableName } from 'drizzle-orm';
 import type { PgColumn } from 'drizzle-orm/pg-core';
 import { DatabaseService } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
@@ -121,23 +121,19 @@ export class EntityService {
   private buildRelationshipCountExpressions(): Record<string, any> {
     const { config } = this;
     const counts: Record<string, any> = {};
-    const thisTable = config.table as any;
+    const thisTableName = getTableName(config.table);
 
     for (const rel of config.relationships ?? []) {
       if (rel.type !== 'hasMany' || !rel.foreignKey) continue;
 
-      const targetConfig = this.entityRegistry.get(rel.targetEntity);
-      if (!targetConfig) continue;
-
-      const targetTable = targetConfig.table as any;
-      const fkCol = targetTable[rel.foreignKey];
-      if (!fkCol) continue;
-
-      const deletedAt = targetTable.deletedAt;
-      const deletedFilter = deletedAt ? sql` AND ${deletedAt} IS NULL` : sql``;
+      // Convert camelCase foreignKey to snake_case DB column name
+      const fkColumn = rel.foreignKey.replace(/[A-Z]/g, (c: string) => `_${c.toLowerCase()}`);
+      const targetTableName = rel.targetEntity;
       const key = `${rel.name}Count`;
 
-      counts[key] = sql`(SELECT COUNT(*) FROM ${targetTable} WHERE ${fkCol} = ${thisTable.id}${deletedFilter})`.as(key);
+      counts[key] = sql.raw(
+        `(SELECT COUNT(*) FROM "${targetTableName}" WHERE "${fkColumn}" = "${thisTableName}"."id" AND "deleted_at" IS NULL)`,
+      );
     }
 
     return counts;

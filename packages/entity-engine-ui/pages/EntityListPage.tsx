@@ -229,12 +229,33 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
       enableSorting: false,
     };
 
-    // Dynamic columns from field definitions (exclude name fields to avoid duplication)
+    // Dynamic columns from list layout (uses visible/order flags from backend)
     const nameFields = new Set(Array.isArray(entity.ui.nameField) ? entity.ui.nameField : [entity.ui.nameField]);
-    const dynamicCols = buildColumnDefs(
-      allFields.filter((f) => !nameFields.has(f.fieldKey)),
-      { maxColumns: 6 },
-    );
+    const listCols = listLayout?.columns ?? [];
+    const visibleListCols = listCols
+      .filter((c) => c.visible && !nameFields.has(c.fieldKey))
+      .sort((a, b) => a.order - b.order);
+
+    // Build columns from list layout, falling back to field defs for formatting
+    const fieldMap = new Map(allFields.map((f) => [f.fieldKey, f]));
+    const dynamicCols: ColumnDef<Row, unknown>[] = visibleListCols.map((col) => {
+      const field = fieldMap.get(col.fieldKey);
+      // If we have a field definition, use buildColumnDefs formatting
+      if (field) {
+        return buildColumnDefs([field], { maxColumns: 1 })[0];
+      }
+      // For computed columns (relationship counts), render as plain number
+      return {
+        id: col.fieldKey,
+        header: col.label,
+        accessorKey: col.fieldKey,
+        enableSorting: col.sortable,
+        cell: ({ getValue }: any) => {
+          const val = getValue();
+          return val !== null && val !== undefined ? String(val) : '-';
+        },
+      };
+    });
 
     // Row actions column — driven by listLayout.actions.row config
     const rowActions = listLayout?.actions.row ?? [];
