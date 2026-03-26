@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router';
-import { useQueryClient, useQuery } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Settings, Copy, Trash2, MoreHorizontal, Briefcase, UserPlus } from 'lucide-react';
 import {
   Button,
@@ -55,45 +55,38 @@ export function EntityDetailPage({ entityType }: EntityDetailPageProps) {
     onSuccess: () => navigate(`/${entity.slug}`),
   });
 
-  // Check if any fields need user options
-  const hasUserFields = useMemo(() => {
-    if (!layout) return false;
-    return layout.sections.some(s => s.fields.some(f => f.fieldType === 'user' || f.fieldType === 'multi_user'));
-  }, [layout]);
+  // Search callbacks for user and lookup fields
+  const searchUsers = useCallback(async (query: string) => {
+    const res = await apiFn.get<{ data: { id: string; firstName: string; lastName: string }[] }>(`/users?search=${encodeURIComponent(query)}&limit=20`);
+    return res.data.map((u) => ({ label: `${u.firstName} ${u.lastName}`.trim(), value: u.id }));
+  }, [apiFn]);
 
-  const { data: userOptions } = useQuery({
-    queryKey: ['user-options'],
-    queryFn: async () => {
-      const res = await apiFn.get<{ data: { id: string; firstName: string; lastName: string }[] }>('/users?limit=200');
-      return res.data.map((u) => ({ label: `${u.firstName} ${u.lastName}`.trim(), value: u.id }));
-    },
-    enabled: hasUserFields,
-  });
+  const searchLookup = useCallback(async (entity: string, query: string) => {
+    return apiFn.get<{ label: string; value: string }[]>(`/lookups/${entity}?search=${encodeURIComponent(query)}&limit=20`);
+  }, [apiFn]);
 
-  // Build per-field lookup/chip options maps for DynamicSection edit mode
-  const fieldLookupOptions = useMemo(() => {
-    if (!userOptions) return undefined;
-    const map: Record<string, { label: string; value: string }[]> = {};
-    if (!layout) return map;
-    for (const section of layout.sections) {
-      for (const field of section.fields) {
-        if (field.fieldType === 'user') map[field.fieldKey] = userOptions;
-      }
+  const getFieldSearch = useCallback((_fieldKey: string, fieldType: string, lookupEntity?: string) => {
+    if (fieldType === 'user') return searchUsers;
+    if ((fieldType === 'lookup' || fieldType === 'category') && lookupEntity) {
+      return (query: string) => searchLookup(lookupEntity, query);
     }
-    return Object.keys(map).length > 0 ? map : undefined;
-  }, [layout, userOptions]);
+    return undefined;
+  }, [searchUsers, searchLookup]);
 
-  const fieldChipOptions = useMemo(() => {
-    if (!userOptions) return undefined;
-    const map: Record<string, { label: string; value: string; color?: string }[]> = {};
-    if (!layout) return map;
+  const getFieldSearchForSection = useCallback((fieldKey: string, fieldType: string) => {
+    if (fieldType === 'user') return searchUsers;
+    if (!layout) return undefined;
     for (const section of layout.sections) {
-      for (const field of section.fields) {
-        if (field.fieldType === 'multi_user') map[field.fieldKey] = userOptions;
-      }
+      const field = section.fields.find(f => f.fieldKey === fieldKey);
+      if (field?.lookupEntity) return (query: string) => searchLookup(field.lookupEntity!, query);
     }
-    return Object.keys(map).length > 0 ? map : undefined;
-  }, [layout, userOptions]);
+    return undefined;
+  }, [searchUsers, searchLookup, layout]);
+
+  const getChipSearchForSection = useCallback((_fieldKey: string, fieldType: string) => {
+    if (fieldType === 'multi_user') return searchUsers;
+    return undefined;
+  }, [searchUsers]);
 
   const hasManyRelationships = useMemo(
     () => entity.relationships.filter((r) => r.type === 'hasMany'),
@@ -292,8 +285,8 @@ export function EntityDetailPage({ entityType }: EntityDetailPageProps) {
                   await updateMutation.mutateAsync({ id: item.id as string, data: values });
                 }}
                 isSaving={updateMutation.isPending}
-                fieldLookupOptions={fieldLookupOptions}
-                fieldChipOptions={fieldChipOptions}
+                getFieldSearch={getFieldSearchForSection}
+                getChipSearch={getChipSearchForSection}
               />
             ))}
 

@@ -3,6 +3,7 @@ import { useFormContext, Controller } from 'react-hook-form';
 import { X } from 'lucide-react';
 import { Label } from './Label';
 import { cn } from '../../lib/utils';
+import { useDebounce } from '../../hooks/useDebounce';
 
 export interface ChipOption {
   label: string;
@@ -13,8 +14,10 @@ export interface ChipOption {
 interface FormChipInputProps {
   name: string;
   label: string;
-  /** Available options to pick from */
-  options: ChipOption[];
+  /** Static options — filtered client-side */
+  options?: ChipOption[];
+  /** Async search callback — called on keystroke with debounce. Used when options is not provided. */
+  onSearch?: (query: string) => Promise<ChipOption[]>;
   placeholder?: string;
   description?: string;
   disabled?: boolean;
@@ -32,6 +35,7 @@ export function FormChipInput({
   name,
   label,
   options,
+  onSearch,
   placeholder = 'Search and add...',
   description,
   disabled,
@@ -61,6 +65,7 @@ export function FormChipInput({
             <Label htmlFor={name}>{label}</Label>
             <ChipInputInner
               options={options}
+              onSearch={onSearch}
               selectedValues={selectedValues}
               onChange={(vals) => field.onChange(vals)}
               onBlur={field.onBlur}
@@ -89,6 +94,7 @@ export function FormChipInput({
 
 function ChipInputInner({
   options,
+  onSearch,
   selectedValues,
   onChange,
   onBlur,
@@ -98,7 +104,8 @@ function ChipInputInner({
   inputId,
   ...rest
 }: {
-  options: ChipOption[];
+  options?: ChipOption[];
+  onSearch?: (query: string) => Promise<ChipOption[]>;
   selectedValues: string[];
   onChange: (values: string[]) => void;
   onBlur: () => void;
@@ -110,16 +117,40 @@ function ChipInputInner({
 }) {
   const [search, setSearch] = React.useState('');
   const [isOpen, setIsOpen] = React.useState(false);
+  const [asyncResults, setAsyncResults] = React.useState<ChipOption[]>([]);
+  const [isSearching, setIsSearching] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
+  const debouncedSearch = useDebounce(search, 300);
 
   const selectedSet = new Set(selectedValues);
-  const optionMap = new Map(options.map(o => [o.value, o]));
+  const optionMap = new Map([...(options ?? []), ...asyncResults].map(o => [o.value, o]));
 
-  // Filter available options
-  const filteredOptions = options.filter(
-    (o) => !selectedSet.has(o.value) && o.label.toLowerCase().includes(search.toLowerCase()),
-  );
+  // Async search effect
+  React.useEffect(() => {
+    if (!onSearch || !isOpen) return;
+    if (!debouncedSearch) { setAsyncResults([]); return; }
+
+    let cancelled = false;
+    setIsSearching(true);
+    onSearch(debouncedSearch).then((results) => {
+      if (!cancelled) {
+        setAsyncResults(results);
+        setIsSearching(false);
+      }
+    }).catch(() => {
+      if (!cancelled) setIsSearching(false);
+    });
+
+    return () => { cancelled = true; };
+  }, [debouncedSearch, onSearch, isOpen]);
+
+  // Determine which options to display
+  const filteredOptions = options
+    ? options.filter(
+        (o) => !selectedSet.has(o.value) && o.label.toLowerCase().includes(search.toLowerCase()),
+      )
+    : asyncResults.filter((o) => !selectedSet.has(o.value));
 
   const addValue = (value: string) => {
     onChange([...selectedValues, value]);
@@ -219,9 +250,21 @@ function ChipInputInner({
         </div>
       )}
 
-      {isOpen && filteredOptions.length === 0 && search && (
+      {isOpen && isSearching && (
+        <div className="absolute z-50 mt-1 w-full rounded-md border border-input bg-popover shadow-md">
+          <p className="px-3 py-2 text-sm text-muted-foreground">Searching...</p>
+        </div>
+      )}
+
+      {isOpen && !isSearching && filteredOptions.length === 0 && search && (
         <div className="absolute z-50 mt-1 w-full rounded-md border border-input bg-popover shadow-md">
           <p className="px-3 py-2 text-sm text-muted-foreground">No results found</p>
+        </div>
+      )}
+
+      {isOpen && !isSearching && filteredOptions.length === 0 && !search && onSearch && (
+        <div className="absolute z-50 mt-1 w-full rounded-md border border-input bg-popover shadow-md">
+          <p className="px-3 py-2 text-sm text-muted-foreground">Type to search...</p>
         </div>
       )}
     </div>

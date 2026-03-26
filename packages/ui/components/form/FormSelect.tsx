@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { useDebounce } from '../../hooks/useDebounce';
 import { useFormContext, Controller } from 'react-hook-form';
 import * as Popover from '@radix-ui/react-popover';
 import { Command } from 'cmdk';
@@ -13,7 +14,10 @@ interface SelectOption {
 
 interface FormSelectBaseProps {
   label?: string;
-  options: SelectOption[];
+  /** Static options — filtered client-side */
+  options?: SelectOption[];
+  /** Async search callback — called on keystroke with debounce. Used when options is not provided. */
+  onSearch?: (query: string) => Promise<SelectOption[]>;
   placeholder?: string;
   description?: string;
   disabled?: boolean;
@@ -35,17 +39,18 @@ interface FormSelectStandaloneProps extends FormSelectBaseProps {
 export type FormSelectProps = FormSelectControlledProps | FormSelectStandaloneProps;
 
 export function FormSelect(props: FormSelectProps) {
-  const { label, options, placeholder = 'Select...', description, disabled, className } = props;
+  const { label, options, onSearch, placeholder = 'Select...', description, disabled, className } = props;
 
   // Standalone mode: value + onChange provided, no form context needed
   if ('value' in props && props.onChange) {
-    const selectedOption = options.find((o) => o.value === props.value);
+    const selectedOption = options?.find((o) => o.value === props.value);
 
     return (
       <div className={cn('space-y-2', className)}>
         {label && <Label>{label}</Label>}
         <SearchableSelect
           options={options}
+          onSearch={onSearch}
           value={props.value}
           onChange={props.onChange}
           placeholder={placeholder}
@@ -67,6 +72,7 @@ function FormContextSelect({
   name,
   label,
   options,
+  onSearch,
   placeholder = 'Select...',
   description,
   disabled,
@@ -89,13 +95,14 @@ function FormContextSelect({
           .filter(Boolean)
           .join(' ') || undefined;
 
-        const selectedOption = options.find((o) => o.value === field.value);
+        const selectedOption = options?.find((o) => o.value === field.value);
 
         return (
           <div className={cn('space-y-2', className)}>
             {label && <Label htmlFor={name}>{label}</Label>}
             <SearchableSelect
               options={options}
+              onSearch={onSearch}
               value={field.value ?? ''}
               onChange={(val) => {
                 field.onChange(val);
@@ -127,6 +134,7 @@ function FormContextSelect({
 
 function SearchableSelect({
   options,
+  onSearch,
   value,
   onChange,
   placeholder,
@@ -136,7 +144,8 @@ function SearchableSelect({
   id,
   displayValue,
 }: {
-  options: SelectOption[];
+  options?: SelectOption[];
+  onSearch?: (query: string) => Promise<SelectOption[]>;
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
@@ -148,14 +157,42 @@ function SearchableSelect({
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const [asyncResults, setAsyncResults] = useState<SelectOption[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const debouncedSearch = useDebounce(search, 300);
 
   useEffect(() => {
     if (open) {
       setSearch('');
+      setAsyncResults([]);
       setTimeout(() => inputRef.current?.focus(), 0);
     }
   }, [open]);
+
+  // Async search effect
+  useEffect(() => {
+    if (!onSearch || !open) return;
+    if (!debouncedSearch && !open) return;
+
+    let cancelled = false;
+    setIsSearching(true);
+    onSearch(debouncedSearch).then((results) => {
+      if (!cancelled) {
+        setAsyncResults(results);
+        setIsSearching(false);
+      }
+    }).catch(() => {
+      if (!cancelled) setIsSearching(false);
+    });
+
+    return () => { cancelled = true; };
+  }, [debouncedSearch, onSearch, open]);
+
+  // Determine which options to display
+  const displayOptions = options
+    ? options.filter((opt) => !search || opt.label.toLowerCase().includes(search.toLowerCase()))
+    : asyncResults;
 
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
@@ -193,14 +230,14 @@ function SearchableSelect({
               />
             </div>
             <Command.List className="max-h-60 overflow-y-auto p-1">
-              <Command.Empty className="py-6 text-center text-sm text-muted-foreground">
-                No results found.
-              </Command.Empty>
-              {options
-                .filter((opt) =>
-                  !search || opt.label.toLowerCase().includes(search.toLowerCase()),
-                )
-                .map((opt) => (
+              {isSearching ? (
+                <div className="py-6 text-center text-sm text-muted-foreground">Searching...</div>
+              ) : displayOptions.length === 0 ? (
+                <Command.Empty className="py-6 text-center text-sm text-muted-foreground">
+                  {onSearch && !search ? 'Type to search...' : 'No results found.'}
+                </Command.Empty>
+              ) : (
+                displayOptions.map((opt) => (
                   <Command.Item
                     key={opt.value}
                     value={opt.value}
@@ -218,7 +255,8 @@ function SearchableSelect({
                     />
                     {opt.label}
                   </Command.Item>
-                ))}
+                ))
+              )}
             </Command.List>
           </Command>
         </Popover.Content>
