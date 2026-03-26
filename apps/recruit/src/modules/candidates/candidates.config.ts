@@ -75,6 +75,13 @@ export const candidatesConfig: EntityConfig = {
           selectionMode: 'single',
           submitUrl: '/api/v1/applications',
           fieldMapping: { candidateId: ':id', jobOpeningId: ':selectedId' },
+          existingCheck: {
+            listUrl: '/api/v1/applications',
+            filterField: 'candidateId',
+            matchField: 'jobOpeningId',
+            label: 'Already applied',
+            disableSelection: true,
+          },
         },
       },
       { key: 'clone', label: 'Clone', icon: 'Copy', permission: 'create' },

@@ -230,6 +230,13 @@ export const JOB_OPENINGS_CONFIG: EntityConfig = {
           selectionMode: 'multiple',
           submitUrl: '/api/v1/applications',
           fieldMapping: { jobOpeningId: ':id', candidateId: ':selectedId' },
+          existingCheck: {
+            listUrl: '/api/v1/applications',
+            filterField: 'jobOpeningId',
+            matchField: 'candidateId',
+            label: 'Already applied',
+            disableSelection: true,
+          },
         },
       },
       { key: 'clone', label: 'Clone', icon: 'Copy', permission: 'create' },

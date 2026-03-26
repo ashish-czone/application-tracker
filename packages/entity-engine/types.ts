@@ -267,6 +267,19 @@ export interface BaseListQuery {
 
 export type ActionVariant = 'default' | 'destructive';
 
+export interface PickerExistingCheck {
+  /** URL to fetch existing associations from (e.g., '/api/v1/applications') */
+  listUrl: string;
+  /** Query param to filter by the source record (e.g., 'candidateId') */
+  filterField: string;
+  /** Field in results whose value matches picker row IDs (e.g., 'jobOpeningId') */
+  matchField: string;
+  /** Badge label shown on matching rows (e.g., 'Already applied') */
+  label: string;
+  /** Whether to prevent selection of matching rows. Defaults to true. */
+  disableSelection?: boolean;
+}
+
 export interface PickerConfig {
   /** Entity type to show in the picker */
   entityType: string;
@@ -276,6 +289,8 @@ export interface PickerConfig {
   submitUrl: string;
   /** Maps field names to values. :id = current record, :selectedId = picked record */
   fieldMapping: Record<string, string>;
+  /** Optional: check for existing associations and label/disable matching rows */
+  existingCheck?: PickerExistingCheck;
 }
 
 export interface EntityAction {

@@ -48,6 +48,8 @@ export interface DataGridProps<TData> {
   selectionMode?: 'single' | 'multiple';
   /** Extract a unique ID from each row for selection tracking. Defaults to (row as any).id */
   getRowId?: (row: TData) => string;
+  /** Conditionally enable/disable row selection. Return false to disable selection for a row. */
+  isRowSelectable?: (row: TData) => boolean;
   /** Actions shown in the bulk action bar when rows are selected */
   bulkActions?: DataGridBulkAction[];
   /** Called when row selection changes. Receives array of selected row IDs. */
