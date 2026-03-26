@@ -1,4 +1,5 @@
 import type { PgTable, PgColumn } from 'drizzle-orm/pg-core';
+import type { SQL } from 'drizzle-orm';
 import type { FieldType, SeedSectionInput, SetPicklistOptionInput } from '@packages/eav-attributes';
 import type { Condition } from '@packages/notifications';
 import type { WorkflowGuardFn } from '@packages/workflows';
