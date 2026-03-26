@@ -20,7 +20,7 @@ import { TaxonomyService, type TagWithGroup } from '@packages/taxonomy';
 import { MediaService, type MediaFile } from '@packages/media';
 import { WorkflowEngineService, WorkflowRegistryService } from '@packages/workflows';
 import type { PaginatedResponse } from '@packages/common';
-import type { EntityConfig, BaseListQuery } from './types';
+import type { EntityConfig, BaseListQuery, ListLayoutColumn } from './types';
 import { EntityRegistryService } from './entity-registry.service';
 
 /**
@@ -115,86 +115,79 @@ export class EntityService {
   }
 
   /**
-   * Build SQL subquery expressions for rollup fields.
-   * Returns a map of fieldKey → SQL expression that can be added to a select.
+   * Build COUNT subquery expressions for hasMany relationships.
+   * Auto-derives from the entity's relationships config.
    */
-  private buildRollupExpressions(): Record<string, any> {
+  private buildRelationshipCountExpressions(): Record<string, any> {
     const { config } = this;
-    const rollups: Record<string, any> = {};
+    const counts: Record<string, any> = {};
+    const thisTable = config.table as any;
 
-    for (const [fieldKey, meta] of Object.entries(config.fieldMeta)) {
-      if (!meta.rollup) continue;
+    for (const rel of config.relationships ?? []) {
+      if (rel.type !== 'hasMany') continue;
 
-      const targetConfig = this.entityRegistry.get(meta.rollup.targetEntity);
+      const targetConfig = this.entityRegistry.get(rel.targetEntity);
       if (!targetConfig) continue;
 
       const targetTable = targetConfig.table as any;
-      const fkCol = targetTable[meta.rollup.foreignKey];
-      const thisTable = config.table as any;
-
+      const fkCol = targetTable[rel.foreignKey];
       if (!fkCol) continue;
 
-      // Build the aggregate expression
       const deletedAt = targetTable.deletedAt;
       const deletedFilter = deletedAt ? sql` AND ${deletedAt} IS NULL` : sql``;
+      const key = `${rel.name}Count`;
 
-      switch (meta.rollup.aggregate) {
-        case 'count':
-          rollups[fieldKey] = sql`(SELECT COUNT(*) FROM ${targetTable} WHERE ${fkCol} = ${thisTable.id}${deletedFilter})`.as(fieldKey);
-          break;
-        case 'sum':
-        case 'avg':
-        case 'min':
-        case 'max': {
-          const aggField = meta.rollup.aggregateField;
-          if (!aggField || !targetTable[aggField]) break;
-          const aggCol = targetTable[aggField];
-          const fn = meta.rollup.aggregate.toUpperCase();
-          rollups[fieldKey] = sql`(SELECT ${sql.raw(fn)}(${aggCol}) FROM ${targetTable} WHERE ${fkCol} = ${thisTable.id}${deletedFilter})`.as(fieldKey);
-          break;
-        }
-      }
+      counts[key] = sql`(SELECT COUNT(*) FROM ${targetTable} WHERE ${fkCol} = ${thisTable.id}${deletedFilter})`.as(key);
     }
 
-    return rollups;
-  }
-
-  /**
-   * Get rollup field keys from config.
-   */
-  private getRollupFieldKeys(): string[] {
-    return Object.entries(this.config.fieldMeta)
-      .filter(([, meta]) => !!meta.rollup)
-      .map(([key]) => key);
+    return counts;
   }
 
   /**
    * Returns list page layout config: columns, actions, filters, sort defaults.
+   * Includes all fields with visible/order flags based on listFields config.
    * Cached by the frontend — this is config, not data.
    */
   async getListLayout(): Promise<import('./types').ListLayoutResponse> {
     const { config } = this;
-    const listDefs = await this.getListFieldDefs();
+    const allDefs = await this.fieldDefinitionService.listByEntityWithOptions(config.entityType);
 
-    const columns = listDefs.map(d => ({
-      fieldKey: d.fieldKey,
-      label: d.label,
-      fieldType: d.fieldType,
-      sortable: !!config.sortableColumns[d.fieldKey],
-      lookupEntity: d.lookupEntity ?? undefined,
-    }));
+    // Build the listFields set for determining default visibility
+    const listFieldSet = config.listFields ? new Set(config.listFields) : null;
+    const listFieldOrder = config.listFields
+      ? new Map(config.listFields.map((k, i) => [k, i]))
+      : null;
 
-    // Append rollup field columns
-    for (const [fieldKey, meta] of Object.entries(config.fieldMeta)) {
-      if (!meta.rollup) continue;
+    // All entity fields as columns with visible/order flags
+    const columns: ListLayoutColumn[] = allDefs
+      .filter(d => !d.isSystem)
+      .map((d, idx) => ({
+        fieldKey: d.fieldKey,
+        label: d.label,
+        fieldType: d.fieldType,
+        sortable: !!config.sortableColumns[d.fieldKey],
+        lookupEntity: d.lookupEntity ?? undefined,
+        visible: listFieldSet ? listFieldSet.has(d.fieldKey) : !EntityService.LIST_SKIP_TYPES.has(d.fieldType) && idx < 10,
+        order: listFieldOrder?.get(d.fieldKey) ?? 1000 + idx,
+      }));
+
+    // Append hasMany relationship count columns
+    for (const rel of config.relationships ?? []) {
+      if (rel.type !== 'hasMany') continue;
+      const key = `${rel.name}Count`;
       columns.push({
-        fieldKey,
-        label: meta.label,
+        fieldKey: key,
+        label: `${rel.label} Count`,
         fieldType: 'number',
         sortable: false,
         lookupEntity: undefined,
+        visible: listFieldSet ? listFieldSet.has(key) : false,
+        order: listFieldOrder?.get(key) ?? 2000,
       });
     }
+
+    // Sort by order
+    columns.sort((a, b) => a.order - b.order);
 
     // Build filterable fields (picklists, lookups, booleans, tags)
     const defs = await this.fieldDefinitionService.listByEntityWithOptions(config.entityType);
@@ -282,9 +275,9 @@ export class EntityService {
     const listDefs = await this.getListFieldDefs();
     const selectMap: Record<string, any> = this.buildListSelectMap(listDefs);
 
-    // Add rollup subqueries
-    const rollupExprs = this.buildRollupExpressions();
-    Object.assign(selectMap, rollupExprs);
+    // Add hasMany relationship count subqueries
+    const countExprs = this.buildRelationshipCountExpressions();
+    Object.assign(selectMap, countExprs);
 
     const rows = await this.database.db
       .select(selectMap)
@@ -345,15 +338,15 @@ export class EntityService {
       throw new NotFoundException(`${config.singularName} not found`);
     }
 
-    // Compute rollup values for detail view
-    const rollupExprs = this.buildRollupExpressions();
-    if (Object.keys(rollupExprs).length > 0) {
-      const [rollupRow] = await this.database.db
-        .select(rollupExprs)
+    // Compute relationship counts for detail view
+    const countExprs = this.buildRelationshipCountExpressions();
+    if (Object.keys(countExprs).length > 0) {
+      const [countRow] = await this.database.db
+        .select(countExprs)
         .from(table)
         .where(eq(table.id, id))
         .limit(1) as any[];
-      if (rollupRow) Object.assign(row, rollupRow);
+      if (countRow) Object.assign(row, countRow);
     }
 
     const response = await this.toResponse(row);

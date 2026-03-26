@@ -39,7 +39,6 @@ export async function seedEntityFields(
 
   for (const [key, meta] of Object.entries(config.fieldMeta)) {
     if (skipSet.has(key)) continue;
-    if (meta.rollup) continue; // Rollup fields are virtual — computed at query time, not stored
 
     const col = columnMap.get(key);
 

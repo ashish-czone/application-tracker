@@ -65,6 +65,8 @@ export const INTERVIEWS_CONFIG: EntityConfig = {
     },
   },
 
+  listFields: ['interviewName', 'candidateId', 'jobOpeningId', 'interviewFrom', 'status'],
+
   sections: [
     { name: 'Interview Information', fields: ['interviewName', 'candidateId', 'clientId', 'jobOpeningId', 'interviewFrom', 'interviewTo', 'location', 'scheduleComments', 'status'] },
   ],

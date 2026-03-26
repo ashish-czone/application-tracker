@@ -70,6 +70,8 @@ export const CONTACTS_CONFIG: EntityConfig = {
     emailOptOut: { label: 'Email Opt Out', section: 'other', sortOrder: 2, fieldType: 'boolean' },
   },
 
+  listFields: ['firstName', 'lastName', 'clientId', 'email', 'mobile', 'jobTitle'],
+
   sections: [
     { name: 'Contact Information', fields: ['firstName', 'lastName', 'clientId', 'department', 'email', 'secondaryEmail', 'jobTitle', 'workPhone', 'mobile', 'fax', 'skypeId'] },
     { name: 'Mailing Address', fields: ['mailingStreet', 'mailingCity', 'mailingProvince', 'mailingPostalCode', 'mailingCountry'] },

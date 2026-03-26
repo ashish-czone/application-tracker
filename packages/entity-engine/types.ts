@@ -1,5 +1,4 @@
 import type { PgTable, PgColumn } from 'drizzle-orm/pg-core';
-import type { SQL } from 'drizzle-orm';
 import type { FieldType, SeedSectionInput, SetPicklistOptionInput } from '@packages/eav-attributes';
 import type { Condition } from '@packages/notifications';
 import type { WorkflowGuardFn } from '@packages/workflows';
@@ -48,19 +47,6 @@ export interface FieldMeta {
   maxFileSize?: number;
   /** Workflow config (for workflow field type) */
   workflow?: WorkflowFieldConfig;
-  /** Rollup config (for rollup field type) — computes an aggregate over a related entity */
-  rollup?: RollupFieldConfig;
-}
-
-export interface RollupFieldConfig {
-  /** Target entity type to aggregate (e.g., 'applications') */
-  targetEntity: string;
-  /** Foreign key on the target entity that references this entity (e.g., 'jobOpeningId') */
-  foreignKey: string;
-  /** Aggregate function */
-  aggregate: 'count' | 'sum' | 'avg' | 'min' | 'max';
-  /** Field on the target entity to aggregate (required for sum/avg/min/max, ignored for count) */
-  aggregateField?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -190,6 +176,8 @@ export interface EntityConfig<TTable extends PgTable = PgTable> {
   fieldMeta: Record<string, FieldMeta>;
   /** Default layout sections with field assignments */
   sections: SeedSectionInput[];
+  /** Field keys to display by default in the list view (in order). Fields not listed are hidden but available via Columns toggle. */
+  listFields?: string[];
 
   // --- Lookup ---
 
@@ -345,6 +333,10 @@ export interface ListLayoutColumn {
   sortable: boolean;
   /** Lookup entity (for lookup columns) */
   lookupEntity?: string;
+  /** Whether the column is visible by default */
+  visible: boolean;
+  /** Display order (lower = first) */
+  order: number;
 }
 
 export interface ListLayoutResponse {
