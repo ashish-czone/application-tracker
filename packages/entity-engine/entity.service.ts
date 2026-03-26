@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
-import { eq, and, or, isNull, ilike, asc, desc, count, sql, type SQL } from 'drizzle-orm';
+import { eq, and, or, isNull, ilike, asc, desc, count, sql } from 'drizzle-orm';
 import type { PgColumn } from 'drizzle-orm/pg-core';
 import { DatabaseService } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
@@ -118,9 +118,9 @@ export class EntityService {
    * Build SQL subquery expressions for rollup fields.
    * Returns a map of fieldKey → SQL expression that can be added to a select.
    */
-  private buildRollupExpressions(): Record<string, SQL> {
+  private buildRollupExpressions(): Record<string, any> {
     const { config } = this;
-    const rollups: Record<string, SQL> = {};
+    const rollups: Record<string, any> = {};
 
     for (const [fieldKey, meta] of Object.entries(config.fieldMeta)) {
       if (!meta.rollup) continue;
