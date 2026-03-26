@@ -338,6 +338,11 @@ export interface ListLayoutColumn {
   visible: boolean;
   /** Display order (lower = first) */
   order: number;
+  /** If this is a relationship count column, the relationship metadata */
+  relationship?: {
+    targetEntity: string;
+    foreignKey: string;
+  };
 }
 
 export interface ListLayoutResponse {

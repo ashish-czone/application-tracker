@@ -169,7 +169,7 @@ export class EntityService {
 
     // Append hasMany relationship count columns
     for (const rel of config.relationships ?? []) {
-      if (rel.type !== 'hasMany') continue;
+      if (rel.type !== 'hasMany' || !rel.foreignKey) continue;
       const key = `${rel.name}Count`;
       columns.push({
         fieldKey: key,
@@ -179,6 +179,10 @@ export class EntityService {
         lookupEntity: undefined,
         visible: listFieldSet ? listFieldSet.has(key) : false,
         order: listFieldOrder?.get(key) ?? 2000,
+        relationship: {
+          targetEntity: rel.targetEntity,
+          foreignKey: rel.foreignKey,
+        },
       });
     }
 
