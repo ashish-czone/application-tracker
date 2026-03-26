@@ -124,11 +124,15 @@ export function DynamicSection({ section, values, onSave, isSaving, fieldLookupO
           chipOpts = rawVal.map((v: any) => ({ label: v.label ?? v.id, value: v.id }));
         }
       }
+      // Pass resolved label for user/lookup fields so FormSelect shows the name on initial render
+      const resolvedLabel = values[`${field.fieldKey}__label`] as string | undefined;
+
       return (
         <DynamicField
           key={field.fieldKey}
           field={field}
           mode="edit"
+          resolvedLabel={resolvedLabel}
           lookupOptions={fieldLookupOptions?.[field.fieldKey]}
           chipOptions={chipOpts}
           onSearch={getFieldSearch?.(field.fieldKey, field.fieldType)}

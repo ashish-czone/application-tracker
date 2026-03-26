@@ -22,6 +22,8 @@ interface FormSelectBaseProps {
   description?: string;
   disabled?: boolean;
   className?: string;
+  /** Initial display value for async fields (e.g., resolved label from backend) */
+  initialDisplayValue?: string;
 }
 
 interface FormSelectControlledProps extends FormSelectBaseProps {
@@ -77,6 +79,7 @@ function FormContextSelect({
   description,
   disabled,
   className,
+  initialDisplayValue,
 }: FormSelectControlledProps) {
   const { control } = useFormContext();
   const errorId = `${name}-error`;
@@ -113,7 +116,7 @@ function FormContextSelect({
               hasError={hasError}
               describedBy={describedBy}
               id={name}
-              displayValue={selectedOption?.label}
+              displayValue={selectedOption?.label ?? initialDisplayValue}
             />
             {description && (
               <p id={descriptionId} className="text-sm text-muted-foreground">

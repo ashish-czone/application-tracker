@@ -156,10 +156,10 @@ export function DynamicField({ field, mode, value, resolvedLabel, lookupOptions,
   }
 
   // Edit mode — render appropriate form control
-  return <DynamicFieldEdit field={field} lookupOptions={lookupOptions} chipOptions={chipOptions} onSearch={onSearch} onChipSearch={onChipSearch} />;
+  return <DynamicFieldEdit field={field} resolvedLabel={resolvedLabel} lookupOptions={lookupOptions} chipOptions={chipOptions} onSearch={onSearch} onChipSearch={onChipSearch} />;
 }
 
-function DynamicFieldEdit({ field, lookupOptions, chipOptions, onSearch, onChipSearch }: { field: FieldDefinition; lookupOptions?: { label: string; value: string }[]; chipOptions?: ChipOption[]; onSearch?: (query: string) => Promise<{ label: string; value: string }[]>; onChipSearch?: (query: string) => Promise<ChipOption[]> }) {
+function DynamicFieldEdit({ field, resolvedLabel, lookupOptions, chipOptions, onSearch, onChipSearch }: { field: FieldDefinition; resolvedLabel?: string | null; lookupOptions?: { label: string; value: string }[]; chipOptions?: ChipOption[]; onSearch?: (query: string) => Promise<{ label: string; value: string }[]>; onChipSearch?: (query: string) => Promise<ChipOption[]> }) {
   const disabled = field.isReadonly;
   const label = field.isRequired ? `${field.label} *` : field.label;
 
@@ -233,6 +233,7 @@ function DynamicFieldEdit({ field, lookupOptions, chipOptions, onSearch, onChipS
           options={lookupOptions}
           onSearch={onSearch}
           disabled={disabled}
+          initialDisplayValue={resolvedLabel ?? undefined}
         />
       );
 
@@ -272,8 +273,9 @@ function DynamicFieldEdit({ field, lookupOptions, chipOptions, onSearch, onChipS
         <FormChipInput
           name={field.fieldKey}
           label={label}
-          options={chipOptions}
+          options={onChipSearch ? undefined : chipOptions}
           onSearch={onChipSearch}
+          initialSelected={onChipSearch ? chipOptions : undefined}
           placeholder={`Search and add ${field.label.toLowerCase()}...`}
           disabled={disabled}
         />
