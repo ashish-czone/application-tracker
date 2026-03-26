@@ -41,7 +41,11 @@ export function DynamicSection({ section, values, onSave, isSaving, fieldLookupO
   const defaultValues = useMemo(() => {
     const defaults: Record<string, unknown> = {};
     for (const field of editableFields) {
-      const val = values[field.fieldKey];
+      let val = values[field.fieldKey];
+      // multi_user/multi_lookup values come hydrated as [{id, label}] — extract IDs for the form
+      if ((field.fieldType === 'multi_user' || field.fieldType === 'multi_lookup') && Array.isArray(val)) {
+        val = val.map((v: any) => typeof v === 'object' && v?.id ? v.id : v);
+      }
       defaults[field.fieldKey] = val ?? (field.defaultValue ?? '');
     }
     return defaults;
@@ -111,17 +115,27 @@ export function DynamicSection({ section, values, onSave, isSaving, fieldLookupO
     ));
 
   const renderEditColumn = (fields: typeof editableFields) =>
-    fields.map(field => (
-      <DynamicField
-        key={field.fieldKey}
-        field={field}
-        mode="edit"
-        lookupOptions={fieldLookupOptions?.[field.fieldKey]}
-        chipOptions={fieldChipOptions?.[field.fieldKey]}
-        onSearch={getFieldSearch?.(field.fieldKey, field.fieldType)}
-        onChipSearch={getChipSearch?.(field.fieldKey, field.fieldType)}
-      />
-    ));
+    fields.map(field => {
+      // For multi_user/multi_lookup, derive chip options from hydrated values so existing selections show labels
+      let chipOpts = fieldChipOptions?.[field.fieldKey];
+      if ((field.fieldType === 'multi_user' || field.fieldType === 'multi_lookup') && !chipOpts) {
+        const rawVal = values[field.fieldKey];
+        if (Array.isArray(rawVal) && rawVal.length > 0 && typeof rawVal[0] === 'object' && rawVal[0]?.id) {
+          chipOpts = rawVal.map((v: any) => ({ label: v.label ?? v.id, value: v.id }));
+        }
+      }
+      return (
+        <DynamicField
+          key={field.fieldKey}
+          field={field}
+          mode="edit"
+          lookupOptions={fieldLookupOptions?.[field.fieldKey]}
+          chipOptions={chipOpts}
+          onSearch={getFieldSearch?.(field.fieldKey, field.fieldType)}
+          onChipSearch={getChipSearch?.(field.fieldKey, field.fieldType)}
+        />
+      );
+    });
 
   return (
     <div className="rounded-lg border border-border bg-card">

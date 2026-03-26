@@ -1030,12 +1030,19 @@ export class EntityService {
   private async resolveLookupLabels(rows: Record<string, unknown>[]): Promise<void> {
     if (rows.length === 0) return;
 
-    // Get field definitions to identify lookup fields
     const defs = await this.fieldDefinitionService.listByEntityWithOptions(this.config.entityType);
+
+    // Resolve lookup fields via lookup resolver
     const lookupFields = defs.filter(
       (d: FieldDefinition) => d.fieldType === 'lookup' && d.lookupEntity,
     );
-    if (lookupFields.length === 0) return;
+
+    // Resolve user fields via users table
+    const userFields = defs.filter(
+      (d: FieldDefinition) => d.fieldType === 'user',
+    );
+
+    if (lookupFields.length === 0 && userFields.length === 0) return;
 
     // Collect unique IDs per lookup entity
     const idsByEntity = new Map<string, { fieldKey: string; ids: Set<string> }>();
@@ -1053,15 +1060,47 @@ export class EntityService {
       }
     }
 
-    // Batch resolve all lookup entities in parallel
+    // Collect unique user IDs
+    const userIds = new Set<string>();
+    for (const field of userFields) {
+      for (const row of rows) {
+        const value = row[field.fieldKey];
+        if (typeof value === 'string' && value.length > 0) {
+          userIds.add(value);
+        }
+      }
+    }
+
+    // Batch resolve all lookup entities + users in parallel
     const labelMaps = new Map<string, Map<string, string>>();
-    await Promise.all(
-      Array.from(idsByEntity.entries()).map(async ([entity, { ids }]) => {
-        if (ids.size === 0) return;
-        const labels = await this.lookupResolver.getBatchLabels(entity, Array.from(ids));
-        labelMaps.set(entity, labels);
-      }),
-    );
+    const userLabelMap = new Map<string, string>();
+
+    const resolvePromises: Promise<void>[] = [];
+
+    for (const [entity, { ids }] of idsByEntity.entries()) {
+      if (ids.size === 0) continue;
+      resolvePromises.push(
+        this.lookupResolver.getBatchLabels(entity, Array.from(ids)).then(labels => {
+          labelMaps.set(entity, labels);
+        }),
+      );
+    }
+
+    if (userIds.size > 0) {
+      resolvePromises.push(
+        this.database.db
+          .select({ id: sql`id`, firstName: sql`first_name`, lastName: sql`last_name` })
+          .from(sql`users`)
+          .where(sql`id IN (${sql.join(Array.from(userIds).map(id => sql`${id}`), sql`, `)})`)
+          .then((users: any[]) => {
+            for (const u of users) {
+              userLabelMap.set(u.id, `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim());
+            }
+          }),
+      );
+    }
+
+    await Promise.all(resolvePromises);
 
     // Inject __label fields into each row
     for (const row of rows) {
@@ -1070,6 +1109,12 @@ export class EntityService {
         const labelMap = labelMaps.get(field.lookupEntity!);
         if (typeof value === 'string' && labelMap) {
           row[`${field.fieldKey}__label`] = labelMap.get(value) ?? null;
+        }
+      }
+      for (const field of userFields) {
+        const value = row[field.fieldKey];
+        if (typeof value === 'string' && userLabelMap.size > 0) {
+          row[`${field.fieldKey}__label`] = userLabelMap.get(value) ?? null;
         }
       }
     }
