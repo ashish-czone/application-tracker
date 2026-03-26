@@ -49,8 +49,12 @@ export function EntityCreatePage({ entityType }: EntityCreatePageProps) {
   const lookupEntities = useMemo(() => {
     if (!editableFields.length) return [];
     return editableFields
-      .filter((f) => (f.fieldType === 'lookup' || f.fieldType === 'user') && f.lookupEntity)
+      .filter((f) => (f.fieldType === 'lookup') && f.lookupEntity)
       .map((f) => f.lookupEntity!);
+  }, [editableFields]);
+
+  const hasUserFields = useMemo(() => {
+    return editableFields.some((f) => f.fieldType === 'user' || f.fieldType === 'multi_user');
   }, [editableFields]);
 
   const { data: lookupOptionsMap } = useQuery({
@@ -65,6 +69,16 @@ export function EntityCreatePage({ entityType }: EntityCreatePageProps) {
       return map;
     },
     enabled: lookupEntities.length > 0,
+  });
+
+  // Fetch user options for user/multi_user fields
+  const { data: userOptions } = useQuery({
+    queryKey: ['user-options'],
+    queryFn: async () => {
+      const res = await apiFn.get<{ data: { id: string; firstName: string; lastName: string }[] }>('/users?limit=200');
+      return res.data.map((u) => ({ label: `${u.firstName} ${u.lastName}`.trim(), value: u.id }));
+    },
+    enabled: hasUserFields,
   });
 
   // Fetch chip options
@@ -174,8 +188,8 @@ export function EntityCreatePage({ entityType }: EntityCreatePageProps) {
               key={field.fieldKey}
               field={field}
               mode="edit"
-              lookupOptions={field.lookupEntity ? lookupOptionsMap?.[field.lookupEntity] : undefined}
-              chipOptions={chipOptionsMap?.[field.fieldKey]}
+              lookupOptions={field.fieldType === 'user' ? userOptions : field.lookupEntity ? lookupOptionsMap?.[field.lookupEntity] : undefined}
+              chipOptions={field.fieldType === 'multi_user' ? userOptions : chipOptionsMap?.[field.fieldKey]}
             />
           ))}
         </div>
