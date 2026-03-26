@@ -73,10 +73,10 @@ export const candidatesConfig: EntityConfig = {
         picker: {
           entityType: 'job_openings',
           selectionMode: 'single',
-          submitUrl: '/api/v1/applications',
+          submitUrl: '/applications',
           fieldMapping: { candidateId: ':id', jobOpeningId: ':selectedId' },
           existingCheck: {
-            listUrl: '/api/v1/applications',
+            listUrl: '/applications',
             filterField: 'candidateId',
             matchField: 'jobOpeningId',
             label: 'Already applied',
