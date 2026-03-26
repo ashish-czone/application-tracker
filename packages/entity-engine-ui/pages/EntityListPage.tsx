@@ -15,6 +15,7 @@ import { useListLayout } from '../helpers/useListLayout';
 import { buildColumnDefs, buildFilterConfigs, buildLookupFilterFields } from '../helpers/buildColumnDefs';
 import { EntityQuickCreateForm } from './EntityQuickCreateForm';
 import { EntityBoardView } from '../components/EntityBoardView';
+import { EntityPickerPanel } from '../components/EntityPickerPanel';
 
 type Row = Record<string, unknown>;
 
@@ -39,6 +40,12 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
   const [deletingItem, setDeletingItem] = useState<Row | null>(null);
   const [bulkDeleteIds, setBulkDeleteIds] = useState<string[]>([]);
   const [showDeleted, setShowDeleted] = useState(false);
+  const [browsePanel, setBrowsePanel] = useState<{
+    targetEntity: string;
+    foreignKey: string;
+    parentId: string;
+    label: string;
+  } | null>(null);
 
   // Board view state
   const boardFields = entity.ui.boardFields ?? [];
@@ -244,15 +251,36 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
       if (field) {
         return buildColumnDefs([field], { maxColumns: 1 })[0];
       }
-      // For computed columns (relationship counts), render as plain number
+      // For computed columns (relationship counts), render as clickable link
       return {
         id: col.fieldKey,
         header: col.label,
         accessorKey: col.fieldKey,
         enableSorting: col.sortable,
-        cell: ({ getValue }: any) => {
+        cell: ({ getValue, row }: any) => {
           const val = getValue();
-          return val !== null && val !== undefined ? String(val) : '-';
+          if (val === null || val === undefined) return '-';
+          const count = Number(val);
+          if (col.relationship && count > 0) {
+            return (
+              <button
+                type="button"
+                className="text-primary hover:underline font-medium"
+                onClick={(e: any) => {
+                  e.stopPropagation();
+                  setBrowsePanel({
+                    targetEntity: col.relationship.targetEntity,
+                    foreignKey: col.relationship.foreignKey,
+                    parentId: String(row.original.id),
+                    label: col.label.replace(' Count', ''),
+                  });
+                }}
+              >
+                {count}
+              </button>
+            );
+          }
+          return String(count);
         },
       };
     });
@@ -451,6 +479,19 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
         isPending={bulkDeleting}
         onConfirm={() => handleBulkDelete(bulkDeleteIds)}
       />
+
+      {/* Browse panel for relationship counts */}
+      {browsePanel && (
+        <EntityPickerPanel
+          mode="browse"
+          open={!!browsePanel}
+          onOpenChange={(open) => { if (!open) setBrowsePanel(null); }}
+          entityType={browsePanel.targetEntity}
+          title={browsePanel.label}
+          filter={{ key: browsePanel.foreignKey, value: browsePanel.parentId }}
+          excludeFields={[browsePanel.foreignKey]}
+        />
+      )}
     </div>
   );
 }

@@ -20,32 +20,56 @@ import { useEntityEngine, useEntityConfig, useEntityHooks } from '../EntityEngin
 import { useEntityLayout } from '../helpers/useEntityLayout';
 import { buildColumnDefs } from '../helpers/buildColumnDefs';
 
-interface EntityPickerPanelProps {
+type Row = Record<string, unknown>;
+
+interface BaseProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** The entity type to display */
+  entityType: string;
+  /** Title for the panel */
+  title?: string;
+  /** Description for the panel */
+  description?: string;
+}
+
+interface BrowseMode extends BaseProps {
+  mode: 'browse';
+  /** Filter the list by a foreign key */
+  filter?: { key: string; value: string };
+  /** Fields to exclude from columns */
+  excludeFields?: string[];
+}
+
+interface PickerMode extends BaseProps {
+  mode: 'picker';
   pickerConfig: PickerConfig;
   sourceId: string;
   onSuccess?: () => void;
 }
 
-type Row = Record<string, unknown>;
+export type EntityPickerPanelProps = BrowseMode | PickerMode;
 
 /**
- * Slide-over panel that renders any entity's DataGrid with selection.
- * Used for association actions like "Apply to Job" or "Apply Candidate".
+ * Slide-over panel that renders any entity's DataGrid.
+ *
+ * Two modes:
+ * - `browse`: read-only view of records, optionally filtered by a foreign key
+ * - `picker`: selection mode with submit to an association endpoint
  */
-export function EntityPickerPanel({
-  open,
-  onOpenChange,
-  pickerConfig,
-  sourceId,
-  onSuccess,
-}: EntityPickerPanelProps) {
+export function EntityPickerPanel(props: EntityPickerPanelProps) {
+  const { open, onOpenChange, entityType } = props;
   const { apiFn } = useEntityEngine();
   const queryClient = useQueryClient();
-  const targetEntity = useEntityConfig(pickerConfig.entityType);
-  const hooks = useEntityHooks(pickerConfig.entityType);
-  const { data: layout } = useEntityLayout(pickerConfig.entityType);
+  const targetEntity = useEntityConfig(entityType);
+  const hooks = useEntityHooks(entityType);
+  const { data: layout } = useEntityLayout(entityType);
+
+  const isPicker = props.mode === 'picker';
+  const pickerConfig = isPicker ? props.pickerConfig : null;
+  const sourceId = isPicker ? props.sourceId : '';
+  const filter = !isPicker ? props.filter : null;
+  const excludeFields = !isPicker ? (props.excludeFields ?? []) : [];
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -58,6 +82,7 @@ export function EntityPickerPanel({
     });
 
   const { data, isLoading } = hooks.useList({
+    ...(filter ? { [filter.key]: filter.value } : {}),
     page,
     limit: pageSize,
     sort,
@@ -65,8 +90,8 @@ export function EntityPickerPanel({
     search: search || undefined,
   });
 
-  // Fetch existing associations when existingCheck is configured
-  const existingCheck = pickerConfig.existingCheck;
+  // Existing check (picker mode only)
+  const existingCheck = pickerConfig?.existingCheck;
   const { data: existingData } = useQuery({
     queryKey: ['picker-existing', existingCheck?.listUrl, sourceId],
     queryFn: () =>
@@ -77,7 +102,6 @@ export function EntityPickerPanel({
     staleTime: 30_000,
   });
 
-  // Build set of existing target IDs
   const existingIds = useMemo(() => {
     if (!existingCheck || !existingData?.data) return new Set<string>();
     return new Set(
@@ -85,13 +109,18 @@ export function EntityPickerPanel({
     );
   }, [existingCheck, existingData]);
 
+  const excludeSet = useMemo(() => new Set(excludeFields), [excludeFields]);
+
   const baseColumns = useMemo(() => {
     if (!layout) return [];
     const allFields = layout.sections.flatMap((s) => s.fields);
-    return buildColumnDefs(allFields, { maxColumns: 5 });
-  }, [layout]);
+    return buildColumnDefs(
+      allFields.filter((f) => !excludeSet.has(f.fieldKey) && (filter ? f.fieldKey !== filter.key : true)),
+      { maxColumns: 6 },
+    );
+  }, [layout, excludeSet, filter]);
 
-  // Append a status badge column if existingCheck is configured
+  // Append existing-check badge column (picker mode only)
   const columns = useMemo<ColumnDef<Row, unknown>[]>(() => {
     if (!existingCheck || existingIds.size === 0) return baseColumns;
 
@@ -116,7 +145,6 @@ export function EntityPickerPanel({
     return [...baseColumns, statusCol];
   }, [baseColumns, existingCheck, existingIds]);
 
-  // Determine if a row is selectable
   const isRowSelectable = useMemo(() => {
     if (!existingCheck || existingCheck.disableSelection === false || existingIds.size === 0) {
       return undefined;
@@ -125,7 +153,7 @@ export function EntityPickerPanel({
   }, [existingCheck, existingIds]);
 
   const handleConfirm = async () => {
-    if (selectedIds.length === 0) return;
+    if (!pickerConfig || selectedIds.length === 0) return;
 
     setIsSubmitting(true);
     try {
@@ -150,7 +178,7 @@ export function EntityPickerPanel({
         queryClient.invalidateQueries({ queryKey: ['picker-existing', existingCheck.listUrl, sourceId] });
       }
       onOpenChange(false);
-      onSuccess?.();
+      if (isPicker) props.onSuccess?.();
     } catch (err: any) {
       const message = err?.response?.data?.message || err?.message || 'Failed to associate records';
       toast.error(message);
@@ -159,25 +187,28 @@ export function EntityPickerPanel({
     }
   };
 
+  const title = props.title ?? (isPicker ? `Select ${targetEntity.pluralName}` : targetEntity.pluralName);
+  const description = props.description ?? (isPicker
+    ? (pickerConfig?.selectionMode === 'single'
+      ? `Choose a ${targetEntity.singularName.toLowerCase()}`
+      : `Choose one or more ${targetEntity.pluralName.toLowerCase()}`)
+    : `Showing ${targetEntity.pluralName.toLowerCase()} for this record`);
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-3/4 max-w-3xl">
         <SheetHeader>
-          <SheetTitle>Select {targetEntity.pluralName}</SheetTitle>
-          <SheetDescription>
-            {pickerConfig.selectionMode === 'single'
-              ? `Choose a ${targetEntity.singularName.toLowerCase()}`
-              : `Choose one or more ${targetEntity.pluralName.toLowerCase()}`}
-          </SheetDescription>
+          <SheetTitle>{title}</SheetTitle>
+          <SheetDescription>{description}</SheetDescription>
         </SheetHeader>
 
         <div className="flex-1 overflow-auto px-6 py-4">
           <DataGrid
             columns={columns}
             data={data?.data ?? []}
-            enableSelection
-            selectionMode={pickerConfig.selectionMode}
-            onSelectionChange={setSelectedIds}
+            enableSelection={isPicker}
+            selectionMode={pickerConfig?.selectionMode}
+            onSelectionChange={isPicker ? setSelectedIds : undefined}
             isRowSelectable={isRowSelectable}
             page={page}
             pageSize={pageSize}
@@ -192,28 +223,30 @@ export function EntityPickerPanel({
             onSearchChange={setSearch}
             searchPlaceholder={`Search ${targetEntity.pluralName.toLowerCase()}...`}
             isLoading={isLoading}
-            storageKey={`picker-${pickerConfig.entityType}`}
-            rowClassName={(row) =>
-              existingIds.has(String((row as Row).id ?? '')) ? 'opacity-50' : undefined
-            }
+            storageKey={`panel-${entityType}`}
+            rowClassName={isPicker && existingIds.size > 0
+              ? (row) => existingIds.has(String((row as Row).id ?? '')) ? 'opacity-50' : undefined
+              : undefined}
           />
         </div>
 
-        <SheetFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handleConfirm}
-            disabled={selectedIds.length === 0 || isSubmitting}
-          >
-            {isSubmitting
-              ? 'Associating...'
-              : selectedIds.length === 0
-                ? 'Select to continue'
-                : `Confirm (${selectedIds.length})`}
-          </Button>
-        </SheetFooter>
+        {isPicker && (
+          <SheetFooter>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConfirm}
+              disabled={selectedIds.length === 0 || isSubmitting}
+            >
+              {isSubmitting
+                ? 'Associating...'
+                : selectedIds.length === 0
+                  ? 'Select to continue'
+                  : `Confirm (${selectedIds.length})`}
+            </Button>
+          </SheetFooter>
+        )}
       </SheetContent>
     </Sheet>
   );

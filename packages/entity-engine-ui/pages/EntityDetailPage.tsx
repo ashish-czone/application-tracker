@@ -287,8 +287,10 @@ export function EntityDetailPage({ entityType }: EntityDetailPageProps) {
       {/* Entity picker panel for association actions */}
       {activePicker?.picker && (
         <EntityPickerPanel
+          mode="picker"
           open={!!activePicker}
           onOpenChange={(open) => { if (!open) setActivePicker(null); }}
+          entityType={activePicker.picker.entityType}
           pickerConfig={activePicker.picker}
           sourceId={item.id as string}
           onSuccess={() => {
