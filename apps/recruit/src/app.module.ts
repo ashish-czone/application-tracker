@@ -36,6 +36,7 @@ import { JobOpeningsModule } from './modules/job-openings/job-openings.module';
 import { EavManagementModule } from './modules/eav-management/eav-management.module';
 import { NotificationRulesModule } from './modules/notification-rules/notification-rules.module';
 import { RbacManagementModule } from './modules/rbac/rbac.module';
+import { UsersModule } from './modules/users/users.module';
 import { validate } from './config/env.validation';
 
 @Module({
@@ -98,6 +99,7 @@ import { validate } from './config/env.validation';
     EavManagementModule,
     NotificationRulesModule,
     RbacManagementModule,
+    UsersModule,
   ],
   providers: [
     {

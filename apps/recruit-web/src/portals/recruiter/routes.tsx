@@ -15,6 +15,10 @@ export const RuleBuilderPage = lazy(
   () => import('./features/automations/pages/RuleBuilderPage'),
 );
 
+export const UsersListPage = lazy(
+  () => import('./features/users/pages/UsersListPage'),
+);
+
 export const RolesListPage = lazy(
   () => import('./features/rbac/pages/RolesListPage'),
 );
