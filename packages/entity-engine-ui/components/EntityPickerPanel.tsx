@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Sheet,
   SheetContent,
@@ -42,6 +42,7 @@ export function EntityPickerPanel({
   onSuccess,
 }: EntityPickerPanelProps) {
   const { apiFn } = useEntityEngine();
+  const queryClient = useQueryClient();
   const targetEntity = useEntityConfig(pickerConfig.entityType);
   const hooks = useEntityHooks(pickerConfig.entityType);
   const { data: layout } = useEntityLayout(pickerConfig.entityType);
@@ -145,6 +146,9 @@ export function EntityPickerPanel({
       );
 
       setSelectedIds([]);
+      if (existingCheck) {
+        queryClient.invalidateQueries({ queryKey: ['picker-existing', existingCheck.listUrl, sourceId] });
+      }
       onOpenChange(false);
       onSuccess?.();
     } catch (err: any) {
