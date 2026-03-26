@@ -124,7 +124,7 @@ export class EntityService {
     const thisTable = config.table as any;
 
     for (const rel of config.relationships ?? []) {
-      if (rel.type !== 'hasMany') continue;
+      if (rel.type !== 'hasMany' || !rel.foreignKey) continue;
 
       const targetConfig = this.entityRegistry.get(rel.targetEntity);
       if (!targetConfig) continue;
