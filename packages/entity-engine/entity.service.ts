@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
-import { eq, and, or, isNull, ilike, asc, desc, count, sql } from 'drizzle-orm';
+import { eq, and, or, isNull, ilike, asc, desc, count, sql, type SQL } from 'drizzle-orm';
 import type { PgColumn } from 'drizzle-orm/pg-core';
 import { DatabaseService } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
