@@ -157,11 +157,6 @@ export const JOB_OPENINGS_CONFIG: EntityConfig = {
     // ── Forecast Details ─────────────────────────────────────────────────
     numberOfPositions: { label: 'Number of Positions', section: 'forecast', sortOrder: 0, fieldType: 'number' },
     revenuePerPosition: { label: 'Revenue per Position', section: 'forecast', sortOrder: 1, fieldType: 'currency' },
-    applicationCount: {
-      label: 'Applications', section: 'forecast', sortOrder: 2,
-      isReadonly: true, isSystem: true,
-      rollup: { targetEntity: 'applications', foreignKey: 'jobOpeningId', aggregate: 'count' },
-    },
 
     // ── Description Information ──────────────────────────────────────────
     jobDescription: { label: 'Job Description', section: 'description', sortOrder: 0, fieldType: 'rich_text', maxLength: 32000 },
@@ -202,6 +197,8 @@ export const JOB_OPENINGS_CONFIG: EntityConfig = {
       fields: ['jobSummary', 'otherAttachments'],
     },
   ],
+
+  listFields: ['title', 'clientId', 'status', 'targetDate', 'employmentType', 'applicationsCount', 'interviewsCount'],
 
   lookup: {
     labelField: 'title',

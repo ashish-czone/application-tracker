@@ -69,6 +69,8 @@ export const CLIENTS_CONFIG: EntityConfig = {
     shippingCountry: { label: 'Shipping Country', section: 'shipping-address', sortOrder: 4 },
   },
 
+  listFields: ['clientName', 'industry', 'contactNumber', 'website', 'contactsCount', 'jobOpeningsCount'],
+
   sections: [
     { name: 'Client Information', fields: ['clientName', 'parentClientId', 'contactNumber', 'fax', 'website', 'industry', 'about', 'source'] },
     { name: 'Billing Address', fields: ['billingStreet', 'billingCity', 'billingProvince', 'billingCode', 'billingCountry'] },

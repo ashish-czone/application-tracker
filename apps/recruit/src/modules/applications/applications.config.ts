@@ -58,6 +58,8 @@ export const APPLICATIONS_CONFIG: EntityConfig = {
     notes: { label: 'Notes', section: 'details', sortOrder: 0, fieldType: 'textarea', maxLength: 5000 },
   },
 
+  listFields: ['candidateId', 'jobOpeningId', 'stage'],
+
   sections: [
     { name: 'Basic Info', fields: ['candidateId', 'jobOpeningId', 'stage'] },
     { name: 'Details', fields: ['notes'] },
