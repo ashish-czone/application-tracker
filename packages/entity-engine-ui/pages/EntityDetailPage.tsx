@@ -1,15 +1,32 @@
 import { useState, useMemo } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router';
-import { ArrowLeft, Trash2, Settings } from 'lucide-react';
-import { Button, ConfirmDialog } from '@packages/ui';
+import { useQueryClient } from '@tanstack/react-query';
+import { ArrowLeft, Settings, Copy, Trash2, MoreHorizontal, Briefcase, UserPlus } from 'lucide-react';
+import {
+  Button,
+  ConfirmDialog,
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  toast,
+} from '@packages/ui';
+import type { EntityAction } from '@packages/entity-engine';
 import { DynamicSection } from '@packages/eav-attributes-ui';
 import { useEntityEngine, useEntityHooks, useEntityConfig } from '../EntityEngineProvider';
 import { useEntityLayout } from '../helpers/useEntityLayout';
+import { useListLayout } from '../helpers/useListLayout';
 import { EntityRelatedList } from './EntityRelatedList';
+import { EntityPickerPanel } from '../components/EntityPickerPanel';
 
 interface EntityDetailPageProps {
   entityType: string;
 }
+
+const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
+  Copy, Trash2, Briefcase, UserPlus,
+};
 
 /**
  * Generic detail page for any entity registered with the entity engine.
@@ -23,13 +40,17 @@ export function EntityDetailPage({ entityType }: EntityDetailPageProps) {
   const entity = useEntityConfig(entityType);
   const hooks = useEntityHooks(entityType);
   const { getDetailPlugins } = useEntityEngine();
+  const queryClient = useQueryClient();
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [activeTab, setActiveTab] = useState('detail');
+  const [activePicker, setActivePicker] = useState<EntityAction | null>(null);
 
   const { data: item, isLoading, isError } = hooks.useDetail(id ?? null);
   const { data: layout, isLoading: layoutLoading } = useEntityLayout(entityType);
+  const { data: listLayout } = useListLayout(entityType);
   const updateMutation = hooks.useUpdate();
+  const createMutation = hooks.useCreate();
   const deleteMutation = hooks.useDelete({
     onSuccess: () => navigate(`/${entity.slug}`),
   });
@@ -39,7 +60,12 @@ export function EntityDetailPage({ entityType }: EntityDetailPageProps) {
     [entity.relationships],
   );
 
-  // Get display name from entity
+  const detailActions = listLayout?.actions?.detail ?? [];
+
+  // Split actions: first picker action as primary button, rest in dropdown
+  const primaryAction = detailActions.find((a) => a.picker);
+  const dropdownActions = detailActions.filter((a) => a !== primaryAction);
+
   const getDisplayName = (row: Record<string, unknown>): string => {
     const { nameField } = entity.ui;
     if (Array.isArray(nameField)) {
@@ -48,11 +74,36 @@ export function EntityDetailPage({ entityType }: EntityDetailPageProps) {
     return String(row[nameField] ?? '');
   };
 
-  // Get subtitle
   const getSubtitle = (row: Record<string, unknown>): string | null => {
     if (!entity.ui.subtitleField) return null;
     const val = row[entity.ui.subtitleField];
     return val ? String(val) : null;
+  };
+
+  const handleAction = async (action: EntityAction) => {
+    if (!item) return;
+
+    switch (action.key) {
+      case 'delete':
+        setShowDeleteConfirm(true);
+        break;
+      case 'clone': {
+        try {
+          const { id: _id, createdAt: _ca, updatedAt: _ua, deletedAt: _da, deletedBy: _db, createdBy: _cb, ...cloneData } = item;
+          const created = await createMutation.mutateAsync(cloneData);
+          toast.success(`${entity.singularName} cloned`);
+          navigate(`/${entity.slug}/${(created as any).id}`);
+        } catch {
+          toast.error(`Failed to clone ${entity.singularName.toLowerCase()}`);
+        }
+        break;
+      }
+      default:
+        if (action.picker) {
+          setActivePicker(action);
+        }
+        break;
+    }
   };
 
   if (isLoading || layoutLoading) {
@@ -101,6 +152,19 @@ export function EntityDetailPage({ entityType }: EntityDetailPageProps) {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Primary action button (first picker action) */}
+            {primaryAction && (
+              <Button size="sm" onClick={() => handleAction(primaryAction)}>
+                {primaryAction.icon && ICON_MAP[primaryAction.icon] && (
+                  (() => {
+                    const Icon = ICON_MAP[primaryAction.icon!];
+                    return <Icon className="h-4 w-4 mr-1" />;
+                  })()
+                )}
+                {primaryAction.label}
+              </Button>
+            )}
+
             <Button
               variant="ghost"
               size="sm"
@@ -109,15 +173,36 @@ export function EntityDetailPage({ entityType }: EntityDetailPageProps) {
               <Settings className="h-4 w-4 mr-1" />
               Edit Layout
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowDeleteConfirm(true)}
-              className="text-destructive hover:text-destructive"
-            >
-              <Trash2 className="h-4 w-4 mr-1" />
-              Delete
-            </Button>
+
+            {/* More actions dropdown */}
+            {dropdownActions.length > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {dropdownActions.map((action, idx) => {
+                    const Icon = action.icon ? ICON_MAP[action.icon] : null;
+                    const isDestructive = action.variant === 'destructive';
+
+                    return (
+                      <div key={action.key}>
+                        {isDestructive && idx > 0 && <DropdownMenuSeparator />}
+                        <DropdownMenuItem
+                          onClick={() => handleAction(action)}
+                          className={isDestructive ? 'text-destructive focus:text-destructive' : ''}
+                        >
+                          {Icon && <Icon className="h-4 w-4 mr-2" />}
+                          {action.label}
+                        </DropdownMenuItem>
+                      </div>
+                    );
+                  })}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
         </div>
       </div>
@@ -198,6 +283,19 @@ export function EntityDetailPage({ entityType }: EntityDetailPageProps) {
         isPending={deleteMutation.isPending}
         onConfirm={() => deleteMutation.mutate(item.id as string)}
       />
+
+      {/* Entity picker panel for association actions */}
+      {activePicker?.picker && (
+        <EntityPickerPanel
+          open={!!activePicker}
+          onOpenChange={(open) => { if (!open) setActivePicker(null); }}
+          pickerConfig={activePicker.picker}
+          sourceId={item.id as string}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: [entityType] });
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -147,6 +147,10 @@ export class EntityService {
         { key: 'massDelete', label: 'Mass Delete', icon: 'Trash2', permission: 'delete', variant: 'destructive' },
         { key: 'export', label: 'Export', icon: 'Download', permission: 'read' },
       ],
+      detail: [
+        { key: 'clone', label: 'Clone', icon: 'Copy', permission: 'create' },
+        { key: 'delete', label: 'Delete', icon: 'Trash2', permission: 'delete', variant: 'destructive' },
+      ],
     };
 
     return {

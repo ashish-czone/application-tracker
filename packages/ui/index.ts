@@ -38,6 +38,19 @@ export { Toaster, toast } from './components/feedback/Toast';
 export { ConfirmDialog } from './components/feedback/ConfirmDialog';
 
 export {
+  Sheet,
+  SheetPortal,
+  SheetOverlay,
+  SheetTrigger,
+  SheetClose,
+  SheetContent,
+  SheetHeader,
+  SheetFooter,
+  SheetTitle,
+  SheetDescription,
+} from './components/feedback/Sheet';
+
+export {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,

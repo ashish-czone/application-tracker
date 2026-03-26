@@ -267,6 +267,17 @@ export interface BaseListQuery {
 
 export type ActionVariant = 'default' | 'destructive';
 
+export interface PickerConfig {
+  /** Entity type to show in the picker */
+  entityType: string;
+  /** Single or multiple selection */
+  selectionMode: 'single' | 'multiple';
+  /** URL to POST selected IDs to */
+  submitUrl: string;
+  /** Maps field names to values. :id = current record, :selectedId = picked record */
+  fieldMapping: Record<string, string>;
+}
+
 export interface EntityAction {
   /** Unique key identifying the action */
   key: string;
@@ -278,6 +289,8 @@ export interface EntityAction {
   permission: 'create' | 'read' | 'update' | 'delete';
   /** Visual variant */
   variant?: ActionVariant;
+  /** Picker config — opens a slide-over entity picker when set */
+  picker?: PickerConfig;
 }
 
 export interface EntityActions {
@@ -285,6 +298,8 @@ export interface EntityActions {
   row: EntityAction[];
   /** Actions shown in the bulk toolbar when rows are selected */
   bulk: EntityAction[];
+  /** Actions shown on the entity detail page */
+  detail: EntityAction[];
 }
 
 // ---------------------------------------------------------------------------

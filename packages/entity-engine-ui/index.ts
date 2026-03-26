@@ -7,6 +7,7 @@ export { useEntityLayout } from './helpers/useEntityLayout';
 export { useListLayout } from './helpers/useListLayout';
 
 export { EntityBoardView } from './components/EntityBoardView';
+export { EntityPickerPanel } from './components/EntityPickerPanel';
 export { EntityListPage } from './pages/EntityListPage';
 export { EntityCreatePage } from './pages/EntityCreatePage';
 export { EntityDetailPage } from './pages/EntityDetailPage';

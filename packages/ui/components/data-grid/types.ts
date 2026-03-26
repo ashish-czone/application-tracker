@@ -44,10 +44,14 @@ export interface DataGridProps<TData> {
 
   /** Enable row selection checkboxes */
   enableSelection?: boolean;
+  /** Selection mode: 'single' renders radio buttons, 'multiple' renders checkboxes. Defaults to 'multiple'. */
+  selectionMode?: 'single' | 'multiple';
   /** Extract a unique ID from each row for selection tracking. Defaults to (row as any).id */
   getRowId?: (row: TData) => string;
   /** Actions shown in the bulk action bar when rows are selected */
   bulkActions?: DataGridBulkAction[];
+  /** Called when row selection changes. Receives array of selected row IDs. */
+  onSelectionChange?: (selectedIds: string[]) => void;
 
   /** Current page number (1-based) */
   page: number;
