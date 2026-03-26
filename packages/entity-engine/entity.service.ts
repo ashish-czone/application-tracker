@@ -21,6 +21,7 @@ import { MediaService, type MediaFile } from '@packages/media';
 import { WorkflowEngineService, WorkflowRegistryService } from '@packages/workflows';
 import type { PaginatedResponse } from '@packages/common';
 import type { EntityConfig, BaseListQuery } from './types';
+import { EntityRegistryService } from './entity-registry.service';
 
 /**
  * Generic CRUD service that works for ANY entity using its EntityConfig.
@@ -50,6 +51,7 @@ export class EntityService {
     private readonly mediaService: MediaService,
     private readonly workflowEngine: WorkflowEngineService,
     private readonly workflowRegistry: WorkflowRegistryService,
+    private readonly entityRegistry: EntityRegistryService,
     appLogger: AppLoggerService,
   ) {
     this.logger = appLogger.forContext(`EntityService[${config.entityType}]`);
@@ -113,6 +115,60 @@ export class EntityService {
   }
 
   /**
+   * Build SQL subquery expressions for rollup fields.
+   * Returns a map of fieldKey → SQL expression that can be added to a select.
+   */
+  private buildRollupExpressions(): Record<string, SQL> {
+    const { config } = this;
+    const rollups: Record<string, SQL> = {};
+
+    for (const [fieldKey, meta] of Object.entries(config.fieldMeta)) {
+      if (!meta.rollup) continue;
+
+      const targetConfig = this.entityRegistry.get(meta.rollup.targetEntity);
+      if (!targetConfig) continue;
+
+      const targetTable = targetConfig.table as any;
+      const fkCol = targetTable[meta.rollup.foreignKey];
+      const thisTable = config.table as any;
+
+      if (!fkCol) continue;
+
+      // Build the aggregate expression
+      const deletedAt = targetTable.deletedAt;
+      const deletedFilter = deletedAt ? sql` AND ${deletedAt} IS NULL` : sql``;
+
+      switch (meta.rollup.aggregate) {
+        case 'count':
+          rollups[fieldKey] = sql`(SELECT COUNT(*) FROM ${targetTable} WHERE ${fkCol} = ${thisTable.id}${deletedFilter})`.as(fieldKey);
+          break;
+        case 'sum':
+        case 'avg':
+        case 'min':
+        case 'max': {
+          const aggField = meta.rollup.aggregateField;
+          if (!aggField || !targetTable[aggField]) break;
+          const aggCol = targetTable[aggField];
+          const fn = meta.rollup.aggregate.toUpperCase();
+          rollups[fieldKey] = sql`(SELECT ${sql.raw(fn)}(${aggCol}) FROM ${targetTable} WHERE ${fkCol} = ${thisTable.id}${deletedFilter})`.as(fieldKey);
+          break;
+        }
+      }
+    }
+
+    return rollups;
+  }
+
+  /**
+   * Get rollup field keys from config.
+   */
+  private getRollupFieldKeys(): string[] {
+    return Object.entries(this.config.fieldMeta)
+      .filter(([, meta]) => !!meta.rollup)
+      .map(([key]) => key);
+  }
+
+  /**
    * Returns list page layout config: columns, actions, filters, sort defaults.
    * Cached by the frontend — this is config, not data.
    */
@@ -127,6 +183,18 @@ export class EntityService {
       sortable: !!config.sortableColumns[d.fieldKey],
       lookupEntity: d.lookupEntity ?? undefined,
     }));
+
+    // Append rollup field columns
+    for (const [fieldKey, meta] of Object.entries(config.fieldMeta)) {
+      if (!meta.rollup) continue;
+      columns.push({
+        fieldKey,
+        label: meta.label,
+        fieldType: 'number',
+        sortable: false,
+        lookupEntity: undefined,
+      });
+    }
 
     // Build filterable fields (picklists, lookups, booleans, tags)
     const defs = await this.fieldDefinitionService.listByEntityWithOptions(config.entityType);
@@ -212,7 +280,11 @@ export class EntityService {
 
     // Fetch only list-relevant columns instead of SELECT *
     const listDefs = await this.getListFieldDefs();
-    const selectMap = this.buildListSelectMap(listDefs);
+    const selectMap: Record<string, any> = this.buildListSelectMap(listDefs);
+
+    // Add rollup subqueries
+    const rollupExprs = this.buildRollupExpressions();
+    Object.assign(selectMap, rollupExprs);
 
     const rows = await this.database.db
       .select(selectMap)
@@ -271,6 +343,17 @@ export class EntityService {
 
     if (!row) {
       throw new NotFoundException(`${config.singularName} not found`);
+    }
+
+    // Compute rollup values for detail view
+    const rollupExprs = this.buildRollupExpressions();
+    if (Object.keys(rollupExprs).length > 0) {
+      const [rollupRow] = await this.database.db
+        .select(rollupExprs)
+        .from(table)
+        .where(eq(table.id, id))
+        .limit(1) as any[];
+      if (rollupRow) Object.assign(row, rollupRow);
     }
 
     const response = await this.toResponse(row);

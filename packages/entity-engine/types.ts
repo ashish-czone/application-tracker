@@ -48,6 +48,19 @@ export interface FieldMeta {
   maxFileSize?: number;
   /** Workflow config (for workflow field type) */
   workflow?: WorkflowFieldConfig;
+  /** Rollup config (for rollup field type) — computes an aggregate over a related entity */
+  rollup?: RollupFieldConfig;
+}
+
+export interface RollupFieldConfig {
+  /** Target entity type to aggregate (e.g., 'applications') */
+  targetEntity: string;
+  /** Foreign key on the target entity that references this entity (e.g., 'jobOpeningId') */
+  foreignKey: string;
+  /** Aggregate function */
+  aggregate: 'count' | 'sum' | 'avg' | 'min' | 'max';
+  /** Field on the target entity to aggregate (required for sum/avg/min/max, ignored for count) */
+  aggregateField?: string;
 }
 
 // ---------------------------------------------------------------------------
