@@ -14,10 +14,12 @@ export interface ChipOption {
 interface FormChipInputProps {
   name: string;
   label: string;
-  /** Static options — filtered client-side */
+  /** Static options — filtered client-side. When set, async search is NOT used. */
   options?: ChipOption[];
   /** Async search callback — called on keystroke with debounce. Used when options is not provided. */
   onSearch?: (query: string) => Promise<ChipOption[]>;
+  /** Pre-resolved labels for already-selected values (seeds the label cache without blocking async search) */
+  initialSelected?: ChipOption[];
   placeholder?: string;
   description?: string;
   disabled?: boolean;
@@ -36,6 +38,7 @@ export function FormChipInput({
   label,
   options,
   onSearch,
+  initialSelected,
   placeholder = 'Search and add...',
   description,
   disabled,
@@ -66,6 +69,7 @@ export function FormChipInput({
             <ChipInputInner
               options={options}
               onSearch={onSearch}
+              initialSelected={initialSelected}
               selectedValues={selectedValues}
               onChange={(vals) => field.onChange(vals)}
               onBlur={field.onBlur}
@@ -95,6 +99,7 @@ export function FormChipInput({
 function ChipInputInner({
   options,
   onSearch,
+  initialSelected,
   selectedValues,
   onChange,
   onBlur,
@@ -106,6 +111,7 @@ function ChipInputInner({
 }: {
   options?: ChipOption[];
   onSearch?: (query: string) => Promise<ChipOption[]>;
+  initialSelected?: ChipOption[];
   selectedValues: string[];
   onChange: (values: string[]) => void;
   onBlur: () => void;
@@ -119,7 +125,13 @@ function ChipInputInner({
   const [isOpen, setIsOpen] = React.useState(false);
   const [asyncResults, setAsyncResults] = React.useState<ChipOption[]>([]);
   const [isSearching, setIsSearching] = React.useState(false);
-  const [selectedCache, setSelectedCache] = React.useState<Map<string, ChipOption>>(new Map());
+  const [selectedCache, setSelectedCache] = React.useState<Map<string, ChipOption>>(() => {
+    const map = new Map<string, ChipOption>();
+    if (initialSelected) {
+      for (const opt of initialSelected) map.set(opt.value, opt);
+    }
+    return map;
+  });
   const containerRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
   const debouncedSearch = useDebounce(search, 300);
