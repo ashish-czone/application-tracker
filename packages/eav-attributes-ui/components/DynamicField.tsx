@@ -19,6 +19,10 @@ interface DynamicFieldProps {
   lookupOptions?: { label: string; value: string }[];
   /** Pre-fetched options for chip input fields (tags, multi_user, multi_lookup) */
   chipOptions?: ChipOption[];
+  /** Async search for lookup/user single-select fields */
+  onSearch?: (query: string) => Promise<{ label: string; value: string }[]>;
+  /** Async search for multi_user/multi_lookup chip fields */
+  onChipSearch?: (query: string) => Promise<ChipOption[]>;
 }
 
 /** Format a field value for display in view mode */
@@ -59,7 +63,7 @@ function formatViewValue(field: FieldDefinition, value: unknown): string {
  * In view mode: displays the formatted value with label.
  * In edit mode: renders the appropriate form component (must be inside a FormProvider).
  */
-export function DynamicField({ field, mode, value, resolvedLabel, lookupOptions, chipOptions }: DynamicFieldProps) {
+export function DynamicField({ field, mode, value, resolvedLabel, lookupOptions, chipOptions, onSearch, onChipSearch }: DynamicFieldProps) {
   if (mode === 'view') {
     // Tags: render as colored badges
     if (field.fieldType === 'tags' && Array.isArray(value)) {
@@ -152,10 +156,10 @@ export function DynamicField({ field, mode, value, resolvedLabel, lookupOptions,
   }
 
   // Edit mode — render appropriate form control
-  return <DynamicFieldEdit field={field} lookupOptions={lookupOptions} chipOptions={chipOptions} />;
+  return <DynamicFieldEdit field={field} lookupOptions={lookupOptions} chipOptions={chipOptions} onSearch={onSearch} onChipSearch={onChipSearch} />;
 }
 
-function DynamicFieldEdit({ field, lookupOptions, chipOptions }: { field: FieldDefinition; lookupOptions?: { label: string; value: string }[]; chipOptions?: ChipOption[] }) {
+function DynamicFieldEdit({ field, lookupOptions, chipOptions, onSearch, onChipSearch }: { field: FieldDefinition; lookupOptions?: { label: string; value: string }[]; chipOptions?: ChipOption[]; onSearch?: (query: string) => Promise<{ label: string; value: string }[]>; onChipSearch?: (query: string) => Promise<ChipOption[]> }) {
   const disabled = field.isReadonly;
   const label = field.isRequired ? `${field.label} *` : field.label;
 
@@ -221,18 +225,16 @@ function DynamicFieldEdit({ field, lookupOptions, chipOptions }: { field: FieldD
 
     case 'lookup':
     case 'user':
-      if (lookupOptions && lookupOptions.length > 0) {
-        return (
-          <FormSelect
-            name={field.fieldKey}
-            label={label}
-            placeholder={`Select ${field.label}`}
-            options={lookupOptions}
-            disabled={disabled}
-          />
-        );
-      }
-      return <FormInput name={field.fieldKey} label={label} disabled={disabled} placeholder="Enter ID" />;
+      return (
+        <FormSelect
+          name={field.fieldKey}
+          label={label}
+          placeholder={`Select ${field.label}`}
+          options={lookupOptions}
+          onSearch={onSearch}
+          disabled={disabled}
+        />
+      );
 
     case 'auto_number':
       return (
@@ -270,7 +272,8 @@ function DynamicFieldEdit({ field, lookupOptions, chipOptions }: { field: FieldD
         <FormChipInput
           name={field.fieldKey}
           label={label}
-          options={chipOptions ?? []}
+          options={chipOptions}
+          onSearch={onChipSearch}
           placeholder={`Search and add ${field.label.toLowerCase()}...`}
           disabled={disabled}
         />

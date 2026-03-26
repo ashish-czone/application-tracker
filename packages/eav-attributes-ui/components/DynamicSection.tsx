@@ -16,13 +16,17 @@ interface DynamicSectionProps {
   fieldLookupOptions?: Record<string, { label: string; value: string }[]>;
   /** Chip options keyed by field key (for multi_user fields in edit mode) */
   fieldChipOptions?: Record<string, { label: string; value: string; color?: string }[]>;
+  /** Async search for single-select fields (lookup, user). Returns a search function for a given field key. */
+  getFieldSearch?: (fieldKey: string, fieldType: string) => ((query: string) => Promise<{ label: string; value: string }[]>) | undefined;
+  /** Async search for multi-select fields (multi_user, multi_lookup). Returns a search function for a given field key. */
+  getChipSearch?: (fieldKey: string, fieldType: string) => ((query: string) => Promise<{ label: string; value: string; color?: string }[]>) | undefined;
 }
 
 /**
  * Renders a layout section with its fields.
  * Supports collapsible header, edit/save/cancel toggle, and grid layout.
  */
-export function DynamicSection({ section, values, onSave, isSaving, fieldLookupOptions, fieldChipOptions }: DynamicSectionProps) {
+export function DynamicSection({ section, values, onSave, isSaving, fieldLookupOptions, fieldChipOptions, getFieldSearch, getChipSearch }: DynamicSectionProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
 
@@ -114,6 +118,8 @@ export function DynamicSection({ section, values, onSave, isSaving, fieldLookupO
         mode="edit"
         lookupOptions={fieldLookupOptions?.[field.fieldKey]}
         chipOptions={fieldChipOptions?.[field.fieldKey]}
+        onSearch={getFieldSearch?.(field.fieldKey, field.fieldType)}
+        onChipSearch={getChipSearch?.(field.fieldKey, field.fieldType)}
       />
     ));
 

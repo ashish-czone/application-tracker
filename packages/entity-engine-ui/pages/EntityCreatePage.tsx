@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router';
 import { useForm } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
@@ -45,66 +45,34 @@ export function EntityCreatePage({ entityType }: EntityCreatePageProps) {
     return steps.flatMap((s) => s.editableFields);
   }, [steps]);
 
-  // Fetch lookup options
-  const lookupEntities = useMemo(() => {
-    if (!editableFields.length) return [];
-    return editableFields
-      .filter((f) => (f.fieldType === 'lookup') && f.lookupEntity)
-      .map((f) => f.lookupEntity!);
+  // Fetch static chip options (tags only — users/lookups use async search)
+  const tagFields = useMemo(() => {
+    return editableFields.filter((f) => f.fieldType === 'tags' && f.tagGroupSlug);
   }, [editableFields]);
 
-  const hasUserFields = useMemo(() => {
-    return editableFields.some((f) => f.fieldType === 'user' || f.fieldType === 'multi_user');
-  }, [editableFields]);
-
-  const { data: lookupOptionsMap } = useQuery({
-    queryKey: ['lookups-create', ...lookupEntities],
-    queryFn: async () => {
-      const map: Record<string, { label: string; value: string }[]> = {};
-      for (const ent of lookupEntities) {
-        try {
-          map[ent] = await apiFn.get<{ label: string; value: string }[]>(`/lookups/${ent}?limit=200`);
-        } catch { map[ent] = []; }
-      }
-      return map;
-    },
-    enabled: lookupEntities.length > 0,
-  });
-
-  // Fetch user options for user/multi_user fields
-  const { data: userOptions } = useQuery({
-    queryKey: ['user-options'],
-    queryFn: async () => {
-      const res = await apiFn.get<{ data: { id: string; firstName: string; lastName: string }[] }>('/users?limit=200');
-      return res.data.map((u) => ({ label: `${u.firstName} ${u.lastName}`.trim(), value: u.id }));
-    },
-    enabled: hasUserFields,
-  });
-
-  // Fetch chip options
-  const chipFields = useMemo(() => {
-    return editableFields.filter(
-      (f) => f.fieldType === 'tags' || f.fieldType === 'multi_user' || f.fieldType === 'multi_lookup',
-    );
-  }, [editableFields]);
-
-  const { data: chipOptionsMap } = useQuery({
-    queryKey: ['chip-options-create', chipFields.map(f => f.fieldKey)],
+  const { data: tagOptionsMap } = useQuery({
+    queryKey: ['tag-options-create', tagFields.map(f => f.fieldKey)],
     queryFn: async () => {
       const map: Record<string, { label: string; value: string; color?: string }[]> = {};
-      for (const field of chipFields) {
+      for (const field of tagFields) {
         try {
-          if (field.fieldType === 'tags' && field.tagGroupSlug) {
-            map[field.fieldKey] = await apiFn.get(`/tags/group/${field.tagGroupSlug}`);
-          } else if ((field.fieldType === 'multi_user' || field.fieldType === 'multi_lookup') && field.lookupEntity) {
-            map[field.fieldKey] = await apiFn.get<{ label: string; value: string }[]>(`/lookups/${field.lookupEntity}?limit=200`);
-          }
+          map[field.fieldKey] = await apiFn.get(`/tags/group/${field.tagGroupSlug}`);
         } catch { map[field.fieldKey] = []; }
       }
       return map;
     },
-    enabled: chipFields.length > 0,
+    enabled: tagFields.length > 0,
   });
+
+  // Async search callbacks
+  const searchUsers = useCallback(async (query: string) => {
+    const res = await apiFn.get<{ data: { id: string; firstName: string; lastName: string }[] }>(`/users?search=${encodeURIComponent(query)}&limit=20`);
+    return res.data.map((u) => ({ label: `${u.firstName} ${u.lastName}`.trim(), value: u.id }));
+  }, [apiFn]);
+
+  const searchLookup = useCallback(async (entity: string, query: string) => {
+    return apiFn.get<{ label: string; value: string }[]>(`/lookups/${entity}?search=${encodeURIComponent(query)}&limit=20`);
+  }, [apiFn]);
 
   const schema = useMemo(() => buildFormSchema(editableFields), [editableFields]);
 
@@ -188,8 +156,17 @@ export function EntityCreatePage({ entityType }: EntityCreatePageProps) {
               key={field.fieldKey}
               field={field}
               mode="edit"
-              lookupOptions={field.fieldType === 'user' ? userOptions : field.lookupEntity ? lookupOptionsMap?.[field.lookupEntity] : undefined}
-              chipOptions={field.fieldType === 'multi_user' ? userOptions : chipOptionsMap?.[field.fieldKey]}
+              chipOptions={field.fieldType === 'tags' ? tagOptionsMap?.[field.fieldKey] : undefined}
+              onSearch={
+                field.fieldType === 'user' ? searchUsers
+                : field.fieldType === 'lookup' && field.lookupEntity ? (q: string) => searchLookup(field.lookupEntity!, q)
+                : undefined
+              }
+              onChipSearch={
+                field.fieldType === 'multi_user' ? searchUsers
+                : (field.fieldType === 'multi_lookup') && field.lookupEntity ? (q: string) => searchLookup(field.lookupEntity!, q)
+                : undefined
+              }
             />
           ))}
         </div>
