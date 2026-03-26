@@ -5,6 +5,7 @@
   "scripts": {
     "build": "nest build",
     "dev": "nest start --watch",
+    "dev:debug": "nest start --debug --watch",
     "start": "node dist/main",
     "test": "vitest run",
     "test:watch": "vitest",
