@@ -53,6 +53,35 @@ export const candidatesConfig: EntityConfig = {
     createdBy: { label: 'Created By (recruiter)' },
   },
 
+  actions: {
+    row: [
+      { key: 'edit', label: 'Edit', icon: 'Pencil', permission: 'update' },
+      { key: 'clone', label: 'Clone', icon: 'Copy', permission: 'create' },
+      { key: 'delete', label: 'Delete', icon: 'Trash2', permission: 'delete', variant: 'destructive' },
+    ],
+    bulk: [
+      { key: 'massUpdate', label: 'Mass Update', icon: 'PenLine', permission: 'update' },
+      { key: 'massDelete', label: 'Mass Delete', icon: 'Trash2', permission: 'delete', variant: 'destructive' },
+      { key: 'export', label: 'Export', icon: 'Download', permission: 'read' },
+    ],
+    detail: [
+      {
+        key: 'apply-to-job',
+        label: 'Apply to Job',
+        icon: 'Briefcase',
+        permission: 'create',
+        picker: {
+          entityType: 'job_openings',
+          selectionMode: 'single',
+          submitUrl: '/api/v1/applications',
+          fieldMapping: { candidateId: ':id', jobOpeningId: ':selectedId' },
+        },
+      },
+      { key: 'clone', label: 'Clone', icon: 'Copy', permission: 'create' },
+      { key: 'delete', label: 'Delete', icon: 'Trash2', permission: 'delete', variant: 'destructive' },
+    ],
+  },
+
   ui: {
     icon: 'users',
     nameField: ['firstName', 'lastName'],

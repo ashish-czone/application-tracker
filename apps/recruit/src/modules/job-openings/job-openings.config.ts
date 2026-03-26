@@ -208,6 +208,35 @@ export const JOB_OPENINGS_CONFIG: EntityConfig = {
     { name: 'interviews', type: 'hasMany', targetEntity: 'interviews', foreignKey: 'jobOpeningId', label: 'Interviews', displayFields: ['interviewName', 'interviewFrom', 'status'] },
   ],
 
+  actions: {
+    row: [
+      { key: 'edit', label: 'Edit', icon: 'Pencil', permission: 'update' },
+      { key: 'clone', label: 'Clone', icon: 'Copy', permission: 'create' },
+      { key: 'delete', label: 'Delete', icon: 'Trash2', permission: 'delete', variant: 'destructive' },
+    ],
+    bulk: [
+      { key: 'massUpdate', label: 'Mass Update', icon: 'PenLine', permission: 'update' },
+      { key: 'massDelete', label: 'Mass Delete', icon: 'Trash2', permission: 'delete', variant: 'destructive' },
+      { key: 'export', label: 'Export', icon: 'Download', permission: 'read' },
+    ],
+    detail: [
+      {
+        key: 'apply-candidate',
+        label: 'Apply Candidate',
+        icon: 'UserPlus',
+        permission: 'create',
+        picker: {
+          entityType: 'candidates',
+          selectionMode: 'multiple',
+          submitUrl: '/api/v1/applications',
+          fieldMapping: { jobOpeningId: ':id', candidateId: ':selectedId' },
+        },
+      },
+      { key: 'clone', label: 'Clone', icon: 'Copy', permission: 'create' },
+      { key: 'delete', label: 'Delete', icon: 'Trash2', permission: 'delete', variant: 'destructive' },
+    ],
+  },
+
   recipientFields: { createdBy: { label: 'Created By' } },
 
   ui: {

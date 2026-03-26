@@ -22,8 +22,10 @@ export function DataGrid<TData>({
   columns,
   data,
   enableSelection = false,
+  selectionMode = 'multiple',
   getRowId = defaultGetRowId as (row: TData) => string,
   bulkActions,
+  onSelectionChange,
   page,
   pageSize,
   pageCount,
@@ -73,40 +75,60 @@ export function DataGrid<TData>({
     setRowSelection({});
   }, [page, search, sortColumn, sortDirection]);
 
-  // Prepend checkbox column when selection is enabled
+  const isSingleSelect = selectionMode === 'single';
+
+  // Prepend selection column when selection is enabled
   const allColumns = useMemo<ColumnDef<TData, unknown>[]>(() => {
     if (!enableSelection) return columns;
 
-    const selectColumn: ColumnDef<TData, unknown> = {
-      id: '_select',
-      size: 40,
-      enableSorting: false,
-      enableHiding: false,
-      header: ({ table }) => (
-        <input
-          type="checkbox"
-          checked={table.getIsAllPageRowsSelected()}
-          ref={(el) => {
-            if (el) el.indeterminate = table.getIsSomePageRowsSelected();
-          }}
-          onChange={table.getToggleAllPageRowsSelectedHandler()}
-          className="rounded border-input"
-          aria-label="Select all rows"
-        />
-      ),
-      cell: ({ row }) => (
-        <input
-          type="checkbox"
-          checked={row.getIsSelected()}
-          onChange={row.getToggleSelectedHandler()}
-          className="rounded border-input"
-          aria-label="Select row"
-        />
-      ),
-    };
+    const selectColumn: ColumnDef<TData, unknown> = isSingleSelect
+      ? {
+          id: '_select',
+          size: 40,
+          enableSorting: false,
+          enableHiding: false,
+          header: () => null,
+          cell: ({ row }) => (
+            <input
+              type="radio"
+              name="row-select"
+              checked={row.getIsSelected()}
+              onChange={row.getToggleSelectedHandler()}
+              className="border-input"
+              aria-label="Select row"
+            />
+          ),
+        }
+      : {
+          id: '_select',
+          size: 40,
+          enableSorting: false,
+          enableHiding: false,
+          header: ({ table }) => (
+            <input
+              type="checkbox"
+              checked={table.getIsAllPageRowsSelected()}
+              ref={(el) => {
+                if (el) el.indeterminate = table.getIsSomePageRowsSelected();
+              }}
+              onChange={table.getToggleAllPageRowsSelectedHandler()}
+              className="rounded border-input"
+              aria-label="Select all rows"
+            />
+          ),
+          cell: ({ row }) => (
+            <input
+              type="checkbox"
+              checked={row.getIsSelected()}
+              onChange={row.getToggleSelectedHandler()}
+              className="rounded border-input"
+              aria-label="Select row"
+            />
+          ),
+        };
 
     return [selectColumn, ...columns];
-  }, [columns, enableSelection]);
+  }, [columns, enableSelection, isSingleSelect]);
 
   const table = useReactTable({
     data,
@@ -120,6 +142,7 @@ export function DataGrid<TData>({
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: enableSelection ? setRowSelection : undefined,
     enableRowSelection: enableSelection,
+    enableMultiRowSelection: enableSelection && !isSingleSelect,
     getRowId: enableSelection ? (row: TData) => getRowId(row) : undefined,
     getCoreRowModel: getCoreRowModel(),
     manualPagination: true,
@@ -131,6 +154,11 @@ export function DataGrid<TData>({
   const selectedRowIds = useMemo(() => {
     return Object.keys(rowSelection).filter((key) => rowSelection[key]);
   }, [rowSelection]);
+
+  // Notify parent of selection changes
+  useEffect(() => {
+    onSelectionChange?.(selectedRowIds);
+  }, [selectedRowIds, onSelectionChange]);
 
   const clearSelection = useCallback(() => setRowSelection({}), []);
 
