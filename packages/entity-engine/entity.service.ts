@@ -1013,8 +1013,18 @@ export class EntityService {
               id,
               label: labels.get(id) ?? id,
             }));
+          } else if (field.fieldType === 'multi_user') {
+            // Resolve user IDs to names
+            const users: any[] = await this.database.db
+              .select({ id: sql`id`, firstName: sql`first_name`, lastName: sql`last_name` })
+              .from(sql`users`)
+              .where(sql`id IN (${sql.join(targetIds.map(id => sql`${id}`), sql`, `)})`);
+            const userMap = new Map(users.map(u => [u.id, `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim()]));
+            row[field.fieldKey] = targetIds.map(id => ({
+              id,
+              label: userMap.get(id) ?? id,
+            }));
           } else {
-            // multi_user without lookupEntity — just return IDs
             row[field.fieldKey] = targetIds.map(id => ({ id, label: id }));
           }
         }
