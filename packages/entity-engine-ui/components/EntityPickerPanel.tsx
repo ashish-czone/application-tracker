@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   Sheet,
   SheetContent,
@@ -7,11 +8,14 @@ import {
   SheetDescription,
   SheetFooter,
   Button,
+  Badge,
   DataGrid,
   useDataGridParams,
   toast,
+  type ColumnDef,
 } from '@packages/ui';
 import type { PickerConfig } from '@packages/entity-engine';
+import type { PaginatedResponse } from '@packages/common';
 import { useEntityEngine, useEntityConfig, useEntityHooks } from '../EntityEngineProvider';
 import { useEntityLayout } from '../helpers/useEntityLayout';
 import { buildColumnDefs } from '../helpers/buildColumnDefs';
@@ -19,13 +23,12 @@ import { buildColumnDefs } from '../helpers/buildColumnDefs';
 interface EntityPickerPanelProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** The picker config from the action definition */
   pickerConfig: PickerConfig;
-  /** ID of the current record (resolved as :id in fieldMapping) */
   sourceId: string;
-  /** Called after successful submission */
   onSuccess?: () => void;
 }
+
+type Row = Record<string, unknown>;
 
 /**
  * Slide-over panel that renders any entity's DataGrid with selection.
@@ -61,11 +64,64 @@ export function EntityPickerPanel({
     search: search || undefined,
   });
 
-  const columns = useMemo(() => {
+  // Fetch existing associations when existingCheck is configured
+  const existingCheck = pickerConfig.existingCheck;
+  const { data: existingData } = useQuery({
+    queryKey: ['picker-existing', existingCheck?.listUrl, sourceId],
+    queryFn: () =>
+      apiFn.get<PaginatedResponse<Row>>(
+        `${existingCheck!.listUrl}?${existingCheck!.filterField}=${sourceId}&limit=1000`,
+      ),
+    enabled: open && !!existingCheck,
+    staleTime: 30_000,
+  });
+
+  // Build set of existing target IDs
+  const existingIds = useMemo(() => {
+    if (!existingCheck || !existingData?.data) return new Set<string>();
+    return new Set(
+      existingData.data.map((r) => String(r[existingCheck.matchField] ?? '')).filter(Boolean),
+    );
+  }, [existingCheck, existingData]);
+
+  const baseColumns = useMemo(() => {
     if (!layout) return [];
     const allFields = layout.sections.flatMap((s) => s.fields);
     return buildColumnDefs(allFields, { maxColumns: 5 });
   }, [layout]);
+
+  // Append a status badge column if existingCheck is configured
+  const columns = useMemo<ColumnDef<Row, unknown>[]>(() => {
+    if (!existingCheck || existingIds.size === 0) return baseColumns;
+
+    const statusCol: ColumnDef<Row, unknown> = {
+      id: '__existing_status',
+      header: '',
+      size: 120,
+      enableSorting: false,
+      cell: ({ row }) => {
+        const rowId = String(row.original.id ?? '');
+        if (existingIds.has(rowId)) {
+          return (
+            <Badge variant="secondary" className="text-xs whitespace-nowrap">
+              {existingCheck.label}
+            </Badge>
+          );
+        }
+        return null;
+      },
+    };
+
+    return [...baseColumns, statusCol];
+  }, [baseColumns, existingCheck, existingIds]);
+
+  // Determine if a row is selectable
+  const isRowSelectable = useMemo(() => {
+    if (!existingCheck || existingCheck.disableSelection === false || existingIds.size === 0) {
+      return undefined;
+    }
+    return (row: Row) => !existingIds.has(String(row.id ?? ''));
+  }, [existingCheck, existingIds]);
 
   const handleConfirm = async () => {
     if (selectedIds.length === 0) return;
@@ -118,6 +174,7 @@ export function EntityPickerPanel({
             enableSelection
             selectionMode={pickerConfig.selectionMode}
             onSelectionChange={setSelectedIds}
+            isRowSelectable={isRowSelectable}
             page={page}
             pageSize={pageSize}
             pageCount={data?.meta?.totalPages ?? 0}
@@ -132,6 +189,9 @@ export function EntityPickerPanel({
             searchPlaceholder={`Search ${targetEntity.pluralName.toLowerCase()}...`}
             isLoading={isLoading}
             storageKey={`picker-${pickerConfig.entityType}`}
+            rowClassName={(row) =>
+              existingIds.has(String((row as Row).id ?? '')) ? 'opacity-50' : undefined
+            }
           />
         </div>
 

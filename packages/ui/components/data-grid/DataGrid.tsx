@@ -24,6 +24,7 @@ export function DataGrid<TData>({
   enableSelection = false,
   selectionMode = 'multiple',
   getRowId = defaultGetRowId as (row: TData) => string,
+  isRowSelectable,
   bulkActions,
   onSelectionChange,
   page,
@@ -141,7 +142,9 @@ export function DataGrid<TData>({
     },
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: enableSelection ? setRowSelection : undefined,
-    enableRowSelection: enableSelection,
+    enableRowSelection: enableSelection
+      ? (isRowSelectable ? (row) => isRowSelectable(row.original) : true)
+      : false,
     enableMultiRowSelection: enableSelection && !isSingleSelect,
     getRowId: enableSelection ? (row: TData) => getRowId(row) : undefined,
     getCoreRowModel: getCoreRowModel(),
