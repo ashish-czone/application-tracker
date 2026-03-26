@@ -12,13 +12,17 @@ interface DynamicSectionProps {
   values: Record<string, unknown>;
   onSave: (values: Record<string, unknown>) => Promise<void>;
   isSaving?: boolean;
+  /** Lookup options keyed by field key (for user/lookup fields in edit mode) */
+  fieldLookupOptions?: Record<string, { label: string; value: string }[]>;
+  /** Chip options keyed by field key (for multi_user fields in edit mode) */
+  fieldChipOptions?: Record<string, { label: string; value: string; color?: string }[]>;
 }
 
 /**
  * Renders a layout section with its fields.
  * Supports collapsible header, edit/save/cancel toggle, and grid layout.
  */
-export function DynamicSection({ section, values, onSave, isSaving }: DynamicSectionProps) {
+export function DynamicSection({ section, values, onSave, isSaving, fieldLookupOptions, fieldChipOptions }: DynamicSectionProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
 
@@ -104,7 +108,13 @@ export function DynamicSection({ section, values, onSave, isSaving }: DynamicSec
 
   const renderEditColumn = (fields: typeof editableFields) =>
     fields.map(field => (
-      <DynamicField key={field.fieldKey} field={field} mode="edit" />
+      <DynamicField
+        key={field.fieldKey}
+        field={field}
+        mode="edit"
+        lookupOptions={fieldLookupOptions?.[field.fieldKey]}
+        chipOptions={fieldChipOptions?.[field.fieldKey]}
+      />
     ));
 
   return (

@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { ArrowLeft, Settings, Copy, Trash2, MoreHorizontal, Briefcase, UserPlus } from 'lucide-react';
 import {
   Button,
@@ -39,7 +39,7 @@ export function EntityDetailPage({ entityType }: EntityDetailPageProps) {
   const location = useLocation();
   const entity = useEntityConfig(entityType);
   const hooks = useEntityHooks(entityType);
-  const { getDetailPlugins } = useEntityEngine();
+  const { getDetailPlugins, apiFn } = useEntityEngine();
   const queryClient = useQueryClient();
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -54,6 +54,46 @@ export function EntityDetailPage({ entityType }: EntityDetailPageProps) {
   const deleteMutation = hooks.useDelete({
     onSuccess: () => navigate(`/${entity.slug}`),
   });
+
+  // Check if any fields need user options
+  const hasUserFields = useMemo(() => {
+    if (!layout) return false;
+    return layout.sections.some(s => s.fields.some(f => f.fieldType === 'user' || f.fieldType === 'multi_user'));
+  }, [layout]);
+
+  const { data: userOptions } = useQuery({
+    queryKey: ['user-options'],
+    queryFn: async () => {
+      const res = await apiFn.get<{ data: { id: string; firstName: string; lastName: string }[] }>('/users?limit=200');
+      return res.data.map((u) => ({ label: `${u.firstName} ${u.lastName}`.trim(), value: u.id }));
+    },
+    enabled: hasUserFields,
+  });
+
+  // Build per-field lookup/chip options maps for DynamicSection edit mode
+  const fieldLookupOptions = useMemo(() => {
+    if (!userOptions) return undefined;
+    const map: Record<string, { label: string; value: string }[]> = {};
+    if (!layout) return map;
+    for (const section of layout.sections) {
+      for (const field of section.fields) {
+        if (field.fieldType === 'user') map[field.fieldKey] = userOptions;
+      }
+    }
+    return Object.keys(map).length > 0 ? map : undefined;
+  }, [layout, userOptions]);
+
+  const fieldChipOptions = useMemo(() => {
+    if (!userOptions) return undefined;
+    const map: Record<string, { label: string; value: string; color?: string }[]> = {};
+    if (!layout) return map;
+    for (const section of layout.sections) {
+      for (const field of section.fields) {
+        if (field.fieldType === 'multi_user') map[field.fieldKey] = userOptions;
+      }
+    }
+    return Object.keys(map).length > 0 ? map : undefined;
+  }, [layout, userOptions]);
 
   const hasManyRelationships = useMemo(
     () => entity.relationships.filter((r) => r.type === 'hasMany'),
@@ -252,6 +292,8 @@ export function EntityDetailPage({ entityType }: EntityDetailPageProps) {
                   await updateMutation.mutateAsync({ id: item.id as string, data: values });
                 }}
                 isSaving={updateMutation.isPending}
+                fieldLookupOptions={fieldLookupOptions}
+                fieldChipOptions={fieldChipOptions}
               />
             ))}
 
