@@ -119,12 +119,13 @@ function ChipInputInner({
   const [isOpen, setIsOpen] = React.useState(false);
   const [asyncResults, setAsyncResults] = React.useState<ChipOption[]>([]);
   const [isSearching, setIsSearching] = React.useState(false);
+  const [selectedCache, setSelectedCache] = React.useState<Map<string, ChipOption>>(new Map());
   const containerRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
   const debouncedSearch = useDebounce(search, 300);
 
   const selectedSet = new Set(selectedValues);
-  const optionMap = new Map([...(options ?? []), ...asyncResults].map(o => [o.value, o]));
+  const optionMap = new Map([...(options ?? []), ...asyncResults, ...selectedCache.values()].map(o => [o.value, o]));
 
   // Async search effect
   React.useEffect(() => {
@@ -153,6 +154,11 @@ function ChipInputInner({
     : asyncResults.filter((o) => !selectedSet.has(o.value));
 
   const addValue = (value: string) => {
+    // Cache the selected option so its label persists after async results clear
+    const opt = optionMap.get(value);
+    if (opt) {
+      setSelectedCache(prev => new Map(prev).set(value, opt));
+    }
     onChange([...selectedValues, value]);
     setSearch('');
     inputRef.current?.focus();

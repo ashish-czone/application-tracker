@@ -159,8 +159,14 @@ function SearchableSelect({
   const [search, setSearch] = useState('');
   const [asyncResults, setAsyncResults] = useState<SelectOption[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [cachedLabel, setCachedLabel] = useState<string | undefined>(displayValue);
   const inputRef = useRef<HTMLInputElement>(null);
   const debouncedSearch = useDebounce(search, 300);
+
+  // Keep cached label in sync with external displayValue
+  useEffect(() => {
+    if (displayValue) setCachedLabel(displayValue);
+  }, [displayValue]);
 
   useEffect(() => {
     if (open) {
@@ -209,7 +215,7 @@ function SearchableSelect({
             !value && 'text-muted-foreground',
           )}
         >
-          <span className="truncate">{displayValue ?? placeholder}</span>
+          <span className="truncate">{cachedLabel ?? displayValue ?? placeholder}</span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </button>
       </Popover.Trigger>
@@ -242,7 +248,9 @@ function SearchableSelect({
                     key={opt.value}
                     value={opt.value}
                     onSelect={() => {
-                      onChange(opt.value === value ? '' : opt.value);
+                      const newVal = opt.value === value ? '' : opt.value;
+                      onChange(newVal);
+                      setCachedLabel(newVal ? opt.label : undefined);
                       setOpen(false);
                     }}
                     className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground"
