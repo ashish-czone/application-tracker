@@ -474,7 +474,8 @@ The listener compares `before`/`after` and skips writes when nothing actually ch
 The frontend does **not** follow the same modular/domain-separated architecture as the backend. It is organized by **layers and portals**. See PROMPT-UI.md for the full frontend architecture, folder structure, and rules.
 
 **Key points:**
-- `packages/ui` is the only shared frontend package (components, hooks, services, types).
+- `packages/ui` is the base shared frontend package (generic components, hooks, services, types).
+- Feature UI packages (`packages/entity-engine-ui`, `packages/eav-attributes-ui`, `packages/taxonomy-ui`, etc.) provide reusable pages, components, hooks, and helpers for their corresponding backend package — still domain-agnostic. See PROMPT-UI.md for structure rules.
 - `apps/web/src/features/` holds cross-portal business logic (auth only, for now).
 - `apps/web/src/portals/` holds portal-specific pages, components, services, types, routes, and menu.
 - Portals never import from each other. Features can import from `packages/ui`. Portals can import from both.
@@ -492,17 +493,17 @@ Packages have ZERO knowledge of business domains. They never reference "candidat
 
 Examples: database (Drizzle ORM + pg Pool + schema definitions), events (in-memory event bus), queue (durable async jobs via BullMQ, including repeatable/cron jobs).
 
-**Platform Capabilities (backend, invoked directly):** Cross-cutting engines that domain services call directly via their public API. They provide capabilities that modules need during their domain operations. See PROMPT-AUTH.md for the authentication, identity, and RBAC architecture.
+**Platform Capabilities (backend, invoked directly):** Cross-cutting engines that domain services call directly via their public API. They provide capabilities that modules need during their domain operations. Platform packages may include their own controllers, DTOs, and permissions when the package provides a complete, self-contained feature (e.g., taxonomy CRUD, media uploads, entity registry API). This eliminates the need for thin "management modules" in every app that just re-export package services. See PROMPT-AUTH.md for the authentication, identity, and RBAC architecture.
 
-Examples: hierarchy (materialized path tree operations for any entity), rbac (role-based access control), settings (typed config per module with admin overrides).
+Examples: hierarchy (materialized path tree operations for any entity), rbac (role-based access control), settings (typed config per module with admin overrides), taxonomy (tag/category management with controllers), entity-engine (dynamic CRUD controllers), media (file upload controllers).
 
-**Side-Effect Packages (backend, event-driven):** Cross-cutting engines that subscribe to domain events and react generically. No module calls them directly — they listen and act independently. They contain no domain knowledge — all behavior is configured via DB rules, not hardcoded `if/else` chains. CRUD endpoints for configuring these packages live in their own modules (e.g., `modules/notification-rules/`, `modules/reminder-rules/`).
+**Side-Effect Packages (backend, event-driven):** Cross-cutting engines that subscribe to domain events and react generically. No module calls them directly — they listen and act independently. They contain no domain knowledge — all behavior is configured via DB rules, not hardcoded `if/else` chains. Configuration CRUD endpoints may live in the package itself (if generic) or in app-level modules (if app-specific, e.g., `modules/notification-rules/`).
 
 Examples: notifications (DB-driven templates + delivery), audit (event-driven immutable change log), reminder-engine (scheduled side-effects).
 
 These packages self-register their event subscriptions using `@OnEvent()` decorators. They process domain events using the base `DomainEvent` interface from `packages/events` — they never import from app modules.
 
-**Frontend:** `packages/ui` is the single shared frontend package. It contains reusable components (grouped by category), generic utility hooks, HTTP client infrastructure, and generic types. See PROMPT-UI.md for the full structure and rules. No other frontend packages exist — domain-specific UI (auth forms, etc.) lives in `apps/web/src/features/` or `apps/web/src/portals/`.
+**Frontend:** `packages/ui` is the base shared frontend package — generic components, hooks, HTTP client, and types. Feature UI packages (`packages/*-ui`) provide reusable pages, components, hooks, and helpers for their corresponding backend package (e.g., `entity-engine-ui` provides `EntityListPage`, `EntityDetailPage`, `useEntityLayout`). These are still domain-agnostic — they work with any entity type, not a specific business entity. Domain-specific UI lives in `apps/*/src/features/` or `apps/*/src/portals/`. See PROMPT-UI.md for the full structure and rules.
 
 **Shared (both):** Pure types and constants.
 
@@ -510,10 +511,12 @@ Example: common — contains ONLY truly generic types (`PaginatedResponse<T>`, `
 
 ### Package Design Rules
 
-1. **No domain knowledge.** A package never imports from app modules.
-2. **Swappable implementations.** Infrastructure packages define interfaces. The in-memory event bus can be swapped to Redis/NATS. Local file storage can be swapped to S3. Modules never depend on the implementation, only the interface.
-3. **Self-contained.** Each package has its own `package.json` and dependencies.
+1. **No domain knowledge.** A package never imports from app modules. It never references specific business entities like "candidate" or "order".
+2. **Self-contained.** Each package has its own `package.json` and dependencies.
+3. **Swappable implementations.** Infrastructure packages define interfaces. The in-memory event bus can be swapped to Redis/NATS. Local file storage can be swapped to S3. Modules never depend on the implementation, only the interface.
 4. **Platform packages use DB for configuration, not code.** Notification rules, workflow definitions, RBAC permissions — all stored in DB. No hardcoded `if/else` chains.
+5. **Packages may include controllers, DTOs, and permissions** when they provide a complete, self-contained feature. Logic stays in the service layer — controllers are thin wiring only. DTOs are internal to the controller layer. Packages register their own RBAC permissions in `onModuleInit()`. This avoids the need for boilerplate "management modules" in every app.
+6. **Feature UI packages** (`packages/*-ui`) may include components, pages, hooks, and helpers that are reusable across apps. They follow the same domain-agnostic rule — they work generically with any entity type, not specific business entities.
 
 ### Hierarchy Package (`@packages/hierarchy`)
 

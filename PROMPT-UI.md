@@ -57,6 +57,36 @@ packages/ui/
 - Auth forms, business validation schemas, domain API calls
 - Anything that references a specific entity (User, Order, Role, etc.)
 
+### Feature UI packages: `packages/*-ui`
+
+Feature UI packages provide reusable pages, components, hooks, and helpers for their corresponding backend package. They sit between `packages/ui` (fully generic) and app-level code (domain-specific).
+
+```
+packages/<feature>-ui/
+ ├ components/         — Reusable React components for the feature
+ ├ pages/              — Full page components (list, detail, create, etc.)
+ ├ hooks/              — React hooks (data fetching, state management)
+ ├ helpers/            — Pure utility functions (schema builders, formatters)
+ └ index.ts            — Public API surface
+```
+
+**Examples:**
+- `packages/entity-engine-ui` — `EntityListPage`, `EntityDetailPage`, `useEntityLayout`, `useListLayout`, `createEntityHooks()`
+- `packages/eav-attributes-ui` — `LayoutCanvas`, `DynamicField`, `buildFormSchema()`
+
+**Rules:**
+- **Domain-agnostic.** They work with any entity type, not a specific business entity. `EntityListPage` renders a list for *any* entity — it never references "candidates" or "orders".
+- **May import from `packages/ui`** for base components and hooks.
+- **May import from their backend package** for types only (e.g., `FieldType` from `@packages/eav-attributes`).
+- **Never import from `apps/`.** They receive app-specific config via props or context.
+- **May contain hooks.** Data-fetching hooks (`useEntityLayout`) and state management hooks are allowed — they are still reusable across apps.
+- **May contain pages.** Full page components that apps wire into their router.
+
+**Dependency direction:**
+```
+packages/ui  ←  packages/*-ui  ←  apps/*/src/
+```
+
 ### App structure: `apps/web/src/`
 
 ```
@@ -85,18 +115,20 @@ apps/web/src/
 | Layer | Scope | Business logic? | Example |
 |---|---|---|---|
 | `packages/ui` | Global (shared package) | No | Button, DataGrid, useDebounce, apiClient |
+| `packages/*-ui` | Feature (shared package) | No | EntityListPage, DynamicField, useEntityLayout |
 | `shared/` | Cross-cutting (app-level) | Yes | auth (components, hooks, services, token management) |
 | `portals/customer/features/` | Feature-specific | Yes | users (pages, components, hooks, services, types) |
 
 ### Dependency rules
 
 ```
-packages/ui  ←  shared/  ←  portals/customer/features/
+packages/ui  ←  packages/*-ui  ←  shared/  ←  portals/customer/features/
 ```
 
-- **Portal features** can import from `packages/ui` and `shared/`.
-- **`shared/`** can import from `packages/ui`.
-- **`packages/ui`** imports nothing from the app.
+- **Portal features** can import from `packages/ui`, `packages/*-ui`, and `shared/`.
+- **`shared/`** can import from `packages/ui` and `packages/*-ui`.
+- **`packages/*-ui`** can import from `packages/ui` and their corresponding backend package types.
+- **`packages/ui`** imports nothing from the app or other packages.
 
 ### Shared rules (`shared/`)
 
