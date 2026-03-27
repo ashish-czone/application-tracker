@@ -13,7 +13,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { RequirePermission } from '@packages/rbac';
-import { WorkflowRegistryService } from '@packages/workflows';
+import { WorkflowRegistryService } from '../services/workflow-registry.service';
 import { CreateWorkflowDto } from '../dto/create-workflow.dto';
 import { UpdateWorkflowDto } from '../dto/update-workflow.dto';
 import { CreateStateDto } from '../dto/create-state.dto';

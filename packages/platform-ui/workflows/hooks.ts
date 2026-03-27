@@ -1,18 +1,8 @@
+import { useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@packages/ui';
-import {
-  listWorkflows,
-  getWorkflow,
-  createWorkflow,
-  updateWorkflow,
-  deleteWorkflow,
-  createState,
-  updateState,
-  deleteState,
-  createTransition,
-  updateTransition,
-  deleteTransition,
-} from './services';
+import { usePlatformAPI } from '../PlatformUIProvider';
+import { createWorkflowsApi } from './services';
 import type {
   CreateWorkflowRequest,
   UpdateWorkflowRequest,
@@ -22,26 +12,34 @@ import type {
   UpdateTransitionRequest,
 } from './types';
 
+function useWorkflowsApi() {
+  const apiFn = usePlatformAPI();
+  return useMemo(() => createWorkflowsApi(apiFn), [apiFn]);
+}
+
 // Definitions
 export function useWorkflows() {
+  const api = useWorkflowsApi();
   return useQuery({
     queryKey: ['workflows'],
-    queryFn: () => listWorkflows(),
+    queryFn: () => api.listWorkflows(),
   });
 }
 
 export function useWorkflow(slug: string) {
+  const api = useWorkflowsApi();
   return useQuery({
     queryKey: ['workflows', slug],
-    queryFn: () => getWorkflow(slug),
+    queryFn: () => api.getWorkflow(slug),
     enabled: !!slug,
   });
 }
 
 export function useCreateWorkflow(options?: { onSuccess?: () => void }) {
+  const api = useWorkflowsApi();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: CreateWorkflowRequest) => createWorkflow(data),
+    mutationFn: (data: CreateWorkflowRequest) => api.createWorkflow(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['workflows'] });
       toast.success('Workflow created');
@@ -54,9 +52,10 @@ export function useCreateWorkflow(options?: { onSuccess?: () => void }) {
 }
 
 export function useUpdateWorkflow() {
+  const api = useWorkflowsApi();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdateWorkflowRequest }) => updateWorkflow(id, data),
+    mutationFn: ({ id, data }: { id: string; data: UpdateWorkflowRequest }) => api.updateWorkflow(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['workflows'] });
       toast.success('Workflow updated');
@@ -68,9 +67,10 @@ export function useUpdateWorkflow() {
 }
 
 export function useDeleteWorkflow(options?: { onSuccess?: () => void }) {
+  const api = useWorkflowsApi();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => deleteWorkflow(id),
+    mutationFn: (id: string) => api.deleteWorkflow(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['workflows'] });
       toast.success('Workflow deleted');
@@ -84,10 +84,11 @@ export function useDeleteWorkflow(options?: { onSuccess?: () => void }) {
 
 // States
 export function useCreateState(slug: string) {
+  const api = useWorkflowsApi();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ definitionId, data }: { definitionId: string; data: CreateStateRequest }) =>
-      createState(definitionId, data),
+      api.createState(definitionId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['workflows', slug] });
       toast.success('State added');
@@ -99,10 +100,11 @@ export function useCreateState(slug: string) {
 }
 
 export function useUpdateState(slug: string) {
+  const api = useWorkflowsApi();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ stateId, data }: { stateId: string; data: UpdateStateRequest }) =>
-      updateState(stateId, data),
+      api.updateState(stateId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['workflows', slug] });
       toast.success('State updated');
@@ -114,9 +116,10 @@ export function useUpdateState(slug: string) {
 }
 
 export function useDeleteState(slug: string) {
+  const api = useWorkflowsApi();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (stateId: string) => deleteState(stateId),
+    mutationFn: (stateId: string) => api.deleteState(stateId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['workflows', slug] });
       toast.success('State removed');
@@ -129,10 +132,11 @@ export function useDeleteState(slug: string) {
 
 // Transitions
 export function useCreateTransition(slug: string) {
+  const api = useWorkflowsApi();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ definitionId, data }: { definitionId: string; data: CreateTransitionRequest }) =>
-      createTransition(definitionId, data),
+      api.createTransition(definitionId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['workflows', slug] });
       toast.success('Transition added');
@@ -144,10 +148,11 @@ export function useCreateTransition(slug: string) {
 }
 
 export function useUpdateTransition(slug: string) {
+  const api = useWorkflowsApi();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ transitionId, data }: { transitionId: string; data: UpdateTransitionRequest }) =>
-      updateTransition(transitionId, data),
+      api.updateTransition(transitionId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['workflows', slug] });
       toast.success('Transition updated');
@@ -159,9 +164,10 @@ export function useUpdateTransition(slug: string) {
 }
 
 export function useDeleteTransition(slug: string) {
+  const api = useWorkflowsApi();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (transitionId: string) => deleteTransition(transitionId),
+    mutationFn: (transitionId: string) => api.deleteTransition(transitionId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['workflows', slug] });
       toast.success('Transition removed');

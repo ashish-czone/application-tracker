@@ -21,7 +21,7 @@ const addStateSchema = z.object({
 
 type AddStateFormValues = z.infer<typeof addStateSchema>;
 
-export default function WorkflowEditorPage() {
+export function WorkflowEditorPage() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const [addStateOpen, setAddStateOpen] = useState(false);

@@ -1,5 +1,6 @@
 // Module
 export { WorkflowsModule } from './workflows.module';
+export { WORKFLOWS_PERMISSIONS } from './permissions';
 
 // Services
 export { WorkflowEngineService } from './services/workflow-engine.service';
