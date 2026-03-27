@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.0.0",
+    "@packages/platform-ui": "workspace:*",
     "@packages/platform-ui-taxonomy": "workspace:*",
     "@packages/ui": "workspace:*",
     "@tanstack/react-query": "^5.60.0",

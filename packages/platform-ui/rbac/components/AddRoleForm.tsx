@@ -14,7 +14,8 @@ import {
   DialogFooter,
   toast,
 } from '@packages/ui';
-import { createRole, setRolePermissions } from '../services';
+import { usePlatformAPI } from '../../PlatformUIProvider';
+import { createRbacApi } from '../services';
 import { PermissionsPicker } from './PermissionsPicker';
 import type { ScopedPermissions } from '../types';
 
@@ -37,6 +38,8 @@ export function AddRoleForm({ onClose }: AddRoleFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const queryClient = useQueryClient();
+  const apiFn = usePlatformAPI();
+  const rbacApi = createRbacApi(apiFn);
 
   const form = useForm<CreateRoleFormValues>({
     resolver: zodResolver(createRoleSchema),
@@ -62,7 +65,7 @@ export function AddRoleForm({ onClose }: AddRoleFormProps) {
     setError(null);
     setIsSubmitting(true);
     try {
-      const role = await createRole({
+      const role = await rbacApi.createRole({
         name: roleDetails.name,
         userType: roleDetails.userType,
         isDefault: roleDetails.isDefault === 'true',
@@ -72,7 +75,7 @@ export function AddRoleForm({ onClose }: AddRoleFormProps) {
         name,
         scope,
       }));
-      await setRolePermissions(role.id, permissions);
+      await rbacApi.setRolePermissions(role.id, permissions);
 
       queryClient.invalidateQueries({ queryKey: ['roles'] });
       toast.success('Role created');

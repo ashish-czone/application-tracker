@@ -9,7 +9,8 @@ import {
   Button,
   Skeleton,
 } from '@packages/ui';
-import { getRoleUserCount } from '../services';
+import { usePlatformAPI } from '../../PlatformUIProvider';
+import { createRbacApi } from '../services';
 import { useDeleteRole } from '../hooks';
 import type { Role } from '../types';
 
@@ -22,6 +23,8 @@ export function DeleteRoleDialog({ role, onClose }: DeleteRoleDialogProps) {
   const [userCount, setUserCount] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const deleteMutation = useDeleteRole({ onSuccess: onClose });
+  const apiFn = usePlatformAPI();
+  const rbacApi = createRbacApi(apiFn);
 
   useEffect(() => {
     if (!role) {
@@ -29,7 +32,7 @@ export function DeleteRoleDialog({ role, onClose }: DeleteRoleDialogProps) {
       return;
     }
     setLoading(true);
-    getRoleUserCount(role.id)
+    rbacApi.getRoleUserCount(role.id)
       .then((res) => setUserCount(res.count))
       .catch(() => setUserCount(null))
       .finally(() => setLoading(false));

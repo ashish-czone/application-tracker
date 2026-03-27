@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { Toaster } from '@packages/ui';
 import { EntityEngineProvider } from '@packages/entity-engine-ui';
 import { TaxonomyProvider } from '@packages/platform-ui-taxonomy';
+import { PlatformUIProvider } from '@packages/platform-ui';
 import { api } from '../lib/api';
 import { SessionExpiredModal } from '../shared/auth/components/SessionExpiredModal';
 import { CANDIDATES_UI_CONFIG } from '../entities/candidates.config';
@@ -27,11 +28,13 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <EntityEngineProvider apiFn={api} entityUIConfigs={entityUIConfigs}>
-          <TaxonomyProvider apiFn={api}>
-            {children}
-          </TaxonomyProvider>
-        </EntityEngineProvider>
+        <PlatformUIProvider apiFn={api}>
+          <EntityEngineProvider apiFn={api} entityUIConfigs={entityUIConfigs}>
+            <TaxonomyProvider apiFn={api}>
+              {children}
+            </TaxonomyProvider>
+          </EntityEngineProvider>
+        </PlatformUIProvider>
         <Toaster />
         <SessionExpiredModal />
       </BrowserRouter>

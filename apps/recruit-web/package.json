@@ -18,6 +18,7 @@
     "@hookform/resolvers": "^5.0.0",
     "@packages/eav-attributes-ui": "workspace:*",
     "@packages/entity-engine-ui": "workspace:*",
+    "@packages/platform-ui": "workspace:*",
     "@packages/platform-ui-taxonomy": "workspace:*",
     "@packages/ui": "workspace:*",
     "@tanstack/react-query": "^5.60.0",

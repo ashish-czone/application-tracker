@@ -400,6 +400,9 @@ importers:
       '@packages/entity-engine-ui':
         specifier: workspace:*
         version: link:../../packages/entity-engine-ui
+      '@packages/platform-ui':
+        specifier: workspace:*
+        version: link:../../packages/platform-ui
       '@packages/platform-ui-taxonomy':
         specifier: workspace:*
         version: link:../../packages/platform-ui/taxonomy
@@ -479,6 +482,9 @@ importers:
       '@hookform/resolvers':
         specifier: ^5.0.0
         version: 5.2.2(react-hook-form@7.71.2(react@19.2.4))
+      '@packages/platform-ui':
+        specifier: workspace:*
+        version: link:../../packages/platform-ui
       '@packages/platform-ui-taxonomy':
         specifier: workspace:*
         version: link:../../packages/platform-ui/taxonomy
@@ -971,6 +977,46 @@ importers:
       vitest:
         specifier: ^3.2.0
         version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(terser@5.46.0)
+
+  packages/platform-ui:
+    dependencies:
+      '@hookform/resolvers':
+        specifier: ^5.0.0
+        version: 5.2.2(react-hook-form@7.71.2(react@19.2.4))
+      '@packages/common':
+        specifier: workspace:*
+        version: link:../common
+      '@packages/entity-engine-ui':
+        specifier: workspace:*
+        version: link:../entity-engine-ui
+      '@packages/ui':
+        specifier: workspace:*
+        version: link:../ui
+      '@tanstack/react-query':
+        specifier: ^5.0.0
+        version: 5.90.21(react@19.2.4)
+      '@tanstack/react-table':
+        specifier: ^8.0.0
+        version: 8.21.3(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      lucide-react:
+        specifier: ^0.500.0
+        version: 0.500.0(react@19.2.4)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.4
+      react-hook-form:
+        specifier: ^7.54.0
+        version: 7.71.2(react@19.2.4)
+      zod:
+        specifier: ^3.24.0
+        version: 3.25.76
+    devDependencies:
+      '@types/react':
+        specifier: ^19.2.14
+        version: 19.2.14
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
 
   packages/platform-ui/taxonomy:
     dependencies:

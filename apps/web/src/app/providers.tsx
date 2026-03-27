@@ -3,6 +3,7 @@ import { BrowserRouter } from 'react-router';
 import type { ReactNode } from 'react';
 import { Toaster } from '@packages/ui';
 import { TaxonomyProvider } from '@packages/platform-ui-taxonomy';
+import { PlatformUIProvider } from '@packages/platform-ui';
 import { api } from '../lib/api';
 import { SessionExpiredModal } from '../shared/auth/components/SessionExpiredModal';
 
@@ -23,9 +24,11 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <TaxonomyProvider apiFn={api}>
-          {children}
-        </TaxonomyProvider>
+        <PlatformUIProvider apiFn={api}>
+          <TaxonomyProvider apiFn={api}>
+            {children}
+          </TaxonomyProvider>
+        </PlatformUIProvider>
         <Toaster />
         <SessionExpiredModal />
       </BrowserRouter>
