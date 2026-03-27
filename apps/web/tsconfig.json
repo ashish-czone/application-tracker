@@ -13,6 +13,7 @@
     "baseUrl": ".",
     "paths": {
       "@modules/*": ["src/modules/*"],
+      "@packages/platform-ui-taxonomy": ["../../packages/platform-ui/taxonomy"],
       "@packages/*": ["../../packages/*"]
     },
     "noEmit": true
