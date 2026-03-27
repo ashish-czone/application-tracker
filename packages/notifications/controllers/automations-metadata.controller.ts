@@ -2,7 +2,8 @@ import { Controller, Get } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { RequirePermission } from '@packages/rbac';
 import { EventRegistryService, type EventMetadata } from '@packages/events';
-import { EntityResolverRegistry, type ResolvedFieldConfig, type RecipientFieldConfig } from '@packages/notifications';
+import { EntityResolverRegistry } from '../services/entity-resolver-registry';
+import type { ResolvedFieldConfig, RecipientFieldConfig } from '../types';
 import { NOTIFICATION_RULES_PERMISSIONS } from '../permissions';
 
 interface EntityResolverResponse {
@@ -28,7 +29,7 @@ export class AutomationsMetadataController {
 
   @Get('entities')
   @RequirePermission(NOTIFICATION_RULES_PERMISSIONS.RULES_READ)
-  @ApiOperation({ summary: 'List registered entity types with filterable fields and recipient fields (options resolved dynamically)' })
+  @ApiOperation({ summary: 'List registered entity types with filterable fields and recipient fields' })
   async listEntities(): Promise<EntityResolverResponse[]> {
     const all = this.entityResolverRegistry.getAll();
     const result: EntityResolverResponse[] = [];

@@ -4,7 +4,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { RequirePermission } from '@packages/rbac';
-import { NotificationRulesService } from '@packages/notifications';
+import { NotificationRulesService } from '../services/notification-rules.service';
 import { CreateRuleDto } from '../dto/create-rule.dto';
 import { UpdateRuleDto } from '../dto/update-rule.dto';
 import { ListRulesQueryDto } from '../dto/list-rules-query.dto';

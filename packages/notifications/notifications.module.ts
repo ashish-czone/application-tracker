@@ -1,6 +1,7 @@
 import { Global, Module, type OnModuleInit } from '@nestjs/common';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { QueueService } from '@packages/queue';
+import { RbacService } from '@packages/rbac';
 import { cronForLocalHour } from '@packages/common';
 import { NotificationChannelsModule, EmailChannelService, WhatsAppChannelService } from '@packages/notification-channels';
 import type { EmailPayload, WhatsAppPayload } from '@packages/notification-channels';
@@ -17,12 +18,16 @@ import { ContactResolverRegistry } from './services/contact-resolver-registry';
 import { ScheduleScanner } from './services/schedule-scanner';
 import { InAppChannel } from './channels/in-app.channel';
 import { NotificationQueryService } from './services/notification-query.service';
+import { NotificationRulesController } from './controllers/notification-rules.controller';
+import { NotificationTemplatesController } from './controllers/notification-templates.controller';
+import { AutomationsMetadataController } from './controllers/automations-metadata.controller';
 
 export const SCHEDULE_SCAN_QUEUE = 'notification.schedule-scan';
 
 @Global()
 @Module({
   imports: [NotificationChannelsModule],
+  controllers: [NotificationRulesController, NotificationTemplatesController, AutomationsMetadataController],
   providers: [
     NotificationRuleService,
     NotificationRulesService,
@@ -58,12 +63,21 @@ export class NotificationsModule implements OnModuleInit {
     private readonly scheduleScanner: ScheduleScanner,
     private readonly emailChannelService: EmailChannelService,
     private readonly whatsAppChannelService: WhatsAppChannelService,
+    private readonly rbacService: RbacService,
     appLogger: AppLoggerService,
   ) {
     this.logger = appLogger.forContext(NotificationsModule.name);
   }
 
   async onModuleInit() {
+    // Register RBAC permissions
+    this.rbacService.registerPermissions('notifications', [
+      { action: 'rules.read', description: 'View notification rules' },
+      { action: 'rules.manage', description: 'Create, update, and delete notification rules' },
+      { action: 'templates.read', description: 'View notification templates' },
+      { action: 'templates.manage', description: 'Create, update, and delete notification templates' },
+    ]);
+
     // Register inline channels
     this.dispatcher.registerInlineChannel(this.inAppChannel);
 
