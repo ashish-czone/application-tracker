@@ -103,6 +103,30 @@ export function EditFieldDialog({
             </label>
           </div>
 
+          {(field.tagGroupSlug || field.categoryGroupSlug || field.lookupEntity) && (
+            <div className="rounded-md border bg-muted/30 p-3 space-y-1.5">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Field Configuration</p>
+              {field.lookupEntity && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Lookup Entity</span>
+                  <span className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">{field.lookupEntity}</span>
+                </div>
+              )}
+              {field.tagGroupSlug && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Tag Group</span>
+                  <span className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">{field.tagGroupSlug}</span>
+                </div>
+              )}
+              {field.categoryGroupSlug && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Category Group</span>
+                  <span className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">{field.categoryGroupSlug}</span>
+                </div>
+              )}
+            </div>
+          )}
+
           <FormInput name="maxLength" label="Max Length" type="number" />
           <FormInput name="defaultValue" label="Default Value" />
 
