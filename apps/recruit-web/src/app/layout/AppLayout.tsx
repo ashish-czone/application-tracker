@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@packages/ui/lib/utils';
 import { EntityNavItems } from '@packages/entity-engine-ui';
-import { NotificationBell } from '../../shared/notifications/components/NotificationBell';
+import { NotificationBell } from '@packages/platform-ui/notification-channels';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
