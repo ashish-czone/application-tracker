@@ -241,11 +241,50 @@ export class EntityService {
       conditions.push(isNull(deletedAtCol));
     }
 
-    // Search across configured columns
-    if (query.search && config.searchColumns.length > 0) {
+    // Search across configured columns + lookup field labels
+    if (query.search) {
       const pattern = `%${query.search}%`;
-      const searchConditions = config.searchColumns.map((col) => ilike(col, pattern));
-      conditions.push(or(...searchConditions));
+      const searchConditions: any[] = [];
+
+      // Standard column search
+      for (const col of config.searchColumns) {
+        searchConditions.push(ilike(col, pattern));
+      }
+
+      // Lookup field search — search related entity label fields via EXISTS subquery
+      for (const [fieldKey, meta] of Object.entries(config.fieldMeta)) {
+        if (!meta.lookupEntity) continue;
+        const lookupConfig = this.lookupResolver.getConfig(meta.lookupEntity);
+        if (!lookupConfig) continue;
+
+        const targetTable = lookupConfig.table;
+        const valueCol = targetTable[lookupConfig.valueField];
+        const fkCol = (config.table as any)[fieldKey];
+        if (!valueCol || !fkCol) continue;
+
+        // Search across all configured search fields on the target entity
+        const searchFields = lookupConfig.searchFields?.length > 0
+          ? lookupConfig.searchFields
+          : [lookupConfig.labelField];
+
+        const fieldConditions = searchFields
+          .map((f: string) => targetTable[f])
+          .filter(Boolean)
+          .map((col: any) => sql`${col} ILIKE ${pattern}`);
+
+        if (fieldConditions.length > 0) {
+          const orClause = fieldConditions.length === 1
+            ? fieldConditions[0]
+            : sql.join(fieldConditions, sql` OR `);
+          searchConditions.push(
+            sql`EXISTS (SELECT 1 FROM ${targetTable} WHERE ${valueCol} = ${fkCol} AND (${orClause}))`,
+          );
+        }
+      }
+
+      if (searchConditions.length > 0) {
+        conditions.push(or(...searchConditions));
+      }
     }
 
     // Generic field-level filters (standard columns + EAV fields)
