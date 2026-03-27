@@ -16,7 +16,7 @@ const CHANNEL_LABELS: Record<NotificationChannel, string> = {
   whatsapp: 'WhatsApp',
 };
 
-export default function TemplatesListPage() {
+export function TemplatesListPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [editing, setEditing] = useState<NotificationTemplate | null>(null);
   const [deleting, setDeleting] = useState<NotificationTemplate | null>(null);
