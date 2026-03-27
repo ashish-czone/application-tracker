@@ -1,4 +1,7 @@
 import { lazy } from 'react';
+import { TagGroupsListPage, CategoryGroupsListPage } from '@packages/platform-ui-taxonomy';
+
+export { TagGroupsListPage, CategoryGroupsListPage };
 
 export const UsersListPage = lazy(
   () => import('./features/users/pages/UsersListPage'),

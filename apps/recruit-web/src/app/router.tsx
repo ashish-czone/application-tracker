@@ -3,7 +3,7 @@ import { Routes, Route, Navigate } from 'react-router';
 import { AppLayout } from './layout/AppLayout';
 import { AuthGuard } from '../shared/auth/components/AuthGuard';
 import { EntityListPage, EntityCreatePage, EntityDetailPage } from '@packages/entity-engine-ui';
-import { SettingsPage, AutomationsPage, RuleBuilderPage, UsersListPage, RolesListPage } from '../portals/recruiter/routes';
+import { SettingsPage, AutomationsPage, RuleBuilderPage, UsersListPage, RolesListPage, TagGroupsListPage, CategoryGroupsListPage } from '../portals/recruiter/routes';
 
 const LoginPage = lazy(() => import('../shared/auth/pages/LoginPage'));
 const RegisterPage = lazy(() => import('../shared/auth/pages/RegisterPage'));
@@ -88,6 +88,14 @@ export function AppRouter() {
           <Route
             path="/roles"
             element={<Suspense fallback={<PageSkeleton />}><RolesListPage /></Suspense>}
+          />
+          <Route
+            path="/tag-groups"
+            element={<TagGroupsListPage />}
+          />
+          <Route
+            path="/categories"
+            element={<CategoryGroupsListPage />}
           />
           <Route
             path="/settings/:entityType?"

@@ -1,4 +1,7 @@
 import { lazy } from 'react';
+import { TagGroupsListPage, CategoryGroupsListPage } from '@packages/platform-ui-taxonomy';
+
+export { TagGroupsListPage, CategoryGroupsListPage };
 
 // Candidates list/detail are now rendered by EntityListPage/EntityDetailPage
 // via the entity engine — no lazy imports needed

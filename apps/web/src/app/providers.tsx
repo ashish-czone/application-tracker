@@ -2,6 +2,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter } from 'react-router';
 import type { ReactNode } from 'react';
 import { Toaster } from '@packages/ui';
+import { TaxonomyProvider } from '@packages/platform-ui-taxonomy';
+import { api } from '../lib/api';
 import { SessionExpiredModal } from '../shared/auth/components/SessionExpiredModal';
 
 const queryClient = new QueryClient({
@@ -21,7 +23,9 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        {children}
+        <TaxonomyProvider apiFn={api}>
+          {children}
+        </TaxonomyProvider>
         <Toaster />
         <SessionExpiredModal />
       </BrowserRouter>
