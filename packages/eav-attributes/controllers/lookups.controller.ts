@@ -1,7 +1,7 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { RequirePermission } from '@packages/rbac';
-import { LookupResolverService } from '@packages/eav-attributes';
+import { LookupResolverService } from '../services/lookup-resolver.service';
 import { EAV_PERMISSIONS } from '../permissions';
 
 @ApiTags('lookups')

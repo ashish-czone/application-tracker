@@ -1,4 +1,5 @@
 export { EavAttributesModule } from './eav-attributes.module';
+export { EAV_PERMISSIONS } from './permissions';
 export { FieldDefinitionService } from './services/field-definition.service';
 export { LayoutService } from './services/layout.service';
 export { FieldValueService } from './services/field-value.service';
