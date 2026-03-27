@@ -1,8 +1,8 @@
 import { Controller, Get, Post, Patch, Delete, Param, Body, Query, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { RequirePermission } from '@packages/rbac';
-import { FieldDefinitionService } from '@packages/eav-attributes';
-import type { FieldType } from '@packages/eav-attributes';
+import { FieldDefinitionService } from '../services/field-definition.service';
+import type { FieldType } from '../types';
 import { EAV_PERMISSIONS } from '../permissions';
 import { CreateFieldDto } from '../dto/create-field.dto';
 import { UpdateFieldDto } from '../dto/update-field.dto';
