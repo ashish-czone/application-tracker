@@ -53,7 +53,7 @@ function TriggerSummary({ rule }: { rule: NotificationRule }) {
   );
 }
 
-export default function AutomationsListPage() {
+export function AutomationsListPage() {
   const [deleting, setDeleting] = useState<NotificationRule | null>(null);
 
   const {

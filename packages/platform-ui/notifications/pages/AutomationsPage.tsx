@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import AutomationsListPage from './AutomationsListPage';
-import TemplatesListPage from './TemplatesListPage';
+import { AutomationsListPage } from './AutomationsListPage';
+import { TemplatesListPage } from './TemplatesListPage';
 
 const TABS = [
   { id: 'rules', label: 'Rules' },
@@ -9,7 +9,7 @@ const TABS = [
 
 type TabId = typeof TABS[number]['id'];
 
-export default function AutomationsPage() {
+export function AutomationsPage() {
   const [activeTab, setActiveTab] = useState<TabId>('rules');
 
   return (

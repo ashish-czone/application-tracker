@@ -1,36 +1,42 @@
+import { useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@packages/ui';
-import {
-  listRules, getRule, createRule, updateRule, deleteRule,
-  listTemplates, getTemplate, createTemplate, updateTemplate, deleteTemplate,
-  listEvents, listEntities, getEntityFields,
-} from './services';
+import { usePlatformAPI } from '../PlatformUIProvider';
+import { createNotificationsApi } from './services';
 import type {
   ListRulesParams, CreateRuleRequest, UpdateRuleRequest,
   ListTemplatesParams, CreateTemplateRequest, UpdateTemplateRequest,
 } from './types';
 
+function useNotificationsApi() {
+  const apiFn = usePlatformAPI();
+  return useMemo(() => createNotificationsApi(apiFn), [apiFn]);
+}
+
 // --- Rules ---
 
 export function useRules(params: ListRulesParams) {
+  const api = useNotificationsApi();
   return useQuery({
     queryKey: ['notification-rules', params],
-    queryFn: () => listRules(params),
+    queryFn: () => api.listRules(params),
   });
 }
 
 export function useRule(id: string) {
+  const api = useNotificationsApi();
   return useQuery({
     queryKey: ['notification-rules', id],
-    queryFn: () => getRule(id),
+    queryFn: () => api.getRule(id),
     enabled: !!id,
   });
 }
 
 export function useCreateRule(options?: { onSuccess?: () => void }) {
+  const api = useNotificationsApi();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: CreateRuleRequest) => createRule(data),
+    mutationFn: (data: CreateRuleRequest) => api.createRule(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['notification-rules'] });
       toast.success('Automation rule created');
@@ -43,9 +49,10 @@ export function useCreateRule(options?: { onSuccess?: () => void }) {
 }
 
 export function useUpdateRule(options?: { onSuccess?: () => void }) {
+  const api = useNotificationsApi();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdateRuleRequest }) => updateRule(id, data),
+    mutationFn: ({ id, data }: { id: string; data: UpdateRuleRequest }) => api.updateRule(id, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['notification-rules'] });
       toast.success('Rule updated');
@@ -58,9 +65,10 @@ export function useUpdateRule(options?: { onSuccess?: () => void }) {
 }
 
 export function useDeleteRule(options?: { onSuccess?: () => void }) {
+  const api = useNotificationsApi();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => deleteRule(id),
+    mutationFn: (id: string) => api.deleteRule(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['notification-rules'] });
       toast.success('Rule deleted');
@@ -73,10 +81,11 @@ export function useDeleteRule(options?: { onSuccess?: () => void }) {
 }
 
 export function useToggleRule() {
+  const api = useNotificationsApi();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
-      updateRule(id, { isActive }),
+      api.updateRule(id, { isActive }),
     onSuccess: (_, variables) => {
       qc.invalidateQueries({ queryKey: ['notification-rules'] });
       toast.success(variables.isActive ? 'Rule activated' : 'Rule deactivated');
@@ -90,24 +99,27 @@ export function useToggleRule() {
 // --- Templates ---
 
 export function useTemplates(params: ListTemplatesParams) {
+  const api = useNotificationsApi();
   return useQuery({
     queryKey: ['notification-templates', params],
-    queryFn: () => listTemplates(params),
+    queryFn: () => api.listTemplates(params),
   });
 }
 
 export function useTemplate(id: string) {
+  const api = useNotificationsApi();
   return useQuery({
     queryKey: ['notification-templates', id],
-    queryFn: () => getTemplate(id),
+    queryFn: () => api.getTemplate(id),
     enabled: !!id,
   });
 }
 
 export function useCreateTemplate(options?: { onSuccess?: () => void }) {
+  const api = useNotificationsApi();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: CreateTemplateRequest) => createTemplate(data),
+    mutationFn: (data: CreateTemplateRequest) => api.createTemplate(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['notification-templates'] });
       toast.success('Template created');
@@ -120,9 +132,10 @@ export function useCreateTemplate(options?: { onSuccess?: () => void }) {
 }
 
 export function useUpdateTemplate(options?: { onSuccess?: () => void }) {
+  const api = useNotificationsApi();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdateTemplateRequest }) => updateTemplate(id, data),
+    mutationFn: ({ id, data }: { id: string; data: UpdateTemplateRequest }) => api.updateTemplate(id, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['notification-templates'] });
       toast.success('Template updated');
@@ -135,9 +148,10 @@ export function useUpdateTemplate(options?: { onSuccess?: () => void }) {
 }
 
 export function useDeleteTemplate(options?: { onSuccess?: () => void }) {
+  const api = useNotificationsApi();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => deleteTemplate(id),
+    mutationFn: (id: string) => api.deleteTemplate(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['notification-templates'] });
       toast.success('Template deleted');
@@ -149,30 +163,31 @@ export function useDeleteTemplate(options?: { onSuccess?: () => void }) {
   });
 }
 
-// --- Metadata registries ---
+// --- Metadata ---
 
 export function useEvents() {
+  const api = useNotificationsApi();
   return useQuery({
     queryKey: ['automations-events'],
-    queryFn: listEvents,
-    staleTime: 5 * 60 * 1000, // events rarely change — cache 5 min
-  });
-}
-
-export function useEntities() {
-  return useQuery({
-    queryKey: ['automations-entities'],
-    queryFn: listEntities,
+    queryFn: () => api.listEvents(),
     staleTime: 5 * 60 * 1000,
   });
 }
 
-// --- Entity fields (generic endpoint) ---
+export function useEntities() {
+  const api = useNotificationsApi();
+  return useQuery({
+    queryKey: ['automations-entities'],
+    queryFn: () => api.listEntities(),
+    staleTime: 5 * 60 * 1000,
+  });
+}
 
 export function useEntityFields(entityType: string | undefined) {
+  const api = useNotificationsApi();
   return useQuery({
     queryKey: ['entity-fields', entityType],
-    queryFn: () => getEntityFields(entityType!),
+    queryFn: () => api.getEntityFields(entityType!),
     enabled: !!entityType,
   });
 }

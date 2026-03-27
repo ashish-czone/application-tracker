@@ -3,7 +3,8 @@ import { useNavigate, useParams } from 'react-router';
 import { ArrowLeft } from 'lucide-react';
 import { Button, Badge, Card, CardContent, CardHeader, CardTitle } from '@packages/ui';
 import { useRule, useCreateRule, useUpdateRule, useEvents, useEntities, useTemplates, useEntityFields } from '../hooks';
-import { setRuleChannels } from '../services';
+import { usePlatformAPI } from '../../PlatformUIProvider';
+import { createNotificationsApi } from '../services';
 import { ConditionBuilder } from '../components/ConditionBuilder';
 import type {
   TriggerType, RecipientStrategy, NotificationChannel,
@@ -23,10 +24,12 @@ const DAY_OPTIONS = [
   { value: 3, label: 'Wed' }, { value: 4, label: 'Thu' }, { value: 5, label: 'Fri' }, { value: 6, label: 'Sat' },
 ];
 
-export default function RuleBuilderPage() {
+export function RuleBuilderPage() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const isEdit = !!id;
+  const apiFn = usePlatformAPI();
+  const notificationsApi = createNotificationsApi(apiFn);
 
   const { data: existingRule } = useRule(id ?? '');
   const { data: events } = useEvents();
@@ -157,7 +160,7 @@ export default function RuleBuilderPage() {
             scheduleDaysOfWeek: scheduleDaysOfWeek.length > 0 ? scheduleDaysOfWeek : undefined,
           },
         });
-        await setRuleChannels(id, ruleChannels);
+        await notificationsApi.setRuleChannels(id, ruleChannels);
       } else {
         await createMutation.mutateAsync({
           name,

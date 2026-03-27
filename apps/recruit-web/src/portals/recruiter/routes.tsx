@@ -1,22 +1,15 @@
 import { lazy } from 'react';
 import { TagGroupsListPage, CategoryGroupsListPage } from '@packages/platform-ui-taxonomy';
 import { RolesListPage } from '@packages/platform-ui/rbac';
+import { AutomationsPage, RuleBuilderPage } from '@packages/platform-ui/notifications';
 
-export { TagGroupsListPage, CategoryGroupsListPage, RolesListPage };
+export { TagGroupsListPage, CategoryGroupsListPage, RolesListPage, AutomationsPage, RuleBuilderPage };
 
 // Candidates list/detail are now rendered by EntityListPage/EntityDetailPage
 // via the entity engine — no lazy imports needed
 
 export const SettingsPage = lazy(
   () => import('./features/settings/pages/SettingsPage'),
-);
-
-export const AutomationsPage = lazy(
-  () => import('./features/automations/pages/AutomationsPage'),
-);
-
-export const RuleBuilderPage = lazy(
-  () => import('./features/automations/pages/RuleBuilderPage'),
 );
 
 export const UsersListPage = lazy(
