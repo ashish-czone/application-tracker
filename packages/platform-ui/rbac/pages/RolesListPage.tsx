@@ -18,7 +18,7 @@ const USER_TYPE_LABELS: Record<string, string> = {
   client: 'Client',
 };
 
-export default function RolesListPage() {
+export function RolesListPage() {
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [deletingRole, setDeletingRole] = useState<Role | null>(null);
