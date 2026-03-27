@@ -6,8 +6,12 @@ import { SmtpEmailProvider } from './email/providers/smtp-email.provider';
 import { WhatsAppChannelService } from './whatsapp/whatsapp-channel.service';
 import { ConsoleWhatsAppProvider } from './whatsapp/providers/console-whatsapp.provider';
 import { TwilioWhatsAppProvider } from './whatsapp/providers/twilio-whatsapp.provider';
+import { InAppChannel } from './in-app/in-app.channel';
+import { NotificationQueryService } from './in-app/notification-query.service';
+import { UserNotificationsController } from './controllers/user-notifications.controller';
 
 @Module({
+  controllers: [UserNotificationsController],
   providers: [
     EmailChannelService,
     ConsoleEmailProvider,
@@ -15,10 +19,14 @@ import { TwilioWhatsAppProvider } from './whatsapp/providers/twilio-whatsapp.pro
     WhatsAppChannelService,
     ConsoleWhatsAppProvider,
     TwilioWhatsAppProvider,
+    InAppChannel,
+    NotificationQueryService,
   ],
   exports: [
     EmailChannelService,
     WhatsAppChannelService,
+    InAppChannel,
+    NotificationQueryService,
   ],
 })
 export class NotificationChannelsModule implements OnModuleInit {

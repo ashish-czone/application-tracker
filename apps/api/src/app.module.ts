@@ -22,7 +22,6 @@ import { AuthOrchestratorModule } from './modules/auth/auth.module';
 import { UsersModule } from '@packages/users';
 import { TasksModule } from '@packages/tasks';
 import { TaxonomyModule } from '@packages/taxonomy';
-import { UserNotificationsModule } from './modules/user-notifications/user-notifications.module';
 import { SharedModule } from './modules/shared/shared.module';
 import { validate } from './config/env.validation';
 
@@ -72,7 +71,6 @@ import { validate } from './config/env.validation';
     UsersModule,
     TasksModule,
     TaxonomyModule,
-    UserNotificationsModule,
   ],
   providers: [
     {
