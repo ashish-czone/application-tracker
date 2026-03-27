@@ -11,8 +11,7 @@ export default defineConfig({
     '../../packages/workflows/schema/index.ts',
     '../../packages/taxonomy/schema/index.ts',
     '../../packages/audit/schema/index.ts',
-    // App-specific modules
-    './src/modules/tasks/schema/tasks.ts',
+    '../../packages/tasks/schema/tasks.ts',
   ],
   out: './drizzle',
   dialect: 'postgresql',
