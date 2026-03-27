@@ -21,7 +21,6 @@ import { RbacGuard } from '@packages/rbac';
 import { AuthOrchestratorModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { TasksModule } from './modules/tasks/tasks.module';
-import { WorkflowsManagementModule } from './modules/workflows/workflows.module';
 import { TaxonomyModule } from '@packages/taxonomy';
 import { SettingsManagementModule } from './modules/settings/settings.module';
 import { UserNotificationsModule } from './modules/user-notifications/user-notifications.module';
@@ -74,7 +73,6 @@ import { validate } from './config/env.validation';
     AuthOrchestratorModule,
     UsersModule,
     TasksModule,
-    WorkflowsManagementModule,
     TaxonomyModule,
     SettingsManagementModule,
     UserNotificationsModule,

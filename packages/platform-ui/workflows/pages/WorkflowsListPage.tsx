@@ -9,7 +9,7 @@ import { useWorkflows, useDeleteWorkflow } from '../hooks';
 import { AddWorkflowForm } from '../components/AddWorkflowForm';
 import type { WorkflowDefinition } from '../types';
 
-export default function WorkflowsListPage() {
+export function WorkflowsListPage() {
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [deletingWorkflow, setDeletingWorkflow] = useState<WorkflowDefinition | null>(null);
   const navigate = useNavigate();

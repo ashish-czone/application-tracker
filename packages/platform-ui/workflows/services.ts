@@ -1,0 +1,57 @@
+import type { ApiFn } from '../PlatformUIProvider';
+import type {
+  WorkflowDefinition,
+  CreateWorkflowRequest,
+  UpdateWorkflowRequest,
+  CreateStateRequest,
+  UpdateStateRequest,
+  CreateTransitionRequest,
+  UpdateTransitionRequest,
+  WorkflowState,
+  WorkflowTransition,
+} from './types';
+
+export function createWorkflowsApi(api: ApiFn) {
+  return {
+    // Definitions
+    listWorkflows(): Promise<WorkflowDefinition[]> {
+      return api.get<WorkflowDefinition[]>('/workflows');
+    },
+    getWorkflow(slug: string): Promise<WorkflowDefinition> {
+      return api.get<WorkflowDefinition>(`/workflows/${slug}`);
+    },
+    createWorkflow(data: CreateWorkflowRequest): Promise<WorkflowDefinition> {
+      return api.post<WorkflowDefinition>('/workflows', data);
+    },
+    updateWorkflow(id: string, data: UpdateWorkflowRequest): Promise<WorkflowDefinition> {
+      return api.patch<WorkflowDefinition>(`/workflows/${id}`, data);
+    },
+    deleteWorkflow(id: string): Promise<void> {
+      return api.delete<void>(`/workflows/${id}`);
+    },
+
+    // States
+    createState(definitionId: string, data: CreateStateRequest): Promise<WorkflowState> {
+      return api.post<WorkflowState>(`/workflows/${definitionId}/states`, data);
+    },
+    updateState(stateId: string, data: UpdateStateRequest): Promise<WorkflowState> {
+      return api.patch<WorkflowState>(`/workflows/states/${stateId}`, data);
+    },
+    deleteState(stateId: string): Promise<void> {
+      return api.delete<void>(`/workflows/states/${stateId}`);
+    },
+
+    // Transitions
+    createTransition(definitionId: string, data: CreateTransitionRequest): Promise<WorkflowTransition> {
+      return api.post<WorkflowTransition>(`/workflows/${definitionId}/transitions`, data);
+    },
+    updateTransition(transitionId: string, data: UpdateTransitionRequest): Promise<WorkflowTransition> {
+      return api.patch<WorkflowTransition>(`/workflows/transitions/${transitionId}`, data);
+    },
+    deleteTransition(transitionId: string): Promise<void> {
+      return api.delete<void>(`/workflows/transitions/${transitionId}`);
+    },
+  };
+}
+
+export type WorkflowsApi = ReturnType<typeof createWorkflowsApi>;

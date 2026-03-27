@@ -1,10 +1,13 @@
-import { Global, Module } from '@nestjs/common';
+import { Global, Module, type OnModuleInit } from '@nestjs/common';
+import { RbacService } from '@packages/rbac';
 import { WorkflowGuardRegistry } from './services/workflow-guard-registry.service';
 import { WorkflowRegistryService } from './services/workflow-registry.service';
 import { WorkflowEngineService } from './services/workflow-engine.service';
+import { WorkflowsController } from './controllers/workflows.controller';
 
 @Global()
 @Module({
+  controllers: [WorkflowsController],
   providers: [
     WorkflowGuardRegistry,
     WorkflowRegistryService,
@@ -16,4 +19,13 @@ import { WorkflowEngineService } from './services/workflow-engine.service';
     WorkflowEngineService,
   ],
 })
-export class WorkflowsModule {}
+export class WorkflowsModule implements OnModuleInit {
+  constructor(private readonly rbacService: RbacService) {}
+
+  onModuleInit() {
+    this.rbacService.registerPermissions('workflows', [
+      { action: 'read', description: 'View workflow definitions' },
+      { action: 'manage', description: 'Create, update, and delete workflow definitions, states, and transitions' },
+    ]);
+  }
+}
