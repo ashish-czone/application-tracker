@@ -110,29 +110,38 @@ export function DataGridToolbar<TData>({
             <Columns3 className="h-4 w-4" />
             <span className="hidden sm:inline">Columns</span>
           </button>
-          {columnMenuOpen && (
-            <div className="absolute right-0 top-full mt-1 z-50 w-48 rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
-              {table
-                .getAllLeafColumns()
-                .filter((col) => col.getCanHide())
-                .map((column) => (
-                  <label
-                    key={column.id}
-                    className="flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm cursor-pointer hover:bg-accent"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={column.getIsVisible()}
-                      onChange={column.getToggleVisibilityHandler()}
-                      className="rounded border-input"
-                    />
-                    {typeof column.columnDef.header === 'string'
-                      ? column.columnDef.header
-                      : column.id}
-                  </label>
-                ))}
-            </div>
-          )}
+          {columnMenuOpen && (() => {
+            const hideable = table.getAllLeafColumns().filter((col) => col.getCanHide());
+            const visibleCount = hideable.filter((col) => col.getIsVisible()).length;
+            return (
+              <div className="absolute right-0 top-full mt-1 z-50 w-56 rounded-md border bg-popover p-1 text-popover-foreground shadow-md max-h-72 overflow-y-auto">
+                {hideable.map((column) => {
+                  const isVisible = column.getIsVisible();
+                  const isLastVisible = isVisible && visibleCount <= 1;
+                  return (
+                    <label
+                      key={column.id}
+                      className={cn(
+                        'flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm cursor-pointer hover:bg-accent',
+                        isLastVisible && 'opacity-50 cursor-not-allowed',
+                      )}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isVisible}
+                        disabled={isLastVisible}
+                        onChange={column.getToggleVisibilityHandler()}
+                        className="rounded border-input"
+                      />
+                      {typeof column.columnDef.header === 'string'
+                        ? column.columnDef.header
+                        : column.id}
+                    </label>
+                  );
+                })}
+              </div>
+            );
+          })()}
         </div>
 
         {/* Export */}

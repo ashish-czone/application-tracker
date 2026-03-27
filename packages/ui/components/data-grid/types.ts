@@ -104,6 +104,12 @@ export interface DataGridProps<TData> {
   /** localStorage key for persisting column visibility preferences */
   storageKey?: string;
 
+  /** Default column visibility when no user preference is stored. Keys are column IDs, values are booleans. */
+  defaultColumnVisibility?: Record<string, boolean>;
+
+  /** Default column visibility when no user preference is stored. Keys are column IDs, values are booleans. */
+  defaultColumnVisibility?: Record<string, boolean>;
+
   /** Render function for mobile card view. If omitted, table is used on all screen sizes. */
   renderCard?: (row: TData) => ReactNode;
 
