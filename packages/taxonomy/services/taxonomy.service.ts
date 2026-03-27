@@ -211,8 +211,27 @@ export class TaxonomyService {
       .orderBy(asc(tags.name));
   }
 
-  async listTagOptionsByGroupSlug(slug: string): Promise<{ value: string; label: string; color: string | null }[]> {
-    const tagList = await this.listTagsByGroupSlug(slug);
+  async listTagOptionsByGroupSlug(slug: string, search?: string, limit?: number): Promise<{ value: string; label: string; color: string | null }[]> {
+    const [group] = await this.database.db
+      .select({ id: tagGroups.id })
+      .from(tagGroups)
+      .where(eq(tagGroups.slug, slug))
+      .limit(1);
+
+    if (!group) return [];
+
+    const conditions = [eq(tags.tagGroupId, group.id)];
+    if (search) {
+      conditions.push(ilike(tags.name, `%${search}%`));
+    }
+
+    const tagList = await this.database.db
+      .select()
+      .from(tags)
+      .where(and(...conditions))
+      .orderBy(asc(tags.name))
+      .limit(limit ?? 50);
+
     return tagList.map(t => ({ value: t.id, label: t.name, color: t.color }));
   }
 

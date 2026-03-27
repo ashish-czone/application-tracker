@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -52,34 +52,21 @@ export function EntityQuickCreateForm({ entityType, singularName, onClose, onSuc
     enabled: lookupEntities.length > 0,
   });
 
-  // Fetch chip options for tags/multi fields in quick create
-  const chipFields = useMemo(() => {
-    if (!layout) return [];
-    return layout.quickCreateFields.filter(
-      (f) => f.fieldType === 'tags' || f.fieldType === 'multi_user' || f.fieldType === 'multi_lookup',
-    );
-  }, [layout]);
+  // Async search callbacks for chip fields
+  const searchUsers = useCallback(async (query: string) => {
+    const res = await apiFn.get<{ data: { id: string; firstName: string; lastName: string }[] }>(`/users?search=${encodeURIComponent(query)}&limit=20`);
+    return res.data.map((u) => ({ label: `${u.firstName} ${u.lastName}`.trim(), value: u.id }));
+  }, [apiFn]);
 
-  const { data: chipOptionsMap } = useQuery({
-    queryKey: ['chip-options-quick', chipFields.map(f => f.fieldKey)],
-    queryFn: async () => {
-      const map: Record<string, { label: string; value: string; color?: string }[]> = {};
-      for (const field of chipFields) {
-        try {
-          if (field.fieldType === 'tags' && field.tagGroupSlug) {
-            map[field.fieldKey] = await apiFn.get(`/tags/group/${field.tagGroupSlug}`);
-          } else if ((field.fieldType === 'multi_user' || field.fieldType === 'multi_lookup') && field.lookupEntity) {
-            const results = await apiFn.get<{ label: string; value: string }[]>(`/lookups/${field.lookupEntity}?limit=200`);
-            map[field.fieldKey] = results;
-          }
-        } catch {
-          map[field.fieldKey] = [];
-        }
-      }
-      return map;
-    },
-    enabled: chipFields.length > 0,
-  });
+  const searchLookupChip = useCallback(async (entity: string, query: string) => {
+    return apiFn.get<{ label: string; value: string }[]>(`/lookups/${entity}?search=${encodeURIComponent(query)}&limit=20`);
+  }, [apiFn]);
+
+  const searchTags = useCallback(async (groupSlug: string, query: string) => {
+    return apiFn.get<{ label: string; value: string; color?: string }[]>(
+      `/tags/group/${groupSlug}?search=${encodeURIComponent(query)}&limit=20`,
+    );
+  }, [apiFn]);
 
   const quickCreateFields = useMemo(
     () => layout?.quickCreateFields ?? [],
@@ -167,7 +154,12 @@ export function EntityQuickCreateForm({ entityType, singularName, onClose, onSuc
               field={field}
               mode="edit"
               lookupOptions={field.lookupEntity ? lookupOptionsMap?.[field.lookupEntity] : undefined}
-              chipOptions={chipOptionsMap?.[field.fieldKey]}
+              onChipSearch={
+                field.fieldType === 'multi_user' ? searchUsers
+                : field.fieldType === 'multi_lookup' && field.lookupEntity ? (q: string) => searchLookupChip(field.lookupEntity!, q)
+                : field.fieldType === 'tags' && field.tagGroupSlug ? (q: string) => searchTags(field.tagGroupSlug!, q)
+                : undefined
+              }
             />
           ))}
         </div>

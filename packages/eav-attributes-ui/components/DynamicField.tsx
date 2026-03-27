@@ -250,7 +250,8 @@ function DynamicFieldEdit({ field, resolvedLabel, lookupOptions, chipOptions, on
         <FormChipInput
           name={field.fieldKey}
           label={label}
-          options={chipOptions ?? []}
+          options={onChipSearch ? undefined : (chipOptions ?? [])}
+          onSearch={onChipSearch}
           placeholder={`Search and add ${field.label.toLowerCase()}...`}
           disabled={disabled}
         />

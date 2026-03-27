@@ -80,8 +80,16 @@ export class TagsController {
   @Get('tags/group/:slug')
   @RequirePermission(TAXONOMY_PERMISSIONS.TAGS_READ)
   @ApiOperation({ summary: 'List tags by group slug as select options' })
-  async getTagsByGroupSlug(@Param('slug') slug: string) {
-    return this.taxonomyService.listTagOptionsByGroupSlug(slug);
+  async getTagsByGroupSlug(
+    @Param('slug') slug: string,
+    @Query('search') search?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.taxonomyService.listTagOptionsByGroupSlug(
+      slug,
+      search || undefined,
+      limit ? parseInt(limit, 10) : undefined,
+    );
   }
 
   @Get('tags/:id')
