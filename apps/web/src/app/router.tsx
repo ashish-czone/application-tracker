@@ -2,7 +2,7 @@ import { Suspense, lazy } from 'react';
 import { Routes, Route, Navigate } from 'react-router';
 import { AppLayout } from './layout/AppLayout';
 import { AuthGuard } from '../shared/auth/components/AuthGuard';
-import { UsersListPage, RolesListPage, TasksListPage, WorkflowsListPage, WorkflowEditorPage, AutomationsPage, RuleBuilderPage, SettingsPage } from '../portals/customer/routes';
+import { UsersListPage, RolesListPage, TasksListPage, WorkflowsListPage, WorkflowEditorPage, AutomationsPage, RuleBuilderPage, SettingsPage, TagGroupsListPage, CategoryGroupsListPage } from '../portals/customer/routes';
 
 const LoginPage = lazy(() => import('../shared/auth/pages/LoginPage'));
 const RegisterPage = lazy(() => import('../shared/auth/pages/RegisterPage'));
@@ -114,6 +114,14 @@ export function AppRouter() {
                 <RuleBuilderPage />
               </Suspense>
             }
+          />
+          <Route
+            path="/tag-groups"
+            element={<TagGroupsListPage />}
+          />
+          <Route
+            path="/categories"
+            element={<CategoryGroupsListPage />}
           />
           <Route
             path="/settings"

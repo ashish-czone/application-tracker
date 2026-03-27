@@ -400,6 +400,9 @@ importers:
       '@packages/entity-engine-ui':
         specifier: workspace:*
         version: link:../../packages/entity-engine-ui
+      '@packages/platform-ui-taxonomy':
+        specifier: workspace:*
+        version: link:../../packages/platform-ui/taxonomy
       '@packages/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -476,6 +479,9 @@ importers:
       '@hookform/resolvers':
         specifier: ^5.0.0
         version: 5.2.2(react-hook-form@7.71.2(react@19.2.4))
+      '@packages/platform-ui-taxonomy':
+        specifier: workspace:*
+        version: link:../../packages/platform-ui/taxonomy
       '@packages/ui':
         specifier: workspace:*
         version: link:../../packages/ui
