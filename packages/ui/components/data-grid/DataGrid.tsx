@@ -48,6 +48,7 @@ export function DataGrid<TData>({
   onRetry,
   emptyState,
   storageKey,
+  defaultColumnVisibility,
   renderCard,
   toolbarActions,
   rowClassName,
@@ -55,13 +56,13 @@ export function DataGrid<TData>({
   exportFilename,
 }: DataGridProps<TData>) {
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(() => {
-    if (!storageKey) return {};
-    try {
-      const stored = localStorage.getItem(`datagrid-columns-${storageKey}`);
-      return stored ? JSON.parse(stored) : {};
-    } catch {
-      return {};
+    if (storageKey) {
+      try {
+        const stored = localStorage.getItem(`datagrid-columns-${storageKey}`);
+        if (stored) return JSON.parse(stored);
+      } catch { /* fall through to default */ }
     }
+    return defaultColumnVisibility ?? {};
   });
 
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});

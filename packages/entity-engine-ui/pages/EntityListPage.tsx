@@ -198,16 +198,54 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
     return String(row[nameField] ?? row.id ?? '');
   };
 
+  // Field types excluded from the column chooser
+  const EXCLUDED_FIELD_TYPES = new Set(['textarea', 'file', 'auto_number']);
+
+  // All entity fields (for column chooser)
+  const allFields = useMemo(() => {
+    if (!layout) return [];
+    return layout.sections.flatMap((s) => s.fields);
+  }, [layout]);
+
+  const nameFields = useMemo(
+    () => new Set(Array.isArray(entity.ui.nameField) ? entity.ui.nameField : [entity.ui.nameField]),
+    [entity.ui.nameField],
+  );
+
+  // Default column visibility: list layout visible columns = shown, everything else = hidden
+  const defaultColumnVisibility = useMemo<Record<string, boolean>>(() => {
+    if (!layout) return {};
+    const listCols = listLayout?.columns ?? [];
+    const visibleKeys = new Set(listCols.filter((c) => c.visible).map((c) => c.fieldKey));
+    const visibility: Record<string, boolean> = {};
+
+    // All eligible fields
+    for (const field of allFields) {
+      if (nameFields.has(field.fieldKey)) continue;
+      if (EXCLUDED_FIELD_TYPES.has(field.fieldType)) continue;
+      if (field.isSystem && !field.isQuickCreate) continue;
+      visibility[field.fieldKey] = visibleKeys.has(field.fieldKey);
+    }
+
+    // Computed columns from list layout (relationship counts)
+    for (const col of listCols) {
+      if (!allFields.some((f) => f.fieldKey === col.fieldKey)) {
+        visibility[col.fieldKey] = col.visible;
+      }
+    }
+
+    return visibility;
+  }, [layout, listLayout, allFields, nameFields]);
+
   // Auto-generate columns from field definitions
   const columns = useMemo<ColumnDef<Row, unknown>[]>(() => {
     if (!layout) return [];
-
-    const allFields = layout.sections.flatMap((s) => s.fields);
 
     // Name column (first column, links to detail page)
     const nameCol: ColumnDef<Row, unknown> = {
       id: '__name__',
       header: entity.singularName,
+      enableHiding: false,
       cell: ({ row }) => {
         const item = row.original;
         const isDeleted = !!item.deletedAt;
@@ -236,32 +274,53 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
       enableSorting: false,
     };
 
-    // Dynamic columns from list layout (uses visible/order flags from backend)
-    const nameFields = new Set(Array.isArray(entity.ui.nameField) ? entity.ui.nameField : [entity.ui.nameField]);
-    const listCols = listLayout?.columns ?? [];
-    const visibleListCols = listCols
-      .filter((c) => c.visible && !nameFields.has(c.fieldKey))
-      .sort((a, b) => a.order - b.order);
-
-    // Build columns from list layout, falling back to field defs for formatting
+    // Build columns for ALL eligible entity fields (column chooser shows all)
     const fieldMap = new Map(allFields.map((f) => [f.fieldKey, f]));
-    const dynamicCols: ColumnDef<Row, unknown>[] = visibleListCols.map((col) => {
-      const field = fieldMap.get(col.fieldKey);
-      // If we have a field definition, use buildColumnDefs formatting
+    const listCols = listLayout?.columns ?? [];
+    const listColMap = new Map(listCols.map((c) => [c.fieldKey, c]));
+
+    // Collect all eligible field keys (preserving list layout order for layout fields, then remaining)
+    const orderedFieldKeys: string[] = [];
+    const addedKeys = new Set<string>();
+
+    // First: list layout columns in their configured order
+    for (const col of listCols.sort((a, b) => a.order - b.order)) {
+      if (!nameFields.has(col.fieldKey)) {
+        orderedFieldKeys.push(col.fieldKey);
+        addedKeys.add(col.fieldKey);
+      }
+    }
+
+    // Then: remaining entity fields not in list layout (sorted by sortOrder)
+    for (const field of allFields) {
+      if (addedKeys.has(field.fieldKey)) continue;
+      if (nameFields.has(field.fieldKey)) continue;
+      if (EXCLUDED_FIELD_TYPES.has(field.fieldType)) continue;
+      if (field.isSystem && !field.isQuickCreate) continue;
+      orderedFieldKeys.push(field.fieldKey);
+      addedKeys.add(field.fieldKey);
+    }
+
+    const dynamicCols: ColumnDef<Row, unknown>[] = orderedFieldKeys.map((key) => {
+      const field = fieldMap.get(key);
+      const listCol = listColMap.get(key);
+
+      // Entity field — use buildColumnDefs formatting
       if (field) {
         return buildColumnDefs([field], { maxColumns: 1 })[0];
       }
-      // For computed columns (relationship counts), render as clickable link
+
+      // Computed column (relationship counts) — render as clickable link
       return {
-        id: col.fieldKey,
-        header: col.label,
-        accessorKey: col.fieldKey,
-        enableSorting: col.sortable,
+        id: key,
+        header: listCol?.label ?? key,
+        accessorKey: key,
+        enableSorting: listCol?.sortable ?? false,
         cell: ({ getValue, row }: any) => {
           const val = getValue();
           if (val === null || val === undefined) return '-';
           const count = Number(val);
-          if (col.relationship && count > 0) {
+          if (listCol?.relationship && count > 0) {
             return (
               <button
                 type="button"
@@ -269,10 +328,10 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
                 onClick={(e: any) => {
                   e.stopPropagation();
                   setBrowsePanel({
-                    targetEntity: col.relationship.targetEntity,
-                    foreignKey: col.relationship.foreignKey,
+                    targetEntity: listCol.relationship.targetEntity,
+                    foreignKey: listCol.relationship.foreignKey,
                     parentId: String(row.original.id),
-                    label: col.label.replace(' Count', ''),
+                    label: (listCol.label ?? key).replace(' Count', ''),
                   });
                 }}
               >
@@ -325,7 +384,7 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
     };
 
     return [nameCol, ...dynamicCols, actionsCol];
-  }, [layout, listLayout, entity, navigate]);
+  }, [layout, listLayout, entity, navigate, allFields, nameFields]);
 
   return (
     <div>
@@ -410,6 +469,7 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
           }},
         }}
         storageKey={`${entity.slug}-list`}
+        defaultColumnVisibility={defaultColumnVisibility}
         rowClassName={(row) => (row as Row).deletedAt ? 'bg-muted/30 text-muted-foreground' : undefined}
         toolbarActions={
           <div className="flex items-center gap-2">
