@@ -42,8 +42,8 @@ export function DynamicSection({ section, values, onSave, isSaving, fieldLookupO
     const defaults: Record<string, unknown> = {};
     for (const field of editableFields) {
       let val = values[field.fieldKey];
-      // multi_user/multi_lookup values come hydrated as [{id, label}] — extract IDs for the form
-      if ((field.fieldType === 'multi_user' || field.fieldType === 'multi_lookup') && Array.isArray(val)) {
+      // multi_user/multi_lookup/tags values come hydrated as [{id, ...}] — extract IDs for the form
+      if ((field.fieldType === 'multi_user' || field.fieldType === 'multi_lookup' || field.fieldType === 'tags') && Array.isArray(val)) {
         val = val.map((v: any) => typeof v === 'object' && v?.id ? v.id : v);
       }
       defaults[field.fieldKey] = val ?? (field.defaultValue ?? '');
@@ -116,12 +116,12 @@ export function DynamicSection({ section, values, onSave, isSaving, fieldLookupO
 
   const renderEditColumn = (fields: typeof editableFields) =>
     fields.map(field => {
-      // For multi_user/multi_lookup, derive chip options from hydrated values so existing selections show labels
+      // For multi_user/multi_lookup/tags, derive chip options from hydrated values so existing selections show labels
       let chipOpts = fieldChipOptions?.[field.fieldKey];
-      if ((field.fieldType === 'multi_user' || field.fieldType === 'multi_lookup') && !chipOpts) {
+      if ((field.fieldType === 'multi_user' || field.fieldType === 'multi_lookup' || field.fieldType === 'tags') && !chipOpts) {
         const rawVal = values[field.fieldKey];
         if (Array.isArray(rawVal) && rawVal.length > 0 && typeof rawVal[0] === 'object' && rawVal[0]?.id) {
-          chipOpts = rawVal.map((v: any) => ({ label: v.label ?? v.id, value: v.id }));
+          chipOpts = rawVal.map((v: any) => ({ label: v.label ?? v.name ?? v.id, value: v.id, color: v.color }));
         }
       }
       // Pass resolved label for user/lookup fields so FormSelect shows the name on initial render
