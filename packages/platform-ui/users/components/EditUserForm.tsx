@@ -15,7 +15,8 @@ import {
   useAsyncValidator,
 } from '@packages/ui';
 import { useUpdateUser } from '../hooks';
-import { checkUnique } from '../services';
+import { usePlatformAPI } from '../../PlatformUIProvider';
+import { createUsersApi } from '../services';
 import type { User } from '../types';
 
 const editUserSchema = z.object({
@@ -33,6 +34,8 @@ interface EditUserFormProps {
 }
 
 export function EditUserForm({ user, onClose }: EditUserFormProps) {
+  const apiFn = usePlatformAPI();
+  const usersApi = createUsersApi(apiFn);
   const form = useForm<EditUserFormValues>({
     resolver: zodResolver(editUserSchema),
     defaultValues: {
@@ -45,7 +48,7 @@ export function EditUserForm({ user, onClose }: EditUserFormProps) {
 
   const emailValidator = useAsyncValidator({
     checkFn: useCallback(
-      (value: string) => checkUnique('users', 'email', value, user.id).then((r) => r.unique),
+      (value: string) => usersApi.checkUnique('users', 'email', value, user.id).then((r) => r.unique),
       [user.id],
     ),
     errorMessage: 'This email is already in use',
