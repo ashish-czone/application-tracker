@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router';
 import {
   ChevronsLeft,
@@ -9,6 +9,7 @@ import {
   LogOut,
   UserCircle,
   ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
 import { cn } from '@packages/ui/lib/utils';
 import { EntityNavItems } from '@packages/entity-engine-ui';
@@ -21,9 +22,111 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from '@packages/ui';
-import { recruiterMenu } from '../../portals/recruiter/menu';
+import { recruiterMenu, type MenuItem } from '../../portals/recruiter/menu';
 import { useAuth } from '../../shared/auth/hooks/useAuth';
 import { useLogout } from '../../shared/auth/hooks/useLogout';
+
+function NavItem({ item, collapsed }: { item: MenuItem; collapsed: boolean }) {
+  const { path, label, icon: Icon } = item;
+  return (
+    <NavLink
+      to={path}
+      end={path === '/'}
+      className={({ isActive }) =>
+        cn(
+          'group flex items-center gap-2.5 rounded-lg h-9 text-[13px] font-medium transition-colors duration-150',
+          collapsed ? 'justify-center w-full' : 'px-2.5',
+          isActive
+            ? 'bg-primary/[0.08] text-primary'
+            : 'text-sidebar-muted hover:text-sidebar-foreground hover:bg-black/[0.03]',
+        )
+      }
+      title={collapsed ? label : undefined}
+    >
+      <Icon className="w-4 h-4 shrink-0" strokeWidth={1.75} />
+      <span className={cn('transition-[opacity,width] duration-200', collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100')}>
+        {label}
+      </span>
+    </NavLink>
+  );
+}
+
+function NavGroup({ item, collapsed, can }: { item: MenuItem; collapsed: boolean; can: (p: string) => boolean }) {
+  const location = useLocation();
+  const childPaths = item.children?.map((c) => c.path) ?? [];
+  const isChildActive = childPaths.some((p) => location.pathname === p || location.pathname.startsWith(p + '/'));
+  const [open, setOpen] = useState(isChildActive);
+
+  // Auto-open when navigating to a child
+  useEffect(() => {
+    if (isChildActive && !open) setOpen(true);
+  }, [isChildActive]);
+
+  const visibleChildren = (item.children ?? []).filter((c) => !c.permission || can(c.permission));
+  const Icon = item.icon;
+
+  if (collapsed) {
+    // When collapsed, just show the icon — clicking navigates to first child
+    return (
+      <NavLink
+        to={visibleChildren[0]?.path ?? item.path}
+        className={cn(
+          'group flex items-center justify-center rounded-lg h-9 w-full text-[13px] font-medium transition-colors duration-150',
+          isChildActive
+            ? 'bg-primary/[0.08] text-primary'
+            : 'text-sidebar-muted hover:text-sidebar-foreground hover:bg-black/[0.03]',
+        )}
+        title={item.label}
+      >
+        <Icon className="w-4 h-4 shrink-0" strokeWidth={1.75} />
+      </NavLink>
+    );
+  }
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className={cn(
+          'w-full flex items-center gap-2.5 rounded-lg h-9 px-2.5 text-[13px] font-medium transition-colors duration-150',
+          isChildActive
+            ? 'text-primary'
+            : 'text-sidebar-muted hover:text-sidebar-foreground hover:bg-black/[0.03]',
+        )}
+      >
+        <Icon className="w-4 h-4 shrink-0" strokeWidth={1.75} />
+        <span className="flex-1 text-left">{item.label}</span>
+        <ChevronRight
+          className={cn('w-3.5 h-3.5 shrink-0 transition-transform duration-200', open && 'rotate-90')}
+          strokeWidth={1.75}
+        />
+      </button>
+      {open && (
+        <div className="ml-4 pl-2.5 border-l border-sidebar-border space-y-0.5 mt-0.5">
+          {visibleChildren.map((child) => (
+            <NavLink
+              key={child.path}
+              to={child.path}
+              end={child.path === item.path}
+              className={({ isActive }) =>
+                cn(
+                  'flex items-center gap-2 rounded-lg h-8 px-2.5 text-[12.5px] font-medium transition-colors duration-150',
+                  isActive
+                    ? 'bg-primary/[0.08] text-primary'
+                    : 'text-sidebar-muted hover:text-sidebar-foreground hover:bg-black/[0.03]',
+                )
+              }
+            >
+              <child.icon className="w-3.5 h-3.5 shrink-0" strokeWidth={1.75} />
+              <span>{child.label}</span>
+            </NavLink>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function AppLayout() {
   const [collapsed, setCollapsed] = useState(false);
@@ -40,9 +143,20 @@ export function AppLayout() {
     setMobileOpen(false);
   }, [location.pathname]);
 
-  const currentPage = navItems.find(
-    (item) => (item.path === '/' ? location.pathname === '/' : location.pathname.startsWith(item.path)),
-  );
+  const currentPage = useMemo(() => {
+    for (const item of navItems) {
+      if (item.children) {
+        const child = item.children.find((c) =>
+          c.path === '/' ? location.pathname === '/' : location.pathname === c.path || location.pathname.startsWith(c.path + '/'),
+        );
+        if (child) return child;
+      }
+      if (item.path === '/' ? location.pathname === '/' : location.pathname.startsWith(item.path)) {
+        return item;
+      }
+    }
+    return undefined;
+  }, [navItems, location.pathname]);
 
   return (
     <div className="min-h-screen bg-content-bg">
@@ -84,53 +198,20 @@ export function AppLayout() {
         {/* Nav items */}
         <nav className="flex-1 px-2.5 pt-2 space-y-0.5 overflow-y-auto">
           {/* Before-entity items (Dashboard) */}
-          {navItems.filter((i) => i.position !== 'after').map(({ path, label, icon: Icon }) => (
-            <NavLink
-              key={path}
-              to={path}
-              end={path === '/'}
-              className={({ isActive }) =>
-                cn(
-                  'group flex items-center gap-2.5 rounded-lg h-9 text-[13px] font-medium transition-colors duration-150',
-                  collapsed ? 'justify-center w-full' : 'px-2.5',
-                  isActive
-                    ? 'bg-primary/[0.08] text-primary'
-                    : 'text-sidebar-muted hover:text-sidebar-foreground hover:bg-black/[0.03]',
-                )
-              }
-              title={collapsed ? label : undefined}
-            >
-              <Icon className="w-4 h-4 shrink-0" strokeWidth={1.75} />
-              <span className={cn('transition-[opacity,width] duration-200', collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100')}>
-                {label}
-              </span>
-            </NavLink>
+          {navItems.filter((i) => i.position !== 'after').map((item) => (
+            <NavItem key={item.path} item={item} collapsed={collapsed} />
           ))}
 
           {/* Entity nav items — auto-generated from registry */}
           <EntityNavItems collapsed={collapsed} />
 
           {/* After-entity items (Automations, Settings) */}
-          {navItems.filter((i) => i.position === 'after').map(({ path, label, icon: Icon }) => (
-            <NavLink
-              key={path}
-              to={path}
-              className={({ isActive }) =>
-                cn(
-                  'group flex items-center gap-2.5 rounded-lg h-9 text-[13px] font-medium transition-colors duration-150',
-                  collapsed ? 'justify-center w-full' : 'px-2.5',
-                  isActive
-                    ? 'bg-primary/[0.08] text-primary'
-                    : 'text-sidebar-muted hover:text-sidebar-foreground hover:bg-black/[0.03]',
-                )
-              }
-              title={collapsed ? label : undefined}
-            >
-              <Icon className="w-4 h-4 shrink-0" strokeWidth={1.75} />
-              <span className={cn('transition-[opacity,width] duration-200', collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100')}>
-                {label}
-              </span>
-            </NavLink>
+          {navItems.filter((i) => i.position === 'after').map((item) => (
+            item.children ? (
+              <NavGroup key={item.path} item={item} collapsed={collapsed} can={can} />
+            ) : (
+              <NavItem key={item.path} item={item} collapsed={collapsed} />
+            )
           ))}
         </nav>
 
