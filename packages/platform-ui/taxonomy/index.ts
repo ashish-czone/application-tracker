@@ -29,6 +29,15 @@ export { AddTagForm } from './components/AddTagForm';
 export { EditTagForm } from './components/EditTagForm';
 export { DeleteTagDialog } from './components/DeleteTagDialog';
 
+export { CategoryGroupsListPage } from './pages/CategoryGroupsListPage';
+export { CategoryTree } from './components/CategoryTree';
+export { AddCategoryGroupForm } from './components/AddCategoryGroupForm';
+export { EditCategoryGroupForm } from './components/EditCategoryGroupForm';
+export { DeleteCategoryGroupDialog } from './components/DeleteCategoryGroupDialog';
+export { AddCategoryForm } from './components/AddCategoryForm';
+export { EditCategoryForm } from './components/EditCategoryForm';
+export { DeleteCategoryDialog } from './components/DeleteCategoryDialog';
+
 export type {
   TaxonomyApiFn,
   TagGroup,
