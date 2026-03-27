@@ -4,7 +4,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { RequirePermission } from '@packages/rbac';
-import { NotificationTemplatesService } from '@packages/notifications';
+import { NotificationTemplatesService } from '../services/notification-templates.service';
 import { CreateTemplateDto } from '../dto/create-template.dto';
 import { UpdateTemplateDto } from '../dto/update-template.dto';
 import { ListTemplatesQueryDto } from '../dto/list-templates-query.dto';

@@ -34,7 +34,6 @@ import { INTERVIEWS_CONFIG } from './modules/interviews/interviews.config';
 import { ClientsModule } from './modules/clients/clients.module';
 import { JobOpeningsModule } from './modules/job-openings/job-openings.module';
 import { EavManagementModule } from './modules/eav-management/eav-management.module';
-import { NotificationRulesModule } from './modules/notification-rules/notification-rules.module';
 import { UsersModule } from './modules/users/users.module';
 import { validate } from './config/env.validation';
 
@@ -96,7 +95,6 @@ import { validate } from './config/env.validation';
     ClientsModule, // sample data seeding: clients, contacts, vendors, interviews
     JobOpeningsModule, // sample data seeding: job openings, applications
     EavManagementModule,
-    NotificationRulesModule,
     UsersModule,
   ],
   providers: [

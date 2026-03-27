@@ -1,4 +1,5 @@
 export { NotificationsModule } from './notifications.module';
+export { NOTIFICATION_RULES_PERMISSIONS } from './permissions';
 export { NotificationDispatcher } from './services/notification-dispatcher';
 export { PreferenceService } from './services/preference.service';
 export { NotificationTemplatesService } from './services/notification-templates.service';
