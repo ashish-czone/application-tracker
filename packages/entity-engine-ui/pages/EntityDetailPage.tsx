@@ -65,6 +65,12 @@ export function EntityDetailPage({ entityType }: EntityDetailPageProps) {
     return apiFn.get<{ label: string; value: string }[]>(`/lookups/${entity}?search=${encodeURIComponent(query)}&limit=20`);
   }, [apiFn]);
 
+  const searchTags = useCallback(async (groupSlug: string, query: string) => {
+    return apiFn.get<{ label: string; value: string; color?: string }[]>(
+      `/tags/group/${groupSlug}?search=${encodeURIComponent(query)}&limit=20`,
+    );
+  }, [apiFn]);
+
   const getFieldSearch = useCallback((_fieldKey: string, fieldType: string, lookupEntity?: string) => {
     if (fieldType === 'user') return searchUsers;
     if ((fieldType === 'lookup' || fieldType === 'category') && lookupEntity) {
@@ -83,10 +89,18 @@ export function EntityDetailPage({ entityType }: EntityDetailPageProps) {
     return undefined;
   }, [searchUsers, searchLookup, layout]);
 
-  const getChipSearchForSection = useCallback((_fieldKey: string, fieldType: string) => {
+  const getChipSearchForSection = useCallback((fieldKey: string, fieldType: string) => {
     if (fieldType === 'multi_user') return searchUsers;
+    if (fieldType === 'tags' && layout) {
+      for (const section of layout.sections) {
+        const field = section.fields.find(f => f.fieldKey === fieldKey);
+        if (field?.tagGroupSlug) {
+          return (query: string) => searchTags(field.tagGroupSlug!, query);
+        }
+      }
+    }
     return undefined;
-  }, [searchUsers]);
+  }, [searchUsers, searchTags, layout]);
 
   const hasManyRelationships = useMemo(
     () => entity.relationships.filter((r) => r.type === 'hasMany'),

@@ -1,7 +1,6 @@
 import { useMemo, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router';
 import { useForm } from 'react-hook-form';
-import { useQuery } from '@tanstack/react-query';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowLeft, Check } from 'lucide-react';
 import { Form, Button } from '@packages/ui';
@@ -45,25 +44,6 @@ export function EntityCreatePage({ entityType }: EntityCreatePageProps) {
     return steps.flatMap((s) => s.editableFields);
   }, [steps]);
 
-  // Fetch static chip options (tags only — users/lookups use async search)
-  const tagFields = useMemo(() => {
-    return editableFields.filter((f) => f.fieldType === 'tags' && f.tagGroupSlug);
-  }, [editableFields]);
-
-  const { data: tagOptionsMap } = useQuery({
-    queryKey: ['tag-options-create', tagFields.map(f => f.fieldKey)],
-    queryFn: async () => {
-      const map: Record<string, { label: string; value: string; color?: string }[]> = {};
-      for (const field of tagFields) {
-        try {
-          map[field.fieldKey] = await apiFn.get(`/tags/group/${field.tagGroupSlug}`);
-        } catch { map[field.fieldKey] = []; }
-      }
-      return map;
-    },
-    enabled: tagFields.length > 0,
-  });
-
   // Async search callbacks
   const searchUsers = useCallback(async (query: string) => {
     const res = await apiFn.get<{ data: { id: string; firstName: string; lastName: string }[] }>(`/users?search=${encodeURIComponent(query)}&limit=20`);
@@ -72,6 +52,12 @@ export function EntityCreatePage({ entityType }: EntityCreatePageProps) {
 
   const searchLookup = useCallback(async (entity: string, query: string) => {
     return apiFn.get<{ label: string; value: string }[]>(`/lookups/${entity}?search=${encodeURIComponent(query)}&limit=20`);
+  }, [apiFn]);
+
+  const searchTags = useCallback(async (groupSlug: string, query: string) => {
+    return apiFn.get<{ label: string; value: string; color?: string }[]>(
+      `/tags/group/${groupSlug}?search=${encodeURIComponent(query)}&limit=20`,
+    );
   }, [apiFn]);
 
   const schema = useMemo(() => buildFormSchema(editableFields), [editableFields]);
@@ -156,7 +142,6 @@ export function EntityCreatePage({ entityType }: EntityCreatePageProps) {
               key={field.fieldKey}
               field={field}
               mode="edit"
-              chipOptions={field.fieldType === 'tags' ? tagOptionsMap?.[field.fieldKey] : undefined}
               onSearch={
                 field.fieldType === 'user' ? searchUsers
                 : field.fieldType === 'lookup' && field.lookupEntity ? (q: string) => searchLookup(field.lookupEntity!, q)
@@ -165,6 +150,7 @@ export function EntityCreatePage({ entityType }: EntityCreatePageProps) {
               onChipSearch={
                 field.fieldType === 'multi_user' ? searchUsers
                 : (field.fieldType === 'multi_lookup') && field.lookupEntity ? (q: string) => searchLookup(field.lookupEntity!, q)
+                : field.fieldType === 'tags' && field.tagGroupSlug ? (q: string) => searchTags(field.tagGroupSlug!, q)
                 : undefined
               }
             />
