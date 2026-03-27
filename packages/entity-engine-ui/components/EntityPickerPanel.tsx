@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Sheet,
@@ -10,7 +10,6 @@ import {
   Button,
   Badge,
   DataGrid,
-  useDataGridParams,
   toast,
   type ColumnDef,
 } from '@packages/ui';
@@ -74,12 +73,23 @@ export function EntityPickerPanel(props: EntityPickerPanelProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { page, pageSize, sort, order, search, setPage, setPageSize, setSort, setSearch } =
-    useDataGridParams({
-      defaultSort: 'createdAt',
-      defaultOrder: 'desc',
-      defaultPageSize: 10,
-    });
+  // Use local state instead of URL params — this is a panel overlay, not a page
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [search, setSearchRaw] = useState('');
+  const [sort, setSortCol] = useState('createdAt');
+  const [order, setOrder] = useState<'asc' | 'desc'>('desc');
+
+  const setSearch = useCallback((value: string) => {
+    setSearchRaw(value);
+    setPage(1);
+  }, []);
+
+  const setSort = useCallback((column: string, direction: 'asc' | 'desc') => {
+    setSortCol(column);
+    setOrder(direction);
+    setPage(1);
+  }, []);
 
   const { data, isLoading } = hooks.useList({
     ...(filter ? { [filter.key]: filter.value } : {}),
