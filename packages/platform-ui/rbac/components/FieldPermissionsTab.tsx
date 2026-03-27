@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button, Skeleton, toast } from '@packages/ui';
 import { useEntityEngine } from '@packages/entity-engine-ui';
-import { api } from '../../../../../lib/api';
+import { usePlatformAPI } from '../../PlatformUIProvider';
 
 type FieldAccess = 'read_write' | 'read_only' | 'hidden';
 
@@ -16,6 +16,7 @@ interface FieldPermissionEntry {
 }
 
 function useFieldPermissions(roleId: string, entityType: string) {
+  const api = usePlatformAPI();
   return useQuery({
     queryKey: ['field-permissions', roleId, entityType],
     queryFn: () =>
@@ -25,6 +26,7 @@ function useFieldPermissions(roleId: string, entityType: string) {
 }
 
 function useSaveFieldPermissions() {
+  const api = usePlatformAPI();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ roleId, entityType, fields }: {

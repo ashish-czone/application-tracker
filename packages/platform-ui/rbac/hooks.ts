@@ -1,14 +1,8 @@
+import { useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@packages/ui';
-import {
-  listRoles,
-  createRole,
-  updateRole,
-  deleteRole,
-  getRolePermissions,
-  setRolePermissions,
-  getPermissionRegistry,
-} from './services';
+import { usePlatformAPI } from '../PlatformUIProvider';
+import { createRbacApi } from './services';
 import type {
   ListRolesParams,
   CreateRoleRequest,
@@ -16,18 +10,25 @@ import type {
   PermissionEntry,
 } from './types';
 
+function useRbacApi() {
+  const apiFn = usePlatformAPI();
+  return useMemo(() => createRbacApi(apiFn), [apiFn]);
+}
+
 export function useRolesList(params: ListRolesParams) {
+  const api = useRbacApi();
   return useQuery({
     queryKey: ['roles', params],
-    queryFn: () => listRoles(params),
+    queryFn: () => api.listRoles(params),
   });
 }
 
 export function useCreateRole(options?: { onSuccess?: () => void }) {
+  const api = useRbacApi();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: CreateRoleRequest) => createRole(data),
+    mutationFn: (data: CreateRoleRequest) => api.createRole(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['roles'] });
       toast.success('Role created');
@@ -40,10 +41,11 @@ export function useCreateRole(options?: { onSuccess?: () => void }) {
 }
 
 export function useUpdateRole(options?: { onSuccess?: () => void }) {
+  const api = useRbacApi();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdateRoleRequest }) => updateRole(id, data),
+    mutationFn: ({ id, data }: { id: string; data: UpdateRoleRequest }) => api.updateRole(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['roles'] });
       toast.success('Role updated');
@@ -56,10 +58,11 @@ export function useUpdateRole(options?: { onSuccess?: () => void }) {
 }
 
 export function useDeleteRole(options?: { onSuccess?: () => void }) {
+  const api = useRbacApi();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: string) => deleteRole(id),
+    mutationFn: (id: string) => api.deleteRole(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['roles'] });
       toast.success('Role deleted');
@@ -72,19 +75,21 @@ export function useDeleteRole(options?: { onSuccess?: () => void }) {
 }
 
 export function useRolePermissions(roleId: string | null) {
+  const api = useRbacApi();
   return useQuery({
     queryKey: ['roles', roleId, 'permissions'],
-    queryFn: () => getRolePermissions(roleId!),
+    queryFn: () => api.getRolePermissions(roleId!),
     enabled: !!roleId,
   });
 }
 
 export function useSetRolePermissions(options?: { onSuccess?: () => void }) {
+  const api = useRbacApi();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: ({ roleId, permissions }: { roleId: string; permissions: PermissionEntry[] }) =>
-      setRolePermissions(roleId, permissions),
+      api.setRolePermissions(roleId, permissions),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['roles', variables.roleId, 'permissions'] });
       toast.success('Permissions updated');
@@ -97,9 +102,10 @@ export function useSetRolePermissions(options?: { onSuccess?: () => void }) {
 }
 
 export function usePermissionRegistry() {
+  const api = useRbacApi();
   return useQuery({
     queryKey: ['permissions', 'registry'],
-    queryFn: getPermissionRegistry,
+    queryFn: () => api.getPermissionRegistry(),
     staleTime: Infinity,
   });
 }
