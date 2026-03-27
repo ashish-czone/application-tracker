@@ -4,7 +4,7 @@ import { cn, Button, ConfirmDialog } from '@packages/ui';
 import { useSettings, useResetSetting } from '../hooks';
 import { SettingField } from '../components/SettingField';
 
-export default function SettingsPage() {
+export function SettingsPage() {
   const { data: groups, isLoading } = useSettings();
   const [activeModule, setActiveModule] = useState<string | null>(null);
   const [resetAllOpen, setResetAllOpen] = useState(false);

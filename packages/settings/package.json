@@ -8,7 +8,11 @@
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
-    "@packages/database": "workspace:*"
+    "@nestjs/swagger": "^11.0.0",
+    "@packages/auth": "workspace:*",
+    "@packages/database": "workspace:*",
+    "@packages/rbac": "workspace:*",
+    "class-validator": "^0.14.1"
   },
   "devDependencies": {
     "drizzle-orm": "^0.45.1",
