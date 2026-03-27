@@ -1,19 +1,28 @@
+import { useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@packages/ui';
-import { listSettings, updateSetting, resetSetting } from './services';
+import { usePlatformAPI } from '../PlatformUIProvider';
+import { createSettingsApi } from './services';
+
+function useSettingsApi() {
+  const apiFn = usePlatformAPI();
+  return useMemo(() => createSettingsApi(apiFn), [apiFn]);
+}
 
 export function useSettings() {
+  const api = useSettingsApi();
   return useQuery({
     queryKey: ['settings'],
-    queryFn: () => listSettings(),
+    queryFn: () => api.listSettings(),
   });
 }
 
 export function useUpdateSetting() {
+  const api = useSettingsApi();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ module, key, value }: { module: string; key: string; value: unknown }) =>
-      updateSetting(module, key, value),
+      api.updateSetting(module, key, value),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['settings'] });
       toast.success('Setting updated');
@@ -25,10 +34,11 @@ export function useUpdateSetting() {
 }
 
 export function useResetSetting() {
+  const api = useSettingsApi();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ module, key }: { module: string; key: string }) =>
-      resetSetting(module, key),
+      api.resetSetting(module, key),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['settings'] });
       toast.success('Setting reset to default');

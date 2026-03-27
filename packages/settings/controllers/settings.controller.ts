@@ -11,7 +11,7 @@ import {
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { CurrentUser, type JwtPayload } from '@packages/auth';
 import { RequirePermission } from '@packages/rbac';
-import { AppConfigService } from '@packages/settings';
+import { AppConfigService } from '../services/app-config.service';
 import { UpdateSettingDto } from '../dto/update-setting.dto';
 import { SETTINGS_PERMISSIONS } from '../permissions';
 
