@@ -1,7 +1,7 @@
 import { Controller, Get, Param, Query, ParseUUIDPipe } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { RequirePermission } from '@packages/rbac';
-import { AuditQueryService } from '@packages/audit';
+import { AuditQueryService } from '../services/audit-query.service';
 import { ListAuditLogsQueryDto } from '../dto/list-audit-logs-query.dto';
 import { AUDIT_PERMISSIONS } from '../permissions';
 

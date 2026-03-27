@@ -1,4 +1,5 @@
 export { AuditModule } from './audit.module';
+export { AUDIT_PERMISSIONS } from './permissions';
 export { AuditRegistryService } from './services/audit-registry.service';
 export { AuditQueryService } from './services/audit-query.service';
 export type {

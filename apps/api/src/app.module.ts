@@ -24,7 +24,6 @@ import { TasksModule } from './modules/tasks/tasks.module';
 import { TaxonomyModule } from '@packages/taxonomy';
 import { SettingsManagementModule } from './modules/settings/settings.module';
 import { UserNotificationsModule } from './modules/user-notifications/user-notifications.module';
-import { AuditManagementModule } from './modules/audit/audit.module';
 import { SharedModule } from './modules/shared/shared.module';
 import { validate } from './config/env.validation';
 
@@ -76,7 +75,6 @@ import { validate } from './config/env.validation';
     TaxonomyModule,
     SettingsManagementModule,
     UserNotificationsModule,
-    AuditManagementModule,
   ],
   providers: [
     {
