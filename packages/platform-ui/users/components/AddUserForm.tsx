@@ -18,7 +18,8 @@ import {
   useAsyncValidator,
 } from '@packages/ui';
 import { useCreateUser, useRoles } from '../hooks';
-import { checkUnique } from '../services';
+import { usePlatformAPI } from '../../PlatformUIProvider';
+import { createUsersApi } from '../services';
 
 const createUserSchema = z.object({
   firstName: z.string().min(2, 'First name must be at least 2 characters').max(100),
@@ -42,6 +43,8 @@ interface AddUserFormProps {
 }
 
 export function AddUserForm({ onClose }: AddUserFormProps) {
+  const apiFn = usePlatformAPI();
+  const usersApi = createUsersApi(apiFn);
   const [selectedRoleIds, setSelectedRoleIds] = useState<Set<string>>(new Set());
   const [rolesError, setRolesError] = useState<string | null>(null);
 
@@ -61,8 +64,8 @@ export function AddUserForm({ onClose }: AddUserFormProps) {
 
   const emailValidator = useAsyncValidator({
     checkFn: useCallback(
-      (value: string) => checkUnique('users', 'email', value).then((r) => r.unique),
-      [],
+      (value: string) => usersApi.checkUnique('users', 'email', value).then((r) => r.unique),
+      [usersApi],
     ),
     errorMessage: 'This email is already in use',
   });

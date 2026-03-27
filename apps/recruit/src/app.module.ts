@@ -34,7 +34,7 @@ import { INTERVIEWS_CONFIG } from './modules/interviews/interviews.config';
 import { ClientsModule } from './modules/clients/clients.module';
 import { JobOpeningsModule } from './modules/job-openings/job-openings.module';
 import { EavManagementModule } from './modules/eav-management/eav-management.module';
-import { UsersModule } from './modules/users/users.module';
+import { UsersModule } from '@packages/users';
 import { validate } from './config/env.validation';
 
 @Module({

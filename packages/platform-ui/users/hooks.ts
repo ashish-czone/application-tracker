@@ -1,27 +1,36 @@
+import { useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@packages/ui';
-import { listUsers, listRoles, createUser, updateUser, deleteUser, restoreUser, resetUserPassword } from './services';
+import { usePlatformAPI } from '../PlatformUIProvider';
+import { createUsersApi } from './services';
 import type { ListUsersParams, CreateUserRequest, UpdateUserRequest } from './types';
 
+function useUsersApi() {
+  const apiFn = usePlatformAPI();
+  return useMemo(() => createUsersApi(apiFn), [apiFn]);
+}
+
 export function useUsers(params: ListUsersParams) {
+  const api = useUsersApi();
   return useQuery({
     queryKey: ['users', params],
-    queryFn: () => listUsers(params),
+    queryFn: () => api.listUsers(params),
   });
 }
 
 export function useRoles(userType?: string) {
+  const api = useUsersApi();
   return useQuery({
     queryKey: ['roles', userType],
-    queryFn: () => listRoles(userType),
+    queryFn: () => api.listRoles(userType),
   });
 }
 
 export function useCreateUser(options?: { onSuccess?: () => void }) {
+  const api = useUsersApi();
   const queryClient = useQueryClient();
-
   return useMutation({
-    mutationFn: (data: CreateUserRequest) => createUser(data),
+    mutationFn: (data: CreateUserRequest) => api.createUser(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       toast.success('User created');
@@ -34,10 +43,10 @@ export function useCreateUser(options?: { onSuccess?: () => void }) {
 }
 
 export function useUpdateUser(options?: { onSuccess?: () => void }) {
+  const api = useUsersApi();
   const queryClient = useQueryClient();
-
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdateUserRequest }) => updateUser(id, data),
+    mutationFn: ({ id, data }: { id: string; data: UpdateUserRequest }) => api.updateUser(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       toast.success('User updated');
@@ -50,10 +59,10 @@ export function useUpdateUser(options?: { onSuccess?: () => void }) {
 }
 
 export function useDeleteUser(options?: { onSuccess?: () => void }) {
+  const api = useUsersApi();
   const queryClient = useQueryClient();
-
   return useMutation({
-    mutationFn: (id: string) => deleteUser(id),
+    mutationFn: (id: string) => api.deleteUser(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       toast.success('User deleted');
@@ -66,8 +75,9 @@ export function useDeleteUser(options?: { onSuccess?: () => void }) {
 }
 
 export function useResetUserPassword(options?: { onSuccess?: () => void }) {
+  const api = useUsersApi();
   return useMutation({
-    mutationFn: ({ id, password }: { id: string; password: string }) => resetUserPassword(id, password),
+    mutationFn: ({ id, password }: { id: string; password: string }) => api.resetUserPassword(id, password),
     onSuccess: () => {
       toast.success('Password updated');
       options?.onSuccess?.();
@@ -79,10 +89,10 @@ export function useResetUserPassword(options?: { onSuccess?: () => void }) {
 }
 
 export function useRestoreUser() {
+  const api = useUsersApi();
   const queryClient = useQueryClient();
-
   return useMutation({
-    mutationFn: (id: string) => restoreUser(id),
+    mutationFn: (id: string) => api.restoreUser(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       toast.success('User restored');

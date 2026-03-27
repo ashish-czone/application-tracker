@@ -37,6 +37,7 @@
     "@packages/rbac": "workspace:*",
     "@packages/settings": "workspace:*",
     "@packages/taxonomy": "workspace:*",
+    "@packages/users": "workspace:*",
     "@packages/workflows": "workspace:*",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",

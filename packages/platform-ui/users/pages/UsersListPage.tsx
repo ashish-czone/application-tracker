@@ -29,7 +29,7 @@ const USER_FILTERS: DataGridFilterConfig[] = [
   },
 ];
 
-export default function UsersListPage() {
+export function UsersListPage() {
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [deletingUser, setDeletingUser] = useState<User | null>(null);
