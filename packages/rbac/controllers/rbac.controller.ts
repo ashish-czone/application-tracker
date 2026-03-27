@@ -14,7 +14,9 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { CurrentUser, type JwtPayload } from '@packages/auth';
-import { RbacService, RequirePermission, type ScopedPermissions } from '@packages/rbac';
+import { RbacService } from '../services/rbac.service';
+import { RequirePermission } from '../decorators/require-permission.decorator';
+import type { ScopedPermissions } from '../types';
 import { CreateRoleDto } from '../dto/create-role.dto';
 import { UpdateRoleDto } from '../dto/update-role.dto';
 import { ListRolesQueryDto } from '../dto/list-roles-query.dto';
