@@ -3,10 +3,9 @@ import { RbacService } from '@packages/rbac';
 import { LayoutsController } from './controllers/layouts.controller';
 import { FieldsController } from './controllers/fields.controller';
 import { LookupsController } from './controllers/lookups.controller';
-import { TagsController } from './controllers/tags.controller';
 
 @Module({
-  controllers: [LayoutsController, FieldsController, LookupsController, TagsController],
+  controllers: [LayoutsController, FieldsController, LookupsController],
 })
 export class EavManagementModule implements OnModuleInit {
   constructor(private readonly rbacService: RbacService) {}

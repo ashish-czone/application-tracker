@@ -21,15 +21,15 @@ interface Tag {
 function useSkillTagGroup() {
   return useQuery({
     queryKey: ['tag-groups'],
-    queryFn: () => api.get<TagGroup[]>('/taxonomy/tag-groups'),
-    select: (groups) => groups.find((g) => g.slug === 'candidate-skills'),
+    queryFn: () => api.get<{ data: TagGroup[] }>('/tag-groups'),
+    select: (response) => response.data.find((g) => g.slug === 'candidate-skills'),
   });
 }
 
 function useTagsByGroup(groupId: string | undefined) {
   return useQuery({
     queryKey: ['tags', groupId],
-    queryFn: () => api.get<Tag[]>(`/taxonomy/tag-groups/${groupId}/tags`),
+    queryFn: () => api.get<Tag[]>(`/tag-groups/${groupId}/tags`),
     enabled: !!groupId,
   });
 }
