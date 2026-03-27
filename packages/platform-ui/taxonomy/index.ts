@@ -20,6 +20,15 @@ export {
   useDeleteCategory,
 } from './hooks';
 
+export { TagGroupsListPage } from './pages/TagGroupsListPage';
+export { TagsList } from './components/TagsList';
+export { AddTagGroupForm } from './components/AddTagGroupForm';
+export { EditTagGroupForm } from './components/EditTagGroupForm';
+export { DeleteTagGroupDialog } from './components/DeleteTagGroupDialog';
+export { AddTagForm } from './components/AddTagForm';
+export { EditTagForm } from './components/EditTagForm';
+export { DeleteTagDialog } from './components/DeleteTagDialog';
+
 export type {
   TaxonomyApiFn,
   TagGroup,
