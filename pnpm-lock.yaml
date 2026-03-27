@@ -291,6 +291,9 @@ importers:
       '@packages/settings':
         specifier: workspace:*
         version: link:../../packages/settings
+      '@packages/tasks':
+        specifier: workspace:*
+        version: link:../../packages/tasks
       '@packages/taxonomy':
         specifier: workspace:*
         version: link:../../packages/taxonomy

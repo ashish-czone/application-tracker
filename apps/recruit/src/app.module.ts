@@ -33,6 +33,7 @@ import { APPLICATIONS_CONFIG } from './modules/applications/applications.config'
 import { INTERVIEWS_CONFIG } from './modules/interviews/interviews.config';
 import { ClientsModule } from './modules/clients/clients.module';
 import { JobOpeningsModule } from './modules/job-openings/job-openings.module';
+import { TasksModule } from '@packages/tasks';
 import { UsersModule } from '@packages/users';
 import { validate } from './config/env.validation';
 
@@ -93,6 +94,7 @@ import { validate } from './config/env.validation';
     CandidatesModule, // extras: resume upload, skill tags, sample data seeding
     ClientsModule, // sample data seeding: clients, contacts, vendors, interviews
     JobOpeningsModule, // sample data seeding: job openings, applications
+    TasksModule,
     UsersModule,
   ],
   providers: [

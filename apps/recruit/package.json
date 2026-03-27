@@ -36,6 +36,7 @@
     "@packages/queue": "workspace:*",
     "@packages/rbac": "workspace:*",
     "@packages/settings": "workspace:*",
+    "@packages/tasks": "workspace:*",
     "@packages/taxonomy": "workspace:*",
     "@packages/users": "workspace:*",
     "@packages/workflows": "workspace:*",
