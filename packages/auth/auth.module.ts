@@ -15,6 +15,7 @@ export class AuthModule {
   static register(config: AuthModuleConfig): DynamicModule {
     return {
       module: AuthModule,
+      global: true,
       providers: [
         {
           provide: AUTH_MODULE_CONFIG,
@@ -32,6 +33,7 @@ export class AuthModule {
   static registerAsync(options: AuthModuleAsyncOptions): DynamicModule {
     return {
       module: AuthModule,
+      global: true,
       providers: [
         {
           provide: AUTH_MODULE_CONFIG,
