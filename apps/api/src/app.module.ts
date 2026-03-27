@@ -20,7 +20,7 @@ import { AuthGuard } from '@packages/auth';
 import { RbacGuard } from '@packages/rbac';
 import { AuthOrchestratorModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
-import { TasksModule } from './modules/tasks/tasks.module';
+import { TasksModule } from '@packages/tasks';
 import { TaxonomyModule } from '@packages/taxonomy';
 import { UserNotificationsModule } from './modules/user-notifications/user-notifications.module';
 import { SharedModule } from './modules/shared/shared.module';

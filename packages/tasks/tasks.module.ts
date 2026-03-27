@@ -29,7 +29,6 @@ export class TasksModule implements OnModuleInit {
   ) {}
 
   onModuleInit() {
-    // Register permissions
     this.rbacService.registerPermissions('tasks', [
       { action: 'create', description: 'Create tasks' },
       { action: 'read', description: 'View tasks' },
@@ -38,7 +37,6 @@ export class TasksModule implements OnModuleInit {
       { action: 'transition', description: 'Transition task status' },
     ]);
 
-    // Register events
     this.eventRegistry.register({
       eventName: TASKS_TASK_CREATED,
       group: 'tasks',
@@ -69,12 +67,10 @@ export class TasksModule implements OnModuleInit {
       },
     });
 
-    // Register auditable events
     this.auditRegistry.register('tasks', {
       events: [TASKS_TASK_CREATED, TASKS_TASK_UPDATED, TASKS_TASK_DELETED],
     });
 
-    // Register entity resolver for schedule-based notifications and conditions
     const workflowRegistry = this.workflowRegistry;
     this.entityResolverRegistry.register('tasks', {
       table: tasks,

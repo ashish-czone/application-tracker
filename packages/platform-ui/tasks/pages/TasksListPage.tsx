@@ -26,7 +26,7 @@ const PRIORITY_CONFIG: Record<string, { label: string; variant: 'default' | 'sec
   urgent: { label: 'Urgent', variant: 'destructive' },
 };
 
-export default function TasksListPage() {
+export function TasksListPage() {
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [deletingTask, setDeletingTask] = useState<Task | null>(null);

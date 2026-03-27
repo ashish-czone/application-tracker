@@ -1,28 +1,37 @@
+import { useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@packages/ui';
-import { listTasks, createTask, updateTask, deleteTask, getTaskTransitions, transitionTask } from './services';
+import { usePlatformAPI } from '../PlatformUIProvider';
+import { createTasksApi } from './services';
 import type { ListTasksParams, CreateTaskRequest, UpdateTaskRequest, TransitionRequest } from './types';
 
+function useTasksApi() {
+  const apiFn = usePlatformAPI();
+  return useMemo(() => createTasksApi(apiFn), [apiFn]);
+}
+
 export function useTasks(params: ListTasksParams) {
+  const api = useTasksApi();
   return useQuery({
     queryKey: ['tasks', params],
-    queryFn: () => listTasks(params),
+    queryFn: () => api.listTasks(params),
   });
 }
 
 export function useTaskTransitions(taskId: string | null) {
+  const api = useTasksApi();
   return useQuery({
     queryKey: ['task-transitions', taskId],
-    queryFn: () => getTaskTransitions(taskId!),
+    queryFn: () => api.getTaskTransitions(taskId!),
     enabled: !!taskId,
   });
 }
 
 export function useCreateTask(options?: { onSuccess?: () => void }) {
+  const api = useTasksApi();
   const queryClient = useQueryClient();
-
   return useMutation({
-    mutationFn: (data: CreateTaskRequest) => createTask(data),
+    mutationFn: (data: CreateTaskRequest) => api.createTask(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       toast.success('Task created');
@@ -35,10 +44,10 @@ export function useCreateTask(options?: { onSuccess?: () => void }) {
 }
 
 export function useUpdateTask(options?: { onSuccess?: () => void }) {
+  const api = useTasksApi();
   const queryClient = useQueryClient();
-
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdateTaskRequest }) => updateTask(id, data),
+    mutationFn: ({ id, data }: { id: string; data: UpdateTaskRequest }) => api.updateTask(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       toast.success('Task updated');
@@ -51,10 +60,10 @@ export function useUpdateTask(options?: { onSuccess?: () => void }) {
 }
 
 export function useDeleteTask(options?: { onSuccess?: () => void }) {
+  const api = useTasksApi();
   const queryClient = useQueryClient();
-
   return useMutation({
-    mutationFn: (id: string) => deleteTask(id),
+    mutationFn: (id: string) => api.deleteTask(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       toast.success('Task deleted');
@@ -67,10 +76,10 @@ export function useDeleteTask(options?: { onSuccess?: () => void }) {
 }
 
 export function useTransitionTask() {
+  const api = useTasksApi();
   const queryClient = useQueryClient();
-
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: TransitionRequest }) => transitionTask(id, data),
+    mutationFn: ({ id, data }: { id: string; data: TransitionRequest }) => api.transitionTask(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['task-transitions'] });
