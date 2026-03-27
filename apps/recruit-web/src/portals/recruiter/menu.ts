@@ -1,4 +1,4 @@
-import { LayoutDashboard, Settings, Bell, Shield, Users, Tags, FolderTree, CheckSquare } from 'lucide-react';
+import { LayoutDashboard, Settings, Bell, Shield, Users, CheckSquare, SlidersHorizontal, Tags, FolderTree, Layers } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 export interface MenuItem {
@@ -8,6 +8,8 @@ export interface MenuItem {
   permission?: string;
   /** Position: 'before' renders before entity nav items, 'after' renders after */
   position?: 'before' | 'after';
+  /** Nested sub-items — renders as collapsible group */
+  children?: MenuItem[];
 }
 
 export const recruiterMenu: MenuItem[] = [
@@ -16,8 +18,17 @@ export const recruiterMenu: MenuItem[] = [
   { path: '/tasks', label: 'Tasks', icon: CheckSquare, permission: 'tasks.read', position: 'after' },
   { path: '/users', label: 'Users', icon: Users, permission: 'users.read', position: 'after' },
   { path: '/roles', label: 'Roles', icon: Shield, permission: 'rbac.roles-read', position: 'after' },
-  { path: '/tag-groups', label: 'Tag Groups', icon: Tags, permission: 'taxonomy.tag-groups.read', position: 'after' },
-  { path: '/categories', label: 'Categories', icon: FolderTree, permission: 'taxonomy.categories.read', position: 'after' },
   { path: '/automations', label: 'Automations', icon: Bell, permission: 'notifications.rules.read', position: 'after' },
-  { path: '/settings', label: 'Settings', icon: Settings, position: 'after' },
+  {
+    path: '/settings',
+    label: 'Settings',
+    icon: Settings,
+    position: 'after',
+    children: [
+      { path: '/settings', label: 'Fields & Layouts', icon: Layers },
+      { path: '/app-settings', label: 'App Settings', icon: SlidersHorizontal, permission: 'settings.read' },
+      { path: '/tag-groups', label: 'Tag Groups', icon: Tags, permission: 'taxonomy.tag-groups.read' },
+      { path: '/categories', label: 'Categories', icon: FolderTree, permission: 'taxonomy.categories.read' },
+    ],
+  },
 ];

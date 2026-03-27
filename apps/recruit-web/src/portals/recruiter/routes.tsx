@@ -4,8 +4,9 @@ import { RolesListPage } from '@packages/platform-ui/rbac';
 import { AutomationsPage, RuleBuilderPage } from '@packages/platform-ui/notifications';
 import { TasksListPage } from '@packages/platform-ui/tasks';
 import { UsersListPage } from '@packages/platform-ui/users';
+import { SettingsPage as AppSettingsPage } from '@packages/platform-ui/settings';
 
-export { TagGroupsListPage, CategoryGroupsListPage, RolesListPage, AutomationsPage, RuleBuilderPage, TasksListPage, UsersListPage };
+export { TagGroupsListPage, CategoryGroupsListPage, RolesListPage, AutomationsPage, RuleBuilderPage, TasksListPage, UsersListPage, AppSettingsPage };
 
 // Candidates list/detail are now rendered by EntityListPage/EntityDetailPage
 // via the entity engine — no lazy imports needed
