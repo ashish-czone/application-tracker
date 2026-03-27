@@ -1,3 +1,25 @@
+// ---- Channel provider contract (used by all channel implementations) ----
+
+export type NotificationChannel = 'email' | 'in_app' | 'whatsapp';
+
+export interface RenderedNotification {
+  title: string;
+  body: string;
+  subject?: string;
+}
+
+export interface ChannelContext {
+  eventName: string;
+  entityType: string;
+  entityId: string;
+  correlationId: string;
+}
+
+export interface ChannelProvider {
+  readonly channel: NotificationChannel;
+  send(recipientId: string, content: RenderedNotification, context: ChannelContext): Promise<void>;
+}
+
 // ---- Shared types ----
 
 export interface SendResult {

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { DatabaseService, eq, and, desc, count, sql } from '@packages/database';
+import { DatabaseService, eq, and, desc, count } from '@packages/database';
 import { notifications } from '../schema/notifications';
 
 export interface ListNotificationsQuery {

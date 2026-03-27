@@ -3,7 +3,7 @@ import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { QueueService } from '@packages/queue';
 import { RbacService } from '@packages/rbac';
 import { cronForLocalHour } from '@packages/common';
-import { NotificationChannelsModule, EmailChannelService, WhatsAppChannelService } from '@packages/notification-channels';
+import { NotificationChannelsModule, EmailChannelService, WhatsAppChannelService, InAppChannel } from '@packages/notification-channels';
 import type { EmailPayload, WhatsAppPayload } from '@packages/notification-channels';
 import { NotificationRuleService } from './services/notification-rule.service';
 import { NotificationRulesService } from './services/notification-rules.service';
@@ -16,8 +16,6 @@ import { NotificationListener } from './listeners/notification.listener';
 import { EntityResolverRegistry } from './services/entity-resolver-registry';
 import { ContactResolverRegistry } from './services/contact-resolver-registry';
 import { ScheduleScanner } from './services/schedule-scanner';
-import { InAppChannel } from './channels/in-app.channel';
-import { NotificationQueryService } from './services/notification-query.service';
 import { NotificationRulesController } from './controllers/notification-rules.controller';
 import { NotificationTemplatesController } from './controllers/notification-templates.controller';
 import { AutomationsMetadataController } from './controllers/automations-metadata.controller';
@@ -40,8 +38,6 @@ export const SCHEDULE_SCAN_QUEUE = 'notification.schedule-scan';
     EntityResolverRegistry,
     ContactResolverRegistry,
     ScheduleScanner,
-    InAppChannel,
-    NotificationQueryService,
   ],
   exports: [
     NotificationDispatcher,
@@ -50,7 +46,6 @@ export const SCHEDULE_SCAN_QUEUE = 'notification.schedule-scan';
     NotificationTemplatesService,
     EntityResolverRegistry,
     ContactResolverRegistry,
-    NotificationQueryService,
   ],
 })
 export class NotificationsModule implements OnModuleInit {

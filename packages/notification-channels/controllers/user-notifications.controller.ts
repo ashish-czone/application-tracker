@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { CurrentUser, type JwtPayload } from '@packages/auth';
-import { NotificationQueryService } from '@packages/notifications';
+import { NotificationQueryService } from '../in-app/notification-query.service';
 
 @ApiTags('notifications')
 @Controller('notifications')

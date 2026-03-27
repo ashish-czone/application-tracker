@@ -7,6 +7,7 @@ export default defineConfig({
     '../../packages/auth/schema/index.ts',
     '../../packages/rbac/schema/index.ts',
     '../../packages/settings/schema/index.ts',
+    '../../packages/notification-channels/schema/notifications.ts',
     '../../packages/notifications/schema/index.ts',
     '../../packages/workflows/schema/index.ts',
     '../../packages/taxonomy/schema/index.ts',
