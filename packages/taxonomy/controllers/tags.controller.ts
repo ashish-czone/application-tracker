@@ -12,8 +12,8 @@ import {
   ParseUUIDPipe,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
-import { TaxonomyService } from '@packages/taxonomy';
 import { RequirePermission } from '@packages/rbac';
+import { TaxonomyService } from '../services/taxonomy.service';
 import { CreateTagGroupDto } from '../dto/create-tag-group.dto';
 import { UpdateTagGroupDto } from '../dto/update-tag-group.dto';
 import { CreateTagDto } from '../dto/create-tag.dto';
@@ -75,6 +75,13 @@ export class TagsController {
   @ApiOperation({ summary: 'List all tags in a group' })
   async listTags(@Param('groupId', ParseUUIDPipe) groupId: string) {
     return this.taxonomyService.listTagsByGroup(groupId);
+  }
+
+  @Get('tags/group/:slug')
+  @RequirePermission(TAXONOMY_PERMISSIONS.TAGS_READ)
+  @ApiOperation({ summary: 'List tags by group slug as select options' })
+  async getTagsByGroupSlug(@Param('slug') slug: string) {
+    return this.taxonomyService.listTagOptionsByGroupSlug(slug);
   }
 
   @Get('tags/:id')

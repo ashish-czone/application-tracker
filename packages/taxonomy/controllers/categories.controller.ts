@@ -11,8 +11,8 @@ import {
   ParseUUIDPipe,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
-import { CategoryService } from '@packages/taxonomy';
 import { RequirePermission } from '@packages/rbac';
+import { CategoryService } from '../services/category.service';
 import { CreateCategoryGroupDto } from '../dto/create-category-group.dto';
 import { UpdateCategoryGroupDto } from '../dto/update-category-group.dto';
 import { CreateCategoryDto } from '../dto/create-category.dto';

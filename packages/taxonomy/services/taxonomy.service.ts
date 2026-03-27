@@ -211,6 +211,11 @@ export class TaxonomyService {
       .orderBy(asc(tags.name));
   }
 
+  async listTagOptionsByGroupSlug(slug: string): Promise<{ value: string; label: string; color: string | null }[]> {
+    const tagList = await this.listTagsByGroupSlug(slug);
+    return tagList.map(t => ({ value: t.id, label: t.name, color: t.color }));
+  }
+
   // --- Entity Tags ---
 
   async attachTag(entityType: string, entityId: string, tagId: string): Promise<void> {

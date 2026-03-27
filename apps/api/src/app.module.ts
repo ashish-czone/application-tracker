@@ -24,7 +24,7 @@ import { RbacManagementModule } from './modules/rbac/rbac.module';
 import { NotificationRulesModule } from './modules/notification-rules/notification-rules.module';
 import { TasksModule } from './modules/tasks/tasks.module';
 import { WorkflowsManagementModule } from './modules/workflows/workflows.module';
-import { TaxonomyManagementModule } from './modules/taxonomy/taxonomy.module';
+import { TaxonomyModule } from '@packages/taxonomy';
 import { SettingsManagementModule } from './modules/settings/settings.module';
 import { UserNotificationsModule } from './modules/user-notifications/user-notifications.module';
 import { AuditManagementModule } from './modules/audit/audit.module';
@@ -79,7 +79,7 @@ import { validate } from './config/env.validation';
     NotificationRulesModule,
     TasksModule,
     WorkflowsManagementModule,
-    TaxonomyManagementModule,
+    TaxonomyModule,
     SettingsManagementModule,
     UserNotificationsModule,
     AuditManagementModule,
