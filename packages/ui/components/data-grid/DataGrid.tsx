@@ -43,6 +43,12 @@ export function DataGrid<TData>({
   activeFilters,
   onFilterRemove,
   onFiltersClear,
+  filterFields,
+  filters,
+  onFilterAdd,
+  onStructuredFilterRemove,
+  onFilterUpdate,
+  onStructuredFiltersClear,
   isLoading = false,
   isError = false,
   onRetry,
@@ -193,6 +199,12 @@ export function DataGrid<TData>({
         activeFilters={activeFilters}
         onFilterRemove={onFilterRemove}
         onFiltersClear={onFiltersClear}
+        filterFields={filterFields}
+        filters={filters}
+        onFilterAdd={onFilterAdd}
+        onStructuredFilterRemove={onStructuredFilterRemove}
+        onFilterUpdate={onFilterUpdate}
+        onStructuredFiltersClear={onStructuredFiltersClear}
         toolbarActions={toolbarActions}
         enableExport={enableExport}
         exportFilename={exportFilename}
