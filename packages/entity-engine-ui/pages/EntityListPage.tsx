@@ -202,16 +202,12 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
     [entity.ui.nameField],
   );
 
-  // Field types excluded from the column chooser (long text and non-tabular types)
-  const EXCLUDED_FIELD_TYPES = new Set(['textarea', 'rich_text', 'file', 'auto_number']);
-
   // Default column visibility from the list layout's visible flag
   const defaultColumnVisibility = useMemo<Record<string, boolean>>(() => {
     if (!listLayout) return {};
     const visibility: Record<string, boolean> = {};
     for (const col of listLayout.columns) {
       if (nameFields.has(col.fieldKey)) continue;
-      if (EXCLUDED_FIELD_TYPES.has(col.fieldType)) continue;
       visibility[col.fieldKey] = col.visible;
     }
     return visibility;
@@ -254,9 +250,9 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
       },
     };
 
-    // Data columns from listLayout (sorted by order, excludes name fields and non-list types)
+    // Data columns from listLayout (sorted by order, excludes name fields)
     const dataCols: ColumnDef<Row, unknown>[] = listLayout.columns
-      .filter((col) => !nameFields.has(col.fieldKey) && !EXCLUDED_FIELD_TYPES.has(col.fieldType))
+      .filter((col) => !nameFields.has(col.fieldKey))
       .sort((a, b) => a.order - b.order)
       .map((col) => ({
         id: col.fieldKey,
