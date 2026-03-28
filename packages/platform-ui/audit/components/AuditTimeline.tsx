@@ -21,7 +21,7 @@ function formatDayHeader(dateStr: string): string {
   const date = new Date(dateStr);
   if (isToday(date)) return 'Today';
   if (isYesterday(date)) return 'Yesterday';
-  return format(date, 'MM/DD/YYYY');
+  return format(date, 'MM/dd/yyyy');
 }
 
 function buildChangeLines(entry: AuditLogEntry): string[] {
