@@ -1,7 +1,7 @@
 import { Module, Global, type DynamicModule, type OnModuleInit, Logger, Inject, type OnApplicationBootstrap } from '@nestjs/common';
 import { DatabaseService } from '@packages/database';
 import { DomainEventEmitter, EventRegistryService } from '@packages/events';
-import { RbacService, FIELD_PERMISSION_ENTITY_RESOLVER } from '@packages/rbac';
+import { RbacService, FIELD_PERMISSION_ENTITY_RESOLVER, FieldPermissionsController } from '@packages/rbac';
 import type { FieldPermissionEntityResolver } from '@packages/rbac';
 import { AuditRegistryService } from '@packages/audit';
 import { FieldValueService, FieldDefinitionService, LayoutService, LookupResolverService, MultiValueService } from '@packages/eav-attributes';
@@ -35,7 +35,7 @@ const pendingConfigs: EntityConfig[] = [];
  */
 @Global()
 @Module({
-  controllers: [EntityEngineApiController],
+  controllers: [EntityEngineApiController, FieldPermissionsController],
   providers: [
     EntityRegistryService,
     {
