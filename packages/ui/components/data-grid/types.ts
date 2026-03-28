@@ -1,5 +1,10 @@
 import type { ColumnDef } from '@tanstack/react-table';
 import type { ComponentType, ReactNode } from 'react';
+import type { FilterOperator, FilterExpression } from './filter-types';
+
+// ---------------------------------------------------------------------------
+// Legacy filter types (backward compat — used by old DataGridFilters dropdown pattern)
+// ---------------------------------------------------------------------------
 
 export interface DataGridFilter {
   key: string;
@@ -17,6 +22,30 @@ export interface DataGridFilterConfig {
   label: string;
   placeholder?: string;
   options: DataGridFilterOption[];
+}
+
+// ---------------------------------------------------------------------------
+// New filter types (used by DataGridFilterBuilder chip pattern)
+// ---------------------------------------------------------------------------
+
+export interface DataGridFilterFieldOption {
+  label: string;
+  value: string;
+}
+
+export interface DataGridFilterField {
+  /** Unique field key (matches API field name) */
+  key: string;
+  /** Display label shown in field picker */
+  label: string;
+  /** Field type — determines which operators are available and what value input to render */
+  fieldType: string;
+  /** Override operators for this field (defaults to OPERATORS_BY_FIELD_TYPE[fieldType]) */
+  operators?: FilterOperator[];
+  /** Static options for picklist/lookup fields */
+  options?: DataGridFilterFieldOption[];
+  /** Async option fetcher for lookup fields with large option sets */
+  onSearchOptions?: (query: string) => Promise<DataGridFilterFieldOption[]>;
 }
 
 export interface DataGridEmptyState {

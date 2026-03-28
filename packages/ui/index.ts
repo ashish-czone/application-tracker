@@ -72,9 +72,15 @@ export type {
   DataGridFilter,
   DataGridFilterConfig,
   DataGridFilterOption,
+  DataGridFilterField,
+  DataGridFilterFieldOption,
   DataGridEmptyState,
   DataGridBulkAction,
 } from './components/data-grid/types';
+
+// Filter types + constants
+export type { FilterOperator, FilterExpression } from './components/data-grid/filter-types';
+export { OPERATORS_BY_FIELD_TYPE, OPERATOR_LABELS } from './components/data-grid/filter-types';
 
 // Components — kanban
 export { KanbanBoard } from './components/kanban/KanbanBoard';
