@@ -32,9 +32,14 @@ function buildChangeLines(entry: AuditLogEntry): string[] {
     return ['Record updated'];
   }
 
-  return Object.entries(entry.changes).map(([field, { from, to }]) =>
-    `${field} changed from ${formatChangeValue(from)} to ${formatChangeValue(to)}`,
-  );
+  return Object.entries(entry.changes)
+    .filter(([field]) => !field.endsWith('__label'))
+    .map(([field, { from, to }]) => {
+      const labelChange = entry.changes![`${field}__label`];
+      const fromDisplay = labelChange ? formatChangeValue(labelChange.from) : formatChangeValue(from);
+      const toDisplay = labelChange ? formatChangeValue(labelChange.to) : formatChangeValue(to);
+      return `${field} changed from ${fromDisplay} to ${toDisplay}`;
+    });
 }
 
 function TimelineEntry({ entry, showLine }: { entry: AuditLogEntry; showLine: boolean }) {
