@@ -129,7 +129,8 @@ export function useDataGridParams(options: UseDataGridParamsOptions = {}) {
     'in', 'notIn', 'isNull', 'isNotNull', 'between', 'contains',
   ]);
 
-  const filtersStorageKey = storageKey ? `datagrid-filters-${storageKey}` : null;
+  const userId = typeof window !== 'undefined' ? localStorage.getItem('auth_user_id') ?? '' : '';
+  const filtersStorageKey = storageKey ? `datagrid-filters-${userId ? `${userId}-` : ''}${storageKey}` : null;
   const lastRestoredKey = useRef<string | null>(null);
 
   const getFilters = useMemo((): FilterExpression[] => {
