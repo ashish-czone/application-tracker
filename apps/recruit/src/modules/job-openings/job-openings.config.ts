@@ -59,7 +59,7 @@ export const JOB_OPENINGS_CONFIG: EntityConfig = {
       ],
     },
     status: {
-      label: 'Job Opening Status', section: 'jobOpeningInfo', sortOrder: 8, fieldType: 'picklist', isSystem: true,
+      label: 'Job Opening Status', section: 'jobOpeningInfo', sortOrder: 8, fieldType: 'picklist',
       picklistOptions: [
         { label: 'In-progress', value: 'in-progress' },
         { label: 'Waiting for Approval', value: 'waiting-for-approval' },
