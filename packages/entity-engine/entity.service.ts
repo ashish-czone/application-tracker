@@ -73,14 +73,17 @@ export class EntityService {
   private static readonly LIST_SYSTEM_COLUMNS = ['id', 'createdAt', 'updatedAt', 'deletedAt', 'createdBy'];
 
   /**
-   * Get the field definitions visible on the list page.
-   * Shared between getListLayout() and list() to keep column selection in sync.
+   * Get the field definitions needed for the list data query.
+   * Uses config.listFields to select exactly the right columns.
    */
   private async getListFieldDefs(): Promise<FieldDefinition[]> {
     const defs = await this.fieldDefinitionService.listByEntityWithOptions(this.config.entityType);
-    return defs
-      .filter(d => !EntityService.LIST_SKIP_TYPES.has(d.fieldType) && !d.isSystem)
-      .slice(0, 10);
+    if (this.config.listFields) {
+      const listFieldSet = new Set(this.config.listFields);
+      return defs.filter(d => listFieldSet.has(d.fieldKey));
+    }
+    // Fallback: all non-system, non-skip-type fields
+    return defs.filter(d => !EntityService.LIST_SKIP_TYPES.has(d.fieldType) && !d.isSystem);
   }
 
   /**
