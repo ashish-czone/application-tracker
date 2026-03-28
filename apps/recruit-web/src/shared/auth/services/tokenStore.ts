@@ -1,6 +1,7 @@
 import type { JwtPayload } from '../types';
 
 const REFRESH_TOKEN_KEY = 'auth_refresh_token';
+const USER_ID_KEY = 'auth_user_id';
 
 // Access token is stored in-memory only (not localStorage) for security
 let accessToken: string | null = null;
@@ -29,11 +30,17 @@ export const tokenStore = {
   setTokens(access: string, refresh: string): void {
     accessToken = access;
     localStorage.setItem(REFRESH_TOKEN_KEY, refresh);
+    // Persist userId for user-scoped localStorage keys (filters, preferences)
+    try {
+      const payload = JSON.parse(atob(access.split('.')[1]));
+      if (payload?.userId) localStorage.setItem(USER_ID_KEY, payload.userId);
+    } catch { /* ignore */ }
   },
 
   clearTokens(): void {
     accessToken = null;
     localStorage.removeItem(REFRESH_TOKEN_KEY);
+    localStorage.removeItem(USER_ID_KEY);
   },
 
   /** Decode JWT payload without signature verification (client-side only). */
