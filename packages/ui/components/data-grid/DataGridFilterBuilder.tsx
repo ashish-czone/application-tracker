@@ -31,17 +31,20 @@ export function DataGridFilterBuilder({
   const [step, setStep] = useState<Step>('field');
   const [selectedField, setSelectedField] = useState<DataGridFilterField | null>(null);
   const [selectedOperator, setSelectedOperator] = useState<FilterOperator | null>(null);
+  const [editingValue, setEditingValue] = useState<unknown>(undefined);
   const [search, setSearch] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+  const anchorRef = useRef<HTMLElement | null>(null);
   const editingRef = useRef(false);
 
   const handleOpenChange = useCallback((nextOpen: boolean) => {
     if (nextOpen && !editingRef.current) {
-      // Opening via the "+ Filter" button — reset to field picker
       setStep('field');
       setSelectedField(null);
       setSelectedOperator(null);
+      setEditingValue(undefined);
       setSearch('');
+      anchorRef.current = null;
     }
     editingRef.current = false;
     setOpen(nextOpen);
@@ -57,6 +60,7 @@ export function DataGridFilterBuilder({
     setSelectedField(field);
     const operators = field.operators ?? OPERATORS_BY_FIELD_TYPE[field.fieldType] ?? ['eq'];
     setSelectedOperator(operators[0]);
+    setEditingValue(undefined);
     setStep('configure');
     setSearch('');
   };
@@ -75,12 +79,14 @@ export function DataGridFilterBuilder({
     setOpen(false);
   };
 
-  const handleChipClick = (expr: FilterExpression) => {
+  const handleChipClick = (expr: FilterExpression, event: React.MouseEvent) => {
     const field = fields.find((f) => f.key === expr.field);
     if (!field) return;
     editingRef.current = true;
+    anchorRef.current = (event.currentTarget as HTMLElement).closest('[data-filter-chip]') as HTMLElement;
     setSelectedField(field);
     setSelectedOperator(expr.operator);
+    setEditingValue(expr.value);
     setStep('configure');
     setSearch('');
     setOpen(true);
@@ -89,8 +95,10 @@ export function DataGridFilterBuilder({
   const handleBack = () => {
     setSelectedField(null);
     setSelectedOperator(null);
+    setEditingValue(undefined);
     setStep('field');
     setSearch('');
+    anchorRef.current = null;
     setTimeout(() => inputRef.current?.focus(), 0);
   };
 
@@ -115,92 +123,96 @@ export function DataGridFilterBuilder({
     return valueLabel ? `${fieldLabel} ${opLabel} ${valueLabel}` : `${fieldLabel} ${opLabel}`;
   };
 
-  return (
-    <div className="flex items-center gap-2 flex-wrap">
-      {/* Filter chips — clickable to edit */}
-      {filters.map((expr) => (
-        <Badge
-          key={expr.field}
-          variant="secondary"
-          className="cursor-pointer"
-          onRemove={() => onRemoveFilter(expr.field)}
-        >
-          <span onClick={() => handleChipClick(expr)}>
-            {getChipLabel(expr)}
-          </span>
-        </Badge>
-      ))}
+  const popoverContent = (
+    <Popover.Content
+      className="z-50 w-72 rounded-md border bg-popover text-popover-foreground shadow-md outline-none animate-in fade-in-0 zoom-in-95"
+      sideOffset={4}
+      align="start"
+      onOpenAutoFocus={(e) => e.preventDefault()}
+    >
+      {/* Header */}
+      <div className="flex items-center gap-2 px-3 py-2 border-b">
+        {step === 'configure' && (
+          <button
+            type="button"
+            onClick={handleBack}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+        )}
+        <span className="text-xs font-medium text-muted-foreground truncate">
+          {step === 'field' ? 'Filter by' : selectedField?.label ?? ''}
+        </span>
+      </div>
 
-      {filters.length > 1 && (
-        <button
-          type="button"
-          onClick={onClearAll}
-          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-        >
-          Clear all
-        </button>
+      {step === 'field' && (
+        <FieldPicker
+          fields={fields}
+          filters={filters}
+          search={search}
+          onSearchChange={setSearch}
+          onSelect={handleFieldSelect}
+          inputRef={inputRef}
+        />
       )}
 
-      {/* Add filter button + popover */}
+      {step === 'configure' && selectedField && selectedOperator && (
+        <OperatorAndValueStep
+          field={selectedField}
+          operator={selectedOperator}
+          initialValue={editingValue}
+          onOperatorChange={handleOperatorChange}
+          onSubmit={handleValueSelect}
+          inputRef={inputRef}
+        />
+      )}
+    </Popover.Content>
+  );
+
+  return (
+    <div className="flex items-center gap-2 flex-wrap">
       <Popover.Root open={open} onOpenChange={handleOpenChange}>
+        {/* Filter chips — clickable to edit, popover anchors to chip */}
+        {filters.map((expr) => (
+          <Popover.Anchor key={expr.field} asChild>
+            <Badge
+              variant="secondary"
+              className="cursor-pointer"
+              onRemove={() => onRemoveFilter(expr.field)}
+              onClick={(e) => handleChipClick(expr, e)}
+            >
+              {getChipLabel(expr)}
+            </Badge>
+          </Popover.Anchor>
+        ))}
+
+        {filters.length > 1 && (
+          <button
+            type="button"
+            onClick={onClearAll}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Clear all
+          </button>
+        )}
+
+        {/* Add filter button */}
         <Popover.Trigger asChild>
           <button
             type="button"
             className={cn(
               'inline-flex items-center gap-1.5 rounded-md border border-dashed border-input bg-background px-2.5 h-7 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors',
-              open && 'bg-accent text-accent-foreground',
+              open && !anchorRef.current && 'bg-accent text-accent-foreground',
             )}
           >
             <Filter className="h-3 w-3" />
             Filter
           </button>
         </Popover.Trigger>
+
         <Popover.Portal>
-          <Popover.Content
-            className="z-50 w-72 rounded-md border bg-popover text-popover-foreground shadow-md outline-none animate-in fade-in-0 zoom-in-95"
-            sideOffset={4}
-            align="start"
-            onOpenAutoFocus={(e) => e.preventDefault()}
-          >
-            {/* Header */}
-            <div className="flex items-center gap-2 px-3 py-2 border-b">
-              {step === 'configure' && (
-                <button
-                  type="button"
-                  onClick={handleBack}
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-              )}
-              <span className="text-xs font-medium text-muted-foreground truncate">
-                {step === 'field' ? 'Filter by' : selectedField?.label ?? ''}
-              </span>
-            </div>
-
-            {/* Step 1: Field picker */}
-            {step === 'field' && (
-              <FieldPicker
-                fields={fields}
-                filters={filters}
-                search={search}
-                onSearchChange={setSearch}
-                onSelect={handleFieldSelect}
-                inputRef={inputRef}
-              />
-            )}
-
-            {/* Step 2: Operator + Value (combined) */}
-            {step === 'configure' && selectedField && selectedOperator && (
-              <OperatorAndValueStep
-                field={selectedField}
-                operator={selectedOperator}
-                onOperatorChange={handleOperatorChange}
-                onSubmit={handleValueSelect}
-                inputRef={inputRef}
-              />
-            )}
-          </Popover.Content>
+          {popoverContent}
         </Popover.Portal>
       </Popover.Root>
     </div>
@@ -264,12 +276,14 @@ function FieldPicker({
 function OperatorAndValueStep({
   field,
   operator,
+  initialValue,
   onOperatorChange,
   onSubmit,
   inputRef,
 }: {
   field: DataGridFilterField;
   operator: FilterOperator;
+  initialValue?: unknown;
   onOperatorChange: (op: FilterOperator) => void;
   onSubmit: (value: unknown, displayValue?: string) => void;
   inputRef: React.RefObject<HTMLInputElement | null>;
@@ -303,6 +317,7 @@ function OperatorAndValueStep({
         <ValueInput
           field={field}
           operator={operator}
+          initialValue={initialValue}
           onSubmit={onSubmit}
           inputRef={inputRef}
         />
@@ -317,11 +332,13 @@ function OperatorAndValueStep({
 function ValueInput({
   field,
   operator,
+  initialValue,
   onSubmit,
   inputRef,
 }: {
   field: DataGridFilterField;
   operator: FilterOperator;
+  initialValue?: unknown;
   onSubmit: (value: unknown, displayValue?: string) => void;
   inputRef: React.RefObject<HTMLInputElement | null>;
 }) {
@@ -335,18 +352,18 @@ function ValueInput({
   }
 
   if (isBetween) {
-    return <BetweenValueInput fieldType={field.fieldType} onSubmit={onSubmit} inputRef={inputRef} />;
+    return <BetweenValueInput fieldType={field.fieldType} initialValue={initialValue} onSubmit={onSubmit} inputRef={inputRef} />;
   }
 
   if (hasOptions && isMultiSelect) {
-    return <MultiSelectValueInput field={field} onSubmit={onSubmit} />;
+    return <MultiSelectValueInput field={field} initialValue={initialValue} onSubmit={onSubmit} />;
   }
 
   if (hasOptions) {
     return <SelectValueInput field={field} onSubmit={onSubmit} inputRef={inputRef} />;
   }
 
-  return <TextValueInput fieldType={field.fieldType} onSubmit={onSubmit} inputRef={inputRef} />;
+  return <TextValueInput fieldType={field.fieldType} initialValue={initialValue} onSubmit={onSubmit} inputRef={inputRef} />;
 }
 
 // --- Boolean ---
@@ -374,15 +391,18 @@ function BooleanValueInput({ onSubmit }: { onSubmit: (v: unknown) => void }) {
 // --- Between (min/max) ---
 function BetweenValueInput({
   fieldType,
+  initialValue,
   onSubmit,
   inputRef,
 }: {
   fieldType: string;
+  initialValue?: unknown;
   onSubmit: (v: unknown) => void;
   inputRef: React.RefObject<HTMLInputElement | null>;
 }) {
-  const [min, setMin] = useState('');
-  const [max, setMax] = useState('');
+  const initial = Array.isArray(initialValue) ? initialValue : ['', ''];
+  const [min, setMin] = useState(String(initial[0] ?? ''));
+  const [max, setMax] = useState(String(initial[1] ?? ''));
 
   const inputType = ['number', 'currency', 'decimal'].includes(fieldType) ? 'number' : 'date';
 
@@ -418,18 +438,21 @@ function BetweenValueInput({
 // --- Multi-select (checkboxes) — supports both static and async options ---
 function MultiSelectValueInput({
   field,
+  initialValue,
   onSubmit,
 }: {
   field: DataGridFilterField;
+  initialValue?: unknown;
   onSubmit: (v: unknown, displayValue?: string) => void;
 }) {
-  const [selected, setSelected] = useState<string[]>([]);
+  const [selected, setSelected] = useState<string[]>(
+    Array.isArray(initialValue) ? (initialValue as string[]) : [],
+  );
   const [search, setSearch] = useState('');
   const [asyncResults, setAsyncResults] = useState<DataGridFilterFieldOption[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const debouncedSearch = useDebounce(search, 300);
 
-  // Async search for lookup fields
   useEffect(() => {
     if (!field.onSearchOptions) return;
     let cancelled = false;
@@ -525,7 +548,6 @@ function SelectValueInput({
   const [isSearching, setIsSearching] = useState(false);
   const debouncedSearch = useDebounce(search, 300);
 
-  // Async search
   useEffect(() => {
     if (!field.onSearchOptions) return;
     let cancelled = false;
@@ -584,14 +606,16 @@ function SelectValueInput({
 // --- Text/number/date input ---
 function TextValueInput({
   fieldType,
+  initialValue,
   onSubmit,
   inputRef,
 }: {
   fieldType: string;
+  initialValue?: unknown;
   onSubmit: (v: unknown) => void;
   inputRef: React.RefObject<HTMLInputElement | null>;
 }) {
-  const [value, setValue] = useState('');
+  const [value, setValue] = useState(initialValue != null ? String(initialValue) : '');
 
   const inputType = ['number', 'currency', 'decimal'].includes(fieldType)
     ? 'number'
