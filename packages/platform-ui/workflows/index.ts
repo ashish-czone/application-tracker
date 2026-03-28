@@ -5,6 +5,9 @@ export { StateNode } from './components/StateNode';
 export { StateConfigPanel } from './components/StateConfigPanel';
 export { TransitionConfigPanel } from './components/TransitionConfigPanel';
 export { AddWorkflowForm } from './components/AddWorkflowForm';
+export { PipelineStageManager } from './components/PipelineStageManager';
+export { StageForm } from './components/StageForm';
+export { StageTransitionEditor } from './components/StageTransitionEditor';
 export {
   useWorkflows, useWorkflow, useCreateWorkflow, useUpdateWorkflow, useDeleteWorkflow,
   useCreateState, useUpdateState, useDeleteState,
