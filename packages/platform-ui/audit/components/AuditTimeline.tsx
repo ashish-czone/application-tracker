@@ -65,6 +65,9 @@ function TimelineEntry({ entry, showLine }: { entry: AuditLogEntry; showLine: bo
         {lines.map((line, i) => (
           <p key={i} className="text-sm text-foreground/80 leading-relaxed">{line}</p>
         ))}
+        {entry.actorName && (
+          <p className="text-xs text-muted-foreground mt-0.5">by {entry.actorName}</p>
+        )}
       </div>
     </div>
   );

@@ -5,6 +5,7 @@ export interface AuditLogEntry {
   action: string;
   eventName: string;
   actorId: string | null;
+  actorName?: string | null;
   before: Record<string, unknown> | null;
   after: Record<string, unknown> | null;
   changes: Record<string, { from: unknown; to: unknown }> | null;
