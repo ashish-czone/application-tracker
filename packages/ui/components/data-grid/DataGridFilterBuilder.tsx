@@ -66,9 +66,9 @@ export function DataGridFilterBuilder({
     }
   };
 
-  const handleValueSelect = (value: unknown) => {
+  const handleValueSelect = (value: unknown, displayValue?: string) => {
     if (!selectedField || !selectedOperator) return;
-    onAddFilter({ field: selectedField.key, operator: selectedOperator, value });
+    onAddFilter({ field: selectedField.key, operator: selectedOperator, value, displayValue });
     setOpen(false);
   };
 
@@ -84,6 +84,7 @@ export function DataGridFilterBuilder({
 
   const getValueLabel = (expr: FilterExpression) => {
     if (expr.operator === 'isNull' || expr.operator === 'isNotNull') return '';
+    if (expr.displayValue) return expr.displayValue;
     const field = fields.find((f) => f.key === expr.field);
     if (Array.isArray(expr.value)) {
       return (expr.value as string[])
@@ -255,7 +256,7 @@ function OperatorAndValueStep({
   field: DataGridFilterField;
   operator: FilterOperator;
   onOperatorChange: (op: FilterOperator) => void;
-  onSubmit: (value: unknown) => void;
+  onSubmit: (value: unknown, displayValue?: string) => void;
   inputRef: React.RefObject<HTMLInputElement | null>;
 }) {
   const operators = field.operators ?? OPERATORS_BY_FIELD_TYPE[field.fieldType] ?? ['eq'];
@@ -306,7 +307,7 @@ function ValueInput({
 }: {
   field: DataGridFilterField;
   operator: FilterOperator;
-  onSubmit: (value: unknown) => void;
+  onSubmit: (value: unknown, displayValue?: string) => void;
   inputRef: React.RefObject<HTMLInputElement | null>;
 }) {
   const isBooleanField = field.fieldType === 'boolean';
@@ -405,7 +406,7 @@ function MultiSelectValueInput({
   onSubmit,
 }: {
   field: DataGridFilterField;
-  onSubmit: (v: unknown) => void;
+  onSubmit: (v: unknown, displayValue?: string) => void;
 }) {
   const [selected, setSelected] = useState<string[]>([]);
   const [search, setSearch] = useState('');
@@ -479,7 +480,12 @@ function MultiSelectValueInput({
         <button
           type="button"
           disabled={selected.length === 0}
-          onClick={() => onSubmit(selected)}
+          onClick={() => {
+            const labels = selected
+              .map((v) => options.find((o) => o.value === v)?.label ?? v)
+              .join(', ');
+            onSubmit(selected, labels);
+          }}
           className="w-full rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Apply ({selected.length})
@@ -496,7 +502,7 @@ function SelectValueInput({
   inputRef,
 }: {
   field: DataGridFilterField;
-  onSubmit: (v: unknown) => void;
+  onSubmit: (v: unknown, displayValue?: string) => void;
   inputRef: React.RefObject<HTMLInputElement | null>;
 }) {
   const [search, setSearch] = useState('');
@@ -547,7 +553,7 @@ function SelectValueInput({
               <Command.Item
                 key={opt.value}
                 value={opt.label}
-                onSelect={() => onSubmit(opt.value)}
+                onSelect={() => onSubmit(opt.value, opt.label)}
                 className="flex items-center rounded-sm px-2 py-1.5 text-sm cursor-pointer hover:bg-accent aria-selected:bg-accent"
               >
                 <span className="truncate">{opt.label}</span>

@@ -24,6 +24,8 @@ export interface FilterExpression {
   field: string;
   operator: FilterOperator;
   value: unknown;
+  /** Display label for the value (used in chips, not sent to API) */
+  displayValue?: string;
 }
 
 /** Valid operators per field type */
