@@ -254,6 +254,7 @@ export class FieldDefinitionService {
         if (f.columnName && existing.columnName !== f.columnName) updates.columnName = f.columnName;
         if (f.sortOrder !== undefined && existing.sortOrder !== f.sortOrder) updates.sortOrder = f.sortOrder;
         if (existing.sortOrder === 0 && f.sortOrder === undefined) updates.sortOrder = i;
+        if (existing.isSystem !== (f.isSystem ?? false)) updates.isSystem = f.isSystem ?? false;
 
         if (Object.keys(updates).length > 0) {
           await this.database.db
