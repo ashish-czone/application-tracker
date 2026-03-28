@@ -1,5 +1,6 @@
 import { useSearchParams } from 'react-router';
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
+import type { FilterExpression, FilterOperator } from '../components/data-grid/filter-types';
 
 interface UseDataGridParamsOptions {
   defaultSort?: string;
@@ -117,6 +118,79 @@ export function useDataGridParams(options: UseDataGridParamsOptions = {}) {
     [setSearchParams],
   );
 
+  // ---------------------------------------------------------------------------
+  // Structured filters — stored as JSON in ?filters= URL param
+  // ---------------------------------------------------------------------------
+
+  const VALID_OPERATORS = new Set<FilterOperator>([
+    'eq', 'neq', 'gt', 'gte', 'lt', 'lte', 'like',
+    'in', 'notIn', 'isNull', 'isNotNull', 'between', 'contains',
+  ]);
+
+  const getFilters = useMemo((): FilterExpression[] => {
+    const raw = searchParams.get('filters');
+    if (!raw) return [];
+    try {
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return [];
+      return parsed.filter(
+        (f: any) => f && typeof f.field === 'string' && typeof f.operator === 'string' && VALID_OPERATORS.has(f.operator),
+      );
+    } catch {
+      return [];
+    }
+  }, [searchParams]);
+
+  const setFiltersParam = useCallback(
+    (filters: FilterExpression[]) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          if (filters.length > 0) next.set('filters', JSON.stringify(filters));
+          else next.delete('filters');
+          next.delete('page');
+          return next;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
+
+  const addFilter = useCallback(
+    (expr: FilterExpression) => {
+      const current = getFilters;
+      const idx = current.findIndex((f) => f.field === expr.field);
+      const updated = idx >= 0
+        ? current.map((f, i) => (i === idx ? expr : f))
+        : [...current, expr];
+      setFiltersParam(updated);
+    },
+    [getFilters, setFiltersParam],
+  );
+
+  const removeFilter = useCallback(
+    (field: string) => {
+      setFiltersParam(getFilters.filter((f) => f.field !== field));
+    },
+    [getFilters, setFiltersParam],
+  );
+
+  const updateFilter = useCallback(
+    (index: number, expr: FilterExpression) => {
+      const updated = [...getFilters];
+      if (index >= 0 && index < updated.length) {
+        updated[index] = expr;
+      }
+      setFiltersParam(updated);
+    },
+    [getFilters, setFiltersParam],
+  );
+
+  const clearAllFilters = useCallback(() => {
+    setFiltersParam([]);
+  }, [setFiltersParam]);
+
   return {
     page,
     pageSize,
@@ -127,8 +201,16 @@ export function useDataGridParams(options: UseDataGridParamsOptions = {}) {
     setPageSize,
     setSearch,
     setSort,
+    // Legacy filter methods (backward compat)
     getFilter,
     setFilter,
     clearFilters,
+    // Structured filter methods
+    filters: getFilters,
+    addFilter,
+    removeFilter,
+    updateFilter,
+    clearAllFilters,
+    setFilters: setFiltersParam,
   };
 }
