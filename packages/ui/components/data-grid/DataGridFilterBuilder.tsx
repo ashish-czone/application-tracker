@@ -32,7 +32,7 @@ export function DataGridFilterBuilder({
   const [selectedField, setSelectedField] = useState<DataGridFilterField | null>(null);
   const [selectedOperator, setSelectedOperator] = useState<FilterOperator | null>(null);
   const [editingValue, setEditingValue] = useState<unknown>(undefined);
-  const [isEditing, setIsEditing] = useState(false);
+  const [editingFieldKey, setEditingFieldKey] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const editingRef = useRef(false);
@@ -43,7 +43,7 @@ export function DataGridFilterBuilder({
       setSelectedField(null);
       setSelectedOperator(null);
       setEditingValue(undefined);
-      setIsEditing(false);
+      setEditingFieldKey(null);
       setSearch('');
     }
     editingRef.current = false;
@@ -86,7 +86,7 @@ export function DataGridFilterBuilder({
     setSelectedField(field);
     setSelectedOperator(expr.operator);
     setEditingValue(expr.value);
-    setIsEditing(true);
+    setEditingFieldKey(expr.field);
     setStep('configure');
     setSearch('');
     setOpen(true);
@@ -132,7 +132,7 @@ export function DataGridFilterBuilder({
     >
       {/* Header */}
       <div className="flex items-center gap-2 px-3 py-2 border-b">
-        {step === 'configure' && !isEditing && (
+        {step === 'configure' && !editingFieldKey && (
           <button
             type="button"
             onClick={handleBack}
@@ -174,17 +174,23 @@ export function DataGridFilterBuilder({
     <div className="flex items-center gap-2 flex-wrap">
       <Popover.Root open={open} onOpenChange={handleOpenChange}>
         {/* Filter chips — clickable to edit */}
-        {filters.map((expr) => (
-          <Badge
-            key={expr.field}
-            variant="secondary"
-            className="cursor-pointer"
-            onRemove={() => onRemoveFilter(expr.field)}
-            onClick={() => handleChipClick(expr)}
-          >
-            {getChipLabel(expr)}
-          </Badge>
-        ))}
+        {filters.map((expr) => {
+          const badge = (
+            <Badge
+              key={expr.field}
+              variant="secondary"
+              className="cursor-pointer"
+              onRemove={() => onRemoveFilter(expr.field)}
+              onClick={() => handleChipClick(expr)}
+            >
+              {getChipLabel(expr)}
+            </Badge>
+          );
+          // Anchor popover to the chip being edited
+          return editingFieldKey === expr.field
+            ? <Popover.Anchor key={expr.field} asChild>{badge}</Popover.Anchor>
+            : badge;
+        })}
 
         {filters.length > 1 && (
           <button
