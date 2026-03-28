@@ -347,6 +347,8 @@ export interface ListLayoutColumn {
   };
   /** Picklist options (for picklist/multi_select cell formatting) */
   picklistOptions?: { label: string; value: string }[];
+  /** Valid filter operators for this column's field type */
+  operators?: string[];
 }
 
 export interface ListLayoutResponse {
