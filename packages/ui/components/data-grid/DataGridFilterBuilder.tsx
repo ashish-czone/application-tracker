@@ -399,7 +399,7 @@ function BetweenValueInput({
   );
 }
 
-// --- Multi-select (checkboxes) ---
+// --- Multi-select (checkboxes) — supports both static and async options ---
 function MultiSelectValueInput({
   field,
   onSubmit,
@@ -409,11 +409,29 @@ function MultiSelectValueInput({
 }) {
   const [selected, setSelected] = useState<string[]>([]);
   const [search, setSearch] = useState('');
+  const [asyncResults, setAsyncResults] = useState<DataGridFilterFieldOption[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const debouncedSearch = useDebounce(search, 300);
 
-  const options = field.options ?? [];
-  const filtered = options.filter(
-    (o) => !search || o.label.toLowerCase().includes(search.toLowerCase()),
-  );
+  // Async search for lookup fields
+  useEffect(() => {
+    if (!field.onSearchOptions) return;
+    let cancelled = false;
+    setIsSearching(true);
+    field.onSearchOptions(debouncedSearch).then((results) => {
+      if (!cancelled) {
+        setAsyncResults(results);
+        setIsSearching(false);
+      }
+    }).catch(() => {
+      if (!cancelled) setIsSearching(false);
+    });
+    return () => { cancelled = true; };
+  }, [debouncedSearch, field]);
+
+  const options = field.options
+    ? field.options.filter((o) => !search || o.label.toLowerCase().includes(search.toLowerCase()))
+    : asyncResults;
 
   const toggle = (value: string) => {
     setSelected((prev) =>
@@ -433,22 +451,28 @@ function MultiSelectValueInput({
         />
       </div>
       <div className="max-h-40 overflow-y-auto p-1">
-        {filtered.map((opt) => (
-          <label
-            key={opt.value}
-            className="flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm cursor-pointer hover:bg-accent"
-          >
-            <input
-              type="checkbox"
-              checked={selected.includes(opt.value)}
-              onChange={() => toggle(opt.value)}
-              className="rounded border-input"
-            />
-            <span className="truncate">{opt.label}</span>
-          </label>
-        ))}
-        {filtered.length === 0 && (
-          <p className="px-2 py-4 text-center text-sm text-muted-foreground">No options</p>
+        {isSearching ? (
+          <div className="px-2 py-4 text-center text-sm text-muted-foreground">Searching...</div>
+        ) : (
+          <>
+            {options.map((opt) => (
+              <label
+                key={opt.value}
+                className="flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm cursor-pointer hover:bg-accent"
+              >
+                <input
+                  type="checkbox"
+                  checked={selected.includes(opt.value)}
+                  onChange={() => toggle(opt.value)}
+                  className="rounded border-input"
+                />
+                <span className="truncate">{opt.label}</span>
+              </label>
+            ))}
+            {options.length === 0 && (
+              <p className="px-2 py-4 text-center text-sm text-muted-foreground">No options</p>
+            )}
+          </>
         )}
       </div>
       <div className="border-t px-2 py-2">
