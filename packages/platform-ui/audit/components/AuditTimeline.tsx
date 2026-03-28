@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { formatDistanceToNow, format } from 'date-fns';
-import { cn, Badge, Button } from '@packages/ui';
+import { useState, useMemo } from 'react';
+import { format, isToday, isYesterday } from 'date-fns';
+import { cn, Button } from '@packages/ui';
 import { ChevronDown, ChevronRight, Plus, Pencil, Trash2, Zap, History } from 'lucide-react';
 import { useAuditLogs } from '../hooks';
 import type { AuditLogEntry } from '../types';
@@ -10,15 +10,11 @@ interface AuditTimelineProps {
   entityId: string;
 }
 
-const ACTION_CONFIG: Record<string, { label: string; icon: React.ComponentType<{ className?: string }>; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-  created: { label: 'Created', icon: Plus, variant: 'default' },
-  updated: { label: 'Updated', icon: Pencil, variant: 'secondary' },
-  deleted: { label: 'Deleted', icon: Trash2, variant: 'destructive' },
+const ACTION_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  created: Plus,
+  updated: Pencil,
+  deleted: Trash2,
 };
-
-function getActionConfig(action: string) {
-  return ACTION_CONFIG[action] ?? { label: action, icon: Zap, variant: 'outline' as const };
-}
 
 function formatChangeValue(value: unknown): string {
   if (value === null || value === undefined) return '(empty)';
@@ -27,30 +23,56 @@ function formatChangeValue(value: unknown): string {
   return String(value);
 }
 
+function formatDayHeader(dateStr: string): string {
+  const date = new Date(dateStr);
+  if (isToday(date)) return 'Today';
+  if (isYesterday(date)) return 'Yesterday';
+  return format(date, 'MMM d, yyyy');
+}
+
+function buildActionSummary(entry: AuditLogEntry): string {
+  if (entry.action === 'created') return 'Record created';
+  if (entry.action === 'deleted') return 'Record deleted';
+
+  if (entry.changes && Object.keys(entry.changes).length > 0) {
+    const fields = Object.keys(entry.changes);
+    if (fields.length === 1) {
+      const field = fields[0];
+      const { from, to } = entry.changes[field];
+      return `${field} changed from ${formatChangeValue(from)} to ${formatChangeValue(to)}`;
+    }
+    return `${fields.length} fields updated`;
+  }
+
+  return 'Record updated';
+}
+
 function ChangeDetails({ entry }: { entry: AuditLogEntry }) {
   const [expanded, setExpanded] = useState(false);
-
-  if (!entry.changes || Object.keys(entry.changes).length === 0) return null;
+  if (!entry.changes || Object.keys(entry.changes).length <= 1) return null;
 
   const changes = Object.entries(entry.changes);
 
   return (
-    <div className="mt-2">
+    <div className="mt-1">
       <button
         type="button"
         onClick={() => setExpanded(!expanded)}
         className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
       >
         {expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-        {changes.length} field{changes.length !== 1 ? 's' : ''} changed
+        Show details
       </button>
       {expanded && (
-        <div className="mt-1.5 space-y-1 text-xs">
+        <div className="mt-1.5 space-y-1 text-xs pl-4">
           {changes.map(([field, { from, to }]) => (
-            <div key={field} className="flex items-baseline gap-1.5 text-muted-foreground">
+            <div key={field} className="text-muted-foreground">
               <span className="font-medium text-foreground">{field}</span>
+              {' '}
+              <span>changed from</span>
+              {' '}
               <span className="line-through">{formatChangeValue(from)}</span>
-              <span>&rarr;</span>
+              {' → '}
               <span className="text-foreground">{formatChangeValue(to)}</span>
             </div>
           ))}
@@ -61,40 +83,51 @@ function ChangeDetails({ entry }: { entry: AuditLogEntry }) {
 }
 
 function TimelineEntry({ entry }: { entry: AuditLogEntry }) {
-  const config = getActionConfig(entry.action);
-  const Icon = config.icon;
+  const Icon = ACTION_ICONS[entry.action] ?? Zap;
   const occurredAt = new Date(entry.occurredAt);
+  const time = format(occurredAt, 'h:mm a');
+  const summary = buildActionSummary(entry);
 
   return (
-    <div className="flex gap-3 py-3">
-      <div className="flex flex-col items-center">
-        <div className={cn(
-          'flex h-7 w-7 shrink-0 items-center justify-center rounded-full',
-          entry.action === 'created' && 'bg-primary/10 text-primary',
-          entry.action === 'updated' && 'bg-muted text-muted-foreground',
-          entry.action === 'deleted' && 'bg-destructive/10 text-destructive',
-          !ACTION_CONFIG[entry.action] && 'bg-muted text-muted-foreground',
-        )}>
-          <Icon className="h-3.5 w-3.5" />
-        </div>
-        <div className="flex-1 w-px bg-border mt-1" />
+    <div className="flex items-start gap-3 py-2.5">
+      {/* Time on the left */}
+      <span className="w-20 shrink-0 text-xs text-muted-foreground text-right pt-0.5 tabular-nums">
+        {time}
+      </span>
+
+      {/* Icon in center */}
+      <div className={cn(
+        'flex h-6 w-6 shrink-0 items-center justify-center rounded-full mt-0.5',
+        entry.action === 'created' && 'bg-primary/10 text-primary',
+        entry.action === 'updated' && 'bg-muted text-muted-foreground',
+        entry.action === 'deleted' && 'bg-destructive/10 text-destructive',
+        !ACTION_ICONS[entry.action] && 'bg-muted text-muted-foreground',
+      )}>
+        <Icon className="h-3 w-3" />
       </div>
-      <div className="flex-1 min-w-0 pb-2">
-        <div className="flex items-center gap-2">
-          <Badge variant={config.variant} className="text-[10px] px-1.5 py-0">
-            {config.label}
-          </Badge>
-          <span
-            className="text-xs text-muted-foreground"
-            title={format(occurredAt, 'PPpp')}
-          >
-            {formatDistanceToNow(occurredAt, { addSuffix: true })}
-          </span>
-        </div>
+
+      {/* Action description on the right */}
+      <div className="flex-1 min-w-0">
+        <p className="text-sm text-foreground">{summary}</p>
         <ChangeDetails entry={entry} />
       </div>
     </div>
   );
+}
+
+/** Group audit entries by calendar day */
+function groupByDay(entries: AuditLogEntry[]): { day: string; entries: AuditLogEntry[] }[] {
+  const groups: Map<string, AuditLogEntry[]> = new Map();
+  for (const entry of entries) {
+    const day = format(new Date(entry.occurredAt), 'yyyy-MM-dd');
+    const existing = groups.get(day);
+    if (existing) {
+      existing.push(entry);
+    } else {
+      groups.set(day, [entry]);
+    }
+  }
+  return Array.from(groups.entries()).map(([day, entries]) => ({ day, entries }));
 }
 
 export function AuditTimeline({ entityType, entityId }: AuditTimelineProps) {
@@ -106,16 +139,20 @@ export function AuditTimeline({ entityType, entityId }: AuditTimelineProps) {
     limit: 25,
   });
 
+  const dayGroups = useMemo(() => {
+    if (!data?.data) return [];
+    return groupByDay(data.data);
+  }, [data?.data]);
+
   if (isLoading) {
     return (
-      <div className="space-y-4 py-4">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="flex gap-3">
-            <div className="h-7 w-7 rounded-full bg-muted animate-pulse shrink-0" />
-            <div className="flex-1 space-y-2">
-              <div className="h-4 w-24 bg-muted animate-pulse rounded" />
-              <div className="h-3 w-48 bg-muted animate-pulse rounded" />
-            </div>
+      <div className="space-y-6 py-4">
+        <div className="h-4 w-28 bg-muted animate-pulse rounded" />
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="flex items-start gap-3">
+            <div className="w-20 h-3 bg-muted animate-pulse rounded" />
+            <div className="h-6 w-6 rounded-full bg-muted animate-pulse shrink-0" />
+            <div className="flex-1 h-4 bg-muted animate-pulse rounded" />
           </div>
         ))}
       </div>
@@ -133,10 +170,7 @@ export function AuditTimeline({ entityType, entityId }: AuditTimelineProps) {
     );
   }
 
-  const entries = data?.data ?? [];
-  const meta = data?.meta;
-
-  if (entries.length === 0) {
+  if (dayGroups.length === 0) {
     return (
       <div className="text-center py-12">
         <History className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
@@ -145,13 +179,29 @@ export function AuditTimeline({ entityType, entityId }: AuditTimelineProps) {
     );
   }
 
+  const meta = data?.meta;
+
   return (
     <div>
-      <div className="divide-y-0">
-        {entries.map((entry) => (
-          <TimelineEntry key={entry.id} entry={entry} />
-        ))}
-      </div>
+      {dayGroups.map((group) => (
+        <div key={group.day} className="mb-6">
+          {/* Day header */}
+          <div className="flex items-center gap-2 mb-2">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              {formatDayHeader(group.day)}
+            </h3>
+            <div className="flex-1 h-px bg-border" />
+          </div>
+
+          {/* Entries for this day */}
+          <div className="divide-y divide-border">
+            {group.entries.map((entry) => (
+              <TimelineEntry key={entry.id} entry={entry} />
+            ))}
+          </div>
+        </div>
+      ))}
+
       {meta && meta.totalPages > 1 && (
         <div className="flex items-center justify-between pt-4 border-t">
           <p className="text-xs text-muted-foreground">
