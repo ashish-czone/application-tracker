@@ -10,6 +10,11 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
   toast,
 } from '@packages/ui';
 import type { EntityAction } from '@packages/entity-engine';
@@ -19,9 +24,13 @@ import { useEntityLayout } from '../helpers/useEntityLayout';
 import { useListLayout } from '../helpers/useListLayout';
 import { EntityRelatedList } from './EntityRelatedList';
 import { EntityPickerPanel } from '../components/EntityPickerPanel';
+import { DetailPageTabs, type DetailTab } from '../components/DetailPageTabs';
+import { DetailPageSidebar } from '../components/DetailPageSidebar';
 
 interface EntityDetailPageProps {
   entityType: string;
+  /** Render the audit trail tab content. Receives entityType and entityId. */
+  renderAuditTrail?: (entityType: string, entityId: string) => React.ReactNode;
 }
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -30,10 +39,9 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
 
 /**
  * Generic detail page for any entity registered with the entity engine.
- * Renders a header with entity name, layout-driven editable sections,
- * and plugin sections (skills, resume, etc.) from the entity UI config.
+ * Layout: left sidebar (related records) + main area (tabs: Overview | Audit Trail).
  */
-export function EntityDetailPage({ entityType }: EntityDetailPageProps) {
+export function EntityDetailPage({ entityType, renderAuditTrail }: EntityDetailPageProps) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
@@ -43,8 +51,14 @@ export function EntityDetailPage({ entityType }: EntityDetailPageProps) {
   const queryClient = useQueryClient();
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [activeTab, setActiveTab] = useState('detail');
+  const [activeTab, setActiveTab] = useState<DetailTab>('overview');
   const [activePicker, setActivePicker] = useState<EntityAction | null>(null);
+  const [browseRelationship, setBrowseRelationship] = useState<{
+    name: string;
+    label: string;
+    targetEntity: string;
+    foreignKey?: string;
+  } | null>(null);
 
   const { data: item, isLoading, isError } = hooks.useDetail(id ?? null);
   const { data: layout, isLoading: layoutLoading } = useEntityLayout(entityType);
@@ -70,14 +84,6 @@ export function EntityDetailPage({ entityType }: EntityDetailPageProps) {
       `/tags/group/${groupSlug}?search=${encodeURIComponent(query)}&limit=20`,
     );
   }, [apiFn]);
-
-  const getFieldSearch = useCallback((_fieldKey: string, fieldType: string, lookupEntity?: string) => {
-    if (fieldType === 'user') return searchUsers;
-    if ((fieldType === 'lookup' || fieldType === 'category') && lookupEntity) {
-      return (query: string) => searchLookup(lookupEntity, query);
-    }
-    return undefined;
-  }, [searchUsers, searchLookup]);
 
   const getFieldSearchForSection = useCallback((fieldKey: string, fieldType: string) => {
     if (fieldType === 'user') return searchUsers;
@@ -106,6 +112,16 @@ export function EntityDetailPage({ entityType }: EntityDetailPageProps) {
     () => entity.relationships.filter((r) => r.type === 'hasMany'),
     [entity.relationships],
   );
+
+  const relationshipCounts = useMemo(() => {
+    if (!item) return {};
+    const counts: Record<string, number> = {};
+    for (const rel of hasManyRelationships) {
+      const key = `${rel.name}Count`;
+      counts[key] = typeof item[key] === 'number' ? (item[key] as number) : 0;
+    }
+    return counts;
+  }, [item, hasManyRelationships]);
 
   const detailActions = listLayout?.actions?.detail ?? [];
 
@@ -179,7 +195,7 @@ export function EntityDetailPage({ entityType }: EntityDetailPageProps) {
   const plugins = getDetailPlugins(entityType).sort((a, b) => a.order - b.order);
 
   return (
-    <div className="max-w-4xl">
+    <div>
       {/* Header */}
       <div className="mb-6">
         <Link
@@ -254,73 +270,78 @@ export function EntityDetailPage({ entityType }: EntityDetailPageProps) {
         </div>
       </div>
 
-      {/* Tabs: Detail + Related Lists */}
-      <div className="border-b mb-6">
-        <nav className="flex gap-0 -mb-px">
-          <button
-            type="button"
-            onClick={() => setActiveTab('detail')}
-            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === 'detail'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/30'
-            }`}
-          >
-            Detail
-          </button>
-          {hasManyRelationships.map((rel) => (
-            <button
-              key={rel.name}
-              type="button"
-              onClick={() => setActiveTab(rel.name)}
-              className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === rel.name
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/30'
-              }`}
-            >
-              {rel.label}
-            </button>
-          ))}
-        </nav>
+      {/* Tabs */}
+      <DetailPageTabs activeTab={activeTab} onTabChange={setActiveTab} />
+
+      {/* Content area: Sidebar + Main */}
+      <div className="flex gap-6">
+        {/* Left sidebar — related record launchers */}
+        {hasManyRelationships.length > 0 && (
+          <DetailPageSidebar
+            relationships={hasManyRelationships}
+            counts={relationshipCounts}
+            onRelationshipClick={(rel) => setBrowseRelationship(rel)}
+          />
+        )}
+
+        {/* Main content */}
+        <div className="flex-1 min-w-0">
+          {activeTab === 'overview' && (
+            <div className="space-y-4">
+              {layout?.sections
+                .filter((s) => s.fields.length > 0)
+                .map((section) => (
+                  <DynamicSection
+                    key={section.id}
+                    section={section}
+                    values={item}
+                    onSave={async (values) => {
+                      await updateMutation.mutateAsync({ id: item.id as string, data: values });
+                    }}
+                    isSaving={updateMutation.isPending}
+                    getFieldSearch={getFieldSearchForSection}
+                    getChipSearch={getChipSearchForSection}
+                  />
+                ))}
+
+              {plugins.map((plugin) => (
+                <plugin.component key={plugin.label} entity={item} />
+              ))}
+            </div>
+          )}
+
+          {activeTab === 'audit-trail' && renderAuditTrail && (
+            renderAuditTrail(entityType, item.id as string)
+          )}
+        </div>
       </div>
 
-      {/* Tab content */}
-      {activeTab === 'detail' ? (
-        <div className="space-y-4">
-          {layout?.sections
-            .filter((s) => s.fields.length > 0)
-            .map((section) => (
-              <DynamicSection
-                key={section.id}
-                section={section}
-                values={item}
-                onSave={async (values) => {
-                  await updateMutation.mutateAsync({ id: item.id as string, data: values });
-                }}
-                isSaving={updateMutation.isPending}
-                getFieldSearch={getFieldSearchForSection}
-                getChipSearch={getChipSearchForSection}
-              />
-            ))}
-
-          {plugins.map((plugin) => (
-            <plugin.component key={plugin.label} entity={item} />
-          ))}
-        </div>
-      ) : (
-        hasManyRelationships
-          .filter((rel) => rel.name === activeTab)
-          .map((rel) => (
-            <EntityRelatedList
-              key={rel.name}
-              targetEntityType={rel.targetEntity}
-              foreignKey={rel.foreignKey ?? `${entityType}Id`}
-              parentId={item.id as string}
-              label={rel.label}
-            />
-          ))
-      )}
+      {/* Related records browse panel */}
+      <Sheet
+        open={!!browseRelationship}
+        onOpenChange={(open) => { if (!open) setBrowseRelationship(null); }}
+      >
+        <SheetContent className="w-3/4 max-w-3xl overflow-y-auto">
+          {browseRelationship && (
+            <>
+              <SheetHeader>
+                <SheetTitle>{browseRelationship.label}</SheetTitle>
+                <SheetDescription>
+                  Related {browseRelationship.label.toLowerCase()} for this {entity.singularName.toLowerCase()}
+                </SheetDescription>
+              </SheetHeader>
+              <div className="mt-4">
+                <EntityRelatedList
+                  targetEntityType={browseRelationship.targetEntity}
+                  foreignKey={browseRelationship.foreignKey ?? `${entityType}Id`}
+                  parentId={item.id as string}
+                  label={browseRelationship.label}
+                />
+              </div>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
 
       {/* Delete confirmation */}
       <ConfirmDialog

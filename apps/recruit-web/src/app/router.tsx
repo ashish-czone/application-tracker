@@ -3,7 +3,16 @@ import { Routes, Route, Navigate } from 'react-router';
 import { AppLayout } from './layout/AppLayout';
 import { AuthGuard } from '../shared/auth/components/AuthGuard';
 import { EntityListPage, EntityCreatePage, EntityDetailPage } from '@packages/entity-engine-ui';
+import { AuditTimeline } from '@packages/platform-ui/audit';
 import { SettingsPage, AppSettingsPage, AutomationsPage, RuleBuilderPage, TasksListPage, UsersListPage, RolesListPage, TagGroupsListPage, CategoryGroupsListPage } from '../portals/recruiter/routes';
+
+function renderAuditTrail(entityType: string, entityId: string) {
+  return <AuditTimeline entityType={entityType} entityId={entityId} />;
+}
+
+function AppEntityDetailPage({ entityType }: { entityType: string }) {
+  return <EntityDetailPage entityType={entityType} renderAuditTrail={renderAuditTrail} />;
+}
 
 const LoginPage = lazy(() => import('../shared/auth/pages/LoginPage'));
 const RegisterPage = lazy(() => import('../shared/auth/pages/RegisterPage'));
@@ -40,7 +49,7 @@ function EntityRoutes({ entityType }: { entityType: string }) {
   return (
     <>
       <Route path={`/${entityType}`} element={<EntityListPage entityType={entityType} />} />
-      <Route path={`/${entityType}/:id`} element={<EntityDetailPage entityType={entityType} />} />
+      <Route path={`/${entityType}/:id`} element={<AppEntityDetailPage entityType={entityType} />} />
     </>
   );
 }
@@ -66,19 +75,19 @@ export function AppRouter() {
           {/* Entity engine routes — each entity = 2 lines */}
           <Route path="/job-openings" element={<EntityListPage entityType="job_openings" />} />
           <Route path="/job-openings/new" element={<EntityCreatePage entityType="job_openings" />} />
-          <Route path="/job-openings/:id" element={<EntityDetailPage entityType="job_openings" />} />
+          <Route path="/job-openings/:id" element={<AppEntityDetailPage entityType="job_openings" />} />
           <Route path="/candidates" element={<EntityListPage entityType="candidates" />} />
-          <Route path="/candidates/:id" element={<EntityDetailPage entityType="candidates" />} />
+          <Route path="/candidates/:id" element={<AppEntityDetailPage entityType="candidates" />} />
           <Route path="/interviews" element={<EntityListPage entityType="interviews" />} />
-          <Route path="/interviews/:id" element={<EntityDetailPage entityType="interviews" />} />
+          <Route path="/interviews/:id" element={<AppEntityDetailPage entityType="interviews" />} />
           <Route path="/clients" element={<EntityListPage entityType="clients" />} />
-          <Route path="/clients/:id" element={<EntityDetailPage entityType="clients" />} />
+          <Route path="/clients/:id" element={<AppEntityDetailPage entityType="clients" />} />
           <Route path="/contacts" element={<EntityListPage entityType="contacts" />} />
-          <Route path="/contacts/:id" element={<EntityDetailPage entityType="contacts" />} />
+          <Route path="/contacts/:id" element={<AppEntityDetailPage entityType="contacts" />} />
           <Route path="/vendors" element={<EntityListPage entityType="vendors" />} />
-          <Route path="/vendors/:id" element={<EntityDetailPage entityType="vendors" />} />
+          <Route path="/vendors/:id" element={<AppEntityDetailPage entityType="vendors" />} />
           <Route path="/applications" element={<EntityListPage entityType="applications" />} />
-          <Route path="/applications/:id" element={<EntityDetailPage entityType="applications" />} />
+          <Route path="/applications/:id" element={<AppEntityDetailPage entityType="applications" />} />
 
           {/* Non-entity routes */}
           <Route
