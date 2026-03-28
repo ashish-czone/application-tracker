@@ -130,7 +130,7 @@ export function useDataGridParams(options: UseDataGridParamsOptions = {}) {
   ]);
 
   const filtersStorageKey = storageKey ? `datagrid-filters-${storageKey}` : null;
-  const restoredFromStorage = useRef(false);
+  const lastRestoredKey = useRef<string | null>(null);
 
   const getFilters = useMemo((): FilterExpression[] => {
     const raw = searchParams.get('filters');
@@ -146,10 +146,10 @@ export function useDataGridParams(options: UseDataGridParamsOptions = {}) {
     }
   }, [searchParams]);
 
-  // Restore filters from localStorage on mount (if no URL param exists)
+  // Restore filters from localStorage when navigating to a page (if no URL param exists)
   useEffect(() => {
-    if (restoredFromStorage.current || !filtersStorageKey) return;
-    restoredFromStorage.current = true;
+    if (!filtersStorageKey || lastRestoredKey.current === filtersStorageKey) return;
+    lastRestoredKey.current = filtersStorageKey;
     if (searchParams.get('filters')) return; // URL param takes precedence
     try {
       const stored = localStorage.getItem(filtersStorageKey);
