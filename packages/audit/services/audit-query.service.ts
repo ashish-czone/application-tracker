@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { DatabaseService, eq, and, desc, count, gte, lte } from '@packages/database';
+import { DatabaseService, eq, and, desc, count, gte, lte, sql } from '@packages/database';
 import type { PaginatedResponse } from '@packages/common';
 import { auditLogs } from '../schema';
 import type { AuditLogRecord, ListAuditLogsQuery } from '../types';
@@ -39,8 +39,11 @@ export class AuditQueryService {
         .where(where),
     ]);
 
+    // Resolve actor names
+    const records = await this.resolveActorNames(data as AuditLogRecord[]);
+
     return {
-      data: data as AuditLogRecord[],
+      data: records,
       meta: {
         total: Number(total),
         page,
@@ -58,7 +61,9 @@ export class AuditQueryService {
       .limit(1);
 
     if (!record) throw new NotFoundException('Audit log entry not found');
-    return record as AuditLogRecord;
+
+    const [resolved] = await this.resolveActorNames([record as AuditLogRecord]);
+    return resolved;
   }
 
   async getEntityHistory(
@@ -67,5 +72,25 @@ export class AuditQueryService {
     query: { page?: number; limit?: number } = {},
   ): Promise<PaginatedResponse<AuditLogRecord>> {
     return this.list({ ...query, entityType, entityId });
+  }
+
+  private async resolveActorNames(records: AuditLogRecord[]): Promise<AuditLogRecord[]> {
+    const actorIds = [...new Set(records.map(r => r.actorId).filter(Boolean))] as string[];
+    if (actorIds.length === 0) return records;
+
+    const users = await this.database.db
+      .select({ id: sql`id`, firstName: sql`first_name`, lastName: sql`last_name` })
+      .from(sql`users`)
+      .where(sql`id IN (${sql.join(actorIds.map(id => sql`${id}`), sql`, `)})`) as { id: string; firstName: string; lastName: string }[];
+
+    const nameMap = new Map<string, string>();
+    for (const u of users) {
+      nameMap.set(u.id, `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim());
+    }
+
+    return records.map(r => ({
+      ...r,
+      actorName: r.actorId ? nameMap.get(r.actorId) ?? null : null,
+    }));
   }
 }
