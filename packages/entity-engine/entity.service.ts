@@ -11,6 +11,7 @@ import {
   parseLegacyFilters,
   parseFilterParam,
   mergeFilters,
+  OPERATORS_BY_FIELD_TYPE,
 } from '@packages/query-builder';
 import { DatabaseService } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
@@ -178,6 +179,7 @@ export class EntityService {
         picklistOptions: (d.fieldType === 'picklist' || d.fieldType === 'multi_select') && d.picklistOptions?.length
           ? d.picklistOptions.map(o => ({ label: o.label, value: o.value }))
           : undefined,
+        operators: OPERATORS_BY_FIELD_TYPE[d.fieldType],
       }));
 
     // Append hasMany relationship count columns
