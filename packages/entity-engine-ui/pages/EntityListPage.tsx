@@ -1,12 +1,11 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
-import { useQuery } from '@tanstack/react-query';
 import { Plus, Trash2, RotateCcw, Database, MoreHorizontal, PenLine, Download, LayoutGrid, Table2 } from 'lucide-react';
 import {
-  DataGrid, DataGridFilters, Badge, Button, useDataGridParams, useActiveFilters,
+  DataGrid, Badge, Button, useDataGridParams,
   Dialog, DialogContent, ConfirmDialog,
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,
-  type ColumnDef, type DataGridBulkAction,
+  type ColumnDef, type DataGridBulkAction, type DataGridFilterField,
 } from '@packages/ui';
 import type { EntityAction } from '@packages/entity-engine';
 import { useEntityEngine, useEntityHooks, useEntityConfig } from '../EntityEngineProvider';
@@ -64,68 +63,44 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
   const {
     page, pageSize, search, sort, order,
     setPage, setPageSize, setSearch, setSort,
-    getFilter, setFilter, clearFilters,
+    filters, addFilter, removeFilter, clearAllFilters,
   } = useDataGridParams({ defaultSort: 'createdAt', defaultOrder: 'desc' });
 
-  // Build filter configs from listLayout columns
-  const picklistFilterConfigs = useMemo(() => {
+  // Build filter field definitions from layout columns
+  const filterFields = useMemo<DataGridFilterField[]>(() => {
     if (!listLayout) return [];
+    const filterableTypes = new Set([
+      'picklist', 'multi_select', 'lookup', 'user', 'boolean', 'category', 'workflow',
+      'text', 'email', 'phone', 'url', 'number', 'currency', 'decimal', 'date', 'datetime',
+    ]);
     return listLayout.columns
-      .filter((c) => (c.fieldType === 'picklist' || c.fieldType === 'multi_select') && c.picklistOptions?.length)
-      .map((c) => ({ key: c.fieldKey, label: c.label, options: c.picklistOptions! }));
-  }, [listLayout]);
-
-  // Identify lookup fields that need async option fetching
-  const lookupFilterFields = useMemo(() => {
-    if (!listLayout) return [];
-    return listLayout.columns
-      .filter((c) => (c.fieldType === 'lookup' || c.fieldType === 'user') && c.lookupEntity)
-      .map((c) => ({ fieldKey: c.fieldKey, label: c.label, lookupEntity: c.lookupEntity! }));
-  }, [listLayout]);
-
-  // Fetch lookup options for all lookup filter fields
-  const { data: lookupOptionsMap } = useQuery({
-    queryKey: ['lookup-filter-options', entityType, lookupFilterFields.map((f) => f.lookupEntity)],
-    queryFn: async () => {
-      const map: Record<string, { label: string; value: string }[]> = {};
-      for (const field of lookupFilterFields) {
-        try {
-          const results = await apiFn.get<{ label: string; value: string }[]>(
-            `/lookups/${field.lookupEntity}?limit=200`,
-          );
-          map[field.fieldKey] = results;
-        } catch {
-          map[field.fieldKey] = [];
+      .filter((c) => filterableTypes.has(c.fieldType) && !c.relationship)
+      .map((c) => {
+        const field: DataGridFilterField = {
+          key: c.fieldKey,
+          label: c.label,
+          fieldType: c.fieldType,
+          operators: c.operators as any,
+        };
+        // Static options for picklist/multi_select
+        if (c.picklistOptions?.length) {
+          field.options = c.picklistOptions;
         }
-      }
-      return map;
-    },
-    enabled: lookupFilterFields.length > 0,
-  });
-
-  // Merge picklist + lookup filter configs
-  const filterConfigs = useMemo(() => {
-    const lookupConfigs = lookupFilterFields
-      .filter((f) => lookupOptionsMap?.[f.fieldKey]?.length)
-      .map((f) => ({
-        key: f.fieldKey,
-        label: f.label,
-        options: lookupOptionsMap![f.fieldKey],
-      }));
-    return [...lookupConfigs, ...picklistFilterConfigs];
-  }, [picklistFilterConfigs, lookupFilterFields, lookupOptionsMap]);
-
-  const activeFilters = useActiveFilters(filterConfigs, getFilter);
-
-  // Build filter params for the API call
-  const filterParams = useMemo(() => {
-    const params: Record<string, unknown> = {};
-    for (const fc of filterConfigs) {
-      const val = getFilter(fc.key);
-      if (val) params[fc.key] = val;
-    }
-    return params;
-  }, [filterConfigs, getFilter]);
+        // Async search for lookup/user fields
+        if ((c.fieldType === 'lookup' || c.fieldType === 'user') && c.lookupEntity) {
+          field.onSearchOptions = async (query: string) => {
+            try {
+              return await apiFn.get<{ label: string; value: string }[]>(
+                `/lookups/${c.lookupEntity}?limit=50${query ? `&search=${encodeURIComponent(query)}` : ''}`,
+              );
+            } catch {
+              return [];
+            }
+          };
+        }
+        return field;
+      });
+  }, [listLayout, apiFn]);
 
   const deleteMutation = hooks.useDelete({ onSuccess: () => setDeletingItem(null) });
   const restoreMutation = hooks.useRestore();
@@ -137,7 +112,7 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
     sort: sort || undefined,
     order,
     includeDeleted: showDeleted,
-    ...filterParams,
+    ...(filters.length > 0 ? { filters: JSON.stringify(filters) } : {}),
   });
 
   // ---------------------------------------------------------------------------
@@ -457,9 +432,11 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
         search={search}
         onSearchChange={setSearch}
         searchPlaceholder={`Search ${entity.pluralName.toLowerCase()}...`}
-        activeFilters={activeFilters}
-        onFilterRemove={(key) => setFilter(key, undefined)}
-        onFiltersClear={() => clearFilters(filterConfigs.map((f) => f.key))}
+        filterFields={filterFields}
+        filters={filters}
+        onFilterAdd={addFilter}
+        onStructuredFilterRemove={removeFilter}
+        onStructuredFiltersClear={clearAllFilters}
         isLoading={isLoading}
         isError={isError}
         onRetry={refetch}
@@ -492,9 +469,6 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
                 />
                 Include deleted
               </label>
-            )}
-            {filterConfigs.length > 0 && (
-              <DataGridFilters filters={filterConfigs} getFilter={getFilter} setFilter={setFilter} />
             )}
             <Button size="sm" onClick={() => {
               if (entity.ui.createMode === 'page' || entity.ui.createMode === 'wizard') {
