@@ -35,7 +35,6 @@ export function DataGridFilterBuilder({
   const [isEditing, setIsEditing] = useState(false);
   const [search, setSearch] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
-  const anchorRef = useRef<HTMLElement | null>(null);
   const editingRef = useRef(false);
 
   const handleOpenChange = useCallback((nextOpen: boolean) => {
@@ -46,7 +45,6 @@ export function DataGridFilterBuilder({
       setEditingValue(undefined);
       setIsEditing(false);
       setSearch('');
-      anchorRef.current = null;
     }
     editingRef.current = false;
     setOpen(nextOpen);
@@ -81,11 +79,10 @@ export function DataGridFilterBuilder({
     setOpen(false);
   };
 
-  const handleChipClick = (expr: FilterExpression, event: React.MouseEvent) => {
+  const handleChipClick = (expr: FilterExpression) => {
     const field = fields.find((f) => f.key === expr.field);
     if (!field) return;
     editingRef.current = true;
-    anchorRef.current = (event.currentTarget as HTMLElement).closest('[data-filter-chip]') as HTMLElement;
     setSelectedField(field);
     setSelectedOperator(expr.operator);
     setEditingValue(expr.value);
@@ -176,18 +173,17 @@ export function DataGridFilterBuilder({
   return (
     <div className="flex items-center gap-2 flex-wrap">
       <Popover.Root open={open} onOpenChange={handleOpenChange}>
-        {/* Filter chips — clickable to edit, popover anchors to chip */}
+        {/* Filter chips — clickable to edit */}
         {filters.map((expr) => (
-          <Popover.Anchor key={expr.field} asChild>
-            <Badge
-              variant="secondary"
-              className="cursor-pointer"
-              onRemove={() => onRemoveFilter(expr.field)}
-              onClick={(e) => handleChipClick(expr, e)}
-            >
-              {getChipLabel(expr)}
-            </Badge>
-          </Popover.Anchor>
+          <Badge
+            key={expr.field}
+            variant="secondary"
+            className="cursor-pointer"
+            onRemove={() => onRemoveFilter(expr.field)}
+            onClick={() => handleChipClick(expr)}
+          >
+            {getChipLabel(expr)}
+          </Badge>
         ))}
 
         {filters.length > 1 && (
@@ -206,7 +202,7 @@ export function DataGridFilterBuilder({
             type="button"
             className={cn(
               'inline-flex items-center gap-1.5 rounded-md border border-dashed border-input bg-background px-2.5 h-7 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors',
-              open && !anchorRef.current && 'bg-accent text-accent-foreground',
+              open && 'bg-accent text-accent-foreground',
             )}
           >
             <Filter className="h-3 w-3" />
