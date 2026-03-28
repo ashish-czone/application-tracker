@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { format, isToday, isYesterday } from 'date-fns';
-import { cn, Button } from '@packages/ui';
+import { Button } from '@packages/ui';
 import { History } from 'lucide-react';
 import { useAuditLogs } from '../hooks';
 import type { AuditLogEntry } from '../types';
@@ -37,59 +37,51 @@ function buildChangeLines(entry: AuditLogEntry): string[] {
   );
 }
 
-function TimelineEntry({ entry, isLast }: { entry: AuditLogEntry; isLast: boolean }) {
+function TimelineEntry({ entry, showLine }: { entry: AuditLogEntry; showLine: boolean }) {
   const occurredAt = new Date(entry.occurredAt);
   const time = format(occurredAt, 'h:mm a');
   const lines = buildChangeLines(entry);
 
   return (
-    <div className="flex">
-      {/* Time — left of the line */}
-      <div className="w-24 shrink-0 text-right pr-4 pt-0.5">
-        <span className="text-xs text-muted-foreground tabular-nums">{time}</span>
+    <div className="flex min-h-[40px]">
+      {/* Time */}
+      <div className="w-[90px] shrink-0 text-right pr-4 pt-[3px]">
+        <span className="text-xs text-muted-foreground tabular-nums whitespace-nowrap">{time}</span>
       </div>
 
-      {/* Dot + vertical line */}
-      <div className="relative flex flex-col items-center w-6 shrink-0">
-        {!isLast && (
-          <div className="absolute top-0 bottom-0 left-1/2 w-px -translate-x-1/2 bg-border" />
-        )}
-        <div className={cn(
-          'relative z-10 mt-1 h-3.5 w-3.5 rounded-full border-[3px] border-background',
-          entry.action === 'created' && 'bg-primary',
-          entry.action === 'deleted' && 'bg-destructive',
-          entry.action !== 'created' && entry.action !== 'deleted' && 'bg-muted-foreground/60',
-        )} />
+      {/* Dot + line column */}
+      <div className="relative w-5 shrink-0 flex flex-col items-center">
+        <div className="h-3 w-3 rounded-full bg-muted-foreground/50 shrink-0 mt-[3px]" />
+        {showLine && <div className="w-[2px] flex-1 bg-border" />}
       </div>
 
-      {/* Action description — right of the line */}
-      <div className="flex-1 min-w-0 pl-3 pb-6">
+      {/* Description */}
+      <div className="flex-1 min-w-0 pl-3 pb-4 pt-[2px]">
         {lines.map((line, i) => (
-          <p key={i} className="text-sm text-foreground leading-relaxed">{line}</p>
+          <p key={i} className="text-sm text-foreground/80 leading-relaxed">{line}</p>
         ))}
       </div>
     </div>
   );
 }
 
-function DayHeader({ day, isFirst }: { day: string; isFirst: boolean }) {
+function DayHeader({ day, showLine }: { day: string; showLine: boolean }) {
   return (
     <div className="flex">
-      {/* Date — left of the line, bold */}
-      <div className="w-24 shrink-0 text-right pr-4 pt-px">
-        <span className="text-sm font-bold text-foreground">{formatDayHeader(day)}</span>
+      {/* Date — bold, left of line */}
+      <div className="w-[90px] shrink-0 text-right pr-4 py-2">
+        <span className="text-[13px] font-semibold text-foreground whitespace-nowrap">
+          {formatDayHeader(day)}
+        </span>
       </div>
 
-      {/* Vertical line continues through the header */}
-      <div className="relative flex flex-col items-center w-6 shrink-0">
-        <div className={cn(
-          'absolute left-1/2 w-px -translate-x-1/2 bg-border',
-          isFirst ? 'top-1/2 bottom-0' : 'top-0 bottom-0',
-        )} />
+      {/* Line column */}
+      <div className="relative w-5 shrink-0 flex flex-col items-center">
+        {showLine && <div className="w-[2px] flex-1 bg-border" />}
       </div>
 
       {/* Spacer */}
-      <div className="flex-1 min-w-0 pl-3 py-3" />
+      <div className="flex-1 min-w-0 pl-3 py-2" />
     </div>
   );
 }
@@ -128,11 +120,11 @@ export function AuditTimeline({ entityType, entityId }: AuditTimelineProps) {
       <div className="space-y-5 py-4">
         {Array.from({ length: 5 }).map((_, i) => (
           <div key={i} className="flex">
-            <div className="w-24 shrink-0 pr-4">
+            <div className="w-[90px] shrink-0 pr-4">
               <div className="h-3 w-14 bg-muted animate-pulse rounded ml-auto" />
             </div>
-            <div className="w-6 shrink-0 flex justify-center">
-              <div className="h-3.5 w-3.5 rounded-full bg-muted animate-pulse" />
+            <div className="w-5 shrink-0 flex justify-center">
+              <div className="h-[10px] w-[10px] rounded-full bg-muted animate-pulse" />
             </div>
             <div className="flex-1 pl-3">
               <div className="h-4 w-3/4 bg-muted animate-pulse rounded" />
@@ -171,12 +163,15 @@ export function AuditTimeline({ entityType, entityId }: AuditTimelineProps) {
     <div>
       {dayGroups.map((group, groupIdx) => (
         <div key={group.day}>
-          <DayHeader day={group.day} isFirst={groupIdx === 0} />
+          <DayHeader
+            day={group.day}
+            showLine={groupIdx > 0 || group.entries.length > 0}
+          />
           {group.entries.map((entry) => (
             <TimelineEntry
               key={entry.id}
               entry={entry}
-              isLast={entry.id === lastEntryId}
+              showLine={entry.id !== lastEntryId}
             />
           ))}
         </div>
