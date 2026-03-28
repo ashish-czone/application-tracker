@@ -1,5 +1,5 @@
 import { lazy, Suspense, useMemo, useState } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router';
+import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@packages/ui';
 import { useEntityEngine, useEntityConfig } from '@packages/entity-engine-ui';
@@ -9,10 +9,10 @@ const FieldManagementPage = lazy(
   () => import('../../field-management/pages/FieldManagementPage'),
 );
 
-function EntitySettingsContent({ entityType }: { entityType: string }) {
+function EntitySettingsContent({ entityType, initialSubTab }: { entityType: string; initialSubTab?: string }) {
   const entity = useEntityConfig(entityType);
   const { data: workflows } = useWorkflows();
-  const [subTab, setSubTab] = useState<'fields' | 'pipeline'>('fields');
+  const [subTab, setSubTab] = useState<'fields' | 'pipeline'>(initialSubTab === 'pipeline' ? 'pipeline' : 'fields');
 
   const entityWorkflow = useMemo(
     () => workflows?.find((w) => w.entityType === entityType && w.isActive),
@@ -73,19 +73,30 @@ function EntitySettingsContent({ entityType }: { entityType: string }) {
 
 export default function SettingsPage() {
   const { entityType: paramEntityType } = useParams<{ entityType: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const location = useLocation();
   const { entities } = useEntityEngine();
+
+  const tabParam = searchParams.get('tab');
 
   const entityTabs = useMemo(
     () =>
       [...entities]
         .sort((a, b) => (a.ui.navOrder ?? 99) - (b.ui.navOrder ?? 99))
-        .map((e) => ({ key: e.entityType, label: e.pluralName, slug: e.slug })),
+        .map((e) => ({ key: e.entityType, label: e.pluralName, slug: e.slug, hasWorkflow: e.features.hasWorkflow })),
     [entities],
   );
 
-  const activeTab = paramEntityType ?? entityTabs[0]?.key ?? '';
+  // When tab=pipeline and no entity specified, auto-select first entity with a workflow
+  const defaultTab = useMemo(() => {
+    if (tabParam === 'pipeline') {
+      return entityTabs.find((t) => t.hasWorkflow)?.key ?? entityTabs[0]?.key ?? '';
+    }
+    return entityTabs[0]?.key ?? '';
+  }, [tabParam, entityTabs]);
+
+  const activeTab = paramEntityType ?? defaultTab;
 
   const cameFrom = (location.state as { from?: string } | null)?.from;
 
@@ -138,7 +149,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Entity content with sub-tabs */}
-      <EntitySettingsContent key={activeTab} entityType={activeTab} />
+      <EntitySettingsContent key={activeTab} entityType={activeTab} initialSubTab={tabParam ?? undefined} />
     </div>
   );
 }

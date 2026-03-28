@@ -1,4 +1,4 @@
-import { LayoutDashboard, Settings, Bell, Shield, Users, CheckSquare, SlidersHorizontal, Tags, FolderTree, Layers } from 'lucide-react';
+import { LayoutDashboard, Settings, Bell, Shield, Users, CheckSquare, SlidersHorizontal, Tags, FolderTree, Layers, GitBranch } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 export interface MenuItem {
@@ -26,6 +26,7 @@ export const recruiterMenu: MenuItem[] = [
     position: 'after',
     children: [
       { path: '/settings', label: 'Fields & Layouts', icon: Layers },
+      { path: '/settings?tab=pipeline', label: 'Pipelines', icon: GitBranch, permission: 'workflows.manage' },
       { path: '/app-settings', label: 'App Settings', icon: SlidersHorizontal, permission: 'settings.read' },
       { path: '/tag-groups', label: 'Tag Groups', icon: Tags, permission: 'taxonomy.tag-groups.read' },
       { path: '/categories', label: 'Categories', icon: FolderTree, permission: 'taxonomy.categories.read' },
