@@ -445,8 +445,9 @@ export class EntityService {
       await config.hooks.afterCreate(row, actorId);
     }
 
-    // Emit event
+    // Emit event (with resolved lookup labels for audit readability)
     const snapshot = await this.buildEntitySnapshot(row);
+    await this.resolveLookupLabels([snapshot]);
     this.domainEventEmitter.emitDynamic(`${config.entityType}.Created`, {
       entityType: config.entityType,
       entityId: row.id,
@@ -570,8 +571,9 @@ export class EntityService {
       await config.hooks.afterUpdate(updated, actorId);
     }
 
-    // Emit event after transaction
+    // Emit event after transaction (with resolved lookup labels for audit readability)
     if (eventPayload) {
+      await this.resolveLookupLabels([eventPayload.before, eventPayload.after]);
       this.domainEventEmitter.emitDynamic(`${config.entityType}.Updated`, {
         entityType: config.entityType,
         entityId: id,
@@ -692,6 +694,7 @@ export class EntityService {
 
     this.logger.log(`${config.singularName} deleted`, { entityId: id, actorId });
 
+    await this.resolveLookupLabels([entity]);
     this.domainEventEmitter.emitDynamic(`${config.entityType}.Deleted`, {
       entityType: config.entityType,
       entityId: id,
