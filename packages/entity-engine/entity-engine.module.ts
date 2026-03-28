@@ -1,7 +1,8 @@
 import { Module, Global, type DynamicModule, type OnModuleInit, Logger, Inject, type OnApplicationBootstrap } from '@nestjs/common';
 import { DatabaseService } from '@packages/database';
 import { DomainEventEmitter, EventRegistryService } from '@packages/events';
-import { RbacService } from '@packages/rbac';
+import { RbacService, FIELD_PERMISSION_ENTITY_RESOLVER } from '@packages/rbac';
+import type { FieldPermissionEntityResolver } from '@packages/rbac';
 import { AuditRegistryService } from '@packages/audit';
 import { FieldValueService, FieldDefinitionService, LayoutService, LookupResolverService, MultiValueService } from '@packages/eav-attributes';
 import { EntityResolverRegistry } from '@packages/notifications';
@@ -12,7 +13,6 @@ import { AppLoggerService } from '@packages/logger';
 import { EntityRegistryService } from './entity-registry.service';
 import { EntityService } from './entity.service';
 import { EntityEngineApiController } from './entity-engine-api.controller';
-import { FieldPermissionsController } from './field-permissions.controller';
 import { createEntityController } from './create-entity-controller';
 import { seedEntityFields, seedWorkflows } from './seed-entity-fields';
 import type { EntityConfig } from './types';
@@ -35,9 +35,26 @@ const pendingConfigs: EntityConfig[] = [];
  */
 @Global()
 @Module({
-  controllers: [EntityEngineApiController, FieldPermissionsController],
-  providers: [EntityRegistryService],
-  exports: [EntityRegistryService],
+  controllers: [EntityEngineApiController],
+  providers: [
+    EntityRegistryService,
+    {
+      provide: FIELD_PERMISSION_ENTITY_RESOLVER,
+      useFactory: (registry: EntityRegistryService): FieldPermissionEntityResolver => ({
+        resolve(entityType: string) {
+          const config = registry.get(entityType);
+          if (!config) return undefined;
+          return { slug: config.slug, fieldMeta: config.fieldMeta };
+        },
+      }),
+      inject: [EntityRegistryService],
+    },
+    {
+      provide: 'FIELD_DEFINITION_SERVICE',
+      useExisting: FieldDefinitionService,
+    },
+  ],
+  exports: [EntityRegistryService, FIELD_PERMISSION_ENTITY_RESOLVER, 'FIELD_DEFINITION_SERVICE'],
 })
 export class EntityEngineModule implements OnApplicationBootstrap {
   private readonly logger = new Logger('EntityEngineModule');
