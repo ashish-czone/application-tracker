@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { format, isToday, isYesterday } from 'date-fns';
-import { cn, Button } from '@packages/ui';
-import { ChevronDown, ChevronRight, Plus, Pencil, Trash2, Zap, History } from 'lucide-react';
+import { Button } from '@packages/ui';
+import { History } from 'lucide-react';
 import { useAuditLogs } from '../hooks';
 import type { AuditLogEntry } from '../types';
 
@@ -9,12 +9,6 @@ interface AuditTimelineProps {
   entityType: string;
   entityId: string;
 }
-
-const ACTION_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
-  created: Plus,
-  updated: Pencil,
-  deleted: Trash2,
-};
 
 function formatChangeValue(value: unknown): string {
   if (value === null || value === undefined) return '(empty)';
@@ -27,92 +21,65 @@ function formatDayHeader(dateStr: string): string {
   const date = new Date(dateStr);
   if (isToday(date)) return 'Today';
   if (isYesterday(date)) return 'Yesterday';
-  return format(date, 'MMM d, yyyy');
+  return format(date, 'MM/DD/YYYY');
 }
 
-function buildActionSummary(entry: AuditLogEntry): string {
-  if (entry.action === 'created') return 'Record created';
-  if (entry.action === 'deleted') return 'Record deleted';
+function buildChangeLines(entry: AuditLogEntry): string[] {
+  if (entry.action === 'created') return ['Record created'];
+  if (entry.action === 'deleted') return ['Record deleted'];
 
-  if (entry.changes && Object.keys(entry.changes).length > 0) {
-    const fields = Object.keys(entry.changes);
-    if (fields.length === 1) {
-      const field = fields[0];
-      const { from, to } = entry.changes[field];
-      return `${field} changed from ${formatChangeValue(from)} to ${formatChangeValue(to)}`;
-    }
-    return `${fields.length} fields updated`;
+  if (!entry.changes || Object.keys(entry.changes).length === 0) {
+    return ['Record updated'];
   }
 
-  return 'Record updated';
-}
-
-function ChangeDetails({ entry }: { entry: AuditLogEntry }) {
-  const [expanded, setExpanded] = useState(false);
-  if (!entry.changes || Object.keys(entry.changes).length <= 1) return null;
-
-  const changes = Object.entries(entry.changes);
-
-  return (
-    <div className="mt-1">
-      <button
-        type="button"
-        onClick={() => setExpanded(!expanded)}
-        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-      >
-        {expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-        Show details
-      </button>
-      {expanded && (
-        <div className="mt-1.5 space-y-1 text-xs pl-4">
-          {changes.map(([field, { from, to }]) => (
-            <div key={field} className="text-muted-foreground">
-              <span className="font-medium text-foreground">{field}</span>
-              {' '}
-              <span>changed from</span>
-              {' '}
-              <span className="line-through">{formatChangeValue(from)}</span>
-              {' → '}
-              <span className="text-foreground">{formatChangeValue(to)}</span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+  return Object.entries(entry.changes).map(([field, { from, to }]) =>
+    `${field} changed from ${formatChangeValue(from)} to ${formatChangeValue(to)}`,
   );
 }
 
 function TimelineEntry({ entry, isLast }: { entry: AuditLogEntry; isLast: boolean }) {
-  const Icon = ACTION_ICONS[entry.action] ?? Zap;
   const occurredAt = new Date(entry.occurredAt);
   const time = format(occurredAt, 'h:mm a');
-  const summary = buildActionSummary(entry);
+  const lines = buildChangeLines(entry);
 
   return (
-    <div className="flex items-start gap-3">
+    <div className="flex">
       {/* Time on the left */}
-      <span className="w-20 shrink-0 text-xs text-muted-foreground text-right pt-1 tabular-nums">
-        {time}
-      </span>
-
-      {/* Icon + vertical line */}
-      <div className="flex flex-col items-center">
-        <div className={cn(
-          'flex h-7 w-7 shrink-0 items-center justify-center rounded-full z-10 border-2 border-background',
-          entry.action === 'created' && 'bg-primary/10 text-primary',
-          entry.action === 'updated' && 'bg-muted text-muted-foreground',
-          entry.action === 'deleted' && 'bg-destructive/10 text-destructive',
-          !ACTION_ICONS[entry.action] && 'bg-muted text-muted-foreground',
-        )}>
-          <Icon className="h-3 w-3" />
-        </div>
-        {!isLast && <div className="flex-1 w-px bg-border" />}
+      <div className="w-20 shrink-0 text-right pr-4 pt-0.5">
+        <span className="text-xs text-muted-foreground tabular-nums">{time}</span>
       </div>
 
-      {/* Action description on the right */}
-      <div className="flex-1 min-w-0 pb-5 pt-0.5">
-        <p className="text-sm text-foreground">{summary}</p>
-        <ChangeDetails entry={entry} />
+      {/* Dot + vertical line */}
+      <div className="relative flex flex-col items-center w-5 shrink-0">
+        {/* Vertical line — runs full height */}
+        {!isLast && (
+          <div className="absolute top-0 bottom-0 left-1/2 w-px -translate-x-1/2 bg-border" />
+        )}
+        {/* Dot */}
+        <div className="relative z-10 mt-1.5 h-2.5 w-2.5 rounded-full bg-muted-foreground/40 border-2 border-background" />
+      </div>
+
+      {/* Action description */}
+      <div className="flex-1 min-w-0 pl-3 pb-5 pt-0.5">
+        {lines.map((line, i) => (
+          <p key={i} className="text-sm text-foreground leading-relaxed">{line}</p>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DayHeader({ day }: { day: string }) {
+  return (
+    <div className="flex">
+      <div className="w-20 shrink-0" />
+      <div className="relative flex flex-col items-center w-5 shrink-0">
+        <div className="absolute top-0 bottom-0 left-1/2 w-px -translate-x-1/2 bg-border" />
+      </div>
+      <div className="flex-1 min-w-0 pl-3 py-2">
+        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          {formatDayHeader(day)}
+        </span>
       </div>
     </div>
   );
@@ -149,13 +116,18 @@ export function AuditTimeline({ entityType, entityId }: AuditTimelineProps) {
 
   if (isLoading) {
     return (
-      <div className="space-y-6 py-4">
-        <div className="h-4 w-28 bg-muted animate-pulse rounded" />
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="flex items-start gap-3">
-            <div className="w-20 h-3 bg-muted animate-pulse rounded" />
-            <div className="h-6 w-6 rounded-full bg-muted animate-pulse shrink-0" />
-            <div className="flex-1 h-4 bg-muted animate-pulse rounded" />
+      <div className="space-y-4 py-4">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="flex">
+            <div className="w-20 shrink-0 pr-4">
+              <div className="h-3 w-14 bg-muted animate-pulse rounded ml-auto" />
+            </div>
+            <div className="w-5 shrink-0 flex justify-center">
+              <div className="h-2.5 w-2.5 rounded-full bg-muted animate-pulse" />
+            </div>
+            <div className="flex-1 pl-3">
+              <div className="h-4 w-3/4 bg-muted animate-pulse rounded" />
+            </div>
           </div>
         ))}
       </div>
@@ -189,30 +161,20 @@ export function AuditTimeline({ entityType, entityId }: AuditTimelineProps) {
   return (
     <div>
       {dayGroups.map((group) => (
-        <div key={group.day} className="mb-2">
-          {/* Day header — aligned with the action text column */}
-          <div className="flex items-center gap-2 mb-2 pl-[92px]">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              {formatDayHeader(group.day)}
-            </h3>
-            <div className="flex-1 h-px bg-border" />
-          </div>
-
-          {/* Entries for this day */}
-          <div>
-            {group.entries.map((entry) => (
-              <TimelineEntry
-                key={entry.id}
-                entry={entry}
-                isLast={entry.id === lastEntryId}
-              />
-            ))}
-          </div>
+        <div key={group.day}>
+          <DayHeader day={group.day} />
+          {group.entries.map((entry) => (
+            <TimelineEntry
+              key={entry.id}
+              entry={entry}
+              isLast={entry.id === lastEntryId}
+            />
+          ))}
         </div>
       ))}
 
       {meta && meta.totalPages > 1 && (
-        <div className="flex items-center justify-between pt-4 border-t">
+        <div className="flex items-center justify-between pt-4 mt-2 border-t">
           <p className="text-xs text-muted-foreground">
             Page {meta.page} of {meta.totalPages} ({meta.total} entries)
           </p>
