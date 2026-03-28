@@ -6,6 +6,9 @@ const config: Config = {
   content: [
     './src/**/*.{ts,tsx}',
     '../../packages/ui/**/*.{ts,tsx}',
+    '../../packages/entity-engine-ui/**/*.{ts,tsx}',
+    '../../packages/eav-attributes-ui/**/*.{ts,tsx}',
+    '../../packages/platform-ui/**/*.{ts,tsx}',
   ],
 };
 
