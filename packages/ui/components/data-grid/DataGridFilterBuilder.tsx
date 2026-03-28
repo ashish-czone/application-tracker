@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import * as Popover from '@radix-ui/react-popover';
 import { Command } from 'cmdk';
-import { Filter, ChevronLeft, Check } from 'lucide-react';
+import { Filter, ChevronLeft } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Badge } from '../Badge';
 import { useDebounce } from '../../hooks/useDebounce';
@@ -72,6 +72,16 @@ export function DataGridFilterBuilder({
     setOpen(false);
   };
 
+  const handleChipClick = (expr: FilterExpression) => {
+    const field = fields.find((f) => f.key === expr.field);
+    if (!field) return;
+    setSelectedField(field);
+    setSelectedOperator(expr.operator);
+    setStep('configure');
+    setSearch('');
+    setOpen(true);
+  };
+
   const handleBack = () => {
     setSelectedField(null);
     setSelectedOperator(null);
@@ -103,14 +113,17 @@ export function DataGridFilterBuilder({
 
   return (
     <div className="flex items-center gap-2 flex-wrap">
-      {/* Filter chips */}
+      {/* Filter chips — clickable to edit */}
       {filters.map((expr) => (
         <Badge
           key={expr.field}
           variant="secondary"
+          className="cursor-pointer"
           onRemove={() => onRemoveFilter(expr.field)}
         >
-          {getChipLabel(expr)}
+          <span onClick={() => handleChipClick(expr)}>
+            {getChipLabel(expr)}
+          </span>
         </Badge>
       ))}
 
@@ -209,6 +222,7 @@ function FieldPicker({
   inputRef: React.RefObject<HTMLInputElement | null>;
 }) {
   const activeFieldKeys = new Set(filters.map((f) => f.field));
+  const availableFields = fields.filter((f) => !activeFieldKeys.has(f.key));
 
   return (
     <Command className="[&_[cmdk-group]]:p-1 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-1.5">
@@ -225,7 +239,7 @@ function FieldPicker({
         <Command.Empty className="px-2 py-4 text-center text-sm text-muted-foreground">
           No fields found
         </Command.Empty>
-        {fields.map((field) => (
+        {availableFields.map((field) => (
           <Command.Item
             key={field.key}
             value={field.label}
@@ -233,9 +247,6 @@ function FieldPicker({
             className="flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm cursor-pointer hover:bg-accent aria-selected:bg-accent"
           >
             <span className="flex-1 truncate">{field.label}</span>
-            {activeFieldKeys.has(field.key) && (
-              <Check className="h-3.5 w-3.5 text-primary shrink-0" />
-            )}
           </Command.Item>
         ))}
       </Command.List>
