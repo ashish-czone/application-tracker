@@ -1,4 +1,4 @@
-import { IsString, MinLength, MaxLength, IsOptional, IsArray, IsInt, Min } from 'class-validator';
+import { IsString, MinLength, MaxLength, IsOptional, IsArray, IsInt, Min, IsObject } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UpdateTransitionDto {
@@ -26,4 +26,9 @@ export class UpdateTransitionDto {
   @IsInt()
   @Min(0)
   sortOrder?: number;
+
+  @ApiPropertyOptional({ description: 'Arbitrary metadata (e.g., conditions)' })
+  @IsOptional()
+  @IsObject()
+  metadata?: Record<string, unknown> | null;
 }

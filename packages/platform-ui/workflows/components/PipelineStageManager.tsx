@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Plus, GripVertical, Pencil, Trash2, Workflow } from 'lucide-react';
 import { Button, ConfirmDialog, Badge } from '@packages/ui';
+import type { Condition, ConditionFieldConfig } from '../../conditions';
 import { useWorkflow, useCreateState, useUpdateState, useDeleteState, useCreateTransition, useDeleteTransition, useUpdateTransition } from '../hooks';
 import { StageForm } from './StageForm';
 import { StageTransitionEditor } from './StageTransitionEditor';
@@ -9,9 +10,10 @@ import type { WorkflowState } from '../types';
 interface PipelineStageManagerProps {
   workflowSlug: string;
   availablePermissions?: string[];
+  entityFields?: Record<string, ConditionFieldConfig>;
 }
 
-export function PipelineStageManager({ workflowSlug, availablePermissions = [] }: PipelineStageManagerProps) {
+export function PipelineStageManager({ workflowSlug, availablePermissions = [], entityFields = {} }: PipelineStageManagerProps) {
   const { data: workflow, isLoading, isError, refetch } = useWorkflow(workflowSlug);
   const createState = useCreateState(workflowSlug);
   const updateState = useUpdateState(workflowSlug);
@@ -152,6 +154,12 @@ export function PipelineStageManager({ workflowSlug, availablePermissions = [] }
                 onUpdateTransitionPermissions={(transitionId, permissions) =>
                   updateTransition.mutate({ transitionId, data: { requiredPermissions: permissions } })
                 }
+                onUpdateTransitionConditions={(transitionId, conditions) => {
+                  const existing = workflow.transitions.find((t) => t.id === transitionId);
+                  const metadata = { ...(existing?.metadata as Record<string, unknown> ?? {}), conditions };
+                  updateTransition.mutate({ transitionId, data: { metadata } });
+                }}
+                entityFields={entityFields}
                 isPending={createTransition.isPending || deleteTransition.isPending || updateTransition.isPending}
               />
             </div>
