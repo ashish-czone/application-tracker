@@ -82,32 +82,35 @@ function ChangeDetails({ entry }: { entry: AuditLogEntry }) {
   );
 }
 
-function TimelineEntry({ entry }: { entry: AuditLogEntry }) {
+function TimelineEntry({ entry, isLast }: { entry: AuditLogEntry; isLast: boolean }) {
   const Icon = ACTION_ICONS[entry.action] ?? Zap;
   const occurredAt = new Date(entry.occurredAt);
   const time = format(occurredAt, 'h:mm a');
   const summary = buildActionSummary(entry);
 
   return (
-    <div className="flex items-start gap-3 py-2.5">
+    <div className="flex items-start gap-3">
       {/* Time on the left */}
-      <span className="w-20 shrink-0 text-xs text-muted-foreground text-right pt-0.5 tabular-nums">
+      <span className="w-20 shrink-0 text-xs text-muted-foreground text-right pt-1 tabular-nums">
         {time}
       </span>
 
-      {/* Icon in center */}
-      <div className={cn(
-        'flex h-6 w-6 shrink-0 items-center justify-center rounded-full mt-0.5',
-        entry.action === 'created' && 'bg-primary/10 text-primary',
-        entry.action === 'updated' && 'bg-muted text-muted-foreground',
-        entry.action === 'deleted' && 'bg-destructive/10 text-destructive',
-        !ACTION_ICONS[entry.action] && 'bg-muted text-muted-foreground',
-      )}>
-        <Icon className="h-3 w-3" />
+      {/* Icon + vertical line */}
+      <div className="flex flex-col items-center">
+        <div className={cn(
+          'flex h-7 w-7 shrink-0 items-center justify-center rounded-full z-10 border-2 border-background',
+          entry.action === 'created' && 'bg-primary/10 text-primary',
+          entry.action === 'updated' && 'bg-muted text-muted-foreground',
+          entry.action === 'deleted' && 'bg-destructive/10 text-destructive',
+          !ACTION_ICONS[entry.action] && 'bg-muted text-muted-foreground',
+        )}>
+          <Icon className="h-3 w-3" />
+        </div>
+        {!isLast && <div className="flex-1 w-px bg-border" />}
       </div>
 
       {/* Action description on the right */}
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 pb-5 pt-0.5">
         <p className="text-sm text-foreground">{summary}</p>
         <ChangeDetails entry={entry} />
       </div>
@@ -180,13 +183,15 @@ export function AuditTimeline({ entityType, entityId }: AuditTimelineProps) {
   }
 
   const meta = data?.meta;
+  const allEntries = data?.data ?? [];
+  const lastEntryId = allEntries.length > 0 ? allEntries[allEntries.length - 1].id : null;
 
   return (
     <div>
       {dayGroups.map((group) => (
-        <div key={group.day} className="mb-6">
-          {/* Day header */}
-          <div className="flex items-center gap-2 mb-2">
+        <div key={group.day} className="mb-2">
+          {/* Day header — aligned with the action text column */}
+          <div className="flex items-center gap-2 mb-2 pl-[92px]">
             <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
               {formatDayHeader(group.day)}
             </h3>
@@ -194,9 +199,13 @@ export function AuditTimeline({ entityType, entityId }: AuditTimelineProps) {
           </div>
 
           {/* Entries for this day */}
-          <div className="divide-y divide-border">
+          <div>
             {group.entries.map((entry) => (
-              <TimelineEntry key={entry.id} entry={entry} />
+              <TimelineEntry
+                key={entry.id}
+                entry={entry}
+                isLast={entry.id === lastEntryId}
+              />
             ))}
           </div>
         </div>
