@@ -1,15 +1,17 @@
 import { useSearchParams } from 'react-router';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import type { FilterExpression, FilterOperator } from '../components/data-grid/filter-types';
 
 interface UseDataGridParamsOptions {
   defaultSort?: string;
   defaultOrder?: 'asc' | 'desc';
   defaultPageSize?: number;
+  /** localStorage key prefix for persisting filters (e.g., 'job-openings-list') */
+  storageKey?: string;
 }
 
 export function useDataGridParams(options: UseDataGridParamsOptions = {}) {
-  const { defaultSort = '', defaultOrder = 'desc', defaultPageSize = 25 } = options;
+  const { defaultSort = '', defaultOrder = 'desc', defaultPageSize = 25, storageKey } = options;
   const [searchParams, setSearchParams] = useSearchParams();
 
   const page = Number(searchParams.get('page')) || 1;
@@ -127,6 +129,9 @@ export function useDataGridParams(options: UseDataGridParamsOptions = {}) {
     'in', 'notIn', 'isNull', 'isNotNull', 'between', 'contains',
   ]);
 
+  const filtersStorageKey = storageKey ? `datagrid-filters-${storageKey}` : null;
+  const restoredFromStorage = useRef(false);
+
   const getFilters = useMemo((): FilterExpression[] => {
     const raw = searchParams.get('filters');
     if (!raw) return [];
@@ -140,6 +145,40 @@ export function useDataGridParams(options: UseDataGridParamsOptions = {}) {
       return [];
     }
   }, [searchParams]);
+
+  // Restore filters from localStorage on mount (if no URL param exists)
+  useEffect(() => {
+    if (restoredFromStorage.current || !filtersStorageKey) return;
+    restoredFromStorage.current = true;
+    if (searchParams.get('filters')) return; // URL param takes precedence
+    try {
+      const stored = localStorage.getItem(filtersStorageKey);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setSearchParams(
+            (prev) => {
+              const next = new URLSearchParams(prev);
+              next.set('filters', stored);
+              return next;
+            },
+            { replace: true },
+          );
+        }
+      }
+    } catch { /* ignore */ }
+  }, [filtersStorageKey, searchParams, setSearchParams]);
+
+  // Persist filters to localStorage whenever they change
+  useEffect(() => {
+    if (!filtersStorageKey) return;
+    const filters = getFilters;
+    if (filters.length > 0) {
+      localStorage.setItem(filtersStorageKey, JSON.stringify(filters));
+    } else {
+      localStorage.removeItem(filtersStorageKey);
+    }
+  }, [getFilters, filtersStorageKey]);
 
   const setFiltersParam = useCallback(
     (filters: FilterExpression[]) => {
