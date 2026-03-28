@@ -1,6 +1,17 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { eq, and, or, isNull, ilike, asc, desc, count, sql, getTableName } from 'drizzle-orm';
 import type { PgColumn } from 'drizzle-orm/pg-core';
+import {
+  buildFilterConditions,
+  buildSearchCondition,
+  buildSoftDeleteCondition,
+  buildSortExpression as qbBuildSortExpression,
+  computePagination,
+  computePaginationMeta,
+  parseLegacyFilters,
+  parseFilterParam,
+  mergeFilters,
+} from '@packages/query-builder';
 import { DatabaseService } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
@@ -230,68 +241,41 @@ export class EntityService {
   // ---------------------------------------------------------------------------
 
   async list(query: BaseListQuery): Promise<PaginatedResponse<Record<string, unknown>>> {
-    const page = query.page ?? 1;
-    const limit = query.limit ?? 25;
-    const offset = (page - 1) * limit;
+    const { page, limit, offset } = computePagination({
+      page: query.page ?? 1,
+      limit: query.limit ?? 25,
+    });
     const { config } = this;
 
     const conditions: any[] = [];
 
-    // Soft delete filter
-    const deletedAtCol = (config.table as any).deletedAt as PgColumn | undefined;
-    if (!query.includeDeleted && deletedAtCol) {
-      conditions.push(isNull(deletedAtCol));
-    }
+    // Soft delete filter (delegated to query-builder)
+    const softDeleteCond = buildSoftDeleteCondition(
+      (config.table as any).deletedAt,
+      query.includeDeleted ?? false,
+    );
+    if (softDeleteCond) conditions.push(softDeleteCond);
 
     // Search across configured columns + lookup field labels
     if (query.search) {
-      const pattern = `%${query.search}%`;
       const searchConditions: any[] = [];
 
-      // Standard column search
-      for (const col of config.searchColumns) {
-        searchConditions.push(ilike(col, pattern));
-      }
+      // Standard column search (delegated to query-builder)
+      const stdSearch = buildSearchCondition(query.search, config.searchColumns);
+      if (stdSearch) searchConditions.push(stdSearch);
 
-      // Lookup field search — search related entity label fields via EXISTS subquery
-      for (const [fieldKey, meta] of Object.entries(config.fieldMeta)) {
-        if (!meta.lookupEntity) continue;
-        const lookupConfig = this.lookupResolver.getConfig(meta.lookupEntity);
-        if (!lookupConfig) continue;
-
-        const targetTable = lookupConfig.table;
-        const valueCol = targetTable[lookupConfig.valueField];
-        const fkCol = (config.table as any)[fieldKey];
-        if (!valueCol || !fkCol) continue;
-
-        // Search across all configured search fields on the target entity
-        const searchFields = lookupConfig.searchFields?.length > 0
-          ? lookupConfig.searchFields
-          : [lookupConfig.labelField];
-
-        const fieldConditions = searchFields
-          .map((f: string) => targetTable[f])
-          .filter(Boolean)
-          .map((col: any) => sql`${col} ILIKE ${pattern}`);
-
-        if (fieldConditions.length > 0) {
-          const orClause = fieldConditions.length === 1
-            ? fieldConditions[0]
-            : sql.join(fieldConditions, sql` OR `);
-          searchConditions.push(
-            sql`EXISTS (SELECT 1 FROM ${targetTable} WHERE ${valueCol} = ${fkCol} AND (${orClause}))`,
-          );
-        }
-      }
+      // Lookup field search — entity-specific, stays here
+      const lookupSearchConds = this.buildLookupSearchConditions(query.search);
+      searchConditions.push(...lookupSearchConds);
 
       if (searchConditions.length > 0) {
         conditions.push(or(...searchConditions));
       }
     }
 
-    // Generic field-level filters (standard columns + EAV fields)
-    const genericFilters = await this.buildGenericFilters(query, config);
-    conditions.push(...genericFilters);
+    // Generic field-level filters (delegated to query-builder + EAV routing)
+    const filterConditions = await this.buildAllFilters(query, config);
+    conditions.push(...filterConditions);
 
     // Custom filters from hooks (for anything not covered by generic filtering)
     if (config.hooks?.buildListFilters) {
@@ -346,12 +330,7 @@ export class EntityService {
 
     return {
       data,
-      meta: {
-        total: Number(total),
-        page,
-        limit,
-        totalPages: Math.ceil(Number(total) / limit),
-      },
+      meta: computePaginationMeta(Number(total), page, limit),
     };
   }
 
@@ -753,20 +732,57 @@ export class EntityService {
   // ---------------------------------------------------------------------------
 
   /**
+   * Build lookup field search conditions (EXISTS subqueries).
+   * Entity-specific — searches related entity labels via foreign keys.
+   */
+  private buildLookupSearchConditions(search: string): any[] {
+    const { config } = this;
+    const pattern = `%${search}%`;
+    const conditions: any[] = [];
+
+    for (const [fieldKey, meta] of Object.entries(config.fieldMeta)) {
+      if (!meta.lookupEntity) continue;
+      const lookupConfig = this.lookupResolver.getConfig(meta.lookupEntity);
+      if (!lookupConfig) continue;
+
+      const targetTable = lookupConfig.table;
+      const valueCol = targetTable[lookupConfig.valueField];
+      const fkCol = (config.table as any)[fieldKey];
+      if (!valueCol || !fkCol) continue;
+
+      const searchFields = lookupConfig.searchFields?.length > 0
+        ? lookupConfig.searchFields
+        : [lookupConfig.labelField];
+
+      const fieldConditions = searchFields
+        .map((f: string) => targetTable[f])
+        .filter(Boolean)
+        .map((col: any) => sql`${col} ILIKE ${pattern}`);
+
+      if (fieldConditions.length > 0) {
+        const orClause = fieldConditions.length === 1
+          ? fieldConditions[0]
+          : sql.join(fieldConditions, sql` OR `);
+        conditions.push(
+          sql`EXISTS (SELECT 1 FROM ${targetTable} WHERE ${valueCol} = ${fkCol} AND (${orClause}))`,
+        );
+      }
+    }
+
+    return conditions;
+  }
+
+  /**
    * Build the ORDER BY expression for list queries.
    * For lookup fields, uses a subquery to sort by the related entity's label.
-   * For standard columns, uses the direct column reference.
+   * For standard columns, delegates to query-builder.
    */
   private buildSortExpression(sortKey: string, direction: 'ASC' | 'DESC', config: EntityConfig): any {
-    const orderFn = direction === 'ASC' ? asc : desc;
-
-    // Check if the sort key is a lookup field (from fieldMeta config)
+    // Check if the sort key is a lookup field (entity-specific logic)
     const meta = config.fieldMeta[sortKey];
     if (meta?.lookupEntity) {
       const lookupConfig = this.lookupResolver.getConfig(meta.lookupEntity);
       if (lookupConfig) {
-        // Sort by the related entity's label via a scalar subquery
-        // e.g. ORDER BY (SELECT first_name FROM candidates WHERE candidates.id = applications.candidate_id) ASC
         const targetTable = lookupConfig.table;
         const labelCol = targetTable[lookupConfig.labelField];
         const valueCol = targetTable[lookupConfig.valueField];
@@ -778,56 +794,56 @@ export class EntityService {
       }
     }
 
-    // Standard column sort
-    const sortColumn = config.sortableColumns[sortKey] ?? config.sortableColumns[config.defaultSort];
-    return orderFn(sortColumn);
+    // Standard column sort (delegated to query-builder)
+    return qbBuildSortExpression(
+      sortKey,
+      direction === 'ASC' ? 'asc' : 'desc',
+      config.sortableColumns,
+      config.defaultSort,
+    );
   }
 
-  /** Query params that are NOT field filters — skip these in generic filtering. */
-  private static readonly SYSTEM_QUERY_PARAMS = new Set([
-    'page', 'limit', 'search', 'sort', 'order', 'includeDeleted',
-  ]);
-
   /**
-   * Build WHERE conditions from query params that match field definitions.
-   * - Standard DB columns: eq(column, value)
-   * - EAV fields: EXISTS subquery via FieldValueService.buildFilterCondition()
+   * Build all filter conditions from legacy query params.
+   * Resolves standard DB columns via query-builder, routes EAV fields to FieldValueService.
    */
-  private async buildGenericFilters(
+  private async buildAllFilters(
     query: BaseListQuery,
     config: EntityConfig,
   ): Promise<any[]> {
-    // Collect filter params (exclude system params)
-    const filterEntries = Object.entries(query).filter(
-      ([key, value]) => !EntityService.SYSTEM_QUERY_PARAMS.has(key) && value != null && value !== '',
-    );
-    if (filterEntries.length === 0) return [];
+    // Convert legacy ?field=value params to FilterExpressions
+    const legacyFilters = parseLegacyFilters(query);
 
-    // Load field definitions to distinguish standard vs EAV
+    // Parse structured ?filters=[...] param (if present)
+    const structuredFilters = query.filters
+      ? parseFilterParam(query.filters as string)
+      : [];
+
+    // Merge: structured takes precedence for same field
+    const allFilters = mergeFilters(legacyFilters, structuredFilters);
+    if (allFilters.length === 0) return [];
+
+    // Load field definitions to build column map and identify EAV fields
     const defs = await this.fieldDefinitionService.listByEntityWithOptions(config.entityType);
-    const defsByKey = new Map(defs.map((d) => [d.fieldKey, d]));
-
-    const conditions: any[] = [];
-    const eavFilters: { fieldKey: string; operator: 'eq'; value: unknown }[] = [];
     const table = config.table as any;
 
-    for (const [key, value] of filterEntries) {
-      const def = defsByKey.get(key);
-      if (!def) continue; // Not a known field — skip (let hooks handle it)
-
-      if (def.columnName) {
-        // Standard DB column — direct equality filter
-        const col = table[key];
-        if (col) {
-          conditions.push(eq(col, value as any));
-        }
-      } else {
-        // EAV field — collect for batch EXISTS subquery
-        eavFilters.push({ fieldKey: key, operator: 'eq', value });
+    // Build column map for standard DB columns
+    const columnMap: Record<string, any> = {};
+    for (const def of defs) {
+      if (def.columnName && table[def.fieldKey]) {
+        columnMap[def.fieldKey] = table[def.fieldKey];
       }
     }
 
-    // Build EAV filter conditions
+    // Resolve standard column filters via query-builder
+    const { conditions, unresolved } = buildFilterConditions(allFilters, columnMap);
+
+    // Route unresolved filters to EAV (only for known EAV fields)
+    const defsByKey = new Map(defs.map((d) => [d.fieldKey, d]));
+    const eavFilters = unresolved
+      .filter((f) => defsByKey.has(f.field) && !defsByKey.get(f.field)!.columnName)
+      .map((f) => ({ fieldKey: f.field, operator: f.operator as any, value: f.value }));
+
     if (eavFilters.length > 0) {
       const eavCondition = this.fieldValueService.buildFilterCondition(
         config.entityType,

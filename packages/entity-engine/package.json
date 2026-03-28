@@ -18,6 +18,7 @@
     "@packages/logger": "workspace:*",
     "@packages/media": "workspace:*",
     "@packages/notifications": "workspace:*",
+    "@packages/query-builder": "workspace:*",
     "@packages/rbac": "workspace:*",
     "@packages/workflows": "workspace:*",
     "rxjs": "^7.0.0"

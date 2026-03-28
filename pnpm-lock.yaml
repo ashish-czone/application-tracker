@@ -792,6 +792,9 @@ importers:
       '@packages/notifications':
         specifier: workspace:*
         version: link:../notifications
+      '@packages/query-builder':
+        specifier: workspace:*
+        version: link:../query-builder
       '@packages/rbac':
         specifier: workspace:*
         version: link:../rbac
