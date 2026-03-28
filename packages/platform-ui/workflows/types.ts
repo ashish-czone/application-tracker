@@ -74,4 +74,5 @@ export interface UpdateTransitionRequest {
   requiredPermissions?: string[] | null;
   guardNames?: string[] | null;
   sortOrder?: number;
+  metadata?: Record<string, unknown> | null;
 }
