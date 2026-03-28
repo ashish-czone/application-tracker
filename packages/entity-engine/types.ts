@@ -259,6 +259,8 @@ export interface BaseListQuery {
   sort?: string;
   order?: 'asc' | 'desc';
   includeDeleted?: boolean;
+  /** Structured filters as JSON string: [{"field":"status","operator":"eq","value":"active"}] */
+  filters?: string;
   /** Additional filter params (entity-specific, passed to hooks.buildListFilters) */
   [key: string]: unknown;
 }
