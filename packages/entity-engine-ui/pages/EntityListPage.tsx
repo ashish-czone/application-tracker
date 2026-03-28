@@ -10,9 +10,7 @@ import {
 } from '@packages/ui';
 import type { EntityAction } from '@packages/entity-engine';
 import { useEntityEngine, useEntityHooks, useEntityConfig } from '../EntityEngineProvider';
-import { useEntityLayout } from '../helpers/useEntityLayout';
 import { useListLayout } from '../helpers/useListLayout';
-import { buildColumnDefs, buildFilterConfigs, buildLookupFilterFields } from '../helpers/buildColumnDefs';
 import { EntityQuickCreateForm } from './EntityQuickCreateForm';
 import { EntityBoardView } from '../components/EntityBoardView';
 import { EntityPickerPanel } from '../components/EntityPickerPanel';
@@ -33,7 +31,6 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
   const entity = useEntityConfig(entityType);
   const hooks = useEntityHooks(entityType);
   const { apiFn } = useEntityEngine();
-  const { data: layout } = useEntityLayout(entityType);
   const { data: listLayout } = useListLayout(entityType);
 
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -70,19 +67,21 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
     getFilter, setFilter, clearFilters,
   } = useDataGridParams({ defaultSort: 'createdAt', defaultOrder: 'desc' });
 
-  // Build picklist filter configs
+  // Build filter configs from listLayout columns
   const picklistFilterConfigs = useMemo(() => {
-    if (!layout) return [];
-    const allFields = layout.sections.flatMap((s) => s.fields);
-    return buildFilterConfigs(allFields);
-  }, [layout]);
+    if (!listLayout) return [];
+    return listLayout.columns
+      .filter((c) => (c.fieldType === 'picklist' || c.fieldType === 'multi_select') && c.picklistOptions?.length)
+      .map((c) => ({ key: c.fieldKey, label: c.label, options: c.picklistOptions! }));
+  }, [listLayout]);
 
   // Identify lookup fields that need async option fetching
   const lookupFilterFields = useMemo(() => {
-    if (!layout) return [];
-    const allFields = layout.sections.flatMap((s) => s.fields);
-    return buildLookupFilterFields(allFields);
-  }, [layout]);
+    if (!listLayout) return [];
+    return listLayout.columns
+      .filter((c) => (c.fieldType === 'lookup' || c.fieldType === 'user') && c.lookupEntity)
+      .map((c) => ({ fieldKey: c.fieldKey, label: c.label, lookupEntity: c.lookupEntity! }));
+  }, [listLayout]);
 
   // Fetch lookup options for all lookup filter fields
   const { data: lookupOptionsMap } = useQuery({
@@ -198,54 +197,36 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
     return String(row[nameField] ?? row.id ?? '');
   };
 
-  // Field types excluded from the column chooser
-  const EXCLUDED_FIELD_TYPES = new Set(['textarea', 'file', 'auto_number']);
-
-  // All entity fields (for column chooser)
-  const allFields = useMemo(() => {
-    if (!layout) return [];
-    return layout.sections.flatMap((s) => s.fields);
-  }, [layout]);
-
   const nameFields = useMemo(
     () => new Set(Array.isArray(entity.ui.nameField) ? entity.ui.nameField : [entity.ui.nameField]),
     [entity.ui.nameField],
   );
 
-  // Default column visibility: list layout visible columns = shown, everything else = hidden
+  // Field types excluded from the column chooser (not useful in a list view)
+  const EXCLUDED_FIELD_TYPES = new Set(['textarea', 'file', 'auto_number']);
+
+  // Default column visibility from the list layout's visible flag
   const defaultColumnVisibility = useMemo<Record<string, boolean>>(() => {
-    if (!layout) return {};
-    const listCols = listLayout?.columns ?? [];
-    const visibleKeys = new Set(listCols.filter((c) => c.visible).map((c) => c.fieldKey));
+    if (!listLayout) return {};
     const visibility: Record<string, boolean> = {};
-
-    // All eligible fields
-    for (const field of allFields) {
-      if (nameFields.has(field.fieldKey)) continue;
-      if (EXCLUDED_FIELD_TYPES.has(field.fieldType)) continue;
-      if (field.isSystem && !field.isQuickCreate) continue;
-      visibility[field.fieldKey] = visibleKeys.has(field.fieldKey);
+    for (const col of listLayout.columns) {
+      if (nameFields.has(col.fieldKey)) continue;
+      if (EXCLUDED_FIELD_TYPES.has(col.fieldType)) continue;
+      visibility[col.fieldKey] = col.visible;
     }
-
-    // Computed columns from list layout (relationship counts)
-    for (const col of listCols) {
-      if (!allFields.some((f) => f.fieldKey === col.fieldKey)) {
-        visibility[col.fieldKey] = col.visible;
-      }
-    }
-
     return visibility;
-  }, [layout, listLayout, allFields, nameFields]);
+  }, [listLayout, nameFields]);
 
-  // Auto-generate columns from field definitions
+  // Build columns directly from listLayout.columns — single data source, no merging
   const columns = useMemo<ColumnDef<Row, unknown>[]>(() => {
-    if (!layout) return [];
+    if (!listLayout) return [];
 
-    // Name column (first column, links to detail page)
+    // Name column (always first, always visible, links to detail page)
     const nameCol: ColumnDef<Row, unknown> = {
       id: '__name__',
       header: entity.singularName,
       enableHiding: false,
+      enableSorting: false,
       cell: ({ row }) => {
         const item = row.original;
         const isDeleted = !!item.deletedAt;
@@ -271,81 +252,113 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
           </div>
         );
       },
-      enableSorting: false,
     };
 
-    // Build columns for ALL eligible entity fields (column chooser shows all)
-    const fieldMap = new Map(allFields.map((f) => [f.fieldKey, f]));
-    const listCols = listLayout?.columns ?? [];
-    const listColMap = new Map(listCols.map((c) => [c.fieldKey, c]));
-
-    // Collect all eligible field keys (preserving list layout order for layout fields, then remaining)
-    const orderedFieldKeys: string[] = [];
-    const addedKeys = new Set<string>();
-
-    // First: list layout columns in their configured order
-    for (const col of listCols.sort((a, b) => a.order - b.order)) {
-      if (!nameFields.has(col.fieldKey)) {
-        orderedFieldKeys.push(col.fieldKey);
-        addedKeys.add(col.fieldKey);
-      }
-    }
-
-    // Then: remaining entity fields not in list layout (sorted by sortOrder)
-    for (const field of allFields) {
-      if (addedKeys.has(field.fieldKey)) continue;
-      if (nameFields.has(field.fieldKey)) continue;
-      if (EXCLUDED_FIELD_TYPES.has(field.fieldType)) continue;
-      if (field.isSystem && !field.isQuickCreate) continue;
-      orderedFieldKeys.push(field.fieldKey);
-      addedKeys.add(field.fieldKey);
-    }
-
-    const dynamicCols: ColumnDef<Row, unknown>[] = orderedFieldKeys.map((key) => {
-      const field = fieldMap.get(key);
-      const listCol = listColMap.get(key);
-
-      // Entity field — use buildColumnDefs formatting
-      if (field) {
-        return buildColumnDefs([field], { maxColumns: 1 })[0];
-      }
-
-      // Computed column (relationship counts) — render as clickable link
-      return {
-        id: key,
-        header: listCol?.label ?? key,
-        accessorKey: key,
-        enableSorting: listCol?.sortable ?? false,
+    // Data columns from listLayout (sorted by order, excludes name fields and non-list types)
+    const dataCols: ColumnDef<Row, unknown>[] = listLayout.columns
+      .filter((col) => !nameFields.has(col.fieldKey) && !EXCLUDED_FIELD_TYPES.has(col.fieldType))
+      .sort((a, b) => a.order - b.order)
+      .map((col) => ({
+        id: col.fieldKey,
+        header: col.label,
+        accessorKey: col.fieldKey,
+        enableSorting: col.sortable,
         cell: ({ getValue, row }: any) => {
-          const val = getValue();
-          if (val === null || val === undefined) return '-';
-          const count = Number(val);
-          if (listCol?.relationship && count > 0) {
-            return (
-              <button
-                type="button"
-                className="text-primary hover:underline font-medium"
-                onClick={(e: any) => {
-                  e.stopPropagation();
-                  setBrowsePanel({
-                    targetEntity: listCol.relationship.targetEntity,
-                    foreignKey: listCol.relationship.foreignKey,
-                    parentId: String(row.original.id),
-                    label: (listCol.label ?? key).replace(' Count', ''),
-                  });
-                }}
-              >
-                {count}
-              </button>
-            );
-          }
-          return String(count);
-        },
-      };
-    });
+          const value = getValue();
 
-    // Row actions column — driven by listLayout.actions.row config
-    const rowActions = listLayout?.actions.row ?? [];
+          // Relationship count columns — clickable link
+          if (col.relationship) {
+            if (value === null || value === undefined) return '-';
+            const count = Number(value);
+            if (count > 0) {
+              return (
+                <button
+                  type="button"
+                  className="text-primary hover:underline font-medium"
+                  onClick={(e: any) => {
+                    e.stopPropagation();
+                    setBrowsePanel({
+                      targetEntity: col.relationship!.targetEntity,
+                      foreignKey: col.relationship!.foreignKey,
+                      parentId: String(row.original.id),
+                      label: col.label.replace(' Count', ''),
+                    });
+                  }}
+                >
+                  {count}
+                </button>
+              );
+            }
+            return String(count);
+          }
+
+          // Lookup/user/category — show resolved label
+          if (col.fieldType === 'lookup' || col.fieldType === 'user' || col.fieldType === 'category') {
+            const label = row.original[`${col.fieldKey}__label`];
+            if (label != null && label !== '') return String(label);
+          }
+
+          // Tags — comma-separated names
+          if (col.fieldType === 'tags') {
+            if (Array.isArray(value) && value.length > 0) {
+              return value.map((t: { name: string }) => t.name).join(', ');
+            }
+            return '-';
+          }
+
+          // Multi-user/multi-lookup — comma-separated labels
+          if (col.fieldType === 'multi_user' || col.fieldType === 'multi_lookup') {
+            if (Array.isArray(value) && value.length > 0) {
+              return value.map((i: { label: string }) => i.label).join(', ');
+            }
+            return '-';
+          }
+
+          // Picklist — resolve label from options
+          if (col.fieldType === 'picklist' && col.picklistOptions) {
+            const opt = col.picklistOptions.find((o) => o.value === value);
+            return opt?.label ?? (value != null ? String(value) : '-');
+          }
+
+          // Multi-select — resolve labels
+          if (col.fieldType === 'multi_select' && col.picklistOptions) {
+            if (Array.isArray(value) && value.length > 0) {
+              return value
+                .map((v: string) => col.picklistOptions!.find((o) => o.value === v)?.label ?? v)
+                .join(', ');
+            }
+            return '-';
+          }
+
+          // Boolean
+          if (col.fieldType === 'boolean') {
+            return value === true ? 'Yes' : value === false ? 'No' : '-';
+          }
+
+          // Currency (stored as cents)
+          if (col.fieldType === 'currency') {
+            const num = Number(value);
+            return isNaN(num) ? (value != null ? String(value) : '-') : `$${(num / 100).toFixed(2)}`;
+          }
+
+          // Date
+          if (col.fieldType === 'date' && typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value)) {
+            return new Date(value).toLocaleDateString();
+          }
+
+          // Datetime
+          if (col.fieldType === 'datetime' && (typeof value === 'string' || value instanceof Date)) {
+            return new Date(value as string).toLocaleString();
+          }
+
+          // Default
+          if (value === null || value === undefined || value === '') return '-';
+          return String(value);
+        },
+      }));
+
+    // Actions column (always last, not hideable)
+    const rowActions = listLayout.actions.row ?? [];
     const actionsCol: ColumnDef<Row, unknown> = {
       id: '__actions__',
       header: '',
@@ -383,8 +396,8 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
       },
     };
 
-    return [nameCol, ...dynamicCols, actionsCol];
-  }, [layout, listLayout, entity, navigate, allFields, nameFields]);
+    return [nameCol, ...dataCols, actionsCol];
+  }, [listLayout, entity, navigate, nameFields]);
 
   return (
     <div>

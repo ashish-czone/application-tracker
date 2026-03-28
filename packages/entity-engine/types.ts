@@ -343,6 +343,8 @@ export interface ListLayoutColumn {
     targetEntity: string;
     foreignKey: string;
   };
+  /** Picklist options (for picklist/multi_select cell formatting) */
+  picklistOptions?: { label: string; value: string }[];
 }
 
 export interface ListLayoutResponse {

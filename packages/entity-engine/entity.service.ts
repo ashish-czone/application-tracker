@@ -165,6 +165,9 @@ export class EntityService {
         lookupEntity: d.lookupEntity ?? undefined,
         visible: listFieldSet ? listFieldSet.has(d.fieldKey) : !EntityService.LIST_SKIP_TYPES.has(d.fieldType) && idx < 10,
         order: listFieldOrder?.get(d.fieldKey) ?? 1000 + idx,
+        picklistOptions: (d.fieldType === 'picklist' || d.fieldType === 'multi_select') && d.picklistOptions?.length
+          ? d.picklistOptions.map(o => ({ label: o.label, value: o.value }))
+          : undefined,
       }));
 
     // Append hasMany relationship count columns
