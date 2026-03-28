@@ -3,11 +3,10 @@ import { RbacService } from './services/rbac.service';
 import { PermissionRegistryService } from './services/permission-registry.service';
 import { RbacGuard } from './guards/rbac.guard';
 import { RbacController } from './controllers/rbac.controller';
-import { FieldPermissionsController } from './controllers/field-permissions.controller';
 
 @Global()
 @Module({
-  controllers: [RbacController, FieldPermissionsController],
+  controllers: [RbacController],
   providers: [PermissionRegistryService, RbacService, RbacGuard],
   exports: [RbacService, PermissionRegistryService, RbacGuard],
 })

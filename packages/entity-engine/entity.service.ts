@@ -572,13 +572,14 @@ export class EntityService {
     }
 
     // Emit event after transaction (with resolved lookup labels for audit readability)
-    if (eventPayload) {
-      await this.resolveLookupLabels([eventPayload.before, eventPayload.after]);
+    if (eventPayload != null) {
+      const payload = eventPayload as { changes: string[]; before: Record<string, unknown>; after: Record<string, unknown> };
+      await this.resolveLookupLabels([payload.before, payload.after]);
       this.domainEventEmitter.emitDynamic(`${config.entityType}.Updated`, {
         entityType: config.entityType,
         entityId: id,
         actorId,
-        payload: eventPayload,
+        payload,
       });
     }
 

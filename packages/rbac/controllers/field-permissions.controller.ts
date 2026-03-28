@@ -32,6 +32,8 @@ interface FieldDefinitionServiceLike {
   listByEntity(entityType: string): Promise<FieldDefinitionLike[]>;
 }
 
+export const FIELD_DEFINITION_SERVICE_TOKEN = 'FIELD_DEFINITION_SERVICE';
+
 /**
  * Field-level permission management per role per entity.
  *
@@ -45,7 +47,7 @@ interface FieldDefinitionServiceLike {
 export class FieldPermissionsController {
   constructor(
     private readonly rbacService: RbacService,
-    @Inject('FIELD_DEFINITION_SERVICE') private readonly fieldDefinitionService: FieldDefinitionServiceLike,
+    @Inject(FIELD_DEFINITION_SERVICE_TOKEN) private readonly fieldDefinitionService: FieldDefinitionServiceLike,
     @Optional() @Inject(FIELD_PERMISSION_ENTITY_RESOLVER) private readonly entityResolver?: FieldPermissionEntityResolver,
   ) {}
 
