@@ -64,7 +64,7 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
     page, pageSize, search, sort, order,
     setPage, setPageSize, setSearch, setSort,
     filters, addFilter, removeFilter, clearAllFilters,
-  } = useDataGridParams({ defaultSort: 'createdAt', defaultOrder: 'desc' });
+  } = useDataGridParams({ defaultSort: 'createdAt', defaultOrder: 'desc', storageKey: `${entity.slug}-list` });
 
   // Build filter field definitions from layout columns
   const filterFields = useMemo<DataGridFilterField[]>(() => {
