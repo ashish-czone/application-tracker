@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import * as Popover from '@radix-ui/react-popover';
 import { Command } from 'cmdk';
-import { Filter, ChevronLeft } from 'lucide-react';
+import { Filter, ChevronLeft, Check } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Badge } from '../Badge';
 import { useDebounce } from '../../hooks/useDebounce';
@@ -365,7 +365,7 @@ function ValueInput({
   }
 
   if (hasOptions) {
-    return <SelectValueInput field={field} onSubmit={onSubmit} inputRef={inputRef} />;
+    return <SelectValueInput field={field} initialValue={initialValue} onSubmit={onSubmit} inputRef={inputRef} />;
   }
 
   return <TextValueInput fieldType={field.fieldType} initialValue={initialValue} onSubmit={onSubmit} inputRef={inputRef} />;
@@ -541,10 +541,12 @@ function MultiSelectValueInput({
 // --- Single-select from options ---
 function SelectValueInput({
   field,
+  initialValue,
   onSubmit,
   inputRef,
 }: {
   field: DataGridFilterField;
+  initialValue?: unknown;
   onSubmit: (v: unknown, displayValue?: string) => void;
   inputRef: React.RefObject<HTMLInputElement | null>;
 }) {
@@ -591,16 +593,20 @@ function SelectValueInput({
             <Command.Empty className="px-2 py-4 text-center text-sm text-muted-foreground">
               No options found
             </Command.Empty>
-            {options.map((opt) => (
-              <Command.Item
-                key={opt.value}
-                value={opt.label}
-                onSelect={() => onSubmit(opt.value, opt.label)}
-                className="flex items-center rounded-sm px-2 py-1.5 text-sm cursor-pointer hover:bg-accent aria-selected:bg-accent"
-              >
-                <span className="truncate">{opt.label}</span>
-              </Command.Item>
-            ))}
+            {options.map((opt) => {
+              const isSelected = opt.value === initialValue;
+              return (
+                <Command.Item
+                  key={opt.value}
+                  value={opt.label}
+                  onSelect={() => onSubmit(opt.value, opt.label)}
+                  className="flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm cursor-pointer hover:bg-accent aria-selected:bg-accent"
+                >
+                  <span className="flex-1 truncate">{opt.label}</span>
+                  {isSelected && <Check className="h-3.5 w-3.5 text-primary shrink-0" />}
+                </Command.Item>
+              );
+            })}
           </>
         )}
       </Command.List>
