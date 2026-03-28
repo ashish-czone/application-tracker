@@ -33,25 +33,29 @@ export function DataGridFilterBuilder({
   const [selectedOperator, setSelectedOperator] = useState<FilterOperator | null>(null);
   const [search, setSearch] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+  const editingRef = useRef(false);
 
-  const resetState = useCallback(() => {
-    setStep('field');
-    setSelectedField(null);
-    setSelectedOperator(null);
-    setSearch('');
+  const handleOpenChange = useCallback((nextOpen: boolean) => {
+    if (nextOpen && !editingRef.current) {
+      // Opening via the "+ Filter" button — reset to field picker
+      setStep('field');
+      setSelectedField(null);
+      setSelectedOperator(null);
+      setSearch('');
+    }
+    editingRef.current = false;
+    setOpen(nextOpen);
   }, []);
 
   useEffect(() => {
     if (open) {
-      resetState();
       setTimeout(() => inputRef.current?.focus(), 0);
     }
-  }, [open, resetState]);
+  }, [open]);
 
   const handleFieldSelect = (field: DataGridFilterField) => {
     setSelectedField(field);
     const operators = field.operators ?? OPERATORS_BY_FIELD_TYPE[field.fieldType] ?? ['eq'];
-    // Default to first operator
     setSelectedOperator(operators[0]);
     setStep('configure');
     setSearch('');
@@ -59,7 +63,6 @@ export function DataGridFilterBuilder({
 
   const handleOperatorChange = (operator: FilterOperator) => {
     setSelectedOperator(operator);
-    // If no-value operator, apply immediately
     if (operator === 'isNull' || operator === 'isNotNull') {
       onAddFilter({ field: selectedField!.key, operator, value: null });
       setOpen(false);
@@ -75,6 +78,7 @@ export function DataGridFilterBuilder({
   const handleChipClick = (expr: FilterExpression) => {
     const field = fields.find((f) => f.key === expr.field);
     if (!field) return;
+    editingRef.current = true;
     setSelectedField(field);
     setSelectedOperator(expr.operator);
     setStep('configure');
@@ -138,7 +142,7 @@ export function DataGridFilterBuilder({
       )}
 
       {/* Add filter button + popover */}
-      <Popover.Root open={open} onOpenChange={setOpen}>
+      <Popover.Root open={open} onOpenChange={handleOpenChange}>
         <Popover.Trigger asChild>
           <button
             type="button"
