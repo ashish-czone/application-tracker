@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
@@ -55,17 +55,30 @@ export function DataGrid<TData>({
   enableExport = false,
   exportFilename,
 }: DataGridProps<TData>) {
+  const hasStoredPreference = useRef(false);
+
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(() => {
     if (storageKey) {
       try {
         const stored = localStorage.getItem(`datagrid-columns-${storageKey}`);
-        if (stored) return JSON.parse(stored);
+        if (stored) {
+          hasStoredPreference.current = true;
+          return JSON.parse(stored);
+        }
       } catch { /* fall through to default */ }
     }
     return defaultColumnVisibility ?? {};
   });
 
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+
+  // Sync columnVisibility when defaultColumnVisibility loads async (e.g. from API layout)
+  // Skip if user already has a stored preference in localStorage
+  useEffect(() => {
+    if (hasStoredPreference.current) return;
+    if (!defaultColumnVisibility || Object.keys(defaultColumnVisibility).length === 0) return;
+    setColumnVisibility(defaultColumnVisibility);
+  }, [defaultColumnVisibility]);
 
   useEffect(() => {
     if (!storageKey) return;
