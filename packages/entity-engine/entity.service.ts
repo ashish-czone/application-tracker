@@ -30,7 +30,7 @@ import {
 import type { FieldDefinition } from '@packages/eav-attributes';
 import { TaxonomyService, type TagWithGroup } from '@packages/taxonomy';
 import { MediaService, type MediaFile } from '@packages/media';
-import { WorkflowEngineService, WorkflowRegistryService } from '@packages/workflows';
+import { WorkflowEngineService, WorkflowRegistryService, PipelineResolverService } from '@packages/workflows';
 import type { PaginatedResponse } from '@packages/common';
 import type { EntityConfig, BaseListQuery, ListLayoutColumn } from './types';
 import { EntityRegistryService } from './entity-registry.service';
@@ -63,6 +63,7 @@ export class EntityService {
     private readonly mediaService: MediaService,
     private readonly workflowEngine: WorkflowEngineService,
     private readonly workflowRegistry: WorkflowRegistryService,
+    private readonly pipelineResolver: PipelineResolverService,
     private readonly entityRegistry: EntityRegistryService,
     appLogger: AppLoggerService,
   ) {
@@ -438,6 +439,32 @@ export class EntityService {
       await this.processFileFields(customFields, row.id, defs);
     }
 
+    // Auto-assign pipeline for entities with workflow discriminators
+    for (const [fieldKey, meta] of Object.entries(config.fieldMeta)) {
+      if (meta.fieldType === 'workflow' && meta.workflow?.discriminator) {
+        const discriminator = meta.workflow.discriminator;
+        try {
+          const findEntity = async (entityType: string, entityId: string) => {
+            const targetConfig = this.entityRegistry.get(entityType);
+            if (!targetConfig) return {};
+            const [found] = await this.database.db
+              .select()
+              .from(targetConfig.table as any)
+              .where(eq((targetConfig.table as any).id, entityId))
+              .limit(1) as any[];
+            return found ?? {};
+          };
+          const value = await discriminator.resolve(
+            { ...standardFields, ...customFields, id: row.id },
+            { findEntity },
+          );
+          await this.pipelineResolver.resolveAndAssign(config.entityType, row.id, fieldKey, value);
+        } catch (err) {
+          this.logger.warn(`Failed to resolve pipeline discriminator for ${config.entityType}/${row.id}: ${(err as Error).message}`);
+        }
+      }
+    }
+
     this.logger.log(`${config.singularName} created`, { entityId: row.id, actorId });
 
     // Hook: afterCreate
@@ -603,8 +630,8 @@ export class EntityService {
     // 1. Get current entity
     const entity = await this.findOneOrFail(id);
 
-    // 2. Look up workflow for this field
-    const workflow = this.workflowRegistry.getByEntityField(config.entityType, fieldKey);
+    // 2. Look up workflow — check assignment first, fall back to default
+    const workflow = await this.pipelineResolver.resolveForTransition(config.entityType, id, fieldKey);
     if (!workflow) {
       throw new BadRequestException(`No workflow found for field '${fieldKey}' on '${config.entityType}'`);
     }

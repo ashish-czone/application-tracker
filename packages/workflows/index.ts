@@ -6,6 +6,7 @@ export { WORKFLOWS_PERMISSIONS } from './permissions';
 export { WorkflowEngineService } from './services/workflow-engine.service';
 export { WorkflowRegistryService } from './services/workflow-registry.service';
 export { WorkflowGuardRegistry } from './services/workflow-guard-registry.service';
+export { PipelineResolverService } from './services/pipeline-resolver.service';
 
 // Types
 export type {

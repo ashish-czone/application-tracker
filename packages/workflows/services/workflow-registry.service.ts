@@ -84,6 +84,9 @@ export class WorkflowRegistryService implements OnModuleInit {
         fieldName: def.fieldName,
         initialState: def.initialState,
         isActive: def.isActive,
+        discriminatorKey: def.discriminatorKey,
+        discriminatorValue: def.discriminatorValue,
+        isDefault: def.isDefault,
         states: cachedStates,
         transitions: cachedTransitions,
       };
@@ -110,13 +113,43 @@ export class WorkflowRegistryService implements OnModuleInit {
     return results;
   }
 
+  /** Returns the first (or default) workflow for an entity field. Backward compatible. */
   getByEntityField(entityType: string, fieldName: string): CachedWorkflowDefinition | undefined {
+    return this.getDefaultForField(entityType, fieldName);
+  }
+
+  /** Returns ALL active workflows for an entity field (multi-pipeline). */
+  getAllForField(entityType: string, fieldName: string): CachedWorkflowDefinition[] {
+    const results: CachedWorkflowDefinition[] = [];
+    for (const def of this.cache.values()) {
+      if (def.entityType === entityType && def.fieldName === fieldName) {
+        results.push(def);
+      }
+    }
+    return results;
+  }
+
+  /** Returns the default workflow for an entity field. */
+  getDefaultForField(entityType: string, fieldName: string): CachedWorkflowDefinition | undefined {
+    for (const def of this.cache.values()) {
+      if (def.entityType === entityType && def.fieldName === fieldName && def.isDefault) {
+        return def;
+      }
+    }
+    // Fallback: return first match if no default is explicitly set
     for (const def of this.cache.values()) {
       if (def.entityType === entityType && def.fieldName === fieldName) {
         return def;
       }
     }
     return undefined;
+  }
+
+  /** Returns the workflow matching a discriminator value, or the default. */
+  getByDiscriminator(entityType: string, fieldName: string, discriminatorValue: string): CachedWorkflowDefinition | undefined {
+    const all = this.getAllForField(entityType, fieldName);
+    return all.find((d) => d.discriminatorValue === discriminatorValue)
+      ?? all.find((d) => d.isDefault);
   }
 
   // --- CRUD Operations ---
@@ -127,6 +160,9 @@ export class WorkflowRegistryService implements OnModuleInit {
     entityType: string;
     fieldName: string;
     initialState: string;
+    discriminatorKey?: string;
+    discriminatorValue?: string;
+    isDefault?: boolean;
   }) {
     const [row] = await this.database.db
       .insert(workflowDefinitions)
@@ -142,6 +178,9 @@ export class WorkflowRegistryService implements OnModuleInit {
     fieldName: string;
     initialState: string;
     isActive: boolean;
+    discriminatorKey: string;
+    discriminatorValue: string;
+    isDefault: boolean;
   }>) {
     const [row] = await this.database.db
       .update(workflowDefinitions)

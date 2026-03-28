@@ -34,4 +34,21 @@ export class UpdateWorkflowDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @ApiPropertyOptional({ description: 'Discriminator key' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  discriminatorKey?: string;
+
+  @ApiPropertyOptional({ description: 'Discriminator value' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  discriminatorValue?: string;
+
+  @ApiPropertyOptional({ description: 'Whether this is the default pipeline' })
+  @IsOptional()
+  @IsBoolean()
+  isDefault?: boolean;
 }

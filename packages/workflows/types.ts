@@ -21,6 +21,9 @@ export interface CachedWorkflowDefinition {
   fieldName: string;
   initialState: string;
   isActive: boolean;
+  discriminatorKey: string | null;
+  discriminatorValue: string | null;
+  isDefault: boolean;
   states: CachedWorkflowState[];
   transitions: CachedWorkflowTransition[];
 }

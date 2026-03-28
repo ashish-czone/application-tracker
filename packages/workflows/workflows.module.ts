@@ -3,6 +3,7 @@ import { RbacService } from '@packages/rbac';
 import { WorkflowGuardRegistry } from './services/workflow-guard-registry.service';
 import { WorkflowRegistryService } from './services/workflow-registry.service';
 import { WorkflowEngineService } from './services/workflow-engine.service';
+import { PipelineResolverService } from './services/pipeline-resolver.service';
 import { WorkflowsController } from './controllers/workflows.controller';
 
 @Global()
@@ -12,11 +13,13 @@ import { WorkflowsController } from './controllers/workflows.controller';
     WorkflowGuardRegistry,
     WorkflowRegistryService,
     WorkflowEngineService,
+    PipelineResolverService,
   ],
   exports: [
     WorkflowGuardRegistry,
     WorkflowRegistryService,
     WorkflowEngineService,
+    PipelineResolverService,
   ],
 })
 export class WorkflowsModule implements OnModuleInit {
