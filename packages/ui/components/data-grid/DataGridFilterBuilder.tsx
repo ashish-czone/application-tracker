@@ -32,6 +32,7 @@ export function DataGridFilterBuilder({
   const [selectedField, setSelectedField] = useState<DataGridFilterField | null>(null);
   const [selectedOperator, setSelectedOperator] = useState<FilterOperator | null>(null);
   const [editingValue, setEditingValue] = useState<unknown>(undefined);
+  const [isEditing, setIsEditing] = useState(false);
   const [search, setSearch] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const anchorRef = useRef<HTMLElement | null>(null);
@@ -43,6 +44,7 @@ export function DataGridFilterBuilder({
       setSelectedField(null);
       setSelectedOperator(null);
       setEditingValue(undefined);
+      setIsEditing(false);
       setSearch('');
       anchorRef.current = null;
     }
@@ -87,6 +89,7 @@ export function DataGridFilterBuilder({
     setSelectedField(field);
     setSelectedOperator(expr.operator);
     setEditingValue(expr.value);
+    setIsEditing(true);
     setStep('configure');
     setSearch('');
     setOpen(true);
@@ -132,7 +135,7 @@ export function DataGridFilterBuilder({
     >
       {/* Header */}
       <div className="flex items-center gap-2 px-3 py-2 border-b">
-        {step === 'configure' && (
+        {step === 'configure' && !isEditing && (
           <button
             type="button"
             onClick={handleBack}
