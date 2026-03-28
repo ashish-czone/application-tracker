@@ -54,6 +54,25 @@ export interface FieldMeta {
 // Workflow field configuration
 // ---------------------------------------------------------------------------
 
+export interface WorkflowDiscriminatorOption {
+  value: string;
+  label: string;
+}
+
+export interface WorkflowDiscriminator {
+  /** Unique key identifying this discriminator (e.g., 'client-country') */
+  key: string;
+  /** Human-readable label for admin UI (e.g., 'Client Country') */
+  label: string;
+  /** Allowed values the admin can choose from when creating pipelines */
+  options: WorkflowDiscriminatorOption[];
+  /** Resolves the discriminator value for a given entity at runtime */
+  resolve: (
+    entityData: Record<string, unknown>,
+    services: { findEntity: (entityType: string, id: string) => Promise<Record<string, unknown>> },
+  ) => Promise<string>;
+}
+
 export interface WorkflowFieldConfig {
   /** Unique slug for the workflow definition (e.g., 'application-status') */
   slug: string;
@@ -63,6 +82,8 @@ export interface WorkflowFieldConfig {
   states: WorkflowStateDef[];
   /** Allowed transitions between states */
   transitions: WorkflowTransitionDef[];
+  /** Optional discriminator for multi-pipeline support */
+  discriminator?: WorkflowDiscriminator;
 }
 
 export interface WorkflowStateDef {

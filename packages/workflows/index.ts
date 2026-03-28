@@ -27,4 +27,5 @@ export {
   workflowStates,
   workflowTransitions,
   workflowTransitionHistory,
+  entityPipelineAssignments,
 } from './schema';
