@@ -202,8 +202,8 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
     [entity.ui.nameField],
   );
 
-  // Field types excluded from the column chooser (not useful in a list view)
-  const EXCLUDED_FIELD_TYPES = new Set(['textarea', 'file', 'auto_number']);
+  // Field types excluded from the column chooser (long text and non-tabular types)
+  const EXCLUDED_FIELD_TYPES = new Set(['textarea', 'rich_text', 'file', 'auto_number']);
 
   // Default column visibility from the list layout's visible flag
   const defaultColumnVisibility = useMemo<Record<string, boolean>>(() => {

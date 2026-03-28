@@ -66,23 +66,19 @@ export class EntityService {
   // LIST LAYOUT
   // ---------------------------------------------------------------------------
 
-  /** Field types excluded from list view columns. */
-  private static readonly LIST_SKIP_TYPES = new Set(['textarea', 'file', 'auto_number']);
+  /** Field types excluded from list view — long text and non-tabular types. */
+  private static readonly LIST_SKIP_TYPES = new Set(['textarea', 'rich_text', 'file', 'auto_number']);
 
   /** System columns always included in list queries. */
   private static readonly LIST_SYSTEM_COLUMNS = ['id', 'createdAt', 'updatedAt', 'deletedAt', 'createdBy'];
 
   /**
-   * Get the field definitions needed for the list data query.
-   * Uses config.listFields to select exactly the right columns.
+   * Get all field definitions eligible for list queries.
+   * Returns all non-system fields except long-text/file types.
+   * listFields only controls default visibility, not data availability.
    */
   private async getListFieldDefs(): Promise<FieldDefinition[]> {
     const defs = await this.fieldDefinitionService.listByEntityWithOptions(this.config.entityType);
-    if (this.config.listFields) {
-      const listFieldSet = new Set(this.config.listFields);
-      return defs.filter(d => listFieldSet.has(d.fieldKey));
-    }
-    // Fallback: all non-system, non-skip-type fields
     return defs.filter(d => !EntityService.LIST_SKIP_TYPES.has(d.fieldType) && !d.isSystem);
   }
 
@@ -157,9 +153,9 @@ export class EntityService {
       ? new Map(config.listFields.map((k, i) => [k, i]))
       : null;
 
-    // All entity fields as columns with visible/order flags
+    // All entity fields as columns with visible/order flags (exclude long-text/file types)
     const columns: ListLayoutColumn[] = allDefs
-      .filter(d => !d.isSystem)
+      .filter(d => !d.isSystem && !EntityService.LIST_SKIP_TYPES.has(d.fieldType))
       .map((d, idx) => ({
         fieldKey: d.fieldKey,
         label: d.label,
