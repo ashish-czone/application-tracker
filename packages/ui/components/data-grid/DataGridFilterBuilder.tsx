@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import * as Popover from '@radix-ui/react-popover';
 import { Command } from 'cmdk';
-import { Filter, ChevronLeft, Check, X } from 'lucide-react';
+import { Filter, ChevronLeft, Check } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Badge } from '../Badge';
 import { useDebounce } from '../../hooks/useDebounce';
@@ -18,7 +18,7 @@ interface DataGridFilterBuilderProps {
   onClearAll: () => void;
 }
 
-type Step = 'field' | 'operator' | 'value';
+type Step = 'field' | 'configure';
 
 export function DataGridFilterBuilder({
   fields,
@@ -48,30 +48,21 @@ export function DataGridFilterBuilder({
     }
   }, [open, resetState]);
 
-  useEffect(() => {
-    setSearch('');
-    setTimeout(() => inputRef.current?.focus(), 0);
-  }, [step]);
-
   const handleFieldSelect = (field: DataGridFilterField) => {
     setSelectedField(field);
     const operators = field.operators ?? OPERATORS_BY_FIELD_TYPE[field.fieldType] ?? ['eq'];
-    if (operators.length === 1) {
-      // Skip operator step if only one operator
-      handleOperatorSelect(operators[0], field);
-    } else {
-      setStep('operator');
-    }
+    // Default to first operator
+    setSelectedOperator(operators[0]);
+    setStep('configure');
+    setSearch('');
   };
 
-  const handleOperatorSelect = (operator: FilterOperator, field?: DataGridFilterField) => {
-    const f = field ?? selectedField;
+  const handleOperatorChange = (operator: FilterOperator) => {
     setSelectedOperator(operator);
+    // If no-value operator, apply immediately
     if (operator === 'isNull' || operator === 'isNotNull') {
-      onAddFilter({ field: f!.key, operator, value: null });
+      onAddFilter({ field: selectedField!.key, operator, value: null });
       setOpen(false);
-    } else {
-      setStep('value');
     }
   };
 
@@ -82,13 +73,11 @@ export function DataGridFilterBuilder({
   };
 
   const handleBack = () => {
-    if (step === 'value') {
-      setSelectedOperator(null);
-      setStep('operator');
-    } else if (step === 'operator') {
-      setSelectedField(null);
-      setStep('field');
-    }
+    setSelectedField(null);
+    setSelectedOperator(null);
+    setStep('field');
+    setSearch('');
+    setTimeout(() => inputRef.current?.focus(), 0);
   };
 
   const getFieldLabel = (fieldKey: string) => fields.find((f) => f.key === fieldKey)?.label ?? fieldKey;
@@ -110,13 +99,6 @@ export function DataGridFilterBuilder({
     const valueLabel = getValueLabel(expr);
     return valueLabel ? `${fieldLabel} ${opLabel} ${valueLabel}` : `${fieldLabel} ${opLabel}`;
   };
-
-  // Header text for each step
-  const headerText = step === 'field'
-    ? 'Filter by'
-    : step === 'operator'
-    ? selectedField?.label ?? ''
-    : `${selectedField?.label ?? ''} ${OPERATOR_LABELS[selectedOperator!] ?? ''}`;
 
   return (
     <div className="flex items-center gap-2 flex-wrap">
@@ -157,14 +139,14 @@ export function DataGridFilterBuilder({
         </Popover.Trigger>
         <Popover.Portal>
           <Popover.Content
-            className="z-50 w-64 rounded-md border bg-popover text-popover-foreground shadow-md outline-none animate-in fade-in-0 zoom-in-95"
+            className="z-50 w-72 rounded-md border bg-popover text-popover-foreground shadow-md outline-none animate-in fade-in-0 zoom-in-95"
             sideOffset={4}
             align="start"
             onOpenAutoFocus={(e) => e.preventDefault()}
           >
             {/* Header */}
             <div className="flex items-center gap-2 px-3 py-2 border-b">
-              {step !== 'field' && (
+              {step === 'configure' && (
                 <button
                   type="button"
                   onClick={handleBack}
@@ -173,10 +155,12 @@ export function DataGridFilterBuilder({
                   <ChevronLeft className="h-4 w-4" />
                 </button>
               )}
-              <span className="text-xs font-medium text-muted-foreground truncate">{headerText}</span>
+              <span className="text-xs font-medium text-muted-foreground truncate">
+                {step === 'field' ? 'Filter by' : selectedField?.label ?? ''}
+              </span>
             </div>
 
-            {/* Step content */}
+            {/* Step 1: Field picker */}
             {step === 'field' && (
               <FieldPicker
                 fields={fields}
@@ -187,16 +171,13 @@ export function DataGridFilterBuilder({
                 inputRef={inputRef}
               />
             )}
-            {step === 'operator' && selectedField && (
-              <OperatorPicker
-                field={selectedField}
-                onSelect={handleOperatorSelect}
-              />
-            )}
-            {step === 'value' && selectedField && selectedOperator && (
-              <ValueInput
+
+            {/* Step 2: Operator + Value (combined) */}
+            {step === 'configure' && selectedField && selectedOperator && (
+              <OperatorAndValueStep
                 field={selectedField}
                 operator={selectedOperator}
+                onOperatorChange={handleOperatorChange}
                 onSubmit={handleValueSelect}
                 inputRef={inputRef}
               />
@@ -262,35 +243,60 @@ function FieldPicker({
 }
 
 // ---------------------------------------------------------------------------
-// Step 2: Operator Picker
+// Step 2: Operator selector (top) + Value input (bottom) — combined
 // ---------------------------------------------------------------------------
-function OperatorPicker({
+function OperatorAndValueStep({
   field,
-  onSelect,
+  operator,
+  onOperatorChange,
+  onSubmit,
+  inputRef,
 }: {
   field: DataGridFilterField;
-  onSelect: (op: FilterOperator) => void;
+  operator: FilterOperator;
+  onOperatorChange: (op: FilterOperator) => void;
+  onSubmit: (value: unknown) => void;
+  inputRef: React.RefObject<HTMLInputElement | null>;
 }) {
   const operators = field.operators ?? OPERATORS_BY_FIELD_TYPE[field.fieldType] ?? ['eq'];
+  const isNoValueOperator = operator === 'isNull' || operator === 'isNotNull';
 
   return (
-    <div className="max-h-52 overflow-y-auto p-1">
-      {operators.map((op) => (
-        <button
-          key={op}
-          type="button"
-          onClick={() => onSelect(op)}
-          className="flex w-full items-center rounded-sm px-2 py-1.5 text-sm cursor-pointer hover:bg-accent text-left"
-        >
-          {OPERATOR_LABELS[op] ?? op}
-        </button>
-      ))}
+    <div className="flex flex-col">
+      {/* Operator selector */}
+      <div className="flex flex-wrap gap-1 px-3 py-2 border-b">
+        {operators.map((op) => (
+          <button
+            key={op}
+            type="button"
+            onClick={() => onOperatorChange(op)}
+            className={cn(
+              'rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors',
+              op === operator
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+            )}
+          >
+            {OPERATOR_LABELS[op] ?? op}
+          </button>
+        ))}
+      </div>
+
+      {/* Value input — hidden for isNull/isNotNull */}
+      {!isNoValueOperator && (
+        <ValueInput
+          field={field}
+          operator={operator}
+          onSubmit={onSubmit}
+          inputRef={inputRef}
+        />
+      )}
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Step 3: Value Input
+// Value Input — adapts to field type + operator
 // ---------------------------------------------------------------------------
 function ValueInput({
   field,
@@ -426,7 +432,7 @@ function MultiSelectValueInput({
           className="flex h-8 w-full rounded-md border border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         />
       </div>
-      <div className="max-h-44 overflow-y-auto p-1">
+      <div className="max-h-40 overflow-y-auto p-1">
         {filtered.map((opt) => (
           <label
             key={opt.value}
@@ -505,7 +511,7 @@ function SelectValueInput({
           className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         />
       </div>
-      <Command.List className="max-h-44 overflow-y-auto p-1">
+      <Command.List className="max-h-40 overflow-y-auto p-1">
         {isSearching ? (
           <div className="px-2 py-4 text-center text-sm text-muted-foreground">Searching...</div>
         ) : (
