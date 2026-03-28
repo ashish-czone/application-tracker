@@ -26,6 +26,9 @@ export interface WorkflowDefinition {
   fieldName: string;
   initialState: string;
   isActive: boolean;
+  discriminatorKey: string | null;
+  discriminatorValue: string | null;
+  isDefault: boolean;
   states: WorkflowState[];
   transitions: WorkflowTransition[];
 }
@@ -36,6 +39,9 @@ export interface CreateWorkflowRequest {
   entityType: string;
   fieldName: string;
   initialState: string;
+  discriminatorKey?: string;
+  discriminatorValue?: string;
+  isDefault?: boolean;
 }
 
 export interface UpdateWorkflowRequest {

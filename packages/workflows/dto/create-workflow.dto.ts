@@ -1,5 +1,5 @@
-import { IsString, MinLength, MaxLength, Matches } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { IsString, MinLength, MaxLength, Matches, IsOptional, IsBoolean } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateWorkflowDto {
   @ApiProperty({ example: 'order-status' })
@@ -32,4 +32,21 @@ export class CreateWorkflowDto {
   @MinLength(1)
   @MaxLength(100)
   initialState!: string;
+
+  @ApiPropertyOptional({ description: 'Discriminator key (e.g., client-country)' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  discriminatorKey?: string;
+
+  @ApiPropertyOptional({ description: 'Discriminator value (e.g., UK)' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  discriminatorValue?: string;
+
+  @ApiPropertyOptional({ description: 'Whether this is the default pipeline', default: true })
+  @IsOptional()
+  @IsBoolean()
+  isDefault?: boolean;
 }

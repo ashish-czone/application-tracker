@@ -8,7 +8,7 @@ import { FieldValueService, FieldDefinitionService, LayoutService, LookupResolve
 import { EntityResolverRegistry } from '@packages/notifications';
 import { TaxonomyService } from '@packages/taxonomy';
 import { MediaService } from '@packages/media';
-import { WorkflowEngineService, WorkflowRegistryService, WorkflowGuardRegistry } from '@packages/workflows';
+import { WorkflowEngineService, WorkflowRegistryService, WorkflowGuardRegistry, PipelineResolverService } from '@packages/workflows';
 import { AppLoggerService } from '@packages/logger';
 import { EntityRegistryService } from './entity-registry.service';
 import { EntityService } from './entity.service';
@@ -99,10 +99,11 @@ export class EntityEngineModule implements OnApplicationBootstrap {
             mediaService: MediaService,
             workflowEngine: WorkflowEngineService,
             workflowRegistry: WorkflowRegistryService,
+            pipelineResolver: PipelineResolverService,
             entityRegistry: EntityRegistryService,
             appLogger: AppLoggerService,
-          ) => new EntityService(config, database, domainEventEmitter, fieldValueService, fieldDefinitionService, lookupResolver, taxonomyService, multiValueService, mediaService, workflowEngine, workflowRegistry, entityRegistry, appLogger),
-          inject: [DatabaseService, DomainEventEmitter, FieldValueService, FieldDefinitionService, LookupResolverService, TaxonomyService, MultiValueService, MediaService, WorkflowEngineService, WorkflowRegistryService, EntityRegistryService, AppLoggerService],
+          ) => new EntityService(config, database, domainEventEmitter, fieldValueService, fieldDefinitionService, lookupResolver, taxonomyService, multiValueService, mediaService, workflowEngine, workflowRegistry, pipelineResolver, entityRegistry, appLogger),
+          inject: [DatabaseService, DomainEventEmitter, FieldValueService, FieldDefinitionService, LookupResolverService, TaxonomyService, MultiValueService, MediaService, WorkflowEngineService, WorkflowRegistryService, PipelineResolverService, EntityRegistryService, AppLoggerService],
         },
       ],
       exports: [serviceToken],

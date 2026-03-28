@@ -401,6 +401,12 @@ export interface EntityRegistryEntry {
     hasTaxonomy: boolean;
     hasWorkflow: boolean;
     hasMedia: boolean;
+    workflowDiscriminator: {
+      key: string;
+      label: string;
+      options: { value: string; label: string }[];
+      fieldName: string;
+    } | null;
   };
   relationships: Omit<EntityRelationship, 'inverseForeignKey' | 'junctionEntity'>[];
 }
