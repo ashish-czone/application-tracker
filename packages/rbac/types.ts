@@ -22,3 +22,12 @@ export interface PermissionRegistryEntry {
   action: string;
   description: string;
 }
+
+/** Minimal interface for resolving entity metadata needed by field permissions. */
+export interface FieldPermissionEntityResolver {
+  /** Get the slug and fieldMeta for an entity type. Returns undefined if not found. */
+  resolve(entityType: string): { slug: string; fieldMeta: Record<string, { isSystem?: boolean }> } | undefined;
+}
+
+/** DI token for FieldPermissionEntityResolver */
+export const FIELD_PERMISSION_ENTITY_RESOLVER = Symbol('FIELD_PERMISSION_ENTITY_RESOLVER');
