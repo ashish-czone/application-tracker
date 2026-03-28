@@ -4,8 +4,10 @@ import type { Table } from '@tanstack/react-table';
 import { cn } from '../../lib/utils';
 import { Badge } from '../Badge';
 import { useDebounce } from '../../hooks/useDebounce';
-import type { DataGridFilter } from './types';
+import type { DataGridFilter, DataGridFilterField } from './types';
+import type { FilterExpression } from './filter-types';
 import { DataGridExport } from './DataGridExport';
+import { DataGridFilterBuilder } from './DataGridFilterBuilder';
 
 interface DataGridToolbarProps<TData> {
   table: Table<TData>;
@@ -15,6 +17,12 @@ interface DataGridToolbarProps<TData> {
   activeFilters?: DataGridFilter[];
   onFilterRemove?: (key: string) => void;
   onFiltersClear?: () => void;
+  filterFields?: DataGridFilterField[];
+  filters?: FilterExpression[];
+  onFilterAdd?: (expr: FilterExpression) => void;
+  onStructuredFilterRemove?: (field: string) => void;
+  onFilterUpdate?: (index: number, expr: FilterExpression) => void;
+  onStructuredFiltersClear?: () => void;
   toolbarActions?: React.ReactNode;
   enableExport?: boolean;
   exportFilename?: string;
@@ -28,6 +36,12 @@ export function DataGridToolbar<TData>({
   activeFilters = [],
   onFilterRemove,
   onFiltersClear,
+  filterFields,
+  filters,
+  onFilterAdd,
+  onStructuredFilterRemove,
+  onFilterUpdate,
+  onStructuredFiltersClear,
   toolbarActions,
   enableExport,
   exportFilename,
@@ -93,6 +107,17 @@ export function DataGridToolbar<TData>({
               </button>
             )}
           </div>
+        )}
+
+        {/* Filter builder (new chip pattern) */}
+        {filterFields && filterFields.length > 0 && onFilterAdd && onStructuredFilterRemove && onStructuredFiltersClear && (
+          <DataGridFilterBuilder
+            fields={filterFields}
+            filters={filters ?? []}
+            onAddFilter={onFilterAdd}
+            onRemoveFilter={onStructuredFilterRemove}
+            onClearAll={onStructuredFiltersClear}
+          />
         )}
 
         <div className="flex-1" />

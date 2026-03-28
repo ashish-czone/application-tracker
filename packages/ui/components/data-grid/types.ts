@@ -113,12 +113,25 @@ export interface DataGridProps<TData> {
   /** Search input placeholder text */
   searchPlaceholder?: string;
 
-  /** Active filter chips displayed above the table */
+  /** Active filter chips displayed above the table (legacy dropdown pattern) */
   activeFilters?: DataGridFilter[];
-  /** Called when a single filter chip is removed */
+  /** Called when a single filter chip is removed (legacy) */
   onFilterRemove?: (key: string) => void;
-  /** Called when "Clear all" filters is clicked */
+  /** Called when "Clear all" filters is clicked (legacy) */
   onFiltersClear?: () => void;
+
+  /** Field definitions for the filter builder popover (new chip pattern) */
+  filterFields?: DataGridFilterField[];
+  /** Structured filter state — FilterExpression[] (new chip pattern) */
+  filters?: FilterExpression[];
+  /** Called when a filter is added via the filter builder */
+  onFilterAdd?: (expr: FilterExpression) => void;
+  /** Called when a structured filter is removed by field key */
+  onStructuredFilterRemove?: (field: string) => void;
+  /** Called when a structured filter is updated at an index */
+  onFilterUpdate?: (index: number, expr: FilterExpression) => void;
+  /** Called to clear all structured filters */
+  onStructuredFiltersClear?: () => void;
 
   /** Shows skeleton loading state */
   isLoading?: boolean;
@@ -132,9 +145,6 @@ export interface DataGridProps<TData> {
 
   /** localStorage key for persisting column visibility preferences */
   storageKey?: string;
-
-  /** Default column visibility when no user preference is stored. Keys are column IDs, values are booleans. */
-  defaultColumnVisibility?: Record<string, boolean>;
 
   /** Default column visibility when no user preference is stored. Keys are column IDs, values are booleans. */
   defaultColumnVisibility?: Record<string, boolean>;

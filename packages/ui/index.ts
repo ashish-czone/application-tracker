@@ -67,6 +67,7 @@ export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent }
 // Components — data-grid
 export { DataGrid } from './components/data-grid/DataGrid';
 export { DataGridFilters } from './components/data-grid/DataGridFilters';
+export { DataGridFilterBuilder } from './components/data-grid/DataGridFilterBuilder';
 export type {
   DataGridProps,
   DataGridFilter,
