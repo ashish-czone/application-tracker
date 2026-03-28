@@ -51,7 +51,7 @@ function TimelineEntry({ entry, showLine }: { entry: AuditLogEntry; showLine: bo
 
       {/* Dot + line column */}
       <div className="relative w-5 shrink-0 flex flex-col items-center">
-        <div className="h-3 w-3 rounded-full bg-muted-foreground/50 shrink-0 mt-[3px]" />
+        <div className="h-3 w-3 rounded-full bg-muted-foreground/50 shrink-0 mt-2" />
         {showLine && <div className="w-[2px] flex-1 bg-border" />}
       </div>
 
