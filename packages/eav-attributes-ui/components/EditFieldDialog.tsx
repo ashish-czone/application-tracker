@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
-  Form, FormInput, Button,
+  Form, FormInput, FormSelect, Button,
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@packages/ui';
 import { FIELD_TYPE_CONFIG } from '../types';
@@ -150,21 +150,14 @@ export function EditFieldDialog({
 
           <FormInput name="maxLength" label="Max Length" type="number" />
 
-          {/* Default Value — dropdown for category/picklist, text input for others */}
+          {/* Default Value — searchable dropdown for category/picklist, text input for others */}
           {showDropdownDefault ? (
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">Default Value</label>
-              <select
-                value={form.watch('defaultValue') ?? ''}
-                onChange={(e) => form.setValue('defaultValue', e.target.value, { shouldDirty: true })}
-                className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-              >
-                <option value="">None</option>
-                {defaultValueOptions.map((opt) => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
-            </div>
+            <FormSelect
+              name="defaultValue"
+              label="Default Value"
+              options={defaultValueOptions}
+              placeholder="None"
+            />
           ) : (
             <FormInput name="defaultValue" label="Default Value" />
           )}
