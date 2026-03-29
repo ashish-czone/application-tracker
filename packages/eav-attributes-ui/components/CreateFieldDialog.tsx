@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -39,6 +39,8 @@ interface CreateFieldDialogProps {
   lookupEntities?: string[];
   tagGroups?: string[];
   categoryGroups?: string[];
+  /** Fetch options for a category group slug — used for default value dropdown */
+  onFetchCategoryOptions?: (groupSlug: string) => Promise<{ label: string; value: string }[]>;
 }
 
 export function CreateFieldDialog({
@@ -51,8 +53,10 @@ export function CreateFieldDialog({
   lookupEntities = [],
   tagGroups = [],
   categoryGroups = [],
+  onFetchCategoryOptions,
 }: CreateFieldDialogProps) {
   const [picklistOptions, setPicklistOptions] = useState<PicklistOptionInput[]>([]);
+  const [categoryOptions, setCategoryOptions] = useState<{ label: string; value: string }[]>([]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -98,11 +102,21 @@ export function CreateFieldDialog({
   }, [open, preselectedType, form]);
 
   const selectedType = form.watch('fieldType') as FieldType;
+  const selectedCategoryGroup = form.watch('categoryGroupSlug');
   const isPicklistType = selectedType === 'picklist' || selectedType === 'multi_select';
   const isLookupType = selectedType === 'lookup' || selectedType === 'multi_lookup';
   const isTagsType = selectedType === 'tags';
   const isCategoryType = selectedType === 'category';
   const isFileType = selectedType === 'file';
+
+  // Fetch category options when category group is selected
+  useEffect(() => {
+    if (!isCategoryType || !selectedCategoryGroup || !onFetchCategoryOptions) {
+      setCategoryOptions([]);
+      return;
+    }
+    onFetchCategoryOptions(selectedCategoryGroup).then(setCategoryOptions).catch(() => setCategoryOptions([]));
+  }, [selectedCategoryGroup, isCategoryType]);
 
   function handleSubmit(data: FormValues) {
     const fileAcceptArray = data.fileAccept
@@ -182,8 +196,6 @@ export function CreateFieldDialog({
             <FormInput name="maxLength" label="Max Length" type="number" placeholder="255" />
           )}
 
-          <FormInput name="defaultValue" label="Default Value (optional)" placeholder="" />
-
           {isPicklistType && (
             <PicklistOptionsEditor options={picklistOptions} onChange={setPicklistOptions} />
           )}
@@ -245,6 +257,25 @@ export function CreateFieldDialog({
                 placeholder="10"
               />
             </>
+          )}
+
+          {/* Default Value — last in form, dropdown for picklist/category types */}
+          {isPicklistType && picklistOptions.length > 0 ? (
+            <FormSelect
+              name="defaultValue"
+              label="Default Value (optional)"
+              placeholder="None"
+              options={picklistOptions.map((o) => ({ label: o.label, value: o.value }))}
+            />
+          ) : isCategoryType && categoryOptions.length > 0 ? (
+            <FormSelect
+              name="defaultValue"
+              label="Default Value (optional)"
+              placeholder="None"
+              options={categoryOptions}
+            />
+          ) : (
+            <FormInput name="defaultValue" label="Default Value (optional)" placeholder="" />
           )}
 
           <DialogFooter>
