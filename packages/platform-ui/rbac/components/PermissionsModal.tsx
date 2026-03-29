@@ -53,7 +53,9 @@ export function PermissionsModal({ role, onClose }: PermissionsModalProps) {
         <DialogHeader>
           <DialogTitle>Role Settings — {role?.name}</DialogTitle>
           <DialogDescription>
-            Manage permissions and field access
+            {role?.isSystem
+              ? 'View permissions and field access for this system role'
+              : 'Manage permissions and field access'}
           </DialogDescription>
         </DialogHeader>
 
