@@ -1,6 +1,6 @@
 import { Injectable, Inject, type OnApplicationBootstrap } from '@nestjs/common';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
-import { DatabaseService, users } from '@packages/database';
+import { DatabaseService, users, sql } from '@packages/database';
 import { EntityService } from '@packages/entity-engine';
 import { clients } from './schema/clients';
 import { contacts } from '../contacts/schema/contacts';
@@ -23,7 +23,7 @@ const SAMPLE_CLIENTS = [
     about: 'Global technology leader specializing in enterprise SaaS solutions.',
     billingCity: 'San Francisco',
     billingProvince: 'CA',
-    billingCountry: 'United States',
+    _billingCountryName: 'United States',
   },
   {
     clientName: 'Globex Industries',
@@ -33,7 +33,7 @@ const SAMPLE_CLIENTS = [
     about: 'Leading manufacturer of industrial automation equipment.',
     billingCity: 'Detroit',
     billingProvince: 'MI',
-    billingCountry: 'United States',
+    _billingCountryName: 'United States',
   },
   {
     clientName: 'Initech Solutions',
@@ -42,7 +42,7 @@ const SAMPLE_CLIENTS = [
     website: 'https://initech.example.com',
     about: 'IT consulting and managed services for mid-market enterprises.',
     billingCity: 'London',
-    billingCountry: 'United Kingdom',
+    _billingCountryName: 'United Kingdom',
   },
   {
     clientName: 'Stark Healthcare',
@@ -52,7 +52,7 @@ const SAMPLE_CLIENTS = [
     about: 'Healthcare technology company focused on patient management systems.',
     billingCity: 'Boston',
     billingProvince: 'MA',
-    billingCountry: 'United States',
+    _billingCountryName: 'United States',
   },
 ];
 
@@ -65,14 +65,15 @@ const SAMPLE_CONTACTS = [
 ];
 
 const SAMPLE_VENDORS = [
-  { vendorName: 'TechTalent Partners', email: 'info@techtalent.example.com', phone: '+1-555-600-7000', website: 'https://techtalent.example.com', city: 'Austin', province: 'TX', country: 'United States' },
-  { vendorName: 'Global Staffing Co', email: 'contact@globalstaffing.example.com', phone: '+44-20-8123-4567', website: 'https://globalstaffing.example.com', city: 'London', country: 'United Kingdom' },
-  { vendorName: 'Elite Recruiters', email: 'hello@eliterecruiters.example.com', phone: '+1-555-700-8000', city: 'New York', province: 'NY', country: 'United States' },
+  { vendorName: 'TechTalent Partners', email: 'info@techtalent.example.com', phone: '+1-555-600-7000', website: 'https://techtalent.example.com', city: 'Austin', province: 'TX', _countryName: 'United States' },
+  { vendorName: 'Global Staffing Co', email: 'contact@globalstaffing.example.com', phone: '+44-20-8123-4567', website: 'https://globalstaffing.example.com', city: 'London', _countryName: 'United Kingdom' },
+  { vendorName: 'Elite Recruiters', email: 'hello@eliterecruiters.example.com', phone: '+1-555-700-8000', city: 'New York', province: 'NY', _countryName: 'United States' },
 ];
 
 @Injectable()
 export class ClientsSeedService implements OnApplicationBootstrap {
   private readonly logger: ContextLogger;
+  private countryCache = new Map<string, string>();
 
   constructor(
     private readonly database: DatabaseService,
@@ -93,6 +94,17 @@ export class ClientsSeedService implements OnApplicationBootstrap {
     await this.ensureSampleInterviews();
   }
 
+  private async resolveCountryId(name: string): Promise<string | undefined> {
+    if (this.countryCache.has(name)) return this.countryCache.get(name);
+    const [row] = await this.database.db
+      .select({ id: sql`c.id` })
+      .from(sql`categories c JOIN category_groups cg ON c.group_id = cg.id`)
+      .where(sql`cg.slug = 'countries' AND c.name = ${name}`)
+      .limit(1) as { id: string }[];
+    if (row) this.countryCache.set(name, row.id);
+    return row?.id;
+  }
+
   private async ensureSampleClients() {
     const [existing] = await this.database.db.select({ id: clients.id }).from(clients).limit(1);
     if (existing) return;
@@ -100,8 +112,9 @@ export class ClientsSeedService implements OnApplicationBootstrap {
     const [admin] = await this.database.db.select({ id: users.id }).from(users).limit(1);
     if (!admin) { this.logger.warn('No users found — skipping client seeding'); return; }
 
-    for (const data of SAMPLE_CLIENTS) {
-      await this.clientService.create(data, admin.id);
+    for (const { _billingCountryName, ...data } of SAMPLE_CLIENTS) {
+      const billingCountry = await this.resolveCountryId(_billingCountryName);
+      await this.clientService.create({ ...data, billingCountry }, admin.id);
     }
     this.logger.log(`Created ${SAMPLE_CLIENTS.length} sample clients`);
   }
@@ -116,7 +129,6 @@ export class ClientsSeedService implements OnApplicationBootstrap {
     const clientRows = await this.database.db.select({ id: clients.id }).from(clients).limit(4);
     if (clientRows.length === 0) { this.logger.warn('No clients — skipping contact seeding'); return; }
 
-    // Assign contacts to clients: 2 for first client, 1 each for the rest
     const contactsWithClients = SAMPLE_CONTACTS.map((c, i) => ({
       ...c,
       clientId: i < 2 ? clientRows[0]?.id : clientRows[Math.min(i - 1, clientRows.length - 1)]?.id,
@@ -135,14 +147,14 @@ export class ClientsSeedService implements OnApplicationBootstrap {
     const [admin] = await this.database.db.select({ id: users.id }).from(users).limit(1);
     if (!admin) return;
 
-    for (const data of SAMPLE_VENDORS) {
-      await this.vendorService.create(data, admin.id);
+    for (const { _countryName, ...data } of SAMPLE_VENDORS) {
+      const country = await this.resolveCountryId(_countryName);
+      await this.vendorService.create({ ...data, country }, admin.id);
     }
     this.logger.log(`Created ${SAMPLE_VENDORS.length} sample vendors`);
   }
 
   private async linkJobOpeningsToClients() {
-    // Link existing job openings to clients if they don't have one
     const joRows = await this.database.db
       .select({ id: jobOpenings.id, clientId: jobOpenings.clientId })
       .from(jobOpenings)

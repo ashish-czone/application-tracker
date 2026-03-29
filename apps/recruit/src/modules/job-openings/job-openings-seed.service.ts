@@ -1,6 +1,6 @@
 import { Injectable, Inject, type OnApplicationBootstrap } from '@nestjs/common';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
-import { DatabaseService, eq, users } from '@packages/database';
+import { DatabaseService, eq, users, sql } from '@packages/database';
 import { EntityService } from '@packages/entity-engine';
 import { jobOpenings } from './schema/job-openings';
 import { applications } from '../applications/schema/applications';
@@ -20,7 +20,7 @@ const SAMPLE_JOB_OPENINGS = [
     industry: 'technology',
     numberOfPositions: 2,
     status: 'in-progress',
-    country: 'united-states',
+    _countryName: 'United States',
     jobDescription: '<p>We are looking for a Senior Frontend Engineer to lead our React-based web applications.</p>',
   },
   {
@@ -34,7 +34,7 @@ const SAMPLE_JOB_OPENINGS = [
     numberOfPositions: 1,
     status: 'in-progress',
     remoteJob: true,
-    country: 'united-states',
+    _countryName: 'United States',
     jobDescription: '<p>Join our infrastructure team to build and maintain CI/CD pipelines and cloud infrastructure.</p>',
   },
   {
@@ -47,7 +47,7 @@ const SAMPLE_JOB_OPENINGS = [
     industry: 'consulting',
     numberOfPositions: 1,
     status: 'in-progress',
-    country: 'united-states',
+    _countryName: 'United States',
   },
   {
     title: 'Backend Engineer Intern',
@@ -59,7 +59,7 @@ const SAMPLE_JOB_OPENINGS = [
     industry: 'technology',
     numberOfPositions: 3,
     status: 'waiting-for-approval',
-    country: 'united-states',
+    _countryName: 'United States',
   },
   {
     title: 'Data Analyst (Contract)',
@@ -71,8 +71,17 @@ const SAMPLE_JOB_OPENINGS = [
     industry: 'financial-services',
     numberOfPositions: 1,
     status: 'in-progress',
-    country: 'united-kingdom',
+    _countryName: 'United Kingdom',
   },
+];
+
+/** Transition paths for sample applications (each array = sequence of stages to transition through) */
+const SAMPLE_APP_TRANSITIONS: { candidateIdx: number; joIdx: number; stages: string[] }[] = [
+  { candidateIdx: 0, joIdx: 0, stages: ['phone-screen', 'technical'] },
+  { candidateIdx: 1, joIdx: 0, stages: ['phone-screen'] },
+  { candidateIdx: 2, joIdx: 1, stages: [] },  // stays at 'new'
+  { candidateIdx: 0, joIdx: 2, stages: ['phone-screen', 'technical', 'on-site', 'final'] },
+  { candidateIdx: 3, joIdx: 1, stages: ['phone-screen', 'technical', 'on-site'] },
 ];
 
 @Injectable()
@@ -93,6 +102,15 @@ export class JobOpeningsSeedService implements OnApplicationBootstrap {
     await this.ensureSampleApplications();
   }
 
+  private async resolveCountryId(name: string): Promise<string | undefined> {
+    const [row] = await this.database.db
+      .select({ id: sql`c.id` })
+      .from(sql`categories c JOIN category_groups cg ON c.group_id = cg.id`)
+      .where(sql`cg.slug = 'countries' AND c.name = ${name}`)
+      .limit(1) as { id: string }[];
+    return row?.id;
+  }
+
   private async ensureSampleJobOpenings() {
     const [existing] = await this.database.db
       .select({ id: jobOpenings.id })
@@ -111,8 +129,9 @@ export class JobOpeningsSeedService implements OnApplicationBootstrap {
       return;
     }
 
-    for (const data of SAMPLE_JOB_OPENINGS) {
-      await this.jobOpeningService.create(data, admin.id);
+    for (const { _countryName, ...data } of SAMPLE_JOB_OPENINGS) {
+      const country = await this.resolveCountryId(_countryName);
+      await this.jobOpeningService.create({ ...data, country }, admin.id);
     }
 
     this.logger.log(`Created ${SAMPLE_JOB_OPENINGS.length} sample job openings`);
@@ -133,7 +152,6 @@ export class JobOpeningsSeedService implements OnApplicationBootstrap {
 
     if (!admin) return;
 
-    // Get candidates and job openings to create applications
     const candidateRows = await this.database.db
       .select({ id: candidates.id })
       .from(candidates)
@@ -149,18 +167,31 @@ export class JobOpeningsSeedService implements OnApplicationBootstrap {
       return;
     }
 
-    const sampleApps = [
-      { candidateId: candidateRows[0]?.id, jobOpeningId: joRows[0]?.id, stage: 'technical' },
-      { candidateId: candidateRows[1]?.id, jobOpeningId: joRows[0]?.id, stage: 'phone-screen' },
-      { candidateId: candidateRows[2]?.id, jobOpeningId: joRows[1]?.id, stage: 'new' },
-      { candidateId: candidateRows[0]?.id, jobOpeningId: joRows[2]?.id, stage: 'final' },
-      { candidateId: candidateRows[3]?.id, jobOpeningId: joRows[1]?.id, stage: 'on-site' },
-    ].filter((a) => a.candidateId && a.jobOpeningId);
+    let created = 0;
+    for (const { candidateIdx, joIdx, stages } of SAMPLE_APP_TRANSITIONS) {
+      const candidateId = candidateRows[candidateIdx]?.id;
+      const jobOpeningId = joRows[joIdx]?.id;
+      if (!candidateId || !jobOpeningId) continue;
 
-    for (const data of sampleApps) {
-      await this.applicationService.create(data, admin.id);
+      // Create application at initial state ('new')
+      const app = await this.applicationService.create(
+        { candidateId, jobOpeningId },
+        admin.id,
+      );
+      const appId = (app as any).id as string;
+
+      // Transition through each stage to build proper history
+      for (const targetStage of stages) {
+        try {
+          await this.applicationService.transition(appId, 'stage', targetStage, admin.id);
+        } catch (err) {
+          this.logger.warn(`Failed to transition application ${appId} to ${targetStage}: ${(err as Error).message}`);
+        }
+      }
+
+      created++;
     }
 
-    this.logger.log(`Created ${sampleApps.length} sample applications`);
+    this.logger.log(`Created ${created} sample applications with transition history`);
   }
 }
