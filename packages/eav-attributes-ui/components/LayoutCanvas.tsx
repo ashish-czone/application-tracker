@@ -158,7 +158,7 @@ function SortableField({
     id: field.id,
     index,
     type: 'field',
-    accept: 'field',
+    accept: ['field', 'palette-field'],
     group: groupId,
   });
 
@@ -479,18 +479,51 @@ export function LayoutCanvas({
       if (!fieldId) return;
 
       let targetColumnKey: string | undefined;
+      let insertIndex: number | undefined;
+
       if (target.type === 'column') {
         targetColumnKey = String(target.id);
       } else if (target.type === 'field') {
-        // Dropped on a field — find which column it belongs to
+        // Dropped on a specific field — insert at that field's position
         const targetFieldId = String(target.id);
-        targetColumnKey = Object.entries(fieldMapRef.current).find(([, ids]) => ids.includes(targetFieldId))?.[0];
+        const entry = Object.entries(fieldMapRef.current).find(([, ids]) => ids.includes(targetFieldId));
+        if (entry) {
+          targetColumnKey = entry[0];
+          insertIndex = entry[1].indexOf(targetFieldId);
+        }
       }
       if (!targetColumnKey) return;
 
       const targetSectionId = getSectionId(targetColumnKey);
-      const targetColumnIndex = targetColumnKey.endsWith('-col1') ? 1 : 0;
-      onAddFieldToSection(targetSectionId, fieldId, targetColumnIndex);
+      const targetColIdx = targetColumnKey.endsWith('-col1') ? 1 : 0;
+
+      syncBlockedRef.current = true;
+      (async () => {
+        try {
+          await onAddFieldToSection(targetSectionId, fieldId, targetColIdx);
+
+          if (insertIndex !== undefined) {
+            // The API appended the field at the end. Reorder to place at desired position.
+            const colIds = [...(fieldMapRef.current[targetColumnKey!] ?? [])];
+            colIds.splice(insertIndex, 0, fieldId);
+
+            const col0Key = `${targetSectionId}-col0`;
+            const col1Key = `${targetSectionId}-col1`;
+            const reorderPayload = [
+              ...(targetColumnKey === col0Key ? colIds : (fieldMapRef.current[col0Key] ?? []))
+                .map((id) => ({ fieldId: id, columnIndex: 0 })),
+              ...(targetColumnKey === col1Key ? colIds : (fieldMapRef.current[col1Key] ?? []))
+                .map((id) => ({ fieldId: id, columnIndex: 1 })),
+            ];
+
+            await onReorderFields(targetSectionId, reorderPayload);
+          }
+        } catch {
+          // noop — query will refetch
+        } finally {
+          syncBlockedRef.current = false;
+        }
+      })();
       return;
     }
 
