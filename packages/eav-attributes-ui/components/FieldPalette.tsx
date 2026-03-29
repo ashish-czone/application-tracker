@@ -1,14 +1,15 @@
-import { useDraggable } from '@dnd-kit/react';
+import { useSortable } from '@dnd-kit/react/sortable';
 import { GripVertical, Plus } from 'lucide-react';
 import { Button } from '@packages/ui';
 import { FIELD_TYPE_CONFIG } from '../types';
 import type { FieldDefinition, FieldType, FieldTypeRegistryEntry } from '../types';
 
-function DraggablePaletteField({ field }: { field: FieldDefinition }) {
-  const { ref, isDragSource } = useDraggable({
-    id: `palette-${field.id}`,
-    type: 'palette-field',
-    data: { type: 'palette-field', field },
+function SortablePaletteField({ field, index }: { field: FieldDefinition; index: number }) {
+  const { ref, isDragSource } = useSortable({
+    id: field.id,
+    index,
+    type: 'field',
+    group: '__palette__',
   });
 
   const typeConfig = FIELD_TYPE_CONFIG[field.fieldType] ?? { label: field.fieldType, color: 'bg-gray-100 text-gray-800' };
@@ -54,8 +55,8 @@ export function FieldPalette({ unassignedFields, onCreateField, onCustomFieldCli
             Unassigned Fields
           </h3>
           <div className="space-y-1">
-            {unassignedFields.map((field) => (
-              <DraggablePaletteField key={field.id} field={field} />
+            {unassignedFields.map((field, index) => (
+              <SortablePaletteField key={field.id} field={field} index={index} />
             ))}
           </div>
         </div>
