@@ -109,7 +109,7 @@ export function PipelineStageManager({ workflowSlug, availablePermissions = [], 
       {/* Canvas view */}
       {view === 'canvas' && (
         <div className="border border-border rounded-lg overflow-hidden" style={{ height: '500px' }}>
-          <WorkflowCanvas workflow={workflow} slug={workflowSlug} />
+          <WorkflowCanvas workflow={workflow} slug={workflowSlug} entityFields={entityFields} />
         </div>
       )}
 

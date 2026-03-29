@@ -30,13 +30,14 @@ const ENTRY_NODE_ID = '__entry__';
 interface WorkflowCanvasProps {
   workflow: WorkflowDefinition;
   slug: string;
+  entityFields?: Record<string, import('../../conditions').ConditionFieldConfig>;
 }
 
 type SelectedItem =
   | { type: 'state'; state: WorkflowState }
   | { type: 'transition'; transition: WorkflowTransition };
 
-export function WorkflowCanvas({ workflow, slug }: WorkflowCanvasProps) {
+export function WorkflowCanvas({ workflow, slug, entityFields }: WorkflowCanvasProps) {
   const [selectedItem, setSelectedItem] = useState<SelectedItem | null>(null);
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
@@ -356,6 +357,7 @@ export function WorkflowCanvas({ workflow, slug }: WorkflowCanvasProps) {
               transition={selectedItem.transition}
               slug={slug}
               onClose={() => setSelectedItem(null)}
+              entityFields={entityFields}
             />
           )}
         </div>

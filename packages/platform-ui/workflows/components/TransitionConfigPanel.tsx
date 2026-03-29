@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, Trash2 } from 'lucide-react';
 import { Button } from '@packages/ui';
+import { ConditionBuilder, type Condition, type ConditionFieldConfig } from '../../conditions';
 import { useUpdateTransition, useDeleteTransition } from '../hooks';
 import type { WorkflowTransition } from '../types';
 
@@ -8,12 +9,20 @@ interface TransitionConfigPanelProps {
   transition: WorkflowTransition;
   slug: string;
   onClose: () => void;
+  entityFields?: Record<string, ConditionFieldConfig>;
 }
 
-export function TransitionConfigPanel({ transition, slug, onClose }: TransitionConfigPanelProps) {
+function getTransitionConditions(transition: WorkflowTransition): Condition[] {
+  const meta = transition.metadata as Record<string, unknown> | null;
+  if (!meta?.conditions) return [];
+  return meta.conditions as Condition[];
+}
+
+export function TransitionConfigPanel({ transition, slug, onClose, entityFields = {} }: TransitionConfigPanelProps) {
   const [name, setName] = useState(transition.name);
   const [permissions, setPermissions] = useState(transition.requiredPermissions.join(', '));
   const [guards, setGuards] = useState(transition.guardNames.join(', '));
+  const [conditions, setConditions] = useState<Condition[]>(getTransitionConditions(transition));
 
   const updateMutation = useUpdateTransition(slug);
   const deleteMutation = useDeleteTransition(slug);
@@ -22,6 +31,7 @@ export function TransitionConfigPanel({ transition, slug, onClose }: TransitionC
     setName(transition.name);
     setPermissions(transition.requiredPermissions.join(', '));
     setGuards(transition.guardNames.join(', '));
+    setConditions(getTransitionConditions(transition));
   }, [transition]);
 
   function handleSave() {
@@ -34,12 +44,16 @@ export function TransitionConfigPanel({ transition, slug, onClose }: TransitionC
       .map((g) => g.trim())
       .filter(Boolean);
 
+    const existingMeta = (transition.metadata as Record<string, unknown> | null) ?? {};
+    const metadata = { ...existingMeta, conditions: conditions.length > 0 ? conditions : undefined };
+
     updateMutation.mutate({
       transitionId: transition.id,
       data: {
         name,
         requiredPermissions: requiredPermissions.length > 0 ? requiredPermissions : null,
         guardNames: guardNames.length > 0 ? guardNames : null,
+        metadata,
       },
     });
   }
@@ -53,7 +67,8 @@ export function TransitionConfigPanel({ transition, slug, onClose }: TransitionC
   const hasChanges =
     name !== transition.name ||
     permissions !== transition.requiredPermissions.join(', ') ||
-    guards !== transition.guardNames.join(', ');
+    guards !== transition.guardNames.join(', ') ||
+    JSON.stringify(conditions) !== JSON.stringify(getTransitionConditions(transition));
 
   return (
     <div className="space-y-4">
@@ -109,6 +124,18 @@ export function TransitionConfigPanel({ transition, slug, onClose }: TransitionC
           />
           <p className="text-[10px] text-muted-foreground">Comma-separated guard function names</p>
         </div>
+
+        {/* Conditions */}
+        {Object.keys(entityFields).length > 0 && (
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">Conditions (all must be met)</label>
+            <ConditionBuilder
+              conditions={conditions}
+              onChange={setConditions}
+              fields={entityFields}
+            />
+          </div>
+        )}
       </div>
 
       <div className="flex items-center justify-between pt-2 border-t">
