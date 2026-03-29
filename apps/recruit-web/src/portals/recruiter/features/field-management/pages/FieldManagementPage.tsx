@@ -119,20 +119,24 @@ export default function FieldManagementPage({ entityType }: FieldManagementPageP
           setCreateFieldForSection(sectionId);
           setCreateFieldOpen(true);
         }}
-      >
-        <FieldPalette
-          unassignedFields={unassignedFields}
-          fieldTypes={fieldTypes}
-          onCreateField={(type) => {
-            setCreateFieldType(type);
-            setCreateFieldOpen(true);
-          }}
-          onCustomFieldClick={() => {
-            setCreateFieldType(undefined);
-            setCreateFieldOpen(true);
-          }}
-        />
-      </LayoutCanvas>
+        renderSidebar={(paletteFieldIds) => {
+          const paletteIdSet = new Set(paletteFieldIds);
+          return (
+            <FieldPalette
+              unassignedFields={unassignedFields.filter((f) => paletteIdSet.has(f.id))}
+              fieldTypes={fieldTypes}
+              onCreateField={(type) => {
+                setCreateFieldType(type);
+                setCreateFieldOpen(true);
+              }}
+              onCustomFieldClick={() => {
+                setCreateFieldType(undefined);
+                setCreateFieldOpen(true);
+              }}
+            />
+          );
+        }}
+      />
 
       <CreateFieldDialog
         open={createFieldOpen}

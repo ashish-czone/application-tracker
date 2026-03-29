@@ -20,8 +20,12 @@ interface LayoutCanvasProps {
   onAddSectionClick: () => void;
   onAddFieldClick: (sectionId: string) => void;
   onMoveFieldToSection?: (sourceSectionId: string, targetSectionId: string, fieldId: string, targetColumnIndex: number) => void | Promise<void>;
-  /** Content rendered inside the DragDropProvider (e.g. FieldPalette) so palette fields share the same DnD context. */
-  children?: React.ReactNode;
+  /**
+   * Render function for sidebar content (e.g. FieldPalette).
+   * Receives the current palette field IDs — during drag these update live
+   * as move() shifts items between the __palette__ group and section columns.
+   */
+  renderSidebar?: (paletteFieldIds: string[]) => React.ReactNode;
 }
 
 // --- Helpers ---
@@ -45,11 +49,15 @@ function toSectionOrder(sections: LayoutSection[]): string[] {
 /**
  * Column-aware field map: "sectionId-col0" → fieldId[], "sectionId-col1" → fieldId[]
  * For single-column sections, only col0 exists.
+ * Unassigned fields go into the "__palette__" key.
  */
 function toColumnFieldMap(sections: LayoutSection[]): Record<string, string[]> {
   const map: Record<string, string[]> = {};
   for (const s of sections) {
-    if (s.id === '__unassigned__') continue;
+    if (s.id === '__unassigned__') {
+      map['__palette__'] = s.fields.map((f) => f.id);
+      continue;
+    }
     if (s.columns <= 1) {
       map[`${s.id}-col0`] = s.fields.map((f) => f.id);
     } else {
@@ -158,7 +166,7 @@ function SortableField({
     id: field.id,
     index,
     type: 'field',
-    accept: ['field', 'palette-field'],
+    accept: 'field',
     group: groupId,
   });
 
@@ -233,7 +241,7 @@ function SortableColumn({
   const { ref: colRef, isDropTarget } = useDroppable({
     id: columnKey,
     type: 'column',
-    accept: ['field', 'palette-field'],
+    accept: 'field',
     collisionPriority: CollisionPriority.Normal,
   });
 
@@ -398,7 +406,7 @@ export function LayoutCanvas({
   onAddSectionClick,
   onAddFieldClick,
   onMoveFieldToSection,
-  children,
+  renderSidebar,
 }: LayoutCanvasProps) {
   const allFieldDefs = useRef(buildFieldDefs(propSections));
   const sectionMeta = useRef(buildSectionMeta(propSections));
@@ -449,14 +457,11 @@ export function LayoutCanvas({
   const handleDragOver = useCallback((event: any) => {
     const { source } = event.operation;
     if (source?.type === 'section') return;
-    // Palette fields aren't in the field map — skip move() for them.
-    // The column's isDropTarget highlight provides visual feedback.
-    if (source?.type === 'palette-field') return;
     setFieldMap((current) => move(current, event));
   }, []);
 
   const handleDragEnd = useCallback((event: any) => {
-    const { source, target } = event.operation;
+    const { source } = event.operation;
 
     if (event.canceled) {
       setFieldMap(preDragFieldMap.current);
@@ -472,61 +477,6 @@ export function LayoutCanvas({
       return;
     }
 
-    // Handle palette field drops — these are unassigned fields dragged from the palette
-    if (source?.type === 'palette-field') {
-      if (!target) return;
-      const fieldId = source.data?.field?.id;
-      if (!fieldId) return;
-
-      let targetColumnKey: string | undefined;
-      let insertIndex: number | undefined;
-
-      if (target.type === 'column') {
-        targetColumnKey = String(target.id);
-      } else if (target.type === 'field') {
-        // Dropped on a specific field — insert at that field's position
-        const targetFieldId = String(target.id);
-        const entry = Object.entries(fieldMapRef.current).find(([, ids]) => ids.includes(targetFieldId));
-        if (entry) {
-          targetColumnKey = entry[0];
-          insertIndex = entry[1].indexOf(targetFieldId);
-        }
-      }
-      if (!targetColumnKey) return;
-
-      const targetSectionId = getSectionId(targetColumnKey);
-      const targetColIdx = targetColumnKey.endsWith('-col1') ? 1 : 0;
-
-      syncBlockedRef.current = true;
-      (async () => {
-        try {
-          await onAddFieldToSection(targetSectionId, fieldId, targetColIdx);
-
-          if (insertIndex !== undefined) {
-            // The API appended the field at the end. Reorder to place at desired position.
-            const colIds = [...(fieldMapRef.current[targetColumnKey!] ?? [])];
-            colIds.splice(insertIndex, 0, fieldId);
-
-            const col0Key = `${targetSectionId}-col0`;
-            const col1Key = `${targetSectionId}-col1`;
-            const reorderPayload = [
-              ...(targetColumnKey === col0Key ? colIds : (fieldMapRef.current[col0Key] ?? []))
-                .map((id) => ({ fieldId: id, columnIndex: 0 })),
-              ...(targetColumnKey === col1Key ? colIds : (fieldMapRef.current[col1Key] ?? []))
-                .map((id) => ({ fieldId: id, columnIndex: 1 })),
-            ];
-
-            await onReorderFields(targetSectionId, reorderPayload);
-          }
-        } catch {
-          // noop — query will refetch
-        } finally {
-          syncBlockedRef.current = false;
-        }
-      })();
-      return;
-    }
-
     const fieldId = String(source?.id ?? '');
     const preMap = preDragFieldMap.current;
     const currentMap = fieldMapRef.current;
@@ -535,6 +485,30 @@ export function LayoutCanvas({
     const currColumnKey = Object.entries(currentMap).find(([, ids]) => ids.includes(fieldId))?.[0];
 
     if (!prevColumnKey || !currColumnKey) return;
+
+    // Field stayed in or returned to palette — no-op
+    if (currColumnKey === '__palette__') return;
+
+    // Palette → section: add field and reorder to match the drop position
+    if (prevColumnKey === '__palette__') {
+      const targetSectionId = getSectionId(currColumnKey);
+      const targetColIdx = currColumnKey.endsWith('-col1') ? 1 : 0;
+
+      syncBlockedRef.current = true;
+      (async () => {
+        try {
+          await onAddFieldToSection(targetSectionId, fieldId, targetColIdx);
+          await onReorderFields(targetSectionId, buildReorderPayload(targetSectionId));
+          localFingerprintRef.current = fingerprint(sectionOrderRef.current, fieldMapRef.current);
+        } catch {
+          setFieldMap(preDragFieldMap.current);
+          localFingerprintRef.current = fingerprint(sectionOrderRef.current, preDragFieldMap.current);
+        } finally {
+          syncBlockedRef.current = false;
+        }
+      })();
+      return;
+    }
 
     const prevSectionId = getSectionId(prevColumnKey);
     const currSectionId = getSectionId(currColumnKey);
@@ -578,7 +552,7 @@ export function LayoutCanvas({
       onDragEnd={handleDragEnd}
     >
       <div className="flex gap-6">
-        {children}
+        {renderSidebar?.(fieldMap['__palette__'] ?? [])}
         <div className="flex-1 space-y-3">
           {sectionOrder.map((sectionId, index) => {
             const section = sectionMeta.current.get(sectionId);
