@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -27,6 +28,8 @@ interface EditFieldDialogProps {
   onSubmit: (fieldId: string, data: UpdateFieldInput) => void;
   onDelete?: (fieldId: string) => void;
   isPending?: boolean;
+  /** Fetch options for category/picklist default value dropdowns */
+  onFetchOptions?: (field: FieldDefinition) => Promise<{ label: string; value: string }[]>;
 }
 
 export function EditFieldDialog({
@@ -36,6 +39,7 @@ export function EditFieldDialog({
   onSubmit,
   onDelete,
   isPending,
+  onFetchOptions,
 }: EditFieldDialogProps) {
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -50,9 +54,26 @@ export function EditFieldDialog({
     } : undefined,
   });
 
+  const [defaultValueOptions, setDefaultValueOptions] = useState<{ label: string; value: string }[]>([]);
+
+  // Fetch options for fields that need a dropdown (category, picklist)
+  useEffect(() => {
+    if (!field || !open || !onFetchOptions) {
+      setDefaultValueOptions([]);
+      return;
+    }
+    const needsOptions = field.fieldType === 'category' || field.fieldType === 'picklist' || field.fieldType === 'multi_select';
+    if (needsOptions) {
+      onFetchOptions(field).then(setDefaultValueOptions).catch(() => setDefaultValueOptions([]));
+    } else {
+      setDefaultValueOptions([]);
+    }
+  }, [field?.id, open]);
+
   if (!field) return null;
 
   const typeConfig = FIELD_TYPE_CONFIG[field.fieldType] ?? { label: field.fieldType, color: 'bg-gray-100 text-gray-800' };
+  const showDropdownDefault = defaultValueOptions.length > 0;
 
   function handleSubmit(data: FormValues) {
     onSubmit(field!.id, {
@@ -128,7 +149,25 @@ export function EditFieldDialog({
           )}
 
           <FormInput name="maxLength" label="Max Length" type="number" />
-          <FormInput name="defaultValue" label="Default Value" />
+
+          {/* Default Value — dropdown for category/picklist, text input for others */}
+          {showDropdownDefault ? (
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Default Value</label>
+              <select
+                value={form.watch('defaultValue') ?? ''}
+                onChange={(e) => form.setValue('defaultValue', e.target.value, { shouldDirty: true })}
+                className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="">None</option>
+                {defaultValueOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <FormInput name="defaultValue" label="Default Value" />
+          )}
 
           <DialogFooter>
             <div className="flex items-center justify-between w-full">
