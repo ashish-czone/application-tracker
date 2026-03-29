@@ -1,20 +1,26 @@
 import { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Plus, GripVertical, Pencil, Trash2, Workflow, List, GitBranch } from 'lucide-react';
 import { Button, ConfirmDialog, Badge, cn } from '@packages/ui';
-import type { Condition, ConditionFieldConfig } from '../../conditions';
+import type { ConditionFieldConfig } from '../../conditions';
+import { usePlatformAPI } from '../../PlatformUIProvider';
 import { useWorkflow, useCreateState, useUpdateState, useDeleteState, useCreateTransition, useDeleteTransition, useUpdateTransition } from '../hooks';
 import { StageForm } from './StageForm';
 import { StageTransitionEditor } from './StageTransitionEditor';
 import { WorkflowCanvas } from './WorkflowCanvas';
 import type { WorkflowState } from '../types';
 
+const BASE_OPERATORS_BY_TYPE: Record<string, boolean> = {
+  text: true, number: true, date: true, enum: true, boolean: true, uuid: true,
+};
+
 interface PipelineStageManagerProps {
   workflowSlug: string;
   availablePermissions?: string[];
-  entityFields?: Record<string, ConditionFieldConfig>;
 }
 
-export function PipelineStageManager({ workflowSlug, availablePermissions = [], entityFields = {} }: PipelineStageManagerProps) {
+export function PipelineStageManager({ workflowSlug, availablePermissions = [] }: PipelineStageManagerProps) {
+  const apiFn = usePlatformAPI();
   const { data: workflow, isLoading, isError, refetch } = useWorkflow(workflowSlug);
   const createState = useCreateState(workflowSlug);
   const updateState = useUpdateState(workflowSlug);
@@ -22,6 +28,28 @@ export function PipelineStageManager({ workflowSlug, availablePermissions = [], 
   const createTransition = useCreateTransition(workflowSlug);
   const deleteTransition = useDeleteTransition(workflowSlug);
   const updateTransition = useUpdateTransition(workflowSlug);
+
+  // Fetch entity field definitions for the condition builder
+  const { data: rawEntityFields } = useQuery({
+    queryKey: ['entity-fields', workflow?.entityType],
+    queryFn: () => apiFn.get<{ key: string; label: string; type: string; options?: string[] }[]>(
+      `/entities/${workflow!.entityType}/fields`,
+    ),
+    enabled: !!workflow?.entityType,
+  });
+
+  const entityFields = useMemo<Record<string, ConditionFieldConfig>>(() => {
+    if (!rawEntityFields) return {};
+    const result: Record<string, ConditionFieldConfig> = {};
+    for (const f of rawEntityFields) {
+      result[f.key] = {
+        type: (BASE_OPERATORS_BY_TYPE[f.type] ? f.type : 'text') as ConditionFieldConfig['type'],
+        label: f.label,
+        options: f.options,
+      };
+    }
+    return result;
+  }, [rawEntityFields]);
 
   const [stageFormOpen, setStageFormOpen] = useState(false);
   const [editingStage, setEditingStage] = useState<WorkflowState | null>(null);
