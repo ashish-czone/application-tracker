@@ -60,14 +60,17 @@ export const APPLICATIONS_CONFIG: EntityConfig = {
             { value: 'United States', label: 'United States' },
             { value: 'United Kingdom', label: 'United Kingdom' },
           ],
-          resolve: async (entityData, { findEntity }) => {
+          resolve: async (entityData, { findEntity, findCategory }) => {
             const jobOpeningId = entityData.jobOpeningId as string;
             if (!jobOpeningId) return '';
             const jobOpening = await findEntity('job_openings', jobOpeningId);
             const clientId = jobOpening.clientId as string;
             if (!clientId) return '';
             const client = await findEntity('clients', clientId);
-            return (client.billingCountry as string) ?? '';
+            const categoryId = client.billingCountry as string;
+            if (!categoryId) return '';
+            const category = await findCategory(categoryId);
+            return category?.name ?? '';
           },
         },
       },

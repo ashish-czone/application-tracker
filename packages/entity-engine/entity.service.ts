@@ -454,9 +454,17 @@ export class EntityService {
               .limit(1) as any[];
             return found ?? {};
           };
+          const findCategory = async (categoryId: string) => {
+            const [found] = await this.database.db
+              .select({ id: sql`id`, name: sql`name`, slug: sql`slug` })
+              .from(sql`categories`)
+              .where(sql`id = ${categoryId}`)
+              .limit(1) as { id: string; name: string; slug: string }[];
+            return found ?? null;
+          };
           const value = await discriminator.resolve(
             { ...standardFields, ...customFields, id: row.id },
-            { findEntity },
+            { findEntity, findCategory },
           );
           await this.pipelineResolver.resolveAndAssign(config.entityType, row.id, fieldKey, value);
         } catch (err) {

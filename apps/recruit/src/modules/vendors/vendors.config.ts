@@ -30,7 +30,7 @@ export const VENDORS_CONFIG: EntityConfig = {
     city: { label: 'City', section: 'address', sortOrder: 1, maxLength: 30 },
     province: { label: 'Province', section: 'address', sortOrder: 2, maxLength: 30 },
     postalCode: { label: 'Postal Code', section: 'address', sortOrder: 3, maxLength: 30 },
-    country: { label: 'Country', section: 'address', sortOrder: 4, maxLength: 30 },
+    country: { label: 'Country', section: 'address', sortOrder: 4, fieldType: 'category', categoryGroupSlug: 'countries' },
   },
 
   listFields: ['vendorName', 'email', 'phone', 'website'],
