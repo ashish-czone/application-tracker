@@ -238,7 +238,23 @@ function SearchableSelect({
                 className="flex h-9 w-full bg-transparent py-2 text-sm outline-none placeholder:text-muted-foreground"
               />
             </div>
-            <Command.List className="max-h-60 overflow-y-auto p-1">
+            <Command.List
+              className="max-h-60 overflow-y-auto p-1"
+              ref={(node) => {
+                if (!node) return;
+                // Fix: Radix Dialog's RemoveScroll blocks wheel events on portalled
+                // Popover content. Manually handle scrolling via native listener.
+                node.addEventListener('wheel', (e) => {
+                  const { scrollTop, scrollHeight, clientHeight } = node;
+                  const atTop = scrollTop === 0 && e.deltaY < 0;
+                  const atBottom = scrollTop + clientHeight >= scrollHeight && e.deltaY > 0;
+                  if (!atTop && !atBottom) {
+                    e.preventDefault();
+                    node.scrollTop += e.deltaY;
+                  }
+                }, { passive: false });
+              }}
+            >
               {isSearching ? (
                 <div className="py-6 text-center text-sm text-muted-foreground">Searching...</div>
               ) : displayOptions.length === 0 ? (
