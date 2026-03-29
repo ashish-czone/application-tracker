@@ -202,7 +202,7 @@ export default function SettingsPage() {
           </Button>
         )}
         <div>
-          <h1 className="text-lg font-semibold text-foreground">Settings</h1>
+          <h1 className="text-lg font-semibold text-foreground">Entity Config</h1>
           <p className="text-sm text-muted-foreground">Manage entity fields, layouts, and pipelines</p>
         </div>
       </div>
