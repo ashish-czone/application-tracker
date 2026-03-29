@@ -79,8 +79,8 @@ export function getPicklistOptions(fieldId: string): Promise<{ label: string; va
 }
 
 export async function getTagGroupSlugs(): Promise<string[]> {
-  const groups = await api.get<{ slug: string }[]>('/tag-groups');
-  return groups.map((g) => g.slug);
+  const res = await api.get<{ data: { slug: string }[] }>('/tag-groups?limit=100');
+  return res.data.map((g) => g.slug);
 }
 
 export async function getCategoryGroupSlugs(): Promise<string[]> {
