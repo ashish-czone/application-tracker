@@ -26,7 +26,7 @@ import {
   useTagGroupSlugs,
   useCategoryGroupSlugs,
 } from '../hooks';
-import { getLookupOptions, getPicklistOptions, getCategoryOptions } from '../services';
+import { getLookupOptions, getPicklistOptions, getTagOptions, getCategoryOptions } from '../services';
 
 interface FieldManagementPageProps {
   entityType: string;
@@ -59,6 +59,9 @@ export default function FieldManagementPage({ entityType }: FieldManagementPageP
   const reorderFieldsMutation = useReorderFields(entityType);
 
   const handleFetchOptions = useCallback(async (field: FieldDefinition) => {
+    if (field.fieldType === 'tags' && field.tagGroupSlug) {
+      return getTagOptions(field.tagGroupSlug);
+    }
     if (field.fieldType === 'category' && field.categoryGroupSlug) {
       return getCategoryOptions(field.categoryGroupSlug);
     }
@@ -151,6 +154,7 @@ export default function FieldManagementPage({ entityType }: FieldManagementPageP
         lookupEntities={lookupEntities}
         tagGroups={tagGroups}
         categoryGroups={categoryGroups}
+        onFetchTagOptions={getTagOptions}
         onFetchCategoryOptions={getCategoryOptions}
       />
 
