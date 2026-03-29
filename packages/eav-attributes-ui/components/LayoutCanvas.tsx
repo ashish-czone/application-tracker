@@ -20,6 +20,8 @@ interface LayoutCanvasProps {
   onAddSectionClick: () => void;
   onAddFieldClick: (sectionId: string) => void;
   onMoveFieldToSection?: (sourceSectionId: string, targetSectionId: string, fieldId: string, targetColumnIndex: number) => void | Promise<void>;
+  /** Content rendered inside the DragDropProvider (e.g. FieldPalette) so palette fields share the same DnD context. */
+  children?: React.ReactNode;
 }
 
 // --- Helpers ---
@@ -231,7 +233,7 @@ function SortableColumn({
   const { ref: colRef, isDropTarget } = useDroppable({
     id: columnKey,
     type: 'column',
-    accept: 'field',
+    accept: ['field', 'palette-field'],
     collisionPriority: CollisionPriority.Normal,
   });
 
@@ -396,6 +398,7 @@ export function LayoutCanvas({
   onAddSectionClick,
   onAddFieldClick,
   onMoveFieldToSection,
+  children,
 }: LayoutCanvasProps) {
   const allFieldDefs = useRef(buildFieldDefs(propSections));
   const sectionMeta = useRef(buildSectionMeta(propSections));
@@ -446,11 +449,14 @@ export function LayoutCanvas({
   const handleDragOver = useCallback((event: any) => {
     const { source } = event.operation;
     if (source?.type === 'section') return;
+    // Palette fields aren't in the field map — skip move() for them.
+    // The column's isDropTarget highlight provides visual feedback.
+    if (source?.type === 'palette-field') return;
     setFieldMap((current) => move(current, event));
   }, []);
 
   const handleDragEnd = useCallback((event: any) => {
-    const { source } = event.operation;
+    const { source, target } = event.operation;
 
     if (event.canceled) {
       setFieldMap(preDragFieldMap.current);
@@ -463,6 +469,28 @@ export function LayoutCanvas({
       setTimeout(() => {
         onReorderSections(sectionOrderRef.current);
       }, 0);
+      return;
+    }
+
+    // Handle palette field drops — these are unassigned fields dragged from the palette
+    if (source?.type === 'palette-field') {
+      if (!target) return;
+      const fieldId = source.data?.field?.id;
+      if (!fieldId) return;
+
+      let targetColumnKey: string | undefined;
+      if (target.type === 'column') {
+        targetColumnKey = String(target.id);
+      } else if (target.type === 'field') {
+        // Dropped on a field — find which column it belongs to
+        const targetFieldId = String(target.id);
+        targetColumnKey = Object.entries(fieldMapRef.current).find(([, ids]) => ids.includes(targetFieldId))?.[0];
+      }
+      if (!targetColumnKey) return;
+
+      const targetSectionId = getSectionId(targetColumnKey);
+      const targetColumnIndex = targetColumnKey.endsWith('-col1') ? 1 : 0;
+      onAddFieldToSection(targetSectionId, fieldId, targetColumnIndex);
       return;
     }
 
@@ -516,32 +544,35 @@ export function LayoutCanvas({
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
-      <div className="flex-1 space-y-3">
-        {sectionOrder.map((sectionId, index) => {
-          const section = sectionMeta.current.get(sectionId);
-          if (!section) return null;
+      <div className="flex gap-6">
+        {children}
+        <div className="flex-1 space-y-3">
+          {sectionOrder.map((sectionId, index) => {
+            const section = sectionMeta.current.get(sectionId);
+            if (!section) return null;
 
-          return (
-            <SortableSection
-              key={sectionId}
-              section={section}
-              index={index}
-              col0FieldIds={fieldMap[`${sectionId}-col0`] ?? []}
-              col1FieldIds={fieldMap[`${sectionId}-col1`] ?? []}
-              allFieldDefs={allFieldDefs}
-              onEditSection={onEditSection}
-              onDeleteSection={onDeleteSection}
-              onRemoveField={onRemoveFieldFromSection}
-              onEditField={onEditField}
-              onAddFieldClick={onAddFieldClick}
-            />
-          );
-        })}
+            return (
+              <SortableSection
+                key={sectionId}
+                section={section}
+                index={index}
+                col0FieldIds={fieldMap[`${sectionId}-col0`] ?? []}
+                col1FieldIds={fieldMap[`${sectionId}-col1`] ?? []}
+                allFieldDefs={allFieldDefs}
+                onEditSection={onEditSection}
+                onDeleteSection={onDeleteSection}
+                onRemoveField={onRemoveFieldFromSection}
+                onEditField={onEditField}
+                onAddFieldClick={onAddFieldClick}
+              />
+            );
+          })}
 
-        <Button type="button" variant="outline" size="sm" className="w-full" onClick={onAddSectionClick}>
-          <Plus className="h-4 w-4 mr-1" />
-          Add Section
-        </Button>
+          <Button type="button" variant="outline" size="sm" className="w-full" onClick={onAddSectionClick}>
+            <Plus className="h-4 w-4 mr-1" />
+            Add Section
+          </Button>
+        </div>
       </div>
     </DragDropProvider>
   );

@@ -91,20 +91,7 @@ export default function FieldManagementPage({ entityType }: FieldManagementPageP
     : null;
 
   return (
-    <div className="flex gap-6">
-      <FieldPalette
-        unassignedFields={unassignedFields}
-        fieldTypes={fieldTypes}
-        onCreateField={(type) => {
-          setCreateFieldType(type);
-          setCreateFieldOpen(true);
-        }}
-        onCustomFieldClick={() => {
-          setCreateFieldType(undefined);
-          setCreateFieldOpen(true);
-        }}
-      />
-
+    <>
       <LayoutCanvas
         sections={layout.sections}
         onAddFieldToSection={(sectionId, fieldId, columnIndex) =>
@@ -132,7 +119,20 @@ export default function FieldManagementPage({ entityType }: FieldManagementPageP
           setCreateFieldForSection(sectionId);
           setCreateFieldOpen(true);
         }}
-      />
+      >
+        <FieldPalette
+          unassignedFields={unassignedFields}
+          fieldTypes={fieldTypes}
+          onCreateField={(type) => {
+            setCreateFieldType(type);
+            setCreateFieldOpen(true);
+          }}
+          onCustomFieldClick={() => {
+            setCreateFieldType(undefined);
+            setCreateFieldOpen(true);
+          }}
+        />
+      </LayoutCanvas>
 
       <CreateFieldDialog
         open={createFieldOpen}
@@ -198,6 +198,6 @@ export default function FieldManagementPage({ entityType }: FieldManagementPageP
           if (deletingSectionId) deleteSectionMutation.mutate(deletingSectionId);
         }}
       />
-    </div>
+    </>
   );
 }
