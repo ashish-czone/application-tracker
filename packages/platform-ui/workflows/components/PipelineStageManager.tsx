@@ -1,10 +1,11 @@
 import { useState, useMemo } from 'react';
-import { Plus, GripVertical, Pencil, Trash2, Workflow } from 'lucide-react';
-import { Button, ConfirmDialog, Badge } from '@packages/ui';
+import { Plus, GripVertical, Pencil, Trash2, Workflow, List, GitBranch } from 'lucide-react';
+import { Button, ConfirmDialog, Badge, cn } from '@packages/ui';
 import type { Condition, ConditionFieldConfig } from '../../conditions';
 import { useWorkflow, useCreateState, useUpdateState, useDeleteState, useCreateTransition, useDeleteTransition, useUpdateTransition } from '../hooks';
 import { StageForm } from './StageForm';
 import { StageTransitionEditor } from './StageTransitionEditor';
+import { WorkflowCanvas } from './WorkflowCanvas';
 import type { WorkflowState } from '../types';
 
 interface PipelineStageManagerProps {
@@ -25,6 +26,7 @@ export function PipelineStageManager({ workflowSlug, availablePermissions = [], 
   const [stageFormOpen, setStageFormOpen] = useState(false);
   const [editingStage, setEditingStage] = useState<WorkflowState | null>(null);
   const [deletingStage, setDeletingStage] = useState<WorkflowState | null>(null);
+  const [view, setView] = useState<'list' | 'canvas'>('list');
 
   const sortedStates = useMemo(
     () => [...(workflow?.states ?? [])].sort((a, b) => a.sortOrder - b.sortOrder),
@@ -64,14 +66,55 @@ export function PipelineStageManager({ workflowSlug, availablePermissions = [], 
             {sortedStates.length} stage{sortedStates.length !== 1 ? 's' : ''} &middot; {workflow.transitions.length} transition{workflow.transitions.length !== 1 ? 's' : ''}
           </p>
         </div>
-        <Button size="sm" onClick={() => { setEditingStage(null); setStageFormOpen(true); }}>
-          <Plus className="h-4 w-4 mr-1" />
-          Add Stage
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* View toggle */}
+          <div className="flex rounded-md border border-border overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setView('list')}
+              className={cn(
+                'px-2.5 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5',
+                view === 'list'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-accent',
+              )}
+            >
+              <List className="h-3.5 w-3.5" />
+              List
+            </button>
+            <button
+              type="button"
+              onClick={() => setView('canvas')}
+              className={cn(
+                'px-2.5 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5',
+                view === 'canvas'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-accent',
+              )}
+            >
+              <GitBranch className="h-3.5 w-3.5" />
+              Canvas
+            </button>
+          </div>
+
+          {view === 'list' && (
+            <Button size="sm" onClick={() => { setEditingStage(null); setStageFormOpen(true); }}>
+              <Plus className="h-4 w-4 mr-1" />
+              Add Stage
+            </Button>
+          )}
+        </div>
       </div>
 
-      {/* Stage list */}
-      {sortedStates.length === 0 ? (
+      {/* Canvas view */}
+      {view === 'canvas' && (
+        <div className="border border-border rounded-lg overflow-hidden" style={{ height: '500px' }}>
+          <WorkflowCanvas workflow={workflow} slug={workflowSlug} />
+        </div>
+      )}
+
+      {/* List view */}
+      {view === 'list' && (sortedStates.length === 0 ? (
         <div className="text-center py-12 border border-dashed border-border rounded-lg">
           <Workflow className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
           <p className="text-sm text-muted-foreground">No stages defined yet.</p>
@@ -165,7 +208,7 @@ export function PipelineStageManager({ workflowSlug, availablePermissions = [], 
             </div>
           ))}
         </div>
-      )}
+      ))}
 
       {/* Stage add/edit dialog */}
       <StageForm
