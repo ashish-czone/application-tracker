@@ -65,6 +65,11 @@ export function reorderFields(
   return api.put<void>(`/layouts/${entityType}/sections/${sectionId}/fields/reorder`, { orderedFields });
 }
 
+// Field types
+export function getFieldTypes(): Promise<{ type: string; label: string; creatable: boolean; sortOrder: number; icon: string; color: string }[]> {
+  return api.get('/fields/types');
+}
+
 // Lookups
 export function getLookupEntities(): Promise<string[]> {
   return api.get<string[]>('/lookups');

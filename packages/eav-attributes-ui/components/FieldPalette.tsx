@@ -1,8 +1,8 @@
 import { useDraggable } from '@dnd-kit/react';
 import { GripVertical, Plus } from 'lucide-react';
 import { Button } from '@packages/ui';
-import { FIELD_TYPE_CONFIG, CREATABLE_FIELD_TYPES } from '../types';
-import type { FieldDefinition, FieldType } from '../types';
+import { FIELD_TYPE_CONFIG } from '../types';
+import type { FieldDefinition, FieldType, FieldTypeRegistryEntry } from '../types';
 
 function DraggablePaletteField({ field }: { field: FieldDefinition }) {
   const { ref, isDragSource } = useDraggable({
@@ -33,9 +33,14 @@ interface FieldPaletteProps {
   unassignedFields: FieldDefinition[];
   onCreateField: (type: FieldType) => void;
   onCustomFieldClick: () => void;
+  /** Registered field types from the backend. If not provided, uses no palette. */
+  fieldTypes?: FieldTypeRegistryEntry[];
 }
 
-export function FieldPalette({ unassignedFields, onCreateField, onCustomFieldClick }: FieldPaletteProps) {
+export function FieldPalette({ unassignedFields, onCreateField, onCustomFieldClick, fieldTypes }: FieldPaletteProps) {
+  const creatableTypes = (fieldTypes ?? [])
+    .filter((ft) => ft.creatable)
+    .sort((a, b) => a.sortOrder - b.sortOrder);
   return (
     <div className="w-64 shrink-0 space-y-4">
       <Button size="sm" className="w-full" onClick={onCustomFieldClick}>
@@ -61,8 +66,9 @@ export function FieldPalette({ unassignedFields, onCreateField, onCustomFieldCli
           Add Field Type
         </h3>
         <div className="grid grid-cols-2 gap-1">
-          {CREATABLE_FIELD_TYPES.map((type) => {
-            const config = FIELD_TYPE_CONFIG[type];
+          {creatableTypes.map((ft) => {
+            const type = ft.type;
+            const config = { label: ft.label, color: ft.color };
             return (
               <button
                 key={type}

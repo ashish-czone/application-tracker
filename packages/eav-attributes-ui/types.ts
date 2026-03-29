@@ -61,40 +61,42 @@ export interface FullLayout {
   quickCreateFields: FieldDefinition[];
 }
 
-// Field type display config
-export const FIELD_TYPE_CONFIG: Record<FieldType, { label: string; color: string }> = {
+// Field type registry entry — matches backend FIELD_TYPE_REGISTRY
+export interface FieldTypeRegistryEntry {
+  type: FieldType;
+  label: string;
+  creatable: boolean;
+  sortOrder: number;
+  icon: string;
+  color: string;
+}
+
+// Fallback config used when registry data hasn't loaded yet
+export const FIELD_TYPE_CONFIG: Record<string, { label: string; color: string }> = {
   text: { label: 'Text', color: 'bg-blue-100 text-blue-800' },
   email: { label: 'Email', color: 'bg-indigo-100 text-indigo-800' },
   phone: { label: 'Phone', color: 'bg-violet-100 text-violet-800' },
   number: { label: 'Number', color: 'bg-emerald-100 text-emerald-800' },
   currency: { label: 'Currency', color: 'bg-green-100 text-green-800' },
-  decimal: { label: 'Decimal', color: 'bg-teal-100 text-teal-800' },
+  decimal: { label: 'Decimal', color: 'bg-emerald-100 text-emerald-800' },
   date: { label: 'Date', color: 'bg-amber-100 text-amber-800' },
-  datetime: { label: 'DateTime', color: 'bg-orange-100 text-orange-800' },
-  boolean: { label: 'Checkbox', color: 'bg-pink-100 text-pink-800' },
-  url: { label: 'URL', color: 'bg-sky-100 text-sky-800' },
-  textarea: { label: 'Multi-line', color: 'bg-cyan-100 text-cyan-800' },
-  rich_text: { label: 'Rich Text', color: 'bg-cyan-100 text-cyan-800' },
-  picklist: { label: 'Picklist', color: 'bg-purple-100 text-purple-800' },
-  multi_select: { label: 'Multi-select', color: 'bg-fuchsia-100 text-fuchsia-800' },
-  lookup: { label: 'Lookup', color: 'bg-rose-100 text-rose-800' },
-  multi_lookup: { label: 'Multi-lookup', color: 'bg-rose-100 text-rose-800' },
-  user: { label: 'User', color: 'bg-red-100 text-red-800' },
-  multi_user: { label: 'Multi-user', color: 'bg-red-100 text-red-800' },
+  datetime: { label: 'DateTime', color: 'bg-amber-100 text-amber-800' },
+  boolean: { label: 'Checkbox', color: 'bg-slate-100 text-slate-800' },
+  url: { label: 'URL', color: 'bg-cyan-100 text-cyan-800' },
+  textarea: { label: 'Multi-line', color: 'bg-blue-100 text-blue-800' },
+  rich_text: { label: 'Rich Text', color: 'bg-blue-100 text-blue-800' },
+  picklist: { label: 'Picklist', color: 'bg-orange-100 text-orange-800' },
+  multi_select: { label: 'Multi-select', color: 'bg-orange-100 text-orange-800' },
+  lookup: { label: 'Lookup', color: 'bg-purple-100 text-purple-800' },
+  multi_lookup: { label: 'Multi-lookup', color: 'bg-purple-100 text-purple-800' },
+  user: { label: 'User', color: 'bg-pink-100 text-pink-800' },
+  multi_user: { label: 'Multi-user', color: 'bg-pink-100 text-pink-800' },
   auto_number: { label: 'Auto #', color: 'bg-gray-100 text-gray-800' },
-  tags: { label: 'Tags', color: 'bg-lime-100 text-lime-800' },
-  file: { label: 'File', color: 'bg-stone-100 text-stone-800' },
+  tags: { label: 'Tags', color: 'bg-teal-100 text-teal-800' },
+  file: { label: 'File', color: 'bg-gray-100 text-gray-800' },
   category: { label: 'Category', color: 'bg-yellow-100 text-yellow-800' },
   workflow: { label: 'Workflow', color: 'bg-blue-100 text-blue-800' },
 };
-
-// Creatable field types (shown in palette)
-export const CREATABLE_FIELD_TYPES: FieldType[] = [
-  'text', 'number', 'email', 'phone', 'currency', 'date',
-  'picklist', 'multi_select', 'boolean', 'url', 'textarea', 'rich_text',
-  'decimal', 'datetime', 'lookup', 'multi_lookup',
-  'user', 'multi_user', 'tags', 'category', 'file',
-];
 
 // Callback types for components
 export interface CreateFieldInput {
