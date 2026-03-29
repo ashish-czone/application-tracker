@@ -53,6 +53,23 @@ export const APPLICATIONS_CONFIG: EntityConfig = {
           { from: 'final', to: ['offer', 'rejected', 'withdrawn'] },
           { from: 'offer', to: ['hired', 'rejected', 'withdrawn'] },
         ],
+        discriminator: {
+          key: 'client-country',
+          label: 'Client Country',
+          options: [
+            { value: 'United States', label: 'United States' },
+            { value: 'United Kingdom', label: 'United Kingdom' },
+          ],
+          resolve: async (entityData, { findEntity }) => {
+            const jobOpeningId = entityData.jobOpeningId as string;
+            if (!jobOpeningId) return '';
+            const jobOpening = await findEntity('job_openings', jobOpeningId);
+            const clientId = jobOpening.clientId as string;
+            if (!clientId) return '';
+            const client = await findEntity('clients', clientId);
+            return (client.billingCountry as string) ?? '';
+          },
+        },
       },
     },
     notes: { label: 'Notes', section: 'details', sortOrder: 0, fieldType: 'textarea', maxLength: 5000 },
