@@ -60,13 +60,13 @@ export const CLIENTS_CONFIG: EntityConfig = {
     billingCity: { label: 'Billing City', section: 'billing-address', sortOrder: 1 },
     billingProvince: { label: 'Billing Province', section: 'billing-address', sortOrder: 2 },
     billingCode: { label: 'Billing Code', section: 'billing-address', sortOrder: 3 },
-    billingCountry: { label: 'Billing Country', section: 'billing-address', sortOrder: 4 },
+    billingCountry: { label: 'Billing Country', section: 'billing-address', sortOrder: 4, fieldType: 'category', categoryGroupSlug: 'countries' },
     // Shipping Address
     shippingStreet: { label: 'Shipping Street', section: 'shipping-address', sortOrder: 0 },
     shippingCity: { label: 'Shipping City', section: 'shipping-address', sortOrder: 1 },
     shippingProvince: { label: 'Shipping Province', section: 'shipping-address', sortOrder: 2 },
     shippingCode: { label: 'Shipping Code', section: 'shipping-address', sortOrder: 3 },
-    shippingCountry: { label: 'Shipping Country', section: 'shipping-address', sortOrder: 4 },
+    shippingCountry: { label: 'Shipping Country', section: 'shipping-address', sortOrder: 4, fieldType: 'category', categoryGroupSlug: 'countries' },
   },
 
   listFields: ['clientName', 'industry', 'contactNumber', 'website', 'contactsCount', 'jobOpeningsCount'],

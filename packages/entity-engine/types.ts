@@ -69,7 +69,10 @@ export interface WorkflowDiscriminator {
   /** Resolves the discriminator value for a given entity at runtime */
   resolve: (
     entityData: Record<string, unknown>,
-    services: { findEntity: (entityType: string, id: string) => Promise<Record<string, unknown>> },
+    services: {
+      findEntity: (entityType: string, id: string) => Promise<Record<string, unknown>>;
+      findCategory: (categoryId: string) => Promise<{ id: string; name: string; slug: string } | null>;
+    },
   ) => Promise<string>;
 }
 
