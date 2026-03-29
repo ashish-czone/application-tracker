@@ -1,6 +1,6 @@
 import { lazy, Suspense, useMemo, useState } from 'react';
 import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router';
-import { ArrowLeft, Plus } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { Button, Badge } from '@packages/ui';
 import { useEntityEngine, useEntityConfig } from '@packages/entity-engine-ui';
 import { useWorkflows, useCreateWorkflow, PipelineStageManager } from '@packages/platform-ui/workflows';
