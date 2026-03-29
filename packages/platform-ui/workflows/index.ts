@@ -6,12 +6,14 @@ export { StateConfigPanel } from './components/StateConfigPanel';
 export { TransitionConfigPanel } from './components/TransitionConfigPanel';
 export { AddWorkflowForm } from './components/AddWorkflowForm';
 export { PipelineStageManager } from './components/PipelineStageManager';
+export { PipelineProgressBar } from './components/PipelineProgressBar';
 export { StageForm } from './components/StageForm';
 export { StageTransitionEditor } from './components/StageTransitionEditor';
 export {
   useWorkflows, useWorkflow, useCreateWorkflow, useUpdateWorkflow, useDeleteWorkflow,
   useCreateState, useUpdateState, useDeleteState,
   useCreateTransition, useUpdateTransition, useDeleteTransition,
+  useTransitionHistory,
 } from './hooks';
 export { createWorkflowsApi, type WorkflowsApi } from './services';
 export type {
@@ -19,4 +21,5 @@ export type {
   CreateWorkflowRequest, UpdateWorkflowRequest,
   CreateStateRequest, UpdateStateRequest,
   CreateTransitionRequest, UpdateTransitionRequest,
+  TransitionHistoryEntry,
 } from './types';

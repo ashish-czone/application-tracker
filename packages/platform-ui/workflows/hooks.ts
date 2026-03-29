@@ -177,3 +177,13 @@ export function useDeleteTransition(slug: string) {
     },
   });
 }
+
+// History
+export function useTransitionHistory(entityType: string, entityId: string) {
+  const api = useWorkflowsApi();
+  return useQuery({
+    queryKey: ['workflow-history', entityType, entityId],
+    queryFn: () => api.getTransitionHistory(entityType, entityId),
+    enabled: !!entityType && !!entityId,
+  });
+}

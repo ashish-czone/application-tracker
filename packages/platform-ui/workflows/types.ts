@@ -82,3 +82,18 @@ export interface UpdateTransitionRequest {
   sortOrder?: number;
   metadata?: Record<string, unknown> | null;
 }
+
+export interface TransitionHistoryEntry {
+  id: string;
+  workflowDefinitionId: string;
+  entityType: string;
+  entityId: string;
+  fieldName: string;
+  fromState: string;
+  toState: string;
+  transitionId: string | null;
+  actorId: string | null;
+  actorName: string | null;
+  comment: string | null;
+  createdAt: string;
+}
