@@ -21,4 +21,5 @@ export type {
   PicklistOptionInput,
 } from './types';
 
-export { FIELD_TYPE_CONFIG, CREATABLE_FIELD_TYPES } from './types';
+export { FIELD_TYPE_CONFIG } from './types';
+export type { FieldTypeRegistryEntry } from './types';

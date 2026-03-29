@@ -21,6 +21,7 @@ import {
   useRemoveFieldFromSection,
   useReorderSections,
   useReorderFields,
+  useFieldTypes,
   useLookupEntities,
   useTagGroupSlugs,
   useCategoryGroupSlugs,
@@ -41,6 +42,7 @@ export default function FieldManagementPage({ entityType }: FieldManagementPageP
   const [deletingSectionId, setDeletingSectionId] = useState<string | null>(null);
 
   const { data: layout, isLoading } = useLayout(entityType);
+  const { data: fieldTypes } = useFieldTypes();
   const { data: lookupEntities } = useLookupEntities();
   const { data: tagGroups } = useTagGroupSlugs();
   const { data: categoryGroups } = useCategoryGroupSlugs();
@@ -89,6 +91,7 @@ export default function FieldManagementPage({ entityType }: FieldManagementPageP
     <div className="flex gap-6">
       <FieldPalette
         unassignedFields={unassignedFields}
+        fieldTypes={fieldTypes}
         onCreateField={(type) => {
           setCreateFieldType(type);
           setCreateFieldOpen(true);
@@ -144,6 +147,7 @@ export default function FieldManagementPage({ entityType }: FieldManagementPageP
         }}
         isPending={createFieldMutation.isPending}
         preselectedType={createFieldType}
+        fieldTypes={fieldTypes}
         lookupEntities={lookupEntities}
         tagGroups={tagGroups}
         categoryGroups={categoryGroups}

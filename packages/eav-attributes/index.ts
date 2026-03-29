@@ -24,7 +24,8 @@ export type {
   SetPicklistOptionInput,
 } from './types';
 
-export { FIELD_TYPE_TO_VALUE_COLUMN, RELATIONAL_FIELD_TYPES } from './types';
+export { FIELD_TYPE_TO_VALUE_COLUMN, RELATIONAL_FIELD_TYPES, FIELD_TYPE_REGISTRY } from './types';
+export type { FieldTypeRegistryEntry } from './types';
 
 export { buildSnapshot, diffSnapshot } from './helpers/snapshot';
 

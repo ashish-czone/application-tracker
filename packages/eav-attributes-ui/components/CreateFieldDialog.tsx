@@ -7,8 +7,8 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@packages/ui';
 import { PicklistOptionsEditor } from './PicklistOptionsEditor';
-import { FIELD_TYPE_CONFIG, CREATABLE_FIELD_TYPES } from '../types';
-import type { FieldType, CreateFieldInput, PicklistOptionInput } from '../types';
+import { FIELD_TYPE_CONFIG } from '../types';
+import type { FieldType, FieldTypeRegistryEntry, CreateFieldInput, PicklistOptionInput } from '../types';
 
 const schema = z.object({
   fieldKey: z.string().min(1, 'Required').max(100).regex(/^[a-z][a-z0-9_]*$/, 'Must be lowercase with underscores (e.g., shoe_size)'),
@@ -35,6 +35,7 @@ interface CreateFieldDialogProps {
   onSubmit: (data: CreateFieldInput) => void;
   isPending?: boolean;
   preselectedType?: FieldType;
+  fieldTypes?: FieldTypeRegistryEntry[];
   lookupEntities?: string[];
   tagGroups?: string[];
   categoryGroups?: string[];
@@ -46,6 +47,7 @@ export function CreateFieldDialog({
   onSubmit,
   isPending,
   preselectedType,
+  fieldTypes = [],
   lookupEntities = [],
   tagGroups = [],
   categoryGroups = [],
@@ -163,9 +165,9 @@ export function CreateFieldDialog({
             name="fieldType"
             label="Field Type"
             placeholder="Select type"
-            options={CREATABLE_FIELD_TYPES.map((t) => ({
-              label: FIELD_TYPE_CONFIG[t].label,
-              value: t,
+            options={fieldTypes.filter((ft) => ft.creatable).sort((a, b) => a.sortOrder - b.sortOrder).map((ft) => ({
+              label: ft.label,
+              value: ft.type,
             }))}
           />
 

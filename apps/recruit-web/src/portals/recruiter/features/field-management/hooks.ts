@@ -11,6 +11,14 @@ export function useLayout(entityType: string) {
   });
 }
 
+export function useFieldTypes() {
+  return useQuery({
+    queryKey: ['field-types'],
+    queryFn: () => svc.getFieldTypes(),
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
 export function useLookupEntities() {
   return useQuery({
     queryKey: ['lookup-entities'],
