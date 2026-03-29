@@ -69,3 +69,11 @@ export function reorderFields(
 export function getLookupEntities(): Promise<string[]> {
   return api.get<string[]>('/lookups');
 }
+
+export function getLookupOptions(entity: string): Promise<{ label: string; value: string }[]> {
+  return api.get<{ label: string; value: string }[]>(`/lookups/${entity}?limit=200`);
+}
+
+export function getPicklistOptions(fieldId: string): Promise<{ label: string; value: string }[]> {
+  return api.get<{ label: string; value: string }[]>(`/fields/${fieldId}/options`);
+}

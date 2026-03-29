@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import {
   LayoutCanvas,
   FieldPalette,
@@ -23,6 +23,7 @@ import {
   useReorderFields,
   useLookupEntities,
 } from '../hooks';
+import { getLookupOptions, getPicklistOptions } from '../services';
 
 interface FieldManagementPageProps {
   entityType: string;
@@ -50,6 +51,16 @@ export default function FieldManagementPage({ entityType }: FieldManagementPageP
   const removeFieldMutation = useRemoveFieldFromSection(entityType);
   const reorderSectionsMutation = useReorderSections(entityType);
   const reorderFieldsMutation = useReorderFields(entityType);
+
+  const handleFetchOptions = useCallback(async (field: FieldDefinition) => {
+    if (field.fieldType === 'category' && field.categoryGroupSlug) {
+      return getLookupOptions(field.categoryGroupSlug);
+    }
+    if ((field.fieldType === 'picklist' || field.fieldType === 'multi_select') && field.id) {
+      return getPicklistOptions(field.id);
+    }
+    return [];
+  }, []);
 
   if (isLoading) {
     return (
@@ -139,6 +150,7 @@ export default function FieldManagementPage({ entityType }: FieldManagementPageP
         onSubmit={(fieldId, data) => updateFieldMutation.mutate({ id: fieldId, data })}
         onDelete={(fieldId) => deleteFieldMutation.mutate(fieldId)}
         isPending={updateFieldMutation.isPending}
+        onFetchOptions={handleFetchOptions}
       />
 
       <CreateSectionDialog
