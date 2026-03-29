@@ -21,6 +21,10 @@ const schema = z.object({
   maxLength: z.string().optional().or(z.literal('')),
   defaultValue: z.string().optional().or(z.literal('')),
   lookupEntity: z.string().optional().or(z.literal('')),
+  tagGroupSlug: z.string().optional().or(z.literal('')),
+  categoryGroupSlug: z.string().optional().or(z.literal('')),
+  fileAccept: z.string().optional().or(z.literal('')),
+  fileMaxSize: z.string().optional().or(z.literal('')),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -32,6 +36,8 @@ interface CreateFieldDialogProps {
   isPending?: boolean;
   preselectedType?: FieldType;
   lookupEntities?: string[];
+  tagGroups?: string[];
+  categoryGroups?: string[];
 }
 
 export function CreateFieldDialog({
@@ -41,6 +47,8 @@ export function CreateFieldDialog({
   isPending,
   preselectedType,
   lookupEntities = [],
+  tagGroups = [],
+  categoryGroups = [],
 }: CreateFieldDialogProps) {
   const [picklistOptions, setPicklistOptions] = useState<PicklistOptionInput[]>([]);
 
@@ -57,6 +65,10 @@ export function CreateFieldDialog({
       maxLength: '',
       defaultValue: '',
       lookupEntity: '',
+      tagGroupSlug: '',
+      categoryGroupSlug: '',
+      fileAccept: '',
+      fileMaxSize: '',
     },
   });
 
@@ -74,6 +86,10 @@ export function CreateFieldDialog({
         maxLength: '',
         defaultValue: '',
         lookupEntity: '',
+        tagGroupSlug: '',
+        categoryGroupSlug: '',
+        fileAccept: '',
+        fileMaxSize: '',
       });
       setPicklistOptions([]);
     }
@@ -81,9 +97,16 @@ export function CreateFieldDialog({
 
   const selectedType = form.watch('fieldType') as FieldType;
   const isPicklistType = selectedType === 'picklist' || selectedType === 'multi_select';
-  const isLookupType = selectedType === 'lookup';
+  const isLookupType = selectedType === 'lookup' || selectedType === 'multi_lookup';
+  const isTagsType = selectedType === 'tags';
+  const isCategoryType = selectedType === 'category';
+  const isFileType = selectedType === 'file';
 
   function handleSubmit(data: FormValues) {
+    const fileAcceptArray = data.fileAccept
+      ? data.fileAccept.split(',').map((s) => s.trim()).filter(Boolean)
+      : undefined;
+
     onSubmit({
       fieldKey: data.fieldKey,
       label: data.label,
@@ -94,8 +117,12 @@ export function CreateFieldDialog({
       isReadonly: data.isReadonly,
       maxLength: data.maxLength ? parseInt(data.maxLength, 10) : undefined,
       defaultValue: data.defaultValue || undefined,
-      lookupEntity: data.lookupEntity || undefined,
+      lookupEntity: isLookupType ? (data.lookupEntity || undefined) : undefined,
       picklistOptions: isPicklistType ? picklistOptions : undefined,
+      tagGroupSlug: isTagsType ? (data.tagGroupSlug || undefined) : undefined,
+      categoryGroupSlug: isCategoryType ? (data.categoryGroupSlug || undefined) : undefined,
+      fileAccept: isFileType ? fileAcceptArray : undefined,
+      fileMaxSize: isFileType && data.fileMaxSize ? parseInt(data.fileMaxSize, 10) * 1024 * 1024 : undefined,
     });
   }
 
@@ -149,7 +176,7 @@ export function CreateFieldDialog({
             <FormCheckbox name="isReadonly" label="Read-only" />
           </div>
 
-          {(selectedType === 'text' || selectedType === 'email' || selectedType === 'url' || selectedType === 'textarea') && (
+          {(selectedType === 'text' || selectedType === 'email' || selectedType === 'url' || selectedType === 'textarea' || selectedType === 'rich_text') && (
             <FormInput name="maxLength" label="Max Length" type="number" placeholder="255" />
           )}
 
@@ -166,6 +193,56 @@ export function CreateFieldDialog({
               placeholder="Select entity"
               options={lookupEntities.map((e) => ({ label: e, value: e }))}
             />
+          )}
+
+          {isTagsType && (
+            tagGroups.length > 0 ? (
+              <FormSelect
+                name="tagGroupSlug"
+                label="Tag Group"
+                placeholder="Select tag group"
+                options={tagGroups.map((g) => ({ label: g, value: g }))}
+              />
+            ) : (
+              <FormInput
+                name="tagGroupSlug"
+                label="Tag Group Slug"
+                placeholder="e.g., skills"
+              />
+            )
+          )}
+
+          {isCategoryType && (
+            categoryGroups.length > 0 ? (
+              <FormSelect
+                name="categoryGroupSlug"
+                label="Category Group"
+                placeholder="Select category group"
+                options={categoryGroups.map((g) => ({ label: g, value: g }))}
+              />
+            ) : (
+              <FormInput
+                name="categoryGroupSlug"
+                label="Category Group Slug"
+                placeholder="e.g., countries"
+              />
+            )
+          )}
+
+          {isFileType && (
+            <>
+              <FormInput
+                name="fileAccept"
+                label="Accepted File Types"
+                placeholder="e.g., image/*,application/pdf"
+              />
+              <FormInput
+                name="fileMaxSize"
+                label="Max File Size (MB)"
+                type="number"
+                placeholder="10"
+              />
+            </>
           )}
 
           <DialogFooter>

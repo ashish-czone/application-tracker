@@ -91,8 +91,9 @@ export const FIELD_TYPE_CONFIG: Record<FieldType, { label: string; color: string
 // Creatable field types (shown in palette)
 export const CREATABLE_FIELD_TYPES: FieldType[] = [
   'text', 'number', 'email', 'phone', 'currency', 'date',
-  'picklist', 'multi_select', 'boolean', 'url', 'textarea',
-  'decimal', 'datetime', 'lookup',
+  'picklist', 'multi_select', 'boolean', 'url', 'textarea', 'rich_text',
+  'decimal', 'datetime', 'lookup', 'multi_lookup',
+  'user', 'multi_user', 'tags', 'category', 'file',
 ];
 
 // Callback types for components
@@ -110,6 +111,10 @@ export interface CreateFieldInput {
   lookupLabelField?: string;
   lookupSearchFields?: string[];
   picklistOptions?: { label: string; value: string; isDefault?: boolean }[];
+  tagGroupSlug?: string;
+  categoryGroupSlug?: string;
+  fileAccept?: string[];
+  fileMaxSize?: number;
 }
 
 export interface UpdateFieldInput {

@@ -3,8 +3,9 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 const FIELD_TYPES = [
   'text', 'email', 'phone', 'number', 'currency', 'decimal',
-  'date', 'datetime', 'boolean', 'url', 'textarea',
-  'picklist', 'multi_select', 'lookup', 'user',
+  'date', 'datetime', 'boolean', 'url', 'textarea', 'rich_text',
+  'picklist', 'multi_select', 'lookup', 'multi_lookup',
+  'user', 'multi_user', 'tags', 'file', 'category',
 ] as const;
 
 export class CreateFieldDto {
@@ -81,4 +82,25 @@ export class CreateFieldDto {
   @IsArray()
   @IsString({ each: true })
   lookupSearchFields?: string[];
+
+  @ApiPropertyOptional({ description: 'Tag group slug for tags fields' })
+  @IsOptional()
+  @IsString()
+  tagGroupSlug?: string;
+
+  @ApiPropertyOptional({ description: 'Category group slug for category fields' })
+  @IsOptional()
+  @IsString()
+  categoryGroupSlug?: string;
+
+  @ApiPropertyOptional({ description: 'Accepted MIME types for file fields' })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  fileAccept?: string[];
+
+  @ApiPropertyOptional({ description: 'Max file size in bytes for file fields' })
+  @IsOptional()
+  @IsInt()
+  fileMaxSize?: number;
 }
