@@ -77,3 +77,11 @@ export function getLookupOptions(entity: string): Promise<{ label: string; value
 export function getPicklistOptions(fieldId: string): Promise<{ label: string; value: string }[]> {
   return api.get<{ label: string; value: string }[]>(`/fields/${fieldId}/options`);
 }
+
+export async function getCategoryOptions(groupSlug: string): Promise<{ label: string; value: string }[]> {
+  const groups = await api.get<{ id: string; slug: string }[]>('/category-groups');
+  const group = groups.find((g) => g.slug === groupSlug);
+  if (!group) return [];
+  const tree = await api.get<{ id: string; name: string }[]>(`/category-groups/${group.id}/tree`);
+  return tree.map((c) => ({ label: c.name, value: c.id }));
+}

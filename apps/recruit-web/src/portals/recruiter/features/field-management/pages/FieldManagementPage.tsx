@@ -23,7 +23,7 @@ import {
   useReorderFields,
   useLookupEntities,
 } from '../hooks';
-import { getLookupOptions, getPicklistOptions } from '../services';
+import { getLookupOptions, getPicklistOptions, getCategoryOptions } from '../services';
 
 interface FieldManagementPageProps {
   entityType: string;
@@ -54,7 +54,7 @@ export default function FieldManagementPage({ entityType }: FieldManagementPageP
 
   const handleFetchOptions = useCallback(async (field: FieldDefinition) => {
     if (field.fieldType === 'category' && field.categoryGroupSlug) {
-      return getLookupOptions(field.categoryGroupSlug);
+      return getCategoryOptions(field.categoryGroupSlug);
     }
     if ((field.fieldType === 'picklist' || field.fieldType === 'multi_select') && field.id) {
       return getPicklistOptions(field.id);
