@@ -45,6 +45,10 @@ export class FieldsController {
       lookupEntity: dto.lookupEntity,
       lookupLabelField: dto.lookupLabelField,
       lookupSearchFields: dto.lookupSearchFields,
+      tagGroupSlug: dto.tagGroupSlug,
+      categoryGroupSlug: dto.categoryGroupSlug,
+      fileAccept: dto.fileAccept,
+      fileMaxSize: dto.fileMaxSize,
     });
   }
 

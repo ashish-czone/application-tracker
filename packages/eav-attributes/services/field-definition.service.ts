@@ -23,6 +23,10 @@ export class FieldDefinitionService {
     lookupEntity?: string;
     lookupLabelField?: string;
     lookupSearchFields?: string[];
+    tagGroupSlug?: string;
+    categoryGroupSlug?: string;
+    fileAccept?: string[];
+    fileMaxSize?: number;
   }): Promise<FieldDefinition> {
     // Check field_key uniqueness — provide a clear error distinguishing standard vs custom collisions
     const existing = await this.findByEntityAndKey(entityType, data.fieldKey);
@@ -57,6 +61,10 @@ export class FieldDefinitionService {
         lookupEntity: data.lookupEntity ?? null,
         lookupLabelField: data.lookupLabelField ?? null,
         lookupSearchFields: data.lookupSearchFields ?? null,
+        tagGroupSlug: data.tagGroupSlug ?? null,
+        categoryGroupSlug: data.categoryGroupSlug ?? null,
+        fileAccept: data.fileAccept ?? null,
+        fileMaxSize: data.fileMaxSize ?? null,
       })
       .returning();
 
