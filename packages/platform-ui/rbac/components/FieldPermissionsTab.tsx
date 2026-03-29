@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { ShieldCheck } from 'lucide-react';
 import { Button, Skeleton, toast } from '@packages/ui';
 import { useEntityEngine } from '@packages/entity-engine-ui';
 import { usePlatformAPI } from '../../PlatformUIProvider';
@@ -56,9 +57,10 @@ const ACCESS_LABELS: Record<FieldAccess, string> = {
 
 interface FieldPermissionsTabProps {
   roleId: string;
+  disabled?: boolean;
 }
 
-export function FieldPermissionsTab({ roleId }: FieldPermissionsTabProps) {
+export function FieldPermissionsTab({ roleId, disabled }: FieldPermissionsTabProps) {
   const { entities } = useEntityEngine();
   const [selectedEntity, setSelectedEntity] = useState('');
   const [localState, setLocalState] = useState<Record<string, FieldAccess>>({});
@@ -102,6 +104,18 @@ export function FieldPermissionsTab({ roleId }: FieldPermissionsTabProps) {
 
   return (
     <div className="space-y-4">
+      {disabled && (
+        <div className="rounded-md bg-muted/50 border border-border px-3 py-3 space-y-1">
+          <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+            <ShieldCheck className="h-4 w-4 text-primary shrink-0" />
+            System role — all fields visible
+          </div>
+          <p className="text-xs text-muted-foreground leading-relaxed pl-6">
+            This system role has full read and write access to all fields. Field permissions cannot be restricted for this role.
+          </p>
+        </div>
+      )}
+
       {/* Entity selector */}
       <div className="flex items-center justify-between">
         <select
@@ -118,7 +132,7 @@ export function FieldPermissionsTab({ roleId }: FieldPermissionsTabProps) {
             ))}
         </select>
 
-        {isDirty && (
+        {isDirty && !disabled && (
           <Button size="sm" onClick={handleSave} disabled={saveMutation.isPending}>
             {saveMutation.isPending ? 'Saving...' : 'Save changes'}
           </Button>
@@ -146,7 +160,7 @@ export function FieldPermissionsTab({ roleId }: FieldPermissionsTabProps) {
             <tbody>
               {fields.map((field) => {
                 const access = localState[field.fieldKey] ?? 'read_write';
-                const isLocked = field.isSystem || field.isRequired;
+                const isLocked = disabled || field.isSystem || field.isRequired;
                 return (
                   <tr key={field.fieldKey} className="border-b last:border-0 hover:bg-muted/20">
                     <td className="px-3 py-2">
