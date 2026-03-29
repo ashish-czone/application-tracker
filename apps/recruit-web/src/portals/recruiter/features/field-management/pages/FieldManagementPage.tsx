@@ -151,6 +151,7 @@ export default function FieldManagementPage({ entityType }: FieldManagementPageP
         lookupEntities={lookupEntities}
         tagGroups={tagGroups}
         categoryGroups={categoryGroups}
+        onFetchCategoryOptions={getCategoryOptions}
       />
 
       <EditFieldDialog
