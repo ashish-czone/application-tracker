@@ -6,9 +6,11 @@ import type { ScopedPermissions } from '../types';
 interface PermissionsPickerProps {
   selected: ScopedPermissions;
   onChange: (selected: ScopedPermissions) => void;
+  disabled?: boolean;
 }
 
-export function PermissionsPicker({ selected, onChange }: PermissionsPickerProps) {
+export function PermissionsPicker({ selected, onChange, disabled }: PermissionsPickerProps) {
+  const hasWildcard = '*' in selected;
   const { data: registry, isLoading } = usePermissionRegistry();
 
   const grouped = useMemo(() => {
@@ -58,6 +60,11 @@ export function PermissionsPicker({ selected, onChange }: PermissionsPickerProps
 
   return (
     <div className="space-y-5">
+      {hasWildcard && (
+        <div className="rounded-md bg-muted/50 border border-border px-3 py-2 text-sm text-muted-foreground">
+          This role has full access to all permissions.
+        </div>
+      )}
       {Object.entries(grouped).map(([module, perms]) => (
         <div key={module}>
           <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
@@ -65,18 +72,20 @@ export function PermissionsPicker({ selected, onChange }: PermissionsPickerProps
           </h4>
           <div className="space-y-1">
             {perms.map(({ permName, action, description }) => {
-              const isChecked = permName in selected;
-              const scope = selected[permName];
+              const isChecked = hasWildcard || permName in selected;
+              const scope = hasWildcard ? 'all' : selected[permName];
+              const isDisabled = disabled || hasWildcard;
               return (
                 <div
                   key={permName}
-                  className="flex items-center justify-between rounded-md px-3 py-2 hover:bg-muted/50"
+                  className={`flex items-center justify-between rounded-md px-3 py-2 ${isDisabled ? 'opacity-60' : 'hover:bg-muted/50'}`}
                 >
-                  <label className="flex items-center gap-2.5 cursor-pointer flex-1 min-w-0">
+                  <label className={`flex items-center gap-2.5 flex-1 min-w-0 ${isDisabled ? 'cursor-default' : 'cursor-pointer'}`}>
                     <input
                       type="checkbox"
                       checked={isChecked}
                       onChange={() => togglePermission(permName)}
+                      disabled={isDisabled}
                       className="rounded border-input shrink-0"
                     />
                     <div className="min-w-0">
@@ -88,6 +97,7 @@ export function PermissionsPicker({ selected, onChange }: PermissionsPickerProps
                     <button
                       type="button"
                       onClick={() => toggleScope(permName)}
+                      disabled={isDisabled}
                       className="text-xs px-2 py-0.5 rounded border border-input bg-background hover:bg-accent transition-colors shrink-0 ml-2"
                     >
                       {scope === 'all' ? 'All' : 'Own'}
