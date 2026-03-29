@@ -88,7 +88,7 @@ export function PermissionsModal({ role, onClose }: PermissionsModalProps) {
             <PermissionsPicker selected={selected} onChange={setSelected} disabled={role?.isSystem} />
           )}
           {tab === 'fields' && role && (
-            <FieldPermissionsTab roleId={role.id} />
+            <FieldPermissionsTab roleId={role.id} disabled={role.isSystem} />
           )}
         </div>
 
