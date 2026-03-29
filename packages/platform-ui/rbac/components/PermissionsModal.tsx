@@ -83,15 +83,15 @@ export function PermissionsModal({ role, onClose }: PermissionsModalProps) {
         {/* Tab content */}
         <div className="flex-1 overflow-y-auto py-2">
           {tab === 'permissions' && (
-            <PermissionsPicker selected={selected} onChange={setSelected} />
+            <PermissionsPicker selected={selected} onChange={setSelected} disabled={role?.isSystem} />
           )}
           {tab === 'fields' && role && (
             <FieldPermissionsTab roleId={role.id} />
           )}
         </div>
 
-        {/* Footer — only show for permissions tab (field tab has its own save) */}
-        {tab === 'permissions' && (
+        {/* Footer — only show for permissions tab and non-system roles (field tab has its own save) */}
+        {tab === 'permissions' && !role?.isSystem && (
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose} disabled={setPermissionsMutation.isPending}>
               Cancel
