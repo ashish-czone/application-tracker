@@ -31,6 +31,8 @@ interface EntityDetailPageProps {
   entityType: string;
   /** Render the audit trail tab content. Receives entityType and entityId. */
   renderAuditTrail?: (entityType: string, entityId: string) => React.ReactNode;
+  /** Render the pipeline progress bar. Receives entityType, entityId, and the full entity record. */
+  renderPipelineProgress?: (entityType: string, entityId: string, entity: Record<string, unknown>) => React.ReactNode;
 }
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -41,7 +43,7 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
  * Generic detail page for any entity registered with the entity engine.
  * Layout: left sidebar (related records) + main area (tabs: Overview | Audit Trail).
  */
-export function EntityDetailPage({ entityType, renderAuditTrail }: EntityDetailPageProps) {
+export function EntityDetailPage({ entityType, renderAuditTrail, renderPipelineProgress }: EntityDetailPageProps) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
@@ -288,6 +290,11 @@ export function EntityDetailPage({ entityType, renderAuditTrail }: EntityDetailP
         <div className="flex-1 min-w-0">
           {activeTab === 'overview' && (
             <div className="space-y-4">
+              {/* Pipeline progress bar for entities with workflow fields */}
+              {renderPipelineProgress && entity.features.hasWorkflow && (
+                renderPipelineProgress(entityType, item.id as string, item)
+              )}
+
               {layout?.sections
                 .filter((s) => s.fields.length > 0)
                 .map((section) => (

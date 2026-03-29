@@ -4,14 +4,28 @@ import { AppLayout } from './layout/AppLayout';
 import { AuthGuard } from '../shared/auth/components/AuthGuard';
 import { EntityListPage, EntityCreatePage, EntityDetailPage } from '@packages/entity-engine-ui';
 import { AuditTimeline } from '@packages/platform-ui/audit';
+import { PipelineProgressBar, useWorkflows } from '@packages/platform-ui/workflows';
 import { SettingsPage, AppSettingsPage, AutomationsPage, RuleBuilderPage, TasksListPage, UsersListPage, RolesListPage, TagGroupsListPage, CategoryGroupsListPage } from '../portals/recruiter/routes';
 
 function renderAuditTrail(entityType: string, entityId: string) {
   return <AuditTimeline entityType={entityType} entityId={entityId} />;
 }
 
+function PipelineProgressForEntity({ entityType, entityId, entity }: { entityType: string; entityId: string; entity: Record<string, unknown> }) {
+  const { data: workflows } = useWorkflows();
+  const workflow = workflows?.find((w) => w.entityType === entityType && w.isActive);
+  if (!workflow) return null;
+  const currentState = entity[workflow.fieldName] as string;
+  if (!currentState) return null;
+  return <PipelineProgressBar workflowSlug={workflow.slug} entityType={entityType} entityId={entityId} currentState={currentState} />;
+}
+
+function renderPipelineProgress(entityType: string, entityId: string, entity: Record<string, unknown>) {
+  return <PipelineProgressForEntity entityType={entityType} entityId={entityId} entity={entity} />;
+}
+
 function AppEntityDetailPage({ entityType }: { entityType: string }) {
-  return <EntityDetailPage entityType={entityType} renderAuditTrail={renderAuditTrail} />;
+  return <EntityDetailPage entityType={entityType} renderAuditTrail={renderAuditTrail} renderPipelineProgress={renderPipelineProgress} />;
 }
 
 const LoginPage = lazy(() => import('../shared/auth/pages/LoginPage'));

@@ -6,6 +6,7 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   HttpCode,
   HttpStatus,
   ParseUUIDPipe,
@@ -13,7 +14,9 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { RequirePermission } from '@packages/rbac';
+import { DatabaseService, sql } from '@packages/database';
 import { WorkflowRegistryService } from '../services/workflow-registry.service';
+import { WorkflowEngineService } from '../services/workflow-engine.service';
 import { CreateWorkflowDto } from '../dto/create-workflow.dto';
 import { UpdateWorkflowDto } from '../dto/update-workflow.dto';
 import { CreateStateDto } from '../dto/create-state.dto';
@@ -25,7 +28,11 @@ import { WORKFLOWS_PERMISSIONS } from '../permissions';
 @ApiTags('workflows')
 @Controller('workflows')
 export class WorkflowsController {
-  constructor(private readonly workflowRegistry: WorkflowRegistryService) {}
+  constructor(
+    private readonly workflowRegistry: WorkflowRegistryService,
+    private readonly workflowEngine: WorkflowEngineService,
+    private readonly database: DatabaseService,
+  ) {}
 
   // --- Workflow Definitions ---
 
@@ -69,6 +76,39 @@ export class WorkflowsController {
   @ApiOperation({ summary: 'Soft delete a workflow definition' })
   async delete(@Param('id', ParseUUIDPipe) id: string) {
     await this.workflowRegistry.deleteDefinition(id);
+  }
+
+  // --- Transition History ---
+
+  @Get('history/:entityType/:entityId')
+  @RequirePermission(WORKFLOWS_PERMISSIONS.READ)
+  @ApiOperation({ summary: 'Get workflow transition history for an entity with resolved actor names' })
+  async getHistory(
+    @Param('entityType') entityType: string,
+    @Param('entityId') entityId: string,
+    @Query('limit') limit?: string,
+  ) {
+    const entries = await this.workflowEngine.getHistory(entityType, entityId, {
+      limit: limit ? parseInt(limit, 10) : 100,
+    });
+
+    // Resolve actor names
+    const actorIds = [...new Set(entries.map((e) => e.actorId).filter(Boolean))] as string[];
+    const actorNames = new Map<string, string>();
+    if (actorIds.length > 0) {
+      const users = await this.database.db
+        .select({ id: sql`id`, firstName: sql`first_name`, lastName: sql`last_name` })
+        .from(sql`users`)
+        .where(sql`id IN (${sql.join(actorIds.map((id) => sql`${id}`), sql`, `)})`) as { id: string; firstName: string; lastName: string }[];
+      for (const u of users) {
+        actorNames.set(u.id, `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim());
+      }
+    }
+
+    return entries.map((e) => ({
+      ...e,
+      actorName: e.actorId ? actorNames.get(e.actorId) ?? null : null,
+    }));
   }
 
   // --- States ---

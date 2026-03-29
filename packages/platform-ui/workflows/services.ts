@@ -9,6 +9,7 @@ import type {
   UpdateTransitionRequest,
   WorkflowState,
   WorkflowTransition,
+  TransitionHistoryEntry,
 } from './types';
 
 export function createWorkflowsApi(api: ApiFn) {
@@ -50,6 +51,11 @@ export function createWorkflowsApi(api: ApiFn) {
     },
     deleteTransition(transitionId: string): Promise<void> {
       return api.delete<void>(`/workflows/transitions/${transitionId}`);
+    },
+
+    // History
+    getTransitionHistory(entityType: string, entityId: string): Promise<TransitionHistoryEntry[]> {
+      return api.get<TransitionHistoryEntry[]>(`/workflows/history/${entityType}/${entityId}`);
     },
   };
 }
