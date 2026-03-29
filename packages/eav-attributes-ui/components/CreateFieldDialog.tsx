@@ -39,6 +39,8 @@ interface CreateFieldDialogProps {
   lookupEntities?: string[];
   tagGroups?: string[];
   categoryGroups?: string[];
+  /** Fetch options for a tag group slug — used for default value dropdown */
+  onFetchTagOptions?: (groupSlug: string) => Promise<{ label: string; value: string }[]>;
   /** Fetch options for a category group slug — used for default value dropdown */
   onFetchCategoryOptions?: (groupSlug: string) => Promise<{ label: string; value: string }[]>;
 }
@@ -53,9 +55,11 @@ export function CreateFieldDialog({
   lookupEntities = [],
   tagGroups = [],
   categoryGroups = [],
+  onFetchTagOptions,
   onFetchCategoryOptions,
 }: CreateFieldDialogProps) {
   const [picklistOptions, setPicklistOptions] = useState<PicklistOptionInput[]>([]);
+  const [tagOptions, setTagOptions] = useState<{ label: string; value: string }[]>([]);
   const [categoryOptions, setCategoryOptions] = useState<{ label: string; value: string }[]>([]);
 
   const form = useForm<FormValues>({
@@ -102,12 +106,29 @@ export function CreateFieldDialog({
   }, [open, preselectedType, form]);
 
   const selectedType = form.watch('fieldType') as FieldType;
+  const selectedTagGroup = form.watch('tagGroupSlug');
   const selectedCategoryGroup = form.watch('categoryGroupSlug');
   const isPicklistType = selectedType === 'picklist' || selectedType === 'multi_select';
   const isLookupType = selectedType === 'lookup' || selectedType === 'multi_lookup';
   const isTagsType = selectedType === 'tags';
   const isCategoryType = selectedType === 'category';
   const isFileType = selectedType === 'file';
+
+  // Reset default value when field type changes
+  useEffect(() => {
+    form.setValue('defaultValue', '');
+    setTagOptions([]);
+    setCategoryOptions([]);
+  }, [selectedType]);
+
+  // Fetch tag options when tag group is selected
+  useEffect(() => {
+    if (!isTagsType || !selectedTagGroup || !onFetchTagOptions) {
+      setTagOptions([]);
+      return;
+    }
+    onFetchTagOptions(selectedTagGroup).then(setTagOptions).catch(() => setTagOptions([]));
+  }, [selectedTagGroup, isTagsType]);
 
   // Fetch category options when category group is selected
   useEffect(() => {
@@ -259,13 +280,20 @@ export function CreateFieldDialog({
             </>
           )}
 
-          {/* Default Value — last in form, dropdown for picklist/category types */}
+          {/* Default Value — last in form, dropdown for picklist/tag/category types */}
           {isPicklistType && picklistOptions.length > 0 ? (
             <FormSelect
               name="defaultValue"
               label="Default Value (optional)"
               placeholder="None"
               options={picklistOptions.map((o) => ({ label: o.label, value: o.value }))}
+            />
+          ) : isTagsType && tagOptions.length > 0 ? (
+            <FormSelect
+              name="defaultValue"
+              label="Default Value (optional)"
+              placeholder="None"
+              options={tagOptions}
             />
           ) : isCategoryType && categoryOptions.length > 0 ? (
             <FormSelect

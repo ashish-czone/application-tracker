@@ -93,6 +93,10 @@ export async function getCategoryGroupSlugs(): Promise<string[]> {
   return groups.map((g) => g.slug);
 }
 
+export async function getTagOptions(groupSlug: string): Promise<{ label: string; value: string }[]> {
+  return api.get<{ label: string; value: string }[]>(`/tags/group/${groupSlug}`);
+}
+
 export async function getCategoryOptions(groupSlug: string): Promise<{ label: string; value: string }[]> {
   const groups = await api.get<{ id: string; slug: string }[]>('/category-groups');
   const group = groups.find((g) => g.slug === groupSlug);
