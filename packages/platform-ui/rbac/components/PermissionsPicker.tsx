@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { ShieldCheck } from 'lucide-react';
 import { Skeleton } from '@packages/ui';
 import { usePermissionRegistry } from '../hooks';
 import type { ScopedPermissions } from '../types';
@@ -61,8 +62,15 @@ export function PermissionsPicker({ selected, onChange, disabled }: PermissionsP
   return (
     <div className="space-y-5">
       {hasWildcard && (
-        <div className="rounded-md bg-muted/50 border border-border px-3 py-2 text-sm text-muted-foreground">
-          This role has full access to all permissions.
+        <div className="rounded-md bg-muted/50 border border-border px-3 py-3 space-y-1">
+          <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+            <ShieldCheck className="h-4 w-4 text-primary shrink-0" />
+            System role — full access granted
+          </div>
+          <p className="text-xs text-muted-foreground leading-relaxed pl-6">
+            This is a system-managed role with unrestricted access to all permissions. Its permissions cannot be modified.
+            To create a role with specific permissions, add a new role instead.
+          </p>
         </div>
       )}
       {Object.entries(grouped).map(([module, perms]) => (
