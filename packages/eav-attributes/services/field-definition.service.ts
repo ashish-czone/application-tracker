@@ -248,13 +248,24 @@ export class FieldDefinitionService {
       }
 
       if (existing) {
+        // Sync all code-defined properties that may have changed
         const updates: Record<string, unknown> = {};
-        // Update fieldKey if it changed (rename migration)
         if (existing.fieldKey !== f.fieldKey) updates.fieldKey = f.fieldKey;
+        if (existing.label !== f.label) updates.label = f.label;
+        if (existing.fieldType !== f.fieldType) updates.fieldType = f.fieldType;
         if (f.columnName && existing.columnName !== f.columnName) updates.columnName = f.columnName;
         if (f.sortOrder !== undefined && existing.sortOrder !== f.sortOrder) updates.sortOrder = f.sortOrder;
         if (existing.sortOrder === 0 && f.sortOrder === undefined) updates.sortOrder = i;
         if (existing.isSystem !== (f.isSystem ?? false)) updates.isSystem = f.isSystem ?? false;
+        if (existing.isUnique !== (f.isUnique ?? false)) updates.isUnique = f.isUnique ?? false;
+        if (existing.isReadonly !== (f.isReadonly ?? false)) updates.isReadonly = f.isReadonly ?? false;
+        if (existing.isQuickCreate !== (f.isQuickCreate ?? false)) updates.isQuickCreate = f.isQuickCreate ?? false;
+        if ((f.maxLength ?? null) !== existing.maxLength) updates.maxLength = f.maxLength ?? null;
+        if ((f.lookupEntity ?? null) !== existing.lookupEntity) updates.lookupEntity = f.lookupEntity ?? null;
+        if ((f.lookupLabelField ?? null) !== existing.lookupLabelField) updates.lookupLabelField = f.lookupLabelField ?? null;
+        if ((f.tagGroupSlug ?? null) !== existing.tagGroupSlug) updates.tagGroupSlug = f.tagGroupSlug ?? null;
+        if ((f.categoryGroupSlug ?? null) !== existing.categoryGroupSlug) updates.categoryGroupSlug = f.categoryGroupSlug ?? null;
+        if ((f.uiType ?? null) !== existing.uiType) updates.uiType = f.uiType ?? null;
 
         if (Object.keys(updates).length > 0) {
           await this.database.db
