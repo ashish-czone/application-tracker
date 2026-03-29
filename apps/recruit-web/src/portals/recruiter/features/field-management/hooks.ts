@@ -18,6 +18,20 @@ export function useLookupEntities() {
   });
 }
 
+export function useTagGroupSlugs() {
+  return useQuery({
+    queryKey: ['tag-group-slugs'],
+    queryFn: () => svc.getTagGroupSlugs(),
+  });
+}
+
+export function useCategoryGroupSlugs() {
+  return useQuery({
+    queryKey: ['category-group-slugs'],
+    queryFn: () => svc.getCategoryGroupSlugs(),
+  });
+}
+
 function useInvalidateLayout(entityType: string) {
   const qc = useQueryClient();
   return () => qc.invalidateQueries({ queryKey: ['layout', entityType] });

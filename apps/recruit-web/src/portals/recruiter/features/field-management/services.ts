@@ -78,6 +78,16 @@ export function getPicklistOptions(fieldId: string): Promise<{ label: string; va
   return api.get<{ label: string; value: string }[]>(`/fields/${fieldId}/options`);
 }
 
+export async function getTagGroupSlugs(): Promise<string[]> {
+  const groups = await api.get<{ slug: string }[]>('/tag-groups');
+  return groups.map((g) => g.slug);
+}
+
+export async function getCategoryGroupSlugs(): Promise<string[]> {
+  const groups = await api.get<{ slug: string }[]>('/category-groups');
+  return groups.map((g) => g.slug);
+}
+
 export async function getCategoryOptions(groupSlug: string): Promise<{ label: string; value: string }[]> {
   const groups = await api.get<{ id: string; slug: string }[]>('/category-groups');
   const group = groups.find((g) => g.slug === groupSlug);

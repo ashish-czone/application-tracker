@@ -22,6 +22,8 @@ import {
   useReorderSections,
   useReorderFields,
   useLookupEntities,
+  useTagGroupSlugs,
+  useCategoryGroupSlugs,
 } from '../hooks';
 import { getLookupOptions, getPicklistOptions, getCategoryOptions } from '../services';
 
@@ -40,6 +42,8 @@ export default function FieldManagementPage({ entityType }: FieldManagementPageP
 
   const { data: layout, isLoading } = useLayout(entityType);
   const { data: lookupEntities } = useLookupEntities();
+  const { data: tagGroups } = useTagGroupSlugs();
+  const { data: categoryGroups } = useCategoryGroupSlugs();
 
   const createFieldMutation = useCreateField(entityType);
   const updateFieldMutation = useUpdateField(entityType, { onSuccess: () => setEditingField(null) });
@@ -141,6 +145,8 @@ export default function FieldManagementPage({ entityType }: FieldManagementPageP
         isPending={createFieldMutation.isPending}
         preselectedType={createFieldType}
         lookupEntities={lookupEntities}
+        tagGroups={tagGroups}
+        categoryGroups={categoryGroups}
       />
 
       <EditFieldDialog
