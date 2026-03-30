@@ -53,3 +53,13 @@ export {
   RELATIONAL_FIELD_TYPES,
   FIELD_TYPE_REGISTRY,
 } from './types';
+
+// --- Helpers moved from eav-attributes ---
+
+export { buildSnapshot, diffSnapshot } from './helpers/snapshot';
+
+export { validatePayload } from './helpers/validate-payload';
+export type { ValidationResult, ValidationError, ValidationOptions, FieldDefinitionWithOptions } from './helpers/validate-payload';
+
+export { splitPayload } from './helpers/split-payload';
+export type { SplitResult } from './helpers/split-payload';
