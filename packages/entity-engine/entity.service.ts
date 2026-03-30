@@ -16,9 +16,9 @@ import {
 import { DatabaseService } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
-import { FieldValueService, MultiValueService } from '@packages/eav-attributes';
 import { FieldDefinitionService } from './services/field-definition.service';
 import { LookupResolverService } from './services/lookup-resolver.service';
+import type { EavStorageExtension } from './extensions/eav-storage.interface';
 import { RELATIONAL_FIELD_TYPES } from './types';
 import type { FieldDefinition } from './types';
 import { buildSnapshot, diffSnapshot } from './helpers/snapshot';
@@ -51,11 +51,10 @@ export class EntityService {
     private readonly config: EntityConfig,
     private readonly database: DatabaseService,
     private readonly domainEventEmitter: DomainEventEmitter,
-    private readonly fieldValueService: FieldValueService,
+    private readonly eavStorage: EavStorageExtension | null,
     private readonly fieldDefinitionService: FieldDefinitionService,
     private readonly lookupResolver: LookupResolverService,
     private readonly taxonomyService: TaxonomyService,
-    private readonly multiValueService: MultiValueService,
     private readonly mediaService: MediaService,
     private readonly workflowEngine: WorkflowEngineService,
     private readonly workflowRegistry: WorkflowRegistryService,
@@ -314,12 +313,12 @@ export class EntityService {
 
     // Batch-hydrate EAV values
     const entityIds = rows.map((r: any) => r.id);
-    const eavMap = entityIds.length > 0
-      ? await this.fieldValueService.getBatchValues(config.entityType, entityIds)
+    const eavMap = entityIds.length > 0 && this.eavStorage
+      ? await this.eavStorage.getBatchValues(config.entityType, entityIds)
       : new Map<string, Record<string, unknown>>();
 
     const data = await Promise.all(
-      rows.map((row: any) => this.toResponse(row, eavMap.get(row.id))),
+      rows.map((row: any) => this.toResponse(row, eavMap?.get(row.id))),
     );
 
     // Resolve lookup field labels (candidateId → candidateId__label: "Jane Smith")
@@ -419,8 +418,8 @@ export class EntityService {
         .returning() as any[];
       const inserted = result[0];
 
-      if (Object.keys(customFields).length > 0) {
-        await this.fieldValueService.setValues(config.entityType, inserted.id, customFields, tx);
+      if (Object.keys(customFields).length > 0 && this.eavStorage) {
+        await this.eavStorage.setValues(config.entityType, inserted.id, customFields, tx);
       }
 
       return inserted;
@@ -432,7 +431,7 @@ export class EntityService {
     }
 
     // Move tmp files to permanent storage and update EAV values
-    if (Object.keys(customFields).length > 0) {
+    if (Object.keys(customFields).length > 0 && this.eavStorage) {
       await this.processFileFields(customFields, row.id, defs);
     }
 
@@ -554,7 +553,7 @@ export class EntityService {
 
     const updated = await this.database.db.transaction(async (tx) => {
       // Read before snapshot inside tx for consistency
-      const eavBefore = await this.fieldValueService.getValues(config.entityType, id, tx);
+      const eavBefore = this.eavStorage ? await this.eavStorage.getValues(config.entityType, id, tx) : {};
       const [existingRow] = await tx.select().from(table).where(eq(table.id, id)).limit(1) as any[];
       const before = buildSnapshot(this.rowToSnapshot(existingRow), eavBefore);
 
@@ -571,8 +570,8 @@ export class EntityService {
 
       // Update EAV values
       let eavAfter = eavBefore;
-      if (hasCustomChanges) {
-        const eavResult = await this.fieldValueService.setValues(config.entityType, id, customFields, tx);
+      if (hasCustomChanges && this.eavStorage) {
+        const eavResult = await this.eavStorage.setValues(config.entityType, id, customFields, tx);
         eavAfter = eavResult.after;
       }
 
@@ -592,7 +591,7 @@ export class EntityService {
     }
 
     // Move tmp files to permanent storage and update EAV values
-    if (hasCustomChanges) {
+    if (hasCustomChanges && this.eavStorage) {
       await this.processFileFields(customFields, id, defs);
     }
 
@@ -665,8 +664,8 @@ export class EntityService {
           .update(table)
           .set({ [fieldKey]: toState })
           .where(eq(table.id, id));
-      } else {
-        await this.fieldValueService.setValues(config.entityType, id, { [fieldKey]: toState }, tx);
+      } else if (this.eavStorage) {
+        await this.eavStorage.setValues(config.entityType, id, { [fieldKey]: toState }, tx);
       }
 
       await this.workflowEngine.recordHistory({
@@ -900,8 +899,8 @@ export class EntityService {
       }
     }
 
-    if (eavFilters.length > 0) {
-      const eavCondition = this.fieldValueService.buildFilterCondition(
+    if (eavFilters.length > 0 && this.eavStorage) {
+      const eavCondition = this.eavStorage.buildFilterCondition(
         config.entityType,
         table.id,
         eavFilters,
@@ -1017,9 +1016,9 @@ export class EntityService {
       }
 
       // multi_user / multi_lookup: store target IDs in junction table
-      if ((def.fieldType === 'multi_user' || def.fieldType === 'multi_lookup') && Array.isArray(value)) {
+      if ((def.fieldType === 'multi_user' || def.fieldType === 'multi_lookup') && Array.isArray(value) && this.eavStorage) {
         const targetIds = value.filter((v): v is string => typeof v === 'string');
-        await this.multiValueService.setValues(this.config.entityType, entityId, key, targetIds);
+        await this.eavStorage.setMultiValues(this.config.entityType, entityId, key, targetIds);
       }
       // category: stored as a lookup-like text value — handled in standard/EAV flow
     }
@@ -1068,9 +1067,9 @@ export class EntityService {
       }
 
       // multi_user / multi_lookup: replace all target IDs
-      if ((def.fieldType === 'multi_user' || def.fieldType === 'multi_lookup') && Array.isArray(value)) {
+      if ((def.fieldType === 'multi_user' || def.fieldType === 'multi_lookup') && Array.isArray(value) && this.eavStorage) {
         const targetIds = value.filter((v): v is string => typeof v === 'string');
-        await this.multiValueService.setValues(this.config.entityType, entityId, key, targetIds);
+        await this.eavStorage.setMultiValues(this.config.entityType, entityId, key, targetIds);
       }
     }
   }
@@ -1122,8 +1121,8 @@ export class EntityService {
       }
     }
 
-    if (Object.keys(updates).length > 0) {
-      await this.fieldValueService.setValues(this.config.entityType, entityId, updates);
+    if (Object.keys(updates).length > 0 && this.eavStorage) {
+      await this.eavStorage.setValues(this.config.entityType, entityId, updates);
     }
   }
 
@@ -1182,8 +1181,8 @@ export class EntityService {
       }
 
       // Hydrate multi-value fields (multi_user, multi_lookup)
-      if (multiFields.length > 0) {
-        const allMulti = await this.multiValueService.getAllForEntity(this.config.entityType, entityId);
+      if (multiFields.length > 0 && this.eavStorage) {
+        const allMulti = await this.eavStorage.getAllMultiValues(this.config.entityType, entityId);
         for (const field of multiFields) {
           const targetIds = allMulti[field.fieldKey] ?? [];
           if (targetIds.length === 0) {
@@ -1366,7 +1365,9 @@ export class EntityService {
 
   /** Build a full snapshot (standard + EAV) for event payloads. */
   private async buildEntitySnapshot(row: Record<string, unknown>): Promise<Record<string, unknown>> {
-    const eavValues = await this.fieldValueService.getValues(this.config.entityType, row.id as string);
+    const eavValues = this.eavStorage
+      ? await this.eavStorage.getValues(this.config.entityType, row.id as string)
+      : {};
     return buildSnapshot(this.rowToSnapshot(row), eavValues);
   }
 
@@ -1375,7 +1376,7 @@ export class EntityService {
     row: Record<string, unknown>,
     preloadedEavValues?: Record<string, unknown>,
   ): Promise<Record<string, unknown>> {
-    const eavValues = preloadedEavValues ?? await this.fieldValueService.getValues(this.config.entityType, row.id as string);
+    const eavValues = preloadedEavValues ?? (this.eavStorage ? await this.eavStorage.getValues(this.config.entityType, row.id as string) : {});
 
     // Allow hooks to customize response
     if (this.config.hooks?.toResponse) {
@@ -1434,10 +1435,12 @@ export class EntityService {
     fields: Record<string, unknown>,
     excludeId?: string,
   ): Promise<void> {
+    if (!this.eavStorage) return; // Skip EAV uniqueness checks when EAV is not loaded
+
     const uniqueEavDefs = defs.filter((d: any) => d.isUnique && !d.columnName && fields[d.fieldKey] != null);
 
     for (const def of uniqueEavDefs) {
-      const isUnique = await this.fieldValueService.checkUniqueness(
+      const isUnique = await this.eavStorage.checkUniqueness(
         this.config.entityType,
         def.fieldKey,
         fields[def.fieldKey],

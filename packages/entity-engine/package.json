@@ -13,8 +13,6 @@
     "@packages/audit": "workspace:*",
     "@packages/common": "workspace:*",
     "@packages/database": "workspace:*",
-    "@packages/eav-attributes": "workspace:*",
-    "@packages/entity-layout": "workspace:*",
     "@packages/events": "workspace:*",
     "@packages/logger": "workspace:*",
     "@packages/media": "workspace:*",

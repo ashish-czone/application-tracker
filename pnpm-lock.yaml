@@ -783,12 +783,6 @@ importers:
       '@packages/database':
         specifier: workspace:*
         version: link:../database
-      '@packages/eav-attributes':
-        specifier: workspace:*
-        version: link:../eav-attributes
-      '@packages/entity-layout':
-        specifier: workspace:*
-        version: link:../entity-layout
       '@packages/events':
         specifier: workspace:*
         version: link:../events
