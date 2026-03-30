@@ -1,5 +1,5 @@
 {
-  "name": "@packages/eav-attributes",
+  "name": "@packages/entity-layout",
   "version": "0.0.1",
   "private": true,
   "main": "index.ts",
@@ -11,8 +11,6 @@
     "@nestjs/swagger": "^11.0.0",
     "@packages/database": "workspace:*",
     "@packages/entity-engine": "workspace:*",
-    "@packages/entity-layout": "workspace:*",
-    "@packages/logger": "workspace:*",
     "@packages/rbac": "workspace:*",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1"
