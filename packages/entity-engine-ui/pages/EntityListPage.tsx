@@ -72,6 +72,7 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
     const filterableTypes = new Set([
       'picklist', 'multi_select', 'lookup', 'user', 'boolean', 'category', 'workflow',
       'text', 'email', 'phone', 'url', 'number', 'currency', 'decimal', 'date', 'datetime',
+      'tags', 'multi_user', 'multi_lookup',
     ]);
     return listLayout.columns
       .filter((c) => filterableTypes.has(c.fieldType) && !c.relationship)
@@ -88,6 +89,42 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
         }
         // Async search for lookup/user fields
         if ((c.fieldType === 'lookup' || c.fieldType === 'user') && c.lookupEntity) {
+          field.onSearchOptions = async (query: string) => {
+            try {
+              return await apiFn.get<{ label: string; value: string }[]>(
+                `/lookups/${c.lookupEntity}?limit=50${query ? `&search=${encodeURIComponent(query)}` : ''}`,
+              );
+            } catch {
+              return [];
+            }
+          };
+        }
+        // Async search for tags fields (via tag group slug)
+        if (c.fieldType === 'tags' && c.tagGroupSlug) {
+          field.onSearchOptions = async (query: string) => {
+            try {
+              return await apiFn.get<{ label: string; value: string }[]>(
+                `/tags/group/${c.tagGroupSlug}?limit=50${query ? `&search=${encodeURIComponent(query)}` : ''}`,
+              );
+            } catch {
+              return [];
+            }
+          };
+        }
+        // Async search for multi_user (users lookup)
+        if (c.fieldType === 'multi_user') {
+          field.onSearchOptions = async (query: string) => {
+            try {
+              return await apiFn.get<{ label: string; value: string }[]>(
+                `/lookups/users?limit=50${query ? `&search=${encodeURIComponent(query)}` : ''}`,
+              );
+            } catch {
+              return [];
+            }
+          };
+        }
+        // Async search for multi_lookup (entity lookup)
+        if (c.fieldType === 'multi_lookup' && c.lookupEntity) {
           field.onSearchOptions = async (query: string) => {
             try {
               return await apiFn.get<{ label: string; value: string }[]>(

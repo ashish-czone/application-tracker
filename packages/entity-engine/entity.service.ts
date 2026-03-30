@@ -181,6 +181,7 @@ export class EntityService {
           ? d.picklistOptions.map(o => ({ label: o.label, value: o.value }))
           : undefined,
         operators: OPERATORS_BY_FIELD_TYPE[d.fieldType],
+        tagGroupSlug: d.fieldType === 'tags' ? (d.tagGroupSlug ?? undefined) : undefined,
       }));
 
     // Append hasMany relationship count columns
@@ -879,11 +880,29 @@ export class EntityService {
     // Resolve standard column filters via query-builder
     const { conditions, unresolved } = buildFilterConditions(allFilters, columnMap);
 
-    // Route unresolved filters to EAV (only for known EAV fields)
+    // Classify unresolved filters into EAV vs relational
     const defsByKey = new Map(defs.map((d) => [d.fieldKey, d]));
-    const eavFilters = unresolved
-      .filter((f) => defsByKey.has(f.field) && !defsByKey.get(f.field)!.columnName)
-      .map((f) => ({ fieldKey: f.field, operator: f.operator as any, value: f.value }));
+    const eavFilters: { fieldKey: string; operator: any; value: any }[] = [];
+
+    for (const f of unresolved) {
+      const def = defsByKey.get(f.field);
+      if (!def) continue;
+
+      if (RELATIONAL_FIELD_TYPES.has(def.fieldType as any)) {
+        // Relational fields: build EXISTS subquery against junction tables
+        const relCondition = this.buildRelationalFilterCondition(
+          config.entityType,
+          table.id,
+          def,
+          f.operator,
+          f.value,
+        );
+        if (relCondition) conditions.push(relCondition);
+      } else if (!def.columnName) {
+        // EAV fields: route to FieldValueService
+        eavFilters.push({ fieldKey: f.field, operator: f.operator, value: f.value });
+      }
+    }
 
     if (eavFilters.length > 0) {
       const eavCondition = this.fieldValueService.buildFilterCondition(
@@ -895,6 +914,78 @@ export class EntityService {
     }
 
     return conditions;
+  }
+
+  /**
+   * Build an EXISTS subquery condition for a relational field (tags, multi_user, multi_lookup).
+   *
+   * - tags: EXISTS (SELECT 1 FROM entity_tags WHERE entity_type = ? AND entity_id = <id> AND tag_id = ?)
+   * - multi_user/multi_lookup: EXISTS (SELECT 1 FROM entity_multi_values WHERE entity_type = ? AND entity_id = <id> AND field_key = ? AND target_id = ?)
+   * - isNull: NOT EXISTS (...)  — no related records
+   * - isNotNull: EXISTS (...)   — at least one related record
+   * - contains: EXISTS (...AND target = value)
+   */
+  private buildRelationalFilterCondition(
+    entityType: string,
+    entityIdColumn: any,
+    def: FieldDefinition,
+    operator: string,
+    value: unknown,
+  ): any {
+    if (def.fieldType === 'tags') {
+      return this.buildTagFilterCondition(entityType, entityIdColumn, operator, value);
+    }
+
+    if (def.fieldType === 'multi_user' || def.fieldType === 'multi_lookup') {
+      return this.buildMultiValueFilterCondition(entityType, entityIdColumn, def.fieldKey, operator, value);
+    }
+
+    return null;
+  }
+
+  private buildTagFilterCondition(
+    entityType: string,
+    entityIdColumn: any,
+    operator: string,
+    value: unknown,
+  ): any {
+    const baseWhere = sql`et.entity_type = ${entityType} AND et.entity_id = ${entityIdColumn}`;
+
+    switch (operator) {
+      case 'contains': {
+        const tagId = String(value);
+        return sql`EXISTS (SELECT 1 FROM entity_tags et WHERE ${baseWhere} AND et.tag_id = ${tagId})`;
+      }
+      case 'isNull':
+        return sql`NOT EXISTS (SELECT 1 FROM entity_tags et WHERE ${baseWhere})`;
+      case 'isNotNull':
+        return sql`EXISTS (SELECT 1 FROM entity_tags et WHERE ${baseWhere})`;
+      default:
+        return null;
+    }
+  }
+
+  private buildMultiValueFilterCondition(
+    entityType: string,
+    entityIdColumn: any,
+    fieldKey: string,
+    operator: string,
+    value: unknown,
+  ): any {
+    const baseWhere = sql`emv.entity_type = ${entityType} AND emv.entity_id = ${entityIdColumn} AND emv.field_key = ${fieldKey}`;
+
+    switch (operator) {
+      case 'contains': {
+        const targetId = String(value);
+        return sql`EXISTS (SELECT 1 FROM entity_multi_values emv WHERE ${baseWhere} AND emv.target_id = ${targetId})`;
+      }
+      case 'isNull':
+        return sql`NOT EXISTS (SELECT 1 FROM entity_multi_values emv WHERE ${baseWhere})`;
+      case 'isNotNull':
+        return sql`EXISTS (SELECT 1 FROM entity_multi_values emv WHERE ${baseWhere})`;
+      default:
+        return null;
+    }
   }
 
   // ---------------------------------------------------------------------------
