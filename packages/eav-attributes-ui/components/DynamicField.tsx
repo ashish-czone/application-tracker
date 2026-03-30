@@ -284,19 +284,17 @@ function DynamicFieldEdit({ field, resolvedLabel, lookupOptions, chipOptions, on
       );
 
     case 'category':
-      // Category acts like a lookup — render as select if options provided
-      if (lookupOptions && lookupOptions.length > 0) {
-        return (
-          <FormSelect
-            name={field.fieldKey}
-            label={label}
-            placeholder={`Select ${field.label}`}
-            options={lookupOptions}
-            disabled={disabled}
-          />
-        );
-      }
-      return <FormInput name={field.fieldKey} label={label} disabled={disabled} placeholder="Select category" />;
+      return (
+        <FormSelect
+          name={field.fieldKey}
+          label={label}
+          placeholder={`Select ${field.label}`}
+          options={lookupOptions}
+          onSearch={onSearch}
+          disabled={disabled}
+          initialDisplayValue={resolvedLabel ?? undefined}
+        />
+      );
 
     default:
       return <FormInput name={field.fieldKey} label={label} disabled={disabled} />;
