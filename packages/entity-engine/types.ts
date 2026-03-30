@@ -373,6 +373,8 @@ export interface ListLayoutColumn {
   picklistOptions?: { label: string; value: string }[];
   /** Valid filter operators for this column's field type */
   operators?: string[];
+  /** Tag group slug (for tags field type — used to fetch filter options) */
+  tagGroupSlug?: string;
 }
 
 export interface ListLayoutResponse {
