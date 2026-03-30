@@ -1150,7 +1150,12 @@ export class EntityService {
       (d: FieldDefinition) => d.fieldType === 'user',
     );
 
-    if (lookupFields.length === 0 && userFields.length === 0) return;
+    // Resolve category fields via categories table
+    const categoryFields = defs.filter(
+      (d: FieldDefinition) => d.fieldType === 'category',
+    );
+
+    if (lookupFields.length === 0 && userFields.length === 0 && categoryFields.length === 0) return;
 
     // Collect unique IDs per lookup entity
     const idsByEntity = new Map<string, { fieldKey: string; ids: Set<string> }>();
@@ -1179,9 +1184,21 @@ export class EntityService {
       }
     }
 
-    // Batch resolve all lookup entities + users in parallel
+    // Collect unique category IDs
+    const categoryIds = new Set<string>();
+    for (const field of categoryFields) {
+      for (const row of rows) {
+        const value = row[field.fieldKey];
+        if (typeof value === 'string' && value.length > 0) {
+          categoryIds.add(value);
+        }
+      }
+    }
+
+    // Batch resolve all lookup entities + users + categories in parallel
     const labelMaps = new Map<string, Map<string, string>>();
     const userLabelMap = new Map<string, string>();
+    const categoryLabelMap = new Map<string, string>();
 
     const resolvePromises: Promise<void>[] = [];
 
@@ -1208,6 +1225,20 @@ export class EntityService {
       );
     }
 
+    if (categoryIds.size > 0) {
+      resolvePromises.push(
+        this.database.db
+          .select({ id: sql`id`, name: sql`name` })
+          .from(sql`categories`)
+          .where(sql`id IN (${sql.join(Array.from(categoryIds).map(id => sql`${id}`), sql`, `)})`)
+          .then((cats: any[]) => {
+            for (const c of cats) {
+              categoryLabelMap.set(c.id, c.name);
+            }
+          }),
+      );
+    }
+
     await Promise.all(resolvePromises);
 
     // Inject __label fields into each row
@@ -1223,6 +1254,12 @@ export class EntityService {
         const value = row[field.fieldKey];
         if (typeof value === 'string' && userLabelMap.size > 0) {
           row[`${field.fieldKey}__label`] = userLabelMap.get(value) ?? null;
+        }
+      }
+      for (const field of categoryFields) {
+        const value = row[field.fieldKey];
+        if (typeof value === 'string' && categoryLabelMap.size > 0) {
+          row[`${field.fieldKey}__label`] = categoryLabelMap.get(value) ?? null;
         }
       }
     }
