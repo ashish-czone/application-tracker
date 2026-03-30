@@ -5,6 +5,8 @@ export { EntityEngineApiController } from './entity-engine-api.controller';
 export { createEntityController } from './create-entity-controller';
 export { createFieldPermissionInterceptor } from './interceptors/field-permission.interceptor';
 export { seedEntityFields, seedWorkflows } from './seed-entity-fields';
+export { defineEntity } from './define-entity';
+export type { ModelDefinition, ModelField } from './define-entity';
 
 // --- Types originally from entity-engine ---
 
