@@ -10,6 +10,7 @@
     "@nestjs/common": "^11.0.0",
     "@nestjs/swagger": "^11.0.0",
     "@packages/database": "workspace:*",
+    "@packages/entity-engine": "workspace:*",
     "@packages/logger": "workspace:*",
     "@packages/rbac": "workspace:*",
     "class-transformer": "^0.5.1",
