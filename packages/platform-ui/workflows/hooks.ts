@@ -178,6 +178,16 @@ export function useDeleteTransition(slug: string) {
   });
 }
 
+// Entity pipeline resolution
+export function useWorkflowForEntity(entityType: string, entityId: string, fieldName: string) {
+  const api = useWorkflowsApi();
+  return useQuery({
+    queryKey: ['workflow-for-entity', entityType, entityId, fieldName],
+    queryFn: () => api.getWorkflowForEntity(entityType, entityId, fieldName),
+    enabled: !!entityType && !!entityId && !!fieldName,
+  });
+}
+
 // History
 export function useTransitionHistory(entityType: string, entityId: string) {
   const api = useWorkflowsApi();

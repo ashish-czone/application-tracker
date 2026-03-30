@@ -13,7 +13,7 @@ export {
   useWorkflows, useWorkflow, useCreateWorkflow, useUpdateWorkflow, useDeleteWorkflow,
   useCreateState, useUpdateState, useDeleteState,
   useCreateTransition, useUpdateTransition, useDeleteTransition,
-  useTransitionHistory,
+  useWorkflowForEntity, useTransitionHistory,
 } from './hooks';
 export { createWorkflowsApi, type WorkflowsApi } from './services';
 export type {

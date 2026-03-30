@@ -4,7 +4,7 @@ import { AppLayout } from './layout/AppLayout';
 import { AuthGuard } from '../shared/auth/components/AuthGuard';
 import { EntityListPage, EntityCreatePage, EntityDetailPage } from '@packages/entity-engine-ui';
 import { AuditTimeline } from '@packages/platform-ui/audit';
-import { PipelineProgressBar, useWorkflows } from '@packages/platform-ui/workflows';
+import { PipelineProgressBar, useWorkflowForEntity, useWorkflows } from '@packages/platform-ui/workflows';
 import { SettingsPage, AppSettingsPage, AutomationsPage, RuleBuilderPage, TasksListPage, UsersListPage, RolesListPage, TagGroupsListPage, CategoryGroupsListPage } from '../portals/recruiter/routes';
 
 function renderAuditTrail(entityType: string, entityId: string) {
@@ -12,12 +12,17 @@ function renderAuditTrail(entityType: string, entityId: string) {
 }
 
 function PipelineProgressForEntity({ entityType, entityId, entity }: { entityType: string; entityId: string; entity: Record<string, unknown> }) {
-  const { data: workflows } = useWorkflows();
-  const workflow = workflows?.find((w) => w.entityType === entityType && w.isActive);
-  if (!workflow) return null;
-  const currentState = entity[workflow.fieldName] as string;
+  // First find the workflow field name for this entity type
+  const { data: allWorkflows } = useWorkflows();
+  const anyWorkflow = allWorkflows?.find((w) => w.entityType === entityType && w.isActive);
+  const fieldName = anyWorkflow?.fieldName ?? '';
+
+  // Then resolve the correct pipeline for this specific entity (checks assignment, falls back to default)
+  const { data: resolvedWorkflow } = useWorkflowForEntity(entityType, entityId, fieldName);
+  if (!resolvedWorkflow) return null;
+  const currentState = entity[resolvedWorkflow.fieldName] as string;
   if (!currentState) return null;
-  return <PipelineProgressBar workflowSlug={workflow.slug} entityType={entityType} entityId={entityId} currentState={currentState} />;
+  return <PipelineProgressBar workflowSlug={resolvedWorkflow.slug} entityType={entityType} entityId={entityId} currentState={currentState} />;
 }
 
 function renderPipelineProgress(entityType: string, entityId: string, entity: Record<string, unknown>) {

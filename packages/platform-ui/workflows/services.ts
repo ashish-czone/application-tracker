@@ -53,6 +53,11 @@ export function createWorkflowsApi(api: ApiFn) {
       return api.delete<void>(`/workflows/transitions/${transitionId}`);
     },
 
+    // Entity pipeline resolution
+    getWorkflowForEntity(entityType: string, entityId: string, fieldName: string): Promise<WorkflowDefinition> {
+      return api.get<WorkflowDefinition>(`/workflows/for-entity/${entityType}/${entityId}/${fieldName}`);
+    },
+
     // History
     getTransitionHistory(entityType: string, entityId: string): Promise<TransitionHistoryEntry[]> {
       return api.get<TransitionHistoryEntry[]>(`/workflows/history/${entityType}/${entityId}`);

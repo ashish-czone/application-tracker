@@ -17,6 +17,7 @@ import { RequirePermission } from '@packages/rbac';
 import { DatabaseService, sql } from '@packages/database';
 import { WorkflowRegistryService } from '../services/workflow-registry.service';
 import { WorkflowEngineService } from '../services/workflow-engine.service';
+import { PipelineResolverService } from '../services/pipeline-resolver.service';
 import { CreateWorkflowDto } from '../dto/create-workflow.dto';
 import { UpdateWorkflowDto } from '../dto/update-workflow.dto';
 import { CreateStateDto } from '../dto/create-state.dto';
@@ -31,6 +32,7 @@ export class WorkflowsController {
   constructor(
     private readonly workflowRegistry: WorkflowRegistryService,
     private readonly workflowEngine: WorkflowEngineService,
+    private readonly pipelineResolver: PipelineResolverService,
     private readonly database: DatabaseService,
   ) {}
 
@@ -76,6 +78,21 @@ export class WorkflowsController {
   @ApiOperation({ summary: 'Soft delete a workflow definition' })
   async delete(@Param('id', ParseUUIDPipe) id: string) {
     await this.workflowRegistry.deleteDefinition(id);
+  }
+
+  // --- Entity Pipeline Resolution ---
+
+  @Get('for-entity/:entityType/:entityId/:fieldName')
+  @RequirePermission(WORKFLOWS_PERMISSIONS.READ)
+  @ApiOperation({ summary: 'Get the resolved workflow for a specific entity record' })
+  async getWorkflowForEntity(
+    @Param('entityType') entityType: string,
+    @Param('entityId') entityId: string,
+    @Param('fieldName') fieldName: string,
+  ) {
+    const workflow = await this.pipelineResolver.resolveForTransition(entityType, entityId, fieldName);
+    if (!workflow) throw new NotFoundException(`No workflow found for ${entityType}/${entityId}/${fieldName}`);
+    return workflow;
   }
 
   // --- Transition History ---
