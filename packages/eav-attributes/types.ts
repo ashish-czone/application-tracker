@@ -23,8 +23,9 @@ export type FieldType =
   | 'rich_text'
   | 'workflow';
 
-/** Field types that bypass the standard EAV pipeline (use join tables, external storage, or special handling) */
-export const RELATIONAL_FIELD_TYPES = new Set<FieldType>(['tags', 'category', 'multi_user', 'multi_lookup']);
+/** Field types that bypass the standard EAV pipeline (use join tables or special handling).
+ *  Note: 'category' is NOT included — it stores a UUID in the standard/EAV column like a lookup. */
+export const RELATIONAL_FIELD_TYPES = new Set<FieldType>(['tags', 'multi_user', 'multi_lookup']);
 
 /** Maps field types to EAV value columns */
 export type EavValueColumn = 'valueText' | 'valueNumber' | 'valueDate' | 'valueDatetime' | 'valueBoolean';
