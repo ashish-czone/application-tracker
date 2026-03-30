@@ -53,7 +53,7 @@ const SAMPLE_JOB_OPENINGS = [
     title: 'Backend Engineer Intern',
     department: 'Engineering',
     location: 'San Francisco, CA',
-    employmentType: 'internship',
+    employmentType: 'training',
     experience: 'fresher',
     salary: '$40,000 - $60,000',
     industry: 'technology',
