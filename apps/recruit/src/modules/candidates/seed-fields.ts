@@ -1,7 +1,8 @@
 import { getTableColumns } from 'drizzle-orm';
 import { candidates } from './schema/candidates';
 import { CANDIDATE_FIELD_META, SKIP_FIELDS, CANDIDATE_SECTIONS } from './field-meta';
-import type { FieldDefinitionService, LayoutService, FieldType } from '@packages/eav-attributes';
+import type { FieldDefinitionService, FieldType } from '@packages/entity-engine';
+import type { LayoutService } from '@packages/entity-layout';
 
 /** Map Drizzle column dataType to EAV FieldType */
 function mapDrizzleType(dataType: string): FieldType {

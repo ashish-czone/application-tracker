@@ -1,6 +1,6 @@
 import { Controller, Get, Param } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiParam } from '@nestjs/swagger';
-import { FieldDefinitionService } from '@packages/eav-attributes';
+import { FieldDefinitionService } from '@packages/entity-engine';
 
 @ApiTags('entities')
 @Controller('entities')

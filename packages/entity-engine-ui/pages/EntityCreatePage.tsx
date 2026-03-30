@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowLeft, Check } from 'lucide-react';
 import { Form, Button } from '@packages/ui';
 import { DynamicField, buildFormSchema } from '@packages/eav-attributes-ui';
-import type { LayoutSection, FullLayoutField } from '@packages/eav-attributes';
+import type { LayoutSection, FullLayoutField } from '@packages/entity-engine/types';
 import { useEntityEngine, useEntityHooks, useEntityConfig } from '../EntityEngineProvider';
 import { useEntityLayout } from '../helpers/useEntityLayout';
 

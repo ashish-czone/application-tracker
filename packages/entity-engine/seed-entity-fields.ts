@@ -1,5 +1,7 @@
 import { getTableColumns } from 'drizzle-orm';
-import type { FieldDefinitionService, LayoutService, FieldType, RegisterFieldInput } from '@packages/eav-attributes';
+import type { FieldDefinitionService } from './services/field-definition.service';
+import type { LayoutService } from '@packages/entity-layout';
+import type { FieldType, RegisterFieldInput } from './types';
 import type { WorkflowRegistryService } from '@packages/workflows';
 import type { EntityConfig, WorkflowTargetDef } from './types';
 

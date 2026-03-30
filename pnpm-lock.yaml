@@ -786,6 +786,9 @@ importers:
       '@packages/eav-attributes':
         specifier: workspace:*
         version: link:../eav-attributes
+      '@packages/entity-layout':
+        specifier: workspace:*
+        version: link:../entity-layout
       '@packages/events':
         specifier: workspace:*
         version: link:../events
@@ -975,9 +978,9 @@ importers:
       '@packages/auth':
         specifier: workspace:*
         version: link:../auth
-      '@packages/eav-attributes':
+      '@packages/entity-engine':
         specifier: workspace:*
-        version: link:../eav-attributes
+        version: link:../entity-engine
       '@packages/logger':
         specifier: workspace:*
         version: link:../logger

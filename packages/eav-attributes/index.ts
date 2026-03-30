@@ -1,10 +1,21 @@
-export { EavAttributesModule } from './eav-attributes.module';
-export { EAV_PERMISSIONS } from './permissions';
-export { FieldDefinitionService } from './services/field-definition.service';
-export { LayoutService } from './services/layout.service';
-export { FieldValueService } from './services/field-value.service';
-export { LookupResolverService } from './services/lookup-resolver.service';
+// EAV Attributes — optional dynamic field storage extension
+// Core types, helpers, field definitions, and layout are in @packages/entity-engine and @packages/entity-layout
 
+export { EavAttributesModule } from './eav-attributes.module';
+export { FieldValueService } from './services/field-value.service';
+export { MultiValueService } from './services/multi-value.service';
+
+// EAV-specific schemas
+export { entityFieldValues } from './schema/entity-field-values';
+export { entityMultiValues } from './schema/entity-multi-values';
+
+// Re-exports for backward compatibility (canonical location is @packages/entity-engine)
+export { FieldDefinitionService } from './services/field-definition.service';
+export { LookupResolverService } from './services/lookup-resolver.service';
+export { LayoutService } from './services/layout.service';
+export { EAV_PERMISSIONS } from './permissions';
+
+// Re-export types (canonical location is @packages/entity-engine)
 export type {
   FieldType,
   EavValueColumn,
@@ -22,26 +33,20 @@ export type {
   RegisterFieldInput,
   SeedSectionInput,
   SetPicklistOptionInput,
+  FieldTypeRegistryEntry,
 } from './types';
 
 export { FIELD_TYPE_TO_VALUE_COLUMN, RELATIONAL_FIELD_TYPES, FIELD_TYPE_REGISTRY } from './types';
-export type { FieldTypeRegistryEntry } from './types';
 
+// Re-export helpers (canonical location is @packages/entity-engine)
 export { buildSnapshot, diffSnapshot } from './helpers/snapshot';
-
 export { validatePayload } from './helpers/validate-payload';
 export type { ValidationResult, ValidationError, ValidationOptions, FieldDefinitionWithOptions } from './helpers/validate-payload';
-
 export { splitPayload } from './helpers/split-payload';
 export type { SplitResult } from './helpers/split-payload';
 
-export {
-  fieldDefinitions,
-  picklistOptions,
-  layoutSections,
-  layoutFields,
-  entityFieldValues,
-  entityMultiValues,
-} from './schema';
-
-export { MultiValueService } from './services/multi-value.service';
+// Re-export schemas (canonical locations are @packages/entity-engine and @packages/entity-layout)
+export { fieldDefinitions } from './schema/field-definitions';
+export { picklistOptions } from './schema/picklist-options';
+export { layoutSections } from './schema/layout-sections';
+export { layoutFields } from './schema/layout-fields';
