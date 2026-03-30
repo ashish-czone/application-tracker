@@ -87,15 +87,36 @@ export function EntityDetailPage({ entityType, renderAuditTrail, renderPipelineP
     );
   }, [apiFn]);
 
+  // Cache: category group slug → group ID
+  const categoryGroupCache = useMemo(() => new Map<string, string>(), []);
+
+  const searchCategories = useCallback(async (groupSlug: string, query: string) => {
+    let groupId = categoryGroupCache.get(groupSlug);
+    if (!groupId) {
+      const groups = await apiFn.get<{ id: string; slug: string }[]>('/category-groups');
+      for (const g of groups) categoryGroupCache.set(g.slug, g.id);
+      groupId = categoryGroupCache.get(groupSlug);
+    }
+    if (!groupId) return [];
+    const tree = await apiFn.get<{ id: string; name: string }[]>(`/category-groups/${groupId}/tree`);
+    const lowerQuery = query.toLowerCase();
+    return tree
+      .filter(c => c.name.toLowerCase().includes(lowerQuery))
+      .map(c => ({ label: c.name, value: c.id }));
+  }, [apiFn, categoryGroupCache]);
+
   const getFieldSearchForSection = useCallback((fieldKey: string, fieldType: string) => {
     if (fieldType === 'user') return searchUsers;
     if (!layout) return undefined;
     for (const section of layout.sections) {
       const field = section.fields.find(f => f.fieldKey === fieldKey);
       if (field?.lookupEntity) return (query: string) => searchLookup(field.lookupEntity!, query);
+      if (fieldType === 'category' && field?.categoryGroupSlug) {
+        return (query: string) => searchCategories(field.categoryGroupSlug!, query);
+      }
     }
     return undefined;
-  }, [searchUsers, searchLookup, layout]);
+  }, [searchUsers, searchLookup, searchCategories, layout]);
 
   const getChipSearchForSection = useCallback((fieldKey: string, fieldType: string) => {
     if (fieldType === 'multi_user') return searchUsers;
