@@ -68,3 +68,17 @@ export type { SplitResult } from './helpers/split-payload';
 
 export { fieldDefinitions } from './schema/field-definitions';
 export { picklistOptions } from './schema/picklist-options';
+
+// --- Services moved from eav-attributes ---
+
+export { FieldDefinitionService } from './services/field-definition.service';
+export { LookupResolverService } from './services/lookup-resolver.service';
+
+// --- Controllers moved from eav-attributes ---
+
+export { FieldsController } from './controllers/fields.controller';
+export { LookupsController } from './controllers/lookups.controller';
+
+// --- Permissions ---
+
+export { EAV_PERMISSIONS } from './permissions';
