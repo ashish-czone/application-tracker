@@ -57,17 +57,24 @@ Every architectural decision should ask: "Would this work if someone is building
 
 ## Project Prompts
 
-This project has detailed architectural and coding prompts. **PROMPT.md is mandatory for every task** — it defines the modular architecture, dependency rules, event system, and database conventions that all code must follow.
+This project has architectural and coding prompts as deep-reference docs. The most critical rules are extracted into `.claude/rules/` (auto-loaded every conversation), so you do NOT need to read PROMPT files for routine changes.
 
-| Task | Always read | Also read |
-|---|---|---|
-| Backend module/feature | PROMPT.md | PROMPT-API.md, PROMPT-TESTING.md |
-| Frontend feature | PROMPT.md | PROMPT-UI.md, PROMPT-TESTING.md |
-| Full-stack feature | PROMPT.md | PROMPT-API.md, PROMPT-UI.md, PROMPT-TESTING.md |
-| Infrastructure/deployment | PROMPT.md | PROMPT-INFRA.md |
-| Tests only | PROMPT.md | PROMPT-TESTING.md |
+**Read PROMPT files when:**
+- Building a new module or package from scratch
+- Working on unfamiliar patterns (e.g., first time writing E2E tests, first infra change)
+- Unsure about a convention that isn't covered by the auto-loaded rules
 
-**Never write code without reading the relevant prompts first.** The prompts define architecture, conventions, data handling rules, and test patterns. Violating them creates inconsistency.
+**Skip PROMPT files when:**
+- Making routine changes to existing code (the existing code + auto-loaded rules are sufficient)
+- The rules files cover the relevant conventions
+
+| Task type | Read if unfamiliar |
+|---|---|
+| Backend module/feature | PROMPT.md, PROMPT-API.md, PROMPT-TESTING.md |
+| Frontend feature | PROMPT.md, PROMPT-UI.md, PROMPT-TESTING.md |
+| Full-stack feature | PROMPT.md, PROMPT-API.md, PROMPT-UI.md, PROMPT-TESTING.md |
+| Infrastructure/deployment | PROMPT-INFRA.md |
+| Auth changes | PROMPT-AUTH.md |
 
 ---
 
