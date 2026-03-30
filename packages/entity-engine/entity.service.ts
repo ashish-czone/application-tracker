@@ -16,18 +16,14 @@ import {
 import { DatabaseService } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
-import {
-  FieldValueService,
-  FieldDefinitionService,
-  LookupResolverService,
-  MultiValueService,
-  RELATIONAL_FIELD_TYPES,
-  buildSnapshot,
-  diffSnapshot,
-  validatePayload,
-  splitPayload,
-} from '@packages/eav-attributes';
-import type { FieldDefinition } from '@packages/eav-attributes';
+import { FieldValueService, MultiValueService } from '@packages/eav-attributes';
+import { FieldDefinitionService } from './services/field-definition.service';
+import { LookupResolverService } from './services/lookup-resolver.service';
+import { RELATIONAL_FIELD_TYPES } from './types';
+import type { FieldDefinition } from './types';
+import { buildSnapshot, diffSnapshot } from './helpers/snapshot';
+import { validatePayload } from './helpers/validate-payload';
+import { splitPayload } from './helpers/split-payload';
 import { TaxonomyService, type TagWithGroup } from '@packages/taxonomy';
 import { MediaService, type MediaFile } from '@packages/media';
 import { WorkflowEngineService, WorkflowRegistryService, PipelineResolverService } from '@packages/workflows';

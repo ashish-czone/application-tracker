@@ -1,4 +1,4 @@
-import type { FieldType } from '@packages/eav-attributes';
+import type { FieldType } from '@packages/entity-engine';
 
 /**
  * Presentation metadata matching Zoho Recruit Candidates standard fields.

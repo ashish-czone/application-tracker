@@ -11,7 +11,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiConsumes } from '@nestjs/swagger';
 import { CurrentUser, type JwtPayload } from '@packages/auth';
-import { FieldDefinitionService } from '@packages/eav-attributes';
+import { FieldDefinitionService } from '@packages/entity-engine';
 import { MediaService } from '../services/media.service';
 import type { MediaFile } from '../types';
 

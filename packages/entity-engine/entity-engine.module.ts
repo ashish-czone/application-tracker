@@ -1,10 +1,13 @@
-import { Module, Global, type DynamicModule, type OnModuleInit, Logger, Inject, type OnApplicationBootstrap } from '@nestjs/common';
+import { Module, Global, type DynamicModule, type OnModuleInit, Logger, type OnApplicationBootstrap } from '@nestjs/common';
 import { DatabaseService } from '@packages/database';
 import { DomainEventEmitter, EventRegistryService } from '@packages/events';
 import { RbacService, FIELD_PERMISSION_ENTITY_RESOLVER, FieldPermissionsController } from '@packages/rbac';
 import type { FieldPermissionEntityResolver } from '@packages/rbac';
 import { AuditRegistryService } from '@packages/audit';
-import { FieldValueService, FieldDefinitionService, LayoutService, LookupResolverService, MultiValueService } from '@packages/eav-attributes';
+import { FieldValueService, MultiValueService } from '@packages/eav-attributes';
+import { LayoutService } from '@packages/entity-layout';
+import { FieldDefinitionService } from './services/field-definition.service';
+import { LookupResolverService } from './services/lookup-resolver.service';
 import { EntityResolverRegistry } from '@packages/notifications';
 import { TaxonomyService } from '@packages/taxonomy';
 import { MediaService } from '@packages/media';
@@ -13,6 +16,8 @@ import { AppLoggerService } from '@packages/logger';
 import { EntityRegistryService } from './entity-registry.service';
 import { EntityService } from './entity.service';
 import { EntityEngineApiController } from './entity-engine-api.controller';
+import { FieldsController } from './controllers/fields.controller';
+import { LookupsController } from './controllers/lookups.controller';
 import { createEntityController } from './create-entity-controller';
 import { seedEntityFields, seedWorkflows } from './seed-entity-fields';
 import type { EntityConfig } from './types';
@@ -35,9 +40,11 @@ const pendingConfigs: EntityConfig[] = [];
  */
 @Global()
 @Module({
-  controllers: [EntityEngineApiController, FieldPermissionsController],
+  controllers: [EntityEngineApiController, FieldPermissionsController, FieldsController, LookupsController],
   providers: [
     EntityRegistryService,
+    FieldDefinitionService,
+    LookupResolverService,
     {
       provide: FIELD_PERMISSION_ENTITY_RESOLVER,
       useFactory: (registry: EntityRegistryService): FieldPermissionEntityResolver => ({
@@ -54,9 +61,9 @@ const pendingConfigs: EntityConfig[] = [];
       useExisting: FieldDefinitionService,
     },
   ],
-  exports: [EntityRegistryService, FIELD_PERMISSION_ENTITY_RESOLVER, 'FIELD_DEFINITION_SERVICE'],
+  exports: [EntityRegistryService, FieldDefinitionService, LookupResolverService, FIELD_PERMISSION_ENTITY_RESOLVER, 'FIELD_DEFINITION_SERVICE'],
 })
-export class EntityEngineModule implements OnApplicationBootstrap {
+export class EntityEngineModule implements OnModuleInit, OnApplicationBootstrap {
   private readonly logger = new Logger('EntityEngineModule');
 
   constructor(
@@ -108,6 +115,13 @@ export class EntityEngineModule implements OnApplicationBootstrap {
       ],
       exports: [serviceToken],
     };
+  }
+
+  onModuleInit() {
+    this.rbac.registerPermissions('eav', [
+      { action: 'read', description: 'View field definitions and layouts' },
+      { action: 'manage', description: 'Create/update/delete custom fields and layouts' },
+    ]);
   }
 
   async onApplicationBootstrap(): Promise<void> {

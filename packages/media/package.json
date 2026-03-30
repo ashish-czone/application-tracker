@@ -11,7 +11,7 @@
     "@nestjs/platform-express": "^11.0.0",
     "@nestjs/swagger": "^11.0.0",
     "@packages/auth": "workspace:*",
-    "@packages/eav-attributes": "workspace:*",
+    "@packages/entity-engine": "workspace:*",
     "@packages/logger": "workspace:*"
   },
   "peerDependencies": {

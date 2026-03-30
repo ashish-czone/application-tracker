@@ -4,14 +4,14 @@ import { DomainEventEmitter } from '@packages/events';
 import { type MediaFile } from '@packages/media';
 import { TaxonomyService } from '@packages/taxonomy';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
+import { FieldValueService } from '@packages/eav-attributes';
 import {
-  FieldValueService,
   FieldDefinitionService,
   buildSnapshot,
   diffSnapshot,
   validatePayload,
   splitPayload,
-} from '@packages/eav-attributes';
+} from '@packages/entity-engine';
 import type { PaginatedResponse } from '@packages/common';
 import { candidates } from '../schema/candidates';
 import {
