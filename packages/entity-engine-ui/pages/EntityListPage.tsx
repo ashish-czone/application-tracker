@@ -372,9 +372,21 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-lg font-semibold text-foreground">{entity.pluralName}</h1>
-        <p className="text-sm text-muted-foreground">Manage {entity.pluralName.toLowerCase()}</p>
+      <div className="mb-6 flex items-start justify-between">
+        <div>
+          <h1 className="text-lg font-semibold text-foreground">{entity.pluralName}</h1>
+          <p className="text-sm text-muted-foreground">Manage {entity.pluralName.toLowerCase()}</p>
+        </div>
+        <Button size="sm" onClick={() => {
+          if (entity.ui.createMode === 'page' || entity.ui.createMode === 'wizard') {
+            navigate(`/${entity.slug}/new`);
+          } else {
+            setAddModalOpen(true);
+          }
+        }}>
+          <Plus className="h-4 w-4 mr-1" />
+          Add {entity.singularName}
+        </Button>
       </div>
 
       {/* View Toggle + Board GroupBy */}
@@ -457,31 +469,17 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
         storageKey={`${entity.slug}-list`}
         defaultColumnVisibility={defaultColumnVisibility}
         rowClassName={(row) => (row as Row).deletedAt ? 'bg-muted/30 text-muted-foreground' : undefined}
-        toolbarActions={
-          <div className="flex items-center gap-2">
-            {entity.features.softDelete && (
-              <label className="flex items-center gap-1.5 text-sm text-muted-foreground cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={showDeleted}
-                  onChange={(e) => setShowDeleted(e.target.checked)}
-                  className="rounded border-input"
-                />
-                Include deleted
-              </label>
-            )}
-            <Button size="sm" onClick={() => {
-              if (entity.ui.createMode === 'page' || entity.ui.createMode === 'wizard') {
-                navigate(`/${entity.slug}/new`);
-              } else {
-                setAddModalOpen(true);
-              }
-            }}>
-              <Plus className="h-4 w-4 mr-1" />
-              Add {entity.singularName}
-            </Button>
-          </div>
-        }
+        toolbarActions={entity.features.softDelete ? (
+          <label className="flex items-center gap-1.5 text-sm text-muted-foreground cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={showDeleted}
+              onChange={(e) => setShowDeleted(e.target.checked)}
+              className="rounded border-input"
+            />
+            Include deleted
+          </label>
+        ) : undefined}
       />
       )}
 
