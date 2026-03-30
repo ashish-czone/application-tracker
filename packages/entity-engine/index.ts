@@ -63,3 +63,8 @@ export type { ValidationResult, ValidationError, ValidationOptions, FieldDefinit
 
 export { splitPayload } from './helpers/split-payload';
 export type { SplitResult } from './helpers/split-payload';
+
+// --- Schemas moved from eav-attributes ---
+
+export { fieldDefinitions } from './schema/field-definitions';
+export { picklistOptions } from './schema/picklist-options';
