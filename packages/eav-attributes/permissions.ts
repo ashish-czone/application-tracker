@@ -1,4 +1,2 @@
-export const EAV_PERMISSIONS = {
-  MANAGE: 'eav.manage',
-  READ: 'eav.read',
-} as const;
+// Re-export from entity-engine (canonical location)
+export { EAV_PERMISSIONS } from '@packages/entity-engine/permissions';

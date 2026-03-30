@@ -199,11 +199,13 @@ describe('FieldDefinitionService', () => {
       await expect(service.delete('fd1')).rejects.toThrow(BadRequestException);
     });
 
-    it('should throw ConflictException when field has values', async () => {
+    it('should throw ConflictException when a registered delete check fails', async () => {
       const field = makeFieldDef({ isCustom: true });
       vi.spyOn(service, 'findById').mockResolvedValueOnce(field as any);
-      // count query returns values exist
-      mockDb._chain.where.mockResolvedValueOnce([{ total: 5 }]);
+      // Register a delete check that throws (simulates EAV checking for existing values)
+      service.registerDeleteCheck(async () => {
+        throw new ConflictException('Cannot delete field: entities have values');
+      });
 
       await expect(service.delete('fd1')).rejects.toThrow(ConflictException);
     });
