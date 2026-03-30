@@ -82,3 +82,11 @@ export { LookupsController } from './controllers/lookups.controller';
 // --- Permissions ---
 
 export { EAV_PERMISSIONS } from './permissions';
+
+// --- Extension interfaces ---
+
+export type { EavStorageExtension } from './extensions/eav-storage.interface';
+export { EAV_STORAGE_EXTENSION } from './extensions/eav-storage.interface';
+
+export type { LayoutExtension } from './extensions/layout-extension.interface';
+export { LAYOUT_EXTENSION } from './extensions/layout-extension.interface';

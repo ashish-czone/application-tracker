@@ -1,13 +1,9 @@
-import { Module, Global, type DynamicModule, type OnModuleInit, Logger, type OnApplicationBootstrap } from '@nestjs/common';
+import { Module, Global, type DynamicModule, type OnModuleInit, Logger, Inject, Optional, type OnApplicationBootstrap } from '@nestjs/common';
 import { DatabaseService } from '@packages/database';
 import { DomainEventEmitter, EventRegistryService } from '@packages/events';
 import { RbacService, FIELD_PERMISSION_ENTITY_RESOLVER, FieldPermissionsController } from '@packages/rbac';
 import type { FieldPermissionEntityResolver } from '@packages/rbac';
 import { AuditRegistryService } from '@packages/audit';
-import { FieldValueService, MultiValueService } from '@packages/eav-attributes';
-import { LayoutService } from '@packages/entity-layout';
-import { FieldDefinitionService } from './services/field-definition.service';
-import { LookupResolverService } from './services/lookup-resolver.service';
 import { EntityResolverRegistry } from '@packages/notifications';
 import { TaxonomyService } from '@packages/taxonomy';
 import { MediaService } from '@packages/media';
@@ -18,8 +14,12 @@ import { EntityService } from './entity.service';
 import { EntityEngineApiController } from './entity-engine-api.controller';
 import { FieldsController } from './controllers/fields.controller';
 import { LookupsController } from './controllers/lookups.controller';
+import { FieldDefinitionService } from './services/field-definition.service';
+import { LookupResolverService } from './services/lookup-resolver.service';
 import { createEntityController } from './create-entity-controller';
 import { seedEntityFields, seedWorkflows } from './seed-entity-fields';
+import { EAV_STORAGE_EXTENSION, type EavStorageExtension } from './extensions/eav-storage.interface';
+import { LAYOUT_EXTENSION, type LayoutExtension } from './extensions/layout-extension.interface';
 import type { EntityConfig } from './types';
 
 // Collect configs that need initialization — populated by forEntity(), consumed by EntityEngineModule.onModuleInit()
@@ -28,12 +28,18 @@ const pendingConfigs: EntityConfig[] = [];
 /**
  * Core entity engine module.
  *
+ * Works standalone for schema-column CRUD. Optional extensions:
+ * - EavAttributesModule → provides EAV_STORAGE_EXTENSION for dynamic field storage
+ * - EntityLayoutModule → provides LAYOUT_EXTENSION for DB-driven layout customization
+ *
  * Usage:
  * ```
  * @Module({
  *   imports: [
  *     EntityEngineModule,                               // once in root
  *     EntityEngineModule.forEntity(candidatesConfig),     // per entity
+ *     EavAttributesModule,                               // optional: dynamic fields
+ *     EntityLayoutModule,                                // optional: layout customization
  *   ],
  * })
  * ```
@@ -45,6 +51,9 @@ const pendingConfigs: EntityConfig[] = [];
     EntityRegistryService,
     FieldDefinitionService,
     LookupResolverService,
+    // Default null providers for optional extensions — overridden when extension modules are imported
+    { provide: EAV_STORAGE_EXTENSION, useValue: null },
+    { provide: LAYOUT_EXTENSION, useValue: null },
     {
       provide: FIELD_PERMISSION_ENTITY_RESOLVER,
       useFactory: (registry: EntityRegistryService): FieldPermissionEntityResolver => ({
@@ -61,7 +70,7 @@ const pendingConfigs: EntityConfig[] = [];
       useExisting: FieldDefinitionService,
     },
   ],
-  exports: [EntityRegistryService, FieldDefinitionService, LookupResolverService, FIELD_PERMISSION_ENTITY_RESOLVER, 'FIELD_DEFINITION_SERVICE'],
+  exports: [EntityRegistryService, FieldDefinitionService, LookupResolverService, EAV_STORAGE_EXTENSION, LAYOUT_EXTENSION, FIELD_PERMISSION_ENTITY_RESOLVER, 'FIELD_DEFINITION_SERVICE'],
 })
 export class EntityEngineModule implements OnModuleInit, OnApplicationBootstrap {
   private readonly logger = new Logger('EntityEngineModule');
@@ -74,7 +83,7 @@ export class EntityEngineModule implements OnModuleInit, OnApplicationBootstrap 
     private readonly lookupResolver: LookupResolverService,
     private readonly entityResolver: EntityResolverRegistry,
     private readonly fieldDefService: FieldDefinitionService,
-    private readonly layoutService: LayoutService,
+    @Inject(LAYOUT_EXTENSION) @Optional() private readonly layoutExtension: LayoutExtension | null,
     private readonly workflowRegistry: WorkflowRegistryService,
     private readonly workflowGuardRegistry: WorkflowGuardRegistry,
   ) {}
@@ -98,19 +107,18 @@ export class EntityEngineModule implements OnModuleInit, OnApplicationBootstrap 
           useFactory: (
             database: DatabaseService,
             domainEventEmitter: DomainEventEmitter,
-            fieldValueService: FieldValueService,
+            eavStorage: EavStorageExtension | null,
             fieldDefinitionService: FieldDefinitionService,
             lookupResolver: LookupResolverService,
             taxonomyService: TaxonomyService,
-            multiValueService: MultiValueService,
             mediaService: MediaService,
             workflowEngine: WorkflowEngineService,
             workflowRegistry: WorkflowRegistryService,
             pipelineResolver: PipelineResolverService,
             entityRegistry: EntityRegistryService,
             appLogger: AppLoggerService,
-          ) => new EntityService(config, database, domainEventEmitter, fieldValueService, fieldDefinitionService, lookupResolver, taxonomyService, multiValueService, mediaService, workflowEngine, workflowRegistry, pipelineResolver, entityRegistry, appLogger),
-          inject: [DatabaseService, DomainEventEmitter, FieldValueService, FieldDefinitionService, LookupResolverService, TaxonomyService, MultiValueService, MediaService, WorkflowEngineService, WorkflowRegistryService, PipelineResolverService, EntityRegistryService, AppLoggerService],
+          ) => new EntityService(config, database, domainEventEmitter, eavStorage, fieldDefinitionService, lookupResolver, taxonomyService, mediaService, workflowEngine, workflowRegistry, pipelineResolver, entityRegistry, appLogger),
+          inject: [DatabaseService, DomainEventEmitter, EAV_STORAGE_EXTENSION, FieldDefinitionService, LookupResolverService, TaxonomyService, MediaService, WorkflowEngineService, WorkflowRegistryService, PipelineResolverService, EntityRegistryService, AppLoggerService],
         },
       ],
       exports: [serviceToken],
@@ -214,9 +222,9 @@ export class EntityEngineModule implements OnModuleInit, OnApplicationBootstrap 
       });
     }
 
-    // 7. Seed fields + layout
+    // 7. Seed fields
     try {
-      await seedEntityFields(config, this.fieldDefService, this.layoutService);
+      await seedEntityFields(config, this.fieldDefService, this.layoutExtension);
     } catch (error) {
       this.logger.warn(`Failed to seed fields for ${config.entityType}: ${(error as Error).message}`);
     }

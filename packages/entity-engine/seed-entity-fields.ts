@@ -1,6 +1,6 @@
 import { getTableColumns } from 'drizzle-orm';
 import type { FieldDefinitionService } from './services/field-definition.service';
-import type { LayoutService } from '@packages/entity-layout';
+import type { LayoutExtension } from './extensions/layout-extension.interface';
 import type { FieldType, RegisterFieldInput } from './types';
 import type { WorkflowRegistryService } from '@packages/workflows';
 import type { EntityConfig, WorkflowTargetDef } from './types';
@@ -31,7 +31,7 @@ function mapDrizzleType(dataType: string): FieldType {
 export async function seedEntityFields(
   config: EntityConfig,
   fieldDefinitionService: FieldDefinitionService,
-  layoutService: LayoutService,
+  layoutExtension: LayoutExtension | null,
 ): Promise<void> {
   const skipSet = new Set(config.systemColumns);
   const columns = getTableColumns(config.table);
@@ -87,9 +87,9 @@ export async function seedEntityFields(
     }
   }
 
-  // Seed default layout sections
-  if (config.sections.length > 0) {
-    await layoutService.seedDefaultLayout(config.entityType, config.sections);
+  // Seed default layout sections (only if layout extension is available)
+  if (layoutExtension && config.sections.length > 0) {
+    await layoutExtension.seedDefaultLayout(config.entityType, config.sections);
   }
 }
 
