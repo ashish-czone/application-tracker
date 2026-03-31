@@ -65,13 +65,18 @@ async function bootstrap() {
     const bullBoardBasePath = '/admin/queues';
 
     const bullBoardAuth = (req: Request, res: Response, next: NextFunction) => {
+      // Accept token from Authorization header or bull_board_token cookie (for iframe/browser access)
       const authHeader = req.headers.authorization;
-      if (!authHeader?.startsWith('Bearer ')) {
+      const token = authHeader?.startsWith('Bearer ')
+        ? authHeader.slice(7)
+        : req.cookies?.bull_board_token;
+
+      if (!token) {
         res.status(401).json({ message: 'Unauthorized' });
         return;
       }
       try {
-        const payload = authService.verifyAccessToken(authHeader.slice(7));
+        const payload = authService.verifyAccessToken(token);
         const permissions = (payload as Record<string, unknown>).permissions as Record<string, unknown> | undefined;
         if (!permissions || !('*' in permissions)) {
           res.status(403).json({ message: 'Forbidden — admin access required' });

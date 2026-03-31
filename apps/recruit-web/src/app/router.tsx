@@ -12,7 +12,7 @@ import {
   useWorkflows,
   useEntityTransition,
 } from '@packages/platform-ui/workflows';
-import { SettingsPage, AppSettingsPage, AutomationsPage, RuleBuilderPage, UsersListPage, RolesListPage, TagGroupsListPage, CategoryGroupsListPage } from '../portals/recruiter/routes';
+import { SettingsPage, AppSettingsPage, AutomationsPage, RuleBuilderPage, UsersListPage, RolesListPage, TagGroupsListPage, CategoryGroupsListPage, QueuedTasksPage } from '../portals/recruiter/routes';
 
 function renderAuditTrail(entityType: string, entityId: string) {
   return <AuditTimeline entityType={entityType} entityId={entityId} />;
@@ -238,6 +238,10 @@ export function AppRouter() {
           <Route
             path="/app-settings"
             element={<Suspense fallback={<PageSkeleton />}><AppSettingsPage /></Suspense>}
+          />
+          <Route
+            path="/queued-tasks"
+            element={<Suspense fallback={<PageSkeleton />}><QueuedTasksPage /></Suspense>}
           />
           <Route
             path="/automations"

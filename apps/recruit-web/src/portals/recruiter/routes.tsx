@@ -13,3 +13,7 @@ export { TagGroupsListPage, CategoryGroupsListPage, RolesListPage, AutomationsPa
 export const SettingsPage = lazy(
   () => import('./features/settings/pages/SettingsPage'),
 );
+
+export const QueuedTasksPage = lazy(
+  () => import('./features/queued-tasks/QueuedTasksPage').then((m) => ({ default: m.QueuedTasksPage })),
+);
