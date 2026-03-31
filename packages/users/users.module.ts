@@ -4,6 +4,7 @@ import { EventRegistryService } from '@packages/events';
 import { DatabaseService, users, isNull } from '@packages/database';
 import { ContactResolverRegistry } from '@packages/notifications';
 import { AuditRegistryService } from '@packages/audit';
+import { LookupResolverService } from '@packages/eav-attributes';
 import { UsersController } from './controllers/users.controller';
 import { UsersService } from './services/users.service';
 import { USERS_PERMISSIONS } from './permissions';
@@ -28,6 +29,7 @@ export class UsersModule implements OnModuleInit {
     private readonly contactResolverRegistry: ContactResolverRegistry,
     private readonly usersService: UsersService,
     private readonly auditRegistry: AuditRegistryService,
+    private readonly lookupResolver: LookupResolverService,
     @Optional() @Inject('UniqueCheckService') private readonly uniqueCheckService?: any,
   ) {}
 
@@ -35,6 +37,16 @@ export class UsersModule implements OnModuleInit {
     // Register contact resolvers for notification channels
     this.contactResolverRegistry.register('email', (userId) => this.usersService.getEmail(userId));
     this.contactResolverRegistry.register('whatsapp', (userId) => this.usersService.getPhone(userId));
+
+    // Register users as a lookup entity for user/multi_user field filters
+    this.lookupResolver.register({
+      entity: 'users',
+      table: users,
+      labelField: 'firstName',
+      labelFields: ['firstName', 'lastName'],
+      valueField: 'id',
+      searchFields: ['firstName', 'lastName', 'email'],
+    });
 
     // Register unique fields if UniqueCheckService is available (provided by app SharedModule)
     if (this.uniqueCheckService) {

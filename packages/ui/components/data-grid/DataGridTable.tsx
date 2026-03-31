@@ -49,8 +49,8 @@ export function DataGridTable<TData>({
   };
 
   return (
-    <div className="rounded-md border overflow-hidden">
-      <table className="w-full caption-bottom text-sm">
+    <div className="rounded-md border overflow-x-auto">
+      <table className="w-full min-w-max caption-bottom text-sm">
         <thead className="bg-muted/50">
           {table.getHeaderGroups().map((headerGroup) => (
             <tr key={headerGroup.id} className="border-b">

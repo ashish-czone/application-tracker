@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { DatabaseService, eq, or, ilike, inArray } from '@packages/database';
+import { DatabaseService, eq, or, ilike, inArray, sql } from '@packages/database';
 import { AppLoggerService, ContextLogger } from '@packages/logger';
 import type { LookupConfig, LookupResult } from '../types';
 
@@ -57,7 +57,7 @@ export class LookupResolverService {
       return [];
     }
 
-    const { table, labelField, valueField, searchFields } = config;
+    const { table, labelField, labelFields, valueField, searchFields } = config;
 
     // Build search conditions across all search fields
     const searchConditions = searchFields
@@ -70,9 +70,14 @@ export class LookupResolverService {
 
     if (searchConditions.length === 0) return [];
 
+    // Build label select: composite (concat with space) or single field
+    const labelSelect = labelFields && labelFields.length > 1
+      ? sql.join(labelFields.map(f => table[f]), sql` || ' ' || `)
+      : table[labelField];
+
     const rows = await this.database.db
       .select({
-        label: table[labelField],
+        label: labelSelect,
         value: table[valueField],
       })
       .from(table)
@@ -92,10 +97,14 @@ export class LookupResolverService {
     const config = this.registry.get(entity);
     if (!config) return null;
 
-    const { table, labelField, valueField } = config;
+    const { table, labelField, labelFields, valueField } = config;
+
+    const labelSelect = labelFields && labelFields.length > 1
+      ? sql.join(labelFields.map(f => table[f]), sql` || ' ' || `)
+      : table[labelField];
 
     const [row] = await this.database.db
-      .select({ label: table[labelField] })
+      .select({ label: labelSelect })
       .from(table)
       .where(eq(table[valueField], value))
       .limit(1);
@@ -111,11 +120,15 @@ export class LookupResolverService {
     const config = this.registry.get(entity);
     if (!config || values.length === 0) return new Map();
 
-    const { table, labelField, valueField } = config;
+    const { table, labelField, labelFields, valueField } = config;
+
+    const labelSelect = labelFields && labelFields.length > 1
+      ? sql.join(labelFields.map(f => table[f]), sql` || ' ' || `)
+      : table[labelField];
 
     const rows = await this.database.db
       .select({
-        label: table[labelField],
+        label: labelSelect,
         value: table[valueField],
       })
       .from(table)
