@@ -40,19 +40,21 @@ export function WorkflowTransitionButton({
   // Primary action: first forward transition, or first sideways if no forward
   const primary = forward[0] ?? sideways[0];
 
+  const displayLabel = (t: ClientAvailableTransition) => `Move to ${t.toState.label}`;
+
   const handlePrimaryClick = () => {
-    onTransitionSelect(primary.toState.name, primary.transition.name, primary.toState.label);
+    onTransitionSelect(primary.toState.name, displayLabel(primary), primary.toState.label);
   };
 
   const handleItemClick = (t: ClientAvailableTransition) => {
-    onTransitionSelect(t.toState.name, t.transition.name, t.toState.label);
+    onTransitionSelect(t.toState.name, displayLabel(t), t.toState.label);
   };
 
   // Single transition: just a regular button, no dropdown
   if (available.length === 1) {
     return (
       <Button size="sm" onClick={handlePrimaryClick}>
-        {primary.transition.name}
+        {displayLabel(primary)}
       </Button>
     );
   }
@@ -65,7 +67,7 @@ export function WorkflowTransitionButton({
         className="rounded-r-none border-r border-r-primary-foreground/30"
         onClick={handlePrimaryClick}
       >
-        {primary.transition.name}
+        {displayLabel(primary)}
       </Button>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -76,15 +78,13 @@ export function WorkflowTransitionButton({
         <DropdownMenuContent align="end">
           {forward.map((t) => (
             <DropdownMenuItem key={t.transition.id} onClick={() => handleItemClick(t)}>
-              {t.transition.name}
-              <span className="ml-2 text-muted-foreground text-xs">{t.toState.label}</span>
+              {displayLabel(t)}
             </DropdownMenuItem>
           ))}
           {forward.length > 0 && sideways.length > 0 && <DropdownMenuSeparator />}
           {sideways.map((t) => (
             <DropdownMenuItem key={t.transition.id} onClick={() => handleItemClick(t)}>
-              {t.transition.name}
-              <span className="ml-2 text-muted-foreground text-xs">{t.toState.label}</span>
+              {displayLabel(t)}
             </DropdownMenuItem>
           ))}
         </DropdownMenuContent>
