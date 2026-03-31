@@ -223,35 +223,7 @@ function lookupCell(value: unknown, row: Record<string, unknown>, props: FieldRe
   return label != null ? String(label) : (value ? String(value) : '-');
 }
 
-function MultiLookupForm(props: FieldRenderProps) {
-  return (
-    <FormChipInput
-      name={props.field.fieldKey}
-      label={fieldLabel(props)}
-      options={props.onChipSearch ? undefined : props.chipOptions}
-      onSearch={props.onChipSearch}
-      initialSelected={props.onChipSearch ? props.chipOptions : undefined}
-      placeholder={`Search and add ${props.field.label.toLowerCase()}...`}
-      disabled={props.field.isReadonly}
-    />
-  );
-}
-
-function multiLookupView(value: unknown): React.ReactNode {
-  const items = Array.isArray(value) ? value : [];
-  if (items.length === 0) return <span className="text-sm text-muted-foreground">-</span>;
-  return (
-    <span className="text-sm text-foreground">
-      {items.map((v: { id: string; label: string }) => v.label).join(', ')}
-    </span>
-  );
-}
-
-function multiLookupCell(value: unknown): string {
-  const items = Array.isArray(value) ? value : [];
-  if (items.length === 0) return '-';
-  return items.map((v: { id: string; label: string }) => v.label).join(', ');
-}
+// multi_lookup and multi_user UI components are in @packages/entity-relations-ui
 
 // ---------------------------------------------------------------------------
 // Taxonomy family (tags, category)
@@ -370,11 +342,9 @@ const definitions: FieldTypeUIDefinition[] = [
   { type: 'picklist',     FormComponent: PicklistForm,     ViewComponent: picklistView,     CellFormatter: picklistCell,     zodSchema: zodSchemas.uuidSchema },
   { type: 'multi_select', FormComponent: PicklistForm,     ViewComponent: multiSelectView,  CellFormatter: multiSelectCell,  zodSchema: zodSchemas.arraySchema },
 
-  // Reference family
+  // Reference family (multi_lookup + multi_user are registered by @packages/entity-relations-ui)
   { type: 'lookup',       FormComponent: LookupForm,       ViewComponent: lookupView,       CellFormatter: lookupCell,       zodSchema: zodSchemas.uuidSchema },
-  { type: 'multi_lookup', FormComponent: MultiLookupForm,  ViewComponent: multiLookupView,  CellFormatter: multiLookupCell,  zodSchema: zodSchemas.arraySchema },
   { type: 'user',         FormComponent: LookupForm,       ViewComponent: lookupView,       CellFormatter: lookupCell,       zodSchema: zodSchemas.uuidSchema },
-  { type: 'multi_user',   FormComponent: MultiLookupForm,  ViewComponent: multiLookupView,  CellFormatter: multiLookupCell,  zodSchema: zodSchemas.arraySchema },
 
   // Taxonomy family
   { type: 'tags',         FormComponent: TagsForm,         ViewComponent: tagsView,         CellFormatter: tagsCell,         zodSchema: zodSchemas.arraySchema },
