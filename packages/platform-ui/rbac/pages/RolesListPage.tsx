@@ -4,7 +4,7 @@ import { format } from 'date-fns';
 import {
   DataGrid, Badge, Button, useDataGridParams,
   Dialog, DialogContent,
-  type ColumnDef, type DataGridFilter,
+  type ColumnDef, type DataGridFilterField,
 } from '@packages/ui';
 import { useRolesList } from '../hooks';
 import { AddRoleForm } from '../components/AddRoleForm';
@@ -18,6 +18,18 @@ const USER_TYPE_LABELS: Record<string, string> = {
   client: 'Client',
 };
 
+const ROLE_FILTER_FIELDS: DataGridFilterField[] = [
+  {
+    key: 'userType',
+    label: 'User Type',
+    fieldType: 'picklist',
+    options: [
+      { label: 'Admin', value: 'admin' },
+      { label: 'Client', value: 'client' },
+    ],
+  },
+];
+
 export function RolesListPage() {
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
@@ -25,21 +37,17 @@ export function RolesListPage() {
   const [permissionsRole, setPermissionsRole] = useState<Role | null>(null);
 
   const {
-    page,
-    pageSize,
-    search,
-    sort,
-    order,
-    setPage,
-    setPageSize,
-    setSearch,
-    setSort,
-    getFilter,
-    setFilter,
-    clearFilters,
-  } = useDataGridParams({ defaultSort: 'createdAt', defaultOrder: 'desc' });
+    page, pageSize, search, sort, order,
+    setPage, setPageSize, setSearch, setSort,
+    filters, addFilter, removeFilter, clearAllFilters,
+  } = useDataGridParams({ defaultSort: 'createdAt', defaultOrder: 'desc', storageKey: 'roles-list' });
 
-  const userType = getFilter('userType');
+  // Extract filter values for the API (which expects simple query params)
+  const userType = useMemo(() => {
+    const f = filters.find((expr) => expr.field === 'userType');
+    if (!f) return undefined;
+    return (f.operator === 'in' && Array.isArray(f.value)) ? f.value[0] as string : f.value as string;
+  }, [filters]);
 
   const { data, isLoading, isError, refetch } = useRolesList({
     page,
@@ -142,18 +150,6 @@ export function RolesListPage() {
     [],
   );
 
-  const activeFilters = useMemo<DataGridFilter[]>(() => {
-    const filters: DataGridFilter[] = [];
-    if (userType) {
-      filters.push({
-        key: 'userType',
-        label: 'Type',
-        value: USER_TYPE_LABELS[userType] ?? userType,
-      });
-    }
-    return filters;
-  }, [userType]);
-
   return (
     <div>
       <div className="mb-6">
@@ -176,12 +172,16 @@ export function RolesListPage() {
         search={search}
         onSearchChange={setSearch}
         searchPlaceholder="Search roles..."
-        activeFilters={activeFilters}
-        onFilterRemove={(key) => setFilter(key, undefined)}
-        onFiltersClear={() => clearFilters(['userType'])}
+        filterFields={ROLE_FILTER_FIELDS}
+        filters={filters}
+        onFilterAdd={addFilter}
+        onStructuredFilterRemove={removeFilter}
+        onStructuredFiltersClear={clearAllFilters}
         isLoading={isLoading}
         isError={isError}
         onRetry={refetch}
+        enableExport
+        exportFilename="roles"
         emptyState={{
           icon: Shield,
           title: 'No roles yet',
@@ -190,21 +190,10 @@ export function RolesListPage() {
         }}
         storageKey="roles-list"
         toolbarActions={
-          <div className="flex items-center gap-2">
-            <select
-              value={userType || ''}
-              onChange={(e) => setFilter('userType', e.target.value || undefined)}
-              className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-            >
-              <option value="">All types</option>
-              <option value="admin">Admin</option>
-              <option value="client">Client</option>
-            </select>
-            <Button size="sm" onClick={() => setAddModalOpen(true)}>
-              <Plus className="h-4 w-4 mr-1" />
-              Add Role
-            </Button>
-          </div>
+          <Button size="sm" onClick={() => setAddModalOpen(true)}>
+            <Plus className="h-4 w-4 mr-1" />
+            Add Role
+          </Button>
         }
         renderCard={(role) => (
           <div className="rounded-lg border bg-card p-4 space-y-2">
