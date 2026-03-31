@@ -1,0 +1,165 @@
+import { defineFieldType, validators } from '@packages/field-types';
+import type { FieldTypePlugin } from '@packages/field-types';
+
+// ---------------------------------------------------------------------------
+// Text family
+// ---------------------------------------------------------------------------
+
+const text = defineFieldType({
+  type: 'text', label: 'Text', family: 'text',
+  icon: 'Type', color: 'bg-blue-100 text-blue-800', sortOrder: 0,
+});
+
+const email = defineFieldType({
+  type: 'email', label: 'Email', family: 'text',
+  icon: 'Mail', color: 'bg-indigo-100 text-indigo-800', sortOrder: 2,
+  validate: validators.email,
+});
+
+const phone = defineFieldType({
+  type: 'phone', label: 'Phone', family: 'text',
+  icon: 'Phone', color: 'bg-violet-100 text-violet-800', sortOrder: 3,
+});
+
+const url = defineFieldType({
+  type: 'url', label: 'URL', family: 'text',
+  icon: 'Link', color: 'bg-cyan-100 text-cyan-800', sortOrder: 9,
+  validate: validators.url,
+});
+
+const textarea = defineFieldType({
+  type: 'textarea', label: 'Multi-line', family: 'text',
+  icon: 'AlignLeft', color: 'bg-blue-100 text-blue-800', sortOrder: 10,
+  excludeFromList: true,
+  sortable: false,
+});
+
+const richText = defineFieldType({
+  type: 'rich_text', label: 'Rich Text', family: 'text',
+  icon: 'FileText', color: 'bg-blue-100 text-blue-800', sortOrder: 11,
+  excludeFromList: true,
+  sortable: false,
+});
+
+// ---------------------------------------------------------------------------
+// Numeric family
+// ---------------------------------------------------------------------------
+
+const number = defineFieldType({
+  type: 'number', label: 'Number', family: 'numeric',
+  icon: 'Hash', color: 'bg-emerald-100 text-emerald-800', sortOrder: 1,
+});
+
+const currency = defineFieldType({
+  type: 'currency', label: 'Currency', family: 'numeric',
+  icon: 'DollarSign', color: 'bg-green-100 text-green-800', sortOrder: 4,
+});
+
+const decimal = defineFieldType({
+  type: 'decimal', label: 'Decimal', family: 'numeric',
+  icon: 'Hash', color: 'bg-emerald-100 text-emerald-800', sortOrder: 12,
+  validate: validators.decimal,
+});
+
+// ---------------------------------------------------------------------------
+// Date family
+// ---------------------------------------------------------------------------
+
+const date = defineFieldType({
+  type: 'date', label: 'Date', family: 'date',
+  icon: 'Calendar', color: 'bg-amber-100 text-amber-800', sortOrder: 5,
+});
+
+const datetime = defineFieldType({
+  type: 'datetime', label: 'DateTime', family: 'date',
+  icon: 'Clock', color: 'bg-amber-100 text-amber-800', sortOrder: 13,
+  storage: { type: 'eav', column: 'valueDatetime' },
+  validate: validators.datetime,
+});
+
+// ---------------------------------------------------------------------------
+// Boolean
+// ---------------------------------------------------------------------------
+
+const boolean = defineFieldType({
+  type: 'boolean', label: 'Checkbox', family: 'special',
+  icon: 'CheckSquare', color: 'bg-slate-100 text-slate-800', sortOrder: 8,
+  storage: { type: 'eav', column: 'valueBoolean' },
+  validate: validators.boolean,
+  filterOperators: ['eq', 'isNull', 'isNotNull'],
+  filterable: true,
+  excludeFromList: false,
+  sortable: true,
+  creatable: true,
+});
+
+// ---------------------------------------------------------------------------
+// Reference family (lookup, multi_lookup, user, multi_user)
+// ---------------------------------------------------------------------------
+
+const lookup = defineFieldType({
+  type: 'lookup', label: 'Lookup', family: 'reference',
+  icon: 'Search', color: 'bg-purple-100 text-purple-800', sortOrder: 14,
+});
+
+const multiLookup = defineFieldType({
+  type: 'multi_lookup', label: 'Multi-lookup', family: 'reference',
+  icon: 'Search', color: 'bg-purple-100 text-purple-800', sortOrder: 15,
+  storage: { type: 'relational', through: 'multiValues' },
+  validate: validators.uuidArray,
+  filterOperators: ['contains', 'isNull', 'isNotNull'],
+  isArray: true,
+  sortable: false,
+});
+
+const user = defineFieldType({
+  type: 'user', label: 'User', family: 'reference',
+  icon: 'User', color: 'bg-pink-100 text-pink-800', sortOrder: 16,
+  defaultLookupEntity: 'users',
+});
+
+const multiUser = defineFieldType({
+  type: 'multi_user', label: 'Multi-user', family: 'reference',
+  icon: 'Users', color: 'bg-pink-100 text-pink-800', sortOrder: 17,
+  storage: { type: 'relational', through: 'multiValues' },
+  validate: validators.uuidArray,
+  filterOperators: ['contains', 'isNull', 'isNotNull'],
+  isArray: true,
+  sortable: false,
+  defaultLookupEntity: 'users',
+});
+
+// ---------------------------------------------------------------------------
+// Special types
+// ---------------------------------------------------------------------------
+
+const autoNumber = defineFieldType({
+  type: 'auto_number', label: 'Auto Number', family: 'special',
+  icon: 'Hash', color: 'bg-gray-100 text-gray-800', sortOrder: 21,
+  autoGenerated: true,
+  filterOperators: ['eq', 'like'],
+  filterable: true,
+});
+
+const file = defineFieldType({
+  type: 'file', label: 'File', family: 'special',
+  icon: 'Paperclip', color: 'bg-gray-100 text-gray-800', sortOrder: 20,
+  creatable: true,
+  excludeFromList: true,
+});
+
+// ---------------------------------------------------------------------------
+// Plugin export
+// ---------------------------------------------------------------------------
+
+export const coreFieldTypesPlugin: FieldTypePlugin = {
+  name: 'entity-engine',
+  fieldTypes: [
+    text, email, phone, url, textarea, richText,
+    number, currency, decimal,
+    date, datetime,
+    boolean,
+    lookup, multiLookup, user, multiUser,
+    autoNumber, file,
+  ],
+};

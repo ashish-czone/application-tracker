@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { Plus, Trash2, RotateCcw, Database, MoreHorizontal, PenLine, Download, LayoutGrid, Table2 } from 'lucide-react';
+import { fieldTypeRegistry } from '@packages/field-types';
 import {
   DataGrid, Badge, Button, useDataGridParams,
   Dialog, DialogContent, ConfirmDialog,
@@ -66,17 +67,17 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
     filters, addFilter, removeFilter, clearAllFilters,
   } = useDataGridParams({ defaultSort: 'createdAt', defaultOrder: 'desc', storageKey: `${entity.slug}-list` });
 
-  // Build filter field definitions from layout columns
+  // Build filter field definitions from layout columns (driven by field type registry)
   const filterFields = useMemo<DataGridFilterField[]>(() => {
     if (!listLayout) return [];
-    const filterableTypes = new Set([
-      'picklist', 'multi_select', 'lookup', 'user', 'boolean', 'category', 'workflow',
-      'text', 'email', 'phone', 'url', 'number', 'currency', 'decimal', 'date', 'datetime',
-      'tags', 'multi_user', 'multi_lookup',
-    ]);
     return listLayout.columns
-      .filter((c) => filterableTypes.has(c.fieldType) && !c.relationship)
+      .filter((c) => {
+        if (c.relationship) return false;
+        const ft = fieldTypeRegistry.get(c.fieldType);
+        return ft?.filterable ?? false;
+      })
       .map((c) => {
+        const ft = fieldTypeRegistry.get(c.fieldType);
         const field: DataGridFilterField = {
           key: c.fieldKey,
           label: c.label,
@@ -87,48 +88,27 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
         if (c.picklistOptions?.length) {
           field.options = c.picklistOptions;
         }
-        // Async search for lookup/user fields
-        if ((c.fieldType === 'lookup' || c.fieldType === 'user') && c.lookupEntity) {
-          field.onSearchOptions = async (query: string) => {
-            try {
-              return await apiFn.get<{ label: string; value: string }[]>(
-                `/lookups/${c.lookupEntity}?limit=50${query ? `&search=${encodeURIComponent(query)}` : ''}`,
-              );
-            } catch {
-              return [];
-            }
-          };
+        // Async search for reference fields (lookup, user, multi_lookup, multi_user, category)
+        if (ft?.isReference) {
+          const lookupEntity = c.lookupEntity ?? ft.defaultLookupEntity;
+          if (lookupEntity) {
+            field.onSearchOptions = async (query: string) => {
+              try {
+                return await apiFn.get<{ label: string; value: string }[]>(
+                  `/lookups/${lookupEntity}?limit=50${query ? `&search=${encodeURIComponent(query)}` : ''}`,
+                );
+              } catch {
+                return [];
+              }
+            };
+          }
         }
-        // Async search for tags fields (via tag group slug)
+        // Async search for tags (via tag group slug)
         if (c.fieldType === 'tags' && c.tagGroupSlug) {
           field.onSearchOptions = async (query: string) => {
             try {
               return await apiFn.get<{ label: string; value: string }[]>(
                 `/tags/group/${c.tagGroupSlug}?limit=50${query ? `&search=${encodeURIComponent(query)}` : ''}`,
-              );
-            } catch {
-              return [];
-            }
-          };
-        }
-        // Async search for multi_user (users lookup)
-        if (c.fieldType === 'multi_user') {
-          field.onSearchOptions = async (query: string) => {
-            try {
-              return await apiFn.get<{ label: string; value: string }[]>(
-                `/lookups/users?limit=50${query ? `&search=${encodeURIComponent(query)}` : ''}`,
-              );
-            } catch {
-              return [];
-            }
-          };
-        }
-        // Async search for multi_lookup (entity lookup)
-        if (c.fieldType === 'multi_lookup' && c.lookupEntity) {
-          field.onSearchOptions = async (query: string) => {
-            try {
-              return await apiFn.get<{ label: string; value: string }[]>(
-                `/lookups/${c.lookupEntity}?limit=50${query ? `&search=${encodeURIComponent(query)}` : ''}`,
               );
             } catch {
               return [];

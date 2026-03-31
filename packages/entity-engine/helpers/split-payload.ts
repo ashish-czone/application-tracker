@@ -1,5 +1,5 @@
+import { fieldTypeRegistry } from '@packages/field-types';
 import type { FieldDefinition } from '../types';
-import { RELATIONAL_FIELD_TYPES } from '../types';
 
 export interface SplitResult {
   /** Fields with columnName (stored in entity table) — keys are fieldKey (camelCase = Drizzle property name) */
@@ -31,7 +31,7 @@ export function splitPayload(
     const def = defMap.get(key);
     if (!def) continue; // unknown keys are ignored (already validated)
 
-    if (RELATIONAL_FIELD_TYPES.has(def.fieldType)) {
+    if (fieldTypeRegistry.isRelational(def.fieldType)) {
       relationalFields[key] = value;
     } else if (def.columnName !== null) {
       standardFields[key] = value;

@@ -2,8 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { DatabaseService, eq, and, sql, inArray } from '@packages/database';
 import { entityFieldValues } from '../schema/entity-field-values';
 import { fieldDefinitions } from '../schema/field-definitions';
-import { FIELD_TYPE_TO_VALUE_COLUMN } from '../types';
-import type { FieldFilter, FieldType, EavValueColumn } from '../types';
+import { fieldTypeRegistry } from '@packages/field-types';
+import type { EavValueColumn } from '@packages/field-types';
+import type { FieldFilter, FieldType } from '../types';
 
 @Injectable()
 export class FieldValueService {
@@ -118,7 +119,7 @@ export class FieldValueService {
         continue;
       }
 
-      const valueColumn = FIELD_TYPE_TO_VALUE_COLUMN[fieldType];
+      const valueColumn = fieldTypeRegistry.getEavColumn(fieldType);
       if (!valueColumn) {
         // Relational field types (tags, file, category) don't use EAV storage
         continue;
@@ -180,7 +181,7 @@ export class FieldValueService {
 
     if (!field[0] || !field[0].isUnique) return true;
 
-    const valueColumn = FIELD_TYPE_TO_VALUE_COLUMN[field[0].fieldType as FieldType];
+    const valueColumn = fieldTypeRegistry.getEavColumn(field[0].fieldType);
     if (!valueColumn) return true; // Relational types don't have EAV uniqueness
     const columnRef = this.getColumnRef(valueColumn);
 

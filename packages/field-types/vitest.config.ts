@@ -3,8 +3,8 @@ import path from 'path';
 
 export default defineConfig({
   test: {
-    globals: true,
-    setupFiles: ['./test/setup-field-types.ts'],
+    include: ['**/*.test.ts'],
+    globals: false,
   },
   resolve: {
     alias: {

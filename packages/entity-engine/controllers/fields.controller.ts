@@ -1,9 +1,9 @@
 import { Controller, Get, Post, Patch, Delete, Param, Body, Query, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { RequirePermission } from '@packages/rbac';
+import { fieldTypeRegistry } from '@packages/field-types';
 import { FieldDefinitionService } from '../services/field-definition.service';
 import type { FieldType } from '../types';
-import { FIELD_TYPE_REGISTRY } from '../types';
 import { EAV_PERMISSIONS } from '../permissions';
 import { CreateFieldDto } from '../dto/create-field.dto';
 import { UpdateFieldDto } from '../dto/update-field.dto';
@@ -17,7 +17,14 @@ export class FieldsController {
   @RequirePermission(EAV_PERMISSIONS.READ)
   @ApiOperation({ summary: 'Get all registered field types with metadata' })
   async getFieldTypes() {
-    return FIELD_TYPE_REGISTRY;
+    return fieldTypeRegistry.getAll().map(ft => ({
+      type: ft.type,
+      label: ft.label,
+      creatable: ft.creatable,
+      sortOrder: ft.sortOrder,
+      icon: ft.icon,
+      color: ft.color,
+    }));
   }
 
   @Get()
