@@ -115,6 +115,18 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
             }
           };
         }
+        // Async search for categories (via category group slug)
+        if (c.fieldType === 'category' && c.categoryGroupSlug) {
+          field.onSearchOptions = async (query: string) => {
+            try {
+              return await apiFn.get<{ label: string; value: string }[]>(
+                `/categories/group/${c.categoryGroupSlug}?limit=50${query ? `&search=${encodeURIComponent(query)}` : ''}`,
+              );
+            } catch {
+              return [];
+            }
+          };
+        }
         return field;
       });
   }, [listLayout, apiFn]);
