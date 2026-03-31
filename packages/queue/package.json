@@ -7,12 +7,13 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@bull-board/api": "^6.20.6",
-    "@bull-board/express": "^6.20.6",
-    "@nestjs/bullmq": "^11.0.0",
     "@nestjs/common": "^11.0.0",
+    "@nestjs/swagger": "^11.0.0",
     "@packages/logger": "workspace:*",
-    "bullmq": "^5.0.0"
+    "@packages/rbac": "workspace:*",
+    "bullmq": "^5.0.0",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.1"
   },
   "devDependencies": {
     "typescript": "^5.7.0",

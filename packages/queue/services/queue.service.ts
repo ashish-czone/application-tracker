@@ -1,9 +1,6 @@
 import { Injectable, Inject, type OnModuleDestroy } from '@nestjs/common';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { Queue, Worker, type Job } from 'bullmq';
-import { createBullBoard } from '@bull-board/api';
-import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
-import { ExpressAdapter } from '@bull-board/express';
 import type { QueueModuleConfig, EnqueueOptions, JobDefinition } from '../types';
 import { QUEUE_MODULE_CONFIG } from '../types';
 
@@ -123,19 +120,10 @@ export class QueueService implements OnModuleDestroy {
   }
 
   /**
-   * Create an Express router for the Bull Board UI.
-   * Mount this on an Express app to expose the queue dashboard.
+   * Get the names of all registered queues.
    */
-  createBullBoardRouter(basePath: string) {
-    const serverAdapter = new ExpressAdapter();
-    serverAdapter.setBasePath(basePath);
-
-    createBullBoard({
-      queues: [...this.queues.values()].map((q) => new BullMQAdapter(q)),
-      serverAdapter,
-    });
-
-    return serverAdapter.getRouter();
+  getQueueNames(): string[] {
+    return [...this.queues.keys()];
   }
 
   async onModuleDestroy() {

@@ -3,11 +3,8 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { correlationIdMiddleware } from '@packages/logger';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { QueueService } from '@packages/queue';
-import { AuthService } from '@packages/auth';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
-import type { Request, Response, NextFunction } from 'express';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -58,38 +55,6 @@ async function bootstrap() {
     expressApp.get('/health', (_req: unknown, res: { json: (body: unknown) => void }) => {
       res.json({ status: 'ok', timestamp: new Date().toISOString() });
     });
-
-    // Bull Board — queue dashboard at /admin/queues (admin-only)
-    const queueService = app.get(QueueService);
-    const authService = app.get(AuthService);
-    const bullBoardBasePath = '/admin/queues';
-
-    const bullBoardAuth = (req: Request, res: Response, next: NextFunction) => {
-      // Accept token from Authorization header or bull_board_token cookie (for iframe/browser access)
-      const authHeader = req.headers.authorization;
-      const token = authHeader?.startsWith('Bearer ')
-        ? authHeader.slice(7)
-        : req.cookies?.bull_board_token;
-
-      if (!token) {
-        res.status(401).json({ message: 'Unauthorized' });
-        return;
-      }
-      try {
-        const payload = authService.verifyAccessToken(token);
-        const permissions = (payload as Record<string, unknown>).permissions as Record<string, unknown> | undefined;
-        if (!permissions || !('*' in permissions)) {
-          res.status(403).json({ message: 'Forbidden — admin access required' });
-          return;
-        }
-        next();
-      } catch {
-        res.status(401).json({ message: 'Invalid or expired token' });
-      }
-    };
-
-    const bullBoardRouter = queueService.createBullBoardRouter(bullBoardBasePath);
-    expressApp.getInstance().use(bullBoardBasePath, bullBoardAuth, bullBoardRouter);
 
     await app.listen(process.env.PORT ?? 3012);
   } else {
