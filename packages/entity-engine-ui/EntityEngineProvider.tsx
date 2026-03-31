@@ -80,6 +80,8 @@ export function EntityEngineProvider({ children, apiFn, entityUIConfigs = [] }: 
     apiFn,
   }), [entities, isLoading, apiMap, hooksMap, pluginMap, apiFn]);
 
+  if (isLoading) return null;
+
   return (
     <EntityEngineContext.Provider value={value}>
       {children}
