@@ -20,38 +20,46 @@ Never default to the simplest/easiest approach. Never decide unilaterally. Even 
 
 ## Project Vision
 
-This is a **configurable platform base** — not a simple starter template. It is designed to serve as the foundation for building various types of business applications: ERPs, CRMs, marketplaces, project management tools, HR systems, and more.
+This is a **domain-agnostic, configuration-based app builder** for developers. It enables rapid application development — ERPs, CRMs, marketplaces, HR systems, project management tools — where ~80% of requirements are met through core platform capabilities and configuration, and ~20% through customization hooks.
 
-**Core principle:** Everything should be modular, configurable, and extensible. The platform provides solid infrastructure so that domain-specific features can be built on top without reinventing the wheel.
+**How it works:**
+- **Define entities declaratively** — `defineEntity()` takes a model definition (fields, relationships, workflows, permissions, layout, UI hints) and generates everything: CRUD API, validation, RBAC, events, audit logging, search, filtering, pagination.
+- **Customize with hooks** — Lifecycle hooks (`beforeCreate`, `afterCreate`, `beforeUpdate`, `buildListFilters`, `workflowGuards`, etc.) let developers inject domain-specific logic without touching the engine.
+- **Extend with field types** — The pluggable field type registry supports 23+ built-in types. New types can be added without modifying core.
+- **Configure at runtime** — Layouts, field visibility, workflow states, notification rules, and settings are all DB-driven and admin-editable.
 
-**Design for:**
-- **Configurability** — modules expose config with sensible defaults; runtime settings override them via an admin panel.
-- **Extensibility** — new modules can be added without modifying core infrastructure.
-- **Multi-tenancy readiness** — data isolation, tenant-scoped config, and per-tenant customization.
-- **Enterprise patterns** — audit logging, event-driven side effects, permission-based access control.
+**Core principles:**
+- **Configuration over code** — if something can be expressed as config, it should be. Code is for the exceptional cases.
+- **Domain agnosticism** — the platform has zero knowledge of "candidates", "orders", or any business entity. Packages must never reference domain concepts.
+- **Hookable, not forkable** — customization happens through well-defined extension points, not by modifying platform code.
+- **Enterprise-grade** — audit logging, RBAC with field-level permissions, event-driven side effects, multi-tenancy readiness.
 
-Every architectural decision should ask: "Would this work if someone is building a CRM with this? An ERP? A marketplace?" If the answer is no, the approach is too narrow.
+Every architectural decision should ask: "Does this keep the platform domain-agnostic? Could a developer building a CRM use this the same way as one building an ERP?" If the answer is no, the approach is too narrow.
 
-### Platform Capabilities Roadmap
+### Platform Capabilities
 
-**Tier 1 — Core plumbing (build first, everything depends on these):**
-1. **Module config + settings system** — typed config per module with defaults; admin-editable overrides stored in DB, cached in memory, invalidated via events.
-2. **Multi-tenancy** — tenant model, row-level data isolation, tenant context middleware, tenant-scoped config.
-3. **Audit logging** — generic event listener capturing who/what/when/which entity. Built on the event system.
-4. **Entity framework / dynamic fields** — extend any entity with custom fields per tenant.
+**Core engine (built):**
+- **Entity engine** — `defineEntity()` API, generic CRUD service, auto-generated controllers
+- **Field type system** — pluggable registry with 23+ types (text, email, lookup, workflow, tags, file, etc.)
+- **EAV storage** — dynamic custom fields per entity, opt-in via `customFields: true`
+- **Layout system** — DB-driven form sections, field ordering, column layout — admin-editable
+- **Workflow engine** — state machines with transitions, guards, conditions, multi-pipeline support
+- **RBAC** — role-based permissions with field-level granularity, auto-registered per entity
+- **Audit logging** — event-driven, with before/after snapshots, sensitive field redaction
+- **Settings system** — typed per-module config with DB overrides, cached + invalidated via events
 
-**Tier 2 — Platform capabilities (build alongside features):**
-5. **Taxonomy / tags** — polymorphic tagging system attachable to any entity for metadata.
-6. **Categories** — hierarchical category trees, attachable to any entity.
-7. **State + transitions engine** — admin-configurable workflow states and transitions, attachable to any entity field. Defines allowed transitions, guards, and side effects.
-8. **Notification system** — in-app, email. Modules emit events, notification module routes based on user/tenant preferences.
-9. **File / media management** — upload, storage abstraction (local/S3), attachments on any entity.
-10. **Task / job queue** — background processing for imports, exports, reports, emails (Bull/BullMQ on Redis).
+**Platform services (built):**
+- **Taxonomy** — polymorphic tags + hierarchical categories, attachable to any entity
+- **Notifications** — rule-based routing (event → channels → recipients), templates, user preferences
+- **Media management** — upload, storage abstraction (local/S3), attachments on any entity
+- **Job queue** — background processing via Bull/BullMQ on Redis
+- **Event system** — domain events with correlation IDs, side-effect handlers
 
-**Tier 3 — UX infrastructure:**
-11. **Dynamic navigation** — sidebar items driven by module registration + permissions, not hardcoded.
-12. **Table / list framework** — reusable server-side pagination, filtering, sorting patterns.
-13. **Form builder foundations** — schema-driven forms that render from config (for dynamic fields + settings).
+**Remaining work:**
+- **Admin UIs** — visual builders for field management, layout customization, workflow editor, notification rules
+- **Dynamic navigation** — sidebar driven by entity registration + permissions (registry exists, UI needed)
+- **Multi-tenancy enforcement** — framework designed, not fully implemented
+- **Form renderer** — schema-driven forms that render entirely from layout + field definition metadata
 
 ---
 
