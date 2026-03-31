@@ -25,7 +25,7 @@ import { buildSnapshot, diffSnapshot } from './helpers/snapshot';
 import { validatePayload } from './helpers/validate-payload';
 import { splitPayload } from './helpers/split-payload';
 import { TaxonomyService, type TagWithGroup } from '@packages/taxonomy';
-import { FieldTypeSaveHookRegistry, type FieldTypeSaveHookContext } from './services/field-type-save-hook.registry';
+import { fieldTypeSaveHookRegistry, type FieldTypeSaveHookRegistry, type FieldTypeSaveHookContext } from './services/field-type-save-hook.registry';
 import { WorkflowEngineService, WorkflowRegistryService, PipelineResolverService } from '@packages/workflows';
 import type { PaginatedResponse } from '@packages/common';
 import type { EntityConfig, BaseListQuery, ListLayoutColumn } from './types';
@@ -55,7 +55,7 @@ export class EntityService {
     private readonly fieldDefinitionService: FieldDefinitionService,
     private readonly lookupResolver: LookupResolverService,
     private readonly taxonomyService: TaxonomyService,
-    private readonly hookRegistry: FieldTypeSaveHookRegistry,
+    _hookRegistry: FieldTypeSaveHookRegistry, // kept for backward-compat factory signature; use singleton directly
     private readonly workflowEngine: WorkflowEngineService,
     private readonly workflowRegistry: WorkflowRegistryService,
     private readonly pipelineResolver: PipelineResolverService,
@@ -424,7 +424,7 @@ export class EntityService {
     for (const [key, value] of Object.entries(allFields)) {
       const def = defMap.get(key);
       if (!def) continue;
-      const hooks = this.hookRegistry.get(def.fieldType);
+      const hooks = fieldTypeSaveHookRegistry.get(def.fieldType);
       if (hooks?.onBeforeSave) {
         const ctx: FieldTypeSaveHookContext = {
           entityType: config.entityType, entityId, fieldKey: key,
@@ -454,7 +454,7 @@ export class EntityService {
       for (const [key, value] of Object.entries(relationalFields)) {
         const def = defMap.get(key);
         if (!def) continue;
-        const hooks = this.hookRegistry.get(def.fieldType);
+        const hooks = fieldTypeSaveHookRegistry.get(def.fieldType);
         if (hooks?.onTransactionalSave) {
           const ctx: FieldTypeSaveHookContext = {
             entityType: config.entityType, entityId: inserted.id, fieldKey: key,
@@ -471,7 +471,7 @@ export class EntityService {
     for (const [key, value] of Object.entries(allFields)) {
       const def = defMap.get(key);
       if (!def) continue;
-      const hooks = this.hookRegistry.get(def.fieldType);
+      const hooks = fieldTypeSaveHookRegistry.get(def.fieldType);
       if (hooks?.onAfterSave) {
         const ctx: FieldTypeSaveHookContext = {
           entityType: config.entityType, entityId: row.id, fieldKey: key,
@@ -603,7 +603,7 @@ export class EntityService {
     for (const [key, value] of Object.entries(allUpdateFields)) {
       const def = updateDefMap.get(key);
       if (!def) continue;
-      const hooks = this.hookRegistry.get(def.fieldType);
+      const hooks = fieldTypeSaveHookRegistry.get(def.fieldType);
       if (hooks?.onBeforeSave) {
         const ctx: FieldTypeSaveHookContext = {
           entityType: config.entityType, entityId: id, fieldKey: key,
@@ -649,7 +649,7 @@ export class EntityService {
         for (const [key, value] of Object.entries(relationalFields)) {
           const def = updateDefMap.get(key);
           if (!def) continue;
-          const hooks = this.hookRegistry.get(def.fieldType);
+          const hooks = fieldTypeSaveHookRegistry.get(def.fieldType);
           if (hooks?.onTransactionalSave) {
             const ctx: FieldTypeSaveHookContext = {
               entityType: config.entityType, entityId: id, fieldKey: key,
@@ -674,7 +674,7 @@ export class EntityService {
     for (const [key, value] of Object.entries(allUpdateFields)) {
       const def = updateDefMap.get(key);
       if (!def) continue;
-      const hooks = this.hookRegistry.get(def.fieldType);
+      const hooks = fieldTypeSaveHookRegistry.get(def.fieldType);
       if (hooks?.onAfterSave) {
         const ctx: FieldTypeSaveHookContext = {
           entityType: config.entityType, entityId: id, fieldKey: key,
