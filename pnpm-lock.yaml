@@ -267,6 +267,9 @@ importers:
       '@packages/entity-engine':
         specifier: workspace:*
         version: link:../../packages/entity-engine
+      '@packages/entity-layout':
+        specifier: workspace:*
+        version: link:../../packages/entity-layout
       '@packages/events':
         specifier: workspace:*
         version: link:../../packages/events
