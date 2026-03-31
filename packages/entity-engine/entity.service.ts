@@ -11,15 +11,14 @@ import {
   parseLegacyFilters,
   parseFilterParam,
   mergeFilters,
-  OPERATORS_BY_FIELD_TYPE,
 } from '@packages/query-builder';
+import { fieldTypeRegistry } from '@packages/field-types';
 import { DatabaseService } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { FieldDefinitionService } from './services/field-definition.service';
 import { LookupResolverService } from './services/lookup-resolver.service';
 import type { EavStorageExtension } from './extensions/eav-storage.interface';
-import { RELATIONAL_FIELD_TYPES } from './types';
 import type { FieldDefinition } from './types';
 import { buildSnapshot, diffSnapshot } from './helpers/snapshot';
 import { validatePayload } from './helpers/validate-payload';
@@ -74,8 +73,11 @@ export class EntityService {
   // LIST LAYOUT
   // ---------------------------------------------------------------------------
 
-  /** Field types excluded from list view — long text and non-tabular types. */
-  private static readonly LIST_SKIP_TYPES = new Set(['textarea', 'rich_text', 'file', 'auto_number']);
+  /** Check if a field type should be excluded from list views (via field type registry). */
+  private static shouldExcludeFromList(fieldType: string): boolean {
+    const ft = fieldTypeRegistry.get(fieldType);
+    return ft?.excludeFromList ?? false;
+  }
 
   /** System columns always included in list queries. */
   private static readonly LIST_SYSTEM_COLUMNS = ['id', 'createdAt', 'updatedAt', 'deletedAt', 'createdBy'];
@@ -87,7 +89,7 @@ export class EntityService {
    */
   private async getListFieldDefs(): Promise<FieldDefinition[]> {
     const defs = await this.fieldDefinitionService.listByEntityWithOptions(this.config.entityType);
-    return defs.filter(d => !EntityService.LIST_SKIP_TYPES.has(d.fieldType) && !d.isSystem);
+    return defs.filter(d => !EntityService.shouldExcludeFromList(d.fieldType) && !d.isSystem);
   }
 
   /**
@@ -163,19 +165,19 @@ export class EntityService {
 
     // All entity fields as columns with visible/order flags (exclude long-text/file types)
     const columns: ListLayoutColumn[] = allDefs
-      .filter(d => !d.isSystem && !EntityService.LIST_SKIP_TYPES.has(d.fieldType))
+      .filter(d => !d.isSystem && !EntityService.shouldExcludeFromList(d.fieldType))
       .map((d, idx) => ({
         fieldKey: d.fieldKey,
         label: d.label,
         fieldType: d.fieldType,
         sortable: !!config.sortableColumns[d.fieldKey],
         lookupEntity: d.lookupEntity ?? undefined,
-        visible: listFieldSet ? listFieldSet.has(d.fieldKey) : !EntityService.LIST_SKIP_TYPES.has(d.fieldType) && idx < 10,
+        visible: listFieldSet ? listFieldSet.has(d.fieldKey) : !EntityService.shouldExcludeFromList(d.fieldType) && idx < 10,
         order: listFieldOrder?.get(d.fieldKey) ?? 1000 + idx,
         picklistOptions: (d.fieldType === 'picklist' || d.fieldType === 'multi_select') && d.picklistOptions?.length
           ? d.picklistOptions.map(o => ({ label: o.label, value: o.value }))
           : undefined,
-        operators: OPERATORS_BY_FIELD_TYPE[d.fieldType],
+        operators: fieldTypeRegistry.get(d.fieldType)?.filterOperators ?? [],
         tagGroupSlug: d.fieldType === 'tags' ? (d.tagGroupSlug ?? undefined) : undefined,
       }));
 
@@ -203,9 +205,11 @@ export class EntityService {
 
     // Build filterable fields (picklists, lookups, booleans, tags)
     const defs = await this.fieldDefinitionService.listByEntityWithOptions(config.entityType);
-    const filterableTypes = new Set(['picklist', 'multi_select', 'lookup', 'user', 'multi_user', 'boolean', 'tags', 'category']);
     const filters = defs
-      .filter(d => filterableTypes.has(d.fieldType))
+      .filter(d => {
+        const ft = fieldTypeRegistry.get(d.fieldType);
+        return ft?.filterable ?? false;
+      })
       .map(d => d.fieldKey);
 
     // Default actions if none configured
@@ -883,7 +887,7 @@ export class EntityService {
       const def = defsByKey.get(f.field);
       if (!def) continue;
 
-      if (RELATIONAL_FIELD_TYPES.has(def.fieldType as any)) {
+      if (fieldTypeRegistry.isRelational(def.fieldType)) {
         // Relational fields: build EXISTS subquery against junction tables
         const relCondition = this.buildRelationalFilterCondition(
           config.entityType,
