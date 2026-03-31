@@ -141,4 +141,22 @@ describe('EntityRegistryService', () => {
     const entries = registry.getRegistryEntries();
     expect(entries[0].features.hasMedia).toBe(true);
   });
+
+  it('exposes customFields flag in features', () => {
+    registry.register(mockConfig({
+      entityType: 'with_custom',
+      slug: 'with-custom',
+      customFields: true,
+    }));
+
+    const entries = registry.getRegistryEntries();
+    expect(entries[0].features.customFields).toBe(true);
+  });
+
+  it('customFields defaults to false in features', () => {
+    registry.register(mockConfig());
+
+    const entries = registry.getRegistryEntries();
+    expect(entries[0].features.customFields).toBe(false);
+  });
 });

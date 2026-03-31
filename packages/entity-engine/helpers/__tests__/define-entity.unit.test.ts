@@ -272,6 +272,25 @@ describe('defineEntity', () => {
     expect(config.sections[0].name).toBe('Basic Info');
   });
 
+  it('should pass through customFields flag', () => {
+    const withFlag = defineEntity({
+      table: testTable,
+      slug: 'test-entities',
+      customFields: true,
+      fields: { title: { type: 'text', label: 'Title' } },
+      ui: { icon: 'FileText' },
+    });
+    expect(withFlag.customFields).toBe(true);
+
+    const withoutFlag = defineEntity({
+      table: testTable,
+      slug: 'test-entities',
+      fields: { title: { type: 'text', label: 'Title' } },
+      ui: { icon: 'FileText' },
+    });
+    expect(withoutFlag.customFields).toBeUndefined();
+  });
+
   it('should set default sort and ensure it is sortable', () => {
     const config = defineEntity({
       table: testTable,

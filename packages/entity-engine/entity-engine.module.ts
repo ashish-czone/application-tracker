@@ -119,7 +119,7 @@ export class EntityEngineModule implements OnModuleInit, OnApplicationBootstrap 
             pipelineResolver: PipelineResolverService,
             entityRegistry: EntityRegistryService,
             appLogger: AppLoggerService,
-          ) => new EntityService(config, database, domainEventEmitter, eavStorage, multiValueExtension, fieldDefinitionService, lookupResolver, taxonomyService, hookRegistry, workflowEngine, workflowRegistry, pipelineResolver, entityRegistry, appLogger),
+          ) => new EntityService(config, database, domainEventEmitter, config.customFields ? eavStorage : null, multiValueExtension, fieldDefinitionService, lookupResolver, taxonomyService, hookRegistry, workflowEngine, workflowRegistry, pipelineResolver, entityRegistry, appLogger),
           inject: [DatabaseService, DomainEventEmitter, { token: EAV_STORAGE_EXTENSION, optional: true }, { token: MULTI_VALUE_EXTENSION, optional: true }, FieldDefinitionService, LookupResolverService, TaxonomyService, FieldTypeSaveHookRegistry, WorkflowEngineService, WorkflowRegistryService, PipelineResolverService, EntityRegistryService, AppLoggerService],
         },
       ],
