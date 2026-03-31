@@ -97,7 +97,7 @@ export { EAV_STORAGE_EXTENSION } from './extensions/eav-storage.interface';
 
 // --- Field type save hooks ---
 
-export { FieldTypeSaveHookRegistry } from './services/field-type-save-hook.registry';
+export { FieldTypeSaveHookRegistry, fieldTypeSaveHookRegistry } from './services/field-type-save-hook.registry';
 export type {
   FieldTypeSaveHookContext,
   FieldTypeSaveHookResult,

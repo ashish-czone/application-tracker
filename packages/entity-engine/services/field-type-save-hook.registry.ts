@@ -84,3 +84,9 @@ export class FieldTypeSaveHookRegistry {
     return this.hooks.has(fieldType);
   }
 }
+
+/**
+ * Module-level singleton — guarantees a single instance regardless of
+ * NestJS module scoping or webpack deduplication quirks.
+ */
+export const fieldTypeSaveHookRegistry = new FieldTypeSaveHookRegistry();

@@ -16,7 +16,7 @@ import { EntityEngineApiController } from './entity-engine-api.controller';
 import { FieldsController } from './controllers/fields.controller';
 import { LookupsController } from './controllers/lookups.controller';
 import { FieldDefinitionService } from './services/field-definition.service';
-import { FieldTypeSaveHookRegistry } from './services/field-type-save-hook.registry';
+import { FieldTypeSaveHookRegistry, fieldTypeSaveHookRegistry } from './services/field-type-save-hook.registry';
 import { LookupResolverService } from './services/lookup-resolver.service';
 import { createEntityController } from './create-entity-controller';
 import { seedEntityFields, seedWorkflows } from './seed-entity-fields';
@@ -53,7 +53,7 @@ const pendingConfigs: EntityConfig[] = [];
     EntityRegistryService,
     FieldDefinitionService,
     LookupResolverService,
-    FieldTypeSaveHookRegistry,
+    { provide: FieldTypeSaveHookRegistry, useValue: fieldTypeSaveHookRegistry },
     {
       provide: FIELD_PERMISSION_ENTITY_RESOLVER,
       useFactory: (registry: EntityRegistryService): FieldPermissionEntityResolver => ({
