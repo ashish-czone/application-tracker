@@ -91,7 +91,7 @@ export const APPLICATIONS_CONFIG: EntityConfig = {
 
   ui: {
     icon: 'file-text',
-    nameField: 'stage',
+    nameField: ['candidateId', 'jobOpeningId'],
     navGroup: 'recruit',
     navOrder: 3,
   },
