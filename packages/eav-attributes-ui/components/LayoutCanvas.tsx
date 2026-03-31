@@ -250,7 +250,7 @@ function SortableColumn({
   return (
     <div
       ref={colRef}
-      className={`flex-1 space-y-1 min-h-[60px] max-h-[400px] overflow-y-auto p-2 rounded-md border transition-colors ${
+      className={`flex-1 space-y-1 min-h-[60px] p-2 rounded-md border transition-colors ${
         isDropTarget
           ? 'bg-primary/5 border-primary border-dashed'
           : 'border-border/50 bg-muted/20'
