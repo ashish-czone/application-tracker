@@ -643,6 +643,8 @@ export interface ListLayoutColumn {
   operators?: string[];
   /** Tag group slug (for tags field type — used to fetch filter options) */
   tagGroupSlug?: string;
+  /** Category group slug (for category field type — used to fetch filter options) */
+  categoryGroupSlug?: string;
 }
 
 export interface ListLayoutResponse {

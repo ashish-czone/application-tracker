@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
-import { DatabaseService, eq, asc, count } from '@packages/database';
+import { DatabaseService, eq, asc, count, and, ilike } from '@packages/database';
 import { HierarchyService, buildTree } from '@packages/hierarchy';
 import { categoryGroups } from '../schema/category-groups';
 import { categories } from '../schema/categories';
@@ -224,6 +224,36 @@ export class CategoryService {
   async getDescendants(id: string): Promise<Category[]> {
     const category = await this.findCategoryByIdOrFail(id);
     return this.hierarchyService.getDescendants(categories, categories.path, category.path);
+  }
+
+  // --- Lookup (for filter dropdowns) ---
+
+  async listCategoryOptionsByGroupSlug(
+    slug: string,
+    search?: string,
+    limit?: number,
+  ): Promise<{ value: string; label: string }[]> {
+    const [group] = await this.database.db
+      .select({ id: categoryGroups.id })
+      .from(categoryGroups)
+      .where(eq(categoryGroups.slug, slug))
+      .limit(1);
+
+    if (!group) return [];
+
+    const conditions = [eq(categories.groupId, group.id)];
+    if (search) {
+      conditions.push(ilike(categories.name, `%${search}%`));
+    }
+
+    const rows = await this.database.db
+      .select({ id: categories.id, name: categories.name })
+      .from(categories)
+      .where(and(...conditions))
+      .orderBy(asc(categories.name))
+      .limit(limit ?? 50);
+
+    return rows.map((r) => ({ value: r.id, label: r.name }));
   }
 
   // --- Validation (for domain modules) ---

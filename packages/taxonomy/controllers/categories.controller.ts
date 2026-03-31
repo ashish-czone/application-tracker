@@ -6,6 +6,7 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   HttpCode,
   HttpStatus,
   ParseUUIDPipe,
@@ -65,6 +66,23 @@ export class CategoriesController {
   @ApiOperation({ summary: 'Delete a category group (must have no categories)' })
   async deleteCategoryGroup(@Param('id', ParseUUIDPipe) id: string) {
     await this.categoryService.deleteCategoryGroup(id);
+  }
+
+  // --- Category lookup by group slug (for filter dropdowns) ---
+
+  @Get('categories/group/:slug')
+  @RequirePermission(TAXONOMY_PERMISSIONS.CATEGORIES_READ)
+  @ApiOperation({ summary: 'List categories by group slug as select options' })
+  async getCategoriesByGroupSlug(
+    @Param('slug') slug: string,
+    @Query('search') search?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.categoryService.listCategoryOptionsByGroupSlug(
+      slug,
+      search || undefined,
+      limit ? parseInt(limit, 10) : undefined,
+    );
   }
 
   // --- Categories ---
