@@ -75,7 +75,7 @@ export function PipelineProgressBar({ workflowSlug, entityType, entityId, curren
     const available = getAvailableTransitions(workflow, currentState);
     for (const t of available) {
       if (t.isForward) {
-        map.set(t.toState.name, { transitionName: t.transition.name });
+        map.set(t.toState.name, { transitionName: `Move to ${t.toState.label}` });
       }
     }
     return map;
