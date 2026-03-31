@@ -168,7 +168,12 @@ export class EntityService {
 
     // All entity fields as columns with visible/order flags (exclude long-text/file types)
     const columns: ListLayoutColumn[] = allDefs
-      .filter(d => !d.isSystem && !EntityService.shouldExcludeFromList(d.fieldType))
+      .filter(d => {
+        if (EntityService.shouldExcludeFromList(d.fieldType)) return false;
+        if (!d.isSystem) return true;
+        // System fields can appear if explicitly listed or have a custom cell renderer
+        return listFieldSet?.has(d.fieldKey) || !!config.fieldMeta[d.fieldKey]?.cellRenderer;
+      })
       .map((d, idx) => ({
         fieldKey: d.fieldKey,
         label: d.label,
