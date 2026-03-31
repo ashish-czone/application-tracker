@@ -98,7 +98,6 @@ export function DataGridFilterBuilder({
     setEditingValue(undefined);
     setStep('field');
     setSearch('');
-    anchorRef.current = null;
     setTimeout(() => inputRef.current?.focus(), 0);
   };
 
