@@ -1,36 +1,138 @@
-import { Suspense, lazy } from 'react';
+import { Suspense, lazy, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router';
 import { AppLayout } from './layout/AppLayout';
 import { AuthGuard } from '../shared/auth/components/AuthGuard';
-import { EntityListPage, EntityCreatePage, EntityDetailPage } from '@packages/entity-engine-ui';
+import { EntityListPage, EntityCreatePage, EntityDetailPage, useEntityConfig } from '@packages/entity-engine-ui';
 import { AuditTimeline } from '@packages/platform-ui/audit';
-import { PipelineProgressBar, useWorkflowForEntity, useWorkflows } from '@packages/platform-ui/workflows';
+import {
+  PipelineProgressBar,
+  TransitionConfirmDialog,
+  WorkflowTransitionButton,
+  useWorkflowForEntity,
+  useWorkflows,
+  useEntityTransition,
+} from '@packages/platform-ui/workflows';
 import { SettingsPage, AppSettingsPage, AutomationsPage, RuleBuilderPage, UsersListPage, RolesListPage, TagGroupsListPage, CategoryGroupsListPage } from '../portals/recruiter/routes';
 
 function renderAuditTrail(entityType: string, entityId: string) {
   return <AuditTimeline entityType={entityType} entityId={entityId} />;
 }
 
-function PipelineProgressForEntity({ entityType, entityId, entity }: { entityType: string; entityId: string; entity: Record<string, unknown> }) {
-  // First find the workflow field name for this entity type
+interface PendingTransition {
+  toStateName: string;
+  transitionName: string;
+  toStateLabel: string;
+}
+
+function useResolvedWorkflow(entityType: string, entityId: string) {
   const { data: allWorkflows } = useWorkflows();
   const anyWorkflow = allWorkflows?.find((w) => w.entityType === entityType && w.isActive);
   const fieldName = anyWorkflow?.fieldName ?? '';
-
-  // Then resolve the correct pipeline for this specific entity (checks assignment, falls back to default)
   const { data: resolvedWorkflow } = useWorkflowForEntity(entityType, entityId, fieldName);
+  return resolvedWorkflow;
+}
+
+function PipelineProgressForEntity({ entityType, entityId, entity }: { entityType: string; entityId: string; entity: Record<string, unknown> }) {
+  const resolvedWorkflow = useResolvedWorkflow(entityType, entityId);
+  const entityConfig = useEntityConfig(entityType);
+  const transitionMutation = useEntityTransition(entityConfig.slug, entityType, entityConfig.singularName);
+  const [pending, setPending] = useState<PendingTransition | null>(null);
+
   if (!resolvedWorkflow) return null;
   const currentState = entity[resolvedWorkflow.fieldName] as string;
   if (!currentState) return null;
-  return <PipelineProgressBar workflowSlug={resolvedWorkflow.slug} entityType={entityType} entityId={entityId} currentState={currentState} />;
+
+  const handleStageClick = (toStateName: string, transitionName: string, toStateLabel: string) => {
+    setPending({ toStateName, transitionName, toStateLabel });
+  };
+
+  const handleConfirm = (comment?: string) => {
+    if (!pending) return;
+    transitionMutation.mutate(
+      { id: entityId, fieldKey: resolvedWorkflow.fieldName, to: pending.toStateName, comment },
+      { onSuccess: () => setPending(null) },
+    );
+  };
+
+  return (
+    <>
+      <PipelineProgressBar
+        workflowSlug={resolvedWorkflow.slug}
+        entityType={entityType}
+        entityId={entityId}
+        currentState={currentState}
+        onStageClick={handleStageClick}
+      />
+      <TransitionConfirmDialog
+        open={!!pending}
+        onOpenChange={(open) => { if (!open) setPending(null); }}
+        transitionName={pending?.transitionName ?? ''}
+        toStateLabel={pending?.toStateLabel ?? ''}
+        isPending={transitionMutation.isPending}
+        onConfirm={handleConfirm}
+      />
+    </>
+  );
+}
+
+function WorkflowActionsForEntity({ entityType, entityId, entity }: { entityType: string; entityId: string; entity: Record<string, unknown> }) {
+  const resolvedWorkflow = useResolvedWorkflow(entityType, entityId);
+  const entityConfig = useEntityConfig(entityType);
+  const transitionMutation = useEntityTransition(entityConfig.slug, entityType, entityConfig.singularName);
+  const [pending, setPending] = useState<PendingTransition | null>(null);
+
+  if (!resolvedWorkflow) return null;
+  const currentState = entity[resolvedWorkflow.fieldName] as string;
+  if (!currentState) return null;
+
+  const handleTransitionSelect = (toStateName: string, transitionName: string, toStateLabel: string) => {
+    setPending({ toStateName, transitionName, toStateLabel });
+  };
+
+  const handleConfirm = (comment?: string) => {
+    if (!pending) return;
+    transitionMutation.mutate(
+      { id: entityId, fieldKey: resolvedWorkflow.fieldName, to: pending.toStateName, comment },
+      { onSuccess: () => setPending(null) },
+    );
+  };
+
+  return (
+    <>
+      <WorkflowTransitionButton
+        workflow={resolvedWorkflow}
+        currentState={currentState}
+        onTransitionSelect={handleTransitionSelect}
+      />
+      <TransitionConfirmDialog
+        open={!!pending}
+        onOpenChange={(open) => { if (!open) setPending(null); }}
+        transitionName={pending?.transitionName ?? ''}
+        toStateLabel={pending?.toStateLabel ?? ''}
+        isPending={transitionMutation.isPending}
+        onConfirm={handleConfirm}
+      />
+    </>
+  );
 }
 
 function renderPipelineProgress(entityType: string, entityId: string, entity: Record<string, unknown>) {
   return <PipelineProgressForEntity entityType={entityType} entityId={entityId} entity={entity} />;
 }
 
+function renderWorkflowActions(entityType: string, entityId: string, entity: Record<string, unknown>) {
+  return <WorkflowActionsForEntity entityType={entityType} entityId={entityId} entity={entity} />;
+}
+
 function AppEntityDetailPage({ entityType }: { entityType: string }) {
-  return <EntityDetailPage entityType={entityType} renderAuditTrail={renderAuditTrail} renderPipelineProgress={renderPipelineProgress} />;
+  return (
+    <EntityDetailPage
+      entityType={entityType}
+      renderAuditTrail={renderAuditTrail}
+      renderPipelineProgress={renderPipelineProgress}
+      renderWorkflowActions={renderWorkflowActions}
+    />
+  );
 }
 
 const LoginPage = lazy(() => import('../shared/auth/pages/LoginPage'));
