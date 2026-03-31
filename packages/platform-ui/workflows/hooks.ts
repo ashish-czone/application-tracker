@@ -197,3 +197,27 @@ export function useTransitionHistory(entityType: string, entityId: string) {
     enabled: !!entityType && !!entityId,
   });
 }
+
+// Entity transition execution
+export function useEntityTransition(
+  entitySlug: string,
+  entityType: string,
+  singularName: string,
+  options?: { onSuccess?: () => void },
+) {
+  const api = useWorkflowsApi();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { id: string; fieldKey: string; to: string; comment?: string }) =>
+      api.executeTransition(entitySlug, body.id, { fieldKey: body.fieldKey, to: body.to, comment: body.comment }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [entityType] });
+      queryClient.invalidateQueries({ queryKey: ['workflow-history'] });
+      toast.success(`${singularName} transitioned`);
+      options?.onSuccess?.();
+    },
+    onError: (error: any) => {
+      toast.error(error?.body?.message || `Failed to transition ${singularName.toLowerCase()}`);
+    },
+  });
+}

@@ -33,6 +33,8 @@ interface EntityDetailPageProps {
   renderAuditTrail?: (entityType: string, entityId: string) => React.ReactNode;
   /** Render the pipeline progress bar. Receives entityType, entityId, and the full entity record. */
   renderPipelineProgress?: (entityType: string, entityId: string, entity: Record<string, unknown>) => React.ReactNode;
+  /** Render workflow transition actions in the header. Receives entityType, entityId, and the full entity record. */
+  renderWorkflowActions?: (entityType: string, entityId: string, entity: Record<string, unknown>) => React.ReactNode;
 }
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -43,7 +45,7 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
  * Generic detail page for any entity registered with the entity engine.
  * Layout: left sidebar (related records) + main area (tabs: Overview | Audit Trail).
  */
-export function EntityDetailPage({ entityType, renderAuditTrail, renderPipelineProgress }: EntityDetailPageProps) {
+export function EntityDetailPage({ entityType, renderAuditTrail, renderPipelineProgress, renderWorkflowActions }: EntityDetailPageProps) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
@@ -238,6 +240,11 @@ export function EntityDetailPage({ entityType, renderAuditTrail, renderPipelineP
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Workflow transition actions */}
+            {renderWorkflowActions && entity.features.hasWorkflow && (
+              renderWorkflowActions(entityType, item.id as string, item)
+            )}
+
             {/* Primary action button (first picker action) */}
             {primaryAction && (
               <Button size="sm" onClick={() => handleAction(primaryAction)}>

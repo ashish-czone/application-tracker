@@ -62,6 +62,15 @@ export function createWorkflowsApi(api: ApiFn) {
     getTransitionHistory(entityType: string, entityId: string): Promise<TransitionHistoryEntry[]> {
       return api.get<TransitionHistoryEntry[]>(`/workflows/history/${entityType}/${entityId}`);
     },
+
+    // Entity transition execution
+    executeTransition(
+      entitySlug: string,
+      entityId: string,
+      body: { fieldKey: string; to: string; comment?: string },
+    ): Promise<Record<string, unknown>> {
+      return api.post<Record<string, unknown>>(`/${entitySlug}/${entityId}/transition`, body);
+    },
   };
 }
 

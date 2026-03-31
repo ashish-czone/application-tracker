@@ -9,11 +9,14 @@ export { PipelineStageManager } from './components/PipelineStageManager';
 export { PipelineProgressBar } from './components/PipelineProgressBar';
 export { StageForm } from './components/StageForm';
 export { StageTransitionEditor } from './components/StageTransitionEditor';
+export { TransitionConfirmDialog } from './components/TransitionConfirmDialog';
+export { WorkflowTransitionButton } from './components/WorkflowTransitionButton';
+export { getAvailableTransitions, type ClientAvailableTransition } from './helpers/getAvailableTransitions';
 export {
   useWorkflows, useWorkflow, useCreateWorkflow, useUpdateWorkflow, useDeleteWorkflow,
   useCreateState, useUpdateState, useDeleteState,
   useCreateTransition, useUpdateTransition, useDeleteTransition,
-  useWorkflowForEntity, useTransitionHistory,
+  useWorkflowForEntity, useTransitionHistory, useEntityTransition,
 } from './hooks';
 export { createWorkflowsApi, type WorkflowsApi } from './services';
 export type {
