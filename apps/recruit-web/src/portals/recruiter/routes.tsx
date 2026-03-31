@@ -14,6 +14,4 @@ export const SettingsPage = lazy(
   () => import('./features/settings/pages/SettingsPage'),
 );
 
-export const QueuedTasksPage = lazy(
-  () => import('./features/queued-tasks/QueuedTasksPage').then((m) => ({ default: m.QueuedTasksPage })),
-);
+export { QueueDashboardPage as QueuedTasksPage } from '@packages/platform-ui/queue-dashboard';
