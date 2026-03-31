@@ -28,7 +28,7 @@ export const recruiterMenu: MenuItem[] = [
       { path: '/app-settings', label: 'App Settings', icon: SlidersHorizontal, permission: 'settings.read' },
       { path: '/tag-groups', label: 'Tag Groups', icon: Tags, permission: 'taxonomy.tag-groups.read' },
       { path: '/categories', label: 'Categories', icon: FolderTree, permission: 'taxonomy.categories.read' },
-      { path: '/queued-tasks', label: 'Queued Tasks', icon: ListTodo },
+      { path: '/queued-tasks', label: 'Queued Tasks', icon: ListTodo, permission: 'queues.read' },
     ],
   },
 ];
