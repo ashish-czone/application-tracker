@@ -6,7 +6,6 @@ import type { FieldPermissionEntityResolver } from '@packages/rbac';
 import { AuditRegistryService } from '@packages/audit';
 import { EntityResolverRegistry } from '@packages/notifications';
 import { TaxonomyService } from '@packages/taxonomy';
-import { MediaService } from '@packages/media';
 import { WorkflowEngineService, WorkflowRegistryService, WorkflowGuardRegistry, PipelineResolverService } from '@packages/workflows';
 import { AppLoggerService } from '@packages/logger';
 import { fieldTypeRegistry } from '@packages/field-types';
@@ -115,14 +114,14 @@ export class EntityEngineModule implements OnModuleInit, OnApplicationBootstrap 
             fieldDefinitionService: FieldDefinitionService,
             lookupResolver: LookupResolverService,
             taxonomyService: TaxonomyService,
-            mediaService: MediaService,
+            hookRegistry: FieldTypeSaveHookRegistry,
             workflowEngine: WorkflowEngineService,
             workflowRegistry: WorkflowRegistryService,
             pipelineResolver: PipelineResolverService,
             entityRegistry: EntityRegistryService,
             appLogger: AppLoggerService,
-          ) => new EntityService(config, database, domainEventEmitter, eavStorage, fieldDefinitionService, lookupResolver, taxonomyService, mediaService, workflowEngine, workflowRegistry, pipelineResolver, entityRegistry, appLogger),
-          inject: [DatabaseService, DomainEventEmitter, EAV_STORAGE_EXTENSION, FieldDefinitionService, LookupResolverService, TaxonomyService, MediaService, WorkflowEngineService, WorkflowRegistryService, PipelineResolverService, EntityRegistryService, AppLoggerService],
+          ) => new EntityService(config, database, domainEventEmitter, eavStorage, fieldDefinitionService, lookupResolver, taxonomyService, hookRegistry, workflowEngine, workflowRegistry, pipelineResolver, entityRegistry, appLogger),
+          inject: [DatabaseService, DomainEventEmitter, EAV_STORAGE_EXTENSION, FieldDefinitionService, LookupResolverService, TaxonomyService, FieldTypeSaveHookRegistry, WorkflowEngineService, WorkflowRegistryService, PipelineResolverService, EntityRegistryService, AppLoggerService],
         },
       ],
       exports: [serviceToken],
