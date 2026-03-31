@@ -34,8 +34,8 @@ export class EavStorageAdapter implements EavStorageExtension {
     return this.fieldValueService.checkUniqueness(entityType, fieldKey, value, excludeEntityId);
   }
 
-  async setMultiValues(entityType: string, entityId: string, fieldKey: string, targetIds: string[]): Promise<void> {
-    return this.multiValueService.setValues(entityType, entityId, fieldKey, targetIds);
+  async setMultiValues(entityType: string, entityId: string, fieldKey: string, targetIds: string[], tx?: any): Promise<void> {
+    return this.multiValueService.setValues(entityType, entityId, fieldKey, targetIds, tx);
   }
 
   async getAllMultiValues(entityType: string, entityId: string): Promise<Record<string, string[]>> {

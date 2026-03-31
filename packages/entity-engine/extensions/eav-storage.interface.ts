@@ -23,8 +23,8 @@ export interface EavStorageExtension {
 
   // --- Multi-value fields (multi_user, multi_lookup) ---
 
-  /** Set multi-value targets for a field (replaces all). */
-  setMultiValues(entityType: string, entityId: string, fieldKey: string, targetIds: string[]): Promise<void>;
+  /** Set multi-value targets for a field (replaces all). Accepts optional tx to join caller's transaction. */
+  setMultiValues(entityType: string, entityId: string, fieldKey: string, targetIds: string[], tx?: any): Promise<void>;
 
   /** Get all multi-value fields for an entity. Returns { fieldKey: targetId[] }. */
   getAllMultiValues(entityType: string, entityId: string): Promise<Record<string, string[]>>;
