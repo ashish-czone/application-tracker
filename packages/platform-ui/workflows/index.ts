@@ -11,6 +11,7 @@ export { StageForm } from './components/StageForm';
 export { StageTransitionEditor } from './components/StageTransitionEditor';
 export { TransitionConfirmDialog } from './components/TransitionConfirmDialog';
 export { WorkflowTransitionButton } from './components/WorkflowTransitionButton';
+export { PipelineProgressInline } from './components/PipelineProgressInline';
 export { getAvailableTransitions, type ClientAvailableTransition } from './helpers/getAvailableTransitions';
 export {
   useWorkflows, useWorkflow, useCreateWorkflow, useUpdateWorkflow, useDeleteWorkflow,

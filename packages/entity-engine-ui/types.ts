@@ -61,3 +61,8 @@ export interface EntityUIConfig {
   entityType: string;
   detailPlugins?: EntityDetailPlugin[];
 }
+
+/** Registration for a named cell renderer used in list view columns */
+export interface ColumnRendererRegistration {
+  component: ComponentType<{ value: unknown; row: Record<string, unknown>; entityType: string }>;
+}

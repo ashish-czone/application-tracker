@@ -2,7 +2,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter } from 'react-router';
 import type { ReactNode } from 'react';
 import { Toaster } from '@packages/ui';
-import { EntityEngineProvider } from '@packages/entity-engine-ui';
+import { EntityEngineProvider, type ColumnRendererRegistration } from '@packages/entity-engine-ui';
+import { PipelineProgressInline } from '@packages/platform-ui/workflows';
 import { TaxonomyProvider } from '@packages/platform-ui-taxonomy';
 import { PlatformUIProvider } from '@packages/platform-ui';
 import { api } from '../lib/api';
@@ -24,12 +25,16 @@ const queryClient = new QueryClient({
 
 const entityUIConfigs = [CANDIDATES_UI_CONFIG];
 
+const columnRenderers: Record<string, ColumnRendererRegistration> = {
+  PipelineProgressRenderer: { component: PipelineProgressInline },
+};
+
 export function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <PlatformUIProvider apiFn={api}>
-          <EntityEngineProvider apiFn={api} entityUIConfigs={entityUIConfigs}>
+          <EntityEngineProvider apiFn={api} entityUIConfigs={entityUIConfigs} columnRenderers={columnRenderers}>
             <TaxonomyProvider apiFn={api}>
               {children}
             </TaxonomyProvider>

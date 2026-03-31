@@ -316,6 +316,8 @@ export interface FieldMeta {
   maxFileSize?: number;
   /** Workflow config (for workflow field type) */
   workflow?: WorkflowFieldConfig;
+  /** Named cell renderer for the list view (looked up in EntityEngineProvider registry) */
+  cellRenderer?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -652,6 +654,8 @@ export interface ListLayoutColumn {
   tagGroupSlug?: string;
   /** Category group slug (for category field type — used to fetch filter options) */
   categoryGroupSlug?: string;
+  /** Named cell renderer key (looked up in EntityEngineProvider registry) */
+  cellRenderer?: string;
 }
 
 export interface ListLayoutResponse {

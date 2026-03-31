@@ -30,7 +30,7 @@ export const APPLICATIONS_CONFIG: EntityConfig = {
       lookupSearchFields: ['title', 'department'],
     },
     stage: {
-      label: 'Stage', section: 'basic', sortOrder: 2, isSystem: true, fieldType: 'workflow',
+      label: 'Stage', section: 'basic', sortOrder: 2, isSystem: true, fieldType: 'workflow', cellRenderer: 'PipelineProgressRenderer',
       workflow: {
         slug: 'application-stage',
         initialState: 'new',
