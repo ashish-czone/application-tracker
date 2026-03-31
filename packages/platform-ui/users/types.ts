@@ -44,5 +44,6 @@ export interface ListUsersParams {
   sort?: string;
   order?: 'asc' | 'desc';
   userType?: string;
+  roleId?: string;
   includeDeleted?: boolean;
 }

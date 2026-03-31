@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Users, Plus, Pencil, Trash2, RotateCcw, KeyRound } from 'lucide-react';
 import { format } from 'date-fns';
 import {
@@ -10,6 +10,8 @@ import { useUsers, useDeleteUser, useRestoreUser } from '../hooks';
 import { AddUserForm } from '../components/AddUserForm';
 import { EditUserForm } from '../components/EditUserForm';
 import { ResetPasswordForm } from '../components/ResetPasswordForm';
+import { usePlatformAPI } from '../../PlatformUIProvider';
+import { createUsersApi } from '../services';
 import type { User } from '../types';
 
 const USER_TYPE_LABELS: Record<string, string> = {
@@ -17,24 +19,14 @@ const USER_TYPE_LABELS: Record<string, string> = {
   client: 'Client',
 };
 
-const USER_FILTER_FIELDS: DataGridFilterField[] = [
-  {
-    key: 'userType',
-    label: 'Type',
-    fieldType: 'picklist',
-    options: [
-      { label: 'Admin', value: 'admin' },
-      { label: 'Client', value: 'client' },
-    ],
-  },
-];
-
 export function UsersListPage() {
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [deletingUser, setDeletingUser] = useState<User | null>(null);
   const [resettingPasswordUser, setResettingPasswordUser] = useState<User | null>(null);
   const [showDeleted, setShowDeleted] = useState(false);
+  const apiFn = usePlatformAPI();
+  const usersApi = useMemo(() => createUsersApi(apiFn), [apiFn]);
   const {
     page, pageSize, search, sort, order,
     setPage, setPageSize, setSearch, setSort,
@@ -48,6 +40,45 @@ export function UsersListPage() {
     return (f.operator === 'in' && Array.isArray(f.value)) ? f.value[0] as string : f.value as string;
   }, [filters]);
 
+  const roleId = useMemo(() => {
+    const f = filters.find((expr) => expr.field === 'roleId');
+    if (!f) return undefined;
+    return f.value as string;
+  }, [filters]);
+
+  const searchRoles = useCallback(
+    async (query: string) => {
+      const result = await usersApi.listRoles();
+      const roles = result.data ?? [];
+      const filtered = query
+        ? roles.filter((r) => r.name.toLowerCase().includes(query.toLowerCase()))
+        : roles;
+      return filtered.map((r) => ({ label: r.name, value: r.id }));
+    },
+    [usersApi],
+  );
+
+  const filterFields = useMemo<DataGridFilterField[]>(
+    () => [
+      {
+        key: 'userType',
+        label: 'Type',
+        fieldType: 'picklist',
+        options: [
+          { label: 'Admin', value: 'admin' },
+          { label: 'Client', value: 'client' },
+        ],
+      },
+      {
+        key: 'roleId',
+        label: 'Role',
+        fieldType: 'lookup',
+        onSearchOptions: searchRoles,
+      },
+    ],
+    [searchRoles],
+  );
+
   const deleteMutation = useDeleteUser({
     onSuccess: () => setDeletingUser(null),
   });
@@ -60,6 +91,7 @@ export function UsersListPage() {
     sort: sort || undefined,
     order,
     userType,
+    roleId,
     includeDeleted: showDeleted,
   });
 
@@ -239,7 +271,7 @@ export function UsersListPage() {
         search={search}
         onSearchChange={setSearch}
         searchPlaceholder="Search by name or email..."
-        filterFields={USER_FILTER_FIELDS}
+        filterFields={filterFields}
         filters={filters}
         onFilterAdd={addFilter}
         onStructuredFilterRemove={removeFilter}

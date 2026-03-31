@@ -50,6 +50,7 @@ export interface ListUsersQuery {
   limit?: number;
   search?: string;
   userType?: string;
+  roleId?: string;
   sort?: 'firstName' | 'email' | 'createdAt';
   order?: 'asc' | 'desc';
   includeDeleted?: boolean;
@@ -106,6 +107,14 @@ export class UsersService {
 
     if (query.userType) {
       conditions.push(eq(users.userType, query.userType));
+    }
+
+    if (query.roleId) {
+      const usersWithRole = this.database.db
+        .select({ userId: userRoles.userId })
+        .from(userRoles)
+        .where(eq(userRoles.roleId, query.roleId));
+      conditions.push(inArray(users.id, usersWithRole));
     }
 
     const whereClause = and(...conditions);

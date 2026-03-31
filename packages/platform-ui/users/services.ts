@@ -12,6 +12,7 @@ export function createUsersApi(api: ApiFn) {
       if (params.sort) searchParams.set('sort', params.sort);
       if (params.order) searchParams.set('order', params.order);
       if (params.userType) searchParams.set('userType', params.userType);
+      if (params.roleId) searchParams.set('roleId', params.roleId);
       if (params.includeDeleted) searchParams.set('includeDeleted', 'true');
       const qs = searchParams.toString();
       return api.get<PaginatedResponse<User>>(`/users${qs ? `?${qs}` : ''}`);
