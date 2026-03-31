@@ -193,12 +193,14 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
   }, [listLayout]);
 
   // Get entity display name from a row
+  // For lookup fields, prefer the resolved __label over the raw UUID
   const getDisplayName = (row: Row): string => {
     const { nameField } = entity.ui;
+    const resolve = (f: string) => row[`${f}__label`] ?? row[f] ?? '';
     if (Array.isArray(nameField)) {
-      return nameField.map((f) => row[f] ?? '').filter(Boolean).join(' ');
+      return nameField.map(resolve).filter(Boolean).join(' — ');
     }
-    return String(row[nameField] ?? row.id ?? '');
+    return String(resolve(nameField) || row.id || '');
   };
 
   const nameFields = useMemo(
@@ -207,11 +209,15 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
   );
 
   // Default column visibility from the list layout's visible flag
+  // Name fields default to hidden (they're shown in the name column) unless they have a cellRenderer
   const defaultColumnVisibility = useMemo<Record<string, boolean>>(() => {
     if (!listLayout) return {};
     const visibility: Record<string, boolean> = {};
     for (const col of listLayout.columns) {
-      if (nameFields.has(col.fieldKey)) continue;
+      if (nameFields.has(col.fieldKey) && !col.cellRenderer) {
+        visibility[col.fieldKey] = false;
+        continue;
+      }
       visibility[col.fieldKey] = col.visible;
     }
     return visibility;
@@ -254,9 +260,8 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
       },
     };
 
-    // Data columns from listLayout (sorted by order, excludes name fields)
+    // Data columns from listLayout (sorted by order)
     const dataCols: ColumnDef<Row, unknown>[] = listLayout.columns
-      .filter((col) => !nameFields.has(col.fieldKey))
       .sort((a, b) => a.order - b.order)
       .map((col) => ({
         id: col.fieldKey,
