@@ -95,6 +95,9 @@ export { EAV_PERMISSIONS } from './permissions';
 export type { EavStorageExtension } from './extensions/eav-storage.interface';
 export { EAV_STORAGE_EXTENSION } from './extensions/eav-storage.interface';
 
+export type { MultiValueExtension } from './extensions/multi-value-extension.interface';
+export { MULTI_VALUE_EXTENSION } from './extensions/multi-value-extension.interface';
+
 // --- Field type save hooks ---
 
 export { FieldTypeSaveHookRegistry, fieldTypeSaveHookRegistry } from './services/field-type-save-hook.registry';

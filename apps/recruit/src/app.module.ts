@@ -20,6 +20,7 @@ import { RbacGuard } from '@packages/rbac';
 import { TaxonomyModule } from '@packages/taxonomy';
 import { HierarchyModule } from '@packages/hierarchy';
 import { EavAttributesModule } from '@packages/eav-attributes';
+import { EntityRelationsModule } from '@packages/entity-relations';
 import { EntityLayoutModule } from '@packages/entity-layout';
 import { EntityEngineModule } from '@packages/entity-engine';
 import { AuthOrchestratorModule } from './modules/auth/auth.module';
@@ -82,6 +83,7 @@ import { validate } from './config/env.validation';
     HierarchyModule,
     TaxonomyModule,
     EavAttributesModule,
+    EntityRelationsModule,
     EntityLayoutModule,
     EntityEngineModule,
     AuthOrchestratorModule,

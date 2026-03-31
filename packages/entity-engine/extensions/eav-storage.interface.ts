@@ -4,8 +4,6 @@
  * When not loaded, entity-engine works on schema columns only.
  */
 export interface EavStorageExtension {
-  // --- EAV field values ---
-
   /** Get all custom field values for a single entity. */
   getValues(entityType: string, entityId: string, tx?: any): Promise<Record<string, unknown>>;
 
@@ -20,14 +18,6 @@ export interface EavStorageExtension {
 
   /** Check if a value is unique across all entities for a given field. */
   checkUniqueness(entityType: string, fieldKey: string, value: unknown, excludeEntityId?: string): Promise<boolean>;
-
-  // --- Multi-value fields (multi_user, multi_lookup) ---
-
-  /** Set multi-value targets for a field (replaces all). Accepts optional tx to join caller's transaction. */
-  setMultiValues(entityType: string, entityId: string, fieldKey: string, targetIds: string[], tx?: any): Promise<void>;
-
-  /** Get all multi-value fields for an entity. Returns { fieldKey: targetId[] }. */
-  getAllMultiValues(entityType: string, entityId: string): Promise<Record<string, string[]>>;
 }
 
 /** NestJS injection token for the EAV storage extension. */

@@ -20,6 +20,7 @@ import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { FieldDefinitionService } from './services/field-definition.service';
 import { LookupResolverService } from './services/lookup-resolver.service';
 import type { EavStorageExtension } from './extensions/eav-storage.interface';
+import type { MultiValueExtension } from './extensions/multi-value-extension.interface';
 import type { FieldDefinition } from './types';
 import { buildSnapshot, diffSnapshot } from './helpers/snapshot';
 import { validatePayload } from './helpers/validate-payload';
@@ -52,6 +53,7 @@ export class EntityService {
     private readonly database: DatabaseService,
     private readonly domainEventEmitter: DomainEventEmitter,
     private readonly eavStorage: EavStorageExtension | null,
+    private readonly multiValueExtension: MultiValueExtension | null,
     private readonly fieldDefinitionService: FieldDefinitionService,
     private readonly lookupResolver: LookupResolverService,
     private readonly taxonomyService: TaxonomyService,
@@ -1142,8 +1144,8 @@ export class EntityService {
       }
 
       // Hydrate multi-value fields (multi_user, multi_lookup)
-      if (multiFields.length > 0 && this.eavStorage) {
-        const allMulti = await this.eavStorage.getAllMultiValues(this.config.entityType, entityId);
+      if (multiFields.length > 0 && this.multiValueExtension) {
+        const allMulti = await this.multiValueExtension.getAllMultiValues(this.config.entityType, entityId);
         for (const field of multiFields) {
           const targetIds = allMulti[field.fieldKey] ?? [];
           if (targetIds.length === 0) {

@@ -3,11 +3,9 @@
 
 export { EavAttributesModule } from './eav-attributes.module';
 export { FieldValueService } from './services/field-value.service';
-export { MultiValueService } from './services/multi-value.service';
 
 // EAV-specific schemas
 export { entityFieldValues } from './schema/entity-field-values';
-export { entityMultiValues } from './schema/entity-multi-values';
 
 // Re-exports for backward compatibility (canonical location is @packages/entity-engine)
 export { FieldDefinitionService } from './services/field-definition.service';

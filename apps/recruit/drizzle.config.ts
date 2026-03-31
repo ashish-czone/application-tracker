@@ -13,6 +13,7 @@ export default defineConfig({
     '../../packages/taxonomy/schema/index.ts',
     '../../packages/audit/schema/index.ts',
     '../../packages/eav-attributes/schema/index.ts',
+    '../../packages/entity-relations/schema/index.ts',
     '../../packages/tasks/schema/tasks.ts',
     // Recruit-specific modules
     './src/modules/clients/schema/clients.ts',
