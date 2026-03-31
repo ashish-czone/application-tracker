@@ -152,9 +152,15 @@ export function RolesListPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-lg font-semibold text-foreground">Roles</h1>
-        <p className="text-sm text-muted-foreground">Manage roles and their permissions</p>
+      <div className="mb-6 flex items-start justify-between">
+        <div>
+          <h1 className="text-lg font-semibold text-foreground">Roles</h1>
+          <p className="text-sm text-muted-foreground">Manage roles and their permissions</p>
+        </div>
+        <Button size="sm" onClick={() => setAddModalOpen(true)}>
+          <Plus className="h-4 w-4 mr-1" />
+          Add Role
+        </Button>
       </div>
 
       <DataGrid
@@ -189,12 +195,6 @@ export function RolesListPage() {
           action: { label: 'Add Role', onClick: () => setAddModalOpen(true) },
         }}
         storageKey="roles-list"
-        toolbarActions={
-          <Button size="sm" onClick={() => setAddModalOpen(true)}>
-            <Plus className="h-4 w-4 mr-1" />
-            Add Role
-          </Button>
-        }
         renderCard={(role) => (
           <div className="rounded-lg border bg-card p-4 space-y-2">
             <div className="flex items-center justify-between">

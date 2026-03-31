@@ -251,9 +251,15 @@ export function UsersListPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-lg font-semibold text-foreground">Users</h1>
-        <p className="text-sm text-muted-foreground">Manage user accounts and permissions</p>
+      <div className="mb-6 flex items-start justify-between">
+        <div>
+          <h1 className="text-lg font-semibold text-foreground">Users</h1>
+          <p className="text-sm text-muted-foreground">Manage user accounts and permissions</p>
+        </div>
+        <Button size="sm" onClick={() => setAddModalOpen(true)}>
+          <Plus className="h-4 w-4 mr-1" />
+          Add User
+        </Button>
       </div>
 
       <DataGrid
@@ -292,21 +298,15 @@ export function UsersListPage() {
         storageKey="users-list"
         rowClassName={(user) => user.deletedAt ? 'bg-muted/30 text-muted-foreground' : undefined}
         toolbarActions={
-          <div className="flex items-center gap-2">
-            <label className="flex items-center gap-1.5 text-sm text-muted-foreground cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={showDeleted}
-                onChange={(e) => setShowDeleted(e.target.checked)}
-                className="rounded border-input"
-              />
-              Include deleted
-            </label>
-            <Button size="sm" onClick={() => setAddModalOpen(true)}>
-              <Plus className="h-4 w-4 mr-1" />
-              Add User
-            </Button>
-          </div>
+          <label className="flex items-center gap-1.5 text-sm text-muted-foreground cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={showDeleted}
+              onChange={(e) => setShowDeleted(e.target.checked)}
+              className="rounded border-input"
+            />
+            Include deleted
+          </label>
         }
         renderCard={(user) => (
           <div className="rounded-lg border bg-card p-4 space-y-2">
