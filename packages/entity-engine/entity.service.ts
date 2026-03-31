@@ -87,12 +87,18 @@ export class EntityService {
 
   /**
    * Get all field definitions eligible for list queries.
-   * Returns all non-system fields except long-text/file types.
-   * listFields only controls default visibility, not data availability.
+   * Excludes long-text/file types and system fields — unless the system field
+   * is explicitly in listFields or has a cellRenderer configured.
    */
   private async getListFieldDefs(): Promise<FieldDefinition[]> {
-    const defs = await this.fieldDefinitionService.listByEntityWithOptions(this.config.entityType);
-    return defs.filter(d => !EntityService.shouldExcludeFromList(d.fieldType) && !d.isSystem);
+    const { config } = this;
+    const defs = await this.fieldDefinitionService.listByEntityWithOptions(config.entityType);
+    const listFieldSet = config.listFields ? new Set(config.listFields) : null;
+    return defs.filter(d => {
+      if (EntityService.shouldExcludeFromList(d.fieldType)) return false;
+      if (!d.isSystem) return true;
+      return listFieldSet?.has(d.fieldKey) || !!config.fieldMeta[d.fieldKey]?.cellRenderer;
+    });
   }
 
   /**
