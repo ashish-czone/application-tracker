@@ -6,6 +6,14 @@
   "scripts": {
     "test": "vitest run"
   },
+  "peerDependencies": {
+    "react": ">=18",
+    "zod": ">=3"
+  },
+  "peerDependenciesMeta": {
+    "react": { "optional": true },
+    "zod": { "optional": true }
+  },
   "devDependencies": {
     "typescript": "^5.7.0",
     "vitest": "^3.0.0"
