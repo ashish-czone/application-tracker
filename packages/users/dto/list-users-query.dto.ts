@@ -29,6 +29,11 @@ export class ListUsersQueryDto {
   @IsIn(['admin', 'client'])
   userType?: string;
 
+  @ApiPropertyOptional({ description: 'Filter by role ID' })
+  @IsOptional()
+  @IsString()
+  roleId?: string;
+
   @ApiPropertyOptional({ enum: ['firstName', 'email', 'createdAt'], default: 'createdAt' })
   @IsOptional()
   @IsIn(['firstName', 'email', 'createdAt'])
