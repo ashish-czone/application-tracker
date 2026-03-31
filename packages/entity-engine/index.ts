@@ -95,5 +95,17 @@ export { EAV_PERMISSIONS } from './permissions';
 export type { EavStorageExtension } from './extensions/eav-storage.interface';
 export { EAV_STORAGE_EXTENSION } from './extensions/eav-storage.interface';
 
+// --- Field type save hooks ---
+
+export { FieldTypeSaveHookRegistry } from './services/field-type-save-hook.registry';
+export type {
+  FieldTypeSaveHookContext,
+  FieldTypeSaveHookResult,
+  FieldTypeSaveHooks,
+  OnBeforeSaveHook,
+  OnTransactionalSaveHook,
+  OnAfterSaveHook,
+} from './services/field-type-save-hook.registry';
+
 export type { LayoutExtension } from './extensions/layout-extension.interface';
 export { LAYOUT_EXTENSION } from './extensions/layout-extension.interface';

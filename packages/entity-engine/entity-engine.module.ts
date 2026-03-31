@@ -17,6 +17,7 @@ import { EntityEngineApiController } from './entity-engine-api.controller';
 import { FieldsController } from './controllers/fields.controller';
 import { LookupsController } from './controllers/lookups.controller';
 import { FieldDefinitionService } from './services/field-definition.service';
+import { FieldTypeSaveHookRegistry } from './services/field-type-save-hook.registry';
 import { LookupResolverService } from './services/lookup-resolver.service';
 import { createEntityController } from './create-entity-controller';
 import { seedEntityFields, seedWorkflows } from './seed-entity-fields';
@@ -53,6 +54,7 @@ const pendingConfigs: EntityConfig[] = [];
     EntityRegistryService,
     FieldDefinitionService,
     LookupResolverService,
+    FieldTypeSaveHookRegistry,
     // Default null providers for optional extensions — overridden when extension modules are imported
     { provide: EAV_STORAGE_EXTENSION, useValue: null },
     { provide: LAYOUT_EXTENSION, useValue: null },
@@ -72,7 +74,7 @@ const pendingConfigs: EntityConfig[] = [];
       useExisting: FieldDefinitionService,
     },
   ],
-  exports: [EntityRegistryService, FieldDefinitionService, LookupResolverService, EAV_STORAGE_EXTENSION, LAYOUT_EXTENSION, FIELD_PERMISSION_ENTITY_RESOLVER, 'FIELD_DEFINITION_SERVICE'],
+  exports: [EntityRegistryService, FieldDefinitionService, LookupResolverService, FieldTypeSaveHookRegistry, EAV_STORAGE_EXTENSION, LAYOUT_EXTENSION, FIELD_PERMISSION_ENTITY_RESOLVER, 'FIELD_DEFINITION_SERVICE'],
 })
 export class EntityEngineModule implements OnModuleInit, OnApplicationBootstrap {
   private readonly logger = new Logger('EntityEngineModule');
