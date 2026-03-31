@@ -217,6 +217,8 @@ export interface LookupConfig {
   entity: string;
   table: any;
   labelField: string;
+  /** When set, label is built by concatenating these fields with a space (overrides labelField for display). */
+  labelFields?: string[];
   valueField: string;
   searchFields: string[];
 }

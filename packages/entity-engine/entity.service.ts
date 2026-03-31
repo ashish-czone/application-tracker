@@ -203,7 +203,7 @@ export class EntityService {
 
     // Build filterable fields (picklists, lookups, booleans, tags)
     const defs = await this.fieldDefinitionService.listByEntityWithOptions(config.entityType);
-    const filterableTypes = new Set(['picklist', 'multi_select', 'lookup', 'user', 'boolean', 'tags', 'category']);
+    const filterableTypes = new Set(['picklist', 'multi_select', 'lookup', 'user', 'multi_user', 'boolean', 'tags', 'category']);
     const filters = defs
       .filter(d => filterableTypes.has(d.fieldType))
       .map(d => d.fieldKey);

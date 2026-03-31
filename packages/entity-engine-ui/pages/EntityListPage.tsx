@@ -503,6 +503,7 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
             }
           }},
         }}
+        key={entity.slug}
         storageKey={`${entity.slug}-list`}
         defaultColumnVisibility={defaultColumnVisibility}
         rowClassName={(row) => (row as Row).deletedAt ? 'bg-muted/30 text-muted-foreground' : undefined}
