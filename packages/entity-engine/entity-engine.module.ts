@@ -54,9 +54,6 @@ const pendingConfigs: EntityConfig[] = [];
     FieldDefinitionService,
     LookupResolverService,
     FieldTypeSaveHookRegistry,
-    // Default null providers for optional extensions — overridden when extension modules are imported
-    { provide: EAV_STORAGE_EXTENSION, useValue: null },
-    { provide: LAYOUT_EXTENSION, useValue: null },
     {
       provide: FIELD_PERMISSION_ENTITY_RESOLVER,
       useFactory: (registry: EntityRegistryService): FieldPermissionEntityResolver => ({
@@ -73,7 +70,7 @@ const pendingConfigs: EntityConfig[] = [];
       useExisting: FieldDefinitionService,
     },
   ],
-  exports: [EntityRegistryService, FieldDefinitionService, LookupResolverService, FieldTypeSaveHookRegistry, EAV_STORAGE_EXTENSION, LAYOUT_EXTENSION, FIELD_PERMISSION_ENTITY_RESOLVER, 'FIELD_DEFINITION_SERVICE'],
+  exports: [EntityRegistryService, FieldDefinitionService, LookupResolverService, FieldTypeSaveHookRegistry, FIELD_PERMISSION_ENTITY_RESOLVER, 'FIELD_DEFINITION_SERVICE'],
 })
 export class EntityEngineModule implements OnModuleInit, OnApplicationBootstrap {
   private readonly logger = new Logger('EntityEngineModule');
@@ -121,7 +118,7 @@ export class EntityEngineModule implements OnModuleInit, OnApplicationBootstrap 
             entityRegistry: EntityRegistryService,
             appLogger: AppLoggerService,
           ) => new EntityService(config, database, domainEventEmitter, eavStorage, fieldDefinitionService, lookupResolver, taxonomyService, hookRegistry, workflowEngine, workflowRegistry, pipelineResolver, entityRegistry, appLogger),
-          inject: [DatabaseService, DomainEventEmitter, EAV_STORAGE_EXTENSION, FieldDefinitionService, LookupResolverService, TaxonomyService, FieldTypeSaveHookRegistry, WorkflowEngineService, WorkflowRegistryService, PipelineResolverService, EntityRegistryService, AppLoggerService],
+          inject: [DatabaseService, DomainEventEmitter, { token: EAV_STORAGE_EXTENSION, optional: true }, FieldDefinitionService, LookupResolverService, TaxonomyService, FieldTypeSaveHookRegistry, WorkflowEngineService, WorkflowRegistryService, PipelineResolverService, EntityRegistryService, AppLoggerService],
         },
       ],
       exports: [serviceToken],
