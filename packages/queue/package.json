@@ -8,7 +8,6 @@
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
-    "@nestjs/swagger": "^11.0.0",
     "@packages/logger": "workspace:*",
     "@packages/rbac": "workspace:*",
     "bullmq": "^5.0.0",

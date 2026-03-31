@@ -10,7 +10,6 @@ import {
   HttpStatus,
   NotFoundException,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { RequirePermission } from '@packages/rbac';
 import { QueueService } from '../services/queue.service';
 import { ListJobsQueryDto, CleanJobsDto } from '../dto/list-jobs-query.dto';
@@ -34,14 +33,13 @@ function serializeJob(job: Job, status: string) {
   };
 }
 
-@ApiTags('queues')
 @Controller('queues')
 export class QueueDashboardController {
   constructor(private readonly queueService: QueueService) {}
 
   @Get()
   @RequirePermission(QUEUE_PERMISSIONS.READ)
-  @ApiOperation({ summary: 'List all queues with job counts' })
+
   async listQueues() {
     const names = this.queueService.getQueueNames();
     const result = await Promise.all(
@@ -59,7 +57,7 @@ export class QueueDashboardController {
 
   @Get(':name/jobs')
   @RequirePermission(QUEUE_PERMISSIONS.READ)
-  @ApiOperation({ summary: 'List jobs for a queue' })
+
   async listJobs(@Param('name') name: string, @Query() query: ListJobsQueryDto) {
     const queue = this.queueService.getQueue(name);
     if (!queue) throw new NotFoundException(`Queue "${name}" not found`);
@@ -87,7 +85,7 @@ export class QueueDashboardController {
   @Post(':name/pause')
   @RequirePermission(QUEUE_PERMISSIONS.MANAGE)
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Pause a queue' })
+
   async pauseQueue(@Param('name') name: string) {
     const queue = this.queueService.getQueue(name);
     if (!queue) throw new NotFoundException(`Queue "${name}" not found`);
@@ -97,7 +95,7 @@ export class QueueDashboardController {
   @Post(':name/resume')
   @RequirePermission(QUEUE_PERMISSIONS.MANAGE)
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Resume a queue' })
+
   async resumeQueue(@Param('name') name: string) {
     const queue = this.queueService.getQueue(name);
     if (!queue) throw new NotFoundException(`Queue "${name}" not found`);
@@ -106,7 +104,7 @@ export class QueueDashboardController {
 
   @Post(':name/clean')
   @RequirePermission(QUEUE_PERMISSIONS.MANAGE)
-  @ApiOperation({ summary: 'Clean jobs by status' })
+
   async cleanJobs(@Param('name') name: string, @Body() dto: CleanJobsDto) {
     const queue = this.queueService.getQueue(name);
     if (!queue) throw new NotFoundException(`Queue "${name}" not found`);
@@ -117,7 +115,7 @@ export class QueueDashboardController {
   @Post(':name/retry-all')
   @RequirePermission(QUEUE_PERMISSIONS.MANAGE)
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Retry all failed jobs' })
+
   async retryAll(@Param('name') name: string) {
     const queue = this.queueService.getQueue(name);
     if (!queue) throw new NotFoundException(`Queue "${name}" not found`);
@@ -127,7 +125,7 @@ export class QueueDashboardController {
   @Post(':name/jobs/:jobId/retry')
   @RequirePermission(QUEUE_PERMISSIONS.MANAGE)
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Retry a single job' })
+
   async retryJob(@Param('name') name: string, @Param('jobId') jobId: string) {
     const queue = this.queueService.getQueue(name);
     if (!queue) throw new NotFoundException(`Queue "${name}" not found`);
@@ -139,7 +137,7 @@ export class QueueDashboardController {
   @Delete(':name/jobs/:jobId')
   @RequirePermission(QUEUE_PERMISSIONS.MANAGE)
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Remove a single job' })
+
   async removeJob(@Param('name') name: string, @Param('jobId') jobId: string) {
     const queue = this.queueService.getQueue(name);
     if (!queue) throw new NotFoundException(`Queue "${name}" not found`);
