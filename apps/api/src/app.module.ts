@@ -20,7 +20,8 @@ import { AuthGuard } from '@packages/auth';
 import { RbacGuard } from '@packages/rbac';
 import { AuthOrchestratorModule } from './modules/auth/auth.module';
 import { UsersModule } from '@packages/users';
-import { TasksModule } from '@packages/tasks';
+import { EntityEngineModule } from '@packages/entity-engine';
+import { TASKS_CONFIG } from '@packages/tasks';
 import { TaxonomyModule } from '@packages/taxonomy';
 import { SharedModule } from './modules/shared/shared.module';
 import { validate } from './config/env.validation';
@@ -67,10 +68,11 @@ import { validate } from './config/env.validation';
     AuditModule,
     HierarchyModule,
     WorkflowsModule,
+    TaxonomyModule,
+    EntityEngineModule,
     AuthOrchestratorModule,
     UsersModule,
-    TasksModule,
-    TaxonomyModule,
+    EntityEngineModule.forEntity(TASKS_CONFIG),
   ],
   providers: [
     {

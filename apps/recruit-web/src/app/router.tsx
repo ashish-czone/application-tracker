@@ -5,7 +5,7 @@ import { AuthGuard } from '../shared/auth/components/AuthGuard';
 import { EntityListPage, EntityCreatePage, EntityDetailPage } from '@packages/entity-engine-ui';
 import { AuditTimeline } from '@packages/platform-ui/audit';
 import { PipelineProgressBar, useWorkflowForEntity, useWorkflows } from '@packages/platform-ui/workflows';
-import { SettingsPage, AppSettingsPage, AutomationsPage, RuleBuilderPage, TasksListPage, UsersListPage, RolesListPage, TagGroupsListPage, CategoryGroupsListPage } from '../portals/recruiter/routes';
+import { SettingsPage, AppSettingsPage, AutomationsPage, RuleBuilderPage, UsersListPage, RolesListPage, TagGroupsListPage, CategoryGroupsListPage } from '../portals/recruiter/routes';
 
 function renderAuditTrail(entityType: string, entityId: string) {
   return <AuditTimeline entityType={entityType} entityId={entityId} />;
@@ -108,11 +108,11 @@ export function AppRouter() {
           <Route path="/applications" element={<EntityListPage entityType="applications" />} />
           <Route path="/applications/:id" element={<AppEntityDetailPage entityType="applications" />} />
 
+          {/* Tasks — now via entity engine */}
+          <Route path="/tasks" element={<EntityListPage entityType="tasks" />} />
+          <Route path="/tasks/:id" element={<AppEntityDetailPage entityType="tasks" />} />
+
           {/* Non-entity routes */}
-          <Route
-            path="/tasks"
-            element={<Suspense fallback={<PageSkeleton />}><TasksListPage /></Suspense>}
-          />
           <Route
             path="/users"
             element={<Suspense fallback={<PageSkeleton />}><UsersListPage /></Suspense>}
