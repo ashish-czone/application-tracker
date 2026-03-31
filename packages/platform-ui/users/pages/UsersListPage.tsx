@@ -2,9 +2,9 @@ import { useMemo, useState } from 'react';
 import { Users, Plus, Pencil, Trash2, RotateCcw, KeyRound } from 'lucide-react';
 import { format } from 'date-fns';
 import {
-  DataGrid, DataGridFilters, Badge, Button, useDataGridParams, useActiveFilters,
+  DataGrid, Badge, Button, useDataGridParams,
   Dialog, DialogContent, ConfirmDialog,
-  type ColumnDef, type DataGridFilterConfig,
+  type ColumnDef, type DataGridFilterField, type DataGridBulkAction,
 } from '@packages/ui';
 import { useUsers, useDeleteUser, useRestoreUser } from '../hooks';
 import { AddUserForm } from '../components/AddUserForm';
@@ -17,11 +17,11 @@ const USER_TYPE_LABELS: Record<string, string> = {
   client: 'Client',
 };
 
-const USER_FILTERS: DataGridFilterConfig[] = [
+const USER_FILTER_FIELDS: DataGridFilterField[] = [
   {
     key: 'userType',
     label: 'Type',
-    placeholder: 'All types',
+    fieldType: 'picklist',
     options: [
       { label: 'Admin', value: 'admin' },
       { label: 'Client', value: 'client' },
@@ -38,11 +38,15 @@ export function UsersListPage() {
   const {
     page, pageSize, search, sort, order,
     setPage, setPageSize, setSearch, setSort,
-    getFilter, setFilter, clearFilters,
-  } = useDataGridParams({ defaultSort: 'createdAt', defaultOrder: 'desc' });
+    filters, addFilter, removeFilter, clearAllFilters,
+  } = useDataGridParams({ defaultSort: 'createdAt', defaultOrder: 'desc', storageKey: 'users-list' });
 
-  const userType = getFilter('userType');
-  const activeFilters = useActiveFilters(USER_FILTERS, getFilter);
+  // Extract filter values for the API (which expects simple query params)
+  const userType = useMemo(() => {
+    const f = filters.find((expr) => expr.field === 'userType');
+    if (!f) return undefined;
+    return (f.operator === 'in' && Array.isArray(f.value)) ? f.value[0] as string : f.value as string;
+  }, [filters]);
 
   const deleteMutation = useDeleteUser({
     onSuccess: () => setDeletingUser(null),
@@ -58,6 +62,23 @@ export function UsersListPage() {
     userType,
     includeDeleted: showDeleted,
   });
+
+  const bulkActions = useMemo<DataGridBulkAction[]>(
+    () => [
+      {
+        label: 'Delete',
+        icon: Trash2,
+        variant: 'destructive',
+        onClick: (selectedIds) => {
+          if (selectedIds.length === 1) {
+            const user = data?.data.find((u) => u.id === selectedIds[0]);
+            if (user) setDeletingUser(user);
+          }
+        },
+      },
+    ],
+    [data?.data],
+  );
 
   const columns = useMemo<ColumnDef<User, unknown>[]>(
     () => [
@@ -218,9 +239,13 @@ export function UsersListPage() {
         search={search}
         onSearchChange={setSearch}
         searchPlaceholder="Search by name or email..."
-        activeFilters={activeFilters}
-        onFilterRemove={(key) => setFilter(key, undefined)}
-        onFiltersClear={() => clearFilters(['userType'])}
+        filterFields={USER_FILTER_FIELDS}
+        filters={filters}
+        onFilterAdd={addFilter}
+        onStructuredFilterRemove={removeFilter}
+        onStructuredFiltersClear={clearAllFilters}
+        enableSelection
+        bulkActions={bulkActions}
         isLoading={isLoading}
         isError={isError}
         onRetry={refetch}
@@ -245,7 +270,6 @@ export function UsersListPage() {
               />
               Include deleted
             </label>
-            <DataGridFilters filters={USER_FILTERS} getFilter={getFilter} setFilter={setFilter} />
             <Button size="sm" onClick={() => setAddModalOpen(true)}>
               <Plus className="h-4 w-4 mr-1" />
               Add User
