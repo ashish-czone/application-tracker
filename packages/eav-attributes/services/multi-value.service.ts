@@ -55,17 +55,19 @@ export class MultiValueService {
 
   /**
    * Set the target IDs for a field, replacing any existing values.
-   * Performs a delete + insert in a transaction.
+   * Performs a delete + insert. Uses caller's transaction if provided,
+   * otherwise creates its own.
    */
   async setValues(
     entityType: string,
     entityId: string,
     fieldKey: string,
     targetIds: string[],
+    tx?: any,
   ): Promise<void> {
-    await this.database.db.transaction(async (tx) => {
+    const doWork = async (db: any) => {
       // Remove existing values for this field
-      await tx
+      await db
         .delete(entityMultiValues)
         .where(and(
           eq(entityMultiValues.entityType, entityType),
@@ -75,7 +77,7 @@ export class MultiValueService {
 
       // Insert new values
       if (targetIds.length > 0) {
-        await tx.insert(entityMultiValues).values(
+        await db.insert(entityMultiValues).values(
           targetIds.map((targetId, index) => ({
             entityType,
             entityId,
@@ -85,7 +87,13 @@ export class MultiValueService {
           })),
         );
       }
-    });
+    };
+
+    if (tx) {
+      await doWork(tx);
+    } else {
+      await this.database.db.transaction(doWork);
+    }
   }
 
   /**

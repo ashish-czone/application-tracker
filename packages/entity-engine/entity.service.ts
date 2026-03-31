@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { eq, and, or, isNull, ilike, asc, desc, count, sql, getTableName } from 'drizzle-orm';
 import type { PgColumn } from 'drizzle-orm/pg-core';
@@ -24,7 +25,7 @@ import { buildSnapshot, diffSnapshot } from './helpers/snapshot';
 import { validatePayload } from './helpers/validate-payload';
 import { splitPayload } from './helpers/split-payload';
 import { TaxonomyService, type TagWithGroup } from '@packages/taxonomy';
-import { MediaService, type MediaFile } from '@packages/media';
+import { FieldTypeSaveHookRegistry, type FieldTypeSaveHookContext } from './services/field-type-save-hook.registry';
 import { WorkflowEngineService, WorkflowRegistryService, PipelineResolverService } from '@packages/workflows';
 import type { PaginatedResponse } from '@packages/common';
 import type { EntityConfig, BaseListQuery, ListLayoutColumn } from './types';
@@ -54,7 +55,7 @@ export class EntityService {
     private readonly fieldDefinitionService: FieldDefinitionService,
     private readonly lookupResolver: LookupResolverService,
     private readonly taxonomyService: TaxonomyService,
-    private readonly mediaService: MediaService,
+    private readonly hookRegistry: FieldTypeSaveHookRegistry,
     private readonly workflowEngine: WorkflowEngineService,
     private readonly workflowRegistry: WorkflowRegistryService,
     private readonly pipelineResolver: PipelineResolverService,
@@ -414,11 +415,34 @@ export class EntityService {
     // Check uniqueness for custom EAV unique fields
     await this.checkEavUniqueness(defs, customFields);
 
-    // Insert in transaction
+    // Pre-generate entity ID so onBeforeSave hooks can use it (e.g. file paths)
+    const entityId = crypto.randomUUID();
+
+    // Phase 1: onBeforeSave hooks (pre-transaction, can throw to abort)
+    const allFields = { ...customFields, ...relationalFields };
+    const defMap = new Map(defs.map(d => [d.fieldKey, d]));
+    for (const [key, value] of Object.entries(allFields)) {
+      const def = defMap.get(key);
+      if (!def) continue;
+      const hooks = this.hookRegistry.get(def.fieldType);
+      if (hooks?.onBeforeSave) {
+        const ctx: FieldTypeSaveHookContext = {
+          entityType: config.entityType, entityId, fieldKey: key,
+          fieldType: def.fieldType, mode: 'create', actorId,
+        };
+        const result = await hooks.onBeforeSave(value, ctx);
+        if (result.transformedValue !== undefined) {
+          if (key in customFields) customFields[key] = result.transformedValue;
+          if (key in relationalFields) relationalFields[key] = result.transformedValue;
+        }
+      }
+    }
+
+    // Phase 2: Transaction (entity row + EAV + relational writes)
     const row = await this.database.db.transaction(async (tx) => {
       const result = await tx
         .insert(config.table as any)
-        .values({ ...standardFields, createdBy: actorId } as any)
+        .values({ id: entityId, ...standardFields, createdBy: actorId } as any)
         .returning() as any[];
       const inserted = result[0];
 
@@ -426,17 +450,37 @@ export class EntityService {
         await this.eavStorage.setValues(config.entityType, inserted.id, customFields, tx);
       }
 
+      // Relational writes inside the transaction
+      for (const [key, value] of Object.entries(relationalFields)) {
+        const def = defMap.get(key);
+        if (!def) continue;
+        const hooks = this.hookRegistry.get(def.fieldType);
+        if (hooks?.onTransactionalSave) {
+          const ctx: FieldTypeSaveHookContext = {
+            entityType: config.entityType, entityId: inserted.id, fieldKey: key,
+            fieldType: def.fieldType, mode: 'create', actorId,
+          };
+          await hooks.onTransactionalSave(value, ctx, tx);
+        }
+      }
+
       return inserted;
     });
 
-    // Handle relational fields (tags, category, multi) after entity exists
-    if (Object.keys(relationalFields).length > 0) {
-      await this.handleRelationalCreate(row.id, relationalFields, defs);
-    }
-
-    // Move tmp files to permanent storage and update EAV values
-    if (Object.keys(customFields).length > 0 && this.eavStorage) {
-      await this.processFileFields(customFields, row.id, defs);
+    // Phase 3: onAfterSave hooks (fire-and-forget)
+    for (const [key, value] of Object.entries(allFields)) {
+      const def = defMap.get(key);
+      if (!def) continue;
+      const hooks = this.hookRegistry.get(def.fieldType);
+      if (hooks?.onAfterSave) {
+        const ctx: FieldTypeSaveHookContext = {
+          entityType: config.entityType, entityId: row.id, fieldKey: key,
+          fieldType: def.fieldType, mode: 'create', actorId,
+        };
+        hooks.onAfterSave(value, ctx).catch(err =>
+          this.logger.warn(`onAfterSave hook failed for ${def.fieldType}/${key}: ${err}`),
+        );
+      }
     }
 
     // Auto-assign pipeline for entities with workflow discriminators
@@ -553,8 +597,29 @@ export class EntityService {
     await this.checkStandardUniqueness(defs, updateValues, id);
     await this.checkEavUniqueness(defs, customFields, id);
 
+    // Phase 1: onBeforeSave hooks (pre-transaction, can throw to abort)
+    const allUpdateFields = { ...customFields, ...relationalFields };
+    const updateDefMap = new Map(defs.map(d => [d.fieldKey, d]));
+    for (const [key, value] of Object.entries(allUpdateFields)) {
+      const def = updateDefMap.get(key);
+      if (!def) continue;
+      const hooks = this.hookRegistry.get(def.fieldType);
+      if (hooks?.onBeforeSave) {
+        const ctx: FieldTypeSaveHookContext = {
+          entityType: config.entityType, entityId: id, fieldKey: key,
+          fieldType: def.fieldType, mode: 'update', actorId,
+        };
+        const result = await hooks.onBeforeSave(value, ctx);
+        if (result.transformedValue !== undefined) {
+          if (key in customFields) customFields[key] = result.transformedValue;
+          if (key in relationalFields) relationalFields[key] = result.transformedValue;
+        }
+      }
+    }
+
     let eventPayload: { changes: string[]; before: Record<string, unknown>; after: Record<string, unknown> } | null = null;
 
+    // Phase 2: Transaction (entity row + EAV + relational writes)
     const updated = await this.database.db.transaction(async (tx) => {
       // Read before snapshot inside tx for consistency
       const eavBefore = this.eavStorage ? await this.eavStorage.getValues(config.entityType, id, tx) : {};
@@ -579,6 +644,22 @@ export class EntityService {
         eavAfter = eavResult.after;
       }
 
+      // Relational writes inside the transaction
+      if (hasRelationalChanges) {
+        for (const [key, value] of Object.entries(relationalFields)) {
+          const def = updateDefMap.get(key);
+          if (!def) continue;
+          const hooks = this.hookRegistry.get(def.fieldType);
+          if (hooks?.onTransactionalSave) {
+            const ctx: FieldTypeSaveHookContext = {
+              entityType: config.entityType, entityId: id, fieldKey: key,
+              fieldType: def.fieldType, mode: 'update', actorId,
+            };
+            await hooks.onTransactionalSave(value, ctx, tx);
+          }
+        }
+      }
+
       const after = buildSnapshot(this.rowToSnapshot(row), eavAfter);
       const changes = diffSnapshot(before, after);
 
@@ -589,14 +670,20 @@ export class EntityService {
       return row;
     });
 
-    // Handle relational fields (tags, category, multi) after transaction
-    if (hasRelationalChanges) {
-      await this.handleRelationalUpdate(id, relationalFields, defs);
-    }
-
-    // Move tmp files to permanent storage and update EAV values
-    if (hasCustomChanges && this.eavStorage) {
-      await this.processFileFields(customFields, id, defs);
+    // Phase 3: onAfterSave hooks (fire-and-forget)
+    for (const [key, value] of Object.entries(allUpdateFields)) {
+      const def = updateDefMap.get(key);
+      if (!def) continue;
+      const hooks = this.hookRegistry.get(def.fieldType);
+      if (hooks?.onAfterSave) {
+        const ctx: FieldTypeSaveHookContext = {
+          entityType: config.entityType, entityId: id, fieldKey: key,
+          fieldType: def.fieldType, mode: 'update', actorId,
+        };
+        hooks.onAfterSave(value, ctx).catch(err =>
+          this.logger.warn(`onAfterSave hook failed for ${def.fieldType}/${key}: ${err}`),
+        );
+      }
     }
 
     this.logger.log(`${config.singularName} updated`, { entityId: id, actorId });
@@ -996,139 +1083,8 @@ export class EntityService {
    * - tags: attach each tag ID via TaxonomyService
    * - category: stored as standard/EAV field (handled by splitPayload)
    */
-  private async handleRelationalCreate(
-    entityId: string,
-    relationalFields: Record<string, unknown>,
-    defs: FieldDefinition[],
-  ): Promise<void> {
-    const defMap = new Map(defs.map(d => [d.fieldKey, d]));
-
-    for (const [key, value] of Object.entries(relationalFields)) {
-      const def = defMap.get(key);
-      if (!def) continue;
-
-      if (def.fieldType === 'tags' && Array.isArray(value)) {
-        for (const tagId of value) {
-          if (typeof tagId === 'string') {
-            try {
-              await this.taxonomyService.attachTag(this.config.entityType, entityId, tagId);
-            } catch {
-              this.logger.warn(`Failed to attach tag ${tagId} to ${entityId}`);
-            }
-          }
-        }
-      }
-
-      // multi_user / multi_lookup: store target IDs in junction table
-      if ((def.fieldType === 'multi_user' || def.fieldType === 'multi_lookup') && Array.isArray(value) && this.eavStorage) {
-        const targetIds = value.filter((v): v is string => typeof v === 'string');
-        await this.eavStorage.setMultiValues(this.config.entityType, entityId, key, targetIds);
-      }
-      // category: stored as a lookup-like text value — handled in standard/EAV flow
-    }
-  }
-
-  /**
-   * After updating an entity, sync relational fields:
-   * - tags: diff current vs new, attach/detach accordingly
-   */
-  private async handleRelationalUpdate(
-    entityId: string,
-    relationalFields: Record<string, unknown>,
-    defs: FieldDefinition[],
-  ): Promise<void> {
-    const defMap = new Map(defs.map(d => [d.fieldKey, d]));
-
-    for (const [key, value] of Object.entries(relationalFields)) {
-      const def = defMap.get(key);
-      if (!def) continue;
-
-      if (def.fieldType === 'tags' && Array.isArray(value)) {
-        // Get current tags for this entity filtered by tag group
-        const currentTags = await this.taxonomyService.getTagsForEntity(this.config.entityType, entityId);
-        const groupTags = def.tagGroupSlug
-          ? currentTags.filter(t => t.groupSlug === def.tagGroupSlug)
-          : currentTags;
-        const currentIds = new Set(groupTags.map(t => t.id));
-        const newIds = new Set(value.filter((v): v is string => typeof v === 'string'));
-
-        // Detach removed tags
-        for (const id of currentIds) {
-          if (!newIds.has(id)) {
-            await this.taxonomyService.detachTag(this.config.entityType, entityId, id);
-          }
-        }
-        // Attach new tags
-        for (const id of newIds) {
-          if (!currentIds.has(id)) {
-            try {
-              await this.taxonomyService.attachTag(this.config.entityType, entityId, id);
-            } catch {
-              this.logger.warn(`Failed to attach tag ${id} to ${entityId}`);
-            }
-          }
-        }
-      }
-
-      // multi_user / multi_lookup: replace all target IDs
-      if ((def.fieldType === 'multi_user' || def.fieldType === 'multi_lookup') && Array.isArray(value) && this.eavStorage) {
-        const targetIds = value.filter((v): v is string => typeof v === 'string');
-        await this.eavStorage.setMultiValues(this.config.entityType, entityId, key, targetIds);
-      }
-    }
-  }
-
-  // ---------------------------------------------------------------------------
-  // FILE FIELD HELPERS
-  // ---------------------------------------------------------------------------
-
-  /**
-   * Check if a value looks like a MediaFile object.
-   */
-  private isMediaFile(value: unknown): value is MediaFile {
-    return (
-      typeof value === 'object' &&
-      value !== null &&
-      typeof (value as any).key === 'string' &&
-      typeof (value as any).originalName === 'string'
-    );
-  }
-
-  /**
-   * After entity create/update, move any tmp files to permanent storage
-   * and update the EAV values with the new keys.
-   */
-  private async processFileFields(
-    customFields: Record<string, unknown>,
-    entityId: string,
-    defs: FieldDefinition[],
-  ): Promise<void> {
-    const defMap = new Map(defs.map(d => [d.fieldKey, d]));
-    const updates: Record<string, unknown> = {};
-
-    for (const [key, value] of Object.entries(customFields)) {
-      const def = defMap.get(key);
-      if (!def || def.fieldType !== 'file') continue;
-
-      if (this.isMediaFile(value) && value.key.startsWith('tmp/')) {
-        try {
-          const moved = await this.mediaService.moveFromTmp(
-            value,
-            this.config.entityType,
-            entityId,
-            key,
-          );
-          updates[key] = moved;
-        } catch (err) {
-          this.logger.warn(`Failed to move tmp file for ${key}: ${err}`);
-        }
-      }
-    }
-
-    if (Object.keys(updates).length > 0 && this.eavStorage) {
-      await this.eavStorage.setValues(this.config.entityType, entityId, updates);
-    }
-  }
+  // handleRelationalCreate/Update and processFileFields have been replaced by
+  // FieldTypeSaveHookRegistry lifecycle hooks (onBeforeSave, onTransactionalSave)
 
   /**
    * Parse file field EAV values from JSON strings back to objects in response rows.

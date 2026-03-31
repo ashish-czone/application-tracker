@@ -15,7 +15,6 @@
     "@packages/database": "workspace:*",
     "@packages/events": "workspace:*",
     "@packages/logger": "workspace:*",
-    "@packages/media": "workspace:*",
     "@packages/notifications": "workspace:*",
     "@packages/query-builder": "workspace:*",
     "@packages/rbac": "workspace:*",

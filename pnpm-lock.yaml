@@ -789,9 +789,6 @@ importers:
       '@packages/logger':
         specifier: workspace:*
         version: link:../logger
-      '@packages/media':
-        specifier: workspace:*
-        version: link:../media
       '@packages/notifications':
         specifier: workspace:*
         version: link:../notifications
@@ -918,6 +915,13 @@ importers:
         version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(terser@5.46.0)
 
   packages/field-types:
+    dependencies:
+      react:
+        specifier: '>=18'
+        version: 19.2.4
+      zod:
+        specifier: '>=3'
+        version: 3.25.76
     devDependencies:
       typescript:
         specifier: ^5.7.0

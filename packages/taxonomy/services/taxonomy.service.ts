@@ -237,14 +237,15 @@ export class TaxonomyService {
 
   // --- Entity Tags ---
 
-  async attachTag(entityType: string, entityId: string, tagId: string): Promise<void> {
+  async attachTag(entityType: string, entityId: string, tagId: string, tx?: any): Promise<void> {
+    const db = tx ?? this.database.db;
     const tag = await this.findTagByIdOrFail(tagId);
 
     // Check allowMultiple constraint
     const group = await this.findTagGroupByIdOrFail(tag.tagGroupId);
     if (!group.allowMultiple) {
       // Check if entity already has a tag from this group
-      const existingFromGroup = await this.database.db
+      const existingFromGroup = await db
         .select({ tagId: entityTags.tagId })
         .from(entityTags)
         .innerJoin(tags, eq(tags.id, entityTags.tagId))
@@ -262,14 +263,15 @@ export class TaxonomyService {
       }
     }
 
-    await this.database.db
+    await db
       .insert(entityTags)
       .values({ entityType, entityId, tagId })
       .onConflictDoNothing();
   }
 
-  async detachTag(entityType: string, entityId: string, tagId: string): Promise<void> {
-    await this.database.db
+  async detachTag(entityType: string, entityId: string, tagId: string, tx?: any): Promise<void> {
+    const db = tx ?? this.database.db;
+    await db
       .delete(entityTags)
       .where(and(
         eq(entityTags.entityType, entityType),
@@ -278,8 +280,9 @@ export class TaxonomyService {
       ));
   }
 
-  async getTagsForEntity(entityType: string, entityId: string): Promise<TagWithGroup[]> {
-    return this.database.db
+  async getTagsForEntity(entityType: string, entityId: string, tx?: any): Promise<TagWithGroup[]> {
+    const db = tx ?? this.database.db;
+    return db
       .select({
         id: tags.id,
         tagGroupId: tags.tagGroupId,
