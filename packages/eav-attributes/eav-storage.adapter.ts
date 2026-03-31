@@ -1,17 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import type { EavStorageExtension } from '@packages/entity-engine/extensions';
 import { FieldValueService } from './services/field-value.service';
-import { MultiValueService } from './services/multi-value.service';
 
 /**
  * Adapter that implements the EavStorageExtension interface
- * by delegating to FieldValueService and MultiValueService.
+ * by delegating to FieldValueService.
  */
 @Injectable()
 export class EavStorageAdapter implements EavStorageExtension {
   constructor(
     private readonly fieldValueService: FieldValueService,
-    private readonly multiValueService: MultiValueService,
   ) {}
 
   async getValues(entityType: string, entityId: string, tx?: any): Promise<Record<string, unknown>> {
@@ -32,13 +30,5 @@ export class EavStorageAdapter implements EavStorageExtension {
 
   async checkUniqueness(entityType: string, fieldKey: string, value: unknown, excludeEntityId?: string): Promise<boolean> {
     return this.fieldValueService.checkUniqueness(entityType, fieldKey, value, excludeEntityId);
-  }
-
-  async setMultiValues(entityType: string, entityId: string, fieldKey: string, targetIds: string[], tx?: any): Promise<void> {
-    return this.multiValueService.setValues(entityType, entityId, fieldKey, targetIds, tx);
-  }
-
-  async getAllMultiValues(entityType: string, entityId: string): Promise<Record<string, string[]>> {
-    return this.multiValueService.getAllForEntity(entityType, entityId);
   }
 }
