@@ -9,6 +9,8 @@ import { TaxonomyService } from '@packages/taxonomy';
 import { MediaService } from '@packages/media';
 import { WorkflowEngineService, WorkflowRegistryService, WorkflowGuardRegistry, PipelineResolverService } from '@packages/workflows';
 import { AppLoggerService } from '@packages/logger';
+import { fieldTypeRegistry } from '@packages/field-types';
+import { coreFieldTypesPlugin } from './field-types';
 import { EntityRegistryService } from './entity-registry.service';
 import { EntityService } from './entity.service';
 import { EntityEngineApiController } from './entity-engine-api.controller';
@@ -126,6 +128,11 @@ export class EntityEngineModule implements OnModuleInit, OnApplicationBootstrap 
   }
 
   onModuleInit() {
+    // Initialize field type registry with core types (if not already populated)
+    if (!fieldTypeRegistry.has('text')) {
+      fieldTypeRegistry.registerPlugin(coreFieldTypesPlugin);
+    }
+
     this.rbac.registerPermissions('eav', [
       { action: 'read', description: 'View field definitions and layouts' },
       { action: 'manage', description: 'Create/update/delete custom fields and layouts' },
