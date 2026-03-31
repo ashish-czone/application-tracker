@@ -70,6 +70,7 @@ export class EntityRegistryService {
       features: {
         softDelete: !!(config.table as any).deletedAt,
         restore: !!(config.table as any).deletedAt,
+        customFields: !!config.customFields,
         hasTaxonomy: Object.values(config.fieldMeta).some(f => f.fieldType === 'tags'),
         hasWorkflow: Object.values(config.fieldMeta).some(f => f.fieldType === 'workflow'),
         hasMedia: Object.values(config.fieldMeta).some(f => f.fieldType === 'file'),

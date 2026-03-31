@@ -1,9 +1,13 @@
+import { Logger } from '@nestjs/common';
 import { getTableColumns } from 'drizzle-orm';
+import { fieldTypeRegistry } from '@packages/field-types';
 import type { FieldDefinitionService } from './services/field-definition.service';
 import type { LayoutExtension } from './extensions/layout-extension.interface';
 import type { FieldType, RegisterFieldInput } from './types';
 import type { WorkflowRegistryService } from '@packages/workflows';
 import type { EntityConfig, WorkflowTargetDef } from './types';
+
+const seedLogger = new Logger('SeedEntityFields');
 
 /** Map Drizzle column dataType to EAV FieldType. */
 function mapDrizzleType(dataType: string): FieldType {
@@ -43,6 +47,17 @@ export async function seedEntityFields(
     if (skipSet.has(key)) continue;
 
     const col = columnMap.get(key);
+
+    // Warn if a non-relational field has no DB column but customFields is disabled
+    if (!col && !config.customFields) {
+      const ft = meta.fieldType ?? 'text';
+      if (!fieldTypeRegistry.isRelational(ft)) {
+        seedLogger.warn(
+          `Entity '${config.entityType}' field '${key}' (${ft}) has no DB column but customFields is not enabled. ` +
+          `This field will not be stored. Either add a DB column or set customFields: true.`,
+        );
+      }
+    }
 
     fields.push({
       fieldKey: key,

@@ -121,6 +121,8 @@ export interface ModelDefinition<TTable extends PgTable = PgTable> {
   softDelete?: boolean;
   /** Enable timestamp tracking (createdAt/updatedAt columns) */
   timestamps?: boolean;
+  /** Enable dynamic custom fields (EAV storage). When true, admins can add custom fields and EAV value operations are active. Default: false. */
+  customFields?: boolean;
 
   // --- Field definitions ---
 
@@ -356,6 +358,7 @@ export function defineEntity<TTable extends PgTable>(model: ModelDefinition<TTab
     lookup,
     relationships: relationships.length > 0 ? relationships : undefined,
     recipientFields: Object.keys(recipientFields).length > 0 ? recipientFields : undefined,
+    customFields: model.customFields,
     extraPermissions: model.extraPermissions,
     extraEvents: model.extraEvents,
     actions: model.actions,

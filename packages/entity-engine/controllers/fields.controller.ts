@@ -1,8 +1,9 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body, Query, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Body, Query, HttpCode, HttpStatus, BadRequestException } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { RequirePermission } from '@packages/rbac';
 import { fieldTypeRegistry } from '@packages/field-types';
 import { FieldDefinitionService } from '../services/field-definition.service';
+import { EntityRegistryService } from '../entity-registry.service';
 import type { FieldType } from '../types';
 import { EAV_PERMISSIONS } from '../permissions';
 import { CreateFieldDto } from '../dto/create-field.dto';
@@ -11,7 +12,10 @@ import { UpdateFieldDto } from '../dto/update-field.dto';
 @ApiTags('fields')
 @Controller('fields')
 export class FieldsController {
-  constructor(private readonly fieldDefinitionService: FieldDefinitionService) {}
+  constructor(
+    private readonly fieldDefinitionService: FieldDefinitionService,
+    private readonly entityRegistry: EntityRegistryService,
+  ) {}
 
   @Get('types')
   @RequirePermission(EAV_PERMISSIONS.READ)
@@ -46,6 +50,10 @@ export class FieldsController {
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a custom field' })
   async createField(@Body() dto: CreateFieldDto) {
+    const entityConfig = this.entityRegistry.get(dto.entityType);
+    if (!entityConfig?.customFields) {
+      throw new BadRequestException(`Custom fields are not enabled for entity type '${dto.entityType}'`);
+    }
     return this.fieldDefinitionService.create(dto.entityType, {
       fieldKey: dto.fieldKey,
       label: dto.label,

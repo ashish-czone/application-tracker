@@ -507,6 +507,13 @@ export interface EntityConfig<TTable extends PgTable = PgTable> {
   /** Configurable actions for list pages (row-level and bulk) */
   actions?: EntityActions;
 
+  // --- Custom fields (EAV) ---
+
+  /** Enable dynamic custom fields (EAV storage) for this entity. Default: false.
+   *  When true: admins can create custom fields, EAV value operations are active.
+   *  When false: all non-relational fields must have DB columns, no EAV overhead. */
+  customFields?: boolean;
+
   // --- UI ---
 
   /** Frontend rendering hints (serialized to registry API) */
@@ -673,6 +680,7 @@ export interface EntityRegistryEntry {
   features: {
     softDelete: boolean;
     restore: boolean;
+    customFields: boolean;
     hasTaxonomy: boolean;
     hasWorkflow: boolean;
     hasMedia: boolean;
