@@ -6,11 +6,8 @@ import {
   Trash2,
   Inbox,
   RefreshCw,
-  Mail,
-  MessageCircle,
-  Clock,
-  Activity,
   ChevronLeft,
+  Activity,
 } from 'lucide-react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { cn, Button } from '@packages/ui';
@@ -43,12 +40,6 @@ const STATUS_BADGE: Record<string, string> = {
   completed: 'bg-emerald-50 text-emerald-700 ring-emerald-200/60',
   failed: 'bg-red-50 text-red-700 ring-red-200/60',
   delayed: 'bg-slate-50 text-slate-600 ring-slate-200/60',
-};
-
-const QUEUE_ICONS: Record<string, typeof Mail> = {
-  'notification.email': Mail,
-  'notification.whatsapp': MessageCircle,
-  'notification.schedule-scan': Clock,
 };
 
 const STATUS_OPTIONS = [
@@ -86,65 +77,108 @@ function queueDisplayName(name: string): string {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-// --- Queue Card ---
+function CountCell({ value, color }: { value: number; color?: string }) {
+  return (
+    <span className={cn('tabular-nums font-medium', value > 0 ? color : 'text-muted-foreground/40')}>
+      {value}
+    </span>
+  );
+}
 
-function QueueCard({
-  queue,
-  isSelected,
-  onSelect,
-}: {
-  queue: QueueSummary;
-  isSelected: boolean;
-  onSelect: () => void;
-}) {
+// --- Queues Table ---
+
+function QueuesTable({ onSelect }: { onSelect: (name: string) => void }) {
+  const { data: queues, isLoading, isError, refetch } = useQueues();
   const pauseMutation = usePauseQueue();
   const resumeMutation = useResumeQueue();
 
-  const total = Object.values(queue.counts).reduce((s, n) => s + n, 0);
-  const Icon = QUEUE_ICONS[queue.name] ?? Activity;
-
-  const segments = [
-    { key: 'active', count: queue.counts.active, color: 'bg-blue-500' },
-    { key: 'waiting', count: queue.counts.waiting, color: 'bg-amber-400' },
-    { key: 'delayed', count: queue.counts.delayed, color: 'bg-slate-300' },
-    { key: 'failed', count: queue.counts.failed, color: 'bg-red-500' },
-    { key: 'completed', count: queue.counts.completed, color: 'bg-emerald-400' },
-  ];
-
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className={cn(
-        'group relative w-full text-left rounded-xl border bg-card p-5 transition-all duration-200',
-        'hover:shadow-md hover:border-border/80',
-        isSelected
-          ? 'ring-2 ring-primary/30 border-primary/40 shadow-sm'
-          : 'border-border/50',
-      )}
-    >
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className={cn(
-            'flex items-center justify-center h-9 w-9 rounded-lg transition-colors',
-            isSelected ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground',
-          )}>
-            <Icon className="h-4.5 w-4.5" strokeWidth={1.75} />
-          </div>
-          <div>
-            <div className="text-sm font-semibold text-foreground">{queueDisplayName(queue.name)}</div>
-            <div className="text-[11px] text-muted-foreground font-mono">{queue.name}</div>
-          </div>
-        </div>
-        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-          {queue.isPaused ? (
+  const columns = useMemo<ColumnDef<QueueSummary, unknown>[]>(() => [
+    {
+      id: 'name',
+      header: 'Queue',
+      accessorKey: 'name',
+      cell: ({ row }) => (
+        <button
+          type="button"
+          onClick={() => onSelect(row.original.name)}
+          className="text-left hover:underline"
+        >
+          <div className="text-sm font-medium text-primary">{queueDisplayName(row.original.name)}</div>
+          <div className="text-[11px] text-muted-foreground font-mono">{row.original.name}</div>
+        </button>
+      ),
+    },
+    {
+      id: 'waiting',
+      header: 'Waiting',
+      size: 90,
+      accessorFn: (row) => row.counts.waiting,
+      cell: ({ getValue }) => <CountCell value={getValue() as number} color="text-amber-600" />,
+    },
+    {
+      id: 'active',
+      header: 'Active',
+      size: 90,
+      accessorFn: (row) => row.counts.active,
+      cell: ({ getValue }) => <CountCell value={getValue() as number} color="text-blue-600" />,
+    },
+    {
+      id: 'completed',
+      header: 'Completed',
+      size: 100,
+      accessorFn: (row) => row.counts.completed,
+      cell: ({ getValue }) => <CountCell value={getValue() as number} color="text-emerald-600" />,
+    },
+    {
+      id: 'failed',
+      header: 'Failed',
+      size: 90,
+      accessorFn: (row) => row.counts.failed,
+      cell: ({ getValue }) => <CountCell value={getValue() as number} color="text-red-600" />,
+    },
+    {
+      id: 'delayed',
+      header: 'Delayed',
+      size: 90,
+      accessorFn: (row) => row.counts.delayed,
+      cell: ({ getValue }) => <CountCell value={getValue() as number} color="text-slate-500" />,
+    },
+    {
+      id: 'total',
+      header: 'Total',
+      size: 90,
+      accessorFn: (row) => Object.values(row.counts).reduce((s, n) => s + n, 0),
+      cell: ({ getValue }) => (
+        <span className="tabular-nums font-semibold">{(getValue() as number).toLocaleString()}</span>
+      ),
+    },
+    {
+      id: 'status',
+      header: 'Status',
+      size: 90,
+      accessorKey: 'isPaused',
+      cell: ({ row }) => (
+        row.original.isPaused
+          ? <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-600 bg-amber-50 rounded-full px-2 py-0.5">Paused</span>
+          : <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 bg-emerald-50 rounded-full px-2 py-0.5">Active</span>
+      ),
+    },
+    {
+      id: 'actions',
+      header: '',
+      size: 70,
+      enableHiding: false,
+      enableSorting: false,
+      cell: ({ row }) => (
+        <div className="flex items-center gap-0.5 justify-end">
+          {row.original.isPaused ? (
             <Button
               variant="ghost"
               size="icon"
               className="h-7 w-7 text-muted-foreground hover:text-emerald-600"
-              onClick={() => resumeMutation.mutate(queue.name)}
+              onClick={(e) => { e.stopPropagation(); resumeMutation.mutate(row.original.name); }}
               disabled={resumeMutation.isPending}
-              title="Resume queue"
+              title="Resume"
             >
               <Play className="h-3.5 w-3.5" />
             </Button>
@@ -153,64 +187,44 @@ function QueueCard({
               variant="ghost"
               size="icon"
               className="h-7 w-7 text-muted-foreground hover:text-amber-600"
-              onClick={() => pauseMutation.mutate(queue.name)}
+              onClick={(e) => { e.stopPropagation(); pauseMutation.mutate(row.original.name); }}
               disabled={pauseMutation.isPending}
-              title="Pause queue"
+              title="Pause"
             >
               <Pause className="h-3.5 w-3.5" />
             </Button>
           )}
         </div>
-      </div>
+      ),
+    },
+  ], [pauseMutation, resumeMutation]);
 
-      <div className="h-1.5 rounded-full bg-muted overflow-hidden flex mb-4">
-        {total > 0 ? segments.map((s) =>
-          s.count > 0 ? (
-            <div
-              key={s.key}
-              className={cn('h-full transition-all duration-500', s.color)}
-              style={{ width: `${(s.count / total) * 100}%` }}
-            />
-          ) : null,
-        ) : (
-          <div className="h-full w-full bg-muted" />
-        )}
-      </div>
-
-      <div className="grid grid-cols-5 gap-1">
-        {([
-          { key: 'waiting', label: 'Wait', count: queue.counts.waiting },
-          { key: 'active', label: 'Active', count: queue.counts.active },
-          { key: 'completed', label: 'Done', count: queue.counts.completed },
-          { key: 'failed', label: 'Failed', count: queue.counts.failed },
-          { key: 'delayed', label: 'Delay', count: queue.counts.delayed },
-        ] as const).map((s) => (
-          <div key={s.key} className="text-center py-1">
-            <div className="flex items-center justify-center gap-1 mb-0.5">
-              <div className={cn('h-1.5 w-1.5 rounded-full', STATUS_DOT[s.key])} />
-              <span className="text-sm font-semibold tabular-nums text-foreground">{s.count}</span>
-            </div>
-            <div className="text-[10px] text-muted-foreground leading-none">{s.label}</div>
-          </div>
-        ))}
-      </div>
-
-      <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/40">
-        <span className="text-[11px] text-muted-foreground tabular-nums">{total.toLocaleString()} total jobs</span>
-        {queue.isPaused && (
-          <span className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-600 bg-amber-50 rounded-full px-2 py-0.5">
-            <Pause className="h-2.5 w-2.5" />
-            Paused
-          </span>
-        )}
-      </div>
-    </button>
+  return (
+    <DataGrid
+      columns={columns}
+      data={queues ?? []}
+      getRowId={(row) => row.name}
+      page={1}
+      pageSize={100}
+      pageCount={1}
+      totalRows={queues?.length ?? 0}
+      onPageChange={() => {}}
+      onPageSizeChange={() => {}}
+      isLoading={isLoading}
+      isError={isError}
+      onRetry={refetch}
+      emptyState={{
+        icon: Inbox,
+        title: 'No queues registered',
+        description: 'Queues will appear here once job processors are registered with the system.',
+      }}
+    />
   );
 }
 
-// --- Job List with DataGrid ---
+// --- Jobs Table ---
 
-function JobList({ queueName, onBack }: { queueName: string; onBack: () => void }) {
+function JobsTable({ queueName, onBack }: { queueName: string; onBack: () => void }) {
   const [statusFilter, setStatusFilter] = useState<JobStatus | undefined>();
   const retryAllMutation = useRetryAllFailed();
   const cleanMutation = useCleanJobs();
@@ -266,10 +280,7 @@ function JobList({ queueName, onBack }: { queueName: string; onBack: () => void 
       accessorKey: 'timestamp',
       size: 120,
       cell: ({ getValue }) => (
-        <span
-          className="text-muted-foreground"
-          title={getValue() ? new Date(getValue() as number).toISOString() : ''}
-        >
+        <span className="text-muted-foreground" title={getValue() ? new Date(getValue() as number).toISOString() : ''}>
           {formatRelativeTime(getValue() as number | null)}
         </span>
       ),
@@ -339,8 +350,8 @@ function JobList({ queueName, onBack }: { queueName: string; onBack: () => void 
   ], [queueName, retryMutation, removeMutation]);
 
   return (
-    <div className="mt-8">
-      {/* Section header */}
+    <div>
+      {/* Header with back button */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <button
@@ -432,65 +443,14 @@ function JobList({ queueName, onBack }: { queueName: string; onBack: () => void 
 // --- Main Page ---
 
 export function QueueDashboardPage() {
-  const { data: queues, isLoading, isError, refetch } = useQueues();
   const [selectedQueue, setSelectedQueue] = useState<string | null>(null);
-
-  if (isLoading) {
-    return (
-      <div className="max-w-6xl space-y-6">
-        <div>
-          <div className="h-5 w-32 animate-pulse rounded bg-muted mb-2" />
-          <div className="h-3.5 w-56 animate-pulse rounded bg-muted" />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-[180px] animate-pulse rounded-xl bg-muted" />
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (isError || !queues) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 text-center">
-        <div className="h-12 w-12 rounded-xl bg-red-50 flex items-center justify-center mb-4">
-          <Activity className="h-6 w-6 text-red-500" />
-        </div>
-        <h2 className="text-sm font-semibold mb-1">Failed to load queues</h2>
-        <p className="text-xs text-muted-foreground mb-4 max-w-xs">
-          Could not connect to the queue system. Make sure Redis is running.
-        </p>
-        <Button variant="outline" size="sm" onClick={() => refetch()}>
-          <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-          Retry
-        </Button>
-      </div>
-    );
-  }
-
-  if (queues.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 text-center">
-        <div className="h-12 w-12 rounded-xl bg-muted flex items-center justify-center mb-4">
-          <Inbox className="h-6 w-6 text-muted-foreground" />
-        </div>
-        <h2 className="text-sm font-semibold mb-1">No queues registered</h2>
-        <p className="text-xs text-muted-foreground max-w-xs">
-          Queues will appear here once job processors are registered with the system.
-        </p>
-      </div>
-    );
-  }
 
   return (
     <div className="max-w-6xl">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-lg font-semibold text-foreground">Queued Tasks</h1>
-          <p className="text-sm text-muted-foreground">
-            {queues.length} queue{queues.length !== 1 ? 's' : ''} registered
-          </p>
+          <p className="text-sm text-muted-foreground">Monitor and manage background job queues</p>
         </div>
         <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
           <span className="relative flex h-2 w-2">
@@ -501,22 +461,10 @@ export function QueueDashboardPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {queues.map((q) => (
-          <QueueCard
-            key={q.name}
-            queue={q}
-            isSelected={selectedQueue === q.name}
-            onSelect={() => setSelectedQueue(selectedQueue === q.name ? null : q.name)}
-          />
-        ))}
-      </div>
-
-      {selectedQueue && (
-        <JobList
-          queueName={selectedQueue}
-          onBack={() => setSelectedQueue(null)}
-        />
+      {selectedQueue ? (
+        <JobsTable queueName={selectedQueue} onBack={() => setSelectedQueue(null)} />
+      ) : (
+        <QueuesTable onSelect={setSelectedQueue} />
       )}
     </div>
   );
