@@ -50,11 +50,16 @@ export type {
   FieldTypeRegistryEntry,
 } from './types';
 
+/** @deprecated Use fieldTypeRegistry from @packages/field-types instead */
 export {
   FIELD_TYPE_TO_VALUE_COLUMN,
   RELATIONAL_FIELD_TYPES,
   FIELD_TYPE_REGISTRY,
 } from './types';
+
+// Re-export field type registry as the canonical API
+export { fieldTypeRegistry } from '@packages/field-types';
+export { coreFieldTypesPlugin } from './field-types';
 
 // --- Helpers moved from eav-attributes ---
 
