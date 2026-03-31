@@ -99,6 +99,11 @@ export interface ModelField {
 
   /** Workflow configuration (for workflow field type) */
   workflow?: WorkflowFieldConfig;
+
+  // --- Display ---
+
+  /** Named cell renderer for the list view (looked up in EntityEngineProvider registry) */
+  cellRenderer?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -282,6 +287,7 @@ export function defineEntity<TTable extends PgTable>(model: ModelDefinition<TTab
       categoryGroupSlug: field.categoryGroupSlug,
       accept: field.accept,
       maxFileSize: field.maxFileSize,
+      cellRenderer: field.cellRenderer,
       workflow: field.workflow,
     };
 

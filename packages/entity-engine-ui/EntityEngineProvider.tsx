@@ -2,7 +2,7 @@ import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { createEntityApi } from './helpers/createEntityApi';
 import { createEntityHooks, type EntityHooks } from './helpers/createEntityHooks';
-import type { EntityRegistryEntry, EntityApi, EntityUIConfig, EntityDetailPlugin } from './types';
+import type { EntityRegistryEntry, EntityApi, EntityUIConfig, EntityDetailPlugin, ColumnRendererRegistration } from './types';
 
 interface EntityEngineContextValue {
   /** All registered entities from the backend */
@@ -19,6 +19,8 @@ interface EntityEngineContextValue {
   getEntityBySlug: (slug: string) => EntityRegistryEntry | undefined;
   /** Get detail plugins for an entity type */
   getDetailPlugins: (entityType: string) => EntityDetailPlugin[];
+  /** Get a named column renderer registration */
+  getColumnRenderer: (name: string) => ColumnRendererRegistration | undefined;
   /** Raw API client (for layout and other non-entity endpoints) */
   apiFn: EntityEngineProviderProps['apiFn'];
 }
@@ -36,9 +38,11 @@ interface EntityEngineProviderProps {
   };
   /** Frontend-side entity UI configs (detail plugins, etc.) */
   entityUIConfigs?: EntityUIConfig[];
+  /** Named column renderer registrations (keyed by renderer name) */
+  columnRenderers?: Record<string, ColumnRendererRegistration>;
 }
 
-export function EntityEngineProvider({ children, apiFn, entityUIConfigs = [] }: EntityEngineProviderProps) {
+export function EntityEngineProvider({ children, apiFn, entityUIConfigs = [], columnRenderers = {} }: EntityEngineProviderProps) {
   // Fetch entity registry from backend
   const { data: entities = [], isLoading } = useQuery({
     queryKey: ['entity-engine', 'registry'],
@@ -77,8 +81,9 @@ export function EntityEngineProvider({ children, apiFn, entityUIConfigs = [] }: 
     getEntity: (entityType: string) => entities.find((e) => e.entityType === entityType),
     getEntityBySlug: (slug: string) => entities.find((e) => e.slug === slug),
     getDetailPlugins: (entityType: string) => pluginMap.get(entityType) ?? [],
+    getColumnRenderer: (name: string) => columnRenderers[name],
     apiFn,
-  }), [entities, isLoading, apiMap, hooksMap, pluginMap, apiFn]);
+  }), [entities, isLoading, apiMap, hooksMap, pluginMap, columnRenderers, apiFn]);
 
   if (isLoading) return null;
 

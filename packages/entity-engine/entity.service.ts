@@ -183,6 +183,7 @@ export class EntityService {
         operators: fieldTypeRegistry.get(d.fieldType)?.filterOperators ?? [],
         tagGroupSlug: d.fieldType === 'tags' ? (d.tagGroupSlug ?? undefined) : undefined,
         categoryGroupSlug: d.fieldType === 'category' ? (d.categoryGroupSlug ?? undefined) : undefined,
+        cellRenderer: config.fieldMeta[d.fieldKey]?.cellRenderer,
       }));
 
     // Append hasMany relationship count columns

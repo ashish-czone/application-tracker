@@ -30,7 +30,7 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
   const navigate = useNavigate();
   const entity = useEntityConfig(entityType);
   const hooks = useEntityHooks(entityType);
-  const { apiFn } = useEntityEngine();
+  const { apiFn, getColumnRenderer } = useEntityEngine();
   const { data: listLayout } = useListLayout(entityType);
 
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -265,6 +265,15 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
         enableSorting: col.sortable,
         cell: ({ getValue, row }: any) => {
           const value = getValue();
+
+          // Custom cell renderer (registered via EntityEngineProvider)
+          if (col.cellRenderer) {
+            const renderer = getColumnRenderer(col.cellRenderer);
+            if (renderer) {
+              const Comp = renderer.component;
+              return <Comp value={value} row={row.original} entityType={entityType} />;
+            }
+          }
 
           // Relationship count columns — clickable link
           if (col.relationship) {

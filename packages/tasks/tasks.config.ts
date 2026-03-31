@@ -33,6 +33,7 @@ export const TASKS_CONFIG = defineEntity({
       sortable: true,
       listVisible: true,
       listOrder: 2,
+      cellRenderer: 'PipelineProgressRenderer',
       workflow: {
         slug: 'task-status',
         initialState: 'open',
