@@ -20,6 +20,7 @@ import { RbacGuard } from '@packages/rbac';
 import { TaxonomyModule } from '@packages/taxonomy';
 import { HierarchyModule } from '@packages/hierarchy';
 import { EavAttributesModule } from '@packages/eav-attributes';
+import { EntityLayoutModule } from '@packages/entity-layout';
 import { EntityEngineModule } from '@packages/entity-engine';
 import { AuthOrchestratorModule } from './modules/auth/auth.module';
 import { SharedModule } from './modules/shared/shared.module';
@@ -81,6 +82,7 @@ import { validate } from './config/env.validation';
     HierarchyModule,
     TaxonomyModule,
     EavAttributesModule,
+    EntityLayoutModule,
     EntityEngineModule,
     AuthOrchestratorModule,
     // Domain modules — entity engine handles CRUD/routing/RBAC/events/audit/seeding
