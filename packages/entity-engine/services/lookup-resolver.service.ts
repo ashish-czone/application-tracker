@@ -3,9 +3,16 @@ import { DatabaseService, eq, or, ilike, inArray, sql } from '@packages/database
 import { AppLoggerService, ContextLogger } from '@packages/logger';
 import type { LookupConfig, LookupResult } from '../types';
 
+/**
+ * Module-level singleton registry shared across all LookupResolverService instances.
+ * Webpack/SWC bundling can cause NestJS to create multiple service instances when
+ * barrel re-exports produce different class references. Using a shared registry
+ * ensures registrations from onApplicationBootstrap are visible to all instances.
+ */
+const sharedRegistry = new Map<string, LookupConfig>();
+
 @Injectable()
 export class LookupResolverService {
-  private readonly registry = new Map<string, LookupConfig>();
   private readonly logger: ContextLogger;
 
   constructor(
@@ -20,7 +27,7 @@ export class LookupResolverService {
    * Called in onModuleInit by domain modules.
    */
   register(config: LookupConfig): void {
-    this.registry.set(config.entity, config);
+    sharedRegistry.set(config.entity, config);
     this.logger.log(`Registered lookup target: ${config.entity}`);
   }
 
@@ -28,14 +35,14 @@ export class LookupResolverService {
    * Check if an entity is registered as a lookup target.
    */
   isRegistered(entity: string): boolean {
-    return this.registry.has(entity);
+    return sharedRegistry.has(entity);
   }
 
   /**
    * Get all registered entity names.
    */
   getRegisteredEntities(): string[] {
-    return Array.from(this.registry.keys());
+    return Array.from(sharedRegistry.keys());
   }
 
   /**
@@ -43,7 +50,7 @@ export class LookupResolverService {
    * Returns undefined if the entity is not registered.
    */
   getConfig(entity: string): LookupConfig | undefined {
-    return this.registry.get(entity);
+    return sharedRegistry.get(entity);
   }
 
   /**
@@ -51,7 +58,7 @@ export class LookupResolverService {
    * Returns label/value pairs for dropdown population.
    */
   async search(entity: string, query: string, limit = 20): Promise<LookupResult[]> {
-    const config = this.registry.get(entity);
+    const config = sharedRegistry.get(entity);
     if (!config) {
       this.logger.warn(`Lookup entity '${entity}' is not registered`);
       return [];
@@ -94,7 +101,7 @@ export class LookupResolverService {
    * Resolve a single value to its display label.
    */
   async getLabel(entity: string, value: string): Promise<string | null> {
-    const config = this.registry.get(entity);
+    const config = sharedRegistry.get(entity);
     if (!config) return null;
 
     const { table, labelField, labelFields, valueField } = config;
@@ -117,7 +124,7 @@ export class LookupResolverService {
    * Returns a Map of value -> label.
    */
   async getBatchLabels(entity: string, values: string[]): Promise<Map<string, string>> {
-    const config = this.registry.get(entity);
+    const config = sharedRegistry.get(entity);
     if (!config || values.length === 0) return new Map();
 
     const { table, labelField, labelFields, valueField } = config;
