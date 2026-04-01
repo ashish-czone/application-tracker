@@ -109,12 +109,12 @@ Before writing any code:
 3. Break the feature into **atomic tasks**. Each task is independently testable and results in one commit.
 4. Present the task breakdown to the user for approval before proceeding.
 
-### Step 2: Implement → Test → Commit → PR → Merge (per task)
+### Step 2: Implement → Test → Commit (per task)
 
 Work through tasks one at a time, in order. For each task:
 
 ```
-Implement → Write tests → Run tests → Fix if failing → Commit → Push → Create PR → Merge to main
+Implement → Write tests → Run tests → Fix if failing → Commit
 ```
 
 **Tests must pass before committing.** After implementing, run the relevant tests for the module/package you changed:
@@ -130,15 +130,17 @@ npx turbo run test --filter='@packages/*'
 
 If any test fails, fix the issue before committing. Do not skip failing tests.
 
-**After each task is done, immediately create a PR and merge it.** Do not accumulate multiple tasks on one branch. Each task gets its own branch, its own PR, and is merged before starting the next task.
+**Each task = one commit.** Commit immediately when tests pass, then continue to the next task on the same branch.
 
-Before starting the next task, switch back to `main` and pull:
+### Step 2b: Push → PR → Merge (after all tasks in the flow)
 
-```bash
-git checkout main && git pull
-```
+After all tasks in the feature flow are complete:
 
-**Never move to the next task until the current task's PR is merged.**
+1. Push the branch.
+2. Create a single PR that covers the entire feature.
+3. Merge the PR to `main`.
+
+**When to create intermediate PRs instead:** If a feature has tasks that cross package boundaries and later tasks depend on earlier ones being importable by other packages (e.g., Task 1 adds types to Package A, Task 5 imports them in Package B), you may batch related tasks into intermediate PRs. Use judgment — the goal is to minimize PR/merge ceremony while keeping each commit independently reviewable. A 12-task feature in a single new package should be 1 PR. A 12-task feature touching 6 packages may need 2–3 PRs at natural seams.
 
 ### Step 3: Audit (after all tasks are complete)
 
@@ -157,7 +159,7 @@ If the audit finds violations, fix them in a new branch, PR, and merge before co
 
 ## Task Breakdown Pattern
 
-Break features into these standard tasks. Skip tasks that don't apply. Never combine multiple tasks into one.
+Break features into these standard tasks. Skip tasks that don't apply. Each task = one commit. Never combine multiple tasks into one commit.
 
 ### Backend feature
 
@@ -244,13 +246,13 @@ Rules:
 
 ### Pull requests
 
-Each task gets its own PR, created and merged immediately after the task is done:
+One PR per feature flow (not per task). Created after all tasks are complete:
 
 1. Push the branch: `git push -u origin feat/add-candidate-submission`
-2. Create PR with a summary of the task's changes.
+2. Create PR with a summary of the full feature — list all tasks/commits included.
 3. PR title follows the same conventional format: `feat: add candidate submission`
 4. Merge the PR to `main` immediately after creation.
-5. Switch back to `main` and pull before starting the next task.
+5. Switch back to `main` and pull.
 
 ### Rules
 
@@ -258,8 +260,9 @@ Each task gets its own PR, created and merged immediately after the task is done
 - **Never force-push** unless explicitly asked.
 - **Never amend a commit** unless explicitly asked. Create new commits.
 - **Code and tests are committed together** — never commit code in one commit and its tests in another.
-- **Always start from `main`.** Every new task branches from an up-to-date `main`, never from another feature branch.
+- **Always start from `main`.** Every new feature branches from an up-to-date `main`, never from another feature branch.
 - **Merge PRs immediately after creation.** Do not wait for manual approval — tests must pass before committing, and the PR is the review record.
+- **One commit per task, one PR per feature.** Tasks are atomic commits. The PR groups all tasks in a feature flow.
 
 ---
 

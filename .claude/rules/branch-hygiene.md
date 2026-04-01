@@ -4,7 +4,7 @@ description: Always start new work from a fresh branch off up-to-date main. Neve
 type: rule
 ---
 
-Before creating any new commit for a new task or PR:
+Before starting a new **feature** (not each task within a feature):
 
 1. **Check if the current branch is stale or already merged.** If you just merged a PR, the current local branch is dead — do not commit to it.
 2. **Switch to main and pull:**
@@ -21,4 +21,4 @@ Before creating any new commit for a new task or PR:
    ```
 4. **Never reuse a branch that has already been merged.** Pushing to a merged branch does not update main — it creates orphaned commits.
 
-This applies every time you start a new task, even if it's a small follow-up to the previous task.
+This applies when starting a new feature. Within a feature flow, multiple tasks are committed sequentially to the same branch — do NOT create a new branch per task.
