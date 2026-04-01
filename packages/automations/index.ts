@@ -7,8 +7,10 @@ export { RoleStrategy } from './services/strategies/role.strategy';
 export { EntityResolverRegistry } from './services/entity-resolver-registry';
 export { AutomationRuleService } from './services/automation-rule.service';
 export { ProvenanceService } from './services/provenance.service';
+export { LifecycleEngine } from './services/lifecycle-engine';
 export { AutomationListener } from './listeners/automation.listener';
 export { buildConditions } from './helpers/condition-builder';
+export { interpolateValues } from './helpers/interpolator';
 export type {
   TriggerType,
   ScheduleDateOperator,
