@@ -1,0 +1,15 @@
+{
+  "name": "@packages/platform-ui-conditions",
+  "version": "0.0.1",
+  "private": true,
+  "main": "index.ts",
+  "dependencies": {
+    "@packages/ui": "workspace:*",
+    "lucide-react": "^0.500.0",
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "typescript": "^5.7.0"
+  }
+}

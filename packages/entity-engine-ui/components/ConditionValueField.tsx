@@ -2,8 +2,8 @@ import { useEffect, useCallback, useMemo } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
 import { DynamicField } from '@packages/eav-attributes-ui';
-import { useEntityEngine } from '@packages/entity-engine-ui';
 import type { FieldDefinition, PicklistOption } from '@packages/eav-attributes-ui';
+import { useEntityEngine } from '../EntityEngineProvider';
 
 interface ConditionValueFieldProps {
   field: FieldDefinition;
@@ -13,7 +13,7 @@ interface ConditionValueFieldProps {
 
 /**
  * Renders a condition value input using DynamicField, wrapped in its own FormProvider.
- * Follows the same pattern as EntityCreateActionConfig for field rendering.
+ * Resolves lookup options, user search, and workflow states automatically.
  */
 export function ConditionValueField({ field, value, onChange }: ConditionValueFieldProps) {
   const { apiFn } = useEntityEngine();
