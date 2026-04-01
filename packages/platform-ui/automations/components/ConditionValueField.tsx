@@ -3,7 +3,7 @@ import { useForm, FormProvider } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
 import { DynamicField } from '@packages/eav-attributes-ui';
 import { useEntityEngine } from '@packages/entity-engine-ui';
-import type { FieldDefinition } from '@packages/eav-attributes-ui';
+import type { FieldDefinition, PicklistOption } from '@packages/eav-attributes-ui';
 
 interface ConditionValueFieldProps {
   field: FieldDefinition;
@@ -59,14 +59,48 @@ export function ConditionValueField({ field, value, onChange }: ConditionValueFi
     );
   }, [apiFn, lookupEntity]);
 
+  // Fetch workflow states for workflow fields — they need to render as a picklist
+  // of available states instead of "Managed by workflow"
+  const isWorkflow = field.fieldType === 'workflow';
+  const { data: workflowStates } = useQuery({
+    queryKey: ['workflow-states', field.entityType, field.fieldKey],
+    queryFn: async () => {
+      const workflows = await apiFn.get<{ entityType: string; fieldName: string; states: { name: string; label: string }[] }[]>('/workflows');
+      const match = workflows.find(w => w.entityType === field.entityType && w.fieldName === field.fieldKey);
+      return match?.states ?? [];
+    },
+    enabled: isWorkflow,
+    staleTime: 5 * 60 * 1000,
+  });
+
   // Override field for condition context: no label (already shown in field selector),
-  // not required, not readonly
-  const conditionField = useMemo(() => ({
-    ...field,
-    label: '',
-    isRequired: false,
-    isReadonly: false,
-  }), [field]);
+  // not required, not readonly.
+  // Workflow fields render as picklist — users select a state value to compare against.
+  const conditionField = useMemo(() => {
+    const base = {
+      ...field,
+      label: '',
+      isRequired: false,
+      isReadonly: false,
+    };
+
+    if (isWorkflow && workflowStates) {
+      return {
+        ...base,
+        fieldType: 'picklist' as const,
+        picklistOptions: workflowStates.map((s, i) => ({
+          id: s.name,
+          fieldId: field.id,
+          label: s.label,
+          value: s.name,
+          isDefault: false,
+          sortOrder: i,
+        })) as PicklistOption[],
+      };
+    }
+
+    return base;
+  }, [field, isWorkflow, workflowStates]);
 
   return (
     <FormProvider {...form}>
