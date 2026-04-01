@@ -23,8 +23,9 @@ function mapDrizzleType(dataType: string): FieldType {
 /**
  * Seeds field definitions, picklist options, and default layout for an entity.
  *
- * Only registers fields that are in `fieldMeta`. DB columns not in fieldMeta
- * are ignored (they're internal/legacy columns not shown to users).
+ * Registers all fields from `fieldMeta` plus implicit system fields (createdAt,
+ * updatedAt, createdBy). Only `id` and soft-delete columns are skipped — they
+ * are pure infrastructure with no user-facing meaning.
  *
  * Fields in `fieldMeta` that have a matching Drizzle column get `columnName` set.
  * Fields in `fieldMeta` without a matching column are registered as virtual/EAV fields
@@ -37,14 +38,17 @@ export async function seedEntityFields(
   fieldDefinitionService: FieldDefinitionService,
   layoutExtension: LayoutExtension | null,
 ): Promise<void> {
-  const skipSet = new Set(config.systemColumns);
+  // Only skip pure infrastructure columns — never shown to users
+  const skipSet = new Set(['id', 'deletedAt', 'deletedBy']);
   const columns = getTableColumns(config.table);
   const columnMap = new Map(Object.entries(columns));
 
   const fields: RegisterFieldInput[] = [];
+  const seenKeys = new Set<string>();
 
   for (const [key, meta] of Object.entries(config.fieldMeta)) {
     if (skipSet.has(key)) continue;
+    seenKeys.add(key);
 
     const col = columnMap.get(key);
 
@@ -80,6 +84,34 @@ export async function seedEntityFields(
       fileAccept: meta.accept ?? undefined,
       fileMaxSize: meta.maxFileSize ?? undefined,
       sortOrder: meta.sortOrder,
+    });
+  }
+
+  // Seed implicit system fields (createdAt, updatedAt, createdBy) if not already
+  // defined in fieldMeta. These are useful for filtering and automation conditions.
+  // Only seeded if the corresponding DB column exists on the entity table.
+  const implicitFields: { key: string; label: string; fieldType: FieldType }[] = [
+    { key: 'createdBy', label: 'Created By', fieldType: 'user' },
+    { key: 'createdAt', label: 'Created At', fieldType: 'datetime' },
+    { key: 'updatedAt', label: 'Updated At', fieldType: 'datetime' },
+  ];
+
+  for (const implicit of implicitFields) {
+    if (seenKeys.has(implicit.key)) continue;
+    const col = columnMap.get(implicit.key);
+    if (!col) continue;
+
+    fields.push({
+      fieldKey: implicit.key,
+      label: implicit.label,
+      fieldType: implicit.fieldType,
+      columnName: col.name,
+      isRequired: false,
+      isSystem: true,
+      isUnique: false,
+      isQuickCreate: false,
+      isReadonly: true,
+      sortOrder: 9000 + fields.length,
     });
   }
 
