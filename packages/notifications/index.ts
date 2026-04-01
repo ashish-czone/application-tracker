@@ -6,6 +6,7 @@ export { NotificationTemplatesService } from './services/notification-templates.
 export { NotificationRulesService } from './services/notification-rules.service';
 export { EntityResolverRegistry } from './services/entity-resolver-registry';
 export { ContactResolverRegistry, type ContactResolverFn } from './services/contact-resolver-registry';
+export { SendNotificationAction } from './services/send-notification.action';
 export { buildConditions, isPayloadCondition, evaluatePayloadConditions, evaluateConditionsInMemory } from './helpers/condition-builder';
 export type {
   NotificationChannel,
