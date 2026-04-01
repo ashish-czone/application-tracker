@@ -5,7 +5,6 @@ import { usePlatformAPI } from '../PlatformUIProvider';
 import { createNotificationsApi } from './services';
 import type {
   ListAutomationRulesParams, CreateAutomationRuleRequest, UpdateAutomationRuleRequest,
-  ListRulesParams, CreateRuleRequest, UpdateRuleRequest,
   ListTemplatesParams, CreateTemplateRequest, UpdateTemplateRequest,
 } from './types';
 
@@ -14,7 +13,7 @@ function useNotificationsApi() {
   return useMemo(() => createNotificationsApi(apiFn), [apiFn]);
 }
 
-// --- Automation Rules (new API) ---
+// --- Automation Rules ---
 
 export function useAutomationRules(params: ListAutomationRulesParams) {
   const api = useNotificationsApi();
@@ -89,89 +88,6 @@ export function useToggleAutomationRule() {
       api.updateAutomationRule(id, { isActive }),
     onSuccess: (_, variables) => {
       qc.invalidateQueries({ queryKey: ['automation-rules'] });
-      toast.success(variables.isActive ? 'Rule activated' : 'Rule deactivated');
-    },
-    onError: (error: any) => {
-      toast.error(error?.body?.message || 'Failed to update rule');
-    },
-  });
-}
-
-// --- Legacy notification rules ---
-
-export function useRules(params: ListRulesParams) {
-  const api = useNotificationsApi();
-  return useQuery({
-    queryKey: ['notification-rules', params],
-    queryFn: () => api.listRules(params),
-  });
-}
-
-export function useRule(id: string) {
-  const api = useNotificationsApi();
-  return useQuery({
-    queryKey: ['notification-rules', id],
-    queryFn: () => api.getRule(id),
-    enabled: !!id,
-  });
-}
-
-export function useCreateRule(options?: { onSuccess?: () => void }) {
-  const api = useNotificationsApi();
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (data: CreateRuleRequest) => api.createRule(data),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['notification-rules'] });
-      toast.success('Automation rule created');
-      options?.onSuccess?.();
-    },
-    onError: (error: any) => {
-      toast.error(error?.body?.message || 'Failed to create rule');
-    },
-  });
-}
-
-export function useUpdateRule(options?: { onSuccess?: () => void }) {
-  const api = useNotificationsApi();
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdateRuleRequest }) => api.updateRule(id, data),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['notification-rules'] });
-      toast.success('Rule updated');
-      options?.onSuccess?.();
-    },
-    onError: (error: any) => {
-      toast.error(error?.body?.message || 'Failed to update rule');
-    },
-  });
-}
-
-export function useDeleteRule(options?: { onSuccess?: () => void }) {
-  const api = useNotificationsApi();
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => api.deleteRule(id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['notification-rules'] });
-      toast.success('Rule deleted');
-      options?.onSuccess?.();
-    },
-    onError: (error: any) => {
-      toast.error(error?.body?.message || 'Failed to delete rule');
-    },
-  });
-}
-
-export function useToggleRule() {
-  const api = useNotificationsApi();
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
-      api.updateRule(id, { isActive }),
-    onSuccess: (_, variables) => {
-      qc.invalidateQueries({ queryKey: ['notification-rules'] });
       toast.success(variables.isActive ? 'Rule activated' : 'Rule deactivated');
     },
     onError: (error: any) => {

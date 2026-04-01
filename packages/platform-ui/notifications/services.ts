@@ -5,11 +5,6 @@ import type {
   CreateAutomationRuleRequest,
   UpdateAutomationRuleRequest,
   ListAutomationRulesParams,
-  NotificationRule,
-  CreateRuleRequest,
-  UpdateRuleRequest,
-  ListRulesParams,
-  RuleChannel,
   NotificationTemplate,
   CreateTemplateRequest,
   UpdateTemplateRequest,
@@ -23,7 +18,7 @@ import type {
 
 export function createNotificationsApi(api: ApiFn) {
   return {
-    // --- Automation Rules (new API) ---
+    // --- Automation Rules ---
 
     listAutomationRules(params: ListAutomationRulesParams): Promise<PaginatedResponse<AutomationRule>> {
       const sp = new URLSearchParams();
@@ -52,41 +47,6 @@ export function createNotificationsApi(api: ApiFn) {
 
     deleteAutomationRule(id: string): Promise<void> {
       return api.delete<void>(`/automation-rules/${id}`);
-    },
-
-    // --- Legacy notification rules ---
-
-    listRules(params: ListRulesParams): Promise<PaginatedResponse<NotificationRule>> {
-      const sp = new URLSearchParams();
-      if (params.page && params.page > 1) sp.set('page', String(params.page));
-      if (params.limit) sp.set('limit', String(params.limit));
-      if (params.search) sp.set('search', params.search);
-      if (params.eventName) sp.set('eventName', params.eventName);
-      if (params.isActive !== undefined) sp.set('isActive', String(params.isActive));
-      if (params.sort) sp.set('sort', params.sort);
-      if (params.order) sp.set('order', params.order);
-      const qs = sp.toString();
-      return api.get<PaginatedResponse<NotificationRule>>(`/notification-rules${qs ? `?${qs}` : ''}`);
-    },
-
-    getRule(id: string): Promise<NotificationRule> {
-      return api.get<NotificationRule>(`/notification-rules/${id}`);
-    },
-
-    createRule(data: CreateRuleRequest): Promise<NotificationRule> {
-      return api.post<NotificationRule>('/notification-rules', data);
-    },
-
-    updateRule(id: string, data: UpdateRuleRequest): Promise<NotificationRule> {
-      return api.patch<NotificationRule>(`/notification-rules/${id}`, data);
-    },
-
-    setRuleChannels(id: string, channels: RuleChannel[]): Promise<NotificationRule> {
-      return api.put<NotificationRule>(`/notification-rules/${id}/channels`, { channels });
-    },
-
-    deleteRule(id: string): Promise<void> {
-      return api.delete<void>(`/notification-rules/${id}`);
     },
 
     // --- Templates ---

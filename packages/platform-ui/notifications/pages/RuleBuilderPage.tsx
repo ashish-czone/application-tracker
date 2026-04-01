@@ -1,15 +1,22 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router';
-import { ArrowLeft } from 'lucide-react';
-import { Button, Badge, Card, CardContent, CardHeader, CardTitle } from '@packages/ui';
-import { useRule, useCreateRule, useUpdateRule, useEvents, useEntities, useTemplates, useEntityFields } from '../hooks';
-import { usePlatformAPI } from '../../PlatformUIProvider';
-import { createNotificationsApi } from '../services';
+import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
+import {
+  Button, Badge, Card, CardContent, CardHeader, CardTitle,
+  Input, Label, FormSelect,
+} from '@packages/ui';
+import {
+  useAutomationRule, useCreateAutomationRule, useUpdateAutomationRule,
+  useEvents, useEntities, useTemplates, useEntityFields,
+  useActionTypes, useUserStrategies,
+} from '../hooks';
 import { ConditionBuilder } from '../components/ConditionBuilder';
 import type {
-  TriggerType, RecipientStrategy, NotificationChannel,
-  Condition, RuleChannel, FieldConfig,
+  TriggerType, NotificationChannel, Condition, ActionConfig,
+  UserResolution, FieldConfig, ScheduleDateOperator, ScheduleUnit,
 } from '../types';
+
+// --- Constants ---
 
 const TRIGGER_TYPES: { value: TriggerType; label: string; description: string }[] = [
   { value: 'event', label: 'Event Trigger', description: 'Fire when a domain event occurs' },
@@ -19,70 +26,119 @@ const TRIGGER_TYPES: { value: TriggerType; label: string; description: string }[
 
 const CHANNELS: NotificationChannel[] = ['email', 'in_app', 'whatsapp'];
 const CHANNEL_LABELS: Record<NotificationChannel, string> = { email: 'Email', in_app: 'In-App', whatsapp: 'WhatsApp' };
+
 const DAY_OPTIONS = [
   { value: 0, label: 'Sun' }, { value: 1, label: 'Mon' }, { value: 2, label: 'Tue' },
   { value: 3, label: 'Wed' }, { value: 4, label: 'Thu' }, { value: 5, label: 'Fri' }, { value: 6, label: 'Sat' },
 ];
 
+// --- Action form state ---
+
+interface ActionFormState {
+  type: string;
+  config: Record<string, unknown>;
+  users: Record<string, UserResolution>;
+}
+
+function emptyAction(): ActionFormState {
+  return { type: '', config: {}, users: {} };
+}
+
+function actionToFormState(action: ActionConfig): ActionFormState {
+  return {
+    type: action.type,
+    config: action.config ?? {},
+    users: action.users ?? {},
+  };
+}
+
+function formStateToAction(state: ActionFormState): ActionConfig {
+  const action: ActionConfig = {
+    type: state.type,
+    config: state.config,
+  };
+  if (Object.keys(state.users).length > 0) {
+    action.users = state.users;
+  }
+  return action;
+}
+
+// --- Send Notification config helpers ---
+
+interface ChannelConfig {
+  channel: NotificationChannel;
+  templateId: string;
+}
+
+function getSendNotificationChannels(config: Record<string, unknown>): ChannelConfig[] {
+  const channels = config.channels;
+  if (Array.isArray(channels)) return channels as ChannelConfig[];
+  return [];
+}
+
+function setSendNotificationChannels(config: Record<string, unknown>, channels: ChannelConfig[]): Record<string, unknown> {
+  return { ...config, channels };
+}
+
+// --- Component ---
+
 export function RuleBuilderPage() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const isEdit = !!id;
-  const apiFn = usePlatformAPI();
-  const notificationsApi = createNotificationsApi(apiFn);
 
-  const { data: existingRule } = useRule(id ?? '');
+  // Data fetching
+  const { data: existingRule } = useAutomationRule(id ?? '');
   const { data: events } = useEvents();
   const { data: entities } = useEntities();
   const { data: templatesData } = useTemplates({ limit: 100 });
+  const { data: actionTypes } = useActionTypes();
+  const { data: userStrategies } = useUserStrategies();
   const templates = templatesData?.data ?? [];
 
-  // Form state
+  // Form state — basic
   const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+
+  // Form state — trigger
   const [triggerType, setTriggerType] = useState<TriggerType>('event');
   const [eventName, setEventName] = useState('');
   const [delayAmount, setDelayAmount] = useState<number | undefined>();
-  const [delayUnit, setDelayUnit] = useState<string>('hours');
+  const [delayUnit, setDelayUnit] = useState<ScheduleUnit>('hours');
   const [scheduleEntityType, setScheduleEntityType] = useState('');
   const [scheduleDateField, setScheduleDateField] = useState('');
-  const [scheduleDateOperator, setScheduleDateOperator] = useState<string>('before');
+  const [scheduleDateOperator, setScheduleDateOperator] = useState<ScheduleDateOperator>('before');
   const [scheduleDateAmounts, setScheduleDateAmounts] = useState('');
-  const [scheduleDateUnit, setScheduleDateUnit] = useState<string>('days');
+  const [scheduleDateUnit, setScheduleDateUnit] = useState<ScheduleUnit>('days');
   const [scheduleDaysOfWeek, setScheduleDaysOfWeek] = useState<number[]>([]);
+
+  // Form state — conditions & actions
   const [conditions, setConditions] = useState<Condition[]>([]);
-  const [recipientStrategy, setRecipientStrategy] = useState<RecipientStrategy>('actor');
-  const [recipientField, setRecipientField] = useState('');
-  const [recipientRoleId, setRecipientRoleId] = useState('');
-  const [channels, setChannels] = useState<Record<NotificationChannel, { enabled: boolean; templateId: string }>>({
-    email: { enabled: false, templateId: '' },
-    in_app: { enabled: false, templateId: '' },
-    whatsapp: { enabled: false, templateId: '' },
-  });
+  const [actions, setActions] = useState<ActionFormState[]>([emptyAction()]);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [initialized, setInitialized] = useState(false);
 
   // Populate form from existing rule
   if (isEdit && existingRule && !initialized) {
     setName(existingRule.name);
+    setDescription(existingRule.description ?? '');
     setTriggerType(existingRule.triggerType);
     setEventName(existingRule.eventName ?? '');
     setDelayAmount(existingRule.delayAmount ?? undefined);
-    setDelayUnit(existingRule.delayUnit ?? 'hours');
+    setDelayUnit((existingRule.delayUnit as ScheduleUnit) ?? 'hours');
     setScheduleEntityType(existingRule.scheduleEntityType ?? '');
     setScheduleDateField(existingRule.scheduleDateField ?? '');
-    setScheduleDateOperator(existingRule.scheduleDateOperator ?? 'before');
+    setScheduleDateOperator((existingRule.scheduleDateOperator as ScheduleDateOperator) ?? 'before');
     setScheduleDateAmounts(existingRule.scheduleDateAmounts?.join(', ') ?? '');
-    setScheduleDateUnit(existingRule.scheduleDateUnit ?? 'days');
+    setScheduleDateUnit((existingRule.scheduleDateUnit as ScheduleUnit) ?? 'days');
     setScheduleDaysOfWeek(existingRule.scheduleDaysOfWeek ?? []);
     setConditions(existingRule.conditions ?? []);
-    setRecipientStrategy(existingRule.recipientStrategy);
-    setRecipientField((existingRule.recipientConfig as any)?.field ?? '');
-    setRecipientRoleId((existingRule.recipientConfig as any)?.roleId ?? '');
-    const ch: any = { email: { enabled: false, templateId: '' }, in_app: { enabled: false, templateId: '' }, whatsapp: { enabled: false, templateId: '' } };
-    for (const rc of existingRule.channels ?? []) {
-      ch[rc.channel] = { enabled: true, templateId: rc.templateId };
-    }
-    setChannels(ch);
+    setActions(
+      existingRule.actions.length > 0
+        ? existingRule.actions.map(actionToFormState)
+        : [emptyAction()],
+    );
     setInitialized(true);
   }
 
@@ -99,14 +155,12 @@ export function RuleBuilderPage() {
     return entities?.find((e) => e.entityType === entityType);
   }, [entities, entityType]);
 
-  // Fetch entity fields from the generic endpoint for the condition builder
   const { data: entityFields } = useEntityFields(entityType || undefined);
 
   const conditionFields = useMemo<Record<string, FieldConfig>>(() => {
     return entityMeta?.fields ?? {};
   }, [entityMeta]);
 
-  // Show conditions card if we have fields from either source
   const hasConditionFields = Object.keys(conditionFields).length > 0 || (entityFields && entityFields.length > 0);
 
   const dateFields = useMemo(() => {
@@ -116,14 +170,14 @@ export function RuleBuilderPage() {
       .map(([key, config]) => ({ value: key, label: config.label }));
   }, [entityMeta]);
 
-  const recipientFields = useMemo(() => {
+  const userFieldOptions = useMemo(() => {
     if (!entityMeta) return [];
-    return Object.entries(entityMeta.recipientFields)
+    return Object.entries(entityMeta.userFields)
       .map(([key, config]) => ({ value: key, label: config.label }));
   }, [entityMeta]);
 
-  const createMutation = useCreateRule({ onSuccess: () => navigate('/automations') });
-  const updateMutation = useUpdateRule({ onSuccess: () => navigate('/automations') });
+  const createMutation = useCreateAutomationRule({ onSuccess: () => navigate('/automations') });
+  const updateMutation = useUpdateAutomationRule({ onSuccess: () => navigate('/automations') });
 
   const toggleDay = useCallback((day: number) => {
     setScheduleDaysOfWeek((prev) =>
@@ -131,59 +185,66 @@ export function RuleBuilderPage() {
     );
   }, []);
 
+  // Action helpers
+  const updateAction = useCallback((index: number, patch: Partial<ActionFormState>) => {
+    setActions((prev) => prev.map((a, i) => (i === index ? { ...a, ...patch } : a)));
+  }, []);
+
+  const removeAction = useCallback((index: number) => {
+    setActions((prev) => prev.filter((_, i) => i !== index));
+  }, []);
+
+  const addAction = useCallback(() => {
+    setActions((prev) => [...prev, emptyAction()]);
+  }, []);
+
+  // Submit
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setIsSubmitting(true);
 
     try {
-      const ruleChannels: RuleChannel[] = CHANNELS
-        .filter((ch) => channels[ch].enabled && channels[ch].templateId)
-        .map((ch) => ({ channel: ch, templateId: channels[ch].templateId }));
-
-      const recipientConfig: Record<string, unknown> = {};
-      if (recipientStrategy === 'entity_owner' && recipientField) recipientConfig.field = recipientField;
-      if (recipientStrategy === 'role' && recipientRoleId) recipientConfig.roleId = recipientRoleId;
-
       const amounts = scheduleDateAmounts
         .split(',')
         .map((s) => parseInt(s.trim(), 10))
         .filter((n) => !isNaN(n) && n >= 0);
+
+      const builtActions = actions
+        .filter((a) => a.type)
+        .map(formStateToAction);
 
       if (isEdit && id) {
         await updateMutation.mutateAsync({
           id,
           data: {
             name,
-            recipientStrategy,
-            recipientConfig: Object.keys(recipientConfig).length > 0 ? recipientConfig : undefined,
+            description: description || undefined,
             conditions: conditions.length > 0 ? conditions : undefined,
-            scheduleDaysOfWeek: scheduleDaysOfWeek.length > 0 ? scheduleDaysOfWeek : undefined,
+            actions: builtActions,
           },
         });
-        await notificationsApi.setRuleChannels(id, ruleChannels);
       } else {
         await createMutation.mutateAsync({
           name,
+          description: description || undefined,
           triggerType,
           ...(triggerType === 'event' && {
             eventName: eventName || undefined,
             delayAmount: delayAmount || undefined,
-            delayUnit: delayAmount ? delayUnit as any : undefined,
+            delayUnit: delayAmount ? delayUnit : undefined,
           }),
           ...((triggerType === 'schedule_once' || triggerType === 'schedule_recurring') && {
             scheduleEntityType: scheduleEntityType || undefined,
             ...(scheduleDateField && {
               scheduleDateField,
-              scheduleDateOperator: scheduleDateOperator as any,
+              scheduleDateOperator,
               scheduleDateAmounts: amounts.length > 0 ? amounts : undefined,
-              scheduleDateUnit: scheduleDateUnit as any,
+              scheduleDateUnit,
             }),
             ...(scheduleDaysOfWeek.length > 0 && { scheduleDaysOfWeek }),
           }),
           conditions: conditions.length > 0 ? conditions : undefined,
-          recipientStrategy,
-          recipientConfig: Object.keys(recipientConfig).length > 0 ? recipientConfig : undefined,
-          channels: ruleChannels,
+          actions: builtActions,
         });
       }
     } catch {
@@ -192,6 +253,24 @@ export function RuleBuilderPage() {
       setIsSubmitting(false);
     }
   }
+
+  // --- Action type options for select ---
+  const actionTypeOptions = useMemo(() => {
+    return (actionTypes ?? []).map((at) => ({ value: at.type, label: at.label }));
+  }, [actionTypes]);
+
+  const strategyOptions = useMemo(() => {
+    return (userStrategies ?? []).map((s) => ({ value: s.type, label: s.label }));
+  }, [userStrategies]);
+
+  // Event options for select
+  const eventOptions = useMemo(() => {
+    return (events ?? []).map((ev) => ({ value: ev.eventName, label: `${ev.group}: ${ev.description}` }));
+  }, [events]);
+
+  const entityOptions = useMemo(() => {
+    return (entities ?? []).map((e) => ({ value: e.entityType, label: e.entityType }));
+  }, [entities]);
 
   return (
     <div className="max-w-3xl">
@@ -209,20 +288,32 @@ export function RuleBuilderPage() {
       </h1>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Name */}
+        {/* Basic Info */}
         <Card>
           <CardHeader><CardTitle className="text-sm">Basic Info</CardTitle></CardHeader>
-          <CardContent>
-            <label className="block text-sm font-medium text-foreground mb-1">Rule Name</label>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Welcome email on signup"
-              required
-              minLength={2}
-              maxLength={200}
-              className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            />
+          <CardContent className="space-y-3">
+            <div className="space-y-2">
+              <Label htmlFor="rule-name">Rule Name</Label>
+              <Input
+                id="rule-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. Welcome email on signup"
+                required
+                minLength={2}
+                maxLength={200}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="rule-description">Description (optional)</Label>
+              <Input
+                id="rule-description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="What does this automation do?"
+                maxLength={500}
+              />
+            </div>
           </CardContent>
         </Card>
 
@@ -256,100 +347,91 @@ export function RuleBuilderPage() {
 
             {triggerType === 'event' && (
               <div className="space-y-3">
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">Event</label>
-                  <select
-                    value={eventName}
-                    onChange={(e) => setEventName(e.target.value)}
-                    disabled={isEdit}
-                    className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
-                  >
-                    <option value="">Select event...</option>
-                    {(events ?? []).map((ev) => (
-                      <option key={ev.eventName} value={ev.eventName}>
-                        {ev.group}: {ev.description}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <FormSelect
+                  value={eventName}
+                  onChange={(v) => setEventName(v)}
+                  options={eventOptions}
+                  label="Event"
+                  placeholder="Select event..."
+                  disabled={isEdit}
+                />
                 <div className="flex items-center gap-2">
-                  <label className="text-sm text-muted-foreground whitespace-nowrap">Delay (optional):</label>
-                  <input
+                  <Label className="text-muted-foreground whitespace-nowrap">Delay (optional):</Label>
+                  <Input
                     type="number"
                     value={delayAmount ?? ''}
                     onChange={(e) => setDelayAmount(e.target.value ? Number(e.target.value) : undefined)}
                     placeholder="0"
                     min={0}
-                    className="w-20 h-9 rounded-md border border-input bg-background px-3 text-sm"
+                    className="w-20"
                   />
-                  <select
+                  <FormSelect
                     value={delayUnit}
-                    onChange={(e) => setDelayUnit(e.target.value)}
-                    className="h-9 rounded-md border border-input bg-background px-2 text-sm"
-                  >
-                    <option value="minutes">minutes</option>
-                    <option value="hours">hours</option>
-                    <option value="days">days</option>
-                  </select>
+                    onChange={(v) => setDelayUnit(v as ScheduleUnit)}
+                    options={[
+                      { value: 'minutes', label: 'minutes' },
+                      { value: 'hours', label: 'hours' },
+                      { value: 'days', label: 'days' },
+                    ]}
+                    placeholder="unit"
+                    className="w-32"
+                  />
                 </div>
               </div>
             )}
 
             {(triggerType === 'schedule_once' || triggerType === 'schedule_recurring') && (
               <div className="space-y-3">
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">Entity Type</label>
-                  <select
-                    value={scheduleEntityType}
-                    onChange={(e) => { setScheduleEntityType(e.target.value); setScheduleDateField(''); }}
-                    disabled={isEdit}
-                    className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
-                  >
-                    <option value="">Select entity...</option>
-                    {(entities ?? []).map((e) => (
-                      <option key={e.entityType} value={e.entityType}>{e.entityType}</option>
-                    ))}
-                  </select>
-                </div>
+                <FormSelect
+                  value={scheduleEntityType}
+                  onChange={(v) => { setScheduleEntityType(v); setScheduleDateField(''); }}
+                  options={entityOptions}
+                  label="Entity Type"
+                  placeholder="Select entity..."
+                  disabled={isEdit}
+                />
 
                 {dateFields.length > 0 && (
                   <div className="flex items-center gap-2 flex-wrap">
-                    <select
+                    <FormSelect
                       value={scheduleDateField}
-                      onChange={(e) => setScheduleDateField(e.target.value)}
-                      className="h-9 rounded-md border border-input bg-background px-2 text-sm"
-                    >
-                      <option value="">No date anchor (condition-only)</option>
-                      {dateFields.map((f) => (
-                        <option key={f.value} value={f.value}>{f.label}</option>
-                      ))}
-                    </select>
+                      onChange={(v) => setScheduleDateField(v)}
+                      options={[
+                        { value: '', label: 'No date anchor (condition-only)' },
+                        ...dateFields,
+                      ]}
+                      placeholder="Date field..."
+                    />
 
                     {scheduleDateField && (
                       <>
-                        <input
+                        <Input
                           value={scheduleDateAmounts}
                           onChange={(e) => setScheduleDateAmounts(e.target.value)}
                           placeholder="7, 3, 1"
-                          className="w-24 h-9 rounded-md border border-input bg-background px-3 text-sm"
+                          className="w-24"
                         />
-                        <select
+                        <FormSelect
                           value={scheduleDateUnit}
-                          onChange={(e) => setScheduleDateUnit(e.target.value)}
-                          className="h-9 rounded-md border border-input bg-background px-2 text-sm"
-                        >
-                          <option value="days">days</option>
-                          <option value="hours">hours</option>
-                          <option value="minutes">minutes</option>
-                        </select>
-                        <select
+                          onChange={(v) => setScheduleDateUnit(v as ScheduleUnit)}
+                          options={[
+                            { value: 'days', label: 'days' },
+                            { value: 'hours', label: 'hours' },
+                            { value: 'minutes', label: 'minutes' },
+                          ]}
+                          placeholder="unit"
+                          className="w-32"
+                        />
+                        <FormSelect
                           value={scheduleDateOperator}
-                          onChange={(e) => setScheduleDateOperator(e.target.value)}
-                          className="h-9 rounded-md border border-input bg-background px-2 text-sm"
-                        >
-                          <option value="before">before</option>
-                          <option value="after">after</option>
-                        </select>
+                          onChange={(v) => setScheduleDateOperator(v as ScheduleDateOperator)}
+                          options={[
+                            { value: 'before', label: 'before' },
+                            { value: 'after', label: 'after' },
+                          ]}
+                          placeholder="operator"
+                          className="w-28"
+                        />
                       </>
                     )}
                   </div>
@@ -357,7 +439,7 @@ export function RuleBuilderPage() {
 
                 {triggerType === 'schedule_recurring' && (
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">Run on days</label>
+                    <Label className="mb-1">Run on days</Label>
                     <div className="flex gap-1">
                       {DAY_OPTIONS.map((day) => (
                         <button
@@ -400,86 +482,43 @@ export function RuleBuilderPage() {
           </Card>
         )}
 
-        {/* Recipients */}
-        <Card>
-          <CardHeader><CardTitle className="text-sm">Recipients</CardTitle></CardHeader>
-          <CardContent className="space-y-3">
-            <select
-              value={recipientStrategy}
-              onChange={(e) => setRecipientStrategy(e.target.value as RecipientStrategy)}
-              className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
-            >
-              <option value="actor">Actor (user who triggered the event)</option>
-              <option value="entity_owner">Entity Owner (field on the entity)</option>
-              <option value="role">All users with a specific role</option>
-            </select>
-
-            {recipientStrategy === 'entity_owner' && recipientFields.length > 0 && (
-              <select
-                value={recipientField}
-                onChange={(e) => setRecipientField(e.target.value)}
-                className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
-              >
-                <option value="">Select recipient field...</option>
-                {recipientFields.map((f) => (
-                  <option key={f.value} value={f.value}>{f.label}</option>
-                ))}
-              </select>
-            )}
-
-            {recipientStrategy === 'role' && (
-              <input
-                value={recipientRoleId}
-                onChange={(e) => setRecipientRoleId(e.target.value)}
-                placeholder="Role ID"
-                className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
-              />
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Channels + Templates */}
-        <Card>
-          <CardHeader><CardTitle className="text-sm">Channels &amp; Templates</CardTitle></CardHeader>
-          <CardContent className="space-y-3">
-            {CHANNELS.map((ch) => {
-              const channelTemplates = templates.filter((t) => t.channel === ch);
-              return (
-                <div key={ch} className="flex items-center gap-3">
-                  <label className="flex items-center gap-2 min-w-[100px]">
-                    <input
-                      type="checkbox"
-                      checked={channels[ch].enabled}
-                      onChange={(e) => setChannels((prev) => ({
-                        ...prev,
-                        [ch]: { ...prev[ch], enabled: e.target.checked },
-                      }))}
-                      className="rounded border-input"
-                    />
-                    <span className="text-sm font-medium">{CHANNEL_LABELS[ch]}</span>
-                  </label>
-                  {channels[ch].enabled && (
-                    <select
-                      value={channels[ch].templateId}
-                      onChange={(e) => setChannels((prev) => ({
-                        ...prev,
-                        [ch]: { ...prev[ch], templateId: e.target.value },
-                      }))}
-                      className="flex-1 h-9 rounded-md border border-input bg-background px-3 text-sm"
-                    >
-                      <option value="">Select template...</option>
-                      {channelTemplates.map((t) => (
-                        <option key={t.id} value={t.id}>{t.name}</option>
-                      ))}
-                    </select>
-                  )}
-                </div>
-              );
-            })}
-          </CardContent>
-        </Card>
-
         {/* Actions */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm">Actions</CardTitle>
+              <Button type="button" variant="outline" size="sm" onClick={addAction}>
+                <Plus className="h-3.5 w-3.5 mr-1" />
+                Add Action
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {actions.map((action, actionIndex) => (
+              <ActionEditor
+                key={actionIndex}
+                action={action}
+                index={actionIndex}
+                actionTypeOptions={actionTypeOptions}
+                actionTypes={actionTypes ?? []}
+                strategyOptions={strategyOptions}
+                userStrategies={userStrategies ?? []}
+                userFieldOptions={userFieldOptions}
+                templates={templates}
+                canRemove={actions.length > 1}
+                onChange={(patch) => updateAction(actionIndex, patch)}
+                onRemove={() => removeAction(actionIndex)}
+              />
+            ))}
+            {actions.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                Add at least one action for this automation.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Submit */}
         <div className="flex items-center justify-end gap-3 pb-8">
           <Button type="button" variant="outline" onClick={() => navigate('/automations')}>
             Cancel
@@ -489,6 +528,275 @@ export function RuleBuilderPage() {
           </Button>
         </div>
       </form>
+    </div>
+  );
+}
+
+// --- Action Editor ---
+
+interface ActionEditorProps {
+  action: ActionFormState;
+  index: number;
+  actionTypeOptions: { value: string; label: string }[];
+  actionTypes: { type: string; label: string; userSlots: { name: string; label: string; required: boolean }[]; configSchema: Record<string, unknown> }[];
+  strategyOptions: { value: string; label: string }[];
+  userStrategies: { type: string; label: string; configSchema: Record<string, unknown> }[];
+  userFieldOptions: { value: string; label: string }[];
+  templates: { id: string; name: string; channel: string }[];
+  canRemove: boolean;
+  onChange: (patch: Partial<ActionFormState>) => void;
+  onRemove: () => void;
+}
+
+function ActionEditor({
+  action, index, actionTypeOptions, actionTypes, strategyOptions,
+  userStrategies, userFieldOptions, templates, canRemove, onChange, onRemove,
+}: ActionEditorProps) {
+  const actionMeta = actionTypes.find((at) => at.type === action.type);
+
+  const handleTypeChange = (type: string) => {
+    const meta = actionTypes.find((at) => at.type === type);
+    const defaultUsers: Record<string, UserResolution> = {};
+    if (meta) {
+      for (const slot of meta.userSlots) {
+        defaultUsers[slot.name] = { strategy: 'actor', config: {} };
+      }
+    }
+    onChange({ type, config: {}, users: defaultUsers });
+  };
+
+  const handleUserSlotChange = (slotName: string, resolution: UserResolution) => {
+    onChange({ users: { ...action.users, [slotName]: resolution } });
+  };
+
+  return (
+    <div className="border border-input rounded-lg p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+          Action {index + 1}
+        </span>
+        {canRemove && (
+          <button
+            type="button"
+            onClick={onRemove}
+            className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+            aria-label="Remove action"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+
+      <FormSelect
+        value={action.type}
+        onChange={handleTypeChange}
+        options={actionTypeOptions}
+        label="Action Type"
+        placeholder="Select action..."
+      />
+
+      {/* Action-specific config */}
+      {action.type === 'send_notification' && (
+        <SendNotificationConfig
+          config={action.config}
+          onChange={(config) => onChange({ config })}
+          templates={templates}
+        />
+      )}
+
+      {action.type && action.type !== 'send_notification' && (
+        <GenericActionConfig
+          config={action.config}
+          onChange={(config) => onChange({ config })}
+        />
+      )}
+
+      {/* User slots */}
+      {actionMeta && actionMeta.userSlots.length > 0 && (
+        <div className="space-y-3 pt-2 border-t border-input">
+          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+            User Resolution
+          </span>
+          {actionMeta.userSlots.map((slot) => (
+            <UserSlotEditor
+              key={slot.name}
+              slot={slot}
+              resolution={action.users[slot.name] ?? { strategy: 'actor', config: {} }}
+              strategyOptions={strategyOptions}
+              userStrategies={userStrategies}
+              userFieldOptions={userFieldOptions}
+              onChange={(res) => handleUserSlotChange(slot.name, res)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// --- Send Notification Config ---
+
+interface SendNotificationConfigProps {
+  config: Record<string, unknown>;
+  onChange: (config: Record<string, unknown>) => void;
+  templates: { id: string; name: string; channel: string }[];
+}
+
+function SendNotificationConfig({ config, onChange, templates }: SendNotificationConfigProps) {
+  const channels = getSendNotificationChannels(config);
+
+  const enabledChannels = useMemo(() => {
+    const set = new Set<string>();
+    for (const ch of channels) set.add(ch.channel);
+    return set;
+  }, [channels]);
+
+  const toggleChannel = (channel: NotificationChannel) => {
+    if (enabledChannels.has(channel)) {
+      onChange(setSendNotificationChannels(config, channels.filter((c) => c.channel !== channel)));
+    } else {
+      onChange(setSendNotificationChannels(config, [...channels, { channel, templateId: '' }]));
+    }
+  };
+
+  const setTemplateForChannel = (channel: NotificationChannel, templateId: string) => {
+    const updated = channels.map((c) =>
+      c.channel === channel ? { ...c, templateId } : c,
+    );
+    onChange(setSendNotificationChannels(config, updated));
+  };
+
+  return (
+    <div className="space-y-3">
+      <Label>Channels &amp; Templates</Label>
+      {CHANNELS.map((ch) => {
+        const isEnabled = enabledChannels.has(ch);
+        const channelTemplates = templates.filter((t) => t.channel === ch);
+        const currentTemplateId = channels.find((c) => c.channel === ch)?.templateId ?? '';
+
+        return (
+          <div key={ch} className="flex items-center gap-3">
+            <label className="flex items-center gap-2 min-w-[100px] cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isEnabled}
+                onChange={() => toggleChannel(ch)}
+                className="h-4 w-4 rounded border-input"
+              />
+              <span className="text-sm font-medium">{CHANNEL_LABELS[ch]}</span>
+            </label>
+            {isEnabled && (
+              <FormSelect
+                value={currentTemplateId}
+                onChange={(v) => setTemplateForChannel(ch, v)}
+                options={channelTemplates.map((t) => ({ value: t.id, label: t.name }))}
+                placeholder="Select template..."
+                className="flex-1"
+              />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// --- Generic Action Config (JSON fallback) ---
+
+function GenericActionConfig({
+  config,
+  onChange,
+}: {
+  config: Record<string, unknown>;
+  onChange: (config: Record<string, unknown>) => void;
+}) {
+  const [raw, setRaw] = useState(() => JSON.stringify(config, null, 2));
+  const [error, setError] = useState('');
+
+  const handleBlur = () => {
+    try {
+      const parsed = JSON.parse(raw);
+      onChange(parsed);
+      setError('');
+    } catch {
+      setError('Invalid JSON');
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <Label>Action Config (JSON)</Label>
+      <textarea
+        value={raw}
+        onChange={(e) => setRaw(e.target.value)}
+        onBlur={handleBlur}
+        rows={4}
+        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      />
+      {error && <p className="text-sm text-destructive">{error}</p>}
+    </div>
+  );
+}
+
+// --- User Slot Editor ---
+
+interface UserSlotEditorProps {
+  slot: { name: string; label: string; required: boolean };
+  resolution: UserResolution;
+  strategyOptions: { value: string; label: string }[];
+  userStrategies: { type: string; label: string; configSchema: Record<string, unknown> }[];
+  userFieldOptions: { value: string; label: string }[];
+  onChange: (resolution: UserResolution) => void;
+}
+
+function UserSlotEditor({ slot, resolution, strategyOptions, userStrategies, userFieldOptions, onChange }: UserSlotEditorProps) {
+  const strategyMeta = userStrategies.find((s) => s.type === resolution.strategy);
+  const configSchema = strategyMeta?.configSchema ?? {};
+
+  const handleStrategyChange = (strategy: string) => {
+    onChange({ strategy: strategy as UserResolution['strategy'], config: {} });
+  };
+
+  const handleConfigChange = (key: string, value: unknown) => {
+    onChange({ ...resolution, config: { ...resolution.config, [key]: value } });
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        <Label className="min-w-[80px] text-muted-foreground">
+          {slot.label}{slot.required && ' *'}
+        </Label>
+        <FormSelect
+          value={resolution.strategy}
+          onChange={handleStrategyChange}
+          options={strategyOptions}
+          placeholder="Select strategy..."
+          className="flex-1"
+        />
+      </div>
+
+      {/* Strategy-specific config fields */}
+      {resolution.strategy === 'entity_field' && 'field' in configSchema && (
+        <div className="ml-[calc(80px+0.5rem)]">
+          <FormSelect
+            value={(resolution.config?.field as string) ?? ''}
+            onChange={(v) => handleConfigChange('field', v)}
+            options={userFieldOptions}
+            placeholder="Select user field..."
+          />
+        </div>
+      )}
+
+      {resolution.strategy === 'role' && 'roleId' in configSchema && (
+        <div className="ml-[calc(80px+0.5rem)]">
+          <Input
+            value={(resolution.config?.roleId as string) ?? ''}
+            onChange={(e) => handleConfigChange('roleId', e.target.value)}
+            placeholder="Role ID"
+          />
+        </div>
+      )}
     </div>
   );
 }

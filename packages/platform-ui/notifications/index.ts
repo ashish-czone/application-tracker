@@ -7,7 +7,6 @@ export { TemplateFormModal } from './components/TemplateFormModal';
 export {
   useAutomationRules, useAutomationRule, useCreateAutomationRule, useUpdateAutomationRule,
   useDeleteAutomationRule, useToggleAutomationRule,
-  useRules, useRule, useCreateRule, useUpdateRule, useDeleteRule, useToggleRule,
   useTemplates, useTemplate, useCreateTemplate, useUpdateTemplate, useDeleteTemplate,
   useEvents, useEntities, useActionTypes, useUserStrategies, useEntityFields,
 } from './hooks';
@@ -16,8 +15,7 @@ export type {
   AutomationRule, ActionConfig, UserResolution, LifecycleUpdateBinding, LifecycleDeleteBinding,
   CreateAutomationRuleRequest, UpdateAutomationRuleRequest, ListAutomationRulesParams,
   ActionTypeMetadata, UserStrategyMetadata, UserResolutionStrategy,
-  NotificationRule, NotificationTemplate, NotificationChannel, TriggerType,
-  RecipientStrategy, Condition, RuleChannel, EventMetadata, EntityMetadata,
-  CreateRuleRequest, UpdateRuleRequest, ListRulesParams,
+  NotificationTemplate, NotificationChannel, TriggerType,
+  Condition, EventMetadata, EntityMetadata,
   CreateTemplateRequest, UpdateTemplateRequest, ListTemplatesParams,
 } from './types';

@@ -16,6 +16,6 @@ export const customerMenu: MenuItem[] = [
   { path: '/workflows', label: 'Workflows', icon: Workflow, permission: 'workflows.read' },
   { path: '/tag-groups', label: 'Tag Groups', icon: Tags, permission: 'taxonomy.tag-groups.read' },
   { path: '/categories', label: 'Categories', icon: FolderTree, permission: 'taxonomy.categories.read' },
-  { path: '/automations', label: 'Automations', icon: Zap, permission: 'notifications.rules.read' },
+  { path: '/automations', label: 'Automations', icon: Zap, permission: 'automations.rules.read' },
   { path: '/settings', label: 'Settings', icon: Settings, permission: 'settings.read' },
 ];
