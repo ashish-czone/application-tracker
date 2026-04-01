@@ -37,12 +37,17 @@ export function FieldValueInput({
 }: FieldValueInputProps) {
   const isDynamic = isDynamicValue(value);
 
+  // Field types that should never offer dynamic mapping
+  const noDynamicTypes = ['workflow', 'file', 'rich_text'];
+  const allowDynamic = !noDynamicTypes.includes(field.fieldType);
+
   // Compatible source fields for dynamic mapping
   const compatibleFields = useMemo(() => {
+    if (!allowDynamic) return [];
     return sourceFields
       .filter((sf) => isFieldTypeCompatible(field.fieldType, sf.fieldType))
       .map((sf) => ({ value: sf.fieldKey, label: sf.label }));
-  }, [sourceFields, field.fieldType]);
+  }, [sourceFields, field.fieldType, allowDynamic]);
 
   const selectedSourceKey = isDynamic ? extractDynamicFieldKey(value as string) : null;
   const hasDynamicOptions = compatibleFields.length > 0;
@@ -63,10 +68,13 @@ export function FieldValueInput({
     onDynamicChange(field.fieldKey, buildDynamicValue(sourceFieldKey));
   };
 
+  const label = field.isRequired ? `${field.label} *` : field.label;
+
   return (
     <div className="space-y-1.5">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-muted-foreground">{field.label}</span>
+      <div className="flex items-center gap-2">
+        <span className="text-xs font-medium text-muted-foreground">{label}</span>
+        <span className="flex-1" />
         {hasDynamicOptions && (
           <button
             type="button"
@@ -96,7 +104,7 @@ export function FieldValueInput({
         />
       ) : (
         <DynamicField
-          field={{ ...field, label: '' }}
+          field={{ ...field, label: '', isRequired: false }}
           mode="edit"
           lookupOptions={lookupOptions}
           onSearch={onSearch}
