@@ -11,6 +11,7 @@ export { ProvenanceService } from './services/provenance.service';
 export { LifecycleEngine } from './services/lifecycle-engine';
 export { ScheduleScanner } from './services/schedule-scanner';
 export { AutomationListener } from './listeners/automation.listener';
+export { WebhookAction } from './services/actions/webhook.action';
 export { buildConditions } from './helpers/condition-builder';
 export { interpolateValues } from './helpers/interpolator';
 export type {
