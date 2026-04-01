@@ -2,8 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { interpolateValues } from '@packages/automations';
+import { coerceFieldValues } from '@packages/common';
 import type { ActionHandler, ActionContext, ActionResult, UserSlotDefinition } from '@packages/automations';
 import type { EntityService } from '../entity.service';
+import { FieldDefinitionService } from '../services/field-definition.service';
 
 @Injectable()
 export class UpdateEntityAction implements ActionHandler {
@@ -32,6 +34,7 @@ export class UpdateEntityAction implements ActionHandler {
 
   constructor(
     private readonly moduleRef: ModuleRef,
+    private readonly fieldDefService: FieldDefinitionService,
     appLogger: AppLoggerService,
   ) {
     this.logger = appLogger.forContext(UpdateEntityAction.name);
@@ -72,9 +75,15 @@ export class UpdateEntityAction implements ActionHandler {
     }
 
     const resolvedFields = interpolateValues(fields, templateContext);
+
+    // Coerce interpolated string values to match target field types
+    const fieldDefs = await this.fieldDefService.listByEntity(entityType);
+    const fieldTypeMap = Object.fromEntries(fieldDefs.map((d) => [d.fieldKey, d.fieldType]));
+    const coercedFields = coerceFieldValues(resolvedFields, fieldTypeMap);
+
     const actorId = context.event?.actorId ?? 'system';
 
-    await entityService.update(entityId, resolvedFields, actorId);
+    await entityService.update(entityId, coercedFields, actorId);
     this.logger.debug('Entity updated', { entityType, entityId, fields: Object.keys(resolvedFields), ruleId: context.rule.id });
     return {};
   }
