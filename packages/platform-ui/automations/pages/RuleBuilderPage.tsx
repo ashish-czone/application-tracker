@@ -512,6 +512,7 @@ export function RuleBuilderPage() {
                 canRemove={actions.length > 1}
                 onChange={(patch) => updateAction(actionIndex, patch)}
                 onRemove={() => removeAction(actionIndex)}
+                sourceEntityType={entityType || undefined}
               />
             ))}
             {actions.length === 0 && (
@@ -550,11 +551,12 @@ interface ActionEditorProps {
   canRemove: boolean;
   onChange: (patch: Partial<ActionFormState>) => void;
   onRemove: () => void;
+  sourceEntityType?: string;
 }
 
 function ActionEditor({
   action, index, actionTypeOptions, actionTypes, strategyOptions,
-  userStrategies, userFieldOptions, templates, canRemove, onChange, onRemove,
+  userStrategies, userFieldOptions, templates, canRemove, onChange, onRemove, sourceEntityType,
 }: ActionEditorProps) {
   const actionMeta = actionTypes.find((at) => at.type === action.type);
 
@@ -612,6 +614,7 @@ function ActionEditor({
         <EntityCreateActionConfig
           config={action.config}
           onChange={(config) => onChange({ config })}
+          sourceEntityType={sourceEntityType}
         />
       )}
 
@@ -619,6 +622,7 @@ function ActionEditor({
         <EntityUpdateActionConfig
           config={action.config}
           onChange={(config) => onChange({ config })}
+          sourceEntityType={sourceEntityType}
         />
       )}
 
