@@ -8,6 +8,7 @@ export default defineConfig({
     alias: {
       '@modules': path.resolve(__dirname, 'src/modules'),
       '@packages/platform-ui-taxonomy': path.resolve(__dirname, '../../packages/platform-ui/taxonomy'),
+      '@packages/platform-ui-conditions': path.resolve(__dirname, '../../packages/platform-ui/conditions'),
       '@packages': path.resolve(__dirname, '../../packages'),
     },
   },
