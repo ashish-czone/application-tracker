@@ -4,7 +4,7 @@ import { DomainEventEmitter, EventRegistryService } from '@packages/events';
 import { RbacService, FIELD_PERMISSION_ENTITY_RESOLVER, FieldPermissionsController } from '@packages/rbac';
 import type { FieldPermissionEntityResolver } from '@packages/rbac';
 import { AuditRegistryService } from '@packages/audit';
-import { EntityResolverRegistry } from '@packages/automations';
+import { EntityResolverRegistry, type EntityFieldConfig, type EntityFieldType } from '@packages/automations';
 import { TaxonomyService } from '@packages/taxonomy';
 import { WorkflowEngineService, WorkflowRegistryService, WorkflowGuardRegistry, PipelineResolverService } from '@packages/workflows';
 import { AppLoggerService } from '@packages/logger';
@@ -23,7 +23,23 @@ import { seedEntityFields, seedWorkflows } from './seed-entity-fields';
 import { EAV_STORAGE_EXTENSION, type EavStorageExtension } from './extensions/eav-storage.interface';
 import { MULTI_VALUE_EXTENSION, type MultiValueExtension } from './extensions/multi-value-extension.interface';
 import { LAYOUT_EXTENSION, type LayoutExtension } from './extensions/layout-extension.interface';
-import type { EntityConfig } from './types';
+import type { EntityConfig, FieldType } from './types';
+
+/** Map entity-engine FieldType → automations EntityFieldType for the resolver registry */
+const FIELD_TYPE_MAP: Partial<Record<FieldType, EntityFieldType>> = {
+  text: 'text', email: 'text', phone: 'text', url: 'text',
+  textarea: 'text', rich_text: 'text', auto_number: 'text',
+  number: 'number', currency: 'number', decimal: 'number',
+  date: 'date', datetime: 'date',
+  boolean: 'boolean',
+  picklist: 'enum', multi_select: 'enum', workflow: 'enum',
+  lookup: 'uuid', user: 'uuid', category: 'uuid',
+};
+
+function mapFieldType(fieldType?: FieldType): EntityFieldType | undefined {
+  if (!fieldType) return undefined;
+  return FIELD_TYPE_MAP[fieldType];
+}
 
 // Collect configs that need initialization — populated by forEntity(), consumed by EntityEngineModule.onModuleInit()
 const pendingConfigs: EntityConfig[] = [];
@@ -209,14 +225,36 @@ export class EntityEngineModule implements OnModuleInit, OnApplicationBootstrap 
       events: [createdEvent, updatedEvent, deletedEvent, ...transitionEvents],
     });
 
-    // 5. Entity resolver (automations)
-    if (config.recipientFields) {
-      this.entityResolver.register(config.entityType, {
-        table: config.table,
-        fields: {},
-        userFields: config.recipientFields,
-      });
+    // 5. Entity resolver (automations — schedule triggers + condition builder)
+    const resolverFields: Record<string, EntityFieldConfig> = {};
+    for (const [key, meta] of Object.entries(config.fieldMeta)) {
+      const mapped = mapFieldType(meta.fieldType);
+      if (!mapped) continue;
+      const fieldConfig: EntityFieldConfig = { type: mapped, label: meta.label };
+      if (meta.fieldType === 'picklist' || meta.fieldType === 'multi_select') {
+        if (meta.picklistOptions) {
+          fieldConfig.options = meta.picklistOptions.map((o) => o.value);
+        } else {
+          const fieldKey = key;
+          fieldConfig.resolveOptions = async () => {
+            const defs = await this.fieldDefService.listByEntity(config.entityType);
+            const def = defs.find((d: { fieldKey: string }) => d.fieldKey === fieldKey);
+            if (!def) return [];
+            const opts = await this.fieldDefService.getPicklistOptions(def.id);
+            return opts.map((o) => o.value);
+          };
+        }
+      }
+      if (meta.fieldType === 'workflow' && meta.workflow) {
+        fieldConfig.options = meta.workflow.states.map((s) => s.name);
+      }
+      resolverFields[key] = fieldConfig;
     }
+    this.entityResolver.register(config.entityType, {
+      table: config.table,
+      fields: resolverFields,
+      userFields: config.recipientFields ?? {},
+    });
 
     // 6. Lookup
     if (config.lookup) {
