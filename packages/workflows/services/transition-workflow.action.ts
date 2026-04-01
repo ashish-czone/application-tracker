@@ -1,10 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
-import { WorkflowEngineService } from '@packages/workflows';
 import type { ActionHandler, ActionContext, ActionResult, UserSlotDefinition } from '@packages/automations';
-import type { EntityService } from '../entity.service';
-import { EntityRegistryService } from '../entity-registry.service';
+import { WorkflowEngineService } from './workflow-engine.service';
+
+/** Minimal interface for EntityService — avoids compile-time dependency on entity-engine */
+interface EntityServiceLike {
+  update(id: string, data: Record<string, unknown>, actorId: string): Promise<unknown>;
+}
 
 @Injectable()
 export class TransitionWorkflowAction implements ActionHandler {
@@ -13,6 +16,7 @@ export class TransitionWorkflowAction implements ActionHandler {
   readonly userSlots: UserSlotDefinition[] = [];
   readonly configSchema = {
     workflowSlug: { type: 'string', required: true, label: 'Workflow' },
+    fieldKey: { type: 'string', required: true, label: 'Workflow field key on the entity' },
     targetState: { type: 'string', required: true, label: 'Target State' },
   };
 
@@ -21,20 +25,20 @@ export class TransitionWorkflowAction implements ActionHandler {
   constructor(
     private readonly moduleRef: ModuleRef,
     private readonly workflowEngine: WorkflowEngineService,
-    private readonly entityRegistry: EntityRegistryService,
     appLogger: AppLoggerService,
   ) {
     this.logger = appLogger.forContext(TransitionWorkflowAction.name);
   }
 
   async execute(context: ActionContext): Promise<ActionResult> {
-    const { workflowSlug, targetState } = context.actionConfig.config as {
+    const { workflowSlug, fieldKey, targetState } = context.actionConfig.config as {
       workflowSlug?: string;
+      fieldKey?: string;
       targetState?: string;
     };
 
-    if (!workflowSlug || !targetState) {
-      this.logger.warn(`Missing workflowSlug or targetState in rule ${context.rule.id}`);
+    if (!workflowSlug || !fieldKey || !targetState) {
+      this.logger.warn(`Missing workflowSlug, fieldKey, or targetState in rule ${context.rule.id}`);
       return {};
     }
 
@@ -57,26 +61,10 @@ export class TransitionWorkflowAction implements ActionHandler {
       return {};
     }
 
-    // Find the workflow field key on this entity
-    const entityConfig = this.entityRegistry.get(entityType);
-    if (!entityConfig) {
-      this.logger.warn(`Entity config not found for type "${entityType}"`);
-      return {};
-    }
-
-    const workflowFieldKey = Object.entries(entityConfig.fieldMeta).find(
-      ([, meta]) => meta.fieldType === 'workflow' && meta.workflow?.slug === workflowSlug,
-    )?.[0];
-
-    if (!workflowFieldKey) {
-      this.logger.warn(`No workflow field with slug "${workflowSlug}" found on entity "${entityType}"`);
-      return {};
-    }
-
     const actorId = context.event?.actorId ?? 'system';
 
     // Validate the transition (checks permissions, guards, conditions)
-    const validated = await this.workflowEngine.validateAndThrow({
+    await this.workflowEngine.validateAndThrow({
       workflowSlug,
       entityType,
       entityId,
@@ -93,9 +81,7 @@ export class TransitionWorkflowAction implements ActionHandler {
       return {};
     }
 
-    // The entity service's update method handles workflow field updates
-    // by detecting workflow fields and calling recordHistory internally
-    await entityService.update(entityId, { [workflowFieldKey]: targetState }, actorId);
+    await entityService.update(entityId, { [fieldKey]: targetState }, actorId);
 
     this.logger.debug('Workflow transitioned', {
       entityType, entityId, workflowSlug,
@@ -106,9 +92,9 @@ export class TransitionWorkflowAction implements ActionHandler {
     return {};
   }
 
-  private getEntityService(entityType: string): EntityService | null {
+  private getEntityService(entityType: string): EntityServiceLike | null {
     try {
-      return this.moduleRef.get<EntityService>(`ENTITY_SERVICE_${entityType}`, { strict: false });
+      return this.moduleRef.get<EntityServiceLike>(`ENTITY_SERVICE_${entityType}`, { strict: false });
     } catch {
       return null;
     }

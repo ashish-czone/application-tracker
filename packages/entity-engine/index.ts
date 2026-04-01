@@ -4,7 +4,6 @@ export { EntityService } from './entity.service';
 export { EntityEngineApiController } from './entity-engine-api.controller';
 export { CreateEntityAction } from './actions/create-entity.action';
 export { UpdateEntityAction } from './actions/update-entity.action';
-export { TransitionWorkflowAction } from './actions/transition-workflow.action';
 export { createEntityController } from './create-entity-controller';
 export { createFieldPermissionInterceptor } from './interceptors/field-permission.interceptor';
 export { seedEntityFields, seedWorkflows } from './seed-entity-fields';

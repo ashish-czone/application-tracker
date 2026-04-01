@@ -25,7 +25,6 @@ import { MULTI_VALUE_EXTENSION, type MultiValueExtension } from './extensions/mu
 import { LAYOUT_EXTENSION, type LayoutExtension } from './extensions/layout-extension.interface';
 import { CreateEntityAction } from './actions/create-entity.action';
 import { UpdateEntityAction } from './actions/update-entity.action';
-import { TransitionWorkflowAction } from './actions/transition-workflow.action';
 import type { EntityConfig, FieldType } from './types';
 
 /** Map entity-engine FieldType → automations EntityFieldType for the resolver registry */
@@ -91,7 +90,6 @@ const pendingConfigs: EntityConfig[] = [];
     },
     CreateEntityAction,
     UpdateEntityAction,
-    TransitionWorkflowAction,
   ],
   exports: [EntityRegistryService, FieldDefinitionService, LookupResolverService, FieldTypeSaveHookRegistry, FIELD_PERMISSION_ENTITY_RESOLVER, 'FIELD_DEFINITION_SERVICE'],
 })
@@ -112,7 +110,6 @@ export class EntityEngineModule implements OnModuleInit, OnApplicationBootstrap 
     private readonly actionRegistry: ActionRegistry,
     private readonly createEntityAction: CreateEntityAction,
     private readonly updateEntityAction: UpdateEntityAction,
-    private readonly transitionWorkflowAction: TransitionWorkflowAction,
   ) {}
 
   /**
@@ -167,7 +164,6 @@ export class EntityEngineModule implements OnModuleInit, OnApplicationBootstrap 
     // Register entity-engine action handlers with automations
     this.actionRegistry.register(this.createEntityAction);
     this.actionRegistry.register(this.updateEntityAction);
-    this.actionRegistry.register(this.transitionWorkflowAction);
   }
 
   async onApplicationBootstrap(): Promise<void> {
