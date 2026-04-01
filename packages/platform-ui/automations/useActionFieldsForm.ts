@@ -6,6 +6,13 @@ import { buildFormSchema, type FieldDefinition } from '@packages/eav-attributes-
 import { useEntityEngine } from '@packages/entity-engine-ui';
 import { isDynamicValue } from './components/field-compatibility';
 
+/** User fields implicitly reference 'users' even when lookupEntity is null in the DB. */
+function effectiveLookupEntity(field: FieldDefinition): string | null {
+  if (field.lookupEntity) return field.lookupEntity;
+  if (field.fieldType === 'user' || field.fieldType === 'multi_user') return 'users';
+  return null;
+}
+
 interface UseActionFieldsFormOptions {
   /** Fields currently being edited (all editable for create, selected subset for update) */
   activeFields: FieldDefinition[];
@@ -41,9 +48,12 @@ export function useActionFieldsForm({
   // --- Lookup options ---
 
   const lookupEntities = useMemo(() => {
-    return activeFields
-      .filter((f) => (f.fieldType === 'lookup' || f.fieldType === 'user') && f.lookupEntity)
-      .map((f) => f.lookupEntity!);
+    const entities: string[] = [];
+    for (const f of activeFields) {
+      const entity = effectiveLookupEntity(f);
+      if (entity && !entities.includes(entity)) entities.push(entity);
+    }
+    return entities;
   }, [activeFields]);
 
   const { data: lookupOptionsMap } = useQuery({
@@ -149,13 +159,6 @@ export function useActionFieldsForm({
 
   // --- Search callbacks ---
 
-  const searchUsers = useCallback(async (query: string) => {
-    const res = await apiFn.get<{ data: { id: string; firstName: string; lastName: string }[] }>(
-      `/users?search=${encodeURIComponent(query)}&limit=20`,
-    );
-    return res.data.map((u) => ({ label: `${u.firstName} ${u.lastName}`.trim(), value: u.id }));
-  }, [apiFn]);
-
   const searchLookup = useCallback(async (entity: string, query: string) => {
     return apiFn.get<{ label: string; value: string }[]>(
       `/lookups/${entity}?search=${encodeURIComponent(query)}&limit=20`,
@@ -173,7 +176,8 @@ export function useActionFieldsForm({
   /** Returns all props needed for a <FieldValueInput> for the given field. */
   const getFieldInputProps = useCallback((field: FieldDefinition) => {
     const fieldValue = dynamicFieldsRef.current[field.fieldKey] ?? form.getValues(field.fieldKey);
-    const options = field.lookupEntity ? lookupOptionsMap?.[field.lookupEntity] : undefined;
+    const lookupEntity = effectiveLookupEntity(field);
+    const options = lookupEntity ? lookupOptionsMap?.[lookupEntity] : undefined;
     const resolvedLabel = (!isDynamicValue(fieldValue) && options && fieldValue)
       ? options.find((o) => o.value === fieldValue)?.label ?? null
       : null;
@@ -186,18 +190,16 @@ export function useActionFieldsForm({
       lookupOptions: options,
       resolvedLabel,
       onSearch:
-        field.fieldType === 'lookup' && field.lookupEntity
-          ? (q: string) => searchLookup(field.lookupEntity!, q)
-          : field.fieldType === 'user'
-          ? searchUsers
+        (field.fieldType === 'lookup' || field.fieldType === 'user') && lookupEntity
+          ? (q: string) => searchLookup(lookupEntity, q)
           : undefined,
       onChipSearch:
-        field.fieldType === 'multi_user' ? searchUsers
-        : field.fieldType === 'multi_lookup' && field.lookupEntity ? (q: string) => searchLookup(field.lookupEntity!, q)
-        : field.fieldType === 'tags' && field.tagGroupSlug ? (q: string) => searchTags(field.tagGroupSlug!, q)
-        : undefined,
+        (field.fieldType === 'multi_user' || field.fieldType === 'multi_lookup') && lookupEntity
+          ? (q: string) => searchLookup(lookupEntity, q)
+          : field.fieldType === 'tags' && field.tagGroupSlug ? (q: string) => searchTags(field.tagGroupSlug!, q)
+          : undefined,
     };
-  }, [handleDynamicChange, sourceFields, lookupOptionsMap, searchUsers, searchLookup, searchTags, form]);
+  }, [handleDynamicChange, sourceFields, lookupOptionsMap, searchLookup, searchTags, form]);
 
   return { form, getFieldInputProps, clearDynamicField };
 }
