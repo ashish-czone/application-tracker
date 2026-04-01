@@ -1,6 +1,8 @@
 export { AutomationsListPage } from './pages/AutomationsListPage';
 export { RuleBuilderPage } from './pages/RuleBuilderPage';
 export { ConditionBuilder } from './components/ConditionBuilder';
+export { EntityCreateActionConfig } from './components/EntityCreateActionConfig';
+export { EntityUpdateActionConfig } from './components/EntityUpdateActionConfig';
 export {
   useAutomationRules, useAutomationRule, useCreateAutomationRule, useUpdateAutomationRule,
   useDeleteAutomationRule, useToggleAutomationRule,
