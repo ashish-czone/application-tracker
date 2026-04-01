@@ -5,8 +5,8 @@ import {
   DataGrid, Badge, Button, useDataGridParams, ConfirmDialog,
   type ColumnDef,
 } from '@packages/ui';
-import { useRules, useDeleteRule, useToggleRule } from '../hooks';
-import type { NotificationRule, TriggerType } from '../types';
+import { useAutomationRules, useDeleteAutomationRule, useToggleAutomationRule } from '../hooks';
+import type { AutomationRule, TriggerType } from '../types';
 
 const TRIGGER_LABELS: Record<TriggerType, string> = {
   event: 'Event',
@@ -16,7 +16,7 @@ const TRIGGER_LABELS: Record<TriggerType, string> = {
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-function TriggerSummary({ rule }: { rule: NotificationRule }) {
+function TriggerSummary({ rule }: { rule: AutomationRule }) {
   if (rule.triggerType === 'event') {
     return (
       <div className="text-sm">
@@ -53,23 +53,38 @@ function TriggerSummary({ rule }: { rule: NotificationRule }) {
   );
 }
 
+function ActionsSummary({ rule }: { rule: AutomationRule }) {
+  if (!rule.actions || rule.actions.length === 0) {
+    return <span className="text-sm text-muted-foreground">No actions</span>;
+  }
+  return (
+    <div className="flex flex-wrap gap-1">
+      {rule.actions.map((action, i) => (
+        <Badge key={i} variant="secondary" className="text-xs">
+          {action.type.replace(/_/g, ' ')}
+        </Badge>
+      ))}
+    </div>
+  );
+}
+
 export function AutomationsListPage() {
-  const [deleting, setDeleting] = useState<NotificationRule | null>(null);
+  const [deleting, setDeleting] = useState<AutomationRule | null>(null);
 
   const {
     page, pageSize, search, sort, order,
     setPage, setPageSize, setSearch, setSort,
   } = useDataGridParams({ defaultSort: 'createdAt', defaultOrder: 'desc' });
 
-  const { data, isLoading, isError, refetch } = useRules({
+  const { data, isLoading, isError, refetch } = useAutomationRules({
     page, limit: pageSize, search: search || undefined,
     sort: sort as 'name' | 'createdAt' | undefined, order,
   });
 
-  const deleteMutation = useDeleteRule({ onSuccess: () => setDeleting(null) });
-  const toggleMutation = useToggleRule();
+  const deleteMutation = useDeleteAutomationRule({ onSuccess: () => setDeleting(null) });
+  const toggleMutation = useToggleAutomationRule();
 
-  const columns = useMemo<ColumnDef<NotificationRule, unknown>[]>(() => [
+  const columns = useMemo<ColumnDef<AutomationRule, unknown>[]>(() => [
     {
       id: 'name',
       header: 'Name',
@@ -94,17 +109,9 @@ export function AutomationsListPage() {
       enableHiding: true,
     },
     {
-      id: 'channels',
-      header: 'Channels',
-      cell: ({ row }) => (
-        <div className="flex flex-wrap gap-1">
-          {(row.original.channels ?? []).map((ch) => (
-            <Badge key={ch.channel} variant="secondary" className="text-xs">
-              {ch.channel === 'in_app' ? 'In-App' : ch.channel.charAt(0).toUpperCase() + ch.channel.slice(1)}
-            </Badge>
-          ))}
-        </div>
-      ),
+      id: 'actions',
+      header: 'Actions',
+      cell: ({ row }) => <ActionsSummary rule={row.original} />,
       enableSorting: false,
       enableHiding: true,
     },
@@ -139,7 +146,7 @@ export function AutomationsListPage() {
       enableHiding: true,
     },
     {
-      id: 'actions',
+      id: 'rowActions',
       header: '',
       size: 80,
       enableHiding: false,
@@ -177,7 +184,7 @@ export function AutomationsListPage() {
         emptyState={{
           icon: Zap,
           title: 'No automation rules yet',
-          description: 'Create your first automation to send notifications on events.',
+          description: 'Create your first automation rule to trigger actions on events or schedules.',
           action: { label: 'Create Rule', onClick: () => { window.location.href = '/automations/create'; } },
         }}
         storageKey="automations-list"
