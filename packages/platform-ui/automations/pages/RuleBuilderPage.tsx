@@ -223,7 +223,7 @@ export function RuleBuilderPage() {
           data: {
             name,
             description: description || undefined,
-            conditions: conditions.length > 0 ? conditions : undefined,
+            conditions: conditions.length > 0 ? conditions : [],
             actions: builtActions,
           },
         });
