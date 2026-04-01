@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AutomationsListPage } from './AutomationsListPage';
+import { AutomationsListPage } from '../../automations/pages/AutomationsListPage';
 import { TemplatesListPage } from './TemplatesListPage';
 
 const TABS = [

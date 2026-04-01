@@ -1,7 +1,8 @@
 import { lazy } from 'react';
 import { TagGroupsListPage, CategoryGroupsListPage } from '@packages/platform-ui-taxonomy';
 import { RolesListPage } from '@packages/platform-ui/rbac';
-import { AutomationsPage, RuleBuilderPage } from '@packages/platform-ui/notifications';
+import { AutomationsPage } from '@packages/platform-ui/notifications';
+import { RuleBuilderPage } from '@packages/platform-ui/automations';
 import { UsersListPage } from '@packages/platform-ui/users';
 import { SettingsPage as AppSettingsPage } from '@packages/platform-ui/settings';
 

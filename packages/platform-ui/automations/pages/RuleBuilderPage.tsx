@@ -7,14 +7,16 @@ import {
 } from '@packages/ui';
 import {
   useAutomationRule, useCreateAutomationRule, useUpdateAutomationRule,
-  useEvents, useEntities, useTemplates, useEntityFields,
+  useEvents, useEntities, useEntityFields,
   useActionTypes, useUserStrategies,
 } from '../hooks';
+import { useTemplates } from '../../notifications/hooks';
 import { ConditionBuilder } from '../components/ConditionBuilder';
 import type {
-  TriggerType, NotificationChannel, Condition, ActionConfig,
+  TriggerType, Condition, ActionConfig,
   UserResolution, FieldConfig, ScheduleDateOperator, ScheduleUnit,
 } from '../types';
+import type { NotificationChannel } from '../../notifications/types';
 
 // --- Constants ---
 
