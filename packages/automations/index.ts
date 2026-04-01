@@ -8,6 +8,7 @@ export { EntityResolverRegistry } from './services/entity-resolver-registry';
 export { AutomationRuleService } from './services/automation-rule.service';
 export { ProvenanceService } from './services/provenance.service';
 export { LifecycleEngine } from './services/lifecycle-engine';
+export { ScheduleScanner } from './services/schedule-scanner';
 export { AutomationListener } from './listeners/automation.listener';
 export { buildConditions } from './helpers/condition-builder';
 export { interpolateValues } from './helpers/interpolator';
