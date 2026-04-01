@@ -1,0 +1,29 @@
+{
+  "name": "@packages/automations",
+  "version": "0.0.1",
+  "private": true,
+  "main": "index.ts",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/event-emitter": "^3.0.0",
+    "@nestjs/swagger": "^11.0.0",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.1",
+    "@packages/common": "workspace:*",
+    "@packages/database": "workspace:*",
+    "@packages/events": "workspace:*",
+    "@packages/logger": "workspace:*",
+    "@packages/queue": "workspace:*",
+    "@packages/rbac": "workspace:*",
+    "drizzle-orm": "^0.45.1",
+    "mustache": "^4.2.0"
+  },
+  "devDependencies": {
+    "@types/mustache": "^4.2.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.2.0"
+  }
+}
