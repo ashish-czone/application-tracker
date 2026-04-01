@@ -45,11 +45,14 @@ export function TransitionWorkflowActionConfig({
     return new Set(allWorkflows.filter((w) => w.isActive).map((w) => w.entityType));
   }, [allWorkflows]);
 
-  // Entity type options: "triggering entity" + only entities with workflows
+  // Only show "Triggering entity" default if the source entity type has workflows
+  const sourceHasWorkflows = !!sourceEntityType && entitiesWithWorkflows.has(sourceEntityType);
+
+  // Entity type options: only entities with workflows (+ triggering entity default if applicable)
   const entityTypeOptions = useMemo(() => [
-    { value: '', label: 'Triggering entity (default)' },
+    ...(sourceHasWorkflows ? [{ value: '', label: 'Triggering entity (default)' }] : []),
     ...entityOptions.filter((e) => entitiesWithWorkflows.has(e.value)),
-  ], [entityOptions, entitiesWithWorkflows]);
+  ], [entityOptions, entitiesWithWorkflows, sourceHasWorkflows]);
 
   // Workflows filtered by effective entity type
   const filteredWorkflows = useMemo(() => {
