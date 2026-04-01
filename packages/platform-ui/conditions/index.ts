@@ -1,2 +1,2 @@
 export { ConditionBuilder, type ConditionBuilderProps } from './ConditionBuilder';
-export type { Condition, ConditionOperator, ConditionFieldType, ConditionFieldConfig } from './types';
+export type { Condition, ConditionOperator, ConditionFieldType, ConditionFieldConfig, RenderValueProps } from './types';
