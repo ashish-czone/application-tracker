@@ -12,6 +12,7 @@ import { FormCurrencyInput } from '@packages/ui/components/form/FormCurrencyInpu
 import { FormRichText } from '@packages/ui/components/form/FormRichText';
 import { FormChipInput } from '@packages/ui/components/form/FormChipInput';
 import { FormFileInput } from '@packages/ui/components/form/FormFileInput';
+import { FormDatePicker } from '@packages/ui/components/form/FormDatePicker';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -108,11 +109,11 @@ function currencyCell(value: unknown): string {
 // ---------------------------------------------------------------------------
 
 function DateForm(props: FieldRenderProps) {
-  return <FormInput name={props.field.fieldKey} label={fieldLabel(props)} type="date" disabled={props.field.isReadonly} />;
+  return <FormDatePicker name={props.field.fieldKey} label={fieldLabel(props)} disabled={props.field.isReadonly} />;
 }
 
 function DatetimeForm(props: FieldRenderProps) {
-  return <FormInput name={props.field.fieldKey} label={fieldLabel(props)} type="datetime-local" disabled={props.field.isReadonly} />;
+  return <FormDatePicker name={props.field.fieldKey} label={fieldLabel(props)} disabled={props.field.isReadonly} includeTime />;
 }
 
 function dateView(value: unknown): React.ReactNode {
