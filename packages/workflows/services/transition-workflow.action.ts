@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
+import { interpolateValues } from '@packages/automations';
 import type { ActionHandler, ActionContext, ActionResult, UserSlotDefinition } from '@packages/automations';
 import { WorkflowEngineService } from './workflow-engine.service';
 
@@ -15,6 +16,16 @@ export class TransitionWorkflowAction implements ActionHandler {
   readonly label = 'Transition Workflow';
   readonly userSlots: UserSlotDefinition[] = [];
   readonly configSchema = {
+    entityType: {
+      type: 'string',
+      required: false,
+      label: 'Entity type (defaults to triggering entity)',
+    },
+    entityId: {
+      type: 'string',
+      required: false,
+      label: 'Entity ID (supports {{mustache}}, defaults to triggering entity)',
+    },
     workflowSlug: { type: 'string', required: true, label: 'Workflow' },
     fieldKey: { type: 'string', required: true, label: 'Workflow field key on the entity' },
     targetState: { type: 'string', required: true, label: 'Target State' },
@@ -31,19 +42,31 @@ export class TransitionWorkflowAction implements ActionHandler {
   }
 
   async execute(context: ActionContext): Promise<ActionResult> {
-    const { workflowSlug, fieldKey, targetState } = context.actionConfig.config as {
+    const config = context.actionConfig.config as {
+      entityType?: string;
+      entityId?: string;
       workflowSlug?: string;
       fieldKey?: string;
       targetState?: string;
     };
+
+    const { workflowSlug, fieldKey, targetState } = config;
 
     if (!workflowSlug || !fieldKey || !targetState) {
       this.logger.warn(`Missing workflowSlug, fieldKey, or targetState in rule ${context.rule.id}`);
       return {};
     }
 
-    const entityType = context.event?.entityType;
-    const entityId = context.event?.entityId;
+    const templateContext = {
+      event: context.event,
+      payload: context.event?.payload ?? {},
+    };
+
+    // Resolve target entity — config overrides take priority, fall back to triggering entity
+    const entityType = config.entityType ?? context.event?.entityType;
+    const rawEntityId = config.entityId ?? context.event?.entityId;
+    const entityId = rawEntityId ? interpolateValues({ id: rawEntityId }, templateContext).id as string : undefined;
+
     if (!entityType || !entityId) {
       this.logger.warn('No entity context available for transition_workflow action');
       return {};
