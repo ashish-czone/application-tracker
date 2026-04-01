@@ -13,3 +13,11 @@ export interface ConditionFieldConfig {
   label: string;
   options?: string[];
 }
+
+export interface RenderValueProps {
+  fieldKey: string;
+  fieldConfig: ConditionFieldConfig;
+  operator: ConditionOperator;
+  value: unknown;
+  onChange: (value: unknown) => void;
+}

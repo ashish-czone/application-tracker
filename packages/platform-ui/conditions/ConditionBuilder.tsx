@@ -1,6 +1,6 @@
 import { Plus, X } from 'lucide-react';
 import { Button, Badge } from '@packages/ui';
-import type { Condition, ConditionOperator, ConditionFieldConfig } from './types';
+import type { Condition, ConditionOperator, ConditionFieldConfig, RenderValueProps } from './types';
 
 const OPERATOR_LABELS: Record<ConditionOperator, string> = {
   eq: 'is',
@@ -33,6 +33,8 @@ export interface ConditionBuilderProps {
   fields: Record<string, ConditionFieldConfig>;
   /** When true, includes payload-change operators (changed, changed_to, changed_from_to) */
   includePayloadOperators?: boolean;
+  /** Custom value renderer — when provided, replaces the default input for condition values */
+  renderValue?: (props: RenderValueProps) => React.ReactNode;
 }
 
 function getOperatorsForType(fieldType: string, includePayload: boolean): ConditionOperator[] {
@@ -46,7 +48,7 @@ function getOperatorsForType(fieldType: string, includePayload: boolean): Condit
   return ops;
 }
 
-export function ConditionBuilder({ conditions, onChange, fields, includePayloadOperators = false }: ConditionBuilderProps) {
+export function ConditionBuilder({ conditions, onChange, fields, includePayloadOperators = false, renderValue }: ConditionBuilderProps) {
   const fieldEntries = Object.entries(fields);
 
   function addCondition() {
@@ -115,33 +117,40 @@ export function ConditionBuilder({ conditions, onChange, fields, includePayloadO
             {isFromTo && (
               <div className="flex items-center gap-1">
                 <span className="text-xs text-muted-foreground">From:</span>
-                {renderValueInput(fieldConfig, String(fromToValue.from ?? ''), (v) =>
-                  updateCondition(index, { value: { ...fromToValue, from: v } }), 'From')}
+                {renderValue
+                  ? renderValue({ fieldKey: condition.field, fieldConfig, operator: condition.operator, value: fromToValue.from, onChange: (v) => updateCondition(index, { value: { ...fromToValue, from: v } }) })
+                  : renderValueInput(fieldConfig, String(fromToValue.from ?? ''), (v) => updateCondition(index, { value: { ...fromToValue, from: v } }), 'From')
+                }
                 <span className="text-xs text-muted-foreground">To:</span>
-                {renderValueInput(fieldConfig, String(fromToValue.to ?? ''), (v) =>
-                  updateCondition(index, { value: { ...fromToValue, to: v } }), 'To')}
+                {renderValue
+                  ? renderValue({ fieldKey: condition.field, fieldConfig, operator: condition.operator, value: fromToValue.to, onChange: (v) => updateCondition(index, { value: { ...fromToValue, to: v } }) })
+                  : renderValueInput(fieldConfig, String(fromToValue.to ?? ''), (v) => updateCondition(index, { value: { ...fromToValue, to: v } }), 'To')
+                }
               </div>
             )}
 
             {/* Standard value inputs */}
-            {needsValue && fieldConfig?.type === 'enum' && fieldConfig.options && condition.operator === 'in' ? (
-              <select
-                multiple
-                value={Array.isArray(condition.value) ? condition.value : []}
-                onChange={(e) => {
-                  const selected = Array.from(e.target.selectedOptions, (opt) => opt.value);
-                  updateCondition(index, { value: selected });
-                }}
-                className="h-16 rounded-md border border-input bg-background px-2 text-sm min-w-[120px]"
-              >
-                {fieldConfig.options.map((opt) => (
-                  <option key={opt} value={opt}>{opt}</option>
-                ))}
-              </select>
-            ) : needsValue ? (
-              renderValueInput(fieldConfig, String(condition.value ?? ''), (v) =>
-                updateCondition(index, { value: fieldConfig?.type === 'number' ? Number(v) : v }), 'Value')
-            ) : null}
+            {needsValue && (renderValue
+              ? renderValue({ fieldKey: condition.field, fieldConfig, operator: condition.operator, value: condition.value, onChange: (v) => updateCondition(index, { value: v }) })
+              : fieldConfig?.type === 'enum' && fieldConfig.options && condition.operator === 'in' ? (
+                <select
+                  multiple
+                  value={Array.isArray(condition.value) ? condition.value : []}
+                  onChange={(e) => {
+                    const selected = Array.from(e.target.selectedOptions, (opt) => opt.value);
+                    updateCondition(index, { value: selected });
+                  }}
+                  className="h-16 rounded-md border border-input bg-background px-2 text-sm min-w-[120px]"
+                >
+                  {fieldConfig.options.map((opt) => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </select>
+              ) : (
+                renderValueInput(fieldConfig, String(condition.value ?? ''), (v) =>
+                  updateCondition(index, { value: fieldConfig?.type === 'number' ? Number(v) : v }), 'Value')
+              )
+            )}
 
             <button
               type="button"
