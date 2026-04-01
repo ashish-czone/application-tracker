@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router';
 import { Zap, Plus, Pencil, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import {
@@ -69,6 +70,7 @@ function ActionsSummary({ rule }: { rule: AutomationRule }) {
 }
 
 export function AutomationsListPage() {
+  const navigate = useNavigate();
   const [deleting, setDeleting] = useState<AutomationRule | null>(null);
 
   const {
@@ -153,20 +155,21 @@ export function AutomationsListPage() {
       enableSorting: false,
       cell: ({ row }) => (
         <div className="flex items-center gap-1 justify-end">
-          <a
-            href={`/automations/${row.original.id}/edit`}
+          <button
+            type="button"
+            onClick={() => navigate(`/automations/${row.original.id}/edit`)}
             className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
             aria-label="Edit"
           >
             <Pencil className="h-4 w-4" />
-          </a>
+          </button>
           <button type="button" onClick={() => setDeleting(row.original)} className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors" aria-label="Delete">
             <Trash2 className="h-4 w-4" />
           </button>
         </div>
       ),
     },
-  ], [toggleMutation]);
+  ], [toggleMutation, navigate]);
 
   return (
     <div>
@@ -185,11 +188,11 @@ export function AutomationsListPage() {
           icon: Zap,
           title: 'No automation rules yet',
           description: 'Create your first automation rule to trigger actions on events or schedules.',
-          action: { label: 'Create Rule', onClick: () => { window.location.href = '/automations/create'; } },
+          action: { label: 'Create Rule', onClick: () => { navigate('/automations/create'); } },
         }}
         storageKey="automations-list"
         toolbarActions={
-          <Button size="sm" onClick={() => { window.location.href = '/automations/create'; }}>
+          <Button size="sm" onClick={() => { navigate('/automations/create'); }}>
             <Plus className="h-4 w-4 mr-1" />
             Create Rule
           </Button>
