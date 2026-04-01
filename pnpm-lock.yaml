@@ -98,6 +98,9 @@ importers:
       '@packages/auth':
         specifier: workspace:*
         version: link:../../packages/auth
+      '@packages/automations':
+        specifier: workspace:*
+        version: link:../../packages/automations
       '@packages/common':
         specifier: workspace:*
         version: link:../../packages/common
@@ -258,6 +261,9 @@ importers:
       '@packages/auth':
         specifier: workspace:*
         version: link:../../packages/auth
+      '@packages/automations':
+        specifier: workspace:*
+        version: link:../../packages/automations
       '@packages/common':
         specifier: workspace:*
         version: link:../../packages/common
@@ -844,6 +850,9 @@ importers:
       '@packages/auth':
         specifier: workspace:*
         version: link:../auth
+      '@packages/automations':
+        specifier: workspace:*
+        version: link:../automations
       '@packages/common':
         specifier: workspace:*
         version: link:../common
@@ -856,9 +865,6 @@ importers:
       '@packages/logger':
         specifier: workspace:*
         version: link:../logger
-      '@packages/notifications':
-        specifier: workspace:*
-        version: link:../notifications
       '@packages/query-builder':
         specifier: workspace:*
         version: link:../query-builder

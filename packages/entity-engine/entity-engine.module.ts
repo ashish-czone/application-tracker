@@ -4,7 +4,7 @@ import { DomainEventEmitter, EventRegistryService } from '@packages/events';
 import { RbacService, FIELD_PERMISSION_ENTITY_RESOLVER, FieldPermissionsController } from '@packages/rbac';
 import type { FieldPermissionEntityResolver } from '@packages/rbac';
 import { AuditRegistryService } from '@packages/audit';
-import { EntityResolverRegistry } from '@packages/notifications';
+import { EntityResolverRegistry } from '@packages/automations';
 import { TaxonomyService } from '@packages/taxonomy';
 import { WorkflowEngineService, WorkflowRegistryService, WorkflowGuardRegistry, PipelineResolverService } from '@packages/workflows';
 import { AppLoggerService } from '@packages/logger';
@@ -209,12 +209,12 @@ export class EntityEngineModule implements OnModuleInit, OnApplicationBootstrap 
       events: [createdEvent, updatedEvent, deletedEvent, ...transitionEvents],
     });
 
-    // 5. Entity resolver
+    // 5. Entity resolver (automations)
     if (config.recipientFields) {
       this.entityResolver.register(config.entityType, {
         table: config.table,
         fields: {},
-        recipientFields: config.recipientFields,
+        userFields: config.recipientFields,
       });
     }
 

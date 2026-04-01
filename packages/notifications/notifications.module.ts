@@ -2,7 +2,7 @@ import { Global, Module, type OnModuleInit } from '@nestjs/common';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { QueueService } from '@packages/queue';
 import { RbacService } from '@packages/rbac';
-import { cronForLocalHour } from '@packages/common';
+import { ActionRegistry } from '@packages/automations';
 import { NotificationChannelsModule, EmailChannelService, WhatsAppChannelService, InAppChannel } from '@packages/notification-channels';
 import type { EmailPayload, WhatsAppPayload } from '@packages/notification-channels';
 import { NotificationRuleService } from './services/notification-rule.service';
@@ -15,6 +15,7 @@ import { NotificationDispatcher, EMAIL_QUEUE_NAME, WHATSAPP_QUEUE_NAME } from '.
 import { NotificationListener } from './listeners/notification.listener';
 import { EntityResolverRegistry } from './services/entity-resolver-registry';
 import { ContactResolverRegistry } from './services/contact-resolver-registry';
+import { SendNotificationAction } from './services/send-notification.action';
 import { ScheduleScanner } from './services/schedule-scanner';
 import { NotificationRulesController } from './controllers/notification-rules.controller';
 import { NotificationTemplatesController } from './controllers/notification-templates.controller';
@@ -37,6 +38,7 @@ export const SCHEDULE_SCAN_QUEUE = 'notification.schedule-scan';
     NotificationListener,
     EntityResolverRegistry,
     ContactResolverRegistry,
+    SendNotificationAction,
     ScheduleScanner,
   ],
   exports: [
@@ -59,6 +61,8 @@ export class NotificationsModule implements OnModuleInit {
     private readonly emailChannelService: EmailChannelService,
     private readonly whatsAppChannelService: WhatsAppChannelService,
     private readonly rbacService: RbacService,
+    private readonly actionRegistry: ActionRegistry,
+    private readonly sendNotificationAction: SendNotificationAction,
     appLogger: AppLoggerService,
   ) {
     this.logger = appLogger.forContext(NotificationsModule.name);
@@ -123,5 +127,8 @@ export class NotificationsModule implements OnModuleInit {
         this.logger.error('Failed to register schedule scanner', { error: err instanceof Error ? err.message : String(err) });
       }
     }
+
+    // Register send_notification action with automations engine
+    this.actionRegistry.register(this.sendNotificationAction);
   }
 }
