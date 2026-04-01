@@ -4,6 +4,7 @@ import { toast } from '@packages/ui';
 import { usePlatformAPI } from '../PlatformUIProvider';
 import { createNotificationsApi } from './services';
 import type {
+  ListAutomationRulesParams, CreateAutomationRuleRequest, UpdateAutomationRuleRequest,
   ListRulesParams, CreateRuleRequest, UpdateRuleRequest,
   ListTemplatesParams, CreateTemplateRequest, UpdateTemplateRequest,
 } from './types';
@@ -13,7 +14,90 @@ function useNotificationsApi() {
   return useMemo(() => createNotificationsApi(apiFn), [apiFn]);
 }
 
-// --- Rules ---
+// --- Automation Rules (new API) ---
+
+export function useAutomationRules(params: ListAutomationRulesParams) {
+  const api = useNotificationsApi();
+  return useQuery({
+    queryKey: ['automation-rules', params],
+    queryFn: () => api.listAutomationRules(params),
+  });
+}
+
+export function useAutomationRule(id: string) {
+  const api = useNotificationsApi();
+  return useQuery({
+    queryKey: ['automation-rules', id],
+    queryFn: () => api.getAutomationRule(id),
+    enabled: !!id,
+  });
+}
+
+export function useCreateAutomationRule(options?: { onSuccess?: () => void }) {
+  const api = useNotificationsApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: CreateAutomationRuleRequest) => api.createAutomationRule(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['automation-rules'] });
+      toast.success('Automation rule created');
+      options?.onSuccess?.();
+    },
+    onError: (error: any) => {
+      toast.error(error?.body?.message || 'Failed to create automation rule');
+    },
+  });
+}
+
+export function useUpdateAutomationRule(options?: { onSuccess?: () => void }) {
+  const api = useNotificationsApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: UpdateAutomationRuleRequest }) => api.updateAutomationRule(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['automation-rules'] });
+      toast.success('Automation rule updated');
+      options?.onSuccess?.();
+    },
+    onError: (error: any) => {
+      toast.error(error?.body?.message || 'Failed to update automation rule');
+    },
+  });
+}
+
+export function useDeleteAutomationRule(options?: { onSuccess?: () => void }) {
+  const api = useNotificationsApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.deleteAutomationRule(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['automation-rules'] });
+      toast.success('Automation rule deleted');
+      options?.onSuccess?.();
+    },
+    onError: (error: any) => {
+      toast.error(error?.body?.message || 'Failed to delete automation rule');
+    },
+  });
+}
+
+export function useToggleAutomationRule() {
+  const api = useNotificationsApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
+      api.updateAutomationRule(id, { isActive }),
+    onSuccess: (_, variables) => {
+      qc.invalidateQueries({ queryKey: ['automation-rules'] });
+      toast.success(variables.isActive ? 'Rule activated' : 'Rule deactivated');
+    },
+    onError: (error: any) => {
+      toast.error(error?.body?.message || 'Failed to update rule');
+    },
+  });
+}
+
+// --- Legacy notification rules ---
 
 export function useRules(params: ListRulesParams) {
   const api = useNotificationsApi();
@@ -179,6 +263,24 @@ export function useEntities() {
   return useQuery({
     queryKey: ['automations-entities'],
     queryFn: () => api.listEntities(),
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useActionTypes() {
+  const api = useNotificationsApi();
+  return useQuery({
+    queryKey: ['automations-action-types'],
+    queryFn: () => api.listActionTypes(),
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useUserStrategies() {
+  const api = useNotificationsApi();
+  return useQuery({
+    queryKey: ['automations-user-strategies'],
+    queryFn: () => api.listUserStrategies(),
     staleTime: 5 * 60 * 1000,
   });
 }
