@@ -239,14 +239,21 @@ function EntityFieldsForm({
   return (
     <FormProvider {...form}>
       <div className="grid grid-cols-2 gap-3">
-        {editableFields.map((field) => (
+        {editableFields.map((field) => {
+          const fieldValue = dynamicFieldsRef.current[field.fieldKey] ?? form.getValues(field.fieldKey);
+          const options = field.lookupEntity ? lookupOptionsMap?.[field.lookupEntity] : undefined;
+          const resolvedLabel = (!isDynamicValue(fieldValue) && options && fieldValue)
+            ? options.find((o) => o.value === fieldValue)?.label ?? null
+            : null;
+          return (
           <FieldValueInput
             key={field.fieldKey}
             field={field}
-            value={dynamicFieldsRef.current[field.fieldKey] ?? form.getValues(field.fieldKey)}
+            value={fieldValue}
             onDynamicChange={handleDynamicChange}
             sourceFields={sourceFields}
-            lookupOptions={field.lookupEntity ? lookupOptionsMap?.[field.lookupEntity] : undefined}
+            lookupOptions={options}
+            resolvedLabel={resolvedLabel}
             onSearch={
               field.fieldType === 'lookup' && field.lookupEntity
                 ? (q: string) => searchLookup(field.lookupEntity!, q)
@@ -261,7 +268,8 @@ function EntityFieldsForm({
               : undefined
             }
           />
-        ))}
+          );
+        })}
       </div>
     </FormProvider>
   );

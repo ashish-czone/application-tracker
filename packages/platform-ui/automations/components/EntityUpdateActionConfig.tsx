@@ -281,15 +281,22 @@ export function EntityUpdateActionConfig({ config, onChange, sourceEntityType }:
           {selectedFields.length > 0 && (
             <FormProvider {...form}>
               <div className="space-y-3">
-                {selectedFields.map((field) => (
+                {selectedFields.map((field) => {
+                  const fieldValue = dynamicFieldsRef.current[field.fieldKey] ?? (form.getValues as any)(field.fieldKey);
+                  const options = field.lookupEntity ? lookupOptionsMap?.[field.lookupEntity] : undefined;
+                  const resolvedLabel = (!isDynamicValue(fieldValue) && options && fieldValue)
+                    ? options.find((o) => o.value === fieldValue)?.label ?? null
+                    : null;
+                  return (
                   <div key={field.fieldKey} className="flex items-start gap-2">
                     <div className="flex-1">
                       <FieldValueInput
                         field={field}
-                        value={dynamicFieldsRef.current[field.fieldKey] ?? (form.getValues as any)(field.fieldKey)}
+                        value={fieldValue}
                         onDynamicChange={handleDynamicChange}
                         sourceFields={sourceFields}
-                        lookupOptions={field.lookupEntity ? lookupOptionsMap?.[field.lookupEntity] : undefined}
+                        lookupOptions={options}
+                        resolvedLabel={resolvedLabel}
                         onSearch={
                           field.fieldType === 'lookup' && field.lookupEntity
                             ? (q: string) => searchLookup(field.lookupEntity!, q)
@@ -314,7 +321,8 @@ export function EntityUpdateActionConfig({ config, onChange, sourceEntityType }:
                       <X className="h-4 w-4" />
                     </button>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </FormProvider>
           )}
