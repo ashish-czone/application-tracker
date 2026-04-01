@@ -1,0 +1,250 @@
+import { describe, it, expect, vi } from 'vitest';
+import { UserResolverRegistry, type UserResolutionContext } from '../user-resolver-registry';
+import { ActorStrategy } from '../strategies/actor.strategy';
+import { EntityFieldStrategy } from '../strategies/entity-field.strategy';
+import { RoleStrategy } from '../strategies/role.strategy';
+import type { AppLoggerService } from '@packages/logger';
+
+function createMockAppLogger(): AppLoggerService {
+  const ctx = { log: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
+  return { forContext: vi.fn().mockReturnValue(ctx), log: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } as any;
+}
+
+function createMockDb() {
+  const mockChain = {
+    from: vi.fn().mockReturnThis(),
+    where: vi.fn().mockReturnThis(),
+    limit: vi.fn().mockResolvedValue([]),
+  };
+  return {
+    db: { select: vi.fn().mockReturnValue(mockChain) },
+    _chain: mockChain,
+  };
+}
+
+function eventContext(overrides: Partial<UserResolutionContext['event']> = {}): UserResolutionContext {
+  return {
+    event: {
+      actorId: 'actor-1',
+      entityType: 'tasks',
+      entityId: 'task-1',
+      payload: {},
+      ...overrides,
+    },
+  };
+}
+
+describe('UserResolverRegistry', () => {
+  it('should register and retrieve strategies', () => {
+    const registry = new UserResolverRegistry(createMockAppLogger());
+    const actor = new ActorStrategy();
+    registry.registerStrategy(actor);
+
+    expect(registry.getStrategy('actor')).toBe(actor);
+    expect(registry.getStrategy('unknown')).toBeUndefined();
+  });
+
+  it('should list all registered strategies', () => {
+    const registry = new UserResolverRegistry(createMockAppLogger());
+    registry.registerStrategy(new ActorStrategy());
+
+    const all = registry.getAllStrategies();
+    expect(all).toHaveLength(1);
+    expect(all[0].type).toBe('actor');
+  });
+
+  it('should return empty array for unknown strategy', async () => {
+    const registry = new UserResolverRegistry(createMockAppLogger());
+
+    const result = await registry.resolve(
+      { strategy: 'unknown' as any },
+      eventContext(),
+    );
+
+    expect(result).toEqual([]);
+  });
+
+  it('should catch strategy errors and return empty array', async () => {
+    const registry = new UserResolverRegistry(createMockAppLogger());
+    registry.registerStrategy({
+      type: 'broken',
+      label: 'Broken',
+      configSchema: {},
+      resolve: () => { throw new Error('boom'); },
+    });
+
+    const result = await registry.resolve(
+      { strategy: 'broken' as any },
+      eventContext(),
+    );
+
+    expect(result).toEqual([]);
+  });
+
+  it('should resolve all user slots', async () => {
+    const registry = new UserResolverRegistry(createMockAppLogger());
+    registry.registerStrategy(new ActorStrategy());
+
+    const result = await registry.resolveAll(
+      {
+        recipient: { strategy: 'actor' },
+        watcher: { strategy: 'actor' },
+      },
+      eventContext(),
+    );
+
+    expect(result).toEqual({
+      recipient: ['actor-1'],
+      watcher: ['actor-1'],
+    });
+  });
+});
+
+describe('ActorStrategy', () => {
+  it('should return actorId from event', async () => {
+    const strategy = new ActorStrategy();
+    const result = await strategy.resolve({ strategy: 'actor' }, eventContext());
+    expect(result).toEqual(['actor-1']);
+  });
+
+  it('should return empty when actorId is null', async () => {
+    const strategy = new ActorStrategy();
+    const result = await strategy.resolve(
+      { strategy: 'actor' },
+      eventContext({ actorId: null }),
+    );
+    expect(result).toEqual([]);
+  });
+
+  it('should return empty when no event in context', async () => {
+    const strategy = new ActorStrategy();
+    const result = await strategy.resolve({ strategy: 'actor' }, {});
+    expect(result).toEqual([]);
+  });
+});
+
+describe('EntityFieldStrategy', () => {
+  it('should resolve from event payload', async () => {
+    const mockDb = createMockDb();
+    const strategy = new EntityFieldStrategy(mockDb as any, () => undefined);
+
+    const result = await strategy.resolve(
+      { strategy: 'entity_field', config: { field: 'assigneeId' } },
+      eventContext({ payload: { assigneeId: 'user-42' } }),
+    );
+
+    expect(result).toEqual(['user-42']);
+  });
+
+  it('should resolve from entity data when not in payload', async () => {
+    const mockDb = createMockDb();
+    const strategy = new EntityFieldStrategy(mockDb as any, () => undefined);
+
+    const result = await strategy.resolve(
+      { strategy: 'entity_field', config: { field: 'assigneeId' } },
+      {
+        event: { actorId: 'a', entityType: 'tasks', entityId: 't-1', payload: {} },
+        entityData: { assigneeId: 'user-99' },
+      },
+    );
+
+    expect(result).toEqual(['user-99']);
+  });
+
+  it('should fall back to DB query when not in payload or entity data', async () => {
+    const mockDb = createMockDb();
+    const fakeTable = { id: 'id-col', assigneeId: 'assignee-col' };
+    mockDb._chain.limit.mockResolvedValueOnce([{ value: 'user-from-db' }]);
+
+    const strategy = new EntityFieldStrategy(
+      mockDb as any,
+      () => ({ table: fakeTable, fields: {}, userFields: {} }),
+    );
+
+    const result = await strategy.resolve(
+      { strategy: 'entity_field', config: { field: 'assigneeId' } },
+      eventContext({ payload: {} }),
+    );
+
+    expect(result).toEqual(['user-from-db']);
+  });
+
+  it('should return empty when field not configured', async () => {
+    const mockDb = createMockDb();
+    const strategy = new EntityFieldStrategy(mockDb as any, () => undefined);
+
+    const result = await strategy.resolve(
+      { strategy: 'entity_field', config: {} },
+      eventContext(),
+    );
+
+    expect(result).toEqual([]);
+  });
+
+  it('should return empty when no field config at all', async () => {
+    const mockDb = createMockDb();
+    const strategy = new EntityFieldStrategy(mockDb as any, () => undefined);
+
+    const result = await strategy.resolve(
+      { strategy: 'entity_field' },
+      eventContext(),
+    );
+
+    expect(result).toEqual([]);
+  });
+
+  it('should return empty when entity resolver not found for DB fallback', async () => {
+    const mockDb = createMockDb();
+    const strategy = new EntityFieldStrategy(mockDb as any, () => undefined);
+
+    const result = await strategy.resolve(
+      { strategy: 'entity_field', config: { field: 'assigneeId' } },
+      eventContext({ payload: {} }),
+    );
+
+    expect(result).toEqual([]);
+  });
+});
+
+describe('RoleStrategy', () => {
+  it('should resolve users by role from DB', async () => {
+    const mockDb = createMockDb();
+    mockDb._chain.where.mockResolvedValueOnce([
+      { userId: 'user-1' },
+      { userId: 'user-2' },
+    ]);
+
+    const strategy = new RoleStrategy(mockDb as any);
+
+    const result = await strategy.resolve(
+      { strategy: 'role', config: { roleId: 'role-1' } },
+      eventContext(),
+    );
+
+    expect(result).toEqual(['user-1', 'user-2']);
+  });
+
+  it('should return empty when no roleId config', async () => {
+    const mockDb = createMockDb();
+    const strategy = new RoleStrategy(mockDb as any);
+
+    const result = await strategy.resolve(
+      { strategy: 'role', config: {} },
+      eventContext(),
+    );
+
+    expect(result).toEqual([]);
+  });
+
+  it('should return empty when no config at all', async () => {
+    const mockDb = createMockDb();
+    const strategy = new RoleStrategy(mockDb as any);
+
+    const result = await strategy.resolve(
+      { strategy: 'role' },
+      eventContext(),
+    );
+
+    expect(result).toEqual([]);
+  });
+});

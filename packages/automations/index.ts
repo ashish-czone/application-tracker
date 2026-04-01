@@ -1,4 +1,8 @@
 export { AUTOMATION_PERMISSIONS } from './permissions';
+export { UserResolverRegistry, type UserResolverStrategy, type UserResolutionContext } from './services/user-resolver-registry';
+export { ActorStrategy } from './services/strategies/actor.strategy';
+export { EntityFieldStrategy } from './services/strategies/entity-field.strategy';
+export { RoleStrategy } from './services/strategies/role.strategy';
 export type {
   TriggerType,
   ScheduleDateOperator,
