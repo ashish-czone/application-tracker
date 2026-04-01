@@ -15,6 +15,8 @@ interface FieldValueInputProps {
   sourceFields: FieldDefinition[];
   /** Props to pass through to DynamicField for static mode */
   lookupOptions?: { label: string; value: string }[];
+  /** Resolved display label for lookup/user fields (from pre-fetched options) */
+  resolvedLabel?: string | null;
   onSearch?: (query: string) => Promise<{ label: string; value: string }[]>;
   onChipSearch?: (query: string) => Promise<{ label: string; value: string; color?: string }[]>;
 }
@@ -32,6 +34,7 @@ export function FieldValueInput({
   onDynamicChange,
   sourceFields,
   lookupOptions,
+  resolvedLabel,
   onSearch,
   onChipSearch,
 }: FieldValueInputProps) {
@@ -106,6 +109,7 @@ export function FieldValueInput({
         <DynamicField
           field={{ ...field, label: '', isRequired: false }}
           mode="edit"
+          resolvedLabel={resolvedLabel}
           lookupOptions={lookupOptions}
           onSearch={onSearch}
           onChipSearch={onChipSearch}
