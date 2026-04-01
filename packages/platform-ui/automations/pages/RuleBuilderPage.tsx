@@ -13,6 +13,7 @@ import {
 import { useTemplates } from '../../notifications/hooks';
 import { ConditionBuilder } from '../components/ConditionBuilder';
 import { TransitionWorkflowActionConfig } from '@packages/platform-ui/workflows/components/TransitionWorkflowActionConfig';
+import { TagEntityActionConfig } from '@packages/platform-ui-taxonomy/components/TagEntityActionConfig';
 import { EntityCreateActionConfig } from '../components/EntityCreateActionConfig';
 import { EntityUpdateActionConfig } from '../components/EntityUpdateActionConfig';
 import type {
@@ -639,7 +640,15 @@ function ActionEditor({
         />
       )}
 
-      {action.type && !['send_notification', 'create_entity', 'update_entity', 'transition_workflow'].includes(action.type) && (
+      {action.type === 'tag_entity' && (
+        <TagEntityActionConfig
+          config={action.config}
+          onChange={(config) => onChange({ config })}
+          entityOptions={entityOptions}
+        />
+      )}
+
+      {action.type && !['send_notification', 'create_entity', 'update_entity', 'transition_workflow', 'tag_entity'].includes(action.type) && (
         <GenericActionConfig
           config={action.config}
           onChange={(config) => onChange({ config })}
