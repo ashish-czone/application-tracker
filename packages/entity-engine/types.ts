@@ -1,6 +1,6 @@
 import type { PgTable, PgColumn } from 'drizzle-orm/pg-core';
 import type { SQL } from 'drizzle-orm';
-import type { Condition } from '@packages/notifications';
+import type { Condition } from '@packages/common';
 import type { WorkflowGuardFn } from '@packages/workflows';
 
 // ---------------------------------------------------------------------------
