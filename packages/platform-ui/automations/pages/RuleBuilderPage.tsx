@@ -12,6 +12,7 @@ import {
 } from '../hooks';
 import { useTemplates } from '../../notifications/hooks';
 import { ConditionBuilder } from '../components/ConditionBuilder';
+import { TransitionWorkflowActionConfig } from '@packages/platform-ui/workflows/components/TransitionWorkflowActionConfig';
 import { EntityCreateActionConfig } from '../components/EntityCreateActionConfig';
 import { EntityUpdateActionConfig } from '../components/EntityUpdateActionConfig';
 import type {
@@ -513,6 +514,7 @@ export function RuleBuilderPage() {
                 onChange={(patch) => updateAction(actionIndex, patch)}
                 onRemove={() => removeAction(actionIndex)}
                 sourceEntityType={entityType || undefined}
+                entityOptions={entityOptions}
               />
             ))}
             {actions.length === 0 && (
@@ -552,11 +554,13 @@ interface ActionEditorProps {
   onChange: (patch: Partial<ActionFormState>) => void;
   onRemove: () => void;
   sourceEntityType?: string;
+  entityOptions: { value: string; label: string }[];
 }
 
 function ActionEditor({
   action, index, actionTypeOptions, actionTypes, strategyOptions,
   userStrategies, userFieldOptions, templates, canRemove, onChange, onRemove, sourceEntityType,
+  entityOptions,
 }: ActionEditorProps) {
   const actionMeta = actionTypes.find((at) => at.type === action.type);
 
@@ -626,7 +630,16 @@ function ActionEditor({
         />
       )}
 
-      {action.type && !['send_notification', 'create_entity', 'update_entity'].includes(action.type) && (
+      {action.type === 'transition_workflow' && (
+        <TransitionWorkflowActionConfig
+          config={action.config}
+          onChange={(config) => onChange({ config })}
+          sourceEntityType={sourceEntityType}
+          entityOptions={entityOptions}
+        />
+      )}
+
+      {action.type && !['send_notification', 'create_entity', 'update_entity', 'transition_workflow'].includes(action.type) && (
         <GenericActionConfig
           config={action.config}
           onChange={(config) => onChange({ config })}
