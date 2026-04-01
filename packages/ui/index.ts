@@ -18,6 +18,8 @@ export { FormCurrencyInput } from './components/form/FormCurrencyInput';
 export { FormRichText } from './components/form/FormRichText';
 export { FormChipInput, type ChipOption } from './components/form/FormChipInput';
 export { FormFileInput } from './components/form/FormFileInput';
+export { FormDatePicker } from './components/form/FormDatePicker';
+export { Calendar } from './components/form/Calendar';
 export { PasswordStrength } from './components/form/PasswordStrength';
 
 // Components — feedback
