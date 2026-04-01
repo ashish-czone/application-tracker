@@ -355,6 +355,37 @@ describe('validatePayload', () => {
     });
   });
 
+  // --- Readonly required fields on create ---
+  describe('readonly required fields on create', () => {
+    const defs = [
+      field({ fieldKey: 'createdBy', fieldType: 'user', isRequired: true, isReadonly: true, label: 'Created By' }),
+      field({ fieldKey: 'title', fieldType: 'text', isRequired: true, label: 'Title' }),
+    ];
+
+    it('should skip required check for readonly fields not in payload on create', () => {
+      const result = validatePayload(defs, { title: 'Hello' });
+      expect(result.valid).toBe(true);
+    });
+
+    it('should still validate readonly fields when present on create', () => {
+      const result = validatePayload(defs, { title: 'Hello', createdBy: '9c233a3f-296e-4d4e-8699-b9fafd19df7b' });
+      expect(result.valid).toBe(true);
+    });
+  });
+
+  // --- Workflow fields on create ---
+  describe('workflow fields on create', () => {
+    const defs = [
+      field({ fieldKey: 'status', fieldType: 'workflow', isRequired: true, isSystem: true, label: 'Status' }),
+      field({ fieldKey: 'title', fieldType: 'text', isRequired: true, label: 'Title' }),
+    ];
+
+    it('should skip required check for workflow fields not in payload on create', () => {
+      const result = validatePayload(defs, { title: 'Hello' });
+      expect(result.valid).toBe(true);
+    });
+  });
+
   // --- Optional fields with null/undefined ---
   describe('optional fields', () => {
     const defs = [field({ fieldKey: 'notes', fieldType: 'textarea', label: 'Notes' })];

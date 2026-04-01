@@ -57,6 +57,18 @@ export function validatePayload(
       continue;
     }
 
+    // Skip readonly fields on create — they are auto-populated by the engine
+    // (e.g. createdBy is set from actorId, createdAt/updatedAt from DB defaults)
+    if (def.isReadonly && !present && !partial) {
+      continue;
+    }
+
+    // Skip workflow fields on create — initial state is resolved by the workflow
+    // registry and pipeline resolver after the row is inserted
+    if (def.fieldType === 'workflow' && !present && !partial) {
+      continue;
+    }
+
     // Required check (skip in partial mode if field not present)
     if (def.isRequired && !partial) {
       if (!present || value === null || value === undefined || value === '') {
