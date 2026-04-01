@@ -3,9 +3,10 @@ import { useForm, FormProvider } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Label, FormSelect } from '@packages/ui';
-import { DynamicField, buildFormSchema } from '@packages/eav-attributes-ui';
+import { DynamicField, buildFormSchema, type FieldDefinition } from '@packages/eav-attributes-ui';
 import { useEntityLayout, useEntityEngine } from '@packages/entity-engine-ui';
 import { useEntities } from '../hooks';
+import type { ApiFn } from '../../PlatformUIProvider';
 
 interface EntityCreateActionConfigProps {
   config: Record<string, unknown>;
@@ -17,8 +18,6 @@ interface EntityCreateActionConfigProps {
  * Renders:
  * 1. Entity type picker (required)
  * 2. Dynamic entity form fields based on the selected entity's layout
- *
- * Uses its own FormProvider so DynamicField components work correctly.
  */
 export function EntityCreateActionConfig({ config, onChange }: EntityCreateActionConfigProps) {
   const { data: entities } = useEntities();
@@ -46,6 +45,59 @@ export function EntityCreateActionConfig({ config, onChange }: EntityCreateActio
       .filter((f) => !f.isReadonly && f.fieldType !== 'auto_number');
   }, [layout]);
 
+  return (
+    <div className="space-y-3">
+      <FormSelect
+        value={selectedEntityType}
+        onChange={handleEntityTypeChange}
+        options={entityOptions}
+        label="Entity Type"
+        placeholder="Select entity type to create..."
+      />
+
+      {selectedEntityType && layoutLoading && (
+        <div className="space-y-2">
+          <div className="h-10 animate-pulse rounded bg-muted" />
+          <div className="h-10 animate-pulse rounded bg-muted" />
+        </div>
+      )}
+
+      {selectedEntityType && editableFields.length > 0 && (
+        <EntityFieldsForm
+          key={`${selectedEntityType}-${editableFields.length}`}
+          editableFields={editableFields}
+          existingFields={existingFields}
+          selectedEntityType={selectedEntityType}
+          onChange={onChange}
+          apiFn={apiFn}
+        />
+      )}
+
+      {selectedEntityType && !layoutLoading && editableFields.length === 0 && (
+        <p className="text-sm text-muted-foreground">No fields configured for this entity type.</p>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Inner form component — keyed by entity type so useForm is recreated
+ * with correct defaultValues when the entity changes. This prevents
+ * uncontrolled-to-controlled input warnings.
+ */
+function EntityFieldsForm({
+  editableFields,
+  existingFields,
+  selectedEntityType,
+  onChange,
+  apiFn,
+}: {
+  editableFields: FieldDefinition[];
+  existingFields: Record<string, unknown>;
+  selectedEntityType: string;
+  onChange: (config: Record<string, unknown>) => void;
+  apiFn: ApiFn;
+}) {
   // Fetch lookup options for reference fields
   const lookupEntities = useMemo(() => {
     return editableFields
@@ -70,7 +122,6 @@ export function EntityCreateActionConfig({ config, onChange }: EntityCreateActio
     enabled: lookupEntities.length > 0,
   });
 
-  // Build form schema and setup React Hook Form
   const schema = useMemo(() => buildFormSchema(editableFields), [editableFields]);
 
   const defaultValues = useMemo(() => {
@@ -86,33 +137,18 @@ export function EntityCreateActionConfig({ config, onChange }: EntityCreateActio
     defaultValues,
   });
 
-  // Reset form when entity type or fields change
-  useEffect(() => {
-    if (editableFields.length > 0) {
-      const values: Record<string, unknown> = {};
-      for (const field of editableFields) {
-        values[field.fieldKey] = existingFields[field.fieldKey] ?? field.defaultValue ?? '';
-      }
-      form.reset(values);
-    }
-  }, [selectedEntityType, editableFields.length]);
-
   // Sync form changes to parent config
   const watchedValues = form.watch();
   useEffect(() => {
-    if (!selectedEntityType || editableFields.length === 0) return;
+    if (editableFields.length === 0) return;
     const fields: Record<string, unknown> = {};
     for (const [key, val] of Object.entries(watchedValues)) {
       if (val !== '' && val !== undefined && val !== null) {
         fields[key] = val;
       }
     }
-    // Only update if fields actually changed to avoid infinite loops
-    const currentFields = (config.fields as Record<string, unknown>) ?? {};
-    if (JSON.stringify(fields) !== JSON.stringify(currentFields)) {
-      onChange({ entityType: selectedEntityType, fields });
-    }
-  }, [watchedValues, selectedEntityType, editableFields.length]);
+    onChange({ entityType: selectedEntityType, fields });
+  }, [watchedValues]);
 
   // Async search callbacks
   const searchUsers = useCallback(async (query: string) => {
@@ -131,53 +167,30 @@ export function EntityCreateActionConfig({ config, onChange }: EntityCreateActio
   }, [apiFn]);
 
   return (
-    <div className="space-y-3">
-      <FormSelect
-        value={selectedEntityType}
-        onChange={handleEntityTypeChange}
-        options={entityOptions}
-        label="Entity Type"
-        placeholder="Select entity type to create..."
-      />
-
-      {selectedEntityType && layoutLoading && (
-        <div className="space-y-2">
-          <div className="h-10 animate-pulse rounded bg-muted" />
-          <div className="h-10 animate-pulse rounded bg-muted" />
-        </div>
-      )}
-
-      {selectedEntityType && editableFields.length > 0 && (
-        <FormProvider {...form}>
-          <div className="grid grid-cols-2 gap-3">
-            {editableFields.map((field) => (
-              <DynamicField
-                key={field.fieldKey}
-                field={field}
-                mode="edit"
-                lookupOptions={field.lookupEntity ? lookupOptionsMap?.[field.lookupEntity] : undefined}
-                onSearch={
-                  field.fieldType === 'lookup' && field.lookupEntity
-                    ? (q: string) => searchLookup(field.lookupEntity!, q)
-                    : field.fieldType === 'user'
-                    ? searchUsers
-                    : undefined
-                }
-                onChipSearch={
-                  field.fieldType === 'multi_user' ? searchUsers
-                  : field.fieldType === 'multi_lookup' && field.lookupEntity ? (q: string) => searchLookup(field.lookupEntity!, q)
-                  : field.fieldType === 'tags' && field.tagGroupSlug ? (q: string) => searchTags(field.tagGroupSlug!, q)
-                  : undefined
-                }
-              />
-            ))}
-          </div>
-        </FormProvider>
-      )}
-
-      {selectedEntityType && !layoutLoading && editableFields.length === 0 && (
-        <p className="text-sm text-muted-foreground">No fields configured for this entity type.</p>
-      )}
-    </div>
+    <FormProvider {...form}>
+      <div className="grid grid-cols-2 gap-3">
+        {editableFields.map((field) => (
+          <DynamicField
+            key={field.fieldKey}
+            field={field}
+            mode="edit"
+            lookupOptions={field.lookupEntity ? lookupOptionsMap?.[field.lookupEntity] : undefined}
+            onSearch={
+              field.fieldType === 'lookup' && field.lookupEntity
+                ? (q: string) => searchLookup(field.lookupEntity!, q)
+                : field.fieldType === 'user'
+                ? searchUsers
+                : undefined
+            }
+            onChipSearch={
+              field.fieldType === 'multi_user' ? searchUsers
+              : field.fieldType === 'multi_lookup' && field.lookupEntity ? (q: string) => searchLookup(field.lookupEntity!, q)
+              : field.fieldType === 'tags' && field.tagGroupSlug ? (q: string) => searchTags(field.tagGroupSlug!, q)
+              : undefined
+            }
+          />
+        ))}
+      </div>
+    </FormProvider>
   );
 }
