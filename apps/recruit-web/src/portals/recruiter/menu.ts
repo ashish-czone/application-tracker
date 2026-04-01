@@ -17,7 +17,7 @@ export const recruiterMenu: MenuItem[] = [
   // Entity nav items (Candidates, Job Openings, Tasks, etc.) are auto-generated here
   { path: '/users', label: 'Users', icon: Users, permission: 'users.read', position: 'after' },
   { path: '/roles', label: 'Roles', icon: Shield, permission: 'rbac.roles-read', position: 'after' },
-  { path: '/automations', label: 'Automations', icon: Bell, permission: 'notifications.rules.read', position: 'after' },
+  { path: '/automations', label: 'Automations', icon: Bell, permission: 'automations.rules.read', position: 'after' },
   {
     path: '/management',
     label: 'Management',

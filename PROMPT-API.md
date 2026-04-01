@@ -7,7 +7,7 @@ Backend API conventions, error handling, validation, response formats, and secur
 ## 1. URL & Naming Conventions
 
 - Global prefix: `/api/v1`
-- Plural nouns, kebab-case: `/notification-rules`
+- Plural nouns, kebab-case: `/automation-rules`
 - Nested resources max 2 levels: `/orders/:orderId/candidates`
 - HTTP methods: GET (200), POST (201), PATCH (200), DELETE (204)
 
