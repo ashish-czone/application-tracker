@@ -118,12 +118,12 @@ export function ConditionBuilder({ conditions, onChange, fields, includePayloadO
               <div className="flex items-center gap-1">
                 <span className="text-xs text-muted-foreground">From:</span>
                 {renderValue
-                  ? renderValue({ fieldKey: condition.field, fieldConfig, operator: condition.operator, value: fromToValue.from, onChange: (v) => updateCondition(index, { value: { ...fromToValue, from: v } }) })
+                  ? renderValue({ fieldKey: condition.field, fieldConfig, operator: condition.operator, value: fromToValue.from, onChange: (v) => updateCondition(index, { value: { ...fromToValue, from: v } }), slot: 'from' })
                   : renderValueInput(fieldConfig, String(fromToValue.from ?? ''), (v) => updateCondition(index, { value: { ...fromToValue, from: v } }), 'From')
                 }
                 <span className="text-xs text-muted-foreground">To:</span>
                 {renderValue
-                  ? renderValue({ fieldKey: condition.field, fieldConfig, operator: condition.operator, value: fromToValue.to, onChange: (v) => updateCondition(index, { value: { ...fromToValue, to: v } }) })
+                  ? renderValue({ fieldKey: condition.field, fieldConfig, operator: condition.operator, value: fromToValue.to, onChange: (v) => updateCondition(index, { value: { ...fromToValue, to: v } }), slot: 'to' })
                   : renderValueInput(fieldConfig, String(fromToValue.to ?? ''), (v) => updateCondition(index, { value: { ...fromToValue, to: v } }), 'To')
                 }
               </div>

@@ -20,4 +20,6 @@ export interface RenderValueProps {
   operator: ConditionOperator;
   value: unknown;
   onChange: (value: unknown) => void;
+  /** Disambiguator for from/to slots in changed_from_to operator */
+  slot?: 'from' | 'to';
 }

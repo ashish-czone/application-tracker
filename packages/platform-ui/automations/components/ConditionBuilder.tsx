@@ -65,7 +65,7 @@ export function ConditionBuilder({ conditions, onChange, fields, entityType, tri
 
     return (
       <ConditionValueField
-        key={`${props.fieldKey}-${props.operator}`}
+        key={`${props.fieldKey}-${props.operator}${props.slot ? `-${props.slot}` : ''}`}
         field={fieldDef}
         value={props.value}
         onChange={props.onChange}
