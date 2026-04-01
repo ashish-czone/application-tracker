@@ -49,6 +49,8 @@ export interface ModelField {
   listVisible?: boolean;
   /** Display order in the list view */
   listOrder?: number;
+  /** Completely exclude this field from the list view (won't appear in columns picker) */
+  excludeFromList?: boolean;
 
   // --- Validation ---
 
@@ -289,6 +291,7 @@ export function defineEntity<TTable extends PgTable>(model: ModelDefinition<TTab
       maxFileSize: field.maxFileSize,
       cellRenderer: field.cellRenderer,
       workflow: field.workflow,
+      excludeFromList: field.excludeFromList,
     };
 
     fieldMeta[key] = meta;

@@ -203,25 +203,16 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
     return String(resolve(nameField) || row.id || '');
   };
 
-  const nameFields = useMemo(
-    () => new Set(Array.isArray(entity.ui.nameField) ? entity.ui.nameField : [entity.ui.nameField]),
-    [entity.ui.nameField],
-  );
-
   // Default column visibility from the list layout's visible flag
-  // Name fields default to hidden (they're shown in the name column) unless they have a cellRenderer
+  // Excluded fields (composite nameField, excludeFromList) are already filtered out by the backend
   const defaultColumnVisibility = useMemo<Record<string, boolean>>(() => {
     if (!listLayout) return {};
     const visibility: Record<string, boolean> = {};
     for (const col of listLayout.columns) {
-      if (nameFields.has(col.fieldKey) && !col.cellRenderer) {
-        visibility[col.fieldKey] = false;
-        continue;
-      }
       visibility[col.fieldKey] = col.visible;
     }
     return visibility;
-  }, [listLayout, nameFields]);
+  }, [listLayout]);
 
   // Build columns directly from listLayout.columns — single data source, no merging
   const columns = useMemo<ColumnDef<Row, unknown>[]>(() => {
@@ -411,7 +402,7 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
     };
 
     return [nameCol, ...dataCols, actionsCol];
-  }, [listLayout, entity, navigate, nameFields]);
+  }, [listLayout, entity, navigate]);
 
   return (
     <div>
