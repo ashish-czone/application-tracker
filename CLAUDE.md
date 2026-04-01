@@ -50,16 +50,32 @@ Every architectural decision should ask: "Does this keep the platform domain-agn
 
 **Platform services (built):**
 - **Taxonomy** — polymorphic tags + hierarchical categories, attachable to any entity
-- **Notifications** — rule-based routing (event → channels → recipients), templates, user preferences
+- **Notifications** — templates, dispatcher, channel providers, user preferences
+- **Automations** — rule-based actions triggered by domain events or schedules. Pluggable action handlers, condition builder, user resolution strategies, provenance tracking, lifecycle bindings. **Action handler ownership pattern:** each package registers its own actions in `onModuleInit()` via `ActionRegistry` — `SendNotificationAction` in notifications, `WebhookAction` in automations, `CreateEntityAction`/`UpdateEntityAction` in entity-engine, `TransitionWorkflowAction` in workflows. Frontend UI: `platform-ui/automations/`.
 - **Media management** — upload, storage abstraction (local/S3), attachments on any entity
 - **Job queue** — background processing via Bull/BullMQ on Redis
 - **Event system** — domain events with correlation IDs, side-effect handlers
 
+**Form rendering system (built):**
+The platform has a fully built, registry-driven form rendering system. **Never build custom form inputs for entity fields — use the existing system.**
+
+- **Field type registries** — Two registries, populated at app startup:
+  - Core registry (`packages/field-types/registry.ts`) — storage strategy, validation, filter operators. No UI concerns.
+  - UI registry (`packages/field-types/ui/ui-registry.ts`) — `FormComponent`, `ViewComponent`, `CellFormatter`, `zodSchema` per field type.
+- **`DynamicField`** (`packages/eav-attributes-ui/components/DynamicField.tsx`) — renders the correct form component for any field type based on UI registry lookup. Must be inside a `FormProvider` (React Hook Form).
+- **`buildFormSchema`** (`packages/eav-attributes-ui/helpers/buildFormSchema.ts`) — dynamically builds a Zod validation schema from `FieldDefinition[]`.
+- **`useEntityLayout`** (`packages/entity-engine-ui/helpers/useEntityLayout.ts`) — fetches layout (sections + `FieldDefinition[]` with picklist options, lookup entities, etc.) for any entity type via `GET /layouts/{entityType}`.
+- **Usage pattern** (see `EntityQuickCreateForm`, `EntityCreatePage`):
+  1. Fetch layout via `useEntityLayout(entityType)`
+  2. Build Zod schema via `buildFormSchema(fields)`
+  3. Create form via `useForm({ resolver: zodResolver(schema) })`
+  4. Wrap in `<FormProvider>`, render `<DynamicField>` per field
+- **23+ field types** registered: text, email, phone, url, textarea, rich_text, number, currency, decimal, date, datetime, boolean, picklist, multi_select, lookup, multi_lookup, user, multi_user, auto_number, tags, file, category, workflow. Each has a dedicated form component (picklist → combobox, lookup → async search select, tags → chip input, etc.).
+
 **Remaining work:**
-- **Admin UIs** — visual builders for field management, layout customization, workflow editor, notification rules
+- **Admin UIs** — visual builders for field management, layout customization, workflow editor
 - **Dynamic navigation** — sidebar driven by entity registration + permissions (registry exists, UI needed)
 - **Multi-tenancy enforcement** — framework designed, not fully implemented
-- **Form renderer** — schema-driven forms that render entirely from layout + field definition metadata
 
 ---
 

@@ -7,14 +7,18 @@ import {
 } from '@packages/ui';
 import {
   useAutomationRule, useCreateAutomationRule, useUpdateAutomationRule,
-  useEvents, useEntities, useTemplates, useEntityFields,
+  useEvents, useEntities, useEntityFields,
   useActionTypes, useUserStrategies,
 } from '../hooks';
+import { useTemplates } from '../../notifications/hooks';
 import { ConditionBuilder } from '../components/ConditionBuilder';
+import { EntityCreateActionConfig } from '../components/EntityCreateActionConfig';
+import { EntityUpdateActionConfig } from '../components/EntityUpdateActionConfig';
 import type {
-  TriggerType, NotificationChannel, Condition, ActionConfig,
+  TriggerType, Condition, ActionConfig,
   UserResolution, FieldConfig, ScheduleDateOperator, ScheduleUnit,
 } from '../types';
+import type { NotificationChannel } from '../../notifications/types';
 
 // --- Constants ---
 
@@ -604,7 +608,21 @@ function ActionEditor({
         />
       )}
 
-      {action.type && action.type !== 'send_notification' && (
+      {action.type === 'create_entity' && (
+        <EntityCreateActionConfig
+          config={action.config}
+          onChange={(config) => onChange({ config })}
+        />
+      )}
+
+      {action.type === 'update_entity' && (
+        <EntityUpdateActionConfig
+          config={action.config}
+          onChange={(config) => onChange({ config })}
+        />
+      )}
+
+      {action.type && !['send_notification', 'create_entity', 'update_entity'].includes(action.type) && (
         <GenericActionConfig
           config={action.config}
           onChange={(config) => onChange({ config })}

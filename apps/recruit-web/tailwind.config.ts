@@ -25,6 +25,7 @@ const config: Config = {
     '../../packages/platform-ui/audit/**/*.{ts,tsx}',
     '../../packages/platform-ui/conditions/**/*.{ts,tsx}',
     '../../packages/platform-ui/notification-channels/**/*.{ts,tsx}',
+    '../../packages/platform-ui/automations/**/*.{ts,tsx}',
     '../../packages/platform-ui/notifications/**/*.{ts,tsx}',
     '../../packages/platform-ui/rbac/**/*.{ts,tsx}',
     '../../packages/platform-ui/settings/**/*.{ts,tsx}',

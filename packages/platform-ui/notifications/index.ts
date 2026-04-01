@@ -1,21 +1,26 @@
+// --- Notifications (templates & channels) ---
 export { AutomationsPage } from './pages/AutomationsPage';
-export { AutomationsListPage } from './pages/AutomationsListPage';
-export { RuleBuilderPage } from './pages/RuleBuilderPage';
 export { TemplatesListPage } from './pages/TemplatesListPage';
-export { ConditionBuilder } from './components/ConditionBuilder';
 export { TemplateFormModal } from './components/TemplateFormModal';
+export {
+  useTemplates, useTemplate, useCreateTemplate, useUpdateTemplate, useDeleteTemplate,
+} from './hooks';
+export { createNotificationsApi, type NotificationsApi } from './services';
+export type {
+  NotificationTemplate, NotificationChannel,
+  CreateTemplateRequest, UpdateTemplateRequest, ListTemplatesParams,
+} from './types';
+
+// --- Re-export from automations for backwards compatibility ---
+export { AutomationsListPage, RuleBuilderPage } from '../automations';
 export {
   useAutomationRules, useAutomationRule, useCreateAutomationRule, useUpdateAutomationRule,
   useDeleteAutomationRule, useToggleAutomationRule,
-  useTemplates, useTemplate, useCreateTemplate, useUpdateTemplate, useDeleteTemplate,
   useEvents, useEntities, useActionTypes, useUserStrategies, useEntityFields,
-} from './hooks';
-export { createNotificationsApi, type NotificationsApi } from './services';
+} from '../automations';
 export type {
   AutomationRule, ActionConfig, UserResolution, LifecycleUpdateBinding, LifecycleDeleteBinding,
   CreateAutomationRuleRequest, UpdateAutomationRuleRequest, ListAutomationRulesParams,
   ActionTypeMetadata, UserStrategyMetadata, UserResolutionStrategy,
-  NotificationTemplate, NotificationChannel, TriggerType,
-  Condition, EventMetadata, EntityMetadata,
-  CreateTemplateRequest, UpdateTemplateRequest, ListTemplatesParams,
-} from './types';
+  TriggerType, Condition, EventMetadata, EntityMetadata,
+} from '../automations';

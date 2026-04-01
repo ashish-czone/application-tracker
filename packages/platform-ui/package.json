@@ -6,7 +6,9 @@
   "dependencies": {
     "@hookform/resolvers": "^5.0.0",
     "@packages/common": "workspace:*",
+    "@packages/eav-attributes-ui": "workspace:*",
     "@packages/entity-engine-ui": "workspace:*",
+    "@packages/field-types": "workspace:*",
     "@packages/ui": "workspace:*",
     "@tanstack/react-query": "^5.0.0",
     "@tanstack/react-table": "^8.0.0",
