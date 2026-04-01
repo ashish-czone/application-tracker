@@ -1,15 +1,12 @@
-import { useMemo, useEffect, useState, useCallback, useRef } from 'react';
-import { useForm, FormProvider } from 'react-hook-form';
-import { useQuery } from '@tanstack/react-query';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Plus, X } from 'lucide-react';
-import { Label, Input, FormSelect, Button } from '@packages/ui';
-import { buildFormSchema, type FieldDefinition } from '@packages/eav-attributes-ui';
-import { useEntityLayout, useEntityEngine } from '@packages/entity-engine-ui';
+import { useMemo, useState, useCallback } from 'react';
+import { FormProvider } from 'react-hook-form';
+import { X } from 'lucide-react';
+import { Label, Input, FormSelect } from '@packages/ui';
+import type { FieldDefinition } from '@packages/eav-attributes-ui';
+import { useEntityLayout } from '@packages/entity-engine-ui';
 import { useEntities } from '../hooks';
+import { useActionFieldsForm } from '../useActionFieldsForm';
 import { FieldValueInput } from './FieldValueInput';
-import { isDynamicValue } from './field-compatibility';
 
 interface EntityUpdateActionConfigProps {
   config: Record<string, unknown>;
@@ -28,7 +25,6 @@ interface EntityUpdateActionConfigProps {
  */
 export function EntityUpdateActionConfig({ config, onChange, sourceEntityType }: EntityUpdateActionConfigProps) {
   const { data: entities } = useEntities();
-  const { apiFn } = useEntityEngine();
 
   const selectedEntityType = (config.entityType as string) ?? '';
   const entityId = (config.entityId as string) ?? '';
@@ -88,123 +84,20 @@ export function EntityUpdateActionConfig({ config, onChange, sourceEntityType }:
       .filter((f): f is FieldDefinition => !!f);
   }, [selectedFieldKeys, allEditableFields]);
 
-  // Track dynamic field values
-  const dynamicFieldsRef = useRef<Record<string, string>>({});
+  const onFieldsChange = useCallback((fields: Record<string, unknown>) => {
+    onChange({
+      ...(selectedEntityType ? { entityType: selectedEntityType } : {}),
+      ...(entityId ? { entityId } : {}),
+      fields,
+    });
+  }, [selectedEntityType, entityId, onChange]);
 
-  // Initialize dynamic fields from existing config
-  useEffect(() => {
-    const dynamic: Record<string, string> = {};
-    for (const [key, val] of Object.entries(existingFields)) {
-      if (isDynamicValue(val)) dynamic[key] = val as string;
-    }
-    dynamicFieldsRef.current = dynamic;
-  }, []);
-
-  // Fetch lookup options for reference fields in the selected set
-  const lookupEntities = useMemo(() => {
-    return selectedFields
-      .filter((f) => (f.fieldType === 'lookup' || f.fieldType === 'user') && f.lookupEntity)
-      .map((f) => f.lookupEntity!);
-  }, [selectedFields]);
-
-  const { data: lookupOptionsMap } = useQuery({
-    queryKey: ['lookups', ...lookupEntities],
-    queryFn: async () => {
-      const map: Record<string, { label: string; value: string }[]> = {};
-      for (const entity of lookupEntities) {
-        try {
-          const results = await apiFn.get<{ label: string; value: string }[]>(`/lookups/${entity}?limit=100`);
-          map[entity] = results;
-        } catch {
-          map[entity] = [];
-        }
-      }
-      return map;
-    },
-    enabled: lookupEntities.length > 0,
+  const { form, getFieldInputProps, clearDynamicField } = useActionFieldsForm({
+    activeFields: selectedFields,
+    existingFields,
+    sourceFields,
+    onFieldsChange,
   });
-
-  // Build form schema from selected non-dynamic fields
-  const staticSelectedFields = useMemo(() => {
-    return selectedFields.filter((f) => !isDynamicValue(existingFields[f.fieldKey]));
-  }, [selectedFields, existingFields]);
-
-  const schema = useMemo(() => {
-    if (staticSelectedFields.length === 0) return z.object({});
-    return buildFormSchema(staticSelectedFields);
-  }, [staticSelectedFields]);
-
-  const defaultValues = useMemo(() => {
-    const defaults: Record<string, unknown> = {};
-    for (const field of selectedFields) {
-      const existing = existingFields[field.fieldKey];
-      defaults[field.fieldKey] = (existing && !isDynamicValue(existing))
-        ? existing
-        : field.defaultValue ?? '';
-    }
-    return defaults;
-  }, [selectedFields, existingFields]);
-
-  const form = useForm({
-    resolver: zodResolver(schema),
-    defaultValues,
-  });
-
-  // Reset form when selected fields change
-  useEffect(() => {
-    const values: Record<string, unknown> = {};
-    for (const field of selectedFields) {
-      const existing = existingFields[field.fieldKey];
-      values[field.fieldKey] = (existing && !isDynamicValue(existing))
-        ? existing
-        : field.defaultValue ?? '';
-    }
-    form.reset(values);
-  }, [selectedFieldKeys.join(',')]);
-
-  // Sync form + dynamic values to parent config
-  const lastSyncRef = useRef('');
-  const syncToParent = useCallback(() => {
-    const watchedValues = form.getValues();
-    const fields: Record<string, unknown> = {};
-    for (const [key, val] of Object.entries(watchedValues)) {
-      if (!selectedFieldKeys.includes(key)) continue;
-      if (dynamicFieldsRef.current[key]) continue;
-      if (val !== '' && val !== undefined && val !== null) {
-        fields[key] = val;
-      }
-    }
-    for (const [key, val] of Object.entries(dynamicFieldsRef.current)) {
-      if (selectedFieldKeys.includes(key)) fields[key] = val;
-    }
-    const serialized = JSON.stringify(fields);
-    if (serialized !== lastSyncRef.current) {
-      lastSyncRef.current = serialized;
-      onChange({
-        ...(selectedEntityType ? { entityType: selectedEntityType } : {}),
-        ...(entityId ? { entityId } : {}),
-        fields,
-      });
-    }
-  }, [form, selectedFieldKeys, selectedEntityType, entityId, onChange]);
-
-  useEffect(() => {
-    const subscription = form.watch(() => syncToParent());
-    return () => subscription.unsubscribe();
-  }, [form, syncToParent]);
-
-  // Handle dynamic value changes
-  const handleDynamicChange = useCallback((fieldKey: string, value: unknown) => {
-    if (isDynamicValue(value)) {
-      dynamicFieldsRef.current = { ...dynamicFieldsRef.current, [fieldKey]: value as string };
-      (form as any).setValue(fieldKey, '');
-    } else {
-      const { [fieldKey]: _, ...rest } = dynamicFieldsRef.current;
-      dynamicFieldsRef.current = rest;
-      (form as any).setValue(fieldKey, value ?? '');
-    }
-    syncToParent();
-  }, [form, syncToParent]);
 
   const addField = (fieldKey: string) => {
     if (fieldKey && !selectedFieldKeys.includes(fieldKey)) {
@@ -214,27 +107,10 @@ export function EntityUpdateActionConfig({ config, onChange, sourceEntityType }:
 
   const removeField = (fieldKey: string) => {
     setSelectedFieldKeys((prev) => prev.filter((k) => k !== fieldKey));
-    const { [fieldKey]: _, ...restDynamic } = dynamicFieldsRef.current;
-    dynamicFieldsRef.current = restDynamic;
-    const { [fieldKey]: __, ...restFields } = (config.fields as Record<string, unknown>) ?? {};
+    clearDynamicField(fieldKey);
+    const { [fieldKey]: _, ...restFields } = (config.fields as Record<string, unknown>) ?? {};
     onChange({ ...config, fields: restFields });
   };
-
-  // Async search callbacks
-  const searchUsers = useCallback(async (query: string) => {
-    const res = await apiFn.get<{ data: { id: string; firstName: string; lastName: string }[] }>(`/users?search=${encodeURIComponent(query)}&limit=20`);
-    return res.data.map((u) => ({ label: `${u.firstName} ${u.lastName}`.trim(), value: u.id }));
-  }, [apiFn]);
-
-  const searchLookup = useCallback(async (entity: string, query: string) => {
-    return apiFn.get<{ label: string; value: string }[]>(`/lookups/${entity}?search=${encodeURIComponent(query)}&limit=20`);
-  }, [apiFn]);
-
-  const searchTags = useCallback(async (groupSlug: string, query: string) => {
-    return apiFn.get<{ label: string; value: string; color?: string }[]>(
-      `/tags/group/${groupSlug}?search=${encodeURIComponent(query)}&limit=20`,
-    );
-  }, [apiFn]);
 
   return (
     <div className="space-y-3">
@@ -281,36 +157,10 @@ export function EntityUpdateActionConfig({ config, onChange, sourceEntityType }:
           {selectedFields.length > 0 && (
             <FormProvider {...form}>
               <div className="space-y-3">
-                {selectedFields.map((field) => {
-                  const fieldValue = dynamicFieldsRef.current[field.fieldKey] ?? (form.getValues as any)(field.fieldKey);
-                  const options = field.lookupEntity ? lookupOptionsMap?.[field.lookupEntity] : undefined;
-                  const resolvedLabel = (!isDynamicValue(fieldValue) && options && fieldValue)
-                    ? options.find((o) => o.value === fieldValue)?.label ?? null
-                    : null;
-                  return (
+                {selectedFields.map((field) => (
                   <div key={field.fieldKey} className="flex items-start gap-2">
                     <div className="flex-1">
-                      <FieldValueInput
-                        field={field}
-                        value={fieldValue}
-                        onDynamicChange={handleDynamicChange}
-                        sourceFields={sourceFields}
-                        lookupOptions={options}
-                        resolvedLabel={resolvedLabel}
-                        onSearch={
-                          field.fieldType === 'lookup' && field.lookupEntity
-                            ? (q: string) => searchLookup(field.lookupEntity!, q)
-                            : field.fieldType === 'user'
-                            ? searchUsers
-                            : undefined
-                        }
-                        onChipSearch={
-                          field.fieldType === 'multi_user' ? searchUsers
-                          : field.fieldType === 'multi_lookup' && field.lookupEntity ? (q: string) => searchLookup(field.lookupEntity!, q)
-                          : field.fieldType === 'tags' && field.tagGroupSlug ? (q: string) => searchTags(field.tagGroupSlug!, q)
-                          : undefined
-                        }
-                      />
+                      <FieldValueInput {...getFieldInputProps(field)} />
                     </div>
                     <button
                       type="button"
@@ -321,8 +171,7 @@ export function EntityUpdateActionConfig({ config, onChange, sourceEntityType }:
                       <X className="h-4 w-4" />
                     </button>
                   </div>
-                  );
-                })}
+                ))}
               </div>
             </FormProvider>
           )}
