@@ -10,6 +10,7 @@ import { DatabaseModule } from '@packages/database';
 import { EventsModule } from '@packages/events';
 import { SettingsModule } from '@packages/settings';
 import { QueueModule } from '@packages/queue';
+import { AutomationsModule } from '@packages/automations';
 import { NotificationsModule } from '@packages/notifications';
 import { NotificationChannelsModule } from '@packages/notification-channels';
 import { WorkflowsModule } from '@packages/workflows';
@@ -76,6 +77,7 @@ import { validate } from './config/env.validation';
       inject: [ConfigService],
     }),
     SharedModule,
+    AutomationsModule,
     NotificationChannelsModule,
     NotificationsModule,
     AuditModule,
