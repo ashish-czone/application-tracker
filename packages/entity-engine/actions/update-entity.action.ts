@@ -11,6 +11,16 @@ export class UpdateEntityAction implements ActionHandler {
   readonly label = 'Update Entity';
   readonly userSlots: UserSlotDefinition[] = [];
   readonly configSchema = {
+    entityType: {
+      type: 'string',
+      required: false,
+      label: 'Entity type (defaults to triggering entity)',
+    },
+    entityId: {
+      type: 'string',
+      required: false,
+      label: 'Entity ID (supports {{mustache}}, defaults to triggering entity)',
+    },
     fields: {
       type: 'object',
       required: true,
@@ -28,16 +38,30 @@ export class UpdateEntityAction implements ActionHandler {
   }
 
   async execute(context: ActionContext): Promise<ActionResult> {
-    const { fields } = context.actionConfig.config as { fields?: Record<string, unknown> };
+    const config = context.actionConfig.config as {
+      entityType?: string;
+      entityId?: string;
+      fields?: Record<string, unknown>;
+    };
+
+    const { fields } = config;
     if (!fields || Object.keys(fields).length === 0) {
       this.logger.warn(`No fields configured for update_entity action in rule ${context.rule.id}`);
       return {};
     }
 
-    const entityType = context.event?.entityType;
-    const entityId = context.event?.entityId;
+    const templateContext = {
+      event: context.event,
+      payload: context.event?.payload ?? {},
+    };
+
+    // Resolve target entity — config overrides take priority, fall back to triggering entity
+    const entityType = config.entityType ?? context.event?.entityType;
+    const rawEntityId = config.entityId ?? context.event?.entityId;
+    const entityId = rawEntityId ? interpolateValues({ id: rawEntityId }, templateContext).id as string : undefined;
+
     if (!entityType || !entityId) {
-      this.logger.warn('No entity context available for update_entity action');
+      this.logger.warn('No entity target available for update_entity action');
       return {};
     }
 
@@ -47,10 +71,6 @@ export class UpdateEntityAction implements ActionHandler {
       return {};
     }
 
-    const templateContext = {
-      event: context.event,
-      payload: context.event?.payload ?? {},
-    };
     const resolvedFields = interpolateValues(fields, templateContext);
     const actorId = context.event?.actorId ?? 'system';
 
@@ -60,7 +80,8 @@ export class UpdateEntityAction implements ActionHandler {
   }
 
   async update(targetEntityId: string, set: Record<string, unknown>, context: ActionContext): Promise<void> {
-    const entityType = context.event?.entityType;
+    const config = context.actionConfig.config as { entityType?: string };
+    const entityType = config.entityType ?? context.event?.entityType;
     if (!entityType) return;
 
     const entityService = this.getEntityService(entityType);
