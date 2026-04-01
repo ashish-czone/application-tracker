@@ -49,8 +49,8 @@ export const INTERVIEWS_CONFIG: EntityConfig = {
       fieldType: 'lookup', lookupEntity: 'job_openings', lookupLabelField: 'title',
       lookupSearchFields: ['title', 'department'],
     },
-    interviewFrom: { label: 'From', section: 'basic', sortOrder: 4, isQuickCreate: true, fieldType: 'datetime' },
-    interviewTo: { label: 'To', section: 'basic', sortOrder: 5, isQuickCreate: true, fieldType: 'datetime' },
+    interviewFrom: { label: 'Interview From', section: 'basic', sortOrder: 4, isQuickCreate: true, fieldType: 'datetime' },
+    interviewTo: { label: 'Interview To', section: 'basic', sortOrder: 5, isQuickCreate: true, fieldType: 'datetime' },
     location: { label: 'Location', section: 'basic', sortOrder: 6 },
     scheduleComments: { label: 'Schedule Comments', section: 'basic', sortOrder: 7, fieldType: 'textarea', maxLength: 32000 },
     status: {
