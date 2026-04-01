@@ -17,6 +17,7 @@ import { EntityFieldStrategy } from './services/strategies/entity-field.strategy
 import { RoleStrategy } from './services/strategies/role.strategy';
 import { AutomationRulesController } from './controllers/automation-rules.controller';
 import { AutomationsMetadataController } from './controllers/automations-metadata.controller';
+import { WebhookAction, WEBHOOK_QUEUE_NAME } from './services/actions/webhook.action';
 
 export const AUTOMATION_SCHEDULE_SCAN_QUEUE = 'automation.schedule-scan';
 
@@ -32,6 +33,7 @@ export const AUTOMATION_SCHEDULE_SCAN_QUEUE = 'automation.schedule-scan';
     ProvenanceService,
     LifecycleEngine,
     ScheduleScanner,
+    WebhookAction,
   ],
   exports: [
     ActionRegistry,
@@ -52,6 +54,7 @@ export class AutomationsModule implements OnModuleInit {
     private readonly scheduleScanner: ScheduleScanner,
     private readonly rbacService: RbacService,
     private readonly database: DatabaseService,
+    private readonly webhookAction: WebhookAction,
     appLogger: AppLoggerService,
   ) {
     this.logger = appLogger.forContext(AutomationsModule.name);
@@ -94,5 +97,29 @@ export class AutomationsModule implements OnModuleInit {
         this.logger.error('Failed to register schedule scanner', { error: err instanceof Error ? err.message : String(err) });
       }
     }
+
+    // Register built-in action handlers
+    this.actionRegistry.register(this.webhookAction);
+
+    // Register webhook queue processor
+    this.queueService.registerProcessor({
+      name: WEBHOOK_QUEUE_NAME,
+      handler: async (data) => {
+        const { url, method, headers, body, ruleId, correlationId } = data as {
+          url: string; method: string; headers: Record<string, string>;
+          body: unknown; ruleId: string; correlationId?: string;
+        };
+        const response = await fetch(url, {
+          method,
+          headers,
+          body: JSON.stringify(body),
+        });
+        if (!response.ok) {
+          const text = await response.text().catch(() => '');
+          throw new Error(`Webhook failed: ${response.status} ${text.slice(0, 200)}`);
+        }
+        this.logger.debug('Webhook delivered', { url, status: response.status, ruleId, correlationId });
+      },
+    });
   }
 }
