@@ -2,8 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { interpolateValues } from '@packages/automations';
+import { coerceFieldValues } from '@packages/common';
 import type { ActionHandler, ActionContext, ActionResult, UserSlotDefinition } from '@packages/automations';
 import type { EntityService } from '../entity.service';
+import { FieldDefinitionService } from '../services/field-definition.service';
 
 @Injectable()
 export class CreateEntityAction implements ActionHandler {
@@ -27,6 +29,7 @@ export class CreateEntityAction implements ActionHandler {
 
   constructor(
     private readonly moduleRef: ModuleRef,
+    private readonly fieldDefService: FieldDefinitionService,
     appLogger: AppLoggerService,
   ) {
     this.logger = appLogger.forContext(CreateEntityAction.name);
@@ -60,9 +63,15 @@ export class CreateEntityAction implements ActionHandler {
       payload: context.event?.payload ?? {},
     };
     const resolvedFields = interpolateValues(fields, templateContext);
+
+    // Coerce interpolated string values to match target field types
+    const fieldDefs = await this.fieldDefService.listByEntity(config.entityType);
+    const fieldTypeMap = Object.fromEntries(fieldDefs.map((d) => [d.fieldKey, d.fieldType]));
+    const coercedFields = coerceFieldValues(resolvedFields, fieldTypeMap);
+
     const actorId = context.event?.actorId ?? 'system';
 
-    const created = await entityService.create(resolvedFields, actorId);
+    const created = await entityService.create(coercedFields, actorId);
     this.logger.debug('Entity created', {
       entityType: config.entityType,
       entityId: created.id,
