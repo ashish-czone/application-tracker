@@ -1,4 +1,4 @@
-import { useMemo, useEffect, useCallback } from 'react';
+import { useMemo, useEffect, useCallback, useRef } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -137,18 +137,25 @@ function EntityFieldsForm({
     defaultValues,
   });
 
-  // Sync form changes to parent config
-  const watchedValues = form.watch();
+  // Sync form changes to parent config — use subscription to avoid infinite re-render loops
+  const lastSyncRef = useRef('');
   useEffect(() => {
-    if (editableFields.length === 0) return;
-    const fields: Record<string, unknown> = {};
-    for (const [key, val] of Object.entries(watchedValues)) {
-      if (val !== '' && val !== undefined && val !== null) {
-        fields[key] = val;
+    const subscription = form.watch((watchedValues) => {
+      if (editableFields.length === 0) return;
+      const fields: Record<string, unknown> = {};
+      for (const [key, val] of Object.entries(watchedValues)) {
+        if (val !== '' && val !== undefined && val !== null) {
+          fields[key] = val;
+        }
       }
-    }
-    onChange({ entityType: selectedEntityType, fields });
-  }, [watchedValues]);
+      const serialized = JSON.stringify(fields);
+      if (serialized !== lastSyncRef.current) {
+        lastSyncRef.current = serialized;
+        onChange({ entityType: selectedEntityType, fields });
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [form, editableFields.length, selectedEntityType, onChange]);
 
   // Async search callbacks
   const searchUsers = useCallback(async (query: string) => {

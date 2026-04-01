@@ -1,4 +1,4 @@
-import { useMemo, useEffect, useState, useCallback } from 'react';
+import { useMemo, useEffect, useState, useCallback, useRef } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -128,25 +128,29 @@ export function EntityUpdateActionConfig({ config, onChange }: EntityUpdateActio
     form.reset(values);
   }, [selectedFieldKeys.join(',')]);
 
-  // Sync form changes to parent config
-  const watchedValues = form.watch();
+  // Sync form changes to parent config — use subscription to avoid infinite re-render loops
+  const lastSyncRef = useRef('');
   useEffect(() => {
-    if (selectedFields.length === 0) return;
-    const fields: Record<string, unknown> = {};
-    for (const [key, val] of Object.entries(watchedValues)) {
-      if (selectedFieldKeys.includes(key) && val !== '' && val !== undefined && val !== null) {
-        fields[key] = val;
+    const subscription = form.watch((watchedValues) => {
+      if (selectedFields.length === 0) return;
+      const fields: Record<string, unknown> = {};
+      for (const [key, val] of Object.entries(watchedValues)) {
+        if (selectedFieldKeys.includes(key) && val !== '' && val !== undefined && val !== null) {
+          fields[key] = val;
+        }
       }
-    }
-    const currentFields = (config.fields as Record<string, unknown>) ?? {};
-    if (JSON.stringify(fields) !== JSON.stringify(currentFields)) {
-      onChange({
-        ...(selectedEntityType ? { entityType: selectedEntityType } : {}),
-        ...(entityId ? { entityId } : {}),
-        fields,
-      });
-    }
-  }, [watchedValues, selectedFields.length, selectedFieldKeys.join(',')]);
+      const serialized = JSON.stringify(fields);
+      if (serialized !== lastSyncRef.current) {
+        lastSyncRef.current = serialized;
+        onChange({
+          ...(selectedEntityType ? { entityType: selectedEntityType } : {}),
+          ...(entityId ? { entityId } : {}),
+          fields,
+        });
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [form, selectedFields.length, selectedFieldKeys.join(','), selectedEntityType, entityId, onChange]);
 
   const addField = (fieldKey: string) => {
     if (fieldKey && !selectedFieldKeys.includes(fieldKey)) {
