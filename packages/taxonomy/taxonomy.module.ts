@@ -2,22 +2,26 @@ import { Global, Module, type OnModuleInit } from '@nestjs/common';
 import { RbacService } from '@packages/rbac';
 import { fieldTypeRegistry } from '@packages/field-types';
 import { fieldTypeSaveHookRegistry } from '@packages/entity-engine';
+import { ActionRegistry } from '@packages/automations';
 import { taxonomyFieldTypesPlugin } from './field-types';
 import { TaxonomyService } from './services/taxonomy.service';
 import { CategoryService } from './services/category.service';
+import { TagEntityAction } from './actions/tag-entity.action';
 import { TagsController } from './controllers/tags.controller';
 import { CategoriesController } from './controllers/categories.controller';
 
 @Global()
 @Module({
   controllers: [TagsController, CategoriesController],
-  providers: [TaxonomyService, CategoryService],
+  providers: [TaxonomyService, CategoryService, TagEntityAction],
   exports: [TaxonomyService, CategoryService],
 })
 export class TaxonomyModule implements OnModuleInit {
   constructor(
     private readonly rbacService: RbacService,
     private readonly taxonomyService: TaxonomyService,
+    private readonly actionRegistry: ActionRegistry,
+    private readonly tagEntityAction: TagEntityAction,
   ) {}
 
   onModuleInit() {
@@ -56,6 +60,8 @@ export class TaxonomyModule implements OnModuleInit {
         },
       });
     }
+
+    this.actionRegistry.register(this.tagEntityAction);
 
     this.rbacService.registerPermissions('taxonomy', [
       { action: 'tag-groups.read', description: 'View tag groups' },

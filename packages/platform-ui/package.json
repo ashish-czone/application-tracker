@@ -8,6 +8,7 @@
     "@packages/common": "workspace:*",
     "@packages/eav-attributes-ui": "workspace:*",
     "@packages/entity-engine-ui": "workspace:*",
+    "@packages/platform-ui-conditions": "workspace:*",
     "@packages/field-types": "workspace:*",
     "@packages/ui": "workspace:*",
     "@tanstack/react-query": "^5.0.0",
