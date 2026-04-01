@@ -5,48 +5,30 @@ import { RbacService } from '@packages/rbac';
 import { ActionRegistry } from '@packages/automations';
 import { NotificationChannelsModule, EmailChannelService, WhatsAppChannelService, InAppChannel } from '@packages/notification-channels';
 import type { EmailPayload, WhatsAppPayload } from '@packages/notification-channels';
-import { NotificationRuleService } from './services/notification-rule.service';
-import { NotificationRulesService } from './services/notification-rules.service';
 import { NotificationTemplatesService } from './services/notification-templates.service';
-import { RecipientResolver } from './services/recipient-resolver';
 import { PreferenceService } from './services/preference.service';
 import { TemplateRenderer } from './services/template-renderer';
 import { NotificationDispatcher, EMAIL_QUEUE_NAME, WHATSAPP_QUEUE_NAME } from './services/notification-dispatcher';
-import { NotificationListener } from './listeners/notification.listener';
-import { EntityResolverRegistry } from './services/entity-resolver-registry';
 import { ContactResolverRegistry } from './services/contact-resolver-registry';
 import { SendNotificationAction } from './services/send-notification.action';
-import { ScheduleScanner } from './services/schedule-scanner';
-import { NotificationRulesController } from './controllers/notification-rules.controller';
 import { NotificationTemplatesController } from './controllers/notification-templates.controller';
-import { AutomationsMetadataController } from './controllers/automations-metadata.controller';
-
-export const SCHEDULE_SCAN_QUEUE = 'notification.schedule-scan';
 
 @Global()
 @Module({
   imports: [NotificationChannelsModule],
-  controllers: [NotificationRulesController, NotificationTemplatesController, AutomationsMetadataController],
+  controllers: [NotificationTemplatesController],
   providers: [
-    NotificationRuleService,
-    NotificationRulesService,
     NotificationTemplatesService,
-    RecipientResolver,
     PreferenceService,
     TemplateRenderer,
     NotificationDispatcher,
-    NotificationListener,
-    EntityResolverRegistry,
     ContactResolverRegistry,
     SendNotificationAction,
-    ScheduleScanner,
   ],
   exports: [
     NotificationDispatcher,
     PreferenceService,
-    NotificationRulesService,
     NotificationTemplatesService,
-    EntityResolverRegistry,
     ContactResolverRegistry,
   ],
 })
@@ -57,7 +39,6 @@ export class NotificationsModule implements OnModuleInit {
     private readonly dispatcher: NotificationDispatcher,
     private readonly inAppChannel: InAppChannel,
     private readonly queueService: QueueService,
-    private readonly scheduleScanner: ScheduleScanner,
     private readonly emailChannelService: EmailChannelService,
     private readonly whatsAppChannelService: WhatsAppChannelService,
     private readonly rbacService: RbacService,
@@ -71,8 +52,6 @@ export class NotificationsModule implements OnModuleInit {
   async onModuleInit() {
     // Register RBAC permissions
     this.rbacService.registerPermissions('notifications', [
-      { action: 'rules.read', description: 'View notification rules' },
-      { action: 'rules.manage', description: 'Create, update, and delete notification rules' },
       { action: 'templates.read', description: 'View notification templates' },
       { action: 'templates.manage', description: 'Create, update, and delete notification templates' },
     ]);
@@ -102,31 +81,6 @@ export class NotificationsModule implements OnModuleInit {
         }
       },
     });
-
-    // Register hourly cron job for schedule scanner
-    this.queueService.registerProcessor({
-      name: SCHEDULE_SCAN_QUEUE,
-      handler: async () => {
-        await this.scheduleScanner.scan();
-      },
-    });
-
-    // Enqueue repeatable scan — runs daily at 2:00 AM in the app timezone
-    const queue = this.queueService.getQueue(SCHEDULE_SCAN_QUEUE);
-    if (queue) {
-      const appTimezone = process.env.APP_TIMEZONE ?? 'UTC';
-      const cronPattern = cronForLocalHour(2, appTimezone);
-      try {
-        await queue.upsertJobScheduler(
-          'notification-schedule-scan',
-          { pattern: cronPattern },
-          { name: SCHEDULE_SCAN_QUEUE, data: {} },
-        );
-        this.logger.log(`Notification schedule scanner registered (${cronPattern}, 2:00 AM ${appTimezone})`);
-      } catch (err) {
-        this.logger.error('Failed to register schedule scanner', { error: err instanceof Error ? err.message : String(err) });
-      }
-    }
 
     // Register send_notification action with automations engine
     this.actionRegistry.register(this.sendNotificationAction);

@@ -13,7 +13,7 @@ export interface Condition {
   value?: unknown;
 }
 
-// --- Automation Rules (new) ---
+// --- Automation Rules ---
 
 export interface UserResolution {
   strategy: UserResolutionStrategy;
@@ -106,73 +106,6 @@ export interface ListAutomationRulesParams {
   order?: 'asc' | 'desc';
 }
 
-// --- Legacy notification rule types (still used by old notification-rules API) ---
-
-export type RecipientStrategy = 'actor' | 'entity_owner' | 'role';
-
-export interface RuleChannel {
-  channel: NotificationChannel;
-  templateId: string;
-}
-
-export interface NotificationRule {
-  id: string;
-  name: string;
-  triggerType: TriggerType;
-  eventName: string | null;
-  delayAmount: number | null;
-  delayUnit: ScheduleUnit | null;
-  scheduleEntityType: string | null;
-  scheduleDateField: string | null;
-  scheduleDateOperator: ScheduleDateOperator | null;
-  scheduleDateAmounts: number[] | null;
-  scheduleDateUnit: ScheduleUnit | null;
-  scheduleDaysOfWeek: number[] | null;
-  conditions: Condition[] | null;
-  recipientStrategy: RecipientStrategy;
-  recipientConfig: Record<string, unknown> | null;
-  isActive: boolean;
-  createdAt: string;
-  channels: RuleChannel[];
-}
-
-export interface CreateRuleRequest {
-  name: string;
-  triggerType: TriggerType;
-  eventName?: string;
-  delayAmount?: number;
-  delayUnit?: ScheduleUnit;
-  scheduleEntityType?: string;
-  scheduleDateField?: string;
-  scheduleDateOperator?: ScheduleDateOperator;
-  scheduleDateAmounts?: number[];
-  scheduleDateUnit?: ScheduleUnit;
-  scheduleDaysOfWeek?: number[];
-  conditions?: Condition[];
-  recipientStrategy: RecipientStrategy;
-  recipientConfig?: Record<string, unknown>;
-  channels: RuleChannel[];
-}
-
-export interface UpdateRuleRequest {
-  name?: string;
-  recipientStrategy?: RecipientStrategy;
-  recipientConfig?: Record<string, unknown>;
-  isActive?: boolean;
-  conditions?: Condition[];
-  scheduleDaysOfWeek?: number[];
-}
-
-export interface ListRulesParams {
-  page?: number;
-  limit?: number;
-  search?: string;
-  eventName?: string;
-  isActive?: boolean;
-  sort?: 'name' | 'createdAt';
-  order?: 'asc' | 'desc';
-}
-
 // --- Notification Templates ---
 
 export interface NotificationTemplate {
@@ -228,15 +161,10 @@ export interface UserFieldConfig {
   label: string;
 }
 
-export interface RecipientFieldConfig {
-  label: string;
-}
-
 export interface EntityMetadata {
   entityType: string;
   fields: Record<string, FieldConfig>;
   userFields: Record<string, UserFieldConfig>;
-  recipientFields: Record<string, RecipientFieldConfig>;
 }
 
 export interface ActionTypeMetadata {

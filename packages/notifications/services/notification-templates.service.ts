@@ -1,8 +1,7 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { DatabaseService, eq, and, ilike, asc, desc, count } from '@packages/database';
 import type { PaginatedResponse } from '@packages/common';
 import { notificationTemplates } from '../schema/notification-templates';
-import { notificationRuleChannels } from '../schema/notification-rule-channels';
 import type { NotificationTemplate, NotificationChannel } from '../types';
 
 @Injectable()
@@ -81,16 +80,6 @@ export class NotificationTemplatesService {
 
   async delete(id: string): Promise<void> {
     await this.findByIdOrFail(id);
-
-    // Check if template is used by any rule channel
-    const [{ total }] = await this.database.db
-      .select({ total: count() })
-      .from(notificationRuleChannels)
-      .where(eq(notificationRuleChannels.templateId, id));
-
-    if (Number(total) > 0) {
-      throw new ConflictException('Cannot delete a template that is used by notification rules. Remove it from all rules first.');
-    }
 
     await this.database.db
       .delete(notificationTemplates)
