@@ -1302,6 +1302,12 @@ importers:
       '@packages/common':
         specifier: workspace:*
         version: link:../../common
+      '@packages/entity-engine-ui':
+        specifier: workspace:*
+        version: link:../../entity-engine-ui
+      '@packages/platform-ui-conditions':
+        specifier: workspace:*
+        version: link:../conditions
       '@packages/ui':
         specifier: workspace:*
         version: link:../../ui
