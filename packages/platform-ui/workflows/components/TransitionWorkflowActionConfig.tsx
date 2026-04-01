@@ -39,11 +39,17 @@ export function TransitionWorkflowActionConfig({
   // Effective entity type for filtering workflows
   const effectiveEntityType = selectedEntityType || sourceEntityType;
 
-  // Entity type options: "triggering entity" + all registered entities
+  // Entity types that have at least one active workflow
+  const entitiesWithWorkflows = useMemo(() => {
+    if (!allWorkflows) return new Set<string>();
+    return new Set(allWorkflows.filter((w) => w.isActive).map((w) => w.entityType));
+  }, [allWorkflows]);
+
+  // Entity type options: "triggering entity" + only entities with workflows
   const entityTypeOptions = useMemo(() => [
     { value: '', label: 'Triggering entity (default)' },
-    ...entityOptions,
-  ], [entityOptions]);
+    ...entityOptions.filter((e) => entitiesWithWorkflows.has(e.value)),
+  ], [entityOptions, entitiesWithWorkflows]);
 
   // Workflows filtered by effective entity type
   const filteredWorkflows = useMemo(() => {
