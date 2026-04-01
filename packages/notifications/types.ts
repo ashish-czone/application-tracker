@@ -8,13 +8,7 @@ export type ScheduleDateOperator = 'before' | 'after';
 
 export type ScheduleUnit = 'minutes' | 'hours' | 'days';
 
-export type ConditionOperator = 'eq' | 'neq' | 'in' | 'gt' | 'lt' | 'is_null' | 'is_not_null' | 'changed' | 'changed_to' | 'changed_from_to';
-
-export interface Condition {
-  field: string;
-  operator: ConditionOperator;
-  value?: unknown;
-}
+export type { Condition, ConditionOperator } from '@packages/common';
 
 export interface NotificationRule {
   id: string;

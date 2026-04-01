@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, UnprocessableEntityException, ForbiddenException } from '@nestjs/common';
 import { DatabaseService, desc, eq, and } from '@packages/database';
 import { RbacService } from '@packages/rbac';
-import { evaluateConditionsInMemory, type Condition } from '@packages/notifications';
+import { evaluateConditionsInMemory, type Condition } from '@packages/common';
 import { workflowTransitionHistory } from '../schema/workflow-transition-history';
 import { WorkflowRegistryService } from './workflow-registry.service';
 import { WorkflowGuardRegistry } from './workflow-guard-registry.service';
