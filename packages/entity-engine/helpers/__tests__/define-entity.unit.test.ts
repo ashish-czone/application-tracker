@@ -222,7 +222,7 @@ describe('defineEntity', () => {
     ]);
   });
 
-  it('should include system columns for soft delete and timestamps', () => {
+  it('should include only infra columns (id, soft delete) in systemColumns', () => {
     const config = defineEntity({
       table: testTable,
       slug: 'test-entities',
@@ -232,10 +232,15 @@ describe('defineEntity', () => {
       ui: { icon: 'FileText' },
     });
 
+    // Only pure infrastructure columns — id and soft-delete
+    expect(config.systemColumns).toContain('id');
     expect(config.systemColumns).toContain('deletedAt');
     expect(config.systemColumns).toContain('deletedBy');
-    expect(config.systemColumns).toContain('createdAt');
-    expect(config.systemColumns).toContain('updatedAt');
+    // createdAt, updatedAt, createdBy are NOT in systemColumns — they are seeded
+    // as system/readonly field definitions for conditions and filters
+    expect(config.systemColumns).not.toContain('createdAt');
+    expect(config.systemColumns).not.toContain('updatedAt');
+    expect(config.systemColumns).not.toContain('createdBy');
   });
 
   it('should pass through hooks, actions, extra permissions, and extra events', () => {

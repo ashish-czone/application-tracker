@@ -9,7 +9,7 @@ function mockConfig(overrides: Partial<EntityConfig> = {}): EntityConfig {
     pluralName: 'Test Entities',
     slug: 'test-entities',
     table: {} as any,
-    systemColumns: ['id', 'createdAt', 'updatedAt', 'deletedAt', 'deletedBy', 'createdBy'],
+    systemColumns: ['id', 'deletedAt', 'deletedBy'],
     searchColumns: [],
     defaultSort: 'createdAt',
     sortableColumns: {},

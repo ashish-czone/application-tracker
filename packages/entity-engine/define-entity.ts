@@ -231,16 +231,16 @@ export function defineEntity<TTable extends PgTable>(model: ModelDefinition<TTab
   const relationships: EntityRelationship[] = [];
   const recipientFields: Record<string, { label: string }> = {};
   const listFields: string[] = [];
-  const systemColumns: string[] = ['id', 'createdBy'];
+  // Infrastructure-only columns: excluded from field seeding and event snapshots.
+  // createdAt/updatedAt/createdBy are NOT included — they are seeded as system fields
+  // so users can filter/condition on them.
+  const systemColumns: string[] = ['id'];
   let nameField: string | string[] = 'id';
   let defaultSort = model.defaultSort ?? 'createdAt';
 
-  // Add system columns based on model behaviors
+  // Add soft-delete infrastructure columns
   if (model.softDelete !== false) {
     systemColumns.push('deletedAt', 'deletedBy');
-  }
-  if (model.timestamps !== false) {
-    systemColumns.push('createdAt', 'updatedAt');
   }
 
   let sortOrder = 0;
@@ -327,10 +327,9 @@ export function defineEntity<TTable extends PgTable>(model: ModelDefinition<TTab
       listFields.push(key);
     }
 
-    // Collect system fields
-    if (field.system) {
-      systemColumns.push(key);
-    }
+    // Note: system: true fields are NOT added to systemColumns.
+    // They are seeded into field_definitions with isSystem/isReadonly flags,
+    // so they appear in conditions, filters, and views but can't be user-edited.
   }
 
   // Build lookup config from isLabel fields

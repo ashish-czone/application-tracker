@@ -1346,12 +1346,12 @@ export class EntityService {
     }
   }
 
-  /** Extract field-level data from a DB row, excluding system columns. */
+  /** Extract field-level data from a DB row, excluding infrastructure-only columns. */
   private rowToSnapshot(row: Record<string, unknown>): Record<string, unknown> {
-    const systemCols = new Set(this.config.systemColumns);
+    const infraCols = new Set(['id', 'deletedAt', 'deletedBy']);
     const snapshot: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(row)) {
-      if (!systemCols.has(key)) {
+      if (!infraCols.has(key)) {
         snapshot[key] = value;
       }
     }
