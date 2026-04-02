@@ -145,6 +145,32 @@ export interface UserStrategyMetadata {
   configSchema: Record<string, unknown>;
 }
 
+// --- Execution log ---
+
+export interface AutomationExecution {
+  id: string;
+  ruleId: string;
+  ruleName: string;
+  actionIndex: number;
+  actionType: string;
+  entityType: string;
+  entityId: string;
+  status: 'success' | 'error';
+  errorMessage: string | null;
+  executedAt: string;
+}
+
+export interface ListExecutionsParams {
+  page?: number;
+  limit?: number;
+  ruleId?: string;
+  status?: 'success' | 'error';
+  entityType?: string;
+  actionType?: string;
+  sort?: 'executedAt';
+  order?: 'asc' | 'desc';
+}
+
 // --- Entity fields (generic endpoint) ---
 
 export interface EntityField {

@@ -2,9 +2,11 @@ import type { PaginatedResponse } from '@packages/common';
 import type { ApiFn } from '../PlatformUIProvider';
 import type {
   AutomationRule,
+  AutomationExecution,
   CreateAutomationRuleRequest,
   UpdateAutomationRuleRequest,
   ListAutomationRulesParams,
+  ListExecutionsParams,
   EventMetadata,
   EntityMetadata,
   ActionTypeMetadata,
@@ -65,6 +67,22 @@ export function createAutomationsApi(api: ApiFn) {
 
     getEntityFields(entityType: string): Promise<EntityField[]> {
       return api.get<EntityField[]>(`/entities/${entityType}/fields`);
+    },
+
+    // --- Execution Log ---
+
+    listExecutions(params: ListExecutionsParams): Promise<PaginatedResponse<AutomationExecution>> {
+      const sp = new URLSearchParams();
+      if (params.page && params.page > 1) sp.set('page', String(params.page));
+      if (params.limit) sp.set('limit', String(params.limit));
+      if (params.ruleId) sp.set('ruleId', params.ruleId);
+      if (params.status) sp.set('status', params.status);
+      if (params.entityType) sp.set('entityType', params.entityType);
+      if (params.actionType) sp.set('actionType', params.actionType);
+      if (params.sort) sp.set('sort', params.sort);
+      if (params.order) sp.set('order', params.order);
+      const qs = sp.toString();
+      return api.get<PaginatedResponse<AutomationExecution>>(`/automation-executions${qs ? `?${qs}` : ''}`);
     },
   };
 }

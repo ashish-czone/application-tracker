@@ -18,6 +18,7 @@ import { ActorStrategy } from './services/strategies/actor.strategy';
 import { EntityFieldStrategy } from './services/strategies/entity-field.strategy';
 import { RoleStrategy } from './services/strategies/role.strategy';
 import { AutomationRulesController } from './controllers/automation-rules.controller';
+import { AutomationExecutionsController } from './controllers/automation-executions.controller';
 import { AutomationsMetadataController } from './controllers/automations-metadata.controller';
 import { WebhookAction, WEBHOOK_QUEUE_NAME } from './services/actions/webhook.action';
 
@@ -27,7 +28,7 @@ export const AUTOMATION_EXECUTION_CLEANUP_QUEUE = 'automation.execution-cleanup'
 
 @Global()
 @Module({
-  controllers: [AutomationRulesController, AutomationsMetadataController],
+  controllers: [AutomationRulesController, AutomationExecutionsController, AutomationsMetadataController],
   providers: [
     AutomationRuleService,
     AutomationListener,

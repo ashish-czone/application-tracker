@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { AutomationsListPage } from '../../automations/pages/AutomationsListPage';
+import { ExecutionLogPage } from '../../automations/pages/ExecutionLogPage';
 import { TemplatesListPage } from './TemplatesListPage';
 
 const TABS = [
   { id: 'rules', label: 'Rules' },
   { id: 'templates', label: 'Templates' },
+  { id: 'execution-log', label: 'Execution Log' },
 ] as const;
 
 type TabId = typeof TABS[number]['id'];
@@ -42,6 +44,7 @@ export function AutomationsPage() {
 
       {activeTab === 'rules' && <AutomationsListPage />}
       {activeTab === 'templates' && <TemplatesListPage />}
+      {activeTab === 'execution-log' && <ExecutionLogPage />}
     </div>
   );
 }

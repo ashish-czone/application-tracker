@@ -1,7 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { DatabaseService, lt } from '@packages/database';
+import { DatabaseService, lt, eq, and, asc, desc, count } from '@packages/database';
+import type { PaginatedResponse } from '@packages/common';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { automationExecutions } from '../schema/automation-executions';
+import { automationRules } from '../schema/automation-rules';
 
 @Injectable()
 export class ExecutionLogService {
@@ -33,6 +35,74 @@ export class ExecutionLogService {
         error: error instanceof Error ? error.message : String(error),
       });
     }
+  }
+
+  async list(query: {
+    page?: number;
+    limit?: number;
+    ruleId?: string;
+    status?: 'success' | 'error';
+    entityType?: string;
+    actionType?: string;
+    sort?: 'executedAt';
+    order?: 'asc' | 'desc';
+  }): Promise<PaginatedResponse<{
+    id: string;
+    ruleId: string;
+    ruleName: string;
+    actionIndex: number;
+    actionType: string;
+    entityType: string;
+    entityId: string;
+    status: string;
+    errorMessage: string | null;
+    executedAt: Date;
+  }>> {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 25;
+    const offset = (page - 1) * limit;
+
+    const conditions = [];
+    if (query.ruleId) conditions.push(eq(automationExecutions.ruleId, query.ruleId));
+    if (query.status) conditions.push(eq(automationExecutions.status, query.status));
+    if (query.entityType) conditions.push(eq(automationExecutions.entityType, query.entityType));
+    if (query.actionType) conditions.push(eq(automationExecutions.actionType, query.actionType));
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+    const orderFn = query.order === 'asc' ? asc : desc;
+
+    const [{ total }] = await this.database.db
+      .select({ total: count() })
+      .from(automationExecutions)
+      .where(whereClause);
+
+    const data = await this.database.db
+      .select({
+        id: automationExecutions.id,
+        ruleId: automationExecutions.ruleId,
+        ruleName: automationRules.name,
+        actionIndex: automationExecutions.actionIndex,
+        actionType: automationExecutions.actionType,
+        entityType: automationExecutions.entityType,
+        entityId: automationExecutions.entityId,
+        status: automationExecutions.status,
+        errorMessage: automationExecutions.errorMessage,
+        executedAt: automationExecutions.executedAt,
+      })
+      .from(automationExecutions)
+      .leftJoin(automationRules, eq(automationExecutions.ruleId, automationRules.id))
+      .where(whereClause)
+      .orderBy(orderFn(automationExecutions.executedAt))
+      .limit(limit)
+      .offset(offset);
+
+    return {
+      data: data.map((row) => ({
+        ...row,
+        ruleName: row.ruleName ?? 'Deleted rule',
+      })),
+      meta: { total: Number(total), page, limit, totalPages: Math.ceil(Number(total) / limit) },
+    };
   }
 
   async deleteOlderThan(days: number): Promise<number> {

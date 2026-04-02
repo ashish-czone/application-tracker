@@ -4,7 +4,8 @@ import { toast } from '@packages/ui';
 import { usePlatformAPI } from '../PlatformUIProvider';
 import { createAutomationsApi } from './services';
 import type {
-  ListAutomationRulesParams, CreateAutomationRuleRequest, UpdateAutomationRuleRequest,
+  ListAutomationRulesParams, ListExecutionsParams,
+  CreateAutomationRuleRequest, UpdateAutomationRuleRequest,
 } from './types';
 
 function useAutomationsApi() {
@@ -139,5 +140,15 @@ export function useEntityFields(entityType: string | undefined) {
     queryKey: ['entity-fields', entityType],
     queryFn: () => api.getEntityFields(entityType!),
     enabled: !!entityType,
+  });
+}
+
+// --- Execution Log ---
+
+export function useAutomationExecutions(params: ListExecutionsParams) {
+  const api = useAutomationsApi();
+  return useQuery({
+    queryKey: ['automation-executions', params],
+    queryFn: () => api.listExecutions(params),
   });
 }
