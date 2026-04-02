@@ -29,6 +29,7 @@ export type {
   LifecycleDeleteBinding,
   AutomationRule,
   AutomationActionLogEntry,
+  AutomationExecutionEntry,
   EntityFieldType,
   EntityFieldConfig,
   ResolvedEntityFieldConfig,
@@ -38,6 +39,7 @@ export type {
 export {
   automationRules,
   automationActionLog,
+  automationExecutions,
   automationScheduled,
   automationSentLog,
 } from './schema';

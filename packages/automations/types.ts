@@ -142,6 +142,22 @@ export interface AutomationActionLogEntry {
 }
 
 // ---------------------------------------------------------------------------
+// Execution log — audit trail of all automation action executions
+// ---------------------------------------------------------------------------
+
+export interface AutomationExecutionEntry {
+  id: string;
+  ruleId: string;
+  actionIndex: number;
+  actionType: string;
+  entityType: string;
+  entityId: string;
+  status: 'success' | 'error';
+  errorMessage: string | null;
+  executedAt: Date;
+}
+
+// ---------------------------------------------------------------------------
 // Entity resolver — metadata for entities that automations can act on
 // ---------------------------------------------------------------------------
 
