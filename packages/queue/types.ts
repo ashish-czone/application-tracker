@@ -7,6 +7,13 @@ export interface JobDefinition<T = unknown> {
   handler: (data: T) => Promise<void>;
 }
 
+export interface JobRetentionPolicy {
+  /** Max age in seconds before auto-removal */
+  age?: number;
+  /** Max number of jobs to keep */
+  count?: number;
+}
+
 export interface EnqueueOptions {
   delay?: number;
   attempts?: number;
@@ -15,6 +22,8 @@ export interface EnqueueOptions {
     delay: number;
   };
   jobId?: string;
+  removeOnComplete?: JobRetentionPolicy | boolean;
+  removeOnFail?: JobRetentionPolicy | boolean;
 }
 
 export const QUEUE_MODULE_CONFIG = Symbol('QUEUE_MODULE_CONFIG');

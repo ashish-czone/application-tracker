@@ -107,6 +107,41 @@ describe('QueueService', () => {
         .rejects.toThrow('Queue "unknown.job" is not registered');
     });
 
+    it('should apply default retention policies', async () => {
+      const service = createQueueService('false');
+      service.registerProcessor({ name: 'test.job', handler: vi.fn() });
+
+      await service.enqueue('test.job', { foo: 'bar' });
+
+      expect(mockQueueAdd).toHaveBeenCalledWith(
+        'test.job',
+        { foo: 'bar' },
+        expect.objectContaining({
+          removeOnComplete: { age: 7 * 24 * 60 * 60 },
+          removeOnFail: { age: 15 * 24 * 60 * 60 },
+        }),
+      );
+    });
+
+    it('should allow overriding retention policies', async () => {
+      const service = createQueueService('false');
+      service.registerProcessor({ name: 'test.job', handler: vi.fn() });
+
+      await service.enqueue('test.job', { foo: 'bar' }, {
+        removeOnComplete: { age: 3600, count: 100 },
+        removeOnFail: false,
+      });
+
+      expect(mockQueueAdd).toHaveBeenCalledWith(
+        'test.job',
+        { foo: 'bar' },
+        expect.objectContaining({
+          removeOnComplete: { age: 3600, count: 100 },
+          removeOnFail: false,
+        }),
+      );
+    });
+
     it('should pass custom options to the job', async () => {
       const service = createQueueService('false');
       service.registerProcessor({ name: 'test.job', handler: vi.fn() });
