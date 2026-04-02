@@ -8,6 +8,7 @@ export { RoleStrategy } from './services/strategies/role.strategy';
 export { EntityResolverRegistry } from './services/entity-resolver-registry';
 export { AutomationRuleService } from './services/automation-rule.service';
 export { ProvenanceService } from './services/provenance.service';
+export { ExecutionLogService } from './services/execution-log.service';
 export { LifecycleEngine } from './services/lifecycle-engine';
 export { ScheduleScanner } from './services/schedule-scanner';
 export { AutomationListener } from './listeners/automation.listener';

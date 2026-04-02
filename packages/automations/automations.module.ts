@@ -11,6 +11,7 @@ import { ActionRegistry } from './services/action-registry';
 import { UserResolverRegistry } from './services/user-resolver-registry';
 import { EntityResolverRegistry } from './services/entity-resolver-registry';
 import { ProvenanceService } from './services/provenance.service';
+import { ExecutionLogService } from './services/execution-log.service';
 import { LifecycleEngine } from './services/lifecycle-engine';
 import { ScheduleScanner } from './services/schedule-scanner';
 import { ActorStrategy } from './services/strategies/actor.strategy';
@@ -33,6 +34,7 @@ export const AUTOMATION_EXECUTION_QUEUE = 'automation.execution';
     UserResolverRegistry,
     EntityResolverRegistry,
     ProvenanceService,
+    ExecutionLogService,
     LifecycleEngine,
     ScheduleScanner,
     WebhookAction,
@@ -43,6 +45,7 @@ export const AUTOMATION_EXECUTION_QUEUE = 'automation.execution';
     EntityResolverRegistry,
     AutomationRuleService,
     ProvenanceService,
+    ExecutionLogService,
   ],
 })
 export class AutomationsModule implements OnModuleInit {
