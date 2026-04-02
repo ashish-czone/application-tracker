@@ -96,11 +96,16 @@ export class QueueService implements OnModuleDestroy {
       throw new Error(`Queue "${queueName}" is not registered. Call registerProcessor first.`);
     }
 
+    const SEVEN_DAYS = 7 * 24 * 60 * 60;
+    const FIFTEEN_DAYS = 15 * 24 * 60 * 60;
+
     const job = await queue.add(queueName, data, {
       delay: options?.delay,
       attempts: options?.attempts ?? 3,
       backoff: options?.backoff ?? { type: 'exponential', delay: 1000 },
       jobId: options?.jobId,
+      removeOnComplete: options?.removeOnComplete ?? { age: SEVEN_DAYS },
+      removeOnFail: options?.removeOnFail ?? { age: FIFTEEN_DAYS },
     });
 
     this.logger.debug('Job enqueued', {
