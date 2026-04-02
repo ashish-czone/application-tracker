@@ -13,6 +13,8 @@ import { AutomationRuleService } from '../services/automation-rule.service';
 import { ActionRegistry } from '../services/action-registry';
 import { UserResolverRegistry } from '../services/user-resolver-registry';
 import { EntityResolverRegistry } from '../services/entity-resolver-registry';
+import { ExecutionLogService } from '../services/execution-log.service';
+import { ProvenanceService } from '../services/provenance.service';
 import { buildConditions } from '../helpers/condition-builder';
 import { automationScheduled } from '../schema/automation-scheduled';
 import type { AutomationRule, ActionConfig, ScheduleUnit } from '../types';
@@ -26,6 +28,8 @@ export class AutomationListener {
     private readonly actionRegistry: ActionRegistry,
     private readonly userResolverRegistry: UserResolverRegistry,
     private readonly entityResolverRegistry: EntityResolverRegistry,
+    private readonly executionLogService: ExecutionLogService,
+    private readonly provenanceService: ProvenanceService,
     private readonly database: DatabaseService,
     appLogger: AppLoggerService,
   ) {
@@ -118,7 +122,7 @@ export class AutomationListener {
         : {};
 
       try {
-        await handler.execute({
+        const result = await handler.execute({
           rule,
           actionIndex: i,
           actionConfig,
@@ -132,10 +136,45 @@ export class AutomationListener {
           },
           resolvedUsers,
         });
+
+        // Log execution audit
+        await this.executionLogService.log({
+          ruleId: rule.id,
+          actionIndex: i,
+          actionType: actionConfig.type,
+          entityType: event.entityType,
+          entityId: event.entityId,
+          status: 'success',
+        });
+
+        // Log provenance for create_entity actions with link config
+        if (result?.targetEntityId && actionConfig.link) {
+          const targetEntityType = (actionConfig.config as { entityType?: string }).entityType ?? event.entityType;
+          await this.provenanceService.log({
+            ruleId: rule.id,
+            actionIndex: i,
+            linkName: actionConfig.link.as,
+            sourceEntityType: event.entityType,
+            sourceEntityId: event.entityId,
+            targetEntityType,
+            targetEntityId: result.targetEntityId,
+          });
+        }
       } catch (error) {
         this.logger.error(`Action "${actionConfig.type}" failed for rule ${rule.id}`, {
           actionIndex: i,
           error: error instanceof Error ? error.message : String(error),
+        });
+
+        // Log failed execution
+        await this.executionLogService.log({
+          ruleId: rule.id,
+          actionIndex: i,
+          actionType: actionConfig.type,
+          entityType: event.entityType,
+          entityId: event.entityId,
+          status: 'error',
+          errorMessage: error instanceof Error ? error.message : String(error),
         });
       }
     }

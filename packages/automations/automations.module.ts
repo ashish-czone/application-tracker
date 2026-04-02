@@ -11,6 +11,7 @@ import { ActionRegistry } from './services/action-registry';
 import { UserResolverRegistry } from './services/user-resolver-registry';
 import { EntityResolverRegistry } from './services/entity-resolver-registry';
 import { ProvenanceService } from './services/provenance.service';
+import { ExecutionLogService } from './services/execution-log.service';
 import { LifecycleEngine } from './services/lifecycle-engine';
 import { ScheduleScanner } from './services/schedule-scanner';
 import { ActorStrategy } from './services/strategies/actor.strategy';
@@ -22,6 +23,7 @@ import { WebhookAction, WEBHOOK_QUEUE_NAME } from './services/actions/webhook.ac
 
 export const AUTOMATION_SCHEDULE_SCAN_QUEUE = 'automation.schedule-scan';
 export const AUTOMATION_EXECUTION_QUEUE = 'automation.execution';
+export const AUTOMATION_EXECUTION_CLEANUP_QUEUE = 'automation.execution-cleanup';
 
 @Global()
 @Module({
@@ -33,6 +35,7 @@ export const AUTOMATION_EXECUTION_QUEUE = 'automation.execution';
     UserResolverRegistry,
     EntityResolverRegistry,
     ProvenanceService,
+    ExecutionLogService,
     LifecycleEngine,
     ScheduleScanner,
     WebhookAction,
@@ -43,6 +46,7 @@ export const AUTOMATION_EXECUTION_QUEUE = 'automation.execution';
     EntityResolverRegistry,
     AutomationRuleService,
     ProvenanceService,
+    ExecutionLogService,
   ],
 })
 export class AutomationsModule implements OnModuleInit {
@@ -59,6 +63,7 @@ export class AutomationsModule implements OnModuleInit {
     private readonly webhookAction: WebhookAction,
     private readonly automationListener: AutomationListener,
     private readonly ruleService: AutomationRuleService,
+    private readonly executionLogService: ExecutionLogService,
     appLogger: AppLoggerService,
   ) {
     this.logger = appLogger.forContext(AutomationsModule.name);
@@ -142,5 +147,29 @@ export class AutomationsModule implements OnModuleInit {
         await this.automationListener.executeActions(rule, event);
       },
     });
+
+    // Register execution log cleanup cron (daily at 3:00 AM, deletes entries older than 90 days)
+    this.queueService.registerProcessor({
+      name: AUTOMATION_EXECUTION_CLEANUP_QUEUE,
+      handler: async () => {
+        await this.executionLogService.deleteOlderThan(90);
+      },
+    });
+
+    const cleanupQueue = this.queueService.getQueue(AUTOMATION_EXECUTION_CLEANUP_QUEUE);
+    if (cleanupQueue) {
+      const appTimezone = process.env.APP_TIMEZONE ?? 'UTC';
+      const cronPattern = cronForLocalHour(3, appTimezone);
+      try {
+        await cleanupQueue.upsertJobScheduler(
+          'automation-execution-cleanup',
+          { pattern: cronPattern },
+          { name: AUTOMATION_EXECUTION_CLEANUP_QUEUE, data: {} },
+        );
+        this.logger.log(`Execution log cleanup registered (${cronPattern}, 3:00 AM ${appTimezone})`);
+      } catch (err) {
+        this.logger.error('Failed to register execution cleanup', { error: err instanceof Error ? err.message : String(err) });
+      }
+    }
   }
 }

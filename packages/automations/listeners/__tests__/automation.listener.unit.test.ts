@@ -4,6 +4,8 @@ import { AutomationRuleService } from '../../services/automation-rule.service';
 import { ActionRegistry } from '../../services/action-registry';
 import { UserResolverRegistry } from '../../services/user-resolver-registry';
 import { EntityResolverRegistry } from '../../services/entity-resolver-registry';
+import { ExecutionLogService } from '../../services/execution-log.service';
+import { ProvenanceService } from '../../services/provenance.service';
 import type { DomainEvent } from '@packages/events';
 import type { AutomationRule, ActionHandler } from '../../types';
 import type { AppLoggerService } from '@packages/logger';
@@ -67,6 +69,8 @@ describe('AutomationListener', () => {
   let actionRegistry: ActionRegistry;
   let userResolverRegistry: UserResolverRegistry;
   let entityResolverRegistry: EntityResolverRegistry;
+  let executionLogService: ExecutionLogService;
+  let provenanceService: ProvenanceService;
   let listener: AutomationListener;
   let mockDb: any;
   let mockHandler: ReturnType<typeof createMockHandler>;
@@ -83,6 +87,11 @@ describe('AutomationListener', () => {
     actionRegistry = new ActionRegistry(mockLogger);
     userResolverRegistry = new UserResolverRegistry(mockLogger);
     entityResolverRegistry = new EntityResolverRegistry(mockLogger);
+    executionLogService = new ExecutionLogService(mockDb, mockLogger);
+    provenanceService = new ProvenanceService(mockDb, mockLogger);
+
+    vi.spyOn(executionLogService, 'log').mockResolvedValue(undefined);
+    vi.spyOn(provenanceService, 'log').mockResolvedValue({} as any);
 
     mockHandler = createMockHandler();
     actionRegistry.register(mockHandler);
@@ -100,6 +109,8 @@ describe('AutomationListener', () => {
       actionRegistry,
       userResolverRegistry,
       entityResolverRegistry,
+      executionLogService,
+      provenanceService,
       mockDb,
       mockLogger,
     );
@@ -261,5 +272,98 @@ describe('AutomationListener', () => {
         entityId: 'task-1',
       }),
     );
+  });
+
+  // --- Execution logging tests ---
+
+  it('should log successful execution to execution log', async () => {
+    vi.spyOn(ruleService, 'findActiveByEventName').mockResolvedValue([buildRule()]);
+
+    await listener.handleDomainEvent(buildEvent());
+
+    expect(executionLogService.log).toHaveBeenCalledWith({
+      ruleId: 'rule-1',
+      actionIndex: 0,
+      actionType: 'test_action',
+      entityType: 'tasks',
+      entityId: 'task-1',
+      status: 'success',
+    });
+  });
+
+  it('should log failed execution with error message', async () => {
+    mockHandler.execute.mockRejectedValueOnce(new Error('action failed'));
+
+    vi.spyOn(ruleService, 'findActiveByEventName').mockResolvedValue([buildRule()]);
+
+    await listener.handleDomainEvent(buildEvent());
+
+    expect(executionLogService.log).toHaveBeenCalledWith({
+      ruleId: 'rule-1',
+      actionIndex: 0,
+      actionType: 'test_action',
+      entityType: 'tasks',
+      entityId: 'task-1',
+      status: 'error',
+      errorMessage: 'action failed',
+    });
+  });
+
+  it('should log provenance for create_entity actions with link config', async () => {
+    mockHandler.execute.mockResolvedValue({ targetEntityId: 'new-task-1' });
+
+    vi.spyOn(ruleService, 'findActiveByEventName').mockResolvedValue([
+      buildRule({
+        actions: [{
+          type: 'test_action',
+          config: { entityType: 'subtasks' },
+          link: { as: 'prep_task' },
+        }],
+      }),
+    ]);
+
+    await listener.handleDomainEvent(buildEvent());
+
+    expect(provenanceService.log).toHaveBeenCalledWith({
+      ruleId: 'rule-1',
+      actionIndex: 0,
+      linkName: 'prep_task',
+      sourceEntityType: 'tasks',
+      sourceEntityId: 'task-1',
+      targetEntityType: 'subtasks',
+      targetEntityId: 'new-task-1',
+    });
+  });
+
+  it('should not log provenance when no link config', async () => {
+    mockHandler.execute.mockResolvedValue({ targetEntityId: 'new-task-1' });
+
+    vi.spyOn(ruleService, 'findActiveByEventName').mockResolvedValue([
+      buildRule({
+        actions: [{ type: 'test_action', config: { entityType: 'subtasks' } }],
+      }),
+    ]);
+
+    await listener.handleDomainEvent(buildEvent());
+
+    expect(provenanceService.log).not.toHaveBeenCalled();
+  });
+
+  it('should not log provenance when no targetEntityId in result', async () => {
+    mockHandler.execute.mockResolvedValue({});
+
+    vi.spyOn(ruleService, 'findActiveByEventName').mockResolvedValue([
+      buildRule({
+        actions: [{
+          type: 'test_action',
+          config: {},
+          link: { as: 'prep_task' },
+        }],
+      }),
+    ]);
+
+    await listener.handleDomainEvent(buildEvent());
+
+    expect(provenanceService.log).not.toHaveBeenCalled();
   });
 });
