@@ -32,6 +32,10 @@ function SortIcon({
   );
 }
 
+function isStickyRight<TData>(column: { columnDef: { meta?: Record<string, unknown> } }) {
+  return (column.columnDef.meta as { sticky?: string } | undefined)?.sticky === 'right';
+}
+
 export function DataGridTable<TData>({
   table,
   isLoading,
@@ -62,6 +66,8 @@ export function DataGridTable<TData>({
                     header.column.getCanSort() &&
                       onSortChange &&
                       'cursor-pointer select-none hover:text-foreground transition-colors',
+                    isStickyRight(header.column) &&
+                      'sticky right-0 z-10 bg-muted/50 shadow-[−2px_0_4px_rgba(0,0,0,0.06)]',
                   )}
                   style={
                     header.getSize() !== 150 ? { width: header.getSize() } : undefined
@@ -90,7 +96,13 @@ export function DataGridTable<TData>({
             ? Array.from({ length: pageSize }).map((_, i) => (
                 <tr key={`skeleton-${i}`} className="border-b last:border-0">
                   {table.getVisibleLeafColumns().map((column) => (
-                    <td key={column.id} className="h-12 px-4">
+                    <td
+                      key={column.id}
+                      className={cn(
+                        'h-12 px-4',
+                        isStickyRight(column) && 'sticky right-0 z-10 bg-background',
+                      )}
+                    >
                       <Skeleton className="h-4 w-[60%]" />
                     </td>
                   ))}
@@ -100,12 +112,19 @@ export function DataGridTable<TData>({
                 <tr
                   key={row.id}
                   className={cn(
-                    'border-b last:border-0 hover:bg-muted/50 transition-colors',
+                    'group/row border-b last:border-0 hover:bg-muted/50 transition-colors',
                     rowClassName?.(row.original),
                   )}
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className="h-12 px-4 align-middle">
+                    <td
+                      key={cell.id}
+                      className={cn(
+                        'h-12 px-4 align-middle',
+                        isStickyRight(cell.column) &&
+                          'sticky right-0 z-10 bg-background group-hover/row:bg-muted/50',
+                      )}
+                    >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>
                   ))}
