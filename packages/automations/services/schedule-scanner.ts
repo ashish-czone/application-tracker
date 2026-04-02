@@ -1,14 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { DatabaseService, eq, and, isNull, sql, lte } from '@packages/database';
+import { QueueService } from '@packages/queue';
 import { todayInTimezone } from '@packages/common';
 import { isPayloadCondition } from '@packages/common';
 import type { DomainEvent } from '@packages/events';
 import type { Condition } from '@packages/common';
+import { AUTOMATION_EXECUTION_QUEUE } from '../automations.module';
 import { automationScheduled } from '../schema/automation-scheduled';
 import { automationSentLog } from '../schema/automation-sent-log';
 import { AutomationRuleService } from './automation-rule.service';
-import { AutomationListener } from '../listeners/automation.listener';
 import { EntityResolverRegistry } from './entity-resolver-registry';
 import { buildConditions } from '../helpers/condition-builder';
 import type { AutomationRule, ScheduleDateOperator, ScheduleUnit } from '../types';
@@ -21,7 +22,7 @@ export class ScheduleScanner {
   constructor(
     private readonly database: DatabaseService,
     private readonly ruleService: AutomationRuleService,
-    private readonly automationListener: AutomationListener,
+    private readonly queueService: QueueService,
     private readonly entityResolverRegistry: EntityResolverRegistry,
     appLogger: AppLoggerService,
   ) {
@@ -87,7 +88,10 @@ export class ScheduleScanner {
           payload: storedPayload?.payload as Record<string, unknown> ?? {},
         };
 
-        await this.automationListener.executeActions(rule, event);
+        await this.queueService.enqueue(AUTOMATION_EXECUTION_QUEUE, {
+          ruleId: rule.id,
+          event,
+        });
         await this.markSent(scheduled.id);
       } catch (error) {
         this.logger.error('Error processing delayed automation', {
@@ -201,7 +205,7 @@ export class ScheduleScanner {
 
     if (matchedEntities.length === 0) return;
 
-    // Fire actions for each matched entity
+    // Enqueue a job per matched entity for parallel execution via Bull workers
     for (const entity of matchedEntities) {
       const syntheticEvent: DomainEvent = {
         eventName: `schedule.${rule.scheduleEntityType}`,
@@ -213,7 +217,10 @@ export class ScheduleScanner {
         payload: entity as Record<string, unknown>,
       };
 
-      await this.automationListener.executeActions(rule, syntheticEvent);
+      await this.queueService.enqueue(AUTOMATION_EXECUTION_QUEUE, {
+        ruleId: rule.id,
+        event: syntheticEvent,
+      });
       await this.logSent(rule.id, rule.scheduleEntityType!, entity.id, targetDate);
     }
   }
