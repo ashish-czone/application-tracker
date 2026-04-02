@@ -25,6 +25,7 @@ import type { FieldDefinition } from './types';
 import { buildSnapshot, diffSnapshot } from './helpers/snapshot';
 import { validatePayload } from './helpers/validate-payload';
 import { splitPayload } from './helpers/split-payload';
+import { buildClonePayload } from './helpers/build-clone-payload';
 import { TaxonomyService, type TagWithGroup } from '@packages/taxonomy';
 import { fieldTypeSaveHookRegistry, type FieldTypeSaveHookRegistry, type FieldTypeSaveHookContext } from './services/field-type-save-hook.registry';
 import { WorkflowEngineService, WorkflowRegistryService, PipelineResolverService } from '@packages/workflows';
@@ -830,6 +831,28 @@ export class EntityService {
     });
 
     return this.findOneOrFail(id);
+  }
+
+  // ---------------------------------------------------------------------------
+  // CLONE
+  // ---------------------------------------------------------------------------
+
+  async clone(id: string, actorId: string): Promise<Record<string, unknown>> {
+    const { config } = this;
+
+    // 1. Fetch source entity (full hydrated response with relational fields)
+    const source = await this.findOneOrFail(id);
+
+    // 2. Load field definitions
+    const defs = await this.fieldDefinitionService.listByEntityWithOptions(config.entityType);
+
+    // 3. Build clone payload (pure function — skips auto/readonly/workflow, transforms relational fields)
+    const nameField = config.ui.nameField;
+    const primaryNameField = Array.isArray(nameField) ? nameField[0] : nameField;
+    const clonePayload = buildClonePayload(source, defs, primaryNameField);
+
+    // 4. Delegate to create() — reuses validation, hooks, events, pipeline assignment
+    return this.create(clonePayload, actorId);
   }
 
   // ---------------------------------------------------------------------------

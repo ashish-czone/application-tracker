@@ -114,6 +114,14 @@ export function createEntityController(config: EntityConfig, serviceToken: strin
       return this.entityService.transition(id, body.fieldKey, body.to, user.userId, body.comment);
     }
 
+    @Post(':id/clone')
+    @RequirePermission(createPermission)
+    @HttpCode(HttpStatus.CREATED)
+    @ApiOperation({ summary: `Clone a ${config.singularName.toLowerCase()}` })
+    async clone(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: JwtPayload) {
+      return this.entityService.clone(id, user.userId);
+    }
+
     @Post(':id/restore')
     @RequirePermission(updatePermission)
     @ApiOperation({ summary: `Restore a soft-deleted ${config.singularName.toLowerCase()}` })

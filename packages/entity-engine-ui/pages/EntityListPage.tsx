@@ -133,6 +133,9 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
 
   const deleteMutation = hooks.useDelete({ onSuccess: () => setDeletingItem(null) });
   const restoreMutation = hooks.useRestore();
+  const cloneMutation = hooks.useClone({
+    onSuccess: (created) => navigate(`/${entity.slug}/${(created as any).id}`),
+  });
 
   const { data, isLoading, isError, refetch } = hooks.useList({
     page,
@@ -395,7 +398,7 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
             entitySlug={entity.slug}
             onEdit={() => navigate(`/${entity.slug}/${item.id}`)}
             onDelete={() => setDeletingItem(item)}
-            onClone={() => {/* TODO: clone */}}
+            onClone={() => cloneMutation.mutate(item.id as string)}
           />
         );
       },

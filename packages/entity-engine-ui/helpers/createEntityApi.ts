@@ -45,5 +45,7 @@ export function createEntityApi(
     delete: (id: string) => apiFn.delete<void>(`${basePath}/${id}`),
 
     restore: (id: string) => apiFn.post<Record<string, unknown>>(`${basePath}/${id}/restore`),
+
+    clone: (id: string) => apiFn.post<Record<string, unknown>>(`${basePath}/${id}/clone`),
   };
 }
