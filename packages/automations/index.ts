@@ -1,4 +1,4 @@
-export { AutomationsModule } from './automations.module';
+export { AutomationsModule, AUTOMATION_EXECUTION_QUEUE } from './automations.module';
 export { AUTOMATION_PERMISSIONS } from './permissions';
 export { ActionRegistry } from './services/action-registry';
 export { UserResolverRegistry, type UserResolverStrategy, type UserResolutionContext } from './services/user-resolver-registry';

@@ -4,6 +4,7 @@ import { QueueService } from '@packages/queue';
 import { RbacService } from '@packages/rbac';
 import { DatabaseService } from '@packages/database';
 import { cronForLocalHour } from '@packages/common';
+import type { DomainEvent } from '@packages/events';
 import { AutomationRuleService } from './services/automation-rule.service';
 import { AutomationListener } from './listeners/automation.listener';
 import { ActionRegistry } from './services/action-registry';
@@ -20,6 +21,7 @@ import { AutomationsMetadataController } from './controllers/automations-metadat
 import { WebhookAction, WEBHOOK_QUEUE_NAME } from './services/actions/webhook.action';
 
 export const AUTOMATION_SCHEDULE_SCAN_QUEUE = 'automation.schedule-scan';
+export const AUTOMATION_EXECUTION_QUEUE = 'automation.execution';
 
 @Global()
 @Module({
@@ -55,6 +57,8 @@ export class AutomationsModule implements OnModuleInit {
     private readonly rbacService: RbacService,
     private readonly database: DatabaseService,
     private readonly webhookAction: WebhookAction,
+    private readonly automationListener: AutomationListener,
+    private readonly ruleService: AutomationRuleService,
     appLogger: AppLoggerService,
   ) {
     this.logger = appLogger.forContext(AutomationsModule.name);
@@ -119,6 +123,23 @@ export class AutomationsModule implements OnModuleInit {
           throw new Error(`Webhook failed: ${response.status} ${text.slice(0, 200)}`);
         }
         this.logger.debug('Webhook delivered', { url, status: response.status, ruleId, correlationId });
+      },
+    });
+
+    // Register automation execution queue processor
+    // Used by schedule scanner to execute matched rule×entity pairs via Bull workers
+    this.queueService.registerProcessor({
+      name: AUTOMATION_EXECUTION_QUEUE,
+      handler: async (data) => {
+        const { ruleId, event } = data as { ruleId: string; event: DomainEvent };
+
+        const rule = await this.ruleService.findByIdOrFail(ruleId).catch(() => null);
+        if (!rule || !rule.isActive) {
+          this.logger.debug('Skipping execution — rule inactive or deleted', { ruleId });
+          return;
+        }
+
+        await this.automationListener.executeActions(rule, event);
       },
     });
   }

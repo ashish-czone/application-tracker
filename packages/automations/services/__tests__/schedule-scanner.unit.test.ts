@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ScheduleScanner } from '../schedule-scanner';
 import { AutomationRuleService } from '../automation-rule.service';
-import { AutomationListener } from '../../listeners/automation.listener';
 import { EntityResolverRegistry } from '../entity-resolver-registry';
+import { AUTOMATION_EXECUTION_QUEUE } from '../../automations.module';
 import type { AutomationRule } from '../../types';
 import type { AppLoggerService } from '@packages/logger';
 
@@ -94,14 +94,14 @@ function createMockDeps() {
   vi.spyOn(ruleService, 'findActiveScheduleRules').mockResolvedValue([]);
   vi.spyOn(ruleService, 'findByIdOrFail').mockResolvedValue(buildScheduleRule());
 
-  const automationListener = {
-    executeActions: vi.fn().mockResolvedValue(undefined),
+  const queueService = {
+    enqueue: vi.fn().mockResolvedValue('job-id'),
   } as any;
 
   const scanner = new ScheduleScanner(
     { db: mockDb } as any,
     ruleService,
-    automationListener,
+    queueService,
     registry,
     mockLogger,
   );
@@ -112,7 +112,7 @@ function createMockDeps() {
     queryResults,
     sentLogResults,
     ruleService,
-    automationListener,
+    queueService,
   };
 }
 
@@ -123,7 +123,7 @@ describe('ScheduleScanner', () => {
     deps = createMockDeps();
   });
 
-  it('should fire actions for each matched entity in schedule rules', async () => {
+  it('should enqueue a job for each matched entity in schedule rules', async () => {
     vi.spyOn(deps.ruleService, 'findActiveScheduleRules').mockResolvedValue([
       buildScheduleRule({ scheduleDateAmounts: [7] }),
     ]);
@@ -137,12 +137,15 @@ describe('ScheduleScanner', () => {
 
     await deps.scanner.scan();
 
-    expect(deps.automationListener.executeActions).toHaveBeenCalledTimes(1);
-    expect(deps.automationListener.executeActions).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'rule-1' }),
+    expect(deps.queueService.enqueue).toHaveBeenCalledTimes(1);
+    expect(deps.queueService.enqueue).toHaveBeenCalledWith(
+      AUTOMATION_EXECUTION_QUEUE,
       expect.objectContaining({
-        entityType: 'tasks',
-        entityId: 'task-1',
+        ruleId: 'rule-1',
+        event: expect.objectContaining({
+          entityType: 'tasks',
+          entityId: 'task-1',
+        }),
       }),
     );
   });
@@ -161,7 +164,7 @@ describe('ScheduleScanner', () => {
 
     await deps.scanner.scan();
 
-    expect(deps.automationListener.executeActions).not.toHaveBeenCalled();
+    expect(deps.queueService.enqueue).not.toHaveBeenCalled();
   });
 
   it('should deduplicate entities matched by multiple offsets', async () => {
@@ -179,10 +182,10 @@ describe('ScheduleScanner', () => {
 
     await deps.scanner.scan();
 
-    expect(deps.automationListener.executeActions).toHaveBeenCalledTimes(1);
+    expect(deps.queueService.enqueue).toHaveBeenCalledTimes(1);
   });
 
-  it('should not fire when no entities match', async () => {
+  it('should not enqueue when no entities match', async () => {
     vi.spyOn(deps.ruleService, 'findActiveScheduleRules').mockResolvedValue([
       buildScheduleRule({ scheduleDateAmounts: [7] }),
     ]);
@@ -194,10 +197,10 @@ describe('ScheduleScanner', () => {
 
     await deps.scanner.scan();
 
-    expect(deps.automationListener.executeActions).not.toHaveBeenCalled();
+    expect(deps.queueService.enqueue).not.toHaveBeenCalled();
   });
 
-  it('should log sent for each matched entity after firing', async () => {
+  it('should log sent for each matched entity after enqueuing', async () => {
     vi.spyOn(deps.ruleService, 'findActiveScheduleRules').mockResolvedValue([
       buildScheduleRule({ scheduleDateAmounts: [7] }),
     ]);
@@ -218,7 +221,7 @@ describe('ScheduleScanner', () => {
     expect(deps.mockDb.insert).toHaveBeenCalledTimes(2);
   });
 
-  it('should process delayed events and fire actions', async () => {
+  it('should enqueue delayed events for execution', async () => {
     vi.spyOn(deps.ruleService, 'findActiveScheduleRules').mockResolvedValue([]);
 
     deps.queryResults.push(
@@ -236,7 +239,18 @@ describe('ScheduleScanner', () => {
 
     await deps.scanner.scan();
 
-    expect(deps.automationListener.executeActions).toHaveBeenCalledTimes(1);
+    expect(deps.queueService.enqueue).toHaveBeenCalledTimes(1);
+    expect(deps.queueService.enqueue).toHaveBeenCalledWith(
+      AUTOMATION_EXECUTION_QUEUE,
+      expect.objectContaining({
+        ruleId: 'rule-1',
+        event: expect.objectContaining({
+          entityType: 'tasks',
+          entityId: 'task-1',
+          eventName: 'tasks.TaskCreated',
+        }),
+      }),
+    );
   });
 
   it('should not crash on scan errors', async () => {
@@ -245,6 +259,6 @@ describe('ScheduleScanner', () => {
 
     await deps.scanner.scan();
 
-    expect(deps.automationListener.executeActions).not.toHaveBeenCalled();
+    expect(deps.queueService.enqueue).not.toHaveBeenCalled();
   });
 });
