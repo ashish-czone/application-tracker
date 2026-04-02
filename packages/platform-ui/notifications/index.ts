@@ -12,15 +12,18 @@ export type {
 } from './types';
 
 // --- Re-export from automations for backwards compatibility ---
-export { AutomationsListPage, RuleBuilderPage } from '../automations';
+export { AutomationsListPage, RuleBuilderPage, ExecutionLogPage } from '../automations';
 export {
   useAutomationRules, useAutomationRule, useCreateAutomationRule, useUpdateAutomationRule,
   useDeleteAutomationRule, useToggleAutomationRule,
   useEvents, useEntities, useActionTypes, useUserStrategies, useEntityFields,
+  useAutomationExecutions,
 } from '../automations';
 export type {
-  AutomationRule, ActionConfig, UserResolution, LifecycleUpdateBinding, LifecycleDeleteBinding,
-  CreateAutomationRuleRequest, UpdateAutomationRuleRequest, ListAutomationRulesParams,
+  AutomationRule, AutomationExecution, ActionConfig, UserResolution,
+  LifecycleUpdateBinding, LifecycleDeleteBinding,
+  CreateAutomationRuleRequest, UpdateAutomationRuleRequest,
+  ListAutomationRulesParams, ListExecutionsParams,
   ActionTypeMetadata, UserStrategyMetadata, UserResolutionStrategy,
   TriggerType, Condition, EventMetadata, EntityMetadata,
 } from '../automations';
