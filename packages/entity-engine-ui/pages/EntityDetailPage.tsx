@@ -68,7 +68,7 @@ export function EntityDetailPage({ entityType, renderAuditTrail, renderPipelineP
   const { data: layout, isLoading: layoutLoading } = useEntityLayout(entityType);
   const { data: listLayout } = useListLayout(entityType);
   const updateMutation = hooks.useUpdate();
-  const createMutation = hooks.useCreate();
+  const cloneMutation = hooks.useClone();
   const deleteMutation = hooks.useDelete({
     onSuccess: () => navigate(`/${entity.slug}`),
   });
@@ -177,12 +177,10 @@ export function EntityDetailPage({ entityType, renderAuditTrail, renderPipelineP
         break;
       case 'clone': {
         try {
-          const { id: _id, createdAt: _ca, updatedAt: _ua, deletedAt: _da, deletedBy: _db, createdBy: _cb, ...cloneData } = item;
-          const created = await createMutation.mutateAsync(cloneData);
-          toast.success(`${entity.singularName} cloned`);
+          const created = await cloneMutation.mutateAsync(item.id as string);
           navigate(`/${entity.slug}/${(created as any).id}`);
         } catch {
-          toast.error(`Failed to clone ${entity.singularName.toLowerCase()}`);
+          // Error handled by useClone hook toast
         }
         break;
       }
