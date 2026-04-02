@@ -373,6 +373,7 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
       size: 60,
       enableHiding: false,
       enableSorting: false,
+      meta: { sticky: 'right' },
       cell: ({ row }) => {
         const item = row.original;
         const isDeleted = !!item.deletedAt;
