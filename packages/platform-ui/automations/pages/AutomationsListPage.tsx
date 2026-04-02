@@ -153,6 +153,7 @@ export function AutomationsListPage() {
       size: 80,
       enableHiding: false,
       enableSorting: false,
+      meta: { sticky: 'right' },
       cell: ({ row }) => (
         <div className="flex items-center gap-1 justify-end">
           <button
