@@ -47,6 +47,7 @@ export interface EntityApi {
   update: (id: string, data: Record<string, unknown>) => Promise<Record<string, unknown>>;
   delete: (id: string) => Promise<void>;
   restore: (id: string) => Promise<Record<string, unknown>>;
+  clone: (id: string) => Promise<Record<string, unknown>>;
 }
 
 /** Plugin section rendered on entity detail page */

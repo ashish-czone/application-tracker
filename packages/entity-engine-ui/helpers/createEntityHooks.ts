@@ -93,7 +93,23 @@ export function createEntityHooks(entityType: string, singularName: string, api:
     });
   }
 
-  return { useList, useDetail, useCreate, useUpdate, useDelete, useRestore };
+  function useClone(options?: { onSuccess?: (entity: Record<string, unknown>) => void }) {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+      mutationFn: (id: string) => api.clone(id),
+      onSuccess: (entity) => {
+        queryClient.invalidateQueries({ queryKey: listKey });
+        toast.success(`${singularName} cloned`);
+        options?.onSuccess?.(entity);
+      },
+      onError: (error: any) => {
+        toast.error(error?.body?.message || `Failed to clone ${singularName.toLowerCase()}`);
+      },
+    });
+  }
+
+  return { useList, useDetail, useCreate, useUpdate, useDelete, useRestore, useClone };
 }
 
 export type EntityHooks = ReturnType<typeof createEntityHooks>;
