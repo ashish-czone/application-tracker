@@ -9,7 +9,7 @@ export interface JobDefinition<T = unknown> {
 
 export interface JobRetentionPolicy {
   /** Max age in seconds before auto-removal */
-  age?: number;
+  age: number;
   /** Max number of jobs to keep */
   count?: number;
 }
