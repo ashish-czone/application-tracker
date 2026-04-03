@@ -10,6 +10,7 @@ const RegisterPage = lazy(() => import('@packages/platform-ui/auth/pages/Registe
 const ForgotPasswordPage = lazy(() => import('@packages/platform-ui/auth/pages/ForgotPasswordPage'));
 const ResetPasswordPage = lazy(() => import('@packages/platform-ui/auth/pages/ResetPasswordPage'));
 const ProfilePage = lazy(() => import('@packages/platform-ui/auth/pages/ProfilePage'));
+const OAuthCallbackPage = lazy(() => import('@packages/platform-ui/auth/pages/OAuthCallbackPage'));
 
 function DashboardPage() {
   return (
@@ -39,6 +40,7 @@ export function AppRouter() {
       <Route path="/register" element={<Suspense fallback={null}><RegisterPage /></Suspense>} />
       <Route path="/forgot-password" element={<Suspense fallback={null}><ForgotPasswordPage /></Suspense>} />
       <Route path="/reset-password" element={<Suspense fallback={null}><ResetPasswordPage /></Suspense>} />
+      <Route path="/oauth/callback" element={<Suspense fallback={null}><OAuthCallbackPage /></Suspense>} />
 
       {/* Protected routes */}
       <Route element={<AuthGuard />}>

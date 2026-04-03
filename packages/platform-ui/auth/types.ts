@@ -91,3 +91,16 @@ export interface UpdateProfileRequest {
   email?: string;
   phone?: string;
 }
+
+// OAuth types
+
+export interface OAuthProviderInfo {
+  provider: string;
+  clientId: string;
+  scopes: string[];
+}
+
+export interface OAuthLoginRequest {
+  code: string;
+  redirectUri: string;
+}

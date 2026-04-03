@@ -12,6 +12,8 @@ import type {
   MessageResponse,
   UserProfile,
   UpdateProfileRequest,
+  OAuthLoginRequest,
+  OAuthProviderInfo,
 } from './types';
 
 const AUTH_BASE = '/auth/client';
@@ -56,6 +58,14 @@ export function createAuthApi(api: ApiFn) {
 
     updateProfile(data: UpdateProfileRequest): Promise<UserProfile> {
       return api.patch<UserProfile>(`${AUTH_BASE}/me`, data);
+    },
+
+    oauthLogin(provider: string, data: OAuthLoginRequest): Promise<AuthTokensResponse> {
+      return api.post<AuthTokensResponse>(`${AUTH_BASE}/oauth/${provider}`, data);
+    },
+
+    getOAuthProviders(): Promise<OAuthProviderInfo[]> {
+      return api.get<OAuthProviderInfo[]>('/auth/oauth/providers');
     },
   };
 }
