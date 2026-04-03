@@ -50,9 +50,11 @@ export function SettingField({ field, module }: SettingFieldProps) {
         {field.metadata.description && (
           <p className="text-xs text-muted-foreground">{field.metadata.description}</p>
         )}
-        <div className="text-[10px] text-muted-foreground mt-1">
-          Default: <code className="bg-muted px-1 py-0.5 rounded">{JSON.stringify(field.default)}</code>
-        </div>
+        {field.metadata.type !== 'password' && (
+          <div className="text-[10px] text-muted-foreground mt-1">
+            Default: <code className="bg-muted px-1 py-0.5 rounded">{JSON.stringify(field.default)}</code>
+          </div>
+        )}
       </div>
 
       {/* Right: input + actions — fixed width to prevent layout shifts */}
@@ -97,6 +99,15 @@ export function SettingField({ field, module }: SettingFieldProps) {
             onKeyDown={handleKeyDown}
             min={field.metadata.min}
             max={field.metadata.max}
+            className="h-9 flex-1 min-w-0 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+          />
+        ) : field.metadata.type === 'password' ? (
+          <input
+            type="password"
+            value={String(value ?? '')}
+            onChange={(e) => setValue(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Enter value"
             className="h-9 flex-1 min-w-0 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
           />
         ) : (
