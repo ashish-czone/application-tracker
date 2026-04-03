@@ -282,6 +282,17 @@ export class ScheduleScanner {
     }
   }
 
+  async deletePendingForEntity(entityType: string, entityId: string, tx?: any): Promise<void> {
+    const db = tx ?? this.database.db;
+    await db
+      .delete(automationScheduled)
+      .where(and(
+        eq(automationScheduled.entityType, entityType),
+        eq(automationScheduled.entityId, entityId),
+        isNull(automationScheduled.sentAt),
+      ));
+  }
+
   private async markSent(scheduledId: string): Promise<void> {
     await this.database.db
       .update(automationScheduled)
