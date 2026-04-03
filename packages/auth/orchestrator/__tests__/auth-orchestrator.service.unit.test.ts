@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { UnauthorizedException, ConflictException, InternalServerErrorException } from '@nestjs/common';
+import { UnauthorizedException, BadRequestException, ConflictException, InternalServerErrorException } from '@nestjs/common';
 import { AuthOrchestratorService } from '../auth-orchestrator.service';
 
 function createMockAuthService() {
@@ -14,6 +14,9 @@ function createMockAuthService() {
     createPasswordResetToken: vi.fn().mockResolvedValue({ token: 'reset-token', expiresAt: new Date() }),
     resetPassword: vi.fn().mockResolvedValue(undefined),
     createPasswordCredential: vi.fn().mockResolvedValue({ id: 'cred-1' }),
+    findCredential: vi.fn().mockResolvedValue(null),
+    createCredential: vi.fn().mockResolvedValue({ id: 'cred-2' }),
+    findUserByEmail: vi.fn().mockResolvedValue(null),
   } as any;
 }
 
@@ -70,6 +73,23 @@ function createMockEventEmitter() {
   } as any;
 }
 
+function createMockAdapterRegistry() {
+  const passwordAdapter = {
+    provider: 'password',
+    authenticate: vi.fn(),
+  };
+  return {
+    get: vi.fn().mockImplementation((provider: string) => {
+      if (provider === 'password') return passwordAdapter;
+      return undefined;
+    }),
+    has: vi.fn().mockImplementation((provider: string) => provider === 'password'),
+    register: vi.fn(),
+    getAll: vi.fn().mockReturnValue([passwordAdapter]),
+    _passwordAdapter: passwordAdapter,
+  } as any;
+}
+
 function createMockLogger() {
   return {
     forContext: vi.fn().mockReturnValue({
@@ -86,19 +106,35 @@ describe('AuthOrchestratorService', () => {
   let rbacService: ReturnType<typeof createMockRbacService>;
   let database: ReturnType<typeof createMockDatabaseService>;
   let eventEmitter: ReturnType<typeof createMockEventEmitter>;
+  let adapterRegistry: ReturnType<typeof createMockAdapterRegistry>;
 
   beforeEach(() => {
     authService = createMockAuthService();
     rbacService = createMockRbacService();
     database = createMockDatabaseService();
     eventEmitter = createMockEventEmitter();
+    adapterRegistry = createMockAdapterRegistry();
     const logger = createMockLogger();
+
+    // Configure password adapter to delegate to authService
+    adapterRegistry._passwordAdapter.authenticate.mockImplementation(async (creds: any) => {
+      const { userId } = await authService.verifyPasswordCredential(creds.identifier, creds.password);
+      return {
+        userId,
+        email: creds.identifier,
+        provider: 'password',
+        providerIdentifier: creds.identifier,
+        isNewUser: false,
+        isNewCredential: false,
+      };
+    });
 
     service = new AuthOrchestratorService(
       authService,
       rbacService,
       database as any,
       eventEmitter,
+      adapterRegistry,
       logger,
     );
   });
@@ -258,6 +294,146 @@ describe('AuthOrchestratorService', () => {
         'auth.PasswordResetCompleted',
         expect.objectContaining({ entityType: 'users' }),
       );
+    });
+  });
+
+  describe('loginWithProvider', () => {
+    it('should throw BadRequestException for unknown provider', async () => {
+      await expect(service.loginWithProvider('unknown', {}, 'client'))
+        .rejects.toThrow(BadRequestException);
+    });
+
+    it('should handle existing user login via adapter', async () => {
+      const mockAdapter = {
+        provider: 'google',
+        authenticate: vi.fn().mockResolvedValue({
+          userId: 'u1',
+          email: 'john@test.com',
+          provider: 'google',
+          providerIdentifier: 'google-123',
+          isNewUser: false,
+          isNewCredential: false,
+        }),
+      };
+      adapterRegistry.get.mockImplementation((p: string) =>
+        p === 'google' ? mockAdapter : undefined,
+      );
+
+      database._selectChain.limit.mockResolvedValue([{
+        email: 'john@test.com',
+        firstName: 'John',
+        lastName: 'Doe',
+        userType: 'client',
+      }]);
+
+      const result = await service.loginWithProvider('google', { code: 'abc', redirectUri: 'http://localhost' }, 'client');
+
+      expect(result).toEqual({
+        accessToken: 'access-token',
+        refreshToken: 'refresh-token',
+        userId: 'u1',
+      });
+      expect(mockAdapter.authenticate).toHaveBeenCalled();
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        'auth.UserLoggedIn',
+        expect.objectContaining({ entityId: 'u1' }),
+      );
+    });
+
+    it('should create credential for account linking', async () => {
+      const mockAdapter = {
+        provider: 'google',
+        authenticate: vi.fn().mockResolvedValue({
+          userId: 'u1',
+          email: 'john@test.com',
+          provider: 'google',
+          providerIdentifier: 'google-123',
+          isNewUser: false,
+          isNewCredential: true,
+        }),
+      };
+      adapterRegistry.get.mockImplementation((p: string) =>
+        p === 'google' ? mockAdapter : undefined,
+      );
+
+      database._selectChain.limit.mockResolvedValue([{
+        email: 'john@test.com',
+        firstName: 'John',
+        lastName: 'Doe',
+        userType: 'client',
+      }]);
+
+      await service.loginWithProvider('google', { code: 'abc', redirectUri: 'http://localhost' }, 'client');
+
+      expect(authService.createCredential).toHaveBeenCalledWith('u1', 'google', 'google-123');
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        'auth.AccountLinked',
+        expect.objectContaining({
+          entityId: 'u1',
+          payload: expect.objectContaining({ provider: 'google' }),
+        }),
+      );
+    });
+
+    it('should create user and credential for new OAuth user', async () => {
+      const mockAdapter = {
+        provider: 'google',
+        authenticate: vi.fn().mockResolvedValue({
+          email: 'new@test.com',
+          firstName: 'New',
+          lastName: 'User',
+          provider: 'google',
+          providerIdentifier: 'google-456',
+          isNewUser: true,
+          isNewCredential: true,
+        }),
+      };
+      adapterRegistry.get.mockImplementation((p: string) =>
+        p === 'google' ? mockAdapter : undefined,
+      );
+
+      // After transaction, loadUser returns the new user
+      database._selectChain.limit.mockResolvedValue([{
+        email: 'new@test.com',
+        firstName: 'New',
+        lastName: 'User',
+        userType: 'client',
+      }]);
+
+      const result = await service.loginWithProvider('google', { code: 'abc', redirectUri: 'http://localhost' }, 'client');
+
+      expect(result.userId).toBe('new-user-1');
+      expect(rbacService.findDefaultRoleForUserType).toHaveBeenCalledWith('client');
+      expect(rbacService.assignRoleToUser).toHaveBeenCalledWith('new-user-1', 'role-1');
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        'auth.UserRegistered',
+        expect.objectContaining({
+          entityId: 'new-user-1',
+          payload: expect.objectContaining({ authProvider: 'google' }),
+        }),
+      );
+    });
+
+    it('should throw when new OAuth user type does not match', async () => {
+      const mockAdapter = {
+        provider: 'google',
+        authenticate: vi.fn().mockResolvedValue({
+          email: 'new@test.com',
+          provider: 'google',
+          providerIdentifier: 'google-456',
+          isNewUser: true,
+          isNewCredential: true,
+        }),
+      };
+      adapterRegistry.get.mockImplementation((p: string) =>
+        p === 'google' ? mockAdapter : undefined,
+      );
+
+      // loadUser returns null (user not found after creation — edge case)
+      database._selectChain.limit.mockResolvedValue([]);
+
+      await expect(service.loginWithProvider('google', { code: 'abc', redirectUri: 'http://localhost' }, 'client'))
+        .rejects.toThrow(UnauthorizedException);
     });
   });
 });

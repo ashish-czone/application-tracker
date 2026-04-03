@@ -1,4 +1,4 @@
-import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Param, Body, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { Public } from '../decorators/public.decorator';
@@ -10,6 +10,7 @@ import { RefreshDto } from '../dto/refresh.dto';
 import { ForgotPasswordDto } from '../dto/forgot-password.dto';
 import { ResetPasswordDto } from '../dto/reset-password.dto';
 import { ChangePasswordDto } from '../dto/change-password.dto';
+import { OAuthLoginDto } from '../dto/oauth-login.dto';
 
 @ApiTags('auth/admin')
 @Controller('auth/admin')
@@ -23,6 +24,15 @@ export class AdminAuthController {
   @ApiOperation({ summary: 'Login as admin' })
   async login(@Body() dto: LoginDto) {
     return this.adminAuth.adminLogin(dto.identifier, dto.password);
+  }
+
+  @Public()
+  @Throttle({ default: { ttl: 60000, limit: 5 } })
+  @Post('oauth/:provider')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Login via OAuth provider as admin' })
+  async oauthLogin(@Param('provider') provider: string, @Body() dto: OAuthLoginDto) {
+    return this.adminAuth.adminOAuthLogin(provider, dto.code, dto.redirectUri);
   }
 
   @Public()

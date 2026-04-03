@@ -1,5 +1,5 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { DatabaseService, eq, and, isNull, gt, type DrizzleDB } from '@packages/database';
+import { DatabaseService, users, eq, and, isNull, gt, type DrizzleDB } from '@packages/database';
 import { CredentialsService } from './credentials.service';
 import { TokensService } from './tokens.service';
 import { authTokens } from '../schema';
@@ -120,6 +120,26 @@ export class AuthService {
     }
 
     await this.credentialsService.updateSecretHash(userId, 'password', newPassword);
+  }
+
+  // --- Generic credential management (used by adapters like OAuth) ---
+
+  async findCredential(provider: string, identifier: string) {
+    return this.credentialsService.findByProviderAndIdentifier(provider, identifier);
+  }
+
+  async createCredential(userId: string, provider: string, identifier: string, tx?: DrizzleDB) {
+    return this.credentialsService.createCredential(userId, provider, identifier, tx);
+  }
+
+  async findUserByEmail(email: string) {
+    const [user] = await this.database.db
+      .select()
+      .from(users)
+      .where(and(eq(users.email, email.toLowerCase()), isNull(users.deletedAt)))
+      .limit(1);
+
+    return user ?? null;
   }
 
   // --- Password reset tokens ---

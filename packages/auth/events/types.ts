@@ -5,6 +5,7 @@ export const AUTH_USER_LOGGED_IN = 'auth.UserLoggedIn' as const;
 export const AUTH_PASSWORD_RESET_REQUESTED = 'auth.PasswordResetRequested' as const;
 export const AUTH_PASSWORD_RESET_COMPLETED = 'auth.PasswordResetCompleted' as const;
 export const AUTH_PASSWORD_CHANGED = 'auth.PasswordChanged' as const;
+export const AUTH_ACCOUNT_LINKED = 'auth.AccountLinked' as const;
 
 // --- Payload types ---
 
@@ -29,6 +30,12 @@ export interface PasswordResetCompletedPayload {
   [key: string]: unknown;
 }
 
+export interface AccountLinkedPayload {
+  provider: string;
+  userType: string;
+  [key: string]: unknown;
+}
+
 // --- Augment global EventPayloadMap for compile-time safety ---
 
 declare module '@packages/events' {
@@ -38,6 +45,7 @@ declare module '@packages/events' {
     [AUTH_PASSWORD_RESET_REQUESTED]: PasswordResetRequestedPayload;
     [AUTH_PASSWORD_RESET_COMPLETED]: PasswordResetCompletedPayload;
     [AUTH_PASSWORD_CHANGED]: UserPayload;
+    [AUTH_ACCOUNT_LINKED]: AccountLinkedPayload;
   }
 }
 
@@ -71,4 +79,10 @@ export interface PasswordChangedEvent extends DomainEvent {
   eventName: typeof AUTH_PASSWORD_CHANGED;
   entityType: 'users';
   payload: UserPayload;
+}
+
+export interface AccountLinkedEvent extends DomainEvent {
+  eventName: typeof AUTH_ACCOUNT_LINKED;
+  entityType: 'users';
+  payload: AccountLinkedPayload;
 }

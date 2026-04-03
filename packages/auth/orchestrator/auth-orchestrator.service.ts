@@ -1,15 +1,17 @@
-import { Injectable, UnauthorizedException, ConflictException, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, BadRequestException, ConflictException, InternalServerErrorException } from '@nestjs/common';
 import { RbacService } from '@packages/rbac';
 import { DatabaseService, users, eq } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { AuthService } from '../services/auth.service';
+import { AuthAdapterRegistry } from '../adapters/auth-adapter-registry';
 import {
   AUTH_USER_REGISTERED,
   AUTH_USER_LOGGED_IN,
   AUTH_PASSWORD_RESET_REQUESTED,
   AUTH_PASSWORD_RESET_COMPLETED,
   AUTH_PASSWORD_CHANGED,
+  AUTH_ACCOUNT_LINKED,
 } from '../events/types';
 
 @Injectable()
@@ -22,41 +24,107 @@ export class AuthOrchestratorService {
     protected readonly rbacService: RbacService,
     protected readonly database: DatabaseService,
     protected readonly domainEventEmitter: DomainEventEmitter,
+    protected readonly adapterRegistry: AuthAdapterRegistry,
     appLogger: AppLoggerService,
   ) {
     this.logger = appLogger.forContext(AuthOrchestratorService.name);
   }
 
   async login(identifier: string, password: string, userType: string) {
-    const { userId } = await this.authService.verifyPasswordCredential(identifier, password);
+    return this.loginWithProvider('password', { identifier, password }, userType);
+  }
 
-    // Validate user has the required user type
-    const user = await this.loadUser(userId);
+  async loginWithProvider(provider: string, credentials: Record<string, unknown>, userType: string) {
+    const adapter = this.adapterRegistry.get(provider);
+    if (!adapter) {
+      throw new BadRequestException(`Unknown auth provider: ${provider}`);
+    }
+
+    const result = await adapter.authenticate(credentials);
+    let userId = result.userId;
+
+    if (result.isNewUser) {
+      // Create user + credential in a transaction
+      const newUser = await this.database.db.transaction(async (tx) => {
+        const [created] = await tx
+          .insert(users)
+          .values({
+            email: result.email.toLowerCase(),
+            firstName: result.firstName ?? result.email.split('@')[0],
+            lastName: result.lastName ?? '',
+            userType,
+          })
+          .returning();
+
+        await this.authService.createCredential(created.id, result.provider, result.providerIdentifier, tx);
+        return created;
+      });
+
+      userId = newUser.id;
+
+      // Assign default role (outside transaction — idempotent)
+      const defaultRole = await this.rbacService.findDefaultRoleForUserType(userType);
+      if (defaultRole) {
+        await this.rbacService.assignRoleToUser(userId, defaultRole.id);
+      }
+    } else if (result.isNewCredential && userId) {
+      // Account linking — create credential for existing user
+      await this.authService.createCredential(userId, result.provider, result.providerIdentifier);
+    }
+
+    // Validate user type
+    const user = await this.loadUser(userId!);
     if (!user || user.userType !== userType) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // Load permissions for this user type
-    const permissions = await this.rbacService.getPermissionsForUser(userId, userType);
+    // Generate tokens
+    const permissions = await this.rbacService.getPermissionsForUser(userId!, userType);
+    const accessToken = this.authService.generateAccessToken({ userId: userId!, userType, permissions });
+    const { token: refreshToken } = await this.authService.createRefreshToken(userId!);
 
-    const accessToken = this.authService.generateAccessToken({ userId, userType, permissions });
-    const { token: refreshToken } = await this.authService.createRefreshToken(userId);
+    this.logger.log('User authenticated', { userId: userId!, userType, provider });
 
-    this.logger.log('User logged in', { userId, userType });
+    // Emit appropriate event
+    if (result.isNewUser) {
+      this.domainEventEmitter.emit(AUTH_USER_REGISTERED, {
+        entityType: 'users',
+        entityId: userId!,
+        actorId: userId!,
+        payload: {
+          email: user.email ?? null,
+          firstName: user.firstName ?? null,
+          lastName: user.lastName ?? null,
+          userType,
+          authProvider: provider,
+        },
+      });
+    } else if (result.isNewCredential) {
+      this.domainEventEmitter.emit(AUTH_ACCOUNT_LINKED, {
+        entityType: 'users',
+        entityId: userId!,
+        actorId: userId!,
+        payload: {
+          provider: result.provider,
+          userType,
+        },
+      });
+    } else {
+      this.domainEventEmitter.emit(AUTH_USER_LOGGED_IN, {
+        entityType: 'users',
+        entityId: userId!,
+        actorId: userId!,
+        payload: {
+          email: user.email ?? null,
+          firstName: user.firstName ?? null,
+          lastName: user.lastName ?? null,
+          userType,
+          authProvider: provider,
+        },
+      });
+    }
 
-    this.domainEventEmitter.emit(AUTH_USER_LOGGED_IN, {
-      entityType: 'users',
-      entityId: userId,
-      actorId: userId,
-      payload: {
-        email: user.email ?? null,
-        firstName: user.firstName ?? null,
-        lastName: user.lastName ?? null,
-        userType,
-      },
-    });
-
-    return { accessToken, refreshToken, userId };
+    return { accessToken, refreshToken, userId: userId! };
   }
 
   async refresh(refreshToken: string, userType: string) {

@@ -14,4 +14,8 @@ export class AdminAuthService extends AuthOrchestratorService {
   async adminRefresh(refreshToken: string) {
     return this.refresh(refreshToken, USER_TYPE);
   }
+
+  async adminOAuthLogin(provider: string, code: string, redirectUri: string) {
+    return this.loginWithProvider(provider, { provider, code, redirectUri }, USER_TYPE);
+  }
 }

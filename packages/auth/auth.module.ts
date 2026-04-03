@@ -7,6 +7,8 @@ import { AuthService } from './services/auth.service';
 import { CredentialsService } from './services/credentials.service';
 import { TokensService } from './services/tokens.service';
 import { AuthGuard } from './guards/auth.guard';
+import { AuthAdapterRegistry } from './adapters/auth-adapter-registry';
+import { PasswordAuthAdapter } from './adapters/password-auth.adapter';
 import { AuthOrchestratorService } from './orchestrator/auth-orchestrator.service';
 import { ClientAuthService } from './orchestrator/client-auth.service';
 import { AdminAuthService } from './orchestrator/admin-auth.service';
@@ -20,6 +22,7 @@ import {
   AUTH_PASSWORD_RESET_REQUESTED,
   AUTH_PASSWORD_RESET_COMPLETED,
   AUTH_PASSWORD_CHANGED,
+  AUTH_ACCOUNT_LINKED,
 } from './events/types';
 
 const AUTH_DEFAULTS = {
@@ -52,6 +55,8 @@ export class AuthModule implements OnModuleInit {
     private readonly eventRegistry: EventRegistryService,
     private readonly appConfig: AppConfigService,
     private readonly auditRegistry: AuditRegistryService,
+    private readonly authAdapterRegistry: AuthAdapterRegistry,
+    private readonly passwordAuthAdapter: PasswordAuthAdapter,
   ) {}
 
   static register(config: AuthModuleConfig): DynamicModule {
@@ -69,12 +74,14 @@ export class AuthModule implements OnModuleInit {
         TokensService,
         AuthService,
         AuthGuard,
+        AuthAdapterRegistry,
+        PasswordAuthAdapter,
         AuthOrchestratorService,
         ClientAuthService,
         AdminAuthService,
         SeedService,
       ],
-      exports: [AuthService, AuthGuard],
+      exports: [AuthService, AuthGuard, AuthAdapterRegistry],
     };
   }
 
@@ -97,16 +104,21 @@ export class AuthModule implements OnModuleInit {
         TokensService,
         AuthService,
         AuthGuard,
+        AuthAdapterRegistry,
+        PasswordAuthAdapter,
         AuthOrchestratorService,
         ClientAuthService,
         AdminAuthService,
         SeedService,
       ],
-      exports: [AuthService, AuthGuard],
+      exports: [AuthService, AuthGuard, AuthAdapterRegistry],
     };
   }
 
   onModuleInit() {
+    // Register built-in password adapter
+    this.authAdapterRegistry.register(this.passwordAuthAdapter);
+
     this.appConfig.register('auth', {
       label: 'Authentication',
       defaults: {
@@ -179,6 +191,16 @@ export class AuthModule implements OnModuleInit {
         email: { type: 'string', label: 'Email' },
         firstName: { type: 'string', label: 'First Name' },
         lastName: { type: 'string', label: 'Last Name' },
+        userType: { type: 'string', label: 'User Type' },
+      },
+    });
+
+    this.eventRegistry.register({
+      eventName: AUTH_ACCOUNT_LINKED,
+      group: 'auth',
+      description: 'Fired when an external auth provider is linked to an existing account',
+      payloadSchema: {
+        provider: { type: 'string', label: 'Auth Provider' },
         userType: { type: 'string', label: 'User Type' },
       },
     });
