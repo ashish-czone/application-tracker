@@ -21,6 +21,7 @@ import { OAuthModule } from '@packages/oauth';
 import { RbacGuard } from '@packages/rbac';
 import { AppConfigService } from '@packages/settings';
 import { TaxonomyModule } from '@packages/taxonomy';
+import { NotesModule } from '@packages/notes';
 import { HierarchyModule } from '@packages/hierarchy';
 import { EavAttributesModule } from '@packages/eav-attributes';
 import { EntityRelationsModule } from '@packages/entity-relations';
@@ -85,6 +86,7 @@ import { validate } from './config/env.validation';
     WorkflowsModule,
     HierarchyModule,
     TaxonomyModule,
+    NotesModule,
     EavAttributesModule,
     EntityRelationsModule,
     EntityLayoutModule,
