@@ -1,15 +1,20 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { DatabaseService, eq, and, isNull, desc, count, sql } from '@packages/database';
+import { DomainEventEmitter } from '@packages/events';
 import type { PaginatedResponse } from '@packages/common';
 import { users } from '@packages/database/schema';
 import { notes } from '../schema/notes';
 import { noteMentions } from '../schema/note-mentions';
 import { extractMentionUserIds } from '../helpers/extract-mentions';
+import { NOTES_NOTE_CREATED, NOTES_NOTE_UPDATED, NOTES_NOTE_DELETED } from '../events/types';
 import type { NoteWithAuthor } from '../types';
 
 @Injectable()
 export class NotesService {
-  constructor(private readonly database: DatabaseService) {}
+  constructor(
+    private readonly database: DatabaseService,
+    private readonly domainEventEmitter: DomainEventEmitter,
+  ) {}
 
   async create(data: {
     entityType: string;
@@ -32,6 +37,20 @@ export class NotesService {
 
     const mentionedUserIds = extractMentionUserIds(data.content);
     await this.syncMentions(note.id, mentionedUserIds);
+
+    this.domainEventEmitter.emit(NOTES_NOTE_CREATED, {
+      entityType: 'notes',
+      entityId: note.id,
+      actorId: data.authorId,
+      payload: {
+        entityType: data.entityType,
+        entityId: data.entityId,
+        authorId: data.authorId,
+        content: data.content,
+        isInternal: note.isInternal,
+        mentionedUserIds,
+      },
+    });
 
     return this.findByIdOrFail(note.id);
   }
@@ -61,7 +80,26 @@ export class NotesService {
       await this.syncMentions(id, mentionedUserIds);
     }
 
-    return this.findByIdOrFail(id);
+    const updated = await this.findByIdOrFail(id);
+    const mentionedUserIds = await this.getMentionUserIds(id);
+
+    this.domainEventEmitter.emit(NOTES_NOTE_UPDATED, {
+      entityType: 'notes',
+      entityId: id,
+      actorId,
+      payload: {
+        entityType: updated.entityType,
+        entityId: updated.entityId,
+        authorId: updated.authorId,
+        content: updated.content,
+        isInternal: updated.isInternal,
+        mentionedUserIds,
+        before: { content: existing.content, isInternal: existing.isInternal },
+        after: { content: updated.content, isInternal: updated.isInternal },
+      },
+    });
+
+    return updated;
   }
 
   async softDelete(id: string, actorId: string): Promise<void> {
@@ -75,6 +113,17 @@ export class NotesService {
       .update(notes)
       .set({ deletedAt: new Date(), deletedBy: actorId })
       .where(eq(notes.id, id));
+
+    this.domainEventEmitter.emit(NOTES_NOTE_DELETED, {
+      entityType: 'notes',
+      entityId: id,
+      actorId,
+      payload: {
+        entityType: existing.entityType,
+        entityId: existing.entityId,
+        authorId: existing.authorId,
+      },
+    });
   }
 
   async findById(id: string): Promise<NoteWithAuthor | null> {
