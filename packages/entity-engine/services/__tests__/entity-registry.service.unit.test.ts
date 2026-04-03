@@ -159,4 +159,22 @@ describe('EntityRegistryService', () => {
     const entries = registry.getRegistryEntries();
     expect(entries[0].features.customFields).toBe(false);
   });
+
+  it('exposes hasNotes flag in features', () => {
+    registry.register(mockConfig({
+      entityType: 'with_notes',
+      slug: 'with-notes',
+      hasNotes: true,
+    }));
+
+    const entries = registry.getRegistryEntries();
+    expect(entries[0].features.hasNotes).toBe(true);
+  });
+
+  it('hasNotes defaults to false in features', () => {
+    registry.register(mockConfig());
+
+    const entries = registry.getRegistryEntries();
+    expect(entries[0].features.hasNotes).toBe(false);
+  });
 });

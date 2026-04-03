@@ -4,6 +4,7 @@ import { AppLayout } from './layout/AppLayout';
 import { AuthGuard } from '@packages/platform-ui/auth/components/AuthGuard';
 import { EntityListPage, EntityCreatePage, EntityDetailPage, useEntityConfig } from '@packages/entity-engine-ui';
 import { AuditTimeline } from '@packages/platform-ui/audit';
+import { NotesSection } from '@packages/notes-ui';
 import {
   PipelineProgressBar,
   TransitionConfirmDialog,
@@ -16,6 +17,10 @@ import { SettingsPage, AppSettingsPage, AutomationsPage, RuleBuilderPage, UsersL
 
 function renderAuditTrail(entityType: string, entityId: string) {
   return <AuditTimeline entityType={entityType} entityId={entityId} />;
+}
+
+function renderNotes(entityType: string, entityId: string) {
+  return <NotesSection entityType={entityType} entityId={entityId} />;
 }
 
 interface PendingTransition {
@@ -129,6 +134,7 @@ function AppEntityDetailPage({ entityType }: { entityType: string }) {
     <EntityDetailPage
       entityType={entityType}
       renderAuditTrail={renderAuditTrail}
+      renderNotes={renderNotes}
       renderPipelineProgress={renderPipelineProgress}
       renderWorkflowActions={renderWorkflowActions}
     />

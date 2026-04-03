@@ -19,6 +19,7 @@ export const candidatesConfig: EntityConfig = {
 
   table: candidates,
   customFields: true,
+  hasNotes: true,
   systemColumns: ['id', 'createdAt', 'updatedAt', 'deletedAt', 'deletedBy', 'createdBy', 'resumeFile'],
 
   searchColumns: [candidates.firstName, candidates.lastName, candidates.email],
