@@ -177,4 +177,33 @@ describe('EntityRegistryService', () => {
     const entries = registry.getRegistryEntries();
     expect(entries[0].features.hasNotes).toBe(false);
   });
+
+  it('exposes hasAttachments flag and config in features', () => {
+    registry.register(mockConfig({
+      entityType: 'with_attachments',
+      slug: 'with-attachments',
+      hasAttachments: true,
+      attachmentConfig: {
+        maxFileSize: 5 * 1024 * 1024,
+        acceptedMimeTypes: ['image/*', 'application/pdf'],
+        deleteMode: 'hard',
+      },
+    }));
+
+    const entries = registry.getRegistryEntries();
+    expect(entries[0].features.hasAttachments).toBe(true);
+    expect(entries[0].features.attachmentConfig).toEqual({
+      maxFileSize: 5 * 1024 * 1024,
+      acceptedMimeTypes: ['image/*', 'application/pdf'],
+      deleteMode: 'hard',
+    });
+  });
+
+  it('hasAttachments defaults to false in features', () => {
+    registry.register(mockConfig());
+
+    const entries = registry.getRegistryEntries();
+    expect(entries[0].features.hasAttachments).toBe(false);
+    expect(entries[0].features.attachmentConfig).toBeUndefined();
+  });
 });

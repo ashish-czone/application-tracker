@@ -523,6 +523,21 @@ export interface EntityConfig<TTable extends PgTable = PgTable> {
   /** Enable the notes tab on the entity detail page. Default: false. */
   hasNotes?: boolean;
 
+  // --- Attachments ---
+
+  /** Enable the attachments tab on the entity detail page. Default: false. */
+  hasAttachments?: boolean;
+
+  /** Per-entity attachment configuration. Only relevant when hasAttachments is true. */
+  attachmentConfig?: {
+    /** Maximum file size in bytes. Default: 10MB (from media module). */
+    maxFileSize?: number;
+    /** Accepted MIME types. Default: all types. e.g., ['image/*', 'application/pdf'] */
+    acceptedMimeTypes?: string[];
+    /** How individual attachments are deleted. 'soft' marks deletedAt, 'hard' removes blob + row. Default: 'soft'. */
+    deleteMode?: 'soft' | 'hard';
+  };
+
   // --- UI ---
 
   /** Frontend rendering hints (serialized to registry API) */
@@ -696,6 +711,12 @@ export interface EntityRegistryEntry {
     hasWorkflow: boolean;
     hasMedia: boolean;
     hasNotes: boolean;
+    hasAttachments: boolean;
+    attachmentConfig?: {
+      maxFileSize?: number;
+      acceptedMimeTypes?: string[];
+      deleteMode?: 'soft' | 'hard';
+    };
     workflowDiscriminator: {
       key: string;
       label: string;

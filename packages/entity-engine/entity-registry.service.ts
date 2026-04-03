@@ -75,6 +75,12 @@ export class EntityRegistryService {
         hasWorkflow: Object.values(config.fieldMeta).some(f => f.fieldType === 'workflow'),
         hasMedia: Object.values(config.fieldMeta).some(f => f.fieldType === 'file'),
         hasNotes: !!config.hasNotes,
+        hasAttachments: !!config.hasAttachments,
+        attachmentConfig: config.attachmentConfig ? {
+          maxFileSize: config.attachmentConfig.maxFileSize,
+          acceptedMimeTypes: config.attachmentConfig.acceptedMimeTypes,
+          deleteMode: config.attachmentConfig.deleteMode,
+        } : undefined,
         workflowDiscriminator: (() => {
           for (const [fieldKey, meta] of Object.entries(config.fieldMeta)) {
             if (meta.fieldType === 'workflow' && meta.workflow?.discriminator) {
