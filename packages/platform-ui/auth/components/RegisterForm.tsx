@@ -15,6 +15,7 @@ import {
   CardContent,
 } from '@packages/ui';
 import { useRegister } from '../hooks/useRegister';
+import { OAuthButtons } from './OAuthButtons';
 
 const registerSchema = z.object({
   firstName: z.string().min(1, 'First name is required').max(100),
@@ -93,6 +94,7 @@ export function RegisterForm() {
             </Link>
           </p>
         </Form>
+        <OAuthButtons />
       </CardContent>
     </Card>
   );

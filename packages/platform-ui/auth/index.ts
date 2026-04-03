@@ -23,6 +23,7 @@ export { RegisterForm } from './components/RegisterForm';
 export { ForgotPasswordForm } from './components/ForgotPasswordForm';
 export { ResetPasswordForm } from './components/ResetPasswordForm';
 export { SessionExpiredModal } from './components/SessionExpiredModal';
+export { OAuthButtons } from './components/OAuthButtons';
 
 // Types
 export type {

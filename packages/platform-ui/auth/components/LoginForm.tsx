@@ -13,6 +13,7 @@ import {
   CardContent,
 } from '@packages/ui';
 import { useLogin } from '../hooks/useLogin';
+import { OAuthButtons } from './OAuthButtons';
 
 const loginSchema = z.object({
   identifier: z.string().min(1, 'Email is required').email('Invalid email address'),
@@ -74,6 +75,7 @@ export function LoginForm() {
             </Link>
           </div>
         </Form>
+        <OAuthButtons />
       </CardContent>
     </Card>
   );
