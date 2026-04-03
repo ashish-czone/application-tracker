@@ -1,14 +1,15 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { AuthService, type AuthAdapterResult } from '@packages/auth';
+import { AppConfigService } from '@packages/settings';
 import { OAuthProviderRegistry } from './providers/oauth-provider-registry';
-import { OAUTH_MODULE_CONFIG, type OAuthModuleConfig } from './types';
+import { getOAuthProviderConfig } from './types';
 
 @Injectable()
 export class OAuthAuthAdapter {
   constructor(
     private readonly providerRegistry: OAuthProviderRegistry,
     private readonly authService: AuthService,
-    @Inject(OAUTH_MODULE_CONFIG) private readonly config: OAuthModuleConfig,
+    private readonly appConfig: AppConfigService,
   ) {}
 
   async authenticateForProvider(providerName: string, credentials: Record<string, unknown>): Promise<AuthAdapterResult> {
@@ -18,7 +19,8 @@ export class OAuthAuthAdapter {
       throw new Error(`OAuth provider not registered: ${providerName}`);
     }
 
-    const providerConfig = this.config.providers.find((p) => p.provider === providerName);
+    // Read credentials from AppConfigService at runtime (cached, no DB hit)
+    const providerConfig = getOAuthProviderConfig(this.appConfig, providerName);
     if (!providerConfig) {
       throw new Error(`OAuth provider not configured: ${providerName}`);
     }

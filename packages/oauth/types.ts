@@ -7,8 +7,19 @@ export interface OAuthProviderConfig {
   scopes?: string[];
 }
 
-export interface OAuthModuleConfig {
-  providers: OAuthProviderConfig[];
-}
+/** Built-in providers that the OAuth module supports */
+export const SUPPORTED_PROVIDERS = ['google'] as const;
+export type SupportedProvider = (typeof SUPPORTED_PROVIDERS)[number];
 
-export const OAUTH_MODULE_CONFIG = Symbol('OAUTH_MODULE_CONFIG');
+/**
+ * Get the runtime config for a provider from AppConfigService (cached, no DB hit).
+ * Returns null if provider is not configured (clientId or clientSecret empty).
+ */
+export function getOAuthProviderConfig(appConfig: { get<T>(module: string, key: string, defaultValue?: T): T }, providerName: string): OAuthProviderConfig | null {
+  const clientId = appConfig.get<string>('oauth', `${providerName}.clientId`, '');
+  const clientSecret = appConfig.get<string>('oauth', `${providerName}.clientSecret`, '');
+
+  if (!clientId || !clientSecret) return null;
+
+  return { provider: providerName, clientId, clientSecret };
+}

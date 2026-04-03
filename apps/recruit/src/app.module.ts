@@ -98,18 +98,7 @@ import { validate } from './config/env.validation';
       }),
       inject: [ConfigService, AppConfigService],
     }),
-    OAuthModule.registerAsync({
-      useFactory: (config: ConfigService) => ({
-        providers: config.get<string>('GOOGLE_CLIENT_ID')
-          ? [{
-              provider: 'google',
-              clientId: config.get<string>('GOOGLE_CLIENT_ID')!,
-              clientSecret: config.get<string>('GOOGLE_CLIENT_SECRET')!,
-            }]
-          : [],
-      }),
-      inject: [ConfigService],
-    }),
+    OAuthModule.register(),
     // Domain modules — entity engine handles CRUD/routing/RBAC/events/audit/seeding
     EntityEngineModule.forEntity(CLIENTS_CONFIG),
     EntityEngineModule.forEntity(CONTACTS_CONFIG),

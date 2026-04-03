@@ -1,6 +1,6 @@
 export interface SettingFieldMetadata {
   label: string;
-  type: 'string' | 'number' | 'boolean';
+  type: 'string' | 'number' | 'boolean' | 'password';
   description?: string;
   min?: number;
   max?: number;
