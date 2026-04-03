@@ -28,6 +28,7 @@ import { splitPayload } from './helpers/split-payload';
 import { buildClonePayload } from './helpers/build-clone-payload';
 import { TaxonomyService, type TagWithGroup } from '@packages/taxonomy';
 import { fieldTypeSaveHookRegistry, type FieldTypeSaveHookRegistry, type FieldTypeSaveHookContext } from './services/field-type-save-hook.registry';
+import { EntityCleanupRegistry } from './services/entity-cleanup-registry';
 import { WorkflowEngineService, WorkflowRegistryService, PipelineResolverService } from '@packages/workflows';
 import type { PaginatedResponse } from '@packages/common';
 import type { EntityConfig, BaseListQuery, ListLayoutColumn } from './types';
@@ -63,6 +64,7 @@ export class EntityService {
     private readonly workflowRegistry: WorkflowRegistryService,
     private readonly pipelineResolver: PipelineResolverService,
     private readonly entityRegistry: EntityRegistryService,
+    private readonly cleanupRegistry: EntityCleanupRegistry,
     appLogger: AppLoggerService,
   ) {
     this.logger = appLogger.forContext(`EntityService[${config.entityType}]`);
@@ -868,10 +870,15 @@ export class EntityService {
       await config.hooks.beforeDelete(id, actorId);
     }
 
-    await this.database.db
-      .update(config.table as any)
-      .set({ deletedAt: new Date(), deletedBy: actorId } as any)
-      .where(eq((config.table as any).id, id));
+    await this.database.db.transaction(async (tx) => {
+      await tx
+        .update(config.table as any)
+        .set({ deletedAt: new Date(), deletedBy: actorId } as any)
+        .where(eq((config.table as any).id, id));
+
+      // Cascade soft-delete to related data (notes, attachments, etc.)
+      await this.cleanupRegistry.runAll(config.entityType, id, actorId, tx);
+    });
 
     this.logger.log(`${config.singularName} deleted`, { entityId: id, actorId });
 

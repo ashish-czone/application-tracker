@@ -114,3 +114,8 @@ export type {
 
 export type { LayoutExtension } from './extensions/layout-extension.interface';
 export { LAYOUT_EXTENSION } from './extensions/layout-extension.interface';
+
+// --- Entity cleanup registry ---
+
+export { EntityCleanupRegistry } from './services/entity-cleanup-registry';
+export type { EntityCleanupHandler } from './services/entity-cleanup-registry';

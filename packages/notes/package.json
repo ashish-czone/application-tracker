@@ -11,6 +11,7 @@
     "@nestjs/swagger": "^11.0.0",
     "@packages/audit": "workspace:*",
     "@packages/database": "workspace:*",
+    "@packages/entity-engine": "workspace:*",
     "@packages/events": "workspace:*",
     "@packages/logger": "workspace:*",
     "@packages/rbac": "workspace:*",
