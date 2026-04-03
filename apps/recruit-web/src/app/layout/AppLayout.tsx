@@ -23,8 +23,8 @@ import {
   DropdownMenuSeparator,
 } from '@packages/ui';
 import { recruiterMenu, type MenuItem } from '../../portals/recruiter/menu';
-import { useAuth } from '../../shared/auth/hooks/useAuth';
-import { useLogout } from '../../shared/auth/hooks/useLogout';
+import { useAuth } from '@packages/platform-ui/auth/hooks/useAuth';
+import { useLogout } from '@packages/platform-ui/auth/hooks/useLogout';
 
 function NavItem({ item, collapsed }: { item: MenuItem; collapsed: boolean }) {
   const { path, label, icon: Icon } = item;
