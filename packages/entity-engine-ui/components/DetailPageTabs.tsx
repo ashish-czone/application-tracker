@@ -1,15 +1,16 @@
 import { useMemo } from 'react';
 import { cn } from '@packages/ui';
 
-export type DetailTab = 'overview' | 'notes' | 'audit-trail';
+export type DetailTab = 'overview' | 'notes' | 'attachments' | 'audit-trail';
 
 interface DetailPageTabsProps {
   activeTab: DetailTab;
   onTabChange: (tab: DetailTab) => void;
   hasNotes?: boolean;
+  hasAttachments?: boolean;
 }
 
-export function DetailPageTabs({ activeTab, onTabChange, hasNotes }: DetailPageTabsProps) {
+export function DetailPageTabs({ activeTab, onTabChange, hasNotes, hasAttachments }: DetailPageTabsProps) {
   const tabs = useMemo(() => {
     const result: { key: DetailTab; label: string }[] = [
       { key: 'overview', label: 'Overview' },
@@ -17,9 +18,12 @@ export function DetailPageTabs({ activeTab, onTabChange, hasNotes }: DetailPageT
     if (hasNotes) {
       result.push({ key: 'notes', label: 'Notes' });
     }
+    if (hasAttachments) {
+      result.push({ key: 'attachments', label: 'Attachments' });
+    }
     result.push({ key: 'audit-trail', label: 'Audit Trail' });
     return result;
-  }, [hasNotes]);
+  }, [hasNotes, hasAttachments]);
 
   return (
     <div className="border-b mb-6">
