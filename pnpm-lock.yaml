@@ -1344,9 +1344,6 @@ importers:
       '@packages/database':
         specifier: workspace:*
         version: link:../database
-      '@packages/entity-engine':
-        specifier: workspace:*
-        version: link:../entity-engine
       '@packages/logger':
         specifier: workspace:*
         version: link:../logger

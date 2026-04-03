@@ -1,6 +1,5 @@
 import { Module, type OnModuleInit } from '@nestjs/common';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
-import { EntityCleanupRegistry } from '@packages/entity-engine';
 import { EmailChannelService } from './email/email-channel.service';
 import { ConsoleEmailProvider } from './email/providers/console-email.provider';
 import { SmtpEmailProvider } from './email/providers/smtp-email.provider';
@@ -40,19 +39,12 @@ export class NotificationChannelsModule implements OnModuleInit {
     private readonly whatsAppChannel: WhatsAppChannelService,
     private readonly consoleWhatsAppProvider: ConsoleWhatsAppProvider,
     private readonly twilioWhatsAppProvider: TwilioWhatsAppProvider,
-    private readonly notificationQueryService: NotificationQueryService,
-    private readonly cleanupRegistry: EntityCleanupRegistry,
     appLogger: AppLoggerService,
   ) {
     this.logger = appLogger.forContext(NotificationChannelsModule.name);
   }
 
   onModuleInit() {
-    // Register entity cleanup handler (delete notifications when parent entity is deleted)
-    this.cleanupRegistry.register('notifications', async (entityType, entityId, _actorId, tx) => {
-      await this.notificationQueryService.deleteAllForEntity(entityType, entityId, tx);
-    });
-
     // Register email providers
     this.emailChannel.registerProvider(this.consoleEmailProvider);
 
