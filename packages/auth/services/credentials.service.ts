@@ -43,6 +43,21 @@ export class CredentialsService {
     return credential;
   }
 
+  async createCredential(userId: string, provider: string, identifier: string, tx?: DrizzleDB) {
+    const db = tx ?? this.database.db;
+
+    const [credential] = await db
+      .insert(credentials)
+      .values({
+        userId,
+        provider,
+        identifier,
+      })
+      .returning();
+
+    return credential;
+  }
+
   async verifyPassword(secretHash: string, plaintext: string): Promise<boolean> {
     return bcrypt.compare(plaintext, secretHash);
   }
