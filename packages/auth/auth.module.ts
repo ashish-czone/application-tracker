@@ -7,6 +7,8 @@ import { AuthService } from './services/auth.service';
 import { CredentialsService } from './services/credentials.service';
 import { TokensService } from './services/tokens.service';
 import { AuthGuard } from './guards/auth.guard';
+import { AuthAdapterRegistry } from './adapters/auth-adapter-registry';
+import { PasswordAuthAdapter } from './adapters/password-auth.adapter';
 import { AuthOrchestratorService } from './orchestrator/auth-orchestrator.service';
 import { ClientAuthService } from './orchestrator/client-auth.service';
 import { AdminAuthService } from './orchestrator/admin-auth.service';
@@ -52,6 +54,8 @@ export class AuthModule implements OnModuleInit {
     private readonly eventRegistry: EventRegistryService,
     private readonly appConfig: AppConfigService,
     private readonly auditRegistry: AuditRegistryService,
+    private readonly authAdapterRegistry: AuthAdapterRegistry,
+    private readonly passwordAuthAdapter: PasswordAuthAdapter,
   ) {}
 
   static register(config: AuthModuleConfig): DynamicModule {
@@ -69,12 +73,14 @@ export class AuthModule implements OnModuleInit {
         TokensService,
         AuthService,
         AuthGuard,
+        AuthAdapterRegistry,
+        PasswordAuthAdapter,
         AuthOrchestratorService,
         ClientAuthService,
         AdminAuthService,
         SeedService,
       ],
-      exports: [AuthService, AuthGuard],
+      exports: [AuthService, AuthGuard, AuthAdapterRegistry],
     };
   }
 
@@ -97,16 +103,21 @@ export class AuthModule implements OnModuleInit {
         TokensService,
         AuthService,
         AuthGuard,
+        AuthAdapterRegistry,
+        PasswordAuthAdapter,
         AuthOrchestratorService,
         ClientAuthService,
         AdminAuthService,
         SeedService,
       ],
-      exports: [AuthService, AuthGuard],
+      exports: [AuthService, AuthGuard, AuthAdapterRegistry],
     };
   }
 
   onModuleInit() {
+    // Register built-in password adapter
+    this.authAdapterRegistry.register(this.passwordAuthAdapter);
+
     this.appConfig.register('auth', {
       label: 'Authentication',
       defaults: {

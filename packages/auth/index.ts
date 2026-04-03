@@ -4,6 +4,10 @@ export { AuthModule } from './auth.module';
 // Core services
 export { AuthService } from './services/auth.service';
 
+// Adapters
+export type { AuthAdapter, AuthAdapterResult } from './adapters/auth-adapter.interface';
+export { AuthAdapterRegistry } from './adapters/auth-adapter-registry';
+
 // Guards & decorators
 export { AuthGuard } from './guards/auth.guard';
 export { Public } from './decorators/public.decorator';
