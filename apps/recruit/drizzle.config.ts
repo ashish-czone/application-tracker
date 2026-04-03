@@ -16,6 +16,7 @@ export default defineConfig({
     '../../packages/eav-attributes/schema/index.ts',
     '../../packages/entity-relations/schema/index.ts',
     '../../packages/tasks/schema/tasks.ts',
+    '../../packages/notes/schema/index.ts',
     // Recruit-specific modules
     './src/modules/clients/schema/clients.ts',
     './src/modules/contacts/schema/contacts.ts',
