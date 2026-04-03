@@ -26,6 +26,7 @@ import { EntityEngineModule } from '@packages/entity-engine';
 import { TASKS_CONFIG } from '@packages/tasks';
 import { TaxonomyModule } from '@packages/taxonomy';
 import { NotesModule } from '@packages/notes';
+import { AttachmentsModule } from '@packages/attachments';
 import { SharedModule } from './modules/shared/shared.module';
 import { validate } from './config/env.validation';
 
@@ -74,6 +75,7 @@ import { validate } from './config/env.validation';
     WorkflowsModule,
     TaxonomyModule,
     NotesModule,
+    AttachmentsModule,
     EntityEngineModule,
     AuthModule.registerAsync({
       useFactory: (config: ConfigService, appConfig: AppConfigService) => ({
