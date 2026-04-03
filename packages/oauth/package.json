@@ -13,7 +13,8 @@
     "@packages/auth": "workspace:*",
     "@packages/database": "workspace:*",
     "@packages/logger": "workspace:*",
-    "@packages/rbac": "workspace:*"
+    "@packages/rbac": "workspace:*",
+    "@packages/settings": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.7.0",

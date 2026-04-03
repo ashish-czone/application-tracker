@@ -1,28 +1,36 @@
-import { Controller, Get, Inject } from '@nestjs/common';
+import { Controller, Get } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { Public } from '@packages/auth';
+import { AppConfigService } from '@packages/settings';
 import { OAuthProviderRegistry } from './providers/oauth-provider-registry';
-import { OAUTH_MODULE_CONFIG, type OAuthModuleConfig } from './types';
+import { SUPPORTED_PROVIDERS, getOAuthProviderConfig } from './types';
 
 @ApiTags('auth/oauth')
 @Controller('auth/oauth')
 export class OAuthController {
   constructor(
     private readonly providerRegistry: OAuthProviderRegistry,
-    @Inject(OAUTH_MODULE_CONFIG) private readonly config: OAuthModuleConfig,
+    private readonly appConfig: AppConfigService,
   ) {}
 
   @Public()
   @Get('providers')
   @ApiOperation({ summary: 'List available OAuth providers' })
   getProviders() {
-    return this.config.providers.map((providerConfig) => {
-      const provider = this.providerRegistry.get(providerConfig.provider);
-      return {
-        provider: providerConfig.provider,
-        clientId: providerConfig.clientId,
-        scopes: providerConfig.scopes ?? provider?.defaultScopes ?? [],
-      };
-    });
+    const result: { provider: string; clientId: string; scopes: string[] }[] = [];
+
+    for (const providerName of SUPPORTED_PROVIDERS) {
+      const config = getOAuthProviderConfig(this.appConfig, providerName);
+      if (!config) continue; // Not configured — skip
+
+      const provider = this.providerRegistry.get(providerName);
+      result.push({
+        provider: providerName,
+        clientId: config.clientId,
+        scopes: provider?.defaultScopes ?? [],
+      });
+    }
+
+    return result;
   }
 }

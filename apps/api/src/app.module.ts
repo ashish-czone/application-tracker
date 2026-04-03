@@ -82,18 +82,7 @@ import { validate } from './config/env.validation';
       }),
       inject: [ConfigService, AppConfigService],
     }),
-    OAuthModule.registerAsync({
-      useFactory: (config: ConfigService) => ({
-        providers: config.get<string>('GOOGLE_CLIENT_ID')
-          ? [{
-              provider: 'google',
-              clientId: config.get<string>('GOOGLE_CLIENT_ID')!,
-              clientSecret: config.get<string>('GOOGLE_CLIENT_SECRET')!,
-            }]
-          : [],
-      }),
-      inject: [ConfigService],
-    }),
+    OAuthModule.register(),
     UsersModule,
     EntityEngineModule.forEntity(TASKS_CONFIG),
   ],

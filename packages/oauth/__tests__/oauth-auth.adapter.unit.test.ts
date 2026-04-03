@@ -30,11 +30,15 @@ function createMockAuthService() {
   };
 }
 
-const mockConfig = {
-  providers: [
-    { provider: 'google', clientId: 'client-id', clientSecret: 'client-secret' },
-  ],
-};
+function createMockAppConfig(clientId = 'client-id', clientSecret = 'client-secret') {
+  return {
+    get: vi.fn().mockImplementation((_module: string, key: string, defaultValue?: string) => {
+      if (key === 'google.clientId') return clientId;
+      if (key === 'google.clientSecret') return clientSecret;
+      return defaultValue ?? '';
+    }),
+  };
+}
 
 describe('OAuthAuthAdapter', () => {
   let adapter: OAuthAuthAdapter;
@@ -45,11 +49,12 @@ describe('OAuthAuthAdapter', () => {
     vi.clearAllMocks();
     providerRegistry = createMockProviderRegistry();
     authService = createMockAuthService();
+    const appConfig = createMockAppConfig();
 
     adapter = new OAuthAuthAdapter(
       providerRegistry as any,
       authService as any,
-      mockConfig,
+      appConfig as any,
     );
   });
 
@@ -57,6 +62,19 @@ describe('OAuthAuthAdapter', () => {
     await expect(
       adapter.authenticateForProvider('github', { code: 'abc', redirectUri: 'http://localhost' }),
     ).rejects.toThrow('OAuth provider not registered: github');
+  });
+
+  it('throws when provider has no credentials configured', async () => {
+    const appConfig = createMockAppConfig('', '');
+    const adapterNoConfig = new OAuthAuthAdapter(
+      providerRegistry as any,
+      authService as any,
+      appConfig as any,
+    );
+
+    await expect(
+      adapterNoConfig.authenticateForProvider('google', { code: 'abc', redirectUri: 'http://localhost' }),
+    ).rejects.toThrow('OAuth provider not configured: google');
   });
 
   it('returns existing user when credential found', async () => {
