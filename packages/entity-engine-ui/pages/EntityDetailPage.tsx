@@ -33,6 +33,8 @@ interface EntityDetailPageProps {
   renderAuditTrail?: (entityType: string, entityId: string) => React.ReactNode;
   /** Render the notes tab content. Receives entityType and entityId. */
   renderNotes?: (entityType: string, entityId: string) => React.ReactNode;
+  /** Render the attachments tab content. Receives entityType and entityId. */
+  renderAttachments?: (entityType: string, entityId: string) => React.ReactNode;
   /** Render the pipeline progress bar. Receives entityType, entityId, and the full entity record. */
   renderPipelineProgress?: (entityType: string, entityId: string, entity: Record<string, unknown>) => React.ReactNode;
   /** Render workflow transition actions in the header. Receives entityType, entityId, and the full entity record. */
@@ -47,7 +49,7 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
  * Generic detail page for any entity registered with the entity engine.
  * Layout: left sidebar (related records) + main area (tabs: Overview | Audit Trail).
  */
-export function EntityDetailPage({ entityType, renderAuditTrail, renderNotes, renderPipelineProgress, renderWorkflowActions }: EntityDetailPageProps) {
+export function EntityDetailPage({ entityType, renderAuditTrail, renderNotes, renderAttachments, renderPipelineProgress, renderWorkflowActions }: EntityDetailPageProps) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
@@ -301,7 +303,7 @@ export function EntityDetailPage({ entityType, renderAuditTrail, renderNotes, re
       </div>
 
       {/* Tabs */}
-      <DetailPageTabs activeTab={activeTab} onTabChange={setActiveTab} hasNotes={entity.features.hasNotes} />
+      <DetailPageTabs activeTab={activeTab} onTabChange={setActiveTab} hasNotes={entity.features.hasNotes} hasAttachments={entity.features.hasAttachments} />
 
       {/* Content area: Sidebar + Main */}
       <div className="flex gap-6">
@@ -347,6 +349,10 @@ export function EntityDetailPage({ entityType, renderAuditTrail, renderNotes, re
 
           {activeTab === 'notes' && renderNotes && entity.features.hasNotes && (
             renderNotes(entityType, item.id as string)
+          )}
+
+          {activeTab === 'attachments' && renderAttachments && entity.features.hasAttachments && (
+            renderAttachments(entityType, item.id as string)
           )}
 
           {activeTab === 'audit-trail' && renderAuditTrail && (
