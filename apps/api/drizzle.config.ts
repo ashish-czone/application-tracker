@@ -14,6 +14,7 @@ export default defineConfig({
     '../../packages/taxonomy/schema/index.ts',
     '../../packages/audit/schema/index.ts',
     '../../packages/tasks/schema/tasks.ts',
+    '../../packages/notes/schema/index.ts',
   ],
   out: './drizzle',
   dialect: 'postgresql',
