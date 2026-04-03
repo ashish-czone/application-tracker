@@ -17,6 +17,7 @@ import { WorkflowsModule } from '@packages/workflows';
 import { AuditModule } from '@packages/audit';
 import { MediaModule } from '@packages/media';
 import { AuthModule, AuthGuard } from '@packages/auth';
+import { OAuthModule } from '@packages/oauth';
 import { RbacGuard } from '@packages/rbac';
 import { AppConfigService } from '@packages/settings';
 import { TaxonomyModule } from '@packages/taxonomy';
@@ -96,6 +97,18 @@ import { validate } from './config/env.validation';
         resetTokenExpiresIn: appConfig.get('auth', 'resetTokenExpiresIn', '1h'),
       }),
       inject: [ConfigService, AppConfigService],
+    }),
+    OAuthModule.registerAsync({
+      useFactory: (config: ConfigService) => ({
+        providers: config.get<string>('GOOGLE_CLIENT_ID')
+          ? [{
+              provider: 'google',
+              clientId: config.get<string>('GOOGLE_CLIENT_ID')!,
+              clientSecret: config.get<string>('GOOGLE_CLIENT_SECRET')!,
+            }]
+          : [],
+      }),
+      inject: [ConfigService],
     }),
     // Domain modules — entity engine handles CRUD/routing/RBAC/events/audit/seeding
     EntityEngineModule.forEntity(CLIENTS_CONFIG),
