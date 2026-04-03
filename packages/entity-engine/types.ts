@@ -518,6 +518,11 @@ export interface EntityConfig<TTable extends PgTable = PgTable> {
    *  When false: all non-relational fields must have DB columns, no EAV overhead. */
   customFields?: boolean;
 
+  // --- Notes ---
+
+  /** Enable the notes tab on the entity detail page. Default: false. */
+  hasNotes?: boolean;
+
   // --- UI ---
 
   /** Frontend rendering hints (serialized to registry API) */
@@ -690,6 +695,7 @@ export interface EntityRegistryEntry {
     hasTaxonomy: boolean;
     hasWorkflow: boolean;
     hasMedia: boolean;
+    hasNotes: boolean;
     workflowDiscriminator: {
       key: string;
       label: string;

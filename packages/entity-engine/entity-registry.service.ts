@@ -74,6 +74,7 @@ export class EntityRegistryService {
         hasTaxonomy: Object.values(config.fieldMeta).some(f => f.fieldType === 'tags'),
         hasWorkflow: Object.values(config.fieldMeta).some(f => f.fieldType === 'workflow'),
         hasMedia: Object.values(config.fieldMeta).some(f => f.fieldType === 'file'),
+        hasNotes: !!config.hasNotes,
         workflowDiscriminator: (() => {
           for (const [fieldKey, meta] of Object.entries(config.fieldMeta)) {
             if (meta.fieldType === 'workflow' && meta.workflow?.discriminator) {

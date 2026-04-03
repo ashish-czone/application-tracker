@@ -1,22 +1,30 @@
+import { useMemo } from 'react';
 import { cn } from '@packages/ui';
 
-export type DetailTab = 'overview' | 'audit-trail';
+export type DetailTab = 'overview' | 'notes' | 'audit-trail';
 
 interface DetailPageTabsProps {
   activeTab: DetailTab;
   onTabChange: (tab: DetailTab) => void;
+  hasNotes?: boolean;
 }
 
-const TABS: { key: DetailTab; label: string }[] = [
-  { key: 'overview', label: 'Overview' },
-  { key: 'audit-trail', label: 'Audit Trail' },
-];
+export function DetailPageTabs({ activeTab, onTabChange, hasNotes }: DetailPageTabsProps) {
+  const tabs = useMemo(() => {
+    const result: { key: DetailTab; label: string }[] = [
+      { key: 'overview', label: 'Overview' },
+    ];
+    if (hasNotes) {
+      result.push({ key: 'notes', label: 'Notes' });
+    }
+    result.push({ key: 'audit-trail', label: 'Audit Trail' });
+    return result;
+  }, [hasNotes]);
 
-export function DetailPageTabs({ activeTab, onTabChange }: DetailPageTabsProps) {
   return (
     <div className="border-b mb-6">
       <nav className="flex gap-0 -mb-px">
-        {TABS.map((tab) => (
+        {tabs.map((tab) => (
           <button
             key={tab.key}
             type="button"

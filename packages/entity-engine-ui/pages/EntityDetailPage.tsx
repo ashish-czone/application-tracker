@@ -31,6 +31,8 @@ interface EntityDetailPageProps {
   entityType: string;
   /** Render the audit trail tab content. Receives entityType and entityId. */
   renderAuditTrail?: (entityType: string, entityId: string) => React.ReactNode;
+  /** Render the notes tab content. Receives entityType and entityId. */
+  renderNotes?: (entityType: string, entityId: string) => React.ReactNode;
   /** Render the pipeline progress bar. Receives entityType, entityId, and the full entity record. */
   renderPipelineProgress?: (entityType: string, entityId: string, entity: Record<string, unknown>) => React.ReactNode;
   /** Render workflow transition actions in the header. Receives entityType, entityId, and the full entity record. */
@@ -45,7 +47,7 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
  * Generic detail page for any entity registered with the entity engine.
  * Layout: left sidebar (related records) + main area (tabs: Overview | Audit Trail).
  */
-export function EntityDetailPage({ entityType, renderAuditTrail, renderPipelineProgress, renderWorkflowActions }: EntityDetailPageProps) {
+export function EntityDetailPage({ entityType, renderAuditTrail, renderNotes, renderPipelineProgress, renderWorkflowActions }: EntityDetailPageProps) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
@@ -299,7 +301,7 @@ export function EntityDetailPage({ entityType, renderAuditTrail, renderPipelineP
       </div>
 
       {/* Tabs */}
-      <DetailPageTabs activeTab={activeTab} onTabChange={setActiveTab} />
+      <DetailPageTabs activeTab={activeTab} onTabChange={setActiveTab} hasNotes={entity.features.hasNotes} />
 
       {/* Content area: Sidebar + Main */}
       <div className="flex gap-6">
@@ -341,6 +343,10 @@ export function EntityDetailPage({ entityType, renderAuditTrail, renderPipelineP
                 <plugin.component key={plugin.label} entity={item} />
               ))}
             </div>
+          )}
+
+          {activeTab === 'notes' && renderNotes && entity.features.hasNotes && (
+            renderNotes(entityType, item.id as string)
           )}
 
           {activeTab === 'audit-trail' && renderAuditTrail && (
