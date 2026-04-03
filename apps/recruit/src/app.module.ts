@@ -16,15 +16,15 @@ import { NotificationChannelsModule } from '@packages/notification-channels';
 import { WorkflowsModule } from '@packages/workflows';
 import { AuditModule } from '@packages/audit';
 import { MediaModule } from '@packages/media';
-import { AuthGuard } from '@packages/auth';
+import { AuthModule, AuthGuard } from '@packages/auth';
 import { RbacGuard } from '@packages/rbac';
+import { AppConfigService } from '@packages/settings';
 import { TaxonomyModule } from '@packages/taxonomy';
 import { HierarchyModule } from '@packages/hierarchy';
 import { EavAttributesModule } from '@packages/eav-attributes';
 import { EntityRelationsModule } from '@packages/entity-relations';
 import { EntityLayoutModule } from '@packages/entity-layout';
 import { EntityEngineModule } from '@packages/entity-engine';
-import { AuthOrchestratorModule } from './modules/auth/auth.module';
 import { SharedModule } from './modules/shared/shared.module';
 import { CandidatesModule } from './modules/candidates/candidates.module';
 import { CLIENTS_CONFIG } from './modules/clients/clients.config';
@@ -88,7 +88,15 @@ import { validate } from './config/env.validation';
     EntityRelationsModule,
     EntityLayoutModule,
     EntityEngineModule,
-    AuthOrchestratorModule,
+    AuthModule.registerAsync({
+      useFactory: (config: ConfigService, appConfig: AppConfigService) => ({
+        jwtSecret: config.get<string>('JWT_SECRET')!,
+        accessTokenExpiresIn: appConfig.get('auth', 'accessTokenExpiresIn', '15m'),
+        refreshTokenExpiresIn: appConfig.get('auth', 'refreshTokenExpiresIn', '7d'),
+        resetTokenExpiresIn: appConfig.get('auth', 'resetTokenExpiresIn', '1h'),
+      }),
+      inject: [ConfigService, AppConfigService],
+    }),
     // Domain modules — entity engine handles CRUD/routing/RBAC/events/audit/seeding
     EntityEngineModule.forEntity(CLIENTS_CONFIG),
     EntityEngineModule.forEntity(CONTACTS_CONFIG),
