@@ -7,8 +7,8 @@ export const NOTES_NOTE_DELETED = 'notes.NoteDeleted' as const;
 // --- Payload types ---
 
 export interface NoteCreatedPayload {
-  entityType: string;
-  entityId: string;
+  targetEntityType: string;
+  targetEntityId: string;
   authorId: string;
   content: string;
   isInternal: boolean;
@@ -17,8 +17,8 @@ export interface NoteCreatedPayload {
 }
 
 export interface NoteUpdatedPayload {
-  entityType: string;
-  entityId: string;
+  targetEntityType: string;
+  targetEntityId: string;
   authorId: string;
   content: string;
   isInternal: boolean;
@@ -29,8 +29,8 @@ export interface NoteUpdatedPayload {
 }
 
 export interface NoteDeletedPayload {
-  entityType: string;
-  entityId: string;
+  targetEntityType: string;
+  targetEntityId: string;
   authorId: string;
   [key: string]: unknown;
 }

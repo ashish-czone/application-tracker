@@ -43,8 +43,8 @@ export class NotesService {
       entityId: note.id,
       actorId: data.authorId,
       payload: {
-        entityType: data.entityType,
-        entityId: data.entityId,
+        targetEntityType: data.entityType,
+        targetEntityId: data.entityId,
         authorId: data.authorId,
         content: data.content,
         isInternal: note.isInternal,
@@ -88,8 +88,8 @@ export class NotesService {
       entityId: id,
       actorId,
       payload: {
-        entityType: updated.entityType,
-        entityId: updated.entityId,
+        targetEntityType: updated.entityType,
+        targetEntityId: updated.entityId,
         authorId: updated.authorId,
         content: updated.content,
         isInternal: updated.isInternal,
@@ -119,8 +119,8 @@ export class NotesService {
       entityId: id,
       actorId,
       payload: {
-        entityType: existing.entityType,
-        entityId: existing.entityId,
+        targetEntityType: existing.entityType,
+        targetEntityId: existing.entityId,
         authorId: existing.authorId,
       },
     });
