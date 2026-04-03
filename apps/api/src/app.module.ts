@@ -17,9 +17,9 @@ import { WorkflowsModule } from '@packages/workflows';
 import { AuditModule } from '@packages/audit';
 import { HierarchyModule } from '@packages/hierarchy';
 import { MediaModule } from '@packages/media';
-import { AuthGuard } from '@packages/auth';
+import { AuthModule, AuthGuard } from '@packages/auth';
 import { RbacGuard } from '@packages/rbac';
-import { AuthOrchestratorModule } from './modules/auth/auth.module';
+import { AppConfigService } from '@packages/settings';
 import { UsersModule } from '@packages/users';
 import { EntityEngineModule } from '@packages/entity-engine';
 import { TASKS_CONFIG } from '@packages/tasks';
@@ -72,7 +72,15 @@ import { validate } from './config/env.validation';
     WorkflowsModule,
     TaxonomyModule,
     EntityEngineModule,
-    AuthOrchestratorModule,
+    AuthModule.registerAsync({
+      useFactory: (config: ConfigService, appConfig: AppConfigService) => ({
+        jwtSecret: config.get<string>('JWT_SECRET')!,
+        accessTokenExpiresIn: appConfig.get('auth', 'accessTokenExpiresIn', '15m'),
+        refreshTokenExpiresIn: appConfig.get('auth', 'refreshTokenExpiresIn', '7d'),
+        resetTokenExpiresIn: appConfig.get('auth', 'resetTokenExpiresIn', '1h'),
+      }),
+      inject: [ConfigService, AppConfigService],
+    }),
     UsersModule,
     EntityEngineModule.forEntity(TASKS_CONFIG),
   ],

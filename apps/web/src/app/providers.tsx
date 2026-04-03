@@ -6,7 +6,7 @@ import { TaxonomyProvider } from '@packages/platform-ui-taxonomy';
 import { EntityEngineProvider } from '@packages/entity-engine-ui';
 import { PlatformUIProvider } from '@packages/platform-ui';
 import { api } from '../lib/api';
-import { SessionExpiredModal } from '../shared/auth/components/SessionExpiredModal';
+import { SessionExpiredModal } from '@packages/platform-ui/auth/components/SessionExpiredModal';
 
 const queryClient = new QueryClient({
   defaultOptions: {

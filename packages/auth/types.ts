@@ -5,9 +5,11 @@ export interface JwtPayload {
 
 export interface AuthModuleConfig {
   jwtSecret: string;
-  accessTokenExpiresIn: string;
-  refreshTokenExpiresIn: string;
-  resetTokenExpiresIn: string;
+  accessTokenExpiresIn?: string;
+  refreshTokenExpiresIn?: string;
+  resetTokenExpiresIn?: string;
+  defaultAdminEmail?: string;
+  defaultAdminPassword?: string;
 }
 
 export interface Credential {

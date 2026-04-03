@@ -1,7 +1,7 @@
 import { Suspense, lazy, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router';
 import { AppLayout } from './layout/AppLayout';
-import { AuthGuard } from '../shared/auth/components/AuthGuard';
+import { AuthGuard } from '@packages/platform-ui/auth/components/AuthGuard';
 import { EntityListPage, EntityCreatePage, EntityDetailPage, useEntityConfig } from '@packages/entity-engine-ui';
 import { AuditTimeline } from '@packages/platform-ui/audit';
 import {
@@ -135,11 +135,11 @@ function AppEntityDetailPage({ entityType }: { entityType: string }) {
   );
 }
 
-const LoginPage = lazy(() => import('../shared/auth/pages/LoginPage'));
-const RegisterPage = lazy(() => import('../shared/auth/pages/RegisterPage'));
-const ForgotPasswordPage = lazy(() => import('../shared/auth/pages/ForgotPasswordPage'));
-const ResetPasswordPage = lazy(() => import('../shared/auth/pages/ResetPasswordPage'));
-const ProfilePage = lazy(() => import('../shared/auth/pages/ProfilePage'));
+const LoginPage = lazy(() => import('@packages/platform-ui/auth/pages/LoginPage'));
+const RegisterPage = lazy(() => import('@packages/platform-ui/auth/pages/RegisterPage'));
+const ForgotPasswordPage = lazy(() => import('@packages/platform-ui/auth/pages/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('@packages/platform-ui/auth/pages/ResetPasswordPage'));
+const ProfilePage = lazy(() => import('@packages/platform-ui/auth/pages/ProfilePage'));
 
 function DashboardPage() {
   return (

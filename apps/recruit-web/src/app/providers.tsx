@@ -7,7 +7,7 @@ import { PipelineProgressInline } from '@packages/platform-ui/workflows';
 import { TaxonomyProvider } from '@packages/platform-ui-taxonomy';
 import { PlatformUIProvider } from '@packages/platform-ui';
 import { api } from '../lib/api';
-import { SessionExpiredModal } from '../shared/auth/components/SessionExpiredModal';
+import { SessionExpiredModal } from '@packages/platform-ui/auth/components/SessionExpiredModal';
 import { CANDIDATES_UI_CONFIG } from '../entities/candidates.config';
 
 const queryClient = new QueryClient({
