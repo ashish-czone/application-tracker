@@ -11,6 +11,8 @@ export { useRegister } from './hooks/useRegister';
 export { useLogout } from './hooks/useLogout';
 export { useForgotPassword } from './hooks/useForgotPassword';
 export { useResetPassword } from './hooks/useResetPassword';
+export { useOAuthProviders, OAUTH_PROVIDERS_QUERY_KEY } from './hooks/useOAuthProviders';
+export { useOAuthLogin } from './hooks/useOAuthLogin';
 
 // Components
 export { AuthGuard } from './components/AuthGuard';
@@ -39,4 +41,6 @@ export type {
   AuthUser,
   UserProfile,
   UpdateProfileRequest,
+  OAuthProviderInfo,
+  OAuthLoginRequest,
 } from './types';
