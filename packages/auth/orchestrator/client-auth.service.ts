@@ -18,4 +18,8 @@ export class ClientAuthService extends AuthOrchestratorService {
   async clientRefresh(refreshToken: string) {
     return this.refresh(refreshToken, USER_TYPE);
   }
+
+  async clientOAuthLogin(provider: string, code: string, redirectUri: string) {
+    return this.loginWithProvider(provider, { provider, code, redirectUri }, USER_TYPE);
+  }
 }

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Param, Body, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { DatabaseService, users, eq, and, isNull } from '@packages/database';
@@ -14,6 +14,7 @@ import { ForgotPasswordDto } from '../dto/forgot-password.dto';
 import { ResetPasswordDto } from '../dto/reset-password.dto';
 import { ChangePasswordDto } from '../dto/change-password.dto';
 import { UpdateProfileDto } from '../dto/update-profile.dto';
+import { OAuthLoginDto } from '../dto/oauth-login.dto';
 
 @ApiTags('auth/client')
 @Controller('auth/client')
@@ -40,6 +41,15 @@ export class ClientAuthController {
   @ApiOperation({ summary: 'Login as client' })
   async login(@Body() dto: LoginDto) {
     return this.clientAuth.clientLogin(dto.identifier, dto.password);
+  }
+
+  @Public()
+  @Throttle({ default: { ttl: 60000, limit: 5 } })
+  @Post('oauth/:provider')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Login or register via OAuth provider' })
+  async oauthLogin(@Param('provider') provider: string, @Body() dto: OAuthLoginDto) {
+    return this.clientAuth.clientOAuthLogin(provider, dto.code, dto.redirectUri);
   }
 
   @Public()

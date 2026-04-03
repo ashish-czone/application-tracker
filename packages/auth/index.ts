@@ -26,14 +26,17 @@ export {
   AUTH_PASSWORD_RESET_REQUESTED,
   AUTH_PASSWORD_RESET_COMPLETED,
   AUTH_PASSWORD_CHANGED,
+  AUTH_ACCOUNT_LINKED,
 } from './events/types';
 export type {
   UserPayload,
   PasswordResetRequestedPayload,
   PasswordResetCompletedPayload,
+  AccountLinkedPayload,
   UserRegisteredEvent,
   UserLoggedInEvent,
   PasswordResetRequestedEvent,
   PasswordResetCompletedEvent,
   PasswordChangedEvent,
+  AccountLinkedEvent,
 } from './events/types';

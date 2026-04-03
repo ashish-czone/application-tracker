@@ -22,6 +22,7 @@ import {
   AUTH_PASSWORD_RESET_REQUESTED,
   AUTH_PASSWORD_RESET_COMPLETED,
   AUTH_PASSWORD_CHANGED,
+  AUTH_ACCOUNT_LINKED,
 } from './events/types';
 
 const AUTH_DEFAULTS = {
@@ -190,6 +191,16 @@ export class AuthModule implements OnModuleInit {
         email: { type: 'string', label: 'Email' },
         firstName: { type: 'string', label: 'First Name' },
         lastName: { type: 'string', label: 'Last Name' },
+        userType: { type: 'string', label: 'User Type' },
+      },
+    });
+
+    this.eventRegistry.register({
+      eventName: AUTH_ACCOUNT_LINKED,
+      group: 'auth',
+      description: 'Fired when an external auth provider is linked to an existing account',
+      payloadSchema: {
+        provider: { type: 'string', label: 'Auth Provider' },
         userType: { type: 'string', label: 'User Type' },
       },
     });
