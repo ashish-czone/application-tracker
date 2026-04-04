@@ -2,8 +2,7 @@ import { Controller, Get, Post, Delete, Body, Param, Query, HttpCode, HttpStatus
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiConsumes } from '@nestjs/swagger';
 import { RequirePermission } from '@packages/rbac';
-import { CurrentUser } from '@packages/auth/decorators/current-user.decorator';
-import type { JwtPayload } from '@packages/auth';
+import { CurrentUser, type JwtPayload } from '@packages/auth-core';
 import { EntityRegistryService } from '@packages/entity-engine';
 import type { UploadedFile } from '@packages/media';
 import { ATTACHMENTS_PERMISSIONS } from '../permissions';

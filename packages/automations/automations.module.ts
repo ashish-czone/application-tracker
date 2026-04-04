@@ -5,9 +5,9 @@ import { RbacService } from '@packages/rbac';
 import { DatabaseService } from '@packages/database';
 import { cronForLocalHour } from '@packages/common';
 import type { DomainEvent } from '@packages/events';
-import { EntityCleanupRegistry } from '@packages/entity-engine';
 import { AutomationRuleService } from './services/automation-rule.service';
 import { AutomationListener } from './listeners/automation.listener';
+import { AutomationsCleanupListener } from './listeners/automations-cleanup.listener';
 import { ActionRegistry } from './services/action-registry';
 import { UserResolverRegistry } from './services/user-resolver-registry';
 import { EntityResolverRegistry } from './services/entity-resolver-registry';
@@ -41,6 +41,7 @@ export const AUTOMATION_EXECUTION_CLEANUP_QUEUE = 'automation.execution-cleanup'
     LifecycleEngine,
     ScheduleScanner,
     WebhookAction,
+    AutomationsCleanupListener,
   ],
   exports: [
     ActionRegistry,
@@ -66,7 +67,6 @@ export class AutomationsModule implements OnModuleInit {
     private readonly automationListener: AutomationListener,
     private readonly ruleService: AutomationRuleService,
     private readonly executionLogService: ExecutionLogService,
-    private readonly cleanupRegistry: EntityCleanupRegistry,
     appLogger: AppLoggerService,
   ) {
     this.logger = appLogger.forContext(AutomationsModule.name);
@@ -78,11 +78,6 @@ export class AutomationsModule implements OnModuleInit {
       { action: 'rules.read', description: 'View automation rules' },
       { action: 'rules.manage', description: 'Create, update, and delete automation rules' },
     ]);
-
-    // Register entity cleanup handler (cancel pending scheduled automations when parent entity is deleted)
-    this.cleanupRegistry.register('automations', async (entityType, entityId, _actorId, tx) => {
-      await this.scheduleScanner.deletePendingForEntity(entityType, entityId, tx);
-    });
 
     // Register built-in user resolver strategies
     this.userResolverRegistry.registerStrategy(new ActorStrategy());

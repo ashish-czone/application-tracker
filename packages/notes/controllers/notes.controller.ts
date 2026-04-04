@@ -1,8 +1,7 @@
 import { Controller, Get, Post, Patch, Delete, Body, Param, Query, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { RequirePermission } from '@packages/rbac';
-import { CurrentUser } from '@packages/auth/decorators/current-user.decorator';
-import type { JwtPayload } from '@packages/auth';
+import { CurrentUser, type JwtPayload } from '@packages/auth-core';
 import { NOTES_PERMISSIONS } from '../permissions';
 import { NotesService } from '../services/notes.service';
 import { CreateNoteDto } from '../dto/create-note.dto';
