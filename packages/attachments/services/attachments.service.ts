@@ -210,7 +210,7 @@ export class AttachmentsService {
     return { url };
   }
 
-  /** Soft-delete all attachments for an entity (used by EntityCleanupRegistry during cascade). */
+  /** Soft-delete all attachments for an entity (called by cleanup listener on entity deletion). */
   async softDeleteAllForEntity(entityType: string, entityId: string, actorId: string, tx?: any): Promise<void> {
     const db = tx ?? this.database.db;
     await db

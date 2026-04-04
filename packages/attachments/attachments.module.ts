@@ -2,15 +2,15 @@ import { Global, Module, type OnModuleInit } from '@nestjs/common';
 import { RbacService } from '@packages/rbac';
 import { AuditRegistryService } from '@packages/audit';
 import { EventRegistryService } from '@packages/events';
-import { EntityCleanupRegistry } from '@packages/entity-engine';
 import { AttachmentsService } from './services/attachments.service';
 import { AttachmentsController } from './controllers/attachments.controller';
+import { AttachmentsCleanupListener } from './listeners/attachments-cleanup.listener';
 import { ATTACHMENTS_ATTACHMENT_UPLOADED, ATTACHMENTS_ATTACHMENT_DELETED } from './events/types';
 
 @Global()
 @Module({
   controllers: [AttachmentsController],
-  providers: [AttachmentsService],
+  providers: [AttachmentsService, AttachmentsCleanupListener],
   exports: [AttachmentsService],
 })
 export class AttachmentsModule implements OnModuleInit {
@@ -18,7 +18,6 @@ export class AttachmentsModule implements OnModuleInit {
     private readonly rbacService: RbacService,
     private readonly auditRegistry: AuditRegistryService,
     private readonly eventRegistry: EventRegistryService,
-    private readonly cleanupRegistry: EntityCleanupRegistry,
     private readonly attachmentsService: AttachmentsService,
   ) {}
 
@@ -33,11 +32,6 @@ export class AttachmentsModule implements OnModuleInit {
     // Register audit events
     this.auditRegistry.register('attachments', {
       events: [ATTACHMENTS_ATTACHMENT_UPLOADED, ATTACHMENTS_ATTACHMENT_DELETED],
-    });
-
-    // Register entity cleanup handler (cascade soft-delete when parent entity is deleted)
-    this.cleanupRegistry.register('attachments', async (entityType, entityId, actorId, tx) => {
-      await this.attachmentsService.softDeleteAllForEntity(entityType, entityId, actorId, tx);
     });
 
     // Register event definitions for discovery

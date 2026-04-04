@@ -2,15 +2,15 @@ import { Global, Module, type OnModuleInit } from '@nestjs/common';
 import { RbacService } from '@packages/rbac';
 import { AuditRegistryService } from '@packages/audit';
 import { EventRegistryService } from '@packages/events';
-import { EntityCleanupRegistry } from '@packages/entity-engine';
 import { NotesService } from './services/notes.service';
 import { NotesController } from './controllers/notes.controller';
+import { NotesCleanupListener } from './listeners/notes-cleanup.listener';
 import { NOTES_NOTE_CREATED, NOTES_NOTE_UPDATED, NOTES_NOTE_DELETED } from './events/types';
 
 @Global()
 @Module({
   controllers: [NotesController],
-  providers: [NotesService],
+  providers: [NotesService, NotesCleanupListener],
   exports: [NotesService],
 })
 export class NotesModule implements OnModuleInit {
@@ -18,7 +18,6 @@ export class NotesModule implements OnModuleInit {
     private readonly rbacService: RbacService,
     private readonly auditRegistry: AuditRegistryService,
     private readonly eventRegistry: EventRegistryService,
-    private readonly cleanupRegistry: EntityCleanupRegistry,
     private readonly notesService: NotesService,
   ) {}
 
@@ -34,11 +33,6 @@ export class NotesModule implements OnModuleInit {
     // Register audit events
     this.auditRegistry.register('notes', {
       events: [NOTES_NOTE_CREATED, NOTES_NOTE_UPDATED, NOTES_NOTE_DELETED],
-    });
-
-    // Register entity cleanup handler (cascade soft-delete when parent entity is deleted)
-    this.cleanupRegistry.register('notes', async (entityType, entityId, actorId, tx) => {
-      await this.notesService.softDeleteAllForEntity(entityType, entityId, actorId, tx);
     });
 
     // Register event definitions for discovery

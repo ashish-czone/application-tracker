@@ -281,7 +281,7 @@ export class NotesService {
     return rows.map((r) => r.userId);
   }
 
-  /** Soft-delete all notes for an entity (used by EntityCleanupRegistry during cascade). */
+  /** Soft-delete all notes for an entity (called by cleanup listener on entity deletion). */
   async softDeleteAllForEntity(entityType: string, entityId: string, actorId: string, tx?: any): Promise<void> {
     const db = tx ?? this.database.db;
     await db
