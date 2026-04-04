@@ -1,6 +1,6 @@
 import { Injectable, type CanActivate, type ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
+import { IS_PUBLIC_KEY } from '@packages/auth-core';
 import { AuthService } from '../services/auth.service';
 
 @Injectable()

@@ -9,7 +9,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
-import { CurrentUser, type JwtPayload } from '@packages/auth';
+import { CurrentUser, type JwtPayload } from '@packages/auth-core';
 import { RequirePermission } from '@packages/rbac';
 import { AppConfigService } from '../services/app-config.service';
 import { UpdateSettingDto } from '../dto/update-setting.dto';

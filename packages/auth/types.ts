@@ -1,7 +1,4 @@
-export interface JwtPayload {
-  userId: string;
-  [key: string]: unknown;
-}
+export type { JwtPayload } from '@packages/auth-core';
 
 export interface AuthModuleConfig {
   jwtSecret: string;

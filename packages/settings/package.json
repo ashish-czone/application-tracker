@@ -9,7 +9,7 @@
   "dependencies": {
     "@nestjs/common": "^11.0.0",
     "@nestjs/swagger": "^11.0.0",
-    "@packages/auth": "workspace:*",
+    "@packages/auth-core": "workspace:*",
     "@packages/database": "workspace:*",
     "@packages/rbac": "workspace:*",
     "class-validator": "^0.14.1"
