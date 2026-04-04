@@ -10,8 +10,7 @@ export { AuthAdapterRegistry } from './adapters/auth-adapter-registry';
 
 // Guards & decorators
 export { AuthGuard } from './guards/auth.guard';
-export { Public } from './decorators/public.decorator';
-export { CurrentUser } from './decorators/current-user.decorator';
+export { Public, CurrentUser, IS_PUBLIC_KEY } from '@packages/auth-core';
 
 // Types
 export type { Credential, AuthToken, JwtPayload, AuthModuleConfig } from './types';

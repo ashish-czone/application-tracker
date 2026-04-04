@@ -13,7 +13,7 @@ import {
   ParseUUIDPipe,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
-import { CurrentUser, type JwtPayload } from '@packages/auth';
+import { CurrentUser, type JwtPayload } from '@packages/auth-core';
 import { RbacService } from '../services/rbac.service';
 import { RequirePermission } from '../decorators/require-permission.decorator';
 import type { ScopedPermissions } from '../types';
