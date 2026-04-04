@@ -9,7 +9,7 @@ import { AUTH_MODULE_CONFIG, AUTH_TOKEN_TYPES, type AuthModuleConfig, type JwtPa
 export class TokensService {
   constructor(
     private readonly database: DatabaseService,
-    @Inject(AUTH_MODULE_CONFIG) private readonly config: AuthModuleConfig,
+    @Inject(AUTH_MODULE_CONFIG) private readonly config: Required<AuthModuleConfig>,
   ) {}
 
   generateAccessToken(payload: JwtPayload): string {
