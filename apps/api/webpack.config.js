@@ -14,6 +14,10 @@ module.exports = function (options) {
     ],
     resolve: {
       ...options.resolve,
+      modules: [
+        'node_modules',
+        path.resolve(__dirname, '../../node_modules'),
+      ],
       alias: {
         '@packages': path.resolve(__dirname, '../../packages'),
         '@modules': path.resolve(__dirname, 'src/modules'),
