@@ -43,7 +43,7 @@ export class TenantRegistryService implements TenantLookup {
     return rows.map(this.toTenantInfo);
   }
 
-  async listByStatus(status: string): Promise<TenantInfo[]> {
+  async listByStatus(status: 'active' | 'suspended' | 'provisioning'): Promise<TenantInfo[]> {
     const rows = await this.database.db
       .select()
       .from(tenants)
@@ -71,7 +71,7 @@ export class TenantRegistryService implements TenantLookup {
     name: string;
     slug: string;
     databaseUrl: string;
-    status: string;
+    status: 'active' | 'suspended' | 'provisioning';
     plan: string;
     capabilities: string[];
     planExpiry: string;
