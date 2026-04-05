@@ -24,9 +24,9 @@ export class TenancyModule implements NestModule {
   ) {}
 
   configure(consumer: MiddlewareConsumer) {
-    if (this.config.resolver !== 'jwt') {
-      consumer.apply(TenantResolverMiddleware).forRoutes('*');
-    }
+    // Always apply middleware — it handles header/subdomain resolution
+    // (first stage). The TenantJwtGuard handles JWT resolution (second stage).
+    consumer.apply(TenantResolverMiddleware).forRoutes('*');
   }
 
   static register(config: TenancyConfig): DynamicModule {
