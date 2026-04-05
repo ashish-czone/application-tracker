@@ -1,5 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { DatabaseService, eq, and, isNull, type DrizzleDB } from '@packages/database';
+import { withTenant, withTenantInsert } from '@packages/tenancy/helpers';
 import * as jwt from 'jsonwebtoken';
 import { randomBytes, createHash } from 'crypto';
 import { authTokens } from '../schema';
@@ -30,7 +31,7 @@ export class TokensService {
     const db = tx ?? this.database.db;
     const [record] = await db
       .insert(authTokens)
-      .values({ userId, type, tokenHash, expiresAt })
+      .values(withTenantInsert(authTokens, { userId, type, tokenHash, expiresAt }))
       .returning();
 
     return { token, expiresAt, id: record.id };
@@ -51,7 +52,7 @@ export class TokensService {
       .select()
       .from(authTokens)
       .where(
-        and(
+        withTenant(authTokens,
           eq(authTokens.tokenHash, tokenHash),
           eq(authTokens.type, type),
           isNull(authTokens.revokedAt),
@@ -70,7 +71,7 @@ export class TokensService {
     await this.database.db
       .update(authTokens)
       .set({ revokedAt: new Date() })
-      .where(eq(authTokens.id, tokenId));
+      .where(withTenant(authTokens, eq(authTokens.id, tokenId)));
   }
 
   async revokeAllUserTokens(userId: string, type?: string) {
@@ -80,14 +81,14 @@ export class TokensService {
     await this.database.db
       .update(authTokens)
       .set({ revokedAt: new Date() })
-      .where(and(...conditions));
+      .where(withTenant(authTokens, ...conditions));
   }
 
   async markTokenUsed(tokenId: string) {
     await this.database.db
       .update(authTokens)
       .set({ usedAt: new Date() })
-      .where(eq(authTokens.id, tokenId));
+      .where(withTenant(authTokens, eq(authTokens.id, tokenId)));
   }
 
   hashToken(token: string): string {

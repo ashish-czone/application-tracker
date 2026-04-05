@@ -1,5 +1,6 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { DatabaseService, users, eq, and, isNull, gt, type DrizzleDB } from '@packages/database';
+import { withTenant } from '@packages/tenancy/helpers';
 import { CredentialsService } from './credentials.service';
 import { TokensService } from './tokens.service';
 import { authTokens } from '../schema';
@@ -53,7 +54,7 @@ export class AuthService {
       const [existing] = await tx
         .select()
         .from(authTokens)
-        .where(and(
+        .where(withTenant(authTokens,
           eq(authTokens.tokenHash, tokenHash),
           eq(authTokens.type, AUTH_TOKEN_TYPES.REFRESH),
           isNull(authTokens.revokedAt),
@@ -71,7 +72,7 @@ export class AuthService {
       await tx
         .update(authTokens)
         .set({ revokedAt: new Date() })
-        .where(eq(authTokens.id, existing.id));
+        .where(withTenant(authTokens, eq(authTokens.id, existing.id)));
 
       return { userId: existing.userId, token: newToken.token, expiresAt: newToken.expiresAt };
     });
@@ -136,7 +137,7 @@ export class AuthService {
     const [user] = await this.database.db
       .select()
       .from(users)
-      .where(and(eq(users.email, email.toLowerCase()), isNull(users.deletedAt)))
+      .where(withTenant(users, eq(users.email, email.toLowerCase()), isNull(users.deletedAt)))
       .limit(1);
 
     return user ?? null;
@@ -166,7 +167,7 @@ export class AuthService {
       const [record] = await tx
         .select()
         .from(authTokens)
-        .where(and(
+        .where(withTenant(authTokens,
           eq(authTokens.tokenHash, tokenHash),
           eq(authTokens.type, AUTH_TOKEN_TYPES.PASSWORD_RESET),
           isNull(authTokens.revokedAt),
@@ -185,7 +186,7 @@ export class AuthService {
       await tx
         .update(authTokens)
         .set({ usedAt: new Date() })
-        .where(eq(authTokens.id, record.id));
+        .where(withTenant(authTokens, eq(authTokens.id, record.id)));
 
       return record;
     });

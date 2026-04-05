@@ -20,6 +20,7 @@ import {
 } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
+import { withTenant, withTenantInsert } from '@packages/tenancy/helpers';
 import type { PaginatedResponse } from '@packages/common';
 import {
   USERS_USER_CREATED,
@@ -113,7 +114,7 @@ export class UsersService {
       const usersWithRole = this.database.db
         .select({ userId: userRoles.userId })
         .from(userRoles)
-        .where(eq(userRoles.roleId, query.roleId));
+        .where(withTenant(userRoles, eq(userRoles.roleId, query.roleId)));
       conditions.push(inArray(users.id, usersWithRole));
     }
 
@@ -132,13 +133,13 @@ export class UsersService {
     const [{ total }] = await this.database.db
       .select({ total: count() })
       .from(users)
-      .where(whereClause);
+      .where(withTenant(users, whereClause));
 
     // Fetch page
     const rows = await this.database.db
       .select()
       .from(users)
-      .where(whereClause)
+      .where(withTenant(users, whereClause))
       .orderBy(orderFn(sortColumn))
       .limit(limit)
       .offset(offset);
@@ -154,7 +155,7 @@ export class UsersService {
           })
           .from(userRoles)
           .innerJoin(roles, eq(roles.id, userRoles.roleId))
-          .where(inArray(userRoles.userId, userIds))
+          .where(withTenant(userRoles, inArray(userRoles.userId, userIds)))
       : [];
 
     const rolesByUserId = new Map<string, { id: string; name: string }[]>();
@@ -192,7 +193,7 @@ export class UsersService {
     const [user] = await this.database.db
       .select({ email: users.email })
       .from(users)
-      .where(and(eq(users.id, id), isNull(users.deletedAt)))
+      .where(withTenant(users, eq(users.id, id), isNull(users.deletedAt)))
       .limit(1);
 
     return user?.email ?? null;
@@ -202,7 +203,7 @@ export class UsersService {
     const [user] = await this.database.db
       .select({ phone: users.phone })
       .from(users)
-      .where(and(eq(users.id, id), isNull(users.deletedAt)))
+      .where(withTenant(users, eq(users.id, id), isNull(users.deletedAt)))
       .limit(1);
 
     return user?.phone ?? null;
@@ -212,7 +213,7 @@ export class UsersService {
     const [user] = await this.database.db
       .select()
       .from(users)
-      .where(and(eq(users.id, id), isNull(users.deletedAt)))
+      .where(withTenant(users, eq(users.id, id), isNull(users.deletedAt)))
       .limit(1);
 
     if (!user) throw new NotFoundException('User not found');
@@ -247,7 +248,7 @@ export class UsersService {
     const [existing] = await this.database.db
       .select({ id: users.id })
       .from(users)
-      .where(and(eq(users.email, data.email.toLowerCase()), isNull(users.deletedAt)))
+      .where(withTenant(users, eq(users.email, data.email.toLowerCase()), isNull(users.deletedAt)))
       .limit(1);
 
     if (existing) throw new ConflictException('Email already in use');
@@ -255,13 +256,13 @@ export class UsersService {
     const user = await this.database.db.transaction(async (tx) => {
       const [newUser] = await tx
         .insert(users)
-        .values({
+        .values(withTenantInsert(users, {
           email: data.email.toLowerCase(),
           phone: data.phone ?? null,
           firstName: data.firstName,
           lastName: data.lastName,
           userType: data.userType,
-        })
+        }))
         .returning();
 
       // Create password credential
@@ -319,7 +320,7 @@ export class UsersService {
         .select({ id: users.id })
         .from(users)
         .where(
-          and(
+          withTenant(users,
             eq(users.email, data.email.toLowerCase()),
             isNull(users.deletedAt),
           ),
@@ -342,7 +343,7 @@ export class UsersService {
     const [updated] = await this.database.db
       .update(users)
       .set(updateValues)
-      .where(eq(users.id, id))
+      .where(withTenant(users, eq(users.id, id)))
       .returning();
 
     this.logger.log('User updated', { userId: id, actorId, changes: Object.keys(updateValues) });
@@ -379,7 +380,7 @@ export class UsersService {
     await this.database.db
       .update(users)
       .set({ deletedAt: new Date(), deletedBy: actorId })
-      .where(eq(users.id, id));
+      .where(withTenant(users, eq(users.id, id)));
 
     this.logger.log('User deleted', { userId: id, actorId });
 
@@ -417,7 +418,7 @@ export class UsersService {
     const [row] = await this.database.db
       .select()
       .from(users)
-      .where(eq(users.id, id))
+      .where(withTenant(users, eq(users.id, id)))
       .limit(1);
 
     if (!row) throw new NotFoundException('User not found');
@@ -426,7 +427,7 @@ export class UsersService {
     const [restored] = await this.database.db
       .update(users)
       .set({ deletedAt: null, deletedBy: null })
-      .where(eq(users.id, id))
+      .where(withTenant(users, eq(users.id, id)))
       .returning();
 
     this.logger.log('User restored', { userId: id });
