@@ -7,6 +7,7 @@ import { ConfigurableThrottlerGuard } from './guards/configurable-throttler.guar
 import path from 'path';
 import { LoggerModule } from '@packages/logger';
 import { DatabaseModule } from '@packages/database';
+import { TenancyModule, type TenancyMode, type TenantResolver } from '@packages/tenancy';
 import { EventsModule } from '@packages/events';
 import { SettingsModule } from '@packages/settings';
 import { QueueModule } from '@packages/queue';
@@ -39,6 +40,18 @@ import { validate } from './config/env.validation';
     }),
     LoggerModule.register({ provider: 'pino' }),
     DatabaseModule,
+    // Conditionally load TenancyModule when TENANCY_MODE is set
+    ...(process.env.TENANCY_MODE ? [
+      TenancyModule.registerAsync({
+        useFactory: (config: ConfigService) => ({
+          mode: config.get<string>('TENANCY_MODE') as TenancyMode,
+          resolver: (config.get<string>('TENANCY_RESOLVER') ?? 'header') as TenantResolver,
+          headerName: config.get<string>('TENANCY_HEADER'),
+          jwtClaim: config.get<string>('TENANCY_JWT_CLAIM'),
+        }),
+        inject: [ConfigService],
+      }),
+    ] : []),
     EventsModule,
     SettingsModule,
     QueueModule.registerAsync({
