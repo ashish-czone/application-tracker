@@ -3,9 +3,8 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import type { PoolClient } from 'pg';
 import { DatabaseService, type DrizzleDB } from '@packages/database';
 import { getCorrelationId, getTenantId } from '@packages/logger';
-import { TENANCY_CONFIG, type TenancyConfig } from '../types';
+import { TENANCY_CONFIG, TENANT_LOOKUP, type TenancyConfig, type TenantLookup } from '../types';
 import { TenantPoolManager } from './tenant-pool-manager.service';
-import { TenantRegistryService } from './tenant-registry.service';
 import * as schema from '@packages/database/schema';
 
 interface RlsRequestContext {
@@ -35,7 +34,7 @@ export class TenantAwareDatabaseService extends DatabaseService implements OnMod
   constructor(
     @Inject(TENANCY_CONFIG) private readonly tenancyConfig: TenancyConfig,
     private readonly poolManager: TenantPoolManager,
-    private readonly tenantRegistry: TenantRegistryService,
+    @Inject(TENANT_LOOKUP) private readonly tenantLookup: TenantLookup,
   ) {
     super();
     this.poolManager.setSchema(schema);
@@ -111,7 +110,7 @@ export class TenantAwareDatabaseService extends DatabaseService implements OnMod
   }
 
   private async acquireDatabaseConnection(tenantId: string, requestId: string): Promise<void> {
-    const tenant = await this.tenantRegistry.findById(tenantId);
+    const tenant = await this.tenantLookup.findById(tenantId);
     if (!tenant) return;
     const db = this.poolManager.getDrizzleForTenant(tenantId, tenant.databaseUrl);
     // In database mode, we don't check out a dedicated client —

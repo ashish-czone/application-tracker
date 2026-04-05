@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 import { DatabaseService } from '@packages/database';
 import { tenants } from '../schema/tenants';
-import type { TenantInfo } from '../types';
+import type { TenantInfo, TenantLookup } from '../types';
 
 /**
  * CRUD service for the tenants control-plane table.
@@ -15,7 +15,7 @@ import type { TenantInfo } from '../types';
  * but not for connection routing.
  */
 @Injectable()
-export class TenantRegistryService {
+export class TenantRegistryService implements TenantLookup {
   constructor(private readonly database: DatabaseService) {}
 
   async findBySlug(slug: string): Promise<TenantInfo | null> {
