@@ -7,7 +7,7 @@ export type DrizzleDB = NodePgDatabase<typeof schema>;
 
 @Injectable()
 export class DatabaseService implements OnModuleDestroy {
-  private readonly pool: Pool;
+  protected readonly pool: Pool;
   readonly db: DrizzleDB;
 
   constructor() {

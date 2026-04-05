@@ -1,19 +1,38 @@
 import { Injectable, Inject, type NestMiddleware } from '@nestjs/common';
 import type { Request, Response, NextFunction } from 'express';
-import { setTenantId } from '@packages/logger';
+import { setTenantId, getCorrelationId } from '@packages/logger';
+import { DatabaseService } from '@packages/database';
 import { TENANCY_CONFIG, type TenancyConfig } from '../types';
+import type { TenantAwareDatabaseService } from '../services/tenant-aware-database.service';
 
 @Injectable()
 export class TenantResolverMiddleware implements NestMiddleware {
   constructor(
     @Inject(TENANCY_CONFIG) private readonly config: TenancyConfig,
+    private readonly database: DatabaseService,
   ) {}
 
-  use(req: Request, _res: Response, next: NextFunction): void {
+  async use(req: Request, res: Response, next: NextFunction): Promise<void> {
     const tenantId = this.resolve(req);
 
-    if (tenantId) {
-      setTenantId(tenantId);
+    if (!tenantId) {
+      next();
+      return;
+    }
+
+    setTenantId(tenantId);
+
+    // Acquire tenant-scoped DB connection before handler runs
+    const requestId = getCorrelationId();
+    const tenantDb = this.database as TenantAwareDatabaseService;
+
+    if (tenantDb.acquireForRequest) {
+      await tenantDb.acquireForRequest(tenantId, requestId);
+
+      // Release on response finish
+      res.on('finish', () => {
+        tenantDb.releaseForRequest(requestId).catch(() => {});
+      });
     }
 
     next();
@@ -26,14 +45,12 @@ export class TenantResolverMiddleware implements NestMiddleware {
       case 'header':
         return this.resolveFromHeader(req);
       case 'jwt':
-        // JWT resolver is handled by TenantJwtGuard, not middleware
         return undefined;
     }
   }
 
   private resolveFromSubdomain(req: Request): string | undefined {
     const hostname = req.hostname;
-    // Extract first subdomain: "acme.app.com" → "acme"
     const parts = hostname.split('.');
     if (parts.length > 2) {
       return parts[0];
