@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { DatabaseService, eq, and, desc, count, gte, lte, sql } from '@packages/database';
 import type { PaginatedResponse } from '@packages/common';
+import { withTenant, tenantCondition } from '@packages/tenancy/helpers';
 import { auditLogs } from '../schema';
 import type { AuditLogRecord, ListAuditLogsQuery } from '../types';
 
@@ -23,7 +24,7 @@ export class AuditQueryService {
     if (query.fromDate) conditions.push(gte(auditLogs.occurredAt, new Date(query.fromDate)));
     if (query.toDate) conditions.push(lte(auditLogs.occurredAt, new Date(query.toDate)));
 
-    const where = conditions.length > 0 ? and(...conditions) : undefined;
+    const where = withTenant(auditLogs, ...(conditions.length > 0 ? [and(...conditions)] : []));
 
     const [data, [{ total }]] = await Promise.all([
       this.database.db
@@ -57,7 +58,7 @@ export class AuditQueryService {
     const [record] = await this.database.db
       .select()
       .from(auditLogs)
-      .where(eq(auditLogs.id, id))
+      .where(withTenant(auditLogs, eq(auditLogs.id, id)))
       .limit(1);
 
     if (!record) throw new NotFoundException('Audit log entry not found');
@@ -81,7 +82,7 @@ export class AuditQueryService {
     const users = await this.database.db
       .select({ id: sql`id`, firstName: sql`first_name`, lastName: sql`last_name` })
       .from(sql`users`)
-      .where(sql`id IN (${sql.join(actorIds.map(id => sql`${id}`), sql`, `)})`) as { id: string; firstName: string; lastName: string }[];
+      .where(sql`id IN (${sql.join(actorIds.map(id => sql`${id}`), sql`, `)}) AND ${tenantCondition()}`) as { id: string; firstName: string; lastName: string }[];
 
     const nameMap = new Map<string, string>();
     for (const u of users) {

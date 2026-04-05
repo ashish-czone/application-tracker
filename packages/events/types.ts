@@ -3,6 +3,7 @@ export interface DomainEvent {
   entityType: string;
   entityId: string;
   actorId: string | null;
+  tenantId: string | undefined;
   correlationId: string;
   occurredAt: string;
   payload: Record<string, unknown>;

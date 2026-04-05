@@ -3,6 +3,7 @@ import { OnEvent } from '@nestjs/event-emitter';
 import { DatabaseService } from '@packages/database';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import type { DomainEvent } from '@packages/events';
+import { withTenantInsert } from '@packages/tenancy/helpers';
 import { AuditRegistryService } from '../services/audit-registry.service';
 import { auditLogs } from '../schema';
 import { computeDiff, inferAction, redactSensitiveFields } from '../helpers/diff';
@@ -52,7 +53,7 @@ export class AuditListener {
         }
       }
 
-      await this.database.db.insert(auditLogs).values({
+      await this.database.db.insert(auditLogs).values(withTenantInsert(auditLogs, {
         entityType: event.entityType,
         entityId: event.entityId,
         action,
@@ -63,7 +64,7 @@ export class AuditListener {
         changes: changes as Record<string, unknown>,
         correlationId: event.correlationId,
         occurredAt: new Date(event.occurredAt),
-      });
+      }));
 
       this.logger.debug('Audit log written', {
         eventName: event.eventName,

@@ -1,5 +1,6 @@
 import { Injectable, type OnModuleInit } from '@nestjs/common';
 import { DatabaseService, eq, and } from '@packages/database';
+import { withTenant, withTenantInsert } from '@packages/tenancy/helpers';
 import { settings } from '../schema';
 
 @Injectable()
@@ -13,7 +14,7 @@ export class SettingsStoreService implements OnModuleInit {
   }
 
   async loadAll() {
-    const rows = await this.database.db.select().from(settings);
+    const rows = await this.database.db.select().from(settings).where(withTenant(settings));
 
     this.cache.clear();
     for (const row of rows) {
@@ -43,18 +44,18 @@ export class SettingsStoreService implements OnModuleInit {
     const [existing] = await this.database.db
       .select()
       .from(settings)
-      .where(and(eq(settings.module, module), eq(settings.key, key)))
+      .where(withTenant(settings, and(eq(settings.module, module), eq(settings.key, key))))
       .limit(1);
 
     if (existing) {
       await this.database.db
         .update(settings)
         .set({ value, updatedBy })
-        .where(eq(settings.id, existing.id));
+        .where(withTenant(settings, eq(settings.id, existing.id)));
     } else {
       await this.database.db
         .insert(settings)
-        .values({ module, key, value, updatedBy });
+        .values(withTenantInsert(settings, { module, key, value, updatedBy }));
     }
 
     // Update cache
@@ -67,7 +68,7 @@ export class SettingsStoreService implements OnModuleInit {
   async remove(module: string, key: string) {
     await this.database.db
       .delete(settings)
-      .where(and(eq(settings.module, module), eq(settings.key, key)));
+      .where(withTenant(settings, and(eq(settings.module, module), eq(settings.key, key))));
 
     // Update cache
     this.cache.get(module)?.delete(key);
