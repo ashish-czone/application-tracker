@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { eq, and, or, isNull, ilike, asc, desc, count, sql, getTableName } from 'drizzle-orm';
 import type { PgColumn } from 'drizzle-orm/pg-core';
+import { withTenant, withTenantInsert, tenantCondition } from '@packages/tenancy/helpers';
 import {
   buildFilterConditions,
   buildSearchCondition,
@@ -166,9 +167,7 @@ export class EntityService {
       const targetTableName = rel.targetEntity;
       const key = `${rel.name}Count`;
 
-      counts[key] = sql.raw(
-        `(SELECT COUNT(*) FROM "${targetTableName}" WHERE "${fkColumn}" = "${thisTableName}"."id" AND "deleted_at" IS NULL)`,
-      );
+      counts[key] = sql`(SELECT COUNT(*) FROM ${sql.raw(`"${targetTableName}"`)} WHERE ${sql.raw(`"${fkColumn}"`)} = ${sql.raw(`"${thisTableName}"."id"`)} AND "deleted_at" IS NULL AND ${tenantCondition()})`;
     }
 
     return counts;
@@ -324,7 +323,9 @@ export class EntityService {
       conditions.push(...extraFilters);
     }
 
-    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+    const whereClause = conditions.length > 0
+      ? withTenant(config.table as any, and(...conditions))
+      : withTenant(config.table as any);
 
     // Sort — check if the sort key is a lookup field, use label subquery if so
     const sortKey = query.sort ?? config.defaultSort;
@@ -392,7 +393,7 @@ export class EntityService {
     const [row] = await this.database.db
       .select()
       .from(table)
-      .where(and(...conditions))
+      .where(withTenant(table, ...conditions))
       .limit(1) as any[];
 
     if (!row) {
@@ -405,7 +406,7 @@ export class EntityService {
       const [countRow] = await this.database.db
         .select(countExprs)
         .from(table)
-        .where(eq(table.id, id))
+        .where(withTenant(table, eq(table.id, id)))
         .limit(1) as any[];
       if (countRow) Object.assign(row, countRow);
     }
@@ -479,7 +480,7 @@ export class EntityService {
     const row = await this.database.db.transaction(async (tx) => {
       const result = await tx
         .insert(config.table as any)
-        .values({ id: entityId, ...standardFields, createdBy: actorId } as any)
+        .values(withTenantInsert(config.table as any, { id: entityId, ...standardFields, createdBy: actorId }) as any)
         .returning() as any[];
       const inserted = result[0];
 
@@ -531,7 +532,7 @@ export class EntityService {
             const [found] = await this.database.db
               .select()
               .from(targetConfig.table as any)
-              .where(eq((targetConfig.table as any).id, entityId))
+              .where(withTenant(targetConfig.table as any, eq((targetConfig.table as any).id, entityId)))
               .limit(1) as any[];
             return found ?? {};
           };
@@ -539,7 +540,7 @@ export class EntityService {
             const [found] = await this.database.db
               .select({ id: sql`id`, name: sql`name`, slug: sql`slug` })
               .from(sql`categories`)
-              .where(sql`id = ${categoryId}`)
+              .where(sql`id = ${categoryId} AND ${tenantCondition()}`)
               .limit(1) as { id: string; name: string; slug: string }[];
             return found ?? null;
           };
@@ -660,7 +661,7 @@ export class EntityService {
     const updated = await this.database.db.transaction(async (tx) => {
       // Read before snapshot inside tx for consistency
       const eavBefore = this.eavStorage ? await this.eavStorage.getValues(config.entityType, id, tx) : {};
-      const [existingRow] = await tx.select().from(table).where(eq(table.id, id)).limit(1) as any[];
+      const [existingRow] = await tx.select().from(table).where(withTenant(table, eq(table.id, id))).limit(1) as any[];
       const before = buildSnapshot(this.rowToSnapshot(existingRow), eavBefore);
 
       // Update standard columns
@@ -669,7 +670,7 @@ export class EntityService {
         const [updatedRow] = await tx
           .update(table)
           .set(updateValues)
-          .where(eq(table.id, id))
+          .where(withTenant(table, eq(table.id, id)))
           .returning() as any[];
         row = updatedRow;
       }
@@ -791,7 +792,7 @@ export class EntityService {
         await tx
           .update(table)
           .set({ [fieldKey]: toState })
-          .where(eq(table.id, id));
+          .where(withTenant(table, eq(table.id, id)));
       } else if (this.eavStorage) {
         await this.eavStorage.setValues(config.entityType, id, { [fieldKey]: toState }, tx);
       }
@@ -872,7 +873,7 @@ export class EntityService {
     await this.database.db
       .update(config.table as any)
       .set({ deletedAt: new Date(), deletedBy: actorId } as any)
-      .where(eq((config.table as any).id, id));
+      .where(withTenant(config.table as any, eq((config.table as any).id, id)));
 
     this.logger.log(`${config.singularName} deleted`, { entityId: id, actorId });
 
@@ -896,7 +897,7 @@ export class EntityService {
     const [row] = await this.database.db
       .select()
       .from(table)
-      .where(eq(table.id, id))
+      .where(withTenant(table, eq(table.id, id)))
       .limit(1) as any[];
 
     if (!row) {
@@ -906,7 +907,7 @@ export class EntityService {
     const [restored] = await this.database.db
       .update(table)
       .set({ deletedAt: null, deletedBy: null } as any)
-      .where(eq(table.id, id))
+      .where(withTenant(table, eq(table.id, id)))
       .returning() as any[];
 
     this.logger.log(`${config.singularName} restored`, { entityId: id });
@@ -1094,7 +1095,7 @@ export class EntityService {
     operator: string,
     value: unknown,
   ): any {
-    const baseWhere = sql`et.entity_type = ${entityType} AND et.entity_id = ${entityIdColumn}`;
+    const baseWhere = sql`et.entity_type = ${entityType} AND et.entity_id = ${entityIdColumn} AND ${tenantCondition()}`;
 
     switch (operator) {
       case 'contains': {
@@ -1117,7 +1118,7 @@ export class EntityService {
     operator: string,
     value: unknown,
   ): any {
-    const baseWhere = sql`emv.entity_type = ${entityType} AND emv.entity_id = ${entityIdColumn} AND emv.field_key = ${fieldKey}`;
+    const baseWhere = sql`emv.entity_type = ${entityType} AND emv.entity_id = ${entityIdColumn} AND emv.field_key = ${fieldKey} AND ${tenantCondition()}`;
 
     switch (operator) {
       case 'contains': {
@@ -1221,7 +1222,7 @@ export class EntityService {
             const users: any[] = await this.database.db
               .select({ id: sql`id`, firstName: sql`first_name`, lastName: sql`last_name` })
               .from(sql`users`)
-              .where(sql`id IN (${sql.join(targetIds.map(id => sql`${id}`), sql`, `)})`);
+              .where(sql`id IN (${sql.join(targetIds.map(id => sql`${id}`), sql`, `)}) AND ${tenantCondition()}`);
             const userMap = new Map(users.map(u => [u.id, `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim()]));
             row[field.fieldKey] = targetIds.map(id => ({
               id,
@@ -1321,7 +1322,7 @@ export class EntityService {
         this.database.db
           .select({ id: sql`id`, firstName: sql`first_name`, lastName: sql`last_name` })
           .from(sql`users`)
-          .where(sql`id IN (${sql.join(Array.from(userIds).map(id => sql`${id}`), sql`, `)})`)
+          .where(sql`id IN (${sql.join(Array.from(userIds).map(id => sql`${id}`), sql`, `)}) AND ${tenantCondition()}`)
           .then((users: any[]) => {
             for (const u of users) {
               userLabelMap.set(u.id, `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim());
@@ -1335,7 +1336,7 @@ export class EntityService {
         this.database.db
           .select({ id: sql`id`, name: sql`name` })
           .from(sql`categories`)
-          .where(sql`id IN (${sql.join(Array.from(categoryIds).map(id => sql`${id}`), sql`, `)})`)
+          .where(sql`id IN (${sql.join(Array.from(categoryIds).map(id => sql`${id}`), sql`, `)}) AND ${tenantCondition()}`)
           .then((cats: any[]) => {
             for (const c of cats) {
               categoryLabelMap.set(c.id, c.name);
@@ -1439,7 +1440,7 @@ export class EntityService {
       const [existing] = await this.database.db
         .select({ id: table.id })
         .from(table)
-        .where(and(...conditions))
+        .where(withTenant(table, ...conditions))
         .limit(1) as any[];
 
       if (existing && existing.id !== excludeId) {

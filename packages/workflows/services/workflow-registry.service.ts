@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, type OnModuleInit } from '@nestjs/common';
 import { DatabaseService, eq, and, isNull } from '@packages/database';
+import { withTenant, withTenantInsert } from '@packages/tenancy/helpers';
 import { workflowDefinitions } from '../schema/workflow-definitions';
 import { workflowStates } from '../schema/workflow-states';
 import { workflowTransitions } from '../schema/workflow-transitions';
@@ -19,15 +20,17 @@ export class WorkflowRegistryService implements OnModuleInit {
     const definitions = await this.database.db
       .select()
       .from(workflowDefinitions)
-      .where(and(eq(workflowDefinitions.isActive, true), isNull(workflowDefinitions.deletedAt)));
+      .where(withTenant(workflowDefinitions, eq(workflowDefinitions.isActive, true), isNull(workflowDefinitions.deletedAt)));
 
     const allStates = await this.database.db
       .select()
-      .from(workflowStates);
+      .from(workflowStates)
+      .where(withTenant(workflowStates));
 
     const allTransitions = await this.database.db
       .select()
-      .from(workflowTransitions);
+      .from(workflowTransitions)
+      .where(withTenant(workflowTransitions));
 
     // Index states and transitions by definition ID
     const statesByDef = new Map<string, typeof allStates>();
@@ -166,7 +169,7 @@ export class WorkflowRegistryService implements OnModuleInit {
   }) {
     const [row] = await this.database.db
       .insert(workflowDefinitions)
-      .values(data)
+      .values(withTenantInsert(workflowDefinitions, data))
       .returning();
     await this.loadAll();
     return row;
@@ -185,7 +188,7 @@ export class WorkflowRegistryService implements OnModuleInit {
     const [row] = await this.database.db
       .update(workflowDefinitions)
       .set(data)
-      .where(eq(workflowDefinitions.id, id))
+      .where(withTenant(workflowDefinitions, eq(workflowDefinitions.id, id)))
       .returning();
 
     if (!row) throw new NotFoundException('Workflow definition not found');
@@ -197,7 +200,7 @@ export class WorkflowRegistryService implements OnModuleInit {
     const [row] = await this.database.db
       .update(workflowDefinitions)
       .set({ deletedAt: new Date() })
-      .where(eq(workflowDefinitions.id, id))
+      .where(withTenant(workflowDefinitions, eq(workflowDefinitions.id, id)))
       .returning();
 
     if (!row) throw new NotFoundException('Workflow definition not found');
@@ -213,7 +216,7 @@ export class WorkflowRegistryService implements OnModuleInit {
   }) {
     const [row] = await this.database.db
       .insert(workflowStates)
-      .values({ workflowDefinitionId: definitionId, ...data })
+      .values(withTenantInsert(workflowStates, { workflowDefinitionId: definitionId, ...data }))
       .returning();
     await this.loadAll();
     return row;
@@ -229,7 +232,7 @@ export class WorkflowRegistryService implements OnModuleInit {
     const [row] = await this.database.db
       .update(workflowStates)
       .set(data)
-      .where(eq(workflowStates.id, id))
+      .where(withTenant(workflowStates, eq(workflowStates.id, id)))
       .returning();
 
     if (!row) throw new NotFoundException('Workflow state not found');
@@ -240,7 +243,7 @@ export class WorkflowRegistryService implements OnModuleInit {
   async deleteState(id: string): Promise<void> {
     const [row] = await this.database.db
       .delete(workflowStates)
-      .where(eq(workflowStates.id, id))
+      .where(withTenant(workflowStates, eq(workflowStates.id, id)))
       .returning();
 
     if (!row) throw new NotFoundException('Workflow state not found');
@@ -258,7 +261,7 @@ export class WorkflowRegistryService implements OnModuleInit {
   }) {
     const [row] = await this.database.db
       .insert(workflowTransitions)
-      .values({ workflowDefinitionId: definitionId, ...data })
+      .values(withTenantInsert(workflowTransitions, { workflowDefinitionId: definitionId, ...data }))
       .returning();
     await this.loadAll();
     return row;
@@ -274,7 +277,7 @@ export class WorkflowRegistryService implements OnModuleInit {
     const [row] = await this.database.db
       .update(workflowTransitions)
       .set(data)
-      .where(eq(workflowTransitions.id, id))
+      .where(withTenant(workflowTransitions, eq(workflowTransitions.id, id)))
       .returning();
 
     if (!row) throw new NotFoundException('Workflow transition not found');
@@ -285,7 +288,7 @@ export class WorkflowRegistryService implements OnModuleInit {
   async deleteTransition(id: string): Promise<void> {
     const [row] = await this.database.db
       .delete(workflowTransitions)
-      .where(eq(workflowTransitions.id, id))
+      .where(withTenant(workflowTransitions, eq(workflowTransitions.id, id)))
       .returning();
 
     if (!row) throw new NotFoundException('Workflow transition not found');

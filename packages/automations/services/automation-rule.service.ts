@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { DatabaseService, eq, and, ilike, asc, desc, count } from '@packages/database';
 import type { PaginatedResponse } from '@packages/common';
+import { withTenant, withTenantInsert } from '@packages/tenancy/helpers';
 import { automationRules } from '../schema/automation-rules';
 import type { AutomationRule, ActionConfig, LifecycleUpdateBinding, LifecycleDeleteBinding, TriggerType } from '../types';
 import type { Condition } from '@packages/common';
@@ -13,7 +14,8 @@ export class AutomationRuleService {
     const rows = await this.database.db
       .select()
       .from(automationRules)
-      .where(and(
+      .where(withTenant(
+        automationRules,
         eq(automationRules.eventName, eventName),
         eq(automationRules.isActive, true),
         eq(automationRules.triggerType, 'event'),
@@ -31,7 +33,7 @@ export class AutomationRuleService {
     const rows = await this.database.db
       .select()
       .from(automationRules)
-      .where(eq(automationRules.isActive, true));
+      .where(withTenant(automationRules, eq(automationRules.isActive, true)));
 
     return rows
       .map(this.toRule)
@@ -45,7 +47,8 @@ export class AutomationRuleService {
     const rows = await this.database.db
       .select()
       .from(automationRules)
-      .where(and(
+      .where(withTenant(
+        automationRules,
         eq(automationRules.isActive, true),
       ));
 
@@ -58,7 +61,7 @@ export class AutomationRuleService {
     const [row] = await this.database.db
       .select()
       .from(automationRules)
-      .where(eq(automationRules.id, id))
+      .where(withTenant(automationRules, eq(automationRules.id, id)))
       .limit(1);
 
     if (!row) throw new NotFoundException('Automation rule not found');
@@ -84,7 +87,7 @@ export class AutomationRuleService {
     if (query.isActive !== undefined) conditions.push(eq(automationRules.isActive, query.isActive));
     if (query.search) conditions.push(ilike(automationRules.name, `%${query.search}%`));
 
-    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+    const whereClause = withTenant(automationRules, ...conditions);
     const sortColumn = { name: automationRules.name, createdAt: automationRules.createdAt }[query.sort ?? 'createdAt'];
     const orderFn = query.order === 'asc' ? asc : desc;
 
@@ -127,7 +130,7 @@ export class AutomationRuleService {
   }): Promise<AutomationRule> {
     const [row] = await this.database.db
       .insert(automationRules)
-      .values({
+      .values(withTenantInsert(automationRules, {
         name: data.name,
         description: data.description ?? null,
         triggerType: data.triggerType ?? 'event',
@@ -144,7 +147,7 @@ export class AutomationRuleService {
         actions: data.actions,
         onSourceUpdated: data.onSourceUpdated ?? null,
         onSourceDeleted: data.onSourceDeleted ?? null,
-      })
+      }))
       .returning();
 
     return this.toRule(row);
@@ -175,7 +178,7 @@ export class AutomationRuleService {
       await this.database.db
         .update(automationRules)
         .set(updateValues)
-        .where(eq(automationRules.id, id));
+        .where(withTenant(automationRules, eq(automationRules.id, id)));
     }
 
     return this.findByIdOrFail(id);
@@ -185,7 +188,7 @@ export class AutomationRuleService {
     await this.findByIdOrFail(id);
     await this.database.db
       .delete(automationRules)
-      .where(eq(automationRules.id, id));
+      .where(withTenant(automationRules, eq(automationRules.id, id)));
   }
 
   private toRule(row: typeof automationRules.$inferSelect): AutomationRule {

@@ -1,9 +1,10 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
-import { DatabaseService, eq, and, isNull, desc, count } from '@packages/database';
+import { DatabaseService, eq, isNull, desc, count } from '@packages/database';
 import { MediaService, isMimeTypeAccepted, isFileSizeValid, DEFAULT_MAX_FILE_SIZE } from '@packages/media';
 import type { UploadedFile } from '@packages/media';
 import { DomainEventEmitter } from '@packages/events';
 import type { PaginatedResponse } from '@packages/common';
+import { withTenant, withTenantInsert } from '@packages/tenancy/helpers';
 import { users } from '@packages/database/schema';
 import { attachments } from '../schema/attachments';
 import { ATTACHMENTS_ATTACHMENT_UPLOADED, ATTACHMENTS_ATTACHMENT_DELETED } from '../events/types';
@@ -51,7 +52,7 @@ export class AttachmentsService {
     // Insert attachment record
     const [attachment] = await this.database.db
       .insert(attachments)
-      .values({
+      .values(withTenantInsert(attachments, {
         entityType,
         entityId,
         fileKey: mediaFile.key,
@@ -59,7 +60,7 @@ export class AttachmentsService {
         mimeType: mediaFile.mimeType,
         size: mediaFile.size,
         uploadedBy,
-      })
+      }))
       .returning();
 
     this.domainEventEmitter.emit(ATTACHMENTS_ATTACHMENT_UPLOADED, {
@@ -87,7 +88,7 @@ export class AttachmentsService {
     await this.database.db
       .update(attachments)
       .set({ deletedAt: new Date(), deletedBy: actorId })
-      .where(eq(attachments.id, id));
+      .where(withTenant(attachments, eq(attachments.id, id)));
 
     this.emitDeletedEvent(existing, actorId);
   }
@@ -101,7 +102,7 @@ export class AttachmentsService {
     await this.mediaService.delete(existing.fileKey);
     await this.database.db
       .delete(attachments)
-      .where(eq(attachments.id, id));
+      .where(withTenant(attachments, eq(attachments.id, id)));
 
     this.emitDeletedEvent(existing, actorId);
   }
@@ -133,7 +134,7 @@ export class AttachmentsService {
       })
       .from(attachments)
       .innerJoin(users, eq(attachments.uploadedBy, users.id))
-      .where(and(eq(attachments.id, id), isNull(attachments.deletedAt)))
+      .where(withTenant(attachments, eq(attachments.id, id), isNull(attachments.deletedAt)))
       .limit(1);
 
     if (!row) return null;
@@ -174,7 +175,7 @@ export class AttachmentsService {
         })
         .from(attachments)
         .innerJoin(users, eq(attachments.uploadedBy, users.id))
-        .where(and(
+        .where(withTenant(attachments,
           eq(attachments.entityType, entityType),
           eq(attachments.entityId, entityId),
           isNull(attachments.deletedAt),
@@ -186,7 +187,7 @@ export class AttachmentsService {
       this.database.db
         .select({ total: count() })
         .from(attachments)
-        .where(and(
+        .where(withTenant(attachments,
           eq(attachments.entityType, entityType),
           eq(attachments.entityId, entityId),
           isNull(attachments.deletedAt),
@@ -216,7 +217,7 @@ export class AttachmentsService {
     await db
       .update(attachments)
       .set({ deletedAt: new Date(), deletedBy: actorId })
-      .where(and(
+      .where(withTenant(attachments,
         eq(attachments.entityType, entityType),
         eq(attachments.entityId, entityId),
         isNull(attachments.deletedAt),

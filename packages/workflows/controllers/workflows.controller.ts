@@ -15,6 +15,7 @@ import {
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { RequirePermission } from '@packages/rbac';
 import { DatabaseService, sql } from '@packages/database';
+import { tenantCondition } from '@packages/tenancy/helpers';
 import { WorkflowRegistryService } from '../services/workflow-registry.service';
 import { WorkflowEngineService } from '../services/workflow-engine.service';
 import { PipelineResolverService } from '../services/pipeline-resolver.service';
@@ -116,7 +117,7 @@ export class WorkflowsController {
       const users = await this.database.db
         .select({ id: sql`id`, firstName: sql`first_name`, lastName: sql`last_name` })
         .from(sql`users`)
-        .where(sql`id IN (${sql.join(actorIds.map((id) => sql`${id}`), sql`, `)})`) as { id: string; firstName: string; lastName: string }[];
+        .where(sql`id IN (${sql.join(actorIds.map((id) => sql`${id}`), sql`, `)}) AND ${tenantCondition()}`) as { id: string; firstName: string; lastName: string }[];
       for (const u of users) {
         actorNames.set(u.id, `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim());
       }

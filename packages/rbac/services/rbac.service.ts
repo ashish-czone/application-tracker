@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
-import { DatabaseService, eq, and, ilike, asc, desc, count, inArray, users } from '@packages/database';
+import { DatabaseService, eq, and, ilike, asc, desc, count, inArray, users, type SQL } from '@packages/database';
 import type { PaginatedResponse } from '@packages/common';
+import { withTenant, withTenantInsert } from '@packages/tenancy/helpers';
 import { roles } from '../schema/roles';
 import { rolePermissions } from '../schema/role-permissions';
 import { userRoles } from '../schema/user-roles';
@@ -19,11 +20,11 @@ export class RbacService {
   async createRole(data: { name: string; userType: string; isDefault?: boolean }): Promise<Role> {
     const [role] = await this.database.db
       .insert(roles)
-      .values({
+      .values(withTenantInsert(roles, {
         name: data.name,
         userType: data.userType,
         isDefault: data.isDefault ?? false,
-      })
+      }))
       .returning();
     return role;
   }
@@ -36,7 +37,7 @@ export class RbacService {
     const [role] = await this.database.db
       .update(roles)
       .set(data)
-      .where(eq(roles.id, id))
+      .where(withTenant(roles, eq(roles.id, id)))
       .returning();
 
     if (!role) throw new NotFoundException('Role not found');
@@ -58,7 +59,7 @@ export class RbacService {
     const [{ total }] = await this.database.db
       .select({ total: count() })
       .from(userRoles)
-      .where(eq(userRoles.roleId, id));
+      .where(withTenant(userRoles, eq(userRoles.roleId, id)));
 
     if (Number(total) > 0) {
       throw new ConflictException('Cannot delete a role that is assigned to users. Remove the role from all users first.');
@@ -66,14 +67,14 @@ export class RbacService {
 
     await this.database.db
       .delete(roles)
-      .where(eq(roles.id, id));
+      .where(withTenant(roles, eq(roles.id, id)));
   }
 
   async getRoleUserCount(id: string): Promise<number> {
     const [{ total }] = await this.database.db
       .select({ total: count() })
       .from(userRoles)
-      .where(eq(userRoles.roleId, id));
+      .where(withTenant(userRoles, eq(userRoles.roleId, id)));
     return Number(total);
   }
 
@@ -81,7 +82,7 @@ export class RbacService {
     const [role] = await this.database.db
       .select()
       .from(roles)
-      .where(eq(roles.id, id))
+      .where(withTenant(roles, eq(roles.id, id)))
       .limit(1);
 
     return role ?? null;
@@ -91,14 +92,14 @@ export class RbacService {
     return this.database.db
       .select()
       .from(roles)
-      .where(eq(roles.userType, userType));
+      .where(withTenant(roles, eq(roles.userType, userType)));
   }
 
   async findDefaultRoleForUserType(userType: string): Promise<Role | null> {
     const [role] = await this.database.db
       .select()
       .from(roles)
-      .where(and(eq(roles.userType, userType), eq(roles.isDefault, true)))
+      .where(withTenant(roles, eq(roles.userType, userType), eq(roles.isDefault, true)))
       .limit(1);
 
     return role ?? null;
@@ -132,7 +133,7 @@ export class RbacService {
       conditions.push(ilike(roles.name, `%${query.search}%`));
     }
 
-    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+    const whereClause = withTenant(roles, ...conditions);
 
     const sortColumn = {
       name: roles.name,
@@ -176,7 +177,7 @@ export class RbacService {
       .from(userRoles)
       .innerJoin(roles, and(eq(roles.id, userRoles.roleId), eq(roles.userType, userType)))
       .innerJoin(rolePermissions, eq(rolePermissions.roleId, roles.id))
-      .where(eq(userRoles.userId, userId));
+      .where(withTenant(userRoles, eq(userRoles.userId, userId)));
 
     const scopedPermissions: ScopedPermissions = {};
     for (const r of results) {
@@ -251,16 +252,16 @@ export class RbacService {
     await this.database.db.transaction(async (tx) => {
       await tx
         .delete(rolePermissions)
-        .where(eq(rolePermissions.roleId, roleId));
+        .where(withTenant(rolePermissions, eq(rolePermissions.roleId, roleId)));
 
       if (entries.length > 0) {
         await tx
           .insert(rolePermissions)
-          .values(entries.map((e) => ({
+          .values(withTenantInsert(rolePermissions, entries.map((e) => ({
             roleId,
             permission: e.name,
             scope: e.scope,
-          })));
+          }))));
       }
     });
   }
@@ -269,7 +270,7 @@ export class RbacService {
     const results = await this.database.db
       .select({ permission: rolePermissions.permission, scope: rolePermissions.scope })
       .from(rolePermissions)
-      .where(eq(rolePermissions.roleId, roleId));
+      .where(withTenant(rolePermissions, eq(rolePermissions.roleId, roleId)));
 
     const scopedPermissions: ScopedPermissions = {};
     for (const r of results) {
@@ -287,7 +288,7 @@ export class RbacService {
     const [user] = await this.database.db
       .select({ userType: users.userType })
       .from(users)
-      .where(eq(users.id, userId))
+      .where(withTenant(users, eq(users.id, userId)))
       .limit(1);
 
     if (!user) throw new NotFoundException('User not found');
@@ -300,18 +301,18 @@ export class RbacService {
 
     await this.database.db
       .insert(userRoles)
-      .values({ userId, roleId })
+      .values(withTenantInsert(userRoles, { userId, roleId }))
       .onConflictDoNothing();
   }
 
   async removeRoleFromUser(userId: string, roleId: string): Promise<void> {
     await this.database.db
       .delete(userRoles)
-      .where(and(eq(userRoles.userId, userId), eq(userRoles.roleId, roleId)));
+      .where(withTenant(userRoles, eq(userRoles.userId, userId), eq(userRoles.roleId, roleId)));
   }
 
   async getUserRoles(userId: string, userType?: string): Promise<Role[]> {
-    const conditions = [eq(userRoles.userId, userId)];
+    const conditions: (SQL | undefined)[] = [eq(userRoles.userId, userId)];
     if (userType) {
       conditions.push(eq(roles.userType, userType));
     }
@@ -327,7 +328,7 @@ export class RbacService {
       })
       .from(userRoles)
       .innerJoin(roles, eq(roles.id, userRoles.roleId))
-      .where(and(...conditions));
+      .where(withTenant(userRoles, ...conditions));
   }
 
   // --- Permission registry (delegates to internal service) ---
@@ -358,7 +359,7 @@ export class RbacService {
     const rows = await this.database.db
       .select({ roleId: rolePermissions.roleId })
       .from(rolePermissions)
-      .where(eq(rolePermissions.permission, '*'));
+      .where(withTenant(rolePermissions, eq(rolePermissions.permission, '*')));
     return new Set(rows.map((r) => r.roleId));
   }
 
@@ -379,7 +380,7 @@ export class RbacService {
     const wildcardRoleRows = await this.database.db
       .select({ roleId: rolePermissions.roleId })
       .from(rolePermissions)
-      .where(eq(rolePermissions.permission, '*'));
+      .where(withTenant(rolePermissions, eq(rolePermissions.permission, '*')));
 
     let wildcardRoleIds = wildcardRoleRows.map((r) => r.roleId);
 
@@ -392,7 +393,7 @@ export class RbacService {
     const [{ total }] = await this.database.db
       .select({ total: count() })
       .from(userRoles)
-      .where(inArray(userRoles.roleId, wildcardRoleIds));
+      .where(withTenant(userRoles, inArray(userRoles.roleId, wildcardRoleIds)));
 
     return Number(total);
   }

@@ -2,6 +2,7 @@ import { Controller, Get, Post, Patch, Param, Body, HttpCode, HttpStatus } from 
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { DatabaseService, users, eq, and, isNull } from '@packages/database';
+import { withTenant } from '@packages/tenancy/helpers';
 import { RbacService } from '@packages/rbac';
 import { Public, CurrentUser, type JwtPayload } from '@packages/auth-core';
 import { ClientAuthService } from '../orchestrator/client-auth.service';
@@ -106,7 +107,7 @@ export class ClientAuthController {
         createdAt: users.createdAt,
       })
       .from(users)
-      .where(and(eq(users.id, user.userId), isNull(users.deletedAt)))
+      .where(withTenant(users, eq(users.id, user.userId), isNull(users.deletedAt)))
       .limit(1);
 
     if (!row) return null;
@@ -132,7 +133,7 @@ export class ClientAuthController {
       await this.database.db
         .update(users)
         .set(updateValues)
-        .where(eq(users.id, user.userId));
+        .where(withTenant(users, eq(users.id, user.userId)));
     }
 
     return this.getProfile(user);

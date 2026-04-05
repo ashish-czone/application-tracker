@@ -9,6 +9,7 @@ import {
   evaluateConditionsInMemory,
   type Condition,
 } from '@packages/common';
+import { withTenantInsert } from '@packages/tenancy/helpers';
 import { AutomationRuleService } from '../services/automation-rule.service';
 import { ActionRegistry } from '../services/action-registry';
 import { UserResolverRegistry } from '../services/user-resolver-registry';
@@ -190,7 +191,7 @@ export class AutomationListener {
 
     await this.database.db
       .insert(automationScheduled)
-      .values({
+      .values(withTenantInsert(automationScheduled, {
         ruleId,
         entityType: event.entityType,
         entityId: event.entityId,
@@ -201,7 +202,7 @@ export class AutomationListener {
           payload: event.payload,
         },
         scheduledFor,
-      });
+      }));
 
     this.logger.debug('Delayed automation scheduled', {
       ruleId,

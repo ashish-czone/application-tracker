@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { DatabaseService, eq, and, ilike, asc, desc, count } from '@packages/database';
 import type { PaginatedResponse } from '@packages/common';
+import { withTenant, withTenantInsert } from '@packages/tenancy/helpers';
 import { notificationTemplates } from '../schema/notification-templates';
 import type { NotificationTemplate, NotificationChannel } from '../types';
 
@@ -31,12 +32,12 @@ export class NotificationTemplatesService {
     const [{ total }] = await this.database.db
       .select({ total: count() })
       .from(notificationTemplates)
-      .where(whereClause);
+      .where(withTenant(notificationTemplates, whereClause));
 
     const data = await this.database.db
       .select()
       .from(notificationTemplates)
-      .where(whereClause)
+      .where(withTenant(notificationTemplates, whereClause))
       .orderBy(orderFn(sortColumn))
       .limit(limit)
       .offset(offset);
@@ -51,7 +52,7 @@ export class NotificationTemplatesService {
     const [template] = await this.database.db
       .select()
       .from(notificationTemplates)
-      .where(eq(notificationTemplates.id, id))
+      .where(withTenant(notificationTemplates, eq(notificationTemplates.id, id)))
       .limit(1);
 
     if (!template) throw new NotFoundException('Notification template not found');
@@ -61,7 +62,7 @@ export class NotificationTemplatesService {
   async create(data: { name: string; channel: NotificationChannel; subject?: string; body: string }): Promise<NotificationTemplate> {
     const [template] = await this.database.db
       .insert(notificationTemplates)
-      .values(data)
+      .values(withTenantInsert(notificationTemplates, data))
       .returning();
     return template as NotificationTemplate;
   }
@@ -72,7 +73,7 @@ export class NotificationTemplatesService {
     const [updated] = await this.database.db
       .update(notificationTemplates)
       .set(data)
-      .where(eq(notificationTemplates.id, id))
+      .where(withTenant(notificationTemplates, eq(notificationTemplates.id, id)))
       .returning();
 
     return updated as NotificationTemplate;
@@ -83,6 +84,6 @@ export class NotificationTemplatesService {
 
     await this.database.db
       .delete(notificationTemplates)
-      .where(eq(notificationTemplates.id, id));
+      .where(withTenant(notificationTemplates, eq(notificationTemplates.id, id)));
   }
 }

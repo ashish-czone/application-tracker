@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { DatabaseService } from '@packages/database';
+import { withTenant, withTenantInsert } from '@packages/tenancy/helpers';
 import { entityMultiValues } from '../schema/entity-multi-values';
 
 /**
@@ -19,7 +20,7 @@ export class MultiValueService {
     const rows = await this.database.db
       .select({ targetId: entityMultiValues.targetId })
       .from(entityMultiValues)
-      .where(and(
+      .where(withTenant(entityMultiValues,
         eq(entityMultiValues.entityType, entityType),
         eq(entityMultiValues.entityId, entityId),
         eq(entityMultiValues.fieldKey, fieldKey),
@@ -39,7 +40,7 @@ export class MultiValueService {
         targetId: entityMultiValues.targetId,
       })
       .from(entityMultiValues)
-      .where(and(
+      .where(withTenant(entityMultiValues,
         eq(entityMultiValues.entityType, entityType),
         eq(entityMultiValues.entityId, entityId),
       ))
@@ -69,7 +70,7 @@ export class MultiValueService {
       // Remove existing values for this field
       await db
         .delete(entityMultiValues)
-        .where(and(
+        .where(withTenant(entityMultiValues,
           eq(entityMultiValues.entityType, entityType),
           eq(entityMultiValues.entityId, entityId),
           eq(entityMultiValues.fieldKey, fieldKey),
@@ -78,13 +79,13 @@ export class MultiValueService {
       // Insert new values
       if (targetIds.length > 0) {
         await db.insert(entityMultiValues).values(
-          targetIds.map((targetId, index) => ({
+          withTenantInsert(entityMultiValues, targetIds.map((targetId, index) => ({
             entityType,
             entityId,
             fieldKey,
             targetId,
             sortOrder: index,
-          })),
+          }))),
         );
       }
     };
@@ -102,7 +103,7 @@ export class MultiValueService {
   async removeAllForEntity(entityType: string, entityId: string): Promise<void> {
     await this.database.db
       .delete(entityMultiValues)
-      .where(and(
+      .where(withTenant(entityMultiValues,
         eq(entityMultiValues.entityType, entityType),
         eq(entityMultiValues.entityId, entityId),
       ));
@@ -120,7 +121,7 @@ export class MultiValueService {
     const rows = await this.database.db
       .select({ entityId: entityMultiValues.entityId })
       .from(entityMultiValues)
-      .where(and(
+      .where(withTenant(entityMultiValues,
         eq(entityMultiValues.entityType, entityType),
         eq(entityMultiValues.fieldKey, fieldKey),
         eq(entityMultiValues.targetId, targetId),

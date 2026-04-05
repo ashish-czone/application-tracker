@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService, eq, and } from '@packages/database';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
+import { withTenant, withTenantInsert } from '@packages/tenancy/helpers';
 import { automationActionLog } from '../schema/automation-action-log';
 import type { AutomationActionLogEntry } from '../types';
 
@@ -30,7 +31,7 @@ export class ProvenanceService {
   }): Promise<AutomationActionLogEntry> {
     const [row] = await this.database.db
       .insert(automationActionLog)
-      .values(entry)
+      .values(withTenantInsert(automationActionLog, entry))
       .returning();
 
     this.logger.debug('Provenance logged', {
@@ -67,7 +68,8 @@ export class ProvenanceService {
     const rows = await this.database.db
       .select()
       .from(automationActionLog)
-      .where(and(
+      .where(withTenant(
+        automationActionLog,
         eq(automationActionLog.ruleId, params.ruleId),
         eq(automationActionLog.linkName, params.linkName),
         eq(automationActionLog.sourceEntityType, params.sourceEntityType),
@@ -107,7 +109,8 @@ export class ProvenanceService {
   async removeByTarget(targetEntityType: string, targetEntityId: string): Promise<void> {
     await this.database.db
       .delete(automationActionLog)
-      .where(and(
+      .where(withTenant(
+        automationActionLog,
         eq(automationActionLog.targetEntityType, targetEntityType),
         eq(automationActionLog.targetEntityId, targetEntityId),
       ));
@@ -119,7 +122,8 @@ export class ProvenanceService {
   async removeBySource(sourceEntityType: string, sourceEntityId: string): Promise<void> {
     await this.database.db
       .delete(automationActionLog)
-      .where(and(
+      .where(withTenant(
+        automationActionLog,
         eq(automationActionLog.sourceEntityType, sourceEntityType),
         eq(automationActionLog.sourceEntityId, sourceEntityId),
       ));

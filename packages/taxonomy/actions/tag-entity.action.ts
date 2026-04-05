@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
-import { DatabaseService, and } from '@packages/database';
+import { DatabaseService } from '@packages/database';
+import { withTenant } from '@packages/tenancy/helpers';
 import {
   buildConditions,
   EntityResolverRegistry,
@@ -88,7 +89,7 @@ export class TagEntityAction implements ActionHandler {
     const sqlConditions = buildConditions(entityResolver.table, conditions, allowedFields);
 
     const idColumn = (entityResolver.table as Record<string, any>).id;
-    const whereClause = sqlConditions.length > 0 ? and(...sqlConditions) : undefined;
+    const whereClause = withTenant(entityResolver.table, ...sqlConditions);
 
     const entities = await this.database.db
       .select({ id: idColumn })

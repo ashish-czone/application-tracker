@@ -1,5 +1,6 @@
 import { DatabaseService, eq } from '@packages/database';
 import { userRoles } from '@packages/rbac';
+import { withTenant } from '@packages/tenancy/helpers';
 import type { UserResolution } from '../../types';
 import type { UserResolverStrategy, UserResolutionContext } from '../user-resolver-registry';
 
@@ -24,7 +25,7 @@ export class RoleStrategy implements UserResolverStrategy {
     const rows = await this.database.db
       .select({ userId: userRoles.userId })
       .from(userRoles)
-      .where(eq(userRoles.roleId, roleId));
+      .where(withTenant(userRoles, eq(userRoles.roleId, roleId)));
 
     return rows.map((r) => r.userId);
   }

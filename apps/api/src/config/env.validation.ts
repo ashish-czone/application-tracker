@@ -1,5 +1,5 @@
 import { plainToInstance } from 'class-transformer';
-import { IsIn, IsString, validateSync } from 'class-validator';
+import { IsIn, IsOptional, IsString, validateSync } from 'class-validator';
 
 export class EnvironmentVariables {
   @IsString()
@@ -16,6 +16,22 @@ export class EnvironmentVariables {
 
   @IsString()
   ALLOWED_ORIGINS!: string;
+
+  @IsOptional()
+  @IsIn(['rls', 'database'])
+  TENANCY_MODE?: string;
+
+  @IsOptional()
+  @IsIn(['subdomain', 'header', 'jwt'])
+  TENANCY_RESOLVER?: string;
+
+  @IsOptional()
+  @IsString()
+  TENANCY_HEADER?: string;
+
+  @IsOptional()
+  @IsString()
+  TENANCY_JWT_CLAIM?: string;
 }
 
 export function validate(config: Record<string, unknown>) {

@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService, eq, and, desc, count } from '@packages/database';
+import { withTenant } from '@packages/tenancy/helpers';
 import { notifications } from '../schema/notifications';
 
 export interface ListNotificationsQuery {
@@ -37,7 +38,7 @@ export class NotificationQueryService {
       conditions.push(eq(notifications.isRead, query.isRead));
     }
 
-    const where = and(...conditions);
+    const where = withTenant(notifications, and(...conditions));
 
     const [data, [{ total }]] = await Promise.all([
       this.database.db
@@ -60,7 +61,7 @@ export class NotificationQueryService {
     const [result] = await this.database.db
       .select({ count: count() })
       .from(notifications)
-      .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false)));
+      .where(withTenant(notifications, eq(notifications.userId, userId), eq(notifications.isRead, false)));
 
     return Number(result.count);
   }
@@ -69,13 +70,13 @@ export class NotificationQueryService {
     await this.database.db
       .update(notifications)
       .set({ isRead: true })
-      .where(and(eq(notifications.id, notificationId), eq(notifications.userId, userId)));
+      .where(withTenant(notifications, eq(notifications.id, notificationId), eq(notifications.userId, userId)));
   }
 
   async markAllAsRead(userId: string): Promise<void> {
     await this.database.db
       .update(notifications)
       .set({ isRead: true })
-      .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false)));
+      .where(withTenant(notifications, eq(notifications.userId, userId), eq(notifications.isRead, false)));
   }
 }

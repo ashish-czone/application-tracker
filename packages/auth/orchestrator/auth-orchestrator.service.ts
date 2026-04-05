@@ -2,7 +2,8 @@ import { Injectable, UnauthorizedException, BadRequestException, ConflictExcepti
 import { RbacService } from '@packages/rbac';
 import { DatabaseService, users, eq } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
-import { AppLoggerService, type ContextLogger } from '@packages/logger';
+import { AppLoggerService, type ContextLogger, getTenantId } from '@packages/logger';
+import { withTenant, withTenantInsert } from '@packages/tenancy/helpers';
 import { AuthService } from '../services/auth.service';
 import { AuthAdapterRegistry } from '../adapters/auth-adapter-registry';
 import {
@@ -48,12 +49,12 @@ export class AuthOrchestratorService {
       const newUser = await this.database.db.transaction(async (tx) => {
         const [created] = await tx
           .insert(users)
-          .values({
+          .values(withTenantInsert(users, {
             email: result.email.toLowerCase(),
             firstName: result.firstName ?? result.email.split('@')[0],
             lastName: result.lastName ?? '',
             userType,
-          })
+          }))
           .returning();
 
         await this.authService.createCredential(created.id, result.provider, result.providerIdentifier, tx);
@@ -80,7 +81,7 @@ export class AuthOrchestratorService {
 
     // Generate tokens
     const permissions = await this.rbacService.getPermissionsForUser(userId!, userType);
-    const accessToken = this.authService.generateAccessToken({ userId: userId!, userType, permissions });
+    const accessToken = this.authService.generateAccessToken({ userId: userId!, userType, permissions, tenantId: getTenantId() });
     const { token: refreshToken } = await this.authService.createRefreshToken(userId!);
 
     this.logger.log('User authenticated', { userId: userId!, userType, provider });
@@ -133,7 +134,7 @@ export class AuthOrchestratorService {
     // Reload permissions (may have changed since last token)
     const permissions = await this.rbacService.getPermissionsForUser(userId, userType);
 
-    const accessToken = this.authService.generateAccessToken({ userId, userType, permissions });
+    const accessToken = this.authService.generateAccessToken({ userId, userType, permissions, tenantId: getTenantId() });
 
     return { accessToken, refreshToken: newRefreshToken };
   }
@@ -212,7 +213,7 @@ export class AuthOrchestratorService {
     const [existing] = await this.database.db
       .select()
       .from(users)
-      .where(eq(users.email, data.email.toLowerCase()))
+      .where(withTenant(users, eq(users.email, data.email.toLowerCase())))
       .limit(1);
 
     if (existing) {
@@ -229,12 +230,12 @@ export class AuthOrchestratorService {
     const user = await this.database.db.transaction(async (tx) => {
       const [newUser] = await tx
         .insert(users)
-        .values({
+        .values(withTenantInsert(users, {
           email: data.email.toLowerCase(),
           firstName: data.firstName,
           lastName: data.lastName,
           userType,
-        })
+        }))
         .returning();
 
       await this.authService.createPasswordCredential(newUser.id, data.email.toLowerCase(), data.password, tx);
@@ -247,7 +248,7 @@ export class AuthOrchestratorService {
 
     // Generate tokens with permissions from the default role
     const permissions = await this.rbacService.getPermissionsForUser(user.id, userType);
-    const accessToken = this.authService.generateAccessToken({ userId: user.id, userType, permissions });
+    const accessToken = this.authService.generateAccessToken({ userId: user.id, userType, permissions, tenantId: getTenantId() });
     const { token: refreshToken } = await this.authService.createRefreshToken(user.id);
 
     this.logger.log('User registered', { userId: user.id, userType });
@@ -278,7 +279,7 @@ export class AuthOrchestratorService {
         userType: users.userType,
       })
       .from(users)
-      .where(eq(users.id, userId))
+      .where(withTenant(users, eq(users.id, userId)))
       .limit(1);
 
     return user ?? null;

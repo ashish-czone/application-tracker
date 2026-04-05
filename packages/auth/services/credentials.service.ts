@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService, eq, and, type DrizzleDB } from '@packages/database';
+import { withTenant, withTenantInsert } from '@packages/tenancy/helpers';
 import * as bcrypt from 'bcrypt';
 import { credentials } from '../schema';
 
@@ -13,7 +14,7 @@ export class CredentialsService {
     const [credential] = await this.database.db
       .select()
       .from(credentials)
-      .where(and(eq(credentials.provider, provider), eq(credentials.identifier, identifier)))
+      .where(withTenant(credentials, eq(credentials.provider, provider), eq(credentials.identifier, identifier)))
       .limit(1);
 
     return credential ?? null;
@@ -23,7 +24,7 @@ export class CredentialsService {
     return this.database.db
       .select()
       .from(credentials)
-      .where(eq(credentials.userId, userId));
+      .where(withTenant(credentials, eq(credentials.userId, userId)));
   }
 
   async createPasswordCredential(userId: string, identifier: string, password: string, tx?: DrizzleDB) {
@@ -32,12 +33,12 @@ export class CredentialsService {
 
     const [credential] = await db
       .insert(credentials)
-      .values({
+      .values(withTenantInsert(credentials, {
         userId,
         provider: 'password',
         identifier,
         secretHash,
-      })
+      }))
       .returning();
 
     return credential;
@@ -48,11 +49,11 @@ export class CredentialsService {
 
     const [credential] = await db
       .insert(credentials)
-      .values({
+      .values(withTenantInsert(credentials, {
         userId,
         provider,
         identifier,
-      })
+      }))
       .returning();
 
     return credential;
@@ -69,6 +70,6 @@ export class CredentialsService {
     await db
       .update(credentials)
       .set({ secretHash })
-      .where(and(eq(credentials.userId, userId), eq(credentials.provider, provider)));
+      .where(withTenant(credentials, eq(credentials.userId, userId), eq(credentials.provider, provider)));
   }
 }
