@@ -7,6 +7,7 @@ import { TenantJwtGuard } from './guards/tenant-jwt.guard';
 import { TenantAwareDatabaseService } from './services/tenant-aware-database.service';
 import { TenantPoolManager } from './services/tenant-pool-manager.service';
 import { TenantRegistryService } from './services/tenant-registry.service';
+import { TenantsController } from './controllers/tenants.controller';
 
 export interface TenancyModuleAsyncOptions {
   useFactory: (...args: any[]) => TenancyConfig | Promise<TenancyConfig>;
@@ -29,6 +30,7 @@ export class TenancyModule implements NestModule {
     return {
       module: TenancyModule,
       global: true,
+      controllers: [TenantsController],
       providers: [
         { provide: TENANCY_CONFIG, useValue: config },
         ...TenancyModule.coreProviders(config),
@@ -41,6 +43,7 @@ export class TenancyModule implements NestModule {
     return {
       module: TenancyModule,
       global: true,
+      controllers: [TenantsController],
       providers: [
         {
           provide: TENANCY_CONFIG,
