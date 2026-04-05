@@ -1,0 +1,23 @@
+{
+  "name": "@packages/tenancy",
+  "version": "0.0.1",
+  "private": true,
+  "main": "index.ts",
+  "exports": {
+    ".": "./index.ts",
+    "./helpers": "./helpers/index.ts",
+    "./schema": "./schema/index.ts"
+  },
+  "scripts": {},
+  "dependencies": {
+    "@nestjs/common": "^11.0.0",
+    "@packages/database": "workspace:*",
+    "@packages/logger": "workspace:*",
+    "drizzle-orm": "^0.45.1",
+    "pg": "^8.20.0"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.18.0",
+    "typescript": "^5.7.0"
+  }
+}
