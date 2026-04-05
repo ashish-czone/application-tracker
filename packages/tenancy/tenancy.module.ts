@@ -6,6 +6,7 @@ import { ServiceAuthClient } from '@packages/service-auth';
 import { TENANCY_CONFIG, TENANT_LOOKUP, type TenancyConfig, type TenantLookup } from './types';
 import { TenantResolverMiddleware } from './middleware/tenant-resolver.middleware';
 import { TenantJwtGuard } from './guards/tenant-jwt.guard';
+import { CapabilityGuard } from './guards/capability.guard';
 import { TenantAwareDatabaseService } from './services/tenant-aware-database.service';
 import { TenantPoolManager } from './services/tenant-pool-manager.service';
 import { TenantRegistryService } from './services/tenant-registry.service';
@@ -50,6 +51,10 @@ export class TenancyModule implements NestModule {
           provide: APP_GUARD,
           useClass: TenantJwtGuard,
         },
+        {
+          provide: APP_GUARD,
+          useClass: CapabilityGuard,
+        },
       ],
       exports: [TENANCY_CONFIG, TENANT_LOOKUP, DatabaseService, TenantRegistryService],
     };
@@ -91,6 +96,10 @@ export class TenancyModule implements NestModule {
         {
           provide: APP_GUARD,
           useClass: TenantJwtGuard,
+        },
+        {
+          provide: APP_GUARD,
+          useClass: CapabilityGuard,
         },
       ],
       exports: [TENANCY_CONFIG, TENANT_LOOKUP, DatabaseService, TenantRegistryService],
