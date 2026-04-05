@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
-import { DatabaseService, eq, and, inArray, count, ilike, asc, desc } from '@packages/database';
+import { DatabaseService, eq, inArray, count, ilike, asc, desc } from '@packages/database';
 import type { PaginatedResponse } from '@packages/common';
+import { withTenant, withTenantInsert } from '@packages/tenancy/helpers';
 import { tagGroups } from '../schema/tag-groups';
 import { tags } from '../schema/tags';
 import { entityTags } from '../schema/entity-tags';
@@ -15,12 +16,12 @@ export class TaxonomyService {
   async createTagGroup(data: { name: string; slug: string; description?: string; allowMultiple?: boolean }): Promise<TagGroup> {
     const [group] = await this.database.db
       .insert(tagGroups)
-      .values({
+      .values(withTenantInsert(tagGroups, {
         name: data.name,
         slug: data.slug,
         description: data.description ?? null,
         allowMultiple: data.allowMultiple ?? true,
-      })
+      }))
       .returning();
     return group;
   }
@@ -39,7 +40,7 @@ export class TaxonomyService {
     const [group] = await this.database.db
       .update(tagGroups)
       .set(updateValues)
-      .where(eq(tagGroups.id, id))
+      .where(withTenant(tagGroups, eq(tagGroups.id, id)))
       .returning();
 
     if (!group) throw new NotFoundException('Tag group not found');
@@ -55,20 +56,20 @@ export class TaxonomyService {
       .select({ total: count() })
       .from(entityTags)
       .innerJoin(tags, eq(tags.id, entityTags.tagId))
-      .where(eq(tags.tagGroupId, id));
+      .where(withTenant(entityTags, eq(tags.tagGroupId, id)));
 
     if (Number(total) > 0) {
       throw new ConflictException('Cannot delete a tag group that has tags attached to entities. Remove all tag assignments first.');
     }
 
-    await this.database.db.delete(tagGroups).where(eq(tagGroups.id, id));
+    await this.database.db.delete(tagGroups).where(withTenant(tagGroups, eq(tagGroups.id, id)));
   }
 
   async findTagGroupById(id: string): Promise<TagGroup | null> {
     const [group] = await this.database.db
       .select()
       .from(tagGroups)
-      .where(eq(tagGroups.id, id))
+      .where(withTenant(tagGroups, eq(tagGroups.id, id)))
       .limit(1);
     return group ?? null;
   }
@@ -95,19 +96,18 @@ export class TaxonomyService {
       conditions.push(ilike(tagGroups.name, `%${query.search}%`));
     }
 
-    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
     const sortColumn = { name: tagGroups.name, createdAt: tagGroups.createdAt }[query.sort ?? 'createdAt'];
     const orderFn = query.order === 'asc' ? asc : desc;
 
     const [{ total }] = await this.database.db
       .select({ total: count() })
       .from(tagGroups)
-      .where(whereClause);
+      .where(withTenant(tagGroups, ...conditions));
 
     const data = await this.database.db
       .select()
       .from(tagGroups)
-      .where(whereClause)
+      .where(withTenant(tagGroups, ...conditions))
       .orderBy(orderFn(sortColumn))
       .limit(limit)
       .offset(offset);
@@ -125,12 +125,12 @@ export class TaxonomyService {
 
     const [tag] = await this.database.db
       .insert(tags)
-      .values({
+      .values(withTenantInsert(tags, {
         tagGroupId: data.tagGroupId,
         name: data.name,
         slug: data.slug,
         color: data.color ?? null,
-      })
+      }))
       .returning();
     return tag;
   }
@@ -148,7 +148,7 @@ export class TaxonomyService {
     const [tag] = await this.database.db
       .update(tags)
       .set(updateValues)
-      .where(eq(tags.id, id))
+      .where(withTenant(tags, eq(tags.id, id)))
       .returning();
 
     if (!tag) throw new NotFoundException('Tag not found');
@@ -162,20 +162,20 @@ export class TaxonomyService {
     const [{ total }] = await this.database.db
       .select({ total: count() })
       .from(entityTags)
-      .where(eq(entityTags.tagId, id));
+      .where(withTenant(entityTags, eq(entityTags.tagId, id)));
 
     if (Number(total) > 0) {
       throw new ConflictException('Cannot delete a tag that is attached to entities. Remove all assignments first.');
     }
 
-    await this.database.db.delete(tags).where(eq(tags.id, id));
+    await this.database.db.delete(tags).where(withTenant(tags, eq(tags.id, id)));
   }
 
   async findTagById(id: string): Promise<Tag | null> {
     const [tag] = await this.database.db
       .select()
       .from(tags)
-      .where(eq(tags.id, id))
+      .where(withTenant(tags, eq(tags.id, id)))
       .limit(1);
     return tag ?? null;
   }
@@ -191,7 +191,7 @@ export class TaxonomyService {
     return this.database.db
       .select()
       .from(tags)
-      .where(eq(tags.tagGroupId, tagGroupId))
+      .where(withTenant(tags, eq(tags.tagGroupId, tagGroupId)))
       .orderBy(asc(tags.name));
   }
 
@@ -199,7 +199,7 @@ export class TaxonomyService {
     const [group] = await this.database.db
       .select({ id: tagGroups.id })
       .from(tagGroups)
-      .where(eq(tagGroups.slug, slug))
+      .where(withTenant(tagGroups, eq(tagGroups.slug, slug)))
       .limit(1);
 
     if (!group) return [];
@@ -207,7 +207,7 @@ export class TaxonomyService {
     return this.database.db
       .select()
       .from(tags)
-      .where(eq(tags.tagGroupId, group.id))
+      .where(withTenant(tags, eq(tags.tagGroupId, group.id)))
       .orderBy(asc(tags.name));
   }
 
@@ -215,7 +215,7 @@ export class TaxonomyService {
     const [group] = await this.database.db
       .select({ id: tagGroups.id })
       .from(tagGroups)
-      .where(eq(tagGroups.slug, slug))
+      .where(withTenant(tagGroups, eq(tagGroups.slug, slug)))
       .limit(1);
 
     if (!group) return [];
@@ -228,7 +228,7 @@ export class TaxonomyService {
     const tagList = await this.database.db
       .select()
       .from(tags)
-      .where(and(...conditions))
+      .where(withTenant(tags, ...conditions))
       .orderBy(asc(tags.name))
       .limit(limit ?? 50);
 
@@ -249,7 +249,7 @@ export class TaxonomyService {
         .select({ tagId: entityTags.tagId })
         .from(entityTags)
         .innerJoin(tags, eq(tags.id, entityTags.tagId))
-        .where(and(
+        .where(withTenant(entityTags,
           eq(entityTags.entityType, entityType),
           eq(entityTags.entityId, entityId),
           eq(tags.tagGroupId, group.id),
@@ -265,7 +265,7 @@ export class TaxonomyService {
 
     await db
       .insert(entityTags)
-      .values({ entityType, entityId, tagId })
+      .values(withTenantInsert(entityTags, { entityType, entityId, tagId }))
       .onConflictDoNothing();
   }
 
@@ -273,7 +273,7 @@ export class TaxonomyService {
     const db = tx ?? this.database.db;
     await db
       .delete(entityTags)
-      .where(and(
+      .where(withTenant(entityTags,
         eq(entityTags.entityType, entityType),
         eq(entityTags.entityId, entityId),
         eq(entityTags.tagId, tagId),
@@ -297,7 +297,7 @@ export class TaxonomyService {
       .from(entityTags)
       .innerJoin(tags, eq(tags.id, entityTags.tagId))
       .innerJoin(tagGroups, eq(tagGroups.id, tags.tagGroupId))
-      .where(and(eq(entityTags.entityType, entityType), eq(entityTags.entityId, entityId)))
+      .where(withTenant(entityTags, eq(entityTags.entityType, entityType), eq(entityTags.entityId, entityId)))
       .orderBy(asc(tagGroups.name), asc(tags.name));
   }
 
@@ -335,7 +335,7 @@ export class TaxonomyService {
         .from(entityTags)
         .innerJoin(tags, eq(tags.id, entityTags.tagId))
         .innerJoin(tagGroups, eq(tagGroups.id, tags.tagGroupId))
-        .where(and(
+        .where(withTenant(entityTags,
           eq(entityTags.entityType, entityType),
           inArray(entityTags.entityId, entityIds),
         ))

@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService, eq, and } from '@packages/database';
+import { withTenant } from '@packages/tenancy/helpers';
 import { notificationPreferences } from '../schema/notification-preferences';
 import type { NotificationChannel } from '../types';
 
@@ -15,7 +16,7 @@ export class PreferenceService {
     const [pref] = await this.database.db
       .select({ isEnabled: notificationPreferences.isEnabled })
       .from(notificationPreferences)
-      .where(and(
+      .where(withTenant(notificationPreferences,
         eq(notificationPreferences.userId, userId),
         eq(notificationPreferences.channel, channel),
       ))

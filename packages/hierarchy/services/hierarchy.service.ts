@@ -1,5 +1,6 @@
 import { Injectable, ConflictException } from '@nestjs/common';
 import { DatabaseService, eq, like, inArray, asc } from '@packages/database';
+import { withTenant } from '@packages/tenancy/helpers';
 import {
   computePath,
   computeDepth,
@@ -60,7 +61,7 @@ export class HierarchyService {
     const rows = await this.database.db
       .select()
       .from(table as any)
-      .where(inArray(idCol, ancestorIds))
+      .where(withTenant(table as any, inArray(idCol, ancestorIds)))
       .orderBy(asc(pathCol));
 
     return rows;
@@ -83,7 +84,7 @@ export class HierarchyService {
     return this.database.db
       .select()
       .from(table as any)
-      .where(like(pathCol, prefix));
+      .where(withTenant(table as any, like(pathCol, prefix)));
   }
 
   /**
@@ -135,13 +136,13 @@ export class HierarchyService {
           path: newPath,
           depth: newDepth,
         })
-        .where(eq(idCol, nodeId));
+        .where(withTenant(table, eq(idCol, nodeId)));
 
       // Update all descendants: replace old path prefix with new path prefix
       const descendants = await tx
         .select()
         .from(table as any)
-        .where(like(pathCol, descendantPrefix(oldPath)));
+        .where(withTenant(table, like(pathCol, descendantPrefix(oldPath))));
 
       for (const descendant of descendants) {
         const updatedPath = rebasePath(descendant.path, oldPath, newPath);
@@ -150,7 +151,7 @@ export class HierarchyService {
         await tx
           .update(table)
           .set({ path: updatedPath, depth: updatedDepth })
-          .where(eq(idCol, descendant.id));
+          .where(withTenant(table, eq(idCol, descendant.id)));
       }
     });
   }
@@ -175,7 +176,7 @@ export class HierarchyService {
     depthCol: any,
   ): Promise<number> {
     // Fetch all rows
-    const allRows = await this.database.db.select().from(table as any);
+    const allRows = await this.database.db.select().from(table as any).where(withTenant(table));
 
     const rowMap = new Map<string, any>();
     for (const row of allRows) {
@@ -204,7 +205,7 @@ export class HierarchyService {
       await this.database.db
         .update(table)
         .set({ path, depth })
-        .where(eq(idCol, row.id));
+        .where(withTenant(table, eq(idCol, row.id)));
 
       updated++;
     }

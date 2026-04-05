@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
-import { DatabaseService, eq, asc, count, and, ilike } from '@packages/database';
+import { DatabaseService, eq, asc, count, ilike } from '@packages/database';
 import { HierarchyService, buildTree } from '@packages/hierarchy';
+import { withTenant, withTenantInsert } from '@packages/tenancy/helpers';
 import { categoryGroups } from '../schema/category-groups';
 import { categories } from '../schema/categories';
 import type { CategoryGroup, Category, CategoryTreeNode } from '../types';
@@ -17,12 +18,12 @@ export class CategoryService {
   async createCategoryGroup(data: { name: string; slug: string; description?: string; sortOrder?: number }): Promise<CategoryGroup> {
     const [group] = await this.database.db
       .insert(categoryGroups)
-      .values({
+      .values(withTenantInsert(categoryGroups, {
         name: data.name,
         slug: data.slug,
         description: data.description ?? null,
         sortOrder: data.sortOrder ?? 0,
-      })
+      }))
       .returning();
     return group;
   }
@@ -41,7 +42,7 @@ export class CategoryService {
     const [group] = await this.database.db
       .update(categoryGroups)
       .set(updateValues)
-      .where(eq(categoryGroups.id, id))
+      .where(withTenant(categoryGroups, eq(categoryGroups.id, id)))
       .returning();
 
     if (!group) throw new NotFoundException('Category group not found');
@@ -55,20 +56,20 @@ export class CategoryService {
     const [{ total }] = await this.database.db
       .select({ total: count() })
       .from(categories)
-      .where(eq(categories.groupId, id));
+      .where(withTenant(categories, eq(categories.groupId, id)));
 
     if (Number(total) > 0) {
       throw new ConflictException('Cannot delete a category group that has categories. Remove all categories first.');
     }
 
-    await this.database.db.delete(categoryGroups).where(eq(categoryGroups.id, id));
+    await this.database.db.delete(categoryGroups).where(withTenant(categoryGroups, eq(categoryGroups.id, id)));
   }
 
   async findCategoryGroupById(id: string): Promise<CategoryGroup | null> {
     const [group] = await this.database.db
       .select()
       .from(categoryGroups)
-      .where(eq(categoryGroups.id, id))
+      .where(withTenant(categoryGroups, eq(categoryGroups.id, id)))
       .limit(1);
     return group ?? null;
   }
@@ -83,6 +84,7 @@ export class CategoryService {
     return this.database.db
       .select()
       .from(categoryGroups)
+      .where(withTenant(categoryGroups))
       .orderBy(asc(categoryGroups.sortOrder), asc(categoryGroups.name));
   }
 
@@ -104,7 +106,7 @@ export class CategoryService {
     // Insert with a temporary path, then update with the real path using the generated ID
     const [category] = await this.database.db
       .insert(categories)
-      .values({
+      .values(withTenantInsert(categories, {
         groupId: data.groupId,
         parentId: data.parentId ?? null,
         name: data.name,
@@ -112,7 +114,7 @@ export class CategoryService {
         sortOrder: data.sortOrder ?? 0,
         path: '/',
         depth: 0,
-      })
+      }))
       .returning();
 
     const { path, depth } = this.hierarchyService.computeInsertValues(parentPath, category.id);
@@ -120,7 +122,7 @@ export class CategoryService {
     const [updated] = await this.database.db
       .update(categories)
       .set({ path, depth })
-      .where(eq(categories.id, category.id))
+      .where(withTenant(categories, eq(categories.id, category.id)))
       .returning();
 
     return updated;
@@ -139,7 +141,7 @@ export class CategoryService {
     const [category] = await this.database.db
       .update(categories)
       .set(updateValues)
-      .where(eq(categories.id, id))
+      .where(withTenant(categories, eq(categories.id, id)))
       .returning();
 
     if (!category) throw new NotFoundException('Category not found');
@@ -178,20 +180,20 @@ export class CategoryService {
     const [{ total }] = await this.database.db
       .select({ total: count() })
       .from(categories)
-      .where(eq(categories.parentId, id));
+      .where(withTenant(categories, eq(categories.parentId, id)));
 
     if (Number(total) > 0) {
       throw new ConflictException('Cannot delete a category that has children. Remove or move child categories first.');
     }
 
-    await this.database.db.delete(categories).where(eq(categories.id, id));
+    await this.database.db.delete(categories).where(withTenant(categories, eq(categories.id, id)));
   }
 
   async findCategoryById(id: string): Promise<Category | null> {
     const [category] = await this.database.db
       .select()
       .from(categories)
-      .where(eq(categories.id, id))
+      .where(withTenant(categories, eq(categories.id, id)))
       .limit(1);
     return category ?? null;
   }
@@ -210,7 +212,7 @@ export class CategoryService {
     const allCategories = await this.database.db
       .select()
       .from(categories)
-      .where(eq(categories.groupId, groupId))
+      .where(withTenant(categories, eq(categories.groupId, groupId)))
       .orderBy(asc(categories.sortOrder), asc(categories.name));
 
     return buildTree(allCategories) as CategoryTreeNode[];
@@ -236,7 +238,7 @@ export class CategoryService {
     const [group] = await this.database.db
       .select({ id: categoryGroups.id })
       .from(categoryGroups)
-      .where(eq(categoryGroups.slug, slug))
+      .where(withTenant(categoryGroups, eq(categoryGroups.slug, slug)))
       .limit(1);
 
     if (!group) return [];
@@ -249,7 +251,7 @@ export class CategoryService {
     const rows = await this.database.db
       .select({ id: categories.id, name: categories.name })
       .from(categories)
-      .where(and(...conditions))
+      .where(withTenant(categories, ...conditions))
       .orderBy(asc(categories.name))
       .limit(limit ?? 50);
 
@@ -264,7 +266,7 @@ export class CategoryService {
     const [group] = await this.database.db
       .select()
       .from(categoryGroups)
-      .where(eq(categoryGroups.id, category.groupId))
+      .where(withTenant(categoryGroups, eq(categoryGroups.id, category.groupId)))
       .limit(1);
 
     if (!group || group.slug !== groupSlug) {

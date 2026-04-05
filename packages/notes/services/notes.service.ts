@@ -1,7 +1,8 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
-import { DatabaseService, eq, and, isNull, desc, count, sql } from '@packages/database';
+import { DatabaseService, eq, isNull, desc, count } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
 import type { PaginatedResponse } from '@packages/common';
+import { withTenant, withTenantInsert } from '@packages/tenancy/helpers';
 import { users } from '@packages/database/schema';
 import { notes } from '../schema/notes';
 import { noteMentions } from '../schema/note-mentions';
@@ -25,14 +26,14 @@ export class NotesService {
   }): Promise<NoteWithAuthor> {
     const [note] = await this.database.db
       .insert(notes)
-      .values({
+      .values(withTenantInsert(notes, {
         entityType: data.entityType,
         entityId: data.entityId,
         content: data.content,
         isInternal: data.isInternal ?? true,
         authorId: data.authorId,
         updatedAt: new Date(),
-      })
+      }))
       .returning();
 
     const mentionedUserIds = extractMentionUserIds(data.content);
@@ -73,7 +74,7 @@ export class NotesService {
     await this.database.db
       .update(notes)
       .set(updateValues)
-      .where(eq(notes.id, id));
+      .where(withTenant(notes, eq(notes.id, id)));
 
     if (data.content !== undefined) {
       const mentionedUserIds = extractMentionUserIds(data.content);
@@ -112,7 +113,7 @@ export class NotesService {
     await this.database.db
       .update(notes)
       .set({ deletedAt: new Date(), deletedBy: actorId })
-      .where(eq(notes.id, id));
+      .where(withTenant(notes, eq(notes.id, id)));
 
     this.domainEventEmitter.emit(NOTES_NOTE_DELETED, {
       entityType: 'notes',
@@ -145,7 +146,7 @@ export class NotesService {
       })
       .from(notes)
       .innerJoin(users, eq(notes.authorId, users.id))
-      .where(and(eq(notes.id, id), isNull(notes.deletedAt)))
+      .where(withTenant(notes, eq(notes.id, id), isNull(notes.deletedAt)))
       .limit(1);
 
     if (!row) return null;
@@ -186,7 +187,7 @@ export class NotesService {
         })
         .from(notes)
         .innerJoin(users, eq(notes.authorId, users.id))
-        .where(and(
+        .where(withTenant(notes,
           eq(notes.entityType, entityType),
           eq(notes.entityId, entityId),
           isNull(notes.deletedAt),
@@ -198,7 +199,7 @@ export class NotesService {
       this.database.db
         .select({ total: count() })
         .from(notes)
-        .where(and(
+        .where(withTenant(notes,
           eq(notes.entityType, entityType),
           eq(notes.entityId, entityId),
           isNull(notes.deletedAt),
@@ -243,7 +244,7 @@ export class NotesService {
         .from(noteMentions)
         .innerJoin(notes, eq(noteMentions.noteId, notes.id))
         .innerJoin(users, eq(notes.authorId, users.id))
-        .where(and(
+        .where(withTenant(noteMentions,
           eq(noteMentions.userId, userId),
           isNull(notes.deletedAt),
         ))
@@ -255,7 +256,7 @@ export class NotesService {
         .select({ total: count() })
         .from(noteMentions)
         .innerJoin(notes, eq(noteMentions.noteId, notes.id))
-        .where(and(
+        .where(withTenant(noteMentions,
           eq(noteMentions.userId, userId),
           isNull(notes.deletedAt),
         )),
@@ -277,7 +278,7 @@ export class NotesService {
     const rows = await this.database.db
       .select({ userId: noteMentions.userId })
       .from(noteMentions)
-      .where(eq(noteMentions.noteId, noteId));
+      .where(withTenant(noteMentions, eq(noteMentions.noteId, noteId)));
     return rows.map((r) => r.userId);
   }
 
@@ -287,7 +288,7 @@ export class NotesService {
     await db
       .update(notes)
       .set({ deletedAt: new Date(), deletedBy: actorId })
-      .where(and(
+      .where(withTenant(notes,
         eq(notes.entityType, entityType),
         eq(notes.entityId, entityId),
         isNull(notes.deletedAt),
@@ -298,13 +299,13 @@ export class NotesService {
     // Delete existing mentions
     await this.database.db
       .delete(noteMentions)
-      .where(eq(noteMentions.noteId, noteId));
+      .where(withTenant(noteMentions, eq(noteMentions.noteId, noteId)));
 
     // Insert new mentions
     if (userIds.length > 0) {
       await this.database.db
         .insert(noteMentions)
-        .values(userIds.map((userId) => ({ noteId, userId })));
+        .values(withTenantInsert(noteMentions, userIds.map((userId) => ({ noteId, userId }))));
     }
   }
 

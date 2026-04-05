@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { DatabaseService, eq } from '@packages/database';
+import { withTenant } from '@packages/tenancy/helpers';
 import type { ActionHandler, ActionContext, ActionResult, UserSlotDefinition } from '@packages/automations';
 import { notificationTemplates } from '../schema/notification-templates';
 import { NotificationDispatcher } from './notification-dispatcher';
@@ -99,7 +100,7 @@ export class SendNotificationAction implements ActionHandler {
     const [row] = await this.database.db
       .select()
       .from(notificationTemplates)
-      .where(eq(notificationTemplates.id, templateId))
+      .where(withTenant(notificationTemplates, eq(notificationTemplates.id, templateId)))
       .limit(1);
 
     if (!row) return null;
