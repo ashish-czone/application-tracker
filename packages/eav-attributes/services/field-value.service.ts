@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { DatabaseService, eq, and, sql, inArray } from '@packages/database';
+import { DatabaseService, eq, sql, inArray } from '@packages/database';
+import { withTenant, withTenantInsert, tenantCondition } from '@packages/tenancy/helpers';
 import { entityFieldValues } from '../schema/entity-field-values';
 import { fieldDefinitions } from '../schema/field-definitions';
 import { fieldTypeRegistry } from '@packages/field-types';
@@ -21,7 +22,7 @@ export class FieldValueService {
     const rows = await db
       .select()
       .from(entityFieldValues)
-      .where(and(
+      .where(withTenant(entityFieldValues,
         eq(entityFieldValues.entityType, entityType),
         eq(entityFieldValues.entityId, entityId),
       ));
@@ -56,7 +57,7 @@ export class FieldValueService {
     const rows = await this.database.db
       .select()
       .from(entityFieldValues)
-      .where(and(...conditions));
+      .where(withTenant(entityFieldValues, ...conditions));
 
     const result = new Map<string, Record<string, unknown>>();
     for (const row of rows) {
@@ -92,7 +93,7 @@ export class FieldValueService {
     const fields = await db
       .select()
       .from(fieldDefinitions)
-      .where(and(
+      .where(withTenant(fieldDefinitions,
         eq(fieldDefinitions.entityType, entityType),
         inArray(fieldDefinitions.fieldKey, fieldKeys),
       ));
@@ -110,7 +111,7 @@ export class FieldValueService {
         // Delete the value row
         await db
           .delete(entityFieldValues)
-          .where(and(
+          .where(withTenant(entityFieldValues,
             eq(entityFieldValues.entityType, entityType),
             eq(entityFieldValues.entityId, entityId),
             eq(entityFieldValues.fieldKey, key),
@@ -129,12 +130,12 @@ export class FieldValueService {
       // Upsert
       await db
         .insert(entityFieldValues)
-        .values({
+        .values(withTenantInsert(entityFieldValues, {
           entityType,
           entityId,
           fieldKey: key,
           ...typedValues,
-        })
+        }))
         .onConflictDoUpdate({
           target: [entityFieldValues.entityType, entityFieldValues.entityId, entityFieldValues.fieldKey],
           set: typedValues,
@@ -154,7 +155,7 @@ export class FieldValueService {
   async deleteValues(entityType: string, entityId: string): Promise<void> {
     await this.database.db
       .delete(entityFieldValues)
-      .where(and(
+      .where(withTenant(entityFieldValues,
         eq(entityFieldValues.entityType, entityType),
         eq(entityFieldValues.entityId, entityId),
       ));
@@ -173,7 +174,7 @@ export class FieldValueService {
     const field = await this.database.db
       .select()
       .from(fieldDefinitions)
-      .where(and(
+      .where(withTenant(fieldDefinitions,
         eq(fieldDefinitions.entityType, entityType),
         eq(fieldDefinitions.fieldKey, fieldKey),
       ))
@@ -198,7 +199,7 @@ export class FieldValueService {
     const [result] = await this.database.db
       .select({ exists: sql<boolean>`true` })
       .from(entityFieldValues)
-      .where(and(...conditions))
+      .where(withTenant(entityFieldValues, ...conditions))
       .limit(1);
 
     return !result;
@@ -265,6 +266,7 @@ export class FieldValueService {
           AND efv.entity_id = ${entityIdColumn}
           AND efv.field_key = ${fieldKey}
           AND ${valueCondition}
+          AND ${tenantCondition()}
       )`;
     });
 

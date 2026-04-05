@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService, eq, or, ilike, inArray, sql } from '@packages/database';
+import { withTenant } from '@packages/tenancy/helpers';
 import { AppLoggerService, ContextLogger } from '@packages/logger';
 import type { LookupConfig, LookupResult } from '../types';
 
@@ -88,7 +89,7 @@ export class LookupResolverService {
         value: table[valueField],
       })
       .from(table)
-      .where(searchConditions.length === 1 ? searchConditions[0] : or(...searchConditions))
+      .where(withTenant(table, searchConditions.length === 1 ? searchConditions[0] : or(...searchConditions)))
       .limit(limit);
 
     return rows.map(r => ({
@@ -113,7 +114,7 @@ export class LookupResolverService {
     const [row] = await this.database.db
       .select({ label: labelSelect })
       .from(table)
-      .where(eq(table[valueField], value))
+      .where(withTenant(table, eq(table[valueField], value)))
       .limit(1);
 
     return row ? String(row.label ?? '') : null;
@@ -139,7 +140,7 @@ export class LookupResolverService {
         value: table[valueField],
       })
       .from(table)
-      .where(inArray(table[valueField], values));
+      .where(withTenant(table, inArray(table[valueField], values)));
 
     const result = new Map<string, string>();
     for (const row of rows) {

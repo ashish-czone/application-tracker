@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
-import { DatabaseService, eq, and, inArray } from '@packages/database';
+import { DatabaseService, eq, inArray } from '@packages/database';
+import { withTenant, withTenantInsert } from '@packages/tenancy/helpers';
 import { fieldDefinitions } from '../schema/field-definitions';
 import { picklistOptions } from '../schema/picklist-options';
 import type { FieldDefinition, PicklistOption, FieldType, FullLayoutField, RegisterFieldInput, SetPicklistOptionInput } from '../types';
@@ -54,7 +55,7 @@ export class FieldDefinitionService {
 
     const [field] = await this.database.db
       .insert(fieldDefinitions)
-      .values({
+      .values(withTenantInsert(fieldDefinitions, {
         entityType,
         fieldKey: data.fieldKey,
         label: data.label,
@@ -76,7 +77,7 @@ export class FieldDefinitionService {
         categoryGroupSlug: data.categoryGroupSlug ?? null,
         fileAccept: data.fileAccept ?? null,
         fileMaxSize: data.fileMaxSize ?? null,
-      })
+      }))
       .returning();
 
     return field as FieldDefinition;
@@ -112,7 +113,7 @@ export class FieldDefinitionService {
     const [updated] = await this.database.db
       .update(fieldDefinitions)
       .set(updateValues)
-      .where(eq(fieldDefinitions.id, id))
+      .where(withTenant(fieldDefinitions, eq(fieldDefinitions.id, id)))
       .returning();
 
     return updated as FieldDefinition;
@@ -128,14 +129,14 @@ export class FieldDefinitionService {
       await check(field.entityType, field.fieldKey);
     }
 
-    await this.database.db.delete(fieldDefinitions).where(eq(fieldDefinitions.id, id));
+    await this.database.db.delete(fieldDefinitions).where(withTenant(fieldDefinitions, eq(fieldDefinitions.id, id)));
   }
 
   async findById(id: string): Promise<FieldDefinition | null> {
     const [field] = await this.database.db
       .select()
       .from(fieldDefinitions)
-      .where(eq(fieldDefinitions.id, id))
+      .where(withTenant(fieldDefinitions, eq(fieldDefinitions.id, id)))
       .limit(1);
     return (field as FieldDefinition) ?? null;
   }
@@ -144,7 +145,7 @@ export class FieldDefinitionService {
     const [field] = await this.database.db
       .select()
       .from(fieldDefinitions)
-      .where(and(
+      .where(withTenant(fieldDefinitions,
         eq(fieldDefinitions.entityType, entityType),
         eq(fieldDefinitions.fieldKey, fieldKey),
       ))
@@ -156,7 +157,7 @@ export class FieldDefinitionService {
     const fields = await this.database.db
       .select()
       .from(fieldDefinitions)
-      .where(eq(fieldDefinitions.entityType, entityType))
+      .where(withTenant(fieldDefinitions, eq(fieldDefinitions.entityType, entityType)))
       .orderBy(fieldDefinitions.sortOrder);
     return fields as FieldDefinition[];
   }
@@ -173,7 +174,7 @@ export class FieldDefinitionService {
     const allOptions = await this.database.db
       .select()
       .from(picklistOptions)
-      .where(inArray(picklistOptions.fieldId, fieldIds))
+      .where(withTenant(picklistOptions, inArray(picklistOptions.fieldId, fieldIds)))
       .orderBy(picklistOptions.sortOrder);
 
     const optionsMap = new Map<string, PicklistOption[]>();
@@ -194,7 +195,7 @@ export class FieldDefinitionService {
     const [field] = await this.database.db
       .select()
       .from(fieldDefinitions)
-      .where(and(
+      .where(withTenant(fieldDefinitions,
         eq(fieldDefinitions.entityType, entityType),
         eq(fieldDefinitions.columnName, columnName),
       ))
@@ -206,7 +207,7 @@ export class FieldDefinitionService {
     const options = await this.database.db
       .select()
       .from(picklistOptions)
-      .where(eq(picklistOptions.fieldId, fieldId))
+      .where(withTenant(picklistOptions, eq(picklistOptions.fieldId, fieldId)))
       .orderBy(picklistOptions.sortOrder);
     return options as PicklistOption[];
   }
@@ -226,18 +227,18 @@ export class FieldDefinitionService {
     // Delete existing options and re-insert
     await this.database.db
       .delete(picklistOptions)
-      .where(eq(picklistOptions.fieldId, field.id));
+      .where(withTenant(picklistOptions, eq(picklistOptions.fieldId, field.id)));
 
     if (options.length > 0) {
       await this.database.db
         .insert(picklistOptions)
-        .values(options.map((opt, idx) => ({
+        .values(withTenantInsert(picklistOptions, options.map((opt, idx) => ({
           fieldId: field.id,
           label: opt.label,
           value: opt.value,
           isDefault: opt.isDefault ?? false,
           sortOrder: idx,
-        })));
+        }))));
     }
   }
 
@@ -280,12 +281,12 @@ export class FieldDefinitionService {
           await this.database.db
             .update(fieldDefinitions)
             .set(updates)
-            .where(eq(fieldDefinitions.id, existing.id));
+            .where(withTenant(fieldDefinitions, eq(fieldDefinitions.id, existing.id)));
         }
       } else {
         await this.database.db
           .insert(fieldDefinitions)
-          .values({
+          .values(withTenantInsert(fieldDefinitions, {
             entityType,
             fieldKey: f.fieldKey,
             label: f.label,
@@ -308,7 +309,7 @@ export class FieldDefinitionService {
             fileAccept: f.fileAccept ?? null,
             fileMaxSize: f.fileMaxSize ?? null,
             sortOrder: f.sortOrder ?? i,
-          });
+          }));
       }
     }
   }

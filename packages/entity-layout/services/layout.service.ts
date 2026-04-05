@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { DatabaseService, eq, and, asc, inArray } from '@packages/database';
+import { DatabaseService, eq, asc, inArray } from '@packages/database';
+import { withTenant, withTenantInsert } from '@packages/tenancy/helpers';
 import { fieldDefinitions, picklistOptions } from '@packages/entity-engine/schema';
 import type {
   LayoutSection,
@@ -34,14 +35,14 @@ export class LayoutService {
     const sections = await this.database.db
       .select()
       .from(layoutSections)
-      .where(and(eq(layoutSections.entityType, entityType), eq(layoutSections.layoutName, layoutName)))
+      .where(withTenant(layoutSections, eq(layoutSections.entityType, entityType), eq(layoutSections.layoutName, layoutName)))
       .orderBy(layoutSections.sortOrder);
 
     const maxOrder = sections.length > 0 ? Math.max(...sections.map(s => s.sortOrder)) + 1 : 0;
 
     const [section] = await this.database.db
       .insert(layoutSections)
-      .values({
+      .values(withTenantInsert(layoutSections, {
         entityType,
         layoutName,
         name: data.name,
@@ -50,7 +51,7 @@ export class LayoutService {
         isCollapsible: data.isCollapsible ?? true,
         isTabular: data.isTabular ?? false,
         tabularMaxRows: data.tabularMaxRows ?? null,
-      })
+      }))
       .returning();
 
     this.invalidateCache(entityType, layoutName);
@@ -77,7 +78,7 @@ export class LayoutService {
     const [updated] = await this.database.db
       .update(layoutSections)
       .set(updateValues)
-      .where(eq(layoutSections.id, id))
+      .where(withTenant(layoutSections, eq(layoutSections.id, id)))
       .returning();
 
     this.invalidateCache(existing.entityType, existing.layoutName);
@@ -87,7 +88,7 @@ export class LayoutService {
   async deleteSection(id: string): Promise<void> {
     const section = await this.findSectionById(id);
     if (!section) throw new NotFoundException('Section not found');
-    await this.database.db.delete(layoutSections).where(eq(layoutSections.id, id));
+    await this.database.db.delete(layoutSections).where(withTenant(layoutSections, eq(layoutSections.id, id)));
     this.invalidateCache(section.entityType, section.layoutName);
   }
 
@@ -96,7 +97,7 @@ export class LayoutService {
       await this.database.db
         .update(layoutSections)
         .set({ sortOrder: i })
-        .where(eq(layoutSections.id, orderedIds[i]));
+        .where(withTenant(layoutSections, eq(layoutSections.id, orderedIds[i])));
     }
     this.invalidateCache(entityType, layoutName);
   }
@@ -111,13 +112,13 @@ export class LayoutService {
     const existingFields = await this.database.db
       .select()
       .from(layoutFields)
-      .where(eq(layoutFields.sectionId, sectionId));
+      .where(withTenant(layoutFields, eq(layoutFields.sectionId, sectionId)));
 
     const maxOrder = existingFields.length > 0 ? Math.max(...existingFields.map(f => f.sortOrder)) + 1 : 0;
 
     await this.database.db
       .insert(layoutFields)
-      .values({ sectionId, fieldId, sortOrder: maxOrder, columnIndex })
+      .values(withTenantInsert(layoutFields, { sectionId, fieldId, sortOrder: maxOrder, columnIndex }))
       .onConflictDoNothing();
 
     this.invalidateCache(section.entityType, section.layoutName);
@@ -129,7 +130,7 @@ export class LayoutService {
 
     await this.database.db
       .delete(layoutFields)
-      .where(and(eq(layoutFields.sectionId, sectionId), eq(layoutFields.fieldId, fieldId)));
+      .where(withTenant(layoutFields, eq(layoutFields.sectionId, sectionId), eq(layoutFields.fieldId, fieldId)));
 
     this.invalidateCache(section.entityType, section.layoutName);
   }
@@ -153,7 +154,7 @@ export class LayoutService {
       await this.database.db
         .update(layoutFields)
         .set(setValues)
-        .where(and(
+        .where(withTenant(layoutFields,
           eq(layoutFields.sectionId, sectionId),
           eq(layoutFields.fieldId, fieldId),
         ));
@@ -175,7 +176,7 @@ export class LayoutService {
     const sections = await this.database.db
       .select()
       .from(layoutSections)
-      .where(and(
+      .where(withTenant(layoutSections,
         eq(layoutSections.entityType, entityType),
         eq(layoutSections.layoutName, layoutName),
       ))
@@ -185,7 +186,7 @@ export class LayoutService {
     const allFields = await this.database.db
       .select()
       .from(fieldDefinitions)
-      .where(eq(fieldDefinitions.entityType, entityType))
+      .where(withTenant(fieldDefinitions, eq(fieldDefinitions.entityType, entityType)))
       .orderBy(asc(fieldDefinitions.sortOrder));
 
     // Fetch all layout field assignments for these sections
@@ -194,7 +195,7 @@ export class LayoutService {
       ? await this.database.db
           .select()
           .from(layoutFields)
-          .where(inArray(layoutFields.sectionId, sectionIds))
+          .where(withTenant(layoutFields, inArray(layoutFields.sectionId, sectionIds)))
           .orderBy(asc(layoutFields.sortOrder))
       : [];
 
@@ -204,7 +205,7 @@ export class LayoutService {
       ? await this.database.db
           .select()
           .from(picklistOptions)
-          .where(inArray(picklistOptions.fieldId, fieldIds))
+          .where(withTenant(picklistOptions, inArray(picklistOptions.fieldId, fieldIds)))
           .orderBy(asc(picklistOptions.sortOrder))
       : [];
 
@@ -303,7 +304,7 @@ export class LayoutService {
     const existing = await this.database.db
       .select()
       .from(layoutSections)
-      .where(and(
+      .where(withTenant(layoutSections,
         eq(layoutSections.entityType, entityType),
         eq(layoutSections.layoutName, layoutName),
       ))
@@ -316,7 +317,7 @@ export class LayoutService {
 
       const [section] = await this.database.db
         .insert(layoutSections)
-        .values({
+        .values(withTenantInsert(layoutSections, {
           entityType,
           layoutName,
           name: sec.name,
@@ -325,7 +326,7 @@ export class LayoutService {
           isCollapsible: sec.isCollapsible ?? true,
           isTabular: sec.isTabular ?? false,
           tabularMaxRows: sec.tabularMaxRows ?? null,
-        })
+        }))
         .returning();
 
       // Assign fields to section
@@ -338,7 +339,7 @@ export class LayoutService {
         const [field] = await this.database.db
           .select()
           .from(fieldDefinitions)
-          .where(and(
+          .where(withTenant(fieldDefinitions,
             eq(fieldDefinitions.entityType, entityType),
             eq(fieldDefinitions.fieldKey, fieldKey),
           ))
@@ -347,12 +348,12 @@ export class LayoutService {
         if (field) {
           await this.database.db
             .insert(layoutFields)
-            .values({
+            .values(withTenantInsert(layoutFields, {
               sectionId: section.id,
               fieldId: field.id,
               sortOrder: fIdx,
               columnIndex,
-            });
+            }));
         }
       }
     }
@@ -366,7 +367,7 @@ export class LayoutService {
     const [section] = await this.database.db
       .select()
       .from(layoutSections)
-      .where(eq(layoutSections.id, id))
+      .where(withTenant(layoutSections, eq(layoutSections.id, id)))
       .limit(1);
     return (section as LayoutSection) ?? null;
   }
