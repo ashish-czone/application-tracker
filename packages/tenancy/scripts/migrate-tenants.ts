@@ -1,92 +1,96 @@
 /**
  * Per-Tenant Migration Runner
  *
- * For database-per-tenant mode: iterates all tenants in the control-plane DB
- * and runs Drizzle migrations against each tenant's database.
- *
- * For RLS mode: runs the RLS setup script against the shared database.
+ * Fetches all active tenants from the control-plane API and runs
+ * Drizzle migrations against each tenant's database.
  *
  * Usage:
- *   npx tsx packages/tenancy/scripts/migrate-tenants.ts [--mode rls|database]
+ *   npx tsx packages/tenancy/scripts/migrate-tenants.ts
  *
  * Environment:
- *   DATABASE_URL — connection string for the control-plane database
- *   TENANCY_MODE — 'rls' or 'database' (can also be passed as --mode flag)
+ *   CONTROL_PLANE_URL  — Control-plane API base URL
+ *   SERVICE_ID         — This service's identifier
+ *   SERVICE_PRIVATE_KEY — PEM-encoded private key for service-auth
+ *   MIGRATIONS_FOLDER  — Path to Drizzle migrations (default: ./apps/recruit/drizzle)
  */
 
+import jwt from 'jsonwebtoken';
 import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 
-async function main() {
-  const mode = getMode();
-  const databaseUrl = process.env.DATABASE_URL;
+interface TenantInfo {
+  id: string;
+  slug: string;
+  databaseUrl: string;
+  status: string;
+}
 
-  if (!databaseUrl) {
-    console.error('DATABASE_URL environment variable is required');
+function getEnvOrDie(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    console.error(`${name} environment variable is required`);
     process.exit(1);
   }
-
-  if (mode === 'rls') {
-    console.log('RLS mode: Use apply-rls.ts script instead.');
-    console.log('  npx tsx packages/tenancy/scripts/apply-rls.ts');
-    process.exit(0);
-  }
-
-  if (mode === 'database') {
-    await migrateTenantDatabases(databaseUrl);
-  }
+  return value;
 }
 
-function getMode(): string {
-  const args = process.argv.slice(2);
-  const modeIndex = args.indexOf('--mode');
-  if (modeIndex !== -1 && args[modeIndex + 1]) {
-    return args[modeIndex + 1];
-  }
-  return process.env.TENANCY_MODE ?? 'database';
+function createServiceToken(): string {
+  const serviceId = getEnvOrDie('SERVICE_ID');
+  const privateKey = getEnvOrDie('SERVICE_PRIVATE_KEY');
+
+  return jwt.sign(
+    { iss: serviceId, aud: 'control-plane', scopes: ['tenants:read'] },
+    privateKey,
+    { algorithm: 'RS256', expiresIn: 300 },
+  );
 }
 
-async function migrateTenantDatabases(controlPlaneUrl: string): Promise<void> {
-  const controlPlane = new Pool({ connectionString: controlPlaneUrl });
+async function fetchActiveTenants(): Promise<TenantInfo[]> {
+  const baseUrl = getEnvOrDie('CONTROL_PLANE_URL');
+  const token = createServiceToken();
 
-  try {
-    // Fetch all active tenants from control-plane
-    const { rows: tenants } = await controlPlane.query(`
-      SELECT id, slug, database_url, status
-      FROM tenants
-      WHERE status = 'active'
-      ORDER BY slug
-    `);
+  const response = await fetch(`${baseUrl}/internal/tenants?status=active`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
 
-    console.log(`Found ${tenants.length} active tenants\n`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch tenants: ${response.status} ${await response.text()}`);
+  }
 
-    const migrationsFolder = process.env.MIGRATIONS_FOLDER ?? './apps/api/drizzle';
-    let success = 0;
-    let failed = 0;
+  return response.json();
+}
 
-    for (const tenant of tenants) {
-      console.log(`  Migrating tenant: ${tenant.slug} (${tenant.id})...`);
+async function main() {
+  const tenants = await fetchActiveTenants();
+  console.log(`Found ${tenants.length} active tenants\n`);
 
-      const tenantPool = new Pool({ connectionString: tenant.database_url });
-      try {
-        const db = drizzle(tenantPool);
-        await migrate(db, { migrationsFolder });
-        console.log(`    DONE`);
-        success++;
-      } catch (err) {
-        console.error(`    FAILED: ${(err as Error).message}`);
-        failed++;
-      } finally {
-        await tenantPool.end();
-      }
+  const migrationsFolder = process.env.MIGRATIONS_FOLDER ?? './apps/recruit/drizzle';
+  let success = 0;
+  let failed = 0;
+
+  for (const tenant of tenants) {
+    console.log(`  Migrating tenant: ${tenant.slug} (${tenant.id})...`);
+
+    const tenantPool = new Pool({ connectionString: tenant.databaseUrl });
+    try {
+      const db = drizzle(tenantPool);
+      await migrate(db, { migrationsFolder });
+      console.log(`    DONE`);
+      success++;
+    } catch (err) {
+      console.error(`    FAILED: ${(err as Error).message}`);
+      failed++;
+    } finally {
+      await tenantPool.end();
     }
-
-    console.log(`\nMigration complete: ${success} succeeded, ${failed} failed`);
-    if (failed > 0) process.exit(1);
-  } finally {
-    await controlPlane.end();
   }
+
+  console.log(`\nMigration complete: ${success} succeeded, ${failed} failed`);
+  if (failed > 0) process.exit(1);
 }
 
 main().catch(err => {
