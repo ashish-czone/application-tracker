@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { DatabaseService, eq, and } from '@packages/database';
+import { withTenant, withTenantInsert } from '@packages/tenancy/helpers';
 import { entityPipelineAssignments } from '../schema';
 import { WorkflowRegistryService } from './workflow-registry.service';
 import type { CachedWorkflowDefinition } from '../types';
@@ -26,7 +27,8 @@ export class PipelineResolverService {
       .select()
       .from(entityPipelineAssignments)
       .where(
-        and(
+        withTenant(
+          entityPipelineAssignments,
           eq(entityPipelineAssignments.entityType, entityType),
           eq(entityPipelineAssignments.entityId, entityId),
           eq(entityPipelineAssignments.fieldName, fieldName),
@@ -70,12 +72,12 @@ export class PipelineResolverService {
     // Store assignment
     await this.database.db
       .insert(entityPipelineAssignments)
-      .values({
+      .values(withTenantInsert(entityPipelineAssignments, {
         entityType,
         entityId,
         fieldName,
         workflowDefinitionId: matched.id,
-      })
+      }))
       .onConflictDoNothing();
 
     this.logger.log(`Pipeline assigned: ${matched.slug} for ${entityType}/${entityId}/${fieldName}`);

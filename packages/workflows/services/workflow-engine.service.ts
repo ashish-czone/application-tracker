@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, UnprocessableEntityException, ForbiddenE
 import { DatabaseService, desc, eq, and } from '@packages/database';
 import { RbacService } from '@packages/rbac';
 import { evaluateConditionsInMemory, type Condition } from '@packages/common';
+import { withTenant, withTenantInsert } from '@packages/tenancy/helpers';
 import { workflowTransitionHistory } from '../schema/workflow-transition-history';
 import { WorkflowRegistryService } from './workflow-registry.service';
 import { WorkflowGuardRegistry } from './workflow-guard-registry.service';
@@ -207,7 +208,7 @@ export class WorkflowEngineService {
   async recordHistory(params: RecordHistoryParams, tx: any): Promise<{ historyId: string; recordedAt: string }> {
     const [historyRow] = await tx
       .insert(workflowTransitionHistory)
-      .values({
+      .values(withTenantInsert(workflowTransitionHistory, {
         workflowDefinitionId: params.workflowDefinitionId,
         entityType: params.entityType,
         entityId: params.entityId,
@@ -218,7 +219,7 @@ export class WorkflowEngineService {
         actorId: params.actorId,
         comment: params.comment,
         metadata: params.metadata,
-      })
+      }))
       .returning();
 
     return {
@@ -239,7 +240,8 @@ export class WorkflowEngineService {
       .select()
       .from(workflowTransitionHistory)
       .where(
-        and(
+        withTenant(
+          workflowTransitionHistory,
           eq(workflowTransitionHistory.entityType, entityType),
           eq(workflowTransitionHistory.entityId, entityId),
         ),
@@ -278,7 +280,8 @@ export class WorkflowEngineService {
       .select({ toState: workflowTransitionHistory.toState })
       .from(workflowTransitionHistory)
       .where(
-        and(
+        withTenant(
+          workflowTransitionHistory,
           eq(workflowTransitionHistory.workflowDefinitionId, definition.id),
           eq(workflowTransitionHistory.entityType, entityType),
           eq(workflowTransitionHistory.entityId, entityId),

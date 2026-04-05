@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { DatabaseService, lt, eq, and, asc, desc, count } from '@packages/database';
 import type { PaginatedResponse } from '@packages/common';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
+import { withTenant, withTenantInsert } from '@packages/tenancy/helpers';
 import { automationExecutions } from '../schema/automation-executions';
 import { automationRules } from '../schema/automation-rules';
 
@@ -28,7 +29,7 @@ export class ExecutionLogService {
     try {
       await this.database.db
         .insert(automationExecutions)
-        .values(entry);
+        .values(withTenantInsert(automationExecutions, entry));
     } catch (error) {
       this.logger.error('Failed to log execution', {
         ruleId: entry.ruleId,
@@ -68,7 +69,7 @@ export class ExecutionLogService {
     if (query.entityType) conditions.push(eq(automationExecutions.entityType, query.entityType));
     if (query.actionType) conditions.push(eq(automationExecutions.actionType, query.actionType));
 
-    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+    const whereClause = withTenant(automationExecutions, ...conditions);
     const orderFn = query.order === 'asc' ? asc : desc;
 
     const [{ total }] = await this.database.db
@@ -111,7 +112,7 @@ export class ExecutionLogService {
 
     const deleted = await this.database.db
       .delete(automationExecutions)
-      .where(lt(automationExecutions.executedAt, cutoff))
+      .where(withTenant(automationExecutions, lt(automationExecutions.executedAt, cutoff)))
       .returning({ id: automationExecutions.id });
 
     this.logger.log(`Cleaned ${deleted.length} execution log entries older than ${days} days`);

@@ -6,6 +6,7 @@ import { todayInTimezone } from '@packages/common';
 import { isPayloadCondition } from '@packages/common';
 import type { DomainEvent } from '@packages/events';
 import type { Condition } from '@packages/common';
+import { withTenant, withTenantInsert } from '@packages/tenancy/helpers';
 import { AUTOMATION_EXECUTION_QUEUE } from '../automations.module';
 import { automationScheduled } from '../schema/automation-scheduled';
 import { automationSentLog } from '../schema/automation-sent-log';
@@ -53,7 +54,8 @@ export class ScheduleScanner {
     const pending = await this.database.db
       .select()
       .from(automationScheduled)
-      .where(and(
+      .where(withTenant(
+        automationScheduled,
         lte(automationScheduled.scheduledFor, new Date()),
         isNull(automationScheduled.sentAt),
       ));
@@ -189,7 +191,7 @@ export class ScheduleScanner {
       const entities = await this.database.db
         .select(selectColumns)
         .from(entityResolver.table)
-        .where(conditions.length > 0 ? and(...conditions) : undefined);
+        .where(withTenant(entityResolver.table as any, ...(conditions.length > 0 ? conditions : [])));
 
       for (const entity of entities) {
         const entityId = (entity as Record<string, any>).id as string;
@@ -241,7 +243,7 @@ export class ScheduleScanner {
     const [entity] = await this.database.db
       .select({ id: idColumn })
       .from(entityResolver.table)
-      .where(and(eq(idColumn, entityId), ...conditionSql))
+      .where(withTenant(entityResolver.table as any, eq(idColumn, entityId), ...conditionSql))
       .limit(1);
 
     return !!entity;
@@ -286,7 +288,8 @@ export class ScheduleScanner {
     const db = tx ?? this.database.db;
     await db
       .delete(automationScheduled)
-      .where(and(
+      .where(withTenant(
+        automationScheduled,
         eq(automationScheduled.entityType, entityType),
         eq(automationScheduled.entityId, entityId),
         isNull(automationScheduled.sentAt),
@@ -297,14 +300,15 @@ export class ScheduleScanner {
     await this.database.db
       .update(automationScheduled)
       .set({ sentAt: new Date() })
-      .where(eq(automationScheduled.id, scheduledId));
+      .where(withTenant(automationScheduled, eq(automationScheduled.id, scheduledId)));
   }
 
   private async checkSentLog(ruleId: string, entityType: string, entityId: string, targetDate: string): Promise<boolean> {
     const [row] = await this.database.db
       .select({ ruleId: automationSentLog.ruleId })
       .from(automationSentLog)
-      .where(and(
+      .where(withTenant(
+        automationSentLog,
         eq(automationSentLog.ruleId, ruleId),
         eq(automationSentLog.entityType, entityType),
         eq(automationSentLog.entityId, entityId),
@@ -318,7 +322,7 @@ export class ScheduleScanner {
   private async logSent(ruleId: string, entityType: string, entityId: string, targetDate: string): Promise<void> {
     await this.database.db
       .insert(automationSentLog)
-      .values({ ruleId, entityType, entityId, targetDate })
+      .values(withTenantInsert(automationSentLog, { ruleId, entityType, entityId, targetDate }))
       .onConflictDoNothing();
   }
 }

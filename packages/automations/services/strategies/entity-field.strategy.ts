@@ -1,4 +1,5 @@
 import { DatabaseService, eq } from '@packages/database';
+import { withTenant } from '@packages/tenancy/helpers';
 import type { UserResolution } from '../../types';
 import type { EntityResolverConfig } from '../../types';
 import type { UserResolverStrategy, UserResolutionContext } from '../user-resolver-registry';
@@ -56,7 +57,7 @@ export class EntityFieldStrategy implements UserResolverStrategy {
     const [row] = await this.database.db
       .select({ value: fieldColumn })
       .from(resolver.table)
-      .where(eq(idColumn, entityId))
+      .where(withTenant(resolver.table as any, eq(idColumn, entityId)))
       .limit(1);
 
     if (!row?.value) return [];
