@@ -14,6 +14,7 @@
   "dependencies": {
     "@nestjs/common": "^11.0.0",
     "@nestjs/core": "^11.0.0",
+    "@packages/auth-core": "workspace:*",
     "@packages/database": "workspace:*",
     "@packages/logger": "workspace:*",
     "@packages/service-auth": "workspace:*",

@@ -1,8 +1,9 @@
-import { Injectable, UnauthorizedException, BadRequestException, ConflictException, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, Optional, Inject, UnauthorizedException, BadRequestException, ConflictException, InternalServerErrorException } from '@nestjs/common';
 import { RbacService } from '@packages/rbac';
 import { DatabaseService, users, eq } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
 import { AppLoggerService, type ContextLogger, getTenantId } from '@packages/logger';
+import { JWT_CLAIMS_ENRICHERS, type JwtClaimsEnricher, type JwtPayload } from '@packages/auth-core';
 import { withTenant, withTenantInsert } from '@packages/tenancy/helpers';
 import { AuthService } from '../services/auth.service';
 import { AuthAdapterRegistry } from '../adapters/auth-adapter-registry';
@@ -27,6 +28,7 @@ export class AuthOrchestratorService {
     protected readonly domainEventEmitter: DomainEventEmitter,
     protected readonly adapterRegistry: AuthAdapterRegistry,
     appLogger: AppLoggerService,
+    @Optional() @Inject(JWT_CLAIMS_ENRICHERS) private readonly enrichers?: JwtClaimsEnricher[],
   ) {
     this.logger = appLogger.forContext(AuthOrchestratorService.name);
   }
@@ -81,7 +83,9 @@ export class AuthOrchestratorService {
 
     // Generate tokens
     const permissions = await this.rbacService.getPermissionsForUser(userId!, userType);
-    const accessToken = this.authService.generateAccessToken({ userId: userId!, userType, permissions, tenantId: getTenantId() });
+    const accessToken = this.authService.generateAccessToken(
+      await this.enrichPayload({ userId: userId!, userType, permissions, tenantId: getTenantId() }),
+    );
     const { token: refreshToken } = await this.authService.createRefreshToken(userId!);
 
     this.logger.log('User authenticated', { userId: userId!, userType, provider });
@@ -134,7 +138,9 @@ export class AuthOrchestratorService {
     // Reload permissions (may have changed since last token)
     const permissions = await this.rbacService.getPermissionsForUser(userId, userType);
 
-    const accessToken = this.authService.generateAccessToken({ userId, userType, permissions, tenantId: getTenantId() });
+    const accessToken = this.authService.generateAccessToken(
+      await this.enrichPayload({ userId, userType, permissions, tenantId: getTenantId() }),
+    );
 
     return { accessToken, refreshToken: newRefreshToken };
   }
@@ -248,7 +254,9 @@ export class AuthOrchestratorService {
 
     // Generate tokens with permissions from the default role
     const permissions = await this.rbacService.getPermissionsForUser(user.id, userType);
-    const accessToken = this.authService.generateAccessToken({ userId: user.id, userType, permissions, tenantId: getTenantId() });
+    const accessToken = this.authService.generateAccessToken(
+      await this.enrichPayload({ userId: user.id, userType, permissions, tenantId: getTenantId() }),
+    );
     const { token: refreshToken } = await this.authService.createRefreshToken(user.id);
 
     this.logger.log('User registered', { userId: user.id, userType });
@@ -269,6 +277,15 @@ export class AuthOrchestratorService {
   }
 
   // --- Private helpers ---
+
+  private async enrichPayload(payload: JwtPayload): Promise<JwtPayload> {
+    if (!this.enrichers?.length) return payload;
+    let enriched = payload;
+    for (const enricher of this.enrichers) {
+      enriched = await enricher.enrich(enriched);
+    }
+    return enriched;
+  }
 
   private async loadUser(userId: string) {
     const [user] = await this.database.db

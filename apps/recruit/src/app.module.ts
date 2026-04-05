@@ -7,6 +7,8 @@ import { ConfigurableThrottlerGuard } from './guards/configurable-throttler.guar
 import path from 'path';
 import { LoggerModule } from '@packages/logger';
 import { DatabaseModule } from '@packages/database';
+import { TenancyModule, type TenancyMode, type TenantResolver } from '@packages/tenancy';
+import { ServiceAuthModule } from '@packages/service-auth';
 import { EventsModule } from '@packages/events';
 import { SettingsModule } from '@packages/settings';
 import { QueueModule } from '@packages/queue';
@@ -52,6 +54,26 @@ import { validate } from './config/env.validation';
     }),
     LoggerModule.register({ provider: 'pino' }),
     DatabaseModule,
+    // Conditionally load multi-tenancy when TENANCY_MODE is set
+    ...(process.env.TENANCY_MODE ? [
+      TenancyModule.registerAsync({
+        useFactory: (config: ConfigService) => ({
+          mode: config.get<string>('TENANCY_MODE') as TenancyMode,
+          resolver: (config.get<string>('TENANCY_RESOLVER') ?? 'header') as TenantResolver,
+          headerName: config.get<string>('TENANCY_HEADER'),
+          controlPlaneUrl: config.get<string>('CONTROL_PLANE_URL'),
+        }),
+        inject: [ConfigService],
+      }),
+      ServiceAuthModule.registerAsync({
+        useFactory: (config: ConfigService) => ({
+          serviceId: 'recruit-app',
+          privateKey: config.get<string>('SERVICE_PRIVATE_KEY')!,
+          trustedServices: JSON.parse(config.get<string>('TRUSTED_SERVICE_KEYS') || '{}'),
+        }),
+        inject: [ConfigService],
+      }),
+    ] : []),
     EventsModule,
     SettingsModule,
     QueueModule.registerAsync({

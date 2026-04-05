@@ -19,6 +19,9 @@ export { withTenant, withTenantInsert, tenantCondition } from './helpers';
 export { CapabilityGuard } from './guards/capability.guard';
 export { RequireCapability, CAPABILITY_KEY } from './decorators/require-capability.decorator';
 
+// Enrichers
+export { TenantClaimsEnricher } from './enrichers/tenant-claims-enricher';
+
 // Services
 export { TenantRegistryService } from './services/tenant-registry.service';
 export { TenantHttpLookup } from './services/tenant-http-lookup';

@@ -7,6 +7,9 @@ export const tenants = pgTable('tenants', {
   name: text('name').notNull(),
   databaseUrl: text('database_url').notNull(),
   status: text('status', { enum: ['active', 'suspended', 'provisioning'] }).notNull().default('active'),
+  plan: text('plan'),
+  capabilities: text('capabilities').array(),
+  planExpiry: text('plan_expiry'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().$defaultFn(() => new Date()),
 });

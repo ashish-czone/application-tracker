@@ -2,11 +2,13 @@ import { Module, type DynamicModule, type MiddlewareConsumer, type NestModule, I
 import { ModuleRef, APP_GUARD } from '@nestjs/core';
 import { DatabaseService } from '@packages/database';
 import { AppLoggerService } from '@packages/logger';
+import { JWT_CLAIMS_ENRICHERS } from '@packages/auth-core';
 import { ServiceAuthClient } from '@packages/service-auth';
 import { TENANCY_CONFIG, TENANT_LOOKUP, type TenancyConfig, type TenantLookup } from './types';
 import { TenantResolverMiddleware } from './middleware/tenant-resolver.middleware';
 import { TenantJwtGuard } from './guards/tenant-jwt.guard';
 import { CapabilityGuard } from './guards/capability.guard';
+import { TenantClaimsEnricher } from './enrichers/tenant-claims-enricher';
 import { TenantAwareDatabaseService } from './services/tenant-aware-database.service';
 import { TenantPoolManager } from './services/tenant-pool-manager.service';
 import { TenantRegistryService } from './services/tenant-registry.service';
@@ -55,8 +57,13 @@ export class TenancyModule implements NestModule {
           provide: APP_GUARD,
           useClass: CapabilityGuard,
         },
+        TenantClaimsEnricher,
+        {
+          provide: JWT_CLAIMS_ENRICHERS,
+          useExisting: TenantClaimsEnricher,
+        },
       ],
-      exports: [TENANCY_CONFIG, TENANT_LOOKUP, DatabaseService, TenantRegistryService],
+      exports: [TENANCY_CONFIG, TENANT_LOOKUP, DatabaseService, TenantRegistryService, JWT_CLAIMS_ENRICHERS],
     };
   }
 
@@ -101,8 +108,13 @@ export class TenancyModule implements NestModule {
           provide: APP_GUARD,
           useClass: CapabilityGuard,
         },
+        TenantClaimsEnricher,
+        {
+          provide: JWT_CLAIMS_ENRICHERS,
+          useExisting: TenantClaimsEnricher,
+        },
       ],
-      exports: [TENANCY_CONFIG, TENANT_LOOKUP, DatabaseService, TenantRegistryService],
+      exports: [TENANCY_CONFIG, TENANT_LOOKUP, DatabaseService, TenantRegistryService, JWT_CLAIMS_ENRICHERS],
     };
   }
 }
