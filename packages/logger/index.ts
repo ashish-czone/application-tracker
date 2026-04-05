@@ -5,7 +5,7 @@ export { LoggerModule } from './logger.module';
 export { AppLoggerService, ContextLogger } from './services/logger.service';
 
 // Correlation
-export { getCorrelationId, runWithCorrelationId } from './correlation/store';
+export { getCorrelationId, runWithCorrelationId, getTenantId, setTenantId } from './correlation/store';
 export { correlationIdMiddleware } from './correlation/middleware';
 
 // Types & tokens
