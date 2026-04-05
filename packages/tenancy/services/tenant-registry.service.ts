@@ -43,10 +43,43 @@ export class TenantRegistryService implements TenantLookup {
     return rows.map(this.toTenantInfo);
   }
 
-  async create(data: { slug: string; name: string; databaseUrl: string }): Promise<TenantInfo> {
+  async listByStatus(status: string): Promise<TenantInfo[]> {
+    const rows = await this.database.db
+      .select()
+      .from(tenants)
+      .where(eq(tenants.status, status));
+    return rows.map(this.toTenantInfo);
+  }
+
+  async create(data: {
+    slug: string;
+    name: string;
+    databaseUrl: string;
+    plan?: string;
+    capabilities?: string[];
+    planExpiry?: string;
+  }): Promise<TenantInfo> {
     const [row] = await this.database.db
       .insert(tenants)
       .values(data)
+      .returning();
+
+    return this.toTenantInfo(row);
+  }
+
+  async update(id: string, data: Partial<{
+    name: string;
+    slug: string;
+    databaseUrl: string;
+    status: string;
+    plan: string;
+    capabilities: string[];
+    planExpiry: string;
+  }>): Promise<TenantInfo> {
+    const [row] = await this.database.db
+      .update(tenants)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(tenants.id, id))
       .returning();
 
     return this.toTenantInfo(row);
@@ -66,6 +99,9 @@ export class TenantRegistryService implements TenantLookup {
       name: row.name,
       databaseUrl: row.databaseUrl,
       status: row.status as TenantInfo['status'],
+      plan: row.plan ?? undefined,
+      capabilities: row.capabilities ?? undefined,
+      planExpiry: row.planExpiry ?? undefined,
     };
   }
 }
