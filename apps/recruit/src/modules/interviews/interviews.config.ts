@@ -54,7 +54,7 @@ export const INTERVIEWS_CONFIG: EntityConfig = {
     location: { label: 'Location', section: 'basic', sortOrder: 6 },
     scheduleComments: { label: 'Schedule Comments', section: 'basic', sortOrder: 7, fieldType: 'textarea', maxLength: 32000 },
     status: {
-      label: 'Status', section: 'basic', sortOrder: 8, fieldType: 'picklist',
+      label: 'Status', section: 'basic', sortOrder: 8, fieldType: 'picklist', cellRenderer: 'StatusBadge',
       picklistOptions: [
         { label: 'Scheduled', value: 'scheduled' },
         { label: 'Completed', value: 'completed' },

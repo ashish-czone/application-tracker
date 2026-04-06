@@ -21,7 +21,7 @@ export const CANDIDATE_FIELD_META: Record<string, {
 }> = {
   // Basic Info
   email: { label: 'Email', section: 'basic', sortOrder: 0, isQuickCreate: true, isUnique: true, fieldType: 'email', maxLength: 255 },
-  firstName: { label: 'First Name', section: 'basic', sortOrder: 1, isQuickCreate: true, isSystem: true, maxLength: 125 },
+  firstName: { label: 'First Name', section: 'basic', sortOrder: 1, isQuickCreate: true, isSystem: true, maxLength: 125, cellRenderer: 'CandidateNameCell' },
   phone: { label: 'Phone', section: 'basic', sortOrder: 2, fieldType: 'phone' },
   lastName: { label: 'Last Name', section: 'basic', sortOrder: 3, isQuickCreate: true, isSystem: true, maxLength: 125 },
   website: { label: 'Website', section: 'basic', sortOrder: 4, fieldType: 'url' },
@@ -67,7 +67,7 @@ export const CANDIDATE_FIELD_META: Record<string, {
   twitterHandle: { label: 'Twitter', section: 'social', sortOrder: 2, maxLength: 50 },
   // Other Info
   candidateStatus: {
-    label: 'Candidate Status', section: 'other', sortOrder: 0, fieldType: 'picklist',
+    label: 'Candidate Status', section: 'other', sortOrder: 0, fieldType: 'picklist', cellRenderer: 'StatusBadge',
     picklistOptions: [
       { label: 'New', value: 'new' },
       { label: 'In Review', value: 'in-review' },

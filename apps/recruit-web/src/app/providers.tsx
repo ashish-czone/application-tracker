@@ -9,6 +9,8 @@ import { PlatformUIProvider } from '@packages/platform-ui';
 import { api } from '../lib/api';
 import { SessionExpiredModal } from '@packages/platform-ui/auth/components/SessionExpiredModal';
 import { CANDIDATES_UI_CONFIG } from '../entities/candidates.config';
+import { StatusBadgeRenderer } from '../portals/recruiter/features/shared/StatusBadgeRenderer';
+import { CandidateNameCell } from '../portals/recruiter/features/shared/CandidateNameCell';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -27,6 +29,8 @@ const entityUIConfigs = [CANDIDATES_UI_CONFIG];
 
 const columnRenderers: Record<string, ColumnRendererRegistration> = {
   PipelineProgressRenderer: { component: PipelineProgressInline },
+  StatusBadge: { component: StatusBadgeRenderer },
+  CandidateNameCell: { component: CandidateNameCell },
 };
 
 export function Providers({ children }: { children: ReactNode }) {
