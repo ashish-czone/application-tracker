@@ -17,6 +17,7 @@ import {
 import { SettingsPage, AppSettingsPage, AutomationsPage, RuleBuilderPage, UsersListPage, RolesListPage, TagGroupsListPage, CategoryGroupsListPage, QueuedTasksPage } from '../portals/recruiter/routes';
 import { CandidateProfilePage } from '../portals/recruiter/features/candidates/CandidateProfilePage';
 import { DashboardPage as RecruitDashboard } from '../portals/recruiter/features/dashboard/DashboardPage';
+import { JobOpeningDetailPage } from '../portals/recruiter/features/job-openings/JobOpeningDetailPage';
 
 function renderAuditTrail(entityType: string, entityId: string) {
   return <AuditTimeline entityType={entityType} entityId={entityId} />;
@@ -204,7 +205,7 @@ export function AppRouter() {
           {/* Entity engine routes — each entity = 2 lines */}
           <Route path="/job-openings" element={<EntityListPage entityType="job_openings" />} />
           <Route path="/job-openings/new" element={<EntityCreatePage entityType="job_openings" />} />
-          <Route path="/job-openings/:id" element={<AppEntityDetailPage entityType="job_openings" />} />
+          <Route path="/job-openings/:id" element={<JobOpeningDetailPage />} />
           <Route path="/candidates" element={<EntityListPage entityType="candidates" />} />
           <Route path="/candidates/:id" element={<CandidateProfilePage />} />
           <Route path="/interviews" element={<EntityListPage entityType="interviews" />} />
