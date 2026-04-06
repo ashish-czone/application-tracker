@@ -12,6 +12,8 @@ interface EntityNavItemsProps {
   iconClassName?: string;
   /** CSS class for the label */
   labelClassName?: string;
+  /** Entity types to exclude from auto-generation (e.g. ['tasks']) */
+  exclude?: string[];
 }
 
 /** Resolve a lucide icon name (e.g. 'users') to its component */
@@ -33,13 +35,15 @@ function resolveIcon(name: string): LucideIcon {
  * This component is designed to be rendered inside the app's sidebar
  * alongside manually-defined nav items (Dashboard, Settings, etc.).
  */
-export function EntityNavItems({ collapsed, className, iconClassName, labelClassName }: EntityNavItemsProps) {
+export function EntityNavItems({ collapsed, className, iconClassName, labelClassName, exclude }: EntityNavItemsProps) {
   const { entities, isLoading } = useEntityEngine();
 
   if (isLoading) return null;
 
+  const excludeSet = exclude ? new Set(exclude) : null;
+
   // Sort by navOrder, then by pluralName
-  const sorted = [...entities].sort((a, b) => {
+  const sorted = [...entities].filter((e) => !excludeSet || !excludeSet.has(e.entityType)).sort((a, b) => {
     const orderA = a.ui.navOrder ?? 99;
     const orderB = b.ui.navOrder ?? 99;
     if (orderA !== orderB) return orderA - orderB;

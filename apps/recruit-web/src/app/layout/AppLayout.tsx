@@ -202,8 +202,8 @@ export function AppLayout() {
             <NavItem key={item.path} item={item} collapsed={collapsed} />
           ))}
 
-          {/* Entity nav items — auto-generated from registry */}
-          <EntityNavItems collapsed={collapsed} />
+          {/* Entity nav items — auto-generated from registry (tasks excluded, placed in after section) */}
+          <EntityNavItems collapsed={collapsed} exclude={['tasks']} />
 
           {/* After-entity items (Automations, Settings) */}
           {navItems.filter((i) => i.position === 'after').map((item) => (
