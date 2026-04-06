@@ -38,6 +38,7 @@ export class MediaService {
    * Upload a single file. Validates, uploads to provider, returns MediaFile metadata.
    */
   async upload(file: UploadedFile, fieldConfig: MediaFieldConfig): Promise<MediaFile> {
+    const originalName = this.decodeFilename(file.originalname);
     const maxSize = fieldConfig.maxFileSize ?? this.config.maxFileSize ?? DEFAULT_MAX_FILE_SIZE;
 
     if (!isMimeTypeAccepted(file.mimetype, fieldConfig.accept)) {
@@ -55,14 +56,14 @@ export class MediaService {
       fieldConfig.entityType,
       fieldConfig.entityId,
       fieldConfig.fieldName,
-      file.originalname,
+      originalName,
     );
 
     await this.provider.upload(key, file.buffer, file.mimetype);
 
     return {
       key,
-      originalName: file.originalname,
+      originalName,
       mimeType: file.mimetype,
       size: file.size,
       uploadedAt: new Date().toISOString(),
@@ -129,13 +130,14 @@ export class MediaService {
       throw new BadRequestException(`File size exceeds maximum of ${maxMB}MB`);
     }
 
-    const key = generateTmpKey(file.originalname);
+    const originalName = this.decodeFilename(file.originalname);
+    const key = generateTmpKey(originalName);
 
     await this.provider.upload(key, file.buffer, file.mimetype);
 
     return {
       key,
-      originalName: file.originalname,
+      originalName,
       mimeType: file.mimetype,
       size: file.size,
       uploadedAt: new Date().toISOString(),
@@ -185,5 +187,14 @@ export class MediaService {
 
   getPublicUrl(key: string): string {
     return this.provider.getPublicUrl(key);
+  }
+
+  /** Multer decodes multipart filenames as Latin-1. Re-decode as UTF-8 to handle non-ASCII characters. */
+  private decodeFilename(name: string): string {
+    try {
+      return Buffer.from(name, 'latin1').toString('utf8');
+    } catch {
+      return name;
+    }
   }
 }

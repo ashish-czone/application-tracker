@@ -92,6 +92,17 @@ describe('MediaService', () => {
       const result = await service.upload(file, config);
       expect(result.size).toBe(1024);
     });
+
+    it('decodes Latin-1 encoded filenames from Multer as UTF-8', async () => {
+      // Multer encodes UTF-8 filenames as Latin-1. The narrow no-break space (U+202F)
+      // in macOS screenshot names gets mangled without decoding.
+      const utf8Name = 'Screenshot 2026-04-01 at 6.08.38\u202FPM.png';
+      const latin1Name = Buffer.from(utf8Name, 'utf8').toString('latin1');
+      const file = createFile({ originalname: latin1Name });
+
+      const result = await service.upload(file, createFieldConfig({ accept: ['image/*'] }));
+      expect(result.originalName).toBe(utf8Name);
+    });
   });
 
   describe('uploadSingle', () => {
