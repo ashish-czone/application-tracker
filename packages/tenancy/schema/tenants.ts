@@ -10,6 +10,7 @@ export const tenants = pgTable('tenants', {
   plan: text('plan'),
   capabilities: text('capabilities').array(),
   planExpiry: text('plan_expiry'),
+  clientId: text('client_id'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().$defaultFn(() => new Date()),
 });

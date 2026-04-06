@@ -58,6 +58,7 @@ export class TenantRegistryService implements TenantLookup {
     plan?: string;
     capabilities?: string[];
     planExpiry?: string;
+    clientId?: string;
   }): Promise<TenantInfo> {
     const [row] = await this.database.db
       .insert(tenants)
@@ -75,6 +76,7 @@ export class TenantRegistryService implements TenantLookup {
     plan: string;
     capabilities: string[];
     planExpiry: string;
+    clientId: string;
   }>): Promise<TenantInfo> {
     const [row] = await this.database.db
       .update(tenants)
@@ -102,6 +104,7 @@ export class TenantRegistryService implements TenantLookup {
       plan: row.plan ?? undefined,
       capabilities: row.capabilities ?? undefined,
       planExpiry: row.planExpiry ?? undefined,
+      clientId: row.clientId ?? undefined,
     };
   }
 }
