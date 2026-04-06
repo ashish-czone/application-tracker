@@ -30,6 +30,7 @@
     "@packages/eav-attributes": "workspace:*",
     "@packages/entity-engine": "workspace:*",
     "@packages/events": "workspace:*",
+    "@packages/hierarchy": "workspace:*",
     "@packages/logger": "workspace:*",
     "@packages/notification-channels": "workspace:*",
     "@packages/notifications": "workspace:*",
