@@ -14,8 +14,12 @@ export default defineConfig({
     '../../packages/workflows/schema/index.ts',
     '../../packages/taxonomy/schema/index.ts',
     '../../packages/audit/schema/index.ts',
+    // Billing + Subscriptions
+    '../../packages/orders-billing/schema/index.ts',
+    '../../packages/orders-subscriptions/schema/index.ts',
     // Control-plane specific
     '../../packages/tenancy/schema/index.ts',
+    './src/modules/clients/schema/clients.ts',
   ],
   out: './drizzle',
   dialect: 'postgresql',
