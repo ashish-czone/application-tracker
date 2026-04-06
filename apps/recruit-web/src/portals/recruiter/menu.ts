@@ -1,4 +1,4 @@
-import { LayoutDashboard, Settings, Bell, Shield, Users, SlidersHorizontal, Tags, FolderTree, Blocks, ListTodo, Wrench } from 'lucide-react';
+import { LayoutDashboard, Settings, Bell, Shield, Users, SlidersHorizontal, Tags, FolderTree, Blocks, ListTodo, Wrench, CheckSquare } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 export interface MenuItem {
@@ -14,7 +14,8 @@ export interface MenuItem {
 
 export const recruiterMenu: MenuItem[] = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard, position: 'before' },
-  // Entity nav items (Candidates, Job Openings, Tasks, etc.) are auto-generated here
+  // Entity nav items (Candidates, Job Openings, etc.) are auto-generated here
+  { path: '/tasks', label: 'Tasks', icon: CheckSquare, position: 'after' },
   { path: '/users', label: 'Users', icon: Users, permission: 'users.read', position: 'after' },
   { path: '/roles', label: 'Roles', icon: Shield, permission: 'rbac.roles-read', position: 'after' },
   { path: '/automations', label: 'Automations', icon: Bell, permission: 'automations.rules.read', position: 'after' },
