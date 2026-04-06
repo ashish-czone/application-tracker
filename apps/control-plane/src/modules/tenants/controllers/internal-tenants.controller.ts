@@ -45,7 +45,7 @@ export class InternalTenantsController {
   @Get()
   async list(@Query('status') status?: string) {
     if (status) {
-      return this.tenantRegistry.listByStatus(status);
+      return this.tenantRegistry.listByStatus(status as 'active' | 'suspended' | 'provisioning');
     }
     return this.tenantRegistry.list();
   }
