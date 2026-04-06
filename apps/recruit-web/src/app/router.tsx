@@ -16,6 +16,7 @@ import {
 } from '@packages/platform-ui/workflows';
 import { SettingsPage, AppSettingsPage, AutomationsPage, RuleBuilderPage, UsersListPage, RolesListPage, TagGroupsListPage, CategoryGroupsListPage, QueuedTasksPage } from '../portals/recruiter/routes';
 import { CandidateProfilePage } from '../portals/recruiter/features/candidates/CandidateProfilePage';
+import { DashboardPage as RecruitDashboard } from '../portals/recruiter/features/dashboard/DashboardPage';
 
 function renderAuditTrail(entityType: string, entityId: string) {
   return <AuditTimeline entityType={entityType} entityId={entityId} />;
@@ -155,15 +156,7 @@ const ResetPasswordPage = lazy(() => import('@packages/platform-ui/auth/pages/Re
 const ProfilePage = lazy(() => import('@packages/platform-ui/auth/pages/ProfilePage'));
 const OAuthCallbackPage = lazy(() => import('@packages/platform-ui/auth/pages/OAuthCallbackPage'));
 
-function DashboardPage() {
-  return (
-    <div className="max-w-6xl">
-      <div className="mb-6">
-        <p className="text-sm text-muted-foreground">Welcome back</p>
-      </div>
-    </div>
-  );
-}
+// Dashboard is now in features/dashboard/DashboardPage.tsx
 
 function PageSkeleton() {
   return (
@@ -202,7 +195,7 @@ export function AppRouter() {
       {/* Protected routes */}
       <Route element={<AuthGuard />}>
         <Route element={<AppLayout />}>
-          <Route path="/" element={<DashboardPage />} />
+          <Route path="/" element={<RecruitDashboard />} />
           <Route
             path="/profile"
             element={<Suspense fallback={<PageSkeleton />}><ProfilePage /></Suspense>}
