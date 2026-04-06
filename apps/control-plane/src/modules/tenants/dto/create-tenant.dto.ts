@@ -22,4 +22,8 @@ export class CreateTenantDto {
   @IsOptional()
   @IsString()
   planExpiry?: string;
+
+  @IsOptional()
+  @IsString()
+  clientId?: string;
 }

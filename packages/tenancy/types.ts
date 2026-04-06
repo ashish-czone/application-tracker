@@ -19,6 +19,7 @@ export interface TenantInfo {
   plan?: string;
   capabilities?: string[];
   planExpiry?: string;
+  clientId?: string;
 }
 
 /**
