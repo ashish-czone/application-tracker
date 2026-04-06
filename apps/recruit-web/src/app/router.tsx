@@ -15,6 +15,9 @@ import {
   useEntityTransition,
 } from '@packages/platform-ui/workflows';
 import { SettingsPage, AppSettingsPage, AutomationsPage, RuleBuilderPage, UsersListPage, RolesListPage, TagGroupsListPage, CategoryGroupsListPage, QueuedTasksPage } from '../portals/recruiter/routes';
+import { CandidateProfilePage } from '../portals/recruiter/features/candidates/CandidateProfilePage';
+import { DashboardPage as RecruitDashboard } from '../portals/recruiter/features/dashboard/DashboardPage';
+import { JobOpeningDetailPage } from '../portals/recruiter/features/job-openings/JobOpeningDetailPage';
 
 function renderAuditTrail(entityType: string, entityId: string) {
   return <AuditTimeline entityType={entityType} entityId={entityId} />;
@@ -154,15 +157,7 @@ const ResetPasswordPage = lazy(() => import('@packages/platform-ui/auth/pages/Re
 const ProfilePage = lazy(() => import('@packages/platform-ui/auth/pages/ProfilePage'));
 const OAuthCallbackPage = lazy(() => import('@packages/platform-ui/auth/pages/OAuthCallbackPage'));
 
-function DashboardPage() {
-  return (
-    <div className="max-w-6xl">
-      <div className="mb-6">
-        <p className="text-sm text-muted-foreground">Welcome back</p>
-      </div>
-    </div>
-  );
-}
+// Dashboard is now in features/dashboard/DashboardPage.tsx
 
 function PageSkeleton() {
   return (
@@ -201,7 +196,7 @@ export function AppRouter() {
       {/* Protected routes */}
       <Route element={<AuthGuard />}>
         <Route element={<AppLayout />}>
-          <Route path="/" element={<DashboardPage />} />
+          <Route path="/" element={<RecruitDashboard />} />
           <Route
             path="/profile"
             element={<Suspense fallback={<PageSkeleton />}><ProfilePage /></Suspense>}
@@ -210,9 +205,9 @@ export function AppRouter() {
           {/* Entity engine routes — each entity = 2 lines */}
           <Route path="/job-openings" element={<EntityListPage entityType="job_openings" />} />
           <Route path="/job-openings/new" element={<EntityCreatePage entityType="job_openings" />} />
-          <Route path="/job-openings/:id" element={<AppEntityDetailPage entityType="job_openings" />} />
+          <Route path="/job-openings/:id" element={<JobOpeningDetailPage />} />
           <Route path="/candidates" element={<EntityListPage entityType="candidates" />} />
-          <Route path="/candidates/:id" element={<AppEntityDetailPage entityType="candidates" />} />
+          <Route path="/candidates/:id" element={<CandidateProfilePage />} />
           <Route path="/interviews" element={<EntityListPage entityType="interviews" />} />
           <Route path="/interviews/:id" element={<AppEntityDetailPage entityType="interviews" />} />
           <Route path="/clients" element={<EntityListPage entityType="clients" />} />
