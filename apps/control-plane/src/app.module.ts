@@ -16,6 +16,7 @@ import { NotificationChannelsModule } from '@packages/notification-channels';
 import { WorkflowsModule } from '@packages/workflows';
 import { AuditModule } from '@packages/audit';
 import { TaxonomyModule } from '@packages/taxonomy';
+import { HierarchyModule } from '@packages/hierarchy';
 import { EavAttributesModule } from '@packages/eav-attributes';
 import { EntityEngineModule } from '@packages/entity-engine';
 import { AuthModule, AuthGuard } from '@packages/auth';
@@ -59,6 +60,7 @@ import { validate } from './config/env.validation';
     AuditModule,
     WorkflowsModule,
     TaxonomyModule,
+    HierarchyModule,
     EavAttributesModule,
     EntityEngineModule,
     // Auth + Users
