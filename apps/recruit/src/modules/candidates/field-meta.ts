@@ -1,24 +1,10 @@
-import type { FieldType } from '@packages/entity-engine';
+import type { FieldMeta } from '@packages/entity-engine';
 
 /**
  * Presentation metadata matching Zoho Recruit Candidates standard fields.
  * Keys must match the camelCase property names in the candidates table.
  */
-export const CANDIDATE_FIELD_META: Record<string, {
-  label: string;
-  section: string;
-  sortOrder: number;
-  isQuickCreate?: boolean;
-  isSystem?: boolean;
-  isUnique?: boolean;
-  fieldType?: FieldType;
-  uiType?: string;
-  picklistOptions?: { label: string; value: string }[];
-  maxLength?: number;
-  tagGroupSlug?: string;
-  accept?: string[];
-  maxFileSize?: number;
-}> = {
+export const CANDIDATE_FIELD_META: Record<string, FieldMeta> = {
   // Basic Info
   email: { label: 'Email', section: 'basic', sortOrder: 0, isQuickCreate: true, isUnique: true, fieldType: 'email', maxLength: 255 },
   firstName: { label: 'First Name', section: 'basic', sortOrder: 1, isQuickCreate: true, isSystem: true, maxLength: 125, cellRenderer: 'CandidateNameCell' },
