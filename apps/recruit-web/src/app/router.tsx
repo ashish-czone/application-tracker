@@ -15,6 +15,7 @@ import {
   useEntityTransition,
 } from '@packages/platform-ui/workflows';
 import { SettingsPage, AppSettingsPage, AutomationsPage, RuleBuilderPage, UsersListPage, RolesListPage, TagGroupsListPage, CategoryGroupsListPage, QueuedTasksPage } from '../portals/recruiter/routes';
+import { CandidateProfilePage } from '../portals/recruiter/features/candidates/CandidateProfilePage';
 
 function renderAuditTrail(entityType: string, entityId: string) {
   return <AuditTimeline entityType={entityType} entityId={entityId} />;
@@ -212,7 +213,7 @@ export function AppRouter() {
           <Route path="/job-openings/new" element={<EntityCreatePage entityType="job_openings" />} />
           <Route path="/job-openings/:id" element={<AppEntityDetailPage entityType="job_openings" />} />
           <Route path="/candidates" element={<EntityListPage entityType="candidates" />} />
-          <Route path="/candidates/:id" element={<AppEntityDetailPage entityType="candidates" />} />
+          <Route path="/candidates/:id" element={<CandidateProfilePage />} />
           <Route path="/interviews" element={<EntityListPage entityType="interviews" />} />
           <Route path="/interviews/:id" element={<AppEntityDetailPage entityType="interviews" />} />
           <Route path="/clients" element={<EntityListPage entityType="clients" />} />
