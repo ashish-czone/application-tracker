@@ -55,6 +55,7 @@ export class TenantRegistryService implements TenantLookup {
     slug: string;
     name: string;
     databaseUrl: string;
+    status?: 'active' | 'suspended' | 'provisioning';
     plan?: string;
     capabilities?: string[];
     planExpiry?: string;

@@ -15,7 +15,7 @@ export class UpdateTenantDto {
 
   @IsOptional()
   @IsIn(['active', 'suspended', 'provisioning'])
-  status?: string;
+  status?: 'active' | 'suspended' | 'provisioning';
 
   @IsOptional()
   @IsString()
