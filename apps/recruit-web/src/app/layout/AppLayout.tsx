@@ -51,6 +51,17 @@ function NavItem({ item, collapsed }: { item: MenuItem; collapsed: boolean }) {
   );
 }
 
+function NavSectionLabel({ label, collapsed }: { label: string; collapsed: boolean }) {
+  if (collapsed) return <div className="my-3 mx-2 border-t border-sidebar-border" />;
+  return (
+    <div className="pt-5 pb-1.5 px-2.5">
+      <span className="text-[10px] font-semibold uppercase tracking-widest text-sidebar-muted/70">
+        {label}
+      </span>
+    </div>
+  );
+}
+
 function NavGroup({ item, collapsed, can }: { item: MenuItem; collapsed: boolean; can: (p: string) => boolean }) {
   const location = useLocation();
   const childPaths = item.children?.map((c) => c.path) ?? [];
@@ -196,23 +207,31 @@ export function AppLayout() {
         </div>
 
         {/* Nav items */}
-        <nav className="flex-1 px-2.5 pt-2 space-y-0.5 overflow-y-auto">
+        <nav className="flex-1 px-2.5 pt-2 overflow-y-auto">
           {/* Before-entity items (Dashboard) */}
-          {navItems.filter((i) => i.position !== 'after').map((item) => (
-            <NavItem key={item.path} item={item} collapsed={collapsed} />
-          ))}
-
-          {/* Entity nav items — auto-generated from registry (tasks excluded, placed in after section) */}
-          <EntityNavItems collapsed={collapsed} exclude={['tasks']} />
-
-          {/* After-entity items (Automations, Settings) */}
-          {navItems.filter((i) => i.position === 'after').map((item) => (
-            item.children ? (
-              <NavGroup key={item.path} item={item} collapsed={collapsed} can={can} />
-            ) : (
+          <div className="space-y-0.5">
+            {navItems.filter((i) => i.position !== 'after').map((item) => (
               <NavItem key={item.path} item={item} collapsed={collapsed} />
-            )
-          ))}
+            ))}
+          </div>
+
+          {/* Recruiting section */}
+          <NavSectionLabel label="Recruiting" collapsed={collapsed} />
+          <div className="space-y-0.5">
+            <EntityNavItems collapsed={collapsed} exclude={['tasks']} />
+          </div>
+
+          {/* Workspace section */}
+          <NavSectionLabel label="Workspace" collapsed={collapsed} />
+          <div className="space-y-0.5">
+            {navItems.filter((i) => i.position === 'after').map((item) => (
+              item.children ? (
+                <NavGroup key={item.path} item={item} collapsed={collapsed} can={can} />
+              ) : (
+                <NavItem key={item.path} item={item} collapsed={collapsed} />
+              )
+            ))}
+          </div>
         </nav>
 
         {/* Sidebar footer */}
