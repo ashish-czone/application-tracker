@@ -167,7 +167,7 @@ export class EntityService {
       const targetTableName = rel.targetEntity;
       const key = `${rel.name}Count`;
 
-      counts[key] = sql`(SELECT COUNT(*) FROM ${sql.raw(`"${targetTableName}"`)} WHERE ${sql.raw(`"${fkColumn}"`)} = ${sql.raw(`"${thisTableName}"."id"`)} AND "deleted_at" IS NULL AND ${tenantCondition()})`;
+      counts[key] = sql`(SELECT COUNT(*)::integer FROM ${sql.raw(`"${targetTableName}"`)} WHERE ${sql.raw(`"${fkColumn}"`)} = ${sql.raw(`"${thisTableName}"."id"`)} AND "deleted_at" IS NULL AND ${tenantCondition()})`;
     }
 
     return counts;
