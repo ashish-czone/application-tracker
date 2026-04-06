@@ -8,6 +8,7 @@ module.exports = function (options) {
       nodeExternals({
         allowlist: [/^@packages\//, /^@modules\//],
         modulesDir: path.resolve(__dirname, '../../node_modules'),
+        additionalModuleDirs: [path.resolve(__dirname, 'node_modules')],
       }),
       { bcrypt: 'commonjs bcrypt' },
     ],
