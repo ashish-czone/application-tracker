@@ -14,6 +14,7 @@ export default defineConfig({
     '../../packages/workflows/schema/index.ts',
     '../../packages/taxonomy/schema/index.ts',
     '../../packages/audit/schema/index.ts',
+    '../../packages/entity-engine/schema/index.ts',
     // Billing + Subscriptions
     '../../packages/orders-billing/schema/index.ts',
     '../../packages/orders-subscriptions/schema/index.ts',

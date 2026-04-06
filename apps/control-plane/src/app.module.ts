@@ -17,7 +17,6 @@ import { WorkflowsModule } from '@packages/workflows';
 import { AuditModule } from '@packages/audit';
 import { TaxonomyModule } from '@packages/taxonomy';
 import { HierarchyModule } from '@packages/hierarchy';
-import { EavAttributesModule } from '@packages/eav-attributes';
 import { EntityEngineModule } from '@packages/entity-engine';
 import { AuthModule, AuthGuard } from '@packages/auth';
 import { OAuthModule } from '@packages/oauth';
@@ -61,7 +60,6 @@ import { validate } from './config/env.validation';
     WorkflowsModule,
     TaxonomyModule,
     HierarchyModule,
-    EavAttributesModule,
     EntityEngineModule,
     // Auth + Users
     AuthModule.registerAsync({
