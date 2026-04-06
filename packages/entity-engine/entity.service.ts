@@ -1373,7 +1373,7 @@ export class EntityService {
 
   /** Extract field-level data from a DB row, excluding infrastructure-only columns. */
   private rowToSnapshot(row: Record<string, unknown>): Record<string, unknown> {
-    const infraCols = new Set(['id', 'deletedAt', 'deletedBy']);
+    const infraCols = new Set(['id', 'createdAt', 'updatedAt', 'createdBy', 'deletedAt', 'deletedBy']);
     const snapshot: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(row)) {
       if (!infraCols.has(key)) {
