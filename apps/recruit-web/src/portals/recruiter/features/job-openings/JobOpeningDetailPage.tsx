@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  ArrowLeft, Building2, MapPin, Briefcase, Calendar, Users2,
+  ArrowLeft, Building2, MapPin, Briefcase, Calendar, Users2, User,
   Clock, MoreHorizontal, Copy, Trash2, UserPlus, FileText,
   LayoutGrid, List, CalendarPlus,
 } from 'lucide-react';
@@ -184,8 +184,10 @@ export function JobOpeningDetailPage() {
   const dept = item.department as string;
   const loc = item.location as string;
   const positions = Number(item.numberOfPositions ?? 1);
+  const positionsFilled = applications.filter((a) => a.stage === 'hired').length;
   const daysOpen = item.createdAt ? daysSince(item.createdAt as string) : 0;
   const applicationsCount = applications.length;
+  const hiringManagerName = item.hiringManager__label as string | undefined;
 
   const tabs: { key: TabKey; label: string; count?: number }[] = [
     { key: 'details', label: 'Details' },
@@ -223,6 +225,12 @@ export function JobOpeningDetailPage() {
                     {[dept, loc].filter(Boolean).join(', ')}
                   </span>
                 )}
+                {hiringManagerName && (
+                  <span className="flex items-center gap-1.5">
+                    <User className="h-3.5 w-3.5" />
+                    {hiringManagerName}
+                  </span>
+                )}
               </div>
             </div>
             <span className={`shrink-0 inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium ${statusStyle.bg}`}>
@@ -235,8 +243,8 @@ export function JobOpeningDetailPage() {
           <div className="flex items-center gap-6 mt-4 pt-4 border-t border-border">
             <div className="flex items-center gap-2 text-sm">
               <Users2 className="h-4 w-4 text-muted-foreground" />
-              <span className="font-semibold text-foreground">{positions}</span>
-              <span className="text-muted-foreground">{positions === 1 ? 'position' : 'positions'}</span>
+              <span className="font-semibold text-foreground">{positionsFilled} / {positions}</span>
+              <span className="text-muted-foreground">filled</span>
             </div>
             <div className="flex items-center gap-2 text-sm">
               <FileText className="h-4 w-4 text-muted-foreground" />
