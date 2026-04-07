@@ -35,6 +35,8 @@ interface EntityDetailPageProps {
   renderNotes?: (entityType: string, entityId: string) => React.ReactNode;
   /** Render the attachments tab content. Receives entityType and entityId. */
   renderAttachments?: (entityType: string, entityId: string) => React.ReactNode;
+  /** Render the evaluations tab content. Receives entityType and entityId. */
+  renderEvaluations?: (entityType: string, entityId: string) => React.ReactNode;
   /** Render the pipeline progress bar. Receives entityType, entityId, and the full entity record. */
   renderPipelineProgress?: (entityType: string, entityId: string, entity: Record<string, unknown>) => React.ReactNode;
   /** Render workflow transition actions in the header. Receives entityType, entityId, and the full entity record. */
@@ -51,7 +53,7 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
  * Generic detail page for any entity registered with the entity engine.
  * Layout: left sidebar (related records) + main area (tabs: Overview | Audit Trail).
  */
-export function EntityDetailPage({ entityType, renderAuditTrail, renderNotes, renderAttachments, renderPipelineProgress, renderWorkflowActions, renderHeaderActions }: EntityDetailPageProps) {
+export function EntityDetailPage({ entityType, renderAuditTrail, renderNotes, renderAttachments, renderEvaluations, renderPipelineProgress, renderWorkflowActions, renderHeaderActions }: EntityDetailPageProps) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
@@ -308,7 +310,7 @@ export function EntityDetailPage({ entityType, renderAuditTrail, renderNotes, re
       </div>
 
       {/* Tabs */}
-      <DetailPageTabs activeTab={activeTab} onTabChange={setActiveTab} hasNotes={entity.features.hasNotes} hasAttachments={entity.features.hasAttachments} />
+      <DetailPageTabs activeTab={activeTab} onTabChange={setActiveTab} hasNotes={entity.features.hasNotes} hasAttachments={entity.features.hasAttachments} hasEvaluations={entity.features.hasEvaluations} />
 
       {/* Content area: Sidebar + Main */}
       <div className="flex gap-6">
@@ -358,6 +360,10 @@ export function EntityDetailPage({ entityType, renderAuditTrail, renderNotes, re
 
           {activeTab === 'attachments' && renderAttachments && entity.features.hasAttachments && (
             renderAttachments(entityType, item.id as string)
+          )}
+
+          {activeTab === 'evaluations' && renderEvaluations && entity.features.hasEvaluations && (
+            renderEvaluations(entityType, item.id as string)
           )}
 
           {activeTab === 'audit-trail' && renderAuditTrail && (

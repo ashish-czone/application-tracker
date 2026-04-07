@@ -22,6 +22,9 @@ export interface EntityRegistryEntry {
     hasTaxonomy: boolean;
     hasWorkflow: boolean;
     hasMedia: boolean;
+    hasNotes: boolean;
+    hasAttachments: boolean;
+    hasEvaluations: boolean;
     workflowDiscriminator?: {
       key: string;
       label: string;

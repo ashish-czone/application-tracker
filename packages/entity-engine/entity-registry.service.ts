@@ -76,6 +76,7 @@ export class EntityRegistryService {
         hasMedia: Object.values(config.fieldMeta).some(f => f.fieldType === 'file'),
         hasNotes: !!config.hasNotes,
         hasAttachments: !!config.hasAttachments,
+        hasEvaluations: !!config.hasEvaluations,
         attachmentConfig: config.attachmentConfig ? {
           maxFileSize: config.attachmentConfig.maxFileSize,
           acceptedMimeTypes: config.attachmentConfig.acceptedMimeTypes,
