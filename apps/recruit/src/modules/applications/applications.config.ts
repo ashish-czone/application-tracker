@@ -1,4 +1,5 @@
 import type { EntityConfig } from '@packages/entity-engine';
+import { evaluationAvgExpr, evaluationCountExpr } from '@packages/evaluations';
 import { applications } from './schema/applications';
 
 export const APPLICATIONS_CONFIG: EntityConfig = {
@@ -16,6 +17,7 @@ export const APPLICATIONS_CONFIG: EntityConfig = {
   sortableColumns: {
     createdAt: applications.createdAt,
     stage: applications.stage,
+    source: applications.source,
   },
 
   fieldMeta: {
@@ -29,8 +31,25 @@ export const APPLICATIONS_CONFIG: EntityConfig = {
       fieldType: 'lookup', lookupEntity: 'job_openings', lookupLabelField: 'title',
       lookupSearchFields: ['title', 'department'],
     },
+    source: {
+      label: 'Source', section: 'basic', sortOrder: 2, fieldType: 'picklist',
+      picklistOptions: [
+        { label: 'Career Page', value: 'career-page' },
+        { label: 'Referral', value: 'referral' },
+        { label: 'LinkedIn', value: 'linkedin' },
+        { label: 'Indeed', value: 'indeed' },
+        { label: 'Agency', value: 'agency' },
+        { label: 'Direct', value: 'direct' },
+        { label: 'Job Board', value: 'job-board' },
+        { label: 'Social Media', value: 'social-media' },
+        { label: 'Other', value: 'other' },
+      ],
+    },
+    referredBy: {
+      label: 'Referred By', section: 'basic', sortOrder: 3, fieldType: 'user',
+    },
     stage: {
-      label: 'Stage', section: 'basic', sortOrder: 2, isSystem: true, fieldType: 'workflow', cellRenderer: 'PipelineProgressRenderer',
+      label: 'Stage', section: 'basic', sortOrder: 4, isSystem: true, fieldType: 'workflow', cellRenderer: 'PipelineProgressRenderer',
       workflow: {
         slug: 'application-stage',
         initialState: 'new',
@@ -76,12 +95,19 @@ export const APPLICATIONS_CONFIG: EntityConfig = {
       },
     },
     notes: { label: 'Notes', section: 'details', sortOrder: 0, fieldType: 'textarea', maxLength: 5000 },
+    averageRating: { label: 'Avg Rating', section: '_computed', sortOrder: 0, fieldType: 'number', cellRenderer: 'RatingRenderer' },
+    evaluationsCount: { label: 'Reviews', section: '_computed', sortOrder: 1, fieldType: 'number' },
   },
 
-  listFields: ['candidateId', 'jobOpeningId', 'stage'],
+  computedColumns: [
+    { name: 'averageRating', expression: evaluationAvgExpr('applications', applications.id) },
+    { name: 'evaluationsCount', expression: evaluationCountExpr('applications', applications.id) },
+  ],
+
+  listFields: ['candidateId', 'jobOpeningId', 'stage', 'source', 'averageRating'],
 
   sections: [
-    { name: 'Basic Info', fields: ['candidateId', 'jobOpeningId', 'stage'] },
+    { name: 'Basic Info', fields: ['candidateId', 'jobOpeningId', 'stage', 'source', 'referredBy'] },
     { name: 'Details', fields: ['notes'] },
   ],
 
