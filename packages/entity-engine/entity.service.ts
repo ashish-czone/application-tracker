@@ -151,26 +151,31 @@ export class EntityService {
   }
 
   /**
-   * Build COUNT subquery expressions for hasMany relationships.
-   * Auto-derives from the entity's relationships config.
+   * Build all computed SQL expressions for SELECT: relationship counts + explicit computed columns.
+   * Unified pipeline — both relationship counts and custom subqueries go through the same path.
    */
-  private buildRelationshipCountExpressions(): Record<string, any> {
+  private buildComputedExpressions(): Record<string, any> {
     const { config } = this;
-    const counts: Record<string, any> = {};
+    const exprs: Record<string, any> = {};
     const thisTableName = getTableName(config.table);
 
+    // Auto-derive COUNT subqueries from hasMany relationships
     for (const rel of config.relationships ?? []) {
       if (rel.type !== 'hasMany' || !rel.foreignKey) continue;
 
-      // Convert camelCase foreignKey to snake_case DB column name
       const fkColumn = rel.foreignKey.replace(/[A-Z]/g, (c: string) => `_${c.toLowerCase()}`);
       const targetTableName = rel.targetEntity;
       const key = `${rel.name}Count`;
 
-      counts[key] = sql`(SELECT COUNT(*)::integer FROM ${sql.raw(`"${targetTableName}"`)} WHERE ${sql.raw(`"${fkColumn}"`)} = ${sql.raw(`"${thisTableName}"."id"`)} AND "deleted_at" IS NULL AND ${tenantCondition()})`;
+      exprs[key] = sql`(SELECT COUNT(*)::integer FROM ${sql.raw(`"${targetTableName}"`)} WHERE ${sql.raw(`"${fkColumn}"`)} = ${sql.raw(`"${thisTableName}"."id"`)} AND "deleted_at" IS NULL AND ${tenantCondition()})`;
     }
 
-    return counts;
+    // Explicit computed columns (e.g., evaluation averages)
+    for (const col of config.computedColumns ?? []) {
+      exprs[col.name] = col.expression;
+    }
+
+    return exprs;
   }
 
   /**
@@ -218,26 +223,28 @@ export class EntityService {
         cellRenderer: config.fieldMeta[d.fieldKey]?.cellRenderer,
       }));
 
-    // Append hasMany relationship count columns
+    // Append computed columns: relationship counts + explicit computed columns
+    // Relationship counts auto-derive label from relationship config.
+    // Explicit computed columns derive label/cellRenderer from fieldMeta.
     for (const rel of config.relationships ?? []) {
       if (rel.type !== 'hasMany' || !rel.foreignKey) continue;
       const key = `${rel.name}Count`;
+      const meta = config.fieldMeta[key];
       columns.push({
         fieldKey: key,
-        label: `${rel.label} Count`,
-        fieldType: 'number',
-        sortable: false,
+        label: meta?.label ?? `${rel.label} Count`,
+        fieldType: meta?.fieldType ?? 'number',
+        sortable: true,
         lookupEntity: undefined,
         visible: listFieldSet ? listFieldSet.has(key) : false,
         order: listFieldOrder?.get(key) ?? 2000,
+        cellRenderer: meta?.cellRenderer,
         relationship: {
           targetEntity: rel.targetEntity,
           foreignKey: rel.foreignKey,
         },
       });
     }
-
-    // Append computed columns (e.g., averageRating from evaluations)
     for (const col of config.computedColumns ?? []) {
       const meta = config.fieldMeta[col.name];
       columns.push({
@@ -358,14 +365,8 @@ export class EntityService {
     const listDefs = await this.getListFieldDefs();
     const selectMap: Record<string, any> = this.buildListSelectMap(listDefs);
 
-    // Add hasMany relationship count subqueries
-    const countExprs = this.buildRelationshipCountExpressions();
-    Object.assign(selectMap, countExprs);
-
-    // Add computed columns (e.g., evaluation averages)
-    for (const col of config.computedColumns ?? []) {
-      selectMap[col.name] = col.expression;
-    }
+    // Add computed expressions (relationship counts + explicit computed columns)
+    Object.assign(selectMap, this.buildComputedExpressions());
 
     const rows = await this.database.db
       .select(selectMap)
@@ -422,17 +423,14 @@ export class EntityService {
     }
 
     // Compute relationship counts + computed columns for detail view
-    const countExprs = this.buildRelationshipCountExpressions();
-    for (const col of config.computedColumns ?? []) {
-      countExprs[col.name] = col.expression;
-    }
-    if (Object.keys(countExprs).length > 0) {
-      const [countRow] = await this.database.db
-        .select(countExprs)
+    const computedExprs = this.buildComputedExpressions();
+    if (Object.keys(computedExprs).length > 0) {
+      const [computedRow] = await this.database.db
+        .select(computedExprs)
         .from(table)
         .where(withTenant(table, eq(table.id, id)))
         .limit(1) as any[];
-      if (countRow) Object.assign(row, countRow);
+      if (computedRow) Object.assign(row, computedRow);
     }
 
     const response = await this.toResponse(row);
@@ -1010,10 +1008,10 @@ export class EntityService {
    * For standard columns, delegates to query-builder.
    */
   private buildSortExpression(sortKey: string, direction: 'ASC' | 'DESC', config: EntityConfig): any {
-    // Check if the sort key is a computed column
-    const computedCol = config.computedColumns?.find(c => c.name === sortKey);
-    if (computedCol) {
-      return sql`${computedCol.expression} ${sql.raw(direction)}`;
+    // Check if the sort key is a computed expression (relationship counts + explicit computed columns)
+    const computedExprs = this.buildComputedExpressions();
+    if (computedExprs[sortKey]) {
+      return sql`${computedExprs[sortKey]} ${sql.raw(direction)}`;
     }
 
     // Check if the sort key is a lookup field (entity-specific logic)
