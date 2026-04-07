@@ -1,15 +1,15 @@
 import { Module, type OnModuleInit } from '@nestjs/common';
 import { UserResolverRegistry } from '@packages/automations';
-import { DatabaseService } from '@packages/database';
 import { ApplicationInterviewersStrategy } from './strategies/application-interviewers.strategy';
+import { ApplicationsAutomationsSeedService } from './applications-automations-seed.service';
 
 /**
  * Applications domain module.
  * CRUD/routing/RBAC/events handled by EntityEngineModule.forEntity(APPLICATIONS_CONFIG).
- * This module registers domain-specific automation strategies.
+ * This module registers domain-specific automation strategies and seed automation rules.
  */
 @Module({
-  providers: [ApplicationInterviewersStrategy],
+  providers: [ApplicationInterviewersStrategy, ApplicationsAutomationsSeedService],
 })
 export class ApplicationsModule implements OnModuleInit {
   constructor(

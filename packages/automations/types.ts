@@ -20,7 +20,8 @@ export interface UserSlotDefinition {
   required: boolean;
 }
 
-export type UserResolutionStrategy = 'actor' | 'entity_field' | 'role';
+/** Built-in strategies + extensible via string for custom strategies registered at runtime */
+export type UserResolutionStrategy = 'actor' | 'entity_field' | 'role' | 'related_entity_field' | (string & {});
 
 export interface UserResolution {
   strategy: UserResolutionStrategy;
