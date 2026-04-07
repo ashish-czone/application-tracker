@@ -14,6 +14,7 @@ export {
   evaluations,
   evaluationScores,
 } from './schema';
+export { evaluationAvgExpr, evaluationCountExpr } from './helpers/computed-columns';
 export {
   EVALUATIONS_EVALUATION_SUBMITTED,
   EVALUATIONS_EVALUATION_UPDATED,
