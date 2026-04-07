@@ -5,6 +5,7 @@ export { UserResolverRegistry, type UserResolverStrategy, type UserResolutionCon
 export { ActorStrategy } from './services/strategies/actor.strategy';
 export { EntityFieldStrategy } from './services/strategies/entity-field.strategy';
 export { RoleStrategy } from './services/strategies/role.strategy';
+export { RelatedEntityFieldStrategy } from './services/strategies/related-entity-field.strategy';
 export { EntityResolverRegistry } from './services/entity-resolver-registry';
 export { AutomationRuleService } from './services/automation-rule.service';
 export { ProvenanceService } from './services/provenance.service';

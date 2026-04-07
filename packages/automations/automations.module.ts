@@ -18,6 +18,7 @@ import { ScheduleScanner } from './services/schedule-scanner';
 import { ActorStrategy } from './services/strategies/actor.strategy';
 import { EntityFieldStrategy } from './services/strategies/entity-field.strategy';
 import { RoleStrategy } from './services/strategies/role.strategy';
+import { RelatedEntityFieldStrategy } from './services/strategies/related-entity-field.strategy';
 import { AutomationRulesController } from './controllers/automation-rules.controller';
 import { AutomationExecutionsController } from './controllers/automation-executions.controller';
 import { AutomationsMetadataController } from './controllers/automations-metadata.controller';
@@ -85,6 +86,9 @@ export class AutomationsModule implements OnModuleInit {
       new EntityFieldStrategy(this.database, (entityType) => this.entityResolverRegistry.get(entityType)),
     );
     this.userResolverRegistry.registerStrategy(new RoleStrategy(this.database));
+    this.userResolverRegistry.registerStrategy(
+      new RelatedEntityFieldStrategy(this.database, (entityType) => this.entityResolverRegistry.get(entityType)),
+    );
 
     // Register schedule scanner cron job
     this.queueService.registerProcessor({
