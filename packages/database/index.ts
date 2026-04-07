@@ -35,5 +35,5 @@ export class DatabaseModule {}
 export * from './schema';
 
 // Re-export commonly used drizzle operators
-export { eq, ne, and, or, not, gt, lt, gte, lte, isNull, isNotNull, ilike, like, sql, asc, desc, inArray, count } from 'drizzle-orm';
+export { eq, ne, and, or, not, gt, lt, gte, lte, isNull, isNotNull, ilike, like, sql, asc, desc, inArray, count, avg, sum, min, max } from 'drizzle-orm';
 export type { SQL } from 'drizzle-orm';
