@@ -12,6 +12,7 @@ export { StageTransitionEditor } from './components/StageTransitionEditor';
 export { TransitionConfirmDialog } from './components/TransitionConfirmDialog';
 export { WorkflowTransitionButton } from './components/WorkflowTransitionButton';
 export { PipelineProgressInline } from './components/PipelineProgressInline';
+export { WorkflowKanbanBoard } from './components/WorkflowKanbanBoard';
 export { TransitionWorkflowActionConfig } from './components/TransitionWorkflowActionConfig';
 export { getAvailableTransitions, type ClientAvailableTransition } from './helpers/getAvailableTransitions';
 export {
