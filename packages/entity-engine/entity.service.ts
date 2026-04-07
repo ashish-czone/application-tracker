@@ -755,10 +755,12 @@ export class EntityService {
     fieldKey: string,
     toState: string,
     actorId: string,
-    comment?: string,
+    options?: { reason?: string; comment?: string },
   ): Promise<Record<string, unknown>> {
     const { config } = this;
     const table = config.table as any;
+    const reason = options?.reason;
+    const comment = options?.comment;
 
     // 1. Get current entity
     const entity = await this.findOneOrFail(id);
@@ -785,6 +787,22 @@ export class EntityService {
       entityData: entity as Record<string, unknown>,
     });
 
+    // 3b. Validate reason/comment against transition definition
+    const transitionDef = workflow.transitions.find((t) => t.id === validated.transitionId);
+    if (transitionDef) {
+      if (transitionDef.reasonRequired && !reason) {
+        throw new BadRequestException('A reason is required for this transition');
+      }
+      if (transitionDef.commentRequired && !comment) {
+        throw new BadRequestException('A comment is required for this transition');
+      }
+      if (reason && transitionDef.reasonOptions && transitionDef.reasonOptions.length > 0) {
+        if (!transitionDef.reasonOptions.includes(reason)) {
+          throw new BadRequestException(`Invalid reason. Must be one of: ${transitionDef.reasonOptions.join(', ')}`);
+        }
+      }
+    }
+
     // 4. Update entity field + record history in a single transaction
     const col = table[fieldKey];
     await this.database.db.transaction(async (tx) => {
@@ -806,6 +824,7 @@ export class EntityService {
         toState,
         transitionId: validated.transitionId,
         actorId,
+        reason,
         comment,
       }, tx);
     });
@@ -828,6 +847,7 @@ export class EntityService {
         toState,
         transitionId: validated.transitionId,
         transitionName: validated.transitionName,
+        reason,
         comment,
       },
     });

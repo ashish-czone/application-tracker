@@ -108,10 +108,10 @@ export function createEntityController(config: EntityConfig, serviceToken: strin
     @ApiOperation({ summary: `Transition a workflow field on a ${config.singularName.toLowerCase()}` })
     async transition(
       @Param('id', ParseUUIDPipe) id: string,
-      @Body() body: { fieldKey: string; to: string; comment?: string },
+      @Body() body: { fieldKey: string; to: string; reason?: string; comment?: string },
       @CurrentUser() user: JwtPayload,
     ) {
-      return this.entityService.transition(id, body.fieldKey, body.to, user.userId, body.comment);
+      return this.entityService.transition(id, body.fieldKey, body.to, user.userId, { reason: body.reason, comment: body.comment });
     }
 
     @Post(':id/clone')

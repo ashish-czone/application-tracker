@@ -1,4 +1,4 @@
-import { pgTable, text, integer, timestamp, jsonb, uniqueIndex, index } from 'drizzle-orm/pg-core';
+import { pgTable, text, integer, boolean, timestamp, jsonb, uniqueIndex, index } from 'drizzle-orm/pg-core';
 import { randomUUID } from 'crypto';
 import { workflowDefinitions } from './workflow-definitions';
 import { workflowStates } from './workflow-states';
@@ -12,6 +12,9 @@ export const workflowTransitions = pgTable('workflow_transitions', {
   requiredPermissions: jsonb('required_permissions'),
   guardNames: jsonb('guard_names'),
   sortOrder: integer('sort_order').notNull().default(0),
+  reasonOptions: jsonb('reason_options').$type<string[]>(),
+  reasonRequired: boolean('reason_required').notNull().default(false),
+  commentRequired: boolean('comment_required').notNull().default(false),
   metadata: jsonb('metadata'),
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }).notNull().$defaultFn(() => new Date()).$onUpdate(() => new Date()),

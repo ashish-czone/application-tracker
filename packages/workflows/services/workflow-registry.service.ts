@@ -76,6 +76,9 @@ export class WorkflowRegistryService implements OnModuleInit {
         requiredPermissions: (t.requiredPermissions as string[] | null) ?? [],
         guardNames: (t.guardNames as string[] | null) ?? [],
         sortOrder: t.sortOrder,
+        reasonOptions: t.reasonOptions ?? null,
+        reasonRequired: t.reasonRequired,
+        commentRequired: t.commentRequired,
         metadata: t.metadata as Record<string, unknown> | null,
       }));
 
@@ -257,6 +260,9 @@ export class WorkflowRegistryService implements OnModuleInit {
     requiredPermissions?: string[];
     guardNames?: string[];
     sortOrder?: number;
+    reasonOptions?: string[];
+    reasonRequired?: boolean;
+    commentRequired?: boolean;
     metadata?: Record<string, unknown>;
   }) {
     const [row] = await this.database.db
@@ -272,6 +278,9 @@ export class WorkflowRegistryService implements OnModuleInit {
     requiredPermissions: string[] | null;
     guardNames: string[] | null;
     sortOrder: number;
+    reasonOptions: string[] | null;
+    reasonRequired: boolean;
+    commentRequired: boolean;
     metadata: Record<string, unknown> | null;
   }>) {
     const [row] = await this.database.db

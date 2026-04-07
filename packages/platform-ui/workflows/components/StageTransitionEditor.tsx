@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
-import { ChevronDown, ChevronRight, Shield, Filter } from 'lucide-react';
-import { cn, Badge } from '@packages/ui';
+import { ChevronDown, ChevronRight, Shield, Filter, MessageSquare, X, Plus } from 'lucide-react';
+import { cn, Badge, Button } from '@packages/ui';
 import { ConditionBuilder, type Condition, type ConditionFieldConfig } from '../../conditions';
 import type { WorkflowState, WorkflowTransition } from '../types';
 
@@ -14,6 +14,7 @@ interface StageTransitionEditorProps {
   onRemoveTransition: (transitionId: string) => void;
   onUpdateTransitionPermissions: (transitionId: string, permissions: string[]) => void;
   onUpdateTransitionConditions: (transitionId: string, conditions: Condition[]) => void;
+  onUpdateTransitionReasons: (transitionId: string, data: { reasonOptions?: string[] | null; reasonRequired?: boolean; commentRequired?: boolean }) => void;
   isPending: boolean;
 }
 
@@ -33,10 +34,12 @@ export function StageTransitionEditor({
   onRemoveTransition,
   onUpdateTransitionPermissions,
   onUpdateTransitionConditions,
+  onUpdateTransitionReasons,
   isPending,
 }: StageTransitionEditorProps) {
   const [expanded, setExpanded] = useState(false);
-  const [activePanel, setActivePanel] = useState<{ id: string; type: 'permissions' | 'conditions' } | null>(null);
+  const [activePanel, setActivePanel] = useState<{ id: string; type: 'permissions' | 'conditions' | 'reasons' } | null>(null);
+  const [newReasonInput, setNewReasonInput] = useState('');
 
   const outgoing = useMemo(
     () => transitions.filter((t) => t.fromStateName === state.name),
@@ -53,7 +56,7 @@ export function StageTransitionEditor({
     [allStates, state.name, outgoingTargetNames],
   );
 
-  function togglePanel(transitionId: string, type: 'permissions' | 'conditions') {
+  function togglePanel(transitionId: string, type: 'permissions' | 'conditions' | 'reasons') {
     if (activePanel?.id === transitionId && activePanel.type === type) {
       setActivePanel(null);
     } else {
@@ -80,6 +83,7 @@ export function StageTransitionEditor({
             const conditions = getTransitionConditions(t);
             const hasConditions = conditions.length > 0;
             const hasPermissions = t.requiredPermissions.length > 0;
+            const hasReasons = (t.reasonOptions?.length ?? 0) > 0;
 
             return (
               <div key={t.id}>
@@ -100,6 +104,11 @@ export function StageTransitionEditor({
                   {hasConditions && (
                     <Badge variant="outline" className="text-[10px] px-1.5 py-0">
                       {conditions.length} condition{conditions.length !== 1 ? 's' : ''}
+                    </Badge>
+                  )}
+                  {hasReasons && (
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                      {t.reasonOptions!.length} reason{t.reasonOptions!.length !== 1 ? 's' : ''}
                     </Badge>
                   )}
 
@@ -129,6 +138,19 @@ export function StageTransitionEditor({
                     title="Edit conditions"
                   >
                     <Filter className="h-3 w-3" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { togglePanel(t.id, 'reasons'); setNewReasonInput(''); }}
+                    className={cn(
+                      'p-1 rounded transition-colors',
+                      activePanel?.id === t.id && activePanel.type === 'reasons'
+                        ? 'text-foreground bg-accent'
+                        : 'text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100',
+                    )}
+                    title="Edit transition reasons"
+                  >
+                    <MessageSquare className="h-3 w-3" />
                   </button>
                   <button
                     type="button"
@@ -178,6 +200,87 @@ export function StageTransitionEditor({
                       onChange={(updated) => onUpdateTransitionConditions(t.id, updated)}
                       fields={entityFields}
                     />
+                  </div>
+                )}
+
+                {/* Reasons panel */}
+                {activePanel?.id === t.id && activePanel.type === 'reasons' && (
+                  <div className="ml-5 mt-1 mb-2 p-3 border border-border rounded-md bg-accent/30 space-y-3">
+                    <p className="text-xs font-medium">Transition Reasons</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {(t.reasonOptions ?? []).map((option) => (
+                        <span
+                          key={option}
+                          className="inline-flex items-center gap-1 rounded-md bg-background px-2 py-0.5 text-xs border border-border"
+                        >
+                          {option}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updated = (t.reasonOptions ?? []).filter((o) => o !== option);
+                              onUpdateTransitionReasons(t.id, { reasonOptions: updated.length > 0 ? updated : null });
+                            }}
+                            className="text-muted-foreground hover:text-foreground"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                    <div className="flex gap-1.5">
+                      <input
+                        type="text"
+                        value={newReasonInput}
+                        onChange={(e) => setNewReasonInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            const trimmed = newReasonInput.trim();
+                            if (trimmed && !(t.reasonOptions ?? []).includes(trimmed)) {
+                              onUpdateTransitionReasons(t.id, { reasonOptions: [...(t.reasonOptions ?? []), trimmed] });
+                              setNewReasonInput('');
+                            }
+                          }
+                        }}
+                        className="flex-1 rounded-md border border-input bg-background px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                        placeholder="Add a reason..."
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 px-2"
+                        onClick={() => {
+                          const trimmed = newReasonInput.trim();
+                          if (trimmed && !(t.reasonOptions ?? []).includes(trimmed)) {
+                            onUpdateTransitionReasons(t.id, { reasonOptions: [...(t.reasonOptions ?? []), trimmed] });
+                            setNewReasonInput('');
+                          }
+                        }}
+                        disabled={!newReasonInput.trim()}
+                      >
+                        <Plus className="h-3 w-3" />
+                      </Button>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <label className="flex items-center gap-2 text-xs cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={t.reasonRequired}
+                          onChange={(e) => onUpdateTransitionReasons(t.id, { reasonRequired: e.target.checked })}
+                          className="rounded border-input"
+                        />
+                        <span className="text-muted-foreground">Reason required</span>
+                      </label>
+                      <label className="flex items-center gap-2 text-xs cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={t.commentRequired}
+                          onChange={(e) => onUpdateTransitionReasons(t.id, { commentRequired: e.target.checked })}
+                          className="rounded border-input"
+                        />
+                        <span className="text-muted-foreground">Comment required</span>
+                      </label>
+                    </div>
                   </div>
                 )}
               </div>

@@ -230,6 +230,9 @@ export function PipelineStageManager({ workflowSlug, availablePermissions = [] }
                   const metadata = { ...(existing?.metadata as Record<string, unknown> ?? {}), conditions };
                   updateTransition.mutate({ transitionId, data: { metadata } });
                 }}
+                onUpdateTransitionReasons={(transitionId, data) =>
+                  updateTransition.mutate({ transitionId, data })
+                }
                 entityFields={entityFields}
                 isPending={createTransition.isPending || deleteTransition.isPending || updateTransition.isPending}
               />

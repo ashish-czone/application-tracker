@@ -45,6 +45,9 @@ export interface CachedWorkflowTransition {
   requiredPermissions: string[];
   guardNames: string[];
   sortOrder: number;
+  reasonOptions: string[] | null;
+  reasonRequired: boolean;
+  commentRequired: boolean;
   metadata: Record<string, unknown> | null;
 }
 
@@ -56,6 +59,9 @@ export interface AvailableTransition {
   toStateLabel: string;
   toStateColor: string | null;
   requiredPermissions: string[];
+  reasonOptions: string[] | null;
+  reasonRequired: boolean;
+  commentRequired: boolean;
 }
 
 export interface TransitionHistoryEntry {
@@ -68,6 +74,7 @@ export interface TransitionHistoryEntry {
   toState: string;
   transitionId: string | null;
   actorId: string | null;
+  reason: string | null;
   comment: string | null;
   metadata: Record<string, unknown> | null;
   createdAt: Date;
@@ -99,6 +106,7 @@ export interface RecordHistoryParams {
   toState: string;
   transitionId: string;
   actorId: string | null;
+  reason?: string;
   comment?: string;
   metadata?: Record<string, unknown>;
 }

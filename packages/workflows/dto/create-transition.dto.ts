@@ -1,4 +1,4 @@
-import { IsString, MinLength, MaxLength, IsOptional, IsUUID, IsArray, IsInt, Min } from 'class-validator';
+import { IsString, MinLength, MaxLength, IsOptional, IsUUID, IsArray, IsInt, IsBoolean, Min } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateTransitionDto {
@@ -33,4 +33,20 @@ export class CreateTransitionDto {
   @IsInt()
   @Min(0)
   sortOrder?: number;
+
+  @ApiPropertyOptional({ example: ['Not qualified', 'Salary mismatch', 'No show'], description: 'Picklist options shown when this transition is triggered' })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  reasonOptions?: string[];
+
+  @ApiPropertyOptional({ example: false, description: 'Whether selecting a reason is required' })
+  @IsOptional()
+  @IsBoolean()
+  reasonRequired?: boolean;
+
+  @ApiPropertyOptional({ example: false, description: 'Whether entering a comment is required' })
+  @IsOptional()
+  @IsBoolean()
+  commentRequired?: boolean;
 }

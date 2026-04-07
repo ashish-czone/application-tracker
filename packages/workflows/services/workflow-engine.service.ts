@@ -44,6 +44,9 @@ export class WorkflowEngineService {
         toStateLabel: toState?.label ?? t.toStateName,
         toStateColor: toState?.color ?? null,
         requiredPermissions: t.requiredPermissions,
+        reasonOptions: t.reasonOptions,
+        reasonRequired: t.reasonRequired,
+        commentRequired: t.commentRequired,
       };
     });
   }
@@ -217,6 +220,7 @@ export class WorkflowEngineService {
         toState: params.toState,
         transitionId: params.transitionId,
         actorId: params.actorId,
+        reason: params.reason,
         comment: params.comment,
         metadata: params.metadata,
       }))
@@ -260,6 +264,7 @@ export class WorkflowEngineService {
       toState: r.toState,
       transitionId: r.transitionId,
       actorId: r.actorId,
+      reason: r.reason,
       comment: r.comment,
       metadata: r.metadata as Record<string, unknown> | null,
       createdAt: r.createdAt,
