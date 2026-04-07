@@ -2,10 +2,14 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter } from 'react-router';
 import type { ReactNode } from 'react';
 import { Toaster } from '@packages/ui';
-import { EntityEngineProvider, type ColumnRendererRegistration } from '@packages/entity-engine-ui';
+import { EntityEngineProvider, type ColumnRendererRegistration, type DetailTabPlugin } from '@packages/entity-engine-ui';
 import { PipelineProgressInline } from '@packages/platform-ui/workflows';
 import { TaxonomyProvider } from '@packages/platform-ui-taxonomy';
 import { PlatformUIProvider } from '@packages/platform-ui';
+import { AuditTimeline } from '@packages/platform-ui/audit';
+import { NotesSection } from '@packages/notes-ui';
+import { AttachmentsSection } from '@packages/attachments-ui';
+import { EvaluationsSection } from '@packages/evaluations-ui';
 import { api } from '../lib/api';
 import { SessionExpiredModal } from '@packages/platform-ui/auth/components/SessionExpiredModal';
 import { CANDIDATES_UI_CONFIG } from '../entities/candidates.config';
@@ -27,6 +31,13 @@ const queryClient = new QueryClient({
 
 const entityUIConfigs = [CANDIDATES_UI_CONFIG];
 
+const detailTabs: DetailTabPlugin[] = [
+  { key: 'notes', label: 'Notes', order: 100, component: NotesSection, featureFlag: 'hasNotes' },
+  { key: 'attachments', label: 'Attachments', order: 200, component: AttachmentsSection, featureFlag: 'hasAttachments' },
+  { key: 'evaluations', label: 'Evaluations', order: 300, component: EvaluationsSection, featureFlag: 'hasEvaluations' },
+  { key: 'audit-trail', label: 'Audit Trail', order: 1000, component: AuditTimeline },
+];
+
 const columnRenderers: Record<string, ColumnRendererRegistration> = {
   PipelineProgressRenderer: { component: PipelineProgressInline },
   StatusBadge: { component: StatusBadgeRenderer },
@@ -38,7 +49,7 @@ export function Providers({ children }: { children: ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <PlatformUIProvider apiFn={api}>
-          <EntityEngineProvider apiFn={api} entityUIConfigs={entityUIConfigs} columnRenderers={columnRenderers}>
+          <EntityEngineProvider apiFn={api} entityUIConfigs={entityUIConfigs} detailTabs={detailTabs} columnRenderers={columnRenderers}>
             <TaxonomyProvider apiFn={api}>
               {children}
             </TaxonomyProvider>

@@ -11,7 +11,7 @@ export { ConditionValueField } from './components/ConditionValueField';
 export { EntityBoardView } from './components/EntityBoardView';
 export { EntityPickerPanel } from './components/EntityPickerPanel';
 export { DetailPageSidebar } from './components/DetailPageSidebar';
-export { DetailPageTabs, type DetailTab } from './components/DetailPageTabs';
+export { DetailPageTabs } from './components/DetailPageTabs';
 export { EntityListPage } from './pages/EntityListPage';
 export { EntityCreatePage } from './pages/EntityCreatePage';
 export { EntityDetailPage } from './pages/EntityDetailPage';
@@ -24,6 +24,7 @@ export type {
   EntityRegistryEntry,
   EntityApi,
   EntityDetailPlugin,
+  DetailTabPlugin,
   EntityUIConfig,
   ColumnRendererRegistration,
 } from './types';

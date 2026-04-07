@@ -24,19 +24,11 @@ import { useEntityLayout } from '../helpers/useEntityLayout';
 import { useListLayout } from '../helpers/useListLayout';
 import { EntityRelatedList } from './EntityRelatedList';
 import { EntityPickerPanel } from '../components/EntityPickerPanel';
-import { DetailPageTabs, type DetailTab } from '../components/DetailPageTabs';
+import { DetailPageTabs } from '../components/DetailPageTabs';
 import { DetailPageSidebar } from '../components/DetailPageSidebar';
 
 interface EntityDetailPageProps {
   entityType: string;
-  /** Render the audit trail tab content. Receives entityType and entityId. */
-  renderAuditTrail?: (entityType: string, entityId: string) => React.ReactNode;
-  /** Render the notes tab content. Receives entityType and entityId. */
-  renderNotes?: (entityType: string, entityId: string) => React.ReactNode;
-  /** Render the attachments tab content. Receives entityType and entityId. */
-  renderAttachments?: (entityType: string, entityId: string) => React.ReactNode;
-  /** Render the evaluations tab content. Receives entityType and entityId. */
-  renderEvaluations?: (entityType: string, entityId: string) => React.ReactNode;
   /** Render the pipeline progress bar. Receives entityType, entityId, and the full entity record. */
   renderPipelineProgress?: (entityType: string, entityId: string, entity: Record<string, unknown>) => React.ReactNode;
   /** Render workflow transition actions in the header. Receives entityType, entityId, and the full entity record. */
@@ -53,17 +45,17 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
  * Generic detail page for any entity registered with the entity engine.
  * Layout: left sidebar (related records) + main area (tabs: Overview | Audit Trail).
  */
-export function EntityDetailPage({ entityType, renderAuditTrail, renderNotes, renderAttachments, renderEvaluations, renderPipelineProgress, renderWorkflowActions, renderHeaderActions }: EntityDetailPageProps) {
+export function EntityDetailPage({ entityType, renderPipelineProgress, renderWorkflowActions, renderHeaderActions }: EntityDetailPageProps) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
   const entity = useEntityConfig(entityType);
   const hooks = useEntityHooks(entityType);
-  const { getDetailPlugins, apiFn } = useEntityEngine();
+  const { getDetailPlugins, getDetailTabs, apiFn } = useEntityEngine();
   const queryClient = useQueryClient();
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [activeTab, setActiveTab] = useState<DetailTab>('overview');
+  const [activeTab, setActiveTab] = useState('overview');
   const [activePicker, setActivePicker] = useState<EntityAction | null>(null);
   const [browseRelationship, setBrowseRelationship] = useState<{
     name: string;
@@ -225,6 +217,16 @@ export function EntityDetailPage({ entityType, renderAuditTrail, renderNotes, re
   const subtitle = getSubtitle(item);
   const plugins = getDetailPlugins(entityType).sort((a, b) => a.order - b.order);
 
+  // Build visible tabs: Overview (built-in) + registered tab plugins filtered by feature flags
+  const visibleTabs = useMemo(() => {
+    const registeredTabs = getDetailTabs(entityType);
+    const features = entity.features as Record<string, unknown>;
+    const filtered = registeredTabs.filter(
+      (tab) => !tab.featureFlag || features[tab.featureFlag],
+    );
+    return [{ key: 'overview', label: 'Overview', order: 0 }, ...filtered];
+  }, [getDetailTabs, entityType, entity.features]);
+
   return (
     <div>
       {/* Header */}
@@ -310,7 +312,7 @@ export function EntityDetailPage({ entityType, renderAuditTrail, renderNotes, re
       </div>
 
       {/* Tabs */}
-      <DetailPageTabs activeTab={activeTab} onTabChange={setActiveTab} hasNotes={entity.features.hasNotes} hasAttachments={entity.features.hasAttachments} hasEvaluations={entity.features.hasEvaluations} />
+      <DetailPageTabs activeTab={activeTab} onTabChange={setActiveTab} tabs={visibleTabs} />
 
       {/* Content area: Sidebar + Main */}
       <div className="flex gap-6">
@@ -354,21 +356,12 @@ export function EntityDetailPage({ entityType, renderAuditTrail, renderNotes, re
             </div>
           )}
 
-          {activeTab === 'notes' && renderNotes && entity.features.hasNotes && (
-            renderNotes(entityType, item.id as string)
-          )}
-
-          {activeTab === 'attachments' && renderAttachments && entity.features.hasAttachments && (
-            renderAttachments(entityType, item.id as string)
-          )}
-
-          {activeTab === 'evaluations' && renderEvaluations && entity.features.hasEvaluations && (
-            renderEvaluations(entityType, item.id as string)
-          )}
-
-          {activeTab === 'audit-trail' && renderAuditTrail && (
-            renderAuditTrail(entityType, item.id as string)
-          )}
+          {activeTab !== 'overview' && (() => {
+            const tab = visibleTabs.find(t => t.key === activeTab);
+            if (!tab?.component) return null;
+            const TabComponent = tab.component;
+            return <TabComponent entityType={entityType} entityId={item.id as string} />;
+          })()}
         </div>
       </div>
 

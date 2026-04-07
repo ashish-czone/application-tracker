@@ -3,27 +3,7 @@ import { useParams } from 'react-router';
 import { CalendarPlus } from 'lucide-react';
 import { Button } from '@packages/ui';
 import { EntityDetailPage, useEntityHooks } from '@packages/entity-engine-ui';
-import { AuditTimeline } from '@packages/platform-ui/audit';
-import { NotesSection } from '@packages/notes-ui';
-import { AttachmentsSection } from '@packages/attachments-ui';
-import { EvaluationsSection } from '@packages/evaluations-ui';
 import { ScheduleInterviewDialog } from '../shared/ScheduleInterviewDialog';
-
-function renderAuditTrail(entityType: string, entityId: string) {
-  return <AuditTimeline entityType={entityType} entityId={entityId} />;
-}
-
-function renderNotes(entityType: string, entityId: string) {
-  return <NotesSection entityType={entityType} entityId={entityId} />;
-}
-
-function renderAttachments(entityType: string, entityId: string) {
-  return <AttachmentsSection entityType={entityType} entityId={entityId} />;
-}
-
-function renderEvaluations(entityType: string, entityId: string) {
-  return <EvaluationsSection entityType={entityType} entityId={entityId} />;
-}
 
 export function ApplicationDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -39,10 +19,6 @@ export function ApplicationDetailPage() {
     <>
       <EntityDetailPage
         entityType="applications"
-        renderAuditTrail={renderAuditTrail}
-        renderNotes={renderNotes}
-        renderAttachments={renderAttachments}
-        renderEvaluations={renderEvaluations}
         renderHeaderActions={
           canSchedule
             ? () => (

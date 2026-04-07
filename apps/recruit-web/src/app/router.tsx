@@ -3,9 +3,6 @@ import { Routes, Route, Navigate } from 'react-router';
 import { AppLayout } from './layout/AppLayout';
 import { AuthGuard } from '@packages/platform-ui/auth/components/AuthGuard';
 import { EntityListPage, EntityCreatePage, EntityDetailPage, useEntityConfig } from '@packages/entity-engine-ui';
-import { AuditTimeline } from '@packages/platform-ui/audit';
-import { NotesSection } from '@packages/notes-ui';
-import { AttachmentsSection } from '@packages/attachments-ui';
 import {
   PipelineProgressBar,
   TransitionConfirmDialog,
@@ -19,18 +16,6 @@ import { CandidateProfilePage } from '../portals/recruiter/features/candidates/C
 import { DashboardPage as RecruitDashboard } from '../portals/recruiter/features/dashboard/DashboardPage';
 import { JobOpeningDetailPage } from '../portals/recruiter/features/job-openings/JobOpeningDetailPage';
 import { ApplicationDetailPage } from '../portals/recruiter/features/applications/ApplicationDetailPage';
-
-function renderAuditTrail(entityType: string, entityId: string) {
-  return <AuditTimeline entityType={entityType} entityId={entityId} />;
-}
-
-function renderNotes(entityType: string, entityId: string) {
-  return <NotesSection entityType={entityType} entityId={entityId} />;
-}
-
-function renderAttachments(entityType: string, entityId: string) {
-  return <AttachmentsSection entityType={entityType} entityId={entityId} />;
-}
 
 interface PendingTransition {
   toStateName: string;
@@ -167,9 +152,6 @@ function AppEntityDetailPage({ entityType }: { entityType: string }) {
   return (
     <EntityDetailPage
       entityType={entityType}
-      renderAuditTrail={renderAuditTrail}
-      renderNotes={renderNotes}
-      renderAttachments={renderAttachments}
       renderPipelineProgress={renderPipelineProgress}
       renderWorkflowActions={renderWorkflowActions}
     />
