@@ -18,6 +18,8 @@ export interface AuditLogRecord {
   after: Record<string, unknown> | null;
   changes: Record<string, { from: unknown; to: unknown }> | null;
   correlationId: string | null;
+  targetEntityType: string | null;
+  targetEntityId: string | null;
   occurredAt: Date;
   createdAt: Date;
 }
@@ -32,4 +34,7 @@ export interface ListAuditLogsQuery {
   action?: string;
   fromDate?: string;
   toDate?: string;
+  targetEntityType?: string;
+  targetEntityId?: string;
+  includeRelated?: boolean;
 }

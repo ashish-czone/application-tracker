@@ -30,6 +30,9 @@ export class AuditListener {
       const payload = event.payload as Record<string, unknown>;
       const sensitiveFields = registration.sensitiveFields ?? [];
 
+      const targetEntityType = (payload.targetEntityType as string) ?? null;
+      const targetEntityId = (payload.targetEntityId as string) ?? null;
+
       const action = inferAction(event.eventName);
 
       const before = redactSensitiveFields(
@@ -63,6 +66,8 @@ export class AuditListener {
         after: after as Record<string, unknown>,
         changes: changes as Record<string, unknown>,
         correlationId: event.correlationId,
+        targetEntityType,
+        targetEntityId,
         occurredAt: new Date(event.occurredAt),
       }));
 

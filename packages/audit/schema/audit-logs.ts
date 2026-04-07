@@ -13,6 +13,8 @@ export const auditLogs = pgTable('audit_logs', {
   after: jsonb('after'),
   changes: jsonb('changes'),
   correlationId: text('correlation_id'),
+  targetEntityType: text('target_entity_type'),
+  targetEntityId: text('target_entity_id'),
   occurredAt: timestamp('occurred_at', { withTimezone: true, mode: 'date' }).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
 }, (table) => [
@@ -20,4 +22,5 @@ export const auditLogs = pgTable('audit_logs', {
   index('audit_logs_actor_id_idx').on(table.actorId),
   index('audit_logs_event_name_idx').on(table.eventName),
   index('audit_logs_created_at_idx').on(table.createdAt),
+  index('audit_logs_target_entity_idx').on(table.targetEntityType, table.targetEntityId),
 ]);

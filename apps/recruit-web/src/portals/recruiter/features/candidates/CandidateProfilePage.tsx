@@ -29,7 +29,7 @@ import {
 import { EntityPickerPanel } from '@packages/entity-engine-ui/components/EntityPickerPanel';
 import { api } from '../../../../lib/api';
 
-type TabKey = 'overview' | 'applications' | 'notes' | 'attachments' | 'audit';
+type TabKey = 'overview' | 'applications' | 'notes' | 'attachments' | 'activity';
 
 const STATUS_COLORS: Record<string, string> = {
   'new': 'bg-blue-50 text-blue-700 border-blue-200',
@@ -214,7 +214,7 @@ export function CandidateProfilePage() {
     { key: 'applications', label: 'Applications', count: applicationsCount },
     { key: 'notes', label: 'Notes' },
     { key: 'attachments', label: 'Files' },
-    { key: 'audit', label: 'History' },
+    { key: 'activity', label: 'Activity' },
   ];
 
   return (
@@ -443,8 +443,8 @@ export function CandidateProfilePage() {
         <AttachmentsSection entityType="candidates" entityId={item.id as string} />
       )}
 
-      {activeTab === 'audit' && (
-        <AuditTimeline entityType="candidates" entityId={item.id as string} />
+      {activeTab === 'activity' && (
+        <AuditTimeline entityType="candidates" entityId={item.id as string} mode="activity" />
       )}
 
       {/* Delete confirmation */}

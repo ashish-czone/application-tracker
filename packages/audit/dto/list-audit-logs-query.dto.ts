@@ -1,5 +1,5 @@
-import { IsOptional, IsString, IsInt, Min, Max, IsUUID, IsDateString, MaxLength } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsOptional, IsString, IsInt, Min, Max, IsUUID, IsDateString, MaxLength, IsBoolean } from 'class-validator';
+import { Type, Transform } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class ListAuditLogsQueryDto {
@@ -55,4 +55,21 @@ export class ListAuditLogsQueryDto {
   @IsOptional()
   @IsDateString()
   toDate?: string;
+
+  @ApiPropertyOptional({ description: 'Filter by target entity type (for cross-entity events)' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  targetEntityType?: string;
+
+  @ApiPropertyOptional({ description: 'Filter by target entity ID (for cross-entity events)' })
+  @IsOptional()
+  @IsUUID()
+  targetEntityId?: string;
+
+  @ApiPropertyOptional({ description: 'Include related cross-entity events (notes, evaluations, attachments)' })
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) => value === 'true' || value === true)
+  @IsBoolean()
+  includeRelated?: boolean;
 }

@@ -10,6 +10,8 @@ export interface AuditLogEntry {
   after: Record<string, unknown> | null;
   changes: Record<string, { from: unknown; to: unknown }> | null;
   correlationId: string | null;
+  targetEntityType: string | null;
+  targetEntityId: string | null;
   occurredAt: string;
   createdAt: string;
 }
@@ -21,4 +23,9 @@ export interface ListAuditLogsParams {
   entityId?: string;
   actorId?: string;
   action?: string;
+  targetEntityType?: string;
+  targetEntityId?: string;
+  includeRelated?: boolean;
 }
+
+export type ActivityEventCategory = 'changes' | 'notes' | 'evaluations' | 'attachments' | 'transitions';

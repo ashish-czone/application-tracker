@@ -1,4 +1,4 @@
 export { AuditTimeline } from './components/AuditTimeline';
-export { useAuditLogs } from './hooks';
+export { useAuditLogs, useEntityActivity } from './hooks';
 export { createAuditApi, type AuditUiApi } from './services';
-export type { AuditLogEntry, ListAuditLogsParams } from './types';
+export type { AuditLogEntry, ListAuditLogsParams, ActivityEventCategory } from './types';

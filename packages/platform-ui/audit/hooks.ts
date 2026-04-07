@@ -17,3 +17,13 @@ export function useAuditLogs(params: ListAuditLogsParams) {
     enabled: !!params.entityType && !!params.entityId,
   });
 }
+
+export function useEntityActivity(entityType: string, entityId: string, page = 1) {
+  return useAuditLogs({
+    entityType,
+    entityId,
+    includeRelated: true,
+    page,
+    limit: 25,
+  });
+}
