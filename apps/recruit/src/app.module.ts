@@ -41,6 +41,7 @@ import { candidatesConfig } from './modules/candidates/candidates.config';
 import { JOB_OPENINGS_CONFIG } from './modules/job-openings/job-openings.config';
 import { APPLICATIONS_CONFIG } from './modules/applications/applications.config';
 import { INTERVIEWS_CONFIG } from './modules/interviews/interviews.config';
+import { offersConfig } from './modules/offers/offers.config';
 import { ClientsModule } from './modules/clients/clients.module';
 import { JobOpeningsModule } from './modules/job-openings/job-openings.module';
 import { TASKS_CONFIG } from '@packages/tasks';
@@ -137,6 +138,7 @@ import { validate } from './config/env.validation';
     EntityEngineModule.forEntity(JOB_OPENINGS_CONFIG),
     EntityEngineModule.forEntity(APPLICATIONS_CONFIG),
     EntityEngineModule.forEntity(INTERVIEWS_CONFIG),
+    EntityEngineModule.forEntity(offersConfig),
     EntityEngineModule.forEntity(TASKS_CONFIG),
     CandidatesModule, // extras: resume upload, skill tags, sample data seeding
     ClientsModule, // sample data seeding: clients, contacts, vendors, interviews
