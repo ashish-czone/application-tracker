@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button, FormTextarea, FormSelect } from '@packages/ui';
 import { useEvaluationTemplates } from '../hooks';
-import type { EvaluationTemplate, EvaluationWithScores } from '../types';
+import type { EvaluationCriterion, EvaluationTemplate, EvaluationWithScores } from '../types';
 import { StarRating } from './StarRating';
 
 interface EvaluationFormProps {
@@ -52,7 +52,7 @@ export function EvaluationForm({
 
   // Auto-select template if only one exists, or use editing evaluation's template
   const defaultTemplateId = editingEvaluation?.templateId ?? (templates.length === 1 ? templates[0].id : '');
-  const selectedTemplate = templates.find((t) => t.id === defaultTemplateId) ?? null;
+  const selectedTemplate = templates.find((t: EvaluationTemplate) => t.id === defaultTemplateId) ?? null;
 
   const schema = useMemo(() => buildSchema(selectedTemplate), [selectedTemplate]);
 
@@ -62,7 +62,7 @@ export function EvaluationForm({
       templateId: defaultTemplateId,
       overallRating: editingEvaluation?.overallRating ?? 0,
       comment: editingEvaluation?.comment ?? '',
-      scores: selectedTemplate?.criteria.map((c) => {
+      scores: selectedTemplate?.criteria.map((c: EvaluationCriterion) => {
         const existing = editingEvaluation?.scores.find((s) => s.criteriaName === c.name);
         return {
           criteriaName: c.name,
@@ -75,13 +75,13 @@ export function EvaluationForm({
 
   const { watch, setValue, reset } = methods;
   const watchedTemplateId = watch('templateId');
-  const currentTemplate = templates.find((t) => t.id === watchedTemplateId) ?? null;
+  const currentTemplate = templates.find((t: EvaluationTemplate) => t.id === watchedTemplateId) ?? null;
 
   // When template changes, reset scores to match new template criteria
   useEffect(() => {
     if (currentTemplate) {
       const currentScores = methods.getValues('scores');
-      const newScores = currentTemplate.criteria.map((c) => {
+      const newScores = currentTemplate.criteria.map((c: EvaluationCriterion) => {
         const existing = currentScores.find((s) => s.criteriaName === c.name);
         return {
           criteriaName: c.name,
@@ -100,7 +100,7 @@ export function EvaluationForm({
         templateId: editingEvaluation.templateId,
         overallRating: editingEvaluation.overallRating,
         comment: editingEvaluation.comment ?? '',
-        scores: selectedTemplate.criteria.map((c) => {
+        scores: selectedTemplate.criteria.map((c: EvaluationCriterion) => {
           const existing = editingEvaluation.scores.find((s) => s.criteriaName === c.name);
           return {
             criteriaName: c.name,
@@ -141,7 +141,7 @@ export function EvaluationForm({
           <FormSelect
             name="templateId"
             label="Evaluation Template"
-            options={templates.map((t) => ({ value: t.id, label: t.name }))}
+            options={templates.map((t: EvaluationTemplate) => ({ value: t.id, label: t.name }))}
           />
         )}
 
@@ -149,7 +149,7 @@ export function EvaluationForm({
         {currentTemplate && (
           <div className="space-y-3">
             <p className="text-sm font-medium">Criteria</p>
-            {currentTemplate.criteria.map((criterion, index) => {
+            {currentTemplate.criteria.map((criterion: EvaluationCriterion, index: number) => {
               const scoreValue = watch(`scores.${index}.score`);
               return (
                 <div key={criterion.name} className="space-y-1.5">

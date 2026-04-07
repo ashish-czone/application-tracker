@@ -35,7 +35,7 @@ export function EvaluationsSection({ entityType, entityId }: EvaluationsSectionP
   // Compute summary from loaded evaluations
   const summary = useMemo(() => {
     if (evaluations.length === 0) return { average: null, count: 0 };
-    const total = evaluations.reduce((sum, e) => sum + e.overallRating, 0);
+    const total = evaluations.reduce((sum: number, e: EvaluationWithScores) => sum + e.overallRating, 0);
     return {
       average: total / evaluations.length,
       count: meta?.total ?? evaluations.length,
@@ -156,7 +156,7 @@ export function EvaluationsSection({ entityType, entityId }: EvaluationsSectionP
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setPage((p) => p - 1)}
+              onClick={() => setPage((p: number) => p - 1)}
               disabled={!hasPrevPage}
             >
               <ChevronLeft className="h-4 w-4" />
@@ -164,7 +164,7 @@ export function EvaluationsSection({ entityType, entityId }: EvaluationsSectionP
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setPage((p) => p + 1)}
+              onClick={() => setPage((p: number) => p + 1)}
               disabled={!hasNextPage}
             >
               <ChevronRight className="h-4 w-4" />
