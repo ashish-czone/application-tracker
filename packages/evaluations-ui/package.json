@@ -1,0 +1,22 @@
+{
+  "name": "@packages/evaluations-ui",
+  "version": "0.0.1",
+  "private": true,
+  "main": "index.ts",
+  "dependencies": {
+    "@packages/common": "workspace:*",
+    "@packages/field-types": "workspace:*",
+    "@packages/platform-ui": "workspace:*",
+    "@packages/ui": "workspace:*",
+    "@hookform/resolvers": "^3.0.0",
+    "@tanstack/react-query": "^5.0.0",
+    "date-fns": "^4.1.0",
+    "lucide-react": "^0.500.0",
+    "react": "^19.0.0",
+    "react-hook-form": "^7.0.0",
+    "zod": "^3.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  }
+}
