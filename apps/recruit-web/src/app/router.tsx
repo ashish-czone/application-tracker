@@ -243,6 +243,8 @@ export function AppRouter() {
           <Route path="/vendors/:id" element={<AppEntityDetailPage entityType="vendors" />} />
           <Route path="/applications" element={<EntityListPage entityType="applications" />} />
           <Route path="/applications/:id" element={<AppEntityDetailPage entityType="applications" />} />
+          <Route path="/offers" element={<EntityListPage entityType="offers" />} />
+          <Route path="/offers/:id" element={<AppEntityDetailPage entityType="offers" />} />
 
           {/* Tasks — now via entity engine */}
           <Route path="/tasks" element={<EntityListPage entityType="tasks" />} />
