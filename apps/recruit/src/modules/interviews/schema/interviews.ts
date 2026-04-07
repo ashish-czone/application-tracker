@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, index } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, integer, index } from 'drizzle-orm/pg-core';
 import { randomUUID } from 'crypto';
 import { users } from '@packages/database/schema';
 
@@ -6,12 +6,16 @@ export const interviews = pgTable('interviews', {
   id: text('id').primaryKey().$defaultFn(() => randomUUID()),
   // Interview Information
   interviewName: text('interview_name').notNull(),
+  interviewType: text('interview_type'),
+  round: integer('round'),
   candidateId: text('candidate_id').notNull(),
   clientId: text('client_id'),
   jobOpeningId: text('job_opening_id').notNull(),
   interviewFrom: timestamp('interview_from', { withTimezone: true, mode: 'string' }).notNull(),
   interviewTo: timestamp('interview_to', { withTimezone: true, mode: 'string' }).notNull(),
   location: text('location'),
+  videoLink: text('video_link'),
+  duration: integer('duration'),
   scheduleComments: text('schedule_comments'),
   status: text('status').default('scheduled'),
   // Audit
