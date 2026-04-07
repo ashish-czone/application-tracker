@@ -28,6 +28,7 @@ export default defineConfig({
     './src/modules/job-openings/schema/job-openings.ts',
     './src/modules/applications/schema/applications.ts',
     './src/modules/interviews/schema/interviews.ts',
+    './src/modules/offers/schema/offers.ts',
   ],
   out: './drizzle',
   dialect: 'postgresql',
