@@ -60,10 +60,26 @@ export interface EntityDetailPlugin {
   order: number;
 }
 
+/** Tab plugin for entity detail pages */
+export interface DetailTabPlugin {
+  /** Unique tab key */
+  key: string;
+  /** Display label */
+  label: string;
+  /** Sort order (lower = earlier). Overview is always 0. */
+  order: number;
+  /** Component rendered when this tab is active */
+  component: ComponentType<{ entityType: string; entityId: string }>;
+  /** If set, tab only shows when entity.features[featureFlag] is truthy */
+  featureFlag?: string;
+}
+
 /** Frontend-side entity UI config (supplements the backend registry) */
 export interface EntityUIConfig {
   entityType: string;
   detailPlugins?: EntityDetailPlugin[];
+  /** Entity-specific detail tabs (merged with global tabs from provider) */
+  detailTabs?: DetailTabPlugin[];
 }
 
 /** Registration for a named cell renderer used in list view columns */
