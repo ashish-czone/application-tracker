@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft, Building2, MapPin, Briefcase, Calendar, Users2, User,
   Clock, MoreHorizontal, Copy, Trash2, UserPlus, FileText,
-  LayoutGrid, List, CalendarPlus, TrendingUp, Activity,
+  LayoutGrid, List, CalendarPlus, TrendingUp, Activity, FileSignature,
 } from 'lucide-react';
 import {
   Button, ConfirmDialog,
@@ -19,6 +19,7 @@ import { EntityPickerPanel } from '@packages/entity-engine-ui/components/EntityP
 import { WorkflowKanbanBoard } from '@packages/platform-ui/workflows';
 import { StarRating } from '@packages/evaluations-ui';
 import { ScheduleInterviewDialog } from '../shared/ScheduleInterviewDialog';
+import { CreateOfferDialog } from '../shared/CreateOfferDialog';
 import { api } from '../../../../lib/api';
 
 type TabKey = 'overview' | 'applications' | 'audit';
@@ -80,6 +81,7 @@ export function JobOpeningDetailPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showApplyPicker, setShowApplyPicker] = useState(false);
   const [scheduleFor, setScheduleFor] = useState<{ candidateId: string; jobOpeningId: string } | null>(null);
+  const [createOfferFor, setCreateOfferFor] = useState<string | null>(null);
 
   const { data: item, isLoading, isError } = hooks.useDetail(id ?? null);
   const { data: layout } = useEntityLayout('job_openings');
@@ -94,6 +96,20 @@ export function JobOpeningDetailPage() {
     enabled: !!id,
   });
   const applications = applicationsData?.data ?? [];
+
+  // Fetch offers for this job's applications to show offer status on kanban cards
+  const { data: offersData } = useQuery({
+    queryKey: ['job_openings', id, 'offers'],
+    queryFn: () => apiFn.get<{ data: { id: string; applicationId: string; status: string }[] }>('/offers?limit=100'),
+    enabled: !!id,
+  });
+  const offersByAppId = useMemo(() => {
+    const map = new Map<string, { id: string; status: string }>();
+    for (const offer of offersData?.data ?? []) {
+      map.set(offer.applicationId, { id: offer.id, status: offer.status });
+    }
+    return map;
+  }, [offersData]);
 
   // Compute stage distribution
   const stageCounts = useMemo(() => {
@@ -499,8 +515,17 @@ export function JobOpeningDetailPage() {
                   singularName="Application"
                   fieldName="stage"
                   records={applications}
-                  onTransitionSuccess={() => {
+                  onTransitionSuccess={({ recordId, toState }) => {
                     queryClient.invalidateQueries({ queryKey: ['job_openings', id, 'applications'] });
+                    if (toState === 'offer' && !offersByAppId.has(recordId)) {
+                      toast('Ready to create an offer?', {
+                        action: {
+                          label: 'Create Offer',
+                          onClick: () => setCreateOfferFor(recordId),
+                        },
+                        duration: 8000,
+                      });
+                    }
                   }}
                   renderCard={(record) => (
                     <div className="group/card relative">
@@ -527,6 +552,31 @@ export function JobOpeningDetailPage() {
                             <StarRating value={record.averageRating as number} size="sm" />
                           </div>
                         )}
+                        {record.stage === 'offer' && (() => {
+                          const offer = offersByAppId.get(record.id as string);
+                          if (offer) {
+                            return (
+                              <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+                                <FileSignature className="h-2.5 w-2.5" />
+                                {offer.status.replace(/[-_]/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())}
+                              </span>
+                            );
+                          }
+                          return (
+                            <button
+                              type="button"
+                              className="mt-1.5 inline-flex items-center gap-1 rounded-full border border-dashed border-primary/40 px-2 py-0.5 text-[10px] font-medium text-primary hover:bg-primary/5 transition-colors"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setCreateOfferFor(record.id as string);
+                              }}
+                            >
+                              <FileSignature className="h-2.5 w-2.5" />
+                              Create Offer
+                            </button>
+                          );
+                        })()}
                       </Link>
                       <button
                         type="button"
@@ -597,6 +647,18 @@ export function JobOpeningDetailPage() {
           candidateId={scheduleFor.candidateId}
           jobOpeningId={scheduleFor.jobOpeningId}
           onSuccess={() => setScheduleFor(null)}
+        />
+      )}
+
+      {createOfferFor && (
+        <CreateOfferDialog
+          open={!!createOfferFor}
+          onOpenChange={(open) => { if (!open) setCreateOfferFor(null); }}
+          applicationId={createOfferFor}
+          onSuccess={() => {
+            setCreateOfferFor(null);
+            queryClient.invalidateQueries({ queryKey: ['job_openings', id, 'offers'] });
+          }}
         />
       )}
 

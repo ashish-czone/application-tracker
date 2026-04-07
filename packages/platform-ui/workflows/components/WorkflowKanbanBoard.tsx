@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
 import { KanbanBoard, toast } from '@packages/ui';
 import type { KanbanColumnDef, KanbanCardData } from '@packages/ui';
 import { useWorkflow, useEntityTransition } from '../hooks';
@@ -23,8 +23,8 @@ interface WorkflowKanbanBoardProps {
   renderCard: (record: Record<string, unknown>) => React.ReactNode;
   /** Loading state (records still fetching) */
   isLoading?: boolean;
-  /** Called after a successful transition */
-  onTransitionSuccess?: () => void;
+  /** Called after a successful transition. Receives the record ID and target state. */
+  onTransitionSuccess?: (info: { recordId: string; toState: string }) => void;
 }
 
 interface PendingTransition {
@@ -64,8 +64,15 @@ export function WorkflowKanbanBoard({
 
   const { data: workflow, isLoading: workflowLoading } = useWorkflow(workflowSlug);
 
+  const lastTransitionRef = useRef<{ recordId: string; toState: string } | null>(null);
+
   const transitionMutation = useEntityTransition(entitySlug, entityType, singularName, {
-    onSuccess: () => onTransitionSuccess?.(),
+    onSuccess: () => {
+      if (lastTransitionRef.current) {
+        onTransitionSuccess?.(lastTransitionRef.current);
+        lastTransitionRef.current = null;
+      }
+    },
   });
 
   // Build a set of states that have records for terminal column filtering
@@ -153,6 +160,7 @@ export function WorkflowKanbanBoard({
       }
 
       // Execute transition directly
+      lastTransitionRef.current = { recordId: cardId, toState: toColumnId };
       transitionMutation.mutate({
         id: cardId,
         fieldKey: fieldName,
@@ -165,6 +173,7 @@ export function WorkflowKanbanBoard({
   const handleTransitionConfirm = useCallback(
     ({ reason, comment }: { reason?: string; comment?: string }) => {
       if (!pendingTransition) return;
+      lastTransitionRef.current = { recordId: pendingTransition.recordId, toState: pendingTransition.toStateName };
       transitionMutation.mutate(
         {
           id: pendingTransition.recordId,
