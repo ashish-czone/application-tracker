@@ -12,8 +12,11 @@ export const jobOpenings = pgTable('job_openings', {
   targetDate: date('target_date', { mode: 'string' }),
   employmentType: text('employment_type').default('full-time'),
   status: text('status').default('in-progress'),
+  hiringManager: text('hiring_manager').references(() => users.id),
   experience: text('experience'),
   industry: text('industry'),
+  jobFunction: text('job_function'),
+  confidential: boolean('confidential').default(false),
   requirements: text('requirements'),
   salary: text('salary'),
   // Address
