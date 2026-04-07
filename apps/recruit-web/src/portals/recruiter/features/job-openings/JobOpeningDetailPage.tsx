@@ -4,25 +4,20 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft, Building2, MapPin, Briefcase, Calendar, Users2,
   Clock, MoreHorizontal, Copy, Trash2, UserPlus, FileText,
+  LayoutGrid, List,
 } from 'lucide-react';
 import {
   Button, ConfirmDialog,
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
-  toast,
+  toast, cn,
 } from '@packages/ui';
 import { DynamicSection } from '@packages/eav-attributes-ui';
 import { useEntityEngine, useEntityHooks, useEntityConfig } from '@packages/entity-engine-ui';
 import { useEntityLayout } from '@packages/entity-engine-ui/helpers/useEntityLayout';
 import { AuditTimeline } from '@packages/platform-ui/audit';
 import { EntityPickerPanel } from '@packages/entity-engine-ui/components/EntityPickerPanel';
-import {
-  PipelineProgressBar,
-  TransitionConfirmDialog,
-  WorkflowTransitionButton,
-  useWorkflowForEntity,
-  useWorkflows,
-  useEntityTransition,
-} from '@packages/platform-ui/workflows';
+import { WorkflowKanbanBoard } from '@packages/platform-ui/workflows';
+import { StarRating } from '@packages/evaluations-ui';
 import { api } from '../../../../lib/api';
 
 type TabKey = 'details' | 'applications' | 'audit';
@@ -65,13 +60,9 @@ interface Application {
   id: string;
   candidateId__label: string;
   stage: string;
+  source: string;
+  averageRating: number | null;
   createdAt: string;
-}
-
-interface PendingTransition {
-  toStateName: string;
-  transitionName: string;
-  toStateLabel: string;
 }
 
 export function JobOpeningDetailPage() {
@@ -83,6 +74,7 @@ export function JobOpeningDetailPage() {
   const { apiFn } = useEntityEngine();
 
   const [activeTab, setActiveTab] = useState<TabKey>('details');
+  const [pipelineView, setPipelineView] = useState<'board' | 'list'>('board');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showApplyPicker, setShowApplyPicker] = useState(false);
 
@@ -374,33 +366,107 @@ export function JobOpeningDetailPage() {
               </Button>
             </div>
           ) : (
-            <div className="space-y-2">
-              {applications.map((app) => (
-                <Link
-                  key={app.id}
-                  to={`/applications/${app.id}`}
-                  className="group flex items-center justify-between rounded-lg border border-border bg-card px-4 py-3 hover:border-primary/30 hover:shadow-sm transition-all"
-                >
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
-                      {app.candidateId__label || 'Candidate'}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Applied {formatDate(app.createdAt)}
-                    </p>
-                  </div>
-                  <span className={`shrink-0 ml-3 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                    `${STAGE_COLORS[app.stage]?.replace('bg-', 'bg-').replace('500', '100').replace('600', '100').replace('400', '100')} text-foreground`
-                  }`}
-                    style={{
-                      backgroundColor: `color-mix(in srgb, ${getComputedStyle(document.documentElement).getPropertyValue('--background') || '#fff'} 90%, ${STAGE_COLORS[app.stage]?.includes('blue') ? '#3b82f6' : STAGE_COLORS[app.stage]?.includes('violet') ? '#8b5cf6' : STAGE_COLORS[app.stage]?.includes('amber') ? '#f59e0b' : STAGE_COLORS[app.stage]?.includes('emerald') ? '#10b981' : STAGE_COLORS[app.stage]?.includes('green') ? '#059669' : STAGE_COLORS[app.stage]?.includes('red') ? '#ef4444' : STAGE_COLORS[app.stage]?.includes('pink') ? '#ec4899' : '#6b7280'})`,
-                    }}
+            <>
+              {/* View toggle */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="inline-flex items-center rounded-lg border border-border bg-muted/30 p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setPipelineView('board')}
+                    className={cn(
+                      'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                      pipelineView === 'board'
+                        ? 'bg-background text-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground',
+                    )}
                   >
-                    {formatLabel(app.stage)}
-                  </span>
-                </Link>
-              ))}
-            </div>
+                    <LayoutGrid className="h-3.5 w-3.5" />
+                    Board
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPipelineView('list')}
+                    className={cn(
+                      'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                      pipelineView === 'list'
+                        ? 'bg-background text-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground',
+                    )}
+                  >
+                    <List className="h-3.5 w-3.5" />
+                    List
+                  </button>
+                </div>
+              </div>
+
+              {pipelineView === 'board' ? (
+                <WorkflowKanbanBoard
+                  workflowSlug="application-stage"
+                  entitySlug="applications"
+                  entityType="applications"
+                  singularName="Application"
+                  fieldName="stage"
+                  records={applications}
+                  onTransitionSuccess={() => {
+                    queryClient.invalidateQueries({ queryKey: ['job_openings', id, 'applications'] });
+                  }}
+                  renderCard={(record) => (
+                    <Link
+                      to={`/applications/${record.id}`}
+                      className="block w-full group/card"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="text-[13px] font-medium text-foreground group-hover/card:text-primary transition-colors leading-snug truncate">
+                        {(record.candidateId__label as string) || 'Candidate'}
+                      </div>
+                      <div className="flex items-center gap-2 mt-1.5">
+                        {record.source && (
+                          <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                            {formatLabel(record.source as string)}
+                          </span>
+                        )}
+                        <span className="text-[10px] text-muted-foreground/60">
+                          {daysSince(record.createdAt as string)}d
+                        </span>
+                      </div>
+                      {(record.averageRating as number) > 0 && (
+                        <div className="mt-1.5">
+                          <StarRating value={record.averageRating as number} size="sm" />
+                        </div>
+                      )}
+                    </Link>
+                  )}
+                />
+              ) : (
+                <div className="space-y-2">
+                  {applications.map((app) => (
+                    <Link
+                      key={app.id}
+                      to={`/applications/${app.id}`}
+                      className="group flex items-center justify-between rounded-lg border border-border bg-card px-4 py-3 hover:border-primary/30 hover:shadow-sm transition-all"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
+                          {app.candidateId__label || 'Candidate'}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Applied {formatDate(app.createdAt)}
+                        </p>
+                      </div>
+                      <span className={`shrink-0 ml-3 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                        `${STAGE_COLORS[app.stage]?.replace('bg-', 'bg-').replace('500', '100').replace('600', '100').replace('400', '100')} text-foreground`
+                      }`}
+                        style={{
+                          backgroundColor: `color-mix(in srgb, ${getComputedStyle(document.documentElement).getPropertyValue('--background') || '#fff'} 90%, ${STAGE_COLORS[app.stage]?.includes('blue') ? '#3b82f6' : STAGE_COLORS[app.stage]?.includes('violet') ? '#8b5cf6' : STAGE_COLORS[app.stage]?.includes('amber') ? '#f59e0b' : STAGE_COLORS[app.stage]?.includes('emerald') ? '#10b981' : STAGE_COLORS[app.stage]?.includes('green') ? '#059669' : STAGE_COLORS[app.stage]?.includes('red') ? '#ef4444' : STAGE_COLORS[app.stage]?.includes('pink') ? '#ec4899' : '#6b7280'})`,
+                        }}
+                      >
+                        {formatLabel(app.stage)}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
