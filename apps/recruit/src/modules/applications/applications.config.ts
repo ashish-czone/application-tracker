@@ -9,6 +9,7 @@ export const APPLICATIONS_CONFIG: EntityConfig = {
   slug: 'applications',
 
   table: applications,
+  hasEvaluations: true,
   systemColumns: ['id', 'createdAt', 'updatedAt', 'deletedAt', 'deletedBy', 'createdBy'],
 
   searchColumns: [],

@@ -6,6 +6,7 @@ import { EntityDetailPage, useEntityHooks } from '@packages/entity-engine-ui';
 import { AuditTimeline } from '@packages/platform-ui/audit';
 import { NotesSection } from '@packages/notes-ui';
 import { AttachmentsSection } from '@packages/attachments-ui';
+import { EvaluationsSection } from '@packages/evaluations-ui';
 import { ScheduleInterviewDialog } from '../shared/ScheduleInterviewDialog';
 
 function renderAuditTrail(entityType: string, entityId: string) {
@@ -18,6 +19,10 @@ function renderNotes(entityType: string, entityId: string) {
 
 function renderAttachments(entityType: string, entityId: string) {
   return <AttachmentsSection entityType={entityType} entityId={entityId} />;
+}
+
+function renderEvaluations(entityType: string, entityId: string) {
+  return <EvaluationsSection entityType={entityType} entityId={entityId} />;
 }
 
 export function ApplicationDetailPage() {
@@ -37,6 +42,7 @@ export function ApplicationDetailPage() {
         renderAuditTrail={renderAuditTrail}
         renderNotes={renderNotes}
         renderAttachments={renderAttachments}
+        renderEvaluations={renderEvaluations}
         renderHeaderActions={
           canSchedule
             ? () => (

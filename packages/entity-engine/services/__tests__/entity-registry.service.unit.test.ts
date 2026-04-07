@@ -206,4 +206,22 @@ describe('EntityRegistryService', () => {
     expect(entries[0].features.hasAttachments).toBe(false);
     expect(entries[0].features.attachmentConfig).toBeUndefined();
   });
+
+  it('exposes hasEvaluations flag in features', () => {
+    registry.register(mockConfig({
+      entityType: 'with_evaluations',
+      slug: 'with-evaluations',
+      hasEvaluations: true,
+    }));
+
+    const entries = registry.getRegistryEntries();
+    expect(entries[0].features.hasEvaluations).toBe(true);
+  });
+
+  it('hasEvaluations defaults to false in features', () => {
+    registry.register(mockConfig());
+
+    const entries = registry.getRegistryEntries();
+    expect(entries[0].features.hasEvaluations).toBe(false);
+  });
 });

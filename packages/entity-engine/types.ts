@@ -528,6 +528,11 @@ export interface EntityConfig<TTable extends PgTable = PgTable> {
   /** Enable the attachments tab on the entity detail page. Default: false. */
   hasAttachments?: boolean;
 
+  // --- Evaluations ---
+
+  /** Enable the evaluations tab on the entity detail page. Default: false. */
+  hasEvaluations?: boolean;
+
   /** Per-entity attachment configuration. Only relevant when hasAttachments is true. */
   attachmentConfig?: {
     /** Maximum file size in bytes. Default: 10MB (from media module). */
@@ -719,6 +724,7 @@ export interface EntityRegistryEntry {
     hasMedia: boolean;
     hasNotes: boolean;
     hasAttachments: boolean;
+    hasEvaluations: boolean;
     attachmentConfig?: {
       maxFileSize?: number;
       acceptedMimeTypes?: string[];
