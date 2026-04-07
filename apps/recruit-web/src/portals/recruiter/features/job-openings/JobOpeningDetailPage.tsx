@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft, Building2, MapPin, Briefcase, Calendar, Users2,
   Clock, MoreHorizontal, Copy, Trash2, UserPlus, FileText,
-  LayoutGrid, List,
+  LayoutGrid, List, CalendarPlus,
 } from 'lucide-react';
 import {
   Button, ConfirmDialog,
@@ -18,6 +18,7 @@ import { AuditTimeline } from '@packages/platform-ui/audit';
 import { EntityPickerPanel } from '@packages/entity-engine-ui/components/EntityPickerPanel';
 import { WorkflowKanbanBoard } from '@packages/platform-ui/workflows';
 import { StarRating } from '@packages/evaluations-ui';
+import { ScheduleInterviewDialog } from '../shared/ScheduleInterviewDialog';
 import { api } from '../../../../lib/api';
 
 type TabKey = 'details' | 'applications' | 'audit';
@@ -58,6 +59,7 @@ function daysSince(dateStr: string): number {
 
 interface Application {
   id: string;
+  candidateId: string;
   candidateId__label: string;
   stage: string;
   source: string;
@@ -77,6 +79,7 @@ export function JobOpeningDetailPage() {
   const [pipelineView, setPipelineView] = useState<'board' | 'list'>('board');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showApplyPicker, setShowApplyPicker] = useState(false);
+  const [scheduleFor, setScheduleFor] = useState<{ candidateId: string; jobOpeningId: string } | null>(null);
 
   const { data: item, isLoading, isError } = hooks.useDetail(id ?? null);
   const { data: layout } = useEntityLayout('job_openings');
@@ -411,30 +414,43 @@ export function JobOpeningDetailPage() {
                     queryClient.invalidateQueries({ queryKey: ['job_openings', id, 'applications'] });
                   }}
                   renderCard={(record) => (
-                    <Link
-                      to={`/applications/${record.id}`}
-                      className="block w-full group/card"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <div className="text-[13px] font-medium text-foreground group-hover/card:text-primary transition-colors leading-snug truncate">
-                        {(record.candidateId__label as string) || 'Candidate'}
-                      </div>
-                      <div className="flex items-center gap-2 mt-1.5">
-                        {record.source && (
-                          <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
-                            {formatLabel(record.source as string)}
-                          </span>
-                        )}
-                        <span className="text-[10px] text-muted-foreground/60">
-                          {daysSince(record.createdAt as string)}d
-                        </span>
-                      </div>
-                      {(record.averageRating as number) > 0 && (
-                        <div className="mt-1.5">
-                          <StarRating value={record.averageRating as number} size="sm" />
+                    <div className="group/card relative">
+                      <Link
+                        to={`/applications/${record.id}`}
+                        className="block w-full"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="text-[13px] font-medium text-foreground group-hover/card:text-primary transition-colors leading-snug truncate pr-6">
+                          {(record.candidateId__label as string) || 'Candidate'}
                         </div>
-                      )}
-                    </Link>
+                        <div className="flex items-center gap-2 mt-1.5">
+                          {record.source && (
+                            <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                              {formatLabel(record.source as string)}
+                            </span>
+                          )}
+                          <span className="text-[10px] text-muted-foreground/60">
+                            {daysSince(record.createdAt as string)}d
+                          </span>
+                        </div>
+                        {(record.averageRating as number) > 0 && (
+                          <div className="mt-1.5">
+                            <StarRating value={record.averageRating as number} size="sm" />
+                          </div>
+                        )}
+                      </Link>
+                      <button
+                        type="button"
+                        title="Schedule Interview"
+                        className="absolute top-0 right-0 p-0.5 rounded text-muted-foreground/0 group-hover/card:text-muted-foreground hover:!text-primary transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setScheduleFor({ candidateId: record.candidateId as string, jobOpeningId: id! });
+                        }}
+                      >
+                        <CalendarPlus className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
                   )}
                 />
               ) : (
@@ -484,6 +500,16 @@ export function JobOpeningDetailPage() {
         isPending={deleteMutation.isPending}
         onConfirm={() => deleteMutation.mutate(item.id as string)}
       />
+
+      {scheduleFor && (
+        <ScheduleInterviewDialog
+          open={!!scheduleFor}
+          onOpenChange={(open) => { if (!open) setScheduleFor(null); }}
+          candidateId={scheduleFor.candidateId}
+          jobOpeningId={scheduleFor.jobOpeningId}
+          onSuccess={() => setScheduleFor(null)}
+        />
+      )}
 
       {showApplyPicker && (
         <EntityPickerPanel
