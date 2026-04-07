@@ -38,8 +38,11 @@ export async function seedEntityFields(
   fieldDefinitionService: FieldDefinitionService,
   layoutExtension: LayoutExtension | null,
 ): Promise<void> {
-  // Only skip pure infrastructure columns — never shown to users
+  // Skip infrastructure columns + computed columns (SQL subqueries, not real fields)
   const skipSet = new Set(['id', 'deletedAt', 'deletedBy']);
+  for (const col of config.computedColumns ?? []) {
+    skipSet.add(col.name);
+  }
   const columns = getTableColumns(config.table);
   const columnMap = new Map(Object.entries(columns));
 
