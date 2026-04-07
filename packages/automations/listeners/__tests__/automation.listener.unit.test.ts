@@ -349,6 +349,38 @@ describe('AutomationListener', () => {
     expect(provenanceService.log).not.toHaveBeenCalled();
   });
 
+  // --- Flat payload condition evaluation (e.g., StageChanged events) ---
+
+  it('should evaluate state conditions against flat payload when no payload.after', async () => {
+    vi.spyOn(ruleService, 'findActiveByEventName').mockResolvedValue([
+      buildRule({
+        conditions: [{ field: 'toState', operator: 'in', value: ['offer', 'hired'] }],
+      }),
+    ]);
+
+    await listener.handleDomainEvent(buildEvent({
+      eventName: 'applications.StageChanged',
+      payload: { toState: 'offer', fromState: 'final' },
+    }));
+
+    expect(mockHandler.execute).toHaveBeenCalledOnce();
+  });
+
+  it('should reject state conditions against flat payload when no match', async () => {
+    vi.spyOn(ruleService, 'findActiveByEventName').mockResolvedValue([
+      buildRule({
+        conditions: [{ field: 'toState', operator: 'in', value: ['offer', 'hired'] }],
+      }),
+    ]);
+
+    await listener.handleDomainEvent(buildEvent({
+      eventName: 'applications.StageChanged',
+      payload: { toState: 'phone-screen', fromState: 'new' },
+    }));
+
+    expect(mockHandler.execute).not.toHaveBeenCalled();
+  });
+
   it('should not log provenance when no targetEntityId in result', async () => {
     mockHandler.execute.mockResolvedValue({});
 

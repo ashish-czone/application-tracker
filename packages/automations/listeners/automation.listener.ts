@@ -90,8 +90,11 @@ export class AutomationListener {
       const payload = event.payload as Record<string, unknown> | undefined;
       const afterData = payload?.after as Record<string, unknown> | undefined;
 
-      if (afterData) {
-        if (!evaluateConditionsInMemory(stateConds, afterData)) return false;
+      // For entity CRUD events, evaluate against payload.after (entity snapshot).
+      // For other events (e.g., StageChanged), evaluate against the flat payload.
+      const stateData = afterData ?? payload;
+      if (stateData) {
+        if (!evaluateConditionsInMemory(stateConds, stateData)) return false;
       }
       // DB-based condition evaluation is handled by schedule scanner and
       // lifecycle engine — the event listener evaluates against payload only

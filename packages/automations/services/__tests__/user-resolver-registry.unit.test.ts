@@ -3,6 +3,7 @@ import { UserResolverRegistry, type UserResolutionContext } from '../user-resolv
 import { ActorStrategy } from '../strategies/actor.strategy';
 import { EntityFieldStrategy } from '../strategies/entity-field.strategy';
 import { RoleStrategy } from '../strategies/role.strategy';
+import { RelatedEntityFieldStrategy } from '../strategies/related-entity-field.strategy';
 import type { AppLoggerService } from '@packages/logger';
 
 function createMockAppLogger(): AppLoggerService {
@@ -243,6 +244,178 @@ describe('RoleStrategy', () => {
     const result = await strategy.resolve(
       { strategy: 'role' },
       eventContext(),
+    );
+
+    expect(result).toEqual([]);
+  });
+});
+
+describe('RelatedEntityFieldStrategy', () => {
+  const resolution = (config: Record<string, unknown>) => ({
+    strategy: 'related_entity_field' as const,
+    config,
+  });
+
+  it('should resolve user from related entity via payload.after', async () => {
+    const mockDb = createMockDb();
+    const relatedTable = { id: 'id-col', hiringManager: 'hm-col' };
+    mockDb._chain.limit.mockResolvedValueOnce([{ value: 'manager-1' }]);
+
+    const strategy = new RelatedEntityFieldStrategy(
+      mockDb as any,
+      (entityType) => entityType === 'job_openings'
+        ? { table: relatedTable, fields: {}, userFields: {} }
+        : undefined,
+    );
+
+    const result = await strategy.resolve(
+      resolution({ throughField: 'jobOpeningId', throughEntityType: 'job_openings', targetField: 'hiringManager' }),
+      eventContext({ payload: { after: { jobOpeningId: 'jo-1' } } }),
+    );
+
+    expect(result).toEqual(['manager-1']);
+  });
+
+  it('should resolve user from related entity via top-level payload', async () => {
+    const mockDb = createMockDb();
+    const relatedTable = { id: 'id-col', hiringManager: 'hm-col' };
+    mockDb._chain.limit.mockResolvedValueOnce([{ value: 'manager-2' }]);
+
+    const strategy = new RelatedEntityFieldStrategy(
+      mockDb as any,
+      (entityType) => entityType === 'job_openings'
+        ? { table: relatedTable, fields: {}, userFields: {} }
+        : undefined,
+    );
+
+    const result = await strategy.resolve(
+      resolution({ throughField: 'jobOpeningId', throughEntityType: 'job_openings', targetField: 'hiringManager' }),
+      eventContext({ payload: { jobOpeningId: 'jo-2' } }),
+    );
+
+    expect(result).toEqual(['manager-2']);
+  });
+
+  it('should resolve user from related entity via entityData fallback', async () => {
+    const mockDb = createMockDb();
+    const relatedTable = { id: 'id-col', hiringManager: 'hm-col' };
+    mockDb._chain.limit.mockResolvedValueOnce([{ value: 'manager-3' }]);
+
+    const strategy = new RelatedEntityFieldStrategy(
+      mockDb as any,
+      (entityType) => entityType === 'job_openings'
+        ? { table: relatedTable, fields: {}, userFields: {} }
+        : undefined,
+    );
+
+    const result = await strategy.resolve(
+      resolution({ throughField: 'jobOpeningId', throughEntityType: 'job_openings', targetField: 'hiringManager' }),
+      {
+        event: { actorId: 'a', entityType: 'applications', entityId: 'app-1', payload: {} },
+        entityData: { jobOpeningId: 'jo-3' },
+      },
+    );
+
+    expect(result).toEqual(['manager-3']);
+  });
+
+  it('should fall back to DB for throughField when not in payload or entityData', async () => {
+    const mockDb = createMockDb();
+    const sourceTable = { id: 'id-col', jobOpeningId: 'jo-col' };
+    const relatedTable = { id: 'id-col', hiringManager: 'hm-col' };
+
+    // First DB call: resolve throughField from source entity
+    mockDb._chain.limit.mockResolvedValueOnce([{ value: 'jo-from-db' }]);
+    // Second DB call: resolve targetField from related entity
+    mockDb._chain.limit.mockResolvedValueOnce([{ value: 'manager-db' }]);
+
+    const strategy = new RelatedEntityFieldStrategy(
+      mockDb as any,
+      (entityType) => {
+        if (entityType === 'applications') return { table: sourceTable, fields: {}, userFields: {} };
+        if (entityType === 'job_openings') return { table: relatedTable, fields: {}, userFields: {} };
+        return undefined;
+      },
+    );
+
+    const result = await strategy.resolve(
+      resolution({ throughField: 'jobOpeningId', throughEntityType: 'job_openings', targetField: 'hiringManager' }),
+      eventContext({ entityType: 'applications', entityId: 'app-1', payload: {} }),
+    );
+
+    expect(result).toEqual(['manager-db']);
+  });
+
+  it('should handle multi-user array fields on related entity', async () => {
+    const mockDb = createMockDb();
+    const relatedTable = { id: 'id-col', interviewers: 'int-col' };
+    mockDb._chain.limit.mockResolvedValueOnce([{ value: ['user-1', 'user-2', 'user-3'] }]);
+
+    const strategy = new RelatedEntityFieldStrategy(
+      mockDb as any,
+      (entityType) => entityType === 'interviews'
+        ? { table: relatedTable, fields: {}, userFields: {} }
+        : undefined,
+    );
+
+    const result = await strategy.resolve(
+      resolution({ throughField: 'interviewId', throughEntityType: 'interviews', targetField: 'interviewers' }),
+      eventContext({ payload: { interviewId: 'int-1' } }),
+    );
+
+    expect(result).toEqual(['user-1', 'user-2', 'user-3']);
+  });
+
+  it('should return empty when config is incomplete', async () => {
+    const mockDb = createMockDb();
+    const strategy = new RelatedEntityFieldStrategy(mockDb as any, () => undefined);
+
+    expect(await strategy.resolve(resolution({}), eventContext())).toEqual([]);
+    expect(await strategy.resolve(resolution({ throughField: 'x' }), eventContext())).toEqual([]);
+    expect(await strategy.resolve(resolution({ throughField: 'x', throughEntityType: 'y' }), eventContext())).toEqual([]);
+  });
+
+  it('should return empty when related entity resolver not found', async () => {
+    const mockDb = createMockDb();
+    const strategy = new RelatedEntityFieldStrategy(mockDb as any, () => undefined);
+
+    const result = await strategy.resolve(
+      resolution({ throughField: 'jobOpeningId', throughEntityType: 'job_openings', targetField: 'hiringManager' }),
+      eventContext({ payload: { after: { jobOpeningId: 'jo-1' } } }),
+    );
+
+    expect(result).toEqual([]);
+  });
+
+  it('should return empty when targetField column not found on related table', async () => {
+    const mockDb = createMockDb();
+    const relatedTable = { id: 'id-col' }; // no hiringManager column
+    const strategy = new RelatedEntityFieldStrategy(
+      mockDb as any,
+      () => ({ table: relatedTable, fields: {}, userFields: {} }),
+    );
+
+    const result = await strategy.resolve(
+      resolution({ throughField: 'jobOpeningId', throughEntityType: 'job_openings', targetField: 'hiringManager' }),
+      eventContext({ payload: { after: { jobOpeningId: 'jo-1' } } }),
+    );
+
+    expect(result).toEqual([]);
+  });
+
+  it('should return empty when related entity user field is null', async () => {
+    const mockDb = createMockDb();
+    const relatedTable = { id: 'id-col', hiringManager: 'hm-col' };
+    mockDb._chain.limit.mockResolvedValueOnce([{ value: null }]);
+
+    const strategy = new RelatedEntityFieldStrategy(
+      mockDb as any,
+      () => ({ table: relatedTable, fields: {}, userFields: {} }),
+    );
+
+    const result = await strategy.resolve(
+      resolution({ throughField: 'jobOpeningId', throughEntityType: 'job_openings', targetField: 'hiringManager' }),
+      eventContext({ payload: { after: { jobOpeningId: 'jo-1' } } }),
     );
 
     expect(result).toEqual([]);

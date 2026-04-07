@@ -253,7 +253,10 @@ export const JOB_OPENINGS_CONFIG: EntityConfig = {
     ],
   },
 
-  recipientFields: { createdBy: { label: 'Created By' } },
+  recipientFields: {
+    createdBy: { label: 'Created By' },
+    hiringManager: { label: 'Hiring Manager' },
+  },
 
   ui: {
     icon: 'briefcase',
