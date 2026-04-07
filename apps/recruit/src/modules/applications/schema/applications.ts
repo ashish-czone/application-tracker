@@ -9,6 +9,8 @@ export const applications = pgTable('applications', {
   jobOpeningId: text('job_opening_id').notNull(),
   // Core
   stage: text('stage').default('new'),
+  source: text('source'),
+  referredBy: text('referred_by').references(() => users.id),
   notes: text('notes'),
   // Audit
   createdBy: text('created_by').notNull().references(() => users.id),

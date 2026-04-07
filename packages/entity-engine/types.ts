@@ -538,6 +538,13 @@ export interface EntityConfig<TTable extends PgTable = PgTable> {
     deleteMode?: 'soft' | 'hard';
   };
 
+  // --- Computed columns ---
+
+  /** SQL subquery expressions added to SELECT in list and detail queries.
+   *  Each entry becomes an extra column in the response (e.g., averageRating, evaluationsCount).
+   *  Computed columns can also be used as sort keys. */
+  computedColumns?: { name: string; expression: SQL }[];
+
   // --- UI ---
 
   /** Frontend rendering hints (serialized to registry API) */
