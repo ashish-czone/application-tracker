@@ -75,7 +75,8 @@ export function createFieldPermissionInterceptor(config: EntityConfig) {
       );
     }
 
-    private filterResponse(response: any, hiddenFields: Set<string>): any {
+    /** @internal */
+    filterResponse(response: any, hiddenFields: Set<string>): any {
       if (response.data && Array.isArray(response.data)) {
         return {
           ...response,
@@ -88,7 +89,8 @@ export function createFieldPermissionInterceptor(config: EntityConfig) {
       return response;
     }
 
-    private stripFields(entity: Record<string, unknown>, hiddenFields: Set<string>): Record<string, unknown> {
+    /** @internal */
+    stripFields(entity: Record<string, unknown>, hiddenFields: Set<string>): Record<string, unknown> {
       const result = { ...entity };
       for (const key of hiddenFields) {
         delete result[key];
