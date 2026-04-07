@@ -15,6 +15,8 @@ export const INTERVIEWS_CONFIG: EntityConfig = {
   defaultSort: 'interviewFrom',
   sortableColumns: {
     interviewName: interviews.interviewName,
+    interviewType: interviews.interviewType,
+    round: interviews.round,
     interviewFrom: interviews.interviewFrom,
     status: interviews.status,
     createdAt: interviews.createdAt,
@@ -22,39 +24,49 @@ export const INTERVIEWS_CONFIG: EntityConfig = {
 
   fieldMeta: {
     interviewName: {
-      label: 'Interview Name', section: 'basic', sortOrder: 0, isQuickCreate: true, isSystem: true, fieldType: 'picklist',
+      label: 'Interview Name', section: 'basic', sortOrder: 0, isQuickCreate: true,
+    },
+    interviewType: {
+      label: 'Interview Type', section: 'basic', sortOrder: 1, isQuickCreate: true, fieldType: 'picklist',
       picklistOptions: [
-        { label: 'Internal Interview', value: 'internal-interview' },
-        { label: 'General Interview', value: 'general-interview' },
-        { label: 'Online Interview', value: 'online-interview' },
-        { label: 'Phone Interview', value: 'phone-interview' },
-        { label: 'Level 1 Interview', value: 'level-1-interview' },
-        { label: 'Level 2 Interview', value: 'level-2-interview' },
-        { label: 'Level 3 Interview', value: 'level-3-interview' },
-        { label: 'Level 4 Interview', value: 'level-4-interview' },
+        { label: 'Phone', value: 'phone' },
+        { label: 'Video', value: 'video' },
+        { label: 'On-site', value: 'on-site' },
+        { label: 'Panel', value: 'panel' },
+        { label: 'Take-home', value: 'take-home' },
+        { label: 'Technical', value: 'technical' },
+        { label: 'HR', value: 'hr' },
       ],
     },
+    round: {
+      label: 'Round', section: 'basic', sortOrder: 2, fieldType: 'number',
+    },
     candidateId: {
-      label: 'Candidate', section: 'basic', sortOrder: 1, isQuickCreate: true,
+      label: 'Candidate', section: 'basic', sortOrder: 3, isQuickCreate: true,
       fieldType: 'lookup', lookupEntity: 'candidates', lookupLabelField: 'firstName',
       lookupSearchFields: ['firstName', 'lastName', 'email'],
     },
     clientId: {
-      label: 'Client', section: 'basic', sortOrder: 2, isQuickCreate: true,
+      label: 'Client', section: 'basic', sortOrder: 4,
       fieldType: 'lookup', lookupEntity: 'clients', lookupLabelField: 'clientName',
       lookupSearchFields: ['clientName'],
     },
     jobOpeningId: {
-      label: 'Job Opening', section: 'basic', sortOrder: 3, isQuickCreate: true,
+      label: 'Job Opening', section: 'basic', sortOrder: 5, isQuickCreate: true,
       fieldType: 'lookup', lookupEntity: 'job_openings', lookupLabelField: 'title',
       lookupSearchFields: ['title', 'department'],
     },
-    interviewFrom: { label: 'Interview From', section: 'basic', sortOrder: 4, isQuickCreate: true, fieldType: 'datetime' },
-    interviewTo: { label: 'Interview To', section: 'basic', sortOrder: 5, isQuickCreate: true, fieldType: 'datetime' },
-    location: { label: 'Location', section: 'basic', sortOrder: 6 },
-    scheduleComments: { label: 'Schedule Comments', section: 'basic', sortOrder: 7, fieldType: 'textarea', maxLength: 32000 },
+    interviewers: {
+      label: 'Interviewer(s)', section: 'basic', sortOrder: 7, fieldType: 'multi_user',
+    },
+    interviewFrom: { label: 'Interview From', section: 'schedule', sortOrder: 0, isQuickCreate: true, fieldType: 'datetime' },
+    interviewTo: { label: 'Interview To', section: 'schedule', sortOrder: 1, isQuickCreate: true, fieldType: 'datetime' },
+    duration: { label: 'Duration (min)', section: 'schedule', sortOrder: 2, fieldType: 'number' },
+    location: { label: 'Location', section: 'schedule', sortOrder: 3 },
+    videoLink: { label: 'Video Link', section: 'schedule', sortOrder: 4, fieldType: 'url' },
+    scheduleComments: { label: 'Schedule Comments', section: 'schedule', sortOrder: 5, fieldType: 'textarea', maxLength: 32000 },
     status: {
-      label: 'Status', section: 'basic', sortOrder: 8, fieldType: 'picklist', cellRenderer: 'StatusBadge',
+      label: 'Status', section: 'basic', sortOrder: 6, fieldType: 'picklist', cellRenderer: 'StatusBadge',
       picklistOptions: [
         { label: 'Scheduled', value: 'scheduled' },
         { label: 'Completed', value: 'completed' },
@@ -65,10 +77,11 @@ export const INTERVIEWS_CONFIG: EntityConfig = {
     },
   },
 
-  listFields: ['interviewName', 'candidateId', 'jobOpeningId', 'interviewFrom', 'status'],
+  listFields: ['interviewName', 'interviewType', 'candidateId', 'jobOpeningId', 'interviewFrom', 'round', 'status'],
 
   sections: [
-    { name: 'Interview Information', fields: ['interviewName', 'candidateId', 'clientId', 'jobOpeningId', 'interviewFrom', 'interviewTo', 'location', 'scheduleComments', 'status'] },
+    { name: 'Interview Information', fields: ['interviewName', 'interviewType', 'round', 'candidateId', 'clientId', 'jobOpeningId', 'status', 'interviewers'] },
+    { name: 'Schedule', fields: ['interviewFrom', 'interviewTo', 'duration', 'location', 'videoLink', 'scheduleComments'] },
   ],
 
   recipientFields: {
