@@ -18,6 +18,7 @@ import { SettingsPage, AppSettingsPage, AutomationsPage, RuleBuilderPage, UsersL
 import { CandidateProfilePage } from '../portals/recruiter/features/candidates/CandidateProfilePage';
 import { DashboardPage as RecruitDashboard } from '../portals/recruiter/features/dashboard/DashboardPage';
 import { JobOpeningDetailPage } from '../portals/recruiter/features/job-openings/JobOpeningDetailPage';
+import { ApplicationDetailPage } from '../portals/recruiter/features/applications/ApplicationDetailPage';
 
 function renderAuditTrail(entityType: string, entityId: string) {
   return <AuditTimeline entityType={entityType} entityId={entityId} />;
@@ -242,7 +243,7 @@ export function AppRouter() {
           <Route path="/vendors" element={<EntityListPage entityType="vendors" />} />
           <Route path="/vendors/:id" element={<AppEntityDetailPage entityType="vendors" />} />
           <Route path="/applications" element={<EntityListPage entityType="applications" />} />
-          <Route path="/applications/:id" element={<AppEntityDetailPage entityType="applications" />} />
+          <Route path="/applications/:id" element={<ApplicationDetailPage />} />
           <Route path="/offers" element={<EntityListPage entityType="offers" />} />
           <Route path="/offers/:id" element={<AppEntityDetailPage entityType="offers" />} />
 

@@ -39,6 +39,8 @@ interface EntityDetailPageProps {
   renderPipelineProgress?: (entityType: string, entityId: string, entity: Record<string, unknown>) => React.ReactNode;
   /** Render workflow transition actions in the header. Receives entityType, entityId, and the full entity record. */
   renderWorkflowActions?: (entityType: string, entityId: string, entity: Record<string, unknown>) => React.ReactNode;
+  /** Render additional action buttons in the header (before workflow actions). */
+  renderHeaderActions?: (entityType: string, entityId: string, entity: Record<string, unknown>) => React.ReactNode;
 }
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -49,7 +51,7 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
  * Generic detail page for any entity registered with the entity engine.
  * Layout: left sidebar (related records) + main area (tabs: Overview | Audit Trail).
  */
-export function EntityDetailPage({ entityType, renderAuditTrail, renderNotes, renderAttachments, renderPipelineProgress, renderWorkflowActions }: EntityDetailPageProps) {
+export function EntityDetailPage({ entityType, renderAuditTrail, renderNotes, renderAttachments, renderPipelineProgress, renderWorkflowActions, renderHeaderActions }: EntityDetailPageProps) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
@@ -242,6 +244,9 @@ export function EntityDetailPage({ entityType, renderAuditTrail, renderNotes, re
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Custom header actions */}
+            {renderHeaderActions && renderHeaderActions(entityType, item.id as string, item)}
+
             {/* Workflow transition actions */}
             {renderWorkflowActions && entity.features.hasWorkflow && (
               renderWorkflowActions(entityType, item.id as string, item)
