@@ -237,6 +237,22 @@ export class EntityService {
       });
     }
 
+    // Append computed columns (e.g., averageRating from evaluations)
+    for (const col of config.computedColumns ?? []) {
+      const meta = config.fieldMeta[col.name];
+      columns.push({
+        fieldKey: col.name,
+        label: meta?.label ?? col.name,
+        fieldType: meta?.fieldType ?? 'number',
+        sortable: true,
+        lookupEntity: undefined,
+        visible: listFieldSet ? listFieldSet.has(col.name) : false,
+        order: listFieldOrder?.get(col.name) ?? 2500,
+        picklistOptions: meta?.picklistOptions as any,
+        cellRenderer: meta?.cellRenderer,
+      });
+    }
+
     // Sort by order
     columns.sort((a, b) => a.order - b.order);
 
@@ -346,6 +362,11 @@ export class EntityService {
     const countExprs = this.buildRelationshipCountExpressions();
     Object.assign(selectMap, countExprs);
 
+    // Add computed columns (e.g., evaluation averages)
+    for (const col of config.computedColumns ?? []) {
+      selectMap[col.name] = col.expression;
+    }
+
     const rows = await this.database.db
       .select(selectMap)
       .from(config.table as any)
@@ -400,8 +421,11 @@ export class EntityService {
       throw new NotFoundException(`${config.singularName} not found`);
     }
 
-    // Compute relationship counts for detail view
+    // Compute relationship counts + computed columns for detail view
     const countExprs = this.buildRelationshipCountExpressions();
+    for (const col of config.computedColumns ?? []) {
+      countExprs[col.name] = col.expression;
+    }
     if (Object.keys(countExprs).length > 0) {
       const [countRow] = await this.database.db
         .select(countExprs)
@@ -986,6 +1010,12 @@ export class EntityService {
    * For standard columns, delegates to query-builder.
    */
   private buildSortExpression(sortKey: string, direction: 'ASC' | 'DESC', config: EntityConfig): any {
+    // Check if the sort key is a computed column
+    const computedCol = config.computedColumns?.find(c => c.name === sortKey);
+    if (computedCol) {
+      return sql`${computedCol.expression} ${sql.raw(direction)}`;
+    }
+
     // Check if the sort key is a lookup field (entity-specific logic)
     const meta = config.fieldMeta[sortKey];
     if (meta?.lookupEntity) {
