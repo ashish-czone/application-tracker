@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft, Building2, MapPin, Briefcase, Calendar, Users2, User,
   Clock, MoreHorizontal, Copy, Trash2, UserPlus, FileText,
-  LayoutGrid, List, CalendarPlus,
+  LayoutGrid, List, CalendarPlus, TrendingUp, Activity,
 } from 'lucide-react';
 import {
   Button, ConfirmDialog,
@@ -14,14 +14,14 @@ import {
 import { DynamicSection } from '@packages/eav-attributes-ui';
 import { useEntityEngine, useEntityHooks, useEntityConfig } from '@packages/entity-engine-ui';
 import { useEntityLayout } from '@packages/entity-engine-ui/helpers/useEntityLayout';
-import { AuditTimeline } from '@packages/platform-ui/audit';
+import { AuditTimeline, useAuditLogs } from '@packages/platform-ui/audit';
 import { EntityPickerPanel } from '@packages/entity-engine-ui/components/EntityPickerPanel';
 import { WorkflowKanbanBoard } from '@packages/platform-ui/workflows';
 import { StarRating } from '@packages/evaluations-ui';
 import { ScheduleInterviewDialog } from '../shared/ScheduleInterviewDialog';
 import { api } from '../../../../lib/api';
 
-type TabKey = 'details' | 'applications' | 'audit';
+type TabKey = 'overview' | 'applications' | 'audit';
 
 const STATUS_STYLES: Record<string, { bg: string; dot: string }> = {
   'in-progress': { bg: 'bg-blue-50 text-blue-700 border-blue-200', dot: 'bg-blue-500' },
@@ -75,7 +75,7 @@ export function JobOpeningDetailPage() {
   const hooks = useEntityHooks('job_openings');
   const { apiFn } = useEntityEngine();
 
-  const [activeTab, setActiveTab] = useState<TabKey>('details');
+  const [activeTab, setActiveTab] = useState<TabKey>('overview');
   const [pipelineView, setPipelineView] = useState<'board' | 'list'>('board');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showApplyPicker, setShowApplyPicker] = useState(false);
@@ -189,8 +189,29 @@ export function JobOpeningDetailPage() {
   const applicationsCount = applications.length;
   const hiringManagerName = item.hiringManager__label as string | undefined;
 
+  // Source breakdown
+  const sourceCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const app of applications) {
+      const src = app.source || 'Unknown';
+      counts[src] = (counts[src] ?? 0) + 1;
+    }
+    return Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  }, [applications]);
+
+  // Avg days in pipeline
+  const avgDaysInPipeline = useMemo(() => {
+    if (applications.length === 0) return 0;
+    const total = applications.reduce((sum, app) => sum + daysSince(app.createdAt), 0);
+    return Math.round(total / applications.length);
+  }, [applications]);
+
+  // Recent activity for this job's applications
+  const { data: activityData } = useAuditLogs({ entityType: 'job_openings', entityId: id ?? '', includeRelated: true, limit: 5 });
+  const recentActivity = activityData?.data ?? [];
+
   const tabs: { key: TabKey; label: string; count?: number }[] = [
-    { key: 'details', label: 'Details' },
+    { key: 'overview', label: 'Overview' },
     { key: 'applications', label: 'Pipeline', count: applicationsCount },
     { key: 'audit', label: 'History' },
   ];
@@ -345,8 +366,68 @@ export function JobOpeningDetailPage() {
       </div>
 
       {/* Tab content */}
-      {activeTab === 'details' && (
-        <div className="space-y-4">
+      {activeTab === 'overview' && (
+        <div className="space-y-6">
+          {/* Quick stats row */}
+          {applicationsCount > 0 && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="rounded-lg border border-border bg-card p-4">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                  <TrendingUp className="h-3.5 w-3.5" />
+                  Avg. Days in Pipeline
+                </div>
+                <div className="text-2xl font-semibold text-foreground">{avgDaysInPipeline}</div>
+              </div>
+              <div className="rounded-lg border border-border bg-card p-4">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                  <Users2 className="h-3.5 w-3.5" />
+                  Positions Filled
+                </div>
+                <div className="text-2xl font-semibold text-foreground">{positionsFilled} <span className="text-sm font-normal text-muted-foreground">/ {positions}</span></div>
+              </div>
+              <div className="col-span-2 rounded-lg border border-border bg-card p-4">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+                  <FileText className="h-3.5 w-3.5" />
+                  Source Breakdown
+                </div>
+                <div className="flex flex-wrap gap-x-4 gap-y-1">
+                  {sourceCounts.map(([source, count]) => (
+                    <span key={source} className="text-sm">
+                      <span className="font-medium text-foreground">{count}</span>
+                      <span className="text-muted-foreground ml-1">{formatLabel(source)}</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Recent activity */}
+          {recentActivity.length > 0 && (
+            <div className="rounded-lg border border-border bg-card p-4">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
+                <Activity className="h-3.5 w-3.5" />
+                Recent Activity
+              </div>
+              <div className="space-y-2">
+                {recentActivity.map((entry: any) => (
+                  <div key={entry.id} className="flex items-center justify-between text-sm">
+                    <div className="min-w-0">
+                      <span className="text-foreground">{entry.description || entry.action}</span>
+                      {entry.actorName && (
+                        <span className="text-muted-foreground"> by {entry.actorName}</span>
+                      )}
+                    </div>
+                    <span className="text-xs text-muted-foreground shrink-0 ml-3">
+                      {formatDate(entry.occurredAt)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Form sections */}
           {layout?.sections
             .filter((s) => s.fields.length > 0)
             .map((section) => (
