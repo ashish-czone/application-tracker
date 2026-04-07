@@ -67,7 +67,7 @@ export function createWorkflowsApi(api: ApiFn) {
     executeTransition(
       entitySlug: string,
       entityId: string,
-      body: { fieldKey: string; to: string; comment?: string },
+      body: { fieldKey: string; to: string; reason?: string; comment?: string },
     ): Promise<Record<string, unknown>> {
       return api.post<Record<string, unknown>>(`/${entitySlug}/${entityId}/transition`, body);
     },

@@ -15,6 +15,9 @@ export interface WorkflowTransition {
   requiredPermissions: string[];
   guardNames: string[];
   sortOrder: number;
+  reasonOptions: string[] | null;
+  reasonRequired: boolean;
+  commentRequired: boolean;
   metadata: Record<string, unknown> | null;
 }
 
@@ -73,6 +76,9 @@ export interface CreateTransitionRequest {
   requiredPermissions?: string[];
   guardNames?: string[];
   sortOrder?: number;
+  reasonOptions?: string[];
+  reasonRequired?: boolean;
+  commentRequired?: boolean;
 }
 
 export interface UpdateTransitionRequest {
@@ -80,6 +86,9 @@ export interface UpdateTransitionRequest {
   requiredPermissions?: string[] | null;
   guardNames?: string[] | null;
   sortOrder?: number;
+  reasonOptions?: string[] | null;
+  reasonRequired?: boolean;
+  commentRequired?: boolean;
   metadata?: Record<string, unknown> | null;
 }
 
@@ -94,6 +103,7 @@ export interface TransitionHistoryEntry {
   transitionId: string | null;
   actorId: string | null;
   actorName: string | null;
+  reason: string | null;
   comment: string | null;
   createdAt: string;
 }

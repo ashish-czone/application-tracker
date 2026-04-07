@@ -208,8 +208,8 @@ export function useEntityTransition(
   const api = useWorkflowsApi();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (body: { id: string; fieldKey: string; to: string; comment?: string }) =>
-      api.executeTransition(entitySlug, body.id, { fieldKey: body.fieldKey, to: body.to, comment: body.comment }),
+    mutationFn: (body: { id: string; fieldKey: string; to: string; reason?: string; comment?: string }) =>
+      api.executeTransition(entitySlug, body.id, { fieldKey: body.fieldKey, to: body.to, reason: body.reason, comment: body.comment }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [entityType] });
       queryClient.invalidateQueries({ queryKey: ['workflow-history'] });

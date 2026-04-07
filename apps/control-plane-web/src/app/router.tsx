@@ -24,6 +24,9 @@ interface PendingTransition {
   toStateName: string;
   transitionName: string;
   toStateLabel: string;
+  reasonOptions?: string[] | null;
+  reasonRequired?: boolean;
+  commentRequired?: boolean;
 }
 
 function useResolvedWorkflow(entityType: string, entityId: string) {
@@ -45,13 +48,21 @@ function PipelineProgressForEntity({ entityType, entityId, entity }: { entityTyp
   if (!currentState) return null;
 
   const handleStageClick = (toStateName: string, transitionName: string, toStateLabel: string) => {
-    setPending({ toStateName, transitionName, toStateLabel });
+    const transition = resolvedWorkflow.transitions.find(
+      (t) => t.fromStateName === currentState && t.toStateName === toStateName,
+    );
+    setPending({
+      toStateName, transitionName, toStateLabel,
+      reasonOptions: transition?.reasonOptions,
+      reasonRequired: transition?.reasonRequired,
+      commentRequired: transition?.commentRequired,
+    });
   };
 
-  const handleConfirm = (comment?: string) => {
+  const handleConfirm = ({ reason, comment }: { reason?: string; comment?: string }) => {
     if (!pending) return;
     transitionMutation.mutate(
-      { id: entityId, fieldKey: resolvedWorkflow.fieldName, to: pending.toStateName, comment },
+      { id: entityId, fieldKey: resolvedWorkflow.fieldName, to: pending.toStateName, reason, comment },
       { onSuccess: () => setPending(null) },
     );
   };
@@ -71,6 +82,9 @@ function PipelineProgressForEntity({ entityType, entityId, entity }: { entityTyp
         transitionName={pending?.transitionName ?? ''}
         toStateLabel={pending?.toStateLabel ?? ''}
         isPending={transitionMutation.isPending}
+        reasonOptions={pending?.reasonOptions}
+        reasonRequired={pending?.reasonRequired}
+        commentRequired={pending?.commentRequired}
         onConfirm={handleConfirm}
       />
     </>
@@ -88,13 +102,21 @@ function WorkflowActionsForEntity({ entityType, entityId, entity }: { entityType
   if (!currentState) return null;
 
   const handleTransitionSelect = (toStateName: string, transitionName: string, toStateLabel: string) => {
-    setPending({ toStateName, transitionName, toStateLabel });
+    const transition = resolvedWorkflow.transitions.find(
+      (t) => t.fromStateName === currentState && t.toStateName === toStateName,
+    );
+    setPending({
+      toStateName, transitionName, toStateLabel,
+      reasonOptions: transition?.reasonOptions,
+      reasonRequired: transition?.reasonRequired,
+      commentRequired: transition?.commentRequired,
+    });
   };
 
-  const handleConfirm = (comment?: string) => {
+  const handleConfirm = ({ reason, comment }: { reason?: string; comment?: string }) => {
     if (!pending) return;
     transitionMutation.mutate(
-      { id: entityId, fieldKey: resolvedWorkflow.fieldName, to: pending.toStateName, comment },
+      { id: entityId, fieldKey: resolvedWorkflow.fieldName, to: pending.toStateName, reason, comment },
       { onSuccess: () => setPending(null) },
     );
   };
@@ -112,6 +134,9 @@ function WorkflowActionsForEntity({ entityType, entityId, entity }: { entityType
         transitionName={pending?.transitionName ?? ''}
         toStateLabel={pending?.toStateLabel ?? ''}
         isPending={transitionMutation.isPending}
+        reasonOptions={pending?.reasonOptions}
+        reasonRequired={pending?.reasonRequired}
+        commentRequired={pending?.commentRequired}
         onConfirm={handleConfirm}
       />
     </>
