@@ -1,6 +1,6 @@
 import { Injectable, Inject, type OnApplicationBootstrap } from '@nestjs/common';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
-import { DatabaseService, eq, users, sql } from '@packages/database';
+import { DatabaseService, eq, users } from '@packages/database';
 import { EntityService } from '@packages/entity-engine';
 import { jobOpenings } from './schema/job-openings';
 import { applications } from '../applications/schema/applications';
@@ -12,21 +12,16 @@ const APP_SERVICE_TOKEN = 'ENTITY_SERVICE_applications';
 const SAMPLE_JOB_OPENINGS = [
   {
     title: 'Senior Frontend Engineer',
-    department: 'Engineering',
-    location: 'San Francisco, CA',
     employmentType: 'full-time',
     experience: '5-plus-years',
     salary: '$150,000 - $220,000',
     industry: 'technology',
     numberOfPositions: 2,
     status: 'in-progress',
-    _countryName: 'United States',
     jobDescription: '<p>We are looking for a Senior Frontend Engineer to lead our React-based web applications.</p>',
   },
   {
     title: 'DevOps Engineer',
-    department: 'Infrastructure',
-    location: 'Remote',
     employmentType: 'full-time',
     experience: '4-5-years',
     salary: '$120,000 - $180,000',
@@ -34,44 +29,34 @@ const SAMPLE_JOB_OPENINGS = [
     numberOfPositions: 1,
     status: 'in-progress',
     remoteJob: true,
-    _countryName: 'United States',
     jobDescription: '<p>Join our infrastructure team to build and maintain CI/CD pipelines and cloud infrastructure.</p>',
   },
   {
     title: 'Product Designer',
-    department: 'Design',
-    location: 'New York, NY',
     employmentType: 'full-time',
     experience: '4-5-years',
     salary: '$110,000 - $160,000',
     industry: 'consulting',
     numberOfPositions: 1,
     status: 'in-progress',
-    _countryName: 'United States',
   },
   {
     title: 'Backend Engineer Intern',
-    department: 'Engineering',
-    location: 'San Francisco, CA',
     employmentType: 'training',
     experience: 'fresher',
     salary: '$40,000 - $60,000',
     industry: 'technology',
     numberOfPositions: 3,
     status: 'waiting-for-approval',
-    _countryName: 'United States',
   },
   {
     title: 'Data Analyst (Contract)',
-    department: 'Analytics',
-    location: 'London, UK',
     employmentType: 'contract',
     experience: '1-3-years',
     salary: '£80,000 - £120,000',
     industry: 'financial-services',
     numberOfPositions: 1,
     status: 'in-progress',
-    _countryName: 'United Kingdom',
   },
 ];
 
@@ -102,15 +87,6 @@ export class JobOpeningsSeedService implements OnApplicationBootstrap {
     await this.ensureSampleApplications();
   }
 
-  private async resolveCountryId(name: string): Promise<string | undefined> {
-    const [row] = await this.database.db
-      .select({ id: sql`c.id` })
-      .from(sql`categories c JOIN category_groups cg ON c.group_id = cg.id`)
-      .where(sql`cg.slug = 'countries' AND c.name = ${name}`)
-      .limit(1) as { id: string }[];
-    return row?.id;
-  }
-
   private async ensureSampleJobOpenings() {
     const [existing] = await this.database.db
       .select({ id: jobOpenings.id })
@@ -129,9 +105,8 @@ export class JobOpeningsSeedService implements OnApplicationBootstrap {
       return;
     }
 
-    for (const { _countryName, ...data } of SAMPLE_JOB_OPENINGS) {
-      const country = await this.resolveCountryId(_countryName);
-      await this.jobOpeningService.create({ ...data, country }, admin.id);
+    for (const data of SAMPLE_JOB_OPENINGS) {
+      await this.jobOpeningService.create(data, admin.id);
     }
 
     this.logger.log(`Created ${SAMPLE_JOB_OPENINGS.length} sample job openings`);
