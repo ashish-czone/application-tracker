@@ -17,6 +17,8 @@ export default defineConfig({
     '../../packages/entity-relations/schema/index.ts',
     '../../packages/tasks/schema/tasks.ts',
     '../../packages/notes/schema/index.ts',
+    '../../packages/drafts/schema/index.ts',
+    '../../packages/evaluations/schema/index.ts',
     '../../packages/attachments/schema/index.ts',
     // Recruit-specific modules
     './src/modules/clients/schema/clients.ts',
