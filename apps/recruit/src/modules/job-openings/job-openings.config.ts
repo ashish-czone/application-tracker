@@ -34,18 +34,22 @@ export const JOB_OPENINGS_CONFIG: EntityConfig = {
       fieldType: 'lookup', lookupEntity: 'contacts', lookupLabelField: 'lastName',
       lookupSearchFields: ['firstName', 'lastName', 'email'],
     },
+    hiringManager: {
+      label: 'Hiring Manager', section: 'jobOpeningInfo', sortOrder: 3,
+      fieldType: 'user',
+    },
     accountManager: {
-      label: 'Account Manager', section: 'jobOpeningInfo', sortOrder: 3,
+      label: 'Account Manager', section: 'jobOpeningInfo', sortOrder: 4,
       fieldType: 'user',
     },
     assignedRecruiters: {
-      label: 'Assigned Recruiter(s)', section: 'jobOpeningInfo', sortOrder: 4, isQuickCreate: true,
+      label: 'Assigned Recruiter(s)', section: 'jobOpeningInfo', sortOrder: 5, isQuickCreate: true,
       fieldType: 'multi_user',
     },
-    dateOpened: { label: 'Date Opened', section: 'jobOpeningInfo', sortOrder: 5, fieldType: 'date' },
-    targetDate: { label: 'Target Date', section: 'jobOpeningInfo', sortOrder: 6, isQuickCreate: true, fieldType: 'date' },
+    dateOpened: { label: 'Date Opened', section: 'jobOpeningInfo', sortOrder: 6, fieldType: 'date' },
+    targetDate: { label: 'Target Date', section: 'jobOpeningInfo', sortOrder: 7, isQuickCreate: true, fieldType: 'date' },
     employmentType: {
-      label: 'Job Type', section: 'jobOpeningInfo', sortOrder: 7, fieldType: 'picklist',
+      label: 'Job Type', section: 'jobOpeningInfo', sortOrder: 8, fieldType: 'picklist',
       picklistOptions: [
         { label: 'Full time', value: 'full-time' },
         { label: 'Part time', value: 'part-time' },
@@ -60,7 +64,7 @@ export const JOB_OPENINGS_CONFIG: EntityConfig = {
       ],
     },
     status: {
-      label: 'Job Opening Status', section: 'jobOpeningInfo', sortOrder: 8, fieldType: 'picklist', cellRenderer: 'StatusBadge',
+      label: 'Job Opening Status', section: 'jobOpeningInfo', sortOrder: 9, fieldType: 'picklist', cellRenderer: 'StatusBadge',
       picklistOptions: [
         { label: 'In-progress', value: 'in-progress' },
         { label: 'Waiting for Approval', value: 'waiting-for-approval' },
@@ -73,7 +77,7 @@ export const JOB_OPENINGS_CONFIG: EntityConfig = {
       ],
     },
     experience: {
-      label: 'Work Experience', section: 'jobOpeningInfo', sortOrder: 9, fieldType: 'picklist',
+      label: 'Work Experience', section: 'jobOpeningInfo', sortOrder: 10, fieldType: 'picklist',
       picklistOptions: [
         { label: 'Fresher', value: 'fresher' },
         { label: '0-1 year', value: '0-1-year' },
@@ -83,7 +87,7 @@ export const JOB_OPENINGS_CONFIG: EntityConfig = {
       ],
     },
     industry: {
-      label: 'Industry', section: 'jobOpeningInfo', sortOrder: 10, fieldType: 'picklist',
+      label: 'Industry', section: 'jobOpeningInfo', sortOrder: 11, fieldType: 'picklist',
       picklistOptions: [
         { label: 'Communications', value: 'communications' },
         { label: 'Technology', value: 'technology' },
@@ -117,15 +121,38 @@ export const JOB_OPENINGS_CONFIG: EntityConfig = {
         { label: 'Other', value: 'other' },
       ],
     },
+    jobFunction: {
+      label: 'Job Function', section: 'jobOpeningInfo', sortOrder: 12, fieldType: 'picklist',
+      picklistOptions: [
+        { label: 'Engineering', value: 'engineering' },
+        { label: 'Sales', value: 'sales' },
+        { label: 'Marketing', value: 'marketing' },
+        { label: 'Operations', value: 'operations' },
+        { label: 'Product', value: 'product' },
+        { label: 'Design', value: 'design' },
+        { label: 'Finance', value: 'finance' },
+        { label: 'Human Resources', value: 'human-resources' },
+        { label: 'Legal', value: 'legal' },
+        { label: 'Customer Support', value: 'customer-support' },
+        { label: 'Data & Analytics', value: 'data-analytics' },
+        { label: 'IT & Infrastructure', value: 'it-infrastructure' },
+        { label: 'Administration', value: 'administration' },
+        { label: 'Other', value: 'other' },
+      ],
+    },
+    confidential: { label: 'Confidential', section: 'jobOpeningInfo', sortOrder: 13, fieldType: 'boolean' },
     requiredSkills: {
-      label: 'Required Skills', section: 'jobOpeningInfo', sortOrder: 11, isQuickCreate: true,
+      label: 'Required Skills', section: 'jobOpeningInfo', sortOrder: 14, isQuickCreate: true,
       fieldType: 'tags', tagGroupSlug: 'recruit-skills',
     },
-    salary: { label: 'Salary', section: 'jobOpeningInfo', sortOrder: 12, maxLength: 120 },
+    salaryMin: { label: 'Salary Min', section: 'compensation', sortOrder: 0, fieldType: 'currency' },
+    salaryMax: { label: 'Salary Max', section: 'compensation', sortOrder: 1, fieldType: 'currency' },
+    currency: { label: 'Currency', section: 'compensation', sortOrder: 2, maxLength: 3 },
+    salary: { label: 'Salary (Legacy)', section: 'compensation', sortOrder: 3, maxLength: 120, excludeFromList: true },
 
     // ── Address Information ──────────────────────────────────────────────
-    location: { label: 'City', section: 'address', sortOrder: 0, maxLength: 120 },
-    department: { label: 'Province', section: 'address', sortOrder: 1, maxLength: 120 },
+    department: { label: 'Department', section: 'address', sortOrder: 0, fieldType: 'category', categoryGroupSlug: 'departments' },
+    location: { label: 'Office', section: 'address', sortOrder: 1, fieldType: 'category', categoryGroupSlug: 'offices' },
     country: { label: 'Country', section: 'address', sortOrder: 2, fieldType: 'category', categoryGroupSlug: 'countries' },
     postalCode: { label: 'Postal Code', section: 'address', sortOrder: 3, maxLength: 30 },
     remoteJob: { label: 'Remote Job', section: 'address', sortOrder: 4, fieldType: 'boolean' },
@@ -154,11 +181,15 @@ export const JOB_OPENINGS_CONFIG: EntityConfig = {
   sections: [
     {
       name: 'Job Opening Information', columns: 2,
-      fields: ['title', 'clientId', 'contactId', 'accountManager', 'assignedRecruiters', 'dateOpened', 'targetDate', 'employmentType', 'status', 'experience', 'industry', 'requiredSkills', 'salary'],
+      fields: ['title', 'clientId', 'contactId', 'hiringManager', 'accountManager', 'assignedRecruiters', 'dateOpened', 'targetDate', 'employmentType', 'status', 'experience', 'industry', 'jobFunction', 'confidential', 'requiredSkills'],
     },
     {
       name: 'Address Information', columns: 2,
-      fields: ['location', 'department', 'country', 'postalCode', 'remoteJob'],
+      fields: ['department', 'location', 'country', 'postalCode', 'remoteJob'],
+    },
+    {
+      name: 'Compensation', columns: 2,
+      fields: ['salaryMin', 'salaryMax', 'currency'],
     },
     {
       name: 'Forecast Details', columns: 2,
@@ -174,7 +205,7 @@ export const JOB_OPENINGS_CONFIG: EntityConfig = {
     },
   ],
 
-  listFields: ['title', 'clientId', 'status', 'targetDate', 'employmentType', 'applicationsCount', 'interviewsCount'],
+  listFields: ['title', 'clientId', 'department', 'status', 'targetDate', 'employmentType', 'applicationsCount', 'interviewsCount'],
 
   lookup: {
     labelField: 'title',
