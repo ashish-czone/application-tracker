@@ -20,10 +20,16 @@ const config: Config = {
     '../../packages/eav-attributes-ui/helpers/**/*.{ts,tsx}',
     // @packages/entity-relations-ui
     '../../packages/entity-relations-ui/field-types/**/*.{ts,tsx}',
+    // @packages/notes-ui
+    '../../packages/notes-ui/components/**/*.tsx',
+    // @packages/attachments-ui
+    '../../packages/attachments-ui/components/**/*.tsx',
+    // @packages/evaluations-ui
+    '../../packages/evaluations-ui/components/**/*.tsx',
     // @packages/platform-ui
     '../../packages/platform-ui/*.{ts,tsx}',
     '../../packages/platform-ui/audit/**/*.{ts,tsx}',
-    '../../packages/platform-ui/conditions/**/*.{ts,tsx}',
+    '../../packages/platform-ui/conditions/*.tsx',
     '../../packages/platform-ui/notification-channels/**/*.{ts,tsx}',
     '../../packages/platform-ui/automations/**/*.{ts,tsx}',
     '../../packages/platform-ui/notifications/**/*.{ts,tsx}',
