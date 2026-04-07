@@ -15,6 +15,8 @@ interface EntityQuickCreateFormProps {
   singularName: string;
   onClose: () => void;
   onSuccess?: (entity: Record<string, unknown>) => void;
+  /** Pre-fill field values (e.g., candidateId from parent context) */
+  initialValues?: Record<string, unknown>;
 }
 
 /**
@@ -22,7 +24,7 @@ interface EntityQuickCreateFormProps {
  * Renders fields marked as isQuickCreate from the entity's layout.
  * Uses @packages/ui form components via DynamicField.
  */
-export function EntityQuickCreateForm({ entityType, singularName, onClose, onSuccess }: EntityQuickCreateFormProps) {
+export function EntityQuickCreateForm({ entityType, singularName, onClose, onSuccess, initialValues }: EntityQuickCreateFormProps) {
   const { data: layout, isLoading: layoutLoading } = useEntityLayout(entityType);
   const { apiFn } = useEntityEngine();
   const hooks = useEntityHooks(entityType);
@@ -81,10 +83,10 @@ export function EntityQuickCreateForm({ entityType, singularName, onClose, onSuc
   const defaultValues = useMemo(() => {
     const defaults: Record<string, unknown> = {};
     for (const field of quickCreateFields) {
-      defaults[field.fieldKey] = field.defaultValue ?? '';
+      defaults[field.fieldKey] = initialValues?.[field.fieldKey] ?? field.defaultValue ?? '';
     }
     return defaults;
-  }, [quickCreateFields]);
+  }, [quickCreateFields, initialValues]);
 
   const form = useForm({
     resolver: zodResolver(schema),
