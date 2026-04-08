@@ -148,7 +148,6 @@ export const JOB_OPENINGS_CONFIG: EntityConfig = {
     salaryMin: { label: 'Salary Min', section: 'compensation', sortOrder: 0, fieldType: 'currency' },
     salaryMax: { label: 'Salary Max', section: 'compensation', sortOrder: 1, fieldType: 'currency' },
     currency: { label: 'Currency', section: 'compensation', sortOrder: 2, maxLength: 3 },
-    salary: { label: 'Salary (Legacy)', section: 'compensation', sortOrder: 3, maxLength: 120, excludeFromList: true },
 
     // ── Address Information ──────────────────────────────────────────────
     department: { label: 'Department', section: 'address', sortOrder: 0, fieldType: 'category', categoryGroupSlug: 'departments' },

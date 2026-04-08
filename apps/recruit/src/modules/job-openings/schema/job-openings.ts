@@ -18,7 +18,6 @@ export const jobOpenings = pgTable('job_openings', {
   jobFunction: text('job_function'),
   confidential: boolean('confidential').default(false),
   requirements: text('requirements'),
-  salary: text('salary'),
   // Address
   department: text('department'),
   location: text('location'),
