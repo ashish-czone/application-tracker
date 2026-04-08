@@ -26,7 +26,6 @@ export const candidates = pgTable('candidates', {
   currentTitle: text('current_title'),
   currentCompany: text('current_company'),
   noticePeriod: text('notice_period'),
-  expectedSalary: integer('expected_salary'),
   salaryExpectationMin: integer('salary_expectation_min'),
   salaryExpectationMax: integer('salary_expectation_max'),
   currentSalary: integer('current_salary'),

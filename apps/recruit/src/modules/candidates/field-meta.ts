@@ -54,7 +54,6 @@ export const CANDIDATE_FIELD_META: Record<string, FieldMeta> = {
   salaryExpectationMax: { label: 'Expected Salary (Max)', section: 'professional', sortOrder: 6, fieldType: 'currency' },
   currentSalary: { label: 'Current Salary', section: 'professional', sortOrder: 7, fieldType: 'currency' },
   currency: { label: 'Currency', section: 'professional', sortOrder: 8, maxLength: 3 },
-  expectedSalary: { label: 'Expected Salary (Legacy)', section: 'professional', sortOrder: 9, fieldType: 'currency', excludeFromList: true },
   skillSet: { label: 'Skill Set', section: 'professional', sortOrder: 10, fieldType: 'textarea', maxLength: 6000 },
   additionalInfo: { label: 'Additional Info', section: 'professional', sortOrder: 11, fieldType: 'textarea', maxLength: 6000 },
   skypeId: { label: 'Skype ID', section: 'professional', sortOrder: 12 },
