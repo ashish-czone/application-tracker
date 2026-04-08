@@ -7,8 +7,82 @@ import { Form, Button, DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, D
 import { DynamicField, buildFormSchema } from '@packages/eav-attributes-ui';
 import { useFormDrafts, DraftRecoveryBanner, DraftStatusIndicator } from '@packages/drafts-ui';
 import type { LayoutSection, FullLayoutField } from '@packages/entity-engine/types';
+import type { ApiFn } from '@packages/platform-ui/PlatformUIProvider';
 import { useEntityEngine, useEntityHooks, useEntityConfig } from '../EntityEngineProvider';
 import { useEntityLayout } from '../helpers/useEntityLayout';
+
+interface ResolvedDraftLabels {
+  single: Record<string, string>;
+  multi: Record<string, { label: string; value: string }[]>;
+}
+
+const SINGLE_LOOKUP_TYPES = new Set(['lookup', 'user', 'category']);
+const MULTI_LOOKUP_TYPES = new Set(['multi_lookup', 'multi_user']);
+
+async function resolveDraftLabels(
+  data: Record<string, unknown>,
+  fields: FullLayoutField[],
+  apiFn: ApiFn,
+): Promise<ResolvedDraftLabels> {
+  const single: Record<string, string> = {};
+  const multi: Record<string, { label: string; value: string }[]> = {};
+
+  // Group fields by resolution strategy
+  const userIds = new Set<string>();
+  const userFields: { fieldKey: string; multi: boolean }[] = [];
+  const lookupsByEntity = new Map<string, { fieldKey: string; ids: string[]; multi: boolean }[]>();
+
+  for (const field of fields) {
+    const val = data[field.fieldKey];
+    if (!val) continue;
+
+    if (field.fieldType === 'user' || field.fieldType === 'multi_user') {
+      const ids = Array.isArray(val) ? val as string[] : [val as string];
+      ids.forEach(id => userIds.add(id));
+      userFields.push({ fieldKey: field.fieldKey, multi: field.fieldType === 'multi_user' });
+    } else if ((field.fieldType === 'lookup' || field.fieldType === 'multi_lookup' || field.fieldType === 'category') && field.lookupEntity) {
+      const ids = Array.isArray(val) ? val as string[] : [val as string];
+      const group = lookupsByEntity.get(field.lookupEntity) ?? [];
+      group.push({ fieldKey: field.fieldKey, ids, multi: field.fieldType === 'multi_lookup' });
+      lookupsByEntity.set(field.lookupEntity, group);
+    }
+  }
+
+  // Resolve users in one call
+  if (userIds.size > 0) {
+    try {
+      const res = await apiFn.get<{ data: { id: string; firstName: string; lastName: string }[] }>('/users?limit=200');
+      const userMap = new Map(res.data.map(u => [u.id, `${u.firstName} ${u.lastName}`.trim()]));
+      for (const { fieldKey, multi: isMulti } of userFields) {
+        const val = data[fieldKey];
+        if (isMulti && Array.isArray(val)) {
+          multi[fieldKey] = val.map(id => ({ value: id, label: userMap.get(id) ?? id }));
+        } else if (typeof val === 'string') {
+          const label = userMap.get(val);
+          if (label) single[fieldKey] = label;
+        }
+      }
+    } catch { /* ignore — labels just won't show */ }
+  }
+
+  // Resolve lookups grouped by entity type
+  for (const [entitySlug, lookupFields] of lookupsByEntity) {
+    try {
+      const options = await apiFn.get<{ label: string; value: string }[]>(`/lookups/${entitySlug}?limit=200`);
+      const optMap = new Map(options.map(o => [o.value, o.label]));
+      for (const { fieldKey, ids, multi: isMulti } of lookupFields) {
+        if (isMulti) {
+          multi[fieldKey] = ids.map(id => ({ value: id, label: optMap.get(id) ?? id }));
+        } else {
+          const label = optMap.get(ids[0]);
+          if (label) single[fieldKey] = label;
+        }
+      }
+    } catch { /* ignore */ }
+  }
+
+  return { single, multi };
+}
 
 interface EntityCreatePageProps {
   entityType: string;
@@ -77,11 +151,17 @@ export function EntityCreatePage({ entityType }: EntityCreatePageProps) {
   });
 
   // --- Drafts integration ---
+  const [draftLabels, setDraftLabels] = useState<ResolvedDraftLabels>({ single: {}, multi: {} });
+
   const drafts = useFormDrafts({
     entityType,
     draftKey: 'new',
     formValues: form.watch(),
-    onRestore: (data) => form.reset(data),
+    onRestore: async (data) => {
+      form.reset(data);
+      const labels = await resolveDraftLabels(data, editableFields, apiFn);
+      setDraftLabels(labels);
+    },
     enabled: editableFields.length > 0,
   });
 
@@ -153,6 +233,8 @@ export function EntityCreatePage({ entityType }: EntityCreatePageProps) {
               key={field.fieldKey}
               field={field}
               mode="edit"
+              resolvedLabel={draftLabels.single[field.fieldKey]}
+              chipOptions={draftLabels.multi[field.fieldKey]}
               onSearch={
                 field.fieldType === 'user' ? searchUsers
                 : field.fieldType === 'lookup' && field.lookupEntity ? (q: string) => searchLookup(field.lookupEntity!, q)
