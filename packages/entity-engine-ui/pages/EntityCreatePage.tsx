@@ -2,8 +2,8 @@ import { useMemo, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowLeft, Check } from 'lucide-react';
-import { Form, Button } from '@packages/ui';
+import { ArrowLeft, Check, ChevronDown } from 'lucide-react';
+import { Form, Button, toast, DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@packages/ui';
 import { DynamicField, buildFormSchema } from '@packages/eav-attributes-ui';
 import { useAutoSaveDraft, useDraftRecovery, useDeleteDraft, DraftRecoveryBanner, DraftStatusIndicator } from '@packages/drafts-ui';
 import type { LayoutSection, FullLayoutField } from '@packages/entity-engine/types';
@@ -78,12 +78,23 @@ export function EntityCreatePage({ entityType }: EntityCreatePageProps) {
 
   // --- Drafts integration ---
   const draftKey = 'new';
-  const { hasDraft, draft, discard: discardDraft } = useDraftRecovery(entityType, draftKey);
+  const { hasDraft, draft, discard: discardDraft, dismiss: dismissDraft } = useDraftRecovery(entityType, draftKey);
   const deleteDraft = useDeleteDraft();
   const formValues = form.watch();
   const autoSave = useAutoSaveDraft(entityType, draftKey, formValues, {
     enabled: editableFields.length > 0,
   });
+
+  function handleRestoreDraft(data: Record<string, unknown>) {
+    form.reset(data);
+    dismissDraft();
+    toast.success('Draft restored');
+  }
+
+  async function handleSaveAsDraft() {
+    await autoSave.saveNow();
+    toast.success('Draft saved');
+  }
 
   const createMutation = hooks.useCreate({
     onSuccess: (created) => {
@@ -231,7 +242,7 @@ export function EntityCreatePage({ entityType }: EntityCreatePageProps) {
         <div className="mb-4">
           <DraftRecoveryBanner
             draft={draft}
-            onRestore={(data) => form.reset(data)}
+            onRestore={handleRestoreDraft}
             onDiscard={discardDraft}
           />
         </div>
@@ -307,9 +318,27 @@ export function EntityCreatePage({ entityType }: EntityCreatePageProps) {
                 Next
               </Button>
             ) : (
-              <Button type="submit" disabled={createMutation.isPending}>
-                {createMutation.isPending ? 'Creating...' : 'Save'}
-              </Button>
+              <div className="inline-flex items-center rounded-md">
+                <Button type="submit" disabled={createMutation.isPending} className="rounded-r-none">
+                  {createMutation.isPending ? 'Creating...' : 'Save'}
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      type="button"
+                      disabled={createMutation.isPending}
+                      className="rounded-l-none border-l border-primary-foreground/20 px-2"
+                    >
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={handleSaveAsDraft}>
+                      Save as Draft
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             )}
           </div>
         </div>
