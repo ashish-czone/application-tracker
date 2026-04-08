@@ -136,46 +136,6 @@ function groupByDay(entries: AuditLogEntry[]): { day: string; entries: AuditLogE
   return Array.from(groups.entries()).map(([day, entries]) => ({ day, entries }));
 }
 
-// --- Filter chips ---
-
-const CATEGORY_LABELS: Record<ActivityEventCategory, string> = {
-  changes: 'Field Changes',
-  notes: 'Notes',
-  evaluations: 'Evaluations',
-  attachments: 'Attachments',
-  transitions: 'Transitions',
-};
-
-function FilterChips({
-  active,
-  onToggle,
-}: {
-  active: Set<ActivityEventCategory>;
-  onToggle: (cat: ActivityEventCategory) => void;
-}) {
-  const categories: ActivityEventCategory[] = ['changes', 'transitions', 'notes', 'evaluations', 'attachments'];
-
-  return (
-    <div className="flex flex-wrap gap-1.5 mb-4">
-      {categories.map((cat: ActivityEventCategory) => (
-        <button
-          key={cat}
-          type="button"
-          onClick={() => onToggle(cat)}
-          className={cn(
-            'px-2.5 py-1 rounded-full text-xs font-medium transition-colors',
-            active.has(cat)
-              ? 'bg-primary text-primary-foreground'
-              : 'bg-muted text-muted-foreground hover:bg-muted/80',
-          )}
-        >
-          {CATEGORY_LABELS[cat]}
-        </button>
-      ))}
-    </div>
-  );
-}
-
 // --- Timeline entry ---
 
 function TimelineEntry({
@@ -254,31 +214,14 @@ function DayHeader({ day, showLine }: { day: string; showLine: boolean }) {
 export function AuditTimeline({ entityType, entityId, mode = 'audit' }: AuditTimelineProps) {
   const isActivityMode = mode === 'activity';
   const [page, setPage] = useState(1);
-  const [activeFilters, setActiveFilters] = useState<Set<ActivityEventCategory>>(
-    () => new Set<ActivityEventCategory>(['changes', 'notes', 'evaluations', 'attachments', 'transitions']),
-  );
 
   const auditQuery = useAuditLogs({ entityType, entityId, page, limit: 25 });
   const activityQuery = useEntityActivity(entityType, entityId, page);
   const { data, isLoading, isError, refetch } = isActivityMode ? activityQuery : auditQuery;
 
-  const handleToggleFilter = (cat: ActivityEventCategory) => {
-    setActiveFilters((prev: Set<ActivityEventCategory>) => {
-      const next = new Set(prev);
-      if (next.has(cat)) {
-        if (next.size > 1) next.delete(cat);
-      } else {
-        next.add(cat);
-      }
-      return next;
-    });
-  };
-
   const filteredEntries = useMemo(() => {
-    if (!data?.data) return [];
-    if (!isActivityMode) return data.data;
-    return data.data.filter((entry: AuditLogEntry) => activeFilters.has(getEventCategory(entry)));
-  }, [data?.data, isActivityMode, activeFilters]);
+    return data?.data ?? [];
+  }, [data?.data]);
 
   const dayGroups = useMemo(() => groupByDay(filteredEntries), [filteredEntries]);
 
@@ -316,7 +259,6 @@ export function AuditTimeline({ entityType, entityId, mode = 'audit' }: AuditTim
   if (dayGroups.length === 0) {
     return (
       <div>
-        {isActivityMode && <FilterChips active={activeFilters} onToggle={handleToggleFilter} />}
         <div className="text-center py-12">
           <History className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
           <p className="text-sm text-muted-foreground">No activity recorded yet.</p>
@@ -330,8 +272,6 @@ export function AuditTimeline({ entityType, entityId, mode = 'audit' }: AuditTim
 
   return (
     <div>
-      {isActivityMode && <FilterChips active={activeFilters} onToggle={handleToggleFilter} />}
-
       {dayGroups.map((group: { day: string; entries: AuditLogEntry[] }, groupIdx: number) => (
         <div key={group.day}>
           <DayHeader
