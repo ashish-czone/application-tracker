@@ -21,6 +21,7 @@ import { StarRating } from '@packages/evaluations-ui';
 import { ScheduleInterviewDialog } from '../shared/ScheduleInterviewDialog';
 import { CreateOfferDialog } from '../shared/CreateOfferDialog';
 import { ApplicationPreviewPanel } from '../applications/ApplicationPreviewPanel';
+import { formatLabel, formatDate } from '@packages/common';
 import { api } from '../../../../lib/api';
 
 type TabKey = 'overview' | 'applications' | 'audit';
@@ -46,14 +47,6 @@ const STAGE_COLORS: Record<string, string> = {
   'rejected': 'bg-red-400',
   'withdrawn': 'bg-gray-400',
 };
-
-function formatLabel(value: string): string {
-  return value.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-}
 
 function daysSince(dateStr: string): number {
   return Math.floor((Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24));

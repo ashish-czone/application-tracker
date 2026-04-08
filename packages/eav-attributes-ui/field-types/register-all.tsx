@@ -4,6 +4,7 @@
  */
 import { fieldTypeUIRegistry, zodSchemas } from '@packages/field-types/ui';
 import type { FieldTypeUIDefinition, FieldRenderProps } from '@packages/field-types/ui';
+import { formatLabel, formatDate, formatDateTime, formatCurrency } from '@packages/common';
 import { FormInput } from '@packages/ui/components/form/FormInput';
 import { FormSelect } from '@packages/ui/components/form/FormSelect';
 import { FormTextarea } from '@packages/ui/components/form/FormTextarea';
@@ -93,15 +94,12 @@ function CurrencyForm(props: FieldRenderProps) {
 }
 
 function currencyView(value: unknown): React.ReactNode {
-  if (value === null || value === undefined || value === '') return <span className="text-sm text-muted-foreground">-</span>;
-  const num = Number(value);
-  return <span className="text-sm text-foreground">{isNaN(num) ? String(value) : `$${(num / 100).toFixed(2)}`}</span>;
+  const display = formatCurrency(value != null ? Number(value) : null);
+  return <span className={`text-sm ${display === '—' ? 'text-muted-foreground' : 'text-foreground'}`}>{display}</span>;
 }
 
 function currencyCell(value: unknown): string {
-  if (value === null || value === undefined || value === '') return '-';
-  const num = Number(value);
-  return isNaN(num) ? String(value) : `$${(num / 100).toFixed(2)}`;
+  return formatCurrency(value != null ? Number(value) : null);
 }
 
 // ---------------------------------------------------------------------------
@@ -118,22 +116,22 @@ function DatetimeForm(props: FieldRenderProps) {
 
 function dateView(value: unknown): React.ReactNode {
   if (!value) return <span className="text-sm text-muted-foreground">-</span>;
-  return <span className="text-sm text-foreground">{new Date(String(value)).toLocaleDateString()}</span>;
+  return <span className="text-sm text-foreground">{formatDate(String(value))}</span>;
 }
 
 function dateCell(value: unknown): string {
   if (!value) return '-';
-  return new Date(String(value)).toLocaleDateString();
+  return formatDate(String(value));
 }
 
 function datetimeView(value: unknown): React.ReactNode {
   if (!value) return <span className="text-sm text-muted-foreground">-</span>;
-  return <span className="text-sm text-foreground">{new Date(String(value)).toLocaleString()}</span>;
+  return <span className="text-sm text-foreground">{formatDateTime(String(value))}</span>;
 }
 
 function datetimeCell(value: unknown): string {
   if (!value) return '-';
-  return new Date(String(value)).toLocaleString();
+  return formatDateTime(String(value));
 }
 
 // ---------------------------------------------------------------------------
@@ -314,6 +312,16 @@ function WorkflowForm(props: FieldRenderProps) {
   );
 }
 
+function workflowView(value: unknown): React.ReactNode {
+  if (!value || typeof value !== 'string') return <span className="text-sm text-muted-foreground">-</span>;
+  return <span className="text-sm text-foreground">{formatLabel(value)}</span>;
+}
+
+function workflowCell(value: unknown): string {
+  if (!value || typeof value !== 'string') return '-';
+  return formatLabel(value);
+}
+
 // ---------------------------------------------------------------------------
 // Registration
 // ---------------------------------------------------------------------------
@@ -354,7 +362,7 @@ const definitions: FieldTypeUIDefinition[] = [
   // Special types
   { type: 'auto_number',  FormComponent: AutoNumberForm,   ViewComponent: defaultView,      CellFormatter: defaultCell,      zodSchema: zodSchemas.noopSchema },
   { type: 'file',         FormComponent: FileForm,         ViewComponent: fileView,          CellFormatter: defaultCell,      zodSchema: zodSchemas.anySchema },
-  { type: 'workflow',     FormComponent: WorkflowForm,     ViewComponent: defaultView,      CellFormatter: defaultCell,      zodSchema: zodSchemas.noopSchema },
+  { type: 'workflow',     FormComponent: WorkflowForm,     ViewComponent: workflowView,     CellFormatter: workflowCell,     zodSchema: zodSchemas.noopSchema },
 ];
 
 // Auto-register all UI definitions

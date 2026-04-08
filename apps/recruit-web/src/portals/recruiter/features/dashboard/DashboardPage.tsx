@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { api } from '../../../../lib/api';
 import { useAuth } from '@packages/platform-ui/auth/hooks/useAuth';
+import { formatLabel, formatDateShort } from '@packages/common';
 
 interface MetricCardProps {
   label: string;
@@ -34,16 +35,8 @@ function MetricCard({ label, value, icon: Icon, href, color, bgColor }: MetricCa
   );
 }
 
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
-
 function formatTime(dateStr: string): string {
   return new Date(dateStr).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-}
-
-function formatLabel(value: string): string {
-  return value.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 const STAGE_COLORS: Record<string, string> = {
@@ -171,7 +164,7 @@ export function DashboardPage() {
                       {app.candidateId__label || 'Candidate'}
                     </p>
                     <p className="text-xs text-muted-foreground truncate mt-0.5">
-                      {app.jobOpeningId__label || 'Job'} &middot; {formatDate(app.createdAt)}
+                      {app.jobOpeningId__label || 'Job'} &middot; {formatDateShort(app.createdAt)}
                     </p>
                   </div>
                   <span className={`shrink-0 ml-3 inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${STAGE_COLORS[app.stage] ?? 'bg-gray-100 text-gray-700'}`}>
@@ -213,7 +206,7 @@ export function DashboardPage() {
                     </p>
                   </div>
                   <div className="shrink-0 ml-3 text-right">
-                    <p className="text-xs font-medium text-foreground">{formatDate(interview.interviewFrom)}</p>
+                    <p className="text-xs font-medium text-foreground">{formatDateShort(interview.interviewFrom)}</p>
                     <p className="text-xs text-muted-foreground">{formatTime(interview.interviewFrom)}</p>
                   </div>
                 </Link>

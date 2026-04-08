@@ -167,10 +167,11 @@ export function EntityDetailPage({ entityType, renderPipelineProgress, renderWor
 
   const getDisplayName = (row: Record<string, unknown>): string => {
     const { nameField } = entity.ui;
+    const resolve = (f: string) => row[`${f}__label`] ?? row[f] ?? '';
     if (Array.isArray(nameField)) {
-      return nameField.map((f) => row[f] ?? '').filter(Boolean).join(' ');
+      return nameField.map(resolve).filter(Boolean).join(' — ');
     }
-    return String(row[nameField] ?? '');
+    return String(resolve(nameField) || row.id || '');
   };
 
   const getSubtitle = (row: Record<string, unknown>): string | null => {
