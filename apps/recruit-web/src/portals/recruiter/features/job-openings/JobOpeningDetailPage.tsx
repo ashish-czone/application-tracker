@@ -175,6 +175,27 @@ export function JobOpeningDetailPage() {
     return undefined;
   }, [searchUsers, searchTags, layout]);
 
+  // Source breakdown — must be above early returns (Rules of Hooks)
+  const sourceCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const app of applications) {
+      const src = app.source || 'Unknown';
+      counts[src] = (counts[src] ?? 0) + 1;
+    }
+    return Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  }, [applications]);
+
+  // Avg days in pipeline
+  const avgDaysInPipeline = useMemo(() => {
+    if (applications.length === 0) return 0;
+    const total = applications.reduce((sum, app) => sum + daysSince(app.createdAt), 0);
+    return Math.round(total / applications.length);
+  }, [applications]);
+
+  // Recent activity for this job's applications
+  const { data: activityData } = useAuditLogs({ entityType: 'job_openings', entityId: id ?? '', includeRelated: true, limit: 5 });
+  const recentActivity = activityData?.data ?? [];
+
   if (isLoading) {
     return (
       <div className="max-w-5xl mx-auto space-y-4">
@@ -204,27 +225,6 @@ export function JobOpeningDetailPage() {
   const daysOpen = item.createdAt ? daysSince(item.createdAt as string) : 0;
   const applicationsCount = applications.length;
   const hiringManagerName = item.hiringManager__label as string | undefined;
-
-  // Source breakdown
-  const sourceCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    for (const app of applications) {
-      const src = app.source || 'Unknown';
-      counts[src] = (counts[src] ?? 0) + 1;
-    }
-    return Object.entries(counts).sort((a, b) => b[1] - a[1]);
-  }, [applications]);
-
-  // Avg days in pipeline
-  const avgDaysInPipeline = useMemo(() => {
-    if (applications.length === 0) return 0;
-    const total = applications.reduce((sum, app) => sum + daysSince(app.createdAt), 0);
-    return Math.round(total / applications.length);
-  }, [applications]);
-
-  // Recent activity for this job's applications
-  const { data: activityData } = useAuditLogs({ entityType: 'job_openings', entityId: id ?? '', includeRelated: true, limit: 5 });
-  const recentActivity = activityData?.data ?? [];
 
   const tabs: { key: TabKey; label: string; count?: number }[] = [
     { key: 'overview', label: 'Overview' },
