@@ -275,7 +275,7 @@ export function AppLayout() {
 
           {/* Page title */}
           <h1 className="text-sm font-semibold text-foreground hidden sm:block">
-            {currentPage?.label ?? 'Page'}
+            {currentPage?.label ?? ''}
           </h1>
 
           {/* Spacer */}
