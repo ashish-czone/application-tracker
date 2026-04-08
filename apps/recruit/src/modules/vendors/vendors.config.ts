@@ -33,7 +33,7 @@ export const VENDORS_CONFIG: EntityConfig = {
     country: { label: 'Country', section: 'address', sortOrder: 4, fieldType: 'category', categoryGroupSlug: 'countries' },
   },
 
-  listFields: ['email', 'phone', 'website'],
+  listFields: ['vendorName', 'email', 'phone', 'website'],
 
   sections: [
     { name: 'Vendor Information', fields: ['vendorName', 'email', 'phone', 'website', 'emailOptOut'] },
