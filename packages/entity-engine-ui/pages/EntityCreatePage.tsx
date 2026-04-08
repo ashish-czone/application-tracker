@@ -2,11 +2,10 @@ import { useMemo, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowLeft, Check, ChevronDown } from 'lucide-react';
-import { Form, Button, DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@packages/ui';
+import { ArrowLeft, Check } from 'lucide-react';
+import { Form, Button } from '@packages/ui';
 import { DynamicField, buildFormSchema } from '@packages/eav-attributes-ui';
-import { useFormDrafts, DraftRecoveryBanner, DraftStatusIndicator } from '@packages/drafts-ui';
-import type { FullLayoutField } from '@packages/entity-engine/types';
+import type { LayoutSection, FullLayoutField } from '@packages/entity-engine/types';
 import { useEntityEngine, useEntityHooks, useEntityConfig } from '../EntityEngineProvider';
 import { useEntityLayout } from '../helpers/useEntityLayout';
 
@@ -76,22 +75,8 @@ export function EntityCreatePage({ entityType }: EntityCreatePageProps) {
     defaultValues,
   });
 
-  // --- Drafts integration ---
-  const formValues = form.watch();
-
-  const drafts = useFormDrafts({
-    entityType,
-    draftKey: 'new',
-    formValues,
-    onRestore: (data) => {
-      form.reset(data);
-    },
-    enabled: editableFields.length > 0,
-  });
-
   const createMutation = hooks.useCreate({
     onSuccess: (created) => {
-      drafts.cleanup();
       navigate(`/${entity.slug}/${created.id}`);
     },
   });
@@ -99,7 +84,6 @@ export function EntityCreatePage({ entityType }: EntityCreatePageProps) {
   function onSubmit(data: Record<string, unknown>) {
     const cleaned: Record<string, unknown> = {};
     for (const [key, val] of Object.entries(data)) {
-      if (key.endsWith('__label')) continue;
       if (val !== '' && val !== undefined) {
         cleaned[key] = val;
       }
@@ -153,30 +137,24 @@ export function EntityCreatePage({ entityType }: EntityCreatePageProps) {
           className="grid gap-4 p-4"
           style={{ gridTemplateColumns: step.columns === 1 ? '1fr' : 'repeat(2, 1fr)' }}
         >
-          {step.editableFields.map((field: FullLayoutField) => {
-            const labelKey = `${field.fieldKey}__label`;
-            const labelVal = formValues[labelKey];
-            return (
-              <DynamicField
-                key={field.fieldKey}
-                field={field}
-                mode="edit"
-                resolvedLabel={typeof labelVal === 'string' ? labelVal : undefined}
-                chipOptions={Array.isArray(labelVal) ? labelVal : undefined}
-                onSearch={
-                  field.fieldType === 'user' ? searchUsers
-                  : field.fieldType === 'lookup' && field.lookupEntity ? (q: string) => searchLookup(field.lookupEntity!, q)
-                  : undefined
-                }
-                onChipSearch={
-                  field.fieldType === 'multi_user' ? searchUsers
-                  : (field.fieldType === 'multi_lookup') && field.lookupEntity ? (q: string) => searchLookup(field.lookupEntity!, q)
-                  : field.fieldType === 'tags' && field.tagGroupSlug ? (q: string) => searchTags(field.tagGroupSlug!, q)
-                  : undefined
-                }
-              />
-            );
-          })}
+          {step.editableFields.map((field: FullLayoutField) => (
+            <DynamicField
+              key={field.fieldKey}
+              field={field}
+              mode="edit"
+              onSearch={
+                field.fieldType === 'user' ? searchUsers
+                : field.fieldType === 'lookup' && field.lookupEntity ? (q: string) => searchLookup(field.lookupEntity!, q)
+                : undefined
+              }
+              onChipSearch={
+                field.fieldType === 'multi_user' ? searchUsers
+                : (field.fieldType === 'multi_lookup') && field.lookupEntity ? (q: string) => searchLookup(field.lookupEntity!, q)
+                : field.fieldType === 'tags' && field.tagGroupSlug ? (q: string) => searchTags(field.tagGroupSlug!, q)
+                : undefined
+              }
+            />
+          ))}
         </div>
       </div>
     );
@@ -193,11 +171,8 @@ export function EntityCreatePage({ entityType }: EntityCreatePageProps) {
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <div className="flex-1">
-          <div className="flex items-center gap-3">
-            <h1 className="text-lg font-semibold text-foreground">Create {entity.singularName}</h1>
-            <DraftStatusIndicator {...drafts.statusProps} />
-          </div>
+        <div>
+          <h1 className="text-lg font-semibold text-foreground">Create {entity.singularName}</h1>
           <p className="text-sm text-muted-foreground">
             {isWizard
               ? isReviewStep ? 'Review your details before saving' : `Step ${currentStep + 1} of ${totalSteps}`
@@ -236,12 +211,6 @@ export function EntityCreatePage({ entityType }: EntityCreatePageProps) {
             })}
           </ol>
         </nav>
-      )}
-
-      {drafts.bannerProps && (
-        <div className="mb-4">
-          <DraftRecoveryBanner {...drafts.bannerProps} />
-        </div>
       )}
 
       <Form form={form} onSubmit={form.handleSubmit(onSubmit)}>
@@ -314,27 +283,9 @@ export function EntityCreatePage({ entityType }: EntityCreatePageProps) {
                 Next
               </Button>
             ) : (
-              <div className="inline-flex items-center rounded-md">
-                <Button type="submit" disabled={createMutation.isPending} className="rounded-r-none">
-                  {createMutation.isPending ? 'Creating...' : 'Save'}
-                </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      type="button"
-                      disabled={createMutation.isPending}
-                      className="rounded-l-none border-l border-primary-foreground/20 px-2"
-                    >
-                      <ChevronDown className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={drafts.saveAsDraft}>
-                      Save as Draft
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+              <Button type="submit" disabled={createMutation.isPending}>
+                {createMutation.isPending ? 'Creating...' : 'Save'}
+              </Button>
             )}
           </div>
         </div>

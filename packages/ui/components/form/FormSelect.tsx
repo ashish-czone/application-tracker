@@ -54,7 +54,7 @@ export function FormSelect(props: FormSelectProps) {
           options={options}
           onSearch={onSearch}
           value={props.value}
-          onChange={(val) => props.onChange(val)}
+          onChange={props.onChange}
           placeholder={placeholder}
           disabled={disabled}
           displayValue={selectedOption?.label}
@@ -81,7 +81,7 @@ function FormContextSelect({
   className,
   initialDisplayValue,
 }: FormSelectControlledProps) {
-  const { control, setValue } = useFormContext();
+  const { control } = useFormContext();
   const errorId = `${name}-error`;
   const descriptionId = `${name}-description`;
 
@@ -107,10 +107,9 @@ function FormContextSelect({
               options={options}
               onSearch={onSearch}
               value={field.value ?? ''}
-              onChange={(val, selectedLabel) => {
+              onChange={(val) => {
                 field.onChange(val);
                 field.onBlur();
-                setValue(`${name}__label`, selectedLabel ?? null);
               }}
               placeholder={placeholder}
               disabled={disabled}
@@ -151,7 +150,7 @@ function SearchableSelect({
   options?: SelectOption[];
   onSearch?: (query: string) => Promise<SelectOption[]>;
   value: string;
-  onChange: (value: string, label?: string) => void;
+  onChange: (value: string) => void;
   placeholder?: string;
   disabled?: boolean;
   hasError?: boolean;
@@ -269,7 +268,7 @@ function SearchableSelect({
                     value={opt.value}
                     onSelect={() => {
                       const newVal = opt.value === value ? '' : opt.value;
-                      onChange(newVal, newVal ? opt.label : undefined);
+                      onChange(newVal);
                       setCachedLabel(newVal ? opt.label : undefined);
                       setOpen(false);
                     }}
