@@ -278,10 +278,10 @@ export interface SetPicklistOptionInput {
 
 export interface FieldMeta {
   label: string;
-  /** Which layout section this field belongs to (matched by section name) */
-  section: string;
-  /** Sort order within the section */
-  sortOrder: number;
+  /** Which layout section this field belongs to (matched by section name). Omit for computed/virtual fields. */
+  section?: string;
+  /** Sort order within the section. Omit for computed/virtual fields. */
+  sortOrder?: number;
   /** Override the auto-detected field type */
   fieldType?: FieldType;
   /** Custom UI widget type (e.g. 'color-picker') */
@@ -548,7 +548,7 @@ export interface EntityConfig<TTable extends PgTable = PgTable> {
   /** SQL subquery expressions added to SELECT in list and detail queries.
    *  Each entry becomes an extra column in the response (e.g., averageRating, evaluationsCount).
    *  Computed columns can also be used as sort keys. */
-  computedColumns?: { name: string; expression: SQL }[];
+  computedColumns?: { name: string; expression: SQL; sourceFields?: string[] }[];
 
   // --- UI ---
 

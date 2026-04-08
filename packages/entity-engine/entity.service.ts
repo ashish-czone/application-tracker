@@ -91,6 +91,17 @@ export class EntityService {
   }
 
 
+  /** Collect source fields from all computed columns (e.g. firstName/lastName hidden when fullName exists). */
+  private getCompositeNameFields(): Set<string> {
+    const fields = new Set<string>();
+    for (const col of this.config.computedColumns ?? []) {
+      if (col.sourceFields) {
+        for (const f of col.sourceFields) fields.add(f);
+      }
+    }
+    return fields;
+  }
+
   /** System columns always included in list queries. */
   private static readonly LIST_SYSTEM_COLUMNS = ['id', 'createdAt', 'updatedAt', 'deletedAt', 'createdBy'];
 

@@ -40,7 +40,7 @@ export const candidatesConfig: EntityConfig = {
   sections: CANDIDATE_SECTIONS,
 
   computedColumns: [
-    { name: 'fullName', expression: sql`TRIM(COALESCE(${candidates.firstName}, '') || ' ' || COALESCE(${candidates.lastName}, ''))` },
+    { name: 'fullName', expression: sql`TRIM(COALESCE(${candidates.firstName}, '') || ' ' || COALESCE(${candidates.lastName}, ''))`, sourceFields: ['firstName', 'lastName'] },
   ],
 
   lookup: {

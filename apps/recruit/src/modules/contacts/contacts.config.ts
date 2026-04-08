@@ -73,7 +73,7 @@ export const CONTACTS_CONFIG: EntityConfig = {
   },
 
   computedColumns: [
-    { name: 'fullName', expression: sql`TRIM(COALESCE(${contacts.firstName}, '') || ' ' || COALESCE(${contacts.lastName}, ''))` },
+    { name: 'fullName', expression: sql`TRIM(COALESCE(${contacts.firstName}, '') || ' ' || COALESCE(${contacts.lastName}, ''))`, sourceFields: ['firstName', 'lastName'] },
   ],
 
   listFields: ['fullName', 'clientId', 'email', 'mobile', 'jobTitle'],
