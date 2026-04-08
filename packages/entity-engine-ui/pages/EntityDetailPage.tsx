@@ -312,6 +312,13 @@ export function EntityDetailPage({ entityType, renderPipelineProgress, renderWor
         </div>
       </div>
 
+      {/* System metadata */}
+      <p className="text-xs text-muted-foreground mb-4">
+        {item.createdBy__label && <>Created by {item.createdBy__label as string}</>}
+        {item.createdAt && <>{item.createdBy__label ? ' · ' : ''}{new Date(item.createdAt as string).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</>}
+        {item.updatedAt && item.updatedAt !== item.createdAt && <> · Updated {new Date(item.updatedAt as string).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</>}
+      </p>
+
       {/* Tabs */}
       <DetailPageTabs activeTab={activeTab} onTabChange={setActiveTab} tabs={visibleTabs} />
 
