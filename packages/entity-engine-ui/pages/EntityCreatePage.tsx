@@ -78,11 +78,13 @@ export function EntityCreatePage({ entityType }: EntityCreatePageProps) {
 
   // --- Drafts integration ---
   const draftKey = 'new';
-  const { hasDraft, draft, discard: discardDraft, dismiss: dismissDraft } = useDraftRecovery(entityType, draftKey);
+  const { hasDraft, draft, isLoading: draftLoading, discard: discardDraft, dismiss: dismissDraft } = useDraftRecovery(entityType, draftKey);
   const deleteDraft = useDeleteDraft();
   const formValues = form.watch();
+  // Pause auto-save while checking for an existing draft or while the recovery banner is shown,
+  // otherwise the empty default values overwrite the saved draft before the user can restore.
   const autoSave = useAutoSaveDraft(entityType, draftKey, formValues, {
-    enabled: editableFields.length > 0,
+    enabled: editableFields.length > 0 && !hasDraft && !draftLoading,
   });
 
   function handleRestoreDraft(data: Record<string, unknown>) {
