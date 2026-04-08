@@ -90,12 +90,6 @@ export class EntityService {
     return this.config.fieldMeta[fieldKey]?.excludeFromList ?? false;
   }
 
-  /** Build set of composite nameField keys (auto-excluded from list). */
-  private getCompositeNameFields(): Set<string> {
-    const { nameField } = this.config.ui;
-    if (Array.isArray(nameField)) return new Set(nameField);
-    return new Set();
-  }
 
   /** System columns always included in list queries. */
   private static readonly LIST_SYSTEM_COLUMNS = ['id', 'createdAt', 'updatedAt', 'deletedAt', 'createdBy'];
@@ -193,15 +187,11 @@ export class EntityService {
       ? new Map(config.listFields.map((k, i) => [k, i]))
       : null;
 
-    // Build set of composite nameField keys — auto-excluded from list columns
-    const compositeNameFields = this.getCompositeNameFields();
-
     // All entity fields as columns with visible/order flags (exclude long-text/file types)
     const columns: ListLayoutColumn[] = allDefs
       .filter(d => {
         if (EntityService.shouldExcludeFromList(d.fieldType)) return false;
         if (this.isFieldExcludedFromList(d.fieldKey)) return false;
-        if (compositeNameFields.has(d.fieldKey)) return false;
         if (!d.isSystem) return true;
         // System fields can appear if explicitly listed or have a custom cell renderer
         return listFieldSet?.has(d.fieldKey) || !!config.fieldMeta[d.fieldKey]?.cellRenderer;

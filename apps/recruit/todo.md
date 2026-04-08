@@ -11,7 +11,7 @@ Compared against: Ashby, Greenhouse, Lever, Workable
 - [x] Offer list shows raw application UUID as the offer name (PR #644 — removed applicationId from list, use status as nameField)
 - [x] "Page" in top header bar instead of current page name (PR #642)
 - [x] Salary fields show "$0.00" instead of "-" for empty values (PR #642)
-- [x] Redundant columns — "Job Opening" + "Posting Title", "Client" + "Client Name" show same value (PR #645 — removed nameField from listFields for job-openings, clients, vendors)
+- [x] Redundant columns — "Job Opening" + "Posting Title", "Client" + "Client Name" show same value (PR #645/#646 — removed auto-generated __name__ column from platform, listFields is now single source of truth)
 - [x] Interview names display kebab-case ("general-interview" instead of "General Interview") (PR #643)
 - [x] Stage shows lowercase "offer" instead of "Offer" on detail page (PR #642)
 - [x] Country codes raw — "IT" instead of "Italy" (PR #643 — field type → category, seed data fixed)

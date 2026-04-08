@@ -1,4 +1,4 @@
-import { eq, ilike } from 'drizzle-orm';
+import { eq, ilike, sql } from 'drizzle-orm';
 import type { EntityConfig } from '@packages/entity-engine';
 import { candidates } from './schema/candidates';
 import { CANDIDATE_FIELD_META, CANDIDATE_SECTIONS } from './field-meta';
@@ -33,15 +33,22 @@ export const candidatesConfig: EntityConfig = {
     country: candidates.country,
   },
 
-  fieldMeta: CANDIDATE_FIELD_META,
+  fieldMeta: {
+    ...CANDIDATE_FIELD_META,
+    fullName: { label: 'Candidate', isSystem: true },
+  },
   sections: CANDIDATE_SECTIONS,
+
+  computedColumns: [
+    { name: 'fullName', expression: sql`TRIM(COALESCE(${candidates.firstName}, '') || ' ' || COALESCE(${candidates.lastName}, ''))` },
+  ],
 
   lookup: {
     labelField: 'firstName',
     searchFields: ['firstName', 'lastName', 'email'],
   },
 
-  listFields: ['firstName', 'lastName', 'email', 'mobile', 'currentTitle', 'currentCompany', 'candidateStatus', 'source', 'applicationsCount'],
+  listFields: ['fullName', 'email', 'mobile', 'currentTitle', 'currentCompany', 'candidateStatus', 'source', 'applicationsCount'],
 
   relationships: [
     {
@@ -96,7 +103,7 @@ export const candidatesConfig: EntityConfig = {
 
   ui: {
     icon: 'users',
-    nameField: ['firstName', 'lastName'],
+    nameField: 'fullName',
     subtitleField: 'currentTitle',
     navGroup: 'recruit',
     navOrder: 1,

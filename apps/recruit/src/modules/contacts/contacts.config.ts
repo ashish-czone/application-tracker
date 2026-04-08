@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import type { EntityConfig } from '@packages/entity-engine';
 import { contacts } from './schema/contacts';
 
@@ -20,6 +21,7 @@ export const CONTACTS_CONFIG: EntityConfig = {
   },
 
   fieldMeta: {
+    fullName: { label: 'Contact', isSystem: true },
     firstName: { label: 'First Name', section: 'basic', sortOrder: 0, isQuickCreate: true, maxLength: 125 },
     lastName: { label: 'Last Name', section: 'basic', sortOrder: 1, isQuickCreate: true, isSystem: true, maxLength: 125 },
     clientId: {
@@ -70,7 +72,11 @@ export const CONTACTS_CONFIG: EntityConfig = {
     emailOptOut: { label: 'Email Opt Out', section: 'other', sortOrder: 2, fieldType: 'boolean' },
   },
 
-  listFields: ['firstName', 'lastName', 'clientId', 'email', 'mobile', 'jobTitle'],
+  computedColumns: [
+    { name: 'fullName', expression: sql`TRIM(COALESCE(${contacts.firstName}, '') || ' ' || COALESCE(${contacts.lastName}, ''))` },
+  ],
+
+  listFields: ['fullName', 'clientId', 'email', 'mobile', 'jobTitle'],
 
   sections: [
     { name: 'Contact Information', fields: ['firstName', 'lastName', 'clientId', 'department', 'email', 'secondaryEmail', 'jobTitle', 'workPhone', 'mobile', 'fax', 'skypeId'] },
@@ -89,7 +95,7 @@ export const CONTACTS_CONFIG: EntityConfig = {
 
   ui: {
     icon: 'contact',
-    nameField: ['firstName', 'lastName'],
+    nameField: 'fullName',
     subtitleField: 'jobTitle',
     navGroup: 'recruit',
     navOrder: 5,
