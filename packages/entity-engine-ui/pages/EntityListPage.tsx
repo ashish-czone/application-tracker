@@ -9,6 +9,7 @@ import {
   type ColumnDef, type DataGridBulkAction, type DataGridFilterField,
 } from '@packages/ui';
 import type { EntityAction } from '@packages/entity-engine';
+import { formatLabel, formatDate, formatDateTime, formatCurrency } from '@packages/common';
 import { useEntityEngine, useEntityHooks, useEntityConfig } from '../EntityEngineProvider';
 import { useListLayout } from '../helpers/useListLayout';
 import { EntityQuickCreateForm } from './EntityQuickCreateForm';
@@ -345,18 +346,18 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
 
           // Currency (stored as cents)
           if (col.fieldType === 'currency') {
-            const num = Number(value);
-            return isNaN(num) ? (value != null ? String(value) : '-') : `$${(num / 100).toFixed(2)}`;
+            const num = value != null ? Number(value) : null;
+            return (num == null || isNaN(num)) ? '—' : formatCurrency(num);
           }
 
           // Date
           if (col.fieldType === 'date' && typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value)) {
-            return new Date(value).toLocaleDateString();
+            return formatDate(value);
           }
 
           // Datetime
           if (col.fieldType === 'datetime' && (typeof value === 'string' || value instanceof Date)) {
-            return new Date(value as string).toLocaleString();
+            return formatDateTime(value as string);
           }
 
           // Default
