@@ -6,128 +6,9 @@ import { ArrowLeft, Check, ChevronDown } from 'lucide-react';
 import { Form, Button, DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@packages/ui';
 import { DynamicField, buildFormSchema } from '@packages/eav-attributes-ui';
 import { useFormDrafts, DraftRecoveryBanner, DraftStatusIndicator } from '@packages/drafts-ui';
-import type { LayoutSection, FullLayoutField } from '@packages/entity-engine/types';
-import type { ApiFn } from '@packages/platform-ui/PlatformUIProvider';
+import type { FullLayoutField } from '@packages/entity-engine/types';
 import { useEntityEngine, useEntityHooks, useEntityConfig } from '../EntityEngineProvider';
 import { useEntityLayout } from '../helpers/useEntityLayout';
-
-interface ResolvedDraftLabels {
-  single: Record<string, string>;
-  multi: Record<string, { label: string; value: string; color?: string }[]>;
-}
-
-type OptionItem = { label: string; value: string; color?: string };
-
-async function resolveDraftLabels(
-  data: Record<string, unknown>,
-  fields: FullLayoutField[],
-  apiFn: ApiFn,
-): Promise<ResolvedDraftLabels> {
-  const single: Record<string, string> = {};
-  const multi: Record<string, OptionItem[]> = {};
-
-  // Collect fields by resolution strategy
-  const userFields: { fieldKey: string; ids: string[]; isMulti: boolean }[] = [];
-  const lookupsByEntity = new Map<string, { fieldKey: string; ids: string[]; isMulti: boolean }[]>();
-  const categoryBySlug = new Map<string, { fieldKey: string; id: string }[]>();
-  const tagsBySlug = new Map<string, { fieldKey: string; ids: string[] }[]>();
-
-  for (const field of fields) {
-    const val = data[field.fieldKey];
-    if (!val) continue;
-
-    const ft = field.fieldType;
-
-    if (ft === 'user' || ft === 'multi_user') {
-      const ids = Array.isArray(val) ? val as string[] : [val as string];
-      userFields.push({ fieldKey: field.fieldKey, ids, isMulti: ft === 'multi_user' });
-    } else if ((ft === 'lookup' || ft === 'multi_lookup') && field.lookupEntity) {
-      const ids = Array.isArray(val) ? val as string[] : [val as string];
-      const group = lookupsByEntity.get(field.lookupEntity) ?? [];
-      group.push({ fieldKey: field.fieldKey, ids, isMulti: ft === 'multi_lookup' });
-      lookupsByEntity.set(field.lookupEntity, group);
-    } else if (ft === 'category' && field.categoryGroupSlug) {
-      const group = categoryBySlug.get(field.categoryGroupSlug) ?? [];
-      group.push({ fieldKey: field.fieldKey, id: val as string });
-      categoryBySlug.set(field.categoryGroupSlug, group);
-    } else if (ft === 'tags' && field.tagGroupSlug) {
-      const ids = Array.isArray(val) ? val as string[] : [val as string];
-      const group = tagsBySlug.get(field.tagGroupSlug) ?? [];
-      group.push({ fieldKey: field.fieldKey, ids });
-      tagsBySlug.set(field.tagGroupSlug, group);
-    }
-  }
-
-  function assignLabels(
-    items: { fieldKey: string; ids: string[]; isMulti: boolean }[],
-    optMap: Map<string, OptionItem>,
-  ) {
-    for (const { fieldKey, ids, isMulti } of items) {
-      if (isMulti) {
-        multi[fieldKey] = ids.map(id => optMap.get(id) ?? { value: id, label: id });
-      } else {
-        const opt = optMap.get(ids[0]);
-        if (opt) single[fieldKey] = opt.label;
-      }
-    }
-  }
-
-  // Fire all resolution calls in parallel
-  const promises: Promise<void>[] = [];
-
-  // Users
-  if (userFields.length > 0) {
-    promises.push(
-      apiFn.get<{ data: { id: string; firstName: string; lastName: string }[] }>('/users?limit=100')
-        .then(res => {
-          const optMap = new Map<string, OptionItem>(
-            res.data.map(u => [u.id, { value: u.id, label: `${u.firstName} ${u.lastName}`.trim() }]),
-          );
-          assignLabels(userFields, optMap);
-        })
-        .catch(() => {}),
-    );
-  }
-
-  // Lookups (grouped by entity)
-  for (const [entitySlug, fields] of lookupsByEntity) {
-    promises.push(
-      apiFn.get<OptionItem[]>(`/lookups/${entitySlug}?limit=100`)
-        .then(options => {
-          const optMap = new Map<string, OptionItem>(options.map(o => [o.value, o]));
-          assignLabels(fields, optMap);
-        })
-        .catch(() => {}),
-    );
-  }
-
-  // Categories (grouped by slug)
-  for (const [slug, catFields] of categoryBySlug) {
-    promises.push(
-      apiFn.get<OptionItem[]>(`/categories/group/${slug}?limit=100`)
-        .then(options => {
-          const optMap = new Map<string, OptionItem>(options.map(o => [o.value, o]));
-          assignLabels(catFields.map(f => ({ fieldKey: f.fieldKey, ids: [f.id], isMulti: false })), optMap);
-        })
-        .catch(() => {}),
-    );
-  }
-
-  // Tags (grouped by slug)
-  for (const [slug, tagFields] of tagsBySlug) {
-    promises.push(
-      apiFn.get<OptionItem[]>(`/tags/group/${slug}?limit=100`)
-        .then(options => {
-          const optMap = new Map<string, OptionItem>(options.map(o => [o.value, o]));
-          assignLabels(tagFields.map(f => ({ ...f, isMulti: true })), optMap);
-        })
-        .catch(() => {}),
-    );
-  }
-
-  await Promise.all(promises);
-  return { single, multi };
-}
 
 interface EntityCreatePageProps {
   entityType: string;
@@ -196,16 +77,14 @@ export function EntityCreatePage({ entityType }: EntityCreatePageProps) {
   });
 
   // --- Drafts integration ---
-  const [draftLabels, setDraftLabels] = useState<ResolvedDraftLabels>({ single: {}, multi: {} });
+  const formValues = form.watch();
 
   const drafts = useFormDrafts({
     entityType,
     draftKey: 'new',
-    formValues: form.watch(),
-    onRestore: async (data) => {
+    formValues,
+    onRestore: (data) => {
       form.reset(data);
-      const labels = await resolveDraftLabels(data, editableFields, apiFn);
-      setDraftLabels(labels);
     },
     enabled: editableFields.length > 0,
   });
@@ -220,6 +99,7 @@ export function EntityCreatePage({ entityType }: EntityCreatePageProps) {
   function onSubmit(data: Record<string, unknown>) {
     const cleaned: Record<string, unknown> = {};
     for (const [key, val] of Object.entries(data)) {
+      if (key.endsWith('__label')) continue;
       if (val !== '' && val !== undefined) {
         cleaned[key] = val;
       }
@@ -273,26 +153,30 @@ export function EntityCreatePage({ entityType }: EntityCreatePageProps) {
           className="grid gap-4 p-4"
           style={{ gridTemplateColumns: step.columns === 1 ? '1fr' : 'repeat(2, 1fr)' }}
         >
-          {step.editableFields.map((field: FullLayoutField) => (
-            <DynamicField
-              key={field.fieldKey}
-              field={field}
-              mode="edit"
-              resolvedLabel={draftLabels.single[field.fieldKey]}
-              chipOptions={draftLabels.multi[field.fieldKey]}
-              onSearch={
-                field.fieldType === 'user' ? searchUsers
-                : field.fieldType === 'lookup' && field.lookupEntity ? (q: string) => searchLookup(field.lookupEntity!, q)
-                : undefined
-              }
-              onChipSearch={
-                field.fieldType === 'multi_user' ? searchUsers
-                : (field.fieldType === 'multi_lookup') && field.lookupEntity ? (q: string) => searchLookup(field.lookupEntity!, q)
-                : field.fieldType === 'tags' && field.tagGroupSlug ? (q: string) => searchTags(field.tagGroupSlug!, q)
-                : undefined
-              }
-            />
-          ))}
+          {step.editableFields.map((field: FullLayoutField) => {
+            const labelKey = `${field.fieldKey}__label`;
+            const labelVal = formValues[labelKey];
+            return (
+              <DynamicField
+                key={field.fieldKey}
+                field={field}
+                mode="edit"
+                resolvedLabel={typeof labelVal === 'string' ? labelVal : undefined}
+                chipOptions={Array.isArray(labelVal) ? labelVal : undefined}
+                onSearch={
+                  field.fieldType === 'user' ? searchUsers
+                  : field.fieldType === 'lookup' && field.lookupEntity ? (q: string) => searchLookup(field.lookupEntity!, q)
+                  : undefined
+                }
+                onChipSearch={
+                  field.fieldType === 'multi_user' ? searchUsers
+                  : (field.fieldType === 'multi_lookup') && field.lookupEntity ? (q: string) => searchLookup(field.lookupEntity!, q)
+                  : field.fieldType === 'tags' && field.tagGroupSlug ? (q: string) => searchTags(field.tagGroupSlug!, q)
+                  : undefined
+                }
+              />
+            );
+          })}
         </div>
       </div>
     );
