@@ -77,6 +77,13 @@ export function EvaluationForm({
   const watchedTemplateId = watch('templateId');
   const currentTemplate = templates.find((t: EvaluationTemplate) => t.id === watchedTemplateId) ?? null;
 
+  // Auto-select template once loaded (defaultValues captured before query resolves)
+  useEffect(() => {
+    if (!editingEvaluation && templates.length === 1 && !watchedTemplateId) {
+      setValue('templateId', templates[0].id);
+    }
+  }, [templates, editingEvaluation, watchedTemplateId, setValue]);
+
   // When template changes, reset scores to match new template criteria
   useEffect(() => {
     if (currentTemplate) {
