@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
-import { DatabaseService, eq, count, desc, avg, inArray } from '@packages/database';
+import { DatabaseService, eq, count, desc, avg, inArray, users } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
 import type { PaginatedResponse } from '@packages/common';
 import { withTenant, withTenantInsert } from '@packages/tenancy/helpers';
@@ -12,7 +12,7 @@ import {
   EVALUATIONS_EVALUATION_UPDATED,
   EVALUATIONS_EVALUATION_DELETED,
 } from '../events/types';
-import type { EvaluationWithScores, EvaluationScore, EvaluationTemplate } from '../types';
+import type { EvaluationWithScores, EvaluationScore, EvaluationTemplate, EvaluationEvaluator } from '../types';
 
 @Injectable()
 export class EvaluationsService {
@@ -217,8 +217,13 @@ export class EvaluationsService {
 
     const [rows, [{ total }]] = await Promise.all([
       this.database.db
-        .select()
+        .select({
+          evaluation: evaluations,
+          evaluatorFirstName: users.firstName,
+          evaluatorLastName: users.lastName,
+        })
         .from(evaluations)
+        .leftJoin(users, eq(evaluations.evaluatorId, users.id))
         .where(withTenant(evaluations,
           eq(evaluations.entityType, entityType),
           eq(evaluations.entityId, entityId),
@@ -235,15 +240,20 @@ export class EvaluationsService {
         )),
     ]);
 
-    const evaluationIds = rows.map((r) => r.id);
+    const evaluationIds = rows.map((r) => r.evaluation.id);
     const allScores = evaluationIds.length > 0
       ? await this.loadScoresForEvaluations(evaluationIds)
       : new Map<string, EvaluationScore[]>();
 
     return {
       data: rows.map((row) => ({
-        ...row,
-        scores: allScores.get(row.id) ?? [],
+        ...row.evaluation,
+        scores: allScores.get(row.evaluation.id) ?? [],
+        evaluator: {
+          id: row.evaluation.evaluatorId,
+          firstName: row.evaluatorFirstName,
+          lastName: row.evaluatorLastName,
+        } as EvaluationEvaluator,
       })) as EvaluationWithScores[],
       meta: {
         total: Number(total),

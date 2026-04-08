@@ -36,7 +36,14 @@ export interface EvaluationScore {
   createdAt: Date;
 }
 
+export interface EvaluationEvaluator {
+  id: string;
+  firstName: string | null;
+  lastName: string | null;
+}
+
 export interface EvaluationWithScores extends Evaluation {
   scores: EvaluationScore[];
   template?: EvaluationTemplate;
+  evaluator?: EvaluationEvaluator;
 }

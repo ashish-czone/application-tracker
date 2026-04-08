@@ -154,6 +154,17 @@ export function EntityDetailPage({ entityType, renderPipelineProgress, renderWor
   const primaryAction = detailActions.find((a) => a.picker);
   const dropdownActions = detailActions.filter((a) => a !== primaryAction);
 
+  // Build visible tabs: Overview (built-in) + registered tab plugins filtered by feature flags
+  // Must be above early returns to satisfy Rules of Hooks
+  const visibleTabs = useMemo(() => {
+    const registeredTabs = getDetailTabs(entityType);
+    const features = entity.features as Record<string, unknown>;
+    const filtered = registeredTabs.filter(
+      (tab) => !tab.featureFlag || features[tab.featureFlag],
+    );
+    return [{ key: 'overview', label: 'Overview', order: 0 }, ...filtered];
+  }, [getDetailTabs, entityType, entity.features]);
+
   const getDisplayName = (row: Record<string, unknown>): string => {
     const { nameField } = entity.ui;
     if (Array.isArray(nameField)) {
@@ -216,16 +227,6 @@ export function EntityDetailPage({ entityType, renderPipelineProgress, renderWor
   const displayName = getDisplayName(item);
   const subtitle = getSubtitle(item);
   const plugins = getDetailPlugins(entityType).sort((a, b) => a.order - b.order);
-
-  // Build visible tabs: Overview (built-in) + registered tab plugins filtered by feature flags
-  const visibleTabs = useMemo(() => {
-    const registeredTabs = getDetailTabs(entityType);
-    const features = entity.features as Record<string, unknown>;
-    const filtered = registeredTabs.filter(
-      (tab) => !tab.featureFlag || features[tab.featureFlag],
-    );
-    return [{ key: 'overview', label: 'Overview', order: 0 }, ...filtered];
-  }, [getDetailTabs, entityType, entity.features]);
 
   return (
     <div>
