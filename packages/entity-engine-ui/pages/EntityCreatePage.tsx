@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowLeft, Check } from 'lucide-react';
 import { Form, Button } from '@packages/ui';
 import { DynamicField, buildFormSchema } from '@packages/eav-attributes-ui';
+import { useAutoSaveDraft, useDraftRecovery, useDeleteDraft, DraftRecoveryBanner, DraftStatusIndicator } from '@packages/drafts-ui';
 import type { LayoutSection, FullLayoutField } from '@packages/entity-engine/types';
 import { useEntityEngine, useEntityHooks, useEntityConfig } from '../EntityEngineProvider';
 import { useEntityLayout } from '../helpers/useEntityLayout';
@@ -75,8 +76,18 @@ export function EntityCreatePage({ entityType }: EntityCreatePageProps) {
     defaultValues,
   });
 
+  // --- Drafts integration ---
+  const draftKey = 'new';
+  const { hasDraft, draft, discard: discardDraft } = useDraftRecovery(entityType, draftKey);
+  const deleteDraft = useDeleteDraft();
+  const formValues = form.watch();
+  const autoSave = useAutoSaveDraft(entityType, draftKey, formValues, {
+    enabled: editableFields.length > 0,
+  });
+
   const createMutation = hooks.useCreate({
     onSuccess: (created) => {
+      deleteDraft.mutate({ entityType, draftKey });
       navigate(`/${entity.slug}/${created.id}`);
     },
   });
@@ -171,8 +182,11 @@ export function EntityCreatePage({ entityType }: EntityCreatePageProps) {
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <div>
-          <h1 className="text-lg font-semibold text-foreground">Create {entity.singularName}</h1>
+        <div className="flex-1">
+          <div className="flex items-center gap-3">
+            <h1 className="text-lg font-semibold text-foreground">Create {entity.singularName}</h1>
+            <DraftStatusIndicator status={autoSave.status} lastSavedAt={autoSave.lastSavedAt} />
+          </div>
           <p className="text-sm text-muted-foreground">
             {isWizard
               ? isReviewStep ? 'Review your details before saving' : `Step ${currentStep + 1} of ${totalSteps}`
@@ -211,6 +225,16 @@ export function EntityCreatePage({ entityType }: EntityCreatePageProps) {
             })}
           </ol>
         </nav>
+      )}
+
+      {hasDraft && draft && (
+        <div className="mb-4">
+          <DraftRecoveryBanner
+            draft={draft}
+            onRestore={(data) => form.reset(data)}
+            onDiscard={discardDraft}
+          />
+        </div>
       )}
 
       <Form form={form} onSubmit={form.handleSubmit(onSubmit)}>
