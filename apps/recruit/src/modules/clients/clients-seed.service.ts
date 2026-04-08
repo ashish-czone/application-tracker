@@ -193,7 +193,7 @@ export class ClientsSeedService implements OnApplicationBootstrap {
     const now = new Date();
     const sampleInterviews = [
       {
-        interviewName: 'phone-interview',
+        interviewName: 'Phone Interview',
         candidateId: candidateRows[0]?.id,
         jobOpeningId: joRows[0]?.id,
         clientId: joRows[0]?.clientId,
@@ -203,7 +203,7 @@ export class ClientsSeedService implements OnApplicationBootstrap {
         status: 'scheduled',
       },
       {
-        interviewName: 'level-1-interview',
+        interviewName: 'Level 1 Interview',
         candidateId: candidateRows[1]?.id,
         jobOpeningId: joRows[0]?.id,
         clientId: joRows[0]?.clientId,
@@ -213,7 +213,7 @@ export class ClientsSeedService implements OnApplicationBootstrap {
         status: 'scheduled',
       },
       {
-        interviewName: 'level-2-interview',
+        interviewName: 'Level 2 Interview',
         candidateId: candidateRows[0]?.id,
         jobOpeningId: joRows[1]?.id,
         clientId: joRows[1]?.clientId,
@@ -224,7 +224,7 @@ export class ClientsSeedService implements OnApplicationBootstrap {
         scheduleComments: 'Candidate performed well in technical round.',
       },
       {
-        interviewName: 'general-interview',
+        interviewName: 'General Interview',
         candidateId: candidateRows[2]?.id,
         jobOpeningId: joRows[2]?.id,
         clientId: joRows[2]?.clientId,

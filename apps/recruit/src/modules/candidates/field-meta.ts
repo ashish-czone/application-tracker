@@ -19,7 +19,7 @@ export const CANDIDATE_FIELD_META: Record<string, FieldMeta> = {
   postalCode: { label: 'Postal Code', section: 'address', sortOrder: 1, maxLength: 30 },
   city: { label: 'City', section: 'address', sortOrder: 2 },
   state: { label: 'Province', section: 'address', sortOrder: 3 },
-  country: { label: 'Country', section: 'address', sortOrder: 4 },
+  country: { label: 'Country', section: 'address', sortOrder: 4, fieldType: 'category', categoryGroupSlug: 'countries' },
   // Professional Details
   experienceInYears: { label: 'Experience in Years', section: 'professional', sortOrder: 0, fieldType: 'decimal' },
   highestQualification: {
