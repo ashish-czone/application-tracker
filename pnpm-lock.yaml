@@ -1317,6 +1317,9 @@ importers:
       '@packages/common':
         specifier: workspace:*
         version: link:../common
+      '@packages/drafts-ui':
+        specifier: workspace:*
+        version: link:../drafts-ui
       '@packages/eav-attributes-ui':
         specifier: workspace:*
         version: link:../eav-attributes-ui
