@@ -252,8 +252,10 @@ export class LayoutService {
     });
 
     // Virtual "Unassigned Fields" section for fields not in any section
+    // Exclude system fields (createdAt, updatedAt, createdBy) — they are displayed
+    // as metadata on the detail page, not as editable layout fields.
     const unassignedFields = allFields
-      .filter(f => !placedFieldIds.has(f.id))
+      .filter(f => !placedFieldIds.has(f.id) && !f.isSystem)
       .map(f => ({
         ...(f as FullLayoutField),
         picklistOptions: picklistMap.get(f.id) ?? [],
