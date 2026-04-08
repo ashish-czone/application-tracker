@@ -44,7 +44,7 @@ export function FormChipInput({
   disabled,
   className,
 }: FormChipInputProps) {
-  const { control, setValue } = useFormContext();
+  const { control } = useFormContext();
   const errorId = `${name}-error`;
   const descriptionId = `${name}-description`;
 
@@ -72,7 +72,6 @@ export function FormChipInput({
               initialSelected={initialSelected}
               selectedValues={selectedValues}
               onChange={(vals) => field.onChange(vals)}
-              onLabelsChange={(labels) => setValue(`${name}__label`, labels)}
               onBlur={field.onBlur}
               placeholder={placeholder}
               disabled={disabled}
@@ -103,7 +102,6 @@ function ChipInputInner({
   initialSelected,
   selectedValues,
   onChange,
-  onLabelsChange,
   onBlur,
   placeholder,
   disabled,
@@ -116,7 +114,6 @@ function ChipInputInner({
   initialSelected?: ChipOption[];
   selectedValues: string[];
   onChange: (values: string[]) => void;
-  onLabelsChange?: (labels: ChipOption[]) => void;
   onBlur: () => void;
   placeholder?: string;
   disabled?: boolean;
@@ -135,17 +132,6 @@ function ChipInputInner({
     }
     return map;
   });
-
-  // Sync initialSelected prop changes into cache (e.g., draft restore)
-  React.useEffect(() => {
-    if (!initialSelected?.length) return;
-    setSelectedCache(prev => {
-      const next = new Map(prev);
-      for (const opt of initialSelected) next.set(opt.value, opt);
-      return next;
-    });
-  }, [initialSelected]);
-
   const containerRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
   const debouncedSearch = useDebounce(search, 300);
@@ -179,31 +165,19 @@ function ChipInputInner({
       )
     : asyncResults.filter((o) => !selectedSet.has(o.value));
 
-  const emitLabels = (vals: string[], extraOpt?: ChipOption) => {
-    if (!onLabelsChange) return;
-    onLabelsChange(vals.map(v => {
-      const o = optionMap.get(v) ?? (extraOpt?.value === v ? extraOpt : undefined);
-      return o ? { value: o.value, label: o.label, color: o.color } : { value: v, label: v };
-    }));
-  };
-
   const addValue = (value: string) => {
     // Cache the selected option so its label persists after async results clear
     const opt = optionMap.get(value);
     if (opt) {
       setSelectedCache(prev => new Map(prev).set(value, opt));
     }
-    const newVals = [...selectedValues, value];
-    onChange(newVals);
-    emitLabels(newVals, opt);
+    onChange([...selectedValues, value]);
     setSearch('');
     inputRef.current?.focus();
   };
 
   const removeValue = (value: string) => {
-    const newVals = selectedValues.filter(v => v !== value);
-    onChange(newVals);
-    emitLabels(newVals);
+    onChange(selectedValues.filter(v => v !== value));
   };
 
   // Close dropdown when clicking outside

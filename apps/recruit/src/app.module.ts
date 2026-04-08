@@ -24,7 +24,6 @@ import { RbacGuard } from '@packages/rbac';
 import { AppConfigService } from '@packages/settings';
 import { TaxonomyModule } from '@packages/taxonomy';
 import { NotesModule } from '@packages/notes';
-import { DraftsModule } from '@packages/drafts';
 import { EvaluationsModule } from '@packages/evaluations';
 import { AttachmentsModule } from '@packages/attachments';
 import { HierarchyModule } from '@packages/hierarchy';
@@ -114,7 +113,6 @@ import { validate } from './config/env.validation';
     HierarchyModule,
     TaxonomyModule,
     NotesModule,
-    DraftsModule,
     EvaluationsModule,
     AttachmentsModule,
     EavAttributesModule,

@@ -6,7 +6,6 @@
   "dependencies": {
     "@hookform/resolvers": "^5.0.0",
     "@packages/common": "workspace:*",
-    "@packages/drafts-ui": "workspace:*",
     "@packages/eav-attributes-ui": "workspace:*",
     "@packages/platform-ui-conditions": "workspace:*",
     "@packages/ui": "workspace:*",
