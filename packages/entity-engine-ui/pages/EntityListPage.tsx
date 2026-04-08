@@ -208,7 +208,6 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
   };
 
   // Default column visibility from the list layout's visible flag
-  // Excluded fields (composite nameField, excludeFromList) are already filtered out by the backend
   const defaultColumnVisibility = useMemo<Record<string, boolean>>(() => {
     if (!listLayout) return {};
     const visibility: Record<string, boolean> = {};
@@ -222,49 +221,57 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
   const columns = useMemo<ColumnDef<Row, unknown>[]>(() => {
     if (!listLayout) return [];
 
-    // Name column (always first, always visible, links to detail page)
-    const nameCol: ColumnDef<Row, unknown> = {
-      id: '__name__',
-      header: entity.singularName,
-      enableHiding: false,
-      enableSorting: false,
-      cell: ({ row }) => {
-        const item = row.original;
-        const isDeleted = !!item.deletedAt;
-        const name = getDisplayName(item);
-        return (
-          <div className={isDeleted ? 'opacity-50' : ''}>
-            <div className="flex items-center gap-2">
-              {isDeleted ? (
-                <span className="font-medium text-foreground">{name}</span>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => navigate(`/${entity.slug}/${item.id}`)}
-                  className="font-medium text-primary hover:underline text-left"
-                >
-                  {name}
-                </button>
-              )}
-              {isDeleted && (
-                <Badge variant="outline" className="text-[10px] px-1.5 py-0">Deleted</Badge>
-              )}
-            </div>
-          </div>
-        );
-      },
-    };
+    // Determine which column is the navigation link (matches nameField)
+    const { nameField } = entity.ui;
+    const linkFieldKey = Array.isArray(nameField) ? nameField[0] : nameField;
+    const hasLinkColumn = listLayout.columns.some((c) => c.fieldKey === linkFieldKey);
 
     // Data columns from listLayout (sorted by order)
     const dataCols: ColumnDef<Row, unknown>[] = listLayout.columns
       .sort((a, b) => a.order - b.order)
-      .map((col) => ({
+      .map((col, idx) => {
+        // The nameField column (or first column as fallback) becomes the clickable link
+        const isLinkColumn = hasLinkColumn ? col.fieldKey === linkFieldKey : idx === 0;
+
+        return {
         id: col.fieldKey,
         header: col.label,
         accessorKey: col.fieldKey,
         enableSorting: col.sortable,
+        enableHiding: !isLinkColumn,
         cell: ({ getValue, row }: any) => {
           const value = getValue();
+          const item = row.original;
+
+          // Link column — render as clickable navigation to detail page
+          if (isLinkColumn) {
+            const isDeleted = !!item.deletedAt;
+            const resolved = item[`${col.fieldKey}__label`] ?? value;
+            const displayValue = (resolved != null && resolved !== '')
+              ? ((col.fieldType === 'picklist' || col.fieldType === 'workflow') ? formatLabel(String(resolved)) : String(resolved))
+              : String(item.id ?? '');
+
+            return (
+              <div className={isDeleted ? 'opacity-50' : ''}>
+                <div className="flex items-center gap-2">
+                  {isDeleted ? (
+                    <span className="font-medium text-foreground">{displayValue}</span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/${entity.slug}/${item.id}`)}
+                      className="font-medium text-primary hover:underline text-left"
+                    >
+                      {displayValue}
+                    </button>
+                  )}
+                  {isDeleted && (
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">Deleted</Badge>
+                  )}
+                </div>
+              </div>
+            );
+          }
 
           // Custom cell renderer (registered via EntityEngineProvider)
           if (col.cellRenderer) {
@@ -364,7 +371,8 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
           if (value === null || value === undefined || value === '') return '-';
           return String(value);
         },
-      }));
+      };
+      });
 
     // Actions column (always last, not hideable)
     const rowActions = listLayout.actions.row ?? [];
@@ -406,7 +414,7 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
       },
     };
 
-    return [nameCol, ...dataCols, actionsCol];
+    return [...dataCols, actionsCol];
   }, [listLayout, entity, navigate]);
 
   return (
