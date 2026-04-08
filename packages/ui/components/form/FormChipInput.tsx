@@ -132,6 +132,17 @@ function ChipInputInner({
     }
     return map;
   });
+
+  // Sync initialSelected prop changes into cache (e.g., draft restore)
+  React.useEffect(() => {
+    if (!initialSelected?.length) return;
+    setSelectedCache(prev => {
+      const next = new Map(prev);
+      for (const opt of initialSelected) next.set(opt.value, opt);
+      return next;
+    });
+  }, [initialSelected]);
+
   const containerRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
   const debouncedSearch = useDebounce(search, 300);
