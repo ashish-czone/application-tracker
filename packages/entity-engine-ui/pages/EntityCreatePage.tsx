@@ -13,11 +13,10 @@ import { useEntityLayout } from '../helpers/useEntityLayout';
 
 interface ResolvedDraftLabels {
   single: Record<string, string>;
-  multi: Record<string, { label: string; value: string }[]>;
+  multi: Record<string, { label: string; value: string; color?: string }[]>;
 }
 
-const SINGLE_LOOKUP_TYPES = new Set(['lookup', 'user', 'category']);
-const MULTI_LOOKUP_TYPES = new Set(['multi_lookup', 'multi_user']);
+type OptionItem = { label: string; value: string; color?: string };
 
 async function resolveDraftLabels(
   data: Record<string, unknown>,
@@ -25,62 +24,108 @@ async function resolveDraftLabels(
   apiFn: ApiFn,
 ): Promise<ResolvedDraftLabels> {
   const single: Record<string, string> = {};
-  const multi: Record<string, { label: string; value: string }[]> = {};
+  const multi: Record<string, OptionItem[]> = {};
 
-  // Group fields by resolution strategy
-  const userIds = new Set<string>();
-  const userFields: { fieldKey: string; multi: boolean }[] = [];
-  const lookupsByEntity = new Map<string, { fieldKey: string; ids: string[]; multi: boolean }[]>();
+  // Collect fields by resolution strategy
+  const userFields: { fieldKey: string; ids: string[]; isMulti: boolean }[] = [];
+  const lookupsByEntity = new Map<string, { fieldKey: string; ids: string[]; isMulti: boolean }[]>();
+  const categoryBySlug = new Map<string, { fieldKey: string; id: string }[]>();
+  const tagsBySlug = new Map<string, { fieldKey: string; ids: string[] }[]>();
 
   for (const field of fields) {
     const val = data[field.fieldKey];
     if (!val) continue;
 
-    if (field.fieldType === 'user' || field.fieldType === 'multi_user') {
+    const ft = field.fieldType;
+
+    if (ft === 'user' || ft === 'multi_user') {
       const ids = Array.isArray(val) ? val as string[] : [val as string];
-      ids.forEach(id => userIds.add(id));
-      userFields.push({ fieldKey: field.fieldKey, multi: field.fieldType === 'multi_user' });
-    } else if ((field.fieldType === 'lookup' || field.fieldType === 'multi_lookup' || field.fieldType === 'category') && field.lookupEntity) {
+      userFields.push({ fieldKey: field.fieldKey, ids, isMulti: ft === 'multi_user' });
+    } else if ((ft === 'lookup' || ft === 'multi_lookup') && field.lookupEntity) {
       const ids = Array.isArray(val) ? val as string[] : [val as string];
       const group = lookupsByEntity.get(field.lookupEntity) ?? [];
-      group.push({ fieldKey: field.fieldKey, ids, multi: field.fieldType === 'multi_lookup' });
+      group.push({ fieldKey: field.fieldKey, ids, isMulti: ft === 'multi_lookup' });
       lookupsByEntity.set(field.lookupEntity, group);
+    } else if (ft === 'category' && field.categoryGroupSlug) {
+      const group = categoryBySlug.get(field.categoryGroupSlug) ?? [];
+      group.push({ fieldKey: field.fieldKey, id: val as string });
+      categoryBySlug.set(field.categoryGroupSlug, group);
+    } else if (ft === 'tags' && field.tagGroupSlug) {
+      const ids = Array.isArray(val) ? val as string[] : [val as string];
+      const group = tagsBySlug.get(field.tagGroupSlug) ?? [];
+      group.push({ fieldKey: field.fieldKey, ids });
+      tagsBySlug.set(field.tagGroupSlug, group);
     }
   }
 
-  // Resolve users in one call
-  if (userIds.size > 0) {
-    try {
-      const res = await apiFn.get<{ data: { id: string; firstName: string; lastName: string }[] }>('/users?limit=200');
-      const userMap = new Map(res.data.map(u => [u.id, `${u.firstName} ${u.lastName}`.trim()]));
-      for (const { fieldKey, multi: isMulti } of userFields) {
-        const val = data[fieldKey];
-        if (isMulti && Array.isArray(val)) {
-          multi[fieldKey] = val.map(id => ({ value: id, label: userMap.get(id) ?? id }));
-        } else if (typeof val === 'string') {
-          const label = userMap.get(val);
-          if (label) single[fieldKey] = label;
-        }
+  function assignLabels(
+    items: { fieldKey: string; ids: string[]; isMulti: boolean }[],
+    optMap: Map<string, OptionItem>,
+  ) {
+    for (const { fieldKey, ids, isMulti } of items) {
+      if (isMulti) {
+        multi[fieldKey] = ids.map(id => optMap.get(id) ?? { value: id, label: id });
+      } else {
+        const opt = optMap.get(ids[0]);
+        if (opt) single[fieldKey] = opt.label;
       }
-    } catch { /* ignore — labels just won't show */ }
+    }
   }
 
-  // Resolve lookups grouped by entity type
-  for (const [entitySlug, lookupFields] of lookupsByEntity) {
-    try {
-      const options = await apiFn.get<{ label: string; value: string }[]>(`/lookups/${entitySlug}?limit=200`);
-      const optMap = new Map(options.map(o => [o.value, o.label]));
-      for (const { fieldKey, ids, multi: isMulti } of lookupFields) {
-        if (isMulti) {
-          multi[fieldKey] = ids.map(id => ({ value: id, label: optMap.get(id) ?? id }));
-        } else {
-          const label = optMap.get(ids[0]);
-          if (label) single[fieldKey] = label;
-        }
-      }
-    } catch { /* ignore */ }
+  // Fire all resolution calls in parallel
+  const promises: Promise<void>[] = [];
+
+  // Users
+  if (userFields.length > 0) {
+    promises.push(
+      apiFn.get<{ data: { id: string; firstName: string; lastName: string }[] }>('/users?limit=100')
+        .then(res => {
+          const optMap = new Map<string, OptionItem>(
+            res.data.map(u => [u.id, { value: u.id, label: `${u.firstName} ${u.lastName}`.trim() }]),
+          );
+          assignLabels(userFields, optMap);
+        })
+        .catch(() => {}),
+    );
   }
 
+  // Lookups (grouped by entity)
+  for (const [entitySlug, fields] of lookupsByEntity) {
+    promises.push(
+      apiFn.get<OptionItem[]>(`/lookups/${entitySlug}?limit=100`)
+        .then(options => {
+          const optMap = new Map<string, OptionItem>(options.map(o => [o.value, o]));
+          assignLabels(fields, optMap);
+        })
+        .catch(() => {}),
+    );
+  }
+
+  // Categories (grouped by slug)
+  for (const [slug, catFields] of categoryBySlug) {
+    promises.push(
+      apiFn.get<OptionItem[]>(`/categories/group/${slug}?limit=100`)
+        .then(options => {
+          const optMap = new Map<string, OptionItem>(options.map(o => [o.value, o]));
+          assignLabels(catFields.map(f => ({ fieldKey: f.fieldKey, ids: [f.id], isMulti: false })), optMap);
+        })
+        .catch(() => {}),
+    );
+  }
+
+  // Tags (grouped by slug)
+  for (const [slug, tagFields] of tagsBySlug) {
+    promises.push(
+      apiFn.get<OptionItem[]>(`/tags/group/${slug}?limit=100`)
+        .then(options => {
+          const optMap = new Map<string, OptionItem>(options.map(o => [o.value, o]));
+          assignLabels(tagFields.map(f => ({ ...f, isMulti: true })), optMap);
+        })
+        .catch(() => {}),
+    );
+  }
+
+  await Promise.all(promises);
   return { single, multi };
 }
 
