@@ -7,16 +7,16 @@ Compared against: Ashby, Greenhouse, Lever, Workable
 
 ## Critical Bugs
 
-- [ ] Application detail title shows raw UUIDs instead of "Candidate -> Job Opening"
-- [ ] Offer list shows raw application UUID as the offer name
-- [ ] "Page" in top header bar instead of current page name
-- [ ] Salary fields show "$0.00" instead of "-" for empty values
-- [ ] Redundant columns — "Job Opening" + "Posting Title", "Client" + "Client Name" show same value
-- [ ] Interview names display kebab-case ("general-interview" instead of "General Interview")
-- [ ] Stage shows lowercase "offer" instead of "Offer" on detail page
-- [ ] Country codes raw — "IT" instead of "Italy"
-- [ ] "Scheduled" and "Completed" interview statuses both use green — hard to distinguish
-- [ ] Date format inconsistent — "Apr 7" on some pages, "12/04/2026, 17:49:44" with seconds on others
+- [x] Application detail title shows raw UUIDs instead of "Candidate -> Job Opening" (PR #642)
+- [x] Offer list shows raw application UUID as the offer name (PR #644 — removed applicationId from list, use status as nameField)
+- [x] "Page" in top header bar instead of current page name (PR #642)
+- [x] Salary fields show "$0.00" instead of "-" for empty values (PR #642)
+- [ ] Redundant columns — "Job Opening" + "Posting Title", "Client" + "Client Name" show same value (needs investigation with running app)
+- [x] Interview names display kebab-case ("general-interview" instead of "General Interview") (PR #643)
+- [x] Stage shows lowercase "offer" instead of "Offer" on detail page (PR #642)
+- [x] Country codes raw — "IT" instead of "Italy" (PR #643 — field type → category, seed data fixed)
+- [x] "Scheduled" and "Completed" interview statuses — already distinct (blue vs emerald in StatusBadgeRenderer)
+- [x] Date format inconsistent — "Apr 7" on some pages, "12/04/2026, 17:49:44" with seconds on others (PR #642)
 
 ---
 
