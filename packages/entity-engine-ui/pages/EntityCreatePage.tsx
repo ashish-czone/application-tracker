@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowLeft, Check, ChevronDown } from 'lucide-react';
-import { Form, Button, toast, DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@packages/ui';
+import { Form, Button, DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@packages/ui';
 import { DynamicField, buildFormSchema } from '@packages/eav-attributes-ui';
-import { useAutoSaveDraft, useDraftRecovery, useDeleteDraft, DraftRecoveryBanner, DraftStatusIndicator } from '@packages/drafts-ui';
+import { useFormDrafts, DraftRecoveryBanner, DraftStatusIndicator } from '@packages/drafts-ui';
 import type { LayoutSection, FullLayoutField } from '@packages/entity-engine/types';
 import { useEntityEngine, useEntityHooks, useEntityConfig } from '../EntityEngineProvider';
 import { useEntityLayout } from '../helpers/useEntityLayout';
@@ -77,30 +77,17 @@ export function EntityCreatePage({ entityType }: EntityCreatePageProps) {
   });
 
   // --- Drafts integration ---
-  const draftKey = 'new';
-  const { hasDraft, draft, isLoading: draftLoading, discard: discardDraft, dismiss: dismissDraft } = useDraftRecovery(entityType, draftKey);
-  const deleteDraft = useDeleteDraft();
-  const formValues = form.watch();
-  // Pause auto-save while checking for an existing draft or while the recovery banner is shown,
-  // otherwise the empty default values overwrite the saved draft before the user can restore.
-  const autoSave = useAutoSaveDraft(entityType, draftKey, formValues, {
-    enabled: editableFields.length > 0 && !hasDraft && !draftLoading,
+  const drafts = useFormDrafts({
+    entityType,
+    draftKey: 'new',
+    formValues: form.watch(),
+    onRestore: (data) => form.reset(data),
+    enabled: editableFields.length > 0,
   });
-
-  function handleRestoreDraft(data: Record<string, unknown>) {
-    form.reset(data);
-    dismissDraft();
-    toast.success('Draft restored');
-  }
-
-  async function handleSaveAsDraft() {
-    await autoSave.saveNow();
-    toast.success('Draft saved');
-  }
 
   const createMutation = hooks.useCreate({
     onSuccess: (created) => {
-      deleteDraft.mutate({ entityType, draftKey });
+      drafts.cleanup();
       navigate(`/${entity.slug}/${created.id}`);
     },
   });
@@ -198,7 +185,7 @@ export function EntityCreatePage({ entityType }: EntityCreatePageProps) {
         <div className="flex-1">
           <div className="flex items-center gap-3">
             <h1 className="text-lg font-semibold text-foreground">Create {entity.singularName}</h1>
-            <DraftStatusIndicator status={autoSave.status} lastSavedAt={autoSave.lastSavedAt} />
+            <DraftStatusIndicator {...drafts.statusProps} />
           </div>
           <p className="text-sm text-muted-foreground">
             {isWizard
@@ -240,13 +227,9 @@ export function EntityCreatePage({ entityType }: EntityCreatePageProps) {
         </nav>
       )}
 
-      {hasDraft && draft && (
+      {drafts.bannerProps && (
         <div className="mb-4">
-          <DraftRecoveryBanner
-            draft={draft}
-            onRestore={handleRestoreDraft}
-            onDiscard={discardDraft}
-          />
+          <DraftRecoveryBanner {...drafts.bannerProps} />
         </div>
       )}
 
@@ -335,7 +318,7 @@ export function EntityCreatePage({ entityType }: EntityCreatePageProps) {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={handleSaveAsDraft}>
+                    <DropdownMenuItem onClick={drafts.saveAsDraft}>
                       Save as Draft
                     </DropdownMenuItem>
                   </DropdownMenuContent>

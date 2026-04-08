@@ -162,3 +162,58 @@ export function useDraftRecovery(entityType: string, draftKey: string) {
     dismiss,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Composable hook — single hook to make any form draftable
+// ---------------------------------------------------------------------------
+
+interface UseFormDraftsOptions {
+  entityType: string;
+  draftKey: string;
+  /** Current form values — typically `form.watch()` */
+  formValues: Record<string, unknown> | null;
+  /** Called with saved draft data when user clicks Restore — typically `(data) => form.reset(data)` */
+  onRestore: (data: Record<string, unknown>) => void;
+  enabled?: boolean;
+  debounceMs?: number;
+}
+
+export function useFormDrafts(options: UseFormDraftsOptions) {
+  const { entityType, draftKey, formValues, onRestore, enabled = true, debounceMs } = options;
+
+  const { hasDraft, draft, isLoading: draftLoading, discard: discardInternal, dismiss } = useDraftRecovery(entityType, draftKey);
+  const deleteDraftMutation = useDeleteDraft();
+
+  const autoSave = useAutoSaveDraft(entityType, draftKey, formValues, {
+    enabled: enabled && !hasDraft && !draftLoading,
+    debounceMs,
+  });
+
+  const restore = useCallback((data: Record<string, unknown>) => {
+    onRestore(data);
+    dismiss();
+    toast.success('Draft restored');
+  }, [onRestore, dismiss]);
+
+  const saveAsDraft = useCallback(async () => {
+    await autoSave.saveNow();
+    toast.success('Draft saved');
+  }, [autoSave]);
+
+  const cleanup = useCallback(() => {
+    deleteDraftMutation.mutate({ entityType, draftKey });
+  }, [deleteDraftMutation, entityType, draftKey]);
+
+  return {
+    hasDraft,
+    draft,
+    /** Spread onto <DraftRecoveryBanner /> — null when no draft to recover */
+    bannerProps: hasDraft && draft ? { draft, onRestore: restore, onDiscard: discardInternal } : null,
+    /** Spread onto <DraftStatusIndicator /> */
+    statusProps: { status: autoSave.status, lastSavedAt: autoSave.lastSavedAt },
+    /** Explicit save-as-draft action with toast */
+    saveAsDraft,
+    /** Delete draft — call on successful entity creation */
+    cleanup,
+  };
+}
