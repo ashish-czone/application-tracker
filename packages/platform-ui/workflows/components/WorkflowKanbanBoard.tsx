@@ -5,6 +5,7 @@ import { useWorkflow, useEntityTransition } from '../hooks';
 import { getAvailableTransitions } from '../helpers/getAvailableTransitions';
 import type { WorkflowDefinition, WorkflowState } from '../types';
 import { TransitionConfirmDialog } from './TransitionConfirmDialog';
+import { formatLabel } from '@packages/common';
 
 interface WorkflowKanbanBoardProps {
   /** Workflow definition slug (e.g., 'application-stage') */
@@ -35,10 +36,6 @@ interface PendingTransition {
   reasonOptions?: string[] | null;
   reasonRequired?: boolean;
   commentRequired?: boolean;
-}
-
-function formatLabel(value: string): string {
-  return value.replace(/[-_]/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
 }
 
 /**

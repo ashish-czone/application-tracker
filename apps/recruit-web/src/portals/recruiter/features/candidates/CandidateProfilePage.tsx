@@ -27,6 +27,7 @@ import {
   useEntityTransition,
 } from '@packages/platform-ui/workflows';
 import { EntityPickerPanel } from '@packages/entity-engine-ui/components/EntityPickerPanel';
+import { formatLabel, formatDate } from '@packages/common';
 import { api } from '../../../../lib/api';
 
 type TabKey = 'overview' | 'applications' | 'notes' | 'attachments' | 'activity';
@@ -71,14 +72,6 @@ function getAvatarColor(name: string): string {
   let hash = 0;
   for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
   return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
-}
-
-function formatLabel(value: string): string {
-  return value.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 interface Application {

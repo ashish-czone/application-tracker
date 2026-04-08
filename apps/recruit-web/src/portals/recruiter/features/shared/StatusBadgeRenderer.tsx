@@ -1,4 +1,5 @@
 import { Badge } from '@packages/ui';
+import { formatLabel } from '@packages/common';
 
 const STATUS_COLORS: Record<string, { bg: string; text: string; dot: string }> = {
   // Candidate statuses
@@ -46,12 +47,6 @@ const STATUS_COLORS: Record<string, { bg: string; text: string; dot: string }> =
 };
 
 const DEFAULT_COLORS = { bg: 'bg-gray-50', text: 'text-gray-600', dot: 'bg-gray-400' };
-
-function formatLabel(value: string): string {
-  return value
-    .replace(/[-_]/g, ' ')
-    .replace(/\b\w/g, (c) => c.toUpperCase());
-}
 
 export function StatusBadgeRenderer({ value }: { value: unknown; row: Record<string, unknown>; entityType: string }) {
   if (!value || typeof value !== 'string') return <span className="text-sm text-muted-foreground">-</span>;
