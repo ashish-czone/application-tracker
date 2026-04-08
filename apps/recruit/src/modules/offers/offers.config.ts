@@ -96,7 +96,7 @@ export const offersConfig: EntityConfig = {
     },
   },
 
-  listFields: ['applicationId', 'status', 'salary', 'startDate', 'expiresAt'],
+  listFields: ['status', 'salary', 'salaryPeriod', 'startDate', 'expiresAt'],
 
   sections: [
     { name: 'Offer Details', fields: ['applicationId', 'status'] },
@@ -112,7 +112,7 @@ export const offersConfig: EntityConfig = {
 
   ui: {
     icon: 'file-signature',
-    nameField: ['applicationId'],
+    nameField: 'status',
     navGroup: 'recruit',
     navOrder: 4,
   },
