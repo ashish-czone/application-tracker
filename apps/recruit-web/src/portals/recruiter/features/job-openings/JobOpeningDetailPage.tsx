@@ -20,6 +20,7 @@ import { WorkflowKanbanBoard } from '@packages/platform-ui/workflows';
 import { StarRating } from '@packages/evaluations-ui';
 import { ScheduleInterviewDialog } from '../shared/ScheduleInterviewDialog';
 import { CreateOfferDialog } from '../shared/CreateOfferDialog';
+import { ApplicationPreviewPanel } from '../applications/ApplicationPreviewPanel';
 import { api } from '../../../../lib/api';
 
 type TabKey = 'overview' | 'applications' | 'audit';
@@ -82,6 +83,7 @@ export function JobOpeningDetailPage() {
   const [showApplyPicker, setShowApplyPicker] = useState(false);
   const [scheduleFor, setScheduleFor] = useState<{ candidateId: string; jobOpeningId: string } | null>(null);
   const [createOfferFor, setCreateOfferFor] = useState<string | null>(null);
+  const [previewApplicationId, setPreviewApplicationId] = useState<string | null>(null);
 
   const { data: item, isLoading, isError } = hooks.useDetail(id ?? null);
   const { data: layout } = useEntityLayout('job_openings');
@@ -529,10 +531,9 @@ export function JobOpeningDetailPage() {
                   }}
                   renderCard={(record) => (
                     <div className="group/card relative">
-                      <Link
-                        to={`/applications/${record.id}`}
-                        className="block w-full"
-                        onClick={(e) => e.stopPropagation()}
+                      <div
+                        className="block w-full cursor-pointer"
+                        onClick={(e) => { e.stopPropagation(); setPreviewApplicationId(record.id as string); }}
                       >
                         <div className="text-[13px] font-medium text-foreground group-hover/card:text-primary transition-colors leading-snug truncate pr-6">
                           {(record.candidateId__label as string) || 'Candidate'}
@@ -577,7 +578,7 @@ export function JobOpeningDetailPage() {
                             </button>
                           );
                         })()}
-                      </Link>
+                      </div>
                       <button
                         type="button"
                         title="Schedule Interview"
@@ -595,10 +596,10 @@ export function JobOpeningDetailPage() {
               ) : (
                 <div className="space-y-2">
                   {applications.map((app) => (
-                    <Link
+                    <div
                       key={app.id}
-                      to={`/applications/${app.id}`}
-                      className="group flex items-center justify-between rounded-lg border border-border bg-card px-4 py-3 hover:border-primary/30 hover:shadow-sm transition-all"
+                      className="group flex items-center justify-between rounded-lg border border-border bg-card px-4 py-3 hover:border-primary/30 hover:shadow-sm transition-all cursor-pointer"
+                      onClick={() => setPreviewApplicationId(app.id)}
                     >
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
@@ -617,7 +618,7 @@ export function JobOpeningDetailPage() {
                       >
                         {formatLabel(app.stage)}
                       </span>
-                    </Link>
+                    </div>
                   ))}
                 </div>
               )}
@@ -688,6 +689,15 @@ export function JobOpeningDetailPage() {
           }}
         />
       )}
+
+      <ApplicationPreviewPanel
+        applicationId={previewApplicationId}
+        open={!!previewApplicationId}
+        onOpenChange={(open) => { if (!open) setPreviewApplicationId(null); }}
+        onTransitionSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['job_openings', id, 'applications'] });
+        }}
+      />
     </div>
   );
 }
