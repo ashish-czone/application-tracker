@@ -109,14 +109,15 @@ export class OrgUnitService {
   async getVisibleOrgUnitIds(userId: string): Promise<string[]> {
     const result = await this.database.db.execute<{ id: string }>(sql`
       WITH RECURSIVE descendants AS (
-        SELECT ou.id
+        SELECT ou.id, 1 AS depth
         FROM org_unit_members oum
         INNER JOIN org_units ou ON ou.id = oum.org_unit_id
         WHERE oum.user_id = ${userId}
         UNION ALL
-        SELECT child.id
+        SELECT child.id, d.depth + 1
         FROM org_units child
         INNER JOIN descendants d ON child.parent_id = d.id
+        WHERE d.depth < 20
       )
       SELECT DISTINCT id FROM descendants
     `);

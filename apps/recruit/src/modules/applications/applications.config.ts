@@ -1,7 +1,8 @@
-import { sql } from 'drizzle-orm';
+import { sql, isNull } from 'drizzle-orm';
 import type { EntityConfig } from '@packages/entity-engine';
 import { evaluationAvgExpr, evaluationCountExpr } from '@packages/evaluations';
 import { applications } from './schema/applications';
+import { jobOpenings } from '../job-openings/schema/job-openings';
 
 export const APPLICATIONS_CONFIG: EntityConfig = {
   entityType: 'applications',
@@ -120,7 +121,7 @@ export const APPLICATIONS_CONFIG: EntityConfig = {
         key: 'my-pipeline',
         label: 'Applications for my Job Openings',
         resolve: async (userId) => sql`${applications.jobOpeningId} IN (
-          SELECT id FROM job_openings WHERE hiring_manager = ${userId} AND deleted_at IS NULL
+          SELECT ${jobOpenings.id} FROM ${jobOpenings} WHERE ${jobOpenings.hiringManager} = ${userId} AND ${jobOpenings.deletedAt} IS NULL
         )`,
       },
     ],

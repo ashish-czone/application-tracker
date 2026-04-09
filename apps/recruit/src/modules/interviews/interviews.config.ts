@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import type { EntityConfig } from '@packages/entity-engine';
 import { interviews } from './schema/interviews';
+import { jobOpenings } from '../job-openings/schema/job-openings';
 
 export const INTERVIEWS_CONFIG: EntityConfig = {
   entityType: 'interviews',
@@ -92,7 +93,7 @@ export const INTERVIEWS_CONFIG: EntityConfig = {
         key: 'my-job-interviews',
         label: 'Interviews for my Job Openings',
         resolve: async (userId) => sql`${interviews.jobOpeningId} IN (
-          SELECT id FROM job_openings WHERE hiring_manager = ${userId} AND deleted_at IS NULL
+          SELECT ${jobOpenings.id} FROM ${jobOpenings} WHERE ${jobOpenings.hiringManager} = ${userId} AND ${jobOpenings.deletedAt} IS NULL
         )`,
       },
     ],
