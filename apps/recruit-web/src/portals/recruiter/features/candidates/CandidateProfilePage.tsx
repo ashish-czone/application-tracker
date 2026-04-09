@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft, Mail, Phone, MapPin, Building2, Briefcase,
   Calendar, Globe, Linkedin, ExternalLink, MoreHorizontal,
-  Copy, Trash2, Pencil,
+  Copy, Trash2, Pencil, CalendarPlus, ClipboardCheck, ArrowRight,
 } from 'lucide-react';
 import {
   Button, Badge, ConfirmDialog,
@@ -28,6 +28,7 @@ import {
 } from '@packages/platform-ui/workflows';
 import { EntityPickerPanel } from '@packages/entity-engine-ui/components/EntityPickerPanel';
 import { formatLabel, formatDate } from '@packages/common';
+import { ScheduleInterviewDialog } from '../shared/ScheduleInterviewDialog';
 import { api } from '../../../../lib/api';
 
 type TabKey = 'overview' | 'applications' | 'notes' | 'attachments' | 'activity';
@@ -93,6 +94,7 @@ export function CandidateProfilePage() {
   const [activeTab, setActiveTab] = useState<TabKey>('overview');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showApplyPicker, setShowApplyPicker] = useState(false);
+  const [scheduleFor, setScheduleFor] = useState<{ candidateId: string; jobOpeningId: string } | null>(null);
 
   const { data: item, isLoading, isError } = hooks.useDetail(id ?? null);
   const { data: layout } = useEntityLayout('candidates');
@@ -294,12 +296,53 @@ export function CandidateProfilePage() {
             </div>
           </div>
 
-          {/* Actions bar */}
-          <div className="flex items-center gap-2 mt-4 pt-4 border-t border-border">
+          {/* Action toolbar */}
+          <div className="flex items-center gap-2 mt-4 pt-4 border-t border-border flex-wrap">
+            {email && (
+              <Button variant="outline" size="sm" asChild>
+                <a href={`mailto:${email}`}>
+                  <Mail className="h-3.5 w-3.5 mr-1.5" />
+                  Email
+                </a>
+              </Button>
+            )}
+
+            {applications.length > 0 && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const activeApp = applications.find((a) => !['hired', 'rejected', 'withdrawn'].includes(a.stage));
+                    if (activeApp) {
+                      setScheduleFor({ candidateId: id!, jobOpeningId: activeApp.jobOpeningId });
+                    } else {
+                      setScheduleFor({ candidateId: id!, jobOpeningId: applications[0].jobOpeningId });
+                    }
+                  }}
+                >
+                  <CalendarPlus className="h-3.5 w-3.5 mr-1.5" />
+                  Schedule
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const activeApp = applications.find((a) => !['hired', 'rejected', 'withdrawn'].includes(a.stage));
+                    navigate(`/applications/${activeApp?.id ?? applications[0].id}`);
+                  }}
+                >
+                  <ClipboardCheck className="h-3.5 w-3.5 mr-1.5" />
+                  Evaluate
+                </Button>
+              </>
+            )}
+
             <Button size="sm" onClick={() => setShowApplyPicker(true)}>
               <Briefcase className="h-3.5 w-3.5 mr-1.5" />
               Apply to Job
             </Button>
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm">
@@ -450,6 +493,17 @@ export function CandidateProfilePage() {
         isPending={deleteMutation.isPending}
         onConfirm={() => deleteMutation.mutate(item.id as string)}
       />
+
+      {/* Schedule interview dialog */}
+      {scheduleFor && (
+        <ScheduleInterviewDialog
+          open={!!scheduleFor}
+          onOpenChange={(open) => { if (!open) setScheduleFor(null); }}
+          candidateId={scheduleFor.candidateId}
+          jobOpeningId={scheduleFor.jobOpeningId}
+          onSuccess={() => setScheduleFor(null)}
+        />
+      )}
 
       {/* Apply to job picker */}
       {showApplyPicker && (
