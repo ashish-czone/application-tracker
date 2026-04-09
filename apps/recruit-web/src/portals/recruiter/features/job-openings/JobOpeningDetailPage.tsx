@@ -5,7 +5,7 @@ import {
   ArrowLeft, Building2, MapPin, Briefcase, Calendar, Users2, User,
   Clock, MoreHorizontal, Copy, Trash2, UserPlus, FileText,
   LayoutGrid, List, CalendarPlus, TrendingUp, Activity, FileSignature,
-  AlertCircle, Clock4, UserCheck,
+  AlertCircle, Clock4, UserCheck, Layers,
 } from 'lucide-react';
 import {
   Button, ConfirmDialog,
@@ -196,6 +196,26 @@ export function JobOpeningDetailPage() {
     }
     return map;
   }, [interviewsData]);
+
+  // Fetch cross-job applications to show candidate awareness on cards
+  const candidateIds = useMemo(() => [...new Set(applications.map((a) => a.candidateId))], [applications]);
+  const { data: allAppsData } = useQuery({
+    queryKey: ['cross-job-applications', candidateIds.sort().join(',')],
+    queryFn: () => apiFn.get<{ data: { candidateId: string; jobOpeningId: string; stage: string }[] }>('/applications?limit=500'),
+    enabled: candidateIds.length > 0,
+    staleTime: 60_000,
+  });
+  const otherJobCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    if (!allAppsData?.data) return counts;
+    const candidateSet = new Set(candidateIds);
+    for (const app of allAppsData.data) {
+      if (candidateSet.has(app.candidateId) && app.jobOpeningId !== id) {
+        counts.set(app.candidateId, (counts.get(app.candidateId) ?? 0) + 1);
+      }
+    }
+    return counts;
+  }, [allAppsData, candidateIds, id]);
 
   // Compute stage distribution
   const stageCounts = useMemo(() => {
@@ -617,6 +637,7 @@ export function JobOpeningDetailPage() {
                     const app = record as unknown as Application;
                     const action = getCardAction(app, interviewsByCandidate);
                     const offer = offersByAppId.get(app.id);
+                    const otherJobs = otherJobCounts.get(app.candidateId) ?? 0;
 
                     return (
                       <div
@@ -629,7 +650,7 @@ export function JobOpeningDetailPage() {
                           className="block w-full cursor-pointer"
                           onClick={(e) => { e.stopPropagation(); setPreviewApplicationId(app.id); }}
                         >
-                          {/* Name + referral badge */}
+                          {/* Name + referral badge + cross-job indicator */}
                           <div className="flex items-center gap-1.5 pr-6">
                             <span className="text-[13px] font-medium text-foreground group-hover/card:text-primary transition-colors leading-snug truncate">
                               {app.candidateId__label || 'Candidate'}
@@ -638,6 +659,12 @@ export function JobOpeningDetailPage() {
                               <span className="shrink-0 inline-flex items-center gap-0.5 rounded-full bg-violet-100 dark:bg-violet-500/15 px-1.5 py-0.5 text-[9px] font-semibold text-violet-700 dark:text-violet-400" title={`Referred by ${app.referredBy__label}`}>
                                 <UserCheck className="h-2.5 w-2.5" />
                                 Ref
+                              </span>
+                            )}
+                            {otherJobs > 0 && (
+                              <span className="shrink-0 inline-flex items-center gap-0.5 rounded-full bg-sky-100 dark:bg-sky-500/15 px-1.5 py-0.5 text-[9px] font-semibold text-sky-700 dark:text-sky-400" title={`Applied to ${otherJobs} other job${otherJobs > 1 ? 's' : ''}`}>
+                                <Layers className="h-2.5 w-2.5" />
+                                +{otherJobs}
                               </span>
                             )}
                           </div>
@@ -744,6 +771,12 @@ export function JobOpeningDetailPage() {
                               <span className="shrink-0 inline-flex items-center gap-0.5 rounded-full bg-violet-100 dark:bg-violet-500/15 px-1.5 py-0.5 text-[9px] font-semibold text-violet-700 dark:text-violet-400">
                                 <UserCheck className="h-2.5 w-2.5" />
                                 Ref
+                              </span>
+                            )}
+                            {(otherJobCounts.get(app.candidateId) ?? 0) > 0 && (
+                              <span className="shrink-0 inline-flex items-center gap-0.5 rounded-full bg-sky-100 dark:bg-sky-500/15 px-1.5 py-0.5 text-[9px] font-semibold text-sky-700 dark:text-sky-400" title={`Applied to ${otherJobCounts.get(app.candidateId)} other job(s)`}>
+                                <Layers className="h-2.5 w-2.5" />
+                                +{otherJobCounts.get(app.candidateId)}
                               </span>
                             )}
                           </div>
