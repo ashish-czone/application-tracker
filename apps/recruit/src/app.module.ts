@@ -32,6 +32,8 @@ import { EntityRelationsModule } from '@packages/entity-relations';
 import { EntityLayoutModule } from '@packages/entity-layout';
 import { EntityEngineModule } from '@packages/entity-engine';
 import { DocumentTemplatesModule } from '@packages/document-templates';
+import { PdfGeneratorModule } from '@packages/pdf-generator';
+import { PuppeteerPdfProvider } from '@packages/pdf-generator/providers/puppeteer.provider';
 import { SharedModule } from './modules/shared/shared.module';
 import { CandidatesModule } from './modules/candidates/candidates.module';
 import { CLIENTS_CONFIG } from './modules/clients/clients.config';
@@ -122,6 +124,7 @@ import { validate } from './config/env.validation';
     EntityLayoutModule,
     EntityEngineModule,
     DocumentTemplatesModule.register(),
+    PdfGeneratorModule.register({ provider: new PuppeteerPdfProvider() }),
     AuthModule.registerAsync({
       useFactory: (config: ConfigService, appConfig: AppConfigService) => ({
         jwtSecret: config.get<string>('JWT_SECRET')!,

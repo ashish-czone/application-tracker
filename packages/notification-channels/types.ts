@@ -30,11 +30,18 @@ export interface SendResult {
 
 // ---- Email ----
 
+export interface EmailAttachment {
+  filename: string;
+  content: Buffer | string;
+  contentType?: string;
+}
+
 export interface EmailPayload {
   to: string;
   subject: string;
   body: string;
   correlationId: string;
+  attachments?: EmailAttachment[];
 }
 
 export interface EmailProvider {

@@ -3,13 +3,14 @@ import { WorkflowGuardRegistry } from '@packages/workflows';
 import { TemplateProviderRegistry } from '@packages/document-templates';
 import { DatabaseService, eq } from '@packages/database';
 import { OfferApprovalsService } from './services/offer-approvals.service';
+import { OfferLetterService } from './services/offer-letter.service';
 import { OfferApprovalsController } from './controllers/offer-approvals.controller';
 import { offers } from './schema/offers';
 import { formatCurrency } from '@packages/common';
 
 @Module({
   controllers: [OfferApprovalsController],
-  providers: [OfferApprovalsService],
+  providers: [OfferApprovalsService, OfferLetterService],
 })
 export class OffersModule implements OnModuleInit {
   constructor(

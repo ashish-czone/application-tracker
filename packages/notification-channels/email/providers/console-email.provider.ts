@@ -16,6 +16,7 @@ export class ConsoleEmailProvider implements EmailProvider {
       to: payload.to,
       subject: payload.subject,
       correlationId: payload.correlationId,
+      attachments: payload.attachments?.map((a) => a.filename) ?? [],
     });
 
     return { success: true };
