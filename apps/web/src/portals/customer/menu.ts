@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, Shield, CheckSquare, Workflow, Zap, Settings, Tags, FolderTree } from 'lucide-react';
+import { LayoutDashboard, Users, Shield, UserCog, CheckSquare, Workflow, Zap, Settings, Tags, FolderTree } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 export interface MenuItem {
@@ -12,6 +12,7 @@ export const customerMenu: MenuItem[] = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/users', label: 'Users', icon: Users, permission: 'users.read' },
   { path: '/roles', label: 'Roles', icon: Shield, permission: 'rbac.roles.read' },
+  { path: '/org-positions', label: 'Org Positions', icon: UserCog, permission: 'org-units.read' },
   { path: '/tasks', label: 'Tasks', icon: CheckSquare, permission: 'tasks.read' },
   { path: '/workflows', label: 'Workflows', icon: Workflow, permission: 'workflows.read' },
   { path: '/tag-groups', label: 'Tag Groups', icon: Tags, permission: 'taxonomy.tag-groups.read' },
