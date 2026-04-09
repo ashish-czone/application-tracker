@@ -439,33 +439,48 @@ export function CandidateProfilePage() {
             </div>
           ) : (
             <div className="grid gap-3">
-              {applications.map((app) => (
-                <Link
-                  key={app.id}
-                  to={`/applications/${app.id}`}
-                  className="group flex items-center justify-between rounded-lg border border-border bg-card p-4 hover:border-primary/30 hover:shadow-sm transition-all"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="h-9 w-9 rounded-lg bg-primary/5 flex items-center justify-center shrink-0">
-                      <Briefcase className="h-4 w-4 text-primary" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
-                        {app.jobOpeningId__label || 'Job Opening'}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        Applied {formatDate(app.createdAt)}
-                      </p>
+              {applications.map((app) => {
+                const isTerminal = ['hired', 'rejected', 'withdrawn'].includes(app.stage);
+                return (
+                  <div
+                    key={app.id}
+                    className="group flex items-center justify-between rounded-lg border border-border bg-card p-4 hover:border-primary/30 hover:shadow-sm transition-all"
+                  >
+                    <Link to={`/applications/${app.id}`} className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="h-9 w-9 rounded-lg bg-primary/5 flex items-center justify-center shrink-0">
+                        <Briefcase className="h-4 w-4 text-primary" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
+                          {app.jobOpeningId__label || 'Job Opening'}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Applied {formatDate(app.createdAt)}
+                        </p>
+                      </div>
+                    </Link>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {!isTerminal && (
+                        <button
+                          type="button"
+                          onClick={() => setScheduleFor({ candidateId: id!, jobOpeningId: app.jobOpeningId })}
+                          className="p-1.5 rounded-md text-muted-foreground/0 group-hover:text-muted-foreground hover:!text-primary hover:bg-primary/5 transition-colors"
+                          aria-label="Schedule interview"
+                          title="Schedule interview"
+                        >
+                          <CalendarPlus className="h-4 w-4" />
+                        </button>
+                      )}
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${STAGE_COLORS[app.stage] ?? 'bg-gray-100 text-gray-700'}`}>
+                        {formatLabel(app.stage)}
+                      </span>
+                      <Link to={`/applications/${app.id}`}>
+                        <ExternalLink className="h-3.5 w-3.5 text-muted-foreground/0 group-hover:text-muted-foreground transition-colors" />
+                      </Link>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 shrink-0">
-                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${STAGE_COLORS[app.stage] ?? 'bg-gray-100 text-gray-700'}`}>
-                      {formatLabel(app.stage)}
-                    </span>
-                    <ExternalLink className="h-3.5 w-3.5 text-muted-foreground/0 group-hover:text-muted-foreground transition-colors" />
-                  </div>
-                </Link>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
