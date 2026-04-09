@@ -1,4 +1,4 @@
-import { IsArray, ValidateNested, IsString, IsOptional, IsIn, MinLength, MaxLength } from 'class-validator';
+import { IsArray, ValidateNested, IsString, IsOptional, Matches, MinLength, MaxLength } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -9,10 +9,11 @@ class PermissionEntryDto {
   @MaxLength(100)
   name!: string;
 
-  @ApiPropertyOptional({ example: 'all', enum: ['own', 'all'], default: 'all' })
+  @ApiPropertyOptional({ example: 'all', description: 'all | team | own | scope:<custom-key>' })
   @IsOptional()
-  @IsIn(['own', 'all'])
-  scope?: 'own' | 'all';
+  @IsString()
+  @Matches(/^(all|team|own|scope:[a-z0-9-]+)$/, { message: 'scope must be all, team, own, or scope:<key>' })
+  scope?: string;
 }
 
 export class SetRolePermissionsDto {

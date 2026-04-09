@@ -16,7 +16,7 @@ import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { CurrentUser, type JwtPayload } from '@packages/auth-core';
 import { RbacService } from '../services/rbac.service';
 import { RequirePermission } from '../decorators/require-permission.decorator';
-import type { ScopedPermissions } from '../types';
+import type { ScopedPermissions, PermissionScope } from '../types';
 import { CreateRoleDto } from '../dto/create-role.dto';
 import { UpdateRoleDto } from '../dto/update-role.dto';
 import { ListRolesQueryDto } from '../dto/list-roles-query.dto';
@@ -98,7 +98,7 @@ export class RbacController {
     @CurrentUser() user: JwtPayload,
   ) {
     const actorPermissions = (user.permissions ?? {}) as ScopedPermissions;
-    await this.rbacService.setRolePermissions(id, dto.permissions, actorPermissions);
+    await this.rbacService.setRolePermissions(id, dto.permissions as { name: string; scope?: PermissionScope }[], actorPermissions);
     return this.rbacService.getRolePermissions(id);
   }
 
