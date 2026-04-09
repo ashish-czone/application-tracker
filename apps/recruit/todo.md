@@ -39,7 +39,7 @@ Compared against: Ashby, Greenhouse, Lever, Workable
 - [ ] Activity feed with tab filters (Notes / Emails / Activities / Feedback)
 - [ ] Interview calendar view (calendar display, timezone handling, availability)
 - [ ] Offer workflow (approval chains, e-signature, letter templates with auto-populate)
-- [ ] Inline scheduling from candidate/application context
+- [x] Inline scheduling from candidate/application context (PR #660)
 - [ ] Right sidebar on custom detail pages (notes, tasks, documents, other jobs)
 - [ ] Smart empty field handling (hide empty fields or collapse them, no "$0.00" or "-" walls)
 - [ ] Smart list views (fewer default columns, prioritize: name, status, source, last activity)

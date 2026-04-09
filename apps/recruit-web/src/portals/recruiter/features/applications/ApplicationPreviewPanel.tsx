@@ -24,7 +24,6 @@ import { useState } from 'react';
 import { ScheduleInterviewDialog } from '../shared/ScheduleInterviewDialog';
 import { CreateOfferDialog } from '../shared/CreateOfferDialog';
 
-const INTERVIEW_STAGES = new Set(['phone-screen', 'technical', 'on-site']);
 const TERMINAL_STAGES = new Set(['hired', 'rejected', 'withdrawn']);
 
 interface StageHint {
@@ -35,7 +34,7 @@ interface StageHint {
 
 function getStageHint(stage: string): StageHint | null {
   if (stage === 'new') return { icon: AlertCircle, color: 'text-blue-600', text: 'Review this application and advance to screening' };
-  if (INTERVIEW_STAGES.has(stage)) return { icon: Clock4, color: 'text-amber-600', text: `${formatLabel(stage)} stage — schedule or review interviews` };
+  if (['phone-screen', 'technical', 'on-site'].includes(stage)) return { icon: Clock4, color: 'text-amber-600', text: `${formatLabel(stage)} stage — schedule or review interviews` };
   if (stage === 'final') return { icon: AlertCircle, color: 'text-pink-600', text: 'Final stage — make a hiring decision' };
   if (stage === 'offer') return { icon: FileSignature, color: 'text-emerald-600', text: 'Create and send an offer to this candidate' };
   if (stage === 'hired') return { icon: CheckCircle2, color: 'text-green-600', text: 'Candidate hired' };
@@ -197,8 +196,8 @@ export function ApplicationPreviewPanel({
                       onTransitionSelect={handleTransitionSelect}
                     />
 
-                    {/* Interview stages: schedule button */}
-                    {INTERVIEW_STAGES.has(stage) && candidateId && jobOpeningId && (
+                    {/* Schedule interview — available for all non-terminal stages */}
+                    {candidateId && jobOpeningId && (
                       <Button variant="outline" size="sm" onClick={() => setShowSchedule(true)}>
                         <CalendarPlus className="h-3.5 w-3.5 mr-1.5" />
                         Schedule Interview
