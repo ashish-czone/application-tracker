@@ -15,6 +15,7 @@ export type {
   ChannelContext,
   EmailProvider,
   EmailPayload,
+  EmailAttachment,
   WhatsAppProvider,
   WhatsAppPayload,
   SendResult,

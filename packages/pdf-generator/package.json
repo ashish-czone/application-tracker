@@ -1,0 +1,21 @@
+{
+  "name": "@packages/pdf-generator",
+  "version": "0.0.1",
+  "private": true,
+  "main": "index.ts",
+  "dependencies": {
+    "@nestjs/common": "^11.0.0",
+    "@packages/logger": "workspace:*"
+  },
+  "peerDependencies": {
+    "puppeteer": ">=22.0.0"
+  },
+  "peerDependenciesMeta": {
+    "puppeteer": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  }
+}

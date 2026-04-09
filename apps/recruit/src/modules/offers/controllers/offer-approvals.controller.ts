@@ -2,12 +2,17 @@ import { Controller, Get, Post, Body, Param, ParseUUIDPipe, HttpCode, HttpStatus
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { CurrentUser, type JwtPayload } from '@packages/auth';
 import { OfferApprovalsService } from '../services/offer-approvals.service';
+import { OfferLetterService } from '../services/offer-letter.service';
 import { SubmitApprovalDto, SetApproversDto } from '../dto/submit-approval.dto';
+import { SendOfferLetterDto } from '../dto/send-offer-letter.dto';
 
 @ApiTags('offer-approvals')
 @Controller('offers')
 export class OfferApprovalsController {
-  constructor(private readonly approvalsService: OfferApprovalsService) {}
+  constructor(
+    private readonly approvalsService: OfferApprovalsService,
+    private readonly offerLetterService: OfferLetterService,
+  ) {}
 
   @Get(':offerId/approvals')
   @ApiOperation({ summary: 'List approval decisions for an offer' })
@@ -35,5 +40,15 @@ export class OfferApprovalsController {
   ) {
     await this.approvalsService.createPendingApprovals(offerId, dto.approverIds);
     return { success: true };
+  }
+
+  @Post(':offerId/send-letter')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Render offer letter, generate PDF, and email to candidate' })
+  async sendOfferLetter(
+    @Param('offerId', ParseUUIDPipe) offerId: string,
+    @Body() dto: SendOfferLetterDto,
+  ) {
+    return this.offerLetterService.sendOfferLetter(offerId, dto.templateId, dto.candidateEmail);
   }
 }
