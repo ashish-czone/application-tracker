@@ -35,8 +35,6 @@ export const CONTACTS_CONFIG: EntityConfig = {
     jobTitle: { label: 'Job Title', section: 'basic', sortOrder: 6, maxLength: 100 },
     workPhone: { label: 'Work Phone', section: 'basic', sortOrder: 7, isQuickCreate: true, fieldType: 'phone' },
     mobile: { label: 'Mobile', section: 'basic', sortOrder: 8, isQuickCreate: true, fieldType: 'phone' },
-    fax: { label: 'Fax', section: 'basic', sortOrder: 9 },
-    skypeId: { label: 'Skype ID', section: 'basic', sortOrder: 10, maxLength: 50 },
     // Mailing Address
     mailingStreet: { label: 'Mailing Street', section: 'mailing-address', sortOrder: 0 },
     mailingCity: { label: 'Mailing City', section: 'mailing-address', sortOrder: 1 },
@@ -79,7 +77,7 @@ export const CONTACTS_CONFIG: EntityConfig = {
   listFields: ['fullName', 'clientId', 'email', 'mobile', 'jobTitle'],
 
   sections: [
-    { name: 'Contact Information', fields: ['firstName', 'lastName', 'clientId', 'department', 'email', 'secondaryEmail', 'jobTitle', 'workPhone', 'mobile', 'fax', 'skypeId'] },
+    { name: 'Contact Information', fields: ['firstName', 'lastName', 'clientId', 'department', 'email', 'secondaryEmail', 'jobTitle', 'workPhone', 'mobile'] },
     { name: 'Mailing Address', fields: ['mailingStreet', 'mailingCity', 'mailingProvince', 'mailingPostalCode', 'mailingCountry'] },
     { name: 'Other Address', fields: ['otherStreet', 'otherCity', 'otherProvince', 'otherPostalCode', 'otherCountry'] },
     { name: 'Social Links', fields: ['linkedinUrl', 'facebookUrl', 'twitterHandle'] },

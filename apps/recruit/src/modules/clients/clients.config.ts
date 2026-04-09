@@ -27,7 +27,6 @@ export const CLIENTS_CONFIG: EntityConfig = {
       lookupSearchFields: ['clientName'],
     },
     contactNumber: { label: 'Contact Number', section: 'basic', sortOrder: 2, isQuickCreate: true, fieldType: 'phone' },
-    fax: { label: 'Fax', section: 'basic', sortOrder: 3 },
     website: { label: 'Website', section: 'basic', sortOrder: 4, isQuickCreate: true, fieldType: 'url' },
     industry: {
       label: 'Industry', section: 'basic', sortOrder: 5, isQuickCreate: true, fieldType: 'picklist',
@@ -72,7 +71,7 @@ export const CLIENTS_CONFIG: EntityConfig = {
   listFields: ['clientName', 'industry', 'contactsCount', 'jobOpeningsCount'],
 
   sections: [
-    { name: 'Client Information', fields: ['clientName', 'parentClientId', 'contactNumber', 'fax', 'website', 'industry', 'about', 'source'] },
+    { name: 'Client Information', fields: ['clientName', 'parentClientId', 'contactNumber', 'website', 'industry', 'about', 'source'] },
     { name: 'Billing Address', fields: ['billingStreet', 'billingCity', 'billingProvince', 'billingCode', 'billingCountry'] },
     { name: 'Shipping Address', fields: ['shippingStreet', 'shippingCity', 'shippingProvince', 'shippingCode', 'shippingCountry'] },
   ],
