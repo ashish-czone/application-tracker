@@ -477,6 +477,18 @@ export interface DataAccessContext {
   teamUserIds?: string[];
 }
 
+/**
+ * Resolves the set of user IDs that constitute a user's "team".
+ * Implementations typically combine org-unit membership + reporting hierarchy.
+ * Injected into entity-engine as an optional global provider.
+ */
+export interface TeamResolver {
+  getTeamUserIds(userId: string): Promise<string[]>;
+}
+
+/** Injection token for the optional TeamResolver provider */
+export const TEAM_RESOLVER = 'TEAM_RESOLVER';
+
 // ---------------------------------------------------------------------------
 // EntityConfig — the single config that defines everything about an entity
 // ---------------------------------------------------------------------------

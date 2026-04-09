@@ -128,6 +128,9 @@ importers:
       '@packages/notifications':
         specifier: workspace:*
         version: link:../../packages/notifications
+      '@packages/org-units':
+        specifier: workspace:*
+        version: link:../../packages/org-units
       '@packages/rbac':
         specifier: workspace:*
         version: link:../../packages/rbac
@@ -530,6 +533,9 @@ importers:
       '@packages/notifications':
         specifier: workspace:*
         version: link:../../packages/notifications
+      '@packages/org-units':
+        specifier: workspace:*
+        version: link:../../packages/org-units
       '@packages/pdf-generator':
         specifier: workspace:*
         version: link:../../packages/pdf-generator
@@ -1193,10 +1199,10 @@ importers:
       class-validator:
         specifier: ^0.14.1
         version: 0.14.4
-    devDependencies:
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3))
+    devDependencies:
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -1992,6 +1998,49 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^3.2.0
+        version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(terser@5.46.0)
+
+  packages/org-units:
+    dependencies:
+      '@nestjs/common':
+        specifier: ^11.0.0
+        version: 11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/swagger':
+        specifier: ^11.0.0
+        version: 11.2.6(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)
+      '@packages/auth-core':
+        specifier: workspace:*
+        version: link:../auth-core
+      '@packages/database':
+        specifier: workspace:*
+        version: link:../database
+      '@packages/entity-engine':
+        specifier: workspace:*
+        version: link:../entity-engine
+      '@packages/rbac':
+        specifier: workspace:*
+        version: link:../rbac
+      '@packages/tenancy':
+        specifier: workspace:*
+        version: link:../tenancy
+      '@packages/users':
+        specifier: workspace:*
+        version: link:../users
+      class-transformer:
+        specifier: ^0.5.1
+        version: 0.5.1
+      class-validator:
+        specifier: ^0.14.1
+        version: 0.14.4
+      drizzle-orm:
+        specifier: ^0.45.1
+        version: 0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3))
+    devDependencies:
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
         version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(terser@5.46.0)
 
   packages/pdf-generator:

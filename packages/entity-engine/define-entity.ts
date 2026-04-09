@@ -5,6 +5,7 @@ import type {
   EntityHooks,
   EntityRelationship,
   EntityActions,
+  DataAccessConfig,
   FieldMeta,
   FieldType,
   SeedSectionInput,
@@ -177,6 +178,11 @@ export interface ModelDefinition<TTable extends PgTable = PgTable> {
 
   /** Configurable actions for list pages */
   actions?: EntityActions;
+
+  // --- Data access ---
+
+  /** Row-level data access configuration. Controls which records users can see based on their RBAC scope. */
+  dataAccess?: DataAccessConfig;
 
   // --- Lifecycle hooks ---
 
@@ -379,6 +385,7 @@ export function defineEntity<TTable extends PgTable>(model: ModelDefinition<TTab
       createMode: model.ui.createMode,
       boardFields: model.ui.boardFields,
     },
+    dataAccess: model.dataAccess,
     hooks: model.hooks,
   };
 }

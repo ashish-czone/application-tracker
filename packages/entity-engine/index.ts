@@ -31,7 +31,10 @@ export type {
   ScopeResolver,
   DataAccessConfig,
   DataAccessContext,
+  TeamResolver,
 } from './types';
+
+export { TEAM_RESOLVER } from './types';
 
 // --- Types and constants moved from eav-attributes ---
 
