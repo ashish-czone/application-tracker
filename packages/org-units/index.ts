@@ -1,5 +1,6 @@
 export { OrgUnitsModule } from './org-units.module';
 export { OrgUnitService } from './services/org-unit.service';
+export { OrgPositionService } from './services/org-position.service';
 export { orgUnits } from './schema/org-units';
 export { orgUnitMembers } from './schema/org-unit-members';
 export { orgPositions } from './schema/org-positions';

@@ -1,6 +1,8 @@
 import { Global, Module, type OnModuleInit } from '@nestjs/common';
 import { OrgUnitService } from './services/org-unit.service';
+import { OrgPositionService } from './services/org-position.service';
 import { OrgUnitController } from './controllers/org-unit.controller';
+import { OrgPositionController } from './controllers/org-position.controller';
 import { PermissionRegistryService } from '@packages/rbac';
 import { LookupResolverService, TEAM_RESOLVER, type TeamResolver } from '@packages/entity-engine';
 import { UsersService } from '@packages/users';
@@ -8,9 +10,10 @@ import { orgUnits } from './schema/org-units';
 
 @Global()
 @Module({
-  controllers: [OrgUnitController],
+  controllers: [OrgUnitController, OrgPositionController],
   providers: [
     OrgUnitService,
+    OrgPositionService,
     {
       provide: TEAM_RESOLVER,
       useFactory: (orgUnitService: OrgUnitService, usersService: UsersService): TeamResolver => ({
@@ -26,7 +29,7 @@ import { orgUnits } from './schema/org-units';
       inject: [OrgUnitService, UsersService],
     },
   ],
-  exports: [OrgUnitService, TEAM_RESOLVER],
+  exports: [OrgUnitService, OrgPositionService, TEAM_RESOLVER],
 })
 export class OrgUnitsModule implements OnModuleInit {
   constructor(
