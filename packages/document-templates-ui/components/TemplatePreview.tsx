@@ -1,9 +1,10 @@
 import { Button } from '@packages/ui';
 import { X } from 'lucide-react';
 import { useTemplatePreview } from '../hooks';
+import type { ApiFn } from '../hooks';
 
 interface TemplatePreviewProps {
-  apiFn: any;
+  apiFn: ApiFn;
   templateId: string;
   templateName: string;
   onClose: () => void;
@@ -34,10 +35,13 @@ export function TemplatePreview({ apiFn, templateId, templateName, onClose }: Te
       {isLoading ? (
         <div className="h-64 animate-pulse rounded-lg bg-muted" />
       ) : (
-        <div className="rounded-lg border border-border bg-white p-6 overflow-auto max-h-[600px]">
-          <div
-            className="prose prose-sm max-w-none text-foreground"
-            dangerouslySetInnerHTML={{ __html: data?.html ?? '' }}
+        <div className="rounded-lg border border-border overflow-hidden">
+          <iframe
+            sandbox=""
+            srcDoc={data?.html ?? ''}
+            title="Template preview"
+            className="w-full border-0 bg-white"
+            style={{ minHeight: 400, maxHeight: 600 }}
           />
         </div>
       )}
