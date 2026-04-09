@@ -2,11 +2,11 @@ import { useMemo } from 'react';
 import { ShieldCheck } from 'lucide-react';
 import { Skeleton } from '@packages/ui';
 import { usePermissionRegistry } from '../hooks';
-import type { ScopedPermissions } from '../types';
+import type { BooleanPermissions } from '../types';
 
 interface PermissionsPickerProps {
-  selected: ScopedPermissions;
-  onChange: (selected: ScopedPermissions) => void;
+  selected: BooleanPermissions;
+  onChange: (selected: BooleanPermissions) => void;
   disabled?: boolean;
 }
 
@@ -33,16 +33,9 @@ export function PermissionsPicker({ selected, onChange, disabled }: PermissionsP
     if (permName in next) {
       delete next[permName];
     } else {
-      next[permName] = 'all';
+      next[permName] = true;
     }
     onChange(next);
-  }
-
-  function toggleScope(permName: string) {
-    onChange({
-      ...selected,
-      [permName]: selected[permName] === 'all' ? 'own' : 'all',
-    });
   }
 
   if (isLoading) {
@@ -81,12 +74,11 @@ export function PermissionsPicker({ selected, onChange, disabled }: PermissionsP
           <div className="space-y-1">
             {perms.map(({ permName, action, description }) => {
               const isChecked = hasWildcard || permName in selected;
-              const scope = hasWildcard ? 'all' : selected[permName];
               const isDisabled = disabled || hasWildcard;
               return (
                 <div
                   key={permName}
-                  className={`flex items-center justify-between rounded-md px-3 py-2 ${isDisabled ? 'opacity-60' : 'hover:bg-muted/50'}`}
+                  className={`flex items-center rounded-md px-3 py-2 ${isDisabled ? 'opacity-60' : 'hover:bg-muted/50'}`}
                 >
                   <label className={`flex items-center gap-2.5 flex-1 min-w-0 ${isDisabled ? 'cursor-default' : 'cursor-pointer'}`}>
                     <input
@@ -101,16 +93,6 @@ export function PermissionsPicker({ selected, onChange, disabled }: PermissionsP
                       <div className="text-xs text-muted-foreground truncate">{description}</div>
                     </div>
                   </label>
-                  {isChecked && (
-                    <button
-                      type="button"
-                      onClick={() => toggleScope(permName)}
-                      disabled={isDisabled}
-                      className="text-xs px-2 py-0.5 rounded border border-input bg-background hover:bg-accent transition-colors shrink-0 ml-2"
-                    >
-                      {scope === 'all' ? 'All' : 'Own'}
-                    </button>
-                  )}
                 </div>
               );
             })}

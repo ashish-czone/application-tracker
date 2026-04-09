@@ -51,7 +51,10 @@ export interface MessageResponse {
   message: string;
 }
 
-// Scoped permissions as stored in JWT (matches backend ScopedPermissions type)
+// Boolean permissions as stored in JWT (scope is determined by org positions, not permissions)
+export type BooleanPermissions = Record<string, true>;
+
+/** @deprecated Use BooleanPermissions instead */
 export type ScopedPermissions = Record<string, string>;
 
 // JWT payload (decoded from access token — not verified client-side)
@@ -59,7 +62,7 @@ export type ScopedPermissions = Record<string, string>;
 export interface JwtPayload {
   userId: string;
   userType: string;
-  permissions: ScopedPermissions;
+  permissions: BooleanPermissions;
   iat: number;
   exp: number;
 }
@@ -69,7 +72,7 @@ export interface JwtPayload {
 export interface AuthUser {
   userId: string;
   userType: string;
-  permissions: ScopedPermissions;
+  permissions: BooleanPermissions;
 }
 
 // Profile types

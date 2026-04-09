@@ -20,7 +20,6 @@ export interface UpdateRoleRequest {
 
 export interface PermissionEntry {
   name: string;
-  scope: string; // 'all' | 'team' | 'own' | 'scope:<custom-key>'
 }
 
 export interface PermissionRegistryEntry {
@@ -29,7 +28,10 @@ export interface PermissionRegistryEntry {
   description: string;
 }
 
-/** Map of permission name → scope (all | team | own | scope:<custom-key>) */
+/** Map of permission name → true (scope is determined by org positions, not permissions) */
+export type BooleanPermissions = Record<string, true>;
+
+/** @deprecated Use BooleanPermissions instead */
 export type ScopedPermissions = Record<string, string>;
 
 export interface ListRolesParams {
