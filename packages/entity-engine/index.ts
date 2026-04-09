@@ -28,6 +28,9 @@ export type {
   WorkflowStateDef,
   WorkflowTransitionDef,
   WorkflowTargetDef,
+  ScopeResolver,
+  DataAccessConfig,
+  DataAccessContext,
 } from './types';
 
 // --- Types and constants moved from eav-attributes ---
