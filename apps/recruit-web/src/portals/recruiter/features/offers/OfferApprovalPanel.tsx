@@ -1,7 +1,7 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, XCircle, Clock, MessageSquare } from 'lucide-react';
-import { Button, cn, toast } from '@packages/ui';
+import { Button, ConfirmDialog, cn, toast } from '@packages/ui';
 import { useEntityEngine } from '@packages/entity-engine-ui';
 import { useAuth } from '@packages/platform-ui/auth';
 import { formatDateTime } from '@packages/common';
@@ -21,9 +21,9 @@ interface OfferApprovalPanelProps {
 }
 
 const DECISION_STYLES: Record<string, { icon: typeof CheckCircle2; color: string; label: string }> = {
-  approved: { icon: CheckCircle2, color: 'text-emerald-600', label: 'Approved' },
-  rejected: { icon: XCircle, color: 'text-red-500', label: 'Rejected' },
-  pending: { icon: Clock, color: 'text-amber-500', label: 'Pending' },
+  approved: { icon: CheckCircle2, color: 'text-success', label: 'Approved' },
+  rejected: { icon: XCircle, color: 'text-destructive', label: 'Rejected' },
+  pending: { icon: Clock, color: 'text-warning', label: 'Pending' },
 };
 
 export function OfferApprovalPanel({ entity }: OfferApprovalPanelProps) {
@@ -33,6 +33,8 @@ export function OfferApprovalPanel({ entity }: OfferApprovalPanelProps) {
   const currentUserId = user?.userId ?? '';
   const { apiFn } = useEntityEngine();
   const queryClient = useQueryClient();
+  const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [rejectComment, setRejectComment] = useState('');
 
   const { data: approvals = [], isLoading } = useQuery({
     queryKey: ['offers', offerId, 'approvals'],
@@ -47,7 +49,7 @@ export function OfferApprovalPanel({ entity }: OfferApprovalPanelProps) {
       queryClient.invalidateQueries({ queryKey: ['offers'] });
       toast.success('Decision submitted');
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       toast.error(err?.message ?? 'Failed to submit decision');
     },
   });
@@ -84,10 +86,9 @@ export function OfferApprovalPanel({ entity }: OfferApprovalPanelProps) {
             {approvedCount}/{totalCount} approved
           </span>
         </div>
-        {/* Progress bar */}
         <div className="mt-2 h-1.5 rounded-full bg-muted overflow-hidden">
           <div
-            className="h-full rounded-full bg-emerald-500 transition-all duration-300"
+            className="h-full rounded-full bg-success transition-all duration-300"
             style={{ width: `${totalCount > 0 ? (approvedCount / totalCount) * 100 : 0}%` }}
           />
         </div>
@@ -128,33 +129,50 @@ export function OfferApprovalPanel({ entity }: OfferApprovalPanelProps) {
         })}
       </div>
 
-      {/* Action buttons for current user */}
       {canDecide && (
         <div className="px-4 py-3 border-t border-border bg-muted/20 flex items-center gap-2">
           <Button
             size="sm"
             onClick={() => submitMutation.mutate({ decision: 'approved' })}
             disabled={submitMutation.isPending}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white"
           >
             <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
             Approve
           </Button>
           <Button
             size="sm"
-            variant="outline"
-            onClick={() => {
-              const comment = window.prompt('Reason for rejection (optional):');
-              submitMutation.mutate({ decision: 'rejected', comment: comment ?? undefined });
-            }}
+            variant="destructive"
+            onClick={() => { setRejectComment(''); setShowRejectDialog(true); }}
             disabled={submitMutation.isPending}
-            className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
           >
             <XCircle className="h-3.5 w-3.5 mr-1.5" />
             Reject
           </Button>
         </div>
       )}
+
+      <ConfirmDialog
+        open={showRejectDialog}
+        onOpenChange={setShowRejectDialog}
+        title="Reject offer"
+        description="Are you sure you want to reject this offer?"
+        confirmLabel="Reject"
+        isPending={submitMutation.isPending}
+        onConfirm={() => {
+          submitMutation.mutate(
+            { decision: 'rejected', comment: rejectComment || undefined },
+            { onSuccess: () => setShowRejectDialog(false) },
+          );
+        }}
+      >
+        <textarea
+          value={rejectComment}
+          onChange={(e) => setRejectComment(e.target.value)}
+          placeholder="Reason for rejection (optional)"
+          rows={3}
+          className="mt-2 flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none"
+        />
+      </ConfirmDialog>
     </div>
   );
 }

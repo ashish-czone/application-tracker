@@ -25,21 +25,23 @@ export class OfferApprovalsService {
   }
 
   async createPendingApprovals(offerId: string, approverIds: string[]): Promise<void> {
-    // Remove existing pending approvals for this offer
-    await this.database.db
-      .delete(offerApprovals)
-      .where(eq(offerApprovals.offerId, offerId));
+    await this.database.db.transaction(async (tx) => {
+      // Remove existing approvals for this offer
+      await tx
+        .delete(offerApprovals)
+        .where(eq(offerApprovals.offerId, offerId));
 
-    // Create fresh pending approvals
-    if (approverIds.length > 0) {
-      await this.database.db.insert(offerApprovals).values(
-        approverIds.map((approverId) => ({
-          offerId,
-          approverId,
-          decision: 'pending',
-        })),
-      );
-    }
+      // Create fresh pending approvals
+      if (approverIds.length > 0) {
+        await tx.insert(offerApprovals).values(
+          approverIds.map((approverId) => ({
+            offerId,
+            approverId,
+            decision: 'pending',
+          })),
+        );
+      }
+    });
   }
 
   async submitDecision(

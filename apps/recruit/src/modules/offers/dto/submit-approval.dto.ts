@@ -1,4 +1,4 @@
-import { IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsIn, IsOptional, IsString, MaxLength, IsArray, ArrayMinSize, IsUUID } from 'class-validator';
 
 export class SubmitApprovalDto {
   @IsIn(['approved', 'rejected'])
@@ -11,6 +11,8 @@ export class SubmitApprovalDto {
 }
 
 export class SetApproversDto {
-  @IsString({ each: true })
+  @IsArray()
+  @ArrayMinSize(1)
+  @IsUUID(undefined, { each: true })
   approverIds!: string[];
 }
