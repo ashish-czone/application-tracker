@@ -82,7 +82,7 @@ export const offersConfig: EntityConfig = {
         ],
         transitions: [
           { from: 'draft', to: ['pending-approval'] },
-          { from: 'pending-approval', to: ['approved', 'draft'] },
+          { from: 'pending-approval', to: [{ state: 'approved', guardNames: ['require-offer-approvals'] }, 'draft'] },
           { from: 'approved', to: ['sent'] },
           { from: 'sent', to: ['accepted', 'declined', 'expired'] },
         ],
