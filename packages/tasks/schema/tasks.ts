@@ -1,6 +1,7 @@
 import { pgTable, text, date, timestamp, index } from 'drizzle-orm/pg-core';
 import { randomUUID } from 'crypto';
 import { users } from '@packages/database/schema';
+import { orgUnits } from '@packages/org-units';
 
 export const tasks = pgTable('tasks', {
   id: text('id').primaryKey().$defaultFn(() => randomUUID()),
@@ -9,6 +10,7 @@ export const tasks = pgTable('tasks', {
   status: text('status').notNull().default('open'),
   priority: text('priority').notNull().default('medium'),
   assigneeId: text('assignee_id').references(() => users.id),
+  assigneeTeamId: text('assignee_team_id').references(() => orgUnits.id),
   dueDate: date('due_date', { mode: 'string' }),
   createdBy: text('created_by').notNull().references(() => users.id),
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
@@ -17,6 +19,7 @@ export const tasks = pgTable('tasks', {
   deletedBy: text('deleted_by'),
 }, (table) => [
   index('tasks_assignee_id_idx').on(table.assigneeId),
+  index('tasks_assignee_team_id_idx').on(table.assigneeTeamId),
   index('tasks_status_idx').on(table.status),
   index('tasks_priority_idx').on(table.priority),
   index('tasks_due_date_idx').on(table.dueDate),
