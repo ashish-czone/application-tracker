@@ -1,9 +1,11 @@
-import { Module, type DynamicModule } from '@nestjs/common';
+import { Module, type DynamicModule, Inject, type OnModuleDestroy } from '@nestjs/common';
 import { PdfGeneratorService, PDF_PROVIDER_TOKEN } from './services/pdf-generator.service';
-import type { PdfGeneratorModuleOptions } from './types';
+import type { PdfGeneratorModuleOptions, PdfProvider } from './types';
 
 @Module({})
-export class PdfGeneratorModule {
+export class PdfGeneratorModule implements OnModuleDestroy {
+  constructor(@Inject(PDF_PROVIDER_TOKEN) private readonly provider: PdfProvider) {}
+
   static register(options: PdfGeneratorModuleOptions): DynamicModule {
     return {
       module: PdfGeneratorModule,
@@ -14,5 +16,9 @@ export class PdfGeneratorModule {
       exports: [PdfGeneratorService],
       global: true,
     };
+  }
+
+  async onModuleDestroy(): Promise<void> {
+    await this.provider.dispose?.();
   }
 }
