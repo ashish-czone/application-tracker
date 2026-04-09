@@ -22,8 +22,8 @@ export interface EvaluationUpdatedPayload {
   targetEntityId: string;
   evaluatorId: string;
   templateId: string;
-  before: { overallRating: number; comment: string | null };
-  after: { overallRating: number; comment: string | null };
+  before: { overallRating: number; recommendation: string | null; comment: string | null };
+  after: { overallRating: number; recommendation: string | null; comment: string | null };
   [key: string]: unknown;
 }
 
