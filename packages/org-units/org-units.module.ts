@@ -1,10 +1,11 @@
 import { Global, Module, type OnModuleInit } from '@nestjs/common';
 import { OrgUnitService } from './services/org-unit.service';
 import { OrgPositionService } from './services/org-position.service';
+import { PositionScopeResolverService } from './services/position-scope-resolver.service';
 import { OrgUnitController } from './controllers/org-unit.controller';
 import { OrgPositionController } from './controllers/org-position.controller';
 import { PermissionRegistryService } from '@packages/rbac';
-import { LookupResolverService, TEAM_RESOLVER, type TeamResolver } from '@packages/entity-engine';
+import { LookupResolverService, TEAM_RESOLVER, POSITION_SCOPE_PROVIDER, type TeamResolver } from '@packages/entity-engine';
 import { UsersService } from '@packages/users';
 import { orgUnits } from './schema/org-units';
 
@@ -14,6 +15,11 @@ import { orgUnits } from './schema/org-units';
   providers: [
     OrgUnitService,
     OrgPositionService,
+    PositionScopeResolverService,
+    {
+      provide: POSITION_SCOPE_PROVIDER,
+      useExisting: PositionScopeResolverService,
+    },
     {
       provide: TEAM_RESOLVER,
       useFactory: (orgUnitService: OrgUnitService, usersService: UsersService): TeamResolver => ({
@@ -29,7 +35,7 @@ import { orgUnits } from './schema/org-units';
       inject: [OrgUnitService, UsersService],
     },
   ],
-  exports: [OrgUnitService, OrgPositionService, TEAM_RESOLVER],
+  exports: [OrgUnitService, OrgPositionService, PositionScopeResolverService, POSITION_SCOPE_PROVIDER, TEAM_RESOLVER],
 })
 export class OrgUnitsModule implements OnModuleInit {
   constructor(
