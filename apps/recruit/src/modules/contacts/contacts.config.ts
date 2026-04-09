@@ -21,7 +21,7 @@ export const CONTACTS_CONFIG: EntityConfig = {
   },
 
   fieldMeta: {
-    fullName: { label: 'Contact', isSystem: true },
+    fullName: { label: 'Contact', isSystem: true, cellRenderer: 'AvatarNameCell' },
     firstName: { label: 'First Name', section: 'basic', sortOrder: 0, isQuickCreate: true, maxLength: 125 },
     lastName: { label: 'Last Name', section: 'basic', sortOrder: 1, isQuickCreate: true, isSystem: true, maxLength: 125 },
     clientId: {

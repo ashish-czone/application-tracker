@@ -20,7 +20,7 @@ export const VENDORS_CONFIG: EntityConfig = {
   },
 
   fieldMeta: {
-    vendorName: { label: 'Vendor Name', section: 'basic', sortOrder: 0, isQuickCreate: true, isSystem: true, maxLength: 120 },
+    vendorName: { label: 'Vendor Name', section: 'basic', sortOrder: 0, isQuickCreate: true, isSystem: true, maxLength: 120, cellRenderer: 'AvatarNameCell' },
     email: { label: 'Email', section: 'basic', sortOrder: 1, isQuickCreate: true, fieldType: 'email', maxLength: 120 },
     phone: { label: 'Phone', section: 'basic', sortOrder: 2, isQuickCreate: true, fieldType: 'phone' },
     website: { label: 'Website', section: 'basic', sortOrder: 3, fieldType: 'url' },
