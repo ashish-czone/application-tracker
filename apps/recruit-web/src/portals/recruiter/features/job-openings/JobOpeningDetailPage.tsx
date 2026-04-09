@@ -5,6 +5,7 @@ import {
   ArrowLeft, Building2, MapPin, Briefcase, Calendar, Users2, User,
   Clock, MoreHorizontal, Copy, Trash2, UserPlus, FileText,
   LayoutGrid, List, CalendarPlus, TrendingUp, Activity, FileSignature,
+  AlertCircle, Clock4, UserCheck,
 } from 'lucide-react';
 import {
   Button, ConfirmDialog,
@@ -59,8 +60,82 @@ interface Application {
   stage: string;
   source: string;
   averageRating: number | null;
+  evaluationsCount: number | null;
+  referredBy: string | null;
+  referredBy__label: string | null;
   createdAt: string;
 }
+
+interface Interview {
+  id: string;
+  candidateId: string;
+  jobOpeningId: string;
+  status: string;
+  interviewFrom: string;
+}
+
+type CardActionStatus = 'red' | 'amber' | 'none';
+
+interface CardAction {
+  status: CardActionStatus;
+  label: string | null;
+}
+
+const INTERVIEW_STAGES = new Set(['phone-screen', 'technical', 'on-site']);
+
+function getCardAction(
+  app: Application,
+  interviewsByCandidate: Map<string, Interview[]>,
+): CardAction {
+  const { stage, evaluationsCount } = app;
+
+  // Terminal / offer stages — no action indicator
+  if (['hired', 'rejected', 'withdrawn', 'offer'].includes(stage)) {
+    return { status: 'none', label: null };
+  }
+
+  // Interview stages: check for scheduled/completed interviews
+  if (INTERVIEW_STAGES.has(stage)) {
+    const interviews = interviewsByCandidate.get(app.candidateId) ?? [];
+    const scheduled = interviews.filter((i) => i.status === 'scheduled');
+    const completed = interviews.filter((i) => i.status === 'completed');
+
+    if (scheduled.length > 0) {
+      return { status: 'amber', label: 'Interview scheduled' };
+    }
+    if (completed.length > 0 && (evaluationsCount ?? 0) === 0) {
+      return { status: 'red', label: 'Needs evaluation' };
+    }
+    return { status: 'red', label: 'Schedule interview' };
+  }
+
+  // New stage — flag if stale
+  if (stage === 'new') {
+    if (daysSince(app.createdAt) > 5) {
+      return { status: 'red', label: 'Review application' };
+    }
+    return { status: 'none', label: null };
+  }
+
+  // Final stage — decision needed
+  if (stage === 'final') {
+    return { status: 'red', label: 'Make decision' };
+  }
+
+  return { status: 'none', label: null };
+}
+
+const ACTION_BORDER_COLOR: Record<CardActionStatus, string> = {
+  red: 'border-l-red-400',
+  amber: 'border-l-amber-400',
+  none: 'border-l-transparent',
+};
+
+const ACTION_TEXT_COLOR: Record<CardActionStatus, string> = {
+  red: 'text-red-600',
+  amber: 'text-amber-600',
+  none: '',
+};
 
 export function JobOpeningDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -105,6 +180,22 @@ export function JobOpeningDetailPage() {
     }
     return map;
   }, [offersData]);
+
+  // Fetch interviews for this job to determine action status on kanban cards
+  const { data: interviewsData } = useQuery({
+    queryKey: ['job_openings', id, 'interviews'],
+    queryFn: () => apiFn.get<{ data: Interview[] }>(`/interviews?jobOpeningId=${id}&limit=200`),
+    enabled: !!id,
+  });
+  const interviewsByCandidate = useMemo(() => {
+    const map = new Map<string, Interview[]>();
+    for (const interview of interviewsData?.data ?? []) {
+      const list = map.get(interview.candidateId) ?? [];
+      list.push(interview);
+      map.set(interview.candidateId, list);
+    }
+    return map;
+  }, [interviewsData]);
 
   // Compute stage distribution
   const stageCounts = useMemo(() => {
@@ -509,7 +600,7 @@ export function JobOpeningDetailPage() {
                   entityType="applications"
                   singularName="Application"
                   fieldName="stage"
-                  records={applications}
+                  records={applications as unknown as Record<string, unknown>[]}
                   onTransitionSuccess={({ recordId, toState }) => {
                     queryClient.invalidateQueries({ queryKey: ['job_openings', id, 'applications'] });
                     if (toState === 'offer' && !offersByAppId.has(recordId)) {
@@ -522,97 +613,164 @@ export function JobOpeningDetailPage() {
                       });
                     }
                   }}
-                  renderCard={(record) => (
-                    <div className="group/card relative">
+                  renderCard={(record) => {
+                    const app = record as unknown as Application;
+                    const action = getCardAction(app, interviewsByCandidate);
+                    const offer = offersByAppId.get(app.id);
+
+                    return (
                       <div
-                        className="block w-full cursor-pointer"
-                        onClick={(e) => { e.stopPropagation(); setPreviewApplicationId(record.id as string); }}
-                      >
-                        <div className="text-[13px] font-medium text-foreground group-hover/card:text-primary transition-colors leading-snug truncate pr-6">
-                          {(record.candidateId__label as string) || 'Candidate'}
-                        </div>
-                        <div className="flex items-center gap-2 mt-1.5">
-                          {record.source && (
-                            <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
-                              {formatLabel(record.source as string)}
-                            </span>
-                          )}
-                          <span className="text-[10px] text-muted-foreground/60">
-                            {daysSince(record.createdAt as string)}d
-                          </span>
-                        </div>
-                        {(record.averageRating as number) > 0 && (
-                          <div className="mt-1.5">
-                            <StarRating value={record.averageRating as number} size="sm" />
-                          </div>
+                        className={cn(
+                          'group/card relative -mx-3.5 -mt-3 -mb-3 px-3.5 pt-3 pb-3 border-l-[3px]',
+                          ACTION_BORDER_COLOR[action.status],
                         )}
-                        {record.stage === 'offer' && (() => {
-                          const offer = offersByAppId.get(record.id as string);
-                          if (offer) {
-                            return (
-                              <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
-                                <FileSignature className="h-2.5 w-2.5" />
-                                {offer.status.replace(/[-_]/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())}
-                              </span>
-                            );
-                          }
-                          return (
-                            <button
-                              type="button"
-                              className="mt-1.5 inline-flex items-center gap-1 rounded-full border border-dashed border-primary/40 px-2 py-0.5 text-[10px] font-medium text-primary hover:bg-primary/5 transition-colors"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                setCreateOfferFor(record.id as string);
-                              }}
-                            >
-                              <FileSignature className="h-2.5 w-2.5" />
-                              Create Offer
-                            </button>
-                          );
-                        })()}
-                      </div>
-                      <button
-                        type="button"
-                        title="Schedule Interview"
-                        className="absolute top-0 right-0 p-0.5 rounded text-muted-foreground/0 group-hover/card:text-muted-foreground hover:!text-primary transition-colors"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setScheduleFor({ candidateId: record.candidateId as string, jobOpeningId: id! });
-                        }}
                       >
-                        <CalendarPlus className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  )}
+                        <div
+                          className="block w-full cursor-pointer"
+                          onClick={(e) => { e.stopPropagation(); setPreviewApplicationId(app.id); }}
+                        >
+                          {/* Name + referral badge */}
+                          <div className="flex items-center gap-1.5 pr-6">
+                            <span className="text-[13px] font-medium text-foreground group-hover/card:text-primary transition-colors leading-snug truncate">
+                              {app.candidateId__label || 'Candidate'}
+                            </span>
+                            {app.referredBy__label && (
+                              <span className="shrink-0 inline-flex items-center gap-0.5 rounded-full bg-violet-100 dark:bg-violet-500/15 px-1.5 py-0.5 text-[9px] font-semibold text-violet-700 dark:text-violet-400" title={`Referred by ${app.referredBy__label}`}>
+                                <UserCheck className="h-2.5 w-2.5" />
+                                Ref
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Source + applied date + days in stage */}
+                          <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                            {app.source && (
+                              <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                                {formatLabel(app.source)}
+                              </span>
+                            )}
+                            <span className="text-[10px] text-muted-foreground/60" title={`Applied ${formatDate(app.createdAt)}`}>
+                              {formatDate(app.createdAt)}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground/40">
+                              {daysSince(app.createdAt)}d in pipeline
+                            </span>
+                          </div>
+
+                          {/* Rating + evaluation count */}
+                          {((app.averageRating ?? 0) > 0 || (app.evaluationsCount ?? 0) > 0) && (
+                            <div className="flex items-center gap-2 mt-1.5">
+                              {(app.averageRating ?? 0) > 0 && (
+                                <StarRating value={app.averageRating!} size="sm" />
+                              )}
+                              {(app.evaluationsCount ?? 0) > 0 && (
+                                <span className="text-[10px] text-muted-foreground">
+                                  {app.evaluationsCount} eval{app.evaluationsCount !== 1 ? 's' : ''}
+                                </span>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Action indicator */}
+                          {action.label && (
+                            <div className={cn('flex items-center gap-1 mt-2 text-[10px] font-medium', ACTION_TEXT_COLOR[action.status])}>
+                              {action.status === 'red' && <AlertCircle className="h-3 w-3" />}
+                              {action.status === 'amber' && <Clock4 className="h-3 w-3" />}
+                              {action.label}
+                            </div>
+                          )}
+
+                          {/* Offer status (offer stage only) */}
+                          {app.stage === 'offer' && (() => {
+                            if (offer) {
+                              return (
+                                <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+                                  <FileSignature className="h-2.5 w-2.5" />
+                                  {offer.status.replace(/[-_]/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())}
+                                </span>
+                              );
+                            }
+                            return (
+                              <button
+                                type="button"
+                                className="mt-1.5 inline-flex items-center gap-1 rounded-full border border-dashed border-primary/40 px-2 py-0.5 text-[10px] font-medium text-primary hover:bg-primary/5 transition-colors"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setCreateOfferFor(app.id);
+                                }}
+                              >
+                                <FileSignature className="h-2.5 w-2.5" />
+                                Create Offer
+                              </button>
+                            );
+                          })()}
+                        </div>
+                        <button
+                          type="button"
+                          title="Schedule Interview"
+                          className="absolute top-3 right-3.5 p-0.5 rounded text-muted-foreground/0 group-hover/card:text-muted-foreground hover:!text-primary transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setScheduleFor({ candidateId: app.candidateId, jobOpeningId: id! });
+                          }}
+                        >
+                          <CalendarPlus className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    );
+                  }}
                 />
               ) : (
                 <div className="space-y-2">
-                  {applications.map((app) => (
-                    <div
-                      key={app.id}
-                      className="group flex items-center justify-between rounded-lg border border-border bg-card px-4 py-3 hover:border-primary/30 hover:shadow-sm transition-all cursor-pointer"
-                      onClick={() => setPreviewApplicationId(app.id)}
-                    >
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
-                          {app.candidateId__label || 'Candidate'}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          Applied {formatDate(app.createdAt)}
-                        </p>
-                      </div>
-                      <span className={`shrink-0 ml-3 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                        `${STAGE_COLORS[app.stage]?.replace('bg-', 'bg-').replace('500', '100').replace('600', '100').replace('400', '100')} text-foreground`
-                      }`}
-                        style={{
-                          backgroundColor: `color-mix(in srgb, ${getComputedStyle(document.documentElement).getPropertyValue('--background') || '#fff'} 90%, ${STAGE_COLORS[app.stage]?.includes('blue') ? '#3b82f6' : STAGE_COLORS[app.stage]?.includes('violet') ? '#8b5cf6' : STAGE_COLORS[app.stage]?.includes('amber') ? '#f59e0b' : STAGE_COLORS[app.stage]?.includes('emerald') ? '#10b981' : STAGE_COLORS[app.stage]?.includes('green') ? '#059669' : STAGE_COLORS[app.stage]?.includes('red') ? '#ef4444' : STAGE_COLORS[app.stage]?.includes('pink') ? '#ec4899' : '#6b7280'})`,
-                        }}
+                  {applications.map((app) => {
+                    const action = getCardAction(app, interviewsByCandidate);
+                    return (
+                      <div
+                        key={app.id}
+                        className={cn(
+                          'group flex items-center justify-between rounded-lg border bg-card px-4 py-3 hover:border-primary/30 hover:shadow-sm transition-all cursor-pointer border-l-[3px]',
+                          ACTION_BORDER_COLOR[action.status],
+                          action.status === 'none' && 'border-l-border',
+                        )}
+                        onClick={() => setPreviewApplicationId(app.id)}
                       >
-                        {formatLabel(app.stage)}
-                      </span>
-                    </div>
-                  ))}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
+                              {app.candidateId__label || 'Candidate'}
+                            </p>
+                            {app.referredBy__label && (
+                              <span className="shrink-0 inline-flex items-center gap-0.5 rounded-full bg-violet-100 dark:bg-violet-500/15 px-1.5 py-0.5 text-[9px] font-semibold text-violet-700 dark:text-violet-400">
+                                <UserCheck className="h-2.5 w-2.5" />
+                                Ref
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-xs text-muted-foreground">
+                              Applied {formatDate(app.createdAt)}
+                            </span>
+                            {action.label && (
+                              <span className={cn('text-[10px] font-medium flex items-center gap-0.5', ACTION_TEXT_COLOR[action.status])}>
+                                {action.status === 'red' && <AlertCircle className="h-3 w-3" />}
+                                {action.status === 'amber' && <Clock4 className="h-3 w-3" />}
+                                {action.label}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0 ml-3">
+                          {(app.averageRating ?? 0) > 0 && (
+                            <StarRating value={app.averageRating!} size="sm" />
+                          )}
+                          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${STAGE_COLORS[app.stage] ?? 'bg-gray-400'} text-white`}>
+                            {formatLabel(app.stage)}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </>
