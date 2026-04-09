@@ -95,8 +95,8 @@ describe('WorkflowEngineService', () => {
 
     rbacServiceMock = {
       getPermissionsForUser: vi.fn().mockResolvedValue({
-        'tasks.approve': 'all',
-        'tasks.create': 'all',
+        'tasks.approve': true,
+        'tasks.create': true,
       }),
     };
 

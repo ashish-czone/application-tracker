@@ -473,21 +473,24 @@ export interface DataAccessConfig {
 /** Context passed to entity service methods for scope enforcement */
 export interface DataAccessContext {
   userId: string;
-  scope: string; // 'all' | 'team' | 'own' | 'scope:<key>'
-  teamUserIds?: string[];
+  scope: string; // 'all' | 'descendants' | 'unit' | 'own' | custom key
 }
+
 
 /**
- * Resolves the set of user IDs that constitute a user's "team".
- * Implementations typically combine org-unit membership + reporting hierarchy.
+ * Resolves data access scope based on a user's org position.
+ * Replaces TeamResolver with position-based scope resolution.
  * Injected into entity-engine as an optional global provider.
  */
-export interface TeamResolver {
-  getTeamUserIds(userId: string): Promise<string[]>;
+export interface PositionScopeProvider {
+  /** Returns the resolved scope string for a user on a given entity type */
+  resolveScope(userId: string, entityType: string): Promise<string>;
+  /** Returns the user IDs visible for the given scope, or null for 'all' or custom scopes */
+  resolveUserIds(userId: string, scope: string): Promise<string[] | null>;
 }
 
-/** Injection token for the optional TeamResolver provider */
-export const TEAM_RESOLVER = 'TEAM_RESOLVER';
+/** Injection token for the optional PositionScopeProvider */
+export const POSITION_SCOPE_PROVIDER = 'POSITION_SCOPE_PROVIDER';
 
 // ---------------------------------------------------------------------------
 // EntityConfig — the single config that defines everything about an entity

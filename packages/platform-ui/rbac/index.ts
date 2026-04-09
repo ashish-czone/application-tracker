@@ -7,5 +7,5 @@ export { PermissionsPicker } from './components/PermissionsPicker';
 export { FieldPermissionsTab } from './components/FieldPermissionsTab';
 export { useRolesList, useCreateRole, useUpdateRole, useDeleteRole, useRolePermissions, useSetRolePermissions, usePermissionRegistry } from './hooks';
 export { createRbacApi } from './services';
-export type { Role, CreateRoleRequest, UpdateRoleRequest, PermissionEntry, PermissionRegistryEntry, ScopedPermissions, ListRolesParams } from './types';
+export type { Role, CreateRoleRequest, UpdateRoleRequest, PermissionEntry, PermissionRegistryEntry, ScopedPermissions, BooleanPermissions, ListRolesParams } from './types';
 export type { RbacApi } from './services';

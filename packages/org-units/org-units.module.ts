@@ -1,32 +1,26 @@
 import { Global, Module, type OnModuleInit } from '@nestjs/common';
 import { OrgUnitService } from './services/org-unit.service';
+import { OrgPositionService } from './services/org-position.service';
+import { PositionScopeResolverService } from './services/position-scope-resolver.service';
 import { OrgUnitController } from './controllers/org-unit.controller';
+import { OrgPositionController } from './controllers/org-position.controller';
 import { PermissionRegistryService } from '@packages/rbac';
-import { LookupResolverService, TEAM_RESOLVER, type TeamResolver } from '@packages/entity-engine';
-import { UsersService } from '@packages/users';
+import { LookupResolverService, POSITION_SCOPE_PROVIDER } from '@packages/entity-engine';
 import { orgUnits } from './schema/org-units';
 
 @Global()
 @Module({
-  controllers: [OrgUnitController],
+  controllers: [OrgUnitController, OrgPositionController],
   providers: [
     OrgUnitService,
+    OrgPositionService,
+    PositionScopeResolverService,
     {
-      provide: TEAM_RESOLVER,
-      useFactory: (orgUnitService: OrgUnitService, usersService: UsersService): TeamResolver => ({
-        getTeamUserIds: async (userId: string) => {
-          const [orgMembers, subordinates] = await Promise.all([
-            orgUnitService.getTeamMemberIds(userId),
-            usersService.getSelfAndSubordinateIds(userId),
-          ]);
-          const unique = new Set([...orgMembers, ...subordinates]);
-          return Array.from(unique);
-        },
-      }),
-      inject: [OrgUnitService, UsersService],
+      provide: POSITION_SCOPE_PROVIDER,
+      useExisting: PositionScopeResolverService,
     },
   ],
-  exports: [OrgUnitService, TEAM_RESOLVER],
+  exports: [OrgUnitService, OrgPositionService, PositionScopeResolverService, POSITION_SCOPE_PROVIDER],
 })
 export class OrgUnitsModule implements OnModuleInit {
   constructor(

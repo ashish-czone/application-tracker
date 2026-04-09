@@ -59,7 +59,7 @@ export class SeedService implements OnModuleInit {
       roleId = role.id;
 
       // Grant wildcard permission — this is what makes the role an admin
-      await this.rbacService.setRolePermissions(roleId, [{ name: '*', scope: 'all' }]);
+      await this.rbacService.setRolePermissions(roleId, [{ name: '*' }]);
       this.logger.log('Admin role created with wildcard (*) permission');
     }
 

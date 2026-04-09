@@ -38,6 +38,7 @@ export type {
   RefreshTokensResponse,
   MessageResponse,
   ScopedPermissions,
+  BooleanPermissions,
   JwtPayload,
   AuthUser,
   UserProfile,

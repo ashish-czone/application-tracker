@@ -11,6 +11,7 @@ import {
   HttpStatus,
   ParseUUIDPipe,
   Inject,
+  Optional,
   UseInterceptors,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
@@ -18,24 +19,44 @@ import { CurrentUser, type JwtPayload } from '@packages/auth';
 import { RequirePermission } from '@packages/rbac';
 import { EntityService } from './entity.service';
 import { createFieldPermissionInterceptor } from './interceptors/field-permission.interceptor';
-import type { EntityConfig, ListLayoutResponse, EntityActions, DataAccessContext } from './types';
+import type { EntityConfig, ListLayoutResponse, EntityActions, DataAccessContext, PositionScopeProvider } from './types';
 import type { PermissionScope } from '@packages/rbac';
 
 /**
  * Extracts the data access context from the JWT payload for a given permission.
- * The scope comes from the user's permissions map (set during JWT enrichment by RBAC).
+ *
+ * Resolution order:
+ * 1. If a PositionScopeProvider is available, resolve scope from org position
+ * 2. Otherwise fall back to JWT-embedded scope (legacy)
  */
-function buildAccessContext(user: JwtPayload, permission: string): DataAccessContext | undefined {
-  const permissions = (user as any).permissions as Record<string, PermissionScope> | undefined;
+async function buildAccessContext(
+  user: JwtPayload,
+  permission: string,
+  entityType: string,
+  positionScopeProvider: PositionScopeProvider | null,
+): Promise<DataAccessContext | undefined> {
+  const permissions = (user as any).permissions as Record<string, PermissionScope | true> | undefined;
   if (!permissions) return undefined;
 
   // Wildcard permission → all access
   if (permissions['*']) return { userId: user.userId, scope: 'all' };
 
-  const scope = permissions[permission];
-  if (!scope) return undefined;
+  const permValue = permissions[permission];
+  if (!permValue) return undefined;
 
-  return { userId: user.userId, scope };
+  // If position scope provider is available, resolve from org position
+  if (positionScopeProvider) {
+    const scope = await positionScopeProvider.resolveScope(user.userId, entityType);
+    return { userId: user.userId, scope };
+  }
+
+  // Legacy: scope embedded in JWT permission value
+  if (typeof permValue === 'string') {
+    return { userId: user.userId, scope: permValue };
+  }
+
+  // Boolean permission (new format) without position provider → default to 'own'
+  return { userId: user.userId, scope: 'own' };
 }
 
 /**
@@ -60,11 +81,20 @@ export function createEntityController(config: EntityConfig, serviceToken: strin
 
   const FieldPermissionInterceptor = createFieldPermissionInterceptor(config);
 
+  const POSITION_SCOPE_TOKEN = 'POSITION_SCOPE_PROVIDER';
+
   @ApiTags(config.slug)
   @Controller(config.slug)
   @UseInterceptors(FieldPermissionInterceptor)
   class DynamicEntityController {
-    constructor(@Inject(serviceToken) private readonly entityService: EntityService) {}
+    private readonly positionScopeProvider: PositionScopeProvider | null;
+
+    constructor(
+      @Inject(serviceToken) private readonly entityService: EntityService,
+      @Inject(POSITION_SCOPE_TOKEN) @Optional() positionScopeProvider: PositionScopeProvider | null,
+    ) {
+      this.positionScopeProvider = positionScopeProvider ?? null;
+    }
 
     @Get('layout/list')
     @RequirePermission(readPermission)
@@ -84,7 +114,7 @@ export function createEntityController(config: EntityConfig, serviceToken: strin
         limit: query.limit ? Number(query.limit) : undefined,
         includeDeleted: query.includeDeleted === 'true',
       };
-      const accessCtx = buildAccessContext(user, readPermission);
+      const accessCtx = await buildAccessContext(user, readPermission, config.entityType, this.positionScopeProvider);
       return this.entityService.list(parsed, accessCtx);
     }
 
@@ -92,7 +122,7 @@ export function createEntityController(config: EntityConfig, serviceToken: strin
     @RequirePermission(readPermission)
     @ApiOperation({ summary: `Get a single ${config.singularName.toLowerCase()} by ID` })
     async findOne(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: JwtPayload) {
-      const accessCtx = buildAccessContext(user, readPermission);
+      const accessCtx = await buildAccessContext(user, readPermission, config.entityType, this.positionScopeProvider);
       return this.entityService.findOneOrFail(id, accessCtx);
     }
 

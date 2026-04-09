@@ -32,7 +32,7 @@ import { fieldTypeSaveHookRegistry, type FieldTypeSaveHookRegistry, type FieldTy
 
 import { WorkflowEngineService, WorkflowRegistryService, PipelineResolverService } from '@packages/workflows';
 import type { PaginatedResponse } from '@packages/common';
-import type { EntityConfig, BaseListQuery, ListLayoutColumn, DataAccessContext, TeamResolver } from './types';
+import type { EntityConfig, BaseListQuery, ListLayoutColumn, DataAccessContext, PositionScopeProvider } from './types';
 import type { SQL as DrizzleSQL } from 'drizzle-orm';
 import { EntityRegistryService } from './entity-registry.service';
 
@@ -67,7 +67,7 @@ export class EntityService {
     private readonly pipelineResolver: PipelineResolverService,
     private readonly entityRegistry: EntityRegistryService,
     appLogger: AppLoggerService,
-    private readonly teamResolver: TeamResolver | null = null,
+    private readonly positionScopeProvider: PositionScopeProvider | null = null,
   ) {
     this.logger = appLogger.forContext(`EntityService[${config.entityType}]`);
   }
@@ -99,29 +99,28 @@ export class EntityService {
       return eq(ownerColumn, ctx.userId);
     }
 
-    if (ctx.scope === 'team') {
+    // Position-based scopes: 'descendants' and 'unit'
+    if (ctx.scope === 'descendants' || ctx.scope === 'unit') {
       if (!ownerColumn) return undefined;
-      let teamUserIds = ctx.teamUserIds;
-      if (!teamUserIds?.length && this.teamResolver) {
-        teamUserIds = await this.teamResolver.getTeamUserIds(ctx.userId);
+      if (this.positionScopeProvider) {
+        const userIds = await this.positionScopeProvider.resolveUserIds(ctx.userId, ctx.scope);
+        if (!userIds) return undefined; // null = no filter
+        if (userIds.length === 0) return eq(ownerColumn, ctx.userId);
+        return inArray(ownerColumn, userIds);
       }
-      if (!teamUserIds?.length) return eq(ownerColumn, ctx.userId);
-      return inArray(ownerColumn, teamUserIds);
+      // Fallback: treat as 'own' if no provider available
+      return eq(ownerColumn, ctx.userId);
     }
 
-    // Custom scope: 'scope:<key>'
-    if (ctx.scope.startsWith('scope:')) {
-      const scopeKey = ctx.scope.slice(6);
-      const resolver = config.dataAccess?.scopes?.find((s) => s.key === scopeKey);
-      if (!resolver) {
-        this.logger.warn(`Unknown data access scope: ${ctx.scope}, falling back to 'own'`);
-        if (!ownerColumn) return undefined;
-        return eq(ownerColumn, ctx.userId);
-      }
+    // Custom scope: 'scope:<key>' (legacy format) or plain key (new format from positions)
+    const scopeKey = ctx.scope.startsWith('scope:') ? ctx.scope.slice(6) : ctx.scope;
+    const resolver = config.dataAccess?.scopes?.find((s) => s.key === scopeKey);
+    if (resolver) {
       return resolver.resolve(ctx.userId);
     }
 
     // Unknown scope — fail closed (own)
+    this.logger.warn(`Unknown data access scope: ${ctx.scope}, falling back to 'own'`);
     if (!ownerColumn) return undefined;
     return eq(ownerColumn, ctx.userId);
   }

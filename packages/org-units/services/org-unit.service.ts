@@ -76,12 +76,19 @@ export class OrgUnitService {
   // Member management
   // ---------------------------------------------------------------------------
 
-  async addMember(orgUnitId: string, userId: string): Promise<void> {
+  async addMember(orgUnitId: string, userId: string, positionId?: string): Promise<void> {
     await this.findOneOrFail(orgUnitId);
     await this.database.db
       .insert(orgUnitMembers)
-      .values({ orgUnitId, userId })
+      .values({ orgUnitId, userId, positionId: positionId ?? null })
       .onConflictDoNothing();
+  }
+
+  async updateMemberPosition(orgUnitId: string, userId: string, positionId: string | null): Promise<void> {
+    await this.database.db
+      .update(orgUnitMembers)
+      .set({ positionId })
+      .where(and(eq(orgUnitMembers.orgUnitId, orgUnitId), eq(orgUnitMembers.userId, userId)));
   }
 
   async removeMember(orgUnitId: string, userId: string): Promise<void> {

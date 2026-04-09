@@ -17,7 +17,7 @@ import {
 import { usePlatformAPI } from '../../PlatformUIProvider';
 import { createRbacApi } from '../services';
 import { PermissionsPicker } from './PermissionsPicker';
-import type { ScopedPermissions } from '../types';
+import type { BooleanPermissions } from '../types';
 
 const createRoleSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').max(100),
@@ -34,7 +34,7 @@ interface AddRoleFormProps {
 export function AddRoleForm({ onClose }: AddRoleFormProps) {
   const [step, setStep] = useState<1 | 2>(1);
   const [roleDetails, setRoleDetails] = useState<CreateRoleFormValues | null>(null);
-  const [selectedPermissions, setSelectedPermissions] = useState<ScopedPermissions>({});
+  const [selectedPermissions, setSelectedPermissions] = useState<BooleanPermissions>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const queryClient = useQueryClient();
@@ -71,10 +71,7 @@ export function AddRoleForm({ onClose }: AddRoleFormProps) {
         isDefault: roleDetails.isDefault === 'true',
       });
 
-      const permissions = Object.entries(selectedPermissions).map(([name, scope]) => ({
-        name,
-        scope,
-      }));
+      const permissions = Object.keys(selectedPermissions).map((name) => ({ name }));
       await rbacApi.setRolePermissions(role.id, permissions);
 
       queryClient.invalidateQueries({ queryKey: ['roles'] });

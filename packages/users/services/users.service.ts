@@ -17,7 +17,6 @@ import {
   asc,
   desc,
   count,
-  sql,
 } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
@@ -452,29 +451,4 @@ export class UsersService {
   // ---------------------------------------------------------------------------
 
   /**
-   * Returns all direct and indirect subordinate user IDs (recursive).
-   * Uses a recursive CTE to walk the reportsTo tree.
-   */
-  async getSubordinateIds(userId: string): Promise<string[]> {
-    const result = await this.database.db.execute<{ id: string }>(sql`
-      WITH RECURSIVE subordinates AS (
-        SELECT id, 1 AS depth FROM users WHERE reports_to = ${userId} AND deleted_at IS NULL
-        UNION ALL
-        SELECT u.id, s.depth + 1 FROM users u
-        INNER JOIN subordinates s ON u.reports_to = s.id
-        WHERE u.deleted_at IS NULL AND s.depth < 20
-      )
-      SELECT id FROM subordinates
-    `);
-    return result.rows.map((r) => r.id);
-  }
-
-  /**
-   * Returns the user's own ID plus all subordinate IDs.
-   * Useful for "own + reports" scope resolution.
-   */
-  async getSelfAndSubordinateIds(userId: string): Promise<string[]> {
-    const subordinateIds = await this.getSubordinateIds(userId);
-    return [userId, ...subordinateIds];
-  }
 }

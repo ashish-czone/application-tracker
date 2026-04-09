@@ -6,7 +6,7 @@ import type {
   UpdateRoleRequest,
   PermissionEntry,
   PermissionRegistryEntry,
-  ScopedPermissions,
+  BooleanPermissions,
   ListRolesParams,
 } from './types';
 
@@ -42,12 +42,12 @@ export function createRbacApi(api: ApiFn) {
       return api.get<{ count: number }>(`/roles/${roleId}/user-count`);
     },
 
-    getRolePermissions(roleId: string): Promise<ScopedPermissions> {
-      return api.get<ScopedPermissions>(`/roles/${roleId}/permissions`);
+    getRolePermissions(roleId: string): Promise<BooleanPermissions> {
+      return api.get<BooleanPermissions>(`/roles/${roleId}/permissions`);
     },
 
-    setRolePermissions(roleId: string, permissions: PermissionEntry[]): Promise<ScopedPermissions> {
-      return api.put<ScopedPermissions>(`/roles/${roleId}/permissions`, { permissions });
+    setRolePermissions(roleId: string, permissions: PermissionEntry[]): Promise<BooleanPermissions> {
+      return api.put<BooleanPermissions>(`/roles/${roleId}/permissions`, { permissions });
     },
 
     getPermissionRegistry(): Promise<PermissionRegistryEntry[]> {

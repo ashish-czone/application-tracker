@@ -11,7 +11,7 @@ import {
 import { useRolePermissions, useSetRolePermissions } from '../hooks';
 import { PermissionsPicker } from './PermissionsPicker';
 import { FieldPermissionsTab } from './FieldPermissionsTab';
-import type { Role, PermissionEntry, ScopedPermissions } from '../types';
+import type { Role, PermissionEntry, BooleanPermissions } from '../types';
 
 type Tab = 'permissions' | 'fields';
 
@@ -25,7 +25,7 @@ export function PermissionsModal({ role, onClose }: PermissionsModalProps) {
   const { data: currentPermissions, isLoading } = useRolePermissions(role?.id ?? null);
   const setPermissionsMutation = useSetRolePermissions({ onSuccess: onClose });
 
-  const [selected, setSelected] = useState<ScopedPermissions>({});
+  const [selected, setSelected] = useState<BooleanPermissions>({});
 
   useEffect(() => {
     if (currentPermissions) {
@@ -40,10 +40,7 @@ export function PermissionsModal({ role, onClose }: PermissionsModalProps) {
 
   function handleSave() {
     if (!role) return;
-    const permissions: PermissionEntry[] = Object.entries(selected).map(([name, scope]) => ({
-      name,
-      scope,
-    }));
+    const permissions: PermissionEntry[] = Object.keys(selected).map((name) => ({ name }));
     setPermissionsMutation.mutate({ roleId: role.id, permissions });
   }
 

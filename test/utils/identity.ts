@@ -1,14 +1,14 @@
 import type { DrizzleDB } from '@packages/database';
 import { users } from '@packages/database';
 import { AuthService } from '@packages/auth';
-import { RbacService, type ScopedPermissions } from '@packages/rbac';
+import { RbacService, type BooleanPermissions } from '@packages/rbac';
 import type { TestingModule } from '@nestjs/testing';
 import { randomUUID } from 'crypto';
 
 export interface TestIdentity {
   userId: string;
   userType: string;
-  permissions: ScopedPermissions;
+  permissions: BooleanPermissions;
   accessToken: string;
 }
 
@@ -54,23 +54,23 @@ export async function createTestIdentity(
     await rbacService.assignRoleToUser(user.id, role.id);
   }
 
-  // Convert permission names to scoped format (default scope 'all' for test identities)
-  const scopedPermissions: ScopedPermissions = {};
+  // Build boolean permissions map
+  const booleanPermissions: BooleanPermissions = {};
   for (const p of options.permissions) {
-    scopedPermissions[p] = 'all';
+    booleanPermissions[p] = true;
   }
 
   // Generate access token
   const accessToken = authService.generateAccessToken({
     userId: user.id,
     userType: options.userType,
-    permissions: scopedPermissions,
+    permissions: booleanPermissions,
   });
 
   return {
     userId: user.id,
     userType: options.userType,
-    permissions: scopedPermissions,
+    permissions: booleanPermissions,
     accessToken,
   };
 }
