@@ -15,6 +15,7 @@ export class CreateTemplateDto {
   subject?: string;
 
   @IsString()
+  @MaxLength(500_000)
   htmlBody!: string;
 
   @IsOptional()
