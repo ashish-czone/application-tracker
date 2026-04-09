@@ -1,0 +1,19 @@
+{
+  "name": "@packages/calendar-ui",
+  "version": "0.0.1",
+  "private": true,
+  "main": "index.ts",
+  "dependencies": {
+    "@packages/ui": "workspace:*",
+    "@fullcalendar/core": "^6.1.0",
+    "@fullcalendar/react": "^6.1.0",
+    "@fullcalendar/daygrid": "^6.1.0",
+    "@fullcalendar/timegrid": "^6.1.0",
+    "@fullcalendar/interaction": "^6.1.0",
+    "lucide-react": "^0.500.0",
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  }
+}

@@ -16,6 +16,7 @@ import { CandidateProfilePage } from '../portals/recruiter/features/candidates/C
 import { DashboardPage as RecruitDashboard } from '../portals/recruiter/features/dashboard/DashboardPage';
 import { JobOpeningDetailPage } from '../portals/recruiter/features/job-openings/JobOpeningDetailPage';
 import { ApplicationDetailPage } from '../portals/recruiter/features/applications/ApplicationDetailPage';
+import { InterviewsCalendarPage } from '../portals/recruiter/features/interviews/InterviewsCalendarPage';
 
 interface PendingTransition {
   toStateName: string;
@@ -217,6 +218,7 @@ export function AppRouter() {
           <Route path="/candidates" element={<EntityListPage entityType="candidates" />} />
           <Route path="/candidates/:id" element={<CandidateProfilePage />} />
           <Route path="/interviews" element={<EntityListPage entityType="interviews" />} />
+          <Route path="/interviews/calendar" element={<InterviewsCalendarPage />} />
           <Route path="/interviews/:id" element={<AppEntityDetailPage entityType="interviews" />} />
           <Route path="/clients" element={<EntityListPage entityType="clients" />} />
           <Route path="/clients/:id" element={<AppEntityDetailPage entityType="clients" />} />
