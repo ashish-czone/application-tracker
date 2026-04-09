@@ -12,9 +12,10 @@ export interface RoleWithSystem extends Role {
   isSystem: boolean;
 }
 
-export type PermissionScope = 'own' | 'all';
+/** Built-in scopes + custom entity-defined scopes (prefixed with 'scope:') */
+export type PermissionScope = 'all' | 'team' | 'own' | `scope:${string}`;
 
-/** Map of permission name → scope (e.g. { "users.read": "all", "users.update": "own" }) */
+/** Map of permission name → scope (e.g. { "users.read": "all", "users.update": "own", "job-openings.read": "scope:hiring-manager" }) */
 export type ScopedPermissions = Record<string, PermissionScope>;
 
 export interface PermissionRegistryEntry {
