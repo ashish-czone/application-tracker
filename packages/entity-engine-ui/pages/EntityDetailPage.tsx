@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Settings, Copy, Trash2, MoreHorizontal, Briefcase, UserPlus } from 'lucide-react';
@@ -63,6 +63,21 @@ export function EntityDetailPage({ entityType, renderPipelineProgress, renderWor
     targetEntity: string;
     foreignKey?: string;
   } | null>(null);
+
+  // Collapsing header: observe a sentinel element at the top of the page
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const [headerCollapsed, setHeaderCollapsed] = useState(false);
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setHeaderCollapsed(!entry.isIntersecting),
+      { threshold: 0 },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, []);
 
   const { data: item, isLoading, isError } = hooks.useDetail(id ?? null);
   const { data: layout, isLoading: layoutLoading } = useEntityLayout(entityType);
@@ -229,9 +244,94 @@ export function EntityDetailPage({ entityType, renderPipelineProgress, renderWor
   const subtitle = getSubtitle(item);
   const plugins = getDetailPlugins(entityType).sort((a, b) => a.order - b.order);
 
+  const headerActions = (
+    <div className="flex items-center gap-2">
+      {/* Custom header actions */}
+      {renderHeaderActions && renderHeaderActions(entityType, item.id as string, item)}
+
+      {/* Workflow transition actions */}
+      {renderWorkflowActions && entity.features.hasWorkflow && (
+        renderWorkflowActions(entityType, item.id as string, item)
+      )}
+
+      {/* Primary action button (first picker action) */}
+      {primaryAction && (
+        <Button size="sm" onClick={() => handleAction(primaryAction)}>
+          {primaryAction.icon && ICON_MAP[primaryAction.icon] && (
+            (() => {
+              const Icon = ICON_MAP[primaryAction.icon!];
+              return <Icon className="h-4 w-4 mr-1" />;
+            })()
+          )}
+          {primaryAction.label}
+        </Button>
+      )}
+
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => navigate(`/settings/${entityType}`, { state: { from: location.pathname } })}
+      >
+        <Settings className="h-4 w-4 mr-1" />
+        Edit Layout
+      </Button>
+
+      {/* More actions dropdown */}
+      {dropdownActions.length > 0 && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {dropdownActions.map((action, idx) => {
+              const Icon = action.icon ? ICON_MAP[action.icon] : null;
+              const isDestructive = action.variant === 'destructive';
+
+              return (
+                <div key={action.key}>
+                  {isDestructive && idx > 0 && <DropdownMenuSeparator />}
+                  <DropdownMenuItem
+                    onClick={() => handleAction(action)}
+                    className={isDestructive ? 'text-destructive focus:text-destructive' : ''}
+                  >
+                    {Icon && <Icon className="h-4 w-4 mr-2" />}
+                    {action.label}
+                  </DropdownMenuItem>
+                </div>
+              );
+            })}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
+    </div>
+  );
+
   return (
     <div>
-      {/* Header */}
+      {/* Scroll sentinel — when this scrolls out of view, header collapses */}
+      <div ref={sentinelRef} className="h-0" />
+
+      {/* Collapsed sticky header — appears when scrolled past the full header */}
+      {headerCollapsed && (
+        <div className="sticky top-0 z-20 -mx-6 px-6 py-2.5 bg-background/95 backdrop-blur-sm border-b border-border shadow-sm animate-in slide-in-from-top-1 duration-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3 min-w-0">
+              <Link
+                to={`/${entity.slug}`}
+                className="text-muted-foreground hover:text-foreground shrink-0"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Link>
+              <h2 className="text-sm font-semibold text-foreground truncate">{displayName}</h2>
+            </div>
+            {headerActions}
+          </div>
+        </div>
+      )}
+
+      {/* Full header */}
       <div className="mb-6">
         <Link
           to={`/${entity.slug}`}
@@ -248,68 +348,7 @@ export function EntityDetailPage({ entityType, renderPipelineProgress, renderWor
               <p className="text-sm text-muted-foreground mt-0.5">{subtitle}</p>
             )}
           </div>
-
-          <div className="flex items-center gap-2">
-            {/* Custom header actions */}
-            {renderHeaderActions && renderHeaderActions(entityType, item.id as string, item)}
-
-            {/* Workflow transition actions */}
-            {renderWorkflowActions && entity.features.hasWorkflow && (
-              renderWorkflowActions(entityType, item.id as string, item)
-            )}
-
-            {/* Primary action button (first picker action) */}
-            {primaryAction && (
-              <Button size="sm" onClick={() => handleAction(primaryAction)}>
-                {primaryAction.icon && ICON_MAP[primaryAction.icon] && (
-                  (() => {
-                    const Icon = ICON_MAP[primaryAction.icon!];
-                    return <Icon className="h-4 w-4 mr-1" />;
-                  })()
-                )}
-                {primaryAction.label}
-              </Button>
-            )}
-
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate(`/settings/${entityType}`, { state: { from: location.pathname } })}
-            >
-              <Settings className="h-4 w-4 mr-1" />
-              Edit Layout
-            </Button>
-
-            {/* More actions dropdown */}
-            {dropdownActions.length > 0 && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  {dropdownActions.map((action, idx) => {
-                    const Icon = action.icon ? ICON_MAP[action.icon] : null;
-                    const isDestructive = action.variant === 'destructive';
-
-                    return (
-                      <div key={action.key}>
-                        {isDestructive && idx > 0 && <DropdownMenuSeparator />}
-                        <DropdownMenuItem
-                          onClick={() => handleAction(action)}
-                          className={isDestructive ? 'text-destructive focus:text-destructive' : ''}
-                        >
-                          {Icon && <Icon className="h-4 w-4 mr-2" />}
-                          {action.label}
-                        </DropdownMenuItem>
-                      </div>
-                    );
-                  })}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-          </div>
+          {headerActions}
         </div>
       </div>
 
