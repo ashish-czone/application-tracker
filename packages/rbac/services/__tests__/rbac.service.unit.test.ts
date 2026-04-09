@@ -194,32 +194,32 @@ describe('RbacService', () => {
   });
 
   describe('getPermissionsForUser', () => {
-    it('should return scoped permissions as Record<string, scope>', async () => {
+    it('should return boolean permissions as Record<string, true>', async () => {
       mockDb._chain.where.mockResolvedValueOnce([
-        { permission: 'users.read', scope: 'all' },
-        { permission: 'users.update', scope: 'own' },
+        { permission: 'users.read' },
+        { permission: 'users.update' },
       ]);
 
       const result = await service.getPermissionsForUser('user-1', 'admin');
 
       expect(result).toEqual({
-        'users.read': 'all',
-        'users.update': 'own',
+        'users.read': true,
+        'users.update': true,
       });
     });
 
-    it('should resolve highest scope when same permission from multiple roles', async () => {
+    it('should deduplicate permissions from multiple roles', async () => {
       mockDb._chain.where.mockResolvedValueOnce([
-        { permission: 'users.read', scope: 'own' },
-        { permission: 'users.read', scope: 'all' },
-        { permission: 'users.update', scope: 'own' },
+        { permission: 'users.read' },
+        { permission: 'users.read' },
+        { permission: 'users.update' },
       ]);
 
       const result = await service.getPermissionsForUser('user-1', 'admin');
 
       expect(result).toEqual({
-        'users.read': 'all',
-        'users.update': 'own',
+        'users.read': true,
+        'users.update': true,
       });
     });
 
@@ -233,12 +233,12 @@ describe('RbacService', () => {
 
     it('should return wildcard when role has * permission', async () => {
       mockDb._chain.where.mockResolvedValueOnce([
-        { permission: '*', scope: 'all' },
+        { permission: '*' },
       ]);
 
       const result = await service.getPermissionsForUser('user-1', 'client');
 
-      expect(result).toEqual({ '*': 'all' });
+      expect(result).toEqual({ '*': true });
     });
   });
 

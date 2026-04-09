@@ -22,7 +22,7 @@ function createMockAuthService() {
 
 function createMockRbacService() {
   return {
-    getPermissionsForUser: vi.fn().mockResolvedValue({ '*': 'all' }),
+    getPermissionsForUser: vi.fn().mockResolvedValue({ '*': true }),
     findDefaultRoleForUserType: vi.fn().mockResolvedValue({ id: 'role-1', name: 'Client' }),
     assignRoleToUser: vi.fn().mockResolvedValue(undefined),
   } as any;

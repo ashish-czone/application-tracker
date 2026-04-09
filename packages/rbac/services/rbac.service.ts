@@ -6,7 +6,7 @@ import { roles } from '../schema/roles';
 import { rolePermissions } from '../schema/role-permissions';
 import { userRoles } from '../schema/user-roles';
 import { PermissionRegistryService } from './permission-registry.service';
-import type { Role, RoleWithSystem, ScopedPermissions, PermissionScope } from '../types';
+import type { Role, RoleWithSystem, ScopedPermissions, PermissionScope, BooleanPermissions } from '../types';
 
 @Injectable()
 export class RbacService {
@@ -170,36 +170,32 @@ export class RbacService {
 
   // --- Permissions ---
 
-  async getPermissionsForUser(userId: string, userType: string): Promise<ScopedPermissions> {
-    // Load permissions from role_permissions — wildcard '*' is stored as a regular permission
+  async getPermissionsForUser(userId: string, userType: string): Promise<BooleanPermissions> {
+    // Load permissions from role_permissions — scope is ignored (determined by org positions now)
     const results = await this.database.db
-      .select({ permission: rolePermissions.permission, scope: rolePermissions.scope })
+      .select({ permission: rolePermissions.permission })
       .from(userRoles)
       .innerJoin(roles, and(eq(roles.id, userRoles.roleId), eq(roles.userType, userType)))
       .innerJoin(rolePermissions, eq(rolePermissions.roleId, roles.id))
       .where(withTenant(userRoles, eq(userRoles.userId, userId)));
 
-    const scopedPermissions: ScopedPermissions = {};
+    const permissions: BooleanPermissions = {};
     for (const r of results) {
-      const existing = scopedPermissions[r.permission];
-      const incoming = r.scope as PermissionScope;
-      if (!existing || this.scopeRank(incoming) > this.scopeRank(existing)) {
-        scopedPermissions[r.permission] = incoming;
-      }
+      permissions[r.permission] = true;
     }
-    return scopedPermissions;
+    return permissions;
   }
 
   async setRolePermissions(
     roleId: string,
     permissionEntries: string[] | { name: string; scope?: PermissionScope }[],
-    actorPermissions?: ScopedPermissions,
+    actorPermissions?: BooleanPermissions | ScopedPermissions,
   ): Promise<void> {
     const role = await this.findRoleById(roleId);
     if (!role) throw new NotFoundException('Role not found');
 
     const entries = permissionEntries.map((e) =>
-      typeof e === 'string' ? { name: e, scope: 'all' as PermissionScope } : { name: e.name, scope: e.scope ?? 'all' },
+      typeof e === 'string' ? { name: e } : { name: e.name },
     );
 
     // Load current permissions once for enforcement checks
@@ -260,23 +256,23 @@ export class RbacService {
           .values(withTenantInsert(rolePermissions, entries.map((e) => ({
             roleId,
             permission: e.name,
-            scope: e.scope,
+            scope: 'all', // DB compat — scope column still exists, always store 'all'
           }))));
       }
     });
   }
 
-  async getRolePermissions(roleId: string): Promise<ScopedPermissions> {
+  async getRolePermissions(roleId: string): Promise<BooleanPermissions> {
     const results = await this.database.db
-      .select({ permission: rolePermissions.permission, scope: rolePermissions.scope })
+      .select({ permission: rolePermissions.permission })
       .from(rolePermissions)
       .where(withTenant(rolePermissions, eq(rolePermissions.roleId, roleId)));
 
-    const scopedPermissions: ScopedPermissions = {};
+    const permissions: BooleanPermissions = {};
     for (const r of results) {
-      scopedPermissions[r.permission] = r.scope as PermissionScope;
+      permissions[r.permission] = true;
     }
-    return scopedPermissions;
+    return permissions;
   }
 
   // --- User-role assignment ---
@@ -398,11 +394,4 @@ export class RbacService {
     return Number(total);
   }
 
-  private scopeRank(scope: PermissionScope): number {
-    if (scope === 'all') return 4;
-    if (scope === 'team') return 3;
-    if (scope === 'own') return 2;
-    if (scope.startsWith('scope:')) return 2; // custom scopes are equivalent to 'own' level
-    return 0;
-  }
 }

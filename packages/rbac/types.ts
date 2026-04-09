@@ -13,10 +13,14 @@ export interface RoleWithSystem extends Role {
 }
 
 /** Built-in scopes + custom entity-defined scopes (prefixed with 'scope:') */
+/** @deprecated Scope is now determined by org positions, not RBAC permissions */
 export type PermissionScope = 'all' | 'team' | 'own' | `scope:${string}`;
 
-/** Map of permission name → scope (e.g. { "users.read": "all", "users.update": "own", "job-openings.read": "scope:hiring-manager" }) */
+/** @deprecated Use BooleanPermissions instead — scope is now determined by org positions */
 export type ScopedPermissions = Record<string, PermissionScope>;
+
+/** Map of permission name → true (scope is no longer embedded in permissions) */
+export type BooleanPermissions = Record<string, true>;
 
 export interface PermissionRegistryEntry {
   module: string;
