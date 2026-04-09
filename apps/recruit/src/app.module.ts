@@ -31,6 +31,7 @@ import { EavAttributesModule } from '@packages/eav-attributes';
 import { EntityRelationsModule } from '@packages/entity-relations';
 import { EntityLayoutModule } from '@packages/entity-layout';
 import { EntityEngineModule } from '@packages/entity-engine';
+import { DocumentTemplatesModule } from '@packages/document-templates';
 import { SharedModule } from './modules/shared/shared.module';
 import { CandidatesModule } from './modules/candidates/candidates.module';
 import { CLIENTS_CONFIG } from './modules/clients/clients.config';
@@ -120,6 +121,7 @@ import { validate } from './config/env.validation';
     EntityRelationsModule,
     EntityLayoutModule,
     EntityEngineModule,
+    DocumentTemplatesModule.register(),
     AuthModule.registerAsync({
       useFactory: (config: ConfigService, appConfig: AppConfigService) => ({
         jwtSecret: config.get<string>('JWT_SECRET')!,
