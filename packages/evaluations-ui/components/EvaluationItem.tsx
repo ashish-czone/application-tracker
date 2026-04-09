@@ -10,6 +10,7 @@ import {
   DropdownMenuItem,
 } from '@packages/ui';
 import type { EvaluationWithScores } from '../types';
+import { RECOMMENDATION_OPTIONS } from '../types';
 import { StarRating } from './StarRating';
 
 interface EvaluationItemProps {
@@ -50,9 +51,17 @@ export function EvaluationItem({ evaluation, currentUserId, onEdit, onDelete }: 
             <span className="text-xs text-muted-foreground">{timeAgo}</span>
           </div>
 
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
             <StarRating value={evaluation.overallRating} size="sm" />
             <span className="text-sm font-medium">{evaluation.overallRating}/5</span>
+            {evaluation.recommendation && (() => {
+              const rec = RECOMMENDATION_OPTIONS.find((r) => r.value === evaluation.recommendation);
+              return rec ? (
+                <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${rec.color}`}>
+                  {rec.label}
+                </span>
+              ) : null;
+            })()}
             {evaluation.template && (
               <span className="text-xs text-muted-foreground">
                 ({evaluation.template.name})
