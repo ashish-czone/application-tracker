@@ -32,7 +32,7 @@ import { fieldTypeSaveHookRegistry, type FieldTypeSaveHookRegistry, type FieldTy
 
 import { WorkflowEngineService, WorkflowRegistryService, PipelineResolverService } from '@packages/workflows';
 import type { PaginatedResponse } from '@packages/common';
-import type { EntityConfig, BaseListQuery, ListLayoutColumn, DataAccessContext } from './types';
+import type { EntityConfig, BaseListQuery, ListLayoutColumn, DataAccessContext, TeamResolver } from './types';
 import type { SQL as DrizzleSQL } from 'drizzle-orm';
 import { EntityRegistryService } from './entity-registry.service';
 
@@ -67,6 +67,7 @@ export class EntityService {
     private readonly pipelineResolver: PipelineResolverService,
     private readonly entityRegistry: EntityRegistryService,
     appLogger: AppLoggerService,
+    private readonly teamResolver: TeamResolver | null = null,
   ) {
     this.logger = appLogger.forContext(`EntityService[${config.entityType}]`);
   }
@@ -99,8 +100,13 @@ export class EntityService {
     }
 
     if (ctx.scope === 'team') {
-      if (!ownerColumn || !ctx.teamUserIds?.length) return eq(ownerColumn ?? table.createdBy, ctx.userId);
-      return inArray(ownerColumn, ctx.teamUserIds);
+      if (!ownerColumn) return undefined;
+      let teamUserIds = ctx.teamUserIds;
+      if (!teamUserIds?.length && this.teamResolver) {
+        teamUserIds = await this.teamResolver.getTeamUserIds(ctx.userId);
+      }
+      if (!teamUserIds?.length) return eq(ownerColumn, ctx.userId);
+      return inArray(ownerColumn, teamUserIds);
     }
 
     // Custom scope: 'scope:<key>'

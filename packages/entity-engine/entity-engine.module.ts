@@ -26,7 +26,8 @@ import { MULTI_VALUE_EXTENSION, type MultiValueExtension } from './extensions/mu
 import { LAYOUT_EXTENSION, type LayoutExtension } from './extensions/layout-extension.interface';
 import { CreateEntityAction } from './actions/create-entity.action';
 import { UpdateEntityAction } from './actions/update-entity.action';
-import type { EntityConfig, FieldType } from './types';
+import { TEAM_RESOLVER } from './types';
+import type { EntityConfig, FieldType, TeamResolver } from './types';
 
 /** Map entity-engine FieldType → automations EntityFieldType for the resolver registry */
 const FIELD_TYPE_MAP: Partial<Record<FieldType, EntityFieldType>> = {
@@ -143,8 +144,9 @@ export class EntityEngineModule implements OnModuleInit, OnApplicationBootstrap 
             pipelineResolver: PipelineResolverService,
             entityRegistry: EntityRegistryService,
             appLogger: AppLoggerService,
-          ) => new EntityService(config, database, domainEventEmitter, config.customFields ? eavStorage : null, multiValueExtension, fieldDefinitionService, lookupResolver, taxonomyService, hookRegistry, workflowEngine, workflowRegistry, pipelineResolver, entityRegistry, appLogger),
-          inject: [DatabaseService, DomainEventEmitter, { token: EAV_STORAGE_EXTENSION, optional: true }, { token: MULTI_VALUE_EXTENSION, optional: true }, FieldDefinitionService, LookupResolverService, TaxonomyService, FieldTypeSaveHookRegistry, WorkflowEngineService, WorkflowRegistryService, PipelineResolverService, EntityRegistryService, AppLoggerService],
+            teamResolver: TeamResolver | null,
+          ) => new EntityService(config, database, domainEventEmitter, config.customFields ? eavStorage : null, multiValueExtension, fieldDefinitionService, lookupResolver, taxonomyService, hookRegistry, workflowEngine, workflowRegistry, pipelineResolver, entityRegistry, appLogger, teamResolver),
+          inject: [DatabaseService, DomainEventEmitter, { token: EAV_STORAGE_EXTENSION, optional: true }, { token: MULTI_VALUE_EXTENSION, optional: true }, FieldDefinitionService, LookupResolverService, TaxonomyService, FieldTypeSaveHookRegistry, WorkflowEngineService, WorkflowRegistryService, PipelineResolverService, EntityRegistryService, AppLoggerService, { token: TEAM_RESOLVER, optional: true }],
         },
       ],
       exports: [serviceToken],

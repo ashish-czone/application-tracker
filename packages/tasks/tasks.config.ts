@@ -98,6 +98,10 @@ export const TASKS_CONFIG = defineEntity({
     },
   ],
 
+  dataAccess: {
+    ownerField: 'assigneeId',
+  },
+
   ui: {
     icon: 'CheckSquare',
     navGroup: 'main',
