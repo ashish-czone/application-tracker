@@ -22,6 +22,8 @@ interface ConfirmDialogProps {
   /** Label shown while pending. Defaults to "Deleting..." */
   pendingLabel?: string;
   onConfirm: () => void;
+  /** Optional content rendered between description and footer. */
+  children?: React.ReactNode;
 }
 
 export function ConfirmDialog({
@@ -34,6 +36,7 @@ export function ConfirmDialog({
   isPending = false,
   pendingLabel = 'Deleting...',
   onConfirm,
+  children,
 }: ConfirmDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -42,6 +45,7 @@ export function ConfirmDialog({
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
+        {children}
         <DialogFooter>
           <Button
             type="button"

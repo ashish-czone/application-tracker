@@ -1,5 +1,6 @@
 import { Controller, Get, Post, Body, Param, ParseUUIDPipe, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { RequirePermission } from '@packages/rbac';
 import { CurrentUser, type JwtPayload } from '@packages/auth';
 import { OfferApprovalsService } from '../services/offer-approvals.service';
 import { OfferLetterService } from '../services/offer-letter.service';
@@ -15,6 +16,7 @@ export class OfferApprovalsController {
   ) {}
 
   @Get(':offerId/approvals')
+  @RequirePermission('offers.read')
   @ApiOperation({ summary: 'List approval decisions for an offer' })
   async list(@Param('offerId', ParseUUIDPipe) offerId: string) {
     return this.approvalsService.listForOffer(offerId);
@@ -22,6 +24,7 @@ export class OfferApprovalsController {
 
   @Post(':offerId/approvals')
   @HttpCode(HttpStatus.OK)
+  @RequirePermission('offers.update')
   @ApiOperation({ summary: 'Submit an approval decision' })
   async submitDecision(
     @Param('offerId', ParseUUIDPipe) offerId: string,
@@ -33,6 +36,7 @@ export class OfferApprovalsController {
 
   @Post(':offerId/approvers')
   @HttpCode(HttpStatus.OK)
+  @RequirePermission('offers.update')
   @ApiOperation({ summary: 'Set approvers for an offer (creates pending approval rows)' })
   async setApprovers(
     @Param('offerId', ParseUUIDPipe) offerId: string,
@@ -44,6 +48,7 @@ export class OfferApprovalsController {
 
   @Post(':offerId/send-letter')
   @HttpCode(HttpStatus.OK)
+  @RequirePermission('offers.update')
   @ApiOperation({ summary: 'Render offer letter, generate PDF, and email to candidate' })
   async sendOfferLetter(
     @Param('offerId', ParseUUIDPipe) offerId: string,

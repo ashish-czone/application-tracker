@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, index } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, index, uniqueIndex } from 'drizzle-orm/pg-core';
 import { randomUUID } from 'crypto';
 import { users } from '@packages/database/schema';
 import { offers } from './offers';
@@ -14,4 +14,5 @@ export const offerApprovals = pgTable('offer_approvals', {
 }, (table) => [
   index('offer_approvals_offer_id_idx').on(table.offerId),
   index('offer_approvals_approver_id_idx').on(table.approverId),
+  uniqueIndex('offer_approvals_offer_approver_unique_idx').on(table.offerId, table.approverId),
 ]);
