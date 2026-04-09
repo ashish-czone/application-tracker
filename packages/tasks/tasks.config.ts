@@ -1,4 +1,5 @@
 import { defineEntity } from '@packages/entity-engine';
+import { eq, or, sql } from 'drizzle-orm';
 import { tasks } from './schema/tasks';
 
 export const TASKS_CONFIG = defineEntity({
@@ -72,13 +73,23 @@ export const TASKS_CONFIG = defineEntity({
       listOrder: 4,
       isRecipient: true,
     },
+    assigneeTeamId: {
+      type: 'lookup',
+      label: 'Assigned Team',
+      entity: 'org-units',
+      lookupLabelField: 'name',
+      lookupSearchFields: ['name'],
+      quickCreate: true,
+      listVisible: true,
+      listOrder: 5,
+    },
     dueDate: {
       type: 'date',
       label: 'Due Date',
       sortable: true,
       quickCreate: true,
       listVisible: true,
-      listOrder: 5,
+      listOrder: 6,
     },
     createdBy: {
       type: 'user',
@@ -94,12 +105,22 @@ export const TASKS_CONFIG = defineEntity({
   sections: [
     {
       name: 'Basic Information',
-      fields: ['title', 'description', 'status', 'priority', 'assigneeId', 'dueDate'],
+      fields: ['title', 'description', 'status', 'priority', 'assigneeId', 'assigneeTeamId', 'dueDate'],
     },
   ],
 
   dataAccess: {
     ownerField: 'assigneeId',
+    scopes: [
+      {
+        key: 'my-tasks',
+        label: 'Assigned to me or my teams',
+        resolve: async (userId: string) => or(
+          eq(tasks.assigneeId, userId),
+          sql`${tasks.assigneeTeamId} IN (SELECT org_unit_id FROM org_unit_members WHERE user_id = ${userId})`,
+        )!,
+      },
+    ],
   },
 
   ui: {

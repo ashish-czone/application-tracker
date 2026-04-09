@@ -6,6 +6,7 @@
   "dependencies": {
     "@packages/database": "workspace:*",
     "@packages/entity-engine": "workspace:*",
+    "@packages/org-units": "workspace:*",
     "drizzle-orm": "^0.45.1"
   },
   "devDependencies": {
