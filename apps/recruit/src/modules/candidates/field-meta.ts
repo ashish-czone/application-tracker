@@ -7,7 +7,7 @@ import type { FieldMeta } from '@packages/entity-engine';
 export const CANDIDATE_FIELD_META: Record<string, FieldMeta> = {
   // Basic Info
   email: { label: 'Email', section: 'basic', sortOrder: 0, isQuickCreate: true, isUnique: true, fieldType: 'email', maxLength: 255 },
-  firstName: { label: 'First Name', section: 'basic', sortOrder: 1, isQuickCreate: true, isSystem: true, maxLength: 125, cellRenderer: 'CandidateNameCell' },
+  firstName: { label: 'First Name', section: 'basic', sortOrder: 1, isQuickCreate: true, isSystem: true, maxLength: 125 },
   phone: { label: 'Phone', section: 'basic', sortOrder: 2, fieldType: 'phone' },
   lastName: { label: 'Last Name', section: 'basic', sortOrder: 3, isQuickCreate: true, isSystem: true, maxLength: 125 },
   website: { label: 'Website', section: 'basic', sortOrder: 4, fieldType: 'url' },

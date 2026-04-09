@@ -35,7 +35,7 @@ export const candidatesConfig: EntityConfig = {
 
   fieldMeta: {
     ...CANDIDATE_FIELD_META,
-    fullName: { label: 'Candidate', isSystem: true },
+    fullName: { label: 'Candidate', isSystem: true, cellRenderer: 'AvatarNameCell' },
   },
   sections: CANDIDATE_SECTIONS,
 

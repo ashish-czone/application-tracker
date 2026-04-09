@@ -20,7 +20,7 @@ export const CLIENTS_CONFIG: EntityConfig = {
   },
 
   fieldMeta: {
-    clientName: { label: 'Client Name', section: 'basic', sortOrder: 0, isQuickCreate: true, isSystem: true, maxLength: 255 },
+    clientName: { label: 'Client Name', section: 'basic', sortOrder: 0, isQuickCreate: true, isSystem: true, maxLength: 255, cellRenderer: 'AvatarNameCell' },
     parentClientId: {
       label: 'Parent Client', section: 'basic', sortOrder: 1,
       fieldType: 'lookup', lookupEntity: 'clients', lookupLabelField: 'clientName',
