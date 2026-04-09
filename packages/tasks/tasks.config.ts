@@ -1,5 +1,6 @@
 import { defineEntity } from '@packages/entity-engine';
 import { eq, or, sql } from 'drizzle-orm';
+import { orgUnitMembers } from '@packages/org-units';
 import { tasks } from './schema/tasks';
 
 export const TASKS_CONFIG = defineEntity({
@@ -79,7 +80,6 @@ export const TASKS_CONFIG = defineEntity({
       entity: 'org-units',
       lookupLabelField: 'name',
       lookupSearchFields: ['name'],
-      quickCreate: true,
       listVisible: true,
       listOrder: 5,
     },
@@ -117,7 +117,7 @@ export const TASKS_CONFIG = defineEntity({
         label: 'Assigned to me or my teams',
         resolve: async (userId: string) => or(
           eq(tasks.assigneeId, userId),
-          sql`${tasks.assigneeTeamId} IN (SELECT org_unit_id FROM org_unit_members WHERE user_id = ${userId})`,
+          sql`${tasks.assigneeTeamId} IN (SELECT ${orgUnitMembers.orgUnitId} FROM ${orgUnitMembers} WHERE ${orgUnitMembers.userId} = ${userId})`,
         )!,
       },
     ],
