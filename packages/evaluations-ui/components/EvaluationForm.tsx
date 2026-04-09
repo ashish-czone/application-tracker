@@ -2,9 +2,10 @@ import { useMemo, useEffect } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Button, FormTextarea, FormSelect } from '@packages/ui';
+import { Button, FormTextarea, FormSelect, cn } from '@packages/ui';
 import { useEvaluationTemplates } from '../hooks';
-import type { EvaluationCriterion, EvaluationTemplate, EvaluationWithScores } from '../types';
+import type { EvaluationCriterion, EvaluationTemplate, EvaluationWithScores, Recommendation } from '../types';
+import { RECOMMENDATION_OPTIONS } from '../types';
 import { StarRating } from './StarRating';
 
 interface EvaluationFormProps {
@@ -20,6 +21,7 @@ interface EvaluationFormProps {
 export interface EvaluationFormValues {
   templateId: string;
   overallRating: number;
+  recommendation: Recommendation;
   comment: string;
   scores: { criteriaName: string; score: number; note: string }[];
 }
@@ -28,6 +30,9 @@ function buildSchema(template: EvaluationTemplate | null) {
   return z.object({
     templateId: z.string().min(1, 'Template is required'),
     overallRating: z.number().int().min(1, 'Overall rating is required').max(5),
+    recommendation: z.enum(['strong_no', 'no', 'yes', 'strong_yes'], {
+      required_error: 'Recommendation is required',
+    }),
     comment: z.string().max(65536).optional().default(''),
     scores: z.array(
       z.object({
@@ -61,6 +66,7 @@ export function EvaluationForm({
     defaultValues: {
       templateId: defaultTemplateId,
       overallRating: editingEvaluation?.overallRating ?? 0,
+      recommendation: editingEvaluation?.recommendation ?? undefined,
       comment: editingEvaluation?.comment ?? '',
       scores: selectedTemplate?.criteria.map((c: EvaluationCriterion) => {
         const existing = editingEvaluation?.scores.find((s) => s.criteriaName === c.name);
@@ -106,6 +112,7 @@ export function EvaluationForm({
       reset({
         templateId: editingEvaluation.templateId,
         overallRating: editingEvaluation.overallRating,
+        recommendation: editingEvaluation.recommendation ?? undefined,
         comment: editingEvaluation.comment ?? '',
         scores: selectedTemplate.criteria.map((c: EvaluationCriterion) => {
           const existing = editingEvaluation.scores.find((s) => s.criteriaName === c.name);
@@ -195,6 +202,36 @@ export function EvaluationForm({
           {methods.formState.errors.overallRating && (
             <p className="text-sm text-destructive">
               {methods.formState.errors.overallRating.message}
+            </p>
+          )}
+        </div>
+
+        {/* Recommendation (forced) */}
+        <div className="space-y-1.5">
+          <p className="text-sm font-medium">Recommendation <span className="text-destructive">*</span></p>
+          <div className="grid grid-cols-4 gap-2">
+            {RECOMMENDATION_OPTIONS.map((option) => {
+              const selected = watch('recommendation') === option.value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setValue('recommendation', option.value, { shouldValidate: true })}
+                  className={cn(
+                    'rounded-lg border px-3 py-2 text-xs font-medium transition-all text-center',
+                    selected
+                      ? `${option.color} border-transparent ring-2 ring-offset-1 ring-primary/30`
+                      : 'border-border bg-background text-muted-foreground hover:bg-muted',
+                  )}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
+          {methods.formState.errors.recommendation && (
+            <p className="text-sm text-destructive">
+              {methods.formState.errors.recommendation.message}
             </p>
           )}
         </div>

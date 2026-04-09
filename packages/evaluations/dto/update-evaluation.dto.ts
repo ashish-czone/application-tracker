@@ -1,7 +1,8 @@
-import { IsString, IsOptional, IsInt, IsArray, ValidateNested, Min, Max, MaxLength } from 'class-validator';
+import { IsString, IsOptional, IsInt, IsArray, IsIn, ValidateNested, Min, Max, MaxLength } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { ScoreItemDto } from './score-item.dto';
+import { RECOMMENDATION_VALUES } from '../types';
 
 export class UpdateEvaluationDto {
   @ApiPropertyOptional({ example: 5 })
@@ -10,6 +11,12 @@ export class UpdateEvaluationDto {
   @Min(1)
   @Max(5)
   overallRating?: number;
+
+  @ApiPropertyOptional({ example: 'yes', enum: RECOMMENDATION_VALUES })
+  @IsOptional()
+  @IsString()
+  @IsIn(RECOMMENDATION_VALUES)
+  recommendation?: string;
 
   @ApiPropertyOptional({ example: 'Updated assessment' })
   @IsOptional()

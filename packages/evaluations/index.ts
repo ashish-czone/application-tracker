@@ -8,7 +8,9 @@ export type {
   Evaluation,
   EvaluationScore,
   EvaluationWithScores,
+  Recommendation,
 } from './types';
+export { RECOMMENDATION_VALUES, RECOMMENDATION_LABELS } from './types';
 export {
   evaluationTemplates,
   evaluations,

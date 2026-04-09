@@ -1,7 +1,8 @@
-import { IsString, IsOptional, IsInt, IsArray, IsUUID, ValidateNested, Min, Max, MaxLength } from 'class-validator';
+import { IsString, IsOptional, IsInt, IsArray, IsUUID, IsIn, ValidateNested, Min, Max, MaxLength } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ScoreItemDto } from './score-item.dto';
+import { RECOMMENDATION_VALUES } from '../types';
 
 export class CreateEvaluationDto {
   @ApiProperty({ example: 'tmpl-uuid' })
@@ -22,6 +23,11 @@ export class CreateEvaluationDto {
   @Min(1)
   @Max(5)
   overallRating!: number;
+
+  @ApiProperty({ example: 'strong_yes', enum: RECOMMENDATION_VALUES })
+  @IsString()
+  @IsIn(RECOMMENDATION_VALUES)
+  recommendation!: string;
 
   @ApiPropertyOptional({ example: 'Strong candidate overall' })
   @IsOptional()

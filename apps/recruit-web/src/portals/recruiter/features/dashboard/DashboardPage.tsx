@@ -1,8 +1,13 @@
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
+  PieChart, Pie,
+} from 'recharts';
+import {
   Briefcase, Users, CalendarCheck, FileText,
-  ArrowUpRight, Clock, TrendingUp,
+  ArrowUpRight, Clock, TrendingUp, Filter,
 } from 'lucide-react';
 import { api } from '../../../../lib/api';
 import { useAuth } from '@packages/platform-ui/auth/hooks/useAuth';
@@ -51,6 +56,31 @@ const STAGE_COLORS: Record<string, string> = {
   'withdrawn': 'bg-gray-100 text-gray-500',
 };
 
+const STAGE_CHART_COLORS: Record<string, string> = {
+  'new': '#6b7280',
+  'phone-screen': '#3b82f6',
+  'technical': '#8b5cf6',
+  'on-site': '#f59e0b',
+  'final': '#ec4899',
+  'offer': '#10b981',
+  'hired': '#059669',
+  'rejected': '#ef4444',
+  'withdrawn': '#9ca3af',
+};
+
+const PIPELINE_STAGE_ORDER = ['new', 'phone-screen', 'technical', 'on-site', 'final', 'offer', 'hired'];
+
+const SOURCE_COLORS = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ec4899', '#06b6d4', '#f97316', '#6366f1'];
+
+interface Application {
+  id: string;
+  candidateId__label: string;
+  jobOpeningId__label: string;
+  stage: string;
+  source: string;
+  createdAt: string;
+}
+
 export function DashboardPage() {
   const { user } = useAuth();
 
@@ -65,21 +95,57 @@ export function DashboardPage() {
     queryFn: () => api.get<{ meta: { total: number } }>('/candidates?limit=1'),
   });
 
-  const { data: applicationsData } = useQuery({
-    queryKey: ['dashboard', 'applications'],
-    queryFn: () => api.get<{ meta: { total: number } }>('/applications?limit=1'),
-  });
-
   const { data: interviewsData } = useQuery({
     queryKey: ['dashboard', 'interviews'],
     queryFn: () => api.get<{ meta: { total: number } }>('/interviews?limit=1'),
   });
 
-  // Fetch recent applications with details
-  const { data: recentApps } = useQuery({
-    queryKey: ['dashboard', 'recent-applications'],
-    queryFn: () => api.get<{ data: { id: string; candidateId__label: string; jobOpeningId__label: string; stage: string; createdAt: string }[] }>('/applications?limit=5&sort=createdAt&order=desc'),
+  // Fetch all applications for charts
+  const { data: allApplicationsData } = useQuery({
+    queryKey: ['dashboard', 'all-applications'],
+    queryFn: () => api.get<{ data: Application[]; meta: { total: number } }>('/applications?limit=500'),
   });
+
+  const applications = allApplicationsData?.data ?? [];
+  const applicationCount = allApplicationsData?.meta?.total ?? 0;
+
+  // Pipeline funnel data
+  const pipelineFunnel = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const app of applications) {
+      counts[app.stage] = (counts[app.stage] ?? 0) + 1;
+    }
+    return PIPELINE_STAGE_ORDER
+      .filter((stage) => (counts[stage] ?? 0) > 0)
+      .map((stage) => ({
+        stage: formatLabel(stage),
+        stageKey: stage,
+        count: counts[stage] ?? 0,
+      }));
+  }, [applications]);
+
+  // Source breakdown data
+  const sourceBreakdown = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const app of applications) {
+      const src = app.source || 'unknown';
+      counts[src] = (counts[src] ?? 0) + 1;
+    }
+    return Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+      .map(([source, count]) => ({
+        source: formatLabel(source),
+        count,
+      }));
+  }, [applications]);
+
+  // Recent applications (top 5 by date)
+  const recentApps = useMemo(() => {
+    return [...applications]
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 5);
+  }, [applications]);
 
   // Fetch upcoming interviews
   const { data: upcomingInterviews } = useQuery({
@@ -89,8 +155,11 @@ export function DashboardPage() {
 
   const jobCount = jobsData?.meta?.total ?? 0;
   const candidateCount = candidatesData?.meta?.total ?? 0;
-  const applicationCount = applicationsData?.meta?.total ?? 0;
   const interviewCount = interviewsData?.meta?.total ?? 0;
+
+  // Conversion rates
+  const hiredCount = applications.filter((a) => a.stage === 'hired').length;
+  const conversionRate = applicationCount > 0 ? Math.round((hiredCount / applicationCount) * 100) : 0;
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -136,7 +205,89 @@ export function DashboardPage() {
         />
       </div>
 
-      {/* Two-column layout */}
+      {/* Charts row */}
+      {applications.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* Pipeline funnel */}
+          <div className="rounded-xl border border-border bg-card overflow-hidden">
+            <div className="flex items-center gap-2 px-5 py-4 border-b border-border">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <h2 className="text-sm font-semibold text-foreground">Pipeline Funnel</h2>
+              <span className="text-xs text-muted-foreground ml-auto">{conversionRate}% conversion</span>
+            </div>
+            <div className="px-5 py-4">
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={pipelineFunnel} layout="vertical" margin={{ left: 10, right: 20, top: 5, bottom: 5 }}>
+                  <XAxis type="number" hide />
+                  <YAxis
+                    type="category"
+                    dataKey="stage"
+                    width={100}
+                    tick={{ fontSize: 12, fill: 'var(--muted-foreground, #6b7280)' }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      borderRadius: '8px',
+                      border: '1px solid var(--border, #e5e7eb)',
+                      backgroundColor: 'var(--card, #fff)',
+                      fontSize: '12px',
+                    }}
+                    formatter={(value: number) => [value, 'Applications']}
+                  />
+                  <Bar dataKey="count" radius={[0, 4, 4, 0]} barSize={20}>
+                    {pipelineFunnel.map((entry) => (
+                      <Cell key={entry.stageKey} fill={STAGE_CHART_COLORS[entry.stageKey] ?? '#6b7280'} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Source breakdown */}
+          <div className="rounded-xl border border-border bg-card overflow-hidden">
+            <div className="flex items-center gap-2 px-5 py-4 border-b border-border">
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              <h2 className="text-sm font-semibold text-foreground">Source Effectiveness</h2>
+            </div>
+            <div className="px-5 py-4">
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={sourceBreakdown} margin={{ left: 0, right: 10, top: 5, bottom: 5 }}>
+                  <XAxis
+                    dataKey="source"
+                    tick={{ fontSize: 11, fill: 'var(--muted-foreground, #6b7280)' }}
+                    axisLine={false}
+                    tickLine={false}
+                    interval={0}
+                    angle={-30}
+                    textAnchor="end"
+                    height={50}
+                  />
+                  <YAxis hide />
+                  <Tooltip
+                    contentStyle={{
+                      borderRadius: '8px',
+                      border: '1px solid var(--border, #e5e7eb)',
+                      backgroundColor: 'var(--card, #fff)',
+                      fontSize: '12px',
+                    }}
+                    formatter={(value: number) => [value, 'Applications']}
+                  />
+                  <Bar dataKey="count" radius={[4, 4, 0, 0]} barSize={28}>
+                    {sourceBreakdown.map((_, i) => (
+                      <Cell key={i} fill={SOURCE_COLORS[i % SOURCE_COLORS.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Two-column layout: recent apps + upcoming interviews */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent applications */}
         <div className="rounded-xl border border-border bg-card">
@@ -148,12 +299,12 @@ export function DashboardPage() {
             <Link to="/applications" className="text-xs text-primary hover:underline">View all</Link>
           </div>
           <div className="divide-y divide-border">
-            {(!recentApps?.data || recentApps.data.length === 0) ? (
+            {recentApps.length === 0 ? (
               <div className="px-5 py-8 text-center text-sm text-muted-foreground">
                 No applications yet
               </div>
             ) : (
-              recentApps.data.map((app) => (
+              recentApps.map((app) => (
                 <Link
                   key={app.id}
                   to={`/applications/${app.id}`}
