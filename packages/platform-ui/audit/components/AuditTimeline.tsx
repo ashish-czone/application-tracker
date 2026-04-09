@@ -1,9 +1,20 @@
 import { useState, useMemo, type ReactNode } from 'react';
 import { format, isToday, isYesterday } from 'date-fns';
 import { Button, cn } from '@packages/ui';
-import { History, MessageSquare, Star, Paperclip, GitBranch } from 'lucide-react';
+import { History, MessageSquare, Star, Paperclip, GitBranch, LayoutList } from 'lucide-react';
 import { useAuditLogs, useEntityActivity } from '../hooks';
 import type { AuditLogEntry, ActivityEventCategory } from '../types';
+
+type FilterKey = 'all' | ActivityEventCategory;
+
+const FILTER_TABS: { key: FilterKey; label: string; icon: ReactNode }[] = [
+  { key: 'all', label: 'All', icon: <LayoutList className="h-3.5 w-3.5" /> },
+  { key: 'notes', label: 'Notes', icon: <MessageSquare className="h-3.5 w-3.5" /> },
+  { key: 'evaluations', label: 'Feedback', icon: <Star className="h-3.5 w-3.5" /> },
+  { key: 'attachments', label: 'Files', icon: <Paperclip className="h-3.5 w-3.5" /> },
+  { key: 'transitions', label: 'Stages', icon: <GitBranch className="h-3.5 w-3.5" /> },
+  { key: 'changes', label: 'Changes', icon: <History className="h-3.5 w-3.5" /> },
+];
 
 interface AuditTimelineProps {
   entityType: string;
@@ -214,14 +225,28 @@ function DayHeader({ day, showLine }: { day: string; showLine: boolean }) {
 export function AuditTimeline({ entityType, entityId, mode = 'audit' }: AuditTimelineProps) {
   const isActivityMode = mode === 'activity';
   const [page, setPage] = useState(1);
+  const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
 
   const auditQuery = useAuditLogs({ entityType, entityId, page, limit: 25 });
   const activityQuery = useEntityActivity(entityType, entityId, page);
   const { data, isLoading, isError, refetch } = isActivityMode ? activityQuery : auditQuery;
 
+  const allEntries = useMemo(() => data?.data ?? [], [data?.data]);
+
+  // Count entries per category for tab badges
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const entry of allEntries) {
+      const cat = getEventCategory(entry);
+      counts[cat] = (counts[cat] ?? 0) + 1;
+    }
+    return counts;
+  }, [allEntries]);
+
   const filteredEntries = useMemo(() => {
-    return data?.data ?? [];
-  }, [data?.data]);
+    if (activeFilter === 'all') return allEntries;
+    return allEntries.filter((entry) => getEventCategory(entry) === activeFilter);
+  }, [allEntries, activeFilter]);
 
   const dayGroups = useMemo(() => groupByDay(filteredEntries), [filteredEntries]);
 
@@ -272,6 +297,51 @@ export function AuditTimeline({ entityType, entityId, mode = 'audit' }: AuditTim
 
   return (
     <div>
+      {/* Category filter tabs — only in activity mode */}
+      {isActivityMode && (
+        <div className="flex items-center gap-1 mb-4 flex-wrap">
+          {FILTER_TABS.map((tab) => {
+            const count = tab.key === 'all' ? allEntries.length : (categoryCounts[tab.key] ?? 0);
+            const isActive = activeFilter === tab.key;
+            if (tab.key !== 'all' && count === 0) return null;
+            return (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setActiveFilter(tab.key)}
+                className={cn(
+                  'inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors',
+                  isActive
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground',
+                )}
+              >
+                {tab.icon}
+                {tab.label}
+                {count > 0 && (
+                  <span className={cn(
+                    'inline-flex items-center justify-center h-4 min-w-[16px] rounded-full px-1 text-[10px] font-semibold',
+                    isActive ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-background text-muted-foreground',
+                  )}>
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Filtered empty state */}
+      {activeFilter !== 'all' && filteredEntries.length === 0 && (
+        <div className="text-center py-8">
+          <p className="text-sm text-muted-foreground">No {FILTER_TABS.find(t => t.key === activeFilter)?.label.toLowerCase()} activity on this page.</p>
+          <Button variant="outline" size="sm" onClick={() => setActiveFilter('all')} className="mt-2">
+            Show all activity
+          </Button>
+        </div>
+      )}
+
       {dayGroups.map((group: { day: string; entries: AuditLogEntry[] }, groupIdx: number) => (
         <div key={group.day}>
           <DayHeader
