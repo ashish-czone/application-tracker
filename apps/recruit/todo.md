@@ -35,7 +35,7 @@ Compared against: Ashby, Greenhouse, Lever, Workable
 
 ## Tier 2 — Polish and Professional Feel
 
-- [ ] Collapsing detail header (minimize on scroll to maximize content space)
+- [x] Collapsing detail header (minimize on scroll to maximize content space) (PR #661)
 - [ ] Activity feed with tab filters (Notes / Emails / Activities / Feedback)
 - [ ] Interview calendar view (calendar display, timezone handling, availability)
 - [ ] Offer workflow (approval chains, e-signature, letter templates with auto-populate)
