@@ -458,11 +458,11 @@ export class UsersService {
   async getSubordinateIds(userId: string): Promise<string[]> {
     const result = await this.database.db.execute<{ id: string }>(sql`
       WITH RECURSIVE subordinates AS (
-        SELECT id FROM users WHERE reports_to = ${userId} AND deleted_at IS NULL
+        SELECT id, 1 AS depth FROM users WHERE reports_to = ${userId} AND deleted_at IS NULL
         UNION ALL
-        SELECT u.id FROM users u
+        SELECT u.id, s.depth + 1 FROM users u
         INNER JOIN subordinates s ON u.reports_to = s.id
-        WHERE u.deleted_at IS NULL
+        WHERE u.deleted_at IS NULL AND s.depth < 20
       )
       SELECT id FROM subordinates
     `);
