@@ -7,6 +7,14 @@ import { DynamicField } from './DynamicField';
 import { buildFormSchema } from '../helpers/buildFormSchema';
 import type { LayoutSection } from '../types';
 
+export function isFieldEmpty(value: unknown): boolean {
+  if (value === null || value === undefined) return true;
+  if (value === '') return true;
+  if (value === 0) return true;
+  if (Array.isArray(value) && value.length === 0) return true;
+  return false;
+}
+
 interface DynamicSectionProps {
   section: LayoutSection;
   values: Record<string, unknown>;
@@ -20,15 +28,18 @@ interface DynamicSectionProps {
   getFieldSearch?: (fieldKey: string, fieldType: string) => ((query: string) => Promise<{ label: string; value: string }[]>) | undefined;
   /** Async search for multi-select fields (multi_user, multi_lookup). Returns a search function for a given field key. */
   getChipSearch?: (fieldKey: string, fieldType: string) => ((query: string) => Promise<{ label: string; value: string; color?: string }[]>) | undefined;
+  /** When true, show all fields including empty ones */
+  showEmptyFields?: boolean;
 }
 
 /**
  * Renders a layout section with its fields.
  * Supports collapsible header, edit/save/cancel toggle, and grid layout.
  */
-export function DynamicSection({ section, values, onSave, isSaving, fieldLookupOptions, fieldChipOptions, getFieldSearch, getChipSearch }: DynamicSectionProps) {
+export function DynamicSection({ section, values, onSave, isSaving, fieldLookupOptions, fieldChipOptions, getFieldSearch, getChipSearch, showEmptyFields = false }: DynamicSectionProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [showHidden, setShowHidden] = useState(false);
 
   const editableFields = useMemo(
     () => section.fields.filter(f => f.fieldType !== 'auto_number'),
@@ -102,6 +113,14 @@ export function DynamicSection({ section, values, onSave, isSaving, fieldLookupO
     () => editableFields.filter(f => f.columnIndex === 1),
     [editableFields],
   );
+
+  const shouldHideEmpty = !showEmptyFields && !showHidden && !isEditing;
+
+  const filterFields = (fields: typeof section.fields) => {
+    if (!shouldHideEmpty) return { visible: fields, hiddenCount: 0 };
+    const visible = fields.filter(f => !isFieldEmpty(values[f.fieldKey]));
+    return { visible, hiddenCount: fields.length - visible.length };
+  };
 
   const renderViewColumn = (fields: typeof section.fields) =>
     fields.map(field => (
@@ -200,14 +219,45 @@ export function DynamicSection({ section, values, onSave, isSaving, fieldLookupO
               </div>
             </Form>
           ) : (
-            isTwoColumn ? (
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-4">{renderViewColumn(col0Fields)}</div>
-                <div className="space-y-4">{renderViewColumn(col1Fields)}</div>
-              </div>
-            ) : (
-              <div className="space-y-4">{renderViewColumn(section.fields)}</div>
-            )
+            (() => {
+              if (isTwoColumn) {
+                const f0 = filterFields(col0Fields);
+                const f1 = filterFields(col1Fields);
+                const totalHidden = f0.hiddenCount + f1.hiddenCount;
+                return (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-4">{renderViewColumn(f0.visible)}</div>
+                      <div className="space-y-4">{renderViewColumn(f1.visible)}</div>
+                    </div>
+                    {totalHidden > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setShowHidden(true)}
+                        className="mt-3 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        Show {totalHidden} empty {totalHidden === 1 ? 'field' : 'fields'}
+                      </button>
+                    )}
+                  </>
+                );
+              }
+              const { visible, hiddenCount } = filterFields(section.fields);
+              return (
+                <>
+                  <div className="space-y-4">{renderViewColumn(visible)}</div>
+                  {hiddenCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowHidden(true)}
+                      className="mt-3 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      Show {hiddenCount} empty {hiddenCount === 1 ? 'field' : 'fields'}
+                    </button>
+                  )}
+                </>
+              );
+            })()
           )}
         </div>
       )}
