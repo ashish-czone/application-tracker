@@ -41,6 +41,7 @@ import { JOB_OPENINGS_CONFIG } from './modules/job-openings/job-openings.config'
 import { APPLICATIONS_CONFIG } from './modules/applications/applications.config';
 import { INTERVIEWS_CONFIG } from './modules/interviews/interviews.config';
 import { offersConfig } from './modules/offers/offers.config';
+import { OffersModule } from './modules/offers/offers.module';
 import { ApplicationsModule } from './modules/applications/applications.module';
 import { ClientsModule } from './modules/clients/clients.module';
 import { JobOpeningsModule } from './modules/job-openings/job-openings.module';
@@ -139,6 +140,7 @@ import { validate } from './config/env.validation';
     EntityEngineModule.forEntity(INTERVIEWS_CONFIG),
     EntityEngineModule.forEntity(offersConfig),
     EntityEngineModule.forEntity(TASKS_CONFIG),
+    OffersModule, // offer approval chain + guard
     ApplicationsModule, // domain-specific automation strategies + seed data
     CandidatesModule, // extras: resume upload, skill tags, sample data seeding
     ClientsModule, // sample data seeding: clients, contacts, vendors, interviews

@@ -13,6 +13,7 @@ import { EvaluationsSection } from '@packages/evaluations-ui';
 import { api } from '../lib/api';
 import { SessionExpiredModal } from '@packages/platform-ui/auth/components/SessionExpiredModal';
 import { CANDIDATES_UI_CONFIG } from '../entities/candidates.config';
+import { OFFERS_UI_CONFIG } from '../entities/offers.config';
 import { StatusBadgeRenderer } from '../portals/recruiter/features/shared/StatusBadgeRenderer';
 import { CandidateNameCell } from '../portals/recruiter/features/shared/CandidateNameCell';
 
@@ -29,7 +30,7 @@ const queryClient = new QueryClient({
   },
 });
 
-const entityUIConfigs = [CANDIDATES_UI_CONFIG];
+const entityUIConfigs = [CANDIDATES_UI_CONFIG, OFFERS_UI_CONFIG];
 
 const detailTabs: DetailTabPlugin[] = [
   { key: 'notes', label: 'Notes', order: 100, component: NotesSection, featureFlag: 'hasNotes' },
