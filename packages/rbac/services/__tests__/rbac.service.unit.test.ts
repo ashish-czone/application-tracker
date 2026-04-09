@@ -282,17 +282,17 @@ describe('RbacService', () => {
     it('should block permission changes on system roles via API', async () => {
       const role = { id: 'admin-role', name: 'Admin', userType: 'client', isDefault: false, createdAt: new Date(), updatedAt: new Date() };
       vi.spyOn(service, 'findRoleById').mockResolvedValueOnce(role);
-      vi.spyOn(service, 'getRolePermissions').mockResolvedValueOnce({ '*': 'all' });
+      vi.spyOn(service, 'getRolePermissions').mockResolvedValueOnce({ '*': true });
 
       await expect(
-        service.setRolePermissions('admin-role', [{ name: 'users.read' }], { '*': 'all' }),
+        service.setRolePermissions('admin-role', [{ name: 'users.read' }], { '*': true }),
       ).rejects.toThrow(ConflictException);
     });
 
     it('should allow internal permission changes on system roles (no actorPermissions)', async () => {
       const role = { id: 'admin-role', name: 'Admin', userType: 'client', isDefault: false, createdAt: new Date(), updatedAt: new Date() };
       vi.spyOn(service, 'findRoleById').mockResolvedValueOnce(role);
-      vi.spyOn(service, 'getRolePermissions').mockResolvedValueOnce({ '*': 'all' });
+      vi.spyOn(service, 'getRolePermissions').mockResolvedValueOnce({ '*': true });
       (service as any).database.db.transaction = vi.fn().mockImplementation(async (fn: any) => fn(mockDb));
 
       await expect(
@@ -320,7 +320,7 @@ describe('RbacService', () => {
       (service as any).database.db.transaction = vi.fn().mockImplementation(async (fn: any) => fn(mockDb));
 
       await expect(
-        service.setRolePermissions('role-1', [{ name: 'anything.do' }], { '*': 'all' }),
+        service.setRolePermissions('role-1', [{ name: 'anything.do' }], { '*': true }),
       ).resolves.toBeUndefined();
     });
 
@@ -329,7 +329,7 @@ describe('RbacService', () => {
       vi.spyOn(service, 'findRoleById').mockResolvedValueOnce(role);
       vi.spyOn(service, 'getRolePermissions').mockResolvedValueOnce({});
 
-      const actorPermissions = { 'orders.read': 'all' as const, 'orders.write': 'all' as const };
+      const actorPermissions = { 'orders.read': true as const, 'orders.write': true as const };
 
       await expect(
         service.setRolePermissions('role-1', [{ name: 'users.manage' }], actorPermissions),
@@ -342,7 +342,7 @@ describe('RbacService', () => {
       vi.spyOn(service, 'getRolePermissions').mockResolvedValueOnce({});
       (service as any).database.db.transaction = vi.fn().mockImplementation(async (fn: any) => fn(mockDb));
 
-      const actorPermissions = { 'orders.read': 'all' as const, 'orders.write': 'all' as const };
+      const actorPermissions = { 'orders.read': true as const, 'orders.write': true as const };
 
       await expect(
         service.setRolePermissions('role-1', [{ name: 'orders.read' }], actorPermissions),
@@ -354,11 +354,11 @@ describe('RbacService', () => {
       vi.spyOn(service, 'findRoleById').mockResolvedValueOnce(role);
       // Role currently has users.manage — actor does not hold it
       vi.spyOn(service, 'getRolePermissions').mockResolvedValueOnce({
-        'orders.read': 'all',
-        'users.manage': 'all',
+        'orders.read': true,
+        'users.manage': true,
       });
 
-      const actorPermissions = { 'orders.read': 'all' as const };
+      const actorPermissions = { 'orders.read': true as const };
 
       // Actor tries to set only orders.read — removing users.manage which they don't hold
       await expect(
@@ -372,7 +372,7 @@ describe('RbacService', () => {
       const role = { id: 'role-1', name: 'admin', userType: 'client', isDefault: false, createdAt: new Date(), updatedAt: new Date() };
       vi.spyOn(service, 'findRoleById').mockResolvedValueOnce(role);
       // Role currently has wildcard
-      vi.spyOn(service, 'getRolePermissions').mockResolvedValueOnce({ '*': 'all' });
+      vi.spyOn(service, 'getRolePermissions').mockResolvedValueOnce({ '*': true });
       // No other wildcard users exist
       vi.spyOn(service, 'countWildcardUsers').mockResolvedValueOnce(0);
 
@@ -384,7 +384,7 @@ describe('RbacService', () => {
     it('should allow removing * when other wildcard users exist', async () => {
       const role = { id: 'role-1', name: 'admin', userType: 'client', isDefault: false, createdAt: new Date(), updatedAt: new Date() };
       vi.spyOn(service, 'findRoleById').mockResolvedValueOnce(role);
-      vi.spyOn(service, 'getRolePermissions').mockResolvedValueOnce({ '*': 'all' });
+      vi.spyOn(service, 'getRolePermissions').mockResolvedValueOnce({ '*': true });
       // Other wildcard users exist
       vi.spyOn(service, 'countWildcardUsers').mockResolvedValueOnce(2);
       (service as any).database.db.transaction = vi.fn().mockImplementation(async (fn: any) => fn(mockDb));
@@ -397,7 +397,7 @@ describe('RbacService', () => {
     it('should allow keeping * permission without lockout check', async () => {
       const role = { id: 'role-1', name: 'admin', userType: 'client', isDefault: false, createdAt: new Date(), updatedAt: new Date() };
       vi.spyOn(service, 'findRoleById').mockResolvedValueOnce(role);
-      vi.spyOn(service, 'getRolePermissions').mockResolvedValueOnce({ '*': 'all' });
+      vi.spyOn(service, 'getRolePermissions').mockResolvedValueOnce({ '*': true });
       (service as any).database.db.transaction = vi.fn().mockImplementation(async (fn: any) => fn(mockDb));
 
       // Keeping wildcard — no lockout check needed
