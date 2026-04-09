@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Settings, Copy, Trash2, MoreHorizontal, Briefcase, UserPlus } from 'lucide-react';
+import { ArrowLeft, Settings, Copy, Trash2, MoreHorizontal, Briefcase, UserPlus, ChevronDown } from 'lucide-react';
 import {
   Button,
   ConfirmDialog,
@@ -51,7 +51,7 @@ export function EntityDetailPage({ entityType, renderPipelineProgress, renderWor
   const location = useLocation();
   const entity = useEntityConfig(entityType);
   const hooks = useEntityHooks(entityType);
-  const { getDetailPlugins, getDetailTabs, apiFn } = useEntityEngine();
+  const { getDetailPlugins, getDetailTabs, getRightSidebarPanels, apiFn } = useEntityEngine();
   const queryClient = useQueryClient();
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -244,6 +244,13 @@ export function EntityDetailPage({ entityType, renderPipelineProgress, renderWor
   const subtitle = getSubtitle(item);
   const plugins = getDetailPlugins(entityType).sort((a, b) => a.order - b.order);
 
+  // Right sidebar panels — filtered by feature flags
+  const allSidebarPanels = getRightSidebarPanels(entityType);
+  const features = entity.features as Record<string, unknown>;
+  const sidebarPanels = allSidebarPanels.filter(
+    (panel) => !panel.featureFlag || features[panel.featureFlag],
+  );
+
   const headerActions = (
     <div className="flex items-center gap-2">
       {/* Custom header actions */}
@@ -362,7 +369,7 @@ export function EntityDetailPage({ entityType, renderPipelineProgress, renderWor
       {/* Tabs */}
       <DetailPageTabs activeTab={activeTab} onTabChange={setActiveTab} tabs={visibleTabs} />
 
-      {/* Content area: Sidebar + Main */}
+      {/* Content area: Sidebar + Main + Right Sidebar */}
       <div className="flex gap-6">
         {/* Left sidebar — related record launchers */}
         {hasManyRelationships.length > 0 && (
@@ -411,6 +418,21 @@ export function EntityDetailPage({ entityType, renderPipelineProgress, renderWor
             return <TabComponent entityType={entityType} entityId={item.id as string} />;
           })()}
         </div>
+
+        {/* Right sidebar — contextual panels (notes, files, evaluations, etc.) */}
+        {sidebarPanels.length > 0 && (
+          <div className="w-80 shrink-0 space-y-3">
+            {sidebarPanels.map((panel) => (
+              <CollapsiblePanel
+                key={panel.key}
+                label={panel.label}
+                defaultCollapsed={panel.defaultCollapsed}
+              >
+                <panel.component entityType={entityType} entityId={item.id as string} />
+              </CollapsiblePanel>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Related records browse panel */}
@@ -464,6 +486,42 @@ export function EntityDetailPage({ entityType, renderPipelineProgress, renderWor
             queryClient.invalidateQueries({ queryKey: [entityType] });
           }}
         />
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Collapsible panel for right sidebar
+// ---------------------------------------------------------------------------
+
+function CollapsiblePanel({
+  label,
+  defaultCollapsed = false,
+  children,
+}: {
+  label: string;
+  defaultCollapsed?: boolean;
+  children: React.ReactNode;
+}) {
+  const [collapsed, setCollapsed] = useState(defaultCollapsed);
+
+  return (
+    <div className="rounded-lg border border-border bg-card overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setCollapsed(!collapsed)}
+        className="flex items-center justify-between w-full px-3 py-2.5 text-xs font-semibold text-foreground hover:bg-muted/50 transition-colors"
+      >
+        {label}
+        <ChevronDown
+          className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${collapsed ? '-rotate-90' : ''}`}
+        />
+      </button>
+      {!collapsed && (
+        <div className="px-3 pb-3 max-h-[400px] overflow-y-auto">
+          {children}
+        </div>
       )}
     </div>
   );

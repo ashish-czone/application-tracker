@@ -40,7 +40,7 @@ Compared against: Ashby, Greenhouse, Lever, Workable
 - [x] Interview calendar view (calendar display, timezone handling, availability) (PR #663)
 - [x] Offer workflow — approval chains (PR #664), letter templates (PR #665); e-signature deferred
 - [x] Inline scheduling from candidate/application context (PR #660)
-- [ ] Right sidebar on custom detail pages (notes, tasks, documents, other jobs)
+- [x] Right sidebar on custom detail pages (notes, tasks, documents, other jobs) (PR #667)
 - [ ] Smart empty field handling (hide empty fields or collapse them, no "$0.00" or "-" walls)
 - [ ] Smart list views (fewer default columns, prioritize: name, status, source, last activity)
 

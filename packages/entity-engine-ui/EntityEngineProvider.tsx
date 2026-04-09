@@ -2,7 +2,7 @@ import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { createEntityApi } from './helpers/createEntityApi';
 import { createEntityHooks, type EntityHooks } from './helpers/createEntityHooks';
-import type { EntityRegistryEntry, EntityApi, EntityUIConfig, EntityDetailPlugin, DetailTabPlugin, ColumnRendererRegistration } from './types';
+import type { EntityRegistryEntry, EntityApi, EntityUIConfig, EntityDetailPlugin, DetailTabPlugin, RightSidebarPanel, ColumnRendererRegistration } from './types';
 
 interface EntityEngineContextValue {
   /** All registered entities from the backend */
@@ -21,6 +21,8 @@ interface EntityEngineContextValue {
   getDetailPlugins: (entityType: string) => EntityDetailPlugin[];
   /** Get detail tab plugins for an entity type (global + entity-specific, sorted by order) */
   getDetailTabs: (entityType: string) => DetailTabPlugin[];
+  /** Get right sidebar panels for an entity type (sorted by order) */
+  getRightSidebarPanels: (entityType: string) => RightSidebarPanel[];
   /** Get a named column renderer registration */
   getColumnRenderer: (name: string) => ColumnRendererRegistration | undefined;
   /** Raw API client (for layout and other non-entity endpoints) */
@@ -44,9 +46,11 @@ interface EntityEngineProviderProps {
   detailTabs?: DetailTabPlugin[];
   /** Named column renderer registrations (keyed by renderer name) */
   columnRenderers?: Record<string, ColumnRendererRegistration>;
+  /** Global right sidebar panels (applied to all entity detail pages, filtered by featureFlag) */
+  rightSidebarPanels?: RightSidebarPanel[];
 }
 
-export function EntityEngineProvider({ children, apiFn, entityUIConfigs = [], detailTabs: globalDetailTabs = [], columnRenderers = {} }: EntityEngineProviderProps) {
+export function EntityEngineProvider({ children, apiFn, entityUIConfigs = [], detailTabs: globalDetailTabs = [], rightSidebarPanels: globalSidebarPanels = [], columnRenderers = {} }: EntityEngineProviderProps) {
   // Fetch entity registry from backend
   const { data: entities = [], isLoading } = useQuery({
     queryKey: ['entity-engine', 'registry'],
@@ -88,6 +92,17 @@ export function EntityEngineProvider({ children, apiFn, entityUIConfigs = [], de
     return perEntity;
   }, [entityUIConfigs]);
 
+  // Index right sidebar panels by entity type
+  const sidebarPanelMap = useMemo(() => {
+    const map = new Map<string, RightSidebarPanel[]>();
+    for (const config of entityUIConfigs) {
+      if (config.rightSidebarPanels?.length) {
+        map.set(config.entityType, [...config.rightSidebarPanels].sort((a, b) => a.order - b.order));
+      }
+    }
+    return map;
+  }, [entityUIConfigs]);
+
   const value = useMemo<EntityEngineContextValue>(() => ({
     entities,
     isLoading,
@@ -100,9 +115,13 @@ export function EntityEngineProvider({ children, apiFn, entityUIConfigs = [], de
       const entityTabs = tabMap.get(entityType) ?? [];
       return [...globalDetailTabs, ...entityTabs].sort((a, b) => a.order - b.order);
     },
+    getRightSidebarPanels: (entityType: string) => {
+      const entityPanels = sidebarPanelMap.get(entityType) ?? [];
+      return [...globalSidebarPanels, ...entityPanels].sort((a, b) => a.order - b.order);
+    },
     getColumnRenderer: (name: string) => columnRenderers[name],
     apiFn,
-  }), [entities, isLoading, apiMap, hooksMap, pluginMap, tabMap, globalDetailTabs, columnRenderers, apiFn]);
+  }), [entities, isLoading, apiMap, hooksMap, pluginMap, tabMap, sidebarPanelMap, globalDetailTabs, globalSidebarPanels, columnRenderers, apiFn]);
 
   if (isLoading) return null;
 
