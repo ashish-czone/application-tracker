@@ -1,0 +1,115 @@
+/*
+ * FullCalendar theme overrides — maps to shadcn/ui CSS variables.
+ * Import this file in any app that uses @packages/calendar-ui.
+ */
+
+.event-calendar {
+  /* FullCalendar root */
+  --fc-border-color: hsl(var(--border));
+  --fc-page-bg-color: hsl(var(--background));
+  --fc-neutral-bg-color: hsl(var(--muted));
+  --fc-neutral-text-color: hsl(var(--muted-foreground));
+  --fc-today-bg-color: hsl(var(--primary) / 0.04);
+  --fc-now-indicator-color: hsl(var(--primary));
+  --fc-event-border-color: transparent;
+  --fc-event-text-color: white;
+  --fc-small-font-size: 0.75rem;
+}
+
+/* Day headers */
+.event-calendar .fc-col-header-cell {
+  background: hsl(var(--muted) / 0.3);
+  border-color: hsl(var(--border));
+  padding: 8px 0;
+}
+
+.event-calendar .fc-col-header-cell-cushion {
+  color: hsl(var(--muted-foreground));
+  font-weight: 500;
+  font-size: 0.8125rem;
+  text-decoration: none;
+}
+
+/* Time slot labels */
+.event-calendar .fc-timegrid-slot-label-cushion {
+  color: hsl(var(--muted-foreground));
+  font-size: 0.75rem;
+}
+
+/* Table cells */
+.event-calendar .fc-timegrid-slot,
+.event-calendar .fc-daygrid-day {
+  border-color: hsl(var(--border) / 0.5);
+}
+
+/* Today highlight */
+.event-calendar .fc-day-today {
+  background: hsl(var(--primary) / 0.04) !important;
+}
+
+.event-calendar .fc-day-today .fc-col-header-cell-cushion {
+  color: hsl(var(--primary));
+  font-weight: 600;
+}
+
+/* Events */
+.event-calendar .fc-event {
+  border-radius: 4px;
+  font-size: 0.75rem;
+  padding: 1px 4px;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 1px 2px hsl(var(--foreground) / 0.08);
+}
+
+.event-calendar .fc-event:hover {
+  filter: brightness(0.92);
+}
+
+.event-calendar .fc-timegrid-event .fc-event-main {
+  padding: 2px 4px;
+}
+
+.event-calendar .fc-event-title {
+  font-weight: 500;
+}
+
+.event-calendar .fc-event-time {
+  font-weight: 400;
+  opacity: 0.85;
+}
+
+/* Now indicator */
+.event-calendar .fc-timegrid-now-indicator-line {
+  border-color: hsl(var(--primary));
+  border-width: 2px;
+}
+
+.event-calendar .fc-timegrid-now-indicator-arrow {
+  border-color: hsl(var(--primary));
+}
+
+/* Day grid (month view) */
+.event-calendar .fc-daygrid-day-number {
+  color: hsl(var(--foreground));
+  font-size: 0.8125rem;
+  padding: 4px 8px;
+  text-decoration: none;
+}
+
+.event-calendar .fc-daygrid-day-number:hover {
+  color: hsl(var(--primary));
+}
+
+/* More link in month view */
+.event-calendar .fc-daygrid-more-link {
+  color: hsl(var(--primary));
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+/* Scrollbar */
+.event-calendar .fc-scroller {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--border)) transparent;
+}

@@ -37,7 +37,7 @@ Compared against: Ashby, Greenhouse, Lever, Workable
 
 - [x] Collapsing detail header (minimize on scroll to maximize content space) (PR #661)
 - [x] Activity feed with tab filters (Notes / Emails / Activities / Feedback) (PR #662)
-- [ ] Interview calendar view (calendar display, timezone handling, availability)
+- [x] Interview calendar view (calendar display, timezone handling, availability) (PR #663)
 - [ ] Offer workflow (approval chains, e-signature, letter templates with auto-populate)
 - [x] Inline scheduling from candidate/application context (PR #660)
 - [ ] Right sidebar on custom detail pages (notes, tasks, documents, other jobs)
