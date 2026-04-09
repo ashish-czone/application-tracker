@@ -48,7 +48,7 @@ export const candidatesConfig: EntityConfig = {
     searchFields: ['firstName', 'lastName', 'email'],
   },
 
-  listFields: ['fullName', 'email', 'mobile', 'currentTitle', 'currentCompany', 'candidateStatus', 'source', 'applicationsCount'],
+  listFields: ['fullName', 'currentTitle', 'candidateStatus', 'source'],
 
   relationships: [
     {

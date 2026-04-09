@@ -204,7 +204,7 @@ export const JOB_OPENINGS_CONFIG: EntityConfig = {
     },
   ],
 
-  listFields: ['title', 'clientId', 'department', 'status', 'targetDate', 'employmentType', 'applicationsCount', 'interviewsCount'],
+  listFields: ['title', 'clientId', 'status', 'targetDate', 'applicationsCount'],
 
   lookup: {
     labelField: 'title',
