@@ -80,29 +80,30 @@ export function EventCalendar({
   return (
     <div className={cn('event-calendar', className)}>
       {/* Custom toolbar */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4" role="toolbar" aria-label="Calendar navigation">
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => navigate('today')}>
+          <Button variant="outline" size="sm" onClick={() => navigate('today')} aria-label="Go to today">
             <CalendarIcon className="h-3.5 w-3.5 mr-1.5" />
             Today
           </Button>
           <div className="flex items-center">
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate('prev')}>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate('prev')} aria-label="Previous period">
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate('next')}>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate('next')} aria-label="Next period">
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
           <h2 className="text-base font-semibold text-foreground ml-1">{title}</h2>
         </div>
 
-        <div className="flex items-center rounded-md border border-input bg-background">
+        <div className="flex items-center rounded-md border border-input bg-background" role="group" aria-label="Calendar view">
           {VIEW_OPTIONS.map((opt) => (
             <button
               key={opt.key}
               type="button"
               onClick={() => changeView(opt.key)}
+              aria-pressed={currentView === opt.key}
               className={cn(
                 'px-3 py-1.5 text-xs font-medium transition-colors first:rounded-l-md last:rounded-r-md',
                 currentView === opt.key
