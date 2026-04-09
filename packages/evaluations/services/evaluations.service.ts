@@ -12,7 +12,7 @@ import {
   EVALUATIONS_EVALUATION_UPDATED,
   EVALUATIONS_EVALUATION_DELETED,
 } from '../events/types';
-import type { EvaluationWithScores, EvaluationScore, EvaluationTemplate, EvaluationEvaluator } from '../types';
+import type { EvaluationWithScores, EvaluationScore, EvaluationTemplate, EvaluationEvaluator, Recommendation } from '../types';
 
 @Injectable()
 export class EvaluationsService {
@@ -82,6 +82,7 @@ export class EvaluationsService {
 
     return {
       ...result.evaluation,
+      recommendation: result.evaluation.recommendation as Recommendation | null,
       scores: result.scores as EvaluationScore[],
       template,
     };
@@ -201,6 +202,7 @@ export class EvaluationsService {
 
     return {
       ...row,
+      recommendation: row.recommendation as Recommendation | null,
       scores: scores as EvaluationScore[],
       template: (template as EvaluationTemplate) ?? undefined,
     };
