@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import type { EntityConfig } from '@packages/entity-engine';
 import { interviews } from './schema/interviews';
 
@@ -83,6 +84,19 @@ export const INTERVIEWS_CONFIG: EntityConfig = {
     { name: 'Interview Information', fields: ['interviewName', 'interviewType', 'round', 'candidateId', 'clientId', 'jobOpeningId', 'status', 'interviewers'] },
     { name: 'Schedule', fields: ['interviewFrom', 'interviewTo', 'duration', 'location', 'videoLink', 'scheduleComments'] },
   ],
+
+  dataAccess: {
+    ownerField: 'createdBy',
+    scopes: [
+      {
+        key: 'my-job-interviews',
+        label: 'Interviews for my Job Openings',
+        resolve: async (userId) => sql`${interviews.jobOpeningId} IN (
+          SELECT id FROM job_openings WHERE hiring_manager = ${userId} AND deleted_at IS NULL
+        )`,
+      },
+    ],
+  },
 
   recipientFields: {
     createdBy: { label: 'Created By' },

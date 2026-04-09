@@ -89,6 +89,8 @@ export const CONTACTS_CONFIG: EntityConfig = {
     searchFields: ['firstName', 'lastName', 'email'],
   },
 
+  dataAccess: { ownerField: 'createdBy' },
+
   recipientFields: { createdBy: { label: 'Created By' } },
 
   ui: {

@@ -101,6 +101,10 @@ export const candidatesConfig: EntityConfig = {
     ],
   },
 
+  dataAccess: {
+    ownerField: 'createdBy',
+  },
+
   ui: {
     icon: 'users',
     nameField: 'fullName',

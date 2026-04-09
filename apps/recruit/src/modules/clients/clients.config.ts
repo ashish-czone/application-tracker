@@ -86,6 +86,8 @@ export const CLIENTS_CONFIG: EntityConfig = {
     { name: 'jobOpenings', type: 'hasMany', targetEntity: 'job_openings', foreignKey: 'clientId', label: 'Job Openings', displayFields: ['title', 'status', 'createdAt'] },
   ],
 
+  dataAccess: { ownerField: 'createdBy' },
+
   recipientFields: { createdBy: { label: 'Created By' } },
 
   ui: {
