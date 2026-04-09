@@ -7,6 +7,7 @@ export const evaluationTemplates = pgTable('evaluation_templates', {
   name: text('name').notNull(),
   entityType: text('entity_type').notNull(),
   criteria: jsonb('criteria').notNull().$type<{ name: string; description: string }[]>(),
+  blindingEnabled: boolean('blinding_enabled').notNull().default(false),
   isActive: boolean('is_active').notNull().default(true),
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }).notNull().$defaultFn(() => new Date()).$onUpdate(() => new Date()),

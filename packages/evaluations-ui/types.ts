@@ -9,6 +9,7 @@ export interface EvaluationTemplate {
   name: string;
   entityType: string;
   criteria: EvaluationCriterion[];
+  blindingEnabled: boolean;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -54,6 +55,7 @@ export interface EvaluationWithScores {
   scores: EvaluationScore[];
   template?: EvaluationTemplate;
   evaluator?: Evaluator;
+  isBlinded?: boolean;
 }
 
 export interface CreateEvaluationRequest {

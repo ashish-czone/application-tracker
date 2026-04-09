@@ -217,6 +217,7 @@ export class EvaluationsService {
     entityId: string,
     page = 1,
     limit = 25,
+    currentUserId?: string,
   ): Promise<PaginatedResponse<EvaluationWithScores>> {
     const offset = (page - 1) * limit;
 
@@ -250,16 +251,37 @@ export class EvaluationsService {
       ? await this.loadScoresForEvaluations(evaluationIds)
       : new Map<string, EvaluationScore[]>();
 
+    const data = rows.map((row) => ({
+      ...row.evaluation,
+      scores: allScores.get(row.evaluation.id) ?? [],
+      evaluator: {
+        id: row.evaluation.evaluatorId,
+        firstName: row.evaluatorFirstName,
+        lastName: row.evaluatorLastName,
+      } as EvaluationEvaluator,
+    })) as EvaluationWithScores[];
+
+    // Apply blinding: if a template has blinding enabled and the requesting user
+    // hasn't submitted their own evaluation, redact other users' evaluations
+    if (currentUserId && data.length > 0) {
+      const userHasSubmitted = data.some((e) => e.evaluatorId === currentUserId);
+      const blindedTemplateIds = await this.getBlindedTemplateIds(data.map((e) => e.templateId));
+
+      if (!userHasSubmitted && blindedTemplateIds.size > 0) {
+        for (const evaluation of data) {
+          if (blindedTemplateIds.has(evaluation.templateId) && evaluation.evaluatorId !== currentUserId) {
+            evaluation.overallRating = 0;
+            evaluation.recommendation = null;
+            evaluation.comment = null;
+            evaluation.scores = [];
+            evaluation.isBlinded = true;
+          }
+        }
+      }
+    }
+
     return {
-      data: rows.map((row) => ({
-        ...row.evaluation,
-        scores: allScores.get(row.evaluation.id) ?? [],
-        evaluator: {
-          id: row.evaluation.evaluatorId,
-          firstName: row.evaluatorFirstName,
-          lastName: row.evaluatorLastName,
-        } as EvaluationEvaluator,
-      })) as EvaluationWithScores[],
+      data,
       meta: {
         total: Number(total),
         page,
@@ -302,6 +324,18 @@ export class EvaluationsService {
         throw new BadRequestException(`Score must be an integer between 1 and 5 for criteria: ${score.criteriaName}`);
       }
     }
+  }
+
+  private async getBlindedTemplateIds(templateIds: string[]): Promise<Set<string>> {
+    const uniqueIds = [...new Set(templateIds)];
+    if (uniqueIds.length === 0) return new Set();
+
+    const templates = await this.database.db
+      .select({ id: evaluationTemplates.id, blindingEnabled: evaluationTemplates.blindingEnabled })
+      .from(evaluationTemplates)
+      .where(inArray(evaluationTemplates.id, uniqueIds));
+
+    return new Set(templates.filter((t) => t.blindingEnabled).map((t) => t.id));
   }
 
   private async loadScoresForEvaluations(evaluationIds: string[]): Promise<Map<string, EvaluationScore[]>> {

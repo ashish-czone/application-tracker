@@ -16,12 +16,13 @@ export class EvaluationsController {
   @Get()
   @RequirePermission(EVALUATIONS_PERMISSIONS.READ)
   @ApiOperation({ summary: 'List evaluations for an entity' })
-  list(@Query() query: ListEvaluationsQueryDto) {
+  list(@CurrentUser() user: JwtPayload, @Query() query: ListEvaluationsQueryDto) {
     return this.evaluationsService.listForEntity(
       query.entityType,
       query.entityId,
       query.page,
       query.limit,
+      user.userId,
     );
   }
 
@@ -43,6 +44,7 @@ export class EvaluationsController {
       entityId: dto.entityId,
       evaluatorId: user.userId,
       overallRating: dto.overallRating,
+      recommendation: dto.recommendation,
       comment: dto.comment,
       scores: dto.scores,
     });
