@@ -1,12 +1,16 @@
 import { Module, type OnModuleInit } from '@nestjs/common';
 import { WorkflowGuardRegistry } from '@packages/workflows';
 import { TemplateProviderRegistry } from '@packages/document-templates';
+import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { NotificationChannelsModule } from '@packages/notification-channels';
 import { DatabaseService, eq } from '@packages/database';
 import { OfferApprovalsService } from './services/offer-approvals.service';
 import { OfferLetterService } from './services/offer-letter.service';
 import { OfferApprovalsController } from './controllers/offer-approvals.controller';
 import { offers } from './schema/offers';
+import { applications } from '../applications/schema/applications';
+import { candidates } from '../candidates/schema/candidates';
+import { jobOpenings } from '../job-openings/schema/job-openings';
 import { formatCurrency } from '@packages/common';
 
 @Module({
@@ -15,12 +19,17 @@ import { formatCurrency } from '@packages/common';
   providers: [OfferApprovalsService, OfferLetterService],
 })
 export class OffersModule implements OnModuleInit {
+  private readonly logger: ContextLogger;
+
   constructor(
     private readonly guardRegistry: WorkflowGuardRegistry,
     private readonly templateProviderRegistry: TemplateProviderRegistry,
     private readonly approvalsService: OfferApprovalsService,
     private readonly database: DatabaseService,
-  ) {}
+    appLogger: AppLoggerService,
+  ) {
+    this.logger = appLogger.forContext(OffersModule.name);
+  }
 
   onModuleInit() {
     // Register guard: blocks pending-approval → approved unless all approvers approved
@@ -50,61 +59,35 @@ export class OffersModule implements OnModuleInit {
         { key: 'currentDate', label: 'Current Date', sampleValue: new Date().toISOString().split('T')[0] },
       ],
       resolve: async (offerId: string): Promise<Record<string, string>> => {
-        // Fetch offer
-        const [offer] = await this.database.db
-          .select()
+        // Single query with joins instead of N+1 sequential queries
+        const [row] = await this.database.db
+          .select({
+            offer: offers,
+            candidateFirstName: candidates.firstName,
+            candidateLastName: candidates.lastName,
+            candidateEmail: candidates.email,
+            jobTitle: jobOpenings.title,
+            department: jobOpenings.department,
+          })
           .from(offers)
+          .leftJoin(applications, eq(applications.id, offers.applicationId))
+          .leftJoin(candidates, eq(candidates.id, applications.candidateId))
+          .leftJoin(jobOpenings, eq(jobOpenings.id, applications.jobOpeningId))
           .where(eq(offers.id, offerId));
-        if (!offer) return {} as Record<string, string>;
 
-        // Fetch application → candidate + job opening via entity engine lookups
-        const { apiFn } = this as any;
-        let candidateFirstName = '';
-        let candidateLastName = '';
-        let candidateEmail = '';
-        let jobTitle = '';
-        let department = '';
-
-        try {
-          // Use raw DB queries to resolve related entities
-          const { applications } = await import('../applications/schema/applications');
-          const [app] = await this.database.db
-            .select()
-            .from(applications)
-            .where(eq(applications.id, offer.applicationId));
-
-          if (app) {
-            const { candidates } = await import('../candidates/schema/candidates');
-            const [candidate] = await this.database.db
-              .select()
-              .from(candidates)
-              .where(eq(candidates.id, app.candidateId));
-            if (candidate) {
-              candidateFirstName = (candidate as any).firstName ?? '';
-              candidateLastName = (candidate as any).lastName ?? '';
-              candidateEmail = (candidate as any).email ?? '';
-            }
-
-            const { jobOpenings } = await import('../job-openings/schema/job-openings');
-            const [job] = await this.database.db
-              .select()
-              .from(jobOpenings)
-              .where(eq(jobOpenings.id, app.jobOpeningId));
-            if (job) {
-              jobTitle = (job as any).title ?? '';
-              department = (job as any).department ?? '';
-            }
-          }
-        } catch {
-          // Related entities may not exist
+        if (!row) {
+          this.logger.warn('Offer not found for template rendering', { offerId });
+          return {} as Record<string, string>;
         }
 
+        const { offer } = row;
+
         return {
-          candidateFirstName,
-          candidateLastName,
-          candidateEmail,
-          jobTitle,
-          department,
+          candidateFirstName: row.candidateFirstName ?? '',
+          candidateLastName: row.candidateLastName ?? '',
+          candidateEmail: row.candidateEmail ?? '',
+          jobTitle: row.jobTitle ?? '',
+          department: row.department ?? '',
           salary: offer.salary ? formatCurrency(offer.salary) : '',
           salaryCurrency: offer.salaryCurrency ?? '',
           salaryPeriod: offer.salaryPeriod ?? '',
