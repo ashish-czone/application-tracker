@@ -18,7 +18,7 @@ import {
   toast,
 } from '@packages/ui';
 import type { EntityAction } from '@packages/entity-engine';
-import { DynamicSection } from '@packages/eav-attributes-ui';
+import { DynamicSection, isFieldEmpty } from '@packages/eav-attributes-ui';
 import { useEntityEngine, useEntityHooks, useEntityConfig } from '../EntityEngineProvider';
 import { useEntityLayout } from '../helpers/useEntityLayout';
 import { useListLayout } from '../helpers/useListLayout';
@@ -383,32 +383,17 @@ export function EntityDetailPage({ entityType, renderPipelineProgress, renderWor
         {/* Main content */}
         <div className="flex-1 min-w-0">
           {activeTab === 'overview' && (
-            <div className="space-y-4">
-              {/* Pipeline progress bar for entities with workflow fields */}
-              {renderPipelineProgress && entity.features.hasWorkflow && (
-                renderPipelineProgress(entityType, item.id as string, item)
-              )}
-
-              {layout?.sections
-                .filter((s) => s.fields.length > 0)
-                .map((section) => (
-                  <DynamicSection
-                    key={section.id}
-                    section={section}
-                    values={item}
-                    onSave={async (values) => {
-                      await updateMutation.mutateAsync({ id: item.id as string, data: values });
-                    }}
-                    isSaving={updateMutation.isPending}
-                    getFieldSearch={getFieldSearchForSection}
-                    getChipSearch={getChipSearchForSection}
-                  />
-                ))}
-
-              {plugins.map((plugin) => (
-                <plugin.component key={plugin.label} entity={item} />
-              ))}
-            </div>
+            <OverviewTab
+              layout={layout}
+              item={item}
+              entityType={entityType}
+              entity={entity}
+              plugins={plugins}
+              updateMutation={updateMutation}
+              renderPipelineProgress={renderPipelineProgress}
+              getFieldSearch={getFieldSearchForSection}
+              getChipSearch={getChipSearchForSection}
+            />
           )}
 
           {activeTab !== 'overview' && (() => {
@@ -486,6 +471,93 @@ export function EntityDetailPage({ entityType, renderPipelineProgress, renderWor
             queryClient.invalidateQueries({ queryKey: [entityType] });
           }}
         />
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Collapsible panel for right sidebar
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Overview tab with smart empty-field/section handling
+// ---------------------------------------------------------------------------
+
+function OverviewTab({
+  layout,
+  item,
+  entityType,
+  entity,
+  plugins,
+  updateMutation,
+  renderPipelineProgress,
+  getFieldSearch,
+  getChipSearch,
+}: {
+  layout: any;
+  item: Record<string, unknown>;
+  entityType: string;
+  entity: any;
+  plugins: any[];
+  updateMutation: any;
+  renderPipelineProgress?: (entityType: string, entityId: string, entity: Record<string, unknown>) => React.ReactNode;
+  getFieldSearch: any;
+  getChipSearch: any;
+}) {
+  const [showEmptySections, setShowEmptySections] = useState(false);
+
+  const allSections = useMemo(
+    () => (layout?.sections ?? []).filter((s: any) => s.fields.length > 0),
+    [layout],
+  );
+
+  const { populated, empty } = useMemo(() => {
+    const populated: any[] = [];
+    const empty: any[] = [];
+    for (const section of allSections) {
+      const hasAnyValue = section.fields.some((f: any) => !isFieldEmpty(item[f.fieldKey]));
+      if (hasAnyValue) populated.push(section);
+      else empty.push(section);
+    }
+    return { populated, empty };
+  }, [allSections, item]);
+
+  const sectionsToRender = showEmptySections ? allSections : populated;
+
+  return (
+    <div className="space-y-4">
+      {renderPipelineProgress && entity.features.hasWorkflow && (
+        renderPipelineProgress(entityType, item.id as string, item)
+      )}
+
+      {sectionsToRender.map((section: any) => (
+        <DynamicSection
+          key={section.id}
+          section={section}
+          values={item}
+          onSave={async (values: Record<string, unknown>) => {
+            await updateMutation.mutateAsync({ id: item.id as string, data: values });
+          }}
+          isSaving={updateMutation.isPending}
+          getFieldSearch={getFieldSearch}
+          getChipSearch={getChipSearch}
+          showEmptyFields={showEmptySections}
+        />
+      ))}
+
+      {plugins.map((plugin: any) => (
+        <plugin.component key={plugin.label} entity={item} />
+      ))}
+
+      {!showEmptySections && empty.length > 0 && (
+        <button
+          type="button"
+          onClick={() => setShowEmptySections(true)}
+          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+        >
+          Show {empty.length} empty {empty.length === 1 ? 'section' : 'sections'}
+        </button>
       )}
     </div>
   );
