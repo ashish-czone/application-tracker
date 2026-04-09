@@ -18,7 +18,25 @@ import { CurrentUser, type JwtPayload } from '@packages/auth';
 import { RequirePermission } from '@packages/rbac';
 import { EntityService } from './entity.service';
 import { createFieldPermissionInterceptor } from './interceptors/field-permission.interceptor';
-import type { EntityConfig, ListLayoutResponse, EntityActions } from './types';
+import type { EntityConfig, ListLayoutResponse, EntityActions, DataAccessContext } from './types';
+import type { PermissionScope } from '@packages/rbac';
+
+/**
+ * Extracts the data access context from the JWT payload for a given permission.
+ * The scope comes from the user's permissions map (set during JWT enrichment by RBAC).
+ */
+function buildAccessContext(user: JwtPayload, permission: string): DataAccessContext | undefined {
+  const permissions = (user as any).permissions as Record<string, PermissionScope> | undefined;
+  if (!permissions) return undefined;
+
+  // Wildcard permission → all access
+  if (permissions['*']) return { userId: user.userId, scope: 'all' };
+
+  const scope = permissions[permission];
+  if (!scope) return undefined;
+
+  return { userId: user.userId, scope };
+}
 
 /**
  * Creates a NestJS controller class dynamically for an entity.
@@ -58,7 +76,7 @@ export function createEntityController(config: EntityConfig, serviceToken: strin
     @Get()
     @RequirePermission(readPermission)
     @ApiOperation({ summary: `List ${config.pluralName.toLowerCase()}` })
-    async list(@Query() query: Record<string, any>) {
+    async list(@Query() query: Record<string, any>, @CurrentUser() user: JwtPayload) {
       // Parse pagination params from query string
       const parsed = {
         ...query,
@@ -66,14 +84,16 @@ export function createEntityController(config: EntityConfig, serviceToken: strin
         limit: query.limit ? Number(query.limit) : undefined,
         includeDeleted: query.includeDeleted === 'true',
       };
-      return this.entityService.list(parsed);
+      const accessCtx = buildAccessContext(user, readPermission);
+      return this.entityService.list(parsed, accessCtx);
     }
 
     @Get(':id')
     @RequirePermission(readPermission)
     @ApiOperation({ summary: `Get a single ${config.singularName.toLowerCase()} by ID` })
-    async findOne(@Param('id', ParseUUIDPipe) id: string) {
-      return this.entityService.findOneOrFail(id);
+    async findOne(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: JwtPayload) {
+      const accessCtx = buildAccessContext(user, readPermission);
+      return this.entityService.findOneOrFail(id, accessCtx);
     }
 
     @Post()

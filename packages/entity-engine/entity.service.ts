@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
-import { eq, and, or, isNull, ilike, asc, desc, count, sql, getTableName } from 'drizzle-orm';
+import { eq, and, or, isNull, ilike, asc, desc, count, sql, getTableName, inArray } from 'drizzle-orm';
 import type { PgColumn } from 'drizzle-orm/pg-core';
 import { withTenant, withTenantInsert, tenantCondition } from '@packages/tenancy/helpers';
 import {
@@ -32,7 +32,8 @@ import { fieldTypeSaveHookRegistry, type FieldTypeSaveHookRegistry, type FieldTy
 
 import { WorkflowEngineService, WorkflowRegistryService, PipelineResolverService } from '@packages/workflows';
 import type { PaginatedResponse } from '@packages/common';
-import type { EntityConfig, BaseListQuery, ListLayoutColumn } from './types';
+import type { EntityConfig, BaseListQuery, ListLayoutColumn, DataAccessContext } from './types';
+import type { SQL as DrizzleSQL } from 'drizzle-orm';
 import { EntityRegistryService } from './entity-registry.service';
 
 /**
@@ -73,6 +74,50 @@ export class EntityService {
   /** The entity config this service was instantiated with. */
   getConfig(): EntityConfig {
     return this.config;
+  }
+
+  // ---------------------------------------------------------------------------
+  // DATA ACCESS SCOPE RESOLUTION
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Resolves a data access scope into a SQL WHERE condition.
+   * Built-in scopes (all, own, team) are handled by the platform.
+   * Custom scopes (scope:<key>) are delegated to the entity's scope resolvers.
+   */
+  private async resolveDataAccessScope(ctx: DataAccessContext): Promise<DrizzleSQL | undefined> {
+    const { config } = this;
+    const table = config.table as any;
+    const ownerField = config.dataAccess?.ownerField ?? 'createdBy';
+    const ownerColumn = table[ownerField] as PgColumn | undefined;
+
+    if (ctx.scope === 'all') return undefined;
+
+    if (ctx.scope === 'own') {
+      if (!ownerColumn) return undefined;
+      return eq(ownerColumn, ctx.userId);
+    }
+
+    if (ctx.scope === 'team') {
+      if (!ownerColumn || !ctx.teamUserIds?.length) return eq(ownerColumn ?? table.createdBy, ctx.userId);
+      return inArray(ownerColumn, ctx.teamUserIds);
+    }
+
+    // Custom scope: 'scope:<key>'
+    if (ctx.scope.startsWith('scope:')) {
+      const scopeKey = ctx.scope.slice(6);
+      const resolver = config.dataAccess?.scopes?.find((s) => s.key === scopeKey);
+      if (!resolver) {
+        this.logger.warn(`Unknown data access scope: ${ctx.scope}, falling back to 'own'`);
+        if (!ownerColumn) return undefined;
+        return eq(ownerColumn, ctx.userId);
+      }
+      return resolver.resolve(ctx.userId);
+    }
+
+    // Unknown scope — fail closed (own)
+    if (!ownerColumn) return undefined;
+    return eq(ownerColumn, ctx.userId);
   }
 
   // ---------------------------------------------------------------------------
@@ -304,7 +349,7 @@ export class EntityService {
   // LIST
   // ---------------------------------------------------------------------------
 
-  async list(query: BaseListQuery): Promise<PaginatedResponse<Record<string, unknown>>> {
+  async list(query: BaseListQuery, accessCtx?: DataAccessContext): Promise<PaginatedResponse<Record<string, unknown>>> {
     const { page, limit, offset } = computePagination({
       page: query.page ?? 1,
       limit: query.limit ?? 25,
@@ -312,6 +357,12 @@ export class EntityService {
     const { config } = this;
 
     const conditions: any[] = [];
+
+    // Data access scope filtering
+    if (accessCtx) {
+      const scopeCondition = await this.resolveDataAccessScope(accessCtx);
+      if (scopeCondition) conditions.push(scopeCondition);
+    }
 
     // Soft delete filter (delegated to query-builder)
     const softDeleteCond = buildSoftDeleteCondition(
@@ -403,7 +454,7 @@ export class EntityService {
   // FIND ONE
   // ---------------------------------------------------------------------------
 
-  async findOneOrFail(id: string): Promise<Record<string, unknown>> {
+  async findOneOrFail(id: string, accessCtx?: DataAccessContext): Promise<Record<string, unknown>> {
     const { config } = this;
     const table = config.table as any;
 
@@ -411,6 +462,12 @@ export class EntityService {
 
     if (table.deletedAt) {
       conditions.push(isNull(table.deletedAt));
+    }
+
+    // Data access scope filtering — ensures user can only view records within their scope
+    if (accessCtx) {
+      const scopeCondition = await this.resolveDataAccessScope(accessCtx);
+      if (scopeCondition) conditions.push(scopeCondition);
     }
 
     const [row] = await this.database.db
