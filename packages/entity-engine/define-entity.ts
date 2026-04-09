@@ -1,5 +1,6 @@
 import { getTableColumns } from 'drizzle-orm';
 import type { PgTable, PgColumn } from 'drizzle-orm/pg-core';
+import type { SQL } from 'drizzle-orm';
 import type {
   EntityConfig,
   EntityHooks,
@@ -178,6 +179,33 @@ export interface ModelDefinition<TTable extends PgTable = PgTable> {
 
   /** Configurable actions for list pages */
   actions?: EntityActions;
+
+  // --- Notes ---
+
+  /** Enable the notes tab on the entity detail page. Default: false. */
+  hasNotes?: boolean;
+
+  // --- Attachments ---
+
+  /** Enable the attachments tab on the entity detail page. Default: false. */
+  hasAttachments?: boolean;
+
+  // --- Evaluations ---
+
+  /** Enable the evaluations tab on the entity detail page. Default: false. */
+  hasEvaluations?: boolean;
+
+  /** Per-entity attachment configuration. Only relevant when hasAttachments is true. */
+  attachmentConfig?: {
+    maxFileSize?: number;
+    acceptedMimeTypes?: string[];
+    deleteMode?: 'soft' | 'hard';
+  };
+
+  // --- Computed columns ---
+
+  /** SQL subquery expressions added to SELECT in list and detail queries. */
+  computedColumns?: { name: string; expression: SQL; sourceFields?: string[] }[];
 
   // --- Data access ---
 
@@ -373,6 +401,11 @@ export function defineEntity<TTable extends PgTable>(model: ModelDefinition<TTab
     relationships: relationships.length > 0 ? relationships : undefined,
     recipientFields: Object.keys(recipientFields).length > 0 ? recipientFields : undefined,
     customFields: model.customFields,
+    hasNotes: model.hasNotes,
+    hasAttachments: model.hasAttachments,
+    hasEvaluations: model.hasEvaluations,
+    attachmentConfig: model.attachmentConfig,
+    computedColumns: model.computedColumns,
     extraPermissions: model.extraPermissions,
     extraEvents: model.extraEvents,
     actions: model.actions,
