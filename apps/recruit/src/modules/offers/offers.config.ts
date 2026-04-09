@@ -106,6 +106,10 @@ export const offersConfig: EntityConfig = {
     { name: 'Notes', fields: ['notes'] },
   ],
 
+  dataAccess: {
+    ownerField: 'createdBy',
+  },
+
   recipientFields: {
     createdBy: { label: 'Created By' },
   },

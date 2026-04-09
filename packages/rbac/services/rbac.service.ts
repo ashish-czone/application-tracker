@@ -399,7 +399,10 @@ export class RbacService {
   }
 
   private scopeRank(scope: PermissionScope): number {
-    const ranks: Record<PermissionScope, number> = { own: 1, all: 2 };
-    return ranks[scope] ?? 0;
+    if (scope === 'all') return 4;
+    if (scope === 'team') return 3;
+    if (scope === 'own') return 2;
+    if (scope.startsWith('scope:')) return 2; // custom scopes are equivalent to 'own' level
+    return 0;
   }
 }

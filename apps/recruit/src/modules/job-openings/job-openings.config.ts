@@ -1,3 +1,4 @@
+import { eq } from 'drizzle-orm';
 import type { EntityConfig } from '@packages/entity-engine';
 import { jobOpenings } from './schema/job-openings';
 
@@ -249,6 +250,17 @@ export const JOB_OPENINGS_CONFIG: EntityConfig = {
       },
       { key: 'clone', label: 'Clone', icon: 'Copy', permission: 'create' },
       { key: 'delete', label: 'Delete', icon: 'Trash2', permission: 'delete', variant: 'destructive' },
+    ],
+  },
+
+  dataAccess: {
+    ownerField: 'createdBy',
+    scopes: [
+      {
+        key: 'hiring-manager',
+        label: 'Where I am Hiring Manager',
+        resolve: async (userId) => eq(jobOpenings.hiringManager, userId),
+      },
     ],
   },
 

@@ -433,6 +433,51 @@ export interface EntityUIHints {
 }
 
 // ---------------------------------------------------------------------------
+// Data access scopes — control which records a user can see
+// ---------------------------------------------------------------------------
+
+/**
+ * A scope resolver provides a SQL condition that filters entity records
+ * based on the user's data access scope. Domain-specific resolvers
+ * return SQL directly — the platform never builds queries on behalf of the domain.
+ */
+export interface ScopeResolver {
+  /** Unique key referenced by RBAC permission scopes (e.g. 'hiring-manager') */
+  key: string;
+  /** Human-readable label shown in RBAC admin UI */
+  label: string;
+  /** Returns a SQL WHERE condition that restricts visible records for this user */
+  resolve(userId: string): Promise<SQL>;
+}
+
+/**
+ * Data access configuration for an entity.
+ * Controls how row-level visibility is enforced based on RBAC permission scopes.
+ */
+export interface DataAccessConfig {
+  /**
+   * The field that identifies the record owner.
+   * Used by the built-in 'own' and 'team' scopes.
+   * Defaults to 'createdBy' if not specified.
+   */
+  ownerField?: string;
+
+  /**
+   * Entity-specific scope resolvers.
+   * These are referenced by RBAC permission scopes as 'scope:<key>'.
+   * Each resolver returns a SQL condition applied to list/detail queries.
+   */
+  scopes?: ScopeResolver[];
+}
+
+/** Context passed to entity service methods for scope enforcement */
+export interface DataAccessContext {
+  userId: string;
+  scope: string; // 'all' | 'team' | 'own' | 'scope:<key>'
+  teamUserIds?: string[];
+}
+
+// ---------------------------------------------------------------------------
 // EntityConfig — the single config that defines everything about an entity
 // ---------------------------------------------------------------------------
 
@@ -554,6 +599,11 @@ export interface EntityConfig<TTable extends PgTable = PgTable> {
 
   /** Frontend rendering hints (serialized to registry API) */
   ui: EntityUIHints;
+
+  // --- Data access ---
+
+  /** Row-level data access configuration. Controls which records users can see based on their RBAC scope. */
+  dataAccess?: DataAccessConfig;
 
   // --- Lifecycle hooks ---
 

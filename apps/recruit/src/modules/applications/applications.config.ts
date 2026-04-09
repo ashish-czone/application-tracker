@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import type { EntityConfig } from '@packages/entity-engine';
 import { evaluationAvgExpr, evaluationCountExpr } from '@packages/evaluations';
 import { applications } from './schema/applications';
@@ -111,6 +112,19 @@ export const APPLICATIONS_CONFIG: EntityConfig = {
     { name: 'Basic Info', fields: ['candidateId', 'jobOpeningId', 'stage', 'source', 'referredBy'] },
     { name: 'Details', fields: ['notes'] },
   ],
+
+  dataAccess: {
+    ownerField: 'createdBy',
+    scopes: [
+      {
+        key: 'my-pipeline',
+        label: 'Applications for my Job Openings',
+        resolve: async (userId) => sql`${applications.jobOpeningId} IN (
+          SELECT id FROM job_openings WHERE hiring_manager = ${userId} AND deleted_at IS NULL
+        )`,
+      },
+    ],
+  },
 
   recipientFields: {
     createdBy: { label: 'Created By' },
