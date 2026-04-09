@@ -5,8 +5,7 @@ import { PositionScopeResolverService } from './services/position-scope-resolver
 import { OrgUnitController } from './controllers/org-unit.controller';
 import { OrgPositionController } from './controllers/org-position.controller';
 import { PermissionRegistryService } from '@packages/rbac';
-import { LookupResolverService, TEAM_RESOLVER, POSITION_SCOPE_PROVIDER, type TeamResolver } from '@packages/entity-engine';
-import { UsersService } from '@packages/users';
+import { LookupResolverService, POSITION_SCOPE_PROVIDER } from '@packages/entity-engine';
 import { orgUnits } from './schema/org-units';
 
 @Global()
@@ -20,22 +19,8 @@ import { orgUnits } from './schema/org-units';
       provide: POSITION_SCOPE_PROVIDER,
       useExisting: PositionScopeResolverService,
     },
-    {
-      provide: TEAM_RESOLVER,
-      useFactory: (orgUnitService: OrgUnitService, usersService: UsersService): TeamResolver => ({
-        getTeamUserIds: async (userId: string) => {
-          const [orgMembers, subordinates] = await Promise.all([
-            orgUnitService.getTeamMemberIds(userId),
-            usersService.getSelfAndSubordinateIds(userId),
-          ]);
-          const unique = new Set([...orgMembers, ...subordinates]);
-          return Array.from(unique);
-        },
-      }),
-      inject: [OrgUnitService, UsersService],
-    },
   ],
-  exports: [OrgUnitService, OrgPositionService, PositionScopeResolverService, POSITION_SCOPE_PROVIDER, TEAM_RESOLVER],
+  exports: [OrgUnitService, OrgPositionService, PositionScopeResolverService, POSITION_SCOPE_PROVIDER],
 })
 export class OrgUnitsModule implements OnModuleInit {
   constructor(

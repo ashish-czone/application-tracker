@@ -8,4 +8,3 @@ export { FieldPermissionsController } from './controllers/field-permissions.cont
 export type { Role, RoleWithSystem, PermissionRegistryEntry, PermissionScope, ScopedPermissions, BooleanPermissions, FieldPermissionEntityResolver } from './types';
 export { FIELD_PERMISSION_ENTITY_RESOLVER } from './types';
 export { roles, rolePermissions, userRoles } from './schema';
-export { scopeFilter, extractCustomScopeKey } from './helpers/scope-filter';

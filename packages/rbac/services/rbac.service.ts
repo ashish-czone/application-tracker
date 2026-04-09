@@ -256,7 +256,6 @@ export class RbacService {
           .values(withTenantInsert(rolePermissions, entries.map((e) => ({
             roleId,
             permission: e.name,
-            scope: 'all', // DB compat — scope column still exists, always store 'all'
           }))));
       }
     });

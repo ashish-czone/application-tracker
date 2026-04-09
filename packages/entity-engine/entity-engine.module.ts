@@ -26,8 +26,8 @@ import { MULTI_VALUE_EXTENSION, type MultiValueExtension } from './extensions/mu
 import { LAYOUT_EXTENSION, type LayoutExtension } from './extensions/layout-extension.interface';
 import { CreateEntityAction } from './actions/create-entity.action';
 import { UpdateEntityAction } from './actions/update-entity.action';
-import { TEAM_RESOLVER, POSITION_SCOPE_PROVIDER } from './types';
-import type { EntityConfig, FieldType, TeamResolver, PositionScopeProvider } from './types';
+import { POSITION_SCOPE_PROVIDER } from './types';
+import type { EntityConfig, FieldType, PositionScopeProvider } from './types';
 
 /** Map entity-engine FieldType → automations EntityFieldType for the resolver registry */
 const FIELD_TYPE_MAP: Partial<Record<FieldType, EntityFieldType>> = {
@@ -144,10 +144,9 @@ export class EntityEngineModule implements OnModuleInit, OnApplicationBootstrap 
             pipelineResolver: PipelineResolverService,
             entityRegistry: EntityRegistryService,
             appLogger: AppLoggerService,
-            teamResolver: TeamResolver | null,
             positionScopeProvider: PositionScopeProvider | null,
-          ) => new EntityService(config, database, domainEventEmitter, config.customFields ? eavStorage : null, multiValueExtension, fieldDefinitionService, lookupResolver, taxonomyService, hookRegistry, workflowEngine, workflowRegistry, pipelineResolver, entityRegistry, appLogger, teamResolver, positionScopeProvider),
-          inject: [DatabaseService, DomainEventEmitter, { token: EAV_STORAGE_EXTENSION, optional: true }, { token: MULTI_VALUE_EXTENSION, optional: true }, FieldDefinitionService, LookupResolverService, TaxonomyService, FieldTypeSaveHookRegistry, WorkflowEngineService, WorkflowRegistryService, PipelineResolverService, EntityRegistryService, AppLoggerService, { token: TEAM_RESOLVER, optional: true }, { token: POSITION_SCOPE_PROVIDER, optional: true }],
+          ) => new EntityService(config, database, domainEventEmitter, config.customFields ? eavStorage : null, multiValueExtension, fieldDefinitionService, lookupResolver, taxonomyService, hookRegistry, workflowEngine, workflowRegistry, pipelineResolver, entityRegistry, appLogger, positionScopeProvider),
+          inject: [DatabaseService, DomainEventEmitter, { token: EAV_STORAGE_EXTENSION, optional: true }, { token: MULTI_VALUE_EXTENSION, optional: true }, FieldDefinitionService, LookupResolverService, TaxonomyService, FieldTypeSaveHookRegistry, WorkflowEngineService, WorkflowRegistryService, PipelineResolverService, EntityRegistryService, AppLoggerService, { token: POSITION_SCOPE_PROVIDER, optional: true }],
         },
       ],
       exports: [serviceToken],

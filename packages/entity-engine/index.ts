@@ -31,11 +31,10 @@ export type {
   ScopeResolver,
   DataAccessConfig,
   DataAccessContext,
-  TeamResolver,
   PositionScopeProvider,
 } from './types';
 
-export { TEAM_RESOLVER, POSITION_SCOPE_PROVIDER } from './types';
+export { POSITION_SCOPE_PROVIDER } from './types';
 
 // --- Types and constants moved from eav-attributes ---
 
