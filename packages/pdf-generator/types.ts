@@ -19,6 +19,8 @@ export interface PdfOptions {
  */
 export interface PdfProvider {
   generatePdf(html: string, options?: PdfOptions): Promise<Buffer>;
+  /** Clean up resources (e.g. close browser). Called on module destroy. */
+  dispose?(): Promise<void>;
 }
 
 export interface PdfGeneratorModuleOptions {
