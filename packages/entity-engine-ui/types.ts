@@ -74,12 +74,30 @@ export interface DetailTabPlugin {
   featureFlag?: string;
 }
 
+/** Panel rendered in the right sidebar of entity detail pages */
+export interface RightSidebarPanel {
+  /** Unique panel key */
+  key: string;
+  /** Display label shown as section header */
+  label: string;
+  /** Component rendered inside the panel */
+  component: ComponentType<{ entityType: string; entityId: string }>;
+  /** Sort order (lower = higher on page) */
+  order: number;
+  /** If set, panel only shows when entity.features[featureFlag] is truthy */
+  featureFlag?: string;
+  /** Whether the panel starts collapsed */
+  defaultCollapsed?: boolean;
+}
+
 /** Frontend-side entity UI config (supplements the backend registry) */
 export interface EntityUIConfig {
   entityType: string;
   detailPlugins?: EntityDetailPlugin[];
   /** Entity-specific detail tabs (merged with global tabs from provider) */
   detailTabs?: DetailTabPlugin[];
+  /** Panels rendered in the right sidebar of the detail page */
+  rightSidebarPanels?: RightSidebarPanel[];
 }
 
 /** Registration for a named cell renderer used in list view columns */

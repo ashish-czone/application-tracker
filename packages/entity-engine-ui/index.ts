@@ -25,6 +25,7 @@ export type {
   EntityApi,
   EntityDetailPlugin,
   DetailTabPlugin,
+  RightSidebarPanel,
   EntityUIConfig,
   ColumnRendererRegistration,
 } from './types';
