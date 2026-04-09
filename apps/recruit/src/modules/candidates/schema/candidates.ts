@@ -13,7 +13,6 @@ export const candidates = pgTable('candidates', {
   mobile: text('mobile'),
   website: text('website'),
   secondaryEmail: text('secondary_email'),
-  fax: text('fax'),
   // Address
   street: text('street'),
   city: text('city'),
@@ -32,7 +31,6 @@ export const candidates = pgTable('candidates', {
   currency: text('currency').default('USD'),
   skillSet: text('skill_set'),
   additionalInfo: text('additional_info'),
-  skypeId: text('skype_id'),
   // Social Links
   linkedinUrl: text('linkedin_url'),
   facebookUrl: text('facebook_url'),

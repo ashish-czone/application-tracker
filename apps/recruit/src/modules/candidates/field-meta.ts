@@ -13,7 +13,6 @@ export const CANDIDATE_FIELD_META: Record<string, FieldMeta> = {
   website: { label: 'Website', section: 'basic', sortOrder: 4, fieldType: 'url' },
   mobile: { label: 'Mobile', section: 'basic', sortOrder: 5, isQuickCreate: true, fieldType: 'phone' },
   secondaryEmail: { label: 'Secondary Email', section: 'basic', sortOrder: 6, fieldType: 'email' },
-  fax: { label: 'Fax', section: 'basic', sortOrder: 7 },
   // Address
   street: { label: 'Street', section: 'address', sortOrder: 0, maxLength: 250 },
   postalCode: { label: 'Postal Code', section: 'address', sortOrder: 1, maxLength: 30 },
@@ -56,7 +55,6 @@ export const CANDIDATE_FIELD_META: Record<string, FieldMeta> = {
   currency: { label: 'Currency', section: 'professional', sortOrder: 8, maxLength: 3 },
   skillSet: { label: 'Skill Set', section: 'professional', sortOrder: 10, fieldType: 'textarea', maxLength: 6000 },
   additionalInfo: { label: 'Additional Info', section: 'professional', sortOrder: 11, fieldType: 'textarea', maxLength: 6000 },
-  skypeId: { label: 'Skype ID', section: 'professional', sortOrder: 12 },
   // Social Links
   linkedinUrl: { label: 'LinkedIn', section: 'social', sortOrder: 0, fieldType: 'url' },
   facebookUrl: { label: 'Facebook', section: 'social', sortOrder: 1, fieldType: 'url' },
@@ -124,9 +122,9 @@ export const SKIP_FIELDS = ['id', 'deletedAt', 'deletedBy', 'resumeFile', 'creat
 
 /** Section definitions matching Zoho Recruit layout */
 export const CANDIDATE_SECTIONS = [
-  { name: 'Basic Info', fields: ['email', 'firstName', 'phone', 'lastName', 'website', 'mobile', 'secondaryEmail', 'fax'] },
+  { name: 'Basic Info', fields: ['email', 'firstName', 'phone', 'lastName', 'website', 'mobile', 'secondaryEmail'] },
   { name: 'Address Information', fields: ['street', 'postalCode', 'city', 'state', 'country'] },
-  { name: 'Professional Details', fields: ['experienceInYears', 'highestQualification', 'currentTitle', 'currentCompany', 'noticePeriod', 'salaryExpectationMin', 'salaryExpectationMax', 'currentSalary', 'currency', 'skillSet', 'additionalInfo', 'skypeId', 'skills'] },
+  { name: 'Professional Details', fields: ['experienceInYears', 'highestQualification', 'currentTitle', 'currentCompany', 'noticePeriod', 'salaryExpectationMin', 'salaryExpectationMax', 'currentSalary', 'currency', 'skillSet', 'additionalInfo', 'skills'] },
   { name: 'Social Links', fields: ['linkedinUrl', 'facebookUrl', 'twitterHandle'] },
   { name: 'Other Info', fields: ['candidateStatus', 'source', 'emailOptOut', 'dateOfBirth', 'gender', 'nationality', 'isWillingToRelocate', 'availableFrom', 'notes'] },
   { name: 'Attachments', fields: ['resume'] },

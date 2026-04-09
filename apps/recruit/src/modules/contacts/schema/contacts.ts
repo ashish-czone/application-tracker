@@ -14,8 +14,6 @@ export const contacts = pgTable('contacts', {
   jobTitle: text('job_title'),
   workPhone: text('work_phone'),
   mobile: text('mobile'),
-  fax: text('fax'),
-  skypeId: text('skype_id'),
   // Mailing Address
   mailingStreet: text('mailing_street'),
   mailingCity: text('mailing_city'),
