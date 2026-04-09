@@ -23,6 +23,7 @@ import { OAuthModule } from '@packages/oauth';
 import { RbacGuard } from '@packages/rbac';
 import { AppConfigService } from '@packages/settings';
 import { UsersModule } from '@packages/users';
+import { OrgUnitsModule } from '@packages/org-units';
 import { EntityEngineModule } from '@packages/entity-engine';
 import { TASKS_CONFIG } from '@packages/tasks';
 import { TaxonomyModule } from '@packages/taxonomy';
@@ -101,6 +102,7 @@ import { validate } from './config/env.validation';
     }),
     OAuthModule.register(),
     UsersModule,
+    OrgUnitsModule,
     EntityEngineModule.forEntity(TASKS_CONFIG),
   ],
   providers: [

@@ -20,7 +20,7 @@ export interface UpdateRoleRequest {
 
 export interface PermissionEntry {
   name: string;
-  scope: 'own' | 'all';
+  scope: string; // 'all' | 'team' | 'own' | 'scope:<custom-key>'
 }
 
 export interface PermissionRegistryEntry {
@@ -29,8 +29,8 @@ export interface PermissionRegistryEntry {
   description: string;
 }
 
-/** Map of permission name → scope */
-export type ScopedPermissions = Record<string, 'own' | 'all'>;
+/** Map of permission name → scope (all | team | own | scope:<custom-key>) */
+export type ScopedPermissions = Record<string, string>;
 
 export interface ListRolesParams {
   page?: number;

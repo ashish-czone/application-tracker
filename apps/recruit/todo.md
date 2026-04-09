@@ -42,19 +42,19 @@ Compared against: Ashby, Greenhouse, Lever, Workable
 - [x] Inline scheduling from candidate/application context (PR #660)
 - [x] Right sidebar on custom detail pages (notes, tasks, documents, other jobs) (PR #667)
 - [x] Smart empty field handling (hide empty fields or collapse them, no "$0.00" or "-" walls) (PR #668)
-- [ ] Smart list views (fewer default columns, prioritize: name, status, source, last activity)
+- [x] Smart list views (fewer default columns, prioritize: name, status, source, last activity) (PR #669)
 
 ---
 
 ## Tier 3 — Modern Touches
 
-- [ ] Candidate avatar/initials in table list views
+- [x] Candidate avatar/initials in table list views (PR #671)
 - [ ] Keyboard shortcuts and command palette for power users
 - [ ] Bulk actions bar (select multiple -> advance, reject, email, tag)
 - [ ] Automation indicators on pipeline stages (lightning bolt for stages with rules)
-- [ ] Role-specific views (recruiter vs hiring manager vs exec)
+- [x] Role-specific views — data access scopes: RBAC + org units + entity scope resolvers (PR #672)
 - [ ] Consistent date formatting (relative for recent, absolute for older)
-- [ ] Remove dated fields (Fax, Skype ID)
+- [x] Remove dated fields (Fax, Skype ID) (PR #670)
 
 ---
 

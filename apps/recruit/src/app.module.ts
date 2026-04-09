@@ -50,6 +50,7 @@ import { ClientsModule } from './modules/clients/clients.module';
 import { JobOpeningsModule } from './modules/job-openings/job-openings.module';
 import { TASKS_CONFIG } from '@packages/tasks';
 import { UsersModule } from '@packages/users';
+import { OrgUnitsModule } from '@packages/org-units';
 import { validate } from './config/env.validation';
 
 @Module({
@@ -151,6 +152,7 @@ import { validate } from './config/env.validation';
     ClientsModule, // sample data seeding: clients, contacts, vendors, interviews
     JobOpeningsModule, // sample data seeding: job openings, applications
     UsersModule,
+    OrgUnitsModule,
   ],
   providers: [
     {

@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { DatabaseService, eq, inArray, sql, count } from '@packages/database';
+import { DatabaseService, eq, and, inArray, sql, count } from '@packages/database';
 import { withTenant, withTenantInsert } from '@packages/tenancy/helpers';
 import { orgUnits } from '../schema/org-units';
 import { orgUnitMembers } from '../schema/org-unit-members';
@@ -87,8 +87,7 @@ export class OrgUnitService {
   async removeMember(orgUnitId: string, userId: string): Promise<void> {
     await this.database.db
       .delete(orgUnitMembers)
-      .where(eq(orgUnitMembers.orgUnitId, orgUnitId))
-      .where(eq(orgUnitMembers.userId, userId));
+      .where(and(eq(orgUnitMembers.orgUnitId, orgUnitId), eq(orgUnitMembers.userId, userId)));
   }
 
   async getMemberIds(orgUnitId: string): Promise<string[]> {

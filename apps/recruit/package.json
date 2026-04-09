@@ -43,6 +43,7 @@
     "@packages/service-auth": "workspace:*",
     "@packages/settings": "workspace:*",
     "@packages/tasks": "workspace:*",
+    "@packages/org-units": "workspace:*",
     "@packages/taxonomy": "workspace:*",
     "@packages/tenancy": "workspace:*",
     "@packages/users": "workspace:*",

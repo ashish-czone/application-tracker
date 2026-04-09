@@ -35,6 +35,7 @@
     "@packages/notifications": "workspace:*",
     "@packages/rbac": "workspace:*",
     "@packages/settings": "workspace:*",
+    "@packages/org-units": "workspace:*",
     "@packages/tasks": "workspace:*",
     "@packages/taxonomy": "workspace:*",
     "@packages/users": "workspace:*",
