@@ -52,8 +52,23 @@ export class OrgUnitController {
   @RequirePermission(ORG_UNIT_PERMISSIONS.MANAGE)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Add a member to an org unit' })
-  async addMember(@Param('id', ParseUUIDPipe) id: string, @Param('userId', ParseUUIDPipe) userId: string) {
-    await this.orgUnitService.addMember(id, userId);
+  async addMember(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('userId', ParseUUIDPipe) userId: string,
+    @Body() body: { positionId?: string } = {},
+  ) {
+    await this.orgUnitService.addMember(id, userId, body.positionId);
+  }
+
+  @Patch(':id/members/:userId')
+  @RequirePermission(ORG_UNIT_PERMISSIONS.MANAGE)
+  @ApiOperation({ summary: 'Update a member\'s position in an org unit' })
+  async updateMemberPosition(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('userId', ParseUUIDPipe) userId: string,
+    @Body() body: { positionId: string | null },
+  ) {
+    await this.orgUnitService.updateMemberPosition(id, userId, body.positionId);
   }
 
   @Delete(':id/members/:userId')
