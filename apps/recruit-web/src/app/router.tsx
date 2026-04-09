@@ -17,6 +17,7 @@ import { DashboardPage as RecruitDashboard } from '../portals/recruiter/features
 import { JobOpeningDetailPage } from '../portals/recruiter/features/job-openings/JobOpeningDetailPage';
 import { ApplicationDetailPage } from '../portals/recruiter/features/applications/ApplicationDetailPage';
 import { InterviewsCalendarPage } from '../portals/recruiter/features/interviews/InterviewsCalendarPage';
+import { TemplatesPage } from '../portals/recruiter/features/templates/TemplatesPage';
 
 interface PendingTransition {
   toStateName: string;
@@ -276,6 +277,7 @@ export function AppRouter() {
             path="/automations/:id/edit"
             element={<Suspense fallback={<PageSkeleton />}><RuleBuilderPage /></Suspense>}
           />
+          <Route path="/templates" element={<TemplatesPage />} />
         </Route>
       </Route>
 

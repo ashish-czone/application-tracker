@@ -26,6 +26,7 @@
     "@packages/auth": "workspace:*",
     "@packages/common": "workspace:*",
     "@packages/database": "workspace:*",
+    "@packages/document-templates": "workspace:*",
     "@packages/eav-attributes": "workspace:*",
     "@packages/entity-engine": "workspace:*",
     "@packages/entity-relations": "workspace:*",

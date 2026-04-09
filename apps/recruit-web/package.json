@@ -17,6 +17,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@hookform/resolvers": "^5.0.0",
     "@packages/calendar-ui": "workspace:*",
+    "@packages/document-templates-ui": "workspace:*",
     "@packages/eav-attributes-ui": "workspace:*",
     "@packages/entity-engine-ui": "workspace:*",
     "@packages/entity-relations-ui": "workspace:*",
