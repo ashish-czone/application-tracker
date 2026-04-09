@@ -13,6 +13,7 @@ export default defineConfig({
     '../../packages/workflows/schema/index.ts',
     '../../packages/taxonomy/schema/index.ts',
     '../../packages/audit/schema/index.ts',
+    '../../packages/org-units/schema/index.ts',
     '../../packages/tasks/schema/tasks.ts',
     '../../packages/notes/schema/index.ts',
     '../../packages/attachments/schema/index.ts',

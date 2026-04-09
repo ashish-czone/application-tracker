@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, ConflictException } from '@nestjs/common';
 import { DatabaseService, eq, and, count } from '@packages/database';
 import { withTenant, withTenantInsert } from '@packages/tenancy/helpers';
 import { orgPositions } from '../schema/org-positions';
@@ -6,8 +6,17 @@ import { orgPositionScopes } from '../schema/org-position-scopes';
 import { orgUnitMembers } from '../schema/org-unit-members';
 import type { OrgPosition, OrgPositionScope } from '../types';
 
+/** Default positions seeded on first startup */
+const DEFAULT_POSITIONS = [
+  { name: 'Head', sortOrder: 0 },
+  { name: 'Lead', sortOrder: 1 },
+  { name: 'Member', sortOrder: 2 },
+];
+
 @Injectable()
 export class OrgPositionService {
+  private readonly logger = new Logger(OrgPositionService.name);
+
   constructor(private readonly database: DatabaseService) {}
 
   // ---------------------------------------------------------------------------
@@ -121,5 +130,33 @@ export class OrgPositionService {
       ))
       .limit(1);
     return row?.scope ?? null;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Seeding
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Seeds default positions (Head, Lead, Member) if none exist.
+   * Called from OrgUnitsModule.onModuleInit.
+   */
+  async seedDefaults(): Promise<void> {
+    const existing = await this.database.db
+      .select({ id: orgPositions.id })
+      .from(orgPositions)
+      .limit(1);
+
+    if (existing.length > 0) return;
+
+    for (const pos of DEFAULT_POSITIONS) {
+      await this.database.db
+        .insert(orgPositions)
+        .values({
+          name: pos.name,
+          sortOrder: pos.sortOrder,
+        });
+    }
+
+    this.logger.log('Seeded default org positions: Head, Lead, Member');
   }
 }
