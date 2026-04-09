@@ -1,0 +1,11 @@
+import { pgTable, text, primaryKey, timestamp } from 'drizzle-orm/pg-core';
+import { users } from '@packages/database/schema';
+import { orgUnits } from './org-units';
+
+export const orgUnitMembers = pgTable('org_unit_members', {
+  orgUnitId: text('org_unit_id').notNull().references(() => orgUnits.id, { onDelete: 'cascade' }),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
+}, (table) => [
+  primaryKey({ columns: [table.orgUnitId, table.userId] }),
+]);
