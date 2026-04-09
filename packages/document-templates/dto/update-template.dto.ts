@@ -13,6 +13,7 @@ export class UpdateTemplateDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(500_000)
   htmlBody?: string;
 
   @IsOptional()

@@ -3,10 +3,11 @@ import { FileText, Plus, Star, Pencil, Trash2, Eye } from 'lucide-react';
 import { Button, ConfirmDialog, Badge, toast } from '@packages/ui';
 import { formatDateTime } from '@packages/common';
 import { useDocumentTemplates, useDeleteTemplate } from '../hooks';
+import type { ApiFn } from '../hooks';
 import type { DocumentTemplate } from '../types';
 
 interface TemplateListProps {
-  apiFn: any;
+  apiFn: ApiFn;
   category?: string;
   onEdit: (template: DocumentTemplate) => void;
   onCreate: () => void;

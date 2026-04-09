@@ -11,4 +11,5 @@ export {
   useTemplatePreview,
   useRenderTemplate,
 } from './hooks';
+export type { ApiFn } from './hooks';
 export type { DocumentTemplate, PlaceholderDefinition, TemplateCategory, RenderResult } from './types';

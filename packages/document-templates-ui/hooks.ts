@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { DocumentTemplate, TemplateCategory, RenderResult } from './types';
 
-type ApiFn = {
+export type ApiFn = {
   get: <T>(url: string) => Promise<T>;
   post: <T>(url: string, body?: unknown) => Promise<T>;
   patch: <T>(url: string, body?: unknown) => Promise<T>;
