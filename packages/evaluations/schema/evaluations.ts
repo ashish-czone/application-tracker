@@ -10,6 +10,7 @@ export const evaluations = pgTable('evaluations', {
   entityId: text('entity_id').notNull(),
   evaluatorId: text('evaluator_id').notNull().references(() => users.id),
   overallRating: integer('overall_rating').notNull(),
+  recommendation: text('recommendation'),
   comment: text('comment'),
   submittedAt: timestamp('submitted_at', { withTimezone: true, mode: 'date' }),
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),

@@ -28,6 +28,7 @@ export class EvaluationsService {
     entityId: string;
     evaluatorId: string;
     overallRating: number;
+    recommendation: string;
     comment?: string;
     scores: { criteriaName: string; score: number; note?: string }[];
   }): Promise<EvaluationWithScores> {
@@ -43,6 +44,7 @@ export class EvaluationsService {
           entityId: data.entityId,
           evaluatorId: data.evaluatorId,
           overallRating: data.overallRating,
+          recommendation: data.recommendation,
           comment: data.comment ?? null,
           submittedAt: new Date(),
           updatedAt: new Date(),
@@ -73,6 +75,7 @@ export class EvaluationsService {
         templateId: data.templateId,
         templateSlug: template.slug,
         overallRating: data.overallRating,
+        recommendation: data.recommendation,
         scores: data.scores.map((s) => ({ criteriaName: s.criteriaName, score: s.score })),
       },
     });
@@ -86,6 +89,7 @@ export class EvaluationsService {
 
   async update(id: string, data: {
     overallRating?: number;
+    recommendation?: string;
     comment?: string;
     scores?: { criteriaName: string; score: number; note?: string }[];
   }, actorId: string): Promise<EvaluationWithScores> {
@@ -100,11 +104,12 @@ export class EvaluationsService {
       this.validateScores(data.scores, template);
     }
 
-    const before = { overallRating: existing.overallRating, comment: existing.comment };
+    const before = { overallRating: existing.overallRating, recommendation: existing.recommendation, comment: existing.comment };
 
     await this.database.db.transaction(async (tx) => {
       const updateValues: Record<string, unknown> = {};
       if (data.overallRating !== undefined) updateValues.overallRating = data.overallRating;
+      if (data.recommendation !== undefined) updateValues.recommendation = data.recommendation;
       if (data.comment !== undefined) updateValues.comment = data.comment;
 
       if (Object.keys(updateValues).length > 0) {
@@ -143,7 +148,7 @@ export class EvaluationsService {
         evaluatorId: updated.evaluatorId,
         templateId: updated.templateId,
         before,
-        after: { overallRating: updated.overallRating, comment: updated.comment },
+        after: { overallRating: updated.overallRating, recommendation: updated.recommendation, comment: updated.comment },
       },
     });
 

@@ -1,3 +1,13 @@
+export const RECOMMENDATION_VALUES = ['strong_no', 'no', 'yes', 'strong_yes'] as const;
+export type Recommendation = typeof RECOMMENDATION_VALUES[number];
+
+export const RECOMMENDATION_LABELS: Record<Recommendation, string> = {
+  strong_no: 'Definitely Not',
+  no: 'No',
+  yes: 'Yes',
+  strong_yes: 'Strong Yes',
+};
+
 export interface EvaluationTemplateCriteria {
   name: string;
   description: string;
@@ -21,6 +31,7 @@ export interface Evaluation {
   entityId: string;
   evaluatorId: string;
   overallRating: number;
+  recommendation: Recommendation | null;
   comment: string | null;
   submittedAt: Date | null;
   createdAt: Date;
