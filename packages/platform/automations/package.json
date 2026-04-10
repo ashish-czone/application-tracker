@@ -27,6 +27,8 @@
     "@packages/platform-testing": "workspace:*",
     "@types/mustache": "^4.2.0",
     "typescript": "^5.7.0",
-    "vitest": "^3.2.0"
+    "vitest": "^3.2.0",
+    "supertest": "^7.0.0",
+    "@types/supertest": "^6.0.2"
   }
 }
