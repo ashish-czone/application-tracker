@@ -4,7 +4,8 @@
   "private": true,
   "main": "index.ts",
   "scripts": {
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:integration": "vitest run --config vitest.integration.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
@@ -23,6 +24,7 @@
     "jsonwebtoken": "^9.0.2"
   },
   "devDependencies": {
+    "@packages/testing": "workspace:*",
     "@types/bcrypt": "^5.0.2",
     "@types/jsonwebtoken": "^9.0.9",
     "drizzle-orm": "^0.45.1",
