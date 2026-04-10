@@ -4,6 +4,7 @@ import { QueueService } from '@packages/queue';
 import { RbacService } from '@packages/rbac';
 import { DatabaseService } from '@packages/database';
 import { cronForLocalHour } from '@packages/common';
+import { AUTOMATIONS_EXTENSION } from '@packages/entity-engine/extensions';
 import type { DomainEvent } from '@packages/events';
 import { AutomationRuleService } from './services/automation-rule.service';
 import { AutomationListener } from './listeners/automation.listener';
@@ -23,6 +24,7 @@ import { AutomationRulesController } from './controllers/automation-rules.contro
 import { AutomationExecutionsController } from './controllers/automation-executions.controller';
 import { AutomationsMetadataController } from './controllers/automations-metadata.controller';
 import { WebhookAction, WEBHOOK_QUEUE_NAME } from './services/actions/webhook.action';
+import { AutomationsExtensionAdapter } from './automations-extension.adapter';
 
 export const AUTOMATION_SCHEDULE_SCAN_QUEUE = 'automation.schedule-scan';
 export const AUTOMATION_EXECUTION_QUEUE = 'automation.execution';
@@ -43,6 +45,11 @@ export const AUTOMATION_EXECUTION_CLEANUP_QUEUE = 'automation.execution-cleanup'
     ScheduleScanner,
     WebhookAction,
     AutomationsCleanupListener,
+    AutomationsExtensionAdapter,
+    {
+      provide: AUTOMATIONS_EXTENSION,
+      useExisting: AutomationsExtensionAdapter,
+    },
   ],
   exports: [
     ActionRegistry,
@@ -51,6 +58,7 @@ export const AUTOMATION_EXECUTION_CLEANUP_QUEUE = 'automation.execution-cleanup'
     AutomationRuleService,
     ProvenanceService,
     ExecutionLogService,
+    AUTOMATIONS_EXTENSION,
   ],
 })
 export class AutomationsModule implements OnModuleInit {

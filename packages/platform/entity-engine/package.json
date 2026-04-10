@@ -10,18 +10,20 @@
     "@nestjs/common": "^11.0.0",
     "@nestjs/swagger": "^11.0.0",
     "@packages/auth": "workspace:*",
-    "@packages/audit": "workspace:*",
     "@packages/common": "workspace:*",
     "@packages/database": "workspace:*",
     "@packages/events": "workspace:*",
     "@packages/logger": "workspace:*",
-    "@packages/automations": "workspace:*",
     "@packages/query-builder": "workspace:*",
     "@packages/rbac": "workspace:*",
-    "@packages/workflows": "workspace:*",
+    "mustache": "^4.2.0",
     "rxjs": "^7.0.0"
   },
   "devDependencies": {
+    "@packages/eav-attributes": "workspace:*",
+    "@packages/taxonomy": "workspace:*",
+    "@packages/workflows": "workspace:*",
+    "@types/mustache": "^4.2.0",
     "drizzle-orm": "^0.45.1",
     "typescript": "^5.7.0",
     "vitest": "^3.0.0"

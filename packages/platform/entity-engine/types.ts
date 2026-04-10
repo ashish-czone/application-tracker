@@ -1,7 +1,7 @@
 import type { PgTable, PgColumn } from 'drizzle-orm/pg-core';
 import type { SQL } from 'drizzle-orm';
 import type { Condition } from '@packages/common';
-import type { WorkflowGuardFn } from '@packages/workflows';
+import type { WorkflowGuardFn } from './extensions/workflow-extension.interface';
 
 // ---------------------------------------------------------------------------
 // Field type system — defines what kinds of fields entities can have

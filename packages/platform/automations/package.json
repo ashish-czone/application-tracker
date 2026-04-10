@@ -15,6 +15,7 @@
     "class-validator": "^0.14.1",
     "@packages/common": "workspace:*",
     "@packages/database": "workspace:*",
+    "@packages/entity-engine": "workspace:*",
     "@packages/events": "workspace:*",
     "@packages/logger": "workspace:*",
     "@packages/queue": "workspace:*",

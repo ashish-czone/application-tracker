@@ -3,10 +3,6 @@ import { DatabaseService } from '@packages/database';
 import { DomainEventEmitter, EventRegistryService } from '@packages/events';
 import { RbacService, FIELD_PERMISSION_ENTITY_RESOLVER, FieldPermissionsController } from '@packages/rbac';
 import type { FieldPermissionEntityResolver } from '@packages/rbac';
-import { AuditRegistryService } from '@packages/audit';
-import { EntityResolverRegistry, ActionRegistry, type EntityFieldConfig, type EntityFieldType } from '@packages/automations';
-import { TaxonomyService } from '@packages/taxonomy';
-import { WorkflowEngineService, WorkflowRegistryService, WorkflowGuardRegistry, PipelineResolverService } from '@packages/workflows';
 import { AppLoggerService } from '@packages/logger';
 import { fieldTypeRegistry } from '@packages/field-types';
 import { coreFieldTypesPlugin } from './field-types';
@@ -24,13 +20,18 @@ import { seedEntityFields, seedWorkflows } from './seed-entity-fields';
 import { EAV_STORAGE_EXTENSION, type EavStorageExtension } from './extensions/eav-storage.interface';
 import { MULTI_VALUE_EXTENSION, type MultiValueExtension } from './extensions/multi-value-extension.interface';
 import { LAYOUT_EXTENSION, type LayoutExtension } from './extensions/layout-extension.interface';
+import { WORKFLOW_EXTENSION, type WorkflowExtension } from './extensions/workflow-extension.interface';
+import { AUTOMATIONS_EXTENSION, type AutomationsExtension, type EntityResolverFieldConfig } from './extensions/automations-extension.interface';
+import { AUDIT_EXTENSION, type AuditExtension } from './extensions/audit-extension.interface';
+import { TAXONOMY_EXTENSION, type TaxonomyExtension } from './extensions/taxonomy-extension.interface';
 import { CreateEntityAction } from './actions/create-entity.action';
 import { UpdateEntityAction } from './actions/update-entity.action';
 import { POSITION_SCOPE_PROVIDER } from './types';
 import type { EntityConfig, FieldType, PositionScopeProvider } from './types';
 
-/** Map entity-engine FieldType → automations EntityFieldType for the resolver registry */
-const FIELD_TYPE_MAP: Partial<Record<FieldType, EntityFieldType>> = {
+/** Map entity-engine FieldType → EntityResolverFieldConfig type for the resolver registry */
+type ResolverFieldType = EntityResolverFieldConfig['type'];
+const FIELD_TYPE_MAP: Partial<Record<FieldType, ResolverFieldType>> = {
   text: 'text', email: 'text', phone: 'text', url: 'text',
   textarea: 'text', rich_text: 'text', auto_number: 'text',
   number: 'number', currency: 'number', decimal: 'number',
@@ -40,7 +41,7 @@ const FIELD_TYPE_MAP: Partial<Record<FieldType, EntityFieldType>> = {
   lookup: 'uuid', user: 'uuid', category: 'uuid',
 };
 
-function mapFieldType(fieldType?: FieldType): EntityFieldType | undefined {
+function mapFieldType(fieldType?: FieldType): ResolverFieldType | undefined {
   if (!fieldType) return undefined;
   return FIELD_TYPE_MAP[fieldType];
 }
@@ -102,14 +103,12 @@ export class EntityEngineModule implements OnModuleInit, OnApplicationBootstrap 
     private readonly registry: EntityRegistryService,
     private readonly rbac: RbacService,
     private readonly eventRegistry: EventRegistryService,
-    private readonly auditRegistry: AuditRegistryService,
     private readonly lookupResolver: LookupResolverService,
-    private readonly entityResolver: EntityResolverRegistry,
     private readonly fieldDefService: FieldDefinitionService,
     @Inject(LAYOUT_EXTENSION) @Optional() private readonly layoutExtension: LayoutExtension | null,
-    private readonly workflowRegistry: WorkflowRegistryService,
-    private readonly workflowGuardRegistry: WorkflowGuardRegistry,
-    private readonly actionRegistry: ActionRegistry,
+    @Inject(WORKFLOW_EXTENSION) @Optional() private readonly workflowExt: WorkflowExtension | null,
+    @Inject(AUTOMATIONS_EXTENSION) @Optional() private readonly automationsExt: AutomationsExtension | null,
+    @Inject(AUDIT_EXTENSION) @Optional() private readonly auditExt: AuditExtension | null,
     private readonly createEntityAction: CreateEntityAction,
     private readonly updateEntityAction: UpdateEntityAction,
   ) {}
@@ -137,16 +136,14 @@ export class EntityEngineModule implements OnModuleInit, OnApplicationBootstrap 
             multiValueExtension: MultiValueExtension | null,
             fieldDefinitionService: FieldDefinitionService,
             lookupResolver: LookupResolverService,
-            taxonomyService: TaxonomyService,
+            taxonomyExt: TaxonomyExtension | null,
             hookRegistry: FieldTypeSaveHookRegistry,
-            workflowEngine: WorkflowEngineService,
-            workflowRegistry: WorkflowRegistryService,
-            pipelineResolver: PipelineResolverService,
+            workflowExt: WorkflowExtension | null,
             entityRegistry: EntityRegistryService,
             appLogger: AppLoggerService,
             positionScopeProvider: PositionScopeProvider | null,
-          ) => new EntityService(config, database, domainEventEmitter, config.customFields ? eavStorage : null, multiValueExtension, fieldDefinitionService, lookupResolver, taxonomyService, hookRegistry, workflowEngine, workflowRegistry, pipelineResolver, entityRegistry, appLogger, positionScopeProvider),
-          inject: [DatabaseService, DomainEventEmitter, { token: EAV_STORAGE_EXTENSION, optional: true }, { token: MULTI_VALUE_EXTENSION, optional: true }, FieldDefinitionService, LookupResolverService, TaxonomyService, FieldTypeSaveHookRegistry, WorkflowEngineService, WorkflowRegistryService, PipelineResolverService, EntityRegistryService, AppLoggerService, { token: POSITION_SCOPE_PROVIDER, optional: true }],
+          ) => new EntityService(config, database, domainEventEmitter, config.customFields ? eavStorage : null, multiValueExtension, fieldDefinitionService, lookupResolver, taxonomyExt, hookRegistry, workflowExt, entityRegistry, appLogger, positionScopeProvider),
+          inject: [DatabaseService, DomainEventEmitter, { token: EAV_STORAGE_EXTENSION, optional: true }, { token: MULTI_VALUE_EXTENSION, optional: true }, FieldDefinitionService, LookupResolverService, { token: TAXONOMY_EXTENSION, optional: true }, FieldTypeSaveHookRegistry, { token: WORKFLOW_EXTENSION, optional: true }, EntityRegistryService, AppLoggerService, { token: POSITION_SCOPE_PROVIDER, optional: true }],
         },
       ],
       exports: [serviceToken],
@@ -164,9 +161,11 @@ export class EntityEngineModule implements OnModuleInit, OnApplicationBootstrap 
       { action: 'manage', description: 'Create/update/delete custom fields and layouts' },
     ]);
 
-    // Register entity-engine action handlers with automations
-    this.actionRegistry.register(this.createEntityAction);
-    this.actionRegistry.register(this.updateEntityAction);
+    // Register entity-engine action handlers with automations (if available)
+    if (this.automationsExt) {
+      this.automationsExt.registerAction(this.createEntityAction);
+      this.automationsExt.registerAction(this.updateEntityAction);
+    }
   }
 
   async onApplicationBootstrap(): Promise<void> {
@@ -234,41 +233,45 @@ export class EntityEngineModule implements OnModuleInit, OnApplicationBootstrap 
       });
     }
 
-    // 4. Audit
-    this.auditRegistry.register(config.entityType, {
-      events: [createdEvent, updatedEvent, deletedEvent, ...transitionEvents],
-    });
+    // 4. Audit (if available)
+    if (this.auditExt) {
+      this.auditExt.register(config.entityType, {
+        events: [createdEvent, updatedEvent, deletedEvent, ...transitionEvents],
+      });
+    }
 
     // 5. Entity resolver (automations — schedule triggers + condition builder)
-    const resolverFields: Record<string, EntityFieldConfig> = {};
-    for (const [key, meta] of Object.entries(config.fieldMeta)) {
-      const mapped = mapFieldType(meta.fieldType);
-      if (!mapped) continue;
-      const fieldConfig: EntityFieldConfig = { type: mapped, label: meta.label };
-      if (meta.fieldType === 'picklist' || meta.fieldType === 'multi_select') {
-        if (meta.picklistOptions) {
-          fieldConfig.options = meta.picklistOptions.map((o) => o.value);
-        } else {
-          const fieldKey = key;
-          fieldConfig.resolveOptions = async () => {
-            const defs = await this.fieldDefService.listByEntity(config.entityType);
-            const def = defs.find((d: { fieldKey: string }) => d.fieldKey === fieldKey);
-            if (!def) return [];
-            const opts = await this.fieldDefService.getPicklistOptions(def.id);
-            return opts.map((o) => o.value);
-          };
+    if (this.automationsExt) {
+      const resolverFields: Record<string, EntityResolverFieldConfig> = {};
+      for (const [key, meta] of Object.entries(config.fieldMeta)) {
+        const mapped = mapFieldType(meta.fieldType);
+        if (!mapped) continue;
+        const fieldConfig: EntityResolverFieldConfig = { type: mapped, label: meta.label };
+        if (meta.fieldType === 'picklist' || meta.fieldType === 'multi_select') {
+          if (meta.picklistOptions) {
+            fieldConfig.options = meta.picklistOptions.map((o) => o.value);
+          } else {
+            const fieldKey = key;
+            fieldConfig.resolveOptions = async () => {
+              const defs = await this.fieldDefService.listByEntity(config.entityType);
+              const def = defs.find((d: { fieldKey: string }) => d.fieldKey === fieldKey);
+              if (!def) return [];
+              const opts = await this.fieldDefService.getPicklistOptions(def.id);
+              return opts.map((o) => o.value);
+            };
+          }
         }
+        if (meta.fieldType === 'workflow' && meta.workflow) {
+          fieldConfig.options = meta.workflow.states.map((s) => s.name);
+        }
+        resolverFields[key] = fieldConfig;
       }
-      if (meta.fieldType === 'workflow' && meta.workflow) {
-        fieldConfig.options = meta.workflow.states.map((s) => s.name);
-      }
-      resolverFields[key] = fieldConfig;
+      this.automationsExt.registerEntityResolver(config.entityType, {
+        table: config.table,
+        fields: resolverFields,
+        userFields: config.recipientFields ?? {},
+      });
     }
-    this.entityResolver.register(config.entityType, {
-      table: config.table,
-      fields: resolverFields,
-      userFields: config.recipientFields ?? {},
-    });
 
     // 6. Lookup
     if (config.lookup) {
@@ -288,17 +291,19 @@ export class EntityEngineModule implements OnModuleInit, OnApplicationBootstrap 
       this.logger.warn(`Failed to seed fields for ${config.entityType}: ${(error as Error).message}`);
     }
 
-    // 8. Seed workflows from fieldMeta
-    try {
-      await seedWorkflows(config, this.workflowRegistry);
-    } catch (error) {
-      this.logger.warn(`Failed to seed workflows for ${config.entityType}: ${(error as Error).message}`);
-    }
+    // 8. Seed workflows from fieldMeta (if workflow extension available)
+    if (this.workflowExt) {
+      try {
+        await seedWorkflows(config, this.workflowExt);
+      } catch (error) {
+        this.logger.warn(`Failed to seed workflows for ${config.entityType}: ${(error as Error).message}`);
+      }
 
-    // 9. Register custom workflow guards from hooks
-    if (config.hooks?.workflowGuards) {
-      for (const [name, fn] of Object.entries(config.hooks.workflowGuards)) {
-        this.workflowGuardRegistry.register(name, fn);
+      // 9. Register custom workflow guards from hooks
+      if (config.hooks?.workflowGuards) {
+        for (const [name, fn] of Object.entries(config.hooks.workflowGuards)) {
+          this.workflowExt.registerGuard(name, fn);
+        }
       }
     }
 

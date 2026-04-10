@@ -15,7 +15,8 @@ import { AutomationsModule } from '@packages/automations';
 import { NotificationsModule } from '@packages/notifications';
 import { NotificationChannelsModule } from '@packages/notification-channels';
 import { WorkflowsModule } from '@packages/workflows';
-import { AuditModule } from '@packages/audit';
+import { AuditModule, AuditRegistryService } from '@packages/audit';
+import { AUDIT_EXTENSION } from '@packages/entity-engine';
 import { HierarchyModule } from '@packages/hierarchy';
 import { MediaModule } from '@packages/media';
 import { AuthModule, AuthGuard } from '@packages/auth';
@@ -121,6 +122,10 @@ import { validate } from './config/env.validation';
     {
       provide: APP_GUARD,
       useClass: ConfigurableThrottlerGuard,
+    },
+    {
+      provide: AUDIT_EXTENSION,
+      useExisting: AuditRegistryService,
     },
   ],
 })

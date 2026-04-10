@@ -4,7 +4,7 @@ import { fieldTypeRegistry } from '@packages/field-types';
 import type { FieldDefinitionService } from './services/field-definition.service';
 import type { LayoutExtension } from './extensions/layout-extension.interface';
 import type { FieldType, RegisterFieldInput } from './types';
-import type { WorkflowRegistryService } from '@packages/workflows';
+import type { WorkflowExtension } from './extensions/workflow-extension.interface';
 import type { EntityConfig, WorkflowTargetDef } from './types';
 
 const seedLogger = new Logger('SeedEntityFields');
@@ -149,7 +149,7 @@ export async function seedEntityFields(
  */
 export async function seedWorkflows(
   config: EntityConfig,
-  workflowRegistry: WorkflowRegistryService,
+  workflowExt: WorkflowExtension,
 ): Promise<void> {
   for (const [fieldKey, meta] of Object.entries(config.fieldMeta)) {
     if (meta.fieldType !== 'workflow' || !meta.workflow) continue;
@@ -157,11 +157,11 @@ export async function seedWorkflows(
     const wf = meta.workflow;
 
     // Skip if already seeded
-    const existing = workflowRegistry.getBySlug(wf.slug);
+    const existing = workflowExt.getBySlug(wf.slug);
     if (existing) continue;
 
     // Create definition
-    const definition = await workflowRegistry.createDefinition({
+    const definition = await workflowExt.createDefinition({
       slug: wf.slug,
       name: `${meta.label} Workflow`,
       entityType: config.entityType,
@@ -173,7 +173,7 @@ export async function seedWorkflows(
     const stateIdByName = new Map<string, string>();
     for (let i = 0; i < wf.states.length; i++) {
       const s = wf.states[i];
-      const state = await workflowRegistry.createState(definition.id, {
+      const state = await workflowExt.createState(definition.id, {
         name: s.name,
         label: s.label,
         color: s.color,
@@ -200,7 +200,7 @@ export async function seedWorkflows(
         const targetState = wf.states.find(s => s.name === targetName);
         const name = targetState?.label ?? targetName;
 
-        await workflowRegistry.createTransition(definition.id, {
+        await workflowExt.createTransition(definition.id, {
           fromStateId,
           toStateId,
           name,

@@ -27,10 +27,9 @@ import { buildSnapshot, diffSnapshot } from './helpers/snapshot';
 import { validatePayload } from './helpers/validate-payload';
 import { splitPayload } from './helpers/split-payload';
 import { buildClonePayload } from './helpers/build-clone-payload';
-import { TaxonomyService, type TagWithGroup } from '@packages/taxonomy';
 import { fieldTypeSaveHookRegistry, type FieldTypeSaveHookRegistry, type FieldTypeSaveHookContext } from './services/field-type-save-hook.registry';
-
-import { WorkflowEngineService, WorkflowRegistryService, PipelineResolverService } from '@packages/workflows';
+import type { WorkflowExtension } from './extensions/workflow-extension.interface';
+import type { TaxonomyExtension } from './extensions/taxonomy-extension.interface';
 import type { PaginatedResponse } from '@packages/common';
 import type { EntityConfig, BaseListQuery, ListLayoutColumn, DataAccessContext, PositionScopeProvider } from './types';
 import type { SQL as DrizzleSQL } from 'drizzle-orm';
@@ -60,11 +59,9 @@ export class EntityService {
     private readonly multiValueExtension: MultiValueExtension | null,
     private readonly fieldDefinitionService: FieldDefinitionService,
     private readonly lookupResolver: LookupResolverService,
-    private readonly taxonomyService: TaxonomyService,
+    private readonly taxonomyExt: TaxonomyExtension | null,
     _hookRegistry: FieldTypeSaveHookRegistry, // kept for backward-compat factory signature; use singleton directly
-    private readonly workflowEngine: WorkflowEngineService,
-    private readonly workflowRegistry: WorkflowRegistryService,
-    private readonly pipelineResolver: PipelineResolverService,
+    private readonly workflowExt: WorkflowExtension | null,
     private readonly entityRegistry: EntityRegistryService,
     appLogger: AppLoggerService,
     private readonly positionScopeProvider: PositionScopeProvider | null = null,
@@ -633,7 +630,7 @@ export class EntityService {
             { ...standardFields, ...customFields, id: row.id },
             { findEntity, findCategory },
           );
-          await this.pipelineResolver.resolveAndAssign(config.entityType, row.id, fieldKey, value);
+          await this.workflowExt?.resolveAndAssign(config.entityType, row.id, fieldKey, value);
         } catch (err) {
           this.logger.warn(`Failed to resolve pipeline discriminator for ${config.entityType}/${row.id}: ${(err as Error).message}`);
         }
@@ -851,7 +848,10 @@ export class EntityService {
     const entity = await this.findOneOrFail(id);
 
     // 2. Look up workflow — check assignment first, fall back to default
-    const workflow = await this.pipelineResolver.resolveForTransition(config.entityType, id, fieldKey);
+    if (!this.workflowExt) {
+      throw new BadRequestException(`Workflow extension is not loaded — cannot transition field '${fieldKey}'`);
+    }
+    const workflow = await this.workflowExt.resolveForTransition(config.entityType, id, fieldKey);
     if (!workflow) {
       throw new BadRequestException(`No workflow found for field '${fieldKey}' on '${config.entityType}'`);
     }
@@ -862,7 +862,7 @@ export class EntityService {
     }
 
     // 3. Validate transition (permissions, guards, conditions) — throws on failure
-    const validated = await this.workflowEngine.validateAndThrow({
+    const validated = await this.workflowExt.validateAndThrow({
       workflowSlug: workflow.slug,
       entityType: config.entityType,
       entityId: id,
@@ -900,7 +900,7 @@ export class EntityService {
         await this.eavStorage.setValues(config.entityType, id, { [fieldKey]: toState }, tx);
       }
 
-      await this.workflowEngine.recordHistory({
+      await this.workflowExt!.recordHistory({
         workflowDefinitionId: validated.workflowDefinitionId,
         entityType: config.entityType,
         entityId: id,
@@ -1302,7 +1302,7 @@ export class EntityService {
 
       // Hydrate tag fields
       if (tagFields.length > 0) {
-        const allTags = await this.taxonomyService.getTagsForEntity(this.config.entityType, entityId);
+        const allTags = this.taxonomyExt ? await this.taxonomyExt.getTagsForEntity(this.config.entityType, entityId) : [];
         for (const field of tagFields) {
           const fieldTags = field.tagGroupSlug
             ? allTags.filter(t => t.groupSlug === field.tagGroupSlug)

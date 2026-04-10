@@ -121,3 +121,15 @@ export type {
 export type { LayoutExtension } from './extensions/layout-extension.interface';
 export { LAYOUT_EXTENSION } from './extensions/layout-extension.interface';
 
+export type { WorkflowExtension, WorkflowDefinitionRef, WorkflowTransitionRef, ValidatedTransition, WorkflowGuardContext, WorkflowGuardFn } from './extensions/workflow-extension.interface';
+export { WORKFLOW_EXTENSION } from './extensions/workflow-extension.interface';
+
+export type { AutomationsExtension, ActionHandlerDef, ActionExecutionContext, ActionExecutionResult, EntityResolverConfig, EntityResolverFieldConfig } from './extensions/automations-extension.interface';
+export { AUTOMATIONS_EXTENSION } from './extensions/automations-extension.interface';
+
+export type { AuditExtension } from './extensions/audit-extension.interface';
+export { AUDIT_EXTENSION } from './extensions/audit-extension.interface';
+
+export type { TaxonomyExtension, TagRef } from './extensions/taxonomy-extension.interface';
+export { TAXONOMY_EXTENSION } from './extensions/taxonomy-extension.interface';
+
