@@ -36,7 +36,7 @@ describe('SettingsStoreService', () => {
 
   describe('loadAll', () => {
     it('should load all settings from DB into cache', async () => {
-      mockDb._chain.from.mockResolvedValueOnce([
+      mockDb._chain.where.mockResolvedValueOnce([
         { module: 'notifications', key: 'emailEnabled', value: true },
         { module: 'notifications', key: 'smsEnabled', value: false },
         { module: 'billing', key: 'currency', value: 'USD' },
@@ -51,14 +51,14 @@ describe('SettingsStoreService', () => {
 
     it('should clear existing cache before loading', async () => {
       // First load
-      mockDb._chain.from.mockResolvedValueOnce([
+      mockDb._chain.where.mockResolvedValueOnce([
         { module: 'mod', key: 'oldKey', value: 'oldValue' },
       ]);
       await service.loadAll();
       expect(service.getCached('mod', 'oldKey')).toBe('oldValue');
 
       // Second load with different data
-      mockDb._chain.from.mockResolvedValueOnce([
+      mockDb._chain.where.mockResolvedValueOnce([
         { module: 'mod', key: 'newKey', value: 'newValue' },
       ]);
       await service.loadAll();
@@ -68,7 +68,7 @@ describe('SettingsStoreService', () => {
     });
 
     it('should handle empty database', async () => {
-      mockDb._chain.from.mockResolvedValueOnce([]);
+      mockDb._chain.where.mockResolvedValueOnce([]);
 
       await service.loadAll();
 
@@ -82,7 +82,7 @@ describe('SettingsStoreService', () => {
     });
 
     it('should return undefined for non-existent key in existing module', async () => {
-      mockDb._chain.from.mockResolvedValueOnce([
+      mockDb._chain.where.mockResolvedValueOnce([
         { module: 'mod', key: 'exists', value: 'val' },
       ]);
       await service.loadAll();
@@ -91,7 +91,7 @@ describe('SettingsStoreService', () => {
     });
 
     it('should return cached value for existing module and key', async () => {
-      mockDb._chain.from.mockResolvedValueOnce([
+      mockDb._chain.where.mockResolvedValueOnce([
         { module: 'mod', key: 'key1', value: 42 },
       ]);
       await service.loadAll();
@@ -106,7 +106,7 @@ describe('SettingsStoreService', () => {
     });
 
     it('should return all cached key-value pairs for a module', async () => {
-      mockDb._chain.from.mockResolvedValueOnce([
+      mockDb._chain.where.mockResolvedValueOnce([
         { module: 'notifications', key: 'emailEnabled', value: true },
         { module: 'notifications', key: 'smsEnabled', value: false },
         { module: 'billing', key: 'currency', value: 'USD' },
@@ -120,7 +120,7 @@ describe('SettingsStoreService', () => {
     });
 
     it('should not include keys from other modules', async () => {
-      mockDb._chain.from.mockResolvedValueOnce([
+      mockDb._chain.where.mockResolvedValueOnce([
         { module: 'mod1', key: 'key1', value: 'a' },
         { module: 'mod2', key: 'key2', value: 'b' },
       ]);
@@ -189,7 +189,7 @@ describe('SettingsStoreService', () => {
   describe('remove', () => {
     it('should delete setting from DB and remove from cache', async () => {
       // Pre-populate cache
-      mockDb._chain.from.mockResolvedValueOnce([
+      mockDb._chain.where.mockResolvedValueOnce([
         { module: 'mod', key: 'key1', value: 'val' },
       ]);
       await service.loadAll();
@@ -209,7 +209,7 @@ describe('SettingsStoreService', () => {
     });
 
     it('should not affect other keys in the same module', async () => {
-      mockDb._chain.from.mockResolvedValueOnce([
+      mockDb._chain.where.mockResolvedValueOnce([
         { module: 'mod', key: 'keep', value: 'yes' },
         { module: 'mod', key: 'remove', value: 'no' },
       ]);
