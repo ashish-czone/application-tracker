@@ -1,20 +1,30 @@
 import { Global, Module, type OnModuleInit } from '@nestjs/common';
 import { RbacService } from '@packages/rbac';
 import { fieldTypeRegistry } from '@packages/field-types';
-import { fieldTypeSaveHookRegistry } from '@packages/entity-engine';
+import { fieldTypeSaveHookRegistry, TAXONOMY_EXTENSION } from '@packages/entity-engine';
 import { ActionRegistry } from '@packages/automations';
 import { taxonomyFieldTypesPlugin } from './field-types';
 import { TaxonomyService } from './services/taxonomy.service';
 import { CategoryService } from './services/category.service';
 import { TagEntityAction } from './actions/tag-entity.action';
+import { TaxonomyExtensionAdapter } from './taxonomy-extension.adapter';
 import { TagsController } from './controllers/tags.controller';
 import { CategoriesController } from './controllers/categories.controller';
 
 @Global()
 @Module({
   controllers: [TagsController, CategoriesController],
-  providers: [TaxonomyService, CategoryService, TagEntityAction],
-  exports: [TaxonomyService, CategoryService],
+  providers: [
+    TaxonomyService,
+    CategoryService,
+    TagEntityAction,
+    TaxonomyExtensionAdapter,
+    {
+      provide: TAXONOMY_EXTENSION,
+      useExisting: TaxonomyExtensionAdapter,
+    },
+  ],
+  exports: [TaxonomyService, CategoryService, TAXONOMY_EXTENSION],
 })
 export class TaxonomyModule implements OnModuleInit {
   constructor(

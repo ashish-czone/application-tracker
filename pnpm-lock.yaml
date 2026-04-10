@@ -2069,6 +2069,9 @@ importers:
       '@packages/database':
         specifier: workspace:*
         version: link:../../core/database
+      '@packages/entity-engine':
+        specifier: workspace:*
+        version: link:../entity-engine
       '@packages/events':
         specifier: workspace:*
         version: link:../../core/events
@@ -2589,6 +2592,9 @@ importers:
       '@packages/database':
         specifier: workspace:*
         version: link:../../core/database
+      '@packages/entity-engine':
+        specifier: workspace:*
+        version: link:../entity-engine
       '@packages/hierarchy':
         specifier: workspace:*
         version: link:../hierarchy
@@ -2662,6 +2668,9 @@ importers:
       '@packages/database':
         specifier: workspace:*
         version: link:../../core/database
+      '@packages/entity-engine':
+        specifier: workspace:*
+        version: link:../entity-engine
       '@packages/events':
         specifier: workspace:*
         version: link:../../core/events
