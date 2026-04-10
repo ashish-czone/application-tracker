@@ -25,6 +25,7 @@ export function createViTestIntegrationConfig(packageDir: string, overrides?: Us
       root: packageDir,
       include: ['**/*.integration.test.ts'],
       globalSetup: [path.resolve(__dirname, 'global-setup.ts')],
+      setupFiles: [path.resolve(__dirname, 'setup-env.ts')],
       hookTimeout: 30000,
       teardownTimeout: 10000,
       testTimeout: 30000,
