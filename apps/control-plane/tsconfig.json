@@ -5,7 +5,7 @@
     "baseUrl": ".",
     "paths": {
       "@modules/*": ["./src/modules/*"],
-      "@packages/*": ["../../packages/*"]
+      "@packages/*": ["../../packages/core/*", "../../packages/platform/*", "../../packages/addons/*"]
     }
   },
   "include": ["src"],

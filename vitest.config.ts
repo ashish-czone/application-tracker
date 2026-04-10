@@ -1,6 +1,7 @@
 import { defineConfig } from 'vitest/config';
 import swc from 'unplugin-swc';
 import path from 'path';
+import { buildPackageAliases } from './packages/resolve-aliases';
 
 export default defineConfig({
   test: {
@@ -20,7 +21,7 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      '@packages': path.resolve(__dirname, './packages'),
+      ...buildPackageAliases(path.resolve(__dirname, './packages')),
       '@modules': path.resolve(__dirname, './apps/api/src/modules'),
     },
   },

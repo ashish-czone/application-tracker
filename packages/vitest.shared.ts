@@ -1,10 +1,9 @@
 import { defineConfig } from 'vitest/config';
 import path from 'path';
+import { buildPackageAliases } from './resolve-aliases';
 
 export default defineConfig({
   resolve: {
-    alias: {
-      '@packages': path.resolve(__dirname),
-    },
+    alias: buildPackageAliases(path.resolve(__dirname)),
   },
 });
