@@ -93,6 +93,7 @@ export interface WorkflowTransitionRef {
 
 export interface ValidatedTransition {
   transitionId: string;
+  transitionName: string;
   workflowDefinitionId: string;
   fieldName: string;
 }

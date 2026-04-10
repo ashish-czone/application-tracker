@@ -1,17 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
-import { interpolateValues } from '@packages/automations';
 import { coerceFieldValues } from '@packages/common';
-import type { ActionHandler, ActionContext, ActionResult, UserSlotDefinition } from '@packages/automations';
+import { interpolateValues } from '../helpers/interpolate-values';
+import type { ActionHandlerDef, ActionExecutionContext, ActionExecutionResult } from '../extensions/automations-extension.interface';
 import type { EntityService } from '../entity.service';
 import { FieldDefinitionService } from '../services/field-definition.service';
 
 @Injectable()
-export class UpdateEntityAction implements ActionHandler {
+export class UpdateEntityAction implements ActionHandlerDef {
   readonly type = 'update_entity';
   readonly label = 'Update Entity';
-  readonly userSlots: UserSlotDefinition[] = [];
+  readonly userSlots: ActionHandlerDef['userSlots'] = [];
   readonly configSchema = {
     entityType: {
       type: 'string',
@@ -40,7 +40,7 @@ export class UpdateEntityAction implements ActionHandler {
     this.logger = appLogger.forContext(UpdateEntityAction.name);
   }
 
-  async execute(context: ActionContext): Promise<ActionResult> {
+  async execute(context: ActionExecutionContext): Promise<ActionExecutionResult> {
     const config = context.actionConfig.config as {
       entityType?: string;
       entityId?: string;
@@ -88,7 +88,7 @@ export class UpdateEntityAction implements ActionHandler {
     return {};
   }
 
-  async update(targetEntityId: string, set: Record<string, unknown>, context: ActionContext): Promise<void> {
+  async update(targetEntityId: string, set: Record<string, unknown>, context: ActionExecutionContext): Promise<void> {
     const config = context.actionConfig.config as { entityType?: string };
     const entityType = config.entityType ?? context.event?.entityType;
     if (!entityType) return;
