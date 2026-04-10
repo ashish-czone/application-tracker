@@ -1008,6 +1008,12 @@ importers:
       '@packages/platform-testing':
         specifier: workspace:*
         version: link:../../platform/testing
+      '@types/supertest':
+        specifier: ^6.0.2
+        version: 6.0.3
+      supertest:
+        specifier: ^7.0.0
+        version: 7.2.2
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -1169,9 +1175,15 @@ importers:
       '@packages/platform-testing':
         specifier: workspace:*
         version: link:../../platform/testing
+      '@types/supertest':
+        specifier: ^6.0.2
+        version: 6.0.3
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3))
+      supertest:
+        specifier: ^7.0.0
+        version: 7.2.2
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -1258,9 +1270,15 @@ importers:
       '@packages/platform-testing':
         specifier: workspace:*
         version: link:../../platform/testing
+      '@types/supertest':
+        specifier: ^6.0.2
+        version: 6.0.3
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3))
+      supertest:
+        specifier: ^7.0.0
+        version: 7.2.2
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -1488,6 +1506,15 @@ importers:
       '@packages/platform-testing':
         specifier: workspace:*
         version: link:../../platform/testing
+      '@types/supertest':
+        specifier: ^6.0.2
+        version: 6.0.3
+      mustache:
+        specifier: ^4.2.0
+        version: 4.2.0
+      supertest:
+        specifier: ^7.0.0
+        version: 7.2.2
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -1588,6 +1615,12 @@ importers:
       '@types/pg':
         specifier: ^8.18.0
         version: 8.18.0
+      '@types/supertest':
+        specifier: ^6.0.2
+        version: 6.0.3
+      supertest:
+        specifier: ^7.0.0
+        version: 7.2.2
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -1634,6 +1667,12 @@ importers:
       '@packages/testing':
         specifier: workspace:*
         version: link:../testing
+      '@types/supertest':
+        specifier: ^6.0.2
+        version: 6.0.3
+      supertest:
+        specifier: ^7.0.0
+        version: 7.2.2
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -1852,9 +1891,15 @@ importers:
       '@packages/testing':
         specifier: workspace:*
         version: link:../testing
+      '@types/supertest':
+        specifier: ^6.0.2
+        version: 6.0.3
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3))
+      supertest:
+        specifier: ^7.0.0
+        version: 7.2.2
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -1886,9 +1931,15 @@ importers:
       '@packages/testing':
         specifier: workspace:*
         version: link:../testing
+      '@types/supertest':
+        specifier: ^6.0.2
+        version: 6.0.3
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3))
+      supertest:
+        specifier: ^7.0.0
+        version: 7.2.2
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -2072,6 +2123,12 @@ importers:
       '@packages/testing':
         specifier: workspace:*
         version: link:../testing
+      '@types/supertest':
+        specifier: ^6.0.2
+        version: 6.0.3
+      supertest:
+        specifier: ^7.0.0
+        version: 7.2.2
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -2130,6 +2187,12 @@ importers:
       '@types/mustache':
         specifier: ^4.2.0
         version: 4.2.6
+      '@types/supertest':
+        specifier: ^6.0.2
+        version: 6.0.3
+      supertest:
+        specifier: ^7.0.0
+        version: 7.2.2
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -2228,9 +2291,15 @@ importers:
       '@types/mustache':
         specifier: ^4.2.0
         version: 4.2.6
+      '@types/supertest':
+        specifier: ^6.0.2
+        version: 6.0.3
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3))
+      supertest:
+        specifier: ^7.0.0
+        version: 7.2.2
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -2317,9 +2386,15 @@ importers:
       '@packages/platform-testing':
         specifier: workspace:*
         version: link:../testing
+      '@types/supertest':
+        specifier: ^6.0.2
+        version: 6.0.3
       mustache:
         specifier: ^4.2.0
         version: 4.2.0
+      supertest:
+        specifier: ^7.0.0
+        version: 7.2.2
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -2441,6 +2516,12 @@ importers:
         specifier: ^6.0.0
         version: 6.10.1
     devDependencies:
+      '@types/supertest':
+        specifier: ^6.0.2
+        version: 6.0.3
+      supertest:
+        specifier: ^7.0.0
+        version: 7.2.2
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -2502,6 +2583,12 @@ importers:
       '@types/mustache':
         specifier: ^4.2.0
         version: 4.2.6
+      '@types/supertest':
+        specifier: ^6.0.2
+        version: 6.0.3
+      supertest:
+        specifier: ^7.0.0
+        version: 7.2.2
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -2762,6 +2849,12 @@ importers:
       '@packages/platform-testing':
         specifier: workspace:*
         version: link:../testing
+      '@types/supertest':
+        specifier: ^6.0.2
+        version: 6.0.3
+      supertest:
+        specifier: ^7.0.0
+        version: 7.2.2
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
