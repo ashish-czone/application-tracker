@@ -1,23 +1,11 @@
 import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest';
-import { Global, Module } from '@nestjs/common';
-import { createIntegrationTestModule, cleanDatabase } from '@packages/testing';
-import { EventsModule } from '@packages/events';
-import { RbacModule } from '@packages/rbac';
+import { createPlatformTestModule, cleanDatabase } from '@packages/platform-testing';
 import { HierarchyModule } from '@packages/hierarchy';
-import { ActionRegistry } from '@packages/automations/services/action-registry';
-import { EntityResolverRegistry } from '@packages/automations/services/entity-resolver-registry';
 import { TaxonomyModule } from '../../taxonomy.module';
 import { TaxonomyService } from '../taxonomy.service';
 import { CategoryService } from '../category.service';
 import type { DrizzleDB } from '@packages/database';
 import type { TestingModule } from '@nestjs/testing';
-
-@Global()
-@Module({
-  providers: [ActionRegistry, EntityResolverRegistry],
-  exports: [ActionRegistry, EntityResolverRegistry],
-})
-class MockAutomationsModule {}
 
 describe('Taxonomy (integration)', () => {
   let module: TestingModule;
@@ -27,8 +15,8 @@ describe('Taxonomy (integration)', () => {
   let categoryService: CategoryService;
 
   beforeAll(async () => {
-    const ctx = await createIntegrationTestModule({
-      imports: [EventsModule, RbacModule, HierarchyModule, MockAutomationsModule, TaxonomyModule],
+    const ctx = await createPlatformTestModule({
+      imports: [HierarchyModule, TaxonomyModule],
     });
     module = ctx.module;
     db = ctx.db;

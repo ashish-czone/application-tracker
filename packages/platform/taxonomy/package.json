@@ -17,7 +17,7 @@
     "class-validator": "^0.14.1"
   },
   "devDependencies": {
-    "@packages/testing": "workspace:*",
+    "@packages/platform-testing": "workspace:*",
     "drizzle-orm": "^0.45.1",
     "typescript": "^5.7.0",
     "vitest": "^3.0.0"

@@ -1,11 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest';
 import { randomUUID } from 'crypto';
-import { Global, Module } from '@nestjs/common';
-import { createIntegrationTestModule, cleanDatabase } from '@packages/testing';
-import { EventsModule } from '@packages/events';
-import { RbacModule } from '@packages/rbac';
-import { QueueService } from '@packages/queue';
-import { ActionRegistry } from '@packages/automations/services/action-registry';
+import { createPlatformTestModule, cleanDatabase } from '@packages/platform-testing';
 import { NotificationChannelsModule } from '@packages/notification-channels';
 import { NotificationsModule } from '../../notifications.module';
 import { NotificationTemplatesService } from '../notification-templates.service';
@@ -13,16 +8,6 @@ import { PreferenceService } from '../preference.service';
 import { ContactResolverRegistry } from '../contact-resolver-registry';
 import type { DrizzleDB } from '@packages/database';
 import type { TestingModule } from '@nestjs/testing';
-
-@Global()
-@Module({
-  providers: [
-    { provide: QueueService, useValue: { registerProcessor: () => {}, getQueue: () => null } },
-    ActionRegistry,
-  ],
-  exports: [QueueService, ActionRegistry],
-})
-class MockDepsModule {}
 
 describe('Notifications (integration)', () => {
   let module: TestingModule;
@@ -33,8 +18,8 @@ describe('Notifications (integration)', () => {
   let contactRegistry: ContactResolverRegistry;
 
   beforeAll(async () => {
-    const ctx = await createIntegrationTestModule({
-      imports: [EventsModule, RbacModule, MockDepsModule, NotificationChannelsModule, NotificationsModule],
+    const ctx = await createPlatformTestModule({
+      imports: [NotificationChannelsModule, NotificationsModule],
     });
     module = ctx.module;
     db = ctx.db;

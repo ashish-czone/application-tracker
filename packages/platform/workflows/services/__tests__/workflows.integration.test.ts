@@ -1,10 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest';
 import { randomUUID } from 'crypto';
-import { Global, Module } from '@nestjs/common';
-import { createIntegrationTestModule, cleanDatabase } from '@packages/testing';
-import { EventsModule } from '@packages/events';
-import { RbacModule } from '@packages/rbac';
-import { ActionRegistry } from '@packages/automations/services/action-registry';
+import { createPlatformTestModule, cleanDatabase } from '@packages/platform-testing';
 import { WorkflowsModule } from '../../workflows.module';
 import { WorkflowRegistryService } from '../workflow-registry.service';
 import { WorkflowEngineService } from '../workflow-engine.service';
@@ -12,13 +8,6 @@ import { WorkflowGuardRegistry } from '../workflow-guard-registry.service';
 import { PipelineResolverService } from '../pipeline-resolver.service';
 import type { DrizzleDB } from '@packages/database';
 import type { TestingModule } from '@nestjs/testing';
-
-@Global()
-@Module({
-  providers: [ActionRegistry],
-  exports: [ActionRegistry],
-})
-class MockAutomationsModule {}
 
 describe('Workflows (integration)', () => {
   let module: TestingModule;
@@ -30,8 +19,8 @@ describe('Workflows (integration)', () => {
   let pipelineResolver: PipelineResolverService;
 
   beforeAll(async () => {
-    const ctx = await createIntegrationTestModule({
-      imports: [EventsModule, RbacModule, MockAutomationsModule, WorkflowsModule],
+    const ctx = await createPlatformTestModule({
+      imports: [WorkflowsModule],
     });
     module = ctx.module;
     db = ctx.db;
