@@ -124,6 +124,7 @@ CREATE TABLE "evaluation_templates" (
   "name" text NOT NULL,
   "entity_type" text NOT NULL,
   "criteria" jsonb NOT NULL,
+  "blinding_enabled" boolean NOT NULL DEFAULT false,
   "is_active" boolean DEFAULT true NOT NULL,
   "created_at" timestamp with time zone DEFAULT now() NOT NULL,
   "updated_at" timestamp with time zone NOT NULL
@@ -136,6 +137,7 @@ CREATE TABLE "evaluations" (
   "entity_id" text NOT NULL,
   "evaluator_id" text NOT NULL,
   "overall_rating" integer NOT NULL,
+  "recommendation" text,
   "comment" text,
   "submitted_at" timestamp with time zone,
   "created_at" timestamp with time zone DEFAULT now() NOT NULL,
