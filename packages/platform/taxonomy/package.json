@@ -19,8 +19,10 @@
   },
   "devDependencies": {
     "@packages/platform-testing": "workspace:*",
+    "@types/supertest": "^6.0.2",
     "drizzle-orm": "^0.45.1",
     "mustache": "^4.2.0",
+    "supertest": "^7.0.0",
     "typescript": "^5.7.0",
     "vitest": "^3.0.0"
   }
