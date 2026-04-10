@@ -6,7 +6,7 @@
 - Always exported constants, never magic strings
 
 ### Structure
-All domain events extend `DomainEvent` from `packages/events/`:
+All domain events extend `DomainEvent` from `packages/core/events/`:
 ```ts
 { eventName, entityType, entityId, actorId, correlationId, occurredAt, payload }
 ```
@@ -16,7 +16,7 @@ All domain events extend `DomainEvent` from `packages/events/`:
 - Side-effect packages subscribe generically via `DomainEvent` — they never import from app modules
 - Side-effect handlers must be idempotent
 - Handler failure never rolls back the domain operation
-- Unreliable I/O (email, webhooks) → enqueue via `packages/queue`, never inline
+- Unreliable I/O (email, webhooks) → enqueue via `packages/core/queue`, never inline
 - Lightweight handlers (DB writes like audit-log) can run inline
 
 ### Audit logging

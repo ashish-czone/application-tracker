@@ -14,7 +14,7 @@ Frontend code does NOT use barrel exports (`index.ts`). Use direct file imports 
 
 ### Architecture layers
 ```
-packages/ui  <-  packages/*-ui  <-  shared/  <-  portals/customer/features/
+packages/core/ui  <-  packages/{platform,addons}/*-ui  <-  shared/  <-  portals/customer/features/
 ```
 - Single portal (`customer`), feature-based grouping under `features/`.
 - `shared/` for cross-cutting concerns (auth, notifications). Full-stack folders with components, hooks, services.

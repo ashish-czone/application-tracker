@@ -71,7 +71,7 @@ apps/api/src/modules/<module-name>/
   dto/                      # Request/response validation (class-validator)
   permissions.ts            # Permission constants
   <module-name>.module.ts   # NestJS module + event/permission registration
-  schema.ts                 # Drizzle table definitions (source of truth; centralized in packages/database/schema/)
+  schema.ts                 # Drizzle table definitions (source of truth; centralized in packages/core/database/schema/)
   index.ts                  # Public API surface
 ```
 
@@ -131,7 +131,7 @@ Side-effect packages subscribe generically — no module imports:
 @OnEvent("**")
 async handleAnyEvent(event: DomainEvent) {
   // Activity log: write to DB inline (lightweight)
-  // Notifications: find rules in DB → enqueue job via packages/queue
+  // Notifications: find rules in DB → enqueue job via packages/core/queue
 }
 ```
 
@@ -146,7 +146,7 @@ async handleAnyEvent(event: DomainEvent) {
 | Infrastructure (backend) | Low-level plumbing | database, events, queue |
 | Platform Capabilities (backend) | Cross-cutting engines called directly | hierarchy, rbac, settings, taxonomy, entity-engine, media |
 | Side-Effect Packages (backend) | Event-driven, generic reactors | notifications, audit, reminder-engine |
-| Frontend | Shared UI toolkit + feature UI | `packages/ui`, `packages/*-ui` |
+| Frontend | Shared UI toolkit + feature UI | `packages/core/ui`, `packages/{platform,addons}/*-ui` |
 | Shared (both) | Pure types/constants | common (`PaginatedResponse<T>`, `BaseEntity`) |
 
 Platform packages may include their own controllers, DTOs, and permissions when they provide a self-contained feature.
@@ -171,10 +171,10 @@ Use for any tree-structured entity. Provides `hierarchyColumns()`, `HierarchySer
 
 ### Schema Organization
 
-All Drizzle schemas in `packages/database/schema/`, organized by module.
+All Drizzle schemas in `packages/core/database/schema/`, organized by module.
 
 ```
-packages/database/
+packages/core/database/
   schema/           # Table definitions (one file per module)
     index.ts        # barrel export
   drizzle/          # generated migrations (committed)
@@ -215,6 +215,6 @@ See `.claude/rules/module-boundaries.md`. Key points: each module queries only i
 - No circular dependencies between modules.
 - No domain logic in packages. No side effects in domain services.
 - Event names: namespaced, past-tense, exported constants.
-- Side-effect handlers: idempotent. Unreliable I/O via `packages/queue`.
+- Side-effect handlers: idempotent. Unreliable I/O via `packages/core/queue`.
 - No `console.log` — use structured logger.
 - Data formatting: see `.claude/rules/data-formatting.md`.

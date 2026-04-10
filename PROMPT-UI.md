@@ -14,12 +14,12 @@ Frontend stack, component rules, form behavior, and UX conventions. Core fronten
 
 ## Frontend Architecture
 
-### Shared package: `packages/ui`
+### Shared package: `packages/core/ui`
 
 Reusable toolkit — components, hooks, services, types. Nothing imports from `apps/`.
 
 ```
-packages/ui/
+packages/core/ui/
  ├ components/
  │   ├ form/         — FormInput, FormSelect, FormDatePicker, etc.
  │   ├ feedback/     — Toast, Alert
@@ -41,7 +41,7 @@ packages/<feature>-ui/
 
 Examples: `entity-engine-ui` (EntityListPage, useEntityLayout), `eav-attributes-ui` (LayoutCanvas, DynamicField)
 
-May import from `packages/ui` and their backend package types. Never from `apps/`.
+May import from `packages/core/ui` and their backend package types. Never from `apps/`.
 
 ### App structure: `apps/web/src/`
 
@@ -60,7 +60,7 @@ apps/web/src/
 ### Dependency direction
 
 ```
-packages/ui  <-  packages/*-ui  <-  shared/  <-  portals/customer/features/
+packages/core/ui  <-  packages/*-ui  <-  shared/  <-  portals/customer/features/
 ```
 
 ---

@@ -60,11 +60,11 @@ Every architectural decision should ask: "Does this keep the platform domain-agn
 The platform has a fully built, registry-driven form rendering system. **Never build custom form inputs for entity fields — use the existing system.**
 
 - **Field type registries** — Two registries, populated at app startup:
-  - Core registry (`packages/field-types/registry.ts`) — storage strategy, validation, filter operators. No UI concerns.
-  - UI registry (`packages/field-types/ui/ui-registry.ts`) — `FormComponent`, `ViewComponent`, `CellFormatter`, `zodSchema` per field type.
-- **`DynamicField`** (`packages/eav-attributes-ui/components/DynamicField.tsx`) — renders the correct form component for any field type based on UI registry lookup. Must be inside a `FormProvider` (React Hook Form).
-- **`buildFormSchema`** (`packages/eav-attributes-ui/helpers/buildFormSchema.ts`) — dynamically builds a Zod validation schema from `FieldDefinition[]`.
-- **`useEntityLayout`** (`packages/entity-engine-ui/helpers/useEntityLayout.ts`) — fetches layout (sections + `FieldDefinition[]` with picklist options, lookup entities, etc.) for any entity type via `GET /layouts/{entityType}`.
+  - Core registry (`packages/platform/field-types/registry.ts`) — storage strategy, validation, filter operators. No UI concerns.
+  - UI registry (`packages/platform/field-types/ui/ui-registry.ts`) — `FormComponent`, `ViewComponent`, `CellFormatter`, `zodSchema` per field type.
+- **`DynamicField`** (`packages/platform/eav-attributes-ui/components/DynamicField.tsx`) — renders the correct form component for any field type based on UI registry lookup. Must be inside a `FormProvider` (React Hook Form).
+- **`buildFormSchema`** (`packages/platform/eav-attributes-ui/helpers/buildFormSchema.ts`) — dynamically builds a Zod validation schema from `FieldDefinition[]`.
+- **`useEntityLayout`** (`packages/platform/entity-engine-ui/helpers/useEntityLayout.ts`) — fetches layout (sections + `FieldDefinition[]` with picklist options, lookup entities, etc.) for any entity type via `GET /layouts/{entityType}`.
 - **Usage pattern** (see `EntityQuickCreateForm`, `EntityCreatePage`):
   1. Fetch layout via `useEntityLayout(entityType)`
   2. Build Zod schema via `buildFormSchema(fields)`
@@ -76,6 +76,32 @@ The platform has a fully built, registry-driven form rendering system. **Never b
 - **Admin UIs** — visual builders for field management, layout customization, workflow editor
 - **Dynamic navigation** — sidebar driven by entity registration + permissions (registry exists, UI needed)
 - **Multi-tenancy enforcement** — framework designed, not fully implemented
+
+### Package Tiers
+
+Packages are organized into three tiers under `packages/`:
+
+```
+packages/
+  core/       — Required by every app. Infrastructure + auth + base UI.
+  platform/   — Standard platform features. Depends only on core.
+  addons/     — Optional packages. Depend on core + optionally platform, never on other addons.
+```
+
+**`packages/core/`** (13 packages): common, database, logger, events, queue, query-builder, auth-core, rbac, auth, users, audit, settings, ui
+
+**`packages/platform/`** (13 packages): entity-engine, entity-layout, field-types, automations, workflows, notifications, notification-channels, taxonomy, hierarchy, media, platform-ui, entity-engine-ui, eav-attributes-ui
+
+**`packages/addons/`** (20 packages): eav-attributes, entity-relations, evaluations, tenancy, service-auth, oauth, orders-billing, orders-subscriptions, org-units, tasks, attachments, notes, drafts, document-templates, pdf-generator, and their UI counterparts
+
+**Dependency rules:**
+- Core packages may depend on other core packages only
+- Platform packages may depend on core + other platform packages
+- Addon packages may depend on core + platform, **never on other addons**
+- All packages use `@packages/*` scope regardless of tier (single namespace)
+- Package names do NOT encode the tier — the folder structure is the tier indicator
+
+When creating a new package, place it in the correct tier based on these rules. If unsure, ask.
 
 ---
 
