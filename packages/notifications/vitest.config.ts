@@ -1,14 +1,8 @@
-import { defineConfig } from 'vitest/config';
-import path from 'path';
+import { defineConfig, mergeConfig } from 'vitest/config';
+import shared from '../vitest.shared';
 
-export default defineConfig({
+export default mergeConfig(shared, defineConfig({
   test: {
-    include: ['**/*.test.ts'],
-    globals: false,
+    globals: true,
   },
-  resolve: {
-    alias: {
-      '@packages': path.resolve(__dirname, '..'),
-    },
-  },
-});
+}));
