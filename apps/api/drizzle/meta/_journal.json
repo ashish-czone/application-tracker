@@ -148,6 +148,13 @@
       "when": 1775646000000,
       "tag": "0020_org_positions",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1775732400000,
+      "tag": "0021_addon_integration_tables",
+      "breakpoints": true
     }
   ]
 }
