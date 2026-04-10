@@ -143,6 +143,124 @@ describe('OrgPositionService', () => {
     });
   });
 
+  describe('findAll', () => {
+    it('should return all positions ordered by sortOrder', async () => {
+      const positions = [
+        { id: 'pos-1', name: 'Head', sortOrder: 0, createdAt: new Date(), updatedAt: new Date() },
+        { id: 'pos-2', name: 'Lead', sortOrder: 1, createdAt: new Date(), updatedAt: new Date() },
+      ];
+      mockDb._chain.orderBy.mockResolvedValueOnce(positions);
+
+      const result = await service.findAll();
+
+      expect(result).toEqual(positions);
+      expect(mockDb.select).toHaveBeenCalled();
+      expect(mockDb._chain.orderBy).toHaveBeenCalled();
+    });
+
+    it('should return empty array when no positions exist', async () => {
+      mockDb._chain.orderBy.mockResolvedValueOnce([]);
+
+      const result = await service.findAll();
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('update', () => {
+    it('should update and return the position', async () => {
+      const position = { id: 'pos-1', name: 'Head', sortOrder: 0, createdAt: new Date(), updatedAt: new Date() };
+      const updated = { ...position, name: 'Senior Lead' };
+      // findOneOrFail
+      mockDb._chain.limit.mockResolvedValueOnce([position]);
+      // update returning
+      mockDb._chain.returning.mockResolvedValueOnce([updated]);
+
+      const result = await service.update('pos-1', { name: 'Senior Lead' });
+
+      expect(result.name).toBe('Senior Lead');
+      expect(mockDb.update).toHaveBeenCalled();
+    });
+
+    it('should throw NotFoundException if position not found', async () => {
+      mockDb._chain.limit.mockResolvedValueOnce([]);
+
+      await expect(service.update('nonexistent', { name: 'x' })).rejects.toThrow(NotFoundException);
+    });
+
+    it('should update sortOrder', async () => {
+      const position = { id: 'pos-1', name: 'Head', sortOrder: 0, createdAt: new Date(), updatedAt: new Date() };
+      const updated = { ...position, sortOrder: 5 };
+      mockDb._chain.limit.mockResolvedValueOnce([position]);
+      mockDb._chain.returning.mockResolvedValueOnce([updated]);
+
+      const result = await service.update('pos-1', { sortOrder: 5 });
+
+      expect(result.sortOrder).toBe(5);
+      expect(mockDb._chain.set).toHaveBeenCalledWith({ sortOrder: 5 });
+    });
+  });
+
+  describe('getScopes', () => {
+    it('should return scopes for the position', async () => {
+      const position = { id: 'pos-1', name: 'Manager', sortOrder: 0, createdAt: new Date(), updatedAt: new Date() };
+      const scopes = [
+        { positionId: 'pos-1', entityType: 'candidates', scope: 'descendants' },
+        { positionId: 'pos-1', entityType: 'job-openings', scope: 'all' },
+      ];
+      // findOneOrFail
+      mockDb._chain.limit.mockResolvedValueOnce([position]);
+      // getScopes query: select→from→where (terminal)
+      mockDb._chain.where
+        .mockReturnValueOnce(mockDb._chain)  // findOneOrFail where → chain for .limit()
+        .mockResolvedValueOnce(scopes);       // getScopes where → resolves directly
+
+      const result = await service.getScopes('pos-1');
+
+      expect(result).toHaveLength(2);
+      expect(result[0].entityType).toBe('candidates');
+    });
+
+    it('should return empty array when no scopes configured', async () => {
+      const position = { id: 'pos-1', name: 'Member', sortOrder: 0, createdAt: new Date(), updatedAt: new Date() };
+      mockDb._chain.limit.mockResolvedValueOnce([position]);
+      mockDb._chain.where
+        .mockReturnValueOnce(mockDb._chain)
+        .mockResolvedValueOnce([]);
+
+      const result = await service.getScopes('pos-1');
+
+      expect(result).toEqual([]);
+    });
+
+    it('should throw NotFoundException if position not found', async () => {
+      mockDb._chain.limit.mockResolvedValueOnce([]);
+
+      await expect(service.getScopes('nonexistent')).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('seedDefaults', () => {
+    it('should insert default positions when none exist', async () => {
+      // existing check: select→from→limit returns empty
+      mockDb._chain.limit.mockResolvedValueOnce([]);
+
+      await service.seedDefaults();
+
+      // 3 default positions: Head, Lead, Member
+      expect(mockDb.insert).toHaveBeenCalledTimes(3);
+    });
+
+    it('should skip seeding when positions already exist', async () => {
+      // existing check: select→from→limit returns a row
+      mockDb._chain.limit.mockResolvedValueOnce([{ id: 'pos-existing' }]);
+
+      await service.seedDefaults();
+
+      expect(mockDb.insert).not.toHaveBeenCalled();
+    });
+  });
+
   describe('getScopeForEntity', () => {
     it('should return scope when configured', async () => {
       mockDb._chain.limit.mockResolvedValueOnce([{ scope: 'descendants' }]);
