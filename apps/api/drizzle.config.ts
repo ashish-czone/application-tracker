@@ -16,9 +16,13 @@ export default defineConfig({
     '../../packages/platform/taxonomy/schema/index.ts',
     // Addon packages
     '../../packages/addons/org-units/schema/index.ts',
+    '../../packages/addons/eav-attributes/schema/index.ts',
+    '../../packages/addons/entity-relations/schema/index.ts',
     '../../packages/addons/tasks/schema/tasks.ts',
     '../../packages/addons/notes/schema/index.ts',
+    '../../packages/addons/evaluations/schema/index.ts',
     '../../packages/addons/attachments/schema/index.ts',
+    '../../packages/addons/document-templates/schema/index.ts',
   ],
   out: './drizzle',
   dialect: 'postgresql',
