@@ -47,6 +47,13 @@ export class LookupResolverService {
   }
 
   /**
+   * Clear all registrations. Only for use in tests.
+   */
+  static clearRegistry(): void {
+    sharedRegistry.clear();
+  }
+
+  /**
    * Get the lookup config for a registered entity.
    * Returns undefined if the entity is not registered.
    */

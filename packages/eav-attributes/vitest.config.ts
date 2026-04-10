@@ -4,5 +4,6 @@ import shared from '../vitest.shared';
 export default mergeConfig(shared, defineConfig({
   test: {
     globals: true,
+    setupFiles: ['./test/setup-field-types.ts'],
   },
 }));
