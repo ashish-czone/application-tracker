@@ -4,7 +4,8 @@
   "private": true,
   "main": "index.ts",
   "scripts": {
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:integration": "vitest run --config vitest.integration.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
@@ -20,6 +21,7 @@
     "rxjs": "^7.0.0"
   },
   "devDependencies": {
+    "@packages/platform-testing": "workspace:*",
     "@packages/eav-attributes": "workspace:*",
     "@packages/taxonomy": "workspace:*",
     "@packages/workflows": "workspace:*",
