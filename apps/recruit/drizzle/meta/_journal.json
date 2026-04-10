@@ -120,6 +120,160 @@
       "when": 1774684800000,
       "tag": "0016_multi_pipeline",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1774771200000,
+      "tag": "0017_notes_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1774857600000,
+      "tag": "0018_attachments_table",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1774944000000,
+      "tag": "0019_drafts_and_evaluations",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1775030400000,
+      "tag": "0020_workflow_transition_reasons",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1775116800000,
+      "tag": "0021_enrich_applications",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1775203200000,
+      "tag": "0022_enrich_interviews",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1775289600000,
+      "tag": "0023_fix_candidate_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1775376000000,
+      "tag": "0024_fix_job_opening_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1775462400000,
+      "tag": "0025_audit_target_entity",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1775548800000,
+      "tag": "0026_create_offers_table",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1775635200000,
+      "tag": "0027_drop_expected_salary",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1775721600000,
+      "tag": "0028_drop_job_opening_salary",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1775808000000,
+      "tag": "0029_drop_drafts_table",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1775894400000,
+      "tag": "0030_add_evaluation_recommendation",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1775980800000,
+      "tag": "0031_create_offer_approvals",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1776067200000,
+      "tag": "0032_create_document_templates",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1776153600000,
+      "tag": "0033_drop_fax_skype_columns",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1776240000000,
+      "tag": "0034_add_reports_to",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1776326400000,
+      "tag": "0035_create_org_units",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1776412800000,
+      "tag": "0036_add_task_assignee_team",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1776499200000,
+      "tag": "0037_add_offer_approvals_unique_constraint",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1776585600000,
+      "tag": "0038_org_positions",
+      "breakpoints": true
     }
   ]
 }
