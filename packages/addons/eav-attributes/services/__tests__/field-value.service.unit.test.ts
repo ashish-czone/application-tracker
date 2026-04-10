@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { sql } from '@packages/database';
 import { FieldValueService } from '../field-value.service';
 
 function createMockDb() {
@@ -393,6 +394,121 @@ describe('FieldValueService', () => {
       const result = await service.checkUniqueness('candidates', 'email', 'test@example.com', 'c1');
 
       expect(result).toBe(true);
+    });
+  });
+
+  // --- buildFilterCondition ---
+
+  describe('buildFilterCondition', () => {
+    const entityIdCol = sql`e.id`;
+
+    /** Recursively flatten a Drizzle SQL object into a string for assertion. */
+    function flattenSql(s: any): string {
+      if (!s || !s.queryChunks) return String(s);
+      return s.queryChunks.map((c: any) => {
+        if (typeof c === 'string') return c;
+        if (c && typeof c === 'object' && c.queryChunks) return flattenSql(c);
+        if (c && typeof c === 'object' && c.value !== undefined) return `$${c.value}`;
+        return String(c);
+      }).join('');
+    }
+
+    it('should return sql`true` for empty filters', () => {
+      const result = service.buildFilterCondition('candidates', entityIdCol, []);
+      expect(flattenSql(result)).toContain('true');
+    });
+
+    it('should generate EXISTS subquery for eq operator', () => {
+      const result = service.buildFilterCondition('candidates', entityIdCol, [
+        { fieldKey: 'status', operator: 'eq', value: 'active' },
+      ]);
+      const sqlStr = flattenSql(result);
+      expect(sqlStr).toContain('EXISTS');
+      expect(sqlStr).toContain('entity_field_values');
+      expect(sqlStr).toContain('value_text');
+    });
+
+    it('should generate neq condition', () => {
+      const result = service.buildFilterCondition('candidates', entityIdCol, [
+        { fieldKey: 'status', operator: 'neq', value: 'closed' },
+      ]);
+      const sqlStr = flattenSql(result);
+      expect(sqlStr).toContain('EXISTS');
+      expect(sqlStr).toContain('!=');
+    });
+
+    it('should generate gt condition for numbers', () => {
+      const result = service.buildFilterCondition('candidates', entityIdCol, [
+        { fieldKey: 'score', operator: 'gt', value: 80 },
+      ]);
+      expect(flattenSql(result)).toContain('value_number >');
+    });
+
+    it('should generate gte condition for numbers', () => {
+      const result = service.buildFilterCondition('candidates', entityIdCol, [
+        { fieldKey: 'score', operator: 'gte', value: 80 },
+      ]);
+      expect(flattenSql(result)).toContain('value_number >=');
+    });
+
+    it('should generate lt condition for numbers', () => {
+      const result = service.buildFilterCondition('candidates', entityIdCol, [
+        { fieldKey: 'score', operator: 'lt', value: 50 },
+      ]);
+      expect(flattenSql(result)).toContain('value_number <');
+    });
+
+    it('should generate lte condition for numbers', () => {
+      const result = service.buildFilterCondition('candidates', entityIdCol, [
+        { fieldKey: 'score', operator: 'lte', value: 50 },
+      ]);
+      expect(flattenSql(result)).toContain('value_number <=');
+    });
+
+    it('should generate ILIKE condition for like operator', () => {
+      const result = service.buildFilterCondition('candidates', entityIdCol, [
+        { fieldKey: 'name', operator: 'like', value: 'alice' },
+      ]);
+      expect(flattenSql(result)).toContain('ILIKE');
+    });
+
+    it('should generate jsonb ? condition for contains operator', () => {
+      const result = service.buildFilterCondition('candidates', entityIdCol, [
+        { fieldKey: 'tags', operator: 'contains', value: 'javascript' },
+      ]);
+      expect(flattenSql(result)).toContain('::jsonb');
+    });
+
+    it('should generate IN condition for in operator with array', () => {
+      const result = service.buildFilterCondition('candidates', entityIdCol, [
+        { fieldKey: 'status', operator: 'in', value: ['active', 'pending'] },
+      ]);
+      expect(flattenSql(result)).toContain('value_text IN');
+    });
+
+    it('should wrap single value in array for in operator', () => {
+      const result = service.buildFilterCondition('candidates', entityIdCol, [
+        { fieldKey: 'status', operator: 'in', value: 'active' },
+      ]);
+      expect(flattenSql(result)).toContain('value_text IN');
+    });
+
+    it('should fall back to eq-like behavior for unknown operators', () => {
+      const result = service.buildFilterCondition('candidates', entityIdCol, [
+        { fieldKey: 'status', operator: 'unknown_op' as any, value: 'active' },
+      ]);
+      expect(flattenSql(result)).toContain('value_text =');
+    });
+
+    it('should AND multiple filter conditions together', () => {
+      const result = service.buildFilterCondition('candidates', entityIdCol, [
+        { fieldKey: 'status', operator: 'eq', value: 'active' },
+        { fieldKey: 'score', operator: 'gte', value: 80 },
+      ]);
+      const sqlStr = flattenSql(result);
+      const existsCount = (sqlStr.match(/EXISTS/g) || []).length;
+      expect(existsCount).toBe(2);
+      expect(sqlStr).toContain(' AND ');
     });
   });
 });
