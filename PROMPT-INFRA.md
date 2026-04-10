@@ -116,7 +116,7 @@ Pipeline: `lint → test → build → deploy`. Feature branches: lint + test + 
 ## 11. Database Operations
 
 - Migrations forward-only. Never edit deployed migrations.
-- Migration files committed in `packages/database/drizzle/`.
+- Migration files committed in `packages/core/database/drizzle/`.
 - Production backups: BullMQ repeatable job → pg_dump → compress → S3. 7-day retention via lifecycle policy.
 - Connection pooling for multiple API instances.
 

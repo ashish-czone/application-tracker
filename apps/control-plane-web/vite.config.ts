@@ -1,15 +1,14 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
+import { buildPackageAliases } from '../../packages/resolve-aliases';
 
 export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
       '@modules': path.resolve(__dirname, 'src/modules'),
-      '@packages/platform-ui-taxonomy': path.resolve(__dirname, '../../packages/platform-ui/taxonomy'),
-      '@packages/platform-ui-conditions': path.resolve(__dirname, '../../packages/platform-ui/conditions'),
-      '@packages': path.resolve(__dirname, '../../packages'),
+      ...buildPackageAliases(path.resolve(__dirname, '../../packages')),
     },
   },
   server: {

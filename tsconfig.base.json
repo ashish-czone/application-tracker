@@ -15,7 +15,7 @@
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "paths": {
-      "@packages/*": ["./packages/*"]
+      "@packages/*": ["./packages/core/*", "./packages/platform/*", "./packages/addons/*"]
     }
   },
   "exclude": ["node_modules", "dist"]

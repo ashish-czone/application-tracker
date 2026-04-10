@@ -2,24 +2,26 @@ import { defineConfig } from 'drizzle-kit';
 
 export default defineConfig({
   schema: [
-    // Shared infrastructure (from packages)
-    '../../packages/database/schema/index.ts',
-    '../../packages/auth/schema/index.ts',
-    '../../packages/rbac/schema/index.ts',
-    '../../packages/settings/schema/index.ts',
-    '../../packages/notification-channels/schema/notifications.ts',
-    '../../packages/automations/schema/index.ts',
-    '../../packages/notifications/schema/index.ts',
-    '../../packages/workflows/schema/index.ts',
-    '../../packages/taxonomy/schema/index.ts',
-    '../../packages/audit/schema/index.ts',
-    '../../packages/org-units/schema/index.ts',
-    '../../packages/eav-attributes/schema/index.ts',
-    '../../packages/entity-relations/schema/index.ts',
-    '../../packages/tasks/schema/tasks.ts',
-    '../../packages/notes/schema/index.ts',
-    '../../packages/evaluations/schema/index.ts',
-    '../../packages/attachments/schema/index.ts',
+    // Core packages
+    '../../packages/core/database/schema/index.ts',
+    '../../packages/core/auth/schema/index.ts',
+    '../../packages/core/rbac/schema/index.ts',
+    '../../packages/core/settings/schema/index.ts',
+    '../../packages/core/audit/schema/index.ts',
+    // Platform packages
+    '../../packages/platform/notification-channels/schema/notifications.ts',
+    '../../packages/platform/automations/schema/index.ts',
+    '../../packages/platform/notifications/schema/index.ts',
+    '../../packages/platform/workflows/schema/index.ts',
+    '../../packages/platform/taxonomy/schema/index.ts',
+    // Addon packages
+    '../../packages/addons/org-units/schema/index.ts',
+    '../../packages/addons/eav-attributes/schema/index.ts',
+    '../../packages/addons/entity-relations/schema/index.ts',
+    '../../packages/addons/tasks/schema/tasks.ts',
+    '../../packages/addons/notes/schema/index.ts',
+    '../../packages/addons/evaluations/schema/index.ts',
+    '../../packages/addons/attachments/schema/index.ts',
     // Recruit-specific modules
     './src/modules/clients/schema/clients.ts',
     './src/modules/contacts/schema/contacts.ts',

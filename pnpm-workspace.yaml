@@ -1,4 +1,6 @@
 packages:
   - "apps/*"
-  - "packages/*"
-  - "packages/platform-ui/*"
+  - "packages/core/*"
+  - "packages/platform/*"
+  - "packages/platform/platform-ui/*"
+  - "packages/addons/*"
