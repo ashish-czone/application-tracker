@@ -4,7 +4,8 @@
   "private": true,
   "main": "index.ts",
   "scripts": {
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:integration": "vitest run --config vitest.integration.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
@@ -23,6 +24,7 @@
     "@aws-sdk/s3-request-presigner": { "optional": true }
   },
   "devDependencies": {
+    "@packages/platform-testing": "workspace:*",
     "@types/multer": "^1.4.0",
     "typescript": "^5.7.0",
     "vitest": "^3.2.0"
