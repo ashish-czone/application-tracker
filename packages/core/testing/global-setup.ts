@@ -9,20 +9,24 @@ import path from 'path';
  *   globalSetup: [require.resolve('@packages/testing/global-setup')]
  */
 export function integrationGlobalSetup() {
-  const apiDir = path.resolve(__dirname, '../../../apps/api');
+  const env = {
+    ...process.env,
+    DATABASE_URL:
+      process.env.DATABASE_URL ?? 'postgresql://dev:dev@localhost:5432/starter',
+  };
 
-  try {
-    execSync('npx drizzle-kit migrate', {
-      cwd: apiDir,
-      stdio: 'inherit',
-      env: {
-        ...process.env,
-        DATABASE_URL:
-          process.env.DATABASE_URL ?? 'postgresql://dev:dev@localhost:5432/starter',
-      },
-    });
-  } catch {
-    console.warn('[testing] Database migration skipped (DB may be unavailable)');
+  // Run migrations for all apps that define schemas used by packages
+  const appDirs = [
+    path.resolve(__dirname, '../../../apps/api'),
+    path.resolve(__dirname, '../../../apps/recruit'),
+  ];
+
+  for (const appDir of appDirs) {
+    try {
+      execSync('npx drizzle-kit migrate', { cwd: appDir, stdio: 'inherit', env });
+    } catch {
+      console.warn(`[testing] Database migration skipped for ${path.basename(appDir)} (DB may be unavailable)`);
+    }
   }
 }
 

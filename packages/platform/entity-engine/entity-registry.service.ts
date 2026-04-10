@@ -57,7 +57,7 @@ export class EntityRegistryService {
       const workflowFields = Object.entries(config.fieldMeta)
         .filter(([, meta]) => meta.fieldType === 'workflow')
         .map(([key]) => key);
-      const boardFields = [...workflowFields, ...(config.ui.boardFields ?? [])];
+      const boardFields = [...workflowFields, ...(config.ui?.boardFields ?? [])];
       // Deduplicate in case a workflow field is also explicitly listed
       const uniqueBoardFields = [...new Set(boardFields)];
 
