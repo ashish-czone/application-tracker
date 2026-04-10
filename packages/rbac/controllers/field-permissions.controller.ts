@@ -110,12 +110,12 @@ export class FieldPermissionsController {
     const hidePrefix = `${entityMeta.slug}.hide-`;
     const readonlyPrefix = `${entityMeta.slug}.readonly-`;
 
-    const updatedList: { name: string; scope: PermissionScope }[] = [];
+    const updatedList: { name: string; scope?: PermissionScope }[] = [];
 
     // Keep existing permissions that aren't field restrictions for this entity
-    for (const [perm, scope] of Object.entries(existingPerms)) {
+    for (const perm of Object.keys(existingPerms)) {
       if (!perm.startsWith(hidePrefix) && !perm.startsWith(readonlyPrefix)) {
-        updatedList.push({ name: perm, scope });
+        updatedList.push({ name: perm });
       }
     }
 
