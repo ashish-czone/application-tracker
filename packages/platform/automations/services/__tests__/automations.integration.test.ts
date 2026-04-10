@@ -1,10 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest';
 import { randomUUID } from 'crypto';
-import { Global, Module } from '@nestjs/common';
-import { createIntegrationTestModule, cleanDatabase } from '@packages/testing';
-import { EventsModule } from '@packages/events';
-import { RbacModule } from '@packages/rbac';
-import { QueueService } from '@packages/queue';
+import { createPlatformTestModule, cleanDatabase } from '@packages/platform-testing';
 import { AutomationsModule } from '../../automations.module';
 import { AutomationRuleService } from '../automation-rule.service';
 import { ExecutionLogService } from '../execution-log.service';
@@ -12,19 +8,6 @@ import { ProvenanceService } from '../provenance.service';
 import { ActionRegistry } from '../action-registry';
 import type { DrizzleDB } from '@packages/database';
 import type { TestingModule } from '@nestjs/testing';
-
-/** Mock QueueService that avoids Redis dependency */
-const mockQueueService = {
-  registerProcessor: () => {},
-  getQueue: () => null,
-};
-
-@Global()
-@Module({
-  providers: [{ provide: QueueService, useValue: mockQueueService }],
-  exports: [QueueService],
-})
-class MockQueueModule {}
 
 describe('Automations (integration)', () => {
   let module: TestingModule;
@@ -36,8 +19,9 @@ describe('Automations (integration)', () => {
   let actionRegistry: ActionRegistry;
 
   beforeAll(async () => {
-    const ctx = await createIntegrationTestModule({
-      imports: [EventsModule, RbacModule, MockQueueModule, AutomationsModule],
+    const ctx = await createPlatformTestModule({
+      imports: [AutomationsModule],
+      mocks: { automations: false },
     });
     module = ctx.module;
     db = ctx.db;

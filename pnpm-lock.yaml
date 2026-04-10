@@ -1604,6 +1604,9 @@ importers:
         specifier: ^0.45.1
         version: 0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3))
     devDependencies:
+      '@packages/testing':
+        specifier: workspace:*
+        version: link:../testing
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -1656,6 +1659,9 @@ importers:
         specifier: ^9.0.2
         version: 9.0.3
     devDependencies:
+      '@packages/testing':
+        specifier: workspace:*
+        version: link:../testing
       '@types/bcrypt':
         specifier: ^5.0.2
         version: 5.0.2
@@ -1816,6 +1822,9 @@ importers:
         specifier: ^0.14.1
         version: 0.14.4
     devDependencies:
+      '@packages/testing':
+        specifier: workspace:*
+        version: link:../testing
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3))
@@ -1847,6 +1856,9 @@ importers:
         specifier: ^0.14.1
         version: 0.14.4
     devDependencies:
+      '@packages/testing':
+        specifier: workspace:*
+        version: link:../testing
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3))
@@ -2030,6 +2042,9 @@ importers:
         specifier: ^0.45.1
         version: 0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3))
     devDependencies:
+      '@packages/testing':
+        specifier: workspace:*
+        version: link:../testing
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -2079,6 +2094,9 @@ importers:
         specifier: ^4.2.0
         version: 4.2.0
     devDependencies:
+      '@packages/platform-testing':
+        specifier: workspace:*
+        version: link:../testing
       '@types/mustache':
         specifier: ^4.2.0
         version: 4.2.6
@@ -2415,6 +2433,9 @@ importers:
         specifier: ^4.2.0
         version: 4.2.0
     devDependencies:
+      '@packages/platform-testing':
+        specifier: workspace:*
+        version: link:../testing
       '@types/mustache':
         specifier: ^4.2.0
         version: 4.2.6
@@ -2575,6 +2596,9 @@ importers:
         specifier: ^0.14.1
         version: 0.14.4
     devDependencies:
+      '@packages/platform-testing':
+        specifier: workspace:*
+        version: link:../testing
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3))
@@ -2584,6 +2608,33 @@ importers:
       vitest:
         specifier: ^3.0.0
         version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(terser@5.46.0)
+
+  packages/platform/testing:
+    dependencies:
+      '@nestjs/common':
+        specifier: ^11.0.0
+        version: 11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/core':
+        specifier: ^11.0.0
+        version: 11.1.16(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@11.1.16)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@packages/automations':
+        specifier: workspace:*
+        version: link:../automations
+      '@packages/events':
+        specifier: workspace:*
+        version: link:../../core/events
+      '@packages/notifications':
+        specifier: workspace:*
+        version: link:../notifications
+      '@packages/queue':
+        specifier: workspace:*
+        version: link:../../core/queue
+      '@packages/rbac':
+        specifier: workspace:*
+        version: link:../../core/rbac
+      '@packages/testing':
+        specifier: workspace:*
+        version: link:../../core/testing
 
   packages/platform/workflows:
     dependencies:
@@ -2621,6 +2672,9 @@ importers:
         specifier: ^0.45.1
         version: 0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3))
     devDependencies:
+      '@packages/platform-testing':
+        specifier: workspace:*
+        version: link:../testing
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
