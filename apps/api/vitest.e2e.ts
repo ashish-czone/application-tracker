@@ -7,11 +7,11 @@ export default defineConfig({
   test: {
     globals: true,
     root: '.',
-    include: ['**/*.test.ts'],
-    exclude: ['**/*.e2e.test.ts', '**/*.security.test.ts', '**/node_modules/**'],
+    include: ['**/*.e2e.test.ts', '**/*.security.test.ts'],
     globalSetup: [path.resolve(__dirname, '../../test/setup/globalSetup.ts')],
-    hookTimeout: 30000,
-    teardownTimeout: 10000,
+    setupFiles: [path.resolve(__dirname, './test-setup-env.ts')],
+    hookTimeout: 60000,
+    teardownTimeout: 15000,
     testTimeout: 30000,
     fileParallelism: false,
   },
@@ -24,6 +24,7 @@ export default defineConfig({
     alias: {
       ...buildPackageAliases(path.resolve(__dirname, '../../packages')),
       '@modules': path.resolve(__dirname, './src/modules'),
+      '@test': path.resolve(__dirname, '../../test'),
     },
   },
 });
