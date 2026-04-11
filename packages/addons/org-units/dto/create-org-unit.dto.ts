@@ -8,9 +8,8 @@ export class CreateOrgUnitDto {
   @IsString()
   parentId?: string;
 
-  @IsOptional()
   @IsString()
-  type?: string;
+  levelId!: string;
 
   @IsOptional()
   @IsInt()

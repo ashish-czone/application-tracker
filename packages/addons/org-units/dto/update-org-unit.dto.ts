@@ -11,7 +11,7 @@ export class UpdateOrgUnitDto {
 
   @IsOptional()
   @IsString()
-  type?: string;
+  levelId?: string;
 
   @IsOptional()
   @IsInt()
