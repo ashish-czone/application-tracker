@@ -68,8 +68,10 @@ export const POSITION_SCOPE_RANK: Record<string, number> = {
 export interface PositionScopeProvider {
   /** Returns the resolved scope string for a user on a given entity type */
   resolveScope(userId: string, entityType: string): Promise<string>;
-  /** Returns the user IDs visible for the given scope, or null for 'all' */
+  /** Returns the user IDs visible for the given scope, or null for 'all' or custom scopes */
   resolveUserIds(userId: string, scope: string): Promise<string[] | null>;
+  /** Returns the org unit IDs visible for the given scope, or null for 'all' or custom scopes */
+  resolveOrgUnitIds(userId: string, scope: string): Promise<string[] | null>;
 }
 
 /** Injection token for the PositionScopeProvider */

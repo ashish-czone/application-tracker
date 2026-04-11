@@ -85,6 +85,28 @@ export class PositionScopeResolverService implements PositionScopeProvider {
   }
 
   /**
+   * Resolves the set of org unit IDs visible for the given scope.
+   * Returns null for 'all' or custom scopes.
+   * Returns [] for 'own' (no team visibility).
+   * For 'descendants', returns user's units + all descendant units.
+   * For 'unit', returns user's direct units only.
+   */
+  async resolveOrgUnitIds(userId: string, scope: string): Promise<string[] | null> {
+    if (scope === 'all') return null;
+    if (scope === 'own') return [];
+
+    if (scope === 'descendants') {
+      return this.getDescendantOrgUnitIds(userId);
+    }
+
+    if (scope === 'unit') {
+      return this.getDirectOrgUnitIds(userId);
+    }
+
+    return null;
+  }
+
+  /**
    * Returns all user IDs in the user's org units + all descendant org units.
    * Always includes the user themselves.
    */
@@ -141,6 +163,40 @@ export class PositionScopeResolverService implements PositionScopeProvider {
     const userIds = new Set(members.map((r) => r.userId));
     userIds.add(userId);
     return Array.from(userIds);
+  }
+
+  /**
+   * Returns org unit IDs the user is directly a member of + all descendant units.
+   */
+  private async getDescendantOrgUnitIds(userId: string): Promise<string[]> {
+    const result = await this.database.db.execute<{ id: string }>(sql`
+      WITH RECURSIVE user_units AS (
+        SELECT ou.id
+        FROM org_unit_members oum
+        INNER JOIN org_units ou ON ou.id = oum.org_unit_id
+        WHERE oum.user_id = ${userId}
+      ),
+      descendants AS (
+        SELECT id FROM user_units
+        UNION ALL
+        SELECT child.id
+        FROM org_units child
+        INNER JOIN descendants d ON child.parent_id = d.id
+      )
+      SELECT DISTINCT id FROM descendants
+    `);
+    return result.rows.map((r) => r.id);
+  }
+
+  /**
+   * Returns org unit IDs the user is directly a member of (no descendants).
+   */
+  private async getDirectOrgUnitIds(userId: string): Promise<string[]> {
+    const rows = await this.database.db
+      .select({ orgUnitId: orgUnitMembers.orgUnitId })
+      .from(orgUnitMembers)
+      .where(eq(orgUnitMembers.userId, userId));
+    return rows.map((r) => r.orgUnitId);
   }
 
   private scopeRank(scope: string): number {
