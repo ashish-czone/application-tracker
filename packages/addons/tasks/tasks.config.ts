@@ -1,7 +1,16 @@
+import { BadRequestException } from '@nestjs/common';
 import { defineEntity } from '@packages/entity-engine';
 import { eq, or, sql } from 'drizzle-orm';
 import { orgUnitMembers } from '@packages/org-units';
 import { tasks } from './schema/tasks';
+
+function validateAssigneeExclusivity(payload: Record<string, unknown>): void {
+  const hasAssignee = payload.assigneeId != null && payload.assigneeId !== '';
+  const hasTeam = payload.assigneeTeamId != null && payload.assigneeTeamId !== '';
+  if (hasAssignee && hasTeam) {
+    throw new BadRequestException('A task cannot be assigned to both a user and a team');
+  }
+}
 
 export const TASKS_CONFIG = defineEntity({
   table: tasks,
@@ -73,6 +82,7 @@ export const TASKS_CONFIG = defineEntity({
       listVisible: true,
       listOrder: 4,
       isRecipient: true,
+      cellRenderer: 'TaskAssigneeCell',
     },
     assigneeTeamId: {
       type: 'lookup',
@@ -80,8 +90,17 @@ export const TASKS_CONFIG = defineEntity({
       entity: 'org-units',
       lookupLabelField: 'name',
       lookupSearchFields: ['name'],
+      quickCreate: true,
+      excludeFromList: true,
+    },
+    claimedById: {
+      type: 'user',
+      label: 'Claimed By',
+      system: true,
+      readonly: true,
       listVisible: true,
       listOrder: 5,
+      cellRenderer: 'TaskClaimedByCell',
     },
     dueDate: {
       type: 'date',
@@ -108,6 +127,27 @@ export const TASKS_CONFIG = defineEntity({
       fields: ['title', 'description', 'status', 'priority', 'assigneeId', 'assigneeTeamId', 'dueDate'],
     },
   ],
+
+  hooks: {
+    beforeCreate: async (payload: Record<string, unknown>) => {
+      validateAssigneeExclusivity(payload);
+      // Clear claimedById on create — only set via claim endpoint
+      return { ...payload, claimedById: null };
+    },
+    beforeUpdate: async (_id: string, payload: Record<string, unknown>) => {
+      if ('assigneeId' in payload || 'assigneeTeamId' in payload) {
+        validateAssigneeExclusivity(payload);
+        // If reassigning, clear the claim
+        if ('assigneeId' in payload && payload.assigneeId) {
+          return { ...payload, assigneeTeamId: null, claimedById: null };
+        }
+        if ('assigneeTeamId' in payload && payload.assigneeTeamId) {
+          return { ...payload, assigneeId: null, claimedById: null };
+        }
+      }
+      return payload;
+    },
+  },
 
   dataAccess: {
     ownerField: 'assigneeId',
