@@ -56,6 +56,21 @@ export function OrgUnitsPage() {
 
   const tree = useMemo(() => (units ? buildTree(units) : []), [units]);
 
+  const allExpandableIds = useMemo(() => {
+    const ids: string[] = [];
+    function collect(nodes: WithChildren<OrgUnit>[]) {
+      for (const n of nodes) {
+        if (n.children.length > 0) { ids.push(n.id); collect(n.children); }
+      }
+    }
+    collect(tree);
+    return ids;
+  }, [tree]);
+
+  const isAllExpanded = allExpandableIds.length > 0 && expanded.size >= allExpandableIds.length;
+  const expandAll = useCallback(() => setExpanded(new Set(allExpandableIds)), [allExpandableIds]);
+  const collapseAll = useCallback(() => setExpanded(new Set()), []);
+
   const sortedLevels = useMemo(
     () => (levels ? [...levels].sort((a, b) => a.sortOrder - b.sortOrder) : []),
     [levels],
@@ -188,7 +203,29 @@ export function OrgUnitsPage() {
           </Button>
         </div>
       ) : (
-        <div className="space-y-0.5">
+        <div>
+          {allExpandableIds.length > 0 && (
+            <div className="flex items-center gap-2 mb-2 text-xs">
+              <button
+                type="button"
+                onClick={expandAll}
+                disabled={isAllExpanded}
+                className="text-primary hover:underline disabled:text-muted-foreground disabled:no-underline disabled:cursor-default"
+              >
+                Expand All
+              </button>
+              <span className="text-muted-foreground/50">|</span>
+              <button
+                type="button"
+                onClick={collapseAll}
+                disabled={expanded.size === 0}
+                className="text-primary hover:underline disabled:text-muted-foreground disabled:no-underline disabled:cursor-default"
+              >
+                Collapse All
+              </button>
+            </div>
+          )}
+          <div className="space-y-0.5">
           {tree.map((node) => (
             <TreeNode
               key={node.id}
@@ -203,6 +240,7 @@ export function OrgUnitsPage() {
               onManageMembers={setMembersUnit}
             />
           ))}
+          </div>
         </div>
       )}
 
