@@ -1,5 +1,4 @@
-import { pgTable, text, date, timestamp, index, check } from 'drizzle-orm/pg-core';
-import { sql } from 'drizzle-orm';
+import { pgTable, text, date, timestamp, index } from 'drizzle-orm/pg-core';
 import { randomUUID } from 'crypto';
 import { users } from '@packages/database/schema';
 import { orgUnits } from '@packages/org-units';
@@ -12,7 +11,6 @@ export const tasks = pgTable('tasks', {
   priority: text('priority').notNull().default('medium'),
   assigneeId: text('assignee_id').references(() => users.id),
   assigneeTeamId: text('assignee_team_id').references(() => orgUnits.id),
-  claimedById: text('claimed_by_id').references(() => users.id),
   dueDate: date('due_date', { mode: 'string' }),
   createdBy: text('created_by').notNull().references(() => users.id),
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
@@ -22,9 +20,7 @@ export const tasks = pgTable('tasks', {
 }, (table) => [
   index('tasks_assignee_id_idx').on(table.assigneeId),
   index('tasks_assignee_team_id_idx').on(table.assigneeTeamId),
-  index('tasks_claimed_by_id_idx').on(table.claimedById),
   index('tasks_status_idx').on(table.status),
   index('tasks_priority_idx').on(table.priority),
   index('tasks_due_date_idx').on(table.dueDate),
-  check('tasks_assignee_exclusive', sql`num_nonnulls(assignee_id, assignee_team_id) <= 1`),
 ]);
