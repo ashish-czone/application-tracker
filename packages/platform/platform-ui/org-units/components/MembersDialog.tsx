@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Trash2, Plus, Users } from 'lucide-react';
 import {
   Button,
@@ -11,7 +11,8 @@ import {
   FormSelect,
   ConfirmDialog,
 } from '@packages/ui';
-import { useUsers } from '../../users/hooks';
+import { usePlatformAPI } from '../../PlatformUIProvider';
+import { createUsersApi } from '../../users/services';
 import { useOrgPositions } from '../../org-positions/hooks';
 import { useOrgUnitMembers, useAddOrgUnitMember, useUpdateMemberPosition, useRemoveOrgUnitMember } from '../hooks';
 import type { OrgUnit, OrgUnitMemberDetail } from '../types';
@@ -24,7 +25,8 @@ interface MembersDialogProps {
 export function MembersDialog({ unit, onClose }: MembersDialogProps) {
   const { data: members, isLoading: membersLoading } = useOrgUnitMembers(unit?.id ?? null);
   const { data: positions } = useOrgPositions();
-  const { data: usersPage } = useUsers({ limit: 100 }, { enabled: !!unit });
+  const apiFn = usePlatformAPI();
+  const usersApi = useMemo(() => createUsersApi(apiFn), [apiFn]);
 
   const [addMode, setAddMode] = useState(false);
   const [newUserId, setNewUserId] = useState('');
@@ -51,12 +53,14 @@ export function MembersDialog({ unit, onClose }: MembersDialogProps) {
     [members],
   );
 
-  const availableUserOptions = useMemo(
-    () =>
-      (usersPage?.data ?? [])
+  const searchUsers = useCallback(
+    async (query: string) => {
+      const result = await usersApi.listUsers({ search: query, limit: 25 });
+      return result.data
         .filter((u) => !existingUserIds.has(u.id))
-        .map((u) => ({ label: `${u.firstName} ${u.lastName}`, value: u.id })),
-    [usersPage, existingUserIds],
+        .map((u) => ({ label: `${u.firstName} ${u.lastName}`, value: u.id }));
+    },
+    [usersApi, existingUserIds],
   );
 
   function handleAdd() {
@@ -110,10 +114,10 @@ export function MembersDialog({ unit, onClose }: MembersDialogProps) {
                 <div className="flex-1">
                   <FormSelect
                     label="User"
-                    options={availableUserOptions}
+                    onSearch={searchUsers}
                     value={newUserId}
                     onChange={setNewUserId}
-                    placeholder="Select user..."
+                    placeholder="Search users..."
                   />
                 </div>
                 <div className="flex-1">
