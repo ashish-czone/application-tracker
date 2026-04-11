@@ -55,7 +55,7 @@ export function MembersDialog({ unit, onClose }: MembersDialogProps) {
 
   const searchUsers = useCallback(
     async (query: string) => {
-      const result = await usersApi.listUsers({ search: query, limit: 25 });
+      const result = await usersApi.listUsers({ search: query, limit: 25, sort: 'firstName', order: 'asc' });
       return result.data
         .filter((u) => !existingUserIds.has(u.id))
         .map((u) => ({ label: `${u.firstName} ${u.lastName}`, value: u.id }));
