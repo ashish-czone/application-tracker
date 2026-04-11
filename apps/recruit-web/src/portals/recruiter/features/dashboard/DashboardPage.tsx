@@ -234,7 +234,7 @@ export function DashboardPage() {
                       backgroundColor: 'var(--card, #fff)',
                       fontSize: '12px',
                     }}
-                    formatter={(value: number) => [value, 'Applications']}
+                    formatter={(value) => [value, 'Applications']}
                   />
                   <Bar dataKey="count" radius={[0, 4, 4, 0]} barSize={20}>
                     {pipelineFunnel.map((entry) => (
@@ -273,7 +273,7 @@ export function DashboardPage() {
                       backgroundColor: 'var(--card, #fff)',
                       fontSize: '12px',
                     }}
-                    formatter={(value: number) => [value, 'Applications']}
+                    formatter={(value) => [value, 'Applications']}
                   />
                   <Bar dataKey="count" radius={[4, 4, 0, 0]} barSize={28}>
                     {sourceBreakdown.map((_, i) => (

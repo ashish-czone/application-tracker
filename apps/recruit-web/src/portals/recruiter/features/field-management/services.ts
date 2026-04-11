@@ -1,4 +1,5 @@
 import { api } from '../../../../lib/api';
+import type { FieldTypeRegistryEntry } from '@packages/eav-attributes-ui';
 import type { FullLayout, CreateFieldInput, UpdateFieldInput, CreateSectionInput, FieldDefinition } from './types';
 
 // Layout
@@ -66,7 +67,7 @@ export function reorderFields(
 }
 
 // Field types
-export function getFieldTypes(): Promise<{ type: string; label: string; creatable: boolean; sortOrder: number; icon: string; color: string }[]> {
+export function getFieldTypes(): Promise<FieldTypeRegistryEntry[]> {
   return api.get('/fields/types');
 }
 

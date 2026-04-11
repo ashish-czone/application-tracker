@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowLeft, Check } from 'lucide-react';
 import { Form, Button } from '@packages/ui';
 import { DynamicField, buildFormSchema } from '@packages/eav-attributes-ui';
-import type { LayoutSection, FullLayoutField } from '@packages/entity-engine/types';
+import type { FieldDefinition } from '@packages/eav-attributes-ui';
 import { useEntityEngine, useEntityHooks, useEntityConfig } from '../EntityEngineProvider';
 import { useEntityLayout } from '../helpers/useEntityLayout';
 
@@ -137,7 +137,7 @@ export function EntityCreatePage({ entityType }: EntityCreatePageProps) {
           className="grid gap-4 p-4"
           style={{ gridTemplateColumns: step.columns === 1 ? '1fr' : 'repeat(2, 1fr)' }}
         >
-          {step.editableFields.map((field: FullLayoutField) => (
+          {step.editableFields.map((field: FieldDefinition) => (
             <DynamicField
               key={field.fieldKey}
               field={field}

@@ -185,7 +185,6 @@ export function LevelsSettingsDialog({ open, onClose }: LevelsSettingsDialogProp
         title="Delete Level"
         description={`Are you sure you want to delete "${deleting?.name}"? This will fail if any org units use this level.`}
         confirmLabel="Delete"
-        variant="destructive"
         isPending={deleteMutation.isPending}
         onConfirm={() => deleting && deleteMutation.mutate(deleting.id)}
       />

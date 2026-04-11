@@ -18,6 +18,7 @@ import {
   toast,
 } from '@packages/ui';
 import type { EntityAction } from '@packages/entity-engine';
+import type { DetailTabPlugin } from '../types';
 import { DynamicSection, isFieldEmpty } from '@packages/eav-attributes-ui';
 import { useEntityEngine, useEntityHooks, useEntityConfig } from '../EntityEngineProvider';
 import { useEntityLayout } from '../helpers/useEntityLayout';
@@ -177,7 +178,7 @@ export function EntityDetailPage({ entityType, renderPipelineProgress, renderWor
     const filtered = registeredTabs.filter(
       (tab) => !tab.featureFlag || features[tab.featureFlag],
     );
-    return [{ key: 'overview', label: 'Overview', order: 0 }, ...filtered];
+    return [{ key: 'overview', label: 'Overview', order: 0 } as DetailTabPlugin, ...filtered];
   }, [getDetailTabs, entityType, entity.features]);
 
   const getDisplayName = (row: Record<string, unknown>): string => {
@@ -361,9 +362,9 @@ export function EntityDetailPage({ entityType, renderPipelineProgress, renderWor
 
       {/* System metadata */}
       <p className="text-xs text-muted-foreground mb-4">
-        {item.createdBy__label && <>Created by {item.createdBy__label as string}</>}
-        {item.createdAt && <>{item.createdBy__label ? ' · ' : ''}{new Date(item.createdAt as string).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</>}
-        {item.updatedAt && item.updatedAt !== item.createdAt && <> · Updated {new Date(item.updatedAt as string).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</>}
+        {item.createdBy__label ? <>Created by {item.createdBy__label as string}</> : null}
+        {item.createdAt ? <>{item.createdBy__label ? ' · ' : ''}{new Date(item.createdAt as string).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</> : null}
+        {item.updatedAt && item.updatedAt !== item.createdAt ? <> · Updated {new Date(item.updatedAt as string).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</> : null}
       </p>
 
       {/* Tabs */}

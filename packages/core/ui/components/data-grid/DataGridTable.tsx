@@ -32,7 +32,7 @@ function SortIcon({
   );
 }
 
-function isStickyRight<TData>(column: { columnDef: { meta?: Record<string, unknown> } }) {
+function isStickyRight(column: { columnDef: { meta?: unknown } }) {
   return (column.columnDef.meta as { sticky?: string } | undefined)?.sticky === 'right';
 }
 
