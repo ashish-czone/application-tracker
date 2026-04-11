@@ -19,6 +19,15 @@ export const TASKS_CONFIG = defineEntity({
   pluralName: 'Tasks',
   softDelete: true,
   timestamps: true,
+  hasNotes: true,
+  hasAttachments: true,
+
+  extraPermissions: [
+    { action: 'assign', description: 'Assign tasks to users or teams' },
+    { action: 'complete', description: 'Mark tasks as done' },
+    { action: 'cancel', description: 'Cancel tasks' },
+    { action: 'reopen', description: 'Reopen completed or cancelled tasks' },
+  ],
 
   fields: {
     title: {
@@ -55,8 +64,20 @@ export const TASKS_CONFIG = defineEntity({
           { name: 'cancelled', label: 'Cancelled', color: '#EF4444' },
         ],
         transitions: [
-          { from: 'open', to: ['in_progress', 'cancelled'] },
-          { from: 'in_progress', to: ['done', 'cancelled'] },
+          { from: 'open', to: [
+            'in_progress',
+            { state: 'cancelled', requiredPermissions: ['tasks.cancel'] },
+          ]},
+          { from: 'in_progress', to: [
+            { state: 'done', requiredPermissions: ['tasks.complete'] },
+            { state: 'cancelled', requiredPermissions: ['tasks.cancel'] },
+          ]},
+          { from: 'done', to: [
+            { state: 'open', requiredPermissions: ['tasks.reopen'] },
+          ]},
+          { from: 'cancelled', to: [
+            { state: 'open', requiredPermissions: ['tasks.reopen'] },
+          ]},
         ],
       },
     },
