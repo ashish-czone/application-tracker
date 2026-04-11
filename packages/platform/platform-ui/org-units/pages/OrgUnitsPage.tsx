@@ -330,10 +330,31 @@ function TreeNode({
             {node.name}
           </span>
 
-          {/* Head info */}
-          {node.head && (
-            <span className="text-xs text-muted-foreground truncate">
-              {node.head.positionName ? `${node.head.positionName}: ` : ''}{node.head.userName}
+          {/* Member previews */}
+          {node.memberPreviews.length > 0 && (
+            <span className="text-xs text-muted-foreground truncate flex items-center gap-1">
+              <span className="font-medium">
+                {node.memberPreviews[0].positionName ? `${node.memberPreviews[0].positionName}: ` : ''}
+                {node.memberPreviews[0].userName}
+              </span>
+              {node.memberPreviews.length > 1 && (
+                <>
+                  <span className="text-muted-foreground/60 mx-0.5">&middot;</span>
+                  {node.memberPreviews.slice(1).map((m) => m.userName).join(', ')}
+                </>
+              )}
+              {node.memberCount > node.memberPreviews.length && (
+                <>
+                  <span className="text-muted-foreground/60 mx-0.5">&middot;</span>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); onManageMembers(node); }}
+                    className="text-primary hover:underline font-medium"
+                  >
+                    +{node.memberCount - node.memberPreviews.length} more
+                  </button>
+                </>
+              )}
             </span>
           )}
         </div>
