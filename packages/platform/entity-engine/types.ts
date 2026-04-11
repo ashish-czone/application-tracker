@@ -463,6 +463,14 @@ export interface DataAccessConfig {
   ownerField?: string;
 
   /**
+   * Optional field referencing an org unit (team).
+   * When set, built-in scope resolution generates:
+   *   ownerField IN (visible users) OR teamField IN (visible org units)
+   * This enables team-based assignment with hierarchical visibility.
+   */
+  teamField?: string;
+
+  /**
    * Entity-specific scope resolvers.
    * These are referenced by RBAC permission scopes as 'scope:<key>'.
    * Each resolver returns a SQL condition applied to list/detail queries.
@@ -487,6 +495,8 @@ export interface PositionScopeProvider {
   resolveScope(userId: string, entityType: string): Promise<string>;
   /** Returns the user IDs visible for the given scope, or null for 'all' or custom scopes */
   resolveUserIds(userId: string, scope: string): Promise<string[] | null>;
+  /** Returns the org unit IDs visible for the given scope, or null for 'all' or custom scopes */
+  resolveOrgUnitIds(userId: string, scope: string): Promise<string[] | null>;
 }
 
 /** Injection token for the optional PositionScopeProvider */

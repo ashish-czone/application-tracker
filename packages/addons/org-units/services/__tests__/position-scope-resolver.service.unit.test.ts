@@ -181,4 +181,60 @@ describe('PositionScopeResolverService', () => {
       expect(result).toEqual(['user-1']);
     });
   });
+
+  describe('resolveOrgUnitIds', () => {
+    it('should return null for "all" scope', async () => {
+      const result = await service.resolveOrgUnitIds('user-1', 'all');
+
+      expect(result).toBeNull();
+    });
+
+    it('should return empty array for "own" scope', async () => {
+      const result = await service.resolveOrgUnitIds('user-1', 'own');
+
+      expect(result).toEqual([]);
+    });
+
+    it('should return null for custom scopes', async () => {
+      const result = await service.resolveOrgUnitIds('user-1', 'hiring-manager');
+
+      expect(result).toBeNull();
+    });
+
+    it('should expand descendant org unit IDs for "descendants" scope', async () => {
+      mockDb.execute.mockResolvedValueOnce({
+        rows: [
+          { id: 'unit-1' },
+          { id: 'unit-2' },
+          { id: 'unit-3' },
+        ],
+      });
+
+      const result = await service.resolveOrgUnitIds('user-1', 'descendants');
+
+      expect(result).toContain('unit-1');
+      expect(result).toContain('unit-2');
+      expect(result).toContain('unit-3');
+      expect(result).toHaveLength(3);
+    });
+
+    it('should return direct org unit IDs for "unit" scope', async () => {
+      mockDb._chain.where.mockResolvedValueOnce([
+        { orgUnitId: 'unit-1' },
+        { orgUnitId: 'unit-2' },
+      ]);
+
+      const result = await service.resolveOrgUnitIds('user-1', 'unit');
+
+      expect(result).toEqual(['unit-1', 'unit-2']);
+    });
+
+    it('should return empty array for "unit" scope when user has no org units', async () => {
+      mockDb._chain.where.mockResolvedValueOnce([]);
+
+      const result = await service.resolveOrgUnitIds('user-1', 'unit');
+
+      expect(result).toEqual([]);
+    });
+  });
 });

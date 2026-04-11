@@ -23,6 +23,7 @@ export interface OrgUnit {
   memberCount: number;
   level: { id: string; name: string; sortOrder: number };
   head: OrgUnitHead | null;
+  memberPreviews: OrgUnitMemberDetail[];
 }
 
 export interface OrgUnitMemberDetail {
