@@ -13,7 +13,6 @@
     "@packages/events": "workspace:*",
     "@packages/rbac": "workspace:*",
     "@packages/queue": "workspace:*",
-    "@packages/automations": "workspace:*",
-    "@packages/notifications": "workspace:*"
+    "@packages/automation-contracts": "workspace:*"
   }
 }

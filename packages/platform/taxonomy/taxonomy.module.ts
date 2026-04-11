@@ -2,7 +2,7 @@ import { Global, Module, type OnModuleInit } from '@nestjs/common';
 import { RbacService } from '@packages/rbac';
 import { fieldTypeRegistry } from '@packages/field-types';
 import { fieldTypeSaveHookRegistry, TAXONOMY_EXTENSION } from '@packages/entity-engine';
-import { ActionRegistry } from '@packages/automations';
+import { ActionRegistry } from '@packages/automation-contracts';
 import { taxonomyFieldTypesPlugin } from './field-types';
 import { TaxonomyService } from './services/taxonomy.service';
 import { CategoryService } from './services/category.service';

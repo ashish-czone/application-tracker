@@ -10,6 +10,7 @@
   "dependencies": {
     "@nestjs/common": "^11.0.0",
     "@nestjs/swagger": "^11.0.0",
+    "@packages/automation-contracts": "workspace:*",
     "@packages/database": "workspace:*",
     "@packages/entity-engine": "workspace:*",
     "@packages/hierarchy": "workspace:*",

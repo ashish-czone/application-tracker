@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
-import { interpolateValues } from '@packages/automations';
-import type { ActionHandler, ActionContext, ActionResult, UserSlotDefinition } from '@packages/automations';
+import { interpolateValues } from '@packages/automation-contracts';
+import type { ActionHandler, ActionContext, ActionResult, UserSlotDefinition } from '@packages/automation-contracts';
 import { WorkflowEngineService } from './workflow-engine.service';
 
 /** Minimal interface for EntityService — avoids compile-time dependency on entity-engine */

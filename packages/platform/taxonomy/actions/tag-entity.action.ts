@@ -5,13 +5,13 @@ import { withTenant } from '@packages/tenancy/helpers';
 import {
   buildConditions,
   EntityResolverRegistry,
-} from '@packages/automations';
+} from '@packages/automation-contracts';
 import type {
   ActionHandler,
   ActionContext,
   ActionResult,
   UserSlotDefinition,
-} from '@packages/automations';
+} from '@packages/automation-contracts';
 import type { Condition } from '@packages/common';
 import { TaxonomyService } from '../services/taxonomy.service';
 

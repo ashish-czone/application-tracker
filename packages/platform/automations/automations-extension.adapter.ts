@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { AutomationsExtension, ActionHandlerDef, EntityResolverConfig } from '@packages/entity-engine/extensions';
-import { ActionRegistry } from './services/action-registry';
-import { EntityResolverRegistry } from './services/entity-resolver-registry';
+import { ActionRegistry, EntityResolverRegistry } from '@packages/automation-contracts';
 
 /**
  * Adapter that implements entity-engine's AutomationsExtension interface

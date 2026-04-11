@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { DatabaseService, eq } from '@packages/database';
 import { withTenant } from '@packages/tenancy/helpers';
-import type { ActionHandler, ActionContext, ActionResult, UserSlotDefinition } from '@packages/automations';
+import type { ActionHandler, ActionContext, ActionResult, UserSlotDefinition } from '@packages/automation-contracts';
 import { notificationTemplates } from '../schema/notification-templates';
 import { NotificationDispatcher } from './notification-dispatcher';
 import { TemplateRenderer } from './template-renderer';

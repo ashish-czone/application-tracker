@@ -1,0 +1,17 @@
+{
+  "name": "@packages/automation-contracts",
+  "version": "0.0.1",
+  "private": true,
+  "main": "index.ts",
+  "dependencies": {
+    "@nestjs/common": "^11.0.0",
+    "@packages/common": "workspace:*",
+    "@packages/logger": "workspace:*",
+    "drizzle-orm": "^0.45.1",
+    "mustache": "^4.2.0"
+  },
+  "devDependencies": {
+    "@types/mustache": "^4.2.0",
+    "typescript": "^5.7.0"
+  }
+}

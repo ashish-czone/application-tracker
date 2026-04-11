@@ -1,8 +1,7 @@
 import { DatabaseService, eq } from '@packages/database';
 import { withTenant } from '@packages/tenancy/helpers';
-import type { UserResolution } from '../../types';
-import type { EntityResolverConfig } from '../../types';
-import type { UserResolverStrategy, UserResolutionContext } from '../user-resolver-registry';
+import type { UserResolution, EntityResolverConfig } from '@packages/automation-contracts';
+import type { UserResolverStrategy, UserResolutionContext } from '@packages/automation-contracts';
 
 /**
  * Resolves users from a field on a *related* entity — one lookup hop away.

@@ -11,9 +11,8 @@ import { AUTOMATION_EXECUTION_QUEUE } from '../automations.module';
 import { automationScheduled } from '../schema/automation-scheduled';
 import { automationSentLog } from '../schema/automation-sent-log';
 import { AutomationRuleService } from './automation-rule.service';
-import { EntityResolverRegistry } from './entity-resolver-registry';
-import { buildConditions } from '../helpers/condition-builder';
-import type { AutomationRule, ScheduleDateOperator, ScheduleUnit } from '../types';
+import { EntityResolverRegistry, buildConditions } from '@packages/automation-contracts';
+import type { AutomationRule, ScheduleDateOperator, ScheduleUnit } from '@packages/automation-contracts';
 
 @Injectable()
 export class ScheduleScanner {
