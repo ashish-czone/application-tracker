@@ -1,4 +1,4 @@
-import { LayoutDashboard, Settings, Bell, Shield, UserCog, Users, SlidersHorizontal, Tags, FolderTree, Blocks, ListTodo, Wrench, CheckSquare } from 'lucide-react';
+import { LayoutDashboard, Settings, Bell, Shield, UserCog, Users, SlidersHorizontal, Tags, FolderTree, Blocks, ListTodo, Wrench, CheckSquare, Building2 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 export interface MenuItem {
@@ -27,6 +27,7 @@ export const recruiterMenu: MenuItem[] = [
     children: [
       { path: '/settings', label: 'Entity Config', icon: Blocks },
       { path: '/app-settings', label: 'App Settings', icon: SlidersHorizontal, permission: 'settings.read' },
+      { path: '/org-units', label: 'Org Structure', icon: Building2, permission: 'org-units.read' },
       { path: '/org-positions', label: 'Org Positions', icon: UserCog, permission: 'org-units.read' },
       { path: '/tag-groups', label: 'Tag Groups', icon: Tags, permission: 'taxonomy.tag-groups.read' },
       { path: '/categories', label: 'Categories', icon: FolderTree, permission: 'taxonomy.categories.read' },
