@@ -1,7 +1,14 @@
 import { Injectable, type OnApplicationBootstrap } from '@nestjs/common';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
-import { DatabaseService, users } from '@packages/database';
-import { OrgUnitService, OrgUnitLevelService, orgUnits } from '@packages/org-units';
+import { DatabaseService, users, eq, isNull } from '@packages/database';
+import { UsersService } from '@packages/users';
+import { RbacService } from '@packages/rbac';
+import {
+  OrgUnitService,
+  OrgUnitLevelService,
+  OrgPositionService,
+  orgUnits,
+} from '@packages/org-units';
 
 interface SeedNode {
   name: string;
@@ -70,22 +77,106 @@ const ORG_TREE: SeedNode[] = [
   },
 ];
 
+const SEED_USERS = [
+  { firstName: 'Emma', lastName: 'Williams', email: 'emma.williams@acme.example.com' },
+  { firstName: 'Liam', lastName: 'Brown', email: 'liam.brown@acme.example.com' },
+  { firstName: 'Olivia', lastName: 'Garcia', email: 'olivia.garcia@acme.example.com' },
+  { firstName: 'Noah', lastName: 'Martinez', email: 'noah.martinez@acme.example.com' },
+  { firstName: 'Ava', lastName: 'Anderson', email: 'ava.anderson@acme.example.com' },
+  { firstName: 'Ethan', lastName: 'Thomas', email: 'ethan.thomas@acme.example.com' },
+  { firstName: 'Sophia', lastName: 'Jackson', email: 'sophia.jackson@acme.example.com' },
+  { firstName: 'Mason', lastName: 'White', email: 'mason.white@acme.example.com' },
+  { firstName: 'Isabella', lastName: 'Harris', email: 'isabella.harris@acme.example.com' },
+  { firstName: 'Lucas', lastName: 'Clark', email: 'lucas.clark@acme.example.com' },
+  { firstName: 'Mia', lastName: 'Lewis', email: 'mia.lewis@acme.example.com' },
+  { firstName: 'Alexander', lastName: 'Robinson', email: 'alexander.robinson@acme.example.com' },
+  { firstName: 'Charlotte', lastName: 'Walker', email: 'charlotte.walker@acme.example.com' },
+  { firstName: 'James', lastName: 'Young', email: 'james.young@acme.example.com' },
+  { firstName: 'Amelia', lastName: 'King', email: 'amelia.king@acme.example.com' },
+];
+
+// Team name → [leadIndex, ...memberIndices] into SEED_USERS
+const TEAM_ASSIGNMENTS: Record<string, number[]> = {
+  'Frontend Team':      [0, 1, 2],
+  'Backend Team':       [3, 4],
+  'DevOps Team':        [5, 6],
+  'Enterprise Sales':   [7, 8],
+  'SMB Sales':          [9],
+  'Talent Acquisition': [10, 11],
+  'People Operations':  [12],
+  'Design Team':        [13],
+  'QA Team':            [14],
+  'Support Team':       [2, 10],
+};
+
 @Injectable()
 export class OrgUnitsSeedService implements OnApplicationBootstrap {
   private readonly logger: ContextLogger;
 
   constructor(
     private readonly database: DatabaseService,
+    private readonly usersService: UsersService,
+    private readonly rbacService: RbacService,
     private readonly orgUnitService: OrgUnitService,
     private readonly orgUnitLevelService: OrgUnitLevelService,
+    private readonly orgPositionService: OrgPositionService,
     appLogger: AppLoggerService,
   ) {
     this.logger = appLogger.forContext(OrgUnitsSeedService.name);
   }
 
   async onApplicationBootstrap() {
+    await this.ensureSeedUsers();
     await this.ensureOrgUnits();
   }
+
+  // ---------------------------------------------------------------------------
+  // Seed users
+  // ---------------------------------------------------------------------------
+
+  private async ensureSeedUsers() {
+    const [existing] = await this.database.db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.email, SEED_USERS[0].email))
+      .limit(1);
+
+    if (existing) return;
+
+    const defaultRole = await this.rbacService.findDefaultRoleForUserType('client');
+    if (!defaultRole) {
+      this.logger.warn('No default client role found — skipping user seeding');
+      return;
+    }
+
+    const [admin] = await this.database.db
+      .select({ id: users.id })
+      .from(users)
+      .where(isNull(users.deletedAt))
+      .limit(1);
+
+    if (!admin) {
+      this.logger.warn('No admin user found — skipping user seeding');
+      return;
+    }
+
+    for (const u of SEED_USERS) {
+      await this.usersService.create({
+        email: u.email,
+        firstName: u.firstName,
+        lastName: u.lastName,
+        password: 'Password123',
+        userType: 'client',
+        roleIds: [defaultRole.id],
+      }, admin.id);
+    }
+
+    this.logger.log(`Seeded ${SEED_USERS.length} users`);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Seed org units + assign members
+  // ---------------------------------------------------------------------------
 
   private async ensureOrgUnits() {
     const [existing] = await this.database.db
@@ -103,11 +194,23 @@ export class OrgUnitsSeedService implements OnApplicationBootstrap {
 
     const levelByName = new Map(levels.map((l) => [l.name, l.id]));
 
+    // Resolve positions by name
+    const positions = await this.orgPositionService.findAll();
+    const leadPositionId = positions.find((p) => p.name === 'Lead')?.id;
+    const memberPositionId = positions.find((p) => p.name === 'Member')?.id;
+
+    // Build email → userId map for seed users
+    const seedEmails = SEED_USERS.map((u) => u.email);
     const allUsers = await this.database.db
-      .select({ id: users.id })
-      .from(users);
+      .select({ id: users.id, email: users.email })
+      .from(users)
+      .where(isNull(users.deletedAt));
+
+    const userByEmail = new Map(allUsers.map((u) => [u.email, u.id]));
+    const seedUserIds = seedEmails.map((e) => userByEmail.get(e)).filter(Boolean) as string[];
 
     let unitCount = 0;
+    const teamUnits = new Map<string, string>(); // team name → unit id
 
     const seedNode = async (node: SeedNode, parentId?: string, sortOrder = 0) => {
       const levelId = levelByName.get(node.levelName);
@@ -124,10 +227,8 @@ export class OrgUnitsSeedService implements OnApplicationBootstrap {
       });
       unitCount++;
 
-      // Assign a random user as a member to leaf teams
-      if (!node.children?.length && allUsers.length > 0) {
-        const randomUser = allUsers[unitCount % allUsers.length];
-        await this.orgUnitService.addMember(unit.id, randomUser.id);
+      if (!node.children?.length) {
+        teamUnits.set(node.name, unit.id);
       }
 
       if (node.children) {
@@ -141,6 +242,22 @@ export class OrgUnitsSeedService implements OnApplicationBootstrap {
       await seedNode(ORG_TREE[i], undefined, i);
     }
 
-    this.logger.log(`Seeded ${unitCount} org units`);
+    // Assign members to teams
+    let memberCount = 0;
+    for (const [teamName, indices] of Object.entries(TEAM_ASSIGNMENTS)) {
+      const unitId = teamUnits.get(teamName);
+      if (!unitId) continue;
+
+      for (let i = 0; i < indices.length; i++) {
+        const userId = seedUserIds[indices[i]];
+        if (!userId) continue;
+
+        const positionId = i === 0 ? leadPositionId : memberPositionId;
+        await this.orgUnitService.addMember(unitId, userId, positionId ?? undefined);
+        memberCount++;
+      }
+    }
+
+    this.logger.log(`Seeded ${unitCount} org units with ${memberCount} member assignments`);
   }
 }
