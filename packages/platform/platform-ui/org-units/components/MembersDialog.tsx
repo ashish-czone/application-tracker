@@ -24,7 +24,7 @@ interface MembersDialogProps {
 export function MembersDialog({ unit, onClose }: MembersDialogProps) {
   const { data: members, isLoading: membersLoading } = useOrgUnitMembers(unit?.id ?? null);
   const { data: positions } = useOrgPositions();
-  const { data: usersPage } = useUsers({ limit: 200 });
+  const { data: usersPage } = useUsers({ limit: 200 }, { enabled: !!unit });
 
   const [addMode, setAddMode] = useState(false);
   const [newUserId, setNewUserId] = useState('');
