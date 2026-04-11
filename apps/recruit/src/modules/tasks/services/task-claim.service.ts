@@ -41,6 +41,37 @@ export class TaskClaimService {
     return updated;
   }
 
+  async assign(
+    taskId: string,
+    data: { userId?: string; teamId?: string },
+  ): Promise<{ id: string; assigneeId: string | null; assigneeTeamId: string | null }> {
+    if (!data.userId && !data.teamId) {
+      throw new BadRequestException('Either userId or teamId must be provided');
+    }
+    if (data.userId && data.teamId) {
+      throw new BadRequestException('Provide either userId or teamId, not both');
+    }
+
+    const [task] = await this.database.db
+      .select({ id: tasks.id })
+      .from(tasks)
+      .where(and(eq(tasks.id, taskId), isNull(tasks.deletedAt)));
+
+    if (!task) throw new BadRequestException('Task not found');
+
+    const set: Record<string, unknown> = data.userId
+      ? { assigneeId: data.userId, assigneeTeamId: null }
+      : { assigneeTeamId: data.teamId, assigneeId: null };
+
+    const [updated] = await this.database.db
+      .update(tasks)
+      .set(set)
+      .where(eq(tasks.id, taskId))
+      .returning({ id: tasks.id, assigneeId: tasks.assigneeId, assigneeTeamId: tasks.assigneeTeamId });
+
+    return updated;
+  }
+
   async unclaim(taskId: string, userId: string): Promise<{ id: string }> {
     const [task] = await this.database.db
       .select({
