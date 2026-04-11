@@ -6,12 +6,9 @@
   "dependencies": {
     "@nestjs/common": "^11.0.0",
     "@packages/common": "workspace:*",
-    "@packages/logger": "workspace:*",
-    "drizzle-orm": "^0.45.1",
-    "mustache": "^4.2.0"
+    "@packages/logger": "workspace:*"
   },
   "devDependencies": {
-    "@types/mustache": "^4.2.0",
     "typescript": "^5.7.0"
   }
 }

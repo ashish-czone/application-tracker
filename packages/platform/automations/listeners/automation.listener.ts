@@ -10,7 +10,8 @@ import {
   type Condition,
 } from '@packages/common';
 import { withTenantInsert } from '@packages/tenancy/helpers';
-import { ActionRegistry, UserResolverRegistry, EntityResolverRegistry, buildConditions } from '@packages/automation-contracts';
+import { ActionRegistry, UserResolverRegistry, EntityResolverRegistry } from '@packages/automation-contracts';
+import { buildConditions } from '../helpers/condition-builder';
 import type { AutomationRule, ActionConfig, ScheduleUnit } from '@packages/automation-contracts';
 import { AutomationRuleService } from '../services/automation-rule.service';
 import { ExecutionLogService } from '../services/execution-log.service';

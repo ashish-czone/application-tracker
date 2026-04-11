@@ -7,7 +7,8 @@ import {
   evaluatePayloadConditions,
   evaluateConditionsInMemory,
 } from '@packages/common';
-import { ActionRegistry, interpolateValues } from '@packages/automation-contracts';
+import { ActionRegistry } from '@packages/automation-contracts';
+import { interpolateValues } from '../helpers/interpolator';
 import type { AutomationRule, LifecycleUpdateBinding, LifecycleDeleteBinding } from '@packages/automation-contracts';
 import { AutomationRuleService } from './automation-rule.service';
 import { ProvenanceService } from './provenance.service';

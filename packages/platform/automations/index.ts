@@ -20,12 +20,14 @@ export {
 } from './schema';
 
 // Re-export everything from automation-contracts for backward compatibility
+export { buildConditions } from './helpers/condition-builder';
+export { interpolateValues } from './helpers/interpolator';
+
+// Re-export registries and types from automation-contracts for backward compatibility
 export {
   ActionRegistry,
   EntityResolverRegistry,
   UserResolverRegistry,
-  buildConditions,
-  interpolateValues,
   type UserResolverStrategy,
   type UserResolutionContext,
 } from '@packages/automation-contracts';

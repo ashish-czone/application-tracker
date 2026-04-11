@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
-import { interpolateValues } from '@packages/automation-contracts';
+import { interpolateValues } from '@packages/automations';
 import type { ActionHandler, ActionContext, ActionResult, UserSlotDefinition } from '@packages/automation-contracts';
 import { WorkflowEngineService } from './workflow-engine.service';
 
