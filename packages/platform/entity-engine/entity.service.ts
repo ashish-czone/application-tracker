@@ -88,25 +88,52 @@ export class EntityService {
     const table = config.table as any;
     const ownerField = config.dataAccess?.ownerField ?? 'createdBy';
     const ownerColumn = table[ownerField] as PgColumn | undefined;
+    const teamFieldKey = config.dataAccess?.teamField;
+    const teamColumn = teamFieldKey ? (table[teamFieldKey] as PgColumn | undefined) : undefined;
 
     if (ctx.scope === 'all') return undefined;
 
     if (ctx.scope === 'own') {
       if (!ownerColumn) return undefined;
-      return eq(ownerColumn, ctx.userId);
+      const ownerCond = eq(ownerColumn, ctx.userId);
+      // For 'own' with teamField: also include records assigned to user's direct teams
+      if (teamColumn && this.positionScopeProvider) {
+        const unitIds = await this.positionScopeProvider.resolveOrgUnitIds(ctx.userId, 'unit');
+        if (unitIds && unitIds.length > 0) {
+          return or(ownerCond, inArray(teamColumn, unitIds))!;
+        }
+      }
+      return ownerCond;
     }
 
     // Position-based scopes: 'descendants' and 'unit'
     if (ctx.scope === 'descendants' || ctx.scope === 'unit') {
-      if (!ownerColumn) return undefined;
-      if (this.positionScopeProvider) {
+      if (!this.positionScopeProvider) {
+        if (!ownerColumn) return undefined;
+        return eq(ownerColumn, ctx.userId);
+      }
+
+      const conditions: DrizzleSQL[] = [];
+
+      // Owner-based filtering
+      if (ownerColumn) {
         const userIds = await this.positionScopeProvider.resolveUserIds(ctx.userId, ctx.scope);
         if (!userIds) return undefined; // null = no filter
-        if (userIds.length === 0) return eq(ownerColumn, ctx.userId);
-        return inArray(ownerColumn, userIds);
+        conditions.push(userIds.length > 0 ? inArray(ownerColumn, userIds) : eq(ownerColumn, ctx.userId));
       }
-      // Fallback: treat as 'own' if no provider available
-      return eq(ownerColumn, ctx.userId);
+
+      // Team-based filtering
+      if (teamColumn) {
+        const unitIds = await this.positionScopeProvider.resolveOrgUnitIds(ctx.userId, ctx.scope);
+        if (unitIds === null) return conditions.length > 0 ? conditions[0] : undefined; // null = no filter on team
+        if (unitIds.length > 0) {
+          conditions.push(inArray(teamColumn, unitIds));
+        }
+      }
+
+      if (conditions.length === 0) return undefined;
+      if (conditions.length === 1) return conditions[0];
+      return or(...conditions)!;
     }
 
     // Custom scope: 'scope:<key>' (legacy format) or plain key (new format from positions)
