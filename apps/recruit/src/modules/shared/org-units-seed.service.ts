@@ -1,7 +1,7 @@
 import { Injectable, type OnApplicationBootstrap } from '@nestjs/common';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { DatabaseService, users, eq, isNull } from '@packages/database';
-import { UsersService } from '@packages/users';
+import { AuthService } from '@packages/auth';
 import { RbacService } from '@packages/rbac';
 import {
   OrgUnitService,
@@ -143,7 +143,7 @@ export class OrgUnitsSeedService implements OnApplicationBootstrap {
 
   constructor(
     private readonly database: DatabaseService,
-    private readonly usersService: UsersService,
+    private readonly authService: AuthService,
     private readonly rbacService: RbacService,
     private readonly orgUnitService: OrgUnitService,
     private readonly orgUnitLevelService: OrgUnitLevelService,
@@ -179,26 +179,19 @@ export class OrgUnitsSeedService implements OnApplicationBootstrap {
       return;
     }
 
-    const [admin] = await this.database.db
-      .select({ id: users.id })
-      .from(users)
-      .where(isNull(users.deletedAt))
-      .limit(1);
-
-    if (!admin) {
-      this.logger.warn('No admin user found — skipping user seeding');
-      return;
-    }
-
     for (const u of SEED_USERS) {
-      await this.usersService.create({
-        email: u.email,
-        firstName: u.firstName,
-        lastName: u.lastName,
-        password: 'Password123',
-        userType: 'client',
-        roleIds: [defaultRole.id],
-      }, admin.id);
+      const [user] = await this.database.db
+        .insert(users)
+        .values({
+          email: u.email.toLowerCase(),
+          firstName: u.firstName,
+          lastName: u.lastName,
+          userType: 'client',
+        })
+        .returning();
+
+      await this.authService.createPasswordCredential(user.id, u.email.toLowerCase(), 'Password123');
+      await this.rbacService.assignRoleToUser(user.id, defaultRole.id);
     }
 
     this.logger.log(`Seeded ${SEED_USERS.length} users`);
