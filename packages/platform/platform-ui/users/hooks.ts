@@ -10,11 +10,12 @@ function useUsersApi() {
   return useMemo(() => createUsersApi(apiFn), [apiFn]);
 }
 
-export function useUsers(params: ListUsersParams) {
+export function useUsers(params: ListUsersParams, options?: { enabled?: boolean }) {
   const api = useUsersApi();
   return useQuery({
     queryKey: ['users', params],
     queryFn: () => api.listUsers(params),
+    enabled: options?.enabled,
   });
 }
 
