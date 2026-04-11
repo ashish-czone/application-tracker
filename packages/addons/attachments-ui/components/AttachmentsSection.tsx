@@ -18,7 +18,7 @@ export function AttachmentsSection({ entityType, entityId }: AttachmentsSectionP
 
   // Read entity config for attachment restrictions
   const entityConfig = useEntityConfig(entityType);
-  const attachmentConfig = entityConfig?.features?.attachmentConfig;
+  const attachmentConfig = (entityConfig?.features as Record<string, unknown>)?.attachmentConfig as { acceptedMimeTypes?: string[]; maxFileSize?: number } | undefined;
 
   const apiBaseUrl = import.meta.env.VITE_API_URL || '/api/v1';
 

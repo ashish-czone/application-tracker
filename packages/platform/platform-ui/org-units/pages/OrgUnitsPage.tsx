@@ -291,7 +291,6 @@ export function OrgUnitsPage() {
         title="Delete Unit"
         description={`Are you sure you want to delete "${deleting?.name}"? This will also remove all its members. This cannot be undone.`}
         confirmLabel="Delete"
-        variant="destructive"
         isPending={deleteMutation.isPending}
         onConfirm={() => deleting && deleteMutation.mutate(deleting.id)}
       />

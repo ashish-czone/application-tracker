@@ -196,7 +196,6 @@ export function MembersDialog({ unit, onClose }: MembersDialogProps) {
         title="Remove Member"
         description={`Are you sure you want to remove "${removingMember?.userName}" from this unit?`}
         confirmLabel="Remove"
-        variant="destructive"
         isPending={removeMutation.isPending}
         onConfirm={() =>
           removingMember && unit && removeMutation.mutate({ unitId: unit.id, userId: removingMember.userId })

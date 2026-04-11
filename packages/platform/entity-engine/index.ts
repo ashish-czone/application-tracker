@@ -20,6 +20,7 @@ export type {
   EntityRegistryEntry,
   EntityAction,
   EntityActions,
+  PickerConfig,
   ListLayoutColumn,
   ListLayoutResponse,
   BaseListQuery,

@@ -183,7 +183,6 @@ export function OrgPositionsPage() {
         title="Delete Position"
         description={`Are you sure you want to delete "${deleting?.name}"? This cannot be undone.`}
         confirmLabel="Delete"
-        variant="destructive"
         isPending={deleteMutation.isPending}
         onConfirm={() => deleting && deleteMutation.mutate(deleting.id)}
       />

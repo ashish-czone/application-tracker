@@ -33,7 +33,7 @@ export function CreateOfferDialog({
             onOpenChange(false);
             onSuccess?.(entity);
           }}
-          onCancel={() => onOpenChange(false)}
+          onClose={() => onOpenChange(false)}
         />
       </DialogContent>
     </Dialog>

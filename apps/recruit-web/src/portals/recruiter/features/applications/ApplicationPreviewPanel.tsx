@@ -64,8 +64,9 @@ export function ApplicationPreviewPanel({
   const { data: layout } = useEntityLayout('applications');
   const updateMutation = hooks.useUpdate();
 
-  const { workflow, currentState } = useWorkflowForEntity('application-stage', 'applications', applicationId ?? '');
-  const transition = useEntityTransition('applications', applicationId ?? '', 'stage');
+  const { data: workflow } = useWorkflowForEntity('applications', applicationId ?? '', 'stage');
+  const currentState = item?.stage as string | undefined;
+  const transition = useEntityTransition('applications', 'applications', 'Application');
 
   const [confirmTransition, setConfirmTransition] = useState<{
     toState: string;
@@ -148,8 +149,8 @@ export function ApplicationPreviewPanel({
   };
 
   const handleConfirmTransition = async () => {
-    if (!confirmTransition) return;
-    await transition.mutateAsync({ toState: confirmTransition.toState });
+    if (!confirmTransition || !applicationId) return;
+    await transition.mutateAsync({ id: applicationId, fieldKey: 'stage', to: confirmTransition.toState });
     setConfirmTransition(null);
     queryClient.invalidateQueries({ queryKey: ['applications'] });
     onTransitionSuccess?.();
@@ -266,6 +267,7 @@ export function ApplicationPreviewPanel({
         <TransitionConfirmDialog
           open={!!confirmTransition}
           onOpenChange={(open) => { if (!open) setConfirmTransition(null); }}
+          transitionName={confirmTransition.transitionName}
           toStateLabel={confirmTransition.toStateLabel}
           isPending={transition.isPending}
           onConfirm={handleConfirmTransition}
