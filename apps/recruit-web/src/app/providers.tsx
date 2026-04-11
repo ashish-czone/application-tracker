@@ -15,6 +15,8 @@ import { SessionExpiredModal } from '@packages/platform-ui/auth/components/Sessi
 import { CANDIDATES_UI_CONFIG } from '../entities/candidates.config';
 import { OFFERS_UI_CONFIG } from '../entities/offers.config';
 import { AvatarNameCell, createStatusBadgeCell, type StatusColors } from '@packages/ui';
+import { TaskAssigneeCell } from '../portals/recruiter/features/tasks/components/TaskAssigneeCell';
+import { TaskClaimedByCell } from '../portals/recruiter/features/tasks/components/TaskClaimedByCell';
 
 const RECRUIT_STATUS_COLORS: Record<string, StatusColors> = {
   // Candidate statuses
@@ -91,6 +93,8 @@ const columnRenderers: Record<string, ColumnRendererRegistration> = {
   PipelineProgressRenderer: { component: PipelineProgressInline },
   StatusBadge: { component: RecruitStatusBadge },
   AvatarNameCell: { component: AvatarNameCell },
+  TaskAssigneeCell: { component: TaskAssigneeCell },
+  TaskClaimedByCell: { component: TaskClaimedByCell },
 };
 
 export function Providers({ children }: { children: ReactNode }) {
