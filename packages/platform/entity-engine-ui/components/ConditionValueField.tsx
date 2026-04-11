@@ -47,7 +47,7 @@ export function ConditionValueField({ field, value, onChange }: ConditionValueFi
 
   const searchUsers = useCallback(async (query: string) => {
     const res = await apiFn.get<{ data: { id: string; firstName: string; lastName: string }[] }>(
-      `/users?search=${encodeURIComponent(query)}&limit=20`,
+      `/users?search=${encodeURIComponent(query)}&limit=20&sort=firstName&order=asc`,
     );
     return res.data.map((u) => ({ label: `${u.firstName} ${u.lastName}`.trim(), value: u.id }));
   }, [apiFn]);

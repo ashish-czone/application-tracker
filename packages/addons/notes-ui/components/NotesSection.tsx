@@ -24,7 +24,7 @@ export function NotesSection({ entityType, entityId }: NotesSectionProps) {
 
   const searchUsers = useCallback(async (query: string): Promise<{ id: string; label: string }[]> => {
     const res = await apiFn.get<{ data: { id: string; firstName: string; lastName: string }[] }>(
-      `/users?search=${encodeURIComponent(query)}&limit=10`,
+      `/users?search=${encodeURIComponent(query)}&limit=10&sort=firstName&order=asc`,
     );
     return res.data.map((u) => ({
       id: u.id,
