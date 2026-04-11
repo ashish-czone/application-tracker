@@ -93,22 +93,13 @@ export const TASKS_CONFIG = defineEntity({
       quickCreate: true,
       excludeFromList: true,
     },
-    claimedById: {
-      type: 'user',
-      label: 'Claimed By',
-      system: true,
-      readonly: true,
-      listVisible: true,
-      listOrder: 5,
-      cellRenderer: 'TaskClaimedByCell',
-    },
     dueDate: {
       type: 'date',
       label: 'Due Date',
       sortable: true,
       quickCreate: true,
       listVisible: true,
-      listOrder: 6,
+      listOrder: 5,
     },
     createdBy: {
       type: 'user',
@@ -131,18 +122,16 @@ export const TASKS_CONFIG = defineEntity({
   hooks: {
     beforeCreate: async (payload: Record<string, unknown>) => {
       validateAssigneeExclusivity(payload);
-      // Clear claimedById on create — only set via claim endpoint
-      return { ...payload, claimedById: null };
+      return payload;
     },
     beforeUpdate: async (_id: string, payload: Record<string, unknown>) => {
       if ('assigneeId' in payload || 'assigneeTeamId' in payload) {
         validateAssigneeExclusivity(payload);
-        // If reassigning, clear the claim
         if ('assigneeId' in payload && payload.assigneeId) {
-          return { ...payload, assigneeTeamId: null, claimedById: null };
+          return { ...payload, assigneeTeamId: null };
         }
         if ('assigneeTeamId' in payload && payload.assigneeTeamId) {
-          return { ...payload, assigneeId: null, claimedById: null };
+          return { ...payload, assigneeId: null };
         }
       }
       return payload;
