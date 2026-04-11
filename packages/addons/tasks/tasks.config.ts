@@ -111,6 +111,7 @@ export const TASKS_CONFIG = defineEntity({
 
   dataAccess: {
     ownerField: 'assigneeId',
+    teamField: 'assigneeTeamId',
     scopes: [
       {
         key: 'my-tasks',

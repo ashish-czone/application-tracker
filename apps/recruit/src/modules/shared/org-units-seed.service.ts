@@ -8,7 +8,9 @@ import {
   OrgUnitLevelService,
   OrgPositionService,
   orgUnits,
+  orgPositionScopes,
 } from '@packages/org-units';
+import { tasks } from '@packages/tasks';
 
 interface SeedNode {
   name: string;
@@ -109,6 +111,32 @@ const TEAM_ASSIGNMENTS: Record<string, number[]> = {
   'Support Team':       [2, 10],
 };
 
+// Position scopes: Head/Lead → descendants, Member → unit
+const POSITION_SCOPES: { positionName: string; entityType: string; scope: string }[] = [
+  { positionName: 'Head', entityType: 'tasks', scope: 'descendants' },
+  { positionName: 'Lead', entityType: 'tasks', scope: 'descendants' },
+  { positionName: 'Member', entityType: 'tasks', scope: 'unit' },
+];
+
+// Sample tasks assigned to teams
+const SAMPLE_TASKS: { title: string; priority: string; teamName: string; dueOffset: number }[] = [
+  { title: 'Set up CI/CD pipeline for new microservice', priority: 'high', teamName: 'DevOps Team', dueOffset: 7 },
+  { title: 'Fix responsive layout on dashboard', priority: 'medium', teamName: 'Frontend Team', dueOffset: 3 },
+  { title: 'Implement user authentication API', priority: 'high', teamName: 'Backend Team', dueOffset: 5 },
+  { title: 'Prepare Q3 enterprise pitch deck', priority: 'urgent', teamName: 'Enterprise Sales', dueOffset: 2 },
+  { title: 'Update SMB pricing page copy', priority: 'low', teamName: 'SMB Sales', dueOffset: 10 },
+  { title: 'Screen 20 candidates for senior engineer role', priority: 'high', teamName: 'Talent Acquisition', dueOffset: 4 },
+  { title: 'Roll out new PTO policy', priority: 'medium', teamName: 'People Operations', dueOffset: 14 },
+  { title: 'Design onboarding flow mockups', priority: 'high', teamName: 'Design Team', dueOffset: 6 },
+  { title: 'Write E2E tests for checkout flow', priority: 'medium', teamName: 'QA Team', dueOffset: 5 },
+  { title: 'Resolve P1 customer ticket #4821', priority: 'urgent', teamName: 'Support Team', dueOffset: 1 },
+  { title: 'Migrate database to PostgreSQL 17', priority: 'medium', teamName: 'DevOps Team', dueOffset: 21 },
+  { title: 'Build reusable data table component', priority: 'medium', teamName: 'Frontend Team', dueOffset: 8 },
+  { title: 'Optimize bulk import endpoint', priority: 'low', teamName: 'Backend Team', dueOffset: 14 },
+  { title: 'Follow up with Globex Industries deal', priority: 'high', teamName: 'Enterprise Sales', dueOffset: 3 },
+  { title: 'Update employee handbook', priority: 'low', teamName: 'People Operations', dueOffset: 30 },
+];
+
 @Injectable()
 export class OrgUnitsSeedService implements OnApplicationBootstrap {
   private readonly logger: ContextLogger;
@@ -128,6 +156,8 @@ export class OrgUnitsSeedService implements OnApplicationBootstrap {
   async onApplicationBootstrap() {
     await this.ensureSeedUsers();
     await this.ensureOrgUnits();
+    await this.ensurePositionScopes();
+    await this.ensureSampleTasks();
   }
 
   // ---------------------------------------------------------------------------
@@ -259,5 +289,84 @@ export class OrgUnitsSeedService implements OnApplicationBootstrap {
     }
 
     this.logger.log(`Seeded ${unitCount} org units with ${memberCount} member assignments`);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Seed position scopes (Head/Lead → descendants, Member → unit)
+  // ---------------------------------------------------------------------------
+
+  private async ensurePositionScopes() {
+    const [existing] = await this.database.db
+      .select({ positionId: orgPositionScopes.positionId })
+      .from(orgPositionScopes)
+      .limit(1);
+
+    if (existing) return;
+
+    const positions = await this.orgPositionService.findAll();
+    const positionByName = new Map(positions.map((p) => [p.name, p.id]));
+
+    let scopeCount = 0;
+    for (const { positionName, entityType, scope } of POSITION_SCOPES) {
+      const positionId = positionByName.get(positionName);
+      if (!positionId) continue;
+
+      await this.database.db
+        .insert(orgPositionScopes)
+        .values({ positionId, entityType, scope })
+        .onConflictDoNothing();
+      scopeCount++;
+    }
+
+    this.logger.log(`Seeded ${scopeCount} position scopes for tasks`);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Seed sample tasks assigned to teams
+  // ---------------------------------------------------------------------------
+
+  private async ensureSampleTasks() {
+    const [existing] = await this.database.db
+      .select({ id: tasks.id })
+      .from(tasks)
+      .limit(1);
+
+    if (existing) return;
+
+    const [admin] = await this.database.db
+      .select({ id: users.id })
+      .from(users)
+      .where(isNull(users.deletedAt))
+      .limit(1);
+
+    if (!admin) return;
+
+    // Build team name → unit id map
+    const unitRows = await this.database.db
+      .select({ id: orgUnits.id, name: orgUnits.name })
+      .from(orgUnits);
+    const unitByName = new Map(unitRows.map((u) => [u.name, u.id]));
+
+    const now = Date.now();
+    let taskCount = 0;
+
+    for (const task of SAMPLE_TASKS) {
+      const teamId = unitByName.get(task.teamName);
+      if (!teamId) continue;
+
+      const dueDate = new Date(now + task.dueOffset * 24 * 60 * 60 * 1000);
+      const dueDateStr = dueDate.toISOString().split('T')[0];
+
+      await this.database.db.insert(tasks).values({
+        title: task.title,
+        priority: task.priority,
+        assigneeTeamId: teamId,
+        dueDate: dueDateStr,
+        createdBy: admin.id,
+      });
+      taskCount++;
+    }
+
+    this.logger.log(`Seeded ${taskCount} sample tasks`);
   }
 }
