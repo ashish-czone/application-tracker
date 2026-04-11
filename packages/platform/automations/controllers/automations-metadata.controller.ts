@@ -2,10 +2,8 @@ import { Controller, Get } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { RequirePermission } from '@packages/rbac';
 import { EventRegistryService, type EventMetadata } from '@packages/events';
-import { EntityResolverRegistry } from '../services/entity-resolver-registry';
-import { ActionRegistry } from '../services/action-registry';
-import { UserResolverRegistry } from '../services/user-resolver-registry';
-import type { ResolvedEntityFieldConfig, EntityUserFieldConfig } from '../types';
+import { EntityResolverRegistry, ActionRegistry, UserResolverRegistry } from '@packages/automation-contracts';
+import type { ResolvedEntityFieldConfig, EntityUserFieldConfig } from '@packages/automation-contracts';
 import { AUTOMATION_PERMISSIONS } from '../permissions';
 
 interface EntityResolverResponse {

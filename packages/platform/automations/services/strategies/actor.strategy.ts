@@ -1,5 +1,5 @@
-import type { UserResolution } from '../../types';
-import type { UserResolverStrategy, UserResolutionContext } from '../user-resolver-registry';
+import type { UserResolution } from '@packages/automation-contracts';
+import type { UserResolverStrategy, UserResolutionContext } from '@packages/automation-contracts';
 
 export class ActorStrategy implements UserResolverStrategy {
   readonly type = 'actor';

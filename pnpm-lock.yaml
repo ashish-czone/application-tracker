@@ -1615,12 +1615,6 @@ importers:
       '@types/pg':
         specifier: ^8.18.0
         version: 8.18.0
-      '@types/supertest':
-        specifier: ^6.0.2
-        version: 6.0.3
-      supertest:
-        specifier: ^7.0.0
-        version: 7.2.2
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -2136,6 +2130,31 @@ importers:
         specifier: ^3.2.0
         version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(terser@5.46.0)
 
+  packages/platform/automation-contracts:
+    dependencies:
+      '@nestjs/common':
+        specifier: ^11.0.0
+        version: 11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@packages/common':
+        specifier: workspace:*
+        version: link:../../core/common
+      '@packages/logger':
+        specifier: workspace:*
+        version: link:../../core/logger
+      drizzle-orm:
+        specifier: ^0.45.1
+        version: 0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3))
+      mustache:
+        specifier: ^4.2.0
+        version: 4.2.0
+    devDependencies:
+      '@types/mustache':
+        specifier: ^4.2.0
+        version: 4.2.6
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+
   packages/platform/automations:
     dependencies:
       '@nestjs/common':
@@ -2147,6 +2166,9 @@ importers:
       '@nestjs/swagger':
         specifier: ^11.0.0
         version: 11.2.6(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)
+      '@packages/automation-contracts':
+        specifier: workspace:*
+        version: link:../automation-contracts
       '@packages/common':
         specifier: workspace:*
         version: link:../../core/common
@@ -2276,18 +2298,9 @@ importers:
         specifier: ^7.0.0
         version: 7.8.2
     devDependencies:
-      '@packages/eav-attributes':
-        specifier: workspace:*
-        version: link:../../addons/eav-attributes
       '@packages/platform-testing':
         specifier: workspace:*
         version: link:../testing
-      '@packages/taxonomy':
-        specifier: workspace:*
-        version: link:../taxonomy
-      '@packages/workflows':
-        specifier: workspace:*
-        version: link:../workflows
       '@types/mustache':
         specifier: ^4.2.0
         version: 4.2.6
@@ -2433,9 +2446,6 @@ importers:
       '@packages/platform-testing':
         specifier: workspace:*
         version: link:../testing
-      '@packages/taxonomy':
-        specifier: workspace:*
-        version: link:../taxonomy
       mustache:
         specifier: ^4.2.0
         version: 4.2.0
@@ -2540,9 +2550,9 @@ importers:
       '@nestjs/swagger':
         specifier: ^11.0.0
         version: 11.2.6(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)
-      '@packages/automations':
+      '@packages/automation-contracts':
         specifier: workspace:*
-        version: link:../automations
+        version: link:../automation-contracts
       '@packages/common':
         specifier: workspace:*
         version: link:../../core/common
@@ -2730,6 +2740,9 @@ importers:
       '@nestjs/swagger':
         specifier: ^11.0.0
         version: 11.2.6(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)
+      '@packages/automation-contracts':
+        specifier: workspace:*
+        version: link:../automation-contracts
       '@packages/database':
         specifier: workspace:*
         version: link:../../core/database
@@ -2782,9 +2795,9 @@ importers:
       '@nestjs/testing':
         specifier: ^11.0.0
         version: 11.1.16(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(@nestjs/platform-express@11.1.16)
-      '@packages/automations':
+      '@packages/automation-contracts':
         specifier: workspace:*
-        version: link:../automations
+        version: link:../automation-contracts
       '@packages/database':
         specifier: workspace:*
         version: link:../../core/database
@@ -2794,9 +2807,6 @@ importers:
       '@packages/logger':
         specifier: workspace:*
         version: link:../../core/logger
-      '@packages/notifications':
-        specifier: workspace:*
-        version: link:../notifications
       '@packages/queue':
         specifier: workspace:*
         version: link:../../core/queue
@@ -2818,9 +2828,9 @@ importers:
       '@nestjs/swagger':
         specifier: ^11.0.0
         version: 11.2.6(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)
-      '@packages/automations':
+      '@packages/automation-contracts':
         specifier: workspace:*
-        version: link:../automations
+        version: link:../automation-contracts
       '@packages/common':
         specifier: workspace:*
         version: link:../../core/common

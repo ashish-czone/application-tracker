@@ -3,7 +3,7 @@ import { DatabaseService, eq, and, ilike, asc, desc, count } from '@packages/dat
 import type { PaginatedResponse } from '@packages/common';
 import { withTenant, withTenantInsert } from '@packages/tenancy/helpers';
 import { automationRules } from '../schema/automation-rules';
-import type { AutomationRule, ActionConfig, LifecycleUpdateBinding, LifecycleDeleteBinding, TriggerType } from '../types';
+import type { AutomationRule, ActionConfig, LifecycleUpdateBinding, LifecycleDeleteBinding, TriggerType } from '@packages/automation-contracts';
 import type { Condition } from '@packages/common';
 
 @Injectable()

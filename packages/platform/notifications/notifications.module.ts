@@ -2,7 +2,7 @@ import { Global, Module, type OnModuleInit } from '@nestjs/common';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { QueueService } from '@packages/queue';
 import { RbacService } from '@packages/rbac';
-import { ActionRegistry } from '@packages/automations';
+import { ActionRegistry } from '@packages/automation-contracts';
 import { NotificationChannelsModule, EmailChannelService, WhatsAppChannelService, InAppChannel } from '@packages/notification-channels';
 import type { EmailPayload, WhatsAppPayload } from '@packages/notification-channels';
 import { NotificationTemplatesService } from './services/notification-templates.service';

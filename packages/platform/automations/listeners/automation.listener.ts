@@ -10,15 +10,12 @@ import {
   type Condition,
 } from '@packages/common';
 import { withTenantInsert } from '@packages/tenancy/helpers';
+import { ActionRegistry, UserResolverRegistry, EntityResolverRegistry, buildConditions } from '@packages/automation-contracts';
+import type { AutomationRule, ActionConfig, ScheduleUnit } from '@packages/automation-contracts';
 import { AutomationRuleService } from '../services/automation-rule.service';
-import { ActionRegistry } from '../services/action-registry';
-import { UserResolverRegistry } from '../services/user-resolver-registry';
-import { EntityResolverRegistry } from '../services/entity-resolver-registry';
 import { ExecutionLogService } from '../services/execution-log.service';
 import { ProvenanceService } from '../services/provenance.service';
-import { buildConditions } from '../helpers/condition-builder';
 import { automationScheduled } from '../schema/automation-scheduled';
-import type { AutomationRule, ActionConfig, ScheduleUnit } from '../types';
 
 @Injectable()
 export class AutomationListener {

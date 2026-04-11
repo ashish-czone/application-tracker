@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { QueueService } from '@packages/queue';
 import Mustache from 'mustache';
-import type { ActionHandler, ActionContext, ActionResult, UserSlotDefinition } from '../../types';
+import type { ActionHandler, ActionContext, ActionResult, UserSlotDefinition } from '@packages/automation-contracts';
 
 export const WEBHOOK_QUEUE_NAME = 'automation.webhook';
 

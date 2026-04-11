@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SendNotificationAction } from '../send-notification.action';
 import { TemplateRenderer } from '../template-renderer';
-import type { ActionContext, AutomationRule } from '@packages/automations';
+import type { ActionContext, AutomationRule } from '@packages/automation-contracts';
 import type { AppLoggerService } from '@packages/logger';
 
 function createMockAppLogger(): AppLoggerService {

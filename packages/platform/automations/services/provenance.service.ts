@@ -3,7 +3,7 @@ import { DatabaseService, eq, and } from '@packages/database';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { withTenant, withTenantInsert } from '@packages/tenancy/helpers';
 import { automationActionLog } from '../schema/automation-action-log';
-import type { AutomationActionLogEntry } from '../types';
+import type { AutomationActionLogEntry } from '@packages/automation-contracts';
 
 @Injectable()
 export class ProvenanceService {

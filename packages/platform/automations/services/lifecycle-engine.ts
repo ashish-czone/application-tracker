@@ -7,11 +7,10 @@ import {
   evaluatePayloadConditions,
   evaluateConditionsInMemory,
 } from '@packages/common';
+import { ActionRegistry, interpolateValues } from '@packages/automation-contracts';
+import type { AutomationRule, LifecycleUpdateBinding, LifecycleDeleteBinding } from '@packages/automation-contracts';
 import { AutomationRuleService } from './automation-rule.service';
-import { ActionRegistry } from './action-registry';
 import { ProvenanceService } from './provenance.service';
-import { interpolateValues } from '../helpers/interpolator';
-import type { AutomationRule, LifecycleUpdateBinding, LifecycleDeleteBinding } from '../types';
 
 @Injectable()
 export class LifecycleEngine {

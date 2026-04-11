@@ -1,6 +1,6 @@
 import { Global, Module, type OnModuleInit } from '@nestjs/common';
 import { RbacService } from '@packages/rbac';
-import { ActionRegistry } from '@packages/automations';
+import { ActionRegistry } from '@packages/automation-contracts';
 import { WORKFLOW_EXTENSION } from '@packages/entity-engine/extensions';
 import { fieldTypeRegistry } from '@packages/field-types';
 import { workflowFieldTypesPlugin } from './field-types';

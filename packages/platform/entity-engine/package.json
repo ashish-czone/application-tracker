@@ -22,9 +22,6 @@
   },
   "devDependencies": {
     "@packages/platform-testing": "workspace:*",
-    "@packages/eav-attributes": "workspace:*",
-    "@packages/taxonomy": "workspace:*",
-    "@packages/workflows": "workspace:*",
     "@types/mustache": "^4.2.0",
     "drizzle-orm": "^0.45.1",
     "typescript": "^5.7.0",

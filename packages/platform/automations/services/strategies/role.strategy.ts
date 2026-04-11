@@ -1,8 +1,8 @@
 import { DatabaseService, eq } from '@packages/database';
 import { userRoles } from '@packages/rbac';
 import { withTenant } from '@packages/tenancy/helpers';
-import type { UserResolution } from '../../types';
-import type { UserResolverStrategy, UserResolutionContext } from '../user-resolver-registry';
+import type { UserResolution } from '@packages/automation-contracts';
+import type { UserResolverStrategy, UserResolutionContext } from '@packages/automation-contracts';
 
 /**
  * Resolves all users with a specific role.

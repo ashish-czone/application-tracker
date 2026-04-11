@@ -4,7 +4,28 @@ import { createPlatformTestModule, cleanDatabase } from '@packages/platform-test
 import { sql } from '@packages/database';
 import { HierarchyModule } from '../../hierarchy.module';
 import { HierarchyService } from '../hierarchy.service';
-import { categories, categoryGroups } from '@packages/taxonomy';
+import { pgTable, text, integer } from 'drizzle-orm/pg-core';
+
+/**
+ * Inline Drizzle table references matching the taxonomy migration schema.
+ * Defined here to avoid a devDependency on @packages/taxonomy (which depends
+ * on @packages/hierarchy at runtime, creating a cycle).
+ */
+const categoryGroups = pgTable('category_groups', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  slug: text('slug').notNull(),
+});
+
+const categories = pgTable('categories', {
+  id: text('id').primaryKey(),
+  groupId: text('group_id').notNull(),
+  parentId: text('parent_id'),
+  path: text('path').notNull().default('/'),
+  depth: integer('depth').notNull().default(0),
+  name: text('name').notNull(),
+  slug: text('slug').notNull(),
+});
 import type { DrizzleDB } from '@packages/database';
 import type { TestingModule } from '@nestjs/testing';
 

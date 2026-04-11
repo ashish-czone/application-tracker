@@ -1,7 +1,5 @@
 import { Global, Module } from '@nestjs/common';
-import { ActionRegistry } from '@packages/automations/services/action-registry';
-import { EntityResolverRegistry } from '@packages/automations/services/entity-resolver-registry';
-import { UserResolverRegistry } from '@packages/automations/services/user-resolver-registry';
+import { ActionRegistry, EntityResolverRegistry, UserResolverRegistry } from '@packages/automation-contracts';
 
 /**
  * Mock AutomationsModule that provides the registries without the full module.
