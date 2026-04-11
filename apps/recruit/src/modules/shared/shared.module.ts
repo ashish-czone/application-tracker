@@ -4,11 +4,12 @@ import { UniqueCheckController } from './controllers/unique-check.controller';
 import { EntityMetadataController } from './controllers/entity-metadata.controller';
 import { CountriesSeedService } from './countries-seed.service';
 import { TaxonomySeedService } from './taxonomy-seed.service';
+import { OrgUnitsSeedService } from './org-units-seed.service';
 
 @Global()
 @Module({
   controllers: [UniqueCheckController, EntityMetadataController],
-  providers: [UniqueCheckService, CountriesSeedService, TaxonomySeedService],
+  providers: [UniqueCheckService, CountriesSeedService, TaxonomySeedService, OrgUnitsSeedService],
   exports: [UniqueCheckService],
 })
 export class SharedModule {}
