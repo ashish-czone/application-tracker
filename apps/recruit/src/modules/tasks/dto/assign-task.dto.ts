@@ -1,4 +1,4 @@
-import { IsOptional, IsUUID, ValidateIf } from 'class-validator';
+import { IsOptional, IsUUID } from 'class-validator';
 
 export class AssignTaskDto {
   @IsOptional()

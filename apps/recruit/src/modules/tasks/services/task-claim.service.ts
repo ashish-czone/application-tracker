@@ -38,7 +38,8 @@ export class TaskClaimService {
 
     if (!updated) throw new ConflictException('Task was claimed by someone else');
 
-    return updated;
+    // assigneeId is guaranteed non-null: we just set it to userId above
+    return updated as { id: string; assigneeId: string };
   }
 
   async assign(
