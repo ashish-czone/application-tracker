@@ -688,12 +688,12 @@ export class EntityService {
   // UPDATE
   // ---------------------------------------------------------------------------
 
-  async update(id: string, payload: Record<string, unknown>, actorId: string): Promise<Record<string, unknown>> {
+  async update(id: string, payload: Record<string, unknown>, actorId: string, accessCtx?: DataAccessContext): Promise<Record<string, unknown>> {
     const { config } = this;
     const table = config.table as any;
 
-    // Ensure entity exists
-    await this.findOneOrFail(id);
+    // Ensure entity exists and is within the actor's scope
+    await this.findOneOrFail(id, accessCtx);
 
     let data = { ...payload };
 
@@ -865,14 +865,15 @@ export class EntityService {
     toState: string,
     actorId: string,
     options?: { reason?: string; comment?: string },
+    accessCtx?: DataAccessContext,
   ): Promise<Record<string, unknown>> {
     const { config } = this;
     const table = config.table as any;
     const reason = options?.reason;
     const comment = options?.comment;
 
-    // 1. Get current entity
-    const entity = await this.findOneOrFail(id);
+    // 1. Get current entity (scope-checked)
+    const entity = await this.findOneOrFail(id, accessCtx);
 
     // 2. Look up workflow — check assignment first, fall back to default
     if (!this.workflowExt) {
@@ -993,9 +994,9 @@ export class EntityService {
   // SOFT DELETE
   // ---------------------------------------------------------------------------
 
-  async softDelete(id: string, actorId: string): Promise<void> {
+  async softDelete(id: string, actorId: string, accessCtx?: DataAccessContext): Promise<void> {
     const { config } = this;
-    const entity = await this.findOneOrFail(id);
+    const entity = await this.findOneOrFail(id, accessCtx);
 
     // Hook: beforeDelete
     if (config.hooks?.beforeDelete) {

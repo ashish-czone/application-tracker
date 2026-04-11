@@ -142,7 +142,8 @@ export function createEntityController(config: EntityConfig, serviceToken: strin
       @Body() body: Record<string, unknown>,
       @CurrentUser() user: JwtPayload,
     ) {
-      return this.entityService.update(id, body, user.userId);
+      const accessCtx = await buildAccessContext(user, updatePermission, config.entityType, this.positionScopeProvider);
+      return this.entityService.update(id, body, user.userId, accessCtx);
     }
 
     @Delete(':id')
@@ -150,7 +151,8 @@ export function createEntityController(config: EntityConfig, serviceToken: strin
     @HttpCode(HttpStatus.NO_CONTENT)
     @ApiOperation({ summary: `Soft delete a ${config.singularName.toLowerCase()}` })
     async delete(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: JwtPayload) {
-      await this.entityService.softDelete(id, user.userId);
+      const accessCtx = await buildAccessContext(user, deletePermission, config.entityType, this.positionScopeProvider);
+      await this.entityService.softDelete(id, user.userId, accessCtx);
     }
 
     @Post(':id/transition')
@@ -161,7 +163,8 @@ export function createEntityController(config: EntityConfig, serviceToken: strin
       @Body() body: { fieldKey: string; to: string; reason?: string; comment?: string },
       @CurrentUser() user: JwtPayload,
     ) {
-      return this.entityService.transition(id, body.fieldKey, body.to, user.userId, { reason: body.reason, comment: body.comment });
+      const accessCtx = await buildAccessContext(user, updatePermission, config.entityType, this.positionScopeProvider);
+      return this.entityService.transition(id, body.fieldKey, body.to, user.userId, { reason: body.reason, comment: body.comment }, accessCtx);
     }
 
     @Post(':id/clone')
