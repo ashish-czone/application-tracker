@@ -50,6 +50,7 @@ import { ApplicationsModule } from './modules/applications/applications.module';
 import { ClientsModule } from './modules/clients/clients.module';
 import { JobOpeningsModule } from './modules/job-openings/job-openings.module';
 import { TASKS_CONFIG } from '@packages/tasks';
+import { TasksModule } from './modules/tasks/tasks.module';
 import { UsersModule } from '@packages/users';
 import { OrgUnitsModule } from '@packages/org-units';
 import { validate } from './config/env.validation';
@@ -147,6 +148,7 @@ import { validate } from './config/env.validation';
     EntityEngineModule.forEntity(INTERVIEWS_CONFIG),
     EntityEngineModule.forEntity(offersConfig),
     EntityEngineModule.forEntity(TASKS_CONFIG),
+    TasksModule, // claim/unclaim for team-assigned tasks
     OffersModule, // offer approval chain + guard
     ApplicationsModule, // domain-specific automation strategies + seed data
     CandidatesModule, // extras: resume upload, skill tags, sample data seeding
