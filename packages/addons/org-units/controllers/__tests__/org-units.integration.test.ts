@@ -24,18 +24,28 @@ describe('OrgUnitController (integration)', () => {
     await ctx.cleanup();
   });
 
-  beforeEach(async () => {
-    await cleanDatabase(ctx.db);
-  });
-
   // ── Helpers ──────────────────────────────────────────────────
 
   let seq = 0;
+  let defaultLevelId: string;
+
+  beforeEach(async () => {
+    await cleanDatabase(ctx.db);
+    seq = 0;
+    // Seed a default level for tests
+    const levelRes = await request(ctx.httpServer)
+      .post('/api/v1/org-unit-levels')
+      .set(withAuth(MANAGE))
+      .send({ name: 'Team', sortOrder: 0 })
+      .expect(201);
+    defaultLevelId = levelRes.body.id;
+  });
 
   async function createOrgUnit(overrides: Record<string, unknown> = {}) {
     seq++;
     const body = {
       name: `Department ${seq}`,
+      levelId: defaultLevelId,
       ...overrides,
     };
     const res = await request(ctx.httpServer)
@@ -55,6 +65,7 @@ describe('OrgUnitController (integration)', () => {
       expect(unit).toMatchObject({
         id: expect.any(String),
         name: 'Engineering',
+        levelId: defaultLevelId,
       });
     });
 
@@ -72,7 +83,15 @@ describe('OrgUnitController (integration)', () => {
       await request(ctx.httpServer)
         .post('/api/v1/org-units')
         .set(withAuth(MANAGE))
-        .send({})
+        .send({ levelId: defaultLevelId })
+        .expect(400);
+    });
+
+    it('should reject missing levelId', async () => {
+      await request(ctx.httpServer)
+        .post('/api/v1/org-units')
+        .set(withAuth(MANAGE))
+        .send({ name: 'Test' })
         .expect(400);
     });
 
@@ -80,13 +99,13 @@ describe('OrgUnitController (integration)', () => {
       await request(ctx.httpServer)
         .post('/api/v1/org-units')
         .set(withAuth(MANAGE))
-        .send({ name: 'Test', hackField: 'injected' })
+        .send({ name: 'Test', levelId: defaultLevelId, hackField: 'injected' })
         .expect(400);
     });
   });
 
   describe('GET /api/v1/org-units', () => {
-    it('should list all org units', async () => {
+    it('should list all org units with level and head info', async () => {
       await createOrgUnit({ name: 'Alpha' });
       await createOrgUnit({ name: 'Beta' });
 
@@ -97,6 +116,9 @@ describe('OrgUnitController (integration)', () => {
 
       expect(res.body).toBeInstanceOf(Array);
       expect(res.body.length).toBeGreaterThanOrEqual(2);
+      expect(res.body[0]).toHaveProperty('level');
+      expect(res.body[0]).toHaveProperty('head');
+      expect(res.body[0]).toHaveProperty('memberCount');
     });
   });
 
@@ -178,7 +200,7 @@ describe('OrgUnitController (integration)', () => {
         .expect(204);
     });
 
-    it('should list members of an org unit', async () => {
+    it('should list members with details', async () => {
       const unit = await createOrgUnit({ name: 'Team' });
       await request(ctx.httpServer)
         .post(`/api/v1/org-units/${unit.id}/members/${testUserId}`)
@@ -192,6 +214,10 @@ describe('OrgUnitController (integration)', () => {
 
       expect(res.body).toBeInstanceOf(Array);
       expect(res.body.length).toBeGreaterThanOrEqual(1);
+      expect(res.body[0]).toHaveProperty('userId');
+      expect(res.body[0]).toHaveProperty('userName');
+      expect(res.body[0]).toHaveProperty('positionId');
+      expect(res.body[0]).toHaveProperty('positionName');
     });
 
     it('should remove a member from an org unit', async () => {
@@ -221,7 +247,7 @@ describe('OrgUnitController (integration)', () => {
       await request(ctx.httpServer)
         .post('/api/v1/org-units')
         .set(withAuth(READ))
-        .send({ name: 'Test' })
+        .send({ name: 'Test', levelId: defaultLevelId })
         .expect(403);
     });
 

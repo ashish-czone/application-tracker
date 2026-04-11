@@ -1,17 +1,9 @@
 import { IsString, IsOptional, IsInt, Min } from 'class-validator';
 
-export class UpdateOrgUnitDto {
+export class UpdateOrgUnitLevelDto {
   @IsOptional()
   @IsString()
   name?: string;
-
-  @IsOptional()
-  @IsString()
-  parentId?: string | null;
-
-  @IsOptional()
-  @IsString()
-  levelId?: string;
 
   @IsOptional()
   @IsInt()

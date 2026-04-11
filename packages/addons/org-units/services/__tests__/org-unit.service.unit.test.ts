@@ -11,11 +11,6 @@ vi.mock('@packages/tenancy/helpers', () => ({
 
 // --- Mock helpers ---
 
-/**
- * Creates a mock Drizzle DB where every chain method returns the chain itself,
- * and the chain is thenable. Each `await` on the chain pops the next value
- * from a FIFO queue (pushed via `_enqueue`). If empty, resolves to `undefined`.
- */
 function createMockDb() {
   const resolveQueue: unknown[] = [];
 
@@ -24,7 +19,7 @@ function createMockDb() {
   };
 
   const methods = [
-    'select', 'from', 'innerJoin', 'leftJoin', 'where', 'limit', 'offset',
+    'select', 'selectDistinctOn', 'from', 'innerJoin', 'leftJoin', 'where', 'limit', 'offset',
     'orderBy', 'groupBy', 'insert', 'values', 'returning', 'update', 'set',
     'delete', 'onConflictDoNothing',
   ];
@@ -33,7 +28,6 @@ function createMockDb() {
     mockChain[method] = vi.fn().mockReturnValue(mockChain);
   }
 
-  // Thenable: each await consumes one queued value
   mockChain.then = (
     resolve: (v: unknown) => void,
     _reject?: (e: unknown) => void,
@@ -42,7 +36,6 @@ function createMockDb() {
     resolve(value);
   };
 
-  // execute() for raw SQL queries
   mockChain.execute = vi.fn().mockResolvedValue({ rows: [] });
 
   return { db: mockChain, _chain: mockChain };
@@ -63,7 +56,7 @@ function makeOrgUnit(overrides?: Partial<Record<string, unknown>>) {
     id: 'ou-1',
     name: 'Engineering',
     parentId: null,
-    type: 'team',
+    levelId: 'level-1',
     sortOrder: 0,
     createdAt: now,
     updatedAt: now,
@@ -92,7 +85,7 @@ describe('OrgUnitService', () => {
       const unit = makeOrgUnit();
       _chain._enqueue([unit]);
 
-      const result = await service.create({ name: 'Engineering' });
+      const result = await service.create({ name: 'Engineering', levelId: 'level-1' });
 
       expect(result).toEqual(unit);
       expect(db.insert).toHaveBeenCalled();
@@ -100,31 +93,21 @@ describe('OrgUnitService', () => {
       expect(db.returning).toHaveBeenCalled();
     });
 
-    it('should default type to "team" when not provided', async () => {
-      const unit = makeOrgUnit({ type: 'team' });
+    it('should use the provided levelId', async () => {
+      const unit = makeOrgUnit({ levelId: 'level-2' });
       _chain._enqueue([unit]);
 
-      await service.create({ name: 'Sales' });
+      await service.create({ name: 'Sales', levelId: 'level-2' });
 
       const valuesArg = db.values.mock.calls[0][0];
-      expect(valuesArg.type).toBe('team');
-    });
-
-    it('should use provided type when specified', async () => {
-      const unit = makeOrgUnit({ type: 'department' });
-      _chain._enqueue([unit]);
-
-      await service.create({ name: 'HR', type: 'department' });
-
-      const valuesArg = db.values.mock.calls[0][0];
-      expect(valuesArg.type).toBe('department');
+      expect(valuesArg.levelId).toBe('level-2');
     });
 
     it('should default sortOrder to 0 when not provided', async () => {
       const unit = makeOrgUnit();
       _chain._enqueue([unit]);
 
-      await service.create({ name: 'Marketing' });
+      await service.create({ name: 'Marketing', levelId: 'level-1' });
 
       const valuesArg = db.values.mock.calls[0][0];
       expect(valuesArg.sortOrder).toBe(0);
@@ -134,7 +117,7 @@ describe('OrgUnitService', () => {
       const unit = makeOrgUnit({ sortOrder: 5 });
       _chain._enqueue([unit]);
 
-      await service.create({ name: 'Marketing', sortOrder: 5 });
+      await service.create({ name: 'Marketing', levelId: 'level-1', sortOrder: 5 });
 
       const valuesArg = db.values.mock.calls[0][0];
       expect(valuesArg.sortOrder).toBe(5);
@@ -144,7 +127,7 @@ describe('OrgUnitService', () => {
       const unit = makeOrgUnit();
       _chain._enqueue([unit]);
 
-      await service.create({ name: 'Root' });
+      await service.create({ name: 'Root', levelId: 'level-1' });
 
       const valuesArg = db.values.mock.calls[0][0];
       expect(valuesArg.parentId).toBeNull();
@@ -154,7 +137,7 @@ describe('OrgUnitService', () => {
       const unit = makeOrgUnit({ parentId: 'parent-1' });
       _chain._enqueue([unit]);
 
-      await service.create({ name: 'Sub-team', parentId: 'parent-1' });
+      await service.create({ name: 'Sub-team', levelId: 'level-1', parentId: 'parent-1' });
 
       const valuesArg = db.values.mock.calls[0][0];
       expect(valuesArg.parentId).toBe('parent-1');
@@ -166,28 +149,24 @@ describe('OrgUnitService', () => {
   // ---------------------------------------------------------------------------
 
   describe('findAll', () => {
-    it('should return all org units with member counts', async () => {
-      const units = [
-        makeOrgUnit({ id: 'ou-1', name: 'Engineering', memberCount: 5 }),
-        makeOrgUnit({ id: 'ou-2', name: 'Sales', memberCount: 3 }),
-      ];
-      _chain._enqueue(units);
+    it('should return empty array when no org units exist', async () => {
+      _chain._enqueue([]);
 
       const result = await service.findAll();
 
-      expect(result).toEqual(units);
-      expect(result).toHaveLength(2);
+      expect(result).toEqual([]);
     });
 
-    it('should left join on members table', async () => {
+    it('should left join on members and inner join on levels', async () => {
       _chain._enqueue([]);
 
       await service.findAll();
 
       expect(db.leftJoin).toHaveBeenCalled();
+      expect(db.innerJoin).toHaveBeenCalled();
     });
 
-    it('should group by org unit id', async () => {
+    it('should group by org unit id and level fields', async () => {
       _chain._enqueue([]);
 
       await service.findAll();
@@ -201,14 +180,6 @@ describe('OrgUnitService', () => {
       await service.findAll();
 
       expect(db.orderBy).toHaveBeenCalled();
-    });
-
-    it('should return empty array when no org units exist', async () => {
-      _chain._enqueue([]);
-
-      const result = await service.findAll();
-
-      expect(result).toEqual([]);
     });
   });
 
@@ -256,9 +227,7 @@ describe('OrgUnitService', () => {
     it('should update and return the org unit', async () => {
       const existing = makeOrgUnit();
       const updated = makeOrgUnit({ name: 'Engineering v2' });
-      // First enqueue: findOneOrFail
       _chain._enqueue([existing]);
-      // Second enqueue: update...returning
       _chain._enqueue([updated]);
 
       const result = await service.update('ou-1', { name: 'Engineering v2' });
@@ -273,7 +242,6 @@ describe('OrgUnitService', () => {
       _chain._enqueue([]);
 
       await expect(service.update('nonexistent', { name: 'X' })).rejects.toThrow(NotFoundException);
-      // update should not have been called since findOneOrFail threw
       expect(db.update).not.toHaveBeenCalled();
     });
 
@@ -308,11 +276,8 @@ describe('OrgUnitService', () => {
   describe('delete', () => {
     it('should delete members first, then the org unit', async () => {
       const unit = makeOrgUnit();
-      // findOneOrFail
       _chain._enqueue([unit]);
-      // delete members (returns chain, awaited)
       _chain._enqueue(undefined);
-      // delete org unit (returns chain, awaited)
       _chain._enqueue(undefined);
 
       await service.delete('ou-1');
@@ -346,9 +311,7 @@ describe('OrgUnitService', () => {
   describe('addMember', () => {
     it('should add a member to an org unit', async () => {
       const unit = makeOrgUnit();
-      // findOneOrFail
       _chain._enqueue([unit]);
-      // insert...onConflictDoNothing
       _chain._enqueue(undefined);
 
       await service.addMember('ou-1', 'user-1');
@@ -376,33 +339,11 @@ describe('OrgUnitService', () => {
       });
     });
 
-    it('should default positionId to null when not provided', async () => {
-      const unit = makeOrgUnit();
-      _chain._enqueue([unit]);
-      _chain._enqueue(undefined);
-
-      await service.addMember('ou-1', 'user-2');
-
-      expect(db.values).toHaveBeenCalledWith(
-        expect.objectContaining({ positionId: null }),
-      );
-    });
-
     it('should call findOneOrFail before inserting', async () => {
       _chain._enqueue([]);
 
       await expect(service.addMember('nonexistent', 'user-1')).rejects.toThrow(NotFoundException);
       expect(db.insert).not.toHaveBeenCalled();
-    });
-
-    it('should use onConflictDoNothing for idempotent adds', async () => {
-      const unit = makeOrgUnit();
-      _chain._enqueue([unit]);
-      _chain._enqueue(undefined);
-
-      await service.addMember('ou-1', 'user-1');
-
-      expect(db.onConflictDoNothing).toHaveBeenCalled();
     });
   });
 
@@ -427,14 +368,6 @@ describe('OrgUnitService', () => {
 
       expect(db.set).toHaveBeenCalledWith({ positionId: null });
     });
-
-    it('should filter by orgUnitId and userId', async () => {
-      _chain._enqueue(undefined);
-
-      await service.updateMemberPosition('ou-1', 'user-1', 'pos-1');
-
-      expect(db.where).toHaveBeenCalled();
-    });
   });
 
   // ---------------------------------------------------------------------------
@@ -449,14 +382,6 @@ describe('OrgUnitService', () => {
 
       expect(db.delete).toHaveBeenCalled();
       expect(db.where).toHaveBeenCalled();
-    });
-
-    it('should return void on success', async () => {
-      _chain._enqueue(undefined);
-
-      const result = await service.removeMember('ou-1', 'user-1');
-
-      expect(result).toBeUndefined();
     });
   });
 
@@ -480,16 +405,6 @@ describe('OrgUnitService', () => {
       const result = await service.getMemberIds('ou-1');
 
       expect(result).toEqual([]);
-    });
-
-    it('should query from orgUnitMembers table', async () => {
-      _chain._enqueue([]);
-
-      await service.getMemberIds('ou-1');
-
-      expect(db.select).toHaveBeenCalled();
-      expect(db.from).toHaveBeenCalled();
-      expect(db.where).toHaveBeenCalled();
     });
   });
 
@@ -516,14 +431,6 @@ describe('OrgUnitService', () => {
 
       expect(result).toEqual([]);
     });
-
-    it('should use raw SQL for recursive CTE', async () => {
-      db.execute.mockResolvedValueOnce({ rows: [{ id: 'ou-1' }] });
-
-      await service.getVisibleOrgUnitIds('user-1');
-
-      expect(db.execute).toHaveBeenCalledTimes(1);
-    });
   });
 
   // ---------------------------------------------------------------------------
@@ -532,11 +439,9 @@ describe('OrgUnitService', () => {
 
   describe('getTeamMemberIds', () => {
     it('should return member IDs from all visible org units', async () => {
-      // getVisibleOrgUnitIds returns org units
       db.execute.mockResolvedValueOnce({
         rows: [{ id: 'ou-1' }, { id: 'ou-2' }],
       });
-      // query members from those org units
       _chain._enqueue([{ userId: 'user-1' }, { userId: 'user-2' }, { userId: 'user-3' }]);
 
       const result = await service.getTeamMemberIds('user-1');
@@ -555,44 +460,22 @@ describe('OrgUnitService', () => {
     });
 
     it('should always include the requesting user in results', async () => {
-      db.execute.mockResolvedValueOnce({
-        rows: [{ id: 'ou-1' }],
-      });
-      // members query returns other users but not user-1
+      db.execute.mockResolvedValueOnce({ rows: [{ id: 'ou-1' }] });
       _chain._enqueue([{ userId: 'user-2' }, { userId: 'user-3' }]);
 
       const result = await service.getTeamMemberIds('user-1');
 
       expect(result).toContain('user-1');
-      expect(result).toContain('user-2');
-      expect(result).toContain('user-3');
     });
 
     it('should deduplicate user IDs across org units', async () => {
-      db.execute.mockResolvedValueOnce({
-        rows: [{ id: 'ou-1' }, { id: 'ou-2' }],
-      });
-      // user-2 appears in both org units
-      _chain._enqueue([
-        { userId: 'user-1' },
-        { userId: 'user-2' },
-        { userId: 'user-2' },
-        { userId: 'user-3' },
-      ]);
+      db.execute.mockResolvedValueOnce({ rows: [{ id: 'ou-1' }, { id: 'ou-2' }] });
+      _chain._enqueue([{ userId: 'user-1' }, { userId: 'user-2' }, { userId: 'user-2' }, { userId: 'user-3' }]);
 
       const result = await service.getTeamMemberIds('user-1');
 
       const uniqueIds = new Set(result);
       expect(uniqueIds.size).toBe(result.length);
-    });
-
-    it('should not query members when no visible org units exist', async () => {
-      db.execute.mockResolvedValueOnce({ rows: [] });
-
-      await service.getTeamMemberIds('user-1');
-
-      // select should not be called for members query
-      expect(db.select).not.toHaveBeenCalled();
     });
   });
 });

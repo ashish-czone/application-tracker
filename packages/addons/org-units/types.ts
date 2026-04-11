@@ -1,8 +1,16 @@
+export interface OrgUnitLevel {
+  id: string;
+  name: string;
+  sortOrder: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface OrgUnit {
   id: string;
   name: string;
   parentId: string | null;
-  type: string;
+  levelId: string;
   sortOrder: number;
   createdAt: Date;
   updatedAt: Date;
@@ -15,8 +23,17 @@ export interface OrgUnitMember {
   createdAt: Date;
 }
 
-export interface OrgUnitWithMembers extends OrgUnit {
+export interface OrgUnitWithDetails extends OrgUnit {
   memberCount: number;
+  level: { id: string; name: string; sortOrder: number };
+  head: { userId: string; userName: string; positionName: string } | null;
+}
+
+export interface OrgUnitMemberDetail {
+  userId: string;
+  userName: string;
+  positionId: string | null;
+  positionName: string | null;
 }
 
 export interface OrgPosition {

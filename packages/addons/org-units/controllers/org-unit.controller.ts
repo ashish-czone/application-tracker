@@ -13,7 +13,7 @@ export class OrgUnitController {
 
   @Get()
   @RequirePermission(ORG_UNIT_PERMISSIONS.READ)
-  @ApiOperation({ summary: 'List all org units' })
+  @ApiOperation({ summary: 'List all org units with level and head info' })
   async list() {
     return this.orgUnitService.findAll();
   }
@@ -81,8 +81,8 @@ export class OrgUnitController {
 
   @Get(':id/members')
   @RequirePermission(ORG_UNIT_PERMISSIONS.READ)
-  @ApiOperation({ summary: 'List members of an org unit' })
+  @ApiOperation({ summary: 'List members of an org unit with details' })
   async listMembers(@Param('id', ParseUUIDPipe) id: string) {
-    return this.orgUnitService.getMemberIds(id);
+    return this.orgUnitService.getMemberDetails(id);
   }
 }

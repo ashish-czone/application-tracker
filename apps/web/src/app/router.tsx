@@ -2,7 +2,7 @@ import { Suspense, lazy } from 'react';
 import { Routes, Route, Navigate } from 'react-router';
 import { AppLayout } from './layout/AppLayout';
 import { AuthGuard } from '@packages/platform-ui/auth/components/AuthGuard';
-import { UsersListPage, RolesListPage, WorkflowsListPage, WorkflowEditorPage, AutomationsPage, RuleBuilderPage, SettingsPage, TagGroupsListPage, CategoryGroupsListPage, OrgPositionsPage } from '../portals/customer/routes';
+import { UsersListPage, RolesListPage, WorkflowsListPage, WorkflowEditorPage, AutomationsPage, RuleBuilderPage, SettingsPage, TagGroupsListPage, CategoryGroupsListPage, OrgPositionsPage, OrgUnitsPage } from '../portals/customer/routes';
 import { EntityListPage, EntityDetailPage } from '@packages/entity-engine-ui';
 
 const LoginPage = lazy(() => import('@packages/platform-ui/auth/pages/LoginPage'));
@@ -67,6 +67,14 @@ export function AppRouter() {
             element={
               <Suspense fallback={<PageSkeleton />}>
                 <RolesListPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/org-units"
+            element={
+              <Suspense fallback={<PageSkeleton />}>
+                <OrgUnitsPage />
               </Suspense>
             }
           />

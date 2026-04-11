@@ -1,9 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { DatabaseService, eq, and, inArray, sql, count } from '@packages/database';
+import { users } from '@packages/database/schema';
 import { withTenant, withTenantInsert } from '@packages/tenancy/helpers';
 import { orgUnits } from '../schema/org-units';
 import { orgUnitMembers } from '../schema/org-unit-members';
-import type { OrgUnit, OrgUnitWithMembers } from '../types';
+import { orgUnitLevels } from '../schema/org-unit-levels';
+import { orgPositions } from '../schema/org-positions';
+import type { OrgUnit, OrgUnitWithDetails, OrgUnitMemberDetail } from '../types';
 
 @Injectable()
 export class OrgUnitService {
@@ -13,37 +16,75 @@ export class OrgUnitService {
   // CRUD
   // ---------------------------------------------------------------------------
 
-  async create(data: { name: string; parentId?: string; type?: string; sortOrder?: number }): Promise<OrgUnit> {
+  async create(data: { name: string; parentId?: string; levelId: string; sortOrder?: number }): Promise<OrgUnit> {
     const [row] = await this.database.db
       .insert(orgUnits)
       .values(withTenantInsert(orgUnits, {
         name: data.name,
         parentId: data.parentId ?? null,
-        type: data.type ?? 'team',
+        levelId: data.levelId,
         sortOrder: data.sortOrder ?? 0,
       }))
       .returning() as OrgUnit[];
     return row;
   }
 
-  async findAll(): Promise<OrgUnitWithMembers[]> {
+  async findAll(): Promise<OrgUnitWithDetails[]> {
+    // Fetch all units with level info and member count
     const rows = await this.database.db
       .select({
         id: orgUnits.id,
         name: orgUnits.name,
         parentId: orgUnits.parentId,
-        type: orgUnits.type,
+        levelId: orgUnits.levelId,
         sortOrder: orgUnits.sortOrder,
         createdAt: orgUnits.createdAt,
         updatedAt: orgUnits.updatedAt,
         memberCount: count(orgUnitMembers.userId),
+        levelName: orgUnitLevels.name,
+        levelSortOrder: orgUnitLevels.sortOrder,
       })
       .from(orgUnits)
       .leftJoin(orgUnitMembers, eq(orgUnitMembers.orgUnitId, orgUnits.id))
+      .innerJoin(orgUnitLevels, eq(orgUnitLevels.id, orgUnits.levelId))
       .where(withTenant(orgUnits))
-      .groupBy(orgUnits.id)
+      .groupBy(orgUnits.id, orgUnitLevels.name, orgUnitLevels.sortOrder)
       .orderBy(orgUnits.sortOrder);
-    return rows as OrgUnitWithMembers[];
+
+    if (rows.length === 0) return [];
+
+    // Fetch head members (member with lowest position sortOrder per unit)
+    const unitIds = rows.map((r) => r.id);
+    const headRows = await this.database.db
+      .selectDistinctOn([orgUnitMembers.orgUnitId], {
+        orgUnitId: orgUnitMembers.orgUnitId,
+        userId: orgUnitMembers.userId,
+        userName: sql<string>`concat(${users.firstName}, ' ', ${users.lastName})`,
+        positionName: orgPositions.name,
+      })
+      .from(orgUnitMembers)
+      .innerJoin(users, eq(users.id, orgUnitMembers.userId))
+      .leftJoin(orgPositions, eq(orgPositions.id, orgUnitMembers.positionId))
+      .where(inArray(orgUnitMembers.orgUnitId, unitIds))
+      .orderBy(orgUnitMembers.orgUnitId, sql`coalesce(${orgPositions.sortOrder}, 999999)`);
+
+    const headByUnit = new Map(headRows.map((h) => [h.orgUnitId, h]));
+
+    return rows.map((row) => {
+      const head = headByUnit.get(row.id);
+      return {
+        id: row.id,
+        name: row.name,
+        parentId: row.parentId,
+        levelId: row.levelId,
+        sortOrder: row.sortOrder,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+        memberCount: Number(row.memberCount),
+        level: { id: row.levelId, name: row.levelName, sortOrder: row.levelSortOrder },
+        head: head ? { userId: head.userId, userName: head.userName, positionName: head.positionName ?? '' } : null,
+      };
+    });
   }
 
   async findOneOrFail(id: string): Promise<OrgUnit> {
@@ -56,7 +97,7 @@ export class OrgUnitService {
     return row;
   }
 
-  async update(id: string, data: Partial<{ name: string; parentId: string | null; type: string; sortOrder: number }>): Promise<OrgUnit> {
+  async update(id: string, data: Partial<{ name: string; parentId: string | null; levelId: string; sortOrder: number }>): Promise<OrgUnit> {
     await this.findOneOrFail(id);
     const [row] = await this.database.db
       .update(orgUnits)
@@ -105,14 +146,32 @@ export class OrgUnitService {
     return rows.map((r) => r.userId);
   }
 
+  async getMemberDetails(orgUnitId: string): Promise<OrgUnitMemberDetail[]> {
+    const rows = await this.database.db
+      .select({
+        userId: orgUnitMembers.userId,
+        userName: sql<string>`concat(${users.firstName}, ' ', ${users.lastName})`,
+        positionId: orgUnitMembers.positionId,
+        positionName: orgPositions.name,
+      })
+      .from(orgUnitMembers)
+      .innerJoin(users, eq(users.id, orgUnitMembers.userId))
+      .leftJoin(orgPositions, eq(orgPositions.id, orgUnitMembers.positionId))
+      .where(eq(orgUnitMembers.orgUnitId, orgUnitId))
+      .orderBy(sql`coalesce(${orgPositions.sortOrder}, 999999)`);
+
+    return rows.map((r) => ({
+      userId: r.userId,
+      userName: r.userName,
+      positionId: r.positionId,
+      positionName: r.positionName,
+    }));
+  }
+
   // ---------------------------------------------------------------------------
   // Hierarchy + visibility resolution
   // ---------------------------------------------------------------------------
 
-  /**
-   * Returns all org unit IDs the user is a member of, plus all descendant org units.
-   * If a user is in "Sales Division", they also get visibility into "Sales Team 1", "Sales Team 2", etc.
-   */
   async getVisibleOrgUnitIds(userId: string): Promise<string[]> {
     const result = await this.database.db.execute<{ id: string }>(sql`
       WITH RECURSIVE descendants AS (
@@ -131,10 +190,6 @@ export class OrgUnitService {
     return result.rows.map((r) => r.id);
   }
 
-  /**
-   * Returns all user IDs that share at least one org unit with the given user.
-   * Includes the user themselves.
-   */
   async getTeamMemberIds(userId: string): Promise<string[]> {
     const orgUnitIds = await this.getVisibleOrgUnitIds(userId);
     if (orgUnitIds.length === 0) return [userId];
