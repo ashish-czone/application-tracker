@@ -53,25 +53,51 @@ export class OrgUnitService {
 
     if (rows.length === 0) return [];
 
-    // Fetch head members (member with lowest position sortOrder per unit)
+    // Fetch top 3 members per unit (ordered by position sortOrder)
     const unitIds = rows.map((r) => r.id);
-    const headRows = await this.database.db
-      .selectDistinctOn([orgUnitMembers.orgUnitId], {
-        orgUnitId: orgUnitMembers.orgUnitId,
-        userId: orgUnitMembers.userId,
-        userName: sql<string>`concat(${users.firstName}, ' ', ${users.lastName})`,
-        positionName: orgPositions.name,
-      })
-      .from(orgUnitMembers)
-      .innerJoin(users, eq(users.id, orgUnitMembers.userId))
-      .leftJoin(orgPositions, eq(orgPositions.id, orgUnitMembers.positionId))
-      .where(inArray(orgUnitMembers.orgUnitId, unitIds))
-      .orderBy(orgUnitMembers.orgUnitId, sql`coalesce(${orgPositions.sortOrder}, 999999)`);
+    const memberRows = await this.database.db.execute<{
+      org_unit_id: string;
+      user_id: string;
+      user_name: string;
+      position_name: string | null;
+      rn: number;
+    }>(sql`
+      SELECT org_unit_id, user_id, user_name, position_name, rn
+      FROM (
+        SELECT
+          oum.org_unit_id,
+          oum.user_id,
+          concat(u.first_name, ' ', u.last_name) AS user_name,
+          op.name AS position_name,
+          row_number() OVER (
+            PARTITION BY oum.org_unit_id
+            ORDER BY coalesce(op.sort_order, 999999)
+          ) AS rn
+        FROM org_unit_members oum
+        INNER JOIN users u ON u.id = oum.user_id
+        LEFT JOIN org_positions op ON op.id = oum.position_id
+        WHERE oum.org_unit_id IN (${sql.join(unitIds.map((id) => sql`${id}`), sql`, `)})
+      ) ranked
+      WHERE rn <= 3
+      ORDER BY org_unit_id, rn
+    `);
 
-    const headByUnit = new Map(headRows.map((h) => [h.orgUnitId, h]));
+    // Group members by unit
+    const membersByUnit = new Map<string, OrgUnitMemberDetail[]>();
+    for (const row of memberRows.rows) {
+      const list = membersByUnit.get(row.org_unit_id) ?? [];
+      list.push({
+        userId: row.user_id,
+        userName: row.user_name,
+        positionId: null,
+        positionName: row.position_name,
+      });
+      membersByUnit.set(row.org_unit_id, list);
+    }
 
     return rows.map((row) => {
-      const head = headByUnit.get(row.id);
+      const members = membersByUnit.get(row.id) ?? [];
+      const head = members[0] ?? null;
       return {
         id: row.id,
         name: row.name,
@@ -83,6 +109,7 @@ export class OrgUnitService {
         memberCount: Number(row.memberCount),
         level: { id: row.levelId, name: row.levelName, sortOrder: row.levelSortOrder },
         head: head ? { userId: head.userId, userName: head.userName, positionName: head.positionName ?? '' } : null,
+        memberPreviews: members,
       };
     });
   }

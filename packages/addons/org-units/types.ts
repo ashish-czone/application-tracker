@@ -27,6 +27,8 @@ export interface OrgUnitWithDetails extends OrgUnit {
   memberCount: number;
   level: { id: string; name: string; sortOrder: number };
   head: { userId: string; userName: string; positionName: string } | null;
+  /** Top 3 members ordered by position sortOrder (for inline preview) */
+  memberPreviews: OrgUnitMemberDetail[];
 }
 
 export interface OrgUnitMemberDetail {
