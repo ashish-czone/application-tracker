@@ -111,6 +111,19 @@ const TEAM_ASSIGNMENTS: Record<string, number[]> = {
   'Support Team':       [2, 10],
 };
 
+// Non-leaf unit name → Head user index into SEED_USERS
+// These users are assigned as Head of their respective division/entity/company
+// so the hierarchy-based scope resolution works for them.
+const HEAD_ASSIGNMENTS: Record<string, number> = {
+  'Engineering':        0,   // Emma Williams — also Lead of Frontend Team
+  'Sales':              7,   // Mason White — also Lead of Enterprise Sales
+  'Human Resources':    10,  // Mia Lewis — also Lead of Talent Acquisition
+  'Product':            13,  // James Young — also Lead of Design Team
+  'Operations':         14,  // Amelia King — also Lead of QA Team (cross-assignment)
+  'Acme North America': 0,   // Emma Williams — entity head
+  'Acme Europe':        13,  // James Young — entity head
+};
+
 // Position scopes: Head/Lead → descendants, Member → unit
 const POSITION_SCOPES: { positionName: string; entityType: string; scope: string }[] = [
   { positionName: 'Head', entityType: 'tasks', scope: 'descendants' },
@@ -119,7 +132,7 @@ const POSITION_SCOPES: { positionName: string; entityType: string; scope: string
 ];
 
 // Sample tasks assigned to teams
-const SAMPLE_TASKS: { title: string; priority: string; teamName: string; dueOffset: number }[] = [
+const TEAM_TASKS: { title: string; priority: string; teamName: string; dueOffset: number }[] = [
   { title: 'Set up CI/CD pipeline for new microservice', priority: 'high', teamName: 'DevOps Team', dueOffset: 7 },
   { title: 'Fix responsive layout on dashboard', priority: 'medium', teamName: 'Frontend Team', dueOffset: 3 },
   { title: 'Implement user authentication API', priority: 'high', teamName: 'Backend Team', dueOffset: 5 },
@@ -135,6 +148,15 @@ const SAMPLE_TASKS: { title: string; priority: string; teamName: string; dueOffs
   { title: 'Optimize bulk import endpoint', priority: 'low', teamName: 'Backend Team', dueOffset: 14 },
   { title: 'Follow up with Globex Industries deal', priority: 'high', teamName: 'Enterprise Sales', dueOffset: 3 },
   { title: 'Update employee handbook', priority: 'low', teamName: 'People Operations', dueOffset: 30 },
+];
+
+// Sample tasks assigned directly to individual users (no team)
+const USER_TASKS: { title: string; priority: string; userIndex: number; dueOffset: number }[] = [
+  { title: 'Review Q3 engineering roadmap', userIndex: 0, priority: 'high', dueOffset: 5 },       // Emma (Head of Engineering)
+  { title: 'Prepare onboarding docs for new hire', userIndex: 1, priority: 'medium', dueOffset: 3 }, // Liam (Frontend member)
+  { title: 'Fix memory leak in background worker', userIndex: 3, priority: 'urgent', dueOffset: 1 }, // Noah (Backend lead)
+  { title: 'Update sales forecast spreadsheet', userIndex: 7, priority: 'medium', dueOffset: 7 },   // Mason (Head of Sales)
+  { title: 'Conduct exit interview with departing employee', userIndex: 10, priority: 'high', dueOffset: 2 }, // Mia (Head of HR)
 ];
 
 @Injectable()
@@ -219,6 +241,7 @@ export class OrgUnitsSeedService implements OnApplicationBootstrap {
 
     // Resolve positions by name
     const positions = await this.orgPositionService.findAll();
+    const headPositionId = positions.find((p) => p.name === 'Head')?.id;
     const leadPositionId = positions.find((p) => p.name === 'Lead')?.id;
     const memberPositionId = positions.find((p) => p.name === 'Member')?.id;
 
@@ -233,7 +256,7 @@ export class OrgUnitsSeedService implements OnApplicationBootstrap {
     const seedUserIds = seedEmails.map((e) => userByEmail.get(e)).filter(Boolean) as string[];
 
     let unitCount = 0;
-    const teamUnits = new Map<string, string>(); // team name → unit id
+    const allUnits = new Map<string, string>(); // unit name → unit id
 
     const seedNode = async (node: SeedNode, parentId?: string, sortOrder = 0) => {
       const levelId = levelByName.get(node.levelName);
@@ -249,10 +272,7 @@ export class OrgUnitsSeedService implements OnApplicationBootstrap {
         sortOrder,
       });
       unitCount++;
-
-      if (!node.children?.length) {
-        teamUnits.set(node.name, unit.id);
-      }
+      allUnits.set(node.name, unit.id);
 
       if (node.children) {
         for (let i = 0; i < node.children.length; i++) {
@@ -265,10 +285,20 @@ export class OrgUnitsSeedService implements OnApplicationBootstrap {
       await seedNode(ORG_TREE[i], undefined, i);
     }
 
-    // Assign members to teams
+    // Assign Heads at non-leaf levels (divisions, entities)
     let memberCount = 0;
+    for (const [unitName, userIndex] of Object.entries(HEAD_ASSIGNMENTS)) {
+      const unitId = allUnits.get(unitName);
+      const userId = seedUserIds[userIndex];
+      if (!unitId || !userId) continue;
+
+      await this.orgUnitService.addMember(unitId, userId, headPositionId ?? undefined);
+      memberCount++;
+    }
+
+    // Assign Lead + Members to leaf teams
     for (const [teamName, indices] of Object.entries(TEAM_ASSIGNMENTS)) {
-      const unitId = teamUnits.get(teamName);
+      const unitId = allUnits.get(teamName);
       if (!unitId) continue;
 
       for (let i = 0; i < indices.length; i++) {
@@ -340,10 +370,19 @@ export class OrgUnitsSeedService implements OnApplicationBootstrap {
       .from(orgUnits);
     const unitByName = new Map(unitRows.map((u) => [u.name, u.id]));
 
+    // Build seed user email → id map
+    const allUsers = await this.database.db
+      .select({ id: users.id, email: users.email })
+      .from(users)
+      .where(isNull(users.deletedAt));
+    const userByEmail = new Map(allUsers.map((u) => [u.email, u.id]));
+    const seedUserIds = SEED_USERS.map((u) => userByEmail.get(u.email)).filter(Boolean) as string[];
+
     const now = Date.now();
     let taskCount = 0;
 
-    for (const task of SAMPLE_TASKS) {
+    // Tasks assigned to teams
+    for (const task of TEAM_TASKS) {
       const teamId = unitByName.get(task.teamName);
       if (!teamId) continue;
 
@@ -354,6 +393,24 @@ export class OrgUnitsSeedService implements OnApplicationBootstrap {
         title: task.title,
         priority: task.priority,
         assigneeTeamId: teamId,
+        dueDate: dueDateStr,
+        createdBy: admin.id,
+      });
+      taskCount++;
+    }
+
+    // Tasks assigned directly to users
+    for (const task of USER_TASKS) {
+      const userId = seedUserIds[task.userIndex];
+      if (!userId) continue;
+
+      const dueDate = new Date(now + task.dueOffset * 24 * 60 * 60 * 1000);
+      const dueDateStr = dueDate.toISOString().split('T')[0];
+
+      await this.database.db.insert(tasks).values({
+        title: task.title,
+        priority: task.priority,
+        assigneeId: userId,
         dueDate: dueDateStr,
         createdBy: admin.id,
       });
