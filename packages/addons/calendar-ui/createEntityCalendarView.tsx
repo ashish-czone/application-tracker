@@ -1,5 +1,5 @@
 import { useMemo, type ComponentType } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { useEntityConfig, useEntityHooks } from '@packages/entity-engine-ui';
 import { EventCalendar } from './components/EventCalendar';
 import type { CalendarEvent, CalendarView } from './types';
