@@ -79,6 +79,7 @@ export function createEntityCalendarView(
       <EventCalendar
         events={events}
         initialView={initialView}
+        allDaySlot
         onEventClick={(id) => navigate(`/${entity.slug}/${id}`)}
       />
     );
