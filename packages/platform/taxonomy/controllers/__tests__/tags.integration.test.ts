@@ -7,6 +7,7 @@ import { TAXONOMY_PERMISSIONS } from '../../permissions';
 
 const READ = [TAXONOMY_PERMISSIONS.TAG_GROUPS_READ, TAXONOMY_PERMISSIONS.TAGS_READ];
 const MANAGE = [...READ, TAXONOMY_PERMISSIONS.TAG_GROUPS_MANAGE, TAXONOMY_PERMISSIONS.TAGS_MANAGE];
+const ENTITY_TAGS = [...READ, TAXONOMY_PERMISSIONS.ENTITY_TAGS_MANAGE];
 
 describe('TagsController (integration)', () => {
   let ctx: PackageTestApp;
@@ -340,6 +341,104 @@ describe('TagsController (integration)', () => {
         .get(`/api/v1/tags/${tag.id}`)
         .set(withAuth(READ))
         .expect(404);
+    });
+  });
+
+  // ── Entity tags (polymorphic) ──────────────────────────────
+
+  describe('Entity tags endpoints', () => {
+    const ENTITY_TYPE = 'tasks';
+    const ENTITY_ID = '11111111-1111-4111-8111-111111111111';
+    const OTHER_ENTITY_ID = '22222222-2222-4222-8222-222222222222';
+
+    it('PUT replaces tags within the named group only', async () => {
+      const taskGroup = await createTagGroup({ name: 'Task Tags', slug: 'task-tags-1' });
+      const otherGroup = await createTagGroup({ name: 'Other', slug: 'other-tags-1' });
+      const tagA = await createTag(taskGroup.id, { name: 'Urgent', slug: 'urgent' });
+      const tagB = await createTag(taskGroup.id, { name: 'Blocked', slug: 'blocked' });
+      const tagOther = await createTag(otherGroup.id, { name: 'Pinned', slug: 'pinned' });
+
+      // Seed entity with one task-tag and one other-group tag
+      await request(ctx.httpServer)
+        .put(`/api/v1/entities/${ENTITY_TYPE}/${ENTITY_ID}/tags`)
+        .set(withAuth(ENTITY_TAGS))
+        .send({ groupSlug: 'task-tags-1', tagIds: [tagA.id] })
+        .expect(200);
+      await request(ctx.httpServer)
+        .put(`/api/v1/entities/${ENTITY_TYPE}/${ENTITY_ID}/tags`)
+        .set(withAuth(ENTITY_TAGS))
+        .send({ groupSlug: 'other-tags-1', tagIds: [tagOther.id] })
+        .expect(200);
+
+      // Replace task-tags with tagB only — tagOther must survive
+      const res = await request(ctx.httpServer)
+        .put(`/api/v1/entities/${ENTITY_TYPE}/${ENTITY_ID}/tags`)
+        .set(withAuth(ENTITY_TAGS))
+        .send({ groupSlug: 'task-tags-1', tagIds: [tagB.id] })
+        .expect(200);
+
+      const ids = (res.body as Array<{ id: string }>).map((t) => t.id).sort();
+      expect(ids).toEqual([tagB.id, tagOther.id].sort());
+    });
+
+    it('GET returns only tags attached to the given entity', async () => {
+      const group = await createTagGroup({ name: 'Task Tags', slug: 'task-tags-2' });
+      const tag = await createTag(group.id, { name: 'Urgent', slug: 'urgent-2' });
+
+      await request(ctx.httpServer)
+        .put(`/api/v1/entities/${ENTITY_TYPE}/${ENTITY_ID}/tags`)
+        .set(withAuth(ENTITY_TAGS))
+        .send({ groupSlug: 'task-tags-2', tagIds: [tag.id] })
+        .expect(200);
+
+      const res = await request(ctx.httpServer)
+        .get(`/api/v1/entities/${ENTITY_TYPE}/${ENTITY_ID}/tags`)
+        .set(withAuth(READ))
+        .expect(200);
+      expect(res.body).toHaveLength(1);
+      expect(res.body[0].id).toBe(tag.id);
+
+      const other = await request(ctx.httpServer)
+        .get(`/api/v1/entities/${ENTITY_TYPE}/${OTHER_ENTITY_ID}/tags`)
+        .set(withAuth(READ))
+        .expect(200);
+      expect(other.body).toHaveLength(0);
+    });
+
+    it('PUT rejects tags that do not belong to the declared group', async () => {
+      const group = await createTagGroup({ name: 'Task Tags', slug: 'task-tags-3' });
+      const otherGroup = await createTagGroup({ name: 'Other', slug: 'other-tags-3' });
+      const foreignTag = await createTag(otherGroup.id, { name: 'Foreign', slug: 'foreign-3' });
+
+      await request(ctx.httpServer)
+        .put(`/api/v1/entities/${ENTITY_TYPE}/${ENTITY_ID}/tags`)
+        .set(withAuth(ENTITY_TAGS))
+        .send({ groupSlug: 'task-tags-3', tagIds: [foreignTag.id] })
+        .expect(404);
+
+      // Confirm no tags were attached
+      const res = await request(ctx.httpServer)
+        .get(`/api/v1/entities/${ENTITY_TYPE}/${ENTITY_ID}/tags`)
+        .set(withAuth(READ))
+        .expect(200);
+      expect(res.body).toHaveLength(0);
+      // Silence unused-var lint
+      expect(group.id).toBeDefined();
+    });
+
+    it('PUT returns 401 without auth', async () => {
+      await request(ctx.httpServer)
+        .put(`/api/v1/entities/${ENTITY_TYPE}/${ENTITY_ID}/tags`)
+        .send({ groupSlug: 'task-tags', tagIds: [] })
+        .expect(401);
+    });
+
+    it('PUT returns 403 with read-only permissions', async () => {
+      await request(ctx.httpServer)
+        .put(`/api/v1/entities/${ENTITY_TYPE}/${ENTITY_ID}/tags`)
+        .set(withAuth(READ))
+        .send({ groupSlug: 'task-tags', tagIds: [] })
+        .expect(403);
     });
   });
 
