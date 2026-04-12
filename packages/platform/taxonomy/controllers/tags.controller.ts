@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Put,
   Patch,
   Delete,
   Body,
@@ -19,6 +20,7 @@ import { UpdateTagGroupDto } from '../dto/update-tag-group.dto';
 import { CreateTagDto } from '../dto/create-tag.dto';
 import { UpdateTagDto } from '../dto/update-tag.dto';
 import { ListTagGroupsQueryDto } from '../dto/list-tag-groups-query.dto';
+import { SetEntityTagsDto } from '../dto/set-entity-tags.dto';
 import { TAXONOMY_PERMISSIONS } from '../permissions';
 
 @ApiTags('taxonomy')
@@ -126,5 +128,33 @@ export class TagsController {
   @ApiOperation({ summary: 'Delete a tag (must not be attached to entities)' })
   async deleteTag(@Param('id', ParseUUIDPipe) id: string) {
     await this.taxonomyService.deleteTag(id);
+  }
+
+  // --- Entity tags (polymorphic attach/detach) ---
+
+  @Get('entities/:entityType/:entityId/tags')
+  @RequirePermission(TAXONOMY_PERMISSIONS.TAGS_READ)
+  @ApiOperation({ summary: 'List all tags attached to an entity (across groups)' })
+  async getEntityTags(
+    @Param('entityType') entityType: string,
+    @Param('entityId', ParseUUIDPipe) entityId: string,
+  ) {
+    return this.taxonomyService.getTagsForEntity(entityType, entityId);
+  }
+
+  @Put('entities/:entityType/:entityId/tags')
+  @RequirePermission(TAXONOMY_PERMISSIONS.ENTITY_TAGS_MANAGE)
+  @ApiOperation({ summary: 'Replace the tag set on an entity within a single tag group' })
+  async setEntityTags(
+    @Param('entityType') entityType: string,
+    @Param('entityId', ParseUUIDPipe) entityId: string,
+    @Body() dto: SetEntityTagsDto,
+  ) {
+    return this.taxonomyService.setTagsForEntityInGroup(
+      entityType,
+      entityId,
+      dto.groupSlug,
+      dto.tagIds,
+    );
   }
 }

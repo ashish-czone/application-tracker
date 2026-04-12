@@ -25,6 +25,7 @@ export interface EntityRegistryEntry {
     hasNotes: boolean;
     hasAttachments: boolean;
     hasEvaluations: boolean;
+    hasTags?: { groupSlug: string };
     workflowDiscriminator?: {
       key: string;
       label: string;

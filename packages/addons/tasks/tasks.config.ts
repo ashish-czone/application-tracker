@@ -21,6 +21,7 @@ export const TASKS_CONFIG = defineEntity({
   timestamps: true,
   hasNotes: true,
   hasAttachments: true,
+  hasTags: { groupSlug: 'task-tags' },
 
   extraPermissions: [
     { action: 'assign', description: 'Assign tasks to users or teams' },
@@ -122,14 +123,6 @@ export const TASKS_CONFIG = defineEntity({
       listVisible: true,
       listOrder: 5,
     },
-    tags: {
-      type: 'tags',
-      label: 'Tags',
-      tagGroupSlug: 'task-tags',
-      quickCreate: true,
-      listVisible: true,
-      listOrder: 6,
-    },
     createdBy: {
       type: 'user',
       label: 'Creator',
@@ -144,7 +137,7 @@ export const TASKS_CONFIG = defineEntity({
   sections: [
     {
       name: 'Basic Information',
-      fields: ['title', 'description', 'status', 'priority', 'assigneeId', 'assigneeTeamId', 'dueDate', 'tags'],
+      fields: ['title', 'description', 'status', 'priority', 'assigneeId', 'assigneeTeamId', 'dueDate'],
     },
   ],
 

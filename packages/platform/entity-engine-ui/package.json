@@ -8,6 +8,7 @@
     "@packages/common": "workspace:*",
     "@packages/eav-attributes-ui": "workspace:*",
     "@packages/platform-ui-conditions": "workspace:*",
+    "@packages/taxonomy-ui": "workspace:*",
     "@packages/ui": "workspace:*",
     "@tanstack/react-query": "^5.0.0",
     "@tanstack/react-table": "^8.0.0",

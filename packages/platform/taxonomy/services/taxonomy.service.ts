@@ -280,6 +280,74 @@ export class TaxonomyService {
       ));
   }
 
+  /**
+   * Replace the set of tags attached to an entity within a single tag group.
+   * Only touches rows whose tag belongs to the given group — tags from other groups are left alone.
+   * Validates that every incoming tagId belongs to the group before mutating.
+   */
+  async setTagsForEntityInGroup(
+    entityType: string,
+    entityId: string,
+    groupSlug: string,
+    tagIds: string[],
+    tx?: any,
+  ): Promise<TagWithGroup[]> {
+    const db = tx ?? this.database.db;
+
+    const [group] = await db
+      .select()
+      .from(tagGroups)
+      .where(withTenant(tagGroups, eq(tagGroups.slug, groupSlug)))
+      .limit(1);
+    if (!group) {
+      throw new NotFoundException(`Tag group "${groupSlug}" not found`);
+    }
+
+    if (tagIds.length > 0) {
+      const validTags = await db
+        .select({ id: tags.id })
+        .from(tags)
+        .where(withTenant(tags, inArray(tags.id, tagIds), eq(tags.tagGroupId, group.id)));
+      const validIds = new Set(validTags.map((t: { id: string }) => t.id));
+      for (const id of tagIds) {
+        if (!validIds.has(id)) {
+          throw new NotFoundException(`Tag "${id}" is not in group "${groupSlug}"`);
+        }
+      }
+    }
+
+    if (!group.allowMultiple && tagIds.length > 1) {
+      throw new ConflictException(
+        `Tag group "${group.name}" only allows one tag per entity`,
+      );
+    }
+
+    const currentInGroup = await db
+      .select({ tagId: entityTags.tagId })
+      .from(entityTags)
+      .innerJoin(tags, eq(tags.id, entityTags.tagId))
+      .where(withTenant(entityTags,
+        eq(entityTags.entityType, entityType),
+        eq(entityTags.entityId, entityId),
+        eq(tags.tagGroupId, group.id),
+      ));
+    const currentIds = new Set<string>(currentInGroup.map((r: { tagId: string }) => r.tagId));
+    const nextIds = new Set<string>(tagIds);
+
+    for (const tagId of currentIds) {
+      if (!nextIds.has(tagId)) {
+        await this.detachTag(entityType, entityId, tagId, db);
+      }
+    }
+    for (const tagId of nextIds) {
+      if (!currentIds.has(tagId)) {
+        await this.attachTag(entityType, entityId, tagId, db);
+      }
+    }
+
+    return this.getTagsForEntity(entityType, entityId, db);
+  }
+
   async getTagsForEntity(entityType: string, entityId: string, tx?: any): Promise<TagWithGroup[]> {
     const db = tx ?? this.database.db;
     return db

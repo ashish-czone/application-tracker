@@ -78,6 +78,7 @@ export class TaxonomyModule implements OnModuleInit {
       { action: 'tag-groups.manage', description: 'Create, update, and delete tag groups' },
       { action: 'tags.read', description: 'View tags' },
       { action: 'tags.manage', description: 'Create, update, and delete tags' },
+      { action: 'entity-tags.manage', description: 'Attach and detach tags on entities' },
       { action: 'categories.read', description: 'View categories' },
       { action: 'categories.manage', description: 'Create, update, move, and delete categories' },
     ]);
