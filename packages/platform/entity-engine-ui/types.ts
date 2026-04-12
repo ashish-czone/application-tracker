@@ -74,6 +74,22 @@ export interface DetailTabPlugin {
   featureFlag?: string;
 }
 
+/** Custom view mode for entity list pages (e.g. calendar, map, timeline) */
+export interface ListViewPlugin {
+  /** Unique view key (used in ?view=<key> URL param) */
+  key: string;
+  /** Display label (shown in the view toggle) */
+  label: string;
+  /** Optional lucide icon component */
+  icon?: ComponentType<{ className?: string }>;
+  /** Sort order relative to other plugin views (table/board are hardcoded and render first) */
+  order: number;
+  /** Component rendered when this view is active. Receives the entity type; should fetch records via useEntityHooks. */
+  component: ComponentType<{ entityType: string }>;
+  /** If set, view only shows when entity.features[featureFlag] is truthy */
+  featureFlag?: string;
+}
+
 /** Panel rendered in the right sidebar of entity detail pages */
 export interface RightSidebarPanel {
   /** Unique panel key */
@@ -98,6 +114,8 @@ export interface EntityUIConfig {
   detailTabs?: DetailTabPlugin[];
   /** Panels rendered in the right sidebar of the detail page */
   rightSidebarPanels?: RightSidebarPanel[];
+  /** Entity-specific list view modes (merged with global list views from provider) */
+  listViews?: ListViewPlugin[];
 }
 
 /** Registration for a named cell renderer used in list view columns */

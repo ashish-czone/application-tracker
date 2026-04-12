@@ -3,13 +3,20 @@
   "version": "0.0.1",
   "private": true,
   "main": "index.ts",
+  "scripts": {
+    "test": "vitest run"
+  },
   "dependencies": {
+    "@nestjs/common": "^11.0.0",
     "@packages/database": "workspace:*",
     "@packages/entity-engine": "workspace:*",
+    "@packages/logger": "workspace:*",
     "@packages/org-units": "workspace:*",
+    "@packages/taxonomy": "workspace:*",
     "drizzle-orm": "^0.45.1"
   },
   "devDependencies": {
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
   }
 }

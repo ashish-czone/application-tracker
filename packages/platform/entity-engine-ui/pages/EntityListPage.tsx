@@ -31,7 +31,7 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
   const navigate = useNavigate();
   const entity = useEntityConfig(entityType);
   const hooks = useEntityHooks(entityType);
-  const { apiFn, getColumnRenderer } = useEntityEngine();
+  const { apiFn, getColumnRenderer, getListViews } = useEntityEngine();
   const { data: listLayout } = useListLayout(entityType);
 
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -49,12 +49,25 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
   const boardFields = entity.ui.boardFields ?? [];
   const hasBoardView = boardFields.length > 0;
   const [searchParams, setSearchParams] = useSearchParams();
-  const view = hasBoardView && searchParams.get('view') === 'board' ? 'board' : 'table';
+
+  // Plugin views registered via EntityEngineProvider (calendar, map, timeline, etc.)
+  // Filtered by featureFlag against entity.features.
+  const pluginListViews = useMemo(() => {
+    return getListViews(entityType).filter((p) => !p.featureFlag || (entity.features as Record<string, unknown>)[p.featureFlag]);
+  }, [getListViews, entityType, entity.features]);
+
+  // Active view: 'table' | 'board' | <plugin-key>. URL param ?view= drives it.
+  const rawView = searchParams.get('view') ?? '';
+  const isBoardActive = hasBoardView && rawView === 'board';
+  const activePlugin = pluginListViews.find((p) => p.key === rawView);
+  const view: string = isBoardActive ? 'board' : (activePlugin?.key ?? 'table');
   const boardGroupBy = searchParams.get('groupBy') ?? boardFields[0] ?? '';
 
-  const setView = (v: 'table' | 'board') => {
+  const setView = (v: string) => {
     setSearchParams((prev) => {
-      if (v === 'board') { prev.set('view', 'board'); } else { prev.delete('view'); prev.delete('groupBy'); }
+      if (v === 'table') { prev.delete('view'); prev.delete('groupBy'); }
+      else if (v === 'board') { prev.set('view', 'board'); }
+      else { prev.set('view', v); prev.delete('groupBy'); }
       return prev;
     }, { replace: true });
   };
@@ -437,25 +450,43 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
       </div>
 
       {/* View Toggle + Board GroupBy */}
-      {hasBoardView && (
+      {(hasBoardView || pluginListViews.length > 0) && (
         <div className="flex items-center gap-2 mb-4">
           <div className="flex items-center rounded-md border border-input bg-background">
             <button
               type="button"
               onClick={() => setView('table')}
-              className={`p-1.5 rounded-l-md transition-colors ${view === 'table' ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`p-1.5 transition-colors first:rounded-l-md ${view === 'table' ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:text-foreground'}`}
               aria-label="Table view"
             >
               <Table2 className="h-4 w-4" />
             </button>
-            <button
-              type="button"
-              onClick={() => setView('board')}
-              className={`p-1.5 rounded-r-md transition-colors ${view === 'board' ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-              aria-label="Board view"
-            >
-              <LayoutGrid className="h-4 w-4" />
-            </button>
+            {hasBoardView && (
+              <button
+                type="button"
+                onClick={() => setView('board')}
+                className={`p-1.5 transition-colors ${view === 'board' ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                aria-label="Board view"
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </button>
+            )}
+            {pluginListViews.map((plugin, idx) => {
+              const Icon = plugin.icon;
+              const isLast = idx === pluginListViews.length - 1;
+              return (
+                <button
+                  key={plugin.key}
+                  type="button"
+                  onClick={() => setView(plugin.key)}
+                  className={`p-1.5 transition-colors ${isLast ? 'rounded-r-md' : ''} ${view === plugin.key ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                  aria-label={`${plugin.label} view`}
+                  title={plugin.label}
+                >
+                  {Icon ? <Icon className="h-4 w-4" /> : <span className="text-xs px-1">{plugin.label}</span>}
+                </button>
+              );
+            })}
           </div>
           {view === 'board' && boardFields.length > 1 && (
             <select
@@ -471,9 +502,17 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
         </div>
       )}
 
-      {view === 'board' ? (
-        <EntityBoardView entityType={entityType} groupByField={boardGroupBy} />
-      ) : (
+      {(() => {
+        if (view === 'board') {
+          return <EntityBoardView entityType={entityType} groupByField={boardGroupBy} />;
+        }
+        if (activePlugin) {
+          const PluginView = activePlugin.component;
+          return <PluginView entityType={entityType} />;
+        }
+        return null;
+      })()}
+      {view === 'table' && (
       <DataGrid
         columns={columns}
         data={data?.data ?? []}

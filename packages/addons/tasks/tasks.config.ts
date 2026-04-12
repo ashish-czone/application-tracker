@@ -122,6 +122,14 @@ export const TASKS_CONFIG = defineEntity({
       listVisible: true,
       listOrder: 5,
     },
+    tags: {
+      type: 'tags',
+      label: 'Tags',
+      tagGroupSlug: 'task-tags',
+      quickCreate: true,
+      listVisible: true,
+      listOrder: 6,
+    },
     createdBy: {
       type: 'user',
       label: 'Creator',
@@ -136,7 +144,7 @@ export const TASKS_CONFIG = defineEntity({
   sections: [
     {
       name: 'Basic Information',
-      fields: ['title', 'description', 'status', 'priority', 'assigneeId', 'assigneeTeamId', 'dueDate'],
+      fields: ['title', 'description', 'status', 'priority', 'assigneeId', 'assigneeTeamId', 'dueDate', 'tags'],
     },
   ],
 
