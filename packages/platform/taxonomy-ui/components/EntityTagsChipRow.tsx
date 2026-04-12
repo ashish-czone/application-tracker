@@ -1,10 +1,11 @@
 import { useMemo, useCallback } from 'react';
 import { ChipInput, type ChipOption } from '@packages/ui';
-import { usePlatformAPI } from '@packages/platform-ui/PlatformUIProvider';
 import { createTaxonomyApi } from '../services';
 import { useEntityTags, useSetEntityTags } from '../hooks';
+import type { ApiFn } from '../types';
 
 interface EntityTagsChipRowProps {
+  apiFn: ApiFn;
   entityType: string;
   entityId: string;
   groupSlug: string;
@@ -15,20 +16,20 @@ interface EntityTagsChipRowProps {
 
 /**
  * Inline, editable tag chip row for an entity detail page.
- * Mutations are optimistic via TanStack Query cache — each change triggers a PUT
- * that replaces the tag set within `groupSlug` on the server.
+ * Mutations update the TanStack Query cache immediately on success — each
+ * change triggers a PUT that replaces the tag set within `groupSlug`.
  */
 export function EntityTagsChipRow({
+  apiFn,
   entityType,
   entityId,
   groupSlug,
   disabled,
   className,
 }: EntityTagsChipRowProps) {
-  const apiFn = usePlatformAPI();
   const taxonomyApi = useMemo(() => createTaxonomyApi(apiFn), [apiFn]);
-  const { data: allTags, isLoading } = useEntityTags(entityType, entityId);
-  const { mutate: setTags, isPending } = useSetEntityTags(entityType, entityId, groupSlug);
+  const { data: allTags, isLoading } = useEntityTags(apiFn, entityType, entityId);
+  const { mutate: setTags, isPending } = useSetEntityTags(apiFn, entityType, entityId, groupSlug);
 
   const tagsInGroup = useMemo(
     () => (allTags ?? []).filter((t) => t.groupSlug === groupSlug),

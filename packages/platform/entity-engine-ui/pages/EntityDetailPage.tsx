@@ -363,6 +363,7 @@ export function EntityDetailPage({ entityType, renderPipelineProgress, renderWor
         {entity.features.hasTags && (
           <div className="mt-3">
             <EntityTagsChipRow
+              apiFn={apiFn}
               entityType={entityType}
               entityId={item.id as string}
               groupSlug={entity.features.hasTags.groupSlug}

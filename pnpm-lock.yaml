@@ -2807,9 +2807,6 @@ importers:
 
   packages/platform/taxonomy-ui:
     dependencies:
-      '@packages/platform-ui':
-        specifier: workspace:*
-        version: link:../platform-ui
       '@packages/ui':
         specifier: workspace:*
         version: link:../../core/ui

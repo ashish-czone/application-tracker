@@ -1,16 +1,11 @@
 import { useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@packages/ui';
-import { usePlatformAPI } from '@packages/platform-ui/PlatformUIProvider';
 import { createTaxonomyApi } from './services';
+import type { ApiFn } from './types';
 
-function useTaxonomyApi() {
-  const apiFn = usePlatformAPI();
-  return useMemo(() => createTaxonomyApi(apiFn), [apiFn]);
-}
-
-export function useEntityTags(entityType: string, entityId: string) {
-  const api = useTaxonomyApi();
+export function useEntityTags(apiFn: ApiFn, entityType: string, entityId: string) {
+  const api = useMemo(() => createTaxonomyApi(apiFn), [apiFn]);
   return useQuery({
     queryKey: ['entity-tags', entityType, entityId],
     queryFn: () => api.getEntityTags(entityType, entityId),
@@ -18,8 +13,13 @@ export function useEntityTags(entityType: string, entityId: string) {
   });
 }
 
-export function useSetEntityTags(entityType: string, entityId: string, groupSlug: string) {
-  const api = useTaxonomyApi();
+export function useSetEntityTags(
+  apiFn: ApiFn,
+  entityType: string,
+  entityId: string,
+  groupSlug: string,
+) {
+  const api = useMemo(() => createTaxonomyApi(apiFn), [apiFn]);
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (tagIds: string[]) => api.setEntityTags(entityType, entityId, groupSlug, tagIds),

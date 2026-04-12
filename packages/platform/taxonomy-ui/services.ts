@@ -1,5 +1,4 @@
-import type { ApiFn } from '@packages/platform-ui/PlatformUIProvider';
-import type { EntityTag, TagOption } from './types';
+import type { ApiFn, EntityTag, TagOption } from './types';
 
 export function createTaxonomyApi(api: ApiFn) {
   return {

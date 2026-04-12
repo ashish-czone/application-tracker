@@ -331,8 +331,8 @@ export class TaxonomyService {
         eq(entityTags.entityId, entityId),
         eq(tags.tagGroupId, group.id),
       ));
-    const currentIds = new Set(currentInGroup.map((r: { tagId: string }) => r.tagId));
-    const nextIds = new Set(tagIds);
+    const currentIds = new Set<string>(currentInGroup.map((r: { tagId: string }) => r.tagId));
+    const nextIds = new Set<string>(tagIds);
 
     for (const tagId of currentIds) {
       if (!nextIds.has(tagId)) {

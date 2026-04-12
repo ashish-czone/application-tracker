@@ -13,3 +13,15 @@ export interface TagOption {
   label: string;
   color?: string;
 }
+
+/**
+ * Structural ApiFn type matching @packages/platform-ui/PlatformUIProvider.
+ * Duplicated here to avoid a platform-ui → entity-engine-ui → taxonomy-ui cycle.
+ */
+export interface ApiFn {
+  get: <T>(path: string) => Promise<T>;
+  post: <T>(path: string, body?: unknown) => Promise<T>;
+  patch: <T>(path: string, body?: unknown) => Promise<T>;
+  put: <T>(path: string, body?: unknown) => Promise<T>;
+  delete: <T>(path: string) => Promise<T>;
+}
