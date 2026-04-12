@@ -12,6 +12,8 @@ interface EntityCreateActionConfigProps {
   onChange: (config: Record<string, unknown>) => void;
   /** Entity type of the triggering event — used for dynamic field mapping */
   sourceEntityType?: string;
+  /** When set, the entity type is fixed by the caller (e.g. via a per-entity action shortcut) and the picker is hidden. */
+  lockedEntityType?: string;
 }
 
 /**
@@ -21,10 +23,10 @@ interface EntityCreateActionConfigProps {
  * 2. Dynamic entity form fields based on the selected entity's layout
  * 3. Each field supports static value or dynamic mapping from trigger payload
  */
-export function EntityCreateActionConfig({ config, onChange, sourceEntityType }: EntityCreateActionConfigProps) {
+export function EntityCreateActionConfig({ config, onChange, sourceEntityType, lockedEntityType }: EntityCreateActionConfigProps) {
   const { data: entities } = useEntities();
 
-  const selectedEntityType = (config.entityType as string) ?? '';
+  const selectedEntityType = lockedEntityType ?? (config.entityType as string) ?? '';
   const existingFields = (config.fields as Record<string, unknown>) ?? {};
 
   const entityOptions = useMemo(() => {
@@ -56,13 +58,15 @@ export function EntityCreateActionConfig({ config, onChange, sourceEntityType }:
 
   return (
     <div className="space-y-3">
-      <FormSelect
-        value={selectedEntityType}
-        onChange={handleEntityTypeChange}
-        options={entityOptions}
-        label="Entity Type"
-        placeholder="Select entity type to create..."
-      />
+      {!lockedEntityType && (
+        <FormSelect
+          value={selectedEntityType}
+          onChange={handleEntityTypeChange}
+          options={entityOptions}
+          label="Entity Type"
+          placeholder="Select entity type to create..."
+        />
+      )}
 
       {selectedEntityType && layoutLoading && (
         <div className="space-y-2">

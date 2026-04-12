@@ -12,10 +12,12 @@ import {
 } from '../hooks';
 import { useTemplates } from '../../notifications/hooks';
 import { ConditionBuilder } from '../components/ConditionBuilder';
+import { useEntityEngine } from '@packages/entity-engine-ui';
 import { TransitionWorkflowActionConfig } from '@packages/platform-ui/workflows/components/TransitionWorkflowActionConfig';
 import { TagEntityActionConfig } from '@packages/platform-ui-taxonomy/components/TagEntityActionConfig';
 import { EntityCreateActionConfig } from '../components/EntityCreateActionConfig';
 import { EntityUpdateActionConfig } from '../components/EntityUpdateActionConfig';
+import { EntityDeleteActionConfig } from '../components/EntityDeleteActionConfig';
 import type {
   TriggerType, Condition, ActionConfig,
   UserResolution, FieldConfig, ScheduleDateOperator, ScheduleUnit,
@@ -39,6 +41,35 @@ const DAY_OPTIONS = [
 ];
 
 // --- Action form state ---
+
+/**
+ * Generic entity actions (backend handlers). In the UI dropdown these are
+ * expanded into per-entity shortcuts like `create_entity:tasks`. The synthetic
+ * dropdown value carries the target entity type so we can hide the per-config
+ * entity picker and pre-fill `config.entityType` automatically.
+ */
+const ENTITY_ACTION_TYPES = ['create_entity', 'update_entity', 'delete_entity'] as const;
+type EntityActionType = (typeof ENTITY_ACTION_TYPES)[number];
+
+function isEntityActionType(type: string): type is EntityActionType {
+  return (ENTITY_ACTION_TYPES as readonly string[]).includes(type);
+}
+
+function actionDropdownValue(type: string, config: Record<string, unknown>): string {
+  if (isEntityActionType(type)) {
+    const entityType = (config.entityType as string) ?? '';
+    return entityType ? `${type}:${entityType}` : type;
+  }
+  return type;
+}
+
+function parseDropdownValue(value: string): { type: string; entityType?: string } {
+  const colon = value.indexOf(':');
+  if (colon === -1) return { type: value };
+  const type = value.slice(0, colon);
+  const entityType = value.slice(colon + 1);
+  return { type, entityType: entityType || undefined };
+}
 
 interface ActionFormState {
   type: string;
@@ -100,6 +131,7 @@ export function RuleBuilderPage() {
   const { data: templatesData } = useTemplates({ limit: 100 });
   const { data: actionTypes } = useActionTypes();
   const { data: userStrategies } = useUserStrategies();
+  const { entities: registryEntities } = useEntityEngine();
   const templates = templatesData?.data ?? [];
 
   // Form state — basic
@@ -261,9 +293,30 @@ export function RuleBuilderPage() {
   }
 
   // --- Action type options for select ---
+  // Generic entity actions are expanded into one option per registered entity,
+  // using each entity's singularName for friendlier labels ("Create Task" instead
+  // of a bare "Create Entity" that requires a second entity-type picker).
   const actionTypeOptions = useMemo(() => {
-    return (actionTypes ?? []).map((at) => ({ value: at.type, label: at.label }));
-  }, [actionTypes]);
+    const options: { value: string; label: string }[] = [];
+    for (const at of actionTypes ?? []) {
+      if (isEntityActionType(at.type)) {
+        const verb = at.type === 'create_entity'
+          ? 'Create'
+          : at.type === 'update_entity'
+            ? 'Update'
+            : 'Delete';
+        for (const entity of registryEntities) {
+          options.push({
+            value: `${at.type}:${entity.entityType}`,
+            label: `${verb} ${entity.singularName}`,
+          });
+        }
+        continue;
+      }
+      options.push({ value: at.type, label: at.label });
+    }
+    return options;
+  }, [actionTypes, registryEntities]);
 
   const strategyOptions = useMemo(() => {
     return (userStrategies ?? []).map((s) => ({ value: s.type, label: s.label }));
@@ -564,8 +617,13 @@ function ActionEditor({
   entityOptions,
 }: ActionEditorProps) {
   const actionMeta = actionTypes.find((at) => at.type === action.type);
+  const dropdownValue = actionDropdownValue(action.type, action.config);
+  const lockedEntityType = isEntityActionType(action.type)
+    ? ((action.config.entityType as string) ?? undefined)
+    : undefined;
 
-  const handleTypeChange = (type: string) => {
+  const handleTypeChange = (value: string) => {
+    const { type, entityType } = parseDropdownValue(value);
     const meta = actionTypes.find((at) => at.type === type);
     const defaultUsers: Record<string, UserResolution> = {};
     if (meta) {
@@ -573,7 +631,8 @@ function ActionEditor({
         defaultUsers[slot.name] = { strategy: 'actor', config: {} };
       }
     }
-    onChange({ type, config: {}, users: defaultUsers });
+    const nextConfig: Record<string, unknown> = entityType ? { entityType } : {};
+    onChange({ type, config: nextConfig, users: defaultUsers });
   };
 
   const handleUserSlotChange = (slotName: string, resolution: UserResolution) => {
@@ -599,7 +658,7 @@ function ActionEditor({
       </div>
 
       <FormSelect
-        value={action.type}
+        value={dropdownValue}
         onChange={handleTypeChange}
         options={actionTypeOptions}
         label="Action Type"
@@ -620,6 +679,7 @@ function ActionEditor({
           config={action.config}
           onChange={(config) => onChange({ config })}
           sourceEntityType={sourceEntityType}
+          lockedEntityType={lockedEntityType}
         />
       )}
 
@@ -628,6 +688,15 @@ function ActionEditor({
           config={action.config}
           onChange={(config) => onChange({ config })}
           sourceEntityType={sourceEntityType}
+          lockedEntityType={lockedEntityType}
+        />
+      )}
+
+      {action.type === 'delete_entity' && (
+        <EntityDeleteActionConfig
+          config={action.config}
+          onChange={(config) => onChange({ config })}
+          lockedEntityType={lockedEntityType}
         />
       )}
 
@@ -648,7 +717,7 @@ function ActionEditor({
         />
       )}
 
-      {action.type && !['send_notification', 'create_entity', 'update_entity', 'transition_workflow', 'tag_entity'].includes(action.type) && (
+      {action.type && !['send_notification', 'create_entity', 'update_entity', 'delete_entity', 'transition_workflow', 'tag_entity'].includes(action.type) && (
         <GenericActionConfig
           config={action.config}
           onChange={(config) => onChange({ config })}
