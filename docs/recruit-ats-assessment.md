@@ -250,3 +250,292 @@ Before any of the above turns into code, the user should weigh in on:
 - **Is multi-tenancy a constraint now** — does the careers page need tenant-scoped routing (`/t/:tenantSlug/jobs`)?
 
 None of the P0 items should start without an answer here.
+
+---
+
+## 6. Phased Delivery Plan
+
+This section is the **living task tracker** for the assessment. Every phase below is a self-contained body of work. Within a phase, tasks are atomic — each maps to one commit, and a phase ships as one PR (or a small number of PRs at natural seams). Update status in place as work lands; link the merged PR next to each task when it's done.
+
+**Status legend:**
+- `[ ]` — not started
+- `[~]` — in progress
+- `[x]` — done (include PR link: `(#729)`)
+- `[-]` — skipped / no longer needed (include one-line reason)
+
+**How to update this file:**
+1. When starting a phase, flip its status to `In progress` and list the branch name.
+2. When a task ships, flip its checkbox to `[x]` and append the PR number.
+3. When a phase is fully shipped, flip its status to `Shipped (YYYY-MM-DD)` and add a one-line retrospective under "Notes".
+4. If scope changes, edit the task list in place and leave a dated note under "Notes". Do not rewrite history.
+
+---
+
+### Phase 0 — Open Decisions (blocks all P0 work)
+
+**Status:** Not started
+**Owner:** User
+**Outputs:** Answers recorded inline in section 5 of this doc
+
+Decisions needed before any code is written in P0 phases:
+
+- [ ] Communication layer: build custom email sync or wrap a provider (Postmark / Customer.io / Loops / Resend)
+- [ ] E-signature vendor: DocuSign / Dropbox Sign / BoldSign / Documenso (OSS)
+- [ ] Resume parser: Affinda / Sovren / OSS (`resume-parser`, `pyresparser`)
+- [ ] Careers page shape: new Vite sub-app vs public routes in `recruit-web`
+- [ ] Recruit brand color: own primary token or inherit platform slate
+- [ ] Multi-tenancy scope: does careers page need tenant-scoped routing now
+
+**Notes:**
+- _empty_
+
+---
+
+### Phase 1 — Design Tokens + Kanban on Applications
+
+**Status:** Not started
+**Dependencies:** Phase 0 decision on recruit brand color
+**Goal:** Replace hardcoded stage colors with design tokens, and deliver a drag-to-transition kanban as a first-class view on the applications list.
+
+Tasks:
+
+- [ ] Add stage design tokens to `packages/core/ui` theme (`--stage-*` with `-bg`, `-fg`, `-border`, `-soft` variants) — verify AA contrast in light and dark mode
+- [ ] Migrate `StatusBadge`, `PipelineProgressRenderer`, stage color map on `JobOpeningDetailPage`, dashboard funnel bar to read from tokens
+- [ ] Grep-verify no `bg-emerald-100`-style stage literals remain in `apps/recruit-web/src/portals/recruiter/features/`
+- [ ] Add view-switcher control (Table / Kanban) to the applications list page
+- [ ] Build reusable `<KanbanBoard>` widget in `packages/platform/entity-engine-ui` (generic over entity + workflow field) — drag source, drop target, column WIP badges
+- [ ] Wire applications kanban to existing workflow transition API; optimistic update + rollback on error
+- [ ] Per-column card shows: candidate avatar + name, job, days-in-stage pill, next scheduled event
+- [ ] Empty / loading / error states for the board
+- [ ] E2E: drag card across columns, verify stage persists, verify workflow guards still block illegal transitions
+- [ ] Keyboard accessibility: arrow-key navigation between cards, space to pick up / drop, screen-reader announcements
+
+**Notes:**
+- _empty_
+
+---
+
+### Phase 2 — Activity Timeline, Inline Edit, Stage-Transition Drawer
+
+**Status:** Not started
+**Dependencies:** None (orthogonal to Phase 1)
+**Goal:** Turn the candidate / application detail page into a true workbench — unified activity feed, fewer clicks to edit, structured stage transitions.
+
+Tasks:
+
+- [ ] Extend audit event stream → polymorphic `activity` feed query (merges notes, stage changes, interviews created, offers sent, emails — email rows become real in Phase 3)
+- [ ] Build `<ActivityTimeline>` component in `packages/platform/entity-engine-ui` (reverse-chronological, grouped by day, icon per event type)
+- [ ] Replace generic audit tab on `CandidateProfilePage` with `ActivityTimeline`
+- [ ] Add `ActivityTimeline` to application detail, offer detail
+- [ ] Inline editable fields on detail pages — click field → inline edit → save on blur / enter; uses existing `DynamicField` under the hood
+- [ ] Field-level permission check before showing edit affordance (hook into existing RBAC field-level perms)
+- [ ] Stage-transition drawer: intercept every workflow transition on applications, collect `reason` (picklist), `note` (markdown), optional `nextStepAction` (e.g., schedule interview, send rejection email — email in Phase 3)
+- [ ] Persist transition reason as part of the workflow event payload; surface in activity timeline
+- [ ] E2E: transition a candidate through 3 stages via the drawer, verify reasons appear in activity feed
+- [ ] Stage progress bar (horizontal stepper) on application detail header
+
+**Notes:**
+- _empty_
+
+---
+
+### Phase 3 — Communication Layer v1
+
+**Status:** Not started
+**Dependencies:** Phase 0 decision on email provider
+**Goal:** Outbound email with templates, merge tags, and a per-candidate thread view. Unlocks rejection flow, bulk outreach, and offer letter delivery.
+
+Tasks:
+
+- [ ] New addon package `packages/addons/communication` — provider abstraction (SMTP / Postmark / Resend / Gmail API), send queue, bounce/complaint webhook handler
+- [ ] `email-templates` entity (name, subject, body markdown, entity context, tags) — admin-editable via existing layout system
+- [ ] Merge-tag renderer with safe escaping (`{{candidate.firstName}}`, `{{job.title}}`) — resolve via entity-engine's field accessors
+- [ ] `communication-log` entity — polymorphic on candidate / application, stores direction, subject, body, status (queued / sent / delivered / opened / bounced)
+- [ ] Outbound send service + queue job; emit `communication.EmailSent` event for activity timeline
+- [ ] Email composer slide-out: template picker, preview pane, merge-tag resolution, schedule-send
+- [ ] Thread view on candidate profile (Emails tab) — list of sent/received messages
+- [ ] Bulk send from applications list (with per-recipient personalization preview)
+- [ ] Rate limiting + per-user daily cap + tenant-scoped sender domain validation
+- [ ] Security tests: 401/403 on send, template ownership, merge-tag injection prevention
+- [ ] E2E: send a templated email from candidate detail, verify activity timeline entry, verify bounced status transitions
+
+**Out of scope for v1:** 2-way inbound email sync (IMAP/Gmail push). Defer to v2.
+
+**Notes:**
+- _empty_
+
+---
+
+### Phase 4 — Offer Documents + E-Signature
+
+**Status:** Not started
+**Dependencies:** Phase 3 (email delivery), Phase 0 decision on e-sign vendor
+**Goal:** Generate offer letter PDFs from templates, send via email, collect e-signature, update offer status on signed.
+
+Tasks:
+
+- [ ] Offer letter template entity — markdown body + header/footer + per-country variant, uses `@packages/addons/document-templates`
+- [ ] Render offer letter via `@packages/addons/pdf-generator` on offer transition to `approved`
+- [ ] Preview panel on offer detail — live PDF render with current field values
+- [ ] E-sign provider abstraction (vendor decided in Phase 0) — envelope create, webhook for signed/declined
+- [ ] Candidate-facing review page `/offers/:token/review` — token-gated, shows PDF, accept/decline CTA, signature capture
+- [ ] Status sync: `sent → accepted / declined` driven by webhook
+- [ ] Email template "offer-sent" wired to send on transition to `sent`, body contains token link
+- [ ] Activity timeline entries for offer events
+- [ ] E2E: create offer → approve → send → open candidate link → sign → verify status transitions and PDF archived
+
+**Notes:**
+- _empty_
+
+---
+
+### Phase 5 — Interview Scorecards + Kits + Feedback Gating
+
+**Status:** Not started
+**Dependencies:** None (parallel to Phase 3/4 if capacity allows)
+**Goal:** Structured interview feedback with rubrics, required before advancing stages past `technical`.
+
+Tasks:
+
+- [ ] `interview-kits` entity — name, job (optional), stage, questions list, rubric criteria with weights
+- [ ] `interview-scorecards` entity — per-interviewer on an interview, answers + ratings + overall recommendation (strong-yes / yes / no / strong-no)
+- [ ] Lock-after-submission behavior on scorecards
+- [ ] Scorecard form component in `packages/platform/entity-engine-ui` — renders kit, collects feedback
+- [ ] Interview detail page redesign: kit preview, per-interviewer scorecard status, aggregate summary
+- [ ] Email / in-app nudge to interviewer when interview status → `completed` and their scorecard is empty
+- [ ] Workflow guard: block transition past `technical` if any scorecard required-and-missing on the latest interview
+- [ ] Aggregate scorecard view on application detail (collapsible panel per interview)
+- [ ] E2E: schedule interview → complete → submit scorecards → verify gate releases stage transition
+
+**Notes:**
+- _empty_
+
+---
+
+### Phase 6 — Reporting v2
+
+**Status:** Not started
+**Dependencies:** Phases 1–5 ship meaningful data first
+**Goal:** Operational reports that recruiting leads actually use: time-to-hire, funnel conversion, source effectiveness, offer acceptance.
+
+Tasks:
+
+- [ ] `recruit/reports` module in `apps/recruit/src/modules/`
+- [ ] Materialized views: time-in-stage, time-to-hire, funnel conversion, offer acceptance rate, source-of-hire, interviewer load
+- [ ] Refresh strategy — scheduled + event-driven (refresh on application / offer events)
+- [ ] Report query API with date range, team, job filters
+- [ ] Reports page (`/reports`) with tab per report, date range picker, team/job filters, export to CSV
+- [ ] Sparkline KPI cards on dashboard (current value + 30-day trend)
+- [ ] DEI breakdown report (requires self-reported demographics, GDPR-aware — flag dependency on Phase 10)
+- [ ] E2E: generate report over fixture data, export CSV, verify filter persistence in URL
+
+**Notes:**
+- _empty_
+
+---
+
+### Phase 7 — Careers Page + Public Applications
+
+**Status:** Not started
+**Dependencies:** Phase 0 decision on sub-app shape, Phase 3 (to send "application received" email)
+**Goal:** Public-facing job board where candidates can apply without staff intervention.
+
+Tasks:
+
+- [ ] New app or public route (per Phase 0 decision) with job list and job detail page
+- [ ] JSON-LD `JobPosting` schema on job detail pages for Google Jobs indexing
+- [ ] Public `POST /public/applications` endpoint — rate-limited, CAPTCHA, honeypot, file upload
+- [ ] Source attribution — capture UTM params, referrer, store on created application
+- [ ] Referral link generator for staff — `?ref=<userId>`
+- [ ] Candidate-facing "application submitted" confirmation page + templated confirmation email (Phase 3 dependency)
+- [ ] Admin control over which jobs are published publicly (`publishedAt` / `unpublishedAt` on job opening)
+- [ ] SEO basics: title, description, OG image per job
+- [ ] E2E: submit a public application, verify it arrives in the internal list with correct source attribution
+
+**Notes:**
+- _empty_
+
+---
+
+### Phase 8 — Resume Parsing
+
+**Status:** Not started
+**Dependencies:** Phase 0 decision on parser vendor, Phase 7 (public apps benefit most)
+**Goal:** Extract structured data from uploaded resumes and prefill candidate fields.
+
+Tasks:
+
+- [ ] Parser provider abstraction in `packages/addons/communication` or a new `packages/addons/resume-parser`
+- [ ] Queue job: on resume upload → parse → write structured fields (skills, experience, education, contact)
+- [ ] Confidence score per field, flag low-confidence for staff review
+- [ ] UI affordance on candidate form: parsed fields show a small "parsed" badge that clears on first edit
+- [ ] Retry + failure surface in the job queue dashboard
+- [ ] Optional: on public application submission, run parser synchronously for small files
+- [ ] E2E: upload sample resume fixture, verify fields populated
+
+**Notes:**
+- _empty_
+
+---
+
+### Phase 9 — P1 Bundle: Requisitions, Automations Recipes, Collaboration, Talent Pool, Assessments
+
+**Status:** Not started
+**Dependencies:** Phases 1–8 provide the substrate
+**Goal:** Round out the recruiter experience with workflow automation, pre-hire assessments, and passive-candidate nurture.
+
+Tasks (decompose into sub-phases when scheduled — each bullet is roughly a sub-phase):
+
+- [ ] Requisitions / hiring plans — job-opening workflow `draft → requested → approved → open → filled / closed`, approval chain reusing offer-approvals pattern, `hiring-plans` entity grouping by quarter/budget
+- [ ] Automations recipe library — ship 5–10 recipes using `@packages/platform/automations`: auto-reject after N days no-response, auto-assign coordinator on interview schedule, nudge hiring manager on stale offer, auto-tag candidates with "silver medalist" on rejection after final round, etc.
+- [ ] Collaboration: `@mentions` in notes (markdown input), notification on mention, "following" concept, unified activity feed improvements
+- [ ] Talent pool / CRM: saved filter + tag-based segments, nurture email schedule (built on communication layer), silver-medalist auto-tag
+- [ ] Assessments integration: `assessments` entity, outbound stub for HackerRank / CodeSignal / TestGorilla, attach-to-application flow, required-before-transition guard
+- [ ] Side-by-side candidate comparison view (select 2–4 from applications list → Compare action)
+- [ ] Global search (⌘K) over candidates / jobs / applications
+- [ ] Bulk actions on applications list — mass stage transition, bulk email, bulk reject, bulk tag
+
+**Notes:**
+- _empty_
+
+---
+
+### Phase 10 — P2 Bundle: Compliance, References, Background, Onboarding, Mobile, Dedup
+
+**Status:** Not started
+**Dependencies:** Phase 9
+**Goal:** Enterprise-readiness features and edge cases.
+
+Tasks:
+
+- [ ] References: `references` entity, token-based external referee form, optional required-before-offer gate
+- [ ] Background checks: integration stub (Checkr / Certn), status on application, webhook-driven transition
+- [ ] Onboarding handoff: `recruit.CandidateHired` event → webhook to external HRIS (BambooHR / Rippling) or placeholder for internal onboarding module
+- [ ] GDPR: consent capture on candidates, retention policies per country (leverages client-country discriminator), soft-delete + scheduled hard-delete job, self-serve DSAR export endpoint, right-to-erasure workflow
+- [ ] Mobile-responsive audit: hero cards, tab layouts, calendar, kanban — add breakpoints, dedicated mobile quick-add interview and review-offer flows
+- [ ] Candidate dedup: fuzzy match on email/phone during create, merge-candidate flow, pgvector-backed semantic search (ties into platform semantic search roadmap)
+- [ ] Accessibility audit pass: icon + color for stages (not color-only), consistent focus rings, `aria-live` on transitions and bulk actions, dark mode verification
+- [ ] Interview calendar drag-to-reschedule with re-notification
+
+**Notes:**
+- _empty_
+
+---
+
+### Cross-Cutting Continuous Work
+
+Things that don't belong to one phase — pick up opportunistically while working in the area:
+
+- [ ] Empty states with illustration + CTA on every list / tab
+- [ ] Skeleton loading states replacing spinners on detail pages
+- [ ] Consolidate hardcoded Tailwind color literals as they're encountered
+- [ ] Storybook / component gallery for new shared widgets (`KanbanBoard`, `ActivityTimeline`, scorecard form)
+- [ ] Keep this document in sync after every shipped task — status, PR link, notes
+
+---
+
+## 7. Change Log
+
+| Date | Change | PR |
+|---|---|---|
+| 2026-04-12 | Initial assessment and phased plan | #729 |
