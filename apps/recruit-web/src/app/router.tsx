@@ -11,7 +11,7 @@ import {
   useWorkflows,
   useEntityTransition,
 } from '@packages/platform-ui/workflows';
-import { SettingsPage, AppSettingsPage, AutomationsPage, RuleBuilderPage, UsersListPage, RolesListPage, TagGroupsListPage, CategoryGroupsListPage, QueuedTasksPage, OrgPositionsPage, OrgUnitsPage } from '../portals/recruiter/routes';
+import { SettingsPage, AppearancePage, AppSettingsPage, AutomationsPage, RuleBuilderPage, UsersListPage, RolesListPage, TagGroupsListPage, CategoryGroupsListPage, QueuedTasksPage, OrgPositionsPage, OrgUnitsPage } from '../portals/recruiter/routes';
 import { CandidateProfilePage } from '../portals/recruiter/features/candidates/CandidateProfilePage';
 import { DashboardPage as RecruitDashboard } from '../portals/recruiter/features/dashboard/DashboardPage';
 import { JobOpeningDetailPage } from '../portals/recruiter/features/job-openings/JobOpeningDetailPage';
@@ -260,6 +260,10 @@ export function AppRouter() {
           <Route
             path="/categories"
             element={<CategoryGroupsListPage />}
+          />
+          <Route
+            path="/settings/appearance"
+            element={<Suspense fallback={<PageSkeleton />}><AppearancePage /></Suspense>}
           />
           <Route
             path="/settings/:entityType?"

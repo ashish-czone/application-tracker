@@ -23,6 +23,7 @@
     "@packages/entity-relations-ui": "workspace:*",
     "@packages/platform-ui": "workspace:*",
     "@packages/platform-ui-taxonomy": "workspace:*",
+    "@packages/theming-ui": "workspace:*",
     "@packages/ui": "workspace:*",
     "@tanstack/react-query": "^5.60.0",
     "dagre": "^0.8.5",
