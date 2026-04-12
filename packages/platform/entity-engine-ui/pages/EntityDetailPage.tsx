@@ -20,6 +20,7 @@ import {
 import type { EntityAction } from '@packages/entity-engine';
 import type { DetailTabPlugin } from '../types';
 import { DynamicSection, isFieldEmpty } from '@packages/eav-attributes-ui';
+import { EntityTagsChipRow } from '@packages/taxonomy-ui';
 import { useEntityEngine, useEntityHooks, useEntityConfig } from '../EntityEngineProvider';
 import { useEntityLayout } from '../helpers/useEntityLayout';
 import { useListLayout } from '../helpers/useListLayout';
@@ -358,6 +359,16 @@ export function EntityDetailPage({ entityType, renderPipelineProgress, renderWor
           </div>
           {headerActions}
         </div>
+
+        {entity.features.hasTags && (
+          <div className="mt-3">
+            <EntityTagsChipRow
+              entityType={entityType}
+              entityId={item.id as string}
+              groupSlug={entity.features.hasTags.groupSlug}
+            />
+          </div>
+        )}
       </div>
 
       {/* System metadata */}

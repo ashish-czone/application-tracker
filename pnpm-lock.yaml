@@ -2349,6 +2349,9 @@ importers:
       '@packages/platform-ui-conditions':
         specifier: workspace:*
         version: link:../platform-ui/conditions
+      '@packages/taxonomy-ui':
+        specifier: workspace:*
+        version: link:../taxonomy-ui
       '@packages/ui':
         specifier: workspace:*
         version: link:../../core/ui
