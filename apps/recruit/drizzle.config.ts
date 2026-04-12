@@ -14,6 +14,7 @@ export default defineConfig({
     '../../packages/platform/notifications/schema/index.ts',
     '../../packages/platform/workflows/schema/index.ts',
     '../../packages/platform/taxonomy/schema/index.ts',
+    '../../packages/platform/user-preferences/schema/index.ts',
     // Addon packages
     '../../packages/addons/org-units/schema/index.ts',
     '../../packages/addons/eav-attributes/schema/index.ts',
