@@ -277,6 +277,7 @@ export class EntityService {
       .filter(d => {
         if (EntityService.shouldExcludeFromList(d.fieldType)) return false;
         if (this.isFieldExcludedFromList(d.fieldKey)) return false;
+        if (config.fieldMeta[d.fieldKey]?.listColumnHidden) return false;
         if (!d.isSystem) return true;
         // System fields can appear if explicitly listed or have a custom cell renderer
         return listFieldSet?.has(d.fieldKey) || !!config.fieldMeta[d.fieldKey]?.cellRenderer;

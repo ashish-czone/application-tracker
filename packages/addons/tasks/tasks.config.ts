@@ -113,6 +113,7 @@ export const TASKS_CONFIG = defineEntity({
       lookupLabelField: 'name',
       lookupSearchFields: ['name'],
       quickCreate: true,
+      listColumnHidden: true,
     },
     dueDate: {
       type: 'date',
