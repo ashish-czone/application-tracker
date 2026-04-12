@@ -66,7 +66,7 @@ export function FormChipInput({
         return (
           <div className={cn('space-y-2', className)}>
             <Label htmlFor={name}>{label}</Label>
-            <ChipInputInner
+            <ChipInput
               options={options}
               onSearch={onSearch}
               initialSelected={initialSelected}
@@ -96,7 +96,7 @@ export function FormChipInput({
   );
 }
 
-function ChipInputInner({
+export function ChipInput({
   options,
   onSearch,
   initialSelected,

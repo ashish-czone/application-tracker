@@ -16,7 +16,7 @@ export { FormTextarea } from './components/form/FormTextarea';
 export { FormCheckbox } from './components/form/FormCheckbox';
 export { FormCurrencyInput } from './components/form/FormCurrencyInput';
 export { FormRichText } from './components/form/FormRichText';
-export { FormChipInput, type ChipOption } from './components/form/FormChipInput';
+export { FormChipInput, ChipInput, type ChipOption } from './components/form/FormChipInput';
 export { FormFileInput } from './components/form/FormFileInput';
 export { FormDatePicker } from './components/form/FormDatePicker';
 export { Calendar } from './components/form/Calendar';
