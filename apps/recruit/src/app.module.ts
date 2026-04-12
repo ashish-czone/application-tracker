@@ -24,6 +24,7 @@ import { OAuthModule } from '@packages/oauth';
 import { RbacGuard } from '@packages/rbac';
 import { AppConfigService } from '@packages/settings';
 import { TaxonomyModule } from '@packages/taxonomy';
+import { UserPreferencesModule } from '@packages/user-preferences';
 import { NotesModule } from '@packages/notes';
 import { EvaluationsModule } from '@packages/evaluations';
 import { AttachmentsModule } from '@packages/attachments';
@@ -119,6 +120,7 @@ import { validate } from './config/env.validation';
     WorkflowsModule,
     HierarchyModule,
     TaxonomyModule,
+    UserPreferencesModule,
     NotesModule,
     EvaluationsModule,
     AttachmentsModule,

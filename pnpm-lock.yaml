@@ -566,6 +566,9 @@ importers:
       '@packages/tenancy':
         specifier: workspace:*
         version: link:../../packages/addons/tenancy
+      '@packages/user-preferences':
+        specifier: workspace:*
+        version: link:../../packages/platform/user-preferences
       '@packages/users':
         specifier: workspace:*
         version: link:../../packages/core/users
