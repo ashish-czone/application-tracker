@@ -179,7 +179,7 @@ importers:
     devDependencies:
       '@nestjs/cli':
         specifier: ^11.0.0
-        version: 11.0.16(@swc/core@1.15.18)(@types/node@22.19.15)(esbuild@0.25.12)
+        version: 11.0.16(@swc/core@1.15.18)(@types/node@22.19.15)
       '@nestjs/schematics':
         specifier: ^11.0.0
         version: 11.0.9(chokidar@4.0.3)(typescript@5.9.3)
@@ -224,7 +224,7 @@ importers:
         version: 7.2.2
       ts-loader:
         specifier: ^9.5.4
-        version: 9.5.4(typescript@5.9.3)(webpack@5.105.4(@swc/core@1.15.18)(esbuild@0.25.12))
+        version: 9.5.4(typescript@5.9.3)(webpack@5.105.4(@swc/core@1.15.18))
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -233,7 +233,7 @@ importers:
         version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(terser@5.46.0)
       webpack:
         specifier: ^5.105.4
-        version: 5.105.4(@swc/core@1.15.18)(esbuild@0.25.12)
+        version: 5.105.4(@swc/core@1.15.18)
       webpack-node-externals:
         specifier: ^3.0.0
         version: 3.0.0
@@ -360,7 +360,7 @@ importers:
     devDependencies:
       '@nestjs/cli':
         specifier: ^11.0.0
-        version: 11.0.16(@swc/core@1.15.18)(@types/node@22.19.15)
+        version: 11.0.16(@swc/core@1.15.18)(@types/node@22.19.15)(esbuild@0.25.12)
       '@nestjs/schematics':
         specifier: ^11.0.0
         version: 11.0.9(chokidar@4.0.3)(typescript@5.9.3)
@@ -384,7 +384,7 @@ importers:
         version: 8.20.0
       ts-loader:
         specifier: ^9.5.1
-        version: 9.5.4(typescript@5.9.3)(webpack@5.105.4(@swc/core@1.15.18))
+        version: 9.5.4(typescript@5.9.3)(webpack@5.105.4(@swc/core@1.15.18)(esbuild@0.25.12))
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -393,7 +393,7 @@ importers:
         version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(terser@5.46.0)
       webpack:
         specifier: ^5.97.0
-        version: 5.105.4(@swc/core@1.15.18)
+        version: 5.105.4(@swc/core@1.15.18)(esbuild@0.25.12)
       webpack-node-externals:
         specifier: ^3.0.0
         version: 3.0.0
@@ -2859,6 +2859,28 @@ importers:
       '@packages/testing':
         specifier: workspace:*
         version: link:../../core/testing
+
+  packages/platform/theming-ui:
+    dependencies:
+      '@packages/ui':
+        specifier: workspace:*
+        version: link:../../core/ui
+      '@tanstack/react-query':
+        specifier: ^5.0.0
+        version: 5.90.21(react@19.2.4)
+      lucide-react:
+        specifier: ^0.500.0
+        version: 0.500.0(react@19.2.4)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.4
+      react-dom:
+        specifier: ^19.0.0
+        version: 19.2.4(react@19.2.4)
+    devDependencies:
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
 
   packages/platform/user-preferences:
     dependencies:

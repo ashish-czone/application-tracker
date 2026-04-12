@@ -1,0 +1,130 @@
+import type { ThemePreset } from './types';
+
+export const THEME_PRESETS: ThemePreset[] = [
+  {
+    id: 'default',
+    name: 'Default',
+    description: 'Neutral slate with a balanced violet accent.',
+    swatch: 'hsl(252 56% 57%)',
+    light: {
+      primary: '252 56% 57%',
+      primaryForeground: '0 0% 100%',
+      accent: '240 5% 96%',
+      accentForeground: '240 6% 10%',
+      ring: '252 56% 57%',
+      sidebarAccent: '252 56% 57%',
+      sidebarAccentForeground: '0 0% 100%',
+    },
+    dark: {
+      primary: '252 56% 65%',
+      primaryForeground: '0 0% 100%',
+      accent: '217 33% 18%',
+      accentForeground: '210 40% 98%',
+      ring: '252 56% 65%',
+      sidebarAccent: '252 56% 65%',
+      sidebarAccentForeground: '0 0% 100%',
+    },
+  },
+  {
+    id: 'ocean',
+    name: 'Ocean',
+    description: 'Calm blue and slate — good for data-heavy screens.',
+    swatch: 'hsl(210 90% 50%)',
+    light: {
+      primary: '210 90% 50%',
+      primaryForeground: '0 0% 100%',
+      accent: '210 40% 96%',
+      accentForeground: '210 50% 15%',
+      ring: '210 90% 50%',
+      sidebarAccent: '210 90% 50%',
+      sidebarAccentForeground: '0 0% 100%',
+    },
+    dark: {
+      primary: '210 90% 60%',
+      primaryForeground: '0 0% 100%',
+      accent: '215 30% 18%',
+      accentForeground: '210 40% 98%',
+      ring: '210 90% 60%',
+      sidebarAccent: '210 90% 60%',
+      sidebarAccentForeground: '0 0% 100%',
+    },
+  },
+  {
+    id: 'forest',
+    name: 'Forest',
+    description: 'Grounded green against warm stone.',
+    swatch: 'hsl(142 55% 38%)',
+    light: {
+      primary: '142 55% 38%',
+      primaryForeground: '0 0% 100%',
+      accent: '60 10% 95%',
+      accentForeground: '60 12% 15%',
+      ring: '142 55% 38%',
+      sidebarAccent: '142 55% 38%',
+      sidebarAccentForeground: '0 0% 100%',
+    },
+    dark: {
+      primary: '142 55% 50%',
+      primaryForeground: '0 0% 100%',
+      accent: '150 15% 18%',
+      accentForeground: '60 10% 95%',
+      ring: '142 55% 50%',
+      sidebarAccent: '142 55% 50%',
+      sidebarAccentForeground: '0 0% 100%',
+    },
+  },
+  {
+    id: 'sunset',
+    name: 'Sunset',
+    description: 'Warm orange against cool zinc.',
+    swatch: 'hsl(22 90% 52%)',
+    light: {
+      primary: '22 90% 52%',
+      primaryForeground: '0 0% 100%',
+      accent: '20 10% 96%',
+      accentForeground: '20 15% 15%',
+      ring: '22 90% 52%',
+      sidebarAccent: '22 90% 52%',
+      sidebarAccentForeground: '0 0% 100%',
+    },
+    dark: {
+      primary: '22 90% 60%',
+      primaryForeground: '0 0% 100%',
+      accent: '20 15% 18%',
+      accentForeground: '20 10% 96%',
+      ring: '22 90% 60%',
+      sidebarAccent: '22 90% 60%',
+      sidebarAccentForeground: '0 0% 100%',
+    },
+  },
+  {
+    id: 'midnight',
+    name: 'Midnight',
+    description: 'Deep violet on cool slate — made for dark mode.',
+    swatch: 'hsl(270 60% 55%)',
+    light: {
+      primary: '270 60% 55%',
+      primaryForeground: '0 0% 100%',
+      accent: '270 20% 96%',
+      accentForeground: '270 25% 15%',
+      ring: '270 60% 55%',
+      sidebarAccent: '270 60% 55%',
+      sidebarAccentForeground: '0 0% 100%',
+    },
+    dark: {
+      primary: '270 65% 65%',
+      primaryForeground: '0 0% 100%',
+      accent: '260 25% 18%',
+      accentForeground: '270 20% 96%',
+      ring: '270 65% 65%',
+      sidebarAccent: '270 65% 65%',
+      sidebarAccentForeground: '0 0% 100%',
+    },
+  },
+];
+
+export const DEFAULT_PRESET_ID = 'default';
+
+export function getPresetById(id: string): ThemePreset {
+  return THEME_PRESETS.find((p) => p.id === id) ?? THEME_PRESETS[0];
+}
