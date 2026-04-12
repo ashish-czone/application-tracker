@@ -521,7 +521,10 @@ function OverviewTab({
   const [showEmptySections, setShowEmptySections] = useState(false);
 
   const allSections = useMemo(
-    () => (layout?.sections ?? []).filter((s: any) => s.fields.length > 0),
+    () =>
+      (layout?.sections ?? []).filter(
+        (s: any) => s.fields.length > 0 && s.id !== '__unassigned__',
+      ),
     [layout],
   );
 
