@@ -224,4 +224,22 @@ describe('EntityRegistryService', () => {
     const entries = registry.getRegistryEntries();
     expect(entries[0].features.hasEvaluations).toBe(false);
   });
+
+  it('exposes hasTags groupSlug in features when set', () => {
+    registry.register(mockConfig({
+      entityType: 'with_tags',
+      slug: 'with-tags',
+      hasTags: { groupSlug: 'task-tags' },
+    }));
+
+    const entries = registry.getRegistryEntries();
+    expect(entries[0].features.hasTags).toEqual({ groupSlug: 'task-tags' });
+  });
+
+  it('hasTags defaults to undefined in features', () => {
+    registry.register(mockConfig());
+
+    const entries = registry.getRegistryEntries();
+    expect(entries[0].features.hasTags).toBeUndefined();
+  });
 });

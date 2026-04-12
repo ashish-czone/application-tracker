@@ -77,6 +77,7 @@ export class EntityRegistryService {
         hasNotes: !!config.hasNotes,
         hasAttachments: !!config.hasAttachments,
         hasEvaluations: !!config.hasEvaluations,
+        hasTags: config.hasTags ? { groupSlug: config.hasTags.groupSlug } : undefined,
         attachmentConfig: config.attachmentConfig ? {
           maxFileSize: config.attachmentConfig.maxFileSize,
           acceptedMimeTypes: config.attachmentConfig.acceptedMimeTypes,

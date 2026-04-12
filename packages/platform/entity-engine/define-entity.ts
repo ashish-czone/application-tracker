@@ -195,6 +195,14 @@ export interface ModelDefinition<TTable extends PgTable = PgTable> {
   /** Enable the evaluations tab on the entity detail page. Default: false. */
   hasEvaluations?: boolean;
 
+  // --- Tags ---
+
+  /**
+   * Enable inline tagging on the entity detail page without declaring a `tags` field.
+   * Renders an editable chip row in the detail header bound to the given tag group.
+   */
+  hasTags?: { groupSlug: string };
+
   /** Per-entity attachment configuration. Only relevant when hasAttachments is true. */
   attachmentConfig?: {
     maxFileSize?: number;
@@ -404,6 +412,7 @@ export function defineEntity<TTable extends PgTable>(model: ModelDefinition<TTab
     hasNotes: model.hasNotes,
     hasAttachments: model.hasAttachments,
     hasEvaluations: model.hasEvaluations,
+    hasTags: model.hasTags,
     attachmentConfig: model.attachmentConfig,
     computedColumns: model.computedColumns,
     extraPermissions: model.extraPermissions,

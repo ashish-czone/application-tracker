@@ -603,6 +603,14 @@ export interface EntityConfig<TTable extends PgTable = PgTable> {
   /** Enable the evaluations tab on the entity detail page. Default: false. */
   hasEvaluations?: boolean;
 
+  // --- Tags ---
+
+  /**
+   * Enable inline tagging on the entity detail page without declaring a `tags` field.
+   * Renders an editable chip row in the detail header bound to the given tag group.
+   */
+  hasTags?: { groupSlug: string };
+
   /** Per-entity attachment configuration. Only relevant when hasAttachments is true. */
   attachmentConfig?: {
     /** Maximum file size in bytes. Default: 10MB (from media module). */
@@ -800,6 +808,7 @@ export interface EntityRegistryEntry {
     hasNotes: boolean;
     hasAttachments: boolean;
     hasEvaluations: boolean;
+    hasTags?: { groupSlug: string };
     attachmentConfig?: {
       maxFileSize?: number;
       acceptedMimeTypes?: string[];
