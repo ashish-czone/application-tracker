@@ -28,10 +28,11 @@ export function EntityCreatePage({ entityType }: EntityCreatePageProps) {
   const isWizard = entity.ui.createMode === 'wizard';
   const [currentStep, setCurrentStep] = useState(0);
 
-  // Filter sections with editable fields
+  // Filter sections with editable fields (exclude the virtual unassigned section)
   const steps = useMemo(() => {
     if (!layout) return [];
     return layout.sections
+      .filter((s) => s.id !== '__unassigned__')
       .map((s) => ({
         ...s,
         editableFields: s.fields.filter((f) => !f.isReadonly && f.fieldType !== 'auto_number'),
