@@ -2,7 +2,7 @@ import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { createEntityApi } from './helpers/createEntityApi';
 import { createEntityHooks, type EntityHooks } from './helpers/createEntityHooks';
-import type { EntityRegistryEntry, EntityApi, EntityUIConfig, EntityDetailPlugin, DetailTabPlugin, RightSidebarPanel, ColumnRendererRegistration } from './types';
+import type { EntityRegistryEntry, EntityApi, EntityUIConfig, EntityDetailPlugin, DetailTabPlugin, ListViewPlugin, RightSidebarPanel, ColumnRendererRegistration } from './types';
 
 interface EntityEngineContextValue {
   /** All registered entities from the backend */
@@ -21,6 +21,8 @@ interface EntityEngineContextValue {
   getDetailPlugins: (entityType: string) => EntityDetailPlugin[];
   /** Get detail tab plugins for an entity type (global + entity-specific, sorted by order) */
   getDetailTabs: (entityType: string) => DetailTabPlugin[];
+  /** Get list view plugins for an entity type (global + entity-specific, sorted by order) */
+  getListViews: (entityType: string) => ListViewPlugin[];
   /** Get right sidebar panels for an entity type (sorted by order) */
   getRightSidebarPanels: (entityType: string) => RightSidebarPanel[];
   /** Get a named column renderer registration */
@@ -44,13 +46,15 @@ interface EntityEngineProviderProps {
   entityUIConfigs?: EntityUIConfig[];
   /** Global detail tab plugins (applied to all entity detail pages) */
   detailTabs?: DetailTabPlugin[];
+  /** Global list view plugins (applied to all entity list pages, filtered by featureFlag) */
+  listViews?: ListViewPlugin[];
   /** Named column renderer registrations (keyed by renderer name) */
   columnRenderers?: Record<string, ColumnRendererRegistration>;
   /** Global right sidebar panels (applied to all entity detail pages, filtered by featureFlag) */
   rightSidebarPanels?: RightSidebarPanel[];
 }
 
-export function EntityEngineProvider({ children, apiFn, entityUIConfigs = [], detailTabs: globalDetailTabs = [], rightSidebarPanels: globalSidebarPanels = [], columnRenderers = {} }: EntityEngineProviderProps) {
+export function EntityEngineProvider({ children, apiFn, entityUIConfigs = [], detailTabs: globalDetailTabs = [], listViews: globalListViews = [], rightSidebarPanels: globalSidebarPanels = [], columnRenderers = {} }: EntityEngineProviderProps) {
   // Fetch entity registry from backend
   const { data: entities = [], isLoading } = useQuery({
     queryKey: ['entity-engine', 'registry'],
@@ -92,6 +96,17 @@ export function EntityEngineProvider({ children, apiFn, entityUIConfigs = [], de
     return perEntity;
   }, [entityUIConfigs]);
 
+  // Index list views: per-entity (global views are merged in getListViews)
+  const listViewMap = useMemo(() => {
+    const perEntity = new Map<string, ListViewPlugin[]>();
+    for (const config of entityUIConfigs) {
+      if (config.listViews?.length) {
+        perEntity.set(config.entityType, config.listViews);
+      }
+    }
+    return perEntity;
+  }, [entityUIConfigs]);
+
   // Index right sidebar panels by entity type
   const sidebarPanelMap = useMemo(() => {
     const map = new Map<string, RightSidebarPanel[]>();
@@ -115,13 +130,17 @@ export function EntityEngineProvider({ children, apiFn, entityUIConfigs = [], de
       const entityTabs = tabMap.get(entityType) ?? [];
       return [...globalDetailTabs, ...entityTabs].sort((a, b) => a.order - b.order);
     },
+    getListViews: (entityType: string) => {
+      const entityViews = listViewMap.get(entityType) ?? [];
+      return [...globalListViews, ...entityViews].sort((a, b) => a.order - b.order);
+    },
     getRightSidebarPanels: (entityType: string) => {
       const entityPanels = sidebarPanelMap.get(entityType) ?? [];
       return [...globalSidebarPanels, ...entityPanels].sort((a, b) => a.order - b.order);
     },
     getColumnRenderer: (name: string) => columnRenderers[name],
     apiFn,
-  }), [entities, isLoading, apiMap, hooksMap, pluginMap, tabMap, sidebarPanelMap, globalDetailTabs, globalSidebarPanels, columnRenderers, apiFn]);
+  }), [entities, isLoading, apiMap, hooksMap, pluginMap, tabMap, listViewMap, sidebarPanelMap, globalDetailTabs, globalListViews, globalSidebarPanels, columnRenderers, apiFn]);
 
   if (isLoading) return null;
 
