@@ -967,6 +967,9 @@ importers:
       '@fullcalendar/timegrid':
         specifier: ^6.1.0
         version: 6.1.20(@fullcalendar/core@6.1.20)
+      '@packages/entity-engine-ui':
+        specifier: workspace:*
+        version: link:../../platform/entity-engine-ui
       '@packages/ui':
         specifier: workspace:*
         version: link:../../core/ui
@@ -976,6 +979,9 @@ importers:
       react:
         specifier: ^19.0.0
         version: 19.2.4
+      react-router-dom:
+        specifier: ^7.0.0
+        version: 7.13.1(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
     devDependencies:
       typescript:
         specifier: ^5.7.0
