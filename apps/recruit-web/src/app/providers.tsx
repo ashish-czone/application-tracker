@@ -6,6 +6,8 @@ import { EntityEngineProvider, type ColumnRendererRegistration, type DetailTabPl
 import { PipelineProgressInline } from '@packages/platform-ui/workflows';
 import { TaxonomyProvider } from '@packages/platform-ui-taxonomy';
 import { PlatformUIProvider } from '@packages/platform-ui';
+import { ThemeProvider } from '@packages/theming-ui';
+import { useAuth } from '@packages/platform-ui/auth/hooks/useAuth';
 import { AuditTimeline } from '@packages/platform-ui/audit';
 import { NotesSection } from '@packages/notes-ui';
 import { AttachmentsSection } from '@packages/attachments-ui';
@@ -96,16 +98,27 @@ const columnRenderers: Record<string, ColumnRendererRegistration> = {
   TaskAssigneeCell: { component: TaskAssigneeCell },
 };
 
+function AuthGatedThemeProvider({ children }: { children: ReactNode }) {
+  const { isAuthenticated } = useAuth();
+  return (
+    <ThemeProvider apiFn={api} enabled={isAuthenticated}>
+      {children}
+    </ThemeProvider>
+  );
+}
+
 export function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <PlatformUIProvider apiFn={api}>
-          <EntityEngineProvider apiFn={api} entityUIConfigs={entityUIConfigs} detailTabs={detailTabs} rightSidebarPanels={rightSidebarPanels} columnRenderers={columnRenderers}>
-            <TaxonomyProvider apiFn={api}>
-              {children}
-            </TaxonomyProvider>
-          </EntityEngineProvider>
+          <AuthGatedThemeProvider>
+            <EntityEngineProvider apiFn={api} entityUIConfigs={entityUIConfigs} detailTabs={detailTabs} rightSidebarPanels={rightSidebarPanels} columnRenderers={columnRenderers}>
+              <TaxonomyProvider apiFn={api}>
+                {children}
+              </TaxonomyProvider>
+            </EntityEngineProvider>
+          </AuthGatedThemeProvider>
         </PlatformUIProvider>
         <Toaster />
         <SessionExpiredModal />

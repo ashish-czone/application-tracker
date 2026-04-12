@@ -566,6 +566,9 @@ importers:
       '@packages/tenancy':
         specifier: workspace:*
         version: link:../../packages/addons/tenancy
+      '@packages/user-preferences':
+        specifier: workspace:*
+        version: link:../../packages/platform/user-preferences
       '@packages/users':
         specifier: workspace:*
         version: link:../../packages/core/users
@@ -699,6 +702,9 @@ importers:
       '@packages/platform-ui-taxonomy':
         specifier: workspace:*
         version: link:../../packages/platform/platform-ui/taxonomy
+      '@packages/theming-ui':
+        specifier: workspace:*
+        version: link:../../packages/platform/theming-ui
       '@packages/ui':
         specifier: workspace:*
         version: link:../../packages/core/ui
@@ -2859,6 +2865,71 @@ importers:
       '@packages/testing':
         specifier: workspace:*
         version: link:../../core/testing
+
+  packages/platform/theming-ui:
+    dependencies:
+      '@packages/ui':
+        specifier: workspace:*
+        version: link:../../core/ui
+      '@tanstack/react-query':
+        specifier: ^5.0.0
+        version: 5.90.21(react@19.2.4)
+      lucide-react:
+        specifier: ^0.500.0
+        version: 0.500.0(react@19.2.4)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.4
+      react-dom:
+        specifier: ^19.0.0
+        version: 19.2.4(react@19.2.4)
+    devDependencies:
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+
+  packages/platform/user-preferences:
+    dependencies:
+      '@nestjs/common':
+        specifier: ^11.0.0
+        version: 11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/swagger':
+        specifier: ^11.0.0
+        version: 11.2.6(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)
+      '@packages/auth':
+        specifier: workspace:*
+        version: link:../../core/auth
+      '@packages/database':
+        specifier: workspace:*
+        version: link:../../core/database
+      '@packages/rbac':
+        specifier: workspace:*
+        version: link:../../core/rbac
+      class-transformer:
+        specifier: ^0.5.1
+        version: 0.5.1
+      class-validator:
+        specifier: ^0.14.1
+        version: 0.14.4
+    devDependencies:
+      '@packages/platform-testing':
+        specifier: workspace:*
+        version: link:../testing
+      '@types/supertest':
+        specifier: ^6.0.2
+        version: 6.0.3
+      drizzle-orm:
+        specifier: ^0.45.1
+        version: 0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3))
+      supertest:
+        specifier: ^7.0.0
+        version: 7.2.2
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(terser@5.46.0)
 
   packages/platform/workflows:
     dependencies:

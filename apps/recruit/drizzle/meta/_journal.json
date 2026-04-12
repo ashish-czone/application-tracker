@@ -288,6 +288,13 @@
       "when": 1776758400000,
       "tag": "0040_task_claim",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1776931200000,
+      "tag": "0043_create_user_preferences",
+      "breakpoints": true
     }
   ]
 }
