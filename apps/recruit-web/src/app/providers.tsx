@@ -14,6 +14,7 @@ import { api } from '../lib/api';
 import { SessionExpiredModal } from '@packages/platform-ui/auth/components/SessionExpiredModal';
 import { CANDIDATES_UI_CONFIG } from '../entities/candidates.config';
 import { OFFERS_UI_CONFIG } from '../entities/offers.config';
+import { TASKS_UI_CONFIG } from '../entities/tasks.config';
 import { AvatarNameCell, createStatusBadgeCell, type StatusColors } from '@packages/ui';
 import { TaskAssigneeCell } from '../portals/recruiter/features/tasks/components/TaskAssigneeCell';
 
@@ -73,7 +74,7 @@ const queryClient = new QueryClient({
   },
 });
 
-const entityUIConfigs = [CANDIDATES_UI_CONFIG, OFFERS_UI_CONFIG];
+const entityUIConfigs = [CANDIDATES_UI_CONFIG, OFFERS_UI_CONFIG, TASKS_UI_CONFIG];
 
 const detailTabs: DetailTabPlugin[] = [
   { key: 'notes', label: 'Notes', order: 100, component: NotesSection, featureFlag: 'hasNotes' },
