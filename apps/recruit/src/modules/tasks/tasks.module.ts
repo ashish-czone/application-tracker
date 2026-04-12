@@ -8,4 +8,4 @@ import { TaskClaimService } from './services/task-claim.service';
   controllers: [TaskClaimController],
   providers: [TaskClaimService],
 })
-export class TasksModule {}
+export class TaskClaimModule {}
