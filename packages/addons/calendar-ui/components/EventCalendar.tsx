@@ -13,6 +13,8 @@ interface EventCalendarProps {
   initialView?: CalendarView;
   height?: string | number;
   className?: string;
+  /** Show the all-day row in week/day views. Default false — flip to true when rendering entities whose date field is a calendar date rather than a timed slot. */
+  allDaySlot?: boolean;
   /** Called when an event is clicked */
   onEventClick?: (eventId: string, extendedProps: Record<string, unknown>) => void;
   /** Called when a date/time slot is clicked */
@@ -32,6 +34,7 @@ export function EventCalendar({
   initialView = 'timeGridWeek',
   height = 'auto',
   className,
+  allDaySlot = false,
   onEventClick,
   onDateClick,
   onDatesChange,
@@ -133,7 +136,7 @@ export function EventCalendar({
         slotMinTime="07:00:00"
         slotMaxTime="20:00:00"
         slotDuration="00:30:00"
-        allDaySlot={false}
+        allDaySlot={allDaySlot}
         weekends
         editable={false}
         selectable={false}
