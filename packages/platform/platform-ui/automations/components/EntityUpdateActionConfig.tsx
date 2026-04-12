@@ -13,6 +13,8 @@ interface EntityUpdateActionConfigProps {
   onChange: (config: Record<string, unknown>) => void;
   /** Entity type of the triggering event — used for dynamic field mapping */
   sourceEntityType?: string;
+  /** When set, the entity type is fixed by the caller (e.g. via a per-entity action shortcut) and the picker is hidden. */
+  lockedEntityType?: string;
 }
 
 /**
@@ -23,10 +25,10 @@ interface EntityUpdateActionConfigProps {
  * 3. Field picker — user selects which fields to set
  * 4. FieldValueInput for each selected field (static or dynamic)
  */
-export function EntityUpdateActionConfig({ config, onChange, sourceEntityType }: EntityUpdateActionConfigProps) {
+export function EntityUpdateActionConfig({ config, onChange, sourceEntityType, lockedEntityType }: EntityUpdateActionConfigProps) {
   const { data: entities } = useEntities();
 
-  const selectedEntityType = (config.entityType as string) ?? '';
+  const selectedEntityType = lockedEntityType ?? (config.entityType as string) ?? '';
   const entityId = (config.entityId as string) ?? '';
   const existingFields = (config.fields as Record<string, unknown>) ?? {};
 
@@ -114,13 +116,15 @@ export function EntityUpdateActionConfig({ config, onChange, sourceEntityType }:
 
   return (
     <div className="space-y-3">
-      <FormSelect
-        value={selectedEntityType}
-        onChange={handleEntityTypeChange}
-        options={entityOptions}
-        label="Entity Type"
-        placeholder="Triggering entity (default)"
-      />
+      {!lockedEntityType && (
+        <FormSelect
+          value={selectedEntityType}
+          onChange={handleEntityTypeChange}
+          options={entityOptions}
+          label="Entity Type"
+          placeholder="Triggering entity (default)"
+        />
+      )}
 
       {selectedEntityType && (
         <div className="space-y-2">
