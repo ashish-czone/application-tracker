@@ -26,6 +26,7 @@ import { AUDIT_EXTENSION, type AuditExtension } from './extensions/audit-extensi
 import { TAXONOMY_EXTENSION, type TaxonomyExtension } from './extensions/taxonomy-extension.interface';
 import { CreateEntityAction } from './actions/create-entity.action';
 import { UpdateEntityAction } from './actions/update-entity.action';
+import { DeleteEntityAction } from './actions/delete-entity.action';
 import { POSITION_SCOPE_PROVIDER } from './types';
 import type { EntityConfig, FieldType, PositionScopeProvider } from './types';
 
@@ -93,6 +94,7 @@ const pendingConfigs: EntityConfig[] = [];
     },
     CreateEntityAction,
     UpdateEntityAction,
+    DeleteEntityAction,
   ],
   exports: [EntityRegistryService, FieldDefinitionService, LookupResolverService, FieldTypeSaveHookRegistry, FIELD_PERMISSION_ENTITY_RESOLVER, 'FIELD_DEFINITION_SERVICE'],
 })
@@ -111,6 +113,7 @@ export class EntityEngineModule implements OnModuleInit, OnApplicationBootstrap 
     @Inject(AUDIT_EXTENSION) @Optional() private readonly auditExt: AuditExtension | null,
     private readonly createEntityAction: CreateEntityAction,
     private readonly updateEntityAction: UpdateEntityAction,
+    private readonly deleteEntityAction: DeleteEntityAction,
   ) {}
 
   /**
@@ -165,6 +168,7 @@ export class EntityEngineModule implements OnModuleInit, OnApplicationBootstrap 
     if (this.automationsExt) {
       this.automationsExt.registerAction(this.createEntityAction);
       this.automationsExt.registerAction(this.updateEntityAction);
+      this.automationsExt.registerAction(this.deleteEntityAction);
     }
   }
 
