@@ -318,8 +318,10 @@ export interface FieldMeta {
   workflow?: WorkflowFieldConfig;
   /** Named cell renderer for the list view (looked up in EntityEngineProvider registry) */
   cellRenderer?: string;
-  /** Completely exclude this field from the list view (won't appear in columns picker) */
+  /** Completely exclude this field from the list view (won't be fetched, won't appear in columns picker) */
   excludeFromList?: boolean;
+  /** Fetched in list queries for data purposes, but not emitted as a column — hidden from the columns picker. */
+  listColumnHidden?: boolean;
 }
 
 // ---------------------------------------------------------------------------

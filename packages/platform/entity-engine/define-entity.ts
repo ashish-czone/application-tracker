@@ -51,8 +51,15 @@ export interface ModelField {
   listVisible?: boolean;
   /** Display order in the list view */
   listOrder?: number;
-  /** Completely exclude this field from the list view (won't appear in columns picker) */
+  /** Completely exclude this field from the list view (won't be fetched, won't appear in columns picker) */
   excludeFromList?: boolean;
+  /**
+   * Hide this field from the list columns picker while still fetching its value
+   * (and resolved __label for lookups/users). Useful when a cellRenderer on
+   * another field needs access to this field's value but the field itself is
+   * not meant to be shown as its own column.
+   */
+  listColumnHidden?: boolean;
 
   // --- Validation ---
 
@@ -334,6 +341,7 @@ export function defineEntity<TTable extends PgTable>(model: ModelDefinition<TTab
       cellRenderer: field.cellRenderer,
       workflow: field.workflow,
       excludeFromList: field.excludeFromList,
+      listColumnHidden: field.listColumnHidden,
     };
 
     fieldMeta[key] = meta;
