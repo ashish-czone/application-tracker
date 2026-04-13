@@ -1,8 +1,9 @@
-import { Suspense, lazy, useState } from 'react';
-import { Routes, Route, Navigate } from 'react-router';
+import { Suspense, lazy, useState, useMemo } from 'react';
+import { Routes, Route, Navigate, type RouteObject } from 'react-router';
 import { AppLayout } from './layout/AppLayout';
 import { AuthGuard } from '@packages/platform-ui/auth/components/AuthGuard';
-import { EntityListPage, EntityCreatePage, EntityDetailPage, useEntityConfig } from '@packages/entity-engine-ui';
+import { EntityListPage, EntityDetailPage, useEntityConfig, useEntityEngine } from '@packages/entity-engine-ui';
+import type { DomainWebManifest, DomainDetailPageComponent } from '@packages/domains';
 import {
   PipelineProgressBar,
   TransitionConfirmDialog,
@@ -12,12 +13,9 @@ import {
   useEntityTransition,
 } from '@packages/platform-ui/workflows';
 import { SettingsPage, AppearancePage, AppSettingsPage, AutomationsPage, RuleBuilderPage, UsersListPage, RolesListPage, TagGroupsListPage, CategoryGroupsListPage, QueuedTasksPage, OrgPositionsPage, OrgUnitsPage } from '../portals/recruiter/routes';
-import { CandidateProfilePage } from '@domains/recruit/web/portals/recruiter/features/candidates/CandidateProfilePage';
-import { DashboardPage as RecruitDashboard } from '../portals/recruiter/features/dashboard/DashboardPage';
-import { JobOpeningDetailPage } from '@domains/recruit/web/portals/recruiter/features/job-openings/JobOpeningDetailPage';
-import { ApplicationDetailPage } from '@domains/recruit/web/portals/recruiter/features/applications/ApplicationDetailPage';
-import { InterviewsCalendarPage } from '@domains/recruit/web/portals/recruiter/features/interviews/InterviewsCalendarPage';
-import { TemplatesPage } from '../portals/recruiter/features/templates/TemplatesPage';
+import { recruitWeb } from '@domains/recruit-web';
+
+const enabledDomains: DomainWebManifest[] = [recruitWeb];
 
 interface PendingTransition {
   toStateName: string;
@@ -180,20 +178,46 @@ function PageSkeleton() {
 }
 
 /**
- * Entity routes rendered via the engine's generic pages.
- * Each entity gets /{slug} (list) and /{slug}/:id (detail) automatically.
- * Adding a new entity here = 2 lines.
+ * Merge detailPageOverrides from every enabled domain. First domain wins on conflict.
  */
-function EntityRoutes({ entityType }: { entityType: string }) {
-  return (
-    <>
-      <Route path={`/${entityType}`} element={<EntityListPage entityType={entityType} />} />
-      <Route path={`/${entityType}/:id`} element={<AppEntityDetailPage entityType={entityType} />} />
-    </>
-  );
+function mergeDetailOverrides(domains: DomainWebManifest[]): Record<string, DomainDetailPageComponent> {
+  const merged: Record<string, DomainDetailPageComponent> = {};
+  for (const domain of domains) {
+    for (const [entityType, component] of Object.entries(domain.detailPageOverrides ?? {})) {
+      if (merged[entityType]) {
+        console.warn(`[domains] duplicate detailPageOverride for "${entityType}" — keeping the first`);
+        continue;
+      }
+      merged[entityType] = component;
+    }
+  }
+  return merged;
+}
+
+/**
+ * Merge routes[] from every enabled domain. First domain wins on path conflict.
+ */
+function mergeDomainRoutes(domains: DomainWebManifest[]): RouteObject[] {
+  const seen = new Set<string>();
+  const merged: RouteObject[] = [];
+  for (const domain of domains) {
+    for (const route of domain.routes ?? []) {
+      if (route.path && seen.has(route.path)) {
+        console.warn(`[domains] duplicate route "${route.path}" — keeping the first`);
+        continue;
+      }
+      if (route.path) seen.add(route.path);
+      merged.push(route);
+    }
+  }
+  return merged;
 }
 
 export function AppRouter() {
+  const { entities } = useEntityEngine();
+  const detailOverrides = useMemo(() => mergeDetailOverrides(enabledDomains), []);
+  const domainRoutes = useMemo(() => mergeDomainRoutes(enabledDomains), []);
+
   return (
     <Routes>
       {/* Public routes */}
@@ -206,35 +230,37 @@ export function AppRouter() {
       {/* Protected routes */}
       <Route element={<AuthGuard />}>
         <Route element={<AppLayout />}>
-          <Route path="/" element={<RecruitDashboard />} />
           <Route
             path="/profile"
             element={<Suspense fallback={<PageSkeleton />}><ProfilePage /></Suspense>}
           />
 
-          {/* Entity engine routes — each entity = 2 lines */}
-          <Route path="/job-openings" element={<EntityListPage entityType="job_openings" />} />
-          <Route path="/job-openings/new" element={<EntityCreatePage entityType="job_openings" />} />
-          <Route path="/job-openings/:id" element={<JobOpeningDetailPage />} />
-          <Route path="/candidates" element={<EntityListPage entityType="candidates" />} />
-          <Route path="/candidates/:id" element={<CandidateProfilePage />} />
-          <Route path="/interviews" element={<EntityListPage entityType="interviews" />} />
-          <Route path="/interviews/calendar" element={<InterviewsCalendarPage />} />
-          <Route path="/interviews/:id" element={<AppEntityDetailPage entityType="interviews" />} />
-          <Route path="/clients" element={<EntityListPage entityType="clients" />} />
-          <Route path="/clients/:id" element={<AppEntityDetailPage entityType="clients" />} />
-          <Route path="/contacts" element={<EntityListPage entityType="contacts" />} />
-          <Route path="/contacts/:id" element={<AppEntityDetailPage entityType="contacts" />} />
-          <Route path="/vendors" element={<EntityListPage entityType="vendors" />} />
-          <Route path="/vendors/:id" element={<AppEntityDetailPage entityType="vendors" />} />
-          <Route path="/applications" element={<EntityListPage entityType="applications" />} />
-          <Route path="/applications/:id" element={<ApplicationDetailPage />} />
-          <Route path="/offers" element={<EntityListPage entityType="offers" />} />
-          <Route path="/offers/:id" element={<AppEntityDetailPage entityType="offers" />} />
+          {/* Entity engine routes — list + detail per registered entity.
+              Detail overrides come from enabled domains' detailPageOverrides. */}
+          {entities.map((entity) => {
+            const Override = detailOverrides[entity.entityType];
+            return [
+              <Route
+                key={`${entity.entityType}-list`}
+                path={`/${entity.slug}`}
+                element={<EntityListPage entityType={entity.entityType} />}
+              />,
+              <Route
+                key={`${entity.entityType}-detail`}
+                path={`/${entity.slug}/:id`}
+                element={Override ? <Suspense fallback={<PageSkeleton />}><Override /></Suspense> : <AppEntityDetailPage entityType={entity.entityType} />}
+              />,
+            ];
+          })}
 
-          {/* Tasks — now via entity engine */}
-          <Route path="/tasks" element={<EntityListPage entityType="tasks" />} />
-          <Route path="/tasks/:id" element={<AppEntityDetailPage entityType="tasks" />} />
+          {/* Domain-contributed routes (dashboard, templates, sub-pages, custom create forms). */}
+          {domainRoutes.map((route) => (
+            <Route
+              key={route.path}
+              path={route.path}
+              element={<Suspense fallback={<PageSkeleton />}>{route.element}</Suspense>}
+            />
+          ))}
 
           {/* Non-entity routes */}
           <Route
@@ -289,7 +315,6 @@ export function AppRouter() {
             path="/automations/:id/edit"
             element={<Suspense fallback={<PageSkeleton />}><RuleBuilderPage /></Suspense>}
           />
-          <Route path="/templates" element={<TemplatesPage />} />
         </Route>
       </Route>
 

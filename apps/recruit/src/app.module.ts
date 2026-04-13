@@ -38,7 +38,7 @@ import { PdfGeneratorModule } from '@packages/pdf-generator';
 import { PuppeteerPdfProvider } from '@packages/pdf-generator/providers/puppeteer.provider';
 import { UsersModule } from '@packages/users';
 import { OrgUnitsModule } from '@packages/org-units';
-import { recruitBackend } from '@domains/recruit/backend';
+import { recruitBackend } from '@domains/recruit-backend';
 import { validate } from './config/env.validation';
 
 @Module({

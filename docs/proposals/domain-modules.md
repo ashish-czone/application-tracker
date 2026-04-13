@@ -1,6 +1,6 @@
 # Proposal: Domain Modules — Multi-App Support on a Single Platform
 
-**Status:** Draft, awaiting review
+**Status:** Landed (Recruit extraction complete)
 **Author:** Ashish
 **Date:** 2026-04-13
 
@@ -65,122 +65,146 @@ Domains are workspace packages scoped as `@domains/*`. The tier is encoded by fo
 
 ### Domain package layout
 
+A domain is a **folder** containing two sibling workspace packages — one for backend code, one for web code. The parent folder (`domains/recruit/`) is not itself a package. This matches the platform-package colocation pattern already used by `packages/platform/entity-engine/{backend,ui}` and `packages/platform/notification-channels/{backend,ui}`.
+
 ```
 domains/recruit/
-  package.json                    # @domains/recruit
-  src/
-    manifest.backend.ts           # backend manifest export
-    manifest.web.ts               # web manifest export
-    backend/
-      recruit.module.ts           # NestJS module aggregating entity modules
-      candidates/
-        candidates.schema.ts      # Drizzle table in `public`
-        candidates.service.ts
-        candidates.controller.ts
-        candidates.events.ts
-        candidates.entity.ts      # defineEntity() config
-      jobs/
-      applications/
-      permissions.ts              # ['recruit.candidates.create', ...]
-      migrations/                 # drizzle migrations, target `public`
-    web/
-      features/
-        candidates/               # pages, forms, tables, hooks
-        jobs/
-      navigation.ts               # sidebar sections
-      routes.ts                   # React Router route objects
+  backend/
+    package.json                  # @domains/recruit-backend
+    index.ts                      # exports recruitBackend manifest
+    recruit.module.ts             # NestJS module aggregating entity modules
+    candidates/
+      schema/candidates.ts        # Drizzle table in `public`
+      candidates.service.ts
+      candidates.controller.ts
+      candidates.events.ts
+      candidates.config.ts        # defineEntity() config
+    job-openings/
+    applications/
+    interviews/
+    offers/
+    ...
+  web/
+    package.json                  # @domains/recruit-web
+    index.tsx                     # exports recruitWeb manifest
+    entities/                     # UI-side entity config overrides
+    portals/recruiter/features/   # pages, forms, tables, hooks
+    lib/                          # domain-specific frontend helpers
 ```
 
-### Subpath exports
+### Why two packages, not one with subpath exports
 
-A single domain package exposes two entry points so `apps/api` and `apps/web` only pull what they need. Without this, the browser bundle would try to include NestJS and the Node bundle would try to include React.
+Splitting into `@domains/recruit-backend` and `@domains/recruit-web` gives honest dependency graphs: each `package.json` declares only what that side actually uses, so the Nest app never resolves React and the Vite build never resolves Nest. With a single package using subpath exports, the dep graph lies and correctness relies on bundler tree-shaking.
 
-```json
-{
-  "name": "@domains/recruit",
-  "exports": {
-    "./backend": "./src/manifest.backend.ts",
-    "./web": "./src/manifest.web.ts"
-  }
-}
-```
+Install size on disk is unchanged (pnpm hard-links), and bundle sizes are determined by the import graph, not the package count. Splitting can only make bundles smaller or equal, never larger.
 
 ### Two manifests per domain
 
-Backend and frontend types cannot share a file (NestJS decorators, Drizzle schemas, and React components live in different build targets). Each domain exposes two manifests, each consumed by one app.
+Backend and frontend types cannot share a file (NestJS decorators, Drizzle schemas, and React components live in different build targets). Each sibling package exposes exactly one manifest, consumed by one app.
 
 ```ts
-// manifest.backend.ts
-import { RecruitModule } from './backend/recruit.module';
-import { candidateEntity, jobEntity, applicationEntity } from './backend/entities';
-import { RECRUIT_PERMISSIONS } from './backend/permissions';
+// domains/recruit/backend/index.ts
+import type { DomainBackendManifest } from '@packages/domains';
+import { RecruitDomainModule } from './recruit.module';
 
-export const recruitBackend = {
+export const recruitBackend: DomainBackendManifest = {
   name: 'recruit',
   displayName: 'Recruit',
-  module: RecruitModule,                    // NestJS module class
-  permissions: RECRUIT_PERMISSIONS,         // string[]
-  entities: [candidateEntity, jobEntity, applicationEntity],
+  module: RecruitDomainModule,
 };
 ```
 
 ```ts
-// manifest.web.ts
-import { recruitNavigation } from './web/navigation';
-import { recruitRoutes } from './web/routes';
+// domains/recruit/web/index.tsx
+import type { DomainWebManifest } from '@packages/domains';
+import { EntityCreatePage } from '@packages/entity-engine-ui';
+// lazy-loaded feature pages...
 
-export const recruitWeb = {
+export const recruitWeb: DomainWebManifest = {
   name: 'recruit',
   displayName: 'Recruit',
-  navigation: recruitNavigation,
-  routes: recruitRoutes,
+  routes: [
+    { path: '/', element: <DashboardPage /> },
+    { path: '/templates', element: <TemplatesPage /> },
+    { path: '/job-openings/new', element: <EntityCreatePage entityType="job_openings" /> },
+    { path: '/interviews/calendar', element: <InterviewsCalendarPage /> },
+  ],
+  detailPageOverrides: {
+    candidates: CandidateProfilePage,
+    job_openings: JobOpeningDetailPage,
+    applications: ApplicationDetailPage,
+  },
 };
 ```
 
-Manifest type definitions live in `packages/platform/common` (or a similar existing shared platform package). No new `domain-engine` package is needed — wiring is plain imports.
+Manifest type definitions live in `@packages/domains`. No new `domain-engine` package is needed — wiring is plain imports.
+
+### What the manifest does **not** contain
+
+The manifest is intentionally small. Several fields that the first draft suggested turned out to be redundant once we traced how the existing platform already handles them:
+
+- **No `permissions: string[]`** — each entity registers its own permissions in `onModuleInit()` via the permission registry. `defineEntity()` + `EntityEngineModule.forEntity()` already wire this up per entity. Listing permissions in the manifest would duplicate what the entity configs declare.
+- **No `entities: EntityConfig[]`** — same reason. The Nest module already imports each entity module, which calls `EntityEngineModule.forEntity(config)` to register itself with the entity engine. There is nothing left for the manifest to do.
+- **No `navigation: NavigationSection[]`** — the web app already fetches the entity registry from `GET /entity-engine/registry` and renders sidebar items via `<EntityNavItems>`, filtered by the current user's permissions. A domain does not need to ship a static navigation tree; entity nav is data, not code. Cross-domain non-entity nav items (a "Reports" section, a custom dashboard link) could be added later as a small `navigation?: NavigationItem[]` field if the need arises.
+
+The manifest only carries what is genuinely app-level wiring: the Nest module to import on the backend, and on the frontend, custom routes (for pages that are not entity list/detail) plus per-entity detail-page overrides (for entities whose generic detail page needs to be replaced with a richer custom view — e.g. the candidate profile).
 
 ### How the apps consume manifests
 
-**`apps/api/src/app.module.ts`:**
+**`apps/recruit/src/app.module.ts`:**
 
 ```ts
-import { recruitBackend } from '@domains/recruit/backend';
-import { crmBackend } from '@domains/crm/backend';
-
-const enabledDomains = [recruitBackend, crmBackend];
+import { recruitBackend } from '@domains/recruit-backend';
 
 @Module({
   imports: [
     // ...core + platform + addon modules
-    ...enabledDomains.map((d) => d.module),
+    recruitBackend.module,
+    // for a second domain: crmBackend.module,
   ],
 })
-export class AppModule implements OnModuleInit {
-  async onModuleInit() {
-    for (const domain of enabledDomains) {
-      this.permissionRegistry.registerMany(domain.permissions);
-      this.entityEngine.registerMany(domain.entities);
-    }
-  }
+export class AppModule {}
+```
+
+That is the whole integration. No `DomainEngineModule.forRoot` wrapper, no registry service, no `onModuleInit` loop. The Nest module itself pulls in each entity's module, and each entity registers its own permissions and entity-engine config in its own `onModuleInit`.
+
+**`apps/recruit-web/src/app/router.tsx`:**
+
+```tsx
+import { recruitWeb } from '@domains/recruit-web';
+import type { DomainWebManifest } from '@packages/domains';
+import { useEntityEngine, EntityListPage } from '@packages/entity-engine-ui';
+
+const enabledDomains: DomainWebManifest[] = [recruitWeb /*, crmWeb */];
+
+export function AppRouter() {
+  const { entities } = useEntityEngine();                  // data from GET /entity-engine/registry
+  const detailOverrides = mergeDetailOverrides(enabledDomains);
+  const domainRoutes = mergeDomainRoutes(enabledDomains);
+
+  return (
+    <Routes>
+      <Route element={<AuthGuard />}>
+        <Route element={<AppLayout />}>
+          {/* Registry-driven list + detail per registered entity. */}
+          {entities.map((e) => {
+            const Override = detailOverrides[e.entityType];
+            return [
+              <Route key={`${e.entityType}-list`}   path={`/${e.slug}`}     element={<EntityListPage entityType={e.entityType} />} />,
+              <Route key={`${e.entityType}-detail`} path={`/${e.slug}/:id`} element={Override ? <Override /> : <AppEntityDetailPage entityType={e.entityType} />} />,
+            ];
+          })}
+          {/* Domain-contributed custom pages. */}
+          {domainRoutes.map((r) => <Route key={r.path} path={r.path} element={r.element} />)}
+          {/* ...platform routes (users, roles, automations, etc.) */}
+        </Route>
+      </Route>
+    </Routes>
+  );
 }
 ```
 
-No `DomainEngineModule.forRoot` wrapper, no registry service. Just loop the imported manifests in `onModuleInit` and call the existing platform registries.
-
-**`apps/web/src/App.tsx`:**
-
-```tsx
-import { recruitWeb } from '@domains/recruit/web';
-import { crmWeb } from '@domains/crm/web';
-
-const enabledDomains = [recruitWeb, crmWeb];
-
-// Merge all navigation sections into the sidebar.
-// Mount all routes under the authenticated shell.
-// Existing permission-based filtering handles visibility per user.
-```
-
-Adding a third domain is a two-line diff in each app. Nothing else.
+Adding a second domain is a two-line diff: import its manifest, append it to `enabledDomains`. Everything else flows from the registry and from the merged detail-override / custom-route maps.
 
 ### Database
 
@@ -226,29 +250,31 @@ packages/core/*     →  other core only
 - A platform or addon package may never import from a domain. The direction is strictly one-way.
 - `apps/*` imports only domain *manifests*, never a domain's internal files. The manifest is the public API of a domain.
 
-Enforced by ESLint import-path rules and the existing `pnpm lint` boundary check.
+Enforced by `eslint-plugin-boundaries` via `eslint.boundaries.config.mjs` at the repo root. `pnpm lint` runs the boundary-only flat config, which is independent of the main ESLint config so that pre-existing style issues cannot mask boundary violations.
 
 ---
 
-## Migration Path From Current State
+## What Landed
 
-High-level. Detailed migration is a follow-up.
+The Recruit extraction is complete. Commits of interest:
 
-1. Create `domains/recruit/` as an empty workspace package with manifest stubs.
-2. Move recruit-specific backend modules from their current location into `domains/recruit/src/backend/`. Update imports. Tests stay green at each step.
-3. Move recruit-specific frontend features into `domains/recruit/src/web/features/`.
-4. Extract recruit navigation from the app's sidebar component into `domains/recruit/src/web/navigation.ts`.
-5. Wire `recruitBackend` and `recruitWeb` into the app's `AppModule` and `App.tsx`.
-6. Delete the old locations once nothing imports them.
-7. Add the new dependency rule to `.claude/rules/dependency-direction.md`.
-8. Add an ESLint boundary rule to enforce the direction.
+- **feat(domains): move recruit-specific web features into @domains/recruit** (#749) — moved backend modules and frontend features into the new tier.
+- **fix(recruit): bundle @domains/* into nest webpack output** (#750) — `apps/recruit` webpack config allowlists `@domains/*` so Nest bundles domain code instead of trying to resolve it as an external.
+- **refactor(recruit): split @domains/recruit into backend + web packages** (this PR) — switched from a single package with subpath exports to two sibling packages (`@domains/recruit-backend`, `@domains/recruit-web`) for honest dep graphs.
+- **chore(lint): add dependency-boundary ESLint config for package tiers** (this PR) — adds `eslint.boundaries.config.mjs` and wires `pnpm lint` to it.
+- **feat(domains): extend DomainWebManifest with routes and detail overrides** (this PR) — final manifest shape.
+- **feat(recruit-web): make AppRouter entity-registry driven** (this PR) — removed hardcoded per-entity routes; router now maps `useEntityEngine().entities` into list/detail routes with optional domain overrides.
 
-No schema move. No data migration. Tables stay where they are — only the code that owns them moves.
+No schema move. No data migration. Tables stay where they are — only the code that owns them moved.
 
-CRM (or any second domain) is built only after Recruit is cleanly extracted and the lint boundary is in place.
+CRM (or any second domain) is built only now that Recruit is cleanly extracted and the boundary lint is in place.
 
 ---
 
 ## Recommendation
 
-Approve this structure. Start with the Recruit extraction — the goal is to land the `domains/` tier, prove the manifest pattern with one real domain, and get the dependency lint enforcing the new rule. A second domain is what validates the proposal; it should land in a codebase where the rules are already enforced.
+Landed. The pattern is proven with Recruit. Follow-ups:
+
+1. Document the pattern in `.claude/rules/dependency-direction.md` (the rule file is already updated; the proposal itself now matches).
+2. Migrate `eslint-plugin-boundaries` from v5 `boundaries/element-types` to v6 `boundaries/dependencies` once the ecosystem stabilizes — currently the rule runs with a deprecation warning.
+3. Extract a second domain (CRM) to validate that the manifest shape holds for a genuinely different vertical.

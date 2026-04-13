@@ -1,0 +1,90 @@
+// @ts-check
+/**
+ * Boundary-only ESLint flat config. Enforces the tier rules from
+ * .claude/rules/dependency-direction.md:
+ *
+ *   apps/*              →  packages/{core,platform,addons}/* + domains/*
+ *   domains/*           →  packages/{core,platform,addons}/*  (never domains, never apps)
+ *   packages/addons/*   →  packages/{core,platform}/*          (never other addons, never domains)
+ *   packages/platform/* →  packages/core/* + platform          (never addons, never domains)
+ *   packages/core/*     →  core only                           (never platform, addons, domains, apps)
+ *
+ * Invoked by `pnpm lint`. Runs independently of the main ESLint config so
+ * pre-existing style issues in the repo don't mask boundary violations.
+ */
+import boundaries from 'eslint-plugin-boundaries';
+import tsParser from '@typescript-eslint/parser';
+import tsPlugin from '@typescript-eslint/eslint-plugin';
+import reactHooks from 'eslint-plugin-react-hooks';
+
+export default [
+  {
+    ignores: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/*.d.ts',
+      '**/*.js',
+      '**/*.cjs',
+      '**/*.mjs',
+      '**/*.test.ts',
+      '**/*.test.tsx',
+      '**/*.spec.ts',
+      '**/*.spec.tsx',
+    ],
+  },
+  {
+    files: ['apps/**/*.{ts,tsx}', 'packages/**/*.{ts,tsx}', 'domains/**/*.{ts,tsx}'],
+    linterOptions: {
+      // These come from eslint-disable directives in source that reference
+      // rules from the full config (not loaded here). Silence them.
+      reportUnusedDisableDirectives: 'off',
+    },
+    languageOptions: {
+      parser: tsParser,
+      parserOptions: {
+        ecmaVersion: 2022,
+        sourceType: 'module',
+        ecmaFeatures: { jsx: true },
+      },
+    },
+    plugins: {
+      boundaries,
+      // Registered as no-ops so pre-existing `eslint-disable-next-line <rule>`
+      // comments in source files don't trip the boundary-only config.
+      '@typescript-eslint': tsPlugin,
+      'react-hooks': reactHooks,
+    },
+    settings: {
+      'boundaries/include': [
+        'apps/**/*',
+        'packages/**/*',
+        'domains/**/*',
+      ],
+      'boundaries/elements': [
+        { type: 'core',     pattern: 'packages/core/*',     mode: 'folder' },
+        { type: 'platform', pattern: 'packages/platform/*', mode: 'folder' },
+        { type: 'addon',    pattern: 'packages/addons/*',   mode: 'folder' },
+        { type: 'domain',   pattern: 'domains/*/*',         mode: 'folder' },
+        { type: 'app',      pattern: 'apps/*',              mode: 'folder' },
+      ],
+    },
+    rules: {
+      // Using legacy rule name to match plugin v5 selector syntax.
+      // v6 renames this to `boundaries/dependencies` with a new object schema;
+      // migrate when the ecosystem stabilizes.
+      'boundaries/element-types': [
+        'error',
+        {
+          default: 'disallow',
+          rules: [
+            { from: ['core'],     allow: ['core'] },
+            { from: ['platform'], allow: ['core', 'platform'] },
+            { from: ['addon'],    allow: ['core', 'platform'] },
+            { from: ['domain'],   allow: ['core', 'platform', 'addon'] },
+            { from: ['app'],      allow: ['core', 'platform', 'addon', 'domain'] },
+          ],
+        },
+      ],
+    },
+  },
+];

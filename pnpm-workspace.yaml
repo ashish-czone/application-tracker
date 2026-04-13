@@ -3,4 +3,4 @@ packages:
   - "packages/core/*"
   - "packages/platform/**"
   - "packages/addons/*"
-  - "domains/*"
+  - "domains/**"
