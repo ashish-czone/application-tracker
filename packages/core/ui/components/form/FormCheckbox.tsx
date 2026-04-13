@@ -1,5 +1,6 @@
 import { useFormContext, Controller } from 'react-hook-form';
 import { cn } from '../../lib/utils';
+import { Checkbox } from './Checkbox';
 
 interface FormCheckboxProps {
   name: string;
@@ -24,13 +25,11 @@ export function FormCheckbox({
       name={name}
       render={({ field }) => (
         <div className={cn('flex items-center gap-2', className)}>
-          <input
-            type="checkbox"
+          <Checkbox
             id={name}
             checked={!!field.value}
-            onChange={(e) => field.onChange(e.target.checked)}
+            onCheckedChange={(checked) => field.onChange(checked === true)}
             disabled={disabled}
-            className="h-4 w-4 rounded border-input"
           />
           <label htmlFor={name} className="text-sm cursor-pointer select-none">
             {label}
