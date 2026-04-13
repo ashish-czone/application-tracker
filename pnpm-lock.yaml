@@ -714,6 +714,9 @@ importers:
       '@packages/entity-engine-ui':
         specifier: workspace:*
         version: link:../../packages/platform/entity-engine/ui
+      '@packages/entity-layout-ui':
+        specifier: workspace:*
+        version: link:../../packages/platform/entity-layout/ui
       '@packages/entity-relations-ui':
         specifier: workspace:*
         version: link:../../packages/addons/entity-relations-ui
@@ -2651,6 +2654,9 @@ importers:
       '@packages/eav-attributes-ui':
         specifier: workspace:*
         version: link:../../eav-attributes-ui
+      '@packages/platform-ui':
+        specifier: workspace:*
+        version: link:../../platform-ui
       '@packages/ui':
         specifier: workspace:*
         version: link:../../../core/ui
