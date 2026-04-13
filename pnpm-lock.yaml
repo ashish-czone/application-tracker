@@ -160,7 +160,7 @@ importers:
         version: link:../../packages/core/settings
       '@packages/tasks':
         specifier: workspace:*
-        version: link:../../packages/addons/tasks
+        version: link:../../packages/addons/tasks/backend
       '@packages/taxonomy':
         specifier: workspace:*
         version: link:../../packages/platform/taxonomy
@@ -577,7 +577,7 @@ importers:
         version: link:../../packages/core/settings
       '@packages/tasks':
         specifier: workspace:*
-        version: link:../../packages/addons/tasks
+        version: link:../../packages/addons/tasks/backend
       '@packages/taxonomy':
         specifier: workspace:*
         version: link:../../packages/platform/taxonomy
@@ -729,6 +729,9 @@ importers:
       '@packages/platform-ui-taxonomy':
         specifier: workspace:*
         version: link:../../packages/platform/platform-ui/taxonomy
+      '@packages/tasks-ui':
+        specifier: workspace:*
+        version: link:../../packages/addons/tasks/ui
       '@packages/theming-ui':
         specifier: workspace:*
         version: link:../../packages/platform/theming-ui
@@ -961,7 +964,7 @@ importers:
         version: link:../../../packages/core/rbac
       '@packages/tasks':
         specifier: workspace:*
-        version: link:../../../packages/addons/tasks
+        version: link:../../../packages/addons/tasks/backend
       '@packages/taxonomy':
         specifier: workspace:*
         version: link:../../../packages/platform/taxonomy
@@ -1766,26 +1769,26 @@ importers:
         specifier: ^3.2.0
         version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(terser@5.46.0)
 
-  packages/addons/tasks:
+  packages/addons/tasks/backend:
     dependencies:
       '@nestjs/common':
         specifier: ^11.0.0
         version: 11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
       '@packages/database':
         specifier: workspace:*
-        version: link:../../core/database
+        version: link:../../../core/database
       '@packages/entity-engine':
         specifier: workspace:*
-        version: link:../../platform/entity-engine/backend
+        version: link:../../../platform/entity-engine/backend
       '@packages/logger':
         specifier: workspace:*
-        version: link:../../core/logger
+        version: link:../../../core/logger
       '@packages/org-units':
         specifier: workspace:*
-        version: link:../org-units
+        version: link:../../org-units
       '@packages/taxonomy':
         specifier: workspace:*
-        version: link:../../platform/taxonomy
+        version: link:../../../platform/taxonomy
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3))
@@ -1796,6 +1799,37 @@ importers:
       vitest:
         specifier: ^3.0.0
         version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(terser@5.46.0)
+
+  packages/addons/tasks/ui:
+    dependencies:
+      '@packages/calendar-ui':
+        specifier: workspace:*
+        version: link:../../calendar-ui
+      '@packages/entity-engine-ui':
+        specifier: workspace:*
+        version: link:../../../platform/entity-engine/ui
+      '@packages/platform-ui':
+        specifier: workspace:*
+        version: link:../../../platform/platform-ui
+      '@packages/ui':
+        specifier: workspace:*
+        version: link:../../../core/ui
+      '@tanstack/react-query':
+        specifier: ^5.0.0
+        version: 5.90.21(react@19.2.4)
+      lucide-react:
+        specifier: ^0.500.0
+        version: 0.500.0(react@19.2.4)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.4
+    devDependencies:
+      '@types/react':
+        specifier: ^19.2.14
+        version: 19.2.14
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
 
   packages/addons/tenancy:
     dependencies:
