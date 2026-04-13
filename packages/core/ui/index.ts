@@ -14,6 +14,8 @@ export { FormPhoneInput } from './components/form/FormPhoneInput';
 export { FormSelect } from './components/form/FormSelect';
 export { FormTextarea } from './components/form/FormTextarea';
 export { FormCheckbox } from './components/form/FormCheckbox';
+export { Checkbox, type CheckboxProps } from './components/form/Checkbox';
+export { RadioGroup, RadioGroupItem } from './components/form/RadioGroup';
 export { FormCurrencyInput } from './components/form/FormCurrencyInput';
 export { FormRichText } from './components/form/FormRichText';
 export { FormChipInput, ChipInput, type ChipOption } from './components/form/FormChipInput';

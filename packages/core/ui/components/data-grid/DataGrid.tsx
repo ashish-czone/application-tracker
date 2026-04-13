@@ -13,6 +13,8 @@ import { DataGridPagination } from './DataGridPagination';
 import { DataGridEmpty } from './DataGridEmpty';
 import { DataGridBulkBar } from './DataGridBulkBar';
 import { Skeleton } from '../Skeleton';
+import { Checkbox } from '../form/Checkbox';
+import { RadioGroup, RadioGroupItem } from '../form/RadioGroup';
 
 function defaultGetRowId(row: unknown): string {
   return (row as Record<string, unknown>).id as string;
@@ -114,14 +116,15 @@ export function DataGrid<TData>({
           enableHiding: false,
           header: () => null,
           cell: ({ row }) => (
-            <input
-              type="radio"
-              name="row-select"
-              checked={row.getIsSelected()}
-              onChange={row.getToggleSelectedHandler()}
-              className="border-input"
-              aria-label="Select row"
-            />
+            <RadioGroup
+              className="flex"
+              value={row.getIsSelected() ? 'selected' : ''}
+              onValueChange={() => {
+                if (!row.getIsSelected()) row.toggleSelected(true);
+              }}
+            >
+              <RadioGroupItem value="selected" aria-label="Select row" />
+            </RadioGroup>
           ),
         }
       : {
@@ -129,24 +132,23 @@ export function DataGrid<TData>({
           size: 40,
           enableSorting: false,
           enableHiding: false,
-          header: ({ table }) => (
-            <input
-              type="checkbox"
-              checked={table.getIsAllPageRowsSelected()}
-              ref={(el) => {
-                if (el) el.indeterminate = table.getIsSomePageRowsSelected();
-              }}
-              onChange={table.getToggleAllPageRowsSelectedHandler()}
-              className="rounded border-input"
-              aria-label="Select all rows"
-            />
-          ),
+          header: ({ table }) => {
+            const allSelected = table.getIsAllPageRowsSelected();
+            const someSelected = table.getIsSomePageRowsSelected();
+            return (
+              <Checkbox
+                checked={allSelected ? true : someSelected ? 'indeterminate' : false}
+                onCheckedChange={(checked) =>
+                  table.toggleAllPageRowsSelected(checked === true)
+                }
+                aria-label="Select all rows"
+              />
+            );
+          },
           cell: ({ row }) => (
-            <input
-              type="checkbox"
+            <Checkbox
               checked={row.getIsSelected()}
-              onChange={row.getToggleSelectedHandler()}
-              className="rounded border-input"
+              onCheckedChange={(checked) => row.toggleSelected(checked === true)}
               aria-label="Select row"
             />
           ),

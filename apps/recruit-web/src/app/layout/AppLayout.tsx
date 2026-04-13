@@ -263,7 +263,7 @@ export function AppLayout() {
         )}
       >
         {/* Top bar */}
-        <header className="sticky top-0 z-30 h-14 bg-white border-b border-border flex items-center gap-4 px-4 lg:px-5 shrink-0">
+        <header className="sticky top-0 z-30 h-14 bg-background border-b border-border flex items-center gap-4 px-4 lg:px-5 shrink-0">
           {/* Mobile menu */}
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
@@ -282,7 +282,7 @@ export function AppLayout() {
           <div className="flex-1" />
 
           {/* Search */}
-          <div className="hidden md:flex items-center gap-2 rounded-lg border border-border bg-white px-3 h-8 w-56 hover:border-ring/40 focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/10 transition-all">
+          <div className="hidden md:flex items-center gap-2 rounded-lg border border-border bg-background px-3 h-8 w-56 hover:border-ring/40 focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/10 transition-all">
             <Search className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
             <input
               type="text"
