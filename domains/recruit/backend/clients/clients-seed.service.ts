@@ -6,7 +6,7 @@ import { clients } from './schema/clients';
 import { contacts } from '../contacts/schema/contacts';
 import { vendors } from '../vendors/schema/vendors';
 import { interviews } from '../interviews/schema/interviews';
-import { candidates } from '@domains/recruit/backend/candidates/schema/candidates';
+import { candidates } from '../candidates/schema/candidates';
 import { jobOpenings } from '../job-openings/schema/job-openings';
 
 const CLIENTS_SERVICE_TOKEN = 'ENTITY_SERVICE_clients';
