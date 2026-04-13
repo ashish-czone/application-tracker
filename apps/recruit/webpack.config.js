@@ -6,7 +6,7 @@ module.exports = function (options) {
     ...options,
     externals: [
       nodeExternals({
-        allowlist: [/^@packages\//, /^@modules\//],
+        allowlist: [/^@packages\//, /^@modules\//, /^@domains\//],
         modulesDir: path.resolve(__dirname, '../../node_modules'),
         additionalModuleDirs: [path.resolve(__dirname, 'node_modules')],
       }),
@@ -20,6 +20,7 @@ module.exports = function (options) {
       ],
       alias: {
         '@packages': path.resolve(__dirname, '../../packages'),
+        '@domains': path.resolve(__dirname, '../../domains'),
         '@modules': path.resolve(__dirname, 'src/modules'),
       },
     },
