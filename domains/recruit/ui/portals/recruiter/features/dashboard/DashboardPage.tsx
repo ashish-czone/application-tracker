@@ -10,7 +10,7 @@ import {
   ArrowUpRight, Clock, TrendingUp, Filter,
 } from 'lucide-react';
 import { api } from '../../../../lib/api';
-import { useAuth } from '@packages/platform-ui/auth/hooks/useAuth';
+import { useAuth } from '@packages/auth-ui/hooks/useAuth';
 import { formatLabel, formatDateShort } from '@packages/common';
 
 interface MetricCardProps {

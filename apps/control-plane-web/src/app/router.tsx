@@ -1,9 +1,9 @@
 import { Suspense, lazy, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router';
 import { AppLayout } from './layout/AppLayout';
-import { AuthGuard } from '@packages/platform-ui/auth/components/AuthGuard';
+import { AuthGuard } from '@packages/auth-ui/components/AuthGuard';
 import { EntityListPage, EntityDetailPage, useEntityConfig } from '@packages/entity-engine-ui';
-import { AuditTimeline } from '@packages/platform-ui/audit';
+import { AuditTimeline } from '@packages/audit-ui';
 import {
   PipelineProgressBar,
   TransitionConfirmDialog,
@@ -11,7 +11,7 @@ import {
   useWorkflowForEntity,
   useWorkflows,
   useEntityTransition,
-} from '@packages/platform-ui/workflows';
+} from '@packages/workflows-ui';
 import { UsersListPage, RolesListPage, AppSettingsPage } from '../portals/admin/routes';
 import { TenantsListPage } from '../portals/admin/features/tenants/TenantsListPage';
 import { TenantDetailPage } from '../portals/admin/features/tenants/TenantDetailPage';
@@ -155,17 +155,16 @@ function AppEntityDetailPage({ entityType }: { entityType: string }) {
   return (
     <EntityDetailPage
       entityType={entityType}
-      renderAuditTrail={renderAuditTrail}
       renderPipelineProgress={renderPipelineProgress}
       renderWorkflowActions={renderWorkflowActions}
     />
   );
 }
 
-const LoginPage = lazy(() => import('@packages/platform-ui/auth/pages/LoginPage'));
-const ForgotPasswordPage = lazy(() => import('@packages/platform-ui/auth/pages/ForgotPasswordPage'));
-const ResetPasswordPage = lazy(() => import('@packages/platform-ui/auth/pages/ResetPasswordPage'));
-const ProfilePage = lazy(() => import('@packages/platform-ui/auth/pages/ProfilePage'));
+const LoginPage = lazy(() => import('@packages/auth-ui/pages/LoginPage'));
+const ForgotPasswordPage = lazy(() => import('@packages/auth-ui/pages/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('@packages/auth-ui/pages/ResetPasswordPage'));
+const ProfilePage = lazy(() => import('@packages/auth-ui/pages/ProfilePage'));
 
 function DashboardPage() {
   return (

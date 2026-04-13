@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, XCircle, Clock, MessageSquare } from 'lucide-react';
 import { Button, ConfirmDialog, cn, toast } from '@packages/ui';
 import { useEntityEngine } from '@packages/entity-engine-ui';
-import { useAuth } from '@packages/platform-ui/auth';
+import { useAuth } from '@packages/auth-ui';
 import { formatDateTime } from '@packages/common';
 
 interface Approval {

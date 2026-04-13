@@ -1,5 +1,5 @@
-import { RolesListPage } from '@packages/platform-ui/rbac';
-import { UsersListPage } from '@packages/platform-ui/users';
-import { SettingsPage as AppSettingsPage } from '@packages/platform-ui/settings';
+import { RolesListPage } from '@packages/rbac-ui';
+import { UsersListPage } from '@packages/users-ui';
+import { SettingsPage as AppSettingsPage } from '@packages/settings-ui';
 
 export { RolesListPage, UsersListPage, AppSettingsPage };

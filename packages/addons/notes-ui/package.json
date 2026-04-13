@@ -4,6 +4,7 @@
   "private": true,
   "main": "index.ts",
   "dependencies": {
+    "@packages/auth-ui": "workspace:*",
     "@packages/common": "workspace:*",
     "@packages/platform-ui": "workspace:*",
     "@packages/ui": "workspace:*",

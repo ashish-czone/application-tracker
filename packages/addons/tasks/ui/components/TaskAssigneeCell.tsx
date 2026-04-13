@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { User, Users } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@packages/ui';
-import { useAuth } from '@packages/platform-ui/auth/hooks/useAuth';
+import { useAuth } from '@packages/auth-ui/hooks/useAuth';
 import { usePlatformAPI } from '@packages/platform-ui';
 import type { CellRendererProps } from '@packages/ui/components/data-grid/cell-renderers/types';
 

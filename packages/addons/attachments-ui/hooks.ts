@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@packages/ui';
-import { usePlatformAPI } from '@packages/platform-ui/PlatformUIProvider';
-import { tokenStore } from '@packages/platform-ui/auth/tokenStore';
+import { usePlatformAPI } from '@packages/platform-ui';
+import { tokenStore } from '@packages/auth-ui/tokenStore';
 import { createAttachmentsApi } from './services';
 import type { AttachmentWithUploader } from './types';
 
