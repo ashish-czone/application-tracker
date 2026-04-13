@@ -1,5 +1,5 @@
 {
-  "name": "@packages/platform-ui-conditions",
+  "name": "@packages/conditions-ui",
   "version": "0.0.1",
   "private": true,
   "main": "index.ts",

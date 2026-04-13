@@ -30,7 +30,7 @@ const ENTRY_NODE_ID = '__entry__';
 interface WorkflowCanvasProps {
   workflow: WorkflowDefinition;
   slug: string;
-  entityFields?: Record<string, import('../../conditions').ConditionFieldConfig>;
+  entityFields?: Record<string, import('@packages/conditions-ui').ConditionFieldConfig>;
 }
 
 type SelectedItem =

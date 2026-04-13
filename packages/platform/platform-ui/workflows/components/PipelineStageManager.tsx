@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Plus, GripVertical, Pencil, Trash2, Workflow, List, GitBranch } from 'lucide-react';
 import { Button, ConfirmDialog, Badge, cn } from '@packages/ui';
-import type { ConditionFieldConfig } from '../../conditions';
+import type { ConditionFieldConfig } from '@packages/conditions-ui';
 import { usePlatformAPI } from '../../PlatformUIProvider';
 import { useWorkflow, useCreateState, useUpdateState, useDeleteState, useCreateTransition, useDeleteTransition, useUpdateTransition } from '../hooks';
 import { StageForm } from './StageForm';

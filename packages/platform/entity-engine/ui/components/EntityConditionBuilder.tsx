@@ -3,8 +3,8 @@ import {
   ConditionBuilder as BaseConditionBuilder,
   type ConditionFieldConfig,
   type RenderValueProps,
-} from '@packages/platform-ui-conditions';
-import type { Condition } from '@packages/platform-ui-conditions';
+} from '@packages/conditions-ui';
+import type { Condition } from '@packages/conditions-ui';
 import type { FieldDefinition } from '@packages/eav-attributes-ui';
 import { useEntityLayout } from '../helpers/useEntityLayout';
 import { ConditionValueField } from './ConditionValueField';

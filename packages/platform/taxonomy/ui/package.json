@@ -6,7 +6,7 @@
   "dependencies": {
     "@hookform/resolvers": "^5.0.0",
     "@packages/common": "workspace:*",
-    "@packages/platform-ui-conditions": "workspace:*",
+    "@packages/conditions-ui": "workspace:*",
     "@packages/ui": "workspace:*",
     "@tanstack/react-query": "^5.0.0",
     "date-fns": "^4.0.0",

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, Trash2, Plus } from 'lucide-react';
 import { Button } from '@packages/ui';
-import { ConditionBuilder, type Condition, type ConditionFieldConfig } from '../../conditions';
+import { ConditionBuilder, type Condition, type ConditionFieldConfig } from '@packages/conditions-ui';
 import { useUpdateTransition, useDeleteTransition } from '../hooks';
 import type { WorkflowTransition } from '../types';
 
