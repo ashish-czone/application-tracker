@@ -3,6 +3,13 @@
   "version": "0.0.1",
   "private": true,
   "main": "index.ts",
+  "exports": {
+    ".": "./index.ts",
+    "./backend": "./backend/index.ts",
+    "./web": "./web/index.ts",
+    "./backend/*": "./backend/*",
+    "./web/*": "./web/*"
+  },
   "scripts": {
     "test": "vitest run --passWithNoTests"
   },
