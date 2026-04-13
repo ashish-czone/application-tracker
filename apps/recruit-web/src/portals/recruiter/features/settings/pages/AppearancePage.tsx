@@ -4,6 +4,8 @@ import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Badg
 import {
   useTheme,
   THEME_PRESETS,
+  NEUTRAL_PRESETS,
+  AUTO_NEUTRAL_ID,
   CURATED_FONTS,
   getFontById,
   type ThemeConfig,
@@ -95,7 +97,13 @@ export default function AppearancePage() {
               <button
                 key={preset.id}
                 type="button"
-                onClick={() => update({ presetId: preset.id, overrides: undefined })}
+                onClick={() =>
+                  update({
+                    presetId: preset.id,
+                    neutralId: AUTO_NEUTRAL_ID,
+                    overrides: undefined,
+                  })
+                }
                 className={`group relative flex flex-col items-start gap-2 rounded-[var(--radius)] border p-4 text-left transition-colors ${
                   active
                     ? 'border-primary ring-2 ring-primary/30'
@@ -111,6 +119,68 @@ export default function AppearancePage() {
                   {active && <Check className="h-3.5 w-3.5 text-primary" />}
                 </div>
                 <p className="text-xs text-muted-foreground">{preset.description}</p>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* Base neutral */}
+      <section className="space-y-3">
+        <div>
+          <h2 className="text-sm font-semibold text-foreground">Base neutral</h2>
+          <p className="text-xs text-muted-foreground">
+            Controls background, text, borders, and sidebar surfaces. "Auto" inherits
+            the accent preset's tinted base.
+          </p>
+        </div>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          <button
+            type="button"
+            onClick={() => update({ neutralId: AUTO_NEUTRAL_ID })}
+            className={`group relative flex flex-col items-start gap-2 rounded-[var(--radius)] border p-4 text-left transition-colors ${
+              theme.neutralId === AUTO_NEUTRAL_ID
+                ? 'border-primary ring-2 ring-primary/30'
+                : 'border-border hover:border-foreground/30'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <div
+                className="h-6 w-6 rounded-full border"
+                style={{
+                  background:
+                    'conic-gradient(from 180deg, hsl(240 6% 60%), hsl(210 14% 60%), hsl(140 10% 60%), hsl(30 12% 60%), hsl(265 14% 60%), hsl(240 6% 60%))',
+                }}
+              />
+              <div className="text-sm font-medium text-foreground">Auto</div>
+              {theme.neutralId === AUTO_NEUTRAL_ID && (
+                <Check className="h-3.5 w-3.5 text-primary" />
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">Match preset tint</p>
+          </button>
+          {NEUTRAL_PRESETS.map((neutral) => {
+            const active = theme.neutralId === neutral.id;
+            return (
+              <button
+                key={neutral.id}
+                type="button"
+                onClick={() => update({ neutralId: neutral.id })}
+                className={`group relative flex flex-col items-start gap-2 rounded-[var(--radius)] border p-4 text-left transition-colors ${
+                  active
+                    ? 'border-primary ring-2 ring-primary/30'
+                    : 'border-border hover:border-foreground/30'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <div
+                    className="h-6 w-6 rounded-full border"
+                    style={{ background: neutral.swatch }}
+                  />
+                  <div className="text-sm font-medium text-foreground">{neutral.name}</div>
+                  {active && <Check className="h-3.5 w-3.5 text-primary" />}
+                </div>
+                <p className="text-xs text-muted-foreground">{neutral.description}</p>
               </button>
             );
           })}
