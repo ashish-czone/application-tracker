@@ -729,6 +729,9 @@ importers:
       '@packages/platform-ui-taxonomy':
         specifier: workspace:*
         version: link:../../packages/platform/platform-ui/taxonomy
+      '@packages/tasks-ui':
+        specifier: workspace:*
+        version: link:../../packages/addons/tasks/ui
       '@packages/theming-ui':
         specifier: workspace:*
         version: link:../../packages/platform/theming-ui

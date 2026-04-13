@@ -25,6 +25,7 @@
     "@packages/notification-channels-ui": "workspace:*",
     "@packages/platform-ui": "workspace:*",
     "@packages/platform-ui-taxonomy": "workspace:*",
+    "@packages/tasks-ui": "workspace:*",
     "@packages/theming-ui": "workspace:*",
     "@packages/ui": "workspace:*",
     "@domains/recruit-web": "workspace:*",

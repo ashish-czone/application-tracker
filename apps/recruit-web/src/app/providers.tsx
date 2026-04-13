@@ -16,9 +16,8 @@ import { api } from '../lib/api';
 import { SessionExpiredModal } from '@packages/platform-ui/auth/components/SessionExpiredModal';
 import { CANDIDATES_UI_CONFIG } from '@domains/recruit-web/entities/candidates.config';
 import { OFFERS_UI_CONFIG } from '@domains/recruit-web/entities/offers.config';
-import { TASKS_UI_CONFIG } from '../entities/tasks.config';
+import { TASKS_UI_CONFIG, TaskAssigneeCell } from '@packages/tasks-ui';
 import { AvatarNameCell, createStatusBadgeCell, type StatusColors } from '@packages/ui';
-import { TaskAssigneeCell } from '../portals/recruiter/features/tasks/components/TaskAssigneeCell';
 
 const RECRUIT_STATUS_COLORS: Record<string, StatusColors> = {
   // Candidate statuses
