@@ -30,7 +30,8 @@ const config: Config = {
     '../../packages/platform/platform-ui/*.{ts,tsx}',
     '../../packages/platform/platform-ui/audit/**/*.{ts,tsx}',
     '../../packages/platform/platform-ui/conditions/*.tsx',
-    '../../packages/platform/platform-ui/notification-channels/**/*.{ts,tsx}',
+    // @packages/notification-channels-ui (platform)
+    '../../packages/platform/notification-channels/ui/**/*.{ts,tsx}',
     '../../packages/platform/platform-ui/automations/**/*.{ts,tsx}',
     '../../packages/platform/platform-ui/notifications/**/*.{ts,tsx}',
     '../../packages/platform/platform-ui/rbac/**/*.{ts,tsx}',

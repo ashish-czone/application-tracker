@@ -11,6 +11,7 @@
   "dependencies": {
     "@hookform/resolvers": "^5.0.0",
     "@packages/entity-engine-ui": "workspace:*",
+    "@packages/notification-channels-ui": "workspace:*",
     "@packages/platform-ui": "workspace:*",
     "@packages/platform-ui-taxonomy": "workspace:*",
     "@packages/ui": "workspace:*",

@@ -11,7 +11,7 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { cn } from '@packages/ui/lib/utils';
-import { NotificationBell } from '@packages/platform-ui/notification-channels';
+import { NotificationBell } from '@packages/notification-channels-ui';
 import {
   DropdownMenu,
   DropdownMenuTrigger,

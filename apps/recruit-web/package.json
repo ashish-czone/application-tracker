@@ -21,6 +21,7 @@
     "@packages/eav-attributes-ui": "workspace:*",
     "@packages/entity-engine-ui": "workspace:*",
     "@packages/entity-relations-ui": "workspace:*",
+    "@packages/notification-channels-ui": "workspace:*",
     "@packages/platform-ui": "workspace:*",
     "@packages/platform-ui-taxonomy": "workspace:*",
     "@packages/theming-ui": "workspace:*",
