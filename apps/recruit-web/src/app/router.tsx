@@ -12,7 +12,7 @@ import {
   useEntityTransition,
 } from '@packages/platform-ui/workflows';
 import { SettingsPage, AppearancePage, AppSettingsPage, AutomationsPage, RuleBuilderPage, UsersListPage, RolesListPage, TagGroupsListPage, CategoryGroupsListPage, QueuedTasksPage, OrgPositionsPage, OrgUnitsPage } from '../portals/recruiter/routes';
-import { CandidateProfilePage } from '../portals/recruiter/features/candidates/CandidateProfilePage';
+import { CandidateProfilePage } from '@domains/recruit/web/portals/recruiter/features/candidates/CandidateProfilePage';
 import { DashboardPage as RecruitDashboard } from '../portals/recruiter/features/dashboard/DashboardPage';
 import { JobOpeningDetailPage } from '../portals/recruiter/features/job-openings/JobOpeningDetailPage';
 import { ApplicationDetailPage } from '../portals/recruiter/features/applications/ApplicationDetailPage';

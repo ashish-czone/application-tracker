@@ -681,6 +681,9 @@ importers:
       '@dnd-kit/utilities':
         specifier: ^3.2.2
         version: 3.2.2(react@19.2.4)
+      '@domains/recruit':
+        specifier: workspace:*
+        version: link:../../domains/recruit
       '@hookform/resolvers':
         specifier: ^5.0.0
         version: 5.2.2(react-hook-form@7.71.2(react@19.2.4))
@@ -878,6 +881,9 @@ importers:
       '@nestjs/swagger':
         specifier: ^11.0.0
         version: 11.2.6(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)
+      '@packages/attachments-ui':
+        specifier: workspace:*
+        version: link:../../packages/addons/attachments-ui
       '@packages/auth':
         specifier: workspace:*
         version: link:../../packages/core/auth
@@ -887,9 +893,15 @@ importers:
       '@packages/database':
         specifier: workspace:*
         version: link:../../packages/core/database
+      '@packages/eav-attributes-ui':
+        specifier: workspace:*
+        version: link:../../packages/platform/eav-attributes-ui
       '@packages/entity-engine':
         specifier: workspace:*
         version: link:../../packages/platform/entity-engine
+      '@packages/entity-engine-ui':
+        specifier: workspace:*
+        version: link:../../packages/platform/entity-engine-ui
       '@packages/events':
         specifier: workspace:*
         version: link:../../packages/core/events
@@ -899,13 +911,37 @@ importers:
       '@packages/media':
         specifier: workspace:*
         version: link:../../packages/platform/media
+      '@packages/notes-ui':
+        specifier: workspace:*
+        version: link:../../packages/addons/notes-ui
+      '@packages/platform-ui':
+        specifier: workspace:*
+        version: link:../../packages/platform/platform-ui
       '@packages/rbac':
         specifier: workspace:*
         version: link:../../packages/core/rbac
       '@packages/taxonomy':
         specifier: workspace:*
         version: link:../../packages/platform/taxonomy
+      '@packages/ui':
+        specifier: workspace:*
+        version: link:../../packages/core/ui
+      '@tanstack/react-query':
+        specifier: ^5.60.0
+        version: 5.90.21(react@19.2.4)
+      lucide-react:
+        specifier: ^0.400.0
+        version: 0.400.0(react@19.2.4)
+      react:
+        specifier: ^19.1.0
+        version: 19.2.4
+      react-router:
+        specifier: ^7.6.1
+        version: 7.13.1(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
     devDependencies:
+      '@types/react':
+        specifier: ^19.2.14
+        version: 19.2.14
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3))
