@@ -15,7 +15,7 @@ import {
 import { DynamicSection } from '@packages/eav-attributes-ui';
 import { useEntityEngine, useEntityHooks, useEntityConfig } from '@packages/entity-engine-ui';
 import { useEntityLayout } from '@packages/entity-engine-ui/helpers/useEntityLayout';
-import { AuditTimeline } from '@packages/platform-ui/audit';
+import { AuditTimeline } from '@packages/audit-ui';
 import { NotesSection } from '@packages/notes-ui';
 import { AttachmentsSection } from '@packages/attachments-ui';
 import {
@@ -25,7 +25,7 @@ import {
   useWorkflowForEntity,
   useWorkflows,
   useEntityTransition,
-} from '@packages/platform-ui/workflows';
+} from '@packages/workflows-ui';
 import { EntityPickerPanel } from '@packages/entity-engine-ui/components/EntityPickerPanel';
 import { formatLabel, formatDate } from '@packages/common';
 import { ScheduleInterviewDialog } from '../shared/ScheduleInterviewDialog';

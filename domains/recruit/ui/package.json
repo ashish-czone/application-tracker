@@ -8,6 +8,8 @@
   },
   "dependencies": {
     "@packages/attachments-ui": "workspace:*",
+    "@packages/audit-ui": "workspace:*",
+    "@packages/auth-ui": "workspace:*",
     "@packages/calendar-ui": "workspace:*",
     "@packages/common": "workspace:*",
     "@packages/document-templates-ui": "workspace:*",
@@ -18,6 +20,7 @@
     "@packages/notes-ui": "workspace:*",
     "@packages/platform-ui": "workspace:*",
     "@packages/ui": "workspace:*",
+    "@packages/workflows-ui": "workspace:*",
     "@tanstack/react-query": "^5.60.0",
     "lucide-react": "^0.400.0",
     "react": "^19.1.0",

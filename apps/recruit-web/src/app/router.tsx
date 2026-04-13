@@ -1,7 +1,7 @@
 import { Suspense, lazy, useState, useMemo } from 'react';
 import { Routes, Route, Navigate, type RouteObject } from 'react-router';
 import { AppLayout } from './layout/AppLayout';
-import { AuthGuard } from '@packages/platform-ui/auth/components/AuthGuard';
+import { AuthGuard } from '@packages/auth-ui/components/AuthGuard';
 import { EntityListPage, EntityDetailPage, useEntityConfig, useEntityEngine } from '@packages/entity-engine-ui';
 import type { DomainWebManifest, DomainDetailPageComponent } from '@packages/domains';
 import {
@@ -11,7 +11,7 @@ import {
   useWorkflowForEntity,
   useWorkflows,
   useEntityTransition,
-} from '@packages/platform-ui/workflows';
+} from '@packages/workflows-ui';
 import { SettingsPage, AppearancePage, AppSettingsPage, AutomationsPage, RuleBuilderPage, UsersListPage, RolesListPage, TagGroupsListPage, CategoryGroupsListPage, QueuedTasksPage, OrgPositionsPage, OrgUnitsPage } from '../portals/recruiter/routes';
 import { recruitWeb } from '@domains/recruit-ui';
 
@@ -158,12 +158,12 @@ function AppEntityDetailPage({ entityType }: { entityType: string }) {
   );
 }
 
-const LoginPage = lazy(() => import('@packages/platform-ui/auth/pages/LoginPage'));
-const RegisterPage = lazy(() => import('@packages/platform-ui/auth/pages/RegisterPage'));
-const ForgotPasswordPage = lazy(() => import('@packages/platform-ui/auth/pages/ForgotPasswordPage'));
-const ResetPasswordPage = lazy(() => import('@packages/platform-ui/auth/pages/ResetPasswordPage'));
-const ProfilePage = lazy(() => import('@packages/platform-ui/auth/pages/ProfilePage'));
-const OAuthCallbackPage = lazy(() => import('@packages/platform-ui/auth/pages/OAuthCallbackPage'));
+const LoginPage = lazy(() => import('@packages/auth-ui/pages/LoginPage'));
+const RegisterPage = lazy(() => import('@packages/auth-ui/pages/RegisterPage'));
+const ForgotPasswordPage = lazy(() => import('@packages/auth-ui/pages/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('@packages/auth-ui/pages/ResetPasswordPage'));
+const ProfilePage = lazy(() => import('@packages/auth-ui/pages/ProfilePage'));
+const OAuthCallbackPage = lazy(() => import('@packages/auth-ui/pages/OAuthCallbackPage'));
 
 // Dashboard is now in features/dashboard/DashboardPage.tsx
 

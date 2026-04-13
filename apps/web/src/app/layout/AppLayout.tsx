@@ -21,8 +21,8 @@ import {
   DropdownMenuSeparator,
 } from '@packages/ui';
 import { customerMenu } from '../../portals/customer/menu';
-import { useAuth } from '@packages/platform-ui/auth/hooks/useAuth';
-import { useLogout } from '@packages/platform-ui/auth/hooks/useLogout';
+import { useAuth } from '@packages/auth-ui/hooks/useAuth';
+import { useLogout } from '@packages/auth-ui/hooks/useLogout';
 
 export function AppLayout() {
   const [collapsed, setCollapsed] = useState(false);

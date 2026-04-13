@@ -1,5 +1,5 @@
 import type { PaginatedResponse } from '@packages/common';
-import type { ApiFn } from '@packages/platform-ui/PlatformUIProvider';
+import type { ApiFn } from '@packages/platform-ui';
 import type { AttachmentWithUploader } from './types';
 
 export function createAttachmentsApi(api: ApiFn) {

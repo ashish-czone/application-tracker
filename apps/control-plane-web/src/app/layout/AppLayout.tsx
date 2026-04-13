@@ -22,8 +22,8 @@ import {
   DropdownMenuSeparator,
 } from '@packages/ui';
 import { adminMenu, type MenuItem } from '../../portals/admin/menu';
-import { useAuth } from '@packages/platform-ui/auth/hooks/useAuth';
-import { useLogout } from '@packages/platform-ui/auth/hooks/useLogout';
+import { useAuth } from '@packages/auth-ui/hooks/useAuth';
+import { useLogout } from '@packages/auth-ui/hooks/useLogout';
 
 function NavItem({ item, collapsed }: { item: MenuItem; collapsed: boolean }) {
   const { path, label, icon: Icon } = item;

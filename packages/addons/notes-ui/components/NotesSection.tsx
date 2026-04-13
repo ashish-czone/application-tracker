@@ -1,8 +1,8 @@
 import { useState, useCallback } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@packages/ui';
-import { usePlatformAPI } from '@packages/platform-ui/PlatformUIProvider';
-import { useAuth } from '@packages/platform-ui/auth/hooks/useAuth';
+import { usePlatformAPI } from '@packages/platform-ui';
+import { useAuth } from '@packages/auth-ui/hooks/useAuth';
 import { useNotes, useCreateNote, useUpdateNote, useDeleteNote } from '../hooks';
 import { NoteEditor } from './NoteEditor';
 import { NotesList } from './NotesList';

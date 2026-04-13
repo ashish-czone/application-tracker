@@ -15,9 +15,9 @@ import {
 import { DynamicSection } from '@packages/eav-attributes-ui';
 import { useEntityEngine, useEntityHooks, useEntityConfig } from '@packages/entity-engine-ui';
 import { useEntityLayout } from '@packages/entity-engine-ui/helpers/useEntityLayout';
-import { AuditTimeline, useAuditLogs } from '@packages/platform-ui/audit';
+import { AuditTimeline, useAuditLogs } from '@packages/audit-ui';
 import { EntityPickerPanel } from '@packages/entity-engine-ui/components/EntityPickerPanel';
-import { WorkflowKanbanBoard } from '@packages/platform-ui/workflows';
+import { WorkflowKanbanBoard } from '@packages/workflows-ui';
 import { StarRating } from '@packages/evaluations-ui';
 import { ScheduleInterviewDialog } from '@domains/recruit-ui/portals/recruiter/features/shared/ScheduleInterviewDialog';
 import { CreateOfferDialog } from '@domains/recruit-ui/portals/recruiter/features/shared/CreateOfferDialog';

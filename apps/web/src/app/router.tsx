@@ -1,16 +1,16 @@
 import { Suspense, lazy } from 'react';
 import { Routes, Route, Navigate } from 'react-router';
 import { AppLayout } from './layout/AppLayout';
-import { AuthGuard } from '@packages/platform-ui/auth/components/AuthGuard';
+import { AuthGuard } from '@packages/auth-ui/components/AuthGuard';
 import { UsersListPage, RolesListPage, WorkflowsListPage, WorkflowEditorPage, AutomationsPage, RuleBuilderPage, SettingsPage, TagGroupsListPage, CategoryGroupsListPage, OrgPositionsPage, OrgUnitsPage } from '../portals/customer/routes';
 import { EntityListPage, EntityDetailPage } from '@packages/entity-engine-ui';
 
-const LoginPage = lazy(() => import('@packages/platform-ui/auth/pages/LoginPage'));
-const RegisterPage = lazy(() => import('@packages/platform-ui/auth/pages/RegisterPage'));
-const ForgotPasswordPage = lazy(() => import('@packages/platform-ui/auth/pages/ForgotPasswordPage'));
-const ResetPasswordPage = lazy(() => import('@packages/platform-ui/auth/pages/ResetPasswordPage'));
-const ProfilePage = lazy(() => import('@packages/platform-ui/auth/pages/ProfilePage'));
-const OAuthCallbackPage = lazy(() => import('@packages/platform-ui/auth/pages/OAuthCallbackPage'));
+const LoginPage = lazy(() => import('@packages/auth-ui/pages/LoginPage'));
+const RegisterPage = lazy(() => import('@packages/auth-ui/pages/RegisterPage'));
+const ForgotPasswordPage = lazy(() => import('@packages/auth-ui/pages/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('@packages/auth-ui/pages/ResetPasswordPage'));
+const ProfilePage = lazy(() => import('@packages/auth-ui/pages/ProfilePage'));
+const OAuthCallbackPage = lazy(() => import('@packages/auth-ui/pages/OAuthCallbackPage'));
 
 function DashboardPage() {
   return (

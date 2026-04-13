@@ -3,7 +3,7 @@ import { useParams, useNavigate, useLocation, useSearchParams } from 'react-rout
 import { ArrowLeft } from 'lucide-react';
 import { Button, Badge } from '@packages/ui';
 import { useEntityEngine, useEntityConfig } from '@packages/entity-engine-ui';
-import { useWorkflows, useCreateWorkflow, PipelineStageManager } from '@packages/platform-ui/workflows';
+import { useWorkflows, useCreateWorkflow, PipelineStageManager } from '@packages/workflows-ui';
 
 const FieldManagementPage = lazy(
   () => import('@packages/entity-layout-ui').then((m) => ({ default: m.FieldManagementPage })),

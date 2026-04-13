@@ -1,5 +1,5 @@
 import type { PaginatedResponse } from '@packages/common';
-import type { ApiFn } from '@packages/platform-ui/PlatformUIProvider';
+import type { ApiFn } from '@packages/platform-ui';
 import type {
   EvaluationWithScores,
   EvaluationTemplate,

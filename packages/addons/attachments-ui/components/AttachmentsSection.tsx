@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@packages/ui';
-import { useAuth } from '@packages/platform-ui/auth/hooks/useAuth';
+import { useAuth } from '@packages/auth-ui/hooks/useAuth';
 import { useEntityConfig } from '@packages/entity-engine-ui';
 import { useAttachments, useUploadAttachment, useDeleteAttachment, useDownloadUrl } from '../hooks';
 import { AttachmentUpload } from './AttachmentUpload';

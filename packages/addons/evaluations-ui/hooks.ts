@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@packages/ui';
-import { usePlatformAPI } from '@packages/platform-ui/PlatformUIProvider';
+import { usePlatformAPI } from '@packages/platform-ui';
 import { createEvaluationsApi } from './services';
 import type { CreateEvaluationRequest, UpdateEvaluationRequest } from './types';
 

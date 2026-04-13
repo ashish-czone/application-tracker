@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@packages/ui';
-import { useAuth } from '@packages/platform-ui/auth/hooks/useAuth';
+import { useAuth } from '@packages/auth-ui/hooks/useAuth';
 import {
   useEvaluations,
   useCreateEvaluation,

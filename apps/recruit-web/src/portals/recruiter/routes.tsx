@@ -1,12 +1,12 @@
 import { lazy } from 'react';
 import { TagGroupsListPage, CategoryGroupsListPage } from '@packages/taxonomy-ui';
-import { RolesListPage } from '@packages/platform-ui/rbac';
-import { AutomationsPage } from '@packages/platform-ui/notifications';
-import { RuleBuilderPage } from '@packages/platform-ui/automations';
-import { UsersListPage } from '@packages/platform-ui/users';
-import { SettingsPage as AppSettingsPage } from '@packages/platform-ui/settings';
-import { OrgPositionsPage } from '@packages/platform-ui/org-positions';
-import { OrgUnitsPage } from '@packages/platform-ui/org-units';
+import { RolesListPage } from '@packages/rbac-ui';
+import { AutomationsPage } from '@packages/notifications-ui';
+import { RuleBuilderPage } from '@packages/automations-ui';
+import { UsersListPage } from '@packages/users-ui';
+import { SettingsPage as AppSettingsPage } from '@packages/settings-ui';
+import { OrgPositionsPage } from '@packages/org-units-ui';
+import { OrgUnitsPage } from '@packages/org-units-ui';
 
 export { TagGroupsListPage, CategoryGroupsListPage, RolesListPage, AutomationsPage, RuleBuilderPage, UsersListPage, AppSettingsPage, OrgPositionsPage, OrgUnitsPage };
 
@@ -21,4 +21,4 @@ export const AppearancePage = lazy(
   () => import('@packages/theming-ui').then((m) => ({ default: m.AppearancePage })),
 );
 
-export { QueueDashboardPage as QueuedTasksPage } from '@packages/platform-ui/queue-dashboard';
+export { QueueDashboardPage as QueuedTasksPage } from '@packages/queue-ui';
