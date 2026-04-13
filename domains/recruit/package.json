@@ -6,7 +6,7 @@
   "exports": {
     ".": "./index.ts",
     "./backend": "./backend/index.ts",
-    "./web": "./web/index.ts",
+    "./web": "./web/index.tsx",
     "./backend/*": "./backend/*",
     "./web/*": "./web/*"
   },
