@@ -29,3 +29,24 @@ export function buildPackageAliases(packagesDir: string): Record<string, string>
 
   return aliases;
 }
+
+/**
+ * Builds Vite/Vitest alias entries for all @domains/* packages by scanning
+ * the domains/ directory and reading package.json names.
+ */
+export function buildDomainAliases(domainsDir: string): Record<string, string> {
+  const aliases: Record<string, string> = {};
+  if (!fs.existsSync(domainsDir)) return aliases;
+
+  for (const entry of fs.readdirSync(domainsDir, { withFileTypes: true })) {
+    if (!entry.isDirectory() || entry.name === 'node_modules') continue;
+    const pkgJsonPath = path.join(domainsDir, entry.name, 'package.json');
+    if (!fs.existsSync(pkgJsonPath)) continue;
+    const pkgJson = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf-8'));
+    if (pkgJson.name?.startsWith('@domains/')) {
+      aliases[pkgJson.name] = path.join(domainsDir, entry.name);
+    }
+  }
+
+  return aliases;
+}

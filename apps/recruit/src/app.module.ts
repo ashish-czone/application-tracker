@@ -37,11 +37,10 @@ import { DocumentTemplatesModule } from '@packages/document-templates';
 import { PdfGeneratorModule } from '@packages/pdf-generator';
 import { PuppeteerPdfProvider } from '@packages/pdf-generator/providers/puppeteer.provider';
 import { SharedModule } from './modules/shared/shared.module';
-import { CandidatesModule } from './modules/candidates/candidates.module';
+import { recruitBackend } from '@domains/recruit/backend';
 import { CLIENTS_CONFIG } from './modules/clients/clients.config';
 import { CONTACTS_CONFIG } from './modules/contacts/contacts.config';
 import { VENDORS_CONFIG } from './modules/vendors/vendors.config';
-import { candidatesConfig } from './modules/candidates/candidates.config';
 import { JOB_OPENINGS_CONFIG } from './modules/job-openings/job-openings.config';
 import { APPLICATIONS_CONFIG } from './modules/applications/applications.config';
 import { INTERVIEWS_CONFIG } from './modules/interviews/interviews.config';
@@ -140,11 +139,12 @@ import { validate } from './config/env.validation';
       inject: [ConfigService, AppConfigService],
     }),
     OAuthModule.register(),
-    // Domain modules — entity engine handles CRUD/routing/RBAC/events/audit/seeding
+    // Recruit domain — candidates entity + CandidatesModule wired internally
+    recruitBackend.module,
+    // Entities still living in apps/recruit (migrated in subsequent PRs)
     EntityEngineModule.forEntity(CLIENTS_CONFIG),
     EntityEngineModule.forEntity(CONTACTS_CONFIG),
     EntityEngineModule.forEntity(VENDORS_CONFIG),
-    EntityEngineModule.forEntity(candidatesConfig),
     EntityEngineModule.forEntity(JOB_OPENINGS_CONFIG),
     EntityEngineModule.forEntity(APPLICATIONS_CONFIG),
     EntityEngineModule.forEntity(INTERVIEWS_CONFIG),
@@ -154,7 +154,6 @@ import { validate } from './config/env.validation';
     TaskClaimModule, // claim/unclaim for team-assigned tasks
     OffersModule, // offer approval chain + guard
     ApplicationsModule, // domain-specific automation strategies + seed data
-    CandidatesModule, // extras: resume upload, skill tags, sample data seeding
     ClientsModule, // sample data seeding: clients, contacts, vendors, interviews
     JobOpeningsModule, // sample data seeding: job openings, applications
     UsersModule,

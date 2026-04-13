@@ -1,0 +1,39 @@
+{
+  "name": "@domains/recruit",
+  "version": "0.0.1",
+  "private": true,
+  "main": "index.ts",
+  "scripts": {
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/core": "^11.0.0",
+    "@nestjs/swagger": "^11.0.0",
+    "@packages/attachments-ui": "workspace:*",
+    "@packages/auth": "workspace:*",
+    "@packages/common": "workspace:*",
+    "@packages/database": "workspace:*",
+    "@packages/eav-attributes-ui": "workspace:*",
+    "@packages/entity-engine": "workspace:*",
+    "@packages/entity-engine-ui": "workspace:*",
+    "@packages/events": "workspace:*",
+    "@packages/logger": "workspace:*",
+    "@packages/media": "workspace:*",
+    "@packages/notes-ui": "workspace:*",
+    "@packages/platform-ui": "workspace:*",
+    "@packages/rbac": "workspace:*",
+    "@packages/taxonomy": "workspace:*",
+    "@packages/ui": "workspace:*",
+    "@tanstack/react-query": "^5.60.0",
+    "lucide-react": "^0.400.0",
+    "react": "^19.1.0",
+    "react-router": "^7.6.1"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "drizzle-orm": "^0.45.1",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}
