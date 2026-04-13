@@ -4,7 +4,7 @@ import { DatabaseService, eq, users } from '@packages/database';
 import { EntityService } from '@packages/entity-engine';
 import { jobOpenings } from './schema/job-openings';
 import { applications } from '../applications/schema/applications';
-import { candidates } from '../candidates/schema/candidates';
+import { candidates } from '@domains/recruit/backend/candidates/schema/candidates';
 
 const JO_SERVICE_TOKEN = 'ENTITY_SERVICE_job_openings';
 const APP_SERVICE_TOKEN = 'ENTITY_SERVICE_applications';
