@@ -14,8 +14,8 @@ import { AttachmentsSection } from '@packages/attachments-ui';
 import { EvaluationsSection } from '@packages/evaluations-ui';
 import { api } from '../lib/api';
 import { SessionExpiredModal } from '@packages/platform-ui/auth/components/SessionExpiredModal';
-import { CANDIDATES_UI_CONFIG } from '@domains/recruit-web/entities/candidates.config';
-import { OFFERS_UI_CONFIG } from '@domains/recruit-web/entities/offers.config';
+import { CANDIDATES_UI_CONFIG } from '@domains/recruit-ui/entities/candidates.config';
+import { OFFERS_UI_CONFIG } from '@domains/recruit-ui/entities/offers.config';
 import { TASKS_UI_CONFIG, TaskAssigneeCell } from '@packages/tasks-ui';
 import { AvatarNameCell, createStatusBadgeCell, type StatusColors } from '@packages/ui';
 

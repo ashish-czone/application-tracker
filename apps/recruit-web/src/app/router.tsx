@@ -13,7 +13,7 @@ import {
   useEntityTransition,
 } from '@packages/platform-ui/workflows';
 import { SettingsPage, AppearancePage, AppSettingsPage, AutomationsPage, RuleBuilderPage, UsersListPage, RolesListPage, TagGroupsListPage, CategoryGroupsListPage, QueuedTasksPage, OrgPositionsPage, OrgUnitsPage } from '../portals/recruiter/routes';
-import { recruitWeb } from '@domains/recruit-web';
+import { recruitWeb } from '@domains/recruit-ui';
 
 const enabledDomains: DomainWebManifest[] = [recruitWeb];
 

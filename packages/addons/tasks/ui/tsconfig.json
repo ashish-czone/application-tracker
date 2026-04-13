@@ -13,8 +13,8 @@
     "noEmit": true,
     "baseUrl": ".",
     "paths": {
-      "@packages/tasks": ["../backend"],
-      "@packages/tasks/*": ["../backend/*"],
+      "@packages/tasks": ["../api"],
+      "@packages/tasks/*": ["../api/*"],
       "@packages/tasks-ui": ["."],
       "@packages/tasks-ui/*": ["./*"],
       "@packages/*": ["../../../core/*/", "../../../platform/*/", "../../../addons/*/"]

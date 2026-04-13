@@ -5,12 +5,12 @@
     "baseUrl": ".",
     "paths": {
       "@modules/*": ["./src/modules/*"],
-      "@packages/entity-engine": ["../../packages/platform/entity-engine/backend"],
-      "@packages/entity-engine/*": ["../../packages/platform/entity-engine/backend/*"],
+      "@packages/entity-engine": ["../../packages/platform/entity-engine/api"],
+      "@packages/entity-engine/*": ["../../packages/platform/entity-engine/api/*"],
       "@packages/entity-engine-ui": ["../../packages/platform/entity-engine/ui"],
       "@packages/entity-engine-ui/*": ["../../packages/platform/entity-engine/ui/*"],
-      "@packages/notification-channels": ["../../packages/platform/notification-channels/backend"],
-      "@packages/notification-channels/*": ["../../packages/platform/notification-channels/backend/*"],
+      "@packages/notification-channels": ["../../packages/platform/notification-channels/api"],
+      "@packages/notification-channels/*": ["../../packages/platform/notification-channels/api/*"],
       "@packages/notification-channels-ui": ["../../packages/platform/notification-channels/ui"],
       "@packages/notification-channels-ui/*": ["../../packages/platform/notification-channels/ui/*"],
       "@packages/*": ["../../packages/core/*", "../../packages/platform/*", "../../packages/addons/*"]

@@ -65,12 +65,12 @@ Domains are workspace packages scoped as `@domains/*`. The tier is encoded by fo
 
 ### Domain package layout
 
-A domain is a **folder** containing two sibling workspace packages — one for backend code, one for web code. The parent folder (`domains/recruit/`) is not itself a package. This matches the platform-package colocation pattern already used by `packages/platform/entity-engine/{backend,ui}` and `packages/platform/notification-channels/{backend,ui}`.
+A domain is a **folder** containing two sibling workspace packages — one for backend code, one for web code. The parent folder (`domains/recruit/`) is not itself a package. This matches the platform-package colocation pattern already used by `packages/platform/entity-engine/{api,ui}` and `packages/platform/notification-channels/{api,ui}`.
 
 ```
 domains/recruit/
-  backend/
-    package.json                  # @domains/recruit-backend
+  api/
+    package.json                  # @domains/recruit-api
     index.ts                      # exports recruitBackend manifest
     recruit.module.ts             # NestJS module aggregating entity modules
     candidates/
@@ -84,8 +84,8 @@ domains/recruit/
     interviews/
     offers/
     ...
-  web/
-    package.json                  # @domains/recruit-web
+  ui/
+    package.json                  # @domains/recruit-ui
     index.tsx                     # exports recruitWeb manifest
     entities/                     # UI-side entity config overrides
     portals/recruiter/features/   # pages, forms, tables, hooks
@@ -94,7 +94,7 @@ domains/recruit/
 
 ### Why two packages, not one with subpath exports
 
-Splitting into `@domains/recruit-backend` and `@domains/recruit-web` gives honest dependency graphs: each `package.json` declares only what that side actually uses, so the Nest app never resolves React and the Vite build never resolves Nest. With a single package using subpath exports, the dep graph lies and correctness relies on bundler tree-shaking.
+Splitting into `@domains/recruit-api` and `@domains/recruit-ui` gives honest dependency graphs: each `package.json` declares only what that side actually uses, so the Nest app never resolves React and the Vite build never resolves Nest. With a single package using subpath exports, the dep graph lies and correctness relies on bundler tree-shaking.
 
 Install size on disk is unchanged (pnpm hard-links), and bundle sizes are determined by the import graph, not the package count. Splitting can only make bundles smaller or equal, never larger.
 
@@ -103,7 +103,7 @@ Install size on disk is unchanged (pnpm hard-links), and bundle sizes are determ
 Backend and frontend types cannot share a file (NestJS decorators, Drizzle schemas, and React components live in different build targets). Each sibling package exposes exactly one manifest, consumed by one app.
 
 ```ts
-// domains/recruit/backend/index.ts
+// domains/recruit/api/index.ts
 import type { DomainBackendManifest } from '@packages/domains';
 import { RecruitDomainModule } from './recruit.module';
 
@@ -115,7 +115,7 @@ export const recruitBackend: DomainBackendManifest = {
 ```
 
 ```ts
-// domains/recruit/web/index.tsx
+// domains/recruit/ui/index.tsx
 import type { DomainWebManifest } from '@packages/domains';
 import { EntityCreatePage } from '@packages/entity-engine-ui';
 // lazy-loaded feature pages...
@@ -154,7 +154,7 @@ The manifest only carries what is genuinely app-level wiring: the Nest module to
 **`apps/recruit/src/app.module.ts`:**
 
 ```ts
-import { recruitBackend } from '@domains/recruit-backend';
+import { recruitBackend } from '@domains/recruit-api';
 
 @Module({
   imports: [
@@ -171,7 +171,7 @@ That is the whole integration. No `DomainEngineModule.forRoot` wrapper, no regis
 **`apps/recruit-web/src/app/router.tsx`:**
 
 ```tsx
-import { recruitWeb } from '@domains/recruit-web';
+import { recruitWeb } from '@domains/recruit-ui';
 import type { DomainWebManifest } from '@packages/domains';
 import { useEntityEngine, EntityListPage } from '@packages/entity-engine-ui';
 
@@ -260,7 +260,7 @@ The Recruit extraction is complete. Commits of interest:
 
 - **feat(domains): move recruit-specific web features into @domains/recruit** (#749) — moved backend modules and frontend features into the new tier.
 - **fix(recruit): bundle @domains/* into nest webpack output** (#750) — `apps/recruit` webpack config allowlists `@domains/*` so Nest bundles domain code instead of trying to resolve it as an external.
-- **refactor(recruit): split @domains/recruit into backend + web packages** (this PR) — switched from a single package with subpath exports to two sibling packages (`@domains/recruit-backend`, `@domains/recruit-web`) for honest dep graphs.
+- **refactor(recruit): split @domains/recruit into backend + web packages** (this PR) — switched from a single package with subpath exports to two sibling packages (`@domains/recruit-api`, `@domains/recruit-ui`) for honest dep graphs.
 - **chore(lint): add dependency-boundary ESLint config for package tiers** (this PR) — adds `eslint.boundaries.config.mjs` and wires `pnpm lint` to it.
 - **feat(domains): extend DomainWebManifest with routes and detail overrides** (this PR) — final manifest shape.
 - **feat(recruit-web): make AppRouter entity-registry driven** (this PR) — removed hardcoded per-entity routes; router now maps `useEntityEngine().entities` into list/detail routes with optional domain overrides.

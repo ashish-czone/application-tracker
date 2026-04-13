@@ -28,7 +28,7 @@
     "@packages/tasks-ui": "workspace:*",
     "@packages/theming-ui": "workspace:*",
     "@packages/ui": "workspace:*",
-    "@domains/recruit-web": "workspace:*",
+    "@domains/recruit-ui": "workspace:*",
     "@tanstack/react-query": "^5.60.0",
     "dagre": "^0.8.5",
     "date-fns": "^4.1.0",

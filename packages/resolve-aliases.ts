@@ -24,7 +24,7 @@ function collectPackages(dir: string, aliases: Record<string, string>, depth = 0
 /**
  * Dynamically builds Vite/Vitest alias entries for all @packages/* by recursively
  * scanning the tier directories (core/, platform/, addons/) for package.json files.
- * Nested packages are supported (e.g. packages/platform/<feature>/{backend,ui}/).
+ * Nested packages are supported (e.g. packages/platform/<feature>/{api,ui}/).
  */
 export function buildPackageAliases(packagesDir: string): Record<string, string> {
   const aliases: Record<string, string> = {};
@@ -57,7 +57,7 @@ function collectDomainPackages(dir: string, aliases: Record<string, string>, dep
 /**
  * Builds Vite/Vitest alias entries for all @domains/* packages by recursively
  * scanning the domains/ directory. Supports nested packages
- * (e.g. domains/<vertical>/{backend,web}/).
+ * (e.g. domains/<vertical>/{api,ui}/).
  */
 export function buildDomainAliases(domainsDir: string): Record<string, string> {
   const aliases: Record<string, string> = {};
