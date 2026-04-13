@@ -1,23 +1,14 @@
 {
-  "name": "@domains/recruit",
+  "name": "@domains/recruit-backend",
   "version": "0.0.1",
   "private": true,
   "main": "index.ts",
-  "exports": {
-    ".": "./index.ts",
-    "./backend": "./backend/index.ts",
-    "./web": "./web/index.tsx",
-    "./backend/*": "./backend/*",
-    "./web/*": "./web/*"
-  },
   "scripts": {
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
-    "@nestjs/core": "^11.0.0",
     "@nestjs/swagger": "^11.0.0",
-    "@packages/attachments-ui": "workspace:*",
     "@packages/auth": "workspace:*",
     "@packages/automations": "workspace:*",
     "@packages/common": "workspace:*",
@@ -25,33 +16,26 @@
     "@packages/document-templates": "workspace:*",
     "@packages/domains": "workspace:*",
     "@packages/eav-attributes": "workspace:*",
-    "@packages/eav-attributes-ui": "workspace:*",
     "@packages/entity-engine": "workspace:*",
-    "@packages/entity-engine-ui": "workspace:*",
     "@packages/entity-layout": "workspace:*",
     "@packages/entity-relations": "workspace:*",
     "@packages/evaluations": "workspace:*",
     "@packages/events": "workspace:*",
     "@packages/logger": "workspace:*",
     "@packages/media": "workspace:*",
-    "@packages/notes-ui": "workspace:*",
     "@packages/notification-channels": "workspace:*",
+    "@packages/notifications": "workspace:*",
     "@packages/org-units": "workspace:*",
     "@packages/pdf-generator": "workspace:*",
-    "@packages/platform-ui": "workspace:*",
     "@packages/rbac": "workspace:*",
     "@packages/tasks": "workspace:*",
     "@packages/taxonomy": "workspace:*",
-    "@packages/ui": "workspace:*",
+    "@packages/tenancy": "workspace:*",
     "@packages/workflows": "workspace:*",
-    "@tanstack/react-query": "^5.60.0",
-    "lucide-react": "^0.400.0",
-    "react": "^19.1.0",
-    "react-router": "^7.6.1",
-    "recharts": "^3.8.1"
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.1"
   },
   "devDependencies": {
-    "@types/react": "^19.2.14",
     "drizzle-orm": "^0.45.1",
     "typescript": "^5.7.0",
     "vitest": "^3.0.0"

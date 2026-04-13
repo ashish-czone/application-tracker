@@ -1,6 +1,6 @@
 import type { EntityUIConfig } from '@packages/entity-engine-ui';
-import { SkillsManager } from '@domains/recruit/web/portals/recruiter/features/candidates/components/SkillsManager';
-import { ResumeSection } from '@domains/recruit/web/portals/recruiter/features/candidates/components/ResumeSection';
+import { SkillsManager } from '@domains/recruit-web/portals/recruiter/features/candidates/components/SkillsManager';
+import { ResumeSection } from '@domains/recruit-web/portals/recruiter/features/candidates/components/ResumeSection';
 
 /**
  * Frontend UI config for the Candidates entity.

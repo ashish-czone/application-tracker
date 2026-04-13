@@ -21,8 +21,8 @@ import {
   useEntityTransition,
 } from '@packages/platform-ui/workflows';
 import { useState } from 'react';
-import { ScheduleInterviewDialog } from '@domains/recruit/web/portals/recruiter/features/shared/ScheduleInterviewDialog';
-import { CreateOfferDialog } from '@domains/recruit/web/portals/recruiter/features/shared/CreateOfferDialog';
+import { ScheduleInterviewDialog } from '@domains/recruit-web/portals/recruiter/features/shared/ScheduleInterviewDialog';
+import { CreateOfferDialog } from '@domains/recruit-web/portals/recruiter/features/shared/CreateOfferDialog';
 
 const TERMINAL_STAGES = new Set(['hired', 'rejected', 'withdrawn']);
 

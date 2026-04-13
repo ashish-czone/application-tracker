@@ -14,7 +14,10 @@
       "@packages/notification-channels-ui": ["../../packages/platform/notification-channels/ui"],
       "@packages/notification-channels-ui/*": ["../../packages/platform/notification-channels/ui/*"],
       "@packages/*": ["../../packages/core/*", "../../packages/platform/*", "../../packages/addons/*"],
-      "@domains/*": ["../../domains/*"]
+      "@domains/recruit-backend": ["../../domains/recruit/backend"],
+      "@domains/recruit-backend/*": ["../../domains/recruit/backend/*"],
+      "@domains/recruit-web": ["../../domains/recruit/web"],
+      "@domains/recruit-web/*": ["../../domains/recruit/web/*"]
     }
   },
   "include": ["src"],

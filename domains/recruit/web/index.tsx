@@ -2,7 +2,6 @@ import { lazy } from 'react';
 import type { RouteObject } from 'react-router';
 import type { DomainWebManifest, DomainDetailPageComponent } from '@packages/domains';
 import { EntityCreatePage } from '@packages/entity-engine-ui';
-import { RECRUIT_DOMAIN_NAME } from '../index';
 
 const DashboardPage = lazy(() =>
   import('./portals/recruiter/features/dashboard/DashboardPage').then((m) => ({ default: m.DashboardPage })),
@@ -37,7 +36,7 @@ const detailPageOverrides: Record<string, DomainDetailPageComponent> = {
 };
 
 export const recruitWeb: DomainWebManifest = {
-  name: RECRUIT_DOMAIN_NAME,
+  name: 'recruit',
   displayName: 'Recruit',
   routes,
   detailPageOverrides,
