@@ -1,0 +1,28 @@
+{
+  "name": "@domains/recruit",
+  "version": "0.0.1",
+  "private": true,
+  "main": "index.ts",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/core": "^11.0.0",
+    "@nestjs/swagger": "^11.0.0",
+    "@packages/auth": "workspace:*",
+    "@packages/common": "workspace:*",
+    "@packages/database": "workspace:*",
+    "@packages/entity-engine": "workspace:*",
+    "@packages/events": "workspace:*",
+    "@packages/logger": "workspace:*",
+    "@packages/media": "workspace:*",
+    "@packages/rbac": "workspace:*",
+    "@packages/taxonomy": "workspace:*"
+  },
+  "devDependencies": {
+    "drizzle-orm": "^0.45.1",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}

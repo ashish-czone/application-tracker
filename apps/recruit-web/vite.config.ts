@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
-import { buildPackageAliases } from '../../packages/resolve-aliases';
+import { buildPackageAliases, buildDomainAliases } from '../../packages/resolve-aliases';
 
 export default defineConfig({
   plugins: [react()],
@@ -9,6 +9,7 @@ export default defineConfig({
     alias: {
       '@modules': path.resolve(__dirname, 'src/modules'),
       ...buildPackageAliases(path.resolve(__dirname, '../../packages')),
+      ...buildDomainAliases(path.resolve(__dirname, '../../domains')),
     },
   },
   server: {

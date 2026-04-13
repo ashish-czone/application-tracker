@@ -1,7 +1,7 @@
 import { defineConfig } from 'vitest/config';
 import swc from 'unplugin-swc';
 import path from 'path';
-import { buildPackageAliases } from '../../packages/resolve-aliases';
+import { buildPackageAliases, buildDomainAliases } from '../../packages/resolve-aliases';
 
 export default defineConfig({
   test: {
@@ -22,6 +22,7 @@ export default defineConfig({
   resolve: {
     alias: {
       ...buildPackageAliases(path.resolve(__dirname, '../../packages')),
+      ...buildDomainAliases(path.resolve(__dirname, '../../domains')),
       '@modules': path.resolve(__dirname, './src/modules'),
     },
   },

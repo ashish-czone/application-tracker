@@ -19,7 +19,8 @@
       "@packages/platform-ui-taxonomy/*": ["../../packages/platform/platform-ui/taxonomy/*"],
       "@packages/platform-ui-conditions": ["../../packages/platform/platform-ui/conditions"],
       "@packages/platform-ui-conditions/*": ["../../packages/platform/platform-ui/conditions/*"],
-      "@packages/*": ["../../packages/core/*", "../../packages/platform/*", "../../packages/addons/*"]
+      "@packages/*": ["../../packages/core/*", "../../packages/platform/*", "../../packages/addons/*"],
+      "@domains/*": ["../../domains/*"]
     },
     "noEmit": true
   },
