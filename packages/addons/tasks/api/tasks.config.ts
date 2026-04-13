@@ -139,6 +139,20 @@ export const TASKS_CONFIG = defineEntity({
       readonly: true,
       isRecipient: true,
     },
+    relatedEntityType: {
+      type: 'text',
+      label: 'Related Entity Type',
+      system: true,
+      readonly: true,
+      excludeFromList: true,
+    },
+    relatedEntityId: {
+      type: 'text',
+      label: 'Related Entity ID',
+      system: true,
+      readonly: true,
+      excludeFromList: true,
+    },
   },
 
   defaultSort: 'createdAt',
