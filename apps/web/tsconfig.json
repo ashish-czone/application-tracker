@@ -17,7 +17,7 @@
       "@packages/taxonomy/*": ["../../packages/platform/taxonomy/api/*"],
       "@packages/taxonomy-ui": ["../../packages/platform/taxonomy/ui"],
       "@packages/taxonomy-ui/*": ["../../packages/platform/taxonomy/ui/*"],
-      "@packages/platform-ui-conditions": ["../../packages/platform/platform-ui/conditions"],
+      "@packages/conditions-ui": ["../../packages/platform/conditions-ui"],
       "@packages/entity-engine": ["../../packages/platform/entity-engine/api"],
       "@packages/entity-engine/*": ["../../packages/platform/entity-engine/api/*"],
       "@packages/entity-engine-ui": ["../../packages/platform/entity-engine/ui"],

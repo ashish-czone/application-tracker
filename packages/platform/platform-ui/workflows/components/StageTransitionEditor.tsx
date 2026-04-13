@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { ChevronDown, ChevronRight, Shield, Filter, MessageSquare, X, Plus } from 'lucide-react';
 import { cn, Badge, Button } from '@packages/ui';
-import { ConditionBuilder, type Condition, type ConditionFieldConfig } from '../../conditions';
+import { ConditionBuilder, type Condition, type ConditionFieldConfig } from '@packages/conditions-ui';
 import type { WorkflowState, WorkflowTransition } from '../types';
 
 interface StageTransitionEditorProps {

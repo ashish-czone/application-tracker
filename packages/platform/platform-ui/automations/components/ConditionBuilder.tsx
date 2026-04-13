@@ -1,6 +1,6 @@
 import { EntityConditionBuilder } from '@packages/entity-engine-ui';
 import type { Condition, TriggerType } from '../types';
-import type { ConditionFieldConfig } from '@packages/platform-ui-conditions';
+import type { ConditionFieldConfig } from '@packages/conditions-ui';
 
 interface ConditionBuilderProps {
   conditions: Condition[];
