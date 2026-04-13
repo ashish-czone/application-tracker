@@ -13,7 +13,7 @@ export default defineConfig({
     '../../packages/platform/automations/api/schema/index.ts',
     '../../packages/platform/notifications/api/schema/index.ts',
     '../../packages/platform/workflows/api/schema/index.ts',
-    '../../packages/platform/taxonomy/schema/index.ts',
+    '../../packages/platform/taxonomy/api/schema/index.ts',
     '../../packages/platform/entity-engine/api/schema/index.ts',
     // Addon packages
     '../../packages/addons/orders-billing/schema/index.ts',

@@ -124,3 +124,36 @@ export function moveCategory(api: TaxonomyApiFn, id: string, data: MoveCategoryR
 export function deleteCategory(api: TaxonomyApiFn, id: string): Promise<void> {
   return api.delete<void>(`/categories/${id}`);
 }
+
+// --- Entity Tag Services (apiFn-based, used by EntityTagsChipRow) ---
+
+import type { ApiFn, EntityTag, TagOption } from './types';
+
+export function createEntityTaxonomyApi(api: ApiFn) {
+  return {
+    getEntityTags(entityType: string, entityId: string): Promise<EntityTag[]> {
+      return api.get<EntityTag[]>(`/entities/${entityType}/${entityId}/tags`);
+    },
+
+    setEntityTags(
+      entityType: string,
+      entityId: string,
+      groupSlug: string,
+      tagIds: string[],
+    ): Promise<EntityTag[]> {
+      return api.put<EntityTag[]>(`/entities/${entityType}/${entityId}/tags`, {
+        groupSlug,
+        tagIds,
+      });
+    },
+
+    searchTagOptions(groupSlug: string, search?: string, limit = 20): Promise<TagOption[]> {
+      const qs = new URLSearchParams();
+      if (search) qs.set('search', search);
+      qs.set('limit', String(limit));
+      return api.get<TagOption[]>(`/tags/group/${groupSlug}?${qs.toString()}`);
+    },
+  };
+}
+
+export type EntityTaxonomyApi = ReturnType<typeof createEntityTaxonomyApi>;

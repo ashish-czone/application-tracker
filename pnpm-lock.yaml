@@ -163,7 +163,7 @@ importers:
         version: link:../../packages/addons/tasks/api
       '@packages/taxonomy':
         specifier: workspace:*
-        version: link:../../packages/platform/taxonomy
+        version: link:../../packages/platform/taxonomy/api
       '@packages/users':
         specifier: workspace:*
         version: link:../../packages/platform/users/api
@@ -338,7 +338,7 @@ importers:
         version: link:../../packages/platform/settings/api
       '@packages/taxonomy':
         specifier: workspace:*
-        version: link:../../packages/platform/taxonomy
+        version: link:../../packages/platform/taxonomy/api
       '@packages/tenancy':
         specifier: workspace:*
         version: link:../../packages/addons/tenancy
@@ -427,9 +427,9 @@ importers:
       '@packages/platform-ui':
         specifier: workspace:*
         version: link:../../packages/platform/platform-ui
-      '@packages/platform-ui-taxonomy':
+      '@packages/taxonomy-ui':
         specifier: workspace:*
-        version: link:../../packages/platform/platform-ui/taxonomy
+        version: link:../../packages/platform/taxonomy/ui
       '@packages/ui':
         specifier: workspace:*
         version: link:../../packages/core/ui
@@ -580,7 +580,7 @@ importers:
         version: link:../../packages/addons/tasks/api
       '@packages/taxonomy':
         specifier: workspace:*
-        version: link:../../packages/platform/taxonomy
+        version: link:../../packages/platform/taxonomy/api
       '@packages/tenancy':
         specifier: workspace:*
         version: link:../../packages/addons/tenancy
@@ -726,12 +726,12 @@ importers:
       '@packages/platform-ui':
         specifier: workspace:*
         version: link:../../packages/platform/platform-ui
-      '@packages/platform-ui-taxonomy':
-        specifier: workspace:*
-        version: link:../../packages/platform/platform-ui/taxonomy
       '@packages/tasks-ui':
         specifier: workspace:*
         version: link:../../packages/addons/tasks/ui
+      '@packages/taxonomy-ui':
+        specifier: workspace:*
+        version: link:../../packages/platform/taxonomy/ui
       '@packages/theming-ui':
         specifier: workspace:*
         version: link:../../packages/platform/theming-ui
@@ -823,9 +823,9 @@ importers:
       '@packages/platform-ui':
         specifier: workspace:*
         version: link:../../packages/platform/platform-ui
-      '@packages/platform-ui-taxonomy':
+      '@packages/taxonomy-ui':
         specifier: workspace:*
-        version: link:../../packages/platform/platform-ui/taxonomy
+        version: link:../../packages/platform/taxonomy/ui
       '@packages/ui':
         specifier: workspace:*
         version: link:../../packages/core/ui
@@ -967,7 +967,7 @@ importers:
         version: link:../../../packages/addons/tasks/api
       '@packages/taxonomy':
         specifier: workspace:*
-        version: link:../../../packages/platform/taxonomy
+        version: link:../../../packages/platform/taxonomy/api
       '@packages/tenancy':
         specifier: workspace:*
         version: link:../../../packages/addons/tenancy
@@ -1788,7 +1788,7 @@ importers:
         version: link:../../org-units/api
       '@packages/taxonomy':
         specifier: workspace:*
-        version: link:../../../platform/taxonomy
+        version: link:../../../platform/taxonomy/api
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3))
@@ -2435,7 +2435,7 @@ importers:
         version: link:../../platform-ui/conditions
       '@packages/taxonomy-ui':
         specifier: workspace:*
-        version: link:../../taxonomy-ui
+        version: link:../../taxonomy/ui
       '@packages/ui':
         specifier: workspace:*
         version: link:../../../core/ui
@@ -2784,6 +2784,9 @@ importers:
       '@packages/platform-ui-conditions':
         specifier: workspace:*
         version: link:conditions
+      '@packages/taxonomy-ui':
+        specifier: workspace:*
+        version: link:../taxonomy/ui
       '@packages/ui':
         specifier: workspace:*
         version: link:../../core/ui
@@ -2839,49 +2842,6 @@ importers:
       react:
         specifier: ^19.0.0
         version: 19.2.4
-    devDependencies:
-      '@types/react':
-        specifier: ^19.2.14
-        version: 19.2.14
-      typescript:
-        specifier: ^5.7.0
-        version: 5.9.3
-
-  packages/platform/platform-ui/taxonomy:
-    dependencies:
-      '@hookform/resolvers':
-        specifier: ^5.0.0
-        version: 5.2.2(react-hook-form@7.71.2(react@19.2.4))
-      '@packages/common':
-        specifier: workspace:*
-        version: link:../../../core/common
-      '@packages/entity-engine-ui':
-        specifier: workspace:*
-        version: link:../../entity-engine/ui
-      '@packages/platform-ui-conditions':
-        specifier: workspace:*
-        version: link:../conditions
-      '@packages/ui':
-        specifier: workspace:*
-        version: link:../../../core/ui
-      '@tanstack/react-query':
-        specifier: ^5.0.0
-        version: 5.90.21(react@19.2.4)
-      date-fns:
-        specifier: ^4.0.0
-        version: 4.1.0
-      lucide-react:
-        specifier: ^0.500.0
-        version: 0.500.0(react@19.2.4)
-      react:
-        specifier: ^19.0.0
-        version: 19.2.4
-      react-hook-form:
-        specifier: ^7.54.0
-        version: 7.71.2(react@19.2.4)
-      zod:
-        specifier: ^3.24.0
-        version: 3.25.76
     devDependencies:
       '@types/react':
         specifier: ^19.2.14
@@ -2998,7 +2958,7 @@ importers:
         specifier: ^3.0.0
         version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(terser@5.46.0)
 
-  packages/platform/taxonomy:
+  packages/platform/taxonomy/api:
     dependencies:
       '@nestjs/common':
         specifier: ^11.0.0
@@ -3008,22 +2968,22 @@ importers:
         version: 11.2.6(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)
       '@packages/automation-contracts':
         specifier: workspace:*
-        version: link:../automation-contracts
+        version: link:../../automation-contracts
       '@packages/automations':
         specifier: workspace:*
-        version: link:../automations/api
+        version: link:../../automations/api
       '@packages/database':
         specifier: workspace:*
-        version: link:../../core/database
+        version: link:../../../core/database
       '@packages/entity-engine':
         specifier: workspace:*
-        version: link:../entity-engine/api
+        version: link:../../entity-engine/api
       '@packages/hierarchy':
         specifier: workspace:*
-        version: link:../hierarchy
+        version: link:../../hierarchy
       '@packages/rbac':
         specifier: workspace:*
-        version: link:../rbac/api
+        version: link:../../rbac/api
       class-transformer:
         specifier: ^0.5.1
         version: 0.5.1
@@ -3033,7 +2993,7 @@ importers:
     devDependencies:
       '@packages/platform-testing':
         specifier: workspace:*
-        version: link:../testing
+        version: link:../../testing
       '@types/supertest':
         specifier: ^6.0.2
         version: 6.0.3
@@ -3053,24 +3013,42 @@ importers:
         specifier: ^3.0.0
         version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(terser@5.46.0)
 
-  packages/platform/taxonomy-ui:
+  packages/platform/taxonomy/ui:
     dependencies:
+      '@hookform/resolvers':
+        specifier: ^5.0.0
+        version: 5.2.2(react-hook-form@7.71.2(react@19.2.4))
+      '@packages/common':
+        specifier: workspace:*
+        version: link:../../../core/common
+      '@packages/platform-ui-conditions':
+        specifier: workspace:*
+        version: link:../../platform-ui/conditions
       '@packages/ui':
         specifier: workspace:*
-        version: link:../../core/ui
+        version: link:../../../core/ui
       '@tanstack/react-query':
         specifier: ^5.0.0
         version: 5.90.21(react@19.2.4)
+      date-fns:
+        specifier: ^4.0.0
+        version: 4.1.0
       lucide-react:
         specifier: ^0.500.0
         version: 0.500.0(react@19.2.4)
       react:
         specifier: ^19.0.0
         version: 19.2.4
-      react-dom:
-        specifier: ^19.0.0
-        version: 19.2.4(react@19.2.4)
+      react-hook-form:
+        specifier: ^7.54.0
+        version: 7.71.2(react@19.2.4)
+      zod:
+        specifier: ^3.24.0
+        version: 3.25.76
     devDependencies:
+      '@types/react':
+        specifier: ^19.2.14
+        version: 19.2.14
       typescript:
         specifier: ^5.7.0
         version: 5.9.3

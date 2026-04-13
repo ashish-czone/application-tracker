@@ -24,7 +24,7 @@
     "@packages/entity-relations-ui": "workspace:*",
     "@packages/notification-channels-ui": "workspace:*",
     "@packages/platform-ui": "workspace:*",
-    "@packages/platform-ui-taxonomy": "workspace:*",
+    "@packages/taxonomy-ui": "workspace:*",
     "@packages/tasks-ui": "workspace:*",
     "@packages/theming-ui": "workspace:*",
     "@packages/ui": "workspace:*",

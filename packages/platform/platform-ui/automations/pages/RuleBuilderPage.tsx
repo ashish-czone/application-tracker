@@ -14,7 +14,7 @@ import { useTemplates } from '../../notifications/hooks';
 import { ConditionBuilder } from '../components/ConditionBuilder';
 import { useEntityEngine } from '@packages/entity-engine-ui';
 import { TransitionWorkflowActionConfig } from '@packages/platform-ui/workflows/components/TransitionWorkflowActionConfig';
-import { TagEntityActionConfig } from '@packages/platform-ui-taxonomy/components/TagEntityActionConfig';
+import { TagEntityActionConfig } from '../components/TagEntityActionConfig';
 import { EntityCreateActionConfig } from '../components/EntityCreateActionConfig';
 import { EntityUpdateActionConfig } from '../components/EntityUpdateActionConfig';
 import { EntityDeleteActionConfig } from '../components/EntityDeleteActionConfig';

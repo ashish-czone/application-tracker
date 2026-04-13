@@ -3,7 +3,7 @@ import { BrowserRouter } from 'react-router';
 import type { ReactNode } from 'react';
 import { Toaster } from '@packages/ui';
 import { EntityEngineProvider } from '@packages/entity-engine-ui';
-import { TaxonomyProvider } from '@packages/platform-ui-taxonomy';
+import { TaxonomyProvider } from '@packages/taxonomy-ui';
 import { PlatformUIProvider } from '@packages/platform-ui';
 import { api } from '../lib/api';
 import { SessionExpiredModal } from '@packages/platform-ui/auth/components/SessionExpiredModal';

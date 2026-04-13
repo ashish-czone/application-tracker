@@ -33,6 +33,10 @@
       "@packages/workflows/*": ["../../packages/platform/workflows/api/*"],
       "@packages/org-units": ["../../packages/addons/org-units/api"],
       "@packages/org-units/*": ["../../packages/addons/org-units/api/*"],
+      "@packages/taxonomy": ["../../packages/platform/taxonomy/api"],
+      "@packages/taxonomy/*": ["../../packages/platform/taxonomy/api/*"],
+      "@packages/taxonomy-ui": ["../../packages/platform/taxonomy/ui"],
+      "@packages/taxonomy-ui/*": ["../../packages/platform/taxonomy/ui/*"],
       "@packages/*": ["../../packages/core/*", "../../packages/platform/*", "../../packages/addons/*"]
     }
   },
