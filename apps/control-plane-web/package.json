@@ -13,7 +13,7 @@
     "@packages/eav-attributes-ui": "workspace:*",
     "@packages/entity-engine-ui": "workspace:*",
     "@packages/platform-ui": "workspace:*",
-    "@packages/platform-ui-taxonomy": "workspace:*",
+    "@packages/taxonomy-ui": "workspace:*",
     "@packages/ui": "workspace:*",
     "@tanstack/react-query": "^5.60.0",
     "date-fns": "^4.1.0",

@@ -13,7 +13,10 @@
     "baseUrl": ".",
     "paths": {
       "@modules/*": ["src/modules/*"],
-      "@packages/platform-ui-taxonomy": ["../../packages/platform/platform-ui/taxonomy"],
+      "@packages/taxonomy": ["../../packages/platform/taxonomy/api"],
+      "@packages/taxonomy/*": ["../../packages/platform/taxonomy/api/*"],
+      "@packages/taxonomy-ui": ["../../packages/platform/taxonomy/ui"],
+      "@packages/taxonomy-ui/*": ["../../packages/platform/taxonomy/ui/*"],
       "@packages/platform-ui-conditions": ["../../packages/platform/platform-ui/conditions"],
       "@packages/entity-engine": ["../../packages/platform/entity-engine/api"],
       "@packages/entity-engine/*": ["../../packages/platform/entity-engine/api/*"],

@@ -1,4 +1,4 @@
-import { TagGroupsListPage, CategoryGroupsListPage } from '@packages/platform-ui-taxonomy';
+import { TagGroupsListPage, CategoryGroupsListPage } from '@packages/taxonomy-ui';
 import { RolesListPage } from '@packages/platform-ui/rbac';
 import { AutomationsPage } from '@packages/platform-ui/notifications';
 import { RuleBuilderPage } from '@packages/platform-ui/automations';

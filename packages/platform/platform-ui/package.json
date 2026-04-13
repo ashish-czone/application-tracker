@@ -9,6 +9,7 @@
     "@packages/eav-attributes-ui": "workspace:*",
     "@packages/entity-engine-ui": "workspace:*",
     "@packages/platform-ui-conditions": "workspace:*",
+    "@packages/taxonomy-ui": "workspace:*",
     "@packages/field-types": "workspace:*",
     "@packages/ui": "workspace:*",
     "@tanstack/react-query": "^5.0.0",

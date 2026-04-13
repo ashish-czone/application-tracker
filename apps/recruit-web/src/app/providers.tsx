@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { Toaster } from '@packages/ui';
 import { EntityEngineProvider, type ColumnRendererRegistration, type DetailTabPlugin, type RightSidebarPanel } from '@packages/entity-engine-ui';
 import { PipelineProgressInline } from '@packages/platform-ui/workflows';
-import { TaxonomyProvider } from '@packages/platform-ui-taxonomy';
+import { TaxonomyProvider } from '@packages/taxonomy-ui';
 import { PlatformUIProvider } from '@packages/platform-ui';
 import { ThemeProvider } from '@packages/theming-ui';
 import { useAuth } from '@packages/platform-ui/auth/hooks/useAuth';

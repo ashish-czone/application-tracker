@@ -1,6 +1,6 @@
 import { useMemo, useCallback } from 'react';
 import { ChipInput, type ChipOption } from '@packages/ui';
-import { createTaxonomyApi } from '../services';
+import { createEntityTaxonomyApi } from '../services';
 import { useEntityTags, useSetEntityTags } from '../hooks';
 import type { ApiFn } from '../types';
 
@@ -27,7 +27,7 @@ export function EntityTagsChipRow({
   disabled,
   className,
 }: EntityTagsChipRowProps) {
-  const taxonomyApi = useMemo(() => createTaxonomyApi(apiFn), [apiFn]);
+  const taxonomyApi = useMemo(() => createEntityTaxonomyApi(apiFn), [apiFn]);
   const { data: allTags, isLoading } = useEntityTags(apiFn, entityType, entityId);
   const { mutate: setTags, isPending } = useSetEntityTags(apiFn, entityType, entityId, groupSlug);
 

@@ -3,7 +3,7 @@ import { Tag } from 'lucide-react';
 import { FormSelect, Label } from '@packages/ui';
 import { EntityConditionBuilder } from '@packages/entity-engine-ui';
 import type { Condition } from '@packages/platform-ui-conditions';
-import { useTagGroupsList, useTagsByGroup } from '../hooks';
+import { useTagGroupsList, useTagsByGroup } from '@packages/taxonomy-ui';
 
 interface TagEntityActionConfigProps {
   config: Record<string, unknown>;

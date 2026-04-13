@@ -28,7 +28,6 @@ export { DeleteTagGroupDialog } from './components/DeleteTagGroupDialog';
 export { AddTagForm } from './components/AddTagForm';
 export { EditTagForm } from './components/EditTagForm';
 export { DeleteTagDialog } from './components/DeleteTagDialog';
-export { TagEntityActionConfig } from './components/TagEntityActionConfig';
 
 export { CategoryGroupsListPage } from './pages/CategoryGroupsListPage';
 export { CategoryTree } from './components/CategoryTree';
@@ -38,6 +37,11 @@ export { DeleteCategoryGroupDialog } from './components/DeleteCategoryGroupDialo
 export { AddCategoryForm } from './components/AddCategoryForm';
 export { EditCategoryForm } from './components/EditCategoryForm';
 export { DeleteCategoryDialog } from './components/DeleteCategoryDialog';
+
+export { EntityTagsChipRow } from './components/EntityTagsChipRow';
+export { useEntityTags, useSetEntityTags } from './hooks';
+export { createEntityTaxonomyApi, type EntityTaxonomyApi } from './services';
+export type { EntityTag, TagOption, ApiFn } from './types';
 
 export type {
   TaxonomyApiFn,

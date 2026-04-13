@@ -13,7 +13,7 @@
     "@packages/entity-engine-ui": "workspace:*",
     "@packages/notification-channels-ui": "workspace:*",
     "@packages/platform-ui": "workspace:*",
-    "@packages/platform-ui-taxonomy": "workspace:*",
+    "@packages/taxonomy-ui": "workspace:*",
     "@packages/ui": "workspace:*",
     "@tanstack/react-query": "^5.60.0",
     "dagre": "^0.8.5",

@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter } from 'react-router';
 import type { ReactNode } from 'react';
 import { Toaster } from '@packages/ui';
-import { TaxonomyProvider } from '@packages/platform-ui-taxonomy';
+import { TaxonomyProvider } from '@packages/taxonomy-ui';
 import { EntityEngineProvider } from '@packages/entity-engine-ui';
 import { PlatformUIProvider } from '@packages/platform-ui';
 import { api } from '../lib/api';
