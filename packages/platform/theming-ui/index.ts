@@ -36,3 +36,4 @@ export type {
   ApiFn,
 } from './types';
 export type { CuratedFont } from './fonts';
+export { default as AppearancePage } from './pages/AppearancePage';
