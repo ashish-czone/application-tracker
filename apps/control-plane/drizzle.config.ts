@@ -4,15 +4,15 @@ export default defineConfig({
   schema: [
     // Core packages
     '../../packages/core/database/schema/index.ts',
-    '../../packages/platform/auth/schema/index.ts',
-    '../../packages/platform/rbac/schema/index.ts',
-    '../../packages/platform/settings/schema/index.ts',
-    '../../packages/platform/audit/schema/index.ts',
+    '../../packages/platform/auth/api/schema/index.ts',
+    '../../packages/platform/rbac/api/schema/index.ts',
+    '../../packages/platform/settings/api/schema/index.ts',
+    '../../packages/platform/audit/api/schema/index.ts',
     // Platform packages
     '../../packages/platform/notification-channels/schema/notifications.ts',
-    '../../packages/platform/automations/schema/index.ts',
-    '../../packages/platform/notifications/schema/index.ts',
-    '../../packages/platform/workflows/schema/index.ts',
+    '../../packages/platform/automations/api/schema/index.ts',
+    '../../packages/platform/notifications/api/schema/index.ts',
+    '../../packages/platform/workflows/api/schema/index.ts',
     '../../packages/platform/taxonomy/schema/index.ts',
     '../../packages/platform/entity-engine/api/schema/index.ts',
     // Addon packages
