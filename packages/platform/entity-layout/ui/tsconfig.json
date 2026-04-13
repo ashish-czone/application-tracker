@@ -13,8 +13,8 @@
     "noEmit": true,
     "baseUrl": ".",
     "paths": {
-      "@packages/entity-layout": ["../backend"],
-      "@packages/entity-layout/*": ["../backend/*"],
+      "@packages/entity-layout": ["../api"],
+      "@packages/entity-layout/*": ["../api/*"],
       "@packages/entity-layout-ui": ["."],
       "@packages/entity-layout-ui/*": ["./*"],
       "@packages/*": ["../../../core/*/", "../../../platform/*/", "../../../addons/*/"]

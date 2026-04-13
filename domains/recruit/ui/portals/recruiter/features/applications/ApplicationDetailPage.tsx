@@ -4,8 +4,8 @@ import { CalendarPlus, FileSignature } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@packages/ui';
 import { EntityDetailPage, useEntityHooks, useEntityEngine } from '@packages/entity-engine-ui';
-import { ScheduleInterviewDialog } from '@domains/recruit-web/portals/recruiter/features/shared/ScheduleInterviewDialog';
-import { CreateOfferDialog } from '@domains/recruit-web/portals/recruiter/features/shared/CreateOfferDialog';
+import { ScheduleInterviewDialog } from '@domains/recruit-ui/portals/recruiter/features/shared/ScheduleInterviewDialog';
+import { CreateOfferDialog } from '@domains/recruit-ui/portals/recruiter/features/shared/CreateOfferDialog';
 
 export function ApplicationDetailPage() {
   const { id } = useParams<{ id: string }>();

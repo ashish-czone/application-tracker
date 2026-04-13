@@ -14,7 +14,7 @@ export default defineConfig({
     '../../packages/platform/notifications/schema/index.ts',
     '../../packages/platform/workflows/schema/index.ts',
     '../../packages/platform/taxonomy/schema/index.ts',
-    '../../packages/platform/entity-engine/backend/schema/index.ts',
+    '../../packages/platform/entity-engine/api/schema/index.ts',
     // Addon packages
     '../../packages/addons/orders-billing/schema/index.ts',
     '../../packages/addons/orders-subscriptions/schema/index.ts',
