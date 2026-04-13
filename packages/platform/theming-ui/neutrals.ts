@@ -8,87 +8,93 @@ import type { NeutralPreset, NeutralVars } from './types';
 export const AUTO_NEUTRAL_ID = 'auto';
 
 /**
- * Shared foreground tones reused across neutral presets. Dark mode uses a
- * near-white for body text; light mode uses a near-black with a hint of hue.
+ * Build a light NeutralVars ramp tinted toward a given hue.
+ *
+ * `sat` drives how saturated the whole ramp is. Neutrals are inherently
+ * low-saturation (that's what makes them "neutral"), but we keep enough
+ * chroma that the family is distinguishable from its neighbours.
  */
-function buildLight(hue: number, chroma: number): NeutralVars {
+function buildLight(hue: number, sat: number): NeutralVars {
+  const low = Math.max(Math.round(sat * 0.6), 3);
+  const fg = Math.min(low + 4, 18);
   return {
-    background: '0 0% 100%',
-    foreground: `${hue} ${Math.min(chroma + 2, 12)}% 10%`,
+    background: `${hue} ${sat}% 99%`,
+    foreground: `${hue} ${fg}% 10%`,
     card: '0 0% 100%',
-    cardForeground: `${hue} ${Math.min(chroma + 2, 12)}% 10%`,
+    cardForeground: `${hue} ${fg}% 10%`,
     popover: '0 0% 100%',
-    popoverForeground: `${hue} ${Math.min(chroma + 2, 12)}% 10%`,
-    secondary: `${hue} ${chroma}% 96%`,
-    secondaryForeground: `${hue} ${Math.min(chroma + 2, 12)}% 10%`,
-    muted: `${hue} ${chroma}% 96%`,
-    mutedForeground: `${hue} ${Math.max(chroma - 1, 3)}% 46%`,
-    border: `${hue} ${chroma}% 90%`,
-    input: `${hue} ${chroma}% 90%`,
-    sidebar: `${hue} ${chroma}% 99%`,
-    sidebarForeground: `${hue} ${Math.min(chroma + 2, 12)}% 10%`,
-    sidebarBorder: `${hue} ${chroma}% 93%`,
-    sidebarMuted: `${hue} ${Math.max(chroma - 2, 3)}% 55%`,
-    contentBg: `${hue} ${chroma + 3}% 98%`,
+    popoverForeground: `${hue} ${fg}% 10%`,
+    secondary: `${hue} ${sat}% 94%`,
+    secondaryForeground: `${hue} ${fg}% 14%`,
+    muted: `${hue} ${sat}% 94%`,
+    mutedForeground: `${hue} ${low}% 44%`,
+    border: `${hue} ${Math.round(sat * 0.8)}% 88%`,
+    input: `${hue} ${Math.round(sat * 0.8)}% 88%`,
+    sidebar: `${hue} ${sat}% 97%`,
+    sidebarForeground: `${hue} ${fg}% 10%`,
+    sidebarBorder: `${hue} ${Math.round(sat * 0.8)}% 90%`,
+    sidebarMuted: `${hue} ${low}% 50%`,
+    contentBg: `${hue} ${sat}% 97%`,
   };
 }
 
-function buildDark(hue: number, chroma: number): NeutralVars {
+function buildDark(hue: number, sat: number): NeutralVars {
+  const low = Math.max(Math.round(sat * 0.7), 5);
   return {
-    background: `${hue} ${chroma + 40}% 6%`,
-    foreground: `${hue} 40% 98%`,
-    card: `${hue} ${chroma + 40}% 9%`,
-    cardForeground: `${hue} 40% 98%`,
-    popover: `${hue} ${chroma + 40}% 9%`,
-    popoverForeground: `${hue} 40% 98%`,
-    secondary: `${hue} ${chroma + 26}% 15%`,
-    secondaryForeground: `${hue} 40% 98%`,
-    muted: `${hue} ${chroma + 26}% 15%`,
-    mutedForeground: `${hue} 20% 65%`,
-    border: `${hue} ${chroma + 26}% 18%`,
-    input: `${hue} ${chroma + 26}% 18%`,
-    sidebar: `${hue} ${chroma + 40}% 8%`,
-    sidebarForeground: `${hue} 40% 98%`,
-    sidebarBorder: `${hue} ${chroma + 26}% 15%`,
-    sidebarMuted: `${hue} 20% 60%`,
-    contentBg: `${hue} ${chroma + 40}% 5%`,
+    background: `${hue} ${sat}% 6%`,
+    foreground: `${hue} 30% 98%`,
+    card: `${hue} ${Math.max(sat - 4, 5)}% 10%`,
+    cardForeground: `${hue} 30% 98%`,
+    popover: `${hue} ${Math.max(sat - 4, 5)}% 10%`,
+    popoverForeground: `${hue} 30% 98%`,
+    secondary: `${hue} ${low}% 16%`,
+    secondaryForeground: `${hue} 30% 98%`,
+    muted: `${hue} ${low}% 16%`,
+    mutedForeground: `${hue} 20% 68%`,
+    border: `${hue} ${low}% 20%`,
+    input: `${hue} ${low}% 20%`,
+    sidebar: `${hue} ${Math.max(sat - 3, 5)}% 8%`,
+    sidebarForeground: `${hue} 30% 98%`,
+    sidebarBorder: `${hue} ${low}% 16%`,
+    sidebarMuted: `${hue} 20% 62%`,
+    contentBg: `${hue} ${sat}% 5%`,
   };
 }
 
 /**
  * Five neutral families, modeled after shadcn/Tailwind's neutral ramps.
- * Users can pick one independently of the accent preset, or keep 'auto' to
- * inherit whatever neutrals the accent preset ships with.
+ * Sat values are chosen so each family is visibly distinct from the others
+ * and from pure grey, while still reading as "neutral".
  */
 export const NEUTRAL_PRESETS: NeutralPreset[] = [
   {
     id: 'slate',
     name: 'Slate',
     description: 'Cool blue-grey. The platform default.',
-    swatch: 'hsl(215 20% 65%)',
-    light: buildLight(215, 16),
-    dark: buildDark(222, 7),
+    swatch: 'hsl(215 25% 60%)',
+    light: buildLight(215, 22),
+    dark: buildDark(222, 28),
   },
   {
     id: 'gray',
     name: 'Gray',
-    description: 'True neutral grey with no hue cast.',
+    description: 'True neutral grey with a subtle cool cast.',
     swatch: 'hsl(220 9% 60%)',
-    light: buildLight(220, 6),
-    dark: buildDark(220, 2),
+    light: buildLight(220, 10),
+    dark: buildDark(220, 14),
   },
   {
     id: 'zinc',
     name: 'Zinc',
-    description: 'Slightly warmer than gray, industrial feel.',
-    swatch: 'hsl(240 4% 60%)',
-    light: buildLight(240, 4),
-    dark: buildDark(240, 2),
+    description: 'Industrial grey, slightly warmer than gray.',
+    swatch: 'hsl(240 6% 60%)',
+    light: buildLight(240, 8),
+    dark: buildDark(240, 12),
   },
   {
     id: 'neutral',
     name: 'Neutral',
-    description: 'Pure neutral — no hue, lowest saturation.',
+    description: 'Pure neutral — no hue at all.',
     swatch: 'hsl(0 0% 60%)',
     light: buildLight(0, 0),
     dark: buildDark(0, 0),
@@ -97,9 +103,9 @@ export const NEUTRAL_PRESETS: NeutralPreset[] = [
     id: 'stone',
     name: 'Stone',
     description: 'Warm earth tone with a subtle beige cast.',
-    swatch: 'hsl(30 6% 60%)',
-    light: buildLight(30, 6),
-    dark: buildDark(30, 2),
+    swatch: 'hsl(28 18% 60%)',
+    light: buildLight(28, 18),
+    dark: buildDark(28, 16),
   },
 ];
 
