@@ -4,10 +4,10 @@ export default defineConfig({
   schema: [
     // Core packages
     '../../packages/core/database/schema/index.ts',
-    '../../packages/core/auth/schema/index.ts',
-    '../../packages/core/rbac/schema/index.ts',
-    '../../packages/core/settings/schema/index.ts',
-    '../../packages/core/audit/schema/index.ts',
+    '../../packages/platform/auth/schema/index.ts',
+    '../../packages/platform/rbac/schema/index.ts',
+    '../../packages/platform/settings/schema/index.ts',
+    '../../packages/platform/audit/schema/index.ts',
     // Platform packages
     '../../packages/platform/notification-channels/schema/notifications.ts',
     '../../packages/platform/automations/schema/index.ts',

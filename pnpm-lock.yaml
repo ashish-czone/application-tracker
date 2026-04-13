@@ -118,7 +118,7 @@ importers:
         version: 6.5.0(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(reflect-metadata@0.2.2)
       '@packages/auth':
         specifier: workspace:*
-        version: link:../../packages/core/auth
+        version: link:../../packages/platform/auth
       '@packages/automations':
         specifier: workspace:*
         version: link:../../packages/platform/automations
@@ -154,10 +154,10 @@ importers:
         version: link:../../packages/addons/org-units
       '@packages/rbac':
         specifier: workspace:*
-        version: link:../../packages/core/rbac
+        version: link:../../packages/platform/rbac
       '@packages/settings':
         specifier: workspace:*
-        version: link:../../packages/core/settings
+        version: link:../../packages/platform/settings
       '@packages/tasks':
         specifier: workspace:*
         version: link:../../packages/addons/tasks/api
@@ -166,7 +166,7 @@ importers:
         version: link:../../packages/platform/taxonomy
       '@packages/users':
         specifier: workspace:*
-        version: link:../../packages/core/users
+        version: link:../../packages/platform/users
       class-transformer:
         specifier: ^0.5.1
         version: 0.5.1
@@ -281,13 +281,13 @@ importers:
         version: 6.5.0(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(reflect-metadata@0.2.2)
       '@packages/audit':
         specifier: workspace:*
-        version: link:../../packages/core/audit
+        version: link:../../packages/platform/audit
       '@packages/auth':
         specifier: workspace:*
-        version: link:../../packages/core/auth
+        version: link:../../packages/platform/auth
       '@packages/auth-core':
         specifier: workspace:*
-        version: link:../../packages/core/auth-core
+        version: link:../../packages/platform/auth-core
       '@packages/automations':
         specifier: workspace:*
         version: link:../../packages/platform/automations
@@ -326,16 +326,16 @@ importers:
         version: link:../../packages/addons/orders-subscriptions
       '@packages/queue':
         specifier: workspace:*
-        version: link:../../packages/core/queue
+        version: link:../../packages/platform/queue
       '@packages/rbac':
         specifier: workspace:*
-        version: link:../../packages/core/rbac
+        version: link:../../packages/platform/rbac
       '@packages/service-auth':
         specifier: workspace:*
         version: link:../../packages/addons/service-auth
       '@packages/settings':
         specifier: workspace:*
-        version: link:../../packages/core/settings
+        version: link:../../packages/platform/settings
       '@packages/taxonomy':
         specifier: workspace:*
         version: link:../../packages/platform/taxonomy
@@ -344,7 +344,7 @@ importers:
         version: link:../../packages/addons/tenancy
       '@packages/users':
         specifier: workspace:*
-        version: link:../../packages/core/users
+        version: link:../../packages/platform/users
       '@packages/workflows':
         specifier: workspace:*
         version: link:../../packages/platform/workflows
@@ -514,10 +514,10 @@ importers:
         version: 6.5.0(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(reflect-metadata@0.2.2)
       '@packages/audit':
         specifier: workspace:*
-        version: link:../../packages/core/audit
+        version: link:../../packages/platform/audit
       '@packages/auth':
         specifier: workspace:*
-        version: link:../../packages/core/auth
+        version: link:../../packages/platform/auth
       '@packages/automations':
         specifier: workspace:*
         version: link:../../packages/platform/automations
@@ -565,16 +565,16 @@ importers:
         version: link:../../packages/addons/pdf-generator
       '@packages/queue':
         specifier: workspace:*
-        version: link:../../packages/core/queue
+        version: link:../../packages/platform/queue
       '@packages/rbac':
         specifier: workspace:*
-        version: link:../../packages/core/rbac
+        version: link:../../packages/platform/rbac
       '@packages/service-auth':
         specifier: workspace:*
         version: link:../../packages/addons/service-auth
       '@packages/settings':
         specifier: workspace:*
-        version: link:../../packages/core/settings
+        version: link:../../packages/platform/settings
       '@packages/tasks':
         specifier: workspace:*
         version: link:../../packages/addons/tasks/api
@@ -589,7 +589,7 @@ importers:
         version: link:../../packages/platform/user-preferences
       '@packages/users':
         specifier: workspace:*
-        version: link:../../packages/core/users
+        version: link:../../packages/platform/users
       '@packages/workflows':
         specifier: workspace:*
         version: link:../../packages/platform/workflows
@@ -907,7 +907,7 @@ importers:
         version: 11.2.6(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)
       '@packages/auth':
         specifier: workspace:*
-        version: link:../../../packages/core/auth
+        version: link:../../../packages/platform/auth
       '@packages/automations':
         specifier: workspace:*
         version: link:../../../packages/platform/automations
@@ -961,7 +961,7 @@ importers:
         version: link:../../../packages/addons/pdf-generator
       '@packages/rbac':
         specifier: workspace:*
-        version: link:../../../packages/core/rbac
+        version: link:../../../packages/platform/rbac
       '@packages/tasks':
         specifier: workspace:*
         version: link:../../../packages/addons/tasks/api
@@ -1068,10 +1068,10 @@ importers:
         version: 11.2.6(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)
       '@packages/audit':
         specifier: workspace:*
-        version: link:../../core/audit
+        version: link:../../platform/audit
       '@packages/auth-core':
         specifier: workspace:*
-        version: link:../../core/auth-core
+        version: link:../../platform/auth-core
       '@packages/database':
         specifier: workspace:*
         version: link:../../core/database
@@ -1089,7 +1089,7 @@ importers:
         version: link:../../platform/media
       '@packages/rbac':
         specifier: workspace:*
-        version: link:../../core/rbac
+        version: link:../../platform/rbac
       class-transformer:
         specifier: ^0.5.1
         version: 0.5.1
@@ -1191,7 +1191,7 @@ importers:
         version: 11.2.6(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)
       '@packages/auth-core':
         specifier: workspace:*
-        version: link:../../core/auth-core
+        version: link:../../platform/auth-core
       '@packages/database':
         specifier: workspace:*
         version: link:../../core/database
@@ -1200,7 +1200,7 @@ importers:
         version: link:../../core/logger
       '@packages/rbac':
         specifier: workspace:*
-        version: link:../../core/rbac
+        version: link:../../platform/rbac
       class-transformer:
         specifier: ^0.5.1
         version: 0.5.1
@@ -1274,7 +1274,7 @@ importers:
         version: link:../../core/logger
       '@packages/rbac':
         specifier: workspace:*
-        version: link:../../core/rbac
+        version: link:../../platform/rbac
       class-transformer:
         specifier: ^0.5.1
         version: 0.5.1
@@ -1355,10 +1355,10 @@ importers:
         version: 11.2.6(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)
       '@packages/audit':
         specifier: workspace:*
-        version: link:../../core/audit
+        version: link:../../platform/audit
       '@packages/auth-core':
         specifier: workspace:*
-        version: link:../../core/auth-core
+        version: link:../../platform/auth-core
       '@packages/database':
         specifier: workspace:*
         version: link:../../core/database
@@ -1370,7 +1370,7 @@ importers:
         version: link:../../core/logger
       '@packages/rbac':
         specifier: workspace:*
-        version: link:../../core/rbac
+        version: link:../../platform/rbac
       class-transformer:
         specifier: ^0.5.1
         version: 0.5.1
@@ -1450,10 +1450,10 @@ importers:
         version: 11.2.6(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)
       '@packages/audit':
         specifier: workspace:*
-        version: link:../../core/audit
+        version: link:../../platform/audit
       '@packages/auth-core':
         specifier: workspace:*
-        version: link:../../core/auth-core
+        version: link:../../platform/auth-core
       '@packages/database':
         specifier: workspace:*
         version: link:../../core/database
@@ -1465,7 +1465,7 @@ importers:
         version: link:../../core/logger
       '@packages/rbac':
         specifier: workspace:*
-        version: link:../../core/rbac
+        version: link:../../platform/rbac
       class-transformer:
         specifier: ^0.5.1
         version: 0.5.1
@@ -1560,7 +1560,7 @@ importers:
         version: 6.5.0(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(reflect-metadata@0.2.2)
       '@packages/auth':
         specifier: workspace:*
-        version: link:../../core/auth
+        version: link:../../platform/auth
       '@packages/database':
         specifier: workspace:*
         version: link:../../core/database
@@ -1569,10 +1569,10 @@ importers:
         version: link:../../core/logger
       '@packages/rbac':
         specifier: workspace:*
-        version: link:../../core/rbac
+        version: link:../../platform/rbac
       '@packages/settings':
         specifier: workspace:*
-        version: link:../../core/settings
+        version: link:../../platform/settings
     devDependencies:
       typescript:
         specifier: ^5.7.0
@@ -1591,7 +1591,7 @@ importers:
         version: 11.1.16(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@11.1.16)(reflect-metadata@0.2.2)(rxjs@7.8.2)
       '@packages/audit':
         specifier: workspace:*
-        version: link:../../core/audit
+        version: link:../../platform/audit
       '@packages/database':
         specifier: workspace:*
         version: link:../../core/database
@@ -1606,7 +1606,7 @@ importers:
         version: link:../../core/logger
       '@packages/rbac':
         specifier: workspace:*
-        version: link:../../core/rbac
+        version: link:../../platform/rbac
       '@packages/tenancy':
         specifier: workspace:*
         version: link:../tenancy
@@ -1631,7 +1631,7 @@ importers:
         version: 11.1.16(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@11.1.16)(reflect-metadata@0.2.2)(rxjs@7.8.2)
       '@packages/audit':
         specifier: workspace:*
-        version: link:../../core/audit
+        version: link:../../platform/audit
       '@packages/common':
         specifier: workspace:*
         version: link:../../core/common
@@ -1652,10 +1652,10 @@ importers:
         version: link:../orders-billing
       '@packages/queue':
         specifier: workspace:*
-        version: link:../../core/queue
+        version: link:../../platform/queue
       '@packages/rbac':
         specifier: workspace:*
-        version: link:../../core/rbac
+        version: link:../../platform/rbac
       '@packages/tenancy':
         specifier: workspace:*
         version: link:../tenancy
@@ -1686,7 +1686,7 @@ importers:
         version: 11.2.6(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)
       '@packages/auth-core':
         specifier: workspace:*
-        version: link:../../core/auth-core
+        version: link:../../platform/auth-core
       '@packages/database':
         specifier: workspace:*
         version: link:../../core/database
@@ -1695,7 +1695,7 @@ importers:
         version: link:../../platform/entity-engine/api
       '@packages/rbac':
         specifier: workspace:*
-        version: link:../../core/rbac
+        version: link:../../platform/rbac
       '@packages/tenancy':
         specifier: workspace:*
         version: link:../tenancy
@@ -1841,7 +1841,7 @@ importers:
         version: 11.1.16(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@11.1.16)(reflect-metadata@0.2.2)(rxjs@7.8.2)
       '@packages/auth-core':
         specifier: workspace:*
-        version: link:../../core/auth-core
+        version: link:../../platform/auth-core
       '@packages/database':
         specifier: workspace:*
         version: link:../../core/database
@@ -1870,132 +1870,6 @@ importers:
       vitest:
         specifier: ^3.2.0
         version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(terser@5.46.0)
-
-  packages/core/audit:
-    dependencies:
-      '@nestjs/common':
-        specifier: ^11.0.0
-        version: 11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
-      '@nestjs/event-emitter':
-        specifier: ^3.0.0
-        version: 3.0.1(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)
-      '@nestjs/swagger':
-        specifier: ^11.0.0
-        version: 11.2.6(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)
-      '@packages/common':
-        specifier: workspace:*
-        version: link:../common
-      '@packages/database':
-        specifier: workspace:*
-        version: link:../database
-      '@packages/events':
-        specifier: workspace:*
-        version: link:../events
-      '@packages/logger':
-        specifier: workspace:*
-        version: link:../logger
-      '@packages/rbac':
-        specifier: workspace:*
-        version: link:../rbac
-      class-transformer:
-        specifier: ^0.5.1
-        version: 0.5.1
-      class-validator:
-        specifier: ^0.14.1
-        version: 0.14.4
-      drizzle-orm:
-        specifier: ^0.45.1
-        version: 0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3))
-    devDependencies:
-      '@packages/testing':
-        specifier: workspace:*
-        version: link:../testing
-      '@types/supertest':
-        specifier: ^6.0.2
-        version: 6.0.3
-      supertest:
-        specifier: ^7.0.0
-        version: 7.2.2
-      typescript:
-        specifier: ^5.7.0
-        version: 5.9.3
-      vitest:
-        specifier: ^3.2.0
-        version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(terser@5.46.0)
-
-  packages/core/auth:
-    dependencies:
-      '@nestjs/common':
-        specifier: ^11.0.0
-        version: 11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
-      '@nestjs/swagger':
-        specifier: ^11.0.0
-        version: 11.2.6(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)
-      '@nestjs/throttler':
-        specifier: ^6.0.0
-        version: 6.5.0(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(reflect-metadata@0.2.2)
-      '@packages/audit':
-        specifier: workspace:*
-        version: link:../audit
-      '@packages/auth-core':
-        specifier: workspace:*
-        version: link:../auth-core
-      '@packages/database':
-        specifier: workspace:*
-        version: link:../database
-      '@packages/events':
-        specifier: workspace:*
-        version: link:../events
-      '@packages/logger':
-        specifier: workspace:*
-        version: link:../logger
-      '@packages/rbac':
-        specifier: workspace:*
-        version: link:../rbac
-      '@packages/settings':
-        specifier: workspace:*
-        version: link:../settings
-      bcrypt:
-        specifier: ^5.1.1
-        version: 5.1.1
-      class-transformer:
-        specifier: ^0.5.1
-        version: 0.5.1
-      class-validator:
-        specifier: ^0.14.1
-        version: 0.14.4
-      jsonwebtoken:
-        specifier: ^9.0.2
-        version: 9.0.3
-    devDependencies:
-      '@packages/testing':
-        specifier: workspace:*
-        version: link:../testing
-      '@types/bcrypt':
-        specifier: ^5.0.2
-        version: 5.0.2
-      '@types/jsonwebtoken':
-        specifier: ^9.0.9
-        version: 9.0.10
-      drizzle-orm:
-        specifier: ^0.45.1
-        version: 0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3))
-      typescript:
-        specifier: ^5.7.0
-        version: 5.9.3
-      vitest:
-        specifier: ^3.0.0
-        version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(terser@5.46.0)
-
-  packages/core/auth-core:
-    dependencies:
-      '@nestjs/common':
-        specifier: ^11.0.0
-        version: 11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
-    devDependencies:
-      typescript:
-        specifier: ^5.7.0
-        version: 5.9.3
 
   packages/core/common:
     dependencies:
@@ -2080,114 +1954,6 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^3.2.0
-        version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(terser@5.46.0)
-
-  packages/core/queue:
-    dependencies:
-      '@nestjs/common':
-        specifier: ^11.0.0
-        version: 11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
-      '@packages/logger':
-        specifier: workspace:*
-        version: link:../logger
-      '@packages/rbac':
-        specifier: workspace:*
-        version: link:../rbac
-      bullmq:
-        specifier: ^5.0.0
-        version: 5.71.0
-      class-transformer:
-        specifier: ^0.5.1
-        version: 0.5.1
-      class-validator:
-        specifier: ^0.14.1
-        version: 0.14.4
-    devDependencies:
-      typescript:
-        specifier: ^5.7.0
-        version: 5.9.3
-      vitest:
-        specifier: ^3.2.0
-        version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(terser@5.46.0)
-
-  packages/core/rbac:
-    dependencies:
-      '@nestjs/common':
-        specifier: ^11.0.0
-        version: 11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
-      '@nestjs/swagger':
-        specifier: ^11.0.0
-        version: 11.2.6(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)
-      '@packages/auth-core':
-        specifier: workspace:*
-        version: link:../auth-core
-      '@packages/database':
-        specifier: workspace:*
-        version: link:../database
-      class-transformer:
-        specifier: ^0.5.1
-        version: 0.5.1
-      class-validator:
-        specifier: ^0.14.1
-        version: 0.14.4
-    devDependencies:
-      '@packages/testing':
-        specifier: workspace:*
-        version: link:../testing
-      '@types/supertest':
-        specifier: ^6.0.2
-        version: 6.0.3
-      drizzle-orm:
-        specifier: ^0.45.1
-        version: 0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3))
-      supertest:
-        specifier: ^7.0.0
-        version: 7.2.2
-      typescript:
-        specifier: ^5.7.0
-        version: 5.9.3
-      vitest:
-        specifier: ^3.0.0
-        version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(terser@5.46.0)
-
-  packages/core/settings:
-    dependencies:
-      '@nestjs/common':
-        specifier: ^11.0.0
-        version: 11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
-      '@nestjs/swagger':
-        specifier: ^11.0.0
-        version: 11.2.6(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)
-      '@packages/auth-core':
-        specifier: workspace:*
-        version: link:../auth-core
-      '@packages/database':
-        specifier: workspace:*
-        version: link:../database
-      '@packages/rbac':
-        specifier: workspace:*
-        version: link:../rbac
-      class-validator:
-        specifier: ^0.14.1
-        version: 0.14.4
-    devDependencies:
-      '@packages/testing':
-        specifier: workspace:*
-        version: link:../testing
-      '@types/supertest':
-        specifier: ^6.0.2
-        version: 6.0.3
-      drizzle-orm:
-        specifier: ^0.45.1
-        version: 0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3))
-      supertest:
-        specifier: ^7.0.0
-        version: 7.2.2
-      typescript:
-        specifier: ^5.7.0
-        version: 5.9.3
-      vitest:
-        specifier: ^3.0.0
         version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(terser@5.46.0)
 
   packages/core/testing:
@@ -2327,35 +2093,29 @@ importers:
         specifier: ^5.7.0
         version: 5.9.3
 
-  packages/core/users:
+  packages/platform/audit:
     dependencies:
       '@nestjs/common':
         specifier: ^11.0.0
         version: 11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/event-emitter':
+        specifier: ^3.0.0
+        version: 3.0.1(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)
       '@nestjs/swagger':
         specifier: ^11.0.0
         version: 11.2.6(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)
-      '@packages/audit':
-        specifier: workspace:*
-        version: link:../audit
-      '@packages/auth':
-        specifier: workspace:*
-        version: link:../auth
       '@packages/common':
         specifier: workspace:*
-        version: link:../common
+        version: link:../../core/common
       '@packages/database':
         specifier: workspace:*
-        version: link:../database
+        version: link:../../core/database
       '@packages/events':
         specifier: workspace:*
-        version: link:../events
+        version: link:../../core/events
       '@packages/logger':
         specifier: workspace:*
-        version: link:../logger
-      '@packages/notifications':
-        specifier: workspace:*
-        version: link:../../platform/notifications
+        version: link:../../core/logger
       '@packages/rbac':
         specifier: workspace:*
         version: link:../rbac
@@ -2371,7 +2131,7 @@ importers:
     devDependencies:
       '@packages/testing':
         specifier: workspace:*
-        version: link:../testing
+        version: link:../../core/testing
       '@types/supertest':
         specifier: ^6.0.2
         version: 6.0.3
@@ -2384,6 +2144,80 @@ importers:
       vitest:
         specifier: ^3.2.0
         version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(terser@5.46.0)
+
+  packages/platform/auth:
+    dependencies:
+      '@nestjs/common':
+        specifier: ^11.0.0
+        version: 11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/swagger':
+        specifier: ^11.0.0
+        version: 11.2.6(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)
+      '@nestjs/throttler':
+        specifier: ^6.0.0
+        version: 6.5.0(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(reflect-metadata@0.2.2)
+      '@packages/audit':
+        specifier: workspace:*
+        version: link:../audit
+      '@packages/auth-core':
+        specifier: workspace:*
+        version: link:../auth-core
+      '@packages/database':
+        specifier: workspace:*
+        version: link:../../core/database
+      '@packages/events':
+        specifier: workspace:*
+        version: link:../../core/events
+      '@packages/logger':
+        specifier: workspace:*
+        version: link:../../core/logger
+      '@packages/rbac':
+        specifier: workspace:*
+        version: link:../rbac
+      '@packages/settings':
+        specifier: workspace:*
+        version: link:../settings
+      bcrypt:
+        specifier: ^5.1.1
+        version: 5.1.1
+      class-transformer:
+        specifier: ^0.5.1
+        version: 0.5.1
+      class-validator:
+        specifier: ^0.14.1
+        version: 0.14.4
+      jsonwebtoken:
+        specifier: ^9.0.2
+        version: 9.0.3
+    devDependencies:
+      '@packages/testing':
+        specifier: workspace:*
+        version: link:../../core/testing
+      '@types/bcrypt':
+        specifier: ^5.0.2
+        version: 5.0.2
+      '@types/jsonwebtoken':
+        specifier: ^9.0.9
+        version: 9.0.10
+      drizzle-orm:
+        specifier: ^0.45.1
+        version: 0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3))
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(terser@5.46.0)
+
+  packages/platform/auth-core:
+    dependencies:
+      '@nestjs/common':
+        specifier: ^11.0.0
+        version: 11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+    devDependencies:
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
 
   packages/platform/automation-contracts:
     dependencies:
@@ -2432,10 +2266,10 @@ importers:
         version: link:../../core/logger
       '@packages/queue':
         specifier: workspace:*
-        version: link:../../core/queue
+        version: link:../queue
       '@packages/rbac':
         specifier: workspace:*
-        version: link:../../core/rbac
+        version: link:../rbac
       class-transformer:
         specifier: ^0.5.1
         version: 0.5.1
@@ -2537,7 +2371,7 @@ importers:
         version: 11.2.6(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)
       '@packages/auth':
         specifier: workspace:*
-        version: link:../../../core/auth
+        version: link:../../auth
       '@packages/common':
         specifier: workspace:*
         version: link:../../../core/common
@@ -2555,7 +2389,7 @@ importers:
         version: link:../../../core/query-builder
       '@packages/rbac':
         specifier: workspace:*
-        version: link:../../../core/rbac
+        version: link:../../rbac
       mustache:
         specifier: ^4.2.0
         version: 4.2.0
@@ -2653,7 +2487,7 @@ importers:
         version: link:../../entity-engine/api
       '@packages/rbac':
         specifier: workspace:*
-        version: link:../../../core/rbac
+        version: link:../../rbac
       class-transformer:
         specifier: ^0.5.1
         version: 0.5.1
@@ -2768,7 +2602,7 @@ importers:
         version: 11.2.6(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)
       '@packages/auth':
         specifier: workspace:*
-        version: link:../../core/auth
+        version: link:../auth
       '@packages/entity-engine':
         specifier: workspace:*
         version: link:../entity-engine/api
@@ -2805,7 +2639,7 @@ importers:
         version: 11.2.6(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)
       '@packages/auth':
         specifier: workspace:*
-        version: link:../../../core/auth
+        version: link:../../auth
       '@packages/database':
         specifier: workspace:*
         version: link:../../../core/database
@@ -2894,10 +2728,10 @@ importers:
         version: link:../notification-channels/api
       '@packages/queue':
         specifier: workspace:*
-        version: link:../../core/queue
+        version: link:../queue
       '@packages/rbac':
         specifier: workspace:*
-        version: link:../../core/rbac
+        version: link:../rbac
       class-transformer:
         specifier: ^0.5.1
         version: 0.5.1
@@ -3056,6 +2890,114 @@ importers:
         specifier: ^5.7.0
         version: 5.9.3
 
+  packages/platform/queue:
+    dependencies:
+      '@nestjs/common':
+        specifier: ^11.0.0
+        version: 11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@packages/logger':
+        specifier: workspace:*
+        version: link:../../core/logger
+      '@packages/rbac':
+        specifier: workspace:*
+        version: link:../rbac
+      bullmq:
+        specifier: ^5.0.0
+        version: 5.71.0
+      class-transformer:
+        specifier: ^0.5.1
+        version: 0.5.1
+      class-validator:
+        specifier: ^0.14.1
+        version: 0.14.4
+    devDependencies:
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.2.0
+        version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(terser@5.46.0)
+
+  packages/platform/rbac:
+    dependencies:
+      '@nestjs/common':
+        specifier: ^11.0.0
+        version: 11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/swagger':
+        specifier: ^11.0.0
+        version: 11.2.6(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)
+      '@packages/auth-core':
+        specifier: workspace:*
+        version: link:../auth-core
+      '@packages/database':
+        specifier: workspace:*
+        version: link:../../core/database
+      class-transformer:
+        specifier: ^0.5.1
+        version: 0.5.1
+      class-validator:
+        specifier: ^0.14.1
+        version: 0.14.4
+    devDependencies:
+      '@packages/testing':
+        specifier: workspace:*
+        version: link:../../core/testing
+      '@types/supertest':
+        specifier: ^6.0.2
+        version: 6.0.3
+      drizzle-orm:
+        specifier: ^0.45.1
+        version: 0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3))
+      supertest:
+        specifier: ^7.0.0
+        version: 7.2.2
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(terser@5.46.0)
+
+  packages/platform/settings:
+    dependencies:
+      '@nestjs/common':
+        specifier: ^11.0.0
+        version: 11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/swagger':
+        specifier: ^11.0.0
+        version: 11.2.6(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)
+      '@packages/auth-core':
+        specifier: workspace:*
+        version: link:../auth-core
+      '@packages/database':
+        specifier: workspace:*
+        version: link:../../core/database
+      '@packages/rbac':
+        specifier: workspace:*
+        version: link:../rbac
+      class-validator:
+        specifier: ^0.14.1
+        version: 0.14.4
+    devDependencies:
+      '@packages/testing':
+        specifier: workspace:*
+        version: link:../../core/testing
+      '@types/supertest':
+        specifier: ^6.0.2
+        version: 6.0.3
+      drizzle-orm:
+        specifier: ^0.45.1
+        version: 0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3))
+      supertest:
+        specifier: ^7.0.0
+        version: 7.2.2
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(terser@5.46.0)
+
   packages/platform/taxonomy:
     dependencies:
       '@nestjs/common':
@@ -3081,7 +3023,7 @@ importers:
         version: link:../hierarchy
       '@packages/rbac':
         specifier: workspace:*
-        version: link:../../core/rbac
+        version: link:../rbac
       class-transformer:
         specifier: ^0.5.1
         version: 0.5.1
@@ -3158,10 +3100,10 @@ importers:
         version: link:../../core/logger
       '@packages/queue':
         specifier: workspace:*
-        version: link:../../core/queue
+        version: link:../queue
       '@packages/rbac':
         specifier: workspace:*
-        version: link:../../core/rbac
+        version: link:../rbac
       '@packages/testing':
         specifier: workspace:*
         version: link:../../core/testing
@@ -3201,13 +3143,13 @@ importers:
         version: 11.2.6(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)
       '@packages/auth':
         specifier: workspace:*
-        version: link:../../core/auth
+        version: link:../auth
       '@packages/database':
         specifier: workspace:*
         version: link:../../core/database
       '@packages/rbac':
         specifier: workspace:*
-        version: link:../../core/rbac
+        version: link:../rbac
       class-transformer:
         specifier: ^0.5.1
         version: 0.5.1
@@ -3232,6 +3174,64 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^3.0.0
+        version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(terser@5.46.0)
+
+  packages/platform/users:
+    dependencies:
+      '@nestjs/common':
+        specifier: ^11.0.0
+        version: 11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/swagger':
+        specifier: ^11.0.0
+        version: 11.2.6(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)
+      '@packages/audit':
+        specifier: workspace:*
+        version: link:../audit
+      '@packages/auth':
+        specifier: workspace:*
+        version: link:../auth
+      '@packages/common':
+        specifier: workspace:*
+        version: link:../../core/common
+      '@packages/database':
+        specifier: workspace:*
+        version: link:../../core/database
+      '@packages/events':
+        specifier: workspace:*
+        version: link:../../core/events
+      '@packages/logger':
+        specifier: workspace:*
+        version: link:../../core/logger
+      '@packages/notifications':
+        specifier: workspace:*
+        version: link:../notifications
+      '@packages/rbac':
+        specifier: workspace:*
+        version: link:../rbac
+      class-transformer:
+        specifier: ^0.5.1
+        version: 0.5.1
+      class-validator:
+        specifier: ^0.14.1
+        version: 0.14.4
+      drizzle-orm:
+        specifier: ^0.45.1
+        version: 0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3))
+    devDependencies:
+      '@packages/testing':
+        specifier: workspace:*
+        version: link:../../core/testing
+      '@types/supertest':
+        specifier: ^6.0.2
+        version: 6.0.3
+      supertest:
+        specifier: ^7.0.0
+        version: 7.2.2
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.2.0
         version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(terser@5.46.0)
 
   packages/platform/workflows:
@@ -3268,7 +3268,7 @@ importers:
         version: link:../../core/logger
       '@packages/rbac':
         specifier: workspace:*
-        version: link:../../core/rbac
+        version: link:../rbac
       class-validator:
         specifier: ^0.14.1
         version: 0.14.4
