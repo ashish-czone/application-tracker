@@ -36,23 +36,9 @@ import { EntityEngineModule } from '@packages/entity-engine';
 import { DocumentTemplatesModule } from '@packages/document-templates';
 import { PdfGeneratorModule } from '@packages/pdf-generator';
 import { PuppeteerPdfProvider } from '@packages/pdf-generator/providers/puppeteer.provider';
-import { SharedModule } from './modules/shared/shared.module';
-import { recruitBackend } from '@domains/recruit/backend';
-import { CLIENTS_CONFIG } from './modules/clients/clients.config';
-import { CONTACTS_CONFIG } from './modules/contacts/contacts.config';
-import { VENDORS_CONFIG } from './modules/vendors/vendors.config';
-import { JOB_OPENINGS_CONFIG } from './modules/job-openings/job-openings.config';
-import { APPLICATIONS_CONFIG } from './modules/applications/applications.config';
-import { INTERVIEWS_CONFIG } from './modules/interviews/interviews.config';
-import { offersConfig } from './modules/offers/offers.config';
-import { OffersModule } from './modules/offers/offers.module';
-import { ApplicationsModule } from './modules/applications/applications.module';
-import { ClientsModule } from './modules/clients/clients.module';
-import { JobOpeningsModule } from './modules/job-openings/job-openings.module';
-import { TASKS_CONFIG, TasksModule } from '@packages/tasks';
-import { TaskClaimModule } from './modules/tasks/tasks.module';
 import { UsersModule } from '@packages/users';
 import { OrgUnitsModule } from '@packages/org-units';
+import { recruitBackend } from '@domains/recruit/backend';
 import { validate } from './config/env.validation';
 
 @Module({
@@ -111,7 +97,6 @@ import { validate } from './config/env.validation';
       }),
       inject: [ConfigService],
     }),
-    SharedModule,
     AutomationsModule,
     NotificationChannelsModule,
     NotificationsModule,
@@ -139,25 +124,9 @@ import { validate } from './config/env.validation';
       inject: [ConfigService, AppConfigService],
     }),
     OAuthModule.register(),
-    // Recruit domain — candidates entity + CandidatesModule wired internally
-    recruitBackend.module,
-    // Entities still living in apps/recruit (migrated in subsequent PRs)
-    EntityEngineModule.forEntity(CLIENTS_CONFIG),
-    EntityEngineModule.forEntity(CONTACTS_CONFIG),
-    EntityEngineModule.forEntity(VENDORS_CONFIG),
-    EntityEngineModule.forEntity(JOB_OPENINGS_CONFIG),
-    EntityEngineModule.forEntity(APPLICATIONS_CONFIG),
-    EntityEngineModule.forEntity(INTERVIEWS_CONFIG),
-    EntityEngineModule.forEntity(offersConfig),
-    EntityEngineModule.forEntity(TASKS_CONFIG),
-    TasksModule, // tasks addon: seeds task-tags group + default tags
-    TaskClaimModule, // claim/unclaim for team-assigned tasks
-    OffersModule, // offer approval chain + guard
-    ApplicationsModule, // domain-specific automation strategies + seed data
-    ClientsModule, // sample data seeding: clients, contacts, vendors, interviews
-    JobOpeningsModule, // sample data seeding: job openings, applications
     UsersModule,
     OrgUnitsModule,
+    recruitBackend.module,
   ],
   providers: [
     {

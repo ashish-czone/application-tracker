@@ -9,7 +9,7 @@ import { OfferLetterService } from './services/offer-letter.service';
 import { OfferApprovalsController } from './controllers/offer-approvals.controller';
 import { offers } from './schema/offers';
 import { applications } from '../applications/schema/applications';
-import { candidates } from '@domains/recruit/backend/candidates/schema/candidates';
+import { candidates } from '../candidates/schema/candidates';
 import { jobOpenings } from '../job-openings/schema/job-openings';
 import { formatCurrency } from '@packages/common';
 

@@ -887,15 +887,24 @@ importers:
       '@packages/auth':
         specifier: workspace:*
         version: link:../../packages/core/auth
+      '@packages/automations':
+        specifier: workspace:*
+        version: link:../../packages/platform/automations
       '@packages/common':
         specifier: workspace:*
         version: link:../../packages/core/common
       '@packages/database':
         specifier: workspace:*
         version: link:../../packages/core/database
+      '@packages/document-templates':
+        specifier: workspace:*
+        version: link:../../packages/addons/document-templates
       '@packages/domains':
         specifier: workspace:*
         version: link:../../packages/platform/domains
+      '@packages/eav-attributes':
+        specifier: workspace:*
+        version: link:../../packages/addons/eav-attributes
       '@packages/eav-attributes-ui':
         specifier: workspace:*
         version: link:../../packages/platform/eav-attributes-ui
@@ -905,6 +914,15 @@ importers:
       '@packages/entity-engine-ui':
         specifier: workspace:*
         version: link:../../packages/platform/entity-engine-ui
+      '@packages/entity-layout':
+        specifier: workspace:*
+        version: link:../../packages/platform/entity-layout
+      '@packages/entity-relations':
+        specifier: workspace:*
+        version: link:../../packages/addons/entity-relations
+      '@packages/evaluations':
+        specifier: workspace:*
+        version: link:../../packages/addons/evaluations
       '@packages/events':
         specifier: workspace:*
         version: link:../../packages/core/events
@@ -917,18 +935,33 @@ importers:
       '@packages/notes-ui':
         specifier: workspace:*
         version: link:../../packages/addons/notes-ui
+      '@packages/notification-channels':
+        specifier: workspace:*
+        version: link:../../packages/platform/notification-channels
+      '@packages/org-units':
+        specifier: workspace:*
+        version: link:../../packages/addons/org-units
+      '@packages/pdf-generator':
+        specifier: workspace:*
+        version: link:../../packages/addons/pdf-generator
       '@packages/platform-ui':
         specifier: workspace:*
         version: link:../../packages/platform/platform-ui
       '@packages/rbac':
         specifier: workspace:*
         version: link:../../packages/core/rbac
+      '@packages/tasks':
+        specifier: workspace:*
+        version: link:../../packages/addons/tasks
       '@packages/taxonomy':
         specifier: workspace:*
         version: link:../../packages/platform/taxonomy
       '@packages/ui':
         specifier: workspace:*
         version: link:../../packages/core/ui
+      '@packages/workflows':
+        specifier: workspace:*
+        version: link:../../packages/platform/workflows
       '@tanstack/react-query':
         specifier: ^5.60.0
         version: 5.90.21(react@19.2.4)
