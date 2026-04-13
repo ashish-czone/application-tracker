@@ -2,5 +2,5 @@ packages:
   - "apps/*"
   - "packages/core/*"
   - "packages/platform/**"
-  - "packages/addons/*"
+  - "packages/addons/**"
   - "domains/**"
