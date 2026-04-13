@@ -241,20 +241,23 @@ export default function AppearancePage() {
           </p>
         </div>
         <CustomAccentPicker
-          current={theme.overrides?.primary ?? null}
+          current={theme.overrides?.accent?.primary ?? null}
           onChange={(hsl) => {
             if (hsl === null) {
-              update({ overrides: undefined });
+              update({ overrides: { ...theme.overrides, accent: undefined } });
               return;
             }
             update({
               overrides: {
                 ...theme.overrides,
-                primary: hsl,
-                primaryForeground: '0 0% 100%',
-                ring: hsl,
-                sidebarAccent: hsl,
-                sidebarAccentForeground: '0 0% 100%',
+                accent: {
+                  ...theme.overrides?.accent,
+                  primary: hsl,
+                  primaryForeground: '0 0% 100%',
+                  ring: hsl,
+                  sidebarAccent: hsl,
+                  sidebarAccentForeground: '0 0% 100%',
+                },
               },
             });
           }}

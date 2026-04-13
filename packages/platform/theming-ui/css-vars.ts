@@ -1,7 +1,8 @@
 import { resolveFontScale, resolveFontStack, resolvePalette } from './theme-config';
-import type { ThemeConfig } from './types';
+import type { PaletteVars, ThemeConfig } from './types';
 
-const PALETTE_VAR_MAP: Record<string, (p: ReturnType<typeof resolvePalette>) => string> = {
+const PALETTE_VAR_MAP: Record<string, (p: PaletteVars) => string> = {
+  // Accent tokens
   '--primary': (p) => p.primary,
   '--primary-foreground': (p) => p.primaryForeground,
   '--accent': (p) => p.accent,
@@ -9,6 +10,24 @@ const PALETTE_VAR_MAP: Record<string, (p: ReturnType<typeof resolvePalette>) => 
   '--ring': (p) => p.ring,
   '--sidebar-accent': (p) => p.sidebarAccent,
   '--sidebar-accent-foreground': (p) => p.sidebarAccentForeground,
+  // Neutral tokens
+  '--background': (p) => p.background,
+  '--foreground': (p) => p.foreground,
+  '--card': (p) => p.card,
+  '--card-foreground': (p) => p.cardForeground,
+  '--popover': (p) => p.popover,
+  '--popover-foreground': (p) => p.popoverForeground,
+  '--secondary': (p) => p.secondary,
+  '--secondary-foreground': (p) => p.secondaryForeground,
+  '--muted': (p) => p.muted,
+  '--muted-foreground': (p) => p.mutedForeground,
+  '--border': (p) => p.border,
+  '--input': (p) => p.input,
+  '--sidebar': (p) => p.sidebar,
+  '--sidebar-foreground': (p) => p.sidebarForeground,
+  '--sidebar-border': (p) => p.sidebarBorder,
+  '--sidebar-muted': (p) => p.sidebarMuted,
+  '--content-bg': (p) => p.contentBg,
 };
 
 /**
