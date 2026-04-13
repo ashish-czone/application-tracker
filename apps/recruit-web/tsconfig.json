@@ -19,6 +19,10 @@
       "@packages/platform-ui-taxonomy/*": ["../../packages/platform/platform-ui/taxonomy/*"],
       "@packages/platform-ui-conditions": ["../../packages/platform/platform-ui/conditions"],
       "@packages/platform-ui-conditions/*": ["../../packages/platform/platform-ui/conditions/*"],
+      "@packages/entity-engine": ["../../packages/platform/entity-engine/backend"],
+      "@packages/entity-engine/*": ["../../packages/platform/entity-engine/backend/*"],
+      "@packages/entity-engine-ui": ["../../packages/platform/entity-engine/ui"],
+      "@packages/entity-engine-ui/*": ["../../packages/platform/entity-engine/ui/*"],
       "@packages/*": ["../../packages/core/*", "../../packages/platform/*", "../../packages/addons/*"],
       "@domains/*": ["../../domains/*"]
     },
