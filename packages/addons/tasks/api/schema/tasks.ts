@@ -7,7 +7,7 @@ export const tasks = pgTable('tasks', {
   id: text('id').primaryKey().$defaultFn(() => randomUUID()),
   title: text('title').notNull(),
   description: text('description'),
-  status: text('status').notNull().default('open'),
+  status: text('status').notNull().default('pending'),
   priority: text('priority').notNull().default('medium'),
   assigneeId: text('assignee_id').references(() => users.id),
   assigneeTeamId: text('assignee_team_id').references(() => orgUnits.id),
