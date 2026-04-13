@@ -6,7 +6,7 @@ import { useEntityEngine, useEntityConfig } from '@packages/entity-engine-ui';
 import { useWorkflows, useCreateWorkflow, PipelineStageManager } from '@packages/platform-ui/workflows';
 
 const FieldManagementPage = lazy(
-  () => import('../../field-management/pages/FieldManagementPage'),
+  () => import('@packages/entity-layout-ui').then((m) => ({ default: m.FieldManagementPage })),
 );
 
 function EntitySettingsContent({ entityType, initialSubTab }: { entityType: string; initialSubTab?: string }) {

@@ -20,6 +20,7 @@
     "@packages/document-templates-ui": "workspace:*",
     "@packages/eav-attributes-ui": "workspace:*",
     "@packages/entity-engine-ui": "workspace:*",
+    "@packages/entity-layout-ui": "workspace:*",
     "@packages/entity-relations-ui": "workspace:*",
     "@packages/notification-channels-ui": "workspace:*",
     "@packages/platform-ui": "workspace:*",

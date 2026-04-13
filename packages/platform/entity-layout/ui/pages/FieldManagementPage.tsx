@@ -25,14 +25,15 @@ import {
   useLookupEntities,
   useTagGroupSlugs,
   useCategoryGroupSlugs,
+  useFieldManagementApi,
 } from '../hooks';
-import { getLookupOptions, getPicklistOptions, getTagOptions, getCategoryOptions } from '../services';
 
 interface FieldManagementPageProps {
   entityType: string;
 }
 
 export default function FieldManagementPage({ entityType }: FieldManagementPageProps) {
+  const api = useFieldManagementApi();
   const [createFieldOpen, setCreateFieldOpen] = useState(false);
   const [createFieldType, setCreateFieldType] = useState<FieldType | undefined>();
   const [createFieldForSection, setCreateFieldForSection] = useState<string | null>(null);
@@ -58,18 +59,21 @@ export default function FieldManagementPage({ entityType }: FieldManagementPageP
   const reorderSectionsMutation = useReorderSections(entityType);
   const reorderFieldsMutation = useReorderFields(entityType);
 
-  const handleFetchOptions = useCallback(async (field: FieldDefinition) => {
-    if (field.fieldType === 'tags' && field.tagGroupSlug) {
-      return getTagOptions(field.tagGroupSlug);
-    }
-    if (field.fieldType === 'category' && field.categoryGroupSlug) {
-      return getCategoryOptions(field.categoryGroupSlug);
-    }
-    if ((field.fieldType === 'picklist' || field.fieldType === 'multi_select') && field.id) {
-      return getPicklistOptions(field.id);
-    }
-    return [];
-  }, []);
+  const handleFetchOptions = useCallback(
+    async (field: FieldDefinition) => {
+      if (field.fieldType === 'tags' && field.tagGroupSlug) {
+        return api.getTagOptions(field.tagGroupSlug);
+      }
+      if (field.fieldType === 'category' && field.categoryGroupSlug) {
+        return api.getCategoryOptions(field.categoryGroupSlug);
+      }
+      if ((field.fieldType === 'picklist' || field.fieldType === 'multi_select') && field.id) {
+        return api.getPicklistOptions(field.id);
+      }
+      return [];
+    },
+    [api],
+  );
 
   if (isLoading) {
     return (
@@ -158,8 +162,8 @@ export default function FieldManagementPage({ entityType }: FieldManagementPageP
         lookupEntities={lookupEntities}
         tagGroups={tagGroups}
         categoryGroups={categoryGroups}
-        onFetchTagOptions={getTagOptions}
-        onFetchCategoryOptions={getCategoryOptions}
+        onFetchTagOptions={api.getTagOptions}
+        onFetchCategoryOptions={api.getCategoryOptions}
       />
 
       <EditFieldDialog
