@@ -14,9 +14,9 @@ import {
 import { SettingsPage, AppearancePage, AppSettingsPage, AutomationsPage, RuleBuilderPage, UsersListPage, RolesListPage, TagGroupsListPage, CategoryGroupsListPage, QueuedTasksPage, OrgPositionsPage, OrgUnitsPage } from '../portals/recruiter/routes';
 import { CandidateProfilePage } from '@domains/recruit/web/portals/recruiter/features/candidates/CandidateProfilePage';
 import { DashboardPage as RecruitDashboard } from '../portals/recruiter/features/dashboard/DashboardPage';
-import { JobOpeningDetailPage } from '../portals/recruiter/features/job-openings/JobOpeningDetailPage';
-import { ApplicationDetailPage } from '../portals/recruiter/features/applications/ApplicationDetailPage';
-import { InterviewsCalendarPage } from '../portals/recruiter/features/interviews/InterviewsCalendarPage';
+import { JobOpeningDetailPage } from '@domains/recruit/web/portals/recruiter/features/job-openings/JobOpeningDetailPage';
+import { ApplicationDetailPage } from '@domains/recruit/web/portals/recruiter/features/applications/ApplicationDetailPage';
+import { InterviewsCalendarPage } from '@domains/recruit/web/portals/recruiter/features/interviews/InterviewsCalendarPage';
 import { TemplatesPage } from '../portals/recruiter/features/templates/TemplatesPage';
 
 interface PendingTransition {
