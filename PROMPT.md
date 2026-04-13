@@ -131,7 +131,7 @@ Side-effect packages subscribe generically — no module imports:
 @OnEvent("**")
 async handleAnyEvent(event: DomainEvent) {
   // Activity log: write to DB inline (lightweight)
-  // Notifications: find rules in DB → enqueue job via packages/core/queue
+  // Notifications: find rules in DB → enqueue job via packages/platform/queue
 }
 ```
 
@@ -215,6 +215,6 @@ See `.claude/rules/module-boundaries.md`. Key points: each module queries only i
 - No circular dependencies between modules.
 - No domain logic in packages. No side effects in domain services.
 - Event names: namespaced, past-tense, exported constants.
-- Side-effect handlers: idempotent. Unreliable I/O via `packages/core/queue`.
+- Side-effect handlers: idempotent. Unreliable I/O via `packages/platform/queue`.
 - No `console.log` — use structured logger.
 - Data formatting: see `.claude/rules/data-formatting.md`.

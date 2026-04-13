@@ -16,7 +16,7 @@ All domain events extend `DomainEvent` from `packages/core/events/`:
 - Side-effect packages subscribe generically via `DomainEvent` — they never import from app modules
 - Side-effect handlers must be idempotent
 - Handler failure never rolls back the domain operation
-- Unreliable I/O (email, webhooks) → enqueue via `packages/core/queue`, never inline
+- Unreliable I/O (email, webhooks) → enqueue via `packages/platform/queue`, never inline
 - Lightweight handlers (DB writes like audit-log) can run inline
 
 ### Audit logging
