@@ -12,6 +12,8 @@ export const tasks = pgTable('tasks', {
   assigneeId: text('assignee_id').references(() => users.id),
   assigneeTeamId: text('assignee_team_id').references(() => orgUnits.id),
   dueDate: date('due_date', { mode: 'string' }),
+  relatedEntityType: text('related_entity_type'),
+  relatedEntityId: text('related_entity_id'),
   createdBy: text('created_by').notNull().references(() => users.id),
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }).notNull().$defaultFn(() => new Date()).$onUpdate(() => new Date()),
@@ -23,4 +25,5 @@ export const tasks = pgTable('tasks', {
   index('tasks_status_idx').on(table.status),
   index('tasks_priority_idx').on(table.priority),
   index('tasks_due_date_idx').on(table.dueDate),
+  index('tasks_related_entity_idx').on(table.relatedEntityType, table.relatedEntityId),
 ]);
