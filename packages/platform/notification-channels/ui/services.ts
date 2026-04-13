@@ -1,5 +1,5 @@
 import type { PaginatedResponse } from '@packages/common';
-import type { ApiFn } from '../PlatformUIProvider';
+import type { ApiFn } from '@packages/platform-ui';
 import type { Notification } from './types';
 
 export function createNotificationChannelsApi(api: ApiFn) {

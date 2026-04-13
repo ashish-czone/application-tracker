@@ -130,7 +130,7 @@ importers:
         version: link:../../packages/platform/media
       '@packages/notification-channels':
         specifier: workspace:*
-        version: link:../../packages/platform/notification-channels
+        version: link:../../packages/platform/notification-channels/backend
       '@packages/notifications':
         specifier: workspace:*
         version: link:../../packages/platform/notifications
@@ -296,7 +296,7 @@ importers:
         version: link:../../packages/core/logger
       '@packages/notification-channels':
         specifier: workspace:*
-        version: link:../../packages/platform/notification-channels
+        version: link:../../packages/platform/notification-channels/backend
       '@packages/notifications':
         specifier: workspace:*
         version: link:../../packages/platform/notifications
@@ -538,7 +538,7 @@ importers:
         version: link:../../packages/platform/media
       '@packages/notification-channels':
         specifier: workspace:*
-        version: link:../../packages/platform/notification-channels
+        version: link:../../packages/platform/notification-channels/backend
       '@packages/notifications':
         specifier: workspace:*
         version: link:../../packages/platform/notifications
@@ -702,6 +702,9 @@ importers:
       '@packages/entity-relations-ui':
         specifier: workspace:*
         version: link:../../packages/addons/entity-relations-ui
+      '@packages/notification-channels-ui':
+        specifier: workspace:*
+        version: link:../../packages/platform/notification-channels/ui
       '@packages/platform-ui':
         specifier: workspace:*
         version: link:../../packages/platform/platform-ui
@@ -793,6 +796,9 @@ importers:
       '@packages/entity-engine-ui':
         specifier: workspace:*
         version: link:../../packages/platform/entity-engine/ui
+      '@packages/notification-channels-ui':
+        specifier: workspace:*
+        version: link:../../packages/platform/notification-channels/ui
       '@packages/platform-ui':
         specifier: workspace:*
         version: link:../../packages/platform/platform-ui
@@ -937,7 +943,7 @@ importers:
         version: link:../../packages/addons/notes-ui
       '@packages/notification-channels':
         specifier: workspace:*
-        version: link:../../packages/platform/notification-channels
+        version: link:../../packages/platform/notification-channels/backend
       '@packages/org-units':
         specifier: workspace:*
         version: link:../../packages/addons/org-units
@@ -2666,7 +2672,7 @@ importers:
         specifier: ^3.2.0
         version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(terser@5.46.0)
 
-  packages/platform/notification-channels:
+  packages/platform/notification-channels/backend:
     dependencies:
       '@nestjs/common':
         specifier: ^11.0.0
@@ -2676,13 +2682,13 @@ importers:
         version: 11.2.6(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)
       '@packages/auth':
         specifier: workspace:*
-        version: link:../../core/auth
+        version: link:../../../core/auth
       '@packages/database':
         specifier: workspace:*
-        version: link:../../core/database
+        version: link:../../../core/database
       '@packages/logger':
         specifier: workspace:*
-        version: link:../../core/logger
+        version: link:../../../core/logger
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3))
@@ -2702,6 +2708,37 @@ importers:
       vitest:
         specifier: ^3.2.0
         version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(terser@5.46.0)
+
+  packages/platform/notification-channels/ui:
+    dependencies:
+      '@packages/common':
+        specifier: workspace:*
+        version: link:../../../core/common
+      '@packages/platform-ui':
+        specifier: workspace:*
+        version: link:../../platform-ui
+      '@packages/ui':
+        specifier: workspace:*
+        version: link:../../../core/ui
+      '@tanstack/react-query':
+        specifier: ^5.0.0
+        version: 5.90.21(react@19.2.4)
+      date-fns:
+        specifier: ^4.1.0
+        version: 4.1.0
+      lucide-react:
+        specifier: ^0.500.0
+        version: 0.500.0(react@19.2.4)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.4
+    devDependencies:
+      '@types/react':
+        specifier: ^19.2.14
+        version: 19.2.14
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
 
   packages/platform/notifications:
     dependencies:
@@ -2731,7 +2768,7 @@ importers:
         version: link:../../core/logger
       '@packages/notification-channels':
         specifier: workspace:*
-        version: link:../notification-channels
+        version: link:../notification-channels/backend
       '@packages/queue':
         specifier: workspace:*
         version: link:../../core/queue
