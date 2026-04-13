@@ -3179,9 +3179,6 @@ importers:
       '@hookform/resolvers':
         specifier: ^5.0.0
         version: 5.2.2(react-hook-form@7.71.2(react@19.2.4))
-      '@packages/automations-ui':
-        specifier: workspace:*
-        version: link:../../automations/ui
       '@packages/common':
         specifier: workspace:*
         version: link:../../../core/common
