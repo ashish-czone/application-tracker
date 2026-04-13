@@ -25,7 +25,9 @@ export const TASKS_CONFIG = defineEntity({
 
   extraPermissions: [
     { action: 'assign', description: 'Assign tasks to users or teams' },
-    { action: 'complete', description: 'Mark tasks as done' },
+    { action: 'submitForReview', description: 'Submit a task for review' },
+    { action: 'approveReview', description: 'Approve a task in review and mark it completed' },
+    { action: 'complete', description: 'Mark tasks as completed' },
     { action: 'cancel', description: 'Cancel tasks' },
     { action: 'reopen', description: 'Reopen completed or cancelled tasks' },
   ],
@@ -57,27 +59,34 @@ export const TASKS_CONFIG = defineEntity({
       cellRenderer: 'PipelineProgressRenderer',
       workflow: {
         slug: 'task-status',
-        initialState: 'open',
+        initialState: 'pending',
         states: [
-          { name: 'open', label: 'Open', color: '#6B7280' },
+          { name: 'pending', label: 'Pending', color: '#6B7280' },
           { name: 'in_progress', label: 'In Progress', color: '#3B82F6' },
-          { name: 'done', label: 'Done', color: '#10B981' },
+          { name: 'review', label: 'In Review', color: '#F59E0B' },
+          { name: 'completed', label: 'Completed', color: '#10B981' },
           { name: 'cancelled', label: 'Cancelled', color: '#EF4444' },
         ],
         transitions: [
-          { from: 'open', to: [
+          { from: 'pending', to: [
             'in_progress',
             { state: 'cancelled', requiredPermissions: ['tasks.cancel'] },
           ]},
           { from: 'in_progress', to: [
-            { state: 'done', requiredPermissions: ['tasks.complete'] },
+            { state: 'review', requiredPermissions: ['tasks.submitForReview'] },
+            { state: 'completed', requiredPermissions: ['tasks.complete'] },
             { state: 'cancelled', requiredPermissions: ['tasks.cancel'] },
           ]},
-          { from: 'done', to: [
-            { state: 'open', requiredPermissions: ['tasks.reopen'] },
+          { from: 'review', to: [
+            { state: 'completed', requiredPermissions: ['tasks.approveReview'] },
+            { state: 'in_progress', requiredPermissions: ['tasks.reopen'] },
+            { state: 'cancelled', requiredPermissions: ['tasks.cancel'] },
+          ]},
+          { from: 'completed', to: [
+            { state: 'pending', requiredPermissions: ['tasks.reopen'] },
           ]},
           { from: 'cancelled', to: [
-            { state: 'open', requiredPermissions: ['tasks.reopen'] },
+            { state: 'pending', requiredPermissions: ['tasks.reopen'] },
           ]},
         ],
       },
@@ -129,6 +138,20 @@ export const TASKS_CONFIG = defineEntity({
       system: true,
       readonly: true,
       isRecipient: true,
+    },
+    relatedEntityType: {
+      type: 'text',
+      label: 'Related Entity Type',
+      system: true,
+      readonly: true,
+      excludeFromList: true,
+    },
+    relatedEntityId: {
+      type: 'text',
+      label: 'Related Entity ID',
+      system: true,
+      readonly: true,
+      excludeFromList: true,
     },
   },
 
