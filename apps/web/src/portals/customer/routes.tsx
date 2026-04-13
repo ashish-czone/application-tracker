@@ -1,7 +1,6 @@
 import { TagGroupsListPage, CategoryGroupsListPage } from '@packages/taxonomy-ui';
 import { RolesListPage } from '@packages/rbac-ui';
-import { AutomationsPage } from '@packages/notifications-ui';
-import { RuleBuilderPage } from '@packages/automations-ui';
+import { AutomationsPage, RuleBuilderPage } from '@packages/automations-ui';
 import { WorkflowsListPage, WorkflowEditorPage } from '@packages/workflows-ui';
 import { SettingsPage } from '@packages/settings-ui';
 import { UsersListPage } from '@packages/users-ui';

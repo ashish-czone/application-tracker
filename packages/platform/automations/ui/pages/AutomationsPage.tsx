@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { AutomationsListPage } from '@packages/automations-ui/pages/AutomationsListPage';
-import { ExecutionLogPage } from '@packages/automations-ui/pages/ExecutionLogPage';
-import { TemplatesListPage } from './TemplatesListPage';
+import { TemplatesListPage } from '@packages/notifications-ui';
+import { AutomationsListPage } from './AutomationsListPage';
+import { ExecutionLogPage } from './ExecutionLogPage';
 
 const TABS = [
   { id: 'rules', label: 'Rules' },

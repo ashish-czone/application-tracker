@@ -5,7 +5,6 @@
   "main": "index.ts",
   "dependencies": {
     "@hookform/resolvers": "^5.0.0",
-    "@packages/automations-ui": "workspace:*",
     "@packages/common": "workspace:*",
     "@packages/conditions-ui": "workspace:*",
     "@packages/eav-attributes-ui": "workspace:*",

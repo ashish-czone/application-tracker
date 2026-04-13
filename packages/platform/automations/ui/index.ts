@@ -1,4 +1,5 @@
 export { AutomationsListPage } from './pages/AutomationsListPage';
+export { AutomationsPage } from './pages/AutomationsPage';
 export { RuleBuilderPage } from './pages/RuleBuilderPage';
 export { ConditionBuilder } from './components/ConditionBuilder';
 export { EntityCreateActionConfig } from './components/EntityCreateActionConfig';
