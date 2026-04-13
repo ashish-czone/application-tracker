@@ -1,8 +1,8 @@
-import { Suspense, lazy, useState } from 'react';
+import { Suspense, lazy, useState, type ComponentType } from 'react';
 import { Routes, Route, Navigate } from 'react-router';
 import { AppLayout } from './layout/AppLayout';
 import { AuthGuard } from '@packages/platform-ui/auth/components/AuthGuard';
-import { EntityListPage, EntityCreatePage, EntityDetailPage, useEntityConfig } from '@packages/entity-engine-ui';
+import { EntityListPage, EntityCreatePage, EntityDetailPage, useEntityConfig, useEntityEngine } from '@packages/entity-engine-ui';
 import {
   PipelineProgressBar,
   TransitionConfirmDialog,
@@ -180,20 +180,19 @@ function PageSkeleton() {
 }
 
 /**
- * Entity routes rendered via the engine's generic pages.
- * Each entity gets /{slug} (list) and /{slug}/:id (detail) automatically.
- * Adding a new entity here = 2 lines.
+ * Per-entity detail page overrides. When an entity type appears here, the generic
+ * EntityDetailPage is replaced with the override component on /{slug}/:id.
+ * TODO (Task 5): move these into the @domains/recruit web manifest.
  */
-function EntityRoutes({ entityType }: { entityType: string }) {
-  return (
-    <>
-      <Route path={`/${entityType}`} element={<EntityListPage entityType={entityType} />} />
-      <Route path={`/${entityType}/:id`} element={<AppEntityDetailPage entityType={entityType} />} />
-    </>
-  );
-}
+const DETAIL_PAGE_OVERRIDES: Record<string, ComponentType> = {
+  candidates: CandidateProfilePage,
+  job_openings: JobOpeningDetailPage,
+  applications: ApplicationDetailPage,
+};
 
 export function AppRouter() {
+  const { entities } = useEntityEngine();
+
   return (
     <Routes>
       {/* Public routes */}
@@ -212,29 +211,28 @@ export function AppRouter() {
             element={<Suspense fallback={<PageSkeleton />}><ProfilePage /></Suspense>}
           />
 
-          {/* Entity engine routes — each entity = 2 lines */}
-          <Route path="/job-openings" element={<EntityListPage entityType="job_openings" />} />
-          <Route path="/job-openings/new" element={<EntityCreatePage entityType="job_openings" />} />
-          <Route path="/job-openings/:id" element={<JobOpeningDetailPage />} />
-          <Route path="/candidates" element={<EntityListPage entityType="candidates" />} />
-          <Route path="/candidates/:id" element={<CandidateProfilePage />} />
-          <Route path="/interviews" element={<EntityListPage entityType="interviews" />} />
-          <Route path="/interviews/calendar" element={<InterviewsCalendarPage />} />
-          <Route path="/interviews/:id" element={<AppEntityDetailPage entityType="interviews" />} />
-          <Route path="/clients" element={<EntityListPage entityType="clients" />} />
-          <Route path="/clients/:id" element={<AppEntityDetailPage entityType="clients" />} />
-          <Route path="/contacts" element={<EntityListPage entityType="contacts" />} />
-          <Route path="/contacts/:id" element={<AppEntityDetailPage entityType="contacts" />} />
-          <Route path="/vendors" element={<EntityListPage entityType="vendors" />} />
-          <Route path="/vendors/:id" element={<AppEntityDetailPage entityType="vendors" />} />
-          <Route path="/applications" element={<EntityListPage entityType="applications" />} />
-          <Route path="/applications/:id" element={<ApplicationDetailPage />} />
-          <Route path="/offers" element={<EntityListPage entityType="offers" />} />
-          <Route path="/offers/:id" element={<AppEntityDetailPage entityType="offers" />} />
+          {/* Entity engine routes — list + detail per registered entity.
+              Detail overrides use the DETAIL_PAGE_OVERRIDES map above. */}
+          {entities.map((entity) => {
+            const Override = DETAIL_PAGE_OVERRIDES[entity.entityType];
+            return [
+              <Route
+                key={`${entity.entityType}-list`}
+                path={`/${entity.slug}`}
+                element={<EntityListPage entityType={entity.entityType} />}
+              />,
+              <Route
+                key={`${entity.entityType}-detail`}
+                path={`/${entity.slug}/:id`}
+                element={Override ? <Override /> : <AppEntityDetailPage entityType={entity.entityType} />}
+              />,
+            ];
+          })}
 
-          {/* Tasks — now via entity engine */}
-          <Route path="/tasks" element={<EntityListPage entityType="tasks" />} />
-          <Route path="/tasks/:id" element={<AppEntityDetailPage entityType="tasks" />} />
+          {/* Extra entity-adjacent routes (custom create/sub-pages).
+              TODO (Task 5): move into domain web manifest. */}
+          <Route path="/job-openings/new" element={<EntityCreatePage entityType="job_openings" />} />
+          <Route path="/interviews/calendar" element={<InterviewsCalendarPage />} />
 
           {/* Non-entity routes */}
           <Route
