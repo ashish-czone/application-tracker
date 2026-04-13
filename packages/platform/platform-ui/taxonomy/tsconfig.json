@@ -13,6 +13,10 @@
     "noEmit": true,
     "baseUrl": ".",
     "paths": {
+      "@packages/entity-engine": ["../../entity-engine/backend"],
+      "@packages/entity-engine/*": ["../../entity-engine/backend/*"],
+      "@packages/entity-engine-ui": ["../../entity-engine/ui"],
+      "@packages/entity-engine-ui/*": ["../../entity-engine/ui/*"],
       "@packages/*": ["../../../core/*/", "../../../platform/*/", "../../../addons/*/"]
     }
   },

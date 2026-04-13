@@ -1,4 +1,4 @@
-import { createViTestIntegrationConfig } from '../../core/testing/vitest-integration';
+import { createViTestIntegrationConfig } from '../../../core/testing/vitest-integration';
 import { defineConfig } from 'vitest/config';
 
 export default createViTestIntegrationConfig(__dirname, defineConfig({
