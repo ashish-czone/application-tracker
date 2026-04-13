@@ -1,32 +1,36 @@
 import path from 'path';
 import fs from 'fs';
 
+function collectPackages(dir: string, aliases: Record<string, string>, depth = 0): void {
+  if (depth > 4 || !fs.existsSync(dir)) return;
+  const pkgJsonPath = path.join(dir, 'package.json');
+  if (fs.existsSync(pkgJsonPath)) {
+    try {
+      const pkgJson = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf-8'));
+      if (pkgJson.name?.startsWith('@packages/')) {
+        aliases[pkgJson.name] = dir;
+      }
+    } catch {
+      // ignore malformed package.json
+    }
+  }
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    if (entry.name === 'node_modules' || entry.name === 'src' || entry.name === 'dist') continue;
+    collectPackages(path.join(dir, entry.name), aliases, depth + 1);
+  }
+}
+
 /**
- * Dynamically builds Vite/Vitest alias entries for all @packages/* by scanning
- * the tier directories (core/, platform/, addons/) and reading package.json names.
+ * Dynamically builds Vite/Vitest alias entries for all @packages/* by recursively
+ * scanning the tier directories (core/, platform/, addons/) for package.json files.
+ * Nested packages are supported (e.g. packages/platform/<feature>/{backend,ui}/).
  */
 export function buildPackageAliases(packagesDir: string): Record<string, string> {
   const aliases: Record<string, string> = {};
-  const scanDirs = [
-    path.join(packagesDir, 'core'),
-    path.join(packagesDir, 'platform'),
-    path.join(packagesDir, 'platform', 'platform-ui'),
-    path.join(packagesDir, 'addons'),
-  ];
-
-  for (const dir of scanDirs) {
-    if (!fs.existsSync(dir)) continue;
-    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-      if (!entry.isDirectory() || entry.name === 'node_modules') continue;
-      const pkgJsonPath = path.join(dir, entry.name, 'package.json');
-      if (!fs.existsSync(pkgJsonPath)) continue;
-      const pkgJson = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf-8'));
-      if (pkgJson.name?.startsWith('@packages/')) {
-        aliases[pkgJson.name] = path.join(dir, entry.name);
-      }
-    }
+  for (const tier of ['core', 'platform', 'addons']) {
+    collectPackages(path.join(packagesDir, tier), aliases);
   }
-
   return aliases;
 }
 
