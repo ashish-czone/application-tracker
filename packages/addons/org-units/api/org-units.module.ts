@@ -29,11 +29,9 @@ export class OrgUnitsModule implements OnModuleInit {
   constructor(
     private readonly permissionRegistry: PermissionRegistryService,
     private readonly lookupResolver: LookupResolverService,
-    private readonly orgPositionService: OrgPositionService,
-    private readonly orgUnitLevelService: OrgUnitLevelService,
   ) {}
 
-  async onModuleInit() {
+  onModuleInit() {
     this.permissionRegistry.register('org-units', [
       { action: 'org-units.read', description: 'View org units' },
       { action: 'org-units.manage', description: 'Create, update, and delete org units' },
@@ -46,8 +44,5 @@ export class OrgUnitsModule implements OnModuleInit {
       valueField: 'id',
       searchFields: ['name'],
     });
-
-    await this.orgPositionService.seedDefaults();
-    await this.orgUnitLevelService.seedDefaults();
   }
 }

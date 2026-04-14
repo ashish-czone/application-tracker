@@ -1,6 +1,6 @@
 import type { SeedSource, SeedFn } from '@packages/database/seeder';
 
-type PkgName = '@packages/auth';
+type PkgName = '@packages/auth' | '@packages/org-units';
 
 /**
  * Ordered list of platform **system** seed sources. Each entry lazy-loads
@@ -37,5 +37,6 @@ export function platformSystemSeedSources(): SeedSource[] {
 
   return [
     system('@packages/auth', () => import('@packages/auth/seeds/system')),
+    system('@packages/org-units', () => import('@packages/org-units/seeds/system')),
   ];
 }
