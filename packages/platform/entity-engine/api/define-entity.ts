@@ -139,6 +139,16 @@ export interface ModelDefinition<TTable extends PgTable = PgTable> {
   timestamps?: boolean;
   /** Enable dynamic custom fields (EAV storage). When true, admins can add custom fields and EAV value operations are active. Default: false. */
   customFields?: boolean;
+  /**
+   * Mark this entity as hierarchical. Requires the Drizzle table to spread
+   * `...hierarchyColumns(selfRef)` from `@packages/hierarchy` (providing
+   * `parentId`, `path`, `depth` columns). When enabled: the three columns are
+   * registered as system columns, and downstream service wiring (Task 2)
+   * injects `HierarchyService` so the entity service gains `reparent()`,
+   * `getAncestors()`, `getDescendants()` plus auto-maintained `path`/`depth`
+   * on create. Default: false.
+   */
+  hierarchy?: boolean;
 
   // --- Field definitions ---
 
@@ -292,6 +302,20 @@ export function defineEntity<TTable extends PgTable>(model: ModelDefinition<TTab
     systemColumns.push('deletedAt', 'deletedBy');
   }
 
+  // Hierarchy: validate the table spreads hierarchyColumns() and register
+  // parent_id / path / depth as system columns. Fails fast with a clear
+  // message if the consumer enabled the flag but forgot the mixin.
+  if (model.hierarchy) {
+    const missing = (['parentId', 'path', 'depth'] as const).filter((k) => !columns[k]);
+    if (missing.length > 0) {
+      throw new Error(
+        `defineEntity({ hierarchy: true }) for '${model.slug}' requires the table to spread ` +
+          `...hierarchyColumns() from @packages/hierarchy. Missing columns: ${missing.join(', ')}.`,
+      );
+    }
+    systemColumns.push('parentId', 'path', 'depth');
+  }
+
   let sortOrder = 0;
 
   for (const [key, field] of Object.entries(model.fields)) {
@@ -417,6 +441,7 @@ export function defineEntity<TTable extends PgTable>(model: ModelDefinition<TTab
     relationships: relationships.length > 0 ? relationships : undefined,
     recipientFields: Object.keys(recipientFields).length > 0 ? recipientFields : undefined,
     customFields: model.customFields,
+    hierarchy: model.hierarchy,
     hasNotes: model.hasNotes,
     hasAttachments: model.hasAttachments,
     hasEvaluations: model.hasEvaluations,

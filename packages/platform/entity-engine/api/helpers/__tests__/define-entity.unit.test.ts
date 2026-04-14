@@ -20,6 +20,17 @@ const testTable = pgTable('test_entities', {
   deletedBy: text('deleted_by'),
 });
 
+// Mock hierarchical table — mirrors the shape produced by hierarchyColumns()
+// in @packages/hierarchy (parentId/path/depth). Inlined rather than imported
+// so this file has no cross-package runtime dependency.
+const hierarchicalTable = pgTable('hierarchical_entities', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  parentId: text('parent_id'),
+  path: text('path').notNull().default('/'),
+  depth: integer('depth').notNull().default(0),
+});
+
 describe('defineEntity', () => {
   it('should produce a valid EntityConfig from a minimal model', () => {
     const config = defineEntity({
@@ -309,5 +320,102 @@ describe('defineEntity', () => {
 
     expect(config.defaultSort).toBe('title');
     expect(config.sortableColumns.title).toBeDefined();
+  });
+
+  describe('hierarchy flag', () => {
+    it('should surface hierarchy: true on the returned config when flag is set', () => {
+      const config = defineEntity({
+        table: hierarchicalTable,
+        slug: 'hierarchical-entities',
+        hierarchy: true,
+        fields: {
+          name: { type: 'text', label: 'Name', required: true, isLabel: true },
+        },
+        ui: { icon: 'Folder' },
+      });
+
+      expect(config.hierarchy).toBe(true);
+    });
+
+    it('should leave hierarchy undefined when flag is absent', () => {
+      const config = defineEntity({
+        table: testTable,
+        slug: 'test-entities',
+        fields: {
+          title: { type: 'text', label: 'Title' },
+        },
+        ui: { icon: 'FileText' },
+      });
+
+      expect(config.hierarchy).toBeUndefined();
+    });
+
+    it('should register parentId, path, and depth as system columns when hierarchy is true', () => {
+      const config = defineEntity({
+        table: hierarchicalTable,
+        slug: 'hierarchical-entities',
+        hierarchy: true,
+        fields: {
+          name: { type: 'text', label: 'Name' },
+        },
+        ui: { icon: 'Folder' },
+      });
+
+      expect(config.systemColumns).toContain('parentId');
+      expect(config.systemColumns).toContain('path');
+      expect(config.systemColumns).toContain('depth');
+    });
+
+    it('should throw when hierarchy: true but the table is missing hierarchyColumns()', () => {
+      expect(() =>
+        defineEntity({
+          table: testTable, // has no parentId/path/depth
+          slug: 'test-entities',
+          hierarchy: true,
+          fields: {
+            title: { type: 'text', label: 'Title' },
+          },
+          ui: { icon: 'FileText' },
+        }),
+      ).toThrow(/hierarchyColumns.*parentId, path, depth/);
+    });
+
+    it('should throw and list only the missing hierarchy columns', () => {
+      const partialTable = pgTable('partial_hierarchical', {
+        id: text('id').primaryKey(),
+        name: text('name').notNull(),
+        parentId: text('parent_id'),
+        // path and depth intentionally missing
+      });
+
+      expect(() =>
+        defineEntity({
+          table: partialTable,
+          slug: 'partial-hierarchical',
+          hierarchy: true,
+          fields: {
+            name: { type: 'text', label: 'Name' },
+          },
+          ui: { icon: 'Folder' },
+        }),
+      ).toThrow(/Missing columns: path, depth/);
+    });
+
+    it('should not add hierarchy columns to systemColumns when flag is false', () => {
+      const config = defineEntity({
+        table: hierarchicalTable,
+        slug: 'hierarchical-entities',
+        hierarchy: false,
+        fields: {
+          name: { type: 'text', label: 'Name' },
+        },
+        ui: { icon: 'Folder' },
+      });
+
+      expect(config.systemColumns).not.toContain('parentId');
+      expect(config.systemColumns).not.toContain('path');
+      expect(config.systemColumns).not.toContain('depth');
+      expect(config.hierarchy).toBe(false);
+    });
   });
 });
