@@ -1,9 +1,8 @@
-import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { Pool } from 'pg';
+import type { INestApplicationContext } from '@nestjs/common';
 
 export type SeedKind = 'system' | 'demo';
 
-export type SeedFn = (db: NodePgDatabase) => Promise<void>;
+export type SeedFn = (ctx: INestApplicationContext) => Promise<void>;
 
 export interface SeedSource {
   name: string;
@@ -14,7 +13,7 @@ export interface SeedSource {
 export interface RunSeedsOptions {
   sources: SeedSource[];
   kind: SeedKind;
-  databaseUrl?: string;
+  bootstrap: () => Promise<INestApplicationContext>;
   logger?: (message: string) => void;
   env?: NodeJS.ProcessEnv;
 }
@@ -35,13 +34,10 @@ export function assertDemoSeedAllowed(env: NodeJS.ProcessEnv = process.env): voi
 export async function runSeeds({
   sources,
   kind,
-  databaseUrl = process.env.DATABASE_URL,
+  bootstrap,
   logger = (message) => console.log(`[db:seed:${kind}] ${message}`),
   env = process.env,
 }: RunSeedsOptions): Promise<void> {
-  if (!databaseUrl) {
-    throw new Error('DATABASE_URL is required to run seeds');
-  }
   if (kind === 'demo') {
     assertDemoSeedAllowed(env);
   }
@@ -52,17 +48,16 @@ export async function runSeeds({
     return;
   }
 
-  const pool = new Pool({ connectionString: databaseUrl });
-  const db: NodePgDatabase = drizzle(pool);
+  const ctx = await bootstrap();
 
   try {
     for (const source of matching) {
       logger(`seeding ${source.name}`);
       const seedFn = await source.load();
-      await seedFn(db);
+      await seedFn(ctx);
     }
     logger(`done (${matching.length} source${matching.length === 1 ? '' : 's'})`);
   } finally {
-    await pool.end();
+    await ctx.close();
   }
 }
