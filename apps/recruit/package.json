@@ -9,7 +9,9 @@
     "start": "node dist/main",
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
-    "db:migrate": "tsx src/cli/migrate.ts"
+    "db:migrate": "tsx src/cli/migrate.ts",
+    "db:seed:system": "tsx src/cli/seed.ts --kind=system",
+    "db:seed:demo": "tsx src/cli/seed.ts --kind=demo"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",

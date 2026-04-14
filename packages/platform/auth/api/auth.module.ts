@@ -12,7 +12,6 @@ import { PasswordAuthAdapter } from './adapters/password-auth.adapter';
 import { AuthOrchestratorService } from './orchestrator/auth-orchestrator.service';
 import { ClientAuthService } from './orchestrator/client-auth.service';
 import { AdminAuthService } from './orchestrator/admin-auth.service';
-import { SeedService } from './orchestrator/seed.service';
 import { ClientAuthController } from './controllers/client-auth.controller';
 import { AdminAuthController } from './controllers/admin-auth.controller';
 import { AUTH_MODULE_CONFIG, type AuthModuleConfig } from './types';
@@ -79,7 +78,6 @@ export class AuthModule implements OnModuleInit {
         AuthOrchestratorService,
         ClientAuthService,
         AdminAuthService,
-        SeedService,
       ],
       exports: [AuthService, AuthGuard, AuthAdapterRegistry],
     };
@@ -109,7 +107,6 @@ export class AuthModule implements OnModuleInit {
         AuthOrchestratorService,
         ClientAuthService,
         AdminAuthService,
-        SeedService,
       ],
       exports: [AuthService, AuthGuard, AuthAdapterRegistry],
     };
