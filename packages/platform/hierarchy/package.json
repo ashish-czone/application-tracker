@@ -9,7 +9,8 @@
   },
   "scripts": {
     "test": "vitest run",
-    "test:integration": "vitest run --config vitest.integration.ts"
+    "test:integration": "vitest run --config vitest.integration.ts",
+    "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
@@ -18,6 +19,7 @@
   },
   "devDependencies": {
     "@packages/platform-testing": "workspace:*",
+    "drizzle-kit": "^0.31.9",
     "mustache": "^4.2.0",
     "typescript": "^5.7.0",
     "vitest": "^3.2.0"
