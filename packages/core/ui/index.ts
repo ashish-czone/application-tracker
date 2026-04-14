@@ -109,3 +109,6 @@ export { cn } from './lib/utils';
 
 // Re-export TanStack Table types for column definitions
 export { type ColumnDef, createColumnHelper } from '@tanstack/react-table';
+
+// Kit — "The Instrument" editorial widget library
+export * from './kit';
