@@ -19,6 +19,7 @@ registerRatingFieldType();
 
 import { WebShell } from '@packages/app-shell-ui';
 import { TASKS_UI_CONFIG, TaskAssigneeCell } from '@packages/tasks-ui';
+import { OrgUnitsPage, OrgPositionsPage } from '@packages/org-units-ui';
 import { NotesSection } from '@packages/notes-ui';
 import { AttachmentsSection } from '@packages/attachments-ui';
 import { EvaluationsSection } from '@packages/evaluations-ui';
@@ -34,6 +35,11 @@ const addonMenuItems: MenuItem[] = [
   { path: '/tasks', label: 'Tasks', icon: CheckSquare, position: 'after' },
   { path: '/org-units', label: 'Org Structure', icon: Building2, permission: 'org-units.read', position: 'after' },
   { path: '/org-positions', label: 'Org Positions', icon: UserCog, permission: 'org-units.read', position: 'after' },
+];
+
+const addonRoutes = [
+  { path: '/org-units', element: <OrgUnitsPage /> },
+  { path: '/org-positions', element: <OrgPositionsPage /> },
 ];
 
 const detailTabs = [
@@ -61,6 +67,7 @@ createRoot(document.getElementById('root')!).render(
       apiFn={api}
       brandLabel="Compliance"
       extraMenuItems={addonMenuItems}
+      extraRoutes={addonRoutes}
       extraEntityUIConfigs={[TASKS_UI_CONFIG]}
       extraDetailTabs={detailTabs}
       extraRightSidebarPanels={rightSidebarPanels}
