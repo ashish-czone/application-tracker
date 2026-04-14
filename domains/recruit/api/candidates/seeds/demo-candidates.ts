@@ -1,5 +1,4 @@
-import { Injectable, Inject, type OnApplicationBootstrap } from '@nestjs/common';
-import { AppLoggerService, type ContextLogger } from '@packages/logger';
+import type { INestApplicationContext } from '@nestjs/common';
 import { DatabaseService, eq, users } from '@packages/database';
 import { TaxonomyService, tagGroups } from '@packages/taxonomy';
 import { EntityService } from '@packages/entity-engine';
@@ -102,75 +101,59 @@ const SAMPLE_CANDIDATES = [
   },
 ];
 
-@Injectable()
-export class CandidatesSeedService implements OnApplicationBootstrap {
-  private readonly logger: ContextLogger;
+export const seedDemoCandidates = async (ctx: INestApplicationContext): Promise<void> => {
+  const database = ctx.get(DatabaseService);
+  const taxonomyService = ctx.get(TaxonomyService);
+  const entityService = ctx.get<EntityService>(SERVICE_TOKEN);
 
-  constructor(
-    private readonly database: DatabaseService,
-    private readonly taxonomyService: TaxonomyService,
-    @Inject(SERVICE_TOKEN) private readonly entityService: EntityService,
-    appLogger: AppLoggerService,
-  ) {
-    this.logger = appLogger.forContext(CandidatesSeedService.name);
-  }
+  await ensureSkillTags(database, taxonomyService);
+  await ensureSampleCandidates(database, entityService);
+};
 
-  async onApplicationBootstrap() {
-    // Field definitions + layout seeding is now handled by EntityEngineModule.forEntity()
-    await this.ensureSkillTags();
-    await this.ensureSampleCandidates();
-  }
+async function ensureSkillTags(
+  database: DatabaseService,
+  taxonomyService: TaxonomyService,
+): Promise<void> {
+  const [existing] = await database.db
+    .select()
+    .from(tagGroups)
+    .where(eq(tagGroups.slug, SKILLS_GROUP_SLUG))
+    .limit(1);
 
-  private async ensureSkillTags() {
-    const [existing] = await this.database.db
-      .select()
-      .from(tagGroups)
-      .where(eq(tagGroups.slug, SKILLS_GROUP_SLUG))
-      .limit(1);
+  if (existing) return;
 
-    if (existing) return;
+  const group = await taxonomyService.createTagGroup({
+    name: 'Skills',
+    slug: SKILLS_GROUP_SLUG,
+    description: 'Technical skills for candidate profiles',
+    allowMultiple: true,
+  });
 
-    const group = await this.taxonomyService.createTagGroup({
-      name: 'Skills',
-      slug: SKILLS_GROUP_SLUG,
-      description: 'Technical skills for candidate profiles',
-      allowMultiple: true,
+  for (const skill of SKILL_TAGS) {
+    await taxonomyService.createTag({
+      tagGroupId: group.id,
+      name: skill.name,
+      slug: skill.slug,
+      color: skill.color,
     });
-
-    for (const skill of SKILL_TAGS) {
-      await this.taxonomyService.createTag({
-        tagGroupId: group.id,
-        name: skill.name,
-        slug: skill.slug,
-        color: skill.color,
-      });
-    }
-
-    this.logger.log(`Created skills tag group with ${SKILL_TAGS.length} tags`);
   }
+}
 
-  private async ensureSampleCandidates() {
-    const [existing] = await this.database.db
-      .select({ email: candidates.email })
-      .from(candidates)
-      .limit(1);
+async function ensureSampleCandidates(
+  database: DatabaseService,
+  entityService: EntityService,
+): Promise<void> {
+  const [existing] = await database.db
+    .select({ email: candidates.email })
+    .from(candidates)
+    .limit(1);
 
-    if (existing) return;
+  if (existing) return;
 
-    const [admin] = await this.database.db
-      .select({ id: users.id })
-      .from(users)
-      .limit(1);
+  const [admin] = await database.db.select({ id: users.id }).from(users).limit(1);
+  if (!admin) return;
 
-    if (!admin) {
-      this.logger.warn('No users found — skipping candidate seeding');
-      return;
-    }
-
-    for (const data of SAMPLE_CANDIDATES) {
-      await this.entityService.create(data, admin.id);
-    }
-
-    this.logger.log(`Created ${SAMPLE_CANDIDATES.length} sample candidates`);
+  for (const data of SAMPLE_CANDIDATES) {
+    await entityService.create(data, admin.id);
   }
 }

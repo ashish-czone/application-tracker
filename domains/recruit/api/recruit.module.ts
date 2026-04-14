@@ -4,7 +4,6 @@ import { TASKS_CONFIG, TasksModule } from '@packages/tasks';
 
 import { SharedModule } from './shared/shared.module';
 
-import { CandidatesModule } from './candidates/candidates.module';
 import { candidatesConfig } from './candidates/candidates.config';
 
 import { CLIENTS_CONFIG } from './clients/clients.config';
@@ -30,7 +29,6 @@ import { TaskClaimModule } from './tasks/tasks.module';
     SharedModule,
 
     EntityEngineModule.forEntity(candidatesConfig),
-    CandidatesModule,
 
     EntityEngineModule.forEntity(CLIENTS_CONFIG),
 
