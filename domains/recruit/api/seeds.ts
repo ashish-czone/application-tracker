@@ -44,5 +44,8 @@ export function recruitDemoSeedSources(): SeedSource[] {
     demo('@domains/recruit-api/demo-clients', () =>
       import('./clients/seeds/demo-clients').then((m) => m.seedDemoClients),
     ),
+    demo('@domains/recruit-api/demo-task-tags', () =>
+      import('./tasks/seeds/demo-task-tags').then((m) => m.seedDemoTaskTags),
+    ),
   ];
 }
