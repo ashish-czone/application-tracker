@@ -2314,6 +2314,97 @@ importers:
         specifier: ^5.7.0
         version: 5.9.3
 
+  packages/platform/app-shell:
+    dependencies:
+      '@nestjs/common':
+        specifier: ^11.0.0
+        version: 11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/config':
+        specifier: ^4.0.0
+        version: 4.0.3(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(rxjs@7.8.2)
+      '@nestjs/core':
+        specifier: ^11.0.0
+        version: 11.1.16(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@11.1.16)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/throttler':
+        specifier: ^6.4.0
+        version: 6.5.0(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(reflect-metadata@0.2.2)
+      '@packages/audit':
+        specifier: workspace:*
+        version: link:../audit/api
+      '@packages/auth':
+        specifier: workspace:*
+        version: link:../auth/api
+      '@packages/automations':
+        specifier: workspace:*
+        version: link:../automations/api
+      '@packages/database':
+        specifier: workspace:*
+        version: link:../../core/database
+      '@packages/domains':
+        specifier: workspace:*
+        version: link:../domains
+      '@packages/entity-engine':
+        specifier: workspace:*
+        version: link:../entity-engine/api
+      '@packages/entity-layout':
+        specifier: workspace:*
+        version: link:../entity-layout/api
+      '@packages/events':
+        specifier: workspace:*
+        version: link:../../core/events
+      '@packages/hierarchy':
+        specifier: workspace:*
+        version: link:../hierarchy
+      '@packages/logger':
+        specifier: workspace:*
+        version: link:../../core/logger
+      '@packages/media':
+        specifier: workspace:*
+        version: link:../media
+      '@packages/notification-channels':
+        specifier: workspace:*
+        version: link:../notification-channels/api
+      '@packages/notifications':
+        specifier: workspace:*
+        version: link:../notifications/api
+      '@packages/queue':
+        specifier: workspace:*
+        version: link:../queue/api
+      '@packages/rbac':
+        specifier: workspace:*
+        version: link:../rbac/api
+      '@packages/settings':
+        specifier: workspace:*
+        version: link:../settings/api
+      '@packages/taxonomy':
+        specifier: workspace:*
+        version: link:../taxonomy/api
+      '@packages/user-preferences':
+        specifier: workspace:*
+        version: link:../user-preferences
+      '@packages/users':
+        specifier: workspace:*
+        version: link:../users/api
+      '@packages/workflows':
+        specifier: workspace:*
+        version: link:../workflows/api
+      class-transformer:
+        specifier: ^0.5.1
+        version: 0.5.1
+      class-validator:
+        specifier: ^0.14.1
+        version: 0.14.4
+    devDependencies:
+      '@types/express':
+        specifier: ^5.0.0
+        version: 5.0.6
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(terser@5.46.0)
+
   packages/platform/audit/api:
     dependencies:
       '@nestjs/common':
