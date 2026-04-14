@@ -11,7 +11,7 @@
  *   CONTROL_PLANE_URL  — Control-plane API base URL
  *   SERVICE_ID         — This service's identifier
  *   SERVICE_PRIVATE_KEY — PEM-encoded private key for service-auth
- *   MIGRATIONS_FOLDER  — Path to Drizzle migrations (default: ./apps/recruit/drizzle)
+ *   MIGRATIONS_FOLDER  — Path to a Drizzle migrations folder (required)
  */
 
 import jwt from 'jsonwebtoken';
@@ -68,7 +68,7 @@ async function main() {
   const tenants = await fetchActiveTenants();
   console.log(`Found ${tenants.length} active tenants\n`);
 
-  const migrationsFolder = process.env.MIGRATIONS_FOLDER ?? './apps/recruit/drizzle';
+  const migrationsFolder = getEnvOrDie('MIGRATIONS_FOLDER');
   let success = 0;
   let failed = 0;
 

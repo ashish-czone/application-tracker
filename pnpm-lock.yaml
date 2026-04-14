@@ -430,18 +430,9 @@ importers:
       '@types/supertest':
         specifier: ^6.0.2
         version: 6.0.3
-      drizzle-kit:
-        specifier: ^0.31.9
-        version: 0.31.9
-      drizzle-orm:
-        specifier: ^0.45.1
-        version: 0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3))
       jsonwebtoken:
         specifier: ^9.0.2
         version: 9.0.3
-      pg:
-        specifier: ^8.20.0
-        version: 8.20.0
       supertest:
         specifier: ^7.0.0
         version: 7.2.2
@@ -998,18 +989,9 @@ importers:
       '@types/supertest':
         specifier: ^6.0.2
         version: 6.0.3
-      drizzle-kit:
-        specifier: ^0.31.9
-        version: 0.31.9
-      drizzle-orm:
-        specifier: ^0.45.1
-        version: 0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3))
       jsonwebtoken:
         specifier: ^9.0.2
         version: 9.0.3
-      pg:
-        specifier: ^8.20.0
-        version: 8.20.0
       supertest:
         specifier: ^7.0.0
         version: 7.2.2
