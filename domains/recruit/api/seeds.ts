@@ -32,5 +32,8 @@ export function recruitDemoSeedSources(): SeedSource[] {
     demo('@domains/recruit-api/taxonomy', () =>
       import('./shared/seeds/taxonomy').then((m) => m.seedTaxonomy),
     ),
+    demo('@domains/recruit-api/demo-org', () =>
+      import('./shared/seeds/demo-org').then((m) => m.seedDemoOrg),
+    ),
   ];
 }
