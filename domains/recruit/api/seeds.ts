@@ -38,6 +38,9 @@ export function recruitDemoSeedSources(): SeedSource[] {
     demo('@domains/recruit-api/demo-candidates', () =>
       import('./candidates/seeds/demo-candidates').then((m) => m.seedDemoCandidates),
     ),
+    demo('@domains/recruit-api/demo-job-openings', () =>
+      import('./job-openings/seeds/demo-job-openings').then((m) => m.seedDemoJobOpenings),
+    ),
     demo('@domains/recruit-api/demo-clients', () =>
       import('./clients/seeds/demo-clients').then((m) => m.seedDemoClients),
     ),

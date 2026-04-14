@@ -11,7 +11,6 @@ import { CLIENTS_CONFIG } from './clients/clients.config';
 import { CONTACTS_CONFIG } from './contacts/contacts.config';
 import { VENDORS_CONFIG } from './vendors/vendors.config';
 
-import { JobOpeningsModule } from './job-openings/job-openings.module';
 import { JOB_OPENINGS_CONFIG } from './job-openings/job-openings.config';
 
 import { ApplicationsModule } from './applications/applications.module';
@@ -36,7 +35,6 @@ import { TaskClaimModule } from './tasks/tasks.module';
     EntityEngineModule.forEntity(VENDORS_CONFIG),
 
     EntityEngineModule.forEntity(JOB_OPENINGS_CONFIG),
-    JobOpeningsModule,
 
     EntityEngineModule.forEntity(APPLICATIONS_CONFIG),
     ApplicationsModule,
