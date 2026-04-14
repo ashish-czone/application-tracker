@@ -19,6 +19,7 @@ registerRatingFieldType();
 
 import { WebShell } from '@packages/app-shell-ui';
 import { TASKS_UI_CONFIG, TaskAssigneeCell } from '@packages/tasks-ui';
+import { OrgUnitsPage, OrgPositionsPage } from '@packages/org-units-ui';
 import { NotesSection } from '@packages/notes-ui';
 import { AttachmentsSection } from '@packages/attachments-ui';
 import { EvaluationsSection } from '@packages/evaluations-ui';
@@ -79,6 +80,11 @@ const addonMenuItems: MenuItem[] = [
   { path: '/org-positions', label: 'Org Positions', icon: UserCog, permission: 'org-units.read', position: 'after' },
 ];
 
+const addonRoutes = [
+  { path: '/org-units', element: <OrgUnitsPage /> },
+  { path: '/org-positions', element: <OrgPositionsPage /> },
+];
+
 const detailTabs = [
   { key: 'notes', label: 'Notes', order: 100, component: NotesSection, featureFlag: 'hasNotes' },
   { key: 'attachments', label: 'Attachments', order: 200, component: AttachmentsSection, featureFlag: 'hasAttachments' },
@@ -105,6 +111,7 @@ createRoot(document.getElementById('root')!).render(
       apiFn={api}
       brandLabel="Recruit"
       extraMenuItems={addonMenuItems}
+      extraRoutes={addonRoutes}
       extraEntityUIConfigs={[TASKS_UI_CONFIG]}
       extraDetailTabs={detailTabs}
       extraRightSidebarPanels={rightSidebarPanels}
