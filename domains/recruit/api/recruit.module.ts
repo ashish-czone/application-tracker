@@ -7,7 +7,6 @@ import { SharedModule } from './shared/shared.module';
 import { CandidatesModule } from './candidates/candidates.module';
 import { candidatesConfig } from './candidates/candidates.config';
 
-import { ClientsModule } from './clients/clients.module';
 import { CLIENTS_CONFIG } from './clients/clients.config';
 
 import { CONTACTS_CONFIG } from './contacts/contacts.config';
@@ -34,7 +33,6 @@ import { TaskClaimModule } from './tasks/tasks.module';
     CandidatesModule,
 
     EntityEngineModule.forEntity(CLIENTS_CONFIG),
-    ClientsModule,
 
     EntityEngineModule.forEntity(CONTACTS_CONFIG),
     EntityEngineModule.forEntity(VENDORS_CONFIG),
