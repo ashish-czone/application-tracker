@@ -15,12 +15,11 @@ import { LookupsController } from './controllers/lookups.controller';
 import { FieldDefinitionService } from './services/field-definition.service';
 import { FieldTypeSaveHookRegistry, fieldTypeSaveHookRegistry } from './services/field-type-save-hook.registry';
 import { LookupResolverService } from './services/lookup-resolver.service';
+import { EntityEngineSeedService } from './services/entity-engine-seed.service';
 
 import { createEntityController } from './create-entity-controller';
-import { seedEntityFields, seedWorkflows } from './seed-entity-fields';
 import { EAV_STORAGE_EXTENSION, type EavStorageExtension } from './extensions/eav-storage.interface';
 import { MULTI_VALUE_EXTENSION, type MultiValueExtension } from './extensions/multi-value-extension.interface';
-import { LAYOUT_EXTENSION, type LayoutExtension } from './extensions/layout-extension.interface';
 import { WORKFLOW_EXTENSION, type WorkflowExtension } from './extensions/workflow-extension.interface';
 import { AUTOMATIONS_EXTENSION, type AutomationsExtension, type EntityResolverFieldConfig } from './extensions/automations-extension.interface';
 import { AUDIT_EXTENSION, type AuditExtension } from './extensions/audit-extension.interface';
@@ -77,6 +76,7 @@ const pendingConfigs: EntityConfig[] = [];
     EntityRegistryService,
     FieldDefinitionService,
     LookupResolverService,
+    EntityEngineSeedService,
     { provide: FieldTypeSaveHookRegistry, useValue: fieldTypeSaveHookRegistry },
     {
       provide: FIELD_PERMISSION_ENTITY_RESOLVER,
@@ -97,7 +97,7 @@ const pendingConfigs: EntityConfig[] = [];
     UpdateEntityAction,
     DeleteEntityAction,
   ],
-  exports: [EntityRegistryService, FieldDefinitionService, LookupResolverService, FieldTypeSaveHookRegistry, FIELD_PERMISSION_ENTITY_RESOLVER, 'FIELD_DEFINITION_SERVICE'],
+  exports: [EntityRegistryService, FieldDefinitionService, LookupResolverService, EntityEngineSeedService, FieldTypeSaveHookRegistry, FIELD_PERMISSION_ENTITY_RESOLVER, 'FIELD_DEFINITION_SERVICE'],
 })
 export class EntityEngineModule implements OnModuleInit, OnApplicationBootstrap {
   private readonly logger = new Logger('EntityEngineModule');
@@ -108,7 +108,6 @@ export class EntityEngineModule implements OnModuleInit, OnApplicationBootstrap 
     private readonly eventRegistry: EventRegistryService,
     private readonly lookupResolver: LookupResolverService,
     private readonly fieldDefService: FieldDefinitionService,
-    @Inject(LAYOUT_EXTENSION) @Optional() private readonly layoutExtension: LayoutExtension | null,
     @Inject(WORKFLOW_EXTENSION) @Optional() private readonly workflowExt: WorkflowExtension | null,
     @Inject(AUTOMATIONS_EXTENSION) @Optional() private readonly automationsExt: AutomationsExtension | null,
     @Inject(AUDIT_EXTENSION) @Optional() private readonly auditExt: AuditExtension | null,
@@ -290,26 +289,11 @@ export class EntityEngineModule implements OnModuleInit, OnApplicationBootstrap 
       });
     }
 
-    // 7. Seed fields
-    try {
-      await seedEntityFields(config, this.fieldDefService, this.layoutExtension);
-    } catch (error) {
-      this.logger.warn(`Failed to seed fields for ${config.entityType}: ${(error as Error).message}`);
-    }
-
-    // 8. Seed workflows from fieldMeta (if workflow extension available)
-    if (this.workflowExt) {
-      try {
-        await seedWorkflows(config, this.workflowExt);
-      } catch (error) {
-        this.logger.warn(`Failed to seed workflows for ${config.entityType}: ${(error as Error).message}`);
-      }
-
-      // 9. Register custom workflow guards from hooks
-      if (config.hooks?.workflowGuards) {
-        for (const [name, fn] of Object.entries(config.hooks.workflowGuards)) {
-          this.workflowExt.registerGuard(name, fn);
-        }
+    // 7. Register custom workflow guards from hooks (in-memory; DB workflow rows
+    //    are seeded by EntityEngineSeedService via the db:seed:system CLI).
+    if (this.workflowExt && config.hooks?.workflowGuards) {
+      for (const [name, fn] of Object.entries(config.hooks.workflowGuards)) {
+        this.workflowExt.registerGuard(name, fn);
       }
     }
 

@@ -90,6 +90,7 @@ export { picklistOptions } from './schema/picklist-options';
 
 export { FieldDefinitionService } from './services/field-definition.service';
 export { LookupResolverService } from './services/lookup-resolver.service';
+export { EntityEngineSeedService } from './services/entity-engine-seed.service';
 
 // --- Controllers moved from eav-attributes ---
 
