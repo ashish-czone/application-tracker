@@ -1,96 +1,70 @@
-import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { and, eq } from 'drizzle-orm';
-import * as bcrypt from 'bcrypt';
-import { users } from '@packages/database/schema';
-import { roles } from '@packages/rbac/schema/roles';
-import { rolePermissions } from '@packages/rbac/schema/role-permissions';
-import { userRoles } from '@packages/rbac/schema/user-roles';
-import { credentials } from '../schema/credentials';
+import type { INestApplicationContext } from '@nestjs/common';
+import { DatabaseService, eq, users } from '@packages/database';
+import { RbacService, rolePermissions } from '@packages/rbac';
+import { AuthService } from '../services/auth.service';
+import { AUTH_MODULE_CONFIG, type AuthModuleConfig } from '../types';
 
-const SALT_ROUNDS = 12;
-const DEFAULT_ADMIN_EMAIL = 'admin@admin.com';
-const DEFAULT_ADMIN_PASSWORD = 'Admin1234';
+export const seedSystem = async (ctx: INestApplicationContext): Promise<void> => {
+  const database = ctx.get(DatabaseService);
+  const rbac = ctx.get(RbacService);
+  const auth = ctx.get(AuthService);
+  const config = ctx.get<AuthModuleConfig>(AUTH_MODULE_CONFIG);
 
-export const seedSystem = async (db: NodePgDatabase): Promise<void> => {
-  const adminEmail = process.env.DEFAULT_ADMIN_EMAIL ?? DEFAULT_ADMIN_EMAIL;
-  const adminPassword = process.env.DEFAULT_ADMIN_PASSWORD ?? DEFAULT_ADMIN_PASSWORD;
+  const adminEmail = config.defaultAdminEmail ?? 'admin@admin.com';
+  const adminPassword = config.defaultAdminPassword ?? 'Admin1234';
 
-  await ensureDefaultClientRole(db);
-  const adminRoleId = await ensureAdminRole(db);
-  await ensureAdminUser(db, adminRoleId, adminEmail, adminPassword);
+  await ensureDefaultClientRole(rbac);
+  const adminRoleId = await ensureAdminRole(database, rbac);
+  await ensureAdminUser(database, auth, rbac, adminRoleId, adminEmail, adminPassword);
 };
 
-async function ensureDefaultClientRole(db: NodePgDatabase): Promise<void> {
-  const [existing] = await db
-    .select({ id: roles.id })
-    .from(roles)
-    .where(and(eq(roles.userType, 'client'), eq(roles.isDefault, true)))
-    .limit(1);
-
+async function ensureDefaultClientRole(rbac: RbacService): Promise<void> {
+  const existing = await rbac.findDefaultRoleForUserType('client');
   if (existing) return;
-
-  await db.insert(roles).values({
-    name: 'Client',
-    userType: 'client',
-    isDefault: true,
-  });
+  await rbac.createRole({ name: 'Client', userType: 'client', isDefault: true });
 }
 
-async function ensureAdminRole(db: NodePgDatabase): Promise<string> {
-  const [existingAdmin] = await db
+async function ensureAdminRole(
+  database: DatabaseService,
+  rbac: RbacService,
+): Promise<string> {
+  const [existing] = await database.db
     .select({ roleId: rolePermissions.roleId })
     .from(rolePermissions)
     .where(eq(rolePermissions.permission, '*'))
     .limit(1);
 
-  if (existingAdmin) return existingAdmin.roleId;
+  if (existing) return existing.roleId;
 
-  const [adminRole] = await db
-    .insert(roles)
-    .values({ name: 'Admin', userType: 'client', isDefault: false })
-    .returning({ id: roles.id });
-
-  await db
-    .insert(rolePermissions)
-    .values({ roleId: adminRole.id, permission: '*' });
-
-  return adminRole.id;
+  const role = await rbac.createRole({ name: 'Admin', userType: 'client' });
+  await rbac.setRolePermissions(role.id, [{ name: '*' }]);
+  return role.id;
 }
 
 async function ensureAdminUser(
-  db: NodePgDatabase,
+  database: DatabaseService,
+  auth: AuthService,
+  rbac: RbacService,
   adminRoleId: string,
   adminEmail: string,
   adminPassword: string,
 ): Promise<void> {
-  const [existing] = await db
-    .select({ id: users.id })
-    .from(users)
-    .where(eq(users.email, adminEmail))
-    .limit(1);
-
+  const existing = await auth.findUserByEmail(adminEmail);
   if (existing) return;
 
-  const [newUser] = await db
+  // Bootstrap user: no actor exists yet, so the event-emitting UsersService.create
+  // path is unavailable. Insert directly so the audit listener has nothing to attribute.
+  // Role assignment + credential still go through the service layer.
+  const [user] = await database.db
     .insert(users)
     .values({
-      email: adminEmail,
+      email: adminEmail.toLowerCase(),
       firstName: 'Admin',
       lastName: 'User',
       userType: 'client',
     })
-    .returning({ id: users.id });
+    .returning();
 
-  const secretHash = await bcrypt.hash(adminPassword, SALT_ROUNDS);
-  await db.insert(credentials).values({
-    userId: newUser.id,
-    provider: 'password',
-    identifier: adminEmail,
-    secretHash,
-  });
-
-  await db.insert(userRoles).values({
-    userId: newUser.id,
-    roleId: adminRoleId,
-  });
-}
+  await auth.createPasswordCredential(user.id, adminEmail.toLowerCase(), adminPassword);
+  await rbac.assignRoleToUser(user.id, adminRoleId);
+};

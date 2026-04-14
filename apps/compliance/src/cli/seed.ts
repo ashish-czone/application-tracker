@@ -1,5 +1,3 @@
-import path from 'node:path';
-import { config as loadEnv } from 'dotenv';
 import { NestFactory } from '@nestjs/core';
 import { runSeeds, type SeedKind, type SeedSource } from '@packages/database/seeder';
 import { platformSeedSources } from '@packages/app-shell/seeds';
@@ -17,8 +15,6 @@ function parseKind(argv: string[]): SeedKind {
 }
 
 async function main() {
-  loadEnv({ path: path.resolve(__dirname, '../../.env') });
-
   const kind = parseKind(process.argv.slice(2));
 
   const sources: SeedSource[] = [

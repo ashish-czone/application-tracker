@@ -10,8 +10,8 @@
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
     "db:migrate": "tsx src/cli/migrate.ts",
-    "db:seed:system": "nest build && node dist/cli/seed.js --kind=system",
-    "db:seed:demo": "nest build && node dist/cli/seed.js --kind=demo"
+    "db:seed:system": "nest build && node --env-file=.env dist/cli/seed.js --kind=system",
+    "db:seed:demo": "nest build && node --env-file=.env dist/cli/seed.js --kind=demo"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
