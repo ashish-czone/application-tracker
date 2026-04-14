@@ -1,4 +1,4 @@
-import type { SeedSource } from '@packages/database/seeder';
+import type { SeedSource, SeedFn } from '@packages/database/seeder';
 
 /**
  * Recruit domain seed sources, split by kind. The cli picks the
@@ -19,5 +19,15 @@ export function recruitSystemSeedSources(): SeedSource[] {
 }
 
 export function recruitDemoSeedSources(): SeedSource[] {
-  return [];
+  const demo = (name: string, load: () => Promise<SeedFn>): SeedSource => ({
+    name,
+    kind: 'demo',
+    load,
+  });
+
+  return [
+    demo('@domains/recruit-api/countries', () =>
+      import('./shared/seeds/countries').then((m) => m.seedCountries),
+    ),
+  ];
 }
