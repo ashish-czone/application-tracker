@@ -375,6 +375,9 @@ importers:
       '@packages/workflows':
         specifier: workspace:*
         version: link:../../packages/platform/workflows/api
+      bcrypt:
+        specifier: ^5.1.1
+        version: 5.1.1
       class-transformer:
         specifier: ^0.5.1
         version: 0.5.1
@@ -934,6 +937,9 @@ importers:
       '@packages/workflows':
         specifier: workspace:*
         version: link:../../packages/platform/workflows/api
+      bcrypt:
+        specifier: ^5.1.1
+        version: 5.1.1
       class-transformer:
         specifier: ^0.5.1
         version: 0.5.1
