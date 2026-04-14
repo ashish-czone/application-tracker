@@ -1,0 +1,24 @@
+{
+  "name": "@domains/compliance-api",
+  "version": "0.0.1",
+  "private": true,
+  "main": "index.ts",
+  "scripts": {
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.0.0",
+    "@packages/common": "workspace:*",
+    "@packages/database": "workspace:*",
+    "@packages/domains": "workspace:*",
+    "@packages/entity-engine": "workspace:*",
+    "@packages/events": "workspace:*",
+    "@packages/logger": "workspace:*",
+    "@packages/tasks": "workspace:*"
+  },
+  "devDependencies": {
+    "drizzle-orm": "^0.45.1",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}
