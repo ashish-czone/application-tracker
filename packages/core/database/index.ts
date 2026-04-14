@@ -44,4 +44,4 @@ export {
   migrationsTableFor,
   type PackageMigrationSource,
   type RunMigrationsOptions,
-} from './migrations';
+} from './migrator';

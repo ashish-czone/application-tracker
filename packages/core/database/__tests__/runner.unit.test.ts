@@ -27,7 +27,7 @@ vi.mock('pg', () => ({
   },
 }));
 
-import { migrationsTableFor, runMigrations } from '../runner';
+import { migrationsTableFor, runMigrations } from '../migrator';
 
 describe('migrationsTableFor', () => {
   it('slugifies scoped package names', () => {
