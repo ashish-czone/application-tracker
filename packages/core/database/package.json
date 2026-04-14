@@ -6,6 +6,7 @@
   "exports": {
     ".": "./index.ts",
     "./migrator": "./migrator.ts",
+    "./seeder": "./seeder.ts",
     "./schema": "./schema/index.ts",
     "./schema/*": "./schema/*.ts"
   },
