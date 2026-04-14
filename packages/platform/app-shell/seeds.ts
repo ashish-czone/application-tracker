@@ -3,24 +3,29 @@ import type { SeedSource, SeedFn } from '@packages/database/seeder';
 type PkgName = '@packages/auth';
 
 /**
- * Ordered list of platform seed sources. Each entry lazy-loads a
- * `seeds/system.ts` or `seeds/demo.ts` module from the owning package.
- * The order mirrors `platformMigrationSources`: anything a later seed
- * depends on (FK refs, lookups) must come first.
+ * Ordered list of platform **system** seed sources. Each entry lazy-loads
+ * a `seeds/system.ts` module from the owning package. The order mirrors
+ * `platformMigrationSources`: anything a later seed depends on (FK refs,
+ * lookups) must come first.
  *
  * Seed functions receive an `INestApplicationContext` and call services
  * directly via `ctx.get(SomeService)` — no raw drizzle duplication of
  * service logic, no OnApplicationBootstrap.
  *
+ * **No demo seeds at platform level.** Packages may only ship system
+ * seeds (the peer of migrations — required for the package to function).
+ * Demo data is opinionated sample content whose shape depends on the
+ * consuming app; it belongs to the domain that wires the app together,
+ * never to a platform package. See the `feedback_seeds_ownership` rule.
+ *
  * Adding a new package seed:
  * 1. Create `packages/<tier>/<name>/api/seeds/system.ts` exporting
- *    `export const seedSystem: SeedFn`, or `seeds/demo.ts` exporting
- *    `export const seedDemo: SeedFn`.
+ *    `export const seedSystem: SeedFn`.
  * 2. Add `"./seeds/system": "./seeds/system.ts"` to the package's
- *    `exports` field.
+ *    `exports` field (if using subpath exports).
  * 3. Register a new entry here in the correct dep order.
  */
-export function platformSeedSources(): SeedSource[] {
+export function platformSystemSeedSources(): SeedSource[] {
   const system = (
     name: PkgName,
     load: () => Promise<{ seedSystem: SeedFn }>,

@@ -1,6 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { runSeeds, type SeedKind, type SeedSource } from '@packages/database/seeder';
-import { platformSeedSources } from '@packages/app-shell/seeds';
+import { platformSystemSeedSources } from '@packages/app-shell/seeds';
 import { AppModule } from '../app.module';
 
 function parseKind(argv: string[]): SeedKind {
@@ -14,16 +14,20 @@ function parseKind(argv: string[]): SeedKind {
   return kind;
 }
 
+function collectSources(kind: SeedKind): SeedSource[] {
+  if (kind === 'system') {
+    // Compliance domain has no domain-level system seeds yet.
+    return [...platformSystemSeedSources()];
+  }
+  // Compliance domain has no demo seeds yet.
+  return [];
+}
+
 async function main() {
   const kind = parseKind(process.argv.slice(2));
 
-  const sources: SeedSource[] = [
-    ...platformSeedSources(),
-    // Domain seeds (compliance) — none registered yet.
-  ];
-
   await runSeeds({
-    sources,
+    sources: collectSources(kind),
     kind,
     bootstrap: () =>
       NestFactory.createApplicationContext(AppModule, {

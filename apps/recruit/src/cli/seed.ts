@@ -1,6 +1,10 @@
 import { NestFactory } from '@nestjs/core';
 import { runSeeds, type SeedKind, type SeedSource } from '@packages/database/seeder';
-import { platformSeedSources } from '@packages/app-shell/seeds';
+import { platformSystemSeedSources } from '@packages/app-shell/seeds';
+import {
+  recruitSystemSeedSources,
+  recruitDemoSeedSources,
+} from '@domains/recruit-api/seeds';
 import { AppModule } from '../app.module';
 
 function parseKind(argv: string[]): SeedKind {
@@ -14,17 +18,22 @@ function parseKind(argv: string[]): SeedKind {
   return kind;
 }
 
+function collectSources(kind: SeedKind): SeedSource[] {
+  if (kind === 'system') {
+    return [
+      ...platformSystemSeedSources(),
+      ...recruitSystemSeedSources(),
+    ];
+  }
+  // Demo seeds only live at domain level — packages never ship demo data.
+  return [...recruitDemoSeedSources()];
+}
+
 async function main() {
   const kind = parseKind(process.argv.slice(2));
 
-  const sources: SeedSource[] = [
-    ...platformSeedSources(),
-    // Domain seeds (recruit) — registered as each OnApplicationBootstrap seed
-    // service is migrated to a seed source.
-  ];
-
   await runSeeds({
-    sources,
+    sources: collectSources(kind),
     kind,
     bootstrap: () =>
       NestFactory.createApplicationContext(AppModule, {
