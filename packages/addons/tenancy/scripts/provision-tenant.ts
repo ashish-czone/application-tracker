@@ -17,7 +17,7 @@
  *   SERVICE_PRIVATE_KEY — PEM-encoded private key for service-auth
  *   DATABASE_ADMIN_URL — PostgreSQL admin connection for CREATE DATABASE
  *                        (e.g., postgresql://admin:pass@localhost:5432/postgres)
- *   MIGRATIONS_FOLDER  — Path to Drizzle migrations (default: ./apps/recruit/drizzle)
+ *   MIGRATIONS_FOLDER  — Path to a Drizzle migrations folder (required)
  */
 
 import jwt from 'jsonwebtoken';
@@ -124,7 +124,7 @@ async function createDatabase(adminUrl: string, dbName: string): Promise<void> {
 }
 
 async function runMigrations(databaseUrl: string): Promise<void> {
-  const migrationsFolder = process.env.MIGRATIONS_FOLDER ?? './apps/recruit/drizzle';
+  const migrationsFolder = getEnvOrDie('MIGRATIONS_FOLDER');
   const pool = new Pool({ connectionString: databaseUrl });
   try {
     const db = drizzle(pool);

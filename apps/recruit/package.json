@@ -9,10 +9,7 @@
     "start": "node dist/main",
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
-    "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio"
+    "db:migrate": "tsx src/cli/migrate.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
@@ -22,6 +19,7 @@
     "@nestjs/platform-express": "^11.0.0",
     "@nestjs/swagger": "^11.0.0",
     "@nestjs/throttler": "^6.4.0",
+    "dotenv": "^16.4.0",
     "@packages/audit": "workspace:*",
     "@packages/auth": "workspace:*",
     "@packages/common": "workspace:*",
@@ -70,12 +68,10 @@
     "@types/multer": "^2.1.0",
     "@types/node": "^22.0.0",
     "@types/supertest": "^6.0.2",
-    "drizzle-kit": "^0.31.9",
-    "drizzle-orm": "^0.45.1",
     "jsonwebtoken": "^9.0.2",
-    "pg": "^8.20.0",
     "supertest": "^7.0.0",
     "ts-loader": "^9.5.4",
+    "tsx": "^4.20.0",
     "typescript": "^5.7.0",
     "vitest": "^3.0.0",
     "webpack": "^5.105.4",
