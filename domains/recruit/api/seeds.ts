@@ -29,5 +29,8 @@ export function recruitDemoSeedSources(): SeedSource[] {
     demo('@domains/recruit-api/countries', () =>
       import('./shared/seeds/countries').then((m) => m.seedCountries),
     ),
+    demo('@domains/recruit-api/taxonomy', () =>
+      import('./shared/seeds/taxonomy').then((m) => m.seedTaxonomy),
+    ),
   ];
 }
