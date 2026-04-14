@@ -350,7 +350,7 @@ describe('defineEntity', () => {
       expect(config.hierarchy).toBeUndefined();
     });
 
-    it('should register parentId, path, and depth as system columns when hierarchy is true', () => {
+    it('should register path and depth (but not parentId) as system columns when hierarchy is true', () => {
       const config = defineEntity({
         table: hierarchicalTable,
         slug: 'hierarchical-entities',
@@ -361,9 +361,60 @@ describe('defineEntity', () => {
         ui: { icon: 'Folder' },
       });
 
-      expect(config.systemColumns).toContain('parentId');
       expect(config.systemColumns).toContain('path');
       expect(config.systemColumns).toContain('depth');
+      // parentId is user-editable — seeded as a lookup field, not a system column
+      expect(config.systemColumns).not.toContain('parentId');
+    });
+
+    it('should auto-inject parentId as a self-lookup field when hierarchy is true', () => {
+      const config = defineEntity({
+        table: hierarchicalTable,
+        slug: 'hierarchical-entities',
+        singularName: 'Folder',
+        pluralName: 'Folders',
+        hierarchy: true,
+        fields: {
+          name: { type: 'text', label: 'Name', isLabel: true },
+        },
+        ui: { icon: 'Folder' },
+      });
+
+      expect(config.fieldMeta.parentId).toBeDefined();
+      expect(config.fieldMeta.parentId.fieldType).toBe('lookup');
+      expect(config.fieldMeta.parentId.lookupEntity).toBe('hierarchical-entities');
+      expect(config.fieldMeta.parentId.lookupLabelField).toBe('name');
+      expect(config.fieldMeta.parentId.isSystem).toBe(true);
+      expect(config.fieldMeta.parentId.label).toBe('Parent Folder');
+    });
+
+    it('should not auto-inject parentId when the consumer declares it explicitly', () => {
+      const config = defineEntity({
+        table: hierarchicalTable,
+        slug: 'hierarchical-entities',
+        hierarchy: true,
+        fields: {
+          name: { type: 'text', label: 'Name' },
+          parentId: { type: 'lookup', label: 'Custom Parent', entity: 'hierarchical-entities' },
+        },
+        ui: { icon: 'Folder' },
+      });
+
+      expect(config.fieldMeta.parentId.label).toBe('Custom Parent');
+    });
+
+    it('should not auto-inject parentId when hierarchy is false', () => {
+      const config = defineEntity({
+        table: hierarchicalTable,
+        slug: 'hierarchical-entities',
+        hierarchy: false,
+        fields: {
+          name: { type: 'text', label: 'Name' },
+        },
+        ui: { icon: 'Folder' },
+      });
+
+      expect(config.fieldMeta.parentId).toBeUndefined();
     });
 
     it('should throw when hierarchy: true but the table is missing hierarchyColumns()', () => {

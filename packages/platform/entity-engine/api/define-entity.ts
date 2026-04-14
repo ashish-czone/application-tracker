@@ -313,7 +313,9 @@ export function defineEntity<TTable extends PgTable>(model: ModelDefinition<TTab
           `...hierarchyColumns() from @packages/hierarchy. Missing columns: ${missing.join(', ')}.`,
       );
     }
-    systemColumns.push('parentId', 'path', 'depth');
+    // parentId is user-editable (seeded as a lookup field below); only
+    // path/depth are pure infrastructure.
+    systemColumns.push('path', 'depth');
   }
 
   let sortOrder = 0;
@@ -404,6 +406,22 @@ export function defineEntity<TTable extends PgTable>(model: ModelDefinition<TTab
     // Note: system: true fields are NOT added to systemColumns.
     // They are seeded into field_definitions with isSystem/isReadonly flags,
     // so they appear in conditions, filters, and views but can't be user-edited.
+  }
+
+  // Hierarchy: auto-inject parentId as a self-lookup field so forms, search,
+  // and filters treat it like any other lookup. Skipped if the consumer
+  // declared their own parentId field explicitly.
+  if (model.hierarchy && !fieldMeta.parentId) {
+    const primaryLabel = typeof nameField === 'string' && nameField !== 'id' ? nameField : undefined;
+    fieldMeta.parentId = {
+      label: `Parent ${singularName}`,
+      section: 'default',
+      sortOrder: sortOrder++,
+      fieldType: 'lookup',
+      lookupEntity: entityType,
+      lookupLabelField: primaryLabel,
+      isSystem: true,
+    };
   }
 
   // Build lookup config from isLabel fields
