@@ -9,6 +9,7 @@ const config: Config = {
     '../../packages/core/ui/components/**/*.{ts,tsx}',
     '../../packages/core/ui/hooks/**/*.{ts,tsx}',
     '../../packages/core/ui/lib/**/*.{ts,tsx}',
+    '../../packages/core/ui/kit/**/*.{ts,tsx}',
     // @packages/app-shell-ui (platform)
     '../../packages/platform/app-shell-ui/index.tsx',
     '../../packages/platform/app-shell-ui/src/**/*.{ts,tsx}',

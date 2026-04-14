@@ -6,8 +6,10 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['"Plus Jakarta Sans"', 'system-ui', '-apple-system', 'sans-serif'],
-        display: ['"Plus Jakarta Sans"', 'system-ui', '-apple-system', 'sans-serif'],
+        sans: ['var(--font-sans)', '"Plus Jakarta Sans"', 'system-ui', '-apple-system', 'sans-serif'],
+        serif: ['var(--font-serif)', '"Iowan Old Style"', 'Georgia', 'serif'],
+        mono: ['var(--font-mono)', '"SF Mono"', 'ui-monospace', 'Menlo', 'monospace'],
+        display: ['var(--font-serif)', '"Plus Jakarta Sans"', 'system-ui', '-apple-system', 'sans-serif'],
       },
       colors: {
         border: 'hsl(var(--border))',
@@ -60,6 +62,44 @@ const config: Config = {
           'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
         },
         'content-bg': 'hsl(var(--content-bg))',
+        // "The Instrument" — compliance theme tokens
+        paper: {
+          DEFAULT: 'hsl(var(--paper))',
+          raised: 'hsl(var(--paper-raised))',
+          sunken: 'hsl(var(--paper-sunken))',
+        },
+        ink: {
+          DEFAULT: 'hsl(var(--ink))',
+          soft: 'hsl(var(--ink-soft))',
+          muted: 'hsl(var(--ink-muted))',
+        },
+        rule: {
+          DEFAULT: 'hsl(var(--rule))',
+          strong: 'hsl(var(--rule-strong))',
+        },
+        authority: {
+          DEFAULT: 'hsl(var(--authority))',
+          soft: 'hsl(var(--authority-soft))',
+        },
+        signal: {
+          DEFAULT: 'hsl(var(--signal))',
+          soft: 'hsl(var(--signal-soft))',
+        },
+        filed: {
+          DEFAULT: 'hsl(var(--filed))',
+          soft: 'hsl(var(--filed-soft))',
+        },
+        'due-soon': {
+          DEFAULT: 'hsl(var(--due-soon))',
+          soft: 'hsl(var(--due-soon-soft))',
+        },
+      },
+      letterSpacing: {
+        eyebrow: '0.14em',
+        tabular: '0.02em',
+      },
+      boxShadow: {
+        'ink-hair': '0 1px 0 0 hsl(var(--rule))',
       },
       borderRadius: {
         lg: 'var(--radius)',
