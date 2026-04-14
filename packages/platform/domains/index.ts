@@ -1,6 +1,7 @@
 import type { Type } from '@nestjs/common';
 import type { ComponentType } from 'react';
 import type { RouteObject } from 'react-router';
+import type { LucideIcon } from 'lucide-react';
 
 export interface DomainBackendManifest {
   name: string;
@@ -13,6 +14,27 @@ export interface DomainBackendManifest {
  * Matches the EntityDetailPage shape so domain components can drop into the generic slot.
  */
 export type DomainDetailPageComponent = ComponentType<Record<string, never>>;
+
+/**
+ * Sidebar menu entry contributed by a domain (or the platform shell).
+ * Position controls whether the item renders before or after auto-generated
+ * entity nav items. Children render as a collapsible group.
+ */
+export interface MenuItem {
+  path: string;
+  label: string;
+  icon: LucideIcon;
+  permission?: string;
+  position?: 'before' | 'after';
+  children?: MenuItem[];
+}
+
+/**
+ * Entity UI config registered with the EntityEngineProvider. Kept loose
+ * (`unknown`) here because the concrete shape lives in
+ * `@packages/entity-engine-ui` and is heavyweight to type from this layer.
+ */
+export type DomainEntityUIConfig = unknown;
 
 export interface DomainWebManifest {
   name: string;
@@ -29,4 +51,15 @@ export interface DomainWebManifest {
    * On conflict, the first-registered domain wins.
    */
   detailPageOverrides?: Record<string, DomainDetailPageComponent>;
+  /**
+   * Sidebar menu items contributed by this domain. Merged with platform
+   * shell items. First-registered wins on path conflict.
+   */
+  menuItems?: MenuItem[];
+  /**
+   * Entity UI configs (column overrides, custom create forms, etc.) the
+   * EntityEngineProvider should register. The shell concatenates configs
+   * across all enabled domains.
+   */
+  entityUIConfigs?: DomainEntityUIConfig[];
 }
