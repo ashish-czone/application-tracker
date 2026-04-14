@@ -84,3 +84,142 @@
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   }
 }
+
+/* ============================================================================
+   Theme: "The Instrument" — compliance-app aesthetic
+   ============================================================================
+   Opt-in. Apply `.theme-instrument` to the <body> or any subtree to activate.
+   Overrides the shadcn semantic slots with a warm, editorial palette and
+   declares kit-specific tokens (paper, ink, authority, signal, filed, etc.).
+   ========================================================================== */
+@layer base {
+  .theme-instrument {
+    /* Raw palette (HSL triples so Tailwind's hsl(var(--x)) pattern works) */
+    --paper: 42 36% 94%;           /* #F6F3EC warm parchment */
+    --paper-raised: 42 53% 97%;    /* #FBF8F2 card surface */
+    --paper-sunken: 41 28% 90%;    /* slightly recessed surfaces */
+    --ink: 216 9% 12%;             /* #1A1D21 near-black warm */
+    --ink-soft: 218 8% 31%;        /* #4A4F57 secondary text */
+    --ink-muted: 40 7% 51%;        /* #8C8576 tertiary warm gray */
+    --rule: 41 28% 84%;            /* #E1DBCE hairline */
+    --rule-strong: 40 18% 68%;     /* emphasized hairline */
+    --authority: 218 56% 24%;      /* #1D3461 deep ink-blue */
+    --authority-soft: 218 40% 40%;
+    --signal: 19 75% 44%;          /* #C6541D burnt orange — urgency only */
+    --signal-soft: 19 72% 92%;
+    --filed: 140 31% 33%;          /* #3A6F4A muted forest */
+    --filed-soft: 140 35% 90%;
+    --due-soon: 42 62% 45%;        /* #B88A2E warm gold */
+    --due-soon-soft: 42 60% 92%;
+
+    /* Map to shadcn slots so every existing component inherits the theme */
+    --background: var(--paper);
+    --foreground: var(--ink);
+    --card: var(--paper-raised);
+    --card-foreground: var(--ink);
+    --popover: var(--paper-raised);
+    --popover-foreground: var(--ink);
+    --primary: var(--authority);
+    --primary-foreground: 42 53% 97%;
+    --secondary: 42 36% 88%;
+    --secondary-foreground: var(--ink);
+    --muted: 41 28% 90%;
+    --muted-foreground: var(--ink-soft);
+    --accent: 42 36% 88%;
+    --accent-foreground: var(--ink);
+    --destructive: var(--signal);
+    --destructive-foreground: 42 53% 97%;
+    --success: var(--filed);
+    --success-foreground: 140 35% 95%;
+    --warning: var(--due-soon);
+    --warning-foreground: 42 53% 97%;
+    --border: var(--rule);
+    --input: var(--rule);
+    --ring: var(--authority);
+    --radius: 0.25rem; /* sharper than default shadcn */
+
+    --sidebar: var(--paper-raised);
+    --sidebar-foreground: var(--ink);
+    --sidebar-border: var(--rule);
+    --sidebar-muted: var(--ink-muted);
+    --sidebar-accent: var(--authority);
+    --sidebar-accent-foreground: 42 53% 97%;
+
+    --content-bg: var(--paper);
+
+    /* Typography stacks */
+    --font-sans: 'General Sans', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    --font-serif: 'Instrument Serif', 'Iowan Old Style', Georgia, serif;
+    --font-mono: 'JetBrains Mono', 'SF Mono', ui-monospace, Menlo, monospace;
+
+    background-color: hsl(var(--paper));
+    color: hsl(var(--ink));
+    font-family: var(--font-sans);
+    font-feature-settings: 'ss01', 'cv11';
+  }
+
+  .theme-instrument .font-display,
+  .theme-instrument h1,
+  .theme-instrument h2,
+  .theme-instrument h3 {
+    font-family: var(--font-serif);
+    font-feature-settings: 'dlig', 'liga';
+  }
+
+  .theme-instrument .font-mono,
+  .theme-instrument [data-numeric='true'] {
+    font-family: var(--font-mono);
+    font-feature-settings: 'tnum', 'zero', 'ss01';
+  }
+
+  /* Grain overlay — subtle paper texture via layered radial gradients. */
+  .theme-instrument .paper-grain {
+    background-image:
+      radial-gradient(circle at 20% 30%, hsla(40, 30%, 60%, 0.035) 0px, transparent 1px),
+      radial-gradient(circle at 70% 60%, hsla(40, 30%, 40%, 0.04) 0px, transparent 1.5px),
+      radial-gradient(circle at 45% 80%, hsla(40, 30%, 50%, 0.03) 0px, transparent 1px);
+    background-size: 3px 3px, 5px 5px, 7px 7px;
+  }
+
+  /* Hairline rule — the workhorse divider of this aesthetic. */
+  .theme-instrument .rule-hair {
+    border-color: hsl(var(--rule));
+    border-width: 1px;
+  }
+  .theme-instrument .rule-double {
+    border-top: 1px solid hsl(var(--rule));
+    box-shadow: 0 2px 0 -1px hsl(var(--rule));
+  }
+
+  /* Small caps label — used everywhere for eyebrows and metadata. */
+  .theme-instrument .small-caps {
+    font-family: var(--font-sans);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-weight: 500;
+    font-size: 11px;
+    color: hsl(var(--ink-muted));
+  }
+}
+
+/* ============================================================================
+   Kit keyframes — motion primitives used by framer-motion and CSS fallbacks.
+   ========================================================================== */
+@layer base {
+  @keyframes stamp-in {
+    0%   { opacity: 0; transform: rotate(6deg) scale(1.3); }
+    60%  { opacity: 1; transform: rotate(-3deg) scale(0.95); }
+    100% { opacity: 1; transform: rotate(-2deg) scale(1); }
+  }
+  @keyframes reveal-up {
+    0%   { opacity: 0; transform: translateY(8px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes rule-draw {
+    0%   { transform: scaleX(0); transform-origin: left; }
+    100% { transform: scaleX(1); transform-origin: left; }
+  }
+  .theme-instrument .stamp-in { animation: stamp-in 0.55s cubic-bezier(0.2, 0, 0, 1) both; }
+  .theme-instrument .reveal-up { animation: reveal-up 0.45s cubic-bezier(0.2, 0, 0, 1) both; }
+  .theme-instrument .rule-draw { animation: rule-draw 0.6s cubic-bezier(0.2, 0, 0, 1) both; }
+}
