@@ -506,6 +506,9 @@ importers:
 
   apps/recruit:
     dependencies:
+      '@domains/compliance-api':
+        specifier: workspace:*
+        version: link:../../domains/compliance/api
       '@domains/recruit-api':
         specifier: workspace:*
         version: link:../../domains/recruit/api

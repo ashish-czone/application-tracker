@@ -39,7 +39,16 @@ import { PuppeteerPdfProvider } from '@packages/pdf-generator/providers/puppetee
 import { UsersModule } from '@packages/users';
 import { OrgUnitsModule } from '@packages/org-units';
 import { recruitBackend } from '@domains/recruit-api';
+import { complianceBackend } from '@domains/compliance-api';
 import { validate } from './config/env.validation';
+
+const APP_DOMAIN = process.env.APP_DOMAIN;
+if (APP_DOMAIN !== 'recruit' && APP_DOMAIN !== 'compliance') {
+  throw new Error(
+    `APP_DOMAIN must be set to 'recruit' or 'compliance' before bootstrap (got: ${APP_DOMAIN ?? 'undefined'})`,
+  );
+}
+const activeDomain = APP_DOMAIN === 'compliance' ? complianceBackend : recruitBackend;
 
 @Module({
   imports: [
@@ -126,7 +135,7 @@ import { validate } from './config/env.validation';
     OAuthModule.register(),
     UsersModule,
     OrgUnitsModule,
-    recruitBackend.module,
+    activeDomain.module,
   ],
   providers: [
     {
