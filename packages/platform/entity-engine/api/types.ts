@@ -590,6 +590,12 @@ export interface EntityConfig<TTable extends PgTable = PgTable> {
    *  When false: all non-relational fields must have DB columns, no EAV overhead. */
   customFields?: boolean;
 
+  /** Mark this entity as hierarchical. Requires the table to spread `...hierarchyColumns()`
+   *  from `@packages/hierarchy`. Enables parent/child relations, path/depth maintenance,
+   *  and HierarchyService-backed reparent/ancestor/descendant operations on the entity
+   *  service (wired in EntityEngineModule). Default: false. */
+  hierarchy?: boolean;
+
   // --- Notes ---
 
   /** Enable the notes tab on the entity detail page. Default: false. */

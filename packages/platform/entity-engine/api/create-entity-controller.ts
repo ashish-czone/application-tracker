@@ -181,6 +181,38 @@ export function createEntityController(config: EntityConfig, serviceToken: strin
     async restore(@Param('id', ParseUUIDPipe) id: string) {
       return this.entityService.restore(id);
     }
+
+    // ── Hierarchy routes ────────────────────────────────────────────────
+    // Only functional when config.hierarchy === true. For non-hierarchical
+    // entities, EntityService throws BadRequestException.
+
+    @Post(':id/reparent')
+    @RequirePermission(updatePermission)
+    @ApiOperation({ summary: `Move a ${config.singularName.toLowerCase()} under a new parent` })
+    async reparent(
+      @Param('id', ParseUUIDPipe) id: string,
+      @Body() body: { parentId: string | null },
+      @CurrentUser() user: JwtPayload,
+    ) {
+      const accessCtx = await buildAccessContext(user, updatePermission, config.entityType, this.positionScopeProvider);
+      return this.entityService.reparent(id, body.parentId ?? null, user.userId, accessCtx);
+    }
+
+    @Get(':id/ancestors')
+    @RequirePermission(readPermission)
+    @ApiOperation({ summary: `Get the ancestor chain of a ${config.singularName.toLowerCase()}` })
+    async getAncestors(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: JwtPayload) {
+      const accessCtx = await buildAccessContext(user, readPermission, config.entityType, this.positionScopeProvider);
+      return this.entityService.getAncestors(id, accessCtx);
+    }
+
+    @Get(':id/descendants')
+    @RequirePermission(readPermission)
+    @ApiOperation({ summary: `Get all descendants of a ${config.singularName.toLowerCase()}` })
+    async getDescendants(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: JwtPayload) {
+      const accessCtx = await buildAccessContext(user, readPermission, config.entityType, this.positionScopeProvider);
+      return this.entityService.getDescendants(id, accessCtx);
+    }
   }
 
   // Give the class a unique name for NestJS DI and debugging

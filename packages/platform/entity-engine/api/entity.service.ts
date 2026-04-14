@@ -17,6 +17,7 @@ import {
 import { fieldTypeRegistry } from '@packages/field-types';
 import { DatabaseService } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
+import { HierarchyService } from '@packages/hierarchy';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { FieldDefinitionService } from './services/field-definition.service';
 import { LookupResolverService } from './services/lookup-resolver.service';
@@ -65,6 +66,7 @@ export class EntityService {
     private readonly entityRegistry: EntityRegistryService,
     appLogger: AppLoggerService,
     private readonly positionScopeProvider: PositionScopeProvider | null = null,
+    private readonly hierarchyService: HierarchyService | null = null,
   ) {
     this.logger = appLogger.forContext(`EntityService[${config.entityType}]`);
   }
@@ -528,6 +530,97 @@ export class EntityService {
   }
 
   // ---------------------------------------------------------------------------
+  // HIERARCHY
+  // ---------------------------------------------------------------------------
+
+  private assertHierarchyEnabled(): HierarchyService {
+    if (!this.config.hierarchy || !this.hierarchyService) {
+      throw new BadRequestException(
+        `${this.config.singularName} does not support hierarchy operations`,
+      );
+    }
+    return this.hierarchyService;
+  }
+
+  /**
+   * Move a node (and its entire subtree) under a new parent.
+   * Pass `newParentId: null` to make the node a root.
+   * Delegates cycle detection and path updates to HierarchyService.
+   */
+  async reparent(
+    id: string,
+    newParentId: string | null,
+    actorId: string,
+    accessCtx?: DataAccessContext,
+  ): Promise<Record<string, unknown>> {
+    const hierarchy = this.assertHierarchyEnabled();
+    const { config } = this;
+    const table = config.table as any;
+
+    // Scope check + fetch current row for its path
+    await this.findOneOrFail(id, accessCtx);
+    const [node] = await this.database.db
+      .select()
+      .from(table)
+      .where(withTenant(table, eq(table.id, id)))
+      .limit(1) as any[];
+
+    let newParentPath: string | null = null;
+    if (newParentId) {
+      const [parent] = await this.database.db
+        .select()
+        .from(table)
+        .where(withTenant(table, eq(table.id, newParentId)))
+        .limit(1) as any[];
+      if (!parent) {
+        throw new NotFoundException(`Parent ${config.singularName} not found: ${newParentId}`);
+      }
+      newParentPath = parent.path as string;
+    }
+
+    await hierarchy.move(
+      table,
+      table.id,
+      table.parentId,
+      table.path,
+      table.depth,
+      id,
+      node.path as string,
+      newParentId,
+      newParentPath,
+    );
+
+    this.logger.log(`${config.singularName} reparented`, { entityId: id, newParentId, actorId });
+    return this.findOneOrFail(id, accessCtx);
+  }
+
+  /**
+   * Get all ancestors of a node (root first, parent last). Excludes the node itself.
+   */
+  async getAncestors(id: string, accessCtx?: DataAccessContext): Promise<Record<string, unknown>[]> {
+    const hierarchy = this.assertHierarchyEnabled();
+    const { config } = this;
+    const table = config.table as any;
+
+    const node = await this.findOneOrFail(id, accessCtx);
+    const rows = await hierarchy.getAncestors(table, table.id, table.path, node.path as string);
+    return Promise.all(rows.map((r) => this.toResponse(r)));
+  }
+
+  /**
+   * Get all descendants of a node. Excludes the node itself.
+   */
+  async getDescendants(id: string, accessCtx?: DataAccessContext): Promise<Record<string, unknown>[]> {
+    const hierarchy = this.assertHierarchyEnabled();
+    const { config } = this;
+    const table = config.table as any;
+
+    const node = await this.findOneOrFail(id, accessCtx);
+    const rows = await hierarchy.getDescendants(table, table.path, node.path as string);
+    return Promise.all(rows.map((r) => this.toResponse(r)));
+  }
+
+  // ---------------------------------------------------------------------------
   // CREATE
   // ---------------------------------------------------------------------------
 
@@ -565,6 +658,29 @@ export class EntityService {
 
     // Pre-generate entity ID so onBeforeSave hooks can use it (e.g. file paths)
     const entityId = crypto.randomUUID();
+
+    // Hierarchy: compute path + depth from the parent's path before insert.
+    // Must happen after splitPayload (so parentId is in standardFields) and
+    // before the insert so path/depth land on the inserted row.
+    if (config.hierarchy && this.hierarchyService) {
+      const parentId = standardFields.parentId as string | null | undefined;
+      let parentPath: string | null = null;
+      if (parentId) {
+        const table = config.table as any;
+        const [parent] = await this.database.db
+          .select()
+          .from(table)
+          .where(withTenant(table, eq(table.id, parentId)))
+          .limit(1) as any[];
+        if (!parent) {
+          throw new BadRequestException(`Parent ${config.singularName} not found: ${parentId}`);
+        }
+        parentPath = parent.path as string;
+      }
+      const { path, depth } = this.hierarchyService.computeInsertValues(parentPath, entityId);
+      standardFields.path = path;
+      standardFields.depth = depth;
+    }
 
     // Phase 1: onBeforeSave hooks (pre-transaction, can throw to abort)
     const allFields = { ...customFields, ...relationalFields };

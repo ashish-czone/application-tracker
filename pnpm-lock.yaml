@@ -2791,6 +2791,9 @@ importers:
       '@packages/events':
         specifier: workspace:*
         version: link:../../../core/events
+      '@packages/hierarchy':
+        specifier: workspace:*
+        version: link:../../hierarchy
       '@packages/logger':
         specifier: workspace:*
         version: link:../../../core/logger
@@ -2991,6 +2994,37 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^3.2.0
+        version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(terser@5.46.0)
+
+  packages/platform/hierarchy/ui:
+    dependencies:
+      '@packages/entity-engine-ui':
+        specifier: workspace:*
+        version: link:../../entity-engine/ui
+      '@packages/hierarchy':
+        specifier: workspace:*
+        version: link:..
+      '@packages/ui':
+        specifier: workspace:*
+        version: link:../../../core/ui
+      '@tanstack/react-query':
+        specifier: ^5.0.0
+        version: 5.90.21(react@19.2.4)
+      lucide-react:
+        specifier: ^0.500.0
+        version: 0.500.0(react@19.2.4)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.4
+    devDependencies:
+      '@types/react':
+        specifier: ^19.2.14
+        version: 19.2.14
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
         version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(terser@5.46.0)
 
   packages/platform/media:

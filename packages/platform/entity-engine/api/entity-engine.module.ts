@@ -1,6 +1,7 @@
 import { Module, Global, type DynamicModule, type OnModuleInit, Logger, Inject, Optional, type OnApplicationBootstrap } from '@nestjs/common';
 import { DatabaseService } from '@packages/database';
 import { DomainEventEmitter, EventRegistryService } from '@packages/events';
+import { HierarchyService } from '@packages/hierarchy';
 import { RbacService, FIELD_PERMISSION_ENTITY_RESOLVER, FieldPermissionsController } from '@packages/rbac';
 import type { FieldPermissionEntityResolver } from '@packages/rbac';
 import { AppLoggerService } from '@packages/logger';
@@ -145,8 +146,9 @@ export class EntityEngineModule implements OnModuleInit, OnApplicationBootstrap 
             entityRegistry: EntityRegistryService,
             appLogger: AppLoggerService,
             positionScopeProvider: PositionScopeProvider | null,
-          ) => new EntityService(config, database, domainEventEmitter, config.customFields ? eavStorage : null, multiValueExtension, fieldDefinitionService, lookupResolver, taxonomyExt, hookRegistry, workflowExt, entityRegistry, appLogger, positionScopeProvider),
-          inject: [DatabaseService, DomainEventEmitter, { token: EAV_STORAGE_EXTENSION, optional: true }, { token: MULTI_VALUE_EXTENSION, optional: true }, FieldDefinitionService, LookupResolverService, { token: TAXONOMY_EXTENSION, optional: true }, FieldTypeSaveHookRegistry, { token: WORKFLOW_EXTENSION, optional: true }, EntityRegistryService, AppLoggerService, { token: POSITION_SCOPE_PROVIDER, optional: true }],
+            hierarchyService: HierarchyService | null,
+          ) => new EntityService(config, database, domainEventEmitter, config.customFields ? eavStorage : null, multiValueExtension, fieldDefinitionService, lookupResolver, taxonomyExt, hookRegistry, workflowExt, entityRegistry, appLogger, positionScopeProvider, hierarchyService),
+          inject: [DatabaseService, DomainEventEmitter, { token: EAV_STORAGE_EXTENSION, optional: true }, { token: MULTI_VALUE_EXTENSION, optional: true }, FieldDefinitionService, LookupResolverService, { token: TAXONOMY_EXTENSION, optional: true }, FieldTypeSaveHookRegistry, { token: WORKFLOW_EXTENSION, optional: true }, EntityRegistryService, AppLoggerService, { token: POSITION_SCOPE_PROVIDER, optional: true }, { token: HierarchyService, optional: true }],
         },
       ],
       exports: [serviceToken],
