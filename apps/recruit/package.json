@@ -10,8 +10,8 @@
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
     "db:migrate": "tsx src/cli/migrate.ts",
-    "db:seed:system": "tsx src/cli/seed.ts --kind=system",
-    "db:seed:demo": "tsx src/cli/seed.ts --kind=demo"
+    "db:seed:system": "nest build && node --env-file=.env dist/cli/seed.js --kind=system",
+    "db:seed:demo": "nest build && node --env-file=.env dist/cli/seed.js --kind=demo"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
@@ -21,6 +21,7 @@
     "@nestjs/platform-express": "^11.0.0",
     "@nestjs/swagger": "^11.0.0",
     "@nestjs/throttler": "^6.4.0",
+    "bcrypt": "^5.1.1",
     "dotenv": "^16.4.0",
     "@packages/audit": "workspace:*",
     "@packages/auth": "workspace:*",

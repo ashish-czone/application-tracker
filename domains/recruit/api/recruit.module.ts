@@ -4,16 +4,13 @@ import { TASKS_CONFIG, TasksModule } from '@packages/tasks';
 
 import { SharedModule } from './shared/shared.module';
 
-import { CandidatesModule } from './candidates/candidates.module';
 import { candidatesConfig } from './candidates/candidates.config';
 
-import { ClientsModule } from './clients/clients.module';
 import { CLIENTS_CONFIG } from './clients/clients.config';
 
 import { CONTACTS_CONFIG } from './contacts/contacts.config';
 import { VENDORS_CONFIG } from './vendors/vendors.config';
 
-import { JobOpeningsModule } from './job-openings/job-openings.module';
 import { JOB_OPENINGS_CONFIG } from './job-openings/job-openings.config';
 
 import { ApplicationsModule } from './applications/applications.module';
@@ -31,16 +28,13 @@ import { TaskClaimModule } from './tasks/tasks.module';
     SharedModule,
 
     EntityEngineModule.forEntity(candidatesConfig),
-    CandidatesModule,
 
     EntityEngineModule.forEntity(CLIENTS_CONFIG),
-    ClientsModule,
 
     EntityEngineModule.forEntity(CONTACTS_CONFIG),
     EntityEngineModule.forEntity(VENDORS_CONFIG),
 
     EntityEngineModule.forEntity(JOB_OPENINGS_CONFIG),
-    JobOpeningsModule,
 
     EntityEngineModule.forEntity(APPLICATIONS_CONFIG),
     ApplicationsModule,

@@ -1,62 +1,39 @@
 import type { SeedSource, SeedFn } from '@packages/database/seeder';
 
-type PkgName =
-  | '@packages/rbac'
-  | '@packages/auth'
-  | '@packages/settings'
-  | '@packages/audit'
-  | '@packages/notification-channels'
-  | '@packages/notifications'
-  | '@packages/automations'
-  | '@packages/workflows'
-  | '@packages/taxonomy'
-  | '@packages/user-preferences'
-  | '@packages/entity-engine'
-  | '@packages/entity-layout'
-  | '@packages/hierarchy'
-  | '@packages/tenancy'
-  | '@packages/eav-attributes'
-  | '@packages/entity-relations'
-  | '@packages/org-units'
-  | '@packages/tasks'
-  | '@packages/notes'
-  | '@packages/attachments'
-  | '@packages/evaluations'
-  | '@packages/document-templates'
-  | '@packages/orders-billing'
-  | '@packages/orders-subscriptions';
+type PkgName = '@packages/auth';
 
 /**
- * Ordered list of platform seed sources. Each entry lazy-loads a
- * `seeds/system.ts` or `seeds/demo.ts` module from the owning package.
+ * Ordered list of platform **system** seed sources. Each entry lazy-loads
+ * a `seeds/system.ts` module from the owning package. The order mirrors
+ * `platformMigrationSources`: anything a later seed depends on (FK refs,
+ * lookups) must come first.
  *
- * The order mirrors `platformMigrationSources`: anything a later seed
- * depends on (FK refs, lookups) must come first. `@packages/auth` owns
- * users + default roles, so its system seed runs before anything that
- * assigns users to things.
+ * Seed functions receive an `INestApplicationContext` and call services
+ * directly via `ctx.get(SomeService)` — no raw drizzle duplication of
+ * service logic, no OnApplicationBootstrap.
+ *
+ * **No demo seeds at platform level.** Packages may only ship system
+ * seeds (the peer of migrations — required for the package to function).
+ * Demo data is opinionated sample content whose shape depends on the
+ * consuming app; it belongs to the domain that wires the app together,
+ * never to a platform package. See the `feedback_seeds_ownership` rule.
  *
  * Adding a new package seed:
  * 1. Create `packages/<tier>/<name>/api/seeds/system.ts` exporting
- *    `export const seedSystem: SeedFn`, or `seeds/demo.ts` exporting
- *    `export const seedDemo: SeedFn`.
+ *    `export const seedSystem: SeedFn`.
  * 2. Add `"./seeds/system": "./seeds/system.ts"` to the package's
- *    `exports` field.
+ *    `exports` field (if using subpath exports).
  * 3. Register a new entry here in the correct dep order.
  */
-export function platformSeedSources(): SeedSource[] {
-  const system = (name: PkgName, load: () => Promise<{ seedSystem: SeedFn }>): SeedSource => ({
+export function platformSystemSeedSources(): SeedSource[] {
+  const system = (
+    name: PkgName,
+    load: () => Promise<{ seedSystem: SeedFn }>,
+  ): SeedSource => ({
     name,
     kind: 'system',
     load: () => load().then((m) => m.seedSystem),
   });
-
-  // Kept for symmetry with PR 2; currently no platform package ships a
-  // demo seed. Enable by importing and adding entries below.
-  // const demo = (name: PkgName, load: () => Promise<{ seedDemo: SeedFn }>): SeedSource => ({
-  //   name,
-  //   kind: 'demo',
-  //   load: () => load().then((m) => m.seedDemo),
-  // });
 
   return [
     system('@packages/auth', () => import('@packages/auth/seeds/system')),

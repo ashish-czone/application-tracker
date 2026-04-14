@@ -4,6 +4,14 @@ const nodeExternals = require('webpack-node-externals');
 module.exports = function (options) {
   return {
     ...options,
+    entry: {
+      main: './src/main.ts',
+      'cli/seed': './src/cli/seed.ts',
+    },
+    output: {
+      ...options.output,
+      filename: '[name].js',
+    },
     externals: [
       nodeExternals({
         allowlist: [/^@packages\//, /^@domains\//],

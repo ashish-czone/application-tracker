@@ -1,7 +1,7 @@
-import path from 'node:path';
-import { config as loadEnv } from 'dotenv';
+import { NestFactory } from '@nestjs/core';
 import { runSeeds, type SeedKind, type SeedSource } from '@packages/database/seeder';
-import { platformSeedSources } from '@packages/app-shell/seeds';
+import { platformSystemSeedSources } from '@packages/app-shell/seeds';
+import { AppModule } from '../app.module';
 
 function parseKind(argv: string[]): SeedKind {
   const kindArg = argv.find((a) => a.startsWith('--kind='));
@@ -14,17 +14,26 @@ function parseKind(argv: string[]): SeedKind {
   return kind;
 }
 
-async function main() {
-  loadEnv({ path: path.resolve(__dirname, '../../.env') });
+function collectSources(kind: SeedKind): SeedSource[] {
+  if (kind === 'system') {
+    // Compliance domain has no domain-level system seeds yet.
+    return [...platformSystemSeedSources()];
+  }
+  // Compliance domain has no demo seeds yet.
+  return [];
+}
 
+async function main() {
   const kind = parseKind(process.argv.slice(2));
 
-  const sources: SeedSource[] = [
-    ...platformSeedSources(),
-    // Domain seeds (compliance) — none registered yet in PR 1.
-  ];
-
-  await runSeeds({ sources, kind });
+  await runSeeds({
+    sources: collectSources(kind),
+    kind,
+    bootstrap: () =>
+      NestFactory.createApplicationContext(AppModule, {
+        logger: ['error', 'warn', 'log'],
+      }),
+  });
 }
 
 main().catch((err) => {
