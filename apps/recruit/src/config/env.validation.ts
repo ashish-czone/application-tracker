@@ -14,6 +14,9 @@ export class EnvironmentVariables {
   @IsIn(['development', 'staging', 'production', 'test'])
   NODE_ENV!: string;
 
+  @IsIn(['recruit', 'compliance'])
+  APP_DOMAIN!: string;
+
   @IsString()
   ALLOWED_ORIGINS!: string;
 

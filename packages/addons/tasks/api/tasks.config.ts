@@ -153,6 +153,13 @@ export const TASKS_CONFIG = defineEntity({
       readonly: true,
       excludeFromList: true,
     },
+    externalKey: {
+      type: 'text',
+      label: 'External Key',
+      system: true,
+      readonly: true,
+      excludeFromList: true,
+    },
   },
 
   defaultSort: 'createdAt',

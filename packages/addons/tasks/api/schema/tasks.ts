@@ -14,6 +14,7 @@ export const tasks = pgTable('tasks', {
   dueDate: date('due_date', { mode: 'string' }),
   relatedEntityType: text('related_entity_type'),
   relatedEntityId: text('related_entity_id'),
+  externalKey: text('external_key'),
   createdBy: text('created_by').notNull().references(() => users.id),
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }).notNull().$defaultFn(() => new Date()).$onUpdate(() => new Date()),

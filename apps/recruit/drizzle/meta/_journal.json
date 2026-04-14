@@ -309,6 +309,13 @@
       "when": 1777104000000,
       "tag": "0045_rename_task_states",
       "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1777190400000,
+      "tag": "0046_compliance_tables",
+      "breakpoints": true
     }
   ]
 }
