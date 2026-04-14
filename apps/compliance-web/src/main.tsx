@@ -28,6 +28,7 @@ import { AvatarNameCell } from '@packages/ui';
 import { CheckSquare, Building2, UserCog } from 'lucide-react';
 import type { MenuItem } from '@packages/domains';
 import { complianceWeb } from '@domains/compliance-ui';
+import { ConsolePreviewPage } from '@domains/compliance-ui/portals/customer/features/console-preview';
 import { api } from './lib/api';
 import './globals.css';
 
@@ -60,18 +61,27 @@ const columnRenderers = {
   TaskAssigneeCell: { component: TaskAssigneeCell },
 };
 
+// Design-preview fork: `/console-preview` renders outside the WebShell for
+// unauthenticated design review. Every other path goes through the normal
+// authenticated WebShell. Remove once the Instrument design ships.
+const isConsolePreview = window.location.pathname.startsWith('/console-preview');
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <WebShell
-      domains={[complianceWeb]}
-      apiFn={api}
-      brandLabel="Compliance"
-      extraMenuItems={addonMenuItems}
-      extraRoutes={addonRoutes}
-      extraEntityUIConfigs={[TASKS_UI_CONFIG]}
-      extraDetailTabs={detailTabs}
-      extraRightSidebarPanels={rightSidebarPanels}
-      extraColumnRenderers={columnRenderers}
-    />
+    {isConsolePreview ? (
+      <ConsolePreviewPage />
+    ) : (
+      <WebShell
+        domains={[complianceWeb]}
+        apiFn={api}
+        brandLabel="Compliance"
+        extraMenuItems={addonMenuItems}
+        extraRoutes={addonRoutes}
+        extraEntityUIConfigs={[TASKS_UI_CONFIG]}
+        extraDetailTabs={detailTabs}
+        extraRightSidebarPanels={rightSidebarPanels}
+        extraColumnRenderers={columnRenderers}
+      />
+    )}
   </StrictMode>,
 );
