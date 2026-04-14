@@ -6,6 +6,7 @@ import { createPackageTestApp, withAuth, type PackageTestApp } from '@packages/p
 import { hierarchyColumns, HierarchyModule } from '@packages/hierarchy';
 import { DatabaseService } from '@packages/database';
 import { EntityEngineModule } from '../../entity-engine.module';
+import { EntityEngineSeedService } from '../../services/entity-engine-seed.service';
 import { defineEntity } from '../../define-entity';
 
 // ---------------------------------------------------------------------------
@@ -49,6 +50,10 @@ describe('Hierarchy routes (integration)', () => {
         EntityEngineModule.forEntity(folderConfig),
       ],
     });
+
+    // Seed field definitions for the registered entity (previously done by
+    // EntityEngineModule.onApplicationBootstrap, now CLI-driven).
+    await ctx.module.get(EntityEngineSeedService).seedAll();
 
     // Create the test table
     const db = ctx.module.get(DatabaseService).db;
