@@ -8,3 +8,4 @@ export const complianceBackend: DomainBackendManifest = {
 };
 
 export { ComplianceDomainModule };
+export * from './schema';
