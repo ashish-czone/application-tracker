@@ -4,7 +4,11 @@
   "packageManager": "pnpm@9.15.4",
   "scripts": {
     "build": "turbo run build",
+    "build:recruit": "APP_DOMAIN=recruit turbo run build --filter @apps/recruit",
+    "build:compliance": "APP_DOMAIN=compliance turbo run build --filter @apps/recruit",
     "dev": "turbo run dev",
+    "dev:recruit": "APP_DOMAIN=recruit turbo run dev --filter @apps/recruit",
+    "dev:compliance": "APP_DOMAIN=compliance turbo run dev --filter @apps/recruit",
     "lint": "pnpm lint:boundaries",
     "lint:boundaries": "eslint -c eslint.boundaries.config.mjs apps packages domains",
     "test": "turbo run test",
