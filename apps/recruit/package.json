@@ -50,7 +50,7 @@
     "@packages/users": "workspace:*",
     "@packages/workflows": "workspace:*",
     "@domains/recruit-api": "workspace:*",
-    "@domains/compliance-api": "workspace:*",
+    "@packages/app-shell": "workspace:*",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "cookie-parser": "^1.4.7",
