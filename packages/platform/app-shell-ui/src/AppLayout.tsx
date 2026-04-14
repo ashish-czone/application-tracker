@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router';
 import {
   ChevronsLeft,
@@ -22,9 +22,14 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from '@packages/ui';
-import { recruiterMenu, type MenuItem } from '../../portals/recruiter/menu';
+import type { MenuItem } from '@packages/domains';
 import { useAuth } from '@packages/auth-ui/hooks/useAuth';
 import { useLogout } from '@packages/auth-ui/hooks/useLogout';
+
+interface AppLayoutProps {
+  brandLabel: string;
+  menuItems: MenuItem[];
+}
 
 function NavItem({ item, collapsed }: { item: MenuItem; collapsed: boolean }) {
   const { path, label, icon: Icon } = item;
@@ -68,7 +73,6 @@ function NavGroup({ item, collapsed, can }: { item: MenuItem; collapsed: boolean
   const isChildActive = childPaths.some((p) => location.pathname === p || location.pathname.startsWith(p + '/'));
   const [open, setOpen] = useState(isChildActive);
 
-  // Auto-open when navigating to a child
   useEffect(() => {
     if (isChildActive && !open) setOpen(true);
   }, [isChildActive]);
@@ -77,7 +81,6 @@ function NavGroup({ item, collapsed, can }: { item: MenuItem; collapsed: boolean
   const Icon = item.icon;
 
   if (collapsed) {
-    // When collapsed, just show the icon — clicking navigates to first child
     return (
       <NavLink
         to={visibleChildren[0]?.path ?? item.path}
@@ -139,15 +142,15 @@ function NavGroup({ item, collapsed, can }: { item: MenuItem; collapsed: boolean
   );
 }
 
-export function AppLayout() {
+export function AppLayout({ brandLabel, menuItems }: AppLayoutProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
   const { can } = useAuth();
 
   const navItems = useMemo(
-    () => recruiterMenu.filter((item) => !item.permission || can(item.permission)),
-    [can],
+    () => menuItems.filter((item) => !item.permission || can(item.permission)),
+    [menuItems, can],
   );
 
   useEffect(() => {
@@ -171,7 +174,6 @@ export function AppLayout() {
 
   return (
     <div className="min-h-screen bg-content-bg">
-      {/* Mobile backdrop */}
       <div
         className={cn(
           'fixed inset-0 bg-black/20 backdrop-blur-sm z-40 transition-opacity duration-200 lg:hidden',
@@ -181,7 +183,6 @@ export function AppLayout() {
         aria-hidden="true"
       />
 
-      {/* Sidebar */}
       <aside
         className={cn(
           'fixed top-0 left-0 bottom-0 z-50 flex flex-col bg-sidebar border-r border-sidebar-border transition-[width,transform] duration-300 ease-out',
@@ -189,11 +190,12 @@ export function AppLayout() {
           mobileOpen ? 'translate-x-0 shadow-xl' : '-translate-x-full lg:translate-x-0',
         )}
       >
-        {/* Brand */}
         <div className="h-14 flex items-center shrink-0 px-4">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center shrink-0">
-              <span className="text-[11px] font-bold text-primary-foreground leading-none">S</span>
+              <span className="text-[11px] font-bold text-primary-foreground leading-none">
+                {brandLabel.charAt(0).toUpperCase()}
+              </span>
             </div>
             <span
               className={cn(
@@ -201,27 +203,23 @@ export function AppLayout() {
                 collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100',
               )}
             >
-              Recruit
+              {brandLabel}
             </span>
           </div>
         </div>
 
-        {/* Nav items */}
         <nav className="flex-1 px-2.5 pt-2 overflow-y-auto">
-          {/* Before-entity items (Dashboard) */}
           <div className="space-y-0.5">
             {navItems.filter((i) => i.position !== 'after').map((item) => (
               <NavItem key={item.path} item={item} collapsed={collapsed} />
             ))}
           </div>
 
-          {/* Recruiting section */}
-          <NavSectionLabel label="Recruiting" collapsed={collapsed} />
+          <NavSectionLabel label="Entities" collapsed={collapsed} />
           <div className="space-y-0.5">
             <EntityNavItems collapsed={collapsed} exclude={['tasks']} />
           </div>
 
-          {/* Workspace section */}
           <NavSectionLabel label="Workspace" collapsed={collapsed} />
           <div className="space-y-0.5">
             {navItems.filter((i) => i.position === 'after').map((item) => (
@@ -234,7 +232,6 @@ export function AppLayout() {
           </div>
         </nav>
 
-        {/* Sidebar footer */}
         <div className="p-2.5 space-y-0.5 shrink-0">
           <button
             onClick={() => setCollapsed(!collapsed)}
@@ -255,16 +252,13 @@ export function AppLayout() {
         </div>
       </aside>
 
-      {/* Main content area */}
       <div
         className={cn(
           'min-h-screen flex flex-col transition-[padding] duration-300 ease-out',
           collapsed ? 'lg:pl-16' : 'lg:pl-60',
         )}
       >
-        {/* Top bar */}
         <header className="sticky top-0 z-30 h-14 bg-background border-b border-border flex items-center gap-4 px-4 lg:px-5 shrink-0">
-          {/* Mobile menu */}
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
             className="lg:hidden -ml-1 p-1.5 rounded-md text-muted-foreground hover:text-foreground transition-colors"
@@ -273,15 +267,12 @@ export function AppLayout() {
             {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
 
-          {/* Page title */}
           <h1 className="text-sm font-semibold text-foreground hidden sm:block">
             {currentPage?.label ?? ''}
           </h1>
 
-          {/* Spacer */}
           <div className="flex-1" />
 
-          {/* Search */}
           <div className="hidden md:flex items-center gap-2 rounded-lg border border-border bg-background px-3 h-8 w-56 hover:border-ring/40 focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/10 transition-all">
             <Search className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
             <input
@@ -294,14 +285,11 @@ export function AppLayout() {
             </kbd>
           </div>
 
-          {/* Notifications */}
           <NotificationBell />
 
-          {/* User menu */}
           <UserMenu />
         </header>
 
-        {/* Page content */}
         <main className="flex-1 p-4 lg:p-6">
           <Outlet />
         </main>

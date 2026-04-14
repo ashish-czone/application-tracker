@@ -44,7 +44,6 @@ function EntitySettingsContent({ entityType, initialSubTab }: { entityType: stri
     });
   }
 
-  // Discriminator values already used by existing pipelines
   const usedDiscriminatorValues = useMemo(
     () => new Set(entityWorkflows.map((w) => w.discriminatorValue).filter(Boolean)),
     [entityWorkflows],
@@ -57,7 +56,6 @@ function EntitySettingsContent({ entityType, initialSubTab }: { entityType: stri
 
   return (
     <div>
-      {/* Sub-tabs: Fields | Pipeline */}
       {hasWorkflow && (
         <div className="flex gap-4 mb-5">
           <button
@@ -100,7 +98,6 @@ function EntitySettingsContent({ entityType, initialSubTab }: { entityType: stri
 
       {subTab === 'pipeline' && activeWorkflow && (
         <div>
-          {/* Multi-pipeline selector — only if discriminator is configured */}
           {discriminator && entityWorkflows.length > 0 && (
             <div className="flex items-center gap-2 mb-4 flex-wrap">
               {entityWorkflows.map((w) => (
@@ -124,7 +121,6 @@ function EntitySettingsContent({ entityType, initialSubTab }: { entityType: stri
                 </button>
               ))}
 
-              {/* Add pipeline for new discriminator value */}
               {availableDiscriminatorOptions.length > 0 && (
                 <select
                   onChange={(e) => {
@@ -151,7 +147,7 @@ function EntitySettingsContent({ entityType, initialSubTab }: { entityType: stri
   );
 }
 
-export default function SettingsPage() {
+export function EntityConfigPage() {
   const { entityType: paramEntityType } = useParams<{ entityType: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -207,7 +203,6 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Entity tabs */}
       <div className="border-b mb-6">
         <nav className="flex gap-0 -mb-px">
           {entityTabs.map((tab) => (
@@ -227,7 +222,6 @@ export default function SettingsPage() {
         </nav>
       </div>
 
-      {/* Entity content with sub-tabs */}
       <EntitySettingsContent key={activeTab} entityType={activeTab} initialSubTab={tabParam ?? undefined} />
     </div>
   );

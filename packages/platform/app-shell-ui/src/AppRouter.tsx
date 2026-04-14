@@ -1,9 +1,8 @@
 import { Suspense, lazy, useState, useMemo } from 'react';
 import { Routes, Route, Navigate, type RouteObject } from 'react-router';
-import { AppLayout } from './layout/AppLayout';
 import { AuthGuard } from '@packages/auth-ui/components/AuthGuard';
 import { EntityListPage, EntityDetailPage, useEntityConfig, useEntityEngine } from '@packages/entity-engine-ui';
-import type { DomainWebManifest, DomainDetailPageComponent } from '@packages/domains';
+import type { DomainWebManifest, DomainDetailPageComponent, MenuItem } from '@packages/domains';
 import {
   PipelineProgressBar,
   TransitionConfirmDialog,
@@ -12,10 +11,22 @@ import {
   useWorkflows,
   useEntityTransition,
 } from '@packages/workflows-ui';
-import { SettingsPage, AppearancePage, AppSettingsPage, AutomationsPage, RuleBuilderPage, UsersListPage, RolesListPage, TagGroupsListPage, CategoryGroupsListPage, QueuedTasksPage, OrgPositionsPage, OrgUnitsPage } from '../portals/recruiter/routes';
-import { recruitWeb } from '@domains/recruit-ui';
+import { TagGroupsListPage, CategoryGroupsListPage } from '@packages/taxonomy-ui';
+import { RolesListPage } from '@packages/rbac-ui';
+import { AutomationsPage, RuleBuilderPage } from '@packages/automations-ui';
+import { UsersListPage } from '@packages/users-ui';
+import { SettingsPage as AppSettingsPage } from '@packages/settings-ui';
+import { QueueDashboardPage } from '@packages/queue-ui';
+import { AppearancePage as ThemingAppearancePage } from '@packages/theming-ui';
+import { AppLayout } from './AppLayout';
+import { EntityConfigPage } from './pages/EntityConfigPage';
 
-const enabledDomains: DomainWebManifest[] = [recruitWeb];
+interface AppRouterProps {
+  domains: DomainWebManifest[];
+  brandLabel: string;
+  menuItems: MenuItem[];
+  extraRoutes?: RouteObject[];
+}
 
 interface PendingTransition {
   toStateName: string;
@@ -165,8 +176,6 @@ const ResetPasswordPage = lazy(() => import('@packages/auth-ui/pages/ResetPasswo
 const ProfilePage = lazy(() => import('@packages/auth-ui/pages/ProfilePage'));
 const OAuthCallbackPage = lazy(() => import('@packages/auth-ui/pages/OAuthCallbackPage'));
 
-// Dashboard is now in features/dashboard/DashboardPage.tsx
-
 function PageSkeleton() {
   return (
     <div className="space-y-4 p-1">
@@ -177,9 +186,6 @@ function PageSkeleton() {
   );
 }
 
-/**
- * Merge detailPageOverrides from every enabled domain. First domain wins on conflict.
- */
 function mergeDetailOverrides(domains: DomainWebManifest[]): Record<string, DomainDetailPageComponent> {
   const merged: Record<string, DomainDetailPageComponent> = {};
   for (const domain of domains) {
@@ -194,9 +200,6 @@ function mergeDetailOverrides(domains: DomainWebManifest[]): Record<string, Doma
   return merged;
 }
 
-/**
- * Merge routes[] from every enabled domain. First domain wins on path conflict.
- */
 function mergeDomainRoutes(domains: DomainWebManifest[]): RouteObject[] {
   const seen = new Set<string>();
   const merged: RouteObject[] = [];
@@ -213,30 +216,24 @@ function mergeDomainRoutes(domains: DomainWebManifest[]): RouteObject[] {
   return merged;
 }
 
-export function AppRouter() {
+export function AppRouter({ domains, brandLabel, menuItems, extraRoutes }: AppRouterProps) {
   const { entities } = useEntityEngine();
-  const detailOverrides = useMemo(() => mergeDetailOverrides(enabledDomains), []);
-  const domainRoutes = useMemo(() => mergeDomainRoutes(enabledDomains), []);
+  const detailOverrides = useMemo(() => mergeDetailOverrides(domains), [domains]);
+  const domainRoutes = useMemo(() => mergeDomainRoutes(domains), [domains]);
+  const allExtraRoutes = useMemo(() => extraRoutes ?? [], [extraRoutes]);
 
   return (
     <Routes>
-      {/* Public routes */}
       <Route path="/login" element={<Suspense fallback={null}><LoginPage /></Suspense>} />
       <Route path="/register" element={<Suspense fallback={null}><RegisterPage /></Suspense>} />
       <Route path="/forgot-password" element={<Suspense fallback={null}><ForgotPasswordPage /></Suspense>} />
       <Route path="/reset-password" element={<Suspense fallback={null}><ResetPasswordPage /></Suspense>} />
       <Route path="/oauth/callback" element={<Suspense fallback={null}><OAuthCallbackPage /></Suspense>} />
 
-      {/* Protected routes */}
       <Route element={<AuthGuard />}>
-        <Route element={<AppLayout />}>
-          <Route
-            path="/profile"
-            element={<Suspense fallback={<PageSkeleton />}><ProfilePage /></Suspense>}
-          />
+        <Route element={<AppLayout brandLabel={brandLabel} menuItems={menuItems} />}>
+          <Route path="/profile" element={<Suspense fallback={<PageSkeleton />}><ProfilePage /></Suspense>} />
 
-          {/* Entity engine routes — list + detail per registered entity.
-              Detail overrides come from enabled domains' detailPageOverrides. */}
           {entities.map((entity) => {
             const Override = detailOverrides[entity.entityType];
             return [
@@ -253,7 +250,6 @@ export function AppRouter() {
             ];
           })}
 
-          {/* Domain-contributed routes (dashboard, templates, sub-pages, custom create forms). */}
           {domainRoutes.map((route) => (
             <Route
               key={route.path}
@@ -262,63 +258,28 @@ export function AppRouter() {
             />
           ))}
 
-          {/* Non-entity routes */}
-          <Route
-            path="/users"
-            element={<Suspense fallback={<PageSkeleton />}><UsersListPage /></Suspense>}
-          />
-          <Route
-            path="/roles"
-            element={<Suspense fallback={<PageSkeleton />}><RolesListPage /></Suspense>}
-          />
-          <Route
-            path="/org-units"
-            element={<Suspense fallback={<PageSkeleton />}><OrgUnitsPage /></Suspense>}
-          />
-          <Route
-            path="/org-positions"
-            element={<Suspense fallback={<PageSkeleton />}><OrgPositionsPage /></Suspense>}
-          />
-          <Route
-            path="/tag-groups"
-            element={<TagGroupsListPage />}
-          />
-          <Route
-            path="/categories"
-            element={<CategoryGroupsListPage />}
-          />
-          <Route
-            path="/settings/appearance"
-            element={<Suspense fallback={<PageSkeleton />}><AppearancePage /></Suspense>}
-          />
-          <Route
-            path="/settings/:entityType?"
-            element={<Suspense fallback={<PageSkeleton />}><SettingsPage /></Suspense>}
-          />
-          <Route
-            path="/app-settings"
-            element={<Suspense fallback={<PageSkeleton />}><AppSettingsPage /></Suspense>}
-          />
-          <Route
-            path="/queued-tasks"
-            element={<Suspense fallback={<PageSkeleton />}><QueuedTasksPage /></Suspense>}
-          />
-          <Route
-            path="/automations"
-            element={<Suspense fallback={<PageSkeleton />}><AutomationsPage /></Suspense>}
-          />
-          <Route
-            path="/automations/create"
-            element={<Suspense fallback={<PageSkeleton />}><RuleBuilderPage /></Suspense>}
-          />
-          <Route
-            path="/automations/:id/edit"
-            element={<Suspense fallback={<PageSkeleton />}><RuleBuilderPage /></Suspense>}
-          />
+          {allExtraRoutes.map((route) => (
+            <Route
+              key={route.path}
+              path={route.path}
+              element={<Suspense fallback={<PageSkeleton />}>{route.element}</Suspense>}
+            />
+          ))}
+
+          <Route path="/users" element={<Suspense fallback={<PageSkeleton />}><UsersListPage /></Suspense>} />
+          <Route path="/roles" element={<Suspense fallback={<PageSkeleton />}><RolesListPage /></Suspense>} />
+          <Route path="/tag-groups" element={<TagGroupsListPage />} />
+          <Route path="/categories" element={<CategoryGroupsListPage />} />
+          <Route path="/settings/appearance" element={<Suspense fallback={<PageSkeleton />}><ThemingAppearancePage /></Suspense>} />
+          <Route path="/settings/:entityType?" element={<Suspense fallback={<PageSkeleton />}><EntityConfigPage /></Suspense>} />
+          <Route path="/app-settings" element={<Suspense fallback={<PageSkeleton />}><AppSettingsPage /></Suspense>} />
+          <Route path="/queued-tasks" element={<Suspense fallback={<PageSkeleton />}><QueueDashboardPage /></Suspense>} />
+          <Route path="/automations" element={<Suspense fallback={<PageSkeleton />}><AutomationsPage /></Suspense>} />
+          <Route path="/automations/create" element={<Suspense fallback={<PageSkeleton />}><RuleBuilderPage /></Suspense>} />
+          <Route path="/automations/:id/edit" element={<Suspense fallback={<PageSkeleton />}><RuleBuilderPage /></Suspense>} />
         </Route>
       </Route>
 
-      {/* Catch-all */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

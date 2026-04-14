@@ -1,5 +1,10 @@
 import { defineConfig } from 'drizzle-kit';
 
+// NOTE: compliance currently shares apps/recruit/drizzle/ as its migrations folder.
+// Each app runs the same migration set against its own DATABASE_URL.
+// Proper per-domain migration split (platform → packages/core/database/migrations,
+// recruit-specific → domains/recruit/api/drizzle, compliance → domains/compliance/api/drizzle)
+// is deferred to a follow-up PR.
 export default defineConfig({
   schema: [
     // Core packages
@@ -23,19 +28,10 @@ export default defineConfig({
     '../../packages/addons/notes/schema/index.ts',
     '../../packages/addons/evaluations/schema/index.ts',
     '../../packages/addons/attachments/schema/index.ts',
-    // Recruit domain
-    '../../domains/recruit/api/clients/schema/clients.ts',
-    '../../domains/recruit/api/contacts/schema/contacts.ts',
-    '../../domains/recruit/api/vendors/schema/vendors.ts',
-    '../../domains/recruit/api/candidates/schema/candidates.ts',
-    '../../domains/recruit/api/job-openings/schema/job-openings.ts',
-    '../../domains/recruit/api/applications/schema/applications.ts',
-    '../../domains/recruit/api/interviews/schema/interviews.ts',
-    '../../domains/recruit/api/offers/schema/offers.ts',
-    // Compliance domain (shared migration folder until per-domain split lands)
+    // Compliance domain
     '../../domains/compliance/api/schema/index.ts',
   ],
-  out: './drizzle',
+  out: '../recruit/drizzle',
   dialect: 'postgresql',
   dbCredentials: {
     url: process.env.DATABASE_URL!,

@@ -1,1 +1,0 @@
-{"root":["./src/main.tsx","./src/vite-env.d.ts","./src/app/app.tsx","./src/app/providers.tsx","./src/app/router.tsx","./src/app/layout/applayout.tsx","./src/lib/api.ts","./src/portals/recruiter/menu.ts","./src/portals/recruiter/routes.tsx","./src/portals/recruiter/features/settings/pages/settingspage.tsx"],"version":"5.9.3"}

@@ -1,0 +1,42 @@
+{
+  "name": "@packages/app-shell",
+  "version": "0.0.1",
+  "private": true,
+  "main": "index.ts",
+  "scripts": {
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/config": "^4.0.0",
+    "@nestjs/core": "^11.0.0",
+    "@nestjs/throttler": "^6.4.0",
+    "@packages/audit": "workspace:*",
+    "@packages/auth": "workspace:*",
+    "@packages/automations": "workspace:*",
+    "@packages/database": "workspace:*",
+    "@packages/domains": "workspace:*",
+    "@packages/entity-engine": "workspace:*",
+    "@packages/entity-layout": "workspace:*",
+    "@packages/events": "workspace:*",
+    "@packages/hierarchy": "workspace:*",
+    "@packages/logger": "workspace:*",
+    "@packages/media": "workspace:*",
+    "@packages/notification-channels": "workspace:*",
+    "@packages/notifications": "workspace:*",
+    "@packages/queue": "workspace:*",
+    "@packages/rbac": "workspace:*",
+    "@packages/settings": "workspace:*",
+    "@packages/taxonomy": "workspace:*",
+    "@packages/user-preferences": "workspace:*",
+    "@packages/users": "workspace:*",
+    "@packages/workflows": "workspace:*",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}

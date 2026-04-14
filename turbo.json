@@ -3,13 +3,11 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**"],
-      "env": ["APP_DOMAIN"]
+      "outputs": ["dist/**"]
     },
     "dev": {
       "cache": false,
-      "persistent": true,
-      "env": ["APP_DOMAIN"]
+      "persistent": true
     },
     "lint": {},
     "test": {}

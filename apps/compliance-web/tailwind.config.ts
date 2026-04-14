@@ -5,15 +5,13 @@ const config: Config = {
   ...baseConfig,
   content: [
     './src/**/*.{ts,tsx}',
-    // @packages/app-shell-ui (platform)
-    '../../packages/platform/app-shell-ui/index.tsx',
-    '../../packages/platform/app-shell-ui/src/**/*.{ts,tsx}',
-    // @domains/recruit-ui
-    '../../domains/recruit/ui/**/*.{ts,tsx}',
     // @packages/ui (core)
     '../../packages/core/ui/components/**/*.{ts,tsx}',
     '../../packages/core/ui/hooks/**/*.{ts,tsx}',
     '../../packages/core/ui/lib/**/*.{ts,tsx}',
+    // @packages/app-shell-ui (platform)
+    '../../packages/platform/app-shell-ui/index.tsx',
+    '../../packages/platform/app-shell-ui/src/**/*.{ts,tsx}',
     // @packages/entity-engine-ui (platform)
     '../../packages/platform/entity-engine/ui/*.{ts,tsx}',
     '../../packages/platform/entity-engine/ui/components/**/*.{ts,tsx}',
@@ -47,6 +45,8 @@ const config: Config = {
     '../../packages/platform/platform-ui/taxonomy/pages/**/*.{ts,tsx}',
     '../../packages/platform/platform-ui/users/**/*.{ts,tsx}',
     '../../packages/platform/platform-ui/workflows/**/*.{ts,tsx}',
+    // Compliance domain UI
+    '../../domains/compliance/ui/**/*.{ts,tsx}',
   ],
 };
 

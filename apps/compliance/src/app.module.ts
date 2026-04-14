@@ -14,7 +14,7 @@ import { OAuthModule } from '@packages/oauth';
 import { OrgUnitsModule } from '@packages/org-units';
 import { PdfGeneratorModule } from '@packages/pdf-generator';
 import { PuppeteerPdfProvider } from '@packages/pdf-generator/providers/puppeteer.provider';
-import { recruitBackend } from '@domains/recruit-api';
+import { complianceBackend } from '@domains/compliance-api';
 
 const tenancyImports = process.env.TENANCY_MODE
   ? [
@@ -29,7 +29,7 @@ const tenancyImports = process.env.TENANCY_MODE
       }),
       ServiceAuthModule.registerAsync({
         useFactory: (config: ConfigService) => ({
-          serviceId: 'recruit-app',
+          serviceId: 'compliance-app',
           privateKey: config.get<string>('SERVICE_PRIVATE_KEY')!,
           trustedServices: JSON.parse(config.get<string>('TRUSTED_SERVICE_KEYS') || '{}'),
         }),
@@ -40,8 +40,8 @@ const tenancyImports = process.env.TENANCY_MODE
 
 @Module(
   createAppModule({
-    domains: [recruitBackend],
-    appName: 'recruit',
+    domains: [complianceBackend],
+    appName: 'compliance',
     envFilePath: path.resolve(__dirname, '../.env'),
     extraImports: [
       ...tenancyImports,

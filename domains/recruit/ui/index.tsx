@@ -1,7 +1,14 @@
 import { lazy } from 'react';
 import type { RouteObject } from 'react-router';
-import type { DomainWebManifest, DomainDetailPageComponent } from '@packages/domains';
+import { LayoutDashboard } from 'lucide-react';
+import type {
+  DomainWebManifest,
+  DomainDetailPageComponent,
+  MenuItem,
+} from '@packages/domains';
 import { EntityCreatePage } from '@packages/entity-engine-ui';
+import { CANDIDATES_UI_CONFIG } from './entities/candidates.config';
+import { OFFERS_UI_CONFIG } from './entities/offers.config';
 
 const DashboardPage = lazy(() =>
   import('./portals/recruiter/features/dashboard/DashboardPage').then((m) => ({ default: m.DashboardPage })),
@@ -35,9 +42,17 @@ const detailPageOverrides: Record<string, DomainDetailPageComponent> = {
   applications: ApplicationDetailPage as unknown as DomainDetailPageComponent,
 };
 
+const menuItems: MenuItem[] = [
+  { path: '/', label: 'Dashboard', icon: LayoutDashboard, position: 'before' },
+];
+
+const entityUIConfigs = [CANDIDATES_UI_CONFIG, OFFERS_UI_CONFIG];
+
 export const recruitWeb: DomainWebManifest = {
   name: 'recruit',
   displayName: 'Recruit',
   routes,
   detailPageOverrides,
+  menuItems,
+  entityUIConfigs,
 };
