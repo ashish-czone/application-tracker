@@ -5,6 +5,11 @@ const config: Config = {
   ...baseConfig,
   content: [
     './src/**/*.{ts,tsx}',
+    // @packages/app-shell-ui (platform)
+    '../../packages/platform/app-shell-ui/index.tsx',
+    '../../packages/platform/app-shell-ui/src/**/*.{ts,tsx}',
+    // @domains/recruit-ui
+    '../../domains/recruit/ui/**/*.{ts,tsx}',
     // @packages/ui (core)
     '../../packages/core/ui/components/**/*.{ts,tsx}',
     '../../packages/core/ui/hooks/**/*.{ts,tsx}',
