@@ -50,5 +50,8 @@ export function recruitDemoSeedSources(): SeedSource[] {
     demo('@domains/recruit-api/demo-automations', () =>
       import('./applications/seeds/demo-automations').then((m) => m.seedDemoAutomations),
     ),
+    demo('@domains/recruit-api/demo-evaluations', () =>
+      import('./applications/seeds/demo-evaluations').then((m) => m.seedDemoEvaluations),
+    ),
   ];
 }
