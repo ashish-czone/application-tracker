@@ -59,36 +59,36 @@ function FrequencyPill({ frequency }: { frequency: ObligationFrequency }) {
   );
 }
 
-function StatusDot({ status }: { status: Obligation['status'] }) {
-  const map = {
-    active: { tone: 'bg-filed', label: 'Active' },
-    draft: { tone: 'bg-due-soon', label: 'Draft' },
-    deprecated: { tone: 'bg-ink-muted', label: 'Deprecated' },
-  } as const;
-  const { tone, label } = map[status];
-  return (
-    <span className="inline-flex items-center gap-1.5 text-[10px] font-sans uppercase tracking-eyebrow text-ink-soft">
-      <span className={`w-1.5 h-1.5 ${tone}`} aria-hidden />
-      {label}
-    </span>
-  );
-}
+const STATUS_TONE: Record<Obligation['status'], string> = {
+  active: 'bg-filed',
+  draft: 'bg-due-soon',
+  deprecated: 'bg-ink-muted',
+};
 
 const OBLIGATION_COLUMNS: DataTableColumn<Obligation>[] = [
   {
     key: 'code',
     header: 'Code',
-    width: '120px',
+    width: '110px',
     cell: (o) => (
-      <span className="font-mono text-[11px] tracking-tabular uppercase text-ink">{o.code}</span>
+      <div className="flex items-center gap-2">
+        <span
+          aria-hidden
+          title={o.status}
+          className={`w-1.5 h-1.5 flex-none ${STATUS_TONE[o.status]}`}
+        />
+        <span className="font-mono text-[11px] tracking-tabular uppercase text-ink">
+          {o.code}
+        </span>
+      </div>
     ),
   },
   {
     key: 'name',
     header: 'Obligation',
     cell: (o) => (
-      <div className="flex flex-col max-w-[340px]">
-        <span className="text-sm text-ink font-sans leading-snug">{o.name}</span>
+      <div className="flex flex-col min-w-0">
+        <span className="text-sm text-ink font-sans leading-snug truncate">{o.name}</span>
         <span className="font-serif italic text-[11px] text-ink-muted truncate">
           {o.description}
         </span>
@@ -98,7 +98,7 @@ const OBLIGATION_COLUMNS: DataTableColumn<Obligation>[] = [
   {
     key: 'law',
     header: 'Law',
-    width: '160px',
+    width: '130px',
     cell: (o) => (
       <div className="flex items-center gap-2">
         <span className="font-mono text-[11px] text-ink-muted tracking-tabular uppercase">
@@ -111,15 +111,16 @@ const OBLIGATION_COLUMNS: DataTableColumn<Obligation>[] = [
   {
     key: 'frequency',
     header: 'Cadence',
-    width: '120px',
+    width: '100px',
     cell: (o) => <FrequencyPill frequency={o.frequency} />,
   },
   {
     key: 'applicable',
     header: 'Applies to',
-    width: '100px',
+    width: '110px',
+    align: 'right',
     cell: (o) => (
-      <div className="flex flex-col items-end">
+      <div className="flex items-baseline justify-end gap-1.5">
         <span className="font-mono text-sm tabular-nums text-ink">{o.applicableClients}</span>
         <span className="text-[10px] uppercase tracking-eyebrow text-ink-muted font-sans">
           clients
@@ -128,44 +129,28 @@ const OBLIGATION_COLUMNS: DataTableColumn<Obligation>[] = [
     ),
   },
   {
-    key: 'period',
-    header: 'This period',
-    width: '100px',
-    cell: (o) => (
-      <span className="font-mono text-sm tabular-nums text-ink-soft">
-        {o.filingsThisPeriod > 0 ? o.filingsThisPeriod : '—'}
-      </span>
-    ),
-  },
-  {
     key: 'health',
     header: 'On-time rate',
-    width: '180px',
+    width: '150px',
     cell: (o) => <HealthBar pct={o.onTimePct} />,
   },
   {
     key: 'owner',
     header: 'Owner',
-    width: '140px',
+    width: '110px',
     cell: (o) => (
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 min-w-0">
         <span
           aria-hidden
-          className="w-6 h-6 bg-authority text-paper-raised text-[10px] font-sans font-semibold flex items-center justify-center"
+          className="w-6 h-6 flex-none bg-authority text-paper-raised text-[10px] font-sans font-semibold flex items-center justify-center"
         >
           {o.owner.initials}
         </span>
-        <span className="text-[11px] font-sans text-ink-soft truncate max-w-[90px]">
+        <span className="text-[11px] font-sans text-ink-soft truncate">
           {o.owner.name.split(' ')[0]}
         </span>
       </div>
     ),
-  },
-  {
-    key: 'status',
-    header: 'Status',
-    width: '110px',
-    cell: (o) => <StatusDot status={o.status} />,
   },
 ];
 
@@ -508,7 +493,7 @@ export function ObligationsLibraryPage() {
                 {filtered.length} of {MOCK_OBLIGATIONS.length} rules shown
               </span>
             </div>
-            <div className="bg-paper-raised border border-rule">
+            <div className="bg-paper-raised border border-rule overflow-x-auto">
               <DataTable
                 columns={OBLIGATION_COLUMNS}
                 rows={filtered}
