@@ -947,6 +947,18 @@
     cursor: not-allowed;
   }
 
+  /* ----- DataGrid row actions -------------------------------------------- */
+  .theme-instrument [data-slot="row-actions-trigger"] {
+    background-color: transparent;
+    color: hsl(var(--ink-muted));
+    border-radius: 2px;
+    transition: background-color 120ms, color 120ms;
+  }
+  .theme-instrument [data-slot="row-actions-trigger"]:hover {
+    background-color: hsl(var(--paper-sunken));
+    color: hsl(var(--ink));
+  }
+
   /* ----- Tabs -------------------------------------------------------------
      The stock shadcn tabs render as a muted pill with an elevated active
      chip. Under Instrument we rebuild as an underlined row — the list

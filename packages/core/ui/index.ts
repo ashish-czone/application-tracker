@@ -133,6 +133,7 @@ export { OPERATORS_BY_FIELD_TYPE, OPERATOR_LABELS } from './components/data-grid
 // Components — data-grid cell renderers
 export { AvatarNameCell } from './components/data-grid/cell-renderers/AvatarNameCell';
 export { StatusBadgeCell, createStatusBadgeCell, type StatusColors } from './components/data-grid/cell-renderers/StatusBadgeCell';
+export { createRowActionsColumn, type RowAction, type RowActionsColumnOptions } from './components/data-grid/cell-renderers/RowActionsCell';
 export type { CellRendererProps } from './components/data-grid/cell-renderers/types';
 
 // Components — kanban
