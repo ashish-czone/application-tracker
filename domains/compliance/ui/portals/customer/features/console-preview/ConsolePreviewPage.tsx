@@ -433,6 +433,7 @@ export function ConsolePreviewPage() {
   const [workshopPage, setWorkshopPage] = useState(1);
   const [workshopSelection, setWorkshopSelection] = useState<string[]>([]);
   const [workshopFilters, setWorkshopFilters] = useState<FilterExpression[]>([]);
+  const [workshopSort, setWorkshopSort] = useState<{ column: string; direction: 'asc' | 'desc' } | null>(null);
 
   // § X — extended kit state
   const [isDark, setIsDark] = useState(false);
@@ -1204,17 +1205,31 @@ export function ConsolePreviewPage() {
             <div className="mt-4">
               <DataGrid<WorkshopRow>
                 columns={WORKSHOP_COLUMNS}
-                data={WORKSHOP_ROWS.filter((row) =>
-                  workshopFilters.every((f) => {
-                    const val = row[f.field as keyof WorkshopRow];
-                    if (f.operator === 'eq') return String(val) === String(f.value);
-                    if (f.operator === 'in') return Array.isArray(f.value) && (f.value as string[]).includes(String(val));
-                    if (f.operator === 'contains') return String(val).toLowerCase().includes(String(f.value).toLowerCase());
-                    if (f.operator === 'gt') return Number(val) > Number(f.value);
-                    if (f.operator === 'lt') return Number(val) < Number(f.value);
-                    return true;
-                  }),
-                )}
+                data={(() => {
+                  const filtered = WORKSHOP_ROWS.filter((row) =>
+                    workshopFilters.every((f) => {
+                      const val = row[f.field as keyof WorkshopRow];
+                      if (f.operator === 'eq') return String(val) === String(f.value);
+                      if (f.operator === 'in') return Array.isArray(f.value) && (f.value as string[]).includes(String(val));
+                      if (f.operator === 'contains') return String(val).toLowerCase().includes(String(f.value).toLowerCase());
+                      if (f.operator === 'gt') return Number(val) > Number(f.value);
+                      if (f.operator === 'lt') return Number(val) < Number(f.value);
+                      return true;
+                    }),
+                  );
+                  if (!workshopSort) return filtered;
+                  const { column, direction } = workshopSort;
+                  const mult = direction === 'asc' ? 1 : -1;
+                  return [...filtered].sort((a, b) => {
+                    const av = a[column as keyof WorkshopRow];
+                    const bv = b[column as keyof WorkshopRow];
+                    if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * mult;
+                    return String(av).localeCompare(String(bv)) * mult;
+                  });
+                })()}
+                sortColumn={workshopSort?.column}
+                sortDirection={workshopSort?.direction}
+                onSortChange={(column, direction) => setWorkshopSort({ column, direction })}
                 filterFields={WORKSHOP_FILTER_FIELDS}
                 filters={workshopFilters}
                 onFilterAdd={(expr) => setWorkshopFilters((prev) => [...prev.filter((f) => f.field !== expr.field), expr])}
@@ -1492,29 +1507,55 @@ export function ConsolePreviewPage() {
           {/* ─── Tabs + Accordion ─── */}
           <div className="mt-10 grid grid-cols-12 gap-8">
             <div className="col-span-6">
-              <Eyebrow tone="muted" mark="g">Tabs</Eyebrow>
-              <div className="mt-4 border border-rule bg-paper-raised p-5">
-                <Tabs value={activeTab} onValueChange={setActiveTab}>
-                  <TabsList>
-                    <TabsTrigger value="overview">Overview</TabsTrigger>
-                    <TabsTrigger value="filings">Filings</TabsTrigger>
-                    <TabsTrigger value="audit">Audit trail</TabsTrigger>
-                    <TabsTrigger value="notes">Notes</TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="overview" className="pt-4 text-sm text-ink-soft leading-relaxed">
-                    The <span className="text-ink font-medium">overview</span> tab summarizes
-                    the filing cadence, recent returns, and outstanding actions for the selected client.
-                  </TabsContent>
-                  <TabsContent value="filings" className="pt-4 text-sm text-ink-soft">
-                    Chronological list of all filings for this entity, filterable by law and period.
-                  </TabsContent>
-                  <TabsContent value="audit" className="pt-4 text-sm text-ink-soft">
-                    Every state transition, every assignee change, every export — immutable.
-                  </TabsContent>
-                  <TabsContent value="notes" className="pt-4 text-sm text-ink-soft">
-                    Private notes and flags kept by the handling team.
-                  </TabsContent>
-                </Tabs>
+              <Eyebrow tone="muted" mark="g">Tabs — two registers</Eyebrow>
+              <div className="mt-4 border border-rule bg-paper-raised p-5 space-y-6">
+                <div>
+                  <p className="mb-3 text-[10px] uppercase tracking-eyebrow text-ink-muted font-sans">
+                    Underlined · navigation
+                  </p>
+                  <Tabs value={activeTab} onValueChange={setActiveTab}>
+                    <TabsList>
+                      <TabsTrigger value="overview">Overview</TabsTrigger>
+                      <TabsTrigger value="filings">Filings</TabsTrigger>
+                      <TabsTrigger value="audit">Audit trail</TabsTrigger>
+                      <TabsTrigger value="notes">Notes</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="overview" className="pt-4 text-sm text-ink-soft leading-relaxed">
+                      The <span className="text-ink font-medium">overview</span> tab summarizes
+                      the filing cadence, recent returns, and outstanding actions for the selected client.
+                    </TabsContent>
+                    <TabsContent value="filings" className="pt-4 text-sm text-ink-soft">
+                      Chronological list of all filings for this entity, filterable by law and period.
+                    </TabsContent>
+                    <TabsContent value="audit" className="pt-4 text-sm text-ink-soft">
+                      Every state transition, every assignee change, every export — immutable.
+                    </TabsContent>
+                    <TabsContent value="notes" className="pt-4 text-sm text-ink-soft">
+                      Private notes and flags kept by the handling team.
+                    </TabsContent>
+                  </Tabs>
+                </div>
+                <div className="border-t border-rule pt-5">
+                  <p className="mb-3 text-[10px] uppercase tracking-eyebrow text-ink-muted font-sans">
+                    Segmented · filing toggle
+                  </p>
+                  <Tabs defaultValue="monthly">
+                    <TabsList variant="segmented">
+                      <TabsTrigger value="monthly">Monthly</TabsTrigger>
+                      <TabsTrigger value="quarterly">Quarterly</TabsTrigger>
+                      <TabsTrigger value="annual">Annual</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="monthly" className="pt-4 text-sm text-ink-soft">
+                      GSTR-1, GSTR-3B, TDS — the regular rhythm. Twelve cycles a year.
+                    </TabsContent>
+                    <TabsContent value="quarterly" className="pt-4 text-sm text-ink-soft">
+                      Advance tax, TDS returns (24Q / 26Q). Four cycles.
+                    </TabsContent>
+                    <TabsContent value="annual" className="pt-4 text-sm text-ink-soft">
+                      GSTR-9 reconciliation, income tax return, tax audit report.
+                    </TabsContent>
+                  </Tabs>
+                </div>
               </div>
             </div>
             <div className="col-span-6">
