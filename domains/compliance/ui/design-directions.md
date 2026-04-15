@@ -122,6 +122,19 @@ The file also ships supporting primitives used by the kit: `@keyframes stamp-in 
 16. **`CommandPalette`** ★ — ⌘K palette with sections (Navigate / Create / Action / Help). Already partly in shadcn, needs styling.
 17. **`PageProgress`** ★ — 1px top-of-page progress bar for route transitions.
 
+### Controls (retuned shadcn primitives — `packages/core/ui/components/`)
+The primitives that every form-heavy screen needs. They live alongside the rest of the shadcn primitives in `packages/core/ui/components/` — they are **not** kit-tier widgets and are not exported as `★` decorative pieces. What makes them Instrument is a block of CSS in `packages/core/ui/globals.css` scoped to `.theme-instrument` that reaches into each primitive via `data-slot` hooks and stable ARIA roles. Outside the Instrument theme they fall back to the default shadcn look, so recruit and other apps are unaffected.
+
+18. **`Dialog`** — Paper-raised modal with a serif display title, hairline border (plus a 6px inset hairline frame), sharp 2px corners, warm-ink overlay, and a small-caps close chip. Used for confirmations and focused tasks. Animation stays subdued — no zoom-bounce.
+19. **`Sheet`** — Right-side drawer with the same editorial chrome as Dialog. The default for anything with more than two fields.
+20. **`Tooltip`** — New primitive (`@radix-ui/react-tooltip`). Ink chip with small-caps all-caps copy, tight tracking, 10px type, no rounded corners. Use for keyboard hints and terse labels — never long sentences.
+21. **`Slider`** / **`FormSlider`** — New primitive (`@radix-ui/react-slider`). Hairline track (`--rule`), ink range fill, circular paper-raised thumb with a 1.5px ink rule. Opt-in `ticks` prop draws tick marks on the track; opt-in `legend` renders small-caps labels beneath. `FormSlider` wraps the primitive for react-hook-form with a live tabular-numeric readout.
+22. **`Input`** / **`Textarea`** — Paper-raised bed, hairline top/sides, inset bottom-hairline that thickens to 2px of `--authority` on focus. Italic placeholders in `--ink-muted`. `type="number"` / `inputmode="numeric|decimal"` automatically switch to JetBrains Mono with `tnum`/`zero` features.
+23. **`FormSelect`** (re-theme only) — The existing popover-combobox trigger inherits the same hairline + inset-rule treatment as `Input`. Popper content (including FormSelect's list, DatePicker, DropdownMenu) picks up paper-raised + hairline border via a popper-wrapper override.
+24. **`Checkbox`** — Square (1px radius), `--ink-soft` hairline border on `--paper-raised`. Checked state is a solid ink slab with a paper-colored check glyph — no brand-primary slab.
+25. **`RadioGroupItem`** — Same hairline paper circle, checked state draws an 8px ink dot inside.
+26. **`DataGrid`** — The full shadcn DataGrid (toolbar, filter builder, bulk bar, pagination, cell renderers) re-themed inside a `data-slot="data-grid"` wrapper: hairline border, paper-sunken thead with small-caps column headers, hairline row rules, paper-sunken row hover, JetBrains Mono on numeric cells via the existing `data-numeric` attribute. This is the grid you use when you need sort / filter / pagination / bulk actions — the kit `DataTable` stays the right pick for dense editorial listings that don't need toolbar machinery.
+
 ### Compliance composites
 18. **`FilingTaskCard`** ☆ — Card showing one filing: DueDateBlock + client name + law code + rule + handler + status. Has a `markFiled` action that plays the stamp animation.
 19. **`FilingTimeline`** ☆ — Horizontal gantt-like timeline of a client's or handler's next 6 months, rendered as ink marks on a ruled baseline. Hover pops a FilingTaskCard.
@@ -150,9 +163,10 @@ Everything is mock data. Goal: **design review**, not functional review.
 9. **§ VI — Bulk Filing** — `SectionRule` + `EmptyState` specimen + `BulkFilingDrawer` rendered inline (via the `inline` prop) as a static preview panel.
 10. **§ VII — Specimens** — `SectionRule` + `Eyebrow` + typography specimens, all six `UrgencyBadge` states, all `JurisdictionTag` variants, seven `StampMark` kinds (FILED / OVERDUE / DRAFT / VOID / CONFIDENTIAL / REVIEW / …), and four `OrdinalDate` variants. This is the "type & marks" design-review strip.
 11. **§ VIII — ⌘K Palette** — `SectionRule` + `CommandPalette` rendered in inline preview mode plus the modal trigger. Groups: Navigate / Create / Actions / Help.
-12. **Colophon** — Closing `SectionRule` + small-caps colophon line.
+12. **§ IX — Controls Workshop** — `SectionRule` + a three-column working layout that exercises every retuned shadcn primitive against real compliance copy: (a) Overlay surfaces — `Dialog` for a bulk-file confirmation (with an embedded `Checkbox` acknowledgement), `Sheet` for a client profile editor, and three `Tooltip` triggers; (b) Controls — `Slider` with `ticks` + `legend` for grace-period tuning, `RadioGroup` for the 4-tier assignee strategy, `Checkbox` group for notification opts; (c) `Form` specimen — `FormInput`, `FormSelect` (jurisdiction + return type), `FormSlider` (priority weight), `FormTextarea`, `FormCheckbox`, action row. Below the columns, a full-width `DataGrid` ("Ready for filing") with five rows, tabular-numeric amount column, status cells, and the toolbar search bar wired up.
+13. **Colophon** — Closing `SectionRule` + small-caps colophon line.
 
-**Kit coverage in the preview:** 16 of 17 ★ widgets are rendered directly. `DueDateBlock` is used transitively inside `FilingTaskCard` but is not given its own specimen; `PageProgress` is a route-transition primitive and also has no specimen of its own. If we add a §IX "chrome" strip in a follow-up, those are the two to include.
+**Kit coverage in the preview:** 16 of 17 ★ widgets are rendered directly, plus all nine retuned controls (Dialog, Sheet, Tooltip, Slider, Input, Textarea, Select, Checkbox, Radio, DataGrid) appear in §IX. `DueDateBlock` is used transitively inside `FilingTaskCard` but is not given its own specimen; `PageProgress` is a route-transition primitive and also has no specimen of its own.
 
 ## 9. Dependencies
 
@@ -161,8 +175,10 @@ Everything is mock data. Goal: **design review**, not functional review.
 | `framer-motion` | Orchestrated page-load, stamp mark entrance, drawer motion |
 | `recharts` | `StatusDonut` and small data viz. (`Sparkline` ended up as hand-rolled SVG, not Recharts — cheaper + no axis cruft to strip.) |
 | `cmdk` | `CommandPalette` (already a shadcn transitive dep) |
+| `@radix-ui/react-tooltip` | Tooltip primitive |
+| `@radix-ui/react-slider` | Slider primitive |
 
-All three ship as deps of `packages/core/ui`.
+All five ship as deps of `packages/core/ui`. The Dialog/Sheet/Checkbox/Radio/Popover radix packages were already installed.
 
 **Typography** is loaded from CDNs, not npm packages — no `@fontsource/*` deps. `apps/compliance-web/index.html` preconnects to `fonts.googleapis.com` and `api.fontshare.com` and pulls Instrument Serif, JetBrains Mono, Plus Jakarta Sans, and Inter from Google Fonts, plus General Sans from Fontshare. `.theme-instrument` then wires the stacks via `--font-sans` / `--font-serif` / `--font-mono` and turns on OpenType features (`ss01`, `cv11`, `dlig`, `liga`, `tnum`, `zero`). Trade-off: the CDN route avoids a ~1–2 MB bundle hit and is fine for the internal preview surface; when the compliance domain goes to real customer-facing traffic we should revisit `@fontsource/*` for the three critical faces and keep Fontshare for General Sans only.
 
@@ -172,8 +188,9 @@ All three ship as deps of `packages/core/ui`.
 
 | Where | What |
 |---|---|
-| `packages/core/ui/kit/` | 17 generic widgets (the ★ list). Domain-agnostic — any future domain can reuse them. Imported everywhere as `@packages/ui`. Consistent with the existing precedent that generic cell renderers live in `packages/core/ui`. |
-| `packages/core/ui/globals.css` (`.theme-instrument` layer) | All Instrument design tokens, keyframes, and utility classes — no separate `tokens.css` file. |
+| `packages/core/ui/kit/` | 17 generic kit widgets (the ★ list). Domain-agnostic — any future domain can reuse them. Imported everywhere as `@packages/ui`. Consistent with the existing precedent that generic cell renderers live in `packages/core/ui`. |
+| `packages/core/ui/components/` | Shadcn primitives (Dialog, Sheet, Tooltip, Slider, Form*, DataGrid, etc.) — **not** Instrument-specific. Each opts into the Instrument treatment via a `data-slot` attribute; CSS in `globals.css` does the re-skin. |
+| `packages/core/ui/globals.css` (`.theme-instrument` layer) | All Instrument design tokens, keyframes, utility classes, **and** the full control-surface override block that retunes Dialog/Sheet/Input/Textarea/Select/Checkbox/Radio/Tooltip/Slider/DataGrid. No separate `tokens.css` file. |
 | `domains/compliance/ui/shared/` | 7 compliance-specific composites (the ☆ list) plus `HandlerWorkloadList`. They know the vocabulary of this domain. |
 | `domains/compliance/ui/portals/customer/features/console-preview/` | The static demo page itself + its mock data. Registered as a route in `domains/compliance/ui/index.tsx` and given a full-bleed fork in `apps/compliance-web/src/main.tsx` so it renders outside the `WebShell`. |
 
