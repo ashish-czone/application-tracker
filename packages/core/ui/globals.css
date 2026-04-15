@@ -218,11 +218,13 @@
 @layer components {
   /* ----- Dialog & Sheet ---------------------------------------------------
      Paper-raised surface, hairline border, serif title, small-caps close
-     chip. Overlay is a warm ink wash, not a flat black veil. */
+     chip. Overlay is a warm ink wash, not a flat black veil.
+     A 2px authority bar hugs the top edge for a gentle colored anchor. */
   .theme-instrument [data-slot="dialog-content"],
   .theme-instrument [data-slot="sheet-content"] {
     background-color: hsl(var(--paper-raised));
     border: 1px solid hsl(var(--rule));
+    border-top: 2px solid hsl(var(--authority));
     border-radius: 2px;
     box-shadow:
       0 1px 0 hsl(var(--rule)),
@@ -371,7 +373,8 @@
   }
 
   /* ----- Checkbox ---------------------------------------------------------
-     Square, hairline, ink fill when checked — no rounded primary slab. */
+     Square, hairline, authority fill when checked. The saturated blue is
+     the one place a form is allowed to assert itself. */
   .theme-instrument [role="checkbox"] {
     width: 16px;
     height: 16px;
@@ -379,16 +382,21 @@
     border-radius: 1px;
     background-color: hsl(var(--paper-raised));
     box-shadow: inset 0 0 0 1px hsl(var(--paper));
+    transition: background-color 120ms, border-color 120ms;
+  }
+  .theme-instrument [role="checkbox"]:hover {
+    border-color: hsl(var(--authority));
   }
   .theme-instrument [role="checkbox"][data-state="checked"],
   .theme-instrument [role="checkbox"][data-state="indeterminate"] {
-    background-color: hsl(var(--ink));
-    border-color: hsl(var(--ink));
+    background-color: hsl(var(--authority));
+    border-color: hsl(var(--authority));
     color: hsl(var(--paper));
+    box-shadow: none;
   }
   .theme-instrument [role="checkbox"]:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 3px hsl(var(--authority) / 0.15);
+    box-shadow: 0 0 0 3px hsl(var(--authority) / 0.2);
   }
 
   /* ----- Radio ------------------------------------------------------------ */
@@ -397,9 +405,13 @@
     height: 16px;
     border: 1px solid hsl(var(--ink-soft));
     background-color: hsl(var(--paper-raised));
+    transition: border-color 120ms;
+  }
+  .theme-instrument [role="radio"]:hover {
+    border-color: hsl(var(--authority));
   }
   .theme-instrument [role="radio"][data-state="checked"] {
-    border-color: hsl(var(--ink));
+    border-color: hsl(var(--authority));
     background-color: hsl(var(--paper-raised));
   }
   .theme-instrument [role="radio"][data-state="checked"]::after {
@@ -408,8 +420,12 @@
     width: 8px;
     height: 8px;
     margin: 3px auto;
-    background-color: hsl(var(--ink));
+    background-color: hsl(var(--authority));
     border-radius: 50%;
+  }
+  .theme-instrument [role="radio"]:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px hsl(var(--authority) / 0.2);
   }
 
   /* ----- Tooltip ---------------------------------------------------------- */
@@ -433,28 +449,28 @@
   /* ----- Slider ----------------------------------------------------------- */
   .theme-instrument [data-slot="slider-track"] {
     background-color: hsl(var(--rule));
-    height: 1px;
+    height: 2px;
     border-radius: 0;
   }
   .theme-instrument [data-slot="slider-range"] {
-    background-color: hsl(var(--ink));
+    background-color: hsl(var(--authority));
   }
   .theme-instrument [data-slot="slider-thumb"] {
     width: 18px;
     height: 18px;
     background-color: hsl(var(--paper-raised));
-    border: 1.5px solid hsl(var(--ink));
+    border: 2px solid hsl(var(--authority));
     border-radius: 50%;
     box-shadow:
       0 1px 0 hsl(var(--rule)),
-      0 2px 6px hsla(216, 18%, 8%, 0.15);
+      0 2px 6px hsla(216, 18%, 8%, 0.18);
     transition: transform 120ms, box-shadow 120ms;
   }
   .theme-instrument [data-slot="slider-thumb"]:hover {
     transform: scale(1.1);
     box-shadow:
       0 1px 0 hsl(var(--rule)),
-      0 4px 10px hsla(216, 18%, 8%, 0.22);
+      0 4px 12px hsla(218, 56%, 24%, 0.32);
   }
   .theme-instrument [data-slot="slider-thumb"]:focus-visible {
     outline: none;
@@ -518,6 +534,146 @@
   .theme-instrument [data-slot="data-grid"] tbody td.font-mono {
     font-family: var(--font-mono);
     font-feature-settings: 'tnum', 'zero';
+  }
+
+  /* Row status tints — attach `data-status="filed" | "due-soon" | "overdue"`
+     to a <tr> to get a washed background plus a 3px colored leading border.
+     Row hover layers on top so the tint stays visible while tracking. */
+  .theme-instrument [data-slot="data-grid"] tbody tr[data-status] {
+    position: relative;
+  }
+  .theme-instrument [data-slot="data-grid"] tbody tr[data-status]::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    pointer-events: none;
+  }
+  .theme-instrument [data-slot="data-grid"] tbody tr[data-status="filed"] {
+    background-color: hsl(var(--filed-soft) / 0.5);
+  }
+  .theme-instrument [data-slot="data-grid"] tbody tr[data-status="filed"]::before {
+    background-color: hsl(var(--filed));
+  }
+  .theme-instrument [data-slot="data-grid"] tbody tr[data-status="due-soon"] {
+    background-color: hsl(var(--due-soon-soft) / 0.6);
+  }
+  .theme-instrument [data-slot="data-grid"] tbody tr[data-status="due-soon"]::before {
+    background-color: hsl(var(--due-soon));
+  }
+  .theme-instrument [data-slot="data-grid"] tbody tr[data-status="overdue"] {
+    background-color: hsl(var(--signal-soft) / 0.6);
+  }
+  .theme-instrument [data-slot="data-grid"] tbody tr[data-status="overdue"]::before {
+    background-color: hsl(var(--signal));
+  }
+
+  /* ----- Badge ------------------------------------------------------------
+     Shadcn Badge ships as a rounded pill with a primary slab fill. In the
+     Instrument theme we square it off, swap the fill for a hairline + tone
+     wash, and small-caps the label. Variants reuse the existing shadcn
+     classes (`default`, `secondary`, `destructive`, `outline`) so usage
+     sites don't change. */
+  .theme-instrument [data-slot="badge"],
+  .theme-instrument .theme-instrument-badge {
+    border-radius: 2px;
+    font-family: var(--font-sans);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border: 1px solid hsl(var(--rule));
+    background-color: hsl(var(--paper-raised));
+    color: hsl(var(--ink-soft));
+  }
+  .theme-instrument [data-slot="badge"][data-tone="authority"] {
+    border-color: hsl(var(--authority) / 0.35);
+    background-color: hsl(var(--authority) / 0.08);
+    color: hsl(var(--authority));
+  }
+  .theme-instrument [data-slot="badge"][data-tone="filed"] {
+    border-color: hsl(var(--filed) / 0.4);
+    background-color: hsl(var(--filed-soft));
+    color: hsl(var(--filed));
+  }
+  .theme-instrument [data-slot="badge"][data-tone="due-soon"] {
+    border-color: hsl(var(--due-soon) / 0.4);
+    background-color: hsl(var(--due-soon-soft));
+    color: hsl(var(--due-soon));
+  }
+  .theme-instrument [data-slot="badge"][data-tone="signal"] {
+    border-color: hsl(var(--signal) / 0.45);
+    background-color: hsl(var(--signal-soft));
+    color: hsl(var(--signal));
+  }
+
+  /* ----- Links ------------------------------------------------------------ */
+  .theme-instrument a:not([class*="no-underline"]):not(button) {
+    color: hsl(var(--authority));
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+    text-decoration-color: hsl(var(--authority) / 0.4);
+    transition: text-decoration-color 120ms;
+  }
+  .theme-instrument a:hover {
+    text-decoration-color: hsl(var(--authority));
+  }
+
+  /* ----- Text selection --------------------------------------------------- */
+  .theme-instrument ::selection {
+    background-color: hsl(var(--authority) / 0.22);
+    color: hsl(var(--ink));
+  }
+
+  /* ----- Tint washes ------------------------------------------------------
+     Use on a container to give a whole section a colored backdrop —
+     useful for alert cards, filing status blocks, "due this week" rails,
+     etc. Each comes with a matching left rail so the tint has an anchor. */
+  .theme-instrument .tint-authority,
+  .theme-instrument .tint-filed,
+  .theme-instrument .tint-due,
+  .theme-instrument .tint-signal {
+    position: relative;
+    padding-left: 16px;
+  }
+  .theme-instrument .tint-authority::before,
+  .theme-instrument .tint-filed::before,
+  .theme-instrument .tint-due::before,
+  .theme-instrument .tint-signal::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+  }
+  .theme-instrument .tint-authority {
+    background-color: hsl(var(--authority) / 0.06);
+  }
+  .theme-instrument .tint-authority::before {
+    background-color: hsl(var(--authority));
+  }
+  .theme-instrument .tint-filed {
+    background-color: hsl(var(--filed-soft) / 0.6);
+  }
+  .theme-instrument .tint-filed::before {
+    background-color: hsl(var(--filed));
+  }
+  .theme-instrument .tint-due {
+    background-color: hsl(var(--due-soon-soft) / 0.65);
+  }
+  .theme-instrument .tint-due::before {
+    background-color: hsl(var(--due-soon));
+  }
+  .theme-instrument .tint-signal {
+    background-color: hsl(var(--signal-soft) / 0.65);
+  }
+  .theme-instrument .tint-signal::before {
+    background-color: hsl(var(--signal));
   }
 }
 

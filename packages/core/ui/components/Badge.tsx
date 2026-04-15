@@ -24,11 +24,18 @@ export interface BadgeProps
   extends React.HTMLAttributes<HTMLDivElement>,
     VariantProps<typeof badgeVariants> {
   onRemove?: () => void;
+  /** Optional tone for Instrument theme — mapped via `data-tone` for CSS targeting. */
+  tone?: 'authority' | 'filed' | 'due-soon' | 'signal';
 }
 
-function Badge({ className, variant, onRemove, children, ...props }: BadgeProps) {
+function Badge({ className, variant, tone, onRemove, children, ...props }: BadgeProps) {
   return (
-    <div className={cn(badgeVariants({ variant }), onRemove && 'pr-1', className)} {...props}>
+    <div
+      data-slot="badge"
+      data-tone={tone}
+      className={cn(badgeVariants({ variant }), onRemove && 'pr-1', className)}
+      {...props}
+    >
       {children}
       {onRemove && (
         <button
