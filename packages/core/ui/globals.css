@@ -1418,6 +1418,42 @@
   [data-slot="sheet-content"][data-modal="false"] {
     pointer-events: auto;
   }
+
+  /* --------------------------------------------------------------------
+     Icons — Instrument editorial treatment
+     --------------------------------------------------------------------
+     Default every SVG inside `.theme-instrument` to ink-muted so icons
+     fade into the typography rather than competing with it. Opt into
+     color per-icon by setting `data-tone` to one of the semantic tones.
+     The `:not([data-tone])` scope keeps third-party surfaces (charts,
+     brand marks, anything that explicitly declares its own tone) free
+     of collateral muting. */
+  .theme-instrument svg:not([data-tone]) {
+    color: var(--ink-muted);
+  }
+  .theme-instrument svg[data-tone="ink"] {
+    color: var(--ink);
+  }
+  .theme-instrument svg[data-tone="authority"] {
+    color: var(--authority);
+  }
+  .theme-instrument svg[data-tone="signal"] {
+    color: var(--signal);
+  }
+  .theme-instrument svg[data-tone="due-soon"] {
+    color: var(--due-soon);
+  }
+  .theme-instrument svg[data-tone="filed"] {
+    color: var(--filed);
+  }
+  /* Buttons carry their own color contract (primary/destructive/etc.)
+     so their icons must inherit the button's foreground rather than
+     the muted default. */
+  .theme-instrument button svg:not([data-tone]),
+  .theme-instrument [role="button"] svg:not([data-tone]),
+  .theme-instrument a svg:not([data-tone]) {
+    color: inherit;
+  }
 }
 
 @layer base {

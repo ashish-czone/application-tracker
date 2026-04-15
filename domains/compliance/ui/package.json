@@ -9,6 +9,7 @@
   "dependencies": {
     "@packages/domains": "workspace:*",
     "@packages/ui": "workspace:*",
+    "@phosphor-icons/react": "^2.1.10",
     "@tanstack/react-table": "^8.21.3",
     "lucide-react": "^0.500.0",
     "react": "^19.1.0",
