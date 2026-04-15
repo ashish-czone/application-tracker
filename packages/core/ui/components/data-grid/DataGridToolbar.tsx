@@ -4,10 +4,11 @@ import type { Table } from '@tanstack/react-table';
 import { cn } from '../../lib/utils';
 import { Badge } from '../Badge';
 import { useDebounce } from '../../hooks/useDebounce';
-import type { DataGridFilter, DataGridFilterField } from './types';
+import type { DataGridBulkAction, DataGridFilter, DataGridFilterField } from './types';
 import type { FilterExpression } from './filter-types';
 import { DataGridExport } from './DataGridExport';
 import { DataGridFilterBuilder } from './DataGridFilterBuilder';
+import { DataGridBulkActionsMenu } from './DataGridBulkActionsMenu';
 
 interface DataGridToolbarProps<TData> {
   table: Table<TData>;
@@ -26,6 +27,9 @@ interface DataGridToolbarProps<TData> {
   toolbarActions?: React.ReactNode;
   enableExport?: boolean;
   exportFilename?: string;
+  bulkActions?: DataGridBulkAction[];
+  selectedRowIds?: string[];
+  onClearSelection?: () => void;
 }
 
 export function DataGridToolbar<TData>({
@@ -45,6 +49,9 @@ export function DataGridToolbar<TData>({
   toolbarActions,
   enableExport,
   exportFilename,
+  bulkActions,
+  selectedRowIds,
+  onClearSelection,
 }: DataGridToolbarProps<TData>) {
   const [localSearch, setLocalSearch] = useState(search ?? '');
   const [columnMenuOpen, setColumnMenuOpen] = useState(false);
@@ -121,6 +128,16 @@ export function DataGridToolbar<TData>({
         )}
 
         <div className="flex-1" />
+
+        {/* Bulk actions menu — only renders when rows are selected */}
+        {bulkActions && bulkActions.length > 0 && selectedRowIds && onClearSelection && (
+          <DataGridBulkActionsMenu
+            selectedCount={selectedRowIds.length}
+            actions={bulkActions}
+            selectedRowIds={selectedRowIds}
+            onClearSelection={onClearSelection}
+          />
+        )}
 
         {/* Column visibility toggle */}
         <div className="relative" ref={columnMenuRef}>

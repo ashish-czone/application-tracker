@@ -11,7 +11,6 @@ import { DataGridToolbar } from './DataGridToolbar';
 import { DataGridTable } from './DataGridTable';
 import { DataGridPagination } from './DataGridPagination';
 import { DataGridEmpty } from './DataGridEmpty';
-import { DataGridBulkBar } from './DataGridBulkBar';
 import { Skeleton } from '../Skeleton';
 import { Checkbox } from '../form/Checkbox';
 import { RadioGroup, RadioGroupItem } from '../form/RadioGroup';
@@ -211,17 +210,10 @@ export function DataGrid<TData>({
         toolbarActions={toolbarActions}
         enableExport={enableExport}
         exportFilename={exportFilename}
+        bulkActions={enableSelection ? bulkActions : undefined}
+        selectedRowIds={enableSelection ? selectedRowIds : undefined}
+        onClearSelection={enableSelection ? clearSelection : undefined}
       />
-
-      {/* Bulk action bar */}
-      {enableSelection && selectedRowIds.length > 0 && bulkActions && (
-        <DataGridBulkBar
-          selectedCount={selectedRowIds.length}
-          actions={bulkActions}
-          selectedRowIds={selectedRowIds}
-          onClearSelection={clearSelection}
-        />
-      )}
 
       {/* Error state */}
       {isError && (
