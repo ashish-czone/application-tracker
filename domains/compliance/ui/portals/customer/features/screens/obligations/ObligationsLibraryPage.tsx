@@ -13,7 +13,12 @@ import {
   DataTable,
   JurisdictionTag,
   Button,
+  FilterPopover,
+  ColumnChooser,
+  ActiveFilterChips,
+  CoarseTabs,
   type DataTableColumn,
+  type ActiveFilter,
 } from '@packages/ui';
 import {
   LAW_GROUPS,
@@ -33,8 +38,18 @@ const FREQUENCY_LABEL: Record<ObligationFrequency, string> = {
   'ad-hoc': 'Ad-hoc',
 };
 
-type LawFilter = LawGroupKey | 'all';
-type JurisdictionFilter = 'all' | 'central' | 'state';
+type StatusTab = 'all' | Obligation['status'];
+type JurisdictionKey = 'central' | 'state' | 'municipal';
+
+const JURISDICTION_OPTIONS: { value: JurisdictionKey; label: string }[] = [
+  { value: 'central', label: 'Central' },
+  { value: 'state', label: 'State' },
+  { value: 'municipal', label: 'Municipal' },
+];
+
+const FREQUENCY_OPTIONS: { value: ObligationFrequency; label: string }[] = (
+  Object.keys(FREQUENCY_LABEL) as ObligationFrequency[]
+).map((f) => ({ value: f, label: FREQUENCY_LABEL[f] }));
 
 function HealthBar({ pct }: { pct: number }) {
   const tone =
@@ -154,11 +169,23 @@ const OBLIGATION_COLUMNS: DataTableColumn<Obligation>[] = [
   },
 ];
 
+const ALL_COLUMN_KEYS = OBLIGATION_COLUMNS.map((c) => c.key);
+const REQUIRED_COLUMN_KEYS: string[] = ['code', 'name'];
+
 export function ObligationsLibraryPage() {
   const [isDark, setIsDark] = useState(false);
-  const [lawFilter, setLawFilter] = useState<LawFilter>('all');
-  const [jurisdictionFilter, setJurisdictionFilter] = useState<JurisdictionFilter>('all');
+
+  // Filter state — popover multi-selects return arrays.
+  const [lawFilter, setLawFilter] = useState<LawGroupKey[]>([]);
+  const [jurisdictionFilter, setJurisdictionFilter] = useState<JurisdictionKey[]>([]);
+  const [frequencyFilter, setFrequencyFilter] = useState<ObligationFrequency[]>([]);
   const [search, setSearch] = useState('');
+
+  // Coarse tab takes the place of the sidebar "Status" section.
+  const [statusTab, setStatusTab] = useState<StatusTab>('all');
+
+  // Column visibility driven by ColumnChooser.
+  const [visibleColumns, setVisibleColumns] = useState<string[]>(ALL_COLUMN_KEYS);
 
   const toggleDark = () => {
     setIsDark((prev) => {
@@ -173,17 +200,97 @@ export function ObligationsLibraryPage() {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return MOCK_OBLIGATIONS.filter((o) => {
-      if (lawFilter !== 'all' && o.lawGroup !== lawFilter) return false;
-      if (jurisdictionFilter !== 'all' && o.jurisdiction !== jurisdictionFilter) return false;
+      if (statusTab !== 'all' && o.status !== statusTab) return false;
+      if (lawFilter.length > 0 && !lawFilter.includes(o.lawGroup)) return false;
+      if (
+        jurisdictionFilter.length > 0 &&
+        !jurisdictionFilter.includes(o.jurisdiction as JurisdictionKey)
+      )
+        return false;
+      if (frequencyFilter.length > 0 && !frequencyFilter.includes(o.frequency)) return false;
       if (q && !`${o.code} ${o.name} ${o.lawName}`.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [lawFilter, jurisdictionFilter, search]);
+  }, [statusTab, lawFilter, jurisdictionFilter, frequencyFilter, search]);
+
+  // Derive active filter chips from filter state.
+  const activeFilters: ActiveFilter[] = useMemo(() => {
+    const chips: ActiveFilter[] = [];
+    for (const key of lawFilter) {
+      const group = LAW_GROUPS.find((g) => g.key === key);
+      chips.push({
+        key: `law:${key}`,
+        group: 'Law',
+        value: group?.label ?? key,
+        onRemove: () => setLawFilter((prev) => prev.filter((k) => k !== key)),
+      });
+    }
+    for (const key of jurisdictionFilter) {
+      chips.push({
+        key: `jurisdiction:${key}`,
+        group: 'Jurisdiction',
+        value: JURISDICTION_OPTIONS.find((j) => j.value === key)?.label ?? key,
+        onRemove: () => setJurisdictionFilter((prev) => prev.filter((k) => k !== key)),
+      });
+    }
+    for (const key of frequencyFilter) {
+      chips.push({
+        key: `frequency:${key}`,
+        group: 'Cadence',
+        value: FREQUENCY_LABEL[key],
+        onRemove: () => setFrequencyFilter((prev) => prev.filter((k) => k !== key)),
+      });
+    }
+    return chips;
+  }, [lawFilter, jurisdictionFilter, frequencyFilter]);
+
+  const clearAll = () => {
+    setLawFilter([]);
+    setJurisdictionFilter([]);
+    setFrequencyFilter([]);
+  };
 
   const totalCoverage = Math.round(
     MOCK_OBLIGATIONS.reduce((acc, o) => acc + o.onTimePct, 0) / MOCK_OBLIGATIONS.length,
   );
   const totalFilingsThisPeriod = MOCK_OBLIGATIONS.reduce((acc, o) => acc + o.filingsThisPeriod, 0);
+
+  // Popover option lists.
+  const lawOptions = LAW_GROUPS.map((g) => ({
+    value: g.key,
+    label: g.label,
+    count: g.count,
+  }));
+
+  const jurisdictionOptions = JURISDICTION_OPTIONS.map((j) => ({
+    value: j.value,
+    label: j.label,
+    count: MOCK_OBLIGATIONS.filter((o) => o.jurisdiction === j.value).length,
+  }));
+
+  const frequencyOptions = FREQUENCY_OPTIONS.map((f) => ({
+    value: f.value,
+    label: f.label,
+    count: MOCK_OBLIGATIONS.filter((o) => o.frequency === f.value).length,
+  }));
+
+  const columnChooserItems = OBLIGATION_COLUMNS.map((c) => ({
+    key: c.key,
+    label: c.header,
+    required: REQUIRED_COLUMN_KEYS.includes(c.key),
+  }));
+
+  // Coarse tab counts.
+  const statusTabs = [
+    { value: 'all' as const, label: 'All', count: MOCK_OBLIGATIONS.length },
+    { value: 'active' as const, label: 'Active', count: OBLIGATION_STATUS_COUNTS.active },
+    { value: 'draft' as const, label: 'Draft', count: OBLIGATION_STATUS_COUNTS.draft },
+    {
+      value: 'deprecated' as const,
+      label: 'Deprecated',
+      count: OBLIGATION_STATUS_COUNTS.deprecated,
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-paper paper-grain">
@@ -324,183 +431,68 @@ export function ObligationsLibraryPage() {
           />
         </section>
 
-        {/* ─── Content grid: sidebar + table ─────────────────────────────── */}
-        <section className="mt-8 grid grid-cols-12 gap-6">
-          {/* Browse sidebar */}
-          <aside className="col-span-12 lg:col-span-3">
-            <div className="bg-paper-raised border border-rule">
-              {/* Search */}
-              <div className="p-4 border-b border-rule">
-                <label className="flex items-center gap-2 border-b border-rule focus-within:border-ink transition-colors pb-1">
-                  <Search className="w-3.5 h-3.5 text-ink-muted flex-none" strokeWidth={1.5} />
-                  <input
-                    type="text"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Search obligations…"
-                    className="w-full bg-transparent outline-none text-sm text-ink placeholder:text-ink-muted font-sans"
-                  />
-                </label>
-              </div>
+        {/* ─── Full-width table block ───────────────────────────────────── */}
+        <section className="mt-10">
+          {/* Coarse tabs — status cut */}
+          <CoarseTabs tabs={statusTabs} value={statusTab} onChange={setStatusTab} />
 
-              {/* Law groups */}
-              <div className="px-4 py-4 border-b border-rule">
-                <p className="text-[10px] uppercase tracking-eyebrow font-sans font-semibold text-ink-muted mb-3">
-                  Law group
-                </p>
-                <ul className="space-y-1">
-                  <li>
-                    <button
-                      type="button"
-                      onClick={() => setLawFilter('all')}
-                      className={`w-full flex items-center justify-between text-left py-1 ${
-                        lawFilter === 'all' ? 'text-ink' : 'text-ink-soft hover:text-ink'
-                      }`}
-                    >
-                      <span
-                        className={`text-sm font-sans ${
-                          lawFilter === 'all' ? 'font-medium' : ''
-                        }`}
-                      >
-                        All obligations
-                      </span>
-                      <span className="font-mono text-[11px] tabular-nums text-ink-muted">
-                        {MOCK_OBLIGATIONS.length}
-                      </span>
-                    </button>
-                  </li>
-                  {LAW_GROUPS.map((g) => {
-                    const active = lawFilter === g.key;
-                    return (
-                      <li key={g.key}>
-                        <button
-                          type="button"
-                          onClick={() => setLawFilter(g.key)}
-                          className={`w-full flex items-center justify-between text-left py-1 ${
-                            active ? 'text-ink' : 'text-ink-soft hover:text-ink'
-                          }`}
-                        >
-                          <span
-                            className={`text-sm font-sans truncate ${
-                              active ? 'font-medium' : ''
-                            }`}
-                          >
-                            {g.label}
-                          </span>
-                          <span className="font-mono text-[11px] tabular-nums text-ink-muted">
-                            {g.count}
-                          </span>
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
+          {/* Filter bar — search + popover filter buttons + column chooser */}
+          <div className="flex items-center gap-3 py-3 border-b border-rule">
+            <label className="flex items-center gap-2 min-w-[200px] max-w-xs flex-1 border-b border-rule focus-within:border-ink transition-colors pb-1">
+              <Search className="w-3.5 h-3.5 text-ink-muted flex-none" strokeWidth={1.5} />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search obligations…"
+                className="w-full bg-transparent outline-none text-sm text-ink placeholder:text-ink-muted font-sans"
+              />
+            </label>
 
-              {/* Jurisdiction */}
-              <div className="px-4 py-4 border-b border-rule">
-                <p className="text-[10px] uppercase tracking-eyebrow font-sans font-semibold text-ink-muted mb-3">
-                  Jurisdiction
-                </p>
-                <ul className="space-y-1">
-                  {(
-                    [
-                      { key: 'all', label: 'All', count: MOCK_OBLIGATIONS.length },
-                      {
-                        key: 'central',
-                        label: 'Central',
-                        count: MOCK_OBLIGATIONS.filter((o) => o.jurisdiction === 'central').length,
-                      },
-                      {
-                        key: 'state',
-                        label: 'State',
-                        count: MOCK_OBLIGATIONS.filter((o) => o.jurisdiction === 'state').length,
-                      },
-                    ] as const
-                  ).map((j) => {
-                    const active = jurisdictionFilter === j.key;
-                    return (
-                      <li key={j.key}>
-                        <button
-                          type="button"
-                          onClick={() => setJurisdictionFilter(j.key)}
-                          className={`w-full flex items-center justify-between text-left py-1 ${
-                            active ? 'text-ink' : 'text-ink-soft hover:text-ink'
-                          }`}
-                        >
-                          <span
-                            className={`text-sm font-sans ${active ? 'font-medium' : ''}`}
-                          >
-                            {j.label}
-                          </span>
-                          <span className="font-mono text-[11px] tabular-nums text-ink-muted">
-                            {j.count}
-                          </span>
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-
-              {/* Status */}
-              <div className="px-4 py-4">
-                <p className="text-[10px] uppercase tracking-eyebrow font-sans font-semibold text-ink-muted mb-3">
-                  Status
-                </p>
-                <ul className="space-y-1.5">
-                  <li className="flex items-center justify-between">
-                    <span className="flex items-center gap-2 text-sm font-sans text-ink-soft">
-                      <span className="w-1.5 h-1.5 bg-filed" aria-hidden />
-                      Active
-                    </span>
-                    <span className="font-mono text-[11px] tabular-nums text-ink-muted">
-                      {OBLIGATION_STATUS_COUNTS.active}
-                    </span>
-                  </li>
-                  <li className="flex items-center justify-between">
-                    <span className="flex items-center gap-2 text-sm font-sans text-ink-soft">
-                      <span className="w-1.5 h-1.5 bg-due-soon" aria-hidden />
-                      Draft
-                    </span>
-                    <span className="font-mono text-[11px] tabular-nums text-ink-muted">
-                      {OBLIGATION_STATUS_COUNTS.draft}
-                    </span>
-                  </li>
-                  <li className="flex items-center justify-between">
-                    <span className="flex items-center gap-2 text-sm font-sans text-ink-soft">
-                      <span className="w-1.5 h-1.5 bg-ink-muted" aria-hidden />
-                      Deprecated
-                    </span>
-                    <span className="font-mono text-[11px] tabular-nums text-ink-muted">
-                      {OBLIGATION_STATUS_COUNTS.deprecated}
-                    </span>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </aside>
-
-          {/* Main table */}
-          <div className="col-span-12 lg:col-span-9">
-            <div className="flex items-baseline justify-between mb-3">
-              <h2 className="font-serif text-xl text-ink leading-none">
-                {lawFilter === 'all'
-                  ? 'All obligations'
-                  : LAW_GROUPS.find((g) => g.key === lawFilter)?.label}
-              </h2>
-              <span className="font-mono text-[11px] tabular-nums text-ink-soft">
-                {filtered.length} of {MOCK_OBLIGATIONS.length} rules shown
-              </span>
-            </div>
-            <div className="bg-paper-raised border border-rule overflow-x-auto">
-              <DataTable
-                columns={OBLIGATION_COLUMNS}
-                rows={filtered}
-                getRowKey={(o) => o.id}
-                onRowClick={() => {}}
+            <div className="flex items-center gap-2">
+              <FilterPopover
+                label="Law group"
+                options={lawOptions}
+                value={lawFilter}
+                onChange={(v) => setLawFilter(v as LawGroupKey[])}
+              />
+              <FilterPopover
+                label="Jurisdiction"
+                options={jurisdictionOptions}
+                value={jurisdictionFilter}
+                onChange={(v) => setJurisdictionFilter(v as JurisdictionKey[])}
+              />
+              <FilterPopover
+                label="Cadence"
+                options={frequencyOptions}
+                value={frequencyFilter}
+                onChange={(v) => setFrequencyFilter(v as ObligationFrequency[])}
               />
             </div>
+
+            <div className="ml-auto flex items-center gap-3">
+              <span className="font-mono text-[11px] tabular-nums text-ink-soft">
+                {filtered.length} of {MOCK_OBLIGATIONS.length} shown
+              </span>
+              <ColumnChooser
+                columns={columnChooserItems}
+                visible={visibleColumns}
+                onChange={setVisibleColumns}
+              />
+            </div>
+          </div>
+
+          {/* Active filter chips — always visible summary of what's applied */}
+          <ActiveFilterChips filters={activeFilters} onClearAll={clearAll} />
+
+          <div className="mt-4 bg-paper-raised border border-rule overflow-x-auto">
+            <DataTable
+              columns={OBLIGATION_COLUMNS}
+              visibleColumns={visibleColumns}
+              rows={filtered}
+              getRowKey={(o) => o.id}
+              onRowClick={() => {}}
+            />
           </div>
         </section>
       </main>

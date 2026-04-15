@@ -30,6 +30,12 @@ export interface DataTableProps<T> {
   className?: string;
   /** Stagger row reveal animation for page-load rhythm. */
   staggerReveal?: boolean;
+  /**
+   * When provided, only columns whose key is in this array are rendered.
+   * Keys not present in `columns` are ignored. Order follows `columns`, not
+   * this array — reordering is a separate concern.
+   */
+  visibleColumns?: string[];
 }
 
 /**
@@ -47,17 +53,22 @@ export function DataTable<T>({
   emptyState,
   className,
   staggerReveal = false,
+  visibleColumns,
 }: DataTableProps<T>) {
   if (rows.length === 0 && emptyState) {
     return <div className={cn('w-full', className)}>{emptyState}</div>;
   }
+
+  const renderedColumns = visibleColumns
+    ? columns.filter((c) => visibleColumns.includes(c.key))
+    : columns;
 
   return (
     <div className={cn('w-full', className)}>
       <table className="w-full border-collapse">
         <thead>
           <tr className="border-b border-rule">
-            {columns.map((col) => (
+            {renderedColumns.map((col) => (
               <th
                 key={col.key}
                 className={cn(
@@ -74,7 +85,7 @@ export function DataTable<T>({
         </thead>
         <tbody>
           {rows.map((row, index) => {
-            const lastIdx = columns.length - 1;
+            const lastIdx = renderedColumns.length - 1;
             return (
               <tr
                 key={getRowKey(row, index)}
@@ -86,7 +97,7 @@ export function DataTable<T>({
                 )}
                 style={staggerReveal ? { animationDelay: `${index * 28}ms` } : undefined}
               >
-                {columns.map((col, colIdx) => {
+                {renderedColumns.map((col, colIdx) => {
                   const overlay = rowOverlay && colIdx === lastIdx ? rowOverlay(row, index) : null;
                   return (
                     <td
