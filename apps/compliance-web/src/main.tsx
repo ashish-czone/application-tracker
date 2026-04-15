@@ -29,6 +29,7 @@ import { CheckSquare, Building2, UserCog } from 'lucide-react';
 import type { MenuItem } from '@packages/domains';
 import { complianceWeb } from '@domains/compliance-ui';
 import { ConsolePreviewPage } from '@domains/compliance-ui/portals/customer/features/console-preview';
+import { DashboardScreenPage } from '@domains/compliance-ui/portals/customer/features/screens/dashboard';
 import { api } from './lib/api';
 import './globals.css';
 
@@ -62,14 +63,20 @@ const columnRenderers = {
 };
 
 // Design-preview fork: `/console-preview` renders outside the WebShell for
-// unauthenticated design review. Every other path goes through the normal
-// authenticated WebShell. Remove once the Instrument design ships.
-const isConsolePreview = window.location.pathname.startsWith('/console-preview');
+// unauthenticated design review. `/screens/*` paths render static screen
+// previews in the same unauthenticated mode, one screen per path. Every
+// other path goes through the normal authenticated WebShell. Remove once
+// the Instrument design ships.
+const pathname = window.location.pathname;
+const isConsolePreview = pathname.startsWith('/console-preview');
+const isDashboardScreen = pathname.startsWith('/screens/dashboard');
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     {isConsolePreview ? (
       <ConsolePreviewPage />
+    ) : isDashboardScreen ? (
+      <DashboardScreenPage />
     ) : (
       <WebShell
         domains={[complianceWeb]}
