@@ -17,6 +17,8 @@ export { DueDateBlock, type DueDateBlockProps } from './DueDateBlock';
 
 export { DataTable, type DataTableProps, type DataTableColumn } from './DataTable';
 export { FilterBar, type FilterBarProps, type FilterChip } from './FilterBar';
+export { FilterPopover, type FilterPopoverProps, type FilterPopoverOption } from './FilterPopover';
+export { ColumnChooser, type ColumnChooserProps, type ColumnChooserItem } from './ColumnChooser';
 export { HierarchyTreeView, type HierarchyTreeViewProps, type HierarchyNode } from './HierarchyTreeView';
 export { EmptyState, type EmptyStateProps } from './EmptyState';
 export { CommandPalette, type CommandPaletteProps, type CommandGroup, type CommandItem } from './CommandPalette';
