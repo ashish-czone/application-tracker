@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import type { ColumnDef } from '@tanstack/react-table';
 import {
   Search,
   Command as CommandIcon,
@@ -10,6 +12,10 @@ import {
   Building2,
   Calendar,
   Users,
+  Info,
+  Mail,
+  Send,
+  AlertTriangle,
 } from 'lucide-react';
 import {
   PageMasthead,
@@ -26,6 +32,38 @@ import {
   JurisdictionTag,
   OrdinalDate,
   StampMark,
+  Button,
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+  Sheet,
+  SheetTrigger,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter,
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  TooltipProvider,
+  Slider,
+  FormSlider,
+  Form,
+  FormInput,
+  FormTextarea,
+  FormSelect,
+  FormCheckbox,
+  Checkbox,
+  RadioGroup,
+  RadioGroupItem,
+  Label,
+  DataGrid,
   type DataTableColumn,
   type FilterChip,
   type CommandGroup,
@@ -157,10 +195,108 @@ const FILING_COLUMNS: DataTableColumn<Filing>[] = [
   },
 ];
 
+// ---------------------------------------------------------------------------
+// §  IX — CONTROLS WORKSHOP — mock data                                    ---
+// ---------------------------------------------------------------------------
+interface WorkshopRow {
+  id: string;
+  code: string;
+  client: string;
+  period: string;
+  amount: number;
+  status: 'ready' | 'draft' | 'blocked';
+}
+const WORKSHOP_ROWS: WorkshopRow[] = [
+  { id: 'w1', code: 'GSTR-3B', client: 'Nilkanth Traders', period: 'Mar 2026', amount: 184500, status: 'ready' },
+  { id: 'w2', code: 'GSTR-1', client: 'Khandwala & Sons', period: 'Mar 2026', amount: 62850, status: 'ready' },
+  { id: 'w3', code: 'ITR-6', client: 'Arbitrage Holdings', period: 'FY 25-26', amount: 0, status: 'draft' },
+  { id: 'w4', code: 'TDS 24Q', client: 'Prism Analytics', period: 'Q4 2026', amount: 41200, status: 'blocked' },
+  { id: 'w5', code: 'GSTR-9', client: 'Velocity Retail', period: 'FY 25-26', amount: 0, status: 'draft' },
+];
+
+const WORKSHOP_COLUMNS: ColumnDef<WorkshopRow>[] = [
+  {
+    id: 'code',
+    header: 'Return',
+    accessorKey: 'code',
+    cell: ({ row }) => <span className="font-mono text-[13px] text-ink">{row.original.code}</span>,
+  },
+  {
+    id: 'client',
+    header: 'Client',
+    accessorKey: 'client',
+  },
+  {
+    id: 'period',
+    header: 'Period',
+    accessorKey: 'period',
+    cell: ({ row }) => <span className="text-ink-soft">{row.original.period}</span>,
+  },
+  {
+    id: 'amount',
+    header: 'Amount (₹)',
+    accessorKey: 'amount',
+    cell: ({ row }) => (
+      <span data-numeric="true" className="font-mono tabular-nums text-right block">
+        {row.original.amount > 0 ? row.original.amount.toLocaleString('en-IN') : '—'}
+      </span>
+    ),
+  },
+  {
+    id: 'status',
+    header: 'Status',
+    accessorKey: 'status',
+    cell: ({ row }) => {
+      const s = row.original.status;
+      const copy =
+        s === 'ready' ? 'Ready to file' : s === 'draft' ? 'Draft' : 'Blocked';
+      const tone =
+        s === 'ready'
+          ? 'text-filed'
+          : s === 'draft'
+            ? 'text-ink-muted'
+            : 'text-signal';
+      return (
+        <span className={`text-[10px] uppercase tracking-[0.14em] ${tone}`}>{copy}</span>
+      );
+    },
+  },
+];
+
+interface WorkshopFormValues {
+  clientName: string;
+  reference: string;
+  jurisdiction: string;
+  returnType: string;
+  notes: string;
+  priority: number;
+  confirmed: boolean;
+}
+
 export function ConsolePreviewPage() {
   const [chips, setChips] = useState<FilterChip[]>(FILTER_CHIPS_INITIAL);
   const [search, setSearch] = useState('');
   const [paletteOpen, setPaletteOpen] = useState(false);
+
+  // § IX — controls workshop state
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [gracePeriod, setGracePeriod] = useState(7);
+  const [bulkTier, setBulkTier] = useState('handler-primary');
+  const [allowOverride, setAllowOverride] = useState(true);
+  const [workshopPage, setWorkshopPage] = useState(1);
+
+  const workshopForm = useForm<WorkshopFormValues>({
+    defaultValues: {
+      clientName: 'Nilkanth Traders Pvt Ltd',
+      reference: 'GSTIN 27AAACN1234A1Z5',
+      jurisdiction: 'central',
+      returnType: 'gstr-3b',
+      notes: 'Client has elected to file on the 16th to allow for reconciliation with purchase register.',
+      priority: 72,
+      confirmed: false,
+    },
+  });
 
   const toggleChip = (key: string) =>
     setChips((c) => c.map((chip) => (chip.key === key ? { ...chip, active: !chip.active } : chip)));
@@ -548,6 +684,341 @@ export function ConsolePreviewPage() {
           <SectionRule label="§ VIII — ⌘K Command Palette" align="left" />
           <div className="mt-4 flex justify-center">
             <CommandPalette open groups={COMMAND_GROUPS} onOpenChange={() => {}} inline />
+          </div>
+        </section>
+
+        {/* §  IX — CONTROLS WORKSHOP  ──────────────────────────────────── */}
+        <section className="mt-16">
+          <SectionRule label="§ IX — Controls Workshop" align="left" />
+          <p className="mt-3 max-w-[62ch] text-sm text-ink-soft font-serif italic leading-relaxed">
+            The generic shadcn primitives — Dialog, Sheet, Tooltip, Slider, Input, Select,
+            Checkbox, Radio, DataGrid — retuned for warm paper. Every control below is the
+            production component from <span className="font-mono not-italic text-[12px]">@packages/ui</span>;
+            only the theme changes.
+          </p>
+
+          <TooltipProvider delayDuration={150}>
+            <div className="mt-8 grid grid-cols-12 gap-8">
+              {/* ─── Column A: Dialog + Sheet + Tooltip triggers ─── */}
+              <div className="col-span-4">
+                <Eyebrow tone="muted" mark="a">Overlay surfaces</Eyebrow>
+                <div className="mt-4 border border-rule bg-paper-raised">
+                  <div className="px-5 py-5 space-y-4">
+                    <div className="space-y-1">
+                      <div className="font-serif text-xl text-ink leading-tight">Dialog</div>
+                      <p className="text-xs text-ink-muted">Confirmation & focused tasks</p>
+                    </div>
+                    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" className="w-full justify-between">
+                          <span>Mark 12 filings as filed</span>
+                          <CheckCircle2 className="w-4 h-4" />
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Confirm bulk filing</DialogTitle>
+                          <DialogDescription>
+                            You are about to mark <span className="font-mono text-ink">12</span>{' '}
+                            filings as filed on <OrdinalDate date={PREVIEW_TODAY} variant="long" />.
+                            This will trigger client notifications and lock the associated periods.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="mt-2 border-y border-rule py-4 space-y-3">
+                          <div className="flex items-start gap-3">
+                            <AlertTriangle className="w-4 h-4 text-signal mt-0.5 shrink-0" />
+                            <div className="text-sm text-ink-soft">
+                              <span className="text-ink">3 of these</span> are past their grace
+                              period. The audit log will flag them as late filings.
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Checkbox
+                              id="dialog-ack"
+                              checked={allowOverride}
+                              onCheckedChange={(v) => setAllowOverride(v === true)}
+                            />
+                            <label htmlFor="dialog-ack" className="text-xs text-ink-soft cursor-pointer">
+                              I have reviewed each filing and acknowledge the late flags
+                            </label>
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <DialogClose asChild>
+                            <Button variant="ghost">Cancel</Button>
+                          </DialogClose>
+                          <Button disabled={!allowOverride} onClick={() => setDialogOpen(false)}>
+                            File 12 returns
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+
+                  <div className="border-t border-rule px-5 py-5 space-y-4">
+                    <div className="space-y-1">
+                      <div className="font-serif text-xl text-ink leading-tight">Sheet</div>
+                      <p className="text-xs text-ink-muted">Right drawer for longer tasks</p>
+                    </div>
+                    <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+                      <SheetTrigger asChild>
+                        <Button variant="outline" className="w-full justify-between">
+                          <span>Edit client profile</span>
+                          <Users className="w-4 h-4" />
+                        </Button>
+                      </SheetTrigger>
+                      <SheetContent side="right">
+                        <SheetHeader>
+                          <SheetTitle>Nilkanth Traders</SheetTitle>
+                          <SheetDescription>
+                            Registered under GST · Income Tax · TDS. Last filing 14 days ago.
+                          </SheetDescription>
+                        </SheetHeader>
+                        <div className="px-6 py-6 space-y-4 flex-1 overflow-auto">
+                          <div>
+                            <Label htmlFor="sheet-name">Legal name</Label>
+                            <input
+                              id="sheet-name"
+                              data-slot="input"
+                              defaultValue="Nilkanth Traders Pvt Ltd"
+                              className="mt-1 w-full"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="sheet-gstin">GSTIN</Label>
+                            <input
+                              id="sheet-gstin"
+                              data-slot="input"
+                              type="text"
+                              inputMode="numeric"
+                              defaultValue="27AAACN1234A1Z5"
+                              className="mt-1 w-full"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="sheet-notes">Handler notes</Label>
+                            <textarea
+                              id="sheet-notes"
+                              data-slot="textarea"
+                              rows={4}
+                              defaultValue="Books closed on 12th of each month. GSTR-1 filed first, then 3B on the 20th."
+                              className="mt-1 w-full"
+                            />
+                          </div>
+                        </div>
+                        <SheetFooter>
+                          <Button variant="ghost" onClick={() => setSheetOpen(false)}>Cancel</Button>
+                          <Button onClick={() => setSheetOpen(false)}>Save profile</Button>
+                        </SheetFooter>
+                      </SheetContent>
+                    </Sheet>
+                  </div>
+
+                  <div className="border-t border-rule px-5 py-5 space-y-4">
+                    <div className="space-y-1">
+                      <div className="font-serif text-xl text-ink leading-tight">Tooltip</div>
+                      <p className="text-xs text-ink-muted">Ink chip with small-caps copy</p>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="outline" size="sm" className="gap-2">
+                            <Info className="w-3.5 h-3.5" />
+                            Why late?
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">Filed after the 20th grace window</TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            className="w-8 h-8 grid place-items-center border border-rule hover:border-ink text-ink-soft hover:text-ink transition-colors"
+                            aria-label="Send reminder"
+                          >
+                            <Send className="w-3.5 h-3.5" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">Send reminder ⌘R</TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            className="w-8 h-8 grid place-items-center border border-rule hover:border-ink text-ink-soft hover:text-ink transition-colors"
+                            aria-label="Compose email"
+                          >
+                            <Mail className="w-3.5 h-3.5" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom">Compose email to client</TooltipContent>
+                      </Tooltip>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* ─── Column B: Sliders + Radio + Checkbox ─── */}
+              <div className="col-span-4">
+                <Eyebrow tone="muted" mark="b">Controls</Eyebrow>
+                <div className="mt-4 border border-rule bg-paper-raised">
+                  <div className="px-5 py-5">
+                    <div className="space-y-1 mb-4">
+                      <div className="font-serif text-xl text-ink leading-tight">Slider</div>
+                      <p className="text-xs text-ink-muted">Hairline track, ink thumb</p>
+                    </div>
+                    <div className="space-y-5">
+                      <div>
+                        <div className="flex items-baseline justify-between mb-1">
+                          <Label htmlFor="grace">Grace period</Label>
+                          <span data-numeric="true" className="font-mono text-sm text-ink">
+                            {gracePeriod} day{gracePeriod === 1 ? '' : 's'}
+                          </span>
+                        </div>
+                        <Slider
+                          min={0}
+                          max={30}
+                          step={1}
+                          value={[gracePeriod]}
+                          onValueChange={(v) => setGracePeriod(v[0])}
+                          ticks
+                          legend={
+                            <>
+                              <span>0</span>
+                              <span>15</span>
+                              <span>30</span>
+                            </>
+                          }
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-rule px-5 py-5">
+                    <div className="space-y-1 mb-4">
+                      <div className="font-serif text-xl text-ink leading-tight">Radio</div>
+                      <p className="text-xs text-ink-muted">Ink dot, square-ish paper bed</p>
+                    </div>
+                    <RadioGroup value={bulkTier} onValueChange={setBulkTier} className="space-y-2">
+                      {[
+                        { v: 'handler-primary', l: 'Primary handler', d: 'First choice, never fails open' },
+                        { v: 'handler-any', l: 'Any handler', d: 'Round-robin among qualified' },
+                        { v: 'global-primary', l: 'Global primary', d: 'Partner fallback only' },
+                        { v: 'unassigned', l: 'Leave unassigned', d: 'Errors out at generation' },
+                      ].map((opt) => (
+                        <label
+                          key={opt.v}
+                          className="flex items-start gap-3 cursor-pointer py-1"
+                        >
+                          <RadioGroupItem value={opt.v} id={`tier-${opt.v}`} className="mt-0.5" />
+                          <div>
+                            <div className="text-[13px] text-ink">{opt.l}</div>
+                            <div className="text-[11px] text-ink-muted">{opt.d}</div>
+                          </div>
+                        </label>
+                      ))}
+                    </RadioGroup>
+                  </div>
+
+                  <div className="border-t border-rule px-5 py-5">
+                    <div className="space-y-1 mb-4">
+                      <div className="font-serif text-xl text-ink leading-tight">Checkbox</div>
+                      <p className="text-xs text-ink-muted">Ink fill when checked</p>
+                    </div>
+                    <div className="space-y-2">
+                      {[
+                        { id: 'cb-1', label: 'Email client on creation', checked: true },
+                        { id: 'cb-2', label: 'Include attachments', checked: true },
+                        { id: 'cb-3', label: 'Notify handler', checked: false },
+                        { id: 'cb-4', label: 'Add to partner digest', checked: false },
+                      ].map((c) => (
+                        <label key={c.id} className="flex items-center gap-3 cursor-pointer">
+                          <Checkbox id={c.id} defaultChecked={c.checked} />
+                          <span className="text-[13px] text-ink">{c.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* ─── Column C: Form specimen ─── */}
+              <div className="col-span-4">
+                <Eyebrow tone="muted" mark="c">Form — register client</Eyebrow>
+                <div className="mt-4 border border-rule bg-paper-raised p-5">
+                  <Form form={workshopForm} onSubmit={workshopForm.handleSubmit(() => {})}>
+                    <FormInput name="clientName" label="Client name" placeholder="Legal entity" />
+                    <FormInput
+                      name="reference"
+                      label="Reference"
+                      placeholder="GSTIN / PAN / Reg no."
+                    />
+                    <FormSelect
+                      name="jurisdiction"
+                      label="Jurisdiction"
+                      options={[
+                        { value: 'central', label: 'Central' },
+                        { value: 'state', label: 'State' },
+                        { value: 'municipal', label: 'Municipal' },
+                        { value: 'international', label: 'International' },
+                      ]}
+                    />
+                    <FormSelect
+                      name="returnType"
+                      label="Return type"
+                      options={[
+                        { value: 'gstr-1', label: 'GSTR-1 · Outward supplies' },
+                        { value: 'gstr-3b', label: 'GSTR-3B · Summary return' },
+                        { value: 'gstr-9', label: 'GSTR-9 · Annual return' },
+                        { value: 'itr-6', label: 'ITR-6 · Corporate income' },
+                      ]}
+                    />
+                    <FormSlider
+                      name="priority"
+                      label="Priority weight"
+                      min={0}
+                      max={100}
+                      step={5}
+                      formatValue={(v) => `${v} / 100`}
+                    />
+                    <FormTextarea
+                      name="notes"
+                      label="Handler notes"
+                      rows={3}
+                      description="Visible to the assigned handler only."
+                    />
+                    <FormCheckbox
+                      name="confirmed"
+                      label="I confirm the above matches the engagement letter"
+                    />
+                    <div className="flex justify-end gap-2 pt-2">
+                      <Button variant="ghost" type="button">Cancel</Button>
+                      <Button type="submit">Register client</Button>
+                    </div>
+                  </Form>
+                </div>
+              </div>
+            </div>
+          </TooltipProvider>
+
+          {/* ─── Full-width DataGrid ─── */}
+          <div className="mt-10">
+            <Eyebrow tone="muted" mark="d">DataGrid — ready for filing</Eyebrow>
+            <div className="mt-4">
+              <DataGrid<WorkshopRow>
+                columns={WORKSHOP_COLUMNS}
+                data={WORKSHOP_ROWS}
+                page={workshopPage}
+                pageSize={10}
+                pageCount={1}
+                totalRows={WORKSHOP_ROWS.length}
+                onPageChange={setWorkshopPage}
+                onPageSizeChange={() => {}}
+                search={search}
+                onSearchChange={setSearch}
+                searchPlaceholder="Search returns, clients, periods…"
+              />
+            </div>
           </div>
         </section>
 

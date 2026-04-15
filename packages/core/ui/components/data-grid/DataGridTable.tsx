@@ -53,7 +53,7 @@ export function DataGridTable<TData>({
   };
 
   return (
-    <div className="rounded-md border overflow-x-auto">
+    <div data-slot="data-grid" className="rounded-md border overflow-x-auto">
       <table className="w-full min-w-max caption-bottom text-sm">
         <thead className="bg-muted/50">
           {table.getHeaderGroups().map((headerGroup) => (

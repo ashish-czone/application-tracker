@@ -44,6 +44,7 @@ export function FormTextarea({
             <textarea
               {...field}
               id={name}
+              data-slot="textarea"
               placeholder={placeholder}
               disabled={disabled}
               rows={rows}

@@ -203,6 +203,325 @@
 }
 
 /* ============================================================================
+   Instrument — control surface overrides
+   ============================================================================
+   The generic shadcn primitives (Dialog, Sheet, Tooltip, Slider, Input,
+   Textarea, Select, Checkbox, Radio, DataGrid) ship with Tailwind classes
+   that feel right in a default app but alien on warm paper. These rules
+   reach into those primitives via `data-slot` hooks and stable ARIA roles
+   to give them the editorial aesthetic the rest of the kit already has —
+   hairline rules, serif titles, small-caps chrome, tabular numerics, and
+   no cosmetic rounding or drop shadows.
+
+   Only fires under `.theme-instrument` so other apps are unaffected.
+   ========================================================================== */
+@layer components {
+  /* ----- Dialog & Sheet ---------------------------------------------------
+     Paper-raised surface, hairline border, serif title, small-caps close
+     chip. Overlay is a warm ink wash, not a flat black veil. */
+  .theme-instrument [data-slot="dialog-content"],
+  .theme-instrument [data-slot="sheet-content"] {
+    background-color: hsl(var(--paper-raised));
+    border: 1px solid hsl(var(--rule));
+    border-radius: 2px;
+    box-shadow:
+      0 1px 0 hsl(var(--rule)),
+      0 24px 48px -20px hsla(216, 9%, 12%, 0.18),
+      0 2px 6px hsla(216, 9%, 12%, 0.05);
+    padding: 28px 32px;
+  }
+
+  .theme-instrument [data-slot="dialog-content"]::before,
+  .theme-instrument [data-slot="sheet-content"]::before {
+    content: '';
+    position: absolute;
+    inset: 6px;
+    border: 1px solid hsl(var(--rule));
+    pointer-events: none;
+    opacity: 0.5;
+  }
+
+  .theme-instrument [role="dialog"] + [data-radix-focus-guard],
+  .theme-instrument [data-state="open"][data-slot="dialog-content"],
+  .theme-instrument [data-state="open"][data-slot="sheet-content"] {
+    /* keep Radix's own data-state animations but subdue the zoom */
+  }
+
+  .theme-instrument [data-slot="dialog-title"],
+  .theme-instrument [data-slot="sheet-title"] {
+    font-family: var(--font-serif);
+    font-feature-settings: 'dlig', 'liga';
+    font-size: 28px;
+    line-height: 1.1;
+    font-weight: 400;
+    color: hsl(var(--ink));
+    letter-spacing: -0.01em;
+  }
+
+  .theme-instrument [data-slot="dialog-close"],
+  .theme-instrument [data-slot="sheet-close"] {
+    top: 12px !important;
+    right: 14px !important;
+    width: 28px;
+    height: 28px;
+    display: grid;
+    place-items: center;
+    border: 1px solid hsl(var(--rule));
+    border-radius: 2px;
+    background-color: hsl(var(--paper));
+    color: hsl(var(--ink-soft));
+    opacity: 1;
+  }
+  .theme-instrument [data-slot="dialog-close"]:hover,
+  .theme-instrument [data-slot="sheet-close"]:hover {
+    background-color: hsl(var(--paper-sunken));
+    color: hsl(var(--ink));
+  }
+
+  /* Dialog overlay — warm ink wash */
+  .theme-instrument [data-slot="dialog-content"] ~ *,
+  .theme-instrument [data-radix-dialog-overlay] {
+    background-color: hsla(216, 18%, 8%, 0.55) !important;
+    backdrop-filter: blur(1px);
+  }
+
+  /* ----- Inputs & Textarea ------------------------------------------------
+     Hairline rule underline, no corner radius, paper bed. Focus = authority
+     ring drawn as a 1px bottom rule rather than a 2px halo. */
+  .theme-instrument [data-slot="input"],
+  .theme-instrument [data-slot="textarea"] {
+    background-color: hsl(var(--paper-raised));
+    border: 1px solid hsl(var(--rule));
+    border-radius: 2px;
+    color: hsl(var(--ink));
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.4;
+    padding: 10px 12px;
+    box-shadow: inset 0 -1px 0 hsl(var(--rule) / 0.6);
+    transition: border-color 120ms, box-shadow 120ms, background-color 120ms;
+  }
+  .theme-instrument [data-slot="input"]::placeholder,
+  .theme-instrument [data-slot="textarea"]::placeholder {
+    color: hsl(var(--ink-muted));
+    font-style: italic;
+  }
+  .theme-instrument [data-slot="input"]:hover,
+  .theme-instrument [data-slot="textarea"]:hover {
+    border-color: hsl(var(--rule-strong));
+  }
+  .theme-instrument [data-slot="input"]:focus-visible,
+  .theme-instrument [data-slot="textarea"]:focus-visible {
+    outline: none;
+    border-color: hsl(var(--authority));
+    box-shadow:
+      inset 0 -2px 0 hsl(var(--authority)),
+      0 0 0 3px hsl(var(--authority) / 0.08);
+    background-color: hsl(var(--paper));
+  }
+  .theme-instrument [data-slot="input"][aria-invalid="true"],
+  .theme-instrument [data-slot="textarea"][aria-invalid="true"] {
+    border-color: hsl(var(--signal));
+    box-shadow: inset 0 -2px 0 hsl(var(--signal));
+  }
+  .theme-instrument [data-slot="input"][type="number"],
+  .theme-instrument [data-slot="input"][inputmode="numeric"],
+  .theme-instrument [data-slot="input"][inputmode="decimal"] {
+    font-family: var(--font-mono);
+    font-feature-settings: 'tnum', 'zero';
+  }
+
+  /* ----- Form labels ------------------------------------------------------
+     Small-caps by default so the chrome frames every field the same way. */
+  .theme-instrument label[for],
+  .theme-instrument [data-slot="label"] {
+    font-family: var(--font-sans);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-weight: 500;
+    color: hsl(var(--ink-muted));
+  }
+
+  /* ----- Select trigger (FormSelect uses role="combobox") ----------------- */
+  .theme-instrument [role="combobox"] {
+    background-color: hsl(var(--paper-raised));
+    border: 1px solid hsl(var(--rule));
+    border-radius: 2px;
+    color: hsl(var(--ink));
+    font-family: var(--font-sans);
+    box-shadow: inset 0 -1px 0 hsl(var(--rule) / 0.6);
+  }
+  .theme-instrument [role="combobox"]:hover {
+    border-color: hsl(var(--rule-strong));
+  }
+  .theme-instrument [role="combobox"][aria-expanded="true"] {
+    border-color: hsl(var(--authority));
+    box-shadow: inset 0 -2px 0 hsl(var(--authority));
+  }
+
+  /* Popover/Select content — paper-raised with hairline border */
+  .theme-instrument [data-radix-popper-content-wrapper] > * {
+    background-color: hsl(var(--paper-raised));
+    border: 1px solid hsl(var(--rule)) !important;
+    border-radius: 2px !important;
+    box-shadow:
+      0 1px 0 hsl(var(--rule)),
+      0 18px 32px -16px hsla(216, 9%, 12%, 0.22) !important;
+  }
+
+  /* ----- Checkbox ---------------------------------------------------------
+     Square, hairline, ink fill when checked — no rounded primary slab. */
+  .theme-instrument [role="checkbox"] {
+    width: 16px;
+    height: 16px;
+    border: 1px solid hsl(var(--ink-soft));
+    border-radius: 1px;
+    background-color: hsl(var(--paper-raised));
+    box-shadow: inset 0 0 0 1px hsl(var(--paper));
+  }
+  .theme-instrument [role="checkbox"][data-state="checked"],
+  .theme-instrument [role="checkbox"][data-state="indeterminate"] {
+    background-color: hsl(var(--ink));
+    border-color: hsl(var(--ink));
+    color: hsl(var(--paper));
+  }
+  .theme-instrument [role="checkbox"]:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px hsl(var(--authority) / 0.15);
+  }
+
+  /* ----- Radio ------------------------------------------------------------ */
+  .theme-instrument [role="radio"] {
+    width: 16px;
+    height: 16px;
+    border: 1px solid hsl(var(--ink-soft));
+    background-color: hsl(var(--paper-raised));
+  }
+  .theme-instrument [role="radio"][data-state="checked"] {
+    border-color: hsl(var(--ink));
+    background-color: hsl(var(--paper-raised));
+  }
+  .theme-instrument [role="radio"][data-state="checked"]::after {
+    content: '';
+    display: block;
+    width: 8px;
+    height: 8px;
+    margin: 3px auto;
+    background-color: hsl(var(--ink));
+    border-radius: 50%;
+  }
+
+  /* ----- Tooltip ---------------------------------------------------------- */
+  .theme-instrument [data-slot="tooltip-content"] {
+    background-color: hsl(var(--ink));
+    color: hsl(var(--paper));
+    border: none;
+    border-radius: 1px;
+    padding: 6px 10px;
+    font-family: var(--font-sans);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-weight: 500;
+    box-shadow: 0 6px 14px -6px hsla(216, 18%, 8%, 0.45);
+  }
+  .theme-instrument [data-slot="tooltip-arrow"] {
+    fill: hsl(var(--ink));
+  }
+
+  /* ----- Slider ----------------------------------------------------------- */
+  .theme-instrument [data-slot="slider-track"] {
+    background-color: hsl(var(--rule));
+    height: 1px;
+    border-radius: 0;
+  }
+  .theme-instrument [data-slot="slider-range"] {
+    background-color: hsl(var(--ink));
+  }
+  .theme-instrument [data-slot="slider-thumb"] {
+    width: 18px;
+    height: 18px;
+    background-color: hsl(var(--paper-raised));
+    border: 1.5px solid hsl(var(--ink));
+    border-radius: 50%;
+    box-shadow:
+      0 1px 0 hsl(var(--rule)),
+      0 2px 6px hsla(216, 18%, 8%, 0.15);
+    transition: transform 120ms, box-shadow 120ms;
+  }
+  .theme-instrument [data-slot="slider-thumb"]:hover {
+    transform: scale(1.1);
+    box-shadow:
+      0 1px 0 hsl(var(--rule)),
+      0 4px 10px hsla(216, 18%, 8%, 0.22);
+  }
+  .theme-instrument [data-slot="slider-thumb"]:focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 4px hsl(var(--authority) / 0.18),
+      0 1px 0 hsl(var(--rule));
+  }
+  .theme-instrument [data-slot="slider-ticks"] span {
+    background-color: hsl(var(--rule-strong));
+  }
+  .theme-instrument [data-slot="slider-legend"] {
+    font-family: var(--font-sans);
+  }
+
+  /* ----- DataGrid ---------------------------------------------------------
+     The shadcn DataGrid wraps its table in data-slot="data-grid". Re-skin
+     the wrapper + table with hairline rules, editorial header, tabular
+     numerics, and paper-sunken row hover. */
+  .theme-instrument [data-slot="data-grid"] {
+    background-color: hsl(var(--paper-raised));
+    border: 1px solid hsl(var(--rule));
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .theme-instrument [data-slot="data-grid"] > table {
+    font-family: var(--font-sans);
+  }
+  .theme-instrument [data-slot="data-grid"] thead {
+    background-color: hsl(var(--paper-sunken));
+    border-bottom: 1px solid hsl(var(--rule));
+  }
+  .theme-instrument [data-slot="data-grid"] thead tr {
+    border-bottom: none;
+  }
+  .theme-instrument [data-slot="data-grid"] thead th {
+    font-family: var(--font-sans);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-weight: 500;
+    color: hsl(var(--ink-muted));
+    padding: 12px 14px;
+    text-align: left;
+  }
+  .theme-instrument [data-slot="data-grid"] tbody tr {
+    border-bottom: 1px solid hsl(var(--rule) / 0.55);
+    transition: background-color 120ms;
+  }
+  .theme-instrument [data-slot="data-grid"] tbody tr:last-child {
+    border-bottom: none;
+  }
+  .theme-instrument [data-slot="data-grid"] tbody tr:hover {
+    background-color: hsl(var(--paper-sunken) / 0.55);
+  }
+  .theme-instrument [data-slot="data-grid"] tbody td {
+    padding: 12px 14px;
+    color: hsl(var(--ink));
+    font-size: 13px;
+  }
+  .theme-instrument [data-slot="data-grid"] tbody td[data-numeric="true"],
+  .theme-instrument [data-slot="data-grid"] tbody td.font-mono {
+    font-family: var(--font-mono);
+    font-feature-settings: 'tnum', 'zero';
+  }
+}
+
+/* ============================================================================
    Kit keyframes — motion primitives used by framer-motion and CSS fallbacks.
    ========================================================================== */
 @layer base {
