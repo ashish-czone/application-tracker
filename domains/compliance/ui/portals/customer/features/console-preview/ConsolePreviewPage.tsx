@@ -30,6 +30,14 @@ import {
   GripVertical,
 } from 'lucide-react';
 import {
+  Scales,
+  Gavel,
+  BookOpenText,
+  Feather,
+  Scroll,
+  Stamp,
+} from '@phosphor-icons/react';
+import {
   PageMasthead,
   SectionRule,
   Eyebrow,
@@ -1759,6 +1767,118 @@ export function ConsolePreviewPage() {
                   );
                 }}
               />
+            </div>
+          </div>
+        </section>
+
+        {/* §  XII — ICONOGRAPHY  ───────────────────────────────────────── */}
+        <section className="mt-16">
+          <SectionRule label="§ XII — Iconography" align="left" />
+          <p className="mt-3 max-w-[62ch] text-sm text-ink-soft font-serif italic leading-relaxed">
+            Two registers, kept in their lanes. Lucide sets the functional
+            vocabulary — toolbar actions, form affordances, the small
+            clerical gestures. Phosphor Thin handles the editorial motifs —
+            scales, quills, stamps — that want to feel printed rather than
+            drawn. Every icon defaults to the muted ink of the surrounding
+            text; opt into color only when the icon is itself the signal.
+          </p>
+
+          {/* ─── Register A: Lucide (functional) ─── */}
+          <div className="mt-8">
+            <Eyebrow tone="muted" mark="a">Lucide — functional register</Eyebrow>
+            <p className="mt-2 max-w-[56ch] text-[12px] text-ink-soft font-serif italic leading-snug">
+              Paired with labels, stroked at 1.5px, sized to the text. They
+              inherit ink-muted by default and lift to full ink on hover or
+              active state.
+            </p>
+            <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-px bg-rule border border-rule">
+              {[
+                { Icon: Search, label: 'Search' },
+                { Icon: Filter, label: 'Filter' },
+                { Icon: Pencil, label: 'Edit' },
+                { Icon: Trash2, label: 'Delete' },
+                { Icon: Download, label: 'Export' },
+                { Icon: Archive, label: 'Archive' },
+                { Icon: Send, label: 'Send' },
+                { Icon: CheckCircle2, label: 'Approve' },
+                { Icon: Calendar, label: 'Schedule' },
+                { Icon: Users, label: 'Assign' },
+                { Icon: Mail, label: 'Notify' },
+                { Icon: FileText, label: 'Draft' },
+              ].map(({ Icon, label }) => (
+                <div
+                  key={label}
+                  className="bg-paper-raised px-4 py-5 flex flex-col items-center gap-2"
+                >
+                  <Icon className="h-5 w-5" strokeWidth={1.5} />
+                  <span className="text-[10px] uppercase tracking-eyebrow text-ink-muted font-sans">
+                    {label}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* ─── Register B: Phosphor Thin (editorial) ─── */}
+          <div className="mt-10">
+            <Eyebrow tone="muted" mark="b">Phosphor Thin — editorial register</Eyebrow>
+            <p className="mt-2 max-w-[56ch] text-[12px] text-ink-soft font-serif italic leading-snug">
+              Used at display sizes as motif marks — section openers, empty
+              states, the colophon. Thin weight reads like pen on paper and
+              recedes into the serif body without demanding attention.
+            </p>
+            <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-px bg-rule border border-rule">
+              {[
+                { Icon: Scales, label: 'Law' },
+                { Icon: Gavel, label: 'Ruling' },
+                { Icon: BookOpenText, label: 'Library' },
+                { Icon: Feather, label: 'Draft' },
+                { Icon: Scroll, label: 'Filing' },
+                { Icon: Stamp, label: 'Stamped' },
+              ].map(({ Icon, label }) => (
+                <div
+                  key={label}
+                  className="bg-paper-raised px-4 py-8 flex flex-col items-center gap-3"
+                >
+                  <Icon size={40} weight="thin" />
+                  <span className="text-[10px] uppercase tracking-eyebrow text-ink-muted font-sans">
+                    {label}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* ─── Tones: when an icon is itself the signal ─── */}
+          <div className="mt-10">
+            <Eyebrow tone="muted" mark="c">Tones — opt-in color</Eyebrow>
+            <p className="mt-2 max-w-[56ch] text-[12px] text-ink-soft font-serif italic leading-snug">
+              Set <code className="font-mono text-[11px] text-ink">data-tone</code> on
+              any SVG to escape the muted default. Reserved for moments where
+              the icon is the meaning — a stamped filing, a due-soon warning,
+              the authority brass on a signature mark.
+            </p>
+            <div className="mt-4 grid grid-cols-2 md:grid-cols-5 gap-px bg-rule border border-rule">
+              {[
+                { Icon: AlertTriangle, label: 'Default', tone: undefined },
+                { Icon: AlertTriangle, label: 'Ink', tone: 'ink' as const },
+                { Icon: AlertTriangle, label: 'Authority', tone: 'authority' as const },
+                { Icon: AlertTriangle, label: 'Due soon', tone: 'due-soon' as const },
+                { Icon: CheckCircle2, label: 'Filed', tone: 'filed' as const },
+              ].map(({ Icon, label, tone }) => (
+                <div
+                  key={label}
+                  className="bg-paper-raised px-4 py-5 flex flex-col items-center gap-2"
+                >
+                  <Icon className="h-5 w-5" strokeWidth={1.5} data-tone={tone} />
+                  <span className="text-[10px] uppercase tracking-eyebrow text-ink-muted font-sans">
+                    {label}
+                  </span>
+                  <code className="font-mono text-[9px] text-ink-muted">
+                    {tone ? `data-tone="${tone}"` : '—'}
+                  </code>
+                </div>
+              ))}
             </div>
           </div>
         </section>
