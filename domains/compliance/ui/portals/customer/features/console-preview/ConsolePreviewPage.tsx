@@ -1507,29 +1507,55 @@ export function ConsolePreviewPage() {
           {/* ─── Tabs + Accordion ─── */}
           <div className="mt-10 grid grid-cols-12 gap-8">
             <div className="col-span-6">
-              <Eyebrow tone="muted" mark="g">Tabs</Eyebrow>
-              <div className="mt-4 border border-rule bg-paper-raised p-5">
-                <Tabs value={activeTab} onValueChange={setActiveTab}>
-                  <TabsList>
-                    <TabsTrigger value="overview">Overview</TabsTrigger>
-                    <TabsTrigger value="filings">Filings</TabsTrigger>
-                    <TabsTrigger value="audit">Audit trail</TabsTrigger>
-                    <TabsTrigger value="notes">Notes</TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="overview" className="pt-4 text-sm text-ink-soft leading-relaxed">
-                    The <span className="text-ink font-medium">overview</span> tab summarizes
-                    the filing cadence, recent returns, and outstanding actions for the selected client.
-                  </TabsContent>
-                  <TabsContent value="filings" className="pt-4 text-sm text-ink-soft">
-                    Chronological list of all filings for this entity, filterable by law and period.
-                  </TabsContent>
-                  <TabsContent value="audit" className="pt-4 text-sm text-ink-soft">
-                    Every state transition, every assignee change, every export — immutable.
-                  </TabsContent>
-                  <TabsContent value="notes" className="pt-4 text-sm text-ink-soft">
-                    Private notes and flags kept by the handling team.
-                  </TabsContent>
-                </Tabs>
+              <Eyebrow tone="muted" mark="g">Tabs — two registers</Eyebrow>
+              <div className="mt-4 border border-rule bg-paper-raised p-5 space-y-6">
+                <div>
+                  <p className="mb-3 text-[10px] uppercase tracking-eyebrow text-ink-muted font-sans">
+                    Underlined · navigation
+                  </p>
+                  <Tabs value={activeTab} onValueChange={setActiveTab}>
+                    <TabsList>
+                      <TabsTrigger value="overview">Overview</TabsTrigger>
+                      <TabsTrigger value="filings">Filings</TabsTrigger>
+                      <TabsTrigger value="audit">Audit trail</TabsTrigger>
+                      <TabsTrigger value="notes">Notes</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="overview" className="pt-4 text-sm text-ink-soft leading-relaxed">
+                      The <span className="text-ink font-medium">overview</span> tab summarizes
+                      the filing cadence, recent returns, and outstanding actions for the selected client.
+                    </TabsContent>
+                    <TabsContent value="filings" className="pt-4 text-sm text-ink-soft">
+                      Chronological list of all filings for this entity, filterable by law and period.
+                    </TabsContent>
+                    <TabsContent value="audit" className="pt-4 text-sm text-ink-soft">
+                      Every state transition, every assignee change, every export — immutable.
+                    </TabsContent>
+                    <TabsContent value="notes" className="pt-4 text-sm text-ink-soft">
+                      Private notes and flags kept by the handling team.
+                    </TabsContent>
+                  </Tabs>
+                </div>
+                <div className="border-t border-rule pt-5">
+                  <p className="mb-3 text-[10px] uppercase tracking-eyebrow text-ink-muted font-sans">
+                    Segmented · filing toggle
+                  </p>
+                  <Tabs defaultValue="monthly">
+                    <TabsList variant="segmented">
+                      <TabsTrigger value="monthly">Monthly</TabsTrigger>
+                      <TabsTrigger value="quarterly">Quarterly</TabsTrigger>
+                      <TabsTrigger value="annual">Annual</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="monthly" className="pt-4 text-sm text-ink-soft">
+                      GSTR-1, GSTR-3B, TDS — the regular rhythm. Twelve cycles a year.
+                    </TabsContent>
+                    <TabsContent value="quarterly" className="pt-4 text-sm text-ink-soft">
+                      Advance tax, TDS returns (24Q / 26Q). Four cycles.
+                    </TabsContent>
+                    <TabsContent value="annual" className="pt-4 text-sm text-ink-soft">
+                      GSTR-9 reconciliation, income tax return, tax audit report.
+                    </TabsContent>
+                  </Tabs>
+                </div>
               </div>
             </div>
             <div className="col-span-6">

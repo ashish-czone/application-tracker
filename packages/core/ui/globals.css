@@ -1040,7 +1040,7 @@
      chip. Under Instrument we rebuild as an underlined row — the list
      becomes a hairline baseline, the active trigger gets a 2px authority
      underline, and spacing sits above the rule. */
-  .theme-instrument [data-slot="tabs-list"] {
+  .theme-instrument [data-slot="tabs-list"][data-variant="pill"] {
     background-color: transparent;
     border-bottom: 1px solid hsl(var(--rule));
     border-radius: 0;
@@ -1048,7 +1048,7 @@
     height: auto;
     gap: 4px;
   }
-  .theme-instrument [data-slot="tabs-trigger"] {
+  .theme-instrument [data-slot="tabs-trigger"][data-variant="pill"] {
     background-color: transparent !important;
     box-shadow: none !important;
     border-radius: 0;
@@ -1063,12 +1063,48 @@
     border-bottom: 2px solid transparent;
     transition: color 120ms, border-color 120ms;
   }
-  .theme-instrument [data-slot="tabs-trigger"]:hover {
+  .theme-instrument [data-slot="tabs-trigger"][data-variant="pill"]:hover {
     color: hsl(var(--ink));
   }
-  .theme-instrument [data-slot="tabs-trigger"][data-state="active"] {
+  .theme-instrument [data-slot="tabs-trigger"][data-variant="pill"][data-state="active"] {
     color: hsl(var(--authority)) !important;
     border-bottom-color: hsl(var(--authority));
+  }
+
+  /* Segmented variant — slab of rule-bordered cells, active cell inverts
+     to the ink. Reads like a filing toggle. */
+  .theme-instrument [data-slot="tabs-list"][data-variant="segmented"] {
+    background-color: hsl(var(--paper-raised));
+    border: 1px solid hsl(var(--rule-strong, var(--rule)));
+    border-radius: 2px;
+    padding: 0;
+    height: auto;
+    overflow: hidden;
+  }
+  .theme-instrument [data-slot="tabs-trigger"][data-variant="segmented"] {
+    background-color: transparent;
+    border-right: 1px solid hsl(var(--rule));
+    border-radius: 0;
+    color: hsl(var(--ink-soft));
+    font-family: var(--font-sans);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-weight: 600;
+    padding: 10px 18px;
+    transition: background-color 120ms, color 120ms;
+  }
+  .theme-instrument [data-slot="tabs-trigger"][data-variant="segmented"]:last-child {
+    border-right: none;
+  }
+  .theme-instrument [data-slot="tabs-trigger"][data-variant="segmented"]:hover {
+    color: hsl(var(--ink));
+    background-color: hsl(var(--paper-sunken) / 0.6);
+  }
+  .theme-instrument [data-slot="tabs-trigger"][data-variant="segmented"][data-state="active"] {
+    background-color: hsl(var(--ink)) !important;
+    color: hsl(var(--paper)) !important;
+    box-shadow: none !important;
   }
 
   /* ----- Accordion -------------------------------------------------------- */
