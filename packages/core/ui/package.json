@@ -34,7 +34,6 @@
     "clsx": "^2.1.0",
     "cmdk": "^1.0.0",
     "date-fns": "^4.1.0",
-    "framer-motion": "^12.38.0",
     "libphonenumber-js": "^1.12.40",
     "@phosphor-icons/react": "^2.1.10",
     "lucide-react": "^0.400.0",

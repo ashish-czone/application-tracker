@@ -1298,10 +1298,74 @@
     text-decoration-thickness: 1px;
     text-underline-offset: 3px;
     text-decoration-color: hsl(var(--authority) / 0.4);
-    transition: text-decoration-color 120ms;
+    transition: text-decoration-color 140ms, text-underline-offset 140ms, text-decoration-thickness 140ms;
   }
-  .theme-instrument a:hover {
+  .theme-instrument a:not([class*="no-underline"]):not(button):hover {
     text-decoration-color: hsl(var(--authority));
+    text-decoration-thickness: 2px;
+    text-underline-offset: 4px;
+  }
+
+  /* ----- Hover micro-animations ------------------------------------------
+     Subtle motion on interactive elements. Hover/focus only — no ambient
+     animation — kept under 160ms so the feel stays editorial instead of
+     app-y. Every rule scoped to .theme-instrument to leave other themes
+     untouched. */
+
+  /* Kanban cards lift a hair + shadow deepens */
+  .theme-instrument [data-slot="kanban-card"] {
+    transition: border-color 140ms, box-shadow 140ms, transform 140ms;
+  }
+  .theme-instrument [data-slot="kanban-card"]:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 10px hsl(var(--ink) / 0.07);
+  }
+
+  /* Sortable header arrows: inactive fades and nudges up on hover, active
+     stays put. Targets the sort icons rendered inside DataGridTable. */
+  .theme-instrument [data-slot="data-grid"] thead th[data-sortable="true"] svg {
+    transition: transform 140ms ease-out, opacity 140ms ease-out;
+    opacity: 0.5;
+  }
+  .theme-instrument [data-slot="data-grid"] thead th[data-sortable="true"]:hover svg {
+    opacity: 1;
+    transform: translateY(-1px);
+  }
+  .theme-instrument [data-slot="data-grid"] thead th[data-sort-active="true"] svg {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* DataGrid row hover adds a hairline ink accent on the leading edge.
+     Scoped off rows that already carry a data-status accent so the two
+     don't stack. */
+  .theme-instrument [data-slot="data-grid"] tbody tr:not([data-status]) {
+    box-shadow: inset 2px 0 0 transparent;
+    transition: background-color 140ms, box-shadow 140ms;
+  }
+  .theme-instrument [data-slot="data-grid"] tbody tr:not([data-status]):hover {
+    box-shadow: inset 2px 0 0 hsl(var(--ink) / 0.35);
+  }
+
+  /* Radix menu items — hover/keyboard highlight both fire data-highlighted.
+     Gives dropdown menus a paper-sunken wash consistent with the theme. */
+  .theme-instrument [role="menuitem"][data-highlighted],
+  .theme-instrument [role="menuitemcheckbox"][data-highlighted],
+  .theme-instrument [role="menuitemradio"][data-highlighted] {
+    background-color: hsl(var(--paper-sunken));
+    color: hsl(var(--ink));
+    outline: none;
+  }
+
+  /* Row-action ellipsis trigger: square paper-sunken hover so the target
+     reads as a discrete affordance rather than a floating glyph. */
+  .theme-instrument [data-slot="row-actions-trigger"] {
+    border-radius: 2px;
+    transition: background-color 140ms, color 140ms;
+  }
+  .theme-instrument [data-slot="row-actions-trigger"]:hover {
+    background-color: hsl(var(--paper-sunken));
+    color: hsl(var(--ink));
   }
 
   /* ----- Text selection --------------------------------------------------- */
