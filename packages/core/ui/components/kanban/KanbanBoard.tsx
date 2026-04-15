@@ -1,58 +1,174 @@
-import { useState, useRef, useMemo } from 'react';
-import { DragDropProvider } from '@dnd-kit/react';
-import { move } from '@dnd-kit/helpers';
+import { useState, useEffect, useRef, useMemo } from 'react';
+import {
+  DndContext,
+  DragOverlay,
+  KeyboardSensor,
+  PointerSensor,
+  closestCorners,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragOverEvent,
+  type DragStartEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  horizontalListSortingStrategy,
+  sortableKeyboardCoordinates,
+  arrayMove,
+} from '@dnd-kit/sortable';
 import { KanbanColumn } from './KanbanColumn';
 import { KanbanCard } from './KanbanCard';
-import type { KanbanBoardProps } from './types';
+import type { KanbanBoardProps, KanbanCardData } from './types';
+
+type CardsByColumn = Record<string, KanbanCardData[]>;
+
+function groupCards(cards: KanbanCardData[], columnIds: string[]): CardsByColumn {
+  const grouped: CardsByColumn = {};
+  for (const colId of columnIds) grouped[colId] = [];
+  for (const card of cards) {
+    if (grouped[card.columnId]) grouped[card.columnId].push(card);
+  }
+  return grouped;
+}
 
 export function KanbanBoard({
   columns,
   cards,
   onCardMove,
+  onColumnReorder,
   renderCard,
   isLoading,
 }: KanbanBoardProps) {
-  // Group cards by column — internal state for optimistic drag reordering
-  const initialGroups = useMemo(() => {
-    const groups: Record<string, string[]> = {};
-    for (const col of columns) {
-      groups[col.id] = [];
+  const columnIds = useMemo(() => columns.map((c) => c.id), [columns]);
+  const sortableColumns = !!onColumnReorder;
+
+  const [cardsByColumn, setCardsByColumn] = useState<CardsByColumn>(() => groupCards(cards, columnIds));
+  const [activeCard, setActiveCard] = useState<KanbanCardData | null>(null);
+  const initialSnapshotRef = useRef<CardsByColumn>(cardsByColumn);
+
+  useEffect(() => {
+    if (activeCard) return;
+    setCardsByColumn(groupCards(cards, columnIds));
+  }, [cards, columnIds, activeCard]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const findColumnIdContainingCard = (cardId: string, source: CardsByColumn): string | null => {
+    for (const [colId, list] of Object.entries(source)) {
+      if (list.some((c) => c.id === cardId)) return colId;
     }
-    for (const card of cards) {
-      if (groups[card.columnId]) {
-        groups[card.columnId].push(card.id);
+    return null;
+  };
+
+  const handleDragStart = (event: DragStartEvent) => {
+    const type = event.active.data.current?.type;
+    if (type === 'card') {
+      const id = String(event.active.id);
+      const colId = findColumnIdContainingCard(id, cardsByColumn);
+      if (colId) setActiveCard(cardsByColumn[colId].find((c) => c.id === id) ?? null);
+    }
+    initialSnapshotRef.current = cardsByColumn;
+  };
+
+  const handleDragOver = (event: DragOverEvent) => {
+    const { active, over } = event;
+    if (!over) return;
+    if (active.data.current?.type !== 'card') return;
+
+    const activeId = String(active.id);
+    const overId = String(over.id);
+
+    setCardsByColumn((prev) => {
+      const fromColumn = findColumnIdContainingCard(activeId, prev);
+      if (!fromColumn) return prev;
+
+      const overType = over.data.current?.type;
+      let toColumn: string | null = null;
+      if (overType === 'card') {
+        toColumn = findColumnIdContainingCard(overId, prev);
+      } else if (overType === 'column-body') {
+        toColumn = (over.data.current as { columnId: string }).columnId;
       }
+      if (!toColumn || toColumn === fromColumn) return prev;
+
+      const sourceList = prev[fromColumn].slice();
+      const cardIdx = sourceList.findIndex((c) => c.id === activeId);
+      if (cardIdx === -1) return prev;
+      const [card] = sourceList.splice(cardIdx, 1);
+      const targetList = prev[toColumn].slice();
+
+      let insertAt = targetList.length;
+      if (overType === 'card') {
+        const targetIdx = targetList.findIndex((c) => c.id === overId);
+        if (targetIdx !== -1) insertAt = targetIdx;
+      }
+      targetList.splice(insertAt, 0, { ...card, columnId: toColumn });
+
+      return { ...prev, [fromColumn]: sourceList, [toColumn]: targetList };
+    });
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveCard(null);
+    if (!over) return;
+
+    const activeType = active.data.current?.type;
+
+    if (activeType === 'column' && sortableColumns) {
+      const activeColumnId = (active.data.current as { columnId: string }).columnId;
+      const overColumnId = (over.data.current as { columnId?: string } | undefined)?.columnId;
+      if (!overColumnId) return;
+      const fromIndex = columnIds.indexOf(activeColumnId);
+      const toIndex = columnIds.indexOf(overColumnId);
+      if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return;
+      onColumnReorder?.({ columnId: activeColumnId, fromIndex, toIndex });
+      return;
     }
-    return groups;
-  }, [columns, cards]);
 
-  const [groups, setGroups] = useState(initialGroups);
-  const previousGroups = useRef(groups);
-  const cardMap = useMemo(() => new Map(cards.map((c) => [c.id, c])), [cards]);
+    if (activeType !== 'card') return;
+    const cardId = String(active.id);
 
-  // Sync internal state when external cards change (e.g., after mutation)
-  if (JSON.stringify(initialGroups) !== JSON.stringify(previousGroups.current)) {
-    setGroups(initialGroups);
-    previousGroups.current = initialGroups;
-  }
+    const fromColumn = findColumnIdContainingCard(cardId, initialSnapshotRef.current);
+    const toColumn = findColumnIdContainingCard(cardId, cardsByColumn);
+    if (!fromColumn || !toColumn) return;
+
+    if (fromColumn === toColumn) {
+      const list = cardsByColumn[toColumn];
+      const overId = String(over.id);
+      const oldIndex = list.findIndex((c) => c.id === cardId);
+      const newIndex = list.findIndex((c) => c.id === overId);
+      if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
+        setCardsByColumn((prev) => ({ ...prev, [toColumn]: arrayMove(prev[toColumn], oldIndex, newIndex) }));
+        onCardMove({ cardId, fromColumnId: fromColumn, toColumnId: toColumn, toIndex: newIndex });
+      }
+      return;
+    }
+
+    const list = cardsByColumn[toColumn];
+    const finalIndex = list.findIndex((c) => c.id === cardId);
+    if (finalIndex === -1) return;
+    onCardMove({ cardId, fromColumnId: fromColumn, toColumnId: toColumn, toIndex: finalIndex });
+  };
 
   if (isLoading) {
     return (
-      <div className="flex gap-3 overflow-x-auto pb-4 pt-1">
-        {(columns.length > 0 ? columns : Array.from({ length: 5 })).map((col, i) => (
-          <div key={(col as any)?.id ?? i} className="w-[280px] shrink-0">
-            <div className="flex items-center gap-2 px-1 pb-3">
-              <div className="h-2 w-2 rounded-full bg-muted animate-pulse" />
-              <div className="h-4 w-20 rounded bg-muted animate-pulse" />
-              <div className="h-5 w-6 rounded-md bg-muted/60 animate-pulse" />
+      <div data-slot="kanban-board" className="flex gap-4 overflow-x-auto pb-4">
+        {columns.map((col) => (
+          <div key={col.id} data-slot="kanban-column" className="flex flex-col w-[280px] shrink-0">
+            <div data-slot="kanban-column-header">
+              <span>{col.label}</span>
+              <span data-slot="kanban-column-count">—</span>
             </div>
-            <div className="rounded-xl bg-muted/20 p-1.5 space-y-1.5">
-              {Array.from({ length: 2 + (i % 2) }).map((_, j) => (
-                <div key={j} className="rounded-lg bg-card border border-border/40 p-3.5">
-                  <div className="h-4 w-3/4 rounded bg-muted/60 animate-pulse" />
-                  <div className="h-3 w-1/2 rounded bg-muted/40 animate-pulse mt-2" />
-                </div>
-              ))}
+            <div data-slot="kanban-column-body">
+              <div data-slot="kanban-card" className="animate-pulse">
+                <div className="h-3 w-3/4 rounded bg-muted/40" />
+                <div className="mt-2 h-3 w-1/2 rounded bg-muted/30" />
+              </div>
             </div>
           </div>
         ))}
@@ -61,61 +177,38 @@ export function KanbanBoard({
   }
 
   return (
-    <DragDropProvider
-      onDragStart={() => {
-        previousGroups.current = groups;
-      }}
-      onDragOver={(event) => {
-        setGroups((current) => move(current, event));
-      }}
-      onDragEnd={(event) => {
-        if (event.canceled) {
-          setGroups(previousGroups.current);
-          return;
-        }
-
-        // Find which column the card ended up in
-        const { source } = event.operation;
-        if (!source || source.type !== 'card') return;
-
-        const cardId = source.id as string;
-        const newGroups = groups;
-
-        for (const [columnId, cardIds] of Object.entries(newGroups)) {
-          if (cardIds.includes(cardId)) {
-            const card = cardMap.get(cardId);
-            if (card && card.columnId !== columnId) {
-              onCardMove(cardId, columnId);
-            }
-            break;
-          }
-        }
-      }}
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCorners}
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDragEnd={handleDragEnd}
+      onDragCancel={() => setActiveCard(null)}
     >
-      <div className="flex gap-3 overflow-x-auto pb-4 pt-1">
-        {columns.map((col) => {
-          const columnCardIds = groups[col.id] ?? [];
-          return (
+      <SortableContext
+        items={columnIds.map((id) => `column:${id}`)}
+        strategy={horizontalListSortingStrategy}
+      >
+        <div data-slot="kanban-board" className="flex gap-4 overflow-x-auto pb-4">
+          {columns.map((col) => (
             <KanbanColumn
               key={col.id}
-              id={col.id}
-              label={col.label}
-              color={col.color}
-              count={columnCardIds.length}
+              column={col}
+              cards={cardsByColumn[col.id] ?? []}
+              sortableColumns={sortableColumns}
             >
-              {columnCardIds.map((cardId, index) => {
-                const card = cardMap.get(cardId);
-                if (!card) return null;
-                return (
-                  <KanbanCard key={cardId} id={cardId} index={index} column={col.id}>
-                    {renderCard(card)}
-                  </KanbanCard>
-                );
-              })}
+              {(cardsByColumn[col.id] ?? []).map((card) => (
+                <KanbanCard key={card.id} id={card.id}>
+                  {renderCard(card)}
+                </KanbanCard>
+              ))}
             </KanbanColumn>
-          );
-        })}
-      </div>
-    </DragDropProvider>
+          ))}
+        </div>
+      </SortableContext>
+      <DragOverlay>
+        {activeCard ? <div data-slot="kanban-card">{renderCard(activeCard)}</div> : null}
+      </DragOverlay>
+    </DndContext>
   );
 }

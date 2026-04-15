@@ -73,8 +73,7 @@ export function EntityBoardView({ entityType, groupByField }: EntityBoardViewPro
     return `${Math.floor(diffDays / 30)}mo ago`;
   };
 
-  // Handle card move — update the groupBy field value
-  const handleCardMove = (cardId: string, toColumnId: string) => {
+  const handleCardMove = ({ cardId, toColumnId }: { cardId: string; toColumnId: string }) => {
     updateMutation.mutate({ id: cardId, data: { [groupByField]: toColumnId } });
   };
 

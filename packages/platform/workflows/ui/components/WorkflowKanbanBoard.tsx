@@ -115,7 +115,7 @@ export function WorkflowKanbanBoard({
   );
 
   const handleCardMove = useCallback(
-    (cardId: string, toColumnId: string) => {
+    ({ cardId, toColumnId }: { cardId: string; toColumnId: string }) => {
       if (!workflow) return;
 
       const record = recordMap.get(cardId);

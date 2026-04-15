@@ -140,7 +140,17 @@ export type { CellRendererProps } from './components/data-grid/cell-renderers/ty
 export { KanbanBoard } from './components/kanban/KanbanBoard';
 export { KanbanColumn } from './components/kanban/KanbanColumn';
 export { KanbanCard } from './components/kanban/KanbanCard';
-export type { KanbanBoardProps, KanbanColumnDef, KanbanCardData } from './components/kanban/types';
+export type {
+  KanbanBoardProps,
+  KanbanColumnDef,
+  KanbanCardData,
+  KanbanCardMoveEvent,
+  KanbanColumnReorderEvent,
+} from './components/kanban/types';
+
+// Components — sortable primitives
+export { Sortable } from './components/sortable/Sortable';
+export { SortableItem, SortableHandle } from './components/sortable/SortableItem';
 
 // Hooks
 export { useDebounce } from './hooks/useDebounce';
