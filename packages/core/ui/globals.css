@@ -610,6 +610,122 @@
     color: hsl(var(--signal));
   }
 
+  /* ----- Button -----------------------------------------------------------
+     Squared corners, sharper weight, small letter-tracking. The default
+     variant stays ink→paper; tone overrides recolor the fill so the same
+     button can express authority/signal/filed/due-soon without changing
+     the variant shape. */
+  .theme-instrument [data-slot="button"] {
+    border-radius: 2px;
+    font-family: var(--font-sans);
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    transition: background-color 120ms, border-color 120ms, color 120ms, box-shadow 120ms;
+  }
+  .theme-instrument [data-slot="button"]:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px hsl(var(--authority) / 0.2);
+  }
+
+  /* Solid variant picks up tone fill. */
+  .theme-instrument [data-slot="button"][data-tone="authority"]:not(.border) {
+    background-color: hsl(var(--authority));
+    color: hsl(var(--paper));
+  }
+  .theme-instrument [data-slot="button"][data-tone="authority"]:not(.border):hover {
+    background-color: hsl(var(--authority) / 0.9);
+  }
+  .theme-instrument [data-slot="button"][data-tone="filed"]:not(.border) {
+    background-color: hsl(var(--filed));
+    color: hsl(var(--paper));
+  }
+  .theme-instrument [data-slot="button"][data-tone="filed"]:not(.border):hover {
+    background-color: hsl(var(--filed) / 0.9);
+  }
+  .theme-instrument [data-slot="button"][data-tone="due-soon"]:not(.border) {
+    background-color: hsl(var(--due-soon));
+    color: hsl(var(--paper));
+  }
+  .theme-instrument [data-slot="button"][data-tone="due-soon"]:not(.border):hover {
+    background-color: hsl(var(--due-soon) / 0.9);
+  }
+  .theme-instrument [data-slot="button"][data-tone="signal"]:not(.border) {
+    background-color: hsl(var(--signal));
+    color: hsl(var(--paper));
+  }
+  .theme-instrument [data-slot="button"][data-tone="signal"]:not(.border):hover {
+    background-color: hsl(var(--signal) / 0.9);
+  }
+
+  /* Outline variant with tone → hairline border + tone text + tone wash on hover */
+  .theme-instrument [data-slot="button"].border[data-tone="authority"] {
+    background-color: transparent;
+    border-color: hsl(var(--authority) / 0.5);
+    color: hsl(var(--authority));
+  }
+  .theme-instrument [data-slot="button"].border[data-tone="authority"]:hover {
+    background-color: hsl(var(--authority) / 0.08);
+    border-color: hsl(var(--authority));
+    color: hsl(var(--authority));
+  }
+  .theme-instrument [data-slot="button"].border[data-tone="filed"] {
+    background-color: transparent;
+    border-color: hsl(var(--filed) / 0.5);
+    color: hsl(var(--filed));
+  }
+  .theme-instrument [data-slot="button"].border[data-tone="filed"]:hover {
+    background-color: hsl(var(--filed-soft));
+    color: hsl(var(--filed));
+  }
+  .theme-instrument [data-slot="button"].border[data-tone="due-soon"] {
+    background-color: transparent;
+    border-color: hsl(var(--due-soon) / 0.5);
+    color: hsl(var(--due-soon));
+  }
+  .theme-instrument [data-slot="button"].border[data-tone="due-soon"]:hover {
+    background-color: hsl(var(--due-soon-soft));
+    color: hsl(var(--due-soon));
+  }
+  .theme-instrument [data-slot="button"].border[data-tone="signal"] {
+    background-color: transparent;
+    border-color: hsl(var(--signal) / 0.5);
+    color: hsl(var(--signal));
+  }
+  .theme-instrument [data-slot="button"].border[data-tone="signal"]:hover {
+    background-color: hsl(var(--signal-soft));
+    color: hsl(var(--signal));
+  }
+
+  /* ----- ButtonGroup ------------------------------------------------------
+     Segmented control feel: all inner buttons sit flush with a shared
+     hairline, outer corners round to 2px. Vertical + horizontal supported. */
+  .theme-instrument [data-slot="button-group"] {
+    border-radius: 2px;
+  }
+  .theme-instrument [data-slot="button-group"][data-attached="true"] > [data-slot="button"] {
+    border-radius: 0 !important;
+  }
+  .theme-instrument [data-slot="button-group"][data-attached="true"][data-orientation="horizontal"]
+    > [data-slot="button"]:first-child {
+    border-top-left-radius: 2px !important;
+    border-bottom-left-radius: 2px !important;
+  }
+  .theme-instrument [data-slot="button-group"][data-attached="true"][data-orientation="horizontal"]
+    > [data-slot="button"]:last-child {
+    border-top-right-radius: 2px !important;
+    border-bottom-right-radius: 2px !important;
+  }
+  .theme-instrument [data-slot="button-group"][data-attached="true"][data-orientation="vertical"]
+    > [data-slot="button"]:first-child {
+    border-top-left-radius: 2px !important;
+    border-top-right-radius: 2px !important;
+  }
+  .theme-instrument [data-slot="button-group"][data-attached="true"][data-orientation="vertical"]
+    > [data-slot="button"]:last-child {
+    border-bottom-left-radius: 2px !important;
+    border-bottom-right-radius: 2px !important;
+  }
+
   /* ----- Links ------------------------------------------------------------ */
   .theme-instrument a:not([class*="no-underline"]):not(button) {
     color: hsl(var(--authority));

@@ -1,5 +1,6 @@
 // Components — ungrouped
-export { Button, type ButtonProps, buttonVariants } from './components/Button';
+export { Button, type ButtonProps, type ButtonTone, buttonVariants } from './components/Button';
+export { ButtonGroup, type ButtonGroupProps } from './components/ButtonGroup';
 export { Badge, type BadgeProps, badgeVariants } from './components/Badge';
 export { Skeleton } from './components/Skeleton';
 
