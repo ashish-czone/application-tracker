@@ -30,6 +30,7 @@ import type { MenuItem } from '@packages/domains';
 import { complianceWeb } from '@domains/compliance-ui';
 import { ConsolePreviewPage } from '@domains/compliance-ui/portals/customer/features/console-preview';
 import { DashboardScreenPage } from '@domains/compliance-ui/portals/customer/features/screens/dashboard';
+import { ObligationsLibraryPage } from '@domains/compliance-ui/portals/customer/features/screens/obligations';
 import { api } from './lib/api';
 import './globals.css';
 
@@ -70,6 +71,7 @@ const columnRenderers = {
 const pathname = window.location.pathname;
 const isConsolePreview = pathname.startsWith('/console-preview');
 const isDashboardScreen = pathname.startsWith('/screens/dashboard');
+const isObligationsScreen = pathname.startsWith('/screens/obligations');
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -77,6 +79,8 @@ createRoot(document.getElementById('root')!).render(
       <ConsolePreviewPage />
     ) : isDashboardScreen ? (
       <DashboardScreenPage />
+    ) : isObligationsScreen ? (
+      <ObligationsLibraryPage />
     ) : (
       <WebShell
         domains={[complianceWeb]}
