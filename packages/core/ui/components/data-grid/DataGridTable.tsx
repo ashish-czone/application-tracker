@@ -24,12 +24,12 @@ function SortIcon({
   sortDirection?: string;
 }) {
   if (column !== sortColumn) {
-    return <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground/50" />;
+    return <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground/60" />;
   }
   return sortDirection === 'asc' ? (
-    <ArrowUp className="h-3.5 w-3.5" />
+    <ArrowUp className="h-3.5 w-3.5" data-tone="ink" />
   ) : (
-    <ArrowDown className="h-3.5 w-3.5" />
+    <ArrowDown className="h-3.5 w-3.5" data-tone="ink" />
   );
 }
 
@@ -60,14 +60,18 @@ export function DataGridTable<TData>({
         <thead className="bg-muted/50">
           {table.getHeaderGroups().map((headerGroup) => (
             <tr key={headerGroup.id} className="border-b">
-              {headerGroup.headers.map((header) => (
+              {headerGroup.headers.map((header) => {
+                const canSort = header.column.getCanSort() && !!onSortChange;
+                const isActiveSort = canSort && header.column.id === sortColumn;
+                return (
                 <th
                   key={header.id}
+                  data-slot="data-grid-header-cell"
+                  data-sortable={canSort ? 'true' : undefined}
+                  data-sort-active={isActiveSort ? 'true' : undefined}
                   className={cn(
                     'h-10 px-4 text-left align-middle font-medium text-muted-foreground',
-                    header.column.getCanSort() &&
-                      onSortChange &&
-                      'cursor-pointer select-none hover:text-foreground transition-colors',
+                    canSort && 'cursor-pointer select-none hover:text-foreground transition-colors',
                     isStickyRight(header.column) &&
                       'sticky right-0 z-10 bg-muted/50 shadow-[−2px_0_4px_rgba(0,0,0,0.06)]',
                   )}
@@ -79,7 +83,7 @@ export function DataGridTable<TData>({
                   {header.isPlaceholder ? null : (
                     <div className="flex items-center gap-1.5">
                       {flexRender(header.column.columnDef.header, header.getContext())}
-                      {header.column.getCanSort() && onSortChange && (
+                      {canSort && (
                         <SortIcon
                           column={header.column.id}
                           sortColumn={sortColumn}
@@ -89,7 +93,8 @@ export function DataGridTable<TData>({
                     </div>
                   )}
                 </th>
-              ))}
+                );
+              })}
             </tr>
           ))}
         </thead>

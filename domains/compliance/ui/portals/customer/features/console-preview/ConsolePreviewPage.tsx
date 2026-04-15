@@ -433,6 +433,7 @@ export function ConsolePreviewPage() {
   const [workshopPage, setWorkshopPage] = useState(1);
   const [workshopSelection, setWorkshopSelection] = useState<string[]>([]);
   const [workshopFilters, setWorkshopFilters] = useState<FilterExpression[]>([]);
+  const [workshopSort, setWorkshopSort] = useState<{ column: string; direction: 'asc' | 'desc' } | null>(null);
 
   // § X — extended kit state
   const [isDark, setIsDark] = useState(false);
@@ -1204,17 +1205,31 @@ export function ConsolePreviewPage() {
             <div className="mt-4">
               <DataGrid<WorkshopRow>
                 columns={WORKSHOP_COLUMNS}
-                data={WORKSHOP_ROWS.filter((row) =>
-                  workshopFilters.every((f) => {
-                    const val = row[f.field as keyof WorkshopRow];
-                    if (f.operator === 'eq') return String(val) === String(f.value);
-                    if (f.operator === 'in') return Array.isArray(f.value) && (f.value as string[]).includes(String(val));
-                    if (f.operator === 'contains') return String(val).toLowerCase().includes(String(f.value).toLowerCase());
-                    if (f.operator === 'gt') return Number(val) > Number(f.value);
-                    if (f.operator === 'lt') return Number(val) < Number(f.value);
-                    return true;
-                  }),
-                )}
+                data={(() => {
+                  const filtered = WORKSHOP_ROWS.filter((row) =>
+                    workshopFilters.every((f) => {
+                      const val = row[f.field as keyof WorkshopRow];
+                      if (f.operator === 'eq') return String(val) === String(f.value);
+                      if (f.operator === 'in') return Array.isArray(f.value) && (f.value as string[]).includes(String(val));
+                      if (f.operator === 'contains') return String(val).toLowerCase().includes(String(f.value).toLowerCase());
+                      if (f.operator === 'gt') return Number(val) > Number(f.value);
+                      if (f.operator === 'lt') return Number(val) < Number(f.value);
+                      return true;
+                    }),
+                  );
+                  if (!workshopSort) return filtered;
+                  const { column, direction } = workshopSort;
+                  const mult = direction === 'asc' ? 1 : -1;
+                  return [...filtered].sort((a, b) => {
+                    const av = a[column as keyof WorkshopRow];
+                    const bv = b[column as keyof WorkshopRow];
+                    if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * mult;
+                    return String(av).localeCompare(String(bv)) * mult;
+                  });
+                })()}
+                sortColumn={workshopSort?.column}
+                sortDirection={workshopSort?.direction}
+                onSortChange={(column, direction) => setWorkshopSort({ column, direction })}
                 filterFields={WORKSHOP_FILTER_FIELDS}
                 filters={workshopFilters}
                 onFilterAdd={(expr) => setWorkshopFilters((prev) => [...prev.filter((f) => f.field !== expr.field), expr])}

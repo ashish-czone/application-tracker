@@ -572,13 +572,25 @@
   }
   .theme-instrument [data-slot="data-grid"] thead th {
     font-family: var(--font-sans);
-    font-size: 10px;
+    font-size: 11px;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    font-weight: 500;
-    color: hsl(var(--ink-muted));
-    padding: 12px 14px;
+    font-weight: 600;
+    color: hsl(var(--ink-soft));
+    padding: 14px 14px 12px;
     text-align: left;
+    border-bottom: 1px solid hsl(var(--rule));
+  }
+  .theme-instrument [data-slot="data-grid"] thead th[data-sortable="true"] {
+    cursor: pointer;
+    user-select: none;
+    transition: color 120ms;
+  }
+  .theme-instrument [data-slot="data-grid"] thead th[data-sortable="true"]:hover {
+    color: hsl(var(--ink));
+  }
+  .theme-instrument [data-slot="data-grid"] thead th[data-sort-active="true"] {
+    color: hsl(var(--ink));
   }
   .theme-instrument [data-slot="data-grid"] tbody tr {
     border-bottom: 1px solid hsl(var(--rule) / 0.55);
