@@ -726,6 +726,146 @@
     border-bottom-right-radius: 2px !important;
   }
 
+  /* ----- DatePicker + Calendar -------------------------------------------
+     Trigger mirrors Input styling (hairline + paper bed + focus rule).
+     Popover content gets the paper-raised frame, weekdays render as
+     small-caps column headers, day cells become square hairline tiles,
+     and the selected day fills authority with paper text. */
+  .theme-instrument [data-slot="datepicker-trigger"] {
+    background-color: hsl(var(--paper-raised));
+    border: 1px solid hsl(var(--rule));
+    border-radius: 2px;
+    color: hsl(var(--ink));
+    font-family: var(--font-sans);
+    font-size: 14px;
+    padding: 10px 12px;
+    box-shadow: inset 0 -1px 0 hsl(var(--rule) / 0.6);
+    transition: border-color 120ms, box-shadow 120ms;
+  }
+  .theme-instrument [data-slot="datepicker-trigger"]:hover {
+    border-color: hsl(var(--rule-strong));
+  }
+  .theme-instrument [data-slot="datepicker-trigger"][data-state="open"],
+  .theme-instrument [data-slot="datepicker-trigger"]:focus-visible {
+    outline: none;
+    border-color: hsl(var(--authority));
+    box-shadow: inset 0 -2px 0 hsl(var(--authority));
+  }
+  .theme-instrument [data-slot="datepicker-content"] {
+    background-color: hsl(var(--paper-raised)) !important;
+    border: 1px solid hsl(var(--rule)) !important;
+    border-radius: 2px !important;
+    box-shadow:
+      0 1px 0 hsl(var(--rule)),
+      0 18px 32px -16px hsla(216, 9%, 12%, 0.22) !important;
+  }
+  /* react-day-picker classnames */
+  .theme-instrument [data-slot="datepicker-content"] .rdp {
+    font-family: var(--font-sans);
+  }
+  .theme-instrument [data-slot="datepicker-content"] .rdp-caption_label {
+    font-family: var(--font-serif);
+    font-size: 16px;
+    font-weight: 400;
+    color: hsl(var(--ink));
+  }
+  .theme-instrument [data-slot="datepicker-content"] .rdp-weekday {
+    font-family: var(--font-sans);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: hsl(var(--ink-muted));
+  }
+  .theme-instrument [data-slot="datepicker-content"] .rdp-day_button {
+    font-family: var(--font-mono);
+    font-feature-settings: 'tnum', 'zero';
+    border-radius: 2px;
+    color: hsl(var(--ink));
+  }
+  .theme-instrument [data-slot="datepicker-content"] .rdp-day_button:hover {
+    background-color: hsl(var(--paper-sunken));
+  }
+  .theme-instrument [data-slot="datepicker-content"] .rdp-selected .rdp-day_button,
+  .theme-instrument [data-slot="datepicker-content"] [aria-selected="true"] .rdp-day_button {
+    background-color: hsl(var(--authority)) !important;
+    color: hsl(var(--paper)) !important;
+  }
+  .theme-instrument [data-slot="datepicker-content"] .rdp-today .rdp-day_button {
+    box-shadow: inset 0 -2px 0 hsl(var(--signal));
+    background-color: transparent;
+  }
+  .theme-instrument [data-slot="datepicker-content"] .rdp-outside .rdp-day_button {
+    color: hsl(var(--ink-muted));
+    opacity: 0.5;
+  }
+
+  /* ----- cmdk dropdowns ---------------------------------------------------
+     The cmdk library (used by FormSelect/Combobox) emits a stable set of
+     [cmdk-*] attributes. Re-skin them so every combobox popover matches
+     the paper aesthetic: editorial header, small-caps group labels,
+     hairline row dividers, authority wash on the highlighted row. */
+  .theme-instrument [cmdk-root] {
+    background-color: transparent;
+    font-family: var(--font-sans);
+  }
+  .theme-instrument [cmdk-input] {
+    background-color: hsl(var(--paper-raised));
+    border-bottom: 1px solid hsl(var(--rule));
+    color: hsl(var(--ink));
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+  .theme-instrument [cmdk-input]::placeholder {
+    color: hsl(var(--ink-muted));
+    font-style: italic;
+  }
+  .theme-instrument [cmdk-list] {
+    background-color: hsl(var(--paper-raised));
+    padding: 4px 0;
+    max-height: 280px;
+    overflow-y: auto;
+  }
+  .theme-instrument [cmdk-empty] {
+    padding: 20px 12px;
+    text-align: center;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: hsl(var(--ink-muted));
+  }
+  .theme-instrument [cmdk-group-heading] {
+    padding: 10px 12px 4px;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-weight: 500;
+    color: hsl(var(--ink-muted));
+  }
+  .theme-instrument [cmdk-item] {
+    padding: 8px 12px;
+    font-size: 13px;
+    color: hsl(var(--ink));
+    border-radius: 0;
+    border-bottom: 1px solid hsl(var(--rule) / 0.4);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background-color 120ms;
+  }
+  .theme-instrument [cmdk-item]:last-child {
+    border-bottom: none;
+  }
+  .theme-instrument [cmdk-item][data-selected="true"],
+  .theme-instrument [cmdk-item][aria-selected="true"] {
+    background-color: hsl(var(--authority) / 0.08);
+    color: hsl(var(--authority));
+  }
+  .theme-instrument [cmdk-item][data-disabled="true"] {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
   /* ----- Format displays --------------------------------------------------
      DateFormat / NumberFormat / CurrencyFormat ship as semantic <time> and
      <span> elements with data-slot hooks. Under Instrument they pick up

@@ -175,6 +175,7 @@ function DatePickerCore({
         <button
           type="button"
           id={id}
+          data-slot="datepicker-trigger"
           aria-invalid={hasError || undefined}
           className={cn(
             'flex h-10 w-full items-center justify-start gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background',
@@ -191,6 +192,7 @@ function DatePickerCore({
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content
+          data-slot="datepicker-content"
           className="z-50 rounded-md border bg-popover text-popover-foreground shadow-md outline-none animate-in fade-in-0 zoom-in-95"
           sideOffset={4}
           align="start"
