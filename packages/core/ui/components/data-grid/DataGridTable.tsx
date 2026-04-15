@@ -60,6 +60,7 @@ export function DataGridTable<TData>({
         <thead className="bg-muted/50">
           {table.getHeaderGroups().map((headerGroup) => (
             <tr key={headerGroup.id} className="border-b">
+              <th aria-hidden="true" className="h-10 w-0 p-0" />
               {headerGroup.headers.map((header) => {
                 const canSort = header.column.getCanSort() && !!onSortChange;
                 const isActiveSort = canSort && header.column.id === sortColumn;
@@ -95,7 +96,6 @@ export function DataGridTable<TData>({
                 </th>
                 );
               })}
-              <th aria-hidden="true" className="h-10 w-0 p-0" />
             </tr>
           ))}
         </thead>
