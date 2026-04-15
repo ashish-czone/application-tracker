@@ -27,6 +27,7 @@ import {
   Filter,
   RotateCw,
   Eye,
+  GripVertical,
 } from 'lucide-react';
 import {
   PageMasthead,
@@ -104,6 +105,13 @@ import {
   Progress,
   FormDatePicker,
   FormDateRangePicker,
+  KanbanBoard,
+  Sortable,
+  SortableItem,
+  SortableHandle,
+  type KanbanColumnDef,
+  type KanbanCardData,
+  type KanbanCardMoveEvent,
   toast,
   type DataTableColumn,
   type FilterChip,
@@ -254,6 +262,13 @@ const WORKSHOP_ROWS: WorkshopRow[] = [
   { id: 'w3', code: 'ITR-6', client: 'Arbitrage Holdings', period: 'FY 25-26', amount: 0, status: 'draft' },
   { id: 'w4', code: 'TDS 24Q', client: 'Prism Analytics', period: 'Q4 2026', amount: 41200, status: 'blocked' },
   { id: 'w5', code: 'GSTR-9', client: 'Velocity Retail', period: 'FY 25-26', amount: 0, status: 'draft' },
+];
+
+const PIPELINE_COLUMNS: KanbanColumnDef[] = [
+  { id: 'draft', label: 'Draft', color: '#A39889' },
+  { id: 'review', label: 'In review', color: '#C7923D', limit: 5 },
+  { id: 'ready', label: 'Ready to file', color: '#3F7B5A' },
+  { id: 'filed', label: 'Filed', color: '#557A92' },
 ];
 
 const WORKSHOP_FILTER_FIELDS: DataGridFilterField[] = [
@@ -420,6 +435,25 @@ export function ConsolePreviewPage() {
   const [selectedDate, setSelectedDate] = useState('2026-04-20');
   const [dateRange, setDateRange] = useState({ from: '2026-04-01', to: '2026-04-30' });
   const [filingProgress] = useState(68);
+
+  // § XI — drag/drop state
+  const [handlerOrder, setHandlerOrder] = useState<{ id: string; name: string; load: number }[]>([
+    { id: 'h1', name: 'Priya Menon', load: 18 },
+    { id: 'h2', name: 'Rohan Shetty', load: 14 },
+    { id: 'h3', name: 'Karthik Iyer', load: 22 },
+    { id: 'h4', name: 'Anika Das', load: 9 },
+    { id: 'h5', name: 'Shreya Kulkarni', load: 12 },
+  ]);
+  const [pipelineCards, setPipelineCards] = useState<KanbanCardData[]>([
+    { id: 'p1', columnId: 'draft', code: 'GSTR-3B', client: 'Nilkanth Traders', due: 'Apr 20' },
+    { id: 'p2', columnId: 'draft', code: 'ITR-6', client: 'Arbitrage Holdings', due: 'Apr 30' },
+    { id: 'p3', columnId: 'review', code: 'GSTR-1', client: 'Khandwala & Sons', due: 'Apr 22' },
+    { id: 'p4', columnId: 'review', code: 'TDS 24Q', client: 'Prism Analytics', due: 'Apr 25' },
+    { id: 'p5', columnId: 'ready', code: 'GSTR-9', client: 'Velocity Retail', due: 'May 05' },
+    { id: 'p6', columnId: 'ready', code: 'ROC MGT-7', client: 'Summit Ventures', due: 'May 08' },
+    { id: 'p7', columnId: 'filed', code: 'GSTR-3B', client: 'Delta Agro', due: 'Filed' },
+    { id: 'p8', columnId: 'filed', code: 'TDS 26Q', client: 'Orion Labs', due: 'Filed' },
+  ]);
 
   // Dark-mode toggle — flip a class on the same subtree that carries
   // `.theme-instrument`. The compliance app applies that class on <body>.
@@ -1642,6 +1676,89 @@ export function ConsolePreviewPage() {
                 <div className="mt-1 font-serif text-base text-ink">3 escalations</div>
                 <div className="text-[11px] text-ink-soft mt-1">Handler notified</div>
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* §  XI — MOTION  ─────────────────────────────────────────────── */}
+        <section className="mt-16">
+          <SectionRule label="§ XI — Motion" align="left" />
+          <p className="mt-3 max-w-[62ch] text-sm text-ink-soft font-serif italic leading-relaxed">
+            Two ways to rearrange paper. A sortable list when order is all that
+            matters, and a kanban board when the shape of a pipeline does. Both
+            are built on the mature @dnd-kit/sortable line — the cards lift,
+            the columns accept, and nothing flickers mid-drag.
+          </p>
+
+          {/* ─── Sortable list: handler priority ─── */}
+          <div className="mt-8">
+            <Eyebrow tone="muted" mark="a">Sortable list — reorder handlers</Eyebrow>
+            <p className="mt-2 max-w-[56ch] text-[12px] text-ink-soft font-serif italic leading-snug">
+              Drag a row by its handle to change the rotation order. The count
+              column is the handler's live workload.
+            </p>
+            <div className="mt-4 max-w-md rounded-md border border-rule bg-paper-raised p-1.5">
+              <Sortable items={handlerOrder} onReorder={setHandlerOrder}>
+                {handlerOrder.map((handler, idx) => (
+                  <SortableItem
+                    key={handler.id}
+                    id={handler.id}
+                    withHandle
+                    className="mb-1 last:mb-0 flex items-center gap-3 rounded-sm bg-paper px-2.5 py-2 text-sm"
+                  >
+                    <SortableHandle className="p-1 text-ink-muted">
+                      <GripVertical className="h-4 w-4" />
+                    </SortableHandle>
+                    <span className="font-sans text-[10px] uppercase tracking-[0.14em] text-ink-muted tabular-nums w-4">
+                      {String(idx + 1).padStart(2, '0')}
+                    </span>
+                    <span className="flex-1 font-serif text-ink">{handler.name}</span>
+                    <span className="font-mono text-[11px] tabular-nums text-ink-soft">
+                      {handler.load}
+                    </span>
+                  </SortableItem>
+                ))}
+              </Sortable>
+            </div>
+          </div>
+
+          {/* ─── Kanban board: filing pipeline ─── */}
+          <div className="mt-10">
+            <Eyebrow tone="muted" mark="b">Kanban — filing pipeline</Eyebrow>
+            <p className="mt-2 max-w-[56ch] text-[12px] text-ink-soft font-serif italic leading-snug">
+              Drag a filing between columns to move it through the pipeline.
+              The in-review column has a soft cap of five — cards keep stacking
+              but the count turns into the authority brass to signal the limit.
+            </p>
+            <div className="mt-4">
+              <KanbanBoard
+                columns={PIPELINE_COLUMNS}
+                cards={pipelineCards}
+                onCardMove={(event: KanbanCardMoveEvent) => {
+                  setPipelineCards((prev) => {
+                    const next = prev.filter((c) => c.id !== event.cardId);
+                    const moved = { ...prev.find((c) => c.id === event.cardId)!, columnId: event.toColumnId };
+                    const inTarget = next.filter((c) => c.columnId === event.toColumnId);
+                    const others = next.filter((c) => c.columnId !== event.toColumnId);
+                    inTarget.splice(event.toIndex, 0, moved);
+                    return [...others, ...inTarget];
+                  });
+                  toast.info(`Moved ${event.cardId} → ${event.toColumnId}`);
+                }}
+                renderCard={(card) => {
+                  const isFiled = card.columnId === 'filed';
+                  return (
+                    <div>
+                      <div className="font-mono text-[12px] text-ink">{String(card.code)}</div>
+                      <div className="mt-0.5 font-serif text-ink-soft">{String(card.client)}</div>
+                      <div data-slot="kanban-card-meta">
+                        {isFiled ? <CheckCircle2 className="h-3 w-3 text-filed" /> : <Calendar className="h-3 w-3" />}
+                        <span>{String(card.due)}</span>
+                      </div>
+                    </div>
+                  );
+                }}
+              />
             </div>
           </div>
         </section>

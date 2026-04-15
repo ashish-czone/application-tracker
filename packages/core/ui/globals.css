@@ -1126,6 +1126,108 @@
     background-color: hsl(var(--signal));
   }
 
+  /* ----- Sortable + Kanban ------------------------------------------------
+     The mature @dnd-kit/sortable primitives render each draggable as a
+     plain element tagged with data-slot="sortable-item". Under Instrument
+     we add a subtle warm-ink lift on drag so the card feels lifted off the
+     paper surface rather than fading into it. */
+  .theme-instrument [data-slot="sortable-item"][data-dragging] {
+    box-shadow:
+      0 12px 24px -8px hsl(var(--ink) / 0.18),
+      0 2px 4px -1px hsl(var(--ink) / 0.08);
+    outline: 1px solid hsl(var(--authority) / 0.4);
+    outline-offset: -1px;
+  }
+  .theme-instrument [data-slot="sortable-handle"] {
+    color: hsl(var(--ink-muted));
+    transition: color 120ms;
+  }
+  .theme-instrument [data-slot="sortable-handle"]:hover {
+    color: hsl(var(--authority));
+  }
+
+  /* Kanban columns — warm paper tray with a hairline rule. */
+  .theme-instrument [data-slot="kanban-board"] {
+    gap: 16px;
+  }
+  .theme-instrument [data-slot="kanban-column"] {
+    background-color: hsl(var(--paper-raised));
+    border: 1px solid hsl(var(--rule));
+    border-radius: 6px;
+  }
+  .theme-instrument [data-slot="kanban-column-header"] {
+    padding: 12px 14px 8px;
+    font-family: var(--font-sans);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: hsl(var(--ink-muted));
+    font-weight: 500;
+    border-bottom: 1px solid hsl(var(--rule));
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .theme-instrument [data-slot="kanban-column-count"] {
+    font-family: var(--font-mono);
+    font-feature-settings: 'tnum';
+    color: hsl(var(--ink-muted));
+    background-color: hsl(var(--paper));
+    border: 1px solid hsl(var(--rule));
+    padding: 1px 6px;
+    border-radius: 999px;
+    font-size: 10px;
+  }
+  .theme-instrument [data-slot="kanban-column-body"] {
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 120px;
+  }
+  .theme-instrument [data-slot="kanban-column-body"][data-over="true"] {
+    background-color: hsl(var(--authority) / 0.04);
+    outline: 1px dashed hsl(var(--authority) / 0.4);
+    outline-offset: -6px;
+  }
+  .theme-instrument [data-slot="kanban-card"] {
+    background-color: hsl(var(--paper));
+    border: 1px solid hsl(var(--rule));
+    border-radius: 4px;
+    padding: 10px 12px;
+    font-family: var(--font-serif);
+    font-size: 13px;
+    color: hsl(var(--ink));
+    line-height: 1.45;
+    transition: border-color 120ms, box-shadow 120ms;
+  }
+  .theme-instrument [data-slot="kanban-card"]:hover {
+    border-color: hsl(var(--authority) / 0.5);
+  }
+  .theme-instrument [data-slot="kanban-card-meta"] {
+    font-family: var(--font-sans);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: hsl(var(--ink-muted));
+    margin-top: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .theme-instrument [data-slot="kanban-column-empty"] {
+    border: 1px dashed hsl(var(--rule-strong));
+    border-radius: 4px;
+    padding: 20px 12px;
+    text-align: center;
+    font-family: var(--font-sans);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: hsl(var(--ink-muted));
+  }
+
   /* ----- Format displays --------------------------------------------------
      DateFormat / NumberFormat / CurrencyFormat ship as semantic <time> and
      <span> elements with data-slot hooks. Under Instrument they pick up
