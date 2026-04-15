@@ -95,6 +95,7 @@ export function DataGridTable<TData>({
                 </th>
                 );
               })}
+              <th aria-hidden="true" className="h-10 w-0 p-0" />
             </tr>
           ))}
         </thead>
