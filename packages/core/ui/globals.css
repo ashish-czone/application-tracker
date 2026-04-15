@@ -280,8 +280,9 @@
     color: hsl(var(--ink));
   }
 
-  /* Dialog overlay — warm ink wash */
-  .theme-instrument [data-slot="dialog-content"] ~ *,
+  /* Dialog/Sheet overlay — warm ink wash. Non-modal sheets skip the
+     overlay entirely so this rule never fires on them. */
+  .theme-instrument [data-slot="sheet-overlay"],
   .theme-instrument [data-radix-dialog-overlay] {
     background-color: hsla(216, 18%, 8%, 0.55) !important;
     backdrop-filter: blur(1px);
@@ -1134,6 +1135,66 @@
 /* ============================================================================
    Kit keyframes — motion primitives used by framer-motion and CSS fallbacks.
    ========================================================================== */
+/* ============================================================================
+   Sheet slide animations — work in every theme, not just Instrument.
+   Applied via class rather than data-attribute so existing Sheet call
+   sites continue to function without changes.
+   ========================================================================== */
+@layer base {
+  @keyframes sheet-slide-in-right {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+  }
+  @keyframes sheet-slide-out-right {
+    from { transform: translateX(0); }
+    to { transform: translateX(100%); }
+  }
+  @keyframes sheet-slide-in-left {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(0); }
+  }
+  @keyframes sheet-slide-out-left {
+    from { transform: translateX(0); }
+    to { transform: translateX(-100%); }
+  }
+  @keyframes sheet-overlay-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes sheet-overlay-out {
+    from { opacity: 1; }
+    to { opacity: 0; }
+  }
+
+  .sheet-slide-right[data-state="open"] {
+    animation: sheet-slide-in-right 260ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .sheet-slide-right[data-state="closed"] {
+    animation: sheet-slide-out-right 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .sheet-slide-left[data-state="open"] {
+    animation: sheet-slide-in-left 260ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .sheet-slide-left[data-state="closed"] {
+    animation: sheet-slide-out-left 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .sheet-overlay[data-state="open"] {
+    animation: sheet-overlay-in 200ms ease-out;
+  }
+  .sheet-overlay[data-state="closed"] {
+    animation: sheet-overlay-out 180ms ease-out;
+  }
+
+  /* Non-modal sheet: the content itself captures pointer events, but
+     Radix (via modal={false}) doesn't render a focus trap or scroll lock
+     so the rest of the page stays fully interactive. The sheet stays
+     open until the user explicitly dismisses it — outside clicks are
+     prevented in the React layer. */
+  [data-slot="sheet-content"][data-modal="false"] {
+    pointer-events: auto;
+  }
+}
+
 @layer base {
   @keyframes stamp-in {
     0%   { opacity: 0; transform: rotate(6deg) scale(1.3); }
