@@ -726,6 +726,21 @@
     border-bottom-right-radius: 2px !important;
   }
 
+  /* ----- Format displays --------------------------------------------------
+     DateFormat / NumberFormat / CurrencyFormat ship as semantic <time> and
+     <span> elements with data-slot hooks. Under Instrument they pick up
+     JetBrains Mono with tabular-nums + zero slashes and tighten their
+     tracking so numbers line up in tables. */
+  .theme-instrument [data-slot="number-format"],
+  .theme-instrument [data-slot="currency-format"] {
+    font-family: var(--font-mono);
+    font-feature-settings: 'tnum', 'zero', 'ss01';
+    letter-spacing: -0.01em;
+  }
+  .theme-instrument [data-slot="date-format"] {
+    font-feature-settings: 'tnum';
+  }
+
   /* ----- Links ------------------------------------------------------------ */
   .theme-instrument a:not([class*="no-underline"]):not(button) {
     color: hsl(var(--authority));
