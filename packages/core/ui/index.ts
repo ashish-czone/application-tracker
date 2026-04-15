@@ -23,6 +23,8 @@ export { FormFileInput } from './components/form/FormFileInput';
 export { FormDatePicker } from './components/form/FormDatePicker';
 export { Calendar } from './components/form/Calendar';
 export { PasswordStrength } from './components/form/PasswordStrength';
+export { Slider, type SliderProps } from './components/form/Slider';
+export { FormSlider } from './components/form/FormSlider';
 
 // Components — feedback
 export {
@@ -40,6 +42,13 @@ export {
 
 export { Toaster, toast } from './components/feedback/Toast';
 export { ConfirmDialog } from './components/feedback/ConfirmDialog';
+
+export {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  TooltipProvider,
+} from './components/feedback/Tooltip';
 
 export {
   Sheet,
