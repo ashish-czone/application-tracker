@@ -158,6 +158,14 @@ export interface DataGridProps<TData> {
   /** Optional callback to add CSS classes to table rows based on row data */
   rowClassName?: (row: TData) => string | undefined;
 
+  /**
+   * Optional callback to add HTML attributes (e.g. `data-status`) to each
+   * `<tr>` element based on row data. Useful for theme-driven row tinting
+   * (the Instrument theme reads `data-status` to paint filed/due-soon/overdue
+   * row washes).
+   */
+  rowAttributes?: (row: TData) => Record<string, string | undefined> | undefined;
+
   /** Enable export button in toolbar. Exports visible columns from current page data. */
   enableExport?: boolean;
   /** Filename prefix for exported files (without extension). Defaults to 'export'. */

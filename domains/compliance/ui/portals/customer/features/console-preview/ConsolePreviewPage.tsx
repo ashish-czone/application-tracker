@@ -16,6 +16,17 @@ import {
   Mail,
   Send,
   AlertTriangle,
+  Pencil,
+  Trash2,
+  Copy,
+  Download,
+  Archive,
+  Moon,
+  Sun,
+  ChevronsUpDown,
+  Filter,
+  RotateCw,
+  Eye,
 } from 'lucide-react';
 import {
   PageMasthead,
@@ -64,9 +75,38 @@ import {
   RadioGroupItem,
   Label,
   DataGrid,
+  createRowActionsColumn,
+  type DataGridBulkAction,
+  // Extended kit (§ X)
+  ButtonGroup,
+  Badge,
+  DateFormat,
+  NumberFormat,
+  CurrencyFormat,
+  Combobox,
+  MultiSelect,
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+  Progress,
+  FormDatePicker,
+  FormDateRangePicker,
+  toast,
   type DataTableColumn,
   type FilterChip,
   type CommandGroup,
+  type ComboboxOption,
 } from '@packages/ui';
 import {
   LawCard,
@@ -261,6 +301,60 @@ const WORKSHOP_COLUMNS: ColumnDef<WorkshopRow>[] = [
       );
     },
   },
+  createRowActionsColumn<WorkshopRow>({
+    actions: [
+      {
+        label: 'View return',
+        icon: Eye,
+        onClick: (row) => toast.info(`Viewing ${row.code} · ${row.client}`),
+      },
+      {
+        label: 'Edit',
+        icon: Pencil,
+        onClick: (row) => toast.info(`Editing ${row.code}`),
+      },
+      {
+        label: 'Duplicate',
+        icon: Copy,
+        onClick: (row) => toast.success(`Duplicated ${row.code}`),
+      },
+      {
+        label: 'Archive',
+        icon: Archive,
+        separatorBefore: true,
+        onClick: (row) => toast.warning(`Archived ${row.code}`),
+        disabled: (row) => row.status === 'blocked',
+      },
+      {
+        label: 'Delete',
+        icon: Trash2,
+        variant: 'destructive',
+        onClick: (row) => toast.error(`Deleted ${row.code}`),
+      },
+    ],
+  }),
+];
+
+const JURISDICTION_OPTIONS: ComboboxOption[] = [
+  { label: 'Central', value: 'central' },
+  { label: 'Maharashtra', value: 'mh' },
+  { label: 'Karnataka', value: 'ka' },
+  { label: 'Tamil Nadu', value: 'tn' },
+  { label: 'Gujarat', value: 'gj' },
+  { label: 'Delhi', value: 'dl' },
+  { label: 'West Bengal', value: 'wb' },
+  { label: 'Telangana', value: 'tg' },
+];
+
+const TAG_OPTIONS: ComboboxOption[] = [
+  { label: 'GST', value: 'gst' },
+  { label: 'Income tax', value: 'it' },
+  { label: 'TDS', value: 'tds' },
+  { label: 'Quarterly', value: 'quarterly' },
+  { label: 'Monthly', value: 'monthly' },
+  { label: 'Annual', value: 'annual' },
+  { label: 'High priority', value: 'high' },
+  { label: 'Audit', value: 'audit' },
 ];
 
 interface WorkshopFormValues {
@@ -285,6 +379,29 @@ export function ConsolePreviewPage() {
   const [bulkTier, setBulkTier] = useState('handler-primary');
   const [allowOverride, setAllowOverride] = useState(true);
   const [workshopPage, setWorkshopPage] = useState(1);
+  const [workshopSelection, setWorkshopSelection] = useState<string[]>([]);
+
+  // § X — extended kit state
+  const [isDark, setIsDark] = useState(false);
+  const [filterTier, setFilterTier] = useState<string>('all');
+  const [activeTab, setActiveTab] = useState('overview');
+  const [tags, setTags] = useState<string[]>(['gst', 'quarterly']);
+  const [selectedJurisdiction, setSelectedJurisdiction] = useState<string>('mh');
+  const [selectedDate, setSelectedDate] = useState('2026-04-20');
+  const [dateRange, setDateRange] = useState({ from: '2026-04-01', to: '2026-04-30' });
+  const [filingProgress] = useState(68);
+
+  // Dark-mode toggle — flip a class on the same subtree that carries
+  // `.theme-instrument`. The compliance app applies that class on <body>.
+  const toggleDark = () => {
+    setIsDark((prev) => {
+      const next = !prev;
+      if (typeof document !== 'undefined') {
+        document.body.classList.toggle('dark', next);
+      }
+      return next;
+    });
+  };
 
   const workshopForm = useForm<WorkshopFormValues>({
     defaultValues: {
@@ -347,6 +464,14 @@ export function ConsolePreviewPage() {
               <span className="ml-4 flex items-center gap-0.5 font-mono text-[10px] text-ink-muted/80">
                 <CommandIcon className="w-3 h-3" strokeWidth={1.5} />K
               </span>
+            </button>
+            <button
+              type="button"
+              onClick={toggleDark}
+              aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+              className="flex items-center justify-center w-8 h-8 border border-rule hover:border-ink text-ink-muted hover:text-ink transition-colors"
+            >
+              {isDark ? <Sun className="w-3.5 h-3.5" strokeWidth={1.5} /> : <Moon className="w-3.5 h-3.5" strokeWidth={1.5} />}
             </button>
             <div className="flex items-center gap-2 pl-4 border-l border-rule">
               <span
@@ -760,7 +885,7 @@ export function ConsolePreviewPage() {
                       <div className="font-serif text-xl text-ink leading-tight">Sheet</div>
                       <p className="text-xs text-ink-muted">Right drawer for longer tasks</p>
                     </div>
-                    <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+                    <Sheet open={sheetOpen} onOpenChange={setSheetOpen} modal={false}>
                       <SheetTrigger asChild>
                         <Button variant="outline" className="w-full justify-between">
                           <span>Edit client profile</span>
@@ -1008,6 +1133,39 @@ export function ConsolePreviewPage() {
               <DataGrid<WorkshopRow>
                 columns={WORKSHOP_COLUMNS}
                 data={WORKSHOP_ROWS}
+                enableSelection
+                onSelectionChange={setWorkshopSelection}
+                rowAttributes={(row) => ({
+                  'data-status':
+                    row.status === 'ready'
+                      ? 'filed'
+                      : row.status === 'blocked'
+                        ? 'overdue'
+                        : 'due-soon',
+                })}
+                bulkActions={[
+                  {
+                    label: 'Mark ready to file',
+                    icon: CheckCircle2,
+                    onClick: (ids) => toast.success(`Marked ${ids.length} as ready`),
+                  },
+                  {
+                    label: 'Export selected',
+                    icon: Download,
+                    onClick: (ids) => toast.info(`Exporting ${ids.length} filings`),
+                  },
+                  {
+                    label: 'Archive',
+                    icon: Archive,
+                    onClick: (ids) => toast.warning(`Archived ${ids.length}`),
+                  },
+                  {
+                    label: 'Delete',
+                    icon: Trash2,
+                    variant: 'destructive',
+                    onClick: (ids) => toast.error(`Deleted ${ids.length}`),
+                  },
+                ]}
                 page={workshopPage}
                 pageSize={10}
                 pageCount={1}
@@ -1018,6 +1176,426 @@ export function ConsolePreviewPage() {
                 onSearchChange={setSearch}
                 searchPlaceholder="Search returns, clients, periods…"
               />
+              {workshopSelection.length === 0 && (
+                <p className="mt-3 text-[10px] uppercase tracking-eyebrow text-ink-muted font-sans">
+                  Select rows to reveal the bulk action bar
+                </p>
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* §  X — EXTENDED KIT  ────────────────────────────────────────── */}
+        <section className="mt-16">
+          <SectionRule label="§ X — Extended Kit" align="left" />
+          <p className="mt-3 max-w-[62ch] text-sm text-ink-soft font-serif italic leading-relaxed">
+            The second half of the surface area — buttons with tone, format displays,
+            standalone comboboxes, tabs, accordions, breadcrumbs, progress, and a working
+            dark mode. Same tokens, every piece.
+          </p>
+
+          {/* ─── Palette strip ─── */}
+          <div className="mt-8">
+            <Eyebrow tone="muted" mark="a">Palette</Eyebrow>
+            <div className="mt-4 grid grid-cols-8 border border-rule bg-paper-raised">
+              {[
+                { label: 'Paper', bg: 'bg-paper', text: 'text-ink' },
+                { label: 'Paper raised', bg: 'bg-paper-raised', text: 'text-ink' },
+                { label: 'Paper sunken', bg: 'bg-paper-sunken', text: 'text-ink' },
+                { label: 'Ink', bg: 'bg-ink', text: 'text-paper' },
+                { label: 'Authority', bg: 'bg-authority', text: 'text-paper' },
+                { label: 'Filed', bg: 'bg-filed', text: 'text-paper' },
+                { label: 'Due soon', bg: 'bg-due-soon', text: 'text-paper' },
+                { label: 'Signal', bg: 'bg-signal', text: 'text-paper' },
+              ].map((tone) => (
+                <div
+                  key={tone.label}
+                  className={`${tone.bg} ${tone.text} aspect-[2/1] flex items-end p-3 border-r border-rule/40 last:border-r-0`}
+                >
+                  <span className="text-[10px] uppercase tracking-[0.14em] font-sans font-medium">
+                    {tone.label}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* ─── Buttons + ButtonGroup ─── */}
+          <div className="mt-10 grid grid-cols-12 gap-8">
+            <div className="col-span-6">
+              <Eyebrow tone="muted" mark="b">Buttons · tone variants</Eyebrow>
+              <div className="mt-4 border border-rule bg-paper-raised p-5 space-y-5">
+                <div className="space-y-2">
+                  <div className="text-[10px] uppercase tracking-eyebrow text-ink-muted font-sans">
+                    Solid fills
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button tone="authority">Authority</Button>
+                    <Button tone="filed">Mark filed</Button>
+                    <Button tone="due-soon">Remind client</Button>
+                    <Button tone="signal">Escalate</Button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="text-[10px] uppercase tracking-eyebrow text-ink-muted font-sans">
+                    Hairline outlines
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button variant="outline" tone="authority">Authority</Button>
+                    <Button variant="outline" tone="filed">Filed</Button>
+                    <Button variant="outline" tone="due-soon">Due soon</Button>
+                    <Button variant="outline" tone="signal">Signal</Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="col-span-6">
+              <Eyebrow tone="muted" mark="c">Button groups</Eyebrow>
+              <div className="mt-4 border border-rule bg-paper-raised p-5 space-y-5">
+                <div className="space-y-2">
+                  <div className="text-[10px] uppercase tracking-eyebrow text-ink-muted font-sans">
+                    View switcher
+                  </div>
+                  <ButtonGroup>
+                    <Button
+                      variant={filterTier === 'all' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setFilterTier('all')}
+                    >
+                      All
+                    </Button>
+                    <Button
+                      variant={filterTier === 'ready' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setFilterTier('ready')}
+                    >
+                      Ready
+                    </Button>
+                    <Button
+                      variant={filterTier === 'draft' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setFilterTier('draft')}
+                    >
+                      Draft
+                    </Button>
+                    <Button
+                      variant={filterTier === 'blocked' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setFilterTier('blocked')}
+                    >
+                      Blocked
+                    </Button>
+                  </ButtonGroup>
+                </div>
+                <div className="space-y-2">
+                  <div className="text-[10px] uppercase tracking-eyebrow text-ink-muted font-sans">
+                    Toolbar cluster
+                  </div>
+                  <ButtonGroup>
+                    <Button variant="outline" size="sm"><Filter className="w-3 h-3" /></Button>
+                    <Button variant="outline" size="sm"><RotateCw className="w-3 h-3" /></Button>
+                    <Button variant="outline" size="sm"><Download className="w-3 h-3" /></Button>
+                    <Button variant="outline" size="sm"><ChevronsUpDown className="w-3 h-3" /></Button>
+                  </ButtonGroup>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ─── Format displays ─── */}
+          <div className="mt-10">
+            <Eyebrow tone="muted" mark="d">Format displays</Eyebrow>
+            <div className="mt-4 grid grid-cols-12 gap-0 border border-rule bg-paper-raised">
+              <div className="col-span-4 p-5 border-r border-rule">
+                <div className="text-[10px] uppercase tracking-eyebrow text-ink-muted font-sans">
+                  Date format
+                </div>
+                <div className="mt-3 space-y-2 text-sm text-ink">
+                  <div>
+                    <span className="text-ink-muted text-[11px] block">Long</span>
+                    <DateFormat value="2026-04-15" format="long" />
+                  </div>
+                  <div>
+                    <span className="text-ink-muted text-[11px] block">Short</span>
+                    <DateFormat value="2026-04-15" format="short" />
+                  </div>
+                  <div>
+                    <span className="text-ink-muted text-[11px] block">Relative</span>
+                    <DateFormat value="2026-04-12" format="relative" />
+                  </div>
+                </div>
+              </div>
+              <div className="col-span-4 p-5 border-r border-rule">
+                <div className="text-[10px] uppercase tracking-eyebrow text-ink-muted font-sans">
+                  Number format
+                </div>
+                <div className="mt-3 space-y-2 text-sm text-ink">
+                  <div>
+                    <span className="text-ink-muted text-[11px] block">Integer</span>
+                    <NumberFormat value={184526} />
+                  </div>
+                  <div>
+                    <span className="text-ink-muted text-[11px] block">Compact</span>
+                    <NumberFormat value={184526} compact />
+                  </div>
+                  <div>
+                    <span className="text-ink-muted text-[11px] block">Percent</span>
+                    <NumberFormat value={0.685} percent decimals={1} />
+                  </div>
+                </div>
+              </div>
+              <div className="col-span-4 p-5">
+                <div className="text-[10px] uppercase tracking-eyebrow text-ink-muted font-sans">
+                  Currency format
+                </div>
+                <div className="mt-3 space-y-2 text-sm text-ink">
+                  <div>
+                    <span className="text-ink-muted text-[11px] block">USD (cents)</span>
+                    <CurrencyFormat value={1250050} currency="USD" />
+                  </div>
+                  <div>
+                    <span className="text-ink-muted text-[11px] block">INR (cents)</span>
+                    <CurrencyFormat value={18452600} currency="INR" />
+                  </div>
+                  <div>
+                    <span className="text-ink-muted text-[11px] block">EUR (major)</span>
+                    <CurrencyFormat value={24999.5} currency="EUR" minor={false} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ─── Combobox + MultiSelect ─── */}
+          <div className="mt-10 grid grid-cols-12 gap-8">
+            <div className="col-span-6">
+              <Eyebrow tone="muted" mark="e">Combobox · standalone</Eyebrow>
+              <div className="mt-4 border border-rule bg-paper-raised p-5 space-y-2">
+                <Label>Jurisdiction</Label>
+                <Combobox
+                  value={selectedJurisdiction}
+                  onChange={setSelectedJurisdiction}
+                  options={JURISDICTION_OPTIONS}
+                  placeholder="Select jurisdiction…"
+                />
+                <p className="text-[11px] text-ink-muted font-serif italic mt-2">
+                  cmdk-backed, search-filtered, keyboard-first
+                </p>
+              </div>
+            </div>
+            <div className="col-span-6">
+              <Eyebrow tone="muted" mark="f">MultiSelect · standalone</Eyebrow>
+              <div className="mt-4 border border-rule bg-paper-raised p-5 space-y-2">
+                <Label>Tags</Label>
+                <MultiSelect
+                  value={tags}
+                  onChange={setTags}
+                  options={TAG_OPTIONS}
+                  placeholder="Add tags…"
+                />
+                <p className="text-[11px] text-ink-muted font-serif italic mt-2">
+                  Chips render as small-caps hairline rectangles
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* ─── Tabs + Accordion ─── */}
+          <div className="mt-10 grid grid-cols-12 gap-8">
+            <div className="col-span-6">
+              <Eyebrow tone="muted" mark="g">Tabs</Eyebrow>
+              <div className="mt-4 border border-rule bg-paper-raised p-5">
+                <Tabs value={activeTab} onValueChange={setActiveTab}>
+                  <TabsList>
+                    <TabsTrigger value="overview">Overview</TabsTrigger>
+                    <TabsTrigger value="filings">Filings</TabsTrigger>
+                    <TabsTrigger value="audit">Audit trail</TabsTrigger>
+                    <TabsTrigger value="notes">Notes</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="overview" className="pt-4 text-sm text-ink-soft leading-relaxed">
+                    The <span className="text-ink font-medium">overview</span> tab summarizes
+                    the filing cadence, recent returns, and outstanding actions for the selected client.
+                  </TabsContent>
+                  <TabsContent value="filings" className="pt-4 text-sm text-ink-soft">
+                    Chronological list of all filings for this entity, filterable by law and period.
+                  </TabsContent>
+                  <TabsContent value="audit" className="pt-4 text-sm text-ink-soft">
+                    Every state transition, every assignee change, every export — immutable.
+                  </TabsContent>
+                  <TabsContent value="notes" className="pt-4 text-sm text-ink-soft">
+                    Private notes and flags kept by the handling team.
+                  </TabsContent>
+                </Tabs>
+              </div>
+            </div>
+            <div className="col-span-6">
+              <Eyebrow tone="muted" mark="h">Accordion</Eyebrow>
+              <div className="mt-4 border border-rule bg-paper-raised p-5">
+                <Accordion type="single" collapsible defaultValue="item-1">
+                  <AccordionItem value="item-1">
+                    <AccordionTrigger>Filing cadence</AccordionTrigger>
+                    <AccordionContent>
+                      GSTR-3B is filed on the 20th of every month. Client has elected a
+                      7-day grace buffer for reconciliation. ITRs are filed annually by
+                      September 30.
+                    </AccordionContent>
+                  </AccordionItem>
+                  <AccordionItem value="item-2">
+                    <AccordionTrigger>Handler assignments</AccordionTrigger>
+                    <AccordionContent>
+                      Priya Iyer is the primary handler for all GST filings. Arjun Rao
+                      handles income tax. Escalations route to the partner-in-charge.
+                    </AccordionContent>
+                  </AccordionItem>
+                  <AccordionItem value="item-3">
+                    <AccordionTrigger>Notification rules</AccordionTrigger>
+                    <AccordionContent>
+                      The client receives a reminder 7 days before a filing due date,
+                      another 48 hours before, and a final call on the morning of.
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
+              </div>
+            </div>
+          </div>
+
+          {/* ─── Breadcrumb + Progress + Badges ─── */}
+          <div className="mt-10 grid grid-cols-12 gap-8">
+            <div className="col-span-7">
+              <Eyebrow tone="muted" mark="i">Breadcrumb</Eyebrow>
+              <div className="mt-4 border border-rule bg-paper-raised p-5">
+                <Breadcrumb>
+                  <BreadcrumbList>
+                    <BreadcrumbItem>
+                      <BreadcrumbLink href="#">Clients</BreadcrumbLink>
+                    </BreadcrumbItem>
+                    <BreadcrumbSeparator />
+                    <BreadcrumbItem>
+                      <BreadcrumbLink href="#">Nilkanth Traders</BreadcrumbLink>
+                    </BreadcrumbItem>
+                    <BreadcrumbSeparator />
+                    <BreadcrumbItem>
+                      <BreadcrumbLink href="#">Filings</BreadcrumbLink>
+                    </BreadcrumbItem>
+                    <BreadcrumbSeparator />
+                    <BreadcrumbItem>
+                      <BreadcrumbPage>GSTR-3B · Mar 2026</BreadcrumbPage>
+                    </BreadcrumbItem>
+                  </BreadcrumbList>
+                </Breadcrumb>
+              </div>
+            </div>
+            <div className="col-span-5">
+              <Eyebrow tone="muted" mark="j">Badges · tones</Eyebrow>
+              <div className="mt-4 border border-rule bg-paper-raised p-5 flex flex-wrap gap-2">
+                <Badge tone="authority">In review</Badge>
+                <Badge tone="filed">Filed</Badge>
+                <Badge tone="due-soon">Due in 3d</Badge>
+                <Badge tone="signal">Overdue</Badge>
+                <Badge>Draft</Badge>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-10">
+            <Eyebrow tone="muted" mark="k">Progress · this quarter</Eyebrow>
+            <div className="mt-4 grid grid-cols-4 gap-4">
+              <div className="border border-rule bg-paper-raised p-5 space-y-2">
+                <div className="text-[10px] uppercase tracking-eyebrow text-ink-muted font-sans">
+                  Filed (authority)
+                </div>
+                <Progress value={filingProgress} />
+                <div className="text-[11px] text-ink font-mono tabular-nums">{filingProgress}%</div>
+              </div>
+              <div className="border border-rule bg-paper-raised p-5 space-y-2">
+                <div className="text-[10px] uppercase tracking-eyebrow text-ink-muted font-sans">
+                  Compliance (filed)
+                </div>
+                <Progress value={82} tone="filed" />
+                <div className="text-[11px] text-ink font-mono tabular-nums">82%</div>
+              </div>
+              <div className="border border-rule bg-paper-raised p-5 space-y-2">
+                <div className="text-[10px] uppercase tracking-eyebrow text-ink-muted font-sans">
+                  Due this week (due-soon)
+                </div>
+                <Progress value={45} tone="due-soon" />
+                <div className="text-[11px] text-ink font-mono tabular-nums">45%</div>
+              </div>
+              <div className="border border-rule bg-paper-raised p-5 space-y-2">
+                <div className="text-[10px] uppercase tracking-eyebrow text-ink-muted font-sans">
+                  Escalations (signal)
+                </div>
+                <Progress value={12} tone="signal" />
+                <div className="text-[11px] text-ink font-mono tabular-nums">12%</div>
+              </div>
+            </div>
+          </div>
+
+          {/* ─── Date pickers ─── */}
+          <div className="mt-10 grid grid-cols-12 gap-8">
+            <div className="col-span-6">
+              <Eyebrow tone="muted" mark="l">Date picker</Eyebrow>
+              <div className="mt-4 border border-rule bg-paper-raised p-5 space-y-2">
+                <Label>Filing date</Label>
+                <FormDatePicker
+                  value={selectedDate}
+                  onChange={setSelectedDate}
+                  placeholder="Pick a filing date…"
+                />
+                <p className="text-[11px] text-ink-muted font-serif italic mt-2">
+                  Selected day fills authority; today is underlined in signal
+                </p>
+              </div>
+            </div>
+            <div className="col-span-6">
+              <Eyebrow tone="muted" mark="m">Date range picker</Eyebrow>
+              <div className="mt-4 border border-rule bg-paper-raised p-5 space-y-2">
+                <Label>Reporting period</Label>
+                <FormDateRangePicker
+                  value={dateRange}
+                  onChange={setDateRange}
+                  placeholder="Pick a reporting period…"
+                />
+                <p className="text-[11px] text-ink-muted font-serif italic mt-2">
+                  Two-month view with range highlighting
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* ─── Tint washes ─── */}
+          <div className="mt-10">
+            <Eyebrow tone="muted" mark="n">Tint washes</Eyebrow>
+            <div className="mt-4 grid grid-cols-4 gap-4">
+              <div className="tint-authority py-4 pr-4">
+                <div className="text-[10px] uppercase tracking-eyebrow font-sans font-medium">
+                  Authority
+                </div>
+                <div className="mt-1 font-serif text-base text-ink">Awaiting review</div>
+                <div className="text-[11px] text-ink-soft mt-1">4 filings in the queue</div>
+              </div>
+              <div className="tint-filed py-4 pr-4">
+                <div className="text-[10px] uppercase tracking-eyebrow font-sans font-medium">
+                  Filed
+                </div>
+                <div className="mt-1 font-serif text-base text-ink">68 this month</div>
+                <div className="text-[11px] text-ink-soft mt-1">On pace for the quarter</div>
+              </div>
+              <div className="tint-due py-4 pr-4">
+                <div className="text-[10px] uppercase tracking-eyebrow font-sans font-medium">
+                  Due soon
+                </div>
+                <div className="mt-1 font-serif text-base text-ink">12 within 7 days</div>
+                <div className="text-[11px] text-ink-soft mt-1">Reminders dispatched</div>
+              </div>
+              <div className="tint-signal py-4 pr-4">
+                <div className="text-[10px] uppercase tracking-eyebrow font-sans font-medium">
+                  Overdue
+                </div>
+                <div className="mt-1 font-serif text-base text-ink">3 escalations</div>
+                <div className="text-[11px] text-ink-soft mt-1">Handler notified</div>
+              </div>
             </div>
           </div>
         </section>
