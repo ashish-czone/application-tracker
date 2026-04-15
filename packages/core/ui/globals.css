@@ -158,6 +158,70 @@
     font-feature-settings: 'ss01', 'cv11';
   }
 
+  /* --------------------------------------------------------------------
+     Instrument · Night Edition (dark)
+     --------------------------------------------------------------------
+     Activate by adding `.dark` to the same subtree that already carries
+     `.theme-instrument` (usually <body> or <html>). Every token gets a
+     warm-dark counterpart — graphite paper, bone ink, brass authority,
+     a honey-gold due-soon and mint-sage filed. The aesthetic stays
+     editorial; we do NOT switch to a cold tech dark. */
+  .theme-instrument.dark {
+    --paper: 30 6% 9%;             /* graphite with a brown cast */
+    --paper-raised: 30 5% 13%;     /* card/dialog surface */
+    --paper-sunken: 30 7% 6%;      /* recessed (table headers, hover) */
+    --ink: 42 28% 92%;             /* warm bone */
+    --ink-soft: 42 15% 72%;        /* soft bone */
+    --ink-muted: 42 12% 52%;       /* brass */
+    --rule: 30 8% 22%;             /* iron hairline */
+    --rule-strong: 30 10% 36%;     /* brighter iron */
+    --authority: 38 78% 62%;       /* warm brass — reads as official */
+    --authority-soft: 38 55% 50%;
+    --signal: 19 82% 62%;          /* brighter burnt orange */
+    --signal-soft: 19 30% 18%;     /* deep terracotta wash */
+    --filed: 140 40% 60%;          /* mint sage */
+    --filed-soft: 140 22% 14%;     /* deep forest wash */
+    --due-soon: 42 82% 62%;        /* honey gold */
+    --due-soon-soft: 42 25% 16%;   /* deep amber wash */
+
+    /* Shadcn slots */
+    --background: var(--paper);
+    --foreground: var(--ink);
+    --card: var(--paper-raised);
+    --card-foreground: var(--ink);
+    --popover: var(--paper-raised);
+    --popover-foreground: var(--ink);
+    --primary: var(--authority);
+    --primary-foreground: 30 6% 9%;
+    --secondary: 30 5% 18%;
+    --secondary-foreground: var(--ink);
+    --muted: 30 7% 14%;
+    --muted-foreground: var(--ink-soft);
+    --accent: 30 5% 18%;
+    --accent-foreground: var(--ink);
+    --destructive: var(--signal);
+    --destructive-foreground: 30 6% 9%;
+    --success: var(--filed);
+    --success-foreground: 30 6% 9%;
+    --warning: var(--due-soon);
+    --warning-foreground: 30 6% 9%;
+    --border: var(--rule);
+    --input: var(--rule);
+    --ring: var(--authority);
+
+    --sidebar: var(--paper-raised);
+    --sidebar-foreground: var(--ink);
+    --sidebar-border: var(--rule);
+    --sidebar-muted: var(--ink-muted);
+    --sidebar-accent: var(--authority);
+    --sidebar-accent-foreground: 30 6% 9%;
+
+    --content-bg: var(--paper);
+
+    background-color: hsl(var(--paper));
+    color: hsl(var(--ink));
+  }
+
   .theme-instrument .font-display,
   .theme-instrument h1,
   .theme-instrument h2,
@@ -1094,6 +1158,53 @@
   .theme-instrument ::selection {
     background-color: hsl(var(--authority) / 0.22);
     color: hsl(var(--ink));
+  }
+
+  /* ----- Dark mode shadow adjustments ------------------------------------
+     Instrument uses warm ink drop shadows everywhere. On graphite paper
+     those shadows are invisible. In dark mode we swap them for a halo
+     glow in authority brass plus a softer black lift. */
+  .theme-instrument.dark [data-slot="dialog-content"],
+  .theme-instrument.dark [data-slot="sheet-content"] {
+    box-shadow:
+      0 1px 0 hsl(var(--rule)),
+      0 24px 48px -20px hsla(0, 0%, 0%, 0.7),
+      0 2px 6px hsla(0, 0%, 0%, 0.4);
+  }
+  .theme-instrument.dark [data-radix-popper-content-wrapper] > *,
+  .theme-instrument.dark [data-slot="datepicker-content"],
+  .theme-instrument.dark [data-slot="combobox-content"],
+  .theme-instrument.dark [data-slot="multi-select-content"] {
+    box-shadow:
+      0 1px 0 hsl(var(--rule)),
+      0 18px 32px -16px hsla(0, 0%, 0%, 0.7) !important;
+  }
+  .theme-instrument.dark [data-slot="slider-thumb"] {
+    box-shadow:
+      0 1px 0 hsl(var(--rule)),
+      0 2px 6px hsla(0, 0%, 0%, 0.5);
+  }
+  .theme-instrument.dark [data-slot="slider-thumb"]:hover {
+    box-shadow:
+      0 1px 0 hsl(var(--rule)),
+      0 4px 12px hsl(var(--authority) / 0.35);
+  }
+  .theme-instrument.dark [data-slot="tooltip-content"] {
+    background-color: hsl(var(--ink));
+    color: hsl(var(--paper));
+    box-shadow: 0 6px 14px -6px hsla(0, 0%, 0%, 0.7);
+  }
+  /* Dark overlay — deeper graphite wash, not muddy brown */
+  .theme-instrument.dark [data-slot="sheet-overlay"],
+  .theme-instrument.dark [data-radix-dialog-overlay] {
+    background-color: hsla(30, 15%, 3%, 0.75) !important;
+  }
+  /* Grain overlay — use a warm highlight on dark */
+  .theme-instrument.dark .paper-grain {
+    background-image:
+      radial-gradient(circle at 20% 30%, hsla(42, 40%, 70%, 0.025) 0px, transparent 1px),
+      radial-gradient(circle at 70% 60%, hsla(42, 40%, 80%, 0.03) 0px, transparent 1.5px),
+      radial-gradient(circle at 45% 80%, hsla(42, 40%, 70%, 0.02) 0px, transparent 1px);
   }
 
   /* ----- Tint washes ------------------------------------------------------
