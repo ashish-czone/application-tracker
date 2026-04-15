@@ -1,11 +1,7 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { useDebounce } from '../../hooks/useDebounce';
 import { useFormContext, Controller } from 'react-hook-form';
-import * as Popover from '@radix-ui/react-popover';
-import { Command } from 'cmdk';
-import { Check, ChevronsUpDown } from 'lucide-react';
 import { Label } from './Label';
 import { cn } from '../../lib/utils';
+import { Combobox, type ComboboxOption } from './Combobox';
 
 interface SelectOption {
   label: string;
@@ -40,34 +36,35 @@ interface FormSelectStandaloneProps extends FormSelectBaseProps {
 
 export type FormSelectProps = FormSelectControlledProps | FormSelectStandaloneProps;
 
+/**
+ * Searchable single-select with optional react-hook-form binding.
+ *
+ * Internally this is a thin wrapper around the standalone `Combobox`
+ * primitive — which owns the cmdk plumbing, debounced async search, and
+ * label cache. Use `Combobox` directly if you don't need react-hook-form.
+ */
 export function FormSelect(props: FormSelectProps) {
   const { label, options, onSearch, placeholder = 'Select...', description, disabled, className } = props;
 
   // Standalone mode: value + onChange provided, no form context needed
   if ('value' in props && props.onChange) {
-    const selectedOption = options?.find((o) => o.value === props.value);
-
     return (
       <div className={cn('space-y-2', className)}>
         {label && <Label>{label}</Label>}
-        <SearchableSelect
-          options={options}
-          onSearch={onSearch}
+        <Combobox
+          options={options as ComboboxOption[] | undefined}
+          onSearch={onSearch as ((q: string) => Promise<ComboboxOption[]>) | undefined}
           value={props.value}
           onChange={props.onChange}
           placeholder={placeholder}
           disabled={disabled}
-          displayValue={selectedOption?.label}
         />
-        {description && (
-          <p className="text-sm text-muted-foreground">{description}</p>
-        )}
+        {description && <p className="text-sm text-muted-foreground">{description}</p>}
       </div>
     );
   }
 
-  // Form mode: uses react-hook-form context
-  return <FormContextSelect {...props as FormSelectControlledProps} />;
+  return <FormContextSelect {...(props as FormSelectControlledProps)} />;
 }
 
 function FormContextSelect({
@@ -91,21 +88,16 @@ function FormContextSelect({
       name={name}
       render={({ field, fieldState, formState }) => {
         const hasError = (fieldState.isTouched || formState.isSubmitted) && !!fieldState.error;
-        const describedBy = [
-          hasError ? errorId : null,
-          description ? descriptionId : null,
-        ]
-          .filter(Boolean)
-          .join(' ') || undefined;
-
-        const selectedOption = options?.find((o) => o.value === field.value);
+        const describedBy =
+          [hasError ? errorId : null, description ? descriptionId : null].filter(Boolean).join(' ') ||
+          undefined;
 
         return (
           <div className={cn('space-y-2', className)}>
             {label && <Label htmlFor={name}>{label}</Label>}
-            <SearchableSelect
-              options={options}
-              onSearch={onSearch}
+            <Combobox
+              options={options as ComboboxOption[] | undefined}
+              onSearch={onSearch as ((q: string) => Promise<ComboboxOption[]>) | undefined}
               value={field.value ?? ''}
               onChange={(val) => {
                 field.onChange(val);
@@ -114,9 +106,9 @@ function FormContextSelect({
               placeholder={placeholder}
               disabled={disabled}
               hasError={hasError}
-              describedBy={describedBy}
               id={name}
-              displayValue={selectedOption?.label ?? initialDisplayValue}
+              aria-describedby={describedBy}
+              initialDisplayValue={initialDisplayValue}
             />
             {description && (
               <p id={descriptionId} className="text-sm text-muted-foreground">
@@ -132,162 +124,5 @@ function FormContextSelect({
         );
       }}
     />
-  );
-}
-
-function SearchableSelect({
-  options,
-  onSearch,
-  value,
-  onChange,
-  placeholder,
-  disabled,
-  hasError,
-  describedBy,
-  id,
-  displayValue,
-}: {
-  options?: SelectOption[];
-  onSearch?: (query: string) => Promise<SelectOption[]>;
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
-  disabled?: boolean;
-  hasError?: boolean;
-  describedBy?: string;
-  id?: string;
-  displayValue?: string;
-}) {
-  const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState('');
-  const [asyncResults, setAsyncResults] = useState<SelectOption[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [cachedLabel, setCachedLabel] = useState<string | undefined>(displayValue);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const debouncedSearch = useDebounce(search, 300);
-
-  // Keep cached label in sync with external displayValue
-  useEffect(() => {
-    if (displayValue) setCachedLabel(displayValue);
-  }, [displayValue]);
-
-  useEffect(() => {
-    if (open) {
-      setSearch('');
-      setAsyncResults([]);
-      setTimeout(() => inputRef.current?.focus(), 0);
-    }
-  }, [open]);
-
-  // Async search effect
-  useEffect(() => {
-    if (!onSearch || !open) return;
-    if (!debouncedSearch && !open) return;
-
-    let cancelled = false;
-    setIsSearching(true);
-    onSearch(debouncedSearch).then((results) => {
-      if (!cancelled) {
-        setAsyncResults(results);
-        setIsSearching(false);
-      }
-    }).catch(() => {
-      if (!cancelled) setIsSearching(false);
-    });
-
-    return () => { cancelled = true; };
-  }, [debouncedSearch, onSearch, open]);
-
-  // Determine which options to display
-  const displayOptions = options
-    ? options.filter((opt) => !search || opt.label.toLowerCase().includes(search.toLowerCase()))
-    : asyncResults;
-
-  return (
-    <Popover.Root open={open} onOpenChange={setOpen}>
-      <Popover.Trigger asChild disabled={disabled}>
-        <button
-          type="button"
-          id={id}
-          role="combobox"
-          aria-expanded={open}
-          aria-invalid={hasError || undefined}
-          aria-describedby={describedBy}
-          className={cn(
-            'flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
-            !value && 'text-muted-foreground',
-          )}
-        >
-          <span className="truncate">{cachedLabel ?? displayValue ?? placeholder}</span>
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </button>
-      </Popover.Trigger>
-      <Popover.Portal>
-        <Popover.Content
-          className="z-50 w-[var(--radix-popover-trigger-width)] rounded-md border bg-popover text-popover-foreground shadow-md outline-none animate-in fade-in-0 zoom-in-95"
-          sideOffset={4}
-          align="start"
-        >
-          <Command shouldFilter={false}>
-            <div className="flex items-center border-b px-3">
-              <Command.Input
-                ref={inputRef}
-                value={search}
-                onValueChange={setSearch}
-                placeholder="Search..."
-                className="flex h-9 w-full bg-transparent py-2 text-sm outline-none placeholder:text-muted-foreground"
-              />
-            </div>
-            <Command.List
-              className="max-h-60 overflow-y-auto p-1"
-              ref={(node) => {
-                if (!node) return;
-                // Fix: Radix Dialog's RemoveScroll blocks wheel events on portalled
-                // Popover content. Manually handle scrolling via native listener.
-                node.addEventListener('wheel', (e) => {
-                  const { scrollTop, scrollHeight, clientHeight } = node;
-                  const atTop = scrollTop === 0 && e.deltaY < 0;
-                  const atBottom = scrollTop + clientHeight >= scrollHeight && e.deltaY > 0;
-                  if (!atTop && !atBottom) {
-                    e.preventDefault();
-                    node.scrollTop += e.deltaY;
-                  }
-                }, { passive: false });
-              }}
-            >
-              {isSearching ? (
-                <div className="py-6 text-center text-sm text-muted-foreground">Searching...</div>
-              ) : displayOptions.length === 0 ? (
-                <Command.Empty className="py-6 text-center text-sm text-muted-foreground">
-                  {onSearch && !search ? 'Type to search...' : 'No results found.'}
-                </Command.Empty>
-              ) : (
-                displayOptions.map((opt) => (
-                  <Command.Item
-                    key={opt.value}
-                    value={opt.value}
-                    onSelect={() => {
-                      const newVal = opt.value === value ? '' : opt.value;
-                      onChange(newVal);
-                      setCachedLabel(newVal ? opt.label : undefined);
-                      setOpen(false);
-                    }}
-                    className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground"
-                  >
-                    <Check
-                      className={cn(
-                        'mr-2 h-4 w-4',
-                        value === opt.value ? 'opacity-100' : 'opacity-0',
-                      )}
-                    />
-                    {opt.label}
-                  </Command.Item>
-                ))
-              )}
-            </Command.List>
-          </Command>
-        </Popover.Content>
-      </Popover.Portal>
-    </Popover.Root>
   );
 }

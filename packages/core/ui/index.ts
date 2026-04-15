@@ -17,7 +17,10 @@ export { FormInput, type AsyncValidationStatus } from './components/form/FormInp
 export { FormEmailInput } from './components/form/FormEmailInput';
 export { FormPasswordInput } from './components/form/FormPasswordInput';
 export { FormPhoneInput } from './components/form/FormPhoneInput';
-export { FormSelect } from './components/form/FormSelect';
+export { FormSelect, type FormSelectProps } from './components/form/FormSelect';
+export { Combobox, type ComboboxProps } from './components/form/Combobox';
+export { MultiSelect, type MultiSelectProps } from './components/form/MultiSelect';
+export type { ComboboxOption } from './hooks/useComboboxState';
 export { FormTextarea } from './components/form/FormTextarea';
 export { FormCheckbox } from './components/form/FormCheckbox';
 export { Checkbox, type CheckboxProps } from './components/form/Checkbox';
@@ -25,6 +28,7 @@ export { RadioGroup, RadioGroupItem } from './components/form/RadioGroup';
 export { FormCurrencyInput } from './components/form/FormCurrencyInput';
 export { FormRichText } from './components/form/FormRichText';
 export { FormChipInput, ChipInput, type ChipOption } from './components/form/FormChipInput';
+// Legacy ChipInput re-export kept for any remaining call sites.
 export { FormFileInput } from './components/form/FormFileInput';
 export { FormDatePicker } from './components/form/FormDatePicker';
 export { Calendar } from './components/form/Calendar';

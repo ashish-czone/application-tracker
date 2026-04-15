@@ -799,6 +799,86 @@
     opacity: 0.5;
   }
 
+  /* ----- MultiSelect chips + trigger + popover ---------------------------
+     Chips render as small-caps hairline rectangles (not rounded pills) so
+     they match the rest of the editorial chrome. The trigger bed mirrors
+     Input styling. The dropdown uses the shared paper-raised frame. */
+  .theme-instrument [data-slot="multi-select-trigger"] {
+    background-color: hsl(var(--paper-raised));
+    border: 1px solid hsl(var(--rule));
+    border-radius: 2px;
+    box-shadow: inset 0 -1px 0 hsl(var(--rule) / 0.6);
+    transition: border-color 120ms, box-shadow 120ms;
+  }
+  .theme-instrument [data-slot="multi-select-trigger"]:hover {
+    border-color: hsl(var(--rule-strong));
+  }
+  .theme-instrument [data-slot="multi-select-trigger"]:focus-within {
+    border-color: hsl(var(--authority));
+    box-shadow: inset 0 -2px 0 hsl(var(--authority));
+  }
+  .theme-instrument [data-slot="multi-select-trigger"] input {
+    font-family: var(--font-sans);
+    color: hsl(var(--ink));
+  }
+  .theme-instrument [data-slot="multi-select-trigger"] input::placeholder {
+    color: hsl(var(--ink-muted));
+    font-style: italic;
+  }
+  .theme-instrument [data-slot="multi-select-content"] {
+    background-color: hsl(var(--paper-raised)) !important;
+    border: 1px solid hsl(var(--rule)) !important;
+    border-radius: 2px !important;
+    box-shadow:
+      0 1px 0 hsl(var(--rule)),
+      0 18px 32px -16px hsla(216, 9%, 12%, 0.22) !important;
+  }
+  .theme-instrument [data-slot="multi-select-content"] button {
+    font-family: var(--font-sans);
+    font-size: 13px;
+    color: hsl(var(--ink));
+    border-bottom: 1px solid hsl(var(--rule) / 0.4);
+    transition: background-color 120ms;
+  }
+  .theme-instrument [data-slot="multi-select-content"] button:last-child {
+    border-bottom: none;
+  }
+  .theme-instrument [data-slot="multi-select-content"] button:hover {
+    background-color: hsl(var(--authority) / 0.08);
+    color: hsl(var(--authority));
+  }
+  /* Chip: square, hairline, small-caps, tone-aware. When no inline color
+     is set the chip inherits the theme's filed-soft wash. */
+  .theme-instrument [data-slot="chip"] {
+    border-radius: 2px !important;
+    border: 1px solid hsl(var(--rule));
+    background-color: hsl(var(--paper)) !important;
+    color: hsl(var(--ink)) !important;
+    font-family: var(--font-sans);
+    font-size: 10px !important;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 500 !important;
+    padding: 3px 6px 3px 8px !important;
+  }
+  .theme-instrument [data-slot="chip"] button {
+    color: hsl(var(--ink-muted));
+  }
+  .theme-instrument [data-slot="chip"] button:hover {
+    color: hsl(var(--signal));
+    background-color: transparent !important;
+  }
+
+  /* Combobox popover content frame */
+  .theme-instrument [data-slot="combobox-content"] {
+    background-color: hsl(var(--paper-raised)) !important;
+    border: 1px solid hsl(var(--rule)) !important;
+    border-radius: 2px !important;
+    box-shadow:
+      0 1px 0 hsl(var(--rule)),
+      0 18px 32px -16px hsla(216, 9%, 12%, 0.22) !important;
+  }
+
   /* ----- cmdk dropdowns ---------------------------------------------------
      The cmdk library (used by FormSelect/Combobox) emits a stable set of
      [cmdk-*] attributes. Re-skin them so every combobox popover matches

@@ -1,5 +1,5 @@
 import { useMemo, useCallback } from 'react';
-import { ChipInput, type ChipOption } from '@packages/ui';
+import { MultiSelect, type ChipOption } from '@packages/ui';
 import { createEntityTaxonomyApi } from '../services';
 import { useEntityTags, useSetEntityTags } from '../hooks';
 import type { ApiFn } from '../types';
@@ -68,15 +68,14 @@ export function EntityTagsChipRow({
 
   return (
     <div className={className}>
-      <ChipInput
-        selectedValues={selectedValues}
+      <MultiSelect
+        value={selectedValues}
         initialSelected={initialSelected}
         onChange={handleChange}
-        onBlur={() => {}}
         onSearch={onSearch}
         placeholder="Add tag…"
         disabled={disabled || isPending}
-        inputId={`entity-tags-${entityType}-${entityId}`}
+        id={`entity-tags-${entityType}-${entityId}`}
       />
     </div>
   );
