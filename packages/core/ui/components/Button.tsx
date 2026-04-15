@@ -29,17 +29,27 @@ const buttonVariants = cva(
   },
 );
 
+export type ButtonTone = 'authority' | 'filed' | 'due-soon' | 'signal';
+
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
   asChild?: boolean;
+  /**
+   * Optional tone for Instrument theme — mapped via `data-tone`. The base
+   * variant still controls the fill style (outline vs solid vs ghost); tone
+   * recolors the fill/ring/text under `.theme-instrument`.
+   */
+  tone?: ButtonTone;
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, ...props }, ref) => {
+  ({ className, variant, size, tone, asChild = false, ...props }, ref) => {
     const Comp = asChild ? Slot : 'button';
     return (
       <Comp
+        data-slot="button"
+        data-tone={tone}
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
         {...props}

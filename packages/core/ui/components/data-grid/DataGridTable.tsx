@@ -11,6 +11,7 @@ interface DataGridTableProps<TData> {
   sortColumn?: string;
   sortDirection?: 'asc' | 'desc';
   rowClassName?: (row: TData) => string | undefined;
+  rowAttributes?: (row: TData) => Record<string, string | undefined> | undefined;
 }
 
 function SortIcon({
@@ -44,6 +45,7 @@ export function DataGridTable<TData>({
   sortColumn,
   sortDirection,
   rowClassName,
+  rowAttributes,
 }: DataGridTableProps<TData>) {
   const handleSort = (header: Header<TData, unknown>) => {
     if (!header.column.getCanSort() || !onSortChange) return;
@@ -115,6 +117,7 @@ export function DataGridTable<TData>({
                     'group/row border-b last:border-0 hover:bg-muted/50 transition-colors',
                     rowClassName?.(row.original),
                   )}
+                  {...(rowAttributes?.(row.original) ?? {})}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <td

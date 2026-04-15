@@ -60,6 +60,7 @@ export function DataGrid<TData>({
   renderCard,
   toolbarActions,
   rowClassName,
+  rowAttributes,
   enableExport = false,
   exportFilename,
 }: DataGridProps<TData>) {
@@ -264,6 +265,7 @@ export function DataGrid<TData>({
               sortColumn={sortColumn}
               sortDirection={sortDirection}
               rowClassName={rowClassName}
+              rowAttributes={rowAttributes}
             />
           </div>
         </>

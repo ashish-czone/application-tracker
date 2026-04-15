@@ -158,6 +158,70 @@
     font-feature-settings: 'ss01', 'cv11';
   }
 
+  /* --------------------------------------------------------------------
+     Instrument · Night Edition (dark)
+     --------------------------------------------------------------------
+     Activate by adding `.dark` to the same subtree that already carries
+     `.theme-instrument` (usually <body> or <html>). Every token gets a
+     warm-dark counterpart — graphite paper, bone ink, brass authority,
+     a honey-gold due-soon and mint-sage filed. The aesthetic stays
+     editorial; we do NOT switch to a cold tech dark. */
+  .theme-instrument.dark {
+    --paper: 30 6% 9%;             /* graphite with a brown cast */
+    --paper-raised: 30 5% 13%;     /* card/dialog surface */
+    --paper-sunken: 30 7% 6%;      /* recessed (table headers, hover) */
+    --ink: 42 28% 92%;             /* warm bone */
+    --ink-soft: 42 15% 72%;        /* soft bone */
+    --ink-muted: 42 12% 52%;       /* brass */
+    --rule: 30 8% 22%;             /* iron hairline */
+    --rule-strong: 30 10% 36%;     /* brighter iron */
+    --authority: 38 78% 62%;       /* warm brass — reads as official */
+    --authority-soft: 38 55% 50%;
+    --signal: 19 82% 62%;          /* brighter burnt orange */
+    --signal-soft: 19 30% 18%;     /* deep terracotta wash */
+    --filed: 140 40% 60%;          /* mint sage */
+    --filed-soft: 140 22% 14%;     /* deep forest wash */
+    --due-soon: 42 82% 62%;        /* honey gold */
+    --due-soon-soft: 42 25% 16%;   /* deep amber wash */
+
+    /* Shadcn slots */
+    --background: var(--paper);
+    --foreground: var(--ink);
+    --card: var(--paper-raised);
+    --card-foreground: var(--ink);
+    --popover: var(--paper-raised);
+    --popover-foreground: var(--ink);
+    --primary: var(--authority);
+    --primary-foreground: 30 6% 9%;
+    --secondary: 30 5% 18%;
+    --secondary-foreground: var(--ink);
+    --muted: 30 7% 14%;
+    --muted-foreground: var(--ink-soft);
+    --accent: 30 5% 18%;
+    --accent-foreground: var(--ink);
+    --destructive: var(--signal);
+    --destructive-foreground: 30 6% 9%;
+    --success: var(--filed);
+    --success-foreground: 30 6% 9%;
+    --warning: var(--due-soon);
+    --warning-foreground: 30 6% 9%;
+    --border: var(--rule);
+    --input: var(--rule);
+    --ring: var(--authority);
+
+    --sidebar: var(--paper-raised);
+    --sidebar-foreground: var(--ink);
+    --sidebar-border: var(--rule);
+    --sidebar-muted: var(--ink-muted);
+    --sidebar-accent: var(--authority);
+    --sidebar-accent-foreground: 30 6% 9%;
+
+    --content-bg: var(--paper);
+
+    background-color: hsl(var(--paper));
+    color: hsl(var(--ink));
+  }
+
   .theme-instrument .font-display,
   .theme-instrument h1,
   .theme-instrument h2,
@@ -218,11 +282,13 @@
 @layer components {
   /* ----- Dialog & Sheet ---------------------------------------------------
      Paper-raised surface, hairline border, serif title, small-caps close
-     chip. Overlay is a warm ink wash, not a flat black veil. */
+     chip. Overlay is a warm ink wash, not a flat black veil.
+     A 2px authority bar hugs the top edge for a gentle colored anchor. */
   .theme-instrument [data-slot="dialog-content"],
   .theme-instrument [data-slot="sheet-content"] {
     background-color: hsl(var(--paper-raised));
     border: 1px solid hsl(var(--rule));
+    border-top: 2px solid hsl(var(--authority));
     border-radius: 2px;
     box-shadow:
       0 1px 0 hsl(var(--rule)),
@@ -278,8 +344,9 @@
     color: hsl(var(--ink));
   }
 
-  /* Dialog overlay — warm ink wash */
-  .theme-instrument [data-slot="dialog-content"] ~ *,
+  /* Dialog/Sheet overlay — warm ink wash. Non-modal sheets skip the
+     overlay entirely so this rule never fires on them. */
+  .theme-instrument [data-slot="sheet-overlay"],
   .theme-instrument [data-radix-dialog-overlay] {
     background-color: hsla(216, 18%, 8%, 0.55) !important;
     backdrop-filter: blur(1px);
@@ -371,7 +438,8 @@
   }
 
   /* ----- Checkbox ---------------------------------------------------------
-     Square, hairline, ink fill when checked — no rounded primary slab. */
+     Square, hairline, authority fill when checked. The saturated blue is
+     the one place a form is allowed to assert itself. */
   .theme-instrument [role="checkbox"] {
     width: 16px;
     height: 16px;
@@ -379,16 +447,21 @@
     border-radius: 1px;
     background-color: hsl(var(--paper-raised));
     box-shadow: inset 0 0 0 1px hsl(var(--paper));
+    transition: background-color 120ms, border-color 120ms;
+  }
+  .theme-instrument [role="checkbox"]:hover {
+    border-color: hsl(var(--authority));
   }
   .theme-instrument [role="checkbox"][data-state="checked"],
   .theme-instrument [role="checkbox"][data-state="indeterminate"] {
-    background-color: hsl(var(--ink));
-    border-color: hsl(var(--ink));
+    background-color: hsl(var(--authority));
+    border-color: hsl(var(--authority));
     color: hsl(var(--paper));
+    box-shadow: none;
   }
   .theme-instrument [role="checkbox"]:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 3px hsl(var(--authority) / 0.15);
+    box-shadow: 0 0 0 3px hsl(var(--authority) / 0.2);
   }
 
   /* ----- Radio ------------------------------------------------------------ */
@@ -397,9 +470,13 @@
     height: 16px;
     border: 1px solid hsl(var(--ink-soft));
     background-color: hsl(var(--paper-raised));
+    transition: border-color 120ms;
+  }
+  .theme-instrument [role="radio"]:hover {
+    border-color: hsl(var(--authority));
   }
   .theme-instrument [role="radio"][data-state="checked"] {
-    border-color: hsl(var(--ink));
+    border-color: hsl(var(--authority));
     background-color: hsl(var(--paper-raised));
   }
   .theme-instrument [role="radio"][data-state="checked"]::after {
@@ -408,8 +485,12 @@
     width: 8px;
     height: 8px;
     margin: 3px auto;
-    background-color: hsl(var(--ink));
+    background-color: hsl(var(--authority));
     border-radius: 50%;
+  }
+  .theme-instrument [role="radio"]:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px hsl(var(--authority) / 0.2);
   }
 
   /* ----- Tooltip ---------------------------------------------------------- */
@@ -433,28 +514,28 @@
   /* ----- Slider ----------------------------------------------------------- */
   .theme-instrument [data-slot="slider-track"] {
     background-color: hsl(var(--rule));
-    height: 1px;
+    height: 2px;
     border-radius: 0;
   }
   .theme-instrument [data-slot="slider-range"] {
-    background-color: hsl(var(--ink));
+    background-color: hsl(var(--authority));
   }
   .theme-instrument [data-slot="slider-thumb"] {
     width: 18px;
     height: 18px;
     background-color: hsl(var(--paper-raised));
-    border: 1.5px solid hsl(var(--ink));
+    border: 2px solid hsl(var(--authority));
     border-radius: 50%;
     box-shadow:
       0 1px 0 hsl(var(--rule)),
-      0 2px 6px hsla(216, 18%, 8%, 0.15);
+      0 2px 6px hsla(216, 18%, 8%, 0.18);
     transition: transform 120ms, box-shadow 120ms;
   }
   .theme-instrument [data-slot="slider-thumb"]:hover {
     transform: scale(1.1);
     box-shadow:
       0 1px 0 hsl(var(--rule)),
-      0 4px 10px hsla(216, 18%, 8%, 0.22);
+      0 4px 12px hsla(218, 56%, 24%, 0.32);
   }
   .theme-instrument [data-slot="slider-thumb"]:focus-visible {
     outline: none;
@@ -519,11 +600,724 @@
     font-family: var(--font-mono);
     font-feature-settings: 'tnum', 'zero';
   }
+
+  /* Row status tints — attach `data-status="filed" | "due-soon" | "overdue"`
+     to a <tr> to get a washed background plus a 3px colored leading border.
+     Row hover layers on top so the tint stays visible while tracking. */
+  .theme-instrument [data-slot="data-grid"] tbody tr[data-status] {
+    position: relative;
+  }
+  .theme-instrument [data-slot="data-grid"] tbody tr[data-status]::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    pointer-events: none;
+  }
+  .theme-instrument [data-slot="data-grid"] tbody tr[data-status="filed"] {
+    background-color: hsl(var(--filed-soft) / 0.5);
+  }
+  .theme-instrument [data-slot="data-grid"] tbody tr[data-status="filed"]::before {
+    background-color: hsl(var(--filed));
+  }
+  .theme-instrument [data-slot="data-grid"] tbody tr[data-status="due-soon"] {
+    background-color: hsl(var(--due-soon-soft) / 0.6);
+  }
+  .theme-instrument [data-slot="data-grid"] tbody tr[data-status="due-soon"]::before {
+    background-color: hsl(var(--due-soon));
+  }
+  .theme-instrument [data-slot="data-grid"] tbody tr[data-status="overdue"] {
+    background-color: hsl(var(--signal-soft) / 0.6);
+  }
+  .theme-instrument [data-slot="data-grid"] tbody tr[data-status="overdue"]::before {
+    background-color: hsl(var(--signal));
+  }
+
+  /* ----- Badge ------------------------------------------------------------
+     Shadcn Badge ships as a rounded pill with a primary slab fill. In the
+     Instrument theme we square it off, swap the fill for a hairline + tone
+     wash, and small-caps the label. Variants reuse the existing shadcn
+     classes (`default`, `secondary`, `destructive`, `outline`) so usage
+     sites don't change. */
+  .theme-instrument [data-slot="badge"],
+  .theme-instrument .theme-instrument-badge {
+    border-radius: 2px;
+    font-family: var(--font-sans);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border: 1px solid hsl(var(--rule));
+    background-color: hsl(var(--paper-raised));
+    color: hsl(var(--ink-soft));
+  }
+  .theme-instrument [data-slot="badge"][data-tone="authority"] {
+    border-color: hsl(var(--authority) / 0.35);
+    background-color: hsl(var(--authority) / 0.08);
+    color: hsl(var(--authority));
+  }
+  .theme-instrument [data-slot="badge"][data-tone="filed"] {
+    border-color: hsl(var(--filed) / 0.4);
+    background-color: hsl(var(--filed-soft));
+    color: hsl(var(--filed));
+  }
+  .theme-instrument [data-slot="badge"][data-tone="due-soon"] {
+    border-color: hsl(var(--due-soon) / 0.4);
+    background-color: hsl(var(--due-soon-soft));
+    color: hsl(var(--due-soon));
+  }
+  .theme-instrument [data-slot="badge"][data-tone="signal"] {
+    border-color: hsl(var(--signal) / 0.45);
+    background-color: hsl(var(--signal-soft));
+    color: hsl(var(--signal));
+  }
+
+  /* ----- Button -----------------------------------------------------------
+     Squared corners, sharper weight, small letter-tracking. The default
+     variant stays ink→paper; tone overrides recolor the fill so the same
+     button can express authority/signal/filed/due-soon without changing
+     the variant shape. */
+  .theme-instrument [data-slot="button"] {
+    border-radius: 2px;
+    font-family: var(--font-sans);
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    transition: background-color 120ms, border-color 120ms, color 120ms, box-shadow 120ms;
+  }
+  .theme-instrument [data-slot="button"]:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px hsl(var(--authority) / 0.2);
+  }
+
+  /* Solid variant picks up tone fill. */
+  .theme-instrument [data-slot="button"][data-tone="authority"]:not(.border) {
+    background-color: hsl(var(--authority));
+    color: hsl(var(--paper));
+  }
+  .theme-instrument [data-slot="button"][data-tone="authority"]:not(.border):hover {
+    background-color: hsl(var(--authority) / 0.9);
+  }
+  .theme-instrument [data-slot="button"][data-tone="filed"]:not(.border) {
+    background-color: hsl(var(--filed));
+    color: hsl(var(--paper));
+  }
+  .theme-instrument [data-slot="button"][data-tone="filed"]:not(.border):hover {
+    background-color: hsl(var(--filed) / 0.9);
+  }
+  .theme-instrument [data-slot="button"][data-tone="due-soon"]:not(.border) {
+    background-color: hsl(var(--due-soon));
+    color: hsl(var(--paper));
+  }
+  .theme-instrument [data-slot="button"][data-tone="due-soon"]:not(.border):hover {
+    background-color: hsl(var(--due-soon) / 0.9);
+  }
+  .theme-instrument [data-slot="button"][data-tone="signal"]:not(.border) {
+    background-color: hsl(var(--signal));
+    color: hsl(var(--paper));
+  }
+  .theme-instrument [data-slot="button"][data-tone="signal"]:not(.border):hover {
+    background-color: hsl(var(--signal) / 0.9);
+  }
+
+  /* Outline variant with tone → hairline border + tone text + tone wash on hover */
+  .theme-instrument [data-slot="button"].border[data-tone="authority"] {
+    background-color: transparent;
+    border-color: hsl(var(--authority) / 0.5);
+    color: hsl(var(--authority));
+  }
+  .theme-instrument [data-slot="button"].border[data-tone="authority"]:hover {
+    background-color: hsl(var(--authority) / 0.08);
+    border-color: hsl(var(--authority));
+    color: hsl(var(--authority));
+  }
+  .theme-instrument [data-slot="button"].border[data-tone="filed"] {
+    background-color: transparent;
+    border-color: hsl(var(--filed) / 0.5);
+    color: hsl(var(--filed));
+  }
+  .theme-instrument [data-slot="button"].border[data-tone="filed"]:hover {
+    background-color: hsl(var(--filed-soft));
+    color: hsl(var(--filed));
+  }
+  .theme-instrument [data-slot="button"].border[data-tone="due-soon"] {
+    background-color: transparent;
+    border-color: hsl(var(--due-soon) / 0.5);
+    color: hsl(var(--due-soon));
+  }
+  .theme-instrument [data-slot="button"].border[data-tone="due-soon"]:hover {
+    background-color: hsl(var(--due-soon-soft));
+    color: hsl(var(--due-soon));
+  }
+  .theme-instrument [data-slot="button"].border[data-tone="signal"] {
+    background-color: transparent;
+    border-color: hsl(var(--signal) / 0.5);
+    color: hsl(var(--signal));
+  }
+  .theme-instrument [data-slot="button"].border[data-tone="signal"]:hover {
+    background-color: hsl(var(--signal-soft));
+    color: hsl(var(--signal));
+  }
+
+  /* ----- ButtonGroup ------------------------------------------------------
+     Segmented control feel: all inner buttons sit flush with a shared
+     hairline, outer corners round to 2px. Vertical + horizontal supported. */
+  .theme-instrument [data-slot="button-group"] {
+    border-radius: 2px;
+  }
+  .theme-instrument [data-slot="button-group"][data-attached="true"] > [data-slot="button"] {
+    border-radius: 0 !important;
+  }
+  .theme-instrument [data-slot="button-group"][data-attached="true"][data-orientation="horizontal"]
+    > [data-slot="button"]:first-child {
+    border-top-left-radius: 2px !important;
+    border-bottom-left-radius: 2px !important;
+  }
+  .theme-instrument [data-slot="button-group"][data-attached="true"][data-orientation="horizontal"]
+    > [data-slot="button"]:last-child {
+    border-top-right-radius: 2px !important;
+    border-bottom-right-radius: 2px !important;
+  }
+  .theme-instrument [data-slot="button-group"][data-attached="true"][data-orientation="vertical"]
+    > [data-slot="button"]:first-child {
+    border-top-left-radius: 2px !important;
+    border-top-right-radius: 2px !important;
+  }
+  .theme-instrument [data-slot="button-group"][data-attached="true"][data-orientation="vertical"]
+    > [data-slot="button"]:last-child {
+    border-bottom-left-radius: 2px !important;
+    border-bottom-right-radius: 2px !important;
+  }
+
+  /* ----- DatePicker + Calendar -------------------------------------------
+     Trigger mirrors Input styling (hairline + paper bed + focus rule).
+     Popover content gets the paper-raised frame, weekdays render as
+     small-caps column headers, day cells become square hairline tiles,
+     and the selected day fills authority with paper text. */
+  .theme-instrument [data-slot="datepicker-trigger"] {
+    background-color: hsl(var(--paper-raised));
+    border: 1px solid hsl(var(--rule));
+    border-radius: 2px;
+    color: hsl(var(--ink));
+    font-family: var(--font-sans);
+    font-size: 14px;
+    padding: 10px 12px;
+    box-shadow: inset 0 -1px 0 hsl(var(--rule) / 0.6);
+    transition: border-color 120ms, box-shadow 120ms;
+  }
+  .theme-instrument [data-slot="datepicker-trigger"]:hover {
+    border-color: hsl(var(--rule-strong));
+  }
+  .theme-instrument [data-slot="datepicker-trigger"][data-state="open"],
+  .theme-instrument [data-slot="datepicker-trigger"]:focus-visible {
+    outline: none;
+    border-color: hsl(var(--authority));
+    box-shadow: inset 0 -2px 0 hsl(var(--authority));
+  }
+  .theme-instrument [data-slot="datepicker-content"] {
+    background-color: hsl(var(--paper-raised)) !important;
+    border: 1px solid hsl(var(--rule)) !important;
+    border-radius: 2px !important;
+    box-shadow:
+      0 1px 0 hsl(var(--rule)),
+      0 18px 32px -16px hsla(216, 9%, 12%, 0.22) !important;
+  }
+  /* react-day-picker classnames */
+  .theme-instrument [data-slot="datepicker-content"] .rdp {
+    font-family: var(--font-sans);
+  }
+  .theme-instrument [data-slot="datepicker-content"] .rdp-caption_label {
+    font-family: var(--font-serif);
+    font-size: 16px;
+    font-weight: 400;
+    color: hsl(var(--ink));
+  }
+  .theme-instrument [data-slot="datepicker-content"] .rdp-weekday {
+    font-family: var(--font-sans);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: hsl(var(--ink-muted));
+  }
+  .theme-instrument [data-slot="datepicker-content"] .rdp-day_button {
+    font-family: var(--font-mono);
+    font-feature-settings: 'tnum', 'zero';
+    border-radius: 2px;
+    color: hsl(var(--ink));
+  }
+  .theme-instrument [data-slot="datepicker-content"] .rdp-day_button:hover {
+    background-color: hsl(var(--paper-sunken));
+  }
+  .theme-instrument [data-slot="datepicker-content"] .rdp-selected .rdp-day_button,
+  .theme-instrument [data-slot="datepicker-content"] [aria-selected="true"] .rdp-day_button {
+    background-color: hsl(var(--authority)) !important;
+    color: hsl(var(--paper)) !important;
+  }
+  .theme-instrument [data-slot="datepicker-content"] .rdp-today .rdp-day_button {
+    box-shadow: inset 0 -2px 0 hsl(var(--signal));
+    background-color: transparent;
+  }
+  .theme-instrument [data-slot="datepicker-content"] .rdp-outside .rdp-day_button {
+    color: hsl(var(--ink-muted));
+    opacity: 0.5;
+  }
+
+  /* ----- MultiSelect chips + trigger + popover ---------------------------
+     Chips render as small-caps hairline rectangles (not rounded pills) so
+     they match the rest of the editorial chrome. The trigger bed mirrors
+     Input styling. The dropdown uses the shared paper-raised frame. */
+  .theme-instrument [data-slot="multi-select-trigger"] {
+    background-color: hsl(var(--paper-raised));
+    border: 1px solid hsl(var(--rule));
+    border-radius: 2px;
+    box-shadow: inset 0 -1px 0 hsl(var(--rule) / 0.6);
+    transition: border-color 120ms, box-shadow 120ms;
+  }
+  .theme-instrument [data-slot="multi-select-trigger"]:hover {
+    border-color: hsl(var(--rule-strong));
+  }
+  .theme-instrument [data-slot="multi-select-trigger"]:focus-within {
+    border-color: hsl(var(--authority));
+    box-shadow: inset 0 -2px 0 hsl(var(--authority));
+  }
+  .theme-instrument [data-slot="multi-select-trigger"] input {
+    font-family: var(--font-sans);
+    color: hsl(var(--ink));
+  }
+  .theme-instrument [data-slot="multi-select-trigger"] input::placeholder {
+    color: hsl(var(--ink-muted));
+    font-style: italic;
+  }
+  .theme-instrument [data-slot="multi-select-content"] {
+    background-color: hsl(var(--paper-raised)) !important;
+    border: 1px solid hsl(var(--rule)) !important;
+    border-radius: 2px !important;
+    box-shadow:
+      0 1px 0 hsl(var(--rule)),
+      0 18px 32px -16px hsla(216, 9%, 12%, 0.22) !important;
+  }
+  .theme-instrument [data-slot="multi-select-content"] button {
+    font-family: var(--font-sans);
+    font-size: 13px;
+    color: hsl(var(--ink));
+    border-bottom: 1px solid hsl(var(--rule) / 0.4);
+    transition: background-color 120ms;
+  }
+  .theme-instrument [data-slot="multi-select-content"] button:last-child {
+    border-bottom: none;
+  }
+  .theme-instrument [data-slot="multi-select-content"] button:hover {
+    background-color: hsl(var(--authority) / 0.08);
+    color: hsl(var(--authority));
+  }
+  /* Chip: square, hairline, small-caps, tone-aware. When no inline color
+     is set the chip inherits the theme's filed-soft wash. */
+  .theme-instrument [data-slot="chip"] {
+    border-radius: 2px !important;
+    border: 1px solid hsl(var(--rule));
+    background-color: hsl(var(--paper)) !important;
+    color: hsl(var(--ink)) !important;
+    font-family: var(--font-sans);
+    font-size: 10px !important;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 500 !important;
+    padding: 3px 6px 3px 8px !important;
+  }
+  .theme-instrument [data-slot="chip"] button {
+    color: hsl(var(--ink-muted));
+  }
+  .theme-instrument [data-slot="chip"] button:hover {
+    color: hsl(var(--signal));
+    background-color: transparent !important;
+  }
+
+  /* Combobox popover content frame */
+  .theme-instrument [data-slot="combobox-content"] {
+    background-color: hsl(var(--paper-raised)) !important;
+    border: 1px solid hsl(var(--rule)) !important;
+    border-radius: 2px !important;
+    box-shadow:
+      0 1px 0 hsl(var(--rule)),
+      0 18px 32px -16px hsla(216, 9%, 12%, 0.22) !important;
+  }
+
+  /* ----- cmdk dropdowns ---------------------------------------------------
+     The cmdk library (used by FormSelect/Combobox) emits a stable set of
+     [cmdk-*] attributes. Re-skin them so every combobox popover matches
+     the paper aesthetic: editorial header, small-caps group labels,
+     hairline row dividers, authority wash on the highlighted row. */
+  .theme-instrument [cmdk-root] {
+    background-color: transparent;
+    font-family: var(--font-sans);
+  }
+  .theme-instrument [cmdk-input] {
+    background-color: hsl(var(--paper-raised));
+    border-bottom: 1px solid hsl(var(--rule));
+    color: hsl(var(--ink));
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+  .theme-instrument [cmdk-input]::placeholder {
+    color: hsl(var(--ink-muted));
+    font-style: italic;
+  }
+  .theme-instrument [cmdk-list] {
+    background-color: hsl(var(--paper-raised));
+    padding: 4px 0;
+    max-height: 280px;
+    overflow-y: auto;
+  }
+  .theme-instrument [cmdk-empty] {
+    padding: 20px 12px;
+    text-align: center;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: hsl(var(--ink-muted));
+  }
+  .theme-instrument [cmdk-group-heading] {
+    padding: 10px 12px 4px;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-weight: 500;
+    color: hsl(var(--ink-muted));
+  }
+  .theme-instrument [cmdk-item] {
+    padding: 8px 12px;
+    font-size: 13px;
+    color: hsl(var(--ink));
+    border-radius: 0;
+    border-bottom: 1px solid hsl(var(--rule) / 0.4);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background-color 120ms;
+  }
+  .theme-instrument [cmdk-item]:last-child {
+    border-bottom: none;
+  }
+  .theme-instrument [cmdk-item][data-selected="true"],
+  .theme-instrument [cmdk-item][aria-selected="true"] {
+    background-color: hsl(var(--authority) / 0.08);
+    color: hsl(var(--authority));
+  }
+  .theme-instrument [cmdk-item][data-disabled="true"] {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  /* ----- DataGrid row actions -------------------------------------------- */
+  .theme-instrument [data-slot="row-actions-trigger"] {
+    background-color: transparent;
+    color: hsl(var(--ink-muted));
+    border-radius: 2px;
+    transition: background-color 120ms, color 120ms;
+  }
+  .theme-instrument [data-slot="row-actions-trigger"]:hover {
+    background-color: hsl(var(--paper-sunken));
+    color: hsl(var(--ink));
+  }
+
+  /* ----- Tabs -------------------------------------------------------------
+     The stock shadcn tabs render as a muted pill with an elevated active
+     chip. Under Instrument we rebuild as an underlined row — the list
+     becomes a hairline baseline, the active trigger gets a 2px authority
+     underline, and spacing sits above the rule. */
+  .theme-instrument [data-slot="tabs-list"] {
+    background-color: transparent;
+    border-bottom: 1px solid hsl(var(--rule));
+    border-radius: 0;
+    padding: 0;
+    height: auto;
+    gap: 4px;
+  }
+  .theme-instrument [data-slot="tabs-trigger"] {
+    background-color: transparent !important;
+    box-shadow: none !important;
+    border-radius: 0;
+    color: hsl(var(--ink-muted));
+    font-family: var(--font-sans);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-weight: 500;
+    padding: 12px 14px;
+    margin-bottom: -1px;
+    border-bottom: 2px solid transparent;
+    transition: color 120ms, border-color 120ms;
+  }
+  .theme-instrument [data-slot="tabs-trigger"]:hover {
+    color: hsl(var(--ink));
+  }
+  .theme-instrument [data-slot="tabs-trigger"][data-state="active"] {
+    color: hsl(var(--authority)) !important;
+    border-bottom-color: hsl(var(--authority));
+  }
+
+  /* ----- Accordion -------------------------------------------------------- */
+  .theme-instrument [data-slot="accordion-item"] {
+    border-bottom: 1px solid hsl(var(--rule));
+  }
+  .theme-instrument [data-slot="accordion-trigger"] {
+    padding: 16px 0;
+    font-family: var(--font-serif);
+    font-size: 18px;
+    font-weight: 400;
+    color: hsl(var(--ink));
+  }
+  .theme-instrument [data-slot="accordion-trigger"]:hover {
+    text-decoration: none;
+    color: hsl(var(--authority));
+  }
+  .theme-instrument [data-slot="accordion-chevron"] {
+    color: hsl(var(--ink-muted));
+  }
+  .theme-instrument [data-slot="accordion-content"] {
+    color: hsl(var(--ink-soft));
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  /* ----- Breadcrumb ------------------------------------------------------- */
+  .theme-instrument [data-slot="breadcrumb-list"] {
+    font-family: var(--font-sans);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: hsl(var(--ink-muted));
+  }
+  .theme-instrument [data-slot="breadcrumb-link"] {
+    color: hsl(var(--ink-muted)) !important;
+    text-decoration: none !important;
+  }
+  .theme-instrument [data-slot="breadcrumb-link"]:hover {
+    color: hsl(var(--authority)) !important;
+  }
+  .theme-instrument [data-slot="breadcrumb-page"] {
+    color: hsl(var(--ink)) !important;
+    font-weight: 500;
+  }
+  .theme-instrument [data-slot="breadcrumb-separator"] svg {
+    color: hsl(var(--rule-strong));
+  }
+
+  /* ----- Progress --------------------------------------------------------
+     Flat hairline rail with a tone-aware fill. */
+  .theme-instrument [data-slot="progress"] {
+    background-color: hsl(var(--rule));
+    height: 2px;
+    border-radius: 0;
+  }
+  .theme-instrument [data-slot="progress-indicator"] {
+    background-color: hsl(var(--authority));
+  }
+  .theme-instrument [data-slot="progress"][data-tone="filed"] [data-slot="progress-indicator"] {
+    background-color: hsl(var(--filed));
+  }
+  .theme-instrument [data-slot="progress"][data-tone="due-soon"] [data-slot="progress-indicator"] {
+    background-color: hsl(var(--due-soon));
+  }
+  .theme-instrument [data-slot="progress"][data-tone="signal"] [data-slot="progress-indicator"] {
+    background-color: hsl(var(--signal));
+  }
+
+  /* ----- Format displays --------------------------------------------------
+     DateFormat / NumberFormat / CurrencyFormat ship as semantic <time> and
+     <span> elements with data-slot hooks. Under Instrument they pick up
+     JetBrains Mono with tabular-nums + zero slashes and tighten their
+     tracking so numbers line up in tables. */
+  .theme-instrument [data-slot="number-format"],
+  .theme-instrument [data-slot="currency-format"] {
+    font-family: var(--font-mono);
+    font-feature-settings: 'tnum', 'zero', 'ss01';
+    letter-spacing: -0.01em;
+  }
+  .theme-instrument [data-slot="date-format"] {
+    font-feature-settings: 'tnum';
+  }
+
+  /* ----- Links ------------------------------------------------------------ */
+  .theme-instrument a:not([class*="no-underline"]):not(button) {
+    color: hsl(var(--authority));
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+    text-decoration-color: hsl(var(--authority) / 0.4);
+    transition: text-decoration-color 120ms;
+  }
+  .theme-instrument a:hover {
+    text-decoration-color: hsl(var(--authority));
+  }
+
+  /* ----- Text selection --------------------------------------------------- */
+  .theme-instrument ::selection {
+    background-color: hsl(var(--authority) / 0.22);
+    color: hsl(var(--ink));
+  }
+
+  /* ----- Dark mode shadow adjustments ------------------------------------
+     Instrument uses warm ink drop shadows everywhere. On graphite paper
+     those shadows are invisible. In dark mode we swap them for a halo
+     glow in authority brass plus a softer black lift. */
+  .theme-instrument.dark [data-slot="dialog-content"],
+  .theme-instrument.dark [data-slot="sheet-content"] {
+    box-shadow:
+      0 1px 0 hsl(var(--rule)),
+      0 24px 48px -20px hsla(0, 0%, 0%, 0.7),
+      0 2px 6px hsla(0, 0%, 0%, 0.4);
+  }
+  .theme-instrument.dark [data-radix-popper-content-wrapper] > *,
+  .theme-instrument.dark [data-slot="datepicker-content"],
+  .theme-instrument.dark [data-slot="combobox-content"],
+  .theme-instrument.dark [data-slot="multi-select-content"] {
+    box-shadow:
+      0 1px 0 hsl(var(--rule)),
+      0 18px 32px -16px hsla(0, 0%, 0%, 0.7) !important;
+  }
+  .theme-instrument.dark [data-slot="slider-thumb"] {
+    box-shadow:
+      0 1px 0 hsl(var(--rule)),
+      0 2px 6px hsla(0, 0%, 0%, 0.5);
+  }
+  .theme-instrument.dark [data-slot="slider-thumb"]:hover {
+    box-shadow:
+      0 1px 0 hsl(var(--rule)),
+      0 4px 12px hsl(var(--authority) / 0.35);
+  }
+  .theme-instrument.dark [data-slot="tooltip-content"] {
+    background-color: hsl(var(--ink));
+    color: hsl(var(--paper));
+    box-shadow: 0 6px 14px -6px hsla(0, 0%, 0%, 0.7);
+  }
+  /* Dark overlay — deeper graphite wash, not muddy brown */
+  .theme-instrument.dark [data-slot="sheet-overlay"],
+  .theme-instrument.dark [data-radix-dialog-overlay] {
+    background-color: hsla(30, 15%, 3%, 0.75) !important;
+  }
+  /* Grain overlay — use a warm highlight on dark */
+  .theme-instrument.dark .paper-grain {
+    background-image:
+      radial-gradient(circle at 20% 30%, hsla(42, 40%, 70%, 0.025) 0px, transparent 1px),
+      radial-gradient(circle at 70% 60%, hsla(42, 40%, 80%, 0.03) 0px, transparent 1.5px),
+      radial-gradient(circle at 45% 80%, hsla(42, 40%, 70%, 0.02) 0px, transparent 1px);
+  }
+
+  /* ----- Tint washes ------------------------------------------------------
+     Use on a container to give a whole section a colored backdrop —
+     useful for alert cards, filing status blocks, "due this week" rails,
+     etc. Each comes with a matching left rail so the tint has an anchor. */
+  .theme-instrument .tint-authority,
+  .theme-instrument .tint-filed,
+  .theme-instrument .tint-due,
+  .theme-instrument .tint-signal {
+    position: relative;
+    padding-left: 16px;
+  }
+  .theme-instrument .tint-authority::before,
+  .theme-instrument .tint-filed::before,
+  .theme-instrument .tint-due::before,
+  .theme-instrument .tint-signal::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+  }
+  .theme-instrument .tint-authority {
+    background-color: hsl(var(--authority) / 0.06);
+  }
+  .theme-instrument .tint-authority::before {
+    background-color: hsl(var(--authority));
+  }
+  .theme-instrument .tint-filed {
+    background-color: hsl(var(--filed-soft) / 0.6);
+  }
+  .theme-instrument .tint-filed::before {
+    background-color: hsl(var(--filed));
+  }
+  .theme-instrument .tint-due {
+    background-color: hsl(var(--due-soon-soft) / 0.65);
+  }
+  .theme-instrument .tint-due::before {
+    background-color: hsl(var(--due-soon));
+  }
+  .theme-instrument .tint-signal {
+    background-color: hsl(var(--signal-soft) / 0.65);
+  }
+  .theme-instrument .tint-signal::before {
+    background-color: hsl(var(--signal));
+  }
 }
 
 /* ============================================================================
    Kit keyframes — motion primitives used by framer-motion and CSS fallbacks.
    ========================================================================== */
+/* ============================================================================
+   Sheet slide animations — work in every theme, not just Instrument.
+   Applied via class rather than data-attribute so existing Sheet call
+   sites continue to function without changes.
+   ========================================================================== */
+@layer base {
+  @keyframes sheet-slide-in-right {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+  }
+  @keyframes sheet-slide-out-right {
+    from { transform: translateX(0); }
+    to { transform: translateX(100%); }
+  }
+  @keyframes sheet-slide-in-left {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(0); }
+  }
+  @keyframes sheet-slide-out-left {
+    from { transform: translateX(0); }
+    to { transform: translateX(-100%); }
+  }
+  @keyframes sheet-overlay-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes sheet-overlay-out {
+    from { opacity: 1; }
+    to { opacity: 0; }
+  }
+
+  .sheet-slide-right[data-state="open"] {
+    animation: sheet-slide-in-right 260ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .sheet-slide-right[data-state="closed"] {
+    animation: sheet-slide-out-right 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .sheet-slide-left[data-state="open"] {
+    animation: sheet-slide-in-left 260ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .sheet-slide-left[data-state="closed"] {
+    animation: sheet-slide-out-left 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .sheet-overlay[data-state="open"] {
+    animation: sheet-overlay-in 200ms ease-out;
+  }
+  .sheet-overlay[data-state="closed"] {
+    animation: sheet-overlay-out 180ms ease-out;
+  }
+
+  /* Non-modal sheet: the content itself captures pointer events, but
+     Radix (via modal={false}) doesn't render a focus trap or scroll lock
+     so the rest of the page stays fully interactive. The sheet stays
+     open until the user explicitly dismisses it — outside clicks are
+     prevented in the React layer. */
+  [data-slot="sheet-content"][data-modal="false"] {
+    pointer-events: auto;
+  }
+}
+
 @layer base {
   @keyframes stamp-in {
     0%   { opacity: 0; transform: rotate(6deg) scale(1.3); }
