@@ -1222,11 +1222,11 @@ export function ConsolePreviewPage() {
                 onSearchChange={setSearch}
                 searchPlaceholder="Search returns, clients, periods…"
               />
-              {workshopSelection.length === 0 && (
-                <p className="mt-3 text-[10px] uppercase tracking-eyebrow text-ink-muted font-sans">
-                  Select rows to reveal the bulk action bar
-                </p>
-              )}
+              <p className="mt-3 text-[10px] uppercase tracking-eyebrow text-ink-muted font-sans">
+                {workshopSelection.length > 0
+                  ? `${workshopSelection.length} selected — Actions menu shows in toolbar`
+                  : 'Try the Filter button (next to search) · select rows to reveal the Actions menu'}
+              </p>
             </div>
           </div>
         </section>
