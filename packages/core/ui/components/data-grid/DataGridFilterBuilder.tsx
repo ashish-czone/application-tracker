@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react';
 import * as Popover from '@radix-ui/react-popover';
 import { Command } from 'cmdk';
 import { Filter, ChevronLeft, Check } from 'lucide-react';
@@ -16,17 +16,24 @@ interface DataGridFilterBuilderProps {
   onAddFilter: (expr: FilterExpression) => void;
   onRemoveFilter: (field: string) => void;
   onClearAll: () => void;
+  /** When true, the trigger renders without inline chips. Chips should be rendered separately via `DataGridFilterChipsRow`. */
+  hideChips?: boolean;
+}
+
+export interface DataGridFilterBuilderHandle {
+  editFilter: (fieldKey: string) => void;
 }
 
 type Step = 'field' | 'configure';
 
-export function DataGridFilterBuilder({
+export const DataGridFilterBuilder = forwardRef<DataGridFilterBuilderHandle, DataGridFilterBuilderProps>(function DataGridFilterBuilder({
   fields,
   filters,
   onAddFilter,
   onRemoveFilter,
   onClearAll,
-}: DataGridFilterBuilderProps) {
+  hideChips = false,
+}, ref) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<Step>('field');
   const [selectedField, setSelectedField] = useState<DataGridFilterField | null>(null);
@@ -79,7 +86,7 @@ export function DataGridFilterBuilder({
     setOpen(false);
   };
 
-  const handleChipClick = (expr: FilterExpression) => {
+  const handleChipClick = useCallback((expr: FilterExpression) => {
     const field = fields.find((f) => f.key === expr.field);
     if (!field) return;
     editingRef.current = true;
@@ -90,7 +97,14 @@ export function DataGridFilterBuilder({
     setStep('configure');
     setSearch('');
     setOpen(true);
-  };
+  }, [fields]);
+
+  useImperativeHandle(ref, () => ({
+    editFilter: (fieldKey: string) => {
+      const expr = filters.find((f) => f.field === fieldKey);
+      if (expr) handleChipClick(expr);
+    },
+  }), [filters, handleChipClick]);
 
   const handleBack = () => {
     setSelectedField(null);
@@ -172,8 +186,8 @@ export function DataGridFilterBuilder({
   return (
     <div className="flex items-center gap-2 flex-wrap">
       <Popover.Root open={open} onOpenChange={handleOpenChange}>
-        {/* Filter chips — clickable to edit */}
-        {filters.map((expr) => {
+        {/* Inline chips — only when hideChips is false (legacy layout). */}
+        {!hideChips && filters.map((expr) => {
           const badge = (
             <Badge
               key={expr.field}
@@ -185,13 +199,12 @@ export function DataGridFilterBuilder({
               {getChipLabel(expr)}
             </Badge>
           );
-          // Anchor popover to the chip being edited
           return editingFieldKey === expr.field
             ? <Popover.Anchor key={expr.field} asChild>{badge}</Popover.Anchor>
             : badge;
         })}
 
-        {filters.length > 1 && (
+        {!hideChips && filters.length > 1 && (
           <button
             type="button"
             onClick={onClearAll}
@@ -201,17 +214,27 @@ export function DataGridFilterBuilder({
           </button>
         )}
 
-        {/* Add filter button */}
         <Popover.Trigger asChild>
           <button
             type="button"
+            data-slot="filter-trigger"
             className={cn(
-              'inline-flex items-center gap-1.5 rounded-md border border-dashed border-input bg-background px-2.5 h-7 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors',
+              'inline-flex items-center gap-1.5 rounded-md border border-input bg-background px-3 h-9 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
               open && 'bg-accent text-accent-foreground',
+              filters.length > 0 && 'border-primary/60 text-foreground',
             )}
           >
-            <Filter className="h-3 w-3" />
-            Filter
+            <Filter className="h-4 w-4" />
+            <span className="hidden sm:inline">Filter</span>
+            {filters.length > 0 && (
+              <span
+                data-slot="filter-count"
+                className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1.5 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold tabular-nums"
+              >
+                {filters.length}
+              </span>
+            )}
           </button>
         </Popover.Trigger>
 
@@ -219,6 +242,73 @@ export function DataGridFilterBuilder({
           {popoverContent}
         </Popover.Portal>
       </Popover.Root>
+    </div>
+  );
+});
+
+// ---------------------------------------------------------------------------
+// Chips row — rendered separately from the filter trigger so the toolbar
+// keeps a single-row layout. Clicking a chip opens the builder in edit mode
+// for that field via the builder's imperative handle.
+// ---------------------------------------------------------------------------
+interface DataGridFilterChipsRowProps {
+  fields: DataGridFilterField[];
+  filters: FilterExpression[];
+  onRemoveFilter: (field: string) => void;
+  onClearAll: () => void;
+  onEditFilter?: (fieldKey: string) => void;
+}
+
+export function DataGridFilterChipsRow({
+  fields,
+  filters,
+  onRemoveFilter,
+  onClearAll,
+  onEditFilter,
+}: DataGridFilterChipsRowProps) {
+  if (filters.length === 0) return null;
+
+  const getFieldLabel = (fieldKey: string) => fields.find((f) => f.key === fieldKey)?.label ?? fieldKey;
+  const getValueLabel = (expr: FilterExpression) => {
+    if (expr.operator === 'isNull' || expr.operator === 'isNotNull') return '';
+    if (expr.displayValue) return expr.displayValue;
+    const field = fields.find((f) => f.key === expr.field);
+    if (Array.isArray(expr.value)) {
+      return (expr.value as string[])
+        .map((v) => field?.options?.find((o) => o.value === v)?.label ?? v)
+        .join(', ');
+    }
+    return field?.options?.find((o) => o.value === expr.value)?.label ?? String(expr.value ?? '');
+  };
+  const getChipLabel = (expr: FilterExpression) => {
+    const fieldLabel = getFieldLabel(expr.field);
+    const opLabel = OPERATOR_LABELS[expr.operator] ?? expr.operator;
+    const valueLabel = getValueLabel(expr);
+    return valueLabel ? `${fieldLabel} ${opLabel} ${valueLabel}` : `${fieldLabel} ${opLabel}`;
+  };
+
+  return (
+    <div data-slot="filter-chips-row" className="flex items-center gap-2 flex-wrap">
+      {filters.map((expr) => (
+        <Badge
+          key={expr.field}
+          variant="secondary"
+          className={cn(onEditFilter && 'cursor-pointer')}
+          onRemove={() => onRemoveFilter(expr.field)}
+          onClick={onEditFilter ? () => onEditFilter(expr.field) : undefined}
+        >
+          {getChipLabel(expr)}
+        </Badge>
+      ))}
+      {filters.length > 1 && (
+        <button
+          type="button"
+          onClick={onClearAll}
+          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+        >
+          Clear all
+        </button>
+      )}
     </div>
   );
 }

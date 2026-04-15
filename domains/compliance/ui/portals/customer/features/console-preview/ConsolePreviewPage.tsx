@@ -77,6 +77,8 @@ import {
   DataGrid,
   createRowActionsColumn,
   type DataGridBulkAction,
+  type DataGridFilterField,
+  type FilterExpression,
   // Extended kit (§ X)
   ButtonGroup,
   Badge,
@@ -254,6 +256,33 @@ const WORKSHOP_ROWS: WorkshopRow[] = [
   { id: 'w5', code: 'GSTR-9', client: 'Velocity Retail', period: 'FY 25-26', amount: 0, status: 'draft' },
 ];
 
+const WORKSHOP_FILTER_FIELDS: DataGridFilterField[] = [
+  {
+    key: 'status',
+    label: 'Status',
+    fieldType: 'picklist',
+    options: [
+      { label: 'Ready to file', value: 'ready' },
+      { label: 'Draft', value: 'draft' },
+      { label: 'Blocked', value: 'blocked' },
+    ],
+  },
+  {
+    key: 'code',
+    label: 'Return type',
+    fieldType: 'picklist',
+    options: [
+      { label: 'GSTR-3B', value: 'GSTR-3B' },
+      { label: 'GSTR-1', value: 'GSTR-1' },
+      { label: 'GSTR-9', value: 'GSTR-9' },
+      { label: 'ITR-6', value: 'ITR-6' },
+      { label: 'TDS 24Q', value: 'TDS 24Q' },
+    ],
+  },
+  { key: 'client', label: 'Client', fieldType: 'text' },
+  { key: 'amount', label: 'Amount', fieldType: 'number' },
+];
+
 const WORKSHOP_COLUMNS: ColumnDef<WorkshopRow>[] = [
   {
     id: 'code',
@@ -380,6 +409,7 @@ export function ConsolePreviewPage() {
   const [allowOverride, setAllowOverride] = useState(true);
   const [workshopPage, setWorkshopPage] = useState(1);
   const [workshopSelection, setWorkshopSelection] = useState<string[]>([]);
+  const [workshopFilters, setWorkshopFilters] = useState<FilterExpression[]>([]);
 
   // § X — extended kit state
   const [isDark, setIsDark] = useState(false);
@@ -1132,7 +1162,23 @@ export function ConsolePreviewPage() {
             <div className="mt-4">
               <DataGrid<WorkshopRow>
                 columns={WORKSHOP_COLUMNS}
-                data={WORKSHOP_ROWS}
+                data={WORKSHOP_ROWS.filter((row) =>
+                  workshopFilters.every((f) => {
+                    const val = row[f.field as keyof WorkshopRow];
+                    if (f.operator === 'eq') return String(val) === String(f.value);
+                    if (f.operator === 'in') return Array.isArray(f.value) && (f.value as string[]).includes(String(val));
+                    if (f.operator === 'contains') return String(val).toLowerCase().includes(String(f.value).toLowerCase());
+                    if (f.operator === 'gt') return Number(val) > Number(f.value);
+                    if (f.operator === 'lt') return Number(val) < Number(f.value);
+                    return true;
+                  }),
+                )}
+                filterFields={WORKSHOP_FILTER_FIELDS}
+                filters={workshopFilters}
+                onFilterAdd={(expr) => setWorkshopFilters((prev) => [...prev.filter((f) => f.field !== expr.field), expr])}
+                onStructuredFilterRemove={(field) => setWorkshopFilters((prev) => prev.filter((f) => f.field !== field))}
+                onFilterUpdate={(index, expr) => setWorkshopFilters((prev) => prev.map((f, i) => (i === index ? expr : f)))}
+                onStructuredFiltersClear={() => setWorkshopFilters([])}
                 enableSelection
                 onSelectionChange={setWorkshopSelection}
                 rowAttributes={(row) => ({
@@ -1176,11 +1222,11 @@ export function ConsolePreviewPage() {
                 onSearchChange={setSearch}
                 searchPlaceholder="Search returns, clients, periods…"
               />
-              {workshopSelection.length === 0 && (
-                <p className="mt-3 text-[10px] uppercase tracking-eyebrow text-ink-muted font-sans">
-                  Select rows to reveal the bulk action bar
-                </p>
-              )}
+              <p className="mt-3 text-[10px] uppercase tracking-eyebrow text-ink-muted font-sans">
+                {workshopSelection.length > 0
+                  ? `${workshopSelection.length} selected — Actions menu shows in toolbar`
+                  : 'Try the Filter button (next to search) · select rows to reveal the Actions menu'}
+              </p>
             </div>
           </div>
         </section>

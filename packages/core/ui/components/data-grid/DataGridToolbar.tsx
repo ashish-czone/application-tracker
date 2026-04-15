@@ -4,10 +4,11 @@ import type { Table } from '@tanstack/react-table';
 import { cn } from '../../lib/utils';
 import { Badge } from '../Badge';
 import { useDebounce } from '../../hooks/useDebounce';
-import type { DataGridFilter, DataGridFilterField } from './types';
+import type { DataGridBulkAction, DataGridFilter, DataGridFilterField } from './types';
 import type { FilterExpression } from './filter-types';
 import { DataGridExport } from './DataGridExport';
-import { DataGridFilterBuilder } from './DataGridFilterBuilder';
+import { DataGridFilterBuilder, DataGridFilterChipsRow, type DataGridFilterBuilderHandle } from './DataGridFilterBuilder';
+import { DataGridBulkActionsMenu } from './DataGridBulkActionsMenu';
 
 interface DataGridToolbarProps<TData> {
   table: Table<TData>;
@@ -26,6 +27,9 @@ interface DataGridToolbarProps<TData> {
   toolbarActions?: React.ReactNode;
   enableExport?: boolean;
   exportFilename?: string;
+  bulkActions?: DataGridBulkAction[];
+  selectedRowIds?: string[];
+  onClearSelection?: () => void;
 }
 
 export function DataGridToolbar<TData>({
@@ -45,10 +49,14 @@ export function DataGridToolbar<TData>({
   toolbarActions,
   enableExport,
   exportFilename,
+  bulkActions,
+  selectedRowIds,
+  onClearSelection,
 }: DataGridToolbarProps<TData>) {
   const [localSearch, setLocalSearch] = useState(search ?? '');
   const [columnMenuOpen, setColumnMenuOpen] = useState(false);
   const columnMenuRef = useRef<HTMLDivElement>(null);
+  const filterBuilderRef = useRef<DataGridFilterBuilderHandle>(null);
 
   const debouncedSearch = useDebounce(localSearch, 300);
 
@@ -109,18 +117,30 @@ export function DataGridToolbar<TData>({
           </div>
         )}
 
-        {/* Filter builder (new chip pattern) */}
+        {/* Filter builder — trigger only; chips render on a second row */}
         {filterFields && filterFields.length > 0 && onFilterAdd && onStructuredFilterRemove && onStructuredFiltersClear && (
           <DataGridFilterBuilder
+            ref={filterBuilderRef}
             fields={filterFields}
             filters={filters ?? []}
             onAddFilter={onFilterAdd}
             onRemoveFilter={onStructuredFilterRemove}
             onClearAll={onStructuredFiltersClear}
+            hideChips
           />
         )}
 
         <div className="flex-1" />
+
+        {/* Bulk actions menu — only renders when rows are selected */}
+        {bulkActions && bulkActions.length > 0 && selectedRowIds && onClearSelection && (
+          <DataGridBulkActionsMenu
+            selectedCount={selectedRowIds.length}
+            actions={bulkActions}
+            selectedRowIds={selectedRowIds}
+            onClearSelection={onClearSelection}
+          />
+        )}
 
         {/* Column visibility toggle */}
         <div className="relative" ref={columnMenuRef}>
@@ -178,7 +198,18 @@ export function DataGridToolbar<TData>({
         {toolbarActions}
       </div>
 
-      {/* Filter chips */}
+      {/* Structured filter chips (new path) */}
+      {filterFields && filterFields.length > 0 && filters && filters.length > 0 && onStructuredFilterRemove && onStructuredFiltersClear && (
+        <DataGridFilterChipsRow
+          fields={filterFields}
+          filters={filters}
+          onRemoveFilter={onStructuredFilterRemove}
+          onClearAll={onStructuredFiltersClear}
+          onEditFilter={(fieldKey) => filterBuilderRef.current?.editFilter(fieldKey)}
+        />
+      )}
+
+      {/* Legacy filter chips (activeFilters path) */}
       {hasFilters && (
         <div className="flex items-center gap-2 flex-wrap">
           {activeFilters.map((filter) => (
