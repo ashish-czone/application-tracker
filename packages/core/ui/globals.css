@@ -946,6 +946,109 @@
     cursor: not-allowed;
   }
 
+  /* ----- Tabs -------------------------------------------------------------
+     The stock shadcn tabs render as a muted pill with an elevated active
+     chip. Under Instrument we rebuild as an underlined row — the list
+     becomes a hairline baseline, the active trigger gets a 2px authority
+     underline, and spacing sits above the rule. */
+  .theme-instrument [data-slot="tabs-list"] {
+    background-color: transparent;
+    border-bottom: 1px solid hsl(var(--rule));
+    border-radius: 0;
+    padding: 0;
+    height: auto;
+    gap: 4px;
+  }
+  .theme-instrument [data-slot="tabs-trigger"] {
+    background-color: transparent !important;
+    box-shadow: none !important;
+    border-radius: 0;
+    color: hsl(var(--ink-muted));
+    font-family: var(--font-sans);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-weight: 500;
+    padding: 12px 14px;
+    margin-bottom: -1px;
+    border-bottom: 2px solid transparent;
+    transition: color 120ms, border-color 120ms;
+  }
+  .theme-instrument [data-slot="tabs-trigger"]:hover {
+    color: hsl(var(--ink));
+  }
+  .theme-instrument [data-slot="tabs-trigger"][data-state="active"] {
+    color: hsl(var(--authority)) !important;
+    border-bottom-color: hsl(var(--authority));
+  }
+
+  /* ----- Accordion -------------------------------------------------------- */
+  .theme-instrument [data-slot="accordion-item"] {
+    border-bottom: 1px solid hsl(var(--rule));
+  }
+  .theme-instrument [data-slot="accordion-trigger"] {
+    padding: 16px 0;
+    font-family: var(--font-serif);
+    font-size: 18px;
+    font-weight: 400;
+    color: hsl(var(--ink));
+  }
+  .theme-instrument [data-slot="accordion-trigger"]:hover {
+    text-decoration: none;
+    color: hsl(var(--authority));
+  }
+  .theme-instrument [data-slot="accordion-chevron"] {
+    color: hsl(var(--ink-muted));
+  }
+  .theme-instrument [data-slot="accordion-content"] {
+    color: hsl(var(--ink-soft));
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  /* ----- Breadcrumb ------------------------------------------------------- */
+  .theme-instrument [data-slot="breadcrumb-list"] {
+    font-family: var(--font-sans);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: hsl(var(--ink-muted));
+  }
+  .theme-instrument [data-slot="breadcrumb-link"] {
+    color: hsl(var(--ink-muted)) !important;
+    text-decoration: none !important;
+  }
+  .theme-instrument [data-slot="breadcrumb-link"]:hover {
+    color: hsl(var(--authority)) !important;
+  }
+  .theme-instrument [data-slot="breadcrumb-page"] {
+    color: hsl(var(--ink)) !important;
+    font-weight: 500;
+  }
+  .theme-instrument [data-slot="breadcrumb-separator"] svg {
+    color: hsl(var(--rule-strong));
+  }
+
+  /* ----- Progress --------------------------------------------------------
+     Flat hairline rail with a tone-aware fill. */
+  .theme-instrument [data-slot="progress"] {
+    background-color: hsl(var(--rule));
+    height: 2px;
+    border-radius: 0;
+  }
+  .theme-instrument [data-slot="progress-indicator"] {
+    background-color: hsl(var(--authority));
+  }
+  .theme-instrument [data-slot="progress"][data-tone="filed"] [data-slot="progress-indicator"] {
+    background-color: hsl(var(--filed));
+  }
+  .theme-instrument [data-slot="progress"][data-tone="due-soon"] [data-slot="progress-indicator"] {
+    background-color: hsl(var(--due-soon));
+  }
+  .theme-instrument [data-slot="progress"][data-tone="signal"] [data-slot="progress-indicator"] {
+    background-color: hsl(var(--signal));
+  }
+
   /* ----- Format displays --------------------------------------------------
      DateFormat / NumberFormat / CurrencyFormat ship as semantic <time> and
      <span> elements with data-slot hooks. Under Instrument they pick up

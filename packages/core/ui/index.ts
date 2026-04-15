@@ -31,6 +31,11 @@ export { FormChipInput, ChipInput, type ChipOption } from './components/form/For
 // Legacy ChipInput re-export kept for any remaining call sites.
 export { FormFileInput } from './components/form/FormFileInput';
 export { FormDatePicker } from './components/form/FormDatePicker';
+export {
+  FormDateRangePicker,
+  type FormDateRangePickerProps,
+  type DateRangeValue,
+} from './components/form/FormDateRangePicker';
 export { Calendar } from './components/form/Calendar';
 export { PasswordStrength } from './components/form/PasswordStrength';
 export { Slider, type SliderProps } from './components/form/Slider';
@@ -52,6 +57,7 @@ export {
 
 export { Toaster, toast } from './components/feedback/Toast';
 export { ConfirmDialog } from './components/feedback/ConfirmDialog';
+export { Progress, type ProgressProps } from './components/feedback/Progress';
 
 export {
   Tooltip,
@@ -86,6 +92,24 @@ export {
 
 // Components — layout
 export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent } from './components/layout/Card';
+
+// Components — layout
+export { Tabs, TabsList, TabsTrigger, TabsContent } from './components/layout/Tabs';
+export {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+} from './components/layout/Accordion';
+export {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+  BreadcrumbEllipsis,
+} from './components/layout/Breadcrumb';
 
 // Components — data-grid
 export { DataGrid } from './components/data-grid/DataGrid';
