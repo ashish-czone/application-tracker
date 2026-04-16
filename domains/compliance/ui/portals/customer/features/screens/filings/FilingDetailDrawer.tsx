@@ -266,6 +266,7 @@ function OverviewBody({
 }) {
   const [priority, setPriority] = useState(filing.priority);
   const [handler, setHandler] = useState<Handler | undefined>(filing.handler);
+  const [showUploadZone, setShowUploadZone] = useState(false);
 
   const handlerOptions = MOCK_HANDLERS.map((h) => ({ value: h.id, label: h.name }));
 
@@ -366,23 +367,35 @@ function OverviewBody({
             <Eyebrow tone="muted" mark="◈">
               Files
             </Eyebrow>
-            {filing.attachments.length > 0 && (
-              <span className="font-mono text-[10px] tabular-nums text-ink-muted">
-                {filing.attachments.length}
-              </span>
-            )}
+            <div className="flex items-center gap-2">
+              {filing.attachments.length > 0 && (
+                <span className="font-mono text-[10px] tabular-nums text-ink-muted">
+                  {filing.attachments.length}
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={() => setShowUploadZone((v) => !v)}
+                className="flex items-center gap-1 text-[10px] uppercase tracking-eyebrow font-sans font-medium text-ink-muted hover:text-ink transition-colors"
+              >
+                <Upload className="w-3 h-3" strokeWidth={1.5} />
+                Attach
+              </button>
+            </div>
           </div>
 
-          {/* Upload zone */}
-          <button
-            type="button"
-            className="w-full border border-dashed border-rule hover:border-ink py-4 flex items-center justify-center gap-2 transition-colors group mb-3"
-          >
-            <Upload className="w-3.5 h-3.5 text-ink-muted group-hover:text-ink" strokeWidth={1.5} />
-            <span className="text-[11px] uppercase tracking-eyebrow font-sans font-medium text-ink-muted group-hover:text-ink">
-              Drop files or click to upload
-            </span>
-          </button>
+          {/* Upload zone — shown on demand */}
+          {showUploadZone && (
+            <button
+              type="button"
+              className="w-full border border-dashed border-rule hover:border-ink py-4 flex items-center justify-center gap-2 transition-colors group mb-3"
+            >
+              <Upload className="w-3.5 h-3.5 text-ink-muted group-hover:text-ink" strokeWidth={1.5} />
+              <span className="text-[11px] uppercase tracking-eyebrow font-sans font-medium text-ink-muted group-hover:text-ink">
+                Drop files or click to upload
+              </span>
+            </button>
+          )}
 
           {filing.attachments.length === 0 && (
             <p className="text-[11px] text-ink-muted font-sans text-center py-2">No files attached</p>
