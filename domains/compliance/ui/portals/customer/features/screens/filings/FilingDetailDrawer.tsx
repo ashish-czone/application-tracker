@@ -573,7 +573,7 @@ function ActivityBody({ filing }: { filing: FilingRow }) {
         return (
           <div key={event.id} className="flex min-h-[48px]">
             {/* ── Left column: actor + time ────────────────── */}
-            <div className="w-[100px] shrink-0 text-right pr-4 pt-[3px]">
+            <div className="w-[100px] shrink-0 text-right pr-4 flex flex-col justify-center">
               <div className="text-[11px] font-sans font-medium text-ink truncate">
                 {event.actor.name}
               </div>
@@ -582,21 +582,19 @@ function ActivityBody({ filing }: { filing: FilingRow }) {
               </div>
             </div>
 
-            {/* ── Center column: circle node + vertical line ── */}
+            {/* ── Center column: line + circle + line ─────── */}
             <div className="w-5 shrink-0 flex flex-col items-center">
+              <div className="w-[2px] flex-1 bg-rule/50" />
               <span
                 className={`w-5 h-5 shrink-0 flex items-center justify-center ring-1 z-10 ${config.bg} ${config.ring}`}
               >
                 <Icon className={`w-2.5 h-2.5 ${config.iconColor}`} strokeWidth={2} />
               </span>
-              {/* Line extends below every row except the very last */}
-              {!isLastRow && <div className="w-[2px] flex-1 bg-rule/50" />}
-              {/* Tail below the last event */}
-              {isLastRow && <div className="w-[2px] h-4 bg-rule/50" />}
+              <div className="w-[2px] flex-1 bg-rule/50" />
             </div>
 
             {/* ── Right column: activity detail ──────────────── */}
-            <div className="flex-1 min-w-0 pl-3 pb-5 pt-[2px]">
+            <div className="flex-1 min-w-0 pl-3 flex items-center">
               <p className="text-sm text-ink font-sans leading-relaxed">
                 {event.detail}
               </p>
@@ -604,6 +602,15 @@ function ActivityBody({ filing }: { filing: FilingRow }) {
           </div>
         );
       })}
+
+      {/* ── Tail row: extends the line below the last event ── */}
+      <div className="flex h-6">
+        <div className="w-[100px] shrink-0" />
+        <div className="w-5 shrink-0 flex flex-col items-center">
+          <div className="w-[2px] flex-1 bg-rule/50" />
+        </div>
+        <div className="flex-1" />
+      </div>
     </div>
   );
 }
