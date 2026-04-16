@@ -595,7 +595,7 @@ function InlineDropdown<T extends string>({
         ref={triggerRef}
         type="button"
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1.5 group -ml-1.5 pl-1.5 pr-1 py-0.5 hover:bg-paper-sunken border border-transparent hover:border-rule transition-colors"
+        className="flex items-center gap-1.5 group -ml-1.5 pl-1.5 pr-1 py-0.5 border-b border-dashed border-rule/50 hover:border-rule hover:bg-paper-sunken transition-colors"
       >
         {renderValue(value)}
         <ChevronDown className="w-3 h-3 text-ink-muted opacity-0 group-hover:opacity-100 transition-opacity" strokeWidth={1.5} />
@@ -684,7 +684,7 @@ function InlineDatePicker({
         ref={triggerRef}
         type="button"
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1.5 group -ml-1.5 pl-1.5 pr-1 py-0.5 hover:bg-paper-sunken border border-transparent hover:border-rule transition-colors"
+        className="flex items-center gap-1.5 group -ml-1.5 pl-1.5 pr-1 py-0.5 border-b border-dashed border-rule/50 hover:border-rule hover:bg-paper-sunken transition-colors"
       >
         <OrdinalDate date={value} variant="short" className="text-sm" />
         <ChevronDown className="w-3 h-3 text-ink-muted opacity-0 group-hover:opacity-100 transition-opacity" strokeWidth={1.5} />
