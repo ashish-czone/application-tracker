@@ -444,7 +444,7 @@ export function ObligationsLibraryPage() {
         {/* ─── Full-width table block ───────────────────────────────────── */}
         <section className="mt-10">
           {/* Coarse tabs — status cut */}
-          <CoarseTabs tabs={statusTabs} value={statusTab} onChange={setStatusTab} />
+          <CoarseTabs variant="segmented" tabs={statusTabs} value={statusTab} onChange={setStatusTab} />
 
           {/* Filter bar — search + popover filter buttons + column chooser */}
           <div className="flex items-center gap-3 py-3 border-b border-rule">
