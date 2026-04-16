@@ -597,20 +597,20 @@ export function FilingsPage() {
                 renderCard={(card) => {
                   const f = card as unknown as FilingRow;
                   return (
-                    <button
-                      type="button"
-                      onClick={() => setSelectedFiling(MOCK_FILING_ROWS.find((r) => r.id === f.id) ?? null)}
-                      className="w-full text-left bg-paper-raised border border-rule p-3 hover:bg-paper-sunken/40 transition-colors"
-                    >
+                    <div className="w-full text-left bg-paper-raised border border-rule p-3">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="font-mono text-[10px] tracking-tabular uppercase text-ink font-medium">
                           {f.lawCode}
                         </span>
                         <JurisdictionTag jurisdiction={f.jurisdiction} />
                       </div>
-                      <div className="text-sm text-ink font-sans leading-snug truncate">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedFiling(MOCK_FILING_ROWS.find((r) => r.id === f.id) ?? null)}
+                        className="text-sm text-ink font-sans leading-snug truncate hover:underline cursor-pointer"
+                      >
                         {f.ruleName}
-                      </div>
+                      </button>
                       <div className="text-[11px] text-ink-muted font-sans mt-0.5 truncate">
                         {f.clientName}
                       </div>
@@ -625,7 +625,7 @@ export function FilingsPage() {
                           </span>
                         )}
                       </div>
-                    </button>
+                    </div>
                   );
                 }}
               />
