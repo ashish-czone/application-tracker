@@ -315,13 +315,9 @@ export function FilingsPage() {
     [filtered],
   );
 
-  function handleCardMove(event: { cardId: string; toColumnId: string }) {
+  function handleCardMove(_event: { cardId: string; toColumnId: string }) {
     // Static preview — no real state mutation. In a wired version this
-    // would call onStatusChange and update the filing's status.
-    const filing = MOCK_FILING_ROWS.find((f) => f.id === event.cardId);
-    if (filing) {
-      setSelectedFiling({ ...filing, status: event.toColumnId as Filing['status'] });
-    }
+    // would call onStatusChange and update the filing's status via API.
   }
 
   // ── Calendar day click ──────────────────────────────────────────
