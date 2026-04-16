@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import {
   X,
@@ -7,6 +8,7 @@ import {
   Paperclip,
   Clock,
   ChevronRight,
+  ChevronDown,
   Upload,
   Send,
   ArrowRightCircle,
@@ -16,6 +18,7 @@ import {
   Eye,
   Download,
   FileSpreadsheet,
+  Check,
 } from 'lucide-react';
 import {
   Eyebrow,
@@ -25,7 +28,8 @@ import {
   SectionRule,
 } from '@packages/ui';
 import type { FilingRow, FilingActivity } from './filingsMock';
-import type { Filing } from '../../../../../shared/types';
+import { MOCK_HANDLERS } from '../../console-preview/mockData';
+import type { Filing, Handler } from '../../../../../shared/types';
 
 // ─── Animation config ────────────────────────────────────────────────
 
@@ -260,6 +264,11 @@ function OverviewBody({
   noteText: string;
   setNoteText: (v: string) => void;
 }) {
+  const [priority, setPriority] = useState(filing.priority);
+  const [handler, setHandler] = useState<Handler | undefined>(filing.handler);
+
+  const handlerOptions = MOCK_HANDLERS.map((h) => ({ value: h.id, label: h.name }));
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <div className="flex-1 overflow-y-auto">
@@ -267,13 +276,22 @@ function OverviewBody({
         <div className="px-6 py-5">
           <div className="grid grid-cols-2 gap-4">
             <DetailField label="Status" value={STATUS_LABEL[filing.status]} />
-            <DetailField
+            <InlineDropdown
               label="Priority"
-              value={
-                <span className={PRIORITY_TONE[filing.priority]}>
-                  {PRIORITY_LABEL[filing.priority]}
+              value={priority}
+              options={PRIORITY_OPTIONS}
+              onChange={setPriority}
+              renderValue={(v) => (
+                <span className={`text-sm font-sans ${PRIORITY_TONE[v]}`}>
+                  {PRIORITY_LABEL[v]}
                 </span>
-              }
+              )}
+              renderOption={(opt, isSelected) => (
+                <>
+                  <span className={`flex-1 ${PRIORITY_TONE[opt.value]}`}>{opt.label}</span>
+                  {isSelected && <Check className="w-3 h-3 text-ink-muted" strokeWidth={2} />}
+                </>
+              )}
             />
             <DetailField label="Due date">
               <OrdinalDate date={filing.dueDate} variant="short" className="text-sm" />
@@ -284,18 +302,46 @@ function OverviewBody({
               <JurisdictionTag jurisdiction={filing.jurisdiction} />
             </DetailField>
             <DetailField label="Client" value={filing.clientName} />
-            {filing.handler && (
-              <DetailField label="Handler">
-                <div className="flex items-center gap-2">
-                  <span
-                    aria-hidden
-                    className="w-6 h-6 bg-authority text-paper-raised text-[10px] font-sans font-semibold flex items-center justify-center flex-none"
-                  >
-                    {filing.handler.initials}
-                  </span>
-                  <span className="text-sm font-sans text-ink">{filing.handler.name}</span>
-                </div>
-              </DetailField>
+            {handler && (
+              <InlineDropdown
+                label="Handler"
+                value={handler.id}
+                options={handlerOptions}
+                onChange={(id) => {
+                  const h = MOCK_HANDLERS.find((m) => m.id === id);
+                  if (h) setHandler(h);
+                }}
+                renderValue={(v) => {
+                  const h = MOCK_HANDLERS.find((m) => m.id === v);
+                  if (!h) return null;
+                  return (
+                    <div className="flex items-center gap-2">
+                      <span
+                        aria-hidden
+                        className="w-6 h-6 bg-authority text-paper-raised text-[10px] font-sans font-semibold flex items-center justify-center flex-none"
+                      >
+                        {h.initials}
+                      </span>
+                      <span className="text-sm font-sans text-ink">{h.name}</span>
+                    </div>
+                  );
+                }}
+                renderOption={(opt, isSelected) => {
+                  const h = MOCK_HANDLERS.find((m) => m.id === opt.value);
+                  return (
+                    <>
+                      <span
+                        aria-hidden
+                        className="w-5 h-5 bg-authority text-paper-raised text-[9px] font-sans font-semibold flex items-center justify-center flex-none"
+                      >
+                        {h?.initials}
+                      </span>
+                      <span className="flex-1">{opt.label}</span>
+                      {isSelected && <Check className="w-3 h-3 text-ink-muted" strokeWidth={2} />}
+                    </>
+                  );
+                }}
+              />
             )}
           </div>
 
@@ -479,6 +525,104 @@ function DetailField({
     </div>
   );
 }
+
+// ─── Inline dropdown (custom, not native select) ────────────────────
+
+function InlineDropdown<T extends string>({
+  label,
+  value,
+  options,
+  renderValue,
+  renderOption,
+  onChange,
+}: {
+  label: string;
+  value: T;
+  options: { value: T; label: string }[];
+  renderValue: (v: T) => React.ReactNode;
+  renderOption?: (opt: { value: T; label: string }, isSelected: boolean) => React.ReactNode;
+  onChange: (v: T) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+
+  const updatePos = useCallback(() => {
+    if (!triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    setPos({ top: rect.bottom + 4, left: rect.left });
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    updatePos();
+    function handleClickOutside(e: MouseEvent) {
+      const target = e.target as Node;
+      if (
+        triggerRef.current?.contains(target) ||
+        menuRef.current?.contains(target)
+      ) return;
+      setOpen(false);
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [open, updatePos]);
+
+  return (
+    <div>
+      <div className="text-[10px] uppercase tracking-eyebrow font-sans font-medium text-ink-muted mb-1">
+        {label}
+      </div>
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-1.5 group -ml-1.5 pl-1.5 pr-1 py-0.5 hover:bg-paper-sunken border border-transparent hover:border-rule transition-colors"
+      >
+        {renderValue(value)}
+        <ChevronDown className="w-3 h-3 text-ink-muted opacity-0 group-hover:opacity-100 transition-opacity" strokeWidth={1.5} />
+      </button>
+
+      {open && createPortal(
+        <div
+          ref={menuRef}
+          className="fixed z-[9999] min-w-[160px] bg-paper-raised border border-rule shadow-lg py-1"
+          style={{ top: pos.top, left: pos.left }}
+        >
+          {options.map((opt) => {
+            const isSelected = opt.value === value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => { onChange(opt.value); setOpen(false); }}
+                className={`w-full text-left px-3 py-1.5 flex items-center gap-2 text-sm font-sans transition-colors ${
+                  isSelected ? 'bg-paper-sunken/60 text-ink' : 'text-ink hover:bg-paper-sunken/40'
+                }`}
+              >
+                {renderOption ? renderOption(opt, isSelected) : (
+                  <>
+                    <span className="flex-1">{opt.label}</span>
+                    {isSelected && <Check className="w-3 h-3 text-ink-muted" strokeWidth={2} />}
+                  </>
+                )}
+              </button>
+            );
+          })}
+        </div>,
+        document.body,
+      )}
+    </div>
+  );
+}
+
+const PRIORITY_OPTIONS: { value: FilingRow['priority']; label: string }[] = [
+  { value: 'critical', label: 'Critical' },
+  { value: 'high', label: 'High' },
+  { value: 'normal', label: 'Normal' },
+  { value: 'low', label: 'Low' },
+];
 
 // ─── Activity body (redesigned timeline) ────────────────────────────
 
