@@ -120,6 +120,7 @@ import {
   type KanbanColumnDef,
   type KanbanCardData,
   type KanbanCardMoveEvent,
+  CoarseTabs,
   toast,
   type DataTableColumn,
   type FilterChip,
@@ -439,6 +440,8 @@ export function ConsolePreviewPage() {
   const [isDark, setIsDark] = useState(false);
   const [filterTier, setFilterTier] = useState<string>('all');
   const [activeTab, setActiveTab] = useState('overview');
+  const [coarseUnderline, setCoarseUnderline] = useState('all');
+  const [coarseSegmented, setCoarseSegmented] = useState('monthly');
   const [tags, setTags] = useState<string[]>(['gst', 'quarterly']);
   const [selectedJurisdiction, setSelectedJurisdiction] = useState<string>('mh');
   const [selectedDate, setSelectedDate] = useState('2026-04-20');
@@ -1555,6 +1558,42 @@ export function ConsolePreviewPage() {
                       GSTR-9 reconciliation, income tax return, tax audit report.
                     </TabsContent>
                   </Tabs>
+                </div>
+                <div className="border-t border-rule pt-5">
+                  <p className="mb-3 text-[10px] uppercase tracking-eyebrow text-ink-muted font-sans">
+                    CoarseTabs · underline (with counts)
+                  </p>
+                  <CoarseTabs
+                    tabs={[
+                      { value: 'all', label: 'All', count: 15 },
+                      { value: 'active', label: 'Active', count: 11 },
+                      { value: 'draft', label: 'Draft', count: 3 },
+                      { value: 'deprecated', label: 'Deprecated', count: 1 },
+                    ]}
+                    value={coarseUnderline}
+                    onChange={setCoarseUnderline}
+                  />
+                  <p className="pt-4 text-sm text-ink-soft">
+                    Underline variant with count pips — used for list-screen status cuts.
+                  </p>
+                </div>
+                <div className="border-t border-rule pt-5">
+                  <p className="mb-3 text-[10px] uppercase tracking-eyebrow text-ink-muted font-sans">
+                    CoarseTabs · segmented
+                  </p>
+                  <CoarseTabs
+                    variant="segmented"
+                    tabs={[
+                      { value: 'monthly', label: 'Monthly' },
+                      { value: 'quarterly', label: 'Quarterly' },
+                      { value: 'annual', label: 'Annual' },
+                    ]}
+                    value={coarseSegmented}
+                    onChange={setCoarseSegmented}
+                  />
+                  <p className="pt-4 text-sm text-ink-soft">
+                    Segmented variant — bordered slab with ink-inverted active cell. Filing toggle.
+                  </p>
                 </div>
               </div>
             </div>
