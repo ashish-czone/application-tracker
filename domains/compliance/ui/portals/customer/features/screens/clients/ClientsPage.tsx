@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { AnimatePresence } from 'framer-motion';
 import {
   Search,
   Command as CommandIcon,
@@ -30,6 +31,7 @@ import {
   type ClientStatus,
   type ClientRiskLevel,
 } from './clientsMock';
+import { NewClientDrawer } from './NewClientDrawer';
 
 // ─── Constants ──────────────────────────────────────────────────────
 
@@ -211,6 +213,7 @@ const REQUIRED_COLUMN_KEYS: string[] = ['name'];
 
 export function ClientsPage() {
   const [isDark, setIsDark] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   // Filter state.
   const [search, setSearch] = useState('');
@@ -397,7 +400,7 @@ export function ClientsPage() {
               <Upload className="w-3.5 h-3.5 mr-1.5" strokeWidth={2} />
               Import
             </Button>
-            <Button size="sm">
+            <Button size="sm" onClick={() => setDrawerOpen(true)}>
               <Plus className="w-3.5 h-3.5 mr-1.5" strokeWidth={2} />
               Add client
             </Button>
@@ -551,6 +554,10 @@ export function ClientsPage() {
           </div>
         </section>
       </main>
+
+      <AnimatePresence>
+        {drawerOpen && <NewClientDrawer onClose={() => setDrawerOpen(false)} />}
+      </AnimatePresence>
     </div>
   );
 }
