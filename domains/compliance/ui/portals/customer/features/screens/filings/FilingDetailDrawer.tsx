@@ -26,6 +26,7 @@ import {
   UrgencyBadge,
   OrdinalDate,
   SectionRule,
+  Calendar,
 } from '@packages/ui';
 import type { FilingRow, FilingActivity } from './filingsMock';
 import { MOCK_HANDLERS } from '../../console-preview/mockData';
@@ -266,6 +267,7 @@ function OverviewBody({
 }) {
   const [priority, setPriority] = useState(filing.priority);
   const [handler, setHandler] = useState<Handler | undefined>(filing.handler);
+  const [dueDate, setDueDate] = useState(filing.dueDate);
   const [showUploadZone, setShowUploadZone] = useState(false);
 
   const handlerOptions = MOCK_HANDLERS.map((h) => ({ value: h.id, label: h.name }));
@@ -294,9 +296,11 @@ function OverviewBody({
                 </>
               )}
             />
-            <DetailField label="Due date">
-              <OrdinalDate date={filing.dueDate} variant="short" className="text-sm" />
-            </DetailField>
+            <InlineDatePicker
+              label="Due date"
+              value={dueDate}
+              onChange={setDueDate}
+            />
             <DetailField label="Period" value={filing.periodLabel} />
             <DetailField label="Law" value={filing.lawCode} mono />
             <DetailField label="Jurisdiction">
@@ -623,6 +627,86 @@ function InlineDropdown<T extends string>({
               </button>
             );
           })}
+        </div>,
+        document.body,
+      )}
+    </div>
+  );
+}
+
+// ─── Inline date picker (portal-based calendar) ──────────────────────
+
+function InlineDatePicker({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string; // ISO date string
+  onChange: (v: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+
+  const updatePos = useCallback(() => {
+    if (!triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    const calW = 288;
+    const left = Math.min(rect.left, window.innerWidth - calW - 12);
+    setPos({ top: rect.bottom + 4, left });
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    updatePos();
+    function handleClickOutside(e: MouseEvent) {
+      const target = e.target as Node;
+      if (
+        triggerRef.current?.contains(target) ||
+        panelRef.current?.contains(target)
+      ) return;
+      setOpen(false);
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [open, updatePos]);
+
+  const selected = new Date(value);
+
+  return (
+    <div>
+      <div className="text-[10px] uppercase tracking-eyebrow font-sans font-medium text-ink-muted mb-1">
+        {label}
+      </div>
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-1.5 group -ml-1.5 pl-1.5 pr-1 py-0.5 hover:bg-paper-sunken border border-transparent hover:border-rule transition-colors"
+      >
+        <OrdinalDate date={value} variant="short" className="text-sm" />
+        <ChevronDown className="w-3 h-3 text-ink-muted opacity-0 group-hover:opacity-100 transition-opacity" strokeWidth={1.5} />
+      </button>
+
+      {open && createPortal(
+        <div
+          ref={panelRef}
+          className="fixed z-[9999] bg-paper-raised border border-rule shadow-lg"
+          style={{ top: pos.top, left: pos.left }}
+        >
+          <Calendar
+            mode="single"
+            selected={selected}
+            defaultMonth={selected}
+            onSelect={(day) => {
+              if (day) {
+                onChange(day.toISOString());
+                setOpen(false);
+              }
+            }}
+          />
         </div>,
         document.body,
       )}
