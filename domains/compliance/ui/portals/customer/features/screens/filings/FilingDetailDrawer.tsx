@@ -491,49 +491,15 @@ const ACTIVITY_CONFIG: Record<
   },
 };
 
-function groupByDay(events: FilingActivity[]): { label: string; events: FilingActivity[] }[] {
-  const sorted = [...events].sort(
+function ActivityBody({ filing }: { filing: FilingRow }) {
+  const sorted = [...filing.activity].sort(
     (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
   );
 
-  const groups: Map<string, FilingActivity[]> = new Map();
-  for (const ev of sorted) {
-    const dateKey = new Date(ev.timestamp).toISOString().split('T')[0];
-    const existing = groups.get(dateKey);
-    if (existing) {
-      existing.push(ev);
-    } else {
-      groups.set(dateKey, [ev]);
-    }
-  }
-
-  return Array.from(groups.entries()).map(([dateKey, evts]) => ({
-    label: formatDayLabel(dateKey),
-    events: evts,
-  }));
-}
-
-function formatDayLabel(dateKey: string): string {
-  const d = new Date(dateKey + 'T12:00:00');
-  const now = new Date();
-  const today = now.toISOString().split('T')[0];
-  const yesterday = new Date(now);
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayKey = yesterday.toISOString().split('T')[0];
-
-  if (dateKey === today) return 'Today';
-  if (dateKey === yesterdayKey) return 'Yesterday';
-
-  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-}
-
-function ActivityBody({ filing }: { filing: FilingRow }) {
-  const dayGroups = groupByDay(filing.activity);
-
   return (
-    <div className="flex-1 overflow-y-auto px-6 py-5">
-      {filing.activity.length === 0 && (
-        <div className="text-center py-12">
+    <div className="flex-1 overflow-y-auto py-5">
+      {sorted.length === 0 && (
+        <div className="text-center py-12 px-6">
           <div className="w-10 h-10 mx-auto mb-3 bg-paper-sunken border border-rule flex items-center justify-center">
             <Clock className="w-5 h-5 text-ink-muted/40" strokeWidth={1} />
           </div>
@@ -544,66 +510,52 @@ function ActivityBody({ filing }: { filing: FilingRow }) {
         </div>
       )}
 
-      <div className="space-y-6">
-        {dayGroups.map((group) => (
-          <div key={group.label}>
-            {/* Day header */}
-            <div className="flex items-center gap-3 mb-4">
-              <span className="text-[10px] uppercase tracking-eyebrow font-sans font-semibold text-ink-muted">
-                {group.label}
-              </span>
-              <div className="flex-1 h-px bg-rule" />
-            </div>
+      {sorted.map((event, idx) => {
+        const config = ACTIVITY_CONFIG[event.type] ?? {
+          icon: Clock,
+          bg: 'bg-ink/5',
+          ring: 'ring-ink/15',
+          iconColor: 'text-ink-muted',
+        };
+        const Icon = config.icon;
+        const isLast = idx === sorted.length - 1;
 
-            {/* Events in this day */}
-            <div className="relative pl-8">
-              {/* Vertical connector line */}
-              {group.events.length > 1 && (
-                <div className="absolute left-[11px] top-4 bottom-4 w-px bg-rule/60" />
-              )}
-
-              <div className="space-y-5">
-                {group.events.map((event) => {
-                  const config = ACTIVITY_CONFIG[event.type] ?? {
-                    icon: Clock,
-                    bg: 'bg-ink/5',
-                    ring: 'ring-ink/15',
-                    iconColor: 'text-ink-muted',
-                  };
-                  const Icon = config.icon;
-
-                  return (
-                    <div key={event.id} className="relative flex items-start gap-3">
-                      {/* Icon node */}
-                      <span
-                        className={`absolute -left-8 w-[22px] h-[22px] flex-none flex items-center justify-center ring-1 z-10 ${config.bg} ${config.ring}`}
-                      >
-                        <Icon className={`w-2.5 h-2.5 ${config.iconColor}`} strokeWidth={2} />
-                      </span>
-
-                      {/* Content */}
-                      <div className="flex-1 min-w-0 pt-0.5">
-                        <p className="text-sm text-ink font-sans leading-snug">
-                          <span className="font-medium">{event.actor.name}</span>
-                          <span className="text-ink-soft"> {event.detail.toLowerCase()}</span>
-                        </p>
-                        <span className="text-[10px] font-mono tabular-nums text-ink-muted mt-0.5 block">
-                          {formatTime(event.timestamp)}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
+        return (
+          <div key={event.id} className="flex min-h-[48px]">
+            {/* ── Left column: actor + datetime ────────────────── */}
+            <div className="w-[100px] shrink-0 text-right pr-4 pt-[3px]">
+              <div className="text-[11px] font-sans font-medium text-ink truncate">
+                {event.actor.name}
+              </div>
+              <div className="text-[10px] font-mono tabular-nums text-ink-muted whitespace-nowrap">
+                {formatShortDate(event.timestamp)}
               </div>
             </div>
+
+            {/* ── Center column: circle node + vertical line ──── */}
+            <div className="w-5 shrink-0 flex flex-col items-center">
+              <span
+                className={`w-5 h-5 shrink-0 flex items-center justify-center ring-1 z-10 ${config.bg} ${config.ring}`}
+              >
+                <Icon className={`w-2.5 h-2.5 ${config.iconColor}`} strokeWidth={2} />
+              </span>
+              {!isLast && <div className="w-[2px] flex-1 bg-rule/50" />}
+            </div>
+
+            {/* ── Right column: activity detail ─────────────────── */}
+            <div className="flex-1 min-w-0 pl-3 pb-5 pt-[2px]">
+              <p className="text-sm text-ink font-sans leading-relaxed">
+                {event.detail}
+              </p>
+            </div>
           </div>
-        ))}
-      </div>
+        );
+      })}
     </div>
   );
 }
 
-function formatTime(iso: string): string {
+function formatShortDate(iso: string): string {
   const d = new Date(iso);
-  return d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
 }
