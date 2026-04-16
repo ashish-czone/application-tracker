@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
   Search,
@@ -21,6 +22,33 @@ import {
 // ─── Types ───────────────────────────────────────────────────────────
 
 type DrawerMode = 'pick' | 'template' | 'scratch';
+type SlideDirection = 'forward' | 'back';
+
+// ─── Animation config ────────────────────────────────────────────────
+
+const EASE_OUT_EXPO = [0.32, 0.72, 0, 1] as const;
+
+const drawerVariants = {
+  hidden: { x: '100%' },
+  visible: { x: 0 },
+};
+
+const backdropVariants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1 },
+};
+
+const panelVariants = {
+  enter: (dir: SlideDirection) => ({
+    opacity: 0,
+    x: dir === 'forward' ? 24 : -24,
+  }),
+  center: { opacity: 1, x: 0 },
+  exit: (dir: SlideDirection) => ({
+    opacity: 0,
+    x: dir === 'forward' ? -24 : 24,
+  }),
+};
 
 interface FormValues {
   code: string;
@@ -64,6 +92,7 @@ export interface NewObligationDrawerProps {
 
 export function NewObligationDrawer({ onClose, onCreate }: NewObligationDrawerProps) {
   const [mode, setMode] = useState<DrawerMode>('pick');
+  const [slideDir, setSlideDir] = useState<SlideDirection>('forward');
   const [selectedTemplate, setSelectedTemplate] = useState<RuleTemplate | null>(null);
   const [templateSearch, setTemplateSearch] = useState('');
   const [templateLawFilter, setTemplateLawFilter] = useState<LawGroupKey | ''>('');
@@ -107,6 +136,7 @@ export function NewObligationDrawer({ onClose, onCreate }: NewObligationDrawerPr
     });
     setModified(new Set());
     setScheduleOpen(false);
+    setSlideDir('forward');
     setMode('template');
   }
 
@@ -115,6 +145,7 @@ export function NewObligationDrawer({ onClose, onCreate }: NewObligationDrawerPr
     setForm(EMPTY_FORM);
     setModified(new Set());
     setScheduleOpen(false);
+    setSlideDir('forward');
     setMode('scratch');
   }
 
@@ -135,6 +166,7 @@ export function NewObligationDrawer({ onClose, onCreate }: NewObligationDrawerPr
   }
 
   function handleBack() {
+    setSlideDir('back');
     setMode('pick');
     setSelectedTemplate(null);
   }
@@ -143,12 +175,27 @@ export function NewObligationDrawer({ onClose, onCreate }: NewObligationDrawerPr
 
   return (
     <div className="fixed inset-0 z-40 flex justify-end">
-      <div
+      {/* Backdrop */}
+      <motion.div
+        variants={backdropVariants}
+        initial="hidden"
+        animate="visible"
+        exit="hidden"
+        transition={{ duration: 0.2, ease: 'easeOut' }}
         className="absolute inset-0 bg-ink/30 backdrop-blur-[2px]"
-        onClick={onClose}
+        onClick={() => onClose?.()}
         aria-hidden
       />
-      <div className="relative w-full max-w-lg h-full bg-paper-raised border-l border-rule flex flex-col">
+
+      {/* Drawer panel */}
+      <motion.div
+        variants={drawerVariants}
+        initial="hidden"
+        animate="visible"
+        exit="hidden"
+        transition={{ duration: 0.28, ease: EASE_OUT_EXPO }}
+        className="relative w-full max-w-lg h-full bg-paper-raised border-l border-rule flex flex-col"
+      >
         {/* ── Header ──────────────────────────────────────────────── */}
         <header className="px-6 pt-6 pb-4 border-b border-rule flex-none">
           <div className="flex items-start justify-between gap-4 mb-3">
@@ -169,16 +216,14 @@ export function NewObligationDrawer({ onClose, onCreate }: NewObligationDrawerPr
                 {mode === 'scratch' && 'From scratch'}
               </Eyebrow>
             </div>
-            {onClose && (
-              <button
-                type="button"
-                onClick={onClose}
-                className="text-ink-muted hover:text-ink transition-colors -mt-1 -mr-1"
-                aria-label="Close drawer"
-              >
-                <X className="w-4 h-4" strokeWidth={1.5} />
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() => onClose?.()}
+              className="text-ink-muted hover:text-ink transition-colors -mt-1 -mr-1"
+              aria-label="Close drawer"
+            >
+              <X className="w-4 h-4" strokeWidth={1.5} />
+            </button>
           </div>
           <h2 className="font-serif text-3xl text-ink leading-tight">
             {mode === 'pick' && 'Add obligation'}
@@ -201,30 +246,42 @@ export function NewObligationDrawer({ onClose, onCreate }: NewObligationDrawerPr
 
         {/* ── Body ────────────────────────────────────────────────── */}
         <div className="flex-1 overflow-y-auto">
-          {mode === 'pick' && (
-            <PickModeBody
-              templateSearch={templateSearch}
-              setTemplateSearch={setTemplateSearch}
-              templateLawFilter={templateLawFilter}
-              setTemplateLawFilter={setTemplateLawFilter}
-              groupedTemplates={groupedTemplates}
-              filteredCount={filteredTemplates.length}
-              totalCount={MOCK_RULE_TEMPLATES.length}
-              onPickTemplate={pickTemplate}
-              onStartScratch={startScratch}
-            />
-          )}
-          {(mode === 'template' || mode === 'scratch') && (
-            <FormBody
-              form={form}
-              updateField={updateField}
-              modified={modified}
-              selectedTemplate={selectedTemplate}
-              scheduleOpen={scheduleOpen}
-              setScheduleOpen={setScheduleOpen}
-              isTemplate={mode === 'template'}
-            />
-          )}
+          <AnimatePresence mode="wait" custom={slideDir}>
+            <motion.div
+              key={mode}
+              custom={slideDir}
+              variants={panelVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.24, ease: EASE_OUT_EXPO }}
+            >
+              {mode === 'pick' && (
+                <PickModeBody
+                  templateSearch={templateSearch}
+                  setTemplateSearch={setTemplateSearch}
+                  templateLawFilter={templateLawFilter}
+                  setTemplateLawFilter={setTemplateLawFilter}
+                  groupedTemplates={groupedTemplates}
+                  filteredCount={filteredTemplates.length}
+                  totalCount={MOCK_RULE_TEMPLATES.length}
+                  onPickTemplate={pickTemplate}
+                  onStartScratch={startScratch}
+                />
+              )}
+              {(mode === 'template' || mode === 'scratch') && (
+                <FormBody
+                  form={form}
+                  updateField={updateField}
+                  modified={modified}
+                  selectedTemplate={selectedTemplate}
+                  scheduleOpen={scheduleOpen}
+                  setScheduleOpen={setScheduleOpen}
+                  isTemplate={mode === 'template'}
+                />
+              )}
+            </motion.div>
+          </AnimatePresence>
         </div>
 
         {/* ── Footer ──────────────────────────────────────────────── */}
@@ -238,7 +295,7 @@ export function NewObligationDrawer({ onClose, onCreate }: NewObligationDrawerPr
             <div className="flex items-center gap-3">
               <button
                 type="button"
-                onClick={onClose}
+                onClick={() => onClose?.()}
                 className="text-[11px] uppercase tracking-eyebrow text-ink-muted font-sans font-medium hover:text-ink"
               >
                 Cancel
@@ -253,7 +310,7 @@ export function NewObligationDrawer({ onClose, onCreate }: NewObligationDrawerPr
             </div>
           </footer>
         )}
-      </div>
+      </motion.div>
     </div>
   );
 }
@@ -549,63 +606,68 @@ function FormBody({
           className="flex items-center gap-2 w-full group"
         >
           <ChevronRight
-            className={`w-3.5 h-3.5 text-ink-muted transition-transform ${scheduleOpen ? 'rotate-90' : ''}`}
+            className={`w-3.5 h-3.5 text-ink-muted transition-transform duration-200 ${scheduleOpen ? 'rotate-90' : ''}`}
             strokeWidth={1.5}
           />
           <SectionRule label="Schedule details" align="left" className="flex-1" />
         </button>
 
-        {scheduleOpen && (
-          <div className="mt-4 grid grid-cols-3 gap-4">
-            <FieldRow
-              label="Due day"
-              compact
-              modified={modified.has('dueDayOfMonth')}
-              isTemplate={isTemplate}
-            >
-              <input
-                type="number"
-                min={1}
-                max={31}
-                value={form.dueDayOfMonth}
-                onChange={(e) => updateField('dueDayOfMonth', e.target.value)}
-                placeholder="20"
-                className="w-full bg-transparent outline-none text-sm text-ink font-mono tabular-nums placeholder:text-ink-muted"
-              />
-            </FieldRow>
-            <FieldRow
-              label="Month offset"
-              compact
-              modified={modified.has('dueMonthOffset')}
-              isTemplate={isTemplate}
-            >
-              <input
-                type="number"
-                min={0}
-                max={12}
-                value={form.dueMonthOffset}
-                onChange={(e) => updateField('dueMonthOffset', e.target.value)}
-                placeholder="1"
-                className="w-full bg-transparent outline-none text-sm text-ink font-mono tabular-nums placeholder:text-ink-muted"
-              />
-            </FieldRow>
-            <FieldRow
-              label="Grace days"
-              compact
-              modified={modified.has('gracePeriodDays')}
-              isTemplate={isTemplate}
-            >
-              <input
-                type="number"
-                min={0}
-                value={form.gracePeriodDays}
-                onChange={(e) => updateField('gracePeriodDays', e.target.value)}
-                placeholder="0"
-                className="w-full bg-transparent outline-none text-sm text-ink font-mono tabular-nums placeholder:text-ink-muted"
-              />
-            </FieldRow>
+        <div
+          className="grid transition-[grid-template-rows] duration-250 ease-out"
+          style={{ gridTemplateRows: scheduleOpen ? '1fr' : '0fr' }}
+        >
+          <div className="overflow-hidden">
+            <div className="mt-4 grid grid-cols-3 gap-4 pb-1">
+              <FieldRow
+                label="Due day"
+                compact
+                modified={modified.has('dueDayOfMonth')}
+                isTemplate={isTemplate}
+              >
+                <input
+                  type="number"
+                  min={1}
+                  max={31}
+                  value={form.dueDayOfMonth}
+                  onChange={(e) => updateField('dueDayOfMonth', e.target.value)}
+                  placeholder="20"
+                  className="w-full bg-transparent outline-none text-sm text-ink font-mono tabular-nums placeholder:text-ink-muted"
+                />
+              </FieldRow>
+              <FieldRow
+                label="Month offset"
+                compact
+                modified={modified.has('dueMonthOffset')}
+                isTemplate={isTemplate}
+              >
+                <input
+                  type="number"
+                  min={0}
+                  max={12}
+                  value={form.dueMonthOffset}
+                  onChange={(e) => updateField('dueMonthOffset', e.target.value)}
+                  placeholder="1"
+                  className="w-full bg-transparent outline-none text-sm text-ink font-mono tabular-nums placeholder:text-ink-muted"
+                />
+              </FieldRow>
+              <FieldRow
+                label="Grace days"
+                compact
+                modified={modified.has('gracePeriodDays')}
+                isTemplate={isTemplate}
+              >
+                <input
+                  type="number"
+                  min={0}
+                  value={form.gracePeriodDays}
+                  onChange={(e) => updateField('gracePeriodDays', e.target.value)}
+                  placeholder="0"
+                  className="w-full bg-transparent outline-none text-sm text-ink font-mono tabular-nums placeholder:text-ink-muted"
+                />
+              </FieldRow>
+            </div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
@@ -632,7 +694,7 @@ function FieldRow({
     <div>
       <div className="flex items-baseline gap-2 mb-1">
         <label
-          className={`block text-[10px] uppercase tracking-eyebrow font-sans font-medium ${
+          className={`block text-[10px] uppercase tracking-eyebrow font-sans font-medium transition-colors ${
             modified ? 'text-due-soon' : 'text-ink-muted'
           }`}
         >
@@ -644,9 +706,9 @@ function FieldRow({
         )}
       </div>
       <div
-        className={`border-b ${
+        className={`border-b transition-colors ${
           modified ? 'border-due-soon' : 'border-rule'
-        } focus-within:border-ink transition-colors ${compact ? 'pb-1' : 'pb-1.5'}`}
+        } focus-within:border-ink ${compact ? 'pb-1' : 'pb-1.5'}`}
       >
         {children}
       </div>

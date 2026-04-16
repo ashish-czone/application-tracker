@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { AnimatePresence } from 'framer-motion';
 import {
   Search,
   Command as CommandIcon,
@@ -520,7 +521,9 @@ export function ObligationsLibraryPage() {
         </section>
       </main>
 
-      {drawerOpen && <NewObligationDrawer onClose={() => setDrawerOpen(false)} />}
+      <AnimatePresence>
+        {drawerOpen && <NewObligationDrawer onClose={() => setDrawerOpen(false)} />}
+      </AnimatePresence>
     </div>
   );
 }
