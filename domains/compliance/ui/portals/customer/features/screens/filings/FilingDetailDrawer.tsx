@@ -13,6 +13,9 @@ import {
   GitBranch,
   UserPlus,
   FilePlus,
+  Eye,
+  Download,
+  FileSpreadsheet,
 } from 'lucide-react';
 import {
   Eyebrow,
@@ -340,23 +343,47 @@ function OverviewBody({
           )}
 
           <div className="space-y-1">
-            {filing.attachments.map((att) => (
-              <div
-                key={att.id}
-                className="flex items-center gap-3 px-3 py-2.5 group hover:bg-paper-sunken/40 transition-colors -mx-1"
-              >
-                <div className="w-7 h-7 bg-paper-sunken border border-rule flex items-center justify-center flex-none">
-                  <Paperclip className="w-3 h-3 text-ink-muted" strokeWidth={1.5} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm text-ink font-sans truncate">{att.name}</div>
-                  <div className="text-[10px] text-ink-muted font-sans">
-                    {att.size} · {att.uploadedBy.name}
+            {filing.attachments.map((att) => {
+              const ext = att.name.split('.').pop()?.toLowerCase() ?? '';
+              const viewable = ['pdf', 'csv', 'txt'].includes(ext);
+              const FileIcon = ['xls', 'xlsx', 'csv'].includes(ext) ? FileSpreadsheet : FileText;
+
+              return (
+                <div
+                  key={att.id}
+                  className="flex items-center gap-3 px-3 py-2.5 group hover:bg-paper-sunken/40 transition-colors -mx-1"
+                >
+                  <div className="w-7 h-7 bg-paper-sunken border border-rule flex items-center justify-center flex-none">
+                    <FileIcon className="w-3 h-3 text-ink-muted" strokeWidth={1.5} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm text-ink font-sans truncate">{att.name}</div>
+                    <div className="text-[10px] text-ink-muted font-sans">
+                      {att.size} · {att.uploadedBy.name} · {formatUploadDate(att.uploadedAt)}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-none">
+                    {viewable ? (
+                      <button
+                        type="button"
+                        className="w-6 h-6 flex items-center justify-center hover:bg-paper-sunken border border-transparent hover:border-rule transition-colors"
+                        title="View"
+                      >
+                        <Eye className="w-3 h-3 text-ink-muted" strokeWidth={1.5} />
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="w-6 h-6 flex items-center justify-center hover:bg-paper-sunken border border-transparent hover:border-rule transition-colors"
+                        title="Download"
+                      >
+                        <Download className="w-3 h-3 text-ink-muted" strokeWidth={1.5} />
+                      </button>
+                    )}
                   </div>
                 </div>
-                <ChevronRight className="w-3 h-3 text-ink-muted opacity-0 group-hover:opacity-100 transition-opacity flex-none" strokeWidth={1.5} />
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
@@ -618,4 +645,9 @@ function ActivityBody({ filing }: { filing: FilingRow }) {
 function formatTime(iso: string): string {
   const d = new Date(iso);
   return d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+}
+
+function formatUploadDate(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 }
