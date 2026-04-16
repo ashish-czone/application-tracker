@@ -571,7 +571,7 @@ function ActivityBody({ filing }: { filing: FilingRow }) {
         const isLastRow = idx === rows.length - 1;
 
         return (
-          <div key={event.id} className="flex min-h-[48px]">
+          <div key={event.id} className="flex min-h-[56px]">
             {/* ── Left column: actor + time ────────────────── */}
             <div className="w-[100px] shrink-0 text-right pr-4 flex flex-col justify-center">
               <div className="text-[11px] font-sans font-medium text-ink truncate">
@@ -604,7 +604,7 @@ function ActivityBody({ filing }: { filing: FilingRow }) {
       })}
 
       {/* ── Tail row: extends the line below the last event ── */}
-      <div className="flex h-6">
+      <div className="flex h-3">
         <div className="w-[100px] shrink-0" />
         <div className="w-5 shrink-0 flex flex-col items-center">
           <div className="w-[2px] flex-1 bg-rule/50" />
