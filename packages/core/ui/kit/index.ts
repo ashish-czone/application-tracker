@@ -16,6 +16,7 @@ export { StatusDonut, type StatusDonutProps, type StatusDonutSegment } from './S
 export { DueDateBlock, type DueDateBlockProps } from './DueDateBlock';
 
 export { DataTable, type DataTableProps, type DataTableColumn } from './DataTable';
+export { Pagination, type PaginationProps } from './Pagination';
 export { FilterBar, type FilterBarProps, type FilterChip } from './FilterBar';
 export { FilterPopover, type FilterPopoverProps, type FilterPopoverOption } from './FilterPopover';
 export { ColumnChooser, type ColumnChooserProps, type ColumnChooserItem } from './ColumnChooser';

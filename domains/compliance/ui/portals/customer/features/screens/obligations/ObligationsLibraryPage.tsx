@@ -11,6 +11,7 @@ import {
 import {
   MetricKPI,
   DataTable,
+  Pagination,
   JurisdictionTag,
   Button,
   FilterPopover,
@@ -187,6 +188,10 @@ export function ObligationsLibraryPage() {
   // Column visibility driven by ColumnChooser.
   const [visibleColumns, setVisibleColumns] = useState<string[]>(ALL_COLUMN_KEYS);
 
+  // Pagination state.
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
   const toggleDark = () => {
     setIsDark((prev) => {
       const next = !prev;
@@ -198,6 +203,8 @@ export function ObligationsLibraryPage() {
   };
 
   const filtered = useMemo(() => {
+    // Reset to page 1 whenever filters change.
+    setPage(1);
     const q = search.trim().toLowerCase();
     return MOCK_OBLIGATIONS.filter((o) => {
       if (statusTab !== 'all' && o.status !== statusTab) return false;
@@ -212,6 +219,9 @@ export function ObligationsLibraryPage() {
       return true;
     });
   }, [statusTab, lawFilter, jurisdictionFilter, frequencyFilter, search]);
+
+  const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const paginatedRows = filtered.slice((page - 1) * pageSize, page * pageSize);
 
   // Derive active filter chips from filter state.
   const activeFilters: ActiveFilter[] = useMemo(() => {
@@ -472,7 +482,7 @@ export function ObligationsLibraryPage() {
 
             <div className="ml-auto flex items-center gap-3">
               <span className="font-mono text-[11px] tabular-nums text-ink-soft">
-                {filtered.length} of {MOCK_OBLIGATIONS.length} shown
+                {filtered.length} of {MOCK_OBLIGATIONS.length}
               </span>
               <ColumnChooser
                 columns={columnChooserItems}
@@ -489,9 +499,20 @@ export function ObligationsLibraryPage() {
             <DataTable
               columns={OBLIGATION_COLUMNS}
               visibleColumns={visibleColumns}
-              rows={filtered}
+              rows={paginatedRows}
               getRowKey={(o) => o.id}
               onRowClick={() => {}}
+            />
+            <Pagination
+              page={page}
+              pageSize={pageSize}
+              pageCount={pageCount}
+              totalRows={filtered.length}
+              onPageChange={setPage}
+              onPageSizeChange={(size) => {
+                setPageSize(size);
+                setPage(1);
+              }}
             />
           </div>
         </section>
