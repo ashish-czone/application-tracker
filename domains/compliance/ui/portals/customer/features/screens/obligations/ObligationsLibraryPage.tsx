@@ -29,6 +29,7 @@ import {
   type Obligation,
   type ObligationFrequency,
 } from './obligationsMock';
+import { NewObligationDrawer } from './NewObligationDrawer';
 
 const FREQUENCY_LABEL: Record<ObligationFrequency, string> = {
   monthly: 'Monthly',
@@ -175,6 +176,7 @@ const REQUIRED_COLUMN_KEYS: string[] = ['code', 'name'];
 
 export function ObligationsLibraryPage() {
   const [isDark, setIsDark] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   // Filter state — popover multi-selects return arrays.
   const [lawFilter, setLawFilter] = useState<LawGroupKey[]>([]);
@@ -382,7 +384,7 @@ export function ObligationsLibraryPage() {
               <Upload className="w-3.5 h-3.5 mr-1.5" strokeWidth={2} />
               Import
             </Button>
-            <Button size="sm">
+            <Button size="sm" onClick={() => setDrawerOpen(true)}>
               <Plus className="w-3.5 h-3.5 mr-1.5" strokeWidth={2} />
               New obligation
             </Button>
@@ -517,6 +519,8 @@ export function ObligationsLibraryPage() {
           </div>
         </section>
       </main>
+
+      {drawerOpen && <NewObligationDrawer onClose={() => setDrawerOpen(false)} />}
     </div>
   );
 }
