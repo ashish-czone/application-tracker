@@ -10,14 +10,18 @@ import {
   Upload,
   Send,
   ArrowRightCircle,
+  GitBranch,
+  UserPlus,
+  FilePlus,
 } from 'lucide-react';
 import {
   Eyebrow,
   JurisdictionTag,
   UrgencyBadge,
   OrdinalDate,
+  SectionRule,
 } from '@packages/ui';
-import type { FilingRow } from './filingsMock';
+import type { FilingRow, FilingActivity } from './filingsMock';
 import type { Filing } from '../../../../../shared/types';
 
 // ─── Animation config ────────────────────────────────────────────────
@@ -59,7 +63,7 @@ const PRIORITY_TONE: Record<string, string> = {
   low: 'text-ink-muted',
 };
 
-type DetailTab = 'details' | 'notes' | 'attachments' | 'activity';
+type DrawerMode = 'overview' | 'activity';
 
 // ─── Props ───────────────────────────────────────────────────────────
 
@@ -72,12 +76,10 @@ export interface FilingDetailDrawerProps {
 // ─── Component ───────────────────────────────────────────────────────
 
 export function FilingDetailDrawer({ filing, onClose, onStatusChange }: FilingDetailDrawerProps) {
-  const [activeTab, setActiveTab] = useState<DetailTab>('details');
+  const [mode, setMode] = useState<DrawerMode>('overview');
   const [noteText, setNoteText] = useState('');
 
   const isFiled = filing.status === 'filed';
-
-  // Determine available workflow transitions based on current status
   const transitions = getTransitions(filing.status);
 
   return (
@@ -172,61 +174,53 @@ export function FilingDetailDrawer({ filing, onClose, onStatusChange }: FilingDe
           )}
         </header>
 
-        {/* ── Tab bar ─────────────────────────────────────────────── */}
+        {/* ── Mode toggle ────────────────────────────────────────── */}
         <div className="flex border-b border-rule flex-none">
-          {TABS.map((tab) => {
-            const isActive = activeTab === tab.key;
-            const count = tab.key === 'notes' ? filing.notes.length
-              : tab.key === 'attachments' ? filing.attachments.length
-              : tab.key === 'activity' ? filing.activity.length
-              : undefined;
-            return (
-              <button
-                key={tab.key}
-                type="button"
-                onClick={() => setActiveTab(tab.key)}
-                className={`flex items-center gap-1.5 px-4 py-2.5 text-[11px] uppercase tracking-eyebrow font-sans font-medium transition-colors border-b-2 -mb-px ${
-                  isActive
-                    ? 'text-ink border-ink'
-                    : 'text-ink-muted border-transparent hover:text-ink'
-                }`}
-              >
-                <tab.icon className="w-3 h-3" strokeWidth={1.5} />
-                {tab.label}
-                {count != null && count > 0 && (
-                  <span className="font-mono text-[10px] tabular-nums text-ink-muted">{count}</span>
-                )}
-              </button>
-            );
-          })}
+          <button
+            type="button"
+            onClick={() => setMode('overview')}
+            className={`flex items-center gap-1.5 px-4 py-2.5 text-[11px] uppercase tracking-eyebrow font-sans font-medium transition-colors border-b-2 -mb-px ${
+              mode === 'overview'
+                ? 'text-ink border-ink'
+                : 'text-ink-muted border-transparent hover:text-ink'
+            }`}
+          >
+            <FileText className="w-3 h-3" strokeWidth={1.5} />
+            Overview
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode('activity')}
+            className={`flex items-center gap-1.5 px-4 py-2.5 text-[11px] uppercase tracking-eyebrow font-sans font-medium transition-colors border-b-2 -mb-px ${
+              mode === 'activity'
+                ? 'text-ink border-ink'
+                : 'text-ink-muted border-transparent hover:text-ink'
+            }`}
+          >
+            <Clock className="w-3 h-3" strokeWidth={1.5} />
+            Activity
+            {filing.activity.length > 0 && (
+              <span className="font-mono text-[10px] tabular-nums text-ink-muted">
+                {filing.activity.length}
+              </span>
+            )}
+          </button>
         </div>
 
         {/* ── Body ────────────────────────────────────────────────── */}
-        <div className="flex-1 overflow-y-auto">
-          {activeTab === 'details' && <DetailsPanel filing={filing} />}
-          {activeTab === 'notes' && (
-            <NotesPanel
-              filing={filing}
-              noteText={noteText}
-              setNoteText={setNoteText}
-            />
-          )}
-          {activeTab === 'attachments' && <AttachmentsPanel filing={filing} />}
-          {activeTab === 'activity' && <ActivityPanel filing={filing} />}
-        </div>
+        {mode === 'overview' ? (
+          <OverviewBody
+            filing={filing}
+            noteText={noteText}
+            setNoteText={setNoteText}
+          />
+        ) : (
+          <ActivityBody filing={filing} />
+        )}
       </motion.div>
     </div>
   );
 }
-
-// ─── Tab definitions ─────────────────────────────────────────────────
-
-const TABS: { key: DetailTab; label: string; icon: typeof FileText }[] = [
-  { key: 'details', label: 'Details', icon: FileText },
-  { key: 'notes', label: 'Notes', icon: MessageSquare },
-  { key: 'attachments', label: 'Files', icon: Paperclip },
-  { key: 'activity', label: 'Activity', icon: Clock },
-];
 
 // ─── Workflow transitions ────────────────────────────────────────────
 
@@ -252,58 +246,187 @@ function getTransitions(current: Filing['status']): Transition[] {
   }
 }
 
-// ─── Details panel ───────────────────────────────────────────────────
+// ─── Overview body (details + notes + files) ────────────────────────
 
-function DetailsPanel({ filing }: { filing: FilingRow }) {
+function OverviewBody({
+  filing,
+  noteText,
+  setNoteText,
+}: {
+  filing: FilingRow;
+  noteText: string;
+  setNoteText: (v: string) => void;
+}) {
   return (
-    <div className="px-6 py-5 space-y-5">
-      <div className="grid grid-cols-2 gap-4">
-        <DetailField label="Status" value={STATUS_LABEL[filing.status]} />
-        <DetailField
-          label="Priority"
-          value={
-            <span className={PRIORITY_TONE[filing.priority]}>
-              {PRIORITY_LABEL[filing.priority]}
-            </span>
-          }
-        />
-        <DetailField label="Due date">
-          <OrdinalDate date={filing.dueDate} variant="short" className="text-sm" />
-        </DetailField>
-        <DetailField label="Period" value={filing.periodLabel} />
-        <DetailField label="Law" value={filing.lawCode} mono />
-        <DetailField label="Jurisdiction">
-          <JurisdictionTag jurisdiction={filing.jurisdiction} />
-        </DetailField>
-        <DetailField label="Client" value={filing.clientName} />
-        {filing.handler && (
-          <DetailField label="Handler">
-            <div className="flex items-center gap-2">
-              <span
-                aria-hidden
-                className="w-6 h-6 bg-authority text-paper-raised text-[10px] font-sans font-semibold flex items-center justify-center flex-none"
-              >
-                {filing.handler.initials}
+    <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 overflow-y-auto">
+        {/* ── Details grid ──────────────────────────────────────── */}
+        <div className="px-6 py-5">
+          <div className="grid grid-cols-2 gap-4">
+            <DetailField label="Status" value={STATUS_LABEL[filing.status]} />
+            <DetailField
+              label="Priority"
+              value={
+                <span className={PRIORITY_TONE[filing.priority]}>
+                  {PRIORITY_LABEL[filing.priority]}
+                </span>
+              }
+            />
+            <DetailField label="Due date">
+              <OrdinalDate date={filing.dueDate} variant="short" className="text-sm" />
+            </DetailField>
+            <DetailField label="Period" value={filing.periodLabel} />
+            <DetailField label="Law" value={filing.lawCode} mono />
+            <DetailField label="Jurisdiction">
+              <JurisdictionTag jurisdiction={filing.jurisdiction} />
+            </DetailField>
+            <DetailField label="Client" value={filing.clientName} />
+            {filing.handler && (
+              <DetailField label="Handler">
+                <div className="flex items-center gap-2">
+                  <span
+                    aria-hidden
+                    className="w-6 h-6 bg-authority text-paper-raised text-[10px] font-sans font-semibold flex items-center justify-center flex-none"
+                  >
+                    {filing.handler.initials}
+                  </span>
+                  <span className="text-sm font-sans text-ink">{filing.handler.name}</span>
+                </div>
+              </DetailField>
+            )}
+          </div>
+
+          {filing.filedDate && (
+            <>
+              <div className="border-t border-rule mt-5 mb-4" />
+              <div className="grid grid-cols-2 gap-4">
+                <DetailField label="Filed on">
+                  <OrdinalDate date={filing.filedDate} variant="short" className="text-sm" />
+                </DetailField>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* ── Files section ─────────────────────────────────────── */}
+        <div className="px-6">
+          <SectionRule />
+        </div>
+        <div className="px-6 py-5">
+          <div className="flex items-center justify-between mb-3">
+            <Eyebrow tone="muted" mark="◈">
+              Files
+            </Eyebrow>
+            {filing.attachments.length > 0 && (
+              <span className="font-mono text-[10px] tabular-nums text-ink-muted">
+                {filing.attachments.length}
               </span>
-              <span className="text-sm font-sans text-ink">{filing.handler.name}</span>
+            )}
+          </div>
+
+          {/* Upload zone */}
+          <button
+            type="button"
+            className="w-full border border-dashed border-rule hover:border-ink py-4 flex items-center justify-center gap-2 transition-colors group mb-3"
+          >
+            <Upload className="w-3.5 h-3.5 text-ink-muted group-hover:text-ink" strokeWidth={1.5} />
+            <span className="text-[11px] uppercase tracking-eyebrow font-sans font-medium text-ink-muted group-hover:text-ink">
+              Drop files or click to upload
+            </span>
+          </button>
+
+          {filing.attachments.length === 0 && (
+            <p className="text-[11px] text-ink-muted font-sans text-center py-2">No files attached</p>
+          )}
+
+          <div className="space-y-1">
+            {filing.attachments.map((att) => (
+              <div
+                key={att.id}
+                className="flex items-center gap-3 px-3 py-2.5 group hover:bg-paper-sunken/40 transition-colors -mx-1"
+              >
+                <div className="w-7 h-7 bg-paper-sunken border border-rule flex items-center justify-center flex-none">
+                  <Paperclip className="w-3 h-3 text-ink-muted" strokeWidth={1.5} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm text-ink font-sans truncate">{att.name}</div>
+                  <div className="text-[10px] text-ink-muted font-sans">
+                    {att.size} · {att.uploadedBy.name}
+                  </div>
+                </div>
+                <ChevronRight className="w-3 h-3 text-ink-muted opacity-0 group-hover:opacity-100 transition-opacity flex-none" strokeWidth={1.5} />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Notes section ─────────────────────────────────────── */}
+        <div className="px-6">
+          <SectionRule />
+        </div>
+        <div className="px-6 py-5">
+          <div className="flex items-center justify-between mb-3">
+            <Eyebrow tone="muted" mark="¶">
+              Notes
+            </Eyebrow>
+            {filing.notes.length > 0 && (
+              <span className="font-mono text-[10px] tabular-nums text-ink-muted">
+                {filing.notes.length}
+              </span>
+            )}
+          </div>
+
+          {filing.notes.length === 0 && (
+            <div className="text-center py-4">
+              <p className="text-[11px] text-ink-muted font-sans">No notes yet — add one below.</p>
             </div>
-          </DetailField>
-        )}
+          )}
+
+          <div className="space-y-3">
+            {filing.notes.map((note) => (
+              <div key={note.id} className="border-l-2 border-rule pl-3 py-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <span
+                    aria-hidden
+                    className="w-5 h-5 bg-authority text-paper-raised text-[9px] font-sans font-semibold flex items-center justify-center flex-none"
+                  >
+                    {note.author.initials}
+                  </span>
+                  <span className="text-[11px] font-sans font-medium text-ink">{note.author.name}</span>
+                  <span className="text-[10px] font-mono tabular-nums text-ink-muted ml-auto">
+                    <OrdinalDate date={note.createdAt} variant="short" className="inline text-[10px]" />
+                  </span>
+                </div>
+                <p className="text-sm text-ink font-sans leading-relaxed">{note.text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
-      {filing.filedDate && (
-        <>
-          <div className="border-t border-rule" />
-          <div className="grid grid-cols-2 gap-4">
-            <DetailField label="Filed on">
-              <OrdinalDate date={filing.filedDate} variant="short" className="text-sm" />
-            </DetailField>
-          </div>
-        </>
-      )}
+      {/* ── Compose bar (sticky bottom) ──────────────────────────── */}
+      <div className="px-6 py-3 border-t border-rule bg-paper-sunken/50 flex-none">
+        <div className="flex items-end gap-2">
+          <textarea
+            value={noteText}
+            onChange={(e) => setNoteText(e.target.value)}
+            placeholder="Add a note…"
+            rows={1}
+            className="flex-1 bg-transparent border border-rule focus:border-ink outline-none px-3 py-2 text-sm text-ink font-sans placeholder:text-ink-muted resize-none transition-colors"
+          />
+          <button
+            type="button"
+            className="px-3 py-2 bg-ink text-paper text-[11px] uppercase tracking-eyebrow font-sans font-semibold hover:brightness-110 transition-[filter] self-end"
+          >
+            <Send className="w-3.5 h-3.5" strokeWidth={2} />
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
+
+// ─── Detail field ───────────────────────────────────────────────────
 
 function DetailField({
   label,
@@ -330,165 +453,157 @@ function DetailField({
   );
 }
 
-// ─── Notes panel ─────────────────────────────────────────────────────
+// ─── Activity body (redesigned timeline) ────────────────────────────
 
-function NotesPanel({
-  filing,
-  noteText,
-  setNoteText,
-}: {
-  filing: FilingRow;
-  noteText: string;
-  setNoteText: (v: string) => void;
-}) {
-  return (
-    <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
-        {filing.notes.length === 0 && (
-          <div className="text-center py-8">
-            <MessageSquare className="w-8 h-8 text-ink-muted/40 mx-auto mb-2" strokeWidth={1} />
-            <p className="text-sm text-ink-muted font-sans">No notes yet</p>
-            <p className="text-[11px] text-ink-muted/60 font-sans mt-1">
-              Add a note to keep the team informed.
-            </p>
-          </div>
-        )}
-        {filing.notes.map((note) => (
-          <div key={note.id} className="border border-rule bg-paper-sunken/30 px-4 py-3">
-            <div className="flex items-center gap-2 mb-2">
-              <span
-                aria-hidden
-                className="w-5 h-5 bg-authority text-paper-raised text-[9px] font-sans font-semibold flex items-center justify-center flex-none"
-              >
-                {note.author.initials}
-              </span>
-              <span className="text-[11px] font-sans font-medium text-ink">{note.author.name}</span>
-              <span className="text-[10px] font-mono tabular-nums text-ink-muted ml-auto">
-                <OrdinalDate date={note.createdAt} variant="short" className="inline text-[10px]" />
-              </span>
-            </div>
-            <p className="text-sm text-ink font-sans leading-relaxed">{note.text}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Compose bar */}
-      <div className="px-6 py-4 border-t border-rule bg-paper-sunken/50 flex-none">
-        <div className="flex items-end gap-2">
-          <textarea
-            value={noteText}
-            onChange={(e) => setNoteText(e.target.value)}
-            placeholder="Add a note…"
-            rows={2}
-            className="flex-1 bg-transparent border border-rule focus:border-ink outline-none px-3 py-2 text-sm text-ink font-sans placeholder:text-ink-muted resize-none transition-colors"
-          />
-          <button
-            type="button"
-            className="px-3 py-2 bg-ink text-paper text-[11px] uppercase tracking-eyebrow font-sans font-semibold hover:brightness-110 transition-[filter] self-end"
-          >
-            <Send className="w-3.5 h-3.5" strokeWidth={2} />
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Attachments panel ───────────────────────────────────────────────
-
-function AttachmentsPanel({ filing }: { filing: FilingRow }) {
-  return (
-    <div className="px-6 py-5 space-y-4">
-      {/* Upload zone */}
-      <button
-        type="button"
-        className="w-full border-2 border-dashed border-rule hover:border-ink py-6 flex flex-col items-center gap-2 transition-colors group"
-      >
-        <Upload className="w-5 h-5 text-ink-muted group-hover:text-ink" strokeWidth={1.5} />
-        <span className="text-[11px] uppercase tracking-eyebrow font-sans font-medium text-ink-muted group-hover:text-ink">
-          Drop files or click to upload
-        </span>
-      </button>
-
-      {filing.attachments.length === 0 && (
-        <div className="text-center py-4">
-          <p className="text-sm text-ink-muted font-sans">No attachments</p>
-        </div>
-      )}
-
-      {filing.attachments.map((att) => (
-        <div
-          key={att.id}
-          className="flex items-center gap-3 border border-rule bg-paper-sunken/30 px-4 py-3 group hover:bg-paper-sunken/60 transition-colors"
-        >
-          <Paperclip className="w-4 h-4 text-ink-muted flex-none" strokeWidth={1.5} />
-          <div className="flex-1 min-w-0">
-            <div className="text-sm text-ink font-sans truncate">{att.name}</div>
-            <div className="text-[10px] text-ink-muted font-sans">
-              {att.size} · uploaded by {att.uploadedBy.name}
-            </div>
-          </div>
-          <ChevronRight className="w-3.5 h-3.5 text-ink-muted opacity-0 group-hover:opacity-100 transition-opacity flex-none" strokeWidth={1.5} />
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ─── Activity panel ──────────────────────────────────────────────────
-
-const ACTIVITY_ICON: Record<string, typeof Clock> = {
-  'status-change': ArrowRightCircle,
-  'note-added': MessageSquare,
-  'attachment-added': Paperclip,
-  assigned: ChevronRight,
-  created: FileText,
+const ACTIVITY_CONFIG: Record<
+  string,
+  { icon: typeof Clock; bg: string; ring: string; iconColor: string }
+> = {
+  'status-change': {
+    icon: GitBranch,
+    bg: 'bg-authority/10',
+    ring: 'ring-authority/30',
+    iconColor: 'text-authority',
+  },
+  assigned: {
+    icon: UserPlus,
+    bg: 'bg-due-soon/10',
+    ring: 'ring-due-soon/30',
+    iconColor: 'text-due-soon',
+  },
+  created: {
+    icon: FilePlus,
+    bg: 'bg-filed/10',
+    ring: 'ring-filed/30',
+    iconColor: 'text-filed',
+  },
+  'note-added': {
+    icon: MessageSquare,
+    bg: 'bg-ink/5',
+    ring: 'ring-ink/15',
+    iconColor: 'text-ink-muted',
+  },
+  'attachment-added': {
+    icon: Paperclip,
+    bg: 'bg-ink/5',
+    ring: 'ring-ink/15',
+    iconColor: 'text-ink-muted',
+  },
 };
 
-function ActivityPanel({ filing }: { filing: FilingRow }) {
-  const sorted = [...filing.activity].sort(
+function groupByDay(events: FilingActivity[]): { label: string; events: FilingActivity[] }[] {
+  const sorted = [...events].sort(
     (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
   );
 
+  const groups: Map<string, FilingActivity[]> = new Map();
+  for (const ev of sorted) {
+    const dateKey = new Date(ev.timestamp).toISOString().split('T')[0];
+    const existing = groups.get(dateKey);
+    if (existing) {
+      existing.push(ev);
+    } else {
+      groups.set(dateKey, [ev]);
+    }
+  }
+
+  return Array.from(groups.entries()).map(([dateKey, evts]) => ({
+    label: formatDayLabel(dateKey),
+    events: evts,
+  }));
+}
+
+function formatDayLabel(dateKey: string): string {
+  const d = new Date(dateKey + 'T12:00:00');
+  const now = new Date();
+  const today = now.toISOString().split('T')[0];
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayKey = yesterday.toISOString().split('T')[0];
+
+  if (dateKey === today) return 'Today';
+  if (dateKey === yesterdayKey) return 'Yesterday';
+
+  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function ActivityBody({ filing }: { filing: FilingRow }) {
+  const dayGroups = groupByDay(filing.activity);
+
   return (
-    <div className="px-6 py-5">
-      {sorted.length === 0 && (
-        <div className="text-center py-8">
-          <Clock className="w-8 h-8 text-ink-muted/40 mx-auto mb-2" strokeWidth={1} />
+    <div className="flex-1 overflow-y-auto px-6 py-5">
+      {filing.activity.length === 0 && (
+        <div className="text-center py-12">
+          <div className="w-10 h-10 mx-auto mb-3 bg-paper-sunken border border-rule flex items-center justify-center">
+            <Clock className="w-5 h-5 text-ink-muted/40" strokeWidth={1} />
+          </div>
           <p className="text-sm text-ink-muted font-sans">No activity recorded</p>
+          <p className="text-[11px] text-ink-muted/60 font-sans mt-1">
+            Actions on this filing will appear here.
+          </p>
         </div>
       )}
 
-      <div className="relative">
-        {/* Timeline line */}
-        {sorted.length > 1 && (
-          <div className="absolute left-[9px] top-5 bottom-5 w-px bg-rule" />
-        )}
+      <div className="space-y-6">
+        {dayGroups.map((group) => (
+          <div key={group.label}>
+            {/* Day header */}
+            <div className="flex items-center gap-3 mb-4">
+              <span className="text-[10px] uppercase tracking-eyebrow font-sans font-semibold text-ink-muted">
+                {group.label}
+              </span>
+              <div className="flex-1 h-px bg-rule" />
+            </div>
 
-        <div className="space-y-4">
-          {sorted.map((event) => {
-            const Icon = ACTIVITY_ICON[event.type] ?? Clock;
-            return (
-              <div key={event.id} className="flex items-start gap-3 relative">
-                <span className="w-[18px] h-[18px] flex-none bg-paper-raised border border-rule flex items-center justify-center z-10">
-                  <Icon className="w-2.5 h-2.5 text-ink-muted" strokeWidth={2} />
-                </span>
-                <div className="flex-1 min-w-0 pt-px">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-[11px] font-sans font-medium text-ink">
-                      {event.actor.name}
-                    </span>
-                    <span className="text-[10px] font-mono tabular-nums text-ink-muted">
-                      <OrdinalDate date={event.timestamp} variant="short" className="inline text-[10px]" />
-                    </span>
-                  </div>
-                  <p className="text-sm text-ink-soft font-sans mt-0.5">{event.detail}</p>
-                </div>
+            {/* Events in this day */}
+            <div className="relative pl-8">
+              {/* Vertical connector line */}
+              {group.events.length > 1 && (
+                <div className="absolute left-[11px] top-4 bottom-4 w-px bg-rule/60" />
+              )}
+
+              <div className="space-y-5">
+                {group.events.map((event) => {
+                  const config = ACTIVITY_CONFIG[event.type] ?? {
+                    icon: Clock,
+                    bg: 'bg-ink/5',
+                    ring: 'ring-ink/15',
+                    iconColor: 'text-ink-muted',
+                  };
+                  const Icon = config.icon;
+
+                  return (
+                    <div key={event.id} className="relative flex items-start gap-3">
+                      {/* Icon node */}
+                      <span
+                        className={`absolute -left-8 w-[22px] h-[22px] flex-none flex items-center justify-center ring-1 z-10 ${config.bg} ${config.ring}`}
+                      >
+                        <Icon className={`w-2.5 h-2.5 ${config.iconColor}`} strokeWidth={2} />
+                      </span>
+
+                      {/* Content */}
+                      <div className="flex-1 min-w-0 pt-0.5">
+                        <p className="text-sm text-ink font-sans leading-snug">
+                          <span className="font-medium">{event.actor.name}</span>
+                          <span className="text-ink-soft"> {event.detail.toLowerCase()}</span>
+                        </p>
+                        <span className="text-[10px] font-mono tabular-nums text-ink-muted mt-0.5 block">
+                          {formatTime(event.timestamp)}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            );
-          })}
-        </div>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
+}
+
+function formatTime(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
 }
