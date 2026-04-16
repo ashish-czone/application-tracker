@@ -491,14 +491,38 @@ const ACTIVITY_CONFIG: Record<
   },
 };
 
-function ActivityBody({ filing }: { filing: FilingRow }) {
-  const sorted = [...filing.activity].sort(
+type TimelineRow =
+  | { kind: 'date'; date: string; label: string }
+  | { kind: 'event'; event: FilingActivity; isFirstInDate: boolean };
+
+function buildTimeline(events: FilingActivity[]): TimelineRow[] {
+  const sorted = [...events].sort(
     (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
   );
+  const rows: TimelineRow[] = [];
+  let prevDate = '';
+  for (const event of sorted) {
+    const dateKey = new Date(event.timestamp).toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+    const isFirstInDate = dateKey !== prevDate;
+    if (isFirstInDate) {
+      rows.push({ kind: 'date', date: dateKey, label: dateKey });
+      prevDate = dateKey;
+    }
+    rows.push({ kind: 'event', event, isFirstInDate });
+  }
+  return rows;
+}
 
-  return (
-    <div className="flex-1 overflow-y-auto py-5">
-      {sorted.length === 0 && (
+function ActivityBody({ filing }: { filing: FilingRow }) {
+  const rows = buildTimeline(filing.activity);
+
+  if (rows.length === 0) {
+    return (
+      <div className="flex-1 overflow-y-auto py-5">
         <div className="text-center py-12 px-6">
           <div className="w-10 h-10 mx-auto mb-3 bg-paper-sunken border border-rule flex items-center justify-center">
             <Clock className="w-5 h-5 text-ink-muted/40" strokeWidth={1} />
@@ -508,9 +532,35 @@ function ActivityBody({ filing }: { filing: FilingRow }) {
             Actions on this filing will appear here.
           </p>
         </div>
-      )}
+      </div>
+    );
+  }
 
-      {sorted.map((event, idx) => {
+  return (
+    <div className="flex-1 overflow-y-auto py-5">
+      {rows.map((row, idx) => {
+        if (row.kind === 'date') {
+          /* ── Date separator row ─────────────────────────── */
+          return (
+            <div key={`d-${row.date}`} className="flex min-h-[28px]">
+              {/* Left: empty */}
+              <div className="w-[100px] shrink-0" />
+              {/* Center: line through */}
+              <div className="w-5 shrink-0 flex flex-col items-center">
+                <div className="w-[2px] flex-1 bg-rule/50" />
+              </div>
+              {/* Right: date label */}
+              <div className="flex-1 min-w-0 pl-3 flex items-center">
+                <span className="text-[10px] font-sans font-semibold tracking-widest uppercase text-ink-muted/70">
+                  {row.label}
+                </span>
+              </div>
+            </div>
+          );
+        }
+
+        /* ── Event row ─────────────────────────────────── */
+        const { event } = row;
         const config = ACTIVITY_CONFIG[event.type] ?? {
           icon: Clock,
           bg: 'bg-ink/5',
@@ -518,31 +568,34 @@ function ActivityBody({ filing }: { filing: FilingRow }) {
           iconColor: 'text-ink-muted',
         };
         const Icon = config.icon;
-        const isLast = idx === sorted.length - 1;
+        const isLastRow = idx === rows.length - 1;
 
         return (
           <div key={event.id} className="flex min-h-[48px]">
-            {/* ── Left column: actor + datetime ────────────────── */}
+            {/* ── Left column: actor + time ────────────────── */}
             <div className="w-[100px] shrink-0 text-right pr-4 pt-[3px]">
               <div className="text-[11px] font-sans font-medium text-ink truncate">
                 {event.actor.name}
               </div>
               <div className="text-[10px] font-mono tabular-nums text-ink-muted whitespace-nowrap">
-                {formatShortDate(event.timestamp)}
+                {formatTime(event.timestamp)}
               </div>
             </div>
 
-            {/* ── Center column: circle node + vertical line ──── */}
+            {/* ── Center column: circle node + vertical line ── */}
             <div className="w-5 shrink-0 flex flex-col items-center">
               <span
                 className={`w-5 h-5 shrink-0 flex items-center justify-center ring-1 z-10 ${config.bg} ${config.ring}`}
               >
                 <Icon className={`w-2.5 h-2.5 ${config.iconColor}`} strokeWidth={2} />
               </span>
-              {!isLast && <div className="w-[2px] flex-1 bg-rule/50" />}
+              {/* Line extends below every row except the very last */}
+              {!isLastRow && <div className="w-[2px] flex-1 bg-rule/50" />}
+              {/* Tail below the last event */}
+              {isLastRow && <div className="w-[2px] h-4 bg-rule/50" />}
             </div>
 
-            {/* ── Right column: activity detail ─────────────────── */}
+            {/* ── Right column: activity detail ──────────────── */}
             <div className="flex-1 min-w-0 pl-3 pb-5 pt-[2px]">
               <p className="text-sm text-ink font-sans leading-relaxed">
                 {event.detail}
@@ -555,7 +608,7 @@ function ActivityBody({ filing }: { filing: FilingRow }) {
   );
 }
 
-function formatShortDate(iso: string): string {
+function formatTime(iso: string): string {
   const d = new Date(iso);
-  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+  return d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
 }
