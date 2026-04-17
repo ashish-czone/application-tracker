@@ -45,7 +45,7 @@ function StackedBarChart({
   const barH = 140;
 
   return (
-    <div className="flex items-end gap-3 h-[180px] px-2">
+    <div className="flex items-end gap-6 h-[180px] px-2">
       {data.map((d) => {
         const total = d.onTime + d.late + d.overdue;
         const scale = total / maxVal;
@@ -54,7 +54,7 @@ function StackedBarChart({
         const overdueH = (d.overdue / total) * barH * scale;
 
         return (
-          <div key={d.month} className="flex-1 flex flex-col items-center gap-1 min-w-0">
+          <div key={d.month} className="flex flex-col items-center gap-1">
             <div className="w-10 flex flex-col justify-end" style={{ height: barH }}>
               <div className="w-full bg-signal" style={{ height: overdueH }} />
               <div className="w-full bg-due-soon" style={{ height: lateH }} />
