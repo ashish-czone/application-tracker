@@ -1,9 +1,9 @@
 import { useState, useMemo } from 'react';
+import { startOfMonth, subMonths } from 'date-fns';
 import {
   Search,
   ChevronRight,
   Download,
-  CalendarDays,
   TrendingUp,
   Clock,
   Users,
@@ -17,6 +17,7 @@ import {
   Eyebrow,
   type DataTableColumn,
 } from '@packages/ui';
+import { DateRangePopover, type DateRangeValue } from '../../../../../shared';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 import {
   COMPLIANCE_TREND,
@@ -30,9 +31,11 @@ import {
   type WorkloadRow,
 } from './reportsMock';
 
-// ─── Date range (static) ───────────────────────────────────────────
-
-const DATE_RANGE = 'Nov 2025 – Apr 2026';
+const TODAY = new Date('2026-04-17');
+const DEFAULT_RANGE: DateRangeValue = {
+  from: startOfMonth(subMonths(TODAY, 5)),
+  to: TODAY,
+};
 
 // ─── Bar chart helpers ──────────────────────────────────────────────
 
@@ -377,6 +380,7 @@ const WORKLOAD_COLUMNS: DataTableColumn<WorkloadRow>[] = [
 export function ReportsPage() {
   const [activeTab, setActiveTab] = useState<ReportTab>('compliance');
   const [search, setSearch] = useState('');
+  const [dateRange, setDateRange] = useState<DateRangeValue>(DEFAULT_RANGE);
 
   // Compliance KPIs
   const totalFilings = COMPLIANCE_TREND.reduce((a, d) => a + d.onTime + d.late + d.overdue, 0);
@@ -430,10 +434,7 @@ export function ReportsPage() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 px-3 py-1.5 border border-rule text-[11px] font-sans text-ink-soft">
-              <CalendarDays className="w-3.5 h-3.5 text-ink-muted" strokeWidth={1.5} />
-              <span>{DATE_RANGE}</span>
-            </div>
+            <DateRangePopover value={dateRange} onChange={setDateRange} today={TODAY} />
             <Button variant="outline" size="sm">
               <Download className="w-3.5 h-3.5 mr-1.5" strokeWidth={2} />
               Export PDF

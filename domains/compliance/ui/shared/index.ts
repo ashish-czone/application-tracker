@@ -20,4 +20,10 @@ export {
 } from './HandlerWorkloadBar';
 export { BulkFilingDrawer, type BulkFilingDrawerProps } from './BulkFilingDrawer';
 
+export {
+  DateRangePopover,
+  type DateRangePopoverProps,
+  type DateRangeValue,
+} from './components/DateRangePopover';
+
 export type { Law, Client, Handler, Filing, LawCode } from './types';
