@@ -1,0 +1,26 @@
+type ScreenKey = 'dashboard' | 'clients' | 'obligations' | 'filings' | 'org-hierarchy' | 'reports';
+
+const ITEMS: Array<{ key: ScreenKey; label: string; href: string }> = [
+  { key: 'dashboard', label: 'Dashboard', href: '/screens/dashboard' },
+  { key: 'clients', label: 'Clients', href: '/screens/clients' },
+  { key: 'obligations', label: 'Laws', href: '/screens/obligations' },
+  { key: 'filings', label: 'Filings', href: '/screens/filings' },
+  { key: 'org-hierarchy', label: 'Organisation', href: '/screens/org-hierarchy' },
+  { key: 'reports', label: 'Reports', href: '#' },
+];
+
+export function ScreenPreviewNav({ active }: { active: ScreenKey }) {
+  return (
+    <nav className="flex items-center gap-6 text-[11px] uppercase tracking-eyebrow font-sans font-medium text-ink-soft">
+      {ITEMS.map((item) => (
+        <a
+          key={item.key}
+          href={item.href}
+          className={item.key === active ? 'text-ink border-b border-ink pb-0.5' : 'hover:text-ink'}
+        >
+          {item.label}
+        </a>
+      ))}
+    </nav>
+  );
+}

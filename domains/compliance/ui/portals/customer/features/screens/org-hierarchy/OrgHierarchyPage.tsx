@@ -18,6 +18,7 @@ import {
   MOCK_LAW_ASSIGNMENTS,
   type OrgUnit,
 } from './orgHierarchyMock';
+import { ScreenPreviewNav } from '../shared/ScreenPreviewNav';
 
 export function OrgHierarchyPage() {
   const [isDark, setIsDark] = useState(false);
@@ -50,14 +51,7 @@ export function OrgHierarchyPage() {
             <span className="font-serif text-2xl italic text-ink leading-none">
               Compliance<span className="text-signal">.</span>
             </span>
-            <nav className="flex items-center gap-6 text-[11px] uppercase tracking-eyebrow font-sans font-medium text-ink-soft">
-              <a className="hover:text-ink" href="/screens/dashboard">Dashboard</a>
-              <a className="hover:text-ink" href="/screens/clients">Clients</a>
-              <a className="hover:text-ink" href="/screens/obligations">Laws</a>
-              <a className="hover:text-ink" href="/screens/filings">Filings</a>
-              <a className="text-ink border-b border-ink pb-0.5">Organisation</a>
-              <a className="hover:text-ink">Reports</a>
-            </nav>
+            <ScreenPreviewNav active="org-hierarchy" />
           </div>
           <div className="flex items-center gap-4">
             <button
