@@ -1,5 +1,6 @@
 const path = require('path');
 const nodeExternals = require('webpack-node-externals');
+const { buildPackageAliases, buildDomainAliases } = require('../../packages/webpack-aliases.cjs');
 
 module.exports = function (options) {
   return {
@@ -27,8 +28,8 @@ module.exports = function (options) {
         path.resolve(__dirname, '../../node_modules'),
       ],
       alias: {
-        '@packages': path.resolve(__dirname, '../../packages'),
-        '@domains': path.resolve(__dirname, '../../domains'),
+        ...buildPackageAliases(path.resolve(__dirname, '../../packages')),
+        ...buildDomainAliases(path.resolve(__dirname, '../../domains')),
       },
     },
   };
