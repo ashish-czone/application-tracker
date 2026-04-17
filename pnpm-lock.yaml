@@ -2453,6 +2453,9 @@ importers:
       '@packages/platform-ui':
         specifier: workspace:*
         version: link:../../../platform/platform-ui
+      '@packages/tasks-contract':
+        specifier: workspace:*
+        version: link:../contracts
       '@packages/ui':
         specifier: workspace:*
         version: link:../../../core/ui
