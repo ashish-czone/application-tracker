@@ -1574,6 +1574,7 @@ export function ConsolePreviewPage() {
                     ]}
                     value={coarseUnderline}
                     onChange={setCoarseUnderline}
+                    animated
                   />
                   <p className="pt-4 text-sm text-ink-soft">
                     Underline variant with count pips — used for list-screen status cuts.

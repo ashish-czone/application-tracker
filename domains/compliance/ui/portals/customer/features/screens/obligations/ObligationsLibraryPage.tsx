@@ -353,7 +353,7 @@ export function ObligationsLibraryPage() {
         {/* ─── Full-width table block ───────────────────────────────────── */}
         <section className="mt-10">
           {/* Coarse tabs — status cut */}
-          <CoarseTabs variant="segmented" tabs={statusTabs} value={statusTab} onChange={setStatusTab} />
+          <CoarseTabs tabs={statusTabs} value={statusTab} onChange={setStatusTab} animated />
 
           <DataGridShell
             columns={OBLIGATION_COLUMNS}

@@ -516,10 +516,10 @@ export function ClientsPage() {
         {/* ─── Table section ────────────────────────────────────────────── */}
         <section className="mt-10">
           <CoarseTabs
-            variant="segmented"
             tabs={statusTabs}
             value={statusTab}
             onChange={setStatusTab}
+            animated
           />
 
           <DataGridShell

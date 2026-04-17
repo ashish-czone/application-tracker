@@ -440,7 +440,7 @@ export function ClientDetailPage() {
 
         {/* ─── Tabs ─────────────────────────────────────────────────────── */}
         <CoarseTabs
-          variant="segmented"
+          animated
           tabs={detailTabs}
           value={activeTab}
           onChange={setActiveTab}
@@ -455,7 +455,7 @@ export function ClientDetailPage() {
           {activeTab === 'filings' && (
             <div>
               <CoarseTabs
-                variant="segmented"
+                animated
                 tabs={filingStatusTabs}
                 value={filingStatusTab}
                 onChange={setFilingStatusTab}
