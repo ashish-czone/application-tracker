@@ -129,13 +129,13 @@ export const Combobox = React.forwardRef<HTMLButtonElement, ComboboxProps>(
             align="start"
           >
             <Command shouldFilter={false}>
-              <div className="flex items-center border-b px-3">
+              <div className="flex items-center border-b">
                 <Command.Input
                   ref={inputRef}
                   value={search}
                   onValueChange={setSearch}
                   placeholder={searchPlaceholder}
-                  className="flex h-9 w-full bg-transparent py-2 text-sm outline-none placeholder:text-muted-foreground"
+                  className="flex h-9 w-full bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground"
                 />
               </div>
               <Command.List
