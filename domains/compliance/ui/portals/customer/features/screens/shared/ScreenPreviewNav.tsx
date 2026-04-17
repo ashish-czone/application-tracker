@@ -1,4 +1,4 @@
-export type ScreenKey = 'dashboard' | 'clients' | 'obligations' | 'filings' | 'org-hierarchy' | 'reports';
+export type ScreenKey = 'dashboard' | 'clients' | 'obligations' | 'filings' | 'org-hierarchy' | 'roles' | 'reports';
 
 const ITEMS: Array<{ key: ScreenKey; label: string; href: string }> = [
   { key: 'dashboard', label: 'Dashboard', href: '/screens/dashboard' },
@@ -6,6 +6,7 @@ const ITEMS: Array<{ key: ScreenKey; label: string; href: string }> = [
   { key: 'obligations', label: 'Laws', href: '/screens/obligations' },
   { key: 'filings', label: 'Filings', href: '/screens/filings' },
   { key: 'org-hierarchy', label: 'Organisation', href: '/screens/org-hierarchy' },
+  { key: 'roles', label: 'Roles', href: '/screens/roles' },
   { key: 'reports', label: 'Reports', href: '#' },
 ];
 
