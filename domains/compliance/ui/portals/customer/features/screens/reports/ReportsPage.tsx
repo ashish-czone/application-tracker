@@ -45,7 +45,7 @@ function StackedBarChart({
   const barH = 140;
 
   return (
-    <div className="flex items-end gap-6 h-[180px] px-2">
+    <div className="flex items-end justify-center gap-6 h-[180px] px-2">
       {data.map((d) => {
         const total = d.onTime + d.late + d.overdue;
         const scale = total / maxVal;
