@@ -157,6 +157,7 @@ export { useDebounce } from './hooks/useDebounce';
 export { useDataGridParams } from './hooks/useDataGridParams';
 export { useActiveFilters } from './hooks/useActiveFilters';
 export { useAsyncValidator } from './hooks/useAsyncValidator';
+export { useSlidingHighlight, type SlidingHighlightResult } from './hooks/useSlidingHighlight';
 
 // Utilities
 export { cn } from './lib/utils';
