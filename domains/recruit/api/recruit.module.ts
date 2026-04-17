@@ -21,8 +21,6 @@ import { INTERVIEWS_CONFIG } from './interviews/interviews.config';
 import { OffersModule } from './offers/offers.module';
 import { offersConfig } from './offers/offers.config';
 
-import { TaskClaimModule } from './tasks/tasks.module';
-
 @Module({
   imports: [
     SharedModule,
@@ -46,7 +44,6 @@ import { TaskClaimModule } from './tasks/tasks.module';
 
     EntityEngineModule.forEntity(TASKS_CONFIG),
     TasksModule,
-    TaskClaimModule,
   ],
 })
 export class RecruitDomainModule {}

@@ -9,12 +9,16 @@
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
+    "@nestjs/swagger": "^11.0.0",
+    "@packages/auth": "workspace:*",
     "@packages/database": "workspace:*",
     "@packages/entity-engine": "workspace:*",
     "@packages/logger": "workspace:*",
     "@packages/org-units": "workspace:*",
+    "@packages/rbac": "workspace:*",
     "@packages/tasks-contract": "workspace:*",
     "@packages/taxonomy": "workspace:*",
+    "class-validator": "^0.14.1",
     "drizzle-orm": "^0.45.1"
   },
   "devDependencies": {
