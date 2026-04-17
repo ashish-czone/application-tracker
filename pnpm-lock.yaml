@@ -2406,6 +2406,9 @@ importers:
       '@packages/org-units':
         specifier: workspace:*
         version: link:../../org-units/api
+      '@packages/tasks-contract':
+        specifier: workspace:*
+        version: link:../contracts
       '@packages/taxonomy':
         specifier: workspace:*
         version: link:../../../platform/taxonomy/api
