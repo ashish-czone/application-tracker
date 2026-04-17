@@ -37,6 +37,7 @@ import { FilingsPage } from '@domains/compliance-ui/portals/customer/features/sc
 import { OrgHierarchyPage } from '@domains/compliance-ui/portals/customer/features/screens/org-hierarchy';
 import { RolesEditorPage } from '@domains/compliance-ui/portals/customer/features/screens/roles';
 import { UsersPage } from '@domains/compliance-ui/portals/customer/features/screens/users';
+import { ReportsPage } from '@domains/compliance-ui/portals/customer/features/screens/reports';
 import { api } from './lib/api';
 import './globals.css';
 
@@ -94,6 +95,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/screens/org-hierarchy" element={<OrgHierarchyPage />} />
           <Route path="/screens/roles" element={<RolesEditorPage />} />
           <Route path="/screens/users" element={<UsersPage />} />
+          <Route path="/screens/reports" element={<ReportsPage />} />
         </Routes>
       </BrowserRouter>
     ) : (
