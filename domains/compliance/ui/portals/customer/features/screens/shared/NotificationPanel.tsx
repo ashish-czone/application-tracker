@@ -305,10 +305,14 @@ function formatRelativeTime(iso: string): string {
   const diffMs = NOW.getTime() - then.getTime();
   const diffMin = Math.floor(diffMs / 60_000);
   const diffHr = Math.floor(diffMs / 3_600_000);
-  const diffDay = Math.floor(diffMs / 86_400_000);
 
-  if (diffMin < 60) return `${diffMin}m ago`;
-  if (diffHr < 24) return `${diffHr}h ago`;
+  // Calendar-day difference (not raw 24h blocks)
+  const nowDay = startOfDay(NOW);
+  const thenDay = startOfDay(then);
+  const diffDay = Math.round((nowDay - thenDay) / 86_400_000);
+
+  if (diffDay === 0 && diffMin < 60) return `${diffMin}m ago`;
+  if (diffDay === 0) return `${diffHr}h ago`;
   if (diffDay === 1) return 'Yesterday';
   if (diffDay < 7) return `${diffDay}d ago`;
   return then.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
