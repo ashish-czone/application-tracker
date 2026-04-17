@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef, useCallback } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import {
   Search,
@@ -93,6 +93,107 @@ function RiskPill({ risk }: { risk: ClientRiskLevel }) {
       <span className={`w-1.5 h-1.5 flex-none ${RISK_TONE[risk]}`} aria-hidden />
       <span className="text-ink-soft">{RISK_LABEL[risk]}</span>
     </span>
+  );
+}
+
+function ClientPreviewPopover({
+  client,
+  anchorRect,
+}: {
+  client: ClientRow;
+  anchorRect: DOMRect | null;
+}) {
+  if (!anchorRect) return null;
+
+  // Position below the row, aligned to the left of the name cell
+  const top = anchorRect.bottom + 6;
+  const left = Math.max(16, anchorRect.left);
+
+  // Flip upward if it would overflow the viewport
+  const viewportH = typeof window !== 'undefined' ? window.innerHeight : 900;
+  const wouldOverflow = top + 200 > viewportH;
+  const finalTop = wouldOverflow ? anchorRect.top - 206 : top;
+
+  return (
+    <div
+      className="fixed z-50 w-[320px] border border-rule bg-paper-raised shadow-lg"
+      style={{ top: finalTop, left }}
+    >
+      <div className="p-4">
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-3">
+          <span
+            aria-hidden
+            className="w-9 h-9 flex-none flex items-center justify-center text-[11px] font-sans font-semibold text-paper-raised"
+            style={{ backgroundColor: client.color }}
+          >
+            {client.initials}
+          </span>
+          <div className="min-w-0">
+            <div className="text-sm font-sans font-medium text-ink leading-snug truncate">
+              {client.name}
+            </div>
+            <div className="font-serif italic text-[11px] text-ink-muted truncate">
+              {client.legalName}
+            </div>
+          </div>
+        </div>
+
+        {/* Tax ID */}
+        <div className="font-mono text-[10px] tracking-wide text-ink-muted mb-3">
+          {client.taxIdentifier}
+        </div>
+
+        {/* Stats grid */}
+        <div className="grid grid-cols-3 gap-px bg-rule border border-rule mb-3">
+          <div className="bg-paper-raised p-2 text-center">
+            <div className="font-mono text-sm tabular-nums text-ink">{client.openFilings || '—'}</div>
+            <div className="text-[9px] uppercase tracking-eyebrow font-sans text-ink-muted mt-0.5">Open</div>
+          </div>
+          <div className="bg-paper-raised p-2 text-center">
+            <div className={`font-mono text-sm tabular-nums ${client.overdueFilings > 0 ? 'text-signal' : 'text-ink'}`}>
+              {client.overdueFilings || '—'}
+            </div>
+            <div className="text-[9px] uppercase tracking-eyebrow font-sans text-ink-muted mt-0.5">Overdue</div>
+          </div>
+          <div className="bg-paper-raised p-2 text-center">
+            <div className="font-mono text-sm tabular-nums text-ink">
+              {client.onTimePct > 0 ? `${client.onTimePct}%` : '—'}
+            </div>
+            <div className="text-[9px] uppercase tracking-eyebrow font-sans text-ink-muted mt-0.5">On-time</div>
+          </div>
+        </div>
+
+        {/* Risk + handler row */}
+        <div className="flex items-center justify-between">
+          {client.status === 'active' ? (
+            <RiskPill risk={client.risk} />
+          ) : (
+            <span className="text-[10px] uppercase tracking-eyebrow font-sans text-ink-muted">
+              {client.status}
+            </span>
+          )}
+          <div className="flex items-center gap-1.5">
+            <span
+              aria-hidden
+              className="w-5 h-5 flex-none bg-authority text-paper-raised text-[9px] font-sans font-semibold flex items-center justify-center"
+            >
+              {client.primaryHandler.initials}
+            </span>
+            <span className="text-[11px] font-sans text-ink-soft">
+              {client.primaryHandler.name.split(' ')[0]}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="border-t border-rule px-4 py-2">
+        <span className="text-[10px] font-sans text-ink-muted">
+          Click row to view full profile →
+        </span>
+      </div>
+    </div>
   );
 }
 
@@ -215,6 +316,29 @@ export function ClientsPage() {
   const [isDark, setIsDark] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
+  // Hover popover state
+  const [hoveredClient, setHoveredClient] = useState<ClientRow | null>(null);
+  const [hoverRect, setHoverRect] = useState<DOMRect | null>(null);
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleRowMouseEnter = useCallback((client: ClientRow, e: React.MouseEvent<HTMLTableRowElement>) => {
+    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    // Capture rect immediately — React nullifies currentTarget after the event handler returns
+    const rect = e.currentTarget.getBoundingClientRect();
+    hoverTimerRef.current = setTimeout(() => {
+      setHoveredClient(client);
+      setHoverRect(rect);
+    }, 400);
+  }, []);
+
+  const handleRowMouseLeave = useCallback(() => {
+    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    hoverTimerRef.current = setTimeout(() => {
+      setHoveredClient(null);
+      setHoverRect(null);
+    }, 150);
+  }, []);
+
   // Filter state.
   const [search, setSearch] = useState('');
   const [statusTab, setStatusTab] = useState<StatusTab>('all');
@@ -332,11 +456,11 @@ export function ClientsPage() {
               Compliance<span className="text-signal">.</span>
             </span>
             <nav className="flex items-center gap-6 text-[11px] uppercase tracking-eyebrow font-sans font-medium text-ink-soft">
-              <a className="hover:text-ink">Dashboard</a>
-              <a className="text-ink border-b border-ink pb-0.5">Clients</a>
-              <a className="hover:text-ink">Laws</a>
-              <a className="hover:text-ink">Filings</a>
-              <a className="hover:text-ink">Reports</a>
+              <a href="/screens/dashboard" className="hover:text-ink">Dashboard</a>
+              <a href="/screens/clients" className="text-ink border-b border-ink pb-0.5">Clients</a>
+              <a href="/screens/obligations" className="hover:text-ink">Laws</a>
+              <a href="/screens/filings" className="hover:text-ink">Filings</a>
+              <a href="#" className="hover:text-ink">Reports</a>
             </nav>
           </div>
           <div className="flex items-center gap-4">
@@ -532,13 +656,23 @@ export function ClientsPage() {
 
           <ActiveFilterChips filters={activeFilters} onClearAll={clearAll} />
 
-          <div className="mt-4 bg-paper-raised border border-rule overflow-x-auto">
+          <div
+            className="mt-4 bg-paper-raised border border-rule overflow-x-auto"
+            onMouseLeave={handleRowMouseLeave}
+          >
             <DataTable
               columns={CLIENT_COLUMNS}
               visibleColumns={visibleColumns}
               rows={paginatedRows}
               getRowKey={(c) => c.id}
-              onRowClick={() => {}}
+              onRowClick={(client) => {
+                window.location.href = `/screens/clients/${client.id}`;
+              }}
+              rowProps={(client) => ({
+                onMouseEnter: (e: React.MouseEvent<HTMLTableRowElement>) =>
+                  handleRowMouseEnter(client, e),
+                onMouseLeave: handleRowMouseLeave,
+              })}
             />
             <Pagination
               page={page}
@@ -558,6 +692,10 @@ export function ClientsPage() {
       <AnimatePresence>
         {drawerOpen && <NewClientDrawer onClose={() => setDrawerOpen(false)} />}
       </AnimatePresence>
+
+      {hoveredClient && (
+        <ClientPreviewPopover client={hoveredClient} anchorRect={hoverRect} />
+      )}
     </div>
   );
 }

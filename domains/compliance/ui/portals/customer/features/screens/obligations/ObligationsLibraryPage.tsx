@@ -315,11 +315,11 @@ export function ObligationsLibraryPage() {
               Compliance<span className="text-signal">.</span>
             </span>
             <nav className="flex items-center gap-6 text-[11px] uppercase tracking-eyebrow font-sans font-medium text-ink-soft">
-              <a className="hover:text-ink">Dashboard</a>
-              <a className="hover:text-ink">Clients</a>
-              <a className="text-ink border-b border-ink pb-0.5">Laws</a>
-              <a className="hover:text-ink">Filings</a>
-              <a className="hover:text-ink">Reports</a>
+              <a href="/screens/dashboard" className="hover:text-ink">Dashboard</a>
+              <a href="/screens/clients" className="hover:text-ink">Clients</a>
+              <a href="/screens/obligations" className="text-ink border-b border-ink pb-0.5">Laws</a>
+              <a href="/screens/filings" className="hover:text-ink">Filings</a>
+              <a href="#" className="hover:text-ink">Reports</a>
             </nav>
           </div>
           <div className="flex items-center gap-4">

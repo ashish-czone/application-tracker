@@ -31,7 +31,7 @@ import { complianceWeb } from '@domains/compliance-ui';
 import { ConsolePreviewPage } from '@domains/compliance-ui/portals/customer/features/console-preview';
 import { DashboardScreenPage } from '@domains/compliance-ui/portals/customer/features/screens/dashboard';
 import { ObligationsLibraryPage } from '@domains/compliance-ui/portals/customer/features/screens/obligations';
-import { ClientsPage } from '@domains/compliance-ui/portals/customer/features/screens/clients';
+import { ClientsPage, ClientDetailPage } from '@domains/compliance-ui/portals/customer/features/screens/clients';
 import { FilingsPage } from '@domains/compliance-ui/portals/customer/features/screens/filings';
 import { OrgHierarchyPage } from '@domains/compliance-ui/portals/customer/features/screens/org-hierarchy';
 import { api } from './lib/api';
@@ -77,7 +77,8 @@ const pathname = window.location.pathname;
 const isConsolePreview = pathname.startsWith('/console-preview');
 const isDashboardScreen = pathname.startsWith('/screens/dashboard');
 const isObligationsScreen = pathname.startsWith('/screens/obligations');
-const isClientsScreen = pathname.startsWith('/screens/clients');
+const isClientDetailScreen = /^\/screens\/clients\/[^/]+$/.test(pathname);
+const isClientsScreen = pathname === '/screens/clients';
 const isFilingsScreen = pathname.startsWith('/screens/filings');
 const isOrgHierarchyScreen = pathname.startsWith('/screens/org-hierarchy');
 
@@ -89,6 +90,8 @@ createRoot(document.getElementById('root')!).render(
       <DashboardScreenPage />
     ) : isObligationsScreen ? (
       <ObligationsLibraryPage />
+    ) : isClientDetailScreen ? (
+      <ClientDetailPage />
     ) : isClientsScreen ? (
       <ClientsPage />
     ) : isFilingsScreen ? (
