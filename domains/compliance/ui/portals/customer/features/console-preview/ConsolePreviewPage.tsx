@@ -522,11 +522,11 @@ export function ConsolePreviewPage() {
               Compliance<span className="text-signal">.</span>
             </span>
             <nav className="flex items-center gap-6 text-[11px] uppercase tracking-eyebrow font-sans font-medium text-ink-soft">
-              <a className="text-ink border-b border-ink pb-0.5">Console</a>
-              <a className="hover:text-ink">Clients</a>
-              <a className="hover:text-ink">Laws</a>
-              <a className="hover:text-ink">Filings</a>
-              <a className="hover:text-ink">Reports</a>
+              <a href="/console-preview" className="text-ink border-b border-ink pb-0.5">Console</a>
+              <a href="/screens/clients" className="hover:text-ink">Clients</a>
+              <a href="/screens/obligations" className="hover:text-ink">Laws</a>
+              <a href="/screens/filings" className="hover:text-ink">Filings</a>
+              <a href="#" className="hover:text-ink">Reports</a>
             </nav>
           </div>
           <div className="flex items-center gap-4">

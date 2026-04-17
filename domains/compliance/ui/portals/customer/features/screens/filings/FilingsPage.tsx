@@ -2,19 +2,16 @@ import { useMemo, useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import {
   Search,
-  Command as CommandIcon,
-  Moon,
-  Sun,
   ChevronRight,
   AlertTriangle,
   List,
   Columns3,
   CalendarDays,
+  Download,
 } from 'lucide-react';
 import {
   MetricKPI,
-  DataTable,
-  Pagination,
+  DataGridShell,
   Button,
   FilterPopover,
   ColumnChooser,
@@ -41,6 +38,7 @@ import {
 } from './filingsMock';
 import { FilingDetailDrawer } from './FilingDetailDrawer';
 import type { Filing } from '../../../../../shared/types';
+import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 
 // ─── Constants ──────────────────────────────────────────────────────
 
@@ -158,8 +156,6 @@ const KANBAN_COLUMNS: KanbanColumnDef[] = [
 // ─── Page ───────────────────────────────────────────────────────────
 
 export function FilingsPage() {
-  const [isDark, setIsDark] = useState(false);
-
   // View mode.
   const [viewMode, setViewMode] = useState<ViewMode>('list');
 
@@ -173,27 +169,13 @@ export function FilingsPage() {
   // Column visibility.
   const [visibleColumns, setVisibleColumns] = useState<string[]>(ALL_COLUMN_KEYS);
 
-  // Pagination.
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-
   // Detail drawer.
   const [selectedFiling, setSelectedFiling] = useState<FilingRow | null>(null);
 
-  const toggleDark = () => {
-    setIsDark((prev) => {
-      const next = !prev;
-      if (typeof document !== 'undefined') {
-        document.body.classList.toggle('dark', next);
-      }
-      return next;
-    });
-  };
 
   // ── Filtering ───────────────────────────────────────────────────
 
   const filtered = useMemo(() => {
-    setPage(1);
     const q = search.trim().toLowerCase();
     return MOCK_FILING_ROWS.filter((f) => {
       if (statusTab !== 'all' && f.status !== statusTab) return false;
@@ -206,9 +188,6 @@ export function FilingsPage() {
       return true;
     });
   }, [statusTab, clientFilter, lawFilter, handlerFilter, search]);
-
-  const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const paginatedRows = filtered.slice((page - 1) * pageSize, page * pageSize);
 
   // ── Active filter chips ─────────────────────────────────────────
 
@@ -331,61 +310,7 @@ export function FilingsPage() {
 
   return (
     <div className="min-h-screen bg-paper paper-grain">
-      {/* ─── Top chrome ─────────────────────────────────────────────────── */}
-      <div className="border-b border-rule bg-paper-raised">
-        <div className="max-w-[1480px] mx-auto px-10 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <span className="font-serif text-2xl italic text-ink leading-none">
-              Compliance<span className="text-signal">.</span>
-            </span>
-            <nav className="flex items-center gap-6 text-[11px] uppercase tracking-eyebrow font-sans font-medium text-ink-soft">
-              <a className="hover:text-ink">Dashboard</a>
-              <a className="hover:text-ink">Clients</a>
-              <a className="hover:text-ink">Laws</a>
-              <a className="text-ink border-b border-ink pb-0.5">Filings</a>
-              <a className="hover:text-ink">Reports</a>
-            </nav>
-          </div>
-          <div className="flex items-center gap-4">
-            <button
-              type="button"
-              className="flex items-center gap-2 px-3 py-1.5 border border-rule hover:border-ink text-[11px] text-ink-muted hover:text-ink font-sans transition-colors"
-            >
-              <Search className="w-3 h-3" strokeWidth={1.5} />
-              <span>Search or command</span>
-              <span className="ml-4 flex items-center gap-0.5 font-mono text-[10px] text-ink-muted/80">
-                <CommandIcon className="w-3 h-3" strokeWidth={1.5} />K
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={toggleDark}
-              aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-              className="flex items-center justify-center w-8 h-8 border border-rule hover:border-ink text-ink-muted hover:text-ink transition-colors"
-            >
-              {isDark ? (
-                <Sun className="w-3.5 h-3.5" strokeWidth={1.5} />
-              ) : (
-                <Moon className="w-3.5 h-3.5" strokeWidth={1.5} />
-              )}
-            </button>
-            <div className="flex items-center gap-2 pl-4 border-l border-rule">
-              <span
-                aria-hidden
-                className="w-7 h-7 bg-authority text-paper-raised text-[10px] font-sans font-semibold flex items-center justify-center"
-              >
-                DI
-              </span>
-              <div className="text-right">
-                <div className="text-xs text-ink font-sans leading-none">Deepak Iyer</div>
-                <div className="text-[10px] uppercase tracking-eyebrow text-ink-muted font-sans mt-0.5">
-                  Partner
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <ScreenPreviewTopBar active="filings" />
 
       <main className="max-w-[1480px] mx-auto px-10 py-8">
         {/* ─── Page header ──────────────────────────────────────────────── */}
@@ -547,6 +472,14 @@ export function FilingsPage() {
               <span className="font-mono text-[11px] tabular-nums text-ink-soft">
                 {filtered.length} of {totalFilings}
               </span>
+              <button
+                type="button"
+                className="inline-flex items-center gap-1.5 px-2.5 py-[5px] border border-rule text-[10px] font-sans font-semibold uppercase tracking-[0.14em] text-ink-soft bg-paper-raised hover:border-ink hover:text-ink transition-colors"
+                aria-label="Export"
+              >
+                <Download className="w-3.5 h-3.5" strokeWidth={1.5} />
+                <span>Export</span>
+              </button>
               {viewMode === 'list' && (
                 <ColumnChooser
                   columns={columnChooserItems}
@@ -561,26 +494,15 @@ export function FilingsPage() {
 
           {/* ── List view ──────────────────────────────────────────── */}
           {viewMode === 'list' && (
-            <div className="mt-4 bg-paper-raised border border-rule overflow-x-auto">
-              <DataTable
-                columns={FILING_COLUMNS}
-                visibleColumns={visibleColumns}
-                rows={paginatedRows}
-                getRowKey={(f) => f.id}
-                onRowClick={(f) => setSelectedFiling(f)}
-              />
-              <Pagination
-                page={page}
-                pageSize={pageSize}
-                pageCount={pageCount}
-                totalRows={filtered.length}
-                onPageChange={setPage}
-                onPageSizeChange={(size) => {
-                  setPageSize(size);
-                  setPage(1);
-                }}
-              />
-            </div>
+            <DataGridShell
+              columns={FILING_COLUMNS}
+              rows={filtered}
+              getRowKey={(f) => f.id}
+              onRowClick={(f) => setSelectedFiling(f)}
+              visibleColumns={visibleColumns}
+              onVisibleColumnsChange={setVisibleColumns}
+              hideToolbar
+            />
           )}
 
           {/* ── Kanban view ────────────────────────────────────────── */}

@@ -1,23 +1,12 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
-import {
-  Search,
-  Command as CommandIcon,
-  Plus,
-  Moon,
-  Sun,
-  Upload,
-  ChevronRight,
-} from 'lucide-react';
+import { Search, Plus, Upload, ChevronRight } from 'lucide-react';
 import {
   MetricKPI,
-  DataTable,
-  Pagination,
+  DataGridShell,
   JurisdictionTag,
   Button,
   FilterPopover,
-  ColumnChooser,
-  ActiveFilterChips,
   CoarseTabs,
   type DataTableColumn,
   type ActiveFilter,
@@ -31,6 +20,7 @@ import {
   type ObligationFrequency,
 } from './obligationsMock';
 import { NewObligationDrawer } from './NewObligationDrawer';
+import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 
 const FREQUENCY_LABEL: Record<ObligationFrequency, string> = {
   monthly: 'Monthly',
@@ -172,11 +162,9 @@ const OBLIGATION_COLUMNS: DataTableColumn<Obligation>[] = [
   },
 ];
 
-const ALL_COLUMN_KEYS = OBLIGATION_COLUMNS.map((c) => c.key);
 const REQUIRED_COLUMN_KEYS: string[] = ['code', 'name'];
 
 export function ObligationsLibraryPage() {
-  const [isDark, setIsDark] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   // Filter state — popover multi-selects return arrays.
@@ -188,26 +176,7 @@ export function ObligationsLibraryPage() {
   // Coarse tab takes the place of the sidebar "Status" section.
   const [statusTab, setStatusTab] = useState<StatusTab>('all');
 
-  // Column visibility driven by ColumnChooser.
-  const [visibleColumns, setVisibleColumns] = useState<string[]>(ALL_COLUMN_KEYS);
-
-  // Pagination state.
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-
-  const toggleDark = () => {
-    setIsDark((prev) => {
-      const next = !prev;
-      if (typeof document !== 'undefined') {
-        document.body.classList.toggle('dark', next);
-      }
-      return next;
-    });
-  };
-
   const filtered = useMemo(() => {
-    // Reset to page 1 whenever filters change.
-    setPage(1);
     const q = search.trim().toLowerCase();
     return MOCK_OBLIGATIONS.filter((o) => {
       if (statusTab !== 'all' && o.status !== statusTab) return false;
@@ -222,9 +191,6 @@ export function ObligationsLibraryPage() {
       return true;
     });
   }, [statusTab, lawFilter, jurisdictionFilter, frequencyFilter, search]);
-
-  const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const paginatedRows = filtered.slice((page - 1) * pageSize, page * pageSize);
 
   // Derive active filter chips from filter state.
   const activeFilters: ActiveFilter[] = useMemo(() => {
@@ -287,12 +253,6 @@ export function ObligationsLibraryPage() {
     count: MOCK_OBLIGATIONS.filter((o) => o.frequency === f.value).length,
   }));
 
-  const columnChooserItems = OBLIGATION_COLUMNS.map((c) => ({
-    key: c.key,
-    label: c.header,
-    required: REQUIRED_COLUMN_KEYS.includes(c.key),
-  }));
-
   // Coarse tab counts.
   const statusTabs = [
     { value: 'all' as const, label: 'All', count: MOCK_OBLIGATIONS.length },
@@ -307,61 +267,7 @@ export function ObligationsLibraryPage() {
 
   return (
     <div className="min-h-screen bg-paper paper-grain">
-      {/* ─── Top chrome ─────────────────────────────────────────────────── */}
-      <div className="border-b border-rule bg-paper-raised">
-        <div className="max-w-[1480px] mx-auto px-10 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <span className="font-serif text-2xl italic text-ink leading-none">
-              Compliance<span className="text-signal">.</span>
-            </span>
-            <nav className="flex items-center gap-6 text-[11px] uppercase tracking-eyebrow font-sans font-medium text-ink-soft">
-              <a className="hover:text-ink">Dashboard</a>
-              <a className="hover:text-ink">Clients</a>
-              <a className="text-ink border-b border-ink pb-0.5">Laws</a>
-              <a className="hover:text-ink">Filings</a>
-              <a className="hover:text-ink">Reports</a>
-            </nav>
-          </div>
-          <div className="flex items-center gap-4">
-            <button
-              type="button"
-              className="flex items-center gap-2 px-3 py-1.5 border border-rule hover:border-ink text-[11px] text-ink-muted hover:text-ink font-sans transition-colors"
-            >
-              <Search className="w-3 h-3" strokeWidth={1.5} />
-              <span>Search or command</span>
-              <span className="ml-4 flex items-center gap-0.5 font-mono text-[10px] text-ink-muted/80">
-                <CommandIcon className="w-3 h-3" strokeWidth={1.5} />K
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={toggleDark}
-              aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-              className="flex items-center justify-center w-8 h-8 border border-rule hover:border-ink text-ink-muted hover:text-ink transition-colors"
-            >
-              {isDark ? (
-                <Sun className="w-3.5 h-3.5" strokeWidth={1.5} />
-              ) : (
-                <Moon className="w-3.5 h-3.5" strokeWidth={1.5} />
-              )}
-            </button>
-            <div className="flex items-center gap-2 pl-4 border-l border-rule">
-              <span
-                aria-hidden
-                className="w-7 h-7 bg-authority text-paper-raised text-[10px] font-sans font-semibold flex items-center justify-center"
-              >
-                DI
-              </span>
-              <div className="text-right">
-                <div className="text-xs text-ink font-sans leading-none">Deepak Iyer</div>
-                <div className="text-[10px] uppercase tracking-eyebrow text-ink-muted font-sans mt-0.5">
-                  Partner
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <ScreenPreviewTopBar active="obligations" />
 
       <main className="max-w-[1480px] mx-auto px-10 py-8">
         {/* ─── Page header ──────────────────────────────────────────────── */}
@@ -449,75 +355,49 @@ export function ObligationsLibraryPage() {
           {/* Coarse tabs — status cut */}
           <CoarseTabs variant="segmented" tabs={statusTabs} value={statusTab} onChange={setStatusTab} />
 
-          {/* Filter bar — search + popover filter buttons + column chooser */}
-          <div className="flex items-center gap-3 py-3 border-b border-rule">
-            <label className="flex items-center gap-2 min-w-[200px] max-w-xs flex-1 border-b border-rule focus-within:border-ink transition-colors pb-1">
-              <Search className="w-3.5 h-3.5 text-ink-muted flex-none" strokeWidth={1.5} />
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search obligations…"
-                className="w-full bg-transparent outline-none text-sm text-ink placeholder:text-ink-muted font-sans"
-              />
-            </label>
-
-            <div className="flex items-center gap-2">
-              <FilterPopover
-                label="Law group"
-                options={lawOptions}
-                value={lawFilter}
-                onChange={(v) => setLawFilter(v as LawGroupKey[])}
-              />
-              <FilterPopover
-                label="Jurisdiction"
-                options={jurisdictionOptions}
-                value={jurisdictionFilter}
-                onChange={(v) => setJurisdictionFilter(v as JurisdictionKey[])}
-              />
-              <FilterPopover
-                label="Cadence"
-                options={frequencyOptions}
-                value={frequencyFilter}
-                onChange={(v) => setFrequencyFilter(v as ObligationFrequency[])}
-              />
-            </div>
-
-            <div className="ml-auto flex items-center gap-3">
-              <span className="font-mono text-[11px] tabular-nums text-ink-soft">
-                {filtered.length} of {MOCK_OBLIGATIONS.length}
-              </span>
-              <ColumnChooser
-                columns={columnChooserItems}
-                visible={visibleColumns}
-                onChange={setVisibleColumns}
-              />
-            </div>
-          </div>
-
-          {/* Active filter chips — always visible summary of what's applied */}
-          <ActiveFilterChips filters={activeFilters} onClearAll={clearAll} />
-
-          <div className="mt-4 bg-paper-raised border border-rule overflow-x-auto">
-            <DataTable
-              columns={OBLIGATION_COLUMNS}
-              visibleColumns={visibleColumns}
-              rows={paginatedRows}
-              getRowKey={(o) => o.id}
-              onRowClick={() => {}}
-            />
-            <Pagination
-              page={page}
-              pageSize={pageSize}
-              pageCount={pageCount}
-              totalRows={filtered.length}
-              onPageChange={setPage}
-              onPageSizeChange={(size) => {
-                setPageSize(size);
-                setPage(1);
-              }}
-            />
-          </div>
+          <DataGridShell
+            columns={OBLIGATION_COLUMNS}
+            rows={filtered}
+            getRowKey={(o) => o.id}
+            requiredColumns={REQUIRED_COLUMN_KEYS}
+            totalRows={MOCK_OBLIGATIONS.length}
+            activeFilters={activeFilters}
+            onClearFilters={clearAll}
+            filters={
+              <>
+                <label className="flex items-center gap-2 min-w-[200px] max-w-xs flex-1 border-b border-rule focus-within:border-ink transition-colors pb-1">
+                  <Search className="w-3.5 h-3.5 text-ink-muted flex-none" strokeWidth={1.5} />
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search obligations…"
+                    className="w-full bg-transparent outline-none text-sm text-ink placeholder:text-ink-muted font-sans"
+                  />
+                </label>
+                <div className="flex items-center gap-2">
+                  <FilterPopover
+                    label="Law group"
+                    options={lawOptions}
+                    value={lawFilter}
+                    onChange={(v) => setLawFilter(v as LawGroupKey[])}
+                  />
+                  <FilterPopover
+                    label="Jurisdiction"
+                    options={jurisdictionOptions}
+                    value={jurisdictionFilter}
+                    onChange={(v) => setJurisdictionFilter(v as JurisdictionKey[])}
+                  />
+                  <FilterPopover
+                    label="Cadence"
+                    options={frequencyOptions}
+                    value={frequencyFilter}
+                    onChange={(v) => setFrequencyFilter(v as ObligationFrequency[])}
+                  />
+                </div>
+              </>
+            }
+          />
         </section>
       </main>
 
