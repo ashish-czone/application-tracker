@@ -45,6 +45,8 @@
       "@packages/workflows/*": ["./packages/platform/workflows/api/*"],
       "@packages/org-units": ["./packages/addons/org-units/api"],
       "@packages/org-units/*": ["./packages/addons/org-units/api/*"],
+      "@packages/tasks-contract": ["./packages/addons/tasks/contracts"],
+      "@packages/tasks-contract/*": ["./packages/addons/tasks/contracts/*"],
       "@packages/taxonomy": ["./packages/platform/taxonomy/api"],
       "@packages/taxonomy/*": ["./packages/platform/taxonomy/api/*"],
       "@packages/taxonomy-ui": ["./packages/platform/taxonomy/ui"],
