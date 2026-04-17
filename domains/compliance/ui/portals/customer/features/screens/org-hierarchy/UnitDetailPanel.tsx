@@ -151,7 +151,7 @@ export function UnitDetailPanel({
 
         {/* Tabs */}
         <div className="mt-0">
-          <CoarseTabs tabs={tabsWithCount} value={tab} onChange={setTab} animated />
+          <CoarseTabs tabs={tabsWithCount} value={tab} onChange={setTab} />
         </div>
       </div>
 
