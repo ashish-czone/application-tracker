@@ -38,9 +38,10 @@ export interface FilingRow extends Filing {
 
 export const FILINGS_TODAY = new Date(2026, 3, 15); // 15 April 2026
 
-function daysFromToday(offset: number): string {
+function daysFromToday(offset: number, hour = 10, minute = 0): string {
   const d = new Date(FILINGS_TODAY);
   d.setDate(d.getDate() + offset);
+  d.setHours(hour, minute, 0, 0);
   return d.toISOString();
 }
 
@@ -58,14 +59,14 @@ function makeActivity(filingId: string, handler: Handler, status: Filing['status
       id: `${filingId}-a1`,
       type: 'created',
       actor: MOCK_HANDLERS[3],
-      timestamp: daysFromToday(-30),
+      timestamp: daysFromToday(-30, 9, 15),
       detail: 'Filing created for this period',
     },
     {
       id: `${filingId}-a2`,
       type: 'assigned',
       actor: MOCK_HANDLERS[3],
-      timestamp: daysFromToday(-28),
+      timestamp: daysFromToday(-30, 9, 22),
       detail: `Assigned to ${handler.name}`,
     },
     ...(status === 'filed'
@@ -74,7 +75,7 @@ function makeActivity(filingId: string, handler: Handler, status: Filing['status
             id: `${filingId}-a3`,
             type: 'status-change' as const,
             actor: handler,
-            timestamp: daysFromToday(-2),
+            timestamp: daysFromToday(-2, 14, 35),
             detail: 'Status changed to Filed',
           },
         ]
