@@ -4,11 +4,10 @@ import {
   Globe,
   SlidersHorizontal,
   ChevronRight,
-  ChevronDown,
   Upload,
   ImageIcon,
 } from 'lucide-react';
-import { Button, Eyebrow } from '@packages/ui';
+import { Button, Combobox, Eyebrow } from '@packages/ui';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 import {
   ADMIN_SETTINGS_SECTIONS,
@@ -29,64 +28,6 @@ const SECTION_ICONS: Record<AdminSettingsSection, typeof Building2> = {
 
 function SectionDivider() {
   return <div className="border-t border-rule" />;
-}
-
-function SelectField({
-  field,
-  value,
-  onChange,
-}: {
-  field: AdminSettingField;
-  value: string;
-  onChange: (v: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const selected = field.options?.find((o) => o.value === value);
-
-  return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between px-3 py-2 border border-rule bg-paper text-sm font-sans text-ink hover:border-ink transition-colors text-left"
-      >
-        <span className={selected ? 'text-ink' : 'text-ink-muted'}>
-          {selected?.label ?? 'Select...'}
-        </span>
-        <ChevronDown
-          className={`w-3.5 h-3.5 text-ink-muted transition-transform ${open ? 'rotate-180' : ''}`}
-          strokeWidth={1.5}
-        />
-      </button>
-      {open && (
-        <>
-          <div
-            className="fixed inset-0 z-10"
-            onClick={() => setOpen(false)}
-          />
-          <div className="absolute z-20 top-full left-0 right-0 mt-1 border border-rule bg-paper-raised shadow-sm max-h-[240px] overflow-y-auto">
-            {field.options?.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => {
-                  onChange(opt.value);
-                  setOpen(false);
-                }}
-                className={`w-full px-3 py-2 text-sm font-sans text-left transition-colors ${
-                  opt.value === value
-                    ? 'bg-authority/5 text-authority'
-                    : 'text-ink hover:bg-paper-sunken'
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
-    </div>
-  );
 }
 
 function SettingRow({
@@ -118,7 +59,13 @@ function SettingRow({
           />
         )}
         {field.type === 'select' && (
-          <SelectField field={field} value={value} onChange={onChange} />
+          <Combobox
+            value={value}
+            onChange={onChange}
+            options={field.options}
+            placeholder="Select..."
+            searchPlaceholder="Search..."
+          />
         )}
         {field.type === 'logo' && (
           <LogoUploadField />
