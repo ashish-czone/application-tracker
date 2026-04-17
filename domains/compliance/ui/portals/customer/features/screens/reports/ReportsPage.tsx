@@ -406,9 +406,9 @@ export function ReportsPage() {
   }, [search]);
 
   const reportTabs = [
-    { value: 'compliance' as const, label: 'Compliance Summary' },
-    { value: 'overdue' as const, label: 'Overdue Aging' },
-    { value: 'workload' as const, label: 'Team Workload' },
+    { value: 'compliance' as const, label: (<span className="inline-flex items-center gap-1.5"><TrendingUp className="w-3 h-3" strokeWidth={1.5} />Compliance Summary</span>) },
+    { value: 'overdue' as const, label: (<span className="inline-flex items-center gap-1.5"><Clock className="w-3 h-3" strokeWidth={1.5} />Overdue Aging</span>) },
+    { value: 'workload' as const, label: (<span className="inline-flex items-center gap-1.5"><Users className="w-3 h-3" strokeWidth={1.5} />Team Workload</span>) },
   ];
 
   return (
@@ -485,25 +485,13 @@ export function ReportsPage() {
         </section>
 
         {/* ─── Report tabs ──────────────────────────────────────── */}
-        <div className="flex items-center border-b border-rule mb-6">
-          {reportTabs.map((tab) => (
-            <button
-              key={tab.value}
-              type="button"
-              onClick={() => { setActiveTab(tab.value); setSearch(''); }}
-              className={`flex items-center gap-1.5 px-4 py-2.5 text-[11px] uppercase tracking-eyebrow font-sans font-medium transition-colors border-b-2 -mb-px ${
-                activeTab === tab.value
-                  ? 'text-ink border-ink'
-                  : 'text-ink-muted border-transparent hover:text-ink'
-              }`}
-            >
-              {tab.value === 'compliance' && <TrendingUp className="w-3 h-3" strokeWidth={1.5} />}
-              {tab.value === 'overdue' && <Clock className="w-3 h-3" strokeWidth={1.5} />}
-              {tab.value === 'workload' && <Users className="w-3 h-3" strokeWidth={1.5} />}
-              {tab.label}
-            </button>
-          ))}
-        </div>
+        <CoarseTabs
+          tabs={reportTabs}
+          value={activeTab}
+          onChange={(v) => { setActiveTab(v); setSearch(''); }}
+          animated
+          className="mb-6"
+        />
 
         {/* ─── Report content ───────────────────────────────────── */}
         {activeTab === 'compliance' && (
