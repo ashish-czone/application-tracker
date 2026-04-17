@@ -26,9 +26,19 @@ This applies to **every** type of change:
 5. **Exit worktree** — use `ExitWorktree` with `action: "remove"` after merge (work is on main)
 6. **Pull main** — immediately after exiting, run `git pull origin main` so the main checkout has the merged changes
 
+## CRITICAL: Never leave unmerged work in a worktree
+
+**Steps 4–6 are mandatory before moving on.** A worktree with unmerged commits is invisible to future sessions and will be lost when cleaned up.
+
+- **After every feature/task:** complete the full push → PR → merge → exit → pull cycle before starting the next feature or ending the session.
+- **Never defer merging.** "I'll come back to it" is not acceptable — the next session won't know the worktree exists.
+- **If the session is ending:** merge whatever is committed, even if the feature is partial. A partial PR on main is recoverable; uncommitted work in a deleted worktree is not.
+- **If context is running low:** prioritize merging over new work. Losing 8 commits of finished work is worse than not starting the next task.
+
 ## Why
 
 - Main repo checkout stays clean for the user and other sessions
 - Parallel work across sessions doesn't conflict
 - Changes are isolated until explicitly merged via PR
 - Prevents accidental direct commits to main
+- **Unmerged worktrees get lost** — future sessions and worktree cleanup will discard them, destroying finished work
