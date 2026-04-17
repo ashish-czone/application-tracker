@@ -54,8 +54,8 @@ function StackedBarChart({
         const overdueH = (d.overdue / total) * barH * scale;
 
         return (
-          <div key={d.month} className="flex-1 flex flex-col items-stretch gap-1 min-w-0">
-            <div className="w-full flex flex-col justify-end" style={{ height: barH }}>
+          <div key={d.month} className="flex-1 flex flex-col items-center gap-1 min-w-0">
+            <div className="w-10 flex flex-col justify-end" style={{ height: barH }}>
               <div className="w-full bg-signal" style={{ height: overdueH }} />
               <div className="w-full bg-due-soon" style={{ height: lateH }} />
               <div className="w-full bg-filed" style={{ height: onTimeH }} />
