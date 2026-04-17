@@ -19,6 +19,8 @@
       "@packages/entity-engine/*": ["./packages/platform/entity-engine/api/*"],
       "@packages/entity-engine-ui": ["./packages/platform/entity-engine/ui"],
       "@packages/entity-engine-ui/*": ["./packages/platform/entity-engine/ui/*"],
+      "@packages/entity-engine-contract": ["./packages/platform/entity-engine/contracts"],
+      "@packages/entity-engine-contract/*": ["./packages/platform/entity-engine/contracts/*"],
       "@packages/notification-channels": ["./packages/platform/notification-channels/api"],
       "@packages/notification-channels/*": ["./packages/platform/notification-channels/api/*"],
       "@packages/notification-channels-ui": ["./packages/platform/notification-channels/ui"],
