@@ -504,8 +504,17 @@ export function RolesEditorPage() {
           {/* ── Resize handle ────────────────────────────────────── */}
           <div
             onPointerDown={onPointerDown}
-            className="w-1 shrink-0 cursor-col-resize hover:bg-ink/10 active:bg-ink/20 transition-colors"
-          />
+            className="group relative w-1.5 shrink-0 cursor-col-resize hover:bg-ink/10 active:bg-ink/20 transition-colors flex items-center justify-center"
+          >
+            {/* Grip dots — visible clamp so users know this is draggable */}
+            <div className="flex flex-col gap-[3px] opacity-30 group-hover:opacity-60 transition-opacity">
+              <span className="block w-[3px] h-[3px] rounded-full bg-ink" />
+              <span className="block w-[3px] h-[3px] rounded-full bg-ink" />
+              <span className="block w-[3px] h-[3px] rounded-full bg-ink" />
+              <span className="block w-[3px] h-[3px] rounded-full bg-ink" />
+              <span className="block w-[3px] h-[3px] rounded-full bg-ink" />
+            </div>
+          </div>
 
           {/* ── Right: detail panel ─────────────────────────────────── */}
           <div className="flex-1 flex flex-col overflow-hidden">
