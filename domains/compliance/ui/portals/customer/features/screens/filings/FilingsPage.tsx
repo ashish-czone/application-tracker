@@ -10,6 +10,7 @@ import {
   List,
   Columns3,
   CalendarDays,
+  Download,
 } from 'lucide-react';
 import {
   MetricKPI,
@@ -546,6 +547,14 @@ export function FilingsPage() {
               <span className="font-mono text-[11px] tabular-nums text-ink-soft">
                 {filtered.length} of {totalFilings}
               </span>
+              <button
+                type="button"
+                className="inline-flex items-center gap-1.5 px-2.5 py-[5px] border border-rule text-[10px] font-sans font-semibold uppercase tracking-[0.14em] text-ink-soft bg-paper-raised hover:border-ink hover:text-ink transition-colors"
+                aria-label="Export"
+              >
+                <Download className="w-3.5 h-3.5" strokeWidth={1.5} />
+                <span>Export</span>
+              </button>
               {viewMode === 'list' && (
                 <ColumnChooser
                   columns={columnChooserItems}
