@@ -52,6 +52,17 @@ export interface DataGridShellProps<T> {
    *  toolbar is rendered externally (e.g. shared across multiple view modes). */
   hideToolbar?: boolean;
 
+  // ─── Selection ───────────────────────────────────────────────────
+  /** Enable row selection — adds a leading checkbox column to the table. */
+  selectable?: boolean;
+  /** Controlled set of currently-selected row keys. Persists across pagination. */
+  selectedKeys?: Set<string>;
+  /** Called when selection changes. The header checkbox toggles selection
+   *  for rows on the current page only — selection persists across pages. */
+  onSelectionChange?: (next: Set<string>) => void;
+  /** Per-row predicate to disable selection for specific rows. */
+  isRowSelectable?: (row: T, index: number) => boolean;
+
   // ─── Container ───────────────────────────────────────────────────
   className?: string;
   /** Extra props spread onto the table container div (e.g. onMouseLeave). */
@@ -89,6 +100,10 @@ export function DataGridShell<T>({
   defaultPageSize = 10,
   onExport,
   hideToolbar = false,
+  selectable,
+  selectedKeys,
+  onSelectionChange,
+  isRowSelectable,
   className,
   containerProps,
 }: DataGridShellProps<T>) {
@@ -181,6 +196,10 @@ export function DataGridShell<T>({
           rowProps={rowProps}
           emptyState={emptyState}
           staggerReveal={staggerReveal}
+          selectable={selectable}
+          selectedKeys={selectedKeys}
+          onSelectionChange={onSelectionChange}
+          isRowSelectable={isRowSelectable}
         />
         <Pagination
           page={page}

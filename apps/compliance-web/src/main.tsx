@@ -25,7 +25,7 @@ import { NotesSection } from '@packages/notes-ui';
 import { AttachmentsSection } from '@packages/attachments-ui';
 import { EvaluationsSection } from '@packages/evaluations-ui';
 import { AuditTimeline } from '@packages/audit-ui';
-import { AvatarNameCell } from '@packages/ui';
+import { AvatarNameCell, Toaster } from '@packages/ui';
 import { CheckSquare, Building2, UserCog, Network } from 'lucide-react';
 import type { MenuItem } from '@packages/domains';
 import { complianceWeb } from '@domains/compliance-ui';
@@ -105,6 +105,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/screens/global-sets" element={<GlobalSetsPage />} />
           <Route path="/screens/admin-settings" element={<AdminSettingsPage />} />
         </Routes>
+        <Toaster />
       </BrowserRouter>
     ) : (
       <WebShell

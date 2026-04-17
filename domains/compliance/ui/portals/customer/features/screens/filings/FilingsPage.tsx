@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   Search,
@@ -8,6 +8,7 @@ import {
   Columns3,
   CalendarDays,
   Download,
+  UserPlus,
 } from 'lucide-react';
 import {
   MetricKPI,
@@ -16,11 +17,13 @@ import {
   FilterPopover,
   ColumnChooser,
   ActiveFilterChips,
+  BulkActionBar,
   CoarseTabs,
   OrdinalDate,
   UrgencyBadge,
   JurisdictionTag,
   KanbanBoard,
+  toast,
   type DataTableColumn,
   type ActiveFilter,
   type KanbanColumnDef,
@@ -37,7 +40,9 @@ import {
   LAW_OPTIONS,
   type FilingRow,
 } from './filingsMock';
+import { MOCK_HANDLERS } from '../../console-preview/mockData';
 import { FilingDetailDrawer } from './FilingDetailDrawer';
+import { BulkReassignDialog, type BulkReassignSubmitPayload } from './BulkReassignDialog';
 import type { Filing } from '../../../../../shared/types';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 
@@ -171,11 +176,18 @@ export function FilingsPage() {
   // Column visibility.
   const [visibleColumns, setVisibleColumns] = useState<string[]>(ALL_COLUMN_KEYS);
 
-  // Local mutable copy of filing rows (supports kanban drag-and-drop).
+  // Local mutable copy of filing rows (supports kanban drag-and-drop + bulk edits).
   const [filingRows, setFilingRows] = useState<FilingRow[]>(MOCK_FILING_ROWS);
 
   // Detail drawer.
   const [selectedFiling, setSelectedFiling] = useState<FilingRow | null>(null);
+
+  // Multi-row selection (for bulk actions). Spans pagination. Cleared on
+  // filter change so the selection can't silently contain off-screen rows.
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // Reassign dialog.
+  const [reassignOpen, setReassignOpen] = useState(false);
 
 
   // ── Filtering ───────────────────────────────────────────────────
@@ -233,6 +245,63 @@ export function FilingsPage() {
     setLawFilter([]);
     setHandlerFilter([]);
   };
+
+  // Clear selection whenever the filter or tab inputs change — otherwise
+  // hidden rows could stay selected and leak into a bulk action.
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [statusTab, clientFilter, lawFilter, handlerFilter, search]);
+
+  // Restrict active selection to rows that are still visible after filtering.
+  const visibleIds = useMemo(() => new Set(filtered.map((f) => f.id)), [filtered]);
+  const effectiveSelectedIds = useMemo(() => {
+    const next = new Set<string>();
+    for (const id of selectedIds) if (visibleIds.has(id)) next.add(id);
+    return next;
+  }, [selectedIds, visibleIds]);
+
+  const selectedFilings = useMemo(
+    () => filingRows.filter((f) => effectiveSelectedIds.has(f.id)),
+    [filingRows, effectiveSelectedIds],
+  );
+
+  // ── Bulk reassign ───────────────────────────────────────────────
+
+  function applyReassign({ newHandlerId, notify, note }: BulkReassignSubmitPayload) {
+    const newHandler = MOCK_HANDLERS.find((h) => h.id === newHandlerId);
+    if (!newHandler) return;
+
+    const targetIds = new Set(effectiveSelectedIds);
+    // Snapshot prior assignments for undo.
+    const before = new Map<string, FilingRow['handler']>();
+    for (const f of filingRows) {
+      if (targetIds.has(f.id)) before.set(f.id, f.handler);
+    }
+
+    setFilingRows((prev) =>
+      prev.map((f) => (targetIds.has(f.id) ? { ...f, handler: newHandler } : f)),
+    );
+    setSelectedIds(new Set());
+    setReassignOpen(false);
+
+    const count = targetIds.size;
+    const noun = count === 1 ? 'filing' : 'filings';
+    toast.success(`${count} ${noun} reassigned to ${newHandler.name}`, {
+      description: notify
+        ? `${newHandler.name.split(' ')[0]} will be notified${note ? ` with your note` : ''}.`
+        : undefined,
+      duration: 10_000,
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          setFilingRows((prev) =>
+            prev.map((f) => (before.has(f.id) ? { ...f, handler: before.get(f.id) } : f)),
+          );
+          toast.message(`Reassignment of ${count} ${noun} reverted`);
+        },
+      },
+    });
+  }
 
   // ── KPI aggregates ──────────────────────────────────────────────
 
@@ -524,6 +593,32 @@ export function FilingsPage() {
 
           <ActiveFilterChips filters={activeFilters} onClearAll={clearAll} />
 
+          {/* ── Bulk action bar — only shown on list view where selection exists ── */}
+          {viewMode === 'list' && (
+            <AnimatePresence>
+              {effectiveSelectedIds.size > 0 && (
+                <BulkActionBar
+                  count={effectiveSelectedIds.size}
+                  itemNoun="filing"
+                  onClear={() => setSelectedIds(new Set())}
+                  actions={[
+                    {
+                      label: 'Reassign',
+                      icon: UserPlus,
+                      onClick: () => setReassignOpen(true),
+                    },
+                    {
+                      label: 'Export',
+                      icon: Download,
+                      onClick: () =>
+                        toast.message(`Export ${effectiveSelectedIds.size} filings (stub)`),
+                    },
+                  ]}
+                />
+              )}
+            </AnimatePresence>
+          )}
+
           {/* ── List view ──────────────────────────────────────────── */}
           {viewMode === 'list' && (
             <DataGridShell
@@ -534,6 +629,9 @@ export function FilingsPage() {
               visibleColumns={visibleColumns}
               onVisibleColumnsChange={setVisibleColumns}
               hideToolbar
+              selectable
+              selectedKeys={effectiveSelectedIds}
+              onSelectionChange={setSelectedIds}
             />
           )}
 
@@ -604,6 +702,15 @@ export function FilingsPage() {
           />
         )}
       </AnimatePresence>
+
+      {/* ─── Bulk reassign dialog ─────────────────────────────────────── */}
+      <BulkReassignDialog
+        open={reassignOpen}
+        onOpenChange={setReassignOpen}
+        filings={selectedFilings}
+        handlers={MOCK_HANDLERS}
+        onConfirm={applyReassign}
+      />
     </div>
   );
 }
