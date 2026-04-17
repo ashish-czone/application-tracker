@@ -41,6 +41,7 @@ import { ReportsPage } from '@domains/compliance-ui/portals/customer/features/sc
 import { SettingsPage } from '@domains/compliance-ui/portals/customer/features/screens/settings';
 import { LawsLibraryPage } from '@domains/compliance-ui/portals/customer/features/screens/laws';
 import { GlobalSetsPage } from '@domains/compliance-ui/portals/customer/features/screens/global-sets';
+import { AdminSettingsPage } from '@domains/compliance-ui/portals/customer/features/screens/admin-settings';
 import { api } from './lib/api';
 import './globals.css';
 
@@ -102,6 +103,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/screens/reports" element={<ReportsPage />} />
           <Route path="/screens/settings" element={<SettingsPage />} />
           <Route path="/screens/global-sets" element={<GlobalSetsPage />} />
+          <Route path="/screens/admin-settings" element={<AdminSettingsPage />} />
         </Routes>
       </BrowserRouter>
     ) : (

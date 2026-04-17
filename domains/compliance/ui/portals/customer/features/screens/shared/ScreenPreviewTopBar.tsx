@@ -15,6 +15,7 @@ import {
   Building2,
   Shield,
   Users as UsersIcon,
+  Wrench,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -146,6 +147,15 @@ export function ScreenPreviewTopBar({ active }: { active: ScreenKey }) {
                   >
                     <UsersIcon className="w-3.5 h-3.5 mr-2 text-ink-muted" strokeWidth={1.5} />
                     Users
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link
+                    to="/screens/admin-settings"
+                    className="rounded-none px-3 py-2 text-xs font-sans text-ink focus:bg-paper focus:text-ink cursor-pointer flex items-center"
+                  >
+                    <Wrench className="w-3.5 h-3.5 mr-2 text-ink-muted" strokeWidth={1.5} />
+                    Admin Settings
                   </Link>
                 </DropdownMenuItem>
               </div>
