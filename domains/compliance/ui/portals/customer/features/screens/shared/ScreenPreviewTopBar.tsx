@@ -1,12 +1,28 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router';
-import { Search, Command as CommandIcon, Moon, Sun, Bell, User, Settings, KeyRound, LogOut } from 'lucide-react';
+import { Link, useNavigate } from 'react-router';
+import {
+  Search,
+  Command as CommandIcon,
+  Moon,
+  Sun,
+  Bell,
+  User,
+  Settings,
+  KeyRound,
+  LogOut,
+  SlidersHorizontal,
+  Layers,
+  Building2,
+  Shield,
+  Users as UsersIcon,
+} from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuLabel,
 } from '@packages/ui';
 import { ScreenPreviewNav, type ScreenKey } from './ScreenPreviewNav';
 import { NotificationPanel } from './NotificationPanel';
@@ -77,6 +93,64 @@ export function ScreenPreviewTopBar({ active }: { active: ScreenKey }) {
               <Moon className="w-3.5 h-3.5" strokeWidth={1.5} />
             )}
           </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                aria-label="Open workspace menu"
+                className="flex items-center justify-center w-8 h-8 border border-rule hover:border-ink text-ink-muted hover:text-ink transition-colors outline-none focus-visible:outline-none"
+              >
+                <SlidersHorizontal className="w-3.5 h-3.5" strokeWidth={1.5} />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              sideOffset={8}
+              className="rounded-none border-rule bg-paper-raised text-ink p-0 min-w-[240px] shadow-none"
+            >
+              <DropdownMenuLabel className="px-4 py-3 text-[10px] uppercase tracking-eyebrow text-ink-muted font-sans font-medium border-b border-rule">
+                Workspace
+              </DropdownMenuLabel>
+              <div className="p-1">
+                <DropdownMenuItem asChild>
+                  <Link
+                    to="/screens/global-sets"
+                    className="rounded-none px-3 py-2 text-xs font-sans text-ink focus:bg-paper focus:text-ink cursor-pointer flex items-center"
+                  >
+                    <Layers className="w-3.5 h-3.5 mr-2 text-ink-muted" strokeWidth={1.5} />
+                    Global Sets
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link
+                    to="/screens/org-hierarchy"
+                    className="rounded-none px-3 py-2 text-xs font-sans text-ink focus:bg-paper focus:text-ink cursor-pointer flex items-center"
+                  >
+                    <Building2 className="w-3.5 h-3.5 mr-2 text-ink-muted" strokeWidth={1.5} />
+                    Organisation
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link
+                    to="/screens/roles"
+                    className="rounded-none px-3 py-2 text-xs font-sans text-ink focus:bg-paper focus:text-ink cursor-pointer flex items-center"
+                  >
+                    <Shield className="w-3.5 h-3.5 mr-2 text-ink-muted" strokeWidth={1.5} />
+                    Roles & Permissions
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link
+                    to="/screens/users"
+                    className="rounded-none px-3 py-2 text-xs font-sans text-ink focus:bg-paper focus:text-ink cursor-pointer flex items-center"
+                  >
+                    <UsersIcon className="w-3.5 h-3.5 mr-2 text-ink-muted" strokeWidth={1.5} />
+                    Users
+                  </Link>
+                </DropdownMenuItem>
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button

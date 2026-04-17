@@ -525,9 +525,10 @@ export function ConsolePreviewPage() {
             <nav className="flex items-center gap-6 text-[11px] uppercase tracking-eyebrow font-sans font-medium text-ink-soft">
               <Link to="/console-preview" className="text-ink border-b border-ink pb-0.5">Console</Link>
               <Link to="/screens/clients" className="hover:text-ink">Clients</Link>
-              <Link to="/screens/obligations" className="hover:text-ink">Laws</Link>
+              <Link to="/screens/laws" className="hover:text-ink">Laws</Link>
+              <Link to="/screens/obligations" className="hover:text-ink">Obligations</Link>
               <Link to="/screens/filings" className="hover:text-ink">Filings</Link>
-              <a href="#" className="hover:text-ink">Reports</a>
+              <Link to="/screens/reports" className="hover:text-ink">Reports</Link>
             </nav>
           </div>
           <div className="flex items-center gap-4">
