@@ -11,8 +11,7 @@ import {
 } from 'lucide-react';
 import {
   MetricKPI,
-  DataTable,
-  Pagination,
+  DataGridShell,
   Button,
   FilterPopover,
   ColumnChooser,
@@ -170,10 +169,6 @@ export function FilingsPage() {
   // Column visibility.
   const [visibleColumns, setVisibleColumns] = useState<string[]>(ALL_COLUMN_KEYS);
 
-  // Pagination.
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-
   // Detail drawer.
   const [selectedFiling, setSelectedFiling] = useState<FilingRow | null>(null);
 
@@ -181,7 +176,6 @@ export function FilingsPage() {
   // ── Filtering ───────────────────────────────────────────────────
 
   const filtered = useMemo(() => {
-    setPage(1);
     const q = search.trim().toLowerCase();
     return MOCK_FILING_ROWS.filter((f) => {
       if (statusTab !== 'all' && f.status !== statusTab) return false;
@@ -194,9 +188,6 @@ export function FilingsPage() {
       return true;
     });
   }, [statusTab, clientFilter, lawFilter, handlerFilter, search]);
-
-  const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const paginatedRows = filtered.slice((page - 1) * pageSize, page * pageSize);
 
   // ── Active filter chips ─────────────────────────────────────────
 
@@ -507,26 +498,15 @@ export function FilingsPage() {
 
           {/* ── List view ──────────────────────────────────────────── */}
           {viewMode === 'list' && (
-            <div className="mt-4 bg-paper-raised border border-rule overflow-x-auto">
-              <DataTable
-                columns={FILING_COLUMNS}
-                visibleColumns={visibleColumns}
-                rows={paginatedRows}
-                getRowKey={(f) => f.id}
-                onRowClick={(f) => setSelectedFiling(f)}
-              />
-              <Pagination
-                page={page}
-                pageSize={pageSize}
-                pageCount={pageCount}
-                totalRows={filtered.length}
-                onPageChange={setPage}
-                onPageSizeChange={(size) => {
-                  setPageSize(size);
-                  setPage(1);
-                }}
-              />
-            </div>
+            <DataGridShell
+              columns={FILING_COLUMNS}
+              rows={filtered}
+              getRowKey={(f) => f.id}
+              onRowClick={(f) => setSelectedFiling(f)}
+              visibleColumns={visibleColumns}
+              onVisibleColumnsChange={setVisibleColumns}
+              hideToolbar
+            />
           )}
 
           {/* ── Kanban view ────────────────────────────────────────── */}

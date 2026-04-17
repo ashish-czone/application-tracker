@@ -1,15 +1,12 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
-import { Search, Plus, Upload, Download, ChevronRight } from 'lucide-react';
+import { Search, Plus, Upload, ChevronRight } from 'lucide-react';
 import {
   MetricKPI,
-  DataTable,
-  Pagination,
+  DataGridShell,
   JurisdictionTag,
   Button,
   FilterPopover,
-  ColumnChooser,
-  ActiveFilterChips,
   CoarseTabs,
   type DataTableColumn,
   type ActiveFilter,
@@ -165,7 +162,6 @@ const OBLIGATION_COLUMNS: DataTableColumn<Obligation>[] = [
   },
 ];
 
-const ALL_COLUMN_KEYS = OBLIGATION_COLUMNS.map((c) => c.key);
 const REQUIRED_COLUMN_KEYS: string[] = ['code', 'name'];
 
 export function ObligationsLibraryPage() {
@@ -180,16 +176,7 @@ export function ObligationsLibraryPage() {
   // Coarse tab takes the place of the sidebar "Status" section.
   const [statusTab, setStatusTab] = useState<StatusTab>('all');
 
-  // Column visibility driven by ColumnChooser.
-  const [visibleColumns, setVisibleColumns] = useState<string[]>(ALL_COLUMN_KEYS);
-
-  // Pagination state.
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-
   const filtered = useMemo(() => {
-    // Reset to page 1 whenever filters change.
-    setPage(1);
     const q = search.trim().toLowerCase();
     return MOCK_OBLIGATIONS.filter((o) => {
       if (statusTab !== 'all' && o.status !== statusTab) return false;
@@ -204,9 +191,6 @@ export function ObligationsLibraryPage() {
       return true;
     });
   }, [statusTab, lawFilter, jurisdictionFilter, frequencyFilter, search]);
-
-  const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const paginatedRows = filtered.slice((page - 1) * pageSize, page * pageSize);
 
   // Derive active filter chips from filter state.
   const activeFilters: ActiveFilter[] = useMemo(() => {
@@ -267,12 +251,6 @@ export function ObligationsLibraryPage() {
     value: f.value,
     label: f.label,
     count: MOCK_OBLIGATIONS.filter((o) => o.frequency === f.value).length,
-  }));
-
-  const columnChooserItems = OBLIGATION_COLUMNS.map((c) => ({
-    key: c.key,
-    label: c.header,
-    required: REQUIRED_COLUMN_KEYS.includes(c.key),
   }));
 
   // Coarse tab counts.
@@ -377,83 +355,49 @@ export function ObligationsLibraryPage() {
           {/* Coarse tabs — status cut */}
           <CoarseTabs variant="segmented" tabs={statusTabs} value={statusTab} onChange={setStatusTab} />
 
-          {/* Filter bar — search + popover filter buttons + column chooser */}
-          <div className="flex items-center gap-3 py-3 border-b border-rule">
-            <label className="flex items-center gap-2 min-w-[200px] max-w-xs flex-1 border-b border-rule focus-within:border-ink transition-colors pb-1">
-              <Search className="w-3.5 h-3.5 text-ink-muted flex-none" strokeWidth={1.5} />
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search obligations…"
-                className="w-full bg-transparent outline-none text-sm text-ink placeholder:text-ink-muted font-sans"
-              />
-            </label>
-
-            <div className="flex items-center gap-2">
-              <FilterPopover
-                label="Law group"
-                options={lawOptions}
-                value={lawFilter}
-                onChange={(v) => setLawFilter(v as LawGroupKey[])}
-              />
-              <FilterPopover
-                label="Jurisdiction"
-                options={jurisdictionOptions}
-                value={jurisdictionFilter}
-                onChange={(v) => setJurisdictionFilter(v as JurisdictionKey[])}
-              />
-              <FilterPopover
-                label="Cadence"
-                options={frequencyOptions}
-                value={frequencyFilter}
-                onChange={(v) => setFrequencyFilter(v as ObligationFrequency[])}
-              />
-            </div>
-
-            <div className="ml-auto flex items-center gap-3">
-              <span className="font-mono text-[11px] tabular-nums text-ink-soft">
-                {filtered.length} of {MOCK_OBLIGATIONS.length}
-              </span>
-              <button
-                type="button"
-                className="inline-flex items-center gap-1.5 px-2.5 py-[5px] border border-rule text-[10px] font-sans font-semibold uppercase tracking-[0.14em] text-ink-soft bg-paper-raised hover:border-ink hover:text-ink transition-colors"
-                aria-label="Export"
-              >
-                <Download className="w-3.5 h-3.5" strokeWidth={1.5} />
-                <span>Export</span>
-              </button>
-              <ColumnChooser
-                columns={columnChooserItems}
-                visible={visibleColumns}
-                onChange={setVisibleColumns}
-              />
-            </div>
-          </div>
-
-          {/* Active filter chips — always visible summary of what's applied */}
-          <ActiveFilterChips filters={activeFilters} onClearAll={clearAll} />
-
-          <div className="mt-4 bg-paper-raised border border-rule overflow-x-auto">
-            <DataTable
-              columns={OBLIGATION_COLUMNS}
-              visibleColumns={visibleColumns}
-              rows={paginatedRows}
-              getRowKey={(o) => o.id}
-              onRowClick={() => {}}
-            />
-            <Pagination
-              page={page}
-              pageSize={pageSize}
-              pageCount={pageCount}
-              totalRows={filtered.length}
-              onPageChange={setPage}
-              onPageSizeChange={(size) => {
-                setPageSize(size);
-                setPage(1);
-              }}
-            />
-          </div>
+          <DataGridShell
+            columns={OBLIGATION_COLUMNS}
+            rows={filtered}
+            getRowKey={(o) => o.id}
+            requiredColumns={REQUIRED_COLUMN_KEYS}
+            totalRows={MOCK_OBLIGATIONS.length}
+            activeFilters={activeFilters}
+            onClearFilters={clearAll}
+            filters={
+              <>
+                <label className="flex items-center gap-2 min-w-[200px] max-w-xs flex-1 border-b border-rule focus-within:border-ink transition-colors pb-1">
+                  <Search className="w-3.5 h-3.5 text-ink-muted flex-none" strokeWidth={1.5} />
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search obligations…"
+                    className="w-full bg-transparent outline-none text-sm text-ink placeholder:text-ink-muted font-sans"
+                  />
+                </label>
+                <div className="flex items-center gap-2">
+                  <FilterPopover
+                    label="Law group"
+                    options={lawOptions}
+                    value={lawFilter}
+                    onChange={(v) => setLawFilter(v as LawGroupKey[])}
+                  />
+                  <FilterPopover
+                    label="Jurisdiction"
+                    options={jurisdictionOptions}
+                    value={jurisdictionFilter}
+                    onChange={(v) => setJurisdictionFilter(v as JurisdictionKey[])}
+                  />
+                  <FilterPopover
+                    label="Cadence"
+                    options={frequencyOptions}
+                    value={frequencyFilter}
+                    onChange={(v) => setFrequencyFilter(v as ObligationFrequency[])}
+                  />
+                </div>
+              </>
+            }
+          />
         </section>
       </main>
 
