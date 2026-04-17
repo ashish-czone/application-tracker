@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
 import {
   Shield,
   Plus,
@@ -337,6 +337,28 @@ export function RolesEditorPage() {
   const [memberSearch, setMemberSearch] = useState('');
   const [addMemberOpen, setAddMemberOpen] = useState(false);
 
+  // ── Resizable split ─────────────────────────────────────────────
+  const [leftWidth, setLeftWidth] = useState(280);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const dragging = useRef(false);
+
+  const onPointerDown = useCallback((e: React.PointerEvent) => {
+    e.preventDefault();
+    dragging.current = true;
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  }, []);
+
+  const onPointerMove = useCallback((e: React.PointerEvent) => {
+    if (!dragging.current || !containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    setLeftWidth(Math.max(200, Math.min(x, 480)));
+  }, []);
+
+  const onPointerUp = useCallback(() => {
+    dragging.current = false;
+  }, []);
+
   const selectedRole = roles.find((r) => r.id === selectedRoleId) ?? roles[0];
   const enabledPermissions = useMemo(
     () => new Set(selectedRole.permissions),
@@ -442,11 +464,14 @@ export function RolesEditorPage() {
 
         {/* ─── Master-detail split ──────────────────────────────────────── */}
         <div
+          ref={containerRef}
           className="flex border border-rule bg-paper-raised"
           style={{ height: 'calc(100vh - 260px)', minHeight: '540px' }}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
         >
           {/* ── Left: role list ──────────────────────────────────────── */}
-          <div className="w-[280px] shrink-0 border-r border-rule flex flex-col">
+          <div className="shrink-0 border-r border-rule flex flex-col" style={{ width: leftWidth }}>
             <div className="px-4 py-3 border-b border-rule flex items-center justify-between">
               <span className="text-[11px] uppercase tracking-eyebrow font-sans font-semibold text-ink-muted">
                 Roles
@@ -475,6 +500,12 @@ export function RolesEditorPage() {
               ))}
             </div>
           </div>
+
+          {/* ── Resize handle ────────────────────────────────────── */}
+          <div
+            onPointerDown={onPointerDown}
+            className="w-1 shrink-0 cursor-col-resize hover:bg-ink/10 active:bg-ink/20 transition-colors"
+          />
 
           {/* ── Right: detail panel ─────────────────────────────────── */}
           <div className="flex-1 flex flex-col overflow-hidden">
