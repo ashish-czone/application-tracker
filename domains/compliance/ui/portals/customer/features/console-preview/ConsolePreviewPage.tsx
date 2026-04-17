@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { Link } from 'react-router';
 import type { ColumnDef } from '@tanstack/react-table';
 import {
   Search,
@@ -522,10 +523,10 @@ export function ConsolePreviewPage() {
               Compliance<span className="text-signal">.</span>
             </span>
             <nav className="flex items-center gap-6 text-[11px] uppercase tracking-eyebrow font-sans font-medium text-ink-soft">
-              <a href="/console-preview" className="text-ink border-b border-ink pb-0.5">Console</a>
-              <a href="/screens/clients" className="hover:text-ink">Clients</a>
-              <a href="/screens/obligations" className="hover:text-ink">Laws</a>
-              <a href="/screens/filings" className="hover:text-ink">Filings</a>
+              <Link to="/console-preview" className="text-ink border-b border-ink pb-0.5">Console</Link>
+              <Link to="/screens/clients" className="hover:text-ink">Clients</Link>
+              <Link to="/screens/obligations" className="hover:text-ink">Laws</Link>
+              <Link to="/screens/filings" className="hover:text-ink">Filings</Link>
               <a href="#" className="hover:text-ink">Reports</a>
             </nav>
           </div>

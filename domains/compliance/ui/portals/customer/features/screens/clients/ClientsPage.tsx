@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router';
 import { AnimatePresence } from 'framer-motion';
 import { Search, Plus, Upload, ChevronRight, AlertTriangle } from 'lucide-react';
 import {
@@ -301,6 +302,7 @@ const REQUIRED_COLUMN_KEYS: string[] = ['name'];
 // ─── Page ───────────────────────────────────────────────────────────
 
 export function ClientsPage() {
+  const navigate = useNavigate();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   // Hover popover state
@@ -527,7 +529,7 @@ export function ClientsPage() {
             requiredColumns={REQUIRED_COLUMN_KEYS}
             totalRows={totalClients}
             onRowClick={(client) => {
-              window.location.href = `/screens/clients/${client.id}`;
+              navigate(`/screens/clients/${client.id}`);
             }}
             rowProps={(client) => ({
               onMouseEnter: (e: React.MouseEvent<HTMLTableRowElement>) =>

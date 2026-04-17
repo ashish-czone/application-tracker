@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router';
 import {
   ChevronRight,
   ChevronLeft,
@@ -366,10 +367,10 @@ export function ClientDetailPage() {
       <main className="max-w-[1480px] mx-auto px-10 py-8">
         {/* ─── Breadcrumb + back ────────────────────────────────────────── */}
         <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-eyebrow font-sans font-medium text-ink-muted mb-6">
-          <a href="/screens/clients" className="flex items-center gap-1 hover:text-ink transition-colors">
+          <Link to="/screens/clients" className="flex items-center gap-1 hover:text-ink transition-colors">
             <ChevronLeft className="w-3 h-3" strokeWidth={1.5} />
             <span>Clients</span>
-          </a>
+          </Link>
           <ChevronRight className="w-3 h-3" strokeWidth={1.5} />
           <span className="text-ink">{client.name}</span>
         </div>

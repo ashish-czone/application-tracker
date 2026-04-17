@@ -1,5 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { BrowserRouter, Route, Routes } from 'react-router';
 import { fieldTypeRegistry } from '@packages/field-types';
 import { coreFieldTypesPlugin } from '@packages/entity-engine/field-types';
 import { eavFieldTypesPlugin } from '@packages/eav-attributes/field-types';
@@ -70,42 +71,31 @@ const columnRenderers = {
   TaskAssigneeCell: { component: TaskAssigneeCell },
 };
 
-// Design-preview fork: `/console-preview` renders outside the WebShell for
-// unauthenticated design review. `/screens/*` paths render static screen
-// previews in the same unauthenticated mode, one screen per path. Every
-// other path goes through the normal authenticated WebShell. Remove once
-// the Instrument design ships.
+// Design-preview fork: `/console-preview` and `/screens/*` render outside the
+// WebShell for unauthenticated design review, inside their own BrowserRouter
+// so the preview nav can use client-side navigation. Every other path goes
+// through the normal authenticated WebShell (which provides its own router).
+// Remove once the Instrument design ships.
 const pathname = window.location.pathname;
-const isConsolePreview = pathname.startsWith('/console-preview');
-const isDashboardScreen = pathname.startsWith('/screens/dashboard');
-const isObligationsScreen = pathname.startsWith('/screens/obligations');
-const isClientDetailScreen = /^\/screens\/clients\/[^/]+$/.test(pathname);
-const isClientsScreen = pathname === '/screens/clients';
-const isFilingsScreen = pathname.startsWith('/screens/filings');
-const isOrgHierarchyScreen = pathname.startsWith('/screens/org-hierarchy');
-const isRolesScreen = pathname.startsWith('/screens/roles');
-const isUsersScreen = pathname.startsWith('/screens/users');
+const isPreview =
+  pathname.startsWith('/console-preview') || pathname.startsWith('/screens/');
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    {isConsolePreview ? (
-      <ConsolePreviewPage />
-    ) : isDashboardScreen ? (
-      <DashboardScreenPage />
-    ) : isObligationsScreen ? (
-      <ObligationsLibraryPage />
-    ) : isClientDetailScreen ? (
-      <ClientDetailPage />
-    ) : isClientsScreen ? (
-      <ClientsPage />
-    ) : isFilingsScreen ? (
-      <FilingsPage />
-    ) : isOrgHierarchyScreen ? (
-      <OrgHierarchyPage />
-    ) : isRolesScreen ? (
-      <RolesEditorPage />
-    ) : isUsersScreen ? (
-      <UsersPage />
+    {isPreview ? (
+      <BrowserRouter>
+        <Routes>
+          <Route path="/console-preview" element={<ConsolePreviewPage />} />
+          <Route path="/screens/dashboard" element={<DashboardScreenPage />} />
+          <Route path="/screens/obligations" element={<ObligationsLibraryPage />} />
+          <Route path="/screens/clients" element={<ClientsPage />} />
+          <Route path="/screens/clients/:clientId" element={<ClientDetailPage />} />
+          <Route path="/screens/filings" element={<FilingsPage />} />
+          <Route path="/screens/org-hierarchy" element={<OrgHierarchyPage />} />
+          <Route path="/screens/roles" element={<RolesEditorPage />} />
+          <Route path="/screens/users" element={<UsersPage />} />
+        </Routes>
+      </BrowserRouter>
     ) : (
       <WebShell
         domains={[complianceWeb]}
