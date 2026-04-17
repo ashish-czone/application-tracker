@@ -1,5 +1,7 @@
 import { type ReactNode } from 'react';
+import { motion } from 'framer-motion';
 import { cn } from '../lib/utils';
+import { useSlidingHighlight } from '../hooks/useSlidingHighlight';
 
 export type CoarseTabVariant = 'underline' | 'segmented';
 
@@ -16,6 +18,8 @@ export interface CoarseTabsProps<T extends string = string> {
   onChange: (next: T) => void;
   /** @default "underline" */
   variant?: CoarseTabVariant;
+  /** Enable sliding highlight animation (underline variant only). */
+  animated?: boolean;
   className?: string;
 }
 
@@ -25,7 +29,7 @@ export interface CoarseTabsProps<T extends string = string> {
  * **underline** (default) — hairline rule spans the full width; the active tab
  * draws a solid ink underline.
  *
- * **segmented** — bordered slab of cells; the active cell inverts to ink
+ * **segmented** — bordered slab of cells; the active cell gets a solid ink
  * background. Reads like a filing-toggle.
  */
 export function CoarseTabs<T extends string = string>({
@@ -33,8 +37,10 @@ export function CoarseTabs<T extends string = string>({
   value,
   onChange,
   variant = 'underline',
+  animated = false,
   className,
 }: CoarseTabsProps<T>) {
+  const highlight = useSlidingHighlight<T>(value);
   if (variant === 'segmented') {
     return (
       <div
@@ -84,14 +90,25 @@ export function CoarseTabs<T extends string = string>({
 
   return (
     <div
+      ref={highlight.containerRef}
       role="tablist"
-      className={cn('flex items-center gap-6 border-b border-rule', className)}
+      className={cn('relative flex items-center gap-6 border-b border-rule', className)}
     >
+      {highlight.rect && (
+        <motion.span
+          aria-hidden
+          className="absolute bottom-0 h-[2px] bg-ink"
+          initial={false}
+          animate={{ left: highlight.rect.left, width: highlight.rect.width }}
+          transition={animated ? highlight.transition : { duration: 0 }}
+        />
+      )}
       {tabs.map((tab) => {
         const active = tab.value === value;
         return (
           <button
             key={tab.value}
+            ref={(el) => highlight.setItemRef(tab.value, el)}
             role="tab"
             type="button"
             aria-selected={active}
@@ -114,12 +131,6 @@ export function CoarseTabs<T extends string = string>({
                 </span>
               )}
             </span>
-            {active && (
-              <span
-                aria-hidden
-                className="absolute left-0 right-0 -bottom-px h-[2px] bg-ink"
-              />
-            )}
           </button>
         );
       })}

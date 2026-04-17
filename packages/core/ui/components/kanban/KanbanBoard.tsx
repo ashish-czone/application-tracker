@@ -1,15 +1,21 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   DndContext,
   DragOverlay,
   KeyboardSensor,
+  MeasuringStrategy,
   PointerSensor,
-  closestCorners,
+  closestCenter,
+  getFirstCollision,
+  pointerWithin,
+  rectIntersection,
   useSensor,
   useSensors,
+  type CollisionDetection,
   type DragEndEvent,
   type DragOverEvent,
   type DragStartEvent,
+  type UniqueIdentifier,
 } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -20,6 +26,10 @@ import {
 import { KanbanColumn } from './KanbanColumn';
 import { KanbanCard } from './KanbanCard';
 import type { KanbanBoardProps, KanbanCardData } from './types';
+
+const MEASURING_CONFIG = {
+  droppable: { strategy: MeasuringStrategy.Always },
+};
 
 type CardsByColumn = Record<string, KanbanCardData[]>;
 
@@ -46,15 +56,81 @@ export function KanbanBoard({
   const [cardsByColumn, setCardsByColumn] = useState<CardsByColumn>(() => groupCards(cards, columnIds));
   const [activeCard, setActiveCard] = useState<KanbanCardData | null>(null);
   const initialSnapshotRef = useRef<CardsByColumn>(cardsByColumn);
+  // After a successful drop, skip one useEffect sync cycle so the internal
+  // card positions (set by handleDragOver) persist instead of being
+  // overwritten by the stale-or-reconstructed cards prop.
+  const skipSyncRef = useRef(false);
+  // Collision-detection helpers: cache the last valid overId and track
+  // cross-container moves so layout shifts don't produce null collisions.
+  const lastOverIdRef = useRef<UniqueIdentifier | null>(null);
+  const recentlyMovedRef = useRef(false);
 
   useEffect(() => {
     if (activeCard) return;
+    if (skipSyncRef.current) {
+      skipSyncRef.current = false;
+      return;
+    }
     setCardsByColumn(groupCards(cards, columnIds));
   }, [cards, columnIds, activeCard]);
+
+  // Clear recentlyMovedRef on the next animation frame after a cross-column
+  // move so the collision fallback only fires during the layout-shift gap.
+  useEffect(() => {
+    if (recentlyMovedRef.current) {
+      requestAnimationFrame(() => { recentlyMovedRef.current = false; });
+    }
+  }, [cardsByColumn]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  // Composite collision detection — dnd-kit's recommended strategy for
+  // multi-container sortables (their MultipleContainers example). Uses
+  // pointer position to pick the container, then closestCenter within it.
+  // Prevents the "shadow at #1, drops at #2" mismatch that closestCorners
+  // causes when the pointer is near column boundaries.
+  const collisionDetection: CollisionDetection = useCallback(
+    (args) => {
+      // 1. Check pointer intersection first (most precise)
+      const pointerCollisions = pointerWithin(args);
+      const intersections =
+        pointerCollisions.length > 0 ? pointerCollisions : rectIntersection(args);
+      let overId = getFirstCollision(intersections, 'id');
+
+      if (overId != null) {
+        // If the collision is with a column body, drill into its cards to
+        // find the closest card within that column.
+        const overContainer = args.droppableContainers.find((c) => c.id === overId);
+        const overData = overContainer?.data?.current;
+        if (overData?.type === 'column-body') {
+          const colId = overData.columnId as string;
+          const colCards = cardsByColumn[colId] ?? [];
+          if (colCards.length > 0) {
+            const cardContainers = args.droppableContainers.filter(
+              (container) => colCards.some((c) => c.id === String(container.id)),
+            );
+            const innerHit = closestCenter({ ...args, droppableContainers: cardContainers });
+            const innerOverId = getFirstCollision(innerHit, 'id');
+            if (innerOverId != null) overId = innerOverId;
+          }
+        }
+
+        lastOverIdRef.current = overId;
+        return [{ id: overId }];
+      }
+
+      // Fallback: during the brief layout shift after a cross-column move,
+      // collisions can return empty. Use the cached last-known overId.
+      if (recentlyMovedRef.current) {
+        lastOverIdRef.current = activeCard?.id ?? null;
+      }
+
+      return lastOverIdRef.current ? [{ id: lastOverIdRef.current }] : [];
+    },
+    [activeCard, cardsByColumn],
   );
 
   const findColumnIdContainingCard = (cardId: string, source: CardsByColumn): string | null => {
@@ -108,6 +184,7 @@ export function KanbanBoard({
       }
       targetList.splice(insertAt, 0, { ...card, columnId: toColumn });
 
+      recentlyMovedRef.current = true;
       return { ...prev, [fromColumn]: sourceList, [toColumn]: targetList };
     });
   };
@@ -144,6 +221,7 @@ export function KanbanBoard({
       const newIndex = list.findIndex((c) => c.id === overId);
       if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
         setCardsByColumn((prev) => ({ ...prev, [toColumn]: arrayMove(prev[toColumn], oldIndex, newIndex) }));
+        skipSyncRef.current = true;
         onCardMove({ cardId, fromColumnId: fromColumn, toColumnId: toColumn, toIndex: newIndex });
       }
       return;
@@ -152,6 +230,7 @@ export function KanbanBoard({
     const list = cardsByColumn[toColumn];
     const finalIndex = list.findIndex((c) => c.id === cardId);
     if (finalIndex === -1) return;
+    skipSyncRef.current = true;
     onCardMove({ cardId, fromColumnId: fromColumn, toColumnId: toColumn, toIndex: finalIndex });
   };
 
@@ -179,7 +258,8 @@ export function KanbanBoard({
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCorners}
+      collisionDetection={collisionDetection}
+      measuring={MEASURING_CONFIG}
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}

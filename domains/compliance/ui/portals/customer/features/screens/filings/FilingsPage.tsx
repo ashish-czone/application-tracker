@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
   Search,
   ChevronRight,
@@ -25,6 +25,7 @@ import {
   type ActiveFilter,
   type KanbanColumnDef,
   type KanbanCardData,
+  useSlidingHighlight,
 } from '@packages/ui';
 import { ComplianceCalendar } from '../../../../../shared';
 import {
@@ -158,6 +159,7 @@ const KANBAN_COLUMNS: KanbanColumnDef[] = [
 export function FilingsPage() {
   // View mode.
   const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const viewHighlight = useSlidingHighlight<ViewMode>(viewMode);
 
   // Filter state.
   const [search, setSearch] = useState('');
@@ -169,6 +171,9 @@ export function FilingsPage() {
   // Column visibility.
   const [visibleColumns, setVisibleColumns] = useState<string[]>(ALL_COLUMN_KEYS);
 
+  // Local mutable copy of filing rows (supports kanban drag-and-drop).
+  const [filingRows, setFilingRows] = useState<FilingRow[]>(MOCK_FILING_ROWS);
+
   // Detail drawer.
   const [selectedFiling, setSelectedFiling] = useState<FilingRow | null>(null);
 
@@ -177,7 +182,7 @@ export function FilingsPage() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return MOCK_FILING_ROWS.filter((f) => {
+    return filingRows.filter((f) => {
       if (statusTab !== 'all' && f.status !== statusTab) return false;
       if (clientFilter.length > 0 && !clientFilter.includes(f.clientId)) return false;
       if (lawFilter.length > 0 && !lawFilter.includes(f.lawId)) return false;
@@ -187,7 +192,7 @@ export function FilingsPage() {
         return false;
       return true;
     });
-  }, [statusTab, clientFilter, lawFilter, handlerFilter, search]);
+  }, [filingRows, statusTab, clientFilter, lawFilter, handlerFilter, search]);
 
   // ── Active filter chips ─────────────────────────────────────────
 
@@ -294,18 +299,35 @@ export function FilingsPage() {
     [filtered],
   );
 
-  function handleCardMove(_event: { cardId: string; toColumnId: string }) {
-    // Static preview — no real state mutation. In a wired version this
-    // would call onStatusChange and update the filing's status via API.
+  function handleCardMove(event: { cardId: string; fromColumnId: string; toColumnId: string; toIndex: number }) {
+    setFilingRows((prev) => {
+      const card = prev.find((f) => f.id === event.cardId);
+      if (!card) return prev;
+
+      const moved = { ...card, status: event.toColumnId as Filing['status'] };
+      const without = prev.filter((f) => f.id !== event.cardId);
+
+      // Find the insertion point: the position of the toIndex-th card
+      // with the target status in the flat array.
+      let seen = 0;
+      let insertAt = without.length;
+      for (let i = 0; i < without.length; i++) {
+        if (without[i].status === event.toColumnId) {
+          if (seen === event.toIndex) { insertAt = i; break; }
+          seen++;
+        }
+      }
+
+      without.splice(insertAt, 0, moved);
+      return without;
+    });
   }
 
-  // ── Calendar day click ──────────────────────────────────────────
+  // ── Calendar filing click ────────────────────────────────────────
 
-  function handleDayClick(_date: Date, dayFilings: Filing[]) {
-    if (dayFilings.length > 0) {
-      const row = MOCK_FILING_ROWS.find((f) => f.id === dayFilings[0].id);
-      if (row) setSelectedFiling(row);
-    }
+  function handleCalendarFilingClick(filing: Filing) {
+    const row = filingRows.find((f) => f.id === filing.id);
+    if (row) setSelectedFiling(row);
   }
 
   return (
@@ -329,15 +351,25 @@ export function FilingsPage() {
           </div>
           <div className="flex items-center gap-3">
             {/* View mode toggle */}
-            <div className="flex border border-rule">
+            <div ref={viewHighlight.containerRef} className="relative flex border border-rule">
+              {viewHighlight.rect && (
+                <motion.div
+                  aria-hidden
+                  className="absolute top-0 bottom-0 bg-ink"
+                  initial={false}
+                  animate={{ left: viewHighlight.rect.left, width: viewHighlight.rect.width }}
+                  transition={viewHighlight.transition}
+                />
+              )}
               {VIEW_MODES.map((vm) => (
                 <button
                   key={vm.key}
+                  ref={(el) => viewHighlight.setItemRef(vm.key, el)}
                   type="button"
                   onClick={() => setViewMode(vm.key)}
-                  className={`flex items-center justify-center w-8 h-8 transition-colors ${
+                  className={`relative z-10 flex items-center justify-center w-8 h-8 transition-colors ${
                     viewMode === vm.key
-                      ? 'bg-ink text-paper'
+                      ? 'text-paper'
                       : 'text-ink-muted hover:text-ink'
                   }`}
                   aria-label={vm.label}
@@ -524,7 +556,7 @@ export function FilingsPage() {
                       </div>
                       <button
                         type="button"
-                        onClick={() => setSelectedFiling(MOCK_FILING_ROWS.find((r) => r.id === f.id) ?? null)}
+                        onClick={() => setSelectedFiling(filingRows.find((r) => r.id === f.id) ?? null)}
                         className="text-sm text-ink font-sans leading-snug truncate hover:underline cursor-pointer"
                       >
                         {f.ruleName}
@@ -556,7 +588,7 @@ export function FilingsPage() {
               <ComplianceCalendar
                 filings={filtered}
                 month={FILINGS_TODAY}
-                onDayClick={handleDayClick}
+                onFilingClick={handleCalendarFilingClick}
               />
             </div>
           )}
