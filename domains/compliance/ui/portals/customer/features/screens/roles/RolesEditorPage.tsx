@@ -471,7 +471,7 @@ export function RolesEditorPage() {
           onPointerUp={onPointerUp}
         >
           {/* ── Left: role list ──────────────────────────────────────── */}
-          <div className="shrink-0 border-r border-rule flex flex-col" style={{ width: leftWidth }}>
+          <div className="relative shrink-0 border-r border-rule flex flex-col" style={{ width: leftWidth }}>
             <div className="px-4 py-3 border-b border-rule flex items-center justify-between">
               <span className="text-[11px] uppercase tracking-eyebrow font-sans font-semibold text-ink-muted">
                 Roles
@@ -499,25 +499,24 @@ export function RolesEditorPage() {
                 />
               ))}
             </div>
-          </div>
 
-          {/* ── Resize handle ────────────────────────────────────── */}
-          <div
-            onPointerDown={onPointerDown}
-            className="group relative w-3 shrink-0 cursor-col-resize hover:bg-ink/8 active:bg-ink/15 transition-colors flex items-center justify-center"
-          >
-            {/* Two-column grip dots */}
-            <div className="grid grid-cols-2 gap-x-[4px] gap-y-[4px] opacity-40 group-hover:opacity-70 transition-opacity">
-              <span className="block w-1 h-1 rounded-full bg-ink-muted" />
-              <span className="block w-1 h-1 rounded-full bg-ink-muted" />
-              <span className="block w-1 h-1 rounded-full bg-ink-muted" />
-              <span className="block w-1 h-1 rounded-full bg-ink-muted" />
-              <span className="block w-1 h-1 rounded-full bg-ink-muted" />
-              <span className="block w-1 h-1 rounded-full bg-ink-muted" />
-              <span className="block w-1 h-1 rounded-full bg-ink-muted" />
-              <span className="block w-1 h-1 rounded-full bg-ink-muted" />
-              <span className="block w-1 h-1 rounded-full bg-ink-muted" />
-              <span className="block w-1 h-1 rounded-full bg-ink-muted" />
+            {/* ── Resize handle — straddles the border ──────────── */}
+            <div
+              onPointerDown={onPointerDown}
+              className="group absolute top-0 bottom-0 -right-[7px] w-[14px] z-10 cursor-col-resize flex items-center justify-center"
+            >
+              <div className="grid grid-cols-2 gap-x-[4px] gap-y-[4px] opacity-40 group-hover:opacity-70 transition-opacity">
+                <span className="block w-1 h-1 rounded-full bg-ink-muted" />
+                <span className="block w-1 h-1 rounded-full bg-ink-muted" />
+                <span className="block w-1 h-1 rounded-full bg-ink-muted" />
+                <span className="block w-1 h-1 rounded-full bg-ink-muted" />
+                <span className="block w-1 h-1 rounded-full bg-ink-muted" />
+                <span className="block w-1 h-1 rounded-full bg-ink-muted" />
+                <span className="block w-1 h-1 rounded-full bg-ink-muted" />
+                <span className="block w-1 h-1 rounded-full bg-ink-muted" />
+                <span className="block w-1 h-1 rounded-full bg-ink-muted" />
+                <span className="block w-1 h-1 rounded-full bg-ink-muted" />
+              </div>
             </div>
           </div>
 
