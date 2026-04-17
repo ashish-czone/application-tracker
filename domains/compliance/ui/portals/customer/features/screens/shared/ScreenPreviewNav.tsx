@@ -10,7 +10,7 @@ const ITEMS: Array<{ key: ScreenKey; label: string; href: string }> = [
   { key: 'org-hierarchy', label: 'Organisation', href: '/screens/org-hierarchy' },
   { key: 'roles', label: 'Roles', href: '/screens/roles' },
   { key: 'users', label: 'Users', href: '/screens/users' },
-  { key: 'reports', label: 'Reports', href: '#' },
+  { key: 'reports', label: 'Reports', href: '/screens/reports' },
 ];
 
 export function ScreenPreviewNav({ active }: { active: ScreenKey }) {
