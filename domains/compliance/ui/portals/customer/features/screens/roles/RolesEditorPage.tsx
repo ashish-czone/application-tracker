@@ -504,15 +504,20 @@ export function RolesEditorPage() {
           {/* ── Resize handle ────────────────────────────────────── */}
           <div
             onPointerDown={onPointerDown}
-            className="group relative w-1.5 shrink-0 cursor-col-resize hover:bg-ink/10 active:bg-ink/20 transition-colors flex items-center justify-center"
+            className="group relative w-3 shrink-0 cursor-col-resize hover:bg-ink/8 active:bg-ink/15 transition-colors flex items-center justify-center"
           >
-            {/* Grip dots — visible clamp so users know this is draggable */}
-            <div className="flex flex-col gap-[3px] opacity-30 group-hover:opacity-60 transition-opacity">
-              <span className="block w-[3px] h-[3px] rounded-full bg-ink" />
-              <span className="block w-[3px] h-[3px] rounded-full bg-ink" />
-              <span className="block w-[3px] h-[3px] rounded-full bg-ink" />
-              <span className="block w-[3px] h-[3px] rounded-full bg-ink" />
-              <span className="block w-[3px] h-[3px] rounded-full bg-ink" />
+            {/* Two-column grip dots */}
+            <div className="grid grid-cols-2 gap-x-[4px] gap-y-[4px] opacity-40 group-hover:opacity-70 transition-opacity">
+              <span className="block w-1 h-1 rounded-full bg-ink-muted" />
+              <span className="block w-1 h-1 rounded-full bg-ink-muted" />
+              <span className="block w-1 h-1 rounded-full bg-ink-muted" />
+              <span className="block w-1 h-1 rounded-full bg-ink-muted" />
+              <span className="block w-1 h-1 rounded-full bg-ink-muted" />
+              <span className="block w-1 h-1 rounded-full bg-ink-muted" />
+              <span className="block w-1 h-1 rounded-full bg-ink-muted" />
+              <span className="block w-1 h-1 rounded-full bg-ink-muted" />
+              <span className="block w-1 h-1 rounded-full bg-ink-muted" />
+              <span className="block w-1 h-1 rounded-full bg-ink-muted" />
             </div>
           </div>
 
