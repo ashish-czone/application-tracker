@@ -1,14 +1,11 @@
 import React, { useMemo, useState, useRef, useCallback } from 'react';
 import { AnimatePresence } from 'framer-motion';
-import { Search, Plus, Upload, Download, ChevronRight, AlertTriangle } from 'lucide-react';
+import { Search, Plus, Upload, ChevronRight, AlertTriangle } from 'lucide-react';
 import {
   MetricKPI,
-  DataTable,
-  Pagination,
+  DataGridShell,
   Button,
   FilterPopover,
-  ColumnChooser,
-  ActiveFilterChips,
   CoarseTabs,
   OrdinalDate,
   type DataTableColumn,
@@ -299,7 +296,6 @@ const CLIENT_COLUMNS: DataTableColumn<ClientRow>[] = [
   },
 ];
 
-const ALL_COLUMN_KEYS = CLIENT_COLUMNS.map((c) => c.key);
 const REQUIRED_COLUMN_KEYS: string[] = ['name'];
 
 // ─── Page ───────────────────────────────────────────────────────────
@@ -336,16 +332,7 @@ export function ClientsPage() {
   const [riskFilter, setRiskFilter] = useState<ClientRiskLevel[]>([]);
   const [handlerFilter, setHandlerFilter] = useState<string[]>([]);
 
-  // Column visibility.
-  const [visibleColumns, setVisibleColumns] = useState<string[]>(ALL_COLUMN_KEYS);
-
-  // Pagination.
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-
-
   const filtered = useMemo(() => {
-    setPage(1);
     const q = search.trim().toLowerCase();
     return MOCK_CLIENT_ROWS.filter((c) => {
       if (statusTab !== 'all' && c.status !== statusTab) return false;
@@ -356,9 +343,6 @@ export function ClientsPage() {
       return true;
     });
   }, [statusTab, riskFilter, handlerFilter, search]);
-
-  const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const paginatedRows = filtered.slice((page - 1) * pageSize, page * pageSize);
 
   // Active filter chips.
   const activeFilters: ActiveFilter[] = useMemo(() => {
@@ -408,12 +392,6 @@ export function ClientsPage() {
     value: h.value,
     label: h.label,
     count: MOCK_CLIENT_ROWS.filter((c) => c.primaryHandler.id === h.value).length,
-  }));
-
-  const columnChooserItems = CLIENT_COLUMNS.map((c) => ({
-    key: c.key,
-    label: c.header,
-    required: REQUIRED_COLUMN_KEYS.includes(c.key),
   }));
 
   // Coarse tabs.
@@ -542,86 +520,52 @@ export function ClientsPage() {
             onChange={setStatusTab}
           />
 
-          {/* Filter bar */}
-          <div className="flex items-center gap-3 py-3 border-b border-rule">
-            <label className="flex items-center gap-2 min-w-[200px] max-w-xs flex-1 border-b border-rule focus-within:border-ink transition-colors pb-1">
-              <Search className="w-3.5 h-3.5 text-ink-muted flex-none" strokeWidth={1.5} />
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search clients…"
-                className="w-full bg-transparent outline-none text-sm text-ink placeholder:text-ink-muted font-sans"
-              />
-            </label>
-
-            <div className="flex items-center gap-2">
-              <FilterPopover
-                label="Risk"
-                options={riskOptions}
-                value={riskFilter}
-                onChange={(v) => setRiskFilter(v as ClientRiskLevel[])}
-              />
-              <FilterPopover
-                label="Handler"
-                options={handlerOptions}
-                value={handlerFilter}
-                onChange={(v) => setHandlerFilter(v as string[])}
-              />
-            </div>
-
-            <div className="ml-auto flex items-center gap-3">
-              <span className="font-mono text-[11px] tabular-nums text-ink-soft">
-                {filtered.length} of {totalClients}
-              </span>
-              <button
-                type="button"
-                className="inline-flex items-center gap-1.5 px-2.5 py-[5px] border border-rule text-[10px] font-sans font-semibold uppercase tracking-[0.14em] text-ink-soft bg-paper-raised hover:border-ink hover:text-ink transition-colors"
-                aria-label="Export"
-              >
-                <Download className="w-3.5 h-3.5" strokeWidth={1.5} />
-                <span>Export</span>
-              </button>
-              <ColumnChooser
-                columns={columnChooserItems}
-                visible={visibleColumns}
-                onChange={setVisibleColumns}
-              />
-            </div>
-          </div>
-
-          <ActiveFilterChips filters={activeFilters} onClearAll={clearAll} />
-
-          <div
-            className="mt-4 bg-paper-raised border border-rule overflow-x-auto"
-            onMouseLeave={handleRowMouseLeave}
-          >
-            <DataTable
-              columns={CLIENT_COLUMNS}
-              visibleColumns={visibleColumns}
-              rows={paginatedRows}
-              getRowKey={(c) => c.id}
-              onRowClick={(client) => {
-                window.location.href = `/screens/clients/${client.id}`;
-              }}
-              rowProps={(client) => ({
-                onMouseEnter: (e: React.MouseEvent<HTMLTableRowElement>) =>
-                  handleRowMouseEnter(client, e),
-                onMouseLeave: handleRowMouseLeave,
-              })}
-            />
-            <Pagination
-              page={page}
-              pageSize={pageSize}
-              pageCount={pageCount}
-              totalRows={filtered.length}
-              onPageChange={setPage}
-              onPageSizeChange={(size) => {
-                setPageSize(size);
-                setPage(1);
-              }}
-            />
-          </div>
+          <DataGridShell
+            columns={CLIENT_COLUMNS}
+            rows={filtered}
+            getRowKey={(c) => c.id}
+            requiredColumns={REQUIRED_COLUMN_KEYS}
+            totalRows={totalClients}
+            onRowClick={(client) => {
+              window.location.href = `/screens/clients/${client.id}`;
+            }}
+            rowProps={(client) => ({
+              onMouseEnter: (e: React.MouseEvent<HTMLTableRowElement>) =>
+                handleRowMouseEnter(client, e),
+              onMouseLeave: handleRowMouseLeave,
+            })}
+            activeFilters={activeFilters}
+            onClearFilters={clearAll}
+            containerProps={{ onMouseLeave: handleRowMouseLeave }}
+            filters={
+              <>
+                <label className="flex items-center gap-2 min-w-[200px] max-w-xs flex-1 border-b border-rule focus-within:border-ink transition-colors pb-1">
+                  <Search className="w-3.5 h-3.5 text-ink-muted flex-none" strokeWidth={1.5} />
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search clients…"
+                    className="w-full bg-transparent outline-none text-sm text-ink placeholder:text-ink-muted font-sans"
+                  />
+                </label>
+                <div className="flex items-center gap-2">
+                  <FilterPopover
+                    label="Risk"
+                    options={riskOptions}
+                    value={riskFilter}
+                    onChange={(v) => setRiskFilter(v as ClientRiskLevel[])}
+                  />
+                  <FilterPopover
+                    label="Handler"
+                    options={handlerOptions}
+                    value={handlerFilter}
+                    onChange={(v) => setHandlerFilter(v as string[])}
+                  />
+                </div>
+              </>
+            }
+          />
         </section>
       </main>
 

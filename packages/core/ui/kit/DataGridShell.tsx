@@ -6,7 +6,7 @@ import { Pagination } from './Pagination';
 import { ColumnChooser } from './ColumnChooser';
 import { ActiveFilterChips, type ActiveFilter } from './ActiveFilterChips';
 
-export interface DataGridProps<T> {
+export interface DataGridShellProps<T> {
   // ─── Table data ──────────────────────────────────────────────────
   columns: DataTableColumn<T>[];
   /** Full filtered row set — DataGrid handles pagination internally. */
@@ -21,6 +21,11 @@ export interface DataGridProps<T> {
   // ─── Column chooser ──────────────────────────────────────────────
   /** Column keys that cannot be hidden. */
   requiredColumns?: string[];
+  /** Controlled visible columns — when provided, DataGrid defers to the
+   *  consumer for column visibility (used with hideToolbar + external ColumnChooser). */
+  visibleColumns?: string[];
+  /** Called when visible columns change. Only fired in uncontrolled mode. */
+  onVisibleColumnsChange?: (keys: string[]) => void;
 
   // ─── Slots ───────────────────────────────────────────────────────
   /** Left side of toolbar — search input, filter popovers, etc. */
@@ -42,6 +47,11 @@ export interface DataGridProps<T> {
   /** Called when the Export button is clicked. Button is always rendered. */
   onExport?: () => void;
 
+  // ─── Layout ──────────────────────────────────────────────────────
+  /** Hide the toolbar (filters, count, export, columns). Useful when the
+   *  toolbar is rendered externally (e.g. shared across multiple view modes). */
+  hideToolbar?: boolean;
+
   // ─── Container ───────────────────────────────────────────────────
   className?: string;
   /** Extra props spread onto the table container div (e.g. onMouseLeave). */
@@ -49,16 +59,17 @@ export interface DataGridProps<T> {
 }
 
 /**
- * Composite data-grid that wires together the toolbar (filters, count,
- * export, column chooser), active-filter chips, DataTable, and Pagination.
+ * Instrument-kit composite data grid. Composes the toolbar (filters, count,
+ * export, column chooser), active-filter chips, DataTable, and Pagination
+ * into a single reusable shell for the editorial design system screens.
  *
  * Pagination state is fully managed internally — consumers pass the complete
- * filtered row set and DataGrid slices for the current page. The page resets
- * to 1 whenever the row set changes (e.g. after filtering).
+ * filtered row set and DataGridShell slices for the current page. The page
+ * resets to 1 whenever the row set changes (e.g. after filtering).
  *
  * Column visibility is also managed internally via ColumnChooser.
  */
-export function DataGrid<T>({
+export function DataGridShell<T>({
   columns,
   rows,
   getRowKey,
@@ -68,6 +79,8 @@ export function DataGrid<T>({
   emptyState,
   staggerReveal,
   requiredColumns = [],
+  visibleColumns: controlledVisibleColumns,
+  onVisibleColumnsChange,
   filters,
   actions,
   activeFilters,
@@ -75,14 +88,22 @@ export function DataGrid<T>({
   totalRows,
   defaultPageSize = 10,
   onExport,
+  hideToolbar = false,
   className,
   containerProps,
-}: DataGridProps<T>) {
+}: DataGridShellProps<T>) {
   // ─── Internal state ────────────────────────────────────────────────
   const allColumnKeys = useMemo(() => columns.map((c) => c.key), [columns]);
-  const [visibleColumns, setVisibleColumns] = useState<string[]>(allColumnKeys);
+  const [internalVisibleColumns, setInternalVisibleColumns] = useState<string[]>(allColumnKeys);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(defaultPageSize);
+
+  // Controlled vs uncontrolled column visibility.
+  const isControlled = controlledVisibleColumns !== undefined;
+  const visibleColumns = isControlled ? controlledVisibleColumns : internalVisibleColumns;
+  const setVisibleColumns = isControlled
+    ? (keys: string[]) => onVisibleColumnsChange?.(keys)
+    : setInternalVisibleColumns;
 
   // Reset to page 1 when the filtered row set changes.
   const rowCount = rows.length;
@@ -90,10 +111,10 @@ export function DataGrid<T>({
     setPage(1);
   }, [rowCount]);
 
-  // Sync visible columns if the column definition changes.
+  // Sync visible columns if the column definition changes (uncontrolled only).
   useEffect(() => {
-    setVisibleColumns(allColumnKeys);
-  }, [allColumnKeys]);
+    if (!isControlled) setInternalVisibleColumns(allColumnKeys);
+  }, [allColumnKeys, isControlled]);
 
   const pageCount = Math.max(1, Math.ceil(rowCount / pageSize));
   const paginatedRows = rows.slice((page - 1) * pageSize, page * pageSize);
@@ -110,12 +131,10 @@ export function DataGrid<T>({
     [columns, requiredColumns],
   );
 
-  const hasToolbar = filters || actions || true; // always show count/export/columns
-
   return (
     <div className={cn('', className)}>
       {/* ─── Toolbar ────────────────────────────────────────────────── */}
-      {hasToolbar && (
+      {!hideToolbar && (
         <div className="flex items-center gap-3 py-3 border-b border-rule">
           {filters}
 
