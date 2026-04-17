@@ -35,6 +35,7 @@ import { ClientsPage, ClientDetailPage } from '@domains/compliance-ui/portals/cu
 import { FilingsPage } from '@domains/compliance-ui/portals/customer/features/screens/filings';
 import { OrgHierarchyPage } from '@domains/compliance-ui/portals/customer/features/screens/org-hierarchy';
 import { RolesEditorPage } from '@domains/compliance-ui/portals/customer/features/screens/roles';
+import { UsersPage } from '@domains/compliance-ui/portals/customer/features/screens/users';
 import { api } from './lib/api';
 import './globals.css';
 
@@ -83,6 +84,7 @@ const isClientsScreen = pathname === '/screens/clients';
 const isFilingsScreen = pathname.startsWith('/screens/filings');
 const isOrgHierarchyScreen = pathname.startsWith('/screens/org-hierarchy');
 const isRolesScreen = pathname.startsWith('/screens/roles');
+const isUsersScreen = pathname.startsWith('/screens/users');
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -102,6 +104,8 @@ createRoot(document.getElementById('root')!).render(
       <OrgHierarchyPage />
     ) : isRolesScreen ? (
       <RolesEditorPage />
+    ) : isUsersScreen ? (
+      <UsersPage />
     ) : (
       <WebShell
         domains={[complianceWeb]}
