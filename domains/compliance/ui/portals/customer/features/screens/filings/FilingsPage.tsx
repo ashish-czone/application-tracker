@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   Search,
@@ -8,6 +8,7 @@ import {
   Columns3,
   CalendarDays,
   Download,
+  UserPlus,
 } from 'lucide-react';
 import {
   MetricKPI,
@@ -16,11 +17,13 @@ import {
   FilterPopover,
   ColumnChooser,
   ActiveFilterChips,
+  BulkActionBar,
   CoarseTabs,
   OrdinalDate,
   UrgencyBadge,
   JurisdictionTag,
   KanbanBoard,
+  toast,
   type DataTableColumn,
   type ActiveFilter,
   type KanbanColumnDef,
@@ -171,11 +174,15 @@ export function FilingsPage() {
   // Column visibility.
   const [visibleColumns, setVisibleColumns] = useState<string[]>(ALL_COLUMN_KEYS);
 
-  // Local mutable copy of filing rows (supports kanban drag-and-drop).
+  // Local mutable copy of filing rows (supports kanban drag-and-drop + bulk edits).
   const [filingRows, setFilingRows] = useState<FilingRow[]>(MOCK_FILING_ROWS);
 
   // Detail drawer.
   const [selectedFiling, setSelectedFiling] = useState<FilingRow | null>(null);
+
+  // Multi-row selection (for bulk actions). Spans pagination. Cleared on
+  // filter change so the selection can't silently contain off-screen rows.
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
 
   // ── Filtering ───────────────────────────────────────────────────
@@ -233,6 +240,20 @@ export function FilingsPage() {
     setLawFilter([]);
     setHandlerFilter([]);
   };
+
+  // Clear selection whenever the filter or tab inputs change — otherwise
+  // hidden rows could stay selected and leak into a bulk action.
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [statusTab, clientFilter, lawFilter, handlerFilter, search]);
+
+  // Restrict active selection to rows that are still visible after filtering.
+  const visibleIds = useMemo(() => new Set(filtered.map((f) => f.id)), [filtered]);
+  const effectiveSelectedIds = useMemo(() => {
+    const next = new Set<string>();
+    for (const id of selectedIds) if (visibleIds.has(id)) next.add(id);
+    return next;
+  }, [selectedIds, visibleIds]);
 
   // ── KPI aggregates ──────────────────────────────────────────────
 
@@ -524,6 +545,32 @@ export function FilingsPage() {
 
           <ActiveFilterChips filters={activeFilters} onClearAll={clearAll} />
 
+          {/* ── Bulk action bar — only shown on list view where selection exists ── */}
+          {viewMode === 'list' && (
+            <AnimatePresence>
+              {effectiveSelectedIds.size > 0 && (
+                <BulkActionBar
+                  count={effectiveSelectedIds.size}
+                  itemNoun="filing"
+                  onClear={() => setSelectedIds(new Set())}
+                  actions={[
+                    {
+                      label: 'Reassign',
+                      icon: UserPlus,
+                      onClick: () => toast.message('Reassign dialog — coming next task'),
+                    },
+                    {
+                      label: 'Export',
+                      icon: Download,
+                      onClick: () =>
+                        toast.message(`Export ${effectiveSelectedIds.size} filings (stub)`),
+                    },
+                  ]}
+                />
+              )}
+            </AnimatePresence>
+          )}
+
           {/* ── List view ──────────────────────────────────────────── */}
           {viewMode === 'list' && (
             <DataGridShell
@@ -534,6 +581,9 @@ export function FilingsPage() {
               visibleColumns={visibleColumns}
               onVisibleColumnsChange={setVisibleColumns}
               hideToolbar
+              selectable
+              selectedKeys={effectiveSelectedIds}
+              onSelectionChange={setSelectedIds}
             />
           )}
 
