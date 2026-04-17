@@ -1,5 +1,13 @@
 import { useMemo } from 'react';
-import { Plus, AlertTriangle } from 'lucide-react';
+import {
+  Plus,
+  AlertTriangle,
+  FileText,
+  Paperclip,
+  UserPlus,
+  GitBranch,
+  MessageSquare,
+} from 'lucide-react';
 import {
   MetricKPI,
   DataTable,
@@ -19,8 +27,9 @@ import {
   MOCK_FILINGS,
   MOCK_WORKLOADS,
 } from '../../console-preview/mockData';
-import { DASHBOARD_ACTIVITY, type ActivityEvent } from './dashboardMock';
+import { DASHBOARD_ACTIVITY } from './dashboardMock';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
+import { ActivityTimeline, type TimelineIconConfig } from '../shared/ActivityTimeline';
 
 // Filings assigned to the current partner (Deepak Iyer — "DI") in v1 mock.
 // In a wired version this comes from /me + /filings?assignee=me.
@@ -63,31 +72,38 @@ const DASHBOARD_COLUMNS: DataTableColumn<Filing>[] = [
   },
 ];
 
-function ActivityItem({ event }: { event: ActivityEvent }) {
-  return (
-    <li className="flex gap-3 py-3 border-b border-rule last:border-0">
-      <span
-        aria-hidden
-        className="flex-shrink-0 w-7 h-7 flex items-center justify-center text-[10px] font-sans font-semibold bg-authority text-paper-raised"
-      >
-        {event.actor.initials}
-      </span>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm text-ink leading-snug">
-          <span className="font-sans font-medium">{event.actor.name}</span>{' '}
-          <span className="text-ink-soft">{event.action}</span>{' '}
-          <span className="font-sans">{event.target}</span>
-          {event.context && (
-            <span className="font-serif italic text-ink-muted"> — {event.context}</span>
-          )}
-        </p>
-        <p className="mt-0.5 text-[10px] uppercase tracking-eyebrow text-ink-muted font-sans">
-          {event.at}
-        </p>
-      </div>
-    </li>
-  );
-}
+const DASHBOARD_ACTIVITY_ICONS: Record<string, TimelineIconConfig> = {
+  'filing-submitted': {
+    icon: FileText,
+    bg: 'bg-filed/10',
+    ring: 'ring-filed/30',
+    iconColor: 'text-filed',
+  },
+  'attachment-added': {
+    icon: Paperclip,
+    bg: 'bg-ink/5',
+    ring: 'ring-ink/15',
+    iconColor: 'text-ink-muted',
+  },
+  assigned: {
+    icon: UserPlus,
+    bg: 'bg-due-soon/10',
+    ring: 'ring-due-soon/30',
+    iconColor: 'text-due-soon',
+  },
+  'status-change': {
+    icon: GitBranch,
+    bg: 'bg-authority/10',
+    ring: 'ring-authority/30',
+    iconColor: 'text-authority',
+  },
+  'note-added': {
+    icon: MessageSquare,
+    bg: 'bg-ink/5',
+    ring: 'ring-ink/15',
+    iconColor: 'text-ink-muted',
+  },
+};
 
 export function DashboardScreenPage() {
   // "Filings that need *my* action" — assigned to me and not yet filed,
@@ -247,12 +263,12 @@ export function DashboardScreenPage() {
                 Audit trail →
               </a>
             </div>
-            <div className="bg-paper-raised border border-rule px-5">
-              <ul>
-                {DASHBOARD_ACTIVITY.map((event) => (
-                  <ActivityItem key={event.id} event={event} />
-                ))}
-              </ul>
+            <div className="bg-paper-raised border border-rule px-5 py-4">
+              <ActivityTimeline
+                events={DASHBOARD_ACTIVITY}
+                iconConfig={DASHBOARD_ACTIVITY_ICONS}
+                variant="feed"
+              />
             </div>
           </div>
           <div className="col-span-12 lg:col-span-7">

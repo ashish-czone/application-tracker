@@ -27,10 +27,10 @@ import {
   MOCK_CLIENT_DETAIL,
   type ClientFiling,
   type ClientLaw,
-  type ClientActivity,
   type ClientFilingStatus,
 } from './clientDetailMock';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
+import { ActivityTimeline, type TimelineIconConfig } from '../shared/ActivityTimeline';
 
 // ─── Status helpers ────────────────────────────────────────────────
 
@@ -69,22 +69,39 @@ const JURISDICTION_LABEL: Record<string, string> = {
   international: 'Int\'l',
 };
 
-// ─── Activity icon map ─────────────────────────────────────────────
+// ─── Activity icon config ──────────────────────────────────────────
 
-const ACTIVITY_ICON: Record<ClientActivity['type'], typeof FileText> = {
-  'filing-submitted': FileText,
-  'handler-changed': UserPlus,
-  'note-added': MessageSquare,
-  'status-change': GitBranch,
-  'law-added': Plus,
-};
-
-const ACTIVITY_TONE: Record<ClientActivity['type'], string> = {
-  'filing-submitted': 'bg-filed text-paper-raised',
-  'handler-changed': 'bg-authority text-paper-raised',
-  'note-added': 'bg-ink-muted text-paper-raised',
-  'status-change': 'bg-due-soon text-paper-raised',
-  'law-added': 'bg-authority text-paper-raised',
+const CLIENT_ACTIVITY_ICONS: Record<string, TimelineIconConfig> = {
+  'filing-submitted': {
+    icon: FileText,
+    bg: 'bg-filed/10',
+    ring: 'ring-filed/30',
+    iconColor: 'text-filed',
+  },
+  'handler-changed': {
+    icon: UserPlus,
+    bg: 'bg-authority/10',
+    ring: 'ring-authority/30',
+    iconColor: 'text-authority',
+  },
+  'note-added': {
+    icon: MessageSquare,
+    bg: 'bg-ink/5',
+    ring: 'ring-ink/15',
+    iconColor: 'text-ink-muted',
+  },
+  'status-change': {
+    icon: GitBranch,
+    bg: 'bg-due-soon/10',
+    ring: 'ring-due-soon/30',
+    iconColor: 'text-due-soon',
+  },
+  'law-added': {
+    icon: Plus,
+    bg: 'bg-authority/10',
+    ring: 'ring-authority/30',
+    iconColor: 'text-authority',
+  },
 };
 
 // ─── Sub-components ────────────────────────────────────────────────
@@ -639,32 +656,11 @@ function OverviewTab({ client }: { client: typeof MOCK_CLIENT_DETAIL }) {
           <h3 className="text-[11px] uppercase tracking-eyebrow font-sans font-semibold text-ink-muted mb-4">
             Recent activity
           </h3>
-          <div className="space-y-0">
-            {client.recentActivity.map((event, idx) => {
-              const Icon = ACTIVITY_ICON[event.type];
-              const isLast = idx === client.recentActivity.length - 1;
-              return (
-                <div key={event.id} className="flex gap-3">
-                  {/* Timeline line + icon */}
-                  <div className="flex flex-col items-center">
-                    <span
-                      className={`w-6 h-6 flex-none flex items-center justify-center ${ACTIVITY_TONE[event.type]}`}
-                    >
-                      <Icon className="w-3 h-3" strokeWidth={2} />
-                    </span>
-                    {!isLast && <div className="w-px flex-1 bg-rule" />}
-                  </div>
-                  {/* Content */}
-                  <div className={`pb-4 min-w-0 ${isLast ? '' : ''}`}>
-                    <p className="text-sm text-ink font-sans leading-snug">{event.detail}</p>
-                    <p className="text-[11px] text-ink-muted font-sans mt-0.5">
-                      {event.actor.name} · {formatRelativeTime(event.timestamp)}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <ActivityTimeline
+            events={client.recentActivity}
+            iconConfig={CLIENT_ACTIVITY_ICONS}
+            variant="feed"
+          />
         </section>
 
         {/* Quick links */}
@@ -694,15 +690,3 @@ function OverviewTab({ client }: { client: typeof MOCK_CLIENT_DETAIL }) {
   );
 }
 
-// ─── Helpers ───────────────────────────────────────────────────────
-
-function formatRelativeTime(isoDate: string): string {
-  const diff = new Date('2026-04-15T12:00:00Z').getTime() - new Date(isoDate).getTime();
-  const minutes = Math.floor(diff / 60_000);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days === 1) return 'Yesterday';
-  return `${days}d ago`;
-}

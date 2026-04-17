@@ -28,9 +28,10 @@ import {
   SectionRule,
   Calendar,
 } from '@packages/ui';
-import type { FilingRow, FilingActivity } from './filingsMock';
+import type { FilingRow } from './filingsMock';
 import { MOCK_HANDLERS } from '../../console-preview/mockData';
 import type { Filing, Handler } from '../../../../../shared/types';
+import { ActivityTimeline, type TimelineIconConfig } from '../shared/ActivityTimeline';
 
 // ─── Animation config ────────────────────────────────────────────────
 
@@ -721,12 +722,9 @@ const PRIORITY_OPTIONS: { value: FilingRow['priority']; label: string }[] = [
   { value: 'low', label: 'Low' },
 ];
 
-// ─── Activity body (redesigned timeline) ────────────────────────────
+// ─── Activity body (shared timeline) ─────────────────────────────────
 
-const ACTIVITY_CONFIG: Record<
-  string,
-  { icon: typeof Clock; bg: string; ring: string; iconColor: string }
-> = {
+const FILING_ACTIVITY_ICONS: Record<string, TimelineIconConfig> = {
   'status-change': {
     icon: GitBranch,
     bg: 'bg-authority/10',
@@ -759,133 +757,17 @@ const ACTIVITY_CONFIG: Record<
   },
 };
 
-type TimelineRow =
-  | { kind: 'date'; date: string; label: string }
-  | { kind: 'event'; event: FilingActivity; isFirstInDate: boolean };
-
-function buildTimeline(events: FilingActivity[]): TimelineRow[] {
-  const sorted = [...events].sort(
-    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
-  );
-  const rows: TimelineRow[] = [];
-  let prevDate = '';
-  for (const event of sorted) {
-    const dateKey = new Date(event.timestamp).toLocaleDateString('en-IN', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    });
-    const isFirstInDate = dateKey !== prevDate;
-    if (isFirstInDate) {
-      rows.push({ kind: 'date', date: dateKey, label: dateKey });
-      prevDate = dateKey;
-    }
-    rows.push({ kind: 'event', event, isFirstInDate });
-  }
-  return rows;
-}
-
 function ActivityBody({ filing }: { filing: FilingRow }) {
-  const rows = buildTimeline(filing.activity);
-
-  if (rows.length === 0) {
-    return (
-      <div className="flex-1 overflow-y-auto py-5">
-        <div className="text-center py-12 px-6">
-          <div className="w-10 h-10 mx-auto mb-3 bg-paper-sunken border border-rule flex items-center justify-center">
-            <Clock className="w-5 h-5 text-ink-muted/40" strokeWidth={1} />
-          </div>
-          <p className="text-sm text-ink-muted font-sans">No activity recorded</p>
-          <p className="text-[11px] text-ink-muted/60 font-sans mt-1">
-            Actions on this filing will appear here.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="flex-1 overflow-y-auto py-5">
-      {rows.map((row, idx) => {
-        if (row.kind === 'date') {
-          /* ── Date separator row ─────────────────────────── */
-          return (
-            <div key={`d-${row.date}`} className="flex min-h-[28px]">
-              {/* Left: empty */}
-              <div className="w-[100px] shrink-0" />
-              {/* Center: line through */}
-              <div className="w-5 shrink-0 flex flex-col items-center">
-                <div className="w-[2px] flex-1 bg-rule/50" />
-              </div>
-              {/* Right: date label */}
-              <div className="flex-1 min-w-0 pl-3 flex items-center">
-                <span className="text-[10px] font-sans font-semibold tracking-widest uppercase text-ink-muted/70">
-                  {row.label}
-                </span>
-              </div>
-            </div>
-          );
-        }
-
-        /* ── Event row ─────────────────────────────────── */
-        const { event } = row;
-        const config = ACTIVITY_CONFIG[event.type] ?? {
-          icon: Clock,
-          bg: 'bg-ink/5',
-          ring: 'ring-ink/15',
-          iconColor: 'text-ink-muted',
-        };
-        const Icon = config.icon;
-        const isLastRow = idx === rows.length - 1;
-
-        return (
-          <div key={event.id} className="flex min-h-[56px]">
-            {/* ── Left column: actor + time ────────────────── */}
-            <div className="w-[100px] shrink-0 text-right pr-4 flex flex-col justify-center">
-              <div className="text-[11px] font-sans font-medium text-ink truncate">
-                {event.actor.name}
-              </div>
-              <div className="text-[10px] font-mono tabular-nums text-ink-muted whitespace-nowrap">
-                {formatTime(event.timestamp)}
-              </div>
-            </div>
-
-            {/* ── Center column: line + circle + line ─────── */}
-            <div className="w-5 shrink-0 flex flex-col items-center">
-              <div className="w-[2px] flex-1 bg-rule/50" />
-              <span
-                className={`w-5 h-5 shrink-0 flex items-center justify-center ring-1 z-10 ${config.bg} ${config.ring}`}
-              >
-                <Icon className={`w-2.5 h-2.5 ${config.iconColor}`} strokeWidth={2} />
-              </span>
-              <div className="w-[2px] flex-1 bg-rule/50" />
-            </div>
-
-            {/* ── Right column: activity detail ──────────────── */}
-            <div className="flex-1 min-w-0 pl-3 flex items-center">
-              <p className="text-sm text-ink font-sans leading-relaxed">
-                {event.detail}
-              </p>
-            </div>
-          </div>
-        );
-      })}
-
-      {/* ── Tail row: extends the line below the last event ── */}
-      <div className="flex h-3">
-        <div className="w-[100px] shrink-0" />
-        <div className="w-5 shrink-0 flex flex-col items-center">
-          <div className="w-[2px] flex-1 bg-rule/50" />
-        </div>
-        <div className="flex-1" />
-      </div>
+      <ActivityTimeline
+        events={filing.activity}
+        iconConfig={FILING_ACTIVITY_ICONS}
+        emptyLabel="No activity recorded"
+        emptyHint="Actions on this filing will appear here."
+      />
     </div>
   );
-}
-
-function formatTime(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
 }
 
 function formatUploadDate(iso: string): string {
