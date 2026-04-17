@@ -1,7 +1,7 @@
 import { Injectable, BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { DatabaseService, eq, and, isNull, isNotNull } from '@packages/database';
 import { OrgUnitService } from '@packages/org-units';
-import { tasks } from '@packages/tasks';
+import { tasks } from '../schema/tasks';
 
 @Injectable()
 export class TaskClaimService {
@@ -29,7 +29,6 @@ export class TaskClaimService {
       throw new ForbiddenException('You are not a member of the assigned team');
     }
 
-    // Optimistic locking: only update if assignee_id is still null
     const [updated] = await this.database.db
       .update(tasks)
       .set({ assigneeId: userId })
@@ -38,7 +37,6 @@ export class TaskClaimService {
 
     if (!updated) throw new ConflictException('Task was claimed by someone else');
 
-    // assigneeId is guaranteed non-null: we just set it to userId above
     return updated as { id: string; assigneeId: string };
   }
 

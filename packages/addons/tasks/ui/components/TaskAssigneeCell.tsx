@@ -5,21 +5,28 @@ import { toast } from '@packages/ui';
 import { useAuth } from '@packages/auth-ui/hooks/useAuth';
 import { usePlatformAPI } from '@packages/platform-ui';
 import type { CellRendererProps } from '@packages/ui/components/data-grid/cell-renderers/types';
+import { tasksRoutes, type TasksFieldMap } from '@packages/tasks-contract';
+
+const ASSIGNEE_ID: keyof TasksFieldMap = 'assigneeId';
+const ASSIGNEE_TEAM_ID: keyof TasksFieldMap = 'assigneeTeamId';
+const ASSIGNEE_LABEL = `${ASSIGNEE_ID}__label` as const;
+const TEAM_LABEL = `${ASSIGNEE_TEAM_ID}__label` as const;
 
 export function TaskAssigneeCell({ row }: CellRendererProps) {
   const { user } = useAuth();
   const api = usePlatformAPI();
   const queryClient = useQueryClient();
 
-  const assigneeId = row.assigneeId as string | null;
-  const assigneeName = row.assigneeId__label as string | undefined;
-  const teamName = row.assigneeTeamId__label as string | undefined;
-  const isTeamTask = !!row.assigneeTeamId;
+  const taskId = row.id as string;
+  const assigneeId = row[ASSIGNEE_ID] as string | null;
+  const assigneeName = row[ASSIGNEE_LABEL] as string | undefined;
+  const teamName = row[TEAM_LABEL] as string | undefined;
+  const isTeamTask = !!row[ASSIGNEE_TEAM_ID];
   const isClaimed = isTeamTask && !!assigneeId;
   const isClaimedByMe = isClaimed && assigneeId === user?.userId;
 
   const claimMutation = useMutation({
-    mutationFn: () => api.post(`/tasks/${row.id}/claim`),
+    mutationFn: () => api.post(tasksRoutes.claim(taskId)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       toast.success('Task claimed');
@@ -30,7 +37,7 @@ export function TaskAssigneeCell({ row }: CellRendererProps) {
   });
 
   const unclaimMutation = useMutation({
-    mutationFn: () => api.post(`/tasks/${row.id}/unclaim`),
+    mutationFn: () => api.post(tasksRoutes.unclaim(taskId)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       toast.success('Task released');

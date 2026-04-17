@@ -7,6 +7,12 @@ describe('tasksRoutes', () => {
     expect(tasksRoutes.base).toBe('/tasks');
     expect(tasksRoutes.transition('abc')).toBe('/tasks/abc/transition');
   });
+
+  it('exposes claim/unclaim/assign helpers matching the TaskClaimController decorators', () => {
+    expect(tasksRoutes.claim('abc')).toBe('/tasks/abc/claim');
+    expect(tasksRoutes.unclaim('abc')).toBe('/tasks/abc/unclaim');
+    expect(tasksRoutes.assign('abc')).toBe('/tasks/abc/assign');
+  });
 });
 
 describe('TASKS_METADATA', () => {
