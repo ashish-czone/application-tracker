@@ -39,6 +39,8 @@ import { RolesEditorPage } from '@domains/compliance-ui/portals/customer/feature
 import { UsersPage } from '@domains/compliance-ui/portals/customer/features/screens/users';
 import { ReportsPage } from '@domains/compliance-ui/portals/customer/features/screens/reports';
 import { SettingsPage } from '@domains/compliance-ui/portals/customer/features/screens/settings';
+import { LawsLibraryPage } from '@domains/compliance-ui/portals/customer/features/screens/laws';
+import { GlobalSetsPage } from '@domains/compliance-ui/portals/customer/features/screens/global-sets';
 import { api } from './lib/api';
 import './globals.css';
 
@@ -89,6 +91,7 @@ createRoot(document.getElementById('root')!).render(
         <Routes>
           <Route path="/console-preview" element={<ConsolePreviewPage />} />
           <Route path="/screens/dashboard" element={<DashboardScreenPage />} />
+          <Route path="/screens/laws" element={<LawsLibraryPage />} />
           <Route path="/screens/obligations" element={<ObligationsLibraryPage />} />
           <Route path="/screens/clients" element={<ClientsPage />} />
           <Route path="/screens/clients/:clientId" element={<ClientDetailPage />} />
@@ -98,6 +101,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/screens/users" element={<UsersPage />} />
           <Route path="/screens/reports" element={<ReportsPage />} />
           <Route path="/screens/settings" element={<SettingsPage />} />
+          <Route path="/screens/global-sets" element={<GlobalSetsPage />} />
         </Routes>
       </BrowserRouter>
     ) : (

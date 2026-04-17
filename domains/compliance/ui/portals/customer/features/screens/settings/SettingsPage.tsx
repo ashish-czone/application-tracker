@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, type ReactElement } from 'react';
 import {
   User,
   ShieldCheck,
@@ -690,7 +690,7 @@ function ActivityLogSection() {
 
 // ─── Section content map ────────────────────────────────────────────
 
-const SECTION_CONTENT: Record<SettingsSection, () => JSX.Element> = {
+const SECTION_CONTENT: Record<SettingsSection, () => ReactElement> = {
   profile: ProfileSection,
   security: SecuritySection,
   notifications: NotificationsSection,

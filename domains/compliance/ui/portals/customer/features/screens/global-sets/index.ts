@@ -1,0 +1,1 @@
+export { GlobalSetsPage } from './GlobalSetsPage';
