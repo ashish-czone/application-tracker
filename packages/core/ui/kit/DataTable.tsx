@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react';
+import { type ReactNode, type HTMLAttributes } from 'react';
 import { cn } from '../lib/utils';
 import { Eyebrow } from './Eyebrow';
 
@@ -36,6 +36,8 @@ export interface DataTableProps<T> {
    * this array — reordering is a separate concern.
    */
   visibleColumns?: string[];
+  /** Extra native props to spread onto each `<tr>` (e.g. mouse events). */
+  rowProps?: (row: T, index: number) => HTMLAttributes<HTMLTableRowElement>;
 }
 
 /**
@@ -54,6 +56,7 @@ export function DataTable<T>({
   className,
   staggerReveal = false,
   visibleColumns,
+  rowProps,
 }: DataTableProps<T>) {
   if (rows.length === 0 && emptyState) {
     return <div className={cn('w-full', className)}>{emptyState}</div>;
@@ -96,6 +99,7 @@ export function DataTable<T>({
                   staggerReveal && 'reveal-up',
                 )}
                 style={staggerReveal ? { animationDelay: `${index * 28}ms` } : undefined}
+                {...(rowProps ? rowProps(row, index) : {})}
               >
                 {renderedColumns.map((col, colIdx) => {
                   const overlay = rowOverlay && colIdx === lastIdx ? rowOverlay(row, index) : null;
