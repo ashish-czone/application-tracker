@@ -1,12 +1,6 @@
 import { useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
-import {
-  Search,
-  Command as CommandIcon,
-  Moon,
-  Sun,
-  Building2,
-} from 'lucide-react';
+import { Building2 } from 'lucide-react';
 import { Eyebrow } from '@packages/ui';
 import { OrgTree } from './OrgTree';
 import { UnitDetailPanel } from './UnitDetailPanel';
@@ -18,10 +12,9 @@ import {
   MOCK_LAW_ASSIGNMENTS,
   type OrgUnit,
 } from './orgHierarchyMock';
-import { ScreenPreviewNav } from '../shared/ScreenPreviewNav';
+import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 
 export function OrgHierarchyPage() {
-  const [isDark, setIsDark] = useState(false);
   const [selectedUnit, setSelectedUnit] = useState<OrgUnit | null>(MOCK_ORG_UNITS[0]);
   const [addUnitOpen, setAddUnitOpen] = useState(false);
   const [addUnitParentId, setAddUnitParentId] = useState<string | null>(null);
@@ -32,63 +25,9 @@ export function OrgHierarchyPage() {
     setAddUnitOpen(true);
   };
 
-  const toggleDark = () => {
-    setIsDark((prev) => {
-      const next = !prev;
-      if (typeof document !== 'undefined') {
-        document.body.classList.toggle('dark', next);
-      }
-      return next;
-    });
-  };
-
   return (
     <div className="min-h-screen bg-paper paper-grain">
-      {/* ─── Top chrome ─────────────────────────────────────────────────── */}
-      <div className="border-b border-rule bg-paper-raised">
-        <div className="max-w-[1480px] mx-auto px-10 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <span className="font-serif text-2xl italic text-ink leading-none">
-              Compliance<span className="text-signal">.</span>
-            </span>
-            <ScreenPreviewNav active="org-hierarchy" />
-          </div>
-          <div className="flex items-center gap-4">
-            <button
-              type="button"
-              className="flex items-center gap-2 px-3 py-1.5 border border-rule hover:border-ink text-[11px] text-ink-muted hover:text-ink font-sans transition-colors"
-            >
-              <Search className="w-3 h-3" strokeWidth={1.5} />
-              <span>Search or command</span>
-              <span className="ml-4 flex items-center gap-0.5 font-mono text-[10px] text-ink-muted/80">
-                <CommandIcon className="w-3 h-3" strokeWidth={1.5} />K
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={toggleDark}
-              aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-              className="flex items-center justify-center w-8 h-8 border border-rule hover:border-ink text-ink-muted hover:text-ink transition-colors"
-            >
-              {isDark ? <Sun className="w-3.5 h-3.5" strokeWidth={1.5} /> : <Moon className="w-3.5 h-3.5" strokeWidth={1.5} />}
-            </button>
-            <div className="flex items-center gap-2 pl-4 border-l border-rule">
-              <span
-                aria-hidden
-                className="w-7 h-7 bg-authority text-paper-raised text-[10px] font-sans font-semibold flex items-center justify-center"
-              >
-                DI
-              </span>
-              <div className="text-right">
-                <div className="text-xs text-ink font-sans leading-none">Deepak Iyer</div>
-                <div className="text-[10px] uppercase tracking-eyebrow text-ink-muted font-sans mt-0.5">
-                  Partner
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <ScreenPreviewTopBar active="org-hierarchy" />
 
       {/* ─── Page header ─────────────────────────────────────────────────── */}
       <div className="max-w-[1480px] mx-auto px-10 pt-8 pb-6">

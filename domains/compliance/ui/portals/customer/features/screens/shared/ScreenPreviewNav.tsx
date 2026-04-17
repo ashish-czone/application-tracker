@@ -1,4 +1,4 @@
-type ScreenKey = 'dashboard' | 'clients' | 'obligations' | 'filings' | 'org-hierarchy' | 'reports';
+export type ScreenKey = 'dashboard' | 'clients' | 'obligations' | 'filings' | 'org-hierarchy' | 'reports';
 
 const ITEMS: Array<{ key: ScreenKey; label: string; href: string }> = [
   { key: 'dashboard', label: 'Dashboard', href: '/screens/dashboard' },

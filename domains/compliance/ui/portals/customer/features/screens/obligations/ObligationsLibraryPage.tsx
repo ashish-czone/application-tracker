@@ -1,15 +1,6 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
-import {
-  Search,
-  Command as CommandIcon,
-  Plus,
-  Moon,
-  Sun,
-  Upload,
-  Download,
-  ChevronRight,
-} from 'lucide-react';
+import { Search, Plus, Upload, Download, ChevronRight } from 'lucide-react';
 import {
   MetricKPI,
   DataTable,
@@ -32,7 +23,7 @@ import {
   type ObligationFrequency,
 } from './obligationsMock';
 import { NewObligationDrawer } from './NewObligationDrawer';
-import { ScreenPreviewNav } from '../shared/ScreenPreviewNav';
+import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 
 const FREQUENCY_LABEL: Record<ObligationFrequency, string> = {
   monthly: 'Monthly',
@@ -178,7 +169,6 @@ const ALL_COLUMN_KEYS = OBLIGATION_COLUMNS.map((c) => c.key);
 const REQUIRED_COLUMN_KEYS: string[] = ['code', 'name'];
 
 export function ObligationsLibraryPage() {
-  const [isDark, setIsDark] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   // Filter state — popover multi-selects return arrays.
@@ -196,16 +186,6 @@ export function ObligationsLibraryPage() {
   // Pagination state.
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-
-  const toggleDark = () => {
-    setIsDark((prev) => {
-      const next = !prev;
-      if (typeof document !== 'undefined') {
-        document.body.classList.toggle('dark', next);
-      }
-      return next;
-    });
-  };
 
   const filtered = useMemo(() => {
     // Reset to page 1 whenever filters change.
@@ -309,55 +289,7 @@ export function ObligationsLibraryPage() {
 
   return (
     <div className="min-h-screen bg-paper paper-grain">
-      {/* ─── Top chrome ─────────────────────────────────────────────────── */}
-      <div className="border-b border-rule bg-paper-raised">
-        <div className="max-w-[1480px] mx-auto px-10 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <span className="font-serif text-2xl italic text-ink leading-none">
-              Compliance<span className="text-signal">.</span>
-            </span>
-            <ScreenPreviewNav active="obligations" />
-          </div>
-          <div className="flex items-center gap-4">
-            <button
-              type="button"
-              className="flex items-center gap-2 px-3 py-1.5 border border-rule hover:border-ink text-[11px] text-ink-muted hover:text-ink font-sans transition-colors"
-            >
-              <Search className="w-3 h-3" strokeWidth={1.5} />
-              <span>Search or command</span>
-              <span className="ml-4 flex items-center gap-0.5 font-mono text-[10px] text-ink-muted/80">
-                <CommandIcon className="w-3 h-3" strokeWidth={1.5} />K
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={toggleDark}
-              aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-              className="flex items-center justify-center w-8 h-8 border border-rule hover:border-ink text-ink-muted hover:text-ink transition-colors"
-            >
-              {isDark ? (
-                <Sun className="w-3.5 h-3.5" strokeWidth={1.5} />
-              ) : (
-                <Moon className="w-3.5 h-3.5" strokeWidth={1.5} />
-              )}
-            </button>
-            <div className="flex items-center gap-2 pl-4 border-l border-rule">
-              <span
-                aria-hidden
-                className="w-7 h-7 bg-authority text-paper-raised text-[10px] font-sans font-semibold flex items-center justify-center"
-              >
-                DI
-              </span>
-              <div className="text-right">
-                <div className="text-xs text-ink font-sans leading-none">Deepak Iyer</div>
-                <div className="text-[10px] uppercase tracking-eyebrow text-ink-muted font-sans mt-0.5">
-                  Partner
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <ScreenPreviewTopBar active="obligations" />
 
       <main className="max-w-[1480px] mx-auto px-10 py-8">
         {/* ─── Page header ──────────────────────────────────────────────── */}
