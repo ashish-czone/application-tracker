@@ -8,6 +8,7 @@
     "@packages/calendar-ui": "workspace:*",
     "@packages/entity-engine-ui": "workspace:*",
     "@packages/platform-ui": "workspace:*",
+    "@packages/tasks-contract": "workspace:*",
     "@packages/ui": "workspace:*",
     "@tanstack/react-query": "^5.0.0",
     "lucide-react": "^0.500.0",

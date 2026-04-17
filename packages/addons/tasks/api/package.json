@@ -13,6 +13,7 @@
     "@packages/entity-engine": "workspace:*",
     "@packages/logger": "workspace:*",
     "@packages/org-units": "workspace:*",
+    "@packages/tasks-contract": "workspace:*",
     "@packages/taxonomy": "workspace:*",
     "drizzle-orm": "^0.45.1"
   },
