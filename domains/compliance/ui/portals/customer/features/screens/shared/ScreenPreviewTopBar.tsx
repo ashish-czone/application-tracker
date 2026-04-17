@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router';
 import { Search, Command as CommandIcon, Moon, Sun, Bell, User, Settings, KeyRound, LogOut } from 'lucide-react';
 import {
   DropdownMenu,
@@ -14,6 +15,7 @@ import { MOCK_NOTIFICATIONS } from './notificationsMock';
 const UNREAD_COUNT = MOCK_NOTIFICATIONS.filter((n) => !n.isRead).length;
 
 export function ScreenPreviewTopBar({ active }: { active: ScreenKey }) {
+  const navigate = useNavigate();
   const [isDark, setIsDark] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
@@ -108,15 +110,24 @@ export function ScreenPreviewTopBar({ active }: { active: ScreenKey }) {
                 </div>
               </div>
               <div className="p-1">
-                <DropdownMenuItem className="rounded-none px-3 py-2 text-xs font-sans text-ink focus:bg-paper focus:text-ink cursor-pointer">
+                <DropdownMenuItem
+                  className="rounded-none px-3 py-2 text-xs font-sans text-ink focus:bg-paper focus:text-ink cursor-pointer"
+                  onSelect={() => navigate('/screens/settings')}
+                >
                   <User className="w-3.5 h-3.5 mr-2 text-ink-muted" strokeWidth={1.5} />
                   Profile
                 </DropdownMenuItem>
-                <DropdownMenuItem className="rounded-none px-3 py-2 text-xs font-sans text-ink focus:bg-paper focus:text-ink cursor-pointer">
+                <DropdownMenuItem
+                  className="rounded-none px-3 py-2 text-xs font-sans text-ink focus:bg-paper focus:text-ink cursor-pointer"
+                  onSelect={() => navigate('/screens/settings')}
+                >
                   <Settings className="w-3.5 h-3.5 mr-2 text-ink-muted" strokeWidth={1.5} />
                   Settings
                 </DropdownMenuItem>
-                <DropdownMenuItem className="rounded-none px-3 py-2 text-xs font-sans text-ink focus:bg-paper focus:text-ink cursor-pointer">
+                <DropdownMenuItem
+                  className="rounded-none px-3 py-2 text-xs font-sans text-ink focus:bg-paper focus:text-ink cursor-pointer"
+                  onSelect={() => navigate('/screens/settings')}
+                >
                   <KeyRound className="w-3.5 h-3.5 mr-2 text-ink-muted" strokeWidth={1.5} />
                   Change password
                 </DropdownMenuItem>
