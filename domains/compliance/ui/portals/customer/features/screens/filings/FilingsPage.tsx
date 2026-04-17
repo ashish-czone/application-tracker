@@ -40,7 +40,9 @@ import {
   LAW_OPTIONS,
   type FilingRow,
 } from './filingsMock';
+import { MOCK_HANDLERS } from '../../console-preview/mockData';
 import { FilingDetailDrawer } from './FilingDetailDrawer';
+import { BulkReassignDialog, type BulkReassignSubmitPayload } from './BulkReassignDialog';
 import type { Filing } from '../../../../../shared/types';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 
@@ -184,6 +186,9 @@ export function FilingsPage() {
   // filter change so the selection can't silently contain off-screen rows.
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
+  // Reassign dialog.
+  const [reassignOpen, setReassignOpen] = useState(false);
+
 
   // ── Filtering ───────────────────────────────────────────────────
 
@@ -254,6 +259,49 @@ export function FilingsPage() {
     for (const id of selectedIds) if (visibleIds.has(id)) next.add(id);
     return next;
   }, [selectedIds, visibleIds]);
+
+  const selectedFilings = useMemo(
+    () => filingRows.filter((f) => effectiveSelectedIds.has(f.id)),
+    [filingRows, effectiveSelectedIds],
+  );
+
+  // ── Bulk reassign ───────────────────────────────────────────────
+
+  function applyReassign({ newHandlerId, notify, note }: BulkReassignSubmitPayload) {
+    const newHandler = MOCK_HANDLERS.find((h) => h.id === newHandlerId);
+    if (!newHandler) return;
+
+    const targetIds = new Set(effectiveSelectedIds);
+    // Snapshot prior assignments for undo.
+    const before = new Map<string, FilingRow['handler']>();
+    for (const f of filingRows) {
+      if (targetIds.has(f.id)) before.set(f.id, f.handler);
+    }
+
+    setFilingRows((prev) =>
+      prev.map((f) => (targetIds.has(f.id) ? { ...f, handler: newHandler } : f)),
+    );
+    setSelectedIds(new Set());
+    setReassignOpen(false);
+
+    const count = targetIds.size;
+    const noun = count === 1 ? 'filing' : 'filings';
+    toast.success(`${count} ${noun} reassigned to ${newHandler.name}`, {
+      description: notify
+        ? `${newHandler.name.split(' ')[0]} will be notified${note ? ` with your note` : ''}.`
+        : undefined,
+      duration: 10_000,
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          setFilingRows((prev) =>
+            prev.map((f) => (before.has(f.id) ? { ...f, handler: before.get(f.id) } : f)),
+          );
+          toast.message(`Reassignment of ${count} ${noun} reverted`);
+        },
+      },
+    });
+  }
 
   // ── KPI aggregates ──────────────────────────────────────────────
 
@@ -557,7 +605,7 @@ export function FilingsPage() {
                     {
                       label: 'Reassign',
                       icon: UserPlus,
-                      onClick: () => toast.message('Reassign dialog — coming next task'),
+                      onClick: () => setReassignOpen(true),
                     },
                     {
                       label: 'Export',
@@ -654,6 +702,15 @@ export function FilingsPage() {
           />
         )}
       </AnimatePresence>
+
+      {/* ─── Bulk reassign dialog ─────────────────────────────────────── */}
+      <BulkReassignDialog
+        open={reassignOpen}
+        onOpenChange={setReassignOpen}
+        filings={selectedFilings}
+        handlers={MOCK_HANDLERS}
+        onConfirm={applyReassign}
+      />
     </div>
   );
 }
