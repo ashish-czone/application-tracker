@@ -22,3 +22,6 @@ export const CLIENTS_DELETED = 'clients.Deleted' as const;
 export const CLIENT_CONTACTS_CREATED = 'client-contacts.Created' as const;
 export const CLIENT_CONTACTS_UPDATED = 'client-contacts.Updated' as const;
 export const CLIENT_CONTACTS_DELETED = 'client-contacts.Deleted' as const;
+
+export const CLIENT_REGISTRATIONS_CREATED = 'client-registrations.Created' as const;
+export const CLIENT_REGISTRATIONS_DELETED = 'client-registrations.Deleted' as const;

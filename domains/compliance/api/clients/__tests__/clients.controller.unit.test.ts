@@ -2,18 +2,22 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ClientsController } from '../clients.controller';
 import type { ClientsService } from '../clients.service';
 import type { ClientContactsService } from '../../client-contacts/client-contacts.service';
+import type { ClientRegistrationService } from '../../client-registrations/client-registrations.service';
 
 describe('ClientsController', () => {
   let clientsService: { createWithContacts: ReturnType<typeof vi.fn> };
   let contactsService: { setPrimary: ReturnType<typeof vi.fn> };
+  let registrationsService: { registerMany: ReturnType<typeof vi.fn> };
   let controller: ClientsController;
 
   beforeEach(() => {
     clientsService = { createWithContacts: vi.fn().mockResolvedValue({ client: {}, contacts: [] }) };
     contactsService = { setPrimary: vi.fn().mockResolvedValue(undefined) };
+    registrationsService = { registerMany: vi.fn().mockResolvedValue([]) };
     controller = new ClientsController(
       clientsService as unknown as ClientsService,
       contactsService as unknown as ClientContactsService,
+      registrationsService as unknown as ClientRegistrationService,
     );
   });
 
@@ -65,6 +69,35 @@ describe('ClientsController', () => {
         ClientsController.prototype.setPrimaryContact,
       );
       expect(permission).toBe('client-contacts.update');
+    });
+  });
+
+  describe('createRegistrations', () => {
+    it('delegates to ClientRegistrationService.registerMany with the actor id', async () => {
+      registrationsService.registerMany.mockResolvedValue([
+        { id: 'r1', clientId: 'cid-1', lawId: 'l1', registeredAt: new Date(), deactivatedAt: null },
+      ]);
+
+      const result = await controller.createRegistrations(
+        'cid-1',
+        { lawCodes: ['GST', 'ITR'] },
+        { userId: 'user-1' } as never,
+      );
+
+      expect(registrationsService.registerMany).toHaveBeenCalledWith(
+        'cid-1',
+        ['GST', 'ITR'],
+        'user-1',
+      );
+      expect(result).toHaveLength(1);
+    });
+
+    it('requires client-registrations.create permission', () => {
+      const permission = Reflect.getMetadata(
+        'requiredPermission',
+        ClientsController.prototype.createRegistrations,
+      );
+      expect(permission).toBe('client-registrations.create');
     });
   });
 });
