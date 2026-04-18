@@ -30,7 +30,7 @@ import {
   type ComplianceRow,
   type OverdueRow,
   type WorkloadRow,
-} from './reportsMock';
+} from './data/reportsMock';
 
 const TODAY = new Date('2026-04-17');
 const DEFAULT_RANGE: DateRangeValue = {

@@ -20,8 +20,8 @@ import {
   type LawGroupKey,
   type Obligation,
   type ObligationFrequency,
-} from './obligationsMock';
-import { NewObligationDrawer } from './NewObligationDrawer';
+} from './data/obligationsMock';
+import { NewObligationDrawer } from './components/NewObligationDrawer';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 
 const FREQUENCY_LABEL: Record<ObligationFrequency, string> = {

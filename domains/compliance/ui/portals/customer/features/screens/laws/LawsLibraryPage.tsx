@@ -3,7 +3,7 @@ import { ChevronRight, ChevronDown, Search, Plus, BookOpen, FileText } from 'luc
 import { Eyebrow } from '@packages/ui';
 import { JurisdictionTag } from '../../../../../components';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
-import { LAWS, type LawNode, type LawJurisdiction } from './lawsMock';
+import { LAWS, type LawNode, type LawJurisdiction } from './data/lawsMock';
 
 function formatDate(iso?: string): string {
   if (!iso) return '\u2014';

@@ -28,7 +28,7 @@ import {
   MOCK_FILINGS,
   MOCK_WORKLOADS,
 } from '../../console-preview/mockData';
-import { DASHBOARD_ACTIVITY } from './dashboardMock';
+import { DASHBOARD_ACTIVITY } from './data/dashboardMock';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 
 // Filings assigned to the current partner (Deepak Iyer — "DI") in v1 mock.

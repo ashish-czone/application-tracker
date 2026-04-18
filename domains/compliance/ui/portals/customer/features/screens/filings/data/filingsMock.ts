@@ -1,5 +1,5 @@
-import type { Filing, Handler } from '../../../../../shared/types';
-import { MOCK_HANDLERS } from '../../console-preview/mockData';
+import type { Filing, Handler } from '../../../../../../shared/types';
+import { MOCK_HANDLERS } from '../../../console-preview/mockData';
 
 // ─── Extended filing row for the Filings list screen ────────────────
 

@@ -40,7 +40,7 @@ import {
   type ActivityEntry,
   type ThemeMode,
   type Density,
-} from './settingsMock';
+} from './data/settingsMock';
 
 // ─── Constants ──────────────────────────────────────────────────────
 

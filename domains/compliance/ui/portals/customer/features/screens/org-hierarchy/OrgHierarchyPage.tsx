@@ -2,16 +2,16 @@ import { useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { Building2 } from 'lucide-react';
 import { Eyebrow } from '@packages/ui';
-import { OrgTree } from './OrgTree';
-import { UnitDetailPanel } from './UnitDetailPanel';
-import { AddUnitDrawer } from './AddUnitDrawer';
-import { AddMemberDrawer } from './AddMemberDrawer';
+import { OrgTree } from './components/OrgTree';
+import { UnitDetailPanel } from './components/UnitDetailPanel';
+import { AddUnitDrawer } from './components/AddUnitDrawer';
+import { AddMemberDrawer } from './components/AddMemberDrawer';
 import {
   MOCK_ORG_UNITS,
   MOCK_MEMBERS,
   MOCK_LAW_ASSIGNMENTS,
   type OrgUnit,
-} from './orgHierarchyMock';
+} from './data/orgHierarchyMock';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 
 export function OrgHierarchyPage() {

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Users } from 'lucide-react';
 import { DrawerShell, DrawerHeader, Eyebrow } from '@packages/ui';
-import { POSITION_LABEL, type OrgUnit, type OrgMember } from './orgHierarchyMock';
+import { POSITION_LABEL, type OrgUnit, type OrgMember } from '../data/orgHierarchyMock';
 
 // ─── Types ───────────────────────────────────────────────────────────
 

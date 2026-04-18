@@ -35,7 +35,7 @@ import {
   ALL_ROLE_OPTIONS,
   type UserRow,
   type UserStatus,
-} from './usersMock';
+} from './data/usersMock';
 
 // ─── Constants ──────────────────────────────────────────────────────
 

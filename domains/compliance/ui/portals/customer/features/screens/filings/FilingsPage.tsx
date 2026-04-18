@@ -38,10 +38,10 @@ import {
   CLIENT_OPTIONS,
   LAW_OPTIONS,
   type FilingRow,
-} from './filingsMock';
+} from './data/filingsMock';
 import { MOCK_HANDLERS } from '../../console-preview/mockData';
-import { FilingDetailDrawer } from './FilingDetailDrawer';
-import { BulkReassignDialog, type BulkReassignSubmitPayload } from './BulkReassignDialog';
+import { FilingDetailDrawer } from './components/FilingDetailDrawer';
+import { BulkReassignDialog, type BulkReassignSubmitPayload } from './components/BulkReassignDialog';
 import type { Filing } from '../../../../../shared/types';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 

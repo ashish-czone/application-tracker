@@ -13,7 +13,7 @@ import {
   type OrgMember,
   type ComplianceLawAssignment,
   type HealthStatus,
-} from './orgHierarchyMock';
+} from '../data/orgHierarchyMock';
 
 // ─── Health badge ───────────────────────────────────────────────────
 

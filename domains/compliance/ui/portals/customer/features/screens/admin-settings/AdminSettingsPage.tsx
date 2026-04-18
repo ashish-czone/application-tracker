@@ -23,7 +23,7 @@ import {
   type AdminSettingsSection,
   type AdminSettingField,
   type AdminSettingsGroup,
-} from './adminSettingsMock';
+} from './data/adminSettingsMock';
 
 // ─── Constants ──────────────────────────────────────────────────────
 

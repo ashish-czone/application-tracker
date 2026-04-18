@@ -16,7 +16,7 @@ import {
   getAvailableMembers,
   type Role,
   type RoleMember,
-} from './rolesMock';
+} from './data/rolesMock';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 
 // ─── Constants ──────────────────────────────────────────────────────

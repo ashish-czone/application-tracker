@@ -7,7 +7,7 @@ import {
   GLOBAL_SET_ITEMS,
   type GlobalSetDefinition,
   type GlobalSetItem,
-} from './globalSetsMock';
+} from './data/globalSetsMock';
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
