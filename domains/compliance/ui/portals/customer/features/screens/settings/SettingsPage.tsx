@@ -5,7 +5,6 @@ import {
   Bell,
   Palette,
   ScrollText,
-  ChevronRight,
   Camera,
   Smartphone,
   Monitor,
@@ -24,6 +23,7 @@ import {
   DataGridShell,
   Eyebrow,
   SearchInput,
+  PageHeader,
   type DataTableColumn,
 } from '@packages/ui';
 import { OrdinalDate } from '../../../../../components';
@@ -707,18 +707,11 @@ export function SettingsPage() {
       <ScreenPreviewTopBar active="dashboard" />
 
       <main className="max-w-[1480px] mx-auto px-10 py-8">
-        {/* ─── Page header ──────────────────────────────────────── */}
-        <header className="mb-8">
-          <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-eyebrow font-sans font-medium text-ink-muted">
-            <span>Account</span>
-            <ChevronRight className="w-3 h-3" strokeWidth={1.5} />
-            <span className="text-ink">Settings</span>
-          </div>
-          <h1 className="font-serif text-4xl text-ink leading-none mt-1">Settings</h1>
-          <p className="mt-2 font-serif italic text-ink-soft max-w-2xl">
-            Manage your account, security, and preferences.
-          </p>
-        </header>
+        <PageHeader
+          breadcrumb={['Account', 'Settings']}
+          title="Settings"
+          subtitle="Manage your account, security, and preferences."
+        />
 
         {/* ─── Split layout: sidebar + content ──────────────────── */}
         <div className="flex gap-0 border border-rule bg-paper-raised">

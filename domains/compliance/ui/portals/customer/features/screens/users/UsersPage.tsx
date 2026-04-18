@@ -2,7 +2,6 @@ import { useState, useMemo, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   Plus,
-  ChevronRight,
   X,
   Mail,
   Phone,
@@ -24,6 +23,7 @@ import {
   SearchInput,
   DetailRow,
   AvatarBadge,
+  PageHeader,
   type DataTableColumn,
   type ActiveFilter,
 } from '@packages/ui';
@@ -451,24 +451,21 @@ export function UsersPage() {
       <ScreenPreviewTopBar active="users" />
 
       <main className="max-w-[1480px] mx-auto px-10 py-8">
-        {/* ─── Page header ──────────────────────────────────────── */}
-        <header className="flex items-end justify-between mb-8">
-          <div>
-            <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-eyebrow font-sans font-medium text-ink-muted">
-              <span>Settings</span>
-              <ChevronRight className="w-3 h-3" strokeWidth={1.5} />
-              <span className="text-ink">Users</span>
-            </div>
-            <h1 className="font-serif text-4xl text-ink leading-none mt-1">Users</h1>
-            <p className="mt-2 font-serif italic text-ink-soft max-w-2xl">
+        <PageHeader
+          breadcrumb={['Settings', 'Users']}
+          title="Users"
+          subtitle={
+            <>
               {totalUsers} team members — {activeUsers} active, {invitedUsers} pending invitations.
-            </p>
-          </div>
-          <Button size="sm">
-            <UserPlus className="w-3.5 h-3.5 mr-1.5" strokeWidth={2} />
-            Invite user
-          </Button>
-        </header>
+            </>
+          }
+          actions={
+            <Button size="sm">
+              <UserPlus className="w-3.5 h-3.5 mr-1.5" strokeWidth={2} />
+              Invite user
+            </Button>
+          }
+        />
 
         {/* ─── KPI row ──────────────────────────────────────────── */}
         <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-px bg-rule border border-rule">

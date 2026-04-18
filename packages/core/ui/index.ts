@@ -154,6 +154,11 @@ export { Eyebrow, type EyebrowProps } from './components/layout/Eyebrow';
 export { SectionRule, type SectionRuleProps } from './components/layout/SectionRule';
 export { CoarseTabs, type CoarseTabsProps, type CoarseTabItem, type CoarseTabVariant } from './components/layout/CoarseTabs';
 export { PageProgress, type PageProgressProps } from './components/layout/PageProgress';
+export {
+  PageHeader,
+  type PageHeaderProps,
+  type PageHeaderTitleSize,
+} from './components/layout/PageHeader';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Components — navigation
