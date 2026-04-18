@@ -1,8 +1,9 @@
-import { Suspense, lazy, useState, useMemo } from 'react';
+import { Suspense, lazy, useState, useMemo, type ReactNode } from 'react';
 import { Routes, Route, Navigate, type RouteObject } from 'react-router';
 import { AuthGuard } from '@packages/auth-ui/components/AuthGuard';
+import { PermissionGuard } from '@packages/auth-ui/components/PermissionGuard';
 import { EntityListPage, EntityDetailPage, useEntityConfig, useEntityEngine } from '@packages/entity-engine-ui';
-import type { DomainWebManifest, DomainDetailPageComponent, MenuItem } from '@packages/domains';
+import type { DomainWebManifest, DomainDetailPageComponent, DomainRouteObject, MenuItem } from '@packages/domains';
 import {
   PipelineProgressBar,
   TransitionConfirmDialog,
@@ -200,9 +201,9 @@ function mergeDetailOverrides(domains: DomainWebManifest[]): Record<string, Doma
   return merged;
 }
 
-function mergeDomainRoutes(domains: DomainWebManifest[]): RouteObject[] {
+function mergeDomainRoutes(domains: DomainWebManifest[]): DomainRouteObject[] {
   const seen = new Set<string>();
-  const merged: RouteObject[] = [];
+  const merged: DomainRouteObject[] = [];
   for (const domain of domains) {
     for (const route of domain.routes ?? []) {
       if (route.path && seen.has(route.path)) {
@@ -214,6 +215,11 @@ function mergeDomainRoutes(domains: DomainWebManifest[]): RouteObject[] {
     }
   }
   return merged;
+}
+
+function withPermission(element: ReactNode, permission?: string): ReactNode {
+  if (!permission) return element;
+  return <PermissionGuard permission={permission}>{element}</PermissionGuard>;
 }
 
 export function AppRouter({ domains, brandLabel, menuItems, extraRoutes }: AppRouterProps) {
@@ -254,7 +260,11 @@ export function AppRouter({ domains, brandLabel, menuItems, extraRoutes }: AppRo
             <Route
               key={route.path}
               path={route.path}
-              element={<Suspense fallback={<PageSkeleton />}>{route.element}</Suspense>}
+              element={
+                <Suspense fallback={<PageSkeleton />}>
+                  {withPermission(route.element, route.permission)}
+                </Suspense>
+              }
             />
           ))}
 

@@ -28,25 +28,13 @@ import { AttachmentsSection } from '@packages/attachments-ui';
 import { EvaluationsSection } from '@packages/evaluations-ui';
 import { AuditTimeline } from '@packages/audit-ui';
 import { AvatarNameCell, Toaster } from '@packages/ui';
-import { CheckSquare, Building2, UserCog, Network } from 'lucide-react';
+import { CheckSquare, Building2, UserCog } from 'lucide-react';
 import type { MenuItem } from '@packages/domains';
 import { complianceWeb } from '@domains/compliance-ui';
 import {
   ConsolePreviewPage,
   ConsolePreviewPageV2,
 } from '@domains/compliance-ui/portals/customer/features/console-preview';
-import { DashboardScreenPage } from '@domains/compliance-ui/portals/customer/features/screens/dashboard';
-import { ObligationsLibraryPage } from '@domains/compliance-ui/portals/customer/features/screens/obligations';
-import { ClientsPage, ClientDetailPage } from '@domains/compliance-ui/portals/customer/features/screens/clients';
-import { FilingsPage } from '@domains/compliance-ui/portals/customer/features/screens/filings';
-import { OrgHierarchyPage } from '@domains/compliance-ui/portals/customer/features/screens/org-hierarchy';
-import { RolesEditorPage } from '@domains/compliance-ui/portals/customer/features/screens/roles';
-import { UsersPage } from '@domains/compliance-ui/portals/customer/features/screens/users';
-import { ReportsPage } from '@domains/compliance-ui/portals/customer/features/screens/reports';
-import { SettingsPage } from '@domains/compliance-ui/portals/customer/features/screens/settings';
-import { LawsLibraryPage } from '@domains/compliance-ui/portals/customer/features/screens/laws';
-import { GlobalSetsPage } from '@domains/compliance-ui/portals/customer/features/screens/global-sets';
-import { AdminSettingsPage } from '@domains/compliance-ui/portals/customer/features/screens/admin-settings';
 import { api } from './lib/api';
 import './globals.css';
 
@@ -54,13 +42,11 @@ const addonMenuItems: MenuItem[] = [
   { path: '/tasks', label: 'Tasks', icon: CheckSquare, position: 'after' },
   { path: '/org-units', label: 'Org Structure', icon: Building2, permission: 'org-units.read', position: 'after' },
   { path: '/org-positions', label: 'Org Positions', icon: UserCog, permission: 'org-units.read', position: 'after' },
-  { path: '/screens/org-hierarchy', label: 'Org Hierarchy', icon: Network, position: 'after' },
 ];
 
 const addonRoutes = [
   { path: '/org-units', element: <OrgUnitsPage /> },
   { path: '/org-positions', element: <OrgPositionsPage /> },
-  { path: '/screens/org-hierarchy', element: <OrgHierarchyPage /> },
 ];
 
 const detailTabs = [
@@ -81,18 +67,17 @@ const columnRenderers = {
   TaskAssigneeCell: { component: TaskAssigneeCell },
 };
 
-// Design-preview fork: `/console-preview` and `/screens/*` render outside the
-// WebShell for unauthenticated design review, inside their own BrowserRouter
-// so the preview nav can use client-side navigation. Every other path goes
-// through the normal authenticated WebShell (which provides its own router).
-// Remove once the Instrument design ships.
+// Design-preview fork: `/console-preview*` renders outside the WebShell for
+// unauthenticated design review, inside its own BrowserRouter so the preview
+// nav can use client-side navigation. Every other path goes through the
+// normal authenticated WebShell — including the formerly-unauthenticated
+// `/screens/*` design surfaces, which now live under the compliance domain
+// manifest at clean paths (`/dashboard`, `/clients`, ...) and are protected
+// by AuthGuard + per-route PermissionGuard.
+// Remove this fork once the Instrument design ships.
 const pathname = window.location.pathname;
-const isPreview =
-  pathname.startsWith('/console-preview') || pathname.startsWith('/screens/');
+const isPreview = pathname.startsWith('/console-preview');
 
-// Preview-fork scope: minimal QueryClient + EntityEngineProvider so screens
-// that have been wired to the real API (e.g. `/screens/clients`) can resolve
-// entity hooks. The authenticated WebShell below supplies its own providers.
 const previewQueryClient = new QueryClient({
   defaultOptions: {
     queries: { staleTime: 0, retry: 1, refetchOnWindowFocus: false },
@@ -109,19 +94,6 @@ createRoot(document.getElementById('root')!).render(
             <Routes>
               <Route path="/console-preview" element={<ConsolePreviewPage />} />
               <Route path="/console-preview-v2" element={<ConsolePreviewPageV2 />} />
-              <Route path="/screens/dashboard" element={<DashboardScreenPage />} />
-              <Route path="/screens/laws" element={<LawsLibraryPage />} />
-              <Route path="/screens/obligations" element={<ObligationsLibraryPage />} />
-              <Route path="/screens/clients" element={<ClientsPage />} />
-              <Route path="/screens/clients/:clientId" element={<ClientDetailPage />} />
-              <Route path="/screens/filings" element={<FilingsPage />} />
-              <Route path="/screens/org-hierarchy" element={<OrgHierarchyPage />} />
-              <Route path="/screens/roles" element={<RolesEditorPage />} />
-              <Route path="/screens/users" element={<UsersPage />} />
-              <Route path="/screens/reports" element={<ReportsPage />} />
-              <Route path="/screens/settings" element={<SettingsPage />} />
-              <Route path="/screens/global-sets" element={<GlobalSetsPage />} />
-              <Route path="/screens/admin-settings" element={<AdminSettingsPage />} />
             </Routes>
             <Toaster />
           </BrowserRouter>
