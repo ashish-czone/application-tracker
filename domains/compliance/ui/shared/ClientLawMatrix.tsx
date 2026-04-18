@@ -1,5 +1,6 @@
 import { type HTMLAttributes } from 'react';
 import { Eyebrow } from '@packages/ui';
+import { ColoredInitialsAvatar } from '../components';
 import type { Client, Law } from './types';
 
 export type MatrixCellState = 'none' | 'overdue' | 'due-this-week' | 'filed' | 'upcoming' | 'pending';
@@ -79,13 +80,12 @@ export function ClientLawMatrix({
               <tr key={client.id} className="border-b border-rule/60 last:border-b-0">
                 <th className="sticky left-0 bg-paper-raised z-10 text-left py-3 px-4 border-r border-rule align-middle">
                   <div className="flex items-center gap-3">
-                    <span
-                      aria-hidden
-                      className="w-8 h-8 flex items-center justify-center text-[11px] font-sans font-semibold text-paper-raised rounded-sm flex-none"
-                      style={{ backgroundColor: client.color ?? 'hsl(var(--authority))' }}
-                    >
-                      {client.initials}
-                    </span>
+                    <ColoredInitialsAvatar
+                      initials={client.initials}
+                      color={client.color}
+                      size="lg"
+                      rounded
+                    />
                     <div className="min-w-0">
                       <div className="text-sm text-ink font-sans truncate">{client.name}</div>
                       {client.taxIdentifier && (

@@ -1,5 +1,5 @@
 import { type DataTableColumn } from '@packages/ui';
-import { OrdinalDate } from '../../../../../../components';
+import { OrdinalDate, ColoredInitialsAvatar } from '../../../../../../components';
 import type { UserRow } from '../data/usersMock';
 import { StatusPill } from './StatusPill';
 import { RoleBadge } from './RoleBadge';
@@ -12,13 +12,7 @@ export const USER_COLUMNS: DataTableColumn<UserRow>[] = [
     header: 'Name',
     cell: (u) => (
       <div className="flex items-center gap-3 min-w-0">
-        <span
-          aria-hidden
-          className="w-8 h-8 flex-none flex items-center justify-center text-[10px] font-sans font-semibold text-paper-raised"
-          style={{ backgroundColor: u.color }}
-        >
-          {u.initials}
-        </span>
+        <ColoredInitialsAvatar initials={u.initials} color={u.color} size="lg" />
         <div className="min-w-0">
           <span className="text-sm text-ink font-sans leading-snug truncate block">{u.name}</span>
           <span className="font-mono text-[11px] text-ink-muted truncate block">{u.email}</span>

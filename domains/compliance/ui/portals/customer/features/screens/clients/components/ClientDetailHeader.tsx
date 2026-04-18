@@ -1,5 +1,5 @@
 import { Building2, Calendar } from 'lucide-react';
-import { OrdinalDate, Pill } from '../../../../../../components';
+import { OrdinalDate, Pill, ColoredInitialsAvatar } from '../../../../../../components';
 import type { MOCK_CLIENT_DETAIL } from '../data/clientDetailMock';
 import { RiskPill } from './RiskPill';
 
@@ -13,13 +13,7 @@ export function ClientDetailHeader({ client }: ClientDetailHeaderProps) {
   return (
     <div className="border border-rule bg-paper-raised p-6 mb-6">
       <div className="flex items-start gap-5">
-        <span
-          aria-hidden
-          className="w-14 h-14 flex-none flex items-center justify-center text-lg font-sans font-semibold text-paper-raised"
-          style={{ backgroundColor: client.color }}
-        >
-          {client.initials}
-        </span>
+        <ColoredInitialsAvatar initials={client.initials} color={client.color} size="2xl" />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3">
             <h1 className="font-serif text-3xl text-ink leading-none">{client.name}</h1>

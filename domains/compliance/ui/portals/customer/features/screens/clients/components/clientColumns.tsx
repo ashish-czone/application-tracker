@@ -1,5 +1,5 @@
 import { type DataTableColumn } from '@packages/ui';
-import { OrdinalDate, HealthBar, HandlerPill } from '../../../../../../components';
+import { OrdinalDate, HealthBar, HandlerPill, ColoredInitialsAvatar } from '../../../../../../components';
 import type { ClientRow } from '../data/clientsMock';
 import { RiskPill } from './RiskPill';
 
@@ -9,13 +9,7 @@ export const CLIENT_COLUMNS: DataTableColumn<ClientRow>[] = [
     header: 'Client',
     cell: (c) => (
       <div className="flex items-center gap-3 min-w-0">
-        <span
-          aria-hidden
-          className="w-8 h-8 flex-none flex items-center justify-center text-[10px] font-sans font-semibold text-paper-raised"
-          style={{ backgroundColor: c.color }}
-        >
-          {c.initials}
-        </span>
+        <ColoredInitialsAvatar initials={c.initials} color={c.color} size="lg" />
         <div className="min-w-0">
           <span className="text-sm text-ink font-sans leading-snug truncate block">{c.name}</span>
           <span className="font-serif italic text-[11px] text-ink-muted truncate block">

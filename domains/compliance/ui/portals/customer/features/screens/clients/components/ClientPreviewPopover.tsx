@@ -1,4 +1,5 @@
 import { AvatarBadge } from '@packages/ui';
+import { ColoredInitialsAvatar } from '../../../../../../components';
 import type { ClientRow } from '../data/clientsMock';
 import { RiskPill } from './RiskPill';
 
@@ -23,13 +24,7 @@ export function ClientPreviewPopover({ client, anchorRect }: ClientPreviewPopove
     >
       <div className="p-4">
         <div className="flex items-center gap-3 mb-3">
-          <span
-            aria-hidden
-            className="w-9 h-9 flex-none flex items-center justify-center text-[11px] font-sans font-semibold text-paper-raised"
-            style={{ backgroundColor: client.color }}
-          >
-            {client.initials}
-          </span>
+          <ColoredInitialsAvatar initials={client.initials} color={client.color} size="xl" />
           <div className="min-w-0">
             <div className="text-sm font-sans font-medium text-ink leading-snug truncate">
               {client.name}
