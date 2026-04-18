@@ -1,3 +1,4 @@
+import { Pill } from '../../../../../../components';
 import type { ClientFilingStatus } from '../data/clientDetailMock';
 
 export const CLIENT_FILING_STATUS_LABEL: Record<ClientFilingStatus, string> = {
@@ -22,9 +23,6 @@ export interface ClientFilingStatusBadgeProps {
 
 export function ClientFilingStatusBadge({ status }: ClientFilingStatusBadgeProps) {
   return (
-    <span className="inline-flex items-center gap-1.5 px-2 py-[2px] border border-rule text-[10px] font-sans font-semibold uppercase tracking-[0.12em] bg-paper-raised">
-      <span className={`w-1.5 h-1.5 flex-none ${CLIENT_FILING_STATUS_DOT[status]}`} aria-hidden />
-      <span className="text-ink-soft">{CLIENT_FILING_STATUS_LABEL[status]}</span>
-    </span>
+    <Pill tone={CLIENT_FILING_STATUS_DOT[status]}>{CLIENT_FILING_STATUS_LABEL[status]}</Pill>
   );
 }
