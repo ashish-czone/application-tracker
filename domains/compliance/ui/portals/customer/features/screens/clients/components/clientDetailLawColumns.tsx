@@ -1,7 +1,6 @@
 import { type DataTableColumn } from '@packages/ui';
-import { HealthBar, OrdinalDate, HandlerPill } from '../../../../../../components';
+import { HealthBar, OrdinalDate, HandlerPill, JurisdictionTag } from '../../../../../../components';
 import type { ClientLaw } from '../data/clientDetailMock';
-import { MutedJurisdictionTag } from './MutedJurisdictionTag';
 
 export const CLIENT_DETAIL_LAW_COLUMNS: DataTableColumn<ClientLaw>[] = [
   {
@@ -11,7 +10,7 @@ export const CLIENT_DETAIL_LAW_COLUMNS: DataTableColumn<ClientLaw>[] = [
       <div className="min-w-0">
         <div className="flex items-center gap-2">
           <span className="font-mono text-xs font-medium text-ink tracking-wide">{l.code}</span>
-          <MutedJurisdictionTag jurisdiction={l.jurisdiction} />
+          <JurisdictionTag jurisdiction={l.jurisdiction} variant="muted" />
         </div>
         <span className="text-[11px] font-sans text-ink-muted mt-0.5 block truncate">
           {l.name}

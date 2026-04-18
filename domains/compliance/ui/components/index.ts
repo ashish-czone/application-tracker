@@ -5,7 +5,12 @@
 // in the generic core/ui package.
 
 // Badges — compliance status + taxonomy markers.
-export { JurisdictionTag, type JurisdictionTagProps, type Jurisdiction } from './badges/JurisdictionTag';
+export {
+  JurisdictionTag,
+  type JurisdictionTagProps,
+  type Jurisdiction,
+  type JurisdictionTagVariant,
+} from './badges/JurisdictionTag';
 export { UrgencyBadge, type UrgencyBadgeProps, type Urgency } from './badges/UrgencyBadge';
 export { StampMark, type StampMarkProps, type StampKind } from './badges/StampMark';
 export { HealthBar, type HealthBarProps } from './badges/HealthBar';
