@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Plus, AlertTriangle } from 'lucide-react';
 import { MetricKPI, DataTable, Button, ActivityTimeline } from '@packages/ui';
+import { Can } from '@packages/auth-ui';
 import { ComplianceCalendar, HandlerWorkloadList } from '../../../../../shared';
 import { PREVIEW_TODAY, MOCK_FILINGS, MOCK_WORKLOADS } from '../../console-preview/mockData';
 import { DASHBOARD_ACTIVITY } from './data/dashboardMock';
@@ -55,22 +56,25 @@ export function DashboardScreenPage() {
           </div>
         </header>
 
-        {overdueCount > 0 && (
-          <div className="mb-6 border border-signal/40 bg-signal/5 px-5 py-3 flex items-center gap-3">
-            <AlertTriangle className="w-4 h-4 text-signal flex-shrink-0" strokeWidth={2} />
-            <p className="flex-1 text-sm text-ink">
-              <span className="font-sans font-medium">{overdueCount} filings are past due.</span>{' '}
-              <span className="text-ink-soft">Review and reassign before end of day.</span>
-            </p>
-            <button
-              type="button"
-              className="text-[11px] uppercase tracking-eyebrow font-sans font-medium text-signal hover:underline"
-            >
-              Review →
-            </button>
-          </div>
-        )}
+        <Can permission="filings.read">
+          {overdueCount > 0 && (
+            <div className="mb-6 border border-signal/40 bg-signal/5 px-5 py-3 flex items-center gap-3">
+              <AlertTriangle className="w-4 h-4 text-signal flex-shrink-0" strokeWidth={2} />
+              <p className="flex-1 text-sm text-ink">
+                <span className="font-sans font-medium">{overdueCount} filings are past due.</span>{' '}
+                <span className="text-ink-soft">Review and reassign before end of day.</span>
+              </p>
+              <button
+                type="button"
+                className="text-[11px] uppercase tracking-eyebrow font-sans font-medium text-signal hover:underline"
+              >
+                Review →
+              </button>
+            </div>
+          )}
+        </Can>
 
+        <Can permission="filings.read">
         <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-px bg-rule border border-rule">
           <MetricKPI
             label="Overdue"
@@ -121,60 +125,67 @@ export function DashboardScreenPage() {
             index={3}
           />
         </section>
+        </Can>
 
         <section className="mt-8 grid grid-cols-12 gap-6">
-          <div className="col-span-12 xl:col-span-8">
-            <div className="flex items-baseline justify-between mb-3">
-              <h2 className="font-serif text-xl text-ink leading-none">Your open work</h2>
-              <a className="text-[11px] uppercase tracking-eyebrow font-sans font-medium text-ink-muted hover:text-ink">
-                View all {MOCK_FILINGS.length} filings →
-              </a>
+          <Can permission="filings.read">
+            <div className="col-span-12 xl:col-span-8">
+              <div className="flex items-baseline justify-between mb-3">
+                <h2 className="font-serif text-xl text-ink leading-none">Your open work</h2>
+                <a className="text-[11px] uppercase tracking-eyebrow font-sans font-medium text-ink-muted hover:text-ink">
+                  View all {MOCK_FILINGS.length} filings →
+                </a>
+              </div>
+              <div className="bg-paper-raised border border-rule">
+                <DataTable
+                  columns={DASHBOARD_COLUMNS}
+                  rows={workQueue}
+                  getRowKey={(f) => f.id}
+                  onRowClick={() => {}}
+                />
+              </div>
             </div>
-            <div className="bg-paper-raised border border-rule">
-              <DataTable
-                columns={DASHBOARD_COLUMNS}
-                rows={workQueue}
-                getRowKey={(f) => f.id}
-                onRowClick={() => {}}
-              />
+            <div className="col-span-12 xl:col-span-4">
+              <div className="flex items-baseline justify-between mb-3">
+                <h2 className="font-serif text-xl text-ink leading-none">April calendar</h2>
+                <a className="text-[11px] uppercase tracking-eyebrow font-sans font-medium text-ink-muted hover:text-ink">
+                  Full calendar →
+                </a>
+              </div>
+              <ComplianceCalendar filings={MOCK_FILINGS} month={PREVIEW_TODAY} />
             </div>
-          </div>
-          <div className="col-span-12 xl:col-span-4">
-            <div className="flex items-baseline justify-between mb-3">
-              <h2 className="font-serif text-xl text-ink leading-none">April calendar</h2>
-              <a className="text-[11px] uppercase tracking-eyebrow font-sans font-medium text-ink-muted hover:text-ink">
-                Full calendar →
-              </a>
-            </div>
-            <ComplianceCalendar filings={MOCK_FILINGS} month={PREVIEW_TODAY} />
-          </div>
+          </Can>
         </section>
 
         <section className="mt-10 grid grid-cols-12 gap-6">
-          <div className="col-span-12 lg:col-span-5">
-            <div className="flex items-baseline justify-between mb-3">
-              <h2 className="font-serif text-xl text-ink leading-none">Recent activity</h2>
-              <a className="text-[11px] uppercase tracking-eyebrow font-sans font-medium text-ink-muted hover:text-ink">
-                Audit trail →
-              </a>
+          <Can permission="audit.read">
+            <div className="col-span-12 lg:col-span-5">
+              <div className="flex items-baseline justify-between mb-3">
+                <h2 className="font-serif text-xl text-ink leading-none">Recent activity</h2>
+                <a className="text-[11px] uppercase tracking-eyebrow font-sans font-medium text-ink-muted hover:text-ink">
+                  Audit trail →
+                </a>
+              </div>
+              <div className="bg-paper-raised border border-rule px-5 py-4">
+                <ActivityTimeline
+                  events={DASHBOARD_ACTIVITY}
+                  iconConfig={DASHBOARD_ACTIVITY_ICONS}
+                  variant="feed"
+                />
+              </div>
             </div>
-            <div className="bg-paper-raised border border-rule px-5 py-4">
-              <ActivityTimeline
-                events={DASHBOARD_ACTIVITY}
-                iconConfig={DASHBOARD_ACTIVITY_ICONS}
-                variant="feed"
-              />
+          </Can>
+          <Can permission="users.read">
+            <div className="col-span-12 lg:col-span-7">
+              <div className="flex items-baseline justify-between mb-3">
+                <h2 className="font-serif text-xl text-ink leading-none">Team workload</h2>
+                <a className="text-[11px] uppercase tracking-eyebrow font-sans font-medium text-ink-muted hover:text-ink">
+                  Rebalance →
+                </a>
+              </div>
+              <HandlerWorkloadList workloads={MOCK_WORKLOADS} />
             </div>
-          </div>
-          <div className="col-span-12 lg:col-span-7">
-            <div className="flex items-baseline justify-between mb-3">
-              <h2 className="font-serif text-xl text-ink leading-none">Team workload</h2>
-              <a className="text-[11px] uppercase tracking-eyebrow font-sans font-medium text-ink-muted hover:text-ink">
-                Rebalance →
-              </a>
-            </div>
-            <HandlerWorkloadList workloads={MOCK_WORKLOADS} />
-          </div>
+          </Can>
         </section>
       </main>
     </div>
