@@ -114,6 +114,7 @@ import {
   type KanbanCardMoveEvent,
   CoarseTabs,
   toast,
+  AvatarBadge,
   type DataTableColumn,
   type FilterChip,
   type CommandGroup,
@@ -243,12 +244,7 @@ const FILING_COLUMNS: DataTableColumn<Filing>[] = [
     cell: (f) =>
       f.handler ? (
         <div className="flex items-center gap-2">
-          <span
-            aria-hidden
-            className="w-6 h-6 flex items-center justify-center text-[10px] font-sans font-semibold bg-authority text-paper-raised"
-          >
-            {f.handler.initials}
-          </span>
+          <AvatarBadge initials={f.handler.initials} size="sm" />
           <span className="text-sm text-ink">{f.handler.name}</span>
         </div>
       ) : (

@@ -20,6 +20,7 @@ import {
   CoarseTabs,
   KanbanBoard,
   SearchInput,
+  AvatarBadge,
   toast,
   type DataTableColumn,
   type ActiveFilter,
@@ -130,12 +131,7 @@ const FILING_COLUMNS: DataTableColumn<FilingRow>[] = [
     cell: (f) =>
       f.handler ? (
         <div className="flex items-center gap-2 min-w-0">
-          <span
-            aria-hidden
-            className="w-6 h-6 flex-none bg-authority text-paper-raised text-[10px] font-sans font-semibold flex items-center justify-center"
-          >
-            {f.handler.initials}
-          </span>
+          <AvatarBadge initials={f.handler.initials} size="sm" />
           <span className="text-[11px] font-sans text-ink-soft truncate">
             {f.handler.name.split(' ')[0]}
           </span>
@@ -658,14 +654,7 @@ export function FilingsPage() {
                       </div>
                       <div className="flex items-center justify-between mt-2 pt-2 border-t border-rule/50">
                         <OrdinalDate date={f.dueDate} variant="short" className="text-[10px]" />
-                        {f.handler && (
-                          <span
-                            aria-hidden
-                            className="w-5 h-5 bg-authority text-paper-raised text-[9px] font-sans font-semibold flex items-center justify-center flex-none"
-                          >
-                            {f.handler.initials}
-                          </span>
-                        )}
+                        {f.handler && <AvatarBadge initials={f.handler.initials} size="xs" />}
                       </div>
                     </div>
                   );

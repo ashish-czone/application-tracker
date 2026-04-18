@@ -1,5 +1,5 @@
 import { type HTMLAttributes } from 'react';
-import { Eyebrow } from '@packages/ui';
+import { AvatarBadge, Eyebrow } from '@packages/ui';
 import type { Handler } from './types';
 
 export interface HandlerWorkload {
@@ -38,12 +38,7 @@ export function HandlerWorkloadBar({
   return (
     <div className={`py-3 ${className}`} {...rest}>
       <div className="flex items-center gap-3 mb-1.5">
-        <span
-          aria-hidden
-          className="w-7 h-7 flex items-center justify-center text-[10px] font-sans font-semibold bg-authority text-paper-raised flex-none"
-        >
-          {handler.initials}
-        </span>
+        <AvatarBadge initials={handler.initials} size="md" />
         <div className="flex-1 min-w-0">
           <div className="text-sm text-ink font-sans truncate">{handler.name}</div>
           {handler.role && (

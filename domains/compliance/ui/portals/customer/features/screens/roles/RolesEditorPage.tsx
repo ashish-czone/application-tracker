@@ -8,7 +8,7 @@ import {
   UserPlus,
   X,
 } from 'lucide-react';
-import { Checkbox, SearchInput } from '@packages/ui';
+import { AvatarBadge, Checkbox, SearchInput } from '@packages/ui';
 import {
   MOCK_ROLES,
   PERMISSION_REGISTRY,
@@ -222,12 +222,7 @@ function MemberRow({
 
   return (
     <div className="flex items-center gap-3 px-4 py-3 border-b border-rule last:border-0 group">
-      <span
-        aria-hidden
-        className="w-8 h-8 flex-none bg-authority text-paper-raised text-[10px] font-sans font-semibold flex items-center justify-center"
-      >
-        {member.initials}
-      </span>
+      <AvatarBadge initials={member.initials} size="lg" />
       <div className="flex-1 min-w-0">
         <div className="text-sm font-sans text-ink truncate">{member.name}</div>
         <div className="text-[11px] font-serif italic text-ink-muted truncate">
@@ -307,12 +302,7 @@ function AddMemberDropdown({
               }}
               className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-paper-sunken/40 transition-colors text-left"
             >
-              <span
-                aria-hidden
-                className="w-6 h-6 flex-none bg-authority text-paper-raised text-[9px] font-sans font-semibold flex items-center justify-center"
-              >
-                {m.initials}
-              </span>
+              <AvatarBadge initials={m.initials} size="sm" />
               <div className="min-w-0">
                 <div className="text-sm font-sans text-ink truncate">{m.name}</div>
                 <div className="text-[10px] text-ink-muted font-sans truncate">{m.email}</div>
