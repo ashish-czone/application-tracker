@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
-import { ChevronRight, Plus, Search, Users } from 'lucide-react';
-import { Eyebrow } from '@packages/ui';
+import { ChevronRight, Plus, Users } from 'lucide-react';
+import { Eyebrow, SearchInput } from '@packages/ui';
 import {
   LEVEL_META,
   getUnitChildren,
@@ -200,16 +200,14 @@ export function OrgTree({ units, members, selectedId, onSelect, onAddChild: onAd
       {/* Search */}
       <div className="px-4 pt-4 pb-3">
         <Eyebrow tone="muted">Organisation</Eyebrow>
-        <div className="mt-3 flex items-center gap-2 px-3 py-2 border border-rule bg-paper hover:border-ink-muted transition-colors">
-          <Search className="w-3.5 h-3.5 text-ink-muted" strokeWidth={1.5} />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search units…"
-            className="flex-1 text-[12px] font-sans text-ink bg-transparent outline-none placeholder:text-ink-muted/60"
-          />
-        </div>
+        <SearchInput
+          variant="boxed"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search units…"
+          className="text-[12px] placeholder:text-ink-muted/60"
+          wrapperClassName="mt-3"
+        />
       </div>
 
       {/* Tree */}
