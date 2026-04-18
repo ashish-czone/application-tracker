@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { ChevronRight, ChevronDown, Search, Plus, BookOpen, FileText } from 'lucide-react';
-import { Eyebrow, JurisdictionTag } from '@packages/ui';
+import { Eyebrow } from '@packages/ui';
+import { JurisdictionTag } from '../../../../../kit';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 import { LAWS, type LawNode, type LawJurisdiction } from './lawsMock';
 

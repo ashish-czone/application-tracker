@@ -24,9 +24,9 @@ import {
   Button,
   DataGridShell,
   Eyebrow,
-  OrdinalDate,
   type DataTableColumn,
 } from '@packages/ui';
+import { OrdinalDate } from '../../../../../kit';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 import {
   CURRENT_USER,

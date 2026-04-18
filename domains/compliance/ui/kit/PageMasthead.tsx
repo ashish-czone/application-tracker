@@ -1,6 +1,5 @@
 import { forwardRef, type HTMLAttributes, type ReactNode } from 'react';
-import { cn } from '../lib/utils';
-import { Eyebrow } from './Eyebrow';
+import { cn, Eyebrow } from '@packages/ui';
 import { OrdinalDate } from './OrdinalDate';
 
 export interface PageMastheadProps extends Omit<HTMLAttributes<HTMLElement>, 'title'> {

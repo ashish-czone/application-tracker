@@ -1,6 +1,5 @@
 import { forwardRef, type HTMLAttributes } from 'react';
-import { cn } from '../lib/utils';
-import { Eyebrow } from './Eyebrow';
+import { cn, Eyebrow } from '@packages/ui';
 
 export interface DueDateBlockProps extends HTMLAttributes<HTMLDivElement> {
   date: Date | string;

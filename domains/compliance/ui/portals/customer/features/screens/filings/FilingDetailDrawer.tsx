@@ -22,12 +22,10 @@ import {
 } from 'lucide-react';
 import {
   Eyebrow,
-  JurisdictionTag,
-  UrgencyBadge,
-  OrdinalDate,
   SectionRule,
   Calendar,
 } from '@packages/ui';
+import { JurisdictionTag, UrgencyBadge, OrdinalDate } from '../../../../../kit';
 import type { FilingRow } from './filingsMock';
 import { MOCK_HANDLERS } from '../../console-preview/mockData';
 import type { Filing, Handler } from '../../../../../shared/types';

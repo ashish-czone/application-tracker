@@ -3,17 +3,11 @@
 // future domain that wants the same aesthetic.
 
 export { Eyebrow, type EyebrowProps } from './Eyebrow';
-export { OrdinalDate, type OrdinalDateProps } from './OrdinalDate';
 export { SectionRule, type SectionRuleProps } from './SectionRule';
-export { PageMasthead, type PageMastheadProps } from './PageMasthead';
-export { StampMark, type StampMarkProps, type StampKind } from './StampMark';
 
-export { UrgencyBadge, type UrgencyBadgeProps, type Urgency } from './UrgencyBadge';
-export { JurisdictionTag, type JurisdictionTagProps, type Jurisdiction } from './JurisdictionTag';
 export { Sparkline, type SparklineProps } from './Sparkline';
 export { MetricKPI, type MetricKPIProps } from './MetricKPI';
 export { StatusDonut, type StatusDonutProps, type StatusDonutSegment } from './StatusDonut';
-export { DueDateBlock, type DueDateBlockProps } from './DueDateBlock';
 
 export { DataTable, type DataTableProps, type DataTableColumn } from './DataTable';
 export { DataGridShell, type DataGridShellProps } from './DataGridShell';

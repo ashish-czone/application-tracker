@@ -4,13 +4,13 @@ import { Search, Plus, Upload, ChevronRight } from 'lucide-react';
 import {
   MetricKPI,
   DataGridShell,
-  JurisdictionTag,
   Button,
   FilterPopover,
   CoarseTabs,
   type DataTableColumn,
   type ActiveFilter,
 } from '@packages/ui';
+import { JurisdictionTag } from '../../../../../kit';
 import {
   LAW_GROUPS,
   MOCK_OBLIGATIONS,

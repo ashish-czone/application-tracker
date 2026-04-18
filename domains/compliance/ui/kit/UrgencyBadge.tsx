@@ -1,5 +1,5 @@
 import { forwardRef, type HTMLAttributes } from 'react';
-import { cn } from '../lib/utils';
+import { cn } from '@packages/ui';
 
 export type Urgency =
   | 'overdue'
