@@ -22,6 +22,7 @@ import {
   CoarseTabs,
   Eyebrow,
   SearchInput,
+  DetailRow,
   type DataTableColumn,
   type ActiveFilter,
 } from '@packages/ui';
@@ -81,17 +82,6 @@ function RoleBadge({ name }: { name: string }) {
     <span className="inline-flex items-center px-2 py-[2px] border border-rule text-[10px] font-sans font-medium text-ink-soft bg-paper-raised whitespace-nowrap">
       {name}
     </span>
-  );
-}
-
-function DetailField({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <div className="text-[10px] uppercase tracking-eyebrow font-sans font-medium text-ink-muted mb-1">
-        {label}
-      </div>
-      <div className="text-sm font-sans text-ink">{children}</div>
-    </div>
   );
 }
 
@@ -164,28 +154,28 @@ function UserDetailDrawer({
           {/* Contact info */}
           <section className="px-6 py-5 border-b border-rule">
             <div className="grid grid-cols-2 gap-4">
-              <DetailField label="Email">
+              <DetailRow label="Email">
                 <span className="flex items-center gap-1.5">
                   <Mail className="w-3 h-3 text-ink-muted" strokeWidth={1.5} />
                   <span className="font-mono text-[12px]">{user.email}</span>
                 </span>
-              </DetailField>
-              <DetailField label="Phone">
+              </DetailRow>
+              <DetailRow label="Phone">
                 <span className="flex items-center gap-1.5">
                   <Phone className="w-3 h-3 text-ink-muted" strokeWidth={1.5} />
                   <span className="font-mono text-[12px]">{user.phone}</span>
                 </span>
-              </DetailField>
-              <DetailField label="Member since">
+              </DetailRow>
+              <DetailRow label="Member since">
                 <OrdinalDate date={user.createdAt} variant="short" className="text-sm" />
-              </DetailField>
-              <DetailField label="Last active">
+              </DetailRow>
+              <DetailRow label="Last active">
                 {user.lastActiveAt ? (
                   <OrdinalDate date={user.lastActiveAt} variant="short" className="text-sm" />
                 ) : (
                   <span className="text-ink-muted italic">Never</span>
                 )}
-              </DetailField>
+              </DetailRow>
             </div>
           </section>
 
