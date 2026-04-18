@@ -1,15 +1,25 @@
-// Components — ungrouped
+// ─────────────────────────────────────────────────────────────────────────────
+// Components — ungrouped primitives
+// ─────────────────────────────────────────────────────────────────────────────
 export { Button, type ButtonProps, type ButtonTone, buttonVariants } from './components/Button';
 export { ButtonGroup, type ButtonGroupProps } from './components/ButtonGroup';
-
-// Data display
-export { DateFormat, type DateFormatProps } from './components/data-display/DateFormat';
-export { NumberFormat, type NumberFormatProps } from './components/data-display/NumberFormat';
-export { CurrencyFormat, type CurrencyFormatProps } from './components/data-display/CurrencyFormat';
 export { Badge, type BadgeProps, badgeVariants } from './components/Badge';
 export { Skeleton } from './components/Skeleton';
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Components — data-display
+// ─────────────────────────────────────────────────────────────────────────────
+export { DateFormat, type DateFormatProps } from './components/data-display/DateFormat';
+export { NumberFormat, type NumberFormatProps } from './components/data-display/NumberFormat';
+export { CurrencyFormat, type CurrencyFormatProps } from './components/data-display/CurrencyFormat';
+export { Sparkline, type SparklineProps } from './components/data-display/Sparkline';
+export { MetricKPI, type MetricKPIProps } from './components/data-display/MetricKPI';
+export { StatusDonut, type StatusDonutProps, type StatusDonutSegment } from './components/data-display/StatusDonut';
+export { HierarchyTreeView, type HierarchyTreeViewProps, type HierarchyNode } from './components/data-display/HierarchyTreeView';
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Components — form
+// ─────────────────────────────────────────────────────────────────────────────
 export { Input, type InputProps } from './components/form/Input';
 export { Label } from './components/form/Label';
 export { Form } from './components/form/Form';
@@ -41,7 +51,9 @@ export { PasswordStrength } from './components/form/PasswordStrength';
 export { Slider, type SliderProps } from './components/form/Slider';
 export { FormSlider } from './components/form/FormSlider';
 
+// ─────────────────────────────────────────────────────────────────────────────
 // Components — feedback
+// ─────────────────────────────────────────────────────────────────────────────
 export {
   Dialog,
   DialogPortal,
@@ -90,10 +102,12 @@ export {
   DropdownMenuPortal,
 } from './components/feedback/DropdownMenu';
 
-// Components — layout
-export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent } from './components/layout/Card';
+export { EmptyState, type EmptyStateProps } from './components/feedback/EmptyState';
 
+// ─────────────────────────────────────────────────────────────────────────────
 // Components — layout
+// ─────────────────────────────────────────────────────────────────────────────
+export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent } from './components/layout/Card';
 export { Tabs, TabsList, TabsTrigger, TabsContent } from './components/layout/Tabs';
 export {
   Accordion,
@@ -110,8 +124,19 @@ export {
   BreadcrumbSeparator,
   BreadcrumbEllipsis,
 } from './components/layout/Breadcrumb';
+export { Eyebrow, type EyebrowProps } from './components/layout/Eyebrow';
+export { SectionRule, type SectionRuleProps } from './components/layout/SectionRule';
+export { CoarseTabs, type CoarseTabsProps, type CoarseTabItem, type CoarseTabVariant } from './components/layout/CoarseTabs';
+export { PageProgress, type PageProgressProps } from './components/layout/PageProgress';
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Components — navigation
+// ─────────────────────────────────────────────────────────────────────────────
+export { CommandPalette, type CommandPaletteProps, type CommandGroup, type CommandItem } from './components/navigation/CommandPalette';
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Components — data-grid
+// ─────────────────────────────────────────────────────────────────────────────
 export { DataGrid } from './components/data-grid/DataGrid';
 export { DataGridFilters } from './components/data-grid/DataGridFilters';
 export { DataGridFilterBuilder } from './components/data-grid/DataGridFilterBuilder';
@@ -130,13 +155,25 @@ export type {
 export type { FilterOperator, FilterExpression } from './components/data-grid/filter-types';
 export { OPERATORS_BY_FIELD_TYPE, OPERATOR_LABELS } from './components/data-grid/filter-types';
 
-// Components — data-grid cell renderers
+// Data-grid cell renderers
 export { AvatarNameCell } from './components/data-grid/cell-renderers/AvatarNameCell';
 export { StatusBadgeCell, createStatusBadgeCell, type StatusColors } from './components/data-grid/cell-renderers/StatusBadgeCell';
 export { createRowActionsColumn, type RowAction, type RowActionsColumnOptions } from './components/data-grid/cell-renderers/RowActionsCell';
 export type { CellRendererProps } from './components/data-grid/cell-renderers/types';
 
+// Data-grid editorial shell + pieces
+export { DataTable, type DataTableProps, type DataTableColumn } from './components/data-grid/DataTable';
+export { DataGridShell, type DataGridShellProps } from './components/data-grid/DataGridShell';
+export { BulkActionBar, type BulkActionBarProps, type BulkActionBarAction } from './components/data-grid/BulkActionBar';
+export { Pagination, type PaginationProps } from './components/data-grid/Pagination';
+export { FilterBar, type FilterBarProps, type FilterChip } from './components/data-grid/FilterBar';
+export { FilterPopover, type FilterPopoverProps, type FilterPopoverOption } from './components/data-grid/FilterPopover';
+export { ColumnChooser, type ColumnChooserProps, type ColumnChooserItem } from './components/data-grid/ColumnChooser';
+export { ActiveFilterChips, type ActiveFilterChipsProps, type ActiveFilter } from './components/data-grid/ActiveFilterChips';
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Components — kanban
+// ─────────────────────────────────────────────────────────────────────────────
 export { KanbanBoard } from './components/kanban/KanbanBoard';
 export { KanbanColumn } from './components/kanban/KanbanColumn';
 export { KanbanCard } from './components/kanban/KanbanCard';
@@ -148,22 +185,25 @@ export type {
   KanbanColumnReorderEvent,
 } from './components/kanban/types';
 
+// ─────────────────────────────────────────────────────────────────────────────
 // Components — sortable primitives
+// ─────────────────────────────────────────────────────────────────────────────
 export { Sortable } from './components/sortable/Sortable';
 export { SortableItem, SortableHandle } from './components/sortable/SortableItem';
 
+// ─────────────────────────────────────────────────────────────────────────────
 // Hooks
+// ─────────────────────────────────────────────────────────────────────────────
 export { useDebounce } from './hooks/useDebounce';
 export { useDataGridParams } from './hooks/useDataGridParams';
 export { useActiveFilters } from './hooks/useActiveFilters';
 export { useAsyncValidator } from './hooks/useAsyncValidator';
 export { useSlidingHighlight, type SlidingHighlightResult } from './hooks/useSlidingHighlight';
 
+// ─────────────────────────────────────────────────────────────────────────────
 // Utilities
+// ─────────────────────────────────────────────────────────────────────────────
 export { cn } from './lib/utils';
 
 // Re-export TanStack Table types for column definitions
 export { type ColumnDef, createColumnHelper } from '@tanstack/react-table';
-
-// Kit — "The Instrument" editorial widget library
-export * from './kit';

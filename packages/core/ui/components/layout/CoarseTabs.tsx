@@ -1,7 +1,7 @@
 import { type ReactNode } from 'react';
 import { motion } from 'framer-motion';
-import { cn } from '../lib/utils';
-import { useSlidingHighlight } from '../hooks/useSlidingHighlight';
+import { cn } from '../../lib/utils';
+import { useSlidingHighlight } from '../../hooks/useSlidingHighlight';
 
 export type CoarseTabVariant = 'underline' | 'segmented';
 

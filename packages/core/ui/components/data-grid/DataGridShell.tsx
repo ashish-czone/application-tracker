@@ -1,6 +1,6 @@
 import { type ReactNode, type HTMLAttributes, useState, useEffect, useMemo } from 'react';
 import { Download } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { cn } from '../../lib/utils';
 import { DataTable, type DataTableColumn } from './DataTable';
 import { Pagination } from './Pagination';
 import { ColumnChooser } from './ColumnChooser';

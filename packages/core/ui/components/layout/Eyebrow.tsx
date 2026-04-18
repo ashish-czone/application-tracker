@@ -1,5 +1,5 @@
 import { forwardRef, type HTMLAttributes } from 'react';
-import { cn } from '../lib/utils';
+import { cn } from '../../lib/utils';
 
 export interface EyebrowProps extends HTMLAttributes<HTMLSpanElement> {
   /** Optional leading roman-numeral / section mark (e.g. "§ II"). */

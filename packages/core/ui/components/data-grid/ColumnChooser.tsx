@@ -1,7 +1,7 @@
 import { type ReactNode } from 'react';
 import * as Popover from '@radix-ui/react-popover';
 import { Check, Columns3 } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { cn } from '../../lib/utils';
 
 export interface ColumnChooserItem {
   key: string;

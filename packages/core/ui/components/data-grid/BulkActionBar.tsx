@@ -1,7 +1,7 @@
 import { type ComponentType, type SVGProps } from 'react';
 import { motion } from 'framer-motion';
 import { X } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { cn } from '../../lib/utils';
 
 export interface BulkActionBarAction {
   /** Short action label — rendered uppercase eyebrow style. */
