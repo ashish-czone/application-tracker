@@ -1,8 +1,8 @@
 import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
 import { DatabaseService, and, eq, isNull } from '@packages/database';
-import { complianceClientLaws } from '../schema/client-laws';
+import { complianceClientRegistrations } from '../schema/client-registrations';
 
-export interface ClientLawRegistration {
+export interface ClientRegistration {
   id: string;
   clientId: string;
   lawId: string;
@@ -11,16 +11,16 @@ export interface ClientLawRegistration {
 }
 
 @Injectable()
-export class ClientLawService {
+export class ClientRegistrationService {
   constructor(private readonly database: DatabaseService) {}
 
-  async register(clientId: string, lawId: string): Promise<ClientLawRegistration> {
+  async register(clientId: string, lawId: string): Promise<ClientRegistration> {
     const existing = await this.findActive(clientId, lawId);
     if (existing) {
       throw new ConflictException(`Client ${clientId} is already registered for law ${lawId}`);
     }
     const [row] = await this.database.db
-      .insert(complianceClientLaws)
+      .insert(complianceClientRegistrations)
       .values({ clientId, lawId })
       .returning();
     return this.toRegistration(row);
@@ -32,54 +32,54 @@ export class ClientLawService {
       throw new NotFoundException(`No active registration for client ${clientId} law ${lawId}`);
     }
     await this.database.db
-      .update(complianceClientLaws)
+      .update(complianceClientRegistrations)
       .set({ deactivatedAt: new Date() })
-      .where(eq(complianceClientLaws.id, existing.id));
+      .where(eq(complianceClientRegistrations.id, existing.id));
   }
 
   /** Active registrations only (deactivatedAt IS NULL). */
-  async getRegisteredClients(lawId: string): Promise<ClientLawRegistration[]> {
+  async getRegisteredClients(lawId: string): Promise<ClientRegistration[]> {
     const rows = await this.database.db
       .select()
-      .from(complianceClientLaws)
+      .from(complianceClientRegistrations)
       .where(
         and(
-          eq(complianceClientLaws.lawId, lawId),
-          isNull(complianceClientLaws.deactivatedAt),
+          eq(complianceClientRegistrations.lawId, lawId),
+          isNull(complianceClientRegistrations.deactivatedAt),
         ),
       );
     return rows.map((r) => this.toRegistration(r));
   }
 
   /** Active registrations only. */
-  async getRegisteredLaws(clientId: string): Promise<ClientLawRegistration[]> {
+  async getRegisteredLaws(clientId: string): Promise<ClientRegistration[]> {
     const rows = await this.database.db
       .select()
-      .from(complianceClientLaws)
+      .from(complianceClientRegistrations)
       .where(
         and(
-          eq(complianceClientLaws.clientId, clientId),
-          isNull(complianceClientLaws.deactivatedAt),
+          eq(complianceClientRegistrations.clientId, clientId),
+          isNull(complianceClientRegistrations.deactivatedAt),
         ),
       );
     return rows.map((r) => this.toRegistration(r));
   }
 
-  private async findActive(clientId: string, lawId: string): Promise<ClientLawRegistration | null> {
+  private async findActive(clientId: string, lawId: string): Promise<ClientRegistration | null> {
     const rows = await this.database.db
       .select()
-      .from(complianceClientLaws)
+      .from(complianceClientRegistrations)
       .where(
         and(
-          eq(complianceClientLaws.clientId, clientId),
-          eq(complianceClientLaws.lawId, lawId),
-          isNull(complianceClientLaws.deactivatedAt),
+          eq(complianceClientRegistrations.clientId, clientId),
+          eq(complianceClientRegistrations.lawId, lawId),
+          isNull(complianceClientRegistrations.deactivatedAt),
         ),
       );
     return rows[0] ? this.toRegistration(rows[0]) : null;
   }
 
-  private toRegistration(row: typeof complianceClientLaws.$inferSelect): ClientLawRegistration {
+  private toRegistration(row: typeof complianceClientRegistrations.$inferSelect): ClientRegistration {
     return {
       id: row.id,
       clientId: row.clientId,

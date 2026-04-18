@@ -9,7 +9,7 @@ import { COMPLIANCE_RULES_CONFIG } from './rules/rules.config';
 import { LAW_HANDLERS_CONFIG } from './law-handlers/law-handlers.config';
 
 import { LawHandlerService } from './law-handlers/law-handlers.service';
-import { ClientLawService } from './client-laws/client-laws.service';
+import { ClientRegistrationService } from './client-registrations/client-registrations.service';
 import { ComplianceRuleService } from './rules/compliance-rules.service';
 import { GenerateComplianceTasksAction } from './automations/generate-compliance-tasks.action';
 
@@ -23,7 +23,7 @@ import { GenerateComplianceTasksAction } from './automations/generate-compliance
   ],
   providers: [
     LawHandlerService,
-    ClientLawService,
+    ClientRegistrationService,
     ComplianceRuleService,
     GenerateComplianceTasksAction,
   ],

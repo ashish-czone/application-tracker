@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ConflictException, NotFoundException } from '@nestjs/common';
-import { ClientLawService } from '../client-laws.service';
+import { ClientRegistrationService } from '../client-registrations.service';
 
 type AnyChain = Record<string, ReturnType<typeof vi.fn>>;
 
@@ -25,9 +25,9 @@ function mockUpdate() {
   return chain;
 }
 
-describe('ClientLawService', () => {
+describe('ClientRegistrationService', () => {
   let db: { db: Record<string, ReturnType<typeof vi.fn>> };
-  let service: ClientLawService;
+  let service: ClientRegistrationService;
 
   const activeRow = {
     id: 'reg1',
@@ -45,7 +45,7 @@ describe('ClientLawService', () => {
         update: vi.fn(),
       },
     };
-    service = new ClientLawService(db as never);
+    service = new ClientRegistrationService(db as never);
   });
 
   describe('register', () => {
