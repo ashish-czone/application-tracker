@@ -118,6 +118,7 @@ import {
   type KanbanCardMoveEvent,
   CoarseTabs,
   toast,
+  AvatarBadge,
   type DataTableColumn,
   type FilterChip,
   type CommandGroup,
@@ -243,12 +244,7 @@ const FILING_COLUMNS: DataTableColumn<Filing>[] = [
     cell: (f) =>
       f.handler ? (
         <div className="flex items-center gap-2">
-          <span
-            aria-hidden
-            className="w-6 h-6 flex items-center justify-center text-[10px] font-sans font-semibold bg-authority text-paper-raised"
-          >
-            {f.handler.initials}
-          </span>
+          <AvatarBadge initials={f.handler.initials} size="sm" />
           <span className="text-sm text-ink">{f.handler.name}</span>
         </div>
       ) : (
@@ -554,12 +550,7 @@ export function ConsolePreviewPage() {
               {isDark ? <Sun className="w-3.5 h-3.5" strokeWidth={1.5} /> : <Moon className="w-3.5 h-3.5" strokeWidth={1.5} />}
             </button>
             <div className="flex items-center gap-2 pl-4 border-l border-rule">
-              <span
-                aria-hidden
-                className="w-7 h-7 bg-authority text-paper-raised text-[10px] font-sans font-semibold flex items-center justify-center"
-              >
-                AG
-              </span>
+              <AvatarBadge initials="AG" size="md" />
               <div className="text-right">
                 <div className="text-xs text-ink font-sans leading-none">Ashish Goel</div>
                 <div className="text-[10px] uppercase tracking-eyebrow text-ink-muted font-sans mt-0.5">

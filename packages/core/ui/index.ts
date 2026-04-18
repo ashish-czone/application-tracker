@@ -23,6 +23,13 @@ export {
   type TimelineIconConfig,
 } from './components/data-display/ActivityTimeline';
 export { DetailRow, type DetailRowProps } from './components/data-display/DetailRow';
+export {
+  AvatarBadge,
+  type AvatarBadgeProps,
+  type AvatarBadgeSize,
+  type AvatarBadgeShape,
+  type AvatarBadgeTone,
+} from './components/data-display/AvatarBadge';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Components — form

@@ -14,6 +14,7 @@ import {
   CoarseTabs,
   Eyebrow,
   SearchInput,
+  AvatarBadge,
   type DataTableColumn,
 } from '@packages/ui';
 import { OrdinalDate } from '../../../../../components';
@@ -294,12 +295,7 @@ const OVERDUE_COLUMNS: DataTableColumn<OverdueRow>[] = [
     width: '120px',
     cell: (r) => (
       <div className="flex items-center gap-2">
-        <span
-          aria-hidden
-          className="w-5 h-5 flex-none bg-authority text-paper-raised text-[9px] font-sans font-semibold flex items-center justify-center"
-        >
-          {r.handlerInitials}
-        </span>
+        <AvatarBadge initials={r.handlerInitials} size="xs" />
         <span className="text-[11px] font-sans text-ink-soft truncate">{r.handler.split(' ')[0]}</span>
       </div>
     ),

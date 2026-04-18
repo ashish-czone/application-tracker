@@ -1,5 +1,5 @@
 import { type HTMLAttributes } from 'react';
-import { Eyebrow } from '@packages/ui';
+import { AvatarBadge, Eyebrow } from '@packages/ui';
 import { DueDateBlock, JurisdictionTag, StampMark, UrgencyBadge } from '../components';
 import type { Filing } from './types';
 
@@ -94,12 +94,7 @@ export function FilingTaskCard({
             </div>
             {filing.handler && (
               <div className="flex items-center gap-2">
-                <span
-                  aria-hidden
-                  className="w-7 h-7 rounded-full bg-authority text-paper-raised text-[10px] font-sans font-semibold flex items-center justify-center"
-                >
-                  {filing.handler.initials}
-                </span>
+                <AvatarBadge initials={filing.handler.initials} size="md" shape="circle" />
                 <div>
                   <Eyebrow tone="muted">Handler</Eyebrow>
                   <div className="text-sm text-ink font-sans mt-0.5">{filing.handler.name}</div>

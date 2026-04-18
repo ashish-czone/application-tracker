@@ -20,6 +20,7 @@ import {
   Pagination,
   CoarseTabs,
   ActivityTimeline,
+  AvatarBadge,
   type DataTableColumn,
   type TimelineIconConfig,
 } from '@packages/ui';
@@ -145,12 +146,7 @@ function HealthBar({ pct }: { pct: number }) {
 function HandlerPill({ handler }: { handler: Handler }) {
   return (
     <div className="flex items-center gap-2 min-w-0">
-      <span
-        aria-hidden
-        className="w-6 h-6 flex-none bg-authority text-paper-raised text-[10px] font-sans font-semibold flex items-center justify-center"
-      >
-        {handler.initials}
-      </span>
+      <AvatarBadge initials={handler.initials} size="sm" />
       <span className="text-[11px] font-sans text-ink-soft truncate">
         {handler.name.split(' ')[0]}
       </span>
@@ -545,12 +541,7 @@ function OverviewTab({ client }: { client: typeof MOCK_CLIENT_DETAIL }) {
           </InfoRow>
           <InfoRow label="Handler">
             <div className="flex items-center gap-2">
-              <span
-                aria-hidden
-                className="w-6 h-6 flex-none bg-authority text-paper-raised text-[10px] font-sans font-semibold flex items-center justify-center"
-              >
-                {client.primaryHandler.initials}
-              </span>
+              <AvatarBadge initials={client.primaryHandler.initials} size="sm" />
               <span className="text-sm text-ink">{client.primaryHandler.name}</span>
               {client.primaryHandler.role && (
                 <span className="text-[11px] text-ink-muted">· {client.primaryHandler.role}</span>

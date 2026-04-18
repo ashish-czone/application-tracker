@@ -31,6 +31,7 @@ import {
   Form,
   FormTextarea,
   ActivityTimeline,
+  AvatarBadge,
   DetailRow,
   type TimelineIconConfig,
 } from '@packages/ui';
@@ -333,12 +334,7 @@ function OverviewBody({ filing }: { filing: FilingRow }) {
                   if (!h) return null;
                   return (
                     <div className="flex items-center gap-2">
-                      <span
-                        aria-hidden
-                        className="w-6 h-6 bg-authority text-paper-raised text-[10px] font-sans font-semibold flex items-center justify-center flex-none"
-                      >
-                        {h.initials}
-                      </span>
+                      <AvatarBadge initials={h.initials} size="sm" />
                       <span className="text-sm font-sans text-ink">{h.name}</span>
                     </div>
                   );
@@ -347,12 +343,7 @@ function OverviewBody({ filing }: { filing: FilingRow }) {
                   const h = MOCK_HANDLERS.find((m) => m.id === opt.value);
                   return (
                     <>
-                      <span
-                        aria-hidden
-                        className="w-5 h-5 bg-authority text-paper-raised text-[9px] font-sans font-semibold flex items-center justify-center flex-none"
-                      >
-                        {h?.initials}
-                      </span>
+                      <AvatarBadge initials={h?.initials ?? ''} size="xs" />
                       <span className="flex-1">{opt.label}</span>
                       {isSelected && <Check className="w-3 h-3 text-ink-muted" strokeWidth={2} />}
                     </>
@@ -488,12 +479,7 @@ function OverviewBody({ filing }: { filing: FilingRow }) {
             {filing.notes.map((note) => (
               <div key={note.id} className="border-l-2 border-rule pl-3 py-1">
                 <div className="flex items-center gap-2 mb-1">
-                  <span
-                    aria-hidden
-                    className="w-5 h-5 bg-authority text-paper-raised text-[9px] font-sans font-semibold flex items-center justify-center flex-none"
-                  >
-                    {note.author.initials}
-                  </span>
+                  <AvatarBadge initials={note.author.initials} size="xs" />
                   <span className="text-[11px] font-sans font-medium text-ink">{note.author.name}</span>
                   <span className="text-[10px] font-mono tabular-nums text-ink-muted ml-auto">
                     <OrdinalDate date={note.createdAt} variant="short" className="inline text-[10px]" />

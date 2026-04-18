@@ -23,6 +23,7 @@ import {
   Eyebrow,
   SearchInput,
   DetailRow,
+  AvatarBadge,
   type DataTableColumn,
   type ActiveFilter,
 } from '@packages/ui';
@@ -128,13 +129,7 @@ function UserDetailDrawer({
           </div>
 
           <div className="flex items-center gap-4">
-            <span
-              aria-hidden
-              className="w-12 h-12 flex-none flex items-center justify-center text-sm font-sans font-semibold text-paper-raised"
-              style={{ backgroundColor: user.color }}
-            >
-              {user.initials}
-            </span>
+            <AvatarBadge initials={user.initials} size="xl" color={user.color} />
             <div className="min-w-0">
               <h2 className="font-serif text-2xl text-ink leading-tight">{user.name}</h2>
               <div className="flex items-center gap-3 mt-1">

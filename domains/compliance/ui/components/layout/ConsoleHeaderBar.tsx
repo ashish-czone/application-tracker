@@ -1,6 +1,6 @@
 import { Link } from 'react-router';
 import { Search, Command as CommandIcon, Moon, Sun } from 'lucide-react';
-import { cn } from '@packages/ui';
+import { AvatarBadge, cn } from '@packages/ui';
 
 export interface ConsoleHeaderBarUser {
   initials: string;
@@ -86,12 +86,7 @@ export function ConsoleHeaderBar({
           </button>
 
           <div className="flex items-center gap-2 pl-4 border-l border-rule">
-            <span
-              aria-hidden
-              className="w-7 h-7 bg-authority text-paper-raised text-[10px] font-sans font-semibold flex items-center justify-center"
-            >
-              {user.initials}
-            </span>
+            <AvatarBadge initials={user.initials} size="md" />
             <div className="text-right">
               <div className="text-xs text-ink font-sans leading-none">{user.name}</div>
               <div className="text-[10px] uppercase tracking-eyebrow text-ink-muted font-sans mt-0.5">

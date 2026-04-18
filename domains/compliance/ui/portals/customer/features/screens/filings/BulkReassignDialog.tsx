@@ -16,6 +16,7 @@ import {
   FormTextarea,
   RadioGroup,
   RadioGroupItem,
+  AvatarBadge,
 } from '@packages/ui';
 import type { Handler } from '../../../../../shared/types';
 import type { FilingRow } from './filingsMock';
@@ -149,12 +150,7 @@ export function BulkReassignDialog({
                         }
                       >
                         <RadioGroupItem value={h.id} className="w-3.5 h-3.5" />
-                        <span
-                          aria-hidden
-                          className="w-7 h-7 bg-authority text-paper-raised text-[10px] font-sans font-semibold flex items-center justify-center flex-none"
-                        >
-                          {h.initials}
-                        </span>
+                        <AvatarBadge initials={h.initials} size="md" />
                         <span className="flex-1 min-w-0">
                           <div className="text-sm text-ink font-sans truncate">{h.name}</div>
                           {h.role && (

@@ -8,6 +8,7 @@ import {
   FilterPopover,
   CoarseTabs,
   SearchInput,
+  AvatarBadge,
   type DataTableColumn,
   type ActiveFilter,
 } from '@packages/ui';
@@ -149,12 +150,7 @@ const OBLIGATION_COLUMNS: DataTableColumn<Obligation>[] = [
     width: '110px',
     cell: (o) => (
       <div className="flex items-center gap-2 min-w-0">
-        <span
-          aria-hidden
-          className="w-6 h-6 flex-none bg-authority text-paper-raised text-[10px] font-sans font-semibold flex items-center justify-center"
-        >
-          {o.owner.initials}
-        </span>
+        <AvatarBadge initials={o.owner.initials} size="sm" />
         <span className="text-[11px] font-sans text-ink-soft truncate">
           {o.owner.name.split(' ')[0]}
         </span>

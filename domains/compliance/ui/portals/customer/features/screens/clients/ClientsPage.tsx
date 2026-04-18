@@ -9,6 +9,7 @@ import {
   FilterPopover,
   CoarseTabs,
   SearchInput,
+  AvatarBadge,
   type DataTableColumn,
   type ActiveFilter,
 } from '@packages/ui';
@@ -165,12 +166,7 @@ function ClientPreviewPopover({
             </span>
           )}
           <div className="flex items-center gap-1.5">
-            <span
-              aria-hidden
-              className="w-5 h-5 flex-none bg-authority text-paper-raised text-[9px] font-sans font-semibold flex items-center justify-center"
-            >
-              {client.primaryHandler.initials}
-            </span>
+            <AvatarBadge initials={client.primaryHandler.initials} size="xs" />
             <span className="text-[11px] font-sans text-ink-soft">
               {client.primaryHandler.name.split(' ')[0]}
             </span>
@@ -273,12 +269,7 @@ const CLIENT_COLUMNS: DataTableColumn<ClientRow>[] = [
     width: '120px',
     cell: (c) => (
       <div className="flex items-center gap-2 min-w-0">
-        <span
-          aria-hidden
-          className="w-6 h-6 flex-none bg-authority text-paper-raised text-[10px] font-sans font-semibold flex items-center justify-center"
-        >
-          {c.primaryHandler.initials}
-        </span>
+        <AvatarBadge initials={c.primaryHandler.initials} size="sm" />
         <span className="text-[11px] font-sans text-ink-soft truncate">
           {c.primaryHandler.name.split(' ')[0]}
         </span>

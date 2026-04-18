@@ -24,6 +24,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuLabel,
+  AvatarBadge,
 } from '@packages/ui';
 import { ScreenPreviewNav, type ScreenKey } from './ScreenPreviewNav';
 import { NotificationPanel } from './NotificationPanel';
@@ -168,12 +169,7 @@ export function ScreenPreviewTopBar({ active }: { active: ScreenKey }) {
                 aria-label="Open user menu"
                 className="flex items-center gap-2 pl-4 border-l border-rule outline-none focus-visible:outline-none group"
               >
-                <span
-                  aria-hidden
-                  className="w-7 h-7 bg-authority text-paper-raised text-[10px] font-sans font-semibold flex items-center justify-center group-hover:opacity-90 transition-opacity"
-                >
-                  DI
-                </span>
+                <AvatarBadge initials="DI" size="md" className="group-hover:opacity-90 transition-opacity" />
                 <div className="text-right">
                   <div className="text-xs text-ink font-sans leading-none">Deepak Iyer</div>
                   <div className="text-[10px] uppercase tracking-eyebrow text-ink-muted font-sans mt-0.5">
