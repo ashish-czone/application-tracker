@@ -1,0 +1,23 @@
+{
+  "name": "@packages/address",
+  "version": "0.0.1",
+  "private": true,
+  "main": "index.ts",
+  "exports": {
+    ".": "./index.ts",
+    "./schema": "./schema/index.ts",
+    "./field-type": "./field-type/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@packages/field-types": "workspace:*",
+    "drizzle-orm": "^0.45.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}

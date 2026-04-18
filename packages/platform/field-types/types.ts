@@ -9,7 +9,8 @@ export type StorageStrategy =
   | { type: 'json'; column: EavValueColumn }         // JSON array stored in EAV text column (multi_select)
   | { type: 'relational'; through: 'multiValues' }   // entity_multi_values junction table
   | { type: 'relational'; through: 'tags' }           // entity_tags junction table
-  | { type: 'column' };                               // direct table column (standard fields)
+  | { type: 'column' }                                // direct table column (standard fields)
+  | { type: 'composite' };                            // one logical field spans multiple typed columns (e.g. address)
 
 // ---------------------------------------------------------------------------
 // Filter operators
