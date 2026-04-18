@@ -1,6 +1,8 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Route, Routes } from 'react-router';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { EntityEngineProvider } from '@packages/entity-engine-ui';
 import { fieldTypeRegistry } from '@packages/field-types';
 import { coreFieldTypesPlugin } from '@packages/entity-engine/field-types';
 import { eavFieldTypesPlugin } from '@packages/eav-attributes/field-types';
@@ -88,29 +90,43 @@ const pathname = window.location.pathname;
 const isPreview =
   pathname.startsWith('/console-preview') || pathname.startsWith('/screens/');
 
+// Preview-fork scope: minimal QueryClient + EntityEngineProvider so screens
+// that have been wired to the real API (e.g. `/screens/clients`) can resolve
+// entity hooks. The authenticated WebShell below supplies its own providers.
+const previewQueryClient = new QueryClient({
+  defaultOptions: {
+    queries: { staleTime: 0, retry: 1, refetchOnWindowFocus: false },
+    mutations: { retry: false },
+  },
+});
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     {isPreview ? (
-      <BrowserRouter>
-        <Routes>
-          <Route path="/console-preview" element={<ConsolePreviewPage />} />
-          <Route path="/console-preview-v2" element={<ConsolePreviewPageV2 />} />
-          <Route path="/screens/dashboard" element={<DashboardScreenPage />} />
-          <Route path="/screens/laws" element={<LawsLibraryPage />} />
-          <Route path="/screens/obligations" element={<ObligationsLibraryPage />} />
-          <Route path="/screens/clients" element={<ClientsPage />} />
-          <Route path="/screens/clients/:clientId" element={<ClientDetailPage />} />
-          <Route path="/screens/filings" element={<FilingsPage />} />
-          <Route path="/screens/org-hierarchy" element={<OrgHierarchyPage />} />
-          <Route path="/screens/roles" element={<RolesEditorPage />} />
-          <Route path="/screens/users" element={<UsersPage />} />
-          <Route path="/screens/reports" element={<ReportsPage />} />
-          <Route path="/screens/settings" element={<SettingsPage />} />
-          <Route path="/screens/global-sets" element={<GlobalSetsPage />} />
-          <Route path="/screens/admin-settings" element={<AdminSettingsPage />} />
-        </Routes>
-        <Toaster />
-      </BrowserRouter>
+      <QueryClientProvider client={previewQueryClient}>
+        <EntityEngineProvider apiFn={api as never}>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/console-preview" element={<ConsolePreviewPage />} />
+              <Route path="/console-preview-v2" element={<ConsolePreviewPageV2 />} />
+              <Route path="/screens/dashboard" element={<DashboardScreenPage />} />
+              <Route path="/screens/laws" element={<LawsLibraryPage />} />
+              <Route path="/screens/obligations" element={<ObligationsLibraryPage />} />
+              <Route path="/screens/clients" element={<ClientsPage />} />
+              <Route path="/screens/clients/:clientId" element={<ClientDetailPage />} />
+              <Route path="/screens/filings" element={<FilingsPage />} />
+              <Route path="/screens/org-hierarchy" element={<OrgHierarchyPage />} />
+              <Route path="/screens/roles" element={<RolesEditorPage />} />
+              <Route path="/screens/users" element={<UsersPage />} />
+              <Route path="/screens/reports" element={<ReportsPage />} />
+              <Route path="/screens/settings" element={<SettingsPage />} />
+              <Route path="/screens/global-sets" element={<GlobalSetsPage />} />
+              <Route path="/screens/admin-settings" element={<AdminSettingsPage />} />
+            </Routes>
+            <Toaster />
+          </BrowserRouter>
+        </EntityEngineProvider>
+      </QueryClientProvider>
     ) : (
       <WebShell
         domains={[complianceWeb]}
