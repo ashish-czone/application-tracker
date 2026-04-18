@@ -35,7 +35,8 @@ const config: Config = {
     '../../packages/platform/platform-ui/audit/**/*.{ts,tsx}',
     '../../packages/platform/platform-ui/conditions/*.tsx',
     // @packages/notification-channels-ui (platform)
-    '../../packages/platform/notification-channels/ui/**/*.{ts,tsx}',
+    '../../packages/platform/notification-channels/ui/*.{ts,tsx}',
+    '../../packages/platform/notification-channels/ui/components/**/*.{ts,tsx}',
     '../../packages/platform/platform-ui/automations/**/*.{ts,tsx}',
     '../../packages/platform/platform-ui/notifications/**/*.{ts,tsx}',
     '../../packages/platform/platform-ui/rbac/**/*.{ts,tsx}',
@@ -47,7 +48,10 @@ const config: Config = {
     '../../packages/platform/platform-ui/users/**/*.{ts,tsx}',
     '../../packages/platform/platform-ui/workflows/**/*.{ts,tsx}',
     // Compliance domain UI
-    '../../domains/compliance/ui/**/*.{ts,tsx}',
+    '../../domains/compliance/ui/*.{ts,tsx}',
+    '../../domains/compliance/ui/components/**/*.{ts,tsx}',
+    '../../domains/compliance/ui/portals/**/*.{ts,tsx}',
+    '../../domains/compliance/ui/shared/**/*.{ts,tsx}',
   ],
 };
 
