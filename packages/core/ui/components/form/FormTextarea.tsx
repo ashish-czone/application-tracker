@@ -4,12 +4,17 @@ import { cn } from '../../lib/utils';
 
 interface FormTextareaProps {
   name: string;
-  label: string;
+  /** Field label. Omit for unlabelled compose-style textareas (a placeholder usually carries the affordance). */
+  label?: string;
   placeholder?: string;
   description?: string;
   disabled?: boolean;
   rows?: number;
   className?: string;
+  /** Classes applied to the <textarea> element. */
+  textareaClassName?: string;
+  /** sr-only accessible name when `label` is omitted. Falls back to `placeholder`. */
+  ariaLabel?: string;
 }
 
 export function FormTextarea({
@@ -20,6 +25,8 @@ export function FormTextarea({
   disabled,
   rows = 3,
   className,
+  textareaClassName,
+  ariaLabel,
 }: FormTextareaProps) {
   const { control } = useFormContext();
   const errorId = `${name}-error`;
@@ -39,8 +46,8 @@ export function FormTextarea({
           .join(' ') || undefined;
 
         return (
-          <div className={cn('space-y-2', className)}>
-            <Label htmlFor={name}>{label}</Label>
+          <div className={cn(label ? 'space-y-2' : '', className)}>
+            {label && <Label htmlFor={name}>{label}</Label>}
             <textarea
               {...field}
               id={name}
@@ -50,12 +57,14 @@ export function FormTextarea({
               rows={rows}
               aria-invalid={hasError || undefined}
               aria-describedby={describedBy}
+              aria-label={!label ? ariaLabel ?? placeholder : undefined}
               className={cn(
                 'flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background',
                 'placeholder:text-muted-foreground',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
                 'disabled:cursor-not-allowed disabled:opacity-50',
                 'resize-none',
+                textareaClassName,
               )}
             />
             {description && (
