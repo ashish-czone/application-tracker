@@ -8,7 +8,7 @@ import {
   UserPlus,
   X,
 } from 'lucide-react';
-import { AvatarBadge, Checkbox, PageHeader, SearchInput } from '@packages/ui';
+import { AvatarBadge, Checkbox, ScreenLayout, SearchInput } from '@packages/ui';
 import {
   MOCK_ROLES,
   PERMISSION_REGISTRY,
@@ -428,21 +428,17 @@ export function RolesEditorPage() {
   const normalizedPermSearch = permSearch.trim().toLowerCase();
 
   return (
-    <div className="min-h-screen bg-paper paper-grain">
-      <ScreenPreviewTopBar active="roles" />
-
-      <main className="max-w-[1480px] mx-auto px-10 py-8">
-        <PageHeader
-          breadcrumb={['Settings', 'Roles & Permissions']}
-          title="Roles & Permissions"
-          subtitle={
-            <>
-              {roles.length} roles · {PERMISSION_REGISTRY.length} permissions
-              across {PERMISSION_GROUPS.length} modules.
-            </>
-          }
-        />
-
+    <ScreenLayout
+      topBar={<ScreenPreviewTopBar active="roles" />}
+      breadcrumb={['Settings', 'Roles & Permissions']}
+      title="Roles & Permissions"
+      subtitle={
+        <>
+          {roles.length} roles · {PERMISSION_REGISTRY.length} permissions
+          across {PERMISSION_GROUPS.length} modules.
+        </>
+      }
+    >
         {/* ─── Master-detail split ──────────────────────────────────────── */}
         <div
           ref={containerRef}
@@ -669,7 +665,6 @@ export function RolesEditorPage() {
             </div>
           </div>
         </div>
-      </main>
-    </div>
+    </ScreenLayout>
   );
 }

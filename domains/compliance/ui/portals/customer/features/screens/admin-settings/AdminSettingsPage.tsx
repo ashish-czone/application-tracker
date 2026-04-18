@@ -14,7 +14,7 @@ import {
   Form,
   FormInput,
   FormSelect,
-  PageHeader,
+  ScreenLayout,
 } from '@packages/ui';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 import {
@@ -180,16 +180,12 @@ export function AdminSettingsPage() {
   const Content = SECTION_CONTENT[activeSection];
 
   return (
-    <div className="min-h-screen bg-paper paper-grain">
-      <ScreenPreviewTopBar active="dashboard" />
-
-      <main className="max-w-[1480px] mx-auto px-10 py-8">
-        <PageHeader
-          breadcrumb={['Workspace', 'Admin Settings']}
-          title="Admin Settings"
-          subtitle="Platform-wide configuration for your organization. Changes here affect all users."
-        />
-
+    <ScreenLayout
+      topBar={<ScreenPreviewTopBar active="dashboard" />}
+      breadcrumb={['Workspace', 'Admin Settings']}
+      title="Admin Settings"
+      subtitle="Platform-wide configuration for your organization. Changes here affect all users."
+    >
         {/* ─── Split layout: sidebar + content ──────────────────── */}
         <div className="flex gap-0 border border-rule bg-paper-raised">
           {/* Left nav */}
@@ -225,7 +221,6 @@ export function AdminSettingsPage() {
             <Content />
           </div>
         </div>
-      </main>
-    </div>
+    </ScreenLayout>
   );
 }

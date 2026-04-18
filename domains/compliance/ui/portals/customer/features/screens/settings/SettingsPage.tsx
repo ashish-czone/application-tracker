@@ -23,7 +23,7 @@ import {
   DataGridShell,
   Eyebrow,
   SearchInput,
-  PageHeader,
+  ScreenLayout,
   type DataTableColumn,
 } from '@packages/ui';
 import { OrdinalDate } from '../../../../../components';
@@ -703,16 +703,12 @@ export function SettingsPage() {
   const Content = SECTION_CONTENT[activeSection];
 
   return (
-    <div className="min-h-screen bg-paper paper-grain">
-      <ScreenPreviewTopBar active="dashboard" />
-
-      <main className="max-w-[1480px] mx-auto px-10 py-8">
-        <PageHeader
-          breadcrumb={['Account', 'Settings']}
-          title="Settings"
-          subtitle="Manage your account, security, and preferences."
-        />
-
+    <ScreenLayout
+      topBar={<ScreenPreviewTopBar active="dashboard" />}
+      breadcrumb={['Account', 'Settings']}
+      title="Settings"
+      subtitle="Manage your account, security, and preferences."
+    >
         {/* ─── Split layout: sidebar + content ──────────────────── */}
         <div className="flex gap-0 border border-rule bg-paper-raised">
           {/* Left nav */}
@@ -748,7 +744,6 @@ export function SettingsPage() {
             <Content />
           </div>
         </div>
-      </main>
-    </div>
+    </ScreenLayout>
   );
 }

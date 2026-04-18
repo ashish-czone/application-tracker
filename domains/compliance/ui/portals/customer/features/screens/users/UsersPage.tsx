@@ -14,7 +14,6 @@ import {
   MoreHorizontal,
 } from 'lucide-react';
 import {
-  MetricKPI,
   DataGridShell,
   Button,
   FilterPopover,
@@ -23,7 +22,7 @@ import {
   SearchInput,
   DetailRow,
   AvatarBadge,
-  PageHeader,
+  ScreenLayout,
   type DataTableColumn,
   type ActiveFilter,
 } from '@packages/ui';
@@ -447,78 +446,69 @@ export function UsersPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-paper paper-grain">
-      <ScreenPreviewTopBar active="users" />
-
-      <main className="max-w-[1480px] mx-auto px-10 py-8">
-        <PageHeader
-          breadcrumb={['Settings', 'Users']}
-          title="Users"
-          subtitle={
-            <>
-              {totalUsers} team members — {activeUsers} active, {invitedUsers} pending invitations.
-            </>
-          }
-          actions={
-            <Button size="sm">
-              <UserPlus className="w-3.5 h-3.5 mr-1.5" strokeWidth={2} />
-              Invite user
-            </Button>
-          }
-        />
-
-        {/* ─── KPI row ──────────────────────────────────────────── */}
-        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-px bg-rule border border-rule">
-          <MetricKPI
-            label="Total users"
-            value={String(totalUsers)}
-            unit="members"
-            delta="▲ 2 this month"
-            deltaTone="positive"
-            accent="authority"
-            sparklineData={[10, 11, 11, 12, 13, 14, totalUsers]}
-            sparklineTone="authority"
-            footnote={`${activeUsers} active`}
-            index={0}
-          />
-          <MetricKPI
-            label="Active today"
-            value={String(activeToday)}
-            unit="users"
-            delta={`of ${activeUsers} active`}
-            deltaTone="neutral"
-            accent="filed"
-            sparklineData={[5, 7, 8, 6, 9, 7, activeToday]}
-            sparklineTone="filed"
-            footnote="logged in today"
-            index={1}
-          />
-          <MetricKPI
-            label="Pending invites"
-            value={String(invitedUsers)}
-            unit="invitations"
-            delta="sent this week"
-            deltaTone="neutral"
-            accent="due-soon"
-            sparklineData={[0, 1, 0, 1, 2, 1, invitedUsers]}
-            sparklineTone="due-soon"
-            footnote="awaiting acceptance"
-            index={2}
-          />
-          <MetricKPI
-            label="Roles in use"
-            value={String(ALL_ROLE_OPTIONS.length)}
-            unit="roles"
-            delta={`across ${totalUsers} users`}
-            deltaTone="neutral"
-            accent="authority"
-            sparklineData={[3, 3, 4, 4, 5, 5, ALL_ROLE_OPTIONS.length]}
-            sparklineTone="authority"
-            footnote="permission groups"
-            index={3}
-          />
-        </section>
-
+    <>
+      <ScreenLayout
+        topBar={<ScreenPreviewTopBar active="users" />}
+        breadcrumb={['Settings', 'Users']}
+        title="Users"
+        subtitle={
+          <>
+            {totalUsers} team members — {activeUsers} active, {invitedUsers} pending invitations.
+          </>
+        }
+        actions={
+          <Button size="sm">
+            <UserPlus className="w-3.5 h-3.5 mr-1.5" strokeWidth={2} />
+            Invite user
+          </Button>
+        }
+        kpis={[
+          {
+            label: 'Total users',
+            value: String(totalUsers),
+            unit: 'members',
+            delta: '▲ 2 this month',
+            deltaTone: 'positive',
+            accent: 'authority',
+            sparklineData: [10, 11, 11, 12, 13, 14, totalUsers],
+            sparklineTone: 'authority',
+            footnote: `${activeUsers} active`,
+          },
+          {
+            label: 'Active today',
+            value: String(activeToday),
+            unit: 'users',
+            delta: `of ${activeUsers} active`,
+            deltaTone: 'neutral',
+            accent: 'filed',
+            sparklineData: [5, 7, 8, 6, 9, 7, activeToday],
+            sparklineTone: 'filed',
+            footnote: 'logged in today',
+          },
+          {
+            label: 'Pending invites',
+            value: String(invitedUsers),
+            unit: 'invitations',
+            delta: 'sent this week',
+            deltaTone: 'neutral',
+            accent: 'due-soon',
+            sparklineData: [0, 1, 0, 1, 2, 1, invitedUsers],
+            sparklineTone: 'due-soon',
+            footnote: 'awaiting acceptance',
+          },
+          {
+            label: 'Roles in use',
+            value: String(ALL_ROLE_OPTIONS.length),
+            unit: 'roles',
+            delta: `across ${totalUsers} users`,
+            deltaTone: 'neutral',
+            accent: 'authority',
+            sparklineData: [3, 3, 4, 4, 5, 5, ALL_ROLE_OPTIONS.length],
+            sparklineTone: 'authority',
+            footnote: 'permission groups',
+          },
+        ]}
+      >
         {/* ─── Table section ────────────────────────────────────── */}
         <section className="mt-10">
           <CoarseTabs
@@ -557,7 +547,7 @@ export function UsersPage() {
             }
           />
         </section>
-      </main>
+      </ScreenLayout>
 
       <AnimatePresence>
         {selectedUser && (
@@ -568,6 +558,6 @@ export function UsersPage() {
           />
         )}
       </AnimatePresence>
-    </div>
+    </>
   );
 }

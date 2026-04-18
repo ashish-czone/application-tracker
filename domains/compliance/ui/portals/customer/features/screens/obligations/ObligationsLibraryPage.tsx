@@ -2,14 +2,13 @@ import { useMemo, useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { Plus, Upload } from 'lucide-react';
 import {
-  MetricKPI,
   DataGridShell,
   Button,
   FilterPopover,
   CoarseTabs,
   SearchInput,
   AvatarBadge,
-  PageHeader,
+  ScreenLayout,
   type DataTableColumn,
   type ActiveFilter,
 } from '@packages/ui';
@@ -264,85 +263,76 @@ export function ObligationsLibraryPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-paper paper-grain">
-      <ScreenPreviewTopBar active="obligations" />
-
-      <main className="max-w-[1480px] mx-auto px-10 py-8">
-        <PageHeader
-          breadcrumb={['Knowledge base', 'Laws', 'Obligations Library']}
-          title="Obligations Library"
-          subtitle={
-            <>
-              {MOCK_OBLIGATIONS.length} rules across {LAW_GROUPS.length} law groups — the canonical
-              catalog used to generate filings for every client on roll-over.
-            </>
-          }
-          actions={
-            <>
-              <Button variant="outline" size="sm">
-                <Upload className="w-3.5 h-3.5 mr-1.5" strokeWidth={2} />
-                Import
-              </Button>
-              <Button size="sm" onClick={() => setDrawerOpen(true)}>
-                <Plus className="w-3.5 h-3.5 mr-1.5" strokeWidth={2} />
-                New obligation
-              </Button>
-            </>
-          }
-        />
-
-        {/* ─── KPI row ──────────────────────────────────────────────────── */}
-        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-px bg-rule border border-rule">
-          <MetricKPI
-            label="Total obligations"
-            value={String(MOCK_OBLIGATIONS.length)}
-            unit="rules"
-            delta={`${LAW_GROUPS.length} law groups`}
-            deltaTone="neutral"
-            accent="authority"
-            sparklineData={[72, 75, 78, 82, 83, 85, MOCK_OBLIGATIONS.length]}
-            sparklineTone="authority"
-            footnote="catalog size"
-            index={0}
-          />
-          <MetricKPI
-            label="Active"
-            value={String(OBLIGATION_STATUS_COUNTS.active)}
-            unit="rules"
-            delta="▲ 2 since last review"
-            deltaTone="positive"
-            accent="filed"
-            sparklineData={[68, 70, 71, 72, 73, 74, OBLIGATION_STATUS_COUNTS.active]}
-            sparklineTone="filed"
-            footnote={`of ${MOCK_OBLIGATIONS.length} total`}
-            index={1}
-          />
-          <MetricKPI
-            label="In draft"
-            value={String(OBLIGATION_STATUS_COUNTS.draft)}
-            unit="rules"
-            delta="awaiting review"
-            deltaTone="neutral"
-            accent="due-soon"
-            sparklineData={[4, 6, 7, 8, 6, 5, OBLIGATION_STATUS_COUNTS.draft]}
-            sparklineTone="due-soon"
-            footnote="open for edits"
-            index={2}
-          />
-          <MetricKPI
-            label="Avg. on-time rate"
-            value={`${totalCoverage}`}
-            unit="%"
-            delta="▲ 2.1 vs Q4"
-            deltaTone="positive"
-            accent="filed"
-            sparklineData={[84, 86, 87, 88, 89, 90, totalCoverage]}
-            sparklineTone="filed"
-            footnote={`${totalFilingsThisPeriod} filings this period`}
-            index={3}
-          />
-        </section>
-
+    <>
+      <ScreenLayout
+        topBar={<ScreenPreviewTopBar active="obligations" />}
+        breadcrumb={['Knowledge base', 'Laws', 'Obligations Library']}
+        title="Obligations Library"
+        subtitle={
+          <>
+            {MOCK_OBLIGATIONS.length} rules across {LAW_GROUPS.length} law groups — the canonical
+            catalog used to generate filings for every client on roll-over.
+          </>
+        }
+        actions={
+          <>
+            <Button variant="outline" size="sm">
+              <Upload className="w-3.5 h-3.5 mr-1.5" strokeWidth={2} />
+              Import
+            </Button>
+            <Button size="sm" onClick={() => setDrawerOpen(true)}>
+              <Plus className="w-3.5 h-3.5 mr-1.5" strokeWidth={2} />
+              New obligation
+            </Button>
+          </>
+        }
+        kpis={[
+          {
+            label: 'Total obligations',
+            value: String(MOCK_OBLIGATIONS.length),
+            unit: 'rules',
+            delta: `${LAW_GROUPS.length} law groups`,
+            deltaTone: 'neutral',
+            accent: 'authority',
+            sparklineData: [72, 75, 78, 82, 83, 85, MOCK_OBLIGATIONS.length],
+            sparklineTone: 'authority',
+            footnote: 'catalog size',
+          },
+          {
+            label: 'Active',
+            value: String(OBLIGATION_STATUS_COUNTS.active),
+            unit: 'rules',
+            delta: '▲ 2 since last review',
+            deltaTone: 'positive',
+            accent: 'filed',
+            sparklineData: [68, 70, 71, 72, 73, 74, OBLIGATION_STATUS_COUNTS.active],
+            sparklineTone: 'filed',
+            footnote: `of ${MOCK_OBLIGATIONS.length} total`,
+          },
+          {
+            label: 'In draft',
+            value: String(OBLIGATION_STATUS_COUNTS.draft),
+            unit: 'rules',
+            delta: 'awaiting review',
+            deltaTone: 'neutral',
+            accent: 'due-soon',
+            sparklineData: [4, 6, 7, 8, 6, 5, OBLIGATION_STATUS_COUNTS.draft],
+            sparklineTone: 'due-soon',
+            footnote: 'open for edits',
+          },
+          {
+            label: 'Avg. on-time rate',
+            value: `${totalCoverage}`,
+            unit: '%',
+            delta: '▲ 2.1 vs Q4',
+            deltaTone: 'positive',
+            accent: 'filed',
+            sparklineData: [84, 86, 87, 88, 89, 90, totalCoverage],
+            sparklineTone: 'filed',
+            footnote: `${totalFilingsThisPeriod} filings this period`,
+          },
+        ]}
+      >
         {/* ─── Full-width table block ───────────────────────────────────── */}
         <section className="mt-10">
           {/* Coarse tabs — status cut */}
@@ -388,11 +378,11 @@ export function ObligationsLibraryPage() {
             }
           />
         </section>
-      </main>
+      </ScreenLayout>
 
       <AnimatePresence>
         {drawerOpen && <NewObligationDrawer onClose={() => setDrawerOpen(false)} />}
       </AnimatePresence>
-    </div>
+    </>
   );
 }

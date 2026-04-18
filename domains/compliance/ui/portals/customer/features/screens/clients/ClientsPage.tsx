@@ -3,14 +3,13 @@ import { useNavigate } from 'react-router';
 import { AnimatePresence } from 'framer-motion';
 import { Plus, Upload, AlertTriangle } from 'lucide-react';
 import {
-  MetricKPI,
   DataGridShell,
   Button,
   FilterPopover,
   CoarseTabs,
   SearchInput,
   AvatarBadge,
-  PageHeader,
+  ScreenLayout,
   type DataTableColumn,
   type ActiveFilter,
 } from '@packages/ui';
@@ -402,107 +401,98 @@ export function ClientsPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-paper paper-grain">
-      <ScreenPreviewTopBar active="clients" />
-
-      <main className="max-w-[1480px] mx-auto px-10 py-8">
-        <PageHeader
-          breadcrumb={['Portfolio', 'Clients']}
-          title="Clients"
-          subtitle={
-            <>
-              {totalClients} entities under management — {activeClients} active,{' '}
-              {CLIENT_STATUS_COUNTS.onboarding} onboarding, {CLIENT_STATUS_COUNTS.dormant} dormant.
-            </>
-          }
-          actions={
-            <>
-              <Button variant="outline" size="sm">
-                <Upload className="w-3.5 h-3.5 mr-1.5" strokeWidth={2} />
-                Import
-              </Button>
-              <Button size="sm" onClick={() => setDrawerOpen(true)}>
-                <Plus className="w-3.5 h-3.5 mr-1.5" strokeWidth={2} />
-                Add client
-              </Button>
-            </>
-          }
-        />
-
-        {/* ─── Alert strip ──────────────────────────────────────────────── */}
-        {totalOverdue > 0 && (
-          <div className="mb-6 border border-signal/40 bg-signal/5 px-5 py-3 flex items-center gap-3">
-            <AlertTriangle className="w-4 h-4 text-signal flex-shrink-0" strokeWidth={2} />
-            <p className="flex-1 text-sm text-ink">
-              <span className="font-sans font-medium">
-                {CLIENT_RISK_COUNTS.critical} client{CLIENT_RISK_COUNTS.critical !== 1 ? 's' : ''} in
-                critical status
-              </span>{' '}
-              <span className="text-ink-soft">
-                with {totalOverdue} overdue filings across the portfolio.
-              </span>
-            </p>
-            <button
-              type="button"
-              className="text-[11px] uppercase tracking-eyebrow font-sans font-medium text-signal hover:underline"
-            >
-              Review →
-            </button>
-          </div>
-        )}
-
-        {/* ─── KPI row ──────────────────────────────────────────────────── */}
-        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-px bg-rule border border-rule">
-          <MetricKPI
-            label="Total clients"
-            value={String(totalClients)}
-            unit="entities"
-            delta="▲ 1 this month"
-            deltaTone="positive"
-            accent="authority"
-            sparklineData={[8, 9, 9, 10, 10, 11, totalClients]}
-            sparklineTone="authority"
-            footnote={`${activeClients} active`}
-            index={0}
-          />
-          <MetricKPI
-            label="Registrations"
-            value={String(MOCK_CLIENT_ROWS.reduce((acc, c) => acc + c.registeredLaws, 0))}
-            unit="law links"
-            delta={`across ${activeClients} clients`}
-            deltaTone="neutral"
-            accent="filed"
-            sparklineData={[32, 35, 37, 40, 42, 44, MOCK_CLIENT_ROWS.reduce((a, c) => a + c.registeredLaws, 0)]}
-            sparklineTone="filed"
-            footnote="avg 3.8 per client"
-            index={1}
-          />
-          <MetricKPI
-            label="Overdue filings"
-            value={String(totalOverdue)}
-            unit="filings"
-            delta={`across ${MOCK_CLIENT_ROWS.filter((c) => c.overdueFilings > 0).length} clients`}
-            deltaTone="negative"
-            accent="signal"
-            sparklineData={[5, 7, 8, 9, 10, 11, totalOverdue]}
-            sparklineTone="signal"
-            footnote={`${CLIENT_RISK_COUNTS.critical} critical`}
-            index={2}
-          />
-          <MetricKPI
-            label="Avg. on-time rate"
-            value={String(avgOnTime)}
-            unit="%"
-            delta="▲ 1.2 vs Q4"
-            deltaTone="positive"
-            accent="filed"
-            sparklineData={[84, 85, 86, 87, 88, 89, avgOnTime]}
-            sparklineTone="filed"
-            footnote="trailing 12 months"
-            index={3}
-          />
-        </section>
-
+    <>
+      <ScreenLayout
+        topBar={<ScreenPreviewTopBar active="clients" />}
+        breadcrumb={['Portfolio', 'Clients']}
+        title="Clients"
+        subtitle={
+          <>
+            {totalClients} entities under management — {activeClients} active,{' '}
+            {CLIENT_STATUS_COUNTS.onboarding} onboarding, {CLIENT_STATUS_COUNTS.dormant} dormant.
+          </>
+        }
+        actions={
+          <>
+            <Button variant="outline" size="sm">
+              <Upload className="w-3.5 h-3.5 mr-1.5" strokeWidth={2} />
+              Import
+            </Button>
+            <Button size="sm" onClick={() => setDrawerOpen(true)}>
+              <Plus className="w-3.5 h-3.5 mr-1.5" strokeWidth={2} />
+              Add client
+            </Button>
+          </>
+        }
+        alert={
+          totalOverdue > 0 && (
+            <div className="border border-signal/40 bg-signal/5 px-5 py-3 flex items-center gap-3">
+              <AlertTriangle className="w-4 h-4 text-signal flex-shrink-0" strokeWidth={2} />
+              <p className="flex-1 text-sm text-ink">
+                <span className="font-sans font-medium">
+                  {CLIENT_RISK_COUNTS.critical} client{CLIENT_RISK_COUNTS.critical !== 1 ? 's' : ''} in
+                  critical status
+                </span>{' '}
+                <span className="text-ink-soft">
+                  with {totalOverdue} overdue filings across the portfolio.
+                </span>
+              </p>
+              <button
+                type="button"
+                className="text-[11px] uppercase tracking-eyebrow font-sans font-medium text-signal hover:underline"
+              >
+                Review →
+              </button>
+            </div>
+          )
+        }
+        kpis={[
+          {
+            label: 'Total clients',
+            value: String(totalClients),
+            unit: 'entities',
+            delta: '▲ 1 this month',
+            deltaTone: 'positive',
+            accent: 'authority',
+            sparklineData: [8, 9, 9, 10, 10, 11, totalClients],
+            sparklineTone: 'authority',
+            footnote: `${activeClients} active`,
+          },
+          {
+            label: 'Registrations',
+            value: String(MOCK_CLIENT_ROWS.reduce((acc, c) => acc + c.registeredLaws, 0)),
+            unit: 'law links',
+            delta: `across ${activeClients} clients`,
+            deltaTone: 'neutral',
+            accent: 'filed',
+            sparklineData: [32, 35, 37, 40, 42, 44, MOCK_CLIENT_ROWS.reduce((a, c) => a + c.registeredLaws, 0)],
+            sparklineTone: 'filed',
+            footnote: 'avg 3.8 per client',
+          },
+          {
+            label: 'Overdue filings',
+            value: String(totalOverdue),
+            unit: 'filings',
+            delta: `across ${MOCK_CLIENT_ROWS.filter((c) => c.overdueFilings > 0).length} clients`,
+            deltaTone: 'negative',
+            accent: 'signal',
+            sparklineData: [5, 7, 8, 9, 10, 11, totalOverdue],
+            sparklineTone: 'signal',
+            footnote: `${CLIENT_RISK_COUNTS.critical} critical`,
+          },
+          {
+            label: 'Avg. on-time rate',
+            value: String(avgOnTime),
+            unit: '%',
+            delta: '▲ 1.2 vs Q4',
+            deltaTone: 'positive',
+            accent: 'filed',
+            sparklineData: [84, 85, 86, 87, 88, 89, avgOnTime],
+            sparklineTone: 'filed',
+            footnote: 'trailing 12 months',
+          },
+        ]}
+      >
         {/* ─── Table section ────────────────────────────────────────────── */}
         <section className="mt-10">
           <CoarseTabs
@@ -555,7 +545,7 @@ export function ClientsPage() {
             }
           />
         </section>
-      </main>
+      </ScreenLayout>
 
       <AnimatePresence>
         {drawerOpen && <NewClientDrawer onClose={() => setDrawerOpen(false)} />}
@@ -564,6 +554,6 @@ export function ClientsPage() {
       {hoveredClient && (
         <ClientPreviewPopover client={hoveredClient} anchorRect={hoverRect} />
       )}
-    </div>
+    </>
   );
 }

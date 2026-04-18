@@ -9,7 +9,6 @@ import {
   UserPlus,
 } from 'lucide-react';
 import {
-  MetricKPI,
   DataGridShell,
   Button,
   FilterPopover,
@@ -20,7 +19,7 @@ import {
   KanbanBoard,
   SearchInput,
   AvatarBadge,
-  PageHeader,
+  ScreenLayout,
   toast,
   type DataTableColumn,
   type ActiveFilter,
@@ -394,126 +393,117 @@ export function FilingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-paper paper-grain">
-      <ScreenPreviewTopBar active="filings" />
-
-      <main className="max-w-[1480px] mx-auto px-10 py-8">
-        <PageHeader
-          breadcrumb={['Workspace', 'Filings']}
-          title="Filings"
-          subtitle={
-            <>
-              {totalFilings} filings across {CLIENT_OPTIONS.length} clients — {overdueCount}{' '}
-              overdue, {dueThisWeekCount} due this week.
-            </>
-          }
-          actions={
-            <div ref={viewHighlight.containerRef} className="relative flex border border-rule">
-              {viewHighlight.rect && (
-                <motion.div
-                  aria-hidden
-                  className="absolute top-0 bottom-0 bg-ink"
-                  initial={false}
-                  animate={{ left: viewHighlight.rect.left, width: viewHighlight.rect.width }}
-                  transition={viewHighlight.transition}
-                />
-              )}
-              {VIEW_MODES.map((vm) => (
-                <button
-                  key={vm.key}
-                  ref={(el) => viewHighlight.setItemRef(vm.key, el)}
-                  type="button"
-                  onClick={() => setViewMode(vm.key)}
-                  className={`relative z-10 flex items-center justify-center w-8 h-8 transition-colors ${
-                    viewMode === vm.key
-                      ? 'text-paper'
-                      : 'text-ink-muted hover:text-ink'
-                  }`}
-                  aria-label={vm.label}
-                >
-                  <vm.icon className="w-3.5 h-3.5" strokeWidth={1.5} />
-                </button>
-              ))}
-            </div>
-          }
-        />
-
-        {/* ─── Alert strip ──────────────────────────────────────────────── */}
-        {overdueCount > 0 && (
-          <div className="mb-6 border border-signal/40 bg-signal/5 px-5 py-3 flex items-center gap-3">
-            <AlertTriangle className="w-4 h-4 text-signal flex-shrink-0" strokeWidth={2} />
-            <p className="flex-1 text-sm text-ink">
-              <span className="font-sans font-medium">
-                {overdueCount} filing{overdueCount !== 1 ? 's' : ''} overdue
-              </span>{' '}
-              <span className="text-ink-soft">
-                across{' '}
-                {new Set(MOCK_FILING_ROWS.filter((f) => f.status === 'overdue').map((f) => f.clientId)).size}{' '}
-                clients. Immediate action required.
-              </span>
-            </p>
-            <button
-              type="button"
-              onClick={() => setStatusTab('overdue')}
-              className="text-[11px] uppercase tracking-eyebrow font-sans font-medium text-signal hover:underline"
-            >
-              Show overdue →
-            </button>
+    <>
+      <ScreenLayout
+        topBar={<ScreenPreviewTopBar active="filings" />}
+        breadcrumb={['Workspace', 'Filings']}
+        title="Filings"
+        subtitle={
+          <>
+            {totalFilings} filings across {CLIENT_OPTIONS.length} clients — {overdueCount}{' '}
+            overdue, {dueThisWeekCount} due this week.
+          </>
+        }
+        actions={
+          <div ref={viewHighlight.containerRef} className="relative flex border border-rule">
+            {viewHighlight.rect && (
+              <motion.div
+                aria-hidden
+                className="absolute top-0 bottom-0 bg-ink"
+                initial={false}
+                animate={{ left: viewHighlight.rect.left, width: viewHighlight.rect.width }}
+                transition={viewHighlight.transition}
+              />
+            )}
+            {VIEW_MODES.map((vm) => (
+              <button
+                key={vm.key}
+                ref={(el) => viewHighlight.setItemRef(vm.key, el)}
+                type="button"
+                onClick={() => setViewMode(vm.key)}
+                className={`relative z-10 flex items-center justify-center w-8 h-8 transition-colors ${
+                  viewMode === vm.key
+                    ? 'text-paper'
+                    : 'text-ink-muted hover:text-ink'
+                }`}
+                aria-label={vm.label}
+              >
+                <vm.icon className="w-3.5 h-3.5" strokeWidth={1.5} />
+              </button>
+            ))}
           </div>
-        )}
-
-        {/* ─── KPI row ──────────────────────────────────────────────────── */}
-        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-px bg-rule border border-rule">
-          <MetricKPI
-            label="Overdue"
-            value={String(overdueCount)}
-            unit="filings"
-            delta={`${MOCK_FILING_ROWS.filter((f) => f.status === 'overdue' && f.priority === 'critical').length} critical`}
-            deltaTone="negative"
-            accent="signal"
-            sparklineData={[2, 3, 3, 4, 3, 4, overdueCount]}
-            sparklineTone="signal"
-            footnote="need action now"
-            index={0}
-          />
-          <MetricKPI
-            label="Due this week"
-            value={String(dueThisWeekCount)}
-            unit="filings"
-            delta={`${FILING_STATUS_COUNTS['due-today']} due today`}
-            deltaTone="neutral"
-            accent="due-soon"
-            sparklineData={[5, 6, 7, 6, 7, 8, dueThisWeekCount]}
-            sparklineTone="due-soon"
-            footnote="across all clients"
-            index={1}
-          />
-          <MetricKPI
-            label="Filed this month"
-            value={String(filedCount)}
-            unit="completed"
-            delta="▲ 2 vs last month"
-            deltaTone="positive"
-            accent="filed"
-            sparklineData={[2, 3, 3, 4, 4, 5, filedCount]}
-            sparklineTone="filed"
-            footnote={`${onTimeRate}% on time`}
-            index={2}
-          />
-          <MetricKPI
-            label="Total filings"
-            value={String(totalFilings)}
-            unit="this period"
-            delta={`${FILING_STATUS_COUNTS.upcoming} upcoming`}
-            deltaTone="neutral"
-            accent="authority"
-            sparklineData={[18, 19, 20, 21, 22, 23, totalFilings]}
-            sparklineTone="authority"
-            footnote={`${CLIENT_OPTIONS.length} clients`}
-            index={3}
-          />
-        </section>
-
+        }
+        alert={
+          overdueCount > 0 && (
+            <div className="border border-signal/40 bg-signal/5 px-5 py-3 flex items-center gap-3">
+              <AlertTriangle className="w-4 h-4 text-signal flex-shrink-0" strokeWidth={2} />
+              <p className="flex-1 text-sm text-ink">
+                <span className="font-sans font-medium">
+                  {overdueCount} filing{overdueCount !== 1 ? 's' : ''} overdue
+                </span>{' '}
+                <span className="text-ink-soft">
+                  across{' '}
+                  {new Set(MOCK_FILING_ROWS.filter((f) => f.status === 'overdue').map((f) => f.clientId)).size}{' '}
+                  clients. Immediate action required.
+                </span>
+              </p>
+              <button
+                type="button"
+                onClick={() => setStatusTab('overdue')}
+                className="text-[11px] uppercase tracking-eyebrow font-sans font-medium text-signal hover:underline"
+              >
+                Show overdue →
+              </button>
+            </div>
+          )
+        }
+        kpis={[
+          {
+            label: 'Overdue',
+            value: String(overdueCount),
+            unit: 'filings',
+            delta: `${MOCK_FILING_ROWS.filter((f) => f.status === 'overdue' && f.priority === 'critical').length} critical`,
+            deltaTone: 'negative',
+            accent: 'signal',
+            sparklineData: [2, 3, 3, 4, 3, 4, overdueCount],
+            sparklineTone: 'signal',
+            footnote: 'need action now',
+          },
+          {
+            label: 'Due this week',
+            value: String(dueThisWeekCount),
+            unit: 'filings',
+            delta: `${FILING_STATUS_COUNTS['due-today']} due today`,
+            deltaTone: 'neutral',
+            accent: 'due-soon',
+            sparklineData: [5, 6, 7, 6, 7, 8, dueThisWeekCount],
+            sparklineTone: 'due-soon',
+            footnote: 'across all clients',
+          },
+          {
+            label: 'Filed this month',
+            value: String(filedCount),
+            unit: 'completed',
+            delta: '▲ 2 vs last month',
+            deltaTone: 'positive',
+            accent: 'filed',
+            sparklineData: [2, 3, 3, 4, 4, 5, filedCount],
+            sparklineTone: 'filed',
+            footnote: `${onTimeRate}% on time`,
+          },
+          {
+            label: 'Total filings',
+            value: String(totalFilings),
+            unit: 'this period',
+            delta: `${FILING_STATUS_COUNTS.upcoming} upcoming`,
+            deltaTone: 'neutral',
+            accent: 'authority',
+            sparklineData: [18, 19, 20, 21, 22, 23, totalFilings],
+            sparklineTone: 'authority',
+            footnote: `${CLIENT_OPTIONS.length} clients`,
+          },
+        ]}
+      >
         {/* ─── Table / Kanban / Calendar section ───────────────────────── */}
         <section className="mt-10">
           <CoarseTabs
@@ -668,7 +658,7 @@ export function FilingsPage() {
             </div>
           )}
         </section>
-      </main>
+      </ScreenLayout>
 
       {/* ─── Detail drawer ────────────────────────────────────────────── */}
       <AnimatePresence>
@@ -688,7 +678,7 @@ export function FilingsPage() {
         handlers={MOCK_HANDLERS}
         onConfirm={applyReassign}
       />
-    </div>
+    </>
   );
 }
 
