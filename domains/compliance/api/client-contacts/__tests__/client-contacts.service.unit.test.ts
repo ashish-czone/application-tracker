@@ -98,6 +98,24 @@ describe('ClientContactsService', () => {
       );
     });
 
+    it('emits nothing when the primary flip fails mid-transaction', async () => {
+      const existing = { id: 'ct-2', clientId: 'cid-1', name: 'Bob', isPrimary: false };
+      const selectChain = mockSelectReturning([existing]);
+      const unsetChain = {
+        set: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        returning: vi.fn().mockRejectedValue(new Error('db error')),
+      } as unknown as AnyChain;
+      const tx: TxMock = {
+        select: vi.fn().mockReturnValue(selectChain),
+        update: vi.fn().mockReturnValueOnce(unsetChain),
+      };
+      db.db.transaction.mockImplementation(async (cb: (tx: TxMock) => unknown) => cb(tx));
+
+      await expect(service.setPrimary('cid-1', 'ct-2')).rejects.toThrow('db error');
+      expect(events.emitDynamic).not.toHaveBeenCalled();
+    });
+
     it('throws NotFound when contact belongs to a different client', async () => {
       // The where clause scopes on both id AND clientId, so a contact belonging
       // to another client will not be returned by the select above.
@@ -111,6 +129,30 @@ describe('ClientContactsService', () => {
       await expect(service.setPrimary('cid-1', 'ct-from-other-client')).rejects.toBeInstanceOf(
         NotFoundException,
       );
+    });
+  });
+
+  describe('hasPrimaryContact', () => {
+    it('returns true when a primary contact exists', async () => {
+      const limitChain = { then: vi.fn() };
+      const whereChain = { limit: vi.fn().mockResolvedValue([{ id: 'ct-1' }]) };
+      const fromChain = { where: vi.fn().mockReturnValue(whereChain) };
+      const selectChain = { from: vi.fn().mockReturnValue(fromChain) };
+      const dbMock = { select: vi.fn().mockReturnValue(selectChain) };
+      const s = new ClientContactsService({ db: dbMock } as never, events as never);
+      void limitChain;
+
+      await expect(s.hasPrimaryContact('cid-1')).resolves.toBe(true);
+    });
+
+    it('returns false when no primary contact exists', async () => {
+      const whereChain = { limit: vi.fn().mockResolvedValue([]) };
+      const fromChain = { where: vi.fn().mockReturnValue(whereChain) };
+      const selectChain = { from: vi.fn().mockReturnValue(fromChain) };
+      const dbMock = { select: vi.fn().mockReturnValue(selectChain) };
+      const s = new ClientContactsService({ db: dbMock } as never, events as never);
+
+      await expect(s.hasPrimaryContact('cid-1')).resolves.toBe(false);
     });
   });
 });

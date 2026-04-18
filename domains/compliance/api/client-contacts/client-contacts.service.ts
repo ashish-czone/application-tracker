@@ -19,6 +19,20 @@ export class ClientContactsService {
   ) {}
 
   /**
+   * True when the client has at least one contact flagged as primary.
+   * Used by the `require-primary-contact` workflow guard on the
+   * onboarding → active transition.
+   */
+  async hasPrimaryContact(clientId: string): Promise<boolean> {
+    const rows = await this.database.db
+      .select({ id: clientContacts.id })
+      .from(clientContacts)
+      .where(and(eq(clientContacts.clientId, clientId), eq(clientContacts.isPrimary, true)))
+      .limit(1);
+    return rows.length > 0;
+  }
+
+  /**
    * Flip the primary-contact flag atomically: unset whichever contact is
    * currently primary for the client, then set the target contact as primary.
    * The partial unique index on (client_id) WHERE is_primary = true would

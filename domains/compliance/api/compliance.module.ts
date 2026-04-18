@@ -2,6 +2,7 @@ import { Module, type OnModuleInit } from '@nestjs/common';
 import { EntityEngineModule } from '@packages/entity-engine';
 import { ActionRegistry } from '@packages/automation-contracts';
 import { TasksModule } from '@packages/tasks';
+import { WorkflowGuardRegistry } from '@packages/workflows';
 
 import { LAWS_CONFIG } from './laws/laws.config';
 import { CLIENTS_CONFIG } from './clients/clients.config';
@@ -40,9 +41,19 @@ export class ComplianceDomainModule implements OnModuleInit {
   constructor(
     private readonly actionRegistry: ActionRegistry,
     private readonly generateTasksAction: GenerateComplianceTasksAction,
+    private readonly guardRegistry: WorkflowGuardRegistry,
+    private readonly contactsService: ClientContactsService,
   ) {}
 
   onModuleInit() {
     this.actionRegistry.register(this.generateTasksAction);
+
+    // Blocks onboarding → active on the clients workflow unless the client
+    // has at least one primary contact. Referenced by `guardNames` on the
+    // transition in clients.config.ts.
+    this.guardRegistry.register('require-primary-contact', async (ctx) => {
+      if (ctx.entityType !== 'clients') return true;
+      return this.contactsService.hasPrimaryContact(ctx.entityId);
+    });
   }
 }

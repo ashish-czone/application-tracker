@@ -85,7 +85,14 @@ export const CLIENTS_CONFIG = defineEntity({
           { name: 'dormant', label: 'Dormant', color: '#6B7280' },
         ],
         transitions: [
-          { from: 'onboarding', to: ['active'] },
+          // Guarded: a client can only leave onboarding once at least one
+          // primary contact exists. Schema enforces exactly-one-primary at
+          // create time, but contacts can be deleted afterwards — the guard
+          // keeps "active" meaningful even in that degraded state.
+          {
+            from: 'onboarding',
+            to: [{ state: 'active', guardNames: ['require-primary-contact'] }],
+          },
           { from: 'active', to: ['dormant'] },
           { from: 'dormant', to: ['active'] },
         ],
