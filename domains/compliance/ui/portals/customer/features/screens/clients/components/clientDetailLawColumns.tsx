@@ -1,8 +1,7 @@
 import { type DataTableColumn } from '@packages/ui';
-import { HealthBar, OrdinalDate } from '../../../../../../components';
+import { HealthBar, OrdinalDate, HandlerPill } from '../../../../../../components';
 import type { ClientLaw } from '../data/clientDetailMock';
 import { MutedJurisdictionTag } from './MutedJurisdictionTag';
-import { HandlerPill } from './HandlerPill';
 
 export const CLIENT_DETAIL_LAW_COLUMNS: DataTableColumn<ClientLaw>[] = [
   {
@@ -68,7 +67,7 @@ export const CLIENT_DETAIL_LAW_COLUMNS: DataTableColumn<ClientLaw>[] = [
     key: 'handler',
     header: 'Handler',
     width: '110px',
-    cell: (l) => <HandlerPill handler={l.handler} />,
+    cell: (l) => <HandlerPill initials={l.handler.initials} name={l.handler.name} />,
   },
   {
     key: 'registeredAt',

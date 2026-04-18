@@ -1,5 +1,5 @@
-import { AvatarBadge, type DataTableColumn } from '@packages/ui';
-import { OrdinalDate, UrgencyBadge, JurisdictionTag } from '../../../../../../components';
+import { type DataTableColumn } from '@packages/ui';
+import { OrdinalDate, UrgencyBadge, JurisdictionTag, HandlerPill } from '../../../../../../components';
 import type { FilingRow } from '../data/filingsMock';
 
 const PRIORITY_TONE: Record<string, string> = {
@@ -72,14 +72,7 @@ export const FILING_COLUMNS: DataTableColumn<FilingRow>[] = [
     header: 'Handler',
     width: '120px',
     cell: (f) =>
-      f.handler ? (
-        <div className="flex items-center gap-2 min-w-0">
-          <AvatarBadge initials={f.handler.initials} size="sm" />
-          <span className="text-[11px] font-sans text-ink-soft truncate">
-            {f.handler.name.split(' ')[0]}
-          </span>
-        </div>
-      ) : null,
+      f.handler ? <HandlerPill initials={f.handler.initials} name={f.handler.name} /> : null,
   },
 ];
 

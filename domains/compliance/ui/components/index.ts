@@ -9,6 +9,7 @@ export { JurisdictionTag, type JurisdictionTagProps, type Jurisdiction } from '.
 export { UrgencyBadge, type UrgencyBadgeProps, type Urgency } from './badges/UrgencyBadge';
 export { StampMark, type StampMarkProps, type StampKind } from './badges/StampMark';
 export { HealthBar, type HealthBarProps } from './badges/HealthBar';
+export { HandlerPill, type HandlerPillProps } from './badges/HandlerPill';
 
 // Editorial — opinionated date formatting + due-date display.
 export { OrdinalDate, type OrdinalDateProps } from './editorial/OrdinalDate';

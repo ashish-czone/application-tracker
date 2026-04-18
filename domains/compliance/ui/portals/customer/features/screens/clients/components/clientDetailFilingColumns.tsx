@@ -1,9 +1,8 @@
 import { type DataTableColumn } from '@packages/ui';
-import { OrdinalDate } from '../../../../../../components';
+import { OrdinalDate, HandlerPill } from '../../../../../../components';
 import type { ClientFiling } from '../data/clientDetailMock';
 import { ClientFilingStatusBadge } from './ClientFilingStatusBadge';
 import { MutedJurisdictionTag } from './MutedJurisdictionTag';
-import { HandlerPill } from './HandlerPill';
 
 export const CLIENT_DETAIL_FILING_COLUMNS: DataTableColumn<ClientFiling>[] = [
   {
@@ -72,6 +71,6 @@ export const CLIENT_DETAIL_FILING_COLUMNS: DataTableColumn<ClientFiling>[] = [
     key: 'handler',
     header: 'Handler',
     width: '110px',
-    cell: (f) => <HandlerPill handler={f.handler} />,
+    cell: (f) => <HandlerPill initials={f.handler.initials} name={f.handler.name} />,
   },
 ];

@@ -1,5 +1,5 @@
-import { AvatarBadge, type DataTableColumn } from '@packages/ui';
-import { HealthBar, JurisdictionTag } from '../../../../../../components';
+import { type DataTableColumn } from '@packages/ui';
+import { HealthBar, JurisdictionTag, HandlerPill } from '../../../../../../components';
 import type { Obligation } from '../data/obligationsMock';
 import { FrequencyPill } from './FrequencyPill';
 
@@ -82,13 +82,6 @@ export const OBLIGATION_COLUMNS: DataTableColumn<Obligation>[] = [
     key: 'owner',
     header: 'Owner',
     width: '110px',
-    cell: (o) => (
-      <div className="flex items-center gap-2 min-w-0">
-        <AvatarBadge initials={o.owner.initials} size="sm" />
-        <span className="text-[11px] font-sans text-ink-soft truncate">
-          {o.owner.name.split(' ')[0]}
-        </span>
-      </div>
-    ),
+    cell: (o) => <HandlerPill initials={o.owner.initials} name={o.owner.name} />,
   },
 ];
