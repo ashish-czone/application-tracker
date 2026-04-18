@@ -16,7 +16,7 @@ import {
   Eyebrow,
   type DataTableColumn,
 } from '@packages/ui';
-import { OrdinalDate } from '../../../../../kit';
+import { OrdinalDate } from '../../../../../components';
 import { DateRangePopover, type DateRangeValue } from '../../../../../shared';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 import {

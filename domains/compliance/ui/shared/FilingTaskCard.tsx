@@ -1,6 +1,6 @@
 import { type HTMLAttributes } from 'react';
 import { Eyebrow } from '@packages/ui';
-import { DueDateBlock, JurisdictionTag, StampMark, UrgencyBadge } from '../kit';
+import { DueDateBlock, JurisdictionTag, StampMark, UrgencyBadge } from '../components';
 import type { Filing } from './types';
 
 export interface FilingTaskCardProps extends HTMLAttributes<HTMLDivElement> {

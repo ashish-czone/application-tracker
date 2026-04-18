@@ -26,7 +26,7 @@ import {
   Eyebrow,
   type DataTableColumn,
 } from '@packages/ui';
-import { OrdinalDate } from '../../../../../kit';
+import { OrdinalDate } from '../../../../../components';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 import {
   CURRENT_USER,

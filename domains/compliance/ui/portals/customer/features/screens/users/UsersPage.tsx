@@ -25,7 +25,7 @@ import {
   type DataTableColumn,
   type ActiveFilter,
 } from '@packages/ui';
-import { OrdinalDate } from '../../../../../kit';
+import { OrdinalDate } from '../../../../../components';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 import {
   MOCK_USERS,

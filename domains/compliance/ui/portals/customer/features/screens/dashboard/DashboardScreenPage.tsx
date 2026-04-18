@@ -14,7 +14,7 @@ import {
   Button,
   type DataTableColumn,
 } from '@packages/ui';
-import { UrgencyBadge, JurisdictionTag, OrdinalDate } from '../../../../../kit';
+import { UrgencyBadge, JurisdictionTag, OrdinalDate } from '../../../../../components';
 import {
   ComplianceCalendar,
   HandlerWorkloadList,

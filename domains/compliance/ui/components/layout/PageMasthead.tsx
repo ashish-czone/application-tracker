@@ -1,6 +1,6 @@
 import { forwardRef, type HTMLAttributes, type ReactNode } from 'react';
 import { cn, Eyebrow } from '@packages/ui';
-import { OrdinalDate } from './OrdinalDate';
+import { OrdinalDate } from '../editorial/OrdinalDate';
 
 export interface PageMastheadProps extends Omit<HTMLAttributes<HTMLElement>, 'title'> {
   /** Section mark like "§ I" or "Ch. 3". Rendered as italic serif mark in the eyebrow. */

@@ -11,7 +11,7 @@ import {
   type DataTableColumn,
   type ActiveFilter,
 } from '@packages/ui';
-import { OrdinalDate } from '../../../../../kit';
+import { OrdinalDate } from '../../../../../components';
 import {
   MOCK_CLIENT_ROWS,
   CLIENT_STATUS_COUNTS,
