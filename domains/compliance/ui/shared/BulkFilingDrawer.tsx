@@ -1,5 +1,5 @@
 import { type HTMLAttributes } from 'react';
-import { DrawerHeader, Eyebrow, SectionRule } from '@packages/ui';
+import { DrawerShell, DrawerHeader, Eyebrow, SectionRule } from '@packages/ui';
 import { OrdinalDate } from '../components';
 import { FilingTaskCard } from './FilingTaskCard';
 import type { Filing } from './types';
@@ -26,13 +26,8 @@ export function BulkFilingDrawer({
   className = '',
   ...rest
 }: BulkFilingDrawerProps) {
-  const content = (
-    <div
-      className={`w-full bg-paper-raised border-l border-rule flex flex-col ${
-        inline ? 'max-w-md h-full' : 'h-full max-w-md'
-      } ${className}`}
-      {...rest}
-    >
+  const inner = (
+    <>
       <DrawerHeader
         eyebrow={<Eyebrow tone="muted" mark="§">Bulk File</Eyebrow>}
         title={
@@ -92,18 +87,23 @@ export function BulkFilingDrawer({
           </button>
         </div>
       </footer>
-    </div>
+    </>
   );
 
-  if (inline) return content;
-  return (
-    <div className="fixed inset-0 z-40 flex justify-end">
+  if (inline) {
+    return (
       <div
-        className="absolute inset-0 bg-ink/30 backdrop-blur-[2px]"
-        onClick={onClose}
-        aria-hidden
-      />
-      <div className="relative w-full max-w-md h-full">{content}</div>
-    </div>
+        className={`w-full max-w-md h-full bg-paper-raised border-l border-rule flex flex-col ${className}`}
+        {...rest}
+      >
+        {inner}
+      </div>
+    );
+  }
+
+  return (
+    <DrawerShell onClose={onClose} width="md">
+      {inner}
+    </DrawerShell>
   );
 }

@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import {
   Plus,
   X,
@@ -23,6 +23,7 @@ import {
   DetailRow,
   AvatarBadge,
   ScreenLayout,
+  DrawerShell,
   type DataTableColumn,
   type ActiveFilter,
 } from '@packages/ui';
@@ -50,20 +51,6 @@ const STATUS_LABEL: Record<UserStatus, string> = {
   active: 'Active',
   invited: 'Invited',
   deactivated: 'Deactivated',
-};
-
-// ─── Animation ──────────────────────────────────────────────────────
-
-const EASE_OUT_EXPO = [0.32, 0.72, 0, 1] as const;
-
-const drawerVariants = {
-  hidden: { x: '100%' },
-  visible: { x: 0 },
-};
-
-const backdropVariants = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1 },
 };
 
 // ─── Sub-components ─────────────────────────────────────────────────
@@ -95,25 +82,7 @@ function UserDetailDrawer({
   onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-40 flex justify-end">
-      <motion.div
-        variants={backdropVariants}
-        initial="hidden"
-        animate="visible"
-        exit="hidden"
-        transition={{ duration: 0.2, ease: 'easeOut' }}
-        className="absolute inset-0 bg-ink/30 backdrop-blur-[2px]"
-        onClick={onClose}
-      />
-
-      <motion.div
-        variants={drawerVariants}
-        initial="hidden"
-        animate="visible"
-        exit="hidden"
-        transition={{ duration: 0.28, ease: EASE_OUT_EXPO }}
-        className="relative w-full max-w-xl h-full bg-paper-raised border-l border-rule flex flex-col"
-      >
+    <DrawerShell onClose={onClose} width="xl">
         {/* ─── Header ───────────────────────────────────────────── */}
         <header className="px-6 pt-6 pb-4 border-b border-rule flex-none">
           <div className="flex items-start justify-between gap-4 mb-4">
@@ -300,8 +269,7 @@ function UserDetailDrawer({
             </div>
           </section>
         </div>
-      </motion.div>
-    </div>
+    </DrawerShell>
   );
 }
 

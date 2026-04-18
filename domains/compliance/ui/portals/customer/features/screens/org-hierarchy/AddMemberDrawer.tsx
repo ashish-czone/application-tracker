@@ -1,22 +1,7 @@
 import { useState } from 'react';
-import { motion } from 'framer-motion';
 import { Users } from 'lucide-react';
-import { DrawerHeader, Eyebrow } from '@packages/ui';
+import { DrawerShell, DrawerHeader, Eyebrow } from '@packages/ui';
 import { POSITION_LABEL, type OrgUnit, type OrgMember } from './orgHierarchyMock';
-
-// ─── Animation config ────────────────────────────────────────────────
-
-const EASE_OUT_EXPO = [0.32, 0.72, 0, 1] as const;
-
-const drawerVariants = {
-  hidden: { x: '100%' },
-  visible: { x: 0 },
-};
-
-const backdropVariants = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1 },
-};
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -52,28 +37,7 @@ export function AddMemberDrawer({ unit, onClose, onCreate }: AddMemberDrawerProp
   }
 
   return (
-    <div className="fixed inset-0 z-40 flex justify-end">
-      {/* Backdrop */}
-      <motion.div
-        variants={backdropVariants}
-        initial="hidden"
-        animate="visible"
-        exit="hidden"
-        transition={{ duration: 0.2, ease: 'easeOut' }}
-        className="absolute inset-0 bg-ink/30 backdrop-blur-[2px]"
-        onClick={() => onClose?.()}
-        aria-hidden
-      />
-
-      {/* Drawer panel */}
-      <motion.div
-        variants={drawerVariants}
-        initial="hidden"
-        animate="visible"
-        exit="hidden"
-        transition={{ duration: 0.28, ease: EASE_OUT_EXPO }}
-        className="relative w-full max-w-md h-full bg-paper-raised border-l border-rule flex flex-col"
-      >
+    <DrawerShell onClose={() => onClose?.()} width="md">
         <DrawerHeader
           eyebrow={<Eyebrow tone="muted" mark="§">New Member</Eyebrow>}
           title="Add member"
@@ -167,8 +131,7 @@ export function AddMemberDrawer({ unit, onClose, onCreate }: AddMemberDrawerProp
             </button>
           </div>
         </footer>
-      </motion.div>
-    </div>
+    </DrawerShell>
   );
 }
 

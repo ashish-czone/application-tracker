@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -23,6 +22,7 @@ import {
   Check,
 } from 'lucide-react';
 import {
+  DrawerShell,
   DrawerHeader,
   Eyebrow,
   SectionRule,
@@ -39,20 +39,6 @@ import { JurisdictionTag, UrgencyBadge, OrdinalDate } from '../../../../../compo
 import type { FilingRow } from './filingsMock';
 import { MOCK_HANDLERS } from '../../console-preview/mockData';
 import type { Filing, Handler } from '../../../../../shared/types';
-
-// ─── Animation config ────────────────────────────────────────────────
-
-const EASE_OUT_EXPO = [0.32, 0.72, 0, 1] as const;
-
-const drawerVariants = {
-  hidden: { x: '100%' },
-  visible: { x: 0 },
-};
-
-const backdropVariants = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1 },
-};
 
 // ─── Status workflow ─────────────────────────────────────────────────
 
@@ -105,28 +91,7 @@ export function FilingDetailDrawer({ filing, onClose, onStatusChange }: FilingDe
   const transitions = getTransitions(filing.status);
 
   return (
-    <div className="fixed inset-0 z-40 flex justify-end">
-      {/* Backdrop */}
-      <motion.div
-        variants={backdropVariants}
-        initial="hidden"
-        animate="visible"
-        exit="hidden"
-        transition={{ duration: 0.2, ease: 'easeOut' }}
-        className="absolute inset-0 bg-ink/30 backdrop-blur-[2px]"
-        onClick={() => onClose?.()}
-        aria-hidden
-      />
-
-      {/* Drawer panel */}
-      <motion.div
-        variants={drawerVariants}
-        initial="hidden"
-        animate="visible"
-        exit="hidden"
-        transition={{ duration: 0.28, ease: EASE_OUT_EXPO }}
-        className="relative w-full max-w-xl h-full bg-paper-raised border-l border-rule flex flex-col"
-      >
+    <DrawerShell onClose={() => onClose?.()} width="xl">
         <DrawerHeader
           titleSize="sm"
           eyebrow={
@@ -229,8 +194,7 @@ export function FilingDetailDrawer({ filing, onClose, onStatusChange }: FilingDe
         ) : (
           <ActivityBody filing={filing} />
         )}
-      </motion.div>
-    </div>
+    </DrawerShell>
   );
 }
 
