@@ -19,6 +19,8 @@ interface FormInputProps {
   autoComplete?: string;
   disabled?: boolean;
   className?: string;
+  /** Classes applied to the <input> element itself (not the wrapper). */
+  inputClassName?: string;
   /** Async validation status — shows inline icon (spinner, check, cross) */
   asyncStatus?: AsyncValidationStatus;
   /** Error message for async validation (shown when asyncStatus is 'invalid') */
@@ -37,6 +39,7 @@ export function FormInput({
   autoComplete,
   disabled,
   className,
+  inputClassName,
   asyncStatus,
   asyncError,
   onBlurValidate,
@@ -74,7 +77,7 @@ export function FormInput({
                 aria-invalid={hasError || showAsyncError || undefined}
                 aria-describedby={describedBy}
                 aria-label={!label ? ariaLabel ?? placeholder : undefined}
-                className={cn(hasAsyncIcon && 'pr-10')}
+                className={cn(hasAsyncIcon && 'pr-10', inputClassName)}
                 onBlur={(e) => {
                   field.onBlur();
                   if (onBlurValidate && e.target.value) {
