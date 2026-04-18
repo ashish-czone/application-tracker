@@ -1,5 +1,5 @@
 import { type DataTableColumn } from '@packages/ui';
-import { HealthBar, OrdinalDate, HandlerPill } from '../../../../../../components';
+import { HealthBar, OrdinalDate, HandlerPill, ColoredInitialsAvatar } from '../../../../../../components';
 import type { ComplianceRow, OverdueRow, WorkloadRow } from '../data/reportsMock';
 import { PriorityPill } from './PriorityPill';
 
@@ -9,13 +9,7 @@ export const COMPLIANCE_COLUMNS: DataTableColumn<ComplianceRow>[] = [
     header: 'Client',
     cell: (r) => (
       <div className="flex items-center gap-3 min-w-0">
-        <span
-          aria-hidden
-          className="w-7 h-7 flex-none flex items-center justify-center text-[9px] font-sans font-semibold text-paper-raised"
-          style={{ backgroundColor: r.color }}
-        >
-          {r.initials}
-        </span>
+        <ColoredInitialsAvatar initials={r.initials} color={r.color} size="md" />
         <span className="text-sm text-ink font-sans truncate">{r.clientName}</span>
       </div>
     ),
@@ -91,13 +85,7 @@ export const OVERDUE_COLUMNS: DataTableColumn<OverdueRow>[] = [
     width: '180px',
     cell: (r) => (
       <div className="flex items-center gap-2 min-w-0">
-        <span
-          aria-hidden
-          className="w-6 h-6 flex-none flex items-center justify-center text-[9px] font-sans font-semibold text-paper-raised"
-          style={{ backgroundColor: r.clientColor }}
-        >
-          {r.clientInitials}
-        </span>
+        <ColoredInitialsAvatar initials={r.clientInitials} color={r.clientColor} size="sm" />
         <span className="text-sm text-ink font-sans truncate">{r.clientName}</span>
       </div>
     ),
@@ -137,13 +125,7 @@ export const WORKLOAD_COLUMNS: DataTableColumn<WorkloadRow>[] = [
     header: 'Team member',
     cell: (r) => (
       <div className="flex items-center gap-3 min-w-0">
-        <span
-          aria-hidden
-          className="w-7 h-7 flex-none flex items-center justify-center text-[9px] font-sans font-semibold text-paper-raised"
-          style={{ backgroundColor: r.color }}
-        >
-          {r.initials}
-        </span>
+        <ColoredInitialsAvatar initials={r.initials} color={r.color} size="md" />
         <div className="min-w-0">
           <span className="text-sm text-ink font-sans truncate block">{r.name}</span>
           <span className="text-[10px] font-sans text-ink-muted">{r.role}</span>

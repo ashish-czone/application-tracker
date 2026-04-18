@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Building2, ChevronDown } from 'lucide-react';
 import { DrawerShell, DrawerHeader, Eyebrow } from '@packages/ui';
+import { FieldLabel } from '../../../../../../components';
 import {
   LEVEL_META,
   type OrgUnit,
@@ -221,12 +222,10 @@ function FieldRow({
 }) {
   return (
     <div>
-      <div className="flex items-baseline gap-2 mb-1">
-        <label className="block text-[10px] uppercase tracking-eyebrow font-sans font-medium text-ink-muted">
-          {label}
-          {required && <span className="text-signal ml-0.5">*</span>}
-        </label>
-      </div>
+      <FieldLabel>
+        {label}
+        {required && <span className="text-signal ml-0.5">*</span>}
+      </FieldLabel>
       <div className="border-b border-rule focus-within:border-ink transition-colors pb-1.5">
         {children}
       </div>

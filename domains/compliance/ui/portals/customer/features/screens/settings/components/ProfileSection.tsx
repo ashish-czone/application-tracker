@@ -1,6 +1,6 @@
 import { Camera } from 'lucide-react';
 import { Button, Eyebrow } from '@packages/ui';
-import { OrdinalDate } from '../../../../../../components';
+import { OrdinalDate, ColoredInitialsAvatar } from '../../../../../../components';
 import { CURRENT_USER } from '../data/settingsMock';
 import { FieldGroup, TextInput, SectionDivider } from './settingsFormPrimitives';
 
@@ -17,13 +17,7 @@ export function ProfileSection() {
 
       <div className="flex items-center gap-5">
         <div className="relative group">
-          <span
-            aria-hidden
-            className="w-16 h-16 flex items-center justify-center text-lg font-sans font-semibold text-paper-raised"
-            style={{ backgroundColor: user.color }}
-          >
-            {user.initials}
-          </span>
+          <ColoredInitialsAvatar initials={user.initials} color={user.color} size="3xl" />
           <button
             type="button"
             className="absolute inset-0 flex items-center justify-center bg-ink/0 group-hover:bg-ink/40 transition-colors"

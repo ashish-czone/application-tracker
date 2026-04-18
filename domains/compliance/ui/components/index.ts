@@ -4,6 +4,16 @@
 // masthead, ordinal dates) and therefore live in the compliance domain, not
 // in the generic core/ui package.
 
+// Avatars — brand-colored identity tiles.
+export {
+  ColoredInitialsAvatar,
+  type ColoredInitialsAvatarProps,
+  type ColoredInitialsAvatarSize,
+} from './avatars/ColoredInitialsAvatar';
+
+// Form — field-level chrome for drawers and settings panels.
+export { FieldLabel, type FieldLabelProps } from './form/FieldLabel';
+
 // Badges — compliance status + taxonomy markers.
 export { Pill, type PillProps } from './badges/Pill';
 export {

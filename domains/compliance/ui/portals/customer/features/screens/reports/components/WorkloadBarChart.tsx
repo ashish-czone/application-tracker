@@ -1,3 +1,4 @@
+import { ColoredInitialsAvatar } from '../../../../../../components';
 import type { WorkloadRow } from '../data/reportsMock';
 
 export interface WorkloadBarChartProps {
@@ -17,13 +18,7 @@ export function WorkloadBarChart({ rows }: WorkloadBarChartProps) {
         return (
           <div key={r.id} className="flex items-center gap-3">
             <div className="flex items-center gap-2 w-[100px] shrink-0">
-              <span
-                aria-hidden
-                className="w-5 h-5 flex-none flex items-center justify-center text-[8px] font-sans font-semibold text-paper-raised"
-                style={{ backgroundColor: r.color }}
-              >
-                {r.initials}
-              </span>
+              <ColoredInitialsAvatar initials={r.initials} color={r.color} size="xs" />
               <span className="text-[11px] font-sans text-ink truncate">
                 {r.name.split(' ')[0]}
               </span>

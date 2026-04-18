@@ -1,6 +1,6 @@
 import { type HTMLAttributes } from 'react';
 import { DrawerShell, DrawerHeader, Eyebrow, SectionRule } from '@packages/ui';
-import { OrdinalDate } from '../components';
+import { OrdinalDate, FieldLabel } from '../components';
 import { FilingTaskCard } from './FilingTaskCard';
 import type { Filing } from './types';
 
@@ -52,17 +52,13 @@ export function BulkFilingDrawer({
         </div>
         <div className="grid grid-cols-2 gap-3 mb-4">
           <div>
-            <label className="block text-[10px] uppercase tracking-eyebrow text-ink-muted font-sans font-medium mb-1">
-              Filing date
-            </label>
+            <FieldLabel>Filing date</FieldLabel>
             <div className="border-b border-ink pb-1.5">
               <OrdinalDate date={new Date()} variant="short" className="text-sm" />
             </div>
           </div>
           <div>
-            <label className="block text-[10px] uppercase tracking-eyebrow text-ink-muted font-sans font-medium mb-1">
-              Ack. number
-            </label>
+            <FieldLabel>Ack. number</FieldLabel>
             <div className="border-b border-rule pb-1.5">
               <span className="font-mono tabular-nums text-sm text-ink-muted">
                 ACK-2026-0412-····
