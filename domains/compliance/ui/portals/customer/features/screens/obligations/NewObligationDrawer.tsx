@@ -1,8 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useForm, useFormContext, FormProvider } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import {
   X,
-  Search,
   ChevronDown,
   ChevronRight,
   BookTemplate,
@@ -10,7 +12,16 @@ import {
   Check,
   ArrowLeft,
 } from 'lucide-react';
-import { Eyebrow, SectionRule } from '@packages/ui';
+import {
+  Eyebrow,
+  SectionRule,
+  Button,
+  Combobox,
+  SearchInput,
+  FormInput,
+  FormSelect,
+  FormTextarea,
+} from '@packages/ui';
 import { JurisdictionTag } from '../../../../../components';
 import {
   MOCK_RULE_TEMPLATES,
@@ -51,7 +62,23 @@ const panelVariants = {
   }),
 };
 
-interface FormValues {
+// ─── Schema ──────────────────────────────────────────────────────────
+
+const obligationSchema = z.object({
+  code: z.string().min(1, 'Code is required'),
+  name: z.string().min(1, 'Name is required'),
+  description: z.string(),
+  lawGroup: z.string().min(1, 'Law is required'),
+  frequency: z.string().min(1, 'Cadence is required'),
+  dueDayOfMonth: z.string(),
+  dueMonthOffset: z.string(),
+  gracePeriodDays: z.string(),
+});
+
+type ObligationFormValues = z.infer<typeof obligationSchema>;
+
+/** External-facing shape — narrows the enum-like fields for onCreate consumers. */
+export interface NewObligationValues {
   code: string;
   name: string;
   description: string;
@@ -62,7 +89,7 @@ interface FormValues {
   gracePeriodDays: string;
 }
 
-const EMPTY_FORM: FormValues = {
+const EMPTY_FORM: ObligationFormValues = {
   code: '',
   name: '',
   description: '',
@@ -82,11 +109,16 @@ const FREQUENCY_LABEL: Record<ObligationFrequency, string> = {
   'ad-hoc': 'Ad-hoc',
 };
 
+const LAW_OPTIONS = LAW_GROUPS.map((g) => ({ value: g.key, label: g.label }));
+const FREQUENCY_OPTIONS = (Object.entries(FREQUENCY_LABEL) as [ObligationFrequency, string][]).map(
+  ([value, label]) => ({ value, label }),
+);
+
 // ─── Props ───────────────────────────────────────────────────────────
 
 export interface NewObligationDrawerProps {
   onClose?: () => void;
-  onCreate?: (values: FormValues, templateId?: string) => void;
+  onCreate?: (values: NewObligationValues, templateId?: string) => void;
 }
 
 // ─── Component ───────────────────────────────────────────────────────
@@ -97,9 +129,12 @@ export function NewObligationDrawer({ onClose, onCreate }: NewObligationDrawerPr
   const [selectedTemplate, setSelectedTemplate] = useState<RuleTemplate | null>(null);
   const [templateSearch, setTemplateSearch] = useState('');
   const [templateLawFilter, setTemplateLawFilter] = useState<LawGroupKey | ''>('');
-  const [form, setForm] = useState<FormValues>(EMPTY_FORM);
   const [scheduleOpen, setScheduleOpen] = useState(false);
-  const [modified, setModified] = useState<Set<keyof FormValues>>(new Set());
+
+  const form = useForm<ObligationFormValues>({
+    resolver: zodResolver(obligationSchema),
+    defaultValues: EMPTY_FORM,
+  });
 
   // ── Template search / filter ─────────────────────────────────────
 
@@ -125,7 +160,7 @@ export function NewObligationDrawer({ onClose, onCreate }: NewObligationDrawerPr
 
   function pickTemplate(tpl: RuleTemplate) {
     setSelectedTemplate(tpl);
-    setForm({
+    form.reset({
       code: tpl.code,
       name: tpl.name,
       description: tpl.description,
@@ -135,7 +170,6 @@ export function NewObligationDrawer({ onClose, onCreate }: NewObligationDrawerPr
       dueMonthOffset: String(tpl.dueMonthOffset),
       gracePeriodDays: String(tpl.gracePeriodDays),
     });
-    setModified(new Set());
     setScheduleOpen(false);
     setSlideDir('forward');
     setMode('template');
@@ -143,27 +177,10 @@ export function NewObligationDrawer({ onClose, onCreate }: NewObligationDrawerPr
 
   function startScratch() {
     setSelectedTemplate(null);
-    setForm(EMPTY_FORM);
-    setModified(new Set());
+    form.reset(EMPTY_FORM);
     setScheduleOpen(false);
     setSlideDir('forward');
     setMode('scratch');
-  }
-
-  function updateField<K extends keyof FormValues>(key: K, value: FormValues[K]) {
-    setForm((prev) => ({ ...prev, [key]: value }));
-    if (selectedTemplate) {
-      const templateValue = String(selectedTemplate[key as keyof RuleTemplate] ?? '');
-      if (value !== templateValue) {
-        setModified((prev) => new Set(prev).add(key));
-      } else {
-        setModified((prev) => {
-          const next = new Set(prev);
-          next.delete(key);
-          return next;
-        });
-      }
-    }
   }
 
   function handleBack() {
@@ -171,6 +188,10 @@ export function NewObligationDrawer({ onClose, onCreate }: NewObligationDrawerPr
     setMode('pick');
     setSelectedTemplate(null);
   }
+
+  const onSubmit = (values: ObligationFormValues) => {
+    onCreate?.(values as NewObligationValues, selectedTemplate?.id);
+  };
 
   // ─── Render ──────────────────────────────────────────────────────
 
@@ -197,122 +218,137 @@ export function NewObligationDrawer({ onClose, onCreate }: NewObligationDrawerPr
         transition={{ duration: 0.28, ease: EASE_OUT_EXPO }}
         className="relative w-full max-w-lg h-full bg-paper-raised border-l border-rule flex flex-col"
       >
-        {/* ── Header ──────────────────────────────────────────────── */}
-        <header className="px-6 pt-6 pb-4 border-b border-rule flex-none">
-          <div className="flex items-start justify-between gap-4 mb-3">
-            <div className="flex items-center gap-2">
-              {mode !== 'pick' && (
+        <FormProvider {...form}>
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            noValidate
+            className="flex flex-col h-full"
+          >
+            {/* ── Header ──────────────────────────────────────────── */}
+            <header className="px-6 pt-6 pb-4 border-b border-rule flex-none">
+              <div className="flex items-start justify-between gap-4 mb-3">
+                <div className="flex items-center gap-2">
+                  {mode !== 'pick' && (
+                    <button
+                      type="button"
+                      onClick={handleBack}
+                      className="text-ink-muted hover:text-ink transition-colors -ml-1"
+                      aria-label="Back"
+                    >
+                      <ArrowLeft className="w-4 h-4" strokeWidth={1.5} />
+                    </button>
+                  )}
+                  <Eyebrow tone="muted" mark="§">
+                    {mode === 'pick' && 'New Obligation'}
+                    {mode === 'template' && 'From template'}
+                    {mode === 'scratch' && 'From scratch'}
+                  </Eyebrow>
+                </div>
                 <button
                   type="button"
-                  onClick={handleBack}
-                  className="text-ink-muted hover:text-ink transition-colors -ml-1"
-                  aria-label="Back"
+                  onClick={() => onClose?.()}
+                  className="text-ink-muted hover:text-ink transition-colors -mt-1 -mr-1"
+                  aria-label="Close drawer"
                 >
-                  <ArrowLeft className="w-4 h-4" strokeWidth={1.5} />
+                  <X className="w-4 h-4" strokeWidth={1.5} />
                 </button>
-              )}
-              <Eyebrow tone="muted" mark="§">
-                {mode === 'pick' && 'New Obligation'}
-                {mode === 'template' && 'From template'}
-                {mode === 'scratch' && 'From scratch'}
-              </Eyebrow>
-            </div>
-            <button
-              type="button"
-              onClick={() => onClose?.()}
-              className="text-ink-muted hover:text-ink transition-colors -mt-1 -mr-1"
-              aria-label="Close drawer"
-            >
-              <X className="w-4 h-4" strokeWidth={1.5} />
-            </button>
-          </div>
-          <h2 className="font-serif text-3xl text-ink leading-tight">
-            {mode === 'pick' && 'Add obligation'}
-            {mode === 'template' && (
-              <>
-                <span className="font-serif italic">Customise</span>{' '}
-                <span className="font-mono text-2xl">{selectedTemplate?.code}</span>
-              </>
-            )}
-            {mode === 'scratch' && 'New obligation'}
-          </h2>
-          <p className="font-serif italic text-ink-soft text-sm mt-2">
-            {mode === 'pick' &&
-              'Start from a standard template or create a custom obligation from scratch.'}
-            {mode === 'template' &&
-              'Pre-filled from the template. Edit any field to customise for your firm.'}
-            {mode === 'scratch' && 'Define a custom obligation not covered by standard templates.'}
-          </p>
-        </header>
-
-        {/* ── Body ────────────────────────────────────────────────── */}
-        <div className="flex-1 overflow-y-auto">
-          <AnimatePresence mode="wait" custom={slideDir}>
-            <motion.div
-              key={mode}
-              custom={slideDir}
-              variants={panelVariants}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              transition={{ duration: 0.24, ease: EASE_OUT_EXPO }}
-            >
-              {mode === 'pick' && (
-                <PickModeBody
-                  templateSearch={templateSearch}
-                  setTemplateSearch={setTemplateSearch}
-                  templateLawFilter={templateLawFilter}
-                  setTemplateLawFilter={setTemplateLawFilter}
-                  groupedTemplates={groupedTemplates}
-                  filteredCount={filteredTemplates.length}
-                  totalCount={MOCK_RULE_TEMPLATES.length}
-                  onPickTemplate={pickTemplate}
-                  onStartScratch={startScratch}
-                />
-              )}
-              {(mode === 'template' || mode === 'scratch') && (
-                <FormBody
-                  form={form}
-                  updateField={updateField}
-                  modified={modified}
-                  selectedTemplate={selectedTemplate}
-                  scheduleOpen={scheduleOpen}
-                  setScheduleOpen={setScheduleOpen}
-                  isTemplate={mode === 'template'}
-                />
-              )}
-            </motion.div>
-          </AnimatePresence>
-        </div>
-
-        {/* ── Footer ──────────────────────────────────────────────── */}
-        {(mode === 'template' || mode === 'scratch') && (
-          <footer className="px-6 pt-4 pb-6 border-t border-rule bg-paper-sunken/50 flex-none">
-            {mode === 'template' && modified.size > 0 && (
-              <p className="text-[10px] uppercase tracking-eyebrow text-due-soon font-sans font-medium mb-3">
-                {modified.size} field{modified.size > 1 ? 's' : ''} modified from template
+              </div>
+              <h2 className="font-serif text-3xl text-ink leading-tight">
+                {mode === 'pick' && 'Add obligation'}
+                {mode === 'template' && (
+                  <>
+                    <span className="font-serif italic">Customise</span>{' '}
+                    <span className="font-mono text-2xl">{selectedTemplate?.code}</span>
+                  </>
+                )}
+                {mode === 'scratch' && 'New obligation'}
+              </h2>
+              <p className="font-serif italic text-ink-soft text-sm mt-2">
+                {mode === 'pick' &&
+                  'Start from a standard template or create a custom obligation from scratch.'}
+                {mode === 'template' &&
+                  'Pre-filled from the template. Edit any field to customise for your firm.'}
+                {mode === 'scratch' && 'Define a custom obligation not covered by standard templates.'}
               </p>
-            )}
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => onClose?.()}
-                className="text-[11px] uppercase tracking-eyebrow text-ink-muted font-sans font-medium hover:text-ink"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => onCreate?.(form, selectedTemplate?.id)}
-                className="ml-auto px-5 py-2.5 bg-ink text-paper text-[11px] uppercase tracking-eyebrow font-sans font-semibold hover:brightness-110 transition-[filter]"
-              >
-                Create as draft
-              </button>
+            </header>
+
+            {/* ── Body ────────────────────────────────────────────── */}
+            <div className="flex-1 overflow-y-auto">
+              <AnimatePresence mode="wait" custom={slideDir}>
+                <motion.div
+                  key={mode}
+                  custom={slideDir}
+                  variants={panelVariants}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  transition={{ duration: 0.24, ease: EASE_OUT_EXPO }}
+                >
+                  {mode === 'pick' && (
+                    <PickModeBody
+                      templateSearch={templateSearch}
+                      setTemplateSearch={setTemplateSearch}
+                      templateLawFilter={templateLawFilter}
+                      setTemplateLawFilter={setTemplateLawFilter}
+                      groupedTemplates={groupedTemplates}
+                      filteredCount={filteredTemplates.length}
+                      totalCount={MOCK_RULE_TEMPLATES.length}
+                      onPickTemplate={pickTemplate}
+                      onStartScratch={startScratch}
+                    />
+                  )}
+                  {(mode === 'template' || mode === 'scratch') && (
+                    <FormBody
+                      selectedTemplate={selectedTemplate}
+                      scheduleOpen={scheduleOpen}
+                      setScheduleOpen={setScheduleOpen}
+                      isTemplate={mode === 'template'}
+                    />
+                  )}
+                </motion.div>
+              </AnimatePresence>
             </div>
-          </footer>
-        )}
+
+            {/* ── Footer ──────────────────────────────────────────── */}
+            {(mode === 'template' || mode === 'scratch') && (
+              <FormFooter
+                onCancel={() => onClose?.()}
+                isTemplate={mode === 'template'}
+              />
+            )}
+          </form>
+        </FormProvider>
       </motion.div>
     </div>
+  );
+}
+
+// ─── Footer ─────────────────────────────────────────────────────────
+// Inside FormProvider so it can read formState for the modified summary.
+
+function FormFooter({ onCancel, isTemplate }: { onCancel: () => void; isTemplate: boolean }) {
+  const {
+    formState: { dirtyFields },
+  } = useFormContext<ObligationFormValues>();
+  const modifiedCount = isTemplate
+    ? Object.values(dirtyFields).filter(Boolean).length
+    : 0;
+  return (
+    <footer className="px-6 pt-4 pb-6 border-t border-rule bg-paper-sunken/50 flex-none">
+      {modifiedCount > 0 && (
+        <p className="text-[10px] uppercase tracking-eyebrow text-due-soon font-sans font-medium mb-3">
+          {modifiedCount} field{modifiedCount > 1 ? 's' : ''} modified from template
+        </p>
+      )}
+      <div className="flex items-center gap-3">
+        <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button type="submit" size="sm" className="ml-auto">
+          Create as draft
+        </Button>
+      </div>
+    </footer>
   );
 }
 
@@ -377,30 +413,20 @@ function PickModeBody({
 
       {/* Search + law filter */}
       <div className="px-6 pt-3 pb-2 flex items-center gap-3">
-        <label className="flex items-center gap-2 flex-1 border-b border-rule focus-within:border-ink transition-colors pb-1">
-          <Search className="w-3.5 h-3.5 text-ink-muted flex-none" strokeWidth={1.5} />
-          <input
-            type="text"
-            value={templateSearch}
-            onChange={(e) => setTemplateSearch(e.target.value)}
-            placeholder="Search templates..."
-            className="w-full bg-transparent outline-none text-sm text-ink placeholder:text-ink-muted font-sans"
-          />
-        </label>
-        <div className="relative">
-          <select
+        <SearchInput
+          value={templateSearch}
+          onChange={(e) => setTemplateSearch(e.target.value)}
+          placeholder="Search templates..."
+          wrapperClassName="flex-1"
+        />
+        <div className="min-w-[140px]">
+          <Combobox
             value={templateLawFilter}
-            onChange={(e) => setTemplateLawFilter(e.target.value as LawGroupKey | '')}
-            className="appearance-none bg-transparent border border-rule px-3 py-1.5 pr-7 text-[11px] uppercase tracking-eyebrow font-sans font-medium text-ink-muted hover:text-ink hover:border-ink cursor-pointer transition-colors"
-          >
-            <option value="">All laws</option>
-            {LAW_GROUPS.map((g) => (
-              <option key={g.key} value={g.key}>
-                {g.label}
-              </option>
-            ))}
-          </select>
-          <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-ink-muted pointer-events-none" strokeWidth={1.5} />
+            onChange={(v) => setTemplateLawFilter(v as LawGroupKey | '')}
+            options={[{ value: '', label: 'All laws' }, ...LAW_OPTIONS]}
+            placeholder="All laws"
+            searchPlaceholder="Search laws..."
+          />
         </div>
       </div>
 
@@ -466,22 +492,23 @@ function PickModeBody({
 // ─── Form body: template (pre-filled) or scratch (blank) ────────────
 
 function FormBody({
-  form,
-  updateField,
-  modified,
   selectedTemplate,
   scheduleOpen,
   setScheduleOpen,
   isTemplate,
 }: {
-  form: FormValues;
-  updateField: <K extends keyof FormValues>(key: K, value: FormValues[K]) => void;
-  modified: Set<keyof FormValues>;
   selectedTemplate: RuleTemplate | null;
   scheduleOpen: boolean;
   setScheduleOpen: (v: boolean) => void;
   isTemplate: boolean;
 }) {
+  const {
+    formState: { dirtyFields },
+  } = useFormContext<ObligationFormValues>();
+  const modifiedCount = isTemplate
+    ? Object.values(dirtyFields).filter(Boolean).length
+    : 0;
+
   return (
     <div className="px-6 py-5 space-y-5">
       {/* Template provenance badge */}
@@ -492,7 +519,7 @@ function FormBody({
             Based on template{' '}
             <span className="font-mono font-medium text-ink">{selectedTemplate.code}</span>
           </span>
-          {modified.size > 0 && (
+          {modifiedCount > 0 && (
             <span className="ml-auto text-[10px] uppercase tracking-eyebrow font-sans font-medium text-due-soon">
               Modified
             </span>
@@ -500,104 +527,47 @@ function FormBody({
         </div>
       )}
 
-      {/* Code */}
-      <FieldRow
-        label="Code"
-        required
-        modified={modified.has('code')}
-        isTemplate={isTemplate}
-      >
-        <input
-          type="text"
-          value={form.code}
-          onChange={(e) => updateField('code', e.target.value.toUpperCase())}
+      <ObligationField name="code" label="Code" required isTemplate={isTemplate}>
+        <FormInput
+          name="code"
           placeholder="e.g. GSTR-3B"
-          className="w-full bg-transparent outline-none text-sm text-ink font-mono uppercase tracking-tabular placeholder:text-ink-muted placeholder:normal-case"
+          ariaLabel="Code"
+          inputClassName="uppercase tracking-tabular font-mono"
         />
-      </FieldRow>
+      </ObligationField>
 
-      {/* Name */}
-      <FieldRow
-        label="Name"
-        required
-        modified={modified.has('name')}
-        isTemplate={isTemplate}
-      >
-        <input
-          type="text"
-          value={form.name}
-          onChange={(e) => updateField('name', e.target.value)}
+      <ObligationField name="name" label="Name" required isTemplate={isTemplate}>
+        <FormInput
+          name="name"
           placeholder="Short title for the obligation"
-          className="w-full bg-transparent outline-none text-sm text-ink font-sans placeholder:text-ink-muted"
+          ariaLabel="Name"
         />
-      </FieldRow>
+      </ObligationField>
 
-      {/* Law */}
-      <FieldRow
-        label="Law"
-        required
-        modified={modified.has('lawGroup')}
-        isTemplate={isTemplate}
-      >
-        <div className="relative w-full">
-          <select
-            value={form.lawGroup}
-            onChange={(e) => updateField('lawGroup', e.target.value as LawGroupKey | '')}
-            className="w-full appearance-none bg-transparent outline-none text-sm text-ink font-sans cursor-pointer pr-6"
-          >
-            <option value="" disabled>
-              Select law group
-            </option>
-            {LAW_GROUPS.map((g) => (
-              <option key={g.key} value={g.key}>
-                {g.label}
-              </option>
-            ))}
-          </select>
-          <ChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-ink-muted pointer-events-none" strokeWidth={1.5} />
-        </div>
-      </FieldRow>
+      <ObligationField name="lawGroup" label="Law" required isTemplate={isTemplate}>
+        <FormSelect
+          name="lawGroup"
+          options={LAW_OPTIONS}
+          placeholder="Select law group"
+        />
+      </ObligationField>
 
-      {/* Frequency */}
-      <FieldRow
-        label="Cadence"
-        required
-        modified={modified.has('frequency')}
-        isTemplate={isTemplate}
-      >
-        <div className="relative w-full">
-          <select
-            value={form.frequency}
-            onChange={(e) => updateField('frequency', e.target.value as ObligationFrequency | '')}
-            className="w-full appearance-none bg-transparent outline-none text-sm text-ink font-sans cursor-pointer pr-6"
-          >
-            <option value="" disabled>
-              Select cadence
-            </option>
-            {Object.entries(FREQUENCY_LABEL).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-          <ChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-ink-muted pointer-events-none" strokeWidth={1.5} />
-        </div>
-      </FieldRow>
+      <ObligationField name="frequency" label="Cadence" required isTemplate={isTemplate}>
+        <FormSelect
+          name="frequency"
+          options={FREQUENCY_OPTIONS}
+          placeholder="Select cadence"
+        />
+      </ObligationField>
 
-      {/* Description */}
-      <FieldRow
-        label="Description"
-        modified={modified.has('description')}
-        isTemplate={isTemplate}
-      >
-        <textarea
-          value={form.description}
-          onChange={(e) => updateField('description', e.target.value)}
-          placeholder="Brief description of this filing requirement"
+      <ObligationField name="description" label="Description" isTemplate={isTemplate}>
+        <FormTextarea
+          name="description"
           rows={3}
-          className="w-full bg-transparent outline-none text-sm text-ink font-serif italic placeholder:text-ink-muted resize-none leading-relaxed"
+          placeholder="Brief description of this filing requirement"
+          ariaLabel="Description"
         />
-      </FieldRow>
+      </ObligationField>
 
       {/* Schedule details — collapsible */}
       <div>
@@ -619,53 +589,45 @@ function FormBody({
         >
           <div className="overflow-hidden">
             <div className="mt-4 grid grid-cols-3 gap-4 pb-1">
-              <FieldRow
+              <ObligationField
+                name="dueDayOfMonth"
                 label="Due day"
-                compact
-                modified={modified.has('dueDayOfMonth')}
                 isTemplate={isTemplate}
               >
-                <input
+                <FormInput
+                  name="dueDayOfMonth"
                   type="number"
-                  min={1}
-                  max={31}
-                  value={form.dueDayOfMonth}
-                  onChange={(e) => updateField('dueDayOfMonth', e.target.value)}
                   placeholder="20"
-                  className="w-full bg-transparent outline-none text-sm text-ink font-mono tabular-nums placeholder:text-ink-muted"
+                  ariaLabel="Due day"
+                  inputClassName="font-mono tabular-nums"
                 />
-              </FieldRow>
-              <FieldRow
+              </ObligationField>
+              <ObligationField
+                name="dueMonthOffset"
                 label="Month offset"
-                compact
-                modified={modified.has('dueMonthOffset')}
                 isTemplate={isTemplate}
               >
-                <input
+                <FormInput
+                  name="dueMonthOffset"
                   type="number"
-                  min={0}
-                  max={12}
-                  value={form.dueMonthOffset}
-                  onChange={(e) => updateField('dueMonthOffset', e.target.value)}
                   placeholder="1"
-                  className="w-full bg-transparent outline-none text-sm text-ink font-mono tabular-nums placeholder:text-ink-muted"
+                  ariaLabel="Month offset"
+                  inputClassName="font-mono tabular-nums"
                 />
-              </FieldRow>
-              <FieldRow
+              </ObligationField>
+              <ObligationField
+                name="gracePeriodDays"
                 label="Grace days"
-                compact
-                modified={modified.has('gracePeriodDays')}
                 isTemplate={isTemplate}
               >
-                <input
+                <FormInput
+                  name="gracePeriodDays"
                   type="number"
-                  min={0}
-                  value={form.gracePeriodDays}
-                  onChange={(e) => updateField('gracePeriodDays', e.target.value)}
                   placeholder="0"
-                  className="w-full bg-transparent outline-none text-sm text-ink font-mono tabular-nums placeholder:text-ink-muted"
+                  ariaLabel="Grace days"
+                  inputClassName="font-mono tabular-nums"
                 />
-              </FieldRow>
+              </ObligationField>
             </div>
           </div>
         </div>
@@ -674,45 +636,41 @@ function FormBody({
   );
 }
 
-// ─── Field row ───────────────────────────────────────────────────────
+// ─── Field wrapper ──────────────────────────────────────────────────
+// Caller-owned label so we can colour/flag it when the template field
+// has been modified. FormInput et al. render label-less underneath.
 
-function FieldRow({
+function ObligationField({
+  name,
   label,
   required,
-  modified,
   isTemplate,
-  compact,
   children,
 }: {
+  name: keyof ObligationFormValues;
   label: string;
   required?: boolean;
-  modified?: boolean;
-  isTemplate?: boolean;
-  compact?: boolean;
-  children: React.ReactNode;
+  isTemplate: boolean;
+  children: ReactNode;
 }) {
+  const {
+    formState: { dirtyFields },
+  } = useFormContext<ObligationFormValues>();
+  const isModified = isTemplate && dirtyFields[name] === true;
   return (
     <div>
       <div className="flex items-baseline gap-2 mb-1">
         <label
           className={`block text-[10px] uppercase tracking-eyebrow font-sans font-medium transition-colors ${
-            modified ? 'text-due-soon' : 'text-ink-muted'
+            isModified ? 'text-due-soon' : 'text-ink-muted'
           }`}
         >
           {label}
           {required && <span className="text-signal ml-0.5">*</span>}
         </label>
-        {isTemplate && modified && (
-          <Check className="w-2.5 h-2.5 text-due-soon" strokeWidth={2} />
-        )}
+        {isModified && <Check className="w-2.5 h-2.5 text-due-soon" strokeWidth={2} />}
       </div>
-      <div
-        className={`border-b transition-colors ${
-          modified ? 'border-due-soon' : 'border-rule'
-        } focus-within:border-ink ${compact ? 'pb-1' : 'pb-1.5'}`}
-      >
-        {children}
-      </div>
+      {children}
     </div>
   );
 }
