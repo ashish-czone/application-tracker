@@ -1,4 +1,7 @@
-import { useState, type ReactElement } from 'react';
+import { useMemo, useState, type ReactElement } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import {
   Building2,
   Globe,
@@ -7,13 +10,19 @@ import {
   Upload,
   ImageIcon,
 } from 'lucide-react';
-import { Button, Combobox, Eyebrow } from '@packages/ui';
+import {
+  Button,
+  Form,
+  FormInput,
+  FormSelect,
+} from '@packages/ui';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 import {
   ADMIN_SETTINGS_SECTIONS,
   ADMIN_SETTINGS_GROUPS,
   type AdminSettingsSection,
   type AdminSettingField,
+  type AdminSettingsGroup,
 } from './adminSettingsMock';
 
 // ─── Constants ──────────────────────────────────────────────────────
@@ -24,21 +33,36 @@ const SECTION_ICONS: Record<AdminSettingsSection, typeof Building2> = {
   preferences: SlidersHorizontal,
 };
 
+// ─── Form helpers ───────────────────────────────────────────────────
+
+type FormValues = Record<string, string>;
+
+/** Build a zod schema with `z.string()` for every non-logo field in a group. */
+function buildGroupSchema(group: AdminSettingsGroup) {
+  const shape: Record<string, z.ZodTypeAny> = {};
+  for (const field of group.fields) {
+    if (field.type === 'logo') continue;
+    shape[field.key] = z.string();
+  }
+  return z.object(shape);
+}
+
+function buildGroupDefaults(group: AdminSettingsGroup): FormValues {
+  const defaults: FormValues = {};
+  for (const field of group.fields) {
+    if (field.type === 'logo') continue;
+    defaults[field.key] = field.value;
+  }
+  return defaults;
+}
+
 // ─── Sub-components ─────────────────────────────────────────────────
 
 function SectionDivider() {
   return <div className="border-t border-rule" />;
 }
 
-function SettingRow({
-  field,
-  value,
-  onChange,
-}: {
-  field: AdminSettingField;
-  value: string;
-  onChange: (v: string) => void;
-}) {
+function SettingRow({ field }: { field: AdminSettingField }) {
   return (
     <div className="grid grid-cols-[1fr_320px] gap-8 items-start py-5">
       {/* Label side */}
@@ -52,24 +76,16 @@ function SettingRow({
       {/* Input side */}
       <div>
         {field.type === 'text' && (
-          <input
-            type="text"
-            defaultValue={value}
-            className="w-full px-3 py-2 border border-rule bg-paper text-sm font-sans text-ink placeholder:text-ink-muted outline-none focus:border-ink transition-colors"
-          />
+          <FormInput name={field.key} ariaLabel={field.label} />
         )}
         {field.type === 'select' && (
-          <Combobox
-            value={value}
-            onChange={onChange}
+          <FormSelect
+            name={field.key}
             options={field.options}
             placeholder="Select..."
-            searchPlaceholder="Search..."
           />
         )}
-        {field.type === 'logo' && (
-          <LogoUploadField />
-        )}
+        {field.type === 'logo' && <LogoUploadField />}
       </div>
     </div>
   );
@@ -82,13 +98,10 @@ function LogoUploadField() {
         <ImageIcon className="w-5 h-5 text-ink-muted/50" strokeWidth={1.5} />
       </div>
       <div>
-        <button
-          type="button"
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-rule text-[11px] uppercase tracking-eyebrow font-sans font-medium text-ink hover:border-ink transition-colors"
-        >
+        <Button type="button" variant="outline" size="sm" className="gap-1.5">
           <Upload className="w-3 h-3" strokeWidth={1.5} />
           Upload logo
-        </button>
+        </Button>
         <span className="block text-[10px] font-serif italic text-ink-muted mt-1.5">
           PNG, SVG, or JPG. Max 2 MB.
         </span>
@@ -103,16 +116,21 @@ function SettingsGroupSection({ sectionKey }: { sectionKey: AdminSettingsSection
   const group = ADMIN_SETTINGS_GROUPS.find((g) => g.key === sectionKey);
   if (!group) return null;
 
-  const [values, setValues] = useState<Record<string, string>>(() =>
-    Object.fromEntries(group.fields.map((f) => [f.key, f.value])),
-  );
+  const defaultValues = useMemo(() => buildGroupDefaults(group), [group]);
+  const schema = useMemo(() => buildGroupSchema(group), [group]);
 
-  const updateValue = (key: string, value: string) => {
-    setValues((prev) => ({ ...prev, [key]: value }));
+  const form = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    defaultValues,
+  });
+
+  const onSubmit = (values: FormValues) => {
+    // Consumer will wire this to the settings API; currently UI-only.
+    void values;
   };
 
   return (
-    <div className="space-y-2">
+    <Form form={form} onSubmit={form.handleSubmit(onSubmit)} className="space-y-2">
       <div>
         <h2 className="font-serif text-2xl text-ink leading-tight">{group.label}</h2>
         <p className="mt-1 font-serif italic text-sm text-ink-soft">
@@ -122,22 +140,26 @@ function SettingsGroupSection({ sectionKey }: { sectionKey: AdminSettingsSection
 
       <div className="divide-y divide-rule">
         {group.fields.map((field) => (
-          <SettingRow
-            key={field.key}
-            field={field}
-            value={values[field.key]!}
-            onChange={(v) => updateValue(field.key, v)}
-          />
+          <SettingRow key={field.key} field={field} />
         ))}
       </div>
 
       <SectionDivider />
 
       <div className="flex items-center gap-3 pt-4">
-        <Button size="sm">Save changes</Button>
-        <Button size="sm" variant="ghost">Reset to defaults</Button>
+        <Button type="submit" size="sm">
+          Save changes
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          onClick={() => form.reset(defaultValues)}
+        >
+          Reset to defaults
+        </Button>
       </div>
-    </div>
+    </Form>
   );
 }
 
