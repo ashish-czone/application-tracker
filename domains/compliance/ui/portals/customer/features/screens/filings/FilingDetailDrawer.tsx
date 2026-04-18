@@ -1,6 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import {
   X,
   FileText,
@@ -24,6 +27,9 @@ import {
   Eyebrow,
   SectionRule,
   Calendar,
+  Button,
+  Form,
+  FormTextarea,
 } from '@packages/ui';
 import { JurisdictionTag, UrgencyBadge, OrdinalDate } from '../../../../../components';
 import type { FilingRow } from './filingsMock';
@@ -72,6 +78,13 @@ const PRIORITY_TONE: Record<string, string> = {
 
 type DrawerMode = 'overview' | 'activity';
 
+// ─── Note compose form ──────────────────────────────────────────────
+
+const noteSchema = z.object({
+  note: z.string().trim().min(1, 'Enter a note'),
+});
+type NoteFormValues = z.infer<typeof noteSchema>;
+
 // ─── Props ───────────────────────────────────────────────────────────
 
 export interface FilingDetailDrawerProps {
@@ -84,7 +97,6 @@ export interface FilingDetailDrawerProps {
 
 export function FilingDetailDrawer({ filing, onClose, onStatusChange }: FilingDetailDrawerProps) {
   const [mode, setMode] = useState<DrawerMode>('overview');
-  const [noteText, setNoteText] = useState('');
 
   const isFiled = filing.status === 'filed';
   const transitions = getTransitions(filing.status);
@@ -216,11 +228,7 @@ export function FilingDetailDrawer({ filing, onClose, onStatusChange }: FilingDe
 
         {/* ── Body ────────────────────────────────────────────────── */}
         {mode === 'overview' ? (
-          <OverviewBody
-            filing={filing}
-            noteText={noteText}
-            setNoteText={setNoteText}
-          />
+          <OverviewBody filing={filing} />
         ) : (
           <ActivityBody filing={filing} />
         )}
@@ -255,19 +263,22 @@ function getTransitions(current: Filing['status']): Transition[] {
 
 // ─── Overview body (details + notes + files) ────────────────────────
 
-function OverviewBody({
-  filing,
-  noteText,
-  setNoteText,
-}: {
-  filing: FilingRow;
-  noteText: string;
-  setNoteText: (v: string) => void;
-}) {
+function OverviewBody({ filing }: { filing: FilingRow }) {
   const [priority, setPriority] = useState(filing.priority);
   const [handler, setHandler] = useState<Handler | undefined>(filing.handler);
   const [dueDate, setDueDate] = useState(filing.dueDate);
   const [showUploadZone, setShowUploadZone] = useState(false);
+
+  const noteForm = useForm<NoteFormValues>({
+    resolver: zodResolver(noteSchema),
+    defaultValues: { note: '' },
+  });
+
+  const submitNote = (values: NoteFormValues) => {
+    // Consumer will wire this to an API; for now, reset the compose field.
+    void values;
+    noteForm.reset({ note: '' });
+  };
 
   const handlerOptions = MOCK_HANDLERS.map((h) => ({ value: h.id, label: h.name }));
 
@@ -494,23 +505,29 @@ function OverviewBody({
       </div>
 
       {/* ── Compose bar (sticky bottom) ──────────────────────────── */}
-      <div className="px-6 py-3 border-t border-rule bg-paper-sunken/50 flex-none">
+      <Form
+        form={noteForm}
+        onSubmit={noteForm.handleSubmit(submitNote)}
+        className="px-6 py-3 border-t border-rule bg-paper-sunken/50 flex-none space-y-0"
+      >
         <div className="flex items-end gap-2">
-          <textarea
-            value={noteText}
-            onChange={(e) => setNoteText(e.target.value)}
-            placeholder="Add a note…"
+          <FormTextarea
+            name="note"
             rows={1}
-            className="flex-1 bg-transparent border border-rule focus:border-ink outline-none px-3 py-2 text-sm text-ink font-sans placeholder:text-ink-muted resize-none transition-colors"
+            placeholder="Add a note…"
+            ariaLabel="Add a note"
+            className="flex-1"
           />
-          <button
-            type="button"
-            className="px-3 py-2 bg-ink text-paper text-[11px] uppercase tracking-eyebrow font-sans font-semibold hover:brightness-110 transition-[filter] self-end"
+          <Button
+            type="submit"
+            size="sm"
+            className="self-end"
+            aria-label="Send note"
           >
             <Send className="w-3.5 h-3.5" strokeWidth={2} />
-          </button>
+          </Button>
         </div>
-      </div>
+      </Form>
     </div>
   );
 }
