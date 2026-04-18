@@ -7,12 +7,9 @@ import {
   FilterPopover,
   CoarseTabs,
   SearchInput,
-  AvatarBadge,
   ScreenLayout,
-  type DataTableColumn,
   type ActiveFilter,
 } from '@packages/ui';
-import { JurisdictionTag } from '../../../../../components';
 import {
   LAW_GROUPS,
   MOCK_OBLIGATIONS,
@@ -20,157 +17,28 @@ import {
   type LawGroupKey,
   type Obligation,
   type ObligationFrequency,
-} from './obligationsMock';
-import { NewObligationDrawer } from './NewObligationDrawer';
+} from './data/obligationsMock';
+import {
+  JURISDICTION_OPTIONS,
+  type JurisdictionKey,
+} from './data/obligationFilterOptions';
+import { FREQUENCY_LABEL, FREQUENCY_OPTIONS } from './components/FrequencyPill';
+import {
+  OBLIGATION_COLUMNS,
+  REQUIRED_OBLIGATION_COLUMN_KEYS,
+} from './components/obligationColumns';
+import { NewObligationDrawer } from './components/NewObligationDrawer';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 
-const FREQUENCY_LABEL: Record<ObligationFrequency, string> = {
-  monthly: 'Monthly',
-  quarterly: 'Quarterly',
-  'half-yearly': 'Half-yearly',
-  yearly: 'Yearly',
-  event: 'On event',
-  'ad-hoc': 'Ad-hoc',
-};
-
 type StatusTab = 'all' | Obligation['status'];
-type JurisdictionKey = 'central' | 'state' | 'municipal';
-
-const JURISDICTION_OPTIONS: { value: JurisdictionKey; label: string }[] = [
-  { value: 'central', label: 'Central' },
-  { value: 'state', label: 'State' },
-  { value: 'municipal', label: 'Municipal' },
-];
-
-const FREQUENCY_OPTIONS: { value: ObligationFrequency; label: string }[] = (
-  Object.keys(FREQUENCY_LABEL) as ObligationFrequency[]
-).map((f) => ({ value: f, label: FREQUENCY_LABEL[f] }));
-
-function HealthBar({ pct }: { pct: number }) {
-  const tone =
-    pct >= 95 ? 'bg-filed' : pct >= 85 ? 'bg-authority' : pct >= 75 ? 'bg-due-soon' : 'bg-signal';
-  return (
-    <div className="flex items-center gap-2 min-w-[120px]">
-      <div className="flex-1 h-1 bg-rule">
-        <div className={`h-full ${tone}`} style={{ width: `${pct}%` }} />
-      </div>
-      <span className="font-mono text-[11px] tabular-nums text-ink-soft w-7 text-right">
-        {pct}%
-      </span>
-    </div>
-  );
-}
-
-function FrequencyPill({ frequency }: { frequency: ObligationFrequency }) {
-  return (
-    <span className="inline-flex items-center px-2 py-[2px] border border-rule text-[10px] font-sans font-semibold uppercase tracking-[0.12em] text-ink-soft bg-paper-raised">
-      {FREQUENCY_LABEL[frequency]}
-    </span>
-  );
-}
-
-const STATUS_TONE: Record<Obligation['status'], string> = {
-  active: 'bg-filed',
-  draft: 'bg-due-soon',
-  deprecated: 'bg-ink-muted',
-};
-
-const OBLIGATION_COLUMNS: DataTableColumn<Obligation>[] = [
-  {
-    key: 'code',
-    header: 'Code',
-    width: '110px',
-    cell: (o) => (
-      <div className="flex items-center gap-2">
-        <span
-          aria-hidden
-          title={o.status}
-          className={`w-1.5 h-1.5 flex-none ${STATUS_TONE[o.status]}`}
-        />
-        <span className="font-mono text-[11px] tracking-tabular uppercase text-ink">
-          {o.code}
-        </span>
-      </div>
-    ),
-  },
-  {
-    key: 'name',
-    header: 'Obligation',
-    cell: (o) => (
-      <div className="flex flex-col min-w-0">
-        <span className="text-sm text-ink font-sans leading-snug truncate">{o.name}</span>
-        <span className="font-serif italic text-[11px] text-ink-muted truncate">
-          {o.description}
-        </span>
-      </div>
-    ),
-  },
-  {
-    key: 'law',
-    header: 'Law',
-    width: '130px',
-    cell: (o) => (
-      <div className="flex items-center gap-2">
-        <span className="font-mono text-[11px] text-ink-muted tracking-tabular uppercase">
-          {o.lawCode}
-        </span>
-        <JurisdictionTag jurisdiction={o.jurisdiction} />
-      </div>
-    ),
-  },
-  {
-    key: 'frequency',
-    header: 'Cadence',
-    width: '100px',
-    cell: (o) => <FrequencyPill frequency={o.frequency} />,
-  },
-  {
-    key: 'applicable',
-    header: 'Applies to',
-    width: '110px',
-    align: 'right',
-    cell: (o) => (
-      <div className="flex items-baseline justify-end gap-1.5">
-        <span className="font-mono text-sm tabular-nums text-ink">{o.applicableClients}</span>
-        <span className="text-[10px] uppercase tracking-eyebrow text-ink-muted font-sans">
-          clients
-        </span>
-      </div>
-    ),
-  },
-  {
-    key: 'health',
-    header: 'On-time rate',
-    width: '150px',
-    cell: (o) => <HealthBar pct={o.onTimePct} />,
-  },
-  {
-    key: 'owner',
-    header: 'Owner',
-    width: '110px',
-    cell: (o) => (
-      <div className="flex items-center gap-2 min-w-0">
-        <AvatarBadge initials={o.owner.initials} size="sm" />
-        <span className="text-[11px] font-sans text-ink-soft truncate">
-          {o.owner.name.split(' ')[0]}
-        </span>
-      </div>
-    ),
-  },
-];
-
-const REQUIRED_COLUMN_KEYS: string[] = ['code', 'name'];
 
 export function ObligationsLibraryPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  // Filter state — popover multi-selects return arrays.
   const [lawFilter, setLawFilter] = useState<LawGroupKey[]>([]);
   const [jurisdictionFilter, setJurisdictionFilter] = useState<JurisdictionKey[]>([]);
   const [frequencyFilter, setFrequencyFilter] = useState<ObligationFrequency[]>([]);
   const [search, setSearch] = useState('');
-
-  // Coarse tab takes the place of the sidebar "Status" section.
   const [statusTab, setStatusTab] = useState<StatusTab>('all');
 
   const filtered = useMemo(() => {
@@ -189,7 +57,6 @@ export function ObligationsLibraryPage() {
     });
   }, [statusTab, lawFilter, jurisdictionFilter, frequencyFilter, search]);
 
-  // Derive active filter chips from filter state.
   const activeFilters: ActiveFilter[] = useMemo(() => {
     const chips: ActiveFilter[] = [];
     for (const key of lawFilter) {
@@ -229,9 +96,11 @@ export function ObligationsLibraryPage() {
   const totalCoverage = Math.round(
     MOCK_OBLIGATIONS.reduce((acc, o) => acc + o.onTimePct, 0) / MOCK_OBLIGATIONS.length,
   );
-  const totalFilingsThisPeriod = MOCK_OBLIGATIONS.reduce((acc, o) => acc + o.filingsThisPeriod, 0);
+  const totalFilingsThisPeriod = MOCK_OBLIGATIONS.reduce(
+    (acc, o) => acc + o.filingsThisPeriod,
+    0,
+  );
 
-  // Popover option lists.
   const lawOptions = LAW_GROUPS.map((g) => ({
     value: g.key,
     label: g.label,
@@ -250,7 +119,6 @@ export function ObligationsLibraryPage() {
     count: MOCK_OBLIGATIONS.filter((o) => o.frequency === f.value).length,
   }));
 
-  // Coarse tab counts.
   const statusTabs = [
     { value: 'all' as const, label: 'All', count: MOCK_OBLIGATIONS.length },
     { value: 'active' as const, label: 'Active', count: OBLIGATION_STATUS_COUNTS.active },
@@ -333,16 +201,14 @@ export function ObligationsLibraryPage() {
           },
         ]}
       >
-        {/* ─── Full-width table block ───────────────────────────────────── */}
         <section className="mt-10">
-          {/* Coarse tabs — status cut */}
           <CoarseTabs tabs={statusTabs} value={statusTab} onChange={setStatusTab} animated />
 
           <DataGridShell
             columns={OBLIGATION_COLUMNS}
             rows={filtered}
             getRowKey={(o) => o.id}
-            requiredColumns={REQUIRED_COLUMN_KEYS}
+            requiredColumns={REQUIRED_OBLIGATION_COLUMN_KEYS}
             totalRows={MOCK_OBLIGATIONS.length}
             activeFilters={activeFilters}
             onClearFilters={clearAll}

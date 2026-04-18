@@ -23,14 +23,14 @@ import {
   FormSelect,
   FormTextarea,
 } from '@packages/ui';
-import { JurisdictionTag } from '../../../../../components';
+import { JurisdictionTag } from '../../../../../../components';
 import {
   MOCK_RULE_TEMPLATES,
   LAW_GROUPS,
   type RuleTemplate,
   type ObligationFrequency,
   type LawGroupKey,
-} from './obligationsMock';
+} from '../data/obligationsMock';
 
 // ─── Types ───────────────────────────────────────────────────────────
 

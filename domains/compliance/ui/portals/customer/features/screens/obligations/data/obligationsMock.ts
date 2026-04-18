@@ -1,5 +1,5 @@
-import type { Handler } from '../../../../../shared/types';
-import { MOCK_HANDLERS } from '../../console-preview/mockData';
+import type { Handler } from '../../../../../../shared/types';
+import { MOCK_HANDLERS } from '../../../console-preview/mockData';
 
 // An Obligation is a *rule definition* — the canonical filing requirement for
 // a law/form/cadence combination. Concrete filings (the instances consumed on

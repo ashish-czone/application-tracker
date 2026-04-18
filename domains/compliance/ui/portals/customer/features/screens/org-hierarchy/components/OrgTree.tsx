@@ -9,7 +9,7 @@ import {
   type OrgUnit,
   type OrgMember,
   type HealthStatus,
-} from './orgHierarchyMock';
+} from '../data/orgHierarchyMock';
 
 // ─── Health dot ─────────────────────────────────────────────────────
 

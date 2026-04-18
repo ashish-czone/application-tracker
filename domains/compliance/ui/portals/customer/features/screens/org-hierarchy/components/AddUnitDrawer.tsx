@@ -6,7 +6,7 @@ import {
   type OrgUnit,
   type OrgLevel,
   type OrgMember,
-} from './orgHierarchyMock';
+} from '../data/orgHierarchyMock';
 
 // ─── Types ───────────────────────────────────────────────────────────
 

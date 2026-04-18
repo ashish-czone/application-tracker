@@ -1,16 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
-import {
-  AlertTriangle,
-  List,
-  Columns3,
-  CalendarDays,
-  Download,
-  UserPlus,
-} from 'lucide-react';
+import { AnimatePresence } from 'framer-motion';
+import { List, Columns3, CalendarDays, Download, UserPlus } from 'lucide-react';
 import {
   DataGridShell,
-  Button,
   FilterPopover,
   ColumnChooser,
   ActiveFilterChips,
@@ -18,17 +10,13 @@ import {
   CoarseTabs,
   KanbanBoard,
   SearchInput,
-  AvatarBadge,
   ScreenLayout,
   ToolbarRow,
   toast,
-  type DataTableColumn,
   type ActiveFilter,
   type KanbanColumnDef,
   type KanbanCardData,
-  useSlidingHighlight,
 } from '@packages/ui';
-import { OrdinalDate, UrgencyBadge, JurisdictionTag } from '../../../../../components';
 import { ComplianceCalendar } from '../../../../../shared';
 import {
   MOCK_FILING_ROWS,
@@ -38,112 +26,32 @@ import {
   CLIENT_OPTIONS,
   LAW_OPTIONS,
   type FilingRow,
-} from './filingsMock';
+} from './data/filingsMock';
 import { MOCK_HANDLERS } from '../../console-preview/mockData';
-import { FilingDetailDrawer } from './FilingDetailDrawer';
-import { BulkReassignDialog, type BulkReassignSubmitPayload } from './BulkReassignDialog';
+import { FilingDetailDrawer } from './components/FilingDetailDrawer';
+import {
+  BulkReassignDialog,
+  type BulkReassignSubmitPayload,
+} from './components/BulkReassignDialog';
+import {
+  FILING_COLUMNS,
+  ALL_FILING_COLUMN_KEYS,
+  REQUIRED_FILING_COLUMN_KEYS,
+} from './components/filingColumns';
+import { ViewModeSwitcher, type ViewModeOption } from './components/ViewModeSwitcher';
+import { FilingKanbanCard } from './components/FilingKanbanCard';
+import { OverdueAlert } from './components/OverdueAlert';
 import type { Filing } from '../../../../../shared/types';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
-
-// ─── Constants ──────────────────────────────────────────────────────
 
 type StatusTab = 'all' | Filing['status'];
 type ViewMode = 'list' | 'kanban' | 'calendar';
 
-const STATUS_LABEL: Record<Filing['status'], string> = {
-  overdue: 'Overdue',
-  'due-today': 'Due today',
-  'due-this-week': 'Due this week',
-  upcoming: 'Upcoming',
-  filed: 'Filed',
-  draft: 'Draft',
-};
-
-const PRIORITY_TONE: Record<string, string> = {
-  critical: 'text-signal',
-  high: 'text-due-soon',
-  normal: 'text-ink-muted',
-  low: 'text-ink-muted/60',
-};
-
-// ─── Table columns ──────────────────────────────────────────────────
-
-const FILING_COLUMNS: DataTableColumn<FilingRow>[] = [
-  {
-    key: 'filing',
-    header: 'Filing',
-    cell: (f) => (
-      <div className="min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="font-mono text-[11px] tracking-tabular uppercase text-ink font-medium">
-            {f.lawCode}
-          </span>
-          <JurisdictionTag jurisdiction={f.jurisdiction} />
-        </div>
-        <span className="text-sm text-ink font-sans leading-snug truncate block mt-0.5">
-          {f.ruleName}
-        </span>
-      </div>
-    ),
-  },
-  {
-    key: 'client',
-    header: 'Client',
-    width: '140px',
-    cell: (f) => (
-      <span className="text-sm text-ink font-sans truncate block">{f.clientName}</span>
-    ),
-  },
-  {
-    key: 'period',
-    header: 'Period',
-    width: '100px',
-    cell: (f) => (
-      <span className="font-mono text-[11px] tabular-nums text-ink-soft">{f.periodLabel}</span>
-    ),
-  },
-  {
-    key: 'dueDate',
-    header: 'Due',
-    width: '110px',
-    cell: (f) => <OrdinalDate date={f.dueDate} variant="short" className="text-[11px]" />,
-  },
-  {
-    key: 'status',
-    header: 'Status',
-    width: '120px',
-    cell: (f) => <UrgencyBadge urgency={f.status} />,
-  },
-  {
-    key: 'priority',
-    header: 'Priority',
-    width: '90px',
-    cell: (f) => (
-      <span className={`text-[11px] uppercase tracking-eyebrow font-sans font-medium ${PRIORITY_TONE[f.priority]}`}>
-        {f.priority}
-      </span>
-    ),
-  },
-  {
-    key: 'handler',
-    header: 'Handler',
-    width: '120px',
-    cell: (f) =>
-      f.handler ? (
-        <div className="flex items-center gap-2 min-w-0">
-          <AvatarBadge initials={f.handler.initials} size="sm" />
-          <span className="text-[11px] font-sans text-ink-soft truncate">
-            {f.handler.name.split(' ')[0]}
-          </span>
-        </div>
-      ) : null,
-  },
+const VIEW_MODES: ViewModeOption<ViewMode>[] = [
+  { key: 'list', label: 'List view', icon: List },
+  { key: 'kanban', label: 'Board view', icon: Columns3 },
+  { key: 'calendar', label: 'Calendar view', icon: CalendarDays },
 ];
-
-const ALL_COLUMN_KEYS = FILING_COLUMNS.map((c) => c.key);
-const REQUIRED_COLUMN_KEYS: string[] = ['filing'];
-
-// ─── Kanban columns ─────────────────────────────────────────────────
 
 const KANBAN_COLUMNS: KanbanColumnDef[] = [
   { id: 'overdue', label: 'Overdue', color: 'hsl(var(--signal))' },
@@ -153,38 +61,20 @@ const KANBAN_COLUMNS: KanbanColumnDef[] = [
   { id: 'filed', label: 'Filed', color: 'hsl(var(--filed))' },
 ];
 
-// ─── Page ───────────────────────────────────────────────────────────
-
 export function FilingsPage() {
-  // View mode.
   const [viewMode, setViewMode] = useState<ViewMode>('list');
-  const viewHighlight = useSlidingHighlight<ViewMode>(viewMode);
 
-  // Filter state.
   const [search, setSearch] = useState('');
   const [statusTab, setStatusTab] = useState<StatusTab>('all');
   const [clientFilter, setClientFilter] = useState<string[]>([]);
   const [lawFilter, setLawFilter] = useState<string[]>([]);
   const [handlerFilter, setHandlerFilter] = useState<string[]>([]);
 
-  // Column visibility.
-  const [visibleColumns, setVisibleColumns] = useState<string[]>(ALL_COLUMN_KEYS);
-
-  // Local mutable copy of filing rows (supports kanban drag-and-drop + bulk edits).
+  const [visibleColumns, setVisibleColumns] = useState<string[]>(ALL_FILING_COLUMN_KEYS);
   const [filingRows, setFilingRows] = useState<FilingRow[]>(MOCK_FILING_ROWS);
-
-  // Detail drawer.
   const [selectedFiling, setSelectedFiling] = useState<FilingRow | null>(null);
-
-  // Multi-row selection (for bulk actions). Spans pagination. Cleared on
-  // filter change so the selection can't silently contain off-screen rows.
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-
-  // Reassign dialog.
   const [reassignOpen, setReassignOpen] = useState(false);
-
-
-  // ── Filtering ───────────────────────────────────────────────────
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -194,13 +84,14 @@ export function FilingsPage() {
       if (lawFilter.length > 0 && !lawFilter.includes(f.lawId)) return false;
       if (handlerFilter.length > 0 && (!f.handler || !handlerFilter.includes(f.handler.id)))
         return false;
-      if (q && !`${f.lawCode} ${f.ruleName} ${f.clientName} ${f.periodLabel}`.toLowerCase().includes(q))
+      if (
+        q &&
+        !`${f.lawCode} ${f.ruleName} ${f.clientName} ${f.periodLabel}`.toLowerCase().includes(q)
+      )
         return false;
       return true;
     });
   }, [filingRows, statusTab, clientFilter, lawFilter, handlerFilter, search]);
-
-  // ── Active filter chips ─────────────────────────────────────────
 
   const activeFilters: ActiveFilter[] = useMemo(() => {
     const chips: ActiveFilter[] = [];
@@ -240,13 +131,10 @@ export function FilingsPage() {
     setHandlerFilter([]);
   };
 
-  // Clear selection whenever the filter or tab inputs change — otherwise
-  // hidden rows could stay selected and leak into a bulk action.
   useEffect(() => {
     setSelectedIds(new Set());
   }, [statusTab, clientFilter, lawFilter, handlerFilter, search]);
 
-  // Restrict active selection to rows that are still visible after filtering.
   const visibleIds = useMemo(() => new Set(filtered.map((f) => f.id)), [filtered]);
   const effectiveSelectedIds = useMemo(() => {
     const next = new Set<string>();
@@ -259,14 +147,11 @@ export function FilingsPage() {
     [filingRows, effectiveSelectedIds],
   );
 
-  // ── Bulk reassign ───────────────────────────────────────────────
-
   function applyReassign({ newHandlerId, notify, note }: BulkReassignSubmitPayload) {
     const newHandler = MOCK_HANDLERS.find((h) => h.id === newHandlerId);
     if (!newHandler) return;
 
     const targetIds = new Set(effectiveSelectedIds);
-    // Snapshot prior assignments for undo.
     const before = new Map<string, FilingRow['handler']>();
     for (const f of filingRows) {
       if (targetIds.has(f.id)) before.set(f.id, f.handler);
@@ -297,8 +182,6 @@ export function FilingsPage() {
     });
   }
 
-  // ── KPI aggregates ──────────────────────────────────────────────
-
   const totalFilings = MOCK_FILING_ROWS.length;
   const overdueCount = FILING_STATUS_COUNTS.overdue;
   const dueThisWeekCount =
@@ -308,7 +191,11 @@ export function FilingsPage() {
     (MOCK_FILING_ROWS.filter((f) => f.status === 'filed').length / totalFilings) * 100,
   );
 
-  // ── Filter popover options ──────────────────────────────────────
+  const overdueClientCount = useMemo(
+    () =>
+      new Set(MOCK_FILING_ROWS.filter((f) => f.status === 'overdue').map((f) => f.clientId)).size,
+    [],
+  );
 
   const clientOptions = CLIENT_OPTIONS.map((c) => ({
     ...c,
@@ -328,10 +215,8 @@ export function FilingsPage() {
   const columnChooserItems = FILING_COLUMNS.map((c) => ({
     key: c.key,
     label: c.header,
-    required: REQUIRED_COLUMN_KEYS.includes(c.key),
+    required: REQUIRED_FILING_COLUMN_KEYS.includes(c.key),
   }));
-
-  // ── Coarse tabs ─────────────────────────────────────────────────
 
   const statusTabs = [
     { value: 'all' as const, label: 'All', count: totalFilings },
@@ -350,19 +235,17 @@ export function FilingsPage() {
     { value: 'filed' as const, label: 'Filed', count: FILING_STATUS_COUNTS.filed },
   ];
 
-  // ── Kanban data ─────────────────────────────────────────────────
-
   const kanbanCards: KanbanCardData[] = useMemo(
-    () =>
-      filtered.map((f) => ({
-        ...f,
-        id: f.id,
-        columnId: f.status,
-      })),
+    () => filtered.map((f) => ({ ...f, id: f.id, columnId: f.status })),
     [filtered],
   );
 
-  function handleCardMove(event: { cardId: string; fromColumnId: string; toColumnId: string; toIndex: number }) {
+  function handleCardMove(event: {
+    cardId: string;
+    fromColumnId: string;
+    toColumnId: string;
+    toIndex: number;
+  }) {
     setFilingRows((prev) => {
       const card = prev.find((f) => f.id === event.cardId);
       if (!card) return prev;
@@ -370,13 +253,14 @@ export function FilingsPage() {
       const moved = { ...card, status: event.toColumnId as Filing['status'] };
       const without = prev.filter((f) => f.id !== event.cardId);
 
-      // Find the insertion point: the position of the toIndex-th card
-      // with the target status in the flat array.
       let seen = 0;
       let insertAt = without.length;
       for (let i = 0; i < without.length; i++) {
         if (without[i].status === event.toColumnId) {
-          if (seen === event.toIndex) { insertAt = i; break; }
+          if (seen === event.toIndex) {
+            insertAt = i;
+            break;
+          }
           seen++;
         }
       }
@@ -385,8 +269,6 @@ export function FilingsPage() {
       return without;
     });
   }
-
-  // ── Calendar filing click ────────────────────────────────────────
 
   function handleCalendarFilingClick(filing: Filing) {
     const row = filingRows.find((f) => f.id === filing.id);
@@ -401,61 +283,18 @@ export function FilingsPage() {
         title="Filings"
         subtitle={
           <>
-            {totalFilings} filings across {CLIENT_OPTIONS.length} clients — {overdueCount}{' '}
-            overdue, {dueThisWeekCount} due this week.
+            {totalFilings} filings across {CLIENT_OPTIONS.length} clients — {overdueCount} overdue,{' '}
+            {dueThisWeekCount} due this week.
           </>
         }
-        actions={
-          <div ref={viewHighlight.containerRef} className="relative flex border border-rule">
-            {viewHighlight.rect && (
-              <motion.div
-                aria-hidden
-                className="absolute top-0 bottom-0 bg-ink"
-                initial={false}
-                animate={{ left: viewHighlight.rect.left, width: viewHighlight.rect.width }}
-                transition={viewHighlight.transition}
-              />
-            )}
-            {VIEW_MODES.map((vm) => (
-              <button
-                key={vm.key}
-                ref={(el) => viewHighlight.setItemRef(vm.key, el)}
-                type="button"
-                onClick={() => setViewMode(vm.key)}
-                className={`relative z-10 flex items-center justify-center w-8 h-8 transition-colors ${
-                  viewMode === vm.key
-                    ? 'text-paper'
-                    : 'text-ink-muted hover:text-ink'
-                }`}
-                aria-label={vm.label}
-              >
-                <vm.icon className="w-3.5 h-3.5" strokeWidth={1.5} />
-              </button>
-            ))}
-          </div>
-        }
+        actions={<ViewModeSwitcher modes={VIEW_MODES} value={viewMode} onChange={setViewMode} />}
         alert={
           overdueCount > 0 && (
-            <div className="border border-signal/40 bg-signal/5 px-5 py-3 flex items-center gap-3">
-              <AlertTriangle className="w-4 h-4 text-signal flex-shrink-0" strokeWidth={2} />
-              <p className="flex-1 text-sm text-ink">
-                <span className="font-sans font-medium">
-                  {overdueCount} filing{overdueCount !== 1 ? 's' : ''} overdue
-                </span>{' '}
-                <span className="text-ink-soft">
-                  across{' '}
-                  {new Set(MOCK_FILING_ROWS.filter((f) => f.status === 'overdue').map((f) => f.clientId)).size}{' '}
-                  clients. Immediate action required.
-                </span>
-              </p>
-              <button
-                type="button"
-                onClick={() => setStatusTab('overdue')}
-                className="text-[11px] uppercase tracking-eyebrow font-sans font-medium text-signal hover:underline"
-              >
-                Show overdue →
-              </button>
-            </div>
+            <OverdueAlert
+              count={overdueCount}
+              clientCount={overdueClientCount}
+              onShowOverdue={() => setStatusTab('overdue')}
+            />
           )
         }
         kpis={[
@@ -505,16 +344,9 @@ export function FilingsPage() {
           },
         ]}
       >
-        {/* ─── Table / Kanban / Calendar section ───────────────────────── */}
         <section className="mt-10">
-          <CoarseTabs
-            tabs={statusTabs}
-            value={statusTab}
-            onChange={setStatusTab}
-            animated
-          />
+          <CoarseTabs tabs={statusTabs} value={statusTab} onChange={setStatusTab} animated />
 
-          {/* Filter bar */}
           <ToolbarRow
             search={
               <SearchInput
@@ -572,7 +404,6 @@ export function FilingsPage() {
 
           <ActiveFilterChips filters={activeFilters} onClearAll={clearAll} />
 
-          {/* ── Bulk action bar — only shown on list view where selection exists ── */}
           {viewMode === 'list' && (
             <AnimatePresence>
               {effectiveSelectedIds.size > 0 && (
@@ -598,7 +429,6 @@ export function FilingsPage() {
             </AnimatePresence>
           )}
 
-          {/* ── List view ──────────────────────────────────────────── */}
           {viewMode === 'list' && (
             <DataGridShell
               columns={FILING_COLUMNS}
@@ -614,7 +444,6 @@ export function FilingsPage() {
             />
           )}
 
-          {/* ── Kanban view ────────────────────────────────────────── */}
           {viewMode === 'kanban' && (
             <div className="mt-4">
               <KanbanBoard
@@ -624,35 +453,18 @@ export function FilingsPage() {
                 renderCard={(card) => {
                   const f = card as unknown as FilingRow;
                   return (
-                    <div className="w-full text-left bg-paper-raised border border-rule p-3">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-mono text-[10px] tracking-tabular uppercase text-ink font-medium">
-                          {f.lawCode}
-                        </span>
-                        <JurisdictionTag jurisdiction={f.jurisdiction} />
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedFiling(filingRows.find((r) => r.id === f.id) ?? null)}
-                        className="text-sm text-ink font-sans leading-snug truncate hover:underline cursor-pointer"
-                      >
-                        {f.ruleName}
-                      </button>
-                      <div className="text-[11px] text-ink-muted font-sans mt-0.5 truncate">
-                        {f.clientName}
-                      </div>
-                      <div className="flex items-center justify-between mt-2 pt-2 border-t border-rule/50">
-                        <OrdinalDate date={f.dueDate} variant="short" className="text-[10px]" />
-                        {f.handler && <AvatarBadge initials={f.handler.initials} size="xs" />}
-                      </div>
-                    </div>
+                    <FilingKanbanCard
+                      filing={f}
+                      onOpen={(row) =>
+                        setSelectedFiling(filingRows.find((r) => r.id === row.id) ?? null)
+                      }
+                    />
                   );
                 }}
               />
             </div>
           )}
 
-          {/* ── Calendar view ──────────────────────────────────────── */}
           {viewMode === 'calendar' && (
             <div className="mt-4">
               <ComplianceCalendar
@@ -665,7 +477,6 @@ export function FilingsPage() {
         </section>
       </ScreenLayout>
 
-      {/* ─── Detail drawer ────────────────────────────────────────────── */}
       <AnimatePresence>
         {selectedFiling && (
           <FilingDetailDrawer
@@ -675,7 +486,6 @@ export function FilingsPage() {
         )}
       </AnimatePresence>
 
-      {/* ─── Bulk reassign dialog ─────────────────────────────────────── */}
       <BulkReassignDialog
         open={reassignOpen}
         onOpenChange={setReassignOpen}
@@ -686,11 +496,3 @@ export function FilingsPage() {
     </>
   );
 }
-
-// ─── View mode definitions ──────────────────────────────────────────
-
-const VIEW_MODES: { key: ViewMode; label: string; icon: typeof List }[] = [
-  { key: 'list', label: 'List view', icon: List },
-  { key: 'kanban', label: 'Board view', icon: Columns3 },
-  { key: 'calendar', label: 'Calendar view', icon: CalendarDays },
-];

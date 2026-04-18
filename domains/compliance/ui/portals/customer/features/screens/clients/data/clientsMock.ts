@@ -1,5 +1,5 @@
-import type { Handler } from '../../../../../shared/types';
-import { MOCK_HANDLERS } from '../../console-preview/mockData';
+import type { Handler } from '../../../../../../shared/types';
+import { MOCK_HANDLERS } from '../../../console-preview/mockData';
 
 // A compliance client — the entity a firm manages filings on behalf of.
 // Each client is registered under one or more laws and has filings generated

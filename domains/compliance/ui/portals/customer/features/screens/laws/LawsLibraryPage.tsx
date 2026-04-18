@@ -1,92 +1,15 @@
 import { useMemo, useState } from 'react';
-import { ChevronRight, ChevronDown, Search, Plus, BookOpen, FileText } from 'lucide-react';
+import { Search, Plus, BookOpen, FileText } from 'lucide-react';
 import { Eyebrow } from '@packages/ui';
 import { JurisdictionTag } from '../../../../../components';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
-import { LAWS, type LawNode, type LawJurisdiction } from './lawsMock';
+import { LAWS, type LawNode, type LawJurisdiction } from './data/lawsMock';
+import { LawTreeRow, countAll } from './components/LawTreeRow';
 
 function formatDate(iso?: string): string {
   if (!iso) return '\u2014';
   const d = new Date(iso);
   return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-}
-
-function countAll(node: LawNode): number {
-  const own = node.obligationCount ?? 0;
-  const kids = (node.children ?? []).reduce((sum, c) => sum + countAll(c), 0);
-  return own + kids;
-}
-
-interface TreeRowProps {
-  node: LawNode;
-  depth: number;
-  activeId: string;
-  expanded: Set<string>;
-  onToggle: (id: string) => void;
-  onSelect: (node: LawNode) => void;
-}
-
-function TreeRow({ node, depth, activeId, expanded, onToggle, onSelect }: TreeRowProps) {
-  const hasChildren = (node.children?.length ?? 0) > 0;
-  const isOpen = expanded.has(node.id);
-  const isActive = node.id === activeId;
-
-  return (
-    <>
-      <div
-        className={`grid grid-cols-[1fr_auto] items-center gap-3 border-b border-rule transition-colors cursor-pointer ${
-          isActive ? 'bg-paper border-l-2 border-l-ink' : 'hover:bg-paper'
-        }`}
-        onClick={() => onSelect(node)}
-      >
-        <div
-          className="flex items-center gap-1.5 px-4 py-2.5"
-          style={{ paddingLeft: `${16 + depth * 16}px` }}
-        >
-          {hasChildren ? (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onToggle(node.id);
-              }}
-              className="flex items-center justify-center w-4 h-4 text-ink-muted hover:text-ink"
-              aria-label={isOpen ? 'Collapse' : 'Expand'}
-            >
-              {isOpen ? (
-                <ChevronDown className="w-3 h-3" strokeWidth={1.5} />
-              ) : (
-                <ChevronRight className="w-3 h-3" strokeWidth={1.5} />
-              )}
-            </button>
-          ) : (
-            <span className="inline-block w-4" />
-          )}
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-[11px] text-ink-muted tabular-nums">{node.citation}</span>
-              <span className="text-xs text-ink font-sans truncate">{node.title}</span>
-            </div>
-          </div>
-        </div>
-        <div className="px-4 py-2.5 font-mono text-[11px] text-ink-muted tabular-nums">
-          {countAll(node)} oblg
-        </div>
-      </div>
-      {isOpen &&
-        node.children?.map((child) => (
-          <TreeRow
-            key={child.id}
-            node={child}
-            depth={depth + 1}
-            activeId={activeId}
-            expanded={expanded}
-            onToggle={onToggle}
-            onSelect={onSelect}
-          />
-        ))}
-    </>
-  );
 }
 
 const JURISDICTION_COUNTS: Record<LawJurisdiction, number> = LAWS.reduce(
@@ -179,7 +102,7 @@ export function LawsLibraryPage() {
             </div>
             <div>
               {LAWS.map((node) => (
-                <TreeRow
+                <LawTreeRow
                   key={node.id}
                   node={node}
                   depth={0}
@@ -214,14 +137,18 @@ export function LawsLibraryPage() {
                 <span className="font-mono text-2xl text-ink tabular-nums">
                   {countAll(activeNode)}
                 </span>
-                <span className="text-[11px] text-ink-muted font-sans pb-1">total, incl. children</span>
+                <span className="text-[11px] text-ink-muted font-sans pb-1">
+                  total, incl. children
+                </span>
               </div>
             </div>
             <div className="px-5 py-4">
               <Eyebrow>Children</Eyebrow>
               <ul className="mt-2 space-y-1.5">
                 {(activeNode.children ?? []).length === 0 ? (
-                  <li className="text-[11px] text-ink-muted font-serif italic">No sub-provisions.</li>
+                  <li className="text-[11px] text-ink-muted font-serif italic">
+                    No sub-provisions.
+                  </li>
                 ) : (
                   activeNode.children!.map((c) => (
                     <li key={c.id} className="flex items-center gap-2 text-xs">

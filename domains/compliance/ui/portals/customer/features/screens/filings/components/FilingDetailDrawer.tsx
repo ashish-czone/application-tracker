@@ -35,10 +35,10 @@ import {
   DetailRow,
   type TimelineIconConfig,
 } from '@packages/ui';
-import { JurisdictionTag, UrgencyBadge, OrdinalDate } from '../../../../../components';
-import type { FilingRow } from './filingsMock';
-import { MOCK_HANDLERS } from '../../console-preview/mockData';
-import type { Filing, Handler } from '../../../../../shared/types';
+import { JurisdictionTag, UrgencyBadge, OrdinalDate } from '../../../../../../components';
+import type { FilingRow } from '../data/filingsMock';
+import { MOCK_HANDLERS } from '../../../console-preview/mockData';
+import type { Filing, Handler } from '../../../../../../shared/types';
 
 // ─── Status workflow ─────────────────────────────────────────────────
 
