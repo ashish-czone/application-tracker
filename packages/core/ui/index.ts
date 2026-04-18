@@ -21,6 +21,7 @@ export { HierarchyTreeView, type HierarchyTreeViewProps, type HierarchyNode } fr
 // Components — form
 // ─────────────────────────────────────────────────────────────────────────────
 export { Input, type InputProps } from './components/form/Input';
+export { SearchInput, type SearchInputProps, type SearchInputVariant } from './components/form/SearchInput';
 export { Label } from './components/form/Label';
 export { Form } from './components/form/Form';
 export { FormInput, type AsyncValidationStatus } from './components/form/FormInput';

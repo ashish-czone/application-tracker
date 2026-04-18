@@ -1,12 +1,13 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
-import { Search, Plus, Upload, ChevronRight } from 'lucide-react';
+import { Plus, Upload, ChevronRight } from 'lucide-react';
 import {
   MetricKPI,
   DataGridShell,
   Button,
   FilterPopover,
   CoarseTabs,
+  SearchInput,
   type DataTableColumn,
   type ActiveFilter,
 } from '@packages/ui';
@@ -365,16 +366,12 @@ export function ObligationsLibraryPage() {
             onClearFilters={clearAll}
             filters={
               <>
-                <label className="flex items-center gap-2 min-w-[200px] max-w-xs flex-1 border-b border-rule focus-within:border-ink transition-colors pb-1">
-                  <Search className="w-3.5 h-3.5 text-ink-muted flex-none" strokeWidth={1.5} />
-                  <input
-                    type="text"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Search obligations…"
-                    className="w-full bg-transparent outline-none text-sm text-ink placeholder:text-ink-muted font-sans"
-                  />
-                </label>
+                <SearchInput
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search obligations…"
+                  wrapperClassName="min-w-[200px] max-w-xs flex-1"
+                />
                 <div className="flex items-center gap-2">
                   <FilterPopover
                     label="Law group"

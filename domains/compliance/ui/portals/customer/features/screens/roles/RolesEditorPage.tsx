@@ -2,14 +2,13 @@ import { useState, useMemo, useCallback, useRef } from 'react';
 import {
   Shield,
   Plus,
-  Search,
   ChevronRight,
   ChevronDown,
   Trash2,
   UserPlus,
   X,
 } from 'lucide-react';
-import { Checkbox } from '@packages/ui';
+import { Checkbox, SearchInput } from '@packages/ui';
 import {
   MOCK_ROLES,
   PERMISSION_REGISTRY,
@@ -276,14 +275,13 @@ function AddMemberDropdown({
   return (
     <div className="absolute right-0 top-full mt-1 z-20 w-72 border border-rule bg-paper-raised shadow-sm">
       <div className="flex items-center gap-2 px-3 py-2 border-b border-rule">
-        <Search className="w-3.5 h-3.5 text-ink-muted flex-none" strokeWidth={1.5} />
-        <input
-          type="text"
+        <SearchInput
+          variant="bare"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search users..."
-          className="flex-1 bg-transparent outline-none text-sm text-ink placeholder:text-ink-muted font-sans"
           autoFocus
+          wrapperClassName="flex-1"
         />
         <button
           type="button"
@@ -591,19 +589,12 @@ export function RolesEditorPage() {
                 <div className="p-6">
                   {/* Permission search */}
                   <div className="mb-4">
-                    <label className="flex items-center gap-2 max-w-sm border-b border-rule focus-within:border-ink transition-colors pb-1">
-                      <Search
-                        className="w-3.5 h-3.5 text-ink-muted flex-none"
-                        strokeWidth={1.5}
-                      />
-                      <input
-                        type="text"
-                        value={permSearch}
-                        onChange={(e) => setPermSearch(e.target.value)}
-                        placeholder="Search permissions..."
-                        className="w-full bg-transparent outline-none text-sm text-ink placeholder:text-ink-muted font-sans"
-                      />
-                    </label>
+                    <SearchInput
+                      value={permSearch}
+                      onChange={(e) => setPermSearch(e.target.value)}
+                      placeholder="Search permissions..."
+                      wrapperClassName="max-w-sm"
+                    />
                     {selectedRole.isSystem && (
                       <p className="mt-2 text-[11px] font-sans text-ink-muted italic">
                         System roles have all permissions and cannot be modified.
@@ -633,19 +624,12 @@ export function RolesEditorPage() {
                 <div className="p-6">
                   {/* Member toolbar */}
                   <div className="flex items-center gap-3 mb-4">
-                    <label className="flex items-center gap-2 flex-1 max-w-sm border-b border-rule focus-within:border-ink transition-colors pb-1">
-                      <Search
-                        className="w-3.5 h-3.5 text-ink-muted flex-none"
-                        strokeWidth={1.5}
-                      />
-                      <input
-                        type="text"
-                        value={memberSearch}
-                        onChange={(e) => setMemberSearch(e.target.value)}
-                        placeholder="Search members..."
-                        className="w-full bg-transparent outline-none text-sm text-ink placeholder:text-ink-muted font-sans"
-                      />
-                    </label>
+                    <SearchInput
+                      value={memberSearch}
+                      onChange={(e) => setMemberSearch(e.target.value)}
+                      placeholder="Search members..."
+                      wrapperClassName="flex-1 max-w-sm"
+                    />
                     <div className="relative ml-auto">
                       <button
                         type="button"

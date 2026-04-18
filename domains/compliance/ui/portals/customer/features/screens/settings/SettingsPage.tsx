@@ -10,7 +10,6 @@ import {
   Smartphone,
   Monitor,
   Globe,
-  Search,
   Eye,
   EyeOff,
   LogOut,
@@ -24,6 +23,7 @@ import {
   Button,
   DataGridShell,
   Eyebrow,
+  SearchInput,
   type DataTableColumn,
 } from '@packages/ui';
 import { OrdinalDate } from '../../../../../components';
@@ -672,16 +672,12 @@ function ActivityLogSection() {
         activeFilters={[]}
         onClearFilters={() => {}}
         filters={
-          <label className="flex items-center gap-2 min-w-[200px] max-w-xs flex-1 border-b border-rule focus-within:border-ink transition-colors pb-1">
-            <Search className="w-3.5 h-3.5 text-ink-muted flex-none" strokeWidth={1.5} />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search activity..."
-              className="w-full bg-transparent outline-none text-sm text-ink placeholder:text-ink-muted font-sans"
-            />
-          </label>
+          <SearchInput
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search activity..."
+            wrapperClassName="min-w-[200px] max-w-xs flex-1"
+          />
         }
       />
     </div>

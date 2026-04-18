@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-  Search,
   ChevronRight,
   AlertTriangle,
   List,
@@ -20,6 +19,7 @@ import {
   BulkActionBar,
   CoarseTabs,
   KanbanBoard,
+  SearchInput,
   toast,
   type DataTableColumn,
   type ActiveFilter,
@@ -535,16 +535,12 @@ export function FilingsPage() {
 
           {/* Filter bar */}
           <div className="flex items-center gap-3 py-3 border-b border-rule">
-            <label className="flex items-center gap-2 min-w-[200px] max-w-xs flex-1 border-b border-rule focus-within:border-ink transition-colors pb-1">
-              <Search className="w-3.5 h-3.5 text-ink-muted flex-none" strokeWidth={1.5} />
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search filings…"
-                className="w-full bg-transparent outline-none text-sm text-ink placeholder:text-ink-muted font-sans"
-              />
-            </label>
+            <SearchInput
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search filings…"
+              wrapperClassName="min-w-[200px] max-w-xs flex-1"
+            />
 
             <div className="flex items-center gap-2">
               <FilterPopover
