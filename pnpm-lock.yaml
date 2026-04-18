@@ -2804,6 +2804,56 @@ importers:
         specifier: ^5.7.0
         version: 5.9.3
 
+  packages/platform/address:
+    dependencies:
+      '@packages/field-types':
+        specifier: workspace:*
+        version: link:../field-types
+      drizzle-orm:
+        specifier: ^0.45.1
+        version: 0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3))
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)
+
+  packages/platform/address/ui:
+    dependencies:
+      '@packages/address':
+        specifier: workspace:*
+        version: link:..
+      '@packages/field-types':
+        specifier: workspace:*
+        version: link:../../field-types
+      '@packages/ui':
+        specifier: workspace:*
+        version: link:../../../core/ui
+      lucide-react:
+        specifier: ^0.500.0
+        version: 0.500.0(react@19.2.4)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.4
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      '@types/react':
+        specifier: ^19.2.14
+        version: 19.2.14
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)
+
   packages/platform/app-shell:
     dependencies:
       '@nestjs/common':

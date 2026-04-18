@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "jsx": "react-jsx",
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@packages/address": ["../"],
+      "@packages/address/*": ["../*"],
+      "@packages/address-ui": ["."],
+      "@packages/address-ui/*": ["./*"],
+      "@packages/*": ["../../../core/*/", "../../../platform/*/", "../../../addons/*/"]
+    }
+  },
+  "include": ["."],
+  "exclude": ["node_modules", "dist"]
+}
