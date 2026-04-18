@@ -10,7 +10,8 @@ import {
   Check,
   ArrowLeft,
 } from 'lucide-react';
-import { Eyebrow, SectionRule, JurisdictionTag } from '@packages/ui';
+import { Eyebrow, SectionRule } from '@packages/ui';
+import { JurisdictionTag } from '../../../../../kit';
 import {
   MOCK_RULE_TEMPLATES,
   LAW_GROUPS,

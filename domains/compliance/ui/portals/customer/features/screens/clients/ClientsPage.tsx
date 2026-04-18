@@ -8,10 +8,10 @@ import {
   Button,
   FilterPopover,
   CoarseTabs,
-  OrdinalDate,
   type DataTableColumn,
   type ActiveFilter,
 } from '@packages/ui';
+import { OrdinalDate } from '../../../../../kit';
 import {
   MOCK_CLIENT_ROWS,
   CLIENT_STATUS_COUNTS,

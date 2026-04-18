@@ -1,6 +1,7 @@
 import { type HTMLAttributes } from 'react';
 import { X } from 'lucide-react';
-import { Eyebrow, SectionRule, OrdinalDate } from '@packages/ui';
+import { Eyebrow, SectionRule } from '@packages/ui';
+import { OrdinalDate } from '../kit';
 import { FilingTaskCard } from './FilingTaskCard';
 import type { Filing } from './types';
 

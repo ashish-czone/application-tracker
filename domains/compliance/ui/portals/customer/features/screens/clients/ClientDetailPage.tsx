@@ -18,10 +18,10 @@ import {
 import {
   DataTable,
   Pagination,
-  OrdinalDate,
   CoarseTabs,
   type DataTableColumn,
 } from '@packages/ui';
+import { OrdinalDate } from '../../../../../kit';
 import type { Handler } from '../../../../../shared/types';
 import {
   MOCK_CLIENT_DETAIL,

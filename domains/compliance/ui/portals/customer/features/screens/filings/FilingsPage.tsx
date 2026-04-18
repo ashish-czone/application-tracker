@@ -19,9 +19,6 @@ import {
   ActiveFilterChips,
   BulkActionBar,
   CoarseTabs,
-  OrdinalDate,
-  UrgencyBadge,
-  JurisdictionTag,
   KanbanBoard,
   toast,
   type DataTableColumn,
@@ -30,6 +27,7 @@ import {
   type KanbanCardData,
   useSlidingHighlight,
 } from '@packages/ui';
+import { OrdinalDate, UrgencyBadge, JurisdictionTag } from '../../../../../kit';
 import { ComplianceCalendar } from '../../../../../shared';
 import {
   MOCK_FILING_ROWS,

@@ -21,11 +21,11 @@ import {
   Button,
   FilterPopover,
   CoarseTabs,
-  OrdinalDate,
   Eyebrow,
   type DataTableColumn,
   type ActiveFilter,
 } from '@packages/ui';
+import { OrdinalDate } from '../../../../../kit';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 import {
   MOCK_USERS,
