@@ -13,6 +13,7 @@ import { LawHandlerService } from './law-handlers/law-handlers.service';
 import { ClientRegistrationService } from './client-registrations/client-registrations.service';
 import { ClientsService } from './clients/clients.service';
 import { ClientContactsService } from './client-contacts/client-contacts.service';
+import { ClientsController } from './clients/clients.controller';
 import { ComplianceRuleService } from './rules/compliance-rules.service';
 import { GenerateComplianceTasksAction } from './automations/generate-compliance-tasks.action';
 
@@ -25,6 +26,7 @@ import { GenerateComplianceTasksAction } from './automations/generate-compliance
     EntityEngineModule.forEntity(COMPLIANCE_RULES_CONFIG),
     EntityEngineModule.forEntity(LAW_HANDLERS_CONFIG),
   ],
+  controllers: [ClientsController],
   providers: [
     LawHandlerService,
     ClientRegistrationService,

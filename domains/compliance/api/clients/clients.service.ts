@@ -71,27 +71,34 @@ export class ClientsService {
     this.validateContacts(input.contacts);
 
     return this.database.db.transaction(async (tx) => {
+      // The address columns are mixed in via addressColumns() from
+      // @packages/address, which returns Record<string, PgColumn>, so Drizzle's
+      // $inferInsert doesn't currently surface their keys at the type level.
+      // Cast the value object to bypass the check — at runtime the columns
+      // exist on the table and Drizzle maps them correctly. A platform
+      // improvement to addressColumns() can remove this cast later.
+      const clientValues = {
+        name: input.client.name,
+        legalName: input.client.legalName,
+        email: input.client.email ?? null,
+        phone: input.client.phone ?? null,
+        website: input.client.website ?? null,
+        taxId: input.client.taxId ?? null,
+        industryId: input.client.industryId ?? null,
+        addressLine1: input.client.addressLine1 ?? null,
+        addressLine2: input.client.addressLine2 ?? null,
+        city: input.client.city ?? null,
+        state: input.client.state ?? null,
+        postalCode: input.client.postalCode ?? null,
+        countryId: input.client.countryId ?? null,
+        accountManagerId: input.client.accountManagerId ?? null,
+        status: input.client.status ?? 'onboarding',
+        onboardedAt: input.client.onboardedAt ?? null,
+        notes: input.client.notes ?? null,
+      };
       const [clientRow] = await tx
         .insert(clients)
-        .values({
-          name: input.client.name,
-          legalName: input.client.legalName,
-          email: input.client.email ?? null,
-          phone: input.client.phone ?? null,
-          website: input.client.website ?? null,
-          taxId: input.client.taxId ?? null,
-          industryId: input.client.industryId ?? null,
-          addressLine1: input.client.addressLine1 ?? null,
-          addressLine2: input.client.addressLine2 ?? null,
-          city: input.client.city ?? null,
-          state: input.client.state ?? null,
-          postalCode: input.client.postalCode ?? null,
-          countryId: input.client.countryId ?? null,
-          accountManagerId: input.client.accountManagerId ?? null,
-          status: input.client.status ?? 'onboarding',
-          onboardedAt: input.client.onboardedAt ?? null,
-          notes: input.client.notes ?? null,
-        })
+        .values(clientValues as typeof clients.$inferInsert)
         .returning();
 
       const contactValues = input.contacts.map((c) => ({
