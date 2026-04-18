@@ -7,7 +7,7 @@ import { complianceClients } from './clients';
 // Soft deactivation via deactivated_at — partial unique index on
 // (client_id, law_id) WHERE deactivated_at IS NULL keeps history while
 // preventing duplicate active registrations.
-export const complianceClientLaws = pgTable('compliance_client_laws', {
+export const complianceClientRegistrations = pgTable('compliance_client_registrations', {
   id: text('id').primaryKey().$defaultFn(() => randomUUID()),
   clientId: text('client_id').notNull().references(() => complianceClients.id, { onDelete: 'cascade' }),
   lawId: text('law_id').notNull().references(() => complianceLaws.id, { onDelete: 'cascade' }),
@@ -20,7 +20,7 @@ export const complianceClientLaws = pgTable('compliance_client_laws', {
     .$onUpdate(() => new Date()),
 }, (table) => [
   // Active unique index added at SQL level (partial WHERE clause).
-  uniqueIndex('compliance_client_laws_pk_key').on(table.clientId, table.lawId, table.registeredAt),
-  index('compliance_client_laws_client_id_idx').on(table.clientId),
-  index('compliance_client_laws_law_id_idx').on(table.lawId),
+  uniqueIndex('compliance_client_registrations_pk_key').on(table.clientId, table.lawId, table.registeredAt),
+  index('compliance_client_registrations_client_id_idx').on(table.clientId),
+  index('compliance_client_registrations_law_id_idx').on(table.lawId),
 ]);

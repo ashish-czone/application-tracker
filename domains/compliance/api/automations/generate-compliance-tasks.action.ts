@@ -11,7 +11,7 @@ import type {
 } from '@packages/automation-contracts';
 
 import { ComplianceRuleService, type ComplianceRule, type Occurrence } from '../rules/compliance-rules.service';
-import { ClientLawService } from '../client-laws/client-laws.service';
+import { ClientRegistrationService } from '../client-registrations/client-registrations.service';
 import { COMPLIANCE_TASK_GENERATED } from '../events/types';
 
 interface TaskEntityService {
@@ -35,7 +35,7 @@ export class GenerateComplianceTasksAction implements ActionHandler {
 
   constructor(
     private readonly ruleService: ComplianceRuleService,
-    private readonly clientLawService: ClientLawService,
+    private readonly clientRegistrationService: ClientRegistrationService,
     private readonly tasksService: TasksService,
     private readonly events: DomainEventEmitter,
     private readonly moduleRef: ModuleRef,
@@ -63,7 +63,7 @@ export class GenerateComplianceTasksAction implements ActionHandler {
       return {};
     }
 
-    const registrations = await this.clientLawService.getRegisteredClients(rule.lawId);
+    const registrations = await this.clientRegistrationService.getRegisteredClients(rule.lawId);
     if (registrations.length === 0) {
       this.logger.debug('No registered clients for rule — skipping', { ruleId, lawId: rule.lawId });
       return {};

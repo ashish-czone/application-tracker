@@ -4,8 +4,8 @@
   "version": "7",
   "dialect": "postgresql",
   "tables": {
-    "public.compliance_client_laws": {
-      "name": "compliance_client_laws",
+    "public.compliance_client_registrations": {
+      "name": "compliance_client_registrations",
       "schema": "",
       "columns": {
         "id": {
@@ -54,8 +54,8 @@
         }
       },
       "indexes": {
-        "compliance_client_laws_pk_key": {
-          "name": "compliance_client_laws_pk_key",
+        "compliance_client_registrations_pk_key": {
+          "name": "compliance_client_registrations_pk_key",
           "columns": [
             {
               "expression": "client_id",
@@ -81,8 +81,8 @@
           "method": "btree",
           "with": {}
         },
-        "compliance_client_laws_client_id_idx": {
-          "name": "compliance_client_laws_client_id_idx",
+        "compliance_client_registrations_client_id_idx": {
+          "name": "compliance_client_registrations_client_id_idx",
           "columns": [
             {
               "expression": "client_id",
@@ -96,8 +96,8 @@
           "method": "btree",
           "with": {}
         },
-        "compliance_client_laws_law_id_idx": {
-          "name": "compliance_client_laws_law_id_idx",
+        "compliance_client_registrations_law_id_idx": {
+          "name": "compliance_client_registrations_law_id_idx",
           "columns": [
             {
               "expression": "law_id",
@@ -113,9 +113,9 @@
         }
       },
       "foreignKeys": {
-        "compliance_client_laws_client_id_compliance_clients_id_fk": {
-          "name": "compliance_client_laws_client_id_compliance_clients_id_fk",
-          "tableFrom": "compliance_client_laws",
+        "compliance_client_registrations_client_id_compliance_clients_id_fk": {
+          "name": "compliance_client_registrations_client_id_compliance_clients_id_fk",
+          "tableFrom": "compliance_client_registrations",
           "tableTo": "compliance_clients",
           "columnsFrom": [
             "client_id"
@@ -126,9 +126,9 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "compliance_client_laws_law_id_compliance_laws_id_fk": {
-          "name": "compliance_client_laws_law_id_compliance_laws_id_fk",
-          "tableFrom": "compliance_client_laws",
+        "compliance_client_registrations_law_id_compliance_laws_id_fk": {
+          "name": "compliance_client_registrations_law_id_compliance_laws_id_fk",
+          "tableFrom": "compliance_client_registrations",
           "tableTo": "compliance_laws",
           "columnsFrom": [
             "law_id"

@@ -40,7 +40,7 @@ describe('GenerateComplianceTasksAction', () => {
     expandRule: Mock;
     resolveAssignee: Mock;
   };
-  let clientLawService: { getRegisteredClients: Mock };
+  let clientRegistrationService: { getRegisteredClients: Mock };
   let tasksService: { findByExternalKey: Mock };
   let events: { emitDynamic: Mock };
   let logger: {
@@ -60,7 +60,7 @@ describe('GenerateComplianceTasksAction', () => {
       expandRule: vi.fn().mockReturnValue([]),
       resolveAssignee: vi.fn().mockResolvedValue('org-1'),
     };
-    clientLawService = { getRegisteredClients: vi.fn().mockResolvedValue([]) };
+    clientRegistrationService = { getRegisteredClients: vi.fn().mockResolvedValue([]) };
     tasksService = { findByExternalKey: vi.fn().mockResolvedValue(null) };
     events = { emitDynamic: vi.fn() };
 
@@ -74,7 +74,7 @@ describe('GenerateComplianceTasksAction', () => {
 
     action = new GenerateComplianceTasksAction(
       ruleService as never,
-      clientLawService as never,
+      clientRegistrationService as never,
       tasksService as never,
       events as never,
       moduleRef as never,
@@ -95,7 +95,7 @@ describe('GenerateComplianceTasksAction', () => {
 
     await action.execute(ctxFor('r1'));
 
-    expect(clientLawService.getRegisteredClients).not.toHaveBeenCalled();
+    expect(clientRegistrationService.getRegisteredClients).not.toHaveBeenCalled();
     expect(tasksEntityService.create).not.toHaveBeenCalled();
   });
 
@@ -104,13 +104,13 @@ describe('GenerateComplianceTasksAction', () => {
 
     await action.execute(ctxFor('r1'));
 
-    expect(clientLawService.getRegisteredClients).not.toHaveBeenCalled();
+    expect(clientRegistrationService.getRegisteredClients).not.toHaveBeenCalled();
     expect(tasksEntityService.create).not.toHaveBeenCalled();
   });
 
   it('skips when there are no registered clients', async () => {
     ruleService.findById.mockResolvedValue(makeRule());
-    clientLawService.getRegisteredClients.mockResolvedValue([]);
+    clientRegistrationService.getRegisteredClients.mockResolvedValue([]);
     ruleService.expandRule.mockReturnValue([
       { periodStart: utc(2026, 4, 1), periodEnd: utc(2026, 4, 30), dueDate: utc(2026, 5, 20) },
     ]);
@@ -123,7 +123,7 @@ describe('GenerateComplianceTasksAction', () => {
   it('creates one task per (client × occurrence) with correct externalKey + fields', async () => {
     const rule = makeRule();
     ruleService.findById.mockResolvedValue(rule);
-    clientLawService.getRegisteredClients.mockResolvedValue([
+    clientRegistrationService.getRegisteredClients.mockResolvedValue([
       { id: 'reg1', clientId: 'c1', lawId: 'l1', registeredAt: new Date(), deactivatedAt: null },
     ]);
     ruleService.expandRule.mockReturnValue([
@@ -152,7 +152,7 @@ describe('GenerateComplianceTasksAction', () => {
 
   it('emits COMPLIANCE_TASK_GENERATED per created task', async () => {
     ruleService.findById.mockResolvedValue(makeRule());
-    clientLawService.getRegisteredClients.mockResolvedValue([
+    clientRegistrationService.getRegisteredClients.mockResolvedValue([
       { id: 'reg1', clientId: 'c1', lawId: 'l1', registeredAt: new Date(), deactivatedAt: null },
     ]);
     ruleService.expandRule.mockReturnValue([
@@ -178,7 +178,7 @@ describe('GenerateComplianceTasksAction', () => {
 
   it('is idempotent — existing task by externalKey is skipped', async () => {
     ruleService.findById.mockResolvedValue(makeRule());
-    clientLawService.getRegisteredClients.mockResolvedValue([
+    clientRegistrationService.getRegisteredClients.mockResolvedValue([
       { id: 'reg1', clientId: 'c1', lawId: 'l1', registeredAt: new Date(), deactivatedAt: null },
     ]);
     ruleService.expandRule.mockReturnValue([
@@ -194,7 +194,7 @@ describe('GenerateComplianceTasksAction', () => {
 
   it('propagates AmbiguousHandlerError from resolveAssignee', async () => {
     ruleService.findById.mockResolvedValue(makeRule());
-    clientLawService.getRegisteredClients.mockResolvedValue([
+    clientRegistrationService.getRegisteredClients.mockResolvedValue([
       { id: 'reg1', clientId: 'c1', lawId: 'l1', registeredAt: new Date(), deactivatedAt: null },
     ]);
     ruleService.expandRule.mockReturnValue([
@@ -211,7 +211,7 @@ describe('GenerateComplianceTasksAction', () => {
   it('period-start is the externalKey dimension — repeat firings dont create duplicates', async () => {
     const rule = makeRule();
     ruleService.findById.mockResolvedValue(rule);
-    clientLawService.getRegisteredClients.mockResolvedValue([
+    clientRegistrationService.getRegisteredClients.mockResolvedValue([
       { id: 'reg1', clientId: 'c1', lawId: 'l1', registeredAt: new Date(), deactivatedAt: null },
     ]);
     ruleService.expandRule.mockReturnValue([
