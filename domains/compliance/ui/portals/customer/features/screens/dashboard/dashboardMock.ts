@@ -1,7 +1,7 @@
 // Static fixtures for the Dashboard screen preview. Local to this feature so
 // the screen can evolve independently of the console-preview design kit.
 
-import type { TimelineEvent } from '../shared/ActivityTimeline';
+import type { TimelineEvent } from '@packages/ui';
 
 export type { TimelineEvent as ActivityEvent };
 

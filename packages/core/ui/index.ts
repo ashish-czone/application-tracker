@@ -16,6 +16,12 @@ export { Sparkline, type SparklineProps } from './components/data-display/Sparkl
 export { MetricKPI, type MetricKPIProps } from './components/data-display/MetricKPI';
 export { StatusDonut, type StatusDonutProps, type StatusDonutSegment } from './components/data-display/StatusDonut';
 export { HierarchyTreeView, type HierarchyTreeViewProps, type HierarchyNode } from './components/data-display/HierarchyTreeView';
+export {
+  ActivityTimeline,
+  type ActivityTimelineProps,
+  type TimelineEvent,
+  type TimelineIconConfig,
+} from './components/data-display/ActivityTimeline';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Components — form
