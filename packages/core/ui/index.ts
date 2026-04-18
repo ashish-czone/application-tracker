@@ -30,6 +30,11 @@ export {
   type AvatarBadgeShape,
   type AvatarBadgeTone,
 } from './components/data-display/AvatarBadge';
+export {
+  StatusBadge,
+  type StatusBadgeProps,
+  type StatusBadgeVariant,
+} from './components/data-display/StatusBadge';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Components — form

@@ -1,5 +1,5 @@
 import { forwardRef, type HTMLAttributes } from 'react';
-import { cn } from '@packages/ui';
+import { StatusBadge, cn } from '@packages/ui';
 
 export type Urgency =
   | 'overdue'
@@ -48,33 +48,31 @@ const SOLID_STYLE: Record<Urgency, string> = {
  * Small-caps urgency chip with a tiny leading mark and optional trailing
  * monospace tail. Color is purposeful — signal orange is reserved for
  * overdue / due-today only; nothing else uses it. That's the point.
+ *
+ * Thin compliance wrapper over the generic `StatusBadge` primitive — it maps
+ * an urgency state to label, mark, and palette classes.
  */
 export const UrgencyBadge = forwardRef<HTMLSpanElement, UrgencyBadgeProps>(
   ({ urgency, tail, variant = 'rule', className, ...rest }, ref) => {
-    const mark = urgency === 'overdue' || urgency === 'due-today' ? '●' : urgency === 'filed' ? '✓' : '·';
+    const mark =
+      urgency === 'overdue' || urgency === 'due-today'
+        ? '●'
+        : urgency === 'filed'
+          ? '✓'
+          : '·';
     return (
-      <span
+      <StatusBadge
         ref={ref}
+        label={LABEL[urgency]}
+        mark={mark}
+        tail={tail}
+        variant={variant}
         className={cn(
-          'inline-flex items-center gap-1.5 px-2 py-[3px]',
-          'text-[10px] font-sans font-semibold uppercase tracking-[0.14em]',
-          'border',
           variant === 'solid' ? SOLID_STYLE[urgency] : RULE_STYLE[urgency],
           className,
         )}
         {...rest}
-      >
-        <span aria-hidden className="text-[10px] leading-none">
-          {mark}
-        </span>
-        <span>{LABEL[urgency]}</span>
-        {tail && (
-          <>
-            <span aria-hidden className="opacity-50">·</span>
-            <span className="font-mono tabular-nums tracking-normal normal-case font-medium">{tail}</span>
-          </>
-        )}
-      </span>
+      />
     );
   },
 );
