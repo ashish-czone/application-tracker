@@ -1,88 +1,18 @@
 import { useMemo, useState } from 'react';
-import { ChevronRight, Plus, Search, Layers, GitBranch, CornerDownRight } from 'lucide-react';
+import { ChevronRight, Plus, Search, Layers, GitBranch } from 'lucide-react';
 import { Eyebrow } from '@packages/ui';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 import {
   GLOBAL_SETS,
   GLOBAL_SET_ITEMS,
   type GlobalSetDefinition,
-  type GlobalSetItem,
 } from './data/globalSetsMock';
+import { HierarchicalRows, buildTree } from './components/HierarchicalRows';
+import { FlatRows } from './components/FlatRows';
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
   return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-}
-
-interface TreeNode extends GlobalSetItem {
-  children: TreeNode[];
-}
-
-function buildTree(items: GlobalSetItem[]): TreeNode[] {
-  const map = new Map<string, TreeNode>();
-  items.forEach((it) => map.set(it.slug, { ...it, children: [] }));
-  const roots: TreeNode[] = [];
-  items.forEach((it) => {
-    const node = map.get(it.slug)!;
-    if (it.parentSlug && map.has(it.parentSlug)) {
-      map.get(it.parentSlug)!.children.push(node);
-    } else {
-      roots.push(node);
-    }
-  });
-  return roots;
-}
-
-function HierarchicalRows({ nodes, depth = 0 }: { nodes: TreeNode[]; depth?: number }) {
-  return (
-    <>
-      {nodes.map((node) => (
-        <div key={node.id}>
-          <div className="grid grid-cols-[1fr_120px_auto] items-center gap-3 px-4 py-2.5 border-b border-rule hover:bg-paper transition-colors">
-            <div className="flex items-center gap-2 text-xs text-ink font-sans" style={{ paddingLeft: `${depth * 16}px` }}>
-              {depth > 0 && <CornerDownRight className="w-3 h-3 text-ink-muted" strokeWidth={1.5} />}
-              <span>{node.label}</span>
-            </div>
-            <div className="font-mono text-[11px] text-ink-muted tabular-nums">{node.slug}</div>
-            <div className="text-[10px] uppercase tracking-eyebrow text-ink-muted font-sans">
-              {node.children.length > 0 ? `${node.children.length} children` : ''}
-            </div>
-          </div>
-          {node.children.length > 0 && <HierarchicalRows nodes={node.children} depth={depth + 1} />}
-        </div>
-      ))}
-    </>
-  );
-}
-
-function FlatRows({ items }: { items: GlobalSetItem[] }) {
-  const metadataKeys = useMemo(() => {
-    const keys = new Set<string>();
-    items.forEach((it) => {
-      if (it.metadata) Object.keys(it.metadata).forEach((k) => keys.add(k));
-    });
-    return Array.from(keys);
-  }, [items]);
-
-  return (
-    <>
-      {items.map((item) => (
-        <div
-          key={item.id}
-          className="grid items-center gap-3 px-4 py-2.5 border-b border-rule hover:bg-paper transition-colors"
-          style={{ gridTemplateColumns: `1fr 120px ${metadataKeys.map(() => '1fr').join(' ') || '0fr'}` }}
-        >
-          <div className="text-xs text-ink font-sans">{item.label}</div>
-          <div className="font-mono text-[11px] text-ink-muted tabular-nums">{item.slug}</div>
-          {metadataKeys.map((k) => (
-            <div key={k} className="text-[11px] text-ink-soft font-sans">
-              {item.metadata?.[k] ?? ''}
-            </div>
-          ))}
-        </div>
-      ))}
-    </>
-  );
 }
 
 export function GlobalSetsPage() {
@@ -103,10 +33,12 @@ export function GlobalSetsPage() {
         </div>
         <div className="flex items-start justify-between mb-8">
           <div>
-            <h1 className="font-serif text-[44px] leading-[1.05] text-ink tracking-tight">Global Sets</h1>
+            <h1 className="font-serif text-[44px] leading-[1.05] text-ink tracking-tight">
+              Global Sets
+            </h1>
             <p className="mt-2 text-[13px] text-ink-soft font-serif italic max-w-2xl">
-              Reference lists shared across the platform. Fields bind to a set by slug, so values stay
-              consistent without duplication.
+              Reference lists shared across the platform. Fields bind to a set by slug, so values
+              stay consistent without duplication.
             </p>
           </div>
           <button
@@ -119,7 +51,6 @@ export function GlobalSetsPage() {
         </div>
 
         <div className="grid grid-cols-[320px_1fr] gap-6">
-          {/* ─── Sets list ────────────────────────────────────────────── */}
           <aside className="border border-rule bg-paper-raised">
             <div className="px-4 py-3 border-b border-rule flex items-center justify-between">
               <Eyebrow>Sets</Eyebrow>
@@ -166,7 +97,6 @@ export function GlobalSetsPage() {
             </ul>
           </aside>
 
-          {/* ─── Set detail ───────────────────────────────────────────── */}
           <section className="border border-rule bg-paper-raised">
             {activeSet && (
               <>
@@ -174,7 +104,9 @@ export function GlobalSetsPage() {
                   <div className="flex items-start justify-between gap-6">
                     <div>
                       <div className="flex items-center gap-3">
-                        <h2 className="font-serif text-2xl text-ink leading-none">{activeSet.label}</h2>
+                        <h2 className="font-serif text-2xl text-ink leading-none">
+                          {activeSet.label}
+                        </h2>
                         <span className="font-mono text-[11px] text-ink-muted tabular-nums px-2 py-0.5 border border-rule">
                           {activeSet.slug}
                         </span>
