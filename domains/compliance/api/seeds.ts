@@ -5,26 +5,39 @@ import type { SeedSource, SeedFn } from '@packages/database/seeder';
  * matching set based on `--kind` so the runner never sees sources
  * of the wrong kind.
  *
- * **No system seeds at domain level today.** Anything load-bearing
- * (package infrastructure) lives inside the owning package as
- * `seeds/system.ts`. If a compliance-specific system seed ever does
- * appear here, it should be rare — the default home is the package.
+ * **System seeds** are load-bearing reference data the compliance
+ * domain needs to function — e.g. the `laws` table must hold the
+ * known tax/regulatory frameworks (GST, ITR, TDS, ROC, PT) before
+ * any client can be registered against them. Without these rows the
+ * registration flow is broken, not just empty, so they run on every
+ * fresh install as peer-to-migrations.
  *
- * **Demo seeds live here and only here.** Packages may not ship
- * demo data; the domain wires the app together and owns opinionated
- * sample content. See the `feedback_seeds_ownership` rule.
+ * **Demo seeds** are opinionated sample content — demo clients,
+ * sample users — that a production install can skip. Packages may
+ * not ship demo data; domains own both kinds and keep them in
+ * separate registries. See the `feedback_seeds_ownership` rule.
  */
+const system = (name: string, load: () => Promise<SeedFn>): SeedSource => ({
+  name,
+  kind: 'system',
+  load,
+});
+
+const demo = (name: string, load: () => Promise<SeedFn>): SeedSource => ({
+  name,
+  kind: 'demo',
+  load,
+});
+
 export function complianceSystemSeedSources(): SeedSource[] {
-  return [];
+  return [
+    system('@domains/compliance-api/system-laws', () =>
+      import('./laws/seeds/system-laws').then((m) => m.seedSystemLaws),
+    ),
+  ];
 }
 
 export function complianceDemoSeedSources(): SeedSource[] {
-  const demo = (name: string, load: () => Promise<SeedFn>): SeedSource => ({
-    name,
-    kind: 'demo',
-    load,
-  });
-
   return [
     demo('@domains/compliance-api/demo-clients', () =>
       import('./clients/seeds/demo-clients').then((m) => m.seedDemoClients),
