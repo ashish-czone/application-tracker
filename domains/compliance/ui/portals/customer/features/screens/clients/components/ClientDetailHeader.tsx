@@ -1,5 +1,5 @@
 import { Building2, Calendar } from 'lucide-react';
-import { OrdinalDate } from '../../../../../../components';
+import { OrdinalDate, Pill } from '../../../../../../components';
 import type { MOCK_CLIENT_DETAIL } from '../data/clientDetailMock';
 import { RiskPill } from './RiskPill';
 
@@ -24,9 +24,7 @@ export function ClientDetailHeader({ client }: ClientDetailHeaderProps) {
           <div className="flex items-center gap-3">
             <h1 className="font-serif text-3xl text-ink leading-none">{client.name}</h1>
             <RiskPill risk={client.risk} />
-            <span className="inline-block px-2 py-[2px] border border-rule text-[10px] font-sans font-semibold uppercase tracking-[0.12em] text-ink-muted bg-paper-raised">
-              {client.status}
-            </span>
+            <Pill>{client.status}</Pill>
           </div>
           <p className="font-serif italic text-ink-soft mt-1">{client.legalName}</p>
           <div className="flex items-center gap-6 mt-3">

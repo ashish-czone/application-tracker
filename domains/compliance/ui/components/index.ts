@@ -5,6 +5,7 @@
 // in the generic core/ui package.
 
 // Badges — compliance status + taxonomy markers.
+export { Pill, type PillProps } from './badges/Pill';
 export {
   JurisdictionTag,
   type JurisdictionTagProps,

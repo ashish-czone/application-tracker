@@ -1,3 +1,4 @@
+import { Pill } from '../../../../../../components';
 import type { ObligationFrequency } from '../data/obligationsMock';
 
 export const FREQUENCY_LABEL: Record<ObligationFrequency, string> = {
@@ -18,9 +19,5 @@ export interface FrequencyPillProps {
 }
 
 export function FrequencyPill({ frequency }: FrequencyPillProps) {
-  return (
-    <span className="inline-flex items-center px-2 py-[2px] border border-rule text-[10px] font-sans font-semibold uppercase tracking-[0.12em] text-ink-soft bg-paper-raised">
-      {FREQUENCY_LABEL[frequency]}
-    </span>
-  );
+  return <Pill>{FREQUENCY_LABEL[frequency]}</Pill>;
 }
