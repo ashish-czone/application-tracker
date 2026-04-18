@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { X, Users } from 'lucide-react';
-import { Eyebrow } from '@packages/ui';
+import { Users } from 'lucide-react';
+import { DrawerHeader, Eyebrow } from '@packages/ui';
 import { POSITION_LABEL, type OrgUnit, type OrgMember } from './orgHierarchyMock';
 
 // ─── Animation config ────────────────────────────────────────────────
@@ -74,28 +74,18 @@ export function AddMemberDrawer({ unit, onClose, onCreate }: AddMemberDrawerProp
         transition={{ duration: 0.28, ease: EASE_OUT_EXPO }}
         className="relative w-full max-w-md h-full bg-paper-raised border-l border-rule flex flex-col"
       >
-        {/* ── Header ──────────────────────────────────────────────── */}
-        <header className="px-6 pt-6 pb-4 border-b border-rule flex-none">
-          <div className="flex items-start justify-between gap-4 mb-3">
-            <Eyebrow tone="muted" mark="§">
-              New Member
-            </Eyebrow>
-            <button
-              type="button"
-              onClick={() => onClose?.()}
-              className="text-ink-muted hover:text-ink transition-colors -mt-1 -mr-1"
-              aria-label="Close drawer"
-            >
-              <X className="w-4 h-4" strokeWidth={1.5} />
-            </button>
-          </div>
-          <h2 className="font-serif text-3xl text-ink leading-tight">Add member</h2>
-          <p className="font-serif italic text-ink-soft text-sm mt-2">
-            Assign a team member to{' '}
-            <span className="font-mono not-italic text-ink text-[13px]">{unit.name}</span>
-            {' '}and define their position within the unit.
-          </p>
-        </header>
+        <DrawerHeader
+          eyebrow={<Eyebrow tone="muted" mark="§">New Member</Eyebrow>}
+          title="Add member"
+          subtitle={
+            <>
+              Assign a team member to{' '}
+              <span className="font-mono not-italic text-ink text-[13px]">{unit.name}</span>
+              {' '}and define their position within the unit.
+            </>
+          }
+          onClose={() => onClose?.()}
+        />
 
         {/* ── Body ────────────────────────────────────────────────── */}
         <div className="flex-1 overflow-y-auto">

@@ -5,7 +5,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
-  X,
   FileText,
   MessageSquare,
   Paperclip,
@@ -24,6 +23,7 @@ import {
   Check,
 } from 'lucide-react';
 import {
+  DrawerHeader,
   Eyebrow,
   SectionRule,
   Calendar,
@@ -127,41 +127,35 @@ export function FilingDetailDrawer({ filing, onClose, onStatusChange }: FilingDe
         transition={{ duration: 0.28, ease: EASE_OUT_EXPO }}
         className="relative w-full max-w-xl h-full bg-paper-raised border-l border-rule flex flex-col"
       >
-        {/* ── Header ──────────────────────────────────────────────── */}
-        <header className="px-6 pt-6 pb-4 border-b border-rule flex-none">
-          <div className="flex items-start justify-between gap-4 mb-3">
+        <DrawerHeader
+          titleSize="sm"
+          eyebrow={
             <div className="flex items-center gap-2">
-              <Eyebrow tone="muted" mark="§">
-                Filing detail
-              </Eyebrow>
+              <Eyebrow tone="muted" mark="§">Filing detail</Eyebrow>
               <UrgencyBadge urgency={filing.status} />
             </div>
-            <button
-              type="button"
-              onClick={() => onClose?.()}
-              className="text-ink-muted hover:text-ink transition-colors -mt-1 -mr-1"
-              aria-label="Close drawer"
-            >
-              <X className="w-4 h-4" strokeWidth={1.5} />
-            </button>
-          </div>
-
-          {/* Filing title */}
-          <div className="flex items-center gap-2 mb-1">
-            <span className="font-mono text-[11px] tracking-tabular uppercase text-ink font-medium">
-              {filing.lawCode}
-            </span>
-            <JurisdictionTag jurisdiction={filing.jurisdiction} />
-          </div>
-          <h2 className="font-serif text-2xl text-ink leading-tight">{filing.ruleName}</h2>
-          <p className="font-serif italic text-ink-soft text-sm mt-1">
-            for{' '}
-            <span className="not-italic font-sans font-medium text-ink">{filing.clientName}</span>
-            {' · '}
-            <span className="font-mono text-[11px] tabular-nums">{filing.periodLabel}</span>
-          </p>
-
-          {/* Workflow transition bar */}
+          }
+          title={
+            <>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="font-mono text-[11px] tracking-tabular uppercase text-ink font-medium">
+                  {filing.lawCode}
+                </span>
+                <JurisdictionTag jurisdiction={filing.jurisdiction} />
+              </div>
+              {filing.ruleName}
+            </>
+          }
+          subtitle={
+            <>
+              for{' '}
+              <span className="not-italic font-sans font-medium text-ink">{filing.clientName}</span>
+              {' · '}
+              <span className="font-mono text-[11px] tabular-nums">{filing.periodLabel}</span>
+            </>
+          }
+          onClose={() => onClose?.()}
+        >
           {!isFiled && transitions.length > 0 && (
             <div className="mt-4 flex items-center gap-2">
               {transitions.map((t) => (
@@ -194,7 +188,7 @@ export function FilingDetailDrawer({ filing, onClose, onStatusChange }: FilingDe
               )}
             </div>
           )}
-        </header>
+        </DrawerHeader>
 
         {/* ── Mode toggle ────────────────────────────────────────── */}
         <div className="flex border-b border-rule flex-none">

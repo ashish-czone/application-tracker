@@ -3,8 +3,9 @@ import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { X, ChevronRight, Building2 } from 'lucide-react';
+import { ChevronRight, Building2 } from 'lucide-react';
 import {
+  DrawerHeader,
   Eyebrow,
   SectionRule,
   Button,
@@ -119,27 +120,12 @@ export function NewClientDrawer({ onClose, onCreate }: NewClientDrawerProps) {
           onSubmit={form.handleSubmit(onSubmit)}
           className="flex flex-col h-full space-y-0"
         >
-          {/* ── Header ──────────────────────────────────────────────── */}
-          <header className="px-6 pt-6 pb-4 border-b border-rule flex-none">
-            <div className="flex items-start justify-between gap-4 mb-3">
-              <Eyebrow tone="muted" mark="§">
-                New Client
-              </Eyebrow>
-              <button
-                type="button"
-                onClick={() => onClose?.()}
-                className="text-ink-muted hover:text-ink transition-colors -mt-1 -mr-1"
-                aria-label="Close drawer"
-              >
-                <X className="w-4 h-4" strokeWidth={1.5} />
-              </button>
-            </div>
-            <h2 className="font-serif text-3xl text-ink leading-tight">Add client</h2>
-            <p className="font-serif italic text-ink-soft text-sm mt-2">
-              Register a new entity under your firm's management and select applicable law
-              registrations.
-            </p>
-          </header>
+          <DrawerHeader
+            eyebrow={<Eyebrow tone="muted" mark="§">New Client</Eyebrow>}
+            title="Add client"
+            subtitle="Register a new entity under your firm's management and select applicable law registrations."
+            onClose={() => onClose?.()}
+          />
 
           {/* ── Body ────────────────────────────────────────────────── */}
           <div className="flex-1 overflow-y-auto">
