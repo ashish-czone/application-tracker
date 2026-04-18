@@ -13,9 +13,6 @@ import {
 } from '@packages/ui';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 import {
-  MOCK_CLIENT_ROWS,
-  CLIENT_STATUS_COUNTS,
-  CLIENT_RISK_COUNTS,
   type ClientRow,
   type ClientStatus,
   type ClientRiskLevel,
@@ -25,6 +22,8 @@ import { NewClientDrawer } from './components/NewClientDrawer';
 import { ClientPreviewPopover } from './components/ClientPreviewPopover';
 import { RISK_LABEL } from './components/RiskPill';
 import { CLIENT_COLUMNS, REQUIRED_CLIENT_COLUMN_KEYS } from './components/clientColumns';
+import { useClientsList } from './api/useClientsApi';
+import { mapClientRecordToRow } from './api/mapClientRecord';
 
 type StatusTab = 'all' | ClientStatus;
 
@@ -61,9 +60,34 @@ export function ClientsPage() {
   const [riskFilter, setRiskFilter] = useState<ClientRiskLevel[]>([]);
   const [handlerFilter, setHandlerFilter] = useState<string[]>([]);
 
+  const { data, isLoading, isError } = useClientsList({ limit: 100 });
+
+  const rows = useMemo<ClientRow[]>(() => {
+    if (!data?.data) return [];
+    return data.data.map(mapClientRecordToRow);
+  }, [data]);
+
+  const statusCounts = useMemo(
+    () => ({
+      active: rows.filter((c) => c.status === 'active').length,
+      onboarding: rows.filter((c) => c.status === 'onboarding').length,
+      dormant: rows.filter((c) => c.status === 'dormant').length,
+    }),
+    [rows],
+  );
+
+  const riskCounts = useMemo(
+    () => ({
+      healthy: rows.filter((c) => c.status === 'active' && c.risk === 'healthy').length,
+      'at-risk': rows.filter((c) => c.status === 'active' && c.risk === 'at-risk').length,
+      critical: rows.filter((c) => c.status === 'active' && c.risk === 'critical').length,
+    }),
+    [rows],
+  );
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return MOCK_CLIENT_ROWS.filter((c) => {
+    return rows.filter((c) => {
       if (statusTab !== 'all' && c.status !== statusTab) return false;
       if (riskFilter.length > 0 && !riskFilter.includes(c.risk)) return false;
       if (handlerFilter.length > 0 && !handlerFilter.includes(c.primaryHandler.id)) return false;
@@ -71,7 +95,7 @@ export function ClientsPage() {
         return false;
       return true;
     });
-  }, [statusTab, riskFilter, handlerFilter, search]);
+  }, [rows, statusTab, riskFilter, handlerFilter, search]);
 
   const activeFilters: ActiveFilter[] = useMemo(() => {
     const chips: ActiveFilter[] = [];
@@ -100,33 +124,34 @@ export function ClientsPage() {
     setHandlerFilter([]);
   };
 
-  const totalClients = MOCK_CLIENT_ROWS.length;
-  const activeClients = CLIENT_STATUS_COUNTS.active;
-  const totalOverdue = MOCK_CLIENT_ROWS.reduce((acc, c) => acc + c.overdueFilings, 0);
-  const onTimeClients = MOCK_CLIENT_ROWS.filter((c) => c.onTimePct > 0);
-  const avgOnTime = Math.round(
-    onTimeClients.reduce((acc, c) => acc + c.onTimePct, 0) / onTimeClients.length,
-  );
-  const totalRegistrations = MOCK_CLIENT_ROWS.reduce((acc, c) => acc + c.registeredLaws, 0);
-  const clientsWithOverdue = MOCK_CLIENT_ROWS.filter((c) => c.overdueFilings > 0).length;
+  const totalClients = rows.length;
+  const activeClients = statusCounts.active;
+  const totalOverdue = rows.reduce((acc, c) => acc + c.overdueFilings, 0);
+  const onTimeClients = rows.filter((c) => c.onTimePct > 0);
+  const avgOnTime =
+    onTimeClients.length > 0
+      ? Math.round(onTimeClients.reduce((acc, c) => acc + c.onTimePct, 0) / onTimeClients.length)
+      : 0;
+  const totalRegistrations = rows.reduce((acc, c) => acc + c.registeredLaws, 0);
+  const clientsWithOverdue = rows.filter((c) => c.overdueFilings > 0).length;
 
   const riskOptions = RISK_OPTIONS.map((r) => ({
     value: r.value,
     label: r.label,
-    count: MOCK_CLIENT_ROWS.filter((c) => c.risk === r.value && c.status === 'active').length,
+    count: rows.filter((c) => c.risk === r.value && c.status === 'active').length,
   }));
 
   const handlerOptions = HANDLER_OPTIONS.map((h) => ({
     value: h.value,
     label: h.label,
-    count: MOCK_CLIENT_ROWS.filter((c) => c.primaryHandler.id === h.value).length,
+    count: rows.filter((c) => c.primaryHandler.id === h.value).length,
   }));
 
   const statusTabs = [
     { value: 'all' as const, label: 'All', count: totalClients },
-    { value: 'active' as const, label: 'Active', count: CLIENT_STATUS_COUNTS.active },
-    { value: 'onboarding' as const, label: 'Onboarding', count: CLIENT_STATUS_COUNTS.onboarding },
-    { value: 'dormant' as const, label: 'Dormant', count: CLIENT_STATUS_COUNTS.dormant },
+    { value: 'active' as const, label: 'Active', count: statusCounts.active },
+    { value: 'onboarding' as const, label: 'Onboarding', count: statusCounts.onboarding },
+    { value: 'dormant' as const, label: 'Dormant', count: statusCounts.dormant },
   ];
 
   return (
@@ -136,10 +161,16 @@ export function ClientsPage() {
         breadcrumb={['Portfolio', 'Clients']}
         title="Clients"
         subtitle={
-          <>
-            {totalClients} entities under management — {activeClients} active,{' '}
-            {CLIENT_STATUS_COUNTS.onboarding} onboarding, {CLIENT_STATUS_COUNTS.dormant} dormant.
-          </>
+          isLoading ? (
+            <>Loading clients…</>
+          ) : isError ? (
+            <span className="text-signal">Failed to load clients. Refresh to retry.</span>
+          ) : (
+            <>
+              {totalClients} entities under management — {activeClients} active,{' '}
+              {statusCounts.onboarding} onboarding, {statusCounts.dormant} dormant.
+            </>
+          )
         }
         actions={
           <>
@@ -159,8 +190,8 @@ export function ClientsPage() {
               <AlertTriangle className="w-4 h-4 text-signal flex-shrink-0" strokeWidth={2} />
               <p className="flex-1 text-sm text-ink">
                 <span className="font-sans font-medium">
-                  {CLIENT_RISK_COUNTS.critical} client
-                  {CLIENT_RISK_COUNTS.critical !== 1 ? 's' : ''} in critical status
+                  {riskCounts.critical} client
+                  {riskCounts.critical !== 1 ? 's' : ''} in critical status
                 </span>{' '}
                 <span className="text-ink-soft">
                   with {totalOverdue} overdue filings across the portfolio.
@@ -207,7 +238,7 @@ export function ClientsPage() {
             accent: 'signal',
             sparklineData: [5, 7, 8, 9, 10, 11, totalOverdue],
             sparklineTone: 'signal',
-            footnote: `${CLIENT_RISK_COUNTS.critical} critical`,
+            footnote: `${riskCounts.critical} critical`,
           },
           {
             label: 'Avg. on-time rate',
