@@ -12,6 +12,7 @@ import {
   ArrowLeft,
 } from 'lucide-react';
 import {
+  DrawerShell,
   DrawerHeader,
   Eyebrow,
   SectionRule,
@@ -36,19 +37,9 @@ import {
 type DrawerMode = 'pick' | 'template' | 'scratch';
 type SlideDirection = 'forward' | 'back';
 
-// ─── Animation config ────────────────────────────────────────────────
+// ─── Animation config (inner panel slide between pick/form modes) ───
 
 const EASE_OUT_EXPO = [0.32, 0.72, 0, 1] as const;
-
-const drawerVariants = {
-  hidden: { x: '100%' },
-  visible: { x: 0 },
-};
-
-const backdropVariants = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1 },
-};
 
 const panelVariants = {
   enter: (dir: SlideDirection) => ({
@@ -196,28 +187,7 @@ export function NewObligationDrawer({ onClose, onCreate }: NewObligationDrawerPr
   // ─── Render ──────────────────────────────────────────────────────
 
   return (
-    <div className="fixed inset-0 z-40 flex justify-end">
-      {/* Backdrop */}
-      <motion.div
-        variants={backdropVariants}
-        initial="hidden"
-        animate="visible"
-        exit="hidden"
-        transition={{ duration: 0.2, ease: 'easeOut' }}
-        className="absolute inset-0 bg-ink/30 backdrop-blur-[2px]"
-        onClick={() => onClose?.()}
-        aria-hidden
-      />
-
-      {/* Drawer panel */}
-      <motion.div
-        variants={drawerVariants}
-        initial="hidden"
-        animate="visible"
-        exit="hidden"
-        transition={{ duration: 0.28, ease: EASE_OUT_EXPO }}
-        className="relative w-full max-w-lg h-full bg-paper-raised border-l border-rule flex flex-col"
-      >
+    <DrawerShell onClose={() => onClose?.()} width="lg">
         <FormProvider {...form}>
           <form
             onSubmit={form.handleSubmit(onSubmit)}
@@ -314,8 +284,7 @@ export function NewObligationDrawer({ onClose, onCreate }: NewObligationDrawerPr
             )}
           </form>
         </FormProvider>
-      </motion.div>
-    </div>
+    </DrawerShell>
   );
 }
 

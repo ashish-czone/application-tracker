@@ -14,7 +14,7 @@ import {
   Eyebrow,
   SearchInput,
   AvatarBadge,
-  PageHeader,
+  ScreenLayout,
   type DataTableColumn,
 } from '@packages/ui';
 import { OrdinalDate } from '../../../../../components';
@@ -412,30 +412,26 @@ export function ReportsPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-paper paper-grain">
-      <ScreenPreviewTopBar active="reports" />
-
-      <main className="max-w-[1480px] mx-auto px-10 py-8">
-        <PageHeader
-          breadcrumb={['Analytics', 'Reports']}
-          title="Reports"
-          subtitle={
-            <>
-              {totalFilings} filings tracked — {avgOnTimeRate}% on-time rate, {totalOverdue} currently overdue.
-            </>
-          }
-          actions={
-            <>
-              <DateRangePopover value={dateRange} onChange={setDateRange} today={TODAY} />
-              <Button variant="outline" size="sm">
-                <Download className="w-3.5 h-3.5 mr-1.5" strokeWidth={2} />
-                Export PDF
-              </Button>
-            </>
-          }
-        />
-
-        {/* ─── KPI strip ────────────────────────────────────────── */}
+    <ScreenLayout
+      topBar={<ScreenPreviewTopBar active="reports" />}
+      breadcrumb={['Analytics', 'Reports']}
+      title="Reports"
+      subtitle={
+        <>
+          {totalFilings} filings tracked — {avgOnTimeRate}% on-time rate, {totalOverdue} currently overdue.
+        </>
+      }
+      actions={
+        <>
+          <DateRangePopover value={dateRange} onChange={setDateRange} today={TODAY} />
+          <Button variant="outline" size="sm">
+            <Download className="w-3.5 h-3.5 mr-1.5" strokeWidth={2} />
+            Export PDF
+          </Button>
+        </>
+      }
+    >
+        {/* ─── KPI strip (custom, not MetricKPI) ────────────────── */}
         <section className="grid grid-cols-4 gap-px bg-rule border border-rule mb-8">
           <div className="bg-paper-raised px-5 py-4">
             <div className="text-[10px] uppercase tracking-eyebrow font-sans font-medium text-ink-muted mb-1">
@@ -646,7 +642,6 @@ export function ReportsPage() {
             />
           </>
         )}
-      </main>
-    </div>
+    </ScreenLayout>
   );
 }
