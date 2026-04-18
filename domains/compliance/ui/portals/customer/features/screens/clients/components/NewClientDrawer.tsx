@@ -15,7 +15,10 @@ import {
   FormPhoneInput,
   FormTextarea,
 } from '@packages/ui';
-import { useCreateClientWithContacts } from '../api/useClientsApi';
+import {
+  useCreateClientRegistrations,
+  useCreateClientWithContacts,
+} from '../api/useClientsApi';
 
 // ─── Schema ──────────────────────────────────────────────────────────
 
@@ -67,12 +70,9 @@ export function NewClientDrawer({ onClose, onCreated }: NewClientDrawerProps) {
   const [selectedLaws, setSelectedLaws] = useState<string[]>([]);
   const [lawsOpen, setLawsOpen] = useState(true);
 
-  const createMutation = useCreateClientWithContacts({
-    onSuccess: () => {
-      onCreated?.();
-      onClose?.();
-    },
-  });
+  const createClient = useCreateClientWithContacts();
+  const createRegistrations = useCreateClientRegistrations();
+  const isPending = createClient.isPending || createRegistrations.isPending;
 
   function toggleLaw(key: string) {
     setSelectedLaws((prev) =>
@@ -80,25 +80,40 @@ export function NewClientDrawer({ onClose, onCreated }: NewClientDrawerProps) {
     );
   }
 
-  const onSubmit = (values: ClientFormValues) => {
-    createMutation.mutate({
-      client: {
-        name: values.name,
-        legalName: values.legalName,
-        taxId: values.taxIdentifier,
-        email: values.primaryContactEmail,
-        phone: values.primaryContactPhone,
-        notes: values.notes || undefined,
-      },
-      contacts: [
-        {
-          name: values.primaryContactName,
+  const onSubmit = async (values: ClientFormValues) => {
+    try {
+      const result = await createClient.mutateAsync({
+        client: {
+          name: values.name,
+          legalName: values.legalName,
+          taxId: values.taxIdentifier,
           email: values.primaryContactEmail,
           phone: values.primaryContactPhone,
-          isPrimary: true,
+          notes: values.notes || undefined,
         },
-      ],
-    });
+        contacts: [
+          {
+            name: values.primaryContactName,
+            email: values.primaryContactEmail,
+            phone: values.primaryContactPhone,
+            isPrimary: true,
+          },
+        ],
+      });
+
+      if (selectedLaws.length > 0) {
+        const lawCodes = selectedLaws
+          .map((key) => LAW_REGISTRATIONS.find((l) => l.key === key)?.code)
+          .filter((c): c is string => Boolean(c));
+        await createRegistrations.mutateAsync({ clientId: result.client.id, lawCodes });
+      }
+
+      onCreated?.();
+      onClose?.();
+    } catch {
+      // Both mutations surface their own error toasts; keep the drawer open
+      // so the user can retry without losing form state.
+    }
   };
 
   // ─── Render ──────────────────────────────────────────────────────
@@ -262,7 +277,7 @@ export function NewClientDrawer({ onClose, onCreated }: NewClientDrawerProps) {
                 variant="ghost"
                 size="sm"
                 onClick={() => onClose?.()}
-                disabled={createMutation.isPending}
+                disabled={isPending}
               >
                 Cancel
               </Button>
@@ -270,9 +285,9 @@ export function NewClientDrawer({ onClose, onCreated }: NewClientDrawerProps) {
                 type="submit"
                 size="sm"
                 className="ml-auto"
-                disabled={createMutation.isPending}
+                disabled={isPending}
               >
-                {createMutation.isPending ? 'Adding…' : 'Add client'}
+                {isPending ? 'Adding…' : 'Add client'}
               </Button>
             </div>
           </footer>
