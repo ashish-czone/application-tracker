@@ -6,6 +6,8 @@ export interface EyebrowProps extends HTMLAttributes<HTMLSpanElement> {
   mark?: string;
   /** Muted when used as metadata, strong when used as section eyebrow. */
   tone?: 'muted' | 'strong' | 'signal' | 'authority';
+  /** `md` is the default 11px label; `sm` is a 10px micro-label. */
+  size?: 'sm' | 'md';
 }
 
 const TONE_CLASSES: Record<NonNullable<EyebrowProps['tone']>, string> = {
@@ -15,18 +17,23 @@ const TONE_CLASSES: Record<NonNullable<EyebrowProps['tone']>, string> = {
   authority: 'text-authority',
 };
 
+const SIZE_CLASSES: Record<NonNullable<EyebrowProps['size']>, string> = {
+  md: 'text-[11px] tracking-eyebrow',
+  sm: 'text-[10px] tracking-eyebrow',
+};
+
 /**
  * Small-caps uppercase label. The utility eyebrow used everywhere in the
  * Instrument theme — above titles, as cell headers, as metadata labels.
  */
 export const Eyebrow = forwardRef<HTMLSpanElement, EyebrowProps>(
-  ({ mark, tone = 'muted', className, children, ...rest }, ref) => {
+  ({ mark, tone = 'muted', size = 'md', className, children, ...rest }, ref) => {
     return (
       <span
         ref={ref}
         className={cn(
           'inline-flex items-baseline gap-1.5 uppercase font-sans font-medium',
-          'text-[11px] tracking-eyebrow',
+          SIZE_CLASSES[size],
           TONE_CLASSES[tone],
           className,
         )}
