@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router';
 import { AnimatePresence } from 'framer-motion';
-import { Plus, Upload, ChevronRight, AlertTriangle } from 'lucide-react';
+import { Plus, Upload, AlertTriangle } from 'lucide-react';
 import {
   MetricKPI,
   DataGridShell,
@@ -10,6 +10,7 @@ import {
   CoarseTabs,
   SearchInput,
   AvatarBadge,
+  PageHeader,
   type DataTableColumn,
   type ActiveFilter,
 } from '@packages/ui';
@@ -405,31 +406,28 @@ export function ClientsPage() {
       <ScreenPreviewTopBar active="clients" />
 
       <main className="max-w-[1480px] mx-auto px-10 py-8">
-        {/* ─── Page header ──────────────────────────────────────────────── */}
-        <header className="flex items-end justify-between mb-8">
-          <div>
-            <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-eyebrow font-sans font-medium text-ink-muted">
-              <span>Portfolio</span>
-              <ChevronRight className="w-3 h-3" strokeWidth={1.5} />
-              <span className="text-ink">Clients</span>
-            </div>
-            <h1 className="font-serif text-4xl text-ink leading-none mt-1">Clients</h1>
-            <p className="mt-2 font-serif italic text-ink-soft max-w-2xl">
+        <PageHeader
+          breadcrumb={['Portfolio', 'Clients']}
+          title="Clients"
+          subtitle={
+            <>
               {totalClients} entities under management — {activeClients} active,{' '}
               {CLIENT_STATUS_COUNTS.onboarding} onboarding, {CLIENT_STATUS_COUNTS.dormant} dormant.
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm">
-              <Upload className="w-3.5 h-3.5 mr-1.5" strokeWidth={2} />
-              Import
-            </Button>
-            <Button size="sm" onClick={() => setDrawerOpen(true)}>
-              <Plus className="w-3.5 h-3.5 mr-1.5" strokeWidth={2} />
-              Add client
-            </Button>
-          </div>
-        </header>
+            </>
+          }
+          actions={
+            <>
+              <Button variant="outline" size="sm">
+                <Upload className="w-3.5 h-3.5 mr-1.5" strokeWidth={2} />
+                Import
+              </Button>
+              <Button size="sm" onClick={() => setDrawerOpen(true)}>
+                <Plus className="w-3.5 h-3.5 mr-1.5" strokeWidth={2} />
+                Add client
+              </Button>
+            </>
+          }
+        />
 
         {/* ─── Alert strip ──────────────────────────────────────────────── */}
         {totalOverdue > 0 && (

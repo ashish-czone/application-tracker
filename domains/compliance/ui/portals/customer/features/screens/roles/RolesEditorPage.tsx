@@ -8,7 +8,7 @@ import {
   UserPlus,
   X,
 } from 'lucide-react';
-import { AvatarBadge, Checkbox, SearchInput } from '@packages/ui';
+import { AvatarBadge, Checkbox, PageHeader, SearchInput } from '@packages/ui';
 import {
   MOCK_ROLES,
   PERMISSION_REGISTRY,
@@ -432,23 +432,16 @@ export function RolesEditorPage() {
       <ScreenPreviewTopBar active="roles" />
 
       <main className="max-w-[1480px] mx-auto px-10 py-8">
-        {/* ─── Page header ──────────────────────────────────────────────── */}
-        <header className="flex items-end justify-between mb-8">
-          <div>
-            <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-eyebrow font-sans font-medium text-ink-muted">
-              <span>Settings</span>
-              <ChevronRight className="w-3 h-3" strokeWidth={1.5} />
-              <span className="text-ink">Roles & Permissions</span>
-            </div>
-            <h1 className="font-serif text-4xl text-ink leading-none mt-1">
-              Roles & Permissions
-            </h1>
-            <p className="mt-2 font-serif italic text-ink-soft max-w-2xl">
+        <PageHeader
+          breadcrumb={['Settings', 'Roles & Permissions']}
+          title="Roles & Permissions"
+          subtitle={
+            <>
               {roles.length} roles · {PERMISSION_REGISTRY.length} permissions
               across {PERMISSION_GROUPS.length} modules.
-            </p>
-          </div>
-        </header>
+            </>
+          }
+        />
 
         {/* ─── Master-detail split ──────────────────────────────────────── */}
         <div

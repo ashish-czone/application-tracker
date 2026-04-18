@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-  ChevronRight,
   AlertTriangle,
   List,
   Columns3,
@@ -21,6 +20,7 @@ import {
   KanbanBoard,
   SearchInput,
   AvatarBadge,
+  PageHeader,
   toast,
   type DataTableColumn,
   type ActiveFilter,
@@ -398,22 +398,16 @@ export function FilingsPage() {
       <ScreenPreviewTopBar active="filings" />
 
       <main className="max-w-[1480px] mx-auto px-10 py-8">
-        {/* ─── Page header ──────────────────────────────────────────────── */}
-        <header className="flex items-end justify-between mb-8">
-          <div>
-            <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-eyebrow font-sans font-medium text-ink-muted">
-              <span>Workspace</span>
-              <ChevronRight className="w-3 h-3" strokeWidth={1.5} />
-              <span className="text-ink">Filings</span>
-            </div>
-            <h1 className="font-serif text-4xl text-ink leading-none mt-1">Filings</h1>
-            <p className="mt-2 font-serif italic text-ink-soft max-w-2xl">
+        <PageHeader
+          breadcrumb={['Workspace', 'Filings']}
+          title="Filings"
+          subtitle={
+            <>
               {totalFilings} filings across {CLIENT_OPTIONS.length} clients — {overdueCount}{' '}
               overdue, {dueThisWeekCount} due this week.
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            {/* View mode toggle */}
+            </>
+          }
+          actions={
             <div ref={viewHighlight.containerRef} className="relative flex border border-rule">
               {viewHighlight.rect && (
                 <motion.div
@@ -441,8 +435,8 @@ export function FilingsPage() {
                 </button>
               ))}
             </div>
-          </div>
-        </header>
+          }
+        />
 
         {/* ─── Alert strip ──────────────────────────────────────────────── */}
         {overdueCount > 0 && (

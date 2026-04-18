@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
-import { Plus, Upload, ChevronRight } from 'lucide-react';
+import { Plus, Upload } from 'lucide-react';
 import {
   MetricKPI,
   DataGridShell,
@@ -9,6 +9,7 @@ import {
   CoarseTabs,
   SearchInput,
   AvatarBadge,
+  PageHeader,
   type DataTableColumn,
   type ActiveFilter,
 } from '@packages/ui';
@@ -267,33 +268,28 @@ export function ObligationsLibraryPage() {
       <ScreenPreviewTopBar active="obligations" />
 
       <main className="max-w-[1480px] mx-auto px-10 py-8">
-        {/* ─── Page header ──────────────────────────────────────────────── */}
-        <header className="flex items-end justify-between mb-8">
-          <div>
-            <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-eyebrow font-sans font-medium text-ink-muted">
-              <span>Knowledge base</span>
-              <ChevronRight className="w-3 h-3" strokeWidth={1.5} />
-              <span>Laws</span>
-              <ChevronRight className="w-3 h-3" strokeWidth={1.5} />
-              <span className="text-ink">Obligations Library</span>
-            </div>
-            <h1 className="font-serif text-4xl text-ink leading-none mt-1">Obligations Library</h1>
-            <p className="mt-2 font-serif italic text-ink-soft max-w-2xl">
+        <PageHeader
+          breadcrumb={['Knowledge base', 'Laws', 'Obligations Library']}
+          title="Obligations Library"
+          subtitle={
+            <>
               {MOCK_OBLIGATIONS.length} rules across {LAW_GROUPS.length} law groups — the canonical
               catalog used to generate filings for every client on roll-over.
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm">
-              <Upload className="w-3.5 h-3.5 mr-1.5" strokeWidth={2} />
-              Import
-            </Button>
-            <Button size="sm" onClick={() => setDrawerOpen(true)}>
-              <Plus className="w-3.5 h-3.5 mr-1.5" strokeWidth={2} />
-              New obligation
-            </Button>
-          </div>
-        </header>
+            </>
+          }
+          actions={
+            <>
+              <Button variant="outline" size="sm">
+                <Upload className="w-3.5 h-3.5 mr-1.5" strokeWidth={2} />
+                Import
+              </Button>
+              <Button size="sm" onClick={() => setDrawerOpen(true)}>
+                <Plus className="w-3.5 h-3.5 mr-1.5" strokeWidth={2} />
+                New obligation
+              </Button>
+            </>
+          }
+        />
 
         {/* ─── KPI row ──────────────────────────────────────────────────── */}
         <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-px bg-rule border border-rule">

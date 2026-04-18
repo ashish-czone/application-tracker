@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react';
 import { startOfMonth, subMonths } from 'date-fns';
 import {
-  ChevronRight,
   Download,
   TrendingUp,
   Clock,
@@ -15,6 +14,7 @@ import {
   Eyebrow,
   SearchInput,
   AvatarBadge,
+  PageHeader,
   type DataTableColumn,
 } from '@packages/ui';
 import { OrdinalDate } from '../../../../../components';
@@ -416,27 +416,24 @@ export function ReportsPage() {
       <ScreenPreviewTopBar active="reports" />
 
       <main className="max-w-[1480px] mx-auto px-10 py-8">
-        {/* ─── Page header ──────────────────────────────────────── */}
-        <header className="flex items-end justify-between mb-8">
-          <div>
-            <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-eyebrow font-sans font-medium text-ink-muted">
-              <span>Analytics</span>
-              <ChevronRight className="w-3 h-3" strokeWidth={1.5} />
-              <span className="text-ink">Reports</span>
-            </div>
-            <h1 className="font-serif text-4xl text-ink leading-none mt-1">Reports</h1>
-            <p className="mt-2 font-serif italic text-ink-soft max-w-2xl">
+        <PageHeader
+          breadcrumb={['Analytics', 'Reports']}
+          title="Reports"
+          subtitle={
+            <>
               {totalFilings} filings tracked — {avgOnTimeRate}% on-time rate, {totalOverdue} currently overdue.
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <DateRangePopover value={dateRange} onChange={setDateRange} today={TODAY} />
-            <Button variant="outline" size="sm">
-              <Download className="w-3.5 h-3.5 mr-1.5" strokeWidth={2} />
-              Export PDF
-            </Button>
-          </div>
-        </header>
+            </>
+          }
+          actions={
+            <>
+              <DateRangePopover value={dateRange} onChange={setDateRange} today={TODAY} />
+              <Button variant="outline" size="sm">
+                <Download className="w-3.5 h-3.5 mr-1.5" strokeWidth={2} />
+                Export PDF
+              </Button>
+            </>
+          }
+        />
 
         {/* ─── KPI strip ────────────────────────────────────────── */}
         <section className="grid grid-cols-4 gap-px bg-rule border border-rule mb-8">
