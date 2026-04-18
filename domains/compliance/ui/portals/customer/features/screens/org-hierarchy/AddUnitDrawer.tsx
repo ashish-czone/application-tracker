@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { X, Building2, ChevronDown } from 'lucide-react';
-import { Eyebrow } from '@packages/ui';
+import { Building2, ChevronDown } from 'lucide-react';
+import { DrawerHeader, Eyebrow } from '@packages/ui';
 import {
   LEVEL_META,
   type OrgUnit,
@@ -122,26 +122,12 @@ export function AddUnitDrawer({
         transition={{ duration: 0.28, ease: EASE_OUT_EXPO }}
         className="relative w-full max-w-lg h-full bg-paper-raised border-l border-rule flex flex-col"
       >
-        {/* ── Header ──────────────────────────────────────────────── */}
-        <header className="px-6 pt-6 pb-4 border-b border-rule flex-none">
-          <div className="flex items-start justify-between gap-4 mb-3">
-            <Eyebrow tone="muted" mark="§">
-              New Unit
-            </Eyebrow>
-            <button
-              type="button"
-              onClick={() => onClose?.()}
-              className="text-ink-muted hover:text-ink transition-colors -mt-1 -mr-1"
-              aria-label="Close drawer"
-            >
-              <X className="w-4 h-4" strokeWidth={1.5} />
-            </button>
-          </div>
-          <h2 className="font-serif text-3xl text-ink leading-tight">Add unit</h2>
-          <p className="font-serif italic text-ink-soft text-sm mt-2">
-            Create a new organisational unit and position it within the hierarchy.
-          </p>
-        </header>
+        <DrawerHeader
+          eyebrow={<Eyebrow tone="muted" mark="§">New Unit</Eyebrow>}
+          title="Add unit"
+          subtitle="Create a new organisational unit and position it within the hierarchy."
+          onClose={() => onClose?.()}
+        />
 
         {/* ── Body ────────────────────────────────────────────────── */}
         <div className="flex-1 overflow-y-auto">

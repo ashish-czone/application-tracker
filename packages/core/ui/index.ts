@@ -124,6 +124,12 @@ export {
 
 export { EmptyState, type EmptyStateProps } from './components/feedback/EmptyState';
 
+export {
+  DrawerHeader,
+  type DrawerHeaderProps,
+  type DrawerHeaderTitleSize,
+} from './components/feedback/DrawerHeader';
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Components — layout
 // ─────────────────────────────────────────────────────────────────────────────

@@ -1,6 +1,5 @@
 import { type HTMLAttributes } from 'react';
-import { X } from 'lucide-react';
-import { Eyebrow, SectionRule } from '@packages/ui';
+import { DrawerHeader, Eyebrow, SectionRule } from '@packages/ui';
 import { OrdinalDate } from '../components';
 import { FilingTaskCard } from './FilingTaskCard';
 import type { Filing } from './types';
@@ -34,30 +33,17 @@ export function BulkFilingDrawer({
       } ${className}`}
       {...rest}
     >
-      <header className="px-6 pt-6 pb-4 border-b border-rule">
-        <div className="flex items-start justify-between gap-4 mb-3">
-          <Eyebrow tone="muted" mark="§">
-            Bulk File
-          </Eyebrow>
-          {onClose && (
-            <button
-              type="button"
-              onClick={onClose}
-              className="text-ink-muted hover:text-ink transition-colors -mt-1 -mr-1"
-              aria-label="Close drawer"
-            >
-              <X className="w-4 h-4" strokeWidth={1.5} />
-            </button>
-          )}
-        </div>
-        <h2 className="font-serif text-3xl text-ink leading-tight">
-          Mark <span className="font-mono tabular-nums not-italic">{filings.length}</span>{' '}
-          <span className="font-serif italic">filings</span> filed
-        </h2>
-        <p className="font-serif italic text-ink-soft text-sm mt-2">
-          Confirm the acknowledgement and we'll stamp each row.
-        </p>
-      </header>
+      <DrawerHeader
+        eyebrow={<Eyebrow tone="muted" mark="§">Bulk File</Eyebrow>}
+        title={
+          <>
+            Mark <span className="font-mono tabular-nums not-italic">{filings.length}</span>{' '}
+            <span className="font-serif italic">filings</span> filed
+          </>
+        }
+        subtitle="Confirm the acknowledgement and we'll stamp each row."
+        onClose={onClose}
+      />
 
       <div className="flex-1 overflow-y-auto px-6 py-5 space-y-3">
         {filings.map((f) => (

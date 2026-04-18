@@ -4,7 +4,6 @@ import { useForm, useFormContext, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
-  X,
   ChevronDown,
   ChevronRight,
   BookTemplate,
@@ -13,6 +12,7 @@ import {
   ArrowLeft,
 } from 'lucide-react';
 import {
+  DrawerHeader,
   Eyebrow,
   SectionRule,
   Button,
@@ -224,9 +224,8 @@ export function NewObligationDrawer({ onClose, onCreate }: NewObligationDrawerPr
             noValidate
             className="flex flex-col h-full"
           >
-            {/* ── Header ──────────────────────────────────────────── */}
-            <header className="px-6 pt-6 pb-4 border-b border-rule flex-none">
-              <div className="flex items-start justify-between gap-4 mb-3">
+            <DrawerHeader
+              eyebrow={
                 <div className="flex items-center gap-2">
                   {mode !== 'pick' && (
                     <button
@@ -244,33 +243,30 @@ export function NewObligationDrawer({ onClose, onCreate }: NewObligationDrawerPr
                     {mode === 'scratch' && 'From scratch'}
                   </Eyebrow>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => onClose?.()}
-                  className="text-ink-muted hover:text-ink transition-colors -mt-1 -mr-1"
-                  aria-label="Close drawer"
-                >
-                  <X className="w-4 h-4" strokeWidth={1.5} />
-                </button>
-              </div>
-              <h2 className="font-serif text-3xl text-ink leading-tight">
-                {mode === 'pick' && 'Add obligation'}
-                {mode === 'template' && (
-                  <>
-                    <span className="font-serif italic">Customise</span>{' '}
-                    <span className="font-mono text-2xl">{selectedTemplate?.code}</span>
-                  </>
-                )}
-                {mode === 'scratch' && 'New obligation'}
-              </h2>
-              <p className="font-serif italic text-ink-soft text-sm mt-2">
-                {mode === 'pick' &&
-                  'Start from a standard template or create a custom obligation from scratch.'}
-                {mode === 'template' &&
-                  'Pre-filled from the template. Edit any field to customise for your firm.'}
-                {mode === 'scratch' && 'Define a custom obligation not covered by standard templates.'}
-              </p>
-            </header>
+              }
+              title={
+                <>
+                  {mode === 'pick' && 'Add obligation'}
+                  {mode === 'template' && (
+                    <>
+                      <span className="font-serif italic">Customise</span>{' '}
+                      <span className="font-mono text-2xl">{selectedTemplate?.code}</span>
+                    </>
+                  )}
+                  {mode === 'scratch' && 'New obligation'}
+                </>
+              }
+              subtitle={
+                <>
+                  {mode === 'pick' &&
+                    'Start from a standard template or create a custom obligation from scratch.'}
+                  {mode === 'template' &&
+                    'Pre-filled from the template. Edit any field to customise for your firm.'}
+                  {mode === 'scratch' && 'Define a custom obligation not covered by standard templates.'}
+                </>
+              }
+              onClose={() => onClose?.()}
+            />
 
             {/* ── Body ────────────────────────────────────────────── */}
             <div className="flex-1 overflow-y-auto">

@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  X,
   CheckCheck,
   FileText,
   Users,
@@ -9,7 +8,7 @@ import {
   UserPlus,
   Bell,
 } from 'lucide-react';
-import { Eyebrow, SectionRule } from '@packages/ui';
+import { DrawerHeader, Eyebrow, SectionRule } from '@packages/ui';
 import { MOCK_NOTIFICATIONS, type AppNotification } from './notificationsMock';
 
 // ─── Animation ──────────────────────────────────────────────────────
@@ -89,36 +88,23 @@ export function NotificationPanel({ open, onClose }: NotificationPanelProps) {
             transition={{ duration: 0.28, ease: EASE_OUT_EXPO }}
             className="relative w-full max-w-md h-full bg-paper-raised border-l border-rule flex flex-col"
           >
-            {/* ── Header ──────────────────────────────────────────── */}
-            <header className="px-6 pt-6 pb-4 border-b border-rule flex-none">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <Eyebrow tone="muted" mark="◈">
-                    Notifications
-                  </Eyebrow>
-                  <h2 className="font-serif text-2xl text-ink leading-tight mt-2">
-                    Inbox
-                  </h2>
-                  {unreadCount > 0 && (
-                    <p className="text-[11px] font-sans text-ink-muted mt-1">
-                      <span className="font-mono tabular-nums font-medium text-ink">
-                        {unreadCount}
-                      </span>{' '}
-                      unread
-                    </p>
-                  )}
-                </div>
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="text-ink-muted hover:text-ink transition-colors -mt-1 -mr-1"
-                  aria-label="Close notifications"
-                >
-                  <X className="w-4 h-4" strokeWidth={1.5} />
-                </button>
-              </div>
-
-              {/* Mark all as read */}
+            <DrawerHeader
+              titleSize="sm"
+              eyebrow={<Eyebrow tone="muted" mark="◈">Notifications</Eyebrow>}
+              title="Inbox"
+              subtitle={
+                unreadCount > 0 ? (
+                  <span className="font-sans not-italic text-[11px] text-ink-muted">
+                    <span className="font-mono tabular-nums font-medium text-ink">
+                      {unreadCount}
+                    </span>{' '}
+                    unread
+                  </span>
+                ) : undefined
+              }
+              onClose={onClose}
+              closeLabel="Close notifications"
+            >
               {unreadCount > 0 && (
                 <button
                   type="button"
@@ -129,7 +115,7 @@ export function NotificationPanel({ open, onClose }: NotificationPanelProps) {
                   Mark all as read
                 </button>
               )}
-            </header>
+            </DrawerHeader>
 
             {/* ── Notification list ────────────────────────────────── */}
             <div className="flex-1 overflow-y-auto">
