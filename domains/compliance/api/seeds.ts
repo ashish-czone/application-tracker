@@ -1,0 +1,33 @@
+import type { SeedSource, SeedFn } from '@packages/database/seeder';
+
+/**
+ * Compliance domain seed sources, split by kind. The cli picks the
+ * matching set based on `--kind` so the runner never sees sources
+ * of the wrong kind.
+ *
+ * **No system seeds at domain level today.** Anything load-bearing
+ * (package infrastructure) lives inside the owning package as
+ * `seeds/system.ts`. If a compliance-specific system seed ever does
+ * appear here, it should be rare — the default home is the package.
+ *
+ * **Demo seeds live here and only here.** Packages may not ship
+ * demo data; the domain wires the app together and owns opinionated
+ * sample content. See the `feedback_seeds_ownership` rule.
+ */
+export function complianceSystemSeedSources(): SeedSource[] {
+  return [];
+}
+
+export function complianceDemoSeedSources(): SeedSource[] {
+  const demo = (name: string, load: () => Promise<SeedFn>): SeedSource => ({
+    name,
+    kind: 'demo',
+    load,
+  });
+
+  return [
+    demo('@domains/compliance-api/demo-clients', () =>
+      import('./clients/seeds/demo-clients').then((m) => m.seedDemoClients),
+    ),
+  ];
+}

@@ -1,7 +1,7 @@
 import { pgTable, text, timestamp, uniqueIndex, index } from 'drizzle-orm/pg-core';
 import { randomUUID } from 'crypto';
 import { complianceLaws } from './laws';
-import { complianceClients } from './clients';
+import { clients } from './clients';
 
 // Registration pivot: which clients are filing under which laws.
 // Soft deactivation via deactivated_at — partial unique index on
@@ -9,7 +9,7 @@ import { complianceClients } from './clients';
 // preventing duplicate active registrations.
 export const complianceClientRegistrations = pgTable('compliance_client_registrations', {
   id: text('id').primaryKey().$defaultFn(() => randomUUID()),
-  clientId: text('client_id').notNull().references(() => complianceClients.id, { onDelete: 'cascade' }),
+  clientId: text('client_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
   lawId: text('law_id').notNull().references(() => complianceLaws.id, { onDelete: 'cascade' }),
   registeredAt: timestamp('registered_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
   deactivatedAt: timestamp('deactivated_at', { withTimezone: true, mode: 'date' }),
