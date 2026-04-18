@@ -130,6 +130,13 @@ export {
   type DrawerHeaderTitleSize,
 } from './components/feedback/DrawerHeader';
 
+export {
+  DrawerShell,
+  type DrawerShellProps,
+  type DrawerShellWidth,
+  type DrawerShellSide,
+} from './components/feedback/DrawerShell';
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Components — layout
 // ─────────────────────────────────────────────────────────────────────────────
@@ -159,6 +166,16 @@ export {
   type PageHeaderProps,
   type PageHeaderTitleSize,
 } from './components/layout/PageHeader';
+export {
+  ScreenLayout,
+  type ScreenLayoutProps,
+  type ScreenLayoutKpiColumns,
+} from './components/layout/ScreenLayout';
+export {
+  ToolbarRow,
+  type ToolbarRowProps,
+  type ToolbarRowVariant,
+} from './components/layout/ToolbarRow';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Components — navigation
