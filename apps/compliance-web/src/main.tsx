@@ -29,7 +29,10 @@ import { AvatarNameCell, Toaster } from '@packages/ui';
 import { CheckSquare, Building2, UserCog, Network } from 'lucide-react';
 import type { MenuItem } from '@packages/domains';
 import { complianceWeb } from '@domains/compliance-ui';
-import { ConsolePreviewPage } from '@domains/compliance-ui/portals/customer/features/console-preview';
+import {
+  ConsolePreviewPage,
+  ConsolePreviewPageV2,
+} from '@domains/compliance-ui/portals/customer/features/console-preview';
 import { DashboardScreenPage } from '@domains/compliance-ui/portals/customer/features/screens/dashboard';
 import { ObligationsLibraryPage } from '@domains/compliance-ui/portals/customer/features/screens/obligations';
 import { ClientsPage, ClientDetailPage } from '@domains/compliance-ui/portals/customer/features/screens/clients';
@@ -91,6 +94,7 @@ createRoot(document.getElementById('root')!).render(
       <BrowserRouter>
         <Routes>
           <Route path="/console-preview" element={<ConsolePreviewPage />} />
+          <Route path="/console-preview-v2" element={<ConsolePreviewPageV2 />} />
           <Route path="/screens/dashboard" element={<DashboardScreenPage />} />
           <Route path="/screens/laws" element={<LawsLibraryPage />} />
           <Route path="/screens/obligations" element={<ObligationsLibraryPage />} />
