@@ -1,6 +1,6 @@
 import { forwardRef, type HTMLAttributes } from 'react';
-import { cn } from '../lib/utils';
-import { Eyebrow } from './Eyebrow';
+import { cn } from '../../lib/utils';
+import { Eyebrow } from '../layout/Eyebrow';
 
 export interface StatusDonutSegment {
   key: string;

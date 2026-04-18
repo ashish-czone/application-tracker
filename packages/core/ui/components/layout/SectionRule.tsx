@@ -1,5 +1,5 @@
 import { forwardRef, type HTMLAttributes, type ReactNode } from 'react';
-import { cn } from '../lib/utils';
+import { cn } from '../../lib/utils';
 
 export interface SectionRuleProps extends HTMLAttributes<HTMLDivElement> {
   /** Optional centered label (e.g. "§ II — FILINGS"). */

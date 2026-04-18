@@ -1,6 +1,6 @@
 import { forwardRef, type HTMLAttributes, type ReactNode } from 'react';
-import { cn } from '../lib/utils';
-import { SectionRule } from './SectionRule';
+import { cn } from '../../lib/utils';
+import { SectionRule } from '../layout/SectionRule';
 
 export interface EmptyStateProps extends HTMLAttributes<HTMLDivElement> {
   /** Small-caps eyebrow label. */

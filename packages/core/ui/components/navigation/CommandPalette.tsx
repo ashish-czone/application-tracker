@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Command } from 'cmdk';
-import { cn } from '../lib/utils';
-import { Eyebrow } from './Eyebrow';
+import { cn } from '../../lib/utils';
+import { Eyebrow } from '../layout/Eyebrow';
 
 export interface CommandItem {
   id: string;

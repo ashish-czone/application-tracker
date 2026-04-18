@@ -1,7 +1,7 @@
 import { type ReactNode, type HTMLAttributes, type MouseEvent } from 'react';
-import { cn } from '../lib/utils';
-import { Eyebrow } from './Eyebrow';
-import { Checkbox } from '../components/form/Checkbox';
+import { cn } from '../../lib/utils';
+import { Eyebrow } from '../layout/Eyebrow';
+import { Checkbox } from '../form/Checkbox';
 
 export interface DataTableColumn<T> {
   key: string;
