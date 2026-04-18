@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router';
+import { Link, useParams } from 'react-router';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
 import { DataTable, Pagination, CoarseTabs } from '@packages/ui';
 import {
@@ -11,16 +11,54 @@ import { ClientDetailHeader } from './components/ClientDetailHeader';
 import { ClientDetailOverview } from './components/ClientDetailOverview';
 import { CLIENT_DETAIL_FILING_COLUMNS } from './components/clientDetailFilingColumns';
 import { CLIENT_DETAIL_LAW_COLUMNS } from './components/clientDetailLawColumns';
+import { useClientDetail } from './api/useClientsApi';
+import { mergeClientDetail } from './api/mapClientRecord';
 
 type DetailTab = 'overview' | 'filings' | 'laws';
 
 export function ClientDetailPage() {
-  const client = MOCK_CLIENT_DETAIL;
+  const { clientId } = useParams<{ clientId: string }>();
+  const { data: record, isLoading, isError } = useClientDetail(clientId);
 
   const [activeTab, setActiveTab] = useState<DetailTab>('overview');
   const [filingsPage, setFilingsPage] = useState(1);
   const [filingsPageSize, setFilingsPageSize] = useState(10);
   const [filingStatusTab, setFilingStatusTab] = useState<'all' | ClientFilingStatus>('all');
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-paper paper-grain">
+        <ScreenPreviewTopBar active="clients" />
+        <main className="max-w-[1480px] mx-auto px-10 py-8">
+          <p className="font-mono text-[11px] tracking-tabular text-ink-muted">Loading client…</p>
+        </main>
+      </div>
+    );
+  }
+
+  if (isError || !record) {
+    return (
+      <div className="min-h-screen bg-paper paper-grain">
+        <ScreenPreviewTopBar active="clients" />
+        <main className="max-w-[1480px] mx-auto px-10 py-8">
+          <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-eyebrow font-sans font-medium text-ink-muted mb-6">
+            <Link
+              to="/screens/clients"
+              className="flex items-center gap-1 hover:text-ink transition-colors"
+            >
+              <ChevronLeft className="w-3 h-3" strokeWidth={1.5} />
+              <span>Clients</span>
+            </Link>
+          </div>
+          <div className="border border-rule bg-paper-raised p-8 text-center">
+            <p className="font-serif italic text-ink-soft">Client not found.</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  const client = mergeClientDetail(record, MOCK_CLIENT_DETAIL);
 
   const filingsPageCount = Math.max(1, Math.ceil(client.recentFilings.length / filingsPageSize));
   const paginatedFilings = client.recentFilings.slice(

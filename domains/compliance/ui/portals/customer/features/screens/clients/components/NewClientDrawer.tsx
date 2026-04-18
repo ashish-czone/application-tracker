@@ -15,6 +15,7 @@ import {
   FormPhoneInput,
   FormTextarea,
 } from '@packages/ui';
+import { useCreateClientWithContacts } from '../api/useClientsApi';
 
 // ─── Schema ──────────────────────────────────────────────────────────
 
@@ -52,12 +53,12 @@ const LAW_REGISTRATIONS = [
 
 export interface NewClientDrawerProps {
   onClose?: () => void;
-  onCreate?: (values: ClientFormValues, laws: string[]) => void;
+  onCreated?: () => void;
 }
 
 // ─── Component ───────────────────────────────────────────────────────
 
-export function NewClientDrawer({ onClose, onCreate }: NewClientDrawerProps) {
+export function NewClientDrawer({ onClose, onCreated }: NewClientDrawerProps) {
   const form = useForm<ClientFormValues>({
     resolver: zodResolver(clientSchema),
     defaultValues: EMPTY_FORM,
@@ -66,6 +67,13 @@ export function NewClientDrawer({ onClose, onCreate }: NewClientDrawerProps) {
   const [selectedLaws, setSelectedLaws] = useState<string[]>([]);
   const [lawsOpen, setLawsOpen] = useState(true);
 
+  const createMutation = useCreateClientWithContacts({
+    onSuccess: () => {
+      onCreated?.();
+      onClose?.();
+    },
+  });
+
   function toggleLaw(key: string) {
     setSelectedLaws((prev) =>
       prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key],
@@ -73,7 +81,24 @@ export function NewClientDrawer({ onClose, onCreate }: NewClientDrawerProps) {
   }
 
   const onSubmit = (values: ClientFormValues) => {
-    onCreate?.(values, selectedLaws);
+    createMutation.mutate({
+      client: {
+        name: values.name,
+        legalName: values.legalName,
+        taxId: values.taxIdentifier,
+        email: values.primaryContactEmail,
+        phone: values.primaryContactPhone,
+        notes: values.notes || undefined,
+      },
+      contacts: [
+        {
+          name: values.primaryContactName,
+          email: values.primaryContactEmail,
+          phone: values.primaryContactPhone,
+          isPrimary: true,
+        },
+      ],
+    });
   };
 
   // ─── Render ──────────────────────────────────────────────────────
@@ -237,11 +262,17 @@ export function NewClientDrawer({ onClose, onCreate }: NewClientDrawerProps) {
                 variant="ghost"
                 size="sm"
                 onClick={() => onClose?.()}
+                disabled={createMutation.isPending}
               >
                 Cancel
               </Button>
-              <Button type="submit" size="sm" className="ml-auto">
-                Add client
+              <Button
+                type="submit"
+                size="sm"
+                className="ml-auto"
+                disabled={createMutation.isPending}
+              >
+                {createMutation.isPending ? 'Adding…' : 'Add client'}
               </Button>
             </div>
           </footer>
