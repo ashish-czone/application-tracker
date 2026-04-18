@@ -31,6 +31,7 @@ import {
   Form,
   FormTextarea,
   ActivityTimeline,
+  DetailRow,
   type TimelineIconConfig,
 } from '@packages/ui';
 import { JurisdictionTag, UrgencyBadge, OrdinalDate } from '../../../../../components';
@@ -289,7 +290,7 @@ function OverviewBody({ filing }: { filing: FilingRow }) {
         {/* ── Details grid ──────────────────────────────────────── */}
         <div className="px-6 py-5">
           <div className="grid grid-cols-2 gap-4">
-            <DetailField label="Status" value={STATUS_LABEL[filing.status]} />
+            <DetailRow label="Status" value={STATUS_LABEL[filing.status]} />
             <InlineDropdown
               label="Priority"
               value={priority}
@@ -312,12 +313,12 @@ function OverviewBody({ filing }: { filing: FilingRow }) {
               value={dueDate}
               onChange={setDueDate}
             />
-            <DetailField label="Period" value={filing.periodLabel} />
-            <DetailField label="Law" value={filing.lawCode} mono />
-            <DetailField label="Jurisdiction">
+            <DetailRow label="Period" value={filing.periodLabel} />
+            <DetailRow label="Law" value={filing.lawCode} mono />
+            <DetailRow label="Jurisdiction">
               <JurisdictionTag jurisdiction={filing.jurisdiction} />
-            </DetailField>
-            <DetailField label="Client" value={filing.clientName} />
+            </DetailRow>
+            <DetailRow label="Client" value={filing.clientName} />
             {handler && (
               <InlineDropdown
                 label="Handler"
@@ -365,9 +366,9 @@ function OverviewBody({ filing }: { filing: FilingRow }) {
             <>
               <div className="border-t border-rule mt-5 mb-4" />
               <div className="grid grid-cols-2 gap-4">
-                <DetailField label="Filed on">
+                <DetailRow label="Filed on">
                   <OrdinalDate date={filing.filedDate} variant="short" className="text-sm" />
-                </DetailField>
+                </DetailRow>
               </div>
             </>
           )}
@@ -529,33 +530,6 @@ function OverviewBody({ filing }: { filing: FilingRow }) {
           </Button>
         </div>
       </Form>
-    </div>
-  );
-}
-
-// ─── Detail field ───────────────────────────────────────────────────
-
-function DetailField({
-  label,
-  value,
-  mono,
-  children,
-}: {
-  label: string;
-  value?: React.ReactNode;
-  mono?: boolean;
-  children?: React.ReactNode;
-}) {
-  return (
-    <div>
-      <div className="text-[10px] uppercase tracking-eyebrow font-sans font-medium text-ink-muted mb-1">
-        {label}
-      </div>
-      {children ?? (
-        <div className={`text-sm text-ink ${mono ? 'font-mono tracking-tabular uppercase' : 'font-sans'}`}>
-          {value}
-        </div>
-      )}
     </div>
   );
 }

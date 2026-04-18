@@ -22,6 +22,7 @@ export {
   type TimelineEvent,
   type TimelineIconConfig,
 } from './components/data-display/ActivityTimeline';
+export { DetailRow, type DetailRowProps } from './components/data-display/DetailRow';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Components — form
