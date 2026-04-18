@@ -24,7 +24,7 @@ describe('ClientsController', () => {
         contacts: [{ name: 'Alice', isPrimary: true }],
       } as never;
 
-      await controller.createWithContacts(dto);
+      await controller.createWithContacts(dto, { userId: 'user-1' } as never);
 
       const arg = clientsService.createWithContacts.mock.calls[0][0];
       expect(arg.client.name).toBe('Acme');
@@ -39,7 +39,7 @@ describe('ClientsController', () => {
         contacts: [{ name: 'Alice', isPrimary: true }],
       } as never;
 
-      await controller.createWithContacts(dto);
+      await controller.createWithContacts(dto, { userId: 'user-1' } as never);
 
       expect(clientsService.createWithContacts.mock.calls[0][0].client.onboardedAt).toBeNull();
     });
@@ -55,8 +55,8 @@ describe('ClientsController', () => {
 
   describe('setPrimaryContact', () => {
     it('delegates to ClientContactsService.setPrimary', async () => {
-      await controller.setPrimaryContact('cid-1', 'ct-1');
-      expect(contactsService.setPrimary).toHaveBeenCalledWith('cid-1', 'ct-1');
+      await controller.setPrimaryContact('cid-1', 'ct-1', { userId: 'user-1' } as never);
+      expect(contactsService.setPrimary).toHaveBeenCalledWith('cid-1', 'ct-1', 'user-1');
     });
 
     it('requires client-contacts.update permission', () => {

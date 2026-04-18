@@ -1,7 +1,9 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { DatabaseService } from '@packages/database';
+import { DomainEventEmitter } from '@packages/events';
 import { clients } from '../schema/clients';
 import { clientContacts } from '../schema/client-contacts';
+import { CLIENTS_CREATED, CLIENT_CONTACTS_CREATED } from '../events/types';
 
 export interface ClientInput {
   name: string;
@@ -59,18 +61,29 @@ export interface CreateWithContactsResult {
 
 @Injectable()
 export class ClientsService {
-  constructor(private readonly database: DatabaseService) {}
+  constructor(
+    private readonly database: DatabaseService,
+    private readonly events: DomainEventEmitter,
+  ) {}
 
   /**
    * Create a client together with its contacts in a single transaction.
    * Exactly one contact must be flagged as primary — the partial unique
    * index on (client_id) WHERE is_primary = true enforces this at the
    * database level, but we validate up-front to return a readable error.
+   *
+   * Emits `clients.Created` and one `client-contacts.Created` per contact
+   * after the transaction commits. Names mirror the entity-engine dynamic
+   * events so listeners receive the same stream whether a client is
+   * created via generic CRUD or via this endpoint.
    */
-  async createWithContacts(input: CreateWithContactsInput): Promise<CreateWithContactsResult> {
+  async createWithContacts(
+    input: CreateWithContactsInput,
+    actorId: string | null = null,
+  ): Promise<CreateWithContactsResult> {
     this.validateContacts(input.contacts);
 
-    return this.database.db.transaction(async (tx) => {
+    const { clientRow, contactRows } = await this.database.db.transaction(async (tx) => {
       // The address columns are mixed in via addressColumns() from
       // @packages/address, which returns Record<string, PgColumn>, so Drizzle's
       // $inferInsert doesn't currently surface their keys at the type level.
@@ -96,13 +109,13 @@ export class ClientsService {
         onboardedAt: input.client.onboardedAt ?? null,
         notes: input.client.notes ?? null,
       };
-      const [clientRow] = await tx
+      const [row] = await tx
         .insert(clients)
         .values(clientValues as typeof clients.$inferInsert)
         .returning();
 
       const contactValues = input.contacts.map((c) => ({
-        clientId: clientRow.id,
+        clientId: row.id,
         name: c.name,
         email: c.email ?? null,
         phone: c.phone ?? null,
@@ -111,13 +124,29 @@ export class ClientsService {
         notes: c.notes ?? null,
       }));
 
-      const contactRows = await tx.insert(clientContacts).values(contactValues).returning();
-
-      return {
-        client: this.toClient(clientRow),
-        contacts: contactRows.map((r) => this.toContact(r)),
-      };
+      const contacts = await tx.insert(clientContacts).values(contactValues).returning();
+      return { clientRow: row, contactRows: contacts };
     });
+
+    this.events.emitDynamic(CLIENTS_CREATED, {
+      entityType: 'clients',
+      entityId: clientRow.id,
+      actorId,
+      payload: { after: clientRow as unknown as Record<string, unknown> },
+    });
+    for (const contact of contactRows) {
+      this.events.emitDynamic(CLIENT_CONTACTS_CREATED, {
+        entityType: 'client-contacts',
+        entityId: contact.id,
+        actorId,
+        payload: { after: contact as unknown as Record<string, unknown> },
+      });
+    }
+
+    return {
+      client: this.toClient(clientRow),
+      contacts: contactRows.map((r) => this.toContact(r)),
+    };
   }
 
   private validateContacts(contacts: ContactInput[]): void {

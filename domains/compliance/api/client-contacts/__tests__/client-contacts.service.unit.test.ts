@@ -11,10 +11,11 @@ function mockSelectReturning(rows: unknown[]) {
   return chain;
 }
 
-function mockUpdateWhere() {
+function mockUpdateWhere(returningRows: unknown[] = []) {
   const chain: AnyChain = {} as AnyChain;
   chain.set = vi.fn().mockReturnValue(chain);
-  chain.where = vi.fn().mockResolvedValue(undefined);
+  chain.where = vi.fn().mockReturnValue(chain);
+  chain.returning = vi.fn().mockResolvedValue(returningRows);
   return chain;
 }
 
@@ -25,20 +26,24 @@ interface TxMock {
 
 describe('ClientContactsService', () => {
   let db: { db: { transaction: ReturnType<typeof vi.fn> } };
+  let events: { emitDynamic: ReturnType<typeof vi.fn> };
   let service: ClientContactsService;
 
   beforeEach(() => {
     db = { db: { transaction: vi.fn() } };
-    service = new ClientContactsService(db as never);
+    events = { emitDynamic: vi.fn() };
+    service = new ClientContactsService(db as never, events as never);
   });
 
   describe('setPrimary', () => {
     it('unsets existing primary and sets new primary in one transaction', async () => {
-      const selectChain = mockSelectReturning([
-        { id: 'ct-2', clientId: 'cid-1', name: 'Bob', isPrimary: false },
-      ]);
-      const unsetChain = mockUpdateWhere();
-      const setChain = mockUpdateWhere();
+      const existing = { id: 'ct-2', clientId: 'cid-1', name: 'Bob', isPrimary: false };
+      const demotedRow = { id: 'ct-1', clientId: 'cid-1', name: 'Alice', isPrimary: false };
+      const promotedRow = { ...existing, isPrimary: true };
+
+      const selectChain = mockSelectReturning([existing]);
+      const unsetChain = mockUpdateWhere([demotedRow]);
+      const setChain = mockUpdateWhere([promotedRow]);
 
       const tx: TxMock = {
         select: vi.fn().mockReturnValue(selectChain),
@@ -46,12 +51,22 @@ describe('ClientContactsService', () => {
       };
       db.db.transaction.mockImplementation(async (cb: (tx: TxMock) => unknown) => cb(tx));
 
-      await service.setPrimary('cid-1', 'ct-2');
+      await service.setPrimary('cid-1', 'ct-2', 'user-1');
 
       expect(db.db.transaction).toHaveBeenCalledTimes(1);
       expect(tx.update).toHaveBeenCalledTimes(2);
       expect(unsetChain.set).toHaveBeenCalledWith({ isPrimary: false });
       expect(setChain.set).toHaveBeenCalledWith({ isPrimary: true });
+
+      expect(events.emitDynamic).toHaveBeenCalledTimes(2);
+      expect(events.emitDynamic).toHaveBeenCalledWith('client-contacts.Updated', expect.objectContaining({
+        entityId: 'ct-1',
+        actorId: 'user-1',
+      }));
+      expect(events.emitDynamic).toHaveBeenCalledWith('client-contacts.Updated', expect.objectContaining({
+        entityId: 'ct-2',
+        actorId: 'user-1',
+      }));
     });
 
     it('no-ops when target contact is already primary', async () => {
@@ -67,6 +82,7 @@ describe('ClientContactsService', () => {
       await service.setPrimary('cid-1', 'ct-1');
 
       expect(tx.update).not.toHaveBeenCalled();
+      expect(events.emitDynamic).not.toHaveBeenCalled();
     });
 
     it('throws NotFound when contact does not exist', async () => {

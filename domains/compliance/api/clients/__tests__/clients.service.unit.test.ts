@@ -26,11 +26,13 @@ function makeTx(clientRow: unknown, contactRows: unknown[]): TxMock {
 
 describe('ClientsService', () => {
   let db: { db: { transaction: ReturnType<typeof vi.fn> } };
+  let events: { emitDynamic: ReturnType<typeof vi.fn> };
   let service: ClientsService;
 
   beforeEach(() => {
     db = { db: { transaction: vi.fn() } };
-    service = new ClientsService(db as never);
+    events = { emitDynamic: vi.fn() };
+    service = new ClientsService(db as never, events as never);
   });
 
   const validClient = {
@@ -119,6 +121,44 @@ describe('ClientsService', () => {
       const contactInsertValues = (tx.insert.mock.results[1].value as AnyChain).values.mock.calls[0][0] as Array<Record<string, unknown>>;
       expect(contactInsertValues).toHaveLength(1);
       expect(contactInsertValues[0].clientId).toBe('cid-xyz');
+    });
+
+    it('emits clients.Created and one client-contacts.Created per contact', async () => {
+      const clientRow = { id: 'cid-1', name: 'Acme', legalName: 'Acme', status: 'onboarding', createdAt: new Date() };
+      const contactRows = [
+        { id: 'ct-1', clientId: 'cid-1', name: 'Alice', isPrimary: true },
+        { id: 'ct-2', clientId: 'cid-1', name: 'Bob', isPrimary: false },
+      ];
+      const tx = makeTx(clientRow, contactRows);
+      db.db.transaction.mockImplementation(async (cb: (tx: TxMock) => unknown) => cb(tx));
+
+      await service.createWithContacts(
+        { client: validClient, contacts: [primaryContact, secondaryContact] },
+        'user-1',
+      );
+
+      expect(events.emitDynamic).toHaveBeenCalledTimes(3);
+      expect(events.emitDynamic).toHaveBeenNthCalledWith(1, 'clients.Created', expect.objectContaining({
+        entityType: 'clients',
+        entityId: 'cid-1',
+        actorId: 'user-1',
+        payload: expect.objectContaining({ after: clientRow }),
+      }));
+      expect(events.emitDynamic).toHaveBeenNthCalledWith(2, 'client-contacts.Created', expect.objectContaining({
+        entityType: 'client-contacts',
+        entityId: 'ct-1',
+      }));
+      expect(events.emitDynamic).toHaveBeenNthCalledWith(3, 'client-contacts.Created', expect.objectContaining({
+        entityType: 'client-contacts',
+        entityId: 'ct-2',
+      }));
+    });
+
+    it('does not emit when validation fails', async () => {
+      await expect(
+        service.createWithContacts({ client: validClient, contacts: [] }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(events.emitDynamic).not.toHaveBeenCalled();
     });
   });
 });

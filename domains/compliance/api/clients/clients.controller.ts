@@ -1,5 +1,6 @@
 import { Body, Controller, HttpCode, HttpStatus, Param, ParseUUIDPipe, Post, Put } from '@nestjs/common';
 import { RequirePermission } from '@packages/rbac';
+import { CurrentUser, type JwtPayload } from '@packages/auth';
 import { ClientsService } from './clients.service';
 import { ClientContactsService } from '../client-contacts/client-contacts.service';
 import { CreateClientWithContactsDto } from './dto/create-with-contacts.dto';
@@ -20,14 +21,20 @@ export class ClientsController {
   @Post('with-contacts')
   @HttpCode(HttpStatus.CREATED)
   @RequirePermission('clients.create')
-  async createWithContacts(@Body() dto: CreateClientWithContactsDto) {
-    return this.clientsService.createWithContacts({
-      client: {
-        ...dto.client,
-        onboardedAt: dto.client.onboardedAt ? new Date(dto.client.onboardedAt) : null,
+  async createWithContacts(
+    @Body() dto: CreateClientWithContactsDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.clientsService.createWithContacts(
+      {
+        client: {
+          ...dto.client,
+          onboardedAt: dto.client.onboardedAt ? new Date(dto.client.onboardedAt) : null,
+        },
+        contacts: dto.contacts,
       },
-      contacts: dto.contacts,
-    });
+      user.userId,
+    );
   }
 
   @Put(':id/contacts/:contactId/primary')
@@ -36,7 +43,8 @@ export class ClientsController {
   async setPrimaryContact(
     @Param('id', ParseUUIDPipe) clientId: string,
     @Param('contactId', ParseUUIDPipe) contactId: string,
+    @CurrentUser() user: JwtPayload,
   ): Promise<void> {
-    await this.contactsService.setPrimary(clientId, contactId);
+    await this.contactsService.setPrimary(clientId, contactId, user.userId);
   }
 }
