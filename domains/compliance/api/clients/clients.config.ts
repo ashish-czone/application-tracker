@@ -1,8 +1,8 @@
 import { defineEntity } from '@packages/entity-engine';
-import { complianceClients } from '../schema/clients';
+import { clients } from '../schema/clients';
 
 export const CLIENTS_CONFIG = defineEntity({
-  table: complianceClients,
+  table: clients,
   slug: 'clients',
   singularName: 'Client',
   pluralName: 'Clients',
@@ -23,19 +23,20 @@ export const CLIENTS_CONFIG = defineEntity({
     legalName: {
       type: 'text',
       label: 'Legal Name',
+      required: true,
       searchable: true,
       listVisible: true,
       listOrder: 2,
     },
-    primaryContactEmail: {
+    email: {
       type: 'email',
-      label: 'Primary Contact Email',
+      label: 'Email',
       listVisible: true,
       listOrder: 3,
     },
-    taxIdentifier: {
+    taxId: {
       type: 'text',
-      label: 'Tax Identifier',
+      label: 'Tax ID',
       unique: true,
       searchable: true,
       listVisible: true,
@@ -48,7 +49,7 @@ export const CLIENTS_CONFIG = defineEntity({
   sections: [
     {
       name: 'Client',
-      fields: ['name', 'legalName', 'primaryContactEmail', 'taxIdentifier'],
+      fields: ['name', 'legalName', 'email', 'taxId'],
     },
   ],
 
