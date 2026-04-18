@@ -9,7 +9,10 @@ export type AsyncValidationStatus = 'idle' | 'checking' | 'valid' | 'invalid';
 
 interface FormInputProps {
   name: string;
-  label: string;
+  /** Field label. Omit when the input sits under a visible row label owned by the caller (e.g. admin settings with left-side description + right-side input). */
+  label?: string;
+  /** sr-only accessible name when `label` is omitted. Falls back to `placeholder`. */
+  ariaLabel?: string;
   type?: string;
   placeholder?: string;
   description?: string;
@@ -27,6 +30,7 @@ interface FormInputProps {
 export function FormInput({
   name,
   label,
+  ariaLabel,
   type = 'text',
   placeholder,
   description,
@@ -57,8 +61,8 @@ export function FormInput({
           .join(' ') || undefined;
 
         return (
-          <div className={cn('space-y-2', className)}>
-            <Label htmlFor={name}>{label}</Label>
+          <div className={cn(label ? 'space-y-2' : '', className)}>
+            {label && <Label htmlFor={name}>{label}</Label>}
             <div className="relative">
               <Input
                 {...field}
@@ -69,6 +73,7 @@ export function FormInput({
                 disabled={disabled}
                 aria-invalid={hasError || showAsyncError || undefined}
                 aria-describedby={describedBy}
+                aria-label={!label ? ariaLabel ?? placeholder : undefined}
                 className={cn(hasAsyncIcon && 'pr-10')}
                 onBlur={(e) => {
                   field.onBlur();
