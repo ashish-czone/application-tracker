@@ -12,7 +12,9 @@ import {
   MetricKPI,
   DataTable,
   Button,
+  ActivityTimeline,
   type DataTableColumn,
+  type TimelineIconConfig,
 } from '@packages/ui';
 import { UrgencyBadge, JurisdictionTag, OrdinalDate } from '../../../../../components';
 import {
@@ -27,7 +29,6 @@ import {
 } from '../../console-preview/mockData';
 import { DASHBOARD_ACTIVITY } from './dashboardMock';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
-import { ActivityTimeline, type TimelineIconConfig } from '../shared/ActivityTimeline';
 
 // Filings assigned to the current partner (Deepak Iyer — "DI") in v1 mock.
 // In a wired version this comes from /me + /filings?assignee=me.

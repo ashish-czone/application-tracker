@@ -19,7 +19,9 @@ import {
   DataTable,
   Pagination,
   CoarseTabs,
+  ActivityTimeline,
   type DataTableColumn,
+  type TimelineIconConfig,
 } from '@packages/ui';
 import { OrdinalDate } from '../../../../../components';
 import type { Handler } from '../../../../../shared/types';
@@ -30,7 +32,6 @@ import {
   type ClientFilingStatus,
 } from './clientDetailMock';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
-import { ActivityTimeline, type TimelineIconConfig } from '../shared/ActivityTimeline';
 
 // ─── Status helpers ────────────────────────────────────────────────
 
