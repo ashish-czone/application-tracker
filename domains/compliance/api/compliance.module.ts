@@ -7,6 +7,7 @@ import { WorkflowGuardRegistry } from '@packages/workflows';
 import { LAWS_CONFIG } from './laws/laws.config';
 import { CLIENTS_CONFIG } from './clients/clients.config';
 import { CLIENT_CONTACTS_CONFIG } from './client-contacts/client-contacts.config';
+import { CLIENT_REGISTRATIONS_CONFIG } from './client-registrations/client-registrations.config';
 import { COMPLIANCE_RULES_CONFIG } from './rules/rules.config';
 import { LAW_HANDLERS_CONFIG } from './law-handlers/law-handlers.config';
 
@@ -24,6 +25,7 @@ import { GenerateComplianceTasksAction } from './automations/generate-compliance
     EntityEngineModule.forEntity(LAWS_CONFIG),
     EntityEngineModule.forEntity(CLIENTS_CONFIG),
     EntityEngineModule.forEntity(CLIENT_CONTACTS_CONFIG),
+    EntityEngineModule.forEntity(CLIENT_REGISTRATIONS_CONFIG),
     EntityEngineModule.forEntity(COMPLIANCE_RULES_CONFIG),
     EntityEngineModule.forEntity(LAW_HANDLERS_CONFIG),
   ],
