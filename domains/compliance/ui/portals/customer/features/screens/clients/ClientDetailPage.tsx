@@ -31,7 +31,7 @@ import {
   type ClientFiling,
   type ClientLaw,
   type ClientFilingStatus,
-} from './clientDetailMock';
+} from './data/clientDetailMock';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 
 // ─── Status helpers ────────────────────────────────────────────────

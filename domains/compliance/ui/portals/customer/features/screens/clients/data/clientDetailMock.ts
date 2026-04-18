@@ -1,5 +1,5 @@
-import type { Handler } from '../../../../../shared/types';
-import { MOCK_HANDLERS } from '../../console-preview/mockData';
+import type { Handler } from '../../../../../../shared/types';
+import { MOCK_HANDLERS } from '../../../console-preview/mockData';
 import type { ClientRow, ClientRiskLevel } from './clientsMock';
 
 // ─── Registered law for the client detail Laws tab ─────────────────
