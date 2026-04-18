@@ -1,6 +1,7 @@
 import { Module, type OnModuleInit } from '@nestjs/common';
 import { EntityEngineModule } from '@packages/entity-engine';
 import { ActionRegistry } from '@packages/automation-contracts';
+import { RbacService } from '@packages/rbac';
 import { TasksModule } from '@packages/tasks';
 import { WorkflowGuardRegistry } from '@packages/workflows';
 
@@ -18,6 +19,7 @@ import { ClientContactsService } from './client-contacts/client-contacts.service
 import { ClientsController } from './clients/clients.controller';
 import { ComplianceRuleService } from './rules/compliance-rules.service';
 import { GenerateComplianceTasksAction } from './automations/generate-compliance-tasks.action';
+import { COMPLIANCE_PERMISSION_REGISTRATIONS } from './permissions';
 
 @Module({
   imports: [
@@ -45,6 +47,7 @@ export class ComplianceDomainModule implements OnModuleInit {
     private readonly generateTasksAction: GenerateComplianceTasksAction,
     private readonly guardRegistry: WorkflowGuardRegistry,
     private readonly contactsService: ClientContactsService,
+    private readonly rbac: RbacService,
   ) {}
 
   onModuleInit() {
@@ -57,5 +60,18 @@ export class ComplianceDomainModule implements OnModuleInit {
       if (ctx.entityType !== 'clients') return true;
       return this.contactsService.hasPrimaryContact(ctx.entityId);
     });
+
+    // Register permissions for compliance UI surfaces that don't yet have
+    // backing entities. CRUD perms for entities (clients, laws, etc.) are
+    // auto-registered by EntityEngineModule.forEntity() above.
+    const byModule = new Map<string, { action: string; description: string }[]>();
+    for (const { module, action, description } of COMPLIANCE_PERMISSION_REGISTRATIONS) {
+      const list = byModule.get(module) ?? [];
+      list.push({ action, description });
+      byModule.set(module, list);
+    }
+    for (const [module, perms] of byModule) {
+      this.rbac.registerPermissions(module, perms);
+    }
   }
 }
