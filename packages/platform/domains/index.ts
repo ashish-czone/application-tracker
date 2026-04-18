@@ -3,6 +3,15 @@ import type { ComponentType } from 'react';
 import type { RouteObject } from 'react-router';
 import type { LucideIcon } from 'lucide-react';
 
+/**
+ * Route contributed by a domain manifest. Extends react-router's `RouteObject`
+ * with an optional `permission` string. When set, the app shell wraps the
+ * route in a permission guard that renders a Forbidden page if the current
+ * user lacks the permission. Auth itself is enforced one level up by the
+ * shell's AuthGuard — `permission` only controls finer-grained access.
+ */
+export type DomainRouteObject = RouteObject & { permission?: string };
+
 export interface DomainBackendManifest {
   name: string;
   displayName: string;
@@ -42,9 +51,11 @@ export interface DomainWebManifest {
   /**
    * Routes mounted under the authenticated app shell.
    * Each route's element should be a React.lazy component so domain code is code-split.
+   * Set `permission` on a route to gate it behind a specific RBAC permission;
+   * users without it see a Forbidden page instead of the route content.
    * On conflict with an existing path, the first-registered route wins.
    */
-  routes?: RouteObject[];
+  routes?: DomainRouteObject[];
   /**
    * Override the generic EntityDetailPage for specific entity types, keyed by entityType.
    * The override component is rendered in place of EntityDetailPage on `/{slug}/:id`.

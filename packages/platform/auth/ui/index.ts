@@ -18,6 +18,8 @@ export { useOAuthLogin } from './hooks/useOAuthLogin';
 export { AuthGuard } from './components/AuthGuard';
 export { AuthLayout } from './components/AuthLayout';
 export { Can } from './components/Can';
+export { Forbidden } from './components/Forbidden';
+export { PermissionGuard } from './components/PermissionGuard';
 export { LoginForm } from './components/LoginForm';
 export { RegisterForm } from './components/RegisterForm';
 export { ForgotPasswordForm } from './components/ForgotPasswordForm';
