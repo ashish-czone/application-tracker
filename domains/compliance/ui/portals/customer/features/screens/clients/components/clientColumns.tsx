@@ -1,5 +1,5 @@
-import { AvatarBadge, type DataTableColumn } from '@packages/ui';
-import { OrdinalDate, HealthBar } from '../../../../../../components';
+import { type DataTableColumn } from '@packages/ui';
+import { OrdinalDate, HealthBar, HandlerPill } from '../../../../../../components';
 import type { ClientRow } from '../data/clientsMock';
 import { RiskPill } from './RiskPill';
 
@@ -90,12 +90,7 @@ export const CLIENT_COLUMNS: DataTableColumn<ClientRow>[] = [
     header: 'Handler',
     width: '120px',
     cell: (c) => (
-      <div className="flex items-center gap-2 min-w-0">
-        <AvatarBadge initials={c.primaryHandler.initials} size="sm" />
-        <span className="text-[11px] font-sans text-ink-soft truncate">
-          {c.primaryHandler.name.split(' ')[0]}
-        </span>
-      </div>
+      <HandlerPill initials={c.primaryHandler.initials} name={c.primaryHandler.name} />
     ),
   },
   {

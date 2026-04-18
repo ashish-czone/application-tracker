@@ -1,5 +1,5 @@
-import { AvatarBadge, type DataTableColumn } from '@packages/ui';
-import { HealthBar, OrdinalDate } from '../../../../../../components';
+import { type DataTableColumn } from '@packages/ui';
+import { HealthBar, OrdinalDate, HandlerPill } from '../../../../../../components';
 import type { ComplianceRow, OverdueRow, WorkloadRow } from '../data/reportsMock';
 import { PriorityPill } from './PriorityPill';
 
@@ -127,14 +127,7 @@ export const OVERDUE_COLUMNS: DataTableColumn<OverdueRow>[] = [
     key: 'handler',
     header: 'Handler',
     width: '120px',
-    cell: (r) => (
-      <div className="flex items-center gap-2">
-        <AvatarBadge initials={r.handlerInitials} size="xs" />
-        <span className="text-[11px] font-sans text-ink-soft truncate">
-          {r.handler.split(' ')[0]}
-        </span>
-      </div>
-    ),
+    cell: (r) => <HandlerPill initials={r.handlerInitials} name={r.handler} size="xs" />,
   },
 ];
 

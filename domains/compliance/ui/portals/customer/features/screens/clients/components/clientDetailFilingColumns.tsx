@@ -1,9 +1,7 @@
 import { type DataTableColumn } from '@packages/ui';
-import { OrdinalDate } from '../../../../../../components';
+import { OrdinalDate, HandlerPill, JurisdictionTag } from '../../../../../../components';
 import type { ClientFiling } from '../data/clientDetailMock';
 import { ClientFilingStatusBadge } from './ClientFilingStatusBadge';
-import { MutedJurisdictionTag } from './MutedJurisdictionTag';
-import { HandlerPill } from './HandlerPill';
 
 export const CLIENT_DETAIL_FILING_COLUMNS: DataTableColumn<ClientFiling>[] = [
   {
@@ -13,7 +11,7 @@ export const CLIENT_DETAIL_FILING_COLUMNS: DataTableColumn<ClientFiling>[] = [
       <div className="min-w-0">
         <div className="flex items-center gap-2">
           <span className="font-mono text-xs font-medium text-ink tracking-wide">{f.lawCode}</span>
-          <MutedJurisdictionTag jurisdiction={f.jurisdiction} />
+          <JurisdictionTag jurisdiction={f.jurisdiction} variant="muted" />
         </div>
         <span className="text-[11px] font-sans text-ink-muted mt-0.5 block truncate">
           {f.ruleName}
@@ -72,6 +70,6 @@ export const CLIENT_DETAIL_FILING_COLUMNS: DataTableColumn<ClientFiling>[] = [
     key: 'handler',
     header: 'Handler',
     width: '110px',
-    cell: (f) => <HandlerPill handler={f.handler} />,
+    cell: (f) => <HandlerPill initials={f.handler.initials} name={f.handler.name} />,
   },
 ];
