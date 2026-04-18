@@ -5,6 +5,7 @@ import { DataTable, type DataTableColumn } from './DataTable';
 import { Pagination } from './Pagination';
 import { ColumnChooser } from './ColumnChooser';
 import { ActiveFilterChips, type ActiveFilter } from './ActiveFilterChips';
+import { ToolbarRow } from '../layout/ToolbarRow';
 
 export interface DataGridShellProps<T> {
   // ─── Table data ──────────────────────────────────────────────────
@@ -150,30 +151,31 @@ export function DataGridShell<T>({
     <div className={cn('', className)}>
       {/* ─── Toolbar ────────────────────────────────────────────────── */}
       {!hideToolbar && (
-        <div className="flex items-center gap-3 py-3 border-b border-rule">
-          {filters}
-
-          <div className="ml-auto flex items-center gap-3">
-            <span className="font-mono text-[11px] tabular-nums text-ink-soft">
-              {rowCount} of {displayTotal}
-            </span>
-            {actions}
-            <button
-              type="button"
-              onClick={onExport}
-              className="inline-flex items-center gap-1.5 px-2.5 py-[5px] border border-rule text-[10px] font-sans font-semibold uppercase tracking-[0.14em] text-ink-soft bg-paper-raised hover:border-ink hover:text-ink transition-colors"
-              aria-label="Export"
-            >
-              <Download className="w-3.5 h-3.5" strokeWidth={1.5} />
-              <span>Export</span>
-            </button>
-            <ColumnChooser
-              columns={columnChooserItems}
-              visible={visibleColumns}
-              onChange={setVisibleColumns}
-            />
-          </div>
-        </div>
+        <ToolbarRow
+          search={filters}
+          trailing={
+            <>
+              <span className="font-mono text-[11px] tabular-nums text-ink-soft">
+                {rowCount} of {displayTotal}
+              </span>
+              {actions}
+              <button
+                type="button"
+                onClick={onExport}
+                className="inline-flex items-center gap-1.5 px-2.5 py-[5px] border border-rule text-[10px] font-sans font-semibold uppercase tracking-[0.14em] text-ink-soft bg-paper-raised hover:border-ink hover:text-ink transition-colors"
+                aria-label="Export"
+              >
+                <Download className="w-3.5 h-3.5" strokeWidth={1.5} />
+                <span>Export</span>
+              </button>
+              <ColumnChooser
+                columns={columnChooserItems}
+                visible={visibleColumns}
+                onChange={setVisibleColumns}
+              />
+            </>
+          }
+        />
       )}
 
       {/* ─── Active filter chips ────────────────────────────────────── */}

@@ -20,6 +20,7 @@ import {
   SearchInput,
   AvatarBadge,
   ScreenLayout,
+  ToolbarRow,
   toast,
   type DataTableColumn,
   type ActiveFilter,
@@ -514,56 +515,60 @@ export function FilingsPage() {
           />
 
           {/* Filter bar */}
-          <div className="flex items-center gap-3 py-3 border-b border-rule">
-            <SearchInput
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search filings…"
-              wrapperClassName="min-w-[200px] max-w-xs flex-1"
-            />
-
-            <div className="flex items-center gap-2">
-              <FilterPopover
-                label="Client"
-                options={clientOptions}
-                value={clientFilter}
-                onChange={(v) => setClientFilter(v as string[])}
+          <ToolbarRow
+            search={
+              <SearchInput
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search filings…"
+                wrapperClassName="min-w-[200px] max-w-xs flex-1"
               />
-              <FilterPopover
-                label="Law"
-                options={lawOptions}
-                value={lawFilter}
-                onChange={(v) => setLawFilter(v as string[])}
-              />
-              <FilterPopover
-                label="Handler"
-                options={handlerOptions}
-                value={handlerFilter}
-                onChange={(v) => setHandlerFilter(v as string[])}
-              />
-            </div>
-
-            <div className="ml-auto flex items-center gap-3">
-              <span className="font-mono text-[11px] tabular-nums text-ink-soft">
-                {filtered.length} of {totalFilings}
-              </span>
-              <button
-                type="button"
-                className="inline-flex items-center gap-1.5 px-2.5 py-[5px] border border-rule text-[10px] font-sans font-semibold uppercase tracking-[0.14em] text-ink-soft bg-paper-raised hover:border-ink hover:text-ink transition-colors"
-                aria-label="Export"
-              >
-                <Download className="w-3.5 h-3.5" strokeWidth={1.5} />
-                <span>Export</span>
-              </button>
-              {viewMode === 'list' && (
-                <ColumnChooser
-                  columns={columnChooserItems}
-                  visible={visibleColumns}
-                  onChange={setVisibleColumns}
+            }
+            filters={
+              <>
+                <FilterPopover
+                  label="Client"
+                  options={clientOptions}
+                  value={clientFilter}
+                  onChange={(v) => setClientFilter(v as string[])}
                 />
-              )}
-            </div>
-          </div>
+                <FilterPopover
+                  label="Law"
+                  options={lawOptions}
+                  value={lawFilter}
+                  onChange={(v) => setLawFilter(v as string[])}
+                />
+                <FilterPopover
+                  label="Handler"
+                  options={handlerOptions}
+                  value={handlerFilter}
+                  onChange={(v) => setHandlerFilter(v as string[])}
+                />
+              </>
+            }
+            trailing={
+              <>
+                <span className="font-mono text-[11px] tabular-nums text-ink-soft">
+                  {filtered.length} of {totalFilings}
+                </span>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-[5px] border border-rule text-[10px] font-sans font-semibold uppercase tracking-[0.14em] text-ink-soft bg-paper-raised hover:border-ink hover:text-ink transition-colors"
+                  aria-label="Export"
+                >
+                  <Download className="w-3.5 h-3.5" strokeWidth={1.5} />
+                  <span>Export</span>
+                </button>
+                {viewMode === 'list' && (
+                  <ColumnChooser
+                    columns={columnChooserItems}
+                    visible={visibleColumns}
+                    onChange={setVisibleColumns}
+                  />
+                )}
+              </>
+            }
+          />
 
           <ActiveFilterChips filters={activeFilters} onClearAll={clearAll} />
 
