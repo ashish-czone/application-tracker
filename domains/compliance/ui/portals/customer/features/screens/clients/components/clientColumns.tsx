@@ -1,7 +1,6 @@
 import { AvatarBadge, type DataTableColumn } from '@packages/ui';
-import { OrdinalDate } from '../../../../../../components';
+import { OrdinalDate, HealthBar } from '../../../../../../components';
 import type { ClientRow } from '../data/clientsMock';
-import { HealthBar } from './HealthBar';
 import { RiskPill } from './RiskPill';
 
 export const CLIENT_COLUMNS: DataTableColumn<ClientRow>[] = [

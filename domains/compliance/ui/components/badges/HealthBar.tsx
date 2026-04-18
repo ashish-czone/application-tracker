@@ -1,12 +1,13 @@
 export interface HealthBarProps {
   pct: number;
+  className?: string;
 }
 
-export function HealthBar({ pct }: HealthBarProps) {
+export function HealthBar({ pct, className }: HealthBarProps) {
   const tone =
     pct >= 95 ? 'bg-filed' : pct >= 85 ? 'bg-authority' : pct >= 75 ? 'bg-due-soon' : 'bg-signal';
   return (
-    <div className="flex items-center gap-2 min-w-[120px]">
+    <div className={`flex items-center gap-2 min-w-[100px] ${className ?? ''}`}>
       <div className="flex-1 h-1 bg-rule">
         <div className={`h-full ${tone}`} style={{ width: `${pct}%` }} />
       </div>
