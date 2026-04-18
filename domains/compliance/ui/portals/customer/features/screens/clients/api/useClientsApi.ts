@@ -78,6 +78,19 @@ export interface CreateClientWithContactsResult {
   contacts: ClientContactRecord[];
 }
 
+export interface ClientRegistrationRecord {
+  id: string;
+  clientId: string;
+  lawId: string;
+  registeredAt: string;
+  deactivatedAt: string | null;
+}
+
+export interface CreateClientRegistrationsPayload {
+  clientId: string;
+  lawCodes: string[];
+}
+
 export function useClientsList(params: Record<string, unknown> = {}) {
   const hooks = useEntityHooks('clients');
   return hooks.useList(params) as ReturnType<typeof hooks.useList> & {
@@ -109,6 +122,28 @@ export function useCreateClientWithContacts(options?: {
     onError: (error: unknown) => {
       const message =
         (error as { body?: { message?: string } })?.body?.message ?? 'Failed to create client';
+      toast.error(message);
+    },
+  });
+}
+
+export function useCreateClientRegistrations(options?: {
+  onSuccess?: (result: ClientRegistrationRecord[]) => void;
+}) {
+  const { apiFn } = useEntityEngine();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ clientId, lawCodes }: CreateClientRegistrationsPayload) =>
+      apiFn.post<ClientRegistrationRecord[]>(`/clients/${clientId}/registrations`, { lawCodes }),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['client-registrations'] });
+      options?.onSuccess?.(result);
+    },
+    onError: (error: unknown) => {
+      const message =
+        (error as { body?: { message?: string } })?.body?.message ??
+        'Failed to save law registrations';
       toast.error(message);
     },
   });
