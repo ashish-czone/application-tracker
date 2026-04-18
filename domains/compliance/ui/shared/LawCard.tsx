@@ -1,6 +1,6 @@
 import { type HTMLAttributes } from 'react';
 import { Eyebrow } from '@packages/ui';
-import { JurisdictionTag, OrdinalDate } from '../kit';
+import { JurisdictionTag, OrdinalDate } from '../components';
 import type { Law } from './types';
 
 export interface LawCardProps extends HTMLAttributes<HTMLDivElement> {

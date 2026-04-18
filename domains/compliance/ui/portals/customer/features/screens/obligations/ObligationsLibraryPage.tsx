@@ -10,7 +10,7 @@ import {
   type DataTableColumn,
   type ActiveFilter,
 } from '@packages/ui';
-import { JurisdictionTag } from '../../../../../kit';
+import { JurisdictionTag } from '../../../../../components';
 import {
   LAW_GROUPS,
   MOCK_OBLIGATIONS,

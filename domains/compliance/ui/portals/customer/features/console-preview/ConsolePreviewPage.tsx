@@ -129,7 +129,7 @@ import {
   JurisdictionTag,
   OrdinalDate,
   StampMark,
-} from '../../../../kit';
+} from '../../../../components';
 import {
   LawCard,
   FilingTaskCard,

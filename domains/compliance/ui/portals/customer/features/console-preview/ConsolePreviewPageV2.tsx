@@ -129,7 +129,7 @@ import {
   PageSection,
   Panel,
   PanelHeading,
-} from '../../../../kit';
+} from '../../../../components';
 import {
   LawCard,
   FilingTaskCard,

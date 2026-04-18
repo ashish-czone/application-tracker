@@ -11,7 +11,7 @@ import {
   ArrowLeft,
 } from 'lucide-react';
 import { Eyebrow, SectionRule } from '@packages/ui';
-import { JurisdictionTag } from '../../../../../kit';
+import { JurisdictionTag } from '../../../../../components';
 import {
   MOCK_RULE_TEMPLATES,
   LAW_GROUPS,

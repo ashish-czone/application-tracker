@@ -21,7 +21,7 @@ import {
   CoarseTabs,
   type DataTableColumn,
 } from '@packages/ui';
-import { OrdinalDate } from '../../../../../kit';
+import { OrdinalDate } from '../../../../../components';
 import type { Handler } from '../../../../../shared/types';
 import {
   MOCK_CLIENT_DETAIL,

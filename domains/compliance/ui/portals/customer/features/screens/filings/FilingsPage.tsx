@@ -27,7 +27,7 @@ import {
   type KanbanCardData,
   useSlidingHighlight,
 } from '@packages/ui';
-import { OrdinalDate, UrgencyBadge, JurisdictionTag } from '../../../../../kit';
+import { OrdinalDate, UrgencyBadge, JurisdictionTag } from '../../../../../components';
 import { ComplianceCalendar } from '../../../../../shared';
 import {
   MOCK_FILING_ROWS,
