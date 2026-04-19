@@ -12,8 +12,6 @@ import {
 } from '@packages/ui';
 import {
   LAW_GROUPS,
-  MOCK_COMPLIANCE_RULES,
-  COMPLIANCE_RULE_STATUS_COUNTS,
   type LawGroupKey,
   type ComplianceRule,
   type ComplianceRuleFrequency,
@@ -29,6 +27,12 @@ import {
 } from './components/complianceRuleColumns';
 import { NewComplianceRuleDrawer } from './components/NewComplianceRuleDrawer';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
+import {
+  useComplianceRulesList,
+  useLawsLookup,
+  type LawRecord,
+} from './api/useComplianceRulesApi';
+import { mapComplianceRuleRecord } from './api/mapComplianceRuleRecord';
 
 type StatusTab = 'all' | ComplianceRule['status'];
 
@@ -41,9 +45,33 @@ export function ComplianceRulesPage() {
   const [search, setSearch] = useState('');
   const [statusTab, setStatusTab] = useState<StatusTab>('all');
 
+  const { data: rulesPage, isLoading, isError } = useComplianceRulesList({ limit: 200 });
+  const { data: lawsPage } = useLawsLookup();
+
+  const lawById = useMemo(() => {
+    const map = new Map<string, LawRecord>();
+    for (const law of lawsPage?.data ?? []) map.set(law.id, law);
+    return map;
+  }, [lawsPage]);
+
+  const rows = useMemo<ComplianceRule[]>(() => {
+    const records = rulesPage?.data;
+    if (!records) return [];
+    return records.map((r) => mapComplianceRuleRecord(r, lawById.get(r.lawId)));
+  }, [rulesPage, lawById]);
+
+  const statusCounts = useMemo(
+    () => ({
+      active: rows.filter((r) => r.status === 'active').length,
+      draft: rows.filter((r) => r.status === 'draft').length,
+      deprecated: rows.filter((r) => r.status === 'deprecated').length,
+    }),
+    [rows],
+  );
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return MOCK_COMPLIANCE_RULES.filter((o) => {
+    return rows.filter((o) => {
       if (statusTab !== 'all' && o.status !== statusTab) return false;
       if (lawFilter.length > 0 && !lawFilter.includes(o.lawGroup)) return false;
       if (
@@ -55,7 +83,7 @@ export function ComplianceRulesPage() {
       if (q && !`${o.code} ${o.name} ${o.lawName}`.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [statusTab, lawFilter, jurisdictionFilter, frequencyFilter, search]);
+  }, [rows, statusTab, lawFilter, jurisdictionFilter, frequencyFilter, search]);
 
   const activeFilters: ActiveFilter[] = useMemo(() => {
     const chips: ActiveFilter[] = [];
@@ -93,13 +121,13 @@ export function ComplianceRulesPage() {
     setFrequencyFilter([]);
   };
 
-  const totalCoverage = Math.round(
-    MOCK_COMPLIANCE_RULES.reduce((acc, o) => acc + o.onTimePct, 0) / MOCK_COMPLIANCE_RULES.length,
-  );
-  const totalFilingsThisPeriod = MOCK_COMPLIANCE_RULES.reduce(
-    (acc, o) => acc + o.filingsThisPeriod,
-    0,
-  );
+  const totalRows = rows.length;
+  const onTimeRows = rows.filter((o) => o.onTimePct > 0);
+  const totalCoverage =
+    onTimeRows.length > 0
+      ? Math.round(onTimeRows.reduce((acc, o) => acc + o.onTimePct, 0) / onTimeRows.length)
+      : 0;
+  const totalFilingsThisPeriod = rows.reduce((acc, o) => acc + o.filingsThisPeriod, 0);
 
   const lawOptions = LAW_GROUPS.map((g) => ({
     value: g.key,
@@ -110,23 +138,23 @@ export function ComplianceRulesPage() {
   const jurisdictionOptions = JURISDICTION_OPTIONS.map((j) => ({
     value: j.value,
     label: j.label,
-    count: MOCK_COMPLIANCE_RULES.filter((o) => o.jurisdiction === j.value).length,
+    count: rows.filter((o) => o.jurisdiction === j.value).length,
   }));
 
   const frequencyOptions = FREQUENCY_OPTIONS.map((f) => ({
     value: f.value,
     label: f.label,
-    count: MOCK_COMPLIANCE_RULES.filter((o) => o.frequency === f.value).length,
+    count: rows.filter((o) => o.frequency === f.value).length,
   }));
 
   const statusTabs = [
-    { value: 'all' as const, label: 'All', count: MOCK_COMPLIANCE_RULES.length },
-    { value: 'active' as const, label: 'Active', count: COMPLIANCE_RULE_STATUS_COUNTS.active },
-    { value: 'draft' as const, label: 'Draft', count: COMPLIANCE_RULE_STATUS_COUNTS.draft },
+    { value: 'all' as const, label: 'All', count: totalRows },
+    { value: 'active' as const, label: 'Active', count: statusCounts.active },
+    { value: 'draft' as const, label: 'Draft', count: statusCounts.draft },
     {
       value: 'deprecated' as const,
       label: 'Deprecated',
-      count: COMPLIANCE_RULE_STATUS_COUNTS.deprecated,
+      count: statusCounts.deprecated,
     },
   ];
 
@@ -137,10 +165,16 @@ export function ComplianceRulesPage() {
         breadcrumb={['Knowledge base', 'Laws', 'Compliance Rules']}
         title="Compliance Rules"
         subtitle={
-          <>
-            {MOCK_COMPLIANCE_RULES.length} rules across {LAW_GROUPS.length} law groups — the
-            canonical catalog used to generate filings for every client on roll-over.
-          </>
+          isLoading ? (
+            <>Loading rules…</>
+          ) : isError ? (
+            <span className="text-signal">Failed to load rules. Refresh to retry.</span>
+          ) : (
+            <>
+              {totalRows} rules across {LAW_GROUPS.length} law groups — the canonical catalog used
+              to generate filings for every client on roll-over.
+            </>
+          )
         }
         actions={
           <>
@@ -157,34 +191,34 @@ export function ComplianceRulesPage() {
         kpis={[
           {
             label: 'Total rules',
-            value: String(MOCK_COMPLIANCE_RULES.length),
+            value: String(totalRows),
             unit: 'rules',
             delta: `${LAW_GROUPS.length} law groups`,
             deltaTone: 'neutral',
             accent: 'authority',
-            sparklineData: [72, 75, 78, 82, 83, 85, MOCK_COMPLIANCE_RULES.length],
+            sparklineData: [72, 75, 78, 82, 83, 85, totalRows],
             sparklineTone: 'authority',
             footnote: 'catalog size',
           },
           {
             label: 'Active',
-            value: String(COMPLIANCE_RULE_STATUS_COUNTS.active),
+            value: String(statusCounts.active),
             unit: 'rules',
             delta: '▲ 2 since last review',
             deltaTone: 'positive',
             accent: 'filed',
-            sparklineData: [68, 70, 71, 72, 73, 74, COMPLIANCE_RULE_STATUS_COUNTS.active],
+            sparklineData: [68, 70, 71, 72, 73, 74, statusCounts.active],
             sparklineTone: 'filed',
-            footnote: `of ${MOCK_COMPLIANCE_RULES.length} total`,
+            footnote: `of ${totalRows} total`,
           },
           {
             label: 'In draft',
-            value: String(COMPLIANCE_RULE_STATUS_COUNTS.draft),
+            value: String(statusCounts.draft),
             unit: 'rules',
             delta: 'awaiting review',
             deltaTone: 'neutral',
             accent: 'due-soon',
-            sparklineData: [4, 6, 7, 8, 6, 5, COMPLIANCE_RULE_STATUS_COUNTS.draft],
+            sparklineData: [4, 6, 7, 8, 6, 5, statusCounts.draft],
             sparklineTone: 'due-soon',
             footnote: 'open for edits',
           },
@@ -209,7 +243,7 @@ export function ComplianceRulesPage() {
             rows={filtered}
             getRowKey={(o) => o.id}
             requiredColumns={REQUIRED_COMPLIANCE_RULE_COLUMN_KEYS}
-            totalRows={MOCK_COMPLIANCE_RULES.length}
+            totalRows={totalRows}
             activeFilters={activeFilters}
             onClearFilters={clearAll}
             filters={
