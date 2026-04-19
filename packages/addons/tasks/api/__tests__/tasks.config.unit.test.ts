@@ -3,7 +3,7 @@ import { BadRequestException, ConflictException } from '@nestjs/common';
 import { TASKS_CONFIG, registerTasksKindLookup } from '../tasks.config';
 
 describe('TASKS_CONFIG', () => {
-  describe('polymorphic relation fields', () => {
+  describe('kind discriminator', () => {
     it('declares kind as a system, readonly, list-visible text field', () => {
       const field = TASKS_CONFIG.fieldMeta.kind;
       expect(field).toBeDefined();
@@ -14,15 +14,6 @@ describe('TASKS_CONFIG', () => {
       // Kind must be visible in the unified /tasks list so operators can
       // tell ad-hoc tasks apart from domain-owned ones (compliance, etc.).
       expect(TASKS_CONFIG.listFields).toContain('kind');
-    });
-
-    it('declares relatedEntityId as a system, readonly, list-excluded text field', () => {
-      const field = TASKS_CONFIG.fieldMeta.relatedEntityId;
-      expect(field).toBeDefined();
-      expect(field.fieldType).toBe('text');
-      expect(field.isSystem).toBe(true);
-      expect(field.isReadonly).toBe(true);
-      expect(field.excludeFromList).toBe(true);
     });
   });
 
