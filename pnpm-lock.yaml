@@ -498,7 +498,7 @@ importers:
         version: link:../../packages/addons/entity-relations-ui
       '@packages/evaluations-ui':
         specifier: workspace:*
-        version: link:../../packages/addons/evaluations-ui
+        version: link:../../packages/addons/evaluations/ui
       '@packages/notes-ui':
         specifier: workspace:*
         version: link:../../packages/addons/notes/ui
@@ -1084,7 +1084,7 @@ importers:
         version: link:../../packages/addons/entity-relations-ui
       '@packages/evaluations-ui':
         specifier: workspace:*
-        version: link:../../packages/addons/evaluations-ui
+        version: link:../../packages/addons/evaluations/ui
       '@packages/notes-ui':
         specifier: workspace:*
         version: link:../../packages/addons/notes/ui
@@ -1484,7 +1484,7 @@ importers:
         version: link:../../../packages/addons/entity-relations
       '@packages/evaluations':
         specifier: workspace:*
-        version: link:../../../packages/addons/evaluations
+        version: link:../../../packages/addons/evaluations/api
       '@packages/events':
         specifier: workspace:*
         version: link:../../../packages/core/events
@@ -1572,7 +1572,7 @@ importers:
         version: link:../../../packages/platform/entity-engine/ui
       '@packages/evaluations-ui':
         specifier: workspace:*
-        version: link:../../../packages/addons/evaluations-ui
+        version: link:../../../packages/addons/evaluations/ui
       '@packages/notes-ui':
         specifier: workspace:*
         version: link:../../../packages/addons/notes/ui
@@ -1916,7 +1916,7 @@ importers:
         specifier: ^5.7.0
         version: 5.9.3
 
-  packages/addons/evaluations:
+  packages/addons/evaluations/api:
     dependencies:
       '@nestjs/common':
         specifier: ^11.0.0
@@ -1929,22 +1929,22 @@ importers:
         version: 11.2.6(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)
       '@packages/audit':
         specifier: workspace:*
-        version: link:../../platform/audit/api
+        version: link:../../../platform/audit/api
       '@packages/auth-core':
         specifier: workspace:*
-        version: link:../../platform/auth-core
+        version: link:../../../platform/auth-core
       '@packages/database':
         specifier: workspace:*
-        version: link:../../core/database
+        version: link:../../../core/database
       '@packages/events':
         specifier: workspace:*
-        version: link:../../core/events
+        version: link:../../../core/events
       '@packages/logger':
         specifier: workspace:*
-        version: link:../../core/logger
+        version: link:../../../core/logger
       '@packages/rbac':
         specifier: workspace:*
-        version: link:../../platform/rbac/api
+        version: link:../../../platform/rbac/api
       class-transformer:
         specifier: ^0.5.1
         version: 0.5.1
@@ -1954,7 +1954,7 @@ importers:
     devDependencies:
       '@packages/platform-testing':
         specifier: workspace:*
-        version: link:../../platform/testing
+        version: link:../../../platform/testing
       '@types/supertest':
         specifier: ^6.0.2
         version: 6.0.3
@@ -1974,26 +1974,26 @@ importers:
         specifier: ^3.0.0
         version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)
 
-  packages/addons/evaluations-ui:
+  packages/addons/evaluations/ui:
     dependencies:
       '@hookform/resolvers':
         specifier: ^3.0.0
         version: 3.10.0(react-hook-form@7.71.2(react@19.2.4))
       '@packages/auth-ui':
         specifier: workspace:*
-        version: link:../../platform/auth/ui
+        version: link:../../../platform/auth/ui
       '@packages/common':
         specifier: workspace:*
-        version: link:../../core/common
+        version: link:../../../core/common
       '@packages/field-types':
         specifier: workspace:*
-        version: link:../../platform/field-types
+        version: link:../../../platform/field-types
       '@packages/platform-ui':
         specifier: workspace:*
-        version: link:../../platform/platform-ui
+        version: link:../../../platform/platform-ui
       '@packages/ui':
         specifier: workspace:*
-        version: link:../../core/ui
+        version: link:../../../core/ui
       '@tanstack/react-query':
         specifier: ^5.0.0
         version: 5.90.21(react@19.2.4)
