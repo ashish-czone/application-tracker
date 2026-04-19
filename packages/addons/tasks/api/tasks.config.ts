@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ConflictException } from '@nestjs/common';
 import { defineEntity } from '@packages/entity-engine';
 import { eq, or, sql } from 'drizzle-orm';
 import { orgUnitMembers } from '@packages/org-units';
@@ -21,6 +21,39 @@ function applyCompletedAt(payload: Record<string, unknown>): Record<string, unkn
   };
 }
 
+function rejectKindInPayload(payload: Record<string, unknown>): void {
+  if ('kind' in payload) {
+    throw new BadRequestException(
+      'The `kind` field is owned by the domain that creates the task (e.g. compliance). Generic /tasks endpoints cannot set it.',
+    );
+  }
+}
+
+/**
+ * Module-level reference to a kind-lookup function, populated by
+ * TasksModule at init time. The entity-engine beforeUpdate/beforeDelete
+ * hooks are pure functions without DI access, so we hand them a lookup
+ * via this indirection instead of extending the platform's hook
+ * signature. A null ref means "module hasn't wired it yet" — we fail
+ * open in that case to avoid breaking bootstrap-time migrations or
+ * tests that never register the guard.
+ */
+type KindLookup = (id: string) => Promise<string | null>;
+let kindLookupRef: KindLookup | null = null;
+export function registerTasksKindLookup(lookup: KindLookup): void {
+  kindLookupRef = lookup;
+}
+
+async function assertGenericMutation(id: string): Promise<void> {
+  if (!kindLookupRef) return;
+  const kind = await kindLookupRef(id);
+  if (kind) {
+    throw new ConflictException(
+      `Task ${id} has kind='${kind}' and must be edited through the owning domain endpoint (e.g. /compliance-tasks/${id}).`,
+    );
+  }
+}
+
 export const TASKS_CONFIG = defineEntity({
   ...TASKS_METADATA,
   table: tasks,
@@ -28,10 +61,13 @@ export const TASKS_CONFIG = defineEntity({
 
   hooks: {
     beforeCreate: async (payload: Record<string, unknown>) => {
+      rejectKindInPayload(payload);
       validateAssigneeExclusivity(payload);
       return applyCompletedAt(payload);
     },
-    beforeUpdate: async (_id: string, payload: Record<string, unknown>) => {
+    beforeUpdate: async (id: string, payload: Record<string, unknown>) => {
+      rejectKindInPayload(payload);
+      await assertGenericMutation(id);
       let next = payload;
       if ('assigneeId' in next || 'assigneeTeamId' in next) {
         validateAssigneeExclusivity(next);
@@ -42,6 +78,9 @@ export const TASKS_CONFIG = defineEntity({
         }
       }
       return applyCompletedAt(next);
+    },
+    beforeDelete: async (id: string) => {
+      await assertGenericMutation(id);
     },
   },
 

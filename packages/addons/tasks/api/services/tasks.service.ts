@@ -37,4 +37,19 @@ export class TasksService {
       .limit(1);
     return rows[0] ?? null;
   }
+
+  /**
+   * Returns the kind discriminator for a task, or null if either the
+   * task doesn't exist or it's an ad-hoc (kind-less) task. Used by the
+   * entity-engine hook in TASKS_CONFIG to reject generic /tasks mutations
+   * against rows owned by a specific domain.
+   */
+  async getKind(id: string): Promise<string | null> {
+    const rows = await this.database.db
+      .select({ kind: tasks.kind })
+      .from(tasks)
+      .where(eq(tasks.id, id))
+      .limit(1);
+    return rows[0]?.kind ?? null;
+  }
 }
