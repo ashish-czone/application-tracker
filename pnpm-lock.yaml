@@ -481,6 +481,9 @@ importers:
       '@packages/automations-ui':
         specifier: workspace:*
         version: link:../../packages/platform/automations/ui
+      '@packages/debug-profiler-ui':
+        specifier: workspace:*
+        version: link:../../packages/core/debug-profiler/ui
       '@packages/document-templates-ui':
         specifier: workspace:*
         version: link:../../packages/addons/document-templates/ui
@@ -1064,6 +1067,9 @@ importers:
       '@packages/calendar-ui':
         specifier: workspace:*
         version: link:../../packages/addons/calendar-ui
+      '@packages/debug-profiler-ui':
+        specifier: workspace:*
+        version: link:../../packages/core/debug-profiler/ui
       '@packages/document-templates-ui':
         specifier: workspace:*
         version: link:../../packages/addons/document-templates/ui
@@ -2620,6 +2626,50 @@ importers:
         specifier: ^3.0.0
         version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)
 
+  packages/core/debug-profiler/api:
+    dependencies:
+      '@nestjs/common':
+        specifier: ^11.0.0
+        version: 11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/core':
+        specifier: ^11.0.0
+        version: 11.1.16(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@11.1.16)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      pg:
+        specifier: ^8.0.0
+        version: 8.20.0
+      rxjs:
+        specifier: ^7.0.0
+        version: 7.8.2
+    devDependencies:
+      '@types/pg':
+        specifier: ^8.0.0
+        version: 8.18.0
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)
+
+  packages/core/debug-profiler/ui:
+    dependencies:
+      '@packages/ui':
+        specifier: workspace:*
+        version: link:../../ui
+      lucide-react:
+        specifier: ^0.500.0
+        version: 0.500.0(react@19.2.4)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.4
+    devDependencies:
+      '@types/react':
+        specifier: ^19.2.14
+        version: 19.2.14
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+
   packages/core/events:
     dependencies:
       '@nestjs/common':
@@ -2913,6 +2963,9 @@ importers:
       '@packages/database':
         specifier: workspace:*
         version: link:../../../core/database
+      '@packages/debug-profiler':
+        specifier: workspace:*
+        version: link:../../../core/debug-profiler/api
       '@packages/domains':
         specifier: workspace:*
         version: link:../../domains

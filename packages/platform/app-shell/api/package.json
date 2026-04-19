@@ -15,6 +15,7 @@
     "@packages/auth": "workspace:*",
     "@packages/automations": "workspace:*",
     "@packages/database": "workspace:*",
+    "@packages/debug-profiler": "workspace:*",
     "@packages/domains": "workspace:*",
     "@packages/entity-engine": "workspace:*",
     "@packages/entity-layout": "workspace:*",

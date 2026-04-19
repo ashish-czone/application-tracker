@@ -21,6 +21,7 @@ registerEntityRelationsFieldTypes();
 registerRatingFieldType();
 
 import { WebShell } from '@packages/app-shell-ui';
+import { DebugProfilerBar, DebugProfilerProvider } from '@packages/debug-profiler-ui';
 import { TASKS_UI_CONFIG, TaskAssigneeCell } from '@packages/tasks-ui';
 import { OrgUnitsPage, OrgPositionsPage } from '@packages/org-units-ui';
 import { NotesSection } from '@packages/notes-ui';
@@ -85,8 +86,15 @@ const previewQueryClient = new QueryClient({
   },
 });
 
+const debugProfiling = import.meta.env.DEV || import.meta.env.VITE_DEBUG_PROFILING === 'true';
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
+    {debugProfiling && (
+      <DebugProfilerProvider>
+        <DebugProfilerBar />
+      </DebugProfilerProvider>
+    )}
     {isPreview ? (
       <QueryClientProvider client={previewQueryClient}>
         <EntityEngineProvider apiFn={api as never}>

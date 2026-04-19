@@ -1,0 +1,22 @@
+{
+  "name": "@packages/debug-profiler",
+  "version": "0.0.1",
+  "private": true,
+  "main": "index.ts",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/core": "^11.0.0",
+    "rxjs": "^7.0.0"
+  },
+  "peerDependencies": {
+    "pg": "^8.0.0"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}

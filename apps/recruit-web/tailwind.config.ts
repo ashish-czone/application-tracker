@@ -5,6 +5,8 @@ const config: Config = {
   ...baseConfig,
   content: [
     './src/**/*.{ts,tsx}',
+    // @packages/debug-profiler-ui (core)
+    '../../packages/core/debug-profiler/ui/*.{ts,tsx}',
     // @packages/app-shell-ui (platform)
     '../../packages/platform/app-shell-ui/index.tsx',
     '../../packages/platform/app-shell-ui/src/**/*.{ts,tsx}',

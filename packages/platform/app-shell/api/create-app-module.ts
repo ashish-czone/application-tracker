@@ -1,10 +1,15 @@
-import type { ModuleMetadata } from '@nestjs/common';
+import { Injectable, Optional, type ModuleMetadata, type OnApplicationBootstrap } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
 import type { DomainBackendManifest } from '@packages/domains';
 import { LoggerModule } from '@packages/logger';
-import { DatabaseModule } from '@packages/database';
+import { DatabaseModule, DatabaseService } from '@packages/database';
+import {
+  DebugProfilerModule,
+  ProfilingContextStore,
+  wrapPgPool,
+} from '@packages/debug-profiler';
 import { EventsModule } from '@packages/events';
 import { SettingsModule, AppConfigService } from '@packages/settings';
 import { QueueModule } from '@packages/queue';
@@ -49,7 +54,21 @@ export interface AppShellOptions {
   extraImports?: NonNullable<ModuleMetadata['imports']>;
 }
 
+@Injectable()
+class DebugProfilerPoolBootstrapper implements OnApplicationBootstrap {
+  constructor(
+    private readonly database: DatabaseService,
+    @Optional() private readonly store?: ProfilingContextStore,
+  ) {}
+
+  onApplicationBootstrap(): void {
+    if (!this.store) return;
+    wrapPgPool(this.database.getPool(), this.store);
+  }
+}
+
 export function createAppModule(options: AppShellOptions): ModuleMetadata {
+  const debugProfilingEnabled = process.env.DEBUG_PROFILING === 'true';
   return {
     imports: [
       ConfigModule.forRoot({
@@ -59,6 +78,7 @@ export function createAppModule(options: AppShellOptions): ModuleMetadata {
       }),
       LoggerModule.register({ provider: 'pino' }),
       DatabaseModule,
+      DebugProfilerModule.forRoot({ enabled: debugProfilingEnabled }),
       EventsModule,
       SettingsModule,
       QueueModule.registerAsync({
@@ -114,6 +134,7 @@ export function createAppModule(options: AppShellOptions): ModuleMetadata {
       { provide: APP_GUARD, useClass: RbacGuard },
       { provide: APP_GUARD, useClass: ConfigurableThrottlerGuard },
       { provide: AUDIT_EXTENSION, useExisting: AuditRegistryService },
+      DebugProfilerPoolBootstrapper,
     ],
   };
 }
