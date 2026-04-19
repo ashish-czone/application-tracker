@@ -51,7 +51,9 @@
       "@domains/recruit-ui": ["../../domains/recruit/ui"],
       "@domains/recruit-ui/*": ["../../domains/recruit/ui/*"],
       "@domains/compliance-api": ["../../domains/compliance/api"],
-      "@domains/compliance-api/*": ["../../domains/compliance/api/*"]
+      "@domains/compliance-api/*": ["../../domains/compliance/api/*"],
+      "@domains/compliance-contract": ["../../domains/compliance/contract"],
+      "@domains/compliance-contract/*": ["../../domains/compliance/contract/*"]
     }
   },
   "include": ["src"],

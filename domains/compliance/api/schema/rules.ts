@@ -1,9 +1,7 @@
 import { pgTable, text, integer, boolean, timestamp, index } from 'drizzle-orm/pg-core';
 import { randomUUID } from 'crypto';
+import type { ComplianceFrequency } from '@domains/compliance-contract';
 import { complianceLaws } from './laws';
-
-export const FREQUENCIES = ['monthly', 'quarterly', 'half_yearly', 'yearly'] as const;
-export type ComplianceFrequency = (typeof FREQUENCIES)[number];
 
 export const complianceRules = pgTable('compliance_rules', {
   id: text('id').primaryKey().$defaultFn(() => randomUUID()),

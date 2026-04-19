@@ -48,7 +48,9 @@
       "@packages/taxonomy-ui/*": ["../../packages/platform/taxonomy/ui/*"],
       "@packages/*": ["../../packages/core/*", "../../packages/platform/*", "../../packages/addons/*"],
       "@domains/compliance-api": ["../../domains/compliance/api"],
-      "@domains/compliance-api/*": ["../../domains/compliance/api/*"]
+      "@domains/compliance-api/*": ["../../domains/compliance/api/*"],
+      "@domains/compliance-contract": ["../../domains/compliance/contract"],
+      "@domains/compliance-contract/*": ["../../domains/compliance/contract/*"]
     }
   },
   "include": ["src"],
