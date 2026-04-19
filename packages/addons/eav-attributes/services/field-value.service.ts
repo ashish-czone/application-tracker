@@ -1,15 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService, eq, sql, inArray } from '@packages/database';
 import { withTenant, withTenantInsert, tenantCondition } from '@packages/tenancy/helpers';
+import { FieldDefinitionService } from '@packages/entity-engine';
 import { entityFieldValues } from '../schema/entity-field-values';
-import { fieldDefinitions } from '../schema/field-definitions';
 import { fieldTypeRegistry } from '@packages/field-types';
 import type { EavValueColumn } from '@packages/field-types';
 import type { FieldFilter, FieldType } from '../types';
 
 @Injectable()
 export class FieldValueService {
-  constructor(private readonly database: DatabaseService) {}
+  constructor(
+    private readonly database: DatabaseService,
+    private readonly fieldDefService: FieldDefinitionService,
+  ) {}
 
   /**
    * Get all custom field values for a single entity instance.
@@ -90,15 +93,12 @@ export class FieldValueService {
     const fieldKeys = Object.keys(values);
     if (fieldKeys.length === 0) return { before, after: { ...before } };
 
-    const fields = await db
-      .select()
-      .from(fieldDefinitions)
-      .where(withTenant(fieldDefinitions,
-        eq(fieldDefinitions.entityType, entityType),
-        inArray(fieldDefinitions.fieldKey, fieldKeys),
-      ));
-
-    const fieldTypeMap = new Map<string, FieldType>(fields.map((f: { fieldKey: string; fieldType: string }) => [f.fieldKey, f.fieldType as FieldType]));
+    const allEntityFields = this.fieldDefService.listByEntity(entityType);
+    const fieldTypeMap = new Map<string, FieldType>(
+      allEntityFields
+        .filter((f) => fieldKeys.includes(f.fieldKey))
+        .map((f) => [f.fieldKey, f.fieldType as FieldType]),
+    );
 
     // Compute after by cloning before and applying changes
     const after = { ...before };
@@ -171,18 +171,11 @@ export class FieldValueService {
     value: unknown,
     excludeEntityId?: string,
   ): Promise<boolean> {
-    const field = await this.database.db
-      .select()
-      .from(fieldDefinitions)
-      .where(withTenant(fieldDefinitions,
-        eq(fieldDefinitions.entityType, entityType),
-        eq(fieldDefinitions.fieldKey, fieldKey),
-      ))
-      .limit(1);
+    const field = this.fieldDefService.findByEntityAndKey(entityType, fieldKey);
 
-    if (!field[0] || !field[0].isUnique) return true;
+    if (!field || !field.isUnique) return true;
 
-    const valueColumn = fieldTypeRegistry.getEavColumn(field[0].fieldType);
+    const valueColumn = fieldTypeRegistry.getEavColumn(field.fieldType);
     if (!valueColumn) return true; // Relational types don't have EAV uniqueness
     const columnRef = this.getColumnRef(valueColumn);
 

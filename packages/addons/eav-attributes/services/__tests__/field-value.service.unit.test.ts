@@ -26,11 +26,16 @@ function createMockDb() {
 describe('FieldValueService', () => {
   let service: FieldValueService;
   let mockDb: ReturnType<typeof createMockDb>;
+  let mockFieldDefService: { listByEntity: ReturnType<typeof vi.fn>; findByEntityAndKey: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     mockDb = createMockDb();
     const databaseService = { db: mockDb } as any;
-    service = new FieldValueService(databaseService);
+    mockFieldDefService = {
+      listByEntity: vi.fn().mockReturnValue([]),
+      findByEntityAndKey: vi.fn().mockReturnValue(null),
+    };
+    service = new FieldValueService(databaseService, mockFieldDefService as any);
   });
 
   // --- getValues ---
@@ -94,15 +99,10 @@ describe('FieldValueService', () => {
 
   describe('setValues', () => {
     it('should return { before, after } with applied changes', async () => {
-      // First call: getValues reads existing EAV (from where)
-      mockDb._chain.where
-        .mockResolvedValueOnce([
-          { fieldKey: 'name', valueText: 'Old Name', valueNumber: null, valueDate: null, valueDatetime: null, valueBoolean: null },
-        ])
-        // Second call: field definition lookup
-        .mockResolvedValueOnce([
-          { fieldKey: 'name', fieldType: 'text' },
-        ]);
+      mockDb._chain.where.mockResolvedValueOnce([
+        { fieldKey: 'name', valueText: 'Old Name', valueNumber: null, valueDate: null, valueDatetime: null, valueBoolean: null },
+      ]);
+      mockFieldDefService.listByEntity.mockReturnValue([{ fieldKey: 'name', fieldType: 'text' }]);
 
       const result = await service.setValues('candidates', 'c1', { name: 'New Name' });
 
@@ -111,13 +111,8 @@ describe('FieldValueService', () => {
     });
 
     it('should route text field to valueText column', async () => {
-      // getValues (empty)
       mockDb._chain.where.mockResolvedValueOnce([]);
-      // field defs
-      const fieldDefs = [
-        { fieldKey: 'name', fieldType: 'text' },
-      ];
-      mockDb._chain.where.mockResolvedValueOnce(fieldDefs);
+      mockFieldDefService.listByEntity.mockReturnValue([{ fieldKey: 'name', fieldType: 'text' }]);
 
       await service.setValues('candidates', 'c1', { name: 'Alice' });
 
@@ -126,10 +121,7 @@ describe('FieldValueService', () => {
 
     it('should route number field to valueNumber column', async () => {
       mockDb._chain.where.mockResolvedValueOnce([]);
-      const fieldDefs = [
-        { fieldKey: 'age', fieldType: 'number' },
-      ];
-      mockDb._chain.where.mockResolvedValueOnce(fieldDefs);
+      mockFieldDefService.listByEntity.mockReturnValue([{ fieldKey: 'age', fieldType: 'number' }]);
 
       const result = await service.setValues('candidates', 'c1', { age: 30 });
 
@@ -139,10 +131,7 @@ describe('FieldValueService', () => {
 
     it('should route boolean field to valueBoolean column', async () => {
       mockDb._chain.where.mockResolvedValueOnce([]);
-      const fieldDefs = [
-        { fieldKey: 'active', fieldType: 'boolean' },
-      ];
-      mockDb._chain.where.mockResolvedValueOnce(fieldDefs);
+      mockFieldDefService.listByEntity.mockReturnValue([{ fieldKey: 'active', fieldType: 'boolean' }]);
 
       const result = await service.setValues('candidates', 'c1', { active: true });
 
@@ -152,10 +141,7 @@ describe('FieldValueService', () => {
 
     it('should route date field to valueDate column', async () => {
       mockDb._chain.where.mockResolvedValueOnce([]);
-      const fieldDefs = [
-        { fieldKey: 'dob', fieldType: 'date' },
-      ];
-      mockDb._chain.where.mockResolvedValueOnce(fieldDefs);
+      mockFieldDefService.listByEntity.mockReturnValue([{ fieldKey: 'dob', fieldType: 'date' }]);
 
       const result = await service.setValues('candidates', 'c1', { dob: '2024-01-15' });
 
@@ -166,10 +152,7 @@ describe('FieldValueService', () => {
     it('should route datetime field to valueDatetime column', async () => {
       mockDb._chain.where.mockResolvedValueOnce([]);
       const dt = new Date('2024-01-15T10:00:00Z');
-      const fieldDefs = [
-        { fieldKey: 'start', fieldType: 'datetime' },
-      ];
-      mockDb._chain.where.mockResolvedValueOnce(fieldDefs);
+      mockFieldDefService.listByEntity.mockReturnValue([{ fieldKey: 'start', fieldType: 'datetime' }]);
 
       const result = await service.setValues('candidates', 'c1', { start: dt });
 
@@ -178,14 +161,10 @@ describe('FieldValueService', () => {
     });
 
     it('should delete value row when value is null and remove from after', async () => {
-      // getValues returns existing value
       mockDb._chain.where.mockResolvedValueOnce([
         { fieldKey: 'name', valueText: 'Alice', valueNumber: null, valueDate: null, valueDatetime: null, valueBoolean: null },
       ]);
-      const fieldDefs = [
-        { fieldKey: 'name', fieldType: 'text' },
-      ];
-      mockDb._chain.where.mockResolvedValueOnce(fieldDefs);
+      mockFieldDefService.listByEntity.mockReturnValue([{ fieldKey: 'name', fieldType: 'text' }]);
 
       const result = await service.setValues('candidates', 'c1', { name: null });
 
@@ -199,10 +178,7 @@ describe('FieldValueService', () => {
       mockDb._chain.where.mockResolvedValueOnce([
         { fieldKey: 'name', valueText: 'Alice', valueNumber: null, valueDate: null, valueDatetime: null, valueBoolean: null },
       ]);
-      const fieldDefs = [
-        { fieldKey: 'name', fieldType: 'text' },
-      ];
-      mockDb._chain.where.mockResolvedValueOnce(fieldDefs);
+      mockFieldDefService.listByEntity.mockReturnValue([{ fieldKey: 'name', fieldType: 'text' }]);
 
       const result = await service.setValues('candidates', 'c1', { name: '' });
 
@@ -215,10 +191,7 @@ describe('FieldValueService', () => {
       mockDb._chain.where.mockResolvedValueOnce([
         { fieldKey: 'name', valueText: 'Alice', valueNumber: null, valueDate: null, valueDatetime: null, valueBoolean: null },
       ]);
-      const fieldDefs = [
-        { fieldKey: 'name', fieldType: 'text' },
-      ];
-      mockDb._chain.where.mockResolvedValueOnce(fieldDefs);
+      mockFieldDefService.listByEntity.mockReturnValue([{ fieldKey: 'name', fieldType: 'text' }]);
 
       const result = await service.setValues('candidates', 'c1', { name: undefined });
 
@@ -227,7 +200,6 @@ describe('FieldValueService', () => {
     });
 
     it('should return { before, after } with same values when values object is empty', async () => {
-      // getValues reads current values
       mockDb._chain.where.mockResolvedValueOnce([
         { fieldKey: 'name', valueText: 'Alice', valueNumber: null, valueDate: null, valueDatetime: null, valueBoolean: null },
       ]);
@@ -236,18 +208,16 @@ describe('FieldValueService', () => {
 
       expect(result.before).toEqual({ name: 'Alice' });
       expect(result.after).toEqual({ name: 'Alice' });
-      // Should not try to look up field definitions
       expect(mockDb.select).toHaveBeenCalledTimes(1); // only getValues
+      expect(mockFieldDefService.listByEntity).not.toHaveBeenCalled();
     });
 
     it('should skip unknown fields', async () => {
       mockDb._chain.where.mockResolvedValueOnce([]);
-      // Field definition lookup returns no matching fields
-      mockDb._chain.where.mockResolvedValueOnce([]);
+      mockFieldDefService.listByEntity.mockReturnValue([]);
 
       const result = await service.setValues('candidates', 'c1', { unknown_field: 'value' });
 
-      // Should not insert or delete since field type is unknown
       expect(mockDb.insert).not.toHaveBeenCalled();
       expect(mockDb.delete).not.toHaveBeenCalled();
       expect(result.before).toEqual({});
@@ -256,12 +226,11 @@ describe('FieldValueService', () => {
 
     it('should handle multiple values in a single call (upsert)', async () => {
       mockDb._chain.where.mockResolvedValueOnce([]);
-      const fieldDefs = [
+      mockFieldDefService.listByEntity.mockReturnValue([
         { fieldKey: 'name', fieldType: 'text' },
         { fieldKey: 'age', fieldType: 'number' },
         { fieldKey: 'active', fieldType: 'boolean' },
-      ];
-      mockDb._chain.where.mockResolvedValueOnce(fieldDefs);
+      ]);
 
       const result = await service.setValues('candidates', 'c1', {
         name: 'Alice',
@@ -269,7 +238,6 @@ describe('FieldValueService', () => {
         active: true,
       });
 
-      // Should call insert 3 times (one per field)
       expect(mockDb.insert).toHaveBeenCalledTimes(3);
       expect(result.after).toEqual({ name: 'Alice', age: 30, active: true });
     });
@@ -288,9 +256,8 @@ describe('FieldValueService', () => {
       };
 
       // getValues inside setValues will use tx
-      txMockChain.where
-        .mockResolvedValueOnce([]) // getValues returns empty
-        .mockResolvedValueOnce([{ fieldKey: 'name', fieldType: 'text' }]); // field defs
+      txMockChain.where.mockResolvedValueOnce([]); // getValues returns empty
+      mockFieldDefService.listByEntity.mockReturnValue([{ fieldKey: 'name', fieldType: 'text' }]);
 
       await service.setValues('candidates', 'c1', { name: 'Alice' }, txMock);
 
@@ -350,10 +317,8 @@ describe('FieldValueService', () => {
 
   describe('checkUniqueness', () => {
     it('should return true when value is unique', async () => {
-      // field definition with isUnique=true
-      mockDb._chain.limit
-        .mockResolvedValueOnce([{ fieldKey: 'email', fieldType: 'text', isUnique: true }])
-        .mockResolvedValueOnce([]);  // no duplicate found
+      mockFieldDefService.findByEntityAndKey.mockReturnValue({ fieldKey: 'email', fieldType: 'text', isUnique: true });
+      mockDb._chain.limit.mockResolvedValueOnce([]); // no duplicate found
 
       const result = await service.checkUniqueness('candidates', 'email', 'test@example.com');
 
@@ -361,9 +326,8 @@ describe('FieldValueService', () => {
     });
 
     it('should return false when duplicate exists', async () => {
-      mockDb._chain.limit
-        .mockResolvedValueOnce([{ fieldKey: 'email', fieldType: 'text', isUnique: true }])
-        .mockResolvedValueOnce([{ exists: true }]); // duplicate found
+      mockFieldDefService.findByEntityAndKey.mockReturnValue({ fieldKey: 'email', fieldType: 'text', isUnique: true });
+      mockDb._chain.limit.mockResolvedValueOnce([{ exists: true }]); // duplicate found
 
       const result = await service.checkUniqueness('candidates', 'email', 'test@example.com');
 
@@ -371,7 +335,7 @@ describe('FieldValueService', () => {
     });
 
     it('should return true when field is not unique (no constraint)', async () => {
-      mockDb._chain.limit.mockResolvedValueOnce([{ fieldKey: 'name', fieldType: 'text', isUnique: false }]);
+      mockFieldDefService.findByEntityAndKey.mockReturnValue({ fieldKey: 'name', fieldType: 'text', isUnique: false });
 
       const result = await service.checkUniqueness('candidates', 'name', 'Alice');
 
@@ -379,7 +343,7 @@ describe('FieldValueService', () => {
     });
 
     it('should return true when field definition not found', async () => {
-      mockDb._chain.limit.mockResolvedValueOnce([]);
+      mockFieldDefService.findByEntityAndKey.mockReturnValue(null);
 
       const result = await service.checkUniqueness('candidates', 'nonexistent', 'value');
 
@@ -387,9 +351,8 @@ describe('FieldValueService', () => {
     });
 
     it('should exclude a specific entity ID from uniqueness check', async () => {
-      mockDb._chain.limit
-        .mockResolvedValueOnce([{ fieldKey: 'email', fieldType: 'text', isUnique: true }])
-        .mockResolvedValueOnce([]); // no other entity with this value
+      mockFieldDefService.findByEntityAndKey.mockReturnValue({ fieldKey: 'email', fieldType: 'text', isUnique: true });
+      mockDb._chain.limit.mockResolvedValueOnce([]); // no other entity with this value
 
       const result = await service.checkUniqueness('candidates', 'email', 'test@example.com', 'c1');
 
