@@ -43,7 +43,7 @@ export function ClientDetailPage() {
         <main className="max-w-[1480px] mx-auto px-10 py-8">
           <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-eyebrow font-sans font-medium text-ink-muted mb-6">
             <Link
-              to="/screens/clients"
+              to="/clients"
               className="flex items-center gap-1 hover:text-ink transition-colors"
             >
               <ChevronLeft className="w-3 h-3" strokeWidth={1.5} />
@@ -107,7 +107,7 @@ export function ClientDetailPage() {
       <main className="max-w-[1480px] mx-auto px-10 py-8">
         <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-eyebrow font-sans font-medium text-ink-muted mb-6">
           <Link
-            to="/screens/clients"
+            to="/clients"
             className="flex items-center gap-1 hover:text-ink transition-colors"
           >
             <ChevronLeft className="w-3 h-3" strokeWidth={1.5} />

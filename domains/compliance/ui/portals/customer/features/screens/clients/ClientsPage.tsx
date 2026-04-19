@@ -263,7 +263,7 @@ export function ClientsPage() {
             requiredColumns={REQUIRED_CLIENT_COLUMN_KEYS}
             totalRows={totalClients}
             onRowClick={(client) => {
-              navigate(`/screens/clients/${client.id}`);
+              navigate(`/clients/${client.id}`);
             }}
             rowProps={(client) => ({
               onMouseEnter: (e: React.MouseEvent<HTMLTableRowElement>) =>
