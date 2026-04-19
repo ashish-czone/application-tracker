@@ -106,6 +106,14 @@ export const TASKS_FIELDS = {
     listVisible: true,
     listOrder: 5,
   },
+  completedAt: {
+    type: 'datetime',
+    label: 'Completed At',
+    system: true,
+    readonly: true,
+    sortable: true,
+    excludeFromList: true,
+  },
   createdBy: {
     type: 'user',
     label: 'Creator',
