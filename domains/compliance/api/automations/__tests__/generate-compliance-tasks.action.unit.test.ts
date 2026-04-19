@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { GenerateComplianceTasksAction } from '../generate-compliance-tasks.action';
-import { COMPLIANCE_TASK_GENERATED } from '../../events/types';
 import {
   AmbiguousHandlerError,
   type ComplianceRule,
@@ -41,8 +40,10 @@ describe('GenerateComplianceTasksAction', () => {
     resolveAssignee: Mock;
   };
   let clientRegistrationService: { getRegisteredClients: Mock };
-  let tasksService: { findByExternalKey: Mock };
-  let events: { emitDynamic: Mock };
+  let complianceTasksService: {
+    findByRuleClientPeriod: Mock;
+    create: Mock;
+  };
   let logger: {
     forContext: Mock;
     log: Mock;
@@ -50,8 +51,6 @@ describe('GenerateComplianceTasksAction', () => {
     error: Mock;
     debug: Mock;
   };
-  let tasksEntityService: { create: Mock };
-  let moduleRef: { get: Mock };
   let action: GenerateComplianceTasksAction;
 
   beforeEach(() => {
@@ -61,23 +60,21 @@ describe('GenerateComplianceTasksAction', () => {
       resolveAssignee: vi.fn().mockResolvedValue('org-1'),
     };
     clientRegistrationService = { getRegisteredClients: vi.fn().mockResolvedValue([]) };
-    tasksService = { findByExternalKey: vi.fn().mockResolvedValue(null) };
-    events = { emitDynamic: vi.fn() };
+    complianceTasksService = {
+      findByRuleClientPeriod: vi.fn().mockResolvedValue(null),
+      create: vi.fn().mockResolvedValue({ id: 'task-new' }),
+    };
 
     const ctxLogger = { log: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
     logger = {
       forContext: vi.fn().mockReturnValue(ctxLogger),
       ...ctxLogger,
     };
-    tasksEntityService = { create: vi.fn().mockResolvedValue({ id: 'task-new' }) };
-    moduleRef = { get: vi.fn().mockReturnValue(tasksEntityService) };
 
     action = new GenerateComplianceTasksAction(
       ruleService as never,
       clientRegistrationService as never,
-      tasksService as never,
-      events as never,
-      moduleRef as never,
+      complianceTasksService as never,
       logger as never,
     );
   });
@@ -86,8 +83,7 @@ describe('GenerateComplianceTasksAction', () => {
     await action.execute(ctxFor(undefined));
 
     expect(ruleService.findById).not.toHaveBeenCalled();
-    expect(tasksEntityService.create).not.toHaveBeenCalled();
-    expect(events.emitDynamic).not.toHaveBeenCalled();
+    expect(complianceTasksService.create).not.toHaveBeenCalled();
   });
 
   it('no-ops when rule is not found', async () => {
@@ -96,7 +92,7 @@ describe('GenerateComplianceTasksAction', () => {
     await action.execute(ctxFor('r1'));
 
     expect(clientRegistrationService.getRegisteredClients).not.toHaveBeenCalled();
-    expect(tasksEntityService.create).not.toHaveBeenCalled();
+    expect(complianceTasksService.create).not.toHaveBeenCalled();
   });
 
   it('no-ops when rule is inactive', async () => {
@@ -105,7 +101,7 @@ describe('GenerateComplianceTasksAction', () => {
     await action.execute(ctxFor('r1'));
 
     expect(clientRegistrationService.getRegisteredClients).not.toHaveBeenCalled();
-    expect(tasksEntityService.create).not.toHaveBeenCalled();
+    expect(complianceTasksService.create).not.toHaveBeenCalled();
   });
 
   it('skips when there are no registered clients', async () => {
@@ -117,10 +113,10 @@ describe('GenerateComplianceTasksAction', () => {
 
     await action.execute(ctxFor('r1'));
 
-    expect(tasksEntityService.create).not.toHaveBeenCalled();
+    expect(complianceTasksService.create).not.toHaveBeenCalled();
   });
 
-  it('creates one task per (client × occurrence) with correct externalKey + fields', async () => {
+  it('creates one task per (client × occurrence) with correct compliance fields', async () => {
     const rule = makeRule();
     ruleService.findById.mockResolvedValue(rule);
     clientRegistrationService.getRegisteredClients.mockResolvedValue([
@@ -133,50 +129,30 @@ describe('GenerateComplianceTasksAction', () => {
 
     await action.execute(ctxFor('r1'));
 
-    expect(tasksEntityService.create).toHaveBeenCalledTimes(2);
+    expect(complianceTasksService.create).toHaveBeenCalledTimes(2);
 
-    const firstCall = tasksEntityService.create.mock.calls[0]![0];
-    expect(firstCall).toMatchObject({
+    const firstCall = complianceTasksService.create.mock.calls[0]!;
+    expect(firstCall[0]).toMatchObject({
       dueDate: '2026-05-20',
       assigneeTeamId: 'org-1',
-      kind: 'compliance',
-      relatedEntityId: 'r1',
-      externalKey: 'r1:c1:2026-04-01',
-    });
-    expect(firstCall.title).toContain('GST Return');
-
-    const secondCall = tasksEntityService.create.mock.calls[1]![0];
-    expect(secondCall.externalKey).toBe('r1:c1:2026-05-01');
-    expect(secondCall.dueDate).toBe('2026-06-20');
-  });
-
-  it('emits COMPLIANCE_TASK_GENERATED per created task', async () => {
-    ruleService.findById.mockResolvedValue(makeRule());
-    clientRegistrationService.getRegisteredClients.mockResolvedValue([
-      { id: 'reg1', clientId: 'c1', lawId: 'l1', registeredAt: new Date(), deactivatedAt: null },
-    ]);
-    ruleService.expandRule.mockReturnValue([
-      { periodStart: utc(2026, 4, 1), periodEnd: utc(2026, 4, 30), dueDate: utc(2026, 5, 20) },
-    ]);
-
-    await action.execute(ctxFor('r1'));
-
-    expect(events.emitDynamic).toHaveBeenCalledTimes(1);
-    const [eventName, eventArgs] = events.emitDynamic.mock.calls[0]!;
-    expect(eventName).toBe(COMPLIANCE_TASK_GENERATED);
-    expect(eventArgs.payload).toMatchObject({
       ruleId: 'r1',
       clientId: 'c1',
       lawId: 'l1',
-      taskId: 'task-new',
-      externalKey: 'r1:c1:2026-04-01',
       periodStart: '2026-04-01',
       periodEnd: '2026-04-30',
-      dueDate: '2026-05-20',
+    });
+    expect(firstCall[0].title).toContain('GST Return');
+    expect(firstCall[1]).toBe('system');
+
+    const secondCall = complianceTasksService.create.mock.calls[1]!;
+    expect(secondCall[0]).toMatchObject({
+      periodStart: '2026-05-01',
+      periodEnd: '2026-05-31',
+      dueDate: '2026-06-20',
     });
   });
 
-  it('is idempotent — existing task by externalKey is skipped', async () => {
+  it('is idempotent — existing task by (rule, client, period) is skipped', async () => {
     ruleService.findById.mockResolvedValue(makeRule());
     clientRegistrationService.getRegisteredClients.mockResolvedValue([
       { id: 'reg1', clientId: 'c1', lawId: 'l1', registeredAt: new Date(), deactivatedAt: null },
@@ -184,12 +160,11 @@ describe('GenerateComplianceTasksAction', () => {
     ruleService.expandRule.mockReturnValue([
       { periodStart: utc(2026, 4, 1), periodEnd: utc(2026, 4, 30), dueDate: utc(2026, 5, 20) },
     ]);
-    tasksService.findByExternalKey.mockResolvedValue({ id: 'existing' });
+    complianceTasksService.findByRuleClientPeriod.mockResolvedValue({ id: 'existing' });
 
     await action.execute(ctxFor('r1'));
 
-    expect(tasksEntityService.create).not.toHaveBeenCalled();
-    expect(events.emitDynamic).not.toHaveBeenCalled();
+    expect(complianceTasksService.create).not.toHaveBeenCalled();
   });
 
   it('propagates AmbiguousHandlerError from resolveAssignee', async () => {
@@ -205,10 +180,10 @@ describe('GenerateComplianceTasksAction', () => {
     );
 
     await expect(action.execute(ctxFor('r1'))).rejects.toBeInstanceOf(AmbiguousHandlerError);
-    expect(tasksEntityService.create).not.toHaveBeenCalled();
+    expect(complianceTasksService.create).not.toHaveBeenCalled();
   });
 
-  it('period-start is the externalKey dimension — repeat firings dont create duplicates', async () => {
+  it('period-start is the idempotency dimension — repeat firings dont create duplicates', async () => {
     const rule = makeRule();
     ruleService.findById.mockResolvedValue(rule);
     clientRegistrationService.getRegisteredClients.mockResolvedValue([
@@ -219,13 +194,13 @@ describe('GenerateComplianceTasksAction', () => {
     ]);
 
     // First firing: no existing → create
-    tasksService.findByExternalKey.mockResolvedValueOnce(null);
+    complianceTasksService.findByRuleClientPeriod.mockResolvedValueOnce(null);
     await action.execute(ctxFor('r1'));
-    expect(tasksEntityService.create).toHaveBeenCalledTimes(1);
+    expect(complianceTasksService.create).toHaveBeenCalledTimes(1);
 
-    // Second firing: findByExternalKey returns existing → skip
-    tasksService.findByExternalKey.mockResolvedValueOnce({ id: 'task-new' });
+    // Second firing: existing found → skip
+    complianceTasksService.findByRuleClientPeriod.mockResolvedValueOnce({ id: 'task-new' });
     await action.execute(ctxFor('r1'));
-    expect(tasksEntityService.create).toHaveBeenCalledTimes(1); // unchanged
+    expect(complianceTasksService.create).toHaveBeenCalledTimes(1); // unchanged
   });
 });
