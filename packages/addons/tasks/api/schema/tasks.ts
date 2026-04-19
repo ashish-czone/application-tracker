@@ -13,7 +13,7 @@ export const tasks = pgTable('tasks', {
   assigneeTeamId: text('assignee_team_id').references(() => orgUnits.id),
   dueDate: date('due_date', { mode: 'string' }),
   completedAt: timestamp('completed_at', { withTimezone: true, mode: 'date' }),
-  relatedEntityType: text('related_entity_type'),
+  kind: text('kind'),
   relatedEntityId: text('related_entity_id'),
   externalKey: text('external_key'),
   createdBy: text('created_by').notNull().references(() => users.id),
@@ -28,5 +28,5 @@ export const tasks = pgTable('tasks', {
   index('tasks_priority_idx').on(table.priority),
   index('tasks_due_date_idx').on(table.dueDate),
   index('tasks_completed_at_idx').on(table.completedAt),
-  index('tasks_related_entity_idx').on(table.relatedEntityType, table.relatedEntityId),
+  index('tasks_kind_related_idx').on(table.kind, table.relatedEntityId),
 ]);

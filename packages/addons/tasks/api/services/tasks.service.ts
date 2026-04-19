@@ -15,12 +15,12 @@ export class TasksService {
   constructor(private readonly database: DatabaseService) {}
 
   /**
-   * Lookup a task by its (relatedEntityType, relatedEntityId, externalKey) triple.
+   * Lookup a task by its (kind, relatedEntityId, externalKey) triple.
    * The triple is protected by a partial unique index so at most one row matches.
    * Returns null when no task exists — callers use this for idempotency checks.
    */
   async findByExternalKey(
-    relatedEntityType: string,
+    kind: string,
     relatedEntityId: string,
     externalKey: string,
   ): Promise<{ id: string } | null> {
@@ -29,12 +29,27 @@ export class TasksService {
       .from(tasks)
       .where(
         and(
-          eq(tasks.relatedEntityType, relatedEntityType),
+          eq(tasks.kind, kind),
           eq(tasks.relatedEntityId, relatedEntityId),
           eq(tasks.externalKey, externalKey),
         ),
       )
       .limit(1);
     return rows[0] ?? null;
+  }
+
+  /**
+   * Returns the kind discriminator for a task, or null if either the
+   * task doesn't exist or it's an ad-hoc (kind-less) task. Used by the
+   * entity-engine hook in TASKS_CONFIG to reject generic /tasks mutations
+   * against rows owned by a specific domain.
+   */
+  async getKind(id: string): Promise<string | null> {
+    const rows = await this.database.db
+      .select({ kind: tasks.kind })
+      .from(tasks)
+      .where(eq(tasks.id, id))
+      .limit(1);
+    return rows[0]?.kind ?? null;
   }
 }

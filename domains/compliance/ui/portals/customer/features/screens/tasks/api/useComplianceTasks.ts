@@ -1,5 +1,7 @@
 import { useMemo } from 'react';
-import { useEntityHooks } from '@packages/entity-engine-ui';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from '@packages/ui';
+import { useEntityEngine, useEntityHooks } from '@packages/entity-engine-ui';
 import { useOrgUnits } from '@packages/org-units-ui';
 import type { OrgUnit } from '@packages/org-units-ui';
 import type { FilingRow } from '../../filings/data/filingsMock';
@@ -10,18 +12,34 @@ interface PaginatedResponse<T> {
   meta: { total: number; page: number; limit: number; totalPages: number };
 }
 
-interface TaskRecord {
+/**
+ * Row shape returned by GET /compliance-tasks — matches ComplianceTaskRow
+ * on the server. Compliance-specific fields (ruleId, clientId, lawId,
+ * periodStart/End) come straight from the join — no external_key parsing.
+ */
+interface ComplianceTaskRow {
   id: string;
   title: string;
+  description: string | null;
   status: string;
   priority: string;
-  assigneeId?: string | null;
-  assigneeTeamId?: string | null;
-  dueDate?: string | null;
-  completedAt?: string | null;
-  relatedEntityType?: string | null;
-  relatedEntityId?: string | null;
-  externalKey?: string | null;
+  assigneeId: string | null;
+  assigneeTeamId: string | null;
+  dueDate: string | null;
+  completedAt: string | null;
+  ruleId: string;
+  clientId: string;
+  lawId: string;
+  periodStart: string;
+  periodEnd: string;
+  externalKey: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface ComplianceTasksResponse {
+  rows: ComplianceTaskRow[];
+  total: number;
 }
 
 interface RuleRecord {
@@ -50,7 +68,7 @@ const PRIORITY_MAP: Record<string, FilingRow['priority']> = {
   low: 'low',
 };
 
-function computeFilingStatus(task: TaskRecord, today: Date): Filing['status'] {
+function computeFilingStatus(task: ComplianceTaskRow, today: Date): Filing['status'] {
   if (task.completedAt) return 'filed';
   if (!task.dueDate) return 'upcoming';
   const due = new Date(task.dueDate);
@@ -82,13 +100,6 @@ function unitToHandler(unit: OrgUnit | undefined): Handler | undefined {
   };
 }
 
-function parseExternalKey(externalKey?: string | null): { clientId: string; periodStart: string } {
-  if (!externalKey) return { clientId: '', periodStart: '' };
-  const parts = externalKey.split(':');
-  if (parts.length < 3) return { clientId: '', periodStart: '' };
-  return { clientId: parts[parts.length - 2], periodStart: parts[parts.length - 1] };
-}
-
 function formatPeriodLabel(periodStart: string): string {
   if (!periodStart) return '';
   const d = new Date(periodStart);
@@ -106,12 +117,15 @@ export interface ComplianceTasksResult {
 }
 
 export function useComplianceTaskRows(): ComplianceTasksResult {
-  const tasksHooks = useEntityHooks('tasks');
+  const { apiFn } = useEntityEngine();
   const rulesHooks = useEntityHooks('compliance_rules');
   const lawsHooks = useEntityHooks('laws');
   const clientsHooks = useEntityHooks('clients');
 
-  const tasksQuery = tasksHooks.useList({ relatedEntityType: 'compliance_rule', limit: 1000 });
+  const tasksQuery = useQuery<ComplianceTasksResponse>({
+    queryKey: ['compliance-tasks', { limit: 1000 }],
+    queryFn: () => apiFn.get<ComplianceTasksResponse>('/compliance-tasks?limit=1000'),
+  });
   const rulesQuery = rulesHooks.useList({ limit: 1000 });
   const lawsQuery = lawsHooks.useList({ limit: 1000 });
   const clientsQuery = clientsHooks.useList({ limit: 1000 });
@@ -132,8 +146,7 @@ export function useComplianceTaskRows(): ComplianceTasksResult {
     orgUnitsQuery.error;
 
   const { rows, handlers, clientOptions, lawOptions } = useMemo(() => {
-    const tasks =
-      (tasksQuery.data as PaginatedResponse<TaskRecord> | undefined)?.data ?? ([] as TaskRecord[]);
+    const tasks = tasksQuery.data?.rows ?? [];
     const rules =
       (rulesQuery.data as PaginatedResponse<RuleRecord> | undefined)?.data ?? ([] as RuleRecord[]);
     const laws =
@@ -152,21 +165,20 @@ export function useComplianceTaskRows(): ComplianceTasksResult {
     today.setHours(0, 0, 0, 0);
 
     const builtRows = tasks.map((t): FilingRow => {
-      const rule = t.relatedEntityId ? ruleById.get(t.relatedEntityId) : undefined;
-      const law = rule?.lawId ? lawById.get(rule.lawId) : undefined;
-      const { clientId, periodStart } = parseExternalKey(t.externalKey);
-      const client = clientId ? clientById.get(clientId) : undefined;
+      const rule = ruleById.get(t.ruleId);
+      const law = lawById.get(t.lawId);
+      const client = clientById.get(t.clientId);
       const unit = t.assigneeTeamId ? unitById.get(t.assigneeTeamId) : undefined;
 
       return {
         id: t.id,
-        clientId,
+        clientId: t.clientId,
         clientName: client?.name ?? '—',
-        lawId: rule?.lawId ?? '',
+        lawId: t.lawId,
         lawCode: law?.code ?? '',
         ruleName: rule?.name ?? t.title,
         dueDate: t.dueDate ?? '',
-        periodLabel: formatPeriodLabel(periodStart),
+        periodLabel: formatPeriodLabel(t.periodStart),
         handler: unitToHandler(unit),
         jurisdiction: (law?.jurisdiction as Filing['jurisdiction']) ?? 'central',
         status: computeFilingStatus(t, today),
@@ -205,4 +217,33 @@ export function useComplianceTaskRows(): ComplianceTasksResult {
   ]);
 
   return { rows, loading, error, handlers, clientOptions, lawOptions };
+}
+
+export interface UpdateComplianceTaskPayload {
+  status?: string;
+  priority?: string;
+  description?: string | null;
+  assigneeId?: string | null;
+  assigneeTeamId?: string | null;
+  dueDate?: string | null;
+  title?: string;
+}
+
+export function useUpdateComplianceTask(options?: { silent?: boolean }) {
+  const { apiFn } = useEntityEngine();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: UpdateComplianceTaskPayload }) =>
+      apiFn.put<unknown>(`/compliance-tasks/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['compliance-tasks'] });
+    },
+    onError: (error: unknown) => {
+      if (options?.silent) return;
+      const message =
+        (error as { body?: { message?: string } })?.body?.message ?? 'Failed to update task';
+      toast.error(message);
+    },
+  });
 }

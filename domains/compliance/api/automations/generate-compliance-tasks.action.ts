@@ -1,8 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { ModuleRef } from '@nestjs/core';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
-import { DomainEventEmitter } from '@packages/events';
-import { TasksService } from '@packages/tasks';
 import type {
   ActionHandler,
   ActionContext,
@@ -10,19 +7,11 @@ import type {
   UserSlotDefinition,
 } from '@packages/automation-contracts';
 
-import { ComplianceRuleService, type ComplianceRule, type Occurrence } from '../rules/compliance-rules.service';
+import { ComplianceRuleService, type Occurrence } from '../rules/compliance-rules.service';
 import { ClientRegistrationService } from '../client-registrations/client-registrations.service';
-import { COMPLIANCE_TASK_GENERATED } from '../events/types';
-
-interface TaskEntityService {
-  create(
-    data: Record<string, unknown>,
-    actorId: string,
-  ): Promise<{ id: string; [k: string]: unknown }>;
-}
+import { ComplianceTasksService } from '../compliance-tasks/compliance-tasks.service';
 
 const HORIZON_MONTHS = 6;
-const RELATED_ENTITY_TYPE = 'compliance_rule';
 
 @Injectable()
 export class GenerateComplianceTasksAction implements ActionHandler {
@@ -36,9 +25,7 @@ export class GenerateComplianceTasksAction implements ActionHandler {
   constructor(
     private readonly ruleService: ComplianceRuleService,
     private readonly clientRegistrationService: ClientRegistrationService,
-    private readonly tasksService: TasksService,
-    private readonly events: DomainEventEmitter,
-    private readonly moduleRef: ModuleRef,
+    private readonly complianceTasksService: ComplianceTasksService,
     appLogger: AppLoggerService,
   ) {
     this.logger = appLogger.forContext(GenerateComplianceTasksAction.name);
@@ -57,12 +44,6 @@ export class GenerateComplianceTasksAction implements ActionHandler {
       return {};
     }
 
-    const tasksEntityService = this.getTasksEntityService();
-    if (!tasksEntityService) {
-      this.logger.error('Tasks EntityService not registered — cannot generate compliance tasks');
-      return {};
-    }
-
     const registrations = await this.clientRegistrationService.getRegisteredClients(rule.lawId);
     if (registrations.length === 0) {
       this.logger.debug('No registered clients for rule — skipping', { ruleId, lawId: rule.lawId });
@@ -76,54 +57,36 @@ export class GenerateComplianceTasksAction implements ActionHandler {
     let created = 0;
     for (const reg of registrations) {
       for (const occ of occurrences) {
-        const externalKey = this.buildExternalKey(rule.id, reg.clientId, occ.periodStart);
+        const periodStart = this.toIsoDate(occ.periodStart);
 
-        const existing = await this.tasksService.findByExternalKey(
-          RELATED_ENTITY_TYPE,
+        const existing = await this.complianceTasksService.findByRuleClientPeriod(
           rule.id,
-          externalKey,
+          reg.clientId,
+          periodStart,
         );
         if (existing) continue;
 
         const assigneeOrgId = await this.ruleService.resolveAssignee(rule.lawId, reg.clientId);
 
-        const task = await tasksEntityService.create(
+        await this.complianceTasksService.create(
           {
             title: this.buildTitle(rule.name, occ),
             dueDate: this.toIsoDate(occ.dueDate),
-            assigneeTeamId: assigneeOrgId,
-            relatedEntityType: RELATED_ENTITY_TYPE,
-            relatedEntityId: rule.id,
-            externalKey,
-          },
-          'system',
-        );
-
-        this.events.emitDynamic(COMPLIANCE_TASK_GENERATED, {
-          entityType: 'compliance_rule',
-          entityId: rule.id,
-          actorId: null,
-          payload: {
             ruleId: rule.id,
             clientId: reg.clientId,
             lawId: rule.lawId,
-            taskId: task.id,
-            externalKey,
-            periodStart: this.toIsoDate(occ.periodStart),
+            periodStart,
             periodEnd: this.toIsoDate(occ.periodEnd),
-            dueDate: this.toIsoDate(occ.dueDate),
+            assigneeTeamId: assigneeOrgId,
           },
-        });
+          'system',
+        );
         created += 1;
       }
     }
 
     this.logger.log('Compliance task generation complete', { ruleId, created });
     return {};
-  }
-
-  private buildExternalKey(ruleId: string, clientId: string, periodStart: Date): string {
-    return `${ruleId}:${clientId}:${this.toIsoDate(periodStart)}`;
   }
 
   private toIsoDate(date: Date): string {
@@ -141,13 +104,5 @@ export class GenerateComplianceTasksAction implements ActionHandler {
     const m = from.getUTCMonth();
     const d = from.getUTCDate();
     return new Date(Date.UTC(y, m + n, d));
-  }
-
-  private getTasksEntityService(): TaskEntityService | null {
-    try {
-      return this.moduleRef.get<TaskEntityService>('ENTITY_SERVICE_tasks', { strict: false });
-    } catch {
-      return null;
-    }
   }
 }

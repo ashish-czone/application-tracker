@@ -14,6 +14,9 @@
  */
 export const COMPLIANCE_PERMISSIONS = {
   FILINGS_READ: 'filings.read',
+  FILINGS_CREATE: 'filings.create',
+  FILINGS_UPDATE: 'filings.update',
+  FILINGS_DELETE: 'filings.delete',
   REPORTS_READ: 'reports.read',
 } as const;
 
@@ -32,5 +35,8 @@ interface PermissionRegistration {
  */
 export const COMPLIANCE_PERMISSION_REGISTRATIONS: PermissionRegistration[] = [
   { module: 'filings', action: 'read', description: 'View compliance filings' },
+  { module: 'filings', action: 'create', description: 'Create compliance filings' },
+  { module: 'filings', action: 'update', description: 'Update compliance filings' },
+  { module: 'filings', action: 'delete', description: 'Delete compliance filings' },
   { module: 'reports', action: 'read', description: 'View compliance reports' },
 ];

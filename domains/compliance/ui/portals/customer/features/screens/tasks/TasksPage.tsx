@@ -17,7 +17,6 @@ import {
   type KanbanColumnDef,
   type KanbanCardData,
 } from '@packages/ui';
-import { useEntityHooks } from '@packages/entity-engine-ui';
 import { ComplianceCalendar } from '../../../../../shared';
 import type { FilingRow } from '../filings/data/filingsMock';
 import { FilingDetailDrawer } from '../filings/components/FilingDetailDrawer';
@@ -35,7 +34,7 @@ import { FilingKanbanCard } from '../filings/components/FilingKanbanCard';
 import { OverdueAlert } from '../filings/components/OverdueAlert';
 import type { Filing } from '../../../../../shared/types';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
-import { useComplianceTaskRows } from './api/useComplianceTasks';
+import { useComplianceTaskRows, useUpdateComplianceTask } from './api/useComplianceTasks';
 
 type StatusTab = 'all' | Filing['status'];
 type ViewMode = 'list' | 'kanban' | 'calendar';
@@ -56,8 +55,7 @@ const KANBAN_COLUMNS: KanbanColumnDef[] = [
 
 export function TasksPage() {
   const { rows, loading, handlers, clientOptions, lawOptions } = useComplianceTaskRows();
-  const tasksHooks = useEntityHooks('tasks');
-  const updateTask = tasksHooks.useUpdate();
+  const updateTask = useUpdateComplianceTask();
 
   const [viewMode, setViewMode] = useState<ViewMode>('list');
 
