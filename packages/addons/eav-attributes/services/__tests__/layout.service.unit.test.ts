@@ -44,11 +44,16 @@ function makeSection(overrides: Record<string, unknown> = {}) {
 describe('LayoutService', () => {
   let service: LayoutService;
   let mockDb: ReturnType<typeof createMockDb>;
+  let mockFieldDefService: { listByEntityWithOptions: ReturnType<typeof vi.fn>; findByEntityAndKey: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     mockDb = createMockDb();
     const databaseService = { db: mockDb } as any;
-    service = new LayoutService(databaseService);
+    mockFieldDefService = {
+      listByEntityWithOptions: vi.fn().mockReturnValue([]),
+      findByEntityAndKey: vi.fn().mockReturnValue(null),
+    };
+    service = new LayoutService(databaseService, mockFieldDefService as any);
   });
 
   // --- createSection ---
@@ -260,7 +265,10 @@ describe('LayoutService', () => {
   describe('getLayout', () => {
     it('should return full layout with sections, fields, and picklist options', async () => {
       const sections = [makeSection()];
-      const fields = [
+      const layoutFieldRows = [
+        { sectionId: 'sec1', fieldId: 'fd1', sortOrder: 0, columnIndex: 0 },
+      ];
+      const fieldsWithOptions = [
         {
           id: 'fd1', entityType: 'candidates', fieldKey: 'status', label: 'Status',
           fieldType: 'picklist', uiType: null, isRequired: false, isSystem: false,
@@ -268,21 +276,17 @@ describe('LayoutService', () => {
           maxLength: null, defaultValue: null, columnName: null, lookupEntity: null,
           lookupLabelField: null, lookupSearchFields: null, sortOrder: 0,
           createdAt: new Date(), updatedAt: new Date(),
+          picklistOptions: [
+            { id: 'po1', fieldId: 'fd1', label: 'Active', value: 'active', isDefault: true, sortOrder: 0 },
+          ],
+          columnIndex: 0,
         },
       ];
-      const layoutFieldRows = [
-        { sectionId: 'sec1', fieldId: 'fd1', sortOrder: 0, columnIndex: 0 },
-      ];
-      const picklistOpts = [
-        { id: 'po1', fieldId: 'fd1', label: 'Active', value: 'active', isDefault: true, sortOrder: 0 },
-      ];
 
-      // sections query
       mockDb._chain.orderBy
-        .mockResolvedValueOnce(sections)   // sections
-        .mockResolvedValueOnce(fields)     // allFields
-        .mockResolvedValueOnce(layoutFieldRows) // allLayoutFields
-        .mockResolvedValueOnce(picklistOpts);   // allPicklistOptions
+        .mockResolvedValueOnce(sections)
+        .mockResolvedValueOnce(layoutFieldRows);
+      mockFieldDefService.listByEntityWithOptions.mockReturnValue(fieldsWithOptions);
 
       const result = await service.getLayout('candidates', 'Standard');
 
@@ -296,7 +300,15 @@ describe('LayoutService', () => {
 
     it('should include unassigned fields section for fields not in any section', async () => {
       const sections = [makeSection()];
-      const fields = [
+      // Only fd1 is placed in the section
+      const layoutFieldRows = [
+        { sectionId: 'sec1', fieldId: 'fd1', sortOrder: 0, columnIndex: 0 },
+      ];
+
+      mockDb._chain.orderBy
+        .mockResolvedValueOnce(sections)
+        .mockResolvedValueOnce(layoutFieldRows);
+      mockFieldDefService.listByEntityWithOptions.mockReturnValue([
         {
           id: 'fd1', entityType: 'candidates', fieldKey: 'name', label: 'Name',
           fieldType: 'text', uiType: null, isRequired: false, isSystem: false,
@@ -304,6 +316,7 @@ describe('LayoutService', () => {
           maxLength: null, defaultValue: null, columnName: null, lookupEntity: null,
           lookupLabelField: null, lookupSearchFields: null, sortOrder: 0,
           createdAt: new Date(), updatedAt: new Date(),
+          picklistOptions: [], columnIndex: 0,
         },
         {
           id: 'fd2', entityType: 'candidates', fieldKey: 'orphan', label: 'Orphan Field',
@@ -312,18 +325,9 @@ describe('LayoutService', () => {
           maxLength: null, defaultValue: null, columnName: null, lookupEntity: null,
           lookupLabelField: null, lookupSearchFields: null, sortOrder: 1,
           createdAt: new Date(), updatedAt: new Date(),
+          picklistOptions: [], columnIndex: 0,
         },
-      ];
-      // Only fd1 is placed in the section
-      const layoutFieldRows = [
-        { sectionId: 'sec1', fieldId: 'fd1', sortOrder: 0, columnIndex: 0 },
-      ];
-
-      mockDb._chain.orderBy
-        .mockResolvedValueOnce(sections)
-        .mockResolvedValueOnce(fields)
-        .mockResolvedValueOnce(layoutFieldRows)
-        .mockResolvedValueOnce([]); // no picklist options
+      ]);
 
       const result = await service.getLayout('candidates', 'Standard');
 
@@ -337,8 +341,8 @@ describe('LayoutService', () => {
     });
 
     it('should include quickCreateFields', async () => {
-      const sections: any[] = [];
-      const fields = [
+      mockDb._chain.orderBy.mockResolvedValueOnce([]);
+      mockFieldDefService.listByEntityWithOptions.mockReturnValue([
         {
           id: 'fd1', entityType: 'candidates', fieldKey: 'name', label: 'Name',
           fieldType: 'text', uiType: null, isRequired: true, isSystem: false,
@@ -346,6 +350,7 @@ describe('LayoutService', () => {
           maxLength: null, defaultValue: null, columnName: null, lookupEntity: null,
           lookupLabelField: null, lookupSearchFields: null, sortOrder: 0,
           createdAt: new Date(), updatedAt: new Date(),
+          picklistOptions: [], columnIndex: 0,
         },
         {
           id: 'fd2', entityType: 'candidates', fieldKey: 'email', label: 'Email',
@@ -354,13 +359,9 @@ describe('LayoutService', () => {
           maxLength: null, defaultValue: null, columnName: null, lookupEntity: null,
           lookupLabelField: null, lookupSearchFields: null, sortOrder: 1,
           createdAt: new Date(), updatedAt: new Date(),
+          picklistOptions: [], columnIndex: 0,
         },
-      ];
-
-      mockDb._chain.orderBy
-        .mockResolvedValueOnce(sections)
-        .mockResolvedValueOnce(fields)
-        .mockResolvedValueOnce([]) // no picklist options (empty sectionIds)
+      ]);
 
       const result = await service.getLayout('candidates');
 
@@ -369,33 +370,22 @@ describe('LayoutService', () => {
     });
 
     it('should cache results and return cached on second call', async () => {
-      const sections: any[] = [];
-      const fields: any[] = [];
+      mockDb._chain.orderBy.mockResolvedValueOnce([]);
 
-      mockDb._chain.orderBy
-        .mockResolvedValueOnce(sections)
-        .mockResolvedValueOnce(fields);
-
-      // First call populates cache
       const first = await service.getLayout('candidates', 'Standard');
 
-      // Reset mock call counts
       mockDb.select.mockClear();
+      mockFieldDefService.listByEntityWithOptions.mockClear();
 
-      // Second call should return from cache
       const second = await service.getLayout('candidates', 'Standard');
 
       expect(second).toEqual(first);
       expect(mockDb.select).not.toHaveBeenCalled();
+      expect(mockFieldDefService.listByEntityWithOptions).not.toHaveBeenCalled();
     });
 
     it('should invalidate cache after mutations', async () => {
-      const sections: any[] = [];
-      const fields: any[] = [];
-
-      mockDb._chain.orderBy
-        .mockResolvedValueOnce(sections)
-        .mockResolvedValueOnce(fields);
+      mockDb._chain.orderBy.mockResolvedValueOnce([]);
 
       // Populate cache
       await service.getLayout('candidates', 'Standard');
@@ -407,9 +397,7 @@ describe('LayoutService', () => {
 
       // Reset and setup for new getLayout call
       mockDb.select.mockClear();
-      mockDb._chain.orderBy
-        .mockResolvedValueOnce([])
-        .mockResolvedValueOnce([]);
+      mockDb._chain.orderBy.mockResolvedValueOnce([]);
 
       // Should re-fetch since cache was invalidated
       await service.getLayout('candidates', 'Standard');
@@ -425,14 +413,9 @@ describe('LayoutService', () => {
       mockDb._chain.limit.mockResolvedValueOnce([]);
 
       const section = makeSection();
-      // Insert section returning
       mockDb._chain.returning.mockResolvedValueOnce([section]);
 
-      // Look up field by key
-      const fieldDef = {
-        id: 'fd1', entityType: 'candidates', fieldKey: 'first_name',
-      };
-      mockDb._chain.limit.mockResolvedValueOnce([fieldDef]);
+      mockFieldDefService.findByEntityAndKey.mockReturnValue({ id: 'fd1', entityType: 'candidates', fieldKey: 'first_name' });
 
       await service.seedDefaultLayout('candidates', [
         { name: 'Basic Info', fields: ['first_name'] },
@@ -461,8 +444,8 @@ describe('LayoutService', () => {
       const section = makeSection();
       mockDb._chain.returning.mockResolvedValueOnce([section]);
 
-      // field not found
-      mockDb._chain.limit.mockResolvedValueOnce([]);
+      // field not found — mock returns null (default)
+      mockFieldDefService.findByEntityAndKey.mockReturnValue(null);
 
       await service.seedDefaultLayout('candidates', [
         { name: 'Basic Info', fields: ['nonexistent_field'] },

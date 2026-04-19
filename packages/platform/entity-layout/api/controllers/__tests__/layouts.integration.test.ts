@@ -3,7 +3,7 @@ import request from 'supertest';
 import { randomUUID } from 'crypto';
 import { sql } from 'drizzle-orm';
 import { createPackageTestApp, withAuth, cleanDatabase, type PackageTestApp } from '@packages/platform-testing';
-import { EntityEngineModule } from '@packages/entity-engine';
+import { EntityEngineModule, FieldDefinitionService } from '@packages/entity-engine';
 import { EntityLayoutModule } from '../../entity-layout.module';
 import { EAV_PERMISSIONS } from '@packages/entity-engine/permissions';
 
@@ -26,6 +26,7 @@ describe('LayoutsController (integration)', () => {
 
   beforeEach(async () => {
     await cleanDatabase(ctx.db);
+    await ctx.module.get(FieldDefinitionService).reloadCache();
   });
 
   // ── Helpers ──────────────────────────────────────────────────
