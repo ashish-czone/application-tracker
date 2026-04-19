@@ -116,7 +116,7 @@ export function ScreenPreviewTopBar({ active }: { active: ScreenKey }) {
               <div className="p-1">
                 <DropdownMenuItem asChild>
                   <Link
-                    to="/screens/global-sets"
+                    to="/global-sets"
                     className="rounded-none px-3 py-2 text-xs font-sans text-ink focus:bg-paper focus:text-ink cursor-pointer flex items-center"
                   >
                     <Layers className="w-3.5 h-3.5 mr-2 text-ink-muted" strokeWidth={1.5} />
@@ -125,7 +125,7 @@ export function ScreenPreviewTopBar({ active }: { active: ScreenKey }) {
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link
-                    to="/screens/org-hierarchy"
+                    to="/org-hierarchy"
                     className="rounded-none px-3 py-2 text-xs font-sans text-ink focus:bg-paper focus:text-ink cursor-pointer flex items-center"
                   >
                     <Building2 className="w-3.5 h-3.5 mr-2 text-ink-muted" strokeWidth={1.5} />
@@ -134,7 +134,7 @@ export function ScreenPreviewTopBar({ active }: { active: ScreenKey }) {
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link
-                    to="/screens/roles"
+                    to="/compliance-roles"
                     className="rounded-none px-3 py-2 text-xs font-sans text-ink focus:bg-paper focus:text-ink cursor-pointer flex items-center"
                   >
                     <Shield className="w-3.5 h-3.5 mr-2 text-ink-muted" strokeWidth={1.5} />
@@ -143,7 +143,7 @@ export function ScreenPreviewTopBar({ active }: { active: ScreenKey }) {
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link
-                    to="/screens/users"
+                    to="/compliance-users"
                     className="rounded-none px-3 py-2 text-xs font-sans text-ink focus:bg-paper focus:text-ink cursor-pointer flex items-center"
                   >
                     <UsersIcon className="w-3.5 h-3.5 mr-2 text-ink-muted" strokeWidth={1.5} />
@@ -152,7 +152,7 @@ export function ScreenPreviewTopBar({ active }: { active: ScreenKey }) {
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link
-                    to="/screens/admin-settings"
+                    to="/admin-settings"
                     className="rounded-none px-3 py-2 text-xs font-sans text-ink focus:bg-paper focus:text-ink cursor-pointer flex items-center"
                   >
                     <Wrench className="w-3.5 h-3.5 mr-2 text-ink-muted" strokeWidth={1.5} />
@@ -192,21 +192,21 @@ export function ScreenPreviewTopBar({ active }: { active: ScreenKey }) {
               <div className="p-1">
                 <DropdownMenuItem
                   className="rounded-none px-3 py-2 text-xs font-sans text-ink focus:bg-paper focus:text-ink cursor-pointer"
-                  onSelect={() => navigate('/screens/settings')}
+                  onSelect={() => navigate('/compliance-settings')}
                 >
                   <User className="w-3.5 h-3.5 mr-2 text-ink-muted" strokeWidth={1.5} />
                   Profile
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className="rounded-none px-3 py-2 text-xs font-sans text-ink focus:bg-paper focus:text-ink cursor-pointer"
-                  onSelect={() => navigate('/screens/settings')}
+                  onSelect={() => navigate('/compliance-settings')}
                 >
                   <Settings className="w-3.5 h-3.5 mr-2 text-ink-muted" strokeWidth={1.5} />
                   Settings
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className="rounded-none px-3 py-2 text-xs font-sans text-ink focus:bg-paper focus:text-ink cursor-pointer"
-                  onSelect={() => navigate('/screens/settings')}
+                  onSelect={() => navigate('/compliance-settings')}
                 >
                   <KeyRound className="w-3.5 h-3.5 mr-2 text-ink-muted" strokeWidth={1.5} />
                   Change password
