@@ -39,6 +39,9 @@ export function complianceSystemSeedSources(): SeedSource[] {
 
 export function complianceDemoSeedSources(): SeedSource[] {
   return [
+    demo('@domains/compliance-api/demo-laws', () =>
+      import('./laws/seeds/demo-laws').then((m) => m.seedDemoLaws),
+    ),
     demo('@domains/compliance-api/demo-clients', () =>
       import('./clients/seeds/demo-clients').then((m) => m.seedDemoClients),
     ),

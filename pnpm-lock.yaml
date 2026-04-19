@@ -1342,6 +1342,9 @@ importers:
       '@packages/events':
         specifier: workspace:*
         version: link:../../../packages/core/events
+      '@packages/hierarchy':
+        specifier: workspace:*
+        version: link:../../../packages/platform/hierarchy
       '@packages/logger':
         specifier: workspace:*
         version: link:../../../packages/core/logger
