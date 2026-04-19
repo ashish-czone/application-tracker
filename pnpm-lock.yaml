@@ -305,7 +305,7 @@ importers:
         version: link:../../packages/core/database
       '@packages/document-templates':
         specifier: workspace:*
-        version: link:../../packages/addons/document-templates
+        version: link:../../packages/addons/document-templates/api
       '@packages/eav-attributes':
         specifier: workspace:*
         version: link:../../packages/addons/eav-attributes
@@ -483,7 +483,7 @@ importers:
         version: link:../../packages/platform/automations/ui
       '@packages/document-templates-ui':
         specifier: workspace:*
-        version: link:../../packages/addons/document-templates-ui
+        version: link:../../packages/addons/document-templates/ui
       '@packages/eav-attributes-ui':
         specifier: workspace:*
         version: link:../../packages/platform/eav-attributes-ui
@@ -873,7 +873,7 @@ importers:
         version: link:../../packages/core/database
       '@packages/document-templates':
         specifier: workspace:*
-        version: link:../../packages/addons/document-templates
+        version: link:../../packages/addons/document-templates/api
       '@packages/eav-attributes':
         specifier: workspace:*
         version: link:../../packages/addons/eav-attributes
@@ -1066,7 +1066,7 @@ importers:
         version: link:../../packages/addons/calendar-ui
       '@packages/document-templates-ui':
         specifier: workspace:*
-        version: link:../../packages/addons/document-templates-ui
+        version: link:../../packages/addons/document-templates/ui
       '@packages/domains':
         specifier: workspace:*
         version: link:../../packages/platform/domains
@@ -1466,7 +1466,7 @@ importers:
         version: link:../../../packages/core/database
       '@packages/document-templates':
         specifier: workspace:*
-        version: link:../../../packages/addons/document-templates
+        version: link:../../../packages/addons/document-templates/api
       '@packages/domains':
         specifier: workspace:*
         version: link:../../../packages/platform/domains
@@ -1560,7 +1560,7 @@ importers:
         version: link:../../../packages/core/common
       '@packages/document-templates-ui':
         specifier: workspace:*
-        version: link:../../../packages/addons/document-templates-ui
+        version: link:../../../packages/addons/document-templates/ui
       '@packages/domains':
         specifier: workspace:*
         version: link:../../../packages/platform/domains
@@ -1746,7 +1746,7 @@ importers:
         specifier: ^5.7.0
         version: 5.9.3
 
-  packages/addons/document-templates:
+  packages/addons/document-templates/api:
     dependencies:
       '@nestjs/common':
         specifier: ^11.0.0
@@ -1756,16 +1756,16 @@ importers:
         version: 11.2.6(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)
       '@packages/auth-core':
         specifier: workspace:*
-        version: link:../../platform/auth-core
+        version: link:../../../platform/auth-core
       '@packages/database':
         specifier: workspace:*
-        version: link:../../core/database
+        version: link:../../../core/database
       '@packages/logger':
         specifier: workspace:*
-        version: link:../../core/logger
+        version: link:../../../core/logger
       '@packages/rbac':
         specifier: workspace:*
-        version: link:../../platform/rbac/api
+        version: link:../../../platform/rbac/api
       class-transformer:
         specifier: ^0.5.1
         version: 0.5.1
@@ -1778,7 +1778,7 @@ importers:
     devDependencies:
       '@packages/platform-testing':
         specifier: workspace:*
-        version: link:../../platform/testing
+        version: link:../../../platform/testing
       '@types/supertest':
         specifier: ^6.0.2
         version: 6.0.3
@@ -1795,14 +1795,14 @@ importers:
         specifier: ^3.0.0
         version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)
 
-  packages/addons/document-templates-ui:
+  packages/addons/document-templates/ui:
     dependencies:
       '@packages/common':
         specifier: workspace:*
-        version: link:../../core/common
+        version: link:../../../core/common
       '@packages/ui':
         specifier: workspace:*
-        version: link:../../core/ui
+        version: link:../../../core/ui
       '@tanstack/react-query':
         specifier: ^5.0.0
         version: 5.90.21(react@19.2.4)
