@@ -58,7 +58,7 @@ const complianceRuleSchema = z.object({
   code: z.string().min(1, 'Code is required'),
   name: z.string().min(1, 'Name is required'),
   description: z.string(),
-  lawGroup: z.string().min(1, 'Law is required'),
+  lawId: z.string().min(1, 'Law is required'),
   frequency: z.string().min(1, 'Cadence is required'),
   dueDayOfMonth: z.string(),
   dueMonthOffset: z.string(),
@@ -67,23 +67,32 @@ const complianceRuleSchema = z.object({
 
 type ComplianceRuleFormValues = z.infer<typeof complianceRuleSchema>;
 
+/** Subset of frequencies accepted by the backend. */
+type CreatableFrequency = 'monthly' | 'quarterly' | 'half-yearly' | 'yearly';
+
 /** External-facing shape — narrows the enum-like fields for onCreate consumers. */
 export interface NewComplianceRuleValues {
   code: string;
   name: string;
   description: string;
-  lawGroup: LawGroupKey | '';
-  frequency: ComplianceRuleFrequency | '';
+  lawId: string;
+  frequency: CreatableFrequency | '';
   dueDayOfMonth: string;
   dueMonthOffset: string;
   gracePeriodDays: string;
+}
+
+export interface DrawerLawOption {
+  id: string;
+  code: string;
+  name: string;
 }
 
 const EMPTY_FORM: ComplianceRuleFormValues = {
   code: '',
   name: '',
   description: '',
-  lawGroup: '',
+  lawId: '',
   frequency: '',
   dueDayOfMonth: '',
   dueMonthOffset: '0',
@@ -99,21 +108,30 @@ const FREQUENCY_LABEL: Record<ComplianceRuleFrequency, string> = {
   'ad-hoc': 'Ad-hoc',
 };
 
-const LAW_OPTIONS = LAW_GROUPS.map((g) => ({ value: g.key, label: g.label }));
-const FREQUENCY_OPTIONS = (
-  Object.entries(FREQUENCY_LABEL) as [ComplianceRuleFrequency, string][]
-).map(([value, label]) => ({ value, label }));
+const CREATABLE_FREQUENCIES: CreatableFrequency[] = ['monthly', 'quarterly', 'half-yearly', 'yearly'];
+const FREQUENCY_OPTIONS = CREATABLE_FREQUENCIES.map((value) => ({
+  value,
+  label: FREQUENCY_LABEL[value],
+}));
+const TEMPLATE_LAW_OPTIONS = LAW_GROUPS.map((g) => ({ value: g.key, label: g.label }));
 
 // ─── Props ───────────────────────────────────────────────────────────
 
 export interface NewComplianceRuleDrawerProps {
   onClose?: () => void;
   onCreate?: (values: NewComplianceRuleValues, templateId?: string) => void;
+  laws: DrawerLawOption[];
+  isSubmitting?: boolean;
 }
 
 // ─── Component ───────────────────────────────────────────────────────
 
-export function NewComplianceRuleDrawer({ onClose, onCreate }: NewComplianceRuleDrawerProps) {
+export function NewComplianceRuleDrawer({
+  onClose,
+  onCreate,
+  laws,
+  isSubmitting,
+}: NewComplianceRuleDrawerProps) {
   const [mode, setMode] = useState<DrawerMode>('pick');
   const [slideDir, setSlideDir] = useState<SlideDirection>('forward');
   const [selectedTemplate, setSelectedTemplate] = useState<RuleTemplate | null>(null);
@@ -125,6 +143,17 @@ export function NewComplianceRuleDrawer({ onClose, onCreate }: NewComplianceRule
     resolver: zodResolver(complianceRuleSchema),
     defaultValues: EMPTY_FORM,
   });
+
+  const lawOptions = useMemo(
+    () => laws.map((l) => ({ value: l.id, label: `${l.code} — ${l.name}` })),
+    [laws],
+  );
+
+  const lawByCode = useMemo(() => {
+    const map = new Map<string, DrawerLawOption>();
+    for (const law of laws) map.set(law.code.toUpperCase(), law);
+    return map;
+  }, [laws]);
 
   // ── Template search / filter ─────────────────────────────────────
 
@@ -150,12 +179,15 @@ export function NewComplianceRuleDrawer({ onClose, onCreate }: NewComplianceRule
 
   function pickTemplate(tpl: RuleTemplate) {
     setSelectedTemplate(tpl);
+    const matchedLawId = lawByCode.get(tpl.lawCode.toUpperCase())?.id ?? '';
+    const templateFrequency: ComplianceRuleFormValues['frequency'] =
+      (CREATABLE_FREQUENCIES as string[]).includes(tpl.frequency) ? tpl.frequency : '';
     form.reset({
       code: tpl.code,
       name: tpl.name,
       description: tpl.description,
-      lawGroup: tpl.lawGroup,
-      frequency: tpl.frequency,
+      lawId: matchedLawId,
+      frequency: templateFrequency,
       dueDayOfMonth: String(tpl.dueDayOfMonth),
       dueMonthOffset: String(tpl.dueMonthOffset),
       gracePeriodDays: String(tpl.gracePeriodDays),
@@ -268,6 +300,7 @@ export function NewComplianceRuleDrawer({ onClose, onCreate }: NewComplianceRule
                       scheduleOpen={scheduleOpen}
                       setScheduleOpen={setScheduleOpen}
                       isTemplate={mode === 'template'}
+                      lawOptions={lawOptions}
                     />
                   )}
                 </motion.div>
@@ -279,6 +312,7 @@ export function NewComplianceRuleDrawer({ onClose, onCreate }: NewComplianceRule
               <FormFooter
                 onCancel={() => onClose?.()}
                 isTemplate={mode === 'template'}
+                isSubmitting={isSubmitting ?? false}
               />
             )}
           </form>
@@ -290,7 +324,15 @@ export function NewComplianceRuleDrawer({ onClose, onCreate }: NewComplianceRule
 // ─── Footer ─────────────────────────────────────────────────────────
 // Inside FormProvider so it can read formState for the modified summary.
 
-function FormFooter({ onCancel, isTemplate }: { onCancel: () => void; isTemplate: boolean }) {
+function FormFooter({
+  onCancel,
+  isTemplate,
+  isSubmitting,
+}: {
+  onCancel: () => void;
+  isTemplate: boolean;
+  isSubmitting: boolean;
+}) {
   const {
     formState: { dirtyFields },
   } = useFormContext<ComplianceRuleFormValues>();
@@ -305,11 +347,11 @@ function FormFooter({ onCancel, isTemplate }: { onCancel: () => void; isTemplate
         </p>
       )}
       <div className="flex items-center gap-3">
-        <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
+        <Button type="button" variant="ghost" size="sm" onClick={onCancel} disabled={isSubmitting}>
           Cancel
         </Button>
-        <Button type="submit" size="sm" className="ml-auto">
-          Create as draft
+        <Button type="submit" size="sm" className="ml-auto" disabled={isSubmitting}>
+          {isSubmitting ? 'Creating…' : 'Create as draft'}
         </Button>
       </div>
     </footer>
@@ -387,7 +429,7 @@ function PickModeBody({
           <Combobox
             value={templateLawFilter}
             onChange={(v) => setTemplateLawFilter(v as LawGroupKey | '')}
-            options={[{ value: '', label: 'All laws' }, ...LAW_OPTIONS]}
+            options={[{ value: '', label: 'All laws' }, ...TEMPLATE_LAW_OPTIONS]}
             placeholder="All laws"
             searchPlaceholder="Search laws..."
           />
@@ -460,11 +502,13 @@ function FormBody({
   scheduleOpen,
   setScheduleOpen,
   isTemplate,
+  lawOptions,
 }: {
   selectedTemplate: RuleTemplate | null;
   scheduleOpen: boolean;
   setScheduleOpen: (v: boolean) => void;
   isTemplate: boolean;
+  lawOptions: { value: string; label: string }[];
 }) {
   const {
     formState: { dirtyFields },
@@ -508,11 +552,11 @@ function FormBody({
         />
       </ComplianceRuleField>
 
-      <ComplianceRuleField name="lawGroup" label="Law" required isTemplate={isTemplate}>
+      <ComplianceRuleField name="lawId" label="Law" required isTemplate={isTemplate}>
         <FormSelect
-          name="lawGroup"
-          options={LAW_OPTIONS}
-          placeholder="Select law group"
+          name="lawId"
+          options={lawOptions}
+          placeholder="Select law"
         />
       </ComplianceRuleField>
 

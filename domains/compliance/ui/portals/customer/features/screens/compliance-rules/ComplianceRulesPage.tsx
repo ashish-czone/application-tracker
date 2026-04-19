@@ -8,8 +8,10 @@ import {
   CoarseTabs,
   SearchInput,
   ScreenLayout,
+  toast,
   type ActiveFilter,
 } from '@packages/ui';
+import { useEntityHooks } from '@packages/entity-engine-ui';
 import {
   LAW_GROUPS,
   type LawGroupKey,
@@ -25,7 +27,10 @@ import {
   COMPLIANCE_RULE_COLUMNS,
   REQUIRED_COMPLIANCE_RULE_COLUMN_KEYS,
 } from './components/complianceRuleColumns';
-import { NewComplianceRuleDrawer } from './components/NewComplianceRuleDrawer';
+import {
+  NewComplianceRuleDrawer,
+  type NewComplianceRuleValues,
+} from './components/NewComplianceRuleDrawer';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 import {
   useComplianceRulesList,
@@ -47,6 +52,9 @@ export function ComplianceRulesPage() {
 
   const { data: rulesPage, isLoading, isError } = useComplianceRulesList({ limit: 200 });
   const { data: lawsPage } = useLawsLookup();
+
+  const rulesHooks = useEntityHooks('compliance_rules');
+  const createRule = rulesHooks.useCreate({ onSuccess: () => setDrawerOpen(false) });
 
   const lawById = useMemo(() => {
     const map = new Map<string, LawRecord>();
@@ -281,8 +289,52 @@ export function ComplianceRulesPage() {
       </ScreenLayout>
 
       <AnimatePresence>
-        {drawerOpen && <NewComplianceRuleDrawer onClose={() => setDrawerOpen(false)} />}
+        {drawerOpen && (
+          <NewComplianceRuleDrawer
+            onClose={() => setDrawerOpen(false)}
+            laws={lawsPage?.data ?? []}
+            isSubmitting={createRule.isPending}
+            onCreate={(values) => {
+              const payload = toCreatePayload(values);
+              if (!payload) {
+                toast.error('Frequency or numeric values are missing');
+                return;
+              }
+              createRule.mutate(payload);
+            }}
+          />
+        )}
       </AnimatePresence>
     </>
   );
+}
+
+const FREQUENCY_TO_API: Record<NewComplianceRuleValues['frequency'], string | null> = {
+  '': null,
+  monthly: 'monthly',
+  quarterly: 'quarterly',
+  'half-yearly': 'half_yearly',
+  yearly: 'yearly',
+};
+
+function toCreatePayload(values: NewComplianceRuleValues): Record<string, unknown> | null {
+  const apiFrequency = FREQUENCY_TO_API[values.frequency];
+  if (!apiFrequency) return null;
+  const dueDayOfMonth = Number(values.dueDayOfMonth);
+  const dueMonthOffset = Number(values.dueMonthOffset);
+  const gracePeriodDays = Number(values.gracePeriodDays);
+  if (!Number.isFinite(dueDayOfMonth) || dueDayOfMonth < 1 || dueDayOfMonth > 31) return null;
+  if (!Number.isFinite(dueMonthOffset)) return null;
+  if (!Number.isFinite(gracePeriodDays)) return null;
+  return {
+    code: values.code,
+    name: values.name,
+    lawId: values.lawId,
+    frequency: apiFrequency,
+    status: 'draft',
+    dueDayOfMonth,
+    dueMonthOffset,
+    gracePeriodDays,
+    description: values.description || undefined,
+  };
 }
