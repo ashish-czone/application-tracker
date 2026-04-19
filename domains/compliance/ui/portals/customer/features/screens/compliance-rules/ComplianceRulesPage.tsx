@@ -12,38 +12,38 @@ import {
 } from '@packages/ui';
 import {
   LAW_GROUPS,
-  MOCK_OBLIGATIONS,
-  OBLIGATION_STATUS_COUNTS,
+  MOCK_COMPLIANCE_RULES,
+  COMPLIANCE_RULE_STATUS_COUNTS,
   type LawGroupKey,
-  type Obligation,
-  type ObligationFrequency,
-} from './data/obligationsMock';
+  type ComplianceRule,
+  type ComplianceRuleFrequency,
+} from './data/complianceRulesMock';
 import {
   JURISDICTION_OPTIONS,
   type JurisdictionKey,
-} from './data/obligationFilterOptions';
+} from './data/complianceRuleFilterOptions';
 import { FREQUENCY_LABEL, FREQUENCY_OPTIONS } from './components/FrequencyPill';
 import {
-  OBLIGATION_COLUMNS,
-  REQUIRED_OBLIGATION_COLUMN_KEYS,
-} from './components/obligationColumns';
-import { NewObligationDrawer } from './components/NewObligationDrawer';
+  COMPLIANCE_RULE_COLUMNS,
+  REQUIRED_COMPLIANCE_RULE_COLUMN_KEYS,
+} from './components/complianceRuleColumns';
+import { NewComplianceRuleDrawer } from './components/NewComplianceRuleDrawer';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 
-type StatusTab = 'all' | Obligation['status'];
+type StatusTab = 'all' | ComplianceRule['status'];
 
-export function ObligationsLibraryPage() {
+export function ComplianceRulesPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const [lawFilter, setLawFilter] = useState<LawGroupKey[]>([]);
   const [jurisdictionFilter, setJurisdictionFilter] = useState<JurisdictionKey[]>([]);
-  const [frequencyFilter, setFrequencyFilter] = useState<ObligationFrequency[]>([]);
+  const [frequencyFilter, setFrequencyFilter] = useState<ComplianceRuleFrequency[]>([]);
   const [search, setSearch] = useState('');
   const [statusTab, setStatusTab] = useState<StatusTab>('all');
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return MOCK_OBLIGATIONS.filter((o) => {
+    return MOCK_COMPLIANCE_RULES.filter((o) => {
       if (statusTab !== 'all' && o.status !== statusTab) return false;
       if (lawFilter.length > 0 && !lawFilter.includes(o.lawGroup)) return false;
       if (
@@ -94,9 +94,9 @@ export function ObligationsLibraryPage() {
   };
 
   const totalCoverage = Math.round(
-    MOCK_OBLIGATIONS.reduce((acc, o) => acc + o.onTimePct, 0) / MOCK_OBLIGATIONS.length,
+    MOCK_COMPLIANCE_RULES.reduce((acc, o) => acc + o.onTimePct, 0) / MOCK_COMPLIANCE_RULES.length,
   );
-  const totalFilingsThisPeriod = MOCK_OBLIGATIONS.reduce(
+  const totalFilingsThisPeriod = MOCK_COMPLIANCE_RULES.reduce(
     (acc, o) => acc + o.filingsThisPeriod,
     0,
   );
@@ -110,36 +110,36 @@ export function ObligationsLibraryPage() {
   const jurisdictionOptions = JURISDICTION_OPTIONS.map((j) => ({
     value: j.value,
     label: j.label,
-    count: MOCK_OBLIGATIONS.filter((o) => o.jurisdiction === j.value).length,
+    count: MOCK_COMPLIANCE_RULES.filter((o) => o.jurisdiction === j.value).length,
   }));
 
   const frequencyOptions = FREQUENCY_OPTIONS.map((f) => ({
     value: f.value,
     label: f.label,
-    count: MOCK_OBLIGATIONS.filter((o) => o.frequency === f.value).length,
+    count: MOCK_COMPLIANCE_RULES.filter((o) => o.frequency === f.value).length,
   }));
 
   const statusTabs = [
-    { value: 'all' as const, label: 'All', count: MOCK_OBLIGATIONS.length },
-    { value: 'active' as const, label: 'Active', count: OBLIGATION_STATUS_COUNTS.active },
-    { value: 'draft' as const, label: 'Draft', count: OBLIGATION_STATUS_COUNTS.draft },
+    { value: 'all' as const, label: 'All', count: MOCK_COMPLIANCE_RULES.length },
+    { value: 'active' as const, label: 'Active', count: COMPLIANCE_RULE_STATUS_COUNTS.active },
+    { value: 'draft' as const, label: 'Draft', count: COMPLIANCE_RULE_STATUS_COUNTS.draft },
     {
       value: 'deprecated' as const,
       label: 'Deprecated',
-      count: OBLIGATION_STATUS_COUNTS.deprecated,
+      count: COMPLIANCE_RULE_STATUS_COUNTS.deprecated,
     },
   ];
 
   return (
     <>
       <ScreenLayout
-        topBar={<ScreenPreviewTopBar active="obligations" />}
-        breadcrumb={['Knowledge base', 'Laws', 'Obligations Library']}
-        title="Obligations Library"
+        topBar={<ScreenPreviewTopBar active="compliance-rules" />}
+        breadcrumb={['Knowledge base', 'Laws', 'Compliance Rules']}
+        title="Compliance Rules"
         subtitle={
           <>
-            {MOCK_OBLIGATIONS.length} rules across {LAW_GROUPS.length} law groups — the canonical
-            catalog used to generate filings for every client on roll-over.
+            {MOCK_COMPLIANCE_RULES.length} rules across {LAW_GROUPS.length} law groups — the
+            canonical catalog used to generate filings for every client on roll-over.
           </>
         }
         actions={
@@ -150,41 +150,41 @@ export function ObligationsLibraryPage() {
             </Button>
             <Button size="sm" onClick={() => setDrawerOpen(true)}>
               <Plus className="w-3.5 h-3.5 mr-1.5" strokeWidth={2} />
-              New obligation
+              New rule
             </Button>
           </>
         }
         kpis={[
           {
-            label: 'Total obligations',
-            value: String(MOCK_OBLIGATIONS.length),
+            label: 'Total rules',
+            value: String(MOCK_COMPLIANCE_RULES.length),
             unit: 'rules',
             delta: `${LAW_GROUPS.length} law groups`,
             deltaTone: 'neutral',
             accent: 'authority',
-            sparklineData: [72, 75, 78, 82, 83, 85, MOCK_OBLIGATIONS.length],
+            sparklineData: [72, 75, 78, 82, 83, 85, MOCK_COMPLIANCE_RULES.length],
             sparklineTone: 'authority',
             footnote: 'catalog size',
           },
           {
             label: 'Active',
-            value: String(OBLIGATION_STATUS_COUNTS.active),
+            value: String(COMPLIANCE_RULE_STATUS_COUNTS.active),
             unit: 'rules',
             delta: '▲ 2 since last review',
             deltaTone: 'positive',
             accent: 'filed',
-            sparklineData: [68, 70, 71, 72, 73, 74, OBLIGATION_STATUS_COUNTS.active],
+            sparklineData: [68, 70, 71, 72, 73, 74, COMPLIANCE_RULE_STATUS_COUNTS.active],
             sparklineTone: 'filed',
-            footnote: `of ${MOCK_OBLIGATIONS.length} total`,
+            footnote: `of ${MOCK_COMPLIANCE_RULES.length} total`,
           },
           {
             label: 'In draft',
-            value: String(OBLIGATION_STATUS_COUNTS.draft),
+            value: String(COMPLIANCE_RULE_STATUS_COUNTS.draft),
             unit: 'rules',
             delta: 'awaiting review',
             deltaTone: 'neutral',
             accent: 'due-soon',
-            sparklineData: [4, 6, 7, 8, 6, 5, OBLIGATION_STATUS_COUNTS.draft],
+            sparklineData: [4, 6, 7, 8, 6, 5, COMPLIANCE_RULE_STATUS_COUNTS.draft],
             sparklineTone: 'due-soon',
             footnote: 'open for edits',
           },
@@ -205,11 +205,11 @@ export function ObligationsLibraryPage() {
           <CoarseTabs tabs={statusTabs} value={statusTab} onChange={setStatusTab} animated />
 
           <DataGridShell
-            columns={OBLIGATION_COLUMNS}
+            columns={COMPLIANCE_RULE_COLUMNS}
             rows={filtered}
             getRowKey={(o) => o.id}
-            requiredColumns={REQUIRED_OBLIGATION_COLUMN_KEYS}
-            totalRows={MOCK_OBLIGATIONS.length}
+            requiredColumns={REQUIRED_COMPLIANCE_RULE_COLUMN_KEYS}
+            totalRows={MOCK_COMPLIANCE_RULES.length}
             activeFilters={activeFilters}
             onClearFilters={clearAll}
             filters={
@@ -217,7 +217,7 @@ export function ObligationsLibraryPage() {
                 <SearchInput
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search obligations…"
+                  placeholder="Search rules…"
                   wrapperClassName="min-w-[200px] max-w-xs flex-1"
                 />
                 <div className="flex items-center gap-2">
@@ -237,7 +237,7 @@ export function ObligationsLibraryPage() {
                     label="Cadence"
                     options={frequencyOptions}
                     value={frequencyFilter}
-                    onChange={(v) => setFrequencyFilter(v as ObligationFrequency[])}
+                    onChange={(v) => setFrequencyFilter(v as ComplianceRuleFrequency[])}
                   />
                 </div>
               </>
@@ -247,7 +247,7 @@ export function ObligationsLibraryPage() {
       </ScreenLayout>
 
       <AnimatePresence>
-        {drawerOpen && <NewObligationDrawer onClose={() => setDrawerOpen(false)} />}
+        {drawerOpen && <NewComplianceRuleDrawer onClose={() => setDrawerOpen(false)} />}
       </AnimatePresence>
     </>
   );

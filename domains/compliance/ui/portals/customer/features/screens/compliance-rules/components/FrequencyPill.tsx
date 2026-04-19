@@ -1,7 +1,7 @@
 import { Pill } from '../../../../../../components';
-import type { ObligationFrequency } from '../data/obligationsMock';
+import type { ComplianceRuleFrequency } from '../data/complianceRulesMock';
 
-export const FREQUENCY_LABEL: Record<ObligationFrequency, string> = {
+export const FREQUENCY_LABEL: Record<ComplianceRuleFrequency, string> = {
   monthly: 'Monthly',
   quarterly: 'Quarterly',
   'half-yearly': 'Half-yearly',
@@ -10,12 +10,12 @@ export const FREQUENCY_LABEL: Record<ObligationFrequency, string> = {
   'ad-hoc': 'Ad-hoc',
 };
 
-export const FREQUENCY_OPTIONS: { value: ObligationFrequency; label: string }[] = (
-  Object.keys(FREQUENCY_LABEL) as ObligationFrequency[]
+export const FREQUENCY_OPTIONS: { value: ComplianceRuleFrequency; label: string }[] = (
+  Object.keys(FREQUENCY_LABEL) as ComplianceRuleFrequency[]
 ).map((f) => ({ value: f, label: FREQUENCY_LABEL[f] }));
 
 export interface FrequencyPillProps {
-  frequency: ObligationFrequency;
+  frequency: ComplianceRuleFrequency;
 }
 
 export function FrequencyPill({ frequency }: FrequencyPillProps) {

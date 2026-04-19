@@ -6,7 +6,6 @@ import {
 
 describe('compliance permissions', () => {
   it('exposes the UI-surface permission strings as constants', () => {
-    expect(COMPLIANCE_PERMISSIONS.OBLIGATIONS_READ).toBe('obligations.read');
     expect(COMPLIANCE_PERMISSIONS.FILINGS_READ).toBe('filings.read');
     expect(COMPLIANCE_PERMISSIONS.REPORTS_READ).toBe('reports.read');
   });

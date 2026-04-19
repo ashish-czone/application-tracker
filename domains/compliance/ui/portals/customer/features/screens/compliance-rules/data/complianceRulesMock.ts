@@ -1,12 +1,12 @@
 import type { Handler } from '../../../../../../shared/types';
 import { MOCK_HANDLERS } from '../../../console-preview/mockData';
 
-// An Obligation is a *rule definition* — the canonical filing requirement for
-// a law/form/cadence combination. Concrete filings (the instances consumed on
-// the dashboard) are generated from obligations at period roll-over. This is
-// the registry view: one row per rule, not per client per period.
+// A ComplianceRule is the canonical filing requirement for a law/form/cadence
+// combination. Concrete filings (the instances consumed on the dashboard) are
+// generated from rules at period roll-over. This is the registry view: one row
+// per rule, not per client per period.
 
-export type ObligationFrequency =
+export type ComplianceRuleFrequency =
   | 'monthly'
   | 'quarterly'
   | 'half-yearly'
@@ -14,7 +14,7 @@ export type ObligationFrequency =
   | 'event'
   | 'ad-hoc';
 
-export type ObligationStatus = 'active' | 'draft' | 'deprecated';
+export type ComplianceRuleStatus = 'active' | 'draft' | 'deprecated';
 
 export type LawGroupKey = 'gst' | 'itr' | 'tds' | 'roc' | 'pt' | 'pf' | 'labour';
 
@@ -25,7 +25,7 @@ export interface LawGroup {
   count: number;
 }
 
-export interface Obligation {
+export interface ComplianceRule {
   id: string;
   code: string; // GSTR-3B, ITR-6, TDS-24Q
   name: string; // Short title
@@ -34,16 +34,16 @@ export interface Obligation {
   lawCode: string; // GST, IT, TDS…
   lawName: string; // "Goods & Services Tax"
   jurisdiction: 'central' | 'state' | 'municipal';
-  frequency: ObligationFrequency;
+  frequency: ComplianceRuleFrequency;
   applicableClients: number; // how many clients this rule applies to
   filingsThisPeriod: number; // generated instances for the current period
   onTimePct: number; // 0-100 — compliance health for this rule (trailing 12 months)
-  status: ObligationStatus;
+  status: ComplianceRuleStatus;
   owner: Handler;
   lastReviewed: string; // ISO date — "March 2026"
 }
 
-export const OBLIGATIONS_TODAY = '2026-04-15';
+export const COMPLIANCE_RULES_TODAY = '2026-04-15';
 
 export const LAW_GROUPS: LawGroup[] = [
   { key: 'gst', label: 'Goods & Services Tax', jurisdiction: 'central', count: 12 },
@@ -55,7 +55,7 @@ export const LAW_GROUPS: LawGroup[] = [
   { key: 'labour', label: 'Labour welfare', jurisdiction: 'state', count: 7 },
 ];
 
-export const MOCK_OBLIGATIONS: Obligation[] = [
+export const MOCK_COMPLIANCE_RULES: ComplianceRule[] = [
   {
     id: 'o1',
     code: 'GSTR-1',
@@ -313,17 +313,17 @@ export const MOCK_OBLIGATIONS: Obligation[] = [
   },
 ];
 
-export const OBLIGATION_STATUS_COUNTS = {
-  active: MOCK_OBLIGATIONS.filter((o) => o.status === 'active').length,
-  draft: MOCK_OBLIGATIONS.filter((o) => o.status === 'draft').length,
-  deprecated: MOCK_OBLIGATIONS.filter((o) => o.status === 'deprecated').length,
+export const COMPLIANCE_RULE_STATUS_COUNTS = {
+  active: MOCK_COMPLIANCE_RULES.filter((o) => o.status === 'active').length,
+  draft: MOCK_COMPLIANCE_RULES.filter((o) => o.status === 'draft').length,
+  deprecated: MOCK_COMPLIANCE_RULES.filter((o) => o.status === 'deprecated').length,
 };
 
 // ─── Rule Templates ─────────────────────────────────────────────────
 // These represent the platform-shipped catalog of standard Indian
-// regulatory obligations. Firms instantiate (and optionally customise)
-// an obligation from a template. Templates are read-only for the firm;
-// the platform team updates them with regulatory changes.
+// regulatory rules. Firms instantiate (and optionally customise) a rule
+// from a template. Templates are read-only for the firm; the platform
+// team updates them with regulatory changes.
 
 export interface RuleTemplate {
   id: string;
@@ -334,7 +334,7 @@ export interface RuleTemplate {
   lawCode: string;
   lawName: string;
   jurisdiction: 'central' | 'state' | 'municipal';
-  frequency: ObligationFrequency;
+  frequency: ComplianceRuleFrequency;
   dueDayOfMonth: number;
   dueMonthOffset: number;
   gracePeriodDays: number;

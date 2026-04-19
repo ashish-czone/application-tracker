@@ -2,18 +2,17 @@
  * Compliance domain permission constants.
  *
  * The entity-engine auto-registers CRUD permissions for every declared entity
- * (clients, client-contacts, client-registrations, laws, compliance-rules,
+ * (clients, client-contacts, client-registrations, laws, compliance_rules,
  * law-handlers — see compliance.module.ts). The constants below cover the UI
- * surfaces that don't yet have backing entities (filings, obligations,
- * reports). Once those become real entities, the auto-registered CRUD perms
- * supersede these and the constants can be removed.
+ * surfaces that don't yet have backing entities (filings, reports). Once
+ * those become real entities, the auto-registered CRUD perms supersede these
+ * and the constants can be removed.
  *
  * The string format mirrors the entity-engine convention: `<module>.<action>`.
  * Keep these in sync with the route-level permissions declared in
  * `domains/compliance/ui/index.tsx`.
  */
 export const COMPLIANCE_PERMISSIONS = {
-  OBLIGATIONS_READ: 'obligations.read',
   FILINGS_READ: 'filings.read',
   REPORTS_READ: 'reports.read',
 } as const;
@@ -32,7 +31,6 @@ interface PermissionRegistration {
  * Grouped by module so each can be passed to `registerPermissions(module, ...)`.
  */
 export const COMPLIANCE_PERMISSION_REGISTRATIONS: PermissionRegistration[] = [
-  { module: 'obligations', action: 'read', description: 'View the obligations library' },
   { module: 'filings', action: 'read', description: 'View compliance filings' },
   { module: 'reports', action: 'read', description: 'View compliance reports' },
 ];

@@ -518,7 +518,7 @@ export function ConsolePreviewPageV2() {
           { label: 'Console', to: '/console-preview-v2', active: true },
           { label: 'Clients', to: '/screens/clients' },
           { label: 'Laws', to: '/screens/laws' },
-          { label: 'Obligations', to: '/screens/obligations' },
+          { label: 'Compliance Rules', to: '/screens/compliance-rules' },
           { label: 'Filings', to: '/screens/filings' },
           { label: 'Reports', to: '/screens/reports' },
         ]}
