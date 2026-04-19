@@ -18,6 +18,7 @@ import { ClientsService } from './clients/clients.service';
 import { ClientContactsService } from './client-contacts/client-contacts.service';
 import { ClientsController } from './clients/clients.controller';
 import { ComplianceRuleService } from './rules/compliance-rules.service';
+import { ComplianceTasksService } from './compliance-tasks/compliance-tasks.service';
 import { GenerateComplianceTasksAction } from './automations/generate-compliance-tasks.action';
 import { COMPLIANCE_PERMISSION_REGISTRATIONS } from './permissions';
 
@@ -39,6 +40,7 @@ import { COMPLIANCE_PERMISSION_REGISTRATIONS } from './permissions';
     ClientsService,
     ClientContactsService,
     ComplianceRuleService,
+    ComplianceTasksService,
     GenerateComplianceTasksAction,
   ],
 })
