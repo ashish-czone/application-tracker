@@ -1323,7 +1323,7 @@ importers:
         version: 11.1.16(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@11.1.16)(reflect-metadata@0.2.2)(rxjs@7.8.2)
       '@packages/address':
         specifier: workspace:*
-        version: link:../../../packages/platform/address
+        version: link:../../../packages/platform/address/api
       '@packages/automation-contracts':
         specifier: workspace:*
         version: link:../../../packages/platform/automation-contracts
@@ -2837,11 +2837,11 @@ importers:
         specifier: ^5.7.0
         version: 5.9.3
 
-  packages/platform/address:
+  packages/platform/address/api:
     dependencies:
       '@packages/field-types':
         specifier: workspace:*
-        version: link:../field-types
+        version: link:../../field-types
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3))
@@ -2860,7 +2860,7 @@ importers:
     dependencies:
       '@packages/address':
         specifier: workspace:*
-        version: link:..
+        version: link:../api
       '@packages/field-types':
         specifier: workspace:*
         version: link:../../field-types
