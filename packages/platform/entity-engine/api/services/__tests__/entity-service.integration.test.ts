@@ -201,7 +201,7 @@ describe('EntityService (integration)', () => {
   afterAll(async () => {
     await db.execute(sql`DROP TABLE IF EXISTS test_entities`);
     await cleanDatabase(db);
-    LookupResolverService.clearRegistry();
+    module.get(LookupResolverService).clearRegistry();
     await cleanup();
   });
 
