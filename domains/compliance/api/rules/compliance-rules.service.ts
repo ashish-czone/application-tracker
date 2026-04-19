@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { DatabaseService, and, eq, isNull } from '@packages/database';
-import { complianceRules, type ComplianceFrequency } from '../schema/rules';
+import type { ComplianceFrequency } from '@domains/compliance-contract';
+import { complianceRules } from '../schema/rules';
 import { complianceLawHandlers } from '../schema/law-handlers';
 import { LawHandlerService } from '../law-handlers/law-handlers.service';
 

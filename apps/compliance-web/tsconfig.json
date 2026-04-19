@@ -82,7 +82,9 @@
       "@domains/compliance-api": ["../../domains/compliance/api"],
       "@domains/compliance-api/*": ["../../domains/compliance/api/*"],
       "@domains/compliance-ui": ["../../domains/compliance/ui"],
-      "@domains/compliance-ui/*": ["../../domains/compliance/ui/*"]
+      "@domains/compliance-ui/*": ["../../domains/compliance/ui/*"],
+      "@domains/compliance-contract": ["../../domains/compliance/contract"],
+      "@domains/compliance-contract/*": ["../../domains/compliance/contract/*"]
     },
     "noEmit": true
   },
