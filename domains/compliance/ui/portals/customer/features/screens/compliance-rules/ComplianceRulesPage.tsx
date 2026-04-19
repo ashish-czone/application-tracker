@@ -12,11 +12,11 @@ import {
   type ActiveFilter,
 } from '@packages/ui';
 import { useEntityHooks } from '@packages/entity-engine-ui';
+import { type ComplianceFrequency } from '@domains/compliance-contract';
 import {
   LAW_GROUPS,
   type LawGroupKey,
   type ComplianceRule,
-  type ComplianceRuleFrequency,
 } from './data/complianceRulesMock';
 import {
   JURISDICTION_OPTIONS,
@@ -46,7 +46,7 @@ export function ComplianceRulesPage() {
 
   const [lawFilter, setLawFilter] = useState<LawGroupKey[]>([]);
   const [jurisdictionFilter, setJurisdictionFilter] = useState<JurisdictionKey[]>([]);
-  const [frequencyFilter, setFrequencyFilter] = useState<ComplianceRuleFrequency[]>([]);
+  const [frequencyFilter, setFrequencyFilter] = useState<ComplianceFrequency[]>([]);
   const [search, setSearch] = useState('');
   const [statusTab, setStatusTab] = useState<StatusTab>('all');
 
@@ -279,7 +279,7 @@ export function ComplianceRulesPage() {
                     label="Cadence"
                     options={frequencyOptions}
                     value={frequencyFilter}
-                    onChange={(v) => setFrequencyFilter(v as ComplianceRuleFrequency[])}
+                    onChange={(v) => setFrequencyFilter(v as ComplianceFrequency[])}
                   />
                 </div>
               </>
@@ -309,17 +309,8 @@ export function ComplianceRulesPage() {
   );
 }
 
-const FREQUENCY_TO_API: Record<NewComplianceRuleValues['frequency'], string | null> = {
-  '': null,
-  monthly: 'monthly',
-  quarterly: 'quarterly',
-  'half-yearly': 'half_yearly',
-  yearly: 'yearly',
-};
-
 function toCreatePayload(values: NewComplianceRuleValues): Record<string, unknown> | null {
-  const apiFrequency = FREQUENCY_TO_API[values.frequency];
-  if (!apiFrequency) return null;
+  if (!values.frequency) return null;
   const dueDayOfMonth = Number(values.dueDayOfMonth);
   const dueMonthOffset = Number(values.dueMonthOffset);
   const gracePeriodDays = Number(values.gracePeriodDays);
@@ -330,7 +321,7 @@ function toCreatePayload(values: NewComplianceRuleValues): Record<string, unknow
     code: values.code,
     name: values.name,
     lawId: values.lawId,
-    frequency: apiFrequency,
+    frequency: values.frequency,
     status: 'draft',
     dueDayOfMonth,
     dueMonthOffset,

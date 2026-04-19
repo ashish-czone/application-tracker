@@ -1,7 +1,7 @@
+import { FREQUENCIES, type ComplianceFrequency } from '@domains/compliance-contract';
 import type { Handler } from '../../../../../../shared/types';
 import type {
   ComplianceRule,
-  ComplianceRuleFrequency,
   ComplianceRuleStatus,
   LawGroupKey,
 } from '../data/complianceRulesMock';
@@ -14,15 +14,6 @@ const UNASSIGNED_HANDLER: Handler = {
 };
 
 const STATUS_VALUES: ComplianceRuleStatus[] = ['active', 'draft', 'deprecated'];
-
-// Backend frequencies use snake_case (half_yearly); UI mock uses kebab (half-yearly).
-// Backend has no `event` or `ad-hoc` — those remain UI-only options for now.
-const FREQUENCY_FROM_API: Record<string, ComplianceRuleFrequency> = {
-  monthly: 'monthly',
-  quarterly: 'quarterly',
-  half_yearly: 'half-yearly',
-  yearly: 'yearly',
-};
 
 const LAW_CODE_TO_GROUP: Record<string, LawGroupKey> = {
   GST: 'gst',
@@ -43,9 +34,11 @@ function normalizeStatus(status: string | null | undefined): ComplianceRuleStatu
   return 'draft';
 }
 
-function normalizeFrequency(value: string | null | undefined): ComplianceRuleFrequency {
-  if (!value) return 'monthly';
-  return FREQUENCY_FROM_API[value] ?? (value as ComplianceRuleFrequency);
+function normalizeFrequency(value: string | null | undefined): ComplianceFrequency {
+  if (value && (FREQUENCIES as readonly string[]).includes(value)) {
+    return value as ComplianceFrequency;
+  }
+  return 'monthly';
 }
 
 function normalizeJurisdiction(

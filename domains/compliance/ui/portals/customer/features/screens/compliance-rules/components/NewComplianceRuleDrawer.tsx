@@ -22,14 +22,15 @@ import {
   FormSelect,
   FormTextarea,
 } from '@packages/ui';
+import { FREQUENCIES, type ComplianceFrequency } from '@domains/compliance-contract';
 import { JurisdictionTag } from '../../../../../../components';
 import {
   MOCK_RULE_TEMPLATES,
   LAW_GROUPS,
   type RuleTemplate,
-  type ComplianceRuleFrequency,
   type LawGroupKey,
 } from '../data/complianceRulesMock';
+import { FREQUENCY_LABEL, FREQUENCY_OPTIONS } from './FrequencyPill';
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -67,16 +68,13 @@ const complianceRuleSchema = z.object({
 
 type ComplianceRuleFormValues = z.infer<typeof complianceRuleSchema>;
 
-/** Subset of frequencies accepted by the backend. */
-type CreatableFrequency = 'monthly' | 'quarterly' | 'half-yearly' | 'yearly';
-
 /** External-facing shape — narrows the enum-like fields for onCreate consumers. */
 export interface NewComplianceRuleValues {
   code: string;
   name: string;
   description: string;
   lawId: string;
-  frequency: CreatableFrequency | '';
+  frequency: ComplianceFrequency | '';
   dueDayOfMonth: string;
   dueMonthOffset: string;
   gracePeriodDays: string;
@@ -99,20 +97,6 @@ const EMPTY_FORM: ComplianceRuleFormValues = {
   gracePeriodDays: '0',
 };
 
-const FREQUENCY_LABEL: Record<ComplianceRuleFrequency, string> = {
-  monthly: 'Monthly',
-  quarterly: 'Quarterly',
-  'half-yearly': 'Half-yearly',
-  yearly: 'Yearly',
-  event: 'On event',
-  'ad-hoc': 'Ad-hoc',
-};
-
-const CREATABLE_FREQUENCIES: CreatableFrequency[] = ['monthly', 'quarterly', 'half-yearly', 'yearly'];
-const FREQUENCY_OPTIONS = CREATABLE_FREQUENCIES.map((value) => ({
-  value,
-  label: FREQUENCY_LABEL[value],
-}));
 const TEMPLATE_LAW_OPTIONS = LAW_GROUPS.map((g) => ({ value: g.key, label: g.label }));
 
 // ─── Props ───────────────────────────────────────────────────────────
@@ -181,7 +165,7 @@ export function NewComplianceRuleDrawer({
     setSelectedTemplate(tpl);
     const matchedLawId = lawByCode.get(tpl.lawCode.toUpperCase())?.id ?? '';
     const templateFrequency: ComplianceRuleFormValues['frequency'] =
-      (CREATABLE_FREQUENCIES as string[]).includes(tpl.frequency) ? tpl.frequency : '';
+      (FREQUENCIES as readonly string[]).includes(tpl.frequency) ? tpl.frequency : '';
     form.reset({
       code: tpl.code,
       name: tpl.name,

@@ -1,3 +1,4 @@
+import type { ComplianceFrequency } from '@domains/compliance-contract';
 import type { Handler } from '../../../../../../shared/types';
 import { MOCK_HANDLERS } from '../../../console-preview/mockData';
 
@@ -5,14 +6,6 @@ import { MOCK_HANDLERS } from '../../../console-preview/mockData';
 // combination. Concrete filings (the instances consumed on the dashboard) are
 // generated from rules at period roll-over. This is the registry view: one row
 // per rule, not per client per period.
-
-export type ComplianceRuleFrequency =
-  | 'monthly'
-  | 'quarterly'
-  | 'half-yearly'
-  | 'yearly'
-  | 'event'
-  | 'ad-hoc';
 
 export type ComplianceRuleStatus = 'active' | 'draft' | 'deprecated';
 
@@ -34,7 +27,7 @@ export interface ComplianceRule {
   lawCode: string; // GST, IT, TDS…
   lawName: string; // "Goods & Services Tax"
   jurisdiction: 'central' | 'state' | 'municipal';
-  frequency: ComplianceRuleFrequency;
+  frequency: ComplianceFrequency;
   applicableClients: number; // how many clients this rule applies to
   filingsThisPeriod: number; // generated instances for the current period
   onTimePct: number; // 0-100 — compliance health for this rule (trailing 12 months)
@@ -334,7 +327,7 @@ export interface RuleTemplate {
   lawCode: string;
   lawName: string;
   jurisdiction: 'central' | 'state' | 'municipal';
-  frequency: ComplianceRuleFrequency;
+  frequency: ComplianceFrequency;
   dueDayOfMonth: number;
   dueMonthOffset: number;
   gracePeriodDays: number;
