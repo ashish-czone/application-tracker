@@ -45,5 +45,22 @@ export function complianceDemoSeedSources(): SeedSource[] {
     demo('@domains/compliance-api/demo-clients', () =>
       import('./clients/seeds/demo-clients').then((m) => m.seedDemoClients),
     ),
+    demo('@domains/compliance-api/demo-users', () =>
+      import('./users/seeds/demo-users').then((m) => m.seedDemoUsers),
+    ),
+    demo('@domains/compliance-api/demo-law-handlers', () =>
+      import('./law-handlers/seeds/demo-law-handlers').then((m) => m.seedDemoLawHandlers),
+    ),
+    demo('@domains/compliance-api/demo-rules', () =>
+      import('./rules/seeds/demo-rules').then((m) => m.seedDemoRules),
+    ),
+    demo('@domains/compliance-api/demo-client-registrations', () =>
+      import('./client-registrations/seeds/demo-client-registrations').then(
+        (m) => m.seedDemoClientRegistrations,
+      ),
+    ),
+    demo('@domains/compliance-api/demo-tasks', () =>
+      import('./tasks/seeds/demo-tasks').then((m) => m.seedDemoTasks),
+    ),
   ];
 }
