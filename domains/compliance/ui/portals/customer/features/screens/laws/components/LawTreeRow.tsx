@@ -69,7 +69,7 @@ export function LawTreeRow({
           </div>
         </div>
         <div className="px-4 py-2.5 font-mono text-[11px] text-ink-muted tabular-nums">
-          {countAll(node)} oblg
+          — oblg
         </div>
       </div>
       {isOpen &&

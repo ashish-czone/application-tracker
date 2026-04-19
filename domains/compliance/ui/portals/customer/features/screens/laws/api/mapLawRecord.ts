@@ -1,7 +1,7 @@
 import type { LawNode, LawJurisdiction } from '../data/lawsMock';
 import type { LawApiRecord } from './useLawsApi';
 
-const JURISDICTIONS: LawJurisdiction[] = ['central', 'state', 'municipal'];
+const JURISDICTIONS: LawJurisdiction[] = ['central', 'state', 'municipal', 'international'];
 
 function normalizeJurisdiction(value: string | null | undefined): LawJurisdiction {
   if (value && (JURISDICTIONS as string[]).includes(value)) {
