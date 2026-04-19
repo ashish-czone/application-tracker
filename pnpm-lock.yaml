@@ -287,7 +287,7 @@ importers:
         version: link:../../packages/platform/app-shell
       '@packages/attachments':
         specifier: workspace:*
-        version: link:../../packages/addons/attachments
+        version: link:../../packages/addons/attachments/api
       '@packages/audit':
         specifier: workspace:*
         version: link:../../packages/platform/audit/api
@@ -471,7 +471,7 @@ importers:
         version: link:../../packages/platform/app-shell-ui
       '@packages/attachments-ui':
         specifier: workspace:*
-        version: link:../../packages/addons/attachments-ui
+        version: link:../../packages/addons/attachments/ui
       '@packages/audit-ui':
         specifier: workspace:*
         version: link:../../packages/platform/audit/ui
@@ -1051,7 +1051,7 @@ importers:
         version: link:../../packages/platform/app-shell-ui
       '@packages/attachments-ui':
         specifier: workspace:*
-        version: link:../../packages/addons/attachments-ui
+        version: link:../../packages/addons/attachments/ui
       '@packages/audit-ui':
         specifier: workspace:*
         version: link:../../packages/platform/audit/ui
@@ -1545,7 +1545,7 @@ importers:
     dependencies:
       '@packages/attachments-ui':
         specifier: workspace:*
-        version: link:../../../packages/addons/attachments-ui
+        version: link:../../../packages/addons/attachments/ui
       '@packages/audit-ui':
         specifier: workspace:*
         version: link:../../../packages/platform/audit/ui
@@ -1611,7 +1611,7 @@ importers:
         specifier: ^3.0.0
         version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)
 
-  packages/addons/attachments:
+  packages/addons/attachments/api:
     dependencies:
       '@nestjs/common':
         specifier: ^11.0.0
@@ -1627,28 +1627,28 @@ importers:
         version: 11.2.6(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)
       '@packages/audit':
         specifier: workspace:*
-        version: link:../../platform/audit/api
+        version: link:../../../platform/audit/api
       '@packages/auth-core':
         specifier: workspace:*
-        version: link:../../platform/auth-core
+        version: link:../../../platform/auth-core
       '@packages/database':
         specifier: workspace:*
-        version: link:../../core/database
+        version: link:../../../core/database
       '@packages/entity-engine':
         specifier: workspace:*
-        version: link:../../platform/entity-engine/api
+        version: link:../../../platform/entity-engine/api
       '@packages/events':
         specifier: workspace:*
-        version: link:../../core/events
+        version: link:../../../core/events
       '@packages/logger':
         specifier: workspace:*
-        version: link:../../core/logger
+        version: link:../../../core/logger
       '@packages/media':
         specifier: workspace:*
-        version: link:../../platform/media
+        version: link:../../../platform/media
       '@packages/rbac':
         specifier: workspace:*
-        version: link:../../platform/rbac/api
+        version: link:../../../platform/rbac/api
       class-transformer:
         specifier: ^0.5.1
         version: 0.5.1
@@ -1658,7 +1658,7 @@ importers:
     devDependencies:
       '@packages/platform-testing':
         specifier: workspace:*
-        version: link:../../platform/testing
+        version: link:../../../platform/testing
       drizzle-kit:
         specifier: ^0.31.9
         version: 0.31.9
@@ -1675,23 +1675,23 @@ importers:
         specifier: ^3.0.0
         version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)
 
-  packages/addons/attachments-ui:
+  packages/addons/attachments/ui:
     dependencies:
       '@packages/auth-ui':
         specifier: workspace:*
-        version: link:../../platform/auth/ui
+        version: link:../../../platform/auth/ui
       '@packages/common':
         specifier: workspace:*
-        version: link:../../core/common
+        version: link:../../../core/common
       '@packages/entity-engine-ui':
         specifier: workspace:*
-        version: link:../../platform/entity-engine/ui
+        version: link:../../../platform/entity-engine/ui
       '@packages/platform-ui':
         specifier: workspace:*
-        version: link:../../platform/platform-ui
+        version: link:../../../platform/platform-ui
       '@packages/ui':
         specifier: workspace:*
-        version: link:../../core/ui
+        version: link:../../../core/ui
       '@tanstack/react-query':
         specifier: ^5.0.0
         version: 5.90.21(react@19.2.4)
