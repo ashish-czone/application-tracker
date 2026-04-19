@@ -4,8 +4,10 @@
     "outDir": "./dist",
     "baseUrl": ".",
     "paths": {
-      "@packages/app-shell": ["../../packages/platform/app-shell"],
-      "@packages/app-shell/*": ["../../packages/platform/app-shell/*"],
+      "@packages/app-shell": ["../../packages/platform/app-shell/api"],
+      "@packages/app-shell/*": ["../../packages/platform/app-shell/api/*"],
+      "@packages/app-shell-ui": ["../../packages/platform/app-shell/ui"],
+      "@packages/app-shell-ui/*": ["../../packages/platform/app-shell/ui/*"],
       "@packages/entity-engine": ["../../packages/platform/entity-engine/api"],
       "@packages/entity-engine/*": ["../../packages/platform/entity-engine/api/*"],
       "@packages/entity-engine-ui": ["../../packages/platform/entity-engine/ui"],
