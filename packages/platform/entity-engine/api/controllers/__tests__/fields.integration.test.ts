@@ -3,6 +3,7 @@ import request from 'supertest';
 import { createPackageTestApp, withAuth, cleanDatabase, type PackageTestApp } from '@packages/platform-testing';
 import { EntityEngineModule } from '../../entity-engine.module';
 import { EntityRegistryService } from '../../entity-registry.service';
+import { FieldDefinitionService } from '../../services/field-definition.service';
 import { EAV_PERMISSIONS } from '../../permissions';
 
 const READ = [EAV_PERMISSIONS.READ];
@@ -36,6 +37,7 @@ describe('FieldsController (integration)', () => {
 
   beforeEach(async () => {
     await cleanDatabase(ctx.db);
+    await ctx.module.get(FieldDefinitionService).reloadCache();
   });
 
   // ── Helpers ──────────────────────────────────────────────────

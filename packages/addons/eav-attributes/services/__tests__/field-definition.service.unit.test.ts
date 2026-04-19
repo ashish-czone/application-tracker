@@ -10,7 +10,7 @@ function createMockDb() {
     values: vi.fn().mockReturnThis(),
     set: vi.fn().mockReturnThis(),
     returning: vi.fn().mockResolvedValue([]),
-    orderBy: vi.fn().mockReturnThis(),
+    orderBy: vi.fn().mockResolvedValue([]),
   };
 
   return {
@@ -42,11 +42,32 @@ function makeFieldDef(overrides: Record<string, unknown> = {}) {
     lookupEntity: null,
     lookupLabelField: null,
     lookupSearchFields: null,
+    tagGroupSlug: null,
+    categoryGroupSlug: null,
+    fileAccept: null,
+    fileMaxSize: null,
     sortOrder: 0,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,
   };
+}
+
+/**
+ * Seed the service's in-memory cache by mocking the bootstrap queries and
+ * calling reloadCache(). Reads go directly to the cache; writes still hit
+ * the mocked DB.
+ */
+async function seedCache(
+  service: FieldDefinitionService,
+  mockDb: ReturnType<typeof createMockDb>,
+  fields: ReturnType<typeof makeFieldDef>[],
+  picklistOptions: { id: string; fieldId: string; label: string; value: string; isDefault?: boolean; sortOrder: number }[] = [],
+): Promise<void> {
+  mockDb._chain.orderBy
+    .mockResolvedValueOnce(fields)
+    .mockResolvedValueOnce(picklistOptions);
+  await service.reloadCache();
 }
 
 describe('FieldDefinitionService', () => {
@@ -63,10 +84,8 @@ describe('FieldDefinitionService', () => {
 
   describe('create', () => {
     it('should create a field definition and return it', async () => {
+      await seedCache(service, mockDb, []);
       const field = makeFieldDef();
-      // findByEntityAndKey returns nothing (no duplicate)
-      mockDb._chain.limit.mockResolvedValueOnce([]);
-      // insert returns the new field
       mockDb._chain.returning.mockResolvedValueOnce([field]);
 
       const result = await service.create('candidates', {
@@ -80,8 +99,8 @@ describe('FieldDefinitionService', () => {
     });
 
     it('should set isCustom=true on created fields', async () => {
+      await seedCache(service, mockDb, []);
       const field = makeFieldDef({ isCustom: true });
-      mockDb._chain.limit.mockResolvedValueOnce([]);
       mockDb._chain.returning.mockResolvedValueOnce([field]);
 
       const result = await service.create('candidates', {
@@ -95,8 +114,7 @@ describe('FieldDefinitionService', () => {
 
     it('should throw ConflictException for standard field collision with descriptive message', async () => {
       const existing = makeFieldDef({ isCustom: false, fieldKey: 'first_name' });
-      // findByEntityAndKey returns existing standard field
-      mockDb._chain.limit.mockResolvedValueOnce([existing]);
+      await seedCache(service, mockDb, [existing]);
 
       await expect(
         service.create('candidates', {
@@ -109,8 +127,7 @@ describe('FieldDefinitionService', () => {
 
     it('should throw ConflictException for custom field collision with descriptive message', async () => {
       const existing = makeFieldDef({ isCustom: true, fieldKey: 'custom_field' });
-      // findByEntityAndKey returns existing custom field
-      mockDb._chain.limit.mockResolvedValueOnce([existing]);
+      await seedCache(service, mockDb, [existing]);
 
       await expect(
         service.create('candidates', {
@@ -123,8 +140,7 @@ describe('FieldDefinitionService', () => {
 
     it('should throw ConflictException on duplicate field_key', async () => {
       const existing = makeFieldDef();
-      // findByEntityAndKey returns existing field
-      mockDb._chain.limit.mockResolvedValueOnce([existing]);
+      await seedCache(service, mockDb, [existing]);
 
       await expect(
         service.create('candidates', {
@@ -141,10 +157,8 @@ describe('FieldDefinitionService', () => {
   describe('update', () => {
     it('should update and return the field definition', async () => {
       const existing = makeFieldDef();
+      await seedCache(service, mockDb, [existing]);
       const updated = makeFieldDef({ label: 'Updated Label' });
-      // findById returns existing
-      mockDb._chain.limit.mockResolvedValueOnce([existing]);
-      // update returns updated
       mockDb._chain.returning.mockResolvedValueOnce([updated]);
 
       const result = await service.update('fd1', { label: 'Updated Label' });
@@ -154,7 +168,7 @@ describe('FieldDefinitionService', () => {
     });
 
     it('should throw NotFoundException if field not found', async () => {
-      mockDb._chain.limit.mockResolvedValueOnce([]);
+      await seedCache(service, mockDb, []);
 
       await expect(service.update('nonexistent', { label: 'X' })).rejects.toThrow(
         NotFoundException,
@@ -163,7 +177,7 @@ describe('FieldDefinitionService', () => {
 
     it('should return existing field on empty update (no-op)', async () => {
       const existing = makeFieldDef();
-      mockDb._chain.limit.mockResolvedValueOnce([existing]);
+      await seedCache(service, mockDb, [existing]);
 
       const result = await service.update('fd1', {});
 
@@ -177,32 +191,28 @@ describe('FieldDefinitionService', () => {
   describe('delete', () => {
     it('should delete a custom field with no values', async () => {
       const field = makeFieldDef({ isCustom: true });
-      // findById returns field via spy
-      vi.spyOn(service, 'findById').mockResolvedValueOnce(field as any);
-      // count query: select({total}).from().where() — terminates at where
-      mockDb._chain.where.mockResolvedValueOnce([{ total: 0 }]);
+      await seedCache(service, mockDb, [field]);
 
       await expect(service.delete('fd1')).resolves.toBeUndefined();
       expect(mockDb.delete).toHaveBeenCalled();
     });
 
     it('should throw NotFoundException if field not found', async () => {
-      vi.spyOn(service, 'findById').mockResolvedValueOnce(null);
+      await seedCache(service, mockDb, []);
 
       await expect(service.delete('nonexistent')).rejects.toThrow(NotFoundException);
     });
 
     it('should throw BadRequestException when deleting non-custom field', async () => {
       const field = makeFieldDef({ isCustom: false });
-      vi.spyOn(service, 'findById').mockResolvedValueOnce(field as any);
+      await seedCache(service, mockDb, [field]);
 
       await expect(service.delete('fd1')).rejects.toThrow(BadRequestException);
     });
 
     it('should throw ConflictException when a registered delete check fails', async () => {
       const field = makeFieldDef({ isCustom: true });
-      vi.spyOn(service, 'findById').mockResolvedValueOnce(field as any);
-      // Register a delete check that throws (simulates EAV checking for existing values)
+      await seedCache(service, mockDb, [field]);
       service.registerDeleteCheck(async () => {
         throw new ConflictException('Cannot delete field: entities have values');
       });
@@ -216,16 +226,16 @@ describe('FieldDefinitionService', () => {
   describe('findById', () => {
     it('should return field if found', async () => {
       const field = makeFieldDef();
-      mockDb._chain.limit.mockResolvedValueOnce([field]);
+      await seedCache(service, mockDb, [field]);
 
-      const result = await service.findById('fd1');
+      const result = service.findById('fd1');
       expect(result).toEqual(field);
     });
 
     it('should return null if not found', async () => {
-      mockDb._chain.limit.mockResolvedValueOnce([]);
+      await seedCache(service, mockDb, []);
 
-      const result = await service.findById('nonexistent');
+      const result = service.findById('nonexistent');
       expect(result).toBeNull();
     });
   });
@@ -235,17 +245,16 @@ describe('FieldDefinitionService', () => {
   describe('findByEntityAndKey', () => {
     it('should return field matching entity type and key', async () => {
       const field = makeFieldDef();
-      mockDb._chain.limit.mockResolvedValueOnce([field]);
+      await seedCache(service, mockDb, [field]);
 
-      const result = await service.findByEntityAndKey('candidates', 'custom_field');
+      const result = service.findByEntityAndKey('candidates', 'custom_field');
       expect(result).toEqual(field);
-      expect(mockDb.select).toHaveBeenCalled();
     });
 
     it('should return null when no match', async () => {
-      mockDb._chain.limit.mockResolvedValueOnce([]);
+      await seedCache(service, mockDb, []);
 
-      const result = await service.findByEntityAndKey('candidates', 'nonexistent_key');
+      const result = service.findByEntityAndKey('candidates', 'nonexistent_key');
       expect(result).toBeNull();
     });
   });
@@ -253,23 +262,23 @@ describe('FieldDefinitionService', () => {
   // --- listByEntity ---
 
   describe('listByEntity', () => {
-    it('should return all fields for the entity type', async () => {
+    it('should return all fields for the entity type ordered by sortOrder', async () => {
       const fields = [
         makeFieldDef({ id: 'fd1', fieldKey: 'first_name', sortOrder: 0 }),
         makeFieldDef({ id: 'fd2', fieldKey: 'last_name', sortOrder: 1 }),
       ];
-      mockDb._chain.orderBy.mockResolvedValueOnce(fields);
+      await seedCache(service, mockDb, fields);
 
-      const result = await service.listByEntity('candidates');
+      const result = service.listByEntity('candidates');
       expect(result).toHaveLength(2);
       expect(result[0].fieldKey).toBe('first_name');
       expect(result[1].fieldKey).toBe('last_name');
     });
 
     it('should return empty array when no fields exist', async () => {
-      mockDb._chain.orderBy.mockResolvedValueOnce([]);
+      await seedCache(service, mockDb, []);
 
-      const result = await service.listByEntity('unknown_entity');
+      const result = service.listByEntity('unknown_entity');
       expect(result).toEqual([]);
     });
   });
@@ -278,33 +287,30 @@ describe('FieldDefinitionService', () => {
 
   describe('registerStandardFields', () => {
     it('should create new fields that do not exist', async () => {
-      // For each field: findByEntityAndKey returns [] (not found), then findByEntityAndColumn returns [] (not found)
-      mockDb._chain.limit
-        .mockResolvedValueOnce([])   // findByEntityAndKey for first_name
-        .mockResolvedValueOnce([])   // findByEntityAndColumn for first_name
-        .mockResolvedValueOnce([])   // findByEntityAndKey for last_name
-        .mockResolvedValueOnce([]);  // findByEntityAndColumn for last_name
+      await seedCache(service, mockDb, []);
+      mockDb._chain.returning
+        .mockResolvedValueOnce([makeFieldDef({ id: 'fd1', fieldKey: 'first_name' })])
+        .mockResolvedValueOnce([makeFieldDef({ id: 'fd2', fieldKey: 'last_name' })]);
 
       await service.registerStandardFields('candidates', [
         { fieldKey: 'first_name', label: 'First Name', fieldType: 'text', columnName: 'first_name' },
         { fieldKey: 'last_name', label: 'Last Name', fieldType: 'text', columnName: 'last_name' },
       ]);
 
-      // Should have called insert twice
       expect(mockDb.insert).toHaveBeenCalledTimes(2);
     });
 
-    it('should not override admin customizations on existing fields (idempotent)', async () => {
+    it('should not update when nothing changed (idempotent)', async () => {
       const existing = makeFieldDef({
         id: 'fd1',
         fieldKey: 'first_name',
-        label: 'Admin Custom Label',
+        label: 'First Name',
+        fieldType: 'text',
         columnName: 'first_name',
         sortOrder: 5,
         isCustom: false,
       });
-      // findByEntityAndKey returns existing
-      mockDb._chain.limit.mockResolvedValueOnce([existing]);
+      await seedCache(service, mockDb, [existing]);
 
       await service.registerStandardFields('candidates', [
         {
@@ -316,8 +322,8 @@ describe('FieldDefinitionService', () => {
         },
       ]);
 
-      // Should NOT call insert (field exists), and should not update since nothing changed
       expect(mockDb.insert).not.toHaveBeenCalled();
+      expect(mockDb.update).not.toHaveBeenCalled();
     });
 
     it('should update sortOrder and columnName if changed', async () => {
@@ -328,7 +334,8 @@ describe('FieldDefinitionService', () => {
         sortOrder: 0,
         isCustom: false,
       });
-      mockDb._chain.limit.mockResolvedValueOnce([existing]);
+      await seedCache(service, mockDb, [existing]);
+      mockDb._chain.returning.mockResolvedValueOnce([{ ...existing, columnName: 'first_name', sortOrder: 3 }]);
 
       await service.registerStandardFields('candidates', [
         {
@@ -340,7 +347,6 @@ describe('FieldDefinitionService', () => {
         },
       ]);
 
-      // Should have called update to set the columnName + sortOrder
       expect(mockDb.update).toHaveBeenCalled();
     });
   });
@@ -350,21 +356,20 @@ describe('FieldDefinitionService', () => {
   describe('setPicklistOptions', () => {
     it('should replace picklist options for a picklist field', async () => {
       const field = makeFieldDef({ id: 'fd1', fieldType: 'picklist' });
-      mockDb._chain.limit.mockResolvedValueOnce([field]);
+      await seedCache(service, mockDb, [field]);
 
       await service.setPicklistOptions('candidates', 'custom_field', [
         { label: 'Option A', value: 'a' },
         { label: 'Option B', value: 'b', isDefault: true },
       ]);
 
-      // Delete old options + insert new ones
       expect(mockDb.delete).toHaveBeenCalled();
       expect(mockDb.insert).toHaveBeenCalled();
     });
 
     it('should throw BadRequestException for non-picklist field type', async () => {
       const field = makeFieldDef({ id: 'fd1', fieldType: 'text' });
-      mockDb._chain.limit.mockResolvedValueOnce([field]);
+      await seedCache(service, mockDb, [field]);
 
       await expect(
         service.setPicklistOptions('candidates', 'custom_field', [
@@ -374,7 +379,7 @@ describe('FieldDefinitionService', () => {
     });
 
     it('should throw NotFoundException if field not found', async () => {
-      mockDb._chain.limit.mockResolvedValueOnce([]);
+      await seedCache(service, mockDb, []);
 
       await expect(
         service.setPicklistOptions('candidates', 'nonexistent', [
@@ -385,7 +390,7 @@ describe('FieldDefinitionService', () => {
 
     it('should work with multi_select field type', async () => {
       const field = makeFieldDef({ id: 'fd1', fieldType: 'multi_select' });
-      mockDb._chain.limit.mockResolvedValueOnce([field]);
+      await seedCache(service, mockDb, [field]);
 
       await service.setPicklistOptions('candidates', 'custom_field', [
         { label: 'Tag A', value: 'tag_a' },
@@ -397,12 +402,11 @@ describe('FieldDefinitionService', () => {
 
     it('should only delete (not insert) when options array is empty', async () => {
       const field = makeFieldDef({ id: 'fd1', fieldType: 'picklist' });
-      mockDb._chain.limit.mockResolvedValueOnce([field]);
+      await seedCache(service, mockDb, [field]);
 
       await service.setPicklistOptions('candidates', 'custom_field', []);
 
       expect(mockDb.delete).toHaveBeenCalled();
-      // Insert should not be called since options are empty
       expect(mockDb.insert).not.toHaveBeenCalled();
     });
   });

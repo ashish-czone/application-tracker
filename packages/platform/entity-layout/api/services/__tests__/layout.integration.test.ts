@@ -26,6 +26,7 @@ describe('Entity Layout (integration)', () => {
 
   afterEach(async () => {
     await cleanDatabase(db);
+    await fieldDefService.reloadCache();
   });
 
   afterAll(async () => {

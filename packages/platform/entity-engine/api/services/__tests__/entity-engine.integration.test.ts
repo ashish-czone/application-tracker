@@ -35,6 +35,7 @@ describe('Entity Engine (integration)', () => {
 
   afterEach(async () => {
     await cleanDatabase(db);
+    await fieldDefService.reloadCache();
     lookupResolver.clearRegistry();
   });
 

@@ -71,11 +71,16 @@ function makeField(overrides: Record<string, unknown> = {}) {
 describe('LayoutService', () => {
   let service: LayoutService;
   let mockDb: ReturnType<typeof createMockDb>;
+  let mockFieldDefService: { listByEntityWithOptions: ReturnType<typeof vi.fn>; findByEntityAndKey: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     mockDb = createMockDb();
     const databaseService = { db: mockDb } as any;
-    service = new LayoutService(databaseService);
+    mockFieldDefService = {
+      listByEntityWithOptions: vi.fn().mockReturnValue([]),
+      findByEntityAndKey: vi.fn().mockReturnValue(null),
+    };
+    service = new LayoutService(databaseService, mockFieldDefService as any);
   });
 
   // --- createSection ---
@@ -415,19 +420,23 @@ describe('LayoutService', () => {
   describe('getLayout', () => {
     it('should return full layout with sections, fields, and picklist options', async () => {
       const sections = [makeSection()];
-      const fields = [makeField()];
       const layoutFieldRows = [
         { sectionId: 'sec1', fieldId: 'fd1', sortOrder: 0, columnIndex: 0 },
       ];
-      const picklistOpts = [
-        { id: 'po1', fieldId: 'fd1', label: 'Active', value: 'active', isDefault: true, sortOrder: 0 },
+      const fieldsWithOptions = [
+        {
+          ...makeField(),
+          picklistOptions: [
+            { id: 'po1', fieldId: 'fd1', label: 'Active', value: 'active', isDefault: true, sortOrder: 0 },
+          ],
+          columnIndex: 0,
+        },
       ];
 
       mockDb._chain.orderBy
         .mockResolvedValueOnce(sections)
-        .mockResolvedValueOnce(fields)
-        .mockResolvedValueOnce(layoutFieldRows)
-        .mockResolvedValueOnce(picklistOpts);
+        .mockResolvedValueOnce(layoutFieldRows);
+      mockFieldDefService.listByEntityWithOptions.mockReturnValue(fieldsWithOptions);
 
       const result = await service.getLayout('candidates', 'Standard');
 
@@ -441,19 +450,17 @@ describe('LayoutService', () => {
 
     it('should include unassigned fields section for non-system fields not in any section', async () => {
       const sections = [makeSection()];
-      const fields = [
-        makeField({ id: 'fd1', fieldKey: 'name' }),
-        makeField({ id: 'fd2', fieldKey: 'orphan', isCustom: true }),
-      ];
       const layoutFieldRows = [
         { sectionId: 'sec1', fieldId: 'fd1', sortOrder: 0, columnIndex: 0 },
       ];
 
       mockDb._chain.orderBy
         .mockResolvedValueOnce(sections)
-        .mockResolvedValueOnce(fields)
-        .mockResolvedValueOnce(layoutFieldRows)
-        .mockResolvedValueOnce([]); // no picklist options
+        .mockResolvedValueOnce(layoutFieldRows);
+      mockFieldDefService.listByEntityWithOptions.mockReturnValue([
+        { ...makeField({ id: 'fd1', fieldKey: 'name' }), picklistOptions: [], columnIndex: 0 },
+        { ...makeField({ id: 'fd2', fieldKey: 'orphan', isCustom: true }), picklistOptions: [], columnIndex: 0 },
+      ]);
 
       const result = await service.getLayout('candidates', 'Standard');
 
@@ -467,21 +474,15 @@ describe('LayoutService', () => {
     });
 
     it('should filter system fields from unassigned section', async () => {
-      const sections: any[] = [];
-      const fields = [
-        makeField({ id: 'fd1', fieldKey: 'createdAt', isSystem: true }),
-        makeField({ id: 'fd2', fieldKey: 'updatedAt', isSystem: true }),
-        makeField({ id: 'fd3', fieldKey: 'name', isSystem: false }),
-      ];
-
-      mockDb._chain.orderBy
-        .mockResolvedValueOnce(sections)
-        .mockResolvedValueOnce(fields)
-        .mockResolvedValueOnce([]); // no picklist options (empty sectionIds)
+      mockDb._chain.orderBy.mockResolvedValueOnce([]);
+      mockFieldDefService.listByEntityWithOptions.mockReturnValue([
+        { ...makeField({ id: 'fd1', fieldKey: 'createdAt', isSystem: true }), picklistOptions: [], columnIndex: 0 },
+        { ...makeField({ id: 'fd2', fieldKey: 'updatedAt', isSystem: true }), picklistOptions: [], columnIndex: 0 },
+        { ...makeField({ id: 'fd3', fieldKey: 'name', isSystem: false }), picklistOptions: [], columnIndex: 0 },
+      ]);
 
       const result = await service.getLayout('candidates');
 
-      // Only non-system unassigned field should appear
       const unassigned = result.sections.find(s => s.id === '__unassigned__');
       expect(unassigned).toBeDefined();
       expect(unassigned!.fields).toHaveLength(1);
@@ -490,16 +491,16 @@ describe('LayoutService', () => {
 
     it('should not include unassigned section when all fields are placed', async () => {
       const sections = [makeSection()];
-      const fields = [makeField({ id: 'fd1', fieldKey: 'name' })];
       const layoutFieldRows = [
         { sectionId: 'sec1', fieldId: 'fd1', sortOrder: 0, columnIndex: 0 },
       ];
 
       mockDb._chain.orderBy
         .mockResolvedValueOnce(sections)
-        .mockResolvedValueOnce(fields)
-        .mockResolvedValueOnce(layoutFieldRows)
-        .mockResolvedValueOnce([]); // no picklist options
+        .mockResolvedValueOnce(layoutFieldRows);
+      mockFieldDefService.listByEntityWithOptions.mockReturnValue([
+        { ...makeField({ id: 'fd1', fieldKey: 'name' }), picklistOptions: [], columnIndex: 0 },
+      ]);
 
       const result = await service.getLayout('candidates', 'Standard');
 
@@ -508,16 +509,11 @@ describe('LayoutService', () => {
     });
 
     it('should include quickCreateFields', async () => {
-      const sections: any[] = [];
-      const fields = [
-        makeField({ id: 'fd1', fieldKey: 'name', isQuickCreate: true }),
-        makeField({ id: 'fd2', fieldKey: 'email', isQuickCreate: false }),
-      ];
-
-      mockDb._chain.orderBy
-        .mockResolvedValueOnce(sections)
-        .mockResolvedValueOnce(fields)
-        .mockResolvedValueOnce([]); // no picklist options (empty sectionIds)
+      mockDb._chain.orderBy.mockResolvedValueOnce([]);
+      mockFieldDefService.listByEntityWithOptions.mockReturnValue([
+        { ...makeField({ id: 'fd1', fieldKey: 'name', isQuickCreate: true }), picklistOptions: [], columnIndex: 0 },
+        { ...makeField({ id: 'fd2', fieldKey: 'email', isQuickCreate: false }), picklistOptions: [], columnIndex: 0 },
+      ]);
 
       const result = await service.getLayout('candidates');
 
@@ -526,30 +522,22 @@ describe('LayoutService', () => {
     });
 
     it('should cache results and return cached on second call', async () => {
-      const sections: any[] = [];
-      const fields: any[] = [];
-
-      mockDb._chain.orderBy
-        .mockResolvedValueOnce(sections)
-        .mockResolvedValueOnce(fields);
+      mockDb._chain.orderBy.mockResolvedValueOnce([]);
 
       const first = await service.getLayout('candidates', 'Standard');
 
       mockDb.select.mockClear();
+      mockFieldDefService.listByEntityWithOptions.mockClear();
 
       const second = await service.getLayout('candidates', 'Standard');
 
       expect(second).toEqual(first);
       expect(mockDb.select).not.toHaveBeenCalled();
+      expect(mockFieldDefService.listByEntityWithOptions).not.toHaveBeenCalled();
     });
 
     it('should re-fetch after cache invalidation', async () => {
-      const sections: any[] = [];
-      const fields: any[] = [];
-
-      mockDb._chain.orderBy
-        .mockResolvedValueOnce(sections)
-        .mockResolvedValueOnce(fields);
+      mockDb._chain.orderBy.mockResolvedValueOnce([]);
 
       // Populate cache
       await service.getLayout('candidates', 'Standard');
@@ -561,18 +549,14 @@ describe('LayoutService', () => {
 
       // Reset and setup for new getLayout call
       mockDb.select.mockClear();
-      mockDb._chain.orderBy
-        .mockResolvedValueOnce([])
-        .mockResolvedValueOnce([]);
+      mockDb._chain.orderBy.mockResolvedValueOnce([]);
 
       await service.getLayout('candidates', 'Standard');
       expect(mockDb.select).toHaveBeenCalled();
     });
 
     it('should default layoutName to Standard', async () => {
-      mockDb._chain.orderBy
-        .mockResolvedValueOnce([])
-        .mockResolvedValueOnce([]);
+      mockDb._chain.orderBy.mockResolvedValueOnce([]);
 
       const result = await service.getLayout('candidates');
 
@@ -581,17 +565,17 @@ describe('LayoutService', () => {
 
     it('should handle fields with no matching layout field gracefully', async () => {
       const sections = [makeSection()];
-      const fields = [makeField({ id: 'fd1' })];
-      // layoutField references a fieldId that does not exist in fieldMap
+      // layoutField references a fieldId that does not exist in the cache
       const layoutFieldRows = [
         { sectionId: 'sec1', fieldId: 'nonexistent-field', sortOrder: 0, columnIndex: 0 },
       ];
 
       mockDb._chain.orderBy
         .mockResolvedValueOnce(sections)
-        .mockResolvedValueOnce(fields)
-        .mockResolvedValueOnce(layoutFieldRows)
-        .mockResolvedValueOnce([]);
+        .mockResolvedValueOnce(layoutFieldRows);
+      mockFieldDefService.listByEntityWithOptions.mockReturnValue([
+        { ...makeField({ id: 'fd1' }), picklistOptions: [], columnIndex: 0 },
+      ]);
 
       const result = await service.getLayout('candidates', 'Standard');
 
@@ -614,8 +598,7 @@ describe('LayoutService', () => {
       const section = makeSection();
       mockDb._chain.returning.mockResolvedValueOnce([section]);
 
-      const fieldDef = { id: 'fd1', entityType: 'candidates', fieldKey: 'first_name' };
-      mockDb._chain.limit.mockResolvedValueOnce([fieldDef]);
+      mockFieldDefService.findByEntityAndKey.mockReturnValue({ id: 'fd1', entityType: 'candidates', fieldKey: 'first_name' });
 
       await service.seedDefaultLayout('candidates', [
         { name: 'Basic Info', fields: ['first_name'] },
@@ -658,8 +641,7 @@ describe('LayoutService', () => {
       const section = makeSection();
       mockDb._chain.returning.mockResolvedValueOnce([section]);
 
-      const fieldDef = { id: 'fd1', entityType: 'candidates', fieldKey: 'first_name' };
-      mockDb._chain.limit.mockResolvedValueOnce([fieldDef]);
+      mockFieldDefService.findByEntityAndKey.mockReturnValue({ id: 'fd1', entityType: 'candidates', fieldKey: 'first_name' });
 
       await service.seedDefaultLayout('candidates', [
         { name: 'Basic Info', fields: [['first_name', 1]] },

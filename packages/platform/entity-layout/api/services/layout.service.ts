@@ -1,13 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { DatabaseService, eq, asc, inArray } from '@packages/database';
 import { withTenant, withTenantInsert } from '@packages/tenancy/helpers';
-import { fieldDefinitions, picklistOptions } from '@packages/entity-engine/schema';
+import { FieldDefinitionService } from '@packages/entity-engine';
 import type {
   LayoutSection,
   FullLayout,
   FullLayoutSection,
   FullLayoutField,
-  PicklistOption,
   SeedSectionInput,
 } from '@packages/entity-engine/types';
 import { layoutSections } from '../schema/layout-sections';
@@ -19,7 +18,10 @@ export class LayoutService {
   private layoutCache = new Map<string, { layout: FullLayout; cachedAt: number }>();
   private readonly CACHE_TTL_MS = 60_000; // 1 minute
 
-  constructor(private readonly database: DatabaseService) {}
+  constructor(
+    private readonly database: DatabaseService,
+    private readonly fieldDefService: FieldDefinitionService,
+  ) {}
 
   // --- Section CRUD ---
 
@@ -182,12 +184,9 @@ export class LayoutService {
       ))
       .orderBy(asc(layoutSections.sortOrder));
 
-    // Fetch all field definitions for this entity
-    const allFields = await this.database.db
-      .select()
-      .from(fieldDefinitions)
-      .where(withTenant(fieldDefinitions, eq(fieldDefinitions.entityType, entityType)))
-      .orderBy(asc(fieldDefinitions.sortOrder));
+    // Field definitions (with picklist options) come from FieldDefinitionService's
+    // in-memory cache — no DB read.
+    const allFields = this.fieldDefService.listByEntityWithOptions(entityType);
 
     // Fetch all layout field assignments for these sections
     const sectionIds = sections.map(s => s.id);
@@ -199,26 +198,7 @@ export class LayoutService {
           .orderBy(asc(layoutFields.sortOrder))
       : [];
 
-    // Fetch all picklist options for all fields
-    const fieldIds = allFields.map(f => f.id);
-    const allPicklistOptions = fieldIds.length > 0
-      ? await this.database.db
-          .select()
-          .from(picklistOptions)
-          .where(withTenant(picklistOptions, inArray(picklistOptions.fieldId, fieldIds)))
-          .orderBy(asc(picklistOptions.sortOrder))
-      : [];
-
-    // Build lookup maps
     const fieldMap = new Map(allFields.map(f => [f.id, f]));
-    const picklistMap = new Map<string, PicklistOption[]>();
-    for (const opt of allPicklistOptions) {
-      const existing = picklistMap.get(opt.fieldId) ?? [];
-      existing.push(opt as PicklistOption);
-      picklistMap.set(opt.fieldId, existing);
-    }
-
-    // Track which fields are placed
     const placedFieldIds = new Set(allLayoutFields.map(lf => lf.fieldId));
 
     // Build sections with fields
@@ -231,11 +211,7 @@ export class LayoutService {
         .map(lf => {
           const field = fieldMap.get(lf.fieldId);
           if (!field) return null;
-          return {
-            ...(field as FullLayoutField),
-            picklistOptions: picklistMap.get(field.id) ?? [],
-            columnIndex: lf.columnIndex,
-          };
+          return { ...field, columnIndex: lf.columnIndex };
         })
         .filter(Boolean) as FullLayoutField[];
 
@@ -256,11 +232,7 @@ export class LayoutService {
     // as metadata on the detail page, not as editable layout fields.
     const unassignedFields = allFields
       .filter(f => !placedFieldIds.has(f.id) && !f.isSystem)
-      .map(f => ({
-        ...(f as FullLayoutField),
-        picklistOptions: picklistMap.get(f.id) ?? [],
-        columnIndex: 0,
-      }));
+      .map(f => ({ ...f, columnIndex: 0 }));
 
     if (unassignedFields.length > 0) {
       fullSections.push({
@@ -278,11 +250,7 @@ export class LayoutService {
     // Quick create fields
     const quickCreateFields = allFields
       .filter(f => f.isQuickCreate)
-      .map(f => ({
-        ...(f as FullLayoutField),
-        picklistOptions: picklistMap.get(f.id) ?? [],
-        columnIndex: 0,
-      }));
+      .map(f => ({ ...f, columnIndex: 0 }));
 
     const layout: FullLayout = {
       entityType,
@@ -337,15 +305,7 @@ export class LayoutService {
         const fieldKey = Array.isArray(entry) ? entry[0] : entry;
         const columnIndex = Array.isArray(entry) ? entry[1] : (fIdx % 2);
 
-        // Look up field definition by key
-        const [field] = await this.database.db
-          .select()
-          .from(fieldDefinitions)
-          .where(withTenant(fieldDefinitions,
-            eq(fieldDefinitions.entityType, entityType),
-            eq(fieldDefinitions.fieldKey, fieldKey),
-          ))
-          .limit(1);
+        const field = this.fieldDefService.findByEntityAndKey(entityType, fieldKey);
 
         if (field) {
           await this.database.db
