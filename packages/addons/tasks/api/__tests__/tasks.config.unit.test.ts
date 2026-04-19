@@ -88,4 +88,48 @@ describe('TASKS_CONFIG', () => {
       expect(actions).toContain('approveReview');
     });
   });
+
+  describe('completedAt stamping', () => {
+    const beforeCreate = TASKS_CONFIG.hooks!.beforeCreate!;
+    const beforeUpdate = TASKS_CONFIG.hooks!.beforeUpdate!;
+
+    it('declares completedAt as a system readonly datetime field', () => {
+      const field = TASKS_CONFIG.fieldMeta.completedAt;
+      expect(field).toBeDefined();
+      expect(field.fieldType).toBe('datetime');
+      expect(field.isSystem).toBe(true);
+      expect(field.isReadonly).toBe(true);
+      expect(field.excludeFromList).toBe(true);
+    });
+
+    it('beforeCreate stamps completedAt when created in completed state', async () => {
+      const out = await beforeCreate({ title: 't', status: 'completed' }, 'actor');
+      expect(out.completedAt).toBeInstanceOf(Date);
+    });
+
+    it('beforeCreate does not stamp completedAt for non-completed status', async () => {
+      const out = await beforeCreate({ title: 't', status: 'pending' }, 'actor');
+      expect(out.completedAt).toBeNull();
+    });
+
+    it('beforeCreate leaves completedAt absent when status is not in payload', async () => {
+      const out = await beforeCreate({ title: 't' }, 'actor');
+      expect('completedAt' in out).toBe(false);
+    });
+
+    it('beforeUpdate stamps completedAt when transitioning to completed', async () => {
+      const out = await beforeUpdate('id', { status: 'completed' }, 'actor');
+      expect(out.completedAt).toBeInstanceOf(Date);
+    });
+
+    it('beforeUpdate clears completedAt when transitioning away from completed', async () => {
+      const out = await beforeUpdate('id', { status: 'pending' }, 'actor');
+      expect(out.completedAt).toBeNull();
+    });
+
+    it('beforeUpdate does not touch completedAt when status is not in payload', async () => {
+      const out = await beforeUpdate('id', { title: 'new title' }, 'actor');
+      expect('completedAt' in out).toBe(false);
+    });
+  });
 });

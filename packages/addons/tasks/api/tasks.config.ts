@@ -13,6 +13,14 @@ function validateAssigneeExclusivity(payload: Record<string, unknown>): void {
   }
 }
 
+function applyCompletedAt(payload: Record<string, unknown>): Record<string, unknown> {
+  if (!('status' in payload)) return payload;
+  return {
+    ...payload,
+    completedAt: payload.status === 'completed' ? new Date() : null,
+  };
+}
+
 export const TASKS_CONFIG = defineEntity({
   ...TASKS_METADATA,
   table: tasks,
@@ -21,19 +29,19 @@ export const TASKS_CONFIG = defineEntity({
   hooks: {
     beforeCreate: async (payload: Record<string, unknown>) => {
       validateAssigneeExclusivity(payload);
-      return payload;
+      return applyCompletedAt(payload);
     },
     beforeUpdate: async (_id: string, payload: Record<string, unknown>) => {
-      if ('assigneeId' in payload || 'assigneeTeamId' in payload) {
-        validateAssigneeExclusivity(payload);
-        if ('assigneeId' in payload && payload.assigneeId) {
-          return { ...payload, assigneeTeamId: null };
-        }
-        if ('assigneeTeamId' in payload && payload.assigneeTeamId) {
-          return { ...payload, assigneeId: null };
+      let next = payload;
+      if ('assigneeId' in next || 'assigneeTeamId' in next) {
+        validateAssigneeExclusivity(next);
+        if ('assigneeId' in next && next.assigneeId) {
+          next = { ...next, assigneeTeamId: null };
+        } else if ('assigneeTeamId' in next && next.assigneeTeamId) {
+          next = { ...next, assigneeId: null };
         }
       }
-      return payload;
+      return applyCompletedAt(next);
     },
   },
 
