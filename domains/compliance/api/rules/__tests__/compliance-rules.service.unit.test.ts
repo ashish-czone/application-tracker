@@ -3,6 +3,7 @@ import {
   ComplianceRuleService,
   NoDefaultHandlerError,
   AmbiguousHandlerError,
+  InvalidFrequencyError,
   type ComplianceRule,
 } from '../compliance-rules.service';
 
@@ -72,6 +73,21 @@ describe('ComplianceRuleService', () => {
         }),
       ).rejects.toBeInstanceOf(NoDefaultHandlerError);
       expect(db.db.insert).not.toHaveBeenCalled();
+    });
+
+    it('throws InvalidFrequencyError when frequency is not in the FREQUENCIES enum', async () => {
+      lawHandlers.hasDefaultHandler.mockResolvedValue(true);
+      await expect(
+        service.create({
+          code: 'X',
+          name: 'x',
+          lawId: 'l1',
+          frequency: 'biweekly' as never,
+          dueDayOfMonth: 20,
+        }),
+      ).rejects.toBeInstanceOf(InvalidFrequencyError);
+      expect(db.db.insert).not.toHaveBeenCalled();
+      expect(lawHandlers.hasDefaultHandler).not.toHaveBeenCalled();
     });
 
     it('inserts when a default handler exists', async () => {
