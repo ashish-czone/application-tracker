@@ -36,8 +36,6 @@ describe('TASKS_FIELDS', () => {
       'completedAt',
       'createdBy',
       'kind',
-      'relatedEntityId',
-      'externalKey',
     ]);
   });
 
@@ -90,7 +88,6 @@ describe('TaskCreateInput', () => {
     expectTypeOf<TaskCreateInput>().not.toHaveProperty('status');
     expectTypeOf<TaskCreateInput>().not.toHaveProperty('createdBy');
     expectTypeOf<TaskCreateInput>().not.toHaveProperty('kind');
-    expectTypeOf<TaskCreateInput>().not.toHaveProperty('externalKey');
   });
 });
 
