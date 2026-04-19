@@ -15,6 +15,13 @@
       "when": 1776576388932,
       "tag": "0001_solid_cable",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1776603305064,
+      "tag": "0002_fair_talos",
+      "breakpoints": true
     }
   ]
 }
