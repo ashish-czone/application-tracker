@@ -5,11 +5,15 @@ import { complianceRules } from '../schema/rules';
 import { complianceLawHandlers } from '../schema/law-handlers';
 import { LawHandlerService } from '../law-handlers/law-handlers.service';
 
+export type ComplianceRuleStatus = 'draft' | 'active' | 'deprecated';
+
 export interface ComplianceRule {
   id: string;
+  code: string;
   name: string;
   lawId: string;
   frequency: ComplianceFrequency;
+  status: ComplianceRuleStatus;
   dueDayOfMonth: number;
   dueMonthOffset: number;
   gracePeriodDays: number;
@@ -18,9 +22,11 @@ export interface ComplianceRule {
 }
 
 export interface CreateComplianceRuleInput {
+  code: string;
   name: string;
   lawId: string;
   frequency: ComplianceFrequency;
+  status?: ComplianceRuleStatus;
   dueDayOfMonth: number;
   dueMonthOffset?: number;
   gracePeriodDays?: number;
@@ -79,9 +85,11 @@ export class ComplianceRuleService {
     const [row] = await this.database.db
       .insert(complianceRules)
       .values({
+        code: input.code,
         name: input.name,
         lawId: input.lawId,
         frequency: input.frequency,
+        status: input.status ?? 'draft',
         dueDayOfMonth: input.dueDayOfMonth,
         dueMonthOffset: input.dueMonthOffset ?? 0,
         gracePeriodDays: input.gracePeriodDays ?? 0,
@@ -231,9 +239,11 @@ export class ComplianceRuleService {
   private toRule(row: typeof complianceRules.$inferSelect): ComplianceRule {
     return {
       id: row.id,
+      code: row.code,
       name: row.name,
       lawId: row.lawId,
       frequency: row.frequency,
+      status: row.status as ComplianceRuleStatus,
       dueDayOfMonth: row.dueDayOfMonth,
       dueMonthOffset: row.dueMonthOffset,
       gracePeriodDays: row.gracePeriodDays,

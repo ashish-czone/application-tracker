@@ -1,13 +1,15 @@
-import { pgTable, text, integer, boolean, timestamp, index } from 'drizzle-orm/pg-core';
+import { pgTable, text, integer, boolean, timestamp, index, uniqueIndex } from 'drizzle-orm/pg-core';
 import { randomUUID } from 'crypto';
 import type { ComplianceFrequency } from '@domains/compliance-contract';
 import { complianceLaws } from './laws';
 
 export const complianceRules = pgTable('compliance_rules', {
   id: text('id').primaryKey().$defaultFn(() => randomUUID()),
+  code: text('code').notNull(),
   name: text('name').notNull(),
   lawId: text('law_id').notNull().references(() => complianceLaws.id, { onDelete: 'cascade' }),
   frequency: text('frequency').notNull().$type<ComplianceFrequency>(),
+  status: text('status').notNull().default('draft'),
   // 1–31; generator clamps to month length for short months.
   dueDayOfMonth: integer('due_day_of_month').notNull(),
   // Months to add to the period end before applying dueDayOfMonth.
@@ -23,6 +25,8 @@ export const complianceRules = pgTable('compliance_rules', {
     .$defaultFn(() => new Date())
     .$onUpdate(() => new Date()),
 }, (table) => [
+  uniqueIndex('compliance_rules_code_key').on(table.code),
   index('compliance_rules_law_id_idx').on(table.lawId),
+  index('compliance_rules_status_idx').on(table.status),
   index('compliance_rules_active_idx').on(table.active),
 ]);

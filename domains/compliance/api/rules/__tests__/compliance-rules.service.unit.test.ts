@@ -29,9 +29,11 @@ function utc(year: number, month: number, day: number): Date {
 function makeRule(overrides: Partial<ComplianceRule> = {}): ComplianceRule {
   return {
     id: 'r1',
+    code: 'TEST-RULE',
     name: 'Test Rule',
     lawId: 'l1',
     frequency: 'monthly',
+    status: 'active',
     dueDayOfMonth: 20,
     dueMonthOffset: 1,
     gracePeriodDays: 0,
@@ -66,7 +68,7 @@ describe('ComplianceRuleService', () => {
       lawHandlers.hasDefaultHandler.mockResolvedValue(false);
       await expect(
         service.create({
-          name: 'x', lawId: 'l1', frequency: 'monthly', dueDayOfMonth: 20,
+          code: 'X', name: 'x', lawId: 'l1', frequency: 'monthly', dueDayOfMonth: 20,
         }),
       ).rejects.toBeInstanceOf(NoDefaultHandlerError);
       expect(db.db.insert).not.toHaveBeenCalled();
@@ -75,17 +77,19 @@ describe('ComplianceRuleService', () => {
     it('inserts when a default handler exists', async () => {
       lawHandlers.hasDefaultHandler.mockResolvedValue(true);
       const insertChain = mockInsertReturning({
-        id: 'r1', name: 'x', lawId: 'l1', frequency: 'monthly',
+        id: 'r1', code: 'X', name: 'x', lawId: 'l1', frequency: 'monthly',
+        status: 'draft',
         dueDayOfMonth: 20, dueMonthOffset: 1, gracePeriodDays: 0,
         description: null, active: true,
       });
       db.db.insert.mockReturnValue(insertChain);
 
       const result = await service.create({
-        name: 'x', lawId: 'l1', frequency: 'monthly', dueDayOfMonth: 20, dueMonthOffset: 1,
+        code: 'X', name: 'x', lawId: 'l1', frequency: 'monthly', dueDayOfMonth: 20, dueMonthOffset: 1,
       });
 
       expect(result.id).toBe('r1');
+      expect(result.status).toBe('draft');
       expect(result.active).toBe(true);
     });
   });
