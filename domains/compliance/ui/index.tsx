@@ -112,21 +112,24 @@ const OrgHierarchyPage = lazy(() =>
  * `domains/compliance/api/permissions.ts`. Dashboard is auth-only — its
  * blocks are gated component-level via `<Can>`.
  */
+// All compliance screens ship their own `ScreenPreviewTopBar` + page chrome,
+// so they opt out of the platform `AppLayout` via `bareLayout: true`. Auth +
+// permission gating still apply.
 const routes: DomainRouteObject[] = [
-  { path: '/console-preview', element: <ConsolePreviewPage /> },
-  { path: '/dashboard', element: <DashboardScreenPage /> },
-  { path: '/clients', element: <ClientsPage />, permission: 'clients.read' },
-  { path: '/clients/:clientId', element: <ClientDetailPage />, permission: 'clients.read' },
-  { path: '/filings', element: <FilingsPage />, permission: 'filings.read' },
-  { path: '/obligations', element: <ObligationsLibraryPage />, permission: 'obligations.read' },
-  { path: '/laws', element: <LawsLibraryPage />, permission: 'laws.read' },
-  { path: '/reports', element: <ReportsPage />, permission: 'reports.read' },
-  { path: '/compliance-users', element: <UsersPage />, permission: 'users.read' },
-  { path: '/compliance-roles', element: <RolesEditorPage />, permission: 'rbac.roles-read' },
-  { path: '/compliance-settings', element: <SettingsPage />, permission: 'settings.read' },
-  { path: '/admin-settings', element: <AdminSettingsPage />, permission: 'settings.manage' },
-  { path: '/global-sets', element: <GlobalSetsPage />, permission: 'taxonomy.categories.read' },
-  { path: '/org-hierarchy', element: <OrgHierarchyPage />, permission: 'org-units.read' },
+  { path: '/console-preview', element: <ConsolePreviewPage />, bareLayout: true },
+  { path: '/dashboard', element: <DashboardScreenPage />, bareLayout: true },
+  { path: '/clients', element: <ClientsPage />, permission: 'clients.read', bareLayout: true },
+  { path: '/clients/:clientId', element: <ClientDetailPage />, permission: 'clients.read', bareLayout: true },
+  { path: '/filings', element: <FilingsPage />, permission: 'filings.read', bareLayout: true },
+  { path: '/obligations', element: <ObligationsLibraryPage />, permission: 'obligations.read', bareLayout: true },
+  { path: '/laws', element: <LawsLibraryPage />, permission: 'laws.read', bareLayout: true },
+  { path: '/reports', element: <ReportsPage />, permission: 'reports.read', bareLayout: true },
+  { path: '/compliance-users', element: <UsersPage />, permission: 'users.read', bareLayout: true },
+  { path: '/compliance-roles', element: <RolesEditorPage />, permission: 'rbac.roles-read', bareLayout: true },
+  { path: '/compliance-settings', element: <SettingsPage />, permission: 'settings.read', bareLayout: true },
+  { path: '/admin-settings', element: <AdminSettingsPage />, permission: 'settings.manage', bareLayout: true },
+  { path: '/global-sets', element: <GlobalSetsPage />, permission: 'taxonomy.categories.read', bareLayout: true },
+  { path: '/org-hierarchy', element: <OrgHierarchyPage />, permission: 'org-units.read', bareLayout: true },
 ];
 
 const menuItems: MenuItem[] = [
