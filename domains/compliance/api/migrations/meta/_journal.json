@@ -8,6 +8,13 @@
       "when": 1776527477879,
       "tag": "0000_remarkable_doomsday",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1776576388932,
+      "tag": "0001_solid_cable",
+      "breakpoints": true
     }
   ]
 }

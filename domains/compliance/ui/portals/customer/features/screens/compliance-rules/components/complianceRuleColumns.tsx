@@ -1,17 +1,17 @@
 import { type DataTableColumn } from '@packages/ui';
 import { HealthBar, JurisdictionTag, HandlerPill } from '../../../../../../components';
-import type { Obligation } from '../data/obligationsMock';
+import type { ComplianceRule } from '../data/complianceRulesMock';
 import { FrequencyPill } from './FrequencyPill';
 
-const STATUS_TONE: Record<Obligation['status'], string> = {
+const STATUS_TONE: Record<ComplianceRule['status'], string> = {
   active: 'bg-filed',
   draft: 'bg-due-soon',
   deprecated: 'bg-ink-muted',
 };
 
-export const REQUIRED_OBLIGATION_COLUMN_KEYS: string[] = ['code', 'name'];
+export const REQUIRED_COMPLIANCE_RULE_COLUMN_KEYS: string[] = ['code', 'name'];
 
-export const OBLIGATION_COLUMNS: DataTableColumn<Obligation>[] = [
+export const COMPLIANCE_RULE_COLUMNS: DataTableColumn<ComplianceRule>[] = [
   {
     key: 'code',
     header: 'Code',
@@ -29,7 +29,7 @@ export const OBLIGATION_COLUMNS: DataTableColumn<Obligation>[] = [
   },
   {
     key: 'name',
-    header: 'Obligation',
+    header: 'Rule',
     cell: (o) => (
       <div className="flex flex-col min-w-0">
         <span className="text-sm text-ink font-sans leading-snug truncate">{o.name}</span>

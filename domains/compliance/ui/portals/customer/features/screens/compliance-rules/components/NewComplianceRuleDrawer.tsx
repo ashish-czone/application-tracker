@@ -4,7 +4,6 @@ import { useForm, useFormContext, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
-  ChevronDown,
   ChevronRight,
   BookTemplate,
   PenLine,
@@ -23,14 +22,15 @@ import {
   FormSelect,
   FormTextarea,
 } from '@packages/ui';
+import { FREQUENCIES, type ComplianceFrequency } from '@domains/compliance-contract';
 import { JurisdictionTag } from '../../../../../../components';
 import {
   MOCK_RULE_TEMPLATES,
   LAW_GROUPS,
   type RuleTemplate,
-  type ObligationFrequency,
   type LawGroupKey,
-} from '../data/obligationsMock';
+} from '../data/complianceRulesMock';
+import { FREQUENCY_LABEL, FREQUENCY_OPTIONS } from './FrequencyPill';
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -55,66 +55,67 @@ const panelVariants = {
 
 // ─── Schema ──────────────────────────────────────────────────────────
 
-const obligationSchema = z.object({
+const complianceRuleSchema = z.object({
   code: z.string().min(1, 'Code is required'),
   name: z.string().min(1, 'Name is required'),
   description: z.string(),
-  lawGroup: z.string().min(1, 'Law is required'),
+  lawId: z.string().min(1, 'Law is required'),
   frequency: z.string().min(1, 'Cadence is required'),
   dueDayOfMonth: z.string(),
   dueMonthOffset: z.string(),
   gracePeriodDays: z.string(),
 });
 
-type ObligationFormValues = z.infer<typeof obligationSchema>;
+type ComplianceRuleFormValues = z.infer<typeof complianceRuleSchema>;
 
 /** External-facing shape — narrows the enum-like fields for onCreate consumers. */
-export interface NewObligationValues {
+export interface NewComplianceRuleValues {
   code: string;
   name: string;
   description: string;
-  lawGroup: LawGroupKey | '';
-  frequency: ObligationFrequency | '';
+  lawId: string;
+  frequency: ComplianceFrequency | '';
   dueDayOfMonth: string;
   dueMonthOffset: string;
   gracePeriodDays: string;
 }
 
-const EMPTY_FORM: ObligationFormValues = {
+export interface DrawerLawOption {
+  id: string;
+  code: string;
+  name: string;
+}
+
+const EMPTY_FORM: ComplianceRuleFormValues = {
   code: '',
   name: '',
   description: '',
-  lawGroup: '',
+  lawId: '',
   frequency: '',
   dueDayOfMonth: '',
   dueMonthOffset: '0',
   gracePeriodDays: '0',
 };
 
-const FREQUENCY_LABEL: Record<ObligationFrequency, string> = {
-  monthly: 'Monthly',
-  quarterly: 'Quarterly',
-  'half-yearly': 'Half-yearly',
-  yearly: 'Yearly',
-  event: 'On event',
-  'ad-hoc': 'Ad-hoc',
-};
-
-const LAW_OPTIONS = LAW_GROUPS.map((g) => ({ value: g.key, label: g.label }));
-const FREQUENCY_OPTIONS = (Object.entries(FREQUENCY_LABEL) as [ObligationFrequency, string][]).map(
-  ([value, label]) => ({ value, label }),
-);
+const TEMPLATE_LAW_OPTIONS = LAW_GROUPS.map((g) => ({ value: g.key, label: g.label }));
 
 // ─── Props ───────────────────────────────────────────────────────────
 
-export interface NewObligationDrawerProps {
+export interface NewComplianceRuleDrawerProps {
   onClose?: () => void;
-  onCreate?: (values: NewObligationValues, templateId?: string) => void;
+  onCreate?: (values: NewComplianceRuleValues, templateId?: string) => void;
+  laws: DrawerLawOption[];
+  isSubmitting?: boolean;
 }
 
 // ─── Component ───────────────────────────────────────────────────────
 
-export function NewObligationDrawer({ onClose, onCreate }: NewObligationDrawerProps) {
+export function NewComplianceRuleDrawer({
+  onClose,
+  onCreate,
+  laws,
+  isSubmitting,
+}: NewComplianceRuleDrawerProps) {
   const [mode, setMode] = useState<DrawerMode>('pick');
   const [slideDir, setSlideDir] = useState<SlideDirection>('forward');
   const [selectedTemplate, setSelectedTemplate] = useState<RuleTemplate | null>(null);
@@ -122,10 +123,21 @@ export function NewObligationDrawer({ onClose, onCreate }: NewObligationDrawerPr
   const [templateLawFilter, setTemplateLawFilter] = useState<LawGroupKey | ''>('');
   const [scheduleOpen, setScheduleOpen] = useState(false);
 
-  const form = useForm<ObligationFormValues>({
-    resolver: zodResolver(obligationSchema),
+  const form = useForm<ComplianceRuleFormValues>({
+    resolver: zodResolver(complianceRuleSchema),
     defaultValues: EMPTY_FORM,
   });
+
+  const lawOptions = useMemo(
+    () => laws.map((l) => ({ value: l.id, label: `${l.code} — ${l.name}` })),
+    [laws],
+  );
+
+  const lawByCode = useMemo(() => {
+    const map = new Map<string, DrawerLawOption>();
+    for (const law of laws) map.set(law.code.toUpperCase(), law);
+    return map;
+  }, [laws]);
 
   // ── Template search / filter ─────────────────────────────────────
 
@@ -151,12 +163,15 @@ export function NewObligationDrawer({ onClose, onCreate }: NewObligationDrawerPr
 
   function pickTemplate(tpl: RuleTemplate) {
     setSelectedTemplate(tpl);
+    const matchedLawId = lawByCode.get(tpl.lawCode.toUpperCase())?.id ?? '';
+    const templateFrequency: ComplianceRuleFormValues['frequency'] =
+      (FREQUENCIES as readonly string[]).includes(tpl.frequency) ? tpl.frequency : '';
     form.reset({
       code: tpl.code,
       name: tpl.name,
       description: tpl.description,
-      lawGroup: tpl.lawGroup,
-      frequency: tpl.frequency,
+      lawId: matchedLawId,
+      frequency: templateFrequency,
       dueDayOfMonth: String(tpl.dueDayOfMonth),
       dueMonthOffset: String(tpl.dueMonthOffset),
       gracePeriodDays: String(tpl.gracePeriodDays),
@@ -180,8 +195,8 @@ export function NewObligationDrawer({ onClose, onCreate }: NewObligationDrawerPr
     setSelectedTemplate(null);
   }
 
-  const onSubmit = (values: ObligationFormValues) => {
-    onCreate?.(values as NewObligationValues, selectedTemplate?.id);
+  const onSubmit = (values: ComplianceRuleFormValues) => {
+    onCreate?.(values as NewComplianceRuleValues, selectedTemplate?.id);
   };
 
   // ─── Render ──────────────────────────────────────────────────────
@@ -208,7 +223,7 @@ export function NewObligationDrawer({ onClose, onCreate }: NewObligationDrawerPr
                     </button>
                   )}
                   <Eyebrow tone="muted" mark="§">
-                    {mode === 'pick' && 'New Obligation'}
+                    {mode === 'pick' && 'New Compliance Rule'}
                     {mode === 'template' && 'From template'}
                     {mode === 'scratch' && 'From scratch'}
                   </Eyebrow>
@@ -216,23 +231,23 @@ export function NewObligationDrawer({ onClose, onCreate }: NewObligationDrawerPr
               }
               title={
                 <>
-                  {mode === 'pick' && 'Add obligation'}
+                  {mode === 'pick' && 'Add compliance rule'}
                   {mode === 'template' && (
                     <>
                       <span className="font-serif italic">Customise</span>{' '}
                       <span className="font-mono text-2xl">{selectedTemplate?.code}</span>
                     </>
                   )}
-                  {mode === 'scratch' && 'New obligation'}
+                  {mode === 'scratch' && 'New compliance rule'}
                 </>
               }
               subtitle={
                 <>
                   {mode === 'pick' &&
-                    'Start from a standard template or create a custom obligation from scratch.'}
+                    'Start from a standard template or create a custom rule from scratch.'}
                   {mode === 'template' &&
                     'Pre-filled from the template. Edit any field to customise for your firm.'}
-                  {mode === 'scratch' && 'Define a custom obligation not covered by standard templates.'}
+                  {mode === 'scratch' && 'Define a custom rule not covered by standard templates.'}
                 </>
               }
               onClose={() => onClose?.()}
@@ -269,6 +284,7 @@ export function NewObligationDrawer({ onClose, onCreate }: NewObligationDrawerPr
                       scheduleOpen={scheduleOpen}
                       setScheduleOpen={setScheduleOpen}
                       isTemplate={mode === 'template'}
+                      lawOptions={lawOptions}
                     />
                   )}
                 </motion.div>
@@ -280,6 +296,7 @@ export function NewObligationDrawer({ onClose, onCreate }: NewObligationDrawerPr
               <FormFooter
                 onCancel={() => onClose?.()}
                 isTemplate={mode === 'template'}
+                isSubmitting={isSubmitting ?? false}
               />
             )}
           </form>
@@ -291,10 +308,18 @@ export function NewObligationDrawer({ onClose, onCreate }: NewObligationDrawerPr
 // ─── Footer ─────────────────────────────────────────────────────────
 // Inside FormProvider so it can read formState for the modified summary.
 
-function FormFooter({ onCancel, isTemplate }: { onCancel: () => void; isTemplate: boolean }) {
+function FormFooter({
+  onCancel,
+  isTemplate,
+  isSubmitting,
+}: {
+  onCancel: () => void;
+  isTemplate: boolean;
+  isSubmitting: boolean;
+}) {
   const {
     formState: { dirtyFields },
-  } = useFormContext<ObligationFormValues>();
+  } = useFormContext<ComplianceRuleFormValues>();
   const modifiedCount = isTemplate
     ? Object.values(dirtyFields).filter(Boolean).length
     : 0;
@@ -306,11 +331,11 @@ function FormFooter({ onCancel, isTemplate }: { onCancel: () => void; isTemplate
         </p>
       )}
       <div className="flex items-center gap-3">
-        <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
+        <Button type="button" variant="ghost" size="sm" onClick={onCancel} disabled={isSubmitting}>
           Cancel
         </Button>
-        <Button type="submit" size="sm" className="ml-auto">
-          Create as draft
+        <Button type="submit" size="sm" className="ml-auto" disabled={isSubmitting}>
+          {isSubmitting ? 'Creating…' : 'Create as draft'}
         </Button>
       </div>
     </footer>
@@ -367,7 +392,7 @@ function PickModeBody({
             </span>
           </div>
           <p className="text-[11px] text-ink-muted font-sans leading-relaxed">
-            Define a custom obligation not found in the standard catalog.
+            Define a custom rule not found in the standard catalog.
           </p>
         </button>
       </div>
@@ -388,7 +413,7 @@ function PickModeBody({
           <Combobox
             value={templateLawFilter}
             onChange={(v) => setTemplateLawFilter(v as LawGroupKey | '')}
-            options={[{ value: '', label: 'All laws' }, ...LAW_OPTIONS]}
+            options={[{ value: '', label: 'All laws' }, ...TEMPLATE_LAW_OPTIONS]}
             placeholder="All laws"
             searchPlaceholder="Search laws..."
           />
@@ -461,15 +486,17 @@ function FormBody({
   scheduleOpen,
   setScheduleOpen,
   isTemplate,
+  lawOptions,
 }: {
   selectedTemplate: RuleTemplate | null;
   scheduleOpen: boolean;
   setScheduleOpen: (v: boolean) => void;
   isTemplate: boolean;
+  lawOptions: { value: string; label: string }[];
 }) {
   const {
     formState: { dirtyFields },
-  } = useFormContext<ObligationFormValues>();
+  } = useFormContext<ComplianceRuleFormValues>();
   const modifiedCount = isTemplate
     ? Object.values(dirtyFields).filter(Boolean).length
     : 0;
@@ -492,47 +519,47 @@ function FormBody({
         </div>
       )}
 
-      <ObligationField name="code" label="Code" required isTemplate={isTemplate}>
+      <ComplianceRuleField name="code" label="Code" required isTemplate={isTemplate}>
         <FormInput
           name="code"
           placeholder="e.g. GSTR-3B"
           ariaLabel="Code"
           inputClassName="uppercase tracking-tabular font-mono"
         />
-      </ObligationField>
+      </ComplianceRuleField>
 
-      <ObligationField name="name" label="Name" required isTemplate={isTemplate}>
+      <ComplianceRuleField name="name" label="Name" required isTemplate={isTemplate}>
         <FormInput
           name="name"
-          placeholder="Short title for the obligation"
+          placeholder="Short title for the rule"
           ariaLabel="Name"
         />
-      </ObligationField>
+      </ComplianceRuleField>
 
-      <ObligationField name="lawGroup" label="Law" required isTemplate={isTemplate}>
+      <ComplianceRuleField name="lawId" label="Law" required isTemplate={isTemplate}>
         <FormSelect
-          name="lawGroup"
-          options={LAW_OPTIONS}
-          placeholder="Select law group"
+          name="lawId"
+          options={lawOptions}
+          placeholder="Select law"
         />
-      </ObligationField>
+      </ComplianceRuleField>
 
-      <ObligationField name="frequency" label="Cadence" required isTemplate={isTemplate}>
+      <ComplianceRuleField name="frequency" label="Cadence" required isTemplate={isTemplate}>
         <FormSelect
           name="frequency"
           options={FREQUENCY_OPTIONS}
           placeholder="Select cadence"
         />
-      </ObligationField>
+      </ComplianceRuleField>
 
-      <ObligationField name="description" label="Description" isTemplate={isTemplate}>
+      <ComplianceRuleField name="description" label="Description" isTemplate={isTemplate}>
         <FormTextarea
           name="description"
           rows={3}
           placeholder="Brief description of this filing requirement"
           ariaLabel="Description"
         />
-      </ObligationField>
+      </ComplianceRuleField>
 
       {/* Schedule details — collapsible */}
       <div>
@@ -554,7 +581,7 @@ function FormBody({
         >
           <div className="overflow-hidden">
             <div className="mt-4 grid grid-cols-3 gap-4 pb-1">
-              <ObligationField
+              <ComplianceRuleField
                 name="dueDayOfMonth"
                 label="Due day"
                 isTemplate={isTemplate}
@@ -566,8 +593,8 @@ function FormBody({
                   ariaLabel="Due day"
                   inputClassName="font-mono tabular-nums"
                 />
-              </ObligationField>
-              <ObligationField
+              </ComplianceRuleField>
+              <ComplianceRuleField
                 name="dueMonthOffset"
                 label="Month offset"
                 isTemplate={isTemplate}
@@ -579,8 +606,8 @@ function FormBody({
                   ariaLabel="Month offset"
                   inputClassName="font-mono tabular-nums"
                 />
-              </ObligationField>
-              <ObligationField
+              </ComplianceRuleField>
+              <ComplianceRuleField
                 name="gracePeriodDays"
                 label="Grace days"
                 isTemplate={isTemplate}
@@ -592,7 +619,7 @@ function FormBody({
                   ariaLabel="Grace days"
                   inputClassName="font-mono tabular-nums"
                 />
-              </ObligationField>
+              </ComplianceRuleField>
             </div>
           </div>
         </div>
@@ -605,14 +632,14 @@ function FormBody({
 // Caller-owned label so we can colour/flag it when the template field
 // has been modified. FormInput et al. render label-less underneath.
 
-function ObligationField({
+function ComplianceRuleField({
   name,
   label,
   required,
   isTemplate,
   children,
 }: {
-  name: keyof ObligationFormValues;
+  name: keyof ComplianceRuleFormValues;
   label: string;
   required?: boolean;
   isTemplate: boolean;
@@ -620,7 +647,7 @@ function ObligationField({
 }) {
   const {
     formState: { dirtyFields },
-  } = useFormContext<ObligationFormValues>();
+  } = useFormContext<ComplianceRuleFormValues>();
   const isModified = isTemplate && dirtyFields[name] === true;
   return (
     <div>

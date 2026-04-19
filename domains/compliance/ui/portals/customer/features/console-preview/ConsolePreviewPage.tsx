@@ -524,7 +524,7 @@ export function ConsolePreviewPage() {
               <Link to="/console-preview" className="text-ink border-b border-ink pb-0.5">Console</Link>
               <Link to="/screens/clients" className="hover:text-ink">Clients</Link>
               <Link to="/screens/laws" className="hover:text-ink">Laws</Link>
-              <Link to="/screens/obligations" className="hover:text-ink">Obligations</Link>
+              <Link to="/screens/compliance-rules" className="hover:text-ink">Compliance Rules</Link>
               <Link to="/screens/filings" className="hover:text-ink">Filings</Link>
               <Link to="/screens/reports" className="hover:text-ink">Reports</Link>
             </nav>
