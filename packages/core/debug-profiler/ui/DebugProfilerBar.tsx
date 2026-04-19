@@ -1,6 +1,6 @@
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { ChevronUp, X, Database, Clock, ChevronDown, ChevronRight, Copy, Check } from 'lucide-react';
-import { useDebugProfile } from './useDebugProfile';
+import { useDebugProfileBatch } from './useDebugProfile';
 import type { DebugProfile, DebugQueryEntry } from './types';
 
 function formatMs(n: number): string {
@@ -13,17 +13,6 @@ function formatParam(value: unknown): string {
   if (value instanceof Date) return value.toISOString();
   if (typeof value === 'string') return JSON.stringify(value);
   return JSON.stringify(value);
-}
-
-function ProfileRow({ profile }: { profile: DebugProfile }) {
-  return (
-    <div className="flex items-center gap-3 text-xs">
-      <span className="font-mono text-muted-foreground">{profile.method}</span>
-      <span className="font-mono truncate max-w-[200px]" title={profile.path}>{profile.path}</span>
-      <span className="ml-auto flex items-center gap-1"><Clock className="w-3 h-3" />{formatMs(profile.durationMs)}</span>
-      <span className="flex items-center gap-1"><Database className="w-3 h-3" />{profile.queryCount}</span>
-    </div>
-  );
 }
 
 function QueryDetail({ query }: { query: DebugQueryEntry }) {
@@ -78,62 +67,58 @@ function QueryDetail({ query }: { query: DebugQueryEntry }) {
   );
 }
 
-export function DebugProfilerBar() {
-  const { latest, history } = useDebugProfile();
-  const [open, setOpen] = useState(false);
-  const [dismissed, setDismissed] = useState(false);
-  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
-
-  useEffect(() => {
-    setExpandedIndex(null);
-  }, [latest?.requestId]);
-
-  if (dismissed || !latest) return null;
-
-  const toggleExpand = (i: number) => {
-    setExpandedIndex((curr) => (curr === i ? null : i));
-  };
-
+function RequestRow({
+  profile,
+  expanded,
+  onToggle,
+  queryExpandedIndex,
+  onToggleQuery,
+}: {
+  profile: DebugProfile;
+  expanded: boolean;
+  onToggle: () => void;
+  queryExpandedIndex: number | null;
+  onToggleQuery: (i: number) => void;
+}) {
   return (
-    <div className="fixed bottom-3 right-3 z-[9999] text-xs">
-      {open ? (
-        <div className="bg-background border border-border rounded-lg shadow-lg w-[640px] max-h-[70vh] flex flex-col">
-          <div className="flex items-center justify-between px-3 py-2 border-b border-border">
-            <span className="font-semibold">Debug profiler</span>
-            <div className="flex items-center gap-2">
-              <button onClick={() => setOpen(false)} className="p-1 hover:bg-accent rounded"><ChevronUp className="w-3 h-3" /></button>
-              <button onClick={() => setDismissed(true)} className="p-1 hover:bg-accent rounded"><X className="w-3 h-3" /></button>
-            </div>
-          </div>
-          <div className="px-3 py-2 border-b border-border">
-            <ProfileRow profile={latest} />
-          </div>
-          <div className="flex-1 overflow-auto">
-            {latest.queries.length === 0 ? (
-              <p className="text-muted-foreground p-3">No queries captured. Ensure the server is running with DEBUG_PROFILING=true.</p>
+    <>
+      <tr
+        className="border-t border-border hover:bg-accent/40 cursor-pointer"
+        onClick={onToggle}
+      >
+        <td className="px-1 text-muted-foreground align-top pt-1.5">
+          {expanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+        </td>
+        <td className="px-2 py-1 font-mono text-muted-foreground align-top">{profile.method}</td>
+        <td className="px-2 py-1 font-mono truncate max-w-[300px] align-top" title={profile.path}>
+          {profile.path}
+        </td>
+        <td className="px-2 py-1 text-right font-mono align-top">{formatMs(profile.durationMs)}</td>
+        <td className="px-2 py-1 text-right font-mono align-top">{profile.queryCount}</td>
+      </tr>
+      {expanded && (
+        <tr className="border-t border-border bg-muted/20">
+          <td colSpan={5} className="p-0">
+            {profile.queries.length === 0 ? (
+              <p className="text-muted-foreground p-3 text-[11px]">No queries captured for this request.</p>
             ) : (
               <table className="w-full">
-                <thead className="bg-muted sticky top-0">
-                  <tr>
-                    <th className="w-6 px-1"></th>
-                    <th className="text-left px-3 py-1 font-medium text-muted-foreground">SQL</th>
-                    <th className="text-right px-3 py-1 font-medium text-muted-foreground w-20">ms</th>
-                  </tr>
-                </thead>
                 <tbody>
-                  {latest.queries.map((q, i) => {
-                    const isExpanded = expandedIndex === i;
+                  {profile.queries.map((q, i) => {
+                    const isExpanded = queryExpandedIndex === i;
                     return (
                       <Fragment key={i}>
                         <tr
                           className="border-t border-border hover:bg-accent/40 cursor-pointer"
-                          onClick={() => toggleExpand(i)}
+                          onClick={() => onToggleQuery(i)}
                         >
-                          <td className="px-1 text-muted-foreground">
+                          <td className="w-6 px-1 text-muted-foreground">
                             {isExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
                           </td>
-                          <td className="px-3 py-1 font-mono truncate max-w-[440px]" title={q.sql}>{q.sql}</td>
-                          <td className="px-3 py-1 text-right font-mono">{formatMs(q.durationMs)}</td>
+                          <td className="px-3 py-1 font-mono truncate max-w-[480px]" title={q.sql}>
+                            {q.sql}
+                          </td>
+                          <td className="px-3 py-1 text-right font-mono w-20">{formatMs(q.durationMs)}</td>
                         </tr>
                         {isExpanded && (
                           <tr className="border-t border-border">
@@ -148,23 +133,121 @@ export function DebugProfilerBar() {
                 </tbody>
               </table>
             )}
-          </div>
-          {history.length > 1 && (
-            <div className="px-3 py-1 border-t border-border text-muted-foreground">
-              {history.length} requests in session
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}
+
+export function DebugProfilerBar() {
+  const { batch, path } = useDebugProfileBatch();
+  const [open, setOpen] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+  const [expandedRequest, setExpandedRequest] = useState<string | null>(null);
+  const [expandedQuery, setExpandedQuery] = useState<number | null>(null);
+
+  const totals = useMemo(() => {
+    const totalMs = batch.reduce((acc, p) => acc + p.durationMs, 0);
+    const totalQueries = batch.reduce((acc, p) => acc + p.queryCount, 0);
+    const totalQueryMs = batch.reduce((acc, p) => acc + p.totalQueryMs, 0);
+    return { totalMs, totalQueries, totalQueryMs };
+  }, [batch]);
+
+  useEffect(() => {
+    setExpandedRequest(null);
+    setExpandedQuery(null);
+  }, [path]);
+
+  if (dismissed || batch.length === 0) return null;
+
+  const toggleRequest = (key: string) => {
+    setExpandedRequest((curr) => (curr === key ? null : key));
+    setExpandedQuery(null);
+  };
+
+  const toggleQuery = (i: number) => {
+    setExpandedQuery((curr) => (curr === i ? null : i));
+  };
+
+  return (
+    <div className="fixed bottom-3 right-3 z-[9999] text-xs">
+      {open ? (
+        <div className="bg-background border border-border rounded-lg shadow-lg w-[720px] max-h-[75vh] flex flex-col">
+          <div className="flex items-center justify-between px-3 py-2 border-b border-border">
+            <span className="font-semibold">Debug profiler</span>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setOpen(false)} className="p-1 hover:bg-accent rounded">
+                <ChevronUp className="w-3 h-3" />
+              </button>
+              <button onClick={() => setDismissed(true)} className="p-1 hover:bg-accent rounded">
+                <X className="w-3 h-3" />
+              </button>
             </div>
-          )}
+          </div>
+          <div className="px-3 py-2 border-b border-border space-y-1">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <span className="uppercase text-[10px] tracking-wide font-semibold">Page</span>
+              <span className="font-mono truncate" title={path}>{path || '/'}</span>
+            </div>
+            <div className="flex items-center gap-4">
+              <span className="flex items-center gap-1">
+                <span className="font-mono">{batch.length}</span>
+                <span className="text-muted-foreground">{batch.length === 1 ? 'request' : 'requests'}</span>
+              </span>
+              <span className="flex items-center gap-1">
+                <Database className="w-3 h-3" />
+                <span className="font-mono">{totals.totalQueries}</span>
+                <span className="text-muted-foreground">queries ({formatMs(totals.totalQueryMs)})</span>
+              </span>
+              <span className="flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                <span className="font-mono">{formatMs(totals.totalMs)}</span>
+                <span className="text-muted-foreground">total</span>
+              </span>
+            </div>
+          </div>
+          <div className="flex-1 overflow-auto">
+            <table className="w-full">
+              <thead className="bg-muted sticky top-0">
+                <tr>
+                  <th className="w-6 px-1"></th>
+                  <th className="text-left px-2 py-1 font-medium text-muted-foreground w-16">Method</th>
+                  <th className="text-left px-2 py-1 font-medium text-muted-foreground">Path</th>
+                  <th className="text-right px-2 py-1 font-medium text-muted-foreground w-20">ms</th>
+                  <th className="text-right px-2 py-1 font-medium text-muted-foreground w-16">queries</th>
+                </tr>
+              </thead>
+              <tbody>
+                {batch.map((profile, i) => {
+                  const key = profile.requestId ?? `${profile.method}-${profile.path}-${i}`;
+                  return (
+                    <RequestRow
+                      key={key}
+                      profile={profile}
+                      expanded={expandedRequest === key}
+                      onToggle={() => toggleRequest(key)}
+                      queryExpandedIndex={expandedRequest === key ? expandedQuery : null}
+                      onToggleQuery={toggleQuery}
+                    />
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       ) : (
         <button
           onClick={() => setOpen(true)}
           className="flex items-center gap-3 bg-background border border-border rounded-full shadow px-3 py-1.5 hover:bg-accent"
+          title={`${batch.length} request${batch.length === 1 ? '' : 's'} since navigation`}
         >
-          <Clock className="w-3 h-3" />
-          <span className="font-mono">{formatMs(latest.durationMs)}</span>
+          <span className="font-mono">{batch.length}</span>
+          <span className="text-muted-foreground">{batch.length === 1 ? 'req' : 'reqs'}</span>
           <Database className="w-3 h-3" />
-          <span className="font-mono">{latest.queryCount}</span>
-          <span className="font-mono text-muted-foreground">({formatMs(latest.totalQueryMs)})</span>
+          <span className="font-mono">{totals.totalQueries}</span>
+          <Clock className="w-3 h-3" />
+          <span className="font-mono">{formatMs(totals.totalMs)}</span>
         </button>
       )}
     </div>
