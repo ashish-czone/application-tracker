@@ -129,13 +129,21 @@ export function NewComplianceRuleDrawer({
   });
 
   const lawOptions = useMemo(
-    () => laws.map((l) => ({ value: l.id, label: `${l.code} — ${l.name}` })),
+    () =>
+      laws
+        .filter((l) => l.id && l.name)
+        .map((l) => ({
+          value: l.id,
+          label: l.code ? `${l.code} — ${l.name}` : l.name,
+        })),
     [laws],
   );
 
   const lawByCode = useMemo(() => {
     const map = new Map<string, DrawerLawOption>();
-    for (const law of laws) map.set(law.code.toUpperCase(), law);
+    for (const law of laws) {
+      if (law.code) map.set(law.code.toUpperCase(), law);
+    }
     return map;
   }, [laws]);
 
@@ -163,7 +171,7 @@ export function NewComplianceRuleDrawer({
 
   function pickTemplate(tpl: RuleTemplate) {
     setSelectedTemplate(tpl);
-    const matchedLawId = lawByCode.get(tpl.lawCode.toUpperCase())?.id ?? '';
+    const matchedLawId = tpl.lawCode ? lawByCode.get(tpl.lawCode.toUpperCase())?.id ?? '' : '';
     const templateFrequency: ComplianceRuleFormValues['frequency'] =
       (FREQUENCIES as readonly string[]).includes(tpl.frequency) ? tpl.frequency : '';
     form.reset({
