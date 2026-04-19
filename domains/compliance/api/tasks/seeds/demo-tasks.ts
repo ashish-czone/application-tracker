@@ -1,41 +1,31 @@
 import type { INestApplicationContext } from '@nestjs/common';
-import { ModuleRef } from '@nestjs/core';
-import { TasksService, tasks } from '@packages/tasks';
 import { DatabaseService, eq, users } from '@packages/database';
+import { complianceTasks } from '../../schema/compliance-tasks';
 import { ComplianceRuleService } from '../../rules/compliance-rules.service';
 import { ClientRegistrationService } from '../../client-registrations/client-registrations.service';
+import { ComplianceTasksService } from '../../compliance-tasks/compliance-tasks.service';
 
 /**
  * Mirrors `GenerateComplianceTasksAction` so seeding is not tied to the
  * automation runner. For every active rule × registered client × occurrence
- * in the next `HORIZON_MONTHS` months, materializes a task. Idempotent via
- * the external key (rule + client + period start).
+ * in the next `HORIZON_MONTHS` months, materializes a compliance task via
+ * `ComplianceTasksService.create` (transactional write to tasks +
+ * compliance_tasks). Idempotent via findByRuleClientPeriod.
  */
 const HORIZON_MONTHS = 6;
-const TASK_KIND = 'compliance';
-
-interface TaskEntityService {
-  create(data: Record<string, unknown>, actorId: string): Promise<{ id: string; [k: string]: unknown }>;
-}
 
 export const seedDemoTasks = async (ctx: INestApplicationContext): Promise<void> => {
   const database = ctx.get(DatabaseService);
   const ruleService = ctx.get(ComplianceRuleService);
   const registrationService = ctx.get(ClientRegistrationService);
-  const tasksService = ctx.get(TasksService);
-  const moduleRef = ctx.get(ModuleRef);
+  const complianceTasksService = ctx.get(ComplianceTasksService);
 
-  // Idempotency: presence of any compliance-rule-linked task short-circuits.
+  // Idempotency short-circuit: if any compliance task already exists, skip.
   const existing = await database.db
-    .select({ id: tasks.id })
-    .from(tasks)
+    .select({ taskId: complianceTasks.taskId })
+    .from(complianceTasks)
     .limit(1);
   if (existing[0]) return;
-
-  const tasksEntityService = moduleRef.get<TaskEntityService>('ENTITY_SERVICE_tasks', {
-    strict: false,
-  });
-  if (!tasksEntityService) return;
 
   const [admin] = await database.db
     .select({ id: users.id })
@@ -66,19 +56,25 @@ export const seedDemoTasks = async (ctx: INestApplicationContext): Promise<void>
       }
 
       for (const occ of occurrences) {
-        const externalKey = buildExternalKey(rule.id, reg.clientId, occ.periodStart);
-        const found = await tasksService.findByExternalKey(TASK_KIND, rule.id, externalKey);
+        const periodStart = toIsoDate(occ.periodStart);
+        const found = await complianceTasksService.findByRuleClientPeriod(
+          rule.id,
+          reg.clientId,
+          periodStart,
+        );
         if (found) continue;
 
-        await tasksEntityService.create(
+        await complianceTasksService.create(
           {
-            title: `${rule.name} — ${toIsoDate(occ.periodStart)} to ${toIsoDate(occ.periodEnd)}`,
+            title: `${rule.name} — ${periodStart} to ${toIsoDate(occ.periodEnd)}`,
             dueDate: toIsoDate(occ.dueDate),
             priority: 'medium',
+            ruleId: rule.id,
+            clientId: reg.clientId,
+            lawId: rule.lawId,
+            periodStart,
+            periodEnd: toIsoDate(occ.periodEnd),
             assigneeTeamId: assigneeOrgId,
-            kind: TASK_KIND,
-            relatedEntityId: rule.id,
-            externalKey,
           },
           admin.id,
         );
@@ -89,10 +85,6 @@ export const seedDemoTasks = async (ctx: INestApplicationContext): Promise<void>
 
 function toIsoDate(date: Date): string {
   return date.toISOString().slice(0, 10);
-}
-
-function buildExternalKey(ruleId: string, clientId: string, periodStart: Date): string {
-  return `${ruleId}:${clientId}:${toIsoDate(periodStart)}`;
 }
 
 function addMonths(from: Date, n: number): Date {
