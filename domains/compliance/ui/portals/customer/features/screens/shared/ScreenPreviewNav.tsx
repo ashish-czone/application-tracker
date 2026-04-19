@@ -13,12 +13,12 @@ export type ScreenKey =
   | 'global-sets';
 
 const ITEMS: Array<{ key: ScreenKey; label: string; href: string }> = [
-  { key: 'dashboard', label: 'Dashboard', href: '/screens/dashboard' },
-  { key: 'clients', label: 'Clients', href: '/screens/clients' },
-  { key: 'laws', label: 'Laws', href: '/screens/laws' },
-  { key: 'obligations', label: 'Obligations', href: '/screens/obligations' },
-  { key: 'filings', label: 'Filings', href: '/screens/filings' },
-  { key: 'reports', label: 'Reports', href: '/screens/reports' },
+  { key: 'dashboard', label: 'Dashboard', href: '/dashboard' },
+  { key: 'clients', label: 'Clients', href: '/clients' },
+  { key: 'laws', label: 'Laws', href: '/laws' },
+  { key: 'obligations', label: 'Obligations', href: '/obligations' },
+  { key: 'filings', label: 'Filings', href: '/filings' },
+  { key: 'reports', label: 'Reports', href: '/reports' },
 ];
 
 export function ScreenPreviewNav({ active }: { active: ScreenKey }) {
