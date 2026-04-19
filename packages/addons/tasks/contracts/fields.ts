@@ -123,10 +123,12 @@ export const TASKS_FIELDS = {
   },
   kind: {
     type: 'text',
-    label: 'Kind',
+    label: 'Type',
     system: true,
     readonly: true,
-    excludeFromList: true,
+    sortable: true,
+    listVisible: true,
+    listOrder: 6,
   },
   relatedEntityId: {
     type: 'text',
