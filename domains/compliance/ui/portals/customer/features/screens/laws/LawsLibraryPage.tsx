@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
+import { AnimatePresence } from 'framer-motion';
 import { Search, Plus, BookOpen, FileText } from 'lucide-react';
-import { Eyebrow } from '@packages/ui';
+import { Eyebrow, toast } from '@packages/ui';
+import { useEntityHooks } from '@packages/entity-engine-ui';
 import { JurisdictionTag } from '../../../../../components';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 import { type LawNode, type LawJurisdiction } from './data/lawsMock';
 import { LawTreeRow } from './components/LawTreeRow';
+import { NewLawDrawer, type NewLawValues } from './components/NewLawDrawer';
 import { useLawsList } from './api/useLawsApi';
 import { buildLawTree, flattenLawTree } from './api/mapLawRecord';
 
@@ -15,7 +18,10 @@ function formatDate(iso?: string): string {
 }
 
 export function LawsLibraryPage() {
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const { data: lawsPage, isLoading, isError } = useLawsList({ limit: 500 });
+  const lawsHooks = useEntityHooks('laws');
+  const createLaw = lawsHooks.useCreate({ onSuccess: () => setDrawerOpen(false) });
 
   const tree = useMemo<LawNode[]>(
     () => buildLawTree(lawsPage?.data ?? []),
@@ -72,6 +78,7 @@ export function LawsLibraryPage() {
           </div>
           <button
             type="button"
+            onClick={() => setDrawerOpen(true)}
             className="flex items-center gap-2 px-3 py-2 bg-ink text-paper-raised text-[11px] uppercase tracking-eyebrow font-sans font-medium hover:bg-ink/90 transition-colors"
           >
             <Plus className="w-3 h-3" strokeWidth={2} />
@@ -188,6 +195,37 @@ export function LawsLibraryPage() {
           )}
         </div>
       </main>
+
+      <AnimatePresence>
+        {drawerOpen && (
+          <NewLawDrawer
+            onClose={() => setDrawerOpen(false)}
+            laws={lawsPage?.data ?? []}
+            isSubmitting={createLaw.isPending}
+            onCreate={(values) => {
+              const payload = toCreatePayload(values);
+              if (!payload) {
+                toast.error('Code and name are required');
+                return;
+              }
+              createLaw.mutate(payload);
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
+}
+
+function toCreatePayload(values: NewLawValues): Record<string, unknown> | null {
+  if (!values.code.trim() || !values.name.trim()) return null;
+  return {
+    code: values.code.trim(),
+    name: values.name.trim(),
+    jurisdiction: values.jurisdiction || undefined,
+    effectiveFrom: values.effectiveFrom || undefined,
+    parentId: values.parentId || undefined,
+    issuingAuthority: values.issuingAuthority || undefined,
+    description: values.description || undefined,
+  };
 }
