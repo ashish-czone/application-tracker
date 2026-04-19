@@ -57,6 +57,10 @@
       "@packages/entity-relations/*": ["../../packages/addons/entity-relations/api/*"],
       "@packages/entity-relations-ui": ["../../packages/addons/entity-relations/ui"],
       "@packages/entity-relations-ui/*": ["../../packages/addons/entity-relations/ui/*"],
+      "@packages/document-templates": ["../../packages/addons/document-templates/api"],
+      "@packages/document-templates/*": ["../../packages/addons/document-templates/api/*"],
+      "@packages/document-templates-ui": ["../../packages/addons/document-templates/ui"],
+      "@packages/document-templates-ui/*": ["../../packages/addons/document-templates/ui/*"],
       "@packages/*": ["../../packages/core/*", "../../packages/platform/*", "../../packages/addons/*"]
     }
   },
