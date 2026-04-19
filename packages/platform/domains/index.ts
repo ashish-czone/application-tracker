@@ -9,8 +9,15 @@ import type { LucideIcon } from 'lucide-react';
  * route in a permission guard that renders a Forbidden page if the current
  * user lacks the permission. Auth itself is enforced one level up by the
  * shell's AuthGuard — `permission` only controls finer-grained access.
+ *
+ * Set `bareLayout: true` to render the route without the platform `AppLayout`
+ * chrome (sidebar + top bar). Use for screens that bring their own full-page
+ * layout. AuthGuard + PermissionGuard still apply.
  */
-export type DomainRouteObject = RouteObject & { permission?: string };
+export type DomainRouteObject = RouteObject & {
+  permission?: string;
+  bareLayout?: boolean;
+};
 
 export interface DomainBackendManifest {
   name: string;

@@ -228,6 +228,28 @@ export function AppRouter({ domains, brandLabel, menuItems, extraRoutes }: AppRo
   const domainRoutes = useMemo(() => mergeDomainRoutes(domains), [domains]);
   const allExtraRoutes = useMemo(() => extraRoutes ?? [], [extraRoutes]);
 
+  const bareDomainRoutes = useMemo(
+    () => domainRoutes.filter((r) => r.bareLayout),
+    [domainRoutes],
+  );
+  const wrappedDomainRoutes = useMemo(
+    () => domainRoutes.filter((r) => !r.bareLayout),
+    [domainRoutes],
+  );
+
+  // A domain route like `/clients` or `/clients/:clientId` claims the `clients`
+  // slug — skip the auto-generated entity list/detail routes for those slugs
+  // so the designed domain page wins.
+  const domainOwnedSlugs = useMemo(() => {
+    const slugs = new Set<string>();
+    for (const r of domainRoutes) {
+      if (typeof r.path !== 'string') continue;
+      const top = r.path.split('/').filter(Boolean)[0];
+      if (top) slugs.add(top);
+    }
+    return slugs;
+  }, [domainRoutes]);
+
   return (
     <Routes>
       <Route path="/login" element={<Suspense fallback={null}><LoginPage /></Suspense>} />
@@ -237,27 +259,23 @@ export function AppRouter({ domains, brandLabel, menuItems, extraRoutes }: AppRo
       <Route path="/oauth/callback" element={<Suspense fallback={null}><OAuthCallbackPage /></Suspense>} />
 
       <Route element={<AuthGuard />}>
+        {bareDomainRoutes.map((route) => (
+          <Route
+            key={route.path}
+            path={route.path}
+            element={
+              <Suspense fallback={<PageSkeleton />}>
+                {withPermission(route.element, route.permission)}
+              </Suspense>
+            }
+          />
+        ))}
+
         <Route element={<AppLayout brandLabel={brandLabel} menuItems={menuItems} />}>
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="/profile" element={<Suspense fallback={<PageSkeleton />}><ProfilePage /></Suspense>} />
 
-          {entities.map((entity) => {
-            const Override = detailOverrides[entity.entityType];
-            return [
-              <Route
-                key={`${entity.entityType}-list`}
-                path={`/${entity.slug}`}
-                element={<EntityListPage entityType={entity.entityType} />}
-              />,
-              <Route
-                key={`${entity.entityType}-detail`}
-                path={`/${entity.slug}/:id`}
-                element={Override ? <Suspense fallback={<PageSkeleton />}><Override /></Suspense> : <AppEntityDetailPage entityType={entity.entityType} />}
-              />,
-            ];
-          })}
-
-          {domainRoutes.map((route) => (
+          {wrappedDomainRoutes.map((route) => (
             <Route
               key={route.path}
               path={route.path}
@@ -268,6 +286,24 @@ export function AppRouter({ domains, brandLabel, menuItems, extraRoutes }: AppRo
               }
             />
           ))}
+
+          {entities
+            .filter((entity) => !domainOwnedSlugs.has(entity.slug))
+            .map((entity) => {
+              const Override = detailOverrides[entity.entityType];
+              return [
+                <Route
+                  key={`${entity.entityType}-list`}
+                  path={`/${entity.slug}`}
+                  element={<EntityListPage entityType={entity.entityType} />}
+                />,
+                <Route
+                  key={`${entity.entityType}-detail`}
+                  path={`/${entity.slug}/:id`}
+                  element={Override ? <Suspense fallback={<PageSkeleton />}><Override /></Suspense> : <AppEntityDetailPage entityType={entity.entityType} />}
+                />,
+              ];
+            })}
 
           {allExtraRoutes.map((route) => (
             <Route
