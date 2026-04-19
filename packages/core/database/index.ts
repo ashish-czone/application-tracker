@@ -14,6 +14,11 @@ export class DatabaseService implements OnModuleDestroy {
     return this._db;
   }
 
+  /** Returns the underlying pg pool. Intended for instrumentation (e.g. debug-profiler). */
+  getPool(): Pool {
+    return this.pool;
+  }
+
   constructor() {
     this.pool = new Pool({ connectionString: process.env.DATABASE_URL });
     this._db = drizzle(this.pool, { schema });

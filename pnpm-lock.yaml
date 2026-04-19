@@ -2938,6 +2938,9 @@ importers:
       '@packages/database':
         specifier: workspace:*
         version: link:../../core/database
+      '@packages/debug-profiler':
+        specifier: workspace:*
+        version: link:../../core/debug-profiler/api
       '@packages/domains':
         specifier: workspace:*
         version: link:../domains

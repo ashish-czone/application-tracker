@@ -40,6 +40,10 @@ export class EnvironmentVariables {
   @IsOptional()
   @IsString()
   TRUSTED_SERVICE_KEYS?: string;
+
+  @IsOptional()
+  @IsIn(['true', 'false'])
+  DEBUG_PROFILING?: string;
 }
 
 export function validate(config: Record<string, unknown>) {
