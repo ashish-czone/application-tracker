@@ -35,7 +35,7 @@ describe('Entity Engine (integration)', () => {
 
   afterEach(async () => {
     await cleanDatabase(db);
-    LookupResolverService.clearRegistry();
+    lookupResolver.clearRegistry();
   });
 
   afterAll(async () => {

@@ -1,21 +1,15 @@
-import { Module, Global, type DynamicModule, type OnModuleInit, Logger, Inject, Optional, type OnApplicationBootstrap } from '@nestjs/common';
+import { Module, type DynamicModule, Logger, Inject, Optional, type OnApplicationBootstrap } from '@nestjs/common';
 import { DatabaseService } from '@packages/database';
 import { DomainEventEmitter, EventRegistryService } from '@packages/events';
 import { HierarchyService } from '@packages/hierarchy';
-import { RbacService, FIELD_PERMISSION_ENTITY_RESOLVER, FieldPermissionsController } from '@packages/rbac';
-import type { FieldPermissionEntityResolver } from '@packages/rbac';
+import { RbacService } from '@packages/rbac';
 import { AppLoggerService } from '@packages/logger';
-import { fieldTypeRegistry } from '@packages/field-types';
-import { coreFieldTypesPlugin } from './field-types';
+import { EntityCoreModule } from './entity-core.module';
 import { EntityRegistryService } from './entity-registry.service';
 import { EntityService } from './entity.service';
-import { EntityEngineApiController } from './entity-engine-api.controller';
-import { FieldsController } from './controllers/fields.controller';
-import { LookupsController } from './controllers/lookups.controller';
 import { FieldDefinitionService } from './services/field-definition.service';
-import { FieldTypeSaveHookRegistry, fieldTypeSaveHookRegistry } from './services/field-type-save-hook.registry';
+import { FieldTypeSaveHookRegistry } from './services/field-type-save-hook.registry';
 import { LookupResolverService } from './services/lookup-resolver.service';
-import { EntityEngineSeedService } from './services/entity-engine-seed.service';
 
 import { createEntityController } from './create-entity-controller';
 import { EAV_STORAGE_EXTENSION, type EavStorageExtension } from './extensions/eav-storage.interface';
@@ -24,9 +18,6 @@ import { WORKFLOW_EXTENSION, type WorkflowExtension } from './extensions/workflo
 import { AUTOMATIONS_EXTENSION, type AutomationsExtension, type EntityResolverFieldConfig } from './extensions/automations-extension.interface';
 import { AUDIT_EXTENSION, type AuditExtension } from './extensions/audit-extension.interface';
 import { TAXONOMY_EXTENSION, type TaxonomyExtension } from './extensions/taxonomy-extension.interface';
-import { CreateEntityAction } from './actions/create-entity.action';
-import { UpdateEntityAction } from './actions/update-entity.action';
-import { DeleteEntityAction } from './actions/delete-entity.action';
 import { POSITION_SCOPE_PROVIDER } from './types';
 import type { EntityConfig, FieldType, PositionScopeProvider } from './types';
 
@@ -47,59 +38,35 @@ function mapFieldType(fieldType?: FieldType): ResolverFieldType | undefined {
   return FIELD_TYPE_MAP[fieldType];
 }
 
-// Collect configs that need initialization — populated by forEntity(), consumed by EntityEngineModule.onModuleInit()
+// Collect configs that need initialization — populated by forEntity(),
+// drained by EntityEngineModule.onApplicationBootstrap. Module-level static
+// so it's shared across every ModuleRef Nest creates for forEntity() entries.
 const pendingConfigs: EntityConfig[] = [];
 
 /**
  * Core entity engine module.
  *
- * Works standalone for schema-column CRUD. Optional extensions:
- * - EavAttributesModule → provides EAV_STORAGE_EXTENSION for dynamic field storage
- * - EntityLayoutModule → provides LAYOUT_EXTENSION for DB-driven layout customization
+ * Imports `EntityCoreModule` for the singleton state services (registry,
+ * field defs, lookup resolver, seed service). Each `forEntity()` call adds
+ * a per-entity controller and service token to the dynamic module — the
+ * shared singletons stay singletons because Nest deduplicates the
+ * `EntityCoreModule` import across all ModuleRefs.
  *
  * Usage:
  * ```
  * @Module({
  *   imports: [
- *     EntityEngineModule,                               // once in root
  *     EntityEngineModule.forEntity(candidatesConfig),     // per entity
- *     EavAttributesModule,                               // optional: dynamic fields
- *     EntityLayoutModule,                                // optional: layout customization
+ *     EavAttributesModule,                                // optional: dynamic fields
+ *     EntityLayoutModule,                                 // optional: layout customization
  *   ],
  * })
  * ```
  */
-@Global()
 @Module({
-  controllers: [EntityEngineApiController, FieldPermissionsController, FieldsController, LookupsController],
-  providers: [
-    EntityRegistryService,
-    FieldDefinitionService,
-    LookupResolverService,
-    EntityEngineSeedService,
-    { provide: FieldTypeSaveHookRegistry, useValue: fieldTypeSaveHookRegistry },
-    {
-      provide: FIELD_PERMISSION_ENTITY_RESOLVER,
-      useFactory: (registry: EntityRegistryService): FieldPermissionEntityResolver => ({
-        resolve(entityType: string) {
-          const config = registry.get(entityType);
-          if (!config) return undefined;
-          return { slug: config.slug, fieldMeta: config.fieldMeta };
-        },
-      }),
-      inject: [EntityRegistryService],
-    },
-    {
-      provide: 'FIELD_DEFINITION_SERVICE',
-      useExisting: FieldDefinitionService,
-    },
-    CreateEntityAction,
-    UpdateEntityAction,
-    DeleteEntityAction,
-  ],
-  exports: [EntityRegistryService, FieldDefinitionService, LookupResolverService, EntityEngineSeedService, FieldTypeSaveHookRegistry, FIELD_PERMISSION_ENTITY_RESOLVER, 'FIELD_DEFINITION_SERVICE'],
+  imports: [EntityCoreModule],
 })
-export class EntityEngineModule implements OnModuleInit, OnApplicationBootstrap {
+export class EntityEngineModule implements OnApplicationBootstrap {
   private readonly logger = new Logger('EntityEngineModule');
 
   constructor(
@@ -111,9 +78,6 @@ export class EntityEngineModule implements OnModuleInit, OnApplicationBootstrap 
     @Inject(WORKFLOW_EXTENSION) @Optional() private readonly workflowExt: WorkflowExtension | null,
     @Inject(AUTOMATIONS_EXTENSION) @Optional() private readonly automationsExt: AutomationsExtension | null,
     @Inject(AUDIT_EXTENSION) @Optional() private readonly auditExt: AuditExtension | null,
-    private readonly createEntityAction: CreateEntityAction,
-    private readonly updateEntityAction: UpdateEntityAction,
-    private readonly deleteEntityAction: DeleteEntityAction,
   ) {}
 
   /**
@@ -154,27 +118,7 @@ export class EntityEngineModule implements OnModuleInit, OnApplicationBootstrap 
     };
   }
 
-  onModuleInit() {
-    // Initialize field type registry with core types (if not already populated)
-    if (!fieldTypeRegistry.has('text')) {
-      fieldTypeRegistry.registerPlugin(coreFieldTypesPlugin);
-    }
-
-    this.rbac.registerPermissions('eav', [
-      { action: 'read', description: 'View field definitions and layouts' },
-      { action: 'manage', description: 'Create/update/delete custom fields and layouts' },
-    ]);
-
-    // Register entity-engine action handlers with automations (if available)
-    if (this.automationsExt) {
-      this.automationsExt.registerAction(this.createEntityAction);
-      this.automationsExt.registerAction(this.updateEntityAction);
-      this.automationsExt.registerAction(this.deleteEntityAction);
-    }
-  }
-
   async onApplicationBootstrap(): Promise<void> {
-    // Process all queued entity configs
     while (pendingConfigs.length > 0) {
       const config = pendingConfigs.shift()!;
       await this.initializeEntity(config);

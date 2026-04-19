@@ -45,7 +45,6 @@ describe('LookupResolverService', () => {
   let mockDb: ReturnType<typeof createMockDb>;
 
   beforeEach(() => {
-    LookupResolverService.clearRegistry();
     mockDb = createMockDb();
     const databaseService = { db: mockDb } as any;
     const mockLogger = createMockLogger();
