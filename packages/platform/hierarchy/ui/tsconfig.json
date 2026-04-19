@@ -15,8 +15,8 @@
     "paths": {
       "@packages/entity-engine-ui": ["../../entity-engine/ui"],
       "@packages/entity-engine-ui/*": ["../../entity-engine/ui/*"],
-      "@packages/hierarchy": ["../"],
-      "@packages/hierarchy/*": ["../*"],
+      "@packages/hierarchy": ["../api"],
+      "@packages/hierarchy/*": ["../api/*"],
       "@packages/hierarchy-ui": ["."],
       "@packages/hierarchy-ui/*": ["./*"],
       "@packages/*": ["../../../core/*/", "../../../platform/*/", "../../../addons/*/"]

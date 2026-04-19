@@ -136,7 +136,7 @@ importers:
         version: link:../../packages/core/events
       '@packages/hierarchy':
         specifier: workspace:*
-        version: link:../../packages/platform/hierarchy
+        version: link:../../packages/platform/hierarchy/api
       '@packages/logger':
         specifier: workspace:*
         version: link:../../packages/core/logger
@@ -631,7 +631,7 @@ importers:
         version: link:../../packages/core/events
       '@packages/hierarchy':
         specifier: workspace:*
-        version: link:../../packages/platform/hierarchy
+        version: link:../../packages/platform/hierarchy/api
       '@packages/logger':
         specifier: workspace:*
         version: link:../../packages/core/logger
@@ -1350,7 +1350,7 @@ importers:
         version: link:../../../packages/core/events
       '@packages/hierarchy':
         specifier: workspace:*
-        version: link:../../../packages/platform/hierarchy
+        version: link:../../../packages/platform/hierarchy/api
       '@packages/logger':
         specifier: workspace:*
         version: link:../../../packages/core/logger
@@ -2980,7 +2980,7 @@ importers:
         version: link:../../../core/events
       '@packages/hierarchy':
         specifier: workspace:*
-        version: link:../../hierarchy
+        version: link:../../hierarchy/api
       '@packages/logger':
         specifier: workspace:*
         version: link:../../../core/logger
@@ -3641,7 +3641,7 @@ importers:
         version: link:../../../core/events
       '@packages/hierarchy':
         specifier: workspace:*
-        version: link:../../hierarchy
+        version: link:../../hierarchy/api
       '@packages/logger':
         specifier: workspace:*
         version: link:../../../core/logger
@@ -3838,21 +3838,21 @@ importers:
         specifier: ^3.0.0
         version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)
 
-  packages/platform/hierarchy:
+  packages/platform/hierarchy/api:
     dependencies:
       '@nestjs/common':
         specifier: ^11.0.0
         version: 11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
       '@packages/database':
         specifier: workspace:*
-        version: link:../../core/database
+        version: link:../../../core/database
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3))
     devDependencies:
       '@packages/platform-testing':
         specifier: workspace:*
-        version: link:../testing
+        version: link:../../testing
       drizzle-kit:
         specifier: ^0.31.9
         version: 0.31.9
@@ -3873,7 +3873,7 @@ importers:
         version: link:../../entity-engine/ui
       '@packages/hierarchy':
         specifier: workspace:*
-        version: link:..
+        version: link:../api
       '@packages/ui':
         specifier: workspace:*
         version: link:../../../core/ui
@@ -4513,7 +4513,7 @@ importers:
         version: link:../../entity-engine/api
       '@packages/hierarchy':
         specifier: workspace:*
-        version: link:../../hierarchy
+        version: link:../../hierarchy/api
       '@packages/rbac':
         specifier: workspace:*
         version: link:../../rbac/api
