@@ -1,10 +1,11 @@
 import { randomUUID } from 'node:crypto';
-import { Injectable, Logger, type CallHandler, type ExecutionContext, type NestInterceptor } from '@nestjs/common';
+import { Inject, Injectable, Logger, type CallHandler, type ExecutionContext, type NestInterceptor } from '@nestjs/common';
 import { map, tap } from 'rxjs/operators';
 import { throwError } from 'rxjs';
 import { catchError, Observable } from 'rxjs';
+import { DEBUG_PROFILER_OPTIONS } from './debug-profiler.module';
 import { ProfilingContextStore } from './profiling-context';
-import type { RequestProfile } from './types';
+import type { DebugProfilerOptions, RequestProfile } from './types';
 
 interface HttpRequestLike {
   method?: string;
@@ -34,9 +35,13 @@ function hasDebugFlag(req: HttpRequestLike): boolean {
 export class DebugProfilerInterceptor implements NestInterceptor {
   private readonly logger = new Logger('DebugProfiler');
 
-  constructor(private readonly store: ProfilingContextStore) {}
+  constructor(
+    private readonly store: ProfilingContextStore,
+    @Inject(DEBUG_PROFILER_OPTIONS) private readonly options: DebugProfilerOptions,
+  ) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
+    if (!this.options.enabled) return next.handle();
     if (context.getType() !== 'http') return next.handle();
 
     const http = context.switchToHttp();

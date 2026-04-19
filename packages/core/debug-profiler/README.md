@@ -27,7 +27,7 @@ Two output surfaces:
 
 ### Server
 
-Set `DEBUG_PROFILING=true` in the app's `.env`. `createAppModule` reads it and conditionally registers `DebugProfilerModule.forRoot({ enabled: true })`. When false, the module is empty and the interceptor + pool wrapper are never loaded → zero runtime cost.
+Set `DEBUG_PROFILING=true` in the app's `.env`. `createAppModule` registers `DebugProfilerModule.forRootAsync(...)` which resolves the flag from `ConfigService` after `.env` is loaded. When false, the interceptor short-circuits and the pool wrapper is never installed → negligible runtime cost.
 
 ### Web
 

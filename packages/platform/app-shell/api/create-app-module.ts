@@ -1,4 +1,4 @@
-import { Injectable, Optional, type ModuleMetadata, type OnApplicationBootstrap } from '@nestjs/common';
+import { Inject, Injectable, type ModuleMetadata, type OnApplicationBootstrap } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
@@ -6,9 +6,11 @@ import type { DomainBackendManifest } from '@packages/domains';
 import { LoggerModule } from '@packages/logger';
 import { DatabaseModule, DatabaseService } from '@packages/database';
 import {
+  DEBUG_PROFILER_OPTIONS,
   DebugProfilerModule,
   ProfilingContextStore,
   wrapPgPool,
+  type DebugProfilerOptions,
 } from '@packages/debug-profiler';
 import { EventsModule } from '@packages/events';
 import { SettingsModule, AppConfigService } from '@packages/settings';
@@ -58,17 +60,17 @@ export interface AppShellOptions {
 class DebugProfilerPoolBootstrapper implements OnApplicationBootstrap {
   constructor(
     private readonly database: DatabaseService,
-    @Optional() private readonly store?: ProfilingContextStore,
+    private readonly store: ProfilingContextStore,
+    @Inject(DEBUG_PROFILER_OPTIONS) private readonly profilerOptions: DebugProfilerOptions,
   ) {}
 
   onApplicationBootstrap(): void {
-    if (!this.store) return;
+    if (!this.profilerOptions.enabled) return;
     wrapPgPool(this.database.getPool(), this.store);
   }
 }
 
 export function createAppModule(options: AppShellOptions): ModuleMetadata {
-  const debugProfilingEnabled = process.env.DEBUG_PROFILING === 'true';
   return {
     imports: [
       ConfigModule.forRoot({
@@ -78,7 +80,12 @@ export function createAppModule(options: AppShellOptions): ModuleMetadata {
       }),
       LoggerModule.register({ provider: 'pino' }),
       DatabaseModule,
-      DebugProfilerModule.forRoot({ enabled: debugProfilingEnabled }),
+      DebugProfilerModule.forRootAsync({
+        useFactory: (config: ConfigService) => ({
+          enabled: config.get<string>('DEBUG_PROFILING') === 'true',
+        }),
+        inject: [ConfigService],
+      }),
       EventsModule,
       SettingsModule,
       QueueModule.registerAsync({
