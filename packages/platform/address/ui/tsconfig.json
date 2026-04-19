@@ -13,8 +13,8 @@
     "noEmit": true,
     "baseUrl": ".",
     "paths": {
-      "@packages/address": ["../"],
-      "@packages/address/*": ["../*"],
+      "@packages/address": ["../api"],
+      "@packages/address/*": ["../api/*"],
       "@packages/address-ui": ["."],
       "@packages/address-ui/*": ["./*"],
       "@packages/*": ["../../../core/*/", "../../../platform/*/", "../../../addons/*/"]
