@@ -3,8 +3,8 @@ import { TASKS_CONFIG } from '../tasks.config';
 
 describe('TASKS_CONFIG', () => {
   describe('polymorphic relation fields', () => {
-    it('declares relatedEntityType as a system, readonly, list-excluded text field', () => {
-      const field = TASKS_CONFIG.fieldMeta.relatedEntityType;
+    it('declares kind as a system, readonly, list-excluded text field', () => {
+      const field = TASKS_CONFIG.fieldMeta.kind;
       expect(field).toBeDefined();
       expect(field.fieldType).toBe('text');
       expect(field.isSystem).toBe(true);

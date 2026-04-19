@@ -22,7 +22,7 @@ interface TaskEntityService {
 }
 
 const HORIZON_MONTHS = 6;
-const RELATED_ENTITY_TYPE = 'compliance_rule';
+const TASK_KIND = 'compliance';
 
 @Injectable()
 export class GenerateComplianceTasksAction implements ActionHandler {
@@ -79,7 +79,7 @@ export class GenerateComplianceTasksAction implements ActionHandler {
         const externalKey = this.buildExternalKey(rule.id, reg.clientId, occ.periodStart);
 
         const existing = await this.tasksService.findByExternalKey(
-          RELATED_ENTITY_TYPE,
+          TASK_KIND,
           rule.id,
           externalKey,
         );
@@ -92,7 +92,7 @@ export class GenerateComplianceTasksAction implements ActionHandler {
             title: this.buildTitle(rule.name, occ),
             dueDate: this.toIsoDate(occ.dueDate),
             assigneeTeamId: assigneeOrgId,
-            relatedEntityType: RELATED_ENTITY_TYPE,
+            kind: TASK_KIND,
             relatedEntityId: rule.id,
             externalKey,
           },

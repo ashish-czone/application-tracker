@@ -15,12 +15,12 @@ export class TasksService {
   constructor(private readonly database: DatabaseService) {}
 
   /**
-   * Lookup a task by its (relatedEntityType, relatedEntityId, externalKey) triple.
+   * Lookup a task by its (kind, relatedEntityId, externalKey) triple.
    * The triple is protected by a partial unique index so at most one row matches.
    * Returns null when no task exists — callers use this for idempotency checks.
    */
   async findByExternalKey(
-    relatedEntityType: string,
+    kind: string,
     relatedEntityId: string,
     externalKey: string,
   ): Promise<{ id: string } | null> {
@@ -29,7 +29,7 @@ export class TasksService {
       .from(tasks)
       .where(
         and(
-          eq(tasks.relatedEntityType, relatedEntityType),
+          eq(tasks.kind, kind),
           eq(tasks.relatedEntityId, relatedEntityId),
           eq(tasks.externalKey, externalKey),
         ),

@@ -12,7 +12,7 @@ import { ClientRegistrationService } from '../../client-registrations/client-reg
  * the external key (rule + client + period start).
  */
 const HORIZON_MONTHS = 6;
-const RELATED_ENTITY_TYPE = 'compliance_rule';
+const TASK_KIND = 'compliance';
 
 interface TaskEntityService {
   create(data: Record<string, unknown>, actorId: string): Promise<{ id: string; [k: string]: unknown }>;
@@ -67,7 +67,7 @@ export const seedDemoTasks = async (ctx: INestApplicationContext): Promise<void>
 
       for (const occ of occurrences) {
         const externalKey = buildExternalKey(rule.id, reg.clientId, occ.periodStart);
-        const found = await tasksService.findByExternalKey(RELATED_ENTITY_TYPE, rule.id, externalKey);
+        const found = await tasksService.findByExternalKey(TASK_KIND, rule.id, externalKey);
         if (found) continue;
 
         await tasksEntityService.create(
@@ -76,7 +76,7 @@ export const seedDemoTasks = async (ctx: INestApplicationContext): Promise<void>
             dueDate: toIsoDate(occ.dueDate),
             priority: 'medium',
             assigneeTeamId: assigneeOrgId,
-            relatedEntityType: RELATED_ENTITY_TYPE,
+            kind: TASK_KIND,
             relatedEntityId: rule.id,
             externalKey,
           },

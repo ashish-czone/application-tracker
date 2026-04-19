@@ -139,7 +139,7 @@ describe('GenerateComplianceTasksAction', () => {
     expect(firstCall).toMatchObject({
       dueDate: '2026-05-20',
       assigneeTeamId: 'org-1',
-      relatedEntityType: 'compliance_rule',
+      kind: 'compliance',
       relatedEntityId: 'r1',
       externalKey: 'r1:c1:2026-04-01',
     });

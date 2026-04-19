@@ -19,7 +19,7 @@ interface TaskRecord {
   assigneeTeamId?: string | null;
   dueDate?: string | null;
   completedAt?: string | null;
-  relatedEntityType?: string | null;
+  kind?: string | null;
   relatedEntityId?: string | null;
   externalKey?: string | null;
 }
@@ -111,7 +111,7 @@ export function useComplianceTaskRows(): ComplianceTasksResult {
   const lawsHooks = useEntityHooks('laws');
   const clientsHooks = useEntityHooks('clients');
 
-  const tasksQuery = tasksHooks.useList({ relatedEntityType: 'compliance_rule', limit: 1000 });
+  const tasksQuery = tasksHooks.useList({ kind: 'compliance', limit: 1000 });
   const rulesQuery = rulesHooks.useList({ limit: 1000 });
   const lawsQuery = lawsHooks.useList({ limit: 1000 });
   const clientsQuery = clientsHooks.useList({ limit: 1000 });
