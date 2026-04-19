@@ -1,7 +1,7 @@
 import type { INestApplicationContext } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
 import { TasksService, tasks } from '@packages/tasks';
-import { DatabaseService } from '@packages/database';
+import { DatabaseService, eq, users } from '@packages/database';
 import { ComplianceRuleService } from '../../rules/compliance-rules.service';
 import { ClientRegistrationService } from '../../client-registrations/client-registrations.service';
 
@@ -37,6 +37,13 @@ export const seedDemoTasks = async (ctx: INestApplicationContext): Promise<void>
   });
   if (!tasksEntityService) return;
 
+  const [admin] = await database.db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.email, 'admin@admin.com'))
+    .limit(1);
+  if (!admin) return;
+
   const activeRules = await ruleService.findActive();
   if (activeRules.length === 0) return;
 
@@ -67,12 +74,13 @@ export const seedDemoTasks = async (ctx: INestApplicationContext): Promise<void>
           {
             title: `${rule.name} — ${toIsoDate(occ.periodStart)} to ${toIsoDate(occ.periodEnd)}`,
             dueDate: toIsoDate(occ.dueDate),
+            priority: 'medium',
             assigneeTeamId: assigneeOrgId,
             relatedEntityType: RELATED_ENTITY_TYPE,
             relatedEntityId: rule.id,
             externalKey,
           },
-          'system',
+          admin.id,
         );
       }
     }
