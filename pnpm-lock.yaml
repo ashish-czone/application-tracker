@@ -1391,6 +1391,9 @@ importers:
       '@packages/entity-engine-ui':
         specifier: workspace:*
         version: link:../../../packages/platform/entity-engine/ui
+      '@packages/org-units-ui':
+        specifier: workspace:*
+        version: link:../../../packages/addons/org-units/ui
       '@packages/ui':
         specifier: workspace:*
         version: link:../../../packages/core/ui
