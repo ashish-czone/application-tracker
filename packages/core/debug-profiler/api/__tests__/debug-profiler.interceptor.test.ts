@@ -51,7 +51,7 @@ function makeHandler(body: unknown): CallHandler {
 describe('DebugProfilerInterceptor', () => {
   it('sets X-Debug-Timing header with duration and query counts', async () => {
     const store = new ProfilingContextStore();
-    const interceptor = new DebugProfilerInterceptor(store);
+    const interceptor = new DebugProfilerInterceptor(store, { enabled: true });
     const { ctx, res } = makeContext();
 
     await lastValueFrom(interceptor.intercept(ctx, makeHandler({ ok: true })));
@@ -63,7 +63,7 @@ describe('DebugProfilerInterceptor', () => {
 
   it('includes queries recorded during request in header totals', async () => {
     const store = new ProfilingContextStore();
-    const interceptor = new DebugProfilerInterceptor(store);
+    const interceptor = new DebugProfilerInterceptor(store, { enabled: true });
     const { ctx, res } = makeContext();
 
     const handler: CallHandler = {
@@ -80,7 +80,7 @@ describe('DebugProfilerInterceptor', () => {
 
   it('does not inject _debug body unless ?debug=1 is set', async () => {
     const store = new ProfilingContextStore();
-    const interceptor = new DebugProfilerInterceptor(store);
+    const interceptor = new DebugProfilerInterceptor(store, { enabled: true });
     const { ctx } = makeContext();
 
     const out = await lastValueFrom(interceptor.intercept(ctx, makeHandler({ ok: true })));
@@ -89,7 +89,7 @@ describe('DebugProfilerInterceptor', () => {
 
   it('injects _debug onto JSON-object bodies when ?debug=1', async () => {
     const store = new ProfilingContextStore();
-    const interceptor = new DebugProfilerInterceptor(store);
+    const interceptor = new DebugProfilerInterceptor(store, { enabled: true });
     const { ctx } = makeContext({ query: { debug: '1' } });
 
     const handler: CallHandler = {
@@ -107,7 +107,7 @@ describe('DebugProfilerInterceptor', () => {
 
   it('does not inject _debug when the body is an array (would break JSON shape)', async () => {
     const store = new ProfilingContextStore();
-    const interceptor = new DebugProfilerInterceptor(store);
+    const interceptor = new DebugProfilerInterceptor(store, { enabled: true });
     const { ctx } = makeContext({ query: { debug: '1' } });
 
     const out = await lastValueFrom(interceptor.intercept(ctx, makeHandler([1, 2, 3])));
@@ -116,16 +116,26 @@ describe('DebugProfilerInterceptor', () => {
 
   it('bypasses non-http contexts', async () => {
     const store = new ProfilingContextStore();
-    const interceptor = new DebugProfilerInterceptor(store);
+    const interceptor = new DebugProfilerInterceptor(store, { enabled: true });
     const ctx = { getType: () => 'rpc' } as unknown as ExecutionContext;
 
     const out = await lastValueFrom(interceptor.intercept(ctx, makeHandler({ ok: true })));
     expect(out).toEqual({ ok: true });
   });
 
+  it('is a pass-through when options.enabled is false — no header, no _debug', async () => {
+    const store = new ProfilingContextStore();
+    const interceptor = new DebugProfilerInterceptor(store, { enabled: false });
+    const { ctx, res } = makeContext({ query: { debug: '1' } });
+
+    const out = await lastValueFrom(interceptor.intercept(ctx, makeHandler({ ok: true })));
+    expect(out).toEqual({ ok: true });
+    expect(res.headers['X-Debug-Timing']).toBeUndefined();
+  });
+
   it('still finalizes header even when the handler throws', async () => {
     const store = new ProfilingContextStore();
-    const interceptor = new DebugProfilerInterceptor(store);
+    const interceptor = new DebugProfilerInterceptor(store, { enabled: true });
     const { ctx, res } = makeContext();
 
     const err = new Error('nope');
@@ -137,7 +147,7 @@ describe('DebugProfilerInterceptor', () => {
 
   it('uses x-correlation-id header as requestId when present', async () => {
     const store = new ProfilingContextStore();
-    const interceptor = new DebugProfilerInterceptor(store);
+    const interceptor = new DebugProfilerInterceptor(store, { enabled: true });
     const { ctx } = makeContext({ headers: { 'x-correlation-id': 'abc-123' }, query: { debug: '1' } });
 
     const out = (await lastValueFrom(interceptor.intercept(ctx, makeHandler({})))) as { _debug: { requestId: string } };
@@ -146,7 +156,7 @@ describe('DebugProfilerInterceptor', () => {
 
   it('makes the profiling context available to query recording during the handler', async () => {
     const store = new ProfilingContextStore();
-    const interceptor = new DebugProfilerInterceptor(store);
+    const interceptor = new DebugProfilerInterceptor(store, { enabled: true });
     const { ctx } = makeContext({ query: { debug: '1' } });
 
     const seen = vi.fn();
