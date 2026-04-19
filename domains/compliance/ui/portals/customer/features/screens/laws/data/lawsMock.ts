@@ -1,4 +1,4 @@
-export type LawJurisdiction = 'central' | 'state' | 'municipal';
+export type LawJurisdiction = 'central' | 'state' | 'municipal' | 'international';
 
 export interface LawNode {
   id: string;

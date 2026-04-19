@@ -18,6 +18,7 @@
     "@packages/domains": "workspace:*",
     "@packages/entity-engine": "workspace:*",
     "@packages/events": "workspace:*",
+    "@packages/hierarchy": "workspace:*",
     "@packages/logger": "workspace:*",
     "@packages/tasks": "workspace:*"
   },
