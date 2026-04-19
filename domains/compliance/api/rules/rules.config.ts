@@ -10,6 +10,16 @@ export const COMPLIANCE_RULES_CONFIG = defineEntity({
   timestamps: true,
 
   fields: {
+    code: {
+      type: 'text',
+      label: 'Code',
+      required: true,
+      unique: true,
+      searchable: true,
+      sortable: true,
+      listVisible: true,
+      listOrder: 1,
+    },
     name: {
       type: 'text',
       label: 'Name',
@@ -18,7 +28,7 @@ export const COMPLIANCE_RULES_CONFIG = defineEntity({
       sortable: true,
       isLabel: true,
       listVisible: true,
-      listOrder: 1,
+      listOrder: 2,
     },
     lawId: {
       type: 'belongsTo',
@@ -28,20 +38,35 @@ export const COMPLIANCE_RULES_CONFIG = defineEntity({
       lookupLabelField: 'name',
       lookupSearchFields: ['name', 'code'],
       listVisible: true,
-      listOrder: 2,
+      listOrder: 3,
     },
     frequency: {
-      type: 'picklist',
+      type: 'text',
       label: 'Frequency',
       required: true,
-      options: [
-        { label: 'Monthly', value: 'monthly' },
-        { label: 'Quarterly', value: 'quarterly' },
-        { label: 'Half-Yearly', value: 'half_yearly' },
-        { label: 'Yearly', value: 'yearly' },
-      ],
       listVisible: true,
-      listOrder: 3,
+      listOrder: 4,
+    },
+    status: {
+      type: 'workflow',
+      label: 'Status',
+      system: true,
+      listVisible: true,
+      listOrder: 5,
+      workflow: {
+        slug: 'compliance-rule-status',
+        initialState: 'draft',
+        states: [
+          { name: 'draft', label: 'Draft', color: '#6B7280' },
+          { name: 'active', label: 'Active', color: '#10B981' },
+          { name: 'deprecated', label: 'Deprecated', color: '#9CA3AF' },
+        ],
+        transitions: [
+          { from: 'draft', to: ['active', 'deprecated'] },
+          { from: 'active', to: ['deprecated'] },
+          { from: 'deprecated', to: ['active'] },
+        ],
+      },
     },
     dueDayOfMonth: {
       type: 'number',
@@ -69,17 +94,15 @@ export const COMPLIANCE_RULES_CONFIG = defineEntity({
       type: 'boolean',
       label: 'Active',
       defaultValue: 'true',
-      listVisible: true,
-      listOrder: 4,
     },
   },
 
-  defaultSort: 'name',
+  defaultSort: 'code',
 
   sections: [
     {
       name: 'Rule',
-      fields: ['name', 'lawId', 'frequency', 'dueDayOfMonth', 'dueMonthOffset', 'gracePeriodDays', 'description', 'active'],
+      fields: ['code', 'name', 'lawId', 'frequency', 'status', 'dueDayOfMonth', 'dueMonthOffset', 'gracePeriodDays', 'description', 'active'],
     },
   ],
 
