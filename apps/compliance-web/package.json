@@ -12,6 +12,7 @@
     "@hookform/resolvers": "^5.0.0",
     "@packages/app-shell-ui": "workspace:*",
     "@packages/attachments-ui": "workspace:*",
+    "@packages/debug-profiler-ui": "workspace:*",
     "@packages/audit-ui": "workspace:*",
     "@packages/auth-ui": "workspace:*",
     "@packages/automations-ui": "workspace:*",

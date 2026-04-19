@@ -481,6 +481,9 @@ importers:
       '@packages/automations-ui':
         specifier: workspace:*
         version: link:../../packages/platform/automations/ui
+      '@packages/debug-profiler-ui':
+        specifier: workspace:*
+        version: link:../../packages/core/debug-profiler/ui
       '@packages/document-templates-ui':
         specifier: workspace:*
         version: link:../../packages/addons/document-templates-ui
@@ -1064,6 +1067,9 @@ importers:
       '@packages/calendar-ui':
         specifier: workspace:*
         version: link:../../packages/addons/calendar-ui
+      '@packages/debug-profiler-ui':
+        specifier: workspace:*
+        version: link:../../packages/core/debug-profiler/ui
       '@packages/document-templates-ui':
         specifier: workspace:*
         version: link:../../packages/addons/document-templates-ui
@@ -2644,6 +2650,25 @@ importers:
       vitest:
         specifier: ^3.0.0
         version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)
+
+  packages/core/debug-profiler/ui:
+    dependencies:
+      '@packages/ui':
+        specifier: workspace:*
+        version: link:../../ui
+      lucide-react:
+        specifier: ^0.500.0
+        version: 0.500.0(react@19.2.4)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.4
+    devDependencies:
+      '@types/react':
+        specifier: ^19.2.14
+        version: 19.2.14
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
 
   packages/core/events:
     dependencies:
