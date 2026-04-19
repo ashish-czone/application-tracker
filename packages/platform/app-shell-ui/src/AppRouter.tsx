@@ -238,6 +238,7 @@ export function AppRouter({ domains, brandLabel, menuItems, extraRoutes }: AppRo
 
       <Route element={<AuthGuard />}>
         <Route element={<AppLayout brandLabel={brandLabel} menuItems={menuItems} />}>
+          <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="/profile" element={<Suspense fallback={<PageSkeleton />}><ProfilePage /></Suspense>} />
 
           {entities.map((entity) => {
