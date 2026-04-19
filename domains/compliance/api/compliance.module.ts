@@ -2,7 +2,7 @@ import { Module, type OnModuleInit } from '@nestjs/common';
 import { EntityEngineModule } from '@packages/entity-engine';
 import { ActionRegistry } from '@packages/automation-contracts';
 import { RbacService } from '@packages/rbac';
-import { TasksModule } from '@packages/tasks';
+import { TASKS_CONFIG, TasksModule } from '@packages/tasks';
 import { WorkflowGuardRegistry } from '@packages/workflows';
 
 import { LAWS_CONFIG } from './laws/laws.config';
@@ -24,6 +24,7 @@ import { COMPLIANCE_PERMISSION_REGISTRATIONS } from './permissions';
 @Module({
   imports: [
     TasksModule,
+    EntityEngineModule.forEntity(TASKS_CONFIG),
     EntityEngineModule.forEntity(LAWS_CONFIG),
     EntityEngineModule.forEntity(CLIENTS_CONFIG),
     EntityEngineModule.forEntity(CLIENT_CONTACTS_CONFIG),
