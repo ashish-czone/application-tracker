@@ -124,3 +124,61 @@ describe('FieldDefinitionService.populateFromRegistry', () => {
     expect(service.listByEntity('gizmos').map((f) => f.fieldKey)).not.toContain('name');
   });
 });
+
+describe('FieldDefinitionService.countByCategoryGroupSlug', () => {
+  let service: FieldDefinitionService;
+
+  beforeEach(() => {
+    service = new FieldDefinitionService({ db: {} as never } as never);
+  });
+
+  it('returns empty map when no fields are loaded', () => {
+    expect(service.countByCategoryGroupSlug()).toEqual({});
+  });
+
+  it('counts fieldType=category fields grouped by categoryGroupSlug', () => {
+    const widgets = defineEntity({
+      table: tbl,
+      slug: 'widgets',
+      fields: {
+        name: { type: 'text', label: 'Name' },
+        country: { type: 'category', label: 'Country', categoryGroupSlug: 'countries' },
+        currency: { type: 'category', label: 'Currency', categoryGroupSlug: 'currencies' },
+      },
+      ui: { icon: 'Box' },
+    });
+    const gizmos = defineEntity({
+      table: pgTable('gizmos', { id: text('id').primaryKey(), title: text('title').notNull() }),
+      slug: 'gizmos',
+      fields: {
+        homeCountry: { type: 'category', label: 'Home Country', categoryGroupSlug: 'countries' },
+      },
+      ui: { icon: 'Box' },
+    });
+
+    service.populateFromRegistry(widgets);
+    service.populateFromRegistry(gizmos);
+
+    const counts = service.countByCategoryGroupSlug();
+    expect(counts.countries).toBe(2);
+    expect(counts.currencies).toBe(1);
+  });
+
+  it('ignores non-category fields and category fields with no slug', () => {
+    const widgets = defineEntity({
+      table: tbl,
+      slug: 'widgets',
+      fields: {
+        name: { type: 'text', label: 'Name' },
+        country: { type: 'category', label: 'Country', categoryGroupSlug: 'countries' },
+      },
+      ui: { icon: 'Box' },
+    });
+
+    service.populateFromRegistry(widgets);
+
+    const counts = service.countByCategoryGroupSlug();
+    expect(Object.keys(counts)).toEqual(['countries']);
+    expect(counts.countries).toBe(1);
+  });
+});

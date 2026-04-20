@@ -17,6 +17,13 @@ export class FieldsController {
     private readonly entityRegistry: EntityRegistryService,
   ) {}
 
+  @Get('usage/category-groups')
+  @RequirePermission(EAV_PERMISSIONS.READ)
+  @ApiOperation({ summary: 'Count how many field definitions reference each category group slug' })
+  async getCategoryGroupUsage(): Promise<Record<string, number>> {
+    return this.fieldDefinitionService.countByCategoryGroupSlug();
+  }
+
   @Get('types')
   @RequirePermission(EAV_PERMISSIONS.READ)
   @ApiOperation({ summary: 'Get all registered field types with metadata' })
