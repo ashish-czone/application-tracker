@@ -235,6 +235,7 @@ export class EntityRegistryService {
       parentEntityType: ext.entity,
       parentTable: parent.table,
       foreignKeyColumn: fkColumn,
+      foreignKeyField: ext.foreignKey,
       parentIdColumn,
       projectedColumns,
       parentDefaults: ext.parentDefaults ?? {},

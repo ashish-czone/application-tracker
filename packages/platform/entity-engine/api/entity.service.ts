@@ -27,6 +27,7 @@ import type { FieldDefinition, FieldType } from './types';
 import { buildSnapshot, diffSnapshot } from './helpers/snapshot';
 import { validatePayload } from './helpers/validate-payload';
 import { splitPayload } from './helpers/split-payload';
+import { splitExtensionPayload } from './helpers/split-extension-payload';
 import { buildClonePayload } from './helpers/build-clone-payload';
 import { fieldTypeSaveHookRegistry, type FieldTypeSaveHookRegistry, type FieldTypeSaveHookContext } from './services/field-type-save-hook.registry';
 import type { WorkflowExtension } from './extensions/workflow-extension.interface';
@@ -102,6 +103,25 @@ export class EntityService {
    */
   private getExtensionMeta(): import('./types').ResolvedExtension | undefined {
     return this.entityRegistry.getResolvedExtension(this.config.entityType);
+  }
+
+  /**
+   * Field definitions visible to this entity. For extension entities, this
+   * surfaces the child's own field defs plus the parent's field defs for any
+   * projected column, so validation and payload-splitting recognise writes to
+   * parent-owned fields as legitimate. The child's own defs take precedence
+   * if a key happens to exist on both sides.
+   */
+  private getEffectiveFieldDefs() {
+    const ownDefs = this.fieldDefinitionService.listByEntityWithOptions(this.config.entityType);
+    const ext = this.getExtensionMeta();
+    if (!ext) return ownDefs;
+
+    const ownKeys = new Set(ownDefs.map((d) => d.fieldKey));
+    const parentDefs = this.fieldDefinitionService.listByEntityWithOptions(ext.parentEntityType);
+    const projectedKeys = new Set(ext.projectedColumns.map((c) => c.fieldKey));
+    const extras = parentDefs.filter((d) => projectedKeys.has(d.fieldKey) && !ownKeys.has(d.fieldKey));
+    return [...ownDefs, ...extras];
   }
 
   /**
@@ -661,6 +681,33 @@ export class EntityService {
     return response;
   }
 
+  /**
+   * Read the joined child+parent row for an extension entity inside a given
+   * transaction. Used by the write path to capture consistent before/after
+   * snapshots across the two tables. Mirrors findOneOrFail's selectMap
+   * construction so both paths return the same shape.
+   *
+   * Bypasses soft-delete + scope filtering — callers in the write path have
+   * already verified visibility via findOneOrFail.
+   */
+  private async readJoinedRowInTx(
+    tx: any,
+    id: string,
+    ext: import('./types').ResolvedExtension,
+  ): Promise<Record<string, unknown>> {
+    const selectMap: Record<string, any> = this.buildListSelectMap([], ext);
+    for (const [k, col] of Object.entries(getTableColumns(this.config.table as any))) {
+      if (!(k in selectMap)) selectMap[k] = col as PgColumn;
+    }
+    const [row] = await tx
+      .select(selectMap)
+      .from(this.config.table as any)
+      .innerJoin(ext.parentTable as any, eq(ext.parentIdColumn, ext.foreignKeyColumn))
+      .where(eq(ext.foreignKeyColumn, id))
+      .limit(1) as any[];
+    return row;
+  }
+
   // ---------------------------------------------------------------------------
   // HIERARCHY
   // ---------------------------------------------------------------------------
@@ -765,8 +812,11 @@ export class EntityService {
       data = await config.hooks.beforeCreate(data, actorId);
     }
 
-    // Load field definitions
-    const defs = await this.fieldDefinitionService.listByEntityWithOptions(config.entityType);
+    // Load field definitions — for extensions this includes the child's own
+    // defs plus the parent's defs for every projected column, so a write to a
+    // parent-owned field validates and splits correctly instead of being
+    // silently dropped as an unknown key.
+    const defs = this.getEffectiveFieldDefs();
 
     // Validate
     const result = validatePayload(defs, data, { partial: false });
@@ -834,16 +884,49 @@ export class EntityService {
       }
     }
 
-    // Phase 2: Transaction (entity row + EAV + relational writes)
-    const row = await this.database.db.transaction(async (tx) => {
-      const result = await tx
-        .insert(config.table as any)
-        .values(withTenantInsert(config.table as any, { id: entityId, ...standardFields, createdBy: actorId }) as any)
-        .returning() as any[];
-      const inserted = result[0];
+    // Phase 2: Transaction (entity row + EAV + relational writes).
+    // Extension entities (`extensionOf`) insert the parent row first, then the
+    // child using the same `entityId` as its FK-also-PK. Both in one tx so a
+    // failure on either side rolls back cleanly.
+    const ext = this.getExtensionMeta();
+    let row = await this.database.db.transaction(async (tx) => {
+      let inserted: any;
+
+      if (ext) {
+        const { parentFields, childFields } = splitExtensionPayload(standardFields, ext);
+
+        const parentTableCols = getTableColumns(ext.parentTable as any);
+        const parentRecord: Record<string, unknown> = {
+          id: entityId,
+          ...ext.parentDefaults,
+          ...parentFields,
+        };
+        if ('createdBy' in parentTableCols) parentRecord.createdBy = actorId;
+        await tx
+          .insert(ext.parentTable as any)
+          .values(withTenantInsert(ext.parentTable as any, parentRecord) as any);
+
+        const childTableCols = getTableColumns(config.table as any);
+        const childRecord: Record<string, unknown> = {
+          [ext.foreignKeyField]: entityId,
+          ...childFields,
+        };
+        if ('createdBy' in childTableCols) childRecord.createdBy = actorId;
+        const childResult = await tx
+          .insert(config.table as any)
+          .values(withTenantInsert(config.table as any, childRecord) as any)
+          .returning() as any[];
+        inserted = childResult[0];
+      } else {
+        const result = await tx
+          .insert(config.table as any)
+          .values(withTenantInsert(config.table as any, { id: entityId, ...standardFields, createdBy: actorId }) as any)
+          .returning() as any[];
+        inserted = result[0];
+      }
 
       if (Object.keys(customFields).length > 0 && this.eavStorage) {
-        await this.eavStorage.setValues(config.entityType, inserted.id, customFields, tx);
+        await this.eavStorage.setValues(config.entityType, entityId, customFields, tx);
       }
 
       // Relational writes inside the transaction
@@ -853,7 +936,7 @@ export class EntityService {
         const hooks = fieldTypeSaveHookRegistry.get(def.fieldType);
         if (hooks?.onTransactionalSave) {
           const ctx: FieldTypeSaveHookContext = {
-            entityType: config.entityType, entityId: inserted.id, fieldKey: key,
+            entityType: config.entityType, entityId, fieldKey: key,
             fieldType: def.fieldType, mode: 'create', actorId,
           };
           await hooks.onTransactionalSave(value, ctx, tx);
@@ -862,6 +945,13 @@ export class EntityService {
 
       return inserted;
     });
+
+    // For extension entities the child row on its own is only half the entity.
+    // Re-read via the joined findOneOrFail so snapshot/event/response see the
+    // full shape (id aliased + projected parent columns included).
+    if (ext) {
+      row = await this.findOneOrFail(entityId);
+    }
 
     // Phase 3: onAfterSave hooks (fire-and-forget)
     for (const [key, value] of Object.entries(allFields)) {
@@ -930,7 +1020,9 @@ export class EntityService {
       payload: { after: snapshot },
     });
 
-    return this.toResponse(row);
+    // For extensions, `row` was re-read via findOneOrFail above and is
+    // already in response shape; skip the second toResponse pass.
+    return ext ? row : this.toResponse(row);
   }
 
   // ---------------------------------------------------------------------------
@@ -951,8 +1043,8 @@ export class EntityService {
       data = await config.hooks.beforeUpdate(id, data, actorId);
     }
 
-    // Load field definitions
-    const defs = await this.fieldDefinitionService.listByEntityWithOptions(config.entityType);
+    // Load effective field definitions (own + projected parent for extensions)
+    const defs = this.getEffectiveFieldDefs();
 
     // Reject workflow field changes in generic update
     const workflowFieldKeys = defs.filter(d => d.fieldType === 'workflow').map(d => d.fieldKey);
@@ -1016,21 +1108,59 @@ export class EntityService {
     let eventPayload: { changes: string[]; before: Record<string, unknown>; after: Record<string, unknown> } | null = null;
 
     // Phase 2: Transaction (entity row + EAV + relational writes)
+    const ext = this.getExtensionMeta();
     const updated = await this.database.db.transaction(async (tx) => {
-      // Read before snapshot inside tx for consistency
+      // Read before snapshot inside tx for consistency. For extensions the
+      // child row alone is only half the entity — read the joined shape so
+      // the snapshot includes projected parent columns.
       const eavBefore = this.eavStorage ? await this.eavStorage.getValues(config.entityType, id, tx) : {};
-      const [existingRow] = await tx.select().from(table).where(withTenant(table, eq(table.id, id))).limit(1) as any[];
+      const existingRow = ext
+        ? await this.readJoinedRowInTx(tx, id, ext)
+        : (await tx.select().from(table).where(withTenant(table, eq(table.id, id))).limit(1) as any[])[0];
       const before = buildSnapshot(this.rowToSnapshot(existingRow), eavBefore);
 
-      // Update standard columns
+      // Update standard columns. Extensions split the bucket into parent and
+      // child slices; either side can be empty. When only the parent slice
+      // has changes, the child row still gets an updatedAt bump (if the column
+      // exists) so the extension entity's audit trail stays current.
       let row = existingRow;
       if (hasStandardChanges) {
-        const [updatedRow] = await tx
-          .update(table)
-          .set(updateValues)
-          .where(withTenant(table, eq(table.id, id)))
-          .returning() as any[];
-        row = updatedRow;
+        if (ext) {
+          const { parentFields, childFields } = splitExtensionPayload(updateValues, ext);
+          const hasParentChanges = Object.keys(parentFields).length > 0;
+          const hasChildChanges = Object.keys(childFields).length > 0;
+
+          if (hasParentChanges) {
+            await tx
+              .update(ext.parentTable as any)
+              .set(parentFields)
+              .where(withTenant(ext.parentTable as any, eq(ext.parentIdColumn, id)));
+          }
+
+          if (hasChildChanges) {
+            await tx
+              .update(config.table as any)
+              .set(childFields)
+              .where(withTenant(config.table as any, eq(ext.foreignKeyColumn, id)));
+          } else if (hasParentChanges) {
+            const childCols = getTableColumns(config.table as any);
+            if ('updatedAt' in childCols) {
+              await tx
+                .update(config.table as any)
+                .set({ updatedAt: new Date() } as any)
+                .where(withTenant(config.table as any, eq(ext.foreignKeyColumn, id)));
+            }
+          }
+
+          row = await this.readJoinedRowInTx(tx, id, ext);
+        } else {
+          const [updatedRow] = await tx
+            .update(table)
+            .set(updateValues)
+            .where(withTenant(table, eq(table.id, id)))
+            .returning() as any[];
+          row = updatedRow;
+        }
       }
 
       // Update EAV values
@@ -1252,10 +1382,22 @@ export class EntityService {
       await config.hooks.beforeDelete(id, actorId);
     }
 
-    await this.database.db
-      .update(config.table as any)
-      .set({ deletedAt: new Date(), deletedBy: actorId } as any)
-      .where(withTenant(config.table as any, eq((config.table as any).id, id)));
+    // Extensions scope reads through the parent's deletedAt — the child
+    // usually has no deletedAt of its own. Soft-delete therefore flips the
+    // parent's columns; the child row is left as-is so a restore is a clean
+    // reverse.
+    const ext = this.getExtensionMeta();
+    if (ext) {
+      await this.database.db
+        .update(ext.parentTable as any)
+        .set({ deletedAt: new Date(), deletedBy: actorId } as any)
+        .where(withTenant(ext.parentTable as any, eq(ext.parentIdColumn, id)));
+    } else {
+      await this.database.db
+        .update(config.table as any)
+        .set({ deletedAt: new Date(), deletedBy: actorId } as any)
+        .where(withTenant(config.table as any, eq((config.table as any).id, id)));
+    }
 
     this.logger.log(`${config.singularName} deleted`, { entityId: id, actorId });
 
@@ -1275,6 +1417,31 @@ export class EntityService {
   async restore(id: string): Promise<Record<string, unknown>> {
     const { config } = this;
     const table = config.table as any;
+
+    // Extensions: check the child row exists (may not have deletedAt of its
+    // own) and flip the parent's deletedAt columns back to null — the mirror
+    // of softDelete above. Return the joined response so the restored entity
+    // is indistinguishable from a fresh read.
+    const ext = this.getExtensionMeta();
+    if (ext) {
+      const [childRow] = await this.database.db
+        .select()
+        .from(table)
+        .where(eq(ext.foreignKeyColumn, id))
+        .limit(1) as any[];
+
+      if (!childRow) {
+        throw new NotFoundException(`${config.singularName} not found`);
+      }
+
+      await this.database.db
+        .update(ext.parentTable as any)
+        .set({ deletedAt: null, deletedBy: null } as any)
+        .where(withTenant(ext.parentTable as any, eq(ext.parentIdColumn, id)));
+
+      this.logger.log(`${config.singularName} restored`, { entityId: id });
+      return this.findOneOrFail(id);
+    }
 
     const [row] = await this.database.db
       .select()
