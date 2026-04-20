@@ -185,4 +185,118 @@ describe('FieldPermissionInterceptor (restriction-based)', () => {
       expect(result).toEqual({ id: '1', firstName: 'Jane', salary: 80000, internalNotes: 'Secret' });
     });
   });
+
+  // --- Extension entities: parent's hide/readonly perms cover projected cols ---
+
+  describe('extension entity (parent permissions for projected columns)', () => {
+    // Child entity that extends the 'tasks' parent. Its own restrictable
+    // fields don't include 'title' or 'priority' — those are projected.
+    const childConfig = {
+      slug: 'compliance-tasks',
+      entityType: 'compliance_tasks',
+      fieldMeta: {
+        ruleId: { label: 'Rule', section: 'basic', sortOrder: 0 },
+      },
+    } as unknown as EntityConfig;
+
+    const parentConfig = {
+      slug: 'tasks',
+      entityType: 'tasks',
+      fieldMeta: {
+        title: { label: 'Title', section: 'basic', sortOrder: 0 },
+        priority: { label: 'Priority', section: 'basic', sortOrder: 1 },
+        kind: { label: 'Kind', section: 'basic', sortOrder: 2, isSystem: true },
+      },
+    } as unknown as EntityConfig;
+
+    function createMockRegistry(resolved: any) {
+      return {
+        getResolvedExtension: (entityType: string) =>
+          entityType === childConfig.entityType ? resolved : undefined,
+        get: (entityType: string) =>
+          entityType === parentConfig.entityType ? parentConfig : undefined,
+      } as any;
+    }
+
+    const resolvedExtension = {
+      parentEntityType: 'tasks',
+      parentTable: {} as any,
+      foreignKeyColumn: {} as any,
+      parentIdColumn: {} as any,
+      projectedColumns: [
+        { fieldKey: 'title', column: {} as any },
+        { fieldKey: 'priority', column: {} as any },
+        { fieldKey: 'kind', column: {} as any }, // system on parent — should not be hideable
+      ],
+      parentDefaults: {},
+    };
+
+    it('strips projected parent column when parent has hide-{key} permission', async () => {
+      const Interceptor = createFieldPermissionInterceptor(childConfig);
+      const interceptor = new Interceptor(createMockRegistry(resolvedExtension));
+
+      const context = createMockContext({ 'tasks.hide-title': 'all' });
+      const handler = createMockHandler({ id: '1', ruleId: 'r1', title: 'My Task', priority: 'high' });
+
+      const result = await lastValueFrom(interceptor.intercept(context, handler));
+
+      expect(result).not.toHaveProperty('title');
+      expect(result).toMatchObject({ id: '1', ruleId: 'r1', priority: 'high' });
+    });
+
+    it('strips projected parent column from writes for readonly-{key}', async () => {
+      const Interceptor = createFieldPermissionInterceptor(childConfig);
+      const interceptor = new Interceptor(createMockRegistry(resolvedExtension));
+
+      const body: Record<string, unknown> = { ruleId: 'r1', title: 'Edit', priority: 'high' };
+      const context = createMockContext({ 'tasks.readonly-priority': 'all' }, body);
+      const handler = createMockHandler({ id: '1' });
+
+      await lastValueFrom(interceptor.intercept(context, handler));
+
+      expect(body).toEqual({ ruleId: 'r1', title: 'Edit' });
+    });
+
+    it('does not strip parent system fields even with hide permission', async () => {
+      const Interceptor = createFieldPermissionInterceptor(childConfig);
+      const interceptor = new Interceptor(createMockRegistry(resolvedExtension));
+
+      const context = createMockContext({ 'tasks.hide-kind': 'all' });
+      const handler = createMockHandler({ id: '1', kind: 'compliance', title: 'X' });
+
+      const result = await lastValueFrom(interceptor.intercept(context, handler));
+
+      expect(result).toEqual({ id: '1', kind: 'compliance', title: 'X' });
+    });
+
+    it('child hide-{key} continues to work alongside parent permissions', async () => {
+      const Interceptor = createFieldPermissionInterceptor(childConfig);
+      const interceptor = new Interceptor(createMockRegistry(resolvedExtension));
+
+      const context = createMockContext({
+        'compliance-tasks.hide-ruleId': 'all',
+        'tasks.hide-title': 'all',
+      });
+      const handler = createMockHandler({ id: '1', ruleId: 'r1', title: 'X', priority: 'high' });
+
+      const result = await lastValueFrom(interceptor.intercept(context, handler));
+
+      expect(result).not.toHaveProperty('ruleId');
+      expect(result).not.toHaveProperty('title');
+      expect(result).toMatchObject({ id: '1', priority: 'high' });
+    });
+
+    it('falls back gracefully when registry is not injected (legacy callers)', async () => {
+      const Interceptor = createFieldPermissionInterceptor(childConfig);
+      const interceptor = new Interceptor(); // no registry
+
+      const context = createMockContext({ 'tasks.hide-title': 'all' });
+      const handler = createMockHandler({ id: '1', title: 'X' });
+
+      const result = await lastValueFrom(interceptor.intercept(context, handler));
+
+      // Without the registry the parent perm doesn't apply — title stays.
+      expect(result).toEqual({ id: '1', title: 'X' });
+    });
+  });
 });

@@ -86,6 +86,37 @@ export class EntityService {
     return this.entityRegistry.getResolvedExtension(this.config.entityType);
   }
 
+  /**
+   * Sortable columns visible to the child — child's own + any projected
+   * parent columns the parent declared sortable. The merge means a sort
+   * by `priority` (a parent column) just works on the extension entity.
+   */
+  private getEffectiveSortableColumns(ext: import('./types').ResolvedExtension): Record<string, PgColumn> {
+    const merged: Record<string, PgColumn> = { ...this.config.sortableColumns };
+    const parent = this.entityRegistry.get(ext.parentEntityType);
+    if (parent) {
+      for (const { fieldKey, column } of ext.projectedColumns) {
+        if (parent.sortableColumns[fieldKey]) merged[fieldKey] = column;
+      }
+    }
+    return merged;
+  }
+
+  /**
+   * Searchable columns visible to the child — child's own + any projected
+   * parent columns the parent declared searchable. Drizzle column references
+   * are stable across getTableColumns() calls, so set membership checks work.
+   */
+  private getEffectiveSearchColumns(ext: import('./types').ResolvedExtension): PgColumn[] {
+    const parent = this.entityRegistry.get(ext.parentEntityType);
+    if (!parent) return this.config.searchColumns;
+    const parentSearchSet = new Set<PgColumn>(parent.searchColumns);
+    const additional = ext.projectedColumns
+      .filter((p) => parentSearchSet.has(p.column))
+      .map((p) => p.column);
+    return [...this.config.searchColumns, ...additional];
+  }
+
   // ---------------------------------------------------------------------------
   // DATA ACCESS SCOPE RESOLUTION
   // ---------------------------------------------------------------------------
@@ -447,12 +478,14 @@ export class EntityService {
     const softDeleteCond = buildSoftDeleteCondition(scopeTable, query.includeDeleted ?? false);
     if (softDeleteCond) conditions.push(softDeleteCond);
 
-    // Search across configured columns + lookup field labels
+    // Search across configured columns + lookup field labels.
+    // For extensions, projected parent columns marked searchable on the
+    // parent participate transparently.
     if (query.search) {
       const searchConditions: any[] = [];
 
-      // Standard column search (delegated to query-builder)
-      const stdSearch = buildSearchCondition(query.search, config.searchColumns);
+      const searchCols = ext ? this.getEffectiveSearchColumns(ext) : config.searchColumns;
+      const stdSearch = buildSearchCondition(query.search, searchCols);
       if (stdSearch) searchConditions.push(stdSearch);
 
       // Lookup field search — entity-specific, stays here
@@ -465,7 +498,7 @@ export class EntityService {
     }
 
     // Generic field-level filters (delegated to query-builder + EAV routing)
-    const filterConditions = await this.buildAllFilters(query, config);
+    const filterConditions = await this.buildAllFilters(query, config, ext);
     conditions.push(...filterConditions);
 
     // Custom filters from hooks (for anything not covered by generic filtering)
@@ -1293,12 +1326,19 @@ export class EntityService {
    * Build the ORDER BY expression for list queries.
    * For lookup fields, uses a subquery to sort by the related entity's label.
    * For standard columns, delegates to query-builder.
+   * For extension entities, projected parent columns flagged sortable on
+   * the parent are merged into the sortable set so a sort by, say, `priority`
+   * (which lives on the parent) just works on the child.
    */
   private buildSortExpression(sortKey: string, direction: 'ASC' | 'DESC', config: EntityConfig): any {
-    // Check if the sort key is a computed expression (relationship counts + explicit computed columns)
-    const computedExprs = this.buildComputedExpressions();
-    if (computedExprs[sortKey]) {
-      return sql`${computedExprs[sortKey]} ${sql.raw(direction)}`;
+    const ext = this.getExtensionMeta();
+    // Computed expressions are skipped for extension entities (see note in
+    // list()); only consult them for non-extension entities.
+    if (!ext) {
+      const computedExprs = this.buildComputedExpressions();
+      if (computedExprs[sortKey]) {
+        return sql`${computedExprs[sortKey]} ${sql.raw(direction)}`;
+      }
     }
 
     // Check if the sort key is a lookup field (entity-specific logic)
@@ -1317,11 +1357,15 @@ export class EntityService {
       }
     }
 
+    const sortableColumns = ext
+      ? this.getEffectiveSortableColumns(ext)
+      : config.sortableColumns;
+
     // Standard column sort (delegated to query-builder)
     return qbBuildSortExpression(
       sortKey,
       direction === 'ASC' ? 'asc' : 'desc',
-      config.sortableColumns,
+      sortableColumns,
       config.defaultSort,
     );
   }
@@ -1329,10 +1373,13 @@ export class EntityService {
   /**
    * Build all filter conditions from legacy query params.
    * Resolves standard DB columns via query-builder, routes EAV fields to FieldValueService.
+   * For extension entities, projected parent columns are added to the column
+   * map so a filter like `?status=open` routes to `parent.status`.
    */
   private async buildAllFilters(
     query: BaseListQuery,
     config: EntityConfig,
+    ext?: import('./types').ResolvedExtension,
   ): Promise<any[]> {
     // Convert legacy ?field=value params to FilterExpressions
     const legacyFilters = parseLegacyFilters(query);
@@ -1355,6 +1402,14 @@ export class EntityService {
     for (const def of defs) {
       if (def.columnName && table[def.fieldKey]) {
         columnMap[def.fieldKey] = table[def.fieldKey];
+      }
+    }
+
+    // Layer projected parent columns. Child columns of the same name win
+    // (they were inserted above), so this is purely additive.
+    if (ext) {
+      for (const { fieldKey, column } of ext.projectedColumns) {
+        if (!(fieldKey in columnMap)) columnMap[fieldKey] = column;
       }
     }
 
