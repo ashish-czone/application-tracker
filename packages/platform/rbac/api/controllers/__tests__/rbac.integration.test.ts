@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
+import { randomUUID } from 'crypto';
 import request from 'supertest';
 import { createPackageTestApp, withAuth, cleanDatabase, type PackageTestApp } from '@packages/platform-testing';
+import { users } from '@packages/database';
 import { RBAC_PERMISSIONS } from '../../permissions';
 
 const READ = [RBAC_PERMISSIONS.ROLES_READ];
@@ -73,12 +75,17 @@ describe('RbacController (integration)', () => {
       });
     });
 
-    it('should reject invalid userType', async () => {
-      await request(ctx.httpServer)
+    it('should accept a null/omitted userType', async () => {
+      const res = await request(ctx.httpServer)
         .post('/api/v1/roles')
         .set(withAuth(MANAGE))
-        .send({ name: 'Bad Role', userType: 'superadmin' })
-        .expect(400);
+        .send({ name: 'Unscoped Role' })
+        .expect(201);
+
+      expect(res.body).toMatchObject({
+        name: 'Unscoped Role',
+        userType: null,
+      });
     });
 
     it('should reject short name', async () => {
@@ -283,6 +290,193 @@ describe('RbacController (integration)', () => {
       expect(res.body).toEqual(expect.arrayContaining([
         expect.objectContaining({ module: 'rbac' }),
       ]));
+    });
+  });
+
+  // ── Role Members ──────────────────────────────────────────────
+
+  describe('Role members endpoints', () => {
+    async function createUser(userType = 'admin') {
+      const [user] = await ctx.db
+        .insert(users)
+        .values({
+          email: `member-${randomUUID()}@example.com`,
+          firstName: 'Member',
+          lastName: 'User',
+          userType,
+        })
+        .returning();
+      return user;
+    }
+
+    describe('GET /api/v1/roles/:id/members', () => {
+      it('should list members of a role', async () => {
+        const role = await createRole();
+        const user = await createUser();
+        await request(ctx.httpServer)
+          .post(`/api/v1/roles/${role.id}/members`)
+          .set(withAuth(MANAGE))
+          .send({ userId: user.id })
+          .expect(201);
+
+        const res = await request(ctx.httpServer)
+          .get(`/api/v1/roles/${role.id}/members`)
+          .set(withAuth(READ))
+          .expect(200);
+
+        expect(res.body.data).toHaveLength(1);
+        expect(res.body.data[0].id).toBe(user.id);
+        expect(res.body.meta.total).toBe(1);
+      });
+
+      it('should return empty list for a role with no members', async () => {
+        const role = await createRole();
+        const res = await request(ctx.httpServer)
+          .get(`/api/v1/roles/${role.id}/members`)
+          .set(withAuth(READ))
+          .expect(200);
+        expect(res.body.data).toEqual([]);
+        expect(res.body.meta.total).toBe(0);
+      });
+
+      it('should 404 when role does not exist', async () => {
+        await request(ctx.httpServer)
+          .get(`/api/v1/roles/${randomUUID()}/members`)
+          .set(withAuth(READ))
+          .expect(404);
+      });
+    });
+
+    describe('POST /api/v1/roles/:id/members', () => {
+      it('should add a member to a role and return member with addedAt', async () => {
+        const role = await createRole();
+        const user = await createUser();
+
+        const res = await request(ctx.httpServer)
+          .post(`/api/v1/roles/${role.id}/members`)
+          .set(withAuth(MANAGE))
+          .send({ userId: user.id })
+          .expect(201);
+
+        expect(res.body.id).toBe(user.id);
+        expect(res.body.email).toBe(user.email);
+        expect(res.body.addedAt).toBeDefined();
+      });
+
+      it('should be idempotent when adding the same member twice', async () => {
+        const role = await createRole();
+        const user = await createUser();
+
+        await request(ctx.httpServer)
+          .post(`/api/v1/roles/${role.id}/members`)
+          .set(withAuth(MANAGE))
+          .send({ userId: user.id })
+          .expect(201);
+        await request(ctx.httpServer)
+          .post(`/api/v1/roles/${role.id}/members`)
+          .set(withAuth(MANAGE))
+          .send({ userId: user.id })
+          .expect(201);
+
+        const res = await request(ctx.httpServer)
+          .get(`/api/v1/roles/${role.id}/members`)
+          .set(withAuth(READ))
+          .expect(200);
+        expect(res.body.data).toHaveLength(1);
+      });
+
+      it('should 400 for an invalid userId', async () => {
+        const role = await createRole();
+        await request(ctx.httpServer)
+          .post(`/api/v1/roles/${role.id}/members`)
+          .set(withAuth(MANAGE))
+          .send({ userId: 'not-a-uuid' })
+          .expect(400);
+      });
+    });
+
+    describe('DELETE /api/v1/roles/:id/members/:userId', () => {
+      it('should remove a member from a role', async () => {
+        const role = await createRole();
+        const user = await createUser();
+        await request(ctx.httpServer)
+          .post(`/api/v1/roles/${role.id}/members`)
+          .set(withAuth(MANAGE))
+          .send({ userId: user.id })
+          .expect(201);
+
+        await request(ctx.httpServer)
+          .delete(`/api/v1/roles/${role.id}/members/${user.id}`)
+          .set(withAuth(MANAGE))
+          .expect(204);
+
+        const res = await request(ctx.httpServer)
+          .get(`/api/v1/roles/${role.id}/members`)
+          .set(withAuth(READ))
+          .expect(200);
+        expect(res.body.data).toHaveLength(0);
+      });
+
+      it('should 404 when role does not exist', async () => {
+        const user = await createUser();
+        await request(ctx.httpServer)
+          .delete(`/api/v1/roles/${randomUUID()}/members/${user.id}`)
+          .set(withAuth(MANAGE))
+          .expect(404);
+      });
+    });
+
+    describe('Member endpoints — auth enforcement', () => {
+      it('GET /members should 401 without auth', async () => {
+        const role = await createRole();
+        await request(ctx.httpServer)
+          .get(`/api/v1/roles/${role.id}/members`)
+          .expect(401);
+      });
+
+      it('GET /members should 403 without rbac.roles.read', async () => {
+        const role = await createRole();
+        await request(ctx.httpServer)
+          .get(`/api/v1/roles/${role.id}/members`)
+          .set(withAuth([]))
+          .expect(403);
+      });
+
+      it('POST /members should 401 without auth', async () => {
+        const role = await createRole();
+        const user = await createUser();
+        await request(ctx.httpServer)
+          .post(`/api/v1/roles/${role.id}/members`)
+          .send({ userId: user.id })
+          .expect(401);
+      });
+
+      it('POST /members should 403 without rbac.roles.manage', async () => {
+        const role = await createRole();
+        const user = await createUser();
+        await request(ctx.httpServer)
+          .post(`/api/v1/roles/${role.id}/members`)
+          .set(withAuth(READ))
+          .send({ userId: user.id })
+          .expect(403);
+      });
+
+      it('DELETE /members should 401 without auth', async () => {
+        const role = await createRole();
+        const user = await createUser();
+        await request(ctx.httpServer)
+          .delete(`/api/v1/roles/${role.id}/members/${user.id}`)
+          .expect(401);
+      });
+
+      it('DELETE /members should 403 without rbac.roles.manage', async () => {
+        const role = await createRole();
+        const user = await createUser();
+        await request(ctx.httpServer)
+          .delete(`/api/v1/roles/${role.id}/members/${user.id}`)
+          .set(withAuth(READ))
+          .expect(403);
+      });
     });
   });
 
