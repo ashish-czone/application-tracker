@@ -138,7 +138,7 @@ export class ComplianceTasksService {
     });
 
     this.events.emitDynamic(COMPLIANCE_TASK_GENERATED, {
-      entityType: 'compliance_rule',
+      entityType: 'compliance_rules',
       entityId: extRow.ruleId,
       actorId: actorId === 'system' ? null : actorId,
       payload: {

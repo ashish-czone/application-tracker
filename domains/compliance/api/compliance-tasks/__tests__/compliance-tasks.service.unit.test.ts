@@ -211,7 +211,7 @@ describe('ComplianceTasksService', () => {
         2,
         'compliance.ComplianceTaskGenerated',
         expect.objectContaining({
-          entityType: 'compliance_rule',
+          entityType: 'compliance_rules',
           entityId: 'r1',
           actorId: 'user-42',
           payload: expect.objectContaining({
