@@ -5,6 +5,7 @@ import { orgUnitLevels } from './org-unit-levels';
 export const orgUnits = pgTable('org_units', {
   id: text('id').primaryKey().$defaultFn(() => randomUUID()),
   name: text('name').notNull(),
+  description: text('description'),
   parentId: text('parent_id').references((): AnyPgColumn => orgUnits.id),
   levelId: text('level_id').notNull().references(() => orgUnitLevels.id),
   sortOrder: integer('sort_order').notNull().default(0),

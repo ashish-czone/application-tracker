@@ -1,29 +1,16 @@
 import { useMemo, useState } from 'react';
 import { Building2, ChevronRight, Plus, MoreHorizontal, Shield, Users, AlertTriangle } from 'lucide-react';
 import { Eyebrow, CoarseTabs, type CoarseTabItem } from '@packages/ui';
+import type { OrgUnit, OrgUnitMemberDetail } from '@packages/org-units-ui';
+import { useOrgUnitMembers } from '@packages/org-units-ui';
 import {
-  LEVEL_META,
-  POSITION_LABEL,
   buildBreadcrumb,
-  getUnitMembers,
-  getUnitHead,
   getUnitChildren,
-  getUnitLawAssignments,
-  type OrgUnit,
-  type OrgMember,
-  type ComplianceLawAssignment,
-  type HealthStatus,
-} from '../data/orgHierarchyMock';
-
-// ─── Health badge ───────────────────────────────────────────────────
-
-const HEALTH_STYLE: Record<HealthStatus, { bg: string; text: string; label: string }> = {
-  healthy: { bg: 'bg-filed/10', text: 'text-filed', label: 'Healthy' },
-  'at-risk': { bg: 'bg-due-soon/10', text: 'text-due-soon', label: 'At Risk' },
-  critical: { bg: 'bg-signal/10', text: 'text-signal', label: 'Critical' },
-};
-
-// ─── Tabs ───────────────────────────────────────────────────────────
+  getInitials,
+  levelTagClass,
+} from '../helpers';
+import type { ComplianceLawAssignment } from '../data/orgHierarchyMock';
+import { getUnitLawAssignments } from '../data/orgHierarchyMock';
 
 type DetailTab = 'members' | 'sub-units' | 'compliance';
 
@@ -33,12 +20,9 @@ const TABS: CoarseTabItem<DetailTab>[] = [
   { value: 'compliance', label: 'Compliance' },
 ];
 
-// ─── Component ──────────────────────────────────────────────────────
-
 interface UnitDetailPanelProps {
   unit: OrgUnit;
   allUnits: OrgUnit[];
-  allMembers: OrgMember[];
   allAssignments: ComplianceLawAssignment[];
   onAddMember?: () => void;
 }
@@ -46,25 +30,24 @@ interface UnitDetailPanelProps {
 export function UnitDetailPanel({
   unit,
   allUnits,
-  allMembers,
   allAssignments,
   onAddMember,
 }: UnitDetailPanelProps) {
   const [tab, setTab] = useState<DetailTab>('members');
+  const { data: membersData, isLoading: membersLoading } = useOrgUnitMembers(unit.id);
+  const members = useMemo<OrgUnitMemberDetail[]>(() => membersData ?? [], [membersData]);
 
   const breadcrumb = useMemo(() => buildBreadcrumb(allUnits, unit.id), [allUnits, unit.id]);
-  const members = useMemo(() => getUnitMembers(allMembers, unit.id), [allMembers, unit.id]);
-  const head = useMemo(() => getUnitHead(allMembers, unit.headId), [allMembers, unit.headId]);
   const children = useMemo(() => getUnitChildren(allUnits, unit.id), [allUnits, unit.id]);
   const lawAssignments = useMemo(
     () => getUnitLawAssignments(allAssignments, unit.id),
     [allAssignments, unit.id],
   );
-  const levelMeta = LEVEL_META[unit.level];
-  const healthStyle = HEALTH_STYLE[unit.health];
+
+  const head = unit.head;
 
   const tabsWithCount: CoarseTabItem<DetailTab>[] = TABS.map((t) => {
-    if (t.value === 'members') return { ...t, count: members.length };
+    if (t.value === 'members') return { ...t, count: unit.memberCount };
     if (t.value === 'sub-units') return { ...t, count: children.length };
     if (t.value === 'compliance') return { ...t, count: lawAssignments.length };
     return t;
@@ -72,9 +55,7 @@ export function UnitDetailPanel({
 
   return (
     <div className="h-full flex flex-col">
-      {/* ─── Header ────────────────────────────────────────────── */}
       <div className="px-6 pt-6 pb-0">
-        {/* Breadcrumb */}
         <nav className="flex items-center gap-1 text-[10px] uppercase tracking-eyebrow font-sans text-ink-muted mb-3">
           {breadcrumb.map((crumb, i) => (
             <span key={crumb.id} className="flex items-center gap-1">
@@ -86,19 +67,14 @@ export function UnitDetailPanel({
           ))}
         </nav>
 
-        {/* Title row */}
         <div className="flex items-start justify-between">
           <div>
             <div className="flex items-center gap-3">
               <h2 className="font-serif text-2xl text-ink leading-none">{unit.name}</h2>
-              <span className={`px-1.5 py-0.5 text-[9px] uppercase tracking-eyebrow font-sans font-semibold ${levelMeta.color}`}>
-                {levelMeta.label}
-              </span>
-              <span className={`px-2 py-0.5 text-[9px] uppercase tracking-eyebrow font-sans font-semibold ${healthStyle.bg} ${healthStyle.text}`}>
-                {healthStyle.label}
+              <span className={`px-1.5 py-0.5 text-[9px] uppercase tracking-eyebrow font-sans font-semibold ${levelTagClass(unit.level.sortOrder)}`}>
+                {unit.level.name}
               </span>
             </div>
-            <p className="mt-1.5 font-mono text-[11px] text-ink-muted tracking-wide">{unit.code}</p>
           </div>
           <button
             type="button"
@@ -108,20 +84,20 @@ export function UnitDetailPanel({
           </button>
         </div>
 
-        {/* Quick stats row */}
         <div className="flex items-center gap-6 mt-4 pb-4 border-b border-rule">
-          {head && (
+          {head ? (
             <div className="flex items-center gap-2">
               <span className="w-6 h-6 bg-authority text-paper text-[9px] font-sans font-semibold flex items-center justify-center">
-                {head.initials}
+                {getInitials(head.userName)}
               </span>
               <div>
-                <div className="text-[11px] font-sans text-ink leading-none">{head.name}</div>
-                <div className="text-[9px] uppercase tracking-eyebrow text-ink-muted font-sans mt-0.5">Head</div>
+                <div className="text-[11px] font-sans text-ink leading-none">{head.userName}</div>
+                <div className="text-[9px] uppercase tracking-eyebrow text-ink-muted font-sans mt-0.5">
+                  {head.positionName || 'Head'}
+                </div>
               </div>
             </div>
-          )}
-          {!head && (
+          ) : (
             <div className="flex items-center gap-2 text-ink-muted">
               <span className="w-6 h-6 border border-rule border-dashed text-[9px] font-sans flex items-center justify-center">?</span>
               <span className="text-[10px] italic font-sans">No head assigned</span>
@@ -129,7 +105,7 @@ export function UnitDetailPanel({
           )}
           <div className="h-4 border-l border-rule" />
           <div className="text-[11px] font-sans text-ink-muted">
-            <span className="text-ink font-medium">{members.length}</span> members
+            <span className="text-ink font-medium">{unit.memberCount}</span> members
           </div>
           {children.length > 0 && (
             <>
@@ -149,19 +125,17 @@ export function UnitDetailPanel({
           )}
         </div>
 
-        {/* Tabs */}
         <div className="mt-0">
           <CoarseTabs tabs={tabsWithCount} value={tab} onChange={setTab} animated />
         </div>
       </div>
 
-      {/* ─── Tab content ───────────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto px-6 py-5">
         {tab === 'sub-units' && (
-          <SubUnitsTab unit={unit} children={children} allMembers={allMembers} />
+          <SubUnitsTab unit={unit} children={children} />
         )}
         {tab === 'members' && (
-          <MembersTab members={members} onAddMember={onAddMember} />
+          <MembersTab members={members} isLoading={membersLoading} onAddMember={onAddMember} />
         )}
         {tab === 'compliance' && (
           <ComplianceTab assignments={lawAssignments} />
@@ -171,53 +145,51 @@ export function UnitDetailPanel({
   );
 }
 
-// ─── Overview tab ───────────────────────────────────────────────────
-
 function SubUnitsTab({
   unit,
   children,
-  allMembers,
 }: {
   unit: OrgUnit;
   children: OrgUnit[];
-  allMembers: OrgMember[];
 }) {
   return (
     <div className="space-y-6">
       <div>
         <Eyebrow tone="muted">Description</Eyebrow>
-        <p className="mt-2 font-serif text-[14px] text-ink leading-relaxed italic">
-          {unit.description}
-        </p>
+        {unit.description ? (
+          <p className="mt-2 font-serif text-[14px] text-ink leading-relaxed italic">
+            {unit.description}
+          </p>
+        ) : (
+          <p className="mt-2 font-serif italic text-ink-muted text-sm">
+            No description yet.
+          </p>
+        )}
       </div>
 
       {children.length > 0 ? (
         <div>
           <Eyebrow tone="muted">Sub-units</Eyebrow>
           <div className="mt-2 space-y-1">
-            {children.map((child) => {
-              const childMembers = getUnitMembers(allMembers, child.id);
-              const childHead = getUnitHead(allMembers, child.headId);
-              const healthStyle = HEALTH_STYLE[child.health];
-              return (
-                <div
-                  key={child.id}
-                  className="flex items-center gap-3 px-3 py-2.5 border border-rule hover:border-ink-muted transition-colors"
-                >
-                  <span className={`w-2 h-2 rounded-full ${healthStyle.bg.replace('/10', '')}`} />
-                  <span className="font-mono text-[10px] tracking-wider text-ink-muted w-8">{child.code}</span>
-                  <span className="font-sans text-[13px] text-ink flex-1">{child.name}</span>
-                  {childHead && (
-                    <span className="w-5 h-5 bg-ink-muted text-paper text-[8px] font-sans font-semibold flex items-center justify-center" title={childHead.name}>
-                      {childHead.initials}
-                    </span>
-                  )}
-                  <span className="text-[10px] font-mono tabular-nums text-ink-muted">
-                    {childMembers.length} members
+            {children.map((child) => (
+              <div
+                key={child.id}
+                className="flex items-center gap-3 px-3 py-2.5 border border-rule hover:border-ink-muted transition-colors"
+              >
+                <span className={`px-1.5 py-0.5 text-[9px] uppercase tracking-eyebrow font-sans font-semibold ${levelTagClass(child.level.sortOrder)}`}>
+                  {child.level.name}
+                </span>
+                <span className="font-sans text-[13px] text-ink flex-1">{child.name}</span>
+                {child.head && (
+                  <span className="w-5 h-5 bg-ink-muted text-paper text-[8px] font-sans font-semibold flex items-center justify-center" title={child.head.userName}>
+                    {getInitials(child.head.userName)}
                   </span>
-                </div>
-              );
-            })}
+                )}
+                <span className="text-[10px] font-mono tabular-nums text-ink-muted">
+                  {child.memberCount} members
+                </span>
+              </div>
+            ))}
           </div>
         </div>
       ) : (
@@ -230,14 +202,15 @@ function SubUnitsTab({
   );
 }
 
-// ─── Members tab ────────────────────────────────────────────────────
-
-function MembersTab({ members, onAddMember }: { members: OrgMember[]; onAddMember?: () => void }) {
-  const sorted = useMemo(() => {
-    const order: Record<string, number> = { head: 0, manager: 1, senior: 2, executive: 3 };
-    return [...members].sort((a, b) => (order[a.position] ?? 9) - (order[b.position] ?? 9));
-  }, [members]);
-
+function MembersTab({
+  members,
+  isLoading,
+  onAddMember,
+}: {
+  members: OrgUnitMemberDetail[];
+  isLoading: boolean;
+  onAddMember?: () => void;
+}) {
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
@@ -252,7 +225,13 @@ function MembersTab({ members, onAddMember }: { members: OrgMember[]; onAddMembe
         </button>
       </div>
 
-      {sorted.length === 0 ? (
+      {isLoading ? (
+        <div className="space-y-1">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="h-14 bg-paper-sunken/30 border border-rule" />
+          ))}
+        </div>
+      ) : members.length === 0 ? (
         <div className="py-12 text-center">
           <Users className="w-8 h-8 text-ink-muted/40 mx-auto mb-3" strokeWidth={1} />
           <p className="font-serif italic text-ink-muted text-sm">No members assigned</p>
@@ -262,21 +241,22 @@ function MembersTab({ members, onAddMember }: { members: OrgMember[]; onAddMembe
         </div>
       ) : (
         <div className="border border-rule divide-y divide-rule">
-          {sorted.map((member) => (
+          {members.map((member) => (
             <div
-              key={member.id}
+              key={member.userId}
               className="flex items-center gap-3 px-4 py-3 hover:bg-paper-sunken/30 transition-colors"
             >
               <span className="w-7 h-7 bg-ink text-paper text-[10px] font-sans font-semibold flex items-center justify-center shrink-0">
-                {member.initials}
+                {getInitials(member.userName)}
               </span>
               <div className="flex-1 min-w-0">
-                <div className="text-[13px] font-sans text-ink leading-none">{member.name}</div>
-                <div className="text-[11px] text-ink-muted font-sans mt-0.5">{member.email}</div>
+                <div className="text-[13px] font-sans text-ink leading-none">{member.userName}</div>
               </div>
-              <span className="px-2 py-0.5 text-[9px] uppercase tracking-eyebrow font-sans font-semibold bg-paper-sunken text-ink-muted">
-                {POSITION_LABEL[member.position]}
-              </span>
+              {member.positionName && (
+                <span className="px-2 py-0.5 text-[9px] uppercase tracking-eyebrow font-sans font-semibold bg-paper-sunken text-ink-muted">
+                  {member.positionName}
+                </span>
+              )}
               <button
                 type="button"
                 className="w-6 h-6 flex items-center justify-center text-ink-muted/40 hover:text-ink transition-colors"
@@ -290,8 +270,6 @@ function MembersTab({ members, onAddMember }: { members: OrgMember[]; onAddMembe
     </div>
   );
 }
-
-// ─── Compliance tab ─────────────────────────────────────────────────
 
 function ComplianceTab({ assignments }: { assignments: ComplianceLawAssignment[] }) {
   return (
@@ -337,7 +315,6 @@ function ComplianceTab({ assignments }: { assignments: ComplianceLawAssignment[]
                   </div>
                 </div>
 
-                {/* Progress bar */}
                 <div className="w-20 h-1.5 bg-paper-sunken rounded-full overflow-hidden">
                   <div
                     className={`h-full ${hasOverdue ? 'bg-signal' : 'bg-filed'}`}

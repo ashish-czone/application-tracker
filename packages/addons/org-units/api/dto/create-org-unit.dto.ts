@@ -6,6 +6,10 @@ export class CreateOrgUnitDto {
 
   @IsOptional()
   @IsString()
+  description?: string;
+
+  @IsOptional()
+  @IsString()
   parentId?: string;
 
   @IsString()

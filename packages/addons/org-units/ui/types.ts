@@ -15,6 +15,7 @@ export interface OrgUnitHead {
 export interface OrgUnit {
   id: string;
   name: string;
+  description: string | null;
   parentId: string | null;
   levelId: string;
   sortOrder: number;
@@ -35,6 +36,7 @@ export interface OrgUnitMemberDetail {
 
 export interface CreateOrgUnitRequest {
   name: string;
+  description?: string;
   levelId: string;
   parentId?: string;
   sortOrder?: number;
@@ -42,6 +44,7 @@ export interface CreateOrgUnitRequest {
 
 export interface UpdateOrgUnitRequest {
   name?: string;
+  description?: string | null;
   levelId?: string;
   parentId?: string | null;
   sortOrder?: number;

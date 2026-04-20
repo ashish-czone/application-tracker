@@ -8,6 +8,13 @@
       "when": 1776155760606,
       "tag": "0000_sharp_serpent_society",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1776681831142,
+      "tag": "0001_silent_agent_zero",
+      "breakpoints": true
     }
   ]
 }

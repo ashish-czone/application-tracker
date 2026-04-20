@@ -65,5 +65,8 @@ export function complianceDemoSeedSources(): SeedSource[] {
     demo('@domains/compliance-api/demo-tasks', () =>
       import('./tasks/seeds/demo-tasks').then((m) => m.seedDemoTasks),
     ),
+    demo('@domains/compliance-api/demo-org-hierarchy', () =>
+      import('./shared/seeds/demo-org-hierarchy').then((m) => m.seedDemoOrgHierarchy),
+    ),
   ];
 }

@@ -161,6 +161,34 @@ describe('OrgUnitController (integration)', () => {
 
       expect(res.body.name).toBe('New Name');
     });
+
+    it('should persist and return description on create and list', async () => {
+      const unit = await createOrgUnit({ name: 'Described', description: 'What this unit does' });
+      expect(unit.description).toBe('What this unit does');
+
+      const res = await request(ctx.httpServer)
+        .get('/api/v1/org-units')
+        .set(withAuth(READ))
+        .expect(200);
+
+      const fetched = (res.body as Array<{ id: string; description: string | null }>).find(
+        (u) => u.id === unit.id,
+      );
+      expect(fetched?.description).toBe('What this unit does');
+    });
+
+    it('should update description', async () => {
+      const unit = await createOrgUnit({ name: 'No desc yet' });
+      expect(unit.description).toBeNull();
+
+      const res = await request(ctx.httpServer)
+        .patch(`/api/v1/org-units/${unit.id}`)
+        .set(withAuth(MANAGE))
+        .send({ description: 'Now described' })
+        .expect(200);
+
+      expect(res.body.description).toBe('Now described');
+    });
   });
 
   describe('DELETE /api/v1/org-units/:id', () => {
