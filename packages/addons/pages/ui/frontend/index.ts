@@ -12,3 +12,13 @@ export type {
   SectionData,
   PublicPageResponse,
 } from './types';
+
+export {
+  starterBlocks,
+  registerStarterBlocks,
+  heroBlock,
+  textBlock,
+  imageBlock,
+  featureListBlock,
+  ctaBlock,
+} from './blocks';
