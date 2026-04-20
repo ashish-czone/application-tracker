@@ -210,6 +210,15 @@ describe('FieldDefinitionService', () => {
       await expect(service.delete('fd1')).rejects.toThrow(BadRequestException);
     });
 
+    it('should throw BadRequestException when deleting an isSystem field', async () => {
+      // Implicit system fields (createdAt/updatedAt/createdBy) are always
+      // `isCustom: false, isSystem: true` — admins must not be able to drop them.
+      const field = makeFieldDef({ isCustom: false, isSystem: true, fieldKey: 'createdAt' });
+      await seedCache(service, mockDb, [field]);
+
+      await expect(service.delete('fd1')).rejects.toThrow(BadRequestException);
+    });
+
     it('should throw ConflictException when a registered delete check fails', async () => {
       const field = makeFieldDef({ isCustom: true });
       await seedCache(service, mockDb, [field]);
