@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { Checkbox } from '@packages/ui';
 
+import type { PermissionItem } from '../utils/permissions';
+
 export interface PermissionGroupProps {
   module: string;
-  permissions: { name: string; label: string }[];
+  permissions: PermissionItem[];
   enabledPermissions: Set<string>;
   onToggle: (name: string) => void;
   onToggleAll: (module: string, names: string[], checked: boolean) => void;
