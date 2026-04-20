@@ -2,6 +2,7 @@ import { Injectable, BadRequestException, ConflictException, ForbiddenException 
 import { DatabaseService, eq, and, isNull, isNotNull } from '@packages/database';
 import { OrgUnitService } from '@packages/org-units';
 import { tasks } from '../schema/tasks';
+import { assertTaskIsAdHoc } from '../tasks.config';
 
 @Injectable()
 export class TaskClaimService {
@@ -11,6 +12,8 @@ export class TaskClaimService {
   ) {}
 
   async claim(taskId: string, userId: string): Promise<{ id: string; assigneeId: string }> {
+    await assertTaskIsAdHoc(taskId);
+
     const [task] = await this.database.db
       .select({
         id: tasks.id,
@@ -51,6 +54,8 @@ export class TaskClaimService {
       throw new BadRequestException('Provide either userId or teamId, not both');
     }
 
+    await assertTaskIsAdHoc(taskId);
+
     const [task] = await this.database.db
       .select({ id: tasks.id })
       .from(tasks)
@@ -72,6 +77,8 @@ export class TaskClaimService {
   }
 
   async unclaim(taskId: string, userId: string): Promise<{ id: string }> {
+    await assertTaskIsAdHoc(taskId);
+
     const [task] = await this.database.db
       .select({
         id: tasks.id,

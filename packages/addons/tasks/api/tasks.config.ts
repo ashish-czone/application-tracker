@@ -34,18 +34,29 @@ function rejectKindInPayload(payload: Record<string, unknown>): void {
  * TasksModule at init time. The entity-engine beforeUpdate/beforeDelete
  * hooks are pure functions without DI access, so we hand them a lookup
  * via this indirection instead of extending the platform's hook
- * signature. A null ref means "module hasn't wired it yet" — we fail
- * open in that case to avoid breaking bootstrap-time migrations or
- * tests that never register the guard.
+ * signature. An unregistered ref means the host app forgot to import
+ * TasksModule — fail-closed, so a missing wire is a loud programming
+ * error rather than a silent bypass of the domain-ownership invariant.
  */
 type KindLookup = (id: string) => Promise<string | null>;
 let kindLookupRef: KindLookup | null = null;
-export function registerTasksKindLookup(lookup: KindLookup): void {
+export function registerTasksKindLookup(lookup: KindLookup | null): void {
   kindLookupRef = lookup;
 }
 
-async function assertGenericMutation(id: string): Promise<void> {
-  if (!kindLookupRef) return;
+/**
+ * Blocks mutations against kind-owned tasks on non-domain code paths.
+ * Exported so callers that bypass the generic EntityService (e.g.
+ * TaskClaimService, which talks to Drizzle directly for optimistic
+ * claim semantics) enforce the same invariant: a kinded row must flow
+ * through its owning domain endpoint.
+ */
+export async function assertTaskIsAdHoc(id: string): Promise<void> {
+  if (!kindLookupRef) {
+    throw new Error(
+      'Tasks kind-guard is not wired — TasksModule must be imported before generic /tasks mutations run.',
+    );
+  }
   const kind = await kindLookupRef(id);
   if (kind) {
     throw new ConflictException(
@@ -67,7 +78,7 @@ export const TASKS_CONFIG = defineEntity({
     },
     beforeUpdate: async (id: string, payload: Record<string, unknown>) => {
       rejectKindInPayload(payload);
-      await assertGenericMutation(id);
+      await assertTaskIsAdHoc(id);
       let next = payload;
       if ('assigneeId' in next || 'assigneeTeamId' in next) {
         validateAssigneeExclusivity(next);
@@ -80,7 +91,7 @@ export const TASKS_CONFIG = defineEntity({
       return applyCompletedAt(next);
     },
     beforeDelete: async (id: string) => {
-      await assertGenericMutation(id);
+      await assertTaskIsAdHoc(id);
     },
   },
 
