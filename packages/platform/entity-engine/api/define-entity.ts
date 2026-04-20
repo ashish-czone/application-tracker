@@ -337,18 +337,26 @@ export function defineEntity<TTable extends PgTable>(model: ModelDefinition<TTab
 
   // Validate onDelete policy against table shape + register soft-delete columns
   // as system columns when the entity is soft-deletable.
+  //
+  // Extension entities (`extensionOf`) are exempt from the table-shape check:
+  // soft-delete columns live on the parent table and the entity-service
+  // soft-delete / restore paths flip the parent's columns, not the child's.
+  // Requiring the child to spread softDeleteColumns would duplicate state the
+  // parent already owns (and nothing writes to).
   const softCols = hasSoftDeleteColumns(model.table);
-  if (model.onDelete.mode === 'soft' && !softCols) {
-    throw new Error(
-      `defineEntity({ onDelete: { mode: 'soft' } }) for '${model.slug}' requires the table to spread ` +
-        `...softDeleteColumns() from @packages/soft-delete. Missing deletedAt / deletedBy columns.`,
-    );
-  }
-  if (model.onDelete.mode !== 'soft' && softCols) {
-    throw new Error(
-      `defineEntity({ onDelete: { mode: '${model.onDelete.mode}' } }) for '${model.slug}' is incompatible ` +
-        `with a table that spreads ...softDeleteColumns(). Either switch to mode 'soft' or remove the columns.`,
-    );
+  if (!model.extensionOf) {
+    if (model.onDelete.mode === 'soft' && !softCols) {
+      throw new Error(
+        `defineEntity({ onDelete: { mode: 'soft' } }) for '${model.slug}' requires the table to spread ` +
+          `...softDeleteColumns() from @packages/soft-delete. Missing deletedAt / deletedBy columns.`,
+      );
+    }
+    if (model.onDelete.mode !== 'soft' && softCols) {
+      throw new Error(
+        `defineEntity({ onDelete: { mode: '${model.onDelete.mode}' } }) for '${model.slug}' is incompatible ` +
+          `with a table that spreads ...softDeleteColumns(). Either switch to mode 'soft' or remove the columns.`,
+      );
+    }
   }
   if (model.onDelete.mode === 'soft') {
     systemColumns.push('deletedAt', 'deletedBy');

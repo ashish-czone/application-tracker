@@ -752,5 +752,36 @@ describe('defineEntity', () => {
         }),
       ).toThrow(/parentDefaults must be a plain object/);
     });
+
+    it("should accept onDelete.mode 'soft' on an extension child without softDeleteColumns", () => {
+      // Parent owns deletedAt/deletedBy; requiring them on the child would
+      // duplicate state the entity-service soft-delete path never writes to.
+      const config = defineEntity({
+        table: extensionTable,
+        onDelete: { mode: 'soft' },
+        slug: 'ext-entities',
+        extensionOf: { entity: 'test-entities', foreignKey: 'taskId' },
+        fields: { ruleId: { type: 'text', label: 'Rule' } },
+        ui: { icon: 'FileText' },
+      });
+
+      // System columns still include deletedAt/deletedBy so they stay out of
+      // snapshots even when the projected parent row surfaces them.
+      expect(config.systemColumns).toContain('deletedAt');
+      expect(config.systemColumns).toContain('deletedBy');
+    });
+
+    it('should still require softDeleteColumns on non-extension entities when mode is soft', () => {
+      // Guard against the exemption above leaking to normal entities.
+      expect(() =>
+        defineEntity({
+          table: extensionTable,
+          onDelete: { mode: 'soft' },
+          slug: 'ext-entities-standalone',
+          fields: { ruleId: { type: 'text', label: 'Rule' } },
+          ui: { icon: 'FileText' },
+        }),
+      ).toThrow(/requires the table to spread.*softDeleteColumns/);
+    });
   });
 });
