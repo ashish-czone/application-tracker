@@ -57,7 +57,6 @@ function taskRowFixture(overrides: Partial<Record<string, unknown>> = {}): Recor
     dueDate: '2026-05-20',
     completedAt: null,
     kind: 'compliance',
-    relatedEntityId: 'r1',
     externalKey: 'r1:c1:2026-04-01',
     createdBy: 'system',
     createdAt: new Date('2026-04-01'),
@@ -76,7 +75,6 @@ function extRowFixture(overrides: Partial<Record<string, unknown>> = {}): Record
     lawId: 'l1',
     periodStart: '2026-04-01',
     periodEnd: '2026-04-30',
-    externalKey: 'r1:c1:2026-04-01',
     createdAt: new Date('2026-04-01'),
     updatedAt: new Date('2026-04-01'),
     ...overrides,
@@ -131,7 +129,7 @@ describe('ComplianceTasksService', () => {
       expect(result.externalKey).toBe('r1:c1:2026-04-01');
     });
 
-    it('sets kind=compliance, relatedEntityId=ruleId, and builds externalKey on the tasks row', async () => {
+    it('sets kind=compliance and builds externalKey on the tasks row', async () => {
       const tasksInsert = mockInsertReturning([taskRowFixture()]);
       const extInsert = mockInsertReturning([extRowFixture()]);
       const tx = {
@@ -144,10 +142,10 @@ describe('ComplianceTasksService', () => {
       const tasksValues = (tx.insert.mock.results[0].value as AnyChain).values.mock
         .calls[0][0] as Record<string, unknown>;
       expect(tasksValues.kind).toBe('compliance');
-      expect(tasksValues.relatedEntityId).toBe('r1');
       expect(tasksValues.externalKey).toBe('r1:c1:2026-04-01');
       expect(tasksValues.createdBy).toBe('user-42');
       expect(tasksValues.priority).toBe('medium');
+      expect(tasksValues).not.toHaveProperty('relatedEntityId');
     });
 
     it('propagates priority and assignee overrides into the tasks insert', async () => {
@@ -170,7 +168,7 @@ describe('ComplianceTasksService', () => {
       expect(tasksValues.description).toBe('note');
     });
 
-    it('writes (ruleId, clientId, lawId, period*, externalKey) into the extension insert', async () => {
+    it('writes (ruleId, clientId, lawId, period*) into the extension insert', async () => {
       const tasksInsert = mockInsertReturning([taskRowFixture()]);
       const extInsert = mockInsertReturning([extRowFixture()]);
       const tx = {
@@ -189,8 +187,8 @@ describe('ComplianceTasksService', () => {
         lawId: 'l1',
         periodStart: '2026-04-01',
         periodEnd: '2026-04-30',
-        externalKey: 'r1:c1:2026-04-01',
       });
+      expect(extValues).not.toHaveProperty('externalKey');
     });
 
     it('emits tasks.Created and compliance.ComplianceTaskGenerated after the tx commits', async () => {
