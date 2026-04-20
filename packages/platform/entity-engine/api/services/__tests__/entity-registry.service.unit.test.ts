@@ -225,6 +225,24 @@ describe('EntityRegistryService', () => {
     expect(entries[0].features.hasEvaluations).toBe(false);
   });
 
+  it('exposes adminConfigurable flag in features', () => {
+    registry.register(mockConfig({
+      entityType: 'with_admin',
+      slug: 'with-admin',
+      adminConfigurable: true,
+    }));
+
+    const entries = registry.getRegistryEntries();
+    expect(entries[0].features.adminConfigurable).toBe(true);
+  });
+
+  it('adminConfigurable defaults to false in features', () => {
+    registry.register(mockConfig());
+
+    const entries = registry.getRegistryEntries();
+    expect(entries[0].features.adminConfigurable).toBe(false);
+  });
+
   it('exposes hasTags groupSlug in features when set', () => {
     registry.register(mockConfig({
       entityType: 'with_tags',

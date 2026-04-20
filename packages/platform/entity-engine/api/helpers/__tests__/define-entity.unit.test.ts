@@ -307,6 +307,25 @@ describe('defineEntity', () => {
     expect(withoutFlag.customFields).toBeUndefined();
   });
 
+  it('should pass through adminConfigurable flag', () => {
+    const withFlag = defineEntity({
+      table: testTable,
+      slug: 'test-entities',
+      adminConfigurable: true,
+      fields: { title: { type: 'text', label: 'Title' } },
+      ui: { icon: 'FileText' },
+    });
+    expect(withFlag.adminConfigurable).toBe(true);
+
+    const withoutFlag = defineEntity({
+      table: testTable,
+      slug: 'test-entities',
+      fields: { title: { type: 'text', label: 'Title' } },
+      ui: { icon: 'FileText' },
+    });
+    expect(withoutFlag.adminConfigurable).toBeUndefined();
+  });
+
   it('should set default sort and ensure it is sortable', () => {
     const config = defineEntity({
       table: testTable,

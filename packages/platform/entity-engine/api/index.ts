@@ -89,8 +89,10 @@ export { picklistOptions } from './schema/picklist-options';
 // --- Services moved from eav-attributes ---
 
 export { FieldDefinitionService } from './services/field-definition.service';
+export { EntityDefinitionService } from './services/entity-definition.service';
 export { LookupResolverService } from './services/lookup-resolver.service';
 export { EntityEngineSeedService } from './services/entity-engine-seed.service';
+export { buildInMemoryFields, buildInMemoryLayout } from './helpers/build-in-memory-definitions';
 
 // --- Controllers moved from eav-attributes ---
 

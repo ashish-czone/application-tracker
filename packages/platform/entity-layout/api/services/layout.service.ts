@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { DatabaseService, eq, asc, inArray } from '@packages/database';
 import { withTenant, withTenantInsert } from '@packages/tenancy/helpers';
-import { FieldDefinitionService } from '@packages/entity-engine';
+import { FieldDefinitionService, EntityDefinitionService } from '@packages/entity-engine';
 import type {
   LayoutSection,
   FullLayout,
@@ -21,6 +21,7 @@ export class LayoutService {
   constructor(
     private readonly database: DatabaseService,
     private readonly fieldDefService: FieldDefinitionService,
+    private readonly entityDefService: EntityDefinitionService,
   ) {}
 
   // --- Section CRUD ---
@@ -172,6 +173,14 @@ export class LayoutService {
     const cached = this.layoutCache.get(cacheKey);
     if (cached && Date.now() - cached.cachedAt < this.CACHE_TTL_MS) {
       return cached.layout;
+    }
+
+    // Non-admin-configurable entities have no DB-backed layout rows — resolve
+    // entirely from the in-memory registry.
+    if (!this.entityDefService.isAdminConfigurable(entityType)) {
+      const layout = this.entityDefService.resolveLayoutFromRegistry(entityType, layoutName);
+      this.layoutCache.set(cacheKey, { layout, cachedAt: Date.now() });
+      return layout;
     }
 
     // Fetch sections

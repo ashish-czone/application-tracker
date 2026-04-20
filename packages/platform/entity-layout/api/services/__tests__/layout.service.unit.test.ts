@@ -72,6 +72,7 @@ describe('LayoutService', () => {
   let service: LayoutService;
   let mockDb: ReturnType<typeof createMockDb>;
   let mockFieldDefService: { listByEntityWithOptions: ReturnType<typeof vi.fn>; findByEntityAndKey: ReturnType<typeof vi.fn> };
+  let mockEntityDefService: { isAdminConfigurable: ReturnType<typeof vi.fn>; resolveLayoutFromRegistry: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     mockDb = createMockDb();
@@ -80,7 +81,11 @@ describe('LayoutService', () => {
       listByEntityWithOptions: vi.fn().mockReturnValue([]),
       findByEntityAndKey: vi.fn().mockReturnValue(null),
     };
-    service = new LayoutService(databaseService, mockFieldDefService as any);
+    mockEntityDefService = {
+      isAdminConfigurable: vi.fn().mockReturnValue(true),
+      resolveLayoutFromRegistry: vi.fn(),
+    };
+    service = new LayoutService(databaseService, mockFieldDefService as any, mockEntityDefService as any);
   });
 
   // --- createSection ---
@@ -561,6 +566,50 @@ describe('LayoutService', () => {
       const result = await service.getLayout('candidates');
 
       expect(result.layoutName).toBe('Standard');
+    });
+
+    it('short-circuits via EntityDefinitionService when entity is not adminConfigurable — no DB calls', async () => {
+      const registryLayout = {
+        entityType: 'things',
+        layoutName: 'Standard',
+        sections: [{
+          id: 'in-memory:things:section:0',
+          name: 'Basics',
+          columns: 1,
+          sortOrder: 0,
+          isCollapsible: true,
+          isTabular: false,
+          tabularMaxRows: null,
+          fields: [],
+        }],
+        quickCreateFields: [],
+      };
+      mockEntityDefService.isAdminConfigurable.mockReturnValue(false);
+      mockEntityDefService.resolveLayoutFromRegistry.mockReturnValue(registryLayout);
+
+      const result = await service.getLayout('things');
+
+      expect(result).toEqual(registryLayout);
+      expect(mockEntityDefService.resolveLayoutFromRegistry).toHaveBeenCalledWith('things', 'Standard');
+      expect(mockDb.select).not.toHaveBeenCalled();
+      expect(mockFieldDefService.listByEntityWithOptions).not.toHaveBeenCalled();
+    });
+
+    it('caches the registry-built layout on subsequent calls', async () => {
+      const registryLayout = {
+        entityType: 'things',
+        layoutName: 'Standard',
+        sections: [],
+        quickCreateFields: [],
+      };
+      mockEntityDefService.isAdminConfigurable.mockReturnValue(false);
+      mockEntityDefService.resolveLayoutFromRegistry.mockReturnValue(registryLayout);
+
+      await service.getLayout('things');
+      mockEntityDefService.resolveLayoutFromRegistry.mockClear();
+      await service.getLayout('things');
+
+      expect(mockEntityDefService.resolveLayoutFromRegistry).not.toHaveBeenCalled();
     });
 
     it('should handle fields with no matching layout field gracefully', async () => {

@@ -590,6 +590,16 @@ export interface EntityConfig<TTable extends PgTable = PgTable> {
    *  When false: all non-relational fields must have DB columns, no EAV overhead. */
   customFields?: boolean;
 
+  /** Allow admins to customize this entity at runtime (reorder layout, toggle field
+   *  visibility, add/configure tags, categories, workflows). Default: false.
+   *  When true: code-defined fields/layout are seeded to DB as `isSystem: true` rows
+   *  and the DB becomes the source of truth. Admin screens show this entity. DB
+   *  queries fire on layout/field-definition reads (cached).
+   *  When false: the in-memory registry is the source of truth, no seeding happens,
+   *  no DB queries for fields/layout, and the entity is hidden from admin screens.
+   *  Independent of `customFields` — either flag can be enabled on its own. */
+  adminConfigurable?: boolean;
+
   /** Mark this entity as hierarchical. Requires the table to spread `...hierarchyColumns()`
    *  from `@packages/hierarchy`. Enables parent/child relations, path/depth maintenance,
    *  and HierarchyService-backed reparent/ancestor/descendant operations on the entity
@@ -810,6 +820,7 @@ export interface EntityRegistryEntry {
     softDelete: boolean;
     restore: boolean;
     customFields: boolean;
+    adminConfigurable: boolean;
     hasTaxonomy: boolean;
     hasWorkflow: boolean;
     hasMedia: boolean;

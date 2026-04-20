@@ -159,6 +159,7 @@ export function EntityConfigPage() {
   const entityTabs = useMemo(
     () =>
       [...entities]
+        .filter((e) => e.features.adminConfigurable)
         .sort((a, b) => (a.ui.navOrder ?? 99) - (b.ui.navOrder ?? 99))
         .map((e) => ({ key: e.entityType, label: e.pluralName, slug: e.slug, hasWorkflow: e.features.hasWorkflow })),
     [entities],
@@ -171,7 +172,12 @@ export function EntityConfigPage() {
     return entityTabs[0]?.key ?? '';
   }, [tabParam, entityTabs]);
 
-  const activeTab = paramEntityType ?? defaultTab;
+  // Fall back to default when the URL points at an entity that isn't
+  // admin-configurable (or is unknown) — we never render the config UI for those.
+  const activeTab =
+    paramEntityType && entityTabs.some((t) => t.key === paramEntityType)
+      ? paramEntityType
+      : defaultTab;
 
   const cameFrom = (location.state as { from?: string } | null)?.from;
 

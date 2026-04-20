@@ -10,6 +10,7 @@ import { LookupsController } from './controllers/lookups.controller';
 import { FieldDefinitionService } from './services/field-definition.service';
 import { LookupResolverService } from './services/lookup-resolver.service';
 import { EntityEngineSeedService } from './services/entity-engine-seed.service';
+import { EntityDefinitionService } from './services/entity-definition.service';
 import { FieldTypeSaveHookRegistry, fieldTypeSaveHookRegistry } from './services/field-type-save-hook.registry';
 import { CreateEntityAction } from './actions/create-entity.action';
 import { UpdateEntityAction } from './actions/update-entity.action';
@@ -43,6 +44,7 @@ import { AUTOMATIONS_EXTENSION, type AutomationsExtension } from './extensions/a
   providers: [
     EntityRegistryService,
     FieldDefinitionService,
+    EntityDefinitionService,
     LookupResolverService,
     EntityEngineSeedService,
     { provide: FieldTypeSaveHookRegistry, useValue: fieldTypeSaveHookRegistry },
@@ -65,6 +67,7 @@ import { AUTOMATIONS_EXTENSION, type AutomationsExtension } from './extensions/a
   exports: [
     EntityRegistryService,
     FieldDefinitionService,
+    EntityDefinitionService,
     LookupResolverService,
     EntityEngineSeedService,
     FieldTypeSaveHookRegistry,

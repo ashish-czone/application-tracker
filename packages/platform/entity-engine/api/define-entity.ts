@@ -140,6 +140,14 @@ export interface ModelDefinition<TTable extends PgTable = PgTable> {
   /** Enable dynamic custom fields (EAV storage). When true, admins can add custom fields and EAV value operations are active. Default: false. */
   customFields?: boolean;
   /**
+   * Allow admins to customize this entity at runtime (layout, field visibility,
+   * tags/categories/workflows). Default: false — the in-memory registry is the
+   * source of truth, no field/layout seeding, no DB reads for definitions, and
+   * the entity is hidden from admin-config screens. Set true to opt in to DB-backed
+   * configuration. Independent of `customFields`.
+   */
+  adminConfigurable?: boolean;
+  /**
    * Mark this entity as hierarchical. Requires the Drizzle table to spread
    * `...hierarchyColumns(selfRef)` from `@packages/hierarchy` (providing
    * `parentId`, `path`, `depth` columns). When enabled: the three columns are
@@ -459,6 +467,7 @@ export function defineEntity<TTable extends PgTable>(model: ModelDefinition<TTab
     relationships: relationships.length > 0 ? relationships : undefined,
     recipientFields: Object.keys(recipientFields).length > 0 ? recipientFields : undefined,
     customFields: model.customFields,
+    adminConfigurable: model.adminConfigurable,
     hierarchy: model.hierarchy,
     hasNotes: model.hasNotes,
     hasAttachments: model.hasAttachments,

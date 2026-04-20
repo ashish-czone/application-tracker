@@ -129,6 +129,13 @@ export class EntityEngineModule implements OnApplicationBootstrap {
     // 1. Register in entity registry
     this.registry.register(config);
 
+    // 1b. For non-admin-configurable entities, mirror code-defined fields into
+    //     the FieldDefinitionService cache so readers don't have to branch on
+    //     the flag — no DB rows exist for these entities.
+    if (!config.adminConfigurable) {
+      this.fieldDefService.populateFromRegistry(config);
+    }
+
     // 2. RBAC
     const permissions = [
       { action: 'create', description: `Create ${config.pluralName.toLowerCase()}` },
