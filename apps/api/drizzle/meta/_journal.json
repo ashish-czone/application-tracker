@@ -169,6 +169,13 @@
       "when": 1776682015778,
       "tag": "0023_org_units_description",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1777244400000,
+      "tag": "0024_pages_tables",
+      "breakpoints": true
     }
   ]
 }

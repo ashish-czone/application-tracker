@@ -4,5 +4,6 @@ import shared from '../../../vitest.shared';
 export default mergeConfig(shared, defineConfig({
   test: {
     globals: true,
+    exclude: ['**/*.integration.test.ts', '**/node_modules/**'],
   },
 }));
