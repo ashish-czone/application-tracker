@@ -17,7 +17,12 @@ import { buildPackageAliases } from '../../resolve-aliases';
  *   export default createViTestIntegrationConfig(__dirname);
  */
 export function createViTestIntegrationConfig(packageDir: string, overrides?: UserConfig) {
-  const packagesDir = path.resolve(packageDir, '../..');
+  // packagesDir must resolve to the repo's `packages/` root regardless of how
+  // deeply nested the caller sits (e.g. `packages/addons/<name>/api/` vs
+  // `packages/addons/<name>/`). Anchor on __dirname of this helper rather than
+  // the caller's path — this file lives at `packages/core/testing/`, so
+  // `../..` is always `packages/`.
+  const packagesDir = path.resolve(__dirname, '../..');
 
   const base = defineConfig({
     test: {
