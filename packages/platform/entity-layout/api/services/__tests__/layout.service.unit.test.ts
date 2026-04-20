@@ -73,6 +73,7 @@ describe('LayoutService', () => {
   let mockDb: ReturnType<typeof createMockDb>;
   let mockFieldDefService: { listByEntityWithOptions: ReturnType<typeof vi.fn>; findByEntityAndKey: ReturnType<typeof vi.fn> };
   let mockEntityDefService: { isAdminConfigurable: ReturnType<typeof vi.fn>; resolveLayoutFromRegistry: ReturnType<typeof vi.fn> };
+  let mockEntityRegistry: { getResolvedExtension: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     mockDb = createMockDb();
@@ -85,7 +86,15 @@ describe('LayoutService', () => {
       isAdminConfigurable: vi.fn().mockReturnValue(true),
       resolveLayoutFromRegistry: vi.fn(),
     };
-    service = new LayoutService(databaseService, mockFieldDefService as any, mockEntityDefService as any);
+    mockEntityRegistry = {
+      getResolvedExtension: vi.fn().mockReturnValue(undefined),
+    };
+    service = new LayoutService(
+      databaseService,
+      mockFieldDefService as any,
+      mockEntityDefService as any,
+      mockEntityRegistry as any,
+    );
   });
 
   // --- createSection ---
@@ -610,6 +619,57 @@ describe('LayoutService', () => {
       await service.getLayout('things');
 
       expect(mockEntityDefService.resolveLayoutFromRegistry).not.toHaveBeenCalled();
+    });
+
+    it('merges parent projected fields into the layout for extension entities', async () => {
+      mockDb._chain.orderBy.mockResolvedValueOnce([]); // no sections for child
+      const childFields = [
+        { ...makeField({ id: 'cf1', entityType: 'compliance_tasks', fieldKey: 'ruleId', label: 'Rule' }), picklistOptions: [], columnIndex: 0 },
+      ];
+      const parentFields = [
+        { ...makeField({ id: 'pf1', entityType: 'tasks', fieldKey: 'title', label: 'Title' }), picklistOptions: [], columnIndex: 0 },
+        { ...makeField({ id: 'pf2', entityType: 'tasks', fieldKey: 'status', label: 'Status' }), picklistOptions: [], columnIndex: 0 },
+        { ...makeField({ id: 'pf3', entityType: 'tasks', fieldKey: 'assignee', label: 'Assignee' }), picklistOptions: [], columnIndex: 0 },
+      ];
+      mockFieldDefService.listByEntityWithOptions.mockImplementation((t: string) =>
+        t === 'compliance_tasks' ? childFields : parentFields,
+      );
+      mockEntityRegistry.getResolvedExtension.mockReturnValue({
+        parentEntityType: 'tasks',
+        projectedColumns: [{ fieldKey: 'title' }, { fieldKey: 'status' }],
+      });
+
+      const result = await service.getLayout('compliance_tasks', 'Standard');
+
+      const unassigned = result.sections.find((s) => s.id === '__unassigned__');
+      expect(unassigned).toBeDefined();
+      const keys = unassigned!.fields.map((f) => f.fieldKey);
+      expect(keys).toEqual(expect.arrayContaining(['ruleId', 'title', 'status']));
+      expect(keys).not.toContain('assignee');
+    });
+
+    it('child-declared fieldKey shadows the parent projection', async () => {
+      mockDb._chain.orderBy.mockResolvedValueOnce([]);
+      const childFields = [
+        { ...makeField({ id: 'cf1', entityType: 'child', fieldKey: 'status', label: 'Child Status' }), picklistOptions: [], columnIndex: 0 },
+      ];
+      const parentFields = [
+        { ...makeField({ id: 'pf1', entityType: 'parent', fieldKey: 'status', label: 'Parent Status' }), picklistOptions: [], columnIndex: 0 },
+      ];
+      mockFieldDefService.listByEntityWithOptions.mockImplementation((t: string) =>
+        t === 'child' ? childFields : parentFields,
+      );
+      mockEntityRegistry.getResolvedExtension.mockReturnValue({
+        parentEntityType: 'parent',
+        projectedColumns: [{ fieldKey: 'status' }],
+      });
+
+      const result = await service.getLayout('child');
+
+      const unassigned = result.sections.find((s) => s.id === '__unassigned__')!;
+      const statusEntries = unassigned.fields.filter((f) => f.fieldKey === 'status');
+      expect(statusEntries).toHaveLength(1);
+      expect(statusEntries[0].label).toBe('Child Status');
     });
 
     it('should handle fields with no matching layout field gracefully', async () => {
