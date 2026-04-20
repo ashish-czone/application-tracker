@@ -26,7 +26,7 @@ import { AppConfigService } from '@packages/settings';
 import { UsersModule } from '@packages/users';
 import { OrgUnitsModule } from '@packages/org-units';
 import { EntityEngineModule } from '@packages/entity-engine';
-import { TASKS_CONFIG } from '@packages/tasks';
+import { TASKS_CONFIG, TasksModule } from '@packages/tasks';
 import { TaxonomyModule } from '@packages/taxonomy';
 import { NotesModule } from '@packages/notes';
 import { AttachmentsModule } from '@packages/attachments';
@@ -104,6 +104,7 @@ import { validate } from './config/env.validation';
     OAuthModule.register(),
     UsersModule,
     OrgUnitsModule,
+    TasksModule,
     EntityEngineModule.forEntity(TASKS_CONFIG),
   ],
   providers: [

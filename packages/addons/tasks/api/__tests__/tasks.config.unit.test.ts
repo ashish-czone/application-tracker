@@ -1,8 +1,15 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import { TASKS_CONFIG, registerTasksKindLookup } from '../tasks.config';
 
 describe('TASKS_CONFIG', () => {
+  // The kind guard is fail-closed (throws if no lookup is wired), so every
+  // hook test needs *some* lookup registered. Default to "no kind" so tests
+  // that aren't about the guard itself just pass through.
+  beforeEach(() => {
+    registerTasksKindLookup(async () => null);
+  });
+
   describe('kind discriminator', () => {
     it('declares kind as a system, readonly, list-visible text field', () => {
       const field = TASKS_CONFIG.fieldMeta.kind;
@@ -173,13 +180,16 @@ describe('TASKS_CONFIG', () => {
       await expect(beforeDelete('task-1', 'actor')).resolves.not.toThrow();
     });
 
-    it('fails open when the lookup has not been registered', async () => {
-      // Simulate a fresh module load (e.g. tests that don't wire TasksModule).
-      // If we can't look up kind, we don't block — the guard is a defense-in-depth
-      // layer, not the source of truth.
-      const freshLookup = vi.fn(async () => null);
-      registerTasksKindLookup(freshLookup);
-      await expect(beforeUpdate('task-1', { title: 'x' }, 'actor')).resolves.toBeDefined();
+    it('fails closed when the lookup has not been registered', async () => {
+      // A missing wire means the host app forgot to import TasksModule. That
+      // is a programming error, not a bypass — the guard refuses to run so
+      // the mistake surfaces loudly instead of silently letting kinded rows
+      // be mutated through generic /tasks.
+      registerTasksKindLookup(null);
+      await expect(beforeUpdate('task-1', { title: 'x' }, 'actor')).rejects.toThrow(
+        /kind-guard is not wired/,
+      );
+      await expect(beforeDelete('task-1', 'actor')).rejects.toThrow(/kind-guard is not wired/);
     });
   });
 });
