@@ -130,6 +130,13 @@ export const TASKS_FIELDS = {
     listVisible: true,
     listOrder: 6,
   },
+  externalKey: {
+    type: 'text',
+    label: 'External Key',
+    system: true,
+    readonly: true,
+    excludeFromList: true,
+  },
 } satisfies FieldMap;
 
 export type TasksFieldMap = typeof TASKS_FIELDS;

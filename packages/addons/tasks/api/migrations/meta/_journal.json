@@ -29,6 +29,13 @@
       "when": 1776615422379,
       "tag": "0003_drop_legacy_task_columns",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1776663892673,
+      "tag": "0004_restore_tasks_external_key",
+      "breakpoints": true
     }
   ]
 }

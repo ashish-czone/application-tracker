@@ -11,8 +11,8 @@ import { complianceRules } from './rules';
 // deleted the extension goes with it.
 //
 // Idempotency surface:
-//   - `external_key` is the format-stable key the action uses to dedupe
-//     across retries.
+//   - `tasks.external_key` (platform primitive, unique per (kind, key))
+//     is the format-stable key the action uses to dedupe across retries.
 //   - (rule_id, client_id, period_start) is the natural-key protection
 //     that survives key-format changes.
 export const complianceTasks = pgTable('compliance_tasks', {
@@ -24,14 +24,12 @@ export const complianceTasks = pgTable('compliance_tasks', {
   lawId: text('law_id').notNull().references(() => complianceLaws.id, { onDelete: 'cascade' }),
   periodStart: date('period_start', { mode: 'string' }).notNull(),
   periodEnd: date('period_end', { mode: 'string' }).notNull(),
-  externalKey: text('external_key').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' })
     .notNull()
     .$defaultFn(() => new Date())
     .$onUpdate(() => new Date()),
 }, (table) => [
-  uniqueIndex('compliance_tasks_external_key_key').on(table.externalKey),
   uniqueIndex('compliance_tasks_rule_client_period_key').on(
     table.ruleId,
     table.clientId,

@@ -73,10 +73,13 @@ export interface ComplianceTaskRow {
  * compliance task is meaningless without its (rule, client, period) tuple,
  * so the two rows are never written apart.
  *
- * Idempotency is owned here (not on the tasks table): the action and seed
- * check `findByRuleClientPeriod` / `findByExternalKey` before calling
- * `create`. The unique constraints on compliance_tasks are the database-
- * side guard rail.
+ * Idempotency uses the platform primitive on tasks: `external_key` lives
+ * on the base `tasks` row (unique per (kind, external_key)) and every kind
+ * reuses the same column. The action and seed check
+ * `findByRuleClientPeriod` / `findByExternalKey` before calling `create`.
+ * The natural-key unique constraint on (rule_id, client_id, period_start)
+ * in compliance_tasks is the domain-level guard rail that survives
+ * key-format changes.
  *
  * Events: emits `tasks.Created` (mirroring the entity-engine CRUD stream so
  * audit and automation listeners receive compliance tasks too) and
@@ -105,7 +108,6 @@ export class ComplianceTasksService {
           assigneeTeamId: input.assigneeTeamId ?? null,
           dueDate: input.dueDate,
           kind: TASK_KIND,
-          relatedEntityId: input.ruleId,
           externalKey,
           createdBy: actorId,
         })
@@ -120,7 +122,6 @@ export class ComplianceTasksService {
           lawId: input.lawId,
           periodStart: input.periodStart,
           periodEnd: input.periodEnd,
-          externalKey,
         })
         .returning();
 
@@ -143,7 +144,7 @@ export class ComplianceTasksService {
         clientId: extRow.clientId,
         lawId: extRow.lawId,
         taskId: taskRow.id,
-        externalKey: extRow.externalKey,
+        externalKey: taskRow.externalKey ?? externalKey,
         periodStart: extRow.periodStart,
         periodEnd: extRow.periodEnd,
         dueDate: taskRow.dueDate ?? '',
@@ -215,9 +216,9 @@ export class ComplianceTasksService {
 
   async findByExternalKey(externalKey: string): Promise<{ taskId: string } | null> {
     const rows = await this.database.db
-      .select({ taskId: complianceTasks.taskId })
-      .from(complianceTasks)
-      .where(eq(complianceTasks.externalKey, externalKey))
+      .select({ taskId: tasks.id })
+      .from(tasks)
+      .where(and(eq(tasks.kind, TASK_KIND), eq(tasks.externalKey, externalKey)))
       .limit(1);
     return rows[0] ?? null;
   }
@@ -337,7 +338,7 @@ export class ComplianceTasksService {
       lawId: ext.lawId,
       periodStart: ext.periodStart,
       periodEnd: ext.periodEnd,
-      externalKey: ext.externalKey,
+      externalKey: task.externalKey ?? this.buildExternalKey(ext.ruleId, ext.clientId, ext.periodStart),
       createdAt: task.createdAt,
       updatedAt: task.updatedAt,
     };

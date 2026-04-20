@@ -1,0 +1,2 @@
+ALTER TABLE "tasks" ADD COLUMN "external_key" text;--> statement-breakpoint
+CREATE UNIQUE INDEX "tasks_kind_external_key_unique" ON "tasks" USING btree ("kind","external_key") WHERE kind IS NOT NULL AND external_key IS NOT NULL;
