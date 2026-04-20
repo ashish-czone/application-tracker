@@ -2,7 +2,10 @@ import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest';
 import { randomUUID } from 'crypto';
 import { createIntegrationTestModule, cleanDatabase } from '@packages/testing';
 import { EventsModule } from '@packages/events';
-import { DatabaseService, users } from '@packages/database';
+import { DatabaseService, eq, users } from '@packages/database';
+import { roles } from '../../schema/roles';
+import { userRoles } from '../../schema/user-roles';
+import { rolePermissions } from '../../schema/role-permissions';
 import { RbacModule } from '../../rbac.module';
 import { RbacService } from '../rbac.service';
 import { PermissionRegistryService } from '../permission-registry.service';
@@ -64,24 +67,49 @@ describe('RBAC (integration)', () => {
       expect(updated.name).toBe('New Name');
     });
 
-    it('should delete a role with no users', async () => {
+    it('should soft-delete a role with no users', async () => {
       const role = await rbacService.createRole({ name: 'Temp', userType: 'admin' });
-      await rbacService.deleteRole(role.id);
+      const actor = await createUser('admin');
+      await rbacService.deleteRole(role.id, actor.id);
+
+      // Hidden from service reads
       const found = await rbacService.findRoleById(role.id);
       expect(found).toBeNull();
+
+      // But the row still exists in the DB with deleted_at + deleted_by set
+      const [raw] = await db.select().from(roles).where(eq(roles.id, role.id));
+      expect(raw).toBeDefined();
+      expect(raw.deletedAt).not.toBeNull();
+      expect(raw.deletedBy).toBe(actor.id);
     });
 
-    it('should prevent deleting a role assigned to users', async () => {
+    it('should hard-delete user_roles and keep role_permissions on soft-delete', async () => {
       const role = await rbacService.createRole({ name: 'InUse', userType: 'admin' });
+      await rbacService.setRolePermissions(role.id, ['things.read', 'things.create']);
       const user = await createUser('admin');
+      const actor = await createUser('admin');
       await rbacService.assignRoleToUser(user.id, role.id);
 
-      await expect(rbacService.deleteRole(role.id)).rejects.toThrow('Cannot delete a role that is assigned to users');
+      await rbacService.deleteRole(role.id, actor.id);
+
+      // user_roles rows for this role are gone (hardDelete strategy)
+      const memberRows = await db.select().from(userRoles).where(eq(userRoles.roleId, role.id));
+      expect(memberRows).toHaveLength(0);
+
+      // role_permissions rows remain (keep strategy)
+      const permRows = await db.select().from(rolePermissions).where(eq(rolePermissions.roleId, role.id));
+      expect(permRows).toHaveLength(2);
+
+      // Role is hidden from reads; name is free for reuse
+      expect(await rbacService.findRoleById(role.id)).toBeNull();
+      const reused = await rbacService.createRole({ name: 'InUse', userType: 'admin' });
+      expect(reused.id).not.toBe(role.id);
     });
 
     it('should prevent deleting a default role', async () => {
       const role = await rbacService.createRole({ name: 'Default', userType: 'admin', isDefault: true });
-      await expect(rbacService.deleteRole(role.id)).rejects.toThrow('Cannot delete a default role');
+      const actor = await createUser('admin');
+      await expect(rbacService.deleteRole(role.id, actor.id)).rejects.toThrow('Cannot delete a default role');
     });
 
     it('should list roles with pagination', async () => {

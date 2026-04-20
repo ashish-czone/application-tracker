@@ -5,7 +5,7 @@ import { PermissionRegistryService } from '../permission-registry.service';
 
 // Mock database helpers
 function createMockDb() {
-  const mockChain = {
+  const mockChain: any = {
     from: vi.fn().mockReturnThis(),
     where: vi.fn().mockReturnThis(),
     innerJoin: vi.fn().mockReturnThis(),
@@ -16,13 +16,16 @@ function createMockDb() {
     onConflictDoNothing: vi.fn().mockResolvedValue(undefined),
   };
 
-  return {
+  const db: any = {
     select: vi.fn().mockReturnValue(mockChain),
     insert: vi.fn().mockReturnValue(mockChain),
     update: vi.fn().mockReturnValue(mockChain),
     delete: vi.fn().mockReturnValue(mockChain),
     _chain: mockChain,
   };
+  // Executor opens a transaction. Run the callback with the same mock.
+  db.transaction = vi.fn((cb: (tx: any) => Promise<unknown>) => cb(db));
+  return db;
 }
 
 function createMockDatabaseService(mockDb: ReturnType<typeof createMockDb>) {
@@ -90,21 +93,23 @@ describe('RbacService', () => {
   });
 
   describe('deleteRole', () => {
-    it('should delete the role when no users assigned', async () => {
+    it('should soft-delete the role even when users are assigned', async () => {
       const role = { id: 'role-1', name: 'custom', userType: 'admin', isDefault: false, createdAt: new Date(), updatedAt: new Date() };
       vi.spyOn(service, 'findRoleById').mockResolvedValueOnce(role);
       vi.spyOn(service, 'isSystemRole').mockResolvedValueOnce(false);
-      // Mock count query — no users assigned
-      mockDb._chain.where.mockResolvedValueOnce([{ total: 0 }]);
 
-      await expect(service.deleteRole('role-1')).resolves.toBeUndefined();
-      expect(mockDb.delete).toHaveBeenCalled();
+      await expect(service.deleteRole('role-1', 'actor-1')).resolves.toBeUndefined();
+      // Executor hard-deletes user_roles then UPDATEs roles with deleted_at/deleted_by
+      expect(mockDb.transaction).toHaveBeenCalled();
+      expect(mockDb.delete).toHaveBeenCalled(); // user_roles hardDelete
+      expect(mockDb.update).toHaveBeenCalled(); // roles soft-mark
+      // role_permissions 'keep' → no delete, no update on that table beyond the role soft-mark
     });
 
     it('should throw NotFoundException if role not found', async () => {
       vi.spyOn(service, 'findRoleById').mockResolvedValueOnce(null);
 
-      await expect(service.deleteRole('nonexistent'))
+      await expect(service.deleteRole('nonexistent', 'actor-1'))
         .rejects.toThrow(NotFoundException);
     });
 
@@ -113,7 +118,7 @@ describe('RbacService', () => {
       vi.spyOn(service, 'findRoleById').mockResolvedValueOnce(role);
       vi.spyOn(service, 'isSystemRole').mockResolvedValueOnce(true);
 
-      await expect(service.deleteRole('admin-role'))
+      await expect(service.deleteRole('admin-role', 'actor-1'))
         .rejects.toThrow(ConflictException);
     });
 
@@ -122,18 +127,7 @@ describe('RbacService', () => {
       vi.spyOn(service, 'findRoleById').mockResolvedValueOnce(role);
       vi.spyOn(service, 'isSystemRole').mockResolvedValueOnce(false);
 
-      await expect(service.deleteRole('role-1'))
-        .rejects.toThrow(ConflictException);
-    });
-
-    it('should throw ConflictException when role has assigned users', async () => {
-      const role = { id: 'role-1', name: 'custom', userType: 'admin', isDefault: false, createdAt: new Date(), updatedAt: new Date() };
-      vi.spyOn(service, 'findRoleById').mockResolvedValueOnce(role);
-      vi.spyOn(service, 'isSystemRole').mockResolvedValueOnce(false);
-      // Mock count query — 3 users assigned
-      mockDb._chain.where.mockResolvedValueOnce([{ total: 3 }]);
-
-      await expect(service.deleteRole('role-1'))
+      await expect(service.deleteRole('role-1', 'actor-1'))
         .rejects.toThrow(ConflictException);
     });
   });

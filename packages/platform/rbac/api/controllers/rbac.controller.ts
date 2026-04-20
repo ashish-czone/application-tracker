@@ -67,9 +67,12 @@ export class RbacController {
   @Delete('roles/:id')
   @RequirePermission(RBAC_PERMISSIONS.ROLES_MANAGE)
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Delete a role (must have no assigned users)' })
-  async deleteRole(@Param('id', ParseUUIDPipe) id: string) {
-    await this.rbacService.deleteRole(id);
+  @ApiOperation({ summary: 'Soft-delete a role. Removes user assignments; keeps permissions for audit/restore.' })
+  async deleteRole(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    await this.rbacService.deleteRole(id, user.userId);
   }
 
   @Get('roles/:id/user-count')
