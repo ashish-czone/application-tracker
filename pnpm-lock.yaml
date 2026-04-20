@@ -1230,6 +1230,12 @@ importers:
       '@packages/org-units-ui':
         specifier: workspace:*
         version: link:../../packages/addons/org-units/ui
+      '@packages/pages-ui-admin':
+        specifier: workspace:*
+        version: link:../../packages/addons/pages/ui/admin
+      '@packages/pages-ui-frontend':
+        specifier: workspace:*
+        version: link:../../packages/addons/pages/ui/frontend
       '@packages/platform-ui':
         specifier: workspace:*
         version: link:../../packages/platform/platform-ui
@@ -2501,6 +2507,9 @@ importers:
       react-dom:
         specifier: ^19.0.0
         version: 19.2.4(react@19.2.4)
+      react-router:
+        specifier: ^7.0.0
+        version: 7.13.1(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
     devDependencies:
       '@types/react':
         specifier: ^19.2.14

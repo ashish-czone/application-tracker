@@ -34,3 +34,4 @@ export type {
 
 export { PageEditor } from './PageEditor';
 export type { PageEditorProps } from './PageEditor';
+export { PageEditorPage } from './PageEditorPage';
