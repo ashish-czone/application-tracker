@@ -12,6 +12,7 @@ import { FieldTypeSaveHookRegistry } from './services/field-type-save-hook.regis
 import { LookupResolverService } from './services/lookup-resolver.service';
 
 import { createEntityController } from './create-entity-controller';
+import { JsonbStorageAdapter } from './storage/jsonb-storage.adapter';
 import { EAV_STORAGE_EXTENSION, type EavStorageExtension } from './extensions/eav-storage.interface';
 import { MULTI_VALUE_EXTENSION, type MultiValueExtension } from './extensions/multi-value-extension.interface';
 import { WORKFLOW_EXTENSION, type WorkflowExtension } from './extensions/workflow-extension.interface';
@@ -100,6 +101,7 @@ export class EntityEngineModule implements OnApplicationBootstrap {
             database: DatabaseService,
             domainEventEmitter: DomainEventEmitter,
             eavStorage: EavStorageExtension | null,
+            jsonbStorage: JsonbStorageAdapter,
             multiValueExtension: MultiValueExtension | null,
             fieldDefinitionService: FieldDefinitionService,
             lookupResolver: LookupResolverService,
@@ -110,8 +112,21 @@ export class EntityEngineModule implements OnApplicationBootstrap {
             appLogger: AppLoggerService,
             positionScopeProvider: PositionScopeProvider | null,
             hierarchyService: HierarchyService | null,
-          ) => new EntityService(config, database, domainEventEmitter, config.customFields ? eavStorage : null, multiValueExtension, fieldDefinitionService, lookupResolver, taxonomyExt, hookRegistry, workflowExt, entityRegistry, appLogger, positionScopeProvider, hierarchyService),
-          inject: [DatabaseService, DomainEventEmitter, { token: EAV_STORAGE_EXTENSION, optional: true }, { token: MULTI_VALUE_EXTENSION, optional: true }, FieldDefinitionService, LookupResolverService, { token: TAXONOMY_EXTENSION, optional: true }, FieldTypeSaveHookRegistry, { token: WORKFLOW_EXTENSION, optional: true }, EntityRegistryService, AppLoggerService, { token: POSITION_SCOPE_PROVIDER, optional: true }, { token: HierarchyService, optional: true }],
+          ) => {
+            let storage: EavStorageExtension | null = null;
+            if (config.customFields === 'eav') {
+              if (!eavStorage) {
+                throw new Error(
+                  `Entity '${config.entityType}' requests customFields: 'eav' but EavAttributesModule is not loaded.`,
+                );
+              }
+              storage = eavStorage;
+            } else if (config.customFields === true) {
+              storage = jsonbStorage;
+            }
+            return new EntityService(config, database, domainEventEmitter, storage, multiValueExtension, fieldDefinitionService, lookupResolver, taxonomyExt, hookRegistry, workflowExt, entityRegistry, appLogger, positionScopeProvider, hierarchyService);
+          },
+          inject: [DatabaseService, DomainEventEmitter, { token: EAV_STORAGE_EXTENSION, optional: true }, JsonbStorageAdapter, { token: MULTI_VALUE_EXTENSION, optional: true }, FieldDefinitionService, LookupResolverService, { token: TAXONOMY_EXTENSION, optional: true }, FieldTypeSaveHookRegistry, { token: WORKFLOW_EXTENSION, optional: true }, EntityRegistryService, AppLoggerService, { token: POSITION_SCOPE_PROVIDER, optional: true }, { token: HierarchyService, optional: true }],
         },
       ],
       exports: [serviceToken],
