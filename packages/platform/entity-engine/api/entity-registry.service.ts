@@ -68,8 +68,8 @@ export class EntityRegistryService {
       slug: config.slug,
       ui: { ...config.ui, boardFields: uniqueBoardFields.length > 0 ? uniqueBoardFields : undefined },
       features: {
-        softDelete: !!(config.table as any).deletedAt,
-        restore: !!(config.table as any).deletedAt,
+        softDelete: config.onDelete.mode === 'soft',
+        restore: config.onDelete.mode === 'soft',
         customFields: !!config.customFields,
         adminConfigurable: !!config.adminConfigurable,
         hasTaxonomy: Object.values(config.fieldMeta).some(f => f.fieldType === 'tags'),

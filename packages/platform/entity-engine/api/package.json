@@ -19,6 +19,7 @@
     "@packages/logger": "workspace:*",
     "@packages/query-builder": "workspace:*",
     "@packages/rbac": "workspace:*",
+    "@packages/soft-delete": "workspace:*",
     "mustache": "^4.2.0",
     "rxjs": "^7.0.0"
   },

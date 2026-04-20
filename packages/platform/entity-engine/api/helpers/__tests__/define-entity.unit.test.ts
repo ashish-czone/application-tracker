@@ -35,6 +35,7 @@ describe('defineEntity', () => {
   it('should produce a valid EntityConfig from a minimal model', () => {
     const config = defineEntity({
       table: testTable,
+      onDelete: { mode: 'soft' },
       slug: 'test-entities',
       fields: {
         title: { type: 'text', label: 'Title', required: true, isLabel: true },
@@ -56,6 +57,7 @@ describe('defineEntity', () => {
   it('should use provided singular/plural names', () => {
     const config = defineEntity({
       table: testTable,
+      onDelete: { mode: 'soft' },
       slug: 'test-entities',
       singularName: 'Test Entity',
       pluralName: 'Test Entities',
@@ -72,6 +74,7 @@ describe('defineEntity', () => {
   it('should collect searchable fields into searchColumns', () => {
     const config = defineEntity({
       table: testTable,
+      onDelete: { mode: 'soft' },
       slug: 'test-entities',
       fields: {
         title: { type: 'text', label: 'Title', searchable: true },
@@ -87,6 +90,7 @@ describe('defineEntity', () => {
   it('should collect sortable fields into sortableColumns', () => {
     const config = defineEntity({
       table: testTable,
+      onDelete: { mode: 'soft' },
       slug: 'test-entities',
       fields: {
         title: { type: 'text', label: 'Title', sortable: true },
@@ -102,6 +106,7 @@ describe('defineEntity', () => {
   it('should derive nameField from isLabel', () => {
     const config = defineEntity({
       table: testTable,
+      onDelete: { mode: 'soft' },
       slug: 'test-entities',
       fields: {
         title: { type: 'text', label: 'Title', isLabel: true },
@@ -116,6 +121,7 @@ describe('defineEntity', () => {
   it('should support multiple isLabel fields', () => {
     const config = defineEntity({
       table: testTable,
+      onDelete: { mode: 'soft' },
       slug: 'test-entities',
       fields: {
         title: { type: 'text', label: 'Title', isLabel: true },
@@ -130,6 +136,7 @@ describe('defineEntity', () => {
   it('should extract hasMany fields as relationships', () => {
     const config = defineEntity({
       table: testTable,
+      onDelete: { mode: 'soft' },
       slug: 'test-entities',
       fields: {
         title: { type: 'text', label: 'Title' },
@@ -160,6 +167,7 @@ describe('defineEntity', () => {
   it('should convert belongsTo to lookup field type', () => {
     const config = defineEntity({
       table: testTable,
+      onDelete: { mode: 'soft' },
       slug: 'test-entities',
       fields: {
         assigneeId: {
@@ -181,6 +189,7 @@ describe('defineEntity', () => {
   it('should collect recipient fields', () => {
     const config = defineEntity({
       table: testTable,
+      onDelete: { mode: 'soft' },
       slug: 'test-entities',
       fields: {
         assigneeId: { type: 'user', label: 'Assignee', isRecipient: true },
@@ -198,6 +207,7 @@ describe('defineEntity', () => {
   it('should collect listVisible fields', () => {
     const config = defineEntity({
       table: testTable,
+      onDelete: { mode: 'soft' },
       slug: 'test-entities',
       fields: {
         title: { type: 'text', label: 'Title', listVisible: true },
@@ -213,6 +223,7 @@ describe('defineEntity', () => {
   it('should handle picklist options', () => {
     const config = defineEntity({
       table: testTable,
+      onDelete: { mode: 'soft' },
       slug: 'test-entities',
       fields: {
         priority: {
@@ -236,8 +247,8 @@ describe('defineEntity', () => {
   it('should include only infra columns (id, soft delete) in systemColumns', () => {
     const config = defineEntity({
       table: testTable,
+      onDelete: { mode: 'soft' },
       slug: 'test-entities',
-      softDelete: true,
       timestamps: true,
       fields: {},
       ui: { icon: 'FileText' },
@@ -258,6 +269,7 @@ describe('defineEntity', () => {
     const beforeCreate = async (p: any) => p;
     const config = defineEntity({
       table: testTable,
+      onDelete: { mode: 'soft' },
       slug: 'test-entities',
       fields: {},
       ui: { icon: 'FileText' },
@@ -274,6 +286,7 @@ describe('defineEntity', () => {
   it('should pass through sections for entity-layout', () => {
     const config = defineEntity({
       table: testTable,
+      onDelete: { mode: 'soft' },
       slug: 'test-entities',
       fields: {
         title: { type: 'text', label: 'Title' },
@@ -291,6 +304,7 @@ describe('defineEntity', () => {
   it('should pass through customFields flag', () => {
     const withFlag = defineEntity({
       table: testTable,
+      onDelete: { mode: 'soft' },
       slug: 'test-entities',
       customFields: true,
       fields: { title: { type: 'text', label: 'Title' } },
@@ -300,6 +314,7 @@ describe('defineEntity', () => {
 
     const withoutFlag = defineEntity({
       table: testTable,
+      onDelete: { mode: 'soft' },
       slug: 'test-entities',
       fields: { title: { type: 'text', label: 'Title' } },
       ui: { icon: 'FileText' },
@@ -310,6 +325,7 @@ describe('defineEntity', () => {
   it('should pass through adminConfigurable flag', () => {
     const withFlag = defineEntity({
       table: testTable,
+      onDelete: { mode: 'soft' },
       slug: 'test-entities',
       adminConfigurable: true,
       fields: { title: { type: 'text', label: 'Title' } },
@@ -319,6 +335,7 @@ describe('defineEntity', () => {
 
     const withoutFlag = defineEntity({
       table: testTable,
+      onDelete: { mode: 'soft' },
       slug: 'test-entities',
       fields: { title: { type: 'text', label: 'Title' } },
       ui: { icon: 'FileText' },
@@ -329,6 +346,7 @@ describe('defineEntity', () => {
   it('should set default sort and ensure it is sortable', () => {
     const config = defineEntity({
       table: testTable,
+      onDelete: { mode: 'soft' },
       slug: 'test-entities',
       defaultSort: 'title',
       fields: {
@@ -345,6 +363,7 @@ describe('defineEntity', () => {
     it('should surface hierarchy: true on the returned config when flag is set', () => {
       const config = defineEntity({
         table: hierarchicalTable,
+        onDelete: { mode: 'hard' },
         slug: 'hierarchical-entities',
         hierarchy: true,
         fields: {
@@ -359,6 +378,7 @@ describe('defineEntity', () => {
     it('should leave hierarchy undefined when flag is absent', () => {
       const config = defineEntity({
         table: testTable,
+        onDelete: { mode: 'soft' },
         slug: 'test-entities',
         fields: {
           title: { type: 'text', label: 'Title' },
@@ -372,6 +392,7 @@ describe('defineEntity', () => {
     it('should register path and depth (but not parentId) as system columns when hierarchy is true', () => {
       const config = defineEntity({
         table: hierarchicalTable,
+        onDelete: { mode: 'hard' },
         slug: 'hierarchical-entities',
         hierarchy: true,
         fields: {
@@ -389,6 +410,7 @@ describe('defineEntity', () => {
     it('should auto-inject parentId as a self-lookup field when hierarchy is true', () => {
       const config = defineEntity({
         table: hierarchicalTable,
+        onDelete: { mode: 'hard' },
         slug: 'hierarchical-entities',
         singularName: 'Folder',
         pluralName: 'Folders',
@@ -410,6 +432,7 @@ describe('defineEntity', () => {
     it('should not auto-inject parentId when the consumer declares it explicitly', () => {
       const config = defineEntity({
         table: hierarchicalTable,
+        onDelete: { mode: 'hard' },
         slug: 'hierarchical-entities',
         hierarchy: true,
         fields: {
@@ -425,6 +448,7 @@ describe('defineEntity', () => {
     it('should not auto-inject parentId when hierarchy is false', () => {
       const config = defineEntity({
         table: hierarchicalTable,
+        onDelete: { mode: 'hard' },
         slug: 'hierarchical-entities',
         hierarchy: false,
         fields: {
@@ -440,6 +464,7 @@ describe('defineEntity', () => {
       expect(() =>
         defineEntity({
           table: testTable, // has no parentId/path/depth
+          onDelete: { mode: 'soft' },
           slug: 'test-entities',
           hierarchy: true,
           fields: {
@@ -461,6 +486,7 @@ describe('defineEntity', () => {
       expect(() =>
         defineEntity({
           table: partialTable,
+          onDelete: { mode: 'hard' },
           slug: 'partial-hierarchical',
           hierarchy: true,
           fields: {
@@ -474,6 +500,7 @@ describe('defineEntity', () => {
     it('should not add hierarchy columns to systemColumns when flag is false', () => {
       const config = defineEntity({
         table: hierarchicalTable,
+        onDelete: { mode: 'hard' },
         slug: 'hierarchical-entities',
         hierarchy: false,
         fields: {

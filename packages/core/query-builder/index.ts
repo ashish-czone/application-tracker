@@ -2,7 +2,6 @@ export {
   buildFilterCondition,
   buildFilterConditions,
   buildSearchCondition,
-  buildSoftDeleteCondition,
   buildSortExpression,
   computePagination,
   computePaginationMeta,

@@ -91,18 +91,6 @@ export function buildSearchCondition(term: string, columns: any[]): SQL | null {
 }
 
 /**
- * Build soft-delete condition (WHERE deleted_at IS NULL).
- * Returns null if includeDeleted is true or no deletedAt column exists.
- */
-export function buildSoftDeleteCondition(
-  deletedAtColumn: any | undefined,
-  includeDeleted: boolean,
-): SQL | null {
-  if (includeDeleted || !deletedAtColumn) return null;
-  return isNull(deletedAtColumn);
-}
-
-/**
  * Build ORDER BY expression from a sort key and direction.
  * Falls back to defaultSort if sortKey is not in sortableColumns.
  */

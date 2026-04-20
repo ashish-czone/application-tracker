@@ -3,7 +3,6 @@ import {
   buildFilterCondition,
   buildFilterConditions,
   buildSearchCondition,
-  buildSoftDeleteCondition,
   buildSortExpression,
   computePagination,
   computePaginationMeta,
@@ -296,26 +295,6 @@ describe('buildSearchCondition', () => {
   it('returns a condition for multiple columns', () => {
     const result = buildSearchCondition('john', [col1, col2]);
     expect(result).toBeTruthy();
-  });
-});
-
-// ---------------------------------------------------------------------------
-// buildSoftDeleteCondition
-// ---------------------------------------------------------------------------
-describe('buildSoftDeleteCondition', () => {
-  const deletedAtCol = { name: 'deleted_at' } as any;
-
-  it('returns IS NULL condition when not including deleted', () => {
-    const result = buildSoftDeleteCondition(deletedAtCol, false);
-    expect(result).toBeTruthy();
-  });
-
-  it('returns null when including deleted', () => {
-    expect(buildSoftDeleteCondition(deletedAtCol, true)).toBeNull();
-  });
-
-  it('returns null when no deletedAt column', () => {
-    expect(buildSoftDeleteCondition(undefined, false)).toBeNull();
   });
 });
 

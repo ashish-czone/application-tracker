@@ -6,7 +6,7 @@ export const CLIENTS_CONFIG = defineEntity({
   slug: 'clients',
   singularName: 'Client',
   pluralName: 'Clients',
-  softDelete: true,
+  onDelete: { mode: 'soft' },
   timestamps: true,
 
   fields: {

@@ -25,6 +25,7 @@ describe('EntityDefinitionService', () => {
     it('returns false for entities that did not opt in', () => {
       registry.register(defineEntity({
         table: tbl,
+        onDelete: { mode: 'hard' },
         slug: 'things',
         fields: { name: { type: 'text', label: 'Name' } },
         ui: { icon: 'Box' },
@@ -35,6 +36,7 @@ describe('EntityDefinitionService', () => {
     it('returns true for entities that opted in', () => {
       registry.register(defineEntity({
         table: tbl,
+        onDelete: { mode: 'hard' },
         slug: 'things',
         adminConfigurable: true,
         fields: { name: { type: 'text', label: 'Name' } },
@@ -52,6 +54,7 @@ describe('EntityDefinitionService', () => {
     it('returns the in-memory field set for a registered entity', () => {
       registry.register(defineEntity({
         table: tbl,
+        onDelete: { mode: 'hard' },
         slug: 'things',
         fields: { name: { type: 'text', label: 'Name', isLabel: true } },
         ui: { icon: 'Box' },
@@ -73,6 +76,7 @@ describe('EntityDefinitionService', () => {
     it('returns a FullLayout built from the code-defined config', () => {
       registry.register(defineEntity({
         table: tbl,
+        onDelete: { mode: 'hard' },
         slug: 'things',
         fields: { name: { type: 'text', label: 'Name', quickCreate: true } },
         sections: [{ name: 'Basics', columns: 1, fields: ['name'] }],
@@ -98,6 +102,7 @@ describe('EntityDefinitionService', () => {
     it('honours a custom layout name', () => {
       registry.register(defineEntity({
         table: tbl,
+        onDelete: { mode: 'hard' },
         slug: 'things',
         fields: { name: { type: 'text', label: 'Name' } },
         ui: { icon: 'Box' },

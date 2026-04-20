@@ -1,7 +1,34 @@
 import type { PgTable, PgColumn } from 'drizzle-orm/pg-core';
 import type { SQL } from 'drizzle-orm';
 import type { Condition } from '@packages/common';
+import type { SoftDeleteMode, DependentStrategy } from '@packages/soft-delete';
 import type { WorkflowGuardFn } from './extensions/workflow-extension.interface';
+
+// ---------------------------------------------------------------------------
+// Deletion policy
+// ---------------------------------------------------------------------------
+
+/**
+ * Declarative deletion behavior for an entity. Required on every
+ * `defineEntity({ onDelete })`. See @packages/soft-delete for the underlying
+ * primitive.
+ *
+ * - `mode: 'hard'` — DELETE removes the row. No soft-delete columns allowed.
+ * - `mode: 'soft'` — DELETE marks `deleted_at` / `deleted_by`. Table must
+ *   spread `...softDeleteColumns()`.
+ * - `mode: 'restrict'` — DELETE is refused when any declared dependent has
+ *   live rows. Otherwise hard-deletes.
+ *
+ * `dependents` is keyed by the entity's hasMany/manyToMany relationship name
+ * or by a target entity type. Each value selects how that relationship is
+ * handled when the parent is deleted. Currently the entity-engine only
+ * enforces `dependents` when a service opts into the executor; the
+ * declaration is stored on the config for future automatic wiring.
+ */
+export interface OnDeleteConfig {
+  mode: SoftDeleteMode;
+  dependents?: Record<string, DependentStrategy>;
+}
 
 // ---------------------------------------------------------------------------
 // Field type system — defines what kinds of fields entities can have
@@ -526,6 +553,9 @@ export interface EntityConfig<TTable extends PgTable = PgTable> {
   table: TTable;
   /** Column keys excluded from EAV registration (audit columns, media columns, etc.) */
   systemColumns: string[];
+
+  /** Deletion policy. Always present — every entity must declare hard/soft/restrict. */
+  onDelete: OnDeleteConfig;
 
   // --- Search ---
 
