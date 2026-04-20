@@ -34,6 +34,14 @@ export class EntityEngineSeedService {
   }
 
   async seedEntity(config: EntityConfig): Promise<void> {
+    // Non-admin-configurable entities have no DB-backed definitions — their
+    // fields/layout/workflows live purely in the registry, so there is nothing
+    // to seed. Skipping here keeps the `field_definitions` / `layout_*` /
+    // workflow tables empty for those entities.
+    if (!config.adminConfigurable) {
+      this.logger.log(`Skipped seeding (adminConfigurable: false): ${config.entityType}`);
+      return;
+    }
     await seedEntityFields(config, this.fieldDefService, this.layoutExtension);
     if (this.workflowExt) {
       await seedWorkflows(config, this.workflowExt);

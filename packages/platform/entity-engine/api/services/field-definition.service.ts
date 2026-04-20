@@ -3,7 +3,8 @@ import { DatabaseService, eq } from '@packages/database';
 import { withTenant, withTenantInsert } from '@packages/tenancy/helpers';
 import { fieldDefinitions } from '../schema/field-definitions';
 import { picklistOptions } from '../schema/picklist-options';
-import type { FieldDefinition, PicklistOption, FieldType, FullLayoutField, RegisterFieldInput, SetPicklistOptionInput } from '../types';
+import { buildInMemoryFields } from '../helpers/build-in-memory-definitions';
+import type { EntityConfig, FieldDefinition, PicklistOption, FieldType, FullLayoutField, RegisterFieldInput, SetPicklistOptionInput } from '../types';
 
 type DeleteCheck = (entityType: string, fieldKey: string) => Promise<void>;
 
@@ -112,6 +113,33 @@ export class FieldDefinitionService implements OnApplicationBootstrap {
 
   getPicklistOptions(fieldId: string): PicklistOption[] {
     return this.picklistByField.get(fieldId) ?? [];
+  }
+
+  /**
+   * Populate the cache from an in-memory entity config, used for entities that
+   * opt out of `adminConfigurable`. These entities have no rows in
+   * `field_definitions`; mirroring their code-defined fields into the same
+   * cache maps lets every existing reader (`listByEntity`, `findByEntityAndKey`,
+   * `listByEntityWithOptions`, etc.) serve them transparently.
+   *
+   * No-op when the entity already has entries in the cache — admin-configurable
+   * entities are authoritative from the DB and must not be overwritten.
+   */
+  populateFromRegistry(config: EntityConfig): void {
+    if (this.fieldsByEntity.has(config.entityType)) return;
+
+    const fields = buildInMemoryFields(config);
+    const bucket: FieldDefinition[] = [];
+    for (const f of fields) {
+      const { picklistOptions: opts, columnIndex: _ci, ...fieldDef } = f;
+      bucket.push(fieldDef);
+      this.fieldsById.set(fieldDef.id, fieldDef);
+      if (opts.length > 0) {
+        this.picklistByField.set(fieldDef.id, opts);
+      }
+    }
+    bucket.sort((a, b) => a.sortOrder - b.sortOrder);
+    this.fieldsByEntity.set(config.entityType, bucket);
   }
 
   // ---------------------------------------------------------------------------
