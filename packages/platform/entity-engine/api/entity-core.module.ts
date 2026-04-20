@@ -15,6 +15,7 @@ import { FieldTypeSaveHookRegistry, fieldTypeSaveHookRegistry } from './services
 import { CreateEntityAction } from './actions/create-entity.action';
 import { UpdateEntityAction } from './actions/update-entity.action';
 import { DeleteEntityAction } from './actions/delete-entity.action';
+import { JsonbStorageAdapter } from './storage/jsonb-storage.adapter';
 import { AUTOMATIONS_EXTENSION, type AutomationsExtension } from './extensions/automations-extension.interface';
 
 /**
@@ -60,6 +61,7 @@ import { AUTOMATIONS_EXTENSION, type AutomationsExtension } from './extensions/a
       inject: [EntityRegistryService],
     },
     { provide: 'FIELD_DEFINITION_SERVICE', useExisting: FieldDefinitionService },
+    JsonbStorageAdapter,
     CreateEntityAction,
     UpdateEntityAction,
     DeleteEntityAction,
@@ -72,6 +74,7 @@ import { AUTOMATIONS_EXTENSION, type AutomationsExtension } from './extensions/a
     EntityEngineSeedService,
     FieldTypeSaveHookRegistry,
     FIELD_PERMISSION_ENTITY_RESOLVER,
+    JsonbStorageAdapter,
     'FIELD_DEFINITION_SERVICE',
   ],
 })

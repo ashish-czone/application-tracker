@@ -9,7 +9,7 @@ export const JOB_OPENINGS_CONFIG: EntityConfig = {
   slug: 'job-openings',
 
   table: jobOpenings,
-  customFields: true,
+  customFields: 'eav',
   systemColumns: ['id', 'createdAt', 'updatedAt', 'deletedAt', 'deletedBy', 'createdBy'],
 
   searchColumns: [jobOpenings.title, jobOpenings.department, jobOpenings.location],

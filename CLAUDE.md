@@ -41,7 +41,7 @@ Every architectural decision should ask: "Does this keep the platform domain-agn
 **Core engine (built):**
 - **Entity engine** — `defineEntity()` API, generic CRUD service, auto-generated controllers
 - **Field type system** — pluggable registry with 23+ types (text, email, lookup, workflow, tags, file, etc.)
-- **EAV storage** — dynamic custom fields per entity, opt-in via `customFields: true`
+- **Custom fields storage** — dynamic custom fields per entity. JSONB (default) via `customFields: true` (table must spread `...customFieldsColumn()`); legacy EAV via `customFields: 'eav'`.
 - **Layout system** — DB-driven form sections, field ordering, column layout — admin-editable
 - **Workflow engine** — state machines with transitions, guards, conditions, multi-pipeline support
 - **RBAC** — role-based permissions with field-level granularity, auto-registered per entity
