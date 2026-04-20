@@ -1,5 +1,6 @@
 import { pgTable, text, integer, jsonb, timestamp, boolean, index } from 'drizzle-orm/pg-core';
 import { randomUUID } from 'crypto';
+import { softDeleteColumns } from '@packages/soft-delete';
 import { subscriptionPlans } from './subscription-plans';
 
 export const subscriptions = pgTable('subscriptions', {
@@ -18,8 +19,7 @@ export const subscriptions = pgTable('subscriptions', {
   metadata: jsonb('metadata'),
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }).notNull().$defaultFn(() => new Date()).$onUpdate(() => new Date()),
-  deletedAt: timestamp('deleted_at', { withTimezone: true, mode: 'date' }),
-  deletedBy: text('deleted_by'),
+  ...softDeleteColumns(),
 }, (table) => [
   index('subscriptions_client_id_idx').on(table.clientId),
   index('subscriptions_plan_id_idx').on(table.planId),

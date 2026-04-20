@@ -6,7 +6,7 @@ export const COMPLIANCE_RULES_CONFIG = defineEntity({
   slug: 'compliance_rules',
   singularName: 'Compliance Rule',
   pluralName: 'Compliance Rules',
-  softDelete: false,
+  onDelete: { mode: 'hard' },
   timestamps: true,
 
   fields: {

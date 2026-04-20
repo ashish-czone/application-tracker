@@ -1,5 +1,6 @@
 import { pgTable, text, jsonb, timestamp, index } from 'drizzle-orm/pg-core';
 import { randomUUID } from 'crypto';
+import { softDeleteColumns } from '@packages/soft-delete';
 
 export const clients = pgTable('clients', {
   id: text('id').primaryKey().$defaultFn(() => randomUUID()),
@@ -8,8 +9,7 @@ export const clients = pgTable('clients', {
   metadata: jsonb('metadata'),
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }).notNull().$defaultFn(() => new Date()).$onUpdate(() => new Date()),
-  deletedAt: timestamp('deleted_at', { withTimezone: true, mode: 'date' }),
-  deletedBy: text('deleted_by'),
+  ...softDeleteColumns(),
 }, (table) => [
   index('clients_name_idx').on(table.name),
   index('clients_email_idx').on(table.email),

@@ -19,6 +19,7 @@
     "@packages/orders-billing": "workspace:*",
     "@packages/queue": "workspace:*",
     "@packages/rbac": "workspace:*",
+    "@packages/soft-delete": "workspace:*",
     "@packages/tenancy": "workspace:*",
     "@packages/workflows": "workspace:*",
     "date-fns": "^4.1.0",

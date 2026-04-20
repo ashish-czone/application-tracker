@@ -6,7 +6,7 @@ export const LAWS_CONFIG = defineEntity({
   slug: 'laws',
   singularName: 'Law',
   pluralName: 'Laws',
-  softDelete: false,
+  onDelete: { mode: 'hard' },
   timestamps: true,
   hierarchy: true,
 

@@ -16,6 +16,7 @@
     "@packages/logger": "workspace:*",
     "@packages/org-units": "workspace:*",
     "@packages/rbac": "workspace:*",
+    "@packages/soft-delete": "workspace:*",
     "@packages/tasks-contract": "workspace:*",
     "@packages/taxonomy": "workspace:*",
     "class-validator": "^0.14.1",

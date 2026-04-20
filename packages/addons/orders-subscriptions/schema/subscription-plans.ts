@@ -1,6 +1,7 @@
 import { pgTable, text, integer, jsonb, timestamp, boolean, index, uniqueIndex } from 'drizzle-orm/pg-core';
 import { randomUUID } from 'crypto';
 import { sql } from 'drizzle-orm';
+import { softDeleteColumns } from '@packages/soft-delete';
 
 export const subscriptionPlans = pgTable('subscription_plans', {
   id: text('id').primaryKey().$defaultFn(() => randomUUID()),
@@ -18,8 +19,7 @@ export const subscriptionPlans = pgTable('subscription_plans', {
   metadata: jsonb('metadata'),
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }).notNull().$defaultFn(() => new Date()).$onUpdate(() => new Date()),
-  deletedAt: timestamp('deleted_at', { withTimezone: true, mode: 'date' }),
-  deletedBy: text('deleted_by'),
+  ...softDeleteColumns(),
 }, (table) => [
   uniqueIndex('subscription_plans_slug_unique').on(table.slug).where(sql`deleted_at IS NULL`),
   index('subscription_plans_is_active_idx').on(table.isActive),

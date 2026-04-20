@@ -40,6 +40,7 @@
     "@packages/rbac": "workspace:*",
     "@packages/service-auth": "workspace:*",
     "@packages/settings": "workspace:*",
+    "@packages/soft-delete": "workspace:*",
     "@packages/taxonomy": "workspace:*",
     "@packages/tenancy": "workspace:*",
     "@packages/users": "workspace:*",
