@@ -23,7 +23,7 @@ import { FieldDefinitionService } from './services/field-definition.service';
 import { LookupResolverService } from './services/lookup-resolver.service';
 import type { EavStorageExtension } from './extensions/eav-storage.interface';
 import type { MultiValueExtension } from './extensions/multi-value-extension.interface';
-import type { FieldDefinition } from './types';
+import type { FieldDefinition, FieldType } from './types';
 import { buildSnapshot, diffSnapshot } from './helpers/snapshot';
 import { validatePayload } from './helpers/validate-payload';
 import { splitPayload } from './helpers/split-payload';
@@ -35,6 +35,24 @@ import type { PaginatedResponse } from '@packages/common';
 import type { EntityConfig, BaseListQuery, ListLayoutColumn, DataAccessContext, PositionScopeProvider } from './types';
 import type { SQL as DrizzleSQL } from 'drizzle-orm';
 import { EntityRegistryService } from './entity-registry.service';
+
+/** Map custom-field types to the SQL cast used when sorting a JSONB custom field. */
+function jsonbSortCast(fieldType: FieldType): string | null {
+  switch (fieldType) {
+    case 'number':
+    case 'currency':
+    case 'decimal':
+      return 'numeric';
+    case 'date':
+      return 'date';
+    case 'datetime':
+      return 'timestamptz';
+    case 'boolean':
+      return 'boolean';
+    default:
+      return null;
+  }
+}
 
 /**
  * Generic CRUD service that works for ANY entity using its EntityConfig.
@@ -361,7 +379,9 @@ export class EntityService {
         fieldKey: d.fieldKey,
         label: d.label,
         fieldType: d.fieldType,
-        sortable: !!config.sortableColumns[d.fieldKey],
+        sortable:
+          !!config.sortableColumns[d.fieldKey]
+          || (config.customFields === true && !d.columnName && !fieldTypeRegistry.isRelational(d.fieldType)),
         lookupEntity: d.lookupEntity ?? undefined,
         visible: listFieldSet ? listFieldSet.has(d.fieldKey) : !EntityService.shouldExcludeFromList(d.fieldType) && idx < 10,
         order: listFieldOrder?.get(d.fieldKey) ?? 1000 + idx,
@@ -1354,6 +1374,19 @@ export class EntityService {
         if (labelCol && valueCol && fkCol) {
           return sql`(SELECT ${labelCol} FROM ${targetTable} WHERE ${valueCol} = ${fkCol}) ${sql.raw(direction)}`;
         }
+      }
+    }
+
+    // JSONB custom field sort: resolve via the field definition cache so every
+    // defined custom field becomes sortable without additional configuration.
+    if (config.customFields === true) {
+      const def = this.fieldDefinitionService.findByEntityAndKey(config.entityType, sortKey);
+      if (def && !def.columnName && !fieldTypeRegistry.isRelational(def.fieldType)) {
+        const table = config.table as any;
+        const cast = jsonbSortCast(def.fieldType);
+        const textExpr = sql`${table.customFields} ->> ${sortKey}`;
+        const expr = cast ? sql`(${textExpr})::${sql.raw(cast)}` : textExpr;
+        return sql`${expr} ${sql.raw(direction)} NULLS LAST`;
       }
     }
 
