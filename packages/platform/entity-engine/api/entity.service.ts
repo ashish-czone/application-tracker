@@ -1362,10 +1362,22 @@ export class EntityService {
       await config.hooks.beforeDelete(id, actorId);
     }
 
-    await this.database.db
-      .update(config.table as any)
-      .set({ deletedAt: new Date(), deletedBy: actorId } as any)
-      .where(withTenant(config.table as any, eq((config.table as any).id, id)));
+    // Extensions scope reads through the parent's deletedAt — the child
+    // usually has no deletedAt of its own. Soft-delete therefore flips the
+    // parent's columns; the child row is left as-is so a restore is a clean
+    // reverse.
+    const ext = this.getExtensionMeta();
+    if (ext) {
+      await this.database.db
+        .update(ext.parentTable as any)
+        .set({ deletedAt: new Date(), deletedBy: actorId } as any)
+        .where(withTenant(ext.parentTable as any, eq(ext.parentIdColumn, id)));
+    } else {
+      await this.database.db
+        .update(config.table as any)
+        .set({ deletedAt: new Date(), deletedBy: actorId } as any)
+        .where(withTenant(config.table as any, eq((config.table as any).id, id)));
+    }
 
     this.logger.log(`${config.singularName} deleted`, { entityId: id, actorId });
 
@@ -1385,6 +1397,31 @@ export class EntityService {
   async restore(id: string): Promise<Record<string, unknown>> {
     const { config } = this;
     const table = config.table as any;
+
+    // Extensions: check the child row exists (may not have deletedAt of its
+    // own) and flip the parent's deletedAt columns back to null — the mirror
+    // of softDelete above. Return the joined response so the restored entity
+    // is indistinguishable from a fresh read.
+    const ext = this.getExtensionMeta();
+    if (ext) {
+      const [childRow] = await this.database.db
+        .select()
+        .from(table)
+        .where(eq(ext.foreignKeyColumn, id))
+        .limit(1) as any[];
+
+      if (!childRow) {
+        throw new NotFoundException(`${config.singularName} not found`);
+      }
+
+      await this.database.db
+        .update(ext.parentTable as any)
+        .set({ deletedAt: null, deletedBy: null } as any)
+        .where(withTenant(ext.parentTable as any, eq(ext.parentIdColumn, id)));
+
+      this.logger.log(`${config.singularName} restored`, { entityId: id });
+      return this.findOneOrFail(id);
+    }
 
     const [row] = await this.database.db
       .select()
