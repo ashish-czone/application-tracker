@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { pgTable, text, timestamp } from 'drizzle-orm/pg-core';
 import { EntityRegistryService } from '../../entity-registry.service';
 import type { EntityConfig } from '../../types';
 
@@ -260,5 +261,237 @@ describe('EntityRegistryService', () => {
 
     const entries = registry.getRegistryEntries();
     expect(entries[0].features.hasTags).toBeUndefined();
+  });
+
+  // ---------------------------------------------------------------------------
+  // extensionOf resolution (finalize / getResolvedExtension)
+  // ---------------------------------------------------------------------------
+
+  describe('extensionOf resolution', () => {
+    // Real Drizzle tables — finalize() walks columns via getTableColumns().
+    const parentTable = pgTable('parent_entities', {
+      id: text('id').primaryKey(),
+      title: text('title').notNull(),
+      status: text('status').notNull(),
+      priority: text('priority'),
+      kind: text('kind').notNull(),                                 // discriminator (not projected)
+      externalKey: text('external_key'),                            // platform plumbing (not projected)
+      createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull(),
+    });
+
+    const childTable = pgTable('child_entities', {
+      taskId: text('task_id').primaryKey(),
+      ruleId: text('rule_id').notNull(),
+      periodStart: text('period_start').notNull(),
+    });
+
+    const otherChildTable = pgTable('other_child_entities', {
+      taskId: text('task_id').primaryKey(),
+    });
+
+    function parentConfig(extensionColumns?: string[], overrides: Partial<EntityConfig> = {}): EntityConfig {
+      return mockConfig({
+        entityType: 'parent_entities',
+        slug: 'parent-entities',
+        table: parentTable as unknown as EntityConfig['table'],
+        extensionColumns,
+        ...overrides,
+      });
+    }
+
+    function childConfig(extensionOf: NonNullable<EntityConfig['extensionOf']>, overrides: Partial<EntityConfig> = {}): EntityConfig {
+      return mockConfig({
+        entityType: 'child_entities',
+        slug: 'child-entities',
+        table: childTable as unknown as EntityConfig['table'],
+        extensionOf,
+        ...overrides,
+      });
+    }
+
+    it('resolves the parent projection when no exclude/extra is set', () => {
+      registry.register(parentConfig(['title', 'status', 'priority']));
+      registry.register(childConfig({ entity: 'parent_entities', foreignKey: 'taskId' }));
+      registry.finalize();
+
+      const resolved = registry.getResolvedExtension('child_entities');
+      expect(resolved).toBeDefined();
+      expect(resolved!.parentEntityType).toBe('parent_entities');
+      expect(resolved!.parentTable).toBe(parentTable);
+      expect(resolved!.foreignKeyColumn).toBe(childTable.taskId);
+      expect(resolved!.parentIdColumn).toBe(parentTable.id);
+      expect(resolved!.projectedColumns.map((p) => p.fieldKey)).toEqual(['title', 'status', 'priority']);
+      expect(resolved!.parentDefaults).toEqual({});
+    });
+
+    it('drops a column listed in excludeColumns', () => {
+      registry.register(parentConfig(['title', 'status', 'priority']));
+      registry.register(childConfig({ entity: 'parent_entities', foreignKey: 'taskId', excludeColumns: ['priority'] }));
+      registry.finalize();
+
+      const resolved = registry.getResolvedExtension('child_entities')!;
+      expect(resolved.projectedColumns.map((p) => p.fieldKey)).toEqual(['title', 'status']);
+    });
+
+    it('appends extraColumns after the parent projection in declared order', () => {
+      registry.register(parentConfig(['title']));
+      registry.register(
+        childConfig({ entity: 'parent_entities', foreignKey: 'taskId', extraColumns: ['createdAt', 'kind'] }),
+      );
+      registry.finalize();
+
+      const resolved = registry.getResolvedExtension('child_entities')!;
+      expect(resolved.projectedColumns.map((p) => p.fieldKey)).toEqual(['title', 'createdAt', 'kind']);
+    });
+
+    it('combines excludeColumns and extraColumns', () => {
+      registry.register(parentConfig(['title', 'status', 'priority']));
+      registry.register(
+        childConfig({
+          entity: 'parent_entities',
+          foreignKey: 'taskId',
+          excludeColumns: ['priority'],
+          extraColumns: ['kind'],
+        }),
+      );
+      registry.finalize();
+
+      const resolved = registry.getResolvedExtension('child_entities')!;
+      expect(resolved.projectedColumns.map((p) => p.fieldKey)).toEqual(['title', 'status', 'kind']);
+    });
+
+    it('passes parentDefaults through verbatim', () => {
+      registry.register(parentConfig(['title']));
+      registry.register(
+        childConfig({ entity: 'parent_entities', foreignKey: 'taskId', parentDefaults: { kind: 'compliance' } }),
+      );
+      registry.finalize();
+
+      const resolved = registry.getResolvedExtension('child_entities')!;
+      expect(resolved.parentDefaults).toEqual({ kind: 'compliance' });
+    });
+
+    it('returns undefined for non-extension entities', () => {
+      registry.register(mockConfig());
+      registry.finalize();
+      expect(registry.getResolvedExtension('test_entity')).toBeUndefined();
+    });
+
+    it('finalize is idempotent', () => {
+      registry.register(parentConfig(['title']));
+      registry.register(childConfig({ entity: 'parent_entities', foreignKey: 'taskId' }));
+      registry.finalize();
+      const before = registry.getResolvedExtension('child_entities');
+
+      registry.finalize();
+      const after = registry.getResolvedExtension('child_entities');
+
+      expect(after).toBe(before);
+    });
+
+    it('throws when getResolvedExtension is called before finalize()', () => {
+      registry.register(parentConfig(['title']));
+      registry.register(childConfig({ entity: 'parent_entities', foreignKey: 'taskId' }));
+
+      expect(() => registry.getResolvedExtension('child_entities')).toThrow(/before finalize/);
+    });
+
+    it('throws when the parent entity is not registered', () => {
+      registry.register(childConfig({ entity: 'parent_entities', foreignKey: 'taskId' }));
+
+      expect(() => registry.finalize()).toThrow(
+        /Entity 'child_entities' declares extensionOf 'parent_entities', but 'parent_entities' is not registered/,
+      );
+    });
+
+    it('throws when the parent declares its own extensionOf (chaining)', () => {
+      // Parent that itself extends another entity
+      const grandparent = mockConfig({
+        entityType: 'grandparent',
+        slug: 'grandparent',
+        table: parentTable as unknown as EntityConfig['table'],
+        extensionColumns: ['title'],
+      });
+      const middleTable = pgTable('middle_entities', {
+        taskId: text('task_id').primaryKey(),
+      });
+      const middle = mockConfig({
+        entityType: 'parent_entities',
+        slug: 'parent-entities',
+        table: middleTable as unknown as EntityConfig['table'],
+        extensionOf: { entity: 'grandparent', foreignKey: 'taskId' },
+      });
+      registry.register(grandparent);
+      registry.register(middle);
+      registry.register(childConfig({ entity: 'parent_entities', foreignKey: 'taskId' }));
+
+      expect(() => registry.finalize()).toThrow(
+        /Extension chaining is not supported/,
+      );
+    });
+
+    it('throws when parent does not declare extensionColumns', () => {
+      registry.register(parentConfig(undefined));
+      registry.register(childConfig({ entity: 'parent_entities', foreignKey: 'taskId' }));
+
+      expect(() => registry.finalize()).toThrow(
+        /does not declare any 'extensionColumns'/,
+      );
+    });
+
+    it('throws when extraColumns names a parent column that does not exist', () => {
+      registry.register(parentConfig(['title']));
+      registry.register(
+        childConfig({ entity: 'parent_entities', foreignKey: 'taskId', extraColumns: ['nope'] }),
+      );
+
+      expect(() => registry.finalize()).toThrow(
+        /extraColumns names 'nope', which is not a column on 'parent_entities'/,
+      );
+    });
+
+    it('throws when extraColumns duplicates a column already in extensionColumns', () => {
+      registry.register(parentConfig(['title']));
+      registry.register(
+        childConfig({ entity: 'parent_entities', foreignKey: 'taskId', extraColumns: ['title'] }),
+      );
+
+      expect(() => registry.finalize()).toThrow(
+        /extraColumns names 'title', which is already in 'parent_entities'\.extensionColumns/,
+      );
+    });
+
+    it('throws when excludeColumns names a column not in extensionColumns', () => {
+      registry.register(parentConfig(['title', 'status']));
+      registry.register(
+        childConfig({ entity: 'parent_entities', foreignKey: 'taskId', excludeColumns: ['priority'] }),
+      );
+
+      expect(() => registry.finalize()).toThrow(
+        /excludeColumns names 'priority', which is not in 'parent_entities'\.extensionColumns/,
+      );
+    });
+
+    it('resolves multiple extensions of the same parent independently', () => {
+      registry.register(parentConfig(['title', 'status']));
+      registry.register(childConfig({ entity: 'parent_entities', foreignKey: 'taskId' }));
+      registry.register(
+        mockConfig({
+          entityType: 'other_child_entities',
+          slug: 'other-child-entities',
+          table: otherChildTable as unknown as EntityConfig['table'],
+          extensionOf: { entity: 'parent_entities', foreignKey: 'taskId', excludeColumns: ['status'] },
+        }),
+      );
+      registry.finalize();
+
+      expect(registry.getResolvedExtension('child_entities')!.projectedColumns.map((p) => p.fieldKey)).toEqual([
+        'title',
+        'status',
+      ]);
+      expect(registry.getResolvedExtension('other_child_entities')!.projectedColumns.map((p) => p.fieldKey)).toEqual([
+        'title',
+      ]);
+    });
   });
 });

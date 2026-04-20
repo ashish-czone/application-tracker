@@ -554,6 +554,29 @@ export interface ExtensionOfConfig {
   parentDefaults?: Record<string, unknown>;
 }
 
+/**
+ * Resolved view of an extension entity's relationship to its parent. Built
+ * by `EntityRegistryService.finalize()` after every entity has been
+ * registered. Downstream services use this instead of re-walking the
+ * config + parent table on every request.
+ */
+export interface ResolvedExtension {
+  /** Convenience copy of `extensionOf.entity`. */
+  parentEntityType: string;
+  /** Parent's Drizzle table reference. */
+  parentTable: PgTable;
+  /** Child's primary-key-also-foreign-key column. */
+  foreignKeyColumn: PgColumn;
+  /** Parent's `id` column — RHS of the join condition. */
+  parentIdColumn: PgColumn;
+  /** Ordered projection of parent columns surfaced on the child's read
+   *  shape. Order: `parent.extensionColumns` minus `excludeColumns`, then
+   *  `extraColumns` appended in declared order. */
+  projectedColumns: Array<{ fieldKey: string; column: PgColumn }>;
+  /** Pass-through copy of `extensionOf.parentDefaults` for the write path. */
+  parentDefaults: Record<string, unknown>;
+}
+
 // ---------------------------------------------------------------------------
 // EntityConfig — the single config that defines everything about an entity
 // ---------------------------------------------------------------------------
