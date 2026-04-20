@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
-import { DrawerShell, DrawerHeader, Eyebrow } from '@packages/ui';
+import { Combobox, DrawerShell, DrawerHeader, Eyebrow, type ComboboxOption } from '@packages/ui';
 import {
   useCreateCategory,
   type CategoryGroup,
@@ -14,16 +14,15 @@ export interface AddItemDrawerProps {
   onClose: () => void;
 }
 
-interface FlatOption {
-  id: string;
-  label: string;
-  depth: number;
-}
-
-function flattenForParentSelect(nodes: CategoryTreeNode[], depth = 0, acc: FlatOption[] = []): FlatOption[] {
+function flattenForParentSelect(
+  nodes: CategoryTreeNode[],
+  trail: string[] = [],
+  acc: ComboboxOption[] = [],
+): ComboboxOption[] {
   for (const n of nodes) {
-    acc.push({ id: n.id, label: n.name, depth });
-    if (n.children.length > 0) flattenForParentSelect(n.children, depth + 1, acc);
+    const path = [...trail, n.name];
+    acc.push({ value: n.id, label: path.join(' › ') });
+    if (n.children.length > 0) flattenForParentSelect(n.children, path, acc);
   }
   return acc;
 }
@@ -178,21 +177,19 @@ export function AddItemDrawer({ group, tree, isHierarchical, onClose }: AddItemD
               >
                 Parent
               </label>
-              <select
+              <Combobox
                 id="add-item-parent"
                 value={parentId}
-                onChange={(e) => setParentId(e.target.value)}
+                onChange={setParentId}
+                options={parentOptions}
+                placeholder="— top level —"
+                searchPlaceholder="Search parents..."
                 disabled={isSubmitting}
-                className="w-full px-3 py-2 border border-rule bg-paper text-sm font-sans text-ink outline-none focus:border-ink transition-colors disabled:bg-paper-sunken disabled:cursor-not-allowed"
-              >
-                <option value="">— top level —</option>
-                {parentOptions.map((opt) => (
-                  <option key={opt.id} value={opt.id}>
-                    {'\u00A0\u00A0'.repeat(opt.depth)}
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
+                className="h-auto rounded-none border-rule bg-paper px-3 py-2 font-sans text-ink focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-ink data-[placeholder]:text-ink-muted"
+              />
+              <p className="mt-1.5 text-[11px] font-sans text-ink-muted">
+                Leave empty to create at the top level.
+              </p>
             </div>
           )}
 
