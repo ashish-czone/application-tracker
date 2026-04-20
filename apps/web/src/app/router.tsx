@@ -2,7 +2,7 @@ import { Suspense, lazy } from 'react';
 import { Routes, Route, Navigate } from 'react-router';
 import { AppLayout } from './layout/AppLayout';
 import { AuthGuard } from '@packages/auth-ui/components/AuthGuard';
-import { UsersListPage, RolesListPage, WorkflowsListPage, WorkflowEditorPage, AutomationsPage, RuleBuilderPage, SettingsPage, TagGroupsListPage, CategoryGroupsListPage, OrgPositionsPage, OrgUnitsPage } from '../portals/customer/routes';
+import { UsersListPage, RolesListPage, WorkflowsListPage, WorkflowEditorPage, AutomationsPage, RuleBuilderPage, SettingsPage, TagGroupsListPage, CategoryGroupsListPage, OrgPositionsPage, OrgUnitsPage, PageEditorPage } from '../portals/customer/routes';
 import { EntityListPage, EntityDetailPage } from '@packages/entity-engine-ui';
 
 const LoginPage = lazy(() => import('@packages/auth-ui/pages/LoginPage'));
@@ -152,6 +152,32 @@ export function AppRouter() {
             path="/categories"
             element={<CategoryGroupsListPage />}
           />
+          <Route path="/pages">
+            <Route
+              index
+              element={
+                <Suspense fallback={<PageSkeleton />}>
+                  <EntityListPage entityType="pages" />
+                </Suspense>
+              }
+            />
+            <Route
+              path=":id"
+              element={
+                <Suspense fallback={<PageSkeleton />}>
+                  <EntityDetailPage entityType="pages" />
+                </Suspense>
+              }
+            />
+            <Route
+              path=":id/edit"
+              element={
+                <Suspense fallback={<PageSkeleton />}>
+                  <PageEditorPage />
+                </Suspense>
+              }
+            />
+          </Route>
           <Route
             path="/settings"
             element={
