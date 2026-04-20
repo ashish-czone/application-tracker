@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsInt, Min, MinLength, MaxLength, Matches } from 'class-validator';
+import { IsString, IsOptional, IsInt, Min, MinLength, MaxLength, Matches, IsObject } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -24,4 +24,9 @@ export class UpdateCategoryDto {
   @IsInt()
   @Min(0)
   sortOrder?: number;
+
+  @ApiPropertyOptional({ description: 'Free-form key/value metadata. Keys are normalized to trimmed lowercase on write. Replaces existing metadata.', example: { iso3: 'USA', phone: '+1' } })
+  @IsOptional()
+  @IsObject()
+  metadata?: Record<string, string>;
 }

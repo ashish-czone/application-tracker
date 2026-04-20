@@ -7,6 +7,7 @@ import {
   type CategoryGroup,
   type CategoryTreeNode,
 } from '@packages/taxonomy-ui';
+import { useCategoryGroupUsage } from '@packages/entity-engine-ui';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 import { HierarchicalRows, type TreeNode } from './components/HierarchicalRows';
 import { FlatRows, type FlatRowItem } from './components/FlatRows';
@@ -69,6 +70,9 @@ export function GlobalSetsPage() {
   const groupsQuery = useCategoryGroupsList();
   const groups = (groupsQuery.data ?? []) as CategoryGroup[];
 
+  const usageQuery = useCategoryGroupUsage();
+  const usage = usageQuery.data ?? {};
+
   const [activeId, setActiveId] = useState<string | null>(null);
   const activeGroup = groups.find((g) => g.id === activeId) ?? groups[0] ?? null;
   const activeGroupId = activeGroup?.id ?? null;
@@ -81,6 +85,7 @@ export function GlobalSetsPage() {
   const treeNodes = useMemo(() => toTreeNodes(tree), [tree]);
   const itemCount = countAll(tree);
   const updatedAt = activeGroup ? maxUpdatedAt(tree, activeGroup.updatedAt) : '';
+  const usedByFields = activeGroup ? usage[activeGroup.slug] ?? 0 : 0;
 
   return (
     <div className="min-h-screen bg-paper paper-grain">
@@ -190,6 +195,15 @@ export function GlobalSetsPage() {
                         <Eyebrow>Items</Eyebrow>
                         <div className="mt-0.5 font-mono text-lg text-ink tabular-nums">
                           {itemCount}
+                        </div>
+                      </div>
+                      <div>
+                        <Eyebrow>Used by</Eyebrow>
+                        <div className="mt-0.5 font-mono text-lg text-ink tabular-nums">
+                          {usedByFields}
+                          <span className="ml-1 text-[10px] text-ink-muted font-sans">
+                            field{usedByFields === 1 ? '' : 's'}
+                          </span>
                         </div>
                       </div>
                       <div>

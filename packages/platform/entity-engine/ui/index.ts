@@ -5,6 +5,7 @@ export type { EntityHooks } from './helpers/createEntityHooks';
 export { buildColumnDefs, buildFilterConfigs } from './helpers/buildColumnDefs';
 export { useEntityLayout } from './helpers/useEntityLayout';
 export { useListLayout } from './helpers/useListLayout';
+export { useCategoryGroupUsage } from './helpers/useCategoryGroupUsage';
 
 export { EntityConditionBuilder, FIELD_TYPE_TO_CONDITION_TYPE } from './components/EntityConditionBuilder';
 export { ConditionValueField } from './components/ConditionValueField';

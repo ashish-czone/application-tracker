@@ -116,6 +116,25 @@ export class FieldDefinitionService implements OnApplicationBootstrap {
   }
 
   /**
+   * Count how many field definitions reference each category group slug.
+   * Returns a map of `categoryGroupSlug -> count`. Slugs with zero references
+   * are omitted; callers should default missing keys to 0.
+   *
+   * Includes both DB-backed fields (admin-configurable entities) and code-only
+   * entities populated via `populateFromRegistry`.
+   */
+  countByCategoryGroupSlug(): Record<string, number> {
+    const counts: Record<string, number> = {};
+    for (const field of this.fieldsById.values()) {
+      if (field.fieldType !== 'category') continue;
+      const slug = field.categoryGroupSlug;
+      if (!slug) continue;
+      counts[slug] = (counts[slug] ?? 0) + 1;
+    }
+    return counts;
+  }
+
+  /**
    * Populate the cache from an in-memory entity config, used for entities that
    * opt out of `adminConfigurable`. These entities have no rows in
    * `field_definitions`; mirroring their code-defined fields into the same
