@@ -86,6 +86,11 @@ export type { SplitResult } from './helpers/split-payload';
 
 export { customFieldsColumn, hasCustomFieldsColumn } from './helpers/custom-fields-column';
 export { JsonbStorageAdapter } from './storage/jsonb-storage.adapter';
+export {
+  generateJsonbIndexesForEntity,
+  generateJsonbIndexes,
+} from './helpers/generate-jsonb-indexes';
+export type { JsonbIndexStatement } from './helpers/generate-jsonb-indexes';
 
 // --- Schemas moved from eav-attributes ---
 

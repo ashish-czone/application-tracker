@@ -349,6 +349,12 @@ export interface FieldMeta {
   excludeFromList?: boolean;
   /** Fetched in list queries for data purposes, but not emitted as a column — hidden from the columns picker. */
   listColumnHidden?: boolean;
+  /**
+   * For JSONB custom fields: flag the field as frequently filtered/sorted so the
+   * expression-index generator emits a btree index on custom_fields ->> 'key'.
+   * Has no effect for schema-column fields or EAV entities.
+   */
+  indexed?: boolean;
 }
 
 // ---------------------------------------------------------------------------
