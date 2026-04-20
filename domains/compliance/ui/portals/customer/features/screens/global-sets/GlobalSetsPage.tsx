@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { ChevronRight, Plus, Search, Layers, GitBranch, Pencil, Trash2 } from 'lucide-react';
+import { AnimatePresence } from 'framer-motion';
 import { Eyebrow } from '@packages/ui';
 import {
   useCategoryGroupsList,
@@ -14,9 +15,9 @@ import { FlatRows, type FlatRowItem } from './components/FlatRows';
 import { AddItemDialog } from './components/AddItemDialog';
 import { EditItemDialog } from './components/EditItemDialog';
 import { DeleteItemDialog } from './components/DeleteItemDialog';
-import { NewSetDialog } from './components/NewSetDialog';
-import { EditSetDialog } from './components/EditSetDialog';
-import { DeleteSetDialog } from './components/DeleteSetDialog';
+import { NewSetDrawer } from './components/NewSetDrawer';
+import { EditSetDrawer } from './components/EditSetDrawer';
+import { DeleteSetDrawer } from './components/DeleteSetDrawer';
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
@@ -335,38 +336,40 @@ export function GlobalSetsPage() {
         />
       )}
 
-      {newSetOpen && (
-        <NewSetDialog
-          onClose={() => setNewSetOpen(false)}
-          onCreated={(id) => setActiveId(id)}
-        />
-      )}
+      <AnimatePresence>
+        {newSetOpen && (
+          <NewSetDrawer
+            onClose={() => setNewSetOpen(false)}
+            onCreated={(id) => setActiveId(id)}
+          />
+        )}
 
-      {editSetOpen && activeGroup && (
-        <EditSetDialog
-          set={{
-            id: activeGroup.id,
-            name: activeGroup.name,
-            slug: activeGroup.slug,
-            description: activeGroup.description,
-          }}
-          onClose={() => setEditSetOpen(false)}
-        />
-      )}
+        {editSetOpen && activeGroup && (
+          <EditSetDrawer
+            set={{
+              id: activeGroup.id,
+              name: activeGroup.name,
+              slug: activeGroup.slug,
+              description: activeGroup.description,
+            }}
+            onClose={() => setEditSetOpen(false)}
+          />
+        )}
 
-      {deleteSetOpen && activeGroup && (
-        <DeleteSetDialog
-          set={{
-            id: activeGroup.id,
-            name: activeGroup.name,
-            slug: activeGroup.slug,
-            itemCount,
-            usedByFields,
-          }}
-          onClose={() => setDeleteSetOpen(false)}
-          onDeleted={() => setActiveId(null)}
-        />
-      )}
+        {deleteSetOpen && activeGroup && (
+          <DeleteSetDrawer
+            set={{
+              id: activeGroup.id,
+              name: activeGroup.name,
+              slug: activeGroup.slug,
+              itemCount,
+              usedByFields,
+            }}
+            onClose={() => setDeleteSetOpen(false)}
+            onDeleted={() => setActiveId(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
