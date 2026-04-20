@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest';
 import { createPlatformTestModule, cleanDatabase } from '@packages/platform-testing';
-import { FieldDefinitionService } from '@packages/entity-engine';
+import { FieldDefinitionService, EntityRegistryService, EntityDefinitionService } from '@packages/entity-engine';
 import { LayoutService } from '../layout.service';
 import type { DrizzleDB } from '@packages/database';
 import type { TestingModule } from '@nestjs/testing';
@@ -14,7 +14,7 @@ describe('Entity Layout (integration)', () => {
 
   beforeAll(async () => {
     const ctx = await createPlatformTestModule({
-      providers: [LayoutService, FieldDefinitionService],
+      providers: [LayoutService, FieldDefinitionService, EntityRegistryService, EntityDefinitionService],
       mocks: { automations: false },
     });
     module = ctx.module;
