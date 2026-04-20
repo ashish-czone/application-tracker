@@ -1372,9 +1372,10 @@ export class EntityService {
 
   /**
    * Build all filter conditions from legacy query params.
-   * Resolves standard DB columns via query-builder, routes EAV fields to FieldValueService.
-   * For extension entities, projected parent columns are added to the column
-   * map so a filter like `?status=open` routes to `parent.status`.
+   * Resolves standard DB columns via query-builder, routes custom-field filters
+   * (JSONB or EAV) to the configured storage adapter. For extension entities,
+   * projected parent columns are added to the column map so a filter like
+   * `?status=open` routes to `parent.status`.
    */
   private async buildAllFilters(
     query: BaseListQuery,
@@ -1416,9 +1417,9 @@ export class EntityService {
     // Resolve standard column filters via query-builder
     const { conditions, unresolved } = buildFilterConditions(allFilters, columnMap);
 
-    // Classify unresolved filters into EAV vs relational
+    // Classify unresolved filters into custom-field vs relational
     const defsByKey = new Map(defs.map((d) => [d.fieldKey, d]));
-    const eavFilters: { fieldKey: string; operator: any; value: any }[] = [];
+    const customFieldFilters: { fieldKey: string; operator: any; value: any }[] = [];
 
     for (const f of unresolved) {
       const def = defsByKey.get(f.field);
@@ -1435,18 +1436,18 @@ export class EntityService {
         );
         if (relCondition) conditions.push(relCondition);
       } else if (!def.columnName) {
-        // EAV fields: route to FieldValueService
-        eavFilters.push({ fieldKey: f.field, operator: f.operator, value: f.value });
+        // Custom field: route to the configured storage adapter (JSONB or EAV)
+        customFieldFilters.push({ fieldKey: f.field, operator: f.operator, value: f.value });
       }
     }
 
-    if (eavFilters.length > 0 && this.eavStorage) {
-      const eavCondition = this.eavStorage.buildFilterCondition(
+    if (customFieldFilters.length > 0 && this.eavStorage) {
+      const condition = this.eavStorage.buildFilterCondition(
         config.entityType,
         table.id,
-        eavFilters,
+        customFieldFilters,
       );
-      conditions.push(eavCondition);
+      conditions.push(condition);
     }
 
     return conditions;
