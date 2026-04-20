@@ -248,6 +248,27 @@ describe('CategoriesController (integration)', () => {
         .send({ name: 'Test', slug: 'Not Valid' })
         .expect(400);
     });
+
+    it('should accept metadata and normalize keys to trimmed lowercase', async () => {
+      const group = await createCategoryGroup();
+      const cat = await createCategory(group.id, {
+        name: 'United States',
+        slug: `usa-${Date.now()}`,
+        metadata: { '  ISO3 ': 'USA', Phone: '+1' },
+      });
+
+      expect(cat.metadata).toEqual({ iso3: 'USA', phone: '+1' });
+    });
+
+    it('should reject non-object metadata', async () => {
+      const group = await createCategoryGroup();
+
+      await request(ctx.httpServer)
+        .post(`/api/v1/category-groups/${group.id}/categories`)
+        .set(withAuth(MANAGE))
+        .send({ name: 'Test', slug: 'test-meta-bad', metadata: 'not-an-object' })
+        .expect(400);
+    });
   });
 
   describe('GET /api/v1/category-groups/:groupId/tree', () => {
@@ -378,6 +399,21 @@ describe('CategoriesController (integration)', () => {
         .set(withAuth(MANAGE))
         .send({ slug: 'Bad Slug' })
         .expect(400);
+    });
+
+    it('should update and normalize metadata keys', async () => {
+      const group = await createCategoryGroup();
+      const cat = await createCategory(group.id, {
+        metadata: { iso3: 'USA' },
+      });
+
+      const res = await request(ctx.httpServer)
+        .patch(`/api/v1/categories/${cat.id}`)
+        .set(withAuth(MANAGE))
+        .send({ metadata: { '  Currency ': 'USD', Symbol: '$' } })
+        .expect(200);
+
+      expect(res.body.metadata).toEqual({ currency: 'USD', symbol: '$' });
     });
   });
 
