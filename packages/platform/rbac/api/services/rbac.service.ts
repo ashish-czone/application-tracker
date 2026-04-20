@@ -2,6 +2,12 @@ import { Injectable, NotFoundException, ConflictException, ForbiddenException } 
 import { DatabaseService, eq, and, or, isNull, ilike, asc, desc, count, inArray, users, type SQL } from '@packages/database';
 import type { PaginatedResponse } from '@packages/common';
 import { withTenant, withTenantInsert } from '@packages/tenancy/helpers';
+import {
+  createSoftDeleteExecutor,
+  defineSoftDeletePolicy,
+  notDeleted,
+  type SoftDeleteExecutor,
+} from '@packages/soft-delete';
 import { roles } from '../schema/roles';
 import { rolePermissions } from '../schema/role-permissions';
 import { userRoles } from '../schema/user-roles';
@@ -10,6 +16,17 @@ import type { Role, RoleMember, RoleWithSystem, ScopedPermissions, PermissionSco
 
 @Injectable()
 export class RbacService {
+  private readonly deleteExecutor: SoftDeleteExecutor = createSoftDeleteExecutor(
+    defineSoftDeletePolicy({
+      table: roles,
+      mode: 'soft',
+      dependents: [
+        { table: userRoles, foreignKey: 'roleId', strategy: 'hardDelete' },
+        { table: rolePermissions, foreignKey: 'roleId', strategy: 'keep' },
+      ],
+    }),
+  );
+
   constructor(
     private readonly database: DatabaseService,
     private readonly permissionRegistry: PermissionRegistryService,
@@ -44,7 +61,7 @@ export class RbacService {
     return role;
   }
 
-  async deleteRole(id: string): Promise<void> {
+  async deleteRole(id: string, actorId: string): Promise<void> {
     const role = await this.findRoleById(id);
     if (!role) throw new NotFoundException('Role not found');
 
@@ -56,18 +73,7 @@ export class RbacService {
       throw new ConflictException('Cannot delete a default role');
     }
 
-    const [{ total }] = await this.database.db
-      .select({ total: count() })
-      .from(userRoles)
-      .where(withTenant(userRoles, eq(userRoles.roleId, id)));
-
-    if (Number(total) > 0) {
-      throw new ConflictException('Cannot delete a role that is assigned to users. Remove the role from all users first.');
-    }
-
-    await this.database.db
-      .delete(roles)
-      .where(withTenant(roles, eq(roles.id, id)));
+    await this.deleteExecutor.delete(this.database.db, id, actorId);
   }
 
   async getRoleUserCount(id: string): Promise<number> {
@@ -82,7 +88,7 @@ export class RbacService {
     const [role] = await this.database.db
       .select()
       .from(roles)
-      .where(withTenant(roles, eq(roles.id, id)))
+      .where(withTenant(roles, eq(roles.id, id), notDeleted(roles)))
       .limit(1);
 
     return role ?? null;
@@ -92,14 +98,14 @@ export class RbacService {
     return this.database.db
       .select()
       .from(roles)
-      .where(withTenant(roles, eq(roles.userType, userType)));
+      .where(withTenant(roles, eq(roles.userType, userType), notDeleted(roles)));
   }
 
   async findDefaultRoleForUserType(userType: string): Promise<Role | null> {
     const [role] = await this.database.db
       .select()
       .from(roles)
-      .where(withTenant(roles, eq(roles.userType, userType), eq(roles.isDefault, true)))
+      .where(withTenant(roles, eq(roles.userType, userType), eq(roles.isDefault, true), notDeleted(roles)))
       .limit(1);
 
     return role ?? null;
@@ -123,7 +129,7 @@ export class RbacService {
     const limit = query.limit ?? 25;
     const offset = (page - 1) * limit;
 
-    const conditions = [];
+    const conditions: SQL[] = [notDeleted(roles)];
 
     if (query.userType) {
       conditions.push(eq(roles.userType, query.userType));
@@ -179,6 +185,7 @@ export class RbacService {
       .innerJoin(roles, and(
         eq(roles.id, userRoles.roleId),
         or(eq(roles.userType, userType), isNull(roles.userType)),
+        notDeleted(roles),
       ))
       .innerJoin(rolePermissions, eq(rolePermissions.roleId, roles.id))
       .where(withTenant(userRoles, eq(userRoles.userId, userId)));
@@ -394,7 +401,7 @@ export class RbacService {
   }
 
   async getUserRoles(userId: string, userType?: string): Promise<Role[]> {
-    const conditions: (SQL | undefined)[] = [eq(userRoles.userId, userId)];
+    const conditions: (SQL | undefined)[] = [eq(userRoles.userId, userId), notDeleted(roles)];
     if (userType) {
       conditions.push(eq(roles.userType, userType));
     }
