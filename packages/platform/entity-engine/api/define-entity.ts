@@ -6,6 +6,7 @@ import type {
   EntityConfig,
   EntityHooks,
   EntityRelationship,
+  ExtensionOfConfig,
   EntityActions,
   DataAccessConfig,
   FieldMeta,
@@ -249,6 +250,16 @@ export interface ModelDefinition<TTable extends PgTable = PgTable> {
   /** SQL subquery expressions added to SELECT in list and detail queries. */
   computedColumns?: { name: string; expression: SQL; sourceFields?: string[] }[];
 
+  // --- Extension-of (MTI / shared-key extension) ---
+
+  /** Columns of THIS entity that are projected into every extension child
+   *  by default. See EntityConfig.extensionColumns for semantics. */
+  extensionColumns?: string[];
+
+  /** Declares this entity as a 1-1 extension of another entity. The child's
+   *  primary key doubles as a foreign key to the parent's id. */
+  extensionOf?: ExtensionOfConfig;
+
   // --- Data access ---
 
   /** Row-level data access configuration. Controls which records users can see based on their RBAC scope. */
@@ -331,6 +342,71 @@ export function defineEntity<TTable extends PgTable>(model: ModelDefinition<TTab
   }
   if (model.onDelete.mode === 'soft') {
     systemColumns.push('deletedAt', 'deletedBy');
+  }
+
+  // Extension-of: validate the shared-key shape locally. Cross-entity
+  // resolution (parent's extensionColumns, etc.) happens at registry
+  // resolution time — this block only catches things visible from the
+  // child's own config.
+  if (model.extensionOf && model.extensionColumns) {
+    throw new Error(
+      `defineEntity for '${model.slug}' declares both 'extensionOf' and 'extensionColumns'. ` +
+        `An entity cannot be both an extension child and a parent for other extensions.`,
+    );
+  }
+  if (model.extensionOf) {
+    const ext = model.extensionOf;
+    if (typeof ext.entity !== 'string' || ext.entity.length === 0) {
+      throw new Error(`defineEntity for '${model.slug}': extensionOf.entity must be a non-empty string.`);
+    }
+    if (typeof ext.foreignKey !== 'string' || ext.foreignKey.length === 0) {
+      throw new Error(`defineEntity for '${model.slug}': extensionOf.foreignKey must be a non-empty string.`);
+    }
+    const fkColumn = columns[ext.foreignKey] as PgColumn | undefined;
+    if (!fkColumn) {
+      throw new Error(
+        `defineEntity for '${model.slug}': extensionOf.foreignKey '${ext.foreignKey}' is not a column on the table.`,
+      );
+    }
+    if (!fkColumn.primary) {
+      throw new Error(
+        `defineEntity for '${model.slug}': extensionOf.foreignKey '${ext.foreignKey}' must be the primary key ` +
+          `of the table (shared-key extension pattern). Use a 'belongsTo' field instead if the child has its own id.`,
+      );
+    }
+    if (!fkColumn.notNull) {
+      throw new Error(
+        `defineEntity for '${model.slug}': extensionOf.foreignKey '${ext.foreignKey}' must be NOT NULL.`,
+      );
+    }
+    for (const k of ext.excludeColumns ?? []) {
+      if (typeof k !== 'string' || k.length === 0) {
+        throw new Error(`defineEntity for '${model.slug}': extensionOf.excludeColumns entries must be non-empty strings.`);
+      }
+    }
+    for (const k of ext.extraColumns ?? []) {
+      if (typeof k !== 'string' || k.length === 0) {
+        throw new Error(`defineEntity for '${model.slug}': extensionOf.extraColumns entries must be non-empty strings.`);
+      }
+    }
+    if (ext.parentDefaults && (typeof ext.parentDefaults !== 'object' || Array.isArray(ext.parentDefaults))) {
+      throw new Error(`defineEntity for '${model.slug}': extensionOf.parentDefaults must be a plain object.`);
+    }
+  }
+  if (model.extensionColumns) {
+    if (!Array.isArray(model.extensionColumns)) {
+      throw new Error(`defineEntity for '${model.slug}': extensionColumns must be an array of column keys.`);
+    }
+    for (const k of model.extensionColumns) {
+      if (typeof k !== 'string' || k.length === 0) {
+        throw new Error(`defineEntity for '${model.slug}': extensionColumns entries must be non-empty strings.`);
+      }
+      if (!columns[k]) {
+        throw new Error(
+          `defineEntity for '${model.slug}': extensionColumns includes '${k}', which is not a column on the table.`,
+        );
+      }
+    }
   }
 
   // Hierarchy: validate the table spreads hierarchyColumns() and register
@@ -499,6 +575,8 @@ export function defineEntity<TTable extends PgTable>(model: ModelDefinition<TTab
     hasTags: model.hasTags,
     attachmentConfig: model.attachmentConfig,
     computedColumns: model.computedColumns,
+    extensionColumns: model.extensionColumns,
+    extensionOf: model.extensionOf,
     extraPermissions: model.extraPermissions,
     extraEvents: model.extraEvents,
     actions: model.actions,

@@ -17,6 +17,7 @@ export type {
   EntityConfig,
   EntityHooks,
   EntityRelationship,
+  ExtensionOfConfig,
   EntityUIHints,
   EntityRegistryEntry,
   EntityAction,

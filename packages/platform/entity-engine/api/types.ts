@@ -532,6 +532,29 @@ export interface PositionScopeProvider {
 export const POSITION_SCOPE_PROVIDER = 'POSITION_SCOPE_PROVIDER';
 
 // ---------------------------------------------------------------------------
+// Extension-of — 1-1 extension entities that share a primary key with a parent
+// ---------------------------------------------------------------------------
+
+export interface ExtensionOfConfig {
+  /** Parent entity type key. Must be registered and must declare `extensionColumns`. */
+  entity: string;
+  /** Column on THIS child's table that is both the primary key AND the
+   *  foreign key to `<parent>.id`. The child and parent share the same id
+   *  value (MTI / shared-key pattern). Validated at `defineEntity` time. */
+  foreignKey: string;
+  /** Columns to drop from the parent's `extensionColumns` for this child only. */
+  excludeColumns?: string[];
+  /** Additional parent columns to project into this child that are not in
+   *  the parent's `extensionColumns`. Resolved against the parent table at
+   *  registry-resolution time. */
+  extraColumns?: string[];
+  /** Column values written to the parent row at create time (e.g., a
+   *  discriminator like `{ kind: 'compliance' }`). Accepted here in PR 1
+   *  but applied on the write path in PR 2. */
+  parentDefaults?: Record<string, unknown>;
+}
+
+// ---------------------------------------------------------------------------
 // EntityConfig — the single config that defines everything about an entity
 // ---------------------------------------------------------------------------
 
@@ -675,6 +698,22 @@ export interface EntityConfig<TTable extends PgTable = PgTable> {
    *  Each entry becomes an extra column in the response (e.g., averageRating, evaluationsCount).
    *  Computed columns can also be used as sort keys. */
   computedColumns?: { name: string; expression: SQL; sourceFields?: string[] }[];
+
+  // --- Extension-of (multi-table inheritance / shared-key extension) ---
+
+  /** Column keys on THIS entity's table that are projected into every
+   *  `extensionOf` child by default. Child entities can opt out per column
+   *  via `extensionOf.excludeColumns`, or pull in additional parent columns
+   *  via `extensionOf.extraColumns`. Keep this list to domain-meaningful
+   *  fields only — platform plumbing like discriminator/idempotency columns
+   *  should NOT be projected, so extensions never see them. */
+  extensionColumns?: string[];
+
+  /** Declares this entity as a 1-1 extension of another entity. The child's
+   *  primary key must also be a foreign key to the parent's id (shared-key
+   *  pattern). Read and write paths join through the foreign key and surface
+   *  the parent's projected columns transparently. */
+  extensionOf?: ExtensionOfConfig;
 
   // --- UI ---
 
