@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, integer, uniqueIndex, index } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, integer, jsonb, uniqueIndex, index } from 'drizzle-orm/pg-core';
 import { randomUUID } from 'crypto';
 import { categoryGroups } from './category-groups';
 import { hierarchyColumns } from '@packages/hierarchy/schema';
@@ -10,6 +10,7 @@ export const categories = pgTable('categories', {
   name: text('name').notNull(),
   slug: text('slug').notNull(),
   sortOrder: integer('sort_order').notNull().default(0),
+  metadata: jsonb('metadata').$type<Record<string, string>>().notNull().default({}),
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }).notNull().$defaultFn(() => new Date()).$onUpdate(() => new Date()),
 }, (table) => [

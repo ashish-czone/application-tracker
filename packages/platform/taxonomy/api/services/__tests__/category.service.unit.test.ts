@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { NotFoundException, ConflictException } from '@nestjs/common';
-import { CategoryService } from '../category.service';
+import { CategoryService, normalizeMetadataKeys } from '../category.service';
 
 function createMockDb() {
   const mockChain = {
@@ -83,7 +83,7 @@ describe('CategoryService', () => {
     it('should create a root category', async () => {
       const group = { id: 'g1', name: 'Departments', slug: 'departments', description: null, sortOrder: 0, createdAt: new Date(), updatedAt: new Date() };
       vi.spyOn(service, 'findCategoryGroupByIdOrFail').mockResolvedValueOnce(group);
-      const cat = { id: 'c1', groupId: 'g1', parentId: null, path: '/', depth: 0, name: 'Engineering', slug: 'engineering', sortOrder: 0, createdAt: new Date(), updatedAt: new Date() };
+      const cat = { id: 'c1', groupId: 'g1', parentId: null, path: '/', depth: 0, name: 'Engineering', slug: 'engineering', sortOrder: 0, metadata: {}, createdAt: new Date(), updatedAt: new Date() };
       const catWithPath = { ...cat, path: '/c1', depth: 0 };
       // First returning: insert, second returning: update with path
       mockDb._chain.returning.mockResolvedValueOnce([cat]).mockResolvedValueOnce([catWithPath]);
@@ -97,7 +97,7 @@ describe('CategoryService', () => {
     it('should reject parent from different group', async () => {
       const group = { id: 'g1', name: 'Departments', slug: 'departments', description: null, sortOrder: 0, createdAt: new Date(), updatedAt: new Date() };
       vi.spyOn(service, 'findCategoryGroupByIdOrFail').mockResolvedValueOnce(group);
-      const parent = { id: 'c2', groupId: 'g2', parentId: null, path: '/c2', depth: 0, name: 'Other', slug: 'other', sortOrder: 0, createdAt: new Date(), updatedAt: new Date() };
+      const parent = { id: 'c2', groupId: 'g2', parentId: null, path: '/c2', depth: 0, name: 'Other', slug: 'other', sortOrder: 0, metadata: {}, createdAt: new Date(), updatedAt: new Date() };
       vi.spyOn(service, 'findCategoryByIdOrFail').mockResolvedValueOnce(parent);
 
       await expect(service.createCategory({ groupId: 'g1', parentId: 'c2', name: 'X', slug: 'x' }))
@@ -107,7 +107,7 @@ describe('CategoryService', () => {
 
   describe('deleteCategory', () => {
     it('should throw ConflictException if category has children', async () => {
-      const cat = { id: 'c1', groupId: 'g1', parentId: null, path: '/c1', depth: 0, name: 'Eng', slug: 'eng', sortOrder: 0, createdAt: new Date(), updatedAt: new Date() };
+      const cat = { id: 'c1', groupId: 'g1', parentId: null, path: '/c1', depth: 0, name: 'Eng', slug: 'eng', sortOrder: 0, metadata: {}, createdAt: new Date(), updatedAt: new Date() };
       vi.spyOn(service, 'findCategoryById').mockResolvedValueOnce(cat);
       mockDb._chain.where.mockResolvedValueOnce([{ total: 2 }]);
 
@@ -118,7 +118,7 @@ describe('CategoryService', () => {
 
   describe('moveCategory', () => {
     it('should reject moving category to itself', async () => {
-      const cat = { id: 'c1', groupId: 'g1', parentId: null, path: '/c1', depth: 0, name: 'Eng', slug: 'eng', sortOrder: 0, createdAt: new Date(), updatedAt: new Date() };
+      const cat = { id: 'c1', groupId: 'g1', parentId: null, path: '/c1', depth: 0, name: 'Eng', slug: 'eng', sortOrder: 0, metadata: {}, createdAt: new Date(), updatedAt: new Date() };
       vi.spyOn(service, 'findCategoryByIdOrFail')
         .mockResolvedValueOnce(cat)   // the category being moved
         .mockResolvedValueOnce(cat);  // the new parent (same id)
@@ -129,8 +129,8 @@ describe('CategoryService', () => {
     });
 
     it('should reject moving to a different group', async () => {
-      const cat = { id: 'c1', groupId: 'g1', parentId: null, path: '/c1', depth: 0, name: 'Eng', slug: 'eng', sortOrder: 0, createdAt: new Date(), updatedAt: new Date() };
-      const target = { id: 'c2', groupId: 'g2', parentId: null, path: '/c2', depth: 0, name: 'Other', slug: 'other', sortOrder: 0, createdAt: new Date(), updatedAt: new Date() };
+      const cat = { id: 'c1', groupId: 'g1', parentId: null, path: '/c1', depth: 0, name: 'Eng', slug: 'eng', sortOrder: 0, metadata: {}, createdAt: new Date(), updatedAt: new Date() };
+      const target = { id: 'c2', groupId: 'g2', parentId: null, path: '/c2', depth: 0, name: 'Other', slug: 'other', sortOrder: 0, metadata: {}, createdAt: new Date(), updatedAt: new Date() };
       vi.spyOn(service, 'findCategoryByIdOrFail')
         .mockResolvedValueOnce(cat)
         .mockResolvedValueOnce(target);
@@ -170,7 +170,7 @@ describe('CategoryService', () => {
 
   describe('validateCategoryInGroup', () => {
     it('should throw if category belongs to wrong group', async () => {
-      const cat = { id: 'c1', groupId: 'g1', parentId: null, path: '/c1', depth: 0, name: 'Eng', slug: 'eng', sortOrder: 0, createdAt: new Date(), updatedAt: new Date() };
+      const cat = { id: 'c1', groupId: 'g1', parentId: null, path: '/c1', depth: 0, name: 'Eng', slug: 'eng', sortOrder: 0, metadata: {}, createdAt: new Date(), updatedAt: new Date() };
       vi.spyOn(service, 'findCategoryByIdOrFail').mockResolvedValueOnce(cat);
       // Return group with different slug
       mockDb._chain.limit.mockResolvedValueOnce([{ id: 'g1', slug: 'locations' }]);
@@ -178,5 +178,38 @@ describe('CategoryService', () => {
       await expect(service.validateCategoryInGroup('c1', 'departments'))
         .rejects.toThrow(ConflictException);
     });
+  });
+});
+
+describe('normalizeMetadataKeys', () => {
+  it('trims and lowercases keys, preserves values', () => {
+    expect(normalizeMetadataKeys({ ISO3: 'IND', Phone: '+91' })).toEqual({
+      iso3: 'IND',
+      phone: '+91',
+    });
+  });
+
+  it('trims surrounding whitespace on keys', () => {
+    expect(normalizeMetadataKeys({ '  Symbol  ': '$', ' Minor ': '2' })).toEqual({
+      symbol: '$',
+      minor: '2',
+    });
+  });
+
+  it('drops entries whose key is empty after trimming', () => {
+    expect(normalizeMetadataKeys({ '   ': 'skipped', kept: 'yes' })).toEqual({
+      kept: 'yes',
+    });
+  });
+
+  it('collides lexically different keys that normalize to the same form (last wins)', () => {
+    // Two input keys ('ISO3' and 'iso3') both normalize to 'iso3'; JS insertion order
+    // determines which wins — documenting the behavior rather than guarding against it.
+    const result = normalizeMetadataKeys({ ISO3: 'A', iso3: 'B' });
+    expect(result).toEqual({ iso3: 'B' });
+  });
+
+  it('returns an empty object for empty input', () => {
+    expect(normalizeMetadataKeys({})).toEqual({});
   });
 });
