@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ChevronRight, Plus, Search, Layers, GitBranch } from 'lucide-react';
+import { ChevronRight, Plus, Search, Layers, GitBranch, Pencil, Trash2 } from 'lucide-react';
 import { Eyebrow } from '@packages/ui';
 import {
   useCategoryGroupsList,
@@ -14,6 +14,9 @@ import { FlatRows, type FlatRowItem } from './components/FlatRows';
 import { AddItemDialog } from './components/AddItemDialog';
 import { EditItemDialog } from './components/EditItemDialog';
 import { DeleteItemDialog } from './components/DeleteItemDialog';
+import { NewSetDialog } from './components/NewSetDialog';
+import { EditSetDialog } from './components/EditSetDialog';
+import { DeleteSetDialog } from './components/DeleteSetDialog';
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
@@ -91,6 +94,9 @@ export function GlobalSetsPage() {
   const [addItemOpen, setAddItemOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [newSetOpen, setNewSetOpen] = useState(false);
+  const [editSetOpen, setEditSetOpen] = useState(false);
+  const [deleteSetOpen, setDeleteSetOpen] = useState(false);
 
   const treeQuery = useCategoryTree(activeGroupId);
   const tree = (treeQuery.data ?? []) as CategoryTreeNode[];
@@ -127,6 +133,7 @@ export function GlobalSetsPage() {
           </div>
           <button
             type="button"
+            onClick={() => setNewSetOpen(true)}
             className="flex items-center gap-2 px-3 py-2 bg-ink text-paper-raised text-[11px] uppercase tracking-eyebrow font-sans font-medium hover:bg-ink/90 transition-colors"
           >
             <Plus className="w-3 h-3" strokeWidth={2} />
@@ -188,7 +195,7 @@ export function GlobalSetsPage() {
           <section className="border border-rule bg-paper-raised">
             {activeGroup && (
               <>
-                <header className="px-6 py-5 border-b border-rule">
+                <header className="group/header px-6 py-5 border-b border-rule">
                   <div className="flex items-start justify-between gap-6">
                     <div>
                       <div className="flex items-center gap-3">
@@ -201,6 +208,24 @@ export function GlobalSetsPage() {
                         <span className="text-[10px] uppercase tracking-eyebrow text-ink-muted font-sans">
                           {isHierarchical ? 'hierarchical' : 'flat'}
                         </span>
+                        <div className="flex items-center gap-1 opacity-0 group-hover/header:opacity-100 focus-within:opacity-100 transition-opacity">
+                          <button
+                            type="button"
+                            onClick={() => setEditSetOpen(true)}
+                            className="p-1 text-ink-muted hover:text-ink transition-colors"
+                            aria-label={`Edit ${activeGroup.name} set`}
+                          >
+                            <Pencil className="w-3.5 h-3.5" strokeWidth={1.5} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDeleteSetOpen(true)}
+                            className="p-1 text-ink-muted hover:text-destructive transition-colors"
+                            aria-label={`Delete ${activeGroup.name} set`}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5} />
+                          </button>
+                        </div>
                       </div>
                       {activeGroup.description && (
                         <p className="mt-2 text-[12px] text-ink-soft font-serif italic max-w-2xl">
@@ -307,6 +332,39 @@ export function GlobalSetsPage() {
             childCount: deletingNode.children.length,
           }}
           onClose={() => setDeletingId(null)}
+        />
+      )}
+
+      {newSetOpen && (
+        <NewSetDialog
+          onClose={() => setNewSetOpen(false)}
+          onCreated={(id) => setActiveId(id)}
+        />
+      )}
+
+      {editSetOpen && activeGroup && (
+        <EditSetDialog
+          set={{
+            id: activeGroup.id,
+            name: activeGroup.name,
+            slug: activeGroup.slug,
+            description: activeGroup.description,
+          }}
+          onClose={() => setEditSetOpen(false)}
+        />
+      )}
+
+      {deleteSetOpen && activeGroup && (
+        <DeleteSetDialog
+          set={{
+            id: activeGroup.id,
+            name: activeGroup.name,
+            slug: activeGroup.slug,
+            itemCount,
+            usedByFields,
+          }}
+          onClose={() => setDeleteSetOpen(false)}
+          onDeleted={() => setActiveId(null)}
         />
       )}
     </div>
