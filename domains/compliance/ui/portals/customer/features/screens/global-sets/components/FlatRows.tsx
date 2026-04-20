@@ -1,15 +1,21 @@
 import { useMemo } from 'react';
-import type { GlobalSetItem } from '../data/globalSetsMock';
+
+export interface FlatRowItem {
+  id: string;
+  slug: string;
+  name: string;
+  metadata: Record<string, string>;
+}
 
 export interface FlatRowsProps {
-  items: GlobalSetItem[];
+  items: FlatRowItem[];
 }
 
 export function FlatRows({ items }: FlatRowsProps) {
   const metadataKeys = useMemo(() => {
     const keys = new Set<string>();
     items.forEach((it) => {
-      if (it.metadata) Object.keys(it.metadata).forEach((k) => keys.add(k));
+      Object.keys(it.metadata).forEach((k) => keys.add(k));
     });
     return Array.from(keys);
   }, [items]);
@@ -24,11 +30,11 @@ export function FlatRows({ items }: FlatRowsProps) {
             gridTemplateColumns: `1fr 120px ${metadataKeys.map(() => '1fr').join(' ') || '0fr'}`,
           }}
         >
-          <div className="text-xs text-ink font-sans">{item.label}</div>
+          <div className="text-xs text-ink font-sans">{item.name}</div>
           <div className="font-mono text-[11px] text-ink-muted tabular-nums">{item.slug}</div>
           {metadataKeys.map((k) => (
             <div key={k} className="text-[11px] text-ink-soft font-sans">
-              {item.metadata?.[k] ?? ''}
+              {item.metadata[k] ?? ''}
             </div>
           ))}
         </div>

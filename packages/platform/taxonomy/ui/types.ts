@@ -90,6 +90,7 @@ export interface Category {
   name: string;
   slug: string;
   sortOrder: number;
+  metadata: Record<string, string>;
   createdAt: string;
   updatedAt: string;
 }
