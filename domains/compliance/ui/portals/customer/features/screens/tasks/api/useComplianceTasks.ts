@@ -13,9 +13,10 @@ interface PaginatedResponse<T> {
 }
 
 /**
- * Row shape returned by GET /compliance-tasks — matches ComplianceTaskRow
- * on the server. Compliance-specific fields (ruleId, clientId, lawId,
- * periodStart/End) come straight from the join — no external_key parsing.
+ * Row shape returned by the generic entity-engine endpoint
+ * GET /compliance-tasks — the child columns plus parent columns projected
+ * via extensionOf (title, status, priority, dueDate, assignees, etc.). No
+ * external_key parsing — it comes through the projection.
  */
 interface ComplianceTaskRow {
   id: string;
@@ -32,14 +33,9 @@ interface ComplianceTaskRow {
   lawId: string;
   periodStart: string;
   periodEnd: string;
-  externalKey: string;
+  externalKey: string | null;
   createdAt: string;
   updatedAt: string;
-}
-
-interface ComplianceTasksResponse {
-  rows: ComplianceTaskRow[];
-  total: number;
 }
 
 interface RuleRecord {
@@ -122,9 +118,9 @@ export function useComplianceTaskRows(): ComplianceTasksResult {
   const lawsHooks = useEntityHooks('laws');
   const clientsHooks = useEntityHooks('clients');
 
-  const tasksQuery = useQuery<ComplianceTasksResponse>({
+  const tasksQuery = useQuery<PaginatedResponse<ComplianceTaskRow>>({
     queryKey: ['compliance-tasks', { limit: 1000 }],
-    queryFn: () => apiFn.get<ComplianceTasksResponse>('/compliance-tasks?limit=1000'),
+    queryFn: () => apiFn.get<PaginatedResponse<ComplianceTaskRow>>('/compliance-tasks?limit=1000'),
   });
   const rulesQuery = rulesHooks.useList({ limit: 1000 });
   const lawsQuery = lawsHooks.useList({ limit: 1000 });
@@ -146,7 +142,7 @@ export function useComplianceTaskRows(): ComplianceTasksResult {
     orgUnitsQuery.error;
 
   const { rows, handlers, clientOptions, lawOptions } = useMemo(() => {
-    const tasks = tasksQuery.data?.rows ?? [];
+    const tasks = tasksQuery.data?.data ?? [];
     const rules =
       (rulesQuery.data as PaginatedResponse<RuleRecord> | undefined)?.data ?? ([] as RuleRecord[]);
     const laws =
@@ -242,7 +238,7 @@ export function useUpdateComplianceTask(options?: { silent?: boolean }) {
 
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: UpdateComplianceTaskPayload }) =>
-      apiFn.put<unknown>(`/compliance-tasks/${id}`, data),
+      apiFn.patch<unknown>(`/compliance-tasks/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['compliance-tasks'] });
     },

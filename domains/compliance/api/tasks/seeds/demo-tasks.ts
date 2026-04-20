@@ -1,16 +1,20 @@
 import type { INestApplicationContext } from '@nestjs/common';
 import { DatabaseService, eq, users } from '@packages/database';
+import { DomainEventEmitter } from '@packages/events';
+import { EntityService } from '@packages/entity-engine';
 import { complianceTasks } from '../../schema/compliance-tasks';
 import { ComplianceRuleService } from '../../rules/compliance-rules.service';
 import { ClientRegistrationService } from '../../client-registrations/client-registrations.service';
-import { ComplianceTasksService } from '../../compliance-tasks/compliance-tasks.service';
+import { ComplianceTasksLookupService } from '../../compliance-tasks/compliance-tasks-lookup.service';
+import { buildComplianceExternalKey } from '../../compliance-tasks/compliance-tasks.config';
+import { COMPLIANCE_TASK_GENERATED } from '../../events/types';
 
 /**
  * Mirrors `GenerateComplianceTasksAction` so seeding is not tied to the
  * automation runner. For every active rule × registered client × occurrence
  * in the next `HORIZON_MONTHS` months, materializes a compliance task via
- * `ComplianceTasksService.create` (transactional write to tasks +
- * compliance_tasks). Idempotent via findByRuleClientPeriod.
+ * the generic EntityService<compliance-tasks>. Idempotent via
+ * findByRuleClientPeriod.
  */
 const HORIZON_MONTHS = 6;
 
@@ -18,7 +22,9 @@ export const seedDemoTasks = async (ctx: INestApplicationContext): Promise<void>
   const database = ctx.get(DatabaseService);
   const ruleService = ctx.get(ComplianceRuleService);
   const registrationService = ctx.get(ClientRegistrationService);
-  const complianceTasksService = ctx.get(ComplianceTasksService);
+  const lookup = ctx.get(ComplianceTasksLookupService);
+  const entityService = ctx.get<EntityService>('ENTITY_SERVICE_compliance-tasks');
+  const events = ctx.get(DomainEventEmitter);
 
   // Idempotency short-circuit: if any compliance task already exists, skip.
   const existing = await database.db
@@ -57,27 +63,43 @@ export const seedDemoTasks = async (ctx: INestApplicationContext): Promise<void>
 
       for (const occ of occurrences) {
         const periodStart = toIsoDate(occ.periodStart);
-        const found = await complianceTasksService.findByRuleClientPeriod(
-          rule.id,
-          reg.clientId,
-          periodStart,
-        );
+        const found = await lookup.findByRuleClientPeriod(rule.id, reg.clientId, periodStart);
         if (found) continue;
 
-        await complianceTasksService.create(
+        const periodEnd = toIsoDate(occ.periodEnd);
+        const dueDate = toIsoDate(occ.dueDate);
+
+        const row = await entityService.create(
           {
-            title: `${rule.name} — ${periodStart} to ${toIsoDate(occ.periodEnd)}`,
-            dueDate: toIsoDate(occ.dueDate),
+            title: `${rule.name} — ${periodStart} to ${periodEnd}`,
+            dueDate,
             priority: 'medium',
             ruleId: rule.id,
             clientId: reg.clientId,
             lawId: rule.lawId,
             periodStart,
-            periodEnd: toIsoDate(occ.periodEnd),
+            periodEnd,
             assigneeTeamId: assigneeOrgId,
           },
           admin.id,
         );
+
+        events.emitDynamic(COMPLIANCE_TASK_GENERATED, {
+          entityType: 'compliance_rules',
+          entityId: rule.id,
+          actorId: null,
+          payload: {
+            ruleId: rule.id,
+            clientId: reg.clientId,
+            lawId: rule.lawId,
+            taskId: row.id as string,
+            externalKey: (row.externalKey as string | undefined)
+              ?? buildComplianceExternalKey(rule.id, reg.clientId, periodStart),
+            periodStart,
+            periodEnd,
+            dueDate,
+          },
+        });
       }
     }
   }
