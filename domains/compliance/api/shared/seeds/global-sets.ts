@@ -1,11 +1,12 @@
 import type { INestApplicationContext } from '@nestjs/common';
-import { DatabaseService, eq } from '@packages/database';
+import { DatabaseService, and, eq, isNull } from '@packages/database';
 import { CategoryService } from '@packages/taxonomy';
-import { categoryGroups } from '@packages/taxonomy/schema';
+import { categories, categoryGroups } from '@packages/taxonomy/schema';
 
 interface GlobalSetItemSeed {
   slug: string;
   name: string;
+  metadata?: Record<string, string>;
   children?: GlobalSetItemSeed[];
 }
 
@@ -22,12 +23,12 @@ const GLOBAL_SETS: GlobalSetGroupSeed[] = [
     name: 'Countries',
     description: 'ISO 3166-1 country list. Used on client, user and jurisdiction fields.',
     items: [
-      { slug: 'IN', name: 'India' },
-      { slug: 'US', name: 'United States' },
-      { slug: 'GB', name: 'United Kingdom' },
-      { slug: 'AE', name: 'United Arab Emirates' },
-      { slug: 'SG', name: 'Singapore' },
-      { slug: 'DE', name: 'Germany' },
+      { slug: 'IN', name: 'India', metadata: { iso3: 'IND', phone: '+91' } },
+      { slug: 'US', name: 'United States', metadata: { iso3: 'USA', phone: '+1' } },
+      { slug: 'GB', name: 'United Kingdom', metadata: { iso3: 'GBR', phone: '+44' } },
+      { slug: 'AE', name: 'United Arab Emirates', metadata: { iso3: 'ARE', phone: '+971' } },
+      { slug: 'SG', name: 'Singapore', metadata: { iso3: 'SGP', phone: '+65' } },
+      { slug: 'DE', name: 'Germany', metadata: { iso3: 'DEU', phone: '+49' } },
     ],
   },
   {
@@ -64,11 +65,11 @@ const GLOBAL_SETS: GlobalSetGroupSeed[] = [
     name: 'Currencies',
     description: 'ISO 4217 currencies with symbol and minor units.',
     items: [
-      { slug: 'INR', name: 'Indian Rupee' },
-      { slug: 'USD', name: 'US Dollar' },
-      { slug: 'EUR', name: 'Euro' },
-      { slug: 'GBP', name: 'Pound Sterling' },
-      { slug: 'AED', name: 'UAE Dirham' },
+      { slug: 'INR', name: 'Indian Rupee', metadata: { symbol: '₹', minor: '2' } },
+      { slug: 'USD', name: 'US Dollar', metadata: { symbol: '$', minor: '2' } },
+      { slug: 'EUR', name: 'Euro', metadata: { symbol: '€', minor: '2' } },
+      { slug: 'GBP', name: 'Pound Sterling', metadata: { symbol: '£', minor: '2' } },
+      { slug: 'AED', name: 'UAE Dirham', metadata: { symbol: 'د.إ', minor: '2' } },
     ],
   },
   {
@@ -129,7 +130,10 @@ async function ensureGlobalSet(
     .where(eq(categoryGroups.slug, set.slug))
     .limit(1);
 
-  if (existing) return;
+  if (existing) {
+    await backfillMetadata(database, categoryService, existing.id, set.items);
+    return;
+  }
 
   const group = await categoryService.createCategoryGroup({
     name: set.name,
@@ -144,6 +148,7 @@ async function ensureGlobalSet(
       name: item.name,
       slug: item.slug,
       sortOrder: i,
+      metadata: item.metadata,
     });
 
     if (!item.children) continue;
@@ -156,7 +161,40 @@ async function ensureGlobalSet(
         name: child.name,
         slug: child.slug,
         sortOrder: j,
+        metadata: child.metadata,
       });
+    }
+  }
+}
+
+async function backfillMetadata(
+  database: DatabaseService,
+  categoryService: CategoryService,
+  groupId: string,
+  items: GlobalSetItemSeed[],
+  parentId: string | null = null,
+): Promise<void> {
+  for (const item of items) {
+    const [row] = await database.db
+      .select({ id: categories.id, metadata: categories.metadata })
+      .from(categories)
+      .where(
+        and(
+          eq(categories.groupId, groupId),
+          eq(categories.slug, item.slug),
+          parentId === null ? isNull(categories.parentId) : eq(categories.parentId, parentId),
+        ),
+      )
+      .limit(1);
+
+    if (!row) continue;
+
+    if (item.metadata && Object.keys(row.metadata ?? {}).length === 0) {
+      await categoryService.updateCategory(row.id, { metadata: item.metadata });
+    }
+
+    if (item.children) {
+      await backfillMetadata(database, categoryService, groupId, item.children, row.id);
     }
   }
 }
