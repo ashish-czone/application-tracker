@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, afterEach, vi } from 'vitest';
 import { pgTable, uuid, text, timestamp } from 'drizzle-orm/pg-core';
 import { sql, eq } from 'drizzle-orm';
 import { createPlatformTestModule, cleanDatabase } from '@packages/platform-testing';
@@ -136,6 +136,7 @@ describe('EntityService extensionOf (integration)', () => {
   let cleanup: () => Promise<void>;
   let childService: EntityService;
   let entityRegistry: EntityRegistryService;
+  let eventEmitter: DomainEventEmitter;
 
   beforeAll(async () => {
     if (!fieldTypeRegistry.has('text')) {
@@ -157,7 +158,7 @@ describe('EntityService extensionOf (integration)', () => {
 
     const fieldDefService = module.get(FieldDefinitionService);
     entityRegistry = module.get(EntityRegistryService);
-    const eventEmitter = module.get(DomainEventEmitter);
+    eventEmitter = module.get(DomainEventEmitter);
 
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS ext_tasks (
@@ -520,6 +521,157 @@ describe('EntityService extensionOf (integration)', () => {
       const [parentAfter] = await db.select().from(parentTasks).where(eq(parentTasks.id, created.id as string)) as any[];
       expect(parentAfter.deletedAt).toBeNull();
       expect(parentAfter.deletedBy).toBeNull();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Event snapshots
+  //
+  // The child config's entityType is what drives the event name
+  // (`ext_compliance_tasks.Created` etc). Listeners subscribed to that event
+  // should see a snapshot that already has the parent's projected fields
+  // merged in — the write path re-reads the joined row before emitting so
+  // audit + side-effect handlers never have to rejoin.
+  // ---------------------------------------------------------------------------
+
+  describe('event snapshots for extension entities', () => {
+    function captureEmits() {
+      const events: Array<{ name: string; params: any }> = [];
+      const spy = vi.spyOn(eventEmitter, 'emitDynamic').mockImplementation((name, params) => {
+        events.push({ name, params });
+      });
+      return { events, spy };
+    }
+
+    it('Created event carries parent projected fields in after-snapshot', async () => {
+      const { events, spy } = captureEmits();
+      try {
+        const actor = crypto.randomUUID();
+        await childService.create(
+          { title: 'Snapshot create', status: 'open', priority: 'high', ruleId: 'r-snap', periodStart: '2026-01-01' },
+          actor,
+        );
+
+        const created = events.find((e) => e.name === 'ext_compliance_tasks.Created');
+        expect(created).toBeDefined();
+        expect(created!.params.entityType).toBe('ext_compliance_tasks');
+        expect(created!.params.actorId).toBe(actor);
+
+        const after = created!.params.payload.after as Record<string, unknown>;
+        // Parent projected fields
+        expect(after.title).toBe('Snapshot create');
+        expect(after.status).toBe('open');
+        expect(after.priority).toBe('high');
+        // Child fields
+        expect(after.ruleId).toBe('r-snap');
+        expect(after.periodStart).toBe('2026-01-01');
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
+    it('Updated event has before + after snapshots with parent fields on both sides', async () => {
+      const actor = crypto.randomUUID();
+      const created = await childService.create(
+        { title: 'Old title', status: 'open', priority: 'low', ruleId: 'r1', periodStart: '2026-01-01' },
+        actor,
+      );
+
+      const { events, spy } = captureEmits();
+      try {
+        await childService.update(
+          created.id as string,
+          { title: 'New title', ruleId: 'r2' },
+          actor,
+        );
+
+        const updated = events.find((e) => e.name === 'ext_compliance_tasks.Updated');
+        expect(updated).toBeDefined();
+
+        const before = updated!.params.payload.before as Record<string, unknown>;
+        const after = updated!.params.payload.after as Record<string, unknown>;
+
+        expect(before.title).toBe('Old title');
+        expect(before.ruleId).toBe('r1');
+        expect(before.priority).toBe('low');
+
+        expect(after.title).toBe('New title');
+        expect(after.ruleId).toBe('r2');
+        // Untouched parent column still present in after snapshot
+        expect(after.priority).toBe('low');
+
+        const changes = updated!.params.payload.changes as string[];
+        expect(changes).toEqual(expect.arrayContaining(['title', 'ruleId']));
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
+    it('parent-only update still emits Updated with a child-rooted snapshot containing parent changes', async () => {
+      const actor = crypto.randomUUID();
+      const created = await childService.create(
+        { title: 'Before', status: 'open', priority: 'low', ruleId: 'r1', periodStart: '2026-01-01' },
+        actor,
+      );
+
+      const { events, spy } = captureEmits();
+      try {
+        await childService.update(created.id as string, { title: 'After parent only' }, actor);
+
+        const updated = events.find((e) => e.name === 'ext_compliance_tasks.Updated');
+        expect(updated).toBeDefined();
+
+        const after = updated!.params.payload.after as Record<string, unknown>;
+        expect(after.title).toBe('After parent only');
+        // Child field untouched but still present
+        expect(after.ruleId).toBe('r1');
+
+        const changes = updated!.params.payload.changes as string[];
+        expect(changes).toContain('title');
+        expect(changes).not.toContain('ruleId');
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
+    it('Deleted event carries a before-snapshot that includes parent fields', async () => {
+      const actor = crypto.randomUUID();
+      const created = await childService.create(
+        { title: 'To delete', status: 'open', priority: 'high', ruleId: 'r1', periodStart: '2026-01-01' },
+        actor,
+      );
+
+      const { events, spy } = captureEmits();
+      try {
+        await childService.softDelete(created.id as string, actor);
+
+        const deleted = events.find((e) => e.name === 'ext_compliance_tasks.Deleted');
+        expect(deleted).toBeDefined();
+
+        const before = deleted!.params.payload.before as Record<string, unknown>;
+        expect(before.title).toBe('To delete');
+        expect(before.status).toBe('open');
+        expect(before.priority).toBe('high');
+        expect(before.ruleId).toBe('r1');
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
+    it('parent entity type does not receive a fan-out event when the child is written', async () => {
+      const { events, spy } = captureEmits();
+      try {
+        const actor = crypto.randomUUID();
+        await childService.create(
+          { title: 'No fanout', status: 'open', ruleId: 'r-no-fanout', periodStart: '2026-01-01' },
+          actor,
+        );
+
+        expect(events.some((e) => e.name === 'ext_compliance_tasks.Created')).toBe(true);
+        expect(events.some((e) => e.name === 'ext_tasks.Created')).toBe(false);
+      } finally {
+        spy.mockRestore();
+      }
     });
   });
 });
