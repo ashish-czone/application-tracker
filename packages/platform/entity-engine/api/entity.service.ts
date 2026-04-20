@@ -27,6 +27,7 @@ import type { FieldDefinition } from './types';
 import { buildSnapshot, diffSnapshot } from './helpers/snapshot';
 import { validatePayload } from './helpers/validate-payload';
 import { splitPayload } from './helpers/split-payload';
+import { splitExtensionPayload } from './helpers/split-extension-payload';
 import { buildClonePayload } from './helpers/build-clone-payload';
 import { fieldTypeSaveHookRegistry, type FieldTypeSaveHookRegistry, type FieldTypeSaveHookContext } from './services/field-type-save-hook.registry';
 import type { WorkflowExtension } from './extensions/workflow-extension.interface';
@@ -814,16 +815,49 @@ export class EntityService {
       }
     }
 
-    // Phase 2: Transaction (entity row + EAV + relational writes)
-    const row = await this.database.db.transaction(async (tx) => {
-      const result = await tx
-        .insert(config.table as any)
-        .values(withTenantInsert(config.table as any, { id: entityId, ...standardFields, createdBy: actorId }) as any)
-        .returning() as any[];
-      const inserted = result[0];
+    // Phase 2: Transaction (entity row + EAV + relational writes).
+    // Extension entities (`extensionOf`) insert the parent row first, then the
+    // child using the same `entityId` as its FK-also-PK. Both in one tx so a
+    // failure on either side rolls back cleanly.
+    const ext = this.getExtensionMeta();
+    let row = await this.database.db.transaction(async (tx) => {
+      let inserted: any;
+
+      if (ext) {
+        const { parentFields, childFields } = splitExtensionPayload(standardFields, ext);
+
+        const parentTableCols = getTableColumns(ext.parentTable as any);
+        const parentRecord: Record<string, unknown> = {
+          id: entityId,
+          ...ext.parentDefaults,
+          ...parentFields,
+        };
+        if ('createdBy' in parentTableCols) parentRecord.createdBy = actorId;
+        await tx
+          .insert(ext.parentTable as any)
+          .values(withTenantInsert(ext.parentTable as any, parentRecord) as any);
+
+        const childTableCols = getTableColumns(config.table as any);
+        const childRecord: Record<string, unknown> = {
+          [ext.foreignKeyField]: entityId,
+          ...childFields,
+        };
+        if ('createdBy' in childTableCols) childRecord.createdBy = actorId;
+        const childResult = await tx
+          .insert(config.table as any)
+          .values(withTenantInsert(config.table as any, childRecord) as any)
+          .returning() as any[];
+        inserted = childResult[0];
+      } else {
+        const result = await tx
+          .insert(config.table as any)
+          .values(withTenantInsert(config.table as any, { id: entityId, ...standardFields, createdBy: actorId }) as any)
+          .returning() as any[];
+        inserted = result[0];
+      }
 
       if (Object.keys(customFields).length > 0 && this.eavStorage) {
-        await this.eavStorage.setValues(config.entityType, inserted.id, customFields, tx);
+        await this.eavStorage.setValues(config.entityType, entityId, customFields, tx);
       }
 
       // Relational writes inside the transaction
@@ -833,7 +867,7 @@ export class EntityService {
         const hooks = fieldTypeSaveHookRegistry.get(def.fieldType);
         if (hooks?.onTransactionalSave) {
           const ctx: FieldTypeSaveHookContext = {
-            entityType: config.entityType, entityId: inserted.id, fieldKey: key,
+            entityType: config.entityType, entityId, fieldKey: key,
             fieldType: def.fieldType, mode: 'create', actorId,
           };
           await hooks.onTransactionalSave(value, ctx, tx);
@@ -842,6 +876,13 @@ export class EntityService {
 
       return inserted;
     });
+
+    // For extension entities the child row on its own is only half the entity.
+    // Re-read via the joined findOneOrFail so snapshot/event/response see the
+    // full shape (id aliased + projected parent columns included).
+    if (ext) {
+      row = await this.findOneOrFail(entityId);
+    }
 
     // Phase 3: onAfterSave hooks (fire-and-forget)
     for (const [key, value] of Object.entries(allFields)) {
@@ -910,7 +951,9 @@ export class EntityService {
       payload: { after: snapshot },
     });
 
-    return this.toResponse(row);
+    // For extensions, `row` was re-read via findOneOrFail above and is
+    // already in response shape; skip the second toResponse pass.
+    return ext ? row : this.toResponse(row);
   }
 
   // ---------------------------------------------------------------------------

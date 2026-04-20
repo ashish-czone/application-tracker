@@ -567,6 +567,9 @@ export interface ResolvedExtension {
   parentTable: PgTable;
   /** Child's primary-key-also-foreign-key column. */
   foreignKeyColumn: PgColumn;
+  /** JS property name of `foreignKeyColumn` on the child table — used by the
+   *  write path to key the FK into Drizzle insert values. */
+  foreignKeyField: string;
   /** Parent's `id` column — RHS of the join condition. */
   parentIdColumn: PgColumn;
   /** Ordered projection of parent columns surfaced on the child's read
