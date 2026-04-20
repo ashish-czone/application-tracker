@@ -9,6 +9,7 @@ export interface OrgUnitLevel {
 export interface OrgUnit {
   id: string;
   name: string;
+  description: string | null;
   parentId: string | null;
   levelId: string;
   sortOrder: number;

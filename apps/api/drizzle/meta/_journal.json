@@ -155,6 +155,20 @@
       "when": 1775732400000,
       "tag": "0021_addon_integration_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1776129117000,
+      "tag": "0022_add_org_unit_levels",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1776682015778,
+      "tag": "0023_org_units_description",
+      "breakpoints": true
     }
   ]
 }

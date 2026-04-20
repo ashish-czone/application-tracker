@@ -16,11 +16,12 @@ export class OrgUnitService {
   // CRUD
   // ---------------------------------------------------------------------------
 
-  async create(data: { name: string; parentId?: string; levelId: string; sortOrder?: number }): Promise<OrgUnit> {
+  async create(data: { name: string; description?: string | null; parentId?: string; levelId: string; sortOrder?: number }): Promise<OrgUnit> {
     const [row] = await this.database.db
       .insert(orgUnits)
       .values(withTenantInsert(orgUnits, {
         name: data.name,
+        description: data.description ?? null,
         parentId: data.parentId ?? null,
         levelId: data.levelId,
         sortOrder: data.sortOrder ?? 0,
@@ -35,6 +36,7 @@ export class OrgUnitService {
       .select({
         id: orgUnits.id,
         name: orgUnits.name,
+        description: orgUnits.description,
         parentId: orgUnits.parentId,
         levelId: orgUnits.levelId,
         sortOrder: orgUnits.sortOrder,
@@ -101,6 +103,7 @@ export class OrgUnitService {
       return {
         id: row.id,
         name: row.name,
+        description: row.description,
         parentId: row.parentId,
         levelId: row.levelId,
         sortOrder: row.sortOrder,
@@ -124,7 +127,7 @@ export class OrgUnitService {
     return row;
   }
 
-  async update(id: string, data: Partial<{ name: string; parentId: string | null; levelId: string; sortOrder: number }>): Promise<OrgUnit> {
+  async update(id: string, data: Partial<{ name: string; description: string | null; parentId: string | null; levelId: string; sortOrder: number }>): Promise<OrgUnit> {
     await this.findOneOrFail(id);
     const [row] = await this.database.db
       .update(orgUnits)

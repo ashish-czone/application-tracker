@@ -55,6 +55,7 @@ function makeOrgUnit(overrides?: Partial<Record<string, unknown>>) {
   return {
     id: 'ou-1',
     name: 'Engineering',
+    description: null,
     parentId: null,
     levelId: 'level-1',
     sortOrder: 0,
@@ -141,6 +142,26 @@ describe('OrgUnitService', () => {
 
       const valuesArg = db.values.mock.calls[0][0];
       expect(valuesArg.parentId).toBe('parent-1');
+    });
+
+    it('should set description to null when not provided', async () => {
+      const unit = makeOrgUnit();
+      _chain._enqueue([unit]);
+
+      await service.create({ name: 'Root', levelId: 'level-1' });
+
+      const valuesArg = db.values.mock.calls[0][0];
+      expect(valuesArg.description).toBeNull();
+    });
+
+    it('should set description when provided', async () => {
+      const unit = makeOrgUnit({ description: 'Handles GST filings' });
+      _chain._enqueue([unit]);
+
+      await service.create({ name: 'GST', levelId: 'level-1', description: 'Handles GST filings' });
+
+      const valuesArg = db.values.mock.calls[0][0];
+      expect(valuesArg.description).toBe('Handles GST filings');
     });
   });
 
