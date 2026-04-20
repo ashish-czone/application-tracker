@@ -10,6 +10,7 @@ function mockConfig(overrides: Partial<EntityConfig> = {}): EntityConfig {
     slug: 'test-entities',
     table: {} as any,
     systemColumns: ['id', 'deletedAt', 'deletedBy'],
+    onDelete: { mode: 'soft' },
     searchColumns: [],
     defaultSort: 'createdAt',
     sortableColumns: {},
@@ -115,16 +116,16 @@ describe('EntityRegistryService', () => {
     expect(entry.relationships[0].foreignKey).toBe('candidateId');
   });
 
-  it('derives softDelete from table schema', () => {
-    registry.register(mockConfig({ table: { deletedAt: {} } as any }));
+  it('derives softDelete feature from onDelete.mode', () => {
+    registry.register(mockConfig({ onDelete: { mode: 'soft' } }));
 
     const entries = registry.getRegistryEntries();
     expect(entries[0].features.softDelete).toBe(true);
     expect(entries[0].features.restore).toBe(true);
   });
 
-  it('softDelete is false when table has no deletedAt column', () => {
-    registry.register(mockConfig({ table: {} as any }));
+  it('softDelete feature is false when onDelete.mode is not soft', () => {
+    registry.register(mockConfig({ onDelete: { mode: 'hard' } }));
 
     const entries = registry.getRegistryEntries();
     expect(entries[0].features.softDelete).toBe(false);

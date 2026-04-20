@@ -6,7 +6,6 @@ import { withTenant, withTenantInsert, tenantCondition } from '@packages/tenancy
 import {
   buildFilterConditions,
   buildSearchCondition,
-  buildSoftDeleteCondition,
   buildSortExpression as qbBuildSortExpression,
   computePagination,
   computePaginationMeta,
@@ -14,6 +13,7 @@ import {
   parseFilterParam,
   mergeFilters,
 } from '@packages/query-builder';
+import { buildSoftDeleteCondition } from '@packages/soft-delete';
 import { fieldTypeRegistry } from '@packages/field-types';
 import { DatabaseService } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
@@ -396,11 +396,8 @@ export class EntityService {
       if (scopeCondition) conditions.push(scopeCondition);
     }
 
-    // Soft delete filter (delegated to query-builder)
-    const softDeleteCond = buildSoftDeleteCondition(
-      (config.table as any).deletedAt,
-      query.includeDeleted ?? false,
-    );
+    // Soft delete filter (delegated to @packages/soft-delete)
+    const softDeleteCond = buildSoftDeleteCondition(config.table, query.includeDeleted ?? false);
     if (softDeleteCond) conditions.push(softDeleteCond);
 
     // Search across configured columns + lookup field labels
@@ -492,9 +489,8 @@ export class EntityService {
 
     const conditions: any[] = [eq(table.id, id)];
 
-    if (table.deletedAt) {
-      conditions.push(isNull(table.deletedAt));
-    }
+    const softDeleteCond = buildSoftDeleteCondition(table);
+    if (softDeleteCond) conditions.push(softDeleteCond);
 
     // Data access scope filtering — ensures user can only view records within their scope
     if (accessCtx) {
@@ -1689,9 +1685,8 @@ export class EntityService {
         eq(col, fields[def.fieldKey] as any),
       ];
 
-      if (table.deletedAt) {
-        conditions.push(isNull(table.deletedAt));
-      }
+      const softDeleteCond = buildSoftDeleteCondition(table);
+      if (softDeleteCond) conditions.push(softDeleteCond);
 
       const [existing] = await this.database.db
         .select({ id: table.id })

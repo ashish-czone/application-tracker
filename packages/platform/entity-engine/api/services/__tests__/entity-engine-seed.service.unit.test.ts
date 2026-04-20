@@ -35,6 +35,7 @@ describe('EntityEngineSeedService', () => {
   it('skips seeding when the entity is not admin-configurable', async () => {
     const config = defineEntity({
       table: tbl,
+      onDelete: { mode: 'hard' },
       slug: 'things',
       fields: { name: { type: 'text', label: 'Name' } },
       ui: { icon: 'Box' },
@@ -49,6 +50,7 @@ describe('EntityEngineSeedService', () => {
   it('seeds when the entity opts in via adminConfigurable', async () => {
     const config = defineEntity({
       table: tbl,
+      onDelete: { mode: 'hard' },
       slug: 'things',
       adminConfigurable: true,
       fields: { name: { type: 'text', label: 'Name' } },
@@ -64,12 +66,14 @@ describe('EntityEngineSeedService', () => {
   it('seedAll honours the per-entity flag', async () => {
     registry.register(defineEntity({
       table: tbl,
+      onDelete: { mode: 'hard' },
       slug: 'skipped',
       fields: { name: { type: 'text', label: 'Name' } },
       ui: { icon: 'Box' },
     }));
     registry.register(defineEntity({
       table: pgTable('admined', { id: text('id').primaryKey(), name: text('name').notNull() }),
+      onDelete: { mode: 'hard' },
       slug: 'admined',
       adminConfigurable: true,
       fields: { name: { type: 'text', label: 'Name' } },

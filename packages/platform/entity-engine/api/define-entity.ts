@@ -1,6 +1,7 @@
 import { getTableColumns } from 'drizzle-orm';
 import type { PgTable, PgColumn } from 'drizzle-orm/pg-core';
 import type { SQL } from 'drizzle-orm';
+import { hasSoftDeleteColumns } from '@packages/soft-delete';
 import type {
   EntityConfig,
   EntityHooks,
@@ -9,6 +10,7 @@ import type {
   DataAccessConfig,
   FieldMeta,
   FieldType,
+  OnDeleteConfig,
   SeedSectionInput,
   SetPicklistOptionInput,
   WorkflowFieldConfig,
@@ -133,8 +135,15 @@ export interface ModelDefinition<TTable extends PgTable = PgTable> {
 
   // --- Model behaviors ---
 
-  /** Enable soft delete (deletedAt/deletedBy columns) */
-  softDelete?: boolean;
+  /**
+   * Deletion policy. Required on every entity — forces an explicit hard/soft/
+   * restrict choice rather than inferring from schema. See `OnDeleteConfig`.
+   *
+   * `mode: 'soft'` requires the Drizzle table to spread `...softDeleteColumns()`
+   * from `@packages/soft-delete`. `mode: 'hard' | 'restrict'` forbids those
+   * columns. Mismatches fail at defineEntity() time with a clear message.
+   */
+  onDelete: OnDeleteConfig;
   /** Enable timestamp tracking (createdAt/updatedAt columns) */
   timestamps?: boolean;
   /** Enable dynamic custom fields (EAV storage). When true, admins can add custom fields and EAV value operations are active. Default: false. */
@@ -272,7 +281,7 @@ const RELATION_TO_FIELD_TYPE: Record<string, FieldType> = {
  * const candidateModel = defineEntity({
  *   table: candidates,
  *   slug: 'candidates',
- *   softDelete: true,
+ *   onDelete: { mode: 'soft' },
  *   fields: {
  *     firstName: { type: 'text', label: 'First Name', required: true, isLabel: true, searchable: true },
  *     email: { type: 'email', label: 'Email', unique: true, searchable: true },
@@ -305,8 +314,22 @@ export function defineEntity<TTable extends PgTable>(model: ModelDefinition<TTab
   let nameField: string | string[] = 'id';
   let defaultSort = model.defaultSort ?? 'createdAt';
 
-  // Add soft-delete infrastructure columns
-  if (model.softDelete !== false) {
+  // Validate onDelete policy against table shape + register soft-delete columns
+  // as system columns when the entity is soft-deletable.
+  const softCols = hasSoftDeleteColumns(model.table);
+  if (model.onDelete.mode === 'soft' && !softCols) {
+    throw new Error(
+      `defineEntity({ onDelete: { mode: 'soft' } }) for '${model.slug}' requires the table to spread ` +
+        `...softDeleteColumns() from @packages/soft-delete. Missing deletedAt / deletedBy columns.`,
+    );
+  }
+  if (model.onDelete.mode !== 'soft' && softCols) {
+    throw new Error(
+      `defineEntity({ onDelete: { mode: '${model.onDelete.mode}' } }) for '${model.slug}' is incompatible ` +
+        `with a table that spreads ...softDeleteColumns(). Either switch to mode 'soft' or remove the columns.`,
+    );
+  }
+  if (model.onDelete.mode === 'soft') {
     systemColumns.push('deletedAt', 'deletedBy');
   }
 
@@ -457,6 +480,7 @@ export function defineEntity<TTable extends PgTable>(model: ModelDefinition<TTab
     slug: model.slug,
     table: model.table,
     systemColumns,
+    onDelete: model.onDelete,
     searchColumns,
     defaultSort,
     sortableColumns,

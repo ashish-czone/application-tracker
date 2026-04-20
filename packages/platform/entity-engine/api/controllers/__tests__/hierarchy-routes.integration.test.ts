@@ -26,6 +26,7 @@ const folders = pgTable('hierarchy_test_folders', {
 
 const folderConfig = defineEntity({
   table: folders,
+  onDelete: { mode: 'soft' },
   slug: 'hierarchy-test-folders',
   singularName: 'Folder',
   pluralName: 'Folders',

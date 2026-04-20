@@ -20,6 +20,7 @@ const testTable = pgTable('widgets', {
 function makeConfig() {
   return defineEntity({
     table: testTable,
+    onDelete: { mode: 'soft' },
     slug: 'widgets',
     fields: {
       name: { type: 'text', label: 'Name', required: true, isLabel: true, quickCreate: true },
@@ -94,6 +95,7 @@ describe('buildInMemoryFields', () => {
   it('returns an empty list when the config has no fieldMeta entries', () => {
     const emptyConfig = defineEntity({
       table: pgTable('empty', { id: text('id').primaryKey() }),
+      onDelete: { mode: 'hard' },
       slug: 'empty',
       fields: {},
       ui: { icon: 'Box' },
@@ -104,6 +106,7 @@ describe('buildInMemoryFields', () => {
   it('honours computedColumns as additional skip entries', () => {
     const config = defineEntity({
       table: testTable,
+      onDelete: { mode: 'soft' },
       slug: 'widgets',
       fields: {
         name: { type: 'text', label: 'Name' },
@@ -144,6 +147,7 @@ describe('buildInMemoryLayout', () => {
         id: text('id').primaryKey(),
         name: text('name').notNull(),
       }),
+      onDelete: { mode: 'hard' },
       slug: 'small',
       fields: {
         name: { type: 'text', label: 'Name' },
