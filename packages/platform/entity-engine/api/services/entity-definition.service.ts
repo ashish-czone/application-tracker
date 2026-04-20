@@ -28,24 +28,40 @@ export class EntityDefinitionService {
    * fields (createdBy/createdAt/updatedAt) when the table has those columns.
    * Picklist options declared via `fieldMeta.picklistOptions` are attached
    * inline. Returns `[]` if the entity is not registered.
+   *
+   * For entities that declare `extensionOf`, the parent's projected fields
+   * are merged in — callers that render forms or lay out sections see a
+   * single unified field list.
    */
   resolveFieldsFromRegistry(entityType: string): FullLayoutField[] {
     const config = this.registry.get(entityType);
     if (!config) return [];
-    return buildInMemoryFields(config);
+    return buildInMemoryFields(config, this.resolveExtensionContext(entityType));
   }
 
   /**
    * Returns a `FullLayout` built from the entity's code-defined sections.
    * Matches the shape of `LayoutService.getLayout` so downstream consumers
    * can treat the two interchangeably. Returns an empty layout if the entity
-   * is not registered.
+   * is not registered. For extensionOf entities the parent's projected
+   * fields are available to place in the child's sections by fieldKey.
    */
   resolveLayoutFromRegistry(entityType: string, layoutName = 'Standard'): FullLayout {
     const config = this.registry.get(entityType);
     if (!config) {
       return { entityType, layoutName, sections: [], quickCreateFields: [] };
     }
-    return buildInMemoryLayout(config, layoutName);
+    return buildInMemoryLayout(config, layoutName, this.resolveExtensionContext(entityType));
+  }
+
+  private resolveExtensionContext(entityType: string) {
+    const ext = this.registry.getResolvedExtension(entityType);
+    if (!ext) return undefined;
+    const parentConfig = this.registry.get(ext.parentEntityType);
+    if (!parentConfig) return undefined;
+    return {
+      parentConfig,
+      projectedKeys: ext.projectedColumns.map((c) => c.fieldKey),
+    };
   }
 }

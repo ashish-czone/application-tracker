@@ -111,4 +111,75 @@ describe('EntityDefinitionService', () => {
       expect(layout.layoutName).toBe('Mobile');
     });
   });
+
+  describe('extensionOf resolution', () => {
+    const parentTbl = pgTable('parent-tasks', {
+      id: text('id').primaryKey(),
+      title: text('title').notNull(),
+      status: text('status').notNull().default('open'),
+      createdBy: text('created_by').notNull(),
+      createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
+      updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }).notNull(),
+    });
+
+    const childTbl = pgTable('compliance-tasks', {
+      id: text('id').primaryKey(),
+      ruleId: text('rule_id'),
+    });
+
+    function registerParentAndChild() {
+      registry.register(defineEntity({
+        table: parentTbl,
+        onDelete: { mode: 'hard' },
+        slug: 'parent-tasks',
+        fields: {
+          title: { type: 'text', label: 'Title' },
+          status: { type: 'text', label: 'Status' },
+        },
+        extensionColumns: ['title', 'status'],
+        ui: { icon: 'Box' },
+      }));
+      registry.register(defineEntity({
+        table: childTbl,
+        onDelete: { mode: 'hard' },
+        slug: 'compliance-tasks',
+        fields: { ruleId: { type: 'text', label: 'Rule' } },
+        extensionOf: { entity: 'parent-tasks', foreignKey: 'id' },
+        ui: { icon: 'Box' },
+      }));
+      registry.finalize();
+    }
+
+    it('merges parent projected fields into resolveFieldsFromRegistry', () => {
+      registerParentAndChild();
+      const fields = service.resolveFieldsFromRegistry('compliance-tasks');
+      const keys = fields.map((f) => f.fieldKey);
+      expect(keys).toContain('ruleId');
+      expect(keys).toContain('title');
+      expect(keys).toContain('status');
+    });
+
+    it('exposes parent projected fields via resolveLayoutFromRegistry', () => {
+      registerParentAndChild();
+      const layout = service.resolveLayoutFromRegistry('compliance-tasks');
+      const unassigned = layout.sections.find((s) => s.name === 'Unassigned Fields')!;
+      expect(unassigned).toBeDefined();
+      const keys = unassigned.fields.map((f) => f.fieldKey);
+      expect(keys).toEqual(expect.arrayContaining(['ruleId', 'title', 'status']));
+    });
+
+    it('does not merge anything for non-extension entities', () => {
+      registry.register(defineEntity({
+        table: tbl,
+        onDelete: { mode: 'hard' },
+        slug: 'things',
+        fields: { name: { type: 'text', label: 'Name' } },
+        ui: { icon: 'Box' },
+      }));
+      registry.finalize();
+      const fields = service.resolveFieldsFromRegistry('things');
+      const keys = fields.map((f) => f.fieldKey);
+      expect(keys).toEqual(expect.arrayContaining(['name', 'createdBy', 'createdAt', 'updatedAt']));
+    });
+  });
 });
