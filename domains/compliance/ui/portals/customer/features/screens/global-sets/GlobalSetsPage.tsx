@@ -12,9 +12,9 @@ import { useCategoryGroupUsage } from '@packages/entity-engine-ui';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 import { HierarchicalRows, type TreeNode } from './components/HierarchicalRows';
 import { FlatRows, type FlatRowItem } from './components/FlatRows';
-import { AddItemDialog } from './components/AddItemDialog';
-import { EditItemDialog } from './components/EditItemDialog';
-import { DeleteItemDialog } from './components/DeleteItemDialog';
+import { AddItemDrawer } from './components/AddItemDrawer';
+import { EditItemDrawer } from './components/EditItemDrawer';
+import { DeleteItemDrawer } from './components/DeleteItemDrawer';
 import { NewSetDrawer } from './components/NewSetDrawer';
 import { EditSetDrawer } from './components/EditSetDrawer';
 import { DeleteSetDrawer } from './components/DeleteSetDrawer';
@@ -303,40 +303,40 @@ export function GlobalSetsPage() {
         </div>
       </main>
 
-      {addItemOpen && activeGroup && (
-        <AddItemDialog
-          group={activeGroup}
-          tree={tree}
-          isHierarchical={isHierarchical}
-          onClose={() => setAddItemOpen(false)}
-        />
-      )}
-
-      {editingNode && (
-        <EditItemDialog
-          item={{
-            id: editingNode.id,
-            name: editingNode.name,
-            slug: editingNode.slug,
-            metadata: editingNode.metadata,
-          }}
-          onClose={() => setEditingId(null)}
-        />
-      )}
-
-      {deletingNode && (
-        <DeleteItemDialog
-          item={{
-            id: deletingNode.id,
-            name: deletingNode.name,
-            slug: deletingNode.slug,
-            childCount: deletingNode.children.length,
-          }}
-          onClose={() => setDeletingId(null)}
-        />
-      )}
-
       <AnimatePresence>
+        {addItemOpen && activeGroup && (
+          <AddItemDrawer
+            group={activeGroup}
+            tree={tree}
+            isHierarchical={isHierarchical}
+            onClose={() => setAddItemOpen(false)}
+          />
+        )}
+
+        {editingNode && (
+          <EditItemDrawer
+            item={{
+              id: editingNode.id,
+              name: editingNode.name,
+              slug: editingNode.slug,
+              metadata: editingNode.metadata,
+            }}
+            onClose={() => setEditingId(null)}
+          />
+        )}
+
+        {deletingNode && (
+          <DeleteItemDrawer
+            item={{
+              id: deletingNode.id,
+              name: deletingNode.name,
+              slug: deletingNode.slug,
+              childCount: deletingNode.children.length,
+            }}
+            onClose={() => setDeletingId(null)}
+          />
+        )}
+
         {newSetOpen && (
           <NewSetDrawer
             onClose={() => setNewSetOpen(false)}

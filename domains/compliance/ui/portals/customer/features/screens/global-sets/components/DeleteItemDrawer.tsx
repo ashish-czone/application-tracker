@@ -1,22 +1,21 @@
 import { useEffect, useRef } from 'react';
-import { X, Loader2, AlertTriangle } from 'lucide-react';
-import { Eyebrow } from '@packages/ui';
+import { Loader2, AlertTriangle } from 'lucide-react';
+import { DrawerShell, DrawerHeader, Eyebrow } from '@packages/ui';
 import { useDeleteCategory } from '@packages/taxonomy-ui';
 
-export interface DeleteItemDialogItem {
+export interface DeleteItemDrawerItem {
   id: string;
   name: string;
   slug: string;
   childCount: number;
 }
 
-export interface DeleteItemDialogProps {
-  item: DeleteItemDialogItem;
+export interface DeleteItemDrawerProps {
+  item: DeleteItemDrawerItem;
   onClose: () => void;
 }
 
-export function DeleteItemDialog({ item, onClose }: DeleteItemDialogProps) {
-  const panelRef = useRef<HTMLDivElement>(null);
+export function DeleteItemDrawer({ item, onClose }: DeleteItemDrawerProps) {
   const cancelRef = useRef<HTMLButtonElement>(null);
 
   const mutation = useDeleteCategory({ onSuccess: onClose });
@@ -41,45 +40,17 @@ export function DeleteItemDialog({ item, onClose }: DeleteItemDialogProps) {
   const hasChildren = item.childCount > 0;
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="delete-item-dialog-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 px-4"
-      onMouseDown={(e) => {
-        if (panelRef.current && !panelRef.current.contains(e.target as Node)) onClose();
-      }}
-    >
-      <div
-        ref={panelRef}
-        className="w-full max-w-md bg-paper-raised paper-grain border border-rule shadow-xl"
-      >
-        <header className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-rule">
-          <div>
-            <Eyebrow tone="muted" mark="§">
-              Delete item
-            </Eyebrow>
-            <h2
-              id="delete-item-dialog-title"
-              className="mt-1.5 font-serif text-2xl text-ink leading-tight"
-            >
-              {item.name}
-            </h2>
-            <div className="mt-1 font-mono text-[11px] text-ink-muted tabular-nums">
-              {item.slug}
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-ink-muted hover:text-ink transition-colors"
-            aria-label="Close"
-          >
-            <X className="w-4 h-4" strokeWidth={1.5} />
-          </button>
-        </header>
+    <DrawerShell onClose={onClose} width="md">
+      <div className="flex flex-col h-full">
+        <DrawerHeader
+          eyebrow={<Eyebrow tone="muted" mark="§">Delete item</Eyebrow>}
+          title={item.name}
+          subtitle={item.slug}
+          onClose={onClose}
+          titleSize="sm"
+        />
 
-        <div className="px-6 py-5 space-y-4">
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
           <p className="text-[13px] font-sans text-ink-soft">
             This action cannot be undone. Fields that bind to this item by slug will no longer
             resolve.
@@ -106,7 +77,7 @@ export function DeleteItemDialog({ item, onClose }: DeleteItemDialogProps) {
           )}
         </div>
 
-        <footer className="flex items-center justify-end gap-2 px-6 py-4 border-t border-rule bg-paper">
+        <footer className="flex items-center justify-end gap-2 px-6 py-4 border-t border-rule bg-paper flex-none">
           <button
             ref={cancelRef}
             type="button"
@@ -127,6 +98,6 @@ export function DeleteItemDialog({ item, onClose }: DeleteItemDialogProps) {
           </button>
         </footer>
       </div>
-    </div>
+    </DrawerShell>
   );
 }
