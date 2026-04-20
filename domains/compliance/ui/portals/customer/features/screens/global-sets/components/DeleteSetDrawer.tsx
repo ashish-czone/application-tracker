@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { X, Loader2, AlertTriangle } from 'lucide-react';
-import { Eyebrow } from '@packages/ui';
+import { Loader2, AlertTriangle } from 'lucide-react';
+import { DrawerShell, DrawerHeader, Eyebrow } from '@packages/ui';
 import { useDeleteCategoryGroup } from '@packages/taxonomy-ui';
 
-export interface DeleteSetDialogSet {
+export interface DeleteSetDrawerSet {
   id: string;
   name: string;
   slug: string;
@@ -11,15 +11,14 @@ export interface DeleteSetDialogSet {
   usedByFields: number;
 }
 
-export interface DeleteSetDialogProps {
-  set: DeleteSetDialogSet;
+export interface DeleteSetDrawerProps {
+  set: DeleteSetDrawerSet;
   onClose: () => void;
   onDeleted?: () => void;
 }
 
-export function DeleteSetDialog({ set, onClose, onDeleted }: DeleteSetDialogProps) {
+export function DeleteSetDrawer({ set, onClose, onDeleted }: DeleteSetDrawerProps) {
   const [confirm, setConfirm] = useState('');
-  const panelRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const mutation = useDeleteCategoryGroup({
@@ -49,45 +48,17 @@ export function DeleteSetDialog({ set, onClose, onDeleted }: DeleteSetDialogProp
   const matches = confirm.trim() === set.slug;
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="delete-set-dialog-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 px-4"
-      onMouseDown={(e) => {
-        if (panelRef.current && !panelRef.current.contains(e.target as Node)) onClose();
-      }}
-    >
-      <div
-        ref={panelRef}
-        className="w-full max-w-md bg-paper-raised paper-grain border border-rule shadow-xl"
-      >
-        <header className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-rule">
-          <div>
-            <Eyebrow tone="muted" mark="§">
-              Delete set
-            </Eyebrow>
-            <h2
-              id="delete-set-dialog-title"
-              className="mt-1.5 font-serif text-2xl text-ink leading-tight"
-            >
-              {set.name}
-            </h2>
-            <div className="mt-1 font-mono text-[11px] text-ink-muted tabular-nums">
-              {set.slug}
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-ink-muted hover:text-ink transition-colors"
-            aria-label="Close"
-          >
-            <X className="w-4 h-4" strokeWidth={1.5} />
-          </button>
-        </header>
+    <DrawerShell onClose={onClose} width="md">
+      <div className="flex flex-col h-full">
+        <DrawerHeader
+          eyebrow={<Eyebrow tone="muted" mark="§">Delete set</Eyebrow>}
+          title={set.name}
+          subtitle={set.slug}
+          onClose={onClose}
+          titleSize="sm"
+        />
 
-        <div className="px-6 py-5 space-y-4">
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
           <p className="text-[13px] font-sans text-ink-soft">
             Deleting a set is permanent. All items in the set will be removed.
           </p>
@@ -143,7 +114,7 @@ export function DeleteSetDialog({ set, onClose, onDeleted }: DeleteSetDialogProp
           )}
         </div>
 
-        <footer className="flex items-center justify-end gap-2 px-6 py-4 border-t border-rule bg-paper">
+        <footer className="flex items-center justify-end gap-2 px-6 py-4 border-t border-rule bg-paper flex-none">
           <button
             type="button"
             onClick={onClose}
@@ -163,6 +134,6 @@ export function DeleteSetDialog({ set, onClose, onDeleted }: DeleteSetDialogProp
           </button>
         </footer>
       </div>
-    </div>
+    </DrawerShell>
   );
 }
