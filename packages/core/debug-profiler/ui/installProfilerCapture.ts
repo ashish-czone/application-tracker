@@ -23,21 +23,6 @@ function parseHeader(header: string | null): { durationMs: number; queryCount: n
   };
 }
 
-function ensureDebugParam(input: string | URL | Request): string | URL | Request {
-  if (typeof input === 'string') {
-    return input.includes('debug=1') || input.includes('debug=true')
-      ? input
-      : input + (input.includes('?') ? '&' : '?') + 'debug=1';
-  }
-  if (input instanceof URL) {
-    input.searchParams.set('debug', '1');
-    return input;
-  }
-  const url = input.url;
-  if (url.includes('debug=1') || url.includes('debug=true')) return input;
-  return new Request(url + (url.includes('?') ? '&' : '?') + 'debug=1', input);
-}
-
 function extractMethodAndPath(input: string | URL | Request, init?: RequestInit): { method: string; path: string } {
   const method = (init?.method ?? (input instanceof Request ? input.method : 'GET')).toUpperCase();
   const rawUrl = input instanceof URL ? input.toString() : input instanceof Request ? input.url : input;
@@ -96,9 +81,9 @@ async function buildProfile(
 }
 
 /**
- * Monkey-patches window.fetch to (a) append ?debug=1 so the server includes
- * the _debug body block and (b) parse timing/query info out of each response
+ * Monkey-patches window.fetch to parse timing/query info out of each response
  * and publish it via profilerBus. Idempotent — a second call is a no-op.
+ * Server opt-in is env-driven; no request-side flag is needed.
  *
  * Returns the original fetch so callers can uninstall if needed.
  */
@@ -109,10 +94,9 @@ export function installProfilerCapture(): typeof fetch {
   const original = target.fetch.bind(window);
 
   target.fetch = async function profilerFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-    const patchedInput = ensureDebugParam(input as string | URL | Request);
     const { method, path } = extractMethodAndPath(input as string | URL | Request, init);
 
-    const response = await original(patchedInput as RequestInfo | URL, init);
+    const response = await original(input, init);
     void buildProfile(response, method, path).then((profile) => {
       if (profile) emitProfile(profile);
     });

@@ -78,19 +78,10 @@ describe('DebugProfilerInterceptor', () => {
     expect(res.headers['X-Debug-Timing']).toMatch(/queryCount=2;totalQueryMs=12(\.0)?/);
   });
 
-  it('does not inject _debug body unless ?debug=1 is set', async () => {
+  it('injects _debug onto JSON-object bodies when enabled', async () => {
     const store = new ProfilingContextStore();
     const interceptor = new DebugProfilerInterceptor(store, { enabled: true });
     const { ctx } = makeContext();
-
-    const out = await lastValueFrom(interceptor.intercept(ctx, makeHandler({ ok: true })));
-    expect(out).toEqual({ ok: true });
-  });
-
-  it('injects _debug onto JSON-object bodies when ?debug=1', async () => {
-    const store = new ProfilingContextStore();
-    const interceptor = new DebugProfilerInterceptor(store, { enabled: true });
-    const { ctx } = makeContext({ query: { debug: '1' } });
 
     const handler: CallHandler = {
       handle: () => {
@@ -108,7 +99,7 @@ describe('DebugProfilerInterceptor', () => {
   it('does not inject _debug when the body is an array (would break JSON shape)', async () => {
     const store = new ProfilingContextStore();
     const interceptor = new DebugProfilerInterceptor(store, { enabled: true });
-    const { ctx } = makeContext({ query: { debug: '1' } });
+    const { ctx } = makeContext();
 
     const out = await lastValueFrom(interceptor.intercept(ctx, makeHandler([1, 2, 3])));
     expect(out).toEqual([1, 2, 3]);
@@ -126,7 +117,7 @@ describe('DebugProfilerInterceptor', () => {
   it('is a pass-through when options.enabled is false — no header, no _debug', async () => {
     const store = new ProfilingContextStore();
     const interceptor = new DebugProfilerInterceptor(store, { enabled: false });
-    const { ctx, res } = makeContext({ query: { debug: '1' } });
+    const { ctx, res } = makeContext();
 
     const out = await lastValueFrom(interceptor.intercept(ctx, makeHandler({ ok: true })));
     expect(out).toEqual({ ok: true });

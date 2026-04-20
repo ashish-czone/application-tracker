@@ -12,7 +12,6 @@ interface HttpRequestLike {
   url?: string;
   originalUrl?: string;
   headers?: Record<string, string | string[] | undefined>;
-  query?: Record<string, unknown>;
 }
 
 interface HttpResponseLike {
@@ -22,13 +21,6 @@ interface HttpResponseLike {
 
 function buildHeader(profile: RequestProfile, totalQueryMs: number): string {
   return `durationMs=${profile.durationMs.toFixed(1)};queryCount=${profile.queries.length};totalQueryMs=${totalQueryMs.toFixed(1)}`;
-}
-
-function hasDebugFlag(req: HttpRequestLike): boolean {
-  const query = req.query;
-  if (!query) return false;
-  const v = query['debug'];
-  return v === '1' || v === 'true';
 }
 
 @Injectable()
@@ -83,7 +75,6 @@ export class DebugProfilerInterceptor implements NestInterceptor {
           return throwError(() => err);
         }),
         map((body) => {
-          if (!hasDebugFlag(req)) return body;
           if (body === null || body === undefined || typeof body !== 'object' || Array.isArray(body)) return body;
           const totalQueryMs = profile.queries.reduce((acc, q) => acc + q.durationMs, 0);
           return {
