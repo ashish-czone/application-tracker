@@ -86,7 +86,7 @@ async function executeRestore(
         await tx
           .update(dep.table)
           .set({ deletedAt: null, deletedBy: null })
-          .where(combine(eq(fkColumn(dep), id)));
+          .where(combine(eq(fkColumn(dep), id), opts?.scope));
       }
     }
     // Suppress unused-warning; actorId reserved for future audit-on-restore.
@@ -107,7 +107,7 @@ async function assertRestrictDependents(
 
     const conditions: SQL[] = [eq(fkColumn(dep), id)];
     if (hasSoftDeleteColumns(dep.table)) {
-      conditions.push(isNull((dep.table as AnyTable).deletedAt as never));
+      conditions.push(isNull((dep.table as unknown as AnyTable).deletedAt as never));
     }
 
     const whereClause = combine(and(...conditions)!, opts?.scope);
