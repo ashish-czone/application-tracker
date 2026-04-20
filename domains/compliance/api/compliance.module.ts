@@ -11,6 +11,7 @@ import { CLIENT_CONTACTS_CONFIG } from './client-contacts/client-contacts.config
 import { CLIENT_REGISTRATIONS_CONFIG } from './client-registrations/client-registrations.config';
 import { COMPLIANCE_RULES_CONFIG } from './rules/rules.config';
 import { LAW_HANDLERS_CONFIG } from './law-handlers/law-handlers.config';
+import { COMPLIANCE_TASKS_CONFIG } from './compliance-tasks/compliance-tasks.config';
 
 import { LawHandlerService } from './law-handlers/law-handlers.service';
 import { ClientRegistrationService } from './client-registrations/client-registrations.service';
@@ -33,6 +34,7 @@ import { COMPLIANCE_PERMISSION_REGISTRATIONS } from './permissions';
     EntityEngineModule.forEntity(CLIENT_REGISTRATIONS_CONFIG),
     EntityEngineModule.forEntity(COMPLIANCE_RULES_CONFIG),
     EntityEngineModule.forEntity(LAW_HANDLERS_CONFIG),
+    EntityEngineModule.forEntity(COMPLIANCE_TASKS_CONFIG),
   ],
   controllers: [ClientsController, ComplianceTasksController],
   providers: [
