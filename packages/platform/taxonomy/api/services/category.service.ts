@@ -6,6 +6,16 @@ import { categoryGroups } from '../schema/category-groups';
 import { categories } from '../schema/categories';
 import type { CategoryGroup, Category, CategoryTreeNode } from '../types';
 
+export function normalizeMetadataKeys(metadata: Record<string, string>): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [key, value] of Object.entries(metadata)) {
+    const normalized = key.trim().toLowerCase();
+    if (normalized.length === 0) continue;
+    out[normalized] = value;
+  }
+  return out;
+}
+
 @Injectable()
 export class CategoryService {
   constructor(
@@ -90,7 +100,7 @@ export class CategoryService {
 
   // --- Categories ---
 
-  async createCategory(data: { groupId: string; parentId?: string; name: string; slug: string; sortOrder?: number }): Promise<Category> {
+  async createCategory(data: { groupId: string; parentId?: string; name: string; slug: string; sortOrder?: number; metadata?: Record<string, string> }): Promise<Category> {
     await this.findCategoryGroupByIdOrFail(data.groupId);
 
     let parentPath: string | null = null;
@@ -112,6 +122,7 @@ export class CategoryService {
         name: data.name,
         slug: data.slug,
         sortOrder: data.sortOrder ?? 0,
+        metadata: data.metadata ? normalizeMetadataKeys(data.metadata) : {},
         path: '/',
         depth: 0,
       }))
@@ -128,11 +139,12 @@ export class CategoryService {
     return updated;
   }
 
-  async updateCategory(id: string, data: { name?: string; slug?: string; sortOrder?: number }): Promise<Category> {
+  async updateCategory(id: string, data: { name?: string; slug?: string; sortOrder?: number; metadata?: Record<string, string> }): Promise<Category> {
     const updateValues: Record<string, unknown> = {};
     if (data.name !== undefined) updateValues.name = data.name;
     if (data.slug !== undefined) updateValues.slug = data.slug;
     if (data.sortOrder !== undefined) updateValues.sortOrder = data.sortOrder;
+    if (data.metadata !== undefined) updateValues.metadata = normalizeMetadataKeys(data.metadata);
 
     if (Object.keys(updateValues).length === 0) {
       return this.findCategoryByIdOrFail(id);

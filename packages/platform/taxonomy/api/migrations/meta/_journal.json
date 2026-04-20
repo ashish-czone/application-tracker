@@ -8,6 +8,13 @@
       "when": 1776155752728,
       "tag": "0000_nappy_tyger_tiger",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1776669553013,
+      "tag": "0001_tearful_lightspeed",
+      "breakpoints": true
     }
   ]
 }

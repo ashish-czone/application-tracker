@@ -1,25 +1,86 @@
 import { useMemo, useState } from 'react';
 import { ChevronRight, Plus, Search, Layers, GitBranch } from 'lucide-react';
 import { Eyebrow } from '@packages/ui';
-import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 import {
-  GLOBAL_SETS,
-  GLOBAL_SET_ITEMS,
-  type GlobalSetDefinition,
-} from './data/globalSetsMock';
-import { HierarchicalRows, buildTree } from './components/HierarchicalRows';
-import { FlatRows } from './components/FlatRows';
+  useCategoryGroupsList,
+  useCategoryTree,
+  type CategoryGroup,
+  type CategoryTreeNode,
+} from '@packages/taxonomy-ui';
+import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
+import { HierarchicalRows, type TreeNode } from './components/HierarchicalRows';
+import { FlatRows, type FlatRowItem } from './components/FlatRows';
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
   return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
+function hasAnyChildren(nodes: CategoryTreeNode[]): boolean {
+  return nodes.some((n) => n.children.length > 0);
+}
+
+function toTreeNodes(nodes: CategoryTreeNode[]): TreeNode[] {
+  return nodes.map((n) => ({
+    id: n.id,
+    slug: n.slug,
+    name: n.name,
+    children: toTreeNodes(n.children),
+  }));
+}
+
+function flattenTree(nodes: CategoryTreeNode[]): FlatRowItem[] {
+  const out: FlatRowItem[] = [];
+  const walk = (ns: CategoryTreeNode[]) => {
+    for (const n of ns) {
+      out.push({ id: n.id, slug: n.slug, name: n.name, metadata: n.metadata });
+      if (n.children.length > 0) walk(n.children);
+    }
+  };
+  walk(nodes);
+  return out;
+}
+
+function countAll(nodes: CategoryTreeNode[]): number {
+  let total = 0;
+  const walk = (ns: CategoryTreeNode[]) => {
+    for (const n of ns) {
+      total += 1;
+      walk(n.children);
+    }
+  };
+  walk(nodes);
+  return total;
+}
+
+function maxUpdatedAt(nodes: CategoryTreeNode[], fallback: string): string {
+  let max = fallback;
+  const walk = (ns: CategoryTreeNode[]) => {
+    for (const n of ns) {
+      if (n.updatedAt > max) max = n.updatedAt;
+      walk(n.children);
+    }
+  };
+  walk(nodes);
+  return max;
+}
+
 export function GlobalSetsPage() {
-  const [activeSlug, setActiveSlug] = useState<string>(GLOBAL_SETS[0].slug);
-  const activeSet: GlobalSetDefinition | undefined = GLOBAL_SETS.find((s) => s.slug === activeSlug);
-  const items = GLOBAL_SET_ITEMS[activeSlug] ?? [];
-  const tree = useMemo(() => buildTree(items), [items]);
+  const groupsQuery = useCategoryGroupsList();
+  const groups = (groupsQuery.data ?? []) as CategoryGroup[];
+
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const activeGroup = groups.find((g) => g.id === activeId) ?? groups[0] ?? null;
+  const activeGroupId = activeGroup?.id ?? null;
+
+  const treeQuery = useCategoryTree(activeGroupId);
+  const tree = (treeQuery.data ?? []) as CategoryTreeNode[];
+
+  const isHierarchical = hasAnyChildren(tree);
+  const flatItems = useMemo(() => flattenTree(tree), [tree]);
+  const treeNodes = useMemo(() => toTreeNodes(tree), [tree]);
+  const itemCount = countAll(tree);
+  const updatedAt = activeGroup ? maxUpdatedAt(tree, activeGroup.updatedAt) : '';
 
   return (
     <div className="min-h-screen bg-paper paper-grain">
@@ -55,7 +116,7 @@ export function GlobalSetsPage() {
             <div className="px-4 py-3 border-b border-rule flex items-center justify-between">
               <Eyebrow>Sets</Eyebrow>
               <span className="font-mono text-[10px] text-ink-muted tabular-nums">
-                {GLOBAL_SETS.length}
+                {groups.length}
               </span>
             </div>
             <div className="flex items-center gap-2 px-4 py-2.5 border-b border-rule text-[11px] text-ink-muted">
@@ -63,29 +124,33 @@ export function GlobalSetsPage() {
               <span className="font-sans">Filter sets</span>
             </div>
             <ul>
-              {GLOBAL_SETS.map((set) => {
-                const isActive = set.slug === activeSlug;
+              {groupsQuery.isLoading && (
+                <li className="px-4 py-3 text-[11px] text-ink-muted font-sans">Loading…</li>
+              )}
+              {!groupsQuery.isLoading && groups.length === 0 && (
+                <li className="px-4 py-3 text-[11px] text-ink-muted font-sans">No sets yet</li>
+              )}
+              {groups.map((set) => {
+                const isActive = set.id === activeGroupId;
+                const showHierarchical = isActive && isHierarchical;
                 return (
-                  <li key={set.slug}>
+                  <li key={set.id}>
                     <button
                       type="button"
-                      onClick={() => setActiveSlug(set.slug)}
+                      onClick={() => setActiveId(set.id)}
                       className={`w-full text-left px-4 py-3 border-b border-rule transition-colors ${
                         isActive ? 'bg-paper border-l-2 border-l-ink' : 'hover:bg-paper'
                       }`}
                     >
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
-                          {set.kind === 'hierarchical' ? (
+                          {showHierarchical ? (
                             <GitBranch className="w-3 h-3 text-ink-muted" strokeWidth={1.5} />
                           ) : (
                             <Layers className="w-3 h-3 text-ink-muted" strokeWidth={1.5} />
                           )}
-                          <span className="text-xs font-sans text-ink">{set.label}</span>
+                          <span className="text-xs font-sans text-ink">{set.name}</span>
                         </div>
-                        <span className="font-mono text-[10px] text-ink-muted tabular-nums">
-                          {set.itemCount}
-                        </span>
                       </div>
                       <div className="mt-1 font-mono text-[10px] text-ink-muted tabular-nums">
                         {set.slug}
@@ -98,43 +163,39 @@ export function GlobalSetsPage() {
           </aside>
 
           <section className="border border-rule bg-paper-raised">
-            {activeSet && (
+            {activeGroup && (
               <>
                 <header className="px-6 py-5 border-b border-rule">
                   <div className="flex items-start justify-between gap-6">
                     <div>
                       <div className="flex items-center gap-3">
                         <h2 className="font-serif text-2xl text-ink leading-none">
-                          {activeSet.label}
+                          {activeGroup.name}
                         </h2>
                         <span className="font-mono text-[11px] text-ink-muted tabular-nums px-2 py-0.5 border border-rule">
-                          {activeSet.slug}
+                          {activeGroup.slug}
                         </span>
                         <span className="text-[10px] uppercase tracking-eyebrow text-ink-muted font-sans">
-                          {activeSet.kind}
+                          {isHierarchical ? 'hierarchical' : 'flat'}
                         </span>
                       </div>
-                      <p className="mt-2 text-[12px] text-ink-soft font-serif italic max-w-2xl">
-                        {activeSet.description}
-                      </p>
+                      {activeGroup.description && (
+                        <p className="mt-2 text-[12px] text-ink-soft font-serif italic max-w-2xl">
+                          {activeGroup.description}
+                        </p>
+                      )}
                     </div>
                     <div className="flex items-center gap-6 text-right">
                       <div>
                         <Eyebrow>Items</Eyebrow>
                         <div className="mt-0.5 font-mono text-lg text-ink tabular-nums">
-                          {activeSet.itemCount}
-                        </div>
-                      </div>
-                      <div>
-                        <Eyebrow>Fields using</Eyebrow>
-                        <div className="mt-0.5 font-mono text-lg text-ink tabular-nums">
-                          {activeSet.usedByFields}
+                          {itemCount}
                         </div>
                       </div>
                       <div>
                         <Eyebrow>Updated</Eyebrow>
                         <div className="mt-0.5 font-mono text-[11px] text-ink-soft tabular-nums">
-                          {formatDate(activeSet.updatedAt)}
+                          {updatedAt ? formatDate(updatedAt) : '—'}
                         </div>
                       </div>
                     </div>
@@ -142,7 +203,7 @@ export function GlobalSetsPage() {
                 </header>
 
                 <div className="flex items-center justify-between px-4 py-2.5 border-b border-rule">
-                  <Eyebrow>{activeSet.kind === 'hierarchical' ? 'Hierarchy' : 'Items'}</Eyebrow>
+                  <Eyebrow>{isHierarchical ? 'Hierarchy' : 'Items'}</Eyebrow>
                   <button
                     type="button"
                     className="flex items-center gap-1.5 text-[11px] uppercase tracking-eyebrow font-sans text-ink-muted hover:text-ink transition-colors"
@@ -153,10 +214,20 @@ export function GlobalSetsPage() {
                 </div>
 
                 <div>
-                  {activeSet.kind === 'hierarchical' ? (
-                    <HierarchicalRows nodes={tree} />
-                  ) : (
-                    <FlatRows items={items} />
+                  {treeQuery.isLoading && (
+                    <div className="px-4 py-6 text-[11px] text-ink-muted font-sans">Loading…</div>
+                  )}
+                  {!treeQuery.isLoading && tree.length === 0 && (
+                    <div className="px-4 py-6 text-[11px] text-ink-muted font-sans">
+                      No items in this set yet.
+                    </div>
+                  )}
+                  {!treeQuery.isLoading && tree.length > 0 && (
+                    isHierarchical ? (
+                      <HierarchicalRows nodes={treeNodes} />
+                    ) : (
+                      <FlatRows items={flatItems} />
+                    )
                   )}
                 </div>
               </>
