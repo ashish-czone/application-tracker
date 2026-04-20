@@ -118,6 +118,14 @@ async function registerChildFields(fieldDefService: FieldDefinitionService) {
   ]);
 }
 
+async function registerParentFields(fieldDefService: FieldDefinitionService) {
+  await fieldDefService.registerStandardFields('ext_tasks', [
+    { fieldKey: 'title', label: 'Title', fieldType: 'text', columnName: 'title', isRequired: true },
+    { fieldKey: 'status', label: 'Status', fieldType: 'text', columnName: 'status', isRequired: true },
+    { fieldKey: 'priority', label: 'Priority', fieldType: 'text', columnName: 'priority' },
+  ]);
+}
+
 // ---------------------------------------------------------------------------
 // Test suite
 // ---------------------------------------------------------------------------
@@ -182,6 +190,7 @@ describe('EntityService extensionOf (integration)', () => {
     entityRegistry.finalize();
 
     await registerChildFields(fieldDefService);
+    await registerParentFields(fieldDefService);
 
     const database = module.get(DatabaseService);
     const lookupResolver = module.get(LookupResolverService);
@@ -339,5 +348,178 @@ describe('EntityService extensionOf (integration)', () => {
 
     const result = await childService.list({});
     expect(result.meta.total).toBe(1);
+  });
+
+  // ---------------------------------------------------------------------------
+  // Write path
+  // ---------------------------------------------------------------------------
+
+  describe('create()', () => {
+    it('inserts parent + child in one transaction with parentDefaults applied', async () => {
+      const actor = crypto.randomUUID();
+      const response = await childService.create(
+        { title: 'New filing', status: 'open', priority: 'high', ruleId: 'rule-1', periodStart: '2026-01-01' },
+        actor,
+      );
+
+      expect(response.id).toBeDefined();
+      expect(response.title).toBe('New filing');
+      expect(response.status).toBe('open');
+      expect(response.priority).toBe('high');
+      expect(response.ruleId).toBe('rule-1');
+      expect(response.periodStart).toBe('2026-01-01');
+
+      const [parentRow] = await db
+        .select()
+        .from(parentTasks)
+        .where(eq(parentTasks.id, response.id as string)) as any[];
+      expect(parentRow.kind).toBe('compliance');
+      expect(parentRow.title).toBe('New filing');
+      expect(parentRow.createdBy).toBe(actor);
+
+      const [childRow] = await db
+        .select()
+        .from(extChildTable)
+        .where(eq(extChildTable.taskId, response.id as string)) as any[];
+      expect(childRow.ruleId).toBe('rule-1');
+      expect(childRow.periodStart).toBe('2026-01-01');
+    });
+
+    it('creates no child row when parent insert fails (transactional rollback)', async () => {
+      const actor = crypto.randomUUID();
+      // Missing required parent field `title` → should reject at validation time;
+      // add a follow-up scenario using a DB-level constraint to prove rollback.
+      await expect(
+        childService.create({ status: 'open', ruleId: 'r1', periodStart: '2026-01-01' }, actor),
+      ).rejects.toThrow();
+
+      const rows = await db.select().from(extChildTable) as any[];
+      expect(rows).toHaveLength(0);
+    });
+  });
+
+  describe('update()', () => {
+    it('writes only to parent when payload contains only parent fields', async () => {
+      const actor = crypto.randomUUID();
+      const created = await childService.create(
+        { title: 'Before', status: 'open', ruleId: 'r1', periodStart: '2026-01-01' },
+        actor,
+      );
+
+      const [childBefore] = await db.select().from(extChildTable).where(eq(extChildTable.taskId, created.id as string)) as any[];
+      const childUpdatedAtBefore = childBefore.updatedAt;
+
+      // Ensure a visible time gap so a child updatedAt bump is observable
+      await new Promise((resolve) => setTimeout(resolve, 25));
+
+      const updated = await childService.update(
+        created.id as string,
+        { title: 'After', priority: 'high' },
+        actor,
+      );
+
+      expect(updated.title).toBe('After');
+      expect(updated.priority).toBe('high');
+      expect(updated.ruleId).toBe('r1');
+
+      const [parentAfter] = await db.select().from(parentTasks).where(eq(parentTasks.id, created.id as string)) as any[];
+      expect(parentAfter.title).toBe('After');
+      expect(parentAfter.priority).toBe('high');
+
+      // Parent-only edit still bumps child's updatedAt (design decision b)
+      const [childAfter] = await db.select().from(extChildTable).where(eq(extChildTable.taskId, created.id as string)) as any[];
+      expect(childAfter.updatedAt.getTime()).toBeGreaterThan(childUpdatedAtBefore.getTime());
+    });
+
+    it('writes only to child when payload contains only child fields', async () => {
+      const actor = crypto.randomUUID();
+      const created = await childService.create(
+        { title: 'Keep', status: 'open', ruleId: 'r1', periodStart: '2026-01-01' },
+        actor,
+      );
+
+      const [parentBefore] = await db.select().from(parentTasks).where(eq(parentTasks.id, created.id as string)) as any[];
+      const parentUpdatedAtBefore = parentBefore.updatedAt;
+
+      await new Promise((resolve) => setTimeout(resolve, 25));
+
+      const updated = await childService.update(
+        created.id as string,
+        { ruleId: 'r2', periodStart: '2026-02-01' },
+        actor,
+      );
+
+      expect(updated.title).toBe('Keep');
+      expect(updated.ruleId).toBe('r2');
+      expect(updated.periodStart).toBe('2026-02-01');
+
+      const [parentAfter] = await db.select().from(parentTasks).where(eq(parentTasks.id, created.id as string)) as any[];
+      // Parent row untouched
+      expect(parentAfter.updatedAt.getTime()).toBe(parentUpdatedAtBefore.getTime());
+      expect(parentAfter.title).toBe('Keep');
+    });
+
+    it('writes to both sides when payload spans parent + child fields', async () => {
+      const actor = crypto.randomUUID();
+      const created = await childService.create(
+        { title: 'Mixed before', status: 'open', ruleId: 'r1', periodStart: '2026-01-01' },
+        actor,
+      );
+
+      const updated = await childService.update(
+        created.id as string,
+        { title: 'Mixed after', ruleId: 'r2' },
+        actor,
+      );
+
+      expect(updated.title).toBe('Mixed after');
+      expect(updated.ruleId).toBe('r2');
+
+      const [parentAfter] = await db.select().from(parentTasks).where(eq(parentTasks.id, created.id as string)) as any[];
+      expect(parentAfter.title).toBe('Mixed after');
+      const [childAfter] = await db.select().from(extChildTable).where(eq(extChildTable.taskId, created.id as string)) as any[];
+      expect(childAfter.ruleId).toBe('r2');
+    });
+  });
+
+  describe('softDelete() + restore()', () => {
+    it('soft-delete flips parent.deletedAt and hides the extension from reads', async () => {
+      const actor = crypto.randomUUID();
+      const created = await childService.create(
+        { title: 'To delete', status: 'open', ruleId: 'r1', periodStart: '2026-01-01' },
+        actor,
+      );
+
+      await childService.softDelete(created.id as string, actor);
+
+      const [parentAfter] = await db.select().from(parentTasks).where(eq(parentTasks.id, created.id as string)) as any[];
+      expect(parentAfter.deletedAt).not.toBeNull();
+      expect(parentAfter.deletedBy).toBe(actor);
+
+      // Child row untouched
+      const [childAfter] = await db.select().from(extChildTable).where(eq(extChildTable.taskId, created.id as string)) as any[];
+      expect(childAfter).toBeDefined();
+
+      await expect(childService.findOneOrFail(created.id as string)).rejects.toThrow(/not found/i);
+    });
+
+    it('restore() clears parent.deletedAt and returns the joined row', async () => {
+      const actor = crypto.randomUUID();
+      const created = await childService.create(
+        { title: 'To restore', status: 'open', ruleId: 'r1', periodStart: '2026-01-01' },
+        actor,
+      );
+      await childService.softDelete(created.id as string, actor);
+
+      const restored = await childService.restore(created.id as string);
+
+      expect(restored.id).toBe(created.id);
+      expect(restored.title).toBe('To restore');
+      expect(restored.ruleId).toBe('r1');
+
+      const [parentAfter] = await db.select().from(parentTasks).where(eq(parentTasks.id, created.id as string)) as any[];
+      expect(parentAfter.deletedAt).toBeNull();
+      expect(parentAfter.deletedBy).toBeNull();
+    });
   });
 });
