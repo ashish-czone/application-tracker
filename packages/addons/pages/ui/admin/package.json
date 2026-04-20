@@ -9,6 +9,7 @@
   "dependencies": {
     "@measured/puck": "^0.19.0",
     "@packages/pages-ui-frontend": "workspace:*",
+    "@packages/platform-ui": "workspace:*",
     "@packages/ui": "workspace:*",
     "@tanstack/react-query": "^5.0.0",
     "lucide-react": "^0.500.0",

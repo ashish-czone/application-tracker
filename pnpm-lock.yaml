@@ -2483,6 +2483,9 @@ importers:
       '@packages/pages-ui-frontend':
         specifier: workspace:*
         version: link:../frontend
+      '@packages/platform-ui':
+        specifier: workspace:*
+        version: link:../../../../platform/platform-ui
       '@packages/ui':
         specifier: workspace:*
         version: link:../../../../core/ui
