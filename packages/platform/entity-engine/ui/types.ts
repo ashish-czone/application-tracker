@@ -19,6 +19,8 @@ export interface EntityRegistryEntry {
   features: {
     softDelete: boolean;
     restore: boolean;
+    /** Entity exposes DB-backed definitions that admins can customize via the admin UI. */
+    adminConfigurable: boolean;
     hasTaxonomy: boolean;
     hasWorkflow: boolean;
     hasMedia: boolean;
