@@ -329,6 +329,54 @@ describe('ComplianceTasksService', () => {
         }),
       );
     });
+
+    it('stamps completedAt=now when transitioning status to "completed"', async () => {
+      const existingTask = taskRowFixture({ status: 'pending', completedAt: null });
+      const existingExt = extRowFixture();
+      const updatedTask = taskRowFixture({ status: 'completed', completedAt: new Date() });
+      db.db.select.mockReturnValue(mockSelectChain([{ task: existingTask, ext: existingExt }]));
+      const updateChain = mockUpdateReturning([updatedTask]);
+      const tx = { update: vi.fn().mockReturnValue(updateChain) };
+      db.db.transaction.mockImplementation(async (cb: (tx: unknown) => unknown) => cb(tx));
+
+      await service.update('task-1', { status: 'completed' }, 'user-1');
+
+      const setArg = updateChain.set.mock.calls[0][0] as Record<string, unknown>;
+      expect(setArg.status).toBe('completed');
+      expect(setArg.completedAt).toBeInstanceOf(Date);
+    });
+
+    it('clears completedAt when reopening from completed back to pending', async () => {
+      const existingTask = taskRowFixture({ status: 'completed', completedAt: new Date() });
+      const existingExt = extRowFixture();
+      const updatedTask = taskRowFixture({ status: 'pending', completedAt: null });
+      db.db.select.mockReturnValue(mockSelectChain([{ task: existingTask, ext: existingExt }]));
+      const updateChain = mockUpdateReturning([updatedTask]);
+      const tx = { update: vi.fn().mockReturnValue(updateChain) };
+      db.db.transaction.mockImplementation(async (cb: (tx: unknown) => unknown) => cb(tx));
+
+      await service.update('task-1', { status: 'pending' }, 'user-1');
+
+      const setArg = updateChain.set.mock.calls[0][0] as Record<string, unknown>;
+      expect(setArg.status).toBe('pending');
+      expect(setArg.completedAt).toBeNull();
+    });
+
+    it('does not touch completedAt when the patch has no status', async () => {
+      const existingTask = taskRowFixture({ status: 'in_progress', completedAt: null });
+      const existingExt = extRowFixture();
+      const updatedTask = taskRowFixture({ status: 'in_progress', title: 'new' });
+      db.db.select.mockReturnValue(mockSelectChain([{ task: existingTask, ext: existingExt }]));
+      const updateChain = mockUpdateReturning([updatedTask]);
+      const tx = { update: vi.fn().mockReturnValue(updateChain) };
+      db.db.transaction.mockImplementation(async (cb: (tx: unknown) => unknown) => cb(tx));
+
+      await service.update('task-1', { title: 'new' }, 'user-1');
+
+      const setArg = updateChain.set.mock.calls[0][0] as Record<string, unknown>;
+      expect(setArg).not.toHaveProperty('completedAt');
+      expect(setArg.title).toBe('new');
+    });
   });
 
   describe('delete', () => {

@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { DatabaseService, and, eq, gte, lte, desc, asc, inArray, isNull } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
 import { tasks } from '@packages/tasks/schema/tasks';
+import { applyCompletedAt } from '@packages/tasks';
 import { complianceTasks } from '../schema/compliance-tasks';
 import { COMPLIANCE_TASK_GENERATED } from '../events/types';
 
@@ -28,6 +29,7 @@ export interface ComplianceTaskUpdateInput {
   description?: string | null;
   assigneeId?: string | null;
   assigneeTeamId?: string | null;
+  status?: string;
 }
 
 export interface ComplianceTaskFilters {
@@ -169,13 +171,20 @@ export class ComplianceTasksService {
     if (input.assigneeId !== undefined) taskPatch.assigneeId = input.assigneeId;
     if (input.assigneeTeamId !== undefined) taskPatch.assigneeTeamId = input.assigneeTeamId;
     if (input.dueDate !== undefined) taskPatch.dueDate = input.dueDate;
+    if (input.status !== undefined) taskPatch.status = input.status;
+
+    // Share the completedAt rule with TASKS_CONFIG.beforeUpdate — moving TO
+    // `completed` stamps now(), moving AWAY clears it, and patches that
+    // don't touch status are left alone. The generic /tasks path rejects
+    // kinded rows, so this is where the stamping actually runs for them.
+    const finalPatch = applyCompletedAt(taskPatch);
 
     const { taskRow, extRow } = await this.database.db.transaction(async (tx) => {
       let updatedTask = existing.task;
-      if (Object.keys(taskPatch).length > 0) {
+      if (Object.keys(finalPatch).length > 0) {
         const [row] = await tx
           .update(tasks)
-          .set(taskPatch)
+          .set(finalPatch)
           .where(eq(tasks.id, taskId))
           .returning();
         updatedTask = row;

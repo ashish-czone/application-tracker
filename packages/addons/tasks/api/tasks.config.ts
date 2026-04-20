@@ -13,7 +13,14 @@ function validateAssigneeExclusivity(payload: Record<string, unknown>): void {
   }
 }
 
-function applyCompletedAt(payload: Record<string, unknown>): Record<string, unknown> {
+/**
+ * Stamps / clears `completedAt` based on the status transition in the
+ * payload. Exported so kind-owned services (compliance-tasks, etc.)
+ * that bypass the generic EntityService still share the same rule:
+ * moving TO `completed` stamps now(), moving AWAY clears it, and
+ * payloads that don't touch status are returned unchanged.
+ */
+export function applyCompletedAt(payload: Record<string, unknown>): Record<string, unknown> {
   if (!('status' in payload)) return payload;
   return {
     ...payload,

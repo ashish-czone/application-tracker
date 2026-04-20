@@ -219,8 +219,15 @@ export function useComplianceTaskRows(): ComplianceTasksResult {
   return { rows, loading, error, handlers, clientOptions, lawOptions };
 }
 
+export type ComplianceTaskStatus =
+  | 'pending'
+  | 'in_progress'
+  | 'review'
+  | 'completed'
+  | 'cancelled';
+
 export interface UpdateComplianceTaskPayload {
-  status?: string;
+  status?: ComplianceTaskStatus;
   priority?: string;
   description?: string | null;
   assigneeId?: string | null;
