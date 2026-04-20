@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Shield, Trash2, UserPlus } from 'lucide-react';
+import { Pencil, Shield, Trash2, UserPlus } from 'lucide-react';
 import { SearchInput } from '@packages/ui';
 import {
   useRolePermissions,
@@ -22,12 +22,14 @@ export interface RoleDetailPanelProps {
   role: Role;
   permissionGroups: PermissionModuleGroup[];
   totalPermissions: number;
+  onEdit?: () => void;
 }
 
 export function RoleDetailPanel({
   role,
   permissionGroups,
   totalPermissions,
+  onEdit,
 }: RoleDetailPanelProps) {
   const [activeTab, setActiveTab] = useState<DetailTab>('permissions');
   const [permSearch, setPermSearch] = useState('');
@@ -144,13 +146,23 @@ export function RoleDetailPanel({
           </div>
         </div>
         {!role.isSystem && (
-          <button
-            type="button"
-            className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] uppercase tracking-eyebrow font-sans font-semibold text-signal hover:bg-signal/5 border border-transparent hover:border-signal/30 transition-colors"
-          >
-            <Trash2 className="w-3 h-3" strokeWidth={1.5} />
-            Delete
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onEdit}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] uppercase tracking-eyebrow font-sans font-semibold text-ink-muted hover:text-ink border border-transparent hover:border-rule transition-colors"
+            >
+              <Pencil className="w-3 h-3" strokeWidth={1.5} />
+              Edit
+            </button>
+            <button
+              type="button"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] uppercase tracking-eyebrow font-sans font-semibold text-signal hover:bg-signal/5 border border-transparent hover:border-signal/30 transition-colors"
+            >
+              <Trash2 className="w-3 h-3" strokeWidth={1.5} />
+              Delete
+            </button>
+          </div>
         )}
       </div>
 

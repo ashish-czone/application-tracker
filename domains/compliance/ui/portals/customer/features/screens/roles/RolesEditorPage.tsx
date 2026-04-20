@@ -5,6 +5,8 @@ import { useRolesList, usePermissionRegistry, type Role } from '@packages/rbac-u
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 import { RoleListItem } from './components/RoleListItem';
 import { RoleDetailPanel } from './components/RoleDetailPanel';
+import { AddRoleDrawer } from './components/AddRoleDrawer';
+import { EditRoleDrawer } from './components/EditRoleDrawer';
 import { groupPermissionsByModule } from './utils/permissions';
 
 export function RolesEditorPage() {
@@ -13,6 +15,8 @@ export function RolesEditorPage() {
 
   const roles = rolesData?.data ?? [];
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
 
   useEffect(() => {
     if (!selectedRoleId && roles.length > 0) {
@@ -84,6 +88,7 @@ export function RolesEditorPage() {
             </span>
             <button
               type="button"
+              onClick={() => setAddOpen(true)}
               className="flex items-center gap-1 text-[10px] uppercase tracking-eyebrow font-sans font-semibold text-ink-muted hover:text-ink transition-colors"
             >
               <Plus className="w-3 h-3" strokeWidth={2} />
@@ -125,6 +130,7 @@ export function RolesEditorPage() {
             role={selectedRole}
             permissionGroups={permissionGroups}
             totalPermissions={totalPermissions}
+            onEdit={() => setEditOpen(true)}
           />
         ) : (
           <div className="flex-1 flex items-center justify-center text-sm text-ink-muted font-sans">
@@ -132,6 +138,11 @@ export function RolesEditorPage() {
           </div>
         )}
       </div>
+
+      {addOpen && <AddRoleDrawer onClose={() => setAddOpen(false)} />}
+      {editOpen && selectedRole && (
+        <EditRoleDrawer role={selectedRole} onClose={() => setEditOpen(false)} />
+      )}
     </ScreenLayout>
   );
 }
