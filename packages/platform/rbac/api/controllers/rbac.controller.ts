@@ -21,6 +21,8 @@ import { CreateRoleDto } from '../dto/create-role.dto';
 import { UpdateRoleDto } from '../dto/update-role.dto';
 import { ListRolesQueryDto } from '../dto/list-roles-query.dto';
 import { SetRolePermissionsDto } from '../dto/set-role-permissions.dto';
+import { AddRoleMemberDto } from '../dto/add-role-member.dto';
+import { ListRoleMembersQueryDto } from '../dto/list-role-members-query.dto';
 import { RBAC_PERMISSIONS } from '../permissions';
 
 @ApiTags('rbac')
@@ -77,6 +79,40 @@ export class RbacController {
     await this.rbacService.findRoleByIdOrFail(id);
     const count = await this.rbacService.getRoleUserCount(id);
     return { count };
+  }
+
+  // --- Role Members ---
+
+  @Get('roles/:id/members')
+  @RequirePermission(RBAC_PERMISSIONS.ROLES_READ)
+  @ApiOperation({ summary: 'List users assigned to a role' })
+  async listRoleMembers(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query() query: ListRoleMembersQueryDto,
+  ) {
+    return this.rbacService.listRoleMembers(id, query);
+  }
+
+  @Post('roles/:id/members')
+  @RequirePermission(RBAC_PERMISSIONS.ROLES_MANAGE)
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Assign a user to a role' })
+  async addRoleMember(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: AddRoleMemberDto,
+  ) {
+    return this.rbacService.addRoleMember(id, dto.userId);
+  }
+
+  @Delete('roles/:id/members/:userId')
+  @RequirePermission(RBAC_PERMISSIONS.ROLES_MANAGE)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Remove a user from a role' })
+  async removeRoleMember(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('userId', ParseUUIDPipe) userId: string,
+  ) {
+    await this.rbacService.removeRoleMember(id, userId);
   }
 
   // --- Role Permissions ---

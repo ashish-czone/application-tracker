@@ -24,9 +24,10 @@ export class ListRolesQueryDto {
   @MaxLength(100)
   search?: string;
 
-  @ApiPropertyOptional({ enum: ['admin', 'client'] })
+  @ApiPropertyOptional({ description: 'Optional user type filter' })
   @IsOptional()
-  @IsIn(['admin', 'client'])
+  @IsString()
+  @MaxLength(50)
   userType?: string;
 
   @ApiPropertyOptional({ enum: ['name', 'createdAt'], default: 'createdAt' })

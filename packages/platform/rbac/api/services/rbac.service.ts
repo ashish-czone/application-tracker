@@ -1,12 +1,12 @@
 import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
-import { DatabaseService, eq, and, ilike, asc, desc, count, inArray, users, type SQL } from '@packages/database';
+import { DatabaseService, eq, and, or, isNull, ilike, asc, desc, count, inArray, users, type SQL } from '@packages/database';
 import type { PaginatedResponse } from '@packages/common';
 import { withTenant, withTenantInsert } from '@packages/tenancy/helpers';
 import { roles } from '../schema/roles';
 import { rolePermissions } from '../schema/role-permissions';
 import { userRoles } from '../schema/user-roles';
 import { PermissionRegistryService } from './permission-registry.service';
-import type { Role, RoleWithSystem, ScopedPermissions, PermissionScope, BooleanPermissions } from '../types';
+import type { Role, RoleMember, RoleWithSystem, ScopedPermissions, PermissionScope, BooleanPermissions } from '../types';
 
 @Injectable()
 export class RbacService {
@@ -17,12 +17,12 @@ export class RbacService {
 
   // --- Roles ---
 
-  async createRole(data: { name: string; userType: string; isDefault?: boolean }): Promise<Role> {
+  async createRole(data: { name: string; userType?: string | null; isDefault?: boolean }): Promise<Role> {
     const [role] = await this.database.db
       .insert(roles)
       .values(withTenantInsert(roles, {
         name: data.name,
-        userType: data.userType,
+        userType: data.userType ?? null,
         isDefault: data.isDefault ?? false,
       }))
       .returning();
@@ -172,10 +172,14 @@ export class RbacService {
 
   async getPermissionsForUser(userId: string, userType: string): Promise<BooleanPermissions> {
     // Load permissions from role_permissions — scope is ignored (determined by org positions now)
+    // Null userType on a role means "applies to any user type".
     const results = await this.database.db
       .select({ permission: rolePermissions.permission })
       .from(userRoles)
-      .innerJoin(roles, and(eq(roles.id, userRoles.roleId), eq(roles.userType, userType)))
+      .innerJoin(roles, and(
+        eq(roles.id, userRoles.roleId),
+        or(eq(roles.userType, userType), isNull(roles.userType)),
+      ))
       .innerJoin(rolePermissions, eq(rolePermissions.roleId, roles.id))
       .where(withTenant(userRoles, eq(userRoles.userId, userId)));
 
@@ -288,7 +292,7 @@ export class RbacService {
 
     if (!user) throw new NotFoundException('User not found');
 
-    if (user.userType !== role.userType) {
+    if (role.userType !== null && user.userType !== role.userType) {
       throw new ConflictException(
         `Cannot assign role scoped to '${role.userType}' — user type is '${user.userType}'`,
       );
@@ -304,6 +308,89 @@ export class RbacService {
     await this.database.db
       .delete(userRoles)
       .where(withTenant(userRoles, eq(userRoles.userId, userId), eq(userRoles.roleId, roleId)));
+  }
+
+  // --- Role members (users assigned to a role) ---
+
+  async listRoleMembers(roleId: string, query: {
+    page?: number;
+    limit?: number;
+    search?: string;
+  }): Promise<PaginatedResponse<RoleMember>> {
+    await this.findRoleByIdOrFail(roleId);
+
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 25;
+    const offset = (page - 1) * limit;
+
+    const conditions: SQL[] = [eq(userRoles.roleId, roleId)];
+    if (query.search) {
+      const term = `%${query.search}%`;
+      const searchClause = or(
+        ilike(users.firstName, term),
+        ilike(users.lastName, term),
+        ilike(users.email, term),
+      );
+      if (searchClause) conditions.push(searchClause);
+    }
+
+    const whereClause = withTenant(userRoles, ...conditions);
+
+    const [{ total }] = await this.database.db
+      .select({ total: count() })
+      .from(userRoles)
+      .innerJoin(users, eq(users.id, userRoles.userId))
+      .where(whereClause);
+
+    const rows = await this.database.db
+      .select({
+        id: users.id,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        email: users.email,
+        addedAt: userRoles.createdAt,
+      })
+      .from(userRoles)
+      .innerJoin(users, eq(users.id, userRoles.userId))
+      .where(whereClause)
+      .orderBy(desc(userRoles.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    return {
+      data: rows,
+      meta: {
+        total: Number(total),
+        page,
+        limit,
+        totalPages: Math.ceil(Number(total) / limit),
+      },
+    };
+  }
+
+  async addRoleMember(roleId: string, userId: string): Promise<RoleMember> {
+    await this.assignRoleToUser(userId, roleId);
+
+    const [row] = await this.database.db
+      .select({
+        id: users.id,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        email: users.email,
+        addedAt: userRoles.createdAt,
+      })
+      .from(userRoles)
+      .innerJoin(users, eq(users.id, userRoles.userId))
+      .where(withTenant(userRoles, eq(userRoles.roleId, roleId), eq(userRoles.userId, userId)))
+      .limit(1);
+
+    if (!row) throw new NotFoundException('Member not found after assignment');
+    return row;
+  }
+
+  async removeRoleMember(roleId: string, userId: string): Promise<void> {
+    await this.findRoleByIdOrFail(roleId);
+    await this.removeRoleFromUser(userId, roleId);
   }
 
   async getUserRoles(userId: string, userType?: string): Promise<Role[]> {

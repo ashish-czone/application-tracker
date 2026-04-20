@@ -5,6 +5,6 @@ export { RbacGuard } from './guards/rbac.guard';
 export { RequirePermission } from './decorators/require-permission.decorator';
 export { RBAC_PERMISSIONS } from './permissions';
 export { FieldPermissionsController } from './controllers/field-permissions.controller';
-export type { Role, RoleWithSystem, PermissionRegistryEntry, PermissionScope, ScopedPermissions, BooleanPermissions, FieldPermissionEntityResolver } from './types';
+export type { Role, RoleMember, RoleWithSystem, PermissionRegistryEntry, PermissionScope, ScopedPermissions, BooleanPermissions, FieldPermissionEntityResolver } from './types';
 export { FIELD_PERMISSION_ENTITY_RESOLVER } from './types';
 export { roles, rolePermissions, userRoles } from './schema';

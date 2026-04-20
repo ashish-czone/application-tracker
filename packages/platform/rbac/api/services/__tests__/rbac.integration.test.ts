@@ -179,6 +179,27 @@ describe('RBAC (integration)', () => {
       );
     });
 
+    it('should allow assigning a null-userType role to any user', async () => {
+      const adminUser = await createUser('admin');
+      const clientUser = await createUser('client');
+      const role = await rbacService.createRole({ name: 'Any User', userType: null });
+
+      await rbacService.assignRoleToUser(adminUser.id, role.id);
+      await rbacService.assignRoleToUser(clientUser.id, role.id);
+
+      expect(await rbacService.getRoleUserCount(role.id)).toBe(2);
+    });
+
+    it('should include null-userType role permissions in getPermissionsForUser', async () => {
+      const user = await createUser('client');
+      const role = await rbacService.createRole({ name: 'Shared', userType: null });
+      await rbacService.setRolePermissions(role.id, ['reports.read']);
+      await rbacService.assignRoleToUser(user.id, role.id);
+
+      const perms = await rbacService.getPermissionsForUser(user.id, 'client');
+      expect(perms['reports.read']).toBe(true);
+    });
+
     it('should remove role from user', async () => {
       const user = await createUser('admin');
       const role = await rbacService.createRole({ name: 'Temp Role', userType: 'admin' });
@@ -242,6 +263,98 @@ describe('RBAC (integration)', () => {
       const testPerms = all.filter((p) => p.module === 'test_module');
       expect(testPerms).toHaveLength(2);
       expect(testPerms.map((p) => p.action)).toContain('read');
+    });
+  });
+
+  describe('Role members', () => {
+    it('should list members with addedAt', async () => {
+      const role = await rbacService.createRole({ name: 'Members Role', userType: 'admin' });
+      const user = await createUser('admin');
+      await rbacService.addRoleMember(role.id, user.id);
+
+      const result = await rbacService.listRoleMembers(role.id, {});
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0].id).toBe(user.id);
+      expect(result.data[0].email).toBe(user.email);
+      expect(result.data[0].addedAt).toBeInstanceOf(Date);
+      expect(result.meta.total).toBe(1);
+    });
+
+    it('should paginate members', async () => {
+      const role = await rbacService.createRole({ name: 'Paginated', userType: 'admin' });
+      for (let i = 0; i < 5; i++) {
+        const user = await createUser('admin');
+        await rbacService.addRoleMember(role.id, user.id);
+      }
+
+      const page1 = await rbacService.listRoleMembers(role.id, { page: 1, limit: 3 });
+      expect(page1.data).toHaveLength(3);
+      expect(page1.meta.total).toBe(5);
+
+      const page2 = await rbacService.listRoleMembers(role.id, { page: 2, limit: 3 });
+      expect(page2.data).toHaveLength(2);
+    });
+
+    it('should filter members by search term', async () => {
+      const role = await rbacService.createRole({ name: 'Searchable', userType: 'admin' });
+      const [u1] = await db
+        .insert(users)
+        .values({ email: `alice-${randomUUID()}@example.com`, firstName: 'Alice', lastName: 'Smith', userType: 'admin' })
+        .returning();
+      const [u2] = await db
+        .insert(users)
+        .values({ email: `bob-${randomUUID()}@example.com`, firstName: 'Bob', lastName: 'Jones', userType: 'admin' })
+        .returning();
+      await rbacService.addRoleMember(role.id, u1.id);
+      await rbacService.addRoleMember(role.id, u2.id);
+
+      const result = await rbacService.listRoleMembers(role.id, { search: 'alice' });
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0].id).toBe(u1.id);
+    });
+
+    it('should return the added member from addRoleMember', async () => {
+      const role = await rbacService.createRole({ name: 'Add', userType: 'admin' });
+      const user = await createUser('admin');
+
+      const member = await rbacService.addRoleMember(role.id, user.id);
+      expect(member.id).toBe(user.id);
+      expect(member.email).toBe(user.email);
+      expect(member.addedAt).toBeInstanceOf(Date);
+    });
+
+    it('should be idempotent — adding the same member twice does not duplicate', async () => {
+      const role = await rbacService.createRole({ name: 'Idempotent', userType: 'admin' });
+      const user = await createUser('admin');
+
+      await rbacService.addRoleMember(role.id, user.id);
+      await rbacService.addRoleMember(role.id, user.id);
+
+      expect(await rbacService.getRoleUserCount(role.id)).toBe(1);
+    });
+
+    it('should remove a member', async () => {
+      const role = await rbacService.createRole({ name: 'Remove', userType: 'admin' });
+      const user = await createUser('admin');
+      await rbacService.addRoleMember(role.id, user.id);
+
+      await rbacService.removeRoleMember(role.id, user.id);
+
+      const result = await rbacService.listRoleMembers(role.id, {});
+      expect(result.data).toHaveLength(0);
+    });
+
+    it('should throw when listing members of a non-existent role', async () => {
+      await expect(
+        rbacService.listRoleMembers(randomUUID(), {}),
+      ).rejects.toThrow('Role not found');
+    });
+
+    it('should throw when removing a member from a non-existent role', async () => {
+      const user = await createUser('admin');
+      await expect(
+        rbacService.removeRoleMember(randomUUID(), user.id),
+      ).rejects.toThrow('Role not found');
     });
   });
 });
