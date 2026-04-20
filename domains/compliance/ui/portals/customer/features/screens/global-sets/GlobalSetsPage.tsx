@@ -12,6 +12,8 @@ import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 import { HierarchicalRows, type TreeNode } from './components/HierarchicalRows';
 import { FlatRows, type FlatRowItem } from './components/FlatRows';
 import { AddItemDialog } from './components/AddItemDialog';
+import { EditItemDialog } from './components/EditItemDialog';
+import { DeleteItemDialog } from './components/DeleteItemDialog';
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
@@ -67,6 +69,15 @@ function maxUpdatedAt(nodes: CategoryTreeNode[], fallback: string): string {
   return max;
 }
 
+function findNodeById(nodes: CategoryTreeNode[], id: string): CategoryTreeNode | null {
+  for (const n of nodes) {
+    if (n.id === id) return n;
+    const found = findNodeById(n.children, id);
+    if (found) return found;
+  }
+  return null;
+}
+
 export function GlobalSetsPage() {
   const groupsQuery = useCategoryGroupsList();
   const groups = (groupsQuery.data ?? []) as CategoryGroup[];
@@ -78,9 +89,14 @@ export function GlobalSetsPage() {
   const activeGroup = groups.find((g) => g.id === activeId) ?? groups[0] ?? null;
   const activeGroupId = activeGroup?.id ?? null;
   const [addItemOpen, setAddItemOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const treeQuery = useCategoryTree(activeGroupId);
   const tree = (treeQuery.data ?? []) as CategoryTreeNode[];
+
+  const editingNode = editingId ? findNodeById(tree, editingId) : null;
+  const deletingNode = deletingId ? findNodeById(tree, deletingId) : null;
 
   const isHierarchical = hasAnyChildren(tree);
   const flatItems = useMemo(() => flattenTree(tree), [tree]);
@@ -241,9 +257,17 @@ export function GlobalSetsPage() {
                   )}
                   {!treeQuery.isLoading && tree.length > 0 && (
                     isHierarchical ? (
-                      <HierarchicalRows nodes={treeNodes} />
+                      <HierarchicalRows
+                        nodes={treeNodes}
+                        onEdit={setEditingId}
+                        onDelete={setDeletingId}
+                      />
                     ) : (
-                      <FlatRows items={flatItems} />
+                      <FlatRows
+                        items={flatItems}
+                        onEdit={setEditingId}
+                        onDelete={setDeletingId}
+                      />
                     )
                   )}
                 </div>
@@ -259,6 +283,30 @@ export function GlobalSetsPage() {
           tree={tree}
           isHierarchical={isHierarchical}
           onClose={() => setAddItemOpen(false)}
+        />
+      )}
+
+      {editingNode && (
+        <EditItemDialog
+          item={{
+            id: editingNode.id,
+            name: editingNode.name,
+            slug: editingNode.slug,
+            metadata: editingNode.metadata,
+          }}
+          onClose={() => setEditingId(null)}
+        />
+      )}
+
+      {deletingNode && (
+        <DeleteItemDialog
+          item={{
+            id: deletingNode.id,
+            name: deletingNode.name,
+            slug: deletingNode.slug,
+            childCount: deletingNode.children.length,
+          }}
+          onClose={() => setDeletingId(null)}
         />
       )}
     </div>

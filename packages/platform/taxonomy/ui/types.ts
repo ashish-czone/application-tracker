@@ -104,12 +104,14 @@ export interface CreateCategoryRequest {
   slug: string;
   parentId?: string;
   sortOrder?: number;
+  metadata?: Record<string, string>;
 }
 
 export interface UpdateCategoryRequest {
   name?: string;
   slug?: string;
   sortOrder?: number;
+  metadata?: Record<string, string>;
 }
 
 export interface MoveCategoryRequest {
