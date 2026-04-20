@@ -85,6 +85,7 @@ export { splitPayload } from './helpers/split-payload';
 export type { SplitResult } from './helpers/split-payload';
 
 export { customFieldsColumn, hasCustomFieldsColumn } from './helpers/custom-fields-column';
+export { JsonbStorageAdapter } from './storage/jsonb-storage.adapter';
 
 // --- Schemas moved from eav-attributes ---
 
