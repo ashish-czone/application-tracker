@@ -1,5 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
-import type { EntityConfig, EntityRegistryEntry } from './types';
+import { getTableColumns } from 'drizzle-orm';
+import type { PgColumn } from 'drizzle-orm/pg-core';
+import type { EntityConfig, EntityRegistryEntry, ResolvedExtension } from './types';
 
 /**
  * Central registry of all entity types.
@@ -9,6 +11,8 @@ import type { EntityConfig, EntityRegistryEntry } from './types';
 @Injectable()
 export class EntityRegistryService {
   private readonly configs = new Map<string, EntityConfig>();
+  private readonly resolvedExtensions = new Map<string, ResolvedExtension>();
+  private finalized = false;
   private readonly logger = new Logger(EntityRegistryService.name);
 
   /**
@@ -109,5 +113,131 @@ export class EntityRegistryService {
   /** Get count of registered entities. */
   get size(): number {
     return this.configs.size;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Extension-of resolution — runs once after all entities are registered.
+  // Walks each entity that declares `extensionOf`, looks up the parent in the
+  // registry, computes the projected column set, and caches a `ResolvedExtension`
+  // for downstream consumers (entity service, controllers).
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Resolve all `extensionOf` configs against their (now-registered) parents.
+   * Idempotent — calling again is a no-op. Throws on the first invalid
+   * extension so misconfigurations surface at boot, not at first request.
+   */
+  finalize(): void {
+    if (this.finalized) return;
+
+    for (const child of this.configs.values()) {
+      if (!child.extensionOf) continue;
+      this.resolvedExtensions.set(child.entityType, this.resolveExtension(child));
+    }
+
+    this.finalized = true;
+    if (this.resolvedExtensions.size > 0) {
+      this.logger.log(`Resolved ${this.resolvedExtensions.size} extension entities`);
+    }
+  }
+
+  /** Returns the resolved extension metadata for an entity, or undefined if
+   *  the entity is not an extension. Throws if the entity declares
+   *  `extensionOf` but `finalize()` has not run yet — non-extension entities
+   *  return undefined regardless so generic call sites don't have to know
+   *  about the bootstrap order. */
+  getResolvedExtension(entityType: string): ResolvedExtension | undefined {
+    if (!this.finalized) {
+      const config = this.configs.get(entityType);
+      if (config?.extensionOf) {
+        throw new Error(
+          `EntityRegistryService.getResolvedExtension('${entityType}') called before finalize()`,
+        );
+      }
+      return undefined;
+    }
+    return this.resolvedExtensions.get(entityType);
+  }
+
+  private resolveExtension(child: EntityConfig): ResolvedExtension {
+    const ext = child.extensionOf!;
+    const parent = this.configs.get(ext.entity);
+    if (!parent) {
+      throw new Error(
+        `Entity '${child.entityType}' declares extensionOf '${ext.entity}', but '${ext.entity}' is not registered.`,
+      );
+    }
+    if (parent.extensionOf) {
+      throw new Error(
+        `Entity '${child.entityType}' extends '${ext.entity}', which is itself an extension. ` +
+          `Extension chaining is not supported.`,
+      );
+    }
+    if (!parent.extensionColumns || parent.extensionColumns.length === 0) {
+      throw new Error(
+        `Entity '${child.entityType}' extends '${ext.entity}', but '${ext.entity}' does not declare ` +
+          `any 'extensionColumns'. Add the field keys you want extensions to inherit on the parent's defineEntity().`,
+      );
+    }
+
+    const childColumns = getTableColumns(child.table);
+    const parentColumns = getTableColumns(parent.table);
+
+    const fkColumn = childColumns[ext.foreignKey] as PgColumn | undefined;
+    if (!fkColumn) {
+      // Already validated at defineEntity time — this is a defensive guard.
+      throw new Error(
+        `Entity '${child.entityType}': extensionOf.foreignKey '${ext.foreignKey}' is not a column on the table.`,
+      );
+    }
+    const parentIdColumn = parentColumns.id as PgColumn | undefined;
+    if (!parentIdColumn) {
+      throw new Error(
+        `Entity '${ext.entity}' has no 'id' column. extensionOf requires the parent to expose an 'id' primary key.`,
+      );
+    }
+
+    // Build projection set: parent.extensionColumns minus excludeColumns,
+    // then extraColumns appended (preserving declared order in both).
+    const excluded = new Set(ext.excludeColumns ?? []);
+    for (const k of excluded) {
+      if (!parent.extensionColumns.includes(k)) {
+        throw new Error(
+          `Entity '${child.entityType}': extensionOf.excludeColumns names '${k}', which is not in ` +
+            `'${ext.entity}'.extensionColumns. Drop the entry or add it to the parent's extensionColumns.`,
+        );
+      }
+    }
+
+    const baseProjection = parent.extensionColumns.filter((k) => !excluded.has(k));
+    const extras = ext.extraColumns ?? [];
+    for (const k of extras) {
+      if (parent.extensionColumns.includes(k)) {
+        throw new Error(
+          `Entity '${child.entityType}': extensionOf.extraColumns names '${k}', which is already in ` +
+            `'${ext.entity}'.extensionColumns. Remove it from extraColumns.`,
+        );
+      }
+      if (!parentColumns[k]) {
+        throw new Error(
+          `Entity '${child.entityType}': extensionOf.extraColumns names '${k}', which is not a column ` +
+            `on '${ext.entity}'.`,
+        );
+      }
+    }
+
+    const projectedColumns: ResolvedExtension['projectedColumns'] = [
+      ...baseProjection.map((fieldKey) => ({ fieldKey, column: parentColumns[fieldKey] as PgColumn })),
+      ...extras.map((fieldKey) => ({ fieldKey, column: parentColumns[fieldKey] as PgColumn })),
+    ];
+
+    return {
+      parentEntityType: ext.entity,
+      parentTable: parent.table,
+      foreignKeyColumn: fkColumn,
+      parentIdColumn,
+      projectedColumns,
+      parentDefaults: ext.parentDefaults ?? {},
+    };
   }
 }

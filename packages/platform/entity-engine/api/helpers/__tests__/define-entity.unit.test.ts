@@ -515,4 +515,178 @@ describe('defineEntity', () => {
       expect(config.hierarchy).toBe(false);
     });
   });
+
+  describe('extensionOf / extensionColumns', () => {
+    // Shared-key extension shape: primary key IS the FK to the parent.
+    // Mirrors the shape used by `compliance_tasks.task_id` today.
+    const extensionTable = pgTable('ext_entities', {
+      taskId: text('task_id').primaryKey(),
+      ruleId: text('rule_id').notNull(),
+      periodStart: text('period_start').notNull(),
+    });
+
+    const nonPkFkTable = pgTable('ext_entities_nonpk', {
+      id: text('id').primaryKey(),
+      taskId: text('task_id').notNull(),
+      ruleId: text('rule_id').notNull(),
+    });
+
+    const nullableFkTable = pgTable('ext_entities_nullable', {
+      taskId: text('task_id'), // nullable, not primary
+      ruleId: text('rule_id').notNull(),
+    });
+
+    it('should pass extensionColumns through on the parent entity', () => {
+      const config = defineEntity({
+        table: testTable,
+        onDelete: { mode: 'soft' },
+        slug: 'test-entities',
+        extensionColumns: ['title', 'status', 'priority'],
+        fields: {
+          title: { type: 'text', label: 'Title' },
+          status: { type: 'text', label: 'Status' },
+          priority: { type: 'text', label: 'Priority' },
+        },
+        ui: { icon: 'FileText' },
+      });
+
+      expect(config.extensionColumns).toEqual(['title', 'status', 'priority']);
+    });
+
+    it('should pass extensionOf through on the child entity', () => {
+      const config = defineEntity({
+        table: extensionTable,
+        onDelete: { mode: 'hard' },
+        slug: 'ext-entities',
+        extensionOf: {
+          entity: 'test-entities',
+          foreignKey: 'taskId',
+          excludeColumns: ['createdAt'],
+          extraColumns: ['email'],
+          parentDefaults: { kind: 'test' },
+        },
+        fields: {
+          ruleId: { type: 'text', label: 'Rule' },
+        },
+        ui: { icon: 'FileText' },
+      });
+
+      expect(config.extensionOf).toEqual({
+        entity: 'test-entities',
+        foreignKey: 'taskId',
+        excludeColumns: ['createdAt'],
+        extraColumns: ['email'],
+        parentDefaults: { kind: 'test' },
+      });
+    });
+
+    it('should leave both undefined when neither is set', () => {
+      const config = defineEntity({
+        table: testTable,
+        onDelete: { mode: 'soft' },
+        slug: 'test-entities',
+        fields: { title: { type: 'text', label: 'Title' } },
+        ui: { icon: 'FileText' },
+      });
+
+      expect(config.extensionColumns).toBeUndefined();
+      expect(config.extensionOf).toBeUndefined();
+    });
+
+    it('should throw when both extensionOf and extensionColumns are set', () => {
+      expect(() =>
+        defineEntity({
+          table: extensionTable,
+          onDelete: { mode: 'hard' },
+          slug: 'ext-entities',
+          extensionColumns: ['ruleId'],
+          extensionOf: { entity: 'test-entities', foreignKey: 'taskId' },
+          fields: { ruleId: { type: 'text', label: 'Rule' } },
+          ui: { icon: 'FileText' },
+        }),
+      ).toThrow(/both 'extensionOf' and 'extensionColumns'/);
+    });
+
+    it('should throw when extensionOf.foreignKey is missing', () => {
+      expect(() =>
+        defineEntity({
+          table: extensionTable,
+          onDelete: { mode: 'hard' },
+          slug: 'ext-entities',
+          extensionOf: { entity: 'test-entities', foreignKey: '' },
+          fields: { ruleId: { type: 'text', label: 'Rule' } },
+          ui: { icon: 'FileText' },
+        }),
+      ).toThrow(/extensionOf\.foreignKey must be a non-empty string/);
+    });
+
+    it('should throw when extensionOf.foreignKey names a column that does not exist', () => {
+      expect(() =>
+        defineEntity({
+          table: extensionTable,
+          onDelete: { mode: 'hard' },
+          slug: 'ext-entities',
+          extensionOf: { entity: 'test-entities', foreignKey: 'nope' },
+          fields: { ruleId: { type: 'text', label: 'Rule' } },
+          ui: { icon: 'FileText' },
+        }),
+      ).toThrow(/foreignKey 'nope' is not a column/);
+    });
+
+    it('should throw when extensionOf.foreignKey is not the primary key', () => {
+      expect(() =>
+        defineEntity({
+          table: nonPkFkTable,
+          onDelete: { mode: 'hard' },
+          slug: 'ext-entities-nonpk',
+          extensionOf: { entity: 'test-entities', foreignKey: 'taskId' },
+          fields: { ruleId: { type: 'text', label: 'Rule' } },
+          ui: { icon: 'FileText' },
+        }),
+      ).toThrow(/must be the primary key/);
+    });
+
+    it('should throw when extensionOf.foreignKey is nullable', () => {
+      expect(() =>
+        defineEntity({
+          table: nullableFkTable,
+          onDelete: { mode: 'hard' },
+          slug: 'ext-entities-nullable',
+          extensionOf: { entity: 'test-entities', foreignKey: 'taskId' },
+          fields: { ruleId: { type: 'text', label: 'Rule' } },
+          ui: { icon: 'FileText' },
+        }),
+      ).toThrow(/must be the primary key|must be NOT NULL/);
+    });
+
+    it('should throw when extensionColumns names a column that does not exist', () => {
+      expect(() =>
+        defineEntity({
+          table: testTable,
+          onDelete: { mode: 'soft' },
+          slug: 'test-entities',
+          extensionColumns: ['title', 'nope'],
+          fields: { title: { type: 'text', label: 'Title' } },
+          ui: { icon: 'FileText' },
+        }),
+      ).toThrow(/extensionColumns includes 'nope'/);
+    });
+
+    it('should throw when extensionOf.parentDefaults is not a plain object', () => {
+      expect(() =>
+        defineEntity({
+          table: extensionTable,
+          onDelete: { mode: 'hard' },
+          slug: 'ext-entities',
+          extensionOf: {
+            entity: 'test-entities',
+            foreignKey: 'taskId',
+            parentDefaults: ['oops'] as unknown as Record<string, unknown>,
+          },
+          fields: { ruleId: { type: 'text', label: 'Rule' } },
+          ui: { icon: 'FileText' },
+        }),
+      ).toThrow(/parentDefaults must be a plain object/);
+    });
+  });
 });

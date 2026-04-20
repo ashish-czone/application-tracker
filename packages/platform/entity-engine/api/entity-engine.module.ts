@@ -123,6 +123,9 @@ export class EntityEngineModule implements OnApplicationBootstrap {
       const config = pendingConfigs.shift()!;
       await this.initializeEntity(config);
     }
+    // Resolve `extensionOf` configs once every entity is registered. Throws
+    // on the first invalid extension so misconfigurations fail at boot.
+    this.registry.finalize();
   }
 
   private async initializeEntity(config: EntityConfig): Promise<void> {

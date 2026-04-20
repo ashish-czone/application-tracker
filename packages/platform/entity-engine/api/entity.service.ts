@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
-import { eq, and, or, isNull, ilike, asc, desc, count, sql, getTableName, inArray } from 'drizzle-orm';
+import { eq, and, or, isNull, ilike, asc, desc, count, sql, getTableName, getTableColumns, inArray } from 'drizzle-orm';
 import type { PgColumn } from 'drizzle-orm/pg-core';
 import { withTenant, withTenantInsert, tenantCondition } from '@packages/tenancy/helpers';
 import {
@@ -74,6 +74,47 @@ export class EntityService {
   /** The entity config this service was instantiated with. */
   getConfig(): EntityConfig {
     return this.config;
+  }
+
+  /**
+   * Resolved extension metadata for this entity (parent table, FK column,
+   * projected columns), or `undefined` for non-extension entities. Looked up
+   * from the registry on every call — the registry only finalizes after
+   * `onApplicationBootstrap`, so reading once in the constructor would race.
+   */
+  private getExtensionMeta(): import('./types').ResolvedExtension | undefined {
+    return this.entityRegistry.getResolvedExtension(this.config.entityType);
+  }
+
+  /**
+   * Sortable columns visible to the child — child's own + any projected
+   * parent columns the parent declared sortable. The merge means a sort
+   * by `priority` (a parent column) just works on the extension entity.
+   */
+  private getEffectiveSortableColumns(ext: import('./types').ResolvedExtension): Record<string, PgColumn> {
+    const merged: Record<string, PgColumn> = { ...this.config.sortableColumns };
+    const parent = this.entityRegistry.get(ext.parentEntityType);
+    if (parent) {
+      for (const { fieldKey, column } of ext.projectedColumns) {
+        if (parent.sortableColumns[fieldKey]) merged[fieldKey] = column;
+      }
+    }
+    return merged;
+  }
+
+  /**
+   * Searchable columns visible to the child — child's own + any projected
+   * parent columns the parent declared searchable. Drizzle column references
+   * are stable across getTableColumns() calls, so set membership checks work.
+   */
+  private getEffectiveSearchColumns(ext: import('./types').ResolvedExtension): PgColumn[] {
+    const parent = this.entityRegistry.get(ext.parentEntityType);
+    if (!parent) return this.config.searchColumns;
+    const parentSearchSet = new Set<PgColumn>(parent.searchColumns);
+    const additional = ext.projectedColumns
+      .filter((p) => parentSearchSet.has(p.column))
+      .map((p) => p.column);
+    return [...this.config.searchColumns, ...additional];
   }
 
   // ---------------------------------------------------------------------------
@@ -203,15 +244,38 @@ export class EntityService {
   /**
    * Build a Drizzle select map for list queries — only standard DB columns
    * that appear in the list layout + required system columns.
+   *
+   * For extension entities (`extensionOf`), the child table has no `id`
+   * column of its own — the FK column doubles as the PK and shares the
+   * parent's id value. We alias `child.fk → 'id'` so callers always see
+   * an `id` field, then layer in the projected parent columns. Per-key
+   * conflicts resolve in favor of the child (its own column wins).
    */
-  private buildListSelectMap(listDefs: FieldDefinition[]): Record<string, PgColumn> {
+  private buildListSelectMap(
+    listDefs: FieldDefinition[],
+    ext?: import('./types').ResolvedExtension,
+  ): Record<string, PgColumn> {
     const table = this.config.table as any;
     const selectMap: Record<string, PgColumn> = {};
 
-    for (const key of EntityService.LIST_SYSTEM_COLUMNS) {
-      if (table[key]) {
-        selectMap[key] = table[key];
+    const resolveColumn = (key: string): PgColumn | undefined => {
+      if (table[key]) return table[key] as PgColumn;
+      if (ext) {
+        const parentTable = ext.parentTable as any;
+        if (parentTable[key]) return parentTable[key] as PgColumn;
       }
+      return undefined;
+    };
+
+    if (ext) {
+      // Extensions never have their own `id` column — alias the FK.
+      selectMap.id = ext.foreignKeyColumn;
+    }
+
+    for (const key of EntityService.LIST_SYSTEM_COLUMNS) {
+      if (key === 'id' && ext) continue; // already aliased
+      const col = resolveColumn(key);
+      if (col) selectMap[key] = col;
     }
 
     // Always include nameField and subtitleField (needed for display even if system/hidden)
@@ -219,12 +283,21 @@ export class EntityService {
     const displayFields = Array.isArray(nameField) ? [...nameField] : [nameField];
     if (subtitleField) displayFields.push(subtitleField);
     for (const key of displayFields) {
-      if (table[key]) selectMap[key] = table[key];
+      const col = resolveColumn(key);
+      if (col) selectMap[key] = col;
     }
 
     for (const def of listDefs) {
       if (def.columnName !== null && table[def.fieldKey]) {
         selectMap[def.fieldKey] = table[def.fieldKey];
+      }
+    }
+
+    // Layer projected parent columns last — child fields with the same key
+    // already won via the loop above, so this is purely additive.
+    if (ext) {
+      for (const { fieldKey, column } of ext.projectedColumns) {
+        if (!(fieldKey in selectMap)) selectMap[fieldKey] = column;
       }
     }
 
@@ -387,6 +460,11 @@ export class EntityService {
       limit: query.limit ?? 25,
     });
     const { config } = this;
+    const ext = this.getExtensionMeta();
+    // For extension entities, soft-delete + tenant scope live on the parent
+    // table (the child has neither column). Compute the scope-target table
+    // once so every helper picks the right table.
+    const scopeTable = ext ? (ext.parentTable as any) : (config.table as any);
 
     const conditions: any[] = [];
 
@@ -397,15 +475,17 @@ export class EntityService {
     }
 
     // Soft delete filter (delegated to @packages/soft-delete)
-    const softDeleteCond = buildSoftDeleteCondition(config.table, query.includeDeleted ?? false);
+    const softDeleteCond = buildSoftDeleteCondition(scopeTable, query.includeDeleted ?? false);
     if (softDeleteCond) conditions.push(softDeleteCond);
 
-    // Search across configured columns + lookup field labels
+    // Search across configured columns + lookup field labels.
+    // For extensions, projected parent columns marked searchable on the
+    // parent participate transparently.
     if (query.search) {
       const searchConditions: any[] = [];
 
-      // Standard column search (delegated to query-builder)
-      const stdSearch = buildSearchCondition(query.search, config.searchColumns);
+      const searchCols = ext ? this.getEffectiveSearchColumns(ext) : config.searchColumns;
+      const stdSearch = buildSearchCondition(query.search, searchCols);
       if (stdSearch) searchConditions.push(stdSearch);
 
       // Lookup field search — entity-specific, stays here
@@ -418,7 +498,7 @@ export class EntityService {
     }
 
     // Generic field-level filters (delegated to query-builder + EAV routing)
-    const filterConditions = await this.buildAllFilters(query, config);
+    const filterConditions = await this.buildAllFilters(query, config, ext);
     conditions.push(...filterConditions);
 
     // Custom filters from hooks (for anything not covered by generic filtering)
@@ -428,8 +508,8 @@ export class EntityService {
     }
 
     const whereClause = conditions.length > 0
-      ? withTenant(config.table as any, and(...conditions))
-      : withTenant(config.table as any);
+      ? withTenant(scopeTable, and(...conditions))
+      : withTenant(scopeTable);
 
     // Sort — check if the sort key is a lookup field, use label subquery if so
     const sortKey = query.sort ?? config.defaultSort;
@@ -437,21 +517,27 @@ export class EntityService {
     const orderByExpr = this.buildSortExpression(sortKey, orderDirection, config);
 
     // Count
-    const [{ total }] = await this.database.db
+    const countQuery = this.database.db
       .select({ total: count() })
-      .from(config.table as any)
-      .where(whereClause) as any[];
+      .from(config.table as any) as any;
+    if (ext) countQuery.innerJoin(ext.parentTable, eq(ext.parentIdColumn, ext.foreignKeyColumn));
+    const [{ total }] = await countQuery.where(whereClause) as any[];
 
     // Fetch only list-relevant columns instead of SELECT *
     const listDefs = await this.getListFieldDefs();
-    const selectMap: Record<string, any> = this.buildListSelectMap(listDefs);
+    const selectMap: Record<string, any> = this.buildListSelectMap(listDefs, ext);
 
-    // Add computed expressions (relationship counts + explicit computed columns)
-    Object.assign(selectMap, this.buildComputedExpressions());
+    // Add computed expressions (relationship counts + explicit computed columns).
+    // Skipped for extensions in PR 1: count subqueries reference `<child>.id`
+    // which doesn't exist on the child table. Revisit when an extension wants
+    // its own computed columns.
+    if (!ext) Object.assign(selectMap, this.buildComputedExpressions());
 
-    const rows = await this.database.db
+    const baseSelect = this.database.db
       .select(selectMap)
-      .from(config.table as any)
+      .from(config.table as any) as any;
+    if (ext) baseSelect.innerJoin(ext.parentTable, eq(ext.parentIdColumn, ext.foreignKeyColumn));
+    const rows = await baseSelect
       .where(whereClause)
       .orderBy(orderByExpr)
       .limit(limit)
@@ -486,16 +572,46 @@ export class EntityService {
   async findOneOrFail(id: string, accessCtx?: DataAccessContext): Promise<Record<string, unknown>> {
     const { config } = this;
     const table = config.table as any;
+    const ext = this.getExtensionMeta();
+    const scopeTable = ext ? (ext.parentTable as any) : table;
+    // Identity column on the child — for extensions the FK is also the PK
+    // and shares the parent's id value, so `eq(fk, id)` is the right shape.
+    const idColumn = ext ? ext.foreignKeyColumn : (table.id as PgColumn);
 
-    const conditions: any[] = [eq(table.id, id)];
+    const conditions: any[] = [eq(idColumn, id)];
 
-    const softDeleteCond = buildSoftDeleteCondition(table);
+    const softDeleteCond = buildSoftDeleteCondition(scopeTable);
     if (softDeleteCond) conditions.push(softDeleteCond);
 
     // Data access scope filtering — ensures user can only view records within their scope
     if (accessCtx) {
       const scopeCondition = await this.resolveDataAccessScope(accessCtx);
       if (scopeCondition) conditions.push(scopeCondition);
+    }
+
+    if (ext) {
+      // Extension reads project parent columns into the response, so build a
+      // selectMap explicitly instead of `select()` (which returns child only).
+      const selectMap: Record<string, any> = this.buildListSelectMap([], ext);
+      // Detail reads want every child column too, not just system + projected.
+      for (const [k, col] of Object.entries(getTableColumns(config.table))) {
+        if (!(k in selectMap)) selectMap[k] = col as PgColumn;
+      }
+      const [row] = await this.database.db
+        .select(selectMap)
+        .from(table)
+        .innerJoin(ext.parentTable, eq(ext.parentIdColumn, ext.foreignKeyColumn))
+        .where(withTenant(scopeTable, ...conditions))
+        .limit(1) as any[];
+
+      if (!row) {
+        throw new NotFoundException(`${config.singularName} not found`);
+      }
+
+      const response = await this.toResponse(row);
+      await this.resolveLookupLabels([response]);
+      await this.hydrateRelationalFields([response]);
+      return response;
     }
 
     const [row] = await this.database.db
@@ -1210,12 +1326,19 @@ export class EntityService {
    * Build the ORDER BY expression for list queries.
    * For lookup fields, uses a subquery to sort by the related entity's label.
    * For standard columns, delegates to query-builder.
+   * For extension entities, projected parent columns flagged sortable on
+   * the parent are merged into the sortable set so a sort by, say, `priority`
+   * (which lives on the parent) just works on the child.
    */
   private buildSortExpression(sortKey: string, direction: 'ASC' | 'DESC', config: EntityConfig): any {
-    // Check if the sort key is a computed expression (relationship counts + explicit computed columns)
-    const computedExprs = this.buildComputedExpressions();
-    if (computedExprs[sortKey]) {
-      return sql`${computedExprs[sortKey]} ${sql.raw(direction)}`;
+    const ext = this.getExtensionMeta();
+    // Computed expressions are skipped for extension entities (see note in
+    // list()); only consult them for non-extension entities.
+    if (!ext) {
+      const computedExprs = this.buildComputedExpressions();
+      if (computedExprs[sortKey]) {
+        return sql`${computedExprs[sortKey]} ${sql.raw(direction)}`;
+      }
     }
 
     // Check if the sort key is a lookup field (entity-specific logic)
@@ -1234,11 +1357,15 @@ export class EntityService {
       }
     }
 
+    const sortableColumns = ext
+      ? this.getEffectiveSortableColumns(ext)
+      : config.sortableColumns;
+
     // Standard column sort (delegated to query-builder)
     return qbBuildSortExpression(
       sortKey,
       direction === 'ASC' ? 'asc' : 'desc',
-      config.sortableColumns,
+      sortableColumns,
       config.defaultSort,
     );
   }
@@ -1246,10 +1373,13 @@ export class EntityService {
   /**
    * Build all filter conditions from legacy query params.
    * Resolves standard DB columns via query-builder, routes EAV fields to FieldValueService.
+   * For extension entities, projected parent columns are added to the column
+   * map so a filter like `?status=open` routes to `parent.status`.
    */
   private async buildAllFilters(
     query: BaseListQuery,
     config: EntityConfig,
+    ext?: import('./types').ResolvedExtension,
   ): Promise<any[]> {
     // Convert legacy ?field=value params to FilterExpressions
     const legacyFilters = parseLegacyFilters(query);
@@ -1272,6 +1402,14 @@ export class EntityService {
     for (const def of defs) {
       if (def.columnName && table[def.fieldKey]) {
         columnMap[def.fieldKey] = table[def.fieldKey];
+      }
+    }
+
+    // Layer projected parent columns. Child columns of the same name win
+    // (they were inserted above), so this is purely additive.
+    if (ext) {
+      for (const { fieldKey, column } of ext.projectedColumns) {
+        if (!(fieldKey in columnMap)) columnMap[fieldKey] = column;
       }
     }
 

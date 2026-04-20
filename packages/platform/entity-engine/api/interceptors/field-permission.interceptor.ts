@@ -1,6 +1,7 @@
-import { Injectable, type CallHandler, type ExecutionContext, type NestInterceptor } from '@nestjs/common';
+import { Inject, Injectable, Optional, type CallHandler, type ExecutionContext, type NestInterceptor } from '@nestjs/common';
 import { Observable, map } from 'rxjs';
 import type { EntityConfig } from '../types';
+import { EntityRegistryService } from '../entity-registry.service';
 
 /**
  * Restriction-based field permission interceptor.
@@ -14,6 +15,12 @@ import type { EntityConfig } from '../types';
  * System and required fields cannot be restricted — they always remain Read & Write.
  * Superadmin (wildcard `*` permission) bypasses all restrictions.
  *
+ * For extension entities (`extensionOf`), projected parent columns are also
+ * gated by the parent's `{parentSlug}.hide-{fieldKey}` /
+ * `{parentSlug}.readonly-{fieldKey}` permissions. The single source of truth
+ * for a field is the entity that owns it — projecting it into a child does
+ * not bypass the parent's RBAC.
+ *
  * Applied per-entity by the auto-generated controller.
  */
 export function createFieldPermissionInterceptor(config: EntityConfig) {
@@ -26,6 +33,10 @@ export function createFieldPermissionInterceptor(config: EntityConfig) {
 
   @Injectable()
   class FieldPermissionInterceptor implements NestInterceptor {
+    constructor(
+      @Optional() @Inject(EntityRegistryService) private readonly entityRegistry?: EntityRegistryService,
+    ) {}
+
     intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
       const request = context.switchToHttp().getRequest();
       const userPermissions: Record<string, string> = request.user?.permissions ?? {};
@@ -44,6 +55,28 @@ export function createFieldPermissionInterceptor(config: EntityConfig) {
           hiddenFields.add(fieldKey);
         } else if (`${slug}.readonly-${fieldKey}` in userPermissions) {
           readonlyFields.add(fieldKey);
+        }
+      }
+
+      // Extension entities: also honor the parent's hide/readonly perms for
+      // any column projected into this child. Skipped silently if the
+      // registry isn't injected (legacy callers in tests) or finalize hasn't
+      // been called yet.
+      const ext = this.entityRegistry?.getResolvedExtension(config.entityType);
+      if (ext) {
+        const parent = this.entityRegistry?.get(ext.parentEntityType);
+        if (parent) {
+          const parentSlug = parent.slug;
+          for (const { fieldKey } of ext.projectedColumns) {
+            const meta = parent.fieldMeta[fieldKey];
+            if (meta && !meta.isSystem) {
+              if (`${parentSlug}.hide-${fieldKey}` in userPermissions) {
+                hiddenFields.add(fieldKey);
+              } else if (`${parentSlug}.readonly-${fieldKey}` in userPermissions) {
+                readonlyFields.add(fieldKey);
+              }
+            }
+          }
         }
       }
 
