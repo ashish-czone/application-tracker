@@ -1,10 +1,18 @@
 export interface Role {
   id: string;
   name: string;
-  userType: string;
+  userType: string | null;
   isDefault: boolean;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface RoleMember {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  addedAt: Date;
 }
 
 /** Role with computed isSystem flag (true when role has wildcard '*' permission) */

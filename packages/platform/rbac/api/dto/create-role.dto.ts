@@ -1,4 +1,4 @@
-import { IsString, MinLength, MaxLength, IsIn, IsOptional, IsBoolean } from 'class-validator';
+import { IsString, MinLength, MaxLength, IsOptional, IsBoolean } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateRoleDto {
@@ -8,10 +8,11 @@ export class CreateRoleDto {
   @MaxLength(100)
   name!: string;
 
-  @ApiProperty({ example: 'admin', enum: ['admin', 'client'] })
+  @ApiPropertyOptional({ description: 'Optional user type scoping. Null means the role applies to any user type.' })
+  @IsOptional()
   @IsString()
-  @IsIn(['admin', 'client'])
-  userType!: string;
+  @MaxLength(50)
+  userType?: string | null;
 
   @ApiPropertyOptional({ example: false, default: false })
   @IsOptional()

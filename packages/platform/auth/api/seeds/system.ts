@@ -1,8 +1,10 @@
 import type { INestApplicationContext } from '@nestjs/common';
 import { DatabaseService, eq, users } from '@packages/database';
-import { RbacService, rolePermissions } from '@packages/rbac';
+import { RbacService, rolePermissions, roles } from '@packages/rbac';
 import { AuthService } from '../services/auth.service';
 import { AUTH_MODULE_CONFIG, type AuthModuleConfig } from '../types';
+
+const SUPER_ADMIN_ROLE_NAME = 'Super Admin';
 
 export const seedSystem = async (ctx: INestApplicationContext): Promise<void> => {
   const database = ctx.get(DatabaseService);
@@ -34,9 +36,16 @@ async function ensureAdminRole(
     .where(eq(rolePermissions.permission, '*'))
     .limit(1);
 
-  if (existing) return existing.roleId;
+  if (existing) {
+    // Normalize historical "Admin" wildcard role to "Super Admin" with null userType.
+    await database.db
+      .update(roles)
+      .set({ name: SUPER_ADMIN_ROLE_NAME, userType: null })
+      .where(eq(roles.id, existing.roleId));
+    return existing.roleId;
+  }
 
-  const role = await rbac.createRole({ name: 'Admin', userType: 'client' });
+  const role = await rbac.createRole({ name: SUPER_ADMIN_ROLE_NAME, userType: null });
   await rbac.setRolePermissions(role.id, [{ name: '*' }]);
   return role.id;
 }
