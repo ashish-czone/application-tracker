@@ -389,11 +389,20 @@ describe('EntityRegistryService', () => {
       expect(after).toBe(before);
     });
 
-    it('throws when getResolvedExtension is called before finalize()', () => {
+    it('throws when an extension entity is queried before finalize()', () => {
       registry.register(parentConfig(['title']));
       registry.register(childConfig({ entity: 'parent_entities', foreignKey: 'taskId' }));
 
       expect(() => registry.getResolvedExtension('child_entities')).toThrow(/before finalize/);
+    });
+
+    it('returns undefined for non-extension entities even before finalize()', () => {
+      registry.register(mockConfig());
+      expect(registry.getResolvedExtension('test_entity')).toBeUndefined();
+    });
+
+    it('returns undefined for unknown entities even before finalize()', () => {
+      expect(registry.getResolvedExtension('never_registered')).toBeUndefined();
     });
 
     it('throws when the parent entity is not registered', () => {

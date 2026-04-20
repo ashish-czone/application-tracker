@@ -142,12 +142,19 @@ export class EntityRegistryService {
   }
 
   /** Returns the resolved extension metadata for an entity, or undefined if
-   *  the entity is not an extension. Throws if `finalize()` has not run. */
+   *  the entity is not an extension. Throws if the entity declares
+   *  `extensionOf` but `finalize()` has not run yet — non-extension entities
+   *  return undefined regardless so generic call sites don't have to know
+   *  about the bootstrap order. */
   getResolvedExtension(entityType: string): ResolvedExtension | undefined {
     if (!this.finalized) {
-      throw new Error(
-        `EntityRegistryService.getResolvedExtension('${entityType}') called before finalize()`,
-      );
+      const config = this.configs.get(entityType);
+      if (config?.extensionOf) {
+        throw new Error(
+          `EntityRegistryService.getResolvedExtension('${entityType}') called before finalize()`,
+        );
+      }
+      return undefined;
     }
     return this.resolvedExtensions.get(entityType);
   }
