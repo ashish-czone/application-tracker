@@ -2,12 +2,14 @@ import type { PaginatedResponse } from '@packages/common';
 import type { ApiFn } from '@packages/platform-ui';
 import type {
   Role,
+  RoleMember,
   CreateRoleRequest,
   UpdateRoleRequest,
   PermissionEntry,
   PermissionRegistryEntry,
   BooleanPermissions,
   ListRolesParams,
+  ListRoleMembersParams,
 } from './types';
 
 export function createRbacApi(api: ApiFn) {
@@ -52,6 +54,23 @@ export function createRbacApi(api: ApiFn) {
 
     getPermissionRegistry(): Promise<PermissionRegistryEntry[]> {
       return api.get<PermissionRegistryEntry[]>('/permissions/registry');
+    },
+
+    listRoleMembers(roleId: string, params: ListRoleMembersParams): Promise<PaginatedResponse<RoleMember>> {
+      const searchParams = new URLSearchParams();
+      if (params.page && params.page > 1) searchParams.set('page', String(params.page));
+      if (params.limit) searchParams.set('limit', String(params.limit));
+      if (params.search) searchParams.set('search', params.search);
+      const qs = searchParams.toString();
+      return api.get<PaginatedResponse<RoleMember>>(`/roles/${roleId}/members${qs ? `?${qs}` : ''}`);
+    },
+
+    addRoleMember(roleId: string, userId: string): Promise<RoleMember> {
+      return api.post<RoleMember>(`/roles/${roleId}/members`, { userId });
+    },
+
+    removeRoleMember(roleId: string, userId: string): Promise<void> {
+      return api.delete<void>(`/roles/${roleId}/members/${userId}`);
     },
   };
 }
