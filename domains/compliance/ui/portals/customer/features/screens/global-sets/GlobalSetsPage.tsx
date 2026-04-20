@@ -11,6 +11,7 @@ import { useCategoryGroupUsage } from '@packages/entity-engine-ui';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 import { HierarchicalRows, type TreeNode } from './components/HierarchicalRows';
 import { FlatRows, type FlatRowItem } from './components/FlatRows';
+import { AddItemDialog } from './components/AddItemDialog';
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
@@ -76,6 +77,7 @@ export function GlobalSetsPage() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const activeGroup = groups.find((g) => g.id === activeId) ?? groups[0] ?? null;
   const activeGroupId = activeGroup?.id ?? null;
+  const [addItemOpen, setAddItemOpen] = useState(false);
 
   const treeQuery = useCategoryTree(activeGroupId);
   const tree = (treeQuery.data ?? []) as CategoryTreeNode[];
@@ -220,6 +222,7 @@ export function GlobalSetsPage() {
                   <Eyebrow>{isHierarchical ? 'Hierarchy' : 'Items'}</Eyebrow>
                   <button
                     type="button"
+                    onClick={() => setAddItemOpen(true)}
                     className="flex items-center gap-1.5 text-[11px] uppercase tracking-eyebrow font-sans text-ink-muted hover:text-ink transition-colors"
                   >
                     <Plus className="w-3 h-3" strokeWidth={2} />
@@ -249,6 +252,15 @@ export function GlobalSetsPage() {
           </section>
         </div>
       </main>
+
+      {addItemOpen && activeGroup && (
+        <AddItemDialog
+          group={activeGroup}
+          tree={tree}
+          isHierarchical={isHierarchical}
+          onClose={() => setAddItemOpen(false)}
+        />
+      )}
     </div>
   );
 }
