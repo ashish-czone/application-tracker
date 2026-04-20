@@ -77,6 +77,23 @@ export const TASKS_CONFIG = defineEntity({
   table: tasks,
   fields: TASKS_FIELDS,
 
+  // Projection surface for extensionOf children (e.g. compliance_tasks). Any
+  // fieldKey listed here can be read/written through an extension entity and
+  // appears on joined list/find responses. `kind` is intentionally NOT
+  // projected — it is the discriminator set by `parentDefaults` on the
+  // extension and is owned by the child domain.
+  extensionColumns: [
+    'title',
+    'description',
+    'status',
+    'priority',
+    'assigneeId',
+    'assigneeTeamId',
+    'dueDate',
+    'completedAt',
+    'externalKey',
+  ],
+
   hooks: {
     beforeCreate: async (payload: Record<string, unknown>) => {
       rejectKindInPayload(payload);
