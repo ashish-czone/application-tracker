@@ -1,22 +1,31 @@
-import { useState, useCallback, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { ScreenLayout } from '@packages/ui';
-import {
-  MOCK_ROLES,
-  PERMISSION_REGISTRY,
-  groupPermissionsByModule,
-  type Role,
-  type RoleMember,
-} from './data/rolesMock';
+import { useRolesList, usePermissionRegistry, type Role } from '@packages/rbac-ui';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 import { RoleListItem } from './components/RoleListItem';
 import { RoleDetailPanel } from './components/RoleDetailPanel';
-
-const PERMISSION_GROUPS = groupPermissionsByModule();
+import { groupPermissionsByModule } from './utils/permissions';
 
 export function RolesEditorPage() {
-  const [roles, setRoles] = useState<Role[]>(MOCK_ROLES);
-  const [selectedRoleId, setSelectedRoleId] = useState<string>(MOCK_ROLES[0].id);
+  const { data: rolesData, isLoading: rolesLoading } = useRolesList({ limit: 100 });
+  const { data: registry, isLoading: registryLoading } = usePermissionRegistry();
+
+  const roles = rolesData?.data ?? [];
+  const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!selectedRoleId && roles.length > 0) {
+      setSelectedRoleId(roles[0].id);
+    }
+  }, [roles, selectedRoleId]);
+
+  const permissionGroups = useMemo(
+    () => groupPermissionsByModule(registry ?? []),
+    [registry],
+  );
+
+  const totalPermissions = registry?.length ?? 0;
 
   const [leftWidth, setLeftWidth] = useState(280);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -39,74 +48,8 @@ export function RolesEditorPage() {
     dragging.current = false;
   }, []);
 
-  const selectedRole = roles.find((r) => r.id === selectedRoleId) ?? roles[0];
-
-  const togglePermission = useCallback(
-    (name: string) => {
-      if (selectedRole.isSystem) return;
-      setRoles((prev) =>
-        prev.map((r) => {
-          if (r.id !== selectedRoleId) return r;
-          const perms = new Set(r.permissions);
-          if (perms.has(name)) perms.delete(name);
-          else perms.add(name);
-          return { ...r, permissions: Array.from(perms) };
-        }),
-      );
-    },
-    [selectedRole.isSystem, selectedRoleId],
-  );
-
-  const toggleAllInModule = useCallback(
-    (_module: string, names: string[], checked: boolean) => {
-      if (selectedRole.isSystem) return;
-      setRoles((prev) =>
-        prev.map((r) => {
-          if (r.id !== selectedRoleId) return r;
-          const perms = new Set(r.permissions);
-          for (const n of names) {
-            if (checked) perms.add(n);
-            else perms.delete(n);
-          }
-          return { ...r, permissions: Array.from(perms) };
-        }),
-      );
-    },
-    [selectedRole.isSystem, selectedRoleId],
-  );
-
-  const addMember = useCallback(
-    (member: RoleMember) => {
-      setRoles((prev) =>
-        prev.map((r) => {
-          if (r.id !== selectedRoleId) return r;
-          if (r.members.some((m) => m.id === member.id)) return r;
-          return {
-            ...r,
-            members: [...r.members, { ...member, addedAt: new Date().toISOString() }],
-            userCount: r.userCount + 1,
-          };
-        }),
-      );
-    },
-    [selectedRoleId],
-  );
-
-  const removeMember = useCallback(
-    (memberId: string) => {
-      setRoles((prev) =>
-        prev.map((r) => {
-          if (r.id !== selectedRoleId) return r;
-          return {
-            ...r,
-            members: r.members.filter((m) => m.id !== memberId),
-            userCount: Math.max(0, r.userCount - 1),
-          };
-        }),
-      );
-    },
-    [selectedRoleId],
-  );
+  const selectedRole: Role | null =
+    roles.find((r) => r.id === selectedRoleId) ?? roles[0] ?? null;
 
   return (
     <ScreenLayout
@@ -114,10 +57,14 @@ export function RolesEditorPage() {
       breadcrumb={['Settings', 'Roles & Permissions']}
       title="Roles & Permissions"
       subtitle={
-        <>
-          {roles.length} roles · {PERMISSION_REGISTRY.length} permissions across{' '}
-          {PERMISSION_GROUPS.length} modules.
-        </>
+        rolesLoading || registryLoading ? (
+          <>Loading…</>
+        ) : (
+          <>
+            {roles.length} roles · {totalPermissions} permissions across{' '}
+            {permissionGroups.length} modules.
+          </>
+        )
       }
     >
       <div
@@ -144,14 +91,20 @@ export function RolesEditorPage() {
             </button>
           </div>
           <div className="flex-1 overflow-y-auto">
-            {roles.map((role) => (
-              <RoleListItem
-                key={role.id}
-                role={role}
-                isSelected={role.id === selectedRoleId}
-                onSelect={() => setSelectedRoleId(role.id)}
-              />
-            ))}
+            {rolesLoading ? (
+              <div className="px-4 py-6 text-sm text-ink-muted font-sans">Loading roles…</div>
+            ) : roles.length === 0 ? (
+              <div className="px-4 py-6 text-sm text-ink-muted font-sans">No roles defined.</div>
+            ) : (
+              roles.map((role) => (
+                <RoleListItem
+                  key={role.id}
+                  role={role}
+                  isSelected={role.id === selectedRole?.id}
+                  onSelect={() => setSelectedRoleId(role.id)}
+                />
+              ))
+            )}
           </div>
 
           <div
@@ -166,14 +119,18 @@ export function RolesEditorPage() {
           </div>
         </div>
 
-        <RoleDetailPanel
-          key={selectedRole.id}
-          role={selectedRole}
-          onTogglePermission={togglePermission}
-          onToggleAllInModule={toggleAllInModule}
-          onAddMember={addMember}
-          onRemoveMember={removeMember}
-        />
+        {selectedRole ? (
+          <RoleDetailPanel
+            key={selectedRole.id}
+            role={selectedRole}
+            permissionGroups={permissionGroups}
+            totalPermissions={totalPermissions}
+          />
+        ) : (
+          <div className="flex-1 flex items-center justify-center text-sm text-ink-muted font-sans">
+            {rolesLoading ? 'Loading…' : 'Select a role to view details.'}
+          </div>
+        )}
       </div>
     </ScreenLayout>
   );

@@ -4,7 +4,7 @@ import { format } from 'date-fns';
 import {
   DataGrid, Badge, Button, useDataGridParams,
   Dialog, DialogContent,
-  type ColumnDef, type DataGridFilterField,
+  type ColumnDef,
 } from '@packages/ui';
 import { useRolesList } from '../hooks';
 import { AddRoleForm } from '../components/AddRoleForm';
@@ -12,23 +12,6 @@ import { EditRoleForm } from '../components/EditRoleForm';
 import { PermissionsModal } from '../components/PermissionsModal';
 import { DeleteRoleDialog } from '../components/DeleteRoleDialog';
 import type { Role } from '../types';
-
-const USER_TYPE_LABELS: Record<string, string> = {
-  admin: 'Admin',
-  client: 'Client',
-};
-
-const ROLE_FILTER_FIELDS: DataGridFilterField[] = [
-  {
-    key: 'userType',
-    label: 'User Type',
-    fieldType: 'picklist',
-    options: [
-      { label: 'Admin', value: 'admin' },
-      { label: 'Client', value: 'client' },
-    ],
-  },
-];
 
 export function RolesListPage() {
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -39,15 +22,7 @@ export function RolesListPage() {
   const {
     page, pageSize, search, sort, order,
     setPage, setPageSize, setSearch, setSort,
-    filters, addFilter, removeFilter, clearAllFilters,
   } = useDataGridParams({ defaultSort: 'createdAt', defaultOrder: 'desc', storageKey: 'roles-list' });
-
-  // Extract filter values for the API (which expects simple query params)
-  const userType = useMemo(() => {
-    const f = filters.find((expr) => expr.field === 'userType');
-    if (!f) return undefined;
-    return (f.operator === 'in' && Array.isArray(f.value)) ? f.value[0] as string : f.value as string;
-  }, [filters]);
 
   const { data, isLoading, isError, refetch } = useRolesList({
     page,
@@ -55,7 +30,6 @@ export function RolesListPage() {
     search: search || undefined,
     sort: sort as 'name' | 'createdAt' | undefined,
     order,
-    userType,
   });
 
   const columns = useMemo<ColumnDef<Role, unknown>[]>(
@@ -79,21 +53,6 @@ export function RolesListPage() {
           </div>
         ),
         enableSorting: true,
-      },
-      {
-        id: 'userType',
-        header: 'User Type',
-        accessorKey: 'userType',
-        cell: ({ getValue }) => {
-          const type = getValue() as string;
-          return (
-            <Badge variant={type === 'admin' ? 'default' : 'secondary'}>
-              {USER_TYPE_LABELS[type] ?? type}
-            </Badge>
-          );
-        },
-        enableSorting: false,
-        enableHiding: true,
       },
       {
         id: 'createdAt',
@@ -178,11 +137,6 @@ export function RolesListPage() {
         search={search}
         onSearchChange={setSearch}
         searchPlaceholder="Search roles..."
-        filterFields={ROLE_FILTER_FIELDS}
-        filters={filters}
-        onFilterAdd={addFilter}
-        onStructuredFilterRemove={removeFilter}
-        onStructuredFiltersClear={clearAllFilters}
         isLoading={isLoading}
         isError={isError}
         onRetry={refetch}
@@ -241,9 +195,6 @@ export function RolesListPage() {
                 )}
               </div>
             </div>
-            <Badge variant={role.userType === 'admin' ? 'default' : 'secondary'}>
-              {USER_TYPE_LABELS[role.userType] ?? role.userType}
-            </Badge>
             <div className="text-xs text-muted-foreground">
               Created {format(new Date(role.createdAt), 'MMM d, yyyy')}
             </div>

@@ -1,5 +1,5 @@
 import { Shield } from 'lucide-react';
-import { PERMISSION_REGISTRY, type Role } from '../data/rolesMock';
+import type { Role } from '@packages/rbac-ui';
 
 export interface RoleListItemProps {
   role: Role;
@@ -16,7 +16,7 @@ export function RoleListItem({ role, isSelected, onSelect }: RoleListItemProps) 
         isSelected ? 'bg-ink text-paper' : 'hover:bg-paper-sunken/40'
       }`}
     >
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <Shield
             className={`w-3.5 h-3.5 flex-none ${
@@ -31,6 +31,8 @@ export function RoleListItem({ role, isSelected, onSelect }: RoleListItemProps) 
           >
             {role.name}
           </span>
+        </div>
+        <div className="flex items-center gap-1 flex-none">
           {role.isSystem && (
             <span
               className={`text-[9px] uppercase tracking-eyebrow font-sans font-semibold px-1.5 py-0.5 ${
@@ -50,20 +52,6 @@ export function RoleListItem({ role, isSelected, onSelect }: RoleListItemProps) 
             </span>
           )}
         </div>
-        <span
-          className={`font-mono text-[11px] tabular-nums flex-none ${
-            isSelected ? 'text-paper/60' : 'text-ink-muted'
-          }`}
-        >
-          {role.userCount}
-        </span>
-      </div>
-      <div
-        className={`mt-0.5 text-[10px] font-sans ${
-          isSelected ? 'text-paper/50' : 'text-ink-muted'
-        }`}
-      >
-        {role.permissions.length} of {PERMISSION_REGISTRY.length} permissions
       </div>
     </button>
   );

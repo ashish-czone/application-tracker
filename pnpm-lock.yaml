@@ -1400,9 +1400,15 @@ importers:
       '@packages/org-units-ui':
         specifier: workspace:*
         version: link:../../../packages/addons/org-units/ui
+      '@packages/rbac-ui':
+        specifier: workspace:*
+        version: link:../../../packages/platform/rbac/ui
       '@packages/ui':
         specifier: workspace:*
         version: link:../../../packages/core/ui
+      '@packages/users-ui':
+        specifier: workspace:*
+        version: link:../../../packages/platform/users/ui
       '@phosphor-icons/react':
         specifier: ^2.1.10
         version: 2.1.10(react-dom@19.2.4(react@19.2.4))(react@19.2.4)

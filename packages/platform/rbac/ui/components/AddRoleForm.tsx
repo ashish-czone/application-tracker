@@ -21,7 +21,6 @@ import type { BooleanPermissions } from '../types';
 
 const createRoleSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').max(100),
-  userType: z.enum(['admin', 'client'], { message: 'User type is required' }),
   isDefault: z.enum(['true', 'false']),
 });
 
@@ -45,7 +44,6 @@ export function AddRoleForm({ onClose }: AddRoleFormProps) {
     resolver: zodResolver(createRoleSchema),
     defaultValues: {
       name: '',
-      userType: '' as 'admin' | 'client',
       isDefault: 'false',
     },
   });
@@ -67,7 +65,7 @@ export function AddRoleForm({ onClose }: AddRoleFormProps) {
     try {
       const role = await rbacApi.createRole({
         name: roleDetails.name,
-        userType: roleDetails.userType,
+        userType: null,
         isDefault: roleDetails.isDefault === 'true',
       });
 
@@ -131,16 +129,6 @@ export function AddRoleForm({ onClose }: AddRoleFormProps) {
           label="Role name"
           placeholder="e.g. Manager"
           autoComplete="off"
-        />
-
-        <FormSelect
-          name="userType"
-          label="User type"
-          placeholder="Select type"
-          options={[
-            { label: 'Admin', value: 'admin' },
-            { label: 'Client', value: 'client' },
-          ]}
         />
 
         <FormSelect

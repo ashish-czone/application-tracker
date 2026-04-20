@@ -5,6 +5,7 @@ import { usePlatformAPI } from '@packages/platform-ui';
 import { createRbacApi } from './services';
 import type {
   ListRolesParams,
+  ListRoleMembersParams,
   CreateRoleRequest,
   UpdateRoleRequest,
   PermissionEntry,
@@ -107,5 +108,52 @@ export function usePermissionRegistry() {
     queryKey: ['permissions', 'registry'],
     queryFn: () => api.getPermissionRegistry(),
     staleTime: Infinity,
+  });
+}
+
+export function useRoleMembers(roleId: string | null, params: ListRoleMembersParams = {}) {
+  const api = useRbacApi();
+  return useQuery({
+    queryKey: ['roles', roleId, 'members', params],
+    queryFn: () => api.listRoleMembers(roleId!, params),
+    enabled: !!roleId,
+  });
+}
+
+export function useAddRoleMember(options?: { onSuccess?: () => void }) {
+  const api = useRbacApi();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ roleId, userId }: { roleId: string; userId: string }) =>
+      api.addRoleMember(roleId, userId),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['roles', variables.roleId, 'members'] });
+      queryClient.invalidateQueries({ queryKey: ['roles'] });
+      toast.success('Member added');
+      options?.onSuccess?.();
+    },
+    onError: (error: any) => {
+      toast.error(error?.body?.message || 'Failed to add member');
+    },
+  });
+}
+
+export function useRemoveRoleMember(options?: { onSuccess?: () => void }) {
+  const api = useRbacApi();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ roleId, userId }: { roleId: string; userId: string }) =>
+      api.removeRoleMember(roleId, userId),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['roles', variables.roleId, 'members'] });
+      queryClient.invalidateQueries({ queryKey: ['roles'] });
+      toast.success('Member removed');
+      options?.onSuccess?.();
+    },
+    onError: (error: any) => {
+      toast.error(error?.body?.message || 'Failed to remove member');
+    },
   });
 }

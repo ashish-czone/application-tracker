@@ -1,7 +1,7 @@
 export interface Role {
   id: string;
   name: string;
-  userType: 'admin' | 'client';
+  userType: string | null;
   isDefault: boolean;
   isSystem: boolean;
   createdAt: string;
@@ -10,8 +10,22 @@ export interface Role {
 
 export interface CreateRoleRequest {
   name: string;
-  userType: 'admin' | 'client';
+  userType?: string | null;
   isDefault?: boolean;
+}
+
+export interface RoleMember {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  addedAt: string;
+}
+
+export interface ListRoleMembersParams {
+  page?: number;
+  limit?: number;
+  search?: string;
 }
 
 export interface UpdateRoleRequest {

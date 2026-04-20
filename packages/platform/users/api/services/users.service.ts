@@ -237,7 +237,7 @@ export class UsersService {
     for (const roleId of data.roleIds) {
       const role = await this.rbacService.findRoleById(roleId);
       if (!role) throw new NotFoundException(`Role '${roleId}' not found`);
-      if (role.userType !== data.userType) {
+      if (role.userType !== null && role.userType !== data.userType) {
         throw new ConflictException(
           `Role '${role.name}' is scoped to '${role.userType}', but user type is '${data.userType}'`,
         );
