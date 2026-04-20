@@ -4312,6 +4312,9 @@ importers:
       '@packages/database':
         specifier: workspace:*
         version: link:../../../core/database
+      '@packages/soft-delete':
+        specifier: workspace:*
+        version: link:../../../core/soft-delete
       class-transformer:
         specifier: ^0.5.1
         version: 0.5.1

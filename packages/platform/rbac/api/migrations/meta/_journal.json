@@ -15,6 +15,13 @@
       "when": 1776669669064,
       "tag": "0001_slow_unus",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1776682747365,
+      "tag": "0002_remarkable_ser_duncan",
+      "breakpoints": true
     }
   ]
 }
