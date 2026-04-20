@@ -10,6 +10,14 @@
 
 **Status:** planning complete, decisions locked after hierarchy refactor. Zero code written in either PR.
 
+> **Historical note (2026-04-20):** PR 2b landed, then the tasks model evolved further in PRs #888 and #889. The sections below describe the _original_ plan where compliance wrote directly into `tasks` via the shared entity service using polymorphic `related_entity_type`/`related_entity_id` columns. The shipped model instead uses:
+> - `tasks.kind` as the discriminator (not `related_entity_type`); `related_entity_id` was dropped.
+> - A `compliance_tasks` 1-1 extension table holding `(rule_id, client_id, law_id, period_start, period_end)` with a unique constraint on `(rule_id, client_id, period_start)` as the natural-key safety net.
+> - `tasks.external_key` as the platform-level idempotency primitive, unique per `(kind, external_key)`. Every task kind reuses this column; no kind re-declares its own `external_key`.
+> - `ComplianceTasksService` owns writes (not the entity service) so the tasks row + extension row are transactional, and automation callers use `tasksService.findByExternalKey('compliance', key)` or `complianceTasksService.findByRuleClientPeriod(...)` for idempotency.
+>
+> References to `relatedEntityType`/`relatedEntityId`, `compliance_tasks.external_key`, and "write through the shared tasks EntityService" in the plan below are stale.
+
 ## What we're building
 
 A compliance domain for tax professionals: clients registered under laws (GST, Income Tax, Audit, etc.) file returns on recurring schedules. Rules define the cadence, the system auto-generates filing tasks for a 6-month horizon, and tasks are assigned to org-units configured to handle each law.
