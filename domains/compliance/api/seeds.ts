@@ -39,6 +39,9 @@ export function complianceSystemSeedSources(): SeedSource[] {
 
 export function complianceDemoSeedSources(): SeedSource[] {
   return [
+    demo('@domains/compliance-api/demo-global-sets', () =>
+      import('./shared/seeds/global-sets').then((m) => m.seedGlobalSets),
+    ),
     demo('@domains/compliance-api/demo-laws', () =>
       import('./laws/seeds/demo-laws').then((m) => m.seedDemoLaws),
     ),
