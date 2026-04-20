@@ -21,6 +21,7 @@ import { ClientsController } from './clients/clients.controller';
 import { ComplianceRuleService } from './rules/compliance-rules.service';
 import { ComplianceTasksService } from './compliance-tasks/compliance-tasks.service';
 import { ComplianceTasksController } from './compliance-tasks/compliance-tasks.controller';
+import { ComplianceTasksLookupService } from './compliance-tasks/compliance-tasks-lookup.service';
 import { GenerateComplianceTasksAction } from './automations/generate-compliance-tasks.action';
 import { COMPLIANCE_PERMISSION_REGISTRATIONS } from './permissions';
 
@@ -44,6 +45,7 @@ import { COMPLIANCE_PERMISSION_REGISTRATIONS } from './permissions';
     ClientContactsService,
     ComplianceRuleService,
     ComplianceTasksService,
+    ComplianceTasksLookupService,
     GenerateComplianceTasksAction,
   ],
 })
