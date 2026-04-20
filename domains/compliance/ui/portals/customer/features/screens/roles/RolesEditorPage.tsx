@@ -131,6 +131,7 @@ export function RolesEditorPage() {
             permissionGroups={permissionGroups}
             totalPermissions={totalPermissions}
             onEdit={() => setEditOpen(true)}
+            onDeleted={() => setSelectedRoleId(null)}
           />
         ) : (
           <div className="flex-1 flex items-center justify-center text-sm text-ink-muted font-sans">

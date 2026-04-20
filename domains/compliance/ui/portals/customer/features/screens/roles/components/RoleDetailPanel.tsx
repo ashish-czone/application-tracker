@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Pencil, Shield, Trash2, UserPlus } from 'lucide-react';
-import { SearchInput } from '@packages/ui';
+import { ConfirmDialog, SearchInput } from '@packages/ui';
 import {
+  useDeleteRole,
   useRolePermissions,
   useSetRolePermissions,
   useRoleMembers,
@@ -23,6 +24,7 @@ export interface RoleDetailPanelProps {
   permissionGroups: PermissionModuleGroup[];
   totalPermissions: number;
   onEdit?: () => void;
+  onDeleted?: () => void;
 }
 
 export function RoleDetailPanel({
@@ -30,11 +32,20 @@ export function RoleDetailPanel({
   permissionGroups,
   totalPermissions,
   onEdit,
+  onDeleted,
 }: RoleDetailPanelProps) {
   const [activeTab, setActiveTab] = useState<DetailTab>('permissions');
   const [permSearch, setPermSearch] = useState('');
   const [memberSearch, setMemberSearch] = useState('');
   const [addMemberOpen, setAddMemberOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+
+  const deleteMutation = useDeleteRole({
+    onSuccess: () => {
+      setDeleteOpen(false);
+      onDeleted?.();
+    },
+  });
 
   const { data: rolePermissions, isLoading: permsLoading } = useRolePermissions(role.id);
   const { data: membersData, isLoading: membersLoading } = useRoleMembers(role.id, { limit: 100 });
@@ -157,6 +168,7 @@ export function RoleDetailPanel({
             </button>
             <button
               type="button"
+              onClick={() => setDeleteOpen(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] uppercase tracking-eyebrow font-sans font-semibold text-signal hover:bg-signal/5 border border-transparent hover:border-signal/30 transition-colors"
             >
               <Trash2 className="w-3 h-3" strokeWidth={1.5} />
@@ -317,6 +329,18 @@ export function RoleDetailPanel({
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        open={deleteOpen}
+        onOpenChange={(open) => !deleteMutation.isPending && setDeleteOpen(open)}
+        title="Delete role?"
+        description={`"${role.name}" will be removed. Any user assignments go away and the role's permissions are archived.`}
+        confirmLabel="Delete role"
+        destructive
+        isPending={deleteMutation.isPending}
+        pendingLabel="Deleting…"
+        onConfirm={() => deleteMutation.mutate(role.id)}
+      />
     </div>
   );
 }
