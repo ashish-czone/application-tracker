@@ -578,6 +578,18 @@ export interface ResolvedExtension {
 }
 
 // ---------------------------------------------------------------------------
+// Custom-fields storage mode
+// ---------------------------------------------------------------------------
+
+/**
+ * Storage backend for an entity's admin-defined custom fields.
+ * - `true` — JSONB column on the entity row (default, fastest, one query).
+ * - `'eav'` — legacy shared EAV table via eav-attributes addon.
+ * - `false` / omitted — no custom fields.
+ */
+export type CustomFieldsMode = boolean | 'eav';
+
+// ---------------------------------------------------------------------------
 // EntityConfig — the single config that defines everything about an entity
 // ---------------------------------------------------------------------------
 
@@ -659,12 +671,19 @@ export interface EntityConfig<TTable extends PgTable = PgTable> {
   /** Configurable actions for list pages (row-level and bulk) */
   actions?: EntityActions;
 
-  // --- Custom fields (EAV) ---
+  // --- Custom fields ---
 
-  /** Enable dynamic custom fields (EAV storage) for this entity. Default: false.
-   *  When true: admins can create custom fields, EAV value operations are active.
-   *  When false: all non-relational fields must have DB columns, no EAV overhead. */
-  customFields?: boolean;
+  /** Enable dynamic custom fields for this entity. Default: none.
+   *  - `true` — **JSONB mode** (default storage). The entity table must spread
+   *    `...customFieldsColumn()` so a `custom_fields jsonb` column exists. All
+   *    admin-defined field values are stored inline on the row. One query loads
+   *    row + all custom values.
+   *  - `'eav'` — **Legacy EAV mode** (opt-in escape hatch). Values stored in the
+   *    shared `entity_field_values` table via the eav-attributes addon. Use only
+   *    for catalog-style entities with wildly sparse attributes.
+   *  - `false` / omitted — no custom fields. All non-relational fields must map
+   *    to DB columns. */
+  customFields?: CustomFieldsMode;
 
   /** Allow admins to customize this entity at runtime (reorder layout, toggle field
    *  visibility, add/configure tags, categories, workflows). Default: false.

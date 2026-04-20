@@ -3,6 +3,7 @@ import type { PgTable, PgColumn } from 'drizzle-orm/pg-core';
 import type { SQL } from 'drizzle-orm';
 import { hasSoftDeleteColumns } from '@packages/soft-delete';
 import type {
+  CustomFieldsMode,
   EntityConfig,
   EntityHooks,
   EntityRelationship,
@@ -16,6 +17,7 @@ import type {
   SetPicklistOptionInput,
   WorkflowFieldConfig,
 } from './types';
+import { hasCustomFieldsColumn } from './helpers/custom-fields-column';
 
 // ---------------------------------------------------------------------------
 // Model field definition — the new per-field declaration API
@@ -147,8 +149,16 @@ export interface ModelDefinition<TTable extends PgTable = PgTable> {
   onDelete: OnDeleteConfig;
   /** Enable timestamp tracking (createdAt/updatedAt columns) */
   timestamps?: boolean;
-  /** Enable dynamic custom fields (EAV storage). When true, admins can add custom fields and EAV value operations are active. Default: false. */
-  customFields?: boolean;
+  /**
+   * Enable dynamic custom fields for this entity. Default: none.
+   * - `true` — JSONB mode (default storage). Requires the Drizzle table to
+   *   spread `...customFieldsColumn()` so `custom_fields jsonb` exists. Values
+   *   live inline on the row; one query loads row + all custom values.
+   * - `'eav'` — legacy EAV opt-in. Values stored in the shared
+   *   `entity_field_values` table via the eav-attributes addon.
+   * - `false` / omitted — no custom fields.
+   */
+  customFields?: CustomFieldsMode;
   /**
    * Allow admins to customize this entity at runtime (layout, field visibility,
    * tags/categories/workflows). Default: false — the in-memory registry is the
@@ -423,6 +433,20 @@ export function defineEntity<TTable extends PgTable>(model: ModelDefinition<TTab
     // parentId is user-editable (seeded as a lookup field below); only
     // path/depth are pure infrastructure.
     systemColumns.push('path', 'depth');
+  }
+
+  // JSONB custom-fields: validate the table spreads customFieldsColumn() and
+  // register the column as a system column so it is never surfaced as a
+  // user-editable field. 'eav' mode and false/undefined skip this check.
+  if (model.customFields === true) {
+    if (!hasCustomFieldsColumn(columns)) {
+      throw new Error(
+        `defineEntity({ customFields: true }) for '${model.slug}' requires the table to spread ` +
+          `...customFieldsColumn() from @packages/entity-engine-api. Missing customFields column. ` +
+          `Use customFields: 'eav' to opt into legacy EAV storage instead.`,
+      );
+    }
+    systemColumns.push('customFields');
   }
 
   let sortOrder = 0;

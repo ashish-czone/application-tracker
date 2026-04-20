@@ -18,7 +18,7 @@ export const candidatesConfig: EntityConfig = {
   slug: 'candidates',
 
   table: candidates,
-  customFields: true,
+  customFields: 'eav',
   hasNotes: true,
   hasAttachments: true,
   systemColumns: ['id', 'createdAt', 'updatedAt', 'deletedAt', 'deletedBy', 'createdBy', 'resumeFile'],

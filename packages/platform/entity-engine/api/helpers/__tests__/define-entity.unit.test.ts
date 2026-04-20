@@ -1,9 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { pgTable, text, timestamp, boolean, integer } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, boolean, integer, jsonb } from 'drizzle-orm/pg-core';
 import { defineEntity } from '../../define-entity';
 import type { ModelDefinition } from '../../define-entity';
 
-// Mock Drizzle table for testing
+// Mock Drizzle table for testing. Includes a `customFields` jsonb column so
+// `customFields: true` (JSONB mode) passes the shape validation.
 const testTable = pgTable('test_entities', {
   id: text('id').primaryKey(),
   title: text('title').notNull(),
@@ -13,11 +14,18 @@ const testTable = pgTable('test_entities', {
   assigneeId: text('assignee_id'),
   isActive: boolean('is_active').notNull().default(true),
   amount: integer('amount'),
+  customFields: jsonb('custom_fields').notNull().default({}),
   createdBy: text('created_by').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }).notNull(),
   deletedAt: timestamp('deleted_at', { withTimezone: true, mode: 'date' }),
   deletedBy: text('deleted_by'),
+});
+
+// Table without the custom_fields column, for testing JSONB-mode validation failure.
+const tableWithoutCustomFields = pgTable('no_custom_fields_entities', {
+  id: text('id').primaryKey(),
+  title: text('title').notNull(),
 });
 
 // Mock hierarchical table — mirrors the shape produced by hierarchyColumns()
@@ -301,25 +309,81 @@ describe('defineEntity', () => {
     expect(config.sections[0].name).toBe('Basic Info');
   });
 
-  it('should pass through customFields flag', () => {
-    const withFlag = defineEntity({
-      table: testTable,
-      onDelete: { mode: 'soft' },
-      slug: 'test-entities',
-      customFields: true,
-      fields: { title: { type: 'text', label: 'Title' } },
-      ui: { icon: 'FileText' },
+  describe('customFields mode', () => {
+    it('should pass through customFields: true (JSONB mode) when the table has the column', () => {
+      const config = defineEntity({
+        table: testTable,
+        onDelete: { mode: 'soft' },
+        slug: 'test-entities',
+        customFields: true,
+        fields: { title: { type: 'text', label: 'Title' } },
+        ui: { icon: 'FileText' },
+      });
+      expect(config.customFields).toBe(true);
     });
-    expect(withFlag.customFields).toBe(true);
 
-    const withoutFlag = defineEntity({
-      table: testTable,
-      onDelete: { mode: 'soft' },
-      slug: 'test-entities',
-      fields: { title: { type: 'text', label: 'Title' } },
-      ui: { icon: 'FileText' },
+    it('should register customFields as a system column in JSONB mode', () => {
+      const config = defineEntity({
+        table: testTable,
+        onDelete: { mode: 'soft' },
+        slug: 'test-entities',
+        customFields: true,
+        fields: { title: { type: 'text', label: 'Title' } },
+        ui: { icon: 'FileText' },
+      });
+      expect(config.systemColumns).toContain('customFields');
     });
-    expect(withoutFlag.customFields).toBeUndefined();
+
+    it("should pass through customFields: 'eav' without requiring the column", () => {
+      const config = defineEntity({
+        table: tableWithoutCustomFields,
+        onDelete: { mode: 'hard' },
+        slug: 'eav-entities',
+        customFields: 'eav',
+        fields: { title: { type: 'text', label: 'Title' } },
+        ui: { icon: 'FileText' },
+      });
+      expect(config.customFields).toBe('eav');
+      expect(config.systemColumns).not.toContain('customFields');
+    });
+
+    it("should leave customFields undefined when the flag is absent", () => {
+      const config = defineEntity({
+        table: testTable,
+        onDelete: { mode: 'soft' },
+        slug: 'test-entities',
+        fields: { title: { type: 'text', label: 'Title' } },
+        ui: { icon: 'FileText' },
+      });
+      expect(config.customFields).toBeUndefined();
+      expect(config.systemColumns).not.toContain('customFields');
+    });
+
+    it("should accept customFields: false explicitly", () => {
+      const config = defineEntity({
+        table: tableWithoutCustomFields,
+        onDelete: { mode: 'hard' },
+        slug: 'no-custom',
+        customFields: false,
+        fields: { title: { type: 'text', label: 'Title' } },
+        ui: { icon: 'FileText' },
+      });
+      expect(config.customFields).toBe(false);
+      expect(config.systemColumns).not.toContain('customFields');
+    });
+
+    it("should throw when customFields: true but the table is missing customFieldsColumn()", () => {
+      expect(() =>
+        defineEntity({
+          table: tableWithoutCustomFields,
+          onDelete: { mode: 'hard' },
+          slug: 'missing-jsonb',
+          customFields: true,
+          fields: { title: { type: 'text', label: 'Title' } },
+          ui: { icon: 'FileText' },
+        }),
+      ).toThrow(/customFieldsColumn.*Missing customFields column/);
+    });
   });
 
   it('should pass through adminConfigurable flag', () => {

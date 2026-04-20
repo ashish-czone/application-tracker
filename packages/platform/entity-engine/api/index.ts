@@ -14,6 +14,7 @@ export type { ModelDefinition, ModelField } from './define-entity';
 // --- Types originally from entity-engine ---
 
 export type {
+  CustomFieldsMode,
   EntityConfig,
   EntityHooks,
   EntityRelationship,
@@ -82,6 +83,8 @@ export type { ValidationResult, ValidationError, ValidationOptions, FieldDefinit
 
 export { splitPayload } from './helpers/split-payload';
 export type { SplitResult } from './helpers/split-payload';
+
+export { customFieldsColumn, hasCustomFieldsColumn } from './helpers/custom-fields-column';
 
 // --- Schemas moved from eav-attributes ---
 
