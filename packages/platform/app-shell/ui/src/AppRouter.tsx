@@ -21,6 +21,7 @@ import { QueueDashboardPage } from '@packages/queue-ui';
 import { AppearancePage as ThemingAppearancePage } from '@packages/theming-ui';
 import { AppLayout } from './AppLayout';
 import { EntityConfigPage } from './pages/EntityConfigPage';
+import { DashboardPage } from './pages/DashboardPage';
 
 interface AppRouterProps {
   domains: DomainWebManifest[];
@@ -237,6 +238,11 @@ export function AppRouter({ domains, brandLabel, menuItems, extraRoutes }: AppRo
     [domainRoutes],
   );
 
+  const domainHasDashboard = useMemo(
+    () => domainRoutes.some((r) => r.path === '/dashboard'),
+    [domainRoutes],
+  );
+
   // A domain route like `/clients` or `/clients/:clientId` claims the `clients`
   // slug — skip the auto-generated entity list/detail routes for those slugs
   // so the designed domain page wins.
@@ -273,6 +279,9 @@ export function AppRouter({ domains, brandLabel, menuItems, extraRoutes }: AppRo
 
         <Route element={<AppLayout brandLabel={brandLabel} menuItems={menuItems} />}>
           <Route index element={<Navigate to="/dashboard" replace />} />
+          {!domainHasDashboard && (
+            <Route path="/dashboard" element={<DashboardPage brandLabel={brandLabel} />} />
+          )}
           <Route path="/profile" element={<Suspense fallback={<PageSkeleton />}><ProfilePage /></Suspense>} />
 
           {wrappedDomainRoutes.map((route) => (
