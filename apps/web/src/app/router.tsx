@@ -2,7 +2,8 @@ import { Suspense, lazy } from 'react';
 import { Routes, Route, Navigate } from 'react-router';
 import { AppLayout } from './layout/AppLayout';
 import { AuthGuard } from '@packages/auth-ui/components/AuthGuard';
-import { UsersListPage, RolesListPage, WorkflowsListPage, WorkflowEditorPage, AutomationsPage, RuleBuilderPage, SettingsPage, TagGroupsListPage, CategoryGroupsListPage, OrgPositionsPage, OrgUnitsPage } from '../portals/customer/routes';
+import { RolesListPage, WorkflowsListPage, WorkflowEditorPage, AutomationsPage, RuleBuilderPage, SettingsPage, TagGroupsListPage, CategoryGroupsListPage, OrgPositionsPage, OrgUnitsPage } from '../portals/customer/routes';
+import { usersRoutes } from '@packages/users-ui';
 import { EntityListPage, EntityDetailPage } from '@packages/entity-engine-ui';
 
 const LoginPage = lazy(() => import('@packages/auth-ui/pages/LoginPage'));
@@ -54,14 +55,7 @@ export function AppRouter() {
               </Suspense>
             }
           />
-          <Route
-            path="/users"
-            element={
-              <Suspense fallback={<PageSkeleton />}>
-                <UsersListPage />
-              </Suspense>
-            }
-          />
+          {usersRoutes}
           <Route
             path="/roles"
             element={

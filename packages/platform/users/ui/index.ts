@@ -1,6 +1,5 @@
 export { UsersListPage } from './pages/UsersListPage';
-export { AddUserForm } from './components/AddUserForm';
-export { EditUserForm } from './components/EditUserForm';
+export { usersRoutes } from './routes';
 export { ResetPasswordForm } from './components/ResetPasswordForm';
 export {
   useUsers, useRoles, useCreateUser, useUpdateUser, useDeleteUser,
