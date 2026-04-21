@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { splitPayload } from '../split-payload';
-import type { FieldDefinition } from '../../types';
+import type { FieldDefinition, EntityRelationship } from '../../types';
 
 /** Helper to build a minimal field definition for tests */
 function field(overrides: Partial<FieldDefinition> & { fieldKey: string }): FieldDefinition {
@@ -97,5 +97,76 @@ describe('splitPayload', () => {
 
     // The key in standardFields is 'firstName' (camelCase), not 'first_name' (snake_case)
     expect(Object.keys(result.standardFields)).toEqual(['firstName']);
+  });
+
+  describe('relationshipInputs bucket', () => {
+    const rel = (name: string, type: EntityRelationship['type'] = 'hasOne'): EntityRelationship => ({
+      name,
+      type,
+      targetEntity: `target_${name}`,
+      label: name,
+    });
+
+    it('defaults relationshipInputs to {} when no relationships are declared', () => {
+      const result = splitPayload(definitions, { firstName: 'Alice' });
+      expect(result.relationshipInputs).toEqual({});
+    });
+
+    it('routes nested hasOne payloads to relationshipInputs', () => {
+      const result = splitPayload(
+        definitions,
+        { firstName: 'Alice', credentials: { password: 's3cret' } },
+        [rel('credentials', 'hasOne')],
+      );
+
+      expect(result.standardFields).toEqual({ firstName: 'Alice' });
+      expect(result.relationshipInputs).toEqual({ credentials: { password: 's3cret' } });
+    });
+
+    it('routes hasMany array payloads to relationshipInputs', () => {
+      const result = splitPayload(
+        definitions,
+        { firstName: 'Alice', roles: ['r1', 'r2'] },
+        [rel('roles', 'hasMany')],
+      );
+
+      expect(result.relationshipInputs).toEqual({ roles: ['r1', 'r2'] });
+    });
+
+    it('relationship names win over field names when both match (ambiguity guard)', () => {
+      // A declared relationship shadows any field with the same key — the engine
+      // would never declare both, but we prefer routing to handlers.
+      const defsWithClash = [...definitions, field({ fieldKey: 'roles', columnName: 'roles' })];
+      const result = splitPayload(
+        defsWithClash,
+        { roles: ['r1'] },
+        [rel('roles', 'hasMany')],
+      );
+
+      expect(result.standardFields).not.toHaveProperty('roles');
+      expect(result.relationshipInputs).toEqual({ roles: ['r1'] });
+    });
+
+    it('ignores relationship keys not present in the payload', () => {
+      const result = splitPayload(
+        definitions,
+        { firstName: 'Alice' },
+        [rel('credentials', 'hasOne'), rel('roles', 'hasMany')],
+      );
+
+      expect(result.relationshipInputs).toEqual({});
+    });
+
+    it('still drops unknown keys that are neither fields nor relationships', () => {
+      const result = splitPayload(
+        definitions,
+        { firstName: 'Alice', credentials: { password: 'x' }, bogus: 42 },
+        [rel('credentials', 'hasOne')],
+      );
+
+      expect(result.standardFields).toEqual({ firstName: 'Alice' });
+      expect(result.relationshipInputs).toEqual({ credentials: { password: 'x' } });
+      expect(result).not.toHaveProperty('bogus');
+    });
   });
 });
