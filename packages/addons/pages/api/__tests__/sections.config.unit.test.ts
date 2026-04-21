@@ -27,4 +27,11 @@ describe('SECTIONS_CONFIG', () => {
   it('declares customFields column as a system column', () => {
     expect(SECTIONS_CONFIG.systemColumns).toContain('customFields');
   });
+
+  it('exposes title as an admin-editable text field (used as section heading)', () => {
+    const titleMeta = SECTIONS_CONFIG.fieldMeta.title;
+    expect(titleMeta).toBeDefined();
+    expect(titleMeta.fieldType).toBe('text');
+    expect(titleMeta.isSystem ?? false).toBe(false);
+  });
 });

@@ -3036,6 +3036,9 @@ importers:
       '@packages/auth-core':
         specifier: workspace:*
         version: link:../../../platform/auth-core
+      '@packages/blocks-contract':
+        specifier: workspace:*
+        version: link:../../../platform/blocks/contract
       '@packages/database':
         specifier: workspace:*
         version: link:../../../core/database

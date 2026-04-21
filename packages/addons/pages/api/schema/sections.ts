@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
-import { pgTable, text, integer, timestamp, index } from 'drizzle-orm/pg-core';
+import { pgTable, text, integer, timestamp, jsonb, index } from 'drizzle-orm/pg-core';
 import { customFieldsColumn } from '@packages/entity-engine/helpers/custom-fields-column';
+import type { DataSource } from '@packages/blocks-contract';
 import { pages } from './pages';
 
 export const sections = pgTable('sections', {
@@ -9,6 +10,8 @@ export const sections = pgTable('sections', {
   order: integer('order').notNull(),
   blockKind: text('block_kind').notNull(),
   variant: text('variant'),
+  title: text('title'),
+  dataSource: jsonb('data_source').$type<DataSource>(),
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' })
     .notNull()
