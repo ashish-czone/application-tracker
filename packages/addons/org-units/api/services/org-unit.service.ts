@@ -220,6 +220,45 @@ export class OrgUnitService {
     return result.rows.map((r) => r.id);
   }
 
+  async getPositionsByUserIds(
+    userIds: string[],
+  ): Promise<Record<string, Array<{ unitId: string; unitName: string; positionId: string | null; positionName: string | null }>>> {
+    if (userIds.length === 0) return {};
+
+    const rows = await this.database.db
+      .select({
+        userId: orgUnitMembers.userId,
+        unitId: orgUnits.id,
+        unitName: orgUnits.name,
+        positionId: orgUnitMembers.positionId,
+        positionName: orgPositions.name,
+        positionSortOrder: orgPositions.sortOrder,
+      })
+      .from(orgUnitMembers)
+      .innerJoin(orgUnits, eq(orgUnits.id, orgUnitMembers.orgUnitId))
+      .leftJoin(orgPositions, eq(orgPositions.id, orgUnitMembers.positionId))
+      .where(
+        and(
+          withTenant(orgUnits),
+          inArray(orgUnitMembers.userId, userIds),
+        ),
+      )
+      .orderBy(sql`coalesce(${orgPositions.sortOrder}, 999999)`);
+
+    const byUser: Record<string, Array<{ unitId: string; unitName: string; positionId: string | null; positionName: string | null }>> = {};
+    for (const row of rows) {
+      const list = byUser[row.userId] ?? [];
+      list.push({
+        unitId: row.unitId,
+        unitName: row.unitName,
+        positionId: row.positionId,
+        positionName: row.positionName,
+      });
+      byUser[row.userId] = list;
+    }
+    return byUser;
+  }
+
   async getTeamMemberIds(userId: string): Promise<string[]> {
     const orgUnitIds = await this.getVisibleOrgUnitIds(userId);
     if (orgUnitIds.length === 0) return [userId];

@@ -29,6 +29,11 @@ export interface ResetPasswordRequest {
   newPassword: string;
 }
 
+export interface AcceptInvitationRequest {
+  token: string;
+  newPassword: string;
+}
+
 export interface ChangePasswordRequest {
   oldPassword: string;
   newPassword: string;

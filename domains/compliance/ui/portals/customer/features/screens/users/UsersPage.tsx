@@ -1,49 +1,105 @@
 import { useState, useMemo, useCallback } from 'react';
 import { AnimatePresence } from 'framer-motion';
-import { UserPlus } from 'lucide-react';
+import { UserPlus, Ban } from 'lucide-react';
 import {
   DataGridShell,
+  BulkActionBar,
   Button,
   FilterPopover,
   CoarseTabs,
   SearchInput,
   ScreenLayout,
+  toast,
   type ActiveFilter,
 } from '@packages/ui';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
-import {
-  MOCK_USERS,
-  USER_STATUS_COUNTS,
-  ALL_ROLE_OPTIONS,
-  type UserRow,
-  type UserStatus,
-} from './data/usersMock';
+import type { UserRow, UserStatus } from './data/usersMock';
 import { UserDetailDrawer } from './components/UserDetailDrawer';
+import { InviteUserDrawer } from './components/InviteUserDrawer';
 import { USER_COLUMNS, REQUIRED_USER_COLUMN_KEYS } from './components/userColumns';
+import {
+  useUsersList,
+  useResendInvitation,
+  useDeactivateUser,
+  useRestoreUser,
+  useBulkDeactivate,
+} from './api/useUsersApi';
+import { mapUserRecordToRow } from './api/mapUserRecord';
 
 type StatusTab = 'all' | UserStatus;
 
 export function UsersPage() {
   const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const [search, setSearch] = useState('');
   const [statusTab, setStatusTab] = useState<StatusTab>('all');
   const [roleFilter, setRoleFilter] = useState<string[]>([]);
 
+  const { data, isLoading, isError } = useUsersList({
+    limit: 500,
+    includeDeleted: true,
+  });
+  const rows = useMemo<UserRow[]>(
+    () => (data?.data ?? []).map(mapUserRecordToRow),
+    [data],
+  );
+
+  const resendInvitation = useResendInvitation({
+    onSuccess: () => setSelectedUser(null),
+  });
+  const deactivateUser = useDeactivateUser({
+    onSuccess: () => setSelectedUser(null),
+  });
+  const restoreUser = useRestoreUser();
+  const bulkDeactivate = useBulkDeactivate({
+    onSuccess: () => setSelectedIds(new Set()),
+  });
+
+  // When the filter set shrinks, prune selection to still-visible rows only.
+  const visibleIds = useMemo(() => new Set(rows.map((u) => u.id)), [rows]);
+  const effectiveSelectedIds = useMemo(() => {
+    const next = new Set<string>();
+    for (const id of selectedIds) if (visibleIds.has(id)) next.add(id);
+    return next;
+  }, [selectedIds, visibleIds]);
+
+  // Only active or invited users can be deactivated. Already-deactivated
+  // rows shouldn't be selectable for this bulk action.
+  const isRowSelectable = useCallback(
+    (user: UserRow) => user.status !== 'deactivated',
+    [],
+  );
+
+  const allRoleOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const u of rows) {
+      for (const r of u.roles) map.set(r.id, r.name);
+    }
+    return Array.from(map.entries()).map(([value, label]) => ({ value, label }));
+  }, [rows]);
+
+  const statusCounts = useMemo(() => {
+    const counts = { all: rows.length, active: 0, invited: 0, deactivated: 0 };
+    for (const u of rows) counts[u.status] += 1;
+    return counts;
+  }, [rows]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return MOCK_USERS.filter((u) => {
+    return rows.filter((u) => {
       if (statusTab !== 'all' && u.status !== statusTab) return false;
       if (roleFilter.length > 0 && !u.roles.some((r) => roleFilter.includes(r.id))) return false;
       if (q && !`${u.name} ${u.email}`.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [statusTab, roleFilter, search]);
+  }, [rows, statusTab, roleFilter, search]);
 
   const activeFilters: ActiveFilter[] = useMemo(() => {
     const chips: ActiveFilter[] = [];
     for (const key of roleFilter) {
-      const role = ALL_ROLE_OPTIONS.find((r) => r.value === key);
+      const role = allRoleOptions.find((r) => r.value === key);
       chips.push({
         key: `role:${key}`,
         group: 'Role',
@@ -52,30 +108,35 @@ export function UsersPage() {
       });
     }
     return chips;
-  }, [roleFilter]);
+  }, [roleFilter, allRoleOptions]);
 
   const clearAll = useCallback(() => setRoleFilter([]), []);
 
-  const totalUsers = MOCK_USERS.length;
-  const activeUsers = USER_STATUS_COUNTS.active;
-  const activeToday = MOCK_USERS.filter(
-    (u) => u.lastActiveAt?.startsWith('2026-04-17') ?? false,
-  ).length;
-  const invitedUsers = USER_STATUS_COUNTS.invited;
+  const totalUsers = rows.length;
+  const activeUsers = statusCounts.active;
+  const invitedUsers = statusCounts.invited;
 
-  const roleOptions = ALL_ROLE_OPTIONS.map((r) => ({
+  // "Active today" — users whose lastLoginAt is within today's UTC day. Kept
+  // UTC-based to match the rest of the compliance screens' KPI derivation;
+  // timezone-aware bucketing is a platform-wide concern, not a users screen one.
+  const activeToday = useMemo(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    return rows.filter((u) => u.lastActiveAt?.startsWith(today) ?? false).length;
+  }, [rows]);
+
+  const roleOptions = allRoleOptions.map((r) => ({
     ...r,
-    count: MOCK_USERS.filter((u) => u.roles.some((role) => role.id === r.value)).length,
+    count: rows.filter((u) => u.roles.some((role) => role.id === r.value)).length,
   }));
 
   const statusTabs = [
     { value: 'all' as const, label: 'All', count: totalUsers },
-    { value: 'active' as const, label: 'Active', count: USER_STATUS_COUNTS.active },
-    { value: 'invited' as const, label: 'Invited', count: USER_STATUS_COUNTS.invited },
+    { value: 'active' as const, label: 'Active', count: statusCounts.active },
+    { value: 'invited' as const, label: 'Invited', count: statusCounts.invited },
     {
       value: 'deactivated' as const,
       label: 'Deactivated',
-      count: USER_STATUS_COUNTS.deactivated,
+      count: statusCounts.deactivated,
     },
   ];
 
@@ -86,12 +147,18 @@ export function UsersPage() {
         breadcrumb={['Settings', 'Users']}
         title="Users"
         subtitle={
-          <>
-            {totalUsers} team members — {activeUsers} active, {invitedUsers} pending invitations.
-          </>
+          isLoading ? (
+            <>Loading users…</>
+          ) : isError ? (
+            <span className="text-signal">Failed to load users. Refresh to retry.</span>
+          ) : (
+            <>
+              {totalUsers} team members — {activeUsers} active, {invitedUsers} pending invitations.
+            </>
+          )
         }
         actions={
-          <Button size="sm">
+          <Button size="sm" onClick={() => setInviteOpen(true)}>
             <UserPlus className="w-3.5 h-3.5 mr-1.5" strokeWidth={2} />
             Invite user
           </Button>
@@ -101,8 +168,7 @@ export function UsersPage() {
             label: 'Total users',
             value: String(totalUsers),
             unit: 'members',
-            delta: '▲ 2 this month',
-            deltaTone: 'positive',
+            deltaTone: 'neutral',
             accent: 'authority',
             sparklineData: [10, 11, 11, 12, 13, 14, totalUsers],
             sparklineTone: 'authority',
@@ -123,7 +189,6 @@ export function UsersPage() {
             label: 'Pending invites',
             value: String(invitedUsers),
             unit: 'invitations',
-            delta: 'sent this week',
             deltaTone: 'neutral',
             accent: 'due-soon',
             sparklineData: [0, 1, 0, 1, 2, 1, invitedUsers],
@@ -132,12 +197,12 @@ export function UsersPage() {
           },
           {
             label: 'Roles in use',
-            value: String(ALL_ROLE_OPTIONS.length),
+            value: String(allRoleOptions.length),
             unit: 'roles',
             delta: `across ${totalUsers} users`,
             deltaTone: 'neutral',
             accent: 'authority',
-            sparklineData: [3, 3, 4, 4, 5, 5, ALL_ROLE_OPTIONS.length],
+            sparklineData: [3, 3, 4, 4, 5, 5, allRoleOptions.length],
             sparklineTone: 'authority',
             footnote: 'permission groups',
           },
@@ -145,6 +210,26 @@ export function UsersPage() {
       >
         <section className="mt-10">
           <CoarseTabs tabs={statusTabs} value={statusTab} onChange={setStatusTab} animated />
+
+          <AnimatePresence>
+            {effectiveSelectedIds.size > 0 && (
+              <BulkActionBar
+                count={effectiveSelectedIds.size}
+                itemNoun="user"
+                onClear={() => setSelectedIds(new Set())}
+                actions={[
+                  {
+                    label: bulkDeactivate.isPending ? 'Deactivating…' : 'Deactivate',
+                    icon: Ban,
+                    tone: 'danger',
+                    disabled: bulkDeactivate.isPending,
+                    onClick: () =>
+                      bulkDeactivate.mutate(Array.from(effectiveSelectedIds)),
+                  },
+                ]}
+              />
+            )}
+          </AnimatePresence>
 
           <DataGridShell
             columns={USER_COLUMNS}
@@ -155,6 +240,19 @@ export function UsersPage() {
             onRowClick={(user) => setSelectedUser(user)}
             activeFilters={activeFilters}
             onClearFilters={clearAll}
+            selectable
+            selectedKeys={effectiveSelectedIds}
+            onSelectionChange={setSelectedIds}
+            isRowSelectable={isRowSelectable}
+            emptyState={
+              <div className="py-10 text-center text-sm text-ink-muted italic font-serif">
+                {isError
+                  ? 'Could not load users. Please refresh to retry.'
+                  : isLoading
+                  ? 'Loading users…'
+                  : 'No users match the current filters.'}
+              </div>
+            }
             filters={
               <>
                 <SearchInput
@@ -178,11 +276,31 @@ export function UsersPage() {
       </ScreenLayout>
 
       <AnimatePresence>
+        {inviteOpen && (
+          <InviteUserDrawer
+            onClose={() => setInviteOpen(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
         {selectedUser && (
           <UserDetailDrawer
             key={selectedUser.id}
             user={selectedUser}
             onClose={() => setSelectedUser(null)}
+            onDeactivate={() => deactivateUser.mutate(selectedUser.id)}
+            onRestore={() =>
+              restoreUser.mutate(selectedUser.id, {
+                onSuccess: () => setSelectedUser(null),
+              })
+            }
+            onResendInvite={() => resendInvitation.mutate(selectedUser.id)}
+            actionPending={
+              deactivateUser.isPending ||
+              restoreUser.isPending ||
+              resendInvitation.isPending
+            }
           />
         )}
       </AnimatePresence>

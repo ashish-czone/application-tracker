@@ -6,6 +6,7 @@ import type {
   LogoutRequest,
   ForgotPasswordRequest,
   ResetPasswordRequest,
+  AcceptInvitationRequest,
   ChangePasswordRequest,
   AuthTokensResponse,
   RefreshTokensResponse,
@@ -46,6 +47,10 @@ export function createAuthApi(api: ApiFn) {
 
     resetPassword(data: ResetPasswordRequest): Promise<MessageResponse> {
       return api.post<MessageResponse>(`${AUTH_BASE}/reset-password`, data);
+    },
+
+    acceptInvitation(data: AcceptInvitationRequest): Promise<AuthTokensResponse> {
+      return api.post<AuthTokensResponse>(`${AUTH_BASE}/accept-invitation`, data);
     },
 
     changePassword(data: ChangePasswordRequest): Promise<MessageResponse> {

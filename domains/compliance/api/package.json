@@ -20,7 +20,11 @@
     "@packages/events": "workspace:*",
     "@packages/hierarchy": "workspace:*",
     "@packages/logger": "workspace:*",
-    "@packages/tasks": "workspace:*"
+    "@packages/org-units": "workspace:*",
+    "@packages/rbac": "workspace:*",
+    "@packages/tasks": "workspace:*",
+    "@packages/users": "workspace:*",
+    "@packages/workflows": "workspace:*"
   },
   "devDependencies": {
     "drizzle-kit": "^0.31.9",

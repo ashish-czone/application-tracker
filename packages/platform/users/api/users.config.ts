@@ -25,6 +25,22 @@ export interface UsersRolesReader {
   ): Promise<Record<string, Array<{ id: string; name: string; userType: string | null }>>>;
 }
 
+/** A single org-unit membership expressed as a user position. Kept as a plain
+ *  structural type so `@packages/users` doesn't pick up an org-units dependency. */
+export interface UserPosition {
+  unitId: string;
+  unitName: string;
+  positionId: string | null;
+  positionName: string | null;
+}
+
+/** Optional batch reader for list/detail position enrichment. Apps that don't
+ *  wire it up simply get `positions: []` on every row. Supplied by any app that
+ *  has an org-units-style membership table (e.g. `@apps/compliance`). */
+export interface UsersPositionsReader {
+  getPositionsByUserIds(userIds: string[]): Promise<Record<string, UserPosition[]>>;
+}
+
 export interface UsersEntityConfigDeps {
   /** Owns the users.credentials hasOne write path. Supplied by @packages/auth. */
   credentialsHandler: RelationHandler;
@@ -33,6 +49,9 @@ export interface UsersEntityConfigDeps {
   /** Batch reader for list/detail role enrichment. Supplied by @packages/rbac.
    *  Optional so unit tests that don't exercise reads can omit it. */
   rolesReader?: UsersRolesReader;
+  /** Batch reader for list/detail position enrichment. Optional — apps without
+   *  an org-units equivalent skip this and every row gets `positions: []`. */
+  positionsReader?: UsersPositionsReader;
 }
 
 /**
@@ -62,6 +81,7 @@ export interface UsersEntityConfigDeps {
  */
 export function createUsersEntityConfig(deps: UsersEntityConfigDeps): EntityConfig<typeof users> {
   const rolesReader = deps.rolesReader;
+  const positionsReader = deps.positionsReader;
 
   return defineEntity({
     table: users,
@@ -158,19 +178,35 @@ export function createUsersEntityConfig(deps: UsersEntityConfigDeps): EntityConf
       afterList: async (rows) => {
         if (rows.length === 0) return rows;
         const ids = rows.map((r) => r.id as string);
-        const byUser = rolesReader ? await rolesReader.getRolesByUserIds(ids) : {};
+        type RolesMap = Awaited<ReturnType<UsersRolesReader['getRolesByUserIds']>>;
+        type PositionsMap = Record<string, UserPosition[]>;
+        const [rolesByUser, positionsByUser] = await Promise.all([
+          rolesReader ? rolesReader.getRolesByUserIds(ids) : Promise.resolve({} as RolesMap),
+          positionsReader
+            ? positionsReader.getPositionsByUserIds(ids)
+            : Promise.resolve({} as PositionsMap),
+        ]);
         return rows.map((r) => ({
           ...r,
-          roles: byUser[r.id as string] ?? [],
+          roles: rolesByUser[r.id as string] ?? [],
+          positions: positionsByUser[r.id as string] ?? [],
           status: deriveUserStatus(r),
         }));
       },
       afterFindOne: async (row) => {
         const id = row.id as string;
-        const byUser = rolesReader ? await rolesReader.getRolesByUserIds([id]) : {};
+        type RolesMap = Awaited<ReturnType<UsersRolesReader['getRolesByUserIds']>>;
+        type PositionsMap = Record<string, UserPosition[]>;
+        const [rolesByUser, positionsByUser] = await Promise.all([
+          rolesReader ? rolesReader.getRolesByUserIds([id]) : Promise.resolve({} as RolesMap),
+          positionsReader
+            ? positionsReader.getPositionsByUserIds([id])
+            : Promise.resolve({} as PositionsMap),
+        ]);
         return {
           ...row,
-          roles: byUser[id] ?? [],
+          roles: rolesByUser[id] ?? [],
+          positions: positionsByUser[id] ?? [],
           status: deriveUserStatus(row),
         };
       },

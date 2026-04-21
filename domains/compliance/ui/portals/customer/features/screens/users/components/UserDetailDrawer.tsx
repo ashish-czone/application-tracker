@@ -21,9 +21,21 @@ import { StatusPill } from './StatusPill';
 export interface UserDetailDrawerProps {
   user: UserRow;
   onClose: () => void;
+  onDeactivate?: () => void;
+  onRestore?: () => void;
+  onResendInvite?: () => void;
+  /** Disables the status-action button while a mutation is in flight. */
+  actionPending?: boolean;
 }
 
-export function UserDetailDrawer({ user, onClose }: UserDetailDrawerProps) {
+export function UserDetailDrawer({
+  user,
+  onClose,
+  onDeactivate,
+  onRestore,
+  onResendInvite,
+  actionPending = false,
+}: UserDetailDrawerProps) {
   return (
     <DrawerShell onClose={onClose} width="xl">
       <header className="px-6 pt-6 pb-4 border-b border-rule flex-none">
@@ -176,7 +188,9 @@ export function UserDetailDrawer({ user, onClose }: UserDetailDrawerProps) {
             {user.status === 'active' && (
               <button
                 type="button"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-rule text-[11px] font-sans font-medium text-ink-soft hover:text-ink hover:border-ink transition-colors"
+                disabled={actionPending}
+                onClick={onDeactivate}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-rule text-[11px] font-sans font-medium text-ink-soft hover:text-ink hover:border-ink transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Ban className="w-3 h-3" strokeWidth={1.5} />
                 Deactivate
@@ -185,7 +199,9 @@ export function UserDetailDrawer({ user, onClose }: UserDetailDrawerProps) {
             {user.status === 'deactivated' && (
               <button
                 type="button"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-rule text-[11px] font-sans font-medium text-ink-soft hover:text-ink hover:border-ink transition-colors"
+                disabled={actionPending}
+                onClick={onRestore}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-rule text-[11px] font-sans font-medium text-ink-soft hover:text-ink hover:border-ink transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <RotateCcw className="w-3 h-3" strokeWidth={1.5} />
                 Reactivate
@@ -194,7 +210,9 @@ export function UserDetailDrawer({ user, onClose }: UserDetailDrawerProps) {
             {user.status === 'invited' && (
               <button
                 type="button"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-rule text-[11px] font-sans font-medium text-ink-soft hover:text-ink hover:border-ink transition-colors"
+                disabled={actionPending}
+                onClick={onResendInvite}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-rule text-[11px] font-sans font-medium text-ink-soft hover:text-ink hover:border-ink transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Mail className="w-3 h-3" strokeWidth={1.5} />
                 Resend invite
