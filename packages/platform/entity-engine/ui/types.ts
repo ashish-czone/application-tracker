@@ -13,6 +13,7 @@ export interface EntityRegistryEntry {
     subtitleField?: string;
     navGroup?: string;
     navOrder?: number;
+    groupRenderMode?: 'tabs';
     createMode?: 'modal' | 'page' | 'wizard';
     boardFields?: string[];
     afterCreateRoute?: string;
