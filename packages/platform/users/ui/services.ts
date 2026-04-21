@@ -1,6 +1,6 @@
 import type { PaginatedResponse } from '@packages/common';
 import type { ApiFn } from '@packages/platform-ui';
-import type { User, Role, CreateUserRequest, UpdateUserRequest, ListUsersParams } from './types';
+import type { User, Role, CreateUserRequest, UpdateUserRequest, ListUsersParams, InviteUserRequest, InvitedUserResponse } from './types';
 
 export function createUsersApi(api: ApiFn) {
   return {
@@ -31,6 +31,15 @@ export function createUsersApi(api: ApiFn) {
     },
     resetUserPassword(id: string, password: string): Promise<void> {
       return api.post<void>(`/users/${id}/reset-password`, { password });
+    },
+    inviteUser(data: InviteUserRequest): Promise<InvitedUserResponse> {
+      return api.post<InvitedUserResponse>('/users/invite', data);
+    },
+    resendInvitation(id: string): Promise<{ expiresAt: string }> {
+      return api.post<{ expiresAt: string }>(`/users/${id}/resend-invitation`);
+    },
+    acceptInvitation(token: string, newPassword: string, userType: 'admin' | 'client' = 'admin'): Promise<{ accessToken: string; refreshToken: string; userId: string }> {
+      return api.post<{ accessToken: string; refreshToken: string; userId: string }>(`/auth/${userType}/accept-invitation`, { token, newPassword });
     },
     checkUnique(entity: string, field: string, value: string, excludeId?: string): Promise<{ unique: boolean }> {
       const params = new URLSearchParams({ entity, field, value });
