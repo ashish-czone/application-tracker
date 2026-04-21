@@ -267,15 +267,8 @@ export interface FieldFilter {
 // Lookup resolution
 // ---------------------------------------------------------------------------
 
-export interface LookupConfig {
-  entity: string;
-  table: any;
-  labelField: string;
-  /** When set, label is built by concatenating these fields with a space (overrides labelField for display). */
-  labelFields?: string[];
-  valueField: string;
-  searchFields: string[];
-}
+export { LOOKUP_RESOLVER_TOKEN } from '@packages/entity-engine-contract';
+export type { LookupConfig, LookupResolver } from '@packages/entity-engine-contract';
 
 export interface LookupResult {
   label: string;

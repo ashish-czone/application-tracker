@@ -2,6 +2,7 @@ import { Module, Global, Logger, Inject, Optional, type OnModuleInit } from '@ne
 import { RbacService, FIELD_PERMISSION_ENTITY_RESOLVER, FieldPermissionsController } from '@packages/rbac';
 import type { FieldPermissionEntityResolver } from '@packages/rbac';
 import { fieldTypeRegistry } from '@packages/field-types';
+import { LOOKUP_RESOLVER_TOKEN } from '@packages/entity-engine-contract';
 import { coreFieldTypesPlugin } from './field-types';
 import { EntityRegistryService } from './entity-registry.service';
 import { EntityEngineApiController } from './entity-engine-api.controller';
@@ -47,6 +48,7 @@ import { AUTOMATIONS_EXTENSION, type AutomationsExtension } from './extensions/a
     FieldDefinitionService,
     EntityDefinitionService,
     LookupResolverService,
+    { provide: LOOKUP_RESOLVER_TOKEN, useExisting: LookupResolverService },
     EntityEngineSeedService,
     { provide: FieldTypeSaveHookRegistry, useValue: fieldTypeSaveHookRegistry },
     {
@@ -71,6 +73,7 @@ import { AUTOMATIONS_EXTENSION, type AutomationsExtension } from './extensions/a
     FieldDefinitionService,
     EntityDefinitionService,
     LookupResolverService,
+    LOOKUP_RESOLVER_TOKEN,
     EntityEngineSeedService,
     FieldTypeSaveHookRegistry,
     FIELD_PERMISSION_ENTITY_RESOLVER,
