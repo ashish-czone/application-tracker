@@ -2,6 +2,19 @@ import { users } from '@packages/database';
 import { defineEntity, type EntityConfig } from '@packages/entity-engine';
 import type { RelationHandler } from '@packages/entity-engine-contract';
 
+export type UserStatus = 'active' | 'invited' | 'deactivated';
+
+/**
+ * Derive the read-side status from the three timestamps on the users row.
+ * Precedence: deletedAt beats invitedAt, and an invitation that has been
+ * accepted (acceptedAt set) transitions into the active bucket.
+ */
+export function deriveUserStatus(row: Record<string, unknown>): UserStatus {
+  if (row.deletedAt) return 'deactivated';
+  if (row.invitedAt && !row.acceptedAt) return 'invited';
+  return 'active';
+}
+
 /** Minimal reader surface the users config needs from rbac for list/detail role
  *  enrichment. Keeping this a structural type (not `RbacService`) keeps
  *  `@packages/users` free of an rbac dependency at the config layer — rbac is
@@ -141,24 +154,27 @@ export function createUsersEntityConfig(deps: UsersEntityConfigDeps): EntityConf
       },
     ],
 
-    hooks: rolesReader
-      ? {
-          afterList: async (rows) => {
-            if (rows.length === 0) return rows;
-            const ids = rows.map((r) => r.id as string);
-            const byUser = await rolesReader.getRolesByUserIds(ids);
-            return rows.map((r) => ({
-              ...r,
-              roles: byUser[r.id as string] ?? [],
-            }));
-          },
-          afterFindOne: async (row) => {
-            const id = row.id as string;
-            const byUser = await rolesReader.getRolesByUserIds([id]);
-            return { ...row, roles: byUser[id] ?? [] };
-          },
-        }
-      : undefined,
+    hooks: {
+      afterList: async (rows) => {
+        if (rows.length === 0) return rows;
+        const ids = rows.map((r) => r.id as string);
+        const byUser = rolesReader ? await rolesReader.getRolesByUserIds(ids) : {};
+        return rows.map((r) => ({
+          ...r,
+          roles: byUser[r.id as string] ?? [],
+          status: deriveUserStatus(r),
+        }));
+      },
+      afterFindOne: async (row) => {
+        const id = row.id as string;
+        const byUser = rolesReader ? await rolesReader.getRolesByUserIds([id]) : {};
+        return {
+          ...row,
+          roles: byUser[id] ?? [],
+          status: deriveUserStatus(row),
+        };
+      },
+    },
 
     ui: {
       icon: 'User',
