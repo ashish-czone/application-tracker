@@ -9,8 +9,9 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@packages/blocks-contract": "workspace:*",
+    "@packages/blocks-ui": "workspace:*",
     "@packages/menus-ui-frontend": "workspace:*",
-    "@packages/pages-ui-frontend": "workspace:*",
     "next": "^15.1.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

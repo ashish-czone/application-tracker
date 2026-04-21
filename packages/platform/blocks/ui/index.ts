@@ -10,5 +10,15 @@ export type {
   BlockVariant,
 } from './types';
 
+export {
+  starterBlocks,
+  registerStarterBlocks,
+  heroBlock,
+  textBlock,
+  imageBlock,
+  featureListBlock,
+  ctaBlock,
+} from './blocks';
+
 // Re-export contract shapes consumers typically need alongside the UI bits.
 export type { DataSource, SectionData, MapperDefinition } from '@packages/blocks-contract';

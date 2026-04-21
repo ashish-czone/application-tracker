@@ -294,6 +294,12 @@ importers:
       '@packages/automations-ui':
         specifier: workspace:*
         version: link:../../../../../packages/platform/automations/ui
+      '@packages/blocks-contract':
+        specifier: workspace:*
+        version: link:../../../../../packages/platform/blocks/contract
+      '@packages/blocks-ui':
+        specifier: workspace:*
+        version: link:../../../../../packages/platform/blocks/ui
       '@packages/debug-profiler-ui':
         specifier: workspace:*
         version: link:../../../../../packages/core/debug-profiler/ui
@@ -318,9 +324,6 @@ importers:
       '@packages/pages-ui-admin':
         specifier: workspace:*
         version: link:../../../../../packages/addons/pages/ui/admin
-      '@packages/pages-ui-frontend':
-        specifier: workspace:*
-        version: link:../../../../../packages/addons/pages/ui/frontend
       '@packages/platform-ui':
         specifier: workspace:*
         version: link:../../../../../packages/platform/platform-ui
@@ -391,12 +394,15 @@ importers:
 
   apps/agency/ui/portals/customer:
     dependencies:
+      '@packages/blocks-contract':
+        specifier: workspace:*
+        version: link:../../../../../packages/platform/blocks/contract
+      '@packages/blocks-ui':
+        specifier: workspace:*
+        version: link:../../../../../packages/platform/blocks/ui
       '@packages/menus-ui-frontend':
         specifier: workspace:*
         version: link:../../../../../packages/addons/menus/ui/frontend
-      '@packages/pages-ui-frontend':
-        specifier: workspace:*
-        version: link:../../../../../packages/addons/pages/ui/frontend
       next:
         specifier: ^15.1.0
         version: 15.5.15(@babel/core@7.29.0)(@playwright/test@1.58.2)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -3079,9 +3085,12 @@ importers:
       '@measured/puck':
         specifier: ^0.19.0
         version: 0.19.3(@types/react@19.2.14)(immer@11.1.4)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(use-sync-external-store@1.6.0(react@19.2.4))
-      '@packages/pages-ui-frontend':
+      '@packages/blocks-contract':
         specifier: workspace:*
-        version: link:../frontend
+        version: link:../../../../platform/blocks/contract
+      '@packages/blocks-ui':
+        specifier: workspace:*
+        version: link:../../../../platform/blocks/ui
       '@packages/platform-ui':
         specifier: workspace:*
         version: link:../../../../platform/platform-ui
@@ -3110,28 +3119,6 @@ importers:
       '@types/react-dom':
         specifier: ^19.0.0
         version: 19.2.3(@types/react@19.2.14)
-      typescript:
-        specifier: ^5.7.0
-        version: 5.9.3
-      vitest:
-        specifier: ^3.0.0
-        version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0)
-
-  packages/addons/pages/ui/frontend:
-    dependencies:
-      react:
-        specifier: ^19.0.0
-        version: 19.2.4
-    devDependencies:
-      '@types/react':
-        specifier: ^19.2.14
-        version: 19.2.14
-      '@types/react-dom':
-        specifier: ^19.0.0
-        version: 19.2.3(@types/react@19.2.14)
-      react-dom:
-        specifier: ^19.0.0
-        version: 19.2.4(react@19.2.4)
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
