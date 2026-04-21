@@ -2,7 +2,7 @@ import { Suspense, lazy, useState, useMemo, type ReactNode } from 'react';
 import { Routes, Route, Navigate, type RouteObject } from 'react-router';
 import { AuthGuard } from '@packages/auth-ui/components/AuthGuard';
 import { PermissionGuard } from '@packages/auth-ui/components/PermissionGuard';
-import { EntityListPage, EntityDetailPage, useEntityConfig, useEntityEngine } from '@packages/entity-engine-ui';
+import { EntityListPage, EntityDetailPage, EntityGroupPage, useEntityConfig, useEntityEngine, groupSlug } from '@packages/entity-engine-ui';
 import type { DomainWebManifest, DomainDetailPageComponent, DomainRouteObject, MenuItem } from '@packages/domains';
 import type { DetailHeaderActionRenderer } from './types';
 import {
@@ -272,6 +272,39 @@ export function AppRouter({ domains, brandLabel, menuItems, extraRoutes, detailH
     return slugs;
   }, [domainRoutes]);
 
+  // Split entities into standalone and grouped (tabbed). Grouped entities
+  // are mounted under their group slug (`/content/:entitySlug`) and their
+  // list view lives inside EntityGroupPage; the detail route still renders
+  // full-screen outside the tabs at `/content/{entitySlug}/:id`.
+  const { standaloneEntities, groupedEntities, entityGroups } = useMemo(() => {
+    const standalone: typeof entities = [];
+    const grouped: typeof entities = [];
+    const groupMap = new Map<string, { slug: string; navGroup: string }>();
+
+    for (const entity of entities) {
+      if (domainOwnedSlugs.has(entity.slug)) continue;
+      if (entity.ui.groupRenderMode === 'tabs' && entity.ui.navGroup) {
+        const slug = groupSlug(entity.ui.navGroup);
+        if (domainOwnedSlugs.has(slug)) {
+          standalone.push(entity);
+          continue;
+        }
+        grouped.push(entity);
+        if (!groupMap.has(slug)) {
+          groupMap.set(slug, { slug, navGroup: entity.ui.navGroup });
+        }
+      } else {
+        standalone.push(entity);
+      }
+    }
+
+    return {
+      standaloneEntities: standalone,
+      groupedEntities: grouped,
+      entityGroups: Array.from(groupMap.values()),
+    };
+  }, [entities, domainOwnedSlugs]);
+
   return (
     <Routes>
       <Route path="/login" element={<Suspense fallback={null}><LoginPage /></Suspense>} />
@@ -312,23 +345,46 @@ export function AppRouter({ domains, brandLabel, menuItems, extraRoutes, detailH
             />
           ))}
 
-          {entities
-            .filter((entity) => !domainOwnedSlugs.has(entity.slug))
-            .map((entity) => {
-              const Override = detailOverrides[entity.entityType];
-              return [
-                <Route
-                  key={`${entity.entityType}-list`}
-                  path={`/${entity.slug}`}
-                  element={<EntityListPage entityType={entity.entityType} />}
-                />,
-                <Route
-                  key={`${entity.entityType}-detail`}
-                  path={`/${entity.slug}/:id`}
-                  element={Override ? <Suspense fallback={<PageSkeleton />}><Override /></Suspense> : <AppEntityDetailPage entityType={entity.entityType} detailHeaderActions={detailHeaderActions} />}
-                />,
-              ];
-            })}
+          {standaloneEntities.map((entity) => {
+            const Override = detailOverrides[entity.entityType];
+            return [
+              <Route
+                key={`${entity.entityType}-list`}
+                path={`/${entity.slug}`}
+                element={<EntityListPage entityType={entity.entityType} />}
+              />,
+              <Route
+                key={`${entity.entityType}-detail`}
+                path={`/${entity.slug}/:id`}
+                element={Override ? <Suspense fallback={<PageSkeleton />}><Override /></Suspense> : <AppEntityDetailPage entityType={entity.entityType} detailHeaderActions={detailHeaderActions} />}
+              />,
+            ];
+          })}
+
+          {entityGroups.map((group) => [
+            <Route
+              key={`group-${group.slug}-root`}
+              path={`/${group.slug}`}
+              element={<EntityGroupPage groupSlugPath={group.slug} />}
+            />,
+            <Route
+              key={`group-${group.slug}-tab`}
+              path={`/${group.slug}/:entitySlug`}
+              element={<EntityGroupPage groupSlugPath={group.slug} />}
+            />,
+          ])}
+
+          {groupedEntities.map((entity) => {
+            const gSlug = groupSlug(entity.ui.navGroup!);
+            const Override = detailOverrides[entity.entityType];
+            return (
+              <Route
+                key={`${entity.entityType}-detail`}
+                path={`/${gSlug}/${entity.slug}/:id`}
+                element={Override ? <Suspense fallback={<PageSkeleton />}><Override /></Suspense> : <AppEntityDetailPage entityType={entity.entityType} detailHeaderActions={detailHeaderActions} />}
+              />
+            );
+          })}
 
           {allExtraRoutes.map((route) => (
             <Route
