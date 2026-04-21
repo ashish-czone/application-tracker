@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router';
 import { Users, Plus, Pencil, Trash2, RotateCcw, KeyRound } from 'lucide-react';
 import { format } from 'date-fns';
 import {
@@ -7,8 +8,6 @@ import {
   type ColumnDef, type DataGridFilterField, type DataGridBulkAction,
 } from '@packages/ui';
 import { useUsers, useDeleteUser, useRestoreUser } from '../hooks';
-import { AddUserForm } from '../components/AddUserForm';
-import { EditUserForm } from '../components/EditUserForm';
 import { ResetPasswordForm } from '../components/ResetPasswordForm';
 import { usePlatformAPI } from '@packages/platform-ui';
 import { createUsersApi } from '../services';
@@ -20,8 +19,7 @@ const USER_TYPE_LABELS: Record<string, string> = {
 };
 
 export function UsersListPage() {
-  const [addModalOpen, setAddModalOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const navigate = useNavigate();
   const [deletingUser, setDeletingUser] = useState<User | null>(null);
   const [resettingPasswordUser, setResettingPasswordUser] = useState<User | null>(null);
   const [showDeleted, setShowDeleted] = useState(false);
@@ -218,7 +216,7 @@ export function UsersListPage() {
             <div className="flex items-center gap-1 justify-end">
               <button
                 type="button"
-                onClick={() => setEditingUser(row.original)}
+                onClick={() => navigate(`/users/${row.original.id}/edit`)}
                 className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                 aria-label={`Edit ${row.original.firstName}`}
               >
@@ -256,7 +254,7 @@ export function UsersListPage() {
           <h1 className="text-lg font-semibold text-foreground">Users</h1>
           <p className="text-sm text-muted-foreground">Manage user accounts and permissions</p>
         </div>
-        <Button size="sm" onClick={() => setAddModalOpen(true)}>
+        <Button size="sm" onClick={() => navigate('/users/new')}>
           <Plus className="h-4 w-4 mr-1" />
           Add User
         </Button>
@@ -293,7 +291,7 @@ export function UsersListPage() {
           icon: Users,
           title: 'No users yet',
           description: 'Add your first user to get started.',
-          action: { label: 'Add User', onClick: () => setAddModalOpen(true) },
+          action: { label: 'Add User', onClick: () => navigate('/users/new') },
         }}
         storageKey="users-list"
         rowClassName={(user) => user.deletedAt ? 'bg-muted/30 text-muted-foreground' : undefined}
@@ -320,7 +318,7 @@ export function UsersListPage() {
                 </Badge>
                 <button
                   type="button"
-                  onClick={() => setEditingUser(user)}
+                  onClick={() => navigate(`/users/${user.id}/edit`)}
                   className="p-1 text-muted-foreground hover:text-foreground"
                   aria-label="Edit"
                 >
@@ -354,22 +352,6 @@ export function UsersListPage() {
           </div>
         )}
       />
-
-      {/* Add User Modal */}
-      <Dialog open={addModalOpen} onOpenChange={setAddModalOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <AddUserForm onClose={() => setAddModalOpen(false)} />
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit User Modal */}
-      <Dialog open={!!editingUser} onOpenChange={(open) => !open && setEditingUser(null)}>
-        <DialogContent className="sm:max-w-lg">
-          {editingUser && (
-            <EditUserForm user={editingUser} onClose={() => setEditingUser(null)} />
-          )}
-        </DialogContent>
-      </Dialog>
 
       {/* Reset Password Modal */}
       <Dialog open={!!resettingPasswordUser} onOpenChange={(open) => !open && setResettingPasswordUser(null)}>

@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowLeft, Check } from 'lucide-react';
 import { Form, Button } from '@packages/ui';
-import { DynamicField, buildFormSchema } from '@packages/eav-attributes-ui';
+import { DynamicField, buildFormSchema, buildEntityPayload } from '@packages/eav-attributes-ui';
 import type { FieldDefinition } from '@packages/eav-attributes-ui';
 import { useEntityEngine, useEntityHooks, useEntityConfig } from '../EntityEngineProvider';
 import { useEntityLayout } from '../helpers/useEntityLayout';
@@ -28,19 +28,75 @@ export function EntityCreatePage({ entityType }: EntityCreatePageProps) {
   const isWizard = entity.ui.createMode === 'wizard';
   const [currentStep, setCurrentStep] = useState(0);
 
-  // Filter sections with editable fields (exclude the virtual unassigned section)
+  // Synthesize a FieldDefinition per collection relationship so the form
+  // registers each one as a flat form key. `DynamicField` renders it via the
+  // existing `multi_lookup` UI (chip input + async search against
+  // /lookups/{targetEntity}); `buildEntityPayload` passes the value through
+  // untouched into the nested payload under the relation name.
+  const relationFields = useMemo<FieldDefinition[]>(() => {
+    if (!layout) return [];
+    return layout.relationSections.map((rel): FieldDefinition => ({
+      id: `__rel_${rel.name}__`,
+      entityType,
+      fieldKey: rel.name,
+      label: rel.label,
+      fieldType: 'multi_lookup',
+      uiType: null,
+      isRequired: false,
+      isSystem: false,
+      isCustom: false,
+      isUnique: false,
+      isQuickCreate: false,
+      isReadonly: false,
+      maxLength: null,
+      defaultValue: null,
+      columnName: null,
+      lookupEntity: rel.targetEntity,
+      lookupLabelField: null,
+      lookupSearchFields: null,
+      tagGroupSlug: null,
+      categoryGroupSlug: null,
+      fileAccept: null,
+      fileMaxSize: null,
+      sortOrder: rel.sortOrder,
+      picklistOptions: [],
+      columnIndex: 0,
+      nestedPath: null,
+    }));
+  }, [layout, entityType]);
+
+  // Filter sections with editable fields (exclude the virtual unassigned
+  // section). A synthetic "Associations" step is appended when the entity
+  // has collection relationships so they render (and in wizard mode, step)
+  // alongside scalar sections.
   const steps = useMemo(() => {
     if (!layout) return [];
-    return layout.sections
+    const base = layout.sections
       .filter((s) => s.id !== '__unassigned__')
       .map((s) => ({
         ...s,
         editableFields: s.fields.filter((f) => !f.isReadonly && f.fieldType !== 'auto_number'),
       }))
       .filter((s) => s.editableFields.length > 0);
-  }, [layout]);
 
-  // All editable fields across all sections
+    if (relationFields.length > 0) {
+      base.push({
+        id: '__relations__',
+        name: 'Associations',
+        columns: 1,
+        sortOrder: 10_000,
+        isCollapsible: false,
+        isTabular: false,
+        tabularMaxRows: null,
+        fields: relationFields,
+        editableFields: relationFields,
+      });
+    }
+    return base;
+  }, [layout, relationFields]);
+
+  // All editable fields across all sections (incl. the synthetic relations
+  // step) — drives schema, defaults, and wizard validation.
   const editableFields = useMemo(() => {
     return steps.flatMap((s) => s.editableFields);
   }, [steps]);
@@ -66,7 +122,18 @@ export function EntityCreatePage({ entityType }: EntityCreatePageProps) {
   const defaultValues = useMemo(() => {
     const defaults: Record<string, unknown> = {};
     for (const field of editableFields) {
-      defaults[field.fieldKey] = field.defaultValue ?? '';
+      // Array-valued types default to [] so zod arraySchema + chip inputs see
+      // the expected shape on first render (scalars default to '').
+      if (
+        field.fieldType === 'multi_lookup' ||
+        field.fieldType === 'multi_user' ||
+        field.fieldType === 'multi_select' ||
+        field.fieldType === 'tags'
+      ) {
+        defaults[field.fieldKey] = [];
+      } else {
+        defaults[field.fieldKey] = field.defaultValue ?? '';
+      }
     }
     return defaults;
   }, [editableFields]);
@@ -83,13 +150,14 @@ export function EntityCreatePage({ entityType }: EntityCreatePageProps) {
   });
 
   function onSubmit(data: Record<string, unknown>) {
-    const cleaned: Record<string, unknown> = {};
-    for (const [key, val] of Object.entries(data)) {
-      if (val !== '' && val !== undefined) {
-        cleaned[key] = val;
-      }
-    }
-    createMutation.mutate(cleaned);
+    if (!layout) return;
+    // `buildEntityPayload` strips empty strings/undefined, then reshapes any
+    // field that carries a `nestedPath` (hasOne relationships like
+    // `credentials.password`) into its nested bucket. Relation-section keys
+    // (manyToMany / hasMany, e.g. `roles: [id1, id2]`) pass through at the
+    // top level since they're not in `layout.sections[].fields`.
+    const payload = buildEntityPayload(data, layout);
+    createMutation.mutate(payload);
   }
 
   // Wizard has N section steps + 1 review step

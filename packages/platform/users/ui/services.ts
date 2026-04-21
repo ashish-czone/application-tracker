@@ -27,7 +27,7 @@ export function createUsersApi(api: ApiFn) {
       return api.delete<void>(`/users/${id}`);
     },
     restoreUser(id: string): Promise<User> {
-      return api.patch<User>(`/users/${id}/restore`);
+      return api.post<User>(`/users/${id}/restore`);
     },
     resetUserPassword(id: string, password: string): Promise<void> {
       return api.post<void>(`/users/${id}/reset-password`, { password });
