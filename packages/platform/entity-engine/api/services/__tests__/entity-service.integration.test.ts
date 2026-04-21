@@ -839,9 +839,11 @@ describe('EntityService (integration)', () => {
       );
     }
 
-    it('onCreate fires with nested payload and tx when the relation key is present', async () => {
-      const onCreate = vi.fn(async (tx: any) => {
+    it('onCreate fires with nested payload, tx and ctx.parent when the relation key is present', async () => {
+      const onCreate = vi.fn(async (tx: any, _parentId: string, _payload: unknown, _actorId: string, ctx: any) => {
         expect(typeof tx.insert).toBe('function');
+        expect(ctx.parent.email).toBe('withrel@example.com');
+        expect(ctx.parent.name).toBe('WithRel');
       });
       const service = buildServiceWithRelations([
         { name: 'credentials', type: 'hasOne', targetEntity: 'test_entities', label: 'Credentials', handler: { onCreate } },
@@ -858,6 +860,7 @@ describe('EntityService (integration)', () => {
         created.id,
         { password: 's3cret' },
         TEST_ACTOR_ID,
+        expect.objectContaining({ parent: expect.objectContaining({ email: 'withrel@example.com' }) }),
       );
     });
 
@@ -916,6 +919,7 @@ describe('EntityService (integration)', () => {
         created.id,
         { password: 'new' },
         TEST_ACTOR_ID,
+        expect.objectContaining({ parent: expect.objectContaining({ email: 'uprel@example.com' }) }),
       );
     });
 
@@ -937,6 +941,7 @@ describe('EntityService (integration)', () => {
         created.id,
         TEST_ACTOR_ID,
         { kind: 'soft' },
+        expect.objectContaining({ parent: expect.objectContaining({ email: 'delrel@example.com' }) }),
       );
 
       // Throwing handler rolls the soft-delete back
