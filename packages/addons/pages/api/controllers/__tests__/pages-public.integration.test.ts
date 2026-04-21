@@ -75,8 +75,37 @@ describe('PagesPublicController (integration)', () => {
 
       expect(res.body.page).toMatchObject({ id: pageId, slug: 'home', title: 'Welcome' });
       expect(res.body.sections).toHaveLength(2);
-      expect(res.body.sections[0]).toMatchObject({ order: 0, blockKind: 'hero-split', customFields: { headline: 'Hello' } });
-      expect(res.body.sections[1]).toMatchObject({ order: 1, blockKind: 'cta', customFields: { text: 'Sign up' } });
+      expect(res.body.sections[0]).toMatchObject({
+        order: 0,
+        blockKind: 'hero-split',
+        title: null,
+        customFields: { headline: 'Hello' },
+        data: {},
+      });
+      expect(res.body.sections[1]).toMatchObject({
+        order: 1,
+        blockKind: 'cta',
+        title: null,
+        customFields: { text: 'Sign up' },
+        data: {},
+      });
+    });
+
+    it('returns section title when set (used as the block heading)', async () => {
+      const pageId = await insertPage({ slug: 'about' });
+      const id = randomUUID();
+      await ctx.db.insert(sections).values({
+        id,
+        pageId,
+        order: 0,
+        blockKind: 'hero-split',
+        title: 'About Acme',
+        customFields: {},
+      });
+
+      const res = await request(ctx.httpServer).get('/api/v1/public/pages/about').expect(200);
+
+      expect(res.body.sections[0]).toMatchObject({ title: 'About Acme', data: {} });
     });
 
     it('returns 404 for an unknown slug', async () => {
