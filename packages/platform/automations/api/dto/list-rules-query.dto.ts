@@ -24,7 +24,7 @@ export class ListRulesQueryDto {
   @MaxLength(100)
   search?: string;
 
-  @ApiPropertyOptional({ example: 'users.UserCreated' })
+  @ApiPropertyOptional({ example: 'users.Created' })
   @IsOptional()
   @IsString()
   @MaxLength(200)

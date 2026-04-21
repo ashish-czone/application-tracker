@@ -93,7 +93,7 @@ describe('inferAction', () => {
   });
 
   it('infers "updated" from event names ending in Updated', () => {
-    expect(inferAction('users.UserUpdated')).toBe('updated');
+    expect(inferAction('users.Updated')).toBe('updated');
   });
 
   it('infers "deleted" from event names ending in Deleted', () => {

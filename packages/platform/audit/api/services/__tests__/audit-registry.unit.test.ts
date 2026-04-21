@@ -25,7 +25,7 @@ describe('AuditRegistryService', () => {
         events: ['tasks.TaskCreated'],
       });
 
-      expect(registry.findRegistration('users.UserCreated')).toBeNull();
+      expect(registry.findRegistration('users.Created')).toBeNull();
     });
 
     it('returns null for events not in the explicit list', () => {
@@ -47,7 +47,7 @@ describe('AuditRegistryService', () => {
     it('wildcard does not match events from other modules', () => {
       registry.register('tasks', { events: '*' });
 
-      expect(registry.findRegistration('users.UserCreated')).toBeNull();
+      expect(registry.findRegistration('users.Created')).toBeNull();
     });
 
     it('wildcard matching is case-insensitive on module prefix', () => {
@@ -58,11 +58,11 @@ describe('AuditRegistryService', () => {
 
     it('preserves sensitiveFields in registration', () => {
       registry.register('users', {
-        events: ['users.UserCreated'],
+        events: ['users.Created'],
         sensitiveFields: ['passwordHash', 'token'],
       });
 
-      const match = registry.findRegistration('users.UserCreated');
+      const match = registry.findRegistration('users.Created');
       expect(match!.registration.sensitiveFields).toEqual(['passwordHash', 'token']);
     });
   });
@@ -70,7 +70,7 @@ describe('AuditRegistryService', () => {
   describe('getAll', () => {
     it('returns all registrations', () => {
       registry.register('tasks', { events: '*' });
-      registry.register('users', { events: ['users.UserCreated'] });
+      registry.register('users', { events: ['users.Created'] });
 
       const all = registry.getAll();
       expect(all.size).toBe(2);

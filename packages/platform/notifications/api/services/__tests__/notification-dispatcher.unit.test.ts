@@ -11,7 +11,7 @@ function createMockAppLogger(): AppLoggerService {
 
 function buildContext(): ChannelContext {
   return {
-    eventName: 'users.UserCreated',
+    eventName: 'users.Created',
     entityType: 'users',
     entityId: 'user-1',
     correlationId: 'corr-1',
