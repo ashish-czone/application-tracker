@@ -5,7 +5,7 @@ import type { NotificationTemplate } from '../../types';
 
 function buildEvent(overrides: Partial<DomainEvent> = {}): DomainEvent {
   return {
-    eventName: 'users.UserCreated',
+    eventName: 'users.Created',
     entityType: 'users',
     entityId: 'user-1',
     actorId: 'actor-1',
@@ -56,7 +56,7 @@ describe('TemplateRenderer', () => {
 
     const result = renderer.render(template, buildEvent());
 
-    expect(result.body).toBe('Event users.UserCreated on users user-1');
+    expect(result.body).toBe('Event users.Created on users user-1');
   });
 
   it('should handle missing payload fields gracefully', () => {

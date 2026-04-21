@@ -599,8 +599,12 @@ export class EntityService {
     // Hydrate relational fields (tags → tag objects with name/color)
     await this.hydrateRelationalFields(data);
 
+    const enriched = config.hooks?.afterList
+      ? await config.hooks.afterList(data, { actorId: accessCtx?.userId ?? '' })
+      : data;
+
     return {
-      data,
+      data: enriched,
       meta: computePaginationMeta(Number(total), page, limit),
     };
   }
@@ -651,7 +655,9 @@ export class EntityService {
       const response = await this.toResponse(row);
       await this.resolveLookupLabels([response]);
       await this.hydrateRelationalFields([response]);
-      return response;
+      return config.hooks?.afterFindOne
+        ? await config.hooks.afterFindOne(response, { actorId: accessCtx?.userId ?? '' })
+        : response;
     }
 
     const [row] = await this.database.db
@@ -678,7 +684,9 @@ export class EntityService {
     const response = await this.toResponse(row);
     await this.resolveLookupLabels([response]);
     await this.hydrateRelationalFields([response]);
-    return response;
+    return config.hooks?.afterFindOne
+      ? await config.hooks.afterFindOne(response, { actorId: accessCtx?.userId ?? '' })
+      : response;
   }
 
   /**

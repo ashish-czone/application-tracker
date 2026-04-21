@@ -418,4 +418,37 @@ describe('RbacService', () => {
       });
     });
   });
+
+  describe('getRolesByUserIds (batch)', () => {
+    it('should return an empty map for empty input (no DB call)', async () => {
+      const result = await service.getRolesByUserIds([]);
+      expect(result).toEqual({});
+      expect(mockDb.select).not.toHaveBeenCalled();
+    });
+
+    it('should return an entry for every input id, empty array when no roles', async () => {
+      mockDb._chain.where.mockResolvedValueOnce([]);
+
+      const result = await service.getRolesByUserIds(['u1', 'u2']);
+
+      expect(result).toEqual({ u1: [], u2: [] });
+      expect(mockDb.select).toHaveBeenCalledOnce();
+    });
+
+    it('should group roles under the owning userId', async () => {
+      const roleA = { id: 'r1', name: 'Admin', userType: 'admin', isDefault: false, createdAt: new Date(), updatedAt: new Date() };
+      const roleB = { id: 'r2', name: 'Editor', userType: 'admin', isDefault: false, createdAt: new Date(), updatedAt: new Date() };
+      mockDb._chain.where.mockResolvedValueOnce([
+        { userId: 'u1', ...roleA },
+        { userId: 'u1', ...roleB },
+        { userId: 'u2', ...roleA },
+      ]);
+
+      const result = await service.getRolesByUserIds(['u1', 'u2', 'u3']);
+
+      expect(result.u1?.map((r: { name: string }) => r.name).sort()).toEqual(['Admin', 'Editor']);
+      expect(result.u2?.map((r: { name: string }) => r.name)).toEqual(['Admin']);
+      expect(result.u3).toEqual([]);
+    });
+  });
 });

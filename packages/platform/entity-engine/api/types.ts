@@ -886,6 +886,25 @@ export interface EntityHooks {
   buildListFilters?: (query: Record<string, unknown>) => SQL[];
   /** Custom response transformation (merge DB row + EAV values). Overrides default merge. */
   toResponse?: (dbRow: Record<string, unknown>, eavValues: Record<string, unknown>) => Record<string, unknown>;
+  /**
+   * Called after list rows are loaded and lookup labels resolved, before the
+   * response is returned. Receives the whole page so batched enrichment (e.g.
+   * fetching related rows in a single query) stays O(1). Runs outside any
+   * transaction. Return the enriched rows.
+   */
+  afterList?: (
+    rows: Record<string, unknown>[],
+    ctx: { actorId: string },
+  ) => Promise<Record<string, unknown>[]>;
+  /**
+   * Called after a single entity is loaded (findOne / detail) and lookup
+   * labels are resolved, before the response is returned. Runs outside any
+   * transaction. Return the enriched row.
+   */
+  afterFindOne?: (
+    row: Record<string, unknown>,
+    ctx: { actorId: string },
+  ) => Promise<Record<string, unknown>>;
   /** Custom workflow guard functions, keyed by name. Referenced by guardNames in transition config. */
   workflowGuards?: Record<string, WorkflowGuardFn>;
 }

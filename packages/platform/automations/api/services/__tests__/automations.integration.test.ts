@@ -44,7 +44,7 @@ describe('Automations (integration)', () => {
     it('should create and retrieve an automation rule', async () => {
       const rule = await ruleService.create({
         name: 'Send Welcome Email',
-        eventName: 'users.UserCreated',
+        eventName: 'users.Created',
         actions: [{ type: 'send_notification', config: { templateId: 'welcome' } }],
       });
 

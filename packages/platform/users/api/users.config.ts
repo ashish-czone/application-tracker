@@ -2,11 +2,24 @@ import { users } from '@packages/database';
 import { defineEntity, type EntityConfig } from '@packages/entity-engine';
 import type { RelationHandler } from '@packages/entity-engine-contract';
 
+/** Minimal reader surface the users config needs from rbac for list/detail role
+ *  enrichment. Keeping this a structural type (not `RbacService`) keeps
+ *  `@packages/users` free of an rbac dependency at the config layer — rbac is
+ *  still required by the owning module at wiring time. */
+export interface UsersRolesReader {
+  getRolesByUserIds(
+    userIds: string[],
+  ): Promise<Record<string, Array<{ id: string; name: string; userType: string | null }>>>;
+}
+
 export interface UsersEntityConfigDeps {
   /** Owns the users.credentials hasOne write path. Supplied by @packages/auth. */
   credentialsHandler: RelationHandler;
   /** Owns the users.roles manyToMany write path. Supplied by @packages/rbac. */
   rolesHandler: RelationHandler;
+  /** Batch reader for list/detail role enrichment. Supplied by @packages/rbac.
+   *  Optional so unit tests that don't exercise reads can omit it. */
+  rolesReader?: UsersRolesReader;
 }
 
 /**
@@ -29,8 +42,14 @@ export interface UsersEntityConfigDeps {
  * CredentialsRelationHandler in the same tx. `roles` likewise goes to
  * UserRolesRelationHandler. See @packages/entity-engine/entity.service for
  * the write-path orchestration.
+ *
+ * Read-side enrichment: afterList / afterFindOne hooks batch-load roles via
+ * the supplied reader so list rows and the detail response carry a `roles`
+ * array without an N+1 per row.
  */
 export function createUsersEntityConfig(deps: UsersEntityConfigDeps): EntityConfig<typeof users> {
+  const rolesReader = deps.rolesReader;
+
   return defineEntity({
     table: users,
     slug: 'users',
@@ -121,6 +140,25 @@ export function createUsersEntityConfig(deps: UsersEntityConfigDeps): EntityConf
         handler: deps.rolesHandler,
       },
     ],
+
+    hooks: rolesReader
+      ? {
+          afterList: async (rows) => {
+            if (rows.length === 0) return rows;
+            const ids = rows.map((r) => r.id as string);
+            const byUser = await rolesReader.getRolesByUserIds(ids);
+            return rows.map((r) => ({
+              ...r,
+              roles: byUser[r.id as string] ?? [],
+            }));
+          },
+          afterFindOne: async (row) => {
+            const id = row.id as string;
+            const byUser = await rolesReader.getRolesByUserIds([id]);
+            return { ...row, roles: byUser[id] ?? [] };
+          },
+        }
+      : undefined,
 
     ui: {
       icon: 'User',

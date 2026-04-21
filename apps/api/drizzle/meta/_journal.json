@@ -176,6 +176,13 @@
       "when": 1777244400000,
       "tag": "0024_pages_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1777526400000,
+      "tag": "0025_roles_soft_delete",
+      "breakpoints": true
     }
   ]
 }
