@@ -43,6 +43,13 @@
       "when": 1776768086071,
       "tag": "0005_nostalgic_mysterio",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1776768121306,
+      "tag": "0006_glamorous_thena",
+      "breakpoints": true
     }
   ]
 }

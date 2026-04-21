@@ -6,6 +6,7 @@ import { TEAM_MEMBERS_CONFIG } from './team-members.config';
 import { SERVICES_CONFIG } from './services.config';
 import { CLIENT_LOGOS_CONFIG } from './client-logos.config';
 import { VALUE_PROPS_CONFIG } from './value-props.config';
+import { STATS_CONFIG } from './stats.config';
 
 /**
  * ContentModule registers content primitives (testimonials, FAQ items, team
@@ -24,6 +25,7 @@ import { VALUE_PROPS_CONFIG } from './value-props.config';
     EntityEngineModule.forEntity(SERVICES_CONFIG),
     EntityEngineModule.forEntity(CLIENT_LOGOS_CONFIG),
     EntityEngineModule.forEntity(VALUE_PROPS_CONFIG),
+    EntityEngineModule.forEntity(STATS_CONFIG),
   ],
 })
 export class ContentModule {}
