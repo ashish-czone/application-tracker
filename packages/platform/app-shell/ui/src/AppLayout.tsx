@@ -217,7 +217,7 @@ export function AppLayout({ brandLabel, menuItems }: AppLayoutProps) {
 
           <NavSectionLabel label="Entities" collapsed={collapsed} />
           <div className="space-y-0.5">
-            <EntityNavItems collapsed={collapsed} exclude={['tasks', 'sections']} />
+            <EntityNavItems collapsed={collapsed} exclude={['tasks', 'sections', 'menu-items']} />
           </div>
 
           <NavSectionLabel label="Workspace" collapsed={collapsed} />
