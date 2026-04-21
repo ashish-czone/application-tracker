@@ -8,6 +8,13 @@
       "when": 1776701103603,
       "tag": "0000_broad_marten_broadcloak",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1776783709551,
+      "tag": "0001_shallow_thundra",
+      "breakpoints": true
     }
   ]
 }

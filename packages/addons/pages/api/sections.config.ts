@@ -45,6 +45,10 @@ export const SECTIONS_CONFIG = defineEntity({
       label: 'Variant',
       system: true,
     },
+    title: {
+      type: 'text',
+      label: 'Heading',
+    },
   },
 
   defaultSort: 'order',

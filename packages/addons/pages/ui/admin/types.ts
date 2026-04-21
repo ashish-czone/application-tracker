@@ -14,6 +14,8 @@ export interface SectionRecord {
   order: number;
   blockKind: string;
   variant: string | null;
+  title: string | null;
+  dataSource: unknown | null;
   customFields: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
@@ -38,6 +40,8 @@ export interface CreateSectionInput {
   order: number;
   blockKind: string;
   variant?: string | null;
+  title?: string | null;
+  dataSource?: unknown | null;
   customFields?: Record<string, unknown>;
 }
 

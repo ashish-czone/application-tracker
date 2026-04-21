@@ -13,6 +13,7 @@
     "@nestjs/swagger": "^11.0.0",
     "@packages/auth": "workspace:*",
     "@packages/auth-core": "workspace:*",
+    "@packages/blocks-contract": "workspace:*",
     "@packages/database": "workspace:*",
     "@packages/entity-engine": "workspace:*",
     "@packages/events": "workspace:*",
