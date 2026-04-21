@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   X,
   Mail,
@@ -8,15 +9,21 @@ import {
   Ban,
   RotateCcw,
 } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   Eyebrow,
   DetailRow,
   AvatarBadge,
   DrawerShell,
+  ConfirmDialog,
 } from '@packages/ui';
+import { useRemoveRoleMember } from '@packages/rbac-ui';
+import { useRemoveOrgUnitMember } from '@packages/org-units-ui';
 import { OrdinalDate } from '../../../../../../components';
-import type { UserRow } from '../data/usersMock';
+import type { UserRow, UserRole, UserPosition } from '../data/usersMock';
 import { StatusPill } from './StatusPill';
+import { RoleAssignEditor } from './RoleAssignEditor';
+import { PositionAssignEditor } from './PositionAssignEditor';
 
 export interface UserDetailDrawerProps {
   user: UserRow;
@@ -36,6 +43,45 @@ export function UserDetailDrawer({
   onResendInvite,
   actionPending = false,
 }: UserDetailDrawerProps) {
+  const queryClient = useQueryClient();
+  const [assignRoleOpen, setAssignRoleOpen] = useState(false);
+  const [addPositionOpen, setAddPositionOpen] = useState(false);
+  const [roleToRemove, setRoleToRemove] = useState<UserRole | null>(null);
+  const [positionToRemove, setPositionToRemove] = useState<UserPosition | null>(null);
+
+  const removeRole = useRemoveRoleMember();
+  const removePosition = useRemoveOrgUnitMember();
+
+  const handleConfirmRemoveRole = () => {
+    if (!roleToRemove) return;
+    removeRole.mutate(
+      { roleId: roleToRemove.id, userId: user.id },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ['users'] });
+          setRoleToRemove(null);
+        },
+      },
+    );
+  };
+
+  const handleConfirmRemovePosition = () => {
+    if (!positionToRemove) return;
+    // UserPosition.id is the unitId in mapUserRecord — see mapPositions there.
+    removePosition.mutate(
+      { unitId: positionToRemove.id, userId: user.id },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ['users'] });
+          setPositionToRemove(null);
+        },
+      },
+    );
+  };
+
+  const excludeRoleIds = user.roles.map((r) => r.id);
+  const excludeUnitIds = user.positions.map((p) => p.id);
+
   return (
     <DrawerShell onClose={onClose} width="xl">
       <header className="px-6 pt-6 pb-4 border-b border-rule flex-none">
@@ -104,13 +150,27 @@ export function UserDetailDrawer({
                 Roles
               </span>
             </div>
-            <button
-              type="button"
-              className="text-[10px] uppercase tracking-eyebrow font-sans font-medium text-authority hover:text-authority-soft transition-colors"
-            >
-              + Assign role
-            </button>
+            {!assignRoleOpen && (
+              <button
+                type="button"
+                onClick={() => setAssignRoleOpen(true)}
+                className="text-[10px] uppercase tracking-eyebrow font-sans font-medium text-authority hover:text-authority-soft transition-colors"
+              >
+                + Assign role
+              </button>
+            )}
           </div>
+
+          {assignRoleOpen && (
+            <div className="mb-3">
+              <RoleAssignEditor
+                userId={user.id}
+                excludeRoleIds={excludeRoleIds}
+                onClose={() => setAssignRoleOpen(false)}
+              />
+            </div>
+          )}
+
           {user.roles.length > 0 ? (
             <div className="space-y-1.5">
               {user.roles.map((role) => (
@@ -124,6 +184,7 @@ export function UserDetailDrawer({
                   </div>
                   <button
                     type="button"
+                    onClick={() => setRoleToRemove(role)}
                     className="text-ink-muted hover:text-signal transition-colors"
                     title="Remove role"
                   >
@@ -145,13 +206,27 @@ export function UserDetailDrawer({
                 Positions
               </span>
             </div>
-            <button
-              type="button"
-              className="text-[10px] uppercase tracking-eyebrow font-sans font-medium text-authority hover:text-authority-soft transition-colors"
-            >
-              + Add position
-            </button>
+            {!addPositionOpen && (
+              <button
+                type="button"
+                onClick={() => setAddPositionOpen(true)}
+                className="text-[10px] uppercase tracking-eyebrow font-sans font-medium text-authority hover:text-authority-soft transition-colors"
+              >
+                + Add position
+              </button>
+            )}
           </div>
+
+          {addPositionOpen && (
+            <div className="mb-3">
+              <PositionAssignEditor
+                userId={user.id}
+                excludeUnitIds={excludeUnitIds}
+                onClose={() => setAddPositionOpen(false)}
+              />
+            </div>
+          )}
+
           {user.positions.length > 0 ? (
             <div className="space-y-1.5">
               {user.positions.map((pos) => (
@@ -167,6 +242,7 @@ export function UserDetailDrawer({
                   </div>
                   <button
                     type="button"
+                    onClick={() => setPositionToRemove(pos)}
                     className="text-ink-muted hover:text-signal transition-colors flex-none"
                     title="Remove position"
                   >
@@ -228,6 +304,38 @@ export function UserDetailDrawer({
           </div>
         </section>
       </div>
+
+      <ConfirmDialog
+        open={roleToRemove !== null}
+        onOpenChange={(open) => !removeRole.isPending && !open && setRoleToRemove(null)}
+        title="Remove role?"
+        description={
+          roleToRemove
+            ? `${user.name} will lose the "${roleToRemove.name}" role and any permissions it grants.`
+            : ''
+        }
+        confirmLabel="Remove role"
+        destructive
+        isPending={removeRole.isPending}
+        pendingLabel="Removing…"
+        onConfirm={handleConfirmRemoveRole}
+      />
+
+      <ConfirmDialog
+        open={positionToRemove !== null}
+        onOpenChange={(open) => !removePosition.isPending && !open && setPositionToRemove(null)}
+        title="Remove position?"
+        description={
+          positionToRemove
+            ? `${user.name} will be removed from "${positionToRemove.unitName}".`
+            : ''
+        }
+        confirmLabel="Remove position"
+        destructive
+        isPending={removePosition.isPending}
+        pendingLabel="Removing…"
+        onConfirm={handleConfirmRemovePosition}
+      />
     </DrawerShell>
   );
 }
