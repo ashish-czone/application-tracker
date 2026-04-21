@@ -27,6 +27,7 @@ import { RbacGuard } from '@packages/rbac';
 import { TaxonomyModule } from '@packages/taxonomy';
 import { UserPreferencesModule } from '@packages/user-preferences';
 import { HierarchyModule } from '@packages/hierarchy';
+import { OrderableModule } from '@packages/orderable';
 import { EntityLayoutModule } from '@packages/entity-layout';
 import { UsersModule } from '@packages/users';
 import { GlobalExceptionFilter } from './filters/global-exception.filter';
@@ -118,6 +119,7 @@ export function createAppModule(options: AppShellOptions): ModuleMetadata {
       AuditModule,
       WorkflowsModule,
       HierarchyModule,
+      OrderableModule,
       TaxonomyModule,
       UserPreferencesModule,
       EntityLayoutModule,

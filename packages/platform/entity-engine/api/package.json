@@ -17,6 +17,7 @@
     "@packages/entity-engine-contract": "workspace:*",
     "@packages/events": "workspace:*",
     "@packages/hierarchy": "workspace:*",
+    "@packages/orderable": "workspace:*",
     "@packages/logger": "workspace:*",
     "@packages/query-builder": "workspace:*",
     "@packages/rbac": "workspace:*",

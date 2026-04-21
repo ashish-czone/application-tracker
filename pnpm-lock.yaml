@@ -476,6 +476,9 @@ importers:
       '@packages/notifications':
         specifier: workspace:*
         version: link:../../packages/platform/notifications/api
+      '@packages/orderable':
+        specifier: workspace:*
+        version: link:../../packages/platform/orderable/api
       '@packages/org-units':
         specifier: workspace:*
         version: link:../../packages/addons/org-units/api
@@ -971,6 +974,9 @@ importers:
       '@packages/oauth':
         specifier: workspace:*
         version: link:../../packages/addons/oauth
+      '@packages/orderable':
+        specifier: workspace:*
+        version: link:../../packages/platform/orderable/api
       '@packages/orders-billing':
         specifier: workspace:*
         version: link:../../packages/addons/orders-billing
@@ -3590,6 +3596,9 @@ importers:
       '@packages/notifications':
         specifier: workspace:*
         version: link:../../notifications/api
+      '@packages/orderable':
+        specifier: workspace:*
+        version: link:../../orderable/api
       '@packages/queue':
         specifier: workspace:*
         version: link:../../queue/api
@@ -4248,6 +4257,9 @@ importers:
       '@packages/logger':
         specifier: workspace:*
         version: link:../../../core/logger
+      '@packages/orderable':
+        specifier: workspace:*
+        version: link:../../orderable/api
       '@packages/query-builder':
         specifier: workspace:*
         version: link:../../../core/query-builder
@@ -4762,6 +4774,31 @@ importers:
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
+
+  packages/platform/orderable/api:
+    dependencies:
+      '@nestjs/common':
+        specifier: ^11.0.0
+        version: 11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@packages/database':
+        specifier: workspace:*
+        version: link:../../../core/database
+      drizzle-orm:
+        specifier: ^0.45.1
+        version: 0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3))
+    devDependencies:
+      '@packages/platform-testing':
+        specifier: workspace:*
+        version: link:../../testing
+      drizzle-kit:
+        specifier: ^0.31.9
+        version: 0.31.9
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.2.0
+        version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0)
 
   packages/platform/platform-ui:
     dependencies:

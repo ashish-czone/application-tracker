@@ -176,6 +176,19 @@ export interface ModelDefinition<TTable extends PgTable = PgTable> {
    */
   hierarchy?: boolean;
 
+  /**
+   * Mark this entity as orderable. Requires the Drizzle table to spread
+   * `...orderableColumns()` from `@packages/orderable` (providing a single
+   * `sortOrder` integer). When enabled: the column is registered as a system
+   * column (hidden from forms and layout seeds), the default list sort is
+   * `sortOrder ASC, id ASC` unless overridden, and the entity service
+   * exposes a unified `move()` method plus a generated `POST /:slug/:id/move`
+   * endpoint that accepts `{ parentId?, sortOrder? }`. When combined with
+   * `hierarchy: true`, a single move call can reparent and reorder atomically.
+   * Default: false.
+   */
+  orderable?: boolean;
+
   // --- Field definitions ---
 
   /** Field definitions keyed by field key (camelCase matching Drizzle property name) */
@@ -342,7 +355,10 @@ export function defineEntity<TTable extends PgTable>(model: ModelDefinition<TTab
   // so users can filter/condition on them.
   const systemColumns: string[] = ['id'];
   let nameField: string | string[] = 'id';
-  let defaultSort = model.defaultSort ?? 'createdAt';
+  // Orderable entities default to sorting by sort_order; stable tie-break on
+  // id is applied downstream in EntityService.list. Consumers can override
+  // via an explicit defaultSort.
+  let defaultSort = model.defaultSort ?? (model.orderable ? 'sortOrder' : 'createdAt');
 
   // Validate onDelete policy against table shape + register soft-delete columns
   // as system columns when the entity is soft-deletable.
@@ -450,6 +466,20 @@ export function defineEntity<TTable extends PgTable>(model: ModelDefinition<TTab
     // parentId is user-editable (seeded as a lookup field below); only
     // path/depth are pure infrastructure.
     systemColumns.push('path', 'depth');
+  }
+
+  // Orderable: validate the table spreads orderableColumns() and register
+  // sort_order as a system column. The column is maintained exclusively via
+  // the unified move() endpoint, never through form submits, so it stays
+  // out of field seeds and form layouts.
+  if (model.orderable) {
+    if (!columns.sortOrder) {
+      throw new Error(
+        `defineEntity({ orderable: true }) for '${model.slug}' requires the table to spread ` +
+          `...orderableColumns() from @packages/orderable. Missing column: sortOrder.`,
+      );
+    }
+    systemColumns.push('sortOrder');
   }
 
   // JSONB custom-fields: validate the table spreads customFieldsColumn() and
@@ -590,6 +620,7 @@ export function defineEntity<TTable extends PgTable>(model: ModelDefinition<TTab
     customFields: model.customFields,
     adminConfigurable: model.adminConfigurable,
     hierarchy: model.hierarchy,
+    orderable: model.orderable,
     hasNotes: model.hasNotes,
     hasAttachments: model.hasAttachments,
     hasEvaluations: model.hasEvaluations,

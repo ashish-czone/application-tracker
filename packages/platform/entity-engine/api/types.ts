@@ -785,6 +785,13 @@ export interface EntityConfig<TTable extends PgTable = PgTable> {
    *  service (wired in EntityEngineModule). Default: false. */
   hierarchy?: boolean;
 
+  /** Mark this entity as orderable. Requires the table to spread `...orderableColumns()`
+   *  from `@packages/orderable`. Registers `sortOrder` as a system column, defaults
+   *  list sort to `sortOrder ASC, id ASC`, and exposes a unified move endpoint that
+   *  accepts `{ parentId?, sortOrder? }`. When combined with `hierarchy: true`, a
+   *  single move call can reparent and reorder. Default: false. */
+  orderable?: boolean;
+
   // --- Notes ---
 
   /** Enable the notes tab on the entity detail page. Default: false. */

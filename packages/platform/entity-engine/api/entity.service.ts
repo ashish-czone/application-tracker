@@ -18,6 +18,7 @@ import { fieldTypeRegistry } from '@packages/field-types';
 import { DatabaseService } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
 import { HierarchyService } from '@packages/hierarchy';
+import { OrderableService } from '@packages/orderable';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { FieldDefinitionService } from './services/field-definition.service';
 import { LookupResolverService } from './services/lookup-resolver.service';
@@ -86,6 +87,7 @@ export class EntityService {
     appLogger: AppLoggerService,
     private readonly positionScopeProvider: PositionScopeProvider | null = null,
     private readonly hierarchyService: HierarchyService | null = null,
+    private readonly orderableService: OrderableService | null = null,
   ) {
     this.logger = appLogger.forContext(`EntityService[${config.entityType}]`);
   }
@@ -556,6 +558,15 @@ export class EntityService {
     const orderDirection = query.order === 'asc' ? 'ASC' : 'DESC';
     const orderByExpr = this.buildSortExpression(sortKey, orderDirection, config);
 
+    // Stable tiebreak on id when sorting by sort_order on an orderable entity.
+    // Without this, two rows sharing a sort_order would return in DB-dependent
+    // order and drag-drop UIs would flicker. Kept outside buildSortExpression
+    // because it applies only to list reads — single-column sorts elsewhere
+    // (exports, snapshots) don't need paginated stability.
+    const orderByClauses = (config.orderable && sortKey === 'sortOrder')
+      ? [orderByExpr, asc((config.table as any).id)]
+      : [orderByExpr];
+
     // Count
     const countQuery = this.database.db
       .select({ total: count() })
@@ -579,7 +590,7 @@ export class EntityService {
     if (ext) baseSelect.innerJoin(ext.parentTable, eq(ext.parentIdColumn, ext.foreignKeyColumn));
     const rows = await baseSelect
       .where(whereClause)
-      .orderBy(orderByExpr)
+      .orderBy(...orderByClauses)
       .limit(limit)
       .offset(offset);
 
@@ -805,6 +816,72 @@ export class EntityService {
     const node = await this.findOneOrFail(id, accessCtx);
     const rows = await hierarchy.getDescendants(table, table.path, node.path as string);
     return Promise.all(rows.map((r) => this.toResponse(r)));
+  }
+
+  // ---------------------------------------------------------------------------
+  // ORDERABLE
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Unified move: reparent and/or reorder a row in a single call.
+   *
+   * At least one of `parentId` or `sortOrder` must be provided. The pieces are
+   * applied in order — reparent first (which recomputes path/depth and the
+   * subtree), then the sort_order write on the row itself. They are not bundled
+   * in a single transaction: the reparent is already transactional on its own,
+   * and a later sort_order failure leaves the node correctly reparented with
+   * stale ordering rather than a corrupt path.
+   *
+   * Typed conditionals per flag:
+   * - `parentId` requires `hierarchy: true`
+   * - `sortOrder` requires `orderable: true`
+   *
+   * @param id - Node id being moved
+   * @param opts - At least one of parentId / sortOrder
+   * @param actorId - User performing the action (for audit logs)
+   * @param accessCtx - Data access scope
+   */
+  async move(
+    id: string,
+    opts: { parentId?: string | null; sortOrder?: number },
+    actorId: string,
+    accessCtx?: DataAccessContext,
+  ): Promise<Record<string, unknown>> {
+    const { config } = this;
+
+    const hasParentIdChange = Object.prototype.hasOwnProperty.call(opts, 'parentId');
+    const hasSortOrderChange = Object.prototype.hasOwnProperty.call(opts, 'sortOrder');
+
+    if (!hasParentIdChange && !hasSortOrderChange) {
+      throw new BadRequestException('move() requires at least one of parentId or sortOrder');
+    }
+
+    if (hasParentIdChange && !config.hierarchy) {
+      throw new BadRequestException(`${config.singularName} is not hierarchical`);
+    }
+
+    if (hasSortOrderChange && !config.orderable) {
+      throw new BadRequestException(`${config.singularName} is not orderable`);
+    }
+
+    // Enforce scope / existence once up front with a proper 404 on a missing id.
+    await this.findOneOrFail(id, accessCtx);
+
+    if (hasParentIdChange) {
+      await this.reparent(id, opts.parentId ?? null, actorId, accessCtx);
+    }
+
+    if (hasSortOrderChange) {
+      const orderable = this.orderableService;
+      if (!orderable) {
+        throw new BadRequestException(`OrderableService not available for ${config.singularName}`);
+      }
+      const table = config.table as any;
+      await orderable.setSortOrder(table, table.id, table.sortOrder, id, opts.sortOrder as number);
+      this.logger.log(`${config.singularName} reordered`, { entityId: id, sortOrder: opts.sortOrder, actorId });
+    }
+
+    return this.findOneOrFail(id, accessCtx);
   }
 
   // ---------------------------------------------------------------------------
