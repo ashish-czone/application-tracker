@@ -13,6 +13,7 @@ import {
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 import type { UserRow, UserStatus } from './data/usersMock';
 import { UserDetailDrawer } from './components/UserDetailDrawer';
+import { InviteUserDrawer } from './components/InviteUserDrawer';
 import { USER_COLUMNS, REQUIRED_USER_COLUMN_KEYS } from './components/userColumns';
 import {
   useUsersList,
@@ -26,6 +27,7 @@ type StatusTab = 'all' | UserStatus;
 
 export function UsersPage() {
   const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
+  const [inviteOpen, setInviteOpen] = useState(false);
 
   const [search, setSearch] = useState('');
   const [statusTab, setStatusTab] = useState<StatusTab>('all');
@@ -134,7 +136,7 @@ export function UsersPage() {
           )
         }
         actions={
-          <Button size="sm">
+          <Button size="sm" onClick={() => setInviteOpen(true)}>
             <UserPlus className="w-3.5 h-3.5 mr-1.5" strokeWidth={2} />
             Invite user
           </Button>
@@ -226,6 +228,14 @@ export function UsersPage() {
           />
         </section>
       </ScreenLayout>
+
+      <AnimatePresence>
+        {inviteOpen && (
+          <InviteUserDrawer
+            onClose={() => setInviteOpen(false)}
+          />
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {selectedUser && (
