@@ -15,17 +15,23 @@ export interface PageEditorProps {
   onSaved?: () => void;
   /** Override the block list. Defaults to everything in the singleton registry. */
   blocks?: BlockDefinition[];
+  /**
+   * Entity slugs the host app has registered. Filters the Puck block picker
+   * via `block.supports` — content blocks needing entities the app hasn't
+   * installed disappear from the palette. Omit to show every block.
+   */
+  availableEntities?: string[];
 }
 
-export function PageEditor({ pageId, onSaved, blocks }: PageEditorProps) {
+export function PageEditor({ pageId, onSaved, blocks, availableEntities }: PageEditorProps) {
   const { data: page, isLoading: pageLoading } = usePage(pageId);
   const { data: sectionsResp, isLoading: sectionsLoading } = useSectionsForPage(pageId);
   const save = useSavePageSections();
 
   const registeredBlocks = useMemo(() => blocks ?? blockRegistry.list(), [blocks]);
   const puckConfig = useMemo<Config>(
-    () => buildPuckConfig(registeredBlocks) as unknown as Config,
-    [registeredBlocks],
+    () => buildPuckConfig(registeredBlocks, { availableEntities }) as unknown as Config,
+    [registeredBlocks, availableEntities],
   );
 
   const initialData = useMemo<Data | null>(() => {
@@ -49,6 +55,7 @@ export function PageEditor({ pageId, onSaved, blocks }: PageEditorProps) {
       blockKind: d.blockKind,
       variant: d.variant,
       customFields: d.customFields,
+      dataSource: d.dataSource,
     }));
     const existingIds = sectionsResp.data.map((s) => s.id);
     await save.mutateAsync({ pageId, existingIds, drafts });

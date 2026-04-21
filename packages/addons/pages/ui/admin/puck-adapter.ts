@@ -4,6 +4,8 @@ import type {
   BlockFieldSpec,
   BlockFieldType,
 } from '@packages/blocks-ui';
+import type { DataSource } from '@packages/blocks-contract';
+import { DataSourcePicker } from './DataSourcePicker';
 
 /**
  * Minimal structural shape the adapter needs to serialize a section into Puck.
@@ -18,6 +20,8 @@ export interface PuckSectionInput {
   blockKind: string;
   variant: string | null;
   customFields: Record<string, unknown>;
+  /** Where the block pulls records from. `null` = static, no data fetch. */
+  dataSource?: DataSource | null;
 }
 
 /**
@@ -36,12 +40,18 @@ export interface PuckData {
   root: { props: Record<string, unknown> };
 }
 
+export interface PuckCustomFieldRender<Value = unknown> {
+  (props: { value: Value; onChange: (value: Value) => void }): ReactNode;
+}
+
 export interface PuckField {
-  type: 'text' | 'textarea' | 'number' | 'select' | 'radio';
+  type: 'text' | 'textarea' | 'number' | 'select' | 'radio' | 'custom';
   label?: string;
   options?: { label: string; value: string | number }[];
   min?: number;
   max?: number;
+  /** Set when `type === 'custom'`. Puck calls this with `{ value, onChange }`. */
+  render?: PuckCustomFieldRender<any>;
 }
 
 export interface PuckComponentConfig {
@@ -99,23 +109,67 @@ function variantField(block: BlockDefinition): PuckField | null {
   };
 }
 
+export interface BuildPuckConfigOptions {
+  /**
+   * Entity slugs the surrounding app has registered. Blocks declaring a
+   * non-empty `supports` list are filtered to those whose declared entities
+   * intersect with this set — a block needing testimonials disappears when
+   * the testimonials entity isn't installed.
+   *
+   * Omit (or pass `undefined`) to skip filtering — every block is shown.
+   */
+  availableEntities?: string[];
+}
+
+/**
+ * Returns the blocks that should appear in the Puck picker for a given
+ * environment. Static-only blocks (empty `supports`) always pass. Blocks
+ * declaring `supports` only pass when at least one of their entities is in
+ * `availableEntities`. When `availableEntities` is omitted, no filtering
+ * happens — useful for tests, single-tenant apps, or when block visibility
+ * isn't gated on entity registration.
+ */
+export function filterBlocksBySupports(
+  blocks: BlockDefinition[],
+  availableEntities?: string[],
+): BlockDefinition[] {
+  if (!availableEntities) return blocks;
+  const available = new Set(availableEntities);
+  return blocks.filter((b) => {
+    const supports = b.supports;
+    if (!supports || supports.length === 0) return true;
+    return supports.some((s) => available.has(s));
+  });
+}
+
 /**
  * Build the Puck `Config` object from our registered blocks. Each block
  * becomes one Puck component keyed by `kind`; its render delegates to
  * the block's actual React component so the admin preview and the
  * public site share the exact same output.
+ *
+ * Pass `availableEntities` to filter content blocks whose `supports` has no
+ * overlap with what's installed.
  */
-export function buildPuckConfig(blocks: BlockDefinition[]): PuckConfig {
+export function buildPuckConfig(
+  blocks: BlockDefinition[],
+  options: BuildPuckConfigOptions = {},
+): PuckConfig {
   const components: Record<string, PuckComponentConfig> = {};
   const categories: Record<string, { title?: string; components: string[] }> = {};
 
-  for (const block of blocks) {
+  const eligible = filterBlocksBySupports(blocks, options.availableEntities);
+
+  for (const block of eligible) {
     const fields: Record<string, PuckField> = {};
     for (const [key, spec] of Object.entries(block.fields)) {
       fields[key] = toPuckField(spec);
     }
     const vField = variantField(block);
     if (vField) fields.variant = vField;
+
+    const dataSourceField = dataSourcePickerField(block, options.availableEntities);
+    if (dataSourceField) fields.dataSource = dataSourceField;
 
     const Component = block.component;
 
@@ -124,7 +178,10 @@ export function buildPuckConfig(blocks: BlockDefinition[]): PuckConfig {
       fields,
       defaultProps: block.defaultVariant ? { variant: block.defaultVariant } : undefined,
       render: (props) => {
-        const { variant, ...rest } = props as Record<string, unknown> & { variant?: string };
+        const { variant, dataSource: _ds, ...rest } = props as Record<string, unknown> & {
+          variant?: string;
+          dataSource?: DataSource | null;
+        };
         return createElement(Component, {
           fields: rest as any,
           variant: typeof variant === 'string' ? variant : null,
@@ -139,6 +196,37 @@ export function buildPuckConfig(blocks: BlockDefinition[]): PuckConfig {
   return { components, categories };
 }
 
+/**
+ * Returns a Puck custom field rendering the DataSourcePicker, scoped to the
+ * intersection of `block.supports` and `availableEntities`. Returns null
+ * when the block doesn't declare `supports` (static-only blocks have nothing
+ * to pick from), so the field never appears for blocks like Hero.
+ */
+function dataSourcePickerField(
+  block: BlockDefinition,
+  availableEntities: string[] | undefined,
+): PuckField | null {
+  const supports = block.supports;
+  if (!supports || supports.length === 0) return null;
+
+  const allowed = availableEntities
+    ? supports.filter((s) => availableEntities.includes(s))
+    : supports;
+
+  const entities = allowed.map((slug) => ({ slug }));
+
+  return {
+    type: 'custom',
+    label: 'Data',
+    render: ({ value, onChange }) =>
+      createElement(DataSourcePicker, {
+        value: (value ?? null) as DataSource | null,
+        onChange: onChange as (next: DataSource | null) => void,
+        availableEntities: entities,
+      }),
+  };
+}
+
 // ─── Serialization between Section rows and Puck Data ────────────────
 
 export function sectionsToPuckData(sections: PuckSectionInput[]): PuckData {
@@ -149,6 +237,7 @@ export function sectionsToPuckData(sections: PuckSectionInput[]): PuckData {
       props: {
         id: s.id,
         ...(s.variant ? { variant: s.variant } : {}),
+        ...(s.dataSource ? { dataSource: s.dataSource } : {}),
         ...s.customFields,
       },
     })),
@@ -162,22 +251,35 @@ export interface SectionDraft {
   blockKind: string;
   variant: string | null;
   customFields: Record<string, unknown>;
+  dataSource: DataSource | null;
 }
 
 /**
  * Project a Puck `Data` object back to the Section shape the API expects.
- * Splits `props` into the known discriminators (id, variant) and the
- * remaining `customFields` blob.
+ * Splits `props` into the known discriminators (id, variant, dataSource)
+ * and the remaining `customFields` blob.
  */
 export function puckDataToSections(data: PuckData): SectionDraft[] {
   return data.content.map((item, order) => {
-    const { id, variant, ...rest } = item.props;
+    const { id, variant, dataSource, ...rest } = item.props as Record<string, unknown> & {
+      id?: unknown;
+      variant?: unknown;
+      dataSource?: unknown;
+    };
     return {
       id: typeof id === 'string' ? id : `tmp-${order}`,
       order,
       blockKind: item.type,
       variant: typeof variant === 'string' ? variant : null,
       customFields: rest,
+      dataSource: isDataSource(dataSource) ? dataSource : null,
     };
   });
+}
+
+/** Narrow guard — used during deserialization to keep typed payloads safe. */
+function isDataSource(value: unknown): value is DataSource {
+  if (typeof value !== 'object' || value === null) return false;
+  const kind = (value as { kind?: unknown }).kind;
+  return kind === 'static' || kind === 'entity-query' || kind === 'entity-ids';
 }

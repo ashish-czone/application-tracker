@@ -17,6 +17,7 @@
     "@packages/database": "workspace:*",
     "@packages/entity-engine": "workspace:*",
     "@packages/events": "workspace:*",
+    "@packages/field-types": "workspace:*",
     "@packages/logger": "workspace:*",
     "@packages/rbac": "workspace:*",
     "@packages/soft-delete": "workspace:*",

@@ -58,7 +58,8 @@ export type FieldType =
   | 'multi_user'
   | 'multi_lookup'
   | 'rich_text'
-  | 'workflow';
+  | 'workflow'
+  | 'data_source';
 
 /** Field types that bypass the standard EAV pipeline (use join tables or special handling).
  *  Note: 'category' is NOT included — it stores a UUID in the standard/EAV column like a lookup. */
@@ -131,6 +132,7 @@ export const FIELD_TYPE_REGISTRY: FieldTypeRegistryEntry[] = [
   { type: 'file',         label: 'File',         creatable: true,  sortOrder: 20, icon: 'Paperclip',    color: 'bg-gray-100 text-gray-800' },
   { type: 'auto_number',  label: 'Auto Number',  creatable: false, sortOrder: 21, icon: 'Hash',         color: 'bg-gray-100 text-gray-800' },
   { type: 'workflow',     label: 'Workflow',      creatable: false, sortOrder: 22, icon: 'GitBranch',    color: 'bg-blue-100 text-blue-800' },
+  { type: 'data_source',  label: 'Data Source',   creatable: false, sortOrder: 23, icon: 'Database',     color: 'bg-blue-100 text-blue-800' },
 ];
 
 // ---------------------------------------------------------------------------

@@ -49,6 +49,11 @@ export const SECTIONS_CONFIG = defineEntity({
       type: 'text',
       label: 'Heading',
     },
+    dataSource: {
+      type: 'data_source',
+      label: 'Data Source',
+      system: true,
+    },
   },
 
   defaultSort: 'order',

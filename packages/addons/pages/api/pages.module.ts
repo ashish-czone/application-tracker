@@ -1,5 +1,7 @@
-import { Module } from '@nestjs/common';
+import { Module, type OnModuleInit } from '@nestjs/common';
 import { EntityEngineModule } from '@packages/entity-engine';
+import { fieldTypeRegistry } from '@packages/field-types';
+import { dataSourceFieldTypePlugin } from '@packages/blocks-contract';
 import { PAGES_CONFIG } from './pages.config';
 import { SECTIONS_CONFIG } from './sections.config';
 import { PagesPublicController } from './controllers/pages-public.controller';
@@ -14,6 +16,9 @@ import { PagesPublicService } from './services/pages-public.service';
  * Adds two non-generated endpoints:
  * - GET  /public/pages/:slug                — anonymous, read by slug
  * - PUT  /pages/:pageId/sections:reorder    — authenticated, bulk reorder
+ *
+ * Registers the `data_source` platform field type so `sections.dataSource`
+ * flows through the generic CRUD pipeline (validate → write → read).
  */
 @Module({
   imports: [
@@ -24,4 +29,10 @@ import { PagesPublicService } from './services/pages-public.service';
   providers: [PagesPublicService],
   exports: [PagesPublicService],
 })
-export class PagesModule {}
+export class PagesModule implements OnModuleInit {
+  onModuleInit() {
+    if (!fieldTypeRegistry.has('data_source')) {
+      fieldTypeRegistry.registerPlugin(dataSourceFieldTypePlugin);
+    }
+  }
+}
