@@ -4809,6 +4809,9 @@ importers:
       '@packages/database':
         specifier: workspace:*
         version: link:../../../core/database
+      '@packages/entity-engine-contract':
+        specifier: workspace:*
+        version: link:../../entity-engine/contracts
       '@packages/soft-delete':
         specifier: workspace:*
         version: link:../../../core/soft-delete
