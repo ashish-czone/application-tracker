@@ -38,6 +38,8 @@ const config: Config = {
     '../../../../../packages/addons/pages/ui/admin/*.{ts,tsx}',
     '../../../../../packages/addons/pages/ui/frontend/*.{ts,tsx}',
     '../../../../../packages/addons/pages/ui/frontend/blocks/**/*.{ts,tsx}',
+    '../../../../../packages/addons/menus/ui/admin/**/*.{ts,tsx}',
+    '../../../../../packages/addons/menus/ui/frontend/**/*.{ts,tsx}',
   ],
 };
 
