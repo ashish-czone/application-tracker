@@ -420,6 +420,40 @@ export class RbacService {
       .where(withTenant(userRoles, ...conditions));
   }
 
+  /**
+   * Batch-load roles for a list of user IDs in a single query. Returns a
+   * map keyed by userId; users with no roles get an empty array entry so
+   * callers can index without a null check. Intended for list-page
+   * enrichment (avoids N+1 in entity-engine afterList hooks).
+   */
+  async getRolesByUserIds(userIds: string[]): Promise<Record<string, Role[]>> {
+    const result: Record<string, Role[]> = {};
+    for (const id of userIds) result[id] = [];
+
+    if (userIds.length === 0) return result;
+
+    const rows = await this.database.db
+      .select({
+        userId: userRoles.userId,
+        id: roles.id,
+        name: roles.name,
+        userType: roles.userType,
+        isDefault: roles.isDefault,
+        createdAt: roles.createdAt,
+        updatedAt: roles.updatedAt,
+      })
+      .from(userRoles)
+      .innerJoin(roles, eq(roles.id, userRoles.roleId))
+      .where(withTenant(userRoles, inArray(userRoles.userId, userIds), notDeleted(roles)));
+
+    for (const row of rows) {
+      const { userId, ...role } = row;
+      (result[userId] ??= []).push(role);
+    }
+
+    return result;
+  }
+
   // --- Permission registry (delegates to internal service) ---
 
   registerPermissions(module: string, perms: { action: string; description: string }[]) {
