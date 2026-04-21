@@ -558,6 +558,15 @@ export class EntityService {
     const orderDirection = query.order === 'asc' ? 'ASC' : 'DESC';
     const orderByExpr = this.buildSortExpression(sortKey, orderDirection, config);
 
+    // Stable tiebreak on id when sorting by sort_order on an orderable entity.
+    // Without this, two rows sharing a sort_order would return in DB-dependent
+    // order and drag-drop UIs would flicker. Kept outside buildSortExpression
+    // because it applies only to list reads — single-column sorts elsewhere
+    // (exports, snapshots) don't need paginated stability.
+    const orderByClauses = (config.orderable && sortKey === 'sortOrder')
+      ? [orderByExpr, asc((config.table as any).id)]
+      : [orderByExpr];
+
     // Count
     const countQuery = this.database.db
       .select({ total: count() })
@@ -581,7 +590,7 @@ export class EntityService {
     if (ext) baseSelect.innerJoin(ext.parentTable, eq(ext.parentIdColumn, ext.foreignKeyColumn));
     const rows = await baseSelect
       .where(whereClause)
-      .orderBy(orderByExpr)
+      .orderBy(...orderByClauses)
       .limit(limit)
       .offset(offset);
 
