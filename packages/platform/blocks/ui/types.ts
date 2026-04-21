@@ -1,10 +1,10 @@
 import type { ComponentType } from 'react';
 
 /**
- * Lightweight field-type set supported by blocks. Mirrors the platform's
- * FieldType but kept local so pages-ui-frontend has no platform deps — the
- * admin package is where fields are projected to the full `FieldDefinition`
- * shape consumed by `DynamicField`.
+ * Lightweight field-type set supported by block-authored `customFields`. Mirrors
+ * the platform's richer FieldType but kept local so blocks-ui has no entity-
+ * engine deps — the admin editor projects these to the full `FieldDefinition`
+ * shape its form renderer consumes.
  */
 export type BlockFieldType =
   | 'text'
@@ -60,28 +60,12 @@ export interface BlockDefinition<TFields extends Record<string, unknown> = Recor
   variants?: BlockVariant[];
   /** Default variant key if the section has none */
   defaultVariant?: string;
+  /**
+   * Entity slugs this block can render. Used by the editor to filter the
+   * (entity × block) picker. Empty or omitted = the block is purely static
+   * (renders only from its own `customFields`, no data source).
+   */
+  supports?: string[];
   /** React component rendered on both admin preview and the public site */
   component: ComponentType<BlockRenderProps<TFields>>;
-}
-
-/** Shape returned by GET /public/pages/:slug — public-site consumes this. */
-export interface SectionData {
-  id: string;
-  order: number;
-  blockKind: string;
-  variant: string | null;
-  customFields: Record<string, unknown>;
-}
-
-export interface PageData {
-  id: string;
-  slug: string;
-  title: string;
-  metaDescription: string | null;
-  ogImage: string | null;
-}
-
-export interface PublicPageResponse {
-  page: PageData;
-  sections: SectionData[];
 }

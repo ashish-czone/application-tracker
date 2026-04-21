@@ -1,5 +1,5 @@
 {
-  "name": "@packages/pages-ui-frontend",
+  "name": "@packages/blocks-ui",
   "version": "0.0.1",
   "private": true,
   "main": "index.ts",
@@ -7,6 +7,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@packages/blocks-contract": "workspace:*",
     "react": "^19.0.0"
   },
   "devDependencies": {

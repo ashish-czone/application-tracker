@@ -8,9 +8,6 @@ export type {
   BlockFieldType,
   BlockRenderProps,
   BlockVariant,
-  PageData,
-  SectionData,
-  PublicPageResponse,
 } from './types';
 
 export {
@@ -22,3 +19,6 @@ export {
   featureListBlock,
   ctaBlock,
 } from './blocks';
+
+// Re-export contract shapes consumers typically need alongside the UI bits.
+export type { DataSource, SectionData, MapperDefinition } from '@packages/blocks-contract';

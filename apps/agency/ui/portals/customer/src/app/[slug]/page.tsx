@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { PageRenderer } from '@packages/pages-ui-frontend';
+import { PageRenderer } from '@packages/blocks-ui';
 import { fetchPageBySlug } from '../../lib/api';
 
 interface RouteParams {

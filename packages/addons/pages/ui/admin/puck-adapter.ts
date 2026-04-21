@@ -3,8 +3,22 @@ import type {
   BlockDefinition,
   BlockFieldSpec,
   BlockFieldType,
-  SectionData,
-} from '@packages/pages-ui-frontend';
+} from '@packages/blocks-ui';
+
+/**
+ * Minimal structural shape the adapter needs to serialize a section into Puck.
+ * We avoid depending on the broader `SectionData` here because the admin
+ * reads rows via the entity-engine list API — those rows don't carry the
+ * server-resolved `data` or a section-title slot, both of which are
+ * irrelevant while authoring.
+ */
+export interface PuckSectionInput {
+  id: string;
+  order: number;
+  blockKind: string;
+  variant: string | null;
+  customFields: Record<string, unknown>;
+}
 
 /**
  * Shape of the Puck `Data` payload for our editor. We keep types loose
@@ -127,7 +141,7 @@ export function buildPuckConfig(blocks: BlockDefinition[]): PuckConfig {
 
 // ─── Serialization between Section rows and Puck Data ────────────────
 
-export function sectionsToPuckData(sections: SectionData[]): PuckData {
+export function sectionsToPuckData(sections: PuckSectionInput[]): PuckData {
   const ordered = [...sections].sort((a, b) => a.order - b.order);
   return {
     content: ordered.map((s) => ({
