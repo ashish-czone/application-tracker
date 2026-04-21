@@ -2,6 +2,8 @@ import { NavLink } from 'react-router';
 import * as Icons from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useEntityEngine } from './EntityEngineProvider';
+import { groupSlug } from './helpers/groupSlug';
+import type { EntityRegistryEntry } from './types';
 
 interface EntityNavItemsProps {
   /** Whether the sidebar is collapsed (icon-only mode) */
@@ -16,6 +18,19 @@ interface EntityNavItemsProps {
   exclude?: string[];
 }
 
+/** A top-level nav item — either a single entity or a collapsed tab group. */
+type NavItem =
+  | { kind: 'entity'; entity: EntityRegistryEntry; order: number }
+  | {
+      kind: 'group';
+      navGroup: string;
+      slug: string;
+      icon: string;
+      firstSlug: string;
+      order: number;
+      entityCount: number;
+    };
+
 /** Resolve a lucide icon name (e.g. 'users') to its component */
 function resolveIcon(name: string): LucideIcon {
   // Convert kebab-case/lowercase to PascalCase (e.g. 'users' → 'Users', 'file-text' → 'FileText')
@@ -29,11 +44,75 @@ function resolveIcon(name: string): LucideIcon {
 }
 
 /**
+ * Build the flat nav item list: entities with `groupRenderMode: 'tabs'` are
+ * collapsed into a single per-group entry (ordered by the minimum `navOrder`
+ * among its members). Entities without tabs-grouping pass through as-is.
+ */
+export function buildNavItems(entities: EntityRegistryEntry[]): NavItem[] {
+  const groups = new Map<
+    string,
+    {
+      navGroup: string;
+      slug: string;
+      members: EntityRegistryEntry[];
+    }
+  >();
+  const singles: NavItem[] = [];
+
+  for (const entity of entities) {
+    if (entity.ui.groupRenderMode === 'tabs' && entity.ui.navGroup) {
+      const slug = groupSlug(entity.ui.navGroup);
+      const existing = groups.get(slug);
+      if (existing) {
+        existing.members.push(entity);
+      } else {
+        groups.set(slug, { navGroup: entity.ui.navGroup, slug, members: [entity] });
+      }
+    } else {
+      singles.push({
+        kind: 'entity',
+        entity,
+        order: entity.ui.navOrder ?? 99,
+      });
+    }
+  }
+
+  const groupItems: NavItem[] = Array.from(groups.values()).map((group) => {
+    const sortedMembers = [...group.members].sort((a, b) => {
+      const orderA = a.ui.navOrder ?? 99;
+      const orderB = b.ui.navOrder ?? 99;
+      if (orderA !== orderB) return orderA - orderB;
+      return a.pluralName.localeCompare(b.pluralName);
+    });
+    const first = sortedMembers[0];
+    return {
+      kind: 'group',
+      navGroup: group.navGroup,
+      slug: group.slug,
+      icon: first.ui.icon,
+      firstSlug: first.slug,
+      order: first.ui.navOrder ?? 99,
+      entityCount: sortedMembers.length,
+    };
+  });
+
+  const all = [...singles, ...groupItems];
+  all.sort((a, b) => {
+    if (a.order !== b.order) return a.order - b.order;
+    const labelA = a.kind === 'entity' ? a.entity.pluralName : a.navGroup;
+    const labelB = b.kind === 'entity' ? b.entity.pluralName : b.navGroup;
+    return labelA.localeCompare(labelB);
+  });
+
+  return all;
+}
+
+/**
  * Auto-generates sidebar navigation items for all registered entities.
- * Reads the entity registry and renders NavLinks sorted by ui.navOrder.
  *
- * This component is designed to be rendered inside the app's sidebar
- * alongside manually-defined nav items (Dashboard, Settings, etc.).
+ * Entities with `ui: { groupRenderMode: 'tabs' }` sharing the same `navGroup`
+ * are collapsed into a single link pointing at the tabbed group page
+ * (`/{groupSlug}`). Other entities render as today — one NavLink per entity.
  */
 export function EntityNavItems({ collapsed, className, iconClassName, labelClassName, exclude }: EntityNavItemsProps) {
   const { entities, isLoading } = useEntityEngine();
@@ -41,14 +120,11 @@ export function EntityNavItems({ collapsed, className, iconClassName, labelClass
   if (isLoading) return null;
 
   const excludeSet = exclude ? new Set(exclude) : null;
+  const filtered = excludeSet
+    ? entities.filter((e) => !excludeSet.has(e.entityType))
+    : entities;
 
-  // Sort by navOrder, then by pluralName
-  const sorted = [...entities].filter((e) => !excludeSet || !excludeSet.has(e.entityType)).sort((a, b) => {
-    const orderA = a.ui.navOrder ?? 99;
-    const orderB = b.ui.navOrder ?? 99;
-    if (orderA !== orderB) return orderA - orderB;
-    return a.pluralName.localeCompare(b.pluralName);
-  });
+  const items = buildNavItems(filtered);
 
   const defaultClassName = (isActive: boolean) =>
     `group flex items-center gap-2.5 rounded-lg h-9 text-[13px] font-medium transition-colors duration-150 ${
@@ -59,26 +135,43 @@ export function EntityNavItems({ collapsed, className, iconClassName, labelClass
         : 'text-sidebar-muted hover:text-sidebar-foreground hover:bg-black/[0.03]'
     }`;
 
+  const renderLink = (key: string, to: string, icon: string, label: string) => {
+    const Icon = resolveIcon(icon);
+    return (
+      <NavLink
+        key={key}
+        to={to}
+        className={({ isActive }) => (className ? className(isActive) : defaultClassName(isActive))}
+        title={collapsed ? label : undefined}
+      >
+        <Icon className={iconClassName ?? 'w-4 h-4 shrink-0'} strokeWidth={1.75} />
+        <span
+          className={labelClassName ?? `transition-[opacity,width] duration-200 ${
+            collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'
+          }`}
+        >
+          {label}
+        </span>
+      </NavLink>
+    );
+  };
+
   return (
     <>
-      {sorted.map((entity) => {
-        const Icon = resolveIcon(entity.ui.icon);
-        return (
-          <NavLink
-            key={entity.entityType}
-            to={`/${entity.slug}`}
-            className={({ isActive }) => (className ? className(isActive) : defaultClassName(isActive))}
-            title={collapsed ? entity.pluralName : undefined}
-          >
-            <Icon className={iconClassName ?? 'w-4 h-4 shrink-0'} strokeWidth={1.75} />
-            <span
-              className={labelClassName ?? `transition-[opacity,width] duration-200 ${
-                collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'
-              }`}
-            >
-              {entity.pluralName}
-            </span>
-          </NavLink>
+      {items.map((item) => {
+        if (item.kind === 'entity') {
+          return renderLink(
+            item.entity.entityType,
+            `/${item.entity.slug}`,
+            item.entity.ui.icon,
+            item.entity.pluralName,
+          );
+        }
+        return renderLink(
+          `group:${item.slug}`,
+          `/${item.slug}`,
+          item.icon,
+          item.navGroup,
         );
       })}
     </>
