@@ -15,6 +15,7 @@ export interface EntityRegistryEntry {
     navOrder?: number;
     createMode?: 'modal' | 'page' | 'wizard';
     boardFields?: string[];
+    afterCreateRoute?: string;
   };
   features: {
     softDelete: boolean;

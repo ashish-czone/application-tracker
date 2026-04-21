@@ -206,6 +206,12 @@ export interface ModelDefinition<TTable extends PgTable = PgTable> {
     boardFields?: string[];
     /** Field key for subtitle display */
     subtitleField?: string;
+    /**
+     * Route template used by the list page after a successful quick-create,
+     * instead of the default detail page. Supports `:id` placeholder —
+     * e.g. `/pages/:id/edit` to drop the user straight into an editor.
+     */
+    afterCreateRoute?: string;
   };
 
   // --- RBAC ---
@@ -601,6 +607,7 @@ export function defineEntity<TTable extends PgTable>(model: ModelDefinition<TTab
       navOrder: model.ui.navOrder,
       createMode: model.ui.createMode,
       boardFields: model.ui.boardFields,
+      afterCreateRoute: model.ui.afterCreateRoute,
     },
     dataAccess: model.dataAccess,
     hooks: model.hooks,

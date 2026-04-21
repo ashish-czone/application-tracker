@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { RouteObject } from 'react-router';
 import type { DomainWebManifest, MenuItem } from '@packages/domains';
 import type {
@@ -6,6 +7,16 @@ import type {
   RightSidebarPanel,
 } from '@packages/entity-engine-ui';
 import type { ApiFn } from '@packages/platform-ui';
+
+/**
+ * Render function for per-entity header actions on EntityDetailPage —
+ * keyed by entityType. The returned node is placed to the left of the
+ * platform-default "Edit Layout" / workflow buttons.
+ */
+export type DetailHeaderActionRenderer = (
+  entityId: string,
+  entity: Record<string, unknown>,
+) => ReactNode;
 
 export type { ApiFn };
 
@@ -53,4 +64,10 @@ export interface WebShellOptions {
    * EntityEngineProvider column renderer registry.
    */
   extraColumnRenderers?: Record<string, ColumnRendererRegistration>;
+  /**
+   * Per-entity header action renderers for EntityDetailPage — e.g. an
+   * "Open Editor" button for pages. Keyed by entityType. Rendered before
+   * workflow actions and the default "Edit Layout" button.
+   */
+  extraDetailHeaderActions?: Record<string, DetailHeaderActionRenderer>;
 }
