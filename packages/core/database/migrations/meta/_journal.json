@@ -8,6 +8,13 @@
       "when": 1776155747191,
       "tag": "0000_oval_golden_guardian",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1776775726707,
+      "tag": "0001_rich_roughhouse",
+      "breakpoints": true
     }
   ]
 }

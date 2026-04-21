@@ -20,6 +20,7 @@ function createMockTokensService(): TokensService {
     verifyAccessToken: vi.fn().mockReturnValue({ userId: 'u1' }),
     createRefreshToken: vi.fn().mockResolvedValue({ token: 'refresh-token', expiresAt: new Date(), id: 'rt-1' }),
     createPasswordResetToken: vi.fn().mockResolvedValue({ token: 'reset-token', expiresAt: new Date(), id: 'prt-1' }),
+    createInvitationToken: vi.fn().mockResolvedValue({ token: 'invite-token', expiresAt: new Date(), id: 'inv-1' }),
     validateToken: vi.fn(),
     revokeToken: vi.fn().mockResolvedValue(undefined),
     revokeAllUserTokens: vi.fn().mockResolvedValue(undefined),
@@ -258,6 +259,95 @@ describe('AuthService', () => {
 
       await expect(service.resetPassword('bad-token', 'new-pass'))
         .rejects.toThrow(UnauthorizedException);
+    });
+  });
+
+  describe('createInvitationToken', () => {
+    it('should revoke any outstanding invitation tokens then create a fresh one', async () => {
+      const result = await service.createInvitationToken('u1');
+
+      expect(tokensService.revokeAllUserTokens).toHaveBeenCalledWith('u1', 'invitation');
+      expect(tokensService.createInvitationToken).toHaveBeenCalledWith('u1', undefined);
+      expect(result.token).toBe('invite-token');
+    });
+  });
+
+  describe('acceptInvitation', () => {
+    /**
+     * Build a tx mock where select() returns a queue of results in order, so
+     * we can simulate: (1) token row found, (2) user row found. Each call to
+     * .limit() shifts the next pre-loaded result.
+     */
+    function createAcceptInvitationMockDatabase(selects: unknown[][]) {
+      const queue = [...selects];
+      const txChain: any = {
+        from: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        for: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockImplementation(async () => queue.shift() ?? []),
+        update: vi.fn().mockReturnValue({
+          set: vi.fn().mockReturnValue({
+            where: vi.fn().mockResolvedValue(undefined),
+          }),
+        }),
+        select: vi.fn(),
+      };
+      txChain.select = vi.fn().mockReturnValue(txChain);
+
+      return {
+        db: {
+          transaction: vi.fn().mockImplementation(async (cb: any) => cb(txChain)),
+        },
+        _txChain: txChain,
+      };
+    }
+
+    it('should create credential + stamp acceptedAt + consume token in one transaction', async () => {
+      const tokenRow = { id: 'inv-1', userId: 'u1', type: 'invitation', expiresAt: new Date(Date.now() + 100000) };
+      const userRow = { id: 'u1', email: 'invited@test.com', acceptedAt: null, deletedAt: null };
+      const db = createAcceptInvitationMockDatabase([[tokenRow], [userRow]]);
+      service = new AuthService(credentialsService as any, tokensService as any, db as any);
+
+      const result = await service.acceptInvitation('valid-invite-token', 'newpassword123');
+
+      expect(tokensService.hashToken).toHaveBeenCalledWith('valid-invite-token');
+      expect(db.db.transaction).toHaveBeenCalled();
+      expect(credentialsService.createPasswordCredential).toHaveBeenCalledWith(
+        'u1', 'invited@test.com', 'newpassword123', expect.anything(),
+      );
+      expect(db._txChain.update).toHaveBeenCalled();
+      expect(result).toEqual({ userId: 'u1' });
+    });
+
+    it('should throw UnauthorizedException when token not found', async () => {
+      const db = createAcceptInvitationMockDatabase([[]]);
+      service = new AuthService(credentialsService as any, tokensService as any, db as any);
+
+      await expect(service.acceptInvitation('bad-token', 'pw'))
+        .rejects.toThrow(UnauthorizedException);
+      expect(credentialsService.createPasswordCredential).not.toHaveBeenCalled();
+    });
+
+    it('should throw UnauthorizedException when invited user has been soft-deleted', async () => {
+      const tokenRow = { id: 'inv-1', userId: 'u1', type: 'invitation', expiresAt: new Date(Date.now() + 100000) };
+      const userRow = { id: 'u1', email: 'invited@test.com', acceptedAt: null, deletedAt: new Date() };
+      const db = createAcceptInvitationMockDatabase([[tokenRow], [userRow]]);
+      service = new AuthService(credentialsService as any, tokensService as any, db as any);
+
+      await expect(service.acceptInvitation('valid-token', 'pw'))
+        .rejects.toThrow(UnauthorizedException);
+      expect(credentialsService.createPasswordCredential).not.toHaveBeenCalled();
+    });
+
+    it('should throw UnauthorizedException when invitation already accepted', async () => {
+      const tokenRow = { id: 'inv-1', userId: 'u1', type: 'invitation', expiresAt: new Date(Date.now() + 100000) };
+      const userRow = { id: 'u1', email: 'invited@test.com', acceptedAt: new Date(), deletedAt: null };
+      const db = createAcceptInvitationMockDatabase([[tokenRow], [userRow]]);
+      service = new AuthService(credentialsService as any, tokensService as any, db as any);
+
+      await expect(service.acceptInvitation('valid-token', 'pw'))
+        .rejects.toThrow(/already accepted/i);
+      expect(credentialsService.createPasswordCredential).not.toHaveBeenCalled();
     });
   });
 });

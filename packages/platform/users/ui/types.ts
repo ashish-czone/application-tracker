@@ -1,3 +1,6 @@
+/** Matches the tri-state produced by the backend's deriveUserStatus. */
+export type UserStatus = 'active' | 'invited' | 'deactivated';
+
 export interface User {
   id: string;
   email: string;
@@ -8,6 +11,11 @@ export interface User {
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
+  invitedAt: string | null;
+  acceptedAt: string | null;
+  lastLoginAt: string | null;
+  /** Computed server-side from deletedAt + invitedAt + acceptedAt. */
+  status: UserStatus;
   roles: { id: string; name: string }[];
 }
 
@@ -19,6 +27,24 @@ export interface CreateUserRequest {
   userType: 'admin' | 'client';
   roleIds: string[];
   phone?: string;
+}
+
+export interface InviteUserRequest {
+  email: string;
+  firstName: string;
+  lastName: string;
+  userType: 'admin' | 'client';
+  phone?: string;
+  roleIds?: string[];
+}
+
+export interface InvitedUserResponse {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  userType: string;
+  invitedAt: string;
 }
 
 export interface Role {

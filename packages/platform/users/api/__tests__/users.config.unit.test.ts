@@ -1,12 +1,32 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { RelationHandler } from '@packages/entity-engine-contract';
-import { createUsersEntityConfig } from '../users.config';
+import { createUsersEntityConfig, deriveUserStatus } from '../users.config';
 
 const noopHandler: RelationHandler = {
   async onCreate() { /* noop */ },
   async onUpdate() { /* noop */ },
   async onDelete() { /* noop */ },
 };
+
+describe('deriveUserStatus', () => {
+  it('returns deactivated when deletedAt is set (takes precedence)', () => {
+    expect(deriveUserStatus({ deletedAt: new Date(), invitedAt: new Date(), acceptedAt: null })).toBe('deactivated');
+    expect(deriveUserStatus({ deletedAt: new Date(), invitedAt: null, acceptedAt: null })).toBe('deactivated');
+    expect(deriveUserStatus({ deletedAt: new Date(), invitedAt: new Date(), acceptedAt: new Date() })).toBe('deactivated');
+  });
+
+  it('returns invited when invitedAt is set but acceptedAt is not', () => {
+    expect(deriveUserStatus({ deletedAt: null, invitedAt: new Date(), acceptedAt: null })).toBe('invited');
+  });
+
+  it('returns active when invitation was accepted', () => {
+    expect(deriveUserStatus({ deletedAt: null, invitedAt: new Date(), acceptedAt: new Date() })).toBe('active');
+  });
+
+  it('returns active for a user that was never invited (legacy account created with credentials)', () => {
+    expect(deriveUserStatus({ deletedAt: null, invitedAt: null, acceptedAt: null })).toBe('active');
+  });
+});
 
 describe('createUsersEntityConfig', () => {
   it('builds an EntityConfig with the expected identity', () => {
@@ -87,13 +107,14 @@ describe('createUsersEntityConfig', () => {
     expect(cfg2.relationships?.find((r) => r.name === 'credentials')?.handler).toBe(h2);
   });
 
-  describe('read-side role enrichment hooks', () => {
-    it('does not register hooks when rolesReader is omitted', () => {
+  describe('read-side enrichment hooks', () => {
+    it('always registers afterList + afterFindOne (status derivation runs regardless of rolesReader)', () => {
       const config = createUsersEntityConfig({
         credentialsHandler: noopHandler,
         rolesHandler: noopHandler,
       });
-      expect(config.hooks).toBeUndefined();
+      expect(config.hooks?.afterList).toBeDefined();
+      expect(config.hooks?.afterFindOne).toBeDefined();
     });
 
     it('registers afterList + afterFindOne when rolesReader is supplied', () => {
@@ -107,6 +128,43 @@ describe('createUsersEntityConfig', () => {
       });
       expect(config.hooks?.afterList).toBeDefined();
       expect(config.hooks?.afterFindOne).toBeDefined();
+    });
+
+    it('afterList derives status for each row (active / invited / deactivated)', async () => {
+      const config = createUsersEntityConfig({
+        credentialsHandler: noopHandler,
+        rolesHandler: noopHandler,
+        rolesReader: { getRolesByUserIds: async () => ({}) },
+      });
+
+      const enriched = await config.hooks!.afterList!(
+        [
+          { id: 'a', deletedAt: null, invitedAt: null, acceptedAt: null },
+          { id: 'b', deletedAt: null, invitedAt: new Date(), acceptedAt: null },
+          { id: 'c', deletedAt: null, invitedAt: new Date(), acceptedAt: new Date() },
+          { id: 'd', deletedAt: new Date(), invitedAt: null, acceptedAt: null },
+        ],
+        { actorId: 'actor-1' },
+      );
+
+      expect(enriched[0]?.status).toBe('active');
+      expect(enriched[1]?.status).toBe('invited');
+      expect(enriched[2]?.status).toBe('active');
+      expect(enriched[3]?.status).toBe('deactivated');
+    });
+
+    it('afterFindOne attaches status for the single row', async () => {
+      const config = createUsersEntityConfig({
+        credentialsHandler: noopHandler,
+        rolesHandler: noopHandler,
+        rolesReader: { getRolesByUserIds: async () => ({}) },
+      });
+
+      const enriched = await config.hooks!.afterFindOne!(
+        { id: 'u1', deletedAt: null, invitedAt: new Date(), acceptedAt: null },
+        { actorId: 'actor-1' },
+      );
+      expect(enriched.status).toBe('invited');
     });
 
     it('afterList attaches roles per row via batch reader', async () => {

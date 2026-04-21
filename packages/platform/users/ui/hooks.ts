@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@packages/ui';
 import { usePlatformAPI } from '@packages/platform-ui';
 import { createUsersApi } from './services';
-import type { ListUsersParams, CreateUserRequest, UpdateUserRequest } from './types';
+import type { ListUsersParams, CreateUserRequest, UpdateUserRequest, InviteUserRequest } from './types';
 
 function useUsersApi() {
   const apiFn = usePlatformAPI();
@@ -100,6 +100,38 @@ export function useRestoreUser() {
     },
     onError: (error: any) => {
       toast.error(error?.body?.message || 'Failed to restore user');
+    },
+  });
+}
+
+export function useInviteUser(options?: { onSuccess?: () => void }) {
+  const api = useUsersApi();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: InviteUserRequest) => api.inviteUser(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast.success('Invitation sent');
+      options?.onSuccess?.();
+    },
+    onError: (error: any) => {
+      toast.error(error?.body?.message || 'Failed to send invitation');
+    },
+  });
+}
+
+export function useResendInvitation(options?: { onSuccess?: () => void }) {
+  const api = useUsersApi();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.resendInvitation(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast.success('Invitation resent');
+      options?.onSuccess?.();
+    },
+    onError: (error: any) => {
+      toast.error(error?.body?.message || 'Failed to resend invitation');
     },
   });
 }

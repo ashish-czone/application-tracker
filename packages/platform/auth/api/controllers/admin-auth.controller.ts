@@ -7,6 +7,7 @@ import { LoginDto } from '../dto/login.dto';
 import { RefreshDto } from '../dto/refresh.dto';
 import { ForgotPasswordDto } from '../dto/forgot-password.dto';
 import { ResetPasswordDto } from '../dto/reset-password.dto';
+import { AcceptInvitationDto } from '../dto/accept-invitation.dto';
 import { ChangePasswordDto } from '../dto/change-password.dto';
 import { OAuthLoginDto } from '../dto/oauth-login.dto';
 
@@ -66,6 +67,15 @@ export class AdminAuthController {
   async resetPassword(@Body() dto: ResetPasswordDto) {
     await this.adminAuth.resetPassword(dto.token, dto.newPassword);
     return { message: 'Password has been reset' };
+  }
+
+  @Public()
+  @Throttle({ default: { ttl: 60000, limit: 5 } })
+  @Post('accept-invitation')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Accept admin invitation — sets password + logs in' })
+  async acceptInvitation(@Body() dto: AcceptInvitationDto) {
+    return this.adminAuth.acceptInvitation(dto.token, dto.newPassword);
   }
 
   @Post('change-password')

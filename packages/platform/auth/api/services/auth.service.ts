@@ -194,4 +194,79 @@ export class AuthService {
     // Outside transaction — non-critical
     await this.tokensService.revokeAllUserTokens(existing.userId, AUTH_TOKEN_TYPES.REFRESH);
   }
+
+  // --- Invitation tokens ---
+
+  async createInvitationToken(userId: string, tx?: DrizzleDB): Promise<{ token: string; expiresAt: Date }> {
+    // Revoke outstanding invitation tokens for this user so a "resend invite"
+    // supersedes any prior link.
+    await this.tokensService.revokeAllUserTokens(userId, AUTH_TOKEN_TYPES.INVITATION);
+    const { token, expiresAt } = await this.tokensService.createInvitationToken(userId, tx);
+    return { token, expiresAt };
+  }
+
+  /**
+   * Accept an invitation — validates the token, creates the password credential
+   * for the invited user, stamps users.acceptedAt, consumes the token. Caller
+   * decides whether to mint a session afterward.
+   */
+  async acceptInvitation(token: string, newPassword: string): Promise<{ userId: string }> {
+    const tokenHash = this.tokensService.hashToken(token);
+
+    return this.database.db.transaction(async (tx) => {
+      // Lock the token row
+      const [record] = await tx
+        .select()
+        .from(authTokens)
+        .where(withTenant(authTokens,
+          eq(authTokens.tokenHash, tokenHash),
+          eq(authTokens.type, AUTH_TOKEN_TYPES.INVITATION),
+          isNull(authTokens.revokedAt),
+          isNull(authTokens.usedAt),
+          gt(authTokens.expiresAt, new Date()),
+        ))
+        .for('update')
+        .limit(1);
+
+      if (!record) throw new UnauthorizedException('Invalid or expired invitation token');
+
+      // Load the invited user (must still exist, not soft-deleted, not already accepted)
+      const [user] = await tx
+        .select({
+          id: users.id,
+          email: users.email,
+          acceptedAt: users.acceptedAt,
+          deletedAt: users.deletedAt,
+        })
+        .from(users)
+        .where(withTenant(users, eq(users.id, record.userId)))
+        .limit(1);
+
+      if (!user || user.deletedAt) {
+        throw new UnauthorizedException('Invalid or expired invitation token');
+      }
+      if (user.acceptedAt) {
+        // Stale link — account is already usable; tell the caller to log in instead
+        // of silently succeeding.
+        throw new UnauthorizedException('Invitation already accepted');
+      }
+
+      // Create the password credential (invited users don't have one yet).
+      await this.credentialsService.createPasswordCredential(user.id, user.email, newPassword, tx);
+
+      // Stamp acceptedAt on the user row
+      await tx
+        .update(users)
+        .set({ acceptedAt: new Date() })
+        .where(withTenant(users, eq(users.id, user.id)));
+
+      // Consume the token
+      await tx
+        .update(authTokens)
+        .set({ usedAt: new Date() })
+        .where(withTenant(authTokens, eq(authTokens.id, record.id)));
+
+      return { userId: user.id };
+    });
+  }
 }

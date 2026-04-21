@@ -5,6 +5,8 @@ export interface AuthModuleConfig {
   accessTokenExpiresIn?: string;
   refreshTokenExpiresIn?: string;
   resetTokenExpiresIn?: string;
+  /** How long invitation tokens are valid. Defaults to 7d. */
+  invitationTokenExpiresIn?: string;
   defaultAdminEmail?: string;
   defaultAdminPassword?: string;
 }
@@ -33,4 +35,5 @@ export const AUTH_MODULE_CONFIG = Symbol('AUTH_MODULE_CONFIG');
 export const AUTH_TOKEN_TYPES = {
   REFRESH: 'refresh',
   PASSWORD_RESET: 'password_reset',
+  INVITATION: 'invitation',
 } as const;
