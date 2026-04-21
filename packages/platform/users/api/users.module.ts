@@ -1,12 +1,18 @@
 import { Module, type OnModuleInit, Optional, Inject } from '@nestjs/common';
-import { RbacService } from '@packages/rbac';
+import { RbacService, UserRolesRelationHandler } from '@packages/rbac';
+import { CredentialsRelationHandler } from '@packages/auth';
 import { EventRegistryService } from '@packages/events';
 import { DatabaseService, users, isNull } from '@packages/database';
 import { ContactResolverRegistry } from '@packages/notifications';
 import { AuditRegistryService } from '@packages/audit';
-import { LookupResolverService } from '@packages/eav-attributes';
+import {
+  LookupResolverService,
+  EntityRegistryService,
+  FieldDefinitionService,
+} from '@packages/entity-engine';
 import { UsersController } from './controllers/users.controller';
 import { UsersService } from './services/users.service';
+import { createUsersEntityConfig } from './users.config';
 import { USERS_PERMISSIONS } from './permissions';
 import {
   USERS_USER_CREATED,
@@ -30,6 +36,10 @@ export class UsersModule implements OnModuleInit {
     private readonly usersService: UsersService,
     private readonly auditRegistry: AuditRegistryService,
     private readonly lookupResolver: LookupResolverService,
+    private readonly entityRegistry: EntityRegistryService,
+    private readonly fieldDefService: FieldDefinitionService,
+    private readonly credentialsHandler: CredentialsRelationHandler,
+    private readonly rolesHandler: UserRolesRelationHandler,
     @Optional() @Inject('UniqueCheckService') private readonly uniqueCheckService?: any,
   ) {}
 
@@ -73,6 +83,19 @@ export class UsersModule implements OnModuleInit {
       events: [USERS_USER_CREATED, USERS_USER_UPDATED, USERS_USER_DELETED],
       sensitiveFields: ['passwordHash', 'token'],
     });
+
+    // Register the dynamic entity config. Does NOT mount CRUD routes — the
+    // legacy UsersController remains the traffic handler. What this DOES give
+    // us: the registry entry, in-memory field cache, and the layout API
+    // (GET /layouts/users) that Task 9's frontend consumes. Task 10 will
+    // decommission the legacy controller and promote this config to a full
+    // `EntityEngineModule.forEntity()` registration.
+    const usersConfig = createUsersEntityConfig({
+      credentialsHandler: this.credentialsHandler,
+      rolesHandler: this.rolesHandler,
+    });
+    this.entityRegistry.register(usersConfig);
+    this.fieldDefService.populateFromRegistry(usersConfig);
 
     // Register events
     this.eventRegistry.register({
