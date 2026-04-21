@@ -1,11 +1,12 @@
 import { Module, type OnModuleInit } from '@nestjs/common';
 import { RbacService } from '@packages/rbac';
 import { PagesModule } from '@packages/pages-api';
+import { ContentModule } from '@packages/content-api';
 
 import { AGENCY_PERMISSION_REGISTRATIONS } from './permissions';
 
 @Module({
-  imports: [PagesModule],
+  imports: [PagesModule, ContentModule],
 })
 export class AgencyDomainModule implements OnModuleInit {
   constructor(private readonly rbac: RbacService) {}

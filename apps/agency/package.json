@@ -37,6 +37,7 @@
     "@packages/media": "workspace:*",
     "@packages/notification-channels": "workspace:*",
     "@packages/notifications": "workspace:*",
+    "@packages/content-api": "workspace:*",
     "@packages/pages-api": "workspace:*",
     "@packages/queue": "workspace:*",
     "@packages/rbac": "workspace:*",

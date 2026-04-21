@@ -16,6 +16,10 @@ async function main() {
       name: '@packages/pages-api',
       migrationsFolder: path.join(workspaceRoot, 'packages/addons/pages/api/migrations'),
     },
+    {
+      name: '@packages/content-api',
+      migrationsFolder: path.join(workspaceRoot, 'packages/addons/content/api/migrations'),
+    },
   ];
 
   await runMigrations({ packages });
