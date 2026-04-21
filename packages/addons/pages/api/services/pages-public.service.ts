@@ -66,6 +66,23 @@ export class PagesPublicService {
     };
   }
 
+  /**
+   * Resolve a set of page ids to their public slugs. Used by other addons
+   * (e.g. menus) that store a pageId reference and need to render a URL
+   * without crossing into the pages schema directly.
+   */
+  async getSlugsForIds(ids: string[]): Promise<Map<string, string>> {
+    const result = new Map<string, string>();
+    if (ids.length === 0) return result;
+    const unique = Array.from(new Set(ids));
+    const rows = await this.database.db
+      .select({ id: pages.id, slug: pages.slug })
+      .from(pages)
+      .where(and(inArray(pages.id, unique), isNull(pages.deletedAt)));
+    for (const row of rows) result.set(row.id, row.slug);
+    return result;
+  }
+
   async reorder(pageId: string, orders: { id: string; order: number }[]): Promise<void> {
     const ids = orders.map((o) => o.id);
     const existing = await this.database.db

@@ -19,21 +19,24 @@ registerEntityRelationsFieldTypes();
 import { WebShell } from '@packages/app-shell-ui';
 import { registerStarterBlocks } from '@packages/pages-ui-frontend';
 import { PageEditorPage } from '@packages/pages-ui-admin';
+import { MenuEditorPage } from '@packages/menus-ui-admin';
 import { AuditTimeline } from '@packages/audit-ui';
 import { Button, Toaster } from '@packages/ui';
-import { FileText, Pencil } from 'lucide-react';
+import { FileText, Menu as MenuIcon, Pencil } from 'lucide-react';
 import type { MenuItem } from '@packages/domains';
 import { api } from './lib/api';
 import './globals.css';
 
 registerStarterBlocks();
 
-const pagesMenu: MenuItem[] = [
+const contentMenu: MenuItem[] = [
   { path: '/pages', label: 'Pages', icon: FileText, permission: 'pages.read' },
+  { path: '/menus', label: 'Menus', icon: MenuIcon, permission: 'menus.read' },
 ];
 
-const pagesRoutes = [
+const contentRoutes = [
   { path: '/pages/:id/edit', element: <PageEditorPage /> },
+  { path: '/menus/:id/edit', element: <MenuEditorPage /> },
 ];
 
 const detailTabs = [
@@ -60,8 +63,8 @@ createRoot(document.getElementById('root')!).render(
       domains={[]}
       apiFn={api}
       brandLabel="Agency Admin"
-      extraMenuItems={pagesMenu}
-      extraRoutes={pagesRoutes}
+      extraMenuItems={contentMenu}
+      extraRoutes={contentRoutes}
       extraDetailTabs={detailTabs}
       extraDetailHeaderActions={detailHeaderActions}
     />

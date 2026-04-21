@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@packages/menus-ui-frontend": "workspace:*",
     "@packages/pages-ui-frontend": "workspace:*",
     "next": "^15.1.0",
     "react": "^19.0.0",

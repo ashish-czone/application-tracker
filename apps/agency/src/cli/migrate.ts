@@ -20,6 +20,10 @@ async function main() {
       name: '@packages/content-api',
       migrationsFolder: path.join(workspaceRoot, 'packages/addons/content/api/migrations'),
     },
+    {
+      name: '@packages/menus-api',
+      migrationsFolder: path.join(workspaceRoot, 'packages/addons/menus/api/migrations'),
+    },
   ];
 
   await runMigrations({ packages });
