@@ -819,13 +819,13 @@ export class EntityService {
     const defs = this.getEffectiveFieldDefs();
 
     // Validate
-    const result = validatePayload(defs, data, { partial: false });
+    const result = validatePayload(defs, data, { partial: false }, config.relationships ?? []);
     if (!result.valid) {
       throw new BadRequestException({ message: 'Validation failed', errors: result.errors });
     }
 
-    // Split standard vs custom vs relational
-    const { standardFields, customFields, relationalFields } = splitPayload(defs, data);
+    // Split standard vs custom vs relational vs relationship inputs
+    const { standardFields, customFields, relationalFields, relationshipInputs } = splitPayload(defs, data, config.relationships ?? []);
 
     // Email normalization (if email field exists)
     if (standardFields.email && typeof standardFields.email === 'string') {
@@ -941,6 +941,15 @@ export class EntityService {
           };
           await hooks.onTransactionalSave(value, ctx, tx);
         }
+      }
+
+      // Relationship handlers: hand each nested payload to the owning
+      // relationship's RelationHandler.onCreate inside this tx. Throwing
+      // from a handler rolls the parent insert back.
+      for (const rel of config.relationships ?? []) {
+        if (!rel.handler?.onCreate) continue;
+        if (!(rel.name in relationshipInputs)) continue;
+        await rel.handler.onCreate(tx, entityId, relationshipInputs[rel.name], actorId);
       }
 
       if (config.hooks?.inCreateTx) {
@@ -1061,13 +1070,13 @@ export class EntityService {
     }
 
     // Validate (partial mode)
-    const result = validatePayload(defs, data, { partial: true });
+    const result = validatePayload(defs, data, { partial: true }, config.relationships ?? []);
     if (!result.valid) {
       throw new BadRequestException({ message: 'Validation failed', errors: result.errors });
     }
 
     // Split
-    const { standardFields, customFields, relationalFields } = splitPayload(defs, data);
+    const { standardFields, customFields, relationalFields, relationshipInputs } = splitPayload(defs, data, config.relationships ?? []);
 
     // Filter out undefined values
     const updateValues: Record<string, unknown> = {};
@@ -1080,8 +1089,9 @@ export class EntityService {
     const hasStandardChanges = Object.keys(updateValues).length > 0;
     const hasCustomChanges = Object.keys(customFields).length > 0;
     const hasRelationalChanges = Object.keys(relationalFields).length > 0;
+    const hasRelationshipInputs = Object.keys(relationshipInputs).length > 0;
 
-    if (!hasStandardChanges && !hasCustomChanges && !hasRelationalChanges) {
+    if (!hasStandardChanges && !hasCustomChanges && !hasRelationalChanges && !hasRelationshipInputs) {
       return this.findOneOrFail(id);
     }
 
@@ -1188,6 +1198,15 @@ export class EntityService {
             await hooks.onTransactionalSave(value, ctx, tx);
           }
         }
+      }
+
+      // Relationship handlers: only fire when the caller actually sent a
+      // payload for this relation — updating other fields shouldn't touch
+      // credentials or role assignments.
+      for (const rel of config.relationships ?? []) {
+        if (!rel.handler?.onUpdate) continue;
+        if (!(rel.name in relationshipInputs)) continue;
+        await rel.handler.onUpdate(tx, id, relationshipInputs[rel.name], actorId);
       }
 
       const after = buildSnapshot(this.rowToSnapshot(row), eavAfter);
@@ -1390,18 +1409,28 @@ export class EntityService {
     // usually has no deletedAt of its own. Soft-delete therefore flips the
     // parent's columns; the child row is left as-is so a restore is a clean
     // reverse.
+    //
+    // Wrapped in a transaction so RelationHandler.onDelete runs atomically
+    // with the parent flip — a handler throwing keeps the parent alive.
     const ext = this.getExtensionMeta();
-    if (ext) {
-      await this.database.db
-        .update(ext.parentTable as any)
-        .set({ deletedAt: new Date(), deletedBy: actorId } as any)
-        .where(withTenant(ext.parentTable as any, eq(ext.parentIdColumn, id)));
-    } else {
-      await this.database.db
-        .update(config.table as any)
-        .set({ deletedAt: new Date(), deletedBy: actorId } as any)
-        .where(withTenant(config.table as any, eq((config.table as any).id, id)));
-    }
+    await this.database.db.transaction(async (tx) => {
+      if (ext) {
+        await tx
+          .update(ext.parentTable as any)
+          .set({ deletedAt: new Date(), deletedBy: actorId } as any)
+          .where(withTenant(ext.parentTable as any, eq(ext.parentIdColumn, id)));
+      } else {
+        await tx
+          .update(config.table as any)
+          .set({ deletedAt: new Date(), deletedBy: actorId } as any)
+          .where(withTenant(config.table as any, eq((config.table as any).id, id)));
+      }
+
+      for (const rel of config.relationships ?? []) {
+        if (!rel.handler?.onDelete) continue;
+        await rel.handler.onDelete(tx, id, actorId, { kind: 'soft' });
+      }
+    });
 
     this.logger.log(`${config.singularName} deleted`, { entityId: id, actorId });
 

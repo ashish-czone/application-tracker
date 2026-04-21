@@ -43,7 +43,10 @@ const testEntities = pgTable('test_entities', {
 const TEST_ACTOR_ID = crypto.randomUUID();
 const OTHER_ACTOR_ID = crypto.randomUUID();
 
-function buildTestConfig(hooks?: EntityConfig['hooks']): EntityConfig {
+function buildTestConfig(
+  hooks?: EntityConfig['hooks'],
+  relationships?: EntityConfig['relationships'],
+): EntityConfig {
   return {
     entityType: 'test_entities',
     singularName: 'Test Entity',
@@ -77,6 +80,7 @@ function buildTestConfig(hooks?: EntityConfig['hooks']): EntityConfig {
       ownerField: 'createdBy',
     },
     hooks,
+    relationships,
   } as EntityConfig;
 }
 
@@ -816,6 +820,145 @@ describe('EntityService (integration)', () => {
       await hookService.softDelete(created.id as string, TEST_ACTOR_ID);
 
       expect(beforeDeleteSpy).toHaveBeenCalledWith(created.id, TEST_ACTOR_ID);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // RELATION HANDLERS (nested payloads → owning packages)
+  // ---------------------------------------------------------------------------
+
+  describe('relation handlers', () => {
+    function buildServiceWithRelations(relationships: EntityConfig['relationships']): EntityService {
+      const database = module.get(DatabaseService);
+      return new EntityService(
+        buildTestConfig(undefined, relationships),
+        database, eventEmitter, null, null,
+        fieldDefService, module.get(LookupResolverService), null,
+        module.get(FieldTypeSaveHookRegistry), null,
+        entityRegistry, module.get(AppLoggerService), null,
+      );
+    }
+
+    it('onCreate fires with nested payload and tx when the relation key is present', async () => {
+      const onCreate = vi.fn(async (tx: any) => {
+        expect(typeof tx.insert).toBe('function');
+      });
+      const service = buildServiceWithRelations([
+        { name: 'credentials', type: 'hasOne', targetEntity: 'test_entities', label: 'Credentials', handler: { onCreate } },
+      ]);
+
+      const created = await service.create(
+        { name: 'WithRel', email: 'withrel@example.com', credentials: { password: 's3cret' } },
+        TEST_ACTOR_ID,
+      );
+
+      expect(onCreate).toHaveBeenCalledOnce();
+      expect(onCreate).toHaveBeenCalledWith(
+        expect.anything(),
+        created.id,
+        { password: 's3cret' },
+        TEST_ACTOR_ID,
+      );
+    });
+
+    it('onCreate does not fire when the relation key is absent from the payload', async () => {
+      const onCreate = vi.fn();
+      const service = buildServiceWithRelations([
+        { name: 'credentials', type: 'hasOne', targetEntity: 'test_entities', label: 'Credentials', handler: { onCreate } },
+      ]);
+
+      await service.create({ name: 'NoRel', email: 'norel@example.com' }, TEST_ACTOR_ID);
+
+      expect(onCreate).not.toHaveBeenCalled();
+    });
+
+    it('rolls back the parent insert when onCreate throws', async () => {
+      const service = buildServiceWithRelations([
+        {
+          name: 'credentials', type: 'hasOne', targetEntity: 'test_entities', label: 'Credentials',
+          handler: { onCreate: async () => { throw new Error('handler-boom'); } },
+        },
+      ]);
+
+      await expect(
+        service.create(
+          { name: 'RollbackRel', email: 'rollbackrel@example.com', credentials: { password: 'x' } },
+          TEST_ACTOR_ID,
+        ),
+      ).rejects.toThrow('handler-boom');
+
+      const rows = await db.execute(
+        sql`SELECT id FROM test_entities WHERE email = 'rollbackrel@example.com'`,
+      );
+      const list = (rows as any).rows ?? (rows as any);
+      expect(list).toHaveLength(0);
+    });
+
+    it('onUpdate fires only when the relation key is present in the update DTO', async () => {
+      const onUpdate = vi.fn();
+      const service = buildServiceWithRelations([
+        { name: 'credentials', type: 'hasOne', targetEntity: 'test_entities', label: 'Credentials', handler: { onUpdate } },
+      ]);
+
+      const created = await service.create({ name: 'UpRel', email: 'uprel@example.com' }, TEST_ACTOR_ID);
+
+      await service.update(created.id as string, { name: 'UpRel2' }, TEST_ACTOR_ID);
+      expect(onUpdate).not.toHaveBeenCalled();
+
+      await service.update(
+        created.id as string,
+        { credentials: { password: 'new' } },
+        TEST_ACTOR_ID,
+      );
+      expect(onUpdate).toHaveBeenCalledOnce();
+      expect(onUpdate).toHaveBeenCalledWith(
+        expect.anything(),
+        created.id,
+        { password: 'new' },
+        TEST_ACTOR_ID,
+      );
+    });
+
+    it('onDelete fires with kind soft on softDelete and rolls back when handler throws', async () => {
+      const onDelete = vi.fn();
+      const service = buildServiceWithRelations([
+        { name: 'credentials', type: 'hasOne', targetEntity: 'test_entities', label: 'Credentials', handler: { onDelete } },
+      ]);
+
+      const created = await service.create(
+        { name: 'DelRel', email: 'delrel@example.com' },
+        TEST_ACTOR_ID,
+      );
+
+      await service.softDelete(created.id as string, TEST_ACTOR_ID);
+      expect(onDelete).toHaveBeenCalledOnce();
+      expect(onDelete).toHaveBeenCalledWith(
+        expect.anything(),
+        created.id,
+        TEST_ACTOR_ID,
+        { kind: 'soft' },
+      );
+
+      // Throwing handler rolls the soft-delete back
+      const throwingService = buildServiceWithRelations([
+        {
+          name: 'credentials', type: 'hasOne', targetEntity: 'test_entities', label: 'Credentials',
+          handler: { onDelete: async () => { throw new Error('del-boom'); } },
+        },
+      ]);
+      const created2 = await throwingService.create(
+        { name: 'DelRel2', email: 'delrel2@example.com' },
+        TEST_ACTOR_ID,
+      );
+      await expect(
+        throwingService.softDelete(created2.id as string, TEST_ACTOR_ID),
+      ).rejects.toThrow('del-boom');
+
+      const rows = await db.execute(
+        sql`SELECT deleted_at FROM test_entities WHERE id = ${created2.id as string}`,
+      );
+      const list = (rows as any).rows ?? (rows as any);
+      expect(list[0].deleted_at).toBeNull();
     });
   });
 

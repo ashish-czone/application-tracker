@@ -468,8 +468,13 @@ export interface RelationHandler {
   onCreate?(tx: unknown, parentId: string, payload: unknown, actorId: string): Promise<void>;
   /** Invoked when the relation key is present in an update DTO. */
   onUpdate?(tx: unknown, parentId: string, payload: unknown, actorId: string): Promise<void>;
-  /** Invoked when the parent entity is deleted (hard delete only — soft delete defers to the parent). */
-  onDelete?(tx: unknown, parentId: string, actorId: string): Promise<void>;
+  /**
+   * Invoked when the parent entity is deleted. `kind` tells the handler
+   * whether the parent is being soft- or hard-deleted so it can decide how
+   * to react (e.g. leave credential rows alone on soft delete but purge
+   * them on hard delete).
+   */
+  onDelete?(tx: unknown, parentId: string, actorId: string, opts: { kind: 'soft' | 'hard' }): Promise<void>;
 }
 
 // ---------------------------------------------------------------------------
