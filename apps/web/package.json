@@ -16,8 +16,6 @@
     "@packages/notification-channels-ui": "workspace:*",
     "@packages/notifications-ui": "workspace:*",
     "@packages/org-units-ui": "workspace:*",
-    "@packages/pages-ui-admin": "workspace:*",
-    "@packages/pages-ui-frontend": "workspace:*",
     "@packages/platform-ui": "workspace:*",
     "@packages/rbac-ui": "workspace:*",
     "@packages/settings-ui": "workspace:*",
