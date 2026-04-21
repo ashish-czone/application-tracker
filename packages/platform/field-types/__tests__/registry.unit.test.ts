@@ -192,9 +192,22 @@ describe('validators', () => {
     expect(validators.email('bad', ctx())).toMatchObject({ code: 'format' });
   });
 
-  it('url validates http prefix', () => {
+  it('url accepts href-shaped values: absolute, root-relative, anchors, mailto, tel', () => {
     expect(validators.url('https://example.com', ctx())).toBeNull();
+    expect(validators.url('http://example.com/a?b=1', ctx())).toBeNull();
+    expect(validators.url('/about', ctx())).toBeNull();
+    expect(validators.url('/blog/post?x=1#top', ctx())).toBeNull();
+    expect(validators.url('/', ctx())).toBeNull();
+    expect(validators.url('#section', ctx())).toBeNull();
+    expect(validators.url('mailto:a@b.c', ctx())).toBeNull();
+    expect(validators.url('tel:+15551234567', ctx())).toBeNull();
+  });
+
+  it('url rejects bare text and unsupported schemes', () => {
     expect(validators.url('ftp://example.com', ctx())).toMatchObject({ code: 'format' });
+    expect(validators.url('javascript:alert(1)', ctx())).toMatchObject({ code: 'format' });
+    expect(validators.url('not a url', ctx())).toMatchObject({ code: 'format' });
+    expect(validators.url('about', ctx())).toMatchObject({ code: 'format' });
   });
 
   it('integer validates integers', () => {
