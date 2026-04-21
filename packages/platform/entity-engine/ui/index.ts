@@ -6,6 +6,7 @@ export { buildColumnDefs, buildFilterConfigs } from './helpers/buildColumnDefs';
 export { useEntityLayout } from './helpers/useEntityLayout';
 export { useListLayout } from './helpers/useListLayout';
 export { useCategoryGroupUsage } from './helpers/useCategoryGroupUsage';
+export { groupSlug } from './helpers/groupSlug';
 
 export { EntityConditionBuilder, FIELD_TYPE_TO_CONDITION_TYPE } from './components/EntityConditionBuilder';
 export { ConditionValueField } from './components/ConditionValueField';

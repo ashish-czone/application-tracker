@@ -196,10 +196,12 @@ export interface ModelDefinition<TTable extends PgTable = PgTable> {
   ui: {
     /** Lucide icon name */
     icon: string;
-    /** Sidebar nav group */
+    /** Sidebar nav group. When multiple entities share a navGroup and set `groupRenderMode: 'tabs'`, they're collapsed into one nav link and rendered as a tabbed page. */
     navGroup?: string;
-    /** Sidebar ordering within group */
+    /** Sidebar ordering within group. Also drives tab order when grouped. */
     navOrder?: number;
+    /** Collapses all entities sharing this `navGroup` into a single tabbed page. Omit for the default flat-link behavior. */
+    groupRenderMode?: 'tabs';
     /** How the "Add" button works */
     createMode?: 'modal' | 'page' | 'wizard';
     /** Picklist field keys for board/kanban view */

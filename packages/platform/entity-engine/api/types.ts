@@ -535,10 +535,12 @@ export interface EntityUIHints {
   nameField: string | string[];
   /** Field key for subtitle */
   subtitleField?: string;
-  /** Sidebar nav group */
+  /** Sidebar nav group. When multiple entities share a navGroup and set `groupRenderMode: 'tabs'`, the platform collapses them into a single nav link and renders a tabbed page. The URL slug is derived from the group label. */
   navGroup?: string;
-  /** Sidebar ordering within group */
+  /** Sidebar ordering within group. When grouped via `groupRenderMode: 'tabs'`, also drives tab order. */
   navOrder?: number;
+  /** How entities in the same `navGroup` are presented. `'tabs'` collapses all grouped entities into one nav link routed to a tabbed group page. Omit to render each entity as an individual sidebar link (current behavior). */
+  groupRenderMode?: 'tabs';
   /** How the "Add" button works: 'modal' = quick-create dialog, 'page' = full create form page, 'wizard' = multi-step (one section per step). Default: 'modal' */
   createMode?: 'modal' | 'page' | 'wizard';
   /** Picklist field keys that can be used as board/kanban grouping. Enables board view toggle on list page. */
