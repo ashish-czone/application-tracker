@@ -4,6 +4,7 @@ import { AuthGuard } from '@packages/auth-ui/components/AuthGuard';
 import { PermissionGuard } from '@packages/auth-ui/components/PermissionGuard';
 import { EntityListPage, EntityDetailPage, useEntityConfig, useEntityEngine } from '@packages/entity-engine-ui';
 import type { DomainWebManifest, DomainDetailPageComponent, DomainRouteObject, MenuItem } from '@packages/domains';
+import type { DetailHeaderActionRenderer } from './types';
 import {
   PipelineProgressBar,
   TransitionConfirmDialog,
@@ -28,6 +29,8 @@ interface AppRouterProps {
   brandLabel: string;
   menuItems: MenuItem[];
   extraRoutes?: RouteObject[];
+  /** Per-entity header action renderers — keyed by entityType. */
+  detailHeaderActions?: Record<string, DetailHeaderActionRenderer>;
 }
 
 interface PendingTransition {
@@ -161,12 +164,25 @@ function renderWorkflowActions(entityType: string, entityId: string, entity: Rec
   return <WorkflowActionsForEntity entityType={entityType} entityId={entityId} entity={entity} />;
 }
 
-function AppEntityDetailPage({ entityType }: { entityType: string }) {
+function AppEntityDetailPage({
+  entityType,
+  detailHeaderActions,
+}: {
+  entityType: string;
+  detailHeaderActions?: Record<string, DetailHeaderActionRenderer>;
+}) {
+  const actionRenderer = detailHeaderActions?.[entityType];
+  const renderHeaderActions = actionRenderer
+    ? (_type: string, entityId: string, entity: Record<string, unknown>) =>
+        actionRenderer(entityId, entity)
+    : undefined;
+
   return (
     <EntityDetailPage
       entityType={entityType}
       renderPipelineProgress={renderPipelineProgress}
       renderWorkflowActions={renderWorkflowActions}
+      renderHeaderActions={renderHeaderActions}
     />
   );
 }
@@ -223,7 +239,7 @@ function withPermission(element: ReactNode, permission?: string): ReactNode {
   return <PermissionGuard permission={permission}>{element}</PermissionGuard>;
 }
 
-export function AppRouter({ domains, brandLabel, menuItems, extraRoutes }: AppRouterProps) {
+export function AppRouter({ domains, brandLabel, menuItems, extraRoutes, detailHeaderActions }: AppRouterProps) {
   const { entities } = useEntityEngine();
   const detailOverrides = useMemo(() => mergeDetailOverrides(domains), [domains]);
   const domainRoutes = useMemo(() => mergeDomainRoutes(domains), [domains]);
@@ -309,7 +325,7 @@ export function AppRouter({ domains, brandLabel, menuItems, extraRoutes }: AppRo
                 <Route
                   key={`${entity.entityType}-detail`}
                   path={`/${entity.slug}/:id`}
-                  element={Override ? <Suspense fallback={<PageSkeleton />}><Override /></Suspense> : <AppEntityDetailPage entityType={entity.entityType} />}
+                  element={Override ? <Suspense fallback={<PageSkeleton />}><Override /></Suspense> : <AppEntityDetailPage entityType={entity.entityType} detailHeaderActions={detailHeaderActions} />}
                 />,
               ];
             })}

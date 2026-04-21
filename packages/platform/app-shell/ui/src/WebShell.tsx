@@ -19,6 +19,7 @@ export function WebShell({
   extraDetailTabs,
   extraRightSidebarPanels,
   extraColumnRenderers,
+  extraDetailHeaderActions,
 }: WebShellOptions) {
   const entityUIConfigs = useMemo(() => {
     const fromDomains = domains.flatMap((d) => d.entityUIConfigs ?? []);
@@ -47,6 +48,7 @@ export function WebShell({
         brandLabel={brandLabel}
         menuItems={menuItems}
         extraRoutes={extraRoutes}
+        detailHeaderActions={extraDetailHeaderActions}
       />
     </Providers>
   );

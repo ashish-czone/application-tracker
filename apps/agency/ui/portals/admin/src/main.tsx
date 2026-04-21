@@ -1,6 +1,6 @@
-import { StrictMode, Suspense, lazy } from 'react';
+import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Route } from 'react-router';
+import { useNavigate } from 'react-router';
 import { fieldTypeRegistry } from '@packages/field-types';
 import { coreFieldTypesPlugin } from '@packages/entity-engine/field-types';
 import { eavFieldTypesPlugin } from '@packages/eav-attributes/field-types';
@@ -17,12 +17,11 @@ import { registerEntityRelationsFieldTypes } from '@packages/entity-relations-ui
 registerEntityRelationsFieldTypes();
 
 import { WebShell } from '@packages/app-shell-ui';
-import { EntityListPage, EntityDetailPage } from '@packages/entity-engine-ui';
 import { registerStarterBlocks } from '@packages/pages-ui-frontend';
 import { PageEditorPage } from '@packages/pages-ui-admin';
 import { AuditTimeline } from '@packages/audit-ui';
-import { Toaster } from '@packages/ui';
-import { FileText } from 'lucide-react';
+import { Button, Toaster } from '@packages/ui';
+import { FileText, Pencil } from 'lucide-react';
 import type { MenuItem } from '@packages/domains';
 import { api } from './lib/api';
 import './globals.css';
@@ -34,19 +33,26 @@ const pagesMenu: MenuItem[] = [
 ];
 
 const pagesRoutes = [
-  {
-    path: '/pages',
-    children: [
-      { index: true, element: <EntityListPage entityType="pages" /> },
-      { path: ':id', element: <EntityDetailPage entityType="pages" /> },
-      { path: ':id/edit', element: <PageEditorPage /> },
-    ],
-  },
+  { path: '/pages/:id/edit', element: <PageEditorPage /> },
 ];
 
 const detailTabs = [
   { key: 'audit-trail', label: 'Audit Trail', order: 1000, component: AuditTimeline },
 ];
+
+function OpenPageEditorButton({ entityId }: { entityId: string }) {
+  const navigate = useNavigate();
+  return (
+    <Button size="sm" onClick={() => navigate(`/pages/${entityId}/edit`)}>
+      <Pencil className="h-4 w-4 mr-1" />
+      Open Editor
+    </Button>
+  );
+}
+
+const detailHeaderActions = {
+  pages: (entityId: string) => <OpenPageEditorButton entityId={entityId} />,
+};
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -57,6 +63,7 @@ createRoot(document.getElementById('root')!).render(
       extraMenuItems={pagesMenu}
       extraRoutes={pagesRoutes}
       extraDetailTabs={detailTabs}
+      extraDetailHeaderActions={detailHeaderActions}
     />
     <Toaster />
   </StrictMode>,
