@@ -178,11 +178,13 @@ export function createUsersEntityConfig(deps: UsersEntityConfigDeps): EntityConf
       afterList: async (rows) => {
         if (rows.length === 0) return rows;
         const ids = rows.map((r) => r.id as string);
+        type RolesMap = Awaited<ReturnType<UsersRolesReader['getRolesByUserIds']>>;
+        type PositionsMap = Record<string, UserPosition[]>;
         const [rolesByUser, positionsByUser] = await Promise.all([
-          rolesReader ? rolesReader.getRolesByUserIds(ids) : Promise.resolve({}),
+          rolesReader ? rolesReader.getRolesByUserIds(ids) : Promise.resolve({} as RolesMap),
           positionsReader
             ? positionsReader.getPositionsByUserIds(ids)
-            : Promise.resolve({} as Record<string, UserPosition[]>),
+            : Promise.resolve({} as PositionsMap),
         ]);
         return rows.map((r) => ({
           ...r,
@@ -193,11 +195,13 @@ export function createUsersEntityConfig(deps: UsersEntityConfigDeps): EntityConf
       },
       afterFindOne: async (row) => {
         const id = row.id as string;
+        type RolesMap = Awaited<ReturnType<UsersRolesReader['getRolesByUserIds']>>;
+        type PositionsMap = Record<string, UserPosition[]>;
         const [rolesByUser, positionsByUser] = await Promise.all([
-          rolesReader ? rolesReader.getRolesByUserIds([id]) : Promise.resolve({}),
+          rolesReader ? rolesReader.getRolesByUserIds([id]) : Promise.resolve({} as RolesMap),
           positionsReader
             ? positionsReader.getPositionsByUserIds([id])
-            : Promise.resolve({} as Record<string, UserPosition[]>),
+            : Promise.resolve({} as PositionsMap),
         ]);
         return {
           ...row,
