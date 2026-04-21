@@ -16,7 +16,7 @@ import {
 import { TagGroupsListPage, CategoryGroupsListPage } from '@packages/taxonomy-ui';
 import { RolesListPage } from '@packages/rbac-ui';
 import { AutomationsPage, RuleBuilderPage } from '@packages/automations-ui';
-import { UsersListPage } from '@packages/users-ui';
+import { usersRoutes } from '@packages/users-ui';
 import { SettingsPage as AppSettingsPage } from '@packages/settings-ui';
 import { QueueDashboardPage } from '@packages/queue-ui';
 import { AppearancePage as ThemingAppearancePage } from '@packages/theming-ui';
@@ -394,7 +394,7 @@ export function AppRouter({ domains, brandLabel, menuItems, extraRoutes, detailH
             />
           ))}
 
-          <Route path="/users" element={<Suspense fallback={<PageSkeleton />}><UsersListPage /></Suspense>} />
+          {usersRoutes}
           <Route path="/roles" element={<Suspense fallback={<PageSkeleton />}><RolesListPage /></Suspense>} />
           <Route path="/tag-groups" element={<TagGroupsListPage />} />
           <Route path="/categories" element={<CategoryGroupsListPage />} />
