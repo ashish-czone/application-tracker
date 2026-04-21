@@ -1,13 +1,15 @@
 import { useState, useMemo, useCallback } from 'react';
 import { AnimatePresence } from 'framer-motion';
-import { UserPlus } from 'lucide-react';
+import { UserPlus, Ban } from 'lucide-react';
 import {
   DataGridShell,
+  BulkActionBar,
   Button,
   FilterPopover,
   CoarseTabs,
   SearchInput,
   ScreenLayout,
+  toast,
   type ActiveFilter,
 } from '@packages/ui';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
@@ -20,6 +22,7 @@ import {
   useResendInvitation,
   useDeactivateUser,
   useRestoreUser,
+  useBulkDeactivate,
 } from './api/useUsersApi';
 import { mapUserRecordToRow } from './api/mapUserRecord';
 
@@ -28,6 +31,7 @@ type StatusTab = 'all' | UserStatus;
 export function UsersPage() {
   const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const [search, setSearch] = useState('');
   const [statusTab, setStatusTab] = useState<StatusTab>('all');
@@ -49,6 +53,24 @@ export function UsersPage() {
     onSuccess: () => setSelectedUser(null),
   });
   const restoreUser = useRestoreUser();
+  const bulkDeactivate = useBulkDeactivate({
+    onSuccess: () => setSelectedIds(new Set()),
+  });
+
+  // When the filter set shrinks, prune selection to still-visible rows only.
+  const visibleIds = useMemo(() => new Set(rows.map((u) => u.id)), [rows]);
+  const effectiveSelectedIds = useMemo(() => {
+    const next = new Set<string>();
+    for (const id of selectedIds) if (visibleIds.has(id)) next.add(id);
+    return next;
+  }, [selectedIds, visibleIds]);
+
+  // Only active or invited users can be deactivated. Already-deactivated
+  // rows shouldn't be selectable for this bulk action.
+  const isRowSelectable = useCallback(
+    (user: UserRow) => user.status !== 'deactivated',
+    [],
+  );
 
   const allRoleOptions = useMemo(() => {
     const map = new Map<string, string>();
@@ -189,6 +211,26 @@ export function UsersPage() {
         <section className="mt-10">
           <CoarseTabs tabs={statusTabs} value={statusTab} onChange={setStatusTab} animated />
 
+          <AnimatePresence>
+            {effectiveSelectedIds.size > 0 && (
+              <BulkActionBar
+                count={effectiveSelectedIds.size}
+                itemNoun="user"
+                onClear={() => setSelectedIds(new Set())}
+                actions={[
+                  {
+                    label: bulkDeactivate.isPending ? 'Deactivating…' : 'Deactivate',
+                    icon: Ban,
+                    tone: 'danger',
+                    disabled: bulkDeactivate.isPending,
+                    onClick: () =>
+                      bulkDeactivate.mutate(Array.from(effectiveSelectedIds)),
+                  },
+                ]}
+              />
+            )}
+          </AnimatePresence>
+
           <DataGridShell
             columns={USER_COLUMNS}
             rows={filtered}
@@ -198,6 +240,10 @@ export function UsersPage() {
             onRowClick={(user) => setSelectedUser(user)}
             activeFilters={activeFilters}
             onClearFilters={clearAll}
+            selectable
+            selectedKeys={effectiveSelectedIds}
+            onSelectionChange={setSelectedIds}
+            isRowSelectable={isRowSelectable}
             emptyState={
               <div className="py-10 text-center text-sm text-ink-muted italic font-serif">
                 {isError
