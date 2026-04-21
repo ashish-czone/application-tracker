@@ -49,7 +49,7 @@ export class EntityDefinitionService {
   resolveLayoutFromRegistry(entityType: string, layoutName = 'Standard'): FullLayout {
     const config = this.registry.get(entityType);
     if (!config) {
-      return { entityType, layoutName, sections: [], quickCreateFields: [] };
+      return { entityType, layoutName, sections: [], relationSections: [], quickCreateFields: [] };
     }
     return buildInMemoryLayout(config, layoutName, this.resolveExtensionContext(entityType));
   }

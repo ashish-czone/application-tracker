@@ -41,6 +41,10 @@ export interface FieldDefinition {
   sortOrder: number;
   picklistOptions: PicklistOption[];
   columnIndex: number;
+  /** When set, this field belongs to a hasOne relationship's nested payload.
+   *  The form reshapes flat RHF values into `{ ..., [nestedPath]: {...} }`
+   *  before POSTing. */
+  nestedPath?: string | null;
 }
 
 export interface LayoutSection {
@@ -54,10 +58,20 @@ export interface LayoutSection {
   fields: FieldDefinition[];
 }
 
+export interface FullLayoutRelationSection {
+  name: string;
+  label: string;
+  type: 'hasMany' | 'manyToMany';
+  targetEntity: string;
+  displayFields?: string[];
+  sortOrder: number;
+}
+
 export interface FullLayout {
   entityType: string;
   layoutName: string;
   sections: LayoutSection[];
+  relationSections: FullLayoutRelationSection[];
   quickCreateFields: FieldDefinition[];
 }
 

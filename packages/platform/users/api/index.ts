@@ -1,5 +1,7 @@
 export { UsersModule } from './users.module';
 export { UsersService } from './services/users.service';
+export { createUsersEntityConfig } from './users.config';
+export type { UsersEntityConfigDeps } from './users.config';
 export { USERS_PERMISSIONS } from './permissions';
 export {
   USERS_USER_CREATED,

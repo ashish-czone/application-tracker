@@ -6,6 +6,7 @@ import { AuditRegistryService } from '@packages/audit';
 import { AuthService } from './services/auth.service';
 import { CredentialsService } from './services/credentials.service';
 import { TokensService } from './services/tokens.service';
+import { CredentialsRelationHandler } from './relation-handlers/credentials-relation-handler';
 import { AuthGuard } from './guards/auth.guard';
 import { AuthAdapterRegistry } from './adapters/auth-adapter-registry';
 import { PasswordAuthAdapter } from './adapters/password-auth.adapter';
@@ -78,8 +79,9 @@ export class AuthModule implements OnModuleInit {
         AuthOrchestratorService,
         ClientAuthService,
         AdminAuthService,
+        CredentialsRelationHandler,
       ],
-      exports: [AuthService, AuthGuard, AuthAdapterRegistry],
+      exports: [AuthService, AuthGuard, AuthAdapterRegistry, CredentialsRelationHandler],
     };
   }
 
@@ -107,8 +109,9 @@ export class AuthModule implements OnModuleInit {
         AuthOrchestratorService,
         ClientAuthService,
         AdminAuthService,
+        CredentialsRelationHandler,
       ],
-      exports: [AuthService, AuthGuard, AuthAdapterRegistry],
+      exports: [AuthService, AuthGuard, AuthAdapterRegistry, CredentialsRelationHandler],
     };
   }
 

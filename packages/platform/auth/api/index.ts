@@ -4,6 +4,9 @@ export { AuthModule } from './auth.module';
 // Core services
 export { AuthService } from './services/auth.service';
 
+// Relation handlers
+export { CredentialsRelationHandler } from './relation-handlers/credentials-relation-handler';
+
 // Adapters
 export type { AuthAdapter, AuthAdapterResult } from './adapters/auth-adapter.interface';
 export { AuthAdapterRegistry } from './adapters/auth-adapter-registry';

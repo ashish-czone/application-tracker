@@ -1,7 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { DatabaseService, eq, asc, inArray } from '@packages/database';
 import { withTenant, withTenantInsert } from '@packages/tenancy/helpers';
-import { FieldDefinitionService, EntityDefinitionService, EntityRegistryService } from '@packages/entity-engine';
+import {
+  FieldDefinitionService,
+  EntityDefinitionService,
+  EntityRegistryService,
+  buildRelationshipLayoutSections,
+} from '@packages/entity-engine';
 import type {
   LayoutSection,
   FullLayout,
@@ -267,10 +272,22 @@ export class LayoutService {
       .filter(f => f.isQuickCreate)
       .map(f => ({ ...f, columnIndex: 0 }));
 
+    // Relationships are always declared in code (never in DB). Pull them
+    // from the registry and run the same sectioning the in-memory builder
+    // uses so the API shape is identical whether layout comes from DB or
+    // code config.
+    const config = this.entityRegistry.get(entityType);
+    const { nestedSections, relationSections } = buildRelationshipLayoutSections(
+      entityType,
+      config?.relationships,
+    );
+    fullSections.push(...nestedSections);
+
     const layout: FullLayout = {
       entityType,
       layoutName,
       sections: fullSections,
+      relationSections,
       quickCreateFields,
     };
 

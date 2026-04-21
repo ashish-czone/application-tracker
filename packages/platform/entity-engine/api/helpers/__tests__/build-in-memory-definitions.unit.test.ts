@@ -163,6 +163,101 @@ describe('buildInMemoryLayout', () => {
     const layout = buildInMemoryLayout(makeConfig());
     expect(layout.quickCreateFields.map((f) => f.fieldKey)).toEqual(['name']);
   });
+
+  describe('relationships', () => {
+    it('emits a dedicated section for each hasOne with nestedFields, with nestedPath stamped on each field', () => {
+      const config = makeConfig();
+      config.relationships = [
+        {
+          name: 'credentials',
+          type: 'hasOne',
+          targetEntity: 'user_credentials',
+          label: 'Credentials',
+          nestedFields: [
+            { fieldKey: 'password', fieldType: 'text', label: 'Password', uiType: 'password', isRequired: true },
+          ],
+        },
+      ];
+
+      const layout = buildInMemoryLayout(config);
+      const credentials = layout.sections.find((s) => s.name === 'Credentials');
+      expect(credentials).toBeDefined();
+      expect(credentials!.fields).toHaveLength(1);
+      expect(credentials!.fields[0].fieldKey).toBe('password');
+      expect(credentials!.fields[0].nestedPath).toBe('credentials');
+      expect(credentials!.fields[0].uiType).toBe('password');
+      expect(credentials!.fields[0].isRequired).toBe(true);
+
+      // hasOne does NOT leak into relationSections — that bucket is collection-only
+      expect(layout.relationSections).toEqual([]);
+    });
+
+    it('emits hasMany / manyToMany as relationSections, not as form sections', () => {
+      const config = makeConfig();
+      config.relationships = [
+        {
+          name: 'roles',
+          type: 'hasMany',
+          targetEntity: 'roles',
+          label: 'Roles',
+          foreignKey: 'userId',
+          displayFields: ['name'],
+        },
+        {
+          name: 'tags',
+          type: 'manyToMany',
+          targetEntity: 'tags',
+          junctionEntity: 'widget_tags',
+          label: 'Tags',
+        },
+      ];
+
+      const layout = buildInMemoryLayout(config);
+      expect(layout.relationSections.map((r) => ({ name: r.name, type: r.type }))).toEqual([
+        { name: 'roles', type: 'hasMany' },
+        { name: 'tags', type: 'manyToMany' },
+      ]);
+      expect(layout.relationSections[0].displayFields).toEqual(['name']);
+
+      // Collection relationships should not create extra form sections
+      const sectionNames = layout.sections.map((s) => s.name);
+      expect(sectionNames).not.toContain('Roles');
+      expect(sectionNames).not.toContain('Tags');
+    });
+
+    it('ignores hasOne relationships with no nestedFields and belongsTo entirely', () => {
+      const config = makeConfig();
+      config.relationships = [
+        { name: 'profile', type: 'hasOne', targetEntity: 'user_profiles', label: 'Profile' },
+        { name: 'manager', type: 'belongsTo', targetEntity: 'users', foreignKey: 'managerId', label: 'Manager' },
+      ];
+
+      const layout = buildInMemoryLayout(config);
+      expect(layout.sections.find((s) => s.name === 'Profile')).toBeUndefined();
+      expect(layout.sections.find((s) => s.name === 'Manager')).toBeUndefined();
+      expect(layout.relationSections).toEqual([]);
+    });
+
+    it('places hasOne nested sections after primary sections, before Unassigned', () => {
+      const config = makeConfig();
+      config.relationships = [
+        {
+          name: 'credentials',
+          type: 'hasOne',
+          targetEntity: 'user_credentials',
+          label: 'Credentials',
+          nestedFields: [{ fieldKey: 'password', fieldType: 'text', label: 'Password' }],
+        },
+      ];
+
+      const layout = buildInMemoryLayout(config);
+      const sectionOrder = layout.sections.map((s) => s.name);
+      // Basics is code-declared (sortOrder 0); Credentials is synthesized (sortOrder 500+);
+      // Unassigned always lands at 999.
+      expect(sectionOrder.indexOf('Basics')).toBeLessThan(sectionOrder.indexOf('Credentials'));
+      expect(sectionOrder.indexOf('Credentials')).toBeLessThan(sectionOrder.indexOf('Unassigned Fields'));
+    });
+  });
 });
 
 describe('extensionOf support', () => {

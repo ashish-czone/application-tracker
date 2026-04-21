@@ -1,6 +1,7 @@
 import type { PgTable, PgColumn } from 'drizzle-orm/pg-core';
 import type { SQL } from 'drizzle-orm';
 import type { Condition } from '@packages/common';
+import type { RelationHandler } from '@packages/entity-engine-contract';
 import type { SoftDeleteMode, DependentStrategy } from '@packages/soft-delete';
 import type { WorkflowGuardFn } from './extensions/workflow-extension.interface';
 
@@ -204,6 +205,13 @@ export interface LayoutField {
 export interface FullLayoutField extends FieldDefinition {
   picklistOptions: PicklistOption[];
   columnIndex: number;
+  /**
+   * When set, this field belongs to a hasOne relationship's nested payload
+   * (keyed by `nestedPath` in the submitted DTO). The form renderer uses
+   * this to reshape flat RHF values into `{ ..., [nestedPath]: { ... } }`
+   * before POSTing to the parent endpoint.
+   */
+  nestedPath?: string | null;
 }
 
 export interface FullLayoutSection {
@@ -217,10 +225,29 @@ export interface FullLayoutSection {
   fields: FullLayoutField[];
 }
 
+/**
+ * Collection-style relationship (hasMany / manyToMany) rendered as a
+ * separate section in the parent's create/edit form. The UI drives a
+ * multi-select picker against the target entity's lookup config.
+ */
+export interface FullLayoutRelationSection {
+  /** Relationship name — the DTO key (e.g. 'roles'). */
+  name: string;
+  label: string;
+  type: 'hasMany' | 'manyToMany';
+  targetEntity: string;
+  displayFields?: string[];
+  sortOrder: number;
+}
+
 export interface FullLayout {
   entityType: string;
   layoutName: string;
   sections: FullLayoutSection[];
+  /** Sections for hasMany / manyToMany relationships. hasOne nested fields
+   *  are placed in the main `sections[]` instead so they submit atomically
+   *  with the parent. */
+  relationSections: FullLayoutRelationSection[];
   quickCreateFields: FullLayoutField[];
 }
 
@@ -448,6 +475,18 @@ export interface EntityRelationship {
   /** Fields to show in the related list (field keys) */
   displayFields?: string[];
   /**
+   * For `hasOne` relationships only: the fields that render inline in the
+   * parent's main form (e.g. `{ fieldKey: 'password', fieldType: 'text',
+   * uiType: 'password' }` for a user's credentials). The DTO keeps them
+   * nested under this relationship's name, and the layout builder emits
+   * them with a `nestedPath` hint so the form knows how to reshape values
+   * before POSTing to the parent endpoint.
+   *
+   * Validation and storage of these fields are the handler's responsibility
+   * — the engine never writes them to the parent table.
+   */
+  nestedFields?: NestedRelationshipField[];
+  /**
    * Optional write-side handler invoked by the engine when a matching nested
    * payload key is present in a create/update DTO. The handler owns the child
    * table (e.g. credentials, user_roles) — the engine never touches it.
@@ -459,23 +498,31 @@ export interface EntityRelationship {
 }
 
 /**
- * Contract for packages that own tables related to an entity via a declared
- * `EntityRelationship`. Each method is optional — implement only what you need.
- * All methods run inside the caller's transaction (`tx`).
+ * Minimal field spec carried on a `hasOne` relationship. Mirrors the shape
+ * of `RegisterFieldInput` but drops columnName (nested fields don't live on
+ * the parent table) and DB-level concerns. Enough for the layout builder
+ * and form renderer to do their jobs.
  */
-export interface RelationHandler {
-  /** Invoked after the parent entity is inserted. Payload is the sub-value from the relation key (e.g. `{ password: '...' }` for hasOne, `[id1, id2]` for manyToMany). */
-  onCreate?(tx: unknown, parentId: string, payload: unknown, actorId: string): Promise<void>;
-  /** Invoked when the relation key is present in an update DTO. */
-  onUpdate?(tx: unknown, parentId: string, payload: unknown, actorId: string): Promise<void>;
-  /**
-   * Invoked when the parent entity is deleted. `kind` tells the handler
-   * whether the parent is being soft- or hard-deleted so it can decide how
-   * to react (e.g. leave credential rows alone on soft delete but purge
-   * them on hard delete).
-   */
-  onDelete?(tx: unknown, parentId: string, actorId: string, opts: { kind: 'soft' | 'hard' }): Promise<void>;
+export interface NestedRelationshipField {
+  fieldKey: string;
+  label: string;
+  fieldType: FieldType;
+  uiType?: string;
+  isRequired?: boolean;
+  maxLength?: number;
+  defaultValue?: string;
+  picklistOptions?: SetPicklistOptionInput[];
+  lookupEntity?: string;
+  lookupLabelField?: string;
+  lookupSearchFields?: string[];
+  sortOrder?: number;
 }
+
+// RelationHandler + RelationHandlerContext live in @packages/entity-engine-contract
+// so owning packages (auth, rbac) can implement handlers without a circular dep
+// on entity-engine itself. Re-exported here for ergonomic access from inside the
+// engine.
+export type { RelationHandler, RelationHandlerContext } from '@packages/entity-engine-contract';
 
 // ---------------------------------------------------------------------------
 // UI hints — serialized to frontend via registry API

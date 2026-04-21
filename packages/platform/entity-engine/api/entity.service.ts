@@ -946,10 +946,15 @@ export class EntityService {
       // Relationship handlers: hand each nested payload to the owning
       // relationship's RelationHandler.onCreate inside this tx. Throwing
       // from a handler rolls the parent insert back.
+      //
+      // `ctx.parent` is a snapshot of the just-inserted row so handlers can
+      // derive values (e.g. credentials.identifier = parent.email) without
+      // the DTO having to duplicate them into the nested payload.
+      const relationCtx = { parent: { ...(inserted as Record<string, unknown>) } };
       for (const rel of config.relationships ?? []) {
         if (!rel.handler?.onCreate) continue;
         if (!(rel.name in relationshipInputs)) continue;
-        await rel.handler.onCreate(tx, entityId, relationshipInputs[rel.name], actorId);
+        await rel.handler.onCreate(tx, entityId, relationshipInputs[rel.name], actorId, relationCtx);
       }
 
       if (config.hooks?.inCreateTx) {
@@ -1203,10 +1208,15 @@ export class EntityService {
       // Relationship handlers: only fire when the caller actually sent a
       // payload for this relation — updating other fields shouldn't touch
       // credentials or role assignments.
+      //
+      // `ctx.parent` reflects the row post-update so the handler sees the
+      // latest values (e.g. a password rotation after an email change reads
+      // the new email).
+      const relationCtx = { parent: { ...(row as Record<string, unknown>) } };
       for (const rel of config.relationships ?? []) {
         if (!rel.handler?.onUpdate) continue;
         if (!(rel.name in relationshipInputs)) continue;
-        await rel.handler.onUpdate(tx, id, relationshipInputs[rel.name], actorId);
+        await rel.handler.onUpdate(tx, id, relationshipInputs[rel.name], actorId, relationCtx);
       }
 
       const after = buildSnapshot(this.rowToSnapshot(row), eavAfter);
@@ -1426,9 +1436,10 @@ export class EntityService {
           .where(withTenant(config.table as any, eq((config.table as any).id, id)));
       }
 
+      const relationCtx = { parent: { ...(entity as Record<string, unknown>) } };
       for (const rel of config.relationships ?? []) {
         if (!rel.handler?.onDelete) continue;
-        await rel.handler.onDelete(tx, id, actorId, { kind: 'soft' });
+        await rel.handler.onDelete(tx, id, actorId, { kind: 'soft' }, relationCtx);
       }
     });
 

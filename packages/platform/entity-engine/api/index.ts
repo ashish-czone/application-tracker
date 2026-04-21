@@ -18,6 +18,8 @@ export type {
   EntityConfig,
   EntityHooks,
   EntityRelationship,
+  RelationHandler,
+  RelationHandlerContext,
   ExtensionOfConfig,
   ResolvedExtension,
   EntityUIHints,
@@ -52,7 +54,9 @@ export type {
   LayoutField,
   FullLayoutField,
   FullLayoutSection,
+  FullLayoutRelationSection,
   FullLayout,
+  NestedRelationshipField,
   FilterOperator,
   FieldFilter,
   LookupConfig,
@@ -103,7 +107,12 @@ export { FieldDefinitionService } from './services/field-definition.service';
 export { EntityDefinitionService } from './services/entity-definition.service';
 export { LookupResolverService } from './services/lookup-resolver.service';
 export { EntityEngineSeedService } from './services/entity-engine-seed.service';
-export { buildInMemoryFields, buildInMemoryLayout } from './helpers/build-in-memory-definitions';
+export {
+  buildInMemoryFields,
+  buildInMemoryLayout,
+  buildRelationshipLayoutSections,
+  synthesizeNestedField,
+} from './helpers/build-in-memory-definitions';
 
 // --- Controllers moved from eav-attributes ---
 

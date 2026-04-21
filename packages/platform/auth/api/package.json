@@ -15,6 +15,7 @@
     "@packages/audit": "workspace:*",
     "@packages/auth-core": "workspace:*",
     "@packages/database": "workspace:*",
+    "@packages/entity-engine-contract": "workspace:*",
     "@packages/events": "workspace:*",
     "@packages/logger": "workspace:*",
     "@packages/rbac": "workspace:*",

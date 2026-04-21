@@ -1,10 +1,12 @@
 import { getTableColumns } from 'drizzle-orm';
 import type {
   EntityConfig,
+  EntityRelationship,
   FieldDefinition,
   FieldType,
   FullLayout,
   FullLayoutField,
+  FullLayoutRelationSection,
   FullLayoutSection,
   PicklistOption,
   SetPicklistOptionInput,
@@ -187,6 +189,105 @@ export function buildInMemoryFields(
 }
 
 /**
+ * Synthesize a `FullLayoutField` from a hasOne relationship's nested field
+ * spec. `nestedPath` is stamped so the form renderer knows to nest this
+ * field under the relationship name in the submitted payload.
+ */
+export function synthesizeNestedField(
+  parentEntityType: string,
+  rel: EntityRelationship,
+  nf: NonNullable<EntityRelationship['nestedFields']>[number],
+  idx: number,
+): FullLayoutField {
+  const picklistOptions = (nf.picklistOptions ?? []).map((opt, i) =>
+    toPicklistOption(parentEntityType, `${rel.name}.${nf.fieldKey}`, opt, i),
+  );
+
+  return {
+    id: inMemoryId([parentEntityType, 'nested', rel.name, nf.fieldKey]),
+    entityType: parentEntityType,
+    fieldKey: nf.fieldKey,
+    label: nf.label,
+    fieldType: nf.fieldType,
+    uiType: nf.uiType ?? null,
+    isRequired: nf.isRequired ?? false,
+    isSystem: false,
+    isCustom: false,
+    isUnique: false,
+    isQuickCreate: false,
+    isReadonly: false,
+    maxLength: nf.maxLength ?? null,
+    defaultValue: nf.defaultValue ?? null,
+    columnName: null,
+    lookupEntity: nf.lookupEntity ?? null,
+    lookupLabelField: nf.lookupLabelField ?? null,
+    lookupSearchFields: nf.lookupSearchFields ?? null,
+    tagGroupSlug: null,
+    categoryGroupSlug: null,
+    fileAccept: null,
+    fileMaxSize: null,
+    sortOrder: nf.sortOrder ?? idx,
+    createdAt: EPOCH,
+    updatedAt: EPOCH,
+    picklistOptions,
+    columnIndex: 0,
+    nestedPath: rel.name,
+  };
+}
+
+/**
+ * Expand `config.relationships` into layout-ready buckets:
+ *   - `nestedSections`: one `FullLayoutSection` per hasOne with nestedFields,
+ *     intended to be appended to the main layout so nested fields submit
+ *     atomically with the parent.
+ *   - `relationSections`: collection relationships (hasMany / manyToMany)
+ *     that render as separate UI sections.
+ *
+ * Shared by both layout builders (in-memory + DB-backed) so they stay in
+ * sync; relationships are always declared in code regardless of whether an
+ * entity's section layout is admin-editable.
+ */
+export function buildRelationshipLayoutSections(
+  entityType: string,
+  relationships: EntityRelationship[] | undefined,
+): { nestedSections: FullLayoutSection[]; relationSections: FullLayoutRelationSection[] } {
+  const nestedSections: FullLayoutSection[] = [];
+  const relationSections: FullLayoutRelationSection[] = [];
+  let sortOrder = 0;
+
+  for (const rel of relationships ?? []) {
+    if (rel.type === 'hasOne' && rel.nestedFields && rel.nestedFields.length > 0) {
+      const nestedFields = rel.nestedFields.map((nf, i) =>
+        synthesizeNestedField(entityType, rel, nf, i),
+      );
+      nestedSections.push({
+        id: inMemoryId([entityType, 'nested-section', rel.name]),
+        name: rel.label,
+        columns: 1,
+        sortOrder: 500 + sortOrder++,
+        isCollapsible: true,
+        isTabular: false,
+        tabularMaxRows: null,
+        fields: nestedFields,
+      });
+      continue;
+    }
+    if (rel.type === 'hasMany' || rel.type === 'manyToMany') {
+      relationSections.push({
+        name: rel.name,
+        label: rel.label,
+        type: rel.type,
+        targetEntity: rel.targetEntity,
+        displayFields: rel.displayFields,
+        sortOrder: sortOrder++,
+      });
+    }
+  }
+
+  return { nestedSections, relationSections };
+}
+
+/**
  * Produce a `FullLayout` for an entity purely from its in-memory
  * `EntityConfig`. Code-defined `config.sections` become layout sections;
  * fields in `fieldMeta` that aren't placed in any section fall into a virtual
@@ -232,6 +333,12 @@ export function buildInMemoryLayout(
     };
   });
 
+  const { nestedSections, relationSections } = buildRelationshipLayoutSections(
+    config.entityType,
+    config.relationships,
+  );
+  sections.push(...nestedSections);
+
   const unassignedFields = fields
     .filter((f) => !placedKeys.has(f.fieldKey) && !f.isSystem)
     .map((f) => ({ ...f, columnIndex: 0 }));
@@ -255,6 +362,7 @@ export function buildInMemoryLayout(
     entityType: config.entityType,
     layoutName,
     sections,
+    relationSections,
     quickCreateFields,
   };
 }
