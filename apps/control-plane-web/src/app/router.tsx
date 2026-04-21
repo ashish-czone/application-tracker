@@ -2,7 +2,7 @@ import { Suspense, lazy, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router';
 import { AppLayout } from './layout/AppLayout';
 import { AuthGuard } from '@packages/auth-ui/components/AuthGuard';
-import { EntityListPage, EntityDetailPage, useEntityConfig } from '@packages/entity-engine-ui';
+import { EntityListPage, EntityDetailPage, EntityCreatePage, EntityEditPage, useEntityConfig } from '@packages/entity-engine-ui';
 import { AuditTimeline } from '@packages/audit-ui';
 import {
   PipelineProgressBar,
@@ -218,10 +218,24 @@ export function AppRouter() {
           <Route path="/tenants/:id" element={<TenantDetailPage />} />
 
           {/* Platform routes */}
-          <Route
-            path="/users"
-            element={<Suspense fallback={<PageSkeleton />}><UsersListPage /></Suspense>}
-          />
+          <Route path="/users">
+            <Route
+              index
+              element={<Suspense fallback={<PageSkeleton />}><UsersListPage /></Suspense>}
+            />
+            <Route
+              path="new"
+              element={<Suspense fallback={<PageSkeleton />}><EntityCreatePage entityType="users" /></Suspense>}
+            />
+            <Route
+              path=":id"
+              element={<Suspense fallback={<PageSkeleton />}><AppEntityDetailPage entityType="users" /></Suspense>}
+            />
+            <Route
+              path=":id/edit"
+              element={<Suspense fallback={<PageSkeleton />}><EntityEditPage entityType="users" /></Suspense>}
+            />
+          </Route>
           <Route
             path="/roles"
             element={<Suspense fallback={<PageSkeleton />}><RolesListPage /></Suspense>}

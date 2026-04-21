@@ -14,6 +14,9 @@ fieldTypeRegistry.registerPlugin(workflowFieldTypesPlugin);
 
 // Register all field type UI definitions
 import '@packages/eav-attributes-ui/field-types/register-all';
+import { registerEntityRelationsFieldTypes } from '@packages/entity-relations-ui';
+
+registerEntityRelationsFieldTypes();
 
 import { App } from './app/App';
 import './globals.css';

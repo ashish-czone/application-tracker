@@ -14,6 +14,7 @@
     "@packages/auth-ui": "workspace:*",
     "@packages/eav-attributes-ui": "workspace:*",
     "@packages/entity-engine-ui": "workspace:*",
+    "@packages/entity-relations-ui": "workspace:*",
     "@packages/platform-ui": "workspace:*",
     "@packages/rbac-ui": "workspace:*",
     "@packages/settings-ui": "workspace:*",
