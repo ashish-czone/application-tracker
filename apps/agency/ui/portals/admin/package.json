@@ -20,6 +20,7 @@
     "@packages/entity-layout-ui": "workspace:*",
     "@packages/entity-relations-ui": "workspace:*",
     "@packages/notification-channels-ui": "workspace:*",
+    "@packages/menus-ui-admin": "workspace:*",
     "@packages/pages-ui-admin": "workspace:*",
     "@packages/pages-ui-frontend": "workspace:*",
     "@packages/platform-ui": "workspace:*",

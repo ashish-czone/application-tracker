@@ -1,0 +1,160 @@
+import { useEffect, useState } from 'react';
+import {
+  Button,
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  FormSelect,
+  Input,
+  Label,
+} from '@packages/ui';
+import { usePagesForPicker } from './hooks';
+import type { LinkType, MenuItemRecord, Target } from './types';
+
+export interface MenuItemDialogValue {
+  label: string;
+  linkType: LinkType;
+  url: string | null;
+  pageId: string | null;
+  target: Target;
+}
+
+interface MenuItemDialogProps {
+  open: boolean;
+  mode: 'create' | 'edit';
+  initial?: Partial<MenuItemRecord>;
+  onCancel: () => void;
+  onSubmit: (value: MenuItemDialogValue) => void;
+  submitting?: boolean;
+}
+
+const LINK_TYPE_OPTIONS = [
+  { value: 'url', label: 'Custom URL' },
+  { value: 'page', label: 'Page' },
+];
+
+const TARGET_OPTIONS = [
+  { value: '_self', label: 'Same tab' },
+  { value: '_blank', label: 'New tab' },
+];
+
+export function MenuItemDialog({
+  open,
+  mode,
+  initial,
+  onCancel,
+  onSubmit,
+  submitting,
+}: MenuItemDialogProps) {
+  const [label, setLabel] = useState('');
+  const [linkType, setLinkType] = useState<LinkType>('url');
+  const [url, setUrl] = useState('');
+  const [pageId, setPageId] = useState<string | null>(null);
+  const [target, setTarget] = useState<Target>('_self');
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    setLabel(initial?.label ?? '');
+    setLinkType((initial?.linkType as LinkType | undefined) ?? 'url');
+    setUrl(initial?.url ?? '');
+    setPageId(initial?.pageId ?? null);
+    setTarget((initial?.target as Target | undefined) ?? '_self');
+    setError(null);
+  }, [open, initial]);
+
+  const pagesQuery = usePagesForPicker();
+  const pageOptions = (pagesQuery.data?.data ?? []).map((p) => ({
+    value: p.id,
+    label: `${p.title} (${p.slug})`,
+  }));
+
+  const handleSubmit = () => {
+    if (!label.trim()) {
+      setError('Label is required');
+      return;
+    }
+    if (linkType === 'url' && !url.trim()) {
+      setError('URL is required for a custom link');
+      return;
+    }
+    if (linkType === 'page' && !pageId) {
+      setError('Pick a page');
+      return;
+    }
+    onSubmit({
+      label: label.trim(),
+      linkType,
+      url: linkType === 'url' ? url.trim() : null,
+      pageId: linkType === 'page' ? pageId : null,
+      target,
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(next) => { if (!next) onCancel(); }}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{mode === 'create' ? 'Add menu item' : 'Edit menu item'}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="menu-item-label">Label</Label>
+            <Input
+              id="menu-item-label"
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              placeholder="e.g. About"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Link type</Label>
+            <FormSelect
+              value={linkType}
+              onChange={(v) => setLinkType((v as LinkType) || 'url')}
+              options={LINK_TYPE_OPTIONS}
+            />
+          </div>
+          {linkType === 'url' ? (
+            <div className="space-y-1.5">
+              <Label htmlFor="menu-item-url">URL</Label>
+              <Input
+                id="menu-item-url"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                placeholder="https://…"
+              />
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              <Label>Page</Label>
+              <FormSelect
+                value={pageId ?? ''}
+                onChange={(v) => setPageId(v ? String(v) : null)}
+                options={pageOptions}
+                placeholder={pagesQuery.isLoading ? 'Loading pages…' : 'Pick a page'}
+              />
+            </div>
+          )}
+          <div className="space-y-1.5">
+            <Label>Opens in</Label>
+            <FormSelect
+              value={target}
+              onChange={(v) => setTarget((v as Target) || '_self')}
+              options={TARGET_OPTIONS}
+            />
+          </div>
+          {error && <p className="text-sm text-destructive">{error}</p>}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onCancel} disabled={submitting}>Cancel</Button>
+          <Button onClick={handleSubmit} disabled={submitting}>
+            {submitting ? 'Saving…' : mode === 'create' ? 'Add item' : 'Save'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
