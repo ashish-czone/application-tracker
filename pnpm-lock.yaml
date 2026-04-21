@@ -158,9 +158,6 @@ importers:
       '@packages/notifications':
         specifier: workspace:*
         version: link:../../packages/platform/notifications/api
-      '@packages/org-units':
-        specifier: workspace:*
-        version: link:../../packages/addons/org-units/api
       '@packages/pages-api':
         specifier: workspace:*
         version: link:../../packages/addons/pages/api
