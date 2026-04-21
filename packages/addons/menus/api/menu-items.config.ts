@@ -91,7 +91,6 @@ export const menuItemConfig = defineEntity({
       isLabel: true,
       listVisible: true,
       listOrder: 2,
-      quickCreate: true,
     },
     linkType: {
       type: 'picklist',

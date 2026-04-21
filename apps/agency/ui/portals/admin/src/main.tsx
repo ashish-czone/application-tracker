@@ -22,17 +22,11 @@ import { PageEditorPage } from '@packages/pages-ui-admin';
 import { MenuEditorPage } from '@packages/menus-ui-admin';
 import { AuditTimeline } from '@packages/audit-ui';
 import { Button, Toaster } from '@packages/ui';
-import { FileText, Menu as MenuIcon, Pencil } from 'lucide-react';
-import type { MenuItem } from '@packages/domains';
+import { Pencil } from 'lucide-react';
 import { api } from './lib/api';
 import './globals.css';
 
 registerStarterBlocks();
-
-const contentMenu: MenuItem[] = [
-  { path: '/pages', label: 'Pages', icon: FileText, permission: 'pages.read' },
-  { path: '/menus', label: 'Menus', icon: MenuIcon, permission: 'menus.read' },
-];
 
 const contentRoutes = [
   { path: '/pages/:id/edit', element: <PageEditorPage /> },
@@ -43,18 +37,19 @@ const detailTabs = [
   { key: 'audit-trail', label: 'Audit Trail', order: 1000, component: AuditTimeline },
 ];
 
-function OpenPageEditorButton({ entityId }: { entityId: string }) {
+function OpenEditorButton({ to, label }: { to: string; label: string }) {
   const navigate = useNavigate();
   return (
-    <Button size="sm" onClick={() => navigate(`/pages/${entityId}/edit`)}>
+    <Button size="sm" onClick={() => navigate(to)}>
       <Pencil className="h-4 w-4 mr-1" />
-      Open Editor
+      {label}
     </Button>
   );
 }
 
 const detailHeaderActions = {
-  pages: (entityId: string) => <OpenPageEditorButton entityId={entityId} />,
+  pages: (entityId: string) => <OpenEditorButton to={`/pages/${entityId}/edit`} label="Open Editor" />,
+  menus: (entityId: string) => <OpenEditorButton to={`/menus/${entityId}/edit`} label="Edit Menu" />,
 };
 
 createRoot(document.getElementById('root')!).render(
@@ -63,7 +58,6 @@ createRoot(document.getElementById('root')!).render(
       domains={[]}
       apiFn={api}
       brandLabel="Agency Admin"
-      extraMenuItems={contentMenu}
       extraRoutes={contentRoutes}
       extraDetailTabs={detailTabs}
       extraDetailHeaderActions={detailHeaderActions}
