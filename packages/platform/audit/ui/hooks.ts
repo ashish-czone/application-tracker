@@ -14,7 +14,7 @@ export function useAuditLogs(params: ListAuditLogsParams) {
   return useQuery({
     queryKey: ['audit-logs', params],
     queryFn: () => api.listAuditLogs(params),
-    enabled: !!params.entityType && !!params.entityId,
+    enabled: Boolean((params.entityType && params.entityId) || params.actorId),
   });
 }
 
@@ -26,4 +26,8 @@ export function useEntityActivity(entityType: string, entityId: string, page = 1
     page,
     limit: 25,
   });
+}
+
+export function useActorActivity(actorId: string, page = 1) {
+  return useAuditLogs({ actorId, page, limit: 25 });
 }
