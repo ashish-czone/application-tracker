@@ -1,50 +1,76 @@
 import { Module, type OnModuleInit, Optional, Inject } from '@nestjs/common';
+import { EntityEngineModule } from '@packages/entity-engine';
 import { RbacService, UserRolesRelationHandler } from '@packages/rbac';
 import { CredentialsRelationHandler } from '@packages/auth';
-import { EventRegistryService } from '@packages/events';
-import { DatabaseService, users, isNull } from '@packages/database';
+import { users, isNull } from '@packages/database';
 import { ContactResolverRegistry } from '@packages/notifications';
-import { AuditRegistryService } from '@packages/audit';
-import {
-  LookupResolverService,
-  EntityRegistryService,
-  FieldDefinitionService,
-} from '@packages/entity-engine';
+import { LookupResolverService } from '@packages/entity-engine';
 import { UsersController } from './controllers/users.controller';
 import { UsersService } from './services/users.service';
 import { createUsersEntityConfig } from './users.config';
-import { USERS_PERMISSIONS } from './permissions';
-import {
-  USERS_USER_CREATED,
-  USERS_USER_UPDATED,
-  USERS_USER_DELETED,
-} from './events/types';
 
 /** Token for optional UniqueCheckService injection from app-level SharedModule */
 export const UNIQUE_CHECK_SERVICE = 'UNIQUE_CHECK_SERVICE';
 
+/**
+ * Module-level entity config. Built once at module-definition time with
+ * placeholder handlers + reader so `EntityEngineModule.forEntity()` receives
+ * a stable reference. The handlers and the rolesReader are injected into
+ * the config at `onModuleInit` — they live on singletons from `@packages/auth`
+ * and `@packages/rbac` that are only available after DI has run.
+ *
+ * The engine reads handlers and hooks at request time (not at bootstrap), so
+ * the late-binding is safe: every entity request fires after onModuleInit.
+ */
+const USERS_CONFIG = createUsersEntityConfig({
+  credentialsHandler: {} as any,
+  rolesHandler: {} as any,
+});
+
 @Module({
+  imports: [EntityEngineModule.forEntity(USERS_CONFIG)],
   controllers: [UsersController],
   providers: [UsersService],
   exports: [UsersService],
 })
 export class UsersModule implements OnModuleInit {
   constructor(
-    private readonly eventRegistry: EventRegistryService,
     private readonly rbacService: RbacService,
     private readonly contactResolverRegistry: ContactResolverRegistry,
     private readonly usersService: UsersService,
-    private readonly auditRegistry: AuditRegistryService,
     private readonly lookupResolver: LookupResolverService,
-    private readonly entityRegistry: EntityRegistryService,
-    private readonly fieldDefService: FieldDefinitionService,
     private readonly credentialsHandler: CredentialsRelationHandler,
     private readonly rolesHandler: UserRolesRelationHandler,
-    @Optional() @Inject('UniqueCheckService') private readonly uniqueCheckService?: any,
+    @Optional() @Inject(UNIQUE_CHECK_SERVICE) private readonly uniqueCheckService?: any,
   ) {}
 
   onModuleInit() {
-    // Register contact resolvers for notification channels
+    // Late-bind the runtime-injected dependencies into the entity config. The
+    // config object was created at module-definition time with placeholders;
+    // the engine reads these at request time, so mutation here is visible to
+    // every subsequent CRUD call.
+    const credsRel = USERS_CONFIG.relationships!.find((r) => r.name === 'credentials')!;
+    credsRel.handler = this.credentialsHandler;
+    const rolesRel = USERS_CONFIG.relationships!.find((r) => r.name === 'roles')!;
+    rolesRel.handler = this.rolesHandler;
+
+    const rbac = this.rbacService;
+    USERS_CONFIG.hooks = {
+      ...USERS_CONFIG.hooks,
+      afterList: async (rows) => {
+        if (rows.length === 0) return rows;
+        const ids = rows.map((r) => r.id as string);
+        const byUser = await rbac.getRolesByUserIds(ids);
+        return rows.map((r) => ({ ...r, roles: byUser[r.id as string] ?? [] }));
+      },
+      afterFindOne: async (row) => {
+        const id = row.id as string;
+        const byUser = await rbac.getRolesByUserIds([id]);
+        return { ...row, roles: byUser[id] ?? [] };
+      },
+    };
+
+    // Contact resolvers for notification channels — not covered by entity-engine
     this.contactResolverRegistry.register('email', (userId) => this.usersService.getEmail(userId));
     this.contactResolverRegistry.register('whatsapp', (userId) => this.usersService.getPhone(userId));
 
@@ -58,76 +84,20 @@ export class UsersModule implements OnModuleInit {
       searchFields: ['firstName', 'lastName', 'email'],
     });
 
-    // Register unique fields if UniqueCheckService is available (provided by app SharedModule)
+    // Unique-field registration for the app-level unique check (if provided)
     if (this.uniqueCheckService) {
       this.uniqueCheckService.register('users', {
         table: users,
         idColumn: users.id,
-        readPermission: USERS_PERMISSIONS.READ,
+        readPermission: 'users.read',
         fields: {
           email: { column: users.email, extraCondition: isNull(users.deletedAt) },
         },
       });
     }
 
-    // Register permissions
-    this.rbacService.registerPermissions('users', [
-      { action: 'create', description: 'Create users' },
-      { action: 'read', description: 'View users' },
-      { action: 'update', description: 'Update users' },
-      { action: 'delete', description: 'Delete users' },
-    ]);
-
-    // Register auditable events
-    this.auditRegistry.register('users', {
-      events: [USERS_USER_CREATED, USERS_USER_UPDATED, USERS_USER_DELETED],
-      sensitiveFields: ['passwordHash', 'token'],
-    });
-
-    // Register the dynamic entity config. Does NOT mount CRUD routes — the
-    // legacy UsersController remains the traffic handler. What this DOES give
-    // us: the registry entry, in-memory field cache, and the layout API
-    // (GET /layouts/users) that Task 9's frontend consumes. Task 10 will
-    // decommission the legacy controller and promote this config to a full
-    // `EntityEngineModule.forEntity()` registration.
-    const usersConfig = createUsersEntityConfig({
-      credentialsHandler: this.credentialsHandler,
-      rolesHandler: this.rolesHandler,
-    });
-    this.entityRegistry.register(usersConfig);
-    this.fieldDefService.populateFromRegistry(usersConfig);
-
-    // Register events
-    this.eventRegistry.register({
-      eventName: USERS_USER_CREATED,
-      group: 'users',
-      description: 'Fired when a new user is created',
-      payloadSchema: {
-        email: { type: 'string', label: 'Email' },
-        firstName: { type: 'string', label: 'First Name' },
-        lastName: { type: 'string', label: 'Last Name' },
-        userType: { type: 'string', label: 'User Type' },
-      },
-    });
-
-    this.eventRegistry.register({
-      eventName: USERS_USER_UPDATED,
-      group: 'users',
-      description: 'Fired when a user is updated',
-      payloadSchema: {
-        changes: { type: 'array', label: 'Changed Fields' },
-      },
-    });
-
-    this.eventRegistry.register({
-      eventName: USERS_USER_DELETED,
-      group: 'users',
-      description: 'Fired when a user is soft-deleted',
-      payloadSchema: {
-        email: { type: 'string', label: 'Email' },
-        firstName: { type: 'string', label: 'First Name' },
-        lastName: { type: 'string', label: 'Last Name' },
-      },
-    });
+    // Permissions, audit event registration, and domain event registration
+    // are all handled by EntityEngineModule.forEntity() during
+    // onApplicationBootstrap. No manual registration needed here.
   }
 }
