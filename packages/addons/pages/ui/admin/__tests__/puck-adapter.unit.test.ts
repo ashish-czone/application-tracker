@@ -120,6 +120,24 @@ describe('buildPuckConfig', () => {
     ]);
     expect(Object.keys(config.components).sort()).toEqual(['hero', 'testimonials']);
   });
+
+  it('injects a `dataSource` custom field on blocks declaring supports', () => {
+    const config = buildPuckConfig(
+      [
+        stubBlock('hero'),
+        stubBlock('testimonials', { supports: ['testimonials'] }),
+      ],
+      { availableEntities: ['testimonials'] },
+    );
+    expect(config.components.hero.fields.dataSource).toBeUndefined();
+    expect(config.components.testimonials.fields.dataSource?.type).toBe('custom');
+    expect(typeof config.components.testimonials.fields.dataSource?.render).toBe('function');
+  });
+
+  it('omits the dataSource custom field on blocks with no supports', () => {
+    const config = buildPuckConfig([stubBlock('static-only')]);
+    expect(config.components['static-only'].fields.dataSource).toBeUndefined();
+  });
 });
 
 describe('filterBlocksBySupports', () => {
@@ -179,5 +197,47 @@ describe('section <-> puck data serialization', () => {
     };
     const sections = puckDataToSections(data);
     expect(sections[0].id).toBe('tmp-0');
+  });
+
+  it('round-trips dataSource on entity-query sections without leaking it into customFields', () => {
+    const input = [
+      {
+        id: 's1',
+        order: 0,
+        blockKind: 'testimonials',
+        variant: null,
+        customFields: { subheading: 'What clients say' },
+        dataSource: {
+          kind: 'entity-query' as const,
+          entity: 'testimonials',
+          sort: '-displayOrder',
+          limit: 6,
+        },
+      },
+    ];
+    const data = sectionsToPuckData(input);
+    expect(data.content[0].props.dataSource).toEqual(input[0].dataSource);
+    const roundTrip = puckDataToSections(data);
+    expect(roundTrip[0].dataSource).toEqual(input[0].dataSource);
+    expect(roundTrip[0].customFields).toEqual({ subheading: 'What clients say' });
+    expect(roundTrip[0].customFields).not.toHaveProperty('dataSource');
+  });
+
+  it('returns dataSource: null for sections without one', () => {
+    const data = sectionsToPuckData([
+      { id: 's0', order: 0, blockKind: 'hero', variant: null, customFields: { headline: 'Hi' } },
+    ]);
+    expect(data.content[0].props).not.toHaveProperty('dataSource');
+    expect(puckDataToSections(data)[0].dataSource).toBeNull();
+  });
+
+  it('drops dataSource with an unknown kind during deserialization', () => {
+    const data = {
+      content: [
+        { type: 'hero', props: { id: 's0', dataSource: { kind: 'something-else' } } },
+      ],
+      root: { props: {} },
+    };
+    expect(puckDataToSections(data)[0].dataSource).toBeNull();
   });
 });

@@ -8,6 +8,8 @@ export interface PageRecord {
   updatedAt: string;
 }
 
+import type { DataSource } from '@packages/blocks-contract';
+
 export interface SectionRecord {
   id: string;
   pageId: string;
@@ -15,7 +17,7 @@ export interface SectionRecord {
   blockKind: string;
   variant: string | null;
   title: string | null;
-  dataSource: unknown | null;
+  dataSource: DataSource | null;
   customFields: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
@@ -41,7 +43,7 @@ export interface CreateSectionInput {
   blockKind: string;
   variant?: string | null;
   title?: string | null;
-  dataSource?: unknown | null;
+  dataSource?: DataSource | null;
   customFields?: Record<string, unknown>;
 }
 

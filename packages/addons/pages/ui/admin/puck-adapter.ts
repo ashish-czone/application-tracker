@@ -4,6 +4,8 @@ import type {
   BlockFieldSpec,
   BlockFieldType,
 } from '@packages/blocks-ui';
+import type { DataSource } from '@packages/blocks-contract';
+import { DataSourcePicker } from './DataSourcePicker';
 
 /**
  * Minimal structural shape the adapter needs to serialize a section into Puck.
@@ -18,6 +20,8 @@ export interface PuckSectionInput {
   blockKind: string;
   variant: string | null;
   customFields: Record<string, unknown>;
+  /** Where the block pulls records from. `null` = static, no data fetch. */
+  dataSource?: DataSource | null;
 }
 
 /**
@@ -36,12 +40,18 @@ export interface PuckData {
   root: { props: Record<string, unknown> };
 }
 
+export interface PuckCustomFieldRender<Value = unknown> {
+  (props: { value: Value; onChange: (value: Value) => void }): ReactNode;
+}
+
 export interface PuckField {
-  type: 'text' | 'textarea' | 'number' | 'select' | 'radio';
+  type: 'text' | 'textarea' | 'number' | 'select' | 'radio' | 'custom';
   label?: string;
   options?: { label: string; value: string | number }[];
   min?: number;
   max?: number;
+  /** Set when `type === 'custom'`. Puck calls this with `{ value, onChange }`. */
+  render?: PuckCustomFieldRender<any>;
 }
 
 export interface PuckComponentConfig {
@@ -158,6 +168,9 @@ export function buildPuckConfig(
     const vField = variantField(block);
     if (vField) fields.variant = vField;
 
+    const dataSourceField = dataSourcePickerField(block, options.availableEntities);
+    if (dataSourceField) fields.dataSource = dataSourceField;
+
     const Component = block.component;
 
     components[block.kind] = {
@@ -165,7 +178,10 @@ export function buildPuckConfig(
       fields,
       defaultProps: block.defaultVariant ? { variant: block.defaultVariant } : undefined,
       render: (props) => {
-        const { variant, ...rest } = props as Record<string, unknown> & { variant?: string };
+        const { variant, dataSource: _ds, ...rest } = props as Record<string, unknown> & {
+          variant?: string;
+          dataSource?: DataSource | null;
+        };
         return createElement(Component, {
           fields: rest as any,
           variant: typeof variant === 'string' ? variant : null,
@@ -180,6 +196,37 @@ export function buildPuckConfig(
   return { components, categories };
 }
 
+/**
+ * Returns a Puck custom field rendering the DataSourcePicker, scoped to the
+ * intersection of `block.supports` and `availableEntities`. Returns null
+ * when the block doesn't declare `supports` (static-only blocks have nothing
+ * to pick from), so the field never appears for blocks like Hero.
+ */
+function dataSourcePickerField(
+  block: BlockDefinition,
+  availableEntities: string[] | undefined,
+): PuckField | null {
+  const supports = block.supports;
+  if (!supports || supports.length === 0) return null;
+
+  const allowed = availableEntities
+    ? supports.filter((s) => availableEntities.includes(s))
+    : supports;
+
+  const entities = allowed.map((slug) => ({ slug }));
+
+  return {
+    type: 'custom',
+    label: 'Data',
+    render: ({ value, onChange }) =>
+      createElement(DataSourcePicker, {
+        value: (value ?? null) as DataSource | null,
+        onChange: onChange as (next: DataSource | null) => void,
+        availableEntities: entities,
+      }),
+  };
+}
+
 // ─── Serialization between Section rows and Puck Data ────────────────
 
 export function sectionsToPuckData(sections: PuckSectionInput[]): PuckData {
@@ -190,6 +237,7 @@ export function sectionsToPuckData(sections: PuckSectionInput[]): PuckData {
       props: {
         id: s.id,
         ...(s.variant ? { variant: s.variant } : {}),
+        ...(s.dataSource ? { dataSource: s.dataSource } : {}),
         ...s.customFields,
       },
     })),
@@ -203,22 +251,35 @@ export interface SectionDraft {
   blockKind: string;
   variant: string | null;
   customFields: Record<string, unknown>;
+  dataSource: DataSource | null;
 }
 
 /**
  * Project a Puck `Data` object back to the Section shape the API expects.
- * Splits `props` into the known discriminators (id, variant) and the
- * remaining `customFields` blob.
+ * Splits `props` into the known discriminators (id, variant, dataSource)
+ * and the remaining `customFields` blob.
  */
 export function puckDataToSections(data: PuckData): SectionDraft[] {
   return data.content.map((item, order) => {
-    const { id, variant, ...rest } = item.props;
+    const { id, variant, dataSource, ...rest } = item.props as Record<string, unknown> & {
+      id?: unknown;
+      variant?: unknown;
+      dataSource?: unknown;
+    };
     return {
       id: typeof id === 'string' ? id : `tmp-${order}`,
       order,
       blockKind: item.type,
       variant: typeof variant === 'string' ? variant : null,
       customFields: rest,
+      dataSource: isDataSource(dataSource) ? dataSource : null,
     };
   });
+}
+
+/** Narrow guard — used during deserialization to keep typed payloads safe. */
+function isDataSource(value: unknown): value is DataSource {
+  if (typeof value !== 'object' || value === null) return false;
+  const kind = (value as { kind?: unknown }).kind;
+  return kind === 'static' || kind === 'entity-query' || kind === 'entity-ids';
 }

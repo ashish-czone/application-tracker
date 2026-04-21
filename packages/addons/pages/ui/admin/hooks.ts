@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { usePlatformAPI } from '@packages/platform-ui';
+import type { DataSource } from '@packages/blocks-contract';
 import { createPagesApi } from './services';
 import type { CreatePageInput, UpdatePageInput } from './types';
 
@@ -83,7 +84,13 @@ export function useSavePageSections() {
     }: {
       pageId: string;
       existingIds: string[];
-      drafts: { order: number; blockKind: string; variant: string | null; customFields: Record<string, unknown> }[];
+      drafts: {
+        order: number;
+        blockKind: string;
+        variant: string | null;
+        customFields: Record<string, unknown>;
+        dataSource: DataSource | null;
+      }[];
     }) => {
       await Promise.all(existingIds.map((id) => api.deleteSection(id)));
       for (const d of drafts) {
@@ -93,6 +100,7 @@ export function useSavePageSections() {
           blockKind: d.blockKind,
           variant: d.variant ?? undefined,
           customFields: d.customFields,
+          dataSource: d.dataSource,
         });
       }
     },

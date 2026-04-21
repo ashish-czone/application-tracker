@@ -55,6 +55,7 @@ export function PageEditor({ pageId, onSaved, blocks, availableEntities }: PageE
       blockKind: d.blockKind,
       variant: d.variant,
       customFields: d.customFields,
+      dataSource: d.dataSource,
     }));
     const existingIds = sectionsResp.data.map((s) => s.id);
     await save.mutateAsync({ pageId, existingIds, drafts });
