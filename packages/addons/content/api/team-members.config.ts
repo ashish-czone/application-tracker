@@ -67,6 +67,7 @@ export const TEAM_MEMBERS_CONFIG = defineEntity({
   ui: {
     icon: 'Users',
     navGroup: 'Content',
+    groupRenderMode: 'tabs',
     navOrder: 30,
     createMode: 'modal',
   },

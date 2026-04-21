@@ -53,6 +53,7 @@ export const VALUE_PROPS_CONFIG = defineEntity({
   ui: {
     icon: 'Sparkles',
     navGroup: 'Content',
+    groupRenderMode: 'tabs',
     navOrder: 60,
     createMode: 'modal',
   },
