@@ -6,6 +6,5 @@ import { SettingsPage } from '@packages/settings-ui';
 import { UsersListPage } from '@packages/users-ui';
 import { OrgPositionsPage } from '@packages/org-units-ui';
 import { OrgUnitsPage } from '@packages/org-units-ui';
-import { PageEditorPage } from '@packages/pages-ui-admin';
 
-export { TagGroupsListPage, CategoryGroupsListPage, RolesListPage, AutomationsPage, RuleBuilderPage, WorkflowsListPage, WorkflowEditorPage, SettingsPage, UsersListPage, OrgPositionsPage, OrgUnitsPage, PageEditorPage };
+export { TagGroupsListPage, CategoryGroupsListPage, RolesListPage, AutomationsPage, RuleBuilderPage, WorkflowsListPage, WorkflowEditorPage, SettingsPage, UsersListPage, OrgPositionsPage, OrgUnitsPage };

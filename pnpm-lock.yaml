@@ -265,6 +265,115 @@ importers:
         specifier: ^3.0.0
         version: 3.0.0
 
+  apps/agency/ui/portals/admin:
+    dependencies:
+      '@hookform/resolvers':
+        specifier: ^5.0.0
+        version: 5.2.2(react-hook-form@7.71.2(react@19.2.4))
+      '@packages/app-shell-ui':
+        specifier: workspace:*
+        version: link:../../../../../packages/platform/app-shell/ui
+      '@packages/audit-ui':
+        specifier: workspace:*
+        version: link:../../../../../packages/platform/audit/ui
+      '@packages/auth-ui':
+        specifier: workspace:*
+        version: link:../../../../../packages/platform/auth/ui
+      '@packages/automations-ui':
+        specifier: workspace:*
+        version: link:../../../../../packages/platform/automations/ui
+      '@packages/debug-profiler-ui':
+        specifier: workspace:*
+        version: link:../../../../../packages/core/debug-profiler/ui
+      '@packages/eav-attributes-ui':
+        specifier: workspace:*
+        version: link:../../../../../packages/platform/eav-attributes-ui
+      '@packages/entity-engine-ui':
+        specifier: workspace:*
+        version: link:../../../../../packages/platform/entity-engine/ui
+      '@packages/entity-layout-ui':
+        specifier: workspace:*
+        version: link:../../../../../packages/platform/entity-layout/ui
+      '@packages/entity-relations-ui':
+        specifier: workspace:*
+        version: link:../../../../../packages/addons/entity-relations/ui
+      '@packages/notification-channels-ui':
+        specifier: workspace:*
+        version: link:../../../../../packages/platform/notification-channels/ui
+      '@packages/pages-ui-admin':
+        specifier: workspace:*
+        version: link:../../../../../packages/addons/pages/ui/admin
+      '@packages/pages-ui-frontend':
+        specifier: workspace:*
+        version: link:../../../../../packages/addons/pages/ui/frontend
+      '@packages/platform-ui':
+        specifier: workspace:*
+        version: link:../../../../../packages/platform/platform-ui
+      '@packages/queue-ui':
+        specifier: workspace:*
+        version: link:../../../../../packages/platform/queue/ui
+      '@packages/rbac-ui':
+        specifier: workspace:*
+        version: link:../../../../../packages/platform/rbac/ui
+      '@packages/settings-ui':
+        specifier: workspace:*
+        version: link:../../../../../packages/platform/settings/ui
+      '@packages/taxonomy-ui':
+        specifier: workspace:*
+        version: link:../../../../../packages/platform/taxonomy/ui
+      '@packages/theming-ui':
+        specifier: workspace:*
+        version: link:../../../../../packages/platform/theming-ui
+      '@packages/ui':
+        specifier: workspace:*
+        version: link:../../../../../packages/core/ui
+      '@packages/users-ui':
+        specifier: workspace:*
+        version: link:../../../../../packages/platform/users/ui
+      '@packages/workflows-ui':
+        specifier: workspace:*
+        version: link:../../../../../packages/platform/workflows/ui
+      '@tanstack/react-query':
+        specifier: ^5.60.0
+        version: 5.90.21(react@19.2.4)
+      lucide-react:
+        specifier: ^0.500.0
+        version: 0.500.0(react@19.2.4)
+      react:
+        specifier: ^19.1.0
+        version: 19.2.4
+      react-dom:
+        specifier: ^19.1.0
+        version: 19.2.4(react@19.2.4)
+      react-router:
+        specifier: ^7.6.1
+        version: 7.13.1(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+    devDependencies:
+      '@types/react':
+        specifier: ^19.2.14
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: ^19.2.3
+        version: 19.2.3(@types/react@19.2.14)
+      '@vitejs/plugin-react':
+        specifier: ^4.6.0
+        version: 4.7.0(vite@6.4.1(@types/node@22.19.15)(jiti@1.21.7)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0))
+      autoprefixer:
+        specifier: ^10.4.20
+        version: 10.4.27(postcss@8.5.8)
+      postcss:
+        specifier: ^8.5.0
+        version: 8.5.8
+      tailwindcss:
+        specifier: ^3.4.0
+        version: 3.4.19(tsx@4.21.0)
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vite:
+        specifier: ^6.4.0
+        version: 6.4.1(@types/node@22.19.15)(jiti@1.21.7)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0)
+
   apps/agency/ui/portals/customer:
     dependencies:
       '@packages/pages-ui-frontend':
@@ -774,7 +883,7 @@ importers:
         version: 19.2.3(@types/react@19.2.14)
       '@vitejs/plugin-react':
         specifier: ^4.6.0
-        version: 4.7.0(vite@6.4.1(@types/node@22.19.15)(jiti@1.21.7)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0))
+        version: 4.7.0(vite@6.4.1(@types/node@22.19.15)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0))
       autoprefixer:
         specifier: ^10.4.20
         version: 10.4.27(postcss@8.5.8)
@@ -789,7 +898,7 @@ importers:
         version: 5.9.3
       vite:
         specifier: ^6.4.0
-        version: 6.4.1(@types/node@22.19.15)(jiti@1.21.7)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0)
+        version: 6.4.1(@types/node@22.19.15)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0)
 
   apps/control-plane:
     dependencies:
@@ -1439,12 +1548,6 @@ importers:
       '@packages/org-units-ui':
         specifier: workspace:*
         version: link:../../packages/addons/org-units/ui
-      '@packages/pages-ui-admin':
-        specifier: workspace:*
-        version: link:../../packages/addons/pages/ui/admin
-      '@packages/pages-ui-frontend':
-        specifier: workspace:*
-        version: link:../../packages/addons/pages/ui/frontend
       '@packages/platform-ui':
         specifier: workspace:*
         version: link:../../packages/platform/platform-ui
