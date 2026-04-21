@@ -55,6 +55,7 @@ export const STATS_CONFIG = defineEntity({
   ui: {
     icon: 'BarChart3',
     navGroup: 'Content',
+    groupRenderMode: 'tabs',
     navOrder: 70,
     createMode: 'modal',
   },

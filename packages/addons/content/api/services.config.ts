@@ -61,6 +61,7 @@ export const SERVICES_CONFIG = defineEntity({
   ui: {
     icon: 'Briefcase',
     navGroup: 'Content',
+    groupRenderMode: 'tabs',
     navOrder: 40,
     createMode: 'modal',
   },

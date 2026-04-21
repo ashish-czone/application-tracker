@@ -6,6 +6,7 @@ export { buildColumnDefs, buildFilterConfigs } from './helpers/buildColumnDefs';
 export { useEntityLayout } from './helpers/useEntityLayout';
 export { useListLayout } from './helpers/useListLayout';
 export { useCategoryGroupUsage } from './helpers/useCategoryGroupUsage';
+export { groupSlug } from './helpers/groupSlug';
 
 export { EntityConditionBuilder, FIELD_TYPE_TO_CONDITION_TYPE } from './components/EntityConditionBuilder';
 export { ConditionValueField } from './components/ConditionValueField';
@@ -14,6 +15,7 @@ export { EntityPickerPanel } from './components/EntityPickerPanel';
 export { DetailPageSidebar } from './components/DetailPageSidebar';
 export { DetailPageTabs } from './components/DetailPageTabs';
 export { EntityListPage } from './pages/EntityListPage';
+export { EntityGroupPage } from './pages/EntityGroupPage';
 export { EntityCreatePage } from './pages/EntityCreatePage';
 export { EntityDetailPage } from './pages/EntityDetailPage';
 export { EntityQuickCreateForm } from './pages/EntityQuickCreateForm';

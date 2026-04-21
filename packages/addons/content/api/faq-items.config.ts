@@ -57,6 +57,7 @@ export const FAQ_ITEMS_CONFIG = defineEntity({
   ui: {
     icon: 'HelpCircle',
     navGroup: 'Content',
+    groupRenderMode: 'tabs',
     navOrder: 20,
     createMode: 'modal',
   },
