@@ -1046,7 +1046,7 @@ importers:
     devDependencies:
       '@nestjs/cli':
         specifier: ^11.0.0
-        version: 11.0.16(@swc/core@1.15.18)(@types/node@22.19.15)(esbuild@0.25.12)
+        version: 11.0.16(@swc/core@1.15.18)(@types/node@22.19.15)
       '@nestjs/schematics':
         specifier: ^11.0.0
         version: 11.0.9(chokidar@4.0.3)(typescript@5.9.3)
@@ -1070,7 +1070,7 @@ importers:
         version: 8.20.0
       ts-loader:
         specifier: ^9.5.1
-        version: 9.5.4(typescript@5.9.3)(webpack@5.105.4(@swc/core@1.15.18)(esbuild@0.25.12))
+        version: 9.5.4(typescript@5.9.3)(webpack@5.105.4(@swc/core@1.15.18))
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -1079,7 +1079,7 @@ importers:
         version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0)
       webpack:
         specifier: ^5.97.0
-        version: 5.105.4(@swc/core@1.15.18)(esbuild@0.25.12)
+        version: 5.105.4(@swc/core@1.15.18)
       webpack-node-externals:
         specifier: ^3.0.0
         version: 3.0.0
@@ -1763,9 +1763,21 @@ importers:
       '@packages/logger':
         specifier: workspace:*
         version: link:../../../packages/core/logger
+      '@packages/org-units':
+        specifier: workspace:*
+        version: link:../../../packages/addons/org-units/api
+      '@packages/rbac':
+        specifier: workspace:*
+        version: link:../../../packages/platform/rbac/api
       '@packages/tasks':
         specifier: workspace:*
         version: link:../../../packages/addons/tasks/api
+      '@packages/users':
+        specifier: workspace:*
+        version: link:../../../packages/platform/users/api
+      '@packages/workflows':
+        specifier: workspace:*
+        version: link:../../../packages/platform/workflows/api
     devDependencies:
       drizzle-kit:
         specifier: ^0.31.9

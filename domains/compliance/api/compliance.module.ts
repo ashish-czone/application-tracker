@@ -3,7 +3,10 @@ import { EntityEngineModule } from '@packages/entity-engine';
 import { ActionRegistry } from '@packages/automation-contracts';
 import { RbacService } from '@packages/rbac';
 import { TASKS_CONFIG, TasksModule } from '@packages/tasks';
+import { USERS_POSITIONS_READER } from '@packages/users';
 import { WorkflowGuardRegistry } from '@packages/workflows';
+
+import { ComplianceUsersPositionsReader } from './users/compliance-users-positions.reader';
 
 import { LAWS_CONFIG } from './laws/laws.config';
 import { CLIENTS_CONFIG } from './clients/clients.config';
@@ -44,6 +47,11 @@ import { COMPLIANCE_PERMISSION_REGISTRATIONS } from './permissions';
     ComplianceRuleService,
     ComplianceTasksLookupService,
     GenerateComplianceTasksAction,
+    ComplianceUsersPositionsReader,
+    {
+      provide: USERS_POSITIONS_READER,
+      useExisting: ComplianceUsersPositionsReader,
+    },
   ],
 })
 export class ComplianceDomainModule implements OnModuleInit {

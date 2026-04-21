@@ -499,4 +499,43 @@ describe('OrgUnitService', () => {
       expect(uniqueIds.size).toBe(result.length);
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // getPositionsByUserIds
+  // ---------------------------------------------------------------------------
+
+  describe('getPositionsByUserIds', () => {
+    it('returns empty map for empty input without querying', async () => {
+      const result = await service.getPositionsByUserIds([]);
+      expect(result).toEqual({});
+      expect(db.select).not.toHaveBeenCalled();
+    });
+
+    it('groups rows by userId into the expected position shape', async () => {
+      _chain._enqueue([
+        { userId: 'u1', unitId: 'ou-1', unitName: 'Tax', positionId: 'p1', positionName: 'Head' },
+        { userId: 'u1', unitId: 'ou-2', unitName: 'GST', positionId: null, positionName: null },
+        { userId: 'u2', unitId: 'ou-1', unitName: 'Tax', positionId: 'p2', positionName: 'Manager' },
+      ]);
+
+      const result = await service.getPositionsByUserIds(['u1', 'u2', 'u3']);
+
+      expect(result.u1).toEqual([
+        { unitId: 'ou-1', unitName: 'Tax', positionId: 'p1', positionName: 'Head' },
+        { unitId: 'ou-2', unitName: 'GST', positionId: null, positionName: null },
+      ]);
+      expect(result.u2).toEqual([
+        { unitId: 'ou-1', unitName: 'Tax', positionId: 'p2', positionName: 'Manager' },
+      ]);
+      expect(result.u3).toBeUndefined();
+    });
+
+    it('returns empty map when no memberships exist', async () => {
+      _chain._enqueue([]);
+
+      const result = await service.getPositionsByUserIds(['u1']);
+
+      expect(result).toEqual({});
+    });
+  });
 });
