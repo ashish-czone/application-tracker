@@ -2,7 +2,7 @@ import { useState, useMemo, type ReactNode } from 'react';
 import { format, isToday, isYesterday } from 'date-fns';
 import { Button, cn } from '@packages/ui';
 import { History, MessageSquare, Star, Paperclip, GitBranch, LayoutList } from 'lucide-react';
-import { useAuditLogs, useEntityActivity } from '../hooks';
+import { useAuditLogs, useEntityActivity, useActorActivity } from '../hooks';
 import type { AuditLogEntry, ActivityEventCategory } from '../types';
 
 type FilterKey = 'all' | ActivityEventCategory;
@@ -16,12 +16,22 @@ const FILTER_TABS: { key: FilterKey; label: string; icon: ReactNode }[] = [
   { key: 'changes', label: 'Changes', icon: <History className="h-3.5 w-3.5" /> },
 ];
 
-interface AuditTimelineProps {
+interface AuditTimelineEntityProps {
   entityType: string;
   entityId: string;
+  actorId?: never;
   /** 'audit' shows only direct entity changes; 'activity' includes related notes/evaluations/attachments */
   mode?: 'audit' | 'activity';
 }
+
+interface AuditTimelineActorProps {
+  actorId: string;
+  entityType?: never;
+  entityId?: never;
+  mode?: never;
+}
+
+type AuditTimelineProps = AuditTimelineEntityProps | AuditTimelineActorProps;
 
 // --- Event category detection ---
 
@@ -153,10 +163,12 @@ function TimelineEntry({
   entry,
   showLine,
   isActivityMode,
+  isActorMode,
 }: {
   entry: AuditLogEntry;
   showLine: boolean;
   isActivityMode: boolean;
+  isActorMode: boolean;
 }) {
   const occurredAt = new Date(entry.occurredAt);
   const time = format(occurredAt, 'h:mm a');
@@ -185,6 +197,11 @@ function TimelineEntry({
 
       {/* Description */}
       <div className="flex-1 min-w-0 pl-3 pb-4 pt-[2px]">
+        {isActorMode && (
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground/80 font-medium mb-0.5">
+            {entry.entityType}
+          </p>
+        )}
         {lines.map((line: string, i: number) => (
           <p
             key={i}
@@ -196,7 +213,7 @@ function TimelineEntry({
             {line}
           </p>
         ))}
-        {entry.actorName && (
+        {!isActorMode && entry.actorName && (
           <p className="text-xs text-muted-foreground mt-0.5">by {entry.actorName}</p>
         )}
       </div>
@@ -222,14 +239,24 @@ function DayHeader({ day, showLine }: { day: string; showLine: boolean }) {
 
 // --- Main component ---
 
-export function AuditTimeline({ entityType, entityId, mode = 'audit' }: AuditTimelineProps) {
+export function AuditTimeline(props: AuditTimelineProps) {
+  const isActorMode = 'actorId' in props;
+  const actorId = isActorMode ? (props as AuditTimelineActorProps).actorId : '';
+  const entityType = !isActorMode ? (props as AuditTimelineEntityProps).entityType : '';
+  const entityId = !isActorMode ? (props as AuditTimelineEntityProps).entityId : '';
+  const mode = !isActorMode ? ((props as AuditTimelineEntityProps).mode ?? 'audit') : 'audit';
   const isActivityMode = mode === 'activity';
   const [page, setPage] = useState(1);
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
 
   const auditQuery = useAuditLogs({ entityType, entityId, page, limit: 25 });
   const activityQuery = useEntityActivity(entityType, entityId, page);
-  const { data, isLoading, isError, refetch } = isActivityMode ? activityQuery : auditQuery;
+  const actorQuery = useActorActivity(actorId, page);
+  const { data, isLoading, isError, refetch } = isActorMode
+    ? actorQuery
+    : isActivityMode
+      ? activityQuery
+      : auditQuery;
 
   const allEntries = useMemo(() => data?.data ?? [], [data?.data]);
 
@@ -354,6 +381,7 @@ export function AuditTimeline({ entityType, entityId, mode = 'audit' }: AuditTim
               entry={entry}
               showLine={entry.id !== lastEntryId}
               isActivityMode={isActivityMode}
+              isActorMode={isActorMode}
             />
           ))}
         </div>
