@@ -6,6 +6,7 @@ import { fieldTypeUIRegistry, zodSchemas } from '@packages/field-types/ui';
 import type { FieldTypeUIDefinition, FieldRenderProps } from '@packages/field-types/ui';
 import { formatLabel, formatDate, formatDateTime, formatCurrency } from '@packages/common';
 import { FormInput } from '@packages/ui/components/form/FormInput';
+import { FormPasswordInput } from '@packages/ui/components/form/FormPasswordInput';
 import { FormSelect } from '@packages/ui/components/form/FormSelect';
 import { FormTextarea } from '@packages/ui/components/form/FormTextarea';
 import { FormCheckbox } from '@packages/ui/components/form/FormCheckbox';
@@ -41,6 +42,17 @@ function fieldLabel(props: FieldRenderProps): string {
 // ---------------------------------------------------------------------------
 
 function TextForm(props: FieldRenderProps) {
+  if (props.field.uiType === 'password') {
+    return (
+      <FormPasswordInput
+        name={props.field.fieldKey}
+        label={fieldLabel(props)}
+        autoComplete="new-password"
+        disabled={props.field.isReadonly}
+        showStrength
+      />
+    );
+  }
   return <FormInput name={props.field.fieldKey} label={fieldLabel(props)} disabled={props.field.isReadonly} />;
 }
 

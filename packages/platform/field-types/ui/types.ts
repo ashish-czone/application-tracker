@@ -10,6 +10,8 @@ export interface FieldRenderProps {
     fieldKey: string;
     label: string;
     fieldType: string;
+    /** Optional variant of the base fieldType (e.g. uiType='password' for a masked text input). */
+    uiType?: string | null;
     isRequired: boolean;
     isReadonly: boolean;
     maxLength?: number | null;
