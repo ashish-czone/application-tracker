@@ -3,6 +3,7 @@ import { Routes, Route } from 'react-router';
 import { useEntityEngine } from './EntityEngineProvider';
 import { EntityListPage } from './pages/EntityListPage';
 import { EntityCreatePage } from './pages/EntityCreatePage';
+import { EntityEditPage } from './pages/EntityEditPage';
 import { EntityDetailPage } from './pages/EntityDetailPage';
 
 interface EntityRouterProps {
@@ -65,6 +66,14 @@ export function EntityRouter({ extraRoutes, fallback }: EntityRouterProps) {
             element={
               <Suspense fallback={fallback ?? <DefaultFallback />}>
                 <EntityDetailPage entityType={entity.entityType} />
+              </Suspense>
+            }
+          />
+          <Route
+            path=":id/edit"
+            element={
+              <Suspense fallback={fallback ?? <DefaultFallback />}>
+                <EntityEditPage entityType={entity.entityType} />
               </Suspense>
             }
           />

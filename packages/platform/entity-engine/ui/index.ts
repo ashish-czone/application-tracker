@@ -15,6 +15,7 @@ export { DetailPageSidebar } from './components/DetailPageSidebar';
 export { DetailPageTabs } from './components/DetailPageTabs';
 export { EntityListPage } from './pages/EntityListPage';
 export { EntityCreatePage } from './pages/EntityCreatePage';
+export { EntityEditPage } from './pages/EntityEditPage';
 export { EntityDetailPage } from './pages/EntityDetailPage';
 export { EntityQuickCreateForm } from './pages/EntityQuickCreateForm';
 export { EntityRelatedList } from './pages/EntityRelatedList';
