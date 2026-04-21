@@ -9,6 +9,7 @@ import {
   useAddRoleMember,
   useRemoveRoleMember,
   type Role,
+  type RoleMember,
   type BooleanPermissions,
 } from '@packages/rbac-ui';
 import { PermissionGroup } from './PermissionGroup';
@@ -39,6 +40,7 @@ export function RoleDetailPanel({
   const [memberSearch, setMemberSearch] = useState('');
   const [addMemberOpen, setAddMemberOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [memberToRemove, setMemberToRemove] = useState<RoleMember | null>(null);
 
   const deleteMutation = useDeleteRole({
     onSuccess: () => {
@@ -121,8 +123,14 @@ export function RoleDetailPanel({
     addMemberMutation.mutate({ roleId: role.id, userId });
   };
 
-  const handleRemoveMember = (userId: string) => {
-    removeMemberMutation.mutate({ roleId: role.id, userId });
+  const handleConfirmRemoveMember = () => {
+    if (!memberToRemove) return;
+    removeMemberMutation.mutate(
+      { roleId: role.id, userId: memberToRemove.id },
+      {
+        onSuccess: () => setMemberToRemove(null),
+      },
+    );
   };
 
   const enabledCount = enabledPermissions.size;
@@ -319,7 +327,7 @@ export function RoleDetailPanel({
                   <MemberRow
                     key={member.id}
                     member={member}
-                    onRemove={() => handleRemoveMember(member.id)}
+                    onRemove={() => setMemberToRemove(member)}
                     isSystemRole={role.isSystem}
                     isRemoving={removeMemberMutation.isPending}
                   />
@@ -340,6 +348,24 @@ export function RoleDetailPanel({
         isPending={deleteMutation.isPending}
         pendingLabel="Deleting…"
         onConfirm={() => deleteMutation.mutate(role.id)}
+      />
+
+      <ConfirmDialog
+        open={memberToRemove !== null}
+        onOpenChange={(open) =>
+          !removeMemberMutation.isPending && !open && setMemberToRemove(null)
+        }
+        title="Remove member?"
+        description={
+          memberToRemove
+            ? `${formatMemberName(memberToRemove)} will lose the "${role.name}" role and any permissions it grants.`
+            : ''
+        }
+        confirmLabel="Remove member"
+        destructive
+        isPending={removeMemberMutation.isPending}
+        pendingLabel="Removing…"
+        onConfirm={handleConfirmRemoveMember}
       />
     </div>
   );
