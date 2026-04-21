@@ -34,4 +34,11 @@ describe('SECTIONS_CONFIG', () => {
     expect(titleMeta.fieldType).toBe('text');
     expect(titleMeta.isSystem ?? false).toBe(false);
   });
+
+  it('declares dataSource as a data_source field (system, not in generic forms)', () => {
+    const dsMeta = SECTIONS_CONFIG.fieldMeta.dataSource;
+    expect(dsMeta).toBeDefined();
+    expect(dsMeta.fieldType).toBe('data_source');
+    expect(dsMeta.isSystem).toBe(true);
+  });
 });

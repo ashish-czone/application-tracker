@@ -3054,6 +3054,9 @@ importers:
       '@packages/events':
         specifier: workspace:*
         version: link:../../../core/events
+      '@packages/field-types':
+        specifier: workspace:*
+        version: link:../../../platform/field-types
       '@packages/logger':
         specifier: workspace:*
         version: link:../../../core/logger
@@ -4294,6 +4297,10 @@ importers:
         version: 5.9.3
 
   packages/platform/blocks/contract:
+    dependencies:
+      '@packages/field-types':
+        specifier: workspace:*
+        version: link:../../field-types
     devDependencies:
       typescript:
         specifier: ^5.7.0
