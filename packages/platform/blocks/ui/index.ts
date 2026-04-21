@@ -20,5 +20,17 @@ export {
   ctaBlock,
 } from './blocks';
 
+export {
+  contentBlocks,
+  registerContentBlocks,
+  testimonialsGridBlock,
+  faqAccordionBlock,
+  teamGridBlock,
+  servicesGridBlock,
+  clientLogosRowBlock,
+  valuePropsGridBlock,
+  statsRowBlock,
+} from './blocks/content';
+
 // Re-export contract shapes consumers typically need alongside the UI bits.
 export type { DataSource, SectionData, MapperDefinition } from '@packages/blocks-contract';

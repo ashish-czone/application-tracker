@@ -26,5 +26,8 @@ export function agencyDemoSeedSources(): SeedSource[] {
     demo('@domains/agency-api/demo-content', () =>
       import('./seeds/demo-content').then((m) => m.seedDemoContent),
     ),
+    demo('@domains/agency-api/demo-page', () =>
+      import('./seeds/demo-page').then((m) => m.seedDemoPage),
+    ),
   ];
 }
