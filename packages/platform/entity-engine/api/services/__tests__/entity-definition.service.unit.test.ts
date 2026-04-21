@@ -95,6 +95,7 @@ describe('EntityDefinitionService', () => {
         entityType: 'unknown',
         layoutName: 'Standard',
         sections: [],
+        relationSections: [],
         quickCreateFields: [],
       });
     });

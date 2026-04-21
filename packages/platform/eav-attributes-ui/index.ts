@@ -15,6 +15,7 @@ export type {
   PicklistOption,
   LayoutSection,
   FullLayout,
+  FullLayoutRelationSection,
   CreateFieldInput,
   UpdateFieldInput,
   CreateSectionInput,
