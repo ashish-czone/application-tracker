@@ -1,9 +1,11 @@
 export {
   buildPuckConfig,
+  filterBlocksBySupports,
   sectionsToPuckData,
   puckDataToSections,
 } from './puck-adapter';
 export type {
+  BuildPuckConfigOptions,
   PuckConfig,
   PuckComponentConfig,
   PuckContentItem,

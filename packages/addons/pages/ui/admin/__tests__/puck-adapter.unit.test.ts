@@ -3,6 +3,7 @@ import { createElement } from 'react';
 import { defineBlock } from '@packages/blocks-ui';
 import {
   buildPuckConfig,
+  filterBlocksBySupports,
   sectionsToPuckData,
   puckDataToSections,
 } from '../puck-adapter';
@@ -98,6 +99,47 @@ describe('buildPuckConfig', () => {
   it('falls back to "Other" category when category is omitted', () => {
     const config = buildPuckConfig([stubBlock('uncat')]);
     expect(config.categories?.Other.components).toEqual(['uncat']);
+  });
+
+  it('hides blocks whose `supports` has no overlap with availableEntities', () => {
+    const config = buildPuckConfig(
+      [
+        stubBlock('hero'),
+        stubBlock('testimonials', { supports: ['testimonials'] }),
+        stubBlock('faq', { supports: ['faq-items'] }),
+      ],
+      { availableEntities: ['testimonials'] },
+    );
+    expect(Object.keys(config.components).sort()).toEqual(['hero', 'testimonials']);
+  });
+
+  it('shows every block when availableEntities is omitted', () => {
+    const config = buildPuckConfig([
+      stubBlock('hero'),
+      stubBlock('testimonials', { supports: ['testimonials'] }),
+    ]);
+    expect(Object.keys(config.components).sort()).toEqual(['hero', 'testimonials']);
+  });
+});
+
+describe('filterBlocksBySupports', () => {
+  it('passes through every block when availableEntities is undefined', () => {
+    const blocks = [stubBlock('a', { supports: ['x'] }), stubBlock('b')];
+    expect(filterBlocksBySupports(blocks, undefined)).toEqual(blocks);
+  });
+
+  it('keeps static-only blocks (empty supports) regardless of availableEntities', () => {
+    const blocks = [stubBlock('static-block')];
+    expect(filterBlocksBySupports(blocks, [])).toEqual(blocks);
+  });
+
+  it('drops blocks whose every supported entity is missing', () => {
+    const blocks = [
+      stubBlock('keep', { supports: ['testimonials', 'team'] }),
+      stubBlock('drop', { supports: ['unknown'] }),
+    ];
+    const filtered = filterBlocksBySupports(blocks, ['team']);
+    expect(filtered.map((b) => b.kind)).toEqual(['keep']);
   });
 });
 

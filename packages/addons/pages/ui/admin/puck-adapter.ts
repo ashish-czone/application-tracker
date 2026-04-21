@@ -99,17 +99,58 @@ function variantField(block: BlockDefinition): PuckField | null {
   };
 }
 
+export interface BuildPuckConfigOptions {
+  /**
+   * Entity slugs the surrounding app has registered. Blocks declaring a
+   * non-empty `supports` list are filtered to those whose declared entities
+   * intersect with this set — a block needing testimonials disappears when
+   * the testimonials entity isn't installed.
+   *
+   * Omit (or pass `undefined`) to skip filtering — every block is shown.
+   */
+  availableEntities?: string[];
+}
+
+/**
+ * Returns the blocks that should appear in the Puck picker for a given
+ * environment. Static-only blocks (empty `supports`) always pass. Blocks
+ * declaring `supports` only pass when at least one of their entities is in
+ * `availableEntities`. When `availableEntities` is omitted, no filtering
+ * happens — useful for tests, single-tenant apps, or when block visibility
+ * isn't gated on entity registration.
+ */
+export function filterBlocksBySupports(
+  blocks: BlockDefinition[],
+  availableEntities?: string[],
+): BlockDefinition[] {
+  if (!availableEntities) return blocks;
+  const available = new Set(availableEntities);
+  return blocks.filter((b) => {
+    const supports = b.supports;
+    if (!supports || supports.length === 0) return true;
+    return supports.some((s) => available.has(s));
+  });
+}
+
 /**
  * Build the Puck `Config` object from our registered blocks. Each block
  * becomes one Puck component keyed by `kind`; its render delegates to
  * the block's actual React component so the admin preview and the
  * public site share the exact same output.
+ *
+ * Pass `availableEntities` to filter content blocks whose `supports` has no
+ * overlap with what's installed.
  */
-export function buildPuckConfig(blocks: BlockDefinition[]): PuckConfig {
+export function buildPuckConfig(
+  blocks: BlockDefinition[],
+  options: BuildPuckConfigOptions = {},
+): PuckConfig {
   const components: Record<string, PuckComponentConfig> = {};
   const categories: Record<string, { title?: string; components: string[] }> = {};
 
-  for (const block of blocks) {
+  const eligible = filterBlocksBySupports(blocks, options.availableEntities);
+
+  for (const block of eligible) {
     const fields: Record<string, PuckField> = {};
     for (const [key, spec] of Object.entries(block.fields)) {
       fields[key] = toPuckField(spec);
