@@ -1,0 +1,26 @@
+{
+  "name": "@domains/agency-api",
+  "version": "0.0.1",
+  "private": true,
+  "main": "index.ts",
+  "scripts": {
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/core": "^11.0.0",
+    "@domains/agency-contract": "workspace:*",
+    "@packages/common": "workspace:*",
+    "@packages/database": "workspace:*",
+    "@packages/domains": "workspace:*",
+    "@packages/entity-engine": "workspace:*",
+    "@packages/events": "workspace:*",
+    "@packages/logger": "workspace:*",
+    "@packages/pages-api": "workspace:*",
+    "@packages/rbac": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}
