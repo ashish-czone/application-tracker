@@ -6,6 +6,8 @@ export const AUTH_PASSWORD_RESET_REQUESTED = 'auth.PasswordResetRequested' as co
 export const AUTH_PASSWORD_RESET_COMPLETED = 'auth.PasswordResetCompleted' as const;
 export const AUTH_PASSWORD_CHANGED = 'auth.PasswordChanged' as const;
 export const AUTH_ACCOUNT_LINKED = 'auth.AccountLinked' as const;
+export const AUTH_INVITATION_SENT = 'auth.InvitationSent' as const;
+export const AUTH_INVITATION_ACCEPTED = 'auth.InvitationAccepted' as const;
 
 // --- Payload types ---
 
@@ -36,6 +38,22 @@ export interface AccountLinkedPayload {
   [key: string]: unknown;
 }
 
+export interface InvitationSentPayload {
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  userType: string;
+  token: string;
+  expiresAt: string;
+  [key: string]: unknown;
+}
+
+export interface InvitationAcceptedPayload {
+  email: string;
+  userType: string;
+  [key: string]: unknown;
+}
+
 // --- Augment global EventPayloadMap for compile-time safety ---
 
 declare module '@packages/events' {
@@ -46,6 +64,8 @@ declare module '@packages/events' {
     [AUTH_PASSWORD_RESET_COMPLETED]: PasswordResetCompletedPayload;
     [AUTH_PASSWORD_CHANGED]: UserPayload;
     [AUTH_ACCOUNT_LINKED]: AccountLinkedPayload;
+    [AUTH_INVITATION_SENT]: InvitationSentPayload;
+    [AUTH_INVITATION_ACCEPTED]: InvitationAcceptedPayload;
   }
 }
 
@@ -85,4 +105,16 @@ export interface AccountLinkedEvent extends DomainEvent {
   eventName: typeof AUTH_ACCOUNT_LINKED;
   entityType: 'users';
   payload: AccountLinkedPayload;
+}
+
+export interface InvitationSentEvent extends DomainEvent {
+  eventName: typeof AUTH_INVITATION_SENT;
+  entityType: 'users';
+  payload: InvitationSentPayload;
+}
+
+export interface InvitationAcceptedEvent extends DomainEvent {
+  eventName: typeof AUTH_INVITATION_ACCEPTED;
+  entityType: 'users';
+  payload: InvitationAcceptedPayload;
 }

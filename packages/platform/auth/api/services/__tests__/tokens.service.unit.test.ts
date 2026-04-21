@@ -15,6 +15,7 @@ function createMockConfig(overrides: Partial<AuthModuleConfig> = {}): AuthModule
     accessTokenExpiresIn: '15m',
     refreshTokenExpiresIn: '7d',
     resetTokenExpiresIn: '1h',
+    invitationTokenExpiresIn: '7d',
     ...overrides,
   };
 }
@@ -264,6 +265,29 @@ describe('TokensService', () => {
 
       const insertedValues = dbChain.values.mock.calls[0][0];
       const expectedExpiry = new Date(now + 1 * 60 * 60 * 1000); // 1h
+      expect(insertedValues.expiresAt.getTime()).toBe(expectedExpiry.getTime());
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // createInvitationToken
+  // -----------------------------------------------------------------------
+  describe('createInvitationToken', () => {
+    it('should create a token with type INVITATION', async () => {
+      await service.createInvitationToken('user-1');
+
+      const insertedValues = dbChain.values.mock.calls[0][0];
+      expect(insertedValues.type).toBe(AUTH_TOKEN_TYPES.INVITATION);
+    });
+
+    it('should calculate expiry based on config.invitationTokenExpiresIn (default 7d)', async () => {
+      const now = Date.now();
+      vi.spyOn(Date, 'now').mockReturnValue(now);
+
+      await service.createInvitationToken('user-1');
+
+      const insertedValues = dbChain.values.mock.calls[0][0];
+      const expectedExpiry = new Date(now + 7 * 24 * 60 * 60 * 1000); // 7d
       expect(insertedValues.expiresAt.getTime()).toBe(expectedExpiry.getTime());
     });
   });

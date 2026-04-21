@@ -11,6 +11,7 @@ import { LoginDto } from '../dto/login.dto';
 import { RefreshDto } from '../dto/refresh.dto';
 import { ForgotPasswordDto } from '../dto/forgot-password.dto';
 import { ResetPasswordDto } from '../dto/reset-password.dto';
+import { AcceptInvitationDto } from '../dto/accept-invitation.dto';
 import { ChangePasswordDto } from '../dto/change-password.dto';
 import { UpdateProfileDto } from '../dto/update-profile.dto';
 import { OAuthLoginDto } from '../dto/oauth-login.dto';
@@ -91,6 +92,15 @@ export class ClientAuthController {
   async resetPassword(@Body() dto: ResetPasswordDto) {
     await this.clientAuth.resetPassword(dto.token, dto.newPassword);
     return { message: 'Password has been reset' };
+  }
+
+  @Public()
+  @Throttle({ default: { ttl: 60000, limit: 5 } })
+  @Post('accept-invitation')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Accept invitation — sets password + logs in' })
+  async acceptInvitation(@Body() dto: AcceptInvitationDto) {
+    return this.clientAuth.acceptInvitation(dto.token, dto.newPassword);
   }
 
   @Get('me')

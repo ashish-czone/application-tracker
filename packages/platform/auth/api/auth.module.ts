@@ -23,12 +23,15 @@ import {
   AUTH_PASSWORD_RESET_COMPLETED,
   AUTH_PASSWORD_CHANGED,
   AUTH_ACCOUNT_LINKED,
+  AUTH_INVITATION_SENT,
+  AUTH_INVITATION_ACCEPTED,
 } from './events/types';
 
 const AUTH_DEFAULTS = {
   accessTokenExpiresIn: '15m',
   refreshTokenExpiresIn: '7d',
   resetTokenExpiresIn: '1h',
+  invitationTokenExpiresIn: '7d',
   defaultAdminEmail: 'admin@admin.com',
   defaultAdminPassword: 'Admin1234',
 };
@@ -43,6 +46,7 @@ function withDefaults(config: AuthModuleConfig): Required<AuthModuleConfig> {
     accessTokenExpiresIn: AUTH_DEFAULTS.accessTokenExpiresIn,
     refreshTokenExpiresIn: AUTH_DEFAULTS.refreshTokenExpiresIn,
     resetTokenExpiresIn: AUTH_DEFAULTS.resetTokenExpiresIn,
+    invitationTokenExpiresIn: AUTH_DEFAULTS.invitationTokenExpiresIn,
     defaultAdminEmail: AUTH_DEFAULTS.defaultAdminEmail,
     defaultAdminPassword: AUTH_DEFAULTS.defaultAdminPassword,
     ...config,
@@ -125,16 +129,18 @@ export class AuthModule implements OnModuleInit {
         accessTokenExpiresIn: AUTH_DEFAULTS.accessTokenExpiresIn,
         refreshTokenExpiresIn: AUTH_DEFAULTS.refreshTokenExpiresIn,
         resetTokenExpiresIn: AUTH_DEFAULTS.resetTokenExpiresIn,
+        invitationTokenExpiresIn: AUTH_DEFAULTS.invitationTokenExpiresIn,
       },
       metadata: {
         accessTokenExpiresIn: { label: 'Access Token Lifetime', type: 'string', description: 'Duration string (e.g., 15m, 1h, 1d)' },
         refreshTokenExpiresIn: { label: 'Refresh Token Lifetime', type: 'string', description: 'Duration string (e.g., 7d, 30d)' },
         resetTokenExpiresIn: { label: 'Password Reset Token Lifetime', type: 'string', description: 'Duration string (e.g., 1h, 24h)' },
+        invitationTokenExpiresIn: { label: 'Invitation Token Lifetime', type: 'string', description: 'Duration string (e.g., 7d, 30d)' },
       },
     });
 
     this.auditRegistry.register('auth', {
-      events: [AUTH_USER_REGISTERED, AUTH_USER_LOGGED_IN, AUTH_PASSWORD_CHANGED],
+      events: [AUTH_USER_REGISTERED, AUTH_USER_LOGGED_IN, AUTH_PASSWORD_CHANGED, AUTH_INVITATION_SENT, AUTH_INVITATION_ACCEPTED],
       sensitiveFields: ['token', 'password', 'identifier'],
     });
 
@@ -201,6 +207,30 @@ export class AuthModule implements OnModuleInit {
       description: 'Fired when an external auth provider is linked to an existing account',
       payloadSchema: {
         provider: { type: 'string', label: 'Auth Provider' },
+        userType: { type: 'string', label: 'User Type' },
+      },
+    });
+
+    this.eventRegistry.register({
+      eventName: AUTH_INVITATION_SENT,
+      group: 'auth',
+      description: 'Fired when a user invitation is created — consumer sends the email',
+      payloadSchema: {
+        email: { type: 'string', label: 'Email' },
+        firstName: { type: 'string', label: 'First Name' },
+        lastName: { type: 'string', label: 'Last Name' },
+        userType: { type: 'string', label: 'User Type' },
+        token: { type: 'string', label: 'Invitation Token' },
+        expiresAt: { type: 'string', label: 'Expires At' },
+      },
+    });
+
+    this.eventRegistry.register({
+      eventName: AUTH_INVITATION_ACCEPTED,
+      group: 'auth',
+      description: 'Fired when an invited user accepts (sets password + activates)',
+      payloadSchema: {
+        email: { type: 'string', label: 'Email' },
         userType: { type: 'string', label: 'User Type' },
       },
     });

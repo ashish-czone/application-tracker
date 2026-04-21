@@ -14,6 +14,7 @@ import {
   AUTH_PASSWORD_RESET_COMPLETED,
   AUTH_PASSWORD_CHANGED,
   AUTH_ACCOUNT_LINKED,
+  AUTH_INVITATION_ACCEPTED,
 } from '../events/types';
 
 @Injectable()
@@ -215,6 +216,47 @@ export class AuthOrchestratorService {
         userType: this.userType,
       },
     });
+  }
+
+  async acceptInvitation(token: string, newPassword: string) {
+    const { userId } = await this.authService.acceptInvitation(token, newPassword);
+
+    // Load the user for the event payload + session claims. Must exist — the
+    // transaction inside acceptInvitation already validated it.
+    const user = await this.loadUser(userId);
+    if (!user) {
+      // Defensive — shouldn't happen unless the row vanished mid-flight.
+      throw new UnauthorizedException('Invalid or expired invitation token');
+    }
+
+    this.logger.log('Invitation accepted', { userId, userType: user.userType });
+
+    this.domainEventEmitter.emit(AUTH_INVITATION_ACCEPTED, {
+      entityType: 'users',
+      entityId: userId,
+      actorId: userId,
+      payload: {
+        email: user.email,
+        userType: user.userType,
+      },
+    });
+
+    // Mint session — accepting an invite should land the user logged in, like
+    // register().
+    const permissions = await this.rbacService.getPermissionsForUser(userId, user.userType);
+    const accessToken = this.authService.generateAccessToken(
+      await this.enrichPayload({ userId, userType: user.userType, permissions, tenantId: getTenantId() }),
+    );
+    const { token: refreshToken } = await this.authService.createRefreshToken(userId);
+
+    // Stamp lastLoginAt so the account shows up as active immediately, matching
+    // the signal the login flow produces.
+    await this.database.db
+      .update(users)
+      .set({ lastLoginAt: new Date() })
+      .where(withTenant(users, eq(users.id, userId)));
+
+    return { accessToken, refreshToken, userId };
   }
 
   async register(

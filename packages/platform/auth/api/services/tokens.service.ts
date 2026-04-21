@@ -45,6 +45,10 @@ export class TokensService {
     return this.createToken(userId, AUTH_TOKEN_TYPES.PASSWORD_RESET, this.config.resetTokenExpiresIn);
   }
 
+  async createInvitationToken(userId: string, tx?: DrizzleDB) {
+    return this.createToken(userId, AUTH_TOKEN_TYPES.INVITATION, this.config.invitationTokenExpiresIn, tx);
+  }
+
   async validateToken(token: string, type: string) {
     const tokenHash = this.hashToken(token);
 

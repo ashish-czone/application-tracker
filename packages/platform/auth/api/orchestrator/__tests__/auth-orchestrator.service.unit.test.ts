@@ -17,6 +17,8 @@ function createMockAuthService() {
     findCredential: vi.fn().mockResolvedValue(null),
     createCredential: vi.fn().mockResolvedValue({ id: 'cred-2' }),
     findUserByEmail: vi.fn().mockResolvedValue(null),
+    createInvitationToken: vi.fn().mockResolvedValue({ token: 'invite-token', expiresAt: new Date() }),
+    acceptInvitation: vi.fn().mockResolvedValue({ userId: 'invited-user-1' }),
   } as any;
 }
 
@@ -472,6 +474,52 @@ describe('AuthOrchestratorService', () => {
       database._selectChain.limit.mockResolvedValue([]);
 
       await expect(service.loginWithProvider('google', { code: 'abc', redirectUri: 'http://localhost' }, 'client'))
+        .rejects.toThrow(UnauthorizedException);
+    });
+  });
+
+  describe('acceptInvitation', () => {
+    it('should delegate to auth service, mint session, emit event, stamp lastLoginAt', async () => {
+      authService.acceptInvitation.mockResolvedValue({ userId: 'invited-user-1' });
+      database._selectChain.limit.mockResolvedValue([{
+        email: 'invited@test.com',
+        firstName: 'Invited',
+        lastName: 'User',
+        userType: 'client',
+      }]);
+
+      const result = await service.acceptInvitation('invite-token', 'new-password');
+
+      expect(authService.acceptInvitation).toHaveBeenCalledWith('invite-token', 'new-password');
+      expect(result).toEqual({
+        accessToken: 'access-token',
+        refreshToken: 'refresh-token',
+        userId: 'invited-user-1',
+      });
+      expect(rbacService.getPermissionsForUser).toHaveBeenCalledWith('invited-user-1', 'client');
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        'auth.InvitationAccepted',
+        expect.objectContaining({ entityType: 'users', entityId: 'invited-user-1' }),
+      );
+      expect(database.db.update).toHaveBeenCalled();
+      const setArg = database._updateChain.set.mock.calls[0][0];
+      expect(setArg).toHaveProperty('lastLoginAt');
+    });
+
+    it('should surface UnauthorizedException from the auth service unchanged', async () => {
+      authService.acceptInvitation.mockRejectedValue(new UnauthorizedException('Invalid or expired invitation token'));
+
+      await expect(service.acceptInvitation('bad-token', 'pw'))
+        .rejects.toThrow(UnauthorizedException);
+      expect(eventEmitter.emit).not.toHaveBeenCalled();
+      expect(database.db.update).not.toHaveBeenCalled();
+    });
+
+    it('should throw UnauthorizedException when loadUser returns null (defensive)', async () => {
+      authService.acceptInvitation.mockResolvedValue({ userId: 'ghost-user' });
+      database._selectChain.limit.mockResolvedValue([]);
+
+      await expect(service.acceptInvitation('valid-token', 'pw'))
         .rejects.toThrow(UnauthorizedException);
     });
   });
