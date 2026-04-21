@@ -39,6 +39,24 @@ const hierarchicalTable = pgTable('hierarchical_entities', {
   depth: integer('depth').notNull().default(0),
 });
 
+// Mock orderable table — mirrors orderableColumns() from @packages/orderable
+// (single sort_order integer). Inlined to avoid cross-package runtime coupling.
+const orderableTable = pgTable('orderable_entities', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  sortOrder: integer('sort_order').notNull().default(0),
+});
+
+// Mock table that is both hierarchical and orderable (menu_items pattern)
+const hierarchicalOrderableTable = pgTable('hierarchical_orderable_entities', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  parentId: text('parent_id'),
+  path: text('path').notNull().default('/'),
+  depth: integer('depth').notNull().default(0),
+  sortOrder: integer('sort_order').notNull().default(0),
+});
+
 describe('defineEntity', () => {
   it('should produce a valid EntityConfig from a minimal model', () => {
     const config = defineEntity({
@@ -816,6 +834,108 @@ describe('defineEntity', () => {
           ui: { icon: 'FileText' },
         }),
       ).toThrow(/requires the table to spread.*softDeleteColumns/);
+    });
+  });
+
+  describe('orderable flag', () => {
+    it('surfaces orderable: true on the returned config', () => {
+      const config = defineEntity({
+        table: orderableTable,
+        onDelete: { mode: 'hard' },
+        slug: 'orderable-entities',
+        orderable: true,
+        fields: {
+          name: { type: 'text', label: 'Name', isLabel: true },
+        },
+        ui: { icon: 'List' },
+      });
+
+      expect(config.orderable).toBe(true);
+    });
+
+    it('leaves orderable undefined when the flag is absent', () => {
+      const config = defineEntity({
+        table: testTable,
+        onDelete: { mode: 'soft' },
+        slug: 'test-entities',
+        fields: { title: { type: 'text', label: 'Title' } },
+        ui: { icon: 'FileText' },
+      });
+
+      expect(config.orderable).toBeUndefined();
+    });
+
+    it('registers sortOrder as a system column so it is hidden from forms/seeds', () => {
+      const config = defineEntity({
+        table: orderableTable,
+        onDelete: { mode: 'hard' },
+        slug: 'orderable-entities',
+        orderable: true,
+        fields: { name: { type: 'text', label: 'Name' } },
+        ui: { icon: 'List' },
+      });
+
+      expect(config.systemColumns).toContain('sortOrder');
+    });
+
+    it('defaults list sort to sortOrder when orderable and no defaultSort given', () => {
+      const config = defineEntity({
+        table: orderableTable,
+        onDelete: { mode: 'hard' },
+        slug: 'orderable-entities',
+        orderable: true,
+        fields: { name: { type: 'text', label: 'Name' } },
+        ui: { icon: 'List' },
+      });
+
+      expect(config.defaultSort).toBe('sortOrder');
+      expect(config.sortableColumns.sortOrder).toBeDefined();
+    });
+
+    it('honours an explicit defaultSort over the orderable default', () => {
+      const config = defineEntity({
+        table: orderableTable,
+        onDelete: { mode: 'hard' },
+        slug: 'orderable-entities',
+        orderable: true,
+        defaultSort: 'name',
+        fields: { name: { type: 'text', label: 'Name', sortable: true } },
+        ui: { icon: 'List' },
+      });
+
+      expect(config.defaultSort).toBe('name');
+    });
+
+    it('throws when orderable: true but the table is missing orderableColumns()', () => {
+      expect(() =>
+        defineEntity({
+          table: testTable,
+          onDelete: { mode: 'soft' },
+          slug: 'test-entities',
+          orderable: true,
+          fields: { title: { type: 'text', label: 'Title' } },
+          ui: { icon: 'FileText' },
+        }),
+      ).toThrow(/orderableColumns.*sortOrder/);
+    });
+
+    it('supports combining hierarchy and orderable on one entity', () => {
+      const config = defineEntity({
+        table: hierarchicalOrderableTable,
+        onDelete: { mode: 'hard' },
+        slug: 'menu-items',
+        hierarchy: true,
+        orderable: true,
+        fields: { name: { type: 'text', label: 'Name', isLabel: true } },
+        ui: { icon: 'Menu' },
+      });
+
+      expect(config.hierarchy).toBe(true);
+      expect(config.orderable).toBe(true);
+      expect(config.systemColumns).toContain('path');
+      expect(config.systemColumns).toContain('depth');
+      expect(config.systemColumns).toContain('sortOrder');
+      expect(config.fieldMeta.parentId).toBeDefined();
     });
   });
 });
