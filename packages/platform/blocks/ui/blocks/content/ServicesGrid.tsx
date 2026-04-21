@@ -3,9 +3,10 @@ import type { ServicesGridFields } from '@packages/blocks-contract';
 import { defineBlock } from '../../registry';
 import type { BlockRenderProps } from '../../types';
 
-interface Fields extends ServicesGridFields {
+interface Fields extends Record<string, unknown> {
   heading?: string;
   subheading?: string;
+  services?: ServicesGridFields['services'];
 }
 
 function ServicesGrid({ fields }: BlockRenderProps<Fields>): ReactNode {

@@ -1,4 +1,5 @@
 import { mapperRegistry } from '../registry';
+import type { MapperDefinition } from '../types';
 import { testimonialsGridMapper } from './testimonials-grid';
 import { faqAccordionMapper } from './faq-accordion';
 import { teamGridMapper } from './team-grid';
@@ -31,14 +32,14 @@ export type { StatRecord, StatsRowFields } from './stats-row';
  * Server addons that want only a subset can cherry-pick named exports; most
  * apps should just call `registerContentMappers()` at bootstrap.
  */
-export const contentMappers = [
-  testimonialsGridMapper,
-  faqAccordionMapper,
-  teamGridMapper,
-  servicesGridMapper,
-  clientLogosRowMapper,
-  valuePropsGridMapper,
-  statsRowMapper,
+export const contentMappers: MapperDefinition[] = [
+  testimonialsGridMapper as MapperDefinition,
+  faqAccordionMapper as MapperDefinition,
+  teamGridMapper as MapperDefinition,
+  servicesGridMapper as MapperDefinition,
+  clientLogosRowMapper as MapperDefinition,
+  valuePropsGridMapper as MapperDefinition,
+  statsRowMapper as MapperDefinition,
 ];
 
 /**

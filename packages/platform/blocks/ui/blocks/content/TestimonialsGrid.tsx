@@ -3,9 +3,10 @@ import type { TestimonialsGridFields } from '@packages/blocks-contract';
 import { defineBlock } from '../../registry';
 import type { BlockRenderProps } from '../../types';
 
-interface Fields extends TestimonialsGridFields {
+interface Fields extends Record<string, unknown> {
   heading?: string;
   subheading?: string;
+  items?: TestimonialsGridFields['items'];
 }
 
 function TestimonialsGrid({ fields }: BlockRenderProps<Fields>): ReactNode {

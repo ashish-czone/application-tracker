@@ -2,10 +2,16 @@ import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { correlationIdMiddleware } from '@packages/logger';
+import { registerContentMappers } from '@packages/blocks-contract';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
+
+// Populate the mapper registry before any request can reach the pages public
+// API. Entity-engine CRUD doesn't need mappers — only the page-resolver path
+// does, and it reads from the singleton registry synchronously.
+registerContentMappers();
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);

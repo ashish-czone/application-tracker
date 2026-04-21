@@ -3,9 +3,10 @@ import type { FaqAccordionFields } from '@packages/blocks-contract';
 import { defineBlock } from '../../registry';
 import type { BlockRenderProps } from '../../types';
 
-interface Fields extends FaqAccordionFields {
+interface Fields extends Record<string, unknown> {
   heading?: string;
   subheading?: string;
+  items?: FaqAccordionFields['items'];
 }
 
 function FaqAccordion({ fields }: BlockRenderProps<Fields>): ReactNode {

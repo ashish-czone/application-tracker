@@ -3,9 +3,10 @@ import type { ValuePropsGridFields } from '@packages/blocks-contract';
 import { defineBlock } from '../../registry';
 import type { BlockRenderProps } from '../../types';
 
-interface Fields extends ValuePropsGridFields {
+interface Fields extends Record<string, unknown> {
   heading?: string;
   subheading?: string;
+  items?: ValuePropsGridFields['items'];
 }
 
 function ValuePropsGrid({ fields }: BlockRenderProps<Fields>): ReactNode {

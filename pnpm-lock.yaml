@@ -137,6 +137,9 @@ importers:
       '@packages/automations':
         specifier: workspace:*
         version: link:../../packages/platform/automations/api
+      '@packages/blocks-contract':
+        specifier: workspace:*
+        version: link:../../packages/platform/blocks/contract
       '@packages/common':
         specifier: workspace:*
         version: link:../../packages/core/common

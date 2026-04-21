@@ -17,7 +17,7 @@ import { registerEntityRelationsFieldTypes } from '@packages/entity-relations-ui
 registerEntityRelationsFieldTypes();
 
 import { WebShell } from '@packages/app-shell-ui';
-import { registerStarterBlocks } from '@packages/blocks-ui';
+import { registerStarterBlocks, registerContentBlocks } from '@packages/blocks-ui';
 import { PageEditorPage } from '@packages/pages-ui-admin';
 import { MenuEditorPage } from '@packages/menus-ui-admin';
 import { AuditTimeline } from '@packages/audit-ui';
@@ -27,6 +27,7 @@ import { api } from './lib/api';
 import './globals.css';
 
 registerStarterBlocks();
+registerContentBlocks();
 
 const contentRoutes = [
   { path: '/pages/:id/edit', element: <PageEditorPage /> },

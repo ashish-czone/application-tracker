@@ -3,8 +3,9 @@ import type { ClientLogosRowFields } from '@packages/blocks-contract';
 import { defineBlock } from '../../registry';
 import type { BlockRenderProps } from '../../types';
 
-interface Fields extends ClientLogosRowFields {
+interface Fields extends Record<string, unknown> {
   heading?: string;
+  logos?: ClientLogosRowFields['logos'];
 }
 
 function ClientLogosRow({ fields }: BlockRenderProps<Fields>): ReactNode {

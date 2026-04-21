@@ -3,9 +3,10 @@ import type { TeamGridFields } from '@packages/blocks-contract';
 import { defineBlock } from '../../registry';
 import type { BlockRenderProps } from '../../types';
 
-interface Fields extends TeamGridFields {
+interface Fields extends Record<string, unknown> {
   heading?: string;
   subheading?: string;
+  members?: TeamGridFields['members'];
 }
 
 function TeamGrid({ fields }: BlockRenderProps<Fields>): ReactNode {

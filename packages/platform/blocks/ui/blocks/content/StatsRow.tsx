@@ -3,9 +3,10 @@ import type { StatsRowFields } from '@packages/blocks-contract';
 import { defineBlock } from '../../registry';
 import type { BlockRenderProps } from '../../types';
 
-interface Fields extends StatsRowFields {
+interface Fields extends Record<string, unknown> {
   heading?: string;
   subheading?: string;
+  stats?: StatsRowFields['stats'];
 }
 
 function formatStat(value: number, suffix: string | null): string {
