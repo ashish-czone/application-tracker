@@ -431,10 +431,10 @@ export interface EntityRelationship {
   /** Relationship name (used as key) */
   name: string;
   /** Relationship type */
-  type: 'hasMany' | 'belongsTo' | 'manyToMany';
+  type: 'hasMany' | 'belongsTo' | 'hasOne' | 'manyToMany';
   /** Target entity type (must be registered in the registry) */
   targetEntity: string;
-  /** Foreign key column on the target entity (for hasMany) */
+  /** Foreign key column on the target entity (for hasMany / hasOne) */
   foreignKey?: string;
   /** Foreign key column on this entity (for belongsTo) */
   inverseForeignKey?: string;
@@ -444,6 +444,29 @@ export interface EntityRelationship {
   label: string;
   /** Fields to show in the related list (field keys) */
   displayFields?: string[];
+  /**
+   * Optional write-side handler invoked by the engine when a matching nested
+   * payload key is present in a create/update DTO. The handler owns the child
+   * table (e.g. credentials, user_roles) — the engine never touches it.
+   *
+   * Handler methods run inside the same transaction as the parent entity
+   * insert/update. Throwing from a handler rolls back the parent operation.
+   */
+  handler?: RelationHandler;
+}
+
+/**
+ * Contract for packages that own tables related to an entity via a declared
+ * `EntityRelationship`. Each method is optional — implement only what you need.
+ * All methods run inside the caller's transaction (`tx`).
+ */
+export interface RelationHandler {
+  /** Invoked after the parent entity is inserted. Payload is the sub-value from the relation key (e.g. `{ password: '...' }` for hasOne, `[id1, id2]` for manyToMany). */
+  onCreate?(tx: unknown, parentId: string, payload: unknown, actorId: string): Promise<void>;
+  /** Invoked when the relation key is present in an update DTO. */
+  onUpdate?(tx: unknown, parentId: string, payload: unknown, actorId: string): Promise<void>;
+  /** Invoked when the parent entity is deleted (hard delete only — soft delete defers to the parent). */
+  onDelete?(tx: unknown, parentId: string, actorId: string): Promise<void>;
 }
 
 // ---------------------------------------------------------------------------

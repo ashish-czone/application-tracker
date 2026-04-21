@@ -44,7 +44,7 @@ type DateLikeType = 'date' | 'datetime';
 
 type MultiScalarType = 'multi_lookup' | 'multi_user' | 'tags';
 
-type RelationType = 'hasMany' | 'manyToMany';
+type RelationType = 'hasOne' | 'hasMany' | 'manyToMany';
 
 /**
  * Base value type derived from a field's `type`.

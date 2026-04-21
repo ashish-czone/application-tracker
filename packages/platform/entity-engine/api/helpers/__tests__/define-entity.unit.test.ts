@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { pgTable, text, timestamp, boolean, integer, jsonb } from 'drizzle-orm/pg-core';
 import { defineEntity } from '../../define-entity';
 import type { ModelDefinition } from '../../define-entity';
@@ -170,6 +170,125 @@ describe('defineEntity', () => {
     });
     // hasMany should NOT appear in fieldMeta
     expect(config.fieldMeta.applications).toBeUndefined();
+  });
+
+  it('should extract hasOne fields as relationships', () => {
+    const config = defineEntity({
+      table: testTable,
+      onDelete: { mode: 'soft' },
+      slug: 'test-entities',
+      fields: {
+        title: { type: 'text', label: 'Title' },
+        credentials: {
+          type: 'hasOne',
+          label: 'Credentials',
+          entity: 'credentials',
+          foreignKey: 'testEntityId',
+        },
+      },
+      ui: { icon: 'FileText' },
+    });
+
+    expect(config.relationships).toHaveLength(1);
+    expect(config.relationships![0]).toMatchObject({
+      name: 'credentials',
+      type: 'hasOne',
+      targetEntity: 'credentials',
+      foreignKey: 'testEntityId',
+      label: 'Credentials',
+    });
+    // hasOne should NOT appear in fieldMeta
+    expect(config.fieldMeta.credentials).toBeUndefined();
+  });
+
+  it('should accept top-level relationships and merge with field-level shortcuts', () => {
+    const config = defineEntity({
+      table: testTable,
+      onDelete: { mode: 'soft' },
+      slug: 'test-entities',
+      fields: {
+        title: { type: 'text', label: 'Title' },
+        legacyChildren: {
+          type: 'hasMany',
+          label: 'Legacy Children',
+          entity: 'children',
+          foreignKey: 'parentId',
+        },
+      },
+      relationships: [
+        {
+          name: 'newChildren',
+          type: 'hasMany',
+          targetEntity: 'children',
+          foreignKey: 'parentId',
+          label: 'New Children',
+        },
+      ],
+      ui: { icon: 'FileText' },
+    });
+
+    expect(config.relationships).toHaveLength(2);
+    const names = config.relationships!.map((r) => r.name).sort();
+    expect(names).toEqual(['legacyChildren', 'newChildren']);
+  });
+
+  it('should let top-level relationships override field-level with the same name', () => {
+    const overrideHandler = { onCreate: vi.fn() };
+    const config = defineEntity({
+      table: testTable,
+      onDelete: { mode: 'soft' },
+      slug: 'test-entities',
+      fields: {
+        title: { type: 'text', label: 'Title' },
+        items: {
+          type: 'hasMany',
+          label: 'Field-level items',
+          entity: 'items',
+          foreignKey: 'parentId',
+        },
+      },
+      relationships: [
+        {
+          name: 'items',
+          type: 'hasMany',
+          targetEntity: 'items',
+          foreignKey: 'parentId',
+          label: 'Top-level items',
+          handler: overrideHandler,
+        },
+      ],
+      ui: { icon: 'FileText' },
+    });
+
+    expect(config.relationships).toHaveLength(1);
+    expect(config.relationships![0].label).toBe('Top-level items');
+    expect(config.relationships![0].handler).toBe(overrideHandler);
+  });
+
+  it('should accept a handler on a hasOne relationship', () => {
+    const onCreate = vi.fn();
+    const config = defineEntity({
+      table: testTable,
+      onDelete: { mode: 'soft' },
+      slug: 'test-entities',
+      fields: {
+        title: { type: 'text', label: 'Title' },
+      },
+      relationships: [
+        {
+          name: 'credentials',
+          type: 'hasOne',
+          targetEntity: 'credentials',
+          foreignKey: 'testEntityId',
+          label: 'Credentials',
+          handler: { onCreate },
+        },
+      ],
+      ui: { icon: 'FileText' },
+    });
+
+    expect(config.relationships).toHaveLength(1);
+    expect(config.relationships![0].handler?.onCreate).toBe(onCreate);
   });
 
   it('should convert belongsTo to lookup field type', () => {

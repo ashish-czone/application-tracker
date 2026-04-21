@@ -24,8 +24,8 @@ import { hasCustomFieldsColumn } from './helpers/custom-fields-column';
 // ---------------------------------------------------------------------------
 
 export interface ModelField {
-  /** Field type. Use 'belongsTo' or 'hasMany' for relation shortcuts. */
-  type: FieldType | 'belongsTo' | 'hasMany' | 'manyToMany';
+  /** Field type. Use 'belongsTo', 'hasOne', 'hasMany', or 'manyToMany' for relation shortcuts. */
+  type: FieldType | 'belongsTo' | 'hasOne' | 'hasMany' | 'manyToMany';
   /** Display label */
   label: string;
 
@@ -275,6 +275,20 @@ export interface ModelDefinition<TTable extends PgTable = PgTable> {
   /** Row-level data access configuration. Controls which records users can see based on their RBAC scope. */
   dataAccess?: DataAccessConfig;
 
+  // --- Relationships (Laravel/Rails style — declared separately from fields) ---
+
+  /**
+   * Entity relationships (belongsTo / hasOne / hasMany / manyToMany).
+   * Declared at the top level, not inside `fields`. Field-level shortcuts
+   * inside `fields` are deprecated and will be removed in a future change.
+   *
+   * Each relationship can carry an optional `handler` that the engine invokes
+   * in the same transaction as the parent entity on create/update/delete. This
+   * is how side tables like `credentials` and `user_roles` are populated from
+   * nested sub-payloads on the owning entity's DTO.
+   */
+  relationships?: EntityRelationship[];
+
   // --- Lifecycle hooks ---
 
   hooks?: EntityHooks;
@@ -284,8 +298,29 @@ export interface ModelDefinition<TTable extends PgTable = PgTable> {
 // Relation field type mapping
 // ---------------------------------------------------------------------------
 
+/**
+ * Merge field-derived relationships (from `fields.X: { type: 'hasMany' | ... }`)
+ * with top-level `relationships` declared on `ModelDefinition`. Top-level entries
+ * override field-derived ones when they share a `name`, so callers can migrate
+ * gradually. The field-level shortcut is deprecated.
+ */
+function mergeRelationships(
+  fromFields: EntityRelationship[],
+  fromTopLevel: EntityRelationship[] | undefined,
+): EntityRelationship[] | undefined {
+  if (!fromTopLevel || fromTopLevel.length === 0) {
+    return fromFields.length > 0 ? fromFields : undefined;
+  }
+  const byName = new Map<string, EntityRelationship>();
+  for (const rel of fromFields) byName.set(rel.name, rel);
+  for (const rel of fromTopLevel) byName.set(rel.name, rel);
+  const merged = Array.from(byName.values());
+  return merged.length > 0 ? merged : undefined;
+}
+
 const RELATION_TO_FIELD_TYPE: Record<string, FieldType> = {
   belongsTo: 'lookup',
+  hasOne: 'lookup', // hasOne doesn't produce a fieldMeta entry — it becomes a relationship
   hasMany: 'lookup', // hasMany doesn't produce a fieldMeta entry — it becomes a relationship
   manyToMany: 'lookup',
 };
@@ -460,13 +495,16 @@ export function defineEntity<TTable extends PgTable>(model: ModelDefinition<TTab
   let sortOrder = 0;
 
   for (const [key, field] of Object.entries(model.fields)) {
-    const isRelation = field.type === 'hasMany' || field.type === 'manyToMany';
+    const isRelation = field.type === 'hasMany' || field.type === 'hasOne' || field.type === 'manyToMany';
 
-    // hasMany/manyToMany: extract as relationship, don't create fieldMeta
+    // hasOne / hasMany / manyToMany: extract as relationship, don't create fieldMeta.
+    // The FK lives on the child table — these are reverse relations with no column
+    // on the parent. Write-side support is provided via an optional handler on the
+    // relationship (wired at engine level, not at defineEntity).
     if (isRelation) {
       relationships.push({
         name: key,
-        type: field.type as 'hasMany' | 'manyToMany',
+        type: field.type as 'hasOne' | 'hasMany' | 'manyToMany',
         targetEntity: field.entity ?? key,
         foreignKey: field.foreignKey,
         inverseForeignKey: field.inverseForeignKey,
@@ -596,7 +634,7 @@ export function defineEntity<TTable extends PgTable>(model: ModelDefinition<TTab
     sections: model.sections ?? [],
     listFields: listFields.length > 0 ? listFields : undefined,
     lookup,
-    relationships: relationships.length > 0 ? relationships : undefined,
+    relationships: mergeRelationships(relationships, model.relationships),
     recipientFields: Object.keys(recipientFields).length > 0 ? recipientFields : undefined,
     customFields: model.customFields,
     adminConfigurable: model.adminConfigurable,

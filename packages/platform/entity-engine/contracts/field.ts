@@ -25,7 +25,7 @@ export type FieldType =
   | 'rich_text'
   | 'workflow';
 
-export type RelationFieldType = 'belongsTo' | 'hasMany' | 'manyToMany';
+export type RelationFieldType = 'belongsTo' | 'hasOne' | 'hasMany' | 'manyToMany';
 
 export interface PicklistOptionDef {
   label: string;
