@@ -33,12 +33,25 @@ export const email: ValidateFn = (value, ctx) => {
   return checkMaxLength(value as string, ctx.label, ctx.maxLength);
 };
 
-/** Validates: string + http(s):// prefix + optional maxLength */
+/**
+ * Validates a plausible HTML-href value. Accepts:
+ *   - absolute http/https URLs (`https://example.com/path`)
+ *   - root-relative paths (`/about`, `/blog/post?x=1#top`)
+ *   - fragment-only anchors (`#section`)
+ *   - mailto: and tel: schemes
+ *
+ * Fields that need a stricter shape (OAuth redirects, webhook endpoints)
+ * should layer their own check on top via entity-level hooks.
+ */
+const HREF_RE = /^(?:https?:\/\/\S+|\/\S*|#\S*|mailto:\S+|tel:\S+)$/i;
 export const url: ValidateFn = (value, ctx) => {
   const err = checkString(value, ctx.label);
   if (err) return err;
-  if (!/^https?:\/\//i.test(value as string)) {
-    return { message: `${ctx.label} must start with http:// or https://`, code: 'format' };
+  if (!HREF_RE.test(value as string)) {
+    return {
+      message: `${ctx.label} must be a URL (http/https), a path starting with /, an anchor starting with #, or a mailto:/tel: link`,
+      code: 'format',
+    };
   }
   return checkMaxLength(value as string, ctx.label, ctx.maxLength);
 };
