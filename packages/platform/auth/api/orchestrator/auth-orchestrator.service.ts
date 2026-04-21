@@ -81,6 +81,12 @@ export class AuthOrchestratorService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    // Stamp last login time — drives the "last active" column on user listings.
+    await this.database.db
+      .update(users)
+      .set({ lastLoginAt: new Date() })
+      .where(withTenant(users, eq(users.id, userId!)));
+
     // Generate tokens
     const permissions = await this.rbacService.getPermissionsForUser(userId!, userType);
     const accessToken = this.authService.generateAccessToken(

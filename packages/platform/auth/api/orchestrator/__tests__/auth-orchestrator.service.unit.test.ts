@@ -41,10 +41,17 @@ function createMockDatabaseService() {
     }),
   };
 
+  const updateChain = {
+    set: vi.fn().mockReturnValue({
+      where: vi.fn().mockResolvedValue(undefined),
+    }),
+  };
+
   return {
     db: {
       select: vi.fn().mockReturnValue(selectChain),
       insert: vi.fn().mockReturnValue(insertChain),
+      update: vi.fn().mockReturnValue(updateChain),
       transaction: vi.fn().mockImplementation(async (cb: any) => {
         const txSelectChain = {
           from: vi.fn().mockReturnThis(),
@@ -64,6 +71,7 @@ function createMockDatabaseService() {
       }),
     },
     _selectChain: selectChain,
+    _updateChain: updateChain,
   };
 }
 
@@ -175,6 +183,37 @@ describe('AuthOrchestratorService', () => {
 
       await expect(service.login('john@test.com', 'password', 'client'))
         .rejects.toThrow(UnauthorizedException);
+    });
+
+    it('should stamp lastLoginAt on successful login', async () => {
+      authService.verifyPasswordCredential.mockResolvedValue({ userId: 'u1' });
+      database._selectChain.limit.mockResolvedValue([{
+        email: 'john@test.com',
+        firstName: 'John',
+        lastName: 'Doe',
+        userType: 'client',
+      }]);
+
+      await service.login('john@test.com', 'password', 'client');
+
+      expect(database.db.update).toHaveBeenCalled();
+      const setArg = database._updateChain.set.mock.calls[0][0];
+      expect(setArg).toHaveProperty('lastLoginAt');
+      expect(setArg.lastLoginAt).toBeInstanceOf(Date);
+    });
+
+    it('should not stamp lastLoginAt when user type mismatches', async () => {
+      authService.verifyPasswordCredential.mockResolvedValue({ userId: 'u1' });
+      database._selectChain.limit.mockResolvedValue([{
+        email: 'john@test.com',
+        firstName: 'John',
+        lastName: 'Doe',
+        userType: 'admin',
+      }]);
+
+      await expect(service.login('john@test.com', 'password', 'client'))
+        .rejects.toThrow(UnauthorizedException);
+      expect(database.db.update).not.toHaveBeenCalled();
     });
 
     it('should throw when user not found', async () => {
