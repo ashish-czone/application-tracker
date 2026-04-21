@@ -351,6 +351,60 @@ describe('EntityService (integration)', () => {
       );
     });
 
+    it('should run inCreateTx hook with tx handle and roll back on throw', async () => {
+      const txHookSpy = vi.fn(async (_id: string, _payload: any, _actor: string, tx: any) => {
+        expect(tx).toBeDefined();
+        expect(typeof tx.insert).toBe('function');
+      });
+      const hookConfig = buildTestConfig({ inCreateTx: txHookSpy });
+
+      const database = module.get(DatabaseService);
+      const hookService = new EntityService(
+        hookConfig, database, eventEmitter, null, null,
+        fieldDefService, module.get(LookupResolverService), null,
+        module.get(FieldTypeSaveHookRegistry), null,
+        entityRegistry, module.get(AppLoggerService), null,
+      );
+
+      const created = await hookService.create(
+        { name: 'Tx Hook', email: 'txhook@example.com' },
+        TEST_ACTOR_ID,
+      );
+      expect(txHookSpy).toHaveBeenCalledOnce();
+      expect(txHookSpy).toHaveBeenCalledWith(
+        created.id,
+        expect.objectContaining({ name: 'Tx Hook' }),
+        TEST_ACTOR_ID,
+        expect.anything(),
+      );
+    });
+
+    it('should roll back the entity insert when inCreateTx throws', async () => {
+      const hookConfig = buildTestConfig({
+        inCreateTx: async () => {
+          throw new Error('boom');
+        },
+      });
+
+      const database = module.get(DatabaseService);
+      const hookService = new EntityService(
+        hookConfig, database, eventEmitter, null, null,
+        fieldDefService, module.get(LookupResolverService), null,
+        module.get(FieldTypeSaveHookRegistry), null,
+        entityRegistry, module.get(AppLoggerService), null,
+      );
+
+      await expect(
+        hookService.create(
+          { name: 'Rollback Test', email: 'rollback@example.com' },
+          TEST_ACTOR_ID,
+        ),
+      ).rejects.toThrow('boom');
+
+      const result = await entityService.list({ search: 'rollback@example.com' });
+      expect(result.data).toHaveLength(0);
+    });
+
     it('should reject unknown fields', async () => {
       await expect(
         entityService.create(

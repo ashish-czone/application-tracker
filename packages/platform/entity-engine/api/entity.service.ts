@@ -943,6 +943,10 @@ export class EntityService {
         }
       }
 
+      if (config.hooks?.inCreateTx) {
+        await config.hooks.inCreateTx(entityId, data, actorId, tx);
+      }
+
       return inserted;
     });
 

@@ -788,6 +788,12 @@ export interface EntityConfig<TTable extends PgTable = PgTable> {
 export interface EntityHooks {
   /** Called before inserting a new entity. Can modify the payload. */
   beforeCreate?: (payload: Record<string, unknown>, actorId: string, tx?: any) => Promise<Record<string, unknown>>;
+  /**
+   * Called inside the create transaction, after the entity row has been inserted.
+   * Receives the tx handle so side-writes (credentials, related rows) are atomic
+   * with the entity insert. Throw to roll the whole create back.
+   */
+  inCreateTx?: (entityId: string, payload: Record<string, unknown>, actorId: string, tx: any) => Promise<void>;
   /** Called after a new entity is inserted (after transaction commits). */
   afterCreate?: (entity: Record<string, unknown>, actorId: string) => Promise<void>;
   /** Called before updating an entity. Can modify the payload. */
