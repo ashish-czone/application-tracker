@@ -4,6 +4,7 @@ import { TESTIMONIALS_CONFIG } from './testimonials.config';
 import { FAQ_ITEMS_CONFIG } from './faq-items.config';
 import { TEAM_MEMBERS_CONFIG } from './team-members.config';
 import { SERVICES_CONFIG } from './services.config';
+import { CLIENT_LOGOS_CONFIG } from './client-logos.config';
 
 /**
  * ContentModule registers content primitives (testimonials, FAQ items, team
@@ -20,6 +21,7 @@ import { SERVICES_CONFIG } from './services.config';
     EntityEngineModule.forEntity(FAQ_ITEMS_CONFIG),
     EntityEngineModule.forEntity(TEAM_MEMBERS_CONFIG),
     EntityEngineModule.forEntity(SERVICES_CONFIG),
+    EntityEngineModule.forEntity(CLIENT_LOGOS_CONFIG),
   ],
 })
 export class ContentModule {}
