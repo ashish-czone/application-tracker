@@ -9,6 +9,7 @@
   "dependencies": {
     "@domains/compliance-contract": "workspace:*",
     "@hookform/resolvers": "^5.0.0",
+    "@packages/audit-ui": "workspace:*",
     "@packages/auth-ui": "workspace:*",
     "@packages/domains": "workspace:*",
     "@packages/entity-engine-ui": "workspace:*",

@@ -5,7 +5,6 @@ import {
   Phone,
   Shield,
   Building2,
-  Clock,
   Ban,
   RotateCcw,
 } from 'lucide-react';
@@ -16,7 +15,9 @@ import {
   AvatarBadge,
   DrawerShell,
   ConfirmDialog,
+  CoarseTabs,
 } from '@packages/ui';
+import { AuditTimeline } from '@packages/audit-ui';
 import { useRemoveRoleMember } from '@packages/rbac-ui';
 import { useRemoveOrgUnitMember } from '@packages/org-units-ui';
 import { OrdinalDate } from '../../../../../../components';
@@ -44,6 +45,7 @@ export function UserDetailDrawer({
   actionPending = false,
 }: UserDetailDrawerProps) {
   const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState<'overview' | 'activity'>('overview');
   const [assignRoleOpen, setAssignRoleOpen] = useState(false);
   const [addPositionOpen, setAddPositionOpen] = useState(false);
   const [roleToRemove, setRoleToRemove] = useState<UserRole | null>(null);
@@ -114,7 +116,21 @@ export function UserDetailDrawer({
         </div>
       </header>
 
+      <div className="px-6 flex-none border-b border-rule">
+        <CoarseTabs
+          tabs={[
+            { value: 'overview', label: 'Overview' },
+            { value: 'activity', label: 'Activity' },
+          ]}
+          value={activeTab}
+          onChange={setActiveTab}
+          className="border-b-0"
+        />
+      </div>
+
       <div className="flex-1 overflow-y-auto">
+        {activeTab === 'overview' && (
+          <>
         <section className="px-6 py-5 border-b border-rule">
           <div className="grid grid-cols-2 gap-4">
             <DetailRow label="Email">
@@ -294,15 +310,16 @@ export function UserDetailDrawer({
                 Resend invite
               </button>
             )}
-            <button
-              type="button"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-rule text-[11px] font-sans font-medium text-ink-soft hover:text-ink hover:border-ink transition-colors"
-            >
-              <Clock className="w-3 h-3" strokeWidth={1.5} />
-              View activity
-            </button>
           </div>
         </section>
+          </>
+        )}
+
+        {activeTab === 'activity' && (
+          <div className="px-6 py-5">
+            <AuditTimeline actorId={user.id} />
+          </div>
+        )}
       </div>
 
       <ConfirmDialog
