@@ -14,7 +14,8 @@ import {
   FormEmailInput,
   FormPhoneInput,
 } from '@packages/ui';
-import { useAdminRoles, useInviteUser } from '../api/useUsersApi';
+import { useInviteUser } from '../api/useUsersApi';
+import { useRoles } from '@packages/users-ui';
 
 const inviteSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
@@ -44,7 +45,7 @@ export function InviteUserDrawer({ onClose, onInvited }: InviteUserDrawerProps) 
   });
 
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
-  const { data: rolesData, isLoading: rolesLoading } = useAdminRoles();
+  const { data: rolesData, isLoading: rolesLoading } = useRoles('client');
   const roles = rolesData?.data ?? [];
 
   const invite = useInviteUser({
@@ -66,7 +67,7 @@ export function InviteUserDrawer({ onClose, onInvited }: InviteUserDrawerProps) 
       lastName: values.lastName,
       email: values.email,
       phone: values.phone || undefined,
-      userType: 'admin',
+      userType: 'client',
       roleIds: selectedRoles.length > 0 ? selectedRoles : undefined,
     });
   };

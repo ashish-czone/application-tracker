@@ -11,6 +11,7 @@ export { useRegister } from './hooks/useRegister';
 export { useLogout } from './hooks/useLogout';
 export { useForgotPassword } from './hooks/useForgotPassword';
 export { useResetPassword } from './hooks/useResetPassword';
+export { useAcceptInvitation } from './hooks/useAcceptInvitation';
 export { useOAuthProviders, OAUTH_PROVIDERS_QUERY_KEY } from './hooks/useOAuthProviders';
 export { useOAuthLogin } from './hooks/useOAuthLogin';
 
@@ -24,6 +25,7 @@ export { LoginForm } from './components/LoginForm';
 export { RegisterForm } from './components/RegisterForm';
 export { ForgotPasswordForm } from './components/ForgotPasswordForm';
 export { ResetPasswordForm } from './components/ResetPasswordForm';
+export { AcceptInvitationForm } from './components/AcceptInvitationForm';
 export { SessionExpiredModal } from './components/SessionExpiredModal';
 export { OAuthButtons } from './components/OAuthButtons';
 
@@ -35,6 +37,7 @@ export type {
   LogoutRequest,
   ForgotPasswordRequest,
   ResetPasswordRequest,
+  AcceptInvitationRequest,
   ChangePasswordRequest,
   AuthTokensResponse,
   RefreshTokensResponse,

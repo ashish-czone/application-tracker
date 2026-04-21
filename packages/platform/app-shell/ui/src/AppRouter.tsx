@@ -191,6 +191,7 @@ const LoginPage = lazy(() => import('@packages/auth-ui/pages/LoginPage'));
 const RegisterPage = lazy(() => import('@packages/auth-ui/pages/RegisterPage'));
 const ForgotPasswordPage = lazy(() => import('@packages/auth-ui/pages/ForgotPasswordPage'));
 const ResetPasswordPage = lazy(() => import('@packages/auth-ui/pages/ResetPasswordPage'));
+const AcceptInvitationPage = lazy(() => import('@packages/auth-ui/pages/AcceptInvitationPage'));
 const ProfilePage = lazy(() => import('@packages/auth-ui/pages/ProfilePage'));
 const OAuthCallbackPage = lazy(() => import('@packages/auth-ui/pages/OAuthCallbackPage'));
 
@@ -311,6 +312,7 @@ export function AppRouter({ domains, brandLabel, menuItems, extraRoutes, detailH
       <Route path="/register" element={<Suspense fallback={null}><RegisterPage /></Suspense>} />
       <Route path="/forgot-password" element={<Suspense fallback={null}><ForgotPasswordPage /></Suspense>} />
       <Route path="/reset-password" element={<Suspense fallback={null}><ResetPasswordPage /></Suspense>} />
+      <Route path="/accept-invitation" element={<Suspense fallback={null}><AcceptInvitationPage /></Suspense>} />
       <Route path="/oauth/callback" element={<Suspense fallback={null}><OAuthCallbackPage /></Suspense>} />
 
       <Route element={<AuthGuard />}>
