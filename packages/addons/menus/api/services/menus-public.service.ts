@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { DatabaseService, and, asc, eq, isNull } from '@packages/database';
+import { PagesPublicService } from '@packages/pages-api';
 import { menus } from '../schema/menus';
 import { menuItems } from '../schema/menu-items';
 
@@ -9,6 +10,12 @@ export interface PublicMenuItemDto {
   linkType: 'url' | 'page';
   url: string | null;
   pageId: string | null;
+  /**
+   * Ready-to-render href. `url` is passed through as-is; `page` is resolved
+   * to `/<pageSlug>` using PagesPublicService. `null` when the reference is
+   * dangling (the target page was deleted).
+   */
+  href: string | null;
   target: '_self' | '_blank';
   depth: number;
   sortOrder: number;
@@ -30,7 +37,10 @@ export interface PublicMenuResponse {
  */
 @Injectable()
 export class MenusPublicService {
-  constructor(private readonly database: DatabaseService) {}
+  constructor(
+    private readonly database: DatabaseService,
+    private readonly pagesPublic: PagesPublicService,
+  ) {}
 
   async getBySlug(slug: string): Promise<PublicMenuResponse> {
     const [menu] = await this.database.db
@@ -64,9 +74,12 @@ export class MenusPublicService {
       .where(and(eq(menuItems.menuId, menu.id), isNull(menuItems.deletedAt)))
       .orderBy(asc(menuItems.sortOrder), asc(menuItems.id));
 
+    const pageIds = rows.map((r) => r.pageId).filter((id): id is string => !!id);
+    const slugByPageId = await this.pagesPublic.getSlugsForIds(pageIds);
+
     return {
       ...menu,
-      items: buildMenuTree(rows),
+      items: buildMenuTree(rows, (id) => slugByPageId.get(id) ?? null),
     };
   }
 }
@@ -86,17 +99,34 @@ type RawRow = {
 /**
  * Build a 2-level tree from a flat list of menu_item rows. Exported for unit
  * testing. Rows are assumed to be pre-sorted by (sortOrder ASC, id ASC) so the
- * output children arrays inherit that order without re-sorting.
+ * output children arrays inherit that order without re-sorting. The
+ * `resolvePageSlug` callback is used to derive `href` for `linkType: 'page'`
+ * rows — defaults to returning null so pure unit tests don't need to wire
+ * page lookups.
  */
-export function buildMenuTree(rows: RawRow[]): PublicMenuItemDto[] {
+export function buildMenuTree(
+  rows: RawRow[],
+  resolvePageSlug: (pageId: string) => string | null = () => null,
+): PublicMenuItemDto[] {
   const byId = new Map<string, PublicMenuItemDto>();
   for (const row of rows) {
+    const linkType = row.linkType as 'url' | 'page';
+    const href =
+      linkType === 'url'
+        ? row.url
+        : row.pageId
+          ? (() => {
+              const slug = resolvePageSlug(row.pageId);
+              return slug ? `/${slug}` : null;
+            })()
+          : null;
     byId.set(row.id, {
       id: row.id,
       label: row.label,
-      linkType: row.linkType as 'url' | 'page',
+      linkType,
       url: row.url,
       pageId: row.pageId,
+      href,
       target: row.target as '_self' | '_blank',
       depth: row.depth,
       sortOrder: row.sortOrder,

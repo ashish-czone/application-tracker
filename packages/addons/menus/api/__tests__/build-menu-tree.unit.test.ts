@@ -83,4 +83,27 @@ describe('buildMenuTree', () => {
       children: [],
     });
   });
+
+  it('resolves href from url for linkType=url', () => {
+    const tree = buildMenuTree([
+      row({ id: 'a', linkType: 'url', url: 'https://example.com' }),
+    ]);
+    expect(tree[0].href).toBe('https://example.com');
+  });
+
+  it('resolves href from resolvePageSlug for linkType=page', () => {
+    const tree = buildMenuTree(
+      [row({ id: 'a', linkType: 'page', url: null, pageId: 'p1' })],
+      (id) => (id === 'p1' ? 'about' : null),
+    );
+    expect(tree[0].href).toBe('/about');
+  });
+
+  it('returns null href when the referenced page is missing', () => {
+    const tree = buildMenuTree(
+      [row({ id: 'a', linkType: 'page', url: null, pageId: 'missing' })],
+      () => null,
+    );
+    expect(tree[0].href).toBeNull();
+  });
 });
