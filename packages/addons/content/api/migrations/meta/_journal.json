@@ -15,6 +15,13 @@
       "when": 1776767926618,
       "tag": "0001_brainy_giant_girl",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1776767969019,
+      "tag": "0002_bouncy_unicorn",
+      "breakpoints": true
     }
   ]
 }

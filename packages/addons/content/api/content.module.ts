@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { EntityEngineModule } from '@packages/entity-engine';
 import { TESTIMONIALS_CONFIG } from './testimonials.config';
 import { FAQ_ITEMS_CONFIG } from './faq-items.config';
+import { TEAM_MEMBERS_CONFIG } from './team-members.config';
 
 /**
  * ContentModule registers content primitives (testimonials, FAQ items, team
@@ -16,6 +17,7 @@ import { FAQ_ITEMS_CONFIG } from './faq-items.config';
   imports: [
     EntityEngineModule.forEntity(TESTIMONIALS_CONFIG),
     EntityEngineModule.forEntity(FAQ_ITEMS_CONFIG),
+    EntityEngineModule.forEntity(TEAM_MEMBERS_CONFIG),
   ],
 })
 export class ContentModule {}
