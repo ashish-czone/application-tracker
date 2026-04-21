@@ -31,4 +31,11 @@ describe('PAGES_CONFIG', () => {
     expect(PAGES_CONFIG.listFields).not.toContain('metaDescription');
     expect(PAGES_CONFIG.listFields).not.toContain('ogImage');
   });
+
+  it('marks title and slug as quick-create fields', () => {
+    expect(PAGES_CONFIG.fieldMeta.title.isQuickCreate).toBe(true);
+    expect(PAGES_CONFIG.fieldMeta.slug.isQuickCreate).toBe(true);
+    expect(PAGES_CONFIG.fieldMeta.metaDescription.isQuickCreate).toBeFalsy();
+    expect(PAGES_CONFIG.fieldMeta.ogImage.isQuickCreate).toBeFalsy();
+  });
 });

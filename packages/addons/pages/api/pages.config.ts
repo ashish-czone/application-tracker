@@ -19,6 +19,7 @@ export const PAGES_CONFIG = defineEntity({
       isLabel: true,
       listVisible: true,
       listOrder: 1,
+      quickCreate: true,
     },
     slug: {
       type: 'text',
@@ -29,6 +30,7 @@ export const PAGES_CONFIG = defineEntity({
       sortable: true,
       listVisible: true,
       listOrder: 2,
+      quickCreate: true,
     },
     metaDescription: {
       type: 'textarea',
