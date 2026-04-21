@@ -57,7 +57,7 @@ export const COMPLIANCE_TASKS_CONFIG = defineEntity({
 
   fields: {
     ruleId: {
-      type: 'belongsTo',
+      type: 'lookup',
       label: 'Rule',
       entity: 'compliance-rules',
       required: true,
@@ -66,7 +66,7 @@ export const COMPLIANCE_TASKS_CONFIG = defineEntity({
       listOrder: 1,
     },
     clientId: {
-      type: 'belongsTo',
+      type: 'lookup',
       label: 'Client',
       entity: 'clients',
       required: true,
@@ -75,7 +75,7 @@ export const COMPLIANCE_TASKS_CONFIG = defineEntity({
       listOrder: 2,
     },
     lawId: {
-      type: 'belongsTo',
+      type: 'lookup',
       label: 'Law',
       entity: 'laws',
       required: true,
@@ -98,6 +98,12 @@ export const COMPLIANCE_TASKS_CONFIG = defineEntity({
       listOrder: 5,
     },
   },
+
+  relationships: [
+    { name: 'rule', type: 'belongsTo', foreignKey: 'ruleId', targetEntity: 'compliance-rules', label: 'Rule' },
+    { name: 'client', type: 'belongsTo', foreignKey: 'clientId', targetEntity: 'clients', label: 'Client' },
+    { name: 'law', type: 'belongsTo', foreignKey: 'lawId', targetEntity: 'laws', label: 'Law' },
+  ],
 
   defaultSort: 'periodStart',
 

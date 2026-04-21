@@ -11,7 +11,7 @@ export const LAW_HANDLERS_CONFIG = defineEntity({
 
   fields: {
     lawId: {
-      type: 'belongsTo',
+      type: 'lookup',
       label: 'Law',
       entity: 'laws',
       required: true,
@@ -21,7 +21,7 @@ export const LAW_HANDLERS_CONFIG = defineEntity({
       listOrder: 1,
     },
     orgEntityId: {
-      type: 'belongsTo',
+      type: 'lookup',
       label: 'Handler Org Unit',
       entity: 'org_units',
       required: true,
@@ -31,7 +31,7 @@ export const LAW_HANDLERS_CONFIG = defineEntity({
       listOrder: 2,
     },
     clientId: {
-      type: 'belongsTo',
+      type: 'lookup',
       label: 'Client (optional override)',
       entity: 'clients',
       lookupLabelField: 'name',
@@ -47,6 +47,12 @@ export const LAW_HANDLERS_CONFIG = defineEntity({
       listOrder: 4,
     },
   },
+
+  relationships: [
+    { name: 'law', type: 'belongsTo', foreignKey: 'lawId', targetEntity: 'laws', label: 'Law' },
+    { name: 'orgEntity', type: 'belongsTo', foreignKey: 'orgEntityId', targetEntity: 'org_units', label: 'Handler Org Unit' },
+    { name: 'client', type: 'belongsTo', foreignKey: 'clientId', targetEntity: 'clients', label: 'Client' },
+  ],
 
   defaultSort: 'lawId',
 
