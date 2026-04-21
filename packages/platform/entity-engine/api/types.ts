@@ -434,11 +434,14 @@ export interface EntityRelationship {
   type: 'hasMany' | 'belongsTo' | 'hasOne' | 'manyToMany';
   /** Target entity type (must be registered in the registry) */
   targetEntity: string;
-  /** Foreign key column on the target entity (for hasMany / hasOne) */
+  /**
+   * The FK column that links the two entities. Direction is implied by type:
+   * - `belongsTo`: column lives on THIS entity, pointing to target
+   * - `hasOne` / `hasMany`: column lives on the TARGET entity, pointing back
+   * - `manyToMany`: not used — use `junctionEntity` instead
+   */
   foreignKey?: string;
-  /** Foreign key column on this entity (for belongsTo) */
-  inverseForeignKey?: string;
-  /** Junction entity type (for manyToMany) */
+  /** Junction entity type (for manyToMany only) */
   junctionEntity?: string;
   /** Display label for the related list */
   label: string;
@@ -989,5 +992,5 @@ export interface EntityRegistryEntry {
       fieldName: string;
     } | null;
   };
-  relationships: Omit<EntityRelationship, 'inverseForeignKey' | 'junctionEntity'>[];
+  relationships: Omit<EntityRelationship, 'junctionEntity' | 'handler'>[];
 }

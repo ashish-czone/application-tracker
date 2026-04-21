@@ -33,7 +33,7 @@ function makeConfig() {
         ],
       },
       priority: { type: 'number', label: 'Priority' },
-      assigneeId: { type: 'belongsTo', label: 'Assignee', entity: 'users' },
+      assigneeId: { type: 'lookup', label: 'Assignee', entity: 'users' },
     },
     sections: [
       { name: 'Basics', columns: 2, fields: ['name', 'status'] },

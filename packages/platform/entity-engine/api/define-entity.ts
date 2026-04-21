@@ -24,8 +24,14 @@ import { hasCustomFieldsColumn } from './helpers/custom-fields-column';
 // ---------------------------------------------------------------------------
 
 export interface ModelField {
-  /** Field type. Use 'belongsTo', 'hasOne', 'hasMany', or 'manyToMany' for relation shortcuts. */
-  type: FieldType | 'belongsTo' | 'hasOne' | 'hasMany' | 'manyToMany';
+  /**
+   * Field type. Must be a scalar/column type.
+   *
+   * Relations (belongsTo/hasOne/hasMany/manyToMany) are declared in the
+   * top-level `relationships` array on ModelDefinition, not here. FK columns
+   * are declared as `type: 'lookup'`.
+   */
+  type: FieldType;
   /** Display label */
   label: string;
 
@@ -80,18 +86,10 @@ export interface ModelField {
   /** Picklist options (for picklist/multi_select field types) */
   options?: SetPicklistOptionInput[];
 
-  // --- Relations ---
+  // --- Lookup (for lookup/multi_lookup/user/multi_user field types) ---
 
-  /** Target entity type for lookup/belongsTo/hasMany/manyToMany */
+  /** Target entity type for lookup/multi_lookup/user/multi_user fields */
   entity?: string;
-  /** Foreign key column on the target entity (for hasMany) */
-  foreignKey?: string;
-  /** Foreign key column on this entity (for belongsTo) */
-  inverseForeignKey?: string;
-  /** Junction entity type (for manyToMany) */
-  junctionEntity?: string;
-  /** Fields to show in the related list (for hasMany) */
-  displayFields?: string[];
   /** Lookup label field (for lookup fields) */
   lookupLabelField?: string;
   /** Lookup search fields (for lookup fields) */
@@ -295,37 +293,6 @@ export interface ModelDefinition<TTable extends PgTable = PgTable> {
 }
 
 // ---------------------------------------------------------------------------
-// Relation field type mapping
-// ---------------------------------------------------------------------------
-
-/**
- * Merge field-derived relationships (from `fields.X: { type: 'hasMany' | ... }`)
- * with top-level `relationships` declared on `ModelDefinition`. Top-level entries
- * override field-derived ones when they share a `name`, so callers can migrate
- * gradually. The field-level shortcut is deprecated.
- */
-function mergeRelationships(
-  fromFields: EntityRelationship[],
-  fromTopLevel: EntityRelationship[] | undefined,
-): EntityRelationship[] | undefined {
-  if (!fromTopLevel || fromTopLevel.length === 0) {
-    return fromFields.length > 0 ? fromFields : undefined;
-  }
-  const byName = new Map<string, EntityRelationship>();
-  for (const rel of fromFields) byName.set(rel.name, rel);
-  for (const rel of fromTopLevel) byName.set(rel.name, rel);
-  const merged = Array.from(byName.values());
-  return merged.length > 0 ? merged : undefined;
-}
-
-const RELATION_TO_FIELD_TYPE: Record<string, FieldType> = {
-  belongsTo: 'lookup',
-  hasOne: 'lookup', // hasOne doesn't produce a fieldMeta entry — it becomes a relationship
-  hasMany: 'lookup', // hasMany doesn't produce a fieldMeta entry — it becomes a relationship
-  manyToMany: 'lookup',
-};
-
-// ---------------------------------------------------------------------------
 // defineEntity() — converts ModelDefinition to EntityConfig
 // ---------------------------------------------------------------------------
 
@@ -360,7 +327,6 @@ export function defineEntity<TTable extends PgTable>(model: ModelDefinition<TTab
   const fieldMeta: Record<string, FieldMeta> = {};
   const searchColumns: PgColumn[] = [];
   const sortableColumns: Record<string, PgColumn> = {};
-  const relationships: EntityRelationship[] = [];
   const recipientFields: Record<string, { label: string }> = {};
   const listFields: string[] = [];
   // Infrastructure-only columns: excluded from field seeding and event snapshots.
@@ -495,30 +461,7 @@ export function defineEntity<TTable extends PgTable>(model: ModelDefinition<TTab
   let sortOrder = 0;
 
   for (const [key, field] of Object.entries(model.fields)) {
-    const isRelation = field.type === 'hasMany' || field.type === 'hasOne' || field.type === 'manyToMany';
-
-    // hasOne / hasMany / manyToMany: extract as relationship, don't create fieldMeta.
-    // The FK lives on the child table — these are reverse relations with no column
-    // on the parent. Write-side support is provided via an optional handler on the
-    // relationship (wired at engine level, not at defineEntity).
-    if (isRelation) {
-      relationships.push({
-        name: key,
-        type: field.type as 'hasOne' | 'hasMany' | 'manyToMany',
-        targetEntity: field.entity ?? key,
-        foreignKey: field.foreignKey,
-        inverseForeignKey: field.inverseForeignKey,
-        junctionEntity: field.junctionEntity,
-        label: field.label,
-        displayFields: field.displayFields,
-      });
-      continue;
-    }
-
-    // Map belongsTo to lookup field type
-    const fieldType: FieldType = field.type === 'belongsTo'
-      ? 'lookup'
-      : field.type as FieldType;
+    const fieldType: FieldType = field.type;
 
     // Build FieldMeta
     const meta: FieldMeta = {
@@ -634,7 +577,7 @@ export function defineEntity<TTable extends PgTable>(model: ModelDefinition<TTab
     sections: model.sections ?? [],
     listFields: listFields.length > 0 ? listFields : undefined,
     lookup,
-    relationships: mergeRelationships(relationships, model.relationships),
+    relationships: model.relationships && model.relationships.length > 0 ? model.relationships : undefined,
     recipientFields: Object.keys(recipientFields).length > 0 ? recipientFields : undefined,
     customFields: model.customFields,
     adminConfigurable: model.adminConfigurable,
