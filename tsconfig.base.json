@@ -107,6 +107,8 @@
       "@packages/orderable/*": ["./packages/platform/orderable/api/*"],
       "@packages/menus-api": ["./packages/addons/menus/api"],
       "@packages/menus-api/*": ["./packages/addons/menus/api/*"],
+      "@packages/blocks-contract": ["./packages/platform/blocks/contract"],
+      "@packages/blocks-contract/*": ["./packages/platform/blocks/contract/*"],
       "@packages/*": ["./packages/core/*", "./packages/platform/*", "./packages/addons/*"],
       "@domains/*": ["./domains/*"]
     }
