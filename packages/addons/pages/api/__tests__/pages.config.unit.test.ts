@@ -38,4 +38,8 @@ describe('PAGES_CONFIG', () => {
     expect(PAGES_CONFIG.fieldMeta.metaDescription.isQuickCreate).toBeFalsy();
     expect(PAGES_CONFIG.fieldMeta.ogImage.isQuickCreate).toBeFalsy();
   });
+
+  it('routes the quick-create success into the page editor', () => {
+    expect(PAGES_CONFIG.ui.afterCreateRoute).toBe('/pages/:id/edit');
+  });
 });

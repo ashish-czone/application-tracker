@@ -496,6 +496,8 @@ export interface EntityUIHints {
   createMode?: 'modal' | 'page' | 'wizard';
   /** Picklist field keys that can be used as board/kanban grouping. Enables board view toggle on list page. */
   boardFields?: string[];
+  /** Route template used by the list page after a successful quick-create, instead of the default detail page. `:id` is interpolated with the created entity id — e.g. `/pages/:id/edit`. */
+  afterCreateRoute?: string;
 }
 
 // ---------------------------------------------------------------------------

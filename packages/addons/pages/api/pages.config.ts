@@ -64,5 +64,6 @@ export const PAGES_CONFIG = defineEntity({
     icon: 'FileText',
     navGroup: 'Content',
     createMode: 'modal',
+    afterCreateRoute: '/pages/:id/edit',
   },
 });

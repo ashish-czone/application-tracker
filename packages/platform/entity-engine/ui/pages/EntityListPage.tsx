@@ -577,7 +577,13 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
             entityType={entityType}
             singularName={entity.singularName}
             onClose={() => setAddModalOpen(false)}
-            onSuccess={(created) => navigate(`/${entity.slug}/${created.id}`)}
+            onSuccess={(created) => {
+              const template = entity.ui.afterCreateRoute;
+              const target = template
+                ? template.replace(':id', String(created.id))
+                : `/${entity.slug}/${created.id}`;
+              navigate(target);
+            }}
           />
         </DialogContent>
       </Dialog>
