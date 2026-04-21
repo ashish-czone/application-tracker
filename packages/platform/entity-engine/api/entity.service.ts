@@ -30,6 +30,7 @@ import { validatePayload } from './helpers/validate-payload';
 import { splitPayload } from './helpers/split-payload';
 import { splitExtensionPayload } from './helpers/split-extension-payload';
 import { buildClonePayload } from './helpers/build-clone-payload';
+import { infrastructureSelectKeys } from './helpers/infrastructure-select-keys';
 import { fieldTypeSaveHookRegistry, type FieldTypeSaveHookRegistry, type FieldTypeSaveHookContext } from './services/field-type-save-hook.registry';
 import type { WorkflowExtension } from './extensions/workflow-extension.interface';
 import type { TaxonomyExtension } from './extensions/taxonomy-extension.interface';
@@ -323,6 +324,15 @@ export class EntityService {
     const displayFields = Array.isArray(nameField) ? [...nameField] : [nameField];
     if (subtitleField) displayFields.push(subtitleField);
     for (const key of displayFields) {
+      const col = resolveColumn(key);
+      if (col) selectMap[key] = col;
+    }
+
+    // Hierarchy/orderable columns are infrastructure — not registered as
+    // user-editable fields, but list consumers (tree renderers, drag-drop
+    // UIs) need them to decide parent/child relationships and nesting depth.
+    // Include them unconditionally when the entity opts in.
+    for (const key of infrastructureSelectKeys(this.config)) {
       const col = resolveColumn(key);
       if (col) selectMap[key] = col;
     }
