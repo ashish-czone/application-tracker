@@ -265,11 +265,11 @@ importers:
         specifier: ^3.0.0
         version: 3.0.0
 
-  apps/agency-site:
+  apps/agency/ui/portals/customer:
     dependencies:
       '@packages/pages-ui-frontend':
         specifier: workspace:*
-        version: link:../../packages/addons/pages/ui/frontend
+        version: link:../../../../../packages/addons/pages/ui/frontend
       next:
         specifier: ^15.1.0
         version: 15.5.15(@babel/core@7.29.0)(@playwright/test@1.58.2)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)

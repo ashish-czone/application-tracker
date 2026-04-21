@@ -1,5 +1,6 @@
 packages:
   - "apps/*"
+  - "apps/*/ui/portals/*"
   - "packages/core/**"
   - "packages/platform/**"
   - "packages/addons/**"
