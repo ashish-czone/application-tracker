@@ -4,13 +4,13 @@
   "packageManager": "pnpm@9.15.4",
   "pnpm": {
     "overrides": {
-      "@dnd-kit/abstract": "0.3.2",
-      "@dnd-kit/collision": "0.3.2",
-      "@dnd-kit/dom": "0.3.2",
-      "@dnd-kit/geometry": "0.3.2",
-      "@dnd-kit/helpers": "0.3.2",
-      "@dnd-kit/react": "0.3.2",
-      "@dnd-kit/state": "0.3.2"
+      "@dnd-kit/abstract": "0.1.21",
+      "@dnd-kit/collision": "0.1.21",
+      "@dnd-kit/dom": "0.1.21",
+      "@dnd-kit/geometry": "0.1.21",
+      "@dnd-kit/helpers": "0.1.18",
+      "@dnd-kit/react": "0.1.18",
+      "@dnd-kit/state": "0.1.21"
     }
   },
   "scripts": {
