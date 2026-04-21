@@ -42,6 +42,8 @@
       "@packages/hierarchy/*": ["../../packages/platform/hierarchy/api/*"],
       "@packages/pages-api": ["../../packages/addons/pages/api"],
       "@packages/pages-api/*": ["../../packages/addons/pages/api/*"],
+      "@packages/content-api": ["../../packages/addons/content/api"],
+      "@packages/content-api/*": ["../../packages/addons/content/api/*"],
       "@packages/*": ["../../packages/core/*", "../../packages/platform/*", "../../packages/addons/*"],
       "@domains/agency-api": ["../../domains/agency/api"],
       "@domains/agency-api/*": ["../../domains/agency/api/*"],

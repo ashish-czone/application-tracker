@@ -16,6 +16,7 @@
     "@packages/entity-engine": "workspace:*",
     "@packages/events": "workspace:*",
     "@packages/logger": "workspace:*",
+    "@packages/content-api": "workspace:*",
     "@packages/pages-api": "workspace:*",
     "@packages/rbac": "workspace:*"
   },

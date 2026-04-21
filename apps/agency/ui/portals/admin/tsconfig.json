@@ -86,6 +86,8 @@
       "@packages/pages-ui-admin/*": ["../../../../../packages/addons/pages/ui/admin/*"],
       "@packages/pages-ui-frontend": ["../../../../../packages/addons/pages/ui/frontend"],
       "@packages/pages-ui-frontend/*": ["../../../../../packages/addons/pages/ui/frontend/*"],
+      "@packages/content-api": ["../../../../../packages/addons/content/api"],
+      "@packages/content-api/*": ["../../../../../packages/addons/content/api/*"],
       "@packages/*": ["../../../../../packages/core/*", "../../../../../packages/platform/*", "../../../../../packages/addons/*"],
       "@domains/agency-api": ["../../../../../domains/agency/api"],
       "@domains/agency-api/*": ["../../../../../domains/agency/api/*"],
