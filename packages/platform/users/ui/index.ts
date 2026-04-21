@@ -7,6 +7,6 @@ export {
 } from './hooks';
 export { createUsersApi, type UsersUiApi } from './services';
 export type {
-  User, UserStatus, Role, CreateUserRequest, UpdateUserRequest, ListUsersParams,
+  User, UserStatus, UserPosition, Role, CreateUserRequest, UpdateUserRequest, ListUsersParams,
   InviteUserRequest, InvitedUserResponse,
 } from './types';

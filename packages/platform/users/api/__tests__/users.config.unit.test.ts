@@ -244,5 +244,102 @@ describe('createUsersEntityConfig', () => {
       );
       expect(enriched.roles).toEqual([]);
     });
+
+    it('afterList attaches positions per row via batch positionsReader', async () => {
+      const positionsReader = {
+        getPositionsByUserIds: vi.fn(async (ids: string[]) => ({
+          [ids[0]!]: [
+            { unitId: 'ou1', unitName: 'Tax', positionId: 'p1', positionName: 'Head' },
+          ],
+          [ids[1]!]: [],
+        })),
+      };
+      const config = createUsersEntityConfig({
+        credentialsHandler: noopHandler,
+        rolesHandler: noopHandler,
+        positionsReader,
+      });
+
+      const enriched = await config.hooks!.afterList!(
+        [{ id: 'u1' }, { id: 'u2' }],
+        { actorId: 'actor-1' },
+      );
+
+      expect(positionsReader.getPositionsByUserIds).toHaveBeenCalledWith(['u1', 'u2']);
+      expect(enriched[0]?.positions).toEqual([
+        { unitId: 'ou1', unitName: 'Tax', positionId: 'p1', positionName: 'Head' },
+      ]);
+      expect(enriched[1]?.positions).toEqual([]);
+    });
+
+    it('afterList returns positions:[] on every row when no positionsReader is wired', async () => {
+      const config = createUsersEntityConfig({
+        credentialsHandler: noopHandler,
+        rolesHandler: noopHandler,
+      });
+
+      const enriched = await config.hooks!.afterList!(
+        [{ id: 'u1' }, { id: 'u2' }],
+        { actorId: 'actor-1' },
+      );
+
+      expect(enriched[0]?.positions).toEqual([]);
+      expect(enriched[1]?.positions).toEqual([]);
+    });
+
+    it('afterFindOne attaches positions for the single row', async () => {
+      const positionsReader = {
+        getPositionsByUserIds: vi.fn(async (ids: string[]) => ({
+          [ids[0]!]: [
+            { unitId: 'ou1', unitName: 'Audit', positionId: null, positionName: null },
+          ],
+        })),
+      };
+      const config = createUsersEntityConfig({
+        credentialsHandler: noopHandler,
+        rolesHandler: noopHandler,
+        positionsReader,
+      });
+
+      const enriched = await config.hooks!.afterFindOne!(
+        { id: 'u1' },
+        { actorId: 'actor-1' },
+      );
+
+      expect(positionsReader.getPositionsByUserIds).toHaveBeenCalledWith(['u1']);
+      expect(enriched.positions).toEqual([
+        { unitId: 'ou1', unitName: 'Audit', positionId: null, positionName: null },
+      ]);
+    });
+
+    it('afterList runs roles and positions readers in parallel and combines both', async () => {
+      const rolesReader = {
+        getRolesByUserIds: vi.fn(async (ids: string[]) => ({
+          [ids[0]!]: [{ id: 'r1', name: 'Admin', userType: 'admin' }],
+        })),
+      };
+      const positionsReader = {
+        getPositionsByUserIds: vi.fn(async (ids: string[]) => ({
+          [ids[0]!]: [{ unitId: 'ou1', unitName: 'Tax', positionId: 'p1', positionName: 'Head' }],
+        })),
+      };
+      const config = createUsersEntityConfig({
+        credentialsHandler: noopHandler,
+        rolesHandler: noopHandler,
+        rolesReader,
+        positionsReader,
+      });
+
+      const enriched = await config.hooks!.afterList!(
+        [{ id: 'u1', deletedAt: null, invitedAt: null, acceptedAt: null }],
+        { actorId: 'actor-1' },
+      );
+
+      expect(enriched[0]?.roles).toEqual([{ id: 'r1', name: 'Admin', userType: 'admin' }]);
+      expect(enriched[0]?.positions).toEqual([
+        { unitId: 'ou1', unitName: 'Tax', positionId: 'p1', positionName: 'Head' },
+      ]);
+      expect(enriched[0]?.status).toBe('active');
+    });
   });
 });

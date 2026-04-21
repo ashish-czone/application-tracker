@@ -1,6 +1,15 @@
 /** Matches the tri-state produced by the backend's deriveUserStatus. */
 export type UserStatus = 'active' | 'invited' | 'deactivated';
 
+/** One org-unit membership. Attached server-side by the optional
+ *  positionsReader registered in apps that have an org-units concept. */
+export interface UserPosition {
+  unitId: string;
+  unitName: string;
+  positionId: string | null;
+  positionName: string | null;
+}
+
 export interface User {
   id: string;
   email: string;
@@ -17,6 +26,8 @@ export interface User {
   /** Computed server-side from deletedAt + invitedAt + acceptedAt. */
   status: UserStatus;
   roles: { id: string; name: string }[];
+  /** Empty array when the app has no positions reader wired up. */
+  positions: UserPosition[];
 }
 
 export interface CreateUserRequest {

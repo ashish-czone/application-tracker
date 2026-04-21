@@ -7,24 +7,49 @@ import { ContactResolverRegistry } from '@packages/notifications';
 import { LookupResolverService } from '@packages/entity-engine';
 import { UsersController } from './controllers/users.controller';
 import { UsersService } from './services/users.service';
-import { createUsersEntityConfig } from './users.config';
+import {
+  createUsersEntityConfig,
+  type UsersRolesReader,
+  type UsersPositionsReader,
+} from './users.config';
 
 /** Token for optional UniqueCheckService injection from app-level SharedModule */
 export const UNIQUE_CHECK_SERVICE = 'UNIQUE_CHECK_SERVICE';
 
+/** DI token for the optional positions reader. Apps that have an org-units
+ *  membership concept register a provider for this token; apps that don't
+ *  just leave it unbound and every user row gets `positions: []`. */
+export const USERS_POSITIONS_READER = 'USERS_POSITIONS_READER';
+
 /**
  * Module-level entity config. Built once at module-definition time with
- * placeholder handlers + reader so `EntityEngineModule.forEntity()` receives
- * a stable reference. The handlers and the rolesReader are injected into
- * the config at `onModuleInit` — they live on singletons from `@packages/auth`
- * and `@packages/rbac` that are only available after DI has run.
+ * placeholder handlers and late-bound reader closures so
+ * `EntityEngineModule.forEntity()` receives a stable reference. The handlers
+ * live on singletons from `@packages/auth` and `@packages/rbac` that are only
+ * available after DI has run, so they're swapped in at `onModuleInit`; the
+ * readers are late-bound through module-scoped refs that the closures below
+ * read from every call.
  *
  * The engine reads handlers and hooks at request time (not at bootstrap), so
  * the late-binding is safe: every entity request fires after onModuleInit.
  */
+let rbacRef: RbacService | null = null;
+let positionsRef: UsersPositionsReader | null = null;
+
+const rolesReader: UsersRolesReader = {
+  getRolesByUserIds: async (ids) => (rbacRef ? rbacRef.getRolesByUserIds(ids) : {}),
+};
+
+const positionsReader: UsersPositionsReader = {
+  getPositionsByUserIds: async (ids) =>
+    positionsRef ? positionsRef.getPositionsByUserIds(ids) : {},
+};
+
 const USERS_CONFIG = createUsersEntityConfig({
   credentialsHandler: {} as any,
   rolesHandler: {} as any,
+  rolesReader,
+  positionsReader,
 });
 
 @Module({
@@ -42,6 +67,9 @@ export class UsersModule implements OnModuleInit {
     private readonly credentialsHandler: CredentialsRelationHandler,
     private readonly rolesHandler: UserRolesRelationHandler,
     @Optional() @Inject(UNIQUE_CHECK_SERVICE) private readonly uniqueCheckService?: any,
+    @Optional()
+    @Inject(USERS_POSITIONS_READER)
+    private readonly appPositionsReader?: UsersPositionsReader,
   ) {}
 
   onModuleInit() {
@@ -54,21 +82,8 @@ export class UsersModule implements OnModuleInit {
     const rolesRel = USERS_CONFIG.relationships!.find((r) => r.name === 'roles')!;
     rolesRel.handler = this.rolesHandler;
 
-    const rbac = this.rbacService;
-    USERS_CONFIG.hooks = {
-      ...USERS_CONFIG.hooks,
-      afterList: async (rows) => {
-        if (rows.length === 0) return rows;
-        const ids = rows.map((r) => r.id as string);
-        const byUser = await rbac.getRolesByUserIds(ids);
-        return rows.map((r) => ({ ...r, roles: byUser[r.id as string] ?? [] }));
-      },
-      afterFindOne: async (row) => {
-        const id = row.id as string;
-        const byUser = await rbac.getRolesByUserIds([id]);
-        return { ...row, roles: byUser[id] ?? [] };
-      },
-    };
+    rbacRef = this.rbacService;
+    if (this.appPositionsReader) positionsRef = this.appPositionsReader;
 
     // Contact resolvers for notification channels — not covered by entity-engine
     this.contactResolverRegistry.register('email', (userId) => this.usersService.getEmail(userId));
