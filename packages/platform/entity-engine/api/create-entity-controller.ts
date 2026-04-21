@@ -213,6 +213,24 @@ export function createEntityController(config: EntityConfig, serviceToken: strin
       const accessCtx = await buildAccessContext(user, readPermission, config.entityType, this.positionScopeProvider);
       return this.entityService.getDescendants(id, accessCtx);
     }
+
+    // ── Move (unified reparent + reorder) ───────────────────────────────
+    // Functional when config.hierarchy === true and/or config.orderable ===
+    // true. Accepts { parentId?, sortOrder? }. Callers may pass just one to
+    // reorder within the current parent, or both to move and reposition in
+    // a single gesture. Non-applicable keys throw 400.
+
+    @Post(':id/move')
+    @RequirePermission(updatePermission)
+    @ApiOperation({ summary: `Move a ${config.singularName.toLowerCase()} (reparent and/or reorder)` })
+    async move(
+      @Param('id', ParseUUIDPipe) id: string,
+      @Body() body: { parentId?: string | null; sortOrder?: number },
+      @CurrentUser() user: JwtPayload,
+    ) {
+      const accessCtx = await buildAccessContext(user, updatePermission, config.entityType, this.positionScopeProvider);
+      return this.entityService.move(id, body, user.userId, accessCtx);
+    }
   }
 
   // Give the class a unique name for NestJS DI and debugging

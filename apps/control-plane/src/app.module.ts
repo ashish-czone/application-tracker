@@ -18,6 +18,7 @@ import { AuditModule, AuditRegistryService } from '@packages/audit';
 import { AUDIT_EXTENSION } from '@packages/entity-engine';
 import { TaxonomyModule } from '@packages/taxonomy';
 import { HierarchyModule } from '@packages/hierarchy';
+import { OrderableModule } from '@packages/orderable';
 import { EntityEngineModule } from '@packages/entity-engine';
 import { AuthModule, AuthGuard } from '@packages/auth';
 import { OAuthModule } from '@packages/oauth';
@@ -61,6 +62,7 @@ import { validate } from './config/env.validation';
     WorkflowsModule,
     TaxonomyModule,
     HierarchyModule,
+    OrderableModule,
     EntityEngineModule,
     // Auth + Users
     AuthModule.registerAsync({

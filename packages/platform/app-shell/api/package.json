@@ -21,6 +21,7 @@
     "@packages/entity-layout": "workspace:*",
     "@packages/events": "workspace:*",
     "@packages/hierarchy": "workspace:*",
+    "@packages/orderable": "workspace:*",
     "@packages/logger": "workspace:*",
     "@packages/media": "workspace:*",
     "@packages/notification-channels": "workspace:*",

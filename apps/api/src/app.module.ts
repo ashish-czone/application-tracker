@@ -18,6 +18,7 @@ import { WorkflowsModule } from '@packages/workflows';
 import { AuditModule, AuditRegistryService } from '@packages/audit';
 import { AUDIT_EXTENSION } from '@packages/entity-engine';
 import { HierarchyModule } from '@packages/hierarchy';
+import { OrderableModule } from '@packages/orderable';
 import { MediaModule } from '@packages/media';
 import { AuthModule, AuthGuard } from '@packages/auth';
 import { OAuthModule } from '@packages/oauth';
@@ -87,6 +88,7 @@ import { validate } from './config/env.validation';
     NotificationsModule,
     AuditModule,
     HierarchyModule,
+    OrderableModule,
     WorkflowsModule,
     TaxonomyModule,
     NotesModule,
