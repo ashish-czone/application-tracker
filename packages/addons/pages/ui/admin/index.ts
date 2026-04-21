@@ -35,3 +35,6 @@ export type {
 export { PageEditor } from './PageEditor';
 export type { PageEditorProps } from './PageEditor';
 export { PageEditorPage } from './PageEditorPage';
+
+export { DataSourcePicker, transitionKind } from './DataSourcePicker';
+export type { DataSourcePickerProps, DataSourcePickerEntity } from './DataSourcePicker';
