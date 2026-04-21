@@ -1,7 +1,7 @@
 import { test, expect, type Route } from '@playwright/test';
 
 /**
- * End-to-end smoke for the public agency-site: mock the pages-api, hit
+ * End-to-end smoke for the public agency customer portal: mock the pages-api, hit
  * the slug route, and assert the starter blocks render. Validates the
  * chain Next.js -> PageRenderer -> block registry -> block components
  * in a real browser without needing a DB or backend.

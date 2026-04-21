@@ -1,10 +1,6 @@
 import type { PublicPageResponse } from '@packages/pages-ui-frontend';
 
-/**
- * Base URL of the pages-api (apps/api). Set in .env as PAGES_API_URL;
- * falls back to http://localhost:3000 for local dev.
- */
-const API_BASE = process.env.PAGES_API_URL ?? 'http://localhost:3000';
+const API_BASE = process.env.PAGES_API_URL ?? 'http://localhost:3014';
 
 export async function fetchPageBySlug(
   slug: string,

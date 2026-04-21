@@ -19,7 +19,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'pnpm --filter @apps/agency-site dev',
+    command: 'pnpm --filter @apps/agency-customer dev',
     url: 'http://localhost:3100',
     reuseExistingServer: true,
     timeout: 90_000,
