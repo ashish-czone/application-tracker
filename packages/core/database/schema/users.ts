@@ -13,6 +13,9 @@ export const users = pgTable('users', {
   updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }).notNull().$defaultFn(() => new Date()).$onUpdate(() => new Date()),
   deletedAt: timestamp('deleted_at', { withTimezone: true, mode: 'date' }),
   deletedBy: text('deleted_by'),
+  invitedAt: timestamp('invited_at', { withTimezone: true, mode: 'date' }),
+  acceptedAt: timestamp('accepted_at', { withTimezone: true, mode: 'date' }),
+  lastLoginAt: timestamp('last_login_at', { withTimezone: true, mode: 'date' }),
 }, (table) => [
   uniqueIndex('users_email_unique').on(table.email).where(sql`deleted_at IS NULL`),
 ]);
