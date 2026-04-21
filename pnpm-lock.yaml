@@ -164,6 +164,9 @@ importers:
       '@packages/media':
         specifier: workspace:*
         version: link:../../packages/platform/media
+      '@packages/menus-api':
+        specifier: workspace:*
+        version: link:../../packages/addons/menus/api
       '@packages/notification-channels':
         specifier: workspace:*
         version: link:../../packages/platform/notification-channels/api
@@ -1687,6 +1690,9 @@ importers:
       '@packages/logger':
         specifier: workspace:*
         version: link:../../../packages/core/logger
+      '@packages/menus-api':
+        specifier: workspace:*
+        version: link:../../../packages/addons/menus/api
       '@packages/pages-api':
         specifier: workspace:*
         version: link:../../../packages/addons/pages/api

@@ -2,9 +2,9 @@ import { randomUUID } from 'node:crypto';
 import { pgTable, text, timestamp, index } from 'drizzle-orm/pg-core';
 import { users } from '@packages/database/schema';
 import { softDeleteColumns } from '@packages/soft-delete';
-import { hierarchyColumns } from '@packages/hierarchy';
-import { orderableColumns } from '@packages/orderable';
-import { pages } from '@packages/pages-api';
+import { hierarchyColumns } from '@packages/hierarchy/schema';
+import { orderableColumns } from '@packages/orderable/schema';
+import { pages } from '@packages/pages-api/schema';
 import { menus } from './menus';
 
 /**
