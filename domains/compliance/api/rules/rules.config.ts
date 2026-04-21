@@ -31,7 +31,7 @@ export const COMPLIANCE_RULES_CONFIG = defineEntity({
       listOrder: 2,
     },
     lawId: {
-      type: 'belongsTo',
+      type: 'lookup',
       label: 'Law',
       entity: 'laws',
       required: true,
@@ -96,6 +96,10 @@ export const COMPLIANCE_RULES_CONFIG = defineEntity({
       defaultValue: 'true',
     },
   },
+
+  relationships: [
+    { name: 'law', type: 'belongsTo', foreignKey: 'lawId', targetEntity: 'laws', label: 'Law' },
+  ],
 
   defaultSort: 'code',
 

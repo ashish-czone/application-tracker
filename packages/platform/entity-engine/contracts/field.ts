@@ -25,7 +25,7 @@ export type FieldType =
   | 'rich_text'
   | 'workflow';
 
-export type RelationFieldType = 'belongsTo' | 'hasMany' | 'manyToMany';
+export type RelationFieldType = 'belongsTo' | 'hasOne' | 'hasMany' | 'manyToMany';
 
 export interface PicklistOptionDef {
   label: string;
@@ -63,9 +63,14 @@ export interface WorkflowFieldConfig {
  * ModelField in @packages/entity-engine's defineEntity(), so a FieldMap
  * declared in a contracts package can be passed straight to defineEntity
  * on the api side.
+ *
+ * Relations (belongsTo/hasOne/hasMany/manyToMany) are NOT declared here —
+ * they live in the top-level `relationships` array on the entity config.
+ * A FieldDef describes a column or EAV value; it does not describe a
+ * relationship. FK columns are declared as `type: 'lookup'`.
  */
 export interface FieldDef {
-  type: FieldType | RelationFieldType;
+  type: FieldType;
   label: string;
 
   required?: boolean;
@@ -89,11 +94,8 @@ export interface FieldDef {
 
   options?: PicklistOptionDef[];
 
+  /** Target entity for lookup/multi_lookup/user/multi_user field types */
   entity?: string;
-  foreignKey?: string;
-  inverseForeignKey?: string;
-  junctionEntity?: string;
-  displayFields?: string[];
   lookupLabelField?: string;
   lookupSearchFields?: string[];
 

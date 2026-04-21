@@ -1,5 +1,5 @@
 import { fieldTypeRegistry } from '@packages/field-types';
-import type { FieldDefinition, PicklistOption } from '../types';
+import type { FieldDefinition, PicklistOption, EntityRelationship } from '../types';
 
 export interface ValidationError {
   field: string;
@@ -23,19 +23,25 @@ export type FieldDefinitionWithOptions = FieldDefinition & { picklistOptions: Pi
 /**
  * Validate a flat entity payload against field definitions.
  * Pure synchronous function — async checks (uniqueness) remain in the entity service.
+ *
+ * Declared relationship names (e.g. `credentials`, `roles`) are accepted as
+ * valid keys here — their shape is validated by each relationship's handler
+ * inside the write-path transaction, not by the generic field validator.
  */
 export function validatePayload(
   definitions: FieldDefinitionWithOptions[],
   payload: Record<string, unknown>,
   options?: ValidationOptions,
+  relationships: EntityRelationship[] = [],
 ): ValidationResult {
   const errors: ValidationError[] = [];
   const defMap = new Map(definitions.map(d => [d.fieldKey, d]));
+  const relNames = new Set(relationships.map(r => r.name));
   const partial = options?.partial ?? false;
 
   // Check for unknown keys in payload
   for (const key of Object.keys(payload)) {
-    if (!defMap.has(key)) {
+    if (!defMap.has(key) && !relNames.has(key)) {
       errors.push({ field: key, message: `Unknown field '${key}'`, code: 'unknown' });
     }
   }

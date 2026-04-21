@@ -24,8 +24,14 @@ import { hasCustomFieldsColumn } from './helpers/custom-fields-column';
 // ---------------------------------------------------------------------------
 
 export interface ModelField {
-  /** Field type. Use 'belongsTo' or 'hasMany' for relation shortcuts. */
-  type: FieldType | 'belongsTo' | 'hasMany' | 'manyToMany';
+  /**
+   * Field type. Must be a scalar/column type.
+   *
+   * Relations (belongsTo/hasOne/hasMany/manyToMany) are declared in the
+   * top-level `relationships` array on ModelDefinition, not here. FK columns
+   * are declared as `type: 'lookup'`.
+   */
+  type: FieldType;
   /** Display label */
   label: string;
 
@@ -80,18 +86,10 @@ export interface ModelField {
   /** Picklist options (for picklist/multi_select field types) */
   options?: SetPicklistOptionInput[];
 
-  // --- Relations ---
+  // --- Lookup (for lookup/multi_lookup/user/multi_user field types) ---
 
-  /** Target entity type for lookup/belongsTo/hasMany/manyToMany */
+  /** Target entity type for lookup/multi_lookup/user/multi_user fields */
   entity?: string;
-  /** Foreign key column on the target entity (for hasMany) */
-  foreignKey?: string;
-  /** Foreign key column on this entity (for belongsTo) */
-  inverseForeignKey?: string;
-  /** Junction entity type (for manyToMany) */
-  junctionEntity?: string;
-  /** Fields to show in the related list (for hasMany) */
-  displayFields?: string[];
   /** Lookup label field (for lookup fields) */
   lookupLabelField?: string;
   /** Lookup search fields (for lookup fields) */
@@ -275,20 +273,24 @@ export interface ModelDefinition<TTable extends PgTable = PgTable> {
   /** Row-level data access configuration. Controls which records users can see based on their RBAC scope. */
   dataAccess?: DataAccessConfig;
 
+  // --- Relationships (Laravel/Rails style — declared separately from fields) ---
+
+  /**
+   * Entity relationships (belongsTo / hasOne / hasMany / manyToMany).
+   * Declared at the top level, not inside `fields`. Field-level shortcuts
+   * inside `fields` are deprecated and will be removed in a future change.
+   *
+   * Each relationship can carry an optional `handler` that the engine invokes
+   * in the same transaction as the parent entity on create/update/delete. This
+   * is how side tables like `credentials` and `user_roles` are populated from
+   * nested sub-payloads on the owning entity's DTO.
+   */
+  relationships?: EntityRelationship[];
+
   // --- Lifecycle hooks ---
 
   hooks?: EntityHooks;
 }
-
-// ---------------------------------------------------------------------------
-// Relation field type mapping
-// ---------------------------------------------------------------------------
-
-const RELATION_TO_FIELD_TYPE: Record<string, FieldType> = {
-  belongsTo: 'lookup',
-  hasMany: 'lookup', // hasMany doesn't produce a fieldMeta entry — it becomes a relationship
-  manyToMany: 'lookup',
-};
 
 // ---------------------------------------------------------------------------
 // defineEntity() — converts ModelDefinition to EntityConfig
@@ -325,7 +327,6 @@ export function defineEntity<TTable extends PgTable>(model: ModelDefinition<TTab
   const fieldMeta: Record<string, FieldMeta> = {};
   const searchColumns: PgColumn[] = [];
   const sortableColumns: Record<string, PgColumn> = {};
-  const relationships: EntityRelationship[] = [];
   const recipientFields: Record<string, { label: string }> = {};
   const listFields: string[] = [];
   // Infrastructure-only columns: excluded from field seeding and event snapshots.
@@ -460,27 +461,7 @@ export function defineEntity<TTable extends PgTable>(model: ModelDefinition<TTab
   let sortOrder = 0;
 
   for (const [key, field] of Object.entries(model.fields)) {
-    const isRelation = field.type === 'hasMany' || field.type === 'manyToMany';
-
-    // hasMany/manyToMany: extract as relationship, don't create fieldMeta
-    if (isRelation) {
-      relationships.push({
-        name: key,
-        type: field.type as 'hasMany' | 'manyToMany',
-        targetEntity: field.entity ?? key,
-        foreignKey: field.foreignKey,
-        inverseForeignKey: field.inverseForeignKey,
-        junctionEntity: field.junctionEntity,
-        label: field.label,
-        displayFields: field.displayFields,
-      });
-      continue;
-    }
-
-    // Map belongsTo to lookup field type
-    const fieldType: FieldType = field.type === 'belongsTo'
-      ? 'lookup'
-      : field.type as FieldType;
+    const fieldType: FieldType = field.type;
 
     // Build FieldMeta
     const meta: FieldMeta = {
@@ -596,7 +577,7 @@ export function defineEntity<TTable extends PgTable>(model: ModelDefinition<TTab
     sections: model.sections ?? [],
     listFields: listFields.length > 0 ? listFields : undefined,
     lookup,
-    relationships: relationships.length > 0 ? relationships : undefined,
+    relationships: model.relationships && model.relationships.length > 0 ? model.relationships : undefined,
     recipientFields: Object.keys(recipientFields).length > 0 ? recipientFields : undefined,
     customFields: model.customFields,
     adminConfigurable: model.adminConfigurable,

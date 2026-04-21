@@ -37,7 +37,7 @@ export interface EntityRegistryEntry {
   };
   relationships: {
     name: string;
-    type: 'hasMany' | 'belongsTo' | 'manyToMany';
+    type: 'hasMany' | 'belongsTo' | 'hasOne' | 'manyToMany';
     targetEntity: string;
     foreignKey?: string;
     label: string;

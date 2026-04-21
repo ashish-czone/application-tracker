@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { pgTable, text, timestamp, boolean, integer, jsonb } from 'drizzle-orm/pg-core';
 import { defineEntity } from '../../define-entity';
 import type { ModelDefinition } from '../../define-entity';
@@ -141,45 +141,79 @@ describe('defineEntity', () => {
     expect(config.ui.nameField).toEqual(['title', 'email']);
   });
 
-  it('should extract hasMany fields as relationships', () => {
+  it('should pass top-level relationships through to EntityConfig', () => {
     const config = defineEntity({
       table: testTable,
       onDelete: { mode: 'soft' },
       slug: 'test-entities',
       fields: {
         title: { type: 'text', label: 'Title' },
-        applications: {
+        assigneeId: { type: 'lookup', label: 'Assignee', entity: 'users' },
+      },
+      relationships: [
+        {
+          name: 'assignee',
+          type: 'belongsTo',
+          targetEntity: 'users',
+          foreignKey: 'assigneeId',
+          label: 'Assignee',
+        },
+        {
+          name: 'applications',
           type: 'hasMany',
-          label: 'Applications',
-          entity: 'applications',
+          targetEntity: 'applications',
           foreignKey: 'testEntityId',
+          label: 'Applications',
           displayFields: ['name', 'status'],
         },
+      ],
+      ui: { icon: 'FileText' },
+    });
+
+    expect(config.relationships).toHaveLength(2);
+    const byName = Object.fromEntries(config.relationships!.map((r) => [r.name, r]));
+    expect(byName.assignee.type).toBe('belongsTo');
+    expect(byName.assignee.foreignKey).toBe('assigneeId');
+    expect(byName.applications.type).toBe('hasMany');
+    // Relations never produce fieldMeta entries under their own name
+    expect(config.fieldMeta.assignee).toBeUndefined();
+    expect(config.fieldMeta.applications).toBeUndefined();
+  });
+
+  it('should accept a handler on a hasOne relationship', () => {
+    const onCreate = vi.fn();
+    const config = defineEntity({
+      table: testTable,
+      onDelete: { mode: 'soft' },
+      slug: 'test-entities',
+      fields: {
+        title: { type: 'text', label: 'Title' },
       },
+      relationships: [
+        {
+          name: 'credentials',
+          type: 'hasOne',
+          targetEntity: 'credentials',
+          foreignKey: 'testEntityId',
+          label: 'Credentials',
+          handler: { onCreate },
+        },
+      ],
       ui: { icon: 'FileText' },
     });
 
     expect(config.relationships).toHaveLength(1);
-    expect(config.relationships![0]).toMatchObject({
-      name: 'applications',
-      type: 'hasMany',
-      targetEntity: 'applications',
-      foreignKey: 'testEntityId',
-      label: 'Applications',
-      displayFields: ['name', 'status'],
-    });
-    // hasMany should NOT appear in fieldMeta
-    expect(config.fieldMeta.applications).toBeUndefined();
+    expect(config.relationships![0].handler?.onCreate).toBe(onCreate);
   });
 
-  it('should convert belongsTo to lookup field type', () => {
+  it('should produce lookup fieldMeta when a field is declared type: lookup', () => {
     const config = defineEntity({
       table: testTable,
       onDelete: { mode: 'soft' },
       slug: 'test-entities',
       fields: {
         assigneeId: {
-          type: 'belongsTo',
+          type: 'lookup',
           label: 'Assignee',
           entity: 'users',
           lookupLabelField: 'firstName',

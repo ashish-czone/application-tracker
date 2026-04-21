@@ -431,19 +431,50 @@ export interface EntityRelationship {
   /** Relationship name (used as key) */
   name: string;
   /** Relationship type */
-  type: 'hasMany' | 'belongsTo' | 'manyToMany';
+  type: 'hasMany' | 'belongsTo' | 'hasOne' | 'manyToMany';
   /** Target entity type (must be registered in the registry) */
   targetEntity: string;
-  /** Foreign key column on the target entity (for hasMany) */
+  /**
+   * The FK column that links the two entities. Direction is implied by type:
+   * - `belongsTo`: column lives on THIS entity, pointing to target
+   * - `hasOne` / `hasMany`: column lives on the TARGET entity, pointing back
+   * - `manyToMany`: not used — use `junctionEntity` instead
+   */
   foreignKey?: string;
-  /** Foreign key column on this entity (for belongsTo) */
-  inverseForeignKey?: string;
-  /** Junction entity type (for manyToMany) */
+  /** Junction entity type (for manyToMany only) */
   junctionEntity?: string;
   /** Display label for the related list */
   label: string;
   /** Fields to show in the related list (field keys) */
   displayFields?: string[];
+  /**
+   * Optional write-side handler invoked by the engine when a matching nested
+   * payload key is present in a create/update DTO. The handler owns the child
+   * table (e.g. credentials, user_roles) — the engine never touches it.
+   *
+   * Handler methods run inside the same transaction as the parent entity
+   * insert/update. Throwing from a handler rolls back the parent operation.
+   */
+  handler?: RelationHandler;
+}
+
+/**
+ * Contract for packages that own tables related to an entity via a declared
+ * `EntityRelationship`. Each method is optional — implement only what you need.
+ * All methods run inside the caller's transaction (`tx`).
+ */
+export interface RelationHandler {
+  /** Invoked after the parent entity is inserted. Payload is the sub-value from the relation key (e.g. `{ password: '...' }` for hasOne, `[id1, id2]` for manyToMany). */
+  onCreate?(tx: unknown, parentId: string, payload: unknown, actorId: string): Promise<void>;
+  /** Invoked when the relation key is present in an update DTO. */
+  onUpdate?(tx: unknown, parentId: string, payload: unknown, actorId: string): Promise<void>;
+  /**
+   * Invoked when the parent entity is deleted. `kind` tells the handler
+   * whether the parent is being soft- or hard-deleted so it can decide how
+   * to react (e.g. leave credential rows alone on soft delete but purge
+   * them on hard delete).
+   */
+  onDelete?(tx: unknown, parentId: string, actorId: string, opts: { kind: 'soft' | 'hard' }): Promise<void>;
 }
 
 // ---------------------------------------------------------------------------
@@ -788,6 +819,12 @@ export interface EntityConfig<TTable extends PgTable = PgTable> {
 export interface EntityHooks {
   /** Called before inserting a new entity. Can modify the payload. */
   beforeCreate?: (payload: Record<string, unknown>, actorId: string, tx?: any) => Promise<Record<string, unknown>>;
+  /**
+   * Called inside the create transaction, after the entity row has been inserted.
+   * Receives the tx handle so side-writes (credentials, related rows) are atomic
+   * with the entity insert. Throw to roll the whole create back.
+   */
+  inCreateTx?: (entityId: string, payload: Record<string, unknown>, actorId: string, tx: any) => Promise<void>;
   /** Called after a new entity is inserted (after transaction commits). */
   afterCreate?: (entity: Record<string, unknown>, actorId: string) => Promise<void>;
   /** Called before updating an entity. Can modify the payload. */
@@ -960,5 +997,5 @@ export interface EntityRegistryEntry {
       fieldName: string;
     } | null;
   };
-  relationships: Omit<EntityRelationship, 'inverseForeignKey' | 'junctionEntity'>[];
+  relationships: Omit<EntityRelationship, 'junctionEntity' | 'handler'>[];
 }

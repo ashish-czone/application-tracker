@@ -40,7 +40,6 @@ const fields = {
       transitions: [],
     },
   },
-  subtasks: { type: 'hasMany', label: 'Subtasks', entity: 'tasks' },
 } satisfies FieldMap;
 
 type Row = EntityRow<typeof fields>;
@@ -61,9 +60,6 @@ describe('EntityRow', () => {
     expectTypeOf<Row['createdBy']>().toEqualTypeOf<string | null>();
   });
 
-  it('omits hasMany / manyToMany fields', () => {
-    expectTypeOf<Row>().not.toHaveProperty('subtasks');
-  });
 });
 
 describe('EntityCreateInput', () => {
@@ -77,9 +73,6 @@ describe('EntityCreateInput', () => {
     expectTypeOf<CreateIn>().not.toHaveProperty('status');
   });
 
-  it('excludes relation fields', () => {
-    expectTypeOf<CreateIn>().not.toHaveProperty('subtasks');
-  });
 });
 
 describe('EntityUpdateInput', () => {
