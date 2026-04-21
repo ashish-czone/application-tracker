@@ -14,6 +14,7 @@
     "@packages/auth": "workspace:*",
     "@packages/common": "workspace:*",
     "@packages/database": "workspace:*",
+    "@packages/entity-engine-contract": "workspace:*",
     "@packages/events": "workspace:*",
     "@packages/hierarchy": "workspace:*",
     "@packages/logger": "workspace:*",
