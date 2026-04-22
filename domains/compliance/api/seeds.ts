@@ -37,6 +37,17 @@ export function complianceSystemSeedSources(): SeedSource[] {
     system('@domains/compliance-api/system-organization', () =>
       import('./organizations/seeds/system-organization').then((m) => m.seedSystemOrganization),
     ),
+    system('@domains/compliance-api/system-roles', () =>
+      import('./shared/seeds/system-roles').then((m) => m.seedSystemRoles),
+    ),
+    system('@domains/compliance-api/system-positions', () =>
+      import('./shared/seeds/system-positions').then((m) => m.seedSystemPositions),
+    ),
+    system('@domains/compliance-api/system-position-scopes', () =>
+      import('./shared/seeds/system-position-scopes').then(
+        (m) => m.seedSystemPositionScopes,
+      ),
+    ),
   ];
 }
 
@@ -53,6 +64,9 @@ export function complianceDemoSeedSources(): SeedSource[] {
     ),
     demo('@domains/compliance-api/demo-users', () =>
       import('./users/seeds/demo-users').then((m) => m.seedDemoUsers),
+    ),
+    demo('@domains/compliance-api/demo-user-roles', () =>
+      import('./users/seeds/demo-user-roles').then((m) => m.seedDemoUserRoles),
     ),
     demo('@domains/compliance-api/demo-law-handlers', () =>
       import('./law-handlers/seeds/demo-law-handlers').then((m) => m.seedDemoLawHandlers),

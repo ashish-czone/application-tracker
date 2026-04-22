@@ -182,6 +182,7 @@ export function UserDetailDrawer({
               <RoleAssignEditor
                 userId={user.id}
                 excludeRoleIds={excludeRoleIds}
+                userPositions={user.positions}
                 onClose={() => setAssignRoleOpen(false)}
               />
             </div>
