@@ -22,7 +22,7 @@ Reference screenshots from Drata and Vanta, captured via Playwright for visual a
 
 | GRC archetype | Drata name | Vanta name | Our screen |
 |---|---|---|---|
-| Dashboard | Dashboard | Automated Compliance | `/screens/dashboard` ✓ |
+| Dashboard | Dashboard | Automated Compliance | `/dashboard` ✓ |
 | Control registry | Controls / Control Framework | Continuous GRC | **Obligations Library** ← this PR |
 | Control detail | Control Detail | Control Detail | TBD — Obligation Detail |
 | Monitoring / tests | Monitoring | Automated Tests | TBD — Handlers / Rules |

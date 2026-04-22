@@ -29,14 +29,6 @@ const DashboardPage = lazy(() =>
   })),
 );
 
-// Legacy hand-crafted mock dashboard, preserved at `/screens` for
-// side-by-side comparison during the widget-based dashboard rollout.
-const ScreensPreviewPage = lazy(() =>
-  import('./portals/customer/features/screens/dashboard').then((m) => ({
-    default: m.DashboardScreenPage,
-  })),
-);
-
 const ClientsPage = lazy(() =>
   import('./portals/customer/features/screens/clients').then((m) => ({
     default: m.ClientsPage,
@@ -139,7 +131,6 @@ const OrganizationPage = lazy(() =>
 const routes: DomainRouteObject[] = [
   { path: '/console-preview', element: <ConsolePreviewPage />, bareLayout: true },
   { path: '/dashboard', element: <DashboardPage />, bareLayout: true },
-  { path: '/screens', element: <ScreensPreviewPage />, bareLayout: true },
   { path: '/clients', element: <ClientsPage />, permission: 'clients.read', bareLayout: true },
   { path: '/clients/:clientId', element: <ClientDetailPage />, permission: 'clients.read', bareLayout: true },
   { path: '/filings', element: <FilingsPage />, permission: 'filings.read', bareLayout: true },
