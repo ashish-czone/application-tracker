@@ -2,13 +2,24 @@ import { Body, Controller, Get, HttpCode, HttpStatus, Param, Put } from '@nestjs
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Public } from '@packages/auth-core';
 import { RequirePermission } from '@packages/rbac';
-import { PagesPublicService, type PublicPageResponse } from '../services/pages-public.service';
+import {
+  PagesPublicService,
+  type PublicPageResponse,
+  type PublicPagesIndexResponse,
+} from '../services/pages-public.service';
 import { ReorderSectionsDto } from '../dto/reorder-sections.dto';
 
 @ApiTags('pages')
 @Controller()
 export class PagesPublicController {
   constructor(private readonly service: PagesPublicService) {}
+
+  @Public()
+  @Get('public/pages')
+  @ApiOperation({ summary: 'List published pages (slug + timestamps, unauthenticated)' })
+  list(): Promise<PublicPagesIndexResponse> {
+    return this.service.listPublished();
+  }
 
   @Public()
   @Get('public/pages/:slug')

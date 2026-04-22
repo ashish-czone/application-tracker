@@ -30,6 +30,16 @@ export interface PublicPageResponse {
   sections: PublicSectionDto[];
 }
 
+export interface PublicPageIndexEntry {
+  slug: string;
+  updatedAt: string;
+  publishedAt: string;
+}
+
+export interface PublicPagesIndexResponse {
+  pages: PublicPageIndexEntry[];
+}
+
 interface SectionRow {
   id: string;
   order: number;
@@ -212,6 +222,40 @@ export class PagesPublicService {
     } catch {
       return null;
     }
+  }
+
+  /**
+   * Lists every page visible to the public — same filter rules as
+   * getBySlug (status=published, publishedAt<=now, not deleted). Used
+   * by the agency-customer sitemap; kept slug-only so a leaking
+   * response can't expose draft titles or unpublished routes.
+   */
+  async listPublished(): Promise<PublicPagesIndexResponse> {
+    const rows = await this.database.db
+      .select({
+        slug: pages.slug,
+        updatedAt: pages.updatedAt,
+        publishedAt: pages.publishedAt,
+      })
+      .from(pages)
+      .where(
+        and(
+          isNull(pages.deletedAt),
+          eq(pages.status, 'published'),
+          lte(pages.publishedAt, new Date()),
+        ),
+      )
+      .orderBy(asc(pages.slug));
+
+    return {
+      pages: rows
+        .filter((r): r is { slug: string; updatedAt: Date; publishedAt: Date } => r.publishedAt !== null)
+        .map((r) => ({
+          slug: r.slug,
+          updatedAt: r.updatedAt.toISOString(),
+          publishedAt: r.publishedAt.toISOString(),
+        })),
+    };
   }
 
   /**
