@@ -838,12 +838,33 @@ this.auditRegistry.register('client_registrations', {
 
 ---
 
+### Q25 — Audit retention
+
+**Decision:** **Keep audit rows forever.** No purge policy in V1.
+
+**Options considered:**
+- (a) Keep forever. _[chosen]_
+- (b) Time-based purge (e.g. 7 years) — rejected: Indian income tax scrutiny can reopen assessments up to 10 years back in serious cases; a 7-year purge creates gaps exactly when evidence matters most.
+- (c) Cascade-delete on hard-deletion of subject entity — rejected: if a client is hard-deleted, the audit trail IS the evidence for why. Purging with the entity defeats the purpose.
+- (d) Per-entity-type retention (tasks shorter, clients longer) — rejected: premature tuning for a storage problem that doesn't exist.
+
+**Rationale:**
+- **Statutory context.** CA firm audit trails have 10+ year scrutiny windows. Forever is the safest default; a purge policy is impossible to reverse.
+- **Storage is trivial.** ~10K rows/year for a 200-client firm. 10 years = 100K rows of JSONB diffs — kilobytes.
+- **Asymmetric cost.** Purged rows are gone. Retaining too much is cheap; retaining too little is catastrophic when needed.
+
+**Edge cases:**
+- **Hard-deleted subject entity** — audit rows persist with their `entityType` + `entityId`, but the subject no longer resolves. UI renders the stale ID with a `[deleted]` marker. Acceptable in V1 since hard delete is rare / admin-only.
+- **Tenancy offboarding** (future) — when a tenant is offboarded, their audit rows get purged along with all their other data. Out of scope for V1 since multi-tenancy isn't fully wired yet.
+- **Redaction-list growth** (from Q24) — rows written before a field joined `sensitiveFields` retain un-redacted values. With no purge, those rows remain discoverable. Acceptable; if a future firm needs retroactive redaction, it's a one-off backfill script, not a retention policy.
+
+**Implication for build:** nothing. No purge cron, no retention column, no per-entity-type config. `audit_logs` table just grows.
+
+---
+
 ## 2. Pending decisions
 
 Questions still to work through before we can finalise V1 implementation. Answered one by one; each is moved into §1 on resolution.
-
-### Q25 — Audit retention
-Keep forever in V1, or define a purge policy?
 
 ### Q26 — Attachment file-type whitelist
 Candidate: PDF, PNG, JPG, XLSX, XLS, DOCX, DOC. Add ZIP / CSV? Block executables explicitly?
