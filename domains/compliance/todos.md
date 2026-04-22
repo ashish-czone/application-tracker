@@ -1061,12 +1061,92 @@ this.auditRegistry.register('client_registrations', {
 
 ---
 
+### Q32 — Termination behaviour
+
+**Decision:** Event-driven cascade on `USERS_USER_DEACTIVATED`. No transactions needed for V1 — the user-coupled entities that matter (tasks, team memberships) are cleanup-able asynchronously because query-time guards on `users.deactivatedAt` make the window invisible. Reinstatement creates a clean slate (no auto-restore of prior state); history is preserved for audit.
+
+**The authoritative signal:** `users.deactivatedAt`. Flip this to a timestamp and the user is functionally gone — consumers already filter on `deactivatedAt IS NULL`, so they disappear from resolvers, personal queues, escalation recipients, and notification targets the moment the flag is written.
+
+**Event-driven cleanup (background GC, not a correctness requirement):**
+
+| Listener location | Work done |
+|---|---|
+| `packages/addons/tasks` | On `USERS_USER_DEACTIVATED`: `UPDATE tasks SET assigneeId = NULL WHERE assigneeId = :userId AND status NOT IN ('completed', 'cancelled')`. Team remains assigned via `assigneeTeamId`, so the task is still routable and falls into Q20's team-fallback path. |
+| `packages/addons/org-units` | On `USERS_USER_DEACTIVATED`: `DELETE FROM org_unit_positions WHERE userId = :userId`. Removes the user from membership resolvers going forward. |
+
+Both listeners are idempotent — re-running them on the same event is a no-op. If a listener crashes, retry (or re-process from queue); no corruption.
+
+**Options considered:**
+- (a) Event-driven cleanup. _[chosen]_
+- (b) Transactional cascade via direct service calls — rejected for V1: `users` is a core package, cannot import from addons (`packages/core/users` → `packages/addons/tasks` violates dependency direction). A transactional cascade would require moving orchestration up to the app or domain tier, which is unnecessary complexity when query-time guards already make the cleanup non-urgent.
+- (c) Admin manually reassigns + removes — rejected: manual steps for mechanical work invite omissions.
+- (d) Synchronous CLI cascade (one-shot script) — rejected: same orchestration problem as (b), plus harder to trigger from admin UI.
+
+**Principle for future transactional needs (when they arise):**
+
+> Use direct service calls inside a transaction at the app or domain tier. Each participating service exposes tx-aware methods. Do NOT pass tx objects through events.
+
+Rationale:
+- Events carry messages, not transactional context. Passing a tx object through them conflates "broadcast with independent handlers" and "transactional participants" into one mechanism.
+- Transactional cascade means handler failure rolls back the domain op — the opposite of `event-conventions.md`'s "handler failure never rolls back the domain operation".
+- Out-of-process listeners (queue workers) cannot receive a tx — Drizzle tx objects are session-bound and non-serializable. You'd end up with two dispatch paths with different semantics.
+- Multi-listener events + shared tx → ambiguous failure semantics (one fails, all roll back? some commit, some don't?).
+
+**The clean split:**
+
+| Need | Mechanism |
+|---|---|
+| Transactional cross-module cleanup (caller cares about failure) | Direct service calls inside `db.transaction()` at the orchestrator tier |
+| Side-effect cleanup (caller doesn't care, eventual consistency OK) | Domain event + listeners |
+
+Compliance V1 has zero transactional cleanup needs. Pure event-driven.
+
+**Query-time guards (the real correctness mechanism):**
+
+| Consumer | Guard |
+|---|---|
+| `org_unit_members` resolver | `AND users.deactivated_at IS NULL` |
+| `org_unit_head` resolver | `AND users.deactivated_at IS NULL` |
+| `parent_unit_head` resolver | `AND users.deactivated_at IS NULL` |
+| Task list views (assignee column) | Hide / anonymise assignee when deactivated |
+| Personal queue (`my-tasks` scope) | `WHERE users.deactivated_at IS NULL` on the user-context side |
+| Mention notification (Q30) | Skip deactivated recipients |
+
+With these in place, the eventual-consistency window for the GC listeners is invisible. Even if the tasks/org-units listeners never ran, the system would still behave correctly — deactivated user just lingers as dangling FK references that nobody queries.
+
+**Reinstatement:**
+- Admin reactivates user → `users.deactivatedAt = NULL` (and emit `USERS_USER_REACTIVATED` for audit).
+- **No auto-restore** of prior task assignments or team memberships. Admin re-adds to teams via fresh `org_unit_positions` rows. Admin reassigns tasks that need it.
+- History (audit rows, note authorship, attachment uploader FKs, completed-task assignee references) is preserved unchanged.
+- Rationale: months after termination, prior assignments are stale (tasks reassigned, priorities shifted, teams restructured). Clean slate avoids surprise resurrection of work state.
+
+**Edge cases:**
+- **User deactivated while holding the only "head" position in a unit** — after position removal, resolver returns empty head list. Escalations for that unit's tasks fall back to `parent_unit_head` at T+3, and if no parent either, the task stays in "no head" state (UI should surface this to firm admin as a coverage gap). Acceptable for V1; firm admin resolves by promoting another member via new sortOrder.
+- **User was `actorId` on in-flight automation rules** — no impact. Automation doesn't re-check actor's deactivation state for already-fired rules.
+- **User authored pending notes** — notes remain attributed. `(deactivated)` badge can be added next to their name in UI as polish. Not a V1 blocker.
+- **Historical task completions** — `completedBy` (if present on tasks schema) unchanged; the fact that X completed Y months ago stays true regardless of X's current status.
+
+**Non-goals for V1:**
+- Auto-deletion of user records — `users.deactivatedAt` is a flag, not a hard delete. Data retention matches Q25 audit retention (keep forever).
+- Handover workflow (assign a "replacement" during deactivation) — future work if firms ask. In V1, admin manually reassigns the handful of tasks that matter.
+- User delete API — not exposed to admins. Deactivation is the only off-ramp.
+
+**Implication for build — Stream H (Employee lifecycle):**
+
+- H1: Verify `users.deactivatedAt` column exists in `packages/core/users` schema; add if missing.
+- H2: Emit `USERS_USER_DEACTIVATED` / `USERS_USER_REACTIVATED` events in user service.
+- H3: In `packages/addons/tasks`, add cleanup listener (`@OnEvent(USERS_USER_DEACTIVATED)` → null assignee on open tasks).
+- H4: In `packages/addons/org-units`, add cleanup listener + add `deactivated_at IS NULL` guards to the three resolvers from Q19b (`org_unit_head`, `parent_unit_head`, `org_unit_members`).
+- H5: Add `deactivated_at IS NULL` guard to `my-tasks` personal-queue scope in `packages/addons/tasks/api/tasks.config.ts`.
+- H6: UI — admin user list exposes "Deactivate" action; confirmation modal summarises consequences ("X will lose team memberships; open tasks will be team-reassigned"); action sets `deactivatedAt`.
+
+All H* tasks land in `packages/core/users`, `packages/addons/tasks`, or `packages/addons/org-units` — **compliance domain ships zero code** for this, same inheritance pattern as Q19 / Q20.
+
+---
+
 ## 2. Pending decisions
 
-Questions still to work through before we can finalise V1 implementation. Answered one by one; each is moved into §1 on resolution.
-
-### Q32 — Termination behaviour
-On termination, null `assigneeId` on all their open tasks AND remove from team memberships? Or keep membership and only null task assignments? Who does this — admin action, or auto on user deactivation event?
+_All decisions locked. This section is intentionally empty — any new questions that emerge during implementation get appended here and moved up to §1 once resolved._
 
 ---
 
