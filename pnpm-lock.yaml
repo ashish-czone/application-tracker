@@ -318,6 +318,9 @@ importers:
       '@packages/entity-relations-ui':
         specifier: workspace:*
         version: link:../../../../../packages/addons/entity-relations/ui
+      '@packages/media-library-ui-admin':
+        specifier: workspace:*
+        version: link:../../../../../packages/addons/media-library/ui/admin
       '@packages/menus-ui-admin':
         specifier: workspace:*
         version: link:../../../../../packages/addons/menus/ui/admin
@@ -2622,6 +2625,12 @@ importers:
 
   packages/addons/media-library/ui/admin:
     dependencies:
+      '@packages/auth-ui':
+        specifier: workspace:*
+        version: link:../../../../platform/auth/ui
+      '@packages/platform-ui':
+        specifier: workspace:*
+        version: link:../../../../platform/platform-ui
       '@packages/ui':
         specifier: workspace:*
         version: link:../../../../core/ui

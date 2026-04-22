@@ -40,6 +40,7 @@ const config: Config = {
     '../../../../../packages/platform/blocks/ui/blocks/**/*.{ts,tsx}',
     '../../../../../packages/addons/menus/ui/admin/**/*.{ts,tsx}',
     '../../../../../packages/addons/menus/ui/frontend/**/*.{ts,tsx}',
+    '../../../../../packages/addons/media-library/ui/admin/**/*.{ts,tsx}',
   ],
 };
 

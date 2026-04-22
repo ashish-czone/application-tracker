@@ -20,9 +20,10 @@ import { WebShell } from '@packages/app-shell-ui';
 import { registerStarterBlocks, registerContentBlocks } from '@packages/blocks-ui';
 import { PageEditorPage } from '@packages/pages-ui-admin';
 import { MenuEditorPage } from '@packages/menus-ui-admin';
+import { MediaLibraryPage } from '@packages/media-library-ui-admin';
 import { AuditTimeline } from '@packages/audit-ui';
 import { Button, Toaster } from '@packages/ui';
-import { Pencil } from 'lucide-react';
+import { Pencil, Image as ImageIcon } from 'lucide-react';
 import { api } from './lib/api';
 import './globals.css';
 
@@ -32,6 +33,11 @@ registerContentBlocks();
 const contentRoutes = [
   { path: '/pages/:id/edit', element: <PageEditorPage /> },
   { path: '/menus/:id/edit', element: <MenuEditorPage /> },
+  { path: '/media-library', element: <MediaLibraryPage /> },
+];
+
+const extraMenuItems = [
+  { path: '/media-library', label: 'Media Library', icon: ImageIcon, position: 'after' as const },
 ];
 
 const detailTabs = [
@@ -60,6 +66,7 @@ createRoot(document.getElementById('root')!).render(
       apiFn={api}
       brandLabel="Agency Admin"
       extraRoutes={contentRoutes}
+      extraMenuItems={extraMenuItems}
       extraDetailTabs={detailTabs}
       extraDetailHeaderActions={detailHeaderActions}
     />
