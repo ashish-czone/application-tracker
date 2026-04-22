@@ -421,8 +421,6 @@ Rules don't have an effective date the same way — deprecation is simply "stop 
 
 ### Q14 — Scope → position mapping at seed time
 
-### Q14 — Scope → position mapping at seed time
-
 **Decision:** Five seeded positions, scopes seeded **only for task entities** in V1. Other compliance entities get their scope seeding deferred until their respective feature work.
 
 **Seeded positions (all admin-editable display names, stable internal identifiers):**
@@ -548,26 +546,189 @@ WHERE assigneeId = :me
 
 ---
 
+### Q17 — Daily digest send time
+
+**Decision:** Digest fires once a day at **9am in `APP_TIMEZONE`** (currently `Asia/Kolkata`), expressed via `cronForLocalHour(9, APP_TIMEZONE)` from `@packages/common`. No per-user timezone resolution in V1.
+
+**Options considered:**
+- (a) Fixed 9am in `APP_TIMEZONE`. _[chosen]_
+- (b) 9am in each user's timezone with `APP_TIMEZONE` fallback — rejected: V1 users are realistically all in India; adds per-user cron resolution complexity for no current payoff.
+- (c) Firm-admin-configurable send time — defer until firms ask.
+- (d) Admin-configurable with per-user override — maximum config surface, premature.
+
+**Why `APP_TIMEZONE` rather than hard-coding IST:** uses the platform's timezone primitive correctly. If an install is deployed for a firm in a different timezone (say a V2 deployment in UAE with `APP_TIMEZONE = Asia/Dubai`), the digest naturally shifts — no code change.
+
+**Edge cases:**
+- User physically abroad on a given day — digest still fires at 9am IST, lands at an off-hour in their local time. Acceptable for V1.
+- Digest generation failure on a given day — next day's run proceeds independently; missed day is gone. Not a blocker because the T+0 / T+3 / T+7 escalation (Stream B) still surfaces urgent work.
+
+**Implication for Stream D:** D1 uses `cronForLocalHour(9, APP_TIMEZONE)` for the schedule trigger. No per-user variance, no additional state.
+
+---
+
+### Q18 — Digest content split
+
+**Decision:** Three sections in the daily digest — **Overdue**, **Due today**, **Due this week** (next 7 days excluding today).
+
+**Rendering rules:**
+- Order top-to-bottom: Overdue → Due today → Due this week (most-urgent first to drive action).
+- Sections with zero tasks are omitted from the email.
+- When all three sections are empty, **no digest is sent** that day (avoids daily empty-inbox noise).
+- Within each section, sort by `dueDate` ascending, then by client name.
+
+**Options considered:**
+- (a) Two sections ("Due within 7 days" + "Overdue") — rejected: buries today's work in a week-long list, kills the intended nudge.
+- (b) Three sections (Overdue / Due today / Due this week). _[chosen]_
+- (c) Four sections (Overdue / Today / This week / Next week) — rejected: "next week" and "this week" blur when digest fires mid-week; marginal value for the extra row.
+- (d) Flat list sorted by due date — rejected: loses triage framing; reader has to scan to find what's actionable today.
+
+**Edge cases:**
+- Tasks escalating that day (T+3 / T+7) — still appear in "Overdue"; escalation notices are separate emails, not part of the digest (see Stream B).
+- Task completed between digest generation and send — safe: digest reflects state at generation time; no per-task dedup needed for V1.
+- Weekend digest — still fires at 9am Saturday/Sunday in V1. Defer weekend suppression until firms ask.
+
+**Implication for Stream D:** digest generator queries split into three date-range buckets relative to `todayInTimezone(APP_TIMEZONE)`. Template has conditional rendering per section.
+
+---
+
+### Q19 — Notification cadence, ownership, and kind-agnosticism
+
+Consolidated decision covering four sub-questions: cadence, where the rules are defined, priority segmentation, and how the kind discriminator interacts with rule selection.
+
+#### Q19a — Per-task overdue cadence
+
+**Decision:** Three-tier escalation: **T+0, T+3, T+7**. Three emails max per task. No daily-while-overdue spam; daily digest (Stream D) still surfaces the task every morning.
+
+**Options considered:**
+- (a) T+0 only — rejected: nothing reaches division heads.
+- (b) T+0 / T+3 / T+7 milestones. _[chosen]_
+- (c) Every day overdue — rejected: inbox fatigue, users tune it out.
+- (d) Milestones + weekly thereafter — rejected: digest already provides daily visibility post-T+7.
+
+Tiers match Q10 escalation semantics: T+0 to assignee (or team members if unassigned); T+3 to team head; T+7 to parent-unit head.
+
+#### Q19b — Ownership and mechanism
+
+**Decision:** Notifications flow entirely through the existing **automations** primitive. No parallel cron, no hardcoded listeners. `packages/addons/tasks` owns the seed set so every tasks-using domain inherits notifications for free.
+
+**Tasks package ships 4 system-seeded automation rules:**
+
+| Seed rule | Trigger | Entity | Action | User resolution |
+|---|---|---|---|---|
+| `task-overdue-tier-1` | `schedule_recurring`, `dueDate + 0 days` | `tasks` | `send_notification` | `entity_field(assigneeId)` OR `org_unit_members(assigneeTeamId)` if assignee null |
+| `task-overdue-tier-2` | `schedule_recurring`, `dueDate + 3 days` | `tasks` | `send_notification` | `org_unit_head(assigneeTeamId)` |
+| `task-overdue-tier-3` | `schedule_recurring`, `dueDate + 7 days` | `tasks` | `send_notification` | `parent_unit_head(assigneeTeamId)` |
+| `task-daily-digest` | `schedule_recurring`, no date filter, target entity `users` | `users` | `send_task_digest` | `entity_field(id)` — the user being iterated |
+
+All four are admin-editable in platform-ui/automations after seeding: can be disabled, cloned, condition-narrowed, template-customised.
+
+**Supporting implementations in `packages/addons/tasks`:**
+- **New action handler `SendTaskDigestAction`** registered via `ActionRegistry` in `onModuleInit()`. Receives the user row as `entityData`, queries tasks (assigned-to-me + unassigned-in-my-teams, matching the Q16 personal-queue query), bucketises into overdue / due today / due this week, composes one email, short-circuits if all buckets empty.
+- **Register `users` with `EntityResolverRegistry`** so it becomes a valid `scheduleEntityType` (verify if already registered in `packages/core/users`; if not, add the registration there, not in tasks).
+
+**Supporting implementations in `packages/addons/org-units`:**
+- **Three user resolvers** registered via `UserResolverRegistry` in `onModuleInit()`:
+  - `org_unit_head` — config `{ unitField }`; returns user whose position in that unit has the lowest `sortOrder`.
+  - `parent_unit_head` — config `{ unitField }`; walks to parent via `org_units.parentId`, returns that unit's head. Empty array if root.
+  - `org_unit_members` — config `{ unitField }`; returns all users assigned to the unit via `org_unit_positions`.
+- These are generic platform primitives — usable by any entity that has an org-unit FK column, not just tasks.
+
+**Why not `defineEntity()` as the declaration site:** seeded automation rules are auxiliary data, not entity schema. Mixing them into `defineEntity()` would couple entity-engine to automations (wrong dependency direction) and conflate schema with behaviour. Tasks package's seeds file is the right location.
+
+**Why not code-level cron for the digest:** automations' `schedule_recurring` with `scheduleEntityType: 'users'` fires once per user per day at the rule's cron time — that IS the digest shape, expressed entirely through the existing primitive.
+
+#### Q19c — Priority segmentation
+
+**Decision:** No priority-based rule segmentation in V1. Single cadence applies to all tasks regardless of `priority`.
+
+**Options considered:**
+- (a) No segmentation — one cadence. _[chosen]_
+- (b) Three seeded rules keyed on `priority = low | medium | high` with different day-spreads — rejected: premature rule proliferation for a use case no firm has asked for.
+- (c) Drop `priority` from compliance tasks — rejected: priority still useful for UI sorting in the personal queue.
+
+`priority` remains on the task for display/sorting (high-priority surfaces first in personal queue, digest within a section). It does **not** branch notification logic. If a firm later wants steeper cadence for high-priority, admin clones a seeded rule, adds `priority = high` condition, adjusts `scheduleDateAmounts`.
+
+#### Q19d — Kind discriminator is template-context, not rule-scope
+
+**Decision:** Seeded rules are **kind-agnostic**. They target `scheduleEntityType: 'tasks'` and fire for every task regardless of kind. `kind` is a template-rendering signal, not a rule-selection signal.
+
+**Storage model:** `compliance_tasks` stays a separate table, 1:1 joined to `tasks` by shared primary key. Rationale:
+- **Dependency direction:** compliance-specific columns (`clientId`, `ruleId`, `periodStart`, `periodEnd`) cannot live in `packages/addons/tasks` — that would pull domain concepts into a platform package.
+- **No nullable-column bloat:** each task-using domain owns its extension columns in its own table.
+- **Base scheduler only needs base columns:** `dueDate`, `status`, `assigneeId`, `assigneeTeamId`, `priority`, `title`, `kind` — all present on `tasks`. The scheduler never joins `compliance_tasks`.
+
+**How kind surfaces in notifications:** the compliance task **generator** builds a semantically-rich `title` at task creation (e.g., `"GST return for ABC Corp — Mar 2026"`). Generic template `"Task '{title}' is overdue (due {dueDate})"` reads naturally without needing kind-specific template variables. V1 ships generic templates only.
+
+**Per-kind template customisation (opt-in, deferred):** future work — a domain can either:
+- Clone a seeded rule, add condition `kind = 'compliance'`, customise template with compliance variables (`{client.name}`, `{rule.name}`, `{period}`), OR
+- Seed its own kind-scoped rules alongside the generic ones (and narrow the generic rules with `kind != 'compliance'` if it wants exclusivity).
+
+Not needed for V1.
+
+**Implications for build:**
+- **Stream B (escalation):** 3 seeded rules + 2 new resolvers in org-units + 1 new action-handler dependency? No — standard `send_notification` suffices.
+- **Stream D (digest):** 1 seeded rule + 1 new action handler (`SendTaskDigestAction`) + 1 new resolver (`org_unit_members`) + register `users` as schedulable entity.
+- **All of the above lands in `packages/addons/tasks` and `packages/addons/org-units`** — compliance domain ships zero notification code in V1, just inherits the seeded rules.
+
+---
+
+### Q20 — Notification target when no individual assignee
+
+**Decision:** For a team-assigned task with no individual assignee, **every team member** receives the T+0 escalation email and sees the task in their daily digest. Head has no special privilege at T+0 — their role kicks in at T+3.
+
+**Options considered:**
+- (a) Broadcast to every member at T+0; head escalation at T+3; parent-unit head at T+7. _[chosen]_
+- (b) Head-only at T+0, members see it via digest — rejected: single point of failure if head is OOO; whole team loses email visibility.
+- (c) Head + deputy at T+0 — rejected: "deputy" isn't a modelled concept; implied 2nd-lowest-sortOrder semantics is fragile and would need platform-level concept work.
+
+**Why (a):** consistent with Q16 (personal queue shows self + unassigned team work to every member). The digest already surfaces the task to every member every morning; the T+0 escalation email is a louder form of the same signal. Broadcast creates mild "who picks it up" coordination but adds redundancy — if head is on leave, another member sees the signal and can claim/assign.
+
+**Resolver config for tier-1 rule:**
+- When `assigneeId IS NOT NULL` → resolve via `entity_field(assigneeId)`. One recipient.
+- When `assigneeId IS NULL` → resolve via `org_unit_members(assigneeTeamId)`. Multiple recipients.
+
+Since an automation rule can't branch user-resolution by a condition on the entity, **two tier-1 rules** are seeded (rather than one):
+
+| Seed rule | Additional condition | Resolver |
+|---|---|---|
+| `task-overdue-tier-1-assignee` | `assigneeId IS NOT NULL` | `entity_field(assigneeId)` |
+| `task-overdue-tier-1-team` | `assigneeId IS NULL AND assigneeTeamId IS NOT NULL` | `org_unit_members(assigneeTeamId)` |
+
+Total seeded rule count in tasks package becomes **5**: two tier-1 variants, one tier-2, one tier-3, one daily digest. (Updates the table in Q19b implicitly — tier-1 row splits into two rows with the above conditions.)
+
+**Edge case — task has neither `assigneeId` nor `assigneeTeamId`:**
+Neither tier-1 rule fires. Tier-2/3 also need `assigneeTeamId` for head resolution, so they don't fire either. Task becomes invisible to escalation. Mitigation: base tasks package should treat a task with no team and no assignee as a configuration error — emit a domain event on overdue-with-no-target, firm admins subscribe via their own automation rule. **Deferred to a separate pending Q (Q20a) if we want to formalise, otherwise accept the edge case for V1.**
+
+**Implication for build:** split seeded tier-1 rule into two; otherwise unchanged from Q19b.
+
+---
+
+### Q21 — User opt-out of notifications
+
+**Decision:** **No per-user opt-out in V1.** Everyone receives every seeded notification. Firm admins retain firm-wide control by disabling a seeded rule in platform-ui/automations, but individual users cannot silence notifications for themselves.
+
+**Options considered:**
+- (a) No opt-out. _[chosen]_
+- (b) Opt-out of digest only, escalations mandatory — rejected: adds UI and preference-check code path for a feature nobody has asked for.
+- (c) Full per-rule opt-out via existing `notification_preferences` table — rejected for V1: wiring exists in `packages/platform/notifications/api/schema/notification-preferences.ts`, but turning it on for compliance rules creates a liability surface (staff silencing statutory deadline alerts).
+- (d) Per-channel opt-out — moot in V1 (email-only channel).
+
+**Why (a):**
+- **Statutory audience, not consumer audience.** Compliance users are firm staff whose job is to file by deadline. "Turn off the emails" is the wrong affordance — inbox fatigue should be solved by *tuning cadence* (already done: T+0/3/7 + one digest), not by individual suppression.
+- **Firm-wide control already exists** via admin disabling a seeded rule. Sufficient for V1.
+- **Reversible.** The preference primitive is already in the platform; if a firm later asks, wiring it for specific rules is a small task.
+
+**Edge cases:**
+- User on leave — their notifications still fire, land in inbox, get read on return. Acceptable for V1. Future work: leave modelling (Q31) may want to route these to a cover colleague, but that's a separate decision.
+- User with email delivery disabled at infra level (bounce, unsubscribed at SMTP) — platform-level concern; not a compliance decision.
+
+**Implication for build:** nothing. `SendNotificationAction` remains preference-unaware for seeded compliance rules; no user-profile UI changes in V1.
+
+---
+
 ## 2. Pending decisions
 
 Questions still to work through before we can finalise V1 implementation. Answered one by one; each is moved into §1 on resolution.
-
-### Q17 — Daily digest send time
-
-### Q17 — Daily digest send time
-Fixed 9am IST, 9am in user timezone (falling back to `APP_TIMEZONE`), or admin-configurable?
-
-### Q18 — Digest content split
-"Due within 7 days" and "Overdue" — split further into today / this week / overdue, or keep two sections?
-
-### Q19 — Per-task overdue email frequency
-Once on the day a task becomes overdue, every day it stays overdue, or only at escalation milestones (T+0, T+3, T+7)?
-
-### Q20 — Notification target when no individual assignee
-Digest to every team member, or only to team head(s)?
-
-### Q21 — User opt-out of notifications
-Allowed in V1 (per-channel / per-rule), or everyone on by default with no opt-out?
 
 ### Q22 — Audit scope
 Writes only, with field-level before/after diffs? Or also read-auditing of sensitive fields? What does the platform's audit infrastructure support out of the box?
@@ -638,7 +799,7 @@ Derived from §1. Re-estimated and re-ordered whenever §1 grows. Each bullet is
 
 ### Stream D — Notifications wiring for compliance due dates
 
-- [ ] **D1.** Automation rule / scheduled job for the daily digest — per-user mail with "due within 7 days" + "overdue" sections. (Pending Q17/Q18/Q20)
+- [ ] **D1.** Automation rule / scheduled job for the daily digest — per-user mail with "due within 7 days" + "overdue" sections. Cron expression via `cronForLocalHour(9, APP_TIMEZONE)`. (Q17, pending Q18/Q20)
 - [ ] **D2.** Per-task email on day task becomes overdue. (Pending Q19)
 - [ ] **D3.** Notification target resolution — assignee if set, else team members; respects escalation recipients from Stream B. (Pending Q20)
 
