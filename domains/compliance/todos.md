@@ -193,12 +193,37 @@ cancelled ──reopen──→ in_progress
 
 ---
 
+### Q6 — Client lifecycle: what happens on dormantisation
+
+**Decision:** When a client transitions `active → dormant`, two things happen as part of the transition:
+
+1. **Auto-cancel all non-terminal tasks for that client.** Every `compliance_task` where `clientId = <client> AND status ∈ {pending, in_progress, blocked}` is flipped to `cancelled`, with a system comment ("Auto-cancelled: client `<Name>` dormantised on `<YYYY-MM-DD>` by `<actor>`."). Captured in audit as a normal write.
+2. **Stop generating new tasks for this client.** The task-generation action filters on `client.status = 'active'` — dormant clients are naturally excluded. No future tasks accumulate.
+
+The UI shows a confirmation prompt on transition: _"This will cancel N open tasks. Continue?"_ so the effect is never surprising.
+
+**Options considered:**
+- (a) Leave tasks alone; user manually cancels what's no longer relevant.
+- (b) Auto-cancel non-terminal tasks + stop future generation. _[chosen]_
+- (c) Block the `active → dormant` transition while open tasks exist.
+- (d) Move open tasks to a "paused" sub-status; resume if the client reactivates.
+
+**Why (b):** Dormancy in a CA firm means "we've stopped the engagement" — no one on the firm side is filing for this client any more. Leaving tasks active (a) creates ghost work that escalates to team heads and spams digests indefinitely. Blocking the transition (c) makes dormantisation administratively painful, which pushes users to leave dead clients in `active` — the worst outcome. (d) adds a fourth lifecycle state for a rare reactivation path; if a client returns, fresh scoping is typically needed anyway, so "cancel now, regenerate on reactivation" is both simpler and more accurate than pausing.
+
+**Reactivation (`dormant → active`):** Task generation resumes from the reactivation date forward — no backfilling of periods the client was dormant for. Previously auto-cancelled tasks stay cancelled; they represent intentionally-skipped periods and the engagement's new contract decides which obligations apply from now on.
+
+**Relationship to the forward-only principle (Q8):** This is the one place V1 is *not* purely forward-only on deactivation — dormancy proactively cancels existing work. Justification: dormancy is a stronger signal than registration deactivation or rule deprecation. When a client goes dormant, no one at the firm is responsible for their filings any more. When a rule is deprecated or a single registration is deactivated, other clients / other laws may still have valid open work that should be completed. The asymmetry reflects that.
+
+**Implementation ripple (add to Stream C / a new sub-stream):**
+- Hook on the `client.status → dormant` workflow transition that enumerates the client's non-terminal tasks and bulk-updates them to `cancelled` with the system comment. Must be transactional with the transition itself.
+- Task generator (`GenerateComplianceTasksAction`) to filter out non-`active` clients — verify that this filter is already in place; add if not.
+- UI prompt on the transition surfacing the task count and confirmation.
+
+---
+
 ## 2. Pending decisions
 
 Questions still to work through before we can finalise V1 implementation. Answered one by one; each is moved into §1 on resolution.
-
-### Q6 — Client lifecycle: dormantisation
-When a client moves to `dormant`, do open tasks stay, auto-cancel, or move to "on hold"?
 
 ### Q7 — Multiple registrations against the same law
 Can one client have two registrations against the same law (e.g., two GSTINs for two states)? If yes, are tasks generated per registration or per (client, law)?
@@ -342,6 +367,12 @@ Derived from §1. Re-estimated and re-ordered whenever §1 grows. Each bullet is
 
 - [ ] **H1.** Null `assigneeId` on all open tasks of a terminated / deactivated user; surface "unassigned in my team" list for team heads. (Pending Q32)
 - [ ] **H2.** Leave tracking — model per Q31. (Pending Q31)
+
+### Stream I — Client lifecycle handling
+
+- [ ] **I1.** Hook on the `client.status → dormant` workflow transition that bulk-cancels all non-terminal `compliance_tasks` for the client, attaching a system comment (`"Auto-cancelled: client <Name> dormantised on <date> by <actor>"`). Transactional with the transition. (Q6)
+- [ ] **I2.** Ensure `GenerateComplianceTasksAction` filters on `client.status = 'active'`. Verify if already present; add if not. (Q6)
+- [ ] **I3.** UI prompt on the dormancy transition showing the number of tasks that will be cancelled, with an explicit confirmation. (Q6)
 
 ### Stream Z — Finalisation
 
