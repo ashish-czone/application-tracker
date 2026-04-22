@@ -20,6 +20,12 @@ import { registerRatingFieldType } from '@packages/evaluations-ui';
 registerEntityRelationsFieldTypes();
 registerRatingFieldType();
 
+// Dashboard widgets: each contributing package registers its own widgets
+// with @packages/dashboard-ui's registry at bootstrap.
+import '@packages/notification-channels-ui/register-widgets';
+import '@packages/tasks-ui/register-widgets';
+import '@domains/compliance-ui/register-widgets';
+
 import { WebShell } from '@packages/app-shell-ui';
 import { DebugProfilerBar, DebugProfilerProvider } from '@packages/debug-profiler-ui';
 import { TASKS_UI_CONFIG, TaskAssigneeCell } from '@packages/tasks-ui';

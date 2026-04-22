@@ -3276,6 +3276,12 @@ importers:
       '@packages/calendar-ui':
         specifier: workspace:*
         version: link:../../calendar-ui
+      '@packages/common':
+        specifier: workspace:*
+        version: link:../../../core/common
+      '@packages/dashboard-ui':
+        specifier: workspace:*
+        version: link:../../../platform/dashboard-ui
       '@packages/entity-engine-ui':
         specifier: workspace:*
         version: link:../../../platform/entity-engine/ui
@@ -4845,6 +4851,9 @@ importers:
       '@packages/common':
         specifier: workspace:*
         version: link:../../../core/common
+      '@packages/dashboard-ui':
+        specifier: workspace:*
+        version: link:../../dashboard-ui
       '@packages/platform-ui':
         specifier: workspace:*
         version: link:../../platform-ui

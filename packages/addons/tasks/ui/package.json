@@ -6,6 +6,8 @@
   "dependencies": {
     "@packages/auth-ui": "workspace:*",
     "@packages/calendar-ui": "workspace:*",
+    "@packages/common": "workspace:*",
+    "@packages/dashboard-ui": "workspace:*",
     "@packages/entity-engine-ui": "workspace:*",
     "@packages/platform-ui": "workspace:*",
     "@packages/tasks-contract": "workspace:*",

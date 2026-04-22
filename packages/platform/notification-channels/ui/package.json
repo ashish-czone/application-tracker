@@ -5,6 +5,7 @@
   "main": "index.ts",
   "dependencies": {
     "@packages/common": "workspace:*",
+    "@packages/dashboard-ui": "workspace:*",
     "@packages/platform-ui": "workspace:*",
     "@packages/ui": "workspace:*",
     "@tanstack/react-query": "^5.0.0",
