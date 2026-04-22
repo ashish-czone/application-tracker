@@ -1082,13 +1082,42 @@ Both listeners are idempotent — re-running them on the same event is a no-op. 
 - (c) Admin manually reassigns + removes — rejected: manual steps for mechanical work invite omissions.
 - (d) Synchronous CLI cascade (one-shot script) — rejected: same orchestration problem as (b), plus harder to trigger from admin UI.
 
-**Principle for future transactional needs (when they arise):**
+**Why tasks + team memberships are side effects, not transactional participants:**
 
-> Use direct service calls inside a transaction at the app or domain tier. Each participating service exposes tx-aware methods. Do NOT pass tx objects through events.
+The test for "is this cleanup transaction-worthy?" is three questions:
 
-Rationale:
-- Events carry messages, not transactional context. Passing a tx object through them conflates "broadcast with independent handlers" and "transactional participants" into one mechanism.
-- Transactional cascade means handler failure rolls back the domain op — the opposite of `event-conventions.md`'s "handler failure never rolls back the domain operation".
+| Test | Task assignee nulling | Team membership removal |
+|---|---|---|
+| If cleanup never ran, would the system give wrong answers to users? | **No** — `deactivated_at IS NULL` guard covers every consumer path (resolvers, task list, personal queue, notifications) | **No** — same guard; deactivated user is invisible to members / head resolution even if `org_unit_positions` row remains |
+| Would the system accept new operations that shouldn't be possible? | **No** — user can't log in; resolvers don't return them; notifications skip them | **No** — same |
+| Is there a correctness-critical constraint broken by delay? | **No** — stale FK is harmless; consumers JOIN + filter | **No** — same |
+
+Three "no"s → **side effect**. The `deactivatedAt` flag is the authoritative signal; cleanup is hygiene (keeping FK references tidy), not a correctness mechanism.
+
+**Why not hooks?**
+
+A "hook registry" pattern — each participating package registers a callback that runs inside the user-deactivation transaction — is architecturally clean and is the right shape for transactional cross-package cleanup. It fits the platform's existing registry-style DI (`AuditRegistryService`, `ActionRegistry`, `UserResolverRegistry`, etc.) and it doesn't violate dependency direction (addons push into a core-defined registry).
+
+But hooks are the right tool only when a participant's cleanup is **correctness-critical** — i.e., if you removed the `deactivatedAt` guard from its consumer path, the system would give wrong answers. For tasks and team memberships, that's not the case — the guards carry correctness, cleanup is hygiene.
+
+**The decision rule for future user-coupled entities:**
+
+> If the entity's cleanup would be *incorrect* without a `deactivated_at IS NULL` guard on every consumer, register it as a **hook** (runs inside the deactivation tx).
+> If the consumer can filter on `deactivatedAt` and tolerate a cleanup delay, use an **event** (runs after commit, idempotent, retry-safe).
+
+Example cases that would require hooks (not compliance V1 concerns):
+- Financial signatory authority revocation where the signing path doesn't check `deactivatedAt` on every call.
+- Unique-constraint conflicts where deactivation must immediately free a reusable slot.
+- External-system sync where the atomic "user is gone" signal must precede any follow-up operation.
+
+None of these describe compliance V1.
+
+**When a first hook-worthy participant arrives, build the registry then — not before.** Platform accretion rule: don't build the `UserLifecycleRegistry` primitive speculatively; wait for a concrete use case.
+
+**Rejected: passing tx objects through events.**
+
+- Events carry messages, not transactional context. Passing a tx object conflates "broadcast with independent handlers" and "transactional participants" into one mechanism.
+- Transactional cascade via events means handler failure rolls back the domain op — the opposite of `event-conventions.md`'s "handler failure never rolls back the domain operation".
 - Out-of-process listeners (queue workers) cannot receive a tx — Drizzle tx objects are session-bound and non-serializable. You'd end up with two dispatch paths with different semantics.
 - Multi-listener events + shared tx → ambiguous failure semantics (one fails, all roll back? some commit, some don't?).
 
@@ -1096,10 +1125,11 @@ Rationale:
 
 | Need | Mechanism |
 |---|---|
-| Transactional cross-module cleanup (caller cares about failure) | Direct service calls inside `db.transaction()` at the orchestrator tier |
-| Side-effect cleanup (caller doesn't care, eventual consistency OK) | Domain event + listeners |
+| Transactional cross-module cleanup (correctness-critical, caller cares about failure) | **Hooks** — participating packages register callbacks via a core-owned registry; callbacks run inside the deactivation `db.transaction()` |
+| Side-effect cleanup (hygiene, caller tolerates eventual consistency) | **Events** — emitted after commit, idempotent listeners, retry-safe |
+| Direct call inside a single tx at the orchestrator tier | Works when the orchestrator (app/domain) knows all participants and their dependency tiers allow it. Less flexible than hooks when participants are plugins. |
 
-Compliance V1 has zero transactional cleanup needs. Pure event-driven.
+Compliance V1 has zero correctness-critical cleanup. Pure event-driven for this release.
 
 **Query-time guards (the real correctness mechanism):**
 
