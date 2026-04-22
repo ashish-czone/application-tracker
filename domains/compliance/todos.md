@@ -953,21 +953,200 @@ this.auditRegistry.register('client_registrations', {
 
 ---
 
-## 2. Pending decisions
-
-Questions still to work through before we can finalise V1 implementation. Answered one by one; each is moved into §1 on resolution.
-
 ### Q29 — Comment mutability
-Flat comments; editable by author anytime, within N minutes, or immutable? Delete policy?
+
+**Decision:** Accept the `packages/addons/notes` addon defaults. Authors can edit and soft-delete their own notes at any time; `updatedAt` auto-tracks edits; domain events feed the audit trail with before/after content so the history is preserved even when the latest version is shown in UI.
+
+**Compliance task "comments" = notes addon attached to `compliance_tasks` entity.** No new table, no new service.
+
+**Options considered:**
+- (a) Platform defaults (author-editable, author-deletable, `updatedAt` on edit, audit via events). _[chosen]_
+- (b) Append-only / immutable — rejected: typos become permanent; unnatural vs. Slack/Linear/GitHub norms.
+- (c) Edit-only-within-N-minutes window — rejected: timer primitive for marginal benefit; audit already solves the integrity concern.
+- (d) Admin override (author + firm admin can edit any note) — rejected: path to revisionism; uncomfortable for compliance context even though audit captures it.
+
+**Why (a):**
+- **Zero build** — notes addon already enforces the author-only guard.
+- **Audit carries integrity.** Q22 wildcard registers `notes.*` events; `NOTES_NOTE_UPDATED` payload includes before/after content (per event-conventions.md), so every edit is in `audit_logs`. UI detail-page audit tab shows the edit history.
+- **User expectation alignment.** Slack / Linear / GitHub all allow post-hoc edits with an `(edited)` marker. Compliance reviewers reading a 6-month-old thread won't be surprised.
+
+**UI rendering:**
+- When `updatedAt > createdAt` (with a small tolerance for creation write-time jitter), render an `(edited)` marker beside the timestamp.
+- Hovering the marker shows `Last edited {relativeTime}` tooltip.
+- Historical versions are not inline — they live in the audit trail (Audit Trail tab → filter by note ID).
+
+**Edge cases:**
+- **Author leaves the firm** (intersects Q32) — their notes remain visible attributed to their name; they can no longer edit (they're deactivated / removed). Uncontroversial.
+- **Admin hard-delete of a note** — not exposed in V1. If `packages/addons/notes` offers an admin surface, compliance doesn't expose it. Future work if a firm ever needs moderation.
+- **`isInternal` toggle** — notes addon supports public/internal; compliance V1 stays internal-only (all notes `isInternal: true`). Client-facing notes can be added later if/when client portal arrives.
+
+**Implication for build:**
+- Stream G (comments): thin wiring — compliance task detail page mounts the notes UI (`packages/addons/notes/ui/hooks.ts`) with `entityType: 'compliance_tasks'`. No API work beyond controller-level permission check that delegates to task read-scope (Q23 visibility principle extends to notes on the task).
+
+---
 
 ### Q30 — Comment @mentions and notifications
-Support `@user` mentions that generate a notification in V1, or defer?
+
+**Decision:** Support `@user` mentions in compliance task comments. When a user is mentioned, they receive an **in-app notification** (notification bell / panel), not an email, in V1. Email delivery for mentions is deferred.
+
+**Platform grounding:**
+- **Mention parsing is built** — `packages/addons/notes/api/helpers/extract-mentions.ts` parses mention tokens from content.
+- **Mention storage is built** — `note_mentions` table records `(noteId, userId)` pairs on note create/update.
+- **`NOTES_NOTE_CREATED` / `_UPDATED` events carry `mentionedUserIds: string[]`** in the payload.
+- **In-app notification channel is fully built** — `packages/platform/notification-channels/in-app/` provides `InAppChannelService`, `NotificationQueryService`, `/user-notifications` API, plus `NotificationBell.tsx` UI component. Compliance already has a `NotificationPanel.tsx`.
+- **Email channel also exists** — but intentionally not wired for mentions in V1.
+
+**Options considered:**
+- (a) Full mentions + email notification — rejected for V1: over-eager delivery, easy to become noisy; reserve for follow-up once firms ask for it.
+- (b) Mentions + in-app notification only. _[chosen]_
+- (c) Defer mentions entirely — rejected: collaboration UX is a core compliance need (reviewer handoff happens via comment); firms will work around via side-channel (WhatsApp), breaking the audit trail.
+
+**Build shape:**
+- **One seeded automation rule** in `packages/addons/notes/api/seeds.ts`: event trigger on `NOTES_NOTE_CREATED` (and `_UPDATED` for mentions added post-hoc) where `mentionedUserIds` is non-empty. Action: `send_notification` to the **in-app channel only**. User resolution: `entity_field` on the `mentionedUserIds` array field in the event payload.
+- **`SendNotificationAction` channel control:** verify the action supports per-rule channel selection (e.g. `config.channels: ['in_app']`). If it currently fans out to all of a user's active channels, add a `channels` config option on the action handler. Minor platform extension if needed, co-located with the existing notification work.
+- **Template (kind-agnostic):** `"{authorName} mentioned you on {taskTitle}: {commentPreview}"`. Content preview is clipped (e.g. first 100 chars) to avoid leaking long comments into notifications.
+- **Multi-user array resolution:** `entity_field` strategy already handles array values (`related-entity-field.strategy.ts:61–63`); confirm the standalone `entity_field` strategy does the same, else add the array path (trivial).
+
+**Where the rule lives:**
+- In `packages/addons/notes` (not tasks, not compliance). Notes addon owns `note_mentions` + the mention event; seeding the mention-notification rule there keeps the feature local. Any notes-using domain benefits automatically.
+
+**Opt-out interaction with Q21:** Q21 locked "no per-user opt-out in V1" for compliance notifications. Mention notifications fall under the same umbrella in V1 — no user opt-out. If mention-spam becomes a real problem, admins can disable the seeded rule firm-wide; revisit user-level opt-out as a separate future decision.
+
+**Email delivery for mentions (deferred):**
+- When added later, it's a trivial rule change — flip the action `channels` config to `['in_app', 'email']` or clone the rule with an email channel.
+- Keeping email off in V1 avoids inbox fatigue during early usage and gives firms time to establish mention norms before we add a louder channel.
+
+**Edge cases:**
+- **Self-mention** — if an author @-mentions themselves, suppress the notification (don't notify-yourself). Enforced in the action handler or via a `mentionedUserIds != authorId` condition on the rule.
+- **Mentioned user is deactivated** — skip. `SendNotificationAction` should already no-op on deactivated recipients; verify.
+- **Note edited to ADD a new mention** — `_UPDATED` event fires; seeded rule listens to both `_CREATED` and `_UPDATED`. But we must not re-notify users who were already mentioned in the prior version. Diff logic: notify only users in `after.mentionedUserIds` but NOT in `before.mentionedUserIds`. This diff lives in the action config (or a condition on the rule if it can express set-difference). **Flag as a build subtlety** — may need a tiny handler-level helper rather than pure declarative condition.
+- **Note edited to REMOVE a mention** — no un-notify action; the in-app notification already delivered remains. Acceptable.
+
+**Implication for build:**
+- **Stream G extension:** add seeded mention-notification rule in `packages/addons/notes/api/seeds.ts`.
+- **Platform check:** confirm `SendNotificationAction` supports per-channel selection; add if missing.
+- **Edit-diff logic:** handler-side "only-new-mentions" filter on `_UPDATED` events.
+- **UI:** mention notifications appear in existing `NotificationBell` / `NotificationPanel`. No new UI.
+
+---
 
 ### Q31 — Leave modelling
-Boolean `onLeave` on user, date-range `leaveSince` / `leaveUntil`, or full time-off module (defer)? Affects how the system nulls `assigneeId` while someone is away.
+
+**Decision:** **No leave modelling in V1.** Staff on leave are not a distinct state in the system. Short leaves are absorbed by the existing T+0 / T+3 / T+7 escalation tiers; indefinite leave is handled the same as termination (see Q32).
+
+**Options considered:**
+- (a) No leave model. _[chosen]_
+- (b) Boolean `onLeave` on users + suppress notifications — rejected: suppression removes the firm's safety signal; user returns to a silent inbox with no evidence of what happened.
+- (c) Date-range `leaveSince` / `leaveUntil` + auto-redirect notifications to team head in range — rejected: non-trivial state machine and scheduler integration for a behaviour already solved by escalation.
+- (d) Full time-off module (approvals, coverage, PTO balance) — rejected: correctly out of V1 scope.
+
+**Why (a):**
+- **Realistic firm behaviour.** CA firms already run on "tell your manager before you leave". Managers manually reassign the 2–3 tasks that matter during the leave window. System-level leave is ceremony for a behaviour that's already solved socially.
+- **Escalation IS the coverage mechanism.** If an assignee is on leave when T+0 fires and doesn't act → T+3 emails the team head → someone else takes action. The three-tier escalation (Q10 / Q19a) is coverage by design.
+- **"Suppress notifications" is the wrong affordance.** Notifications are the firm's best signal that something needs attention; silencing them removes the safety net. A full inbox on return is not a blocker — a missed statutory deadline is.
+- **Indefinite leave ≡ termination.** Staff on open-ended leave are functionally deactivated; Q32's termination flow (null task assignments, remove team memberships) applies.
+
+**Edge cases:**
+- **Known short leave (e.g. 3-day wedding):** manager reassigns high-priority tasks before the staff leaves. T+3 / T+7 handle anything missed. Acceptable.
+- **Known longer leave (e.g. 2-week holiday):** same mechanism, more manual reassignment. Still acceptable for V1.
+- **Unplanned / emergency leave (illness):** escalation tiers absorb it automatically. No admin intervention needed.
+- **Parental leave / sabbatical (months):** treat as termination per Q32 (deactivate user, null task assignments, remove from team). Reinstate by reactivating when they return. Firm-admin operation, no separate leave state.
+
+**Non-goals for V1:**
+- Auto-routing of T+0 emails to team head when `onLeave: true` — explicitly out of scope; T+3 already covers this a few days later.
+- Leave balance / approval workflow — not platform concern.
+- Out-of-office auto-reply on notifications — not valuable enough for V1.
+
+**Implication for build:** nothing. No leave state, no leave UI, no leave-aware scheduling. The three-tier escalation + Q32 termination flow together cover every scenario V1 needs.
+
+---
 
 ### Q32 — Termination behaviour
-On termination, null `assigneeId` on all their open tasks AND remove from team memberships? Or keep membership and only null task assignments? Who does this — admin action, or auto on user deactivation event?
+
+**Decision:** Event-driven cascade on `USERS_USER_DEACTIVATED`. No transactions needed for V1 — the user-coupled entities that matter (tasks, team memberships) are cleanup-able asynchronously because query-time guards on `users.deactivatedAt` make the window invisible. Reinstatement creates a clean slate (no auto-restore of prior state); history is preserved for audit.
+
+**The authoritative signal:** `users.deactivatedAt`. Flip this to a timestamp and the user is functionally gone — consumers already filter on `deactivatedAt IS NULL`, so they disappear from resolvers, personal queues, escalation recipients, and notification targets the moment the flag is written.
+
+**Event-driven cleanup (background GC, not a correctness requirement):**
+
+| Listener location | Work done |
+|---|---|
+| `packages/addons/tasks` | On `USERS_USER_DEACTIVATED`: `UPDATE tasks SET assigneeId = NULL WHERE assigneeId = :userId AND status NOT IN ('completed', 'cancelled')`. Team remains assigned via `assigneeTeamId`, so the task is still routable and falls into Q20's team-fallback path. |
+| `packages/addons/org-units` | On `USERS_USER_DEACTIVATED`: `DELETE FROM org_unit_positions WHERE userId = :userId`. Removes the user from membership resolvers going forward. |
+
+Both listeners are idempotent — re-running them on the same event is a no-op. If a listener crashes, retry (or re-process from queue); no corruption.
+
+**Options considered:**
+- (a) Event-driven cleanup. _[chosen]_
+- (b) Transactional cascade via direct service calls — rejected for V1: `users` is a core package, cannot import from addons (`packages/core/users` → `packages/addons/tasks` violates dependency direction). A transactional cascade would require moving orchestration up to the app or domain tier, which is unnecessary complexity when query-time guards already make the cleanup non-urgent.
+- (c) Admin manually reassigns + removes — rejected: manual steps for mechanical work invite omissions.
+- (d) Synchronous CLI cascade (one-shot script) — rejected: same orchestration problem as (b), plus harder to trigger from admin UI.
+
+**Principle for future transactional needs (when they arise):**
+
+> Use direct service calls inside a transaction at the app or domain tier. Each participating service exposes tx-aware methods. Do NOT pass tx objects through events.
+
+Rationale:
+- Events carry messages, not transactional context. Passing a tx object through them conflates "broadcast with independent handlers" and "transactional participants" into one mechanism.
+- Transactional cascade means handler failure rolls back the domain op — the opposite of `event-conventions.md`'s "handler failure never rolls back the domain operation".
+- Out-of-process listeners (queue workers) cannot receive a tx — Drizzle tx objects are session-bound and non-serializable. You'd end up with two dispatch paths with different semantics.
+- Multi-listener events + shared tx → ambiguous failure semantics (one fails, all roll back? some commit, some don't?).
+
+**The clean split:**
+
+| Need | Mechanism |
+|---|---|
+| Transactional cross-module cleanup (caller cares about failure) | Direct service calls inside `db.transaction()` at the orchestrator tier |
+| Side-effect cleanup (caller doesn't care, eventual consistency OK) | Domain event + listeners |
+
+Compliance V1 has zero transactional cleanup needs. Pure event-driven.
+
+**Query-time guards (the real correctness mechanism):**
+
+| Consumer | Guard |
+|---|---|
+| `org_unit_members` resolver | `AND users.deactivated_at IS NULL` |
+| `org_unit_head` resolver | `AND users.deactivated_at IS NULL` |
+| `parent_unit_head` resolver | `AND users.deactivated_at IS NULL` |
+| Task list views (assignee column) | Hide / anonymise assignee when deactivated |
+| Personal queue (`my-tasks` scope) | `WHERE users.deactivated_at IS NULL` on the user-context side |
+| Mention notification (Q30) | Skip deactivated recipients |
+
+With these in place, the eventual-consistency window for the GC listeners is invisible. Even if the tasks/org-units listeners never ran, the system would still behave correctly — deactivated user just lingers as dangling FK references that nobody queries.
+
+**Reinstatement:**
+- Admin reactivates user → `users.deactivatedAt = NULL` (and emit `USERS_USER_REACTIVATED` for audit).
+- **No auto-restore** of prior task assignments or team memberships. Admin re-adds to teams via fresh `org_unit_positions` rows. Admin reassigns tasks that need it.
+- History (audit rows, note authorship, attachment uploader FKs, completed-task assignee references) is preserved unchanged.
+- Rationale: months after termination, prior assignments are stale (tasks reassigned, priorities shifted, teams restructured). Clean slate avoids surprise resurrection of work state.
+
+**Edge cases:**
+- **User deactivated while holding the only "head" position in a unit** — after position removal, resolver returns empty head list. Escalations for that unit's tasks fall back to `parent_unit_head` at T+3, and if no parent either, the task stays in "no head" state (UI should surface this to firm admin as a coverage gap). Acceptable for V1; firm admin resolves by promoting another member via new sortOrder.
+- **User was `actorId` on in-flight automation rules** — no impact. Automation doesn't re-check actor's deactivation state for already-fired rules.
+- **User authored pending notes** — notes remain attributed. `(deactivated)` badge can be added next to their name in UI as polish. Not a V1 blocker.
+- **Historical task completions** — `completedBy` (if present on tasks schema) unchanged; the fact that X completed Y months ago stays true regardless of X's current status.
+
+**Non-goals for V1:**
+- Auto-deletion of user records — `users.deactivatedAt` is a flag, not a hard delete. Data retention matches Q25 audit retention (keep forever).
+- Handover workflow (assign a "replacement" during deactivation) — future work if firms ask. In V1, admin manually reassigns the handful of tasks that matter.
+- User delete API — not exposed to admins. Deactivation is the only off-ramp.
+
+**Implication for build — Stream H (Employee lifecycle):**
+
+- H1: Verify `users.deactivatedAt` column exists in `packages/core/users` schema; add if missing.
+- H2: Emit `USERS_USER_DEACTIVATED` / `USERS_USER_REACTIVATED` events in user service.
+- H3: In `packages/addons/tasks`, add cleanup listener (`@OnEvent(USERS_USER_DEACTIVATED)` → null assignee on open tasks).
+- H4: In `packages/addons/org-units`, add cleanup listener + add `deactivated_at IS NULL` guards to the three resolvers from Q19b (`org_unit_head`, `parent_unit_head`, `org_unit_members`).
+- H5: Add `deactivated_at IS NULL` guard to `my-tasks` personal-queue scope in `packages/addons/tasks/api/tasks.config.ts`.
+- H6: UI — admin user list exposes "Deactivate" action; confirmation modal summarises consequences ("X will lose team memberships; open tasks will be team-reassigned"); action sets `deactivatedAt`.
+
+All H* tasks land in `packages/core/users`, `packages/addons/tasks`, or `packages/addons/org-units` — **compliance domain ships zero code** for this, same inheritance pattern as Q19 / Q20.
+
+---
+
+## 2. Pending decisions
+
+_All decisions locked. This section is intentionally empty — any new questions that emerge during implementation get appended here and moved up to §1 once resolved._
 
 ---
 
