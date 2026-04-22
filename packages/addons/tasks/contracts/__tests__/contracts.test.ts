@@ -18,7 +18,7 @@ describe('tasksRoutes', () => {
 describe('TASKS_METADATA', () => {
   it('declares the slug and soft-delete behavior the api relies on', () => {
     expect(TASKS_METADATA.slug).toBe('tasks');
-    expect(TASKS_METADATA.softDelete).toBe(true);
+    expect(TASKS_METADATA.onDelete).toEqual({ mode: 'soft' });
     expect(TASKS_METADATA.hasTags).toEqual({ groupSlug: 'task-tags' });
   });
 });
