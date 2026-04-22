@@ -1848,6 +1848,9 @@ importers:
       '@packages/org-units-ui':
         specifier: workspace:*
         version: link:../../../packages/addons/org-units/ui
+      '@packages/platform-ui':
+        specifier: workspace:*
+        version: link:../../../packages/platform/platform-ui
       '@packages/rbac-ui':
         specifier: workspace:*
         version: link:../../../packages/platform/rbac/ui
