@@ -21,6 +21,11 @@ describe('TASKS_METADATA', () => {
     expect(TASKS_METADATA.onDelete).toEqual({ mode: 'soft' });
     expect(TASKS_METADATA.hasTags).toEqual({ groupSlug: 'task-tags' });
   });
+
+  it('exposes the six extra action permissions matching the workflow transitions', () => {
+    const actions = TASKS_METADATA.extraPermissions?.map((p) => p.action) ?? [];
+    expect(actions).toEqual(['pickup', 'reassign', 'review', 'complete', 'reopen', 'close']);
+  });
 });
 
 describe('TASKS_FIELDS', () => {
