@@ -45,13 +45,10 @@ export class TaskClaimService {
 
   async reassign(
     taskId: string,
-    data: { userId?: string; teamId?: string },
-  ): Promise<{ id: string; assigneeId: string | null; assigneeTeamId: string | null }> {
-    if (!data.userId && !data.teamId) {
-      throw new BadRequestException('Either userId or teamId must be provided');
-    }
-    if (data.userId && data.teamId) {
-      throw new BadRequestException('Provide either userId or teamId, not both');
+    data: { teamId: string; userId?: string | null },
+  ): Promise<{ id: string; assigneeId: string | null; assigneeTeamId: string }> {
+    if (!data.teamId) {
+      throw new BadRequestException('teamId is required — every task must belong to a team');
     }
 
     await assertTaskIsAdHoc(taskId);
@@ -63,17 +60,16 @@ export class TaskClaimService {
 
     if (!task) throw new BadRequestException('Task not found');
 
-    const set: Record<string, unknown> = data.userId
-      ? { assigneeId: data.userId, assigneeTeamId: null }
-      : { assigneeTeamId: data.teamId, assigneeId: null };
-
     const [updated] = await this.database.db
       .update(tasks)
-      .set(set)
+      .set({
+        assigneeTeamId: data.teamId,
+        assigneeId: data.userId ?? null,
+      })
       .where(eq(tasks.id, taskId))
       .returning({ id: tasks.id, assigneeId: tasks.assigneeId, assigneeTeamId: tasks.assigneeTeamId });
 
-    return updated;
+    return updated as { id: string; assigneeId: string | null; assigneeTeamId: string };
   }
 
   async unclaim(taskId: string, userId: string): Promise<{ id: string }> {

@@ -1,11 +1,10 @@
 import { IsOptional, IsUUID } from 'class-validator';
 
 export class ReassignTaskDto {
-  @IsOptional()
   @IsUUID()
-  userId?: string;
+  teamId!: string;
 
   @IsOptional()
   @IsUUID()
-  teamId?: string;
+  userId?: string | null;
 }

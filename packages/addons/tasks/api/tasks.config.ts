@@ -5,14 +5,6 @@ import { orgUnitMembers } from '@packages/org-units';
 import { TASKS_FIELDS, TASKS_METADATA } from '@packages/tasks-contract';
 import { tasks } from './schema/tasks';
 
-function validateAssigneeExclusivity(payload: Record<string, unknown>): void {
-  const hasAssignee = payload.assigneeId != null && payload.assigneeId !== '';
-  const hasTeam = payload.assigneeTeamId != null && payload.assigneeTeamId !== '';
-  if (hasAssignee && hasTeam) {
-    throw new BadRequestException('A task cannot be assigned to both a user and a team');
-  }
-}
-
 /**
  * Stamps / clears `completedAt` based on the status transition in the
  * payload. Exported so kind-owned services (compliance-tasks, etc.)
@@ -97,22 +89,12 @@ export const TASKS_CONFIG = defineEntity({
   hooks: {
     beforeCreate: async (payload: Record<string, unknown>) => {
       rejectKindInPayload(payload);
-      validateAssigneeExclusivity(payload);
       return applyCompletedAt(payload);
     },
     beforeUpdate: async (id: string, payload: Record<string, unknown>) => {
       rejectKindInPayload(payload);
       await assertTaskIsAdHoc(id);
-      let next = payload;
-      if ('assigneeId' in next || 'assigneeTeamId' in next) {
-        validateAssigneeExclusivity(next);
-        if ('assigneeId' in next && next.assigneeId) {
-          next = { ...next, assigneeTeamId: null };
-        } else if ('assigneeTeamId' in next && next.assigneeTeamId) {
-          next = { ...next, assigneeId: null };
-        }
-      }
-      return applyCompletedAt(next);
+      return applyCompletedAt(payload);
     },
     beforeDelete: async (id: string) => {
       await assertTaskIsAdHoc(id);
