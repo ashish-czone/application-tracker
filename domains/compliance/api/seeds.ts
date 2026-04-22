@@ -37,6 +37,9 @@ export function complianceSystemSeedSources(): SeedSource[] {
     system('@domains/compliance-api/system-organization', () =>
       import('./organizations/seeds/system-organization').then((m) => m.seedSystemOrganization),
     ),
+    system('@domains/compliance-api/system-roles', () =>
+      import('./shared/seeds/system-roles').then((m) => m.seedSystemRoles),
+    ),
   ];
 }
 
