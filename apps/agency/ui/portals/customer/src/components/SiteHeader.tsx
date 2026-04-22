@@ -1,15 +1,16 @@
-import { fetchMenuBySlug } from '@/lib/api';
+import { fetchMenuBySlug, fetchSiteSettings } from '@/lib/api';
 import { HeaderShell } from './header/HeaderShell';
 
 /**
- * Server component: loads the `primary` menu and hands it to the
- * interactive header shell. Branding (siteName) is hardcoded for now
- * — F1 (site-settings addon) replaces it with a value read from the
- * DB. That swap will touch only this file.
+ * Server component: loads the `primary` menu and public site settings,
+ * then hands them to the interactive header shell. Both fetches are
+ * parallelized; each has its own ISR cache tag.
  */
 export async function SiteHeader({ slug = 'primary' }: { slug?: string }) {
-  const menu = await fetchMenuBySlug(slug);
+  const [menu, settings] = await Promise.all([
+    fetchMenuBySlug(slug),
+    fetchSiteSettings(),
+  ]);
   const items = menu?.items ?? [];
-  const siteName = 'Studio';
-  return <HeaderShell siteName={siteName} menuItems={items} />;
+  return <HeaderShell siteName={settings.siteName} menuItems={items} />;
 }
