@@ -1204,8 +1204,10 @@ Shipped as PR #970 (2026-04-22).
 
 Revised scope per Q19b/Q20: no bespoke resolver or cron — three user-resolver strategies in `@packages/org-units` + four seeded automation rules in `@packages/tasks`, executed by the platform's existing `ScheduleScanner`. The `automation_sent_log` table (unique on `ruleId, entityType, entityId, targetDate`) gives B3 for free.
 
+Stream B shipped as PR #980 (2026-04-22).
+
 - [x] **B1.** Escalation-target resolver primitives — supplied by three `UserResolverStrategy` classes in `@packages/org-units` (`org_unit_head`, `parent_unit_head`, `org_unit_members`), registered on `UserResolverRegistry` in `OrgUnitsModule.onModuleInit()`. Per-tier target is composed at the rule level using these plus the built-in `entity_field` strategy. Ships co-heads tie-break (Q3) and parent-walk via `org_units.parentId`. Fallback to "users holding `all` scope on compliance tasks" is deferred — the daily digest (Stream D) still surfaces orphan tasks.
-- [ ] **B2.** Four system-seeded automation rules in `@packages/tasks` covering T+0 (assigneeId NOT NULL → `entity_field(assigneeId)`), T+0 (assigneeId NULL AND assigneeTeamId NOT NULL → `org_unit_members(assigneeTeamId)`), T+3 (`org_unit_head(assigneeTeamId)`), T+7 (`parent_unit_head(assigneeTeamId)`). Each pairs a generic notification template with `schedule_recurring` + `scheduleDateField: 'dueDate'` + `scheduleDateOperator: 'after'`. (Q17/Q19/Q20)
+- [x] **B2.** Four system-seeded automation rules in `@packages/tasks` covering T+0 assignee (`entity_field(assigneeId)`), T+0 team broadcast (`org_unit_members(assigneeTeamId)`), T+3 (`org_unit_head(assigneeTeamId)`), T+7 (`parent_unit_head(assigneeTeamId)`). Each pairs a generic notification template with `schedule_once` + `scheduleDateField: 'dueDate'` + `scheduleDateOperator: 'after'`. **Deviation from Q19b's table:** implementation uses `schedule_once` rather than the `schedule_recurring` originally specified — `schedule_recurring` would re-send every scan while the date condition held, contradicting Q19a's "three emails max per task" invariant. The Q19b table below has been kept as-written for historical context; the shipped seed is authoritative.
 - [x] **B3.** Idempotency — satisfied by the platform's existing `automation_sent_log` (unique `ruleId × entityType × entityId × targetDate`). No additional tracking table needed.
 
 ### Stream C — Compliance domain role, position & scope seeds
@@ -1220,9 +1222,13 @@ Shipped as PR #973 (2026-04-22).
 
 ### Stream D — Notifications wiring for compliance due dates
 
-- [ ] **D1.** Automation rule / scheduled job for the daily digest — per-user mail with "due within 7 days" + "overdue" sections. Cron expression via `cronForLocalHour(9, APP_TIMEZONE)`. (Q17, pending Q18/Q20)
-- [ ] **D2.** Per-task email on day task becomes overdue. (Pending Q19)
-- [ ] **D3.** Notification target resolution — assignee if set, else team members; respects escalation recipients from Stream B. (Pending Q20)
+Stream D shipped as PR #982 (2026-04-22). The per-task overdue email (originally scoped as D2) was absorbed into Stream B's T+0 tier-1 rules; D3's target resolution is handled by the B1 resolvers + the digest's `entity_field(id)` recipient.
+
+- [x] **D1.** Daily digest — seeded as the `task-daily-digest` automation rule: `schedule_recurring` against `users`, `scheduleHour = 9` (APP_TIMEZONE, Q17), `send_task_digest` action with three buckets (overdue / due today / due this week, Q18). Supporting work: new `SendTaskDigestAction` handler in `@packages/tasks` + new `task-daily-digest` email template. Personal-queue scope mirrors Q16 semantics (own + unassigned-in-my-teams).
+- [x] **D2.** Per-task overdue email — delivered by Stream B's tier-1 rules (T+0 assignee / T+0 team broadcast). No separate D2 artefact.
+- [x] **D3.** Target resolution — assignee-if-set-else-team-members is covered by the B1 resolvers (`entity_field`, `org_unit_members`, `org_unit_head`, `parent_unit_head`) used by Stream B rules + the digest's `entity_field(id)` recipient (one per iterated user).
+
+**Platform primitive introduced by Stream D (D-a):** nullable `schedule_hour` (0-23) on `automation_rules`. The schedule scanner now runs `0 * * * *` (hourly) and fires each rule only during its `scheduleHour`; NULL is treated as `DEFAULT_SCHEDULE_HOUR = 2` so rules that predate the column keep their historic once-daily-at-2am cadence without backfill. This was required because Q17 demands the digest fires at 9am APP_TIMEZONE and the previous once-daily scanner cron pinned every schedule-rule to the same hour.
 
 ### Stream E — Audit trail wiring
 
