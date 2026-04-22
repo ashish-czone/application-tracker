@@ -7,9 +7,11 @@ import { MenusModule } from '@packages/menus-api';
 
 import { AGENCY_PERMISSION_REGISTRATIONS } from './permissions';
 import { SITE_SETTINGS } from './settings';
+import { SiteSettingsController } from './site-settings.controller';
 
 @Module({
   imports: [PagesModule, ContentModule, MenusModule],
+  controllers: [SiteSettingsController],
 })
 export class AgencyDomainModule implements OnModuleInit {
   constructor(
