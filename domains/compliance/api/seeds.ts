@@ -57,6 +57,9 @@ export function complianceDemoSeedSources(): SeedSource[] {
     demo('@domains/compliance-api/demo-users', () =>
       import('./users/seeds/demo-users').then((m) => m.seedDemoUsers),
     ),
+    demo('@domains/compliance-api/demo-user-roles', () =>
+      import('./users/seeds/demo-user-roles').then((m) => m.seedDemoUserRoles),
+    ),
     demo('@domains/compliance-api/demo-law-handlers', () =>
       import('./law-handlers/seeds/demo-law-handlers').then((m) => m.seedDemoLawHandlers),
     ),
