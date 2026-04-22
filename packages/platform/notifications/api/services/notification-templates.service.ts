@@ -59,6 +59,16 @@ export class NotificationTemplatesService {
     return template as NotificationTemplate;
   }
 
+  async findFirstByName(name: string): Promise<NotificationTemplate | null> {
+    const [template] = await this.database.db
+      .select()
+      .from(notificationTemplates)
+      .where(withTenant(notificationTemplates, eq(notificationTemplates.name, name)))
+      .limit(1);
+
+    return (template as NotificationTemplate | undefined) ?? null;
+  }
+
   async create(data: { name: string; channel: NotificationChannel; subject?: string; body: string }): Promise<NotificationTemplate> {
     const [template] = await this.database.db
       .insert(notificationTemplates)
