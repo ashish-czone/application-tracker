@@ -672,12 +672,40 @@ Not needed for V1.
 
 ---
 
+### Q20 — Notification target when no individual assignee
+
+**Decision:** For a team-assigned task with no individual assignee, **every team member** receives the T+0 escalation email and sees the task in their daily digest. Head has no special privilege at T+0 — their role kicks in at T+3.
+
+**Options considered:**
+- (a) Broadcast to every member at T+0; head escalation at T+3; parent-unit head at T+7. _[chosen]_
+- (b) Head-only at T+0, members see it via digest — rejected: single point of failure if head is OOO; whole team loses email visibility.
+- (c) Head + deputy at T+0 — rejected: "deputy" isn't a modelled concept; implied 2nd-lowest-sortOrder semantics is fragile and would need platform-level concept work.
+
+**Why (a):** consistent with Q16 (personal queue shows self + unassigned team work to every member). The digest already surfaces the task to every member every morning; the T+0 escalation email is a louder form of the same signal. Broadcast creates mild "who picks it up" coordination but adds redundancy — if head is on leave, another member sees the signal and can claim/assign.
+
+**Resolver config for tier-1 rule:**
+- When `assigneeId IS NOT NULL` → resolve via `entity_field(assigneeId)`. One recipient.
+- When `assigneeId IS NULL` → resolve via `org_unit_members(assigneeTeamId)`. Multiple recipients.
+
+Since an automation rule can't branch user-resolution by a condition on the entity, **two tier-1 rules** are seeded (rather than one):
+
+| Seed rule | Additional condition | Resolver |
+|---|---|---|
+| `task-overdue-tier-1-assignee` | `assigneeId IS NOT NULL` | `entity_field(assigneeId)` |
+| `task-overdue-tier-1-team` | `assigneeId IS NULL AND assigneeTeamId IS NOT NULL` | `org_unit_members(assigneeTeamId)` |
+
+Total seeded rule count in tasks package becomes **5**: two tier-1 variants, one tier-2, one tier-3, one daily digest. (Updates the table in Q19b implicitly — tier-1 row splits into two rows with the above conditions.)
+
+**Edge case — task has neither `assigneeId` nor `assigneeTeamId`:**
+Neither tier-1 rule fires. Tier-2/3 also need `assigneeTeamId` for head resolution, so they don't fire either. Task becomes invisible to escalation. Mitigation: base tasks package should treat a task with no team and no assignee as a configuration error — emit a domain event on overdue-with-no-target, firm admins subscribe via their own automation rule. **Deferred to a separate pending Q (Q20a) if we want to formalise, otherwise accept the edge case for V1.**
+
+**Implication for build:** split seeded tier-1 rule into two; otherwise unchanged from Q19b.
+
+---
+
 ## 2. Pending decisions
 
 Questions still to work through before we can finalise V1 implementation. Answered one by one; each is moved into §1 on resolution.
-
-### Q20 — Notification target when no individual assignee
-Digest to every team member, or only to team head(s)?
 
 ### Q21 — User opt-out of notifications
 Allowed in V1 (per-channel / per-rule), or everyone on by default with no opt-out?
