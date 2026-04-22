@@ -726,21 +726,145 @@ Neither tier-1 rule fires. Tier-2/3 also need `assigneeTeamId` for head resoluti
 
 ---
 
+### Q22 — Audit scope
+
+**Decision:** Wildcard audit on every compliance-owned module. Each module registers with `AuditRegistryService` in `onModuleInit()` using `events: '*'`. Writes-only (reads not covered by platform — not planned for V1).
+
+**Coverage (modules that must call `register`):**
+- `clients`
+- `client_registrations`
+- `compliance_rules`
+- `compliance_tasks`
+- Any future compliance-owned module (new law types, handlers, etc.)
+
+**Platform grounding (`packages/platform/audit`):**
+- Action enum: `created | updated | deleted`. No read-audit primitive.
+- Listener consumes domain events, writes `audit_logs` rows with `before`, `after`, `changes` (field-level diff), `correlationId`, `actorId`, `eventName`.
+- Field-level diffs are automatic — derived from the event payload's `before` / `after` snapshots. Nothing to configure per event.
+- `sensitiveFields` array on registration redacts named fields from snapshots (covered by Q24).
+
+**Options considered:**
+- (a) Wildcard (`events: '*'`) on every compliance-owned module. _[chosen]_
+- (b) Selective allowlist — only status transitions, assignments, deactivations — rejected: "noise" argument is weak (diffs are tiny JSON; no future reader regrets too much detail), and the registration surface area per event is larger than just wildcarding.
+- (c) Wildcard + new read-audit infrastructure — rejected: platform work, speculative for V1, not a standard CA-firm requirement (records are shared within firm; not GDPR-grade privacy).
+
+**Build prerequisite (not a decision — a convention reminder):** compliance module services must emit events with `before`/`after` snapshots per `.claude/rules/event-conventions.md`. Without properly structured events, audit rows would be empty. Each service defines a `Snapshot` interface and `toSnapshot()` method.
+
+**Implication for Stream E (Audit):**
+- E1: Register each compliance module via `AuditRegistryService.register(moduleName, { events: '*', sensitiveFields: [...] })` in `onModuleInit()`.
+- E2: Ensure every emitted update-event payload carries `{ before, after }` snapshots. Covered by the audit integration tests in each module.
+- E3: No new audit schema or infrastructure. Platform's `audit_logs` table absorbs everything.
+
+---
+
+### Q23 — Audit visibility
+
+**Decision:** Audit visibility **inherits from the subject entity**. If a user can read the entity, they can read its audit trail. Firm admins additionally get a global "all audit" view via a separate permission.
+
+**Two audit-read surfaces in V1:**
+
+| Surface | Permission | Visibility |
+|---|---|---|
+| Per-entity audit timeline (detail page tab) | Inherited from entity read permission + scope | Only rows with `entityType + entityId` matching an entity the user can already read |
+| Firm-wide audit list | `audit.read_all` (firm-admin role only) | All rows across the firm |
+
+**Why (c) — "audit inherits visibility of the subject":**
+- **One source of truth for visibility.** No parallel audit-permission matrix to reason about — if you can see the task, you see its history.
+- **Natural UX binding.** Detail page's "Audit Trail" tab (per the detail-page redesign memory) shows the entity's timeline. No mental model split between "can view record" and "can view record's history".
+- **Team leads don't need admin escalation** to answer "who reassigned this task?" — they already have task-scope read.
+- **Rejected alternatives:**
+  - (a) Admin-only — too restrictive; routine audit questions require admin pinging.
+  - (b) Parallel scope rows for audit — duplicates scope logic, two sources of truth.
+  - (d) Self-only — covers auditing one's own actions but misses the main use case (seeing others' changes to records I'm responsible for).
+
+**Implementation sketch (for Stream E):**
+- Per-entity endpoint: `GET /audit-logs?entityType=X&entityId=Y` — controller authorises by delegating to the owning module's read-check (e.g., `complianceTasksService.canRead(user, taskId)`). Returns empty list if user can't read the entity.
+- Firm-wide endpoint: `GET /audit-logs` (no `entityType` filter) — requires `audit.read_all` permission, not gated by scope.
+- Redaction: `sensitiveFields` list from registration (Q24) applies uniformly to both surfaces.
+
+**Edge cases:**
+- **Entity was deleted** — audit row persists, but the subject is gone. In V1, soft-deleted entities remain readable by their owners (platform convention), so their audit trail remains visible. Hard-deleted entities' audit rows become visible only to `audit.read_all` holders.
+- **User's scope changed** (e.g., moved to a different unit) — subsequent reads honour current scope. Historical rows they previously saw are no longer visible if the entity has moved out of their scope. Acceptable.
+- **Cross-entity correlations** (`correlationId`, `targetEntity*`) — returned rows may reference related entities the user can't read. V1: return the row with fields as-is; downstream UI may render target entity IDs without resolving names when out of scope. Defer a "hide correlation leak" polish.
+
+**Implication for build:**
+- E4: `audit.read_all` permission registered by platform audit module (already exists — verify).
+- E5: Per-entity audit endpoint added to each compliance controller OR a generic `GET /audit-logs?entityType=X&entityId=Y` that performs authorisation delegation. Prefer the generic endpoint to avoid duplication across domains — but requires a permission-check registry on `AuditRegistryService` (`authoriseRead: (user, entityId) => Promise<boolean>`). Minor platform extension.
+
+---
+
+### Q24 — Sensitive field redaction
+
+**Decision:** Redact **tax identifiers only**. No other PII redaction in V1.
+
+**Redacted fields:**
+
+| Module | Field | Rationale |
+|---|---|---|
+| `clients` | `taxId` (PAN / GSTIN) | Indian PII; audit logs persist longer than working records, export leakage would be problematic. |
+| `client_registrations` | `registrationNumber` | Same reasoning — individual GSTIN / TAN / PAN for that registration. |
+
+**Not redacted:**
+- `clients.contactEmail`, `clients.contactPhone` — business contact info, already sprayed across emails / invoices / CRMs. Redacting in audit gives false confidence; audit value ("who changed the contact email?") is exactly the point.
+- `compliance_rules.*` — metadata, no PII.
+- `compliance_tasks.*` — work state, no PII.
+
+**Options considered:**
+- (a) Redact tax IDs only. _[chosen]_
+- (b) Redact tax IDs + email + phone — rejected: redacting already-spread fields creates a false privacy signal without adding real protection.
+- (c) No redaction — rejected: tax IDs are the one class of field where export leakage has regulatory weight.
+- (d) Redact tax IDs + email, keep phone — rejected: inconsistent; either treat "contact details" as redacted or not, and not-redacted is the right call.
+
+**Registration shape (Stream E1):**
+```ts
+// In clients module onModuleInit
+this.auditRegistry.register('clients', {
+  events: '*',
+  sensitiveFields: ['taxId'],
+});
+// In client_registrations module onModuleInit
+this.auditRegistry.register('client_registrations', {
+  events: '*',
+  sensitiveFields: ['registrationNumber'],
+});
+```
+
+**Behaviour:**
+- `audit_logs.before` and `audit_logs.after` JSONB will carry `"taxId": "[REDACTED]"` (or whatever platform redaction sentinel is) for those fields.
+- `audit_logs.changes` still records that the field changed and when / by whom — just not the before/after values.
+- UI detail-page audit tab will render "taxId changed" without revealing the old or new value.
+
+**Edge case — redaction list grows later:** redaction applies at audit-write time. Rows written before a field was added to `sensitiveFields` retain un-redacted values. Not a V1 blocker since the list is fixed at seed time, but intersects with Q25 (retention) — if we ever purge audit rows, we lose any un-redacted historical values naturally.
+
+---
+
+### Q25 — Audit retention
+
+**Decision:** **Keep audit rows forever.** No purge policy in V1.
+
+**Options considered:**
+- (a) Keep forever. _[chosen]_
+- (b) Time-based purge (e.g. 7 years) — rejected: Indian income tax scrutiny can reopen assessments up to 10 years back in serious cases; a 7-year purge creates gaps exactly when evidence matters most.
+- (c) Cascade-delete on hard-deletion of subject entity — rejected: if a client is hard-deleted, the audit trail IS the evidence for why. Purging with the entity defeats the purpose.
+- (d) Per-entity-type retention (tasks shorter, clients longer) — rejected: premature tuning for a storage problem that doesn't exist.
+
+**Rationale:**
+- **Statutory context.** CA firm audit trails have 10+ year scrutiny windows. Forever is the safest default; a purge policy is impossible to reverse.
+- **Storage is trivial.** ~10K rows/year for a 200-client firm. 10 years = 100K rows of JSONB diffs — kilobytes.
+- **Asymmetric cost.** Purged rows are gone. Retaining too much is cheap; retaining too little is catastrophic when needed.
+
+**Edge cases:**
+- **Hard-deleted subject entity** — audit rows persist with their `entityType` + `entityId`, but the subject no longer resolves. UI renders the stale ID with a `[deleted]` marker. Acceptable in V1 since hard delete is rare / admin-only.
+- **Tenancy offboarding** (future) — when a tenant is offboarded, their audit rows get purged along with all their other data. Out of scope for V1 since multi-tenancy isn't fully wired yet.
+- **Redaction-list growth** (from Q24) — rows written before a field joined `sensitiveFields` retain un-redacted values. With no purge, those rows remain discoverable. Acceptable; if a future firm needs retroactive redaction, it's a one-off backfill script, not a retention policy.
+
+**Implication for build:** nothing. No purge cron, no retention column, no per-entity-type config. `audit_logs` table just grows.
+
+---
+
 ## 2. Pending decisions
 
 Questions still to work through before we can finalise V1 implementation. Answered one by one; each is moved into §1 on resolution.
-
-### Q22 — Audit scope
-Writes only, with field-level before/after diffs? Or also read-auditing of sensitive fields? What does the platform's audit infrastructure support out of the box?
-
-### Q23 — Audit visibility
-Who can view the audit trail — firm admins only, or also team leads / task stakeholders for their own scope?
-
-### Q24 — Sensitive field redaction
-List of fields to redact in audit logs. Candidate list: `clients.taxId` (PAN/GSTIN), contact email, contact phone. Anything else?
-
-### Q25 — Audit retention
-Keep forever in V1, or define a purge policy?
 
 ### Q26 — Attachment file-type whitelist
 Candidate: PDF, PNG, JPG, XLSX, XLS, DOCX, DOC. Add ZIP / CSV? Block executables explicitly?
