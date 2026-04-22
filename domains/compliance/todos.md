@@ -757,12 +757,45 @@ Neither tier-1 rule fires. Tier-2/3 also need `assigneeTeamId` for head resoluti
 
 ---
 
+### Q23 — Audit visibility
+
+**Decision:** Audit visibility **inherits from the subject entity**. If a user can read the entity, they can read its audit trail. Firm admins additionally get a global "all audit" view via a separate permission.
+
+**Two audit-read surfaces in V1:**
+
+| Surface | Permission | Visibility |
+|---|---|---|
+| Per-entity audit timeline (detail page tab) | Inherited from entity read permission + scope | Only rows with `entityType + entityId` matching an entity the user can already read |
+| Firm-wide audit list | `audit.read_all` (firm-admin role only) | All rows across the firm |
+
+**Why (c) — "audit inherits visibility of the subject":**
+- **One source of truth for visibility.** No parallel audit-permission matrix to reason about — if you can see the task, you see its history.
+- **Natural UX binding.** Detail page's "Audit Trail" tab (per the detail-page redesign memory) shows the entity's timeline. No mental model split between "can view record" and "can view record's history".
+- **Team leads don't need admin escalation** to answer "who reassigned this task?" — they already have task-scope read.
+- **Rejected alternatives:**
+  - (a) Admin-only — too restrictive; routine audit questions require admin pinging.
+  - (b) Parallel scope rows for audit — duplicates scope logic, two sources of truth.
+  - (d) Self-only — covers auditing one's own actions but misses the main use case (seeing others' changes to records I'm responsible for).
+
+**Implementation sketch (for Stream E):**
+- Per-entity endpoint: `GET /audit-logs?entityType=X&entityId=Y` — controller authorises by delegating to the owning module's read-check (e.g., `complianceTasksService.canRead(user, taskId)`). Returns empty list if user can't read the entity.
+- Firm-wide endpoint: `GET /audit-logs` (no `entityType` filter) — requires `audit.read_all` permission, not gated by scope.
+- Redaction: `sensitiveFields` list from registration (Q24) applies uniformly to both surfaces.
+
+**Edge cases:**
+- **Entity was deleted** — audit row persists, but the subject is gone. In V1, soft-deleted entities remain readable by their owners (platform convention), so their audit trail remains visible. Hard-deleted entities' audit rows become visible only to `audit.read_all` holders.
+- **User's scope changed** (e.g., moved to a different unit) — subsequent reads honour current scope. Historical rows they previously saw are no longer visible if the entity has moved out of their scope. Acceptable.
+- **Cross-entity correlations** (`correlationId`, `targetEntity*`) — returned rows may reference related entities the user can't read. V1: return the row with fields as-is; downstream UI may render target entity IDs without resolving names when out of scope. Defer a "hide correlation leak" polish.
+
+**Implication for build:**
+- E4: `audit.read_all` permission registered by platform audit module (already exists — verify).
+- E5: Per-entity audit endpoint added to each compliance controller OR a generic `GET /audit-logs?entityType=X&entityId=Y` that performs authorisation delegation. Prefer the generic endpoint to avoid duplication across domains — but requires a permission-check registry on `AuditRegistryService` (`authoriseRead: (user, entityId) => Promise<boolean>`). Minor platform extension.
+
+---
+
 ## 2. Pending decisions
 
 Questions still to work through before we can finalise V1 implementation. Answered one by one; each is moved into §1 on resolution.
-
-### Q23 — Audit visibility
-Who can view the audit trail — firm admins only, or also team leads / task stakeholders for their own scope?
 
 ### Q24 — Sensitive field redaction
 List of fields to redact in audit logs. Candidate list: `clients.taxId` (PAN/GSTIN), contact email, contact phone. Anything else?
