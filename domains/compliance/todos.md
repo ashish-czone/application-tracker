@@ -419,14 +419,57 @@ Rules don't have an effective date the same way — deprecation is simply "stop 
 
 ---
 
+### Q14 — Scope → position mapping at seed time
+
+### Q14 — Scope → position mapping at seed time
+
+**Decision:** Five seeded positions, scopes seeded **only for task entities** in V1. Other compliance entities get their scope seeding deferred until their respective feature work.
+
+**Seeded positions (all admin-editable display names, stable internal identifiers):**
+
+| Position | sortOrder | Task-entity scope |
+|---|---|---|
+| Member | 2 | `unit` |
+| Lead | 1 | `unit` |
+| Head | 0 | `unit` |
+| Division Head | 0 (on a division-level unit) | `descendants` |
+| Firm Admin | -1 or lowest | `all` |
+
+Scope seeds apply to `tasks` and `compliance_tasks` only. Other compliance entities (`clients`, `client_registrations`, `client_contacts`, `compliance_rules`, `laws`, `law_handlers`) get **no seeded (position, entityType) rows** in V1.
+
+**Platform scope semantics** (verified in `packages/addons/org-units/api/services/position-scope-resolver.service.ts:17–19`):
+- `own` → only the user's own records (`[userId]`).
+- `unit` → all users in the user's direct units (team-level visibility).
+- `descendants` → user's units + all descendant units, recursive CTE.
+- `all` → unfiltered.
+- Fail-closed default (line 47): when no position/scope row exists for a `(user, entityType)`, the resolver returns `own`.
+
+**Task entities get extra team-visibility via `teamField`:** the tasks entity config unions `assigneeTeamId` into the owner check, so even `own` scope on tasks effectively shows "me OR tasks owned by teams I'm in." Doesn't apply to entities without a configured `teamField`.
+
+**Why seed only tasks:**
+- Task visibility is the V1 scope's operational heart — every seeded role's capability check depends on it.
+- Other entities (clients, rules, laws) have different visibility models across typical CA firms — some want clients firm-wide, some team-segregated. Making the call without feature-specific need is premature.
+- Fail-closed default `own` for non-task entities will likely need attention when we wire the clients and rule catalogue list pages — at that point we decide per-entity (seed `all`, seed `unit`, or add an entity-level `defaultScope` mechanism). Not urgent for V1 task lifecycle work.
+
+**Options considered and rejected:**
+- Seed the same `unit / descendants / all` scopes across every compliance entity preemptively — premature; assumes team-segregated visibility applies uniformly, which isn't obvious for catalogue-style entities.
+- Seed only two positions (Head + Member) — Lead is a meaningful middle tier in many firms; seeding all three avoids common customisation.
+- Omit Division Head and Firm Admin seeds — firms with hierarchy or firm-level admins would have to custom-create them; seeding keeps a fresh install usable for multi-level firms too.
+
+**UX flag (non-blocking) — role/position tier mismatch:** because role (capability) and position (structure) are orthogonal per Q3, a Member holding the Team Lead role effectively has team-leadership capability in their team despite not being structurally a Head. The admin UI surfaces a warning when assigning a leadership-tier role to a non-leadership position, but permits it. Feature, not bug.
+
+**Implementation ripple (extend Stream C):**
+- Seed the five positions with stable internal identifiers.
+- Seed `(position × task-entity)` scope rows: 5 positions × 2 task entities (base tasks + compliance_tasks) = 10 rows.
+- UI warning on role assignment when role-tier ≠ position-tier.
+
+---
+
 ## 2. Pending decisions
 
 Questions still to work through before we can finalise V1 implementation. Answered one by one; each is moved into §1 on resolution.
 
-### Q14 — Scope → position mapping at seed time
-
-### Q14 — Scope → position mapping at seed time
-What scope does each seeded position (Head, Lead, Member) carry by default? (Likely: Head → `unit`, Lead → `own`, Member → `own`; Division Head → `descendants`; Firm Admin → `all`.) Needs a single pass to confirm defaults.
+### Q15 — Role ↔ permission seed composition
 
 ### Q15 — Role ↔ permission seed composition
 Exactly which permissions does each seeded role (Preparer / Reviewer / Team Lead / Firm Admin) hold? First-cut table below needs confirmation.
@@ -514,10 +557,13 @@ Derived from §1. Re-estimated and re-ordered whenever §1 grows. Each bullet is
 - [ ] **B2.** Scheduled job (cron) that sweeps tasks daily, evaluates escalation tier based on due date, and triggers notifications via the notifications package. (Q3, pending Q17/Q19)
 - [ ] **B3.** Idempotency — record which tier a task has already notified at; never double-send.
 
-### Stream C — Compliance domain role & permission seeds
+### Stream C — Compliance domain role, position & scope seeds
 
 - [ ] **C1.** System seed: default roles (Preparer, Reviewer, Team Lead, Firm Admin) with their permission sets. Added to `complianceSystemSeedSources()` in `domains/compliance/api/seeds.ts`. (Q3, pending Q15 for exact permission list)
 - [ ] **C2.** Demo seed: sample user ↔ role assignments reflecting a realistic small firm. (Q3)
+- [ ] **C3.** System seed: five default positions with stable internal identifiers — Member (sortOrder 2), Lead (1), Head (0), Division Head (0, used on division-level units), Firm Admin (lowest sortOrder). Display names admin-editable. (Q14)
+- [ ] **C4.** System seed: `(position × task-entity)` scope rows for both the base `tasks` entity and the `compliance_tasks` extension. Member/Lead/Head → `unit`, Division Head → `descendants`, Firm Admin → `all`. 10 rows total. No scope seeds for non-task entities in V1. (Q14)
+- [ ] **C5.** UI warning on role assignment when the assigned role's tier and the user's position tier don't align (e.g. Team Lead role on a Member position). Non-blocking advisory. (Q14)
 
 ### Stream D — Notifications wiring for compliance due dates
 
