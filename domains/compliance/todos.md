@@ -793,12 +793,54 @@ Neither tier-1 rule fires. Tier-2/3 also need `assigneeTeamId` for head resoluti
 
 ---
 
+### Q24 — Sensitive field redaction
+
+**Decision:** Redact **tax identifiers only**. No other PII redaction in V1.
+
+**Redacted fields:**
+
+| Module | Field | Rationale |
+|---|---|---|
+| `clients` | `taxId` (PAN / GSTIN) | Indian PII; audit logs persist longer than working records, export leakage would be problematic. |
+| `client_registrations` | `registrationNumber` | Same reasoning — individual GSTIN / TAN / PAN for that registration. |
+
+**Not redacted:**
+- `clients.contactEmail`, `clients.contactPhone` — business contact info, already sprayed across emails / invoices / CRMs. Redacting in audit gives false confidence; audit value ("who changed the contact email?") is exactly the point.
+- `compliance_rules.*` — metadata, no PII.
+- `compliance_tasks.*` — work state, no PII.
+
+**Options considered:**
+- (a) Redact tax IDs only. _[chosen]_
+- (b) Redact tax IDs + email + phone — rejected: redacting already-spread fields creates a false privacy signal without adding real protection.
+- (c) No redaction — rejected: tax IDs are the one class of field where export leakage has regulatory weight.
+- (d) Redact tax IDs + email, keep phone — rejected: inconsistent; either treat "contact details" as redacted or not, and not-redacted is the right call.
+
+**Registration shape (Stream E1):**
+```ts
+// In clients module onModuleInit
+this.auditRegistry.register('clients', {
+  events: '*',
+  sensitiveFields: ['taxId'],
+});
+// In client_registrations module onModuleInit
+this.auditRegistry.register('client_registrations', {
+  events: '*',
+  sensitiveFields: ['registrationNumber'],
+});
+```
+
+**Behaviour:**
+- `audit_logs.before` and `audit_logs.after` JSONB will carry `"taxId": "[REDACTED]"` (or whatever platform redaction sentinel is) for those fields.
+- `audit_logs.changes` still records that the field changed and when / by whom — just not the before/after values.
+- UI detail-page audit tab will render "taxId changed" without revealing the old or new value.
+
+**Edge case — redaction list grows later:** redaction applies at audit-write time. Rows written before a field was added to `sensitiveFields` retain un-redacted values. Not a V1 blocker since the list is fixed at seed time, but intersects with Q25 (retention) — if we ever purge audit rows, we lose any un-redacted historical values naturally.
+
+---
+
 ## 2. Pending decisions
 
 Questions still to work through before we can finalise V1 implementation. Answered one by one; each is moved into §1 on resolution.
-
-### Q24 — Sensitive field redaction
-List of fields to redact in audit logs. Candidate list: `clients.taxId` (PAN/GSTIN), contact email, contact phone. Anything else?
 
 ### Q25 — Audit retention
 Keep forever in V1, or define a purge policy?
