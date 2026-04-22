@@ -1030,12 +1030,40 @@ this.auditRegistry.register('client_registrations', {
 
 ---
 
+### Q31 — Leave modelling
+
+**Decision:** **No leave modelling in V1.** Staff on leave are not a distinct state in the system. Short leaves are absorbed by the existing T+0 / T+3 / T+7 escalation tiers; indefinite leave is handled the same as termination (see Q32).
+
+**Options considered:**
+- (a) No leave model. _[chosen]_
+- (b) Boolean `onLeave` on users + suppress notifications — rejected: suppression removes the firm's safety signal; user returns to a silent inbox with no evidence of what happened.
+- (c) Date-range `leaveSince` / `leaveUntil` + auto-redirect notifications to team head in range — rejected: non-trivial state machine and scheduler integration for a behaviour already solved by escalation.
+- (d) Full time-off module (approvals, coverage, PTO balance) — rejected: correctly out of V1 scope.
+
+**Why (a):**
+- **Realistic firm behaviour.** CA firms already run on "tell your manager before you leave". Managers manually reassign the 2–3 tasks that matter during the leave window. System-level leave is ceremony for a behaviour that's already solved socially.
+- **Escalation IS the coverage mechanism.** If an assignee is on leave when T+0 fires and doesn't act → T+3 emails the team head → someone else takes action. The three-tier escalation (Q10 / Q19a) is coverage by design.
+- **"Suppress notifications" is the wrong affordance.** Notifications are the firm's best signal that something needs attention; silencing them removes the safety net. A full inbox on return is not a blocker — a missed statutory deadline is.
+- **Indefinite leave ≡ termination.** Staff on open-ended leave are functionally deactivated; Q32's termination flow (null task assignments, remove team memberships) applies.
+
+**Edge cases:**
+- **Known short leave (e.g. 3-day wedding):** manager reassigns high-priority tasks before the staff leaves. T+3 / T+7 handle anything missed. Acceptable.
+- **Known longer leave (e.g. 2-week holiday):** same mechanism, more manual reassignment. Still acceptable for V1.
+- **Unplanned / emergency leave (illness):** escalation tiers absorb it automatically. No admin intervention needed.
+- **Parental leave / sabbatical (months):** treat as termination per Q32 (deactivate user, null task assignments, remove from team). Reinstate by reactivating when they return. Firm-admin operation, no separate leave state.
+
+**Non-goals for V1:**
+- Auto-routing of T+0 emails to team head when `onLeave: true` — explicitly out of scope; T+3 already covers this a few days later.
+- Leave balance / approval workflow — not platform concern.
+- Out-of-office auto-reply on notifications — not valuable enough for V1.
+
+**Implication for build:** nothing. No leave state, no leave UI, no leave-aware scheduling. The three-tier escalation + Q32 termination flow together cover every scenario V1 needs.
+
+---
+
 ## 2. Pending decisions
 
 Questions still to work through before we can finalise V1 implementation. Answered one by one; each is moved into §1 on resolution.
-
-### Q31 — Leave modelling
-Boolean `onLeave` on user, date-range `leaveSince` / `leaveUntil`, or full time-off module (defer)? Affects how the system nulls `assigneeId` while someone is away.
 
 ### Q32 — Termination behaviour
 On termination, null `assigneeId` on all their open tasks AND remove from team memberships? Or keep membership and only null task assignments? Who does this — admin action, or auto on user deactivation event?
