@@ -20,6 +20,7 @@
     "@packages/menus-api": "workspace:*",
     "@packages/pages-api": "workspace:*",
     "@packages/rbac": "workspace:*",
+    "@packages/settings": "workspace:*",
     "drizzle-orm": "^0.45.1"
   },
   "devDependencies": {
