@@ -219,14 +219,37 @@ The UI shows a confirmation prompt on transition: _"This will cancel N open task
 - Task generator (`GenerateComplianceTasksAction`) to filter out non-`active` clients — verify that this filter is already in place; add if not.
 - UI prompt on the transition surfacing the task count and confirmation.
 
+### Q7 — Multiple registrations against the same law
+
+**Decision:** Defer to V2. V1 assumes **one active registration per `(client, law)`**. No schema change from today's `client_registrations`.
+
+**Context:** The common Indian case is GST multi-state — a company with branches in Maharashtra, Gujarat, and Karnataka holds three GSTINs and files GSTR-1 / GSTR-3B independently for each. TDS (TAN) can multiply similarly when a company has multiple deductor identities.
+
+**Options considered:**
+- (a) Disallow multiple registrations — the V1 status quo.
+- (b) Add `registrationNumber` to `client_registrations`, key tasks on `(rule, registration, period)` so each GSTIN has its own task flow.
+- (c) Allow multiple registrations as metadata only; tasks stay keyed at `(client, law)` and the GSTIN is recorded in-task.
+- (d) Use **client groups** instead: model each state as its own client record (with its own branch address, contacts, team ownership), group them under the parent business. Pushed out when Q1 deferred groups.
+
+**Why defer:** (b) and (d) are alternate designs for the same problem:
+- (b) keeps one client record, adds a per-registration identifier, and couples contacts/team to the parent client.
+- (d) creates N client records with independent contacts / team / address; the group gives the roll-up view.
+
+Each has real tradeoffs — (b) is a tighter schema but forces shared contact/team; (d) separates things cleanly but requires the group primitive (deferred in Q1). Making the call without groups in scope risks locking in the wrong shape. Better to revisit both together when Q1 comes back on the table.
+
+**V1 workaround for firms that need multi-state GST today:**
+- (i) Track the primary GSTIN as the registration, capture others in task comments or a text field. Unsearchable but survives V1.
+- (ii) Create one client record per state manually. Duplicates contacts and loses client-level reporting but gives per-GSTIN task tracking.
+
+Either is acceptable as a known gap. Neither is blocking — most small-firm clients have a single GSTIN, and the firms that need multi-state can self-serve via (ii) until V2.
+
+**Implication for the build plan:** no schema change, no generator change, no UI change. The existing `client_registrations` + `GenerateComplianceTasksAction` keep working as-is.
+
 ---
 
 ## 2. Pending decisions
 
 Questions still to work through before we can finalise V1 implementation. Answered one by one; each is moved into §1 on resolution.
-
-### Q7 — Multiple registrations against the same law
-Can one client have two registrations against the same law (e.g., two GSTINs for two states)? If yes, are tasks generated per registration or per (client, law)?
 
 ### Q8 — Forward-only semantics on deactivation
 Confirm: deactivating a registration or deprecating a rule leaves already-generated tasks unaffected; only future generation stops. Need to also decide how this is communicated in the UI.
