@@ -219,29 +219,180 @@ The UI shows a confirmation prompt on transition: _"This will cancel N open task
 - Task generator (`GenerateComplianceTasksAction`) to filter out non-`active` clients — verify that this filter is already in place; add if not.
 - UI prompt on the transition surfacing the task count and confirmation.
 
+### Q7 — Multiple registrations against the same law
+
+**Decision:** Defer to V2. V1 assumes **one active registration per `(client, law)`**. No schema change from today's `client_registrations`.
+
+**Context:** The common Indian case is GST multi-state — a company with branches in Maharashtra, Gujarat, and Karnataka holds three GSTINs and files GSTR-1 / GSTR-3B independently for each. TDS (TAN) can multiply similarly when a company has multiple deductor identities.
+
+**Options considered:**
+- (a) Disallow multiple registrations — the V1 status quo.
+- (b) Add `registrationNumber` to `client_registrations`, key tasks on `(rule, registration, period)` so each GSTIN has its own task flow.
+- (c) Allow multiple registrations as metadata only; tasks stay keyed at `(client, law)` and the GSTIN is recorded in-task.
+- (d) Use **client groups** instead: model each state as its own client record (with its own branch address, contacts, team ownership), group them under the parent business. Pushed out when Q1 deferred groups.
+
+**Why defer:** (b) and (d) are alternate designs for the same problem:
+- (b) keeps one client record, adds a per-registration identifier, and couples contacts/team to the parent client.
+- (d) creates N client records with independent contacts / team / address; the group gives the roll-up view.
+
+Each has real tradeoffs — (b) is a tighter schema but forces shared contact/team; (d) separates things cleanly but requires the group primitive (deferred in Q1). Making the call without groups in scope risks locking in the wrong shape. Better to revisit both together when Q1 comes back on the table.
+
+**V1 workaround for firms that need multi-state GST today:**
+- (i) Track the primary GSTIN as the registration, capture others in task comments or a text field. Unsearchable but survives V1.
+- (ii) Create one client record per state manually. Duplicates contacts and loses client-level reporting but gives per-GSTIN task tracking.
+
+Either is acceptable as a known gap. Neither is blocking — most small-firm clients have a single GSTIN, and the firms that need multi-state can self-serve via (ii) until V2.
+
+**Implication for the build plan:** no schema change, no generator change, no UI change. The existing `client_registrations` + `GenerateComplianceTasksAction` keep working as-is.
+
+---
+
+### Q8 — Forward-only semantics on registration deactivation & rule deprecation
+
+**Decision:** Forward-only **from the effective date**, not from the input date. Different specifics for registrations (which have an effective date) and rules (which don't).
+
+**Registration deactivation:**
+
+`client_registrations.deactivatedAt` is **user-selectable**, constrained to **past or present only** in V1 (no future-scheduled deactivation — would require a recurring "process pending deactivations" job for no V1 payoff). Backdating is the common real-world case: clients routinely inform the firm about a GST/TAN cancellation weeks after the fact, and the effective date is what determines which periods were legally active.
+
+On deactivation, tasks are partitioned by `periodStart`:
+
+| Task condition | Action |
+|---|---|
+| `periodStart > deactivatedAt` AND non-terminal | Auto-cancel with a system comment ("registration deactivated effective YYYY-MM-DD; this period falls after"). These tasks should never have existed. |
+| `periodStart ≤ deactivatedAt` AND non-terminal | Leave alone — may still be legally required to file (e.g. the February GSTR-3B is still due even if GST was surrendered on 31-Mar). |
+| Terminal (`completed` / `cancelled`) | Untouched regardless. |
+
+Future generation stops naturally via a generator-side filter: `registration.deactivatedAt IS NULL OR registration.deactivatedAt > periodStart`.
+
+**Rule deprecation:**
+
+Rules don't have an effective date the same way — deprecation is simply "stop generating new tasks from this rule." So rule deprecation is **forward-only from now**: already-generated tasks are left alone regardless of period; the generator just skips deprecated rules.
+
+**UI in both cases:**
+
+- On deactivation / deprecation, show a summary before confirming: "Deactivating this registration effective YYYY-MM-DD. M tasks after this date will auto-cancel. N tasks remain open for earlier periods."
+- **Optional secondary checkbox:** "Also cancel the N remaining in-flight tasks for earlier periods." Default unchecked. Lets firms who want to abandon everything do it in one action.
+- Registration detail / rule detail page afterwards shows a "Deactivated on YYYY-MM-DD" / "Deprecated" banner so the non-generation behaviour is explicit.
+- In task list views, tasks linked to a deactivated registration or deprecated rule get a subtle marker so users seeing an unfamiliar task understand its provenance.
+
+**Options considered and rejected:**
+- Forward-only from **input date** (ignore the user-selected `deactivatedAt`) — rejected because backdated entries would leave invalid tasks (generated for periods after the real cancellation date) alive indefinitely.
+- Auto-cancel *all* non-terminal tasks on deactivation (parallel to client dormancy) — rejected because it destroys valid pre-effective-date obligations. Dormancy is the exception, not the rule; registration/rule deactivation is softer.
+- Block deactivation until all tasks are terminal — too harsh, prevents recording the real-world event until tidy-up is done.
+
+**Relationship to Q6:** the three "things can become inactive" transitions now have cleanly distinct semantics — client dormancy (aggressive: cancel all non-terminal); registration deactivation (medium: cancel tasks after effective date, keep earlier); rule deprecation (soft: forward-only, no cancel).
+
+**Implementation ripple (extend Stream I):**
+- Hook on `client_registrations` deactivation that partitions tasks by `periodStart` vs. `deactivatedAt` and cancels the post-effective-date set; optional checkbox cancels the remainder.
+- Generator filter for registration effective date: `registration.deactivatedAt IS NULL OR registration.deactivatedAt > periodStart`.
+- Hook on `compliance_rules.status → deprecated` that only stops generation — no auto-cancel; surface the optional cancel checkbox.
+- Generator filter for rule status: already filters on `status = 'active'` (verify during implementation).
+- UI on both transitions: date picker (for registration), summary of auto-cancelled tasks, optional checkbox for remainder, deactivation/deprecation banners thereafter.
+
+---
+
+### Q9 — Rule parameter changes mid-period
+
+**Decision:** **Per-field policy.** Cosmetic fields are freely editable; due-date math is editable but forward-only; rule-identity fields become immutable once the rule has generated at least one task.
+
+| Field | Policy | Why |
+|---|---|---|
+| `name`, `description` | Freely editable | Cosmetic, no functional impact. |
+| `dueDayOfMonth`, `dueMonthOffset`, `gracePeriodDays` | Editable, forward-only | New values apply to newly-generated tasks. Already-generated tasks keep their original due dates. Silently moving the due date on tasks that are already on dashboards, in digests, and being worked against would break user trust and invalidate overdue calculations mid-flight. |
+| `code` | Immutable once ≥1 task generated | The natural key downstream; renaming would orphan historical references. |
+| `frequency` (monthly / quarterly / …) | Immutable once ≥1 task generated | Changing frequency means a different rule conceptually — user should deprecate and create a new rule. |
+| `lawId` | Immutable once ≥1 task generated | Changes what law the tasks are filed under — rewrites history. |
+| `status` (draft / active / deprecated) | Workflow-managed | Covered by Q8 for `deprecated`; `draft → active` is the initial activation transition. |
+
+**Options considered and rejected:**
+- Forward-only from edit time (universal) — right for due-date math, wrong for identity fields where even new tasks shouldn't be under a renamed `code` or shifted `lawId`.
+- Recompute all non-terminal tasks on any edit — destructive; shifts deadlines on tasks being worked against, breaks the overdue signal retroactively.
+- Block all edits once ≥1 task generated — punishes legitimate corrections (typo in `dueDayOfMonth`, clearer description) by forcing a deprecate-and-recreate dance.
+
+**Idempotency interaction:** the generator's natural key is `(ruleId, registrationId, periodStart)` (with Q7 deferred, effectively `(ruleId, clientId, periodStart)` in V1). On key conflict during a sweep, the generator is a **pure no-op** — never mutates an existing row. This keeps forward-only strict: fixing a mistake on an already-generated task requires the user to cancel it explicitly, at which point the next generator sweep emits a fresh row using the current rule parameters.
+
+**UI communication:**
+- Immutable fields are disabled in the edit form once the rule has generated tasks, with a tooltip: "Cannot change — this rule has generated tasks. Deprecate this rule and create a new one to change `<field>`."
+- Editing a forward-only field (due-date math): save dialog shows "This change will apply only to tasks generated from now on. N tasks already generated will keep their current due dates."
+- No "recompute in-flight tasks" bulk action in V1.
+
+**Edge case — long-horizon tasks pre-edit:** a task generated months in advance (in the 6-month horizon) will now have older math than the current rule. Fine — it stays with original due date. If the user wants the new math applied, they cancel it and the next sweep regenerates against the new parameters.
+
+**Implementation ripple (extend Stream I):**
+- Guard on rule update that enforces the immutability of identity fields once ≥1 task exists.
+- "Has this rule generated any task?" helper on the service layer — a simple `SELECT 1 FROM compliance_tasks WHERE rule_id = ? LIMIT 1`.
+- UI logic in the rule edit form to disable immutable fields, and the save dialog copy for forward-only edits.
+
+---
+
+### Q10 — Weekend / public-holiday handling on due dates
+
+**Decision:** Calendar date as-is. No holiday calendar in V1. Firms that want a cushion for weekend / holiday ends express it through the existing `gracePeriodDays` field on the rule.
+
+**Options considered:**
+- (a) Calendar date as-is. _[chosen]_
+- (b) Auto-roll to next working day (store rolled date).
+- (c) Store `statutoryDueDate` + `workingDueDate` separately.
+- (a) + (d) grace period absorbs the shift — no schema change. _[chosen, naturally]_
+
+**Why (a):** statutory due dates are the actual calendar dates in Indian compliance. ITD / GSTN portals are automated and accept filings on weekends and public holidays, so the legal due date never shifts. "Next working day" rolling is a firm-internal convenience, not a statutory requirement.
+
+**Why not (b):** requires a state-wise gazetted holiday calendar (Republic Day is nationwide but Maharashtra Day isn't), dragging in multi-state complexity V1 has deferred. Also silently shifts dates users know by muscle memory ("11th is GSTR-1"), breaking trust.
+
+**Why not (c):** adds a column, a second date to communicate in UI / emails / escalation, and raises "which date does overdue fire against?" — all for marginal gain when (d) covers the need via an existing field.
+
+**How `gracePeriodDays` covers the case:** a firm that wants "due on the 11th, but don't escalate if filed by Monday" sets `gracePeriodDays = 2` on that rule. Overdue calc is `today > dueDate + gracePeriodDays`, so weekend-end due dates get a quiet buffer without the system needing to know *why*.
+
+**Explicit V1 limitation (documented, not fixed):** the system has no concept of public holidays. A due date on Diwali is treated like any other calendar date. Firms handle it via `gracePeriodDays`. A working-day math + holiday calendar is a post-V1 feature if customer demand materialises.
+
+**Implication for build:** zero schema change, zero generator change, zero UI change beyond rendering the stored date. No new Stream I tasks.
+
+### Q11 / Q12 — Task generation horizon & trigger
+
+**Decision:** Rolling **12-month** horizon based on `periodStart`, refreshed by a **daily cron** and top-up **event-driven** on rule / registration / client-activation creation.
+
+**Horizon:** 12 months forward from today, measured by `periodStart` (not `dueDate`). So on any given day, the system has materialised every `(active rule × active registration)` task whose period begins within the next 12 months. This gives yearly rules (e.g. the ITR for FY26-27 with `periodStart = 2026-04-01`) exactly 12 months of prep lead time — visible from 2025-04-01 — while keeping monthly/quarterly rules comfortably in view.
+
+**Triggers:**
+
+| Event | What generates |
+|---|---|
+| Daily cron sweep | For every `(active rule × active registration)` pair, fill any missing task rows for `periodStart ∈ [today, today + 12mo]`. Idempotent: existing rows are no-ops. |
+| Rule activated (`status` → `active`) | Generate for this rule × all its active registrations, full horizon. Immediate visibility — no waiting for the next sweep. |
+| Registration created | Generate for all active rules on that law × this registration, full horizon. |
+| Client reactivated (`status` → `active`) | Generate for all active registrations of this client × active rules, full horizon. (Previously cancelled tasks from the prior dormancy stay cancelled per Q6.) |
+
+**Why rolling rather than FY-aligned:**
+- More forgiving for firms onboarding mid-year — they see 12 months forward from day one, not "next year becomes visible in March."
+- No brittle "big batch" moment — a failed yearly batch on 1st March would leave a whole FY unmaterialised until the daily safety-net catches it. With rolling + daily, the safety-net *is* the primary mechanism.
+- Idempotency means daily sweep cost is negligible (mostly no-op key conflicts per Q9).
+
+**Why 12 months specifically:**
+- Long enough for yearly-rule prep lead time (ITR, tax audit, Form 3CD).
+- Short enough to keep row count sane — roughly `(active rule-registration pairs) × ~13 rows / year` for monthly rules.
+- Matches how firms talk about their work calendar ("what's coming up this year").
+
+**Options considered and rejected:**
+- Keep 6 months (current code) — yearly filings wouldn't appear until ~6 months before due, too late for prep chasing.
+- FY-aligned annual batch on 1st March + safety-net sweep (Model B) — aesthetically appealing but introduces a brittle moment and privileges mid-year onboarders less well.
+- Per-rule horizon (monthly rules = 3mo, yearly = 24mo) — over-engineered; marginal UX gain for real per-rule config complexity.
+- Per-firm configurable horizon (settings) — ship the right default; offer knob in V2 if asked.
+
+**Concrete timeline for FY 2026-27 tasks under the locked model:**
+- **2025-04-01:** FY26-27 yearly ITR + April 2026 GSTR-1 first become visible (exactly 12 months ahead of their `periodStart`).
+- **2025-04-01 → 2026-03-01:** monthly / quarterly FY26-27 tasks roll into view progressively as each period's start enters the 12-month window.
+- **2026-03-01:** nearly all FY26-27 tasks visible; any with `periodStart` in the tail end of March 2027 enter on exactly 2026-03-01.
+
+**Implication for build:** the existing `GenerateComplianceTasksAction` stays as the core engine. Changes needed: extend horizon 6→12 months; wire a daily schedule trigger; subscribe to the three domain events for event-driven generation.
+
 ---
 
 ## 2. Pending decisions
 
 Questions still to work through before we can finalise V1 implementation. Answered one by one; each is moved into §1 on resolution.
 
-### Q7 — Multiple registrations against the same law
-Can one client have two registrations against the same law (e.g., two GSTINs for two states)? If yes, are tasks generated per registration or per (client, law)?
-
-### Q8 — Forward-only semantics on deactivation
-Confirm: deactivating a registration or deprecating a rule leaves already-generated tasks unaffected; only future generation stops. Need to also decide how this is communicated in the UI.
-
-### Q9 — Rule parameter changes mid-period
-If due-date math changes on an active rule, do already-generated future tasks recompute or stay with their original dates?
-
-### Q10 — Weekend / public-holiday handling on due dates
-Calendar date as-is vs. roll to next working day vs. track both.
-
-### Q11 — Task generation horizon
-Current code uses 6 months. Keep, extend, or make configurable?
-
-### Q12 — Task generation trigger
-Nightly cron, event-driven (on rule/registration create + periodic top-up), or both?
+### Q13 — Missing handler behaviour
 
 ### Q13 — Missing handler behaviour
 If a client is registered for a law but no law-handler (default team) is configured, do we generate the task with null team + admin alert, or block generation?
@@ -368,11 +519,50 @@ Derived from §1. Re-estimated and re-ordered whenever §1 grows. Each bullet is
 - [ ] **H1.** Null `assigneeId` on all open tasks of a terminated / deactivated user; surface "unassigned in my team" list for team heads. (Pending Q32)
 - [ ] **H2.** Leave tracking — model per Q31. (Pending Q31)
 
-### Stream I — Client lifecycle handling
+### Stream I — Domain lifecycle transition hooks
+
+Hooks that fire when a client, registration, or rule changes state in a way that affects compliance tasks. Three deactivation paths, three different semantics (see Q6, Q8).
+
+**Client dormancy (aggressive: cancel everything):**
 
 - [ ] **I1.** Hook on the `client.status → dormant` workflow transition that bulk-cancels all non-terminal `compliance_tasks` for the client, attaching a system comment (`"Auto-cancelled: client <Name> dormantised on <date> by <actor>"`). Transactional with the transition. (Q6)
 - [ ] **I2.** Ensure `GenerateComplianceTasksAction` filters on `client.status = 'active'`. Verify if already present; add if not. (Q6)
 - [ ] **I3.** UI prompt on the dormancy transition showing the number of tasks that will be cancelled, with an explicit confirmation. (Q6)
+
+**Registration deactivation (medium: cancel post-effective-date, keep earlier):**
+
+- [ ] **I4.** Allow user-selectable `deactivatedAt` on `client_registrations`, constrained to past or present only in V1. Add UI date picker with constraint. (Q8)
+- [ ] **I5.** Hook on registration deactivation that auto-cancels non-terminal tasks where `periodStart > deactivatedAt`, with a system comment referencing the effective date. Leaves earlier-period tasks alone. (Q8)
+- [ ] **I6.** Generator filter: `registration.deactivatedAt IS NULL OR registration.deactivatedAt > periodStart`. (Q8)
+- [ ] **I7.** UI on registration deactivation: show summary ("M tasks after this date will auto-cancel; N tasks remain open for earlier periods") plus an optional secondary checkbox to also cancel the N remaining. Default unchecked. (Q8)
+
+**Rule deprecation (soft: forward-only, no auto-cancel):**
+
+- [ ] **I8.** Hook on `compliance_rules.status → deprecated` that stops future generation but leaves existing tasks untouched. No mandatory cancel. (Q8)
+- [ ] **I9.** Generator filter: skip rules with `status = 'deprecated'`. Verify if already in place; add if not. (Q8)
+- [ ] **I10.** UI on rule deprecation: summary of non-terminal tasks for that rule, plus an optional checkbox "Also cancel N in-flight tasks from this rule." Default unchecked. (Q8)
+
+**Rule parameter edits (per-field policy, forward-only where applicable):**
+
+- [ ] **I13.** Service-layer helper `ruleHasGeneratedTasks(ruleId)` — single-row existence check on `compliance_tasks`. (Q9)
+- [ ] **I14.** Guard on rule update that blocks changes to `code`, `frequency`, `lawId` once `ruleHasGeneratedTasks` returns true. (Q9)
+- [ ] **I15.** UI in the rule edit form: disable immutable fields with the explanatory tooltip; show forward-only save-dialog copy when due-date-math fields change. (Q9)
+- [ ] **I16.** Confirm generator is a pure no-op on `(ruleId, clientId, periodStart)` conflict (never mutates existing row). Add a test if missing. (Q9)
+
+**Cross-cutting UI:**
+
+- [ ] **I17.** Banners on client / registration / rule detail pages reflecting their inactive state ("Deactivated on YYYY-MM-DD", "Deprecated", "Dormant"). (Q6, Q8)
+- [ ] **I18.** Subtle marker on task rows whose source registration or rule is inactive, so users viewing a task queue understand why an unfamiliar task is there. (Q8)
+
+### Stream J — Task generation cadence
+
+Ensures the generator runs at the right times and produces the right horizon. Builds on the existing `GenerateComplianceTasksAction`.
+
+- [ ] **J1.** Extend the generator horizon from 6 months to **12 months** based on `periodStart`. (Q11)
+- [ ] **J2.** Daily cron / scheduled trigger that invokes the generator across every `(active rule × active registration)` pair. Idempotent — per Q9 the generator is a pure no-op on key conflict. (Q12)
+- [ ] **J3.** Event subscriber on rule activation (`status → active`): trigger the generator for that rule × all its active registrations, full horizon. (Q12)
+- [ ] **J4.** Event subscriber on registration creation: trigger the generator for that registration × all active rules on its law, full horizon. (Q12)
+- [ ] **J5.** Event subscriber on client reactivation (`status → active`): trigger the generator for that client's active registrations × active rules. Previously cancelled dormancy tasks remain cancelled per Q6. (Q12)
 
 ### Stream Z — Finalisation
 
