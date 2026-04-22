@@ -1188,29 +1188,35 @@ Derived from §1. Re-estimated and re-ordered whenever §1 grows. Each bullet is
 
 ### Stream A — Tasks package hardening (platform-level, no compliance deps)
 
-- [ ] **A1.** Drop the XOR constraint (`validateAssigneeExclusivity` in `tasks.config.ts:8` and the swap logic at `:107–113`). Tighten `assigneeTeamId` to `NOT NULL` via migration. After this, a task must always have a team and may optionally have an individual — both can coexist. (Q2)
-- [ ] **A2.** Define task action permission slugs (`tasks.view`, `tasks.pickup`, `tasks.reassign`, `tasks.review`, `tasks.complete`, `tasks.reopen`, `tasks.close`) as constants in the tasks package. (Q3)
-- [ ] **A3.** Add a system seed in the tasks package that upserts these permissions into the permission registry. Wire into the CLI's system-seed run. (Q3)
-- [ ] **A4.** Add action-level guards / service methods: `pickupTask`, `reassignTask`, `reviewTask`, `markComplete`, `reopenTask`, `closeTask`. Each enforces permission + scope + task-relationship (assignee / team member / head) checks. (Q3)
-- [ ] **A5.** Expose the new action endpoints in the tasks controller with proper DTOs. Include each task's list of currently-allowed actions in the list/get response so the UI can disable buttons without hardcoding status slugs. (Q3, Q4)
-- [ ] **A6.** Verify scope-on-position integration end-to-end (position → scope, scope resolver, descendants walk). Close gaps _in the org-units / rbac packages_, not in the tasks package. (Q3 — "first implementation step")
-- [ ] **A7.** Define the task lifecycle workflow on the base `tasks` entity in `tasks.config.ts` via `defineEntity()`. Five states (`pending / in_progress / blocked / completed / cancelled`), transitions per §1 Q4, transition guards (`blocked` requires a reason comment). Mark `completed` and `cancelled` states with `isSystem: true` so they cannot be renamed or deleted via the admin UI. If the workflow package persists definitions, wire a system seed in the tasks package. (Q4)
-- [ ] **A8.** Add the per-action `allowedStatuses` configuration (action gate) alongside the action guards from A4. Compose the gate with permission + scope on every action entry point. (Q4)
-- [ ] **A9.** Narrow the `my-tasks` custom scope in `packages/addons/tasks/api/tasks.config.ts:122–135` from "assignee = me OR any team I'm in" to "assignee = me OR (assignee is null AND team in myTeams)" so the personal queue shows unassigned-in-my-teams but not teammates' active work. (Q16)
+Shipped as PR #970 (2026-04-22).
+
+- [x] **A1.** Drop the XOR constraint (`validateAssigneeExclusivity` in `tasks.config.ts:8` and the swap logic at `:107–113`). Tighten `assigneeTeamId` to `NOT NULL` via migration. After this, a task must always have a team and may optionally have an individual — both can coexist. (Q2)
+- [x] **A2.** Define task action permission slugs (`tasks.view`, `tasks.pickup`, `tasks.reassign`, `tasks.review`, `tasks.complete`, `tasks.reopen`, `tasks.close`) as constants in the tasks package. (Q3)
+- [x] **A3.** Add a system seed in the tasks package that upserts these permissions into the permission registry. Wire into the CLI's system-seed run. (Q3)
+- [x] **A4.** Add action-level guards / service methods: `pickupTask`, `reassignTask`, `reviewTask`, `markComplete`, `reopenTask`, `closeTask`. Each enforces permission + scope + task-relationship (assignee / team member / head) checks. (Q3)
+- [x] **A5.** Expose the new action endpoints in the tasks controller with proper DTOs. Include each task's list of currently-allowed actions in the list/get response so the UI can disable buttons without hardcoding status slugs. (Q3, Q4)
+- [ ] **A6.** Verify scope-on-position integration end-to-end (position → scope, scope resolver, descendants walk). Close gaps _in the org-units / rbac packages_, not in the tasks package. (Q3 — "first implementation step") — *deferred; `allowedActions` exposure on list/get responses also deferred from A5.*
+- [x] **A7.** Define the task lifecycle workflow on the base `tasks` entity in `tasks.config.ts` via `defineEntity()`. Five states (`pending / in_progress / blocked / completed / cancelled`), transitions per §1 Q4, transition guards (`blocked` requires a reason comment). Mark `completed` and `cancelled` states with `isSystem: true` so they cannot be renamed or deleted via the admin UI. If the workflow package persists definitions, wire a system seed in the tasks package. (Q4)
+- [x] **A8.** Add the per-action `allowedStatuses` configuration (action gate) alongside the action guards from A4. Compose the gate with permission + scope on every action entry point. (Q4)
+- [x] **A9.** Narrow the `my-tasks` custom scope in `packages/addons/tasks/api/tasks.config.ts:122–135` from "assignee = me OR any team I'm in" to "assignee = me OR (assignee is null AND team in myTeams)" so the personal queue shows unassigned-in-my-teams but not teammates' active work. (Q16)
 
 ### Stream B — Escalation subsystem (platform-level, consumes tasks package)
 
-- [ ] **B1.** Define an escalation-target resolver: given a task, return the set of user IDs for tier T+0, T+3, T+7, with fallback rules (roll up, firm admin). (Q3)
-- [ ] **B2.** Scheduled job (cron) that sweeps tasks daily, evaluates escalation tier based on due date, and triggers notifications via the notifications package. (Q3, pending Q17/Q19)
-- [ ] **B3.** Idempotency — record which tier a task has already notified at; never double-send.
+Revised scope per Q19b/Q20: no bespoke resolver or cron — three user-resolver strategies in `@packages/org-units` + four seeded automation rules in `@packages/tasks`, executed by the platform's existing `ScheduleScanner`. The `automation_sent_log` table (unique on `ruleId, entityType, entityId, targetDate`) gives B3 for free.
+
+- [x] **B1.** Escalation-target resolver primitives — supplied by three `UserResolverStrategy` classes in `@packages/org-units` (`org_unit_head`, `parent_unit_head`, `org_unit_members`), registered on `UserResolverRegistry` in `OrgUnitsModule.onModuleInit()`. Per-tier target is composed at the rule level using these plus the built-in `entity_field` strategy. Ships co-heads tie-break (Q3) and parent-walk via `org_units.parentId`. Fallback to "users holding `all` scope on compliance tasks" is deferred — the daily digest (Stream D) still surfaces orphan tasks.
+- [ ] **B2.** Four system-seeded automation rules in `@packages/tasks` covering T+0 (assigneeId NOT NULL → `entity_field(assigneeId)`), T+0 (assigneeId NULL AND assigneeTeamId NOT NULL → `org_unit_members(assigneeTeamId)`), T+3 (`org_unit_head(assigneeTeamId)`), T+7 (`parent_unit_head(assigneeTeamId)`). Each pairs a generic notification template with `schedule_recurring` + `scheduleDateField: 'dueDate'` + `scheduleDateOperator: 'after'`. (Q17/Q19/Q20)
+- [x] **B3.** Idempotency — satisfied by the platform's existing `automation_sent_log` (unique `ruleId × entityType × entityId × targetDate`). No additional tracking table needed.
 
 ### Stream C — Compliance domain role, position & scope seeds
 
-- [ ] **C1.** System seed: default roles (Preparer, Reviewer, Team Lead, Firm Admin) with the permission sets defined in the Q15 tables (task permissions + compliance-entity CRUD permissions). Added to `complianceSystemSeedSources()` in `domains/compliance/api/seeds.ts`. (Q3, Q15)
-- [ ] **C2.** Demo seed: sample user ↔ role assignments reflecting a realistic small firm. (Q3)
-- [ ] **C3.** System seed: five default positions with stable internal identifiers — Member (sortOrder 2), Lead (1), Head (0), Division Head (0, used on division-level units), Firm Admin (lowest sortOrder). Display names admin-editable. (Q14)
-- [ ] **C4.** System seed: `(position × task-entity)` scope rows for both the base `tasks` entity and the `compliance_tasks` extension. Member/Lead/Head → `unit`, Division Head → `descendants`, Firm Admin → `all`. 10 rows total. No scope seeds for non-task entities in V1. (Q14)
-- [ ] **C5.** UI warning on role assignment when the assigned role's tier and the user's position tier don't align (e.g. Team Lead role on a Member position). Non-blocking advisory. (Q14)
+Shipped as PR #973 (2026-04-22).
+
+- [x] **C1.** System seed: default roles (Preparer, Reviewer, Team Lead, Firm Admin) with the permission sets defined in the Q15 tables (task permissions + compliance-entity CRUD permissions). Added to `complianceSystemSeedSources()` in `domains/compliance/api/seeds.ts`. (Q3, Q15)
+- [x] **C2.** Demo seed: sample user ↔ role assignments reflecting a realistic small firm. (Q3)
+- [x] **C3.** System seed: five default positions with stable internal identifiers — Member (sortOrder 2), Lead (1), Head (0), Division Head (0, used on division-level units), Firm Admin (lowest sortOrder). Display names admin-editable. (Q14)
+- [x] **C4.** System seed: `(position × task-entity)` scope rows for both the base `tasks` entity and the `compliance_tasks` extension. Member/Lead/Head → `unit`, Division Head → `descendants`, Firm Admin → `all`. 10 rows total. No scope seeds for non-task entities in V1. (Q14)
+- [x] **C5.** UI warning on role assignment when the assigned role's tier and the user's position tier don't align (e.g. Team Lead role on a Member position). Non-blocking advisory. (Q14)
 
 ### Stream D — Notifications wiring for compliance due dates
 
