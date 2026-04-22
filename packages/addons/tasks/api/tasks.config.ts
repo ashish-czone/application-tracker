@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import { defineEntity } from '@packages/entity-engine';
-import { eq, or, sql } from 'drizzle-orm';
+import { and, eq, isNull, or, sql } from 'drizzle-orm';
 import { orgUnitMembers } from '@packages/org-units';
 import { TASKS_FIELDS, TASKS_METADATA } from '@packages/tasks-contract';
 import { tasks } from './schema/tasks';
@@ -106,11 +106,19 @@ export const TASKS_CONFIG = defineEntity({
     teamField: 'assigneeTeamId',
     scopes: [
       {
+        // Compliance Q16: the personal queue shows tasks the user owns
+        // directly, plus tasks still unassigned in teams they're a member of
+        // (the team pool they can pick up). It explicitly does NOT include
+        // teammates' in-progress work — that belongs on the team board, not
+        // the personal queue.
         key: 'my-tasks',
-        label: 'Assigned to me or my teams',
+        label: 'Assigned to me or unclaimed in my teams',
         resolve: async (userId: string) => or(
           eq(tasks.assigneeId, userId),
-          sql`${tasks.assigneeTeamId} IN (SELECT ${orgUnitMembers.orgUnitId} FROM ${orgUnitMembers} WHERE ${orgUnitMembers.userId} = ${userId})`,
+          and(
+            isNull(tasks.assigneeId),
+            sql`${tasks.assigneeTeamId} IN (SELECT ${orgUnitMembers.orgUnitId} FROM ${orgUnitMembers} WHERE ${orgUnitMembers.userId} = ${userId})`,
+          ),
         )!,
       },
     ],
