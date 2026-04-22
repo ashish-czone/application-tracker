@@ -4845,6 +4845,9 @@ importers:
       '@packages/common':
         specifier: workspace:*
         version: link:../../../core/common
+      '@packages/dashboard-ui':
+        specifier: workspace:*
+        version: link:../../dashboard-ui
       '@packages/platform-ui':
         specifier: workspace:*
         version: link:../../platform-ui
