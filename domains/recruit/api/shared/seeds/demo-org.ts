@@ -8,6 +8,7 @@ import {
   OrgUnitLevelService,
   OrgPositionService,
   orgUnits,
+  orgUnitMembers,
   orgPositionScopes,
 } from '@packages/org-units';
 import { tasks } from '@packages/tasks';
@@ -348,9 +349,19 @@ async function ensureSampleTasks(database: DatabaseService): Promise<void> {
     });
   }
 
+  // Every task needs a team now (compliance Q2). For user-personal tasks we
+  // look up any team the user belongs to and use it — the user is assigned
+  // on top of that team.
   for (const task of USER_TASKS) {
     const userId = seedUserIds[task.userIndex];
     if (!userId) continue;
+
+    const [membership] = await database.db
+      .select({ orgUnitId: orgUnitMembers.orgUnitId })
+      .from(orgUnitMembers)
+      .where(eq(orgUnitMembers.userId, userId))
+      .limit(1);
+    if (!membership) continue;
 
     const dueDate = new Date(now + task.dueOffset * 24 * 60 * 60 * 1000);
     const dueDateStr = dueDate.toISOString().split('T')[0];
@@ -359,6 +370,7 @@ async function ensureSampleTasks(database: DatabaseService): Promise<void> {
       title: task.title,
       priority: task.priority,
       assigneeId: userId,
+      assigneeTeamId: membership.orgUnitId,
       dueDate: dueDateStr,
       createdBy: admin.id,
     });
