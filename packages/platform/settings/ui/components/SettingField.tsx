@@ -87,9 +87,13 @@ export function SettingField({ field, module }: SettingFieldProps) {
             }}
             className="h-9 flex-1 min-w-0 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
           >
-            {field.metadata.options.map((opt) => (
-              <option key={opt} value={opt}>{opt}</option>
-            ))}
+            {field.metadata.options.map((opt) => {
+              const optValue = typeof opt === 'string' ? opt : opt.value;
+              const optLabel = typeof opt === 'string' ? opt : opt.label;
+              return (
+                <option key={optValue} value={optValue}>{optLabel}</option>
+              );
+            })}
           </select>
         ) : field.metadata.type === 'number' ? (
           <input
