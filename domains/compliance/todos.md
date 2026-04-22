@@ -92,12 +92,87 @@ Escalation **adds visibility only** — does not reassign ownership.
 
 ---
 
+### Q4 — Task lifecycle statuses, workflow placement, and action gates
+
+**Decision:** Five canonical states — `pending | in_progress | blocked | completed | cancelled` — expressed via the platform workflow engine bound to the base `tasks` entity. Action gates (status-dependent rules on non-status actions) are a separate tiny layer in the tasks package.
+
+**Status semantics:**
+
+| Status | Meaning | Escalates? |
+|--------|---------|:----------:|
+| `pending` | Generated but no work started; individual may or may not be assigned. | Yes |
+| `in_progress` | Someone has picked it up and is actively working. | Yes |
+| `blocked` | Work stalled — typically waiting on client input or external dependency. A comment explaining the reason is required when transitioning in. | Yes — due dates don't care why you're stuck; the head of team needs visibility. |
+| `completed` | Filing done. `completedAt` stamped automatically. | No |
+| `cancelled` | No longer relevant (erroneously generated, scope vanished). Preserved for audit. | No |
+
+**Transitions:**
+
+```
+pending ──pickup──→ in_progress ──complete──→ completed
+   │                    │   ↕ block/resume        │
+   │                    ↓                         │
+   │                 blocked ────complete────→ (same)
+   │                    │
+   └────────cancel──────┴────→ cancelled
+                                    ↑  (no un-cancel — use reopen)
+
+completed ──reopen──→ in_progress
+cancelled ──reopen──→ in_progress
+```
+
+**Options considered and rejected:**
+- Three-state (`pending / in_progress / completed`) — no way to distinguish waiting-on-client from actively-working, which is ~60% of slippage in Indian CA practice. Loses a high-signal operational lens for one saved column state.
+- Six-state with `filed` between `in_progress` and `completed` — forces a second manual flip per task and splits "done" ambiguously. Deferred until statutory integrations make the distinction meaningful.
+- Separate `reopened` status — reopening is a transition, not a resting state; flips to `in_progress`.
+- Storing `overdue` as a status — creates drift (forget to flip back). Derived instead: `dueDate < today AND !isTerminal`.
+- A compliance-specific `compliance-task-status` workflow on the `compliance_tasks` extension — rejected because the five states are generic enough for any task-kind. One workflow on base `tasks`, shared by all kinds. Future kinds that need different states can override via their extension's `defineEntity()`, bound to the same column.
+
+**Workflow placement:**
+- Declared inside `defineEntity()` in `tasks.config.ts` alongside `fields`, `dataAccess`, etc. Same declarative pattern `clients` and `compliance_rules` already use.
+- **Not in `onModuleInit()`** — workflow definition is declarative metadata, not a runtime registration. In-memory registrations (action handlers, event subscriptions) remain `onModuleInit`.
+- If the workflow package persists definitions to DB, the code declaration drives a system seed (peer-to-migration), mirroring the permission-seeding pattern. Verify during implementation; if the platform only supports in-memory workflow registration today, either is fine.
+
+**Canonical state protection:**
+- `completed` and `cancelled` are seeded with `isSystem: true` on the workflow state rows. Admin UI blocks rename/delete on those two.
+- Admins may freely **add** states (e.g., insert `filed` between `in_progress` and `completed`) and rename/delete non-system states.
+- Rationale: canonical slugs are wired into code (`completedAt` stamping, escalation pause, terminal-state checks in action gates). A silent rename would break those behaviours.
+- Alternatives rejected: (a) trusting admins fully → silent breakage on rename; (b) code-only workflow (not persisted) → blocks firms from customising, loses consistency with other entity workflows.
+
+**Action gates (non-status actions, conditional on status):**
+
+| Action | Allowed statuses |
+|--------|------------------|
+| `pickup` | `pending` |
+| `reassign` | `pending`, `in_progress`, `blocked` |
+| `review` | `in_progress`, `blocked` |
+| `complete` | `in_progress`, `blocked` |
+| `reopen` | `completed`, `cancelled` → target state `in_progress` |
+| `cancel` | `pending`, `in_progress`, `blocked` |
+
+- Declared per action in the tasks package, alongside the action guards (Stream A).
+- Composed with permission + scope on every action: `hasPermission ∧ scopeCheck ∧ status ∈ allowedStatuses`.
+- Exposed to the UI via the task DTO (list of allowed actions per task) so buttons can be disabled without hardcoding slugs on the frontend.
+- Rejected: modelling these as workflow transitions (`reassign` doesn't change status — it's outside the workflow engine's remit). Rejected: inlining `if` statements in each action handler — spreads the rule, makes it hard to reason about.
+
+**Status-transition guards:**
+- Transition-time conditions (e.g., "require a comment when moving to `blocked`", "require ≥1 attachment before `completed`") live inside the workflow definition as transition guards — a platform feature already used by client and rule workflows.
+
+**Why `blocked` still escalates:**
+- It's easy to assume blocked = paused, but in compliance, due dates don't care why you're stuck. A blocked task approaching its due date is exactly when escalation should fire — the head of team needs the opportunity to re-chase the client or reassign. Only `completed` and `cancelled` pause escalation.
+
+**UI implications (no hardcoded slugs in generic views):**
+- Kanban columns → workflow states, ordered by `sortOrder`.
+- "My queue" default filter → `isTerminal: false`.
+- Overdue styling → `dueDate < today AND !isTerminal`.
+- Disabled action buttons → action gate's `allowedStatuses` exposed via DTO.
+- Kind-specific UI nudges (e.g., the "Why blocked?" comment prompt) live in the compliance UI, not the generic tasks UI.
+
+---
+
 ## 2. Pending decisions
 
 Questions still to work through before we can finalise V1 implementation. Answered one by one; each is moved into §1 on resolution.
-
-### Q4 — Task lifecycle statuses
-Simple (Pending / In Progress / Done) vs. richer (Pending / In Progress / Under Review / Filed / Done) vs. other. Ties to whether V1 has any review step at all.
 
 ### Q5 — Definition of "complete"
 Is marking a task complete a pure status change, or does it require an attachment (proof of filing)? Affects UI and guard logic.
@@ -200,12 +275,14 @@ Derived from §1. Re-estimated and re-ordered whenever §1 grows. Each bullet is
 
 ### Stream A — Tasks package hardening (platform-level, no compliance deps)
 
-- [ ] **A1.** Verify current `tasks.assigneeId` / `assigneeTeamId` schema and any XOR constraint. Tighten `assigneeTeamId` to `NOT NULL`; drop XOR if present. (Q2)
+- [ ] **A1.** Drop the XOR constraint (`validateAssigneeExclusivity` in `tasks.config.ts:8` and the swap logic at `:107–113`). Tighten `assigneeTeamId` to `NOT NULL` via migration. After this, a task must always have a team and may optionally have an individual — both can coexist. (Q2)
 - [ ] **A2.** Define task action permission slugs (`tasks.view`, `tasks.pickup`, `tasks.reassign`, `tasks.review`, `tasks.complete`, `tasks.reopen`, `tasks.close`) as constants in the tasks package. (Q3)
 - [ ] **A3.** Add a system seed in the tasks package that upserts these permissions into the permission registry. Wire into the CLI's system-seed run. (Q3)
 - [ ] **A4.** Add action-level guards / service methods: `pickupTask`, `reassignTask`, `reviewTask`, `markComplete`, `reopenTask`, `closeTask`. Each enforces permission + scope + task-relationship (assignee / team member / head) checks. (Q3)
-- [ ] **A5.** Expose the new action endpoints in the tasks controller with proper DTOs.
+- [ ] **A5.** Expose the new action endpoints in the tasks controller with proper DTOs. Include each task's list of currently-allowed actions in the list/get response so the UI can disable buttons without hardcoding status slugs. (Q3, Q4)
 - [ ] **A6.** Verify scope-on-position integration end-to-end (position → scope, scope resolver, descendants walk). Close gaps _in the org-units / rbac packages_, not in the tasks package. (Q3 — "first implementation step")
+- [ ] **A7.** Define the task lifecycle workflow on the base `tasks` entity in `tasks.config.ts` via `defineEntity()`. Five states (`pending / in_progress / blocked / completed / cancelled`), transitions per §1 Q4, transition guards (`blocked` requires a reason comment). Mark `completed` and `cancelled` states with `isSystem: true` so they cannot be renamed or deleted via the admin UI. If the workflow package persists definitions, wire a system seed in the tasks package. (Q4)
+- [ ] **A8.** Add the per-action `allowedStatuses` configuration (action gate) alongside the action guards from A4. Compose the gate with permission + scope on every action entry point. (Q4)
 
 ### Stream B — Escalation subsystem (platform-level, consumes tasks package)
 
