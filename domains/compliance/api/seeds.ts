@@ -43,6 +43,11 @@ export function complianceSystemSeedSources(): SeedSource[] {
     system('@domains/compliance-api/system-positions', () =>
       import('./shared/seeds/system-positions').then((m) => m.seedSystemPositions),
     ),
+    system('@domains/compliance-api/system-position-scopes', () =>
+      import('./shared/seeds/system-position-scopes').then(
+        (m) => m.seedSystemPositionScopes,
+      ),
+    ),
   ];
 }
 
