@@ -388,14 +388,42 @@ Rules don't have an effective date the same way — deprecation is simply "stop 
 
 ---
 
+### Q13 — Missing handler behaviour
+
+**Decision:** Prevent the missing-handler state at write time via a **first-registration guard**. The 4-tier resolver is then guaranteed to return a non-null team at task generation. No fallback team, no synthetic "Unassigned" bucket, no NULL `assigneeTeamId`.
+
+**Three guards together maintain the invariant:**
+
+1. **First-registration guard.** When creating a `client_registration` for a `(client, law)` pair, if no `law_handlers` row exists for that `(firm, law)` combination (global-primary or global-any), block the create and surface an inline prompt: _"No handler configured for `<Law>`. [Configure handler] or cancel."_ The "Configure handler" link deep-links into the handler admin page scoped to that law.
+
+2. **Handler-delete guard.** Deleting a `law_handlers` row is blocked if it would leave any active client registration for that law without a resolvable handler. Admin must add the replacement handler *before* deleting the existing one.
+
+3. **Org-unit-delete cascade.** Deleting an `org_unit` that's referenced by any `law_handlers` row forces the admin to reassign each reference first. Same "replace before delete" pattern.
+
+**Why first-registration, not law-creation:**
+- Covers **both** user-created laws AND system-seeded laws (GST, Income Tax, TDS) that the firm hasn't "created" but is using.
+- Doesn't front-load law creation — firms can enumerate their law catalogue in one session and structure their teams later.
+- Single invariant boundary rather than scattered creation-time checks.
+
+**Options considered and rejected:**
+- Fallback to a firm-level "Unassigned" team when the resolver returns null — risks silent misrouting; tasks pile up in a team nobody checks. Works, but tolerates misconfiguration rather than preventing it.
+- Fallback to a platform-level synthetic team — pollutes the org hierarchy with a team the firm didn't create; breaks escalation and multi-tenancy assumptions.
+- Block at law creation only — misses system-seeded laws and doesn't protect against later handler/org-unit deletion.
+- Fail-soft with `assigneeTeamId = NULL` — contradicts Q2's NOT NULL invariant.
+
+**Parallel to existing patterns:** mirrors the existing primary-contact guard on the `client.status → active` transition. Same philosophy: validate the precondition at the transition, don't rely on a silent fallback.
+
+**Edge case — admin mid-reassignment of handlers:** the delete-before-add workflow is blocked by guard #2. Admin must add the new handler first, then delete the old. Small UX friction for a clean invariant.
+
+**Implementation ripple (extend Stream I):** three new guards (registration create, handler delete, org unit delete), the inline "configure handler" deep-link in the registration creation UI, and service-layer helpers to check resolver coverage.
+
+---
+
 ## 2. Pending decisions
 
 Questions still to work through before we can finalise V1 implementation. Answered one by one; each is moved into §1 on resolution.
 
-### Q13 — Missing handler behaviour
-
-### Q13 — Missing handler behaviour
-If a client is registered for a law but no law-handler (default team) is configured, do we generate the task with null team + admin alert, or block generation?
+### Q14 — Scope → position mapping at seed time
 
 ### Q14 — Scope → position mapping at seed time
 What scope does each seeded position (Head, Lead, Member) carry by default? (Likely: Head → `unit`, Lead → `own`, Member → `own`; Division Head → `descendants`; Firm Admin → `all`.) Needs a single pass to confirm defaults.
@@ -549,10 +577,18 @@ Hooks that fire when a client, registration, or rule changes state in a way that
 - [ ] **I15.** UI in the rule edit form: disable immutable fields with the explanatory tooltip; show forward-only save-dialog copy when due-date-math fields change. (Q9)
 - [ ] **I16.** Confirm generator is a pure no-op on `(ruleId, clientId, periodStart)` conflict (never mutates existing row). Add a test if missing. (Q9)
 
+**Handler integrity guards (prevent missing-handler state):**
+
+- [ ] **I19.** Service helper `hasResolvableHandler(firmId, lawId, clientId?)` — checks whether the 4-tier resolver would return a team for the given (firm, law, optional client). (Q13)
+- [ ] **I20.** Guard on `client_registrations` create: reject if `hasResolvableHandler(firm, law)` is false. Error response carries the lawId so UI can deep-link to handler config. (Q13)
+- [ ] **I21.** Guard on `law_handlers` delete: reject if any active `client_registration` for that law would be left without a resolvable handler after removal. (Q13)
+- [ ] **I22.** Guard on `org_units` delete: reject if any `law_handlers` row references the unit. Requires admin to reassign handlers first. (Q13)
+- [ ] **I23.** UI on registration creation: inline "Configure handler" prompt when guard #I20 fires; deep-link to the handler admin page scoped to the specific law. (Q13)
+
 **Cross-cutting UI:**
 
-- [ ] **I17.** Banners on client / registration / rule detail pages reflecting their inactive state ("Deactivated on YYYY-MM-DD", "Deprecated", "Dormant"). (Q6, Q8)
-- [ ] **I18.** Subtle marker on task rows whose source registration or rule is inactive, so users viewing a task queue understand why an unfamiliar task is there. (Q8)
+- [ ] **I24.** Banners on client / registration / rule detail pages reflecting their inactive state ("Deactivated on YYYY-MM-DD", "Deprecated", "Dormant"). (Q6, Q8)
+- [ ] **I25.** Subtle marker on task rows whose source registration or rule is inactive, so users viewing a task queue understand why an unfamiliar task is there. (Q8)
 
 ### Stream J — Task generation cadence
 
