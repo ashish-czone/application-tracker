@@ -1,21 +1,21 @@
 import Link from 'next/link';
 import { Container } from './layout/Container';
-import { fetchMenuBySlug } from '@/lib/api';
+import { fetchMenuBySlug, fetchSiteSettings, type SiteSettings } from '@/lib/api';
 import type { PublicMenuItemDto } from '@packages/menus-ui-frontend';
 
 /**
- * Site footer. Fetches an optional `footer` menu — each top-level
- * item becomes a column, children become links. Fails gracefully
- * when no footer menu exists (authors haven't created one yet); the
- * brand + copyright row still renders.
- *
- * Branding, contact, and social links are hardcoded placeholders
- * until F1 wires site-settings.
+ * Site footer. Branding, contact, and social are read from public
+ * site-settings. An optional `footer` menu renders as columns of
+ * links; falling back to a minimal contact layout otherwise.
  */
 export async function SiteFooter() {
-  const menu = await fetchMenuBySlug('footer');
-  const siteName = 'Studio';
+  const [menu, settings] = await Promise.all([
+    fetchMenuBySlug('footer'),
+    fetchSiteSettings(),
+  ]);
   const year = new Date().getFullYear();
+  const socialLinks = buildSocialLinks(settings);
+  const copyrightName = settings.companyName || settings.siteName;
 
   return (
     <footer className="mt-24 bg-[hsl(var(--foreground))] text-[hsl(var(--background))]">
@@ -23,53 +23,55 @@ export async function SiteFooter() {
         <div className="grid grid-cols-1 gap-12 md:grid-cols-[1.2fr_2fr] md:gap-16">
           <div className="space-y-5">
             <Link href="/" className="font-display text-2xl font-semibold tracking-tight">
-              {siteName}
+              {settings.siteName}
             </Link>
-            <p className="max-w-sm text-sm text-[hsl(var(--background)/0.7)]">
-              A studio for brands with something to say.
-            </p>
-            <div className="flex items-center gap-4 text-sm text-[hsl(var(--background)/0.7)]">
-              <a
-                href="https://twitter.com/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-[hsl(var(--background))] transition-colors"
-              >
-                Twitter
-              </a>
-              <a
-                href="https://linkedin.com/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-[hsl(var(--background))] transition-colors"
-              >
-                LinkedIn
-              </a>
-              <a
-                href="https://instagram.com/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-[hsl(var(--background))] transition-colors"
-              >
-                Instagram
-              </a>
-            </div>
+            {settings.tagline && (
+              <p className="max-w-sm text-sm text-[hsl(var(--background)/0.7)]">
+                {settings.tagline}
+              </p>
+            )}
+            {socialLinks.length > 0 && (
+              <div className="flex items-center gap-4 text-sm text-[hsl(var(--background)/0.7)]">
+                {socialLinks.map((link) => (
+                  <a
+                    key={link.label}
+                    href={link.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-[hsl(var(--background))] transition-colors"
+                  >
+                    {link.label}
+                  </a>
+                ))}
+              </div>
+            )}
           </div>
 
           {menu && menu.items.length > 0 ? (
             <FooterColumns items={menu.items} />
           ) : (
-            <FooterColumnsFallback />
+            <FooterContactFallback settings={settings} />
           )}
         </div>
 
         <div className="mt-16 pt-8 border-t border-[hsl(var(--background)/0.1)] flex flex-col md:flex-row md:items-center md:justify-between gap-3 text-xs text-[hsl(var(--background)/0.6)]">
-          <span>© {year} {siteName}. All rights reserved.</span>
+          <span>© {year} {copyrightName}. All rights reserved.</span>
           <span>Built with the starter-template platform.</span>
         </div>
       </Container>
     </footer>
   );
+}
+
+function buildSocialLinks(settings: SiteSettings): Array<{ label: string; href: string }> {
+  const candidates: Array<{ label: string; href: string }> = [
+    { label: 'Twitter', href: settings['social.twitter'] },
+    { label: 'LinkedIn', href: settings['social.linkedin'] },
+    { label: 'Instagram', href: settings['social.instagram'] },
+    { label: 'GitHub', href: settings['social.github'] },
+    { label: 'YouTube', href: settings['social.youtube'] },
+  ];
+  return candidates.filter((link) => link.href.length > 0);
 }
 
 function FooterColumns({ items }: { items: PublicMenuItemDto[] }) {
@@ -115,38 +117,52 @@ function FooterColumns({ items }: { items: PublicMenuItemDto[] }) {
   );
 }
 
-function FooterColumnsFallback() {
+function FooterContactFallback({ settings }: { settings: SiteSettings }) {
+  const hasContact =
+    settings.contactEmail || settings.contactPhone || settings.address;
+  if (!hasContact) return null;
+
   return (
-    <div className="grid grid-cols-2 gap-8 md:grid-cols-3 md:gap-10 text-sm">
-      <div className="space-y-3">
-        <h3 className="text-xs font-semibold tracking-[0.14em] uppercase text-[hsl(var(--background)/0.5)]">
-          Studio
-        </h3>
-        <ul className="space-y-2 text-[hsl(var(--background)/0.7)]">
-          <li>Work</li>
-          <li>About</li>
-          <li>Journal</li>
-        </ul>
-      </div>
-      <div className="space-y-3">
-        <h3 className="text-xs font-semibold tracking-[0.14em] uppercase text-[hsl(var(--background)/0.5)]">
-          Contact
-        </h3>
-        <ul className="space-y-2 text-[hsl(var(--background)/0.7)]">
-          <li>hello@studio.example</li>
-          <li>+1 (555) 000-0000</li>
-        </ul>
-      </div>
-      <div className="space-y-3">
-        <h3 className="text-xs font-semibold tracking-[0.14em] uppercase text-[hsl(var(--background)/0.5)]">
-          Elsewhere
-        </h3>
-        <ul className="space-y-2 text-[hsl(var(--background)/0.7)]">
-          <li>Newsletter</li>
-          <li>Press</li>
-          <li>Careers</li>
-        </ul>
-      </div>
+    <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 md:grid-cols-3 md:gap-10 text-sm">
+      {(settings.contactEmail || settings.contactPhone) && (
+        <div className="space-y-3">
+          <h3 className="text-xs font-semibold tracking-[0.14em] uppercase text-[hsl(var(--background)/0.5)]">
+            Contact
+          </h3>
+          <ul className="space-y-2 text-[hsl(var(--background)/0.7)]">
+            {settings.contactEmail && (
+              <li>
+                <a
+                  href={`mailto:${settings.contactEmail}`}
+                  className="hover:text-[hsl(var(--background))] transition-colors"
+                >
+                  {settings.contactEmail}
+                </a>
+              </li>
+            )}
+            {settings.contactPhone && (
+              <li>
+                <a
+                  href={`tel:${settings.contactPhone.replace(/\s+/g, '')}`}
+                  className="hover:text-[hsl(var(--background))] transition-colors"
+                >
+                  {settings.contactPhone}
+                </a>
+              </li>
+            )}
+          </ul>
+        </div>
+      )}
+      {settings.address && (
+        <div className="space-y-3">
+          <h3 className="text-xs font-semibold tracking-[0.14em] uppercase text-[hsl(var(--background)/0.5)]">
+            Studio
+          </h3>
+          <p className="whitespace-pre-line text-[hsl(var(--background)/0.7)]">
+            {settings.address}
+          </p>
+        </div>
+      )}
     </div>
   );
 }

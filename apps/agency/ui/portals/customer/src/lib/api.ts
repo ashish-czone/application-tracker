@@ -68,3 +68,68 @@ export async function fetchPublishedPages(
   const body = (await res.json()) as { pages: PublicPageIndexEntry[] };
   return body.pages ?? [];
 }
+
+/**
+ * Shape returned by `GET /api/v1/public/site-settings`. Mirrors the
+ * backend's `PublicSiteSettings` (derived from `PUBLIC_SITE_KEYS` in
+ * `domains/agency/api/settings.ts`). All values are strings; empty
+ * string = "not set".
+ */
+export interface SiteSettings {
+  companyName: string;
+  companyLogo: string;
+  siteName: string;
+  tagline: string;
+  description: string;
+  contactEmail: string;
+  contactPhone: string;
+  address: string;
+  'social.twitter': string;
+  'social.linkedin': string;
+  'social.instagram': string;
+  'social.github': string;
+  'social.youtube': string;
+  'defaultSeo.title': string;
+  'defaultSeo.description': string;
+  'defaultSeo.ogImage': string;
+  'analytics.ga4': string;
+  'analytics.posthog': string;
+}
+
+// Used when the API is unreachable (e.g., during a prerender before
+// the API comes up). Kept aligned with SITE_DEFAULTS on the backend
+// so the site still renders something sensible rather than blowing up.
+const SITE_SETTINGS_FALLBACK: SiteSettings = {
+  companyName: 'Studio',
+  companyLogo: '',
+  siteName: 'Studio',
+  tagline: 'Brand-first design and technology',
+  description: 'A studio building thoughtful digital products.',
+  contactEmail: 'hello@example.com',
+  contactPhone: '',
+  address: '',
+  'social.twitter': '',
+  'social.linkedin': '',
+  'social.instagram': '',
+  'social.github': '',
+  'social.youtube': '',
+  'defaultSeo.title': '',
+  'defaultSeo.description': '',
+  'defaultSeo.ogImage': '',
+  'analytics.ga4': '',
+  'analytics.posthog': '',
+};
+
+export async function fetchSiteSettings(
+  options: { revalidate?: number } = {},
+): Promise<SiteSettings> {
+  try {
+    const res = await fetch(`${API_BASE}/api/v1/public/site-settings`, {
+      next: { revalidate: options.revalidate ?? 300, tags: ['site-settings'] },
+    });
+    if (!res.ok) return SITE_SETTINGS_FALLBACK;
+    return (await res.json()) as SiteSettings;
+  } catch {
+    return SITE_SETTINGS_FALLBACK;
+  }
+}
