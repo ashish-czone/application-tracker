@@ -106,15 +106,18 @@ export class AutomationsModule implements OnModuleInit {
 
     const queue = this.queueService.getQueue(AUTOMATION_SCHEDULE_SCAN_QUEUE);
     if (queue) {
-      const appTimezone = process.env.APP_TIMEZONE ?? 'UTC';
-      const cronPattern = cronForLocalHour(2, appTimezone);
+      // Scanner runs at the top of every hour; per-rule `scheduleHour` (defaulting
+      // to 2am for null) decides which rules fire on a given tick. Pattern is
+      // timezone-independent (BullMQ evaluates cron in UTC and each tick hits
+      // every tenant simultaneously; rules interpret the hour in APP_TIMEZONE).
+      const cronPattern = '0 * * * *';
       try {
         await queue.upsertJobScheduler(
           'automation-schedule-scan',
           { pattern: cronPattern },
           { name: AUTOMATION_SCHEDULE_SCAN_QUEUE, data: {} },
         );
-        this.logger.log(`Automation schedule scanner registered (${cronPattern}, 2:00 AM ${appTimezone})`);
+        this.logger.log(`Automation schedule scanner registered (${cronPattern}, hourly)`);
       } catch (err) {
         this.logger.error('Failed to register schedule scanner', { error: err instanceof Error ? err.message : String(err) });
       }

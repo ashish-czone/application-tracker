@@ -112,6 +112,7 @@ export interface AutomationRule {
   scheduleDateAmounts: number[] | null;
   scheduleDateUnit: ScheduleUnit | null;
   scheduleDaysOfWeek: number[] | null;
+  scheduleHour: number | null;
 
   // Shared
   conditions: Condition[] | null;

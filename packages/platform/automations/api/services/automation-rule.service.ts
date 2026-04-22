@@ -133,6 +133,7 @@ export class AutomationRuleService {
     scheduleDateAmounts?: number[];
     scheduleDateUnit?: string;
     scheduleDaysOfWeek?: number[];
+    scheduleHour?: number;
     conditions?: Condition[];
     actions: ActionConfig[];
     onSourceUpdated?: LifecycleUpdateBinding[];
@@ -153,6 +154,7 @@ export class AutomationRuleService {
         scheduleDateAmounts: data.scheduleDateAmounts ?? null,
         scheduleDateUnit: data.scheduleDateUnit ?? null,
         scheduleDaysOfWeek: data.scheduleDaysOfWeek ?? null,
+        scheduleHour: data.scheduleHour ?? null,
         conditions: data.conditions ?? null,
         actions: data.actions,
         onSourceUpdated: data.onSourceUpdated ?? null,
@@ -216,6 +218,7 @@ export class AutomationRuleService {
       scheduleDateAmounts: row.scheduleDateAmounts as number[] | null,
       scheduleDateUnit: row.scheduleDateUnit as AutomationRule['scheduleDateUnit'],
       scheduleDaysOfWeek: row.scheduleDaysOfWeek as number[] | null,
+      scheduleHour: row.scheduleHour,
       conditions: row.conditions as Condition[] | null,
       actions: row.actions as ActionConfig[],
       onSourceUpdated: row.onSourceUpdated as LifecycleUpdateBinding[] | null,

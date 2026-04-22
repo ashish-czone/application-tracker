@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { ScheduleScanner } from '../schedule-scanner';
 import { AutomationRuleService } from '../automation-rule.service';
 import { EntityResolverRegistry } from '../entity-resolver-registry';
@@ -26,6 +26,7 @@ function buildScheduleRule(overrides: Partial<AutomationRule> = {}): AutomationR
     scheduleDateAmounts: [7, 3, 1],
     scheduleDateUnit: 'days',
     scheduleDaysOfWeek: null,
+    scheduleHour: null,
     conditions: null,
     actions: [{ type: 'send_notification', config: {} }],
     onSourceUpdated: null,
@@ -120,7 +121,16 @@ describe('ScheduleScanner', () => {
   let deps: ReturnType<typeof createMockDeps>;
 
   beforeEach(() => {
+    // Default hour for schedule rules is 2am APP_TIMEZONE; APP_TIMEZONE defaults
+    // to UTC in tests, so pin the wall clock at 02:00 UTC so rules with null
+    // `scheduleHour` fire.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-03-18T02:00:00Z'));
     deps = createMockDeps();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('should enqueue a job for each matched entity in schedule rules', async () => {
@@ -260,5 +270,67 @@ describe('ScheduleScanner', () => {
     await deps.scanner.scan();
 
     expect(deps.queueService.enqueue).not.toHaveBeenCalled();
+  });
+
+  describe('scheduleHour hour-of-day filter', () => {
+    it('fires a rule with scheduleHour matching the current hour', async () => {
+      vi.setSystemTime(new Date('2026-03-18T09:00:00Z'));
+      vi.spyOn(deps.ruleService, 'findActiveScheduleRules').mockResolvedValue([
+        buildScheduleRule({ scheduleHour: 9, scheduleDateAmounts: [0] }),
+      ]);
+
+      deps.queryResults.push(
+        [], // delayed events
+        [{ id: 'task-1', name: 'Task A', dueDate: '2026-03-18', ownerId: 'user-1' }],
+      );
+      deps.sentLogResults.push([]);
+
+      await deps.scanner.scan();
+
+      expect(deps.queueService.enqueue).toHaveBeenCalledTimes(1);
+    });
+
+    it('skips a rule whose scheduleHour does not match the current hour', async () => {
+      vi.setSystemTime(new Date('2026-03-18T10:00:00Z'));
+      vi.spyOn(deps.ruleService, 'findActiveScheduleRules').mockResolvedValue([
+        buildScheduleRule({ scheduleHour: 9, scheduleDateAmounts: [0] }),
+      ]);
+
+      deps.queryResults.push([]); // delayed events — no rule query because filter short-circuits
+
+      await deps.scanner.scan();
+
+      expect(deps.queueService.enqueue).not.toHaveBeenCalled();
+    });
+
+    it('treats null scheduleHour as the 2am default and fires at 02:00', async () => {
+      vi.setSystemTime(new Date('2026-03-18T02:00:00Z'));
+      vi.spyOn(deps.ruleService, 'findActiveScheduleRules').mockResolvedValue([
+        buildScheduleRule({ scheduleHour: null, scheduleDateAmounts: [0] }),
+      ]);
+
+      deps.queryResults.push(
+        [], // delayed events
+        [{ id: 'task-1', name: 'Task A', dueDate: '2026-03-18', ownerId: 'user-1' }],
+      );
+      deps.sentLogResults.push([]);
+
+      await deps.scanner.scan();
+
+      expect(deps.queueService.enqueue).toHaveBeenCalledTimes(1);
+    });
+
+    it('skips a rule with null scheduleHour when the current hour is not 2am', async () => {
+      vi.setSystemTime(new Date('2026-03-18T14:00:00Z'));
+      vi.spyOn(deps.ruleService, 'findActiveScheduleRules').mockResolvedValue([
+        buildScheduleRule({ scheduleHour: null, scheduleDateAmounts: [0] }),
+      ]);
+
+      deps.queryResults.push([]); // delayed events
+
+      await deps.scanner.scan();
+
+      expect(deps.queueService.enqueue).not.toHaveBeenCalled();
+    });
   });
 });

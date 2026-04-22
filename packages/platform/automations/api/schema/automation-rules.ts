@@ -19,6 +19,11 @@ export const automationRules = pgTable('automation_rules', {
   scheduleDateAmounts: jsonb('schedule_date_amounts'),
   scheduleDateUnit: text('schedule_date_unit'),
   scheduleDaysOfWeek: jsonb('schedule_days_of_week'),
+  // Hour-of-day (0-23) in APP_TIMEZONE at which schedule_recurring / schedule_once
+  // rules fire. NULL means "use the scanner's default hour" (2am), preserving
+  // historic behaviour. The scanner runs hourly; rules whose scheduleHour does
+  // not match the current hour are skipped before any entity query.
+  scheduleHour: integer('schedule_hour'),
 
   // Shared
   conditions: jsonb('conditions'),

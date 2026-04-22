@@ -26,6 +26,7 @@ function sampleRuleRow(overrides: Record<string, unknown> = {}) {
     scheduleDateAmounts: null,
     scheduleDateUnit: null,
     scheduleDaysOfWeek: null,
+    scheduleHour: null,
     conditions: null,
     actions: [{ type: 'send_notification', config: {} }],
     onSourceUpdated: null,
@@ -484,6 +485,27 @@ describe('AutomationRuleService', () => {
           scheduleDaysOfWeek: [1, 2, 3, 4, 5],
         }),
       );
+    });
+
+    it('should pass scheduleHour through to insert and default to null when omitted', async () => {
+      mockDb._enqueue([sampleRuleRow({ triggerType: 'schedule_recurring' })]);
+      await service.create({
+        name: 'Digest Rule',
+        triggerType: 'schedule_recurring',
+        scheduleEntityType: 'users',
+        scheduleHour: 9,
+        actions: [{ type: 'send_task_digest', config: {} }],
+      });
+      expect(mockDb.db.values).toHaveBeenCalledWith(expect.objectContaining({ scheduleHour: 9 }));
+
+      mockDb._enqueue([sampleRuleRow()]);
+      await service.create({
+        name: 'Eventy',
+        triggerType: 'event',
+        eventName: 'x.Y',
+        actions: [{ type: 'send_notification', config: {} }],
+      });
+      expect(mockDb.db.values).toHaveBeenLastCalledWith(expect.objectContaining({ scheduleHour: null }));
     });
   });
 
