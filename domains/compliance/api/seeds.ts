@@ -40,6 +40,9 @@ export function complianceSystemSeedSources(): SeedSource[] {
     system('@domains/compliance-api/system-roles', () =>
       import('./shared/seeds/system-roles').then((m) => m.seedSystemRoles),
     ),
+    system('@domains/compliance-api/system-positions', () =>
+      import('./shared/seeds/system-positions').then((m) => m.seedSystemPositions),
+    ),
   ];
 }
 
