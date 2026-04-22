@@ -862,18 +862,100 @@ this.auditRegistry.register('client_registrations', {
 
 ---
 
+### Q26 — Attachment file-type whitelist
+
+**Decision:** Single whitelist applied uniformly to all compliance-domain attachments. Defined as a constant in the compliance domain (e.g. `COMPLIANCE_ATTACHMENT_MIME_TYPES` in `domains/compliance/api/constants.ts`), passed via `AttachmentConfig.acceptedMimeTypes` wherever `AttachmentsService.upload()` is called from compliance.
+
+**Accepted MIME types:**
+
+| MIME | Extension | Use |
+|---|---|---|
+| `application/pdf` | .pdf | Filing acknowledgements, challans, notices |
+| `image/png` | .png | Portal screenshots |
+| `image/jpeg` | .jpg, .jpeg | Portal screenshots |
+| `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` | .xlsx | Workings, reconciliations |
+| `application/vnd.ms-excel` | .xls | Legacy Excel |
+| `application/vnd.openxmlformats-officedocument.wordprocessingml.document` | .docx | Drafts, cover letters |
+| `application/msword` | .doc | Legacy Word |
+| `text/csv` | .csv | Plaintext data exports |
+
+**Rejected explicitly:**
+- **ZIP** — hides contents from scanning, nesting risk. Firms needing multi-file bundles upload individually. Revisit post-V1 if demand emerges, then only with a virus-scan gate.
+- **Executables and scripts** (.exe, .bat, .sh, .js, .html, .htm, etc.) — security risk. Must not be on the whitelist regardless of user request.
+- **RTF** — legacy; PDF/DOCX cover the same use.
+- Everything else by default (whitelist, not blocklist).
+
+**Options considered:**
+- (a) The eight types above. _[chosen]_
+- (b) Same plus ZIP — rejected: allows nested executables without a scanner in V1.
+- (c) Same but drop CSV (force XLSX) — rejected: CSV is plaintext, safe, and common for tax-authority data exports.
+- (d) Accept all (`*/*`) with downstream virus-scan — rejected: no scanner in V1.
+
+**Platform grounding:** `packages/addons/attachments/api/services/attachments.service.ts` validates MIME per request via `isMimeTypeAccepted(file.mimetype, acceptedTypes)`. No platform changes needed — compliance just passes the list.
+
+**Scope consideration:** clients/registrations/rules don't attach files in V1 MVP (no attachment UI on those entities). If a future PR adds them, they'll reuse the same `COMPLIANCE_ATTACHMENT_MIME_TYPES` constant.
+
+**Implication for build:**
+- Stream F (Attachments): add `COMPLIANCE_ATTACHMENT_MIME_TYPES` constant; pass via `AttachmentConfig` when wiring the task-detail upload call. Zero platform work.
+
+---
+
+### Q27 — Attachment max size
+
+**Decision:** **25 MB per file.** No per-task aggregate cap. No firm-wide storage quota.
+
+**Options considered:**
+- (a) 25 MB per file, no aggregate, no quota. _[chosen]_
+- (b) 10 MB per file — rejected: forces compression workflow for multi-page scanned notices, adds friction for legitimate use.
+- (c) 50 MB per file — rejected: rare to legitimately need >25MB; headroom invites misuse.
+- (d) Per-firm quota — deferred: requires usage-tracking infrastructure in `packages/addons/attachments` or `packages/platform/media` (counter table + enforcement at upload + admin-visible usage panel). Not V1-scoped. Revisit if storage cost becomes a real problem post-launch.
+- (e) Per-task aggregate cap — rejected: creates surprising failures ("why can't I add this 11th doc?"). Per-file cap is predictable; aggregate is opaque.
+
+**Why 25 MB:**
+- Covers all realistic V1 document shapes: filing acknowledgement PDFs (<2MB), portal screenshots (<1MB), Excel workings up to 15MB, multi-page scanned notices up to 20MB.
+- Platform default `DEFAULT_MAX_FILE_SIZE` in `@packages/media` is already reasonable; compliance passes 25MB explicitly via `AttachmentConfig.maxFileSize` for clarity/override.
+- Small enough that even a rogue uploader can't fill a reasonable disk quickly; large enough to not annoy legitimate users.
+
+**Implication for build:**
+- Stream F: add `COMPLIANCE_MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024` constant alongside the MIME whitelist (Q26). Pass via `AttachmentConfig.maxFileSize`. Zero platform work.
+
+**Follow-up post-V1:** if firms start hitting storage-cost issues, add usage tracking + firm quota as a separate feature — probably per-tenant counter + enforcement hook in `MediaService.upload()`. Keep it out of V1.
+
+---
+
+### Q28 — Attachment retention
+
+**Decision:** Keep attachments forever — rows and storage blobs alike. No time-based purge. Soft-deleted attachments remain in DB + storage.
+
+**Options considered:**
+- (a) Keep forever (soft-delete stays in DB + storage). _[chosen]_
+- (b) Purge soft-deleted after N days to reclaim storage — rejected: risks losing a filing document that gets revisited in a post-purge scrutiny.
+- (c) Cascade hard-delete when owning task is hard-deleted — rejected: attachment outlives subject, same principle as Q25. Hard-deleted task + hard-deleted attachment means zero evidence of the work.
+- (d) Purge N days after task marked completed — rejected: breaks when a closed task needs to be reopened for scrutiny (common in tax assessments reopened 5+ years later).
+
+**Rationale (mirrors Q25):**
+- **Statutory context.** The attachment IS the evidence of filing. Acknowledgement PDFs, signed returns, portal receipts — these are the artefacts a firm produces to prove work was done. Losing them in a purge is losing the case when scrutiny reopens years later.
+- **Storage economics.** ~200 clients × 5 filings/year × 3 docs × 2MB ≈ 6GB/year. 10 years = 60GB. Trivial at platform level; becomes a firm-quota problem if it becomes one (deferred per Q27).
+- **Soft-delete already gives the UX affordance** ("I deleted it by accident" → admin-recoverable from DB + storage) without losing data.
+
+**Platform grounding:**
+- `attachments.deletedAt` + `deletedBy` columns exist; soft-delete is built in.
+- `attachments-cleanup.listener.ts` cascades soft-delete when the owning entity is deleted — **verify behaviour**: confirmed in `packages/addons/attachments/api/listeners/attachments-cleanup.listener.ts` that the listener soft-deletes (not hard-deletes) on entity removal. Matches V1 intent.
+- No platform changes needed.
+
+**Edge cases:**
+- **Storage blob for soft-deleted attachment** — remains in the storage bucket. Platform's `hardDelete()` method exists and removes both row and blob, but compliance controllers never call it. Only triggered by admin tooling (out of V1 scope).
+- **Orphaned blobs after subject entity hard-delete** — cleanup listener only soft-deletes rows, so the blob stays referenced via the row. Soft-delete is the correct behaviour; no orphans.
+- **Uploader leaves the firm** (intersects Q32 termination) — attachment row keeps the old `uploadedBy` FK. User soft-delete (if that's how the firm handles offboarding) doesn't affect the attachment. Safe.
+
+**Implication for build:**
+- Stream F: no retention code. Compliance controllers use `AttachmentsService.softDelete()` only (never `hardDelete()`). `attachments-cleanup.listener` handles the entity-cascade case automatically.
+
+---
+
 ## 2. Pending decisions
 
 Questions still to work through before we can finalise V1 implementation. Answered one by one; each is moved into §1 on resolution.
-
-### Q26 — Attachment file-type whitelist
-Candidate: PDF, PNG, JPG, XLSX, XLS, DOCX, DOC. Add ZIP / CSV? Block executables explicitly?
-
-### Q27 — Attachment max size
-25 MB per file? Per-task cap? Any storage quota per firm / client?
-
-### Q28 — Attachment retention
-Keep forever in V1, or purge on task close + N days?
 
 ### Q29 — Comment mutability
 Flat comments; editable by author anytime, within N minutes, or immutable? Delete policy?
