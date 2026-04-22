@@ -44,6 +44,7 @@ describe('GenerateComplianceTasksAction', () => {
     findByRuleClientPeriod: Mock;
     create: Mock;
   };
+  let events: { emitDynamic: Mock };
   let logger: {
     forContext: Mock;
     log: Mock;
@@ -64,6 +65,7 @@ describe('GenerateComplianceTasksAction', () => {
       findByRuleClientPeriod: vi.fn().mockResolvedValue(null),
       create: vi.fn().mockResolvedValue({ id: 'task-new' }),
     };
+    events = { emitDynamic: vi.fn() };
 
     const ctxLogger = { log: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
     logger = {
@@ -71,10 +73,17 @@ describe('GenerateComplianceTasksAction', () => {
       ...ctxLogger,
     };
 
+    // Post-extensionOf (PR #918), the action takes a lookup service AND an
+    // EntityService for compliance-tasks. We stub both with the same mock —
+    // it carries the `findByRuleClientPeriod` the lookup needs and the
+    // `create` the EntityService needs, and the assertions reference one
+    // object either way.
     action = new GenerateComplianceTasksAction(
       ruleService as never,
       clientRegistrationService as never,
       complianceTasksService as never,
+      complianceTasksService as never,
+      events as never,
       logger as never,
     );
   });
