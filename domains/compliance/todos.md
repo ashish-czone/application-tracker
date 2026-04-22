@@ -985,12 +985,54 @@ this.auditRegistry.register('client_registrations', {
 
 ---
 
+### Q30 — Comment @mentions and notifications
+
+**Decision:** Support `@user` mentions in compliance task comments. When a user is mentioned, they receive an **in-app notification** (notification bell / panel), not an email, in V1. Email delivery for mentions is deferred.
+
+**Platform grounding:**
+- **Mention parsing is built** — `packages/addons/notes/api/helpers/extract-mentions.ts` parses mention tokens from content.
+- **Mention storage is built** — `note_mentions` table records `(noteId, userId)` pairs on note create/update.
+- **`NOTES_NOTE_CREATED` / `_UPDATED` events carry `mentionedUserIds: string[]`** in the payload.
+- **In-app notification channel is fully built** — `packages/platform/notification-channels/in-app/` provides `InAppChannelService`, `NotificationQueryService`, `/user-notifications` API, plus `NotificationBell.tsx` UI component. Compliance already has a `NotificationPanel.tsx`.
+- **Email channel also exists** — but intentionally not wired for mentions in V1.
+
+**Options considered:**
+- (a) Full mentions + email notification — rejected for V1: over-eager delivery, easy to become noisy; reserve for follow-up once firms ask for it.
+- (b) Mentions + in-app notification only. _[chosen]_
+- (c) Defer mentions entirely — rejected: collaboration UX is a core compliance need (reviewer handoff happens via comment); firms will work around via side-channel (WhatsApp), breaking the audit trail.
+
+**Build shape:**
+- **One seeded automation rule** in `packages/addons/notes/api/seeds.ts`: event trigger on `NOTES_NOTE_CREATED` (and `_UPDATED` for mentions added post-hoc) where `mentionedUserIds` is non-empty. Action: `send_notification` to the **in-app channel only**. User resolution: `entity_field` on the `mentionedUserIds` array field in the event payload.
+- **`SendNotificationAction` channel control:** verify the action supports per-rule channel selection (e.g. `config.channels: ['in_app']`). If it currently fans out to all of a user's active channels, add a `channels` config option on the action handler. Minor platform extension if needed, co-located with the existing notification work.
+- **Template (kind-agnostic):** `"{authorName} mentioned you on {taskTitle}: {commentPreview}"`. Content preview is clipped (e.g. first 100 chars) to avoid leaking long comments into notifications.
+- **Multi-user array resolution:** `entity_field` strategy already handles array values (`related-entity-field.strategy.ts:61–63`); confirm the standalone `entity_field` strategy does the same, else add the array path (trivial).
+
+**Where the rule lives:**
+- In `packages/addons/notes` (not tasks, not compliance). Notes addon owns `note_mentions` + the mention event; seeding the mention-notification rule there keeps the feature local. Any notes-using domain benefits automatically.
+
+**Opt-out interaction with Q21:** Q21 locked "no per-user opt-out in V1" for compliance notifications. Mention notifications fall under the same umbrella in V1 — no user opt-out. If mention-spam becomes a real problem, admins can disable the seeded rule firm-wide; revisit user-level opt-out as a separate future decision.
+
+**Email delivery for mentions (deferred):**
+- When added later, it's a trivial rule change — flip the action `channels` config to `['in_app', 'email']` or clone the rule with an email channel.
+- Keeping email off in V1 avoids inbox fatigue during early usage and gives firms time to establish mention norms before we add a louder channel.
+
+**Edge cases:**
+- **Self-mention** — if an author @-mentions themselves, suppress the notification (don't notify-yourself). Enforced in the action handler or via a `mentionedUserIds != authorId` condition on the rule.
+- **Mentioned user is deactivated** — skip. `SendNotificationAction` should already no-op on deactivated recipients; verify.
+- **Note edited to ADD a new mention** — `_UPDATED` event fires; seeded rule listens to both `_CREATED` and `_UPDATED`. But we must not re-notify users who were already mentioned in the prior version. Diff logic: notify only users in `after.mentionedUserIds` but NOT in `before.mentionedUserIds`. This diff lives in the action config (or a condition on the rule if it can express set-difference). **Flag as a build subtlety** — may need a tiny handler-level helper rather than pure declarative condition.
+- **Note edited to REMOVE a mention** — no un-notify action; the in-app notification already delivered remains. Acceptable.
+
+**Implication for build:**
+- **Stream G extension:** add seeded mention-notification rule in `packages/addons/notes/api/seeds.ts`.
+- **Platform check:** confirm `SendNotificationAction` supports per-channel selection; add if missing.
+- **Edit-diff logic:** handler-side "only-new-mentions" filter on `_UPDATED` events.
+- **UI:** mention notifications appear in existing `NotificationBell` / `NotificationPanel`. No new UI.
+
+---
+
 ## 2. Pending decisions
 
 Questions still to work through before we can finalise V1 implementation. Answered one by one; each is moved into §1 on resolution.
-
-### Q30 — Comment @mentions and notifications
-Support `@user` mentions that generate a notification in V1, or defer?
 
 ### Q31 — Leave modelling
 Boolean `onLeave` on user, date-range `leaveSince` / `leaveUntil`, or full time-off module (defer)? Affects how the system nulls `assigneeId` while someone is away.
