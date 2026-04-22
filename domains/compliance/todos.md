@@ -953,12 +953,41 @@ this.auditRegistry.register('client_registrations', {
 
 ---
 
+### Q29 — Comment mutability
+
+**Decision:** Accept the `packages/addons/notes` addon defaults. Authors can edit and soft-delete their own notes at any time; `updatedAt` auto-tracks edits; domain events feed the audit trail with before/after content so the history is preserved even when the latest version is shown in UI.
+
+**Compliance task "comments" = notes addon attached to `compliance_tasks` entity.** No new table, no new service.
+
+**Options considered:**
+- (a) Platform defaults (author-editable, author-deletable, `updatedAt` on edit, audit via events). _[chosen]_
+- (b) Append-only / immutable — rejected: typos become permanent; unnatural vs. Slack/Linear/GitHub norms.
+- (c) Edit-only-within-N-minutes window — rejected: timer primitive for marginal benefit; audit already solves the integrity concern.
+- (d) Admin override (author + firm admin can edit any note) — rejected: path to revisionism; uncomfortable for compliance context even though audit captures it.
+
+**Why (a):**
+- **Zero build** — notes addon already enforces the author-only guard.
+- **Audit carries integrity.** Q22 wildcard registers `notes.*` events; `NOTES_NOTE_UPDATED` payload includes before/after content (per event-conventions.md), so every edit is in `audit_logs`. UI detail-page audit tab shows the edit history.
+- **User expectation alignment.** Slack / Linear / GitHub all allow post-hoc edits with an `(edited)` marker. Compliance reviewers reading a 6-month-old thread won't be surprised.
+
+**UI rendering:**
+- When `updatedAt > createdAt` (with a small tolerance for creation write-time jitter), render an `(edited)` marker beside the timestamp.
+- Hovering the marker shows `Last edited {relativeTime}` tooltip.
+- Historical versions are not inline — they live in the audit trail (Audit Trail tab → filter by note ID).
+
+**Edge cases:**
+- **Author leaves the firm** (intersects Q32) — their notes remain visible attributed to their name; they can no longer edit (they're deactivated / removed). Uncontroversial.
+- **Admin hard-delete of a note** — not exposed in V1. If `packages/addons/notes` offers an admin surface, compliance doesn't expose it. Future work if a firm ever needs moderation.
+- **`isInternal` toggle** — notes addon supports public/internal; compliance V1 stays internal-only (all notes `isInternal: true`). Client-facing notes can be added later if/when client portal arrives.
+
+**Implication for build:**
+- Stream G (comments): thin wiring — compliance task detail page mounts the notes UI (`packages/addons/notes/ui/hooks.ts`) with `entityType: 'compliance_tasks'`. No API work beyond controller-level permission check that delegates to task read-scope (Q23 visibility principle extends to notes on the task).
+
+---
+
 ## 2. Pending decisions
 
 Questions still to work through before we can finalise V1 implementation. Answered one by one; each is moved into §1 on resolution.
-
-### Q29 — Comment mutability
-Flat comments; editable by author anytime, within N minutes, or immutable? Delete policy?
 
 ### Q30 — Comment @mentions and notifications
 Support `@user` mentions that generate a notification in V1, or defer?
