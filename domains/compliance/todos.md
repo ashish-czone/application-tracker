@@ -703,12 +703,32 @@ Neither tier-1 rule fires. Tier-2/3 also need `assigneeTeamId` for head resoluti
 
 ---
 
+### Q21 — User opt-out of notifications
+
+**Decision:** **No per-user opt-out in V1.** Everyone receives every seeded notification. Firm admins retain firm-wide control by disabling a seeded rule in platform-ui/automations, but individual users cannot silence notifications for themselves.
+
+**Options considered:**
+- (a) No opt-out. _[chosen]_
+- (b) Opt-out of digest only, escalations mandatory — rejected: adds UI and preference-check code path for a feature nobody has asked for.
+- (c) Full per-rule opt-out via existing `notification_preferences` table — rejected for V1: wiring exists in `packages/platform/notifications/api/schema/notification-preferences.ts`, but turning it on for compliance rules creates a liability surface (staff silencing statutory deadline alerts).
+- (d) Per-channel opt-out — moot in V1 (email-only channel).
+
+**Why (a):**
+- **Statutory audience, not consumer audience.** Compliance users are firm staff whose job is to file by deadline. "Turn off the emails" is the wrong affordance — inbox fatigue should be solved by *tuning cadence* (already done: T+0/3/7 + one digest), not by individual suppression.
+- **Firm-wide control already exists** via admin disabling a seeded rule. Sufficient for V1.
+- **Reversible.** The preference primitive is already in the platform; if a firm later asks, wiring it for specific rules is a small task.
+
+**Edge cases:**
+- User on leave — their notifications still fire, land in inbox, get read on return. Acceptable for V1. Future work: leave modelling (Q31) may want to route these to a cover colleague, but that's a separate decision.
+- User with email delivery disabled at infra level (bounce, unsubscribed at SMTP) — platform-level concern; not a compliance decision.
+
+**Implication for build:** nothing. `SendNotificationAction` remains preference-unaware for seeded compliance rules; no user-profile UI changes in V1.
+
+---
+
 ## 2. Pending decisions
 
 Questions still to work through before we can finalise V1 implementation. Answered one by one; each is moved into §1 on resolution.
-
-### Q21 — User opt-out of notifications
-Allowed in V1 (per-channel / per-rule), or everyone on by default with no opt-out?
 
 ### Q22 — Audit scope
 Writes only, with field-level before/after diffs? Or also read-auditing of sensitive fields? What does the platform's audit infrastructure support out of the box?
