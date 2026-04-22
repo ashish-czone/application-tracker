@@ -421,8 +421,6 @@ Rules don't have an effective date the same way — deprecation is simply "stop 
 
 ### Q14 — Scope → position mapping at seed time
 
-### Q14 — Scope → position mapping at seed time
-
 **Decision:** Five seeded positions, scopes seeded **only for task entities** in V1. Other compliance entities get their scope seeding deferred until their respective feature work.
 
 **Seeded positions (all admin-editable display names, stable internal identifiers):**
@@ -550,8 +548,6 @@ WHERE assigneeId = :me
 
 ### Q17 — Daily digest send time
 
-### Q17 — Daily digest send time
-
 **Decision:** Digest fires once a day at **9am in `APP_TIMEZONE`** (currently `Asia/Kolkata`), expressed via `cronForLocalHour(9, APP_TIMEZONE)` from `@packages/common`. No per-user timezone resolution in V1.
 
 **Options considered:**
@@ -570,14 +566,34 @@ WHERE assigneeId = :me
 
 ---
 
+### Q18 — Digest content split
+
+**Decision:** Three sections in the daily digest — **Overdue**, **Due today**, **Due this week** (next 7 days excluding today).
+
+**Rendering rules:**
+- Order top-to-bottom: Overdue → Due today → Due this week (most-urgent first to drive action).
+- Sections with zero tasks are omitted from the email.
+- When all three sections are empty, **no digest is sent** that day (avoids daily empty-inbox noise).
+- Within each section, sort by `dueDate` ascending, then by client name.
+
+**Options considered:**
+- (a) Two sections ("Due within 7 days" + "Overdue") — rejected: buries today's work in a week-long list, kills the intended nudge.
+- (b) Three sections (Overdue / Due today / Due this week). _[chosen]_
+- (c) Four sections (Overdue / Today / This week / Next week) — rejected: "next week" and "this week" blur when digest fires mid-week; marginal value for the extra row.
+- (d) Flat list sorted by due date — rejected: loses triage framing; reader has to scan to find what's actionable today.
+
+**Edge cases:**
+- Tasks escalating that day (T+3 / T+7) — still appear in "Overdue"; escalation notices are separate emails, not part of the digest (see Stream B).
+- Task completed between digest generation and send — safe: digest reflects state at generation time; no per-task dedup needed for V1.
+- Weekend digest — still fires at 9am Saturday/Sunday in V1. Defer weekend suppression until firms ask.
+
+**Implication for Stream D:** digest generator queries split into three date-range buckets relative to `todayInTimezone(APP_TIMEZONE)`. Template has conditional rendering per section.
+
+---
+
 ## 2. Pending decisions
 
 Questions still to work through before we can finalise V1 implementation. Answered one by one; each is moved into §1 on resolution.
-
-### Q18 — Digest content split
-
-### Q18 — Digest content split
-"Due within 7 days" and "Overdue" — split further into today / this week / overdue, or keep two sections?
 
 ### Q19 — Per-task overdue email frequency
 Once on the day a task becomes overdue, every day it stays overdue, or only at escalation milestones (T+0, T+3, T+7)?
