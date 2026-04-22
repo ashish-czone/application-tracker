@@ -1,20 +1,30 @@
 import { useMemo, useState } from 'react';
 import { X, Shield } from 'lucide-react';
-import { SearchInput } from '@packages/ui';
+import { SearchInput, toast } from '@packages/ui';
 import { useRolesList, useAddRoleMember } from '@packages/rbac-ui';
+import { useOrgPositions } from '@packages/org-units-ui';
 import { useQueryClient } from '@tanstack/react-query';
+import type { UserPosition } from '../data/usersMock';
+
+// Compliance-seeded roles whose capability is team- or firm-level leadership.
+// Matching by display name is intentionally soft — admins can rename roles,
+// at which point the advisory stops firing. The assignment is never blocked.
+const LEADERSHIP_ROLE_NAMES = new Set(['Team Lead', 'Firm Admin']);
 
 export interface RoleAssignEditorProps {
   userId: string;
   /** IDs of roles the user already has — excluded from the picker. */
   excludeRoleIds: string[];
+  /** Positions currently held by the user — used to flag role/position tier mismatches. */
+  userPositions: UserPosition[];
   onClose: () => void;
 }
 
-export function RoleAssignEditor({ userId, excludeRoleIds, onClose }: RoleAssignEditorProps) {
+export function RoleAssignEditor({ userId, excludeRoleIds, userPositions, onClose }: RoleAssignEditorProps) {
   const [query, setQuery] = useState('');
   const queryClient = useQueryClient();
   const { data, isLoading } = useRolesList({ limit: 100 });
+  const { data: positions } = useOrgPositions();
 
   const addMember = useAddRoleMember();
 
@@ -27,9 +37,25 @@ export function RoleAssignEditor({ userId, excludeRoleIds, onClose }: RoleAssign
       .filter((r) => (q ? r.name.toLowerCase().includes(q) : true));
   }, [data, excluded, query]);
 
-  const handleAdd = (roleId: string) => {
+  // A position is leadership-tier when its sortOrder is 0 or lower (Head /
+  // Division Head / Firm Admin in the compliance seed — see Q14). Derived
+  // from live position data so admin renames are respected.
+  const userHasLeadershipPosition = useMemo(() => {
+    if (!positions) return false;
+    const leadershipNames = new Set(
+      positions.filter((p) => p.sortOrder <= 0).map((p) => p.name),
+    );
+    return userPositions.some((p) => leadershipNames.has(p.title));
+  }, [positions, userPositions]);
+
+  const handleAdd = (role: { id: string; name: string }) => {
+    if (LEADERSHIP_ROLE_NAMES.has(role.name) && !userHasLeadershipPosition) {
+      toast.warning(
+        `"${role.name}" is a leadership-tier role, but this user has no leadership-tier position (Head / Division Head / Firm Admin). The assignment is allowed — role grants capability, position governs scope.`,
+      );
+    }
     addMember.mutate(
-      { roleId, userId },
+      { roleId: role.id, userId },
       {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: ['users'] });
@@ -77,7 +103,7 @@ export function RoleAssignEditor({ userId, excludeRoleIds, onClose }: RoleAssign
               key={role.id}
               type="button"
               disabled={addMember.isPending}
-              onClick={() => handleAdd(role.id)}
+              onClick={() => handleAdd(role)}
               className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-paper-sunken/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Shield className="w-3 h-3 text-authority flex-none" strokeWidth={1.5} />
