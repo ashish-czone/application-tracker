@@ -49,3 +49,22 @@ export async function fetchMenuBySlug(
   }
   return (await res.json()) as PublicMenuResponse;
 }
+
+export interface PublicPageIndexEntry {
+  slug: string;
+  updatedAt: string;
+  publishedAt: string;
+}
+
+export async function fetchPublishedPages(
+  options: { revalidate?: number } = {},
+): Promise<PublicPageIndexEntry[]> {
+  const res = await fetch(`${API_BASE}/api/v1/public/pages`, {
+    next: { revalidate: options.revalidate ?? 300, tags: ['pages:index'] },
+  });
+  if (!res.ok) {
+    throw new Error(`fetchPublishedPages failed: ${res.status} ${res.statusText}`);
+  }
+  const body = (await res.json()) as { pages: PublicPageIndexEntry[] };
+  return body.pages ?? [];
+}
