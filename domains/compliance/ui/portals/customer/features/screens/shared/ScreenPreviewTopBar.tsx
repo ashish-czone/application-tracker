@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
+import { useQuery } from '@tanstack/react-query';
 import {
   Search,
   Command as CommandIcon,
@@ -26,26 +27,57 @@ import {
   DropdownMenuLabel,
   AvatarBadge,
 } from '@packages/ui';
+import { createAuthApi, useLogout, type UserProfile } from '@packages/auth-ui';
+import { usePlatformAPI } from '@packages/platform-ui';
 import { useUnreadCount } from '@packages/notification-channels-ui';
 import { ScreenPreviewNav, type ScreenKey } from './ScreenPreviewNav';
 import { NotificationPanel } from './NotificationPanel';
 
+const THEME_STORAGE_KEY = 'compliance-theme';
+
+/** `null` on SSR — window isn't available, default to light. */
+function readStoredTheme(): 'dark' | 'light' {
+  if (typeof window === 'undefined') return 'light';
+  return window.localStorage.getItem(THEME_STORAGE_KEY) === 'dark' ? 'dark' : 'light';
+}
+
 export function ScreenPreviewTopBar({ active }: { active: ScreenKey }) {
   const navigate = useNavigate();
-  const [isDark, setIsDark] = useState(false);
+  const [isDark, setIsDark] = useState<boolean>(() => readStoredTheme() === 'dark');
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const { data: unread } = useUnreadCount();
   const unreadCount = unread?.count ?? 0;
 
+  const api = usePlatformAPI();
+  const authApi = useMemo(() => createAuthApi(api), [api]);
+  const { data: profile } = useQuery<UserProfile>({
+    queryKey: ['auth', 'profile'],
+    queryFn: () => authApi.getProfile(),
+    staleTime: 5 * 60 * 1000,
+  });
+  const logoutMutation = useLogout();
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    document.body.classList.toggle('dark', isDark);
+  }, [isDark]);
+
   const toggleDark = () => {
     setIsDark((prev) => {
       const next = !prev;
-      if (typeof document !== 'undefined') {
-        document.body.classList.toggle('dark', next);
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(THEME_STORAGE_KEY, next ? 'dark' : 'light');
       }
       return next;
     });
   };
+
+  const fullName = profile
+    ? `${profile.firstName ?? ''} ${profile.lastName ?? ''}`.trim() || profile.email
+    : '';
+  const initials = profile ? computeInitials(profile) : '?';
+  const roleLabel = profile?.roles?.[0]?.name ?? '';
+  const email = profile?.email ?? '';
 
   return (
     <div className="border-b border-rule bg-paper-raised">
@@ -169,12 +201,14 @@ export function ScreenPreviewTopBar({ active }: { active: ScreenKey }) {
                 aria-label="Open user menu"
                 className="flex items-center gap-2 pl-4 border-l border-rule outline-none focus-visible:outline-none group"
               >
-                <AvatarBadge initials="DI" size="md" className="group-hover:opacity-90 transition-opacity" />
+                <AvatarBadge initials={initials} size="md" className="group-hover:opacity-90 transition-opacity" />
                 <div className="text-right">
-                  <div className="text-xs text-ink font-sans leading-none">Deepak Iyer</div>
-                  <div className="text-[10px] uppercase tracking-eyebrow text-ink-muted font-sans mt-0.5">
-                    Partner
-                  </div>
+                  <div className="text-xs text-ink font-sans leading-none">{fullName}</div>
+                  {roleLabel && (
+                    <div className="text-[10px] uppercase tracking-eyebrow text-ink-muted font-sans mt-0.5">
+                      {roleLabel}
+                    </div>
+                  )}
                 </div>
               </button>
             </DropdownMenuTrigger>
@@ -184,10 +218,12 @@ export function ScreenPreviewTopBar({ active }: { active: ScreenKey }) {
               className="rounded-none border-rule bg-paper-raised text-ink p-0 min-w-[220px] shadow-none"
             >
               <div className="px-4 py-3 border-b border-rule">
-                <div className="text-sm text-ink font-sans leading-tight">Deepak Iyer</div>
-                <div className="text-[11px] text-ink-muted font-serif italic mt-0.5">
-                  deepak@firm.example
-                </div>
+                <div className="text-sm text-ink font-sans leading-tight">{fullName}</div>
+                {email && (
+                  <div className="text-[11px] text-ink-muted font-serif italic mt-0.5">
+                    {email}
+                  </div>
+                )}
               </div>
               <div className="p-1">
                 <DropdownMenuItem
@@ -214,9 +250,16 @@ export function ScreenPreviewTopBar({ active }: { active: ScreenKey }) {
               </div>
               <DropdownMenuSeparator className="bg-rule my-0" />
               <div className="p-1">
-                <DropdownMenuItem className="rounded-none px-3 py-2 text-xs font-sans text-signal focus:bg-paper focus:text-signal cursor-pointer">
+                <DropdownMenuItem
+                  disabled={logoutMutation.isPending}
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    logoutMutation.mutate();
+                  }}
+                  className="rounded-none px-3 py-2 text-xs font-sans text-signal focus:bg-paper focus:text-signal cursor-pointer"
+                >
                   <LogOut className="w-3.5 h-3.5 mr-2" strokeWidth={1.5} />
-                  Sign out
+                  {logoutMutation.isPending ? 'Signing out…' : 'Sign out'}
                 </DropdownMenuItem>
               </div>
             </DropdownMenuContent>
@@ -230,4 +273,12 @@ export function ScreenPreviewTopBar({ active }: { active: ScreenKey }) {
       />
     </div>
   );
+}
+
+function computeInitials(profile: UserProfile): string {
+  const first = profile.firstName?.[0] ?? '';
+  const last = profile.lastName?.[0] ?? '';
+  const combined = `${first}${last}`.toUpperCase();
+  if (combined) return combined;
+  return (profile.email?.[0] ?? '?').toUpperCase();
 }

@@ -16,6 +16,7 @@
     "@packages/entity-engine-ui": "workspace:*",
     "@packages/notification-channels-ui": "workspace:*",
     "@packages/org-units-ui": "workspace:*",
+    "@packages/platform-ui": "workspace:*",
     "@packages/rbac-ui": "workspace:*",
     "@packages/settings-ui": "workspace:*",
     "@packages/ui": "workspace:*",
