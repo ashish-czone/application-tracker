@@ -388,30 +388,171 @@ Rules don't have an effective date the same way — deprecation is simply "stop 
 
 ---
 
+### Q13 — Missing handler behaviour
+
+**Decision:** Prevent the missing-handler state at write time via a **first-registration guard**. The 4-tier resolver is then guaranteed to return a non-null team at task generation. No fallback team, no synthetic "Unassigned" bucket, no NULL `assigneeTeamId`.
+
+**Three guards together maintain the invariant:**
+
+1. **First-registration guard.** When creating a `client_registration` for a `(client, law)` pair, if no `law_handlers` row exists for that `(firm, law)` combination (global-primary or global-any), block the create and surface an inline prompt: _"No handler configured for `<Law>`. [Configure handler] or cancel."_ The "Configure handler" link deep-links into the handler admin page scoped to that law.
+
+2. **Handler-delete guard.** Deleting a `law_handlers` row is blocked if it would leave any active client registration for that law without a resolvable handler. Admin must add the replacement handler *before* deleting the existing one.
+
+3. **Org-unit-delete cascade.** Deleting an `org_unit` that's referenced by any `law_handlers` row forces the admin to reassign each reference first. Same "replace before delete" pattern.
+
+**Why first-registration, not law-creation:**
+- Covers **both** user-created laws AND system-seeded laws (GST, Income Tax, TDS) that the firm hasn't "created" but is using.
+- Doesn't front-load law creation — firms can enumerate their law catalogue in one session and structure their teams later.
+- Single invariant boundary rather than scattered creation-time checks.
+
+**Options considered and rejected:**
+- Fallback to a firm-level "Unassigned" team when the resolver returns null — risks silent misrouting; tasks pile up in a team nobody checks. Works, but tolerates misconfiguration rather than preventing it.
+- Fallback to a platform-level synthetic team — pollutes the org hierarchy with a team the firm didn't create; breaks escalation and multi-tenancy assumptions.
+- Block at law creation only — misses system-seeded laws and doesn't protect against later handler/org-unit deletion.
+- Fail-soft with `assigneeTeamId = NULL` — contradicts Q2's NOT NULL invariant.
+
+**Parallel to existing patterns:** mirrors the existing primary-contact guard on the `client.status → active` transition. Same philosophy: validate the precondition at the transition, don't rely on a silent fallback.
+
+**Edge case — admin mid-reassignment of handlers:** the delete-before-add workflow is blocked by guard #2. Admin must add the new handler first, then delete the old. Small UX friction for a clean invariant.
+
+**Implementation ripple (extend Stream I):** three new guards (registration create, handler delete, org unit delete), the inline "configure handler" deep-link in the registration creation UI, and service-layer helpers to check resolver coverage.
+
+---
+
+### Q14 — Scope → position mapping at seed time
+
+### Q14 — Scope → position mapping at seed time
+
+**Decision:** Five seeded positions, scopes seeded **only for task entities** in V1. Other compliance entities get their scope seeding deferred until their respective feature work.
+
+**Seeded positions (all admin-editable display names, stable internal identifiers):**
+
+| Position | sortOrder | Task-entity scope |
+|---|---|---|
+| Member | 2 | `unit` |
+| Lead | 1 | `unit` |
+| Head | 0 | `unit` |
+| Division Head | 0 (on a division-level unit) | `descendants` |
+| Firm Admin | -1 or lowest | `all` |
+
+Scope seeds apply to `tasks` and `compliance_tasks` only. Other compliance entities (`clients`, `client_registrations`, `client_contacts`, `compliance_rules`, `laws`, `law_handlers`) get **no seeded (position, entityType) rows** in V1.
+
+**Platform scope semantics** (verified in `packages/addons/org-units/api/services/position-scope-resolver.service.ts:17–19`):
+- `own` → only the user's own records (`[userId]`).
+- `unit` → all users in the user's direct units (team-level visibility).
+- `descendants` → user's units + all descendant units, recursive CTE.
+- `all` → unfiltered.
+- Fail-closed default (line 47): when no position/scope row exists for a `(user, entityType)`, the resolver returns `own`.
+
+**Task entities get extra team-visibility via `teamField`:** the tasks entity config unions `assigneeTeamId` into the owner check, so even `own` scope on tasks effectively shows "me OR tasks owned by teams I'm in." Doesn't apply to entities without a configured `teamField`.
+
+**Why seed only tasks:**
+- Task visibility is the V1 scope's operational heart — every seeded role's capability check depends on it.
+- Other entities (clients, rules, laws) have different visibility models across typical CA firms — some want clients firm-wide, some team-segregated. Making the call without feature-specific need is premature.
+- Fail-closed default `own` for non-task entities will likely need attention when we wire the clients and rule catalogue list pages — at that point we decide per-entity (seed `all`, seed `unit`, or add an entity-level `defaultScope` mechanism). Not urgent for V1 task lifecycle work.
+
+**Options considered and rejected:**
+- Seed the same `unit / descendants / all` scopes across every compliance entity preemptively — premature; assumes team-segregated visibility applies uniformly, which isn't obvious for catalogue-style entities.
+- Seed only two positions (Head + Member) — Lead is a meaningful middle tier in many firms; seeding all three avoids common customisation.
+- Omit Division Head and Firm Admin seeds — firms with hierarchy or firm-level admins would have to custom-create them; seeding keeps a fresh install usable for multi-level firms too.
+
+**UX flag (non-blocking) — role/position tier mismatch:** because role (capability) and position (structure) are orthogonal per Q3, a Member holding the Team Lead role effectively has team-leadership capability in their team despite not being structurally a Head. The admin UI surfaces a warning when assigning a leadership-tier role to a non-leadership position, but permits it. Feature, not bug.
+
+**Implementation ripple (extend Stream C):**
+- Seed the five positions with stable internal identifiers.
+- Seed `(position × task-entity)` scope rows: 5 positions × 2 task entities (base tasks + compliance_tasks) = 10 rows.
+- UI warning on role assignment when role-tier ≠ position-tier.
+
+---
+
+### Q15 — Role ↔ permission seed composition
+
+**Decision:** Four seeded roles with admin-editable display names and permission sets. Task permissions from the `tasks` package; compliance-entity CRUD permissions auto-generated by entity-engine.
+
+**Task permissions:**
+
+| Permission | Preparer | Reviewer | Team Lead | Firm Admin |
+|---|:-:|:-:|:-:|:-:|
+| `tasks.view` | ✅ | ✅ | ✅ | ✅ |
+| `tasks.pickup` | ✅ | ✅ | ✅ | ✅ |
+| `tasks.reassign` |  |  | ✅ | ✅ |
+| `tasks.review` |  | ✅ | ✅ | ✅ |
+| `tasks.complete` | ✅ | ✅ | ✅ | ✅ |
+| `tasks.reopen` |  |  | ✅ | ✅ |
+| `tasks.close` |  |  | ✅ | ✅ |
+
+**Compliance-entity permissions:**
+
+| Permission | Preparer | Reviewer | Team Lead | Firm Admin |
+|---|:-:|:-:|:-:|:-:|
+| `compliance.clients.view` | ✅ | ✅ | ✅ | ✅ |
+| `compliance.clients.create` / `.update` |  |  | ✅ | ✅ |
+| `compliance.clients.delete` |  |  |  | ✅ |
+| `compliance.client_contacts.view` | ✅ | ✅ | ✅ | ✅ |
+| `compliance.client_contacts.create` / `.update` / `.delete` |  |  | ✅ | ✅ |
+| `compliance.client_registrations.view` | ✅ | ✅ | ✅ | ✅ |
+| `compliance.client_registrations.create` / `.update` |  |  | ✅ | ✅ |
+| `compliance.client_registrations.delete` |  |  |  | ✅ |
+| `compliance.laws.view` | ✅ | ✅ | ✅ | ✅ |
+| `compliance.laws.create` / `.update` / `.delete` |  |  |  | ✅ |
+| `compliance.compliance_rules.view` | ✅ | ✅ | ✅ | ✅ |
+| `compliance.compliance_rules.create` / `.update` |  |  | ✅ | ✅ |
+| `compliance.compliance_rules.delete` |  |  |  | ✅ |
+| `compliance.law_handlers.*` |  |  |  | ✅ |
+
+**Rationale by role:**
+
+- **Preparer** — rank-and-file worker. Reads everything for context; acts only on their own tasks (pickup + complete). No review, reassign, reopen, close. No data-steward writes.
+- **Reviewer** — Preparer + `tasks.review`. Review is informational in V1 (no maker-checker gate per Q5) but a distinct capability firms assign selectively.
+- **Team Lead** — full task lifecycle + write access to clients, contacts, registrations, and rules (subject to Q9's per-field rule edit policy). No deletes, no law-catalogue writes, no `law_handlers` — those are firm-admin territory.
+- **Firm Admin** — everything. Sole holder of deletes, law creation/update/delete, and `law_handlers` (which governs task-generation routing per Q13).
+
+**Deliberate omissions:**
+- No law write below Firm Admin — shared catalogue integrity.
+- No client / registration delete below Firm Admin — deactivation (Q8) is the normal lifecycle; hard-delete is exceptional.
+- No `tasks.reassign.any` / `.reopen.any` super-variants — Firm Admin's `all` scope (per Q14) already grants firm-wide reach, so parallel permission surfaces are redundant.
+
+**Options considered and rejected:**
+- Merge Preparer + Reviewer into one role — rejected; review is a distinct capability firms want to grant selectively (senior preparer signs off on juniors' work without running the whole team).
+- Grant Reviewer `tasks.reassign` — rejected; reassign is team management, distinct from review-chain.
+- Grant Team Lead deletes — rejected; deletes are destructive and firm-wide; admin-gating keeps blast radius small.
+- Ship without Firm Admin — rejected; every firm needs at least one super-user for initial setup and handler config.
+
+**Implementation ripple:** no new tasks — the permission set is already covered by Stream C's C1 (role system seed). The table above becomes the source of truth for that seed.
+
+---
+
+### Q16 — Multi-team visibility
+
+**Decision:** "My tasks" = personally-assigned tasks **plus** unassigned tasks in any of the user's teams. Actively-owned-by-teammates tasks stay in the team board, not in the personal queue.
+
+**Default "my tasks" query:**
+```
+WHERE assigneeId = :me
+   OR (assigneeId IS NULL AND assigneeTeamId IN :myTeams)
+```
+
+**Team boards** (per-team view, not personal) show all tasks with `assigneeTeamId = team`, regardless of assignee.
+
+**Options considered:**
+- (a) Strictly personal — only `assigneeId = me`. Rejected: members who skip the team board miss unassigned tasks drifting toward due date, which defeats the team-first model from Q2.
+- (b) Everything in my teams — `assigneeId = me OR assigneeTeamId IN myTeams`. Rejected: for a 10-person team the personal queue fills with teammates' active work; signal/noise drops, team board becomes redundant.
+- (c) Personal + unassigned-in-my-teams. _[chosen]_ Balances personal focus with team coverage visibility.
+
+**Edge cases handled naturally:**
+- Pickup of unassigned task → `assigneeId = me` → task stays in my queue, no longer classified as unassigned for teammates. Team board still shows it under my name.
+- Reassignment to teammate → task leaves my queue, enters theirs.
+- Leave / termination per Stream H → `assigneeId` cleared → task appears as unassigned in every teammate's queue in the same team. Intended coverage behaviour.
+
+**Implication for build:** no new schema. The `my-tasks` custom scope in `packages/addons/tasks/api/tasks.config.ts:122–135` currently returns the broader (b) set — update its SQL to the narrower (c) expression. Applies to both the base tasks entity and `compliance_tasks` via extension.
+
+---
+
 ## 2. Pending decisions
 
 Questions still to work through before we can finalise V1 implementation. Answered one by one; each is moved into §1 on resolution.
 
-### Q13 — Missing handler behaviour
-
-### Q13 — Missing handler behaviour
-If a client is registered for a law but no law-handler (default team) is configured, do we generate the task with null team + admin alert, or block generation?
-
-### Q14 — Scope → position mapping at seed time
-What scope does each seeded position (Head, Lead, Member) carry by default? (Likely: Head → `unit`, Lead → `own`, Member → `own`; Division Head → `descendants`; Firm Admin → `all`.) Needs a single pass to confirm defaults.
-
-### Q15 — Role ↔ permission seed composition
-Exactly which permissions does each seeded role (Preparer / Reviewer / Team Lead / Firm Admin) hold? First-cut table below needs confirmation.
-
-| Role        | view | pickup | reassign | review | complete | reopen | close |
-|-------------|:----:|:------:|:--------:|:------:|:--------:|:------:|:-----:|
-| Preparer    |  ✅  |   ✅   |          |        |    ✅    |        |       |
-| Reviewer    |  ✅  |   ✅   |          |   ✅   |    ✅    |        |       |
-| Team Lead   |  ✅  |   ✅   |    ✅    |   ✅   |    ✅    |   ✅   |   ✅  |
-| Firm Admin  |  ✅  |   ✅   |    ✅    |   ✅   |    ✅    |   ✅   |   ✅  |
-
-### Q16 — Multi-team visibility
-An employee in Teams A and B, task assigned to Team A: should they see it in their personal "all my tasks" view, or only inside Team A's board?
+### Q17 — Daily digest send time
 
 ### Q17 — Daily digest send time
 Fixed 9am IST, 9am in user timezone (falling back to `APP_TIMEZONE`), or admin-configurable?
@@ -479,6 +620,7 @@ Derived from §1. Re-estimated and re-ordered whenever §1 grows. Each bullet is
 - [ ] **A6.** Verify scope-on-position integration end-to-end (position → scope, scope resolver, descendants walk). Close gaps _in the org-units / rbac packages_, not in the tasks package. (Q3 — "first implementation step")
 - [ ] **A7.** Define the task lifecycle workflow on the base `tasks` entity in `tasks.config.ts` via `defineEntity()`. Five states (`pending / in_progress / blocked / completed / cancelled`), transitions per §1 Q4, transition guards (`blocked` requires a reason comment). Mark `completed` and `cancelled` states with `isSystem: true` so they cannot be renamed or deleted via the admin UI. If the workflow package persists definitions, wire a system seed in the tasks package. (Q4)
 - [ ] **A8.** Add the per-action `allowedStatuses` configuration (action gate) alongside the action guards from A4. Compose the gate with permission + scope on every action entry point. (Q4)
+- [ ] **A9.** Narrow the `my-tasks` custom scope in `packages/addons/tasks/api/tasks.config.ts:122–135` from "assignee = me OR any team I'm in" to "assignee = me OR (assignee is null AND team in myTeams)" so the personal queue shows unassigned-in-my-teams but not teammates' active work. (Q16)
 
 ### Stream B — Escalation subsystem (platform-level, consumes tasks package)
 
@@ -486,10 +628,13 @@ Derived from §1. Re-estimated and re-ordered whenever §1 grows. Each bullet is
 - [ ] **B2.** Scheduled job (cron) that sweeps tasks daily, evaluates escalation tier based on due date, and triggers notifications via the notifications package. (Q3, pending Q17/Q19)
 - [ ] **B3.** Idempotency — record which tier a task has already notified at; never double-send.
 
-### Stream C — Compliance domain role & permission seeds
+### Stream C — Compliance domain role, position & scope seeds
 
-- [ ] **C1.** System seed: default roles (Preparer, Reviewer, Team Lead, Firm Admin) with their permission sets. Added to `complianceSystemSeedSources()` in `domains/compliance/api/seeds.ts`. (Q3, pending Q15 for exact permission list)
+- [ ] **C1.** System seed: default roles (Preparer, Reviewer, Team Lead, Firm Admin) with the permission sets defined in the Q15 tables (task permissions + compliance-entity CRUD permissions). Added to `complianceSystemSeedSources()` in `domains/compliance/api/seeds.ts`. (Q3, Q15)
 - [ ] **C2.** Demo seed: sample user ↔ role assignments reflecting a realistic small firm. (Q3)
+- [ ] **C3.** System seed: five default positions with stable internal identifiers — Member (sortOrder 2), Lead (1), Head (0), Division Head (0, used on division-level units), Firm Admin (lowest sortOrder). Display names admin-editable. (Q14)
+- [ ] **C4.** System seed: `(position × task-entity)` scope rows for both the base `tasks` entity and the `compliance_tasks` extension. Member/Lead/Head → `unit`, Division Head → `descendants`, Firm Admin → `all`. 10 rows total. No scope seeds for non-task entities in V1. (Q14)
+- [ ] **C5.** UI warning on role assignment when the assigned role's tier and the user's position tier don't align (e.g. Team Lead role on a Member position). Non-blocking advisory. (Q14)
 
 ### Stream D — Notifications wiring for compliance due dates
 
@@ -549,10 +694,18 @@ Hooks that fire when a client, registration, or rule changes state in a way that
 - [ ] **I15.** UI in the rule edit form: disable immutable fields with the explanatory tooltip; show forward-only save-dialog copy when due-date-math fields change. (Q9)
 - [ ] **I16.** Confirm generator is a pure no-op on `(ruleId, clientId, periodStart)` conflict (never mutates existing row). Add a test if missing. (Q9)
 
+**Handler integrity guards (prevent missing-handler state):**
+
+- [ ] **I19.** Service helper `hasResolvableHandler(firmId, lawId, clientId?)` — checks whether the 4-tier resolver would return a team for the given (firm, law, optional client). (Q13)
+- [ ] **I20.** Guard on `client_registrations` create: reject if `hasResolvableHandler(firm, law)` is false. Error response carries the lawId so UI can deep-link to handler config. (Q13)
+- [ ] **I21.** Guard on `law_handlers` delete: reject if any active `client_registration` for that law would be left without a resolvable handler after removal. (Q13)
+- [ ] **I22.** Guard on `org_units` delete: reject if any `law_handlers` row references the unit. Requires admin to reassign handlers first. (Q13)
+- [ ] **I23.** UI on registration creation: inline "Configure handler" prompt when guard #I20 fires; deep-link to the handler admin page scoped to the specific law. (Q13)
+
 **Cross-cutting UI:**
 
-- [ ] **I17.** Banners on client / registration / rule detail pages reflecting their inactive state ("Deactivated on YYYY-MM-DD", "Deprecated", "Dormant"). (Q6, Q8)
-- [ ] **I18.** Subtle marker on task rows whose source registration or rule is inactive, so users viewing a task queue understand why an unfamiliar task is there. (Q8)
+- [ ] **I24.** Banners on client / registration / rule detail pages reflecting their inactive state ("Deactivated on YYYY-MM-DD", "Deprecated", "Dormant"). (Q6, Q8)
+- [ ] **I25.** Subtle marker on task rows whose source registration or rule is inactive, so users viewing a task queue understand why an unfamiliar task is there. (Q8)
 
 ### Stream J — Task generation cadence
 
