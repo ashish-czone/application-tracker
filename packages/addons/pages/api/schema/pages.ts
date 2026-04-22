@@ -1,10 +1,17 @@
 import { randomUUID } from 'node:crypto';
-import { pgTable, text, timestamp, index, uniqueIndex } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, jsonb, index, uniqueIndex } from 'drizzle-orm/pg-core';
 import { users } from '@packages/database/schema';
 import { softDeleteColumns } from '@packages/soft-delete';
 
 export const PAGE_STATUSES = ['draft', 'scheduled', 'published', 'archived'] as const;
 export type PageStatus = (typeof PAGE_STATUSES)[number];
+
+export interface PageSeo {
+  title?: string;
+  description?: string;
+  ogImage?: string;
+  canonicalUrl?: string;
+}
 
 export const pages = pgTable('pages', {
   id: text('id').primaryKey().$defaultFn(() => randomUUID()),
@@ -12,6 +19,7 @@ export const pages = pgTable('pages', {
   title: text('title').notNull(),
   metaDescription: text('meta_description'),
   ogImage: text('og_image'),
+  seo: jsonb('seo').$type<PageSeo>().notNull().default({}),
   status: text('status').notNull().$type<PageStatus>().default('draft'),
   publishedAt: timestamp('published_at', { withTimezone: true, mode: 'date' }),
   createdBy: text('created_by').notNull().references(() => users.id),
