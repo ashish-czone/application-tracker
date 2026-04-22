@@ -3,11 +3,14 @@ import { Button } from '@packages/ui';
 import { DashboardShell } from '@packages/dashboard-ui';
 import { ScreenPreviewTopBar } from '../screens/shared/ScreenPreviewTopBar';
 
+// Widget order tuned for the 12-col grid at xl:
+//   overdue (lg, 8 cols) + notifications (sm, 3 cols) → row 1
+//   upcoming (md, 6 cols) + my-tasks (md, 6 cols)     → row 2
 const DASHBOARD_WIDGETS = [
   'compliance.overdue-filings',
+  'notifications.recent',
   'compliance.upcoming-filings',
   'tasks.my-tasks',
-  'notifications.recent',
 ] as const;
 
 export function DashboardPage() {
