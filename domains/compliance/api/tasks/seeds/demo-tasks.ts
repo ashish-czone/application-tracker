@@ -1,7 +1,8 @@
 import type { INestApplicationContext } from '@nestjs/common';
-import { DatabaseService, eq, users } from '@packages/database';
+import { DatabaseService, asc, eq, users } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
 import { EntityService } from '@packages/entity-engine';
+import { tasks } from '@packages/tasks';
 import { complianceTasks } from '../../schema/compliance-tasks';
 import { ComplianceRuleService } from '../../rules/compliance-rules.service';
 import { ClientRegistrationService } from '../../client-registrations/client-registrations.service';
@@ -103,6 +104,32 @@ export const seedDemoTasks = async (ctx: INestApplicationContext): Promise<void>
       }
     }
   }
+
+  // Demo variety: spread the first N compliance tasks across overdue / due-today /
+  // due-this-week / upcoming buckets, and individually assign every third task to
+  // admin. Without this the dashboard widgets show empty states on a fresh seed
+  // because every generated task lands months out and is team-assigned only.
+  const SPREAD_LIMIT = 30;
+  const DUE_OFFSETS = [-14, -10, -7, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7];
+  const spread = await database.db
+    .select({ id: tasks.id })
+    .from(tasks)
+    .where(eq(tasks.kind, 'compliance'))
+    .orderBy(asc(tasks.createdAt))
+    .limit(SPREAD_LIMIT);
+
+  for (let i = 0; i < spread.length; i++) {
+    const dayOffset = DUE_OFFSETS[i % DUE_OFFSETS.length]!;
+    const demoDue = toIsoDate(addDays(now, dayOffset));
+    const assignToAdmin = i % 3 === 0;
+    await database.db
+      .update(tasks)
+      .set({
+        dueDate: demoDue,
+        ...(assignToAdmin ? { assigneeId: admin.id } : {}),
+      })
+      .where(eq(tasks.id, spread[i]!.id));
+  }
 };
 
 function toIsoDate(date: Date): string {
@@ -112,5 +139,11 @@ function toIsoDate(date: Date): string {
 function addMonths(from: Date, n: number): Date {
   return new Date(
     Date.UTC(from.getUTCFullYear(), from.getUTCMonth() + n, from.getUTCDate()),
+  );
+}
+
+function addDays(from: Date, n: number): Date {
+  return new Date(
+    Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), from.getUTCDate() + n),
   );
 }
