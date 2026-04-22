@@ -6,23 +6,28 @@ import { coreFieldTypesPlugin } from '@packages/entity-engine/field-types';
 import { eavFieldTypesPlugin } from '@packages/eav-attributes/field-types';
 import { taxonomyFieldTypesPlugin } from '@packages/taxonomy/field-types';
 import { workflowFieldTypesPlugin } from '@packages/workflows/field-types';
+import { mediaLibraryFieldTypesPlugin } from '@packages/media-library-api/field-types';
 
 fieldTypeRegistry.registerPlugin(coreFieldTypesPlugin);
 fieldTypeRegistry.registerPlugin(eavFieldTypesPlugin);
 fieldTypeRegistry.registerPlugin(taxonomyFieldTypesPlugin);
 fieldTypeRegistry.registerPlugin(workflowFieldTypesPlugin);
+fieldTypeRegistry.registerPlugin(mediaLibraryFieldTypesPlugin);
 
 import '@packages/eav-attributes-ui/field-types/register-all';
 import { registerEntityRelationsFieldTypes } from '@packages/entity-relations-ui';
+import { registerMediaLibraryFieldTypes } from '@packages/media-library-ui-admin';
 registerEntityRelationsFieldTypes();
+registerMediaLibraryFieldTypes();
 
 import { WebShell } from '@packages/app-shell-ui';
 import { registerStarterBlocks, registerContentBlocks } from '@packages/blocks-ui';
 import { PageEditorPage } from '@packages/pages-ui-admin';
 import { MenuEditorPage } from '@packages/menus-ui-admin';
+import { MediaLibraryPage } from '@packages/media-library-ui-admin';
 import { AuditTimeline } from '@packages/audit-ui';
 import { Button, Toaster } from '@packages/ui';
-import { Pencil } from 'lucide-react';
+import { Pencil, Image as ImageIcon } from 'lucide-react';
 import { api } from './lib/api';
 import './globals.css';
 
@@ -32,6 +37,11 @@ registerContentBlocks();
 const contentRoutes = [
   { path: '/pages/:id/edit', element: <PageEditorPage /> },
   { path: '/menus/:id/edit', element: <MenuEditorPage /> },
+  { path: '/media-library', element: <MediaLibraryPage /> },
+];
+
+const extraMenuItems = [
+  { path: '/media-library', label: 'Media Library', icon: ImageIcon, position: 'after' as const },
 ];
 
 const detailTabs = [
@@ -60,6 +70,7 @@ createRoot(document.getElementById('root')!).render(
       apiFn={api}
       brandLabel="Agency Admin"
       extraRoutes={contentRoutes}
+      extraMenuItems={extraMenuItems}
       extraDetailTabs={detailTabs}
       extraDetailHeaderActions={detailHeaderActions}
     />
