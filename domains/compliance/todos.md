@@ -591,12 +591,90 @@ WHERE assigneeId = :me
 
 ---
 
+### Q19 — Notification cadence, ownership, and kind-agnosticism
+
+Consolidated decision covering four sub-questions: cadence, where the rules are defined, priority segmentation, and how the kind discriminator interacts with rule selection.
+
+#### Q19a — Per-task overdue cadence
+
+**Decision:** Three-tier escalation: **T+0, T+3, T+7**. Three emails max per task. No daily-while-overdue spam; daily digest (Stream D) still surfaces the task every morning.
+
+**Options considered:**
+- (a) T+0 only — rejected: nothing reaches division heads.
+- (b) T+0 / T+3 / T+7 milestones. _[chosen]_
+- (c) Every day overdue — rejected: inbox fatigue, users tune it out.
+- (d) Milestones + weekly thereafter — rejected: digest already provides daily visibility post-T+7.
+
+Tiers match Q10 escalation semantics: T+0 to assignee (or team members if unassigned); T+3 to team head; T+7 to parent-unit head.
+
+#### Q19b — Ownership and mechanism
+
+**Decision:** Notifications flow entirely through the existing **automations** primitive. No parallel cron, no hardcoded listeners. `packages/addons/tasks` owns the seed set so every tasks-using domain inherits notifications for free.
+
+**Tasks package ships 4 system-seeded automation rules:**
+
+| Seed rule | Trigger | Entity | Action | User resolution |
+|---|---|---|---|---|
+| `task-overdue-tier-1` | `schedule_recurring`, `dueDate + 0 days` | `tasks` | `send_notification` | `entity_field(assigneeId)` OR `org_unit_members(assigneeTeamId)` if assignee null |
+| `task-overdue-tier-2` | `schedule_recurring`, `dueDate + 3 days` | `tasks` | `send_notification` | `org_unit_head(assigneeTeamId)` |
+| `task-overdue-tier-3` | `schedule_recurring`, `dueDate + 7 days` | `tasks` | `send_notification` | `parent_unit_head(assigneeTeamId)` |
+| `task-daily-digest` | `schedule_recurring`, no date filter, target entity `users` | `users` | `send_task_digest` | `entity_field(id)` — the user being iterated |
+
+All four are admin-editable in platform-ui/automations after seeding: can be disabled, cloned, condition-narrowed, template-customised.
+
+**Supporting implementations in `packages/addons/tasks`:**
+- **New action handler `SendTaskDigestAction`** registered via `ActionRegistry` in `onModuleInit()`. Receives the user row as `entityData`, queries tasks (assigned-to-me + unassigned-in-my-teams, matching the Q16 personal-queue query), bucketises into overdue / due today / due this week, composes one email, short-circuits if all buckets empty.
+- **Register `users` with `EntityResolverRegistry`** so it becomes a valid `scheduleEntityType` (verify if already registered in `packages/core/users`; if not, add the registration there, not in tasks).
+
+**Supporting implementations in `packages/addons/org-units`:**
+- **Three user resolvers** registered via `UserResolverRegistry` in `onModuleInit()`:
+  - `org_unit_head` — config `{ unitField }`; returns user whose position in that unit has the lowest `sortOrder`.
+  - `parent_unit_head` — config `{ unitField }`; walks to parent via `org_units.parentId`, returns that unit's head. Empty array if root.
+  - `org_unit_members` — config `{ unitField }`; returns all users assigned to the unit via `org_unit_positions`.
+- These are generic platform primitives — usable by any entity that has an org-unit FK column, not just tasks.
+
+**Why not `defineEntity()` as the declaration site:** seeded automation rules are auxiliary data, not entity schema. Mixing them into `defineEntity()` would couple entity-engine to automations (wrong dependency direction) and conflate schema with behaviour. Tasks package's seeds file is the right location.
+
+**Why not code-level cron for the digest:** automations' `schedule_recurring` with `scheduleEntityType: 'users'` fires once per user per day at the rule's cron time — that IS the digest shape, expressed entirely through the existing primitive.
+
+#### Q19c — Priority segmentation
+
+**Decision:** No priority-based rule segmentation in V1. Single cadence applies to all tasks regardless of `priority`.
+
+**Options considered:**
+- (a) No segmentation — one cadence. _[chosen]_
+- (b) Three seeded rules keyed on `priority = low | medium | high` with different day-spreads — rejected: premature rule proliferation for a use case no firm has asked for.
+- (c) Drop `priority` from compliance tasks — rejected: priority still useful for UI sorting in the personal queue.
+
+`priority` remains on the task for display/sorting (high-priority surfaces first in personal queue, digest within a section). It does **not** branch notification logic. If a firm later wants steeper cadence for high-priority, admin clones a seeded rule, adds `priority = high` condition, adjusts `scheduleDateAmounts`.
+
+#### Q19d — Kind discriminator is template-context, not rule-scope
+
+**Decision:** Seeded rules are **kind-agnostic**. They target `scheduleEntityType: 'tasks'` and fire for every task regardless of kind. `kind` is a template-rendering signal, not a rule-selection signal.
+
+**Storage model:** `compliance_tasks` stays a separate table, 1:1 joined to `tasks` by shared primary key. Rationale:
+- **Dependency direction:** compliance-specific columns (`clientId`, `ruleId`, `periodStart`, `periodEnd`) cannot live in `packages/addons/tasks` — that would pull domain concepts into a platform package.
+- **No nullable-column bloat:** each task-using domain owns its extension columns in its own table.
+- **Base scheduler only needs base columns:** `dueDate`, `status`, `assigneeId`, `assigneeTeamId`, `priority`, `title`, `kind` — all present on `tasks`. The scheduler never joins `compliance_tasks`.
+
+**How kind surfaces in notifications:** the compliance task **generator** builds a semantically-rich `title` at task creation (e.g., `"GST return for ABC Corp — Mar 2026"`). Generic template `"Task '{title}' is overdue (due {dueDate})"` reads naturally without needing kind-specific template variables. V1 ships generic templates only.
+
+**Per-kind template customisation (opt-in, deferred):** future work — a domain can either:
+- Clone a seeded rule, add condition `kind = 'compliance'`, customise template with compliance variables (`{client.name}`, `{rule.name}`, `{period}`), OR
+- Seed its own kind-scoped rules alongside the generic ones (and narrow the generic rules with `kind != 'compliance'` if it wants exclusivity).
+
+Not needed for V1.
+
+**Implications for build:**
+- **Stream B (escalation):** 3 seeded rules + 2 new resolvers in org-units + 1 new action-handler dependency? No — standard `send_notification` suffices.
+- **Stream D (digest):** 1 seeded rule + 1 new action handler (`SendTaskDigestAction`) + 1 new resolver (`org_unit_members`) + register `users` as schedulable entity.
+- **All of the above lands in `packages/addons/tasks` and `packages/addons/org-units`** — compliance domain ships zero notification code in V1, just inherits the seeded rules.
+
+---
+
 ## 2. Pending decisions
 
 Questions still to work through before we can finalise V1 implementation. Answered one by one; each is moved into §1 on resolution.
-
-### Q19 — Per-task overdue email frequency
-Once on the day a task becomes overdue, every day it stays overdue, or only at escalation milestones (T+0, T+3, T+7)?
 
 ### Q20 — Notification target when no individual assignee
 Digest to every team member, or only to team head(s)?
