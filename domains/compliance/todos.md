@@ -247,12 +247,57 @@ Either is acceptable as a known gap. Neither is blocking — most small-firm cli
 
 ---
 
+### Q8 — Forward-only semantics on registration deactivation & rule deprecation
+
+**Decision:** Forward-only **from the effective date**, not from the input date. Different specifics for registrations (which have an effective date) and rules (which don't).
+
+**Registration deactivation:**
+
+`client_registrations.deactivatedAt` is **user-selectable**, constrained to **past or present only** in V1 (no future-scheduled deactivation — would require a recurring "process pending deactivations" job for no V1 payoff). Backdating is the common real-world case: clients routinely inform the firm about a GST/TAN cancellation weeks after the fact, and the effective date is what determines which periods were legally active.
+
+On deactivation, tasks are partitioned by `periodStart`:
+
+| Task condition | Action |
+|---|---|
+| `periodStart > deactivatedAt` AND non-terminal | Auto-cancel with a system comment ("registration deactivated effective YYYY-MM-DD; this period falls after"). These tasks should never have existed. |
+| `periodStart ≤ deactivatedAt` AND non-terminal | Leave alone — may still be legally required to file (e.g. the February GSTR-3B is still due even if GST was surrendered on 31-Mar). |
+| Terminal (`completed` / `cancelled`) | Untouched regardless. |
+
+Future generation stops naturally via a generator-side filter: `registration.deactivatedAt IS NULL OR registration.deactivatedAt > periodStart`.
+
+**Rule deprecation:**
+
+Rules don't have an effective date the same way — deprecation is simply "stop generating new tasks from this rule." So rule deprecation is **forward-only from now**: already-generated tasks are left alone regardless of period; the generator just skips deprecated rules.
+
+**UI in both cases:**
+
+- On deactivation / deprecation, show a summary before confirming: "Deactivating this registration effective YYYY-MM-DD. M tasks after this date will auto-cancel. N tasks remain open for earlier periods."
+- **Optional secondary checkbox:** "Also cancel the N remaining in-flight tasks for earlier periods." Default unchecked. Lets firms who want to abandon everything do it in one action.
+- Registration detail / rule detail page afterwards shows a "Deactivated on YYYY-MM-DD" / "Deprecated" banner so the non-generation behaviour is explicit.
+- In task list views, tasks linked to a deactivated registration or deprecated rule get a subtle marker so users seeing an unfamiliar task understand its provenance.
+
+**Options considered and rejected:**
+- Forward-only from **input date** (ignore the user-selected `deactivatedAt`) — rejected because backdated entries would leave invalid tasks (generated for periods after the real cancellation date) alive indefinitely.
+- Auto-cancel *all* non-terminal tasks on deactivation (parallel to client dormancy) — rejected because it destroys valid pre-effective-date obligations. Dormancy is the exception, not the rule; registration/rule deactivation is softer.
+- Block deactivation until all tasks are terminal — too harsh, prevents recording the real-world event until tidy-up is done.
+
+**Relationship to Q6:** the three "things can become inactive" transitions now have cleanly distinct semantics — client dormancy (aggressive: cancel all non-terminal); registration deactivation (medium: cancel tasks after effective date, keep earlier); rule deprecation (soft: forward-only, no cancel).
+
+**Implementation ripple (extend Stream I):**
+- Hook on `client_registrations` deactivation that partitions tasks by `periodStart` vs. `deactivatedAt` and cancels the post-effective-date set; optional checkbox cancels the remainder.
+- Generator filter for registration effective date: `registration.deactivatedAt IS NULL OR registration.deactivatedAt > periodStart`.
+- Hook on `compliance_rules.status → deprecated` that only stops generation — no auto-cancel; surface the optional cancel checkbox.
+- Generator filter for rule status: already filters on `status = 'active'` (verify during implementation).
+- UI on both transitions: date picker (for registration), summary of auto-cancelled tasks, optional checkbox for remainder, deactivation/deprecation banners thereafter.
+
+---
+
 ## 2. Pending decisions
 
 Questions still to work through before we can finalise V1 implementation. Answered one by one; each is moved into §1 on resolution.
 
-### Q8 — Forward-only semantics on deactivation
-Confirm: deactivating a registration or deprecating a rule leaves already-generated tasks unaffected; only future generation stops. Need to also decide how this is communicated in the UI.
+### Q9 — Rule parameter changes mid-period
+If due-date math changes on an active rule, do already-generated future tasks recompute or stay with their original dates?
 
 ### Q9 — Rule parameter changes mid-period
 If due-date math changes on an active rule, do already-generated future tasks recompute or stay with their original dates?
@@ -391,11 +436,33 @@ Derived from §1. Re-estimated and re-ordered whenever §1 grows. Each bullet is
 - [ ] **H1.** Null `assigneeId` on all open tasks of a terminated / deactivated user; surface "unassigned in my team" list for team heads. (Pending Q32)
 - [ ] **H2.** Leave tracking — model per Q31. (Pending Q31)
 
-### Stream I — Client lifecycle handling
+### Stream I — Domain lifecycle transition hooks
+
+Hooks that fire when a client, registration, or rule changes state in a way that affects compliance tasks. Three deactivation paths, three different semantics (see Q6, Q8).
+
+**Client dormancy (aggressive: cancel everything):**
 
 - [ ] **I1.** Hook on the `client.status → dormant` workflow transition that bulk-cancels all non-terminal `compliance_tasks` for the client, attaching a system comment (`"Auto-cancelled: client <Name> dormantised on <date> by <actor>"`). Transactional with the transition. (Q6)
 - [ ] **I2.** Ensure `GenerateComplianceTasksAction` filters on `client.status = 'active'`. Verify if already present; add if not. (Q6)
 - [ ] **I3.** UI prompt on the dormancy transition showing the number of tasks that will be cancelled, with an explicit confirmation. (Q6)
+
+**Registration deactivation (medium: cancel post-effective-date, keep earlier):**
+
+- [ ] **I4.** Allow user-selectable `deactivatedAt` on `client_registrations`, constrained to past or present only in V1. Add UI date picker with constraint. (Q8)
+- [ ] **I5.** Hook on registration deactivation that auto-cancels non-terminal tasks where `periodStart > deactivatedAt`, with a system comment referencing the effective date. Leaves earlier-period tasks alone. (Q8)
+- [ ] **I6.** Generator filter: `registration.deactivatedAt IS NULL OR registration.deactivatedAt > periodStart`. (Q8)
+- [ ] **I7.** UI on registration deactivation: show summary ("M tasks after this date will auto-cancel; N tasks remain open for earlier periods") plus an optional secondary checkbox to also cancel the N remaining. Default unchecked. (Q8)
+
+**Rule deprecation (soft: forward-only, no auto-cancel):**
+
+- [ ] **I8.** Hook on `compliance_rules.status → deprecated` that stops future generation but leaves existing tasks untouched. No mandatory cancel. (Q8)
+- [ ] **I9.** Generator filter: skip rules with `status = 'deprecated'`. Verify if already in place; add if not. (Q8)
+- [ ] **I10.** UI on rule deprecation: summary of non-terminal tasks for that rule, plus an optional checkbox "Also cancel N in-flight tasks from this rule." Default unchecked. (Q8)
+
+**Cross-cutting UI:**
+
+- [ ] **I11.** Banners on client / registration / rule detail pages reflecting their inactive state ("Deactivated on YYYY-MM-DD", "Deprecated", "Dormant"). (Q6, Q8)
+- [ ] **I12.** Subtle marker on task rows whose source registration or rule is inactive, so users viewing a task queue understand why an unfamiliar task is there. (Q8)
 
 ### Stream Z — Finalisation
 
