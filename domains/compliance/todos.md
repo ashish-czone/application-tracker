@@ -326,10 +326,6 @@ Rules don't have an effective date the same way — deprecation is simply "stop 
 
 ---
 
-## 2. Pending decisions
-
-Questions still to work through before we can finalise V1 implementation. Answered one by one; each is moved into §1 on resolution.
-
 ### Q10 — Weekend / public-holiday handling on due dates
 
 **Decision:** Calendar date as-is. No holiday calendar in V1. Firms that want a cushion for weekend / holiday ends express it through the existing `gracePeriodDays` field on the rule.
@@ -352,11 +348,51 @@ Questions still to work through before we can finalise V1 implementation. Answer
 
 **Implication for build:** zero schema change, zero generator change, zero UI change beyond rendering the stored date. No new Stream I tasks.
 
-### Q11 — Task generation horizon
-Current code uses 6 months. Keep, extend, or make configurable?
+### Q11 / Q12 — Task generation horizon & trigger
 
-### Q12 — Task generation trigger
-Nightly cron, event-driven (on rule/registration create + periodic top-up), or both?
+**Decision:** Rolling **12-month** horizon based on `periodStart`, refreshed by a **daily cron** and top-up **event-driven** on rule / registration / client-activation creation.
+
+**Horizon:** 12 months forward from today, measured by `periodStart` (not `dueDate`). So on any given day, the system has materialised every `(active rule × active registration)` task whose period begins within the next 12 months. This gives yearly rules (e.g. the ITR for FY26-27 with `periodStart = 2026-04-01`) exactly 12 months of prep lead time — visible from 2025-04-01 — while keeping monthly/quarterly rules comfortably in view.
+
+**Triggers:**
+
+| Event | What generates |
+|---|---|
+| Daily cron sweep | For every `(active rule × active registration)` pair, fill any missing task rows for `periodStart ∈ [today, today + 12mo]`. Idempotent: existing rows are no-ops. |
+| Rule activated (`status` → `active`) | Generate for this rule × all its active registrations, full horizon. Immediate visibility — no waiting for the next sweep. |
+| Registration created | Generate for all active rules on that law × this registration, full horizon. |
+| Client reactivated (`status` → `active`) | Generate for all active registrations of this client × active rules, full horizon. (Previously cancelled tasks from the prior dormancy stay cancelled per Q6.) |
+
+**Why rolling rather than FY-aligned:**
+- More forgiving for firms onboarding mid-year — they see 12 months forward from day one, not "next year becomes visible in March."
+- No brittle "big batch" moment — a failed yearly batch on 1st March would leave a whole FY unmaterialised until the daily safety-net catches it. With rolling + daily, the safety-net *is* the primary mechanism.
+- Idempotency means daily sweep cost is negligible (mostly no-op key conflicts per Q9).
+
+**Why 12 months specifically:**
+- Long enough for yearly-rule prep lead time (ITR, tax audit, Form 3CD).
+- Short enough to keep row count sane — roughly `(active rule-registration pairs) × ~13 rows / year` for monthly rules.
+- Matches how firms talk about their work calendar ("what's coming up this year").
+
+**Options considered and rejected:**
+- Keep 6 months (current code) — yearly filings wouldn't appear until ~6 months before due, too late for prep chasing.
+- FY-aligned annual batch on 1st March + safety-net sweep (Model B) — aesthetically appealing but introduces a brittle moment and privileges mid-year onboarders less well.
+- Per-rule horizon (monthly rules = 3mo, yearly = 24mo) — over-engineered; marginal UX gain for real per-rule config complexity.
+- Per-firm configurable horizon (settings) — ship the right default; offer knob in V2 if asked.
+
+**Concrete timeline for FY 2026-27 tasks under the locked model:**
+- **2025-04-01:** FY26-27 yearly ITR + April 2026 GSTR-1 first become visible (exactly 12 months ahead of their `periodStart`).
+- **2025-04-01 → 2026-03-01:** monthly / quarterly FY26-27 tasks roll into view progressively as each period's start enters the 12-month window.
+- **2026-03-01:** nearly all FY26-27 tasks visible; any with `periodStart` in the tail end of March 2027 enter on exactly 2026-03-01.
+
+**Implication for build:** the existing `GenerateComplianceTasksAction` stays as the core engine. Changes needed: extend horizon 6→12 months; wire a daily schedule trigger; subscribe to the three domain events for event-driven generation.
+
+---
+
+## 2. Pending decisions
+
+Questions still to work through before we can finalise V1 implementation. Answered one by one; each is moved into §1 on resolution.
+
+### Q13 — Missing handler behaviour
 
 ### Q13 — Missing handler behaviour
 If a client is registered for a law but no law-handler (default team) is configured, do we generate the task with null team + admin alert, or block generation?
@@ -517,6 +553,16 @@ Hooks that fire when a client, registration, or rule changes state in a way that
 
 - [ ] **I17.** Banners on client / registration / rule detail pages reflecting their inactive state ("Deactivated on YYYY-MM-DD", "Deprecated", "Dormant"). (Q6, Q8)
 - [ ] **I18.** Subtle marker on task rows whose source registration or rule is inactive, so users viewing a task queue understand why an unfamiliar task is there. (Q8)
+
+### Stream J — Task generation cadence
+
+Ensures the generator runs at the right times and produces the right horizon. Builds on the existing `GenerateComplianceTasksAction`.
+
+- [ ] **J1.** Extend the generator horizon from 6 months to **12 months** based on `periodStart`. (Q11)
+- [ ] **J2.** Daily cron / scheduled trigger that invokes the generator across every `(active rule × active registration)` pair. Idempotent — per Q9 the generator is a pure no-op on key conflict. (Q12)
+- [ ] **J3.** Event subscriber on rule activation (`status → active`): trigger the generator for that rule × all its active registrations, full horizon. (Q12)
+- [ ] **J4.** Event subscriber on registration creation: trigger the generator for that registration × all active rules on its law, full horizon. (Q12)
+- [ ] **J5.** Event subscriber on client reactivation (`status → active`): trigger the generator for that client's active registrations × active rules. Previously cancelled dormancy tasks remain cancelled per Q6. (Q12)
 
 ### Stream Z — Finalisation
 
