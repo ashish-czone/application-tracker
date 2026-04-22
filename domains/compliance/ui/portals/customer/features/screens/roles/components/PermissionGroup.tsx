@@ -43,12 +43,22 @@ export function PermissionGroup({
       ? ('indeterminate' as const)
       : false;
 
+  const toggleExpanded = () => setExpanded((prev) => !prev);
+
   return (
     <div className="border border-rule">
-      <button
-        type="button"
-        onClick={() => setExpanded((prev) => !prev)}
-        className="w-full flex items-center gap-3 px-4 py-3 bg-paper-raised hover:bg-paper-sunken/30 transition-colors"
+      <div
+        role="button"
+        tabIndex={0}
+        aria-expanded={expanded}
+        onClick={toggleExpanded}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            toggleExpanded();
+          }
+        }}
+        className="w-full flex items-center gap-3 px-4 py-3 bg-paper-raised hover:bg-paper-sunken/30 transition-colors cursor-pointer"
       >
         {expanded ? (
           <ChevronDown className="w-3.5 h-3.5 text-ink-muted flex-none" strokeWidth={1.5} />
@@ -72,7 +82,7 @@ export function PermissionGroup({
         <span className="font-mono text-[11px] tabular-nums text-ink-muted">
           {enabledCount} of {filtered.length}
         </span>
-      </button>
+      </div>
       {expanded && (
         <div className="px-4 py-2 border-t border-rule bg-paper">
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1.5">
