@@ -4374,6 +4374,31 @@ importers:
         specifier: ^5.7.0
         version: 5.9.3
 
+  packages/platform/dashboard-ui:
+    dependencies:
+      '@packages/auth-ui':
+        specifier: workspace:*
+        version: link:../auth/ui
+      '@packages/ui':
+        specifier: workspace:*
+        version: link:../../core/ui
+      lucide-react:
+        specifier: ^0.500.0
+        version: 0.500.0(react@19.2.4)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.4
+    devDependencies:
+      '@types/react':
+        specifier: ^19.2.14
+        version: 19.2.14
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0)
+
   packages/platform/domains:
     dependencies:
       '@nestjs/common':
