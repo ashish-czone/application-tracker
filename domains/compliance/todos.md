@@ -726,12 +726,40 @@ Neither tier-1 rule fires. Tier-2/3 also need `assigneeTeamId` for head resoluti
 
 ---
 
+### Q22 — Audit scope
+
+**Decision:** Wildcard audit on every compliance-owned module. Each module registers with `AuditRegistryService` in `onModuleInit()` using `events: '*'`. Writes-only (reads not covered by platform — not planned for V1).
+
+**Coverage (modules that must call `register`):**
+- `clients`
+- `client_registrations`
+- `compliance_rules`
+- `compliance_tasks`
+- Any future compliance-owned module (new law types, handlers, etc.)
+
+**Platform grounding (`packages/platform/audit`):**
+- Action enum: `created | updated | deleted`. No read-audit primitive.
+- Listener consumes domain events, writes `audit_logs` rows with `before`, `after`, `changes` (field-level diff), `correlationId`, `actorId`, `eventName`.
+- Field-level diffs are automatic — derived from the event payload's `before` / `after` snapshots. Nothing to configure per event.
+- `sensitiveFields` array on registration redacts named fields from snapshots (covered by Q24).
+
+**Options considered:**
+- (a) Wildcard (`events: '*'`) on every compliance-owned module. _[chosen]_
+- (b) Selective allowlist — only status transitions, assignments, deactivations — rejected: "noise" argument is weak (diffs are tiny JSON; no future reader regrets too much detail), and the registration surface area per event is larger than just wildcarding.
+- (c) Wildcard + new read-audit infrastructure — rejected: platform work, speculative for V1, not a standard CA-firm requirement (records are shared within firm; not GDPR-grade privacy).
+
+**Build prerequisite (not a decision — a convention reminder):** compliance module services must emit events with `before`/`after` snapshots per `.claude/rules/event-conventions.md`. Without properly structured events, audit rows would be empty. Each service defines a `Snapshot` interface and `toSnapshot()` method.
+
+**Implication for Stream E (Audit):**
+- E1: Register each compliance module via `AuditRegistryService.register(moduleName, { events: '*', sensitiveFields: [...] })` in `onModuleInit()`.
+- E2: Ensure every emitted update-event payload carries `{ before, after }` snapshots. Covered by the audit integration tests in each module.
+- E3: No new audit schema or infrastructure. Platform's `audit_logs` table absorbs everything.
+
+---
+
 ## 2. Pending decisions
 
 Questions still to work through before we can finalise V1 implementation. Answered one by one; each is moved into §1 on resolution.
-
-### Q22 — Audit scope
-Writes only, with field-level before/after diffs? Or also read-auditing of sensitive fields? What does the platform's audit infrastructure support out of the box?
 
 ### Q23 — Audit visibility
 Who can view the audit trail — firm admins only, or also team leads / task stakeholders for their own scope?
