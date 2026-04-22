@@ -12,6 +12,7 @@
     "@packages/audit-ui": "workspace:*",
     "@packages/auth-ui": "workspace:*",
     "@packages/domains": "workspace:*",
+    "@packages/eav-attributes-ui": "workspace:*",
     "@packages/entity-engine-ui": "workspace:*",
     "@packages/org-units-ui": "workspace:*",
     "@packages/rbac-ui": "workspace:*",
