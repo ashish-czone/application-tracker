@@ -11,6 +11,7 @@
     "@hookform/resolvers": "^5.0.0",
     "@packages/audit-ui": "workspace:*",
     "@packages/auth-ui": "workspace:*",
+    "@packages/dashboard-ui": "workspace:*",
     "@packages/domains": "workspace:*",
     "@packages/eav-attributes-ui": "workspace:*",
     "@packages/entity-engine-ui": "workspace:*",
