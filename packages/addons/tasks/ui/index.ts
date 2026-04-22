@@ -1,5 +1,6 @@
 export { TASKS_UI_CONFIG } from './config';
 export { TaskAssigneeCell } from './components/TaskAssigneeCell';
+export { MyTasksWidget } from './components/MyTasksWidget';
 
 // Re-export the typed HTTP contract so UI consumers have one import point.
 export { tasksRoutes } from '@packages/tasks-contract';
