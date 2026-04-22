@@ -4,6 +4,11 @@ import { OrgUnitService } from '@packages/org-units';
 import { tasks } from '../schema/tasks';
 import { assertTaskIsAdHoc } from '../tasks.config';
 
+// Compliance Q4 action gate: reassign is only valid while the task is still
+// actionable. Terminal states (completed / cancelled) are reopened via the
+// workflow /transition endpoint, not via reassign.
+const REASSIGN_ALLOWED_STATUSES = new Set(['pending', 'in_progress', 'blocked']);
+
 @Injectable()
 export class TaskClaimService {
   constructor(
@@ -11,12 +16,13 @@ export class TaskClaimService {
     private readonly orgUnitService: OrgUnitService,
   ) {}
 
-  async claim(taskId: string, userId: string): Promise<{ id: string; assigneeId: string }> {
+  async pickup(taskId: string, userId: string): Promise<{ id: string; assigneeId: string; status: string }> {
     await assertTaskIsAdHoc(taskId);
 
     const [task] = await this.database.db
       .select({
         id: tasks.id,
+        status: tasks.status,
         assigneeId: tasks.assigneeId,
         assigneeTeamId: tasks.assigneeTeamId,
       })
@@ -24,56 +30,65 @@ export class TaskClaimService {
       .where(and(eq(tasks.id, taskId), isNull(tasks.deletedAt)));
 
     if (!task) throw new BadRequestException('Task not found');
-    if (!task.assigneeTeamId) throw new BadRequestException('Only team-assigned tasks can be claimed');
-    if (task.assigneeId) throw new ConflictException('Task is already claimed');
+    if (task.status !== 'pending') {
+      throw new ConflictException(`Pickup allowed only on pending tasks (current: ${task.status})`);
+    }
+    if (task.assigneeId) throw new ConflictException('Task is already picked up');
 
     const memberIds = await this.orgUnitService.getMemberIds(task.assigneeTeamId);
     if (!memberIds.includes(userId)) {
       throw new ForbiddenException('You are not a member of the assigned team');
     }
 
+    // Atomic: only takes effect if the row is still unclaimed AND still pending.
     const [updated] = await this.database.db
       .update(tasks)
-      .set({ assigneeId: userId })
-      .where(and(eq(tasks.id, taskId), isNull(tasks.assigneeId), isNotNull(tasks.assigneeTeamId)))
-      .returning({ id: tasks.id, assigneeId: tasks.assigneeId });
+      .set({ assigneeId: userId, status: 'in_progress' })
+      .where(and(
+        eq(tasks.id, taskId),
+        isNull(tasks.assigneeId),
+        isNotNull(tasks.assigneeTeamId),
+        eq(tasks.status, 'pending'),
+      ))
+      .returning({ id: tasks.id, assigneeId: tasks.assigneeId, status: tasks.status });
 
-    if (!updated) throw new ConflictException('Task was claimed by someone else');
+    if (!updated) throw new ConflictException('Task was picked up or moved by someone else');
 
-    return updated as { id: string; assigneeId: string };
+    return updated as { id: string; assigneeId: string; status: string };
   }
 
-  async assign(
+  async reassign(
     taskId: string,
-    data: { userId?: string; teamId?: string },
-  ): Promise<{ id: string; assigneeId: string | null; assigneeTeamId: string | null }> {
-    if (!data.userId && !data.teamId) {
-      throw new BadRequestException('Either userId or teamId must be provided');
-    }
-    if (data.userId && data.teamId) {
-      throw new BadRequestException('Provide either userId or teamId, not both');
+    data: { teamId: string; userId?: string | null },
+  ): Promise<{ id: string; assigneeId: string | null; assigneeTeamId: string }> {
+    if (!data.teamId) {
+      throw new BadRequestException('teamId is required — every task must belong to a team');
     }
 
     await assertTaskIsAdHoc(taskId);
 
     const [task] = await this.database.db
-      .select({ id: tasks.id })
+      .select({ id: tasks.id, status: tasks.status })
       .from(tasks)
       .where(and(eq(tasks.id, taskId), isNull(tasks.deletedAt)));
 
     if (!task) throw new BadRequestException('Task not found');
-
-    const set: Record<string, unknown> = data.userId
-      ? { assigneeId: data.userId, assigneeTeamId: null }
-      : { assigneeTeamId: data.teamId, assigneeId: null };
+    if (!REASSIGN_ALLOWED_STATUSES.has(task.status)) {
+      throw new ConflictException(
+        `Reassign allowed only while task is pending, in_progress, or blocked (current: ${task.status})`,
+      );
+    }
 
     const [updated] = await this.database.db
       .update(tasks)
-      .set(set)
+      .set({
+        assigneeTeamId: data.teamId,
+        assigneeId: data.userId ?? null,
+      })
       .where(eq(tasks.id, taskId))
       .returning({ id: tasks.id, assigneeId: tasks.assigneeId, assigneeTeamId: tasks.assigneeTeamId });
 
-    return updated;
+    return updated as { id: string; assigneeId: string | null; assigneeTeamId: string };
   }
 
   async unclaim(taskId: string, userId: string): Promise<{ id: string }> {
@@ -90,9 +105,9 @@ export class TaskClaimService {
 
     if (!task) throw new BadRequestException('Task not found');
     if (!task.assigneeTeamId) throw new BadRequestException('Only team-assigned tasks can be released');
-    if (!task.assigneeId) throw new BadRequestException('Task is not claimed');
+    if (!task.assigneeId) throw new BadRequestException('Task is not picked up');
     if (task.assigneeId !== userId) {
-      throw new ForbiddenException('You can only release tasks you claimed');
+      throw new ForbiddenException('You can only release tasks you picked up');
     }
 
     await this.database.db

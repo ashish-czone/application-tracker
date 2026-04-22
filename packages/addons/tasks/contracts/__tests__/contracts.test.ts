@@ -8,18 +8,23 @@ describe('tasksRoutes', () => {
     expect(tasksRoutes.transition('abc')).toBe('/tasks/abc/transition');
   });
 
-  it('exposes claim/unclaim/assign helpers matching the TaskClaimController decorators', () => {
-    expect(tasksRoutes.claim('abc')).toBe('/tasks/abc/claim');
+  it('exposes pickup/unclaim/reassign helpers matching the TaskClaimController decorators', () => {
+    expect(tasksRoutes.pickup('abc')).toBe('/tasks/abc/pickup');
     expect(tasksRoutes.unclaim('abc')).toBe('/tasks/abc/unclaim');
-    expect(tasksRoutes.assign('abc')).toBe('/tasks/abc/assign');
+    expect(tasksRoutes.reassign('abc')).toBe('/tasks/abc/reassign');
   });
 });
 
 describe('TASKS_METADATA', () => {
   it('declares the slug and soft-delete behavior the api relies on', () => {
     expect(TASKS_METADATA.slug).toBe('tasks');
-    expect(TASKS_METADATA.softDelete).toBe(true);
+    expect(TASKS_METADATA.onDelete).toEqual({ mode: 'soft' });
     expect(TASKS_METADATA.hasTags).toEqual({ groupSlug: 'task-tags' });
+  });
+
+  it('exposes the six extra action permissions matching the workflow transitions', () => {
+    const actions = TASKS_METADATA.extraPermissions?.map((p) => p.action) ?? [];
+    expect(actions).toEqual(['pickup', 'reassign', 'review', 'complete', 'reopen', 'close']);
   });
 });
 
@@ -42,7 +47,16 @@ describe('TASKS_FIELDS', () => {
 
   it('keeps the status workflow states in sync with TaskStatus', () => {
     const stateNames = TASKS_FIELDS.status.workflow.states.map((s) => s.name);
-    expect(stateNames).toEqual(['pending', 'in_progress', 'review', 'completed', 'cancelled']);
+    expect(stateNames).toEqual(['pending', 'in_progress', 'blocked', 'completed', 'cancelled']);
+  });
+
+  it('marks completed and cancelled as system states (protected from rename/delete)', () => {
+    const byName = Object.fromEntries(TASKS_FIELDS.status.workflow.states.map((s) => [s.name, s]));
+    expect(byName.completed.isSystem).toBe(true);
+    expect(byName.cancelled.isSystem).toBe(true);
+    expect(byName.pending.isSystem).toBeFalsy();
+    expect(byName.in_progress.isSystem).toBeFalsy();
+    expect(byName.blocked.isSystem).toBeFalsy();
   });
 
   it('keeps the priority options in sync with TaskPriority', () => {

@@ -12,7 +12,7 @@ export const tasks = pgTable('tasks', {
   status: text('status').notNull().default('pending'),
   priority: text('priority').notNull().default('medium'),
   assigneeId: text('assignee_id').references(() => users.id),
-  assigneeTeamId: text('assignee_team_id').references(() => orgUnits.id),
+  assigneeTeamId: text('assignee_team_id').notNull().references(() => orgUnits.id),
   dueDate: date('due_date', { mode: 'string' }),
   completedAt: timestamp('completed_at', { withTimezone: true, mode: 'date' }),
   kind: text('kind'),

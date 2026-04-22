@@ -218,7 +218,7 @@ export function useComplianceTaskRows(): ComplianceTasksResult {
 export type ComplianceTaskStatus =
   | 'pending'
   | 'in_progress'
-  | 'review'
+  | 'blocked'
   | 'completed'
   | 'cancelled';
 

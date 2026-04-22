@@ -3,40 +3,40 @@ import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { CurrentUser, type JwtPayload } from '@packages/auth';
 import { RequirePermission } from '@packages/rbac';
 import { TaskClaimService } from '../services/task-claim.service';
-import { AssignTaskDto } from '../dto/assign-task.dto';
+import { ReassignTaskDto } from '../dto/reassign-task.dto';
 
 @ApiTags('tasks')
 @Controller('tasks')
 export class TaskClaimController {
   constructor(private readonly claimService: TaskClaimService) {}
 
-  @Post(':id/assign')
-  @RequirePermission('tasks.assign')
+  @Post(':id/reassign')
+  @RequirePermission('tasks.reassign')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Assign a task to a user or team' })
-  async assign(
+  @ApiOperation({ summary: 'Reassign a task to a different user or team' })
+  async reassign(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: AssignTaskDto,
+    @Body() dto: ReassignTaskDto,
     @CurrentUser() _user: JwtPayload,
   ) {
-    return this.claimService.assign(id, dto);
+    return this.claimService.reassign(id, dto);
   }
 
-  @Post(':id/claim')
-  @RequirePermission('tasks.update')
+  @Post(':id/pickup')
+  @RequirePermission('tasks.pickup')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Claim a team-assigned task' })
-  async claim(
+  @ApiOperation({ summary: 'Pick up a team-assigned task for the current user' })
+  async pickup(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: JwtPayload,
   ) {
-    return this.claimService.claim(id, user.userId);
+    return this.claimService.pickup(id, user.userId);
   }
 
   @Post(':id/unclaim')
-  @RequirePermission('tasks.update')
+  @RequirePermission('tasks.pickup')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Release a claimed task' })
+  @ApiOperation({ summary: 'Release a picked-up task back to the team pool' })
   async unclaim(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: JwtPayload,

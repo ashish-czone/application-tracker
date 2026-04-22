@@ -14,12 +14,12 @@ export const TASKS_METADATA = {
   hasTags: { groupSlug: 'task-tags' },
 
   extraPermissions: [
-    { action: 'assign', description: 'Assign tasks to users or teams' },
-    { action: 'submitForReview', description: 'Submit a task for review' },
-    { action: 'approveReview', description: 'Approve a task in review and mark it completed' },
+    { action: 'pickup', description: 'Pick up a pending task and move it to in-progress' },
+    { action: 'reassign', description: 'Reassign a task to a different user or team' },
+    { action: 'review', description: 'Review a task in progress or blocked (peer/maker-checker marker)' },
     { action: 'complete', description: 'Mark tasks as completed' },
-    { action: 'cancel', description: 'Cancel tasks' },
     { action: 'reopen', description: 'Reopen completed or cancelled tasks' },
+    { action: 'close', description: 'Close (cancel) a non-terminal task' },
   ],
 
   defaultSort: 'createdAt',
