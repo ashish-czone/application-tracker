@@ -2944,6 +2944,9 @@ importers:
       '@packages/auth-core':
         specifier: workspace:*
         version: link:../../../platform/auth-core
+      '@packages/automation-contracts':
+        specifier: workspace:*
+        version: link:../../../platform/automation-contracts
       '@packages/database':
         specifier: workspace:*
         version: link:../../../core/database
