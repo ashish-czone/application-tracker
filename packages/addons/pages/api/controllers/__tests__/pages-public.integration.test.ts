@@ -32,13 +32,25 @@ describe('PagesPublicController (integration)', () => {
     );
   });
 
-  async function insertPage(overrides: Partial<{ slug: string; title: string; deletedAt: Date | null }> = {}) {
+  async function insertPage(
+    overrides: Partial<{
+      slug: string;
+      title: string;
+      deletedAt: Date | null;
+      status: 'draft' | 'scheduled' | 'published' | 'archived';
+      publishedAt: Date | null;
+    }> = {},
+  ) {
     const id = randomUUID();
     await ctx.db.insert(pages).values({
       id,
       slug: overrides.slug ?? `slug-${id.slice(0, 8)}`,
       title: overrides.title ?? 'Untitled',
       createdBy: testUserId,
+      // Default test pages to live so existing tests keep focusing on their
+      // actual concern — lifecycle gating has dedicated tests below.
+      status: overrides.status ?? 'published',
+      publishedAt: overrides.publishedAt !== undefined ? overrides.publishedAt : new Date(Date.now() - 1000),
       ...(overrides.deletedAt !== undefined ? { deletedAt: overrides.deletedAt, deletedBy: testUserId } : {}),
     });
     return id;
@@ -115,6 +127,34 @@ describe('PagesPublicController (integration)', () => {
     it('returns 404 for a soft-deleted page', async () => {
       await insertPage({ slug: 'gone', deletedAt: new Date() });
       await request(ctx.httpServer).get('/api/v1/public/pages/gone').expect(404);
+    });
+
+    it('returns 404 for a draft page', async () => {
+      await insertPage({ slug: 'draft-page', status: 'draft', publishedAt: null });
+      await request(ctx.httpServer).get('/api/v1/public/pages/draft-page').expect(404);
+    });
+
+    it('returns 404 for an archived page', async () => {
+      await insertPage({ slug: 'archived', status: 'archived', publishedAt: new Date(Date.now() - 1000) });
+      await request(ctx.httpServer).get('/api/v1/public/pages/archived').expect(404);
+    });
+
+    it('returns 404 when publishedAt is in the future (scheduled)', async () => {
+      await insertPage({
+        slug: 'future',
+        status: 'published',
+        publishedAt: new Date(Date.now() + 60_000),
+      });
+      await request(ctx.httpServer).get('/api/v1/public/pages/future').expect(404);
+    });
+
+    it('returns 200 once the scheduled time has passed', async () => {
+      await insertPage({
+        slug: 'just-live',
+        status: 'published',
+        publishedAt: new Date(Date.now() - 5_000),
+      });
+      await request(ctx.httpServer).get('/api/v1/public/pages/just-live').expect(200);
     });
   });
 
