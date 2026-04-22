@@ -11,6 +11,9 @@ import { useEntityLayout } from '../helpers/useEntityLayout';
 
 interface EntityEditPageProps {
   entityType: string;
+  /** Optional override — when provided, takes precedence over the URL `:id` param.
+   *  Used by singleton-entity wrappers that resolve the row id outside React Router. */
+  id?: string;
 }
 
 /**
@@ -27,9 +30,10 @@ interface EntityEditPageProps {
  *
  * Edit is always single-page (no wizard), regardless of `entity.ui.createMode`.
  */
-export function EntityEditPage({ entityType }: EntityEditPageProps) {
+export function EntityEditPage({ entityType, id: idProp }: EntityEditPageProps) {
   const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>();
+  const params = useParams<{ id: string }>();
+  const id = idProp ?? params.id;
   const entity = useEntityConfig(entityType);
   const hooks = useEntityHooks(entityType);
   const { apiFn } = useEntityEngine();

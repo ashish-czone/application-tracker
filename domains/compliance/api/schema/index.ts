@@ -5,3 +5,4 @@ export { complianceRules } from './rules';
 export { complianceLawHandlers } from './law-handlers';
 export { complianceClientRegistrations } from './client-registrations';
 export { complianceTasks } from './compliance-tasks';
+export { organizations } from './organizations';

@@ -29,6 +29,13 @@
       "when": 1776664030056,
       "tag": "0003_drop_compliance_tasks_external_key",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1776860888184,
+      "tag": "0004_warm_maverick",
+      "breakpoints": true
     }
   ]
 }

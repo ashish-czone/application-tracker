@@ -1833,6 +1833,9 @@ importers:
       '@packages/domains':
         specifier: workspace:*
         version: link:../../../packages/platform/domains
+      '@packages/eav-attributes-ui':
+        specifier: workspace:*
+        version: link:../../../packages/platform/eav-attributes-ui
       '@packages/entity-engine-ui':
         specifier: workspace:*
         version: link:../../../packages/platform/entity-engine/ui

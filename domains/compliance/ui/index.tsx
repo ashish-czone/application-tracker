@@ -107,6 +107,12 @@ const OrgHierarchyPage = lazy(() =>
   })),
 );
 
+const OrganizationPage = lazy(() =>
+  import('./portals/customer/features/screens/organization').then((m) => ({
+    default: m.OrganizationPage,
+  })),
+);
+
 /**
  * Compliance domain UI manifest. The `console-preview` route is a static
  * design-review surface showing the Instrument kit in context — not wired
@@ -136,6 +142,7 @@ const routes: DomainRouteObject[] = [
   { path: '/compliance-roles', element: <RolesEditorPage />, permission: 'rbac.roles-read', bareLayout: true },
   { path: '/compliance-settings', element: <SettingsPage />, permission: 'settings.read', bareLayout: true },
   { path: '/admin-settings', element: <AdminSettingsPage />, permission: 'settings.manage', bareLayout: true },
+  { path: '/organization', element: <OrganizationPage />, permission: 'organization.update', bareLayout: true },
   { path: '/global-sets', element: <GlobalSetsPage />, permission: 'taxonomy.categories.read', bareLayout: true },
   { path: '/org-hierarchy', element: <OrgHierarchyPage />, permission: 'org-units.read', bareLayout: true },
 ];
@@ -158,6 +165,7 @@ const menuItems: MenuItem[] = [
       { path: '/compliance-roles', label: 'Roles', icon: Shield, permission: 'rbac.roles-read' },
       { path: '/global-sets', label: 'Global Sets', icon: Layers, permission: 'taxonomy.categories.read' },
       { path: '/compliance-settings', label: 'Settings', icon: Settings, permission: 'settings.read' },
+      { path: '/organization', label: 'Organization', icon: Building2, permission: 'organization.update' },
       { path: '/admin-settings', label: 'Admin Settings', icon: FileText, permission: 'settings.manage' },
       { path: '/org-hierarchy', label: 'Org Hierarchy', icon: Network, permission: 'org-units.read' },
     ],
