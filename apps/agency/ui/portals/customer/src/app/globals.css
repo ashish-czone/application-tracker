@@ -1,18 +1,158 @@
 @import "tailwindcss";
 
-@theme {
-  --color-background: #ffffff;
-  --color-foreground: #0a0a0a;
-  --color-muted: #f5f5f5;
-  --color-muted-foreground: #737373;
-  --color-border: #e5e5e5;
-  --color-primary: #0a0a0a;
-  --color-primary-foreground: #ffffff;
+/* ──────────────────────────────────────────────────────────────
+   Design tokens — semantic names, HSL triplets so shades can be
+   composed (`hsl(var(--foreground) / 0.6)`). Kept in :root so the
+   tokens can be overridden per-tenant later without forking the
+   sheet. Dark-mode values ship dormant — flipped by adding
+   `data-theme="dark"` to <html> in F2.
+   ────────────────────────────────────────────────────────────── */
+:root {
+  /* Neutrals — crisp, high-contrast palette. */
+  --background: 0 0% 100%;
+  --foreground: 222 24% 10%;
+  --muted: 220 14% 96%;
+  --muted-foreground: 220 9% 42%;
+  --surface: 0 0% 100%;
+  --surface-muted: 220 18% 98%;
+  --border: 220 14% 90%;
+  --ring: 222 24% 10%;
+
+  /* Accent — swap per-palette later. Default is a single ink colour
+     so the site reads editorial, not techy. */
+  --accent: 260 95% 62%;
+  --accent-foreground: 0 0% 100%;
+
+  /* Body / display fonts are wired via next/font in layout.tsx and
+     exposed as --font-sans / --font-display on <html>. */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: var(--font-display-face), var(--font-sans);
+
+  /* Fluid type scale — clamp(min, preferred-with-vw, max). Each step
+     is roughly one typographic size apart, tuned for hero-driven
+     agency layouts. */
+  --font-size-xs: clamp(0.75rem, 0.73rem + 0.1vw, 0.8125rem);
+  --font-size-sm: clamp(0.875rem, 0.85rem + 0.15vw, 0.9375rem);
+  --font-size-base: clamp(1rem, 0.97rem + 0.2vw, 1.0625rem);
+  --font-size-lg: clamp(1.125rem, 1.08rem + 0.3vw, 1.25rem);
+  --font-size-xl: clamp(1.25rem, 1.18rem + 0.45vw, 1.5rem);
+  --font-size-2xl: clamp(1.5rem, 1.4rem + 0.7vw, 1.875rem);
+  --font-size-3xl: clamp(1.875rem, 1.7rem + 1vw, 2.5rem);
+  --font-size-4xl: clamp(2.5rem, 2.2rem + 2vw, 4rem);
+  --font-size-5xl: clamp(3.5rem, 3rem + 3vw, 6rem);
+  --font-size-6xl: clamp(4.5rem, 3.5rem + 5vw, 8rem);
+
+  /* Line heights — tight for display, generous for body. */
+  --leading-tight: 1.05;
+  --leading-snug: 1.2;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.7;
+
+  --radius: 0.5rem;
+  --radius-lg: 0.875rem;
+}
+
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-surface: hsl(var(--surface));
+  --color-surface-muted: hsl(var(--surface-muted));
+  --color-border: hsl(var(--border));
+  --color-ring: hsl(var(--ring));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+
+  --font-sans: var(--font-sans);
+  --font-display: var(--font-display);
+
+  --radius: var(--radius);
+  --radius-lg: var(--radius-lg);
 }
 
 html,
 body {
-  background: var(--color-background);
-  color: var(--color-foreground);
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  line-height: var(--leading-normal);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* ──────────────────────────────────────────────────────────────
+   Typography utility classes. Used by hand in layout + by blocks
+   via a shared <Heading>/<Lead> primitive. Kept here so the scale
+   lives in one place and any block can adopt it.
+   ────────────────────────────────────────────────────────────── */
+.text-display {
+  font-family: var(--font-display);
+  font-size: var(--font-size-6xl);
+  line-height: var(--leading-tight);
+  letter-spacing: -0.03em;
+  font-weight: 600;
+}
+.text-hero {
+  font-family: var(--font-display);
+  font-size: var(--font-size-5xl);
+  line-height: var(--leading-tight);
+  letter-spacing: -0.025em;
+  font-weight: 600;
+}
+.text-headline {
+  font-family: var(--font-display);
+  font-size: var(--font-size-4xl);
+  line-height: var(--leading-tight);
+  letter-spacing: -0.02em;
+  font-weight: 600;
+}
+.text-title {
+  font-family: var(--font-display);
+  font-size: var(--font-size-3xl);
+  line-height: var(--leading-snug);
+  letter-spacing: -0.015em;
+  font-weight: 600;
+}
+.text-subtitle {
+  font-size: var(--font-size-2xl);
+  line-height: var(--leading-snug);
+  letter-spacing: -0.01em;
+  font-weight: 500;
+}
+.text-lead {
+  font-size: var(--font-size-xl);
+  line-height: var(--leading-relaxed);
+  color: hsl(var(--muted-foreground));
+}
+.text-eyebrow {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: hsl(var(--muted-foreground));
+}
+
+/* Keyboard focus — visible but tasteful. */
+:where(a, button, [role="button"]):focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/* Respect reduced-motion globally in case a third-party component
+   tries to animate. JS-driven motion primitives have their own
+   guard via useReducedMotion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }
