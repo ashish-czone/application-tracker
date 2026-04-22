@@ -1717,6 +1717,9 @@ importers:
       '@packages/logger':
         specifier: workspace:*
         version: link:../../../packages/core/logger
+      '@packages/media-library-api':
+        specifier: workspace:*
+        version: link:../../../packages/addons/media-library/api
       '@packages/menus-api':
         specifier: workspace:*
         version: link:../../../packages/addons/menus/api
