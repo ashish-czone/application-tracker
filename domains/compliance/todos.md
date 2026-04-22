@@ -331,7 +331,26 @@ Rules don't have an effective date the same way — deprecation is simply "stop 
 Questions still to work through before we can finalise V1 implementation. Answered one by one; each is moved into §1 on resolution.
 
 ### Q10 — Weekend / public-holiday handling on due dates
-Calendar date as-is vs. roll to next working day vs. track both.
+
+**Decision:** Calendar date as-is. No holiday calendar in V1. Firms that want a cushion for weekend / holiday ends express it through the existing `gracePeriodDays` field on the rule.
+
+**Options considered:**
+- (a) Calendar date as-is. _[chosen]_
+- (b) Auto-roll to next working day (store rolled date).
+- (c) Store `statutoryDueDate` + `workingDueDate` separately.
+- (a) + (d) grace period absorbs the shift — no schema change. _[chosen, naturally]_
+
+**Why (a):** statutory due dates are the actual calendar dates in Indian compliance. ITD / GSTN portals are automated and accept filings on weekends and public holidays, so the legal due date never shifts. "Next working day" rolling is a firm-internal convenience, not a statutory requirement.
+
+**Why not (b):** requires a state-wise gazetted holiday calendar (Republic Day is nationwide but Maharashtra Day isn't), dragging in multi-state complexity V1 has deferred. Also silently shifts dates users know by muscle memory ("11th is GSTR-1"), breaking trust.
+
+**Why not (c):** adds a column, a second date to communicate in UI / emails / escalation, and raises "which date does overdue fire against?" — all for marginal gain when (d) covers the need via an existing field.
+
+**How `gracePeriodDays` covers the case:** a firm that wants "due on the 11th, but don't escalate if filed by Monday" sets `gracePeriodDays = 2` on that rule. Overdue calc is `today > dueDate + gracePeriodDays`, so weekend-end due dates get a quiet buffer without the system needing to know *why*.
+
+**Explicit V1 limitation (documented, not fixed):** the system has no concept of public holidays. A due date on Diwali is treated like any other calendar date. Firms handle it via `gracePeriodDays`. A working-day math + holiday calendar is a post-V1 feature if customer demand materialises.
+
+**Implication for build:** zero schema change, zero generator change, zero UI change beyond rendering the stored date. No new Stream I tasks.
 
 ### Q11 — Task generation horizon
 Current code uses 6 months. Keep, extend, or make configurable?
