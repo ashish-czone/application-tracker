@@ -1,9 +1,13 @@
+export type PageStatus = 'draft' | 'scheduled' | 'published' | 'archived';
+
 export interface PageRecord {
   id: string;
   slug: string;
   title: string;
   metaDescription: string | null;
   ogImage: string | null;
+  status: PageStatus;
+  publishedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -35,6 +39,8 @@ export interface UpdatePageInput {
   title?: string;
   metaDescription?: string | null;
   ogImage?: string | null;
+  status?: PageStatus;
+  publishedAt?: string | null;
 }
 
 export interface CreateSectionInput {

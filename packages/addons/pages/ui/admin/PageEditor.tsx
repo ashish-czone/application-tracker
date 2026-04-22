@@ -8,6 +8,7 @@ import {
   sectionsToPuckData,
 } from './puck-adapter';
 import { usePage, useSectionsForPage, useSavePageSections } from './hooks';
+import { PublishPanel } from './PublishPanel';
 import type { SectionRecord } from './types';
 
 export interface PageEditorProps {
@@ -64,7 +65,7 @@ export function PageEditor({ pageId, onSaved, blocks, availableEntities }: PageE
   }
 
   return (
-    <div className="h-screen w-full">
+    <div className="h-screen w-full flex flex-col">
       <div className="border-b px-4 py-2 text-sm font-medium flex items-center gap-2">
         <span className="text-muted-foreground">Editing:</span>
         <span>{page?.title ?? pageId}</span>
@@ -72,11 +73,14 @@ export function PageEditor({ pageId, onSaved, blocks, availableEntities }: PageE
           {save.isPending ? 'Saving…' : save.isError ? 'Save failed' : ''}
         </span>
       </div>
-      <Puck
-        config={puckConfig}
-        data={data}
-        onPublish={handleSave}
-      />
+      {page && <PublishPanel page={page} />}
+      <div className="flex-1 min-h-0">
+        <Puck
+          config={puckConfig}
+          data={data}
+          onPublish={handleSave}
+        />
+      </div>
     </div>
   );
 }
