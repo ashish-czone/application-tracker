@@ -34,6 +34,9 @@ export function complianceSystemSeedSources(): SeedSource[] {
     system('@domains/compliance-api/system-laws', () =>
       import('./laws/seeds/system-laws').then((m) => m.seedSystemLaws),
     ),
+    system('@domains/compliance-api/system-organization', () =>
+      import('./organizations/seeds/system-organization').then((m) => m.seedSystemOrganization),
+    ),
   ];
 }
 
