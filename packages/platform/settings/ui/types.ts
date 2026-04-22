@@ -1,10 +1,12 @@
+export type SettingFieldOption = string | { value: string; label: string };
+
 export interface SettingFieldMetadata {
   label: string;
   type: 'string' | 'number' | 'boolean' | 'password';
   description?: string;
   min?: number;
   max?: number;
-  options?: string[];
+  options?: SettingFieldOption[];
 }
 
 export interface SettingsField {

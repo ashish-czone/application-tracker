@@ -1,8 +1,6 @@
-import { Building2, Globe, SlidersHorizontal } from 'lucide-react';
-import type { AdminSettingsSection } from '../data/adminSettingsMock';
+import { Globe, SlidersHorizontal } from 'lucide-react';
 
-export const SECTION_ICONS: Record<AdminSettingsSection, typeof Building2> = {
-  organization: Building2,
-  localization: Globe,
+export const SECTION_ICONS: Record<string, typeof Globe> = {
+  general: Globe,
   preferences: SlidersHorizontal,
 };

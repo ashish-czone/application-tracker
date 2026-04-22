@@ -331,5 +331,42 @@ describe('AppConfigService', () => {
       expect(field.metadata.label).toBe('someKey');
       expect(field.metadata.type).toBe('string');
     });
+
+    it('should pass through labeled options (object form)', () => {
+      const definition: SettingsModuleDefinition = {
+        label: 'Locale',
+        defaults: { currency: 'USD' },
+        metadata: {
+          currency: {
+            label: 'Currency',
+            type: 'string',
+            options: [
+              { value: 'USD', label: 'USD — US Dollar ($)' },
+              { value: 'EUR', label: 'EUR — Euro (€)' },
+            ],
+          },
+        },
+      };
+      service.register('locale', definition);
+      (mockStore.getAllCachedByModule as ReturnType<typeof vi.fn>).mockReturnValueOnce({});
+
+      const result = service.getByModule('locale');
+      const field = result.fields[0];
+
+      expect(field.metadata.options).toEqual([
+        { value: 'USD', label: 'USD — US Dollar ($)' },
+        { value: 'EUR', label: 'EUR — Euro (€)' },
+      ]);
+    });
+
+    it('should pass through string-form options (backward compat)', () => {
+      service.register('billing', billingDefinition);
+      (mockStore.getAllCachedByModule as ReturnType<typeof vi.fn>).mockReturnValueOnce({});
+
+      const result = service.getByModule('billing');
+      const currencyField = result.fields.find((f) => f.key === 'currency')!;
+
+      expect(currencyField.metadata.options).toEqual(['USD', 'EUR', 'GBP']);
+    });
   });
 });

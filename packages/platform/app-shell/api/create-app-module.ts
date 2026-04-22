@@ -33,6 +33,7 @@ import { UsersModule } from '@packages/users';
 import { GlobalExceptionFilter } from './filters/global-exception.filter';
 import { ConfigurableThrottlerGuard } from './guards/configurable-throttler.guard';
 import { validate } from './env.validation';
+import { AppDefaultsModule } from './modules/app-defaults.module';
 
 export interface AppShellOptions {
   /**
@@ -89,6 +90,7 @@ export function createAppModule(options: AppShellOptions): ModuleMetadata {
       }),
       EventsModule,
       SettingsModule,
+      AppDefaultsModule,
       QueueModule.registerAsync({
         useFactory: (config: ConfigService) => ({
           redisUrl: config.get<string>('REDIS_URL')!,
