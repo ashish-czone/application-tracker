@@ -26,16 +26,16 @@ import {
   DropdownMenuLabel,
   AvatarBadge,
 } from '@packages/ui';
+import { useUnreadCount } from '@packages/notification-channels-ui';
 import { ScreenPreviewNav, type ScreenKey } from './ScreenPreviewNav';
 import { NotificationPanel } from './NotificationPanel';
-import { MOCK_NOTIFICATIONS } from './notificationsMock';
-
-const UNREAD_COUNT = MOCK_NOTIFICATIONS.filter((n) => !n.isRead).length;
 
 export function ScreenPreviewTopBar({ active }: { active: ScreenKey }) {
   const navigate = useNavigate();
   const [isDark, setIsDark] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const { data: unread } = useUnreadCount();
+  const unreadCount = unread?.count ?? 0;
 
   const toggleDark = () => {
     setIsDark((prev) => {
@@ -74,12 +74,12 @@ export function ScreenPreviewTopBar({ active }: { active: ScreenKey }) {
             className="relative flex items-center justify-center w-8 h-8 border border-rule hover:border-ink text-ink-muted hover:text-ink transition-colors"
           >
             <Bell className="w-3.5 h-3.5" strokeWidth={1.5} />
-            {UNREAD_COUNT > 0 && (
+            {unreadCount > 0 && (
               <span
                 aria-hidden
                 className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 flex items-center justify-center bg-signal text-paper text-[9px] font-mono font-semibold tabular-nums px-1"
               >
-                {UNREAD_COUNT}
+                {unreadCount}
               </span>
             )}
           </button>

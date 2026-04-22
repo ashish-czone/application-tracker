@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import {
   CheckCheck,
@@ -9,12 +8,19 @@ import {
   Bell,
 } from 'lucide-react';
 import { DrawerShell, DrawerHeader, Eyebrow, SectionRule } from '@packages/ui';
-import { MOCK_NOTIFICATIONS, type AppNotification } from './notificationsMock';
+import {
+  useNotifications,
+  useMarkAsRead,
+  useMarkAllAsRead,
+  type Notification,
+} from '@packages/notification-channels-ui';
 
 // ─── Category config ────────────────────────────────────────────────
 
+type Category = 'filing' | 'client' | 'system' | 'assignment';
+
 const CATEGORY_CONFIG: Record<
-  AppNotification['category'],
+  Category,
   { icon: typeof Bell; bg: string; iconColor: string }
 > = {
   filing: { icon: FileText, bg: 'bg-signal/8', iconColor: 'text-signal' },
@@ -22,6 +28,24 @@ const CATEGORY_CONFIG: Record<
   system: { icon: Monitor, bg: 'bg-ink/5', iconColor: 'text-ink-muted' },
   assignment: { icon: UserPlus, bg: 'bg-due-soon/8', iconColor: 'text-due-soon' },
 };
+
+/**
+ * Drives the per-row icon + color. Derived from entityType so the
+ * backend stays schema-free. Anything unmapped falls back to `system`.
+ */
+function categoryFor(n: Notification): Category {
+  switch (n.entityType) {
+    case 'filings':
+      return 'filing';
+    case 'clients':
+      return 'client';
+    case 'compliance-tasks':
+    case 'tasks':
+      return 'assignment';
+    default:
+      return 'system';
+  }
+}
 
 // ─── Props ──────────────────────────────────────────────────────────
 
@@ -33,20 +57,12 @@ interface NotificationPanelProps {
 // ─── Component ──────────────────────────────────────────────────────
 
 export function NotificationPanel({ open, onClose }: NotificationPanelProps) {
-  const [notifications, setNotifications] = useState<AppNotification[]>(MOCK_NOTIFICATIONS);
+  const { data, isLoading, isError } = useNotifications({ page: 1, limit: 50 });
+  const markAsRead = useMarkAsRead();
+  const markAllAsRead = useMarkAllAsRead();
 
+  const notifications: Notification[] = data?.data ?? [];
   const unreadCount = notifications.filter((n) => !n.isRead).length;
-
-  function markAsRead(id: string) {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)),
-    );
-  }
-
-  function markAllAsRead() {
-    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-  }
-
   const groups = groupNotifications(notifications);
 
   return (
@@ -73,8 +89,9 @@ export function NotificationPanel({ open, onClose }: NotificationPanelProps) {
               {unreadCount > 0 && (
                 <button
                   type="button"
-                  onClick={markAllAsRead}
-                  className="mt-3 flex items-center gap-1.5 text-[11px] uppercase tracking-eyebrow font-sans font-medium text-ink-muted hover:text-ink transition-colors"
+                  onClick={() => markAllAsRead.mutate()}
+                  disabled={markAllAsRead.isPending}
+                  className="mt-3 flex items-center gap-1.5 text-[11px] uppercase tracking-eyebrow font-sans font-medium text-ink-muted hover:text-ink transition-colors disabled:opacity-50"
                 >
                   <CheckCheck className="w-3.5 h-3.5" strokeWidth={1.5} />
                   Mark all as read
@@ -84,18 +101,12 @@ export function NotificationPanel({ open, onClose }: NotificationPanelProps) {
 
             {/* ── Notification list ────────────────────────────────── */}
             <div className="flex-1 overflow-y-auto">
-              {notifications.length === 0 ? (
-                <div className="text-center py-16 px-6">
-                  <div className="w-10 h-10 mx-auto mb-3 bg-paper-sunken border border-rule flex items-center justify-center">
-                    <Bell className="w-5 h-5 text-ink-muted/40" strokeWidth={1} />
-                  </div>
-                  <p className="text-sm text-ink-muted font-sans">
-                    No notifications yet
-                  </p>
-                  <p className="text-[11px] text-ink-muted/60 font-sans mt-1">
-                    You'll see filing alerts, assignments, and updates here.
-                  </p>
-                </div>
+              {isLoading ? (
+                <NotificationListSkeleton />
+              ) : isError ? (
+                <NotificationLoadError />
+              ) : notifications.length === 0 ? (
+                <NotificationEmpty />
               ) : (
                 groups.map((group, gi) => (
                   <div key={group.label}>
@@ -113,7 +124,7 @@ export function NotificationPanel({ open, onClose }: NotificationPanelProps) {
                       <NotificationRow
                         key={n.id}
                         notification={n}
-                        onMarkAsRead={markAsRead}
+                        onMarkAsRead={(id) => markAsRead.mutate(id)}
                       />
                     ))}
                   </div>
@@ -132,10 +143,10 @@ function NotificationRow({
   notification,
   onMarkAsRead,
 }: {
-  notification: AppNotification;
+  notification: Notification;
   onMarkAsRead: (id: string) => void;
 }) {
-  const config = CATEGORY_CONFIG[notification.category];
+  const config = CATEGORY_CONFIG[categoryFor(notification)];
   const Icon = config.icon;
 
   return (
@@ -167,7 +178,6 @@ function NotificationRow({
           >
             {notification.title}
           </p>
-          {/* Unread dot */}
           {!notification.isRead && (
             <span className="w-1.5 h-1.5 bg-signal flex-none mt-1.5" />
           )}
@@ -176,13 +186,8 @@ function NotificationRow({
           {notification.body}
         </p>
         <div className="flex items-center gap-2 mt-1.5">
-          {notification.actor && (
-            <span className="text-[10px] font-sans font-medium text-ink-muted">
-              {notification.actor.name}
-            </span>
-          )}
           <span className="text-[10px] font-mono tabular-nums text-ink-muted/60">
-            {formatRelativeTime(notification.timestamp)}
+            {formatRelativeTime(notification.createdAt)}
           </span>
         </div>
       </div>
@@ -190,35 +195,79 @@ function NotificationRow({
   );
 }
 
+// ─── States ─────────────────────────────────────────────────────────
+
+function NotificationEmpty() {
+  return (
+    <div className="text-center py-16 px-6">
+      <div className="w-10 h-10 mx-auto mb-3 bg-paper-sunken border border-rule flex items-center justify-center">
+        <Bell className="w-5 h-5 text-ink-muted/40" strokeWidth={1} />
+      </div>
+      <p className="text-sm text-ink-muted font-sans">No notifications yet</p>
+      <p className="text-[11px] text-ink-muted/60 font-sans mt-1">
+        You'll see filing alerts, assignments, and updates here.
+      </p>
+    </div>
+  );
+}
+
+function NotificationListSkeleton() {
+  return (
+    <div className="px-6 py-4 space-y-4">
+      {[0, 1, 2, 3].map((i) => (
+        <div key={i} className="flex items-start gap-3">
+          <div className="w-7 h-7 bg-paper-sunken animate-pulse" />
+          <div className="flex-1 space-y-1.5">
+            <div className="h-3 w-2/3 bg-paper-sunken animate-pulse" />
+            <div className="h-2.5 w-full bg-paper-sunken animate-pulse" />
+            <div className="h-2.5 w-4/5 bg-paper-sunken animate-pulse" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function NotificationLoadError() {
+  return (
+    <div className="text-center py-16 px-6">
+      <p className="text-sm text-ink-muted font-sans">
+        Could not load notifications.
+      </p>
+      <p className="text-[11px] text-ink-muted/60 font-sans mt-1">
+        Try closing and reopening this panel.
+      </p>
+    </div>
+  );
+}
+
 // ─── Grouping ──────────────────────────────────────────────────────
 
 interface NotificationGroup {
   label: string;
-  items: AppNotification[];
+  items: Notification[];
 }
-
-/** Reference "now" for the static preview. */
-const NOW = new Date('2026-04-17T12:00:00Z');
 
 function startOfDay(d: Date): number {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
 }
 
 function getMonday(d: Date): Date {
-  const day = d.getDay(); // 0=Sun … 6=Sat
-  const diff = day === 0 ? 6 : day - 1; // days since Monday
+  const day = d.getDay();
+  const diff = day === 0 ? 6 : day - 1;
   const mon = new Date(d);
   mon.setDate(mon.getDate() - diff);
   return new Date(mon.getFullYear(), mon.getMonth(), mon.getDate());
 }
 
-function groupNotifications(items: AppNotification[]): NotificationGroup[] {
-  const todayStart = startOfDay(NOW);
+function groupNotifications(items: Notification[]): NotificationGroup[] {
+  const now = new Date();
+  const todayStart = startOfDay(now);
   const yesterdayStart = todayStart - 86_400_000;
-  const weekStart = getMonday(NOW).getTime();
-  const monthStart = new Date(NOW.getFullYear(), NOW.getMonth(), 1).getTime();
+  const weekStart = getMonday(now).getTime();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
 
-  const buckets: Record<string, AppNotification[]> = {
+  const buckets: Record<string, Notification[]> = {
     today: [],
     yesterday: [],
     thisWeek: [],
@@ -227,7 +276,7 @@ function groupNotifications(items: AppNotification[]): NotificationGroup[] {
   };
 
   for (const n of items) {
-    const t = new Date(n.timestamp).getTime();
+    const t = new Date(n.createdAt).getTime();
     if (t >= todayStart) buckets.today.push(n);
     else if (t >= yesterdayStart) buckets.yesterday.push(n);
     else if (t >= weekStart) buckets.thisWeek.push(n);
@@ -251,17 +300,17 @@ function groupNotifications(items: AppNotification[]): NotificationGroup[] {
 // ─── Helpers ────────────────────────────────────────────────────────
 
 function formatRelativeTime(iso: string): string {
+  const now = new Date();
   const then = new Date(iso);
-  const diffMs = NOW.getTime() - then.getTime();
+  const diffMs = now.getTime() - then.getTime();
   const diffMin = Math.floor(diffMs / 60_000);
   const diffHr = Math.floor(diffMs / 3_600_000);
 
-  // Calendar-day difference (not raw 24h blocks)
-  const nowDay = startOfDay(NOW);
+  const nowDay = startOfDay(now);
   const thenDay = startOfDay(then);
   const diffDay = Math.round((nowDay - thenDay) / 86_400_000);
 
-  if (diffDay === 0 && diffMin < 60) return `${diffMin}m ago`;
+  if (diffDay === 0 && diffMin < 60) return `${Math.max(diffMin, 1)}m ago`;
   if (diffDay === 0) return `${diffHr}h ago`;
   if (diffDay === 1) return 'Yesterday';
   if (diffDay < 7) return `${diffDay}d ago`;
