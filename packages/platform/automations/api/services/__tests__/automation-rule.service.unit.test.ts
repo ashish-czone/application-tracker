@@ -291,6 +291,28 @@ describe('AutomationRuleService', () => {
   });
 
   // -----------------------------------------------------------------------
+  // findFirstByName
+  // -----------------------------------------------------------------------
+  describe('findFirstByName', () => {
+    it('returns the rule when one exists with that name', async () => {
+      mockDb._enqueue([sampleRuleRow({ name: 'task-overdue-tier-2' })]);
+
+      const rule = await service.findFirstByName('task-overdue-tier-2');
+
+      expect(rule?.name).toBe('task-overdue-tier-2');
+      expect(mockDb.db.limit).toHaveBeenCalledWith(1);
+    });
+
+    it('returns null when no rule matches the name', async () => {
+      mockDb._enqueue([]);
+
+      const rule = await service.findFirstByName('nonexistent');
+
+      expect(rule).toBeNull();
+    });
+  });
+
+  // -----------------------------------------------------------------------
   // list
   // -----------------------------------------------------------------------
   describe('list', () => {

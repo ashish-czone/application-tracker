@@ -183,6 +183,26 @@ describe('NotificationTemplatesService', () => {
     });
   });
 
+  describe('findFirstByName', () => {
+    it('returns the template when one exists with that name', async () => {
+      const template = buildTemplate({ name: 'task-overdue-tier-1-assignee' });
+      mockDb.queueResult([template]);
+
+      const result = await service.findFirstByName('task-overdue-tier-1-assignee');
+
+      expect(result).toEqual(template);
+      expect(mockDb._chain.limit).toHaveBeenCalledWith(1);
+    });
+
+    it('returns null when no template matches the name', async () => {
+      mockDb.queueResult([]);
+
+      const result = await service.findFirstByName('nonexistent');
+
+      expect(result).toBeNull();
+    });
+  });
+
   describe('create', () => {
     it('should insert and return the created template', async () => {
       const template = buildTemplate();

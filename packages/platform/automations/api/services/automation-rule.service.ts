@@ -69,6 +69,16 @@ export class AutomationRuleService {
     return this.toRule(row);
   }
 
+  async findFirstByName(name: string): Promise<AutomationRule | null> {
+    const [row] = await this.database.db
+      .select()
+      .from(automationRules)
+      .where(withTenant(automationRules, eq(automationRules.name, name)))
+      .limit(1);
+
+    return row ? this.toRule(row) : null;
+  }
+
   async list(query: {
     page?: number;
     limit?: number;

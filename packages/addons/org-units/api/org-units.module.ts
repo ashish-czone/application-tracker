@@ -1,4 +1,5 @@
 import { Global, Module, type OnModuleInit } from '@nestjs/common';
+import { DatabaseService } from '@packages/database';
 import { OrgUnitService } from './services/org-unit.service';
 import { OrgUnitLevelService } from './services/org-unit-level.service';
 import { OrgPositionService } from './services/org-position.service';
@@ -8,7 +9,11 @@ import { OrgUnitLevelController } from './controllers/org-unit-level.controller'
 import { OrgPositionController } from './controllers/org-position.controller';
 import { PermissionRegistryService } from '@packages/rbac';
 import { LookupResolverService, POSITION_SCOPE_PROVIDER } from '@packages/entity-engine';
+import { UserResolverRegistry, EntityResolverRegistry } from '@packages/automation-contracts';
 import { orgUnits } from './schema/org-units';
+import { OrgUnitHeadStrategy } from './automation-resolvers/org-unit-head.strategy';
+import { ParentUnitHeadStrategy } from './automation-resolvers/parent-unit-head.strategy';
+import { OrgUnitMembersStrategy } from './automation-resolvers/org-unit-members.strategy';
 
 @Global()
 @Module({
@@ -29,6 +34,9 @@ export class OrgUnitsModule implements OnModuleInit {
   constructor(
     private readonly permissionRegistry: PermissionRegistryService,
     private readonly lookupResolver: LookupResolverService,
+    private readonly userResolverRegistry: UserResolverRegistry,
+    private readonly entityResolverRegistry: EntityResolverRegistry,
+    private readonly database: DatabaseService,
   ) {}
 
   onModuleInit() {
@@ -44,5 +52,13 @@ export class OrgUnitsModule implements OnModuleInit {
       valueField: 'id',
       searchFields: ['name'],
     });
+
+    // User-resolution strategies for automations. Any entity with an
+    // org-unit FK column (e.g. `assigneeTeamId` on tasks) can drive its
+    // notification recipients through these.
+    const getResolver = (entityType: string) => this.entityResolverRegistry.get(entityType);
+    this.userResolverRegistry.registerStrategy(new OrgUnitHeadStrategy(this.database, getResolver));
+    this.userResolverRegistry.registerStrategy(new ParentUnitHeadStrategy(this.database, getResolver));
+    this.userResolverRegistry.registerStrategy(new OrgUnitMembersStrategy(this.database, getResolver));
   }
 }
