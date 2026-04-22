@@ -548,14 +548,33 @@ WHERE assigneeId = :me
 
 ---
 
+### Q17 — Daily digest send time
+
+### Q17 — Daily digest send time
+
+**Decision:** Digest fires once a day at **9am in `APP_TIMEZONE`** (currently `Asia/Kolkata`), expressed via `cronForLocalHour(9, APP_TIMEZONE)` from `@packages/common`. No per-user timezone resolution in V1.
+
+**Options considered:**
+- (a) Fixed 9am in `APP_TIMEZONE`. _[chosen]_
+- (b) 9am in each user's timezone with `APP_TIMEZONE` fallback — rejected: V1 users are realistically all in India; adds per-user cron resolution complexity for no current payoff.
+- (c) Firm-admin-configurable send time — defer until firms ask.
+- (d) Admin-configurable with per-user override — maximum config surface, premature.
+
+**Why `APP_TIMEZONE` rather than hard-coding IST:** uses the platform's timezone primitive correctly. If an install is deployed for a firm in a different timezone (say a V2 deployment in UAE with `APP_TIMEZONE = Asia/Dubai`), the digest naturally shifts — no code change.
+
+**Edge cases:**
+- User physically abroad on a given day — digest still fires at 9am IST, lands at an off-hour in their local time. Acceptable for V1.
+- Digest generation failure on a given day — next day's run proceeds independently; missed day is gone. Not a blocker because the T+0 / T+3 / T+7 escalation (Stream B) still surfaces urgent work.
+
+**Implication for Stream D:** D1 uses `cronForLocalHour(9, APP_TIMEZONE)` for the schedule trigger. No per-user variance, no additional state.
+
+---
+
 ## 2. Pending decisions
 
 Questions still to work through before we can finalise V1 implementation. Answered one by one; each is moved into §1 on resolution.
 
-### Q17 — Daily digest send time
-
-### Q17 — Daily digest send time
-Fixed 9am IST, 9am in user timezone (falling back to `APP_TIMEZONE`), or admin-configurable?
+### Q18 — Digest content split
 
 ### Q18 — Digest content split
 "Due within 7 days" and "Overdue" — split further into today / this week / overdue, or keep two sections?
@@ -638,7 +657,7 @@ Derived from §1. Re-estimated and re-ordered whenever §1 grows. Each bullet is
 
 ### Stream D — Notifications wiring for compliance due dates
 
-- [ ] **D1.** Automation rule / scheduled job for the daily digest — per-user mail with "due within 7 days" + "overdue" sections. (Pending Q17/Q18/Q20)
+- [ ] **D1.** Automation rule / scheduled job for the daily digest — per-user mail with "due within 7 days" + "overdue" sections. Cron expression via `cronForLocalHour(9, APP_TIMEZONE)`. (Q17, pending Q18/Q20)
 - [ ] **D2.** Per-task email on day task becomes overdue. (Pending Q19)
 - [ ] **D3.** Notification target resolution — assignee if set, else team members; respects escalation recipients from Stream B. (Pending Q20)
 
