@@ -170,12 +170,32 @@ cancelled ──reopen──→ in_progress
 
 ---
 
+### Q5 — Definition of "complete"
+
+**Decision:** In V1, marking a task complete is a **pure status change**. No attachment, no acknowledgement number, no proof requirement. `completedAt` is stamped automatically by the existing `applyCompletedAt` hook when status moves to `completed`.
+
+**Options considered:**
+- (a) Status change only. _[chosen]_
+- (b) Require ≥1 attachment before `completed`, enforced as a transition guard.
+- (c) Require an attachment **and** an acknowledgement identifier (new `ackNumber` text field).
+- (d) Allow complete without proof but flag the task as "completed without proof" until an attachment is added.
+
+**Why (a):** Keeping completion a pure status change decouples Stream A (workflow) from Streams F/G (attachments, comments) — the lifecycle can be wired up and tested in isolation. It also matches the MVP principle of shipping the thinnest operational surface: V1 completion is a firm-internal acknowledgement, not an ITD acknowledgement.
+
+**Why not (b)/(c) yet:** The "did we actually file?" assurance belongs with statutory integrations — when the system can pull an ACK number from the ITD / GSTN / TRACES APIs, there's real proof to attach. Until then, requiring an attachment just incentivises users to upload any PDF to unblock the button (compliance theatre). (c) adds schema (`ackNumber`) and UX that will be redesigned once integrations land. Both deferred to the version that introduces filing integrations — likely (c) is the post-V1 target.
+
+**(d) rejected** because it introduces a third derived state that nobody asked for. If firms want visibility into missing-proof tasks, a view that filters `status = completed AND attachment_count = 0` covers it without schema changes.
+
+**Implications for the build plan:**
+- No transition guard on `in_progress → completed` beyond what the workflow engine enforces natively (see Q4 for the `blocked` guard).
+- Streams F (attachments) and G (comments) remain optional enhancers of the task experience, not prerequisites for completion.
+- When statutory integrations arrive (post-V1), revisit: introduce `ackNumber` field, optionally add an intermediate state, and move the hard proof requirement there.
+
+---
+
 ## 2. Pending decisions
 
 Questions still to work through before we can finalise V1 implementation. Answered one by one; each is moved into §1 on resolution.
-
-### Q5 — Definition of "complete"
-Is marking a task complete a pure status change, or does it require an attachment (proof of filing)? Affects UI and guard logic.
 
 ### Q6 — Client lifecycle: dormantisation
 When a client moves to `dormant`, do open tasks stay, auto-cancel, or move to "on hold"?
