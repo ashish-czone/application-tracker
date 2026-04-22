@@ -11,6 +11,7 @@
     "@nestjs/common": "^11.0.0",
     "@nestjs/swagger": "^11.0.0",
     "@packages/auth": "workspace:*",
+    "@packages/automation-contracts": "workspace:*",
     "@packages/automations": "workspace:*",
     "@packages/common": "workspace:*",
     "@packages/database": "workspace:*",
@@ -22,10 +23,13 @@
     "@packages/soft-delete": "workspace:*",
     "@packages/tasks-contract": "workspace:*",
     "@packages/taxonomy": "workspace:*",
+    "@packages/tenancy": "workspace:*",
     "class-validator": "^0.14.1",
-    "drizzle-orm": "^0.45.1"
+    "drizzle-orm": "^0.45.1",
+    "mustache": "^4.2.0"
   },
   "devDependencies": {
+    "@types/mustache": "^4.2.0",
     "drizzle-kit": "^0.31.9",
     "typescript": "^5.7.0",
     "vitest": "^3.0.0"

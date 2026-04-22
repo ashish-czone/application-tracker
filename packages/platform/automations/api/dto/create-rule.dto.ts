@@ -179,6 +179,13 @@ export class CreateRuleDto {
   @Max(6, { each: true })
   scheduleDaysOfWeek?: number[];
 
+  @ApiPropertyOptional({ example: 9, description: 'Hour 0-23 in APP_TIMEZONE at which the rule fires. Null defaults to 2am.' })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(23)
+  scheduleHour?: number;
+
   // --- Shared ---
 
   @ApiPropertyOptional({ type: [ConditionDto] })

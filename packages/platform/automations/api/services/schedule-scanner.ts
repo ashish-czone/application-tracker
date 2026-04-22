@@ -15,6 +15,13 @@ import { EntityResolverRegistry } from '@packages/automation-contracts';
 import { buildConditions } from '../helpers/condition-builder';
 import type { AutomationRule, ScheduleDateOperator, ScheduleUnit } from '@packages/automation-contracts';
 
+/**
+ * Default hour (0-23, APP_TIMEZONE) at which schedule rules with no explicit
+ * `scheduleHour` fire. Matches the historical once-daily scanner cadence so
+ * existing rules that predate the column keep behaving identically.
+ */
+export const DEFAULT_SCHEDULE_HOUR = 2;
+
 @Injectable()
 export class ScheduleScanner {
   private readonly logger: ContextLogger;
@@ -29,6 +36,19 @@ export class ScheduleScanner {
   ) {
     this.logger = appLogger.forContext(ScheduleScanner.name);
     this.appTimezone = process.env.APP_TIMEZONE ?? 'UTC';
+  }
+
+  private currentHourInAppTimezone(): number {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      hour: 'numeric',
+      hour12: false,
+      timeZone: this.appTimezone,
+    });
+    const parts = formatter.formatToParts(new Date());
+    const hourPart = parts.find((p) => p.type === 'hour')?.value;
+    const parsed = hourPart !== undefined ? Number.parseInt(hourPart, 10) : Number.NaN;
+    // Intl returns "24" for midnight in some locales; normalise.
+    return Number.isFinite(parsed) ? parsed % 24 : new Date().getUTCHours();
   }
 
   async scan(): Promise<void> {
@@ -126,6 +146,13 @@ export class ScheduleScanner {
 
   private async evaluateScheduleRule(rule: AutomationRule): Promise<void> {
     if (!rule.scheduleEntityType) return;
+
+    // Hour-of-day filter. The scanner runs hourly; rules fire only during the
+    // hour matching `scheduleHour`. Null `scheduleHour` uses DEFAULT_SCHEDULE_HOUR
+    // so rules that predate the column keep firing once-daily at the historic
+    // scanner time.
+    const ruleHour = rule.scheduleHour ?? DEFAULT_SCHEDULE_HOUR;
+    if (this.currentHourInAppTimezone() !== ruleHour) return;
 
     // Check day-of-week filter for recurring rules
     if (rule.scheduleDaysOfWeek && rule.scheduleDaysOfWeek.length > 0) {

@@ -5,16 +5,19 @@ import { NotificationTemplatesService } from '@packages/notifications';
 import { AutomationRuleService } from '@packages/automations';
 
 /**
- * Stream B escalation seed: four schedule-driven rules that fire the three-
- * tier overdue cadence (T+0, T+3, T+7) against every task regardless of
- * `kind`. Rules are admin-editable after seeding — firms can narrow by kind,
- * priority, or template text in platform-ui/automations.
+ * Task system seed — two groups, both admin-editable after install:
  *
- * triggerType is `schedule_once` so each tier fires exactly once per task
- * (`automation_sent_log` keys on `ruleId|entityType|entityId|targetDate`,
- * with `targetDate='9999-12-31'` for once-semantics). `schedule_recurring`
- * would re-send every scan until the task leaves the condition window, which
- * contradicts the "three emails max per task" invariant from Q19a.
+ * 1. Stream B escalation rules (T+0 assignee / T+0 team / T+3 team head /
+ *    T+7 parent-unit head). All four use `schedule_once` so each tier
+ *    fires exactly once per task — `automation_sent_log` dedupes on
+ *    `(rule, entity, targetDate='9999-12-31')`. `schedule_recurring` would
+ *    re-send every scan until the task left the date window, which
+ *    contradicts Q19a's "three emails max per task" invariant.
+ *
+ * 2. Stream D daily-digest rule — `schedule_recurring` against `users` at
+ *    9am APP_TIMEZONE (Q17) with `send_task_digest` action. Digest content
+ *    composition lives in SendTaskDigestAction; this seed only wires the
+ *    schedule.
  */
 
 interface TemplateSeed {
@@ -75,6 +78,30 @@ const TEMPLATES: TemplateSeed[] = [
       'As parent-unit head, please intervene.',
       '',
       '— Automated reminder',
+    ].join('\n'),
+  },
+  {
+    name: 'task-daily-digest',
+    channel: 'email',
+    subject: 'Your tasks today ({{totalCount}})',
+    body: [
+      'Hi,',
+      '',
+      "Here's your task digest for today.",
+      '',
+      '{{#hasOverdue}}OVERDUE ({{overdueCount}}):',
+      '{{#sections.overdue}}  — {{title}} (was due {{dueDate}})',
+      '{{/sections.overdue}}',
+      '{{/hasOverdue}}',
+      '{{#hasToday}}DUE TODAY ({{todayCount}}):',
+      '{{#sections.today}}  — {{title}} (due {{dueDate}})',
+      '{{/sections.today}}',
+      '{{/hasToday}}',
+      '{{#hasThisWeek}}DUE THIS WEEK ({{thisWeekCount}}):',
+      '{{#sections.thisWeek}}  — {{title}} (due {{dueDate}})',
+      '{{/sections.thisWeek}}',
+      '{{/hasThisWeek}}',
+      '— Automated daily digest',
     ].join('\n'),
   },
 ];
@@ -173,6 +200,31 @@ export const seedSystem = async (ctx: INestApplicationContext): Promise<void> =>
           users: rule.users,
           config: {
             channels: [{ channel: 'email', templateId: templateIds[rule.templateName] }],
+          },
+        },
+      ],
+    });
+  }
+
+  // Stream D — daily digest. One rule per user per day, 9am APP_TIMEZONE
+  // (Q17). `users` is already a valid scheduleEntityType because users goes
+  // through defineEntity() in @packages/users; no extra registration needed.
+  const digestRuleName = 'task-daily-digest';
+  const existingDigest = await ruleService.findFirstByName(digestRuleName);
+  if (!existingDigest) {
+    await ruleService.create({
+      name: digestRuleName,
+      description: 'Daily 9am digest per user: overdue, due today, and due this week in their personal queue.',
+      triggerType: 'schedule_recurring',
+      scheduleEntityType: 'users',
+      scheduleHour: 9,
+      scheduleDaysOfWeek: [0, 1, 2, 3, 4, 5, 6],
+      actions: [
+        {
+          type: 'send_task_digest',
+          users: { recipient: { strategy: 'entity_field', config: { field: 'id' } } },
+          config: {
+            channels: [{ channel: 'email', templateId: templateIds['task-daily-digest'] }],
           },
         },
       ],
