@@ -862,12 +862,47 @@ this.auditRegistry.register('client_registrations', {
 
 ---
 
+### Q26 — Attachment file-type whitelist
+
+**Decision:** Single whitelist applied uniformly to all compliance-domain attachments. Defined as a constant in the compliance domain (e.g. `COMPLIANCE_ATTACHMENT_MIME_TYPES` in `domains/compliance/api/constants.ts`), passed via `AttachmentConfig.acceptedMimeTypes` wherever `AttachmentsService.upload()` is called from compliance.
+
+**Accepted MIME types:**
+
+| MIME | Extension | Use |
+|---|---|---|
+| `application/pdf` | .pdf | Filing acknowledgements, challans, notices |
+| `image/png` | .png | Portal screenshots |
+| `image/jpeg` | .jpg, .jpeg | Portal screenshots |
+| `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` | .xlsx | Workings, reconciliations |
+| `application/vnd.ms-excel` | .xls | Legacy Excel |
+| `application/vnd.openxmlformats-officedocument.wordprocessingml.document` | .docx | Drafts, cover letters |
+| `application/msword` | .doc | Legacy Word |
+| `text/csv` | .csv | Plaintext data exports |
+
+**Rejected explicitly:**
+- **ZIP** — hides contents from scanning, nesting risk. Firms needing multi-file bundles upload individually. Revisit post-V1 if demand emerges, then only with a virus-scan gate.
+- **Executables and scripts** (.exe, .bat, .sh, .js, .html, .htm, etc.) — security risk. Must not be on the whitelist regardless of user request.
+- **RTF** — legacy; PDF/DOCX cover the same use.
+- Everything else by default (whitelist, not blocklist).
+
+**Options considered:**
+- (a) The eight types above. _[chosen]_
+- (b) Same plus ZIP — rejected: allows nested executables without a scanner in V1.
+- (c) Same but drop CSV (force XLSX) — rejected: CSV is plaintext, safe, and common for tax-authority data exports.
+- (d) Accept all (`*/*`) with downstream virus-scan — rejected: no scanner in V1.
+
+**Platform grounding:** `packages/addons/attachments/api/services/attachments.service.ts` validates MIME per request via `isMimeTypeAccepted(file.mimetype, acceptedTypes)`. No platform changes needed — compliance just passes the list.
+
+**Scope consideration:** clients/registrations/rules don't attach files in V1 MVP (no attachment UI on those entities). If a future PR adds them, they'll reuse the same `COMPLIANCE_ATTACHMENT_MIME_TYPES` constant.
+
+**Implication for build:**
+- Stream F (Attachments): add `COMPLIANCE_ATTACHMENT_MIME_TYPES` constant; pass via `AttachmentConfig` when wiring the task-detail upload call. Zero platform work.
+
+---
+
 ## 2. Pending decisions
 
 Questions still to work through before we can finalise V1 implementation. Answered one by one; each is moved into §1 on resolution.
-
-### Q26 — Attachment file-type whitelist
-Candidate: PDF, PNG, JPG, XLSX, XLS, DOCX, DOC. Add ZIP / CSV? Block executables explicitly?
 
 ### Q27 — Attachment max size
 25 MB per file? Per-task cap? Any storage quota per firm / client?
