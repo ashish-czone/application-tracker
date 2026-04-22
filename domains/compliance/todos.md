@@ -923,12 +923,39 @@ this.auditRegistry.register('client_registrations', {
 
 ---
 
+### Q28 — Attachment retention
+
+**Decision:** Keep attachments forever — rows and storage blobs alike. No time-based purge. Soft-deleted attachments remain in DB + storage.
+
+**Options considered:**
+- (a) Keep forever (soft-delete stays in DB + storage). _[chosen]_
+- (b) Purge soft-deleted after N days to reclaim storage — rejected: risks losing a filing document that gets revisited in a post-purge scrutiny.
+- (c) Cascade hard-delete when owning task is hard-deleted — rejected: attachment outlives subject, same principle as Q25. Hard-deleted task + hard-deleted attachment means zero evidence of the work.
+- (d) Purge N days after task marked completed — rejected: breaks when a closed task needs to be reopened for scrutiny (common in tax assessments reopened 5+ years later).
+
+**Rationale (mirrors Q25):**
+- **Statutory context.** The attachment IS the evidence of filing. Acknowledgement PDFs, signed returns, portal receipts — these are the artefacts a firm produces to prove work was done. Losing them in a purge is losing the case when scrutiny reopens years later.
+- **Storage economics.** ~200 clients × 5 filings/year × 3 docs × 2MB ≈ 6GB/year. 10 years = 60GB. Trivial at platform level; becomes a firm-quota problem if it becomes one (deferred per Q27).
+- **Soft-delete already gives the UX affordance** ("I deleted it by accident" → admin-recoverable from DB + storage) without losing data.
+
+**Platform grounding:**
+- `attachments.deletedAt` + `deletedBy` columns exist; soft-delete is built in.
+- `attachments-cleanup.listener.ts` cascades soft-delete when the owning entity is deleted — **verify behaviour**: confirmed in `packages/addons/attachments/api/listeners/attachments-cleanup.listener.ts` that the listener soft-deletes (not hard-deletes) on entity removal. Matches V1 intent.
+- No platform changes needed.
+
+**Edge cases:**
+- **Storage blob for soft-deleted attachment** — remains in the storage bucket. Platform's `hardDelete()` method exists and removes both row and blob, but compliance controllers never call it. Only triggered by admin tooling (out of V1 scope).
+- **Orphaned blobs after subject entity hard-delete** — cleanup listener only soft-deletes rows, so the blob stays referenced via the row. Soft-delete is the correct behaviour; no orphans.
+- **Uploader leaves the firm** (intersects Q32 termination) — attachment row keeps the old `uploadedBy` FK. User soft-delete (if that's how the firm handles offboarding) doesn't affect the attachment. Safe.
+
+**Implication for build:**
+- Stream F: no retention code. Compliance controllers use `AttachmentsService.softDelete()` only (never `hardDelete()`). `attachments-cleanup.listener` handles the entity-cascade case automatically.
+
+---
+
 ## 2. Pending decisions
 
 Questions still to work through before we can finalise V1 implementation. Answered one by one; each is moved into §1 on resolution.
-
-### Q28 — Attachment retention
-Keep forever in V1, or purge on task close + N days?
 
 ### Q29 — Comment mutability
 Flat comments; editable by author anytime, within N minutes, or immutable? Delete policy?
