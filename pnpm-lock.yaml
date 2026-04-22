@@ -3327,6 +3327,9 @@ importers:
       '@packages/auth':
         specifier: workspace:*
         version: link:../../../platform/auth/api
+      '@packages/automation-contracts':
+        specifier: workspace:*
+        version: link:../../../platform/automation-contracts
       '@packages/automations':
         specifier: workspace:*
         version: link:../../../platform/automations/api
@@ -3360,13 +3363,22 @@ importers:
       '@packages/taxonomy':
         specifier: workspace:*
         version: link:../../../platform/taxonomy/api
+      '@packages/tenancy':
+        specifier: workspace:*
+        version: link:../../tenancy
       class-validator:
         specifier: ^0.14.1
         version: 0.14.4
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3))
+      mustache:
+        specifier: ^4.2.0
+        version: 4.2.0
     devDependencies:
+      '@types/mustache':
+        specifier: ^4.2.0
+        version: 4.2.6
       drizzle-kit:
         specifier: ^0.31.9
         version: 0.31.9
