@@ -15,6 +15,20 @@
       "when": 1776783709551,
       "tag": "0001_shallow_thundra",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1776859175066,
+      "tag": "0002_bright_tony_stark",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1776859283555,
+      "tag": "0003_petite_jackal",
+      "breakpoints": true
     }
   ]
 }

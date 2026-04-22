@@ -27,6 +27,7 @@ export {
 } from './hooks';
 export type {
   PageRecord,
+  PageStatus,
   SectionRecord,
   CreatePageInput,
   UpdatePageInput,
@@ -37,6 +38,8 @@ export type {
 export { PageEditor } from './PageEditor';
 export type { PageEditorProps } from './PageEditor';
 export { PageEditorPage } from './PageEditorPage';
+export { PublishPanel } from './PublishPanel';
+export type { PublishPanelProps } from './PublishPanel';
 
 export { DataSourcePicker, transitionKind } from './DataSourcePicker';
 export type { DataSourcePickerProps, DataSourcePickerEntity } from './DataSourcePicker';

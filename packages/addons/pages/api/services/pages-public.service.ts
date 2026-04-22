@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
-import { DatabaseService, and, asc, eq, isNull, inArray } from '@packages/database';
+import { DatabaseService, and, asc, eq, isNull, inArray, lte } from '@packages/database';
 import { EntityRegistryService, type EntityService } from '@packages/entity-engine';
 import { mapperRegistry, type DataSource } from '@packages/blocks-contract';
 import { pages } from '../schema/pages';
@@ -63,7 +63,14 @@ export class PagesPublicService {
         ogImage: pages.ogImage,
       })
       .from(pages)
-      .where(and(eq(pages.slug, slug), isNull(pages.deletedAt)))
+      .where(
+        and(
+          eq(pages.slug, slug),
+          isNull(pages.deletedAt),
+          eq(pages.status, 'published'),
+          lte(pages.publishedAt, new Date()),
+        ),
+      )
       .limit(1);
 
     if (!page) {

@@ -41,6 +41,28 @@ export const PAGES_CONFIG = defineEntity({
       type: 'url',
       label: 'OG Image URL',
     },
+    status: {
+      type: 'picklist',
+      label: 'Status',
+      required: true,
+      options: [
+        { value: 'draft', label: 'Draft' },
+        { value: 'scheduled', label: 'Scheduled' },
+        { value: 'published', label: 'Published' },
+        { value: 'archived', label: 'Archived' },
+      ],
+      defaultValue: 'draft',
+      listVisible: true,
+      listOrder: 3,
+      sortable: true,
+    },
+    publishedAt: {
+      type: 'datetime',
+      label: 'Published At',
+      sortable: true,
+      listVisible: true,
+      listOrder: 4,
+    },
     createdBy: {
       type: 'user',
       label: 'Created By',
@@ -54,7 +76,7 @@ export const PAGES_CONFIG = defineEntity({
       readonly: true,
       sortable: true,
       listVisible: true,
-      listOrder: 3,
+      listOrder: 5,
     },
   },
 
