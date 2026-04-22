@@ -23,7 +23,15 @@ const ConsolePreviewPage = lazy(() =>
   })),
 );
 
-const DashboardScreenPage = lazy(() =>
+const DashboardPage = lazy(() =>
+  import('./portals/customer/features/dashboard').then((m) => ({
+    default: m.DashboardPage,
+  })),
+);
+
+// Legacy hand-crafted mock dashboard, preserved at `/screens` for
+// side-by-side comparison during the widget-based dashboard rollout.
+const ScreensPreviewPage = lazy(() =>
   import('./portals/customer/features/screens/dashboard').then((m) => ({
     default: m.DashboardScreenPage,
   })),
@@ -130,7 +138,8 @@ const OrganizationPage = lazy(() =>
 // permission gating still apply.
 const routes: DomainRouteObject[] = [
   { path: '/console-preview', element: <ConsolePreviewPage />, bareLayout: true },
-  { path: '/dashboard', element: <DashboardScreenPage />, bareLayout: true },
+  { path: '/dashboard', element: <DashboardPage />, bareLayout: true },
+  { path: '/screens', element: <ScreensPreviewPage />, bareLayout: true },
   { path: '/clients', element: <ClientsPage />, permission: 'clients.read', bareLayout: true },
   { path: '/clients/:clientId', element: <ClientDetailPage />, permission: 'clients.read', bareLayout: true },
   { path: '/filings', element: <FilingsPage />, permission: 'filings.read', bareLayout: true },

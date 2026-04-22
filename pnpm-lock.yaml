@@ -1833,6 +1833,9 @@ importers:
       '@packages/auth-ui':
         specifier: workspace:*
         version: link:../../../packages/platform/auth/ui
+      '@packages/dashboard-ui':
+        specifier: workspace:*
+        version: link:../../../packages/platform/dashboard-ui
       '@packages/domains':
         specifier: workspace:*
         version: link:../../../packages/platform/domains
