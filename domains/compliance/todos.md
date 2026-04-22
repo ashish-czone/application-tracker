@@ -900,12 +900,32 @@ this.auditRegistry.register('client_registrations', {
 
 ---
 
+### Q27 — Attachment max size
+
+**Decision:** **25 MB per file.** No per-task aggregate cap. No firm-wide storage quota.
+
+**Options considered:**
+- (a) 25 MB per file, no aggregate, no quota. _[chosen]_
+- (b) 10 MB per file — rejected: forces compression workflow for multi-page scanned notices, adds friction for legitimate use.
+- (c) 50 MB per file — rejected: rare to legitimately need >25MB; headroom invites misuse.
+- (d) Per-firm quota — deferred: requires usage-tracking infrastructure in `packages/addons/attachments` or `packages/platform/media` (counter table + enforcement at upload + admin-visible usage panel). Not V1-scoped. Revisit if storage cost becomes a real problem post-launch.
+- (e) Per-task aggregate cap — rejected: creates surprising failures ("why can't I add this 11th doc?"). Per-file cap is predictable; aggregate is opaque.
+
+**Why 25 MB:**
+- Covers all realistic V1 document shapes: filing acknowledgement PDFs (<2MB), portal screenshots (<1MB), Excel workings up to 15MB, multi-page scanned notices up to 20MB.
+- Platform default `DEFAULT_MAX_FILE_SIZE` in `@packages/media` is already reasonable; compliance passes 25MB explicitly via `AttachmentConfig.maxFileSize` for clarity/override.
+- Small enough that even a rogue uploader can't fill a reasonable disk quickly; large enough to not annoy legitimate users.
+
+**Implication for build:**
+- Stream F: add `COMPLIANCE_MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024` constant alongside the MIME whitelist (Q26). Pass via `AttachmentConfig.maxFileSize`. Zero platform work.
+
+**Follow-up post-V1:** if firms start hitting storage-cost issues, add usage tracking + firm quota as a separate feature — probably per-tenant counter + enforcement hook in `MediaService.upload()`. Keep it out of V1.
+
+---
+
 ## 2. Pending decisions
 
 Questions still to work through before we can finalise V1 implementation. Answered one by one; each is moved into §1 on resolution.
-
-### Q27 — Attachment max size
-25 MB per file? Per-task cap? Any storage quota per firm / client?
 
 ### Q28 — Attachment retention
 Keep forever in V1, or purge on task close + N days?
