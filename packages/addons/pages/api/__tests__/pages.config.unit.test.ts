@@ -42,4 +42,21 @@ describe('PAGES_CONFIG', () => {
   it('routes the quick-create success into the page editor', () => {
     expect(PAGES_CONFIG.ui.afterCreateRoute).toBe('/pages/:id/edit');
   });
+
+  it('registers status as a picklist with the four lifecycle values, defaulting to draft', () => {
+    const status = PAGES_CONFIG.fieldMeta.status;
+    expect(status).toBeDefined();
+    expect(status.fieldType).toBe('picklist');
+    const values = (status.picklistOptions ?? []).map((o) => o.value);
+    expect(values).toEqual(['draft', 'scheduled', 'published', 'archived']);
+    expect(status.defaultValue).toBe('draft');
+  });
+
+  it('registers publishedAt as a sortable, list-visible datetime', () => {
+    const pub = PAGES_CONFIG.fieldMeta.publishedAt;
+    expect(pub).toBeDefined();
+    expect(pub.fieldType).toBe('datetime');
+    expect(PAGES_CONFIG.listFields).toContain('publishedAt');
+    expect(PAGES_CONFIG.listFields).toContain('status');
+  });
 });
