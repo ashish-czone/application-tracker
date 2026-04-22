@@ -522,14 +522,37 @@ Scope seeds apply to `tasks` and `compliance_tasks` only. Other compliance entit
 
 ---
 
+### Q16 — Multi-team visibility
+
+**Decision:** "My tasks" = personally-assigned tasks **plus** unassigned tasks in any of the user's teams. Actively-owned-by-teammates tasks stay in the team board, not in the personal queue.
+
+**Default "my tasks" query:**
+```
+WHERE assigneeId = :me
+   OR (assigneeId IS NULL AND assigneeTeamId IN :myTeams)
+```
+
+**Team boards** (per-team view, not personal) show all tasks with `assigneeTeamId = team`, regardless of assignee.
+
+**Options considered:**
+- (a) Strictly personal — only `assigneeId = me`. Rejected: members who skip the team board miss unassigned tasks drifting toward due date, which defeats the team-first model from Q2.
+- (b) Everything in my teams — `assigneeId = me OR assigneeTeamId IN myTeams`. Rejected: for a 10-person team the personal queue fills with teammates' active work; signal/noise drops, team board becomes redundant.
+- (c) Personal + unassigned-in-my-teams. _[chosen]_ Balances personal focus with team coverage visibility.
+
+**Edge cases handled naturally:**
+- Pickup of unassigned task → `assigneeId = me` → task stays in my queue, no longer classified as unassigned for teammates. Team board still shows it under my name.
+- Reassignment to teammate → task leaves my queue, enters theirs.
+- Leave / termination per Stream H → `assigneeId` cleared → task appears as unassigned in every teammate's queue in the same team. Intended coverage behaviour.
+
+**Implication for build:** no new schema. The `my-tasks` custom scope in `packages/addons/tasks/api/tasks.config.ts:122–135` currently returns the broader (b) set — update its SQL to the narrower (c) expression. Applies to both the base tasks entity and `compliance_tasks` via extension.
+
+---
+
 ## 2. Pending decisions
 
 Questions still to work through before we can finalise V1 implementation. Answered one by one; each is moved into §1 on resolution.
 
-### Q16 — Multi-team visibility
-
-### Q16 — Multi-team visibility
-An employee in Teams A and B, task assigned to Team A: should they see it in their personal "all my tasks" view, or only inside Team A's board?
+### Q17 — Daily digest send time
 
 ### Q17 — Daily digest send time
 Fixed 9am IST, 9am in user timezone (falling back to `APP_TIMEZONE`), or admin-configurable?
@@ -597,6 +620,7 @@ Derived from §1. Re-estimated and re-ordered whenever §1 grows. Each bullet is
 - [ ] **A6.** Verify scope-on-position integration end-to-end (position → scope, scope resolver, descendants walk). Close gaps _in the org-units / rbac packages_, not in the tasks package. (Q3 — "first implementation step")
 - [ ] **A7.** Define the task lifecycle workflow on the base `tasks` entity in `tasks.config.ts` via `defineEntity()`. Five states (`pending / in_progress / blocked / completed / cancelled`), transitions per §1 Q4, transition guards (`blocked` requires a reason comment). Mark `completed` and `cancelled` states with `isSystem: true` so they cannot be renamed or deleted via the admin UI. If the workflow package persists definitions, wire a system seed in the tasks package. (Q4)
 - [ ] **A8.** Add the per-action `allowedStatuses` configuration (action gate) alongside the action guards from A4. Compose the gate with permission + scope on every action entry point. (Q4)
+- [ ] **A9.** Narrow the `my-tasks` custom scope in `packages/addons/tasks/api/tasks.config.ts:122–135` from "assignee = me OR any team I'm in" to "assignee = me OR (assignee is null AND team in myTeams)" so the personal queue shows unassigned-in-my-teams but not teammates' active work. (Q16)
 
 ### Stream B — Escalation subsystem (platform-level, consumes tasks package)
 
