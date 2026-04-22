@@ -158,6 +158,33 @@ describe('PagesPublicController (integration)', () => {
     });
   });
 
+  // ── Public index ────────────────────────────────────────────
+
+  describe('GET /api/v1/public/pages', () => {
+    it('returns only published, non-deleted, non-future pages sorted by slug', async () => {
+      await insertPage({ slug: 'about', status: 'published' });
+      await insertPage({ slug: 'work', status: 'published' });
+      await insertPage({ slug: 'internal-draft', status: 'draft', publishedAt: null });
+      await insertPage({ slug: 'archived', status: 'archived' });
+      await insertPage({
+        slug: 'future',
+        status: 'published',
+        publishedAt: new Date(Date.now() + 60_000),
+      });
+      await insertPage({ slug: 'gone', deletedAt: new Date() });
+
+      const res = await request(ctx.httpServer).get('/api/v1/public/pages').expect(200);
+
+      const slugs = res.body.pages.map((p: { slug: string }) => p.slug);
+      expect(slugs).toEqual(['about', 'work']);
+      expect(res.body.pages[0]).toMatchObject({
+        slug: 'about',
+        updatedAt: expect.any(String),
+        publishedAt: expect.any(String),
+      });
+    });
+  });
+
   // ── Reorder (auth + permission) ─────────────────────────────
 
   describe('PUT /api/v1/pages/:pageId/sections:reorder', () => {
