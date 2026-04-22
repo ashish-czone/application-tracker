@@ -20,6 +20,7 @@
     "@packages/events": "workspace:*",
     "@packages/hierarchy": "workspace:*",
     "@packages/logger": "workspace:*",
+    "@packages/notification-channels": "workspace:*",
     "@packages/org-units": "workspace:*",
     "@packages/rbac": "workspace:*",
     "@packages/tasks": "workspace:*",
