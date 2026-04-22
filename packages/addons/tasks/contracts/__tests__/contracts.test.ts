@@ -42,7 +42,16 @@ describe('TASKS_FIELDS', () => {
 
   it('keeps the status workflow states in sync with TaskStatus', () => {
     const stateNames = TASKS_FIELDS.status.workflow.states.map((s) => s.name);
-    expect(stateNames).toEqual(['pending', 'in_progress', 'review', 'completed', 'cancelled']);
+    expect(stateNames).toEqual(['pending', 'in_progress', 'blocked', 'completed', 'cancelled']);
+  });
+
+  it('marks completed and cancelled as system states (protected from rename/delete)', () => {
+    const byName = Object.fromEntries(TASKS_FIELDS.status.workflow.states.map((s) => [s.name, s]));
+    expect(byName.completed.isSystem).toBe(true);
+    expect(byName.cancelled.isSystem).toBe(true);
+    expect(byName.pending.isSystem).toBeFalsy();
+    expect(byName.in_progress.isSystem).toBeFalsy();
+    expect(byName.blocked.isSystem).toBeFalsy();
   });
 
   it('keeps the priority options in sync with TaskPriority', () => {

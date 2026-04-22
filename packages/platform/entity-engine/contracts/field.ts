@@ -37,6 +37,13 @@ export interface WorkflowStateDef {
   name: string;
   label: string;
   color?: string;
+  /**
+   * Canonical states wired into code behaviour (e.g. `completed`,
+   * `cancelled` — terminal states the engine treats specially). Admin UIs
+   * must block rename/delete on these; admins can still add or reorder
+   * non-system states around them.
+   */
+  isSystem?: boolean;
 }
 
 export interface WorkflowTargetDef {

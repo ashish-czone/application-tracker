@@ -37,30 +37,30 @@ export const TASKS_FIELDS = {
       states: [
         { name: 'pending', label: 'Pending', color: '#6B7280' },
         { name: 'in_progress', label: 'In Progress', color: '#3B82F6' },
-        { name: 'review', label: 'In Review', color: '#F59E0B' },
-        { name: 'completed', label: 'Completed', color: '#10B981' },
-        { name: 'cancelled', label: 'Cancelled', color: '#EF4444' },
+        { name: 'blocked', label: 'Blocked', color: '#F59E0B' },
+        { name: 'completed', label: 'Completed', color: '#10B981', isSystem: true },
+        { name: 'cancelled', label: 'Cancelled', color: '#EF4444', isSystem: true },
       ],
       transitions: [
         { from: 'pending', to: [
-          'in_progress',
-          { state: 'cancelled', requiredPermissions: ['tasks.cancel'] },
+          { state: 'in_progress', requiredPermissions: ['tasks.pickup'] },
+          { state: 'cancelled', requiredPermissions: ['tasks.close'] },
         ]},
         { from: 'in_progress', to: [
-          { state: 'review', requiredPermissions: ['tasks.submitForReview'] },
+          'blocked',
           { state: 'completed', requiredPermissions: ['tasks.complete'] },
-          { state: 'cancelled', requiredPermissions: ['tasks.cancel'] },
+          { state: 'cancelled', requiredPermissions: ['tasks.close'] },
         ]},
-        { from: 'review', to: [
-          { state: 'completed', requiredPermissions: ['tasks.approveReview'] },
-          { state: 'in_progress', requiredPermissions: ['tasks.reopen'] },
-          { state: 'cancelled', requiredPermissions: ['tasks.cancel'] },
+        { from: 'blocked', to: [
+          'in_progress',
+          { state: 'completed', requiredPermissions: ['tasks.complete'] },
+          { state: 'cancelled', requiredPermissions: ['tasks.close'] },
         ]},
         { from: 'completed', to: [
-          { state: 'pending', requiredPermissions: ['tasks.reopen'] },
+          { state: 'in_progress', requiredPermissions: ['tasks.reopen'] },
         ]},
         { from: 'cancelled', to: [
-          { state: 'pending', requiredPermissions: ['tasks.reopen'] },
+          { state: 'in_progress', requiredPermissions: ['tasks.reopen'] },
         ]},
       ],
     },

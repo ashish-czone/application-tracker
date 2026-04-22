@@ -33,61 +33,70 @@ describe('TASKS_CONFIG', () => {
 
     it('declares the five expected states in order', () => {
       const names = workflow.states.map((s) => s.name);
-      expect(names).toEqual(['pending', 'in_progress', 'review', 'completed', 'cancelled']);
+      expect(names).toEqual(['pending', 'in_progress', 'blocked', 'completed', 'cancelled']);
     });
 
-    it('allows pending -> in_progress without permission', () => {
+    it('marks completed and cancelled as system states', () => {
+      const byName = Object.fromEntries(workflow.states.map((s) => [s.name, s]));
+      expect(byName.completed.isSystem).toBe(true);
+      expect(byName.cancelled.isSystem).toBe(true);
+    });
+
+    it('gates pending -> in_progress by tasks.pickup', () => {
       const pending = workflow.transitions.find((t) => t.from === 'pending')!;
-      expect(pending.to).toContain('in_progress');
-    });
-
-    it('gates in_progress -> review by tasks.submitForReview', () => {
-      const inProgress = workflow.transitions.find((t) => t.from === 'in_progress')!;
-      const toReview = inProgress.to.find(
+      const toInProgress = pending.to.find(
         (t): t is { state: string; requiredPermissions?: string[] } =>
-          typeof t === 'object' && t.state === 'review',
+          typeof t === 'object' && t.state === 'in_progress',
       );
-      expect(toReview?.requiredPermissions).toContain('tasks.submitForReview');
+      expect(toInProgress?.requiredPermissions).toContain('tasks.pickup');
     });
 
-    it('gates review -> completed by tasks.approveReview', () => {
-      const review = workflow.transitions.find((t) => t.from === 'review')!;
-      const toCompleted = review.to.find(
+    it('allows in_progress <-> blocked as implicit assignee transitions (no permission)', () => {
+      const inProgress = workflow.transitions.find((t) => t.from === 'in_progress')!;
+      expect(inProgress.to).toContain('blocked');
+      const blocked = workflow.transitions.find((t) => t.from === 'blocked')!;
+      expect(blocked.to).toContain('in_progress');
+    });
+
+    it('gates in_progress -> completed by tasks.complete', () => {
+      const inProgress = workflow.transitions.find((t) => t.from === 'in_progress')!;
+      const toCompleted = inProgress.to.find(
         (t): t is { state: string; requiredPermissions?: string[] } =>
           typeof t === 'object' && t.state === 'completed',
       );
-      expect(toCompleted?.requiredPermissions).toContain('tasks.approveReview');
+      expect(toCompleted?.requiredPermissions).toContain('tasks.complete');
     });
 
-    it('allows cancelled as an escape from pending, in_progress, and review', () => {
-      for (const from of ['pending', 'in_progress', 'review'] as const) {
+    it('gates blocked -> completed by tasks.complete', () => {
+      const blocked = workflow.transitions.find((t) => t.from === 'blocked')!;
+      const toCompleted = blocked.to.find(
+        (t): t is { state: string; requiredPermissions?: string[] } =>
+          typeof t === 'object' && t.state === 'completed',
+      );
+      expect(toCompleted?.requiredPermissions).toContain('tasks.complete');
+    });
+
+    it('allows cancelled via tasks.close from pending, in_progress, and blocked', () => {
+      for (const from of ['pending', 'in_progress', 'blocked'] as const) {
         const transition = workflow.transitions.find((t) => t.from === from)!;
         const toCancelled = transition.to.find(
           (t): t is { state: string; requiredPermissions?: string[] } =>
             typeof t === 'object' && t.state === 'cancelled',
         );
         expect(toCancelled).toBeDefined();
-        expect(toCancelled?.requiredPermissions).toContain('tasks.cancel');
+        expect(toCancelled?.requiredPermissions).toContain('tasks.close');
       }
     });
 
-    it('allows reopening completed and cancelled tasks back to pending', () => {
+    it('allows reopening completed and cancelled tasks to in_progress via tasks.reopen', () => {
       for (const from of ['completed', 'cancelled'] as const) {
         const transition = workflow.transitions.find((t) => t.from === from)!;
-        const toPending = transition.to.find(
+        const toInProgress = transition.to.find(
           (t): t is { state: string; requiredPermissions?: string[] } =>
-            typeof t === 'object' && t.state === 'pending',
+            typeof t === 'object' && t.state === 'in_progress',
         );
-        expect(toPending?.requiredPermissions).toContain('tasks.reopen');
+        expect(toInProgress?.requiredPermissions).toContain('tasks.reopen');
       }
-    });
-  });
-
-  describe('extra permissions', () => {
-    it('registers submitForReview and approveReview permissions', () => {
-      const actions = TASKS_CONFIG.extraPermissions?.map((p) => p.action) ?? [];
-      expect(actions).toContain('submitForReview');
-      expect(actions).toContain('approveReview');
     });
   });
 

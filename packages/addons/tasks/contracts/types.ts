@@ -12,7 +12,7 @@ import type { TasksFieldMap } from './fields';
  * in `./fields.ts` — they're declared side by side so the link is visible
  * when editing.
  */
-export type TaskStatus = 'pending' | 'in_progress' | 'review' | 'completed' | 'cancelled';
+export type TaskStatus = 'pending' | 'in_progress' | 'blocked' | 'completed' | 'cancelled';
 
 /**
  * Task priority values. Must stay in sync with `priority.options` in

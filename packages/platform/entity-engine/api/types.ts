@@ -425,6 +425,12 @@ export interface WorkflowStateDef {
   label: string;
   /** Color for UI badges */
   color?: string;
+  /**
+   * Canonical state wired into code (e.g. terminal states the engine checks
+   * by name). Admin UIs must block rename/delete on system states; non-system
+   * states can be added/renamed/removed freely.
+   */
+  isSystem?: boolean;
 }
 
 export interface WorkflowTransitionDef {
