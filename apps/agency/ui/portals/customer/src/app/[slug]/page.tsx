@@ -2,6 +2,9 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { PageRenderer } from '@packages/blocks-ui';
 import { fetchPageBySlug } from '../../lib/api';
+import { JsonLd } from '@/components/JsonLd';
+
+const SITE_URL = process.env.SITE_URL ?? 'http://localhost:3100';
 
 interface RouteParams {
   params: Promise<{ slug: string }>;
@@ -36,5 +39,21 @@ export default async function SlugPage({ params }: RouteParams) {
   const { slug } = await params;
   const result = await fetchPageBySlug(slug);
   if (!result) notFound();
-  return <PageRenderer sections={result.sections} />;
+
+  const { page, sections } = result;
+  const webPage = {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    name: page.title,
+    url: `${SITE_URL}/${page.slug}`,
+    ...(page.metaDescription ? { description: page.metaDescription } : {}),
+    ...(page.ogImage ? { primaryImageOfPage: { '@type': 'ImageObject', url: page.ogImage } } : {}),
+  };
+
+  return (
+    <>
+      <JsonLd data={webPage} />
+      <PageRenderer sections={sections} />
+    </>
+  );
 }
