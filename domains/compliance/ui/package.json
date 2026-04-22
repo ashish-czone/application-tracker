@@ -15,6 +15,7 @@
     "@packages/entity-engine-ui": "workspace:*",
     "@packages/org-units-ui": "workspace:*",
     "@packages/rbac-ui": "workspace:*",
+    "@packages/settings-ui": "workspace:*",
     "@packages/ui": "workspace:*",
     "@packages/users-ui": "workspace:*",
     "@phosphor-icons/react": "^2.1.10",

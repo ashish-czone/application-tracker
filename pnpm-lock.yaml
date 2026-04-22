@@ -1836,6 +1836,9 @@ importers:
       '@packages/rbac-ui':
         specifier: workspace:*
         version: link:../../../packages/platform/rbac/ui
+      '@packages/settings-ui':
+        specifier: workspace:*
+        version: link:../../../packages/platform/settings/ui
       '@packages/ui':
         specifier: workspace:*
         version: link:../../../packages/core/ui
