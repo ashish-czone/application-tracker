@@ -23,16 +23,16 @@ export function TaskAssigneeCell({ row }: CellRendererProps) {
   const teamName = row[TEAM_LABEL] as string | undefined;
   const isTeamTask = !!row[ASSIGNEE_TEAM_ID];
   const isClaimed = isTeamTask && !!assigneeId;
-  const isClaimedByMe = isClaimed && assigneeId === user?.userId;
+  const isPickedUpByMe = isClaimed && assigneeId === user?.userId;
 
-  const claimMutation = useMutation({
-    mutationFn: () => api.post(tasksRoutes.claim(taskId)),
+  const pickupMutation = useMutation({
+    mutationFn: () => api.post(tasksRoutes.pickup(taskId)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      toast.success('Task claimed');
+      toast.success('Task picked up');
     },
     onError: (error: any) => {
-      toast.error(error?.body?.message || 'Failed to claim task');
+      toast.error(error?.body?.message || 'Failed to pick up task');
     },
   });
 
@@ -47,10 +47,10 @@ export function TaskAssigneeCell({ row }: CellRendererProps) {
     },
   });
 
-  const handleClaim = useCallback((e: React.MouseEvent) => {
+  const handlePickup = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
-    claimMutation.mutate();
-  }, [claimMutation]);
+    pickupMutation.mutate();
+  }, [pickupMutation]);
 
   const handleUnclaim = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -67,8 +67,8 @@ export function TaskAssigneeCell({ row }: CellRendererProps) {
     );
   }
 
-  // Team task, claimed by current user
-  if (isTeamTask && isClaimedByMe) {
+  // Team task, picked up by current user
+  if (isTeamTask && isPickedUpByMe) {
     return (
       <div className="flex items-center gap-1.5">
         <User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
@@ -85,7 +85,7 @@ export function TaskAssigneeCell({ row }: CellRendererProps) {
     );
   }
 
-  // Team task, claimed by someone else
+  // Team task, picked up by someone else
   if (isTeamTask && isClaimed) {
     return (
       <div className="flex items-center gap-1.5">
@@ -95,7 +95,7 @@ export function TaskAssigneeCell({ row }: CellRendererProps) {
     );
   }
 
-  // Team task, unclaimed
+  // Team task, not yet picked up
   if (isTeamTask && teamName) {
     return (
       <div className="flex items-center gap-1.5">
@@ -103,11 +103,11 @@ export function TaskAssigneeCell({ row }: CellRendererProps) {
         <span className="text-sm truncate">{teamName}</span>
         <button
           type="button"
-          onClick={handleClaim}
-          disabled={claimMutation.isPending}
+          onClick={handlePickup}
+          disabled={pickupMutation.isPending}
           className="text-xs text-primary hover:underline font-medium shrink-0"
         >
-          {claimMutation.isPending ? '...' : 'Claim'}
+          {pickupMutation.isPending ? '...' : 'Pick up'}
         </button>
       </div>
     );

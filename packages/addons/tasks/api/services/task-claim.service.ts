@@ -11,7 +11,7 @@ export class TaskClaimService {
     private readonly orgUnitService: OrgUnitService,
   ) {}
 
-  async claim(taskId: string, userId: string): Promise<{ id: string; assigneeId: string }> {
+  async pickup(taskId: string, userId: string): Promise<{ id: string; assigneeId: string }> {
     await assertTaskIsAdHoc(taskId);
 
     const [task] = await this.database.db
@@ -24,8 +24,8 @@ export class TaskClaimService {
       .where(and(eq(tasks.id, taskId), isNull(tasks.deletedAt)));
 
     if (!task) throw new BadRequestException('Task not found');
-    if (!task.assigneeTeamId) throw new BadRequestException('Only team-assigned tasks can be claimed');
-    if (task.assigneeId) throw new ConflictException('Task is already claimed');
+    if (!task.assigneeTeamId) throw new BadRequestException('Only team-assigned tasks can be picked up');
+    if (task.assigneeId) throw new ConflictException('Task is already picked up');
 
     const memberIds = await this.orgUnitService.getMemberIds(task.assigneeTeamId);
     if (!memberIds.includes(userId)) {
@@ -38,12 +38,12 @@ export class TaskClaimService {
       .where(and(eq(tasks.id, taskId), isNull(tasks.assigneeId), isNotNull(tasks.assigneeTeamId)))
       .returning({ id: tasks.id, assigneeId: tasks.assigneeId });
 
-    if (!updated) throw new ConflictException('Task was claimed by someone else');
+    if (!updated) throw new ConflictException('Task was picked up by someone else');
 
     return updated as { id: string; assigneeId: string };
   }
 
-  async assign(
+  async reassign(
     taskId: string,
     data: { userId?: string; teamId?: string },
   ): Promise<{ id: string; assigneeId: string | null; assigneeTeamId: string | null }> {
@@ -90,9 +90,9 @@ export class TaskClaimService {
 
     if (!task) throw new BadRequestException('Task not found');
     if (!task.assigneeTeamId) throw new BadRequestException('Only team-assigned tasks can be released');
-    if (!task.assigneeId) throw new BadRequestException('Task is not claimed');
+    if (!task.assigneeId) throw new BadRequestException('Task is not picked up');
     if (task.assigneeId !== userId) {
-      throw new ForbiddenException('You can only release tasks you claimed');
+      throw new ForbiddenException('You can only release tasks you picked up');
     }
 
     await this.database.db

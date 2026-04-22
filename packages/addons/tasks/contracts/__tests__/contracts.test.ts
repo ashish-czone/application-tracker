@@ -8,10 +8,10 @@ describe('tasksRoutes', () => {
     expect(tasksRoutes.transition('abc')).toBe('/tasks/abc/transition');
   });
 
-  it('exposes claim/unclaim/assign helpers matching the TaskClaimController decorators', () => {
-    expect(tasksRoutes.claim('abc')).toBe('/tasks/abc/claim');
+  it('exposes pickup/unclaim/reassign helpers matching the TaskClaimController decorators', () => {
+    expect(tasksRoutes.pickup('abc')).toBe('/tasks/abc/pickup');
     expect(tasksRoutes.unclaim('abc')).toBe('/tasks/abc/unclaim');
-    expect(tasksRoutes.assign('abc')).toBe('/tasks/abc/assign');
+    expect(tasksRoutes.reassign('abc')).toBe('/tasks/abc/reassign');
   });
 });
 

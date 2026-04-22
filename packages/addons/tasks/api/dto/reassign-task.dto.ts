@@ -1,6 +1,6 @@
 import { IsOptional, IsUUID } from 'class-validator';
 
-export class AssignTaskDto {
+export class ReassignTaskDto {
   @IsOptional()
   @IsUUID()
   userId?: string;
