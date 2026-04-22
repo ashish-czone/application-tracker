@@ -6,15 +6,19 @@ import { coreFieldTypesPlugin } from '@packages/entity-engine/field-types';
 import { eavFieldTypesPlugin } from '@packages/eav-attributes/field-types';
 import { taxonomyFieldTypesPlugin } from '@packages/taxonomy/field-types';
 import { workflowFieldTypesPlugin } from '@packages/workflows/field-types';
+import { mediaLibraryFieldTypesPlugin } from '@packages/media-library-api/field-types';
 
 fieldTypeRegistry.registerPlugin(coreFieldTypesPlugin);
 fieldTypeRegistry.registerPlugin(eavFieldTypesPlugin);
 fieldTypeRegistry.registerPlugin(taxonomyFieldTypesPlugin);
 fieldTypeRegistry.registerPlugin(workflowFieldTypesPlugin);
+fieldTypeRegistry.registerPlugin(mediaLibraryFieldTypesPlugin);
 
 import '@packages/eav-attributes-ui/field-types/register-all';
 import { registerEntityRelationsFieldTypes } from '@packages/entity-relations-ui';
+import { registerMediaLibraryFieldTypes } from '@packages/media-library-ui-admin';
 registerEntityRelationsFieldTypes();
+registerMediaLibraryFieldTypes();
 
 import { WebShell } from '@packages/app-shell-ui';
 import { registerStarterBlocks, registerContentBlocks } from '@packages/blocks-ui';
