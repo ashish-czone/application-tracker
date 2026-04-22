@@ -292,15 +292,43 @@ Rules don't have an effective date the same way — deprecation is simply "stop 
 
 ---
 
+### Q9 — Rule parameter changes mid-period
+
+**Decision:** **Per-field policy.** Cosmetic fields are freely editable; due-date math is editable but forward-only; rule-identity fields become immutable once the rule has generated at least one task.
+
+| Field | Policy | Why |
+|---|---|---|
+| `name`, `description` | Freely editable | Cosmetic, no functional impact. |
+| `dueDayOfMonth`, `dueMonthOffset`, `gracePeriodDays` | Editable, forward-only | New values apply to newly-generated tasks. Already-generated tasks keep their original due dates. Silently moving the due date on tasks that are already on dashboards, in digests, and being worked against would break user trust and invalidate overdue calculations mid-flight. |
+| `code` | Immutable once ≥1 task generated | The natural key downstream; renaming would orphan historical references. |
+| `frequency` (monthly / quarterly / …) | Immutable once ≥1 task generated | Changing frequency means a different rule conceptually — user should deprecate and create a new rule. |
+| `lawId` | Immutable once ≥1 task generated | Changes what law the tasks are filed under — rewrites history. |
+| `status` (draft / active / deprecated) | Workflow-managed | Covered by Q8 for `deprecated`; `draft → active` is the initial activation transition. |
+
+**Options considered and rejected:**
+- Forward-only from edit time (universal) — right for due-date math, wrong for identity fields where even new tasks shouldn't be under a renamed `code` or shifted `lawId`.
+- Recompute all non-terminal tasks on any edit — destructive; shifts deadlines on tasks being worked against, breaks the overdue signal retroactively.
+- Block all edits once ≥1 task generated — punishes legitimate corrections (typo in `dueDayOfMonth`, clearer description) by forcing a deprecate-and-recreate dance.
+
+**Idempotency interaction:** the generator's natural key is `(ruleId, registrationId, periodStart)` (with Q7 deferred, effectively `(ruleId, clientId, periodStart)` in V1). On key conflict during a sweep, the generator is a **pure no-op** — never mutates an existing row. This keeps forward-only strict: fixing a mistake on an already-generated task requires the user to cancel it explicitly, at which point the next generator sweep emits a fresh row using the current rule parameters.
+
+**UI communication:**
+- Immutable fields are disabled in the edit form once the rule has generated tasks, with a tooltip: "Cannot change — this rule has generated tasks. Deprecate this rule and create a new one to change `<field>`."
+- Editing a forward-only field (due-date math): save dialog shows "This change will apply only to tasks generated from now on. N tasks already generated will keep their current due dates."
+- No "recompute in-flight tasks" bulk action in V1.
+
+**Edge case — long-horizon tasks pre-edit:** a task generated months in advance (in the 6-month horizon) will now have older math than the current rule. Fine — it stays with original due date. If the user wants the new math applied, they cancel it and the next sweep regenerates against the new parameters.
+
+**Implementation ripple (extend Stream I):**
+- Guard on rule update that enforces the immutability of identity fields once ≥1 task exists.
+- "Has this rule generated any task?" helper on the service layer — a simple `SELECT 1 FROM compliance_tasks WHERE rule_id = ? LIMIT 1`.
+- UI logic in the rule edit form to disable immutable fields, and the save dialog copy for forward-only edits.
+
+---
+
 ## 2. Pending decisions
 
 Questions still to work through before we can finalise V1 implementation. Answered one by one; each is moved into §1 on resolution.
-
-### Q9 — Rule parameter changes mid-period
-If due-date math changes on an active rule, do already-generated future tasks recompute or stay with their original dates?
-
-### Q9 — Rule parameter changes mid-period
-If due-date math changes on an active rule, do already-generated future tasks recompute or stay with their original dates?
 
 ### Q10 — Weekend / public-holiday handling on due dates
 Calendar date as-is vs. roll to next working day vs. track both.
@@ -459,10 +487,17 @@ Hooks that fire when a client, registration, or rule changes state in a way that
 - [ ] **I9.** Generator filter: skip rules with `status = 'deprecated'`. Verify if already in place; add if not. (Q8)
 - [ ] **I10.** UI on rule deprecation: summary of non-terminal tasks for that rule, plus an optional checkbox "Also cancel N in-flight tasks from this rule." Default unchecked. (Q8)
 
+**Rule parameter edits (per-field policy, forward-only where applicable):**
+
+- [ ] **I13.** Service-layer helper `ruleHasGeneratedTasks(ruleId)` — single-row existence check on `compliance_tasks`. (Q9)
+- [ ] **I14.** Guard on rule update that blocks changes to `code`, `frequency`, `lawId` once `ruleHasGeneratedTasks` returns true. (Q9)
+- [ ] **I15.** UI in the rule edit form: disable immutable fields with the explanatory tooltip; show forward-only save-dialog copy when due-date-math fields change. (Q9)
+- [ ] **I16.** Confirm generator is a pure no-op on `(ruleId, clientId, periodStart)` conflict (never mutates existing row). Add a test if missing. (Q9)
+
 **Cross-cutting UI:**
 
-- [ ] **I11.** Banners on client / registration / rule detail pages reflecting their inactive state ("Deactivated on YYYY-MM-DD", "Deprecated", "Dormant"). (Q6, Q8)
-- [ ] **I12.** Subtle marker on task rows whose source registration or rule is inactive, so users viewing a task queue understand why an unfamiliar task is there. (Q8)
+- [ ] **I17.** Banners on client / registration / rule detail pages reflecting their inactive state ("Deactivated on YYYY-MM-DD", "Deprecated", "Dormant"). (Q6, Q8)
+- [ ] **I18.** Subtle marker on task rows whose source registration or rule is inactive, so users viewing a task queue understand why an unfamiliar task is there. (Q8)
 
 ### Stream Z — Finalisation
 
