@@ -64,7 +64,7 @@ export function OrgPositionsPage() {
         <div>
           <h1 className="text-lg font-semibold text-foreground">Org Positions</h1>
           <p className="text-sm text-muted-foreground">
-            Define positions within org units and configure their data access scopes
+            Define positions within org units (e.g. Head, Lead, Member)
           </p>
         </div>
         <Button size="sm" onClick={() => { addForm.reset({ name: '' }); setAddOpen(true); }}>

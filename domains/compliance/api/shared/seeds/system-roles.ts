@@ -17,11 +17,12 @@ import { roles, RbacService } from '@packages/rbac';
  *      `compliance_rules`, `compliance_law_handlers`                   — underscore
  *    We seed against the slugs the engine actually registers.
  *
- * Roles are scoped to `userType: null` — they are capability roles that apply
- * to any user type. Scope (who-can-see-what) is governed by
- * `org_position_scopes`, not by role userType. Re-running the seed is a no-op:
- * we skip creation when a role with the same (name, userType=null) tuple
- * already exists, and we never clobber admin-edited permissions.
+ * Roles are scoped to `userType: null` — they apply to any user type. Every
+ * grant here defaults to `[{type:'any'}]` (unrestricted on rows) because no
+ * scopes are passed. Narrowed scopes (`own`, `unit`, `descendants`, …) will
+ * be configured on these same grants in the compliance-filings application
+ * PR. Re-running the seed is a no-op: we skip creation when a role with the
+ * same (name, userType=null) tuple already exists.
  */
 
 interface RoleSpec {
