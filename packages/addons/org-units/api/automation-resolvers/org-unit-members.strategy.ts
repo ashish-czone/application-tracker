@@ -1,4 +1,5 @@
-import { DatabaseService, eq } from '@packages/database';
+import { DatabaseService, and, eq, isNull } from '@packages/database';
+import { users } from '@packages/database/schema';
 import type {
   EntityResolverConfig,
   UserResolution,
@@ -12,6 +13,10 @@ import { resolveUnitIdFromContext } from './unit-id-helper';
  * Resolves to every member of the target unit, regardless of position.
  * Used for broadcast notifications (e.g. the tier-1 escalation fires to
  * the whole team when a task has no individual assignee — Q20).
+ *
+ * Deactivated users (`users.deletedAt IS NOT NULL`) are filtered out via
+ * an inner join so a stale `org_unit_members` row cannot leak a
+ * terminated employee into a recipient list (Q32).
  *
  * Config: `{ unitField: 'assigneeTeamId' }` — the field on the source
  * entity that holds the org-unit id.
@@ -43,7 +48,8 @@ export class OrgUnitMembersStrategy implements UserResolverStrategy {
     const rows = await this.database.db
       .select({ userId: orgUnitMembers.userId })
       .from(orgUnitMembers)
-      .where(eq(orgUnitMembers.orgUnitId, unitId));
+      .innerJoin(users, eq(users.id, orgUnitMembers.userId))
+      .where(and(eq(orgUnitMembers.orgUnitId, unitId), isNull(users.deletedAt)));
 
     return rows.map((r) => r.userId);
   }

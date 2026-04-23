@@ -1,4 +1,5 @@
-import { DatabaseService, eq } from '@packages/database';
+import { DatabaseService, and, eq, isNull } from '@packages/database';
+import { users } from '@packages/database/schema';
 import type {
   EntityResolverConfig,
   UserResolution,
@@ -15,8 +16,12 @@ import { resolveUnitIdFromContext } from './unit-id-helper';
  * returned — co-heads are intentional (see Q3 in compliance/todos.md).
  *
  * Members without a position are excluded: "no position" means "not a head".
- * If no member has a position, returns an empty array — the caller is
- * responsible for rolling up to the parent unit if that matters.
+ * Deactivated users (`users.deletedAt IS NOT NULL`) are filtered out
+ * (Q32) so a stale membership row cannot make a terminated employee the
+ * resolved head.
+ *
+ * If no active, positioned member remains, returns an empty array — the
+ * caller is responsible for rolling up to the parent unit if that matters.
  *
  * Config: `{ unitField: 'assigneeTeamId' }` — the field on the source
  * entity that holds the org-unit id.
@@ -55,8 +60,9 @@ export class OrgUnitHeadStrategy implements UserResolverStrategy {
         sortOrder: orgPositions.sortOrder,
       })
       .from(orgUnitMembers)
+      .innerJoin(users, eq(users.id, orgUnitMembers.userId))
       .leftJoin(orgPositions, eq(orgPositions.id, orgUnitMembers.positionId))
-      .where(eq(orgUnitMembers.orgUnitId, unitId));
+      .where(and(eq(orgUnitMembers.orgUnitId, unitId), isNull(users.deletedAt)));
 
     const positioned = rows.filter((r): r is { userId: string; sortOrder: number } => r.sortOrder != null);
     if (positioned.length === 0) return [];

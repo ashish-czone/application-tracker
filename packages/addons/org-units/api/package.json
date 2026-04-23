@@ -10,13 +10,16 @@
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
+    "@nestjs/event-emitter": "^3.0.0",
     "@nestjs/swagger": "^11.0.0",
     "@packages/auth-core": "workspace:*",
     "@packages/automation-contracts": "workspace:*",
     "@packages/database": "workspace:*",
     "@packages/entity-engine": "workspace:*",
+    "@packages/logger": "workspace:*",
     "@packages/rbac": "workspace:*",
     "@packages/tenancy": "workspace:*",
+    "@packages/users": "workspace:*",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "drizzle-orm": "^0.45.1"
