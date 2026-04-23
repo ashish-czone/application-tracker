@@ -1283,9 +1283,9 @@ Hooks that fire when a client, registration, or rule changes state in a way that
 
 **Client dormancy (aggressive: cancel everything):**
 
-- [ ] **I1.** Hook on the `client.status → dormant` workflow transition that bulk-cancels all non-terminal `compliance_tasks` for the client, attaching a system comment (`"Auto-cancelled: client <Name> dormantised on <date> by <actor>"`). Transactional with the transition. (Q6)
-- [ ] **I2.** Ensure `GenerateComplianceTasksAction` filters on `client.status = 'active'`. Verify if already present; add if not. (Q6)
-- [ ] **I3.** UI prompt on the dormancy transition showing the number of tasks that will be cancelled, with an explicit confirmation. (Q6)
+- [x] **I1.** Hook on the `client.status → dormant` workflow transition that bulk-cancels all non-terminal `compliance_filings` for the client, attaching a workflow_transition_history row per filing (reason="Client dormantised", comment carrying the admin's dormancy rationale). Transactional with the transition — new platform `onTransition` hook runs inside the same tx. (Q6)
+- [x] **I2.** `GenerateComplianceFilingsAction` filters on `client.status = 'active'` via `getRegisteredClients` innerJoin on clients.status — dormant clients are skipped at the resolver level. (Q6)
+- [x] **I3.** UI preflight banner on the dormancy transition (and all transitions with advisory guards) shows the number of filings that will be cancelled, confirmation stays explicit via the existing reason + comment required on the transition. Enabled by enriching the workflow guard contract to carry warning/blocker messages + a `/workflows/preflight` endpoint consumed by `TransitionConfirmDialog`. (Q6)
 
 **Registration deactivation (medium: cancel post-effective-date, keep earlier):**
 
