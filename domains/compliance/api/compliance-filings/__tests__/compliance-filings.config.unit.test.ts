@@ -125,6 +125,41 @@ describe('COMPLIANCE_FILINGS_CONFIG', () => {
     });
   });
 
+  describe('data-access anchors', () => {
+    const dataAccess = COMPLIANCE_FILINGS_CONFIG.dataAccess!;
+
+    it('anchors own/assigned/unit scopes on the filing columns', () => {
+      // `own` resolves via createdByField; `assigned` via assigneeField;
+      // `unit`/`descendants` via teamField. Renaming any of these columns
+      // would silently break scope resolution — this test is the tripwire.
+      expect(dataAccess.createdByField).toBe('createdBy');
+      expect(dataAccess.assigneeField).toBe('assigneeId');
+      expect(dataAccess.teamField).toBe('assigneeTeamId');
+    });
+
+    it('does not carry the legacy ownerField alias', () => {
+      // ownerField was the pre-scope-v2 alias for createdByField. New code
+      // should use the explicit name — keep the deprecated alias out of new
+      // configs so grep hits are unambiguous when we later remove it.
+      expect((dataAccess as { ownerField?: unknown }).ownerField).toBeUndefined();
+    });
+
+    it('registers the unassigned_in_unit custom scope for pickup', () => {
+      // Preparers/Reviewers hold `compliance-filings.pickup` scoped to
+      // `unassigned_in_unit` so they can only self-claim unclaimed filings
+      // from a team they belong to.
+      const keys = (dataAccess.scopes ?? []).map((s) => s.key);
+      expect(keys).toContain('unassigned_in_unit');
+    });
+
+    it('drops the legacy my-filings scope', () => {
+      // my-filings (assigned-to-me OR unassigned-in-my-teams) is now
+      // expressed as `assigned` + `unassigned_in_unit` at the grant level.
+      const keys = (dataAccess.scopes ?? []).map((s) => s.key);
+      expect(keys).not.toContain('my-filings');
+    });
+  });
+
   describe('external key derivation', () => {
     it('formats ruleId:clientId:periodStart in a stable order', () => {
       expect(buildFilingExternalKey('rule-1', 'client-1', '2026-04-01')).toBe('rule-1:client-1:2026-04-01');

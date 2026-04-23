@@ -1,5 +1,5 @@
 import { defineEntity } from '@packages/entity-engine';
-import { and, eq, isNull, or, sql } from 'drizzle-orm';
+import { and, isNull, sql } from 'drizzle-orm';
 import { orgUnitMembers } from '@packages/org-units';
 import { complianceFilings } from '../schema/compliance-filings';
 import {
@@ -90,22 +90,26 @@ export const COMPLIANCE_FILINGS_CONFIG = defineEntity({
   },
 
   dataAccess: {
-    ownerField: 'assigneeId',
+    // Ownership anchors drive the built-in scope predicates:
+    //   own        → createdBy = actor
+    //   assigned   → assigneeId = actor
+    //   unit       → assigneeTeamId in actor's units
+    //   descendants→ assigneeTeamId in actor's unit subtree
+    createdByField: 'createdBy',
+    assigneeField: 'assigneeId',
     teamField: 'assigneeTeamId',
     scopes: [
       {
-        // Personal queue: filings owned by me, plus unclaimed filings in
-        // teams I'm a member of (the pool I can pick up). Intentionally does
-        // NOT surface teammates' in-progress work — that belongs on the team
-        // board, not the personal queue.
-        key: 'my-filings',
-        label: 'Assigned to me or unclaimed in my teams',
-        resolve: async (userId: string) => or(
-          eq(complianceFilings.assigneeId, userId),
-          and(
-            isNull(complianceFilings.assigneeId),
-            sql`${complianceFilings.assigneeTeamId} IN (SELECT ${orgUnitMembers.orgUnitId} FROM ${orgUnitMembers} WHERE ${orgUnitMembers.userId} = ${userId})`,
-          ),
+        // Pickup pool: filings unclaimed (assigneeId IS NULL) in a team the
+        // actor belongs to. Used by Preparers/Reviewers whose `pickup` grant
+        // is scoped to this key so they can only self-claim from their team
+        // pool — never from another team and never steal work already
+        // assigned to someone else (even if it's still pending).
+        key: 'unassigned_in_unit',
+        label: 'Unassigned filings in my teams',
+        resolve: async (userId: string) => and(
+          isNull(complianceFilings.assigneeId),
+          sql`${complianceFilings.assigneeTeamId} IN (SELECT ${orgUnitMembers.orgUnitId} FROM ${orgUnitMembers} WHERE ${orgUnitMembers.userId} = ${userId})`,
         )!,
       },
     ],
