@@ -7,13 +7,21 @@ import type { ClientRegistrationService } from '../../client-registrations/clien
 describe('ClientsController', () => {
   let clientsService: { createWithContacts: ReturnType<typeof vi.fn> };
   let contactsService: { setPrimary: ReturnType<typeof vi.fn> };
-  let registrationsService: { registerMany: ReturnType<typeof vi.fn> };
+  let registrationsService: {
+    registerMany: ReturnType<typeof vi.fn>;
+    previewDeactivation: ReturnType<typeof vi.fn>;
+    deactivate: ReturnType<typeof vi.fn>;
+  };
   let controller: ClientsController;
 
   beforeEach(() => {
     clientsService = { createWithContacts: vi.fn().mockResolvedValue({ client: {}, contacts: [] }) };
     contactsService = { setPrimary: vi.fn().mockResolvedValue(undefined) };
-    registrationsService = { registerMany: vi.fn().mockResolvedValue([]) };
+    registrationsService = {
+      registerMany: vi.fn().mockResolvedValue([]),
+      previewDeactivation: vi.fn().mockResolvedValue({ registrationId: 'r1', deactivatedAt: '', cancelledAfter: 0, remainingBefore: 0 }),
+      deactivate: vi.fn().mockResolvedValue({ registrationId: 'r1', deactivatedAt: '', autoCancelledFilingIds: [], manuallyCancelledFilingIds: [] }),
+    };
     controller = new ClientsController(
       clientsService as unknown as ClientsService,
       contactsService as unknown as ClientContactsService,
@@ -98,6 +106,59 @@ describe('ClientsController', () => {
         ClientsController.prototype.createRegistrations,
       );
       expect(permission).toBe('client-registrations.create');
+    });
+  });
+
+  describe('previewDeactivation', () => {
+    it('parses the query date and delegates to the service', async () => {
+      await controller.previewDeactivation('cid-1', 'law-1', '2026-03-01');
+      const args = registrationsService.previewDeactivation.mock.calls[0];
+      expect(args[0]).toBe('cid-1');
+      expect(args[1]).toBe('law-1');
+      expect(args[2]).toBeInstanceOf(Date);
+      expect((args[2] as Date).toISOString()).toBe('2026-03-01T00:00:00.000Z');
+    });
+
+    it('rejects missing date with 400', async () => {
+      await expect(controller.previewDeactivation('cid-1', 'law-1', undefined)).rejects.toThrow();
+    });
+
+    it('rejects an unparseable date with 400', async () => {
+      await expect(controller.previewDeactivation('cid-1', 'law-1', 'not-a-date')).rejects.toThrow();
+    });
+
+    it('requires client-registrations.delete permission', () => {
+      const permission = Reflect.getMetadata(
+        'requiredPermission',
+        ClientsController.prototype.previewDeactivation,
+      );
+      expect(permission).toBe('client-registrations.delete');
+    });
+  });
+
+  describe('deactivateRegistration', () => {
+    it('passes through the DTO + actor id', async () => {
+      await controller.deactivateRegistration(
+        'cid-1',
+        'law-1',
+        { deactivatedAt: '2026-03-01T00:00:00Z', alsoCancelEarlier: true, comment: 'stop' },
+        { userId: 'user-1' } as never,
+      );
+      const args = registrationsService.deactivate.mock.calls[0];
+      expect(args[0]).toBe('cid-1');
+      expect(args[1]).toBe('law-1');
+      expect(args[2].deactivatedAt).toBeInstanceOf(Date);
+      expect(args[2].alsoCancelEarlier).toBe(true);
+      expect(args[2].actorId).toBe('user-1');
+      expect(args[2].comment).toBe('stop');
+    });
+
+    it('requires client-registrations.delete permission', () => {
+      const permission = Reflect.getMetadata(
+        'requiredPermission',
+        ClientsController.prototype.deactivateRegistration,
+      );
+      expect(permission).toBe('client-registrations.delete');
     });
   });
 });
