@@ -39,7 +39,6 @@ function makeRule(overrides: Partial<ComplianceRule> = {}): ComplianceRule {
     dueMonthOffset: 1,
     gracePeriodDays: 0,
     description: null,
-    active: true,
     ...overrides,
   };
 }
@@ -96,7 +95,7 @@ describe('ComplianceRuleService', () => {
         id: 'r1', code: 'X', name: 'x', lawId: 'l1', frequency: 'monthly',
         status: 'draft',
         dueDayOfMonth: 20, dueMonthOffset: 1, gracePeriodDays: 0,
-        description: null, active: true,
+        description: null,
       });
       db.db.insert.mockReturnValue(insertChain);
 
@@ -106,7 +105,6 @@ describe('ComplianceRuleService', () => {
 
       expect(result.id).toBe('r1');
       expect(result.status).toBe('draft');
-      expect(result.active).toBe(true);
     });
   });
 

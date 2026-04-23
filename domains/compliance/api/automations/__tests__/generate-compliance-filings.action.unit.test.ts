@@ -14,14 +14,15 @@ function utc(year: number, month: number, day: number): Date {
 function makeRule(overrides: Partial<ComplianceRule> = {}): ComplianceRule {
   return {
     id: 'r1',
+    code: 'GST-M',
     name: 'GST Return',
     lawId: 'l1',
     frequency: 'monthly',
+    status: 'active',
     dueDayOfMonth: 20,
     dueMonthOffset: 1,
     gracePeriodDays: 0,
     description: null,
-    active: true,
     ...overrides,
   };
 }
@@ -102,13 +103,22 @@ describe('GenerateComplianceFilingsAction', () => {
     expect(filingsService.create).not.toHaveBeenCalled();
   });
 
-  it('no-ops when rule is inactive', async () => {
-    ruleService.findById.mockResolvedValue(makeRule({ active: false }));
+  it('I9 skips deprecated rules without querying registrations', async () => {
+    ruleService.findById.mockResolvedValue(makeRule({ status: 'deprecated' }));
 
     await action.execute(ctxFor('r1'));
 
     expect(clientRegistrationService.getRegistrationsForLaw).not.toHaveBeenCalled();
     expect(filingsService.create).not.toHaveBeenCalled();
+  });
+
+  it('still generates for draft rules (deprecation is the only stop state)', async () => {
+    ruleService.findById.mockResolvedValue(makeRule({ status: 'draft' }));
+    clientRegistrationService.getRegistrationsForLaw.mockResolvedValue([]);
+
+    await action.execute(ctxFor('r1'));
+
+    expect(clientRegistrationService.getRegistrationsForLaw).toHaveBeenCalledWith('l1');
   });
 
   it('skips when there are no registered clients', async () => {

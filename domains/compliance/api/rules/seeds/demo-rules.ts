@@ -142,7 +142,6 @@ export const seedDemoRules = async (ctx: INestApplicationContext): Promise<void>
       dueMonthOffset: rule.dueMonthOffset,
       gracePeriodDays: rule.gracePeriodDays,
       description: rule.description,
-      active: true,
     });
   }
 };

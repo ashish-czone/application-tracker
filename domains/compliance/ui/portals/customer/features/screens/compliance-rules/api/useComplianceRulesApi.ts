@@ -16,7 +16,6 @@ export interface ComplianceRuleRecord {
   dueMonthOffset: number;
   gracePeriodDays: number;
   description?: string | null;
-  active: boolean;
   createdAt?: string;
   updatedAt?: string;
   [key: string]: unknown;

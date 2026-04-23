@@ -1,4 +1,4 @@
-import { pgTable, text, integer, boolean, timestamp, index, uniqueIndex } from 'drizzle-orm/pg-core';
+import { pgTable, text, integer, timestamp, index, uniqueIndex } from 'drizzle-orm/pg-core';
 import { randomUUID } from 'crypto';
 import type { ComplianceFrequency } from '@domains/compliance-contract';
 import { complianceLaws } from './laws';
@@ -18,7 +18,6 @@ export const complianceRules = pgTable('compliance_rules', {
   dueMonthOffset: integer('due_month_offset').notNull().default(0),
   gracePeriodDays: integer('grace_period_days').notNull().default(0),
   description: text('description'),
-  active: boolean('active').notNull().default(true),
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' })
     .notNull()
@@ -28,5 +27,4 @@ export const complianceRules = pgTable('compliance_rules', {
   uniqueIndex('compliance_rules_code_key').on(table.code),
   index('compliance_rules_law_id_idx').on(table.lawId),
   index('compliance_rules_status_idx').on(table.status),
-  index('compliance_rules_active_idx').on(table.active),
 ]);

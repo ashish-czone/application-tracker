@@ -1,5 +1,5 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-import { DatabaseService, and, eq, isNull } from '@packages/database';
+import { DatabaseService, eq, ne } from '@packages/database';
 import { FREQUENCIES, type ComplianceFrequency } from '@domains/compliance-contract';
 import { complianceRules } from '../schema/rules';
 import { complianceLawHandlers } from '../schema/law-handlers';
@@ -33,7 +33,6 @@ export interface ComplianceRule {
   dueMonthOffset: number;
   gracePeriodDays: number;
   description: string | null;
-  active: boolean;
 }
 
 export interface CreateComplianceRuleInput {
@@ -46,7 +45,6 @@ export interface CreateComplianceRuleInput {
   dueMonthOffset?: number;
   gracePeriodDays?: number;
   description?: string | null;
-  active?: boolean;
 }
 
 export interface Occurrence {
@@ -110,7 +108,6 @@ export class ComplianceRuleService {
         dueMonthOffset: input.dueMonthOffset ?? 0,
         gracePeriodDays: input.gracePeriodDays ?? 0,
         description: input.description ?? null,
-        active: input.active ?? true,
       })
       .returning();
     return this.toRule(row);
@@ -120,7 +117,7 @@ export class ComplianceRuleService {
     const rows = await this.database.db
       .select()
       .from(complianceRules)
-      .where(eq(complianceRules.active, true));
+      .where(ne(complianceRules.status, 'deprecated'));
     return rows.map((r) => this.toRule(r));
   }
 
@@ -264,7 +261,6 @@ export class ComplianceRuleService {
       dueMonthOffset: row.dueMonthOffset,
       gracePeriodDays: row.gracePeriodDays,
       description: row.description,
-      active: row.active,
     };
   }
 }
