@@ -2,6 +2,10 @@ import { defineEntity } from '@packages/entity-engine';
 import { and, eq, isNull, or, sql } from 'drizzle-orm';
 import { orgUnitMembers } from '@packages/org-units';
 import { complianceFilings } from '../schema/compliance-filings';
+import {
+  COMPLIANCE_ATTACHMENT_MIME_TYPES,
+  COMPLIANCE_MAX_ATTACHMENT_BYTES,
+} from '../constants';
 
 /** Natural key used for the compliance_filings.external_key idempotency column.
  *  The generate action reuses this format across retries — keep the shape stable. */
@@ -50,6 +54,13 @@ export const COMPLIANCE_FILINGS_CONFIG = defineEntity({
   pluralName: 'Compliance Filings',
   onDelete: { mode: 'soft' },
   timestamps: true,
+
+  hasAttachments: true,
+  attachmentConfig: {
+    acceptedMimeTypes: [...COMPLIANCE_ATTACHMENT_MIME_TYPES],
+    maxFileSize: COMPLIANCE_MAX_ATTACHMENT_BYTES,
+    deleteMode: 'soft',
+  },
 
   extraPermissions: [
     { action: 'pickup', description: 'Pick up a pending filing and move it to in-progress' },
