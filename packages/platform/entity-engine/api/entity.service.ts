@@ -1447,6 +1447,26 @@ export class EntityService {
         reason,
         comment,
       }, tx);
+
+      // Domain-specific transactional side effects. Throws roll the whole
+      // transition back — callers use this for work that must atomically
+      // commit-or-not with the state change (e.g. bulk-cancelling children
+      // when the parent moves to a terminal state). For fire-and-forget
+      // cleanup, subscribe to `{entity}.{Field}Changed` instead.
+      if (config.hooks?.onTransition) {
+        await config.hooks.onTransition({
+          entityType: config.entityType,
+          entityId: id,
+          fieldKey,
+          fromState: currentState,
+          toState,
+          transitionId: validated.transitionId,
+          actorId,
+          reason,
+          comment,
+          entity: entity as Record<string, unknown>,
+        }, tx);
+      }
     });
 
     this.logger.log(`${config.singularName} transitioned`, {

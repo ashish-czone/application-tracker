@@ -35,6 +35,7 @@ export type {
   WorkflowStateDef,
   WorkflowTransitionDef,
   WorkflowTargetDef,
+  TransitionHookContext,
   ScopeResolver,
   DataAccessConfig,
   DataAccessContext,
@@ -146,7 +147,7 @@ export type {
 export type { LayoutExtension } from './extensions/layout-extension.interface';
 export { LAYOUT_EXTENSION } from './extensions/layout-extension.interface';
 
-export type { WorkflowExtension, WorkflowDefinitionRef, WorkflowTransitionRef, ValidatedTransition, WorkflowGuardContext, WorkflowGuardFn } from './extensions/workflow-extension.interface';
+export type { WorkflowExtension, WorkflowDefinitionRef, WorkflowTransitionRef, ValidatedTransition, WorkflowGuardContext, WorkflowGuardFn, GuardResult } from './extensions/workflow-extension.interface';
 export { WORKFLOW_EXTENSION } from './extensions/workflow-extension.interface';
 
 export type { AutomationsExtension, ActionHandlerDef, ActionExecutionContext, ActionExecutionResult, EntityResolverConfig, EntityResolverFieldConfig } from './extensions/automations-extension.interface';

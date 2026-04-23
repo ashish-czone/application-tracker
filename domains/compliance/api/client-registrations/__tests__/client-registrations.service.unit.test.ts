@@ -8,6 +8,8 @@ type AnyChain = Record<string, ReturnType<typeof vi.fn>>;
 function mockSelectRows(rows: unknown[]) {
   const chain: AnyChain = {} as AnyChain;
   chain.from = vi.fn().mockReturnValue(chain);
+  chain.innerJoin = vi.fn().mockReturnValue(chain);
+  chain.leftJoin = vi.fn().mockReturnValue(chain);
   chain.where = vi.fn().mockResolvedValue(rows);
   return chain;
 }
@@ -230,8 +232,14 @@ describe('ClientRegistrationService', () => {
   });
 
   describe('getRegisteredClients', () => {
-    it('returns mapped active registrations for the law', async () => {
-      db.db.select.mockReturnValue(mockSelectRows([activeRow, { ...activeRow, id: 'reg2', clientId: 'c2' }]));
+    it('returns mapped active registrations for the law (joined with active clients)', async () => {
+      // Joined shape: SELECT returns { registration: <row> } after innerJoin on clients
+      db.db.select.mockReturnValue(
+        mockSelectRows([
+          { registration: activeRow },
+          { registration: { ...activeRow, id: 'reg2', clientId: 'c2' } },
+        ]),
+      );
 
       const result = await service.getRegisteredClients('l1');
 

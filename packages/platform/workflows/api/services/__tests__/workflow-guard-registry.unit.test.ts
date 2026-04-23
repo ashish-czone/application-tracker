@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { WorkflowGuardRegistry } from '../workflow-guard-registry.service';
+import { allow, allowWithWarning, block } from '../../types';
 import type { WorkflowGuardContext } from '../../types';
 
 const mockContextLogger = {
@@ -30,68 +31,71 @@ describe('WorkflowGuardRegistry', () => {
     registry = new WorkflowGuardRegistry(mockAppLogger);
   });
 
-  describe('register', () => {
-    it('should store a guard function by name', () => {
-      const guard = async () => true;
+  describe('register / get / has', () => {
+    it('stores a guard function by name', () => {
+      const guard = async () => allow();
       registry.register('test-guard', guard);
       expect(registry.get('test-guard')).toBe(guard);
-    });
-  });
-
-  describe('get', () => {
-    it('should return undefined for unregistered guard', () => {
-      expect(registry.get('nonexistent')).toBeUndefined();
-    });
-  });
-
-  describe('has', () => {
-    it('should return true for registered guard', () => {
-      registry.register('test-guard', async () => true);
       expect(registry.has('test-guard')).toBe(true);
     });
 
-    it('should return false for unregistered guard', () => {
+    it('returns undefined / false for unregistered guards', () => {
+      expect(registry.get('nonexistent')).toBeUndefined();
       expect(registry.has('nonexistent')).toBe(false);
     });
   });
 
-  describe('executeGuards', () => {
-    it('should pass when all guards return true', async () => {
-      registry.register('guard-a', async () => true);
-      registry.register('guard-b', async () => true);
+  describe('runGuards', () => {
+    it('returns empty warnings and blockers when all guards allow', async () => {
+      registry.register('guard-a', async () => allow());
+      registry.register('guard-b', async () => allow());
 
-      const result = await registry.executeGuards(['guard-a', 'guard-b'], mockContext);
-      expect(result).toEqual({ passed: true });
+      const result = await registry.runGuards(['guard-a', 'guard-b'], mockContext);
+      expect(result.warnings).toEqual([]);
+      expect(result.blockers).toEqual([]);
     });
 
-    it('should fail on first failing guard and return its name', async () => {
-      registry.register('guard-a', async () => true);
-      registry.register('guard-b', async () => false);
-      registry.register('guard-c', async () => true);
+    it('collects warning messages from allow_with_warning guards', async () => {
+      registry.register('guard-a', async () => allowWithWarning('first'));
+      registry.register('guard-b', async () => allow());
+      registry.register('guard-c', async () => allowWithWarning('second'));
 
-      const result = await registry.executeGuards(['guard-a', 'guard-b', 'guard-c'], mockContext);
-      expect(result).toEqual({ passed: false, failedGuard: 'guard-b' });
+      const result = await registry.runGuards(['guard-a', 'guard-b', 'guard-c'], mockContext);
+      expect(result.warnings).toEqual(['first', 'second']);
+      expect(result.blockers).toEqual([]);
     });
 
-    it('should throw when a guard name is not registered', async () => {
+    it('collects blockers from every guard rather than short-circuiting', async () => {
+      registry.register('guard-a', async () => block('reason a'));
+      registry.register('guard-b', async () => allow());
+      registry.register('guard-c', async () => block('reason c'));
+
+      const result = await registry.runGuards(['guard-a', 'guard-b', 'guard-c'], mockContext);
+      expect(result.blockers).toEqual([
+        { guardName: 'guard-a', message: 'reason a' },
+        { guardName: 'guard-c', message: 'reason c' },
+      ]);
+    });
+
+    it('throws when a guard name is not registered', async () => {
       await expect(
-        registry.executeGuards(['nonexistent'], mockContext),
+        registry.runGuards(['nonexistent'], mockContext),
       ).rejects.toThrow("Workflow guard 'nonexistent' is not registered");
     });
 
-    it('should pass with empty guard names array', async () => {
-      const result = await registry.executeGuards([], mockContext);
-      expect(result).toEqual({ passed: true });
+    it('returns empty result for empty names array', async () => {
+      const result = await registry.runGuards([], mockContext);
+      expect(result).toEqual({ warnings: [], blockers: [] });
     });
 
-    it('should pass the context to guard functions', async () => {
+    it('passes the context to guard functions', async () => {
       let receivedContext: WorkflowGuardContext | null = null;
       registry.register('context-guard', async (ctx) => {
         receivedContext = ctx;
-        return true;
+        return allow();
       });
 
-      await registry.executeGuards(['context-guard'], mockContext);
+      await registry.runGuards(['context-guard'], mockContext);
       expect(receivedContext).toEqual(mockContext);
     });
   });

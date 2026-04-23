@@ -923,6 +923,37 @@ export interface EntityHooks {
   ) => Promise<Record<string, unknown>>;
   /** Custom workflow guard functions, keyed by name. Referenced by guardNames in transition config. */
   workflowGuards?: Record<string, WorkflowGuardFn>;
+  /**
+   * Called inside the workflow transition transaction, after the entity field
+   * is flipped to `toState` and history is recorded, before commit. Receives
+   * the same `tx` handle so transactional side-writes (e.g. bulk-cancelling
+   * downstream rows when a parent moves to a terminal state) are atomic with
+   * the transition itself — throwing rolls the entire transition back.
+   *
+   * Mirrors `inCreateTx` for workflow transitions. For fire-and-forget side
+   * effects that tolerate eventual consistency, subscribe to the generic
+   * `{entityType}.{FieldName}Changed` event emitted after commit instead.
+   */
+  onTransition?: (ctx: TransitionHookContext, tx: any) => Promise<void>;
+}
+
+/**
+ * Context passed to `hooks.onTransition`. Mirrors the payload emitted on the
+ * post-commit `{entityType}.{Field}Changed` event so handlers can share
+ * shape. `entity` is the pre-transition snapshot (scope-checked read);
+ * `toState` is the committed-but-not-yet-visible target state.
+ */
+export interface TransitionHookContext {
+  entityType: string;
+  entityId: string;
+  fieldKey: string;
+  fromState: string;
+  toState: string;
+  transitionId: string;
+  actorId: string;
+  reason?: string;
+  comment?: string;
+  entity: Record<string, unknown>;
 }
 
 // ---------------------------------------------------------------------------

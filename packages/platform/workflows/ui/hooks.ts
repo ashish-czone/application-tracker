@@ -198,6 +198,38 @@ export function useTransitionHistory(entityType: string, entityId: string) {
   });
 }
 
+// Preflight — run on demand when the transition dialog opens so banners
+// appear before the user types a reason/comment. `enabled` is driven by
+// the dialog's open state.
+export function useTransitionPreflight(
+  params: {
+    workflowSlug: string;
+    entityType: string;
+    entityId: string;
+    fromState: string;
+    toState: string;
+  } | null,
+) {
+  const api = useWorkflowsApi();
+  return useQuery({
+    queryKey: [
+      'workflow-preflight',
+      params?.workflowSlug,
+      params?.entityType,
+      params?.entityId,
+      params?.fromState,
+      params?.toState,
+    ],
+    queryFn: () => api.preflightTransition(params!),
+    enabled: !!params,
+    // Preflight is cheap and state-dependent — always refetch when the
+    // dialog reopens. Staying stale would mean a user sees a cached count
+    // even after another admin has changed the underlying data.
+    staleTime: 0,
+    gcTime: 0,
+  });
+}
+
 // Entity transition execution
 export function useEntityTransition(
   entitySlug: string,

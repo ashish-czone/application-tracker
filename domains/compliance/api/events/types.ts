@@ -24,6 +24,24 @@ export interface ComplianceFilingGeneratedPayload extends Record<string, unknown
   dueDate: string;
 }
 
+/**
+ * Emitted once per client dormancy cascade (Q6). Carries the full list of
+ * filing ids that were auto-cancelled inside the transition tx so audit
+ * consumers can render the cascade as a single high-level event rather than
+ * flooding the audit stream with per-filing StatusChanged rows. Per-filing
+ * workflow_history rows are still written inside the tx so each filing's own
+ * detail/audit view shows "cancelled: Client dormantised".
+ */
+export const COMPLIANCE_CLIENT_DORMANTISED = 'compliance.ClientDormantised' as const;
+
+export interface ComplianceClientDormantisedPayload extends Record<string, unknown> {
+  clientId: string;
+  clientName: string;
+  reason: string | null;
+  comment: string | null;
+  cancelledFilingIds: string[];
+}
+
 // Names mirror the dynamic events entity-engine emits for generic CRUD paths,
 // so listeners (audit, automations, etc.) subscribe once and receive events
 // from both the auto-CRUD and the custom create-with-contacts / primary-flip

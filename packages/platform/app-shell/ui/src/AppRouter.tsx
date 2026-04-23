@@ -12,6 +12,7 @@ import {
   useWorkflowForEntity,
   useWorkflows,
   useEntityTransition,
+  useTransitionPreflight,
 } from '@packages/workflows-ui';
 import { TagGroupsListPage, CategoryGroupsListPage } from '@packages/taxonomy-ui';
 import { RolesListPage } from '@packages/rbac-ui';
@@ -48,6 +49,53 @@ function useResolvedWorkflow(entityType: string, entityId: string) {
   const fieldName = anyWorkflow?.fieldName ?? '';
   const { data: resolvedWorkflow } = useWorkflowForEntity(entityType, entityId, fieldName);
   return resolvedWorkflow;
+}
+
+/**
+ * Shared dialog wrapper. Holds the preflight query so both entry points
+ * (PipelineProgressForEntity / WorkflowActionsForEntity) get identical
+ * warning/blocker handling without duplicating the hook wiring.
+ */
+function PreflightedTransitionDialog({
+  workflowSlug,
+  entityType,
+  entityId,
+  fromState,
+  pending,
+  isPending,
+  onCancel,
+  onConfirm,
+}: {
+  workflowSlug: string;
+  entityType: string;
+  entityId: string;
+  fromState: string;
+  pending: PendingTransition | null;
+  isPending: boolean;
+  onCancel: () => void;
+  onConfirm: (data: { reason?: string; comment?: string }) => void;
+}) {
+  const preflightParams = pending
+    ? { workflowSlug, entityType, entityId, fromState, toState: pending.toStateName }
+    : null;
+  const { data: preflight, isFetching: preflightLoading } = useTransitionPreflight(preflightParams);
+
+  return (
+    <TransitionConfirmDialog
+      open={!!pending}
+      onOpenChange={(open) => { if (!open) onCancel(); }}
+      transitionName={pending?.transitionName ?? ''}
+      toStateLabel={pending?.toStateLabel ?? ''}
+      isPending={isPending}
+      reasonOptions={pending?.reasonOptions}
+      reasonRequired={pending?.reasonRequired}
+      commentRequired={pending?.commentRequired}
+      warnings={preflight?.warnings}
+      blockers={preflight?.blockers}
+      preflightLoading={preflightLoading}
+      onConfirm={onConfirm}
+    />
+  );
 }
 
 function PipelineProgressForEntity({ entityType, entityId, entity }: { entityType: string; entityId: string; entity: Record<string, unknown> }) {
@@ -89,15 +137,14 @@ function PipelineProgressForEntity({ entityType, entityId, entity }: { entityTyp
         currentState={currentState}
         onStageClick={handleStageClick}
       />
-      <TransitionConfirmDialog
-        open={!!pending}
-        onOpenChange={(open) => { if (!open) setPending(null); }}
-        transitionName={pending?.transitionName ?? ''}
-        toStateLabel={pending?.toStateLabel ?? ''}
+      <PreflightedTransitionDialog
+        workflowSlug={resolvedWorkflow.slug}
+        entityType={entityType}
+        entityId={entityId}
+        fromState={currentState}
+        pending={pending}
         isPending={transitionMutation.isPending}
-        reasonOptions={pending?.reasonOptions}
-        reasonRequired={pending?.reasonRequired}
-        commentRequired={pending?.commentRequired}
+        onCancel={() => setPending(null)}
         onConfirm={handleConfirm}
       />
     </>
@@ -141,15 +188,14 @@ function WorkflowActionsForEntity({ entityType, entityId, entity }: { entityType
         currentState={currentState}
         onTransitionSelect={handleTransitionSelect}
       />
-      <TransitionConfirmDialog
-        open={!!pending}
-        onOpenChange={(open) => { if (!open) setPending(null); }}
-        transitionName={pending?.transitionName ?? ''}
-        toStateLabel={pending?.toStateLabel ?? ''}
+      <PreflightedTransitionDialog
+        workflowSlug={resolvedWorkflow.slug}
+        entityType={entityType}
+        entityId={entityId}
+        fromState={currentState}
+        pending={pending}
         isPending={transitionMutation.isPending}
-        reasonOptions={pending?.reasonOptions}
-        reasonRequired={pending?.reasonRequired}
-        commentRequired={pending?.commentRequired}
+        onCancel={() => setPending(null)}
         onConfirm={handleConfirm}
       />
     </>

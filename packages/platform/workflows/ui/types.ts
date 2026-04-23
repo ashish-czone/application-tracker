@@ -92,6 +92,13 @@ export interface UpdateTransitionRequest {
   metadata?: Record<string, unknown> | null;
 }
 
+export interface TransitionPreflight {
+  transitionId: string | null;
+  warnings: string[];
+  blockers: string[];
+  missingPermissions: string[];
+}
+
 export interface TransitionHistoryEntry {
   id: string;
   workflowDefinitionId: string;

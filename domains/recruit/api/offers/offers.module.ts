@@ -1,5 +1,5 @@
 import { Module, type OnModuleInit } from '@nestjs/common';
-import { WorkflowGuardRegistry } from '@packages/workflows';
+import { WorkflowGuardRegistry, allow, block } from '@packages/workflows';
 import { TemplateProviderRegistry } from '@packages/document-templates';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { NotificationChannelsModule } from '@packages/notification-channels';
@@ -34,9 +34,12 @@ export class OffersModule implements OnModuleInit {
   onModuleInit() {
     // Register guard: blocks pending-approval → approved unless all approvers approved
     this.guardRegistry.register('require-offer-approvals', async (ctx) => {
-      if (ctx.entityType !== 'offers') return true;
-      if (ctx.toState !== 'approved') return true;
-      return this.approvalsService.allApproved(ctx.entityId);
+      if (ctx.entityType !== 'offers') return allow();
+      if (ctx.toState !== 'approved') return allow();
+      const passed = await this.approvalsService.allApproved(ctx.entityId);
+      return passed
+        ? allow()
+        : block('All approvers must approve this offer before it can move to Approved.');
     });
 
     // Register offer-letter template placeholder provider

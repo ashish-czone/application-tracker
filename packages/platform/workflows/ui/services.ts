@@ -10,6 +10,7 @@ import type {
   WorkflowState,
   WorkflowTransition,
   TransitionHistoryEntry,
+  TransitionPreflight,
 } from './types';
 
 export function createWorkflowsApi(api: ApiFn) {
@@ -61,6 +62,18 @@ export function createWorkflowsApi(api: ApiFn) {
     // History
     getTransitionHistory(entityType: string, entityId: string): Promise<TransitionHistoryEntry[]> {
       return api.get<TransitionHistoryEntry[]>(`/workflows/history/${entityType}/${entityId}`);
+    },
+
+    // Preflight (advisory guard run)
+    preflightTransition(params: {
+      workflowSlug: string;
+      entityType: string;
+      entityId: string;
+      fromState: string;
+      toState: string;
+    }): Promise<TransitionPreflight> {
+      const qs = new URLSearchParams(params).toString();
+      return api.get<TransitionPreflight>(`/workflows/preflight?${qs}`);
     },
 
     // Entity transition execution

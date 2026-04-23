@@ -20,6 +20,7 @@ export {
   useCreateState, useUpdateState, useDeleteState,
   useCreateTransition, useUpdateTransition, useDeleteTransition,
   useWorkflowForEntity, useTransitionHistory, useEntityTransition,
+  useTransitionPreflight,
 } from './hooks';
 export { createWorkflowsApi, type WorkflowsApi } from './services';
 export type {
@@ -28,4 +29,5 @@ export type {
   CreateStateRequest, UpdateStateRequest,
   CreateTransitionRequest, UpdateTransitionRequest,
   TransitionHistoryEntry,
+  TransitionPreflight,
 } from './types';
