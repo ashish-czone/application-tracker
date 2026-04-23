@@ -39,7 +39,7 @@ describe('GenerateComplianceFilingsAction', () => {
     expandRule: Mock;
     resolveAssignee: Mock;
   };
-  let clientRegistrationService: { getRegisteredClients: Mock };
+  let clientRegistrationService: { getRegistrationsForLaw: Mock };
   let filingsService: {
     findByRuleClientPeriod: Mock;
     create: Mock;
@@ -60,7 +60,7 @@ describe('GenerateComplianceFilingsAction', () => {
       expandRule: vi.fn().mockReturnValue([]),
       resolveAssignee: vi.fn().mockResolvedValue('org-1'),
     };
-    clientRegistrationService = { getRegisteredClients: vi.fn().mockResolvedValue([]) };
+    clientRegistrationService = { getRegistrationsForLaw: vi.fn().mockResolvedValue([]) };
     filingsService = {
       findByRuleClientPeriod: vi.fn().mockResolvedValue(null),
       create: vi.fn().mockResolvedValue({ id: 'filing-new' }),
@@ -98,7 +98,7 @@ describe('GenerateComplianceFilingsAction', () => {
 
     await action.execute(ctxFor('r1'));
 
-    expect(clientRegistrationService.getRegisteredClients).not.toHaveBeenCalled();
+    expect(clientRegistrationService.getRegistrationsForLaw).not.toHaveBeenCalled();
     expect(filingsService.create).not.toHaveBeenCalled();
   });
 
@@ -107,13 +107,13 @@ describe('GenerateComplianceFilingsAction', () => {
 
     await action.execute(ctxFor('r1'));
 
-    expect(clientRegistrationService.getRegisteredClients).not.toHaveBeenCalled();
+    expect(clientRegistrationService.getRegistrationsForLaw).not.toHaveBeenCalled();
     expect(filingsService.create).not.toHaveBeenCalled();
   });
 
   it('skips when there are no registered clients', async () => {
     ruleService.findById.mockResolvedValue(makeRule());
-    clientRegistrationService.getRegisteredClients.mockResolvedValue([]);
+    clientRegistrationService.getRegistrationsForLaw.mockResolvedValue([]);
     ruleService.expandRule.mockReturnValue([
       { periodStart: utc(2026, 4, 1), periodEnd: utc(2026, 4, 30), dueDate: utc(2026, 5, 20) },
     ]);
@@ -126,7 +126,7 @@ describe('GenerateComplianceFilingsAction', () => {
   it('creates one filing per (client × occurrence) with the right compliance fields', async () => {
     const rule = makeRule();
     ruleService.findById.mockResolvedValue(rule);
-    clientRegistrationService.getRegisteredClients.mockResolvedValue([
+    clientRegistrationService.getRegistrationsForLaw.mockResolvedValue([
       { id: 'reg1', clientId: 'c1', lawId: 'l1', registeredAt: new Date(), deactivatedAt: null },
     ]);
     ruleService.expandRule.mockReturnValue([
@@ -154,7 +154,7 @@ describe('GenerateComplianceFilingsAction', () => {
 
   it('emits COMPLIANCE_FILING_GENERATED with the compliance projection', async () => {
     ruleService.findById.mockResolvedValue(makeRule());
-    clientRegistrationService.getRegisteredClients.mockResolvedValue([
+    clientRegistrationService.getRegistrationsForLaw.mockResolvedValue([
       { id: 'reg1', clientId: 'c1', lawId: 'l1', registeredAt: new Date(), deactivatedAt: null },
     ]);
     ruleService.expandRule.mockReturnValue([
@@ -182,7 +182,7 @@ describe('GenerateComplianceFilingsAction', () => {
 
   it('is idempotent — existing filing by (rule, client, period) is skipped', async () => {
     ruleService.findById.mockResolvedValue(makeRule());
-    clientRegistrationService.getRegisteredClients.mockResolvedValue([
+    clientRegistrationService.getRegistrationsForLaw.mockResolvedValue([
       { id: 'reg1', clientId: 'c1', lawId: 'l1', registeredAt: new Date(), deactivatedAt: null },
     ]);
     ruleService.expandRule.mockReturnValue([
@@ -197,7 +197,7 @@ describe('GenerateComplianceFilingsAction', () => {
 
   it('propagates AmbiguousHandlerError from resolveAssignee', async () => {
     ruleService.findById.mockResolvedValue(makeRule());
-    clientRegistrationService.getRegisteredClients.mockResolvedValue([
+    clientRegistrationService.getRegistrationsForLaw.mockResolvedValue([
       { id: 'reg1', clientId: 'c1', lawId: 'l1', registeredAt: new Date(), deactivatedAt: null },
     ]);
     ruleService.expandRule.mockReturnValue([
@@ -211,10 +211,56 @@ describe('GenerateComplianceFilingsAction', () => {
     expect(filingsService.create).not.toHaveBeenCalled();
   });
 
+  it('I6: includes deactivated registrations for periods that started on or before deactivatedAt; skips later periods', async () => {
+    // Registration deactivated on 2026-04-15. Per Q8:
+    //   - period starting 2026-04-01 (before deactivation) → generate
+    //   - period starting 2026-05-01 (after deactivation) → skip
+    ruleService.findById.mockResolvedValue(makeRule());
+    clientRegistrationService.getRegistrationsForLaw.mockResolvedValue([
+      {
+        id: 'reg1',
+        clientId: 'c1',
+        lawId: 'l1',
+        registeredAt: utc(2025, 1, 1),
+        deactivatedAt: utc(2026, 4, 15),
+      },
+    ]);
+    ruleService.expandRule.mockReturnValue([
+      { periodStart: utc(2026, 4, 1), periodEnd: utc(2026, 4, 30), dueDate: utc(2026, 5, 20) },
+      { periodStart: utc(2026, 5, 1), periodEnd: utc(2026, 5, 31), dueDate: utc(2026, 6, 20) },
+    ]);
+
+    await action.execute(ctxFor('r1'));
+
+    expect(filingsService.create).toHaveBeenCalledTimes(1);
+    expect(filingsService.create.mock.calls[0]![0]).toMatchObject({ periodStart: '2026-04-01' });
+  });
+
+  it('I6: skips every period when deactivatedAt is before the horizon (all periods fall after)', async () => {
+    ruleService.findById.mockResolvedValue(makeRule());
+    clientRegistrationService.getRegistrationsForLaw.mockResolvedValue([
+      {
+        id: 'reg1',
+        clientId: 'c1',
+        lawId: 'l1',
+        registeredAt: utc(2025, 1, 1),
+        deactivatedAt: utc(2025, 12, 31),
+      },
+    ]);
+    ruleService.expandRule.mockReturnValue([
+      { periodStart: utc(2026, 4, 1), periodEnd: utc(2026, 4, 30), dueDate: utc(2026, 5, 20) },
+      { periodStart: utc(2026, 5, 1), periodEnd: utc(2026, 5, 31), dueDate: utc(2026, 6, 20) },
+    ]);
+
+    await action.execute(ctxFor('r1'));
+
+    expect(filingsService.create).not.toHaveBeenCalled();
+  });
+
   it('repeat firings do not create duplicates — natural-key guard protects retries', async () => {
     const rule = makeRule();
     ruleService.findById.mockResolvedValue(rule);
-    clientRegistrationService.getRegisteredClients.mockResolvedValue([
+    clientRegistrationService.getRegistrationsForLaw.mockResolvedValue([
       { id: 'reg1', clientId: 'c1', lawId: 'l1', registeredAt: new Date(), deactivatedAt: null },
     ]);
     ruleService.expandRule.mockReturnValue([

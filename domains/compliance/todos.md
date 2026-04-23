@@ -1289,10 +1289,10 @@ Hooks that fire when a client, registration, or rule changes state in a way that
 
 **Registration deactivation (medium: cancel post-effective-date, keep earlier):**
 
-- [ ] **I4.** Allow user-selectable `deactivatedAt` on `client_registrations`, constrained to past or present only in V1. Add UI date picker with constraint. (Q8)
-- [ ] **I5.** Hook on registration deactivation that auto-cancels non-terminal tasks where `periodStart > deactivatedAt`, with a system comment referencing the effective date. Leaves earlier-period tasks alone. (Q8)
-- [ ] **I6.** Generator filter: `registration.deactivatedAt IS NULL OR registration.deactivatedAt > periodStart`. (Q8)
-- [ ] **I7.** UI on registration deactivation: show summary ("M tasks after this date will auto-cancel; N tasks remain open for earlier periods") plus an optional secondary checkbox to also cancel the N remaining. Default unchecked. (Q8)
+- [x] **I4.** User-selectable `deactivatedAt` on `client_registrations`, constrained to past-or-today in V1. Validated server-side in `ClientRegistrationService.deactivate()` + client-side via the dialog's `max={today}` date input. (Q8)
+- [x] **I5.** `deactivate()` cascades non-terminal filing cancellation in one tx — auto-cancels `periodStart > deactivatedAt`, optionally cancels earlier-period via `alsoCancelEarlier` opt-in. Each cancelled filing gets a `workflow_transition_history` row with a distinct reason per path (`"Registration deactivated"` vs `"Registration deactivation cleanup"`) so the audit trail reconstructs intent. Emits `compliance.RegistrationDeactivated`. (Q8)
+- [x] **I6.** Generator now uses `getRegistrationsForLaw(lawId)` which includes recently-deactivated registrations, applies the per-occurrence filter `deactivatedAt IS NULL || deactivatedAt > periodStart` — so a registration deactivated 2026-03-01 still generates filings for periods starting on or before that date. (Q8)
+- [x] **I7.** `RegistrationDeactivationDialog` on the client Laws tab: date picker (past-or-today), live preview ("M filings will auto-cancel; N filings remain open"), optional "also cancel earlier" checkbox (off by default, hidden when `remainingBefore === 0`), optional audit comment. Preview driven by the new `GET /clients/:id/registrations/:lawId/deactivation-preview?date=...` endpoint. (Q8)
 
 **Rule deprecation (soft: forward-only, no auto-cancel):**
 

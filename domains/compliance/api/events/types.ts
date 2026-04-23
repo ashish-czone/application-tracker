@@ -56,3 +56,25 @@ export const CLIENT_CONTACTS_DELETED = 'client-contacts.Deleted' as const;
 
 export const CLIENT_REGISTRATIONS_CREATED = 'client-registrations.Created' as const;
 export const CLIENT_REGISTRATIONS_DELETED = 'client-registrations.Deleted' as const;
+
+/**
+ * Emitted when a client_registration is deactivated (I4/I5, Q8). Medium
+ * destructive: cancels non-terminal filings whose `periodStart > deactivatedAt`
+ * inside the same tx. If the admin opts in via `alsoCancelEarlier`, filings
+ * for earlier periods are cancelled too, tagged with a distinct reason so the
+ * audit trail reconstructs intent. `autoCancelledFilingIds` and
+ * `manuallyCancelledFilingIds` are reported separately so downstream listeners
+ * can distinguish the two paths — e.g. automations that fire on "client was
+ * actively downscoped" should probably only react to the manual path.
+ */
+export const COMPLIANCE_REGISTRATION_DEACTIVATED = 'compliance.RegistrationDeactivated' as const;
+
+export interface ComplianceRegistrationDeactivatedPayload extends Record<string, unknown> {
+  registrationId: string;
+  clientId: string;
+  lawId: string;
+  deactivatedAt: string;
+  comment: string | null;
+  autoCancelledFilingIds: string[];
+  manuallyCancelledFilingIds: string[];
+}

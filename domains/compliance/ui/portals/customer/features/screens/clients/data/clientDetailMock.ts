@@ -6,6 +6,10 @@ import type { ClientRow, ClientRiskLevel } from './clientsMock';
 
 export interface ClientLaw {
   id: string;
+  /** UUID of the law — used by deactivation + future registration mutations. */
+  lawId: string;
+  /** UUID of the client this registration belongs to. */
+  clientId: string;
   code: string;
   name: string;
   jurisdiction: 'central' | 'state' | 'municipal' | 'international';
@@ -108,6 +112,8 @@ export const MOCK_CLIENT_DETAIL: ClientDetail = {
   registeredLawDetails: [
     {
       id: 'cl1',
+      lawId: '00000000-0000-0000-0000-00000000l001',
+      clientId: 'c1',
       code: 'GST',
       name: 'Goods & Services Tax',
       jurisdiction: 'central',
@@ -121,6 +127,8 @@ export const MOCK_CLIENT_DETAIL: ClientDetail = {
     },
     {
       id: 'cl2',
+      lawId: '00000000-0000-0000-0000-00000000l002',
+      clientId: 'c1',
       code: 'ITR',
       name: 'Income Tax Return',
       jurisdiction: 'central',
@@ -134,6 +142,8 @@ export const MOCK_CLIENT_DETAIL: ClientDetail = {
     },
     {
       id: 'cl3',
+      lawId: '00000000-0000-0000-0000-00000000l003',
+      clientId: 'c1',
       code: 'TDS',
       name: 'Tax Deducted at Source',
       jurisdiction: 'central',
@@ -147,6 +157,8 @@ export const MOCK_CLIENT_DETAIL: ClientDetail = {
     },
     {
       id: 'cl4',
+      lawId: '00000000-0000-0000-0000-00000000l004',
+      clientId: 'c1',
       code: 'ROC',
       name: 'Registrar of Companies',
       jurisdiction: 'central',
@@ -160,6 +172,8 @@ export const MOCK_CLIENT_DETAIL: ClientDetail = {
     },
     {
       id: 'cl5',
+      lawId: '00000000-0000-0000-0000-00000000l005',
+      clientId: 'c1',
       code: 'PT',
       name: 'Professional Tax',
       jurisdiction: 'state',
