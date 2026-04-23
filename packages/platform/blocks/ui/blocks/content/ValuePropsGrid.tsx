@@ -1,4 +1,4 @@
-import { createElement, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import type { ValuePropsGridFields } from '@packages/blocks-contract';
 import { defineBlock } from '../../registry';
 import type { BlockRenderProps } from '../../types';
@@ -9,45 +9,56 @@ interface Fields extends Record<string, unknown> {
   items?: ValuePropsGridFields['items'];
 }
 
+function pad2(n: number): string {
+  return String(n + 1).padStart(2, '0');
+}
+
+/**
+ * Editorial value-props grid — oversized numerals replace the old
+ * icon tile so the block reads as a display-type list. Each item
+ * stands on a hairline top rule; the numeral is the visual hook.
+ */
 function ValuePropsGrid({ fields }: BlockRenderProps<Fields>): ReactNode {
   const { heading, subheading, items = [] } = fields;
 
-  return createElement(
-    'section',
-    { className: 'w-full py-20 px-6' },
-    createElement(
-      'div',
-      { className: 'mx-auto max-w-6xl flex flex-col gap-12' },
-      heading || subheading
-        ? createElement(
-            'div',
-            { className: 'flex flex-col gap-3 text-center max-w-2xl mx-auto' },
-            heading ? createElement('h2', { className: 'text-3xl md:text-4xl font-bold tracking-tight' }, heading) : null,
-            subheading ? createElement('p', { className: 'text-lg text-muted-foreground' }, subheading) : null,
-          )
-        : null,
-      createElement(
-        'div',
-        { className: 'grid gap-10 md:grid-cols-2 lg:grid-cols-3' },
-        ...items.map((item) =>
-          createElement(
-            'div',
-            { key: item.id, className: 'flex flex-col gap-3' },
-            createElement(
-              'div',
-              {
-                className:
-                  'flex h-12 w-12 items-center justify-center rounded-md bg-primary/10 text-primary text-xl',
-                'aria-hidden': true,
-              },
-              '★',
-            ),
-            createElement('h3', { className: 'text-xl font-semibold' }, item.title),
-            createElement('p', { className: 'text-base text-muted-foreground' }, item.description),
-          ),
-        ),
-      ),
-    ),
+  return (
+    <section className="w-full py-20 md:py-28">
+      <div className="mx-auto max-w-6xl px-6 md:px-10 flex flex-col gap-14">
+        {(heading || subheading) && (
+          <div className="flex flex-col gap-3 max-w-2xl">
+            {heading && (
+              <h2 className="text-4xl md:text-5xl font-semibold tracking-[-0.02em] leading-[1.05]">
+                {heading}
+              </h2>
+            )}
+            {subheading && (
+              <p className="text-lg text-[hsl(var(--muted-foreground))]">{subheading}</p>
+            )}
+          </div>
+        )}
+        <div className="grid gap-x-10 gap-y-14 md:grid-cols-2 lg:grid-cols-3">
+          {items.map((item, i) => (
+            <div
+              key={item.id}
+              className="flex flex-col gap-4 border-t border-[hsl(var(--border))] pt-6"
+            >
+              <span
+                aria-hidden
+                className="text-5xl md:text-6xl font-semibold tracking-[-0.03em] leading-none text-[hsl(var(--foreground))]"
+              >
+                {pad2(i)}
+              </span>
+              <h3 className="text-xl md:text-2xl font-semibold tracking-[-0.01em] leading-tight">
+                {item.title}
+              </h3>
+              <p className="text-base leading-relaxed text-[hsl(var(--muted-foreground))]">
+                {item.description}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
 
