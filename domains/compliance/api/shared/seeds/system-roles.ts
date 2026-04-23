@@ -39,6 +39,16 @@ import { roles, RbacService, type ScopeSpec } from '@packages/rbac';
  * Team Leads get `unit` on every filing verb — they're the unit's authority.
  * Firm Admin grants are all `any` — they're the firm-wide authority.
  *
+ * Platform note: the `/transition` endpoint builds its row-level accessCtx
+ * from the generic `update` permission, not from the transition-specific
+ * verb (pickup/submit/complete/reject/reopen/close). The scopes declared on
+ * those verbs are therefore recorded-but-inert today — they gate the *name*
+ * of the permission (workflow engine checks required-permission presence
+ * against DB RbacService) but do not further narrow which rows the actor
+ * can transition beyond what `update` already permits. Dispatch (self-claim
+ * from the pickup pool) is therefore done by Team Leads under their
+ * `update: unit` scope; preparers work on filings already assigned to them.
+ *
  * Re-running the seed is a no-op: we skip creation when a role with the
  * same (name, userType=null) tuple already exists.
  */
