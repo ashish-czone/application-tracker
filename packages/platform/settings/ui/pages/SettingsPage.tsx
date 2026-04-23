@@ -1,15 +1,27 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Settings, RotateCcw } from 'lucide-react';
 import { cn, Button, ConfirmDialog } from '@packages/ui';
 import { useSettings, useResetSetting } from '../hooks';
 import { SettingField } from '../components/SettingField';
 
 export function SettingsPage() {
-  const { data: groups, isLoading } = useSettings();
+  const { data: rawGroups, isLoading } = useSettings();
   const [activeModule, setActiveModule] = useState<string | null>(null);
   const [resetAllOpen, setResetAllOpen] = useState(false);
   const [resettingAll, setResettingAll] = useState(false);
   const resetMutation = useResetSetting();
+
+  // Hidden fields are edited by dedicated screens (e.g., Appearance,
+  // Branding). They still live on the same AppConfig module — we just
+  // skip them in the generic editor. A module with only hidden fields
+  // drops out of the tab list entirely.
+  const groups = useMemo(
+    () =>
+      rawGroups
+        ?.map((g) => ({ ...g, fields: g.fields.filter((f) => !f.metadata.hidden) }))
+        .filter((g) => g.fields.length > 0),
+    [rawGroups],
+  );
 
   // Auto-select first module
   const selectedModule = activeModule ?? groups?.[0]?.module ?? null;

@@ -76,18 +76,16 @@ export class AppConfigService {
   private buildGroup(module: string, definition: SettingsModuleDefinition): SettingsGroup {
     const overrides = this.store.getAllCachedByModule(module);
 
-    const fields: SettingsField[] = Object.entries(definition.defaults)
-      .filter(([key]) => !definition.metadata[key]?.hidden)
-      .map(([key, defaultValue]) => {
-        const isOverridden = key in overrides;
-        return {
-          key,
-          value: isOverridden ? overrides[key] : defaultValue,
-          default: defaultValue,
-          isOverridden,
-          metadata: definition.metadata[key] ?? { label: key, type: 'string' },
-        };
-      });
+    const fields: SettingsField[] = Object.entries(definition.defaults).map(([key, defaultValue]) => {
+      const isOverridden = key in overrides;
+      return {
+        key,
+        value: isOverridden ? overrides[key] : defaultValue,
+        default: defaultValue,
+        isOverridden,
+        metadata: definition.metadata[key] ?? { label: key, type: 'string' },
+      };
+    });
 
     return {
       module,
