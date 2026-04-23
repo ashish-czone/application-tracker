@@ -6,8 +6,11 @@ import { DEFAULT_SITE_THEME, type SiteTheme } from '@domains/agency-contract';
 // social, SEO, analytics). Kept as one bucket because the existing
 // platform `general` module is scoped to localization (currency,
 // timezone, formats) — not company identity. If another app later
-// needs company identity too, lift `companyName`/`companyLogo` out
-// into a shared `company` module with a one-line migration.
+// needs company identity, lift `companyName` plus the media
+// references (`companyLogo`, `defaultSeo.ogImage`) into a shared
+// `company` module with a one-line migration — the public endpoint
+// already resolves the media UUIDs to URLs, so consumers of the
+// public wire shape don't need to change.
 //
 // `theme`, `companyLogo`, and `defaultSeo.ogImage` are marked
 // `hidden: true` so the generic settings admin page skips them — they

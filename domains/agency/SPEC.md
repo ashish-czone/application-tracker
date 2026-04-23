@@ -1,6 +1,6 @@
 ---
 title: Agency Marketing Site — Spec & Roadmap
-status: in progress (updated 2026-04-22)
+status: v1 code-complete (updated 2026-04-23) — F9.1 mobile sweep + F9.3 Lighthouse measurement need manual verification
 owners: product + platform
 decisions:
   - 2026-04-22 — posts data model: separate entities (Option A). No primitive extraction in v1; revisit if a third entity needs the same fields.
@@ -169,7 +169,8 @@ Blog-specific blocks (`blog-featured`, `blog-list`, `blog-cta`, `post-body`) are
 | **F0** Publish + SEO on pages  | `publishedAt`, `status`, `seo` jsonb on pages; public endpoint filters drafts; admin publish panel | PR #959                                    |
 | **F1** Site settings           | `site` settings module (18 keys), `GET /public/site-settings`, portal wiring (layout, header, footer, org JSON-LD) | PR #975                                    |
 | **F3** Public design system    | Framer Motion + reduced-motion helper, fluid type + variable fonts, sticky blurred header with mobile drawer, dark inverse footer, motion primitives, 404 redesign | PR #961                                    |
-| **F4** Block design pass       | Hero (3 variants), CTA (3 variants), Testimonials (card+quote), Stats (editorial numerals), Logos (CSS marquee) | PR #963 — remaining F4.3 blocks pending    |
+| **F2** Theme persistence       | `site.theme` jsonb, admin Appearance editor, SSR FOUC-safe CSS vars, visitor light/dark toggle in header | PR #985                                   |
+| **F4** Block design pass       | Hero (3 variants), CTA (3 variants), Testimonials, Stats, Logos (F4.1/4.2), Team, Services, FAQ, Value-props redesign (F4.3), process timeline, case-study grid, pricing, contact form placeholder (F4.4) | PRs #963, #988, #989                      |
 | **F5** Media library           | `@packages/media-library-api` (MediaAsset entity, composite upload, sharp dimensions) + `@packages/media-library-ui-admin` (gallery page, drag-drop upload, per-file progress, detail drawer) + `media` field type (picker dialog, view, cell) | PRs #979, #981                             |
 | **F8** SEO + discoverability   | Public pages-index endpoint, dynamic sitemap from published pages, `robots.txt`, JSON-LD for Organization + WebPage | PR #964                                    |
 | Agency domain module           | `domains/agency/api/` (imports pages + menus + content + media-library, demo seed)                 |                                            |
@@ -177,16 +178,10 @@ Blog-specific blocks (`blog-featured`, `blog-list`, `blog-cta`, `post-body`) are
 
 ## 5.2 Partial / weak
 
-- **Theme persistence (F2)** — `@packages/theming-ui` is global admin state only; public site still reads tokens from design-system CSS (F3 shipped the tokens but not per-site persistence). No admin → public propagation, no light/dark toggle in the public header.
-- **F4.3 remaining blocks** — Team, Services, FAQ, Value-props still on pre-design-pass visuals. Design tokens are available; it's a pure design pass.
-- **Site logo / OG image are plain URL fields** — F1 shipped string fields for `companyLogo` and `defaultSeo.ogImage`. Ideal follow-up is a retrofit to the `media` field type so admins pick from the library instead of pasting URLs.
+- **F9.1 mobile sweep** and **F9.3 Lighthouse/perf** — structural work is in (responsive Tailwind, `next/font` preload + swap, inlined theme vars), but an actual device/viewport pass and a Lighthouse measurement against a deployed target still need to be walked through manually.
 
 ## 5.3 Missing
 
-- **F2 theme persistence** — end-to-end palette picker → site_settings.theme → public CSS variables → light/dark toggle in header.
-- **F4.4 new blocks** — process timeline, case-study grid, pricing, contact form placeholder.
-- **F9 polish / a11y / perf sweep** — mobile sweep at 360/768/1024/1440, Lighthouse target ≥ 95, conditional analytics snippet, a11y audit.
-- **F10 supervisor audit** — final naming/boundary/test/docs pass.
 - ~~Rich-text editor (F6)~~ — deferred with the blog.
 - ~~Posts / blog (F7) + `/tag/<slug>`~~ — deferred.
 
@@ -209,14 +204,14 @@ Tasks follow the workflow in `CLAUDE.md` (one commit per task, one PR per featur
 - [x] **F1.3 — Admin UI.** Rendered by `@packages/settings-ui` at `/app-settings` — no custom page needed.
 - [x] **F1.4 — Hook up customer portal.** `fetchSiteSettings()` with ISR cache; `SiteHeader`, `SiteFooter`, `layout.tsx` metadata, Organization JSON-LD all consume real values.
 
-**F1 follow-up (not blocking V1, tracked here):** retrofit `companyLogo` + `defaultSeo.ogImage` from plain URL strings to the `media` field type now that F5 has shipped — admins currently paste URLs; they should pick from the library.
+**F1 follow-up** ✅ (PR #987) — `companyLogo` + `defaultSeo.ogImage` migrated from plain URL strings to media-library asset UUIDs. New `MediaAssetsResolverService` on the media-library API resolves them to public URLs in the `/public/site-settings` response; admin edits them through a new Branding page using `MediaPickerDialog`. Platform primitive added: `SettingFieldMetadata.hidden` skips fields from the generic Settings UI.
 
-## F2. Theme-editor persistence + public propagation — pending
+## F2. Theme-editor persistence + public propagation ✅ (PR #985)
 
-- [ ] **F2.1 — Extend theming-ui presets** — add 4–6 curated palettes aligned to agency aesthetics (Minimal, Bold, Editorial, Studio Dark, Warm, Monochrome). Typography scales (compact / standard / editorial).
-- [ ] **F2.2 — Persist theme in site settings.** Admin `AppearancePage` writes a `theme` key into the `site` settings module (schema addition). Live preview in admin.
-- [ ] **F2.3 — Public site theme loader.** `apps/agency/ui/portals/customer` reads theme via the existing `fetchSiteSettings()` call in `layout.tsx`, emits CSS variables inline in `<head>` to avoid FOUC. Respects user's `prefers-color-scheme` for mode auto.
-- [ ] **F2.4 — Light/dark toggle in header** (persists to localStorage; defaults to system).
+- [x] **F2.1 — Extend theming-ui presets** — 6 curated palettes (Minimal, Bold, Editorial, Studio Dark, Warm, Monochrome) + 3 typography scales (compact/standard/editorial) live in `@domains/agency-contract` (pure data, framework-free, consumed by both admin and Next.js customer).
+- [x] **F2.2 — Persist theme in site settings.** `theme` key added to the `site` module as a structured jsonb object; admin `AppearancePage` writes via `useUpdateSetting`.
+- [x] **F2.3 — Public site theme loader.** Customer portal `layout.tsx` emits the resolved CSS variables inline via `buildThemeStyleCss` — SSR, no FOUC.
+- [x] **F2.4 — Light/dark toggle in header** — new `ThemeToggle` component persists to localStorage and mirrors to `html[data-theme]`; CSS emits `:root` + `html[data-theme=...]` override blocks so the toggle always trumps the site default.
 
 ## F3. Public site design system + layout ✅ (PR #961)
 
@@ -227,12 +222,12 @@ Tasks follow the workflow in `CLAUDE.md` (one commit per task, one PR per featur
 - [x] **F3.5 — Page wrapper + motion primitives.** `<Section>`, `<Reveal>`, `<HoverLift>` (`5f82cb12`).
 - [x] **F3.6 — 404 polish.** Rebuilt to match the design system (`25c5fae6`).
 
-## F4. Block upgrades (design pass)
+## F4. Block upgrades (design pass) ✅
 
-- [x] **F4.1 — Hero variants.** Centered (default), split, full-bleed. Eyebrow + secondary CTA added. Fluid type + pill CTAs. (PR #963)
+- [x] **F4.1 — Hero variants.** Centered (default), split, full-bleed. Eyebrow + secondary CTA, fluid type, pill CTAs. (PR #963)
 - [x] **F4.2 — CTA variants.** Centered, banner (inverse full-bleed), split. (PR #963)
-- [ ] **F4.3 — Existing content blocks design pass.** Shipped so far: Testimonials (card + serif quote + hairline divider), Stats (editorial numerals, auto-adjust column count), Logos (CSS-only marquee with edge mask, grid fallback). **Pending:** Team (card hover reveal), Services (icon grid + alternating rows), Value-props, FAQ.
-- [ ] **F4.4 — New blocks.** Process timeline, case-study grid, pricing, contact form placeholder.
+- [x] **F4.3 — Existing content blocks design pass.** Testimonials / Stats / Logos in PR #963; Team (3/4 portraits + hover LinkedIn pill), Services (numbered eyebrow + arrow-link CTAs), FAQ (plus/minus marker + editorial dividers), Value-props (display numerals) in PR #988. All on the same F4 rhythm (py-20 md:py-28, max-w-6xl, tracking-[-0.02em] headings).
+- [x] **F4.4 — New blocks.** Process timeline (numbered with vertical rule), case-study grid (4/5 portrait tiles with hover affordance), pricing (1–3 tiers with a single inverse "Recommended"), contact form placeholder (disabled inputs + helper line). All static (author-entered, no new entities). (PR #989)
 
 ## F5. Media library ✅ (PRs #979, #981)
 
@@ -258,31 +253,33 @@ Tasks follow the workflow in `CLAUDE.md` (one commit per task, one PR per featur
 - [x] **F8.4 — JSON-LD.** Organization (site-wide, wired to F1 site settings) + WebPage (`8261b599`). Article + BreadcrumbList scoped out with the blog.
 - [x] **F8.5 — OG image defaults + per-page override.** Falls back to `site.defaultSeo.ogImage`; page `seo.ogImage` overrides.
 
-## F9. Polish, accessibility, perf — pending
+## F9. Polish, accessibility, perf
 
-- [ ] **F9.1 — Mobile sweep.** Every page at 360/768/1024/1440. No horizontal scroll. Drawer, accordions, stacking.
-- [ ] **F9.2 — a11y audit.** Keyboard nav, focus states, ARIA on menu drawer, colour contrast on each palette, skip-to-content link, reduced motion.
-- [ ] **F9.3 — Perf.** `next/image` on all block images, font preload, critical-CSS inline theme vars, Lighthouse ≥ 95 mobile/desktop.
-- [ ] **F9.4 — Analytics snippet** — conditional on `site.analytics.ga4` / `site.analytics.posthog`.
+- [ ] **F9.1 — Mobile sweep.** Every page at 360/768/1024/1440. No horizontal scroll. Drawer, accordions, stacking. **Manual verification pending** — responsive classes are in place across all blocks + header/footer; needs an actual device/viewport pass.
+- [x] **F9.2 — a11y audit.** (PR #990) Skip-to-content link → `<main>` landmark with `tabIndex={-1}`; `aria-current="page"` on active nav (desktop + mobile drawer); drawer has `role="dialog"` + `aria-modal`, focuses first link on open, Escape closes and restores focus to the toggle. Global `prefers-reduced-motion` guard already in globals.css from F3.
+- [ ] **F9.3 — Perf.** `next/font` preload + `display: 'swap'` for Inter + Fraunces; inline theme CSS vars in `<head>` (from F2). `next/image` on block images would require the block components (currently framework-agnostic, used by both Puck preview in admin and the customer portal) to take an optional image renderer — a bigger refactor than a polish pass and deferred. Lighthouse ≥ 95 needs measurement against a deployed target.
+- [x] **F9.4 — Analytics snippet** — (PR #990) new `<Analytics>` component emits GA4 `gtag` tags + PostHog bootstrap conditional on `site.analytics.ga4` / `site.analytics.posthog`. Both use `next/script afterInteractive` so they never block hydration; IDs are escape-guarded into the inline init blocks.
 
-## F10. Supervisor audit (per CLAUDE.md Step 3) — pending
+## F10. Supervisor audit (per CLAUDE.md Step 3) ✅
 
-- [ ] **F10.1 — Naming + boundary audit** — no addon→addon imports, no package→domain references, no frontend→backend imports.
-- [ ] **F10.2 — Test coverage audit** — every new endpoint has 401 + 403 security tests; every new block has a renderer test.
-- [ ] **F10.3 — Docs** — update `packages/*/README.md` where present; fold follow-ups from PR #917/#919 that this roadmap covered into closed items.
+- [x] **F10.1 — Naming + boundary audit.** Clean — no addon→addon, no package→domain, no frontend→backend imports. `domains/agency/contract` stays framework-free (zero runtime deps). All 4 redesigned F4.3 blocks migrated off `createElement`; older starter blocks (TextBlock, FeatureList, ImageBlock) still use `createElement` but are out of the F4 scope.
+- [x] **F10.2 — Test coverage audit.** `site-settings.controller.unit.test.ts` covers media resolver paths; `blocks.unit.test.tsx` covers all 4 F4.4 blocks; `app-config.service.unit.test.ts` verifies `metadata.hidden` is preserved on the wire; `media-library-api` resolver + upload still green. Security tests on public site-settings aren't applicable — the endpoint is `@Public()` by design (marketing visitors).
+- [x] **F10.3 — Docs.** This SPEC updated to reflect shipped state across F1-follow-up, F2, F4.3, F4.4, F9.2, F9.4, F10.
 
 # 7. Dependencies / critical path
 
 ```
-F0 ✅ ──► F1 ✅ ──► F2 (theme persistence)
+F0 ✅ ──► F1 ✅ ──► F2 ✅ ──► F1 follow-up ✅ (media-backed logo/OG)
      │
-     └─► F3 ✅ ──► F4 (block design pass — partial)
+     └─► F3 ✅ ──► F4 ✅ (4.1/4.2/4.3/4.4)
                 │
                 └─► F8 ✅ (SEO)
 F5 ✅ (media) ──► [F6 deferred] ──► [F7 deferred]
+F9 ≈ (9.2 a11y + 9.4 analytics ✅; 9.1 mobile sweep + 9.3 Lighthouse need manual verification)
+F10 ✅ (supervisor audit)
 ```
 
-Remaining path to demoable v1: **F2 → F4.3 tail + F4.4 → F9 → F10**. F1 logo/OG-image retrofit to the media field type is a small follow-up that bundles naturally with F2 or F9.
+**V1 demoable.** The two open items (F9.1 device sweep, F9.3 Lighthouse measurement) require a running portal / device lab or a deployed target rather than code changes.
 
 # 8. Success criteria
 
