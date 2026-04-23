@@ -65,7 +65,10 @@ export class GenerateComplianceFilingsAction implements ActionHandler {
       return {};
     }
 
-    const registrations = await this.clientRegistrationService.getRegisteredClients(rule.lawId);
+    // Include recently-deactivated registrations: per I6/Q8, a registration
+    // deactivated 2026-03-01 still owes filings for periods starting on or
+    // before that date. Per-occurrence filter below decides inclusion.
+    const registrations = await this.clientRegistrationService.getRegistrationsForLaw(rule.lawId);
     if (registrations.length === 0) {
       this.logger.debug('No registered clients for rule — skipping', { ruleId, lawId: rule.lawId });
       return {};
@@ -79,6 +82,11 @@ export class GenerateComplianceFilingsAction implements ActionHandler {
     for (const reg of registrations) {
       for (const occ of occurrences) {
         const periodStart = this.toIsoDate(occ.periodStart);
+
+        // I6: `deactivatedAt IS NULL OR deactivatedAt > periodStart`. A
+        // registration deactivated on or before this period started has no
+        // further obligation for this period.
+        if (reg.deactivatedAt && this.toIsoDate(reg.deactivatedAt) <= periodStart) continue;
 
         const existing = await this.lookup.findByRuleClientPeriod(rule.id, reg.clientId, periodStart);
         if (existing) continue;

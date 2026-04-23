@@ -393,6 +393,35 @@ export class ClientRegistrationService {
   }
 
   /**
+   * All registrations for the given law whose client is currently `active`,
+   * **including recently-deactivated registrations** so the generator (I6,
+   * Q8) can make a per-period inclusion decision: a registration deactivated
+   * 2026-03-01 should still generate filings for periods starting on or
+   * before that date, because the firm was contractually engaged for those
+   * periods.
+   *
+   * The client.status filter stays (I2, Q6) — dormant / onboarding clients
+   * are excluded entirely because dormancy is aggressive (cancel everything)
+   * and there's no per-period case to preserve.
+   *
+   * UI callers that want "who is registered right now" should keep using
+   * {@link getRegisteredClients}.
+   */
+  async getRegistrationsForLaw(lawId: string): Promise<ClientRegistration[]> {
+    const rows = await this.database.db
+      .select({ registration: complianceClientRegistrations })
+      .from(complianceClientRegistrations)
+      .innerJoin(clients, eq(clients.id, complianceClientRegistrations.clientId))
+      .where(
+        and(
+          eq(complianceClientRegistrations.lawId, lawId),
+          eq(clients.status, 'active'),
+        ),
+      );
+    return rows.map((r) => this.toRegistration(r.registration));
+  }
+
+  /**
    * Active registrations for the given law, filtered down to clients whose
    * own status is `active`. Dormant / onboarding clients are excluded so the
    * generator (I2/Q6) never materialises filings for a client the firm has
