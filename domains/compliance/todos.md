@@ -1252,10 +1252,16 @@ Scoped to `compliance-filings` only. The original wording said "compliance tasks
   - `deleteMode: 'soft'` — per Q28.
   - Unit-tested in `compliance-filings/__tests__/compliance-filings.config.unit.test.ts` ("attachments (Stream F / Q26 + Q27 + Q28)" block).
 
-### Stream G — Comments on compliance tasks
+### Stream G — Comments on compliance filings
 
-- [ ] **G1.** Wire the `notes` addon API/UI on compliance task detail, flat model. (Pending Q29)
-- [ ] **G2.** (Conditional on Q30) `@mention` detection + notification on comment create.
+Scoped to `compliance-filings` (same tasks→filings re-scoping as Stream F).
+
+- [x] **G1.** `COMPLIANCE_FILINGS_CONFIG` has `hasNotes: true`. The notes addon is fully polymorphic, so the Notes tab lands on the auto-rendered detail page via `apps/compliance-web`'s existing `extraDetailTabs` (`featureFlag: 'hasNotes'`). Platform defaults apply per Q29 — author-editable, author-soft-deletable, `(edited)` marker driven by `updatedAt > createdAt`, history lives in the audit trail.
+- [x] **G2.** `@mention` → in-app notification (Q30). Ships:
+  - **New event `notes.NoteMentioned`** — emitted by `NotesService.create` / `.update` only when users are *newly* introduced by the change. Self-mentions are filtered at the emit site, so the rule doesn't need a self-check. The edit-diff (prior mentions vs current) is computed in the service using the existing `note_mentions` table, which avoids a condition-language limitation in the automation layer.
+  - **Seeded template + rule** in `@packages/notes` (`api/seeds/system.ts` → `notesSystemSeedSources()`). Channel is `in_app` only — email for mentions is explicitly deferred per Q30.
+  - **`EntityFieldStrategy` now resolves array-valued payload fields**, so the `newMentionedUserIds` array fans out to one notification per mentioned user without needing a bespoke strategy. Backward-compatible for scalar fields.
+  - Wired into the compliance seed CLI (`apps/compliance/src/cli/seed.ts`); other notes-consuming apps opt in the same way.
 
 ### Stream H — Employee lifecycle handling
 

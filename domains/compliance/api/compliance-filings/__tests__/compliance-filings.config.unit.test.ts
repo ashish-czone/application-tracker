@@ -24,6 +24,13 @@ describe('COMPLIANCE_FILINGS_CONFIG', () => {
     ]));
   });
 
+  it('enables notes on the filing entity (Stream G / Q29)', () => {
+    // Compliance comments = notes addon attached to compliance-filings. Setting
+    // hasNotes: true surfaces the Notes tab on the auto-rendered detail page
+    // via compliance-web's extraDetailTabs.
+    expect(COMPLIANCE_FILINGS_CONFIG.hasNotes).toBe(true);
+  });
+
   describe('attachments (Stream F / Q26 + Q27 + Q28)', () => {
     it('enables attachments on the filing entity', () => {
       expect(COMPLIANCE_FILINGS_CONFIG.hasAttachments).toBe(true);

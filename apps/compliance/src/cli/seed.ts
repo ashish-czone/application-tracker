@@ -3,6 +3,7 @@ import { runSeeds, type SeedKind, type SeedSource } from '@packages/database/see
 import { platformSystemSeedSources } from '@packages/app-shell/seeds';
 import { orgUnitsSystemSeedSources } from '@packages/org-units/seeds/system';
 import { tasksSystemSeedSources } from '@packages/tasks/seeds/system';
+import { notesSystemSeedSources } from '@packages/notes/seeds/system';
 import { complianceDemoSeedSources, complianceSystemSeedSources } from '@domains/compliance-api/seeds';
 import { AppModule } from '../app.module';
 
@@ -23,6 +24,7 @@ function collectSources(kind: SeedKind): SeedSource[] {
       ...platformSystemSeedSources(),
       ...orgUnitsSystemSeedSources(),
       ...tasksSystemSeedSources(),
+      ...notesSystemSeedSources(),
       ...complianceSystemSeedSources(),
     ];
   }

@@ -4,6 +4,17 @@ import type { UserResolution, EntityResolverConfig } from '@packages/automation-
 import type { UserResolverStrategy, UserResolutionContext } from '@packages/automation-contracts';
 
 /**
+ * Accepts either a string (single user id) or a string array (multi-user
+ * field — e.g. a mention list in a note payload). Anything else normalises
+ * to an empty list so callers can treat the result uniformly.
+ */
+function coerceUserIds(value: unknown): string[] {
+  if (Array.isArray(value)) return value.filter((v): v is string => typeof v === 'string' && v.length > 0);
+  if (typeof value === 'string' && value.length > 0) return [value];
+  return [];
+}
+
+/**
  * Resolves users from a field on the source entity (e.g., assigneeId, ownerId).
  *
  * Config: { field: 'assigneeId' }
@@ -31,14 +42,16 @@ export class EntityFieldStrategy implements UserResolverStrategy {
 
     // 1. Try event payload
     if (context.event?.payload) {
-      const fromPayload = context.event.payload[field] as string | undefined;
-      if (fromPayload) return [fromPayload];
+      const fromPayload = context.event.payload[field];
+      const resolved = coerceUserIds(fromPayload);
+      if (resolved.length > 0) return resolved;
     }
 
     // 2. Try entity data in context
     if (context.entityData) {
-      const fromData = context.entityData[field] as string | undefined;
-      if (fromData) return [fromData];
+      const fromData = context.entityData[field];
+      const resolved = coerceUserIds(fromData);
+      if (resolved.length > 0) return resolved;
     }
 
     // 3. Fall back to DB query
@@ -59,7 +72,6 @@ export class EntityFieldStrategy implements UserResolverStrategy {
       .where(withTenant(resolver.table as any, eq(idColumn, entityId)))
       .limit(1);
 
-    if (!row?.value) return [];
-    return [row.value as string];
+    return coerceUserIds(row?.value);
   }
 }

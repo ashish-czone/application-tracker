@@ -62,6 +62,8 @@ export const COMPLIANCE_FILINGS_CONFIG = defineEntity({
     deleteMode: 'soft',
   },
 
+  hasNotes: true,
+
   extraPermissions: [
     { action: 'pickup', description: 'Pick up a pending filing and move it to in-progress' },
     { action: 'submit', description: 'Submit an in-progress filing for review' },

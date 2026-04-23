@@ -7,8 +7,17 @@ import { users } from '@packages/database/schema';
 import { notes } from '../schema/notes';
 import { noteMentions } from '../schema/note-mentions';
 import { extractMentionUserIds } from '../helpers/extract-mentions';
-import { NOTES_NOTE_CREATED, NOTES_NOTE_UPDATED, NOTES_NOTE_DELETED } from '../events/types';
+import { NOTES_NOTE_CREATED, NOTES_NOTE_UPDATED, NOTES_NOTE_DELETED, NOTES_NOTE_MENTIONED } from '../events/types';
 import type { NoteWithAuthor } from '../types';
+
+const MENTION_PREVIEW_LENGTH = 140;
+
+function buildContentPreview(content: string): string {
+  const trimmed = content.trim().replace(/\s+/g, ' ');
+  return trimmed.length > MENTION_PREVIEW_LENGTH
+    ? `${trimmed.slice(0, MENTION_PREVIEW_LENGTH)}…`
+    : trimmed;
+}
 
 @Injectable()
 export class NotesService {
@@ -53,6 +62,24 @@ export class NotesService {
       },
     });
 
+    // Self-mentions never produce notifications.
+    const newMentionedUserIds = mentionedUserIds.filter((uid) => uid !== data.authorId);
+    if (newMentionedUserIds.length > 0) {
+      this.domainEventEmitter.emit(NOTES_NOTE_MENTIONED, {
+        entityType: 'notes',
+        entityId: note.id,
+        actorId: data.authorId,
+        payload: {
+          noteId: note.id,
+          targetEntityType: data.entityType,
+          targetEntityId: data.entityId,
+          authorId: data.authorId,
+          newMentionedUserIds,
+          contentPreview: buildContentPreview(data.content),
+        },
+      });
+    }
+
     return this.findByIdOrFail(note.id);
   }
 
@@ -75,6 +102,10 @@ export class NotesService {
       .update(notes)
       .set(updateValues)
       .where(withTenant(notes, eq(notes.id, id)));
+
+    // Snapshot prior mentions before any sync, so we can diff (only newly-added
+    // users should drive a mention notification — Q30 edit-diff).
+    const priorMentionedUserIds = await this.getMentionUserIds(id);
 
     if (data.content !== undefined) {
       const mentionedUserIds = extractMentionUserIds(data.content);
@@ -99,6 +130,26 @@ export class NotesService {
         after: { content: updated.content, isInternal: updated.isInternal },
       },
     });
+
+    const priorSet = new Set(priorMentionedUserIds);
+    const newMentionedUserIds = mentionedUserIds.filter(
+      (uid) => !priorSet.has(uid) && uid !== updated.authorId,
+    );
+    if (newMentionedUserIds.length > 0) {
+      this.domainEventEmitter.emit(NOTES_NOTE_MENTIONED, {
+        entityType: 'notes',
+        entityId: id,
+        actorId,
+        payload: {
+          noteId: id,
+          targetEntityType: updated.entityType,
+          targetEntityId: updated.entityId,
+          authorId: updated.authorId,
+          newMentionedUserIds,
+          contentPreview: buildContentPreview(updated.content),
+        },
+      });
+    }
 
     return updated;
   }

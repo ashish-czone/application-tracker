@@ -170,6 +170,30 @@ describe('EntityFieldStrategy', () => {
     expect(result).toEqual(['user-from-db']);
   });
 
+  it('should resolve an array-valued payload field (e.g. mentionedUserIds)', async () => {
+    const mockDb = createMockDb();
+    const strategy = new EntityFieldStrategy(mockDb as any, () => undefined);
+
+    const result = await strategy.resolve(
+      { strategy: 'entity_field', config: { field: 'newMentionedUserIds' } },
+      eventContext({ payload: { newMentionedUserIds: ['u-1', 'u-2', 'u-3'] } }),
+    );
+
+    expect(result).toEqual(['u-1', 'u-2', 'u-3']);
+  });
+
+  it('should skip non-string entries in array payload fields', async () => {
+    const mockDb = createMockDb();
+    const strategy = new EntityFieldStrategy(mockDb as any, () => undefined);
+
+    const result = await strategy.resolve(
+      { strategy: 'entity_field', config: { field: 'ids' } },
+      eventContext({ payload: { ids: ['u-1', null, undefined, '', 42, 'u-2'] as never } }),
+    );
+
+    expect(result).toEqual(['u-1', 'u-2']);
+  });
+
   it('should return empty when field not configured', async () => {
     const mockDb = createMockDb();
     const strategy = new EntityFieldStrategy(mockDb as any, () => undefined);
