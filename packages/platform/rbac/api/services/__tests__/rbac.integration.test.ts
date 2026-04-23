@@ -6,6 +6,7 @@ import { DatabaseService, eq, users } from '@packages/database';
 import { roles } from '../../schema/roles';
 import { userRoles } from '../../schema/user-roles';
 import { rolePermissions } from '../../schema/role-permissions';
+import { rolePermissionScopes } from '../../schema/role-permission-scopes';
 import { RbacModule } from '../../rbac.module';
 import { RbacService } from '../rbac.service';
 import { PermissionRegistryService } from '../permission-registry.service';
@@ -149,7 +150,10 @@ describe('RBAC (integration)', () => {
       await rbacService.setRolePermissions(role.id, ['users.read', 'users.update']);
 
       const perms = await rbacService.getRolePermissions(role.id);
-      expect(perms).toEqual({ 'users.read': true, 'users.update': true });
+      expect(perms).toEqual({
+        'users.read': [{ type: 'any' }],
+        'users.update': [{ type: 'any' }],
+      });
     });
 
     it('should replace permissions on update', async () => {
@@ -158,7 +162,7 @@ describe('RBAC (integration)', () => {
       await rbacService.setRolePermissions(role.id, ['users.read']);
 
       const perms = await rbacService.getRolePermissions(role.id);
-      expect(perms).toEqual({ 'users.read': true });
+      expect(perms).toEqual({ 'users.read': [{ type: 'any' }] });
     });
 
     it('should resolve user permissions through role chain', async () => {
@@ -168,8 +172,8 @@ describe('RBAC (integration)', () => {
       await rbacService.assignRoleToUser(user.id, role.id);
 
       const perms = await rbacService.getPermissionsForUser(user.id, 'admin');
-      expect(perms['users.read']).toBe(true);
-      expect(perms['users.create']).toBe(true);
+      expect(perms['users.read']).toEqual([{ type: 'any' }]);
+      expect(perms['users.create']).toEqual([{ type: 'any' }]);
     });
 
     it('should aggregate permissions from multiple roles', async () => {
@@ -182,8 +186,111 @@ describe('RBAC (integration)', () => {
       await rbacService.assignRoleToUser(user.id, role2.id);
 
       const perms = await rbacService.getPermissionsForUser(user.id, 'admin');
-      expect(perms['users.read']).toBe(true);
-      expect(perms['users.update']).toBe(true);
+      expect(perms['users.read']).toEqual([{ type: 'any' }]);
+      expect(perms['users.update']).toEqual([{ type: 'any' }]);
+    });
+
+    it('should persist scope rows alongside grants', async () => {
+      const role = await rbacService.createRole({ name: 'Scoped Editor', userType: 'admin' });
+      await rbacService.setRolePermissions(role.id, [
+        { name: 'tasks.update', scopes: [{ type: 'own' }] },
+        { name: 'tasks.read', scopes: [{ type: 'unit' }, { type: 'own' }] },
+      ]);
+
+      const scopeRows = await db
+        .select()
+        .from(rolePermissionScopes)
+        .where(eq(rolePermissionScopes.roleId, role.id));
+
+      expect(scopeRows).toHaveLength(3);
+      const byPermission = new Map<string, string[]>();
+      for (const row of scopeRows) {
+        if (!byPermission.has(row.permission)) byPermission.set(row.permission, []);
+        byPermission.get(row.permission)!.push(row.scopeType);
+      }
+      expect(byPermission.get('tasks.update')).toEqual(['own']);
+      expect(byPermission.get('tasks.read')?.sort()).toEqual(['own', 'unit']);
+    });
+
+    it('should round-trip scopes through getRolePermissions', async () => {
+      const role = await rbacService.createRole({ name: 'Narrow', userType: 'admin' });
+      await rbacService.setRolePermissions(role.id, [
+        { name: 'tasks.update', scopes: [{ type: 'own' }, { type: 'assigned' }] },
+      ]);
+
+      const perms = await rbacService.getRolePermissions(role.id);
+      const scopes = perms['tasks.update'];
+      expect(scopes).toHaveLength(2);
+      expect(scopes.map((s) => s.type).sort()).toEqual(['assigned', 'own']);
+    });
+
+    it('should default bare string entries to [{type:"any"}] and persist an explicit row', async () => {
+      const role = await rbacService.createRole({ name: 'Any Only', userType: 'admin' });
+      await rbacService.setRolePermissions(role.id, ['users.read']);
+
+      // Bare string entries normalise to `[{type:'any'}]` and persist a scope row.
+      // (A missing row would also read back as [{type:'any'}], but setRolePermissions
+      // always writes an explicit row so the grant carries intent.)
+      const scopeRows = await db
+        .select()
+        .from(rolePermissionScopes)
+        .where(eq(rolePermissionScopes.roleId, role.id));
+      expect(scopeRows).toHaveLength(1);
+      expect(scopeRows[0].scopeType).toBe('any');
+
+      const perms = await rbacService.getRolePermissions(role.id);
+      expect(perms).toEqual({ 'users.read': [{ type: 'any' }] });
+    });
+
+    it('should cascade scope rows when grants are replaced', async () => {
+      const role = await rbacService.createRole({ name: 'Cascader', userType: 'admin' });
+      await rbacService.setRolePermissions(role.id, [
+        { name: 'tasks.update', scopes: [{ type: 'own' }] },
+      ]);
+      await rbacService.setRolePermissions(role.id, [
+        { name: 'tasks.read', scopes: [{ type: 'unit' }] },
+      ]);
+
+      const scopeRows = await db
+        .select()
+        .from(rolePermissionScopes)
+        .where(eq(rolePermissionScopes.roleId, role.id));
+      expect(scopeRows).toHaveLength(1);
+      expect(scopeRows[0].permission).toBe('tasks.read');
+      expect(scopeRows[0].scopeType).toBe('unit');
+    });
+
+    it('should OR-combine scopes from two roles on the same permission', async () => {
+      const user = await createUser('admin');
+      const reviewer = await rbacService.createRole({ name: 'Reviewer', userType: 'admin' });
+      const owner = await rbacService.createRole({ name: 'Owner', userType: 'admin' });
+      await rbacService.setRolePermissions(reviewer.id, [
+        { name: 'tasks.update', scopes: [{ type: 'assigned' }] },
+      ]);
+      await rbacService.setRolePermissions(owner.id, [
+        { name: 'tasks.update', scopes: [{ type: 'own' }] },
+      ]);
+      await rbacService.assignRoleToUser(user.id, reviewer.id);
+      await rbacService.assignRoleToUser(user.id, owner.id);
+
+      const perms = await rbacService.getPermissionsForUser(user.id, 'admin');
+      expect(perms['tasks.update']?.map((s) => s.type).sort()).toEqual(['assigned', 'own']);
+    });
+
+    it('should collapse to [{type:"any"}] when any role grants the "any" scope', async () => {
+      const user = await createUser('admin');
+      const narrow = await rbacService.createRole({ name: 'Narrow', userType: 'admin' });
+      const wide = await rbacService.createRole({ name: 'Wide', userType: 'admin' });
+      await rbacService.setRolePermissions(narrow.id, [
+        { name: 'tasks.update', scopes: [{ type: 'own' }] },
+      ]);
+      // `wide` defaults to `any` on a bare string entry
+      await rbacService.setRolePermissions(wide.id, ['tasks.update']);
+      await rbacService.assignRoleToUser(user.id, narrow.id);
+      await rbacService.assignRoleToUser(user.id, wide.id);
+
+      const perms = await rbacService.getPermissionsForUser(user.id, 'admin');
+      expect(perms['tasks.update']).toEqual([{ type: 'any' }]);
     });
   });
 
@@ -225,7 +332,7 @@ describe('RBAC (integration)', () => {
       await rbacService.assignRoleToUser(user.id, role.id);
 
       const perms = await rbacService.getPermissionsForUser(user.id, 'client');
-      expect(perms['reports.read']).toBe(true);
+      expect(perms['reports.read']).toEqual([{ type: 'any' }]);
     });
 
     it('should remove role from user', async () => {
