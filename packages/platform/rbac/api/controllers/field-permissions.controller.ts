@@ -2,7 +2,7 @@ import { Controller, Get, Put, Param, Body, ParseUUIDPipe, NotFoundException, In
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { RequirePermission } from '../decorators/require-permission.decorator';
 import { RbacService } from '../services/rbac.service';
-import type { PermissionScope, FieldPermissionEntityResolver } from '../types';
+import type { FieldPermissionEntityResolver } from '../types';
 import { FIELD_PERMISSION_ENTITY_RESOLVER } from '../types';
 
 type FieldAccess = 'read_write' | 'read_only' | 'hidden';
@@ -110,7 +110,7 @@ export class FieldPermissionsController {
     const hidePrefix = `${entityMeta.slug}.hide-`;
     const readonlyPrefix = `${entityMeta.slug}.readonly-`;
 
-    const updatedList: { name: string; scope?: PermissionScope }[] = [];
+    const updatedList: { name: string }[] = [];
 
     // Keep existing permissions that aren't field restrictions for this entity
     for (const perm of Object.keys(existingPerms)) {
@@ -119,15 +119,17 @@ export class FieldPermissionsController {
       }
     }
 
-    // Add new restriction entries from the matrix
+    // Add new restriction entries from the matrix. Field perms are boolean —
+    // they are gated by key presence, so no scopes are attached (defaults to
+    // unrestricted when persisted).
     for (const { fieldKey, access } of body.fields) {
       const meta = entityMeta.fieldMeta[fieldKey];
       if (meta?.isSystem) continue;
 
       if (access === 'hidden') {
-        updatedList.push({ name: `${entityMeta.slug}.hide-${fieldKey}`, scope: 'all' });
+        updatedList.push({ name: `${entityMeta.slug}.hide-${fieldKey}` });
       } else if (access === 'read_only') {
-        updatedList.push({ name: `${entityMeta.slug}.readonly-${fieldKey}`, scope: 'all' });
+        updatedList.push({ name: `${entityMeta.slug}.readonly-${fieldKey}` });
       }
     }
 

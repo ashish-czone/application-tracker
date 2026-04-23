@@ -66,7 +66,7 @@ async function canReadEntity(
 
   const positionScopeProvider = safeGet<PositionScopeProvider>(moduleRef, POSITION_SCOPE_PROVIDER);
   const readPermission = `${entityType}.read`;
-  const accessCtx = await buildAccessContext(
+  const accessCtx = buildAccessContext(
     user,
     readPermission,
     entityType,
