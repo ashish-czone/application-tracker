@@ -5,7 +5,7 @@ export { EntityEngineApiController } from './entity-engine-api.controller';
 export { CreateEntityAction } from './actions/create-entity.action';
 export { UpdateEntityAction } from './actions/update-entity.action';
 export { DeleteEntityAction } from './actions/delete-entity.action';
-export { createEntityController } from './create-entity-controller';
+export { createEntityController, buildAccessContext } from './create-entity-controller';
 export { createFieldPermissionInterceptor } from './interceptors/field-permission.interceptor';
 export { seedEntityFields, seedWorkflows } from './seed-entity-fields';
 export { defineEntity } from './define-entity';
