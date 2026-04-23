@@ -1845,9 +1845,6 @@ importers:
       '@packages/app-shell':
         specifier: workspace:*
         version: link:../../../packages/platform/app-shell/api
-      '@packages/audit':
-        specifier: workspace:*
-        version: link:../../../packages/platform/audit/api
       '@packages/notifications':
         specifier: workspace:*
         version: link:../../../packages/platform/notifications/api

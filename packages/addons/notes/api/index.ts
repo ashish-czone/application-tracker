@@ -7,12 +7,15 @@ export {
   NOTES_NOTE_CREATED,
   NOTES_NOTE_UPDATED,
   NOTES_NOTE_DELETED,
+  NOTES_NOTE_MENTIONED,
 } from './events/types';
 export type {
   NoteCreatedPayload,
   NoteUpdatedPayload,
   NoteDeletedPayload,
+  NoteMentionedPayload,
   NoteCreatedEvent,
   NoteUpdatedEvent,
   NoteDeletedEvent,
+  NoteMentionedEvent,
 } from './events/types';

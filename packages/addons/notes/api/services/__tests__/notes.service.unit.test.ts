@@ -5,6 +5,7 @@ import {
   NOTES_NOTE_CREATED,
   NOTES_NOTE_UPDATED,
   NOTES_NOTE_DELETED,
+  NOTES_NOTE_MENTIONED,
 } from '../../events/types';
 
 // --- Mocks ---
@@ -328,6 +329,49 @@ describe('NotesService', () => {
       const emitCall = eventEmitter.emit.mock.calls[0];
       expect(emitCall[1].payload.mentionedUserIds).toEqual([]);
     });
+
+    // ── NOTES_NOTE_MENTIONED (Stream G / Q30) ───────────────────
+    it('should emit NOTES_NOTE_MENTIONED on create when non-self mentions exist', async () => {
+      vi.mocked(extractMentionUserIds).mockReturnValueOnce(['user-2', 'user-3']);
+      _chain._enqueue(
+        [{ id: 'note-new', ...createInput, isInternal: true, createdAt: now, updatedAt: now, deletedAt: null, deletedBy: null }],
+        undefined,
+        undefined,
+        [makeNoteRow({ id: 'note-new', content: '<p>Hi @user-2 @user-3</p>' })],
+      );
+
+      await service.create(createInput);
+
+      const mentionedCall = eventEmitter.emit.mock.calls.find((c: unknown[]) => c[0] === NOTES_NOTE_MENTIONED);
+      expect(mentionedCall).toBeDefined();
+      expect(mentionedCall![1].payload.newMentionedUserIds).toEqual(['user-2', 'user-3']);
+      expect(mentionedCall![1].payload.authorId).toBe('user-1');
+    });
+
+    it('should not emit NOTES_NOTE_MENTIONED when only self-mentioned', async () => {
+      vi.mocked(extractMentionUserIds).mockReturnValueOnce(['user-1']);
+      _chain._enqueue(
+        [{ id: 'note-new', ...createInput, isInternal: true, createdAt: now, updatedAt: now, deletedAt: null, deletedBy: null }],
+        undefined,
+        undefined,
+        [makeNoteRow({ id: 'note-new' })],
+      );
+
+      await service.create(createInput);
+
+      const mentionedCalls = eventEmitter.emit.mock.calls.filter((c: unknown[]) => c[0] === NOTES_NOTE_MENTIONED);
+      expect(mentionedCalls).toHaveLength(0);
+    });
+
+    it('should not emit NOTES_NOTE_MENTIONED when no mentions', async () => {
+      vi.mocked(extractMentionUserIds).mockReturnValueOnce([]);
+      enqueueCreateFlow();
+
+      await service.create(createInput);
+
+      const mentionedCalls = eventEmitter.emit.mock.calls.filter((c: unknown[]) => c[0] === NOTES_NOTE_MENTIONED);
+      expect(mentionedCalls).toHaveLength(0);
+    });
   });
 
   // ──────────────────────────────────────────────────────────
@@ -339,9 +383,10 @@ describe('NotesService', () => {
       _chain._enqueue(
         [makeNoteRow()],                                        // 1. findByIdOrFail (existing)
         undefined,                                              // 2. update().set().where()
-        undefined,                                              // 3. syncMentions: delete().where()
-        [makeNoteRow({ content: '<p>Updated</p>' })],           // 4. findByIdOrFail (updated)
-        [],                                                     // 5. getMentionUserIds
+        [],                                                     // 3. getMentionUserIds (prior — Q30 diff)
+        undefined,                                              // 4. syncMentions: delete().where()
+        [makeNoteRow({ content: '<p>Updated</p>' })],           // 5. findByIdOrFail (updated)
+        [],                                                     // 6. getMentionUserIds (current)
       );
 
       const result = await service.update('note-1', { content: '<p>Updated</p>' }, 'user-1');
@@ -386,10 +431,11 @@ describe('NotesService', () => {
       _chain._enqueue(
         [makeNoteRow()],                                        // findByIdOrFail
         undefined,                                              // update
+        [],                                                     // getMentionUserIds (prior — Q30 diff)
         undefined,                                              // syncMentions: delete
         undefined,                                              // syncMentions: insert
         [makeNoteRow({ content: '<p>Updated</p>' })],           // findByIdOrFail (updated)
-        [{ userId: 'user-2' }],                                 // getMentionUserIds
+        [{ userId: 'user-2' }],                                 // getMentionUserIds (current)
       );
 
       await service.update('note-1', { content: '<p>Updated</p>' }, 'user-1');
@@ -401,8 +447,9 @@ describe('NotesService', () => {
       _chain._enqueue(
         [makeNoteRow()],                                        // findByIdOrFail
         undefined,                                              // update
+        [],                                                     // getMentionUserIds (prior — Q30 diff)
         [makeNoteRow({ isInternal: false })],                   // findByIdOrFail (updated)
-        [],                                                     // getMentionUserIds
+        [],                                                     // getMentionUserIds (current)
       );
 
       await service.update('note-1', { isInternal: false }, 'user-1');
@@ -414,9 +461,10 @@ describe('NotesService', () => {
       _chain._enqueue(
         [makeNoteRow({ content: '<p>Old</p>', isInternal: true })],  // findByIdOrFail
         undefined,                                                    // update
+        [],                                                           // getMentionUserIds (prior — Q30 diff)
         undefined,                                                    // syncMentions: delete
         [makeNoteRow({ content: '<p>New</p>', isInternal: true })],  // findByIdOrFail (updated)
-        [{ userId: 'user-2' }],                                      // getMentionUserIds
+        [{ userId: 'user-2' }],                                      // getMentionUserIds (current)
       );
 
       await service.update('note-1', { content: '<p>New</p>' }, 'user-1');
@@ -447,14 +495,74 @@ describe('NotesService', () => {
       _chain._enqueue(
         [makeNoteRow({ isInternal: true })],                    // findByIdOrFail
         undefined,                                              // update
+        [],                                                     // getMentionUserIds (prior — Q30 diff)
         [makeNoteRow({ isInternal: false })],                   // findByIdOrFail (updated)
-        [],                                                     // getMentionUserIds
+        [],                                                     // getMentionUserIds (current)
       );
 
       const result = await service.update('note-1', { isInternal: false }, 'user-1');
 
       expect(result.isInternal).toBe(false);
       expect(_chain.set).toHaveBeenCalledWith({ isInternal: false });
+    });
+
+    // ── NOTES_NOTE_MENTIONED on update (Stream G / Q30) ────────
+    it('should emit NOTES_NOTE_MENTIONED with only NEW mentions on update', async () => {
+      // Prior: user-2 was already mentioned. Update introduces user-3.
+      // Only user-3 should be in newMentionedUserIds.
+      vi.mocked(extractMentionUserIds).mockReturnValueOnce(['user-2', 'user-3']);
+      _chain._enqueue(
+        [makeNoteRow({ content: '<p>Old @user-2</p>' })],       // findByIdOrFail
+        undefined,                                                // update
+        [{ userId: 'user-2' }],                                  // getMentionUserIds (prior)
+        undefined,                                                // syncMentions: delete
+        undefined,                                                // syncMentions: insert
+        [makeNoteRow({ content: '<p>New @user-2 @user-3</p>' })], // findByIdOrFail (updated)
+        [{ userId: 'user-2' }, { userId: 'user-3' }],            // getMentionUserIds (current)
+      );
+
+      await service.update('note-1', { content: '<p>New @user-2 @user-3</p>' }, 'user-1');
+
+      const mentionedCall = eventEmitter.emit.mock.calls.find((c: unknown[]) => c[0] === NOTES_NOTE_MENTIONED);
+      expect(mentionedCall).toBeDefined();
+      expect(mentionedCall![1].payload.newMentionedUserIds).toEqual(['user-3']);
+    });
+
+    it('should not emit NOTES_NOTE_MENTIONED on update when no new mentions added', async () => {
+      // Prior == after. No one is newly-mentioned.
+      vi.mocked(extractMentionUserIds).mockReturnValueOnce(['user-2']);
+      _chain._enqueue(
+        [makeNoteRow()],                                          // findByIdOrFail
+        undefined,                                                // update
+        [{ userId: 'user-2' }],                                   // getMentionUserIds (prior)
+        undefined,                                                // syncMentions: delete
+        undefined,                                                // syncMentions: insert
+        [makeNoteRow({ content: '<p>Tweaked @user-2</p>' })],
+        [{ userId: 'user-2' }],                                   // getMentionUserIds (current)
+      );
+
+      await service.update('note-1', { content: '<p>Tweaked @user-2</p>' }, 'user-1');
+
+      const mentionedCalls = eventEmitter.emit.mock.calls.filter((c: unknown[]) => c[0] === NOTES_NOTE_MENTIONED);
+      expect(mentionedCalls).toHaveLength(0);
+    });
+
+    it('should exclude self-mentions from newMentionedUserIds on update', async () => {
+      vi.mocked(extractMentionUserIds).mockReturnValueOnce(['user-1', 'user-3']);
+      _chain._enqueue(
+        [makeNoteRow()],                                          // findByIdOrFail
+        undefined,                                                // update
+        [],                                                       // getMentionUserIds (prior)
+        undefined,                                                // syncMentions: delete
+        undefined,                                                // syncMentions: insert
+        [makeNoteRow({ content: '<p>@user-1 @user-3</p>' })],
+        [{ userId: 'user-1' }, { userId: 'user-3' }],            // current
+      );
+
+      await service.update('note-1', { content: '<p>@user-1 @user-3</p>' }, 'user-1');
+
+      const mentionedCall = eventEmitter.emit.mock.calls.find((c: unknown[]) => c[0] === NOTES_NOTE_MENTIONED);
+      expect(mentionedCall![1].payload.newMentionedUserIds).toEqual(['user-3']);
     });
   });
 
