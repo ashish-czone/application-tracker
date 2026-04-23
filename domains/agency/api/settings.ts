@@ -45,9 +45,9 @@ export const SITE_SETTINGS: SettingsModuleDefinition = {
       description: 'Legal entity name. Used in footer copyright and Organization schema.',
     },
     companyLogo: {
-      label: 'Company logo URL',
+      label: 'Company logo',
       type: 'string',
-      description: 'Public URL to the logo. Migrates to a media reference when the media library ships.',
+      description: 'Media-library asset reference (UUID). Edited via the Branding page.',
     },
     siteName: {
       label: 'Site name',
@@ -110,9 +110,9 @@ export const SITE_SETTINGS: SettingsModuleDefinition = {
       type: 'string',
     },
     'defaultSeo.ogImage': {
-      label: 'Default Open Graph image URL',
+      label: 'Default Open Graph image',
       type: 'string',
-      description: 'Fallback social-share image. Recommended 1200×630.',
+      description: 'Media-library asset reference (UUID). Fallback social-share image, recommended 1200×630. Edited via the Branding page.',
     },
     'analytics.ga4': {
       label: 'Google Analytics 4 Measurement ID',
