@@ -13,6 +13,7 @@
     "@packages/app-shell-ui": "workspace:*",
     "@packages/audit-ui": "workspace:*",
     "@packages/auth-ui": "workspace:*",
+    "@domains/agency-contract": "workspace:*",
     "@packages/blocks-contract": "workspace:*",
     "@packages/blocks-ui": "workspace:*",
     "@packages/automations-ui": "workspace:*",
