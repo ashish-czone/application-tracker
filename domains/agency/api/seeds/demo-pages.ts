@@ -1,0 +1,523 @@
+import type { INestApplicationContext } from '@nestjs/common';
+import { DatabaseService, users } from '@packages/database';
+import { pages, sections } from '@packages/pages-api';
+import { eq } from 'drizzle-orm';
+
+/**
+ * Full-site demo seed for a web development agency (web / mobile / AI / Shopify
+ * / digital marketing). Each page is composed from the starter block set
+ * (hero, text, image, feature-list, cta, process-timeline, case-study-grid,
+ * pricing, contact-form-placeholder) so every piece of copy lives in the
+ * section's `customFields` JSONB and is editable section-by-section in the
+ * admin.
+ *
+ * Images are direct Unsplash URLs — the starter blocks accept URL strings, no
+ * media-asset UUID resolution happens in the public pages response. Admins can
+ * swap any URL through the section editor.
+ *
+ * Idempotent per slug: a page is inserted only if its slug is free. Safe to
+ * run alongside `seedDemoPage` (which owns `home-content`). Order is published
+ * immediately so `GET /public/pages/{slug}` returns them from the moment the
+ * seed completes.
+ */
+
+interface SectionSeed {
+  order: number;
+  blockKind: string;
+  variant?: string;
+  title?: string | null;
+  customFields: Record<string, unknown>;
+}
+
+interface PageSeed {
+  slug: string;
+  title: string;
+  metaDescription: string;
+  sections: SectionSeed[];
+}
+
+const HERO_IMAGE =
+  'https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=2000&auto=format&fit=crop&q=80';
+const AI_IMAGE =
+  'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=1200&auto=format&fit=crop&q=80';
+
+const CASE_ECOM =
+  'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=900&auto=format&fit=crop&q=80';
+const CASE_MOBILE =
+  'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=900&auto=format&fit=crop&q=80';
+const CASE_AI_DASH =
+  'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=900&auto=format&fit=crop&q=80';
+const CASE_CORPORATE =
+  'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=900&auto=format&fit=crop&q=80';
+const CASE_MARKETING =
+  'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=900&auto=format&fit=crop&q=80';
+const CASE_MOBILE_UI =
+  'https://images.unsplash.com/photo-1559028012-481c04fa702d?w=900&auto=format&fit=crop&q=80';
+
+const HOME: PageSeed = {
+  slug: 'home',
+  title: 'Home',
+  metaDescription:
+    'A compact team of senior engineers and designers shipping web, mobile, and AI products end-to-end.',
+  sections: [
+    {
+      order: 0,
+      blockKind: 'hero',
+      variant: 'full-bleed',
+      title: 'Hero',
+      customFields: {
+        eyebrow: 'Web · Mobile · AI',
+        headline: "We build ambitious products for the companies shaping what's next.",
+        subheadline:
+          'A compact team of senior engineers and designers, shipping web, mobile, and AI products end-to-end. From first sketch to production at scale.',
+        ctaText: 'Start a project',
+        ctaHref: '/contact',
+        ctaSecondaryText: 'See our work',
+        ctaSecondaryHref: '/work',
+        imageUrl: HERO_IMAGE,
+      },
+    },
+    {
+      order: 1,
+      blockKind: 'feature-list',
+      title: 'What we build',
+      customFields: {
+        heading: 'What we build',
+        items: [
+          'Web platforms :: Marketing sites, dashboards, and internal tools built on modern TypeScript stacks.',
+          'Mobile apps :: Native iOS and Android apps and cross-platform React Native builds.',
+          'AI products :: LLM-native workflows, RAG pipelines, and agent systems in production.',
+          'Shopify :: Headless storefronts on Hydrogen, custom themes, and app integrations.',
+          'Digital marketing :: Technical SEO, paid acquisition, and analytics instrumentation.',
+          'Strategy & design :: Product discovery, UX, and brand systems that ship with the code.',
+        ].join('\n'),
+      },
+    },
+    {
+      order: 2,
+      blockKind: 'case-study-grid',
+      title: 'Recent work',
+      customFields: {
+        heading: 'Recent work',
+        subheading: "A sample of what we've shipped in the last twelve months.",
+        entries: [
+          `Halston Financial :: A compliance dashboard that replaced six spreadsheets :: /work :: ${CASE_CORPORATE}`,
+          `Northshore Logistics :: Driver app for a 2,000-strong last-mile fleet :: /work :: ${CASE_MOBILE_UI}`,
+          `Brightline Health :: RAG system for clinical policy lookup :: /work :: ${CASE_AI_DASH}`,
+          `Maven Atelier :: Headless Shopify storefront + fulfilment integration :: /work :: ${CASE_ECOM}`,
+        ].join('\n'),
+      },
+    },
+    {
+      order: 3,
+      blockKind: 'cta',
+      variant: 'split',
+      title: 'Closing CTA',
+      customFields: {
+        heading: 'Have a project in mind?',
+        body: 'We take on a handful of new engagements each quarter. Start with a 30-minute call.',
+        primaryText: 'Schedule a call',
+        primaryHref: '/contact',
+        secondaryText: 'See all services',
+        secondaryHref: '/services',
+      },
+    },
+  ],
+};
+
+const ABOUT: PageSeed = {
+  slug: 'about',
+  title: 'About',
+  metaDescription:
+    'A small team of senior engineers and designers. Founded 2019. No hand-offs, no juniors to supervise.',
+  sections: [
+    {
+      order: 0,
+      blockKind: 'hero',
+      variant: 'centered',
+      title: 'Hero',
+      customFields: {
+        eyebrow: 'About',
+        headline: 'A small team, shipping work that matters.',
+        subheadline:
+          'Founded in 2019 by engineers tired of oversold, under-delivered agency work. We stayed small on purpose.',
+      },
+    },
+    {
+      order: 1,
+      blockKind: 'text',
+      title: 'Story',
+      customFields: {
+        heading: 'How we got here',
+        body: `We spent a decade inside fast-growing product companies before starting the studio. The agency work we saw from the outside was often bloated, over-documented, and under-shipped. We wanted something different — a studio run by senior engineers, paid for outcomes, not hours.
+
+Five years later, we're eleven people across four cities. We keep the team small because senior engineers do the work end-to-end, from architecture through deploy. No hand-offs. No juniors to supervise. Just the person who writes the code talking directly to you.`,
+      },
+    },
+    {
+      order: 2,
+      blockKind: 'feature-list',
+      title: 'Values',
+      customFields: {
+        heading: 'What we believe',
+        items: [
+          'Work ships :: Code in production beats perfect code in a branch. Always.',
+          'Small teams win :: Two senior engineers outperform a team of ten. It compounds over quarters.',
+          'No hand-offs :: The person you talk to is the person writing the code.',
+          'Outcomes over hours :: Fixed bids for scoped work. Hourly only when the work is genuinely discovery.',
+          'Own the whole stack :: Frontend, backend, infra, analytics. No "that\'s another team".',
+          'Leave things better :: Clean repos, written docs, handover playbooks. No vendor lock-in.',
+        ].join('\n'),
+      },
+    },
+    {
+      order: 3,
+      blockKind: 'cta',
+      variant: 'banner',
+      title: 'Closing CTA',
+      customFields: {
+        heading: 'Want to work together?',
+        body: 'We take on a handful of new engagements each quarter.',
+        primaryText: 'Get in touch',
+        primaryHref: '/contact',
+      },
+    },
+  ],
+};
+
+const SERVICES: PageSeed = {
+  slug: 'services',
+  title: 'Services',
+  metaDescription:
+    'Web development, mobile apps, AI engineering, Shopify, and digital marketing — scoped to outcomes.',
+  sections: [
+    {
+      order: 0,
+      blockKind: 'hero',
+      variant: 'centered',
+      title: 'Hero',
+      customFields: {
+        eyebrow: 'Services',
+        headline: 'Work we take on.',
+        subheadline:
+          'Five practices, one team. Most engagements span more than one — we scope to the outcome, not the title.',
+      },
+    },
+    {
+      order: 1,
+      blockKind: 'feature-list',
+      title: 'Practices',
+      customFields: {
+        heading: 'Practices',
+        items: [
+          'Web development :: Marketing sites, SaaS dashboards, and internal tools on Next.js, Remix, and the wider TypeScript ecosystem.',
+          'Mobile apps :: iOS, Android, and React Native apps — from first build through App Store submission and ongoing release cadence.',
+          'AI engineering :: LLM apps, RAG pipelines, agent systems, and fine-tuning. Production-grade, not demos.',
+          'Shopify :: Headless storefronts on Hydrogen, Liquid theme builds, Shopify apps, and migration from legacy ecom stacks.',
+          'Digital marketing :: Technical SEO, paid acquisition (Meta, Google, LinkedIn), analytics instrumentation, and conversion optimization.',
+        ].join('\n'),
+      },
+    },
+    {
+      order: 2,
+      blockKind: 'process-timeline',
+      title: 'How we work',
+      customFields: {
+        heading: 'How we work',
+        subheading:
+          'A repeatable shape for most engagements. We adjust the edges; the spine stays the same.',
+        steps: [
+          'Discovery :: Two weeks of interviews, audits, and scoping. You get a written plan and a fixed bid.',
+          'Design :: Figma, fast iteration, design reviews every three days. Approved screens feed build.',
+          'Build :: Weekly demo every Friday. Staging environment from week one. PRs open the whole way.',
+          'Launch :: Zero-downtime cutover, analytics live, monitoring in place. A playbook you can act on.',
+          'Ongoing :: Monthly or quarterly retainers for continued improvement. Or hand off clean and walk away.',
+        ].join('\n'),
+      },
+    },
+    {
+      order: 3,
+      blockKind: 'pricing',
+      title: 'Pricing',
+      customFields: {
+        heading: 'How engagements are priced',
+        subheading:
+          'Fixed bids for scoped work, retainers for ongoing capacity, hourly only for genuine discovery.',
+        tiers: `Discovery
+From $6k
+Two-week paid discovery
+Interviews, audit, and architecture plan
+Written recommendations + fixed bid
+Credited toward build if we ship together
+Start discovery :: /contact
+
+Build (recommended)
+From $45k
+Fixed-bid scoped project
+Design + engineering end-to-end
+Weekly demos, staging from day one
+Launch support + 30-day warranty
+Start a build :: /contact
+
+Retainer
+From $12k/mo
+Ongoing engineering capacity
+Senior engineer + PM on your cadence
+Quarterly roadmap, monthly retro
+Cancel any month after month three
+Start a retainer :: /contact`,
+      },
+    },
+    {
+      order: 4,
+      blockKind: 'feature-list',
+      title: 'Always included',
+      customFields: {
+        heading: "What's always included",
+        items: [
+          'Fixed bid :: No scope-creep surprises. If the spec changes, we re-bid transparently.',
+          'Weekly demo :: Every Friday, live. You see the work as it is built, not at the end.',
+          'Code you own :: Everything in your GitHub from day one. No vendor lock. No hidden repos.',
+          'Production-grade :: Infra as code, CI/CD, monitoring. Not just a repo.',
+          'Written handover :: Runbook, architecture doc, one-pager for the next team.',
+          'Direct access :: Slack with the people writing the code. No account managers in between.',
+        ].join('\n'),
+      },
+    },
+    {
+      order: 5,
+      blockKind: 'cta',
+      variant: 'centered',
+      title: 'Closing CTA',
+      customFields: {
+        heading: 'Ready to start?',
+        body: "Book a 30-minute intro call. We'll walk through what you need and what a good engagement looks like.",
+        primaryText: 'Book a call',
+        primaryHref: '/contact',
+      },
+    },
+  ],
+};
+
+const WORK: PageSeed = {
+  slug: 'work',
+  title: 'Selected work',
+  metaDescription:
+    'A curated sample of recent client work across web, mobile, AI, Shopify, and growth engagements.',
+  sections: [
+    {
+      order: 0,
+      blockKind: 'hero',
+      variant: 'centered',
+      title: 'Hero',
+      customFields: {
+        eyebrow: 'Selected work',
+        headline: 'Recent projects, shipped.',
+        subheadline:
+          "A curated sample. We ship under NDA as often as not — ask us about the work you can't see here.",
+      },
+    },
+    {
+      order: 1,
+      blockKind: 'case-study-grid',
+      title: 'Cases',
+      customFields: {
+        heading: null,
+        subheading: null,
+        entries: [
+          `Halston Financial :: Compliance dashboard that replaced six spreadsheets :: /work :: ${CASE_CORPORATE}`,
+          `Northshore Logistics :: Driver app for a 2,000-strong last-mile fleet :: /work :: ${CASE_MOBILE_UI}`,
+          `Brightline Health :: RAG system for clinical policy lookup :: /work :: ${CASE_AI_DASH}`,
+          `Maven Atelier :: Headless Shopify storefront + fulfilment integration :: /work :: ${CASE_ECOM}`,
+          `Kestrel Robotics :: Internal tools and analytics for a hardware team :: /work :: ${CASE_MOBILE}`,
+          `Halston Growth :: Paid acquisition + landing-page engine :: /work :: ${CASE_MARKETING}`,
+        ].join('\n'),
+      },
+    },
+    {
+      order: 2,
+      blockKind: 'cta',
+      variant: 'split',
+      title: 'Closing CTA',
+      customFields: {
+        heading: 'Your next project?',
+        body: 'We take a handful of new engagements each quarter. The good ones start with a call.',
+        primaryText: 'Start a project',
+        primaryHref: '/contact',
+      },
+    },
+  ],
+};
+
+const CONTACT: PageSeed = {
+  slug: 'contact',
+  title: 'Contact',
+  metaDescription: "Tell us what you're building. We reply within one business day.",
+  sections: [
+    {
+      order: 0,
+      blockKind: 'hero',
+      variant: 'centered',
+      title: 'Hero',
+      customFields: {
+        eyebrow: 'Contact',
+        headline: "Let's build something.",
+        subheadline:
+          "Tell us what you're thinking. We read every message and reply within one business day.",
+      },
+    },
+    {
+      order: 1,
+      blockKind: 'contact-form-placeholder',
+      title: 'Form',
+      customFields: {
+        heading: 'Start a conversation',
+        subheading: "Share what you're working on. We'll reply with a plan for the first call.",
+        submitLabel: 'Send message',
+        helperText:
+          'Prefer email? hello@example.com. We have teams in San Francisco, London, and Dubai.',
+      },
+    },
+    {
+      order: 2,
+      blockKind: 'feature-list',
+      title: 'Other ways to reach us',
+      customFields: {
+        heading: 'Other ways to reach us',
+        items: [
+          'Email :: hello@example.com — we check it every morning.',
+          'Schedule :: calendly.com/example — pick a time that works for you.',
+          'Careers :: careers@example.com — always looking for senior engineers.',
+          'Press :: press@example.com — for interviews and speaking.',
+        ].join('\n'),
+      },
+    },
+  ],
+};
+
+const SERVICES_AI: PageSeed = {
+  slug: 'services-ai',
+  title: 'AI Engineering',
+  metaDescription:
+    'LLM apps, RAG pipelines, agent systems, and fine-tuning. Production-grade AI engineering.',
+  sections: [
+    {
+      order: 0,
+      blockKind: 'hero',
+      variant: 'split',
+      title: 'Hero',
+      customFields: {
+        eyebrow: 'Services / AI',
+        headline: 'AI products, built for production.',
+        subheadline:
+          'We ship AI-native applications — LLM workflows, RAG pipelines, agent systems — with the rigor of any other production software. Latency budgets, eval suites, cost controls, all in place.',
+        ctaText: 'Start an AI project',
+        ctaHref: '/contact',
+        ctaSecondaryText: 'See all services',
+        ctaSecondaryHref: '/services',
+        imageUrl: AI_IMAGE,
+      },
+    },
+    {
+      order: 1,
+      blockKind: 'feature-list',
+      title: 'What we build',
+      customFields: {
+        heading: 'What we build',
+        items: [
+          'RAG pipelines :: Retrieval-augmented generation on your docs, with grounded citations and recall metrics.',
+          'Agent systems :: Multi-step workflows with tool use, memory, and human-in-the-loop escape hatches.',
+          'LLM apps :: Chat interfaces, Copilot-style assistants, and structured-output endpoints on OpenAI, Anthropic, and Google.',
+          'Evals :: Offline eval suites plus production monitoring. Catch regressions before users do.',
+          'Cost controls :: Caching, routing, and model selection that keep unit economics in the green.',
+          'Fine-tuning :: When base models fall short. Data prep, training, eval, deploy.',
+        ].join('\n'),
+      },
+    },
+    {
+      order: 2,
+      blockKind: 'process-timeline',
+      title: 'AI process',
+      customFields: {
+        heading: 'How AI engagements run',
+        subheading:
+          'Faster iteration cycles than traditional software. Same disciplines on the build side.',
+        steps: [
+          'Framing :: One week. Jobs-to-be-done, eval criteria, baseline metrics. We exit with go/no-go.',
+          'Prototype :: Two weeks. Thin slice, real data, initial evals. You see it work before we scale.',
+          'Harden :: Four to eight weeks. Latency budget, cost model, monitoring, production deploy.',
+          'Iterate :: Ongoing. Weekly evals, prompt versioning, model upgrades as they land.',
+        ].join('\n'),
+      },
+    },
+    {
+      order: 3,
+      blockKind: 'case-study-grid',
+      title: 'AI work',
+      customFields: {
+        heading: 'AI work',
+        subheading: "A small sample of AI systems we've shipped.",
+        entries: [
+          `Brightline Health :: RAG system for clinical policy lookup :: /work :: ${CASE_AI_DASH}`,
+          `Halston Financial :: Agent that reconciles trade breaks :: /work :: ${CASE_CORPORATE}`,
+          `Maven Atelier :: AI-assisted product content generation :: /work :: ${CASE_ECOM}`,
+        ].join('\n'),
+      },
+    },
+    {
+      order: 4,
+      blockKind: 'cta',
+      variant: 'centered',
+      title: 'Closing CTA',
+      customFields: {
+        heading: 'AI project in the plan?',
+        body: "Happy to talk through what you're building. We can usually tell in one call whether we're a fit.",
+        primaryText: 'Book an AI call',
+        primaryHref: '/contact',
+        secondaryText: 'See all services',
+        secondaryHref: '/services',
+      },
+    },
+  ],
+};
+
+const AGENCY_PAGES: PageSeed[] = [HOME, ABOUT, SERVICES, WORK, CONTACT, SERVICES_AI];
+
+export const seedDemoPages = async (ctx: INestApplicationContext): Promise<void> => {
+  const database = ctx.get(DatabaseService);
+  const [admin] = await database.db.select({ id: users.id }).from(users).limit(1);
+  if (!admin) return;
+
+  for (const seed of AGENCY_PAGES) {
+    const [existing] = await database.db
+      .select({ id: pages.id })
+      .from(pages)
+      .where(eq(pages.slug, seed.slug))
+      .limit(1);
+    if (existing) continue;
+
+    const publishedAt = new Date();
+    const [page] = await database.db
+      .insert(pages)
+      .values({
+        slug: seed.slug,
+        title: seed.title,
+        metaDescription: seed.metaDescription,
+        status: 'published',
+        publishedAt,
+        createdBy: admin.id,
+      })
+      .returning({ id: pages.id });
+
+    for (const s of seed.sections) {
+      await database.db.insert(sections).values({
+        pageId: page.id,
+        order: s.order,
+        blockKind: s.blockKind,
+        variant: s.variant ?? null,
+        title: s.title ?? null,
+        customFields: s.customFields,
+      });
+    }
+  }
+};
