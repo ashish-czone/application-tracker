@@ -1802,6 +1802,9 @@ importers:
       '@packages/rbac':
         specifier: workspace:*
         version: link:../../../packages/platform/rbac/api
+      '@packages/soft-delete':
+        specifier: workspace:*
+        version: link:../../../packages/core/soft-delete
       '@packages/tasks':
         specifier: workspace:*
         version: link:../../../packages/addons/tasks/api

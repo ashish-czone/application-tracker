@@ -23,6 +23,7 @@
     "@packages/notification-channels": "workspace:*",
     "@packages/org-units": "workspace:*",
     "@packages/rbac": "workspace:*",
+    "@packages/soft-delete": "workspace:*",
     "@packages/tasks": "workspace:*",
     "@packages/users": "workspace:*",
     "@packages/workflows": "workspace:*"
