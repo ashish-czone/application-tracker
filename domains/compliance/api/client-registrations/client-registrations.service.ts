@@ -6,19 +6,18 @@ import {
 } from '@nestjs/common';
 import { DatabaseService, and, count, eq, gt, inArray, isNull, lte, not } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
-import { WorkflowEngineService, WorkflowRegistryService } from '@packages/workflows';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { complianceClientRegistrations } from '../schema/client-registrations';
 import { complianceLaws } from '../schema/laws';
 import { clients } from '../schema/clients';
 import { complianceFilings } from '../schema/compliance-filings';
+import { ComplianceFilingsCancellationService } from '../compliance-filings/compliance-filings-cancellation.service';
 import {
   CLIENT_REGISTRATIONS_CREATED,
   COMPLIANCE_REGISTRATION_DEACTIVATED,
 } from '../events/types';
 
 const TERMINAL_FILING_STATUSES = ['completed', 'cancelled'];
-const FILING_WORKFLOW_SLUG = 'compliance-filing-status';
 
 /**
  * Reasons written to workflow_transition_history.reason for filings cancelled
@@ -69,8 +68,7 @@ export class ClientRegistrationService {
   constructor(
     private readonly database: DatabaseService,
     private readonly events: DomainEventEmitter,
-    private readonly workflowEngine: WorkflowEngineService,
-    private readonly workflowRegistry: WorkflowRegistryService,
+    private readonly filingsCancellation: ComplianceFilingsCancellationService,
     appLogger: AppLoggerService,
   ) {
     this.logger = appLogger.forContext(ClientRegistrationService.name);
@@ -244,17 +242,6 @@ export class ClientRegistrationService {
       throw new NotFoundException(`No active registration for client ${clientId} law ${lawId}`);
     }
 
-    const definition = this.workflowRegistry.getBySlug(FILING_WORKFLOW_SLUG);
-    if (!definition) {
-      throw new Error(`Workflow definition '${FILING_WORKFLOW_SLUG}' not found — cannot record filing cancellation history`);
-    }
-    const transitionIdByFromState = new Map<string, string>();
-    for (const t of definition.transitions) {
-      if (t.toStateName === 'cancelled') {
-        transitionIdByFromState.set(t.fromStateName, t.id);
-      }
-    }
-
     const deactivatedOn = toDateString(params.deactivatedAt);
     const alsoCancelEarlier = params.alsoCancelEarlier ?? false;
 
@@ -286,19 +273,15 @@ export class ClientRegistrationService {
             ))
         : [];
 
-      await this.cancelFilings(tx, afterFilings, {
+      await this.filingsCancellation.cancelFilings(tx, afterFilings, {
         reason: REASON_AUTO_CANCELLED,
         comment: this.buildComment(deactivatedOn, params.comment, false),
         actorId: params.actorId,
-        definitionId: definition.id,
-        transitionIdByFromState,
       });
-      await this.cancelFilings(tx, beforeFilings, {
+      await this.filingsCancellation.cancelFilings(tx, beforeFilings, {
         reason: REASON_MANUALLY_CANCELLED,
         comment: this.buildComment(deactivatedOn, params.comment, true),
         actorId: params.actorId,
-        definitionId: definition.id,
-        transitionIdByFromState,
       });
 
       return {
@@ -337,46 +320,6 @@ export class ClientRegistrationService {
       autoCancelledFilingIds: autoCancelledIds,
       manuallyCancelledFilingIds: manuallyCancelledIds,
     };
-  }
-
-  private async cancelFilings(
-    tx: any,
-    filings: Array<{ id: string; status: string }>,
-    params: {
-      reason: string;
-      comment: string;
-      actorId: string | null;
-      definitionId: string;
-      transitionIdByFromState: Map<string, string>;
-    },
-  ): Promise<void> {
-    if (filings.length === 0) return;
-    const ids = filings.map((f) => f.id);
-    await tx
-      .update(complianceFilings)
-      .set({ status: 'cancelled' })
-      .where(inArray(complianceFilings.id, ids));
-
-    for (const filing of filings) {
-      const transitionId = params.transitionIdByFromState.get(filing.status);
-      if (!transitionId) {
-        throw new Error(
-          `No configured transition from '${filing.status}' → 'cancelled' on workflow '${FILING_WORKFLOW_SLUG}'. Filing ${filing.id} cannot be auto-cancelled; fix the workflow definition or exclude this state from the registration deactivation cascade.`,
-        );
-      }
-      await this.workflowEngine.recordHistory({
-        workflowDefinitionId: params.definitionId,
-        entityType: 'compliance-filings',
-        entityId: filing.id,
-        fieldName: 'status',
-        fromState: filing.status,
-        toState: 'cancelled',
-        transitionId,
-        actorId: params.actorId,
-        reason: params.reason,
-        comment: params.comment,
-      }, tx);
-    }
   }
 
   private buildComment(deactivatedOn: string, adminComment: string | undefined, alsoCancelEarlier: boolean): string {

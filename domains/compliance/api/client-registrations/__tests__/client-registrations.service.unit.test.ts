@@ -2,8 +2,8 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { ClientRegistrationService } from '../client-registrations.service';
 import type { DomainEventEmitter } from '@packages/events';
-import type { WorkflowEngineService, WorkflowRegistryService } from '@packages/workflows';
 import type { AppLoggerService } from '@packages/logger';
+import type { ComplianceFilingsCancellationService } from '../../compliance-filings/compliance-filings-cancellation.service';
 
 type AnyChain = Record<string, ReturnType<typeof vi.fn>>;
 
@@ -33,8 +33,7 @@ function mockUpdate() {
 describe('ClientRegistrationService', () => {
   let db: { db: Record<string, ReturnType<typeof vi.fn>> };
   let events: { emitDynamic: ReturnType<typeof vi.fn> };
-  let workflowEngine: { recordHistory: ReturnType<typeof vi.fn> };
-  let workflowRegistry: { getBySlug: ReturnType<typeof vi.fn> };
+  let filingsCancellation: { cancelFilings: ReturnType<typeof vi.fn> };
   let service: ClientRegistrationService;
 
   const activeRow = {
@@ -43,16 +42,6 @@ describe('ClientRegistrationService', () => {
     lawId: 'l1',
     registeredAt: new Date('2026-01-01'),
     deactivatedAt: null,
-  };
-
-  const filingWorkflowDef = {
-    id: 'wf-def-filings',
-    transitions: [
-      { id: 't-pending-cancel', fromStateName: 'pending', toStateName: 'cancelled' },
-      { id: 't-inprogress-cancel', fromStateName: 'in_progress', toStateName: 'cancelled' },
-      { id: 't-review-cancel', fromStateName: 'review', toStateName: 'cancelled' },
-      { id: 't-rejected-cancel', fromStateName: 'rejected', toStateName: 'cancelled' },
-    ],
   };
 
   const appLogger = {
@@ -71,13 +60,11 @@ describe('ClientRegistrationService', () => {
       },
     };
     events = { emitDynamic: vi.fn() };
-    workflowEngine = { recordHistory: vi.fn().mockResolvedValue({ historyId: 'h', recordedAt: '' }) };
-    workflowRegistry = { getBySlug: vi.fn().mockReturnValue(filingWorkflowDef) };
+    filingsCancellation = { cancelFilings: vi.fn().mockResolvedValue(undefined) };
     service = new ClientRegistrationService(
       db as never,
       events as unknown as DomainEventEmitter,
-      workflowEngine as unknown as WorkflowEngineService,
-      workflowRegistry as unknown as WorkflowRegistryService,
+      filingsCancellation as unknown as ComplianceFilingsCancellationService,
       appLogger,
     );
   });
@@ -330,16 +317,17 @@ describe('ClientRegistrationService', () => {
 
       expect(result.autoCancelledFilingIds).toEqual(['f-after-1', 'f-after-2']);
       expect(result.manuallyCancelledFilingIds).toEqual([]);
-      // Two recordHistory calls — one per cancelled filing
-      expect(workflowEngine.recordHistory).toHaveBeenCalledTimes(2);
-      expect(workflowEngine.recordHistory).toHaveBeenCalledWith(
-        expect.objectContaining({
-          entityType: 'compliance-filings',
-          entityId: 'f-after-1',
-          reason: 'Registration deactivated',
-          transitionId: 't-pending-cancel',
-        }),
+      // Cascade delegated to shared helper — auto path with distinct reason
+      expect(filingsCancellation.cancelFilings).toHaveBeenCalledWith(
         tx,
+        [
+          { id: 'f-after-1', status: 'pending' },
+          { id: 'f-after-2', status: 'in_progress' },
+        ],
+        expect.objectContaining({
+          reason: 'Registration deactivated',
+          actorId: 'u1',
+        }),
       );
       // Event emitted once, payload includes both id lists
       expect(events.emitDynamic).toHaveBeenCalledTimes(1);
@@ -373,12 +361,12 @@ describe('ClientRegistrationService', () => {
 
       expect(result.autoCancelledFilingIds).toEqual(['f-after-1']);
       expect(result.manuallyCancelledFilingIds).toEqual(['f-before-1']);
-      expect(workflowEngine.recordHistory).toHaveBeenCalledWith(
+      expect(filingsCancellation.cancelFilings).toHaveBeenCalledWith(
+        tx,
+        [{ id: 'f-before-1', status: 'in_progress' }],
         expect.objectContaining({
-          entityId: 'f-before-1',
           reason: 'Registration deactivation cleanup',
         }),
-        tx,
       );
     });
 
@@ -394,7 +382,8 @@ describe('ClientRegistrationService', () => {
 
       expect(result.autoCancelledFilingIds).toEqual([]);
       expect(result.manuallyCancelledFilingIds).toEqual([]);
-      expect(workflowEngine.recordHistory).not.toHaveBeenCalled();
+      // Helper is still called (with empty arrays) — it no-ops on zero length
+      expect(filingsCancellation.cancelFilings).toHaveBeenCalledWith(tx, [], expect.any(Object));
       expect(events.emitDynamic).toHaveBeenCalledTimes(1);
     });
   });
