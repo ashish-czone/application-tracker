@@ -14,6 +14,45 @@ Keep this file up to date as we work. Append new questions at the bottom of §2.
 
 Running log so the next session can pick up without archaeology. Newest at top.
 
+### 2026-04-23 (late) — Filings scope matrix applied (PR #1005)
+
+**Shipped on top of the role-grant-scope platform (PR #1000 earlier the same day):**
+
+- **Task 1** — compliance-filings entity config now declares explicit ownership anchors (`createdByField: 'createdBy'`, `assigneeField: 'assigneeId'`, `teamField: 'assigneeTeamId'`) in place of the legacy `ownerField` alias. Dropped the legacy `my-filings` custom scope; registered `unassigned_in_unit` (filings where `assigneeId IS NULL AND assigneeTeamId IN actor.units`) as the pickup pool.
+- **Task 2** — system role seeds rewritten from bare `string[]` permissions to `GrantSpec[]` with explicit scope arrays:
+  - **Preparer** — `read: unit`, `pickup: unassigned_in_unit`, `update/submit: assigned`, reference reads at `any`.
+  - **Reviewer** — inherits Preparer, adds `complete/reject: unit`.
+  - **Team Lead** — every filing verb at `unit`; clients / contacts / registrations / compliance_rules CRUD (sans delete) at `any`.
+  - **Firm Admin** — everything `any`, including delete on every CRUD entity.
+- **Task 5** — 6 new integration tests over real HTTP + real DB asserting the matrix end-to-end: `read: unit` filters list output, `update: assigned` blocks teammate edits, `update: unit` permits in-unit edits across assignees, `update: any` collapses to unrestricted. Local `withScopedAuth(userId, scopes)` helper emits JWTs with `ScopeSpec[]` per permission instead of the boolean grants `withAuth()` produces.
+
+**Platform fact documented (not fixed) in the seed header:**
+
+`/transition` builds its row-level `accessCtx` from the generic `update` permission — not from the transition-specific verb (`pickup`/`complete`/`reject`/…). Scopes declared on those verbs therefore gate the permission *name* (workflow engine checks required-permission presence against DB RbacService) but do not further narrow the rows the actor can transition. Practical consequences:
+
+- A Preparer with `update: assigned` **cannot self-claim** an unassigned filing under the current platform — `findOneOrFail` filters the unassigned row out before the transition runs. Dispatch is a Team Lead action (`update: unit` covers it).
+- A Reviewer with `update: assigned` (inherited) + `complete: unit` **cannot complete a teammate's filing** — same mechanism. Reviewers only approve their own submissions today.
+
+The seed stores the transition-verb scopes anyway so a future platform change (transition uses verb-specific scopes) flips behavior without re-seeding.
+
+**Deliberately deferred to a follow-up PR:**
+
+- **Task 3 (reassign validation hook)** — rejected as a category. "Assignee must be in my unit" is data validation, not authorization. If ever needed it belongs in a transition guard / validator layer, not a `beforeUpdate` hook. Scope system + UI filtering are sufficient; an authorized actor who manually posts a weird `assigneeId` is a data-quality issue, not a security one.
+- **Task 4 (unit-filtered assignee picker)** — `BulkReassignDialog` + `FilingDetailDrawer` currently source handlers from `useOrgUnits()` which returns every unit in the org. Picker filtering needs a "my visible units" API (doesn't exist) or a frontend `useCurrentUser`-style hook (doesn't exist). Pure UX polish — no functional enforcement story, since task 3 is out.
+- **Task 6 (E2E coverage)** — `e2e-compliance/` doesn't exist. Scaffolding (playwright config + auth + mock-api + entity generators + spec files) only pays off alongside task 4's UI change. Bundled with it.
+
+Picker + E2E ship together as the next compliance PR when someone picks it up.
+
+**Blocker on main (not ours, surfaced here):**
+
+`@apps/compliance build` currently fails with a TS error at `domains/compliance/api/rules/compliance-rules.service.ts:258` (`Type 'string | null' is not assignable to type 'string | undefined'`). Introduced by PR #1003 (Stream I8-I10). `@apps/compliance-web` build and all unit + integration tests are green. Needs a quick fix PR — grep `params.comment ?? null` and widen the callee signature to accept `string | null` (or coerce to `undefined`).
+
+**Next pickup choices, in priority order:**
+
+1. **Fix the `@apps/compliance` build** — tiny, but every other compliance PR is partially unverifiable until this lands.
+2. **Stream I sub-PR 4 (I13-I16)** — rule parameter edit guards (Q9). Outline in the next session-log entry below. Two open questions still to lock ("has generated work" signal: filings vs. tasks; forward-only enforcement: purely UI or service-side).
+3. **Picker + E2E PR** — task 4 + task 6 bundled. Only attractive if the unit-scoped picker is actually valuable to the user; today the scope matrix is enforced server-side regardless of what the picker shows.
+
 ### 2026-04-23 — Stream I continued: registration deactivation → rule deprecation
 
 **Shipped:**
