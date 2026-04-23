@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
 import { DataTable, Pagination, CoarseTabs } from '@packages/ui';
+import { AuditTimeline } from '@packages/audit-ui';
 import {
   MOCK_CLIENT_DETAIL,
   type ClientFilingStatus,
@@ -14,7 +15,7 @@ import { CLIENT_DETAIL_LAW_COLUMNS } from './components/clientDetailLawColumns';
 import { useClientDetail } from './api/useClientsApi';
 import { mergeClientDetail } from './api/mapClientRecord';
 
-type DetailTab = 'overview' | 'filings' | 'laws';
+type DetailTab = 'overview' | 'filings' | 'laws' | 'audit-trail';
 
 export function ClientDetailPage() {
   const { clientId } = useParams<{ clientId: string }>();
@@ -98,6 +99,7 @@ export function ClientDetailPage() {
     { value: 'overview' as const, label: 'Overview' },
     { value: 'filings' as const, label: 'Filings', count: client.openFilings },
     { value: 'laws' as const, label: 'Laws', count: client.registeredLaws },
+    { value: 'audit-trail' as const, label: 'Audit Trail' },
   ];
 
   return (
@@ -166,6 +168,12 @@ export function ClientDetailPage() {
                 getRowKey={(l) => l.id}
                 onRowClick={() => {}}
               />
+            </div>
+          )}
+
+          {activeTab === 'audit-trail' && clientId && (
+            <div className="bg-paper-raised border border-rule p-6">
+              <AuditTimeline entityType="clients" entityId={clientId} />
             </div>
           )}
         </div>
