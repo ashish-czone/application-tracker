@@ -5,6 +5,7 @@ import '../lib/register-blocks';
 import { SiteHeader } from '@/components/SiteHeader';
 import { SiteFooter } from '@/components/SiteFooter';
 import { JsonLd } from '@/components/JsonLd';
+import { Analytics } from '@/components/Analytics';
 import { fetchSiteSettings, type SiteSettings } from '@/lib/api';
 import { buildThemeStyleCss, NO_FLASH_SCRIPT } from '@/lib/theme';
 
@@ -77,6 +78,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           {children}
         </main>
         <SiteFooter />
+        <Analytics ga4={settings['analytics.ga4']} posthog={settings['analytics.posthog']} />
       </body>
     </html>
   );
