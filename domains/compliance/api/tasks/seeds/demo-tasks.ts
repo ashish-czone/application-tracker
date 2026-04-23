@@ -114,7 +114,7 @@ export const seedDemoTasks = async (ctx: INestApplicationContext): Promise<void>
   const spread = await database.db
     .select({ id: tasks.id })
     .from(tasks)
-    .where(eq(tasks.kind, 'compliance'))
+    .where(eq(tasks.relatedEntityType, 'compliance'))
     .orderBy(asc(tasks.createdAt))
     .limit(SPREAD_LIMIT);
 

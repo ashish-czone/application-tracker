@@ -2,11 +2,10 @@ import { Injectable, BadRequestException, ConflictException, ForbiddenException 
 import { DatabaseService, eq, and, isNull, isNotNull } from '@packages/database';
 import { OrgUnitService } from '@packages/org-units';
 import { tasks } from '../schema/tasks';
-import { assertTaskIsAdHoc } from '../tasks.config';
 
-// Compliance Q4 action gate: reassign is only valid while the task is still
-// actionable. Terminal states (completed / cancelled) are reopened via the
-// workflow /transition endpoint, not via reassign.
+// Reassign is only valid while the task is still actionable. Terminal states
+// (completed / cancelled) are reopened via the workflow /transition endpoint,
+// not via reassign.
 const REASSIGN_ALLOWED_STATUSES = new Set(['pending', 'in_progress', 'blocked']);
 
 @Injectable()
@@ -17,8 +16,6 @@ export class TaskClaimService {
   ) {}
 
   async pickup(taskId: string, userId: string): Promise<{ id: string; assigneeId: string; status: string }> {
-    await assertTaskIsAdHoc(taskId);
-
     const [task] = await this.database.db
       .select({
         id: tasks.id,
@@ -65,8 +62,6 @@ export class TaskClaimService {
       throw new BadRequestException('teamId is required — every task must belong to a team');
     }
 
-    await assertTaskIsAdHoc(taskId);
-
     const [task] = await this.database.db
       .select({ id: tasks.id, status: tasks.status })
       .from(tasks)
@@ -92,8 +87,6 @@ export class TaskClaimService {
   }
 
   async unclaim(taskId: string, userId: string): Promise<{ id: string }> {
-    await assertTaskIsAdHoc(taskId);
-
     const [task] = await this.database.db
       .select({
         id: tasks.id,

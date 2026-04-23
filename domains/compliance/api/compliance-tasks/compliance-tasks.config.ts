@@ -32,7 +32,7 @@ export const COMPLIANCE_TASKS_CONFIG = defineEntity({
   extensionOf: {
     entity: 'tasks',
     foreignKey: 'taskId',
-    parentDefaults: { kind: 'compliance' },
+    parentDefaults: { relatedEntityType: 'compliance' },
   },
 
   hooks: {

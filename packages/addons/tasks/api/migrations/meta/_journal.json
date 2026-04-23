@@ -43,6 +43,13 @@
       "when": 1776866577212,
       "tag": "0005_require_tasks_assignee_team_id",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1777075200000,
+      "tag": "0006_polymorphic_related_entity",
+      "breakpoints": true
     }
   ]
 }

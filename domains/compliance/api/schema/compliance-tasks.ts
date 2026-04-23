@@ -5,14 +5,15 @@ import { clients } from './clients';
 import { complianceRules } from './rules';
 
 // 1-1 extension of a base tasks row with compliance-specific dimensions.
-// The tasks row sets `kind = 'compliance'`; this row carries the
-// (rule, client, period) tuple that makes the task meaningful in a
-// compliance context. CASCADE on task_id: when the base task is hard-
-// deleted the extension goes with it.
+// The tasks row sets `related_entity_type = 'compliance'`; this row
+// carries the (rule, client, period) tuple that makes the task
+// meaningful in a compliance context. CASCADE on task_id: when the
+// base task is hard-deleted the extension goes with it.
 //
 // Idempotency surface:
-//   - `tasks.external_key` (platform primitive, unique per (kind, key))
-//     is the format-stable key the action uses to dedupe across retries.
+//   - `tasks.external_key` (platform primitive, unique per
+//     (related_entity_type, external_key)) is the format-stable key
+//     the action uses to dedupe across retries.
 //   - (rule_id, client_id, period_start) is the natural-key protection
 //     that survives key-format changes.
 export const complianceTasks = pgTable('compliance_tasks', {

@@ -15,7 +15,8 @@ export const tasks = pgTable('tasks', {
   assigneeTeamId: text('assignee_team_id').notNull().references(() => orgUnits.id),
   dueDate: date('due_date', { mode: 'string' }),
   completedAt: timestamp('completed_at', { withTimezone: true, mode: 'date' }),
-  kind: text('kind'),
+  relatedEntityType: text('related_entity_type'),
+  relatedEntityId: text('related_entity_id'),
   externalKey: text('external_key'),
   createdBy: text('created_by').notNull().references(() => users.id),
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
@@ -28,8 +29,8 @@ export const tasks = pgTable('tasks', {
   index('tasks_priority_idx').on(table.priority),
   index('tasks_due_date_idx').on(table.dueDate),
   index('tasks_completed_at_idx').on(table.completedAt),
-  index('tasks_kind_idx').on(table.kind),
-  uniqueIndex('tasks_kind_external_key_unique')
-    .on(table.kind, table.externalKey)
-    .where(sql`kind IS NOT NULL AND external_key IS NOT NULL`),
+  index('tasks_related_entity_idx').on(table.relatedEntityType, table.relatedEntityId),
+  uniqueIndex('tasks_related_entity_external_key_unique')
+    .on(table.relatedEntityType, table.externalKey)
+    .where(sql`related_entity_type IS NOT NULL AND external_key IS NOT NULL`),
 ]);
