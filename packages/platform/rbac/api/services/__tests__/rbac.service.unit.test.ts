@@ -9,6 +9,7 @@ function createMockDb() {
     from: vi.fn().mockReturnThis(),
     where: vi.fn().mockReturnThis(),
     innerJoin: vi.fn().mockReturnThis(),
+    leftJoin: vi.fn().mockReturnThis(),
     limit: vi.fn().mockReturnThis(),
     values: vi.fn().mockReturnThis(),
     set: vi.fn().mockReturnThis(),
@@ -188,32 +189,44 @@ describe('RbacService', () => {
   });
 
   describe('getPermissionsForUser', () => {
-    it('should return boolean permissions as Record<string, true>', async () => {
+    it('should return scoped permissions with default any scope when no scope rows', async () => {
       mockDb._chain.where.mockResolvedValueOnce([
-        { permission: 'users.read' },
-        { permission: 'users.update' },
+        { permission: 'users.read', scopeType: null, scopeParams: null },
+        { permission: 'users.update', scopeType: null, scopeParams: null },
       ]);
 
       const result = await service.getPermissionsForUser('user-1', 'admin');
 
       expect(result).toEqual({
-        'users.read': true,
-        'users.update': true,
+        'users.read': [{ type: 'any' }],
+        'users.update': [{ type: 'any' }],
       });
     });
 
-    it('should deduplicate permissions from multiple roles', async () => {
+    it('should aggregate scopes from multiple role grants, collapsing duplicates', async () => {
       mockDb._chain.where.mockResolvedValueOnce([
-        { permission: 'users.read' },
-        { permission: 'users.read' },
-        { permission: 'users.update' },
+        { permission: 'tasks.update', scopeType: 'own', scopeParams: null },
+        { permission: 'tasks.update', scopeType: 'assigned', scopeParams: null },
+        { permission: 'tasks.update', scopeType: 'own', scopeParams: null },
       ]);
 
       const result = await service.getPermissionsForUser('user-1', 'admin');
 
       expect(result).toEqual({
-        'users.read': true,
-        'users.update': true,
+        'tasks.update': [{ type: 'own' }, { type: 'assigned' }],
+      });
+    });
+
+    it('should collapse scopes to any when any scope is present', async () => {
+      mockDb._chain.where.mockResolvedValueOnce([
+        { permission: 'tasks.update', scopeType: 'own', scopeParams: null },
+        { permission: 'tasks.update', scopeType: 'any', scopeParams: null },
+      ]);
+
+      const result = await service.getPermissionsForUser('user-1', 'admin');
+
+      expect(result).toEqual({
+        'tasks.update': [{ type: 'any' }],
       });
     });
 
@@ -225,14 +238,14 @@ describe('RbacService', () => {
       expect(result).toEqual({});
     });
 
-    it('should return wildcard when role has * permission', async () => {
+    it('should return wildcard with any scope when role has * permission', async () => {
       mockDb._chain.where.mockResolvedValueOnce([
-        { permission: '*' },
+        { permission: '*', scopeType: 'any', scopeParams: null },
       ]);
 
       const result = await service.getPermissionsForUser('user-1', 'client');
 
-      expect(result).toEqual({ '*': true });
+      expect(result).toEqual({ '*': [{ type: 'any' }] });
     });
   });
 
@@ -276,7 +289,7 @@ describe('RbacService', () => {
     it('should block permission changes on system roles via API', async () => {
       const role = { id: 'admin-role', name: 'Admin', userType: 'client', isDefault: false, createdAt: new Date(), updatedAt: new Date() };
       vi.spyOn(service, 'findRoleById').mockResolvedValueOnce(role);
-      vi.spyOn(service, 'getRolePermissions').mockResolvedValueOnce({ '*': true });
+      vi.spyOn(service, 'getRolePermissions').mockResolvedValueOnce({ '*': [{ type: 'any' }] });
 
       await expect(
         service.setRolePermissions('admin-role', [{ name: 'users.read' }], { '*': true }),
@@ -286,7 +299,7 @@ describe('RbacService', () => {
     it('should allow internal permission changes on system roles (no actorPermissions)', async () => {
       const role = { id: 'admin-role', name: 'Admin', userType: 'client', isDefault: false, createdAt: new Date(), updatedAt: new Date() };
       vi.spyOn(service, 'findRoleById').mockResolvedValueOnce(role);
-      vi.spyOn(service, 'getRolePermissions').mockResolvedValueOnce({ '*': true });
+      vi.spyOn(service, 'getRolePermissions').mockResolvedValueOnce({ '*': [{ type: 'any' }] });
       (service as any).database.db.transaction = vi.fn().mockImplementation(async (fn: any) => fn(mockDb));
 
       await expect(
@@ -323,7 +336,7 @@ describe('RbacService', () => {
       vi.spyOn(service, 'findRoleById').mockResolvedValueOnce(role);
       vi.spyOn(service, 'getRolePermissions').mockResolvedValueOnce({});
 
-      const actorPermissions = { 'orders.read': true as const, 'orders.write': true as const };
+      const actorPermissions = { 'orders.read': [{ type: 'any' }], 'orders.write': [{ type: 'any' }] };
 
       await expect(
         service.setRolePermissions('role-1', [{ name: 'users.manage' }], actorPermissions),
@@ -336,7 +349,7 @@ describe('RbacService', () => {
       vi.spyOn(service, 'getRolePermissions').mockResolvedValueOnce({});
       (service as any).database.db.transaction = vi.fn().mockImplementation(async (fn: any) => fn(mockDb));
 
-      const actorPermissions = { 'orders.read': true as const, 'orders.write': true as const };
+      const actorPermissions = { 'orders.read': [{ type: 'any' }], 'orders.write': [{ type: 'any' }] };
 
       await expect(
         service.setRolePermissions('role-1', [{ name: 'orders.read' }], actorPermissions),
@@ -348,11 +361,11 @@ describe('RbacService', () => {
       vi.spyOn(service, 'findRoleById').mockResolvedValueOnce(role);
       // Role currently has users.manage — actor does not hold it
       vi.spyOn(service, 'getRolePermissions').mockResolvedValueOnce({
-        'orders.read': true,
-        'users.manage': true,
+        'orders.read': [{ type: 'any' }],
+        'users.manage': [{ type: 'any' }],
       });
 
-      const actorPermissions = { 'orders.read': true as const };
+      const actorPermissions = { 'orders.read': [{ type: 'any' }] };
 
       // Actor tries to set only orders.read — removing users.manage which they don't hold
       await expect(
@@ -366,7 +379,7 @@ describe('RbacService', () => {
       const role = { id: 'role-1', name: 'admin', userType: 'client', isDefault: false, createdAt: new Date(), updatedAt: new Date() };
       vi.spyOn(service, 'findRoleById').mockResolvedValueOnce(role);
       // Role currently has wildcard
-      vi.spyOn(service, 'getRolePermissions').mockResolvedValueOnce({ '*': true });
+      vi.spyOn(service, 'getRolePermissions').mockResolvedValueOnce({ '*': [{ type: 'any' }] });
       // No other wildcard users exist
       vi.spyOn(service, 'countWildcardUsers').mockResolvedValueOnce(0);
 
@@ -378,7 +391,7 @@ describe('RbacService', () => {
     it('should allow removing * when other wildcard users exist', async () => {
       const role = { id: 'role-1', name: 'admin', userType: 'client', isDefault: false, createdAt: new Date(), updatedAt: new Date() };
       vi.spyOn(service, 'findRoleById').mockResolvedValueOnce(role);
-      vi.spyOn(service, 'getRolePermissions').mockResolvedValueOnce({ '*': true });
+      vi.spyOn(service, 'getRolePermissions').mockResolvedValueOnce({ '*': [{ type: 'any' }] });
       // Other wildcard users exist
       vi.spyOn(service, 'countWildcardUsers').mockResolvedValueOnce(2);
       (service as any).database.db.transaction = vi.fn().mockImplementation(async (fn: any) => fn(mockDb));
@@ -391,7 +404,7 @@ describe('RbacService', () => {
     it('should allow keeping * permission without lockout check', async () => {
       const role = { id: 'role-1', name: 'admin', userType: 'client', isDefault: false, createdAt: new Date(), updatedAt: new Date() };
       vi.spyOn(service, 'findRoleById').mockResolvedValueOnce(role);
-      vi.spyOn(service, 'getRolePermissions').mockResolvedValueOnce({ '*': true });
+      vi.spyOn(service, 'getRolePermissions').mockResolvedValueOnce({ '*': [{ type: 'any' }] });
       (service as any).database.db.transaction = vi.fn().mockImplementation(async (fn: any) => fn(mockDb));
 
       // Keeping wildcard — no lockout check needed

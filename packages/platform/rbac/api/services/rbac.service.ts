@@ -10,9 +10,11 @@ import {
 } from '@packages/soft-delete';
 import { roles } from '../schema/roles';
 import { rolePermissions } from '../schema/role-permissions';
+import { rolePermissionScopes } from '../schema/role-permission-scopes';
 import { userRoles } from '../schema/user-roles';
 import { PermissionRegistryService } from './permission-registry.service';
-import type { Role, RoleMember, RoleWithSystem, ScopedPermissions, PermissionScope, BooleanPermissions } from '../types';
+import { normaliseScopes } from '../scope-types';
+import type { Role, RoleMember, RoleWithSystem, ScopedPermissions, BooleanPermissions, ScopeSpec } from '../types';
 
 @Injectable()
 export class RbacService {
@@ -176,11 +178,16 @@ export class RbacService {
 
   // --- Permissions ---
 
-  async getPermissionsForUser(userId: string, userType: string): Promise<BooleanPermissions> {
-    // Load permissions from role_permissions — scope is ignored (determined by org positions now)
-    // Null userType on a role means "applies to any user type".
+  async getPermissionsForUser(userId: string, userType: string): Promise<ScopedPermissions> {
+    // Load grants + their scopes in a single LEFT JOIN. Null scopeType rows
+    // mean the grant has no scopes persisted — treated as `any` (unrestricted)
+    // so pre-scope-migration grants behave as before.
     const results = await this.database.db
-      .select({ permission: rolePermissions.permission })
+      .select({
+        permission: rolePermissions.permission,
+        scopeType: rolePermissionScopes.scopeType,
+        scopeParams: rolePermissionScopes.scopeParams,
+      })
       .from(userRoles)
       .innerJoin(roles, and(
         eq(roles.id, userRoles.roleId),
@@ -188,25 +195,39 @@ export class RbacService {
         notDeleted(roles),
       ))
       .innerJoin(rolePermissions, eq(rolePermissions.roleId, roles.id))
+      .leftJoin(rolePermissionScopes, and(
+        eq(rolePermissionScopes.roleId, rolePermissions.roleId),
+        eq(rolePermissionScopes.permission, rolePermissions.permission),
+      ))
       .where(withTenant(userRoles, eq(userRoles.userId, userId)));
 
-    const permissions: BooleanPermissions = {};
+    const accumulated: Record<string, ScopeSpec[]> = {};
     for (const r of results) {
-      permissions[r.permission] = true;
+      const scope: ScopeSpec = r.scopeType
+        ? { type: r.scopeType, ...(r.scopeParams ? { params: r.scopeParams as Record<string, unknown> } : {}) }
+        : { type: 'any' };
+      (accumulated[r.permission] ??= []).push(scope);
+    }
+
+    const permissions: ScopedPermissions = {};
+    for (const [perm, scopes] of Object.entries(accumulated)) {
+      permissions[perm] = normaliseScopes(scopes);
     }
     return permissions;
   }
 
   async setRolePermissions(
     roleId: string,
-    permissionEntries: string[] | { name: string; scope?: PermissionScope }[],
+    permissionEntries: string[] | { name: string; scopes?: ScopeSpec[] }[],
     actorPermissions?: BooleanPermissions | ScopedPermissions,
   ): Promise<void> {
     const role = await this.findRoleById(roleId);
     if (!role) throw new NotFoundException('Role not found');
 
     const entries = permissionEntries.map((e) =>
-      typeof e === 'string' ? { name: e } : { name: e.name },
+      typeof e === 'string'
+        ? { name: e, scopes: [{ type: 'any' }] as ScopeSpec[] }
+        : { name: e.name, scopes: normaliseScopes(e.scopes && e.scopes.length > 0 ? e.scopes : [{ type: 'any' }]) },
     );
 
     // Load current permissions once for enforcement checks
@@ -257,30 +278,63 @@ export class RbacService {
     }
 
     await this.database.db.transaction(async (tx) => {
+      // Cascade from role_permissions clears scopes too.
       await tx
         .delete(rolePermissions)
         .where(withTenant(rolePermissions, eq(rolePermissions.roleId, roleId)));
 
-      if (entries.length > 0) {
-        await tx
-          .insert(rolePermissions)
-          .values(withTenantInsert(rolePermissions, entries.map((e) => ({
-            roleId,
-            permission: e.name,
-          }))));
+      if (entries.length === 0) return;
+
+      await tx
+        .insert(rolePermissions)
+        .values(withTenantInsert(rolePermissions, entries.map((e) => ({
+          roleId,
+          permission: e.name,
+        }))));
+
+      const scopeRows = entries.flatMap((e) =>
+        e.scopes.map((s) => ({
+          roleId,
+          permission: e.name,
+          scopeType: s.type,
+          scopeParams: s.params ?? null,
+        })),
+      );
+
+      if (scopeRows.length > 0) {
+        await tx.insert(rolePermissionScopes).values(scopeRows);
       }
     });
   }
 
-  async getRolePermissions(roleId: string): Promise<BooleanPermissions> {
+  async getRolePermissions(roleId: string): Promise<ScopedPermissions> {
     const results = await this.database.db
-      .select({ permission: rolePermissions.permission })
+      .select({
+        permission: rolePermissions.permission,
+        scopeType: rolePermissionScopes.scopeType,
+        scopeParams: rolePermissionScopes.scopeParams,
+      })
       .from(rolePermissions)
+      .leftJoin(rolePermissionScopes, and(
+        eq(rolePermissionScopes.roleId, rolePermissions.roleId),
+        eq(rolePermissionScopes.permission, rolePermissions.permission),
+      ))
       .where(withTenant(rolePermissions, eq(rolePermissions.roleId, roleId)));
 
-    const permissions: BooleanPermissions = {};
+    const accumulated: Record<string, ScopeSpec[]> = {};
     for (const r of results) {
-      permissions[r.permission] = true;
+      if (!(r.permission in accumulated)) accumulated[r.permission] = [];
+      if (r.scopeType) {
+        accumulated[r.permission].push({
+          type: r.scopeType,
+          ...(r.scopeParams ? { params: r.scopeParams as Record<string, unknown> } : {}),
+        });
+      }
+    }
+
+    const permissions: ScopedPermissions = {};
+    for (const [perm, scopes] of Object.entries(accumulated)) {
+      permissions[perm] = scopes.length > 0 ? normaliseScopes(scopes) : [{ type: 'any' }];
     }
     return permissions;
   }
