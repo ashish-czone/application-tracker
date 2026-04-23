@@ -1,4 +1,3 @@
-import { BadRequestException, ConflictException } from '@nestjs/common';
 import { defineEntity } from '@packages/entity-engine';
 import { and, eq, isNull, or, sql } from 'drizzle-orm';
 import { orgUnitMembers } from '@packages/org-units';
@@ -7,10 +6,8 @@ import { tasks } from './schema/tasks';
 
 /**
  * Stamps / clears `completedAt` based on the status transition in the
- * payload. Exported so kind-owned services (compliance-tasks, etc.)
- * that bypass the generic EntityService still share the same rule:
- * moving TO `completed` stamps now(), moving AWAY clears it, and
- * payloads that don't touch status are returned unchanged.
+ * payload: moving TO `completed` stamps now(), moving AWAY clears it,
+ * and payloads that don't touch status are returned unchanged.
  */
 export function applyCompletedAt(payload: Record<string, unknown>): Record<string, unknown> {
   if (!('status' in payload)) return payload;
@@ -20,85 +17,14 @@ export function applyCompletedAt(payload: Record<string, unknown>): Record<strin
   };
 }
 
-function rejectKindInPayload(payload: Record<string, unknown>): void {
-  if ('kind' in payload) {
-    throw new BadRequestException(
-      'The `kind` field is owned by the domain that creates the task (e.g. compliance). Generic /tasks endpoints cannot set it.',
-    );
-  }
-}
-
-/**
- * Module-level reference to a kind-lookup function, populated by
- * TasksModule at init time. The entity-engine beforeUpdate/beforeDelete
- * hooks are pure functions without DI access, so we hand them a lookup
- * via this indirection instead of extending the platform's hook
- * signature. An unregistered ref means the host app forgot to import
- * TasksModule — fail-closed, so a missing wire is a loud programming
- * error rather than a silent bypass of the domain-ownership invariant.
- */
-type KindLookup = (id: string) => Promise<string | null>;
-let kindLookupRef: KindLookup | null = null;
-export function registerTasksKindLookup(lookup: KindLookup | null): void {
-  kindLookupRef = lookup;
-}
-
-/**
- * Blocks mutations against kind-owned tasks on non-domain code paths.
- * Exported so callers that bypass the generic EntityService (e.g.
- * TaskClaimService, which talks to Drizzle directly for optimistic
- * claim semantics) enforce the same invariant: a kinded row must flow
- * through its owning domain endpoint.
- */
-export async function assertTaskIsAdHoc(id: string): Promise<void> {
-  if (!kindLookupRef) {
-    throw new Error(
-      'Tasks kind-guard is not wired — TasksModule must be imported before generic /tasks mutations run.',
-    );
-  }
-  const kind = await kindLookupRef(id);
-  if (kind) {
-    throw new ConflictException(
-      `Task ${id} has kind='${kind}' and must be edited through the owning domain endpoint (e.g. /compliance-tasks/${id}).`,
-    );
-  }
-}
-
 export const TASKS_CONFIG = defineEntity({
   ...TASKS_METADATA,
   table: tasks,
   fields: TASKS_FIELDS,
 
-  // Projection surface for extensionOf children (e.g. compliance_tasks). Any
-  // fieldKey listed here can be read/written through an extension entity and
-  // appears on joined list/find responses. `kind` is intentionally NOT
-  // projected — it is the discriminator set by `parentDefaults` on the
-  // extension and is owned by the child domain.
-  extensionColumns: [
-    'title',
-    'description',
-    'status',
-    'priority',
-    'assigneeId',
-    'assigneeTeamId',
-    'dueDate',
-    'completedAt',
-    'externalKey',
-  ],
-
   hooks: {
-    beforeCreate: async (payload: Record<string, unknown>) => {
-      rejectKindInPayload(payload);
-      return applyCompletedAt(payload);
-    },
-    beforeUpdate: async (id: string, payload: Record<string, unknown>) => {
-      rejectKindInPayload(payload);
-      await assertTaskIsAdHoc(id);
-      return applyCompletedAt(payload);
-    },
-    beforeDelete: async (id: string) => {
-      await assertTaskIsAdHoc(id);
-    },
+    beforeCreate: async (payload: Record<string, unknown>) => applyCompletedAt(payload),
+    beforeUpdate: async (_id: string, payload: Record<string, unknown>) => applyCompletedAt(payload),
   },
 
   dataAccess: {
@@ -106,11 +32,10 @@ export const TASKS_CONFIG = defineEntity({
     teamField: 'assigneeTeamId',
     scopes: [
       {
-        // Compliance Q16: the personal queue shows tasks the user owns
-        // directly, plus tasks still unassigned in teams they're a member of
-        // (the team pool they can pick up). It explicitly does NOT include
-        // teammates' in-progress work — that belongs on the team board, not
-        // the personal queue.
+        // The personal queue shows tasks the user owns directly, plus tasks
+        // still unassigned in teams they're a member of (the team pool they
+        // can pick up). It explicitly does NOT include teammates' in-progress
+        // work — that belongs on the team board, not the personal queue.
         key: 'my-tasks',
         label: 'Assigned to me or unclaimed in my teams',
         resolve: async (userId: string) => or(

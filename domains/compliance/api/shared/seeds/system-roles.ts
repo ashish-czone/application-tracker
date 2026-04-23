@@ -13,8 +13,8 @@ import { roles, RbacService } from '@packages/rbac';
  *  - Q15 uses `view` everywhere; the engine registers `read`.
  *  - Q15 uses a `compliance.` prefix; the engine does not.
  *  - Entity slug casing is mixed (hyphen for some, underscore for others):
- *      `client-contacts`, `client-registrations`, `compliance-tasks` — hyphen
- *      `compliance_rules`, `compliance_law_handlers`                — underscore
+ *      `client-contacts`, `client-registrations`, `compliance-filings` — hyphen
+ *      `compliance_rules`, `compliance_law_handlers`                   — underscore
  *    We seed against the slugs the engine actually registers.
  *
  * Roles are scoped to `userType: null` — they are capability roles that apply
@@ -29,21 +29,28 @@ interface RoleSpec {
   permissions: string[];
 }
 
-const TASK_ACTIONS_FULL = [
-  'tasks.read',
-  'tasks.pickup',
-  'tasks.reassign',
-  'tasks.review',
-  'tasks.complete',
-  'tasks.reopen',
-  'tasks.close',
+// Full filing-lifecycle action set. Preparers/reviewers get subsets; leads
+// and admins get the full set. Ordering matches the workflow:
+// pickup → submit → complete/reject → reopen/close.
+const FILING_ACTIONS_FULL = [
+  'compliance-filings.read',
+  'compliance-filings.create',
+  'compliance-filings.update',
+  'compliance-filings.delete',
+  'compliance-filings.pickup',
+  'compliance-filings.submit',
+  'compliance-filings.complete',
+  'compliance-filings.reject',
+  'compliance-filings.reopen',
+  'compliance-filings.close',
 ];
 
+// Preparers claim filings, work on them, submit for review — they do not
+// approve or reject their own work.
 const PREPARER_PERMISSIONS = [
-  'tasks.read',
-  'tasks.pickup',
-  'tasks.complete',
-  'compliance-tasks.read',
+  'compliance-filings.read',
+  'compliance-filings.pickup',
+  'compliance-filings.submit',
   'clients.read',
   'client-contacts.read',
   'client-registrations.read',
@@ -51,11 +58,16 @@ const PREPARER_PERMISSIONS = [
   'compliance_rules.read',
 ];
 
-const REVIEWER_PERMISSIONS = [...PREPARER_PERMISSIONS, 'tasks.review'];
+// Reviewers can do everything a preparer does, plus approve (`complete`)
+// and send a filing back (`reject`) during the review state.
+const REVIEWER_PERMISSIONS = [
+  ...PREPARER_PERMISSIONS,
+  'compliance-filings.complete',
+  'compliance-filings.reject',
+];
 
 const TEAM_LEAD_PERMISSIONS = [
-  ...TASK_ACTIONS_FULL,
-  'compliance-tasks.read',
+  ...FILING_ACTIONS_FULL,
   'clients.read',
   'clients.create',
   'clients.update',
@@ -73,11 +85,7 @@ const TEAM_LEAD_PERMISSIONS = [
 ];
 
 const FIRM_ADMIN_PERMISSIONS = [
-  ...TASK_ACTIONS_FULL,
-  'compliance-tasks.read',
-  'compliance-tasks.create',
-  'compliance-tasks.update',
-  'compliance-tasks.delete',
+  ...FILING_ACTIONS_FULL,
   'clients.read',
   'clients.create',
   'clients.update',

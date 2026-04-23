@@ -40,7 +40,8 @@ describe('TASKS_FIELDS', () => {
       'dueDate',
       'completedAt',
       'createdBy',
-      'kind',
+      'relatedEntityType',
+      'relatedEntityId',
       'externalKey',
     ]);
   });
@@ -102,7 +103,8 @@ describe('TaskCreateInput', () => {
   it('excludes system and readonly fields', () => {
     expectTypeOf<TaskCreateInput>().not.toHaveProperty('status');
     expectTypeOf<TaskCreateInput>().not.toHaveProperty('createdBy');
-    expectTypeOf<TaskCreateInput>().not.toHaveProperty('kind');
+    expectTypeOf<TaskCreateInput>().not.toHaveProperty('relatedEntityType');
+    expectTypeOf<TaskCreateInput>().not.toHaveProperty('relatedEntityId');
     expectTypeOf<TaskCreateInput>().not.toHaveProperty('externalKey');
   });
 });

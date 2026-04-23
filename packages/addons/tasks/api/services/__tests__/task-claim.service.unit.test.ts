@@ -1,7 +1,6 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { TaskClaimService } from '../task-claim.service';
-import { registerTasksKindLookup } from '../../tasks.config';
 
 function createMockDb() {
   const selectChain = {
@@ -41,12 +40,6 @@ describe('TaskClaimService', () => {
     mockDb = createMockDb();
     mockOrgUnits = createMockOrgUnitService();
     service = new TaskClaimService(createMockDatabaseService(mockDb), mockOrgUnits);
-    // Ad-hoc task by default; individual tests override to 'compliance' etc.
-    registerTasksKindLookup(async () => null);
-  });
-
-  afterEach(() => {
-    registerTasksKindLookup(null);
   });
 
   describe('pickup', () => {
@@ -199,35 +192,4 @@ describe('TaskClaimService', () => {
     });
   });
 
-  describe('kind guard', () => {
-    it('pickup rejects kind-owned tasks with ConflictException', async () => {
-      registerTasksKindLookup(async () => 'compliance');
-      await expect(service.pickup('task-1', 'user-1')).rejects.toThrow(ConflictException);
-      expect(mockDb.select).not.toHaveBeenCalled();
-      expect(mockDb.update).not.toHaveBeenCalled();
-    });
-
-    it('unclaim rejects kind-owned tasks with ConflictException', async () => {
-      registerTasksKindLookup(async () => 'compliance');
-      await expect(service.unclaim('task-1', 'user-1')).rejects.toThrow(ConflictException);
-      expect(mockDb.select).not.toHaveBeenCalled();
-      expect(mockDb.update).not.toHaveBeenCalled();
-    });
-
-    it('reassign rejects kind-owned tasks with ConflictException', async () => {
-      registerTasksKindLookup(async () => 'compliance');
-      await expect(service.reassign('task-1', { teamId: 'team-1' })).rejects.toThrow(
-        ConflictException,
-      );
-      expect(mockDb.select).not.toHaveBeenCalled();
-      expect(mockDb.update).not.toHaveBeenCalled();
-    });
-
-    it('reassign runs input validation before the guard (missing teamId)', async () => {
-      registerTasksKindLookup(async () => 'compliance');
-      // Payload-shape errors should still surface as BadRequest — the guard
-      // doesn't need to run because there's no valid mutation to block.
-      await expect(service.reassign('task-1', { teamId: '' })).rejects.toThrow(BadRequestException);
-    });
-  });
 });

@@ -15,7 +15,9 @@ import { CLIENT_CONTACTS_CONFIG } from './client-contacts/client-contacts.config
 import { CLIENT_REGISTRATIONS_CONFIG } from './client-registrations/client-registrations.config';
 import { COMPLIANCE_RULES_CONFIG } from './rules/rules.config';
 import { LAW_HANDLERS_CONFIG } from './law-handlers/law-handlers.config';
-import { COMPLIANCE_TASKS_CONFIG } from './compliance-tasks/compliance-tasks.config';
+// compliance-tasks/ is the pre-filings implementation — retained for reference
+// while the filings migration is in-flight. New work goes to compliance-filings/.
+import { COMPLIANCE_FILINGS_CONFIG } from './compliance-filings/compliance-filings.config';
 import { createOrganizationsEntityConfig } from './organizations/organizations.config';
 
 import { LawHandlerService } from './law-handlers/law-handlers.service';
@@ -24,8 +26,8 @@ import { ClientsService } from './clients/clients.service';
 import { ClientContactsService } from './client-contacts/client-contacts.service';
 import { ClientsController } from './clients/clients.controller';
 import { ComplianceRuleService } from './rules/compliance-rules.service';
-import { ComplianceTasksLookupService } from './compliance-tasks/compliance-tasks-lookup.service';
-import { GenerateComplianceTasksAction } from './automations/generate-compliance-tasks.action';
+import { ComplianceFilingsLookupService } from './compliance-filings/compliance-filings-lookup.service';
+import { GenerateComplianceFilingsAction } from './automations/generate-compliance-filings.action';
 import { COMPLIANCE_PERMISSION_REGISTRATIONS } from './permissions';
 
 // Late-bound database handle: the organizations config references this via a
@@ -51,7 +53,7 @@ const ORGANIZATIONS_CONFIG = createOrganizationsEntityConfig({
     EntityEngineModule.forEntity(CLIENT_REGISTRATIONS_CONFIG),
     EntityEngineModule.forEntity(COMPLIANCE_RULES_CONFIG),
     EntityEngineModule.forEntity(LAW_HANDLERS_CONFIG),
-    EntityEngineModule.forEntity(COMPLIANCE_TASKS_CONFIG),
+    EntityEngineModule.forEntity(COMPLIANCE_FILINGS_CONFIG),
     EntityEngineModule.forEntity(ORGANIZATIONS_CONFIG),
   ],
   controllers: [ClientsController],
@@ -61,8 +63,8 @@ const ORGANIZATIONS_CONFIG = createOrganizationsEntityConfig({
     ClientsService,
     ClientContactsService,
     ComplianceRuleService,
-    ComplianceTasksLookupService,
-    GenerateComplianceTasksAction,
+    ComplianceFilingsLookupService,
+    GenerateComplianceFilingsAction,
     ComplianceUsersPositionsReader,
     {
       provide: USERS_POSITIONS_READER,
@@ -73,7 +75,7 @@ const ORGANIZATIONS_CONFIG = createOrganizationsEntityConfig({
 export class ComplianceDomainModule implements OnModuleInit {
   constructor(
     private readonly actionRegistry: ActionRegistry,
-    private readonly generateTasksAction: GenerateComplianceTasksAction,
+    private readonly generateFilingsAction: GenerateComplianceFilingsAction,
     private readonly guardRegistry: WorkflowGuardRegistry,
     private readonly contactsService: ClientContactsService,
     private readonly rbac: RbacService,
@@ -83,7 +85,7 @@ export class ComplianceDomainModule implements OnModuleInit {
   onModuleInit() {
     organizationsDbRef = this.databaseService.db;
 
-    this.actionRegistry.register(this.generateTasksAction);
+    this.actionRegistry.register(this.generateFilingsAction);
 
     // Blocks onboarding → active on the clients workflow unless the client
     // has at least one primary contact. Referenced by `guardNames` on the

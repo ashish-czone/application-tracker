@@ -51,6 +51,12 @@ export interface WorkflowTargetDef {
   requiredPermissions?: string[];
   guardNames?: string[];
   conditions?: Condition[];
+  /** Require the actor to supply a reason (validated against `reasonOptions` if set). */
+  reasonRequired?: boolean;
+  /** Require the actor to supply a free-text comment. */
+  commentRequired?: boolean;
+  /** Constrained list of allowed values for `reason` — when set, reasons outside this list are rejected. */
+  reasonOptions?: string[];
 }
 
 export interface WorkflowTransitionDef {

@@ -121,14 +121,21 @@ export const TASKS_FIELDS = {
     readonly: true,
     isRecipient: true,
   },
-  kind: {
+  relatedEntityType: {
     type: 'text',
-    label: 'Type',
+    label: 'Related To',
     system: true,
     readonly: true,
     sortable: true,
     listVisible: true,
     listOrder: 6,
+  },
+  relatedEntityId: {
+    type: 'text',
+    label: 'Related Record',
+    system: true,
+    readonly: true,
+    excludeFromList: true,
   },
   externalKey: {
     type: 'text',

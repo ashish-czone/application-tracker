@@ -6,7 +6,6 @@ export type ScreenKey =
   | 'laws'
   | 'compliance-rules'
   | 'filings'
-  | 'tasks'
   | 'reports'
   | 'org-hierarchy'
   | 'roles'
@@ -18,7 +17,6 @@ const ITEMS: Array<{ key: ScreenKey; label: string; href: string }> = [
   { key: 'clients', label: 'Clients', href: '/clients' },
   { key: 'laws', label: 'Laws', href: '/laws' },
   { key: 'compliance-rules', label: 'Compliance Rules', href: '/compliance-rules' },
-  { key: 'tasks', label: 'Tasks', href: '/tasks' },
   { key: 'filings', label: 'Filings', href: '/filings' },
   { key: 'reports', label: 'Reports', href: '/reports' },
 ];

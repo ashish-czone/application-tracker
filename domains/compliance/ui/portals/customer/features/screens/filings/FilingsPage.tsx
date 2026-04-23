@@ -18,16 +18,7 @@ import {
   type KanbanCardData,
 } from '@packages/ui';
 import { ComplianceCalendar } from '../../../../../shared';
-import {
-  MOCK_FILING_ROWS,
-  FILING_STATUS_COUNTS,
-  FILINGS_TODAY,
-  HANDLER_OPTIONS,
-  CLIENT_OPTIONS,
-  LAW_OPTIONS,
-  type FilingRow,
-} from './data/filingsMock';
-import { MOCK_HANDLERS } from '../../console-preview/mockData';
+import type { FilingRow } from './data/filingTypes';
 import { FilingDetailDrawer } from './components/FilingDetailDrawer';
 import {
   BulkReassignDialog,
@@ -43,6 +34,7 @@ import { FilingKanbanCard } from './components/FilingKanbanCard';
 import { OverdueAlert } from './components/OverdueAlert';
 import type { Filing } from '../../../../../shared/types';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
+import { useComplianceFilingRows, useUpdateComplianceFiling } from './api/useComplianceFilings';
 
 type StatusTab = 'all' | Filing['status'];
 type ViewMode = 'list' | 'kanban' | 'calendar';
@@ -62,6 +54,9 @@ const KANBAN_COLUMNS: KanbanColumnDef[] = [
 ];
 
 export function FilingsPage() {
+  const { rows, loading, handlers, clientOptions, lawOptions } = useComplianceFilingRows();
+  const updateFiling = useUpdateComplianceFiling();
+
   const [viewMode, setViewMode] = useState<ViewMode>('list');
 
   const [search, setSearch] = useState('');
@@ -71,14 +66,13 @@ export function FilingsPage() {
   const [handlerFilter, setHandlerFilter] = useState<string[]>([]);
 
   const [visibleColumns, setVisibleColumns] = useState<string[]>(ALL_FILING_COLUMN_KEYS);
-  const [filingRows, setFilingRows] = useState<FilingRow[]>(MOCK_FILING_ROWS);
   const [selectedFiling, setSelectedFiling] = useState<FilingRow | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [reassignOpen, setReassignOpen] = useState(false);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return filingRows.filter((f) => {
+    return rows.filter((f) => {
       if (statusTab !== 'all' && f.status !== statusTab) return false;
       if (clientFilter.length > 0 && !clientFilter.includes(f.clientId)) return false;
       if (lawFilter.length > 0 && !lawFilter.includes(f.lawId)) return false;
@@ -91,12 +85,12 @@ export function FilingsPage() {
         return false;
       return true;
     });
-  }, [filingRows, statusTab, clientFilter, lawFilter, handlerFilter, search]);
+  }, [rows, statusTab, clientFilter, lawFilter, handlerFilter, search]);
 
   const activeFilters: ActiveFilter[] = useMemo(() => {
     const chips: ActiveFilter[] = [];
     for (const key of clientFilter) {
-      const opt = CLIENT_OPTIONS.find((o) => o.value === key);
+      const opt = clientOptions.find((o) => o.value === key);
       chips.push({
         key: `client:${key}`,
         group: 'Client',
@@ -105,7 +99,7 @@ export function FilingsPage() {
       });
     }
     for (const key of lawFilter) {
-      const opt = LAW_OPTIONS.find((o) => o.value === key);
+      const opt = lawOptions.find((o) => o.value === key);
       chips.push({
         key: `law:${key}`,
         group: 'Law',
@@ -114,16 +108,16 @@ export function FilingsPage() {
       });
     }
     for (const key of handlerFilter) {
-      const opt = HANDLER_OPTIONS.find((o) => o.value === key);
+      const opt = handlers.find((h) => h.id === key);
       chips.push({
         key: `handler:${key}`,
         group: 'Handler',
-        value: opt?.label ?? key,
+        value: opt?.name ?? key,
         onRemove: () => setHandlerFilter((prev) => prev.filter((k) => k !== key)),
       });
     }
     return chips;
-  }, [clientFilter, lawFilter, handlerFilter]);
+  }, [clientFilter, lawFilter, handlerFilter, clientOptions, lawOptions, handlers]);
 
   const clearAll = () => {
     setClientFilter([]);
@@ -143,73 +137,70 @@ export function FilingsPage() {
   }, [selectedIds, visibleIds]);
 
   const selectedFilings = useMemo(
-    () => filingRows.filter((f) => effectiveSelectedIds.has(f.id)),
-    [filingRows, effectiveSelectedIds],
+    () => rows.filter((f) => effectiveSelectedIds.has(f.id)),
+    [rows, effectiveSelectedIds],
   );
 
   function applyReassign({ newHandlerId, notify, note }: BulkReassignSubmitPayload) {
-    const newHandler = MOCK_HANDLERS.find((h) => h.id === newHandlerId);
+    const newHandler = handlers.find((h) => h.id === newHandlerId);
     if (!newHandler) return;
+    const targetIds = Array.from(effectiveSelectedIds);
 
-    const targetIds = new Set(effectiveSelectedIds);
-    const before = new Map<string, FilingRow['handler']>();
-    for (const f of filingRows) {
-      if (targetIds.has(f.id)) before.set(f.id, f.handler);
-    }
-
-    setFilingRows((prev) =>
-      prev.map((f) => (targetIds.has(f.id) ? { ...f, handler: newHandler } : f)),
-    );
-    setSelectedIds(new Set());
-    setReassignOpen(false);
-
-    const count = targetIds.size;
-    const noun = count === 1 ? 'filing' : 'filings';
-    toast.success(`${count} ${noun} reassigned to ${newHandler.name}`, {
-      description: notify
-        ? `${newHandler.name.split(' ')[0]} will be notified${note ? ` with your note` : ''}.`
-        : undefined,
-      duration: 10_000,
-      action: {
-        label: 'Undo',
-        onClick: () => {
-          setFilingRows((prev) =>
-            prev.map((f) => (before.has(f.id) ? { ...f, handler: before.get(f.id) } : f)),
-          );
-          toast.message(`Reassignment of ${count} ${noun} reverted`);
-        },
-      },
-    });
+    Promise.all(
+      targetIds.map((id) =>
+        updateFiling.mutateAsync({ id, data: { assigneeTeamId: newHandlerId, assigneeId: null } }),
+      ),
+    )
+      .then(() => {
+        setSelectedIds(new Set());
+        setReassignOpen(false);
+        const count = targetIds.length;
+        const noun = count === 1 ? 'filing' : 'filings';
+        toast.success(`${count} ${noun} reassigned to ${newHandler.name}`, {
+          description: notify
+            ? `${newHandler.name.split(' ')[0]} will be notified${note ? ` with your note` : ''}.`
+            : undefined,
+          duration: 10_000,
+        });
+      })
+      .catch(() => {
+        toast.error('Failed to reassign filings');
+      });
   }
 
-  const totalFilings = MOCK_FILING_ROWS.length;
-  const overdueCount = FILING_STATUS_COUNTS.overdue;
-  const dueThisWeekCount =
-    FILING_STATUS_COUNTS['due-today'] + FILING_STATUS_COUNTS['due-this-week'];
-  const filedCount = FILING_STATUS_COUNTS.filed;
-  const onTimeRate = Math.round(
-    (MOCK_FILING_ROWS.filter((f) => f.status === 'filed').length / totalFilings) * 100,
-  );
+  const totalFilings = rows.length;
+  const statusCounts = useMemo(() => {
+    const counts = { overdue: 0, 'due-today': 0, 'due-this-week': 0, upcoming: 0, filed: 0 };
+    for (const r of rows) {
+      if (r.status in counts) counts[r.status as keyof typeof counts] += 1;
+    }
+    return counts;
+  }, [rows]);
+
+  const overdueCount = statusCounts.overdue;
+  const dueThisWeekCount = statusCounts['due-today'] + statusCounts['due-this-week'];
+  const filedCount = statusCounts.filed;
+  const onTimeRate = totalFilings > 0 ? Math.round((filedCount / totalFilings) * 100) : 0;
 
   const overdueClientCount = useMemo(
-    () =>
-      new Set(MOCK_FILING_ROWS.filter((f) => f.status === 'overdue').map((f) => f.clientId)).size,
-    [],
+    () => new Set(rows.filter((f) => f.status === 'overdue').map((f) => f.clientId)).size,
+    [rows],
   );
 
-  const clientOptions = CLIENT_OPTIONS.map((c) => ({
+  const clientOptionsWithCounts = clientOptions.map((c) => ({
     ...c,
-    count: MOCK_FILING_ROWS.filter((f) => f.clientId === c.value).length,
+    count: rows.filter((f) => f.clientId === c.value).length,
   }));
 
-  const lawOptions = LAW_OPTIONS.map((l) => ({
+  const lawOptionsWithCounts = lawOptions.map((l) => ({
     ...l,
-    count: MOCK_FILING_ROWS.filter((f) => f.lawId === l.value).length,
+    count: rows.filter((f) => f.lawId === l.value).length,
   }));
 
-  const handlerOptions = HANDLER_OPTIONS.map((h) => ({
-    ...h,
-    count: MOCK_FILING_ROWS.filter((f) => f.handler?.id === h.value).length,
+  const handlerOptionsWithCounts = handlers.map((h) => ({
+    value: h.id,
+    label: h.name,
+    count: rows.filter((f) => f.handler?.id === h.id).length,
   }));
 
   const columnChooserItems = FILING_COLUMNS.map((c) => ({
@@ -220,19 +211,11 @@ export function FilingsPage() {
 
   const statusTabs = [
     { value: 'all' as const, label: 'All', count: totalFilings },
-    { value: 'overdue' as const, label: 'Overdue', count: FILING_STATUS_COUNTS.overdue },
-    {
-      value: 'due-today' as const,
-      label: 'Due today',
-      count: FILING_STATUS_COUNTS['due-today'],
-    },
-    {
-      value: 'due-this-week' as const,
-      label: 'This week',
-      count: FILING_STATUS_COUNTS['due-this-week'],
-    },
-    { value: 'upcoming' as const, label: 'Upcoming', count: FILING_STATUS_COUNTS.upcoming },
-    { value: 'filed' as const, label: 'Filed', count: FILING_STATUS_COUNTS.filed },
+    { value: 'overdue' as const, label: 'Overdue', count: statusCounts.overdue },
+    { value: 'due-today' as const, label: 'Due today', count: statusCounts['due-today'] },
+    { value: 'due-this-week' as const, label: 'This week', count: statusCounts['due-this-week'] },
+    { value: 'upcoming' as const, label: 'Upcoming', count: statusCounts.upcoming },
+    { value: 'filed' as const, label: 'Filed', count: statusCounts.filed },
   ];
 
   const kanbanCards: KanbanCardData[] = useMemo(
@@ -246,34 +229,25 @@ export function FilingsPage() {
     toColumnId: string;
     toIndex: number;
   }) {
-    setFilingRows((prev) => {
-      const card = prev.find((f) => f.id === event.cardId);
-      if (!card) return prev;
-
-      const moved = { ...card, status: event.toColumnId as Filing['status'] };
-      const without = prev.filter((f) => f.id !== event.cardId);
-
-      let seen = 0;
-      let insertAt = without.length;
-      for (let i = 0; i < without.length; i++) {
-        if (without[i].status === event.toColumnId) {
-          if (seen === event.toIndex) {
-            insertAt = i;
-            break;
-          }
-          seen++;
-        }
-      }
-
-      without.splice(insertAt, 0, moved);
-      return without;
-    });
+    const toFiled = event.toColumnId === 'filed';
+    const fromFiled = event.fromColumnId === 'filed';
+    if (!toFiled && !fromFiled) return;
+    const nextStatus = toFiled ? 'completed' : 'pending';
+    updateFiling
+      .mutateAsync({ id: event.cardId, data: { status: nextStatus } })
+      .catch(() => toast.error('Failed to update filing status'));
   }
 
-  function handleCalendarFilingClick(filing: Filing) {
-    const row = filingRows.find((f) => f.id === filing.id);
+  function handleCalendarClick(filing: Filing) {
+    const row = rows.find((f) => f.id === filing.id);
     if (row) setSelectedFiling(row);
   }
+
+  const monthAnchor = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, []);
 
   return (
     <>
@@ -282,10 +256,14 @@ export function FilingsPage() {
         breadcrumb={['Workspace', 'Filings']}
         title="Filings"
         subtitle={
-          <>
-            {totalFilings} filings across {CLIENT_OPTIONS.length} clients — {overdueCount} overdue,{' '}
-            {dueThisWeekCount} due this week.
-          </>
+          loading ? (
+            'Loading filings…'
+          ) : (
+            <>
+              {totalFilings} filings across {clientOptions.length} clients — {overdueCount} overdue,{' '}
+              {dueThisWeekCount} due this week.
+            </>
+          )
         }
         actions={<ViewModeSwitcher modes={VIEW_MODES} value={viewMode} onChange={setViewMode} />}
         alert={
@@ -302,7 +280,7 @@ export function FilingsPage() {
             label: 'Overdue',
             value: String(overdueCount),
             unit: 'filings',
-            delta: `${MOCK_FILING_ROWS.filter((f) => f.status === 'overdue' && f.priority === 'critical').length} critical`,
+            delta: `${rows.filter((f) => f.status === 'overdue' && f.priority === 'critical').length} critical`,
             deltaTone: 'negative',
             accent: 'signal',
             sparklineData: [2, 3, 3, 4, 3, 4, overdueCount],
@@ -313,7 +291,7 @@ export function FilingsPage() {
             label: 'Due this week',
             value: String(dueThisWeekCount),
             unit: 'filings',
-            delta: `${FILING_STATUS_COUNTS['due-today']} due today`,
+            delta: `${statusCounts['due-today']} due today`,
             deltaTone: 'neutral',
             accent: 'due-soon',
             sparklineData: [5, 6, 7, 6, 7, 8, dueThisWeekCount],
@@ -324,7 +302,7 @@ export function FilingsPage() {
             label: 'Filed this month',
             value: String(filedCount),
             unit: 'completed',
-            delta: '▲ 2 vs last month',
+            delta: `${onTimeRate}% on time`,
             deltaTone: 'positive',
             accent: 'filed',
             sparklineData: [2, 3, 3, 4, 4, 5, filedCount],
@@ -335,12 +313,12 @@ export function FilingsPage() {
             label: 'Total filings',
             value: String(totalFilings),
             unit: 'this period',
-            delta: `${FILING_STATUS_COUNTS.upcoming} upcoming`,
+            delta: `${statusCounts.upcoming} upcoming`,
             deltaTone: 'neutral',
             accent: 'authority',
             sparklineData: [18, 19, 20, 21, 22, 23, totalFilings],
             sparklineTone: 'authority',
-            footnote: `${CLIENT_OPTIONS.length} clients`,
+            footnote: `${clientOptions.length} clients`,
           },
         ]}
       >
@@ -360,19 +338,19 @@ export function FilingsPage() {
               <>
                 <FilterPopover
                   label="Client"
-                  options={clientOptions}
+                  options={clientOptionsWithCounts}
                   value={clientFilter}
                   onChange={(v) => setClientFilter(v as string[])}
                 />
                 <FilterPopover
                   label="Law"
-                  options={lawOptions}
+                  options={lawOptionsWithCounts}
                   value={lawFilter}
                   onChange={(v) => setLawFilter(v as string[])}
                 />
                 <FilterPopover
                   label="Handler"
-                  options={handlerOptions}
+                  options={handlerOptionsWithCounts}
                   value={handlerFilter}
                   onChange={(v) => setHandlerFilter(v as string[])}
                 />
@@ -456,7 +434,7 @@ export function FilingsPage() {
                     <FilingKanbanCard
                       filing={f}
                       onOpen={(row) =>
-                        setSelectedFiling(filingRows.find((r) => r.id === row.id) ?? null)
+                        setSelectedFiling(rows.find((r) => r.id === row.id) ?? null)
                       }
                     />
                   );
@@ -469,8 +447,8 @@ export function FilingsPage() {
             <div className="mt-4">
               <ComplianceCalendar
                 filings={filtered}
-                month={FILINGS_TODAY}
-                onFilingClick={handleCalendarFilingClick}
+                month={monthAnchor}
+                onFilingClick={handleCalendarClick}
               />
             </div>
           )}
@@ -479,10 +457,7 @@ export function FilingsPage() {
 
       <AnimatePresence>
         {selectedFiling && (
-          <FilingDetailDrawer
-            filing={selectedFiling}
-            onClose={() => setSelectedFiling(null)}
-          />
+          <FilingDetailDrawer filing={selectedFiling} onClose={() => setSelectedFiling(null)} />
         )}
       </AnimatePresence>
 
@@ -490,7 +465,7 @@ export function FilingsPage() {
         open={reassignOpen}
         onOpenChange={setReassignOpen}
         filings={selectedFilings}
-        handlers={MOCK_HANDLERS}
+        handlers={handlers}
         onConfirm={applyReassign}
       />
     </>

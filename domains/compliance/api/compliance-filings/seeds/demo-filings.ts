@@ -2,35 +2,37 @@ import type { INestApplicationContext } from '@nestjs/common';
 import { DatabaseService, asc, eq, users } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
 import { EntityService } from '@packages/entity-engine';
-import { tasks } from '@packages/tasks';
-import { complianceTasks } from '../../schema/compliance-tasks';
+import { complianceFilings } from '../../schema/compliance-filings';
 import { ComplianceRuleService } from '../../rules/compliance-rules.service';
 import { ClientRegistrationService } from '../../client-registrations/client-registrations.service';
-import { ComplianceTasksLookupService } from '../../compliance-tasks/compliance-tasks-lookup.service';
-import { buildComplianceExternalKey } from '../../compliance-tasks/compliance-tasks.config';
-import { COMPLIANCE_TASK_GENERATED } from '../../events/types';
+import { ComplianceFilingsLookupService } from '../compliance-filings-lookup.service';
+import { buildFilingExternalKey } from '../compliance-filings.config';
+import { COMPLIANCE_FILING_GENERATED } from '../../events/types';
 
 /**
- * Mirrors `GenerateComplianceTasksAction` so seeding is not tied to the
+ * Mirrors `GenerateComplianceFilingsAction` so seeding is not tied to the
  * automation runner. For every active rule × registered client × occurrence
- * in the next `HORIZON_MONTHS` months, materializes a compliance task via
- * the generic EntityService<compliance-tasks>. Idempotent via
- * findByRuleClientPeriod.
+ * in the next `HORIZON_MONTHS` months, materializes a filing via the generic
+ * EntityService<compliance-filings>. Idempotent via findByRuleClientPeriod.
+ *
+ * After bulk generation, spreads the first 30 filings across a
+ * due-date/assignment range so dashboard widgets have data in the
+ * overdue / due-today / due-this-week / upcoming buckets on a fresh seed.
  */
 const HORIZON_MONTHS = 6;
 
-export const seedDemoTasks = async (ctx: INestApplicationContext): Promise<void> => {
+export const seedDemoFilings = async (ctx: INestApplicationContext): Promise<void> => {
   const database = ctx.get(DatabaseService);
   const ruleService = ctx.get(ComplianceRuleService);
   const registrationService = ctx.get(ClientRegistrationService);
-  const lookup = ctx.get(ComplianceTasksLookupService);
-  const entityService = ctx.get<EntityService>('ENTITY_SERVICE_compliance-tasks');
+  const lookup = ctx.get(ComplianceFilingsLookupService);
+  const entityService = ctx.get<EntityService>('ENTITY_SERVICE_compliance-filings');
   const events = ctx.get(DomainEventEmitter);
 
-  // Idempotency short-circuit: if any compliance task already exists, skip.
+  // Idempotency short-circuit: if any filing exists, skip.
   const existing = await database.db
-    .select({ taskId: complianceTasks.taskId })
-    .from(complianceTasks)
+    .select({ id: complianceFilings.id })
+    .from(complianceFilings)
     .limit(1);
   if (existing[0]) return;
 
@@ -85,7 +87,7 @@ export const seedDemoTasks = async (ctx: INestApplicationContext): Promise<void>
           admin.id,
         );
 
-        events.emitDynamic(COMPLIANCE_TASK_GENERATED, {
+        events.emitDynamic(COMPLIANCE_FILING_GENERATED, {
           entityType: 'compliance_rules',
           entityId: rule.id,
           actorId: null,
@@ -93,9 +95,9 @@ export const seedDemoTasks = async (ctx: INestApplicationContext): Promise<void>
             ruleId: rule.id,
             clientId: reg.clientId,
             lawId: rule.lawId,
-            taskId: row.id as string,
+            filingId: row.id as string,
             externalKey: (row.externalKey as string | undefined)
-              ?? buildComplianceExternalKey(rule.id, reg.clientId, periodStart),
+              ?? buildFilingExternalKey(rule.id, reg.clientId, periodStart),
             periodStart,
             periodEnd,
             dueDate,
@@ -105,17 +107,15 @@ export const seedDemoTasks = async (ctx: INestApplicationContext): Promise<void>
     }
   }
 
-  // Demo variety: spread the first N compliance tasks across overdue / due-today /
-  // due-this-week / upcoming buckets, and individually assign every third task to
-  // admin. Without this the dashboard widgets show empty states on a fresh seed
-  // because every generated task lands months out and is team-assigned only.
+  // Demo variety: spread the first N filings across overdue / due-today /
+  // due-this-week / upcoming buckets, and individually assign every third
+  // filing to admin so the "assigned to me" widgets are populated.
   const SPREAD_LIMIT = 30;
   const DUE_OFFSETS = [-14, -10, -7, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7];
   const spread = await database.db
-    .select({ id: tasks.id })
-    .from(tasks)
-    .where(eq(tasks.relatedEntityType, 'compliance'))
-    .orderBy(asc(tasks.createdAt))
+    .select({ id: complianceFilings.id })
+    .from(complianceFilings)
+    .orderBy(asc(complianceFilings.createdAt))
     .limit(SPREAD_LIMIT);
 
   for (let i = 0; i < spread.length; i++) {
@@ -123,12 +123,12 @@ export const seedDemoTasks = async (ctx: INestApplicationContext): Promise<void>
     const demoDue = toIsoDate(addDays(now, dayOffset));
     const assignToAdmin = i % 3 === 0;
     await database.db
-      .update(tasks)
+      .update(complianceFilings)
       .set({
         dueDate: demoDue,
         ...(assignToAdmin ? { assigneeId: admin.id } : {}),
       })
-      .where(eq(tasks.id, spread[i]!.id));
+      .where(eq(complianceFilings.id, spread[i]!.id));
   }
 };
 

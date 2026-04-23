@@ -11,6 +11,19 @@ export interface ComplianceTaskGeneratedPayload extends Record<string, unknown> 
   dueDate: string;
 }
 
+export const COMPLIANCE_FILING_GENERATED = 'compliance.ComplianceFilingGenerated' as const;
+
+export interface ComplianceFilingGeneratedPayload extends Record<string, unknown> {
+  ruleId: string;
+  clientId: string;
+  lawId: string;
+  filingId: string;
+  externalKey: string;
+  periodStart: string;
+  periodEnd: string;
+  dueDate: string;
+}
+
 // Names mirror the dynamic events entity-engine emits for generic CRUD paths,
 // so listeners (audit, automations, etc.) subscribe once and receive events
 // from both the auto-CRUD and the custom create-with-contacts / primary-flip

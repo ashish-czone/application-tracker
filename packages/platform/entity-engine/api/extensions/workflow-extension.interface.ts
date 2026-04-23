@@ -35,6 +35,9 @@ export interface WorkflowExtension {
     guardNames?: string[];
     sortOrder: number;
     metadata?: Record<string, unknown>;
+    reasonRequired?: boolean;
+    commentRequired?: boolean;
+    reasonOptions?: string[];
   }): Promise<{ id: string }>;
 
   /** Register a custom workflow guard function. */

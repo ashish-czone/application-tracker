@@ -3,7 +3,6 @@ import {
   BarChart3,
   Building2,
   CalendarClock,
-  CheckSquare,
   FileText,
   Gauge,
   Layers,
@@ -44,12 +43,6 @@ const ClientDetailPage = lazy(() =>
 const FilingsPage = lazy(() =>
   import('./portals/customer/features/screens/filings').then((m) => ({
     default: m.FilingsPage,
-  })),
-);
-
-const TasksPage = lazy(() =>
-  import('./portals/customer/features/screens/tasks').then((m) => ({
-    default: m.TasksPage,
   })),
 );
 
@@ -120,8 +113,8 @@ const OrganizationPage = lazy(() =>
  *
  * Permission strings on each route are interpreted by AppRouter, which
  * wraps the element in `<PermissionGuard>` when present. Permission keys
- * for entities (clients, laws, compliance_rules, etc.) are auto-registered
- * by EntityEngine; UI-only screens (filings, reports) come from
+ * for entities (clients, laws, compliance_rules, compliance-filings, etc.)
+ * are auto-registered by EntityEngine; UI-only screens (reports) come from
  * `domains/compliance/api/permissions.ts`. Dashboard is auth-only — its
  * blocks are gated component-level via `<Can>`.
  */
@@ -133,8 +126,7 @@ const routes: DomainRouteObject[] = [
   { path: '/dashboard', element: <DashboardPage />, bareLayout: true },
   { path: '/clients', element: <ClientsPage />, permission: 'clients.read', bareLayout: true },
   { path: '/clients/:clientId', element: <ClientDetailPage />, permission: 'clients.read', bareLayout: true },
-  { path: '/filings', element: <FilingsPage />, permission: 'filings.read', bareLayout: true },
-  { path: '/tasks', element: <TasksPage />, permission: 'tasks.read', bareLayout: true },
+  { path: '/filings', element: <FilingsPage />, permission: 'compliance-filings.read', bareLayout: true },
   { path: '/compliance-rules', element: <ComplianceRulesPage />, permission: 'compliance_rules.read', bareLayout: true },
   { path: '/laws', element: <LawsLibraryPage />, permission: 'laws.read', bareLayout: true },
   { path: '/reports', element: <ReportsPage />, permission: 'reports.read', bareLayout: true },
@@ -150,8 +142,7 @@ const routes: DomainRouteObject[] = [
 const menuItems: MenuItem[] = [
   { path: '/dashboard', label: 'Dashboard', icon: Gauge, position: 'before' },
   { path: '/clients', label: 'Clients', icon: Building2, permission: 'clients.read', position: 'before' },
-  { path: '/tasks', label: 'Tasks', icon: CheckSquare, permission: 'tasks.read', position: 'before' },
-  { path: '/filings', label: 'Filings', icon: CalendarClock, permission: 'filings.read', position: 'before' },
+  { path: '/filings', label: 'Filings', icon: CalendarClock, permission: 'compliance-filings.read', position: 'before' },
   { path: '/compliance-rules', label: 'Compliance Rules', icon: ListChecks, permission: 'compliance_rules.read', position: 'before' },
   { path: '/laws', label: 'Laws', icon: Scale, permission: 'laws.read', position: 'before' },
   { path: '/reports', label: 'Reports', icon: BarChart3, permission: 'reports.read', position: 'before' },
