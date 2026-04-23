@@ -1,4 +1,5 @@
 import type { SettingsModuleDefinition } from '@packages/settings';
+import { DEFAULT_SITE_THEME, type SiteTheme } from '@domains/agency-contract';
 
 // Agency marketing site settings. Single `site` module covering both
 // company identity (name, logo) and public-site branding (tagline,
@@ -7,6 +8,11 @@ import type { SettingsModuleDefinition } from '@packages/settings';
 // timezone, formats) — not company identity. If another app later
 // needs company identity too, lift `companyName`/`companyLogo` out
 // into a shared `company` module with a one-line migration.
+//
+// `theme` is a structured object (jsonb-backed). The generic settings
+// admin page does not render it — it's edited via the dedicated
+// Appearance page, so its metadata.type is kept as 'string' only to
+// satisfy the current settings metadata shape.
 export const SITE_DEFAULTS = {
   companyName: 'Studio',
   companyLogo: '',
@@ -26,6 +32,7 @@ export const SITE_DEFAULTS = {
   'defaultSeo.ogImage': '',
   'analytics.ga4': '',
   'analytics.posthog': '',
+  theme: DEFAULT_SITE_THEME as SiteTheme,
 } as const;
 
 export const SITE_SETTINGS: SettingsModuleDefinition = {
@@ -117,6 +124,11 @@ export const SITE_SETTINGS: SettingsModuleDefinition = {
       type: 'string',
       description: 'Public project API key. Leave blank to disable PostHog.',
     },
+    theme: {
+      label: 'Public site theme',
+      type: 'string',
+      description: 'Edited via the Appearance page, not this form.',
+    },
   },
 };
 
@@ -143,6 +155,7 @@ export const PUBLIC_SITE_KEYS = [
   'defaultSeo.ogImage',
   'analytics.ga4',
   'analytics.posthog',
+  'theme',
 ] as const satisfies ReadonlyArray<keyof typeof SITE_DEFAULTS>;
 
 export type SiteSettingKey = keyof typeof SITE_DEFAULTS;

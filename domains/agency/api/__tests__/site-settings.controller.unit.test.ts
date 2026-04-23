@@ -1,13 +1,15 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { AppConfigService } from '@packages/settings';
+import { DEFAULT_SITE_THEME, type SiteTheme } from '@domains/agency-contract';
 import { SiteSettingsController } from '../site-settings.controller';
 import { PUBLIC_SITE_KEYS, SITE_DEFAULTS } from '../settings';
 
-function makeAppConfig(overrides: Partial<Record<string, string>> = {}): AppConfigService {
+function makeAppConfig(overrides: Partial<Record<string, unknown>> = {}): AppConfigService {
   return {
     get: vi.fn((module: string, key: string) => {
       if (module !== 'site') throw new Error(`unexpected module ${module}`);
-      return overrides[key] ?? (SITE_DEFAULTS as Record<string, string>)[key];
+      if (key in overrides) return overrides[key];
+      return (SITE_DEFAULTS as Record<string, unknown>)[key];
     }),
   } as unknown as AppConfigService;
 }
@@ -21,11 +23,36 @@ describe('SiteSettingsController', () => {
 
     for (const key of PUBLIC_SITE_KEYS) {
       expect(result).toHaveProperty(key);
-      expect(result[key]).toBe((SITE_DEFAULTS as Record<string, string>)[key]);
+      expect(result[key]).toEqual((SITE_DEFAULTS as Record<string, unknown>)[key]);
     }
   });
 
-  it('reflects admin overrides', () => {
+  it('returns the theme default as a structured object, not a string', () => {
+    const appConfig = makeAppConfig();
+    const controller = new SiteSettingsController(appConfig);
+
+    const result = controller.get();
+
+    expect(result.theme).toEqual(DEFAULT_SITE_THEME);
+    expect(typeof result.theme).toBe('object');
+  });
+
+  it('passes through an admin-overridden theme object', () => {
+    const overriddenTheme: SiteTheme = {
+      ...DEFAULT_SITE_THEME,
+      presetId: 'bold',
+      mode: 'dark',
+      accentOverride: '22 90% 52%',
+    };
+    const appConfig = makeAppConfig({ theme: overriddenTheme });
+    const controller = new SiteSettingsController(appConfig);
+
+    const result = controller.get();
+
+    expect(result.theme).toEqual(overriddenTheme);
+  });
+
+  it('reflects admin overrides on scalar keys', () => {
     const appConfig = makeAppConfig({
       siteName: 'Override Studio',
       'social.twitter': 'https://x.com/override',
