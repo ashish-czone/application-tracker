@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
 import { DataTable, Pagination, CoarseTabs } from '@packages/ui';
@@ -6,12 +6,14 @@ import { AuditTimeline } from '@packages/audit-ui';
 import {
   MOCK_CLIENT_DETAIL,
   type ClientFilingStatus,
+  type ClientLaw,
 } from './data/clientDetailMock';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 import { ClientDetailHeader } from './components/ClientDetailHeader';
 import { ClientDetailOverview } from './components/ClientDetailOverview';
 import { CLIENT_DETAIL_FILING_COLUMNS } from './components/clientDetailFilingColumns';
-import { CLIENT_DETAIL_LAW_COLUMNS } from './components/clientDetailLawColumns';
+import { makeClientDetailLawColumns } from './components/clientDetailLawColumns';
+import { RegistrationDeactivationDialog } from './components/RegistrationDeactivationDialog';
 import { useClientDetail } from './api/useClientsApi';
 import { mergeClientDetail } from './api/mapClientRecord';
 
@@ -25,6 +27,12 @@ export function ClientDetailPage() {
   const [filingsPage, setFilingsPage] = useState(1);
   const [filingsPageSize, setFilingsPageSize] = useState(10);
   const [filingStatusTab, setFilingStatusTab] = useState<'all' | ClientFilingStatus>('all');
+  const [deactivating, setDeactivating] = useState<ClientLaw | null>(null);
+
+  const lawColumns = useMemo(
+    () => makeClientDetailLawColumns({ onDeactivate: setDeactivating }),
+    [],
+  );
 
   if (isLoading) {
     return (
@@ -162,8 +170,8 @@ export function ClientDetailPage() {
           {activeTab === 'laws' && (
             <div className="bg-paper-raised border border-rule overflow-x-auto">
               <DataTable
-                columns={CLIENT_DETAIL_LAW_COLUMNS}
-                visibleColumns={CLIENT_DETAIL_LAW_COLUMNS.map((c) => c.key)}
+                columns={lawColumns}
+                visibleColumns={lawColumns.map((c) => c.key)}
                 rows={client.registeredLawDetails}
                 getRowKey={(l) => l.id}
                 onRowClick={() => {}}
@@ -177,6 +185,17 @@ export function ClientDetailPage() {
             </div>
           )}
         </div>
+
+        {deactivating && (
+          <RegistrationDeactivationDialog
+            open={!!deactivating}
+            onOpenChange={(open) => { if (!open) setDeactivating(null); }}
+            clientId={deactivating.clientId}
+            lawId={deactivating.lawId}
+            lawLabel={`${deactivating.code} — ${deactivating.name}`}
+            onDeactivated={() => setDeactivating(null)}
+          />
+        )}
       </main>
     </div>
   );

@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@packages/ui';
 import { useEntityEngine, useEntityHooks } from '@packages/entity-engine-ui';
 
@@ -91,6 +91,28 @@ export interface CreateClientRegistrationsPayload {
   lawCodes: string[];
 }
 
+export interface RegistrationDeactivationPreview {
+  registrationId: string;
+  deactivatedAt: string;
+  cancelledAfter: number;
+  remainingBefore: number;
+}
+
+export interface DeactivateRegistrationPayload {
+  clientId: string;
+  lawId: string;
+  deactivatedAt: string;
+  alsoCancelEarlier?: boolean;
+  comment?: string;
+}
+
+export interface DeactivateRegistrationResult {
+  registrationId: string;
+  deactivatedAt: string;
+  autoCancelledFilingIds: string[];
+  manuallyCancelledFilingIds: string[];
+}
+
 export function useClientsList(params: Record<string, unknown> = {}) {
   const hooks = useEntityHooks('clients');
   return hooks.useList(params) as ReturnType<typeof hooks.useList> & {
@@ -144,6 +166,60 @@ export function useCreateClientRegistrations(options?: {
       const message =
         (error as { body?: { message?: string } })?.body?.message ??
         'Failed to save law registrations';
+      toast.error(message);
+    },
+  });
+}
+
+/**
+ * Fetches the "what would happen if I deactivated this registration as of
+ * `date`?" preview so the dialog can render "M filings will auto-cancel;
+ * N filings remain open for earlier periods" live as the admin changes the
+ * date. Params-null → disabled (used while the dialog is closed or the
+ * date input is empty).
+ */
+export function useRegistrationDeactivationPreview(
+  params: { clientId: string; lawId: string; date: string } | null,
+) {
+  const { apiFn } = useEntityEngine();
+  return useQuery({
+    queryKey: ['registration-deactivation-preview', params?.clientId, params?.lawId, params?.date],
+    queryFn: () =>
+      apiFn.get<RegistrationDeactivationPreview>(
+        `/clients/${params!.clientId}/registrations/${params!.lawId}/deactivation-preview?date=${encodeURIComponent(params!.date)}`,
+      ),
+    enabled: !!params,
+    staleTime: 0,
+    gcTime: 0,
+  });
+}
+
+export function useDeactivateRegistration(options?: {
+  onSuccess?: (result: DeactivateRegistrationResult) => void;
+}) {
+  const { apiFn } = useEntityEngine();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ clientId, lawId, ...body }: DeactivateRegistrationPayload) =>
+      apiFn.post<DeactivateRegistrationResult>(
+        `/clients/${clientId}/registrations/${lawId}/deactivate`,
+        body,
+      ),
+    onSuccess: (result) => {
+      // Every surface that may have shown this registration or its filings
+      // needs to refetch — registrations list, filings list, and any audit
+      // timeline rendered on the client detail page.
+      queryClient.invalidateQueries({ queryKey: ['client-registrations'] });
+      queryClient.invalidateQueries({ queryKey: ['compliance-filings'] });
+      queryClient.invalidateQueries({ queryKey: ['audit'] });
+      toast.success('Registration deactivated');
+      options?.onSuccess?.(result);
+    },
+    onError: (error: unknown) => {
+      const message =
+        (error as { body?: { message?: string } })?.body?.message ??
+        'Failed to deactivate registration';
       toast.error(message);
     },
   });
