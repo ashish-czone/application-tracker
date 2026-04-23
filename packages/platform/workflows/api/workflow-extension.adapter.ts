@@ -50,6 +50,9 @@ export class WorkflowExtensionAdapter implements WorkflowExtension {
     guardNames?: string[];
     sortOrder: number;
     metadata?: Record<string, unknown>;
+    reasonRequired?: boolean;
+    commentRequired?: boolean;
+    reasonOptions?: string[];
   }) {
     return this.registry.createTransition(definitionId, data);
   }

@@ -208,6 +208,9 @@ export async function seedWorkflows(
           guardNames: targetDef?.guardNames,
           sortOrder: i,
           metadata: targetDef?.conditions ? { conditions: targetDef.conditions } : undefined,
+          reasonRequired: targetDef?.reasonRequired,
+          commentRequired: targetDef?.commentRequired,
+          reasonOptions: targetDef?.reasonOptions,
         });
       }
     }
