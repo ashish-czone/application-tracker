@@ -24,6 +24,12 @@ export default defineConfig({
     teardownTimeout: 10000,
     testTimeout: 30000,
     fileParallelism: false,
+    // Force a single worker — every test file boots its own Nest app and
+    // beforeEach truncates the shared DB. With multiple worker threads,
+    // file A's truncate runs mid-seed for file B, producing
+    // workflow_transition_history / workflow_states FK violations.
+    pool: 'threads',
+    poolOptions: { threads: { singleThread: true } },
   },
   plugins: [
     swc.vite({
