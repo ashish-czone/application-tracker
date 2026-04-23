@@ -3111,6 +3111,9 @@ importers:
       '@nestjs/common':
         specifier: ^11.0.0
         version: 11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/event-emitter':
+        specifier: ^3.0.0
+        version: 3.0.1(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)
       '@nestjs/swagger':
         specifier: ^11.0.0
         version: 11.2.6(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)
@@ -3126,12 +3129,18 @@ importers:
       '@packages/entity-engine':
         specifier: workspace:*
         version: link:../../../platform/entity-engine/api
+      '@packages/logger':
+        specifier: workspace:*
+        version: link:../../../core/logger
       '@packages/rbac':
         specifier: workspace:*
         version: link:../../../platform/rbac/api
       '@packages/tenancy':
         specifier: workspace:*
         version: link:../../tenancy
+      '@packages/users':
+        specifier: workspace:*
+        version: link:../../../platform/users/api
       class-transformer:
         specifier: ^0.5.1
         version: 0.5.1
@@ -3393,6 +3402,9 @@ importers:
       '@nestjs/common':
         specifier: ^11.0.0
         version: 11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/event-emitter':
+        specifier: ^3.0.0
+        version: 3.0.1(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)
       '@nestjs/swagger':
         specifier: ^11.0.0
         version: 11.2.6(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)
@@ -3438,6 +3450,9 @@ importers:
       '@packages/tenancy':
         specifier: workspace:*
         version: link:../../tenancy
+      '@packages/users':
+        specifier: workspace:*
+        version: link:../../../platform/users/api
       class-validator:
         specifier: ^0.14.1
         version: 0.14.4
