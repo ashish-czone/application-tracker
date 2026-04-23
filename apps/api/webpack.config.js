@@ -12,7 +12,7 @@ module.exports = function (options) {
         additionalModuleDirs: [path.resolve(__dirname, 'node_modules')],
       }),
       // Native modules inside @packages/* must be externalized
-      { bcrypt: 'commonjs bcrypt' },
+      { bcrypt: 'commonjs bcrypt', sharp: 'commonjs sharp' },
     ],
     resolve: {
       ...options.resolve,

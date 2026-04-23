@@ -23,6 +23,7 @@
     "@nestjs/throttler": "^6.4.0",
     "bcrypt": "^5.1.1",
     "dotenv": "^16.4.0",
+    "sharp": "^0.33.5",
     "@packages/app-shell": "workspace:*",
     "@packages/attachments": "workspace:*",
     "@packages/audit": "workspace:*",
