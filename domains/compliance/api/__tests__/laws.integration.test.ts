@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import request from 'supertest';
-import { withAuth, cleanDatabase, type PackageTestApp } from '@packages/platform-testing';
-import { createComplianceTestApp } from './setup/app';
+import { withAuth, type PackageTestApp } from '@packages/platform-testing';
+import { createComplianceTestApp, resetComplianceTestDb } from './setup/app';
 
 const READ = ['laws.read'];
 const MANAGE = ['laws.read', 'laws.create', 'laws.update', 'laws.delete'];
@@ -18,7 +18,7 @@ describe('Laws (integration)', () => {
   });
 
   beforeEach(async () => {
-    await cleanDatabase(ctx.db);
+    await resetComplianceTestDb(ctx);
   });
 
   let seq = 0;
