@@ -144,7 +144,7 @@ export const COMPLIANCE_FILINGS_CONFIG = defineEntity({
             from: 'in_progress',
             to: [
               'pending',
-              'review',
+              { state: 'review', requiredPermissions: ['compliance-filings.submit'] },
               { state: 'cancelled', requiredPermissions: ['compliance-filings.close'] },
             ],
           },
@@ -155,6 +155,7 @@ export const COMPLIANCE_FILINGS_CONFIG = defineEntity({
               { state: 'completed', requiredPermissions: ['compliance-filings.complete'] },
               {
                 state: 'rejected',
+                requiredPermissions: ['compliance-filings.reject'],
                 reasonRequired: true,
                 commentRequired: true,
               },

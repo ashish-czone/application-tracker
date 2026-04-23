@@ -53,9 +53,14 @@ describe('COMPLIANCE_FILINGS_CONFIG', () => {
       expect(findTarget(workflow.transitions, 'in_progress', 'pending')).toBe('pending');
     });
 
-    it('allows in_progress -> review without a permission gate (submitting for review is self-serve)', () => {
-      const target = findTarget(workflow.transitions, 'in_progress', 'review');
-      expect(target).toBe('review');
+    it('gates in_progress -> review by compliance-filings.submit', () => {
+      const target = findTarget(workflow.transitions, 'in_progress', 'review') as TargetObject;
+      expect(target?.requiredPermissions).toContain('compliance-filings.submit');
+    });
+
+    it('gates review -> rejected by compliance-filings.reject (in addition to reason/comment)', () => {
+      const target = findTarget(workflow.transitions, 'review', 'rejected') as TargetObject;
+      expect(target?.requiredPermissions).toContain('compliance-filings.reject');
     });
 
     it('gates review -> completed by compliance-filings.complete', () => {
