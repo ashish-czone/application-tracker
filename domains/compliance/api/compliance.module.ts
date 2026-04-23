@@ -1,4 +1,6 @@
 import { Module, type OnModuleInit } from '@nestjs/common';
+import { ModuleRef } from '@nestjs/core';
+import { AuditRegistryService } from '@packages/audit';
 import { DatabaseService, type DrizzleDB } from '@packages/database';
 import { EntityEngineModule } from '@packages/entity-engine';
 import { ActionRegistry } from '@packages/automation-contracts';
@@ -6,6 +8,8 @@ import { RbacService } from '@packages/rbac';
 import { TASKS_CONFIG, TasksModule } from '@packages/tasks';
 import { USERS_POSITIONS_READER } from '@packages/users';
 import { WorkflowGuardRegistry } from '@packages/workflows';
+
+import { registerComplianceAudit } from './audit/register-compliance-audit';
 
 import { ComplianceUsersPositionsReader } from './users/compliance-users-positions.reader';
 
@@ -80,12 +84,16 @@ export class ComplianceDomainModule implements OnModuleInit {
     private readonly contactsService: ClientContactsService,
     private readonly rbac: RbacService,
     private readonly databaseService: DatabaseService,
+    private readonly auditRegistry: AuditRegistryService,
+    private readonly moduleRef: ModuleRef,
   ) {}
 
   onModuleInit() {
     organizationsDbRef = this.databaseService.db;
 
     this.actionRegistry.register(this.generateFilingsAction);
+
+    registerComplianceAudit(this.auditRegistry, this.moduleRef);
 
     // Blocks onboarding → active on the clients workflow unless the client
     // has at least one primary contact. Referenced by `guardNames` on the

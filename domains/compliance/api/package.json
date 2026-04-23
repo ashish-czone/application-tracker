@@ -12,6 +12,8 @@
     "@nestjs/core": "^11.0.0",
     "@packages/address": "workspace:*",
     "@domains/compliance-contract": "workspace:*",
+    "@packages/audit": "workspace:*",
+    "@packages/auth-core": "workspace:*",
     "@packages/automation-contracts": "workspace:*",
     "@packages/common": "workspace:*",
     "@packages/database": "workspace:*",

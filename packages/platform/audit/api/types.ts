@@ -1,9 +1,21 @@
 export type AuditAction = 'created' | 'updated' | 'deleted' | string;
 
+export interface AuditReadAuthorisationContext {
+  user: { userId: string; permissions?: Record<string, string>; [key: string]: unknown };
+  entityType: string;
+  entityId: string;
+}
+
 export interface AuditModuleRegistration {
   events: string[] | '*';
   /** Fields to exclude from audit snapshots (e.g., 'passwordHash') */
   sensitiveFields?: string[];
+  /**
+   * Called by the per-entity audit read endpoint. Should return true when
+   * the user is allowed to see audit rows for `entityId`. Omit to require
+   * the `audit.read_all` permission for this module's entities.
+   */
+  authoriseRead?: (ctx: AuditReadAuthorisationContext) => boolean | Promise<boolean>;
 }
 
 export interface AuditLogRecord {

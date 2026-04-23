@@ -29,7 +29,7 @@ import type { PermissionScope } from '@packages/rbac';
  * 1. If a PositionScopeProvider is available, resolve scope from org position
  * 2. Otherwise fall back to JWT-embedded scope (legacy)
  */
-async function buildAccessContext(
+export async function buildAccessContext(
   user: JwtPayload,
   permission: string,
   entityType: string,

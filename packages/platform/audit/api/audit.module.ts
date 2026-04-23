@@ -16,7 +16,7 @@ export class AuditModule implements OnModuleInit {
 
   onModuleInit() {
     this.rbacService.registerPermissions('audit', [
-      { action: 'read', description: 'View audit logs' },
+      { action: 'read_all', description: 'View firm-wide audit logs across every entity' },
     ]);
   }
 }
