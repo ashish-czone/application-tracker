@@ -276,52 +276,6 @@ describe('OrgUnit Services (integration)', () => {
       });
     });
 
-    describe('scopes', () => {
-      it('should set and get scopes for a position', async () => {
-        const pos = await positionService.create({ name: 'Manager' });
-
-        await positionService.setScopes(pos.id, [
-          { entityType: 'candidates', scope: 'descendants' },
-          { entityType: 'job_openings', scope: 'all' },
-        ]);
-
-        const scopes = await positionService.getScopes(pos.id);
-        expect(scopes).toHaveLength(2);
-        expect(scopes.find((s) => s.entityType === 'candidates')!.scope).toBe('descendants');
-      });
-
-      it('should replace scopes on subsequent set', async () => {
-        const pos = await positionService.create({ name: 'Manager' });
-
-        await positionService.setScopes(pos.id, [
-          { entityType: 'candidates', scope: 'descendants' },
-        ]);
-        await positionService.setScopes(pos.id, [
-          { entityType: 'candidates', scope: 'all' },
-        ]);
-
-        const scopes = await positionService.getScopes(pos.id);
-        expect(scopes).toHaveLength(1);
-        expect(scopes[0].scope).toBe('all');
-      });
-
-      it('should get scope for specific entity type', async () => {
-        const pos = await positionService.create({ name: 'Manager' });
-        await positionService.setScopes(pos.id, [
-          { entityType: 'candidates', scope: 'unit' },
-        ]);
-
-        const scope = await positionService.getScopeForEntity(pos.id, 'candidates');
-        expect(scope).toBe('unit');
-      });
-
-      it('should return null for entity type with no scope', async () => {
-        const pos = await positionService.create({ name: 'Manager' });
-        const scope = await positionService.getScopeForEntity(pos.id, 'nonexistent');
-        expect(scope).toBeNull();
-      });
-    });
-
     describe('seedDefaults', () => {
       it('should seed default positions when none exist', async () => {
         await positionService.seedDefaults();

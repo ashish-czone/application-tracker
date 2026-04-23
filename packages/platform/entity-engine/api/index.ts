@@ -39,6 +39,7 @@ export type {
   ScopeResolver,
   DataAccessConfig,
   DataAccessContext,
+  AccessScopeSpec,
   PositionScopeProvider,
 } from './types';
 

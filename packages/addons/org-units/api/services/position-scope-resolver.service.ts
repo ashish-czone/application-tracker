@@ -1,76 +1,28 @@
 import { Injectable } from '@nestjs/common';
-import { DatabaseService, eq, and, inArray, sql } from '@packages/database';
+import { DatabaseService, eq, inArray, sql } from '@packages/database';
 import { orgUnitMembers } from '../schema/org-unit-members';
-import { orgPositionScopes } from '../schema/org-position-scopes';
-import { POSITION_SCOPE_RANK } from '../types';
 import type { PositionScopeProvider } from '../types';
 
 /**
- * Core scope resolution engine.
+ * Org-tree traversal utility used by hierarchical scopes (`unit`,
+ * `descendants`) in the entity-engine access pipeline. Given an actor and a
+ * scope level, it expands to the set of user IDs and org-unit IDs the actor
+ * "covers" through the position tree.
  *
- * Resolves a user's data access scope for a given entity type based on their
- * org position(s). When a user holds multiple positions across different org units,
- * the most permissive scope wins.
- *
- * Built-in scope levels (most → least permissive):
- * - 'all'         — no filter, see everything
- * - 'descendants' — see own org unit(s) + all descendant org units
- * - 'unit'        — see only own org unit(s)
- * - 'own'         — see only own records
- *
- * Custom scope keys (e.g. 'hiring-manager') are treated as equivalent to 'own'
- * for ranking purposes — they're entity-specific and resolved by the entity's
- * custom scope resolver.
+ * Scope authorisation rules live on role-permission grants; this service
+ * supplies the raw tree expansion the enforcement layer needs to translate
+ * `unit` / `descendants` into concrete WHERE IN lists.
  */
 @Injectable()
 export class PositionScopeResolverService implements PositionScopeProvider {
   constructor(private readonly database: DatabaseService) {}
 
   /**
-   * Returns the most permissive scope string for a user on a given entity type.
-   * Defaults to 'own' when no position/scope mapping exists (fail-closed).
-   */
-  async resolveScope(userId: string, entityType: string): Promise<string> {
-    // Join org_unit_members → org_position_scopes to get all scopes for this user + entity
-    const rows = await this.database.db
-      .select({ scope: orgPositionScopes.scope })
-      .from(orgUnitMembers)
-      .innerJoin(
-        orgPositionScopes,
-        and(
-          eq(orgPositionScopes.positionId, orgUnitMembers.positionId),
-          eq(orgPositionScopes.entityType, entityType),
-        ),
-      )
-      .where(eq(orgUnitMembers.userId, userId));
-
-    if (rows.length === 0) return 'own';
-
-    // Most permissive wins
-    let bestScope = rows[0].scope;
-    let bestRank = this.scopeRank(bestScope);
-
-    for (let i = 1; i < rows.length; i++) {
-      const rank = this.scopeRank(rows[i].scope);
-      if (rank > bestRank) {
-        bestRank = rank;
-        bestScope = rows[i].scope;
-      }
-    }
-
-    return bestScope;
-  }
-
-  /**
-   * Resolves the set of user IDs visible for the given scope.
-   * Returns null for 'all' (no filter needed).
-   * Returns [userId] for 'own' or unrecognized scopes.
-   * For 'descendants' and 'unit', expands org unit hierarchy accordingly.
+   * Resolves the set of user IDs covered by a hierarchical scope rooted at
+   * the actor. Returns `null` for non-hierarchical scope keys so the caller
+   * can fall through to per-scope-type handling.
    */
   async resolveUserIds(userId: string, scope: string): Promise<string[] | null> {
-    if (scope === 'all') return null;
-    if (scope === 'own') return [userId];
-
     if (scope === 'descendants') {
       return this.getDescendantUserIds(userId);
     }
@@ -79,22 +31,14 @@ export class PositionScopeResolverService implements PositionScopeProvider {
       return this.getUnitUserIds(userId);
     }
 
-    // Custom scope keys (e.g. 'hiring-manager') — entity engine handles these
-    // via its custom scope resolvers, so we just return null to signal delegation
     return null;
   }
 
   /**
-   * Resolves the set of org unit IDs visible for the given scope.
-   * Returns null for 'all' or custom scopes.
-   * Returns [] for 'own' (no team visibility).
-   * For 'descendants', returns user's units + all descendant units.
-   * For 'unit', returns user's direct units only.
+   * Resolves the set of org-unit IDs covered by a hierarchical scope. Returns
+   * `null` for non-hierarchical scope keys.
    */
   async resolveOrgUnitIds(userId: string, scope: string): Promise<string[] | null> {
-    if (scope === 'all') return null;
-    if (scope === 'own') return [];
-
     if (scope === 'descendants') {
       return this.getDescendantOrgUnitIds(userId);
     }
@@ -197,9 +141,5 @@ export class PositionScopeResolverService implements PositionScopeProvider {
       .from(orgUnitMembers)
       .where(eq(orgUnitMembers.userId, userId));
     return rows.map((r) => r.orgUnitId);
-  }
-
-  private scopeRank(scope: string): number {
-    return POSITION_SCOPE_RANK[scope] ?? 1;
   }
 }

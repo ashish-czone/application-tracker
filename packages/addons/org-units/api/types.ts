@@ -47,33 +47,17 @@ export interface OrgPosition {
   updatedAt: Date;
 }
 
-export interface OrgPositionScope {
-  positionId: string;
-  entityType: string;
-  scope: string;
-}
-
-/** Built-in scope levels for org positions */
-export type PositionScopeLevel = 'all' | 'descendants' | 'unit' | 'own';
-
-/** All built-in scope levels, ordered from most to least permissive */
-export const POSITION_SCOPE_RANK: Record<string, number> = {
-  all: 4,
-  descendants: 3,
-  unit: 2,
-  own: 1,
-};
-
 /**
- * Resolves data access scope based on a user's org position.
- * Injected into entity-engine as a global provider, replacing TeamResolver.
+ * Expands a hierarchical access scope (`unit` / `descendants`) into the set
+ * of user-ids and org-unit-ids it covers for a given actor. Authorisation
+ * rules themselves live on role-permission grants; this provider only
+ * supplies tree-shape data the enforcement layer asks for.
+ *
+ * Returns `null` for scope keys that don't map to tree traversal (e.g. `own`,
+ * `assigned`, custom keys) so the caller can fall through.
  */
 export interface PositionScopeProvider {
-  /** Returns the resolved scope string for a user on a given entity type */
-  resolveScope(userId: string, entityType: string): Promise<string>;
-  /** Returns the user IDs visible for the given scope, or null for 'all' or custom scopes */
   resolveUserIds(userId: string, scope: string): Promise<string[] | null>;
-  /** Returns the org unit IDs visible for the given scope, or null for 'all' or custom scopes */
   resolveOrgUnitIds(userId: string, scope: string): Promise<string[] | null>;
 }
 

@@ -42,91 +42,15 @@ describe('PositionScopeResolverService', () => {
     service = new PositionScopeResolverService(databaseService);
   });
 
-  describe('resolveScope', () => {
-    it('should return "own" when user has no position scopes', async () => {
-      // select→from→innerJoin→where returns empty array
-      mockDb._chain.where.mockResolvedValueOnce([]);
-
-      const result = await service.resolveScope('user-1', 'candidates');
-
-      expect(result).toBe('own');
-    });
-
-    it('should return the scope when user has a single position', async () => {
-      mockDb._chain.where.mockResolvedValueOnce([{ scope: 'descendants' }]);
-
-      const result = await service.resolveScope('user-1', 'candidates');
-
-      expect(result).toBe('descendants');
-    });
-
-    it('should return the most permissive scope when user has multiple positions', async () => {
-      // User is in two org units with different positions/scopes for candidates
-      mockDb._chain.where.mockResolvedValueOnce([
-        { scope: 'unit' },        // rank 2
-        { scope: 'descendants' }, // rank 3 — this should win
-      ]);
-
-      const result = await service.resolveScope('user-1', 'candidates');
-
-      expect(result).toBe('descendants');
-    });
-
-    it('should return "all" when any position grants "all"', async () => {
-      mockDb._chain.where.mockResolvedValueOnce([
-        { scope: 'unit' },
-        { scope: 'all' },
-        { scope: 'own' },
-      ]);
-
-      const result = await service.resolveScope('user-1', 'candidates');
-
-      expect(result).toBe('all');
-    });
-
-    it('should handle custom scope keys with rank equivalent to "own"', async () => {
-      mockDb._chain.where.mockResolvedValueOnce([
-        { scope: 'hiring-manager' }, // custom, rank 1 (same as own)
-        { scope: 'unit' },           // rank 2 — this wins
-      ]);
-
-      const result = await service.resolveScope('user-1', 'job-openings');
-
-      expect(result).toBe('unit');
-    });
-
-    it('should return custom scope when it is the only scope', async () => {
-      mockDb._chain.where.mockResolvedValueOnce([
-        { scope: 'hiring-manager' },
-      ]);
-
-      const result = await service.resolveScope('user-1', 'job-openings');
-
-      expect(result).toBe('hiring-manager');
-    });
-  });
-
   describe('resolveUserIds', () => {
-    it('should return null for "all" scope', async () => {
-      const result = await service.resolveUserIds('user-1', 'all');
-
-      expect(result).toBeNull();
-    });
-
-    it('should return [userId] for "own" scope', async () => {
-      const result = await service.resolveUserIds('user-1', 'own');
-
-      expect(result).toEqual(['user-1']);
-    });
-
-    it('should return null for custom scopes (delegated to entity engine)', async () => {
-      const result = await service.resolveUserIds('user-1', 'hiring-manager');
-
-      expect(result).toBeNull();
+    it('should return null for non-hierarchical scopes', async () => {
+      expect(await service.resolveUserIds('user-1', 'own')).toBeNull();
+      expect(await service.resolveUserIds('user-1', 'assigned')).toBeNull();
+      expect(await service.resolveUserIds('user-1', 'any')).toBeNull();
+      expect(await service.resolveUserIds('user-1', 'hiring-manager')).toBeNull();
     });
 
     it('should expand descendants for "descendants" scope', async () => {
-      // execute returns recursive CTE result
       mockDb.execute.mockResolvedValueOnce({
         rows: [
           { user_id: 'user-1' },
@@ -144,7 +68,6 @@ describe('PositionScopeResolverService', () => {
     });
 
     it('should always include the user themselves in descendants', async () => {
-      // Even if the CTE doesn't include them
       mockDb.execute.mockResolvedValueOnce({
         rows: [{ user_id: 'user-2' }],
       });
@@ -156,11 +79,9 @@ describe('PositionScopeResolverService', () => {
     });
 
     it('should expand unit members for "unit" scope', async () => {
-      // First query: get user's org unit IDs
       mockDb._chain.where.mockResolvedValueOnce([
         { orgUnitId: 'unit-1' },
       ]);
-      // Second query: get all members in those org units
       mockDb._chain.where.mockResolvedValueOnce([
         { userId: 'user-1' },
         { userId: 'user-2' },
@@ -183,22 +104,11 @@ describe('PositionScopeResolverService', () => {
   });
 
   describe('resolveOrgUnitIds', () => {
-    it('should return null for "all" scope', async () => {
-      const result = await service.resolveOrgUnitIds('user-1', 'all');
-
-      expect(result).toBeNull();
-    });
-
-    it('should return empty array for "own" scope', async () => {
-      const result = await service.resolveOrgUnitIds('user-1', 'own');
-
-      expect(result).toEqual([]);
-    });
-
-    it('should return null for custom scopes', async () => {
-      const result = await service.resolveOrgUnitIds('user-1', 'hiring-manager');
-
-      expect(result).toBeNull();
+    it('should return null for non-hierarchical scopes', async () => {
+      expect(await service.resolveOrgUnitIds('user-1', 'own')).toBeNull();
+      expect(await service.resolveOrgUnitIds('user-1', 'assigned')).toBeNull();
+      expect(await service.resolveOrgUnitIds('user-1', 'any')).toBeNull();
+      expect(await service.resolveOrgUnitIds('user-1', 'hiring-manager')).toBeNull();
     });
 
     it('should expand descendant org unit IDs for "descendants" scope', async () => {

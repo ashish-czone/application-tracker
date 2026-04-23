@@ -10,10 +10,8 @@ import type {
   AddMemberRequest,
   UpdateMemberPositionRequest,
   OrgPosition,
-  OrgPositionScope,
   CreateOrgPositionRequest,
   UpdateOrgPositionRequest,
-  SetPositionScopesRequest,
 } from './types';
 
 export function createOrgUnitsApi(api: ApiFn) {
@@ -99,14 +97,6 @@ export function createOrgPositionsApi(api: ApiFn) {
 
     delete(id: string): Promise<void> {
       return api.delete<void>(`/org-positions/${id}`);
-    },
-
-    getScopes(positionId: string): Promise<OrgPositionScope[]> {
-      return api.get<OrgPositionScope[]>(`/org-positions/${positionId}/scopes`);
-    },
-
-    setScopes(positionId: string, data: SetPositionScopesRequest): Promise<OrgPositionScope[]> {
-      return api.put<OrgPositionScope[]>(`/org-positions/${positionId}/scopes`, data);
     },
   };
 }

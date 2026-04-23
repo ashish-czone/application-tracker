@@ -455,7 +455,7 @@ describe('EntityService (integration)', () => {
       // Can see own
       const found = await entityService.findOneOrFail(owned.id as string, {
         userId: TEST_ACTOR_ID,
-        scope: 'own',
+        scopes: [{ type: 'own' }],
       });
       expect(found.id).toBe(owned.id);
 
@@ -463,7 +463,7 @@ describe('EntityService (integration)', () => {
       await expect(
         entityService.findOneOrFail(otherOwned.id as string, {
           userId: TEST_ACTOR_ID,
-          scope: 'own',
+          scopes: [{ type: 'own' }],
         }),
       ).rejects.toThrow('not found');
     });
@@ -473,7 +473,7 @@ describe('EntityService (integration)', () => {
 
       const found = await entityService.findOneOrFail(otherOwned.id as string, {
         userId: TEST_ACTOR_ID,
-        scope: 'all',
+        scopes: [{ type: 'any' }],
       });
       expect(found.id).toBe(otherOwned.id);
     });
@@ -606,7 +606,7 @@ describe('EntityService (integration)', () => {
 
       const result = await entityService.list({}, {
         userId: TEST_ACTOR_ID,
-        scope: 'own',
+        scopes: [{ type: 'own' }],
       });
       expect(result.data).toHaveLength(1);
       expect(result.data[0].name).toBe('Mine');
@@ -635,7 +635,7 @@ describe('EntityService (integration)', () => {
         entityRegistry, module.get(AppLoggerService), null,
       );
 
-      const result = await hookService.list({}, { userId: TEST_ACTOR_ID, scope: 'all' });
+      const result = await hookService.list({}, { userId: TEST_ACTOR_ID, scopes: [{ type: 'any' }] });
 
       expect(afterListSpy).toHaveBeenCalledOnce();
       expect(afterListSpy.mock.calls[0]?.[0]).toHaveLength(3);
@@ -690,7 +690,7 @@ describe('EntityService (integration)', () => {
 
       const result = await hookService.findOneOrFail(created.id as string, {
         userId: TEST_ACTOR_ID,
-        scope: 'all',
+        scopes: [{ type: 'any' }],
       });
 
       expect(afterFindOneSpy).toHaveBeenCalledOnce();

@@ -577,49 +577,78 @@ export interface ScopeResolver {
 /**
  * Data access configuration for an entity.
  * Controls how row-level visibility is enforced based on RBAC permission scopes.
+ *
+ * Ownership anchors are separate concepts:
+ *   - createdByField: who created the record (defaults to 'createdBy')
+ *   - assigneeField:  who the record is currently assigned to (if applicable)
+ *   - teamField:      which org unit the record belongs to (if applicable)
+ *
+ * Scope types consume anchors: 'own' → createdByField, 'assigned' → assigneeField,
+ * 'unit'/'descendants' → teamField + org tree traversal on assignees/creators.
  */
 export interface DataAccessConfig {
   /**
-   * The field that identifies the record owner.
-   * Used by the built-in 'own' and 'team' scopes.
-   * Defaults to 'createdBy' if not specified.
+   * The field that identifies the record's creator.
+   * Used by the built-in 'own' scope. Defaults to 'createdBy'.
    */
-  ownerField?: string;
+  createdByField?: string;
+
+  /**
+   * The field that identifies the current assignee (user).
+   * Used by the built-in 'assigned' scope.
+   */
+  assigneeField?: string;
 
   /**
    * Optional field referencing an org unit (team).
-   * When set, built-in scope resolution generates:
-   *   ownerField IN (visible users) OR teamField IN (visible org units)
-   * This enables team-based assignment with hierarchical visibility.
+   * Used by 'unit' and 'descendants' scopes for team-based filtering.
    */
   teamField?: string;
 
   /**
-   * Entity-specific scope resolvers.
-   * These are referenced by RBAC permission scopes as 'scope:<key>'.
-   * Each resolver returns a SQL condition applied to list/detail queries.
+   * @deprecated Use createdByField + assigneeField. `ownerField` is retained as
+   * an alias for createdByField during migration; new code should not set it.
+   */
+  ownerField?: string;
+
+  /**
+   * Entity-specific scope resolvers for custom scope types.
+   * Registered type → SQL condition. Used when a role grant references
+   * a scope type not in the built-in vocabulary.
    */
   scopes?: ScopeResolver[];
+}
+
+/** A single scope value attached to a permission grant. Mirrors @packages/rbac ScopeSpec. */
+export interface AccessScopeSpec {
+  type: string;
+  params?: Record<string, unknown>;
 }
 
 /** Context passed to entity service methods for scope enforcement */
 export interface DataAccessContext {
   userId: string;
-  scope: string; // 'all' | 'descendants' | 'unit' | 'own' | custom key
+  /**
+   * The scopes the user holds for the verb being performed on this entity.
+   * Row-level access = OR over these scopes. An array containing
+   * `{ type: 'any' }` means unrestricted.
+   */
+  scopes: AccessScopeSpec[];
 }
 
 
 /**
- * Resolves data access scope based on a user's org position.
- * Replaces TeamResolver with position-based scope resolution.
- * Injected into entity-engine as an optional global provider.
+ * Optional provider that expands hierarchical access scopes ("unit",
+ * "descendants") into the set of user-ids and org-unit-ids they cover for
+ * the acting user. The entity-engine asks the provider at query time; the
+ * provider supplies tree-shape data so the engine can emit WHERE IN clauses.
+ *
+ * This provider does not decide *which* scopes apply — that lives on
+ * role-permission grants. It only answers "what does this hierarchical scope
+ * expand to for this user right now?".
  */
 export interface PositionScopeProvider {
-  /** Returns the resolved scope string for a user on a given entity type */
-  resolveScope(userId: string, entityType: string): Promise<string>;
-  /** Returns the user IDs visible for the given scope, or null for 'all' or custom scopes */
   resolveUserIds(userId: string, scope: string): Promise<string[] | null>;
-  /** Returns the org unit IDs visible for the given scope, or null for 'all' or custom scopes */
   resolveOrgUnitIds(userId: string, scope: string): Promise<string[] | null>;
 }
 

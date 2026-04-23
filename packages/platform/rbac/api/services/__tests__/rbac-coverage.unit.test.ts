@@ -19,6 +19,7 @@ function createMockDb() {
   chain.select = vi.fn().mockReturnValue(chain);
   chain.from = vi.fn().mockReturnValue(chain);
   chain.innerJoin = vi.fn().mockReturnValue(chain);
+  chain.leftJoin = vi.fn().mockReturnValue(chain);
   chain.orderBy = vi.fn().mockReturnValue(chain);
   chain.limit = vi.fn().mockReturnValue(chain);
   chain.insert = vi.fn().mockReturnValue(chain);
@@ -250,19 +251,19 @@ describe('RbacService — additional coverage', () => {
   // getRolePermissions
   // ----------------------------------------------------------------
   describe('getRolePermissions', () => {
-    it('should return BooleanPermissions from rolePermissions table', async () => {
+    it('should return scoped permissions from rolePermissions + rolePermissionScopes', async () => {
       mockDb.pushWhereResult([
-        { permission: 'users.read' },
-        { permission: 'users.write' },
-        { permission: 'orders.read' },
+        { permission: 'users.read', scopeType: null, scopeParams: null },
+        { permission: 'users.write', scopeType: null, scopeParams: null },
+        { permission: 'orders.read', scopeType: 'own', scopeParams: null },
       ]);
 
       const result = await service.getRolePermissions('role-1');
 
       expect(result).toEqual({
-        'users.read': true,
-        'users.write': true,
-        'orders.read': true,
+        'users.read': [{ type: 'any' }],
+        'users.write': [{ type: 'any' }],
+        'orders.read': [{ type: 'own' }],
       });
     });
 
@@ -274,24 +275,23 @@ describe('RbacService — additional coverage', () => {
       expect(result).toEqual({});
     });
 
-    it('should include wildcard permission', async () => {
-      mockDb.pushWhereResult([{ permission: '*' }]);
+    it('should include wildcard permission with any scope', async () => {
+      mockDb.pushWhereResult([{ permission: '*', scopeType: 'any', scopeParams: null }]);
 
       const result = await service.getRolePermissions('role-1');
 
-      expect(result).toEqual({ '*': true });
+      expect(result).toEqual({ '*': [{ type: 'any' }] });
     });
 
-    it('should deduplicate duplicate permission entries', async () => {
+    it('should collect multiple scopes on the same grant', async () => {
       mockDb.pushWhereResult([
-        { permission: 'users.read' },
-        { permission: 'users.read' },
+        { permission: 'tasks.update', scopeType: 'own', scopeParams: null },
+        { permission: 'tasks.update', scopeType: 'assigned', scopeParams: null },
       ]);
 
       const result = await service.getRolePermissions('role-1');
 
-      expect(result).toEqual({ 'users.read': true });
-      expect(Object.keys(result)).toHaveLength(1);
+      expect(result).toEqual({ 'tasks.update': [{ type: 'own' }, { type: 'assigned' }] });
     });
   });
 

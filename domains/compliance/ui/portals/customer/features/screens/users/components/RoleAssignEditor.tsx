@@ -51,7 +51,7 @@ export function RoleAssignEditor({ userId, excludeRoleIds, userPositions, onClos
   const handleAdd = (role: { id: string; name: string }) => {
     if (LEADERSHIP_ROLE_NAMES.has(role.name) && !userHasLeadershipPosition) {
       toast.warning(
-        `"${role.name}" is a leadership-tier role, but this user has no leadership-tier position (Head / Division Head / Firm Admin). The assignment is allowed — role grants capability, position governs scope.`,
+        `"${role.name}" is a leadership-tier role, but this user has no leadership-tier position (Head / Division Head / Firm Admin). The assignment is allowed — check that the role's scope grants match what you intend.`,
       );
     }
     addMember.mutate(

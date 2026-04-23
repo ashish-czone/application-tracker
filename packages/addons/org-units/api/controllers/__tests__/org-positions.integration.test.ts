@@ -145,44 +145,6 @@ describe('OrgPositionController (integration)', () => {
     });
   });
 
-  // ── Scopes ──────────────────────────────────────────────────
-
-  describe('Scopes', () => {
-    it('should set and get scopes for a position', async () => {
-      const position = await createPosition({ name: 'Recruiter' });
-
-      await request(ctx.httpServer)
-        .put(`/api/v1/org-positions/${position.id}/scopes`)
-        .set(withAuth(MANAGE))
-        .send({
-          scopes: [
-            { entityType: 'candidates', scope: 'own' },
-            { entityType: 'job-openings', scope: 'team' },
-          ],
-        })
-        .expect(200);
-
-      const res = await request(ctx.httpServer)
-        .get(`/api/v1/org-positions/${position.id}/scopes`)
-        .set(withAuth(READ))
-        .expect(200);
-
-      expect(res.body).toBeInstanceOf(Array);
-      expect(res.body.length).toBeGreaterThanOrEqual(2);
-    });
-
-    it('should return empty scopes for position with none', async () => {
-      const position = await createPosition({ name: 'NoScopes' });
-
-      const res = await request(ctx.httpServer)
-        .get(`/api/v1/org-positions/${position.id}/scopes`)
-        .set(withAuth(READ))
-        .expect(200);
-
-      expect(res.body).toHaveLength(0);
-    });
-  });
-
   // ── Permission enforcement ──────────────────────────────────
 
   describe('Permission enforcement', () => {

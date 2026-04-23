@@ -19,44 +19,42 @@ import { CurrentUser, type JwtPayload } from '@packages/auth';
 import { RequirePermission } from '@packages/rbac';
 import { EntityService } from './entity.service';
 import { createFieldPermissionInterceptor } from './interceptors/field-permission.interceptor';
-import type { EntityConfig, ListLayoutResponse, EntityActions, DataAccessContext, PositionScopeProvider } from './types';
-import type { PermissionScope } from '@packages/rbac';
+import type { EntityConfig, ListLayoutResponse, EntityActions, DataAccessContext, AccessScopeSpec, PositionScopeProvider } from './types';
+
+type JwtPermissionValue = AccessScopeSpec[] | true;
 
 /**
- * Extracts the data access context from the JWT payload for a given permission.
+ * Builds the data access context for a verb from the user's JWT. Scopes are
+ * attached to the role-permission grant; the JWT carries them as
+ * `permissions[<name>]: ScopeSpec[]`. Wildcard `*` collapses to `[{type:'any'}]`.
  *
- * Resolution order:
- * 1. If a PositionScopeProvider is available, resolve scope from org position
- * 2. Otherwise fall back to JWT-embedded scope (legacy)
+ * Returns `undefined` when the user holds no grant for the permission — the
+ * upstream @RequirePermission guard rejects that case first, so the access
+ * context is only built for authorised callers.
+ *
+ * `entityType` and `positionScopeProvider` are retained in the signature for
+ * call-site stability; they are no longer used to resolve scope.
  */
-export async function buildAccessContext(
+export function buildAccessContext(
   user: JwtPayload,
   permission: string,
-  entityType: string,
-  positionScopeProvider: PositionScopeProvider | null,
-): Promise<DataAccessContext | undefined> {
-  const permissions = (user as any).permissions as Record<string, PermissionScope | true> | undefined;
+  _entityType: string,
+  _positionScopeProvider: PositionScopeProvider | null,
+): DataAccessContext | undefined {
+  const permissions = (user as { permissions?: Record<string, JwtPermissionValue> }).permissions;
   if (!permissions) return undefined;
 
-  // Wildcard permission → all access
-  if (permissions['*']) return { userId: user.userId, scope: 'all' };
+  // Wildcard → unrestricted on every verb.
+  if ('*' in permissions) return { userId: user.userId, scopes: [{ type: 'any' }] };
 
-  const permValue = permissions[permission];
-  if (!permValue) return undefined;
+  const value = permissions[permission];
+  if (value === undefined) return undefined;
 
-  // If position scope provider is available, resolve from org position
-  if (positionScopeProvider) {
-    const scope = await positionScopeProvider.resolveScope(user.userId, entityType);
-    return { userId: user.userId, scope };
-  }
+  // Legacy boolean grant (pre-scope) → treated as unrestricted.
+  if (value === true) return { userId: user.userId, scopes: [{ type: 'any' }] };
 
-  // Legacy: scope embedded in JWT permission value
-  if (typeof permValue === 'string') {
-    return { userId: user.userId, scope: permValue };
-  }
-
-  // Boolean permission (new format) without position provider → default to 'own'
-  return { userId: user.userId, scope: 'own' };
+  // Empty array means the user has the grant but no scopes resolved — deny.
+  return { userId: user.userId, scopes: value };
 }
 
 /**
@@ -114,7 +112,7 @@ export function createEntityController(config: EntityConfig, serviceToken: strin
         limit: query.limit ? Number(query.limit) : undefined,
         includeDeleted: query.includeDeleted === 'true',
       };
-      const accessCtx = await buildAccessContext(user, readPermission, config.entityType, this.positionScopeProvider);
+      const accessCtx = buildAccessContext(user, readPermission, config.entityType, this.positionScopeProvider);
       return this.entityService.list(parsed, accessCtx);
     }
 
@@ -122,7 +120,7 @@ export function createEntityController(config: EntityConfig, serviceToken: strin
     @RequirePermission(readPermission)
     @ApiOperation({ summary: `Get a single ${config.singularName.toLowerCase()} by ID` })
     async findOne(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: JwtPayload) {
-      const accessCtx = await buildAccessContext(user, readPermission, config.entityType, this.positionScopeProvider);
+      const accessCtx = buildAccessContext(user, readPermission, config.entityType, this.positionScopeProvider);
       return this.entityService.findOneOrFail(id, accessCtx);
     }
 
@@ -142,7 +140,7 @@ export function createEntityController(config: EntityConfig, serviceToken: strin
       @Body() body: Record<string, unknown>,
       @CurrentUser() user: JwtPayload,
     ) {
-      const accessCtx = await buildAccessContext(user, updatePermission, config.entityType, this.positionScopeProvider);
+      const accessCtx = buildAccessContext(user, updatePermission, config.entityType, this.positionScopeProvider);
       return this.entityService.update(id, body, user.userId, accessCtx);
     }
 
@@ -151,7 +149,7 @@ export function createEntityController(config: EntityConfig, serviceToken: strin
     @HttpCode(HttpStatus.NO_CONTENT)
     @ApiOperation({ summary: `Soft delete a ${config.singularName.toLowerCase()}` })
     async delete(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: JwtPayload) {
-      const accessCtx = await buildAccessContext(user, deletePermission, config.entityType, this.positionScopeProvider);
+      const accessCtx = buildAccessContext(user, deletePermission, config.entityType, this.positionScopeProvider);
       await this.entityService.softDelete(id, user.userId, accessCtx);
     }
 
@@ -163,7 +161,7 @@ export function createEntityController(config: EntityConfig, serviceToken: strin
       @Body() body: { fieldKey: string; to: string; reason?: string; comment?: string },
       @CurrentUser() user: JwtPayload,
     ) {
-      const accessCtx = await buildAccessContext(user, updatePermission, config.entityType, this.positionScopeProvider);
+      const accessCtx = buildAccessContext(user, updatePermission, config.entityType, this.positionScopeProvider);
       return this.entityService.transition(id, body.fieldKey, body.to, user.userId, { reason: body.reason, comment: body.comment }, accessCtx);
     }
 
@@ -194,7 +192,7 @@ export function createEntityController(config: EntityConfig, serviceToken: strin
       @Body() body: { parentId: string | null },
       @CurrentUser() user: JwtPayload,
     ) {
-      const accessCtx = await buildAccessContext(user, updatePermission, config.entityType, this.positionScopeProvider);
+      const accessCtx = buildAccessContext(user, updatePermission, config.entityType, this.positionScopeProvider);
       return this.entityService.reparent(id, body.parentId ?? null, user.userId, accessCtx);
     }
 
@@ -202,7 +200,7 @@ export function createEntityController(config: EntityConfig, serviceToken: strin
     @RequirePermission(readPermission)
     @ApiOperation({ summary: `Get the ancestor chain of a ${config.singularName.toLowerCase()}` })
     async getAncestors(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: JwtPayload) {
-      const accessCtx = await buildAccessContext(user, readPermission, config.entityType, this.positionScopeProvider);
+      const accessCtx = buildAccessContext(user, readPermission, config.entityType, this.positionScopeProvider);
       return this.entityService.getAncestors(id, accessCtx);
     }
 
@@ -210,7 +208,7 @@ export function createEntityController(config: EntityConfig, serviceToken: strin
     @RequirePermission(readPermission)
     @ApiOperation({ summary: `Get all descendants of a ${config.singularName.toLowerCase()}` })
     async getDescendants(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: JwtPayload) {
-      const accessCtx = await buildAccessContext(user, readPermission, config.entityType, this.positionScopeProvider);
+      const accessCtx = buildAccessContext(user, readPermission, config.entityType, this.positionScopeProvider);
       return this.entityService.getDescendants(id, accessCtx);
     }
 
@@ -228,7 +226,7 @@ export function createEntityController(config: EntityConfig, serviceToken: strin
       @Body() body: { parentId?: string | null; sortOrder?: number },
       @CurrentUser() user: JwtPayload,
     ) {
-      const accessCtx = await buildAccessContext(user, updatePermission, config.entityType, this.positionScopeProvider);
+      const accessCtx = buildAccessContext(user, updatePermission, config.entityType, this.positionScopeProvider);
       return this.entityService.move(id, body, user.userId, accessCtx);
     }
   }

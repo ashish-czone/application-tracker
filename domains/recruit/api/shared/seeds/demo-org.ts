@@ -9,7 +9,6 @@ import {
   OrgPositionService,
   orgUnits,
   orgUnitMembers,
-  orgPositionScopes,
 } from '@packages/org-units';
 import { tasks } from '@packages/tasks';
 
@@ -121,12 +120,6 @@ const HEAD_ASSIGNMENTS: Record<string, number> = {
   'Acme Europe': 13,
 };
 
-const POSITION_SCOPES: { positionName: string; entityType: string; scope: string }[] = [
-  { positionName: 'Head', entityType: 'tasks', scope: 'descendants' },
-  { positionName: 'Lead', entityType: 'tasks', scope: 'descendants' },
-  { positionName: 'Member', entityType: 'tasks', scope: 'unit' },
-];
-
 const TEAM_TASKS: { title: string; priority: string; teamName: string; dueOffset: number }[] = [
   { title: 'Set up CI/CD pipeline for new microservice', priority: 'high', teamName: 'DevOps Team', dueOffset: 7 },
   { title: 'Fix responsive layout on dashboard', priority: 'medium', teamName: 'Frontend Team', dueOffset: 3 },
@@ -163,7 +156,6 @@ export const seedDemoOrg = async (ctx: INestApplicationContext): Promise<void> =
 
   await ensureSeedUsers(database, authService, rbacService);
   await ensureOrgUnits(database, orgUnitService, orgUnitLevelService, orgPositionService);
-  await ensurePositionScopes(database, orgPositionService);
   await ensureSampleTasks(database);
 };
 
@@ -275,31 +267,6 @@ async function ensureOrgUnits(
       const positionId = i === 0 ? leadPositionId : memberPositionId;
       await orgUnitService.addMember(unitId, userId, positionId ?? undefined);
     }
-  }
-}
-
-async function ensurePositionScopes(
-  database: DatabaseService,
-  orgPositionService: OrgPositionService,
-): Promise<void> {
-  const [existing] = await database.db
-    .select({ positionId: orgPositionScopes.positionId })
-    .from(orgPositionScopes)
-    .limit(1);
-
-  if (existing) return;
-
-  const positions = await orgPositionService.findAll();
-  const positionByName = new Map(positions.map((p) => [p.name, p.id]));
-
-  for (const { positionName, entityType, scope } of POSITION_SCOPES) {
-    const positionId = positionByName.get(positionName);
-    if (!positionId) continue;
-
-    await database.db
-      .insert(orgPositionScopes)
-      .values({ positionId, entityType, scope })
-      .onConflictDoNothing();
   }
 }
 

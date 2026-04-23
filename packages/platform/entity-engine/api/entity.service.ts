@@ -163,74 +163,98 @@ export class EntityService {
   // ---------------------------------------------------------------------------
 
   /**
-   * Resolves a data access scope into a SQL WHERE condition.
-   * Built-in scopes (all, own, team) are handled by the platform.
-   * Custom scopes (scope:<key>) are delegated to the entity's scope resolvers.
+   * Resolves a set of access scopes into a single SQL WHERE condition by
+   * OR-ing the predicate of each scope. `any` short-circuits to no filter.
+   *
+   * Built-in types handled here:
+   *   - any:         no filter
+   *   - own:         createdByField = actor
+   *   - assigned:    assigneeField = actor
+   *   - unit:        team/assignee/creator within actor's direct units
+   *   - descendants: team/assignee/creator within actor's unit subtree
+   *
+   * Custom types fall through to entity-registered scope resolvers.
+   * If the scope array is empty (user holds no scopes for this verb), the
+   * result is a `1=0` condition that matches no rows — i.e. no access.
    */
   private async resolveDataAccessScope(ctx: DataAccessContext): Promise<DrizzleSQL | undefined> {
     const { config } = this;
     const table = config.table as any;
-    const ownerField = config.dataAccess?.ownerField ?? 'createdBy';
-    const ownerColumn = table[ownerField] as PgColumn | undefined;
-    const teamFieldKey = config.dataAccess?.teamField;
-    const teamColumn = teamFieldKey ? (table[teamFieldKey] as PgColumn | undefined) : undefined;
+    const createdByKey = config.dataAccess?.createdByField ?? config.dataAccess?.ownerField ?? 'createdBy';
+    const createdByColumn = table[createdByKey] as PgColumn | undefined;
+    const assigneeKey = config.dataAccess?.assigneeField;
+    const assigneeColumn = assigneeKey ? (table[assigneeKey] as PgColumn | undefined) : undefined;
+    const teamKey = config.dataAccess?.teamField;
+    const teamColumn = teamKey ? (table[teamKey] as PgColumn | undefined) : undefined;
 
-    if (ctx.scope === 'all') return undefined;
+    if (ctx.scopes.length === 0) {
+      // No scopes held → deny. Use a contradiction so callers compose with AND safely.
+      return sql`1=0`;
+    }
 
-    if (ctx.scope === 'own') {
-      if (!ownerColumn) return undefined;
-      const ownerCond = eq(ownerColumn, ctx.userId);
-      // For 'own' with teamField: also include records assigned to user's direct teams
-      if (teamColumn && this.positionScopeProvider) {
-        const unitIds = await this.positionScopeProvider.resolveOrgUnitIds(ctx.userId, 'unit');
-        if (unitIds && unitIds.length > 0) {
-          return or(ownerCond, inArray(teamColumn, unitIds))!;
+    // Short-circuit on 'any' — most permissive scope wins.
+    if (ctx.scopes.some((s) => s.type === 'any')) return undefined;
+
+    const predicates: DrizzleSQL[] = [];
+
+    for (const scope of ctx.scopes) {
+      const predicate = await this.predicateForScope(scope, {
+        createdByColumn,
+        assigneeColumn,
+        teamColumn,
+      }, ctx.userId);
+      if (predicate) predicates.push(predicate);
+    }
+
+    if (predicates.length === 0) return sql`1=0`;
+    if (predicates.length === 1) return predicates[0];
+    return or(...predicates)!;
+  }
+
+  /** Build the SQL predicate for a single scope value. */
+  private async predicateForScope(
+    scope: import('./types').AccessScopeSpec,
+    cols: {
+      createdByColumn?: PgColumn;
+      assigneeColumn?: PgColumn;
+      teamColumn?: PgColumn;
+    },
+    userId: string,
+  ): Promise<DrizzleSQL | undefined> {
+    switch (scope.type) {
+      case 'own':
+        return cols.createdByColumn ? eq(cols.createdByColumn, userId) : undefined;
+
+      case 'assigned':
+        return cols.assigneeColumn ? eq(cols.assigneeColumn, userId) : undefined;
+
+      case 'unit':
+      case 'descendants': {
+        if (!this.positionScopeProvider) return undefined;
+        const orConds: DrizzleSQL[] = [];
+        const userIds = await this.positionScopeProvider.resolveUserIds(userId, scope.type);
+        const unitIds = await this.positionScopeProvider.resolveOrgUnitIds(userId, scope.type);
+
+        if (userIds && userIds.length > 0) {
+          if (cols.createdByColumn) orConds.push(inArray(cols.createdByColumn, userIds));
+          if (cols.assigneeColumn) orConds.push(inArray(cols.assigneeColumn, userIds));
         }
-      }
-      return ownerCond;
-    }
-
-    // Position-based scopes: 'descendants' and 'unit'
-    if (ctx.scope === 'descendants' || ctx.scope === 'unit') {
-      if (!this.positionScopeProvider) {
-        if (!ownerColumn) return undefined;
-        return eq(ownerColumn, ctx.userId);
-      }
-
-      const conditions: DrizzleSQL[] = [];
-
-      // Owner-based filtering
-      if (ownerColumn) {
-        const userIds = await this.positionScopeProvider.resolveUserIds(ctx.userId, ctx.scope);
-        if (!userIds) return undefined; // null = no filter
-        conditions.push(userIds.length > 0 ? inArray(ownerColumn, userIds) : eq(ownerColumn, ctx.userId));
-      }
-
-      // Team-based filtering
-      if (teamColumn) {
-        const unitIds = await this.positionScopeProvider.resolveOrgUnitIds(ctx.userId, ctx.scope);
-        if (unitIds === null) return conditions.length > 0 ? conditions[0] : undefined; // null = no filter on team
-        if (unitIds.length > 0) {
-          conditions.push(inArray(teamColumn, unitIds));
+        if (unitIds && unitIds.length > 0 && cols.teamColumn) {
+          orConds.push(inArray(cols.teamColumn, unitIds));
         }
+        if (orConds.length === 0) return undefined;
+        if (orConds.length === 1) return orConds[0];
+        return or(...orConds)!;
       }
 
-      if (conditions.length === 0) return undefined;
-      if (conditions.length === 1) return conditions[0];
-      return or(...conditions)!;
+      default: {
+        // Delegate to entity-registered custom scope resolver.
+        const resolver = this.config.dataAccess?.scopes?.find((s) => s.key === scope.type);
+        if (resolver) return resolver.resolve(userId);
+        this.logger.warn(`Unknown data access scope type: ${scope.type}`);
+        return undefined;
+      }
     }
-
-    // Custom scope: 'scope:<key>' (legacy format) or plain key (new format from positions)
-    const scopeKey = ctx.scope.startsWith('scope:') ? ctx.scope.slice(6) : ctx.scope;
-    const resolver = config.dataAccess?.scopes?.find((s) => s.key === scopeKey);
-    if (resolver) {
-      return resolver.resolve(ctx.userId);
-    }
-
-    // Unknown scope — fail closed (own)
-    this.logger.warn(`Unknown data access scope: ${ctx.scope}, falling back to 'own'`);
-    if (!ownerColumn) return undefined;
-    return eq(ownerColumn, ctx.userId);
   }
 
   // ---------------------------------------------------------------------------

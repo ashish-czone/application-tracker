@@ -12,7 +12,6 @@ import type {
   UpdateMemberPositionRequest,
   CreateOrgPositionRequest,
   UpdateOrgPositionRequest,
-  SetPositionScopesRequest,
 } from './types';
 
 function useOrgUnitsApi() {
@@ -273,29 +272,3 @@ export function useDeleteOrgPosition(options?: { onSuccess?: () => void }) {
   });
 }
 
-export function usePositionScopes(positionId: string | null) {
-  const api = useOrgPositionsApi();
-  return useQuery({
-    queryKey: ['org-positions', positionId, 'scopes'],
-    queryFn: () => api.getScopes(positionId!),
-    enabled: !!positionId,
-  });
-}
-
-export function useSetPositionScopes(options?: { onSuccess?: () => void }) {
-  const api = useOrgPositionsApi();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ positionId, data }: { positionId: string; data: SetPositionScopesRequest }) =>
-      api.setScopes(positionId, data),
-    onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['org-positions', variables.positionId, 'scopes'] });
-      toast.success('Scopes updated');
-      options?.onSuccess?.();
-    },
-    onError: (error: any) => {
-      toast.error(error?.body?.message || 'Failed to update scopes');
-    },
-  });
-}
