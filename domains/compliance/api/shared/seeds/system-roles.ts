@@ -1,6 +1,6 @@
 import type { INestApplicationContext } from '@nestjs/common';
 import { DatabaseService, and, eq, isNull } from '@packages/database';
-import { roles, RbacService } from '@packages/rbac';
+import { roles, RbacService, type ScopeSpec } from '@packages/rbac';
 
 /**
  * System seed for the four default compliance roles. Maps the Q15 permission
@@ -17,100 +17,159 @@ import { roles, RbacService } from '@packages/rbac';
  *      `compliance_rules`, `compliance_law_handlers`                   — underscore
  *    We seed against the slugs the engine actually registers.
  *
- * Roles are scoped to `userType: null` — they apply to any user type. Every
- * grant here defaults to `[{type:'any'}]` (unrestricted on rows) because no
- * scopes are passed. Narrowed scopes (`own`, `unit`, `descendants`, …) will
- * be configured on these same grants in the compliance-filings application
- * PR. Re-running the seed is a no-op: we skip creation when a role with the
+ * Roles are scoped to `userType: null` — they apply to any user type.
+ *
+ * Scope model (see compliance-filings.config.ts `dataAccess`):
+ *   - any                 unrestricted (firm-wide)
+ *   - unit                rows whose assigneeTeamId is in actor's org units
+ *   - assigned            rows where assigneeId = actor
+ *   - own                 rows where createdBy = actor
+ *   - unassigned_in_unit  unclaimed rows (assigneeId IS NULL) in actor's units
+ *
+ * Team members (Preparer, Reviewer) see the team's filings (`unit`), but
+ * writes are narrower:
+ *   - pickup restricts to unclaimed filings in the team pool so one
+ *     preparer can't steal an assigned filing from a teammate.
+ *   - update/submit restricts to rows actually assigned to them (`assigned`).
+ *
+ * Reviewers additionally approve/reject across the unit (`unit` on
+ * complete/reject) so they can act on anything they supervise, not just
+ * filings they personally filed.
+ *
+ * Team Leads get `unit` on every filing verb — they're the unit's authority.
+ * Firm Admin grants are all `any` — they're the firm-wide authority.
+ *
+ * Re-running the seed is a no-op: we skip creation when a role with the
  * same (name, userType=null) tuple already exists.
  */
 
-interface RoleSpec {
+interface GrantSpec {
   name: string;
-  permissions: string[];
+  scopes: ScopeSpec[];
 }
 
-// Full filing-lifecycle action set. Preparers/reviewers get subsets; leads
-// and admins get the full set. Ordering matches the workflow:
-// pickup → submit → complete/reject → reopen/close.
-const FILING_ACTIONS_FULL = [
-  'compliance-filings.read',
-  'compliance-filings.create',
-  'compliance-filings.update',
-  'compliance-filings.delete',
-  'compliance-filings.pickup',
-  'compliance-filings.submit',
-  'compliance-filings.complete',
-  'compliance-filings.reject',
-  'compliance-filings.reopen',
-  'compliance-filings.close',
+interface RoleSpec {
+  name: string;
+  permissions: GrantSpec[];
+}
+
+// ── Convenience scope constants ────────────────────────────────────────────
+
+const ANY: ScopeSpec[] = [{ type: 'any' }];
+const UNIT: ScopeSpec[] = [{ type: 'unit' }];
+const ASSIGNED: ScopeSpec[] = [{ type: 'assigned' }];
+const UNASSIGNED_IN_UNIT: ScopeSpec[] = [{ type: 'unassigned_in_unit' }];
+
+// ── Reference-data reads (shared by every role) ────────────────────────────
+//
+// Clients / contacts / registrations / laws / rules are firm-wide reference
+// data — there's no "my clients" model at the row level. Every role reads
+// them unrestricted; only CRUD differs.
+const REFERENCE_READS: GrantSpec[] = [
+  { name: 'clients.read',              scopes: ANY },
+  { name: 'client-contacts.read',      scopes: ANY },
+  { name: 'client-registrations.read', scopes: ANY },
+  { name: 'laws.read',                 scopes: ANY },
+  { name: 'compliance_rules.read',     scopes: ANY },
 ];
 
-// Preparers claim filings, work on them, submit for review — they do not
-// approve or reject their own work.
-const PREPARER_PERMISSIONS = [
-  'compliance-filings.read',
-  'compliance-filings.pickup',
-  'compliance-filings.submit',
-  'clients.read',
-  'client-contacts.read',
-  'client-registrations.read',
-  'laws.read',
-  'compliance_rules.read',
+// ── Preparer ───────────────────────────────────────────────────────────────
+//
+// Sees the team's filings (unit), claims only from the unclaimed pool
+// (unassigned_in_unit), and updates/submits only filings actually assigned
+// to them (assigned). Cannot approve or reject their own work.
+const PREPARER_PERMISSIONS: GrantSpec[] = [
+  { name: 'compliance-filings.read',   scopes: UNIT },
+  { name: 'compliance-filings.pickup', scopes: UNASSIGNED_IN_UNIT },
+  { name: 'compliance-filings.update', scopes: ASSIGNED },
+  { name: 'compliance-filings.submit', scopes: ASSIGNED },
+  ...REFERENCE_READS,
 ];
 
-// Reviewers can do everything a preparer does, plus approve (`complete`)
-// and send a filing back (`reject`) during the review state.
-const REVIEWER_PERMISSIONS = [
+// ── Reviewer ───────────────────────────────────────────────────────────────
+//
+// Same as a preparer for the preparation flow, plus `complete`/`reject`
+// across the unit — reviewers supervise everything the team produces, not
+// just filings they personally prepared.
+const REVIEWER_PERMISSIONS: GrantSpec[] = [
   ...PREPARER_PERMISSIONS,
-  'compliance-filings.complete',
-  'compliance-filings.reject',
+  { name: 'compliance-filings.complete', scopes: UNIT },
+  { name: 'compliance-filings.reject',   scopes: UNIT },
 ];
 
-const TEAM_LEAD_PERMISSIONS = [
-  ...FILING_ACTIONS_FULL,
-  'clients.read',
-  'clients.create',
-  'clients.update',
-  'client-contacts.read',
-  'client-contacts.create',
-  'client-contacts.update',
-  'client-contacts.delete',
-  'client-registrations.read',
-  'client-registrations.create',
-  'client-registrations.update',
-  'laws.read',
-  'compliance_rules.read',
-  'compliance_rules.create',
-  'compliance_rules.update',
+// ── Team Lead ──────────────────────────────────────────────────────────────
+//
+// Full filing lifecycle inside their unit(s): read/create/update/delete and
+// every workflow transition. Outside filings, they manage the firm-wide
+// reference data used by their team (clients + contacts + registrations and
+// compliance_rules). They don't cross legal-entity boundaries — but at the
+// data model level that's still `any`; unit-scoped reference data would be
+// a separate feature.
+const TEAM_LEAD_PERMISSIONS: GrantSpec[] = [
+  { name: 'compliance-filings.read',     scopes: UNIT },
+  { name: 'compliance-filings.create',   scopes: UNIT },
+  { name: 'compliance-filings.update',   scopes: UNIT },
+  { name: 'compliance-filings.delete',   scopes: UNIT },
+  { name: 'compliance-filings.pickup',   scopes: UNIT },
+  { name: 'compliance-filings.submit',   scopes: UNIT },
+  { name: 'compliance-filings.complete', scopes: UNIT },
+  { name: 'compliance-filings.reject',   scopes: UNIT },
+  { name: 'compliance-filings.reopen',   scopes: UNIT },
+  { name: 'compliance-filings.close',    scopes: UNIT },
+  { name: 'clients.read',                scopes: ANY },
+  { name: 'clients.create',              scopes: ANY },
+  { name: 'clients.update',              scopes: ANY },
+  { name: 'client-contacts.read',        scopes: ANY },
+  { name: 'client-contacts.create',      scopes: ANY },
+  { name: 'client-contacts.update',      scopes: ANY },
+  { name: 'client-contacts.delete',      scopes: ANY },
+  { name: 'client-registrations.read',   scopes: ANY },
+  { name: 'client-registrations.create', scopes: ANY },
+  { name: 'client-registrations.update', scopes: ANY },
+  { name: 'laws.read',                   scopes: ANY },
+  { name: 'compliance_rules.read',       scopes: ANY },
+  { name: 'compliance_rules.create',     scopes: ANY },
+  { name: 'compliance_rules.update',     scopes: ANY },
 ];
 
-const FIRM_ADMIN_PERMISSIONS = [
-  ...FILING_ACTIONS_FULL,
-  'clients.read',
-  'clients.create',
-  'clients.update',
-  'clients.delete',
-  'client-contacts.read',
-  'client-contacts.create',
-  'client-contacts.update',
-  'client-contacts.delete',
-  'client-registrations.read',
-  'client-registrations.create',
-  'client-registrations.update',
-  'client-registrations.delete',
-  'laws.read',
-  'laws.create',
-  'laws.update',
-  'laws.delete',
-  'compliance_rules.read',
-  'compliance_rules.create',
-  'compliance_rules.update',
-  'compliance_rules.delete',
-  'compliance_law_handlers.read',
-  'compliance_law_handlers.create',
-  'compliance_law_handlers.update',
-  'compliance_law_handlers.delete',
+// ── Firm Admin ─────────────────────────────────────────────────────────────
+//
+// Firm-wide CRUD across every compliance entity. Everything `any`.
+const FIRM_ADMIN_PERMISSIONS: GrantSpec[] = [
+  { name: 'compliance-filings.read',       scopes: ANY },
+  { name: 'compliance-filings.create',     scopes: ANY },
+  { name: 'compliance-filings.update',     scopes: ANY },
+  { name: 'compliance-filings.delete',     scopes: ANY },
+  { name: 'compliance-filings.pickup',     scopes: ANY },
+  { name: 'compliance-filings.submit',     scopes: ANY },
+  { name: 'compliance-filings.complete',   scopes: ANY },
+  { name: 'compliance-filings.reject',     scopes: ANY },
+  { name: 'compliance-filings.reopen',     scopes: ANY },
+  { name: 'compliance-filings.close',      scopes: ANY },
+  { name: 'clients.read',                  scopes: ANY },
+  { name: 'clients.create',                scopes: ANY },
+  { name: 'clients.update',                scopes: ANY },
+  { name: 'clients.delete',                scopes: ANY },
+  { name: 'client-contacts.read',          scopes: ANY },
+  { name: 'client-contacts.create',        scopes: ANY },
+  { name: 'client-contacts.update',        scopes: ANY },
+  { name: 'client-contacts.delete',        scopes: ANY },
+  { name: 'client-registrations.read',     scopes: ANY },
+  { name: 'client-registrations.create',   scopes: ANY },
+  { name: 'client-registrations.update',   scopes: ANY },
+  { name: 'client-registrations.delete',   scopes: ANY },
+  { name: 'laws.read',                     scopes: ANY },
+  { name: 'laws.create',                   scopes: ANY },
+  { name: 'laws.update',                   scopes: ANY },
+  { name: 'laws.delete',                   scopes: ANY },
+  { name: 'compliance_rules.read',         scopes: ANY },
+  { name: 'compliance_rules.create',       scopes: ANY },
+  { name: 'compliance_rules.update',       scopes: ANY },
+  { name: 'compliance_rules.delete',       scopes: ANY },
+  { name: 'compliance_law_handlers.read',   scopes: ANY },
+  { name: 'compliance_law_handlers.create', scopes: ANY },
+  { name: 'compliance_law_handlers.update', scopes: ANY },
+  { name: 'compliance_law_handlers.delete', scopes: ANY },
 ];
 
 export const COMPLIANCE_ROLES: RoleSpec[] = [
