@@ -282,6 +282,9 @@ importers:
 
   apps/agency/ui/portals/admin:
     dependencies:
+      '@domains/agency-contract':
+        specifier: workspace:*
+        version: link:../../../../../domains/agency/contract
       '@hookform/resolvers':
         specifier: ^5.0.0
         version: 5.2.2(react-hook-form@7.71.2(react@19.2.4))
@@ -400,6 +403,9 @@ importers:
 
   apps/agency/ui/portals/customer:
     dependencies:
+      '@domains/agency-contract':
+        specifier: workspace:*
+        version: link:../../../../../domains/agency/contract
       '@packages/blocks-contract':
         specifier: workspace:*
         version: link:../../../../../packages/platform/blocks/contract

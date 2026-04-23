@@ -1,5 +1,6 @@
 import type { SectionData } from '@packages/blocks-contract';
 import type { PublicMenuResponse } from '@packages/menus-ui-frontend';
+import { DEFAULT_SITE_THEME, type SiteTheme } from '@domains/agency-contract';
 
 /**
  * Shape the public-page API returns at `GET /api/v1/public/pages/:slug`.
@@ -94,6 +95,7 @@ export interface SiteSettings {
   'defaultSeo.ogImage': string;
   'analytics.ga4': string;
   'analytics.posthog': string;
+  theme: SiteTheme;
 }
 
 // Used when the API is unreachable (e.g., during a prerender before
@@ -118,6 +120,7 @@ const SITE_SETTINGS_FALLBACK: SiteSettings = {
   'defaultSeo.ogImage': '',
   'analytics.ga4': '',
   'analytics.posthog': '',
+  theme: DEFAULT_SITE_THEME,
 };
 
 export async function fetchSiteSettings(

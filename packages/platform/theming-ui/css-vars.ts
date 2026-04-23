@@ -70,6 +70,33 @@ export function applyThemeToDom(theme: ThemeConfig, doc: Document = document): v
 }
 
 /**
+ * Return a style map of CSS custom properties for a resolved theme, suitable
+ * for scoping a theme to a container (e.g. a preview panel, an SSR-injected
+ * `<style>` block) without mutating `document.documentElement`.
+ */
+export function themeCssVars(theme: ThemeConfig, isDark: boolean): Record<string, string> {
+  const palette = resolvePalette(theme, isDark);
+  const vars: Record<string, string> = {};
+  for (const [cssVar, read] of Object.entries(PALETTE_VAR_MAP)) {
+    vars[cssVar] = read(palette);
+  }
+  vars['--radius'] = `${theme.radius}rem`;
+  return vars;
+}
+
+/**
+ * Serialize a theme as a CSS rule body — e.g. for SSR-injected `<style>`
+ * blocks that need to set vars on `:root` without shipping inline styles.
+ * Returns the declarations only; callers wrap them in their selector.
+ */
+export function themeCssDeclarations(theme: ThemeConfig, isDark: boolean): string {
+  const vars = themeCssVars(theme, isDark);
+  return Object.entries(vars)
+    .map(([k, v]) => `${k}: ${v};`)
+    .join('');
+}
+
+/**
  * Remove all theme-applied inline styles from the document root, returning
  * the page to whatever globals.css declared. Used on provider unmount and
  * when toggling themes in tests.

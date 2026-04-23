@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Menu, X, ChevronDown } from 'lucide-react';
 import type { PublicMenuItemDto } from '@packages/menus-ui-frontend';
 import { cn } from '@/lib/cn';
+import { ThemeToggle } from './ThemeToggle';
 
 export interface HeaderShellProps {
   siteName: string;
@@ -65,15 +66,18 @@ export function HeaderShell({ siteName, menuItems }: HeaderShellProps) {
 
         <DesktopNav items={menuItems} />
 
-        <button
-          type="button"
-          className="md:hidden inline-flex items-center justify-center w-10 h-10 rounded-md text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]"
-          aria-label={open ? 'Close menu' : 'Open menu'}
-          aria-expanded={open}
-          onClick={() => setOpen((v) => !v)}
-        >
-          {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </button>
+        <div className="flex items-center gap-1">
+          <ThemeToggle className="hidden md:inline-flex" />
+          <button
+            type="button"
+            className="md:hidden inline-flex items-center justify-center w-10 h-10 rounded-md text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]"
+            aria-label={open ? 'Close menu' : 'Open menu'}
+            aria-expanded={open}
+            onClick={() => setOpen((v) => !v)}
+          >
+            {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
+        </div>
       </div>
 
       <MobileDrawer open={open} items={menuItems} onClose={() => setOpen(false)} />
@@ -200,6 +204,10 @@ function MobileDrawer({
             <MobileItem key={item.id} item={item} onNavigate={onClose} />
           ))}
         </ul>
+        <div className="mt-6 pt-6 border-t border-[hsl(var(--border))] flex items-center gap-3">
+          <ThemeToggle />
+          <span className="text-sm text-[hsl(var(--muted-foreground))]">Theme</span>
+        </div>
       </nav>
     </div>
   );

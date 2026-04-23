@@ -27,7 +27,8 @@ import { MenuEditorPage } from '@packages/menus-ui-admin';
 import { MediaLibraryPage } from '@packages/media-library-ui-admin';
 import { AuditTimeline } from '@packages/audit-ui';
 import { Button, Toaster } from '@packages/ui';
-import { Pencil, Image as ImageIcon } from 'lucide-react';
+import { Pencil, Image as ImageIcon, Palette } from 'lucide-react';
+import AppearancePage from './pages/AppearancePage';
 import { api } from './lib/api';
 import './globals.css';
 
@@ -38,10 +39,12 @@ const contentRoutes = [
   { path: '/pages/:id/edit', element: <PageEditorPage /> },
   { path: '/menus/:id/edit', element: <MenuEditorPage /> },
   { path: '/media-library', element: <MediaLibraryPage /> },
+  { path: '/appearance', element: <AppearancePage /> },
 ];
 
 const extraMenuItems = [
   { path: '/media-library', label: 'Media Library', icon: ImageIcon, position: 'after' as const },
+  { path: '/appearance', label: 'Appearance', icon: Palette, position: 'after' as const },
 ];
 
 const detailTabs = [
