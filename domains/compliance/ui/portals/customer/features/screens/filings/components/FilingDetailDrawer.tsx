@@ -36,7 +36,7 @@ import {
   type TimelineIconConfig,
 } from '@packages/ui';
 import { JurisdictionTag, UrgencyBadge, OrdinalDate } from '../../../../../../components';
-import type { FilingRow } from '../data/filingsMock';
+import type { FilingRow } from '../data/filingTypes';
 import { MOCK_HANDLERS } from '../../../console-preview/mockData';
 import type { Filing, Handler } from '../../../../../../shared/types';
 

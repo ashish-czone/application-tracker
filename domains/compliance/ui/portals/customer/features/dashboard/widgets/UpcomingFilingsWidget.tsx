@@ -4,7 +4,7 @@ import { CalendarCheck } from 'lucide-react';
 import { Skeleton } from '@packages/ui';
 import { JurisdictionTag } from '../../../../../components';
 import type { Filing } from '../../../../../shared';
-import { useComplianceTaskRows } from '../../screens/tasks/api/useComplianceTasks';
+import { useComplianceFilingRows } from '../../screens/filings/api/useComplianceFilings';
 
 type DueBucket = 'Due today' | 'This week';
 
@@ -21,7 +21,7 @@ function formatDueDay(dueDate: string): string {
 }
 
 export function UpcomingFilingsWidget() {
-  const { rows, loading, error } = useComplianceTaskRows();
+  const { rows, loading, error } = useComplianceFilingRows();
 
   const grouped = useMemo(() => {
     const upcoming = rows

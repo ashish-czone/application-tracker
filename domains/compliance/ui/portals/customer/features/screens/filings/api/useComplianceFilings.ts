@@ -4,7 +4,7 @@ import { toast } from '@packages/ui';
 import { useEntityEngine, useEntityHooks } from '@packages/entity-engine-ui';
 import { useOrgUnits } from '@packages/org-units-ui';
 import type { OrgUnit } from '@packages/org-units-ui';
-import type { FilingRow } from '../../filings/data/filingsMock';
+import type { FilingRow } from '../data/filingTypes';
 import type { Handler, Filing } from '../../../../../../shared/types';
 
 interface PaginatedResponse<T> {
@@ -14,11 +14,12 @@ interface PaginatedResponse<T> {
 
 /**
  * Row shape returned by the generic entity-engine endpoint
- * GET /compliance-tasks — the child columns plus parent columns projected
- * via extensionOf (title, status, priority, dueDate, assignees, etc.). No
- * external_key parsing — it comes through the projection.
+ * GET /compliance-filings — the filings table columns. `status` is the
+ * workflow state (pending | in_progress | review | completed | rejected |
+ * cancelled); the UI derives the due-date bucket separately from `dueDate` +
+ * `completedAt` via `computeFilingStatus`.
  */
-interface ComplianceTaskRow {
+interface ComplianceFilingRow {
   id: string;
   title: string;
   description: string | null;
@@ -64,10 +65,10 @@ const PRIORITY_MAP: Record<string, FilingRow['priority']> = {
   low: 'low',
 };
 
-function computeFilingStatus(task: ComplianceTaskRow, today: Date): Filing['status'] {
-  if (task.completedAt) return 'filed';
-  if (!task.dueDate) return 'upcoming';
-  const due = new Date(task.dueDate);
+function computeFilingStatus(filing: ComplianceFilingRow, today: Date): Filing['status'] {
+  if (filing.completedAt) return 'filed';
+  if (!filing.dueDate) return 'upcoming';
+  const due = new Date(filing.dueDate);
   due.setHours(0, 0, 0, 0);
   const days = Math.round((due.getTime() - today.getTime()) / 86_400_000);
   if (days < 0) return 'overdue';
@@ -103,7 +104,7 @@ function formatPeriodLabel(periodStart: string): string {
   return d.toLocaleString('en-US', { month: 'short', year: 'numeric' });
 }
 
-export interface ComplianceTasksResult {
+export interface ComplianceFilingsResult {
   rows: FilingRow[];
   loading: boolean;
   error: unknown;
@@ -112,15 +113,16 @@ export interface ComplianceTasksResult {
   lawOptions: { value: string; label: string }[];
 }
 
-export function useComplianceTaskRows(): ComplianceTasksResult {
+export function useComplianceFilingRows(): ComplianceFilingsResult {
   const { apiFn } = useEntityEngine();
   const rulesHooks = useEntityHooks('compliance_rules');
   const lawsHooks = useEntityHooks('laws');
   const clientsHooks = useEntityHooks('clients');
 
-  const tasksQuery = useQuery<PaginatedResponse<ComplianceTaskRow>>({
-    queryKey: ['compliance-tasks', { limit: 1000 }],
-    queryFn: () => apiFn.get<PaginatedResponse<ComplianceTaskRow>>('/compliance-tasks?limit=1000'),
+  const filingsQuery = useQuery<PaginatedResponse<ComplianceFilingRow>>({
+    queryKey: ['compliance-filings', { limit: 1000 }],
+    queryFn: () =>
+      apiFn.get<PaginatedResponse<ComplianceFilingRow>>('/compliance-filings?limit=1000'),
   });
   const rulesQuery = rulesHooks.useList({ limit: 1000 });
   const lawsQuery = lawsHooks.useList({ limit: 1000 });
@@ -128,21 +130,21 @@ export function useComplianceTaskRows(): ComplianceTasksResult {
   const orgUnitsQuery = useOrgUnits();
 
   const loading =
-    tasksQuery.isLoading ||
+    filingsQuery.isLoading ||
     rulesQuery.isLoading ||
     lawsQuery.isLoading ||
     clientsQuery.isLoading ||
     orgUnitsQuery.isLoading;
 
   const error =
-    tasksQuery.error ||
+    filingsQuery.error ||
     rulesQuery.error ||
     lawsQuery.error ||
     clientsQuery.error ||
     orgUnitsQuery.error;
 
   const { rows, handlers, clientOptions, lawOptions } = useMemo(() => {
-    const tasks = tasksQuery.data?.data ?? [];
+    const filings = filingsQuery.data?.data ?? [];
     const rules =
       (rulesQuery.data as PaginatedResponse<RuleRecord> | undefined)?.data ?? ([] as RuleRecord[]);
     const laws =
@@ -160,7 +162,7 @@ export function useComplianceTaskRows(): ComplianceTasksResult {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const builtRows = tasks.map((t): FilingRow => {
+    const builtRows = filings.map((t): FilingRow => {
       const rule = ruleById.get(t.ruleId);
       const law = lawById.get(t.lawId);
       const client = clientById.get(t.clientId);
@@ -205,7 +207,7 @@ export function useComplianceTaskRows(): ComplianceTasksResult {
       lawOptions: lawOpts,
     };
   }, [
-    tasksQuery.data,
+    filingsQuery.data,
     rulesQuery.data,
     lawsQuery.data,
     clientsQuery.data,
@@ -215,15 +217,20 @@ export function useComplianceTaskRows(): ComplianceTasksResult {
   return { rows, loading, error, handlers, clientOptions, lawOptions };
 }
 
-export type ComplianceTaskStatus =
+/**
+ * Workflow states for compliance filings. Matches the 6-state state machine
+ * declared in `domains/compliance/api/compliance-filings/compliance-filings.config.ts`.
+ */
+export type ComplianceFilingStatus =
   | 'pending'
   | 'in_progress'
-  | 'blocked'
+  | 'review'
   | 'completed'
+  | 'rejected'
   | 'cancelled';
 
-export interface UpdateComplianceTaskPayload {
-  status?: ComplianceTaskStatus;
+export interface UpdateComplianceFilingPayload {
+  status?: ComplianceFilingStatus;
   priority?: string;
   description?: string | null;
   assigneeId?: string | null;
@@ -232,20 +239,20 @@ export interface UpdateComplianceTaskPayload {
   title?: string;
 }
 
-export function useUpdateComplianceTask(options?: { silent?: boolean }) {
+export function useUpdateComplianceFiling(options?: { silent?: boolean }) {
   const { apiFn } = useEntityEngine();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdateComplianceTaskPayload }) =>
-      apiFn.patch<unknown>(`/compliance-tasks/${id}`, data),
+    mutationFn: ({ id, data }: { id: string; data: UpdateComplianceFilingPayload }) =>
+      apiFn.patch<unknown>(`/compliance-filings/${id}`, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['compliance-tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['compliance-filings'] });
     },
     onError: (error: unknown) => {
       if (options?.silent) return;
       const message =
-        (error as { body?: { message?: string } })?.body?.message ?? 'Failed to update task';
+        (error as { body?: { message?: string } })?.body?.message ?? 'Failed to update filing';
       toast.error(message);
     },
   });

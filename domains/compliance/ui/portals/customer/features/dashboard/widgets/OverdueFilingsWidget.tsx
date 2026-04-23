@@ -3,7 +3,7 @@ import { Link } from 'react-router';
 import { AlertTriangle } from 'lucide-react';
 import { Skeleton } from '@packages/ui';
 import { JurisdictionTag } from '../../../../../components';
-import { useComplianceTaskRows } from '../../screens/tasks/api/useComplianceTasks';
+import { useComplianceFilingRows } from '../../screens/filings/api/useComplianceFilings';
 
 function daysOverdue(dueDate: string): number {
   if (!dueDate) return 0;
@@ -15,7 +15,7 @@ function daysOverdue(dueDate: string): number {
 }
 
 export function OverdueFilingsWidget() {
-  const { rows, loading, error } = useComplianceTaskRows();
+  const { rows, loading, error } = useComplianceFilingRows();
 
   const overdue = useMemo(
     () =>

@@ -19,7 +19,7 @@ import {
   AvatarBadge,
 } from '@packages/ui';
 import type { Handler } from '../../../../../../shared/types';
-import type { FilingRow } from '../data/filingsMock';
+import type { FilingRow } from '../data/filingTypes';
 
 export interface BulkReassignSubmitPayload {
   newHandlerId: string;

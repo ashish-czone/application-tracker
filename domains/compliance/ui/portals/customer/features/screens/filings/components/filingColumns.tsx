@@ -1,6 +1,6 @@
 import { type DataTableColumn } from '@packages/ui';
 import { OrdinalDate, UrgencyBadge, JurisdictionTag, HandlerPill } from '../../../../../../components';
-import type { FilingRow } from '../data/filingsMock';
+import type { FilingRow } from '../data/filingTypes';
 
 const PRIORITY_TONE: Record<string, string> = {
   critical: 'text-signal',
