@@ -40,6 +40,7 @@ export function HeaderShell({ siteName, menuItems }: HeaderShellProps) {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const pathname = usePathname() ?? '/';
+  const toggleRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -57,6 +58,19 @@ export function HeaderShell({ siteName, menuItems }: HeaderShellProps) {
     return () => {
       document.body.style.overflow = prev;
     };
+  }, [open]);
+
+  // Escape closes the drawer and returns focus to the toggle.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setOpen(false);
+        toggleRef.current?.focus();
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
   }, [open]);
 
   return (
@@ -82,10 +96,12 @@ export function HeaderShell({ siteName, menuItems }: HeaderShellProps) {
         <div className="flex items-center gap-1">
           <ThemeToggle className="hidden md:inline-flex" />
           <button
+            ref={toggleRef}
             type="button"
             className="md:hidden inline-flex items-center justify-center w-10 h-10 rounded-md text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]"
             aria-label={open ? 'Close menu' : 'Open menu'}
             aria-expanded={open}
+            aria-controls="mobile-drawer"
             onClick={() => setOpen((v) => !v)}
           >
             {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -224,8 +240,23 @@ function MobileDrawer({
   pathname: string;
   onClose: () => void;
 }) {
+  const navRef = useRef<HTMLElement | null>(null);
+
+  // Move focus to the first interactive element inside the drawer on
+  // open so keyboard users land somewhere sensible. Guarded behind
+  // `open` so the focus doesn't jump on mount of the closed drawer.
+  useEffect(() => {
+    if (!open) return;
+    const el = navRef.current?.querySelector<HTMLElement>('a, button');
+    el?.focus();
+  }, [open]);
+
   return (
     <div
+      id="mobile-drawer"
+      role="dialog"
+      aria-modal={open ? 'true' : undefined}
+      aria-label="Primary navigation"
       className={cn(
         'md:hidden fixed inset-x-0 top-16 bottom-0 z-40 transition-transform duration-300',
         'bg-[hsl(var(--background))]',
@@ -233,7 +264,7 @@ function MobileDrawer({
       )}
       aria-hidden={!open}
     >
-      <nav className="px-6 py-8 h-full overflow-y-auto" aria-label="Primary mobile">
+      <nav ref={navRef} className="px-6 py-8 h-full overflow-y-auto" aria-label="Primary mobile">
         <ul className="flex flex-col gap-1">
           {items.map((item) => (
             <MobileItem key={item.id} item={item} pathname={pathname} onNavigate={onClose} />
