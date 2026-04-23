@@ -1,9 +1,25 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
-import { DatabaseService, eq, ne } from '@packages/database';
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { DatabaseService, and, count, eq, inArray, ne, not } from '@packages/database';
+import { WorkflowEngineService, WorkflowRegistryService } from '@packages/workflows';
+import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { FREQUENCIES, type ComplianceFrequency } from '@domains/compliance-contract';
 import { complianceRules } from '../schema/rules';
 import { complianceLawHandlers } from '../schema/law-handlers';
+import { complianceFilings } from '../schema/compliance-filings';
 import { LawHandlerService } from '../law-handlers/law-handlers.service';
+import { ComplianceFilingsCancellationService } from '../compliance-filings/compliance-filings-cancellation.service';
+
+const RULE_WORKFLOW_SLUG = 'compliance-rule-status';
+const TERMINAL_FILING_STATUSES = ['completed', 'cancelled'];
+
+/**
+ * Reason written to workflow_transition_history for filings cancelled as a
+ * consequence of their rule being deprecated. Single reason — unlike
+ * registration deactivation, there's no pre/post-effective split here because
+ * deprecation doesn't carry an effective date. Either the admin opts in to
+ * cancel all in-flight filings or the cascade is a no-op.
+ */
+const REASON_RULE_DEPRECATED = 'Rule deprecated';
 
 export class InvalidFrequencyError extends BadRequestException {
   constructor(value: string) {
@@ -59,6 +75,16 @@ export class NoDefaultHandlerError extends BadRequestException {
   }
 }
 
+export interface DeprecationPreview {
+  ruleId: string;
+  inFlightFilingCount: number;
+}
+
+export interface DeprecationResult {
+  ruleId: string;
+  cancelledFilingIds: string[];
+}
+
 export class AmbiguousHandlerError extends BadRequestException {
   constructor(lawId: string, clientId: string, tier: string) {
     super({
@@ -85,10 +111,18 @@ function addMonths(year: number, month: number, n: number): { year: number; mont
 
 @Injectable()
 export class ComplianceRuleService {
+  private readonly logger: ContextLogger;
+
   constructor(
     private readonly database: DatabaseService,
     private readonly lawHandlers: LawHandlerService,
-  ) {}
+    private readonly workflowEngine: WorkflowEngineService,
+    private readonly workflowRegistry: WorkflowRegistryService,
+    private readonly filingsCancellation: ComplianceFilingsCancellationService,
+    appLogger: AppLoggerService,
+  ) {
+    this.logger = appLogger.forContext(ComplianceRuleService.name);
+  }
 
   async create(input: CreateComplianceRuleInput): Promise<ComplianceRule> {
     assertFrequency(input.frequency);
@@ -127,6 +161,135 @@ export class ComplianceRuleService {
       .from(complianceRules)
       .where(eq(complianceRules.id, id));
     return rows[0] ? this.toRule(rows[0]) : null;
+  }
+
+  /**
+   * Dry-run of deprecation for the UI dialog (I10). Returns the count of
+   * non-terminal filings for this rule across all clients. No writes.
+   * Feeds the "Also cancel N in-flight filings from this rule" checkbox —
+   * when the count is zero we hide the checkbox entirely on the UI.
+   */
+  async previewDeprecation(ruleId: string): Promise<DeprecationPreview> {
+    const rule = await this.findById(ruleId);
+    if (!rule) {
+      throw new NotFoundException(`Rule ${ruleId} not found`);
+    }
+    const [row] = await this.database.db
+      .select({ count: count() })
+      .from(complianceFilings)
+      .where(and(
+        eq(complianceFilings.ruleId, ruleId),
+        not(inArray(complianceFilings.status, TERMINAL_FILING_STATUSES)),
+      ));
+    return {
+      ruleId,
+      inFlightFilingCount: Number(row?.count ?? 0),
+    };
+  }
+
+  /**
+   * Deprecate a rule (I8-I10). Semantics are the softest of the three
+   * lifecycle cascades in this stream:
+   *
+   *   - Flips `compliance_rules.status` to 'deprecated' and writes one
+   *     `workflow_transition_history` row for the rule itself (captures
+   *     actor, reason, comment). Generator (I9) short-circuits on
+   *     `status === 'deprecated'`, so no new filings will be produced.
+   *   - Existing non-terminal filings are preserved by default. If the admin
+   *     opts in via `alsoCancelInFlight`, every non-terminal filing for this
+   *     rule is cancelled inside the same tx, each with its own
+   *     workflow_transition_history row (reason: "Rule deprecated").
+   *   - No domain-specific event emitted — the rule's own transition row
+   *     plus the per-filing cancellation rows are the authoritative audit.
+   *
+   * All of the above runs in one tx — the rule status flip and every filing
+   * cancellation succeed or fail together. Idempotent on already-deprecated
+   * rules (no-ops and returns an empty list).
+   */
+  async deprecate(
+    ruleId: string,
+    params: {
+      alsoCancelInFlight?: boolean;
+      actorId: string | null;
+      comment?: string;
+    },
+  ): Promise<DeprecationResult> {
+    const rule = await this.findById(ruleId);
+    if (!rule) {
+      throw new NotFoundException(`Rule ${ruleId} not found`);
+    }
+    if (rule.status === 'deprecated') {
+      return { ruleId, cancelledFilingIds: [] };
+    }
+
+    const definition = this.workflowRegistry.getBySlug(RULE_WORKFLOW_SLUG);
+    if (!definition) {
+      throw new Error(
+        `Workflow definition '${RULE_WORKFLOW_SLUG}' not found — cannot record rule deprecation history`,
+      );
+    }
+    const ruleTransitionId = definition.transitions.find(
+      (t) => t.fromStateName === rule.status && t.toStateName === 'deprecated',
+    )?.id;
+    if (!ruleTransitionId) {
+      throw new Error(
+        `No configured transition from '${rule.status}' → 'deprecated' on workflow '${RULE_WORKFLOW_SLUG}'.`,
+      );
+    }
+
+    const alsoCancelInFlight = params.alsoCancelInFlight ?? false;
+
+    const cancelledIds = await this.database.db.transaction(async (tx) => {
+      await tx
+        .update(complianceRules)
+        .set({ status: 'deprecated' })
+        .where(eq(complianceRules.id, ruleId));
+
+      await this.workflowEngine.recordHistory({
+        workflowDefinitionId: definition.id,
+        entityType: 'compliance_rules',
+        entityId: ruleId,
+        fieldName: 'status',
+        fromState: rule.status,
+        toState: 'deprecated',
+        transitionId: ruleTransitionId,
+        actorId: params.actorId,
+        reason: REASON_RULE_DEPRECATED,
+        comment: params.comment ?? null,
+      }, tx);
+
+      if (!alsoCancelInFlight) return [];
+
+      const inFlight = await tx
+        .select({ id: complianceFilings.id, status: complianceFilings.status })
+        .from(complianceFilings)
+        .where(and(
+          eq(complianceFilings.ruleId, ruleId),
+          not(inArray(complianceFilings.status, TERMINAL_FILING_STATUSES)),
+        ));
+
+      await this.filingsCancellation.cancelFilings(tx, inFlight, {
+        reason: REASON_RULE_DEPRECATED,
+        comment: this.buildCascadeComment(rule.code, params.comment),
+        actorId: params.actorId,
+      });
+
+      return inFlight.map((f: { id: string }) => f.id);
+    });
+
+    this.logger.log('Rule deprecated', {
+      ruleId,
+      ruleCode: rule.code,
+      cancelledCount: cancelledIds.length,
+      alsoCancelInFlight,
+    });
+
+    return { ruleId, cancelledFilingIds: cancelledIds };
+  }
+
+  private buildCascadeComment(ruleCode: string, adminComment: string | undefined): string {
+    const prefix = `Auto-cancelled: rule "${ruleCode}" deprecated.`;
+    return adminComment ? `${prefix} ${adminComment}` : prefix;
   }
 
   /**
