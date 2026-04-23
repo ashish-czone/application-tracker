@@ -67,6 +67,37 @@ describe('AuditRegistryService', () => {
     });
   });
 
+  describe('findRegistrationByEntityType', () => {
+    it('returns the registration whose module name matches the entity type', () => {
+      registry.register('clients', { events: '*', sensitiveFields: ['taxId'] });
+      registry.register('laws', { events: '*' });
+
+      const match = registry.findRegistrationByEntityType('clients');
+      expect(match).not.toBeNull();
+      expect(match!.moduleName).toBe('clients');
+      expect(match!.registration.sensitiveFields).toEqual(['taxId']);
+    });
+
+    it('matches case-insensitively', () => {
+      registry.register('Clients', { events: '*' });
+      expect(registry.findRegistrationByEntityType('clients')).not.toBeNull();
+      expect(registry.findRegistrationByEntityType('CLIENTS')).not.toBeNull();
+    });
+
+    it('returns null when no registration exists for the entity type', () => {
+      registry.register('clients', { events: '*' });
+      expect(registry.findRegistrationByEntityType('ghosts')).toBeNull();
+    });
+
+    it('preserves authoriseRead on the returned registration', () => {
+      const authoriseRead = () => true;
+      registry.register('clients', { events: '*', authoriseRead });
+
+      const match = registry.findRegistrationByEntityType('clients');
+      expect(match!.registration.authoriseRead).toBe(authoriseRead);
+    });
+  });
+
   describe('getAll', () => {
     it('returns all registrations', () => {
       registry.register('tasks', { events: '*' });

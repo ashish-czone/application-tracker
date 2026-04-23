@@ -72,7 +72,7 @@ export const PERMISSION_REGISTRY: Permission[] = [
   { name: 'settings.manage', label: 'Manage settings', module: 'Settings' },
 
   // Audit
-  { name: 'audit.read', label: 'View audit trail', module: 'Audit' },
+  { name: 'audit.read_all', label: 'View firm-wide audit trail', module: 'Audit' },
 ];
 
 // Group permissions by module for the UI
@@ -135,7 +135,7 @@ export const MOCK_ROLES: Role[] = [
       'org.read', 'org.manage',
       'reports.read', 'reports.export',
       'settings.read', 'settings.manage',
-      'audit.read',
+      'audit.read_all',
     ],
     members: [MEMBER_POOL[0], MEMBER_POOL[2], MEMBER_POOL[5]],
   },
@@ -154,7 +154,7 @@ export const MOCK_ROLES: Role[] = [
       'filings.read', 'filings.create', 'filings.update', 'filings.submit',
       'org.read',
       'reports.read',
-      'audit.read',
+      'audit.read_all',
     ],
     members: [MEMBER_POOL[3], MEMBER_POOL[4], MEMBER_POOL[6], MEMBER_POOL[7]],
   },

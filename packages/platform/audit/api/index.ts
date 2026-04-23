@@ -7,6 +7,7 @@ export type {
   ListAuditLogsQuery,
   AuditModuleRegistration,
   AuditAction,
+  AuditReadAuthorisationContext,
 } from './types';
 export { auditLogs } from './schema';
 export { computeDiff, inferAction, redactSensitiveFields } from './helpers/diff';
