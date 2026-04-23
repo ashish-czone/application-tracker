@@ -9,7 +9,11 @@ import {
 import type { AuditModuleRegistration, AuditRegistryService } from '@packages/audit';
 import type { JwtPayload } from '@packages/auth-core';
 
-import { COMPLIANCE_TASK_GENERATED, COMPLIANCE_FILING_GENERATED } from '../events/types';
+import {
+  COMPLIANCE_TASK_GENERATED,
+  COMPLIANCE_FILING_GENERATED,
+  COMPLIANCE_CLIENT_DORMANTISED,
+} from '../events/types';
 
 /**
  * Every compliance-owned event namespace that should land in `audit_logs`.
@@ -46,12 +50,15 @@ export function registerComplianceAudit(
     auditRegistry.register(slug, { events: '*', sensitiveFields, authoriseRead });
   }
 
-  // Custom generator events (`compliance.ComplianceFilingGenerated`,
-  // `compliance.ComplianceTaskGenerated`). These don't map to a single
+  // Custom generator + lifecycle-cascade events. These don't map to a single
   // readable entity, so no authoriseRead — the controller falls back to
   // `audit.read_all`, which is firm-admin only per Q23.
   auditRegistry.register('compliance', {
-    events: [COMPLIANCE_TASK_GENERATED, COMPLIANCE_FILING_GENERATED],
+    events: [
+      COMPLIANCE_TASK_GENERATED,
+      COMPLIANCE_FILING_GENERATED,
+      COMPLIANCE_CLIENT_DORMANTISED,
+    ],
   });
 }
 

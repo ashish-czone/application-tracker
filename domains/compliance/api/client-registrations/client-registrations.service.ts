@@ -8,6 +8,7 @@ import { DatabaseService, and, eq, isNull, inArray } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
 import { complianceClientRegistrations } from '../schema/client-registrations';
 import { complianceLaws } from '../schema/laws';
+import { clients } from '../schema/clients';
 import { CLIENT_REGISTRATIONS_CREATED } from '../events/types';
 
 export interface ClientRegistration {
@@ -119,18 +120,27 @@ export class ClientRegistrationService {
       .where(eq(complianceClientRegistrations.id, existing.id));
   }
 
-  /** Active registrations only (deactivatedAt IS NULL). */
+  /**
+   * Active registrations for the given law, filtered down to clients whose
+   * own status is `active`. Dormant / onboarding clients are excluded so the
+   * generator (I2/Q6) never materialises filings for a client the firm has
+   * stopped actively serving — the dormancy cascade already cancels any
+   * in-flight filings at transition time, but the generator still runs on a
+   * horizon and would otherwise keep re-creating them.
+   */
   async getRegisteredClients(lawId: string): Promise<ClientRegistration[]> {
     const rows = await this.database.db
-      .select()
+      .select({ registration: complianceClientRegistrations })
       .from(complianceClientRegistrations)
+      .innerJoin(clients, eq(clients.id, complianceClientRegistrations.clientId))
       .where(
         and(
           eq(complianceClientRegistrations.lawId, lawId),
           isNull(complianceClientRegistrations.deactivatedAt),
+          eq(clients.status, 'active'),
         ),
       );
-    return rows.map((r) => this.toRegistration(r));
+    return rows.map((r) => this.toRegistration(r.registration));
   }
 
   /** Active registrations only. */

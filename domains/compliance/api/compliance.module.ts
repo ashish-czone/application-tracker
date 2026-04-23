@@ -8,13 +8,14 @@ import { RbacService } from '@packages/rbac';
 import { TASKS_CONFIG, TasksModule } from '@packages/tasks';
 import { USERS_POSITIONS_READER } from '@packages/users';
 import { WorkflowGuardRegistry } from '@packages/workflows';
+import { ClientDormancyService } from './clients/client-dormancy.service';
 
 import { registerComplianceAudit } from './audit/register-compliance-audit';
 
 import { ComplianceUsersPositionsReader } from './users/compliance-users-positions.reader';
 
 import { LAWS_CONFIG } from './laws/laws.config';
-import { CLIENTS_CONFIG } from './clients/clients.config';
+import { CLIENTS_CONFIG, setClientDormancyHandler } from './clients/clients.config';
 import { CLIENT_CONTACTS_CONFIG } from './client-contacts/client-contacts.config';
 import { CLIENT_REGISTRATIONS_CONFIG } from './client-registrations/client-registrations.config';
 import { COMPLIANCE_RULES_CONFIG } from './rules/rules.config';
@@ -69,6 +70,7 @@ const ORGANIZATIONS_CONFIG = createOrganizationsEntityConfig({
     ComplianceRuleService,
     ComplianceFilingsLookupService,
     GenerateComplianceFilingsAction,
+    ClientDormancyService,
     ComplianceUsersPositionsReader,
     {
       provide: USERS_POSITIONS_READER,
@@ -82,6 +84,7 @@ export class ComplianceDomainModule implements OnModuleInit {
     private readonly generateFilingsAction: GenerateComplianceFilingsAction,
     private readonly guardRegistry: WorkflowGuardRegistry,
     private readonly contactsService: ClientContactsService,
+    private readonly clientDormancyService: ClientDormancyService,
     private readonly rbac: RbacService,
     private readonly databaseService: DatabaseService,
     private readonly auditRegistry: AuditRegistryService,
@@ -92,6 +95,11 @@ export class ComplianceDomainModule implements OnModuleInit {
     organizationsDbRef = this.databaseService.db;
 
     this.actionRegistry.register(this.generateFilingsAction);
+
+    // Wire the CLIENTS onTransition hook to the dormancy service. The hook
+    // runs inside the client transition tx and receives the same tx handle
+    // so filing cancellation commits atomically with the status flip.
+    setClientDormancyHandler(this.clientDormancyService);
 
     registerComplianceAudit(this.auditRegistry, this.moduleRef);
 
