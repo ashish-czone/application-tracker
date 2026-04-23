@@ -35,6 +35,7 @@ export type {
   WorkflowStateDef,
   WorkflowTransitionDef,
   WorkflowTargetDef,
+  TransitionHookContext,
   ScopeResolver,
   DataAccessConfig,
   DataAccessContext,
