@@ -183,6 +183,13 @@
       "when": 1777526400000,
       "tag": "0025_roles_soft_delete",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1777785600000,
+      "tag": "0026_role_permission_scopes",
+      "breakpoints": true
     }
   ]
 }
