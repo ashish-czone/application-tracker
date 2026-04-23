@@ -13,6 +13,9 @@ export { PipelineResolverService } from './services/pipeline-resolver.service';
 export type {
   WorkflowGuardContext,
   WorkflowGuardFn,
+  GuardResult,
+  GuardExecutionResult,
+  TransitionPreflight,
   CachedWorkflowDefinition,
   CachedWorkflowState,
   CachedWorkflowTransition,
@@ -22,6 +25,7 @@ export type {
   TransitionHistoryEntry,
   ValidationResult,
 } from './types';
+export { allow, allowWithWarning, block } from './types';
 
 // Schema tables
 export {

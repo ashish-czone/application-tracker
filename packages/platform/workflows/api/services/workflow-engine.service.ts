@@ -8,6 +8,7 @@ import { WorkflowRegistryService } from './workflow-registry.service';
 import { WorkflowGuardRegistry } from './workflow-guard-registry.service';
 import {
   type AvailableTransition,
+  type TransitionPreflight,
   type ValidatedTransition,
   type RecordHistoryParams,
   type TransitionHistoryEntry,
@@ -79,7 +80,9 @@ export class WorkflowEngineService {
       }
     }
 
-    // Execute guards
+    // Execute guards. Warnings do not block the transition — only the UI
+    // preflight surfaces them. Blockers short-circuit the commit path with
+    // the guard's own message.
     if (transition.guardNames.length > 0 && context) {
       const guardContext: WorkflowGuardContext = {
         workflowSlug,
@@ -92,13 +95,83 @@ export class WorkflowEngineService {
         metadata: context.metadata,
       };
 
-      const guardResult = await this.guardRegistry.executeGuards(transition.guardNames, guardContext);
-      if (!guardResult.passed) {
-        return { valid: false, transitionId: transition.id, failedGuard: guardResult.failedGuard };
+      const { blockers } = await this.guardRegistry.runGuards(transition.guardNames, guardContext);
+      if (blockers.length > 0) {
+        return {
+          valid: false,
+          transitionId: transition.id,
+          failedGuard: blockers[0].guardName,
+          blockerMessage: blockers[0].message,
+        };
       }
     }
 
     return { valid: true, transitionId: transition.id };
+  }
+
+  /**
+   * Dry-run a proposed transition for the UI confirm dialog. Returns every
+   * warning and blocker (including missing permissions) without touching the
+   * database. Guards that throw at this stage bubble up as 500s — preflight
+   * is not a try/catch layer. Each caller already rechecks on the commit
+   * path via validateAndThrow(), so preflight is advisory-only.
+   */
+  async preflightTransition(params: {
+    workflowSlug: string;
+    entityType: string;
+    entityId: string;
+    fromState: string;
+    toState: string;
+    actorId: string | null;
+    metadata?: Record<string, unknown>;
+  }): Promise<TransitionPreflight> {
+    const definition = this.registry.getBySlug(params.workflowSlug);
+    if (!definition) {
+      throw new NotFoundException(`Workflow '${params.workflowSlug}' not found`);
+    }
+
+    const transition = definition.transitions.find(
+      (t) => t.fromStateName === params.fromState && t.toStateName === params.toState,
+    );
+    if (!transition) {
+      return {
+        transitionId: null,
+        warnings: [],
+        blockers: [`Transition from '${params.fromState}' to '${params.toState}' is not allowed in workflow '${params.workflowSlug}'`],
+        missingPermissions: [],
+      };
+    }
+
+    let missingPermissions: string[] = [];
+    if (transition.requiredPermissions.length > 0 && params.actorId) {
+      const userPermissions = await this.rbacService.getPermissionsForUser(params.actorId, 'admin');
+      missingPermissions = transition.requiredPermissions.filter((p) => !userPermissions[p]);
+    }
+
+    let warnings: string[] = [];
+    let guardBlockers: string[] = [];
+    if (transition.guardNames.length > 0) {
+      const guardContext: WorkflowGuardContext = {
+        workflowSlug: params.workflowSlug,
+        entityType: params.entityType,
+        entityId: params.entityId,
+        fieldName: definition.fieldName,
+        fromState: params.fromState,
+        toState: params.toState,
+        actorId: params.actorId,
+        metadata: params.metadata,
+      };
+      const result = await this.guardRegistry.runGuards(transition.guardNames, guardContext);
+      warnings = result.warnings;
+      guardBlockers = result.blockers.map((b) => b.message);
+    }
+
+    return {
+      transitionId: transition.id,
+      warnings,
+      blockers: guardBlockers,
+      missingPermissions,
+    };
   }
 
   /**
@@ -146,7 +219,7 @@ export class WorkflowEngineService {
       }
       if (validation.failedGuard) {
         throw new UnprocessableEntityException(
-          `Guard '${validation.failedGuard}' rejected the transition`,
+          validation.blockerMessage ?? `Guard '${validation.failedGuard}' rejected the transition`,
         );
       }
       throw new UnprocessableEntityException(
@@ -185,11 +258,11 @@ export class WorkflowEngineService {
 
       for (const guard of params.additionalGuards) {
         const result = await guard(guardContext);
-        if (!result) {
-          throw new UnprocessableEntityException(
-            'An additional guard rejected the transition',
-          );
+        if (result.decision === 'block') {
+          throw new UnprocessableEntityException(result.message);
         }
+        // Inline additional guards cannot warn — only named registry guards
+        // surface in the UI preflight. Treat allow_with_warning as allow.
       }
     }
 

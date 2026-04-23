@@ -13,6 +13,7 @@
     "@nestjs/event-emitter": "^3.0.0",
     "@nestjs/swagger": "^11.0.0",
     "class-validator": "^0.14.1",
+    "@packages/auth-core": "workspace:*",
     "@packages/automation-contracts": "workspace:*",
     "@packages/automations": "workspace:*",
     "@packages/database": "workspace:*",

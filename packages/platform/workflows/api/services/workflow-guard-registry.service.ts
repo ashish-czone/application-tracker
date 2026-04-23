@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
-import type { WorkflowGuardFn, WorkflowGuardContext } from '../types';
+import type {
+  GuardExecutionResult,
+  WorkflowGuardFn,
+  WorkflowGuardContext,
+} from '../types';
 
 @Injectable()
 export class WorkflowGuardRegistry {
@@ -24,10 +28,19 @@ export class WorkflowGuardRegistry {
     return this.guards.has(name);
   }
 
-  async executeGuards(
+  /**
+   * Run every guard in `names` against the given context. Collects all
+   * warnings and blockers rather than short-circuiting — the UI preflight
+   * displays all of them together, and the commit-side validator throws
+   * using the first blocker's message (see WorkflowEngineService).
+   */
+  async runGuards(
     names: string[],
     context: WorkflowGuardContext,
-  ): Promise<{ passed: boolean; failedGuard?: string }> {
+  ): Promise<GuardExecutionResult> {
+    const warnings: string[] = [];
+    const blockers: Array<{ guardName: string; message: string }> = [];
+
     for (const name of names) {
       const guard = this.guards.get(name);
       if (!guard) {
@@ -35,11 +48,14 @@ export class WorkflowGuardRegistry {
       }
 
       const result = await guard(context);
-      if (!result) {
-        return { passed: false, failedGuard: name };
+      if (result.decision === 'allow') continue;
+      if (result.decision === 'allow_with_warning') {
+        warnings.push(result.message);
+        continue;
       }
+      blockers.push({ guardName: name, message: result.message });
     }
 
-    return { passed: true };
+    return { warnings, blockers };
   }
 }

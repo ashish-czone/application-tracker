@@ -7,7 +7,7 @@ import { ActionRegistry } from '@packages/automation-contracts';
 import { RbacService } from '@packages/rbac';
 import { TASKS_CONFIG, TasksModule } from '@packages/tasks';
 import { USERS_POSITIONS_READER } from '@packages/users';
-import { WorkflowGuardRegistry } from '@packages/workflows';
+import { WorkflowGuardRegistry, allow, allowWithWarning, block } from '@packages/workflows';
 import { ClientDormancyService } from './clients/client-dormancy.service';
 
 import { registerComplianceAudit } from './audit/register-compliance-audit';
@@ -107,8 +107,26 @@ export class ComplianceDomainModule implements OnModuleInit {
     // has at least one primary contact. Referenced by `guardNames` on the
     // transition in clients.config.ts.
     this.guardRegistry.register('require-primary-contact', async (ctx) => {
-      if (ctx.entityType !== 'clients') return true;
-      return this.contactsService.hasPrimaryContact(ctx.entityId);
+      if (ctx.entityType !== 'clients') return allow();
+      const hasPrimary = await this.contactsService.hasPrimaryContact(ctx.entityId);
+      return hasPrimary
+        ? allow()
+        : block('Add a primary contact before activating this client.');
+    });
+
+    // Advisory guard on clients active → dormant: surfaces the count of
+    // non-terminal filings that will be auto-cancelled, so the admin
+    // confirms knowingly. Cascade itself runs in ClientDormancyService via
+    // the onTransition hook — this guard is preflight-only.
+    this.guardRegistry.register('compliance-client-dormancy-warning', async (ctx) => {
+      if (ctx.entityType !== 'clients') return allow();
+      if (ctx.toState !== 'dormant') return allow();
+      const count = await this.clientDormancyService.countNonTerminalFilings(ctx.entityId);
+      if (count === 0) return allow();
+      const noun = count === 1 ? 'filing' : 'filings';
+      return allowWithWarning(
+        `${count} non-terminal ${noun} will be cancelled when this client is dormantised.`,
+      );
     });
 
     // Register permissions for compliance UI surfaces that don't yet have

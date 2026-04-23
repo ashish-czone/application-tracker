@@ -14,6 +14,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { RequirePermission } from '@packages/rbac';
+import { CurrentUser, type JwtPayload } from '@packages/auth-core';
 import { DatabaseService, sql } from '@packages/database';
 import { tenantCondition } from '@packages/tenancy/helpers';
 import { WorkflowRegistryService } from '../services/workflow-registry.service';
@@ -79,6 +80,36 @@ export class WorkflowsController {
   @ApiOperation({ summary: 'Soft delete a workflow definition' })
   async delete(@Param('id', ParseUUIDPipe) id: string) {
     await this.workflowRegistry.deleteDefinition(id);
+  }
+
+  // --- Preflight ---
+
+  /**
+   * Dry-run a proposed transition: runs guards in advisory mode so the UI
+   * can show warnings ("N filings will be cancelled") and blockers
+   * ("Add a primary contact first") before the user confirms in the
+   * transition dialog. No DB writes. Guards re-run on commit via
+   * validateAndThrow(), so preflight is advisory-only.
+   */
+  @Get('preflight')
+  @RequirePermission(WORKFLOWS_PERMISSIONS.READ)
+  @ApiOperation({ summary: 'Preview warnings, blockers, and missing permissions for a proposed transition' })
+  async preflight(
+    @Query('workflowSlug') workflowSlug: string,
+    @Query('entityType') entityType: string,
+    @Query('entityId') entityId: string,
+    @Query('fromState') fromState: string,
+    @Query('toState') toState: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.workflowEngine.preflightTransition({
+      workflowSlug,
+      entityType,
+      entityId,
+      fromState,
+      toState,
+      actorId: user.userId,
+    });
   }
 
   // --- Entity Pipeline Resolution ---

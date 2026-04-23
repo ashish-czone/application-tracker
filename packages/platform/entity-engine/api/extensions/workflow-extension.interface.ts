@@ -101,7 +101,11 @@ export interface ValidatedTransition {
   fieldName: string;
 }
 
-/** Guard function signature — receives context, returns true to allow. */
+/**
+ * Guard function signature — receives context, returns a GuardResult.
+ * See `@packages/workflows` for full semantics; entity-engine re-declares
+ * the minimal shape here to avoid a dependency cycle.
+ */
 export interface WorkflowGuardContext {
   workflowSlug: string;
   entityType: string;
@@ -113,7 +117,12 @@ export interface WorkflowGuardContext {
   metadata?: Record<string, unknown>;
 }
 
-export type WorkflowGuardFn = (context: WorkflowGuardContext) => Promise<boolean>;
+export type GuardResult =
+  | { decision: 'allow' }
+  | { decision: 'allow_with_warning'; message: string }
+  | { decision: 'block'; message: string };
+
+export type WorkflowGuardFn = (context: WorkflowGuardContext) => Promise<GuardResult>;
 
 /** NestJS injection token for the workflow extension. */
 export const WORKFLOW_EXTENSION = 'WORKFLOW_EXTENSION';

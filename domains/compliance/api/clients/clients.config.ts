@@ -115,12 +115,15 @@ export const CLIENTS_CONFIG = defineEntity({
           // tx. Forcing a reason + comment makes the admin articulate *why*
           // and that explanation propagates into each filing's workflow
           // history so the audit trail reads standalone on every row.
+          // The advisory guard surfaces the exact count of filings that
+          // will be cancelled in the preflight banner before confirm.
           {
             from: 'active',
             to: [{
               state: 'dormant',
               reasonRequired: true,
               commentRequired: true,
+              guardNames: ['compliance-client-dormancy-warning'],
             }],
           },
           { from: 'dormant', to: ['active'] },

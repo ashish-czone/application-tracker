@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { DatabaseService, and, eq, inArray, not } from '@packages/database';
+import { DatabaseService, and, count, eq, inArray, not } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
 import { WorkflowEngineService, WorkflowRegistryService } from '@packages/workflows';
 import type { TransitionHookContext } from '@packages/entity-engine';
@@ -31,6 +31,24 @@ export class ClientDormancyService {
     appLogger: AppLoggerService,
   ) {
     this.logger = appLogger.forContext(ClientDormancyService.name);
+  }
+
+  /**
+   * Count of non-terminal filings that would be cancelled if this client
+   * were dormantised right now. Used by the `compliance-client-dormancy-warning`
+   * advisory guard to populate the UI preflight banner — so the admin
+   * confirms knowingly. Reads via the shared DB handle (not a tx) because
+   * preflight is called from the HTTP layer outside any transition.
+   */
+  async countNonTerminalFilings(clientId: string): Promise<number> {
+    const [row] = await this.database.db
+      .select({ count: count() })
+      .from(complianceFilings)
+      .where(and(
+        eq(complianceFilings.clientId, clientId),
+        not(inArray(complianceFilings.status, TERMINAL_FILING_STATUSES)),
+      ));
+    return Number(row?.count ?? 0);
   }
 
   /**
