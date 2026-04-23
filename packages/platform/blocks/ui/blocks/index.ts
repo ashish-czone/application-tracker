@@ -4,8 +4,22 @@ import { textBlock } from './TextBlock';
 import { imageBlock } from './ImageBlock';
 import { featureListBlock } from './FeatureList';
 import { ctaBlock } from './CTA';
+import { processTimelineBlock } from './ProcessTimeline';
+import { caseStudyGridBlock } from './CaseStudyGrid';
+import { pricingBlock } from './Pricing';
+import { contactFormPlaceholderBlock } from './ContactFormPlaceholder';
 
-export const starterBlocks = [heroBlock, textBlock, imageBlock, featureListBlock, ctaBlock];
+export const starterBlocks = [
+  heroBlock,
+  textBlock,
+  imageBlock,
+  featureListBlock,
+  ctaBlock,
+  processTimelineBlock,
+  caseStudyGridBlock,
+  pricingBlock,
+  contactFormPlaceholderBlock,
+];
 
 /**
  * Convenience for Next.js / admin bootstrapping: call once on app boot to
@@ -16,4 +30,14 @@ export function registerStarterBlocks(): void {
   blockRegistry.registerAll(starterBlocks);
 }
 
-export { heroBlock, textBlock, imageBlock, featureListBlock, ctaBlock };
+export {
+  heroBlock,
+  textBlock,
+  imageBlock,
+  featureListBlock,
+  ctaBlock,
+  processTimelineBlock,
+  caseStudyGridBlock,
+  pricingBlock,
+  contactFormPlaceholderBlock,
+};
