@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { AlertTriangle, ShieldAlert, Loader2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -24,6 +25,16 @@ interface TransitionConfirmDialogProps {
   reasonRequired?: boolean;
   /** Whether a comment must be entered */
   commentRequired?: boolean;
+  /** Preflight messages surfaced by advisory guards. Blockers disable the
+   * confirm button; warnings are informational so the user acknowledges the
+   * cost of the transition (e.g. "N filings will be cancelled"). Whichever
+   * parent wires this up is responsible for fetching preflight when the
+   * dialog opens — dialog itself stays presentational. */
+  warnings?: string[];
+  blockers?: string[];
+  /** If true, preflight is still loading — hide banners and disable confirm
+   * so we never let the user commit before we know whether it's safe. */
+  preflightLoading?: boolean;
   /** Called with the optional reason and comment when the user confirms */
   onConfirm: (data: { reason?: string; comment?: string }) => void;
 }
@@ -37,6 +48,9 @@ export function TransitionConfirmDialog({
   reasonOptions,
   reasonRequired,
   commentRequired,
+  warnings,
+  blockers,
+  preflightLoading,
   onConfirm,
 }: TransitionConfirmDialogProps) {
   const [reason, setReason] = useState('');
@@ -52,7 +66,9 @@ export function TransitionConfirmDialog({
   const hasReasonOptions = reasonOptions && reasonOptions.length > 0;
   const isReasonValid = !reasonRequired || !!reason;
   const isCommentValid = !commentRequired || !!comment.trim();
-  const canSubmit = isReasonValid && isCommentValid;
+  const hasBlockers = (blockers?.length ?? 0) > 0;
+  const canSubmit = isReasonValid && isCommentValid && !hasBlockers && !preflightLoading;
+  const hasWarnings = (warnings?.length ?? 0) > 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -65,6 +81,41 @@ export function TransitionConfirmDialog({
         </DialogHeader>
 
         <div className="py-4 space-y-4">
+          {preflightLoading && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              Checking preconditions…
+            </div>
+          )}
+
+          {hasBlockers && (
+            <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 space-y-2">
+              <div className="flex items-center gap-2 text-sm font-medium text-destructive">
+                <ShieldAlert className="h-4 w-4" />
+                This transition cannot proceed
+              </div>
+              <ul className="list-disc pl-5 text-sm text-destructive space-y-1">
+                {blockers!.map((msg, i) => (
+                  <li key={i}>{msg}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {hasWarnings && !hasBlockers && (
+            <div className="rounded-md border border-amber-500/50 bg-amber-500/10 p-3 space-y-2">
+              <div className="flex items-center gap-2 text-sm font-medium text-amber-700 dark:text-amber-500">
+                <AlertTriangle className="h-4 w-4" />
+                Heads up
+              </div>
+              <ul className="list-disc pl-5 text-sm text-amber-800 dark:text-amber-400 space-y-1">
+                {warnings!.map((msg, i) => (
+                  <li key={i}>{msg}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {hasReasonOptions && (
             <div>
               <label htmlFor="transition-reason" className="text-sm font-medium text-foreground">
