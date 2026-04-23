@@ -10,6 +10,43 @@ Keep this file up to date as we work. Append new questions at the bottom of §2.
 
 ---
 
+## Session log
+
+Running log so the next session can pick up without archaeology. Newest at top.
+
+### 2026-04-23 — Stream I continued: registration deactivation → rule deprecation
+
+**Shipped:**
+- **Stream I1-I3** (client dormancy cascade, Q6) — PR #999. New platform `onTransition` hook primitive on entity-engine; compliance wires `ClientDormancyService` into it for transactional bulk-cancellation. Enriched the workflow guard contract platform-wide (`GuardResult` discriminated union + `/workflows/preflight` endpoint + `TransitionConfirmDialog` renders blocker/warning banners).
+- **Stream I4-I7** (registration deactivation, Q8) — PR #1002. `ClientRegistrationService.deactivate(clientId, lawId, { deactivatedAt, alsoCancelEarlier, actorId, comment })` with past-or-today constraint. Medium-destructive semantics: auto-cancels post-effective filings (`periodStart > deactivatedAt`), preserves earlier-period filings by default, optional `alsoCancelEarlier`. Two distinct reason strings per path for audit intent reconstruction. Emits `compliance.RegistrationDeactivated`. UI: `RegistrationDeactivationDialog` on client Laws tab.
+- **Stream I8-I10** (rule deprecation, Q8) — PR #1003. Softest cascade. Two architectural calls locked before coding: (1) dropped redundant `compliance_rules.active` column (user caught catastrophic duplication with `status`); generator now filters on `status === 'deprecated'`. (2) No custom domain event — workflow transition history is the audit surface. Extracted shared `ComplianceFilingsCancellationService` now used by both I4-I7 and I8-I10. Deprecate flips status in tx + one rule history row; `alsoCancelInFlight` bulk-cancels with reason `"Rule deprecated"`. UI: `RuleDeprecationDialog` row action on the rules list.
+
+**Two new reusable rules saved to memory (both surfaced from I8-I10 pushback):**
+- No duplicate state columns (`active` boolean + `status='active'` is catastrophic — pick one)
+- No redundant domain events alongside workflow transitions (only emit custom when payload isn't captured by the generic transition)
+
+**Next up — Stream I sub-PR 4: I13-I16 (rule parameter edits / per-field mutability policy, Q9)**
+
+Soft guards on rule edits after filings exist:
+- **I13** — service helper `ruleHasGeneratedTasks(ruleId)` (single-row existence check on `compliance_tasks` / `compliance_filings`; confirm which table is the authoritative "has generated work" signal in V1).
+- **I14** — block edits to `code`, `frequency`, `lawId` once that helper returns true (these three would silently invalidate already-generated filings).
+- **I15** — UI disables the immutable fields with tooltip; due-date-math edits (`dueDayOfMonth`, `dueMonthOffset`, `gracePeriodDays`) get a "forward-only — existing filings keep their original due dates" save-dialog copy.
+- **I16** — confirm the generator is a pure no-op on `(ruleId, clientId, periodStart)` conflict (never mutates an existing row). Add a test if missing.
+
+**Open questions to lock before writing code:**
+1. "Has generated work" signal: check `compliance_filings` (post-Stream F refactor, this is the authoritative work unit) or `compliance_tasks` (legacy, pre-filings)? Likely filings — confirm.
+2. "Forward-only" enforcement for due-date-math edits — purely UI copy, or does the service need to record the old values somewhere so existing filings' computed due dates are preserved? Filings already store their computed `dueDate` as a column, so the service should be a no-op change + UI messaging. Verify.
+
+**Later sub-PRs in Stream I (after I13-I16):**
+- **I19-I23** — handler integrity guards (hasResolvableHandler helper; guards on registration-create, law_handlers delete, org_units delete; inline "Configure handler" prompt).
+- **I24-I25** — inactive-state banners on client / registration / rule detail pages.
+
+**Streams remaining after I:**
+- **Stream J** — generator cadence (12-month horizon, daily cron, event triggers).
+- **Stream Z** — finalisation audit pass.
+
+---
+
 ## 1. Decision log
 
 ### Q1 — Should V1 support client groups?
