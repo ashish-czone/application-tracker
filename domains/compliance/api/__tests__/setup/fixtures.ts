@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import type { DrizzleDB } from '@packages/database';
 import { users } from '@packages/database';
+import { roles, rolePermissions, userRoles } from '@packages/rbac';
 import { orgUnits, orgUnitLevels } from '@packages/org-units';
 import {
   clients,
@@ -194,6 +195,37 @@ export async function createFiling(
     ...overrides,
   });
   return { id };
+}
+
+/**
+ * Create a role, attach the given permissions to it, and assign it to the
+ * user. Used in filing workflow tests so the real RbacService (consulted
+ * by the workflow engine during transitions) sees the caller as holding
+ * permissions like `compliance-filings.pickup`, `.submit`, etc.
+ *
+ * The mock auth header (`withAuth([...])`) is NOT enough on its own:
+ * WorkflowEngineService.validateTransition calls
+ * `rbacService.getPermissionsForUser(actorId, 'admin')` and consults the
+ * DB directly — the mock guard's header-based permissions only gate the
+ * controller, not the in-service permission check.
+ */
+export async function grantPermissions(
+  db: DrizzleDB,
+  userId: string,
+  permissions: string[],
+): Promise<void> {
+  const roleId = randomUUID();
+  await db.insert(roles).values({
+    id: roleId,
+    name: unique('test-role'),
+    userType: 'admin',
+  });
+  if (permissions.length > 0) {
+    await db
+      .insert(rolePermissions)
+      .values(permissions.map((p) => ({ roleId, permission: p })));
+  }
+  await db.insert(userRoles).values({ userId, roleId });
 }
 
 /**

@@ -72,6 +72,13 @@ async function seedAllWorkflows(ctx: PackageTestApp): Promise<void> {
  */
 export async function resetComplianceTestDb(ctx: PackageTestApp): Promise<void> {
   await cleanDatabase(ctx.db);
+  // Reload registry BEFORE seeding: seedWorkflows' "already seeded?" check
+  // consults the in-memory cache (`workflowExt.getBySlug`), which still
+  // holds the previous test's stale workflow row after cleanDatabase wiped
+  // the DB. Reloading against the now-empty DB clears the cache so
+  // seedWorkflows actually re-inserts the rows.
+  const workflowRegistry = ctx.module.get(WorkflowRegistryService);
+  await workflowRegistry.loadAll();
   await seedAllWorkflows(ctx);
-  await ctx.module.get(WorkflowRegistryService).loadAll();
+  await workflowRegistry.loadAll();
 }
