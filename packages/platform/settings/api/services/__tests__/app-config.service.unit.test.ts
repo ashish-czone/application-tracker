@@ -368,5 +368,28 @@ describe('AppConfigService', () => {
 
       expect(currencyField.metadata.options).toEqual(['USD', 'EUR', 'GBP']);
     });
+
+    it('should preserve hidden flag on field metadata for UI filtering', () => {
+      const definition: SettingsModuleDefinition = {
+        label: 'Site',
+        defaults: {
+          siteName: 'Studio',
+          theme: { presetId: 'minimal' },
+        },
+        metadata: {
+          siteName: { label: 'Site name', type: 'string' },
+          theme: { label: 'Theme', type: 'string', hidden: true },
+        },
+      };
+      service.register('site', definition);
+      (mockStore.getAllCachedByModule as ReturnType<typeof vi.fn>).mockReturnValueOnce({});
+
+      const result = service.getByModule('site');
+      const themeField = result.fields.find((f) => f.key === 'theme')!;
+      const siteNameField = result.fields.find((f) => f.key === 'siteName')!;
+
+      expect(themeField.metadata.hidden).toBe(true);
+      expect(siteNameField.metadata.hidden).toBeUndefined();
+    });
   });
 });

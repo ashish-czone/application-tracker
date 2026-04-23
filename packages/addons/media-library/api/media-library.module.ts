@@ -4,6 +4,7 @@ import { fieldTypeRegistry } from '@packages/field-types';
 import { MEDIA_ASSETS_CONFIG } from './media-assets.config';
 import { MediaAssetsUploadController } from './controllers/media-assets-upload.controller';
 import { MediaAssetsUploadService } from './services/media-assets-upload.service';
+import { MediaAssetsResolverService } from './services/media-assets-resolver.service';
 import { mediaLibraryFieldTypesPlugin } from './field-types';
 
 /**
@@ -21,8 +22,8 @@ import { mediaLibraryFieldTypesPlugin } from './field-types';
 @Module({
   imports: [EntityEngineModule.forEntity(MEDIA_ASSETS_CONFIG)],
   controllers: [MediaAssetsUploadController],
-  providers: [MediaAssetsUploadService],
-  exports: [MediaAssetsUploadService],
+  providers: [MediaAssetsUploadService, MediaAssetsResolverService],
+  exports: [MediaAssetsUploadService, MediaAssetsResolverService],
 })
 export class MediaLibraryModule implements OnModuleInit {
   onModuleInit() {

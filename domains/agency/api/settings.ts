@@ -9,10 +9,10 @@ import { DEFAULT_SITE_THEME, type SiteTheme } from '@domains/agency-contract';
 // needs company identity too, lift `companyName`/`companyLogo` out
 // into a shared `company` module with a one-line migration.
 //
-// `theme` is a structured object (jsonb-backed). The generic settings
-// admin page does not render it — it's edited via the dedicated
-// Appearance page, so its metadata.type is kept as 'string' only to
-// satisfy the current settings metadata shape.
+// `theme`, `companyLogo`, and `defaultSeo.ogImage` are marked
+// `hidden: true` so the generic settings admin page skips them — they
+// are edited by the dedicated Appearance and Branding pages, which
+// read/write via the same AppConfig module.
 export const SITE_DEFAULTS = {
   companyName: 'Studio',
   companyLogo: '',
@@ -45,9 +45,10 @@ export const SITE_SETTINGS: SettingsModuleDefinition = {
       description: 'Legal entity name. Used in footer copyright and Organization schema.',
     },
     companyLogo: {
-      label: 'Company logo URL',
+      label: 'Company logo',
       type: 'string',
-      description: 'Public URL to the logo. Migrates to a media reference when the media library ships.',
+      description: 'Media-library asset reference (UUID). Edited via the Branding page.',
+      hidden: true,
     },
     siteName: {
       label: 'Site name',
@@ -110,9 +111,10 @@ export const SITE_SETTINGS: SettingsModuleDefinition = {
       type: 'string',
     },
     'defaultSeo.ogImage': {
-      label: 'Default Open Graph image URL',
+      label: 'Default Open Graph image',
       type: 'string',
-      description: 'Fallback social-share image. Recommended 1200×630.',
+      description: 'Media-library asset reference (UUID). Fallback social-share image, recommended 1200×630. Edited via the Branding page.',
+      hidden: true,
     },
     'analytics.ga4': {
       label: 'Google Analytics 4 Measurement ID',
@@ -128,6 +130,7 @@ export const SITE_SETTINGS: SettingsModuleDefinition = {
       label: 'Public site theme',
       type: 'string',
       description: 'Edited via the Appearance page, not this form.',
+      hidden: true,
     },
   },
 };

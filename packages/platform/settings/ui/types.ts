@@ -7,6 +7,7 @@ export interface SettingFieldMetadata {
   min?: number;
   max?: number;
   options?: SettingFieldOption[];
+  hidden?: boolean;
 }
 
 export interface SettingsField {
