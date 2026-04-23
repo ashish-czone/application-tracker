@@ -1,4 +1,5 @@
-import { DatabaseService, eq } from '@packages/database';
+import { DatabaseService, and, eq, isNull } from '@packages/database';
+import { users } from '@packages/database/schema';
 import { withTenant } from '@packages/tenancy/helpers';
 import type {
   EntityResolverConfig,
@@ -15,6 +16,10 @@ import { resolveUnitIdFromContext } from './unit-id-helper';
  * Resolves to the head(s) of the parent of the target unit. If the target
  * unit has no parent (it's a root), returns an empty array — the caller
  * handles that as "no one to escalate to".
+ *
+ * Deactivated users (`users.deletedAt IS NOT NULL`) are filtered out
+ * (Q32) so a stale membership row cannot make a terminated employee the
+ * resolved parent head.
  *
  * Config: `{ unitField: 'assigneeTeamId' }` — the field on the source
  * entity that holds the org-unit id of the starting unit.
@@ -57,8 +62,9 @@ export class ParentUnitHeadStrategy implements UserResolverStrategy {
         sortOrder: orgPositions.sortOrder,
       })
       .from(orgUnitMembers)
+      .innerJoin(users, eq(users.id, orgUnitMembers.userId))
       .leftJoin(orgPositions, eq(orgPositions.id, orgUnitMembers.positionId))
-      .where(eq(orgUnitMembers.orgUnitId, unit.parentId));
+      .where(and(eq(orgUnitMembers.orgUnitId, unit.parentId), isNull(users.deletedAt)));
 
     const positioned = rows.filter((r): r is { userId: string; sortOrder: number } => r.sortOrder != null);
     if (positioned.length === 0) return [];

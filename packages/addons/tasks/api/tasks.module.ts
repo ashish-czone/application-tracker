@@ -5,11 +5,12 @@ import { TasksService } from './services/tasks.service';
 import { TaskClaimService } from './services/task-claim.service';
 import { SendTaskDigestAction } from './services/send-task-digest.action';
 import { TaskClaimController } from './controllers/task-claim.controller';
+import { TasksUserLifecycleListener } from './listeners/tasks-user-lifecycle.listener';
 
 @Module({
   imports: [OrgUnitsModule],
   controllers: [TaskClaimController],
-  providers: [TasksService, TaskClaimService, SendTaskDigestAction],
+  providers: [TasksService, TaskClaimService, SendTaskDigestAction, TasksUserLifecycleListener],
   exports: [TasksService],
 })
 export class TasksModule implements OnModuleInit {

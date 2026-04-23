@@ -14,6 +14,7 @@ import { orgUnits } from './schema/org-units';
 import { OrgUnitHeadStrategy } from './automation-resolvers/org-unit-head.strategy';
 import { ParentUnitHeadStrategy } from './automation-resolvers/parent-unit-head.strategy';
 import { OrgUnitMembersStrategy } from './automation-resolvers/org-unit-members.strategy';
+import { OrgUnitsUserLifecycleListener } from './listeners/org-units-user-lifecycle.listener';
 
 @Global()
 @Module({
@@ -23,6 +24,7 @@ import { OrgUnitMembersStrategy } from './automation-resolvers/org-unit-members.
     OrgUnitLevelService,
     OrgPositionService,
     PositionScopeResolverService,
+    OrgUnitsUserLifecycleListener,
     {
       provide: POSITION_SCOPE_PROVIDER,
       useExisting: PositionScopeResolverService,

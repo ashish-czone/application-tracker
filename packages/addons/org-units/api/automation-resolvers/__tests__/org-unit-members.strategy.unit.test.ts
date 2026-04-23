@@ -5,6 +5,8 @@ function createMockDb(rowQueue: any[][]) {
   function makeChain() {
     const chain: any = {};
     chain.from = vi.fn().mockReturnValue(chain);
+    chain.innerJoin = vi.fn().mockReturnValue(chain);
+    chain.leftJoin = vi.fn().mockReturnValue(chain);
     chain.where = vi.fn().mockReturnValue(chain);
     chain.limit = vi.fn().mockImplementation(() => Promise.resolve(rowQueue.shift() ?? []));
     chain.then = (resolve: any) => resolve(rowQueue.shift() ?? []);

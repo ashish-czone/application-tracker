@@ -9,3 +9,5 @@ export type {
   UsersRolesReader,
   UsersPositionsReader,
 } from './users.config';
+export { USERS_USER_DEACTIVATED } from './events/types';
+export type { UserDeactivatedPayload, UserDeactivatedEvent } from './events/types';

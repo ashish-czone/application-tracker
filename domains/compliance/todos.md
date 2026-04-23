@@ -1265,8 +1265,17 @@ Scoped to `compliance-filings` (same tasks→filings re-scoping as Stream F).
 
 ### Stream H — Employee lifecycle handling
 
-- [ ] **H1.** Null `assigneeId` on all open tasks of a terminated / deactivated user; surface "unassigned in my team" list for team heads. (Pending Q32)
-- [ ] **H2.** Leave tracking — model per Q31. (Pending Q31)
+Shipped event-driven per Q32. All cleanup lives in platform addons (`@packages/users`, `@packages/addons/tasks`, `@packages/addons/org-units`) — compliance domain ships zero code. The authoritative "deactivated" signal is `users.deletedAt` (flipped by the generic entity-engine soft-delete path), aliased as `USERS_USER_DEACTIVATED` for semantic subscription.
+
+- [x] **H1.** Null `assigneeId` on all open tasks of a terminated / deactivated user. (Q32) Ships as `TasksUserLifecycleListener` in `@packages/addons/tasks`: `@OnEvent(USERS_USER_DEACTIVATED)` issues one `UPDATE tasks SET assigneeId = NULL WHERE assigneeId = :user AND status NOT IN ('completed','cancelled')`. Team stays assigned via `assigneeTeamId` so the task falls back to team pickup / escalation. Idempotent; listener errors never roll back deactivation. UI surface for "unassigned in my team" (team-head-facing list) deferred to a later polish pass — the digest already broadcasts the team's unclaimed queue to every member every morning (Q16), which covers the functional need.
+- [x] **H2.** Leave tracking — no-op per Q31 (no leave state in V1; escalation + Q32 termination cover every scenario).
+- [x] **H2-events.** New event constant `USERS_USER_DEACTIVATED` exported from `@packages/users` (`users.Deleted` alias), plus `UserDeactivatedPayload` / `UserDeactivatedEvent` for typed listeners.
+- [x] **H3.** `@packages/addons/tasks` listener + @nestjs/event-emitter wiring. Covered above (H1).
+- [x] **H4.** `@packages/addons/org-units` listener deletes `org_unit_members` rows for the deactivated user. The three automation resolvers (`org_unit_head`, `parent_unit_head`, `org_unit_members`) hardened with an inner join on `users` + `users.deletedAt IS NULL`, so the eventual-consistency window between soft-delete and listener firing cannot leak a deactivated employee into an escalation recipient list. Correctness lives in the resolver guards; the listener is hygiene.
+- [x] **H5.** `my-tasks` personal-queue scope wrapped in an `EXISTS` check on `users.deletedAt IS NULL` so a deactivated caller's queue short-circuits to empty even with a cached session.
+- [ ] **H6.** UI "Deactivate" button with consequence summary — deferred. Platform already exposes generic `DELETE /users/:id` via the entity engine with a generic confirmation modal; the bespoke consequences copy is UI polish, not a V1 blocker.
+
+**Ships as PR (feat/compliance-employee-lifecycle):** users event constant → tasks listener → org-units listener + resolver guards → my-tasks scope guard.
 
 ### Stream I — Domain lifecycle transition hooks
 
