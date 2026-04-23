@@ -1296,9 +1296,9 @@ Hooks that fire when a client, registration, or rule changes state in a way that
 
 **Rule deprecation (soft: forward-only, no auto-cancel):**
 
-- [ ] **I8.** Hook on `compliance_rules.status → deprecated` that stops future generation but leaves existing tasks untouched. No mandatory cancel. (Q8)
-- [ ] **I9.** Generator filter: skip rules with `status = 'deprecated'`. Verify if already in place; add if not. (Q8)
-- [ ] **I10.** UI on rule deprecation: summary of non-terminal tasks for that rule, plus an optional checkbox "Also cancel N in-flight tasks from this rule." Default unchecked. (Q8)
+- [x] **I8.** `ComplianceRuleService.deprecate()` flips `compliance_rules.status` to 'deprecated' inside a tx and writes one `workflow_transition_history` row for the rule itself. No hook needed — the rule's own transition row plus the per-filing cancellation rows are the authoritative audit. Also dropped the redundant `active` boolean column (0006 migration); `status` is now the single source of truth. (Q8)
+- [x] **I9.** Generator short-circuits on `rule.status === 'deprecated'` (both `generate-compliance-filings` and `generate-compliance-tasks` actions). Unit tests verify deprecated rules never query registrations. (Q8)
+- [x] **I10.** `RuleDeprecationDialog` on the rules list (row action "Deprecate"): live preview of the non-terminal filing count, optional "Also cancel N in-flight filings" checkbox (off by default, hidden when count is zero), optional audit comment. Preview driven by `GET /compliance-rules/:id/deprecation-preview`; confirm calls `POST /compliance-rules/:id/deprecate` with `{ alsoCancelInFlight, comment }`. Opt-in cascade uses the shared `ComplianceFilingsCancellationService` (extracted for reuse with I4-I7). (Q8)
 
 **Rule parameter edits (per-field policy, forward-only where applicable):**
 

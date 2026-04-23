@@ -1,4 +1,4 @@
-import { type DataTableColumn } from '@packages/ui';
+import { Button, type DataTableColumn } from '@packages/ui';
 import { HealthBar, JurisdictionTag, HandlerPill } from '../../../../../../components';
 import type { ComplianceRule } from '../data/complianceRulesMock';
 import { FrequencyPill } from './FrequencyPill';
@@ -11,7 +11,36 @@ const STATUS_TONE: Record<ComplianceRule['status'], string> = {
 
 export const REQUIRED_COMPLIANCE_RULE_COLUMN_KEYS: string[] = ['code', 'name'];
 
-export const COMPLIANCE_RULE_COLUMNS: DataTableColumn<ComplianceRule>[] = [
+export interface ComplianceRuleColumnsOptions {
+  onDeprecate: (rule: ComplianceRule) => void;
+}
+
+export function makeComplianceRuleColumns({
+  onDeprecate,
+}: ComplianceRuleColumnsOptions): DataTableColumn<ComplianceRule>[] {
+  return [...BASE_COMPLIANCE_RULE_COLUMNS, {
+    key: 'actions',
+    header: '',
+    width: '110px',
+    align: 'right',
+    cell: (o) =>
+      o.status === 'deprecated' ? null : (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-6 text-xs text-ink-muted hover:text-signal"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDeprecate(o);
+          }}
+        >
+          Deprecate
+        </Button>
+      ),
+  }];
+}
+
+const BASE_COMPLIANCE_RULE_COLUMNS: DataTableColumn<ComplianceRule>[] = [
   {
     key: 'code',
     header: 'Code',
