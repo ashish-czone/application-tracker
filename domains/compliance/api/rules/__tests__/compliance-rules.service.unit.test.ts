@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { NotFoundException } from '@nestjs/common';
 import {
   ComplianceRuleService,
   NoDefaultHandlerError,
@@ -6,6 +7,9 @@ import {
   InvalidFrequencyError,
   type ComplianceRule,
 } from '../compliance-rules.service';
+import type { WorkflowEngineService, WorkflowRegistryService } from '@packages/workflows';
+import type { AppLoggerService } from '@packages/logger';
+import type { ComplianceFilingsCancellationService } from '../../compliance-filings/compliance-filings-cancellation.service';
 
 type AnyChain = Record<string, ReturnType<typeof vi.fn>>;
 
@@ -39,7 +43,6 @@ function makeRule(overrides: Partial<ComplianceRule> = {}): ComplianceRule {
     dueMonthOffset: 1,
     gracePeriodDays: 0,
     description: null,
-    active: true,
     ...overrides,
   };
 }
@@ -47,17 +50,47 @@ function makeRule(overrides: Partial<ComplianceRule> = {}): ComplianceRule {
 describe('ComplianceRuleService', () => {
   let db: { db: Record<string, ReturnType<typeof vi.fn>> };
   let lawHandlers: { hasDefaultHandler: ReturnType<typeof vi.fn> };
+  let workflowEngine: { recordHistory: ReturnType<typeof vi.fn> };
+  let workflowRegistry: { getBySlug: ReturnType<typeof vi.fn> };
+  let filingsCancellation: { cancelFilings: ReturnType<typeof vi.fn> };
   let service: ComplianceRuleService;
+
+  const ruleWorkflowDef = {
+    id: 'wf-def-rule-status',
+    transitions: [
+      { id: 't-draft-deprecated', fromStateName: 'draft', toStateName: 'deprecated' },
+      { id: 't-active-deprecated', fromStateName: 'active', toStateName: 'deprecated' },
+      { id: 't-deprecated-active', fromStateName: 'deprecated', toStateName: 'active' },
+    ],
+  };
+
+  const appLogger = {
+    forContext: vi.fn().mockReturnValue({
+      log: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(),
+    }),
+  } as unknown as AppLoggerService;
 
   beforeEach(() => {
     db = {
       db: {
         select: vi.fn(),
         insert: vi.fn(),
+        update: vi.fn(),
+        transaction: vi.fn(),
       },
     };
     lawHandlers = { hasDefaultHandler: vi.fn() };
-    service = new ComplianceRuleService(db as never, lawHandlers as never);
+    workflowEngine = { recordHistory: vi.fn().mockResolvedValue({ historyId: 'h', recordedAt: '' }) };
+    workflowRegistry = { getBySlug: vi.fn().mockReturnValue(ruleWorkflowDef) };
+    filingsCancellation = { cancelFilings: vi.fn().mockResolvedValue(undefined) };
+    service = new ComplianceRuleService(
+      db as never,
+      lawHandlers as never,
+      workflowEngine as unknown as WorkflowEngineService,
+      workflowRegistry as unknown as WorkflowRegistryService,
+      filingsCancellation as unknown as ComplianceFilingsCancellationService,
+      appLogger,
+    );
   });
 
   // --------------------------------------------------------------------------
@@ -96,7 +129,7 @@ describe('ComplianceRuleService', () => {
         id: 'r1', code: 'X', name: 'x', lawId: 'l1', frequency: 'monthly',
         status: 'draft',
         dueDayOfMonth: 20, dueMonthOffset: 1, gracePeriodDays: 0,
-        description: null, active: true,
+        description: null,
       });
       db.db.insert.mockReturnValue(insertChain);
 
@@ -106,7 +139,6 @@ describe('ComplianceRuleService', () => {
 
       expect(result.id).toBe('r1');
       expect(result.status).toBe('draft');
-      expect(result.active).toBe(true);
     });
   });
 
@@ -283,6 +315,149 @@ describe('ComplianceRuleService', () => {
     it('throws NoDefaultHandlerError when no handlers match at all', async () => {
       db.db.select.mockReturnValue(mockSelectRows([]));
       await expect(service.resolveAssignee('l1', 'c1')).rejects.toBeInstanceOf(NoDefaultHandlerError);
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // previewDeprecation — I10 dry-run
+  // --------------------------------------------------------------------------
+
+  describe('previewDeprecation', () => {
+    const ruleRow = {
+      id: 'r1', code: 'GST-M', name: 'GST', lawId: 'l1', frequency: 'monthly',
+      status: 'active',
+      dueDayOfMonth: 20, dueMonthOffset: 1, gracePeriodDays: 0, description: null,
+    };
+
+    it('returns the non-terminal filing count for the rule', async () => {
+      db.db.select
+        .mockReturnValueOnce(mockSelectRows([ruleRow])) // findById
+        .mockReturnValueOnce(mockSelectRows([{ count: 7 }])); // count query
+
+      const result = await service.previewDeprecation('r1');
+
+      expect(result).toEqual({ ruleId: 'r1', inFlightFilingCount: 7 });
+    });
+
+    it('returns zero when no in-flight filings exist', async () => {
+      db.db.select
+        .mockReturnValueOnce(mockSelectRows([ruleRow]))
+        .mockReturnValueOnce(mockSelectRows([{ count: 0 }]));
+
+      const result = await service.previewDeprecation('r1');
+
+      expect(result.inFlightFilingCount).toBe(0);
+    });
+
+    it('throws NotFoundException when the rule does not exist', async () => {
+      db.db.select.mockReturnValueOnce(mockSelectRows([]));
+      await expect(service.previewDeprecation('missing')).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // deprecate — I8/I10
+  // --------------------------------------------------------------------------
+
+  describe('deprecate', () => {
+    const ruleRow = {
+      id: 'r1', code: 'GST-M', name: 'GST', lawId: 'l1', frequency: 'monthly',
+      status: 'active',
+      dueDayOfMonth: 20, dueMonthOffset: 1, gracePeriodDays: 0, description: null,
+    };
+
+    function mockTx(opts: { inFlight?: Array<{ id: string; status: string }> } = {}) {
+      const tx: Record<string, ReturnType<typeof vi.fn>> = {} as Record<string, ReturnType<typeof vi.fn>>;
+      tx.update = vi.fn().mockReturnValue({
+        set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) }),
+      });
+      tx.select = vi.fn().mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue(opts.inFlight ?? []),
+        }),
+      });
+      return tx;
+    }
+
+    it('throws NotFoundException when rule is missing', async () => {
+      db.db.select.mockReturnValueOnce(mockSelectRows([]));
+      await expect(service.deprecate('missing', { actorId: 'u1' })).rejects.toBeInstanceOf(NotFoundException);
+      expect(db.db.transaction).not.toHaveBeenCalled();
+    });
+
+    it('is a no-op when rule is already deprecated', async () => {
+      db.db.select.mockReturnValueOnce(mockSelectRows([{ ...ruleRow, status: 'deprecated' }]));
+      const result = await service.deprecate('r1', { actorId: 'u1' });
+      expect(result).toEqual({ ruleId: 'r1', cancelledFilingIds: [] });
+      expect(db.db.transaction).not.toHaveBeenCalled();
+    });
+
+    it('flips status and writes the rule transition history row; no cascade by default', async () => {
+      db.db.select.mockReturnValueOnce(mockSelectRows([ruleRow]));
+      const tx = mockTx();
+      db.db.transaction.mockImplementation(async (fn: (t: typeof tx) => unknown) => fn(tx));
+
+      const result = await service.deprecate('r1', { actorId: 'u1', comment: 'replaced by GST-M-v2' });
+
+      expect(result.cancelledFilingIds).toEqual([]);
+      expect(workflowEngine.recordHistory).toHaveBeenCalledTimes(1);
+      expect(workflowEngine.recordHistory).toHaveBeenCalledWith(
+        expect.objectContaining({
+          entityType: 'compliance_rules',
+          entityId: 'r1',
+          fromState: 'active',
+          toState: 'deprecated',
+          transitionId: 't-active-deprecated',
+          reason: 'Rule deprecated',
+          comment: 'replaced by GST-M-v2',
+          actorId: 'u1',
+        }),
+        tx,
+      );
+      expect(filingsCancellation.cancelFilings).not.toHaveBeenCalled();
+    });
+
+    it('cascades cancellation when alsoCancelInFlight is true', async () => {
+      db.db.select.mockReturnValueOnce(mockSelectRows([ruleRow]));
+      const tx = mockTx({
+        inFlight: [
+          { id: 'f1', status: 'pending' },
+          { id: 'f2', status: 'in_progress' },
+        ],
+      });
+      db.db.transaction.mockImplementation(async (fn: (t: typeof tx) => unknown) => fn(tx));
+
+      const result = await service.deprecate('r1', { actorId: 'u1', alsoCancelInFlight: true });
+
+      expect(result.cancelledFilingIds).toEqual(['f1', 'f2']);
+      expect(filingsCancellation.cancelFilings).toHaveBeenCalledWith(
+        tx,
+        [
+          { id: 'f1', status: 'pending' },
+          { id: 'f2', status: 'in_progress' },
+        ],
+        expect.objectContaining({
+          reason: 'Rule deprecated',
+          actorId: 'u1',
+          comment: expect.stringContaining('GST-M'),
+        }),
+      );
+    });
+
+    it('transitions a draft rule directly to deprecated', async () => {
+      db.db.select.mockReturnValueOnce(mockSelectRows([{ ...ruleRow, status: 'draft' }]));
+      const tx = mockTx();
+      db.db.transaction.mockImplementation(async (fn: (t: typeof tx) => unknown) => fn(tx));
+
+      await service.deprecate('r1', { actorId: 'u1' });
+
+      expect(workflowEngine.recordHistory).toHaveBeenCalledWith(
+        expect.objectContaining({
+          fromState: 'draft',
+          transitionId: 't-draft-deprecated',
+        }),
+        tx,
+      );
     });
   });
 });

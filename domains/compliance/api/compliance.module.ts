@@ -31,7 +31,9 @@ import { ClientsService } from './clients/clients.service';
 import { ClientContactsService } from './client-contacts/client-contacts.service';
 import { ClientsController } from './clients/clients.controller';
 import { ComplianceRuleService } from './rules/compliance-rules.service';
+import { ComplianceRulesController } from './rules/compliance-rules.controller';
 import { ComplianceFilingsLookupService } from './compliance-filings/compliance-filings-lookup.service';
+import { ComplianceFilingsCancellationService } from './compliance-filings/compliance-filings-cancellation.service';
 import { GenerateComplianceFilingsAction } from './automations/generate-compliance-filings.action';
 import { COMPLIANCE_PERMISSION_REGISTRATIONS } from './permissions';
 
@@ -61,7 +63,7 @@ const ORGANIZATIONS_CONFIG = createOrganizationsEntityConfig({
     EntityEngineModule.forEntity(COMPLIANCE_FILINGS_CONFIG),
     EntityEngineModule.forEntity(ORGANIZATIONS_CONFIG),
   ],
-  controllers: [ClientsController],
+  controllers: [ClientsController, ComplianceRulesController],
   providers: [
     LawHandlerService,
     ClientRegistrationService,
@@ -69,6 +71,7 @@ const ORGANIZATIONS_CONFIG = createOrganizationsEntityConfig({
     ClientContactsService,
     ComplianceRuleService,
     ComplianceFilingsLookupService,
+    ComplianceFilingsCancellationService,
     GenerateComplianceFilingsAction,
     ClientDormancyService,
     ComplianceUsersPositionsReader,

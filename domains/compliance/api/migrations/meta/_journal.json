@@ -43,6 +43,13 @@
       "when": 1776939822210,
       "tag": "0005_compliance_filings",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1776960997982,
+      "tag": "0006_drop_rules_active",
+      "breakpoints": true
     }
   ]
 }

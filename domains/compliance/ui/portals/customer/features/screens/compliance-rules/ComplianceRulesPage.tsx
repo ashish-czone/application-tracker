@@ -24,9 +24,10 @@ import {
 } from './data/complianceRuleFilterOptions';
 import { FREQUENCY_LABEL, FREQUENCY_OPTIONS } from './components/FrequencyPill';
 import {
-  COMPLIANCE_RULE_COLUMNS,
+  makeComplianceRuleColumns,
   REQUIRED_COMPLIANCE_RULE_COLUMN_KEYS,
 } from './components/complianceRuleColumns';
+import { RuleDeprecationDialog } from './components/RuleDeprecationDialog';
 import {
   NewComplianceRuleDrawer,
   type NewComplianceRuleValues,
@@ -43,6 +44,7 @@ type StatusTab = 'all' | ComplianceRule['status'];
 
 export function ComplianceRulesPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [deprecating, setDeprecating] = useState<ComplianceRule | null>(null);
 
   const [lawFilter, setLawFilter] = useState<LawGroupKey[]>([]);
   const [jurisdictionFilter, setJurisdictionFilter] = useState<JurisdictionKey[]>([]);
@@ -155,6 +157,11 @@ export function ComplianceRulesPage() {
     count: rows.filter((o) => o.frequency === f.value).length,
   }));
 
+  const ruleColumns = useMemo(
+    () => makeComplianceRuleColumns({ onDeprecate: setDeprecating }),
+    [],
+  );
+
   const statusTabs = [
     { value: 'all' as const, label: 'All', count: totalRows },
     { value: 'active' as const, label: 'Active', count: statusCounts.active },
@@ -247,7 +254,7 @@ export function ComplianceRulesPage() {
           <CoarseTabs tabs={statusTabs} value={statusTab} onChange={setStatusTab} animated />
 
           <DataGridShell
-            columns={COMPLIANCE_RULE_COLUMNS}
+            columns={ruleColumns}
             rows={filtered}
             getRowKey={(o) => o.id}
             requiredColumns={REQUIRED_COMPLIANCE_RULE_COLUMN_KEYS}
@@ -305,6 +312,15 @@ export function ComplianceRulesPage() {
           />
         )}
       </AnimatePresence>
+
+      {deprecating && (
+        <RuleDeprecationDialog
+          open
+          onOpenChange={(o) => !o && setDeprecating(null)}
+          ruleId={deprecating.id}
+          ruleLabel={`${deprecating.code} — ${deprecating.name}`}
+        />
+      )}
     </>
   );
 }

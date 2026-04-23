@@ -59,8 +59,8 @@ export class GenerateComplianceTasksAction implements ActionHandler {
     }
 
     const rule = await this.ruleService.findById(ruleId);
-    if (!rule || !rule.active) {
-      this.logger.debug('Rule not found or inactive — skipping', { ruleId });
+    if (!rule || rule.status === 'deprecated') {
+      this.logger.debug('Rule not found or deprecated — skipping', { ruleId });
       return {};
     }
 

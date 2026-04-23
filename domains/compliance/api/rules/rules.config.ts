@@ -90,11 +90,6 @@ export const COMPLIANCE_RULES_CONFIG = defineEntity({
       label: 'Description',
       maxLength: 32000,
     },
-    active: {
-      type: 'boolean',
-      label: 'Active',
-      defaultValue: 'true',
-    },
   },
 
   relationships: [
@@ -106,7 +101,7 @@ export const COMPLIANCE_RULES_CONFIG = defineEntity({
   sections: [
     {
       name: 'Rule',
-      fields: ['code', 'name', 'lawId', 'frequency', 'status', 'dueDayOfMonth', 'dueMonthOffset', 'gracePeriodDays', 'description', 'active'],
+      fields: ['code', 'name', 'lawId', 'frequency', 'status', 'dueDayOfMonth', 'dueMonthOffset', 'gracePeriodDays', 'description'],
     },
   ],
 
