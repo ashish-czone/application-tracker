@@ -19,7 +19,7 @@ module.exports = function (options) {
         modulesDir: path.resolve(__dirname, '../../node_modules'),
         additionalModuleDirs: [path.resolve(__dirname, 'node_modules')],
       }),
-      { bcrypt: 'commonjs bcrypt' },
+      { bcrypt: 'commonjs bcrypt', sharp: 'commonjs sharp' },
     ],
     resolve: {
       ...options.resolve,
