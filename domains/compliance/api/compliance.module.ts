@@ -26,8 +26,8 @@ import { ClientsService } from './clients/clients.service';
 import { ClientContactsService } from './client-contacts/client-contacts.service';
 import { ClientsController } from './clients/clients.controller';
 import { ComplianceRuleService } from './rules/compliance-rules.service';
-import { ComplianceTasksLookupService } from './compliance-tasks/compliance-tasks-lookup.service';
-import { GenerateComplianceTasksAction } from './automations/generate-compliance-tasks.action';
+import { ComplianceFilingsLookupService } from './compliance-filings/compliance-filings-lookup.service';
+import { GenerateComplianceFilingsAction } from './automations/generate-compliance-filings.action';
 import { COMPLIANCE_PERMISSION_REGISTRATIONS } from './permissions';
 
 // Late-bound database handle: the organizations config references this via a
@@ -63,8 +63,8 @@ const ORGANIZATIONS_CONFIG = createOrganizationsEntityConfig({
     ClientsService,
     ClientContactsService,
     ComplianceRuleService,
-    ComplianceTasksLookupService,
-    GenerateComplianceTasksAction,
+    ComplianceFilingsLookupService,
+    GenerateComplianceFilingsAction,
     ComplianceUsersPositionsReader,
     {
       provide: USERS_POSITIONS_READER,
@@ -75,7 +75,7 @@ const ORGANIZATIONS_CONFIG = createOrganizationsEntityConfig({
 export class ComplianceDomainModule implements OnModuleInit {
   constructor(
     private readonly actionRegistry: ActionRegistry,
-    private readonly generateTasksAction: GenerateComplianceTasksAction,
+    private readonly generateFilingsAction: GenerateComplianceFilingsAction,
     private readonly guardRegistry: WorkflowGuardRegistry,
     private readonly contactsService: ClientContactsService,
     private readonly rbac: RbacService,
@@ -85,7 +85,7 @@ export class ComplianceDomainModule implements OnModuleInit {
   onModuleInit() {
     organizationsDbRef = this.databaseService.db;
 
-    this.actionRegistry.register(this.generateTasksAction);
+    this.actionRegistry.register(this.generateFilingsAction);
 
     // Blocks onboarding → active on the clients workflow unless the client
     // has at least one primary contact. Referenced by `guardNames` on the
