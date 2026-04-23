@@ -24,6 +24,31 @@ describe('COMPLIANCE_FILINGS_CONFIG', () => {
     ]));
   });
 
+  describe('attachments (Stream F / Q26 + Q27 + Q28)', () => {
+    it('enables attachments on the filing entity', () => {
+      expect(COMPLIANCE_FILINGS_CONFIG.hasAttachments).toBe(true);
+    });
+
+    it('pins the MIME whitelist to the compliance-domain list (Q26)', () => {
+      const accepted = COMPLIANCE_FILINGS_CONFIG.attachmentConfig?.acceptedMimeTypes ?? [];
+      // ZIPs and executables are excluded by the whitelist — the test exists to
+      // catch any accidental relaxation of this constraint.
+      expect(accepted).toContain('application/pdf');
+      expect(accepted).toContain('image/png');
+      expect(accepted).toContain('text/csv');
+      expect(accepted).not.toContain('application/zip');
+      expect(accepted).not.toContain('application/x-msdownload');
+    });
+
+    it('caps per-file upload at 25 MB (Q27)', () => {
+      expect(COMPLIANCE_FILINGS_CONFIG.attachmentConfig?.maxFileSize).toBe(25 * 1024 * 1024);
+    });
+
+    it('soft-deletes attachments so evidence is recoverable (Q28)', () => {
+      expect(COMPLIANCE_FILINGS_CONFIG.attachmentConfig?.deleteMode).toBe('soft');
+    });
+  });
+
   describe('workflow', () => {
     const workflow = COMPLIANCE_FILINGS_CONFIG.fieldMeta.status.workflow!;
 

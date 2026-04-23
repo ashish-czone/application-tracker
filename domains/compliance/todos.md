@@ -1241,10 +1241,16 @@ Stream D shipped as PR #982 (2026-04-22). The per-task overdue email (originally
 - `packages/platform/audit` — `AuditModuleRegistration.authoriseRead` callback added; `audit.read` permission renamed to `audit.read_all` (firm-wide only); per-entity audit reads now delegate to the registration's callback rather than gating on a blanket permission.
 - `packages/platform/entity-engine` — `buildAccessContext` exported so domain modules can build scope-aware access contexts for their `authoriseRead` callbacks without copy-pasting the JWT scope-resolution logic.
 
-### Stream F — Attachments on compliance tasks
+### Stream F — Attachments on compliance filings
 
-- [ ] **F1.** Wire the `attachments` addon API/UI on compliance task detail (using generic `entityType='tasks'`, no new table). (Pending Q26/Q27/Q28)
-- [ ] **F2.** Enforce file-type whitelist + size limit at upload.
+Scoped to `compliance-filings` only. The original wording said "compliance tasks / entityType='tasks'", which predated the filings extraction (commit 354a53d1). Tasks are now fully generic (`@packages/tasks`) and V1 doesn't generate compliance tasks — the filing IS the user-facing work unit and, per Q28, "the attachment IS the evidence of filing." Clients/registrations/rules have no attachment UI in V1 (Q26 scope note).
+
+- [x] **F1.** `COMPLIANCE_FILINGS_CONFIG` carries `hasAttachments: true` + `attachmentConfig`, so the attachments addon wires itself automatically. The auto-rendered entity detail page picks up the `attachments` tab via `compliance-web`'s existing `extraDetailTabs` (`featureFlag: 'hasAttachments'`). `AttachmentsController.upload` reads `entityConfig.attachmentConfig` off the registry — no compliance-side controller needed.
+- [x] **F2.** Whitelist + size limit pass through `AttachmentConfig` to `AttachmentsService.upload`:
+  - `COMPLIANCE_ATTACHMENT_MIME_TYPES` in `domains/compliance/api/constants.ts` — the eight MIME types from Q26.
+  - `COMPLIANCE_MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024` — per Q27.
+  - `deleteMode: 'soft'` — per Q28.
+  - Unit-tested in `compliance-filings/__tests__/compliance-filings.config.unit.test.ts` ("attachments (Stream F / Q26 + Q27 + Q28)" block).
 
 ### Stream G — Comments on compliance tasks
 
