@@ -1,0 +1,1 @@
+DROP TABLE "org_position_scopes" CASCADE;

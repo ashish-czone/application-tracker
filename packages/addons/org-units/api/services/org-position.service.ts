@@ -1,10 +1,9 @@
 import { Injectable, Logger, NotFoundException, ConflictException } from '@nestjs/common';
-import { DatabaseService, eq, and, count } from '@packages/database';
+import { DatabaseService, eq, count } from '@packages/database';
 import { withTenant, withTenantInsert } from '@packages/tenancy/helpers';
 import { orgPositions } from '../schema/org-positions';
-import { orgPositionScopes } from '../schema/org-position-scopes';
 import { orgUnitMembers } from '../schema/org-unit-members';
-import type { OrgPosition, OrgPositionScope } from '../types';
+import type { OrgPosition } from '../types';
 
 /** Default positions seeded on first startup */
 const DEFAULT_POSITIONS = [
@@ -75,61 +74,8 @@ export class OrgPositionService {
     }
 
     await this.database.db
-      .delete(orgPositionScopes)
-      .where(eq(orgPositionScopes.positionId, id));
-    await this.database.db
       .delete(orgPositions)
       .where(withTenant(orgPositions, eq(orgPositions.id, id)));
-  }
-
-  // ---------------------------------------------------------------------------
-  // Scope management
-  // ---------------------------------------------------------------------------
-
-  async getScopes(positionId: string): Promise<OrgPositionScope[]> {
-    await this.findOneOrFail(positionId);
-    return this.database.db
-      .select()
-      .from(orgPositionScopes)
-      .where(eq(orgPositionScopes.positionId, positionId)) as Promise<OrgPositionScope[]>;
-  }
-
-  async setScopes(positionId: string, scopes: { entityType: string; scope: string }[]): Promise<OrgPositionScope[]> {
-    await this.findOneOrFail(positionId);
-
-    await this.database.db.transaction(async (tx) => {
-      await tx
-        .delete(orgPositionScopes)
-        .where(eq(orgPositionScopes.positionId, positionId));
-
-      if (scopes.length > 0) {
-        await tx
-          .insert(orgPositionScopes)
-          .values(scopes.map((s) => ({
-            positionId,
-            entityType: s.entityType,
-            scope: s.scope,
-          })));
-      }
-    });
-
-    return this.getScopes(positionId);
-  }
-
-  /**
-   * Get the scope for a specific position and entity type.
-   * Returns null if no scope is configured (caller should default to 'own').
-   */
-  async getScopeForEntity(positionId: string, entityType: string): Promise<string | null> {
-    const [row] = await this.database.db
-      .select({ scope: orgPositionScopes.scope })
-      .from(orgPositionScopes)
-      .where(and(
-        eq(orgPositionScopes.positionId, positionId),
-        eq(orgPositionScopes.entityType, entityType),
-      ))
-      .limit(1);
-    return row?.scope ?? null;
   }
 
   // ---------------------------------------------------------------------------

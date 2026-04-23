@@ -638,16 +638,17 @@ export interface DataAccessContext {
 
 
 /**
- * Resolves data access scope based on a user's org position.
- * Replaces TeamResolver with position-based scope resolution.
- * Injected into entity-engine as an optional global provider.
+ * Optional provider that expands hierarchical access scopes ("unit",
+ * "descendants") into the set of user-ids and org-unit-ids they cover for
+ * the acting user. The entity-engine asks the provider at query time; the
+ * provider supplies tree-shape data so the engine can emit WHERE IN clauses.
+ *
+ * This provider does not decide *which* scopes apply — that lives on
+ * role-permission grants. It only answers "what does this hierarchical scope
+ * expand to for this user right now?".
  */
 export interface PositionScopeProvider {
-  /** Returns the resolved scope string for a user on a given entity type */
-  resolveScope(userId: string, entityType: string): Promise<string>;
-  /** Returns the user IDs visible for the given scope, or null for 'all' or custom scopes */
   resolveUserIds(userId: string, scope: string): Promise<string[] | null>;
-  /** Returns the org unit IDs visible for the given scope, or null for 'all' or custom scopes */
   resolveOrgUnitIds(userId: string, scope: string): Promise<string[] | null>;
 }
 

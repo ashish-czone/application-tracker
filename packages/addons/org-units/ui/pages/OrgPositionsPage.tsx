@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { UserCog, Plus, Pencil, Trash2, ShieldCheck } from 'lucide-react';
+import { UserCog, Plus, Pencil, Trash2 } from 'lucide-react';
 import {
   Button,
   Skeleton,
@@ -17,7 +17,6 @@ import {
   ConfirmDialog,
 } from '@packages/ui';
 import { useOrgPositions, useCreateOrgPosition, useUpdateOrgPosition, useDeleteOrgPosition } from '../hooks';
-import { PositionScopesEditor } from '../components/PositionScopesEditor';
 import type { OrgPosition } from '../types';
 
 const positionSchema = z.object({
@@ -31,7 +30,6 @@ export function OrgPositionsPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [editing, setEditing] = useState<OrgPosition | null>(null);
   const [deleting, setDeleting] = useState<OrgPosition | null>(null);
-  const [scopesPosition, setScopesPosition] = useState<OrgPosition | null>(null);
 
   const createMutation = useCreateOrgPosition({ onSuccess: () => setAddOpen(false) });
   const updateMutation = useUpdateOrgPosition({ onSuccess: () => setEditing(null) });
@@ -107,15 +105,6 @@ export function OrgPositionsPage() {
               <div className="flex items-center gap-1">
                 <button
                   type="button"
-                  onClick={() => setScopesPosition(position)}
-                  className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
-                  aria-label={`Configure scopes for ${position.name}`}
-                  title="Data access scopes"
-                >
-                  <ShieldCheck className="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
                   onClick={() => openEdit(position)}
                   className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                   aria-label={`Edit ${position.name}`}
@@ -187,11 +176,6 @@ export function OrgPositionsPage() {
         onConfirm={() => deleting && deleteMutation.mutate(deleting.id)}
       />
 
-      {/* Scopes Editor Modal */}
-      <PositionScopesEditor
-        position={scopesPosition}
-        onClose={() => setScopesPosition(null)}
-      />
     </div>
   );
 }

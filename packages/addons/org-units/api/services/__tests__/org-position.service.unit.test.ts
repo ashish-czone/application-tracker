@@ -100,7 +100,7 @@ describe('OrgPositionService', () => {
       await expect(service.delete('pos-1')).rejects.toThrow(ConflictException);
     });
 
-    it('should delete position and its scopes when no members reference it', async () => {
+    it('should delete position when no members reference it', async () => {
       const position = { id: 'pos-1', name: 'Member', sortOrder: 0, createdAt: new Date(), updatedAt: new Date() };
       // findOneOrFail: select→from→where→limit
       mockDb._chain.limit.mockResolvedValueOnce([position]);
@@ -111,35 +111,7 @@ describe('OrgPositionService', () => {
 
       await service.delete('pos-1');
 
-      // Two deletes: scopes first, then position
-      expect(mockDb.delete).toHaveBeenCalledTimes(2);
-    });
-  });
-
-  describe('setScopes', () => {
-    it('should replace all scopes for a position', async () => {
-      const position = { id: 'pos-1', name: 'Manager', sortOrder: 0, createdAt: new Date(), updatedAt: new Date() };
-
-      const scopes = [
-        { entityType: 'candidates', scope: 'descendants' },
-        { entityType: 'job-openings', scope: 'unit' },
-      ];
-
-      // findOneOrFail for setScopes + findOneOrFail for getScopes
-      mockDb._chain.limit
-        .mockResolvedValueOnce([position])
-        .mockResolvedValueOnce([position]);
-
-      // getScopes: select→from→where (terminal)
-      mockDb._chain.where
-        .mockReturnValueOnce(mockDb._chain)  // 1st where (findOneOrFail in setScopes)
-        .mockReturnValueOnce(mockDb._chain)  // 2nd where (findOneOrFail in getScopes)
-        .mockResolvedValueOnce(scopes.map((s) => ({ positionId: 'pos-1', ...s }))); // 3rd where (getScopes query)
-
-      const result = await service.setScopes('pos-1', scopes);
-
-      expect(result).toHaveLength(2);
-      expect(mockDb.transaction).toHaveBeenCalled();
+      expect(mockDb.delete).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -201,45 +173,6 @@ describe('OrgPositionService', () => {
     });
   });
 
-  describe('getScopes', () => {
-    it('should return scopes for the position', async () => {
-      const position = { id: 'pos-1', name: 'Manager', sortOrder: 0, createdAt: new Date(), updatedAt: new Date() };
-      const scopes = [
-        { positionId: 'pos-1', entityType: 'candidates', scope: 'descendants' },
-        { positionId: 'pos-1', entityType: 'job-openings', scope: 'all' },
-      ];
-      // findOneOrFail
-      mockDb._chain.limit.mockResolvedValueOnce([position]);
-      // getScopes query: select→from→where (terminal)
-      mockDb._chain.where
-        .mockReturnValueOnce(mockDb._chain)  // findOneOrFail where → chain for .limit()
-        .mockResolvedValueOnce(scopes);       // getScopes where → resolves directly
-
-      const result = await service.getScopes('pos-1');
-
-      expect(result).toHaveLength(2);
-      expect(result[0].entityType).toBe('candidates');
-    });
-
-    it('should return empty array when no scopes configured', async () => {
-      const position = { id: 'pos-1', name: 'Member', sortOrder: 0, createdAt: new Date(), updatedAt: new Date() };
-      mockDb._chain.limit.mockResolvedValueOnce([position]);
-      mockDb._chain.where
-        .mockReturnValueOnce(mockDb._chain)
-        .mockResolvedValueOnce([]);
-
-      const result = await service.getScopes('pos-1');
-
-      expect(result).toEqual([]);
-    });
-
-    it('should throw NotFoundException if position not found', async () => {
-      mockDb._chain.limit.mockResolvedValueOnce([]);
-
-      await expect(service.getScopes('nonexistent')).rejects.toThrow(NotFoundException);
-    });
-  });
-
   describe('seedDefaults', () => {
     it('should insert default positions when none exist', async () => {
       // existing check: select→from→limit returns empty
@@ -261,21 +194,4 @@ describe('OrgPositionService', () => {
     });
   });
 
-  describe('getScopeForEntity', () => {
-    it('should return scope when configured', async () => {
-      mockDb._chain.limit.mockResolvedValueOnce([{ scope: 'descendants' }]);
-
-      const result = await service.getScopeForEntity('pos-1', 'candidates');
-
-      expect(result).toBe('descendants');
-    });
-
-    it('should return null when no scope configured', async () => {
-      mockDb._chain.limit.mockResolvedValueOnce([]);
-
-      const result = await service.getScopeForEntity('pos-1', 'unknown-entity');
-
-      expect(result).toBeNull();
-    });
-  });
 });
