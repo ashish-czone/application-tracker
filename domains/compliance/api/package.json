@@ -5,6 +5,7 @@
   "main": "index.ts",
   "scripts": {
     "test": "vitest run --passWithNoTests",
+    "test:integration": "vitest run --config vitest.integration.ts",
     "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
@@ -29,8 +30,17 @@
     "@packages/workflows": "workspace:*"
   },
   "devDependencies": {
+    "@packages/app-shell": "workspace:*",
+    "@packages/audit": "workspace:*",
+    "@packages/notifications": "workspace:*",
+    "@packages/platform-testing": "workspace:*",
+    "@packages/settings": "workspace:*",
+    "@types/pg": "^8.11.10",
+    "@types/supertest": "^6.0.2",
     "drizzle-kit": "^0.31.9",
     "drizzle-orm": "^0.45.1",
+    "pg": "^8.13.1",
+    "supertest": "^7.0.0",
     "typescript": "^5.7.0",
     "vitest": "^3.0.0"
   }
