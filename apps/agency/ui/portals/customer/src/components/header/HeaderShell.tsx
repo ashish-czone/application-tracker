@@ -1,11 +1,23 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Menu, X, ChevronDown } from 'lucide-react';
 import type { PublicMenuItemDto } from '@packages/menus-ui-frontend';
 import { cn } from '@/lib/cn';
 import { ThemeToggle } from './ThemeToggle';
+
+/**
+ * True when `pathname` matches (or is a child of) `href`. External
+ * URLs never match; the root href only matches the exact root.
+ */
+function isActivePath(pathname: string, href: string | null | undefined): boolean {
+  if (!href) return false;
+  if (/^https?:\/\//.test(href)) return false;
+  if (href === '/') return pathname === '/';
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
 
 export interface HeaderShellProps {
   siteName: string;
@@ -27,6 +39,8 @@ export interface HeaderShellProps {
 export function HeaderShell({ siteName, menuItems }: HeaderShellProps) {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
+  const pathname = usePathname() ?? '/';
+  const toggleRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -44,6 +58,19 @@ export function HeaderShell({ siteName, menuItems }: HeaderShellProps) {
     return () => {
       document.body.style.overflow = prev;
     };
+  }, [open]);
+
+  // Escape closes the drawer and returns focus to the toggle.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setOpen(false);
+        toggleRef.current?.focus();
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
   }, [open]);
 
   return (
@@ -64,15 +91,17 @@ export function HeaderShell({ siteName, menuItems }: HeaderShellProps) {
           {siteName}
         </Link>
 
-        <DesktopNav items={menuItems} />
+        <DesktopNav items={menuItems} pathname={pathname} />
 
         <div className="flex items-center gap-1">
           <ThemeToggle className="hidden md:inline-flex" />
           <button
+            ref={toggleRef}
             type="button"
             className="md:hidden inline-flex items-center justify-center w-10 h-10 rounded-md text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]"
             aria-label={open ? 'Close menu' : 'Open menu'}
             aria-expanded={open}
+            aria-controls="mobile-drawer"
             onClick={() => setOpen((v) => !v)}
           >
             {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -80,33 +109,46 @@ export function HeaderShell({ siteName, menuItems }: HeaderShellProps) {
         </div>
       </div>
 
-      <MobileDrawer open={open} items={menuItems} onClose={() => setOpen(false)} />
+      <MobileDrawer
+        open={open}
+        items={menuItems}
+        pathname={pathname}
+        onClose={() => setOpen(false)}
+      />
     </header>
   );
 }
 
-function DesktopNav({ items }: { items: PublicMenuItemDto[] }) {
+function DesktopNav({ items, pathname }: { items: PublicMenuItemDto[]; pathname: string }) {
   if (items.length === 0) return null;
   return (
     <nav className="hidden md:flex items-center gap-1" aria-label="Primary">
       <ul className="flex items-center gap-1">
         {items.map((item) => (
-          <DesktopItem key={item.id} item={item} />
+          <DesktopItem key={item.id} item={item} pathname={pathname} />
         ))}
       </ul>
     </nav>
   );
 }
 
-function DesktopItem({ item }: { item: PublicMenuItemDto }) {
+function DesktopItem({ item, pathname }: { item: PublicMenuItemDto; pathname: string }) {
   const hasChildren = item.children.length > 0;
   const href = item.href ?? '#';
   const isExternal = /^https?:\/\//.test(href) || item.target === '_blank';
+  const active =
+    isActivePath(pathname, item.href) ||
+    item.children.some((c) => isActivePath(pathname, c.href));
 
-  const linkClasses =
-    'px-3 py-2 rounded-md text-sm font-medium text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] transition-colors';
+  const linkClasses = cn(
+    'px-3 py-2 rounded-md text-sm font-medium transition-colors',
+    active
+      ? 'text-[hsl(var(--foreground))] bg-[hsl(var(--muted))]'
+      : 'text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]',
+  );
 
   if (!hasChildren) {
+    const ariaCurrent = active ? ('page' as const) : undefined;
     return (
       <li>
         {isExternal ? (
@@ -115,11 +157,12 @@ function DesktopItem({ item }: { item: PublicMenuItemDto }) {
             target={item.target === '_blank' ? '_blank' : undefined}
             rel={item.target === '_blank' ? 'noopener noreferrer' : undefined}
             className={linkClasses}
+            aria-current={ariaCurrent}
           >
             {item.label}
           </a>
         ) : (
-          <Link href={href} className={linkClasses}>
+          <Link href={href} className={linkClasses} aria-current={ariaCurrent}>
             {item.label}
           </Link>
         )}
@@ -152,6 +195,14 @@ function DesktopItem({ item }: { item: PublicMenuItemDto }) {
           {item.children.map((child) => {
             const childHref = child.href ?? '#';
             const childExternal = /^https?:\/\//.test(childHref) || child.target === '_blank';
+            const childActive = isActivePath(pathname, child.href);
+            const childAriaCurrent = childActive ? ('page' as const) : undefined;
+            const childClasses = cn(
+              'block px-3 py-2 rounded-md text-sm',
+              childActive
+                ? 'bg-[hsl(var(--muted))] text-[hsl(var(--foreground))]'
+                : 'hover:bg-[hsl(var(--muted))]',
+            );
             return (
               <li key={child.id}>
                 {childExternal ? (
@@ -159,15 +210,13 @@ function DesktopItem({ item }: { item: PublicMenuItemDto }) {
                     href={childHref}
                     target={child.target === '_blank' ? '_blank' : undefined}
                     rel={child.target === '_blank' ? 'noopener noreferrer' : undefined}
-                    className="block px-3 py-2 rounded-md text-sm hover:bg-[hsl(var(--muted))]"
+                    className={childClasses}
+                    aria-current={childAriaCurrent}
                   >
                     {child.label}
                   </a>
                 ) : (
-                  <Link
-                    href={childHref}
-                    className="block px-3 py-2 rounded-md text-sm hover:bg-[hsl(var(--muted))]"
-                  >
+                  <Link href={childHref} className={childClasses} aria-current={childAriaCurrent}>
                     {child.label}
                   </Link>
                 )}
@@ -183,14 +232,31 @@ function DesktopItem({ item }: { item: PublicMenuItemDto }) {
 function MobileDrawer({
   open,
   items,
+  pathname,
   onClose,
 }: {
   open: boolean;
   items: PublicMenuItemDto[];
+  pathname: string;
   onClose: () => void;
 }) {
+  const navRef = useRef<HTMLElement | null>(null);
+
+  // Move focus to the first interactive element inside the drawer on
+  // open so keyboard users land somewhere sensible. Guarded behind
+  // `open` so the focus doesn't jump on mount of the closed drawer.
+  useEffect(() => {
+    if (!open) return;
+    const el = navRef.current?.querySelector<HTMLElement>('a, button');
+    el?.focus();
+  }, [open]);
+
   return (
     <div
+      id="mobile-drawer"
+      role="dialog"
+      aria-modal={open ? 'true' : undefined}
+      aria-label="Primary navigation"
       className={cn(
         'md:hidden fixed inset-x-0 top-16 bottom-0 z-40 transition-transform duration-300',
         'bg-[hsl(var(--background))]',
@@ -198,10 +264,10 @@ function MobileDrawer({
       )}
       aria-hidden={!open}
     >
-      <nav className="px-6 py-8 h-full overflow-y-auto" aria-label="Primary mobile">
+      <nav ref={navRef} className="px-6 py-8 h-full overflow-y-auto" aria-label="Primary mobile">
         <ul className="flex flex-col gap-1">
           {items.map((item) => (
-            <MobileItem key={item.id} item={item} onNavigate={onClose} />
+            <MobileItem key={item.id} item={item} pathname={pathname} onNavigate={onClose} />
           ))}
         </ul>
         <div className="mt-6 pt-6 border-t border-[hsl(var(--border))] flex items-center gap-3">
@@ -215,15 +281,26 @@ function MobileDrawer({
 
 function MobileItem({
   item,
+  pathname,
   onNavigate,
 }: {
   item: PublicMenuItemDto;
+  pathname: string;
   onNavigate: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const hasChildren = item.children.length > 0;
   const href = item.href ?? '#';
   const isExternal = /^https?:\/\//.test(href) || item.target === '_blank';
+  const active =
+    isActivePath(pathname, item.href) ||
+    item.children.some((c) => isActivePath(pathname, c.href));
+  const ariaCurrent = active && !hasChildren ? ('page' as const) : undefined;
+
+  const topClasses = cn(
+    'block px-4 py-4 text-lg font-medium rounded-md',
+    active ? 'bg-[hsl(var(--muted))]' : 'hover:bg-[hsl(var(--muted))]',
+  );
 
   if (!hasChildren) {
     return (
@@ -234,16 +311,13 @@ function MobileItem({
             target={item.target === '_blank' ? '_blank' : undefined}
             rel={item.target === '_blank' ? 'noopener noreferrer' : undefined}
             onClick={onNavigate}
-            className="block px-4 py-4 text-lg font-medium rounded-md hover:bg-[hsl(var(--muted))]"
+            className={topClasses}
+            aria-current={ariaCurrent}
           >
             {item.label}
           </a>
         ) : (
-          <Link
-            href={href}
-            onClick={onNavigate}
-            className="block px-4 py-4 text-lg font-medium rounded-md hover:bg-[hsl(var(--muted))]"
-          >
+          <Link href={href} onClick={onNavigate} className={topClasses} aria-current={ariaCurrent}>
             {item.label}
           </Link>
         )}
@@ -256,7 +330,10 @@ function MobileItem({
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
-        className="w-full flex items-center justify-between px-4 py-4 text-lg font-medium rounded-md hover:bg-[hsl(var(--muted))]"
+        className={cn(
+          'w-full flex items-center justify-between px-4 py-4 text-lg font-medium rounded-md',
+          active ? 'bg-[hsl(var(--muted))]' : 'hover:bg-[hsl(var(--muted))]',
+        )}
         aria-expanded={expanded}
       >
         {item.label}
@@ -267,6 +344,14 @@ function MobileItem({
           {item.children.map((child) => {
             const childHref = child.href ?? '#';
             const childExternal = /^https?:\/\//.test(childHref) || child.target === '_blank';
+            const childActive = isActivePath(pathname, child.href);
+            const childAriaCurrent = childActive ? ('page' as const) : undefined;
+            const childClasses = cn(
+              'block px-4 py-3 text-base rounded-md',
+              childActive
+                ? 'bg-[hsl(var(--muted))] text-[hsl(var(--foreground))]'
+                : 'text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))]',
+            );
             return (
               <li key={child.id}>
                 {childExternal ? (
@@ -275,7 +360,8 @@ function MobileItem({
                     target={child.target === '_blank' ? '_blank' : undefined}
                     rel={child.target === '_blank' ? 'noopener noreferrer' : undefined}
                     onClick={onNavigate}
-                    className="block px-4 py-3 text-base text-[hsl(var(--muted-foreground))] rounded-md hover:bg-[hsl(var(--muted))]"
+                    className={childClasses}
+                    aria-current={childAriaCurrent}
                   >
                     {child.label}
                   </a>
@@ -283,7 +369,8 @@ function MobileItem({
                   <Link
                     href={childHref}
                     onClick={onNavigate}
-                    className="block px-4 py-3 text-base text-[hsl(var(--muted-foreground))] rounded-md hover:bg-[hsl(var(--muted))]"
+                    className={childClasses}
+                    aria-current={childAriaCurrent}
                   >
                     {child.label}
                   </Link>

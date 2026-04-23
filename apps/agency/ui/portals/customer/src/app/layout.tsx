@@ -5,6 +5,7 @@ import '../lib/register-blocks';
 import { SiteHeader } from '@/components/SiteHeader';
 import { SiteFooter } from '@/components/SiteFooter';
 import { JsonLd } from '@/components/JsonLd';
+import { Analytics } from '@/components/Analytics';
 import { fetchSiteSettings, type SiteSettings } from '@/lib/api';
 import { buildThemeStyleCss, NO_FLASH_SCRIPT } from '@/lib/theme';
 
@@ -66,9 +67,18 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body className="min-h-screen flex flex-col">
         <JsonLd data={organization} />
+        <a
+          href="#main"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-md focus:bg-[hsl(var(--foreground))] focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-[hsl(var(--background))]"
+        >
+          Skip to main content
+        </a>
         <SiteHeader />
-        <main className="flex-1">{children}</main>
+        <main id="main" tabIndex={-1} className="flex-1 outline-none">
+          {children}
+        </main>
         <SiteFooter />
+        <Analytics ga4={settings['analytics.ga4']} posthog={settings['analytics.posthog']} />
       </body>
     </html>
   );
