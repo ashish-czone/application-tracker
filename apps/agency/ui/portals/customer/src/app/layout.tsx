@@ -6,6 +6,7 @@ import { SiteHeader } from '@/components/SiteHeader';
 import { SiteFooter } from '@/components/SiteFooter';
 import { JsonLd } from '@/components/JsonLd';
 import { fetchSiteSettings, type SiteSettings } from '@/lib/api';
+import { buildThemeStyleCss, NO_FLASH_SCRIPT } from '@/lib/theme';
 
 const SITE_URL = process.env.SITE_URL ?? 'http://localhost:3100';
 
@@ -55,9 +56,14 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const settings = await fetchSiteSettings();
   const organization = buildOrganizationSchema(settings);
+  const themeCss = buildThemeStyleCss(settings.theme);
 
   return (
     <html lang="en" className={`${inter.variable} ${display.variable}`}>
+      <head>
+        <style dangerouslySetInnerHTML={{ __html: themeCss }} />
+        <script dangerouslySetInnerHTML={{ __html: NO_FLASH_SCRIPT }} />
+      </head>
       <body className="min-h-screen flex flex-col">
         <JsonLd data={organization} />
         <SiteHeader />

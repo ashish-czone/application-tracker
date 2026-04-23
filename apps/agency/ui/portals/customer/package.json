@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@domains/agency-contract": "workspace:*",
     "@packages/blocks-contract": "workspace:*",
     "@packages/blocks-ui": "workspace:*",
     "@packages/menus-ui-frontend": "workspace:*",

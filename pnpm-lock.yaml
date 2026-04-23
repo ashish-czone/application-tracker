@@ -403,6 +403,9 @@ importers:
 
   apps/agency/ui/portals/customer:
     dependencies:
+      '@domains/agency-contract':
+        specifier: workspace:*
+        version: link:../../../../../domains/agency/contract
       '@packages/blocks-contract':
         specifier: workspace:*
         version: link:../../../../../packages/platform/blocks/contract
