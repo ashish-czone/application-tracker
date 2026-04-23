@@ -20,12 +20,16 @@ describe('starter blocks', () => {
     registerStarterBlocks();
   });
 
-  it('registers hero, text, image, feature-list, cta', () => {
+  it('registers the full starter set (F4 + F4.4 blocks)', () => {
     expect(starterBlocks.map((b) => b.kind).sort()).toEqual([
+      'case-study-grid',
+      'contact-form-placeholder',
       'cta',
       'feature-list',
       'hero',
       'image',
+      'pricing',
+      'process-timeline',
       'text',
     ]);
     for (const block of starterBlocks) {
@@ -105,5 +109,93 @@ describe('starter blocks', () => {
     ]);
     expect(html).toContain('Split');
     expect(html).toContain('src="https://x/img.png"');
+  });
+
+  it('ProcessTimeline renders numbered steps from "Title :: Description" lines', () => {
+    const html = markup([
+      section({
+        id: 's1',
+        order: 0,
+        blockKind: 'process-timeline',
+        customFields: {
+          heading: 'How we work',
+          steps:
+            'Discover :: Kickoff workshop\nDesign :: Wireframes to hi-fi\nBuild :: Engineering sprints\nLaunch',
+        },
+      }),
+    ]);
+    expect(html).toContain('How we work');
+    expect(html).toContain('Discover');
+    expect(html).toContain('Kickoff workshop');
+    expect(html).toContain('Design');
+    expect(html).toContain('Build');
+    expect(html).toContain('Launch');
+    // Numbered 01..04
+    expect(html).toContain('01');
+    expect(html).toContain('04');
+  });
+
+  it('CaseStudyGrid renders each entry; drops malformed rows', () => {
+    const html = markup([
+      section({
+        id: 's1',
+        order: 0,
+        blockKind: 'case-study-grid',
+        customFields: {
+          entries:
+            'Brightline :: Freight tracking :: /work/brightline :: /img/a.jpg\nNorthshore :: HIPAA portal\nDanglingRowWithNoTitle',
+        },
+      }),
+    ]);
+    expect(html).toContain('Brightline');
+    expect(html).toContain('Freight tracking');
+    expect(html).toContain('href="/work/brightline"');
+    expect(html).toContain('src="/img/a.jpg"');
+    expect(html).toContain('Northshore');
+    expect(html).toContain('HIPAA portal');
+    expect(html).not.toContain('DanglingRowWithNoTitle');
+  });
+
+  it('Pricing parses tiers, marks featured, renders CTA row', () => {
+    const html = markup([
+      section({
+        id: 's1',
+        order: 0,
+        blockKind: 'pricing',
+        customFields: {
+          tiers:
+            'Starter\n$49/mo\nUnlimited projects\nEmail support\nGet started :: /signup\n\nPro (recommended)\n$99/mo\nEverything in Starter\nDedicated manager\nStart trial :: /signup?plan=pro',
+        },
+      }),
+    ]);
+    expect(html).toContain('Starter');
+    expect(html).toContain('$49/mo');
+    expect(html).toContain('Unlimited projects');
+    expect(html).toContain('Email support');
+    expect(html).toContain('Get started');
+    expect(html).toContain('href="/signup"');
+    expect(html).toContain('Pro');
+    expect(html).toContain('Recommended');
+    expect(html).not.toContain('(recommended)');
+    expect(html).toContain('$99/mo');
+    expect(html).toContain('Dedicated manager');
+    expect(html).toContain('href="/signup?plan=pro"');
+  });
+
+  it('ContactFormPlaceholder renders disabled fields with heading', () => {
+    const html = markup([
+      section({
+        id: 's1',
+        order: 0,
+        blockKind: 'contact-form-placeholder',
+        customFields: { heading: 'Talk to us', subheading: 'We reply within a day.' },
+      }),
+    ]);
+    expect(html).toContain('Talk to us');
+    expect(html).toContain('We reply within a day.');
+    expect(html).toContain('placeholder="Your full name"');
+    expect(html).toContain('placeholder="you@example.com"');
+    expect(html).toContain('Send message');
+    expect(html).toContain('disabled');
   });
 });
