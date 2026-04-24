@@ -11,7 +11,7 @@ import {
 import { useEntityHooks, useEntityLayout } from '@packages/entity-engine-ui';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 
-const ENTITY_TYPE = 'organization';
+const ENTITY_TYPE = 'organizations';
 
 export function OrganizationPage() {
   const orgHooks = useEntityHooks(ENTITY_TYPE);

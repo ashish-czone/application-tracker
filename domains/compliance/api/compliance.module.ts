@@ -1,7 +1,6 @@
 import { Module, type OnModuleInit } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
 import { AuditRegistryService } from '@packages/audit';
-import { DatabaseService, type DrizzleDB } from '@packages/database';
 import { EntityEngineModule } from '@packages/entity-engine';
 import { ActionRegistry } from '@packages/automation-contracts';
 import { RbacService } from '@packages/rbac';
@@ -23,26 +22,13 @@ import { LawHandlersModule } from './law-handlers/law-handlers.module';
 // compliance-tasks/ is the pre-filings implementation — retained for reference
 // while the filings migration is in-flight. New work goes to compliance-filings/.
 import { ComplianceFilingsModule } from './compliance-filings/compliance-filings.module';
-import { createOrganizationsEntityConfig } from './organizations/organizations.config';
+import { OrganizationsModule } from './organizations/organizations.module';
 
 import { ClientsService } from './clients/clients.service';
 import { ClientContactsService } from './client-contacts/client-contacts.service';
 import { ClientsController } from './clients/clients.controller';
 import { GenerateComplianceFilingsAction } from './automations/generate-compliance-filings.action';
 import { COMPLIANCE_PERMISSION_MANIFESTS } from './permissions';
-
-// Late-bound database handle: the organizations config references this via a
-// getter so singleton enforcement can query the DB at request time without
-// needing the live client at module-definition time. Populated in onModuleInit.
-let organizationsDbRef: DrizzleDB | null = null;
-const ORGANIZATIONS_CONFIG = createOrganizationsEntityConfig({
-  getDb: () => {
-    if (!organizationsDbRef) {
-      throw new Error('Organizations config accessed before module init — db not yet wired.');
-    }
-    return organizationsDbRef;
-  },
-});
 
 @Module({
   imports: [
@@ -55,7 +41,7 @@ const ORGANIZATIONS_CONFIG = createOrganizationsEntityConfig({
     ComplianceRulesModule,
     LawHandlersModule,
     ComplianceFilingsModule,
-    EntityEngineModule.forEntity(ORGANIZATIONS_CONFIG),
+    OrganizationsModule,
   ],
   controllers: [ClientsController],
   providers: [
@@ -77,14 +63,11 @@ export class ComplianceDomainModule implements OnModuleInit {
     private readonly contactsService: ClientContactsService,
     private readonly clientDormancyService: ClientDormancyService,
     private readonly rbac: RbacService,
-    private readonly databaseService: DatabaseService,
     private readonly auditRegistry: AuditRegistryService,
     private readonly moduleRef: ModuleRef,
   ) {}
 
   onModuleInit() {
-    organizationsDbRef = this.databaseService.db;
-
     this.actionRegistry.register(this.generateFilingsAction);
 
     // Wire the CLIENTS onTransition hook to the dormancy service. The hook

@@ -25,7 +25,7 @@ const COMPLIANCE_ENTITY_REGISTRATIONS: { slug: string; sensitiveFields?: string[
   { slug: 'compliance-rules' },
   { slug: 'compliance-filings' },
   { slug: 'law-handlers' },
-  { slug: 'organization' },
+  { slug: 'organizations' },
 ];
 
 /**
