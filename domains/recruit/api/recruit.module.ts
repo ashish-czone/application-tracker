@@ -4,42 +4,38 @@ import { TASKS_CONFIG, TasksModule } from '@packages/tasks';
 
 import { SharedModule } from './shared/shared.module';
 
-import { candidatesConfig } from './candidates/candidates.config';
+import { CandidatesModule } from './candidates/candidates.module';
 
-import { CLIENTS_CONFIG } from './clients/clients.config';
+import { ClientsModule } from './clients/clients.module';
 
-import { CONTACTS_CONFIG } from './contacts/contacts.config';
+import { ContactsModule } from './contacts/contacts.module';
 import { VendorsModule } from './vendors/vendors.module';
 
-import { JOB_OPENINGS_CONFIG } from './job-openings/job-openings.config';
+import { JobOpeningsModule } from './job-openings/job-openings.module';
 
 import { ApplicationsModule } from './applications/applications.module';
-import { APPLICATIONS_CONFIG } from './applications/applications.config';
 
-import { INTERVIEWS_CONFIG } from './interviews/interviews.config';
+import { InterviewsModule } from './interviews/interviews.module';
 
 import { OffersModule } from './offers/offers.module';
-import { offersConfig } from './offers/offers.config';
 
 @Module({
   imports: [
     SharedModule,
 
-    EntityEngineModule.forEntity(candidatesConfig),
+    CandidatesModule,
 
-    EntityEngineModule.forEntity(CLIENTS_CONFIG),
+    ClientsModule,
 
-    EntityEngineModule.forEntity(CONTACTS_CONFIG),
+    ContactsModule,
     VendorsModule,
 
-    EntityEngineModule.forEntity(JOB_OPENINGS_CONFIG),
+    JobOpeningsModule,
 
-    EntityEngineModule.forEntity(APPLICATIONS_CONFIG),
     ApplicationsModule,
 
-    EntityEngineModule.forEntity(INTERVIEWS_CONFIG),
+    InterviewsModule,
 
-    EntityEngineModule.forEntity(offersConfig),
     OffersModule,
 
     EntityEngineModule.forEntity(TASKS_CONFIG),
