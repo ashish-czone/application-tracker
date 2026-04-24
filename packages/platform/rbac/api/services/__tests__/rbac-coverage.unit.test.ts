@@ -92,7 +92,16 @@ describe('RbacService — additional coverage', () => {
       getByModule: vi.fn(),
       has: vi.fn(),
     } as any;
-    service = new RbacService(mockDb as any, permissionRegistry);
+    const manifestRegistry = {
+      register: vi.fn(),
+      registerMany: vi.fn(),
+      get: vi.fn(),
+      has: vi.fn(),
+      list: vi.fn(() => []),
+      listByModule: vi.fn(() => []),
+      getSupportedScopes: vi.fn(() => undefined),
+    } as any;
+    service = new RbacService(mockDb as any, permissionRegistry, manifestRegistry);
   });
 
   // ----------------------------------------------------------------

@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { RbacService } from '../rbac.service';
 import { PermissionRegistryService } from '../permission-registry.service';
+import { PermissionManifestRegistry } from '../../permission-manifest';
 
 // Mock database helpers
 function createMockDb() {
@@ -36,13 +37,15 @@ function createMockDatabaseService(mockDb: ReturnType<typeof createMockDb>) {
 describe('RbacService', () => {
   let service: RbacService;
   let permissionRegistry: PermissionRegistryService;
+  let manifestRegistry: PermissionManifestRegistry;
   let mockDb: ReturnType<typeof createMockDb>;
 
   beforeEach(() => {
     mockDb = createMockDb();
     const databaseService = createMockDatabaseService(mockDb);
     permissionRegistry = new PermissionRegistryService();
-    service = new RbacService(databaseService, permissionRegistry);
+    manifestRegistry = new PermissionManifestRegistry();
+    service = new RbacService(databaseService, permissionRegistry, manifestRegistry);
   });
 
   describe('createRole', () => {
@@ -429,6 +432,89 @@ describe('RbacService', () => {
         action: 'create',
         description: 'Create candidates',
       });
+    });
+  });
+
+  describe('setRolePermissions — manifest scope validation', () => {
+    const role = {
+      id: 'role-1',
+      name: 'preparer',
+      userType: null,
+      isDefault: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    beforeEach(() => {
+      (service as any).database.db.transaction = vi.fn().mockImplementation(async (fn: any) => fn(mockDb));
+      vi.spyOn(service, 'findRoleById').mockResolvedValue(role);
+      vi.spyOn(service, 'getRolePermissions').mockResolvedValue({});
+    });
+
+    it('allows scopes that are in the manifest supportedScopes', async () => {
+      service.registerManifests([
+        {
+          slug: 'filings.pickup',
+          module: 'filings',
+          action: 'pickup',
+          label: 'Pick up filing',
+          supportedScopes: ['unit', 'unassigned_in_unit'],
+        },
+      ]);
+
+      await expect(
+        service.setRolePermissions('role-1', [
+          { name: 'filings.pickup', scopes: [{ type: 'unit' }] },
+        ]),
+      ).resolves.toBeUndefined();
+    });
+
+    it('rejects a scope type not in supportedScopes', async () => {
+      service.registerManifests([
+        {
+          slug: 'filings.pickup',
+          module: 'filings',
+          action: 'pickup',
+          label: 'Pick up filing',
+          supportedScopes: ['unit', 'unassigned_in_unit'],
+        },
+      ]);
+
+      await expect(
+        service.setRolePermissions('role-1', [
+          { name: 'filings.pickup', scopes: [{ type: 'own' }] },
+        ]),
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it("rejects 'any' when the manifest doesn't list it", async () => {
+      service.registerManifests([
+        {
+          slug: 'filings.pickup',
+          module: 'filings',
+          action: 'pickup',
+          label: 'Pick up filing',
+          supportedScopes: ['unit'],
+        },
+      ]);
+
+      await expect(
+        service.setRolePermissions('role-1', ['filings.pickup']), // string form → scope 'any'
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it('allows unregistered slugs (permissive while manifests are rolled out)', async () => {
+      await expect(
+        service.setRolePermissions('role-1', [
+          { name: 'not-yet-registered.read', scopes: [{ type: 'own' }] },
+        ]),
+      ).resolves.toBeUndefined();
+    });
+
+    it("allows wildcard '*' regardless of manifest state", async () => {
+      await expect(
+        service.setRolePermissions('role-1', [{ name: '*' }]),
+      ).resolves.toBeUndefined();
     });
   });
 
