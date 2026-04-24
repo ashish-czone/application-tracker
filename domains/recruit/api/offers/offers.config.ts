@@ -107,7 +107,7 @@ export const offersConfig: EntityConfig = {
   ],
 
   dataAccess: {
-    ownerField: 'createdBy',
+    anchors: { creator: 'createdBy' },
   },
 
   recipientFields: {

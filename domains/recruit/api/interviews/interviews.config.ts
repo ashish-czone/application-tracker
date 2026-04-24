@@ -87,7 +87,7 @@ export const INTERVIEWS_CONFIG: EntityConfig = {
   ],
 
   dataAccess: {
-    ownerField: 'createdBy',
+    anchors: { creator: 'createdBy' },
     scopes: [
       {
         key: 'my-job-interviews',

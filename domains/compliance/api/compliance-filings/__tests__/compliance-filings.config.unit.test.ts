@@ -129,19 +129,12 @@ describe('COMPLIANCE_FILINGS_CONFIG', () => {
     const dataAccess = COMPLIANCE_FILINGS_CONFIG.dataAccess!;
 
     it('anchors own/assigned/unit scopes on the filing columns', () => {
-      // `own` resolves via createdByField; `assigned` via assigneeField;
-      // `unit`/`descendants` via teamField. Renaming any of these columns
-      // would silently break scope resolution — this test is the tripwire.
-      expect(dataAccess.createdByField).toBe('createdBy');
-      expect(dataAccess.assigneeField).toBe('assigneeId');
-      expect(dataAccess.teamField).toBe('assigneeTeamId');
-    });
-
-    it('does not carry the legacy ownerField alias', () => {
-      // ownerField was the pre-scope-v2 alias for createdByField. New code
-      // should use the explicit name — keep the deprecated alias out of new
-      // configs so grep hits are unambiguous when we later remove it.
-      expect((dataAccess as { ownerField?: unknown }).ownerField).toBeUndefined();
+      // `own` resolves via the creator anchor; `assigned` via assignee;
+      // `unit`/`descendants` via team. Renaming any of these columns would
+      // silently break scope resolution — this test is the tripwire.
+      expect(dataAccess.anchors?.creator).toBe('createdBy');
+      expect(dataAccess.anchors?.assignee).toBe('assigneeId');
+      expect(dataAccess.anchors?.team).toBe('assigneeTeamId');
     });
 
     it('registers the unassigned_in_unit custom scope for pickup', () => {

@@ -29,8 +29,11 @@ export const TASKS_CONFIG = defineEntity({
   },
 
   dataAccess: {
-    ownerField: 'assigneeId',
-    teamField: 'assigneeTeamId',
+    // Tasks are anchored on the current assignee / assignee's team rather
+    // than the creator — `own` on a task means "assigned to me," not
+    // "I created it." Mapping `creator -> assigneeId` preserves that
+    // pre-refactor behaviour; adjust if the semantic is ever reviewed.
+    anchors: { creator: 'assigneeId', assignee: 'assigneeId', team: 'assigneeTeamId' },
     scopes: [
       {
         // The personal queue shows tasks the user owns directly, plus tasks

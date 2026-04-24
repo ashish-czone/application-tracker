@@ -90,14 +90,16 @@ export const COMPLIANCE_FILINGS_CONFIG = defineEntity({
   },
 
   dataAccess: {
-    // Ownership anchors drive the built-in scope predicates:
-    //   own        → createdBy = actor
-    //   assigned   → assigneeId = actor
-    //   unit       → assigneeTeamId in actor's units
-    //   descendants→ assigneeTeamId in actor's unit subtree
-    createdByField: 'createdBy',
-    assigneeField: 'assigneeId',
-    teamField: 'assigneeTeamId',
+    // Anchors drive the registered scope resolvers:
+    //   own        → creator anchor  → createdBy = actor
+    //   assigned   → assignee anchor → assigneeId = actor
+    //   unit       → team anchor     → assigneeTeamId in actor's units
+    //   descendants→ team anchor     → assigneeTeamId in actor's unit subtree
+    anchors: {
+      creator: 'createdBy',
+      assignee: 'assigneeId',
+      team: 'assigneeTeamId',
+    },
     scopes: [
       {
         // Pickup pool: filings unclaimed (assigneeId IS NULL) in a team the

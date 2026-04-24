@@ -45,7 +45,7 @@ export const VENDORS_CONFIG: EntityConfig = {
     searchFields: ['vendorName', 'email'],
   },
 
-  dataAccess: { ownerField: 'createdBy' },
+  dataAccess: { anchors: { creator: 'createdBy' } },
 
   recipientFields: {
     createdBy: { label: 'Created By' },

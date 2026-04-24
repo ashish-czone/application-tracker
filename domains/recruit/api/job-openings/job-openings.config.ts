@@ -254,7 +254,7 @@ export const JOB_OPENINGS_CONFIG: EntityConfig = {
   },
 
   dataAccess: {
-    ownerField: 'createdBy',
+    anchors: { creator: 'createdBy' },
     scopes: [
       {
         key: 'hiring-manager',

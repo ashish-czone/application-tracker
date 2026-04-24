@@ -102,7 +102,7 @@ export const candidatesConfig: EntityConfig = {
   },
 
   dataAccess: {
-    ownerField: 'createdBy',
+    anchors: { creator: 'createdBy' },
   },
 
   ui: {
