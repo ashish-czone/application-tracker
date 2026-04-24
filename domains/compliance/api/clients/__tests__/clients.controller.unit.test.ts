@@ -5,7 +5,18 @@ import type { ClientContactsService } from '../../client-contacts/client-contact
 import type { ClientRegistrationsService } from '../../client-registrations/client-registrations.service';
 
 describe('ClientsController', () => {
-  let clientsService: { createWithContacts: ReturnType<typeof vi.fn> };
+  let clientsService: {
+    createWithContacts: ReturnType<typeof vi.fn>;
+    list: ReturnType<typeof vi.fn>;
+    findOne: ReturnType<typeof vi.fn>;
+    create: ReturnType<typeof vi.fn>;
+    update: ReturnType<typeof vi.fn>;
+    softDelete: ReturnType<typeof vi.fn>;
+    clone: ReturnType<typeof vi.fn>;
+    restore: ReturnType<typeof vi.fn>;
+    getListLayout: ReturnType<typeof vi.fn>;
+    transition: ReturnType<typeof vi.fn>;
+  };
   let contactsService: { setPrimary: ReturnType<typeof vi.fn> };
   let registrationsService: {
     registerMany: ReturnType<typeof vi.fn>;
@@ -15,7 +26,18 @@ describe('ClientsController', () => {
   let controller: ClientsController;
 
   beforeEach(() => {
-    clientsService = { createWithContacts: vi.fn().mockResolvedValue({ client: {}, contacts: [] }) };
+    clientsService = {
+      createWithContacts: vi.fn().mockResolvedValue({ client: {}, contacts: [] }),
+      list: vi.fn().mockResolvedValue({ data: [], meta: {} }),
+      findOne: vi.fn().mockResolvedValue({ id: 'cid-1' }),
+      create: vi.fn().mockResolvedValue({ id: 'cid-1' }),
+      update: vi.fn().mockResolvedValue({ id: 'cid-1' }),
+      softDelete: vi.fn().mockResolvedValue(undefined),
+      clone: vi.fn().mockResolvedValue({ id: 'cid-2' }),
+      restore: vi.fn().mockResolvedValue({ id: 'cid-1' }),
+      getListLayout: vi.fn().mockResolvedValue({ columns: [] }),
+      transition: vi.fn().mockResolvedValue({ id: 'cid-1', status: 'active' }),
+    };
     contactsService = { setPrimary: vi.fn().mockResolvedValue(undefined) };
     registrationsService = {
       registerMany: vi.fn().mockResolvedValue([]),
@@ -27,6 +49,67 @@ describe('ClientsController', () => {
       contactsService as unknown as ClientContactsService,
       registrationsService as unknown as ClientRegistrationsService,
     );
+  });
+
+  describe('CRUD', () => {
+    it('list delegates with parsed page/limit and includeDeleted flag', async () => {
+      await controller.list({ page: '2', limit: '50', includeDeleted: 'true' });
+      expect(clientsService.list).toHaveBeenCalledWith(
+        { page: 2, limit: 50, includeDeleted: true },
+        undefined,
+      );
+    });
+
+    it('findOne requires clients.read', () => {
+      const permission = Reflect.getMetadata('requiredPermission', ClientsController.prototype.findOne);
+      expect(permission).toBe('clients.read');
+    });
+
+    it('create parses body and forwards actor id', async () => {
+      await controller.create({ name: 'Acme', legalName: 'Acme Pvt.' }, { userId: 'user-1' } as never);
+      expect(clientsService.create).toHaveBeenCalledWith(
+        expect.objectContaining({ name: 'Acme', legalName: 'Acme Pvt.' }),
+        'user-1',
+      );
+    });
+
+    it('update parses body and forwards access context', async () => {
+      const accessCtx = { userId: 'user-1' } as never;
+      await controller.update('cid-1', { name: 'New' }, { userId: 'user-1' } as never, accessCtx);
+      expect(clientsService.update).toHaveBeenCalledWith('cid-1', expect.objectContaining({ name: 'New' }), 'user-1', accessCtx);
+    });
+
+    it('delete requires clients.delete', () => {
+      const permission = Reflect.getMetadata('requiredPermission', ClientsController.prototype.delete);
+      expect(permission).toBe('clients.delete');
+    });
+
+    it('transition parses body and forwards reason/comment', async () => {
+      await controller.transition(
+        'cid-1',
+        { fieldKey: 'status', to: 'dormant', reason: 'Ceased', comment: 'Client dormantised' },
+        { userId: 'user-1' } as never,
+      );
+      expect(clientsService.transition).toHaveBeenCalledWith(
+        'cid-1',
+        'status',
+        'dormant',
+        'user-1',
+        { reason: 'Ceased', comment: 'Client dormantised' },
+        undefined,
+      );
+    });
+
+    it('transition rejects bodies missing fieldKey', () => {
+      expect(() =>
+        controller.transition('cid-1', { to: 'dormant' }, { userId: 'user-1' } as never),
+      ).toThrow();
+    });
+
+    it('transition requires clients.update', () => {
+      const permission = Reflect.getMetadata('requiredPermission', ClientsController.prototype.transition);
+      expect(permission).toBe('clients.update');
+    });
   });
 
   describe('createWithContacts', () => {

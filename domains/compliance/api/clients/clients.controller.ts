@@ -1,19 +1,36 @@
-import { BadRequestException, Body, Controller, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Post, Put, Query } from '@nestjs/common';
-import { RequirePermission } from '@packages/rbac';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Put,
+  Query,
+} from '@nestjs/common';
+import {
+  AccessContext,
+  RequirePermission,
+  type DataAccessContext,
+} from '@packages/rbac';
 import { CurrentUser, type JwtPayload } from '@packages/auth';
 import { ClientsService } from './clients.service';
 import { ClientContactsService } from '../client-contacts/client-contacts.service';
 import { ClientRegistrationsService } from '../client-registrations/client-registrations.service';
+import {
+  CreateClientSchema,
+  TransitionClientSchema,
+  UpdateClientSchema,
+} from './clients.dto';
 import { CreateClientWithContactsDto } from './dto/create-with-contacts.dto';
 import { RegisterLawsDto } from './dto/register-laws.dto';
 import { DeactivateRegistrationDto } from './dto/deactivate-registration.dto';
 
-/**
- * Custom client endpoints that layer on top of the generic entity-engine
- * controller auto-registered for `clients` and `client-contacts`. The
- * transactional create-with-contacts and the atomic primary-contact flip
- * cannot be expressed through the generic CRUD, so they live here.
- */
 @Controller('clients')
 export class ClientsController {
   constructor(
@@ -21,6 +38,101 @@ export class ClientsController {
     private readonly contactsService: ClientContactsService,
     private readonly registrationsService: ClientRegistrationsService,
   ) {}
+
+  // ---- Generic CRUD --------------------------------------------------------
+
+  @Get('layout/list')
+  @RequirePermission('clients.read')
+  getListLayout() {
+    return this.clientsService.getListLayout();
+  }
+
+  @Get()
+  @RequirePermission('clients.read')
+  list(@Query() query: Record<string, unknown>, @AccessContext() accessCtx?: DataAccessContext) {
+    const parsed = {
+      ...query,
+      page: query.page ? Number(query.page) : undefined,
+      limit: query.limit ? Number(query.limit) : undefined,
+      includeDeleted: query.includeDeleted === 'true',
+    };
+    return this.clientsService.list(parsed, accessCtx);
+  }
+
+  @Get(':id')
+  @RequirePermission('clients.read')
+  findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+    @AccessContext() accessCtx?: DataAccessContext,
+  ) {
+    return this.clientsService.findOne(id, accessCtx);
+  }
+
+  @Post()
+  @RequirePermission('clients.create')
+  @HttpCode(HttpStatus.CREATED)
+  create(@Body() body: unknown, @CurrentUser() user: JwtPayload) {
+    const input = CreateClientSchema.parse(body);
+    return this.clientsService.create(input, user.userId);
+  }
+
+  @Patch(':id')
+  @RequirePermission('clients.update')
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: unknown,
+    @CurrentUser() user: JwtPayload,
+    @AccessContext() accessCtx?: DataAccessContext,
+  ) {
+    const input = UpdateClientSchema.parse(body);
+    return this.clientsService.update(id, input, user.userId, accessCtx);
+  }
+
+  @Delete(':id')
+  @RequirePermission('clients.delete')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async delete(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: JwtPayload,
+    @AccessContext() accessCtx?: DataAccessContext,
+  ) {
+    await this.clientsService.softDelete(id, user.userId, accessCtx);
+  }
+
+  @Post(':id/transition')
+  @RequirePermission('clients.update')
+  @HttpCode(HttpStatus.CREATED)
+  transition(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: unknown,
+    @CurrentUser() user: JwtPayload,
+    @AccessContext() accessCtx?: DataAccessContext,
+  ) {
+    const input = TransitionClientSchema.parse(body);
+    return this.clientsService.transition(
+      id,
+      input.fieldKey,
+      input.to,
+      user.userId,
+      { reason: input.reason, comment: input.comment },
+      accessCtx,
+    );
+  }
+
+  @Post(':id/clone')
+  @RequirePermission('clients.create')
+  @HttpCode(HttpStatus.CREATED)
+  clone(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: JwtPayload) {
+    return this.clientsService.clone(id, user.userId);
+  }
+
+  @Post(':id/restore')
+  @RequirePermission('clients.update')
+  restore(@Param('id', ParseUUIDPipe) id: string) {
+    return this.clientsService.restore(id);
+  }
+
+  // ---- Composite create + cross-entity endpoints ---------------------------
 
   @Post('with-contacts')
   @HttpCode(HttpStatus.CREATED)

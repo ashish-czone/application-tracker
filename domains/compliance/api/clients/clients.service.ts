@@ -1,9 +1,12 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Inject, Injectable, BadRequestException } from '@nestjs/common';
 import { DatabaseService } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
+import { EntityService, type BaseListQuery } from '@packages/entity-engine';
+import type { DataAccessContext } from '@packages/rbac';
 import { clients } from '../schema/clients';
 import { clientContacts } from '../schema/client-contacts';
 import { CLIENTS_CREATED, CLIENT_CONTACTS_CREATED } from '../events/types';
+import { ClientDormancyService } from './client-dormancy.service';
 
 export interface ClientInput {
   name: string;
@@ -59,12 +62,116 @@ export interface CreateWithContactsResult {
   contacts: Contact[];
 }
 
+/**
+ * Merged service: CRUD delegates for the entity engine + the transactional
+ * status transition (with dormancy cascade) + the composite
+ * `createWithContacts` flow. Generic CRUD routes through the engine; the
+ * transition method composes the engine's split primitives
+ * (`validateTransition` / `applyTransition` / `emitTransitionEvent`) so the
+ * dormancy cascade commits atomically with the status flip — no engine hook
+ * indirection.
+ */
 @Injectable()
 export class ClientsService {
   constructor(
+    @Inject('ENTITY_SERVICE_clients') private readonly entityService: EntityService,
     private readonly database: DatabaseService,
     private readonly events: DomainEventEmitter,
+    private readonly dormancy: ClientDormancyService,
   ) {}
+
+  // ---- CRUD delegates (vendors template) -----------------------------------
+
+  list(query: BaseListQuery, accessCtx?: DataAccessContext) {
+    return this.entityService.list(query, accessCtx);
+  }
+
+  findOne(id: string, accessCtx?: DataAccessContext) {
+    return this.entityService.findOneOrFail(id, accessCtx);
+  }
+
+  create(input: Record<string, unknown>, actorId: string) {
+    return this.entityService.create(input, actorId);
+  }
+
+  update(
+    id: string,
+    input: Record<string, unknown>,
+    actorId: string,
+    accessCtx?: DataAccessContext,
+  ) {
+    return this.entityService.update(id, input, actorId, accessCtx);
+  }
+
+  softDelete(id: string, actorId: string, accessCtx?: DataAccessContext) {
+    return this.entityService.softDelete(id, actorId, accessCtx);
+  }
+
+  clone(id: string, actorId: string) {
+    return this.entityService.clone(id, actorId);
+  }
+
+  restore(id: string) {
+    return this.entityService.restore(id);
+  }
+
+  getListLayout() {
+    return this.entityService.getListLayout();
+  }
+
+  // ---- Workflow transition with service-owned cascade tx -------------------
+
+  /**
+   * Transition a workflow field on a client. Uses the engine's split
+   * primitives (validate → apply → emit) so this service owns the tx and
+   * can piggyback the dormancy cascade on the same tx atomically.
+   *
+   * When `status` flips `active → dormant`, every non-terminal compliance
+   * filing for the client is auto-cancelled (Q6). The cascade runs inside
+   * the same tx as the status update + workflow history — throwing rolls
+   * the whole transition back.
+   */
+  async transition(
+    id: string,
+    fieldKey: string,
+    toState: string,
+    actorId: string,
+    options?: { reason?: string; comment?: string },
+    accessCtx?: DataAccessContext,
+  ): Promise<Record<string, unknown>> {
+    const ctx = await this.entityService.validateTransition(
+      id,
+      fieldKey,
+      toState,
+      actorId,
+      options,
+      accessCtx,
+    );
+
+    const isDormantisation =
+      ctx.fieldKey === 'status' &&
+      ctx.fromState === 'active' &&
+      ctx.toState === 'dormant';
+
+    let cancelledFilingIds: string[] = [];
+
+    await this.database.db.transaction(async (tx) => {
+      await this.entityService.applyTransition(ctx, tx);
+      if (isDormantisation) {
+        const result = await this.dormancy.cancelInFlightFilings(ctx, tx);
+        cancelledFilingIds = result.cancelledFilingIds;
+      }
+    });
+
+    this.entityService.emitTransitionEvent(ctx);
+    if (isDormantisation) {
+      this.dormancy.emitCascadeEvent(ctx, cancelledFilingIds);
+    }
+
+    return this.entityService.findOneOrFail(id);
+  }
+
+  // ---- Composite create-with-contacts --------------------------------------
 
   /**
    * Create a client together with its contacts in a single transaction.
