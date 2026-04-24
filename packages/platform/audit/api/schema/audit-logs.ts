@@ -1,6 +1,5 @@
 import { pgTable, text, jsonb, timestamp, index } from 'drizzle-orm/pg-core';
 import { randomUUID } from 'crypto';
-import { users } from '@packages/database/schema';
 
 export const auditLogs = pgTable('audit_logs', {
   id: text('id').primaryKey().$defaultFn(() => randomUUID()),
@@ -8,7 +7,7 @@ export const auditLogs = pgTable('audit_logs', {
   entityId: text('entity_id').notNull(),
   action: text('action').notNull(),
   eventName: text('event_name').notNull(),
-  actorId: text('actor_id').references(() => users.id),
+  actorId: text('actor_id'),
   before: jsonb('before'),
   after: jsonb('after'),
   changes: jsonb('changes'),

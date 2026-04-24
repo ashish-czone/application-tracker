@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto';
 import { pgTable, text, timestamp, index } from 'drizzle-orm/pg-core';
-import { users } from '@packages/database/schema';
 import { softDeleteColumns } from '@packages/soft-delete';
 import { hierarchyColumns } from '@packages/hierarchy/schema';
 import { orderableColumns } from '@packages/orderable/schema';
@@ -25,7 +24,7 @@ export const menuItems = pgTable('menu_items', {
   target: text('target').notNull().default('_self'),
   ...hierarchyColumns(),
   ...orderableColumns(),
-  createdBy: text('created_by').notNull().references(() => users.id),
+  createdBy: text('created_by').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' })
     .notNull()

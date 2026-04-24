@@ -1,6 +1,5 @@
 import { pgTable, text, timestamp, index, uniqueIndex } from 'drizzle-orm/pg-core';
 import { randomUUID } from 'crypto';
-import { users } from '@packages/database/schema';
 
 export const applications = pgTable('applications', {
   id: text('id').primaryKey().$defaultFn(() => randomUUID()),
@@ -10,10 +9,10 @@ export const applications = pgTable('applications', {
   // Core
   stage: text('stage').default('new'),
   source: text('source'),
-  referredBy: text('referred_by').references(() => users.id),
+  referredBy: text('referred_by'),
   notes: text('notes'),
   // Audit
-  createdBy: text('created_by').notNull().references(() => users.id),
+  createdBy: text('created_by').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }).notNull().$defaultFn(() => new Date()).$onUpdate(() => new Date()),
   deletedAt: timestamp('deleted_at', { withTimezone: true, mode: 'date' }),

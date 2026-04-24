@@ -1,7 +1,6 @@
 import { pgTable, text, integer, jsonb, timestamp, index, uniqueIndex } from 'drizzle-orm/pg-core';
 import { randomUUID } from 'crypto';
 import { sql } from 'drizzle-orm';
-import { users } from '@packages/database/schema';
 import { softDeleteColumns } from '@packages/soft-delete';
 
 export const orders = pgTable('orders', {
@@ -15,7 +14,7 @@ export const orders = pgTable('orders', {
   notes: text('notes'),
   metadata: jsonb('metadata'),
   expiresAt: timestamp('expires_at', { withTimezone: true, mode: 'date' }),
-  createdBy: text('created_by').notNull().references(() => users.id),
+  createdBy: text('created_by').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }).notNull().$defaultFn(() => new Date()).$onUpdate(() => new Date()),
   ...softDeleteColumns(),

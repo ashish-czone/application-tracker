@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto';
 import { pgTable, text, integer, timestamp, index, uniqueIndex } from 'drizzle-orm/pg-core';
-import { users } from '@packages/database/schema';
 import { softDeleteColumns } from '@packages/soft-delete';
 
 export const mediaAssets = pgTable('media_assets', {
@@ -25,7 +24,7 @@ export const mediaAssets = pgTable('media_assets', {
   altText: text('alt_text'),
   caption: text('caption'),
 
-  createdBy: text('created_by').notNull().references(() => users.id),
+  createdBy: text('created_by').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' })
     .notNull()

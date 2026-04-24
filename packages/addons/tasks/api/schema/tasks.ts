@@ -1,7 +1,6 @@
 import { pgTable, text, date, timestamp, index, uniqueIndex } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
-import { users } from '@packages/database/schema';
 import { orgUnits } from '@packages/org-units/schema/org-units';
 import { softDeleteColumns } from '@packages/soft-delete';
 
@@ -11,14 +10,14 @@ export const tasks = pgTable('tasks', {
   description: text('description'),
   status: text('status').notNull().default('pending'),
   priority: text('priority').notNull().default('medium'),
-  assigneeId: text('assignee_id').references(() => users.id),
+  assigneeId: text('assignee_id'),
   assigneeTeamId: text('assignee_team_id').notNull().references(() => orgUnits.id),
   dueDate: date('due_date', { mode: 'string' }),
   completedAt: timestamp('completed_at', { withTimezone: true, mode: 'date' }),
   relatedEntityType: text('related_entity_type'),
   relatedEntityId: text('related_entity_id'),
   externalKey: text('external_key'),
-  createdBy: text('created_by').notNull().references(() => users.id),
+  createdBy: text('created_by').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }).notNull().$defaultFn(() => new Date()).$onUpdate(() => new Date()),
   ...softDeleteColumns(),

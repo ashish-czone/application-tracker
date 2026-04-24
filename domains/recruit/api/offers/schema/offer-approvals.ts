@@ -1,12 +1,11 @@
 import { pgTable, text, timestamp, index, uniqueIndex } from 'drizzle-orm/pg-core';
 import { randomUUID } from 'crypto';
-import { users } from '@packages/database/schema';
 import { offers } from './offers';
 
 export const offerApprovals = pgTable('offer_approvals', {
   id: text('id').primaryKey().$defaultFn(() => randomUUID()),
   offerId: text('offer_id').notNull().references(() => offers.id, { onDelete: 'cascade' }),
-  approverId: text('approver_id').notNull().references(() => users.id),
+  approverId: text('approver_id').notNull(),
   decision: text('decision').notNull().default('pending'), // pending | approved | rejected
   comment: text('comment'),
   decidedAt: timestamp('decided_at', { withTimezone: true, mode: 'date' }),

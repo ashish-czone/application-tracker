@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto';
 import { pgTable, text, integer, timestamp, index } from 'drizzle-orm/pg-core';
-import { users } from '@packages/database/schema';
 import { evaluationTemplates } from './evaluation-templates';
 
 export const evaluations = pgTable('evaluations', {
@@ -8,7 +7,7 @@ export const evaluations = pgTable('evaluations', {
   templateId: text('template_id').notNull().references(() => evaluationTemplates.id),
   entityType: text('entity_type').notNull(),
   entityId: text('entity_id').notNull(),
-  evaluatorId: text('evaluator_id').notNull().references(() => users.id),
+  evaluatorId: text('evaluator_id').notNull(),
   overallRating: integer('overall_rating').notNull(),
   recommendation: text('recommendation'),
   comment: text('comment'),
