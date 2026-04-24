@@ -14,6 +14,22 @@ Keep this file up to date as we work. Append new questions at the bottom of §2.
 
 Running log so the next session can pick up without archaeology. Newest at top.
 
+### 2026-04-24 — Stream I sub-PR 4 shipped (I13-I16)
+
+**Shipped (rule parameter edit guards, Q9):**
+- **I13** — `ComplianceRuleService.hasGeneratedFilings(ruleId)` — single-row existence check (LIMIT 1) on `compliance_filings`. Cancelled filings count; identity stays baked in regardless of status. Original wording said `compliance_tasks`; V1 only materialises `compliance_filings`, so the authoritative table is filings.
+- **I14** — `assertUpdateAllowed(id, payload)` throws `ImmutableRuleFieldError` (400 `RULE_FIELD_IMMUTABLE`, `fields: string[]`) when the payload changes `code`/`frequency`/`lawId` on a rule with filings. Same-value writes pass through (idempotent PATCHes don't 400). Wired as `beforeUpdate` on `COMPLIANCE_RULES_CONFIG` via `setRuleUpdateGuard()` — defense-in-depth for anyone using the generic CRUD path — and also hit by the domain `PATCH /compliance-rules/:id` endpoint the new UI uses.
+- **I15** — server half: `GET /compliance-rules/:id/edit-constraints` returns `{ hasGeneratedFilings, generatedFilingCount }`; `PATCH /compliance-rules/:id` on the custom controller runs the service guard. UI half: new domain-owned `RuleEditPage` (lazy-loaded at `/compliance-rules/:id/edit`) disables identity fields with a per-field tooltip when `hasGeneratedFilings` and intercepts save into a forward-only confirm dialog when due-date math changed. `DynamicField` gained a mundane `disabled?: boolean` + `disabledTooltip?: string` pair (coerces `isReadonly` to true on render props — every FormComponent already forwards `isReadonly → disabled`). Rules list grew an Edit row action next to Deprecate.
+- **I16** — generator no-op on conflict tightened: existing tests proved no `create` on `findByRuleClientPeriod` hit; new case proves no `update`, no `delete`, no event either when the rule has drifted (e.g. `dueDayOfMonth` 20 → 25) after a filing was generated under the old math. Forward-only invariant holds.
+
+**Architectural decision locked during the PR:**
+- Rejected extending `EntityEditPage` with a per-field immutability primitive (`FieldDefinition.immutableWhen`, extension-point props). Q9 is the only current ask — over-generalising from a single data point. Went with a domain-owned custom edit page using the existing platform primitives (`useEntityLayout`, `buildFormSchema`, `DynamicField`) as building blocks. The only platform change is `DynamicField`'s new `disabled` prop — completeness on a form wrapper, not a new pattern.
+
+**Next up — Stream I sub-PR 5 (I19-I23, handler integrity guards, Q13)**
+- Service helper `hasResolvableHandler(firmId, lawId, clientId?)` using the existing 4-tier resolver from `ComplianceRuleService.resolveAssignee`.
+- Guards: reject `client_registrations` create when `hasResolvableHandler(firm, law)` is false; reject `law_handlers` delete when any active registration would be orphaned; reject `org_units` delete when `law_handlers` rows still reference it.
+- UI: inline "Configure handler" deep-link on the registration creation error path.
+
 ### 2026-04-23 (late) — Filings scope matrix applied (PR #1005)
 
 **Shipped on top of the role-grant-scope platform (PR #1000 earlier the same day):**
@@ -1378,10 +1394,10 @@ Hooks that fire when a client, registration, or rule changes state in a way that
 
 **Rule parameter edits (per-field policy, forward-only where applicable):**
 
-- [ ] **I13.** Service-layer helper `ruleHasGeneratedTasks(ruleId)` — single-row existence check on `compliance_tasks`. (Q9)
-- [ ] **I14.** Guard on rule update that blocks changes to `code`, `frequency`, `lawId` once `ruleHasGeneratedTasks` returns true. (Q9)
-- [ ] **I15.** UI in the rule edit form: disable immutable fields with the explanatory tooltip; show forward-only save-dialog copy when due-date-math fields change. (Q9)
-- [ ] **I16.** Confirm generator is a pure no-op on `(ruleId, clientId, periodStart)` conflict (never mutates existing row). Add a test if missing. (Q9)
+- [x] **I13.** Service-layer helper `ComplianceRuleService.hasGeneratedFilings(ruleId)` — single-row existence check (LIMIT 1) on `compliance_filings`. Cancelled filings count as generated — identity stays baked in across the status. Wording in the original todo said `compliance_tasks`, but V1 only materialises `compliance_filings` (Stream F note); the helper checks filings. (Q9)
+- [x] **I14.** Identity-field immutability guard. `ComplianceRuleService.assertUpdateAllowed(id, payload)` throws `ImmutableRuleFieldError` (400, `RULE_FIELD_IMMUTABLE`, `fields: [...]`) when the payload changes `code`/`frequency`/`lawId` on a rule with filings. Same-value writes pass through (idempotent PATCH). Forward-only fields (`dueDayOfMonth`/`dueMonthOffset`/`gracePeriodDays`) stay editable — Q9 keeps them mutable, the I16 no-op holds the forward-only invariant. Wired as `beforeUpdate` hook on `COMPLIANCE_RULES_CONFIG` via `setRuleUpdateGuard()` — defense-in-depth for anyone hitting the generic CRUD path. (Q9)
+- [x] **I15.** Rule edit UX. New `GET /compliance-rules/:id/edit-constraints` returns `{ hasGeneratedFilings, generatedFilingCount }`. Domain-owned `RuleEditPage` (custom, lazy-loaded at `/compliance-rules/:id/edit`) fetches the constraints up front and: renders `code`/`frequency`/`lawId` disabled with a per-field tooltip when the rule has filings; intercepts save into a forward-only confirm dialog when due-date math changed; PATCHes via the new `/compliance-rules/:id` domain endpoint (also wired on the custom controller — keeps the rule URL family consolidated). `DynamicField` gained a mundane `disabled?: boolean` + `disabledTooltip?: string` pair — same shape as its existing `mode` prop, coerces `field.isReadonly` to true on render props so every FormComponent's existing `isReadonly → disabled` forwarding picks it up. Rules list grew an "Edit" row action next to "Deprecate". (Q9)
+- [x] **I16.** Generator no-op on conflict — verified. Existing unit tests proved `create` is not called on `findByRuleClientPeriod` hit; new test tightens the invariant: when the rule has drifted (e.g. `dueDayOfMonth` changed from 20 to 25 after an existing filing was generated under the old math), re-running the generator makes no `create`, no `update`, no `delete`, no event. Matches Q9's strict forward-only contract — already-generated filings keep their original dueDate. (Q9)
 
 **Handler integrity guards (prevent missing-handler state):**
 

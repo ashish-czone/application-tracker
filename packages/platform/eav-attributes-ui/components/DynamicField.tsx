@@ -17,6 +17,20 @@ interface DynamicFieldProps {
   onSearch?: (query: string) => Promise<{ label: string; value: string }[]>;
   /** Async search for multi_user/multi_lookup chip fields */
   onChipSearch?: (query: string) => Promise<ChipOption[]>;
+  /**
+   * Per-render disabled override. When true, the rendered input is disabled
+   * even if `field.isReadonly` is false. Implemented by coercing
+   * `isReadonly` to true on the render props — every FormComponent already
+   * forwards `isReadonly` to the underlying shadcn input's `disabled`, so
+   * no FormComponent changes are needed.
+   *
+   * The wrapping `title` attribute on the outer element surfaces the
+   * tooltip on hover. The input itself is disabled (not just visually),
+   * so RHF does not track edits to locked fields.
+   */
+  disabled?: boolean;
+  /** Optional tooltip shown on hover when `disabled` is true. */
+  disabledTooltip?: string;
 }
 
 /**
@@ -24,8 +38,10 @@ interface DynamicFieldProps {
  * In view mode: displays the formatted value with label.
  * In edit mode: renders the appropriate form component (must be inside a FormProvider).
  */
-export function DynamicField({ field, mode, value, resolvedLabel, lookupOptions, chipOptions, onSearch, onChipSearch }: DynamicFieldProps) {
+export function DynamicField({ field, mode, value, resolvedLabel, lookupOptions, chipOptions, onSearch, onChipSearch, disabled, disabledTooltip }: DynamicFieldProps) {
   const uiDef = fieldTypeUIRegistry.get(field.fieldType);
+
+  const effectiveReadonly = field.isReadonly || disabled === true;
 
   const renderProps: FieldRenderProps = {
     field: {
@@ -34,7 +50,7 @@ export function DynamicField({ field, mode, value, resolvedLabel, lookupOptions,
       fieldType: field.fieldType,
       uiType: field.uiType,
       isRequired: field.isRequired,
-      isReadonly: field.isReadonly,
+      isReadonly: effectiveReadonly,
       maxLength: field.maxLength,
       lookupEntity: field.lookupEntity,
       tagGroupSlug: field.tagGroupSlug,
@@ -64,5 +80,9 @@ export function DynamicField({ field, mode, value, resolvedLabel, lookupOptions,
     return <div className="text-sm text-muted-foreground">Unknown field type: {field.fieldType}</div>;
   }
 
-  return <uiDef.FormComponent {...renderProps} />;
+  const input = <uiDef.FormComponent {...renderProps} />;
+  if (disabled && disabledTooltip) {
+    return <div title={disabledTooltip}>{input}</div>;
+  }
+  return input;
 }

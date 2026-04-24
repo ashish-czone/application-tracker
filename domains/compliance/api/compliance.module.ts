@@ -18,7 +18,7 @@ import { LAWS_CONFIG } from './laws/laws.config';
 import { CLIENTS_CONFIG, setClientDormancyHandler } from './clients/clients.config';
 import { CLIENT_CONTACTS_CONFIG } from './client-contacts/client-contacts.config';
 import { CLIENT_REGISTRATIONS_CONFIG } from './client-registrations/client-registrations.config';
-import { COMPLIANCE_RULES_CONFIG } from './rules/rules.config';
+import { COMPLIANCE_RULES_CONFIG, setRuleUpdateGuard } from './rules/rules.config';
 import { LAW_HANDLERS_CONFIG } from './law-handlers/law-handlers.config';
 // compliance-tasks/ is the pre-filings implementation — retained for reference
 // while the filings migration is in-flight. New work goes to compliance-filings/.
@@ -88,6 +88,7 @@ export class ComplianceDomainModule implements OnModuleInit {
     private readonly guardRegistry: WorkflowGuardRegistry,
     private readonly contactsService: ClientContactsService,
     private readonly clientDormancyService: ClientDormancyService,
+    private readonly ruleService: ComplianceRuleService,
     private readonly rbac: RbacService,
     private readonly databaseService: DatabaseService,
     private readonly auditRegistry: AuditRegistryService,
@@ -103,6 +104,11 @@ export class ComplianceDomainModule implements OnModuleInit {
     // runs inside the client transition tx and receives the same tx handle
     // so filing cancellation commits atomically with the status flip.
     setClientDormancyHandler(this.clientDormancyService);
+
+    // I14: wire the rule update guard. The COMPLIANCE_RULES_CONFIG
+    // beforeUpdate hook delegates here to block identity-field edits
+    // (code / frequency / lawId) once the rule has generated filings.
+    setRuleUpdateGuard(this.ruleService);
 
     registerComplianceAudit(this.auditRegistry, this.moduleRef);
 

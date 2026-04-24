@@ -52,6 +52,12 @@ const ComplianceRulesPage = lazy(() =>
   })),
 );
 
+const RuleEditPage = lazy(() =>
+  import('./portals/customer/features/screens/compliance-rules/RuleEditPage').then((m) => ({
+    default: m.RuleEditPage,
+  })),
+);
+
 const LawsLibraryPage = lazy(() =>
   import('./portals/customer/features/screens/laws').then((m) => ({
     default: m.LawsLibraryPage,
@@ -128,6 +134,7 @@ const routes: DomainRouteObject[] = [
   { path: '/clients/:clientId', element: <ClientDetailPage />, permission: 'clients.read', bareLayout: true },
   { path: '/filings', element: <FilingsPage />, permission: 'compliance-filings.read', bareLayout: true },
   { path: '/compliance-rules', element: <ComplianceRulesPage />, permission: 'compliance_rules.read', bareLayout: true },
+  { path: '/compliance-rules/:id/edit', element: <RuleEditPage />, permission: 'compliance_rules.update' },
   { path: '/laws', element: <LawsLibraryPage />, permission: 'laws.read', bareLayout: true },
   { path: '/reports', element: <ReportsPage />, permission: 'reports.read', bareLayout: true },
   { path: '/compliance-users', element: <UsersPage />, permission: 'users.read', bareLayout: true },

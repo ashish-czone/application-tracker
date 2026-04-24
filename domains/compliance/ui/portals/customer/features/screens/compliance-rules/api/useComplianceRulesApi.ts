@@ -115,3 +115,62 @@ export function useDeprecateRule(options?: {
     },
   });
 }
+
+export interface RuleEditConstraints {
+  ruleId: string;
+  hasGeneratedFilings: boolean;
+  generatedFilingCount: number;
+}
+
+/**
+ * I15: fetches `{ hasGeneratedFilings, generatedFilingCount }` for the rule
+ * edit form. Drives the disabled state on `code`/`frequency`/`lawId` and
+ * the "N filings already generated" copy in the forward-only save dialog.
+ */
+export function useRuleEditConstraints(ruleId: string | null | undefined) {
+  const { apiFn } = useEntityEngine();
+  return useQuery({
+    queryKey: ['rule-edit-constraints', ruleId],
+    queryFn: () =>
+      apiFn.get<RuleEditConstraints>(
+        `/compliance-rules/${ruleId}/edit-constraints`,
+      ),
+    enabled: !!ruleId,
+    staleTime: 0,
+    gcTime: 0,
+  });
+}
+
+export interface UpdateComplianceRulePayload {
+  ruleId: string;
+  data: Partial<Pick<ComplianceRuleRecord, 'code' | 'name' | 'lawId' | 'frequency' | 'dueDayOfMonth' | 'dueMonthOffset' | 'gracePeriodDays' | 'description'>>;
+}
+
+/**
+ * I15: domain PATCH against the compliance-rules custom controller. The
+ * controller runs the I14 identity-field guard and returns the updated
+ * rule. Server-side errors (e.g. RULE_FIELD_IMMUTABLE) surface through
+ * `onError` — the form uses the backend as the ultimate backstop.
+ */
+export function useUpdateComplianceRule(options?: {
+  onSuccess?: (result: ComplianceRuleRecord) => void;
+}) {
+  const { apiFn } = useEntityEngine();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ ruleId, data }: UpdateComplianceRulePayload) =>
+      apiFn.patch<ComplianceRuleRecord>(`/compliance-rules/${ruleId}`, data),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['compliance_rules'] });
+      queryClient.invalidateQueries({ queryKey: ['rule-edit-constraints', result.id] });
+      queryClient.invalidateQueries({ queryKey: ['audit'] });
+      toast.success('Rule updated');
+      options?.onSuccess?.(result);
+    },
+    onError: (error: unknown) => {
+      const body = (error as { body?: { message?: string; code?: string } })?.body;
+      toast.error(body?.message ?? 'Failed to update rule');
+    },
+  });
+}

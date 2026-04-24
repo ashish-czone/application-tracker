@@ -5,6 +5,7 @@ import {
   NoDefaultHandlerError,
   AmbiguousHandlerError,
   InvalidFrequencyError,
+  ImmutableRuleFieldError,
   type ComplianceRule,
 } from '../compliance-rules.service';
 import type { WorkflowEngineService, WorkflowRegistryService } from '@packages/workflows';
@@ -17,6 +18,14 @@ function mockSelectRows(rows: unknown[]) {
   const chain: AnyChain = {} as AnyChain;
   chain.from = vi.fn().mockReturnValue(chain);
   chain.where = vi.fn().mockResolvedValue(rows);
+  return chain;
+}
+
+function mockSelectRowsWithLimit(rows: unknown[]) {
+  const chain: AnyChain = {} as AnyChain;
+  chain.from = vi.fn().mockReturnValue(chain);
+  chain.where = vi.fn().mockReturnValue(chain);
+  chain.limit = vi.fn().mockResolvedValue(rows);
   return chain;
 }
 
@@ -315,6 +324,171 @@ describe('ComplianceRuleService', () => {
     it('throws NoDefaultHandlerError when no handlers match at all', async () => {
       db.db.select.mockReturnValue(mockSelectRows([]));
       await expect(service.resolveAssignee('l1', 'c1')).rejects.toBeInstanceOf(NoDefaultHandlerError);
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // hasGeneratedFilings — I13
+  // --------------------------------------------------------------------------
+
+  describe('hasGeneratedFilings', () => {
+    it('returns true when at least one filing exists for the rule', async () => {
+      db.db.select.mockReturnValueOnce(mockSelectRowsWithLimit([{ id: 'f1' }]));
+      expect(await service.hasGeneratedFilings('r1')).toBe(true);
+    });
+
+    it('returns false when no filings exist for the rule', async () => {
+      db.db.select.mockReturnValueOnce(mockSelectRowsWithLimit([]));
+      expect(await service.hasGeneratedFilings('r1')).toBe(false);
+    });
+
+    it('treats cancelled filings as generated — identity stays baked in', async () => {
+      // Even if every filing for this rule is cancelled, the rule has
+      // "generated" filings and its identity fields must remain immutable.
+      db.db.select.mockReturnValueOnce(mockSelectRowsWithLimit([{ id: 'f-cancelled' }]));
+      expect(await service.hasGeneratedFilings('r1')).toBe(true);
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // getEditConstraints — I15 form hydration
+  // --------------------------------------------------------------------------
+
+  describe('getEditConstraints', () => {
+    const ruleRow = {
+      id: 'r1', code: 'GST-M', name: 'GST', lawId: 'l1', frequency: 'monthly',
+      status: 'active',
+      dueDayOfMonth: 20, dueMonthOffset: 1, gracePeriodDays: 0, description: null,
+    };
+
+    it('returns hasGeneratedFilings=true and the count when filings exist', async () => {
+      db.db.select
+        .mockReturnValueOnce(mockSelectRows([ruleRow])) // findById
+        .mockReturnValueOnce(mockSelectRows([{ count: 12 }])); // count
+      expect(await service.getEditConstraints('r1')).toEqual({
+        ruleId: 'r1',
+        hasGeneratedFilings: true,
+        generatedFilingCount: 12,
+      });
+    });
+
+    it('returns hasGeneratedFilings=false when count is zero', async () => {
+      db.db.select
+        .mockReturnValueOnce(mockSelectRows([ruleRow]))
+        .mockReturnValueOnce(mockSelectRows([{ count: 0 }]));
+      expect(await service.getEditConstraints('r1')).toEqual({
+        ruleId: 'r1',
+        hasGeneratedFilings: false,
+        generatedFilingCount: 0,
+      });
+    });
+
+    it('throws NotFoundException when the rule does not exist', async () => {
+      db.db.select.mockReturnValueOnce(mockSelectRows([]));
+      await expect(service.getEditConstraints('missing')).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // assertUpdateAllowed — I14 identity-field guard
+  // --------------------------------------------------------------------------
+
+  describe('assertUpdateAllowed', () => {
+    const ruleRow = {
+      id: 'r1', code: 'GST-M', name: 'GST', lawId: 'l1', frequency: 'monthly',
+      status: 'active',
+      dueDayOfMonth: 20, dueMonthOffset: 1, gracePeriodDays: 0, description: null,
+    };
+
+    it('no-ops when the payload touches no identity field', async () => {
+      // Cosmetic + forward-only fields only — no DB access at all.
+      await service.assertUpdateAllowed('r1', {
+        name: 'New name',
+        description: 'Updated',
+        dueDayOfMonth: 25,
+        dueMonthOffset: 2,
+        gracePeriodDays: 3,
+      });
+      expect(db.db.select).not.toHaveBeenCalled();
+    });
+
+    it('passes through when identity fields are in the payload but values match current', async () => {
+      // Idempotent PATCH — caller re-sends the same code/frequency/lawId.
+      // No filings lookup needed; the guard should short-circuit after
+      // discovering no fields actually changed.
+      db.db.select.mockReturnValueOnce(mockSelectRows([ruleRow])); // findById
+      await service.assertUpdateAllowed('r1', {
+        code: 'GST-M',
+        frequency: 'monthly',
+        lawId: 'l1',
+      });
+      // only findById was called — no hasGeneratedFilings query
+      expect(db.db.select).toHaveBeenCalledTimes(1);
+    });
+
+    it('passes through when rule has no generated filings yet', async () => {
+      db.db.select
+        .mockReturnValueOnce(mockSelectRows([ruleRow])) // findById
+        .mockReturnValueOnce(mockSelectRowsWithLimit([])); // hasGeneratedFilings → false
+      await service.assertUpdateAllowed('r1', {
+        code: 'GST-M-v2',
+        frequency: 'quarterly',
+      });
+    });
+
+    it('throws ImmutableRuleFieldError listing every changed identity field when filings exist', async () => {
+      db.db.select
+        .mockReturnValueOnce(mockSelectRows([ruleRow])) // findById
+        .mockReturnValueOnce(mockSelectRowsWithLimit([{ id: 'f1' }])); // hasGeneratedFilings → true
+
+      await expect(
+        service.assertUpdateAllowed('r1', {
+          code: 'GST-M-v2',
+          frequency: 'quarterly',
+          lawId: 'l2',
+          name: 'New name',
+          dueDayOfMonth: 25,
+        }),
+      ).rejects.toMatchObject({
+        response: expect.objectContaining({
+          code: 'RULE_FIELD_IMMUTABLE',
+          fields: ['code', 'frequency', 'lawId'],
+        }),
+      });
+    });
+
+    it('reports only the changed identity fields (not the unchanged ones in the payload)', async () => {
+      db.db.select
+        .mockReturnValueOnce(mockSelectRows([ruleRow]))
+        .mockReturnValueOnce(mockSelectRowsWithLimit([{ id: 'f1' }]));
+
+      await expect(
+        service.assertUpdateAllowed('r1', {
+          code: 'GST-M', // unchanged
+          frequency: 'quarterly', // changed
+          lawId: 'l1', // unchanged
+        }),
+      ).rejects.toMatchObject({
+        response: expect.objectContaining({
+          fields: ['frequency'],
+        }),
+      });
+    });
+
+    it('does not throw when only forward-only fields are edited, even with filings', async () => {
+      // Due-date math is forward-only, not immutable. Guard must stay out.
+      await service.assertUpdateAllowed('r1', {
+        dueDayOfMonth: 25,
+        dueMonthOffset: 2,
+        gracePeriodDays: 5,
+      });
+      // hasGeneratedFilings must never be queried
+      expect(db.db.select).not.toHaveBeenCalled();
+    });
+
+    it('ImmutableRuleFieldError is a 400 BadRequestException', async () => {
+      const err = new ImmutableRuleFieldError(['code']);
+      expect(err.getStatus()).toBe(400);
     });
   });
 

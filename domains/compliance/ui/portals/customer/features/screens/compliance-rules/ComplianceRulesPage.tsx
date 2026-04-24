@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router';
 import { AnimatePresence } from 'framer-motion';
 import { Plus, Upload } from 'lucide-react';
 import {
@@ -43,6 +44,7 @@ import { mapComplianceRuleRecord } from './api/mapComplianceRuleRecord';
 type StatusTab = 'all' | ComplianceRule['status'];
 
 export function ComplianceRulesPage() {
+  const navigate = useNavigate();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [deprecating, setDeprecating] = useState<ComplianceRule | null>(null);
 
@@ -158,8 +160,11 @@ export function ComplianceRulesPage() {
   }));
 
   const ruleColumns = useMemo(
-    () => makeComplianceRuleColumns({ onDeprecate: setDeprecating }),
-    [],
+    () => makeComplianceRuleColumns({
+      onDeprecate: setDeprecating,
+      onEdit: (rule) => navigate(`/compliance-rules/${rule.id}/edit`),
+    }),
+    [navigate],
   );
 
   const statusTabs = [

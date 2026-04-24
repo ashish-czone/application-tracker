@@ -30,6 +30,32 @@ export class InvalidFrequencyError extends BadRequestException {
   }
 }
 
+/**
+ * I14: raised by the rule update guard when the caller tries to change a
+ * rule-identity field (`code`, `frequency`, `lawId`) on a rule that has
+ * already materialised at least one filing. The UI uses `fields` to mark the
+ * offending inputs; message is the human-readable one-liner.
+ *
+ * Forward-only fields (`dueDayOfMonth`, `dueMonthOffset`, `gracePeriodDays`)
+ * stay editable — they never raise this error. See Q9 for the per-field
+ * policy that defines which fields are identity vs forward-only.
+ */
+export const IMMUTABLE_RULE_IDENTITY_FIELDS = ['code', 'frequency', 'lawId'] as const;
+export type ImmutableRuleIdentityField = (typeof IMMUTABLE_RULE_IDENTITY_FIELDS)[number];
+
+export class ImmutableRuleFieldError extends BadRequestException {
+  constructor(fields: ImmutableRuleIdentityField[]) {
+    const list = fields.join(', ');
+    super({
+      code: 'RULE_FIELD_IMMUTABLE',
+      message:
+        `Cannot change ${list}: this rule has generated filings. ` +
+        `Deprecate this rule and create a new one to change identity fields.`,
+      fields,
+    });
+  }
+}
+
 function assertFrequency(value: string): asserts value is ComplianceFrequency {
   if (!(FREQUENCIES as readonly string[]).includes(value)) {
     throw new InvalidFrequencyError(value);
@@ -155,12 +181,137 @@ export class ComplianceRuleService {
     return rows.map((r) => this.toRule(r));
   }
 
+  /**
+   * Domain update path used by the compliance-rules custom controller. Runs
+   * the I14 guard, writes allowed fields, and returns the fresh row.
+   *
+   * Status is excluded — workflow transitions flow through the workflow
+   * engine (draft → active → deprecated), not PATCH. `deprecate()` is the
+   * dedicated endpoint for deprecation.
+   *
+   * The same guard is also wired as a `beforeUpdate` hook on the entity
+   * config (defense-in-depth) so callers hitting the generic CRUD path
+   * still get the 400. The custom controller is the preferred UI entry
+   * point because the UI needs a single mutation to invalidate together.
+   */
+  async update(
+    id: string,
+    input: Partial<Pick<CreateComplianceRuleInput, 'code' | 'name' | 'lawId' | 'frequency' | 'dueDayOfMonth' | 'dueMonthOffset' | 'gracePeriodDays' | 'description'>>,
+  ): Promise<ComplianceRule> {
+    const existing = await this.findById(id);
+    if (!existing) {
+      throw new NotFoundException(`Rule ${id} not found`);
+    }
+    if (input.frequency !== undefined) {
+      assertFrequency(input.frequency);
+    }
+    await this.assertUpdateAllowed(id, input as Record<string, unknown>);
+
+    const patch: Record<string, unknown> = {};
+    if (input.code !== undefined) patch.code = input.code;
+    if (input.name !== undefined) patch.name = input.name;
+    if (input.lawId !== undefined) patch.lawId = input.lawId;
+    if (input.frequency !== undefined) patch.frequency = input.frequency;
+    if (input.dueDayOfMonth !== undefined) patch.dueDayOfMonth = input.dueDayOfMonth;
+    if (input.dueMonthOffset !== undefined) patch.dueMonthOffset = input.dueMonthOffset;
+    if (input.gracePeriodDays !== undefined) patch.gracePeriodDays = input.gracePeriodDays;
+    if (input.description !== undefined) patch.description = input.description;
+
+    if (Object.keys(patch).length === 0) return existing;
+
+    const [row] = await this.database.db
+      .update(complianceRules)
+      .set(patch)
+      .where(eq(complianceRules.id, id))
+      .returning();
+    return this.toRule(row);
+  }
+
   async findById(id: string): Promise<ComplianceRule | null> {
     const rows = await this.database.db
       .select()
       .from(complianceRules)
       .where(eq(complianceRules.id, id));
     return rows[0] ? this.toRule(rows[0]) : null;
+  }
+
+  /**
+   * I13: does this rule have at least one filing materialised against it?
+   * Used by the I14 update guard to lock identity fields (`code`, `frequency`,
+   * `lawId`) and by the I15 UI to render forward-only copy on due-date math
+   * edits. Single-row existence check — `LIMIT 1`, no full count scan.
+   *
+   * Cancelled filings count: once a filing has been generated, the rule's
+   * identity is baked into historical data. Whether the filing is still open,
+   * completed, or cancelled is irrelevant — renaming the rule would still
+   * rewrite what those rows mean.
+   */
+  async hasGeneratedFilings(ruleId: string): Promise<boolean> {
+    const rows = await this.database.db
+      .select({ id: complianceFilings.id })
+      .from(complianceFilings)
+      .where(eq(complianceFilings.ruleId, ruleId))
+      .limit(1);
+    return rows.length > 0;
+  }
+
+  /**
+   * I13 + I15: what the edit form needs to know before rendering. Boolean +
+   * count pair — the boolean drives the identity-field disable state; the
+   * count is displayed in the forward-only save dialog ("N filings already
+   * generated will keep their current due dates").
+   */
+  async getEditConstraints(ruleId: string): Promise<{
+    ruleId: string;
+    hasGeneratedFilings: boolean;
+    generatedFilingCount: number;
+  }> {
+    const rule = await this.findById(ruleId);
+    if (!rule) {
+      throw new NotFoundException(`Rule ${ruleId} not found`);
+    }
+    const [row] = await this.database.db
+      .select({ count: count() })
+      .from(complianceFilings)
+      .where(eq(complianceFilings.ruleId, ruleId));
+    const generatedFilingCount = Number(row?.count ?? 0);
+    return {
+      ruleId,
+      hasGeneratedFilings: generatedFilingCount > 0,
+      generatedFilingCount,
+    };
+  }
+
+  /**
+   * I14: guard invoked from the `beforeUpdate` hook on `COMPLIANCE_RULES_CONFIG`.
+   * When the payload touches an identity field (`code`, `frequency`, `lawId`)
+   * AND the rule already has filings AND the new value is actually different
+   * from the current value, throw ImmutableRuleFieldError. Same-value writes
+   * pass through so idempotent PATCHes don't 400 spuriously.
+   *
+   * Forward-only fields (`dueDayOfMonth`, `dueMonthOffset`, `gracePeriodDays`)
+   * are explicitly allowed by this guard — Q9 keeps them editable and relies
+   * on the generator being a pure no-op on conflict (I16) to hold the
+   * forward-only invariant without needing a server-side shift.
+   */
+  async assertUpdateAllowed(id: string, payload: Record<string, unknown>): Promise<void> {
+    const touched = IMMUTABLE_RULE_IDENTITY_FIELDS.filter((k) => k in payload);
+    if (touched.length === 0) return;
+
+    const current = await this.findById(id);
+    if (!current) {
+      // Let the underlying update raise NotFoundException — this guard only
+      // polices field-level immutability, not existence.
+      return;
+    }
+
+    const changed = touched.filter((k) => payload[k] !== undefined && payload[k] !== current[k]);
+    if (changed.length === 0) return;
+
+    const hasFilings = await this.hasGeneratedFilings(id);
+    if (!hasFilings) return;
+
+    throw new ImmutableRuleFieldError(changed);
   }
 
   /**
