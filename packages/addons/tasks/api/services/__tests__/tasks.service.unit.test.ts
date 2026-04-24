@@ -98,4 +98,37 @@ describe('TasksService', () => {
       expect(result).toBeNull();
     });
   });
+
+  describe('handleUserDeactivated', () => {
+    function makeUpdateDb(returnedRows: { id: string }[]) {
+      const returningFn = vi.fn().mockResolvedValue(returnedRows);
+      const whereFn = vi.fn().mockReturnValue({ returning: returningFn });
+      const setFn = vi.fn().mockReturnValue({ where: whereFn });
+      const updateFn = vi.fn().mockReturnValue({ set: setFn });
+      return { db: { update: updateFn }, _set: setFn, _returning: returningFn } as never;
+    }
+
+    it('nulls assigneeId on open tasks and returns the cleared count', async () => {
+      const db = makeUpdateDb([{ id: 't1' }, { id: 't2' }]);
+      const service = new TasksService(entityService as never, db);
+      const result = await service.handleUserDeactivated('user-1');
+      expect(result).toEqual({ clearedCount: 2 });
+      expect((db as any)._set).toHaveBeenCalledWith({ assigneeId: null });
+    });
+
+    it('returns zero count when the user has no open tasks', async () => {
+      const service = new TasksService(entityService as never, makeUpdateDb([]));
+      const result = await service.handleUserDeactivated('user-nobody');
+      expect(result).toEqual({ clearedCount: 0 });
+    });
+
+    it('propagates DB errors (caller decides rollback behavior)', async () => {
+      const returningFn = vi.fn().mockRejectedValue(new Error('boom'));
+      const whereFn = vi.fn().mockReturnValue({ returning: returningFn });
+      const setFn = vi.fn().mockReturnValue({ where: whereFn });
+      const updateFn = vi.fn().mockReturnValue({ set: setFn });
+      const service = new TasksService(entityService as never, { db: { update: updateFn } } as never);
+      await expect(service.handleUserDeactivated('user-1')).rejects.toThrow('boom');
+    });
+  });
 });
