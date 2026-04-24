@@ -10,3 +10,7 @@ export type { Role, RoleMember, RoleWithSystem, PermissionRegistryEntry, Permiss
 export { BUILT_IN_SCOPE_TYPES, FIELD_PERMISSION_ENTITY_RESOLVER } from './types';
 export { registerCustomScopeType, isKnownScopeType, listCustomScopeTypes, normaliseScopes } from './scope-types';
 export { roles, rolePermissions, rolePermissionScopes, userRoles } from './schema';
+export { ScopeResolverRegistry } from './scope-resolver';
+export type { ScopeResolver, ScopeResolverContext, ScopeAnchorMap } from './scope-resolver';
+export { OwnScopeResolver } from './scope-resolvers/own.resolver';
+export { AssignedScopeResolver } from './scope-resolvers/assigned.resolver';
