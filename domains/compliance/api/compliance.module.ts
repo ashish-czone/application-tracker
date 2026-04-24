@@ -14,7 +14,7 @@ import { registerComplianceAudit } from './audit/register-compliance-audit';
 
 import { ComplianceUsersPositionsReader } from './users/compliance-users-positions.reader';
 
-import { LAWS_CONFIG } from './laws/laws.config';
+import { LawsModule } from './laws/laws.module';
 import { CLIENTS_CONFIG, setClientDormancyHandler } from './clients/clients.config';
 import { CLIENT_CONTACTS_CONFIG } from './client-contacts/client-contacts.config';
 import { CLIENT_REGISTRATIONS_CONFIG } from './client-registrations/client-registrations.config';
@@ -54,7 +54,7 @@ const ORGANIZATIONS_CONFIG = createOrganizationsEntityConfig({
   imports: [
     TasksModule,
     EntityEngineModule.forEntity(TASKS_CONFIG),
-    EntityEngineModule.forEntity(LAWS_CONFIG),
+    LawsModule,
     EntityEngineModule.forEntity(CLIENTS_CONFIG),
     EntityEngineModule.forEntity(CLIENT_CONTACTS_CONFIG),
     EntityEngineModule.forEntity(CLIENT_REGISTRATIONS_CONFIG),
