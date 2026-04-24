@@ -1,7 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { ScopeResolverRegistry, type ScopeResolver } from '@packages/rbac';
+import { ScopeResolverRegistry, type ScopeResolver, type DataAccessContext } from '@packages/rbac';
 import { EntityService } from '../../entity.service';
-import type { DataAccessContext } from '../../types';
 
 /**
  * Unit tests for EntityService.resolveDataAccessScope — the dispatch that

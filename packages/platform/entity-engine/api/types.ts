@@ -611,22 +611,8 @@ export interface DataAccessConfig {
   scopes?: EntityScopeResolver[];
 }
 
-/** A single scope value attached to a permission grant. Mirrors @packages/rbac ScopeSpec. */
-export interface AccessScopeSpec {
-  type: string;
-  params?: Record<string, unknown>;
-}
-
-/** Context passed to entity service methods for scope enforcement */
-export interface DataAccessContext {
-  userId: string;
-  /**
-   * The scopes the user holds for the verb being performed on this entity.
-   * Row-level access = OR over these scopes. An array containing
-   * `{ type: 'any' }` means unrestricted.
-   */
-  scopes: AccessScopeSpec[];
-}
+// `AccessScopeSpec` and `DataAccessContext` live in `@packages/rbac`. Import
+// them from there in service method signatures.
 
 
 // ---------------------------------------------------------------------------

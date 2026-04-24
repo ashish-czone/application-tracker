@@ -36,7 +36,8 @@ import { fieldTypeSaveHookRegistry, type FieldTypeSaveHookRegistry, type FieldTy
 import type { WorkflowExtension } from './extensions/workflow-extension.interface';
 import type { TaxonomyExtension } from './extensions/taxonomy-extension.interface';
 import type { PaginatedResponse } from '@packages/common';
-import type { EntityConfig, BaseListQuery, ListLayoutColumn, DataAccessContext } from './types';
+import type { EntityConfig, BaseListQuery, ListLayoutColumn } from './types';
+import type { DataAccessContext, AccessScopeSpec } from '@packages/rbac';
 import type { SQL as DrizzleSQL } from 'drizzle-orm';
 import { EntityRegistryService } from './entity-registry.service';
 
@@ -208,7 +209,7 @@ export class EntityService {
    * stale scope sitting on an old role grant degrades gracefully.
    */
   private async resolveScope(
-    scope: import('./types').AccessScopeSpec,
+    scope: AccessScopeSpec,
     userId: string,
     anchors: ScopeAnchorMap,
   ): Promise<DrizzleSQL | undefined> {
