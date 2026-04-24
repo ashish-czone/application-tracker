@@ -11,7 +11,7 @@ import { ClientsModule } from './clients/clients.module';
 import { ContactsModule } from './contacts/contacts.module';
 import { VendorsModule } from './vendors/vendors.module';
 
-import { JOB_OPENINGS_CONFIG } from './job-openings/job-openings.config';
+import { JobOpeningsModule } from './job-openings/job-openings.module';
 
 import { ApplicationsModule } from './applications/applications.module';
 import { APPLICATIONS_CONFIG } from './applications/applications.config';
@@ -32,7 +32,7 @@ import { offersConfig } from './offers/offers.config';
     ContactsModule,
     VendorsModule,
 
-    EntityEngineModule.forEntity(JOB_OPENINGS_CONFIG),
+    JobOpeningsModule,
 
     EntityEngineModule.forEntity(APPLICATIONS_CONFIG),
     ApplicationsModule,
