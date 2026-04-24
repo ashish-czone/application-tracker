@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
-import { and, or, isNull, ilike, asc, desc, count, sql, getTableName, getTableColumns } from 'drizzle-orm';
+import { eq, and, or, isNull, ilike, asc, desc, count, sql, getTableName, getTableColumns } from 'drizzle-orm';
 import type { PgColumn } from 'drizzle-orm/pg-core';
 import { withTenant, withTenantInsert, tenantCondition } from '@packages/tenancy/helpers';
 import {
@@ -232,7 +232,7 @@ export class EntityService {
    * are dropped (defence-in-depth against config typos).
    */
   private buildAnchors(): ScopeAnchorMap {
-    const table = this.config.table as Record<string, PgColumn | undefined>;
+    const table = this.config.table as unknown as Record<string, PgColumn | undefined>;
     const declared = this.config.dataAccess?.anchors ?? {};
     const anchors: ScopeAnchorMap = {};
     for (const [role, columnName] of Object.entries(declared)) {
