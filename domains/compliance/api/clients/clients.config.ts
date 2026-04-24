@@ -1,22 +1,5 @@
-import { defineEntity, type TransitionHookContext } from '@packages/entity-engine';
+import { defineEntity } from '@packages/entity-engine';
 import { clients } from '../schema/clients';
-
-/**
- * Late-bound dormancy handler. `CLIENTS_CONFIG` is evaluated at module-load
- * time — before Nest has a chance to DI a service in — so the hook reaches
- * through this indirection. `ComplianceDomainModule.onModuleInit` installs
- * the real handler via `setClientDormancyHandler`, same pattern used by
- * `createOrganizationsEntityConfig` for late-bound DB access. Leaving the
- * handler unset while a dormantise attempt fires throws rather than silently
- * skipping the cascade — that's the whole point of the `onTransition` slot.
- */
-export interface ClientDormancyHandler {
-  onClientDormantised(ctx: TransitionHookContext, tx: unknown): Promise<void>;
-}
-let dormancyHandlerRef: ClientDormancyHandler | null = null;
-export function setClientDormancyHandler(h: ClientDormancyHandler): void {
-  dormancyHandlerRef = h;
-}
 
 // Address fields are declared individually here rather than through a single
 // composite `address` field because the `FieldType` union in entity-engine
@@ -182,18 +165,6 @@ export const CLIENTS_CONFIG = defineEntity({
       fields: ['notes'],
     },
   ],
-
-  hooks: {
-    onTransition: async (ctx, tx) => {
-      if (ctx.fieldKey !== 'status' || ctx.toState !== 'dormant') return;
-      if (!dormancyHandlerRef) {
-        // Never skip silently — if we couldn't cancel filings, the client
-        // shouldn't flip to dormant either.
-        throw new Error('Client dormancy handler not wired — ComplianceDomainModule.onModuleInit must call setClientDormancyHandler()');
-      }
-      await dormancyHandlerRef.onClientDormantised(ctx, tx);
-    },
-  },
 
   ui: {
     icon: 'Building2',

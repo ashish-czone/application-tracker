@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { DatabaseService, and, count, eq, inArray, not } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
 import { WorkflowEngineService, WorkflowRegistryService } from '@packages/workflows';
-import type { TransitionHookContext } from '@packages/entity-engine';
+import type { TransitionContext } from '@packages/entity-engine';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
 
 import { complianceFilings } from '../schema/compliance-filings';
@@ -10,11 +10,12 @@ import { COMPLIANCE_CLIENT_DORMANTISED } from '../events/types';
 
 /**
  * Q6 — when a client moves from `active` to `dormant`, every non-terminal
- * compliance filing for that client is auto-cancelled inside the client
- * transition tx. The admin's dormancy reason/comment travel through to each
- * filing's workflow_history row so every filing's audit trail stands on its
- * own ("Cancelled: Client dormantised — <admin-supplied reason>") without
- * needing a duplicate column on `compliance_filings`.
+ * compliance filing for that client is auto-cancelled inside the same
+ * transaction that flips the client's status. The admin's dormancy reason
+ * and comment travel through to each filing's workflow_history row so every
+ * filing's audit trail stands on its own ("Cancelled: Client dormantised —
+ * <admin-supplied reason>") without needing a duplicate column on
+ * `compliance_filings`.
  */
 const TERMINAL_FILING_STATUSES = ['completed', 'cancelled'];
 const FILING_WORKFLOW_SLUG = 'compliance-filing-status';
@@ -52,14 +53,20 @@ export class ClientDormancyService {
   }
 
   /**
-   * Called from the CLIENTS onTransition hook. Operates entirely inside the
-   * shared tx so bulk cancellation commits atomically with the client's
-   * status flip — an exception here rolls the whole dormancy back.
+   * Cancel every non-terminal filing for the dormantised client on the
+   * caller-supplied tx. Called by `ClientsService.transition` from inside
+   * the same tx that flips the client's status, so the cascade commits
+   * atomically with the status flip — an exception here rolls the whole
+   * transition back.
+   *
+   * Caller is responsible for (a) gating this on the right transition
+   * (active → dormant on the `status` field) and (b) calling
+   * `emitCascadeEvent` with the returned IDs after the tx commits.
    */
-  async onClientDormantised(ctx: TransitionHookContext, tx: any): Promise<void> {
-    if (ctx.fieldKey !== 'status' || ctx.toState !== 'dormant') return;
-    if (ctx.fromState !== 'active') return;
-
+  async cancelInFlightFilings(
+    ctx: TransitionContext,
+    tx: any,
+  ): Promise<{ cancelledFilingIds: string[] }> {
     const clientId = ctx.entityId;
     const clientName = (ctx.entity.name as string | null | undefined) ?? clientId;
 
@@ -73,8 +80,7 @@ export class ClientDormancyService {
 
     if (filings.length === 0) {
       this.logger.log('Client dormantised — no non-terminal filings to cancel', { clientId });
-      this.emitCascadeEvent(ctx, clientName, []);
-      return;
+      return { cancelledFilingIds: [] };
     }
 
     const cancelledIds = filings.map((f: { id: string }) => f.id);
@@ -131,14 +137,17 @@ export class ClientDormancyService {
       cancelledCount: cancelledIds.length,
     });
 
-    this.emitCascadeEvent(ctx, clientName, cancelledIds);
+    return { cancelledFilingIds: cancelledIds };
   }
 
-  private emitCascadeEvent(
-    ctx: TransitionHookContext,
-    clientName: string,
-    cancelledFilingIds: string[],
-  ): void {
+  /**
+   * Post-commit emission of the cascade event. Called by
+   * `ClientsService.transition` after the dormancy tx commits. Fires exactly
+   * once per dormantisation — empty cancelledFilingIds still emits so
+   * listeners see that the dormantisation itself happened.
+   */
+  emitCascadeEvent(ctx: TransitionContext, cancelledFilingIds: string[]): void {
+    const clientName = (ctx.entity.name as string | null | undefined) ?? ctx.entityId;
     this.events.emitDynamic(COMPLIANCE_CLIENT_DORMANTISED, {
       entityType: 'clients',
       entityId: ctx.entityId,

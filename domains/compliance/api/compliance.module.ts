@@ -14,7 +14,7 @@ import { registerComplianceAudit } from './audit/register-compliance-audit';
 import { ComplianceUsersPositionsReader } from './users/compliance-users-positions.reader';
 
 import { LawsModule } from './laws/laws.module';
-import { CLIENTS_CONFIG, setClientDormancyHandler } from './clients/clients.config';
+import { ClientsModule } from './clients/clients.module';
 import { ClientContactsModule } from './client-contacts/client-contacts.module';
 import { ClientRegistrationsModule } from './client-registrations/client-registrations.module';
 import { ComplianceRulesModule } from './rules/compliance-rules.module';
@@ -24,9 +24,7 @@ import { LawHandlersModule } from './law-handlers/law-handlers.module';
 import { ComplianceFilingsModule } from './compliance-filings/compliance-filings.module';
 import { OrganizationsModule } from './organizations/organizations.module';
 
-import { ClientsService } from './clients/clients.service';
 import { ClientContactsService } from './client-contacts/client-contacts.service';
-import { ClientsController } from './clients/clients.controller';
 import { GenerateComplianceFilingsAction } from './automations/generate-compliance-filings.action';
 import { COMPLIANCE_PERMISSION_MANIFESTS } from './permissions';
 
@@ -35,7 +33,7 @@ import { COMPLIANCE_PERMISSION_MANIFESTS } from './permissions';
     TasksModule,
     EntityEngineModule.forEntity(TASKS_CONFIG),
     LawsModule,
-    EntityEngineModule.forEntity(CLIENTS_CONFIG),
+    ClientsModule,
     ClientContactsModule,
     ClientRegistrationsModule,
     ComplianceRulesModule,
@@ -43,11 +41,8 @@ import { COMPLIANCE_PERMISSION_MANIFESTS } from './permissions';
     ComplianceFilingsModule,
     OrganizationsModule,
   ],
-  controllers: [ClientsController],
   providers: [
-    ClientsService,
     GenerateComplianceFilingsAction,
-    ClientDormancyService,
     ComplianceUsersPositionsReader,
     {
       provide: USERS_POSITIONS_READER,
@@ -70,11 +65,6 @@ export class ComplianceDomainModule implements OnModuleInit {
   onModuleInit() {
     this.actionRegistry.register(this.generateFilingsAction);
 
-    // Wire the CLIENTS onTransition hook to the dormancy service. The hook
-    // runs inside the client transition tx and receives the same tx handle
-    // so filing cancellation commits atomically with the status flip.
-    setClientDormancyHandler(this.clientDormancyService);
-
     registerComplianceAudit(this.auditRegistry, this.moduleRef);
 
     // Blocks onboarding → active on the clients workflow unless the client
@@ -90,8 +80,9 @@ export class ComplianceDomainModule implements OnModuleInit {
 
     // Advisory guard on clients active → dormant: surfaces the count of
     // non-terminal filings that will be auto-cancelled, so the admin
-    // confirms knowingly. Cascade itself runs in ClientDormancyService via
-    // the onTransition hook — this guard is preflight-only.
+    // confirms knowingly. Cascade itself runs in ClientsService.transition
+    // inside its own tx via ClientDormancyService — this guard is
+    // preflight-only.
     this.guardRegistry.register('compliance-client-dormancy-warning', async (ctx) => {
       if (ctx.entityType !== 'clients') return allow();
       if (ctx.toState !== 'dormant') return allow();

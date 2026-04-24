@@ -25,14 +25,53 @@ function makeTx(clientRow: unknown, contactRows: unknown[]): TxMock {
 }
 
 describe('ClientsService', () => {
+  let entityService: {
+    list: ReturnType<typeof vi.fn>;
+    findOneOrFail: ReturnType<typeof vi.fn>;
+    create: ReturnType<typeof vi.fn>;
+    update: ReturnType<typeof vi.fn>;
+    softDelete: ReturnType<typeof vi.fn>;
+    clone: ReturnType<typeof vi.fn>;
+    restore: ReturnType<typeof vi.fn>;
+    getListLayout: ReturnType<typeof vi.fn>;
+    validateTransition: ReturnType<typeof vi.fn>;
+    applyTransition: ReturnType<typeof vi.fn>;
+    emitTransitionEvent: ReturnType<typeof vi.fn>;
+  };
   let db: { db: { transaction: ReturnType<typeof vi.fn> } };
   let events: { emitDynamic: ReturnType<typeof vi.fn> };
+  let dormancy: {
+    cancelInFlightFilings: ReturnType<typeof vi.fn>;
+    emitCascadeEvent: ReturnType<typeof vi.fn>;
+  };
   let service: ClientsService;
 
   beforeEach(() => {
+    entityService = {
+      list: vi.fn(),
+      findOneOrFail: vi.fn().mockResolvedValue({ id: 'cid-1', status: 'dormant' }),
+      create: vi.fn(),
+      update: vi.fn(),
+      softDelete: vi.fn(),
+      clone: vi.fn(),
+      restore: vi.fn(),
+      getListLayout: vi.fn(),
+      validateTransition: vi.fn(),
+      applyTransition: vi.fn().mockResolvedValue(undefined),
+      emitTransitionEvent: vi.fn(),
+    };
     db = { db: { transaction: vi.fn() } };
     events = { emitDynamic: vi.fn() };
-    service = new ClientsService(db as never, events as never);
+    dormancy = {
+      cancelInFlightFilings: vi.fn().mockResolvedValue({ cancelledFilingIds: [] }),
+      emitCascadeEvent: vi.fn(),
+    };
+    service = new ClientsService(
+      entityService as never,
+      db as never,
+      events as never,
+      dormancy as never,
+    );
   });
 
   const validClient = {
@@ -41,6 +80,129 @@ describe('ClientsService', () => {
   };
   const primaryContact: ContactInput = { name: 'Alice', isPrimary: true };
   const secondaryContact: ContactInput = { name: 'Bob', isPrimary: false };
+
+  describe('CRUD delegates', () => {
+    it('list delegates to entityService.list with the access context', () => {
+      const accessCtx = { userId: 'u1' } as never;
+      service.list({ page: 1 } as never, accessCtx);
+      expect(entityService.list).toHaveBeenCalledWith({ page: 1 }, accessCtx);
+    });
+
+    it('findOne delegates to entityService.findOneOrFail', () => {
+      service.findOne('cid-1', { userId: 'u1' } as never);
+      expect(entityService.findOneOrFail).toHaveBeenCalledWith('cid-1', { userId: 'u1' });
+    });
+
+    it('create delegates to entityService.create with the actor id', () => {
+      service.create({ name: 'Acme' }, 'user-1');
+      expect(entityService.create).toHaveBeenCalledWith({ name: 'Acme' }, 'user-1');
+    });
+
+    it('update delegates to entityService.update', () => {
+      const accessCtx = { userId: 'u1' } as never;
+      service.update('cid-1', { name: 'Acme 2' }, 'user-1', accessCtx);
+      expect(entityService.update).toHaveBeenCalledWith('cid-1', { name: 'Acme 2' }, 'user-1', accessCtx);
+    });
+
+    it('softDelete delegates to entityService.softDelete', () => {
+      service.softDelete('cid-1', 'user-1');
+      expect(entityService.softDelete).toHaveBeenCalledWith('cid-1', 'user-1', undefined);
+    });
+
+    it('clone delegates to entityService.clone', () => {
+      service.clone('cid-1', 'user-1');
+      expect(entityService.clone).toHaveBeenCalledWith('cid-1', 'user-1');
+    });
+
+    it('restore delegates to entityService.restore', () => {
+      service.restore('cid-1');
+      expect(entityService.restore).toHaveBeenCalledWith('cid-1');
+    });
+
+    it('getListLayout delegates to entityService.getListLayout', () => {
+      service.getListLayout();
+      expect(entityService.getListLayout).toHaveBeenCalled();
+    });
+  });
+
+  describe('transition', () => {
+    const baseCtx = {
+      entityType: 'clients',
+      entityId: 'cid-1',
+      fieldKey: 'status',
+      fieldName: 'status',
+      fromState: 'onboarding',
+      toState: 'active',
+      transitionId: 't-1',
+      transitionName: 'activate',
+      workflowDefinitionId: 'wf-1',
+      workflowSlug: 'client-status',
+      actorId: 'user-1',
+      entity: { id: 'cid-1', name: 'Acme' },
+    };
+
+    it('runs validate → tx(apply) → emit for a non-dormantisation transition', async () => {
+      entityService.validateTransition.mockResolvedValue(baseCtx);
+      db.db.transaction.mockImplementation(async (cb: (tx: unknown) => unknown) => cb({}));
+
+      await service.transition('cid-1', 'status', 'active', 'user-1');
+
+      expect(entityService.validateTransition).toHaveBeenCalledWith('cid-1', 'status', 'active', 'user-1', undefined, undefined);
+      expect(entityService.applyTransition).toHaveBeenCalledWith(baseCtx, {});
+      expect(dormancy.cancelInFlightFilings).not.toHaveBeenCalled();
+      expect(entityService.emitTransitionEvent).toHaveBeenCalledWith(baseCtx);
+      expect(dormancy.emitCascadeEvent).not.toHaveBeenCalled();
+    });
+
+    it('runs dormancy cascade inside the same tx when active → dormant on status', async () => {
+      const dormantCtx = { ...baseCtx, fromState: 'active', toState: 'dormant' };
+      entityService.validateTransition.mockResolvedValue(dormantCtx);
+      dormancy.cancelInFlightFilings.mockResolvedValue({ cancelledFilingIds: ['f1', 'f2'] });
+      let applyCalled = false;
+      let cascadeCalled = false;
+      db.db.transaction.mockImplementation(async (cb: (tx: unknown) => unknown) => {
+        const tx = {};
+        entityService.applyTransition.mockImplementationOnce(() => {
+          applyCalled = true;
+          expect(cascadeCalled).toBe(false);
+          return Promise.resolve();
+        });
+        dormancy.cancelInFlightFilings.mockImplementationOnce(() => {
+          cascadeCalled = true;
+          expect(applyCalled).toBe(true);
+          return Promise.resolve({ cancelledFilingIds: ['f1', 'f2'] });
+        });
+        return cb(tx);
+      });
+
+      await service.transition('cid-1', 'status', 'dormant', 'user-1', { reason: 'Ceased' });
+
+      expect(applyCalled).toBe(true);
+      expect(cascadeCalled).toBe(true);
+      expect(dormancy.emitCascadeEvent).toHaveBeenCalledWith(dormantCtx, ['f1', 'f2']);
+    });
+
+    it('does not run cascade on dormant → active', async () => {
+      const reactivate = { ...baseCtx, fromState: 'dormant', toState: 'active' };
+      entityService.validateTransition.mockResolvedValue(reactivate);
+      db.db.transaction.mockImplementation(async (cb: (tx: unknown) => unknown) => cb({}));
+
+      await service.transition('cid-1', 'status', 'active', 'user-1');
+
+      expect(dormancy.cancelInFlightFilings).not.toHaveBeenCalled();
+      expect(dormancy.emitCascadeEvent).not.toHaveBeenCalled();
+    });
+
+    it('does not run cascade on a non-status field flipping to dormant', async () => {
+      const other = { ...baseCtx, fieldKey: 'other', fieldName: 'other', fromState: 'active', toState: 'dormant' };
+      entityService.validateTransition.mockResolvedValue(other);
+      db.db.transaction.mockImplementation(async (cb: (tx: unknown) => unknown) => cb({}));
+
+      await service.transition('cid-1', 'other', 'dormant', 'user-1');
+
+      expect(dormancy.cancelInFlightFilings).not.toHaveBeenCalled();
+    });
+  });
 
   describe('createWithContacts', () => {
     it('inserts client + contacts in a single transaction and returns both', async () => {
