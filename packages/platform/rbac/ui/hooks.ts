@@ -102,11 +102,11 @@ export function useSetRolePermissions(options?: { onSuccess?: () => void }) {
   });
 }
 
-export function usePermissionRegistry() {
+export function usePermissionManifests() {
   const api = useRbacApi();
   return useQuery({
-    queryKey: ['permissions', 'registry'],
-    queryFn: () => api.getPermissionRegistry(),
+    queryKey: ['permission-manifests'],
+    queryFn: () => api.listPermissionManifests(),
     staleTime: Infinity,
   });
 }

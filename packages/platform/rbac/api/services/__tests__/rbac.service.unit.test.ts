@@ -414,28 +414,19 @@ describe('RbacService', () => {
     });
   });
 
-  describe('registerManifests / getAllRegisteredPermissions', () => {
-    it('maps manifests to the legacy {module, action, description} shape', () => {
+  describe('registerManifests', () => {
+    it('registers manifests into the registry so they are visible to validation + discovery', () => {
       service.registerManifests([
         { slug: 'candidates.create', module: 'candidates', action: 'create', label: 'Create candidates', description: 'Create candidates', supportedScopes: ['any'] },
         { slug: 'candidates.read',   module: 'candidates', action: 'read',   label: 'View candidates',   description: 'View candidates',   supportedScopes: ['any'] },
       ]);
 
-      const result = service.getAllRegisteredPermissions();
-
-      expect(result).toHaveLength(2);
-      expect(result[0]).toEqual({
+      expect(manifestRegistry.list()).toHaveLength(2);
+      expect(manifestRegistry.get('candidates.create')).toMatchObject({
         module: 'candidates',
         action: 'create',
-        description: 'Create candidates',
+        label: 'Create candidates',
       });
-    });
-
-    it('falls back to the label when description is omitted', () => {
-      service.registerManifests([
-        { slug: 'candidates.export', module: 'candidates', action: 'export', label: 'Export candidates', supportedScopes: ['any'] },
-      ]);
-      expect(service.getAllRegisteredPermissions()[0].description).toBe('Export candidates');
     });
   });
 

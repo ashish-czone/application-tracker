@@ -14,7 +14,7 @@ import { rolePermissionScopes } from '../schema/role-permission-scopes';
 import { userRoles } from '../schema/user-roles';
 import { PermissionManifestRegistry, type PermissionManifest } from '../permission-manifest';
 import { normaliseScopes } from '../scope-types';
-import type { Role, RoleMember, RoleWithSystem, ScopedPermissions, BooleanPermissions, ScopeSpec, PermissionRegistryEntry } from '../types';
+import type { Role, RoleMember, RoleWithSystem, ScopedPermissions, BooleanPermissions, ScopeSpec } from '../types';
 
 @Injectable()
 export class RbacService {
@@ -521,19 +521,6 @@ export class RbacService {
    */
   registerManifests(manifests: PermissionManifest[]): void {
     this.manifestRegistry.registerMany(manifests);
-  }
-
-  /**
-   * Flat list of registered permissions in legacy `{module, action,
-   * description}` shape. Derived from PermissionManifestRegistry for
-   * backward-compat with the existing `/rbac/permissions/registry` endpoint.
-   */
-  getAllRegisteredPermissions(): PermissionRegistryEntry[] {
-    return this.manifestRegistry.list().map((m) => ({
-      module: m.module,
-      action: m.action,
-      description: m.description ?? m.label,
-    }));
   }
 
   /**

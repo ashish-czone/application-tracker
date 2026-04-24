@@ -15,6 +15,7 @@ import {
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { CurrentUser, type JwtPayload } from '@packages/auth-core';
 import { RbacService } from '../services/rbac.service';
+import { PermissionManifestRegistry } from '../permission-manifest';
 import { RequirePermission } from '../decorators/require-permission.decorator';
 import type { BooleanPermissions } from '../types';
 import { CreateRoleDto } from '../dto/create-role.dto';
@@ -28,7 +29,10 @@ import { RBAC_PERMISSIONS } from '../permissions';
 @ApiTags('rbac')
 @Controller()
 export class RbacController {
-  constructor(private readonly rbacService: RbacService) {}
+  constructor(
+    private readonly rbacService: RbacService,
+    private readonly manifestRegistry: PermissionManifestRegistry,
+  ) {}
 
   // --- Roles ---
 
@@ -141,12 +145,16 @@ export class RbacController {
     return this.rbacService.getRolePermissions(id);
   }
 
-  // --- Permission Registry ---
+  // --- Permission Manifests ---
 
-  @Get('permissions/registry')
+  @Get('permission-manifests')
   @RequirePermission(RBAC_PERMISSIONS.PERMISSIONS_READ)
-  @ApiOperation({ summary: 'List all registered permissions from modules' })
-  async getPermissionRegistry() {
-    return this.rbacService.getAllRegisteredPermissions();
+  @ApiOperation({
+    summary: 'List every registered permission manifest',
+    description:
+      'Returns slug, module, action, label, description, and supportedScopes for every permission the platform knows about. Drives the role-editor UI.',
+  })
+  async listPermissionManifests() {
+    return this.manifestRegistry.list();
   }
 }

@@ -36,10 +36,13 @@ export interface PermissionEntry {
   name: string;
 }
 
-export interface PermissionRegistryEntry {
+export interface PermissionManifest {
+  slug: string;
   module: string;
   action: string;
-  description: string;
+  label: string;
+  description?: string;
+  supportedScopes: string[];
 }
 
 /** Map of permission name → true (scope is determined by org positions, not permissions) */
