@@ -30,6 +30,32 @@ export class InvalidFrequencyError extends BadRequestException {
   }
 }
 
+/**
+ * I14: raised by the rule update guard when the caller tries to change a
+ * rule-identity field (`code`, `frequency`, `lawId`) on a rule that has
+ * already materialised at least one filing. The UI uses `fields` to mark the
+ * offending inputs; message is the human-readable one-liner.
+ *
+ * Forward-only fields (`dueDayOfMonth`, `dueMonthOffset`, `gracePeriodDays`)
+ * stay editable — they never raise this error. See Q9 for the per-field
+ * policy that defines which fields are identity vs forward-only.
+ */
+export const IMMUTABLE_RULE_IDENTITY_FIELDS = ['code', 'frequency', 'lawId'] as const;
+export type ImmutableRuleIdentityField = (typeof IMMUTABLE_RULE_IDENTITY_FIELDS)[number];
+
+export class ImmutableRuleFieldError extends BadRequestException {
+  constructor(fields: ImmutableRuleIdentityField[]) {
+    const list = fields.join(', ');
+    super({
+      code: 'RULE_FIELD_IMMUTABLE',
+      message:
+        `Cannot change ${list}: this rule has generated filings. ` +
+        `Deprecate this rule and create a new one to change identity fields.`,
+      fields,
+    });
+  }
+}
+
 function assertFrequency(value: string): asserts value is ComplianceFrequency {
   if (!(FREQUENCIES as readonly string[]).includes(value)) {
     throw new InvalidFrequencyError(value);
@@ -181,6 +207,65 @@ export class ComplianceRuleService {
       .where(eq(complianceFilings.ruleId, ruleId))
       .limit(1);
     return rows.length > 0;
+  }
+
+  /**
+   * I13 + I15: what the edit form needs to know before rendering. Boolean +
+   * count pair — the boolean drives the identity-field disable state; the
+   * count is displayed in the forward-only save dialog ("N filings already
+   * generated will keep their current due dates").
+   */
+  async getEditConstraints(ruleId: string): Promise<{
+    ruleId: string;
+    hasGeneratedFilings: boolean;
+    generatedFilingCount: number;
+  }> {
+    const rule = await this.findById(ruleId);
+    if (!rule) {
+      throw new NotFoundException(`Rule ${ruleId} not found`);
+    }
+    const [row] = await this.database.db
+      .select({ count: count() })
+      .from(complianceFilings)
+      .where(eq(complianceFilings.ruleId, ruleId));
+    const generatedFilingCount = Number(row?.count ?? 0);
+    return {
+      ruleId,
+      hasGeneratedFilings: generatedFilingCount > 0,
+      generatedFilingCount,
+    };
+  }
+
+  /**
+   * I14: guard invoked from the `beforeUpdate` hook on `COMPLIANCE_RULES_CONFIG`.
+   * When the payload touches an identity field (`code`, `frequency`, `lawId`)
+   * AND the rule already has filings AND the new value is actually different
+   * from the current value, throw ImmutableRuleFieldError. Same-value writes
+   * pass through so idempotent PATCHes don't 400 spuriously.
+   *
+   * Forward-only fields (`dueDayOfMonth`, `dueMonthOffset`, `gracePeriodDays`)
+   * are explicitly allowed by this guard — Q9 keeps them editable and relies
+   * on the generator being a pure no-op on conflict (I16) to hold the
+   * forward-only invariant without needing a server-side shift.
+   */
+  async assertUpdateAllowed(id: string, payload: Record<string, unknown>): Promise<void> {
+    const touched = IMMUTABLE_RULE_IDENTITY_FIELDS.filter((k) => k in payload);
+    if (touched.length === 0) return;
+
+    const current = await this.findById(id);
+    if (!current) {
+      // Let the underlying update raise NotFoundException — this guard only
+      // polices field-level immutability, not existence.
+      return;
+    }
+
+    const changed = touched.filter((k) => payload[k] !== undefined && payload[k] !== current[k]);
+    if (changed.length === 0) return;
+
+    const hasFilings = await this.hasGeneratedFilings(id);
+    if (!hasFilings) return;
+
+    throw new ImmutableRuleFieldError(changed);
   }
 
   /**

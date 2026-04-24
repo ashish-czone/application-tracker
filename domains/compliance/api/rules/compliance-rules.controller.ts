@@ -32,6 +32,19 @@ export class ComplianceRulesController {
     return this.rules.previewDeprecation(id);
   }
 
+  /**
+   * I15: return the edit constraints the rule form needs to render.
+   * `hasGeneratedFilings` drives the disabled state on `code`/`frequency`/`lawId`;
+   * `generatedFilingCount` is shown in the forward-only save dialog when
+   * due-date-math fields are touched. Permission mirrors the update endpoint
+   * since a user who can't update shouldn't be computing edit constraints.
+   */
+  @Get(':id/edit-constraints')
+  @RequirePermission('compliance_rules.update')
+  async getEditConstraints(@Param('id', ParseUUIDPipe) id: string) {
+    return this.rules.getEditConstraints(id);
+  }
+
   @Post(':id/deprecate')
   @HttpCode(HttpStatus.OK)
   @RequirePermission('compliance_rules.update')

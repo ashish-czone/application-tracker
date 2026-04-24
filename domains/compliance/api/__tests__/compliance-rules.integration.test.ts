@@ -2,7 +2,11 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import request from 'supertest';
 import { withAuth, type PackageTestApp } from '@packages/platform-testing';
 import { createComplianceTestApp, resetComplianceTestDb } from './setup/app';
-import { createLaw } from './setup/fixtures';
+import {
+  createLaw,
+  createFiling,
+  createFilingPrereqs,
+} from './setup/fixtures';
 
 const READ = ['compliance_rules.read'];
 const MANAGE = [
@@ -167,6 +171,140 @@ describe('Compliance Rules (integration)', () => {
         .send({ frequency: 'quarterly' })
         .expect(200);
       expect(res.body.frequency).toBe('quarterly');
+    });
+
+    describe('I14: identity-field immutability once filings exist', () => {
+      async function seedRuleWithFiling() {
+        // createFilingPrereqs builds the full user/org-unit/law/rule/client
+        // chain; we write the filing row directly so the guard sees the
+        // rule as "has generated filings" without depending on the
+        // generator automation firing.
+        const { userId, teamId, lawId, ruleId, clientId } = await createFilingPrereqs(ctx.db);
+        await createFiling(ctx.db, {
+          ruleId, clientId, lawId, assigneeTeamId: teamId, createdBy: userId,
+        });
+        return { ruleId, lawId };
+      }
+
+      it('blocks a code change with 400 RULE_FIELD_IMMUTABLE', async () => {
+        const { ruleId } = await seedRuleWithFiling();
+        const res = await request(ctx.httpServer)
+          .patch(`/api/v1/compliance_rules/${ruleId}`)
+          .set(withAuth(MANAGE))
+          .send({ code: 'NEW-CODE' })
+          .expect(400);
+        expect(res.body).toMatchObject({
+          code: 'RULE_FIELD_IMMUTABLE',
+          fields: ['code'],
+        });
+      });
+
+      it('blocks a frequency change with 400 and lists only the changed field', async () => {
+        const { ruleId } = await seedRuleWithFiling();
+        const res = await request(ctx.httpServer)
+          .patch(`/api/v1/compliance_rules/${ruleId}`)
+          .set(withAuth(MANAGE))
+          .send({ frequency: 'quarterly' })
+          .expect(400);
+        expect(res.body.fields).toEqual(['frequency']);
+      });
+
+      it('blocks a lawId change with 400', async () => {
+        const { ruleId } = await seedRuleWithFiling();
+        const { id: otherLawId } = await createLaw(ctx.db);
+        const res = await request(ctx.httpServer)
+          .patch(`/api/v1/compliance_rules/${ruleId}`)
+          .set(withAuth(MANAGE))
+          .send({ lawId: otherLawId })
+          .expect(400);
+        expect(res.body.fields).toEqual(['lawId']);
+      });
+
+      it('allows cosmetic + forward-only edits on a rule that already has filings', async () => {
+        const { ruleId } = await seedRuleWithFiling();
+        const res = await request(ctx.httpServer)
+          .patch(`/api/v1/compliance_rules/${ruleId}`)
+          .set(withAuth(MANAGE))
+          .send({
+            name: 'Updated name',
+            description: 'Updated description',
+            dueDayOfMonth: 25,
+            dueMonthOffset: 2,
+            gracePeriodDays: 5,
+          })
+          .expect(200);
+        expect(res.body).toMatchObject({
+          name: 'Updated name',
+          dueDayOfMonth: 25,
+          dueMonthOffset: 2,
+          gracePeriodDays: 5,
+        });
+      });
+
+      it('allows identity-field changes on a rule that has no filings', async () => {
+        // No filing seeded — guard passes through even for identity fields.
+        const rule = await createRule();
+        await request(ctx.httpServer)
+          .patch(`/api/v1/compliance_rules/${rule.id}`)
+          .set(withAuth(MANAGE))
+          .send({ code: 'NEW-CODE' })
+          .expect(200);
+      });
+    });
+  });
+
+  describe('GET /api/v1/compliance-rules/:id/edit-constraints', () => {
+    it('reports hasGeneratedFilings=false + count=0 for a fresh rule', async () => {
+      const rule = await createRule();
+      const res = await request(ctx.httpServer)
+        .get(`/api/v1/compliance-rules/${rule.id}/edit-constraints`)
+        .set(withAuth(MANAGE))
+        .expect(200);
+      expect(res.body).toEqual({
+        ruleId: rule.id,
+        hasGeneratedFilings: false,
+        generatedFilingCount: 0,
+      });
+    });
+
+    it('reports hasGeneratedFilings=true with the exact count once filings exist', async () => {
+      const { userId, teamId, lawId, ruleId, clientId } = await createFilingPrereqs(ctx.db);
+      await createFiling(ctx.db, { ruleId, clientId, lawId, assigneeTeamId: teamId, createdBy: userId });
+      await createFiling(ctx.db, {
+        ruleId, clientId, lawId, assigneeTeamId: teamId, createdBy: userId,
+        periodStart: '2026-04-01', periodEnd: '2026-04-30',
+      });
+      const res = await request(ctx.httpServer)
+        .get(`/api/v1/compliance-rules/${ruleId}/edit-constraints`)
+        .set(withAuth(MANAGE))
+        .expect(200);
+      expect(res.body).toMatchObject({
+        ruleId,
+        hasGeneratedFilings: true,
+        generatedFilingCount: 2,
+      });
+    });
+
+    it('returns 401 without auth', async () => {
+      const rule = await createRule();
+      await request(ctx.httpServer)
+        .get(`/api/v1/compliance-rules/${rule.id}/edit-constraints`)
+        .expect(401);
+    });
+
+    it('returns 403 with read-only perms', async () => {
+      const rule = await createRule();
+      await request(ctx.httpServer)
+        .get(`/api/v1/compliance-rules/${rule.id}/edit-constraints`)
+        .set(withAuth(READ))
+        .expect(403);
+    });
+
+    it('returns 404 for unknown rule id', async () => {
+      await request(ctx.httpServer)
+        .get('/api/v1/compliance-rules/00000000-0000-0000-0000-000000000000/edit-constraints')
+        .set(withAuth(MANAGE))
+        .expect(404);
     });
   });
 
