@@ -3,11 +3,12 @@ import { DatabaseService } from '@packages/database';
 import { DomainEventEmitter, EventRegistryService } from '@packages/events';
 import { HierarchyService } from '@packages/hierarchy';
 import { OrderableService } from '@packages/orderable';
-import { RbacService, ScopeResolverRegistry } from '@packages/rbac';
+import { RbacService, ScopeResolverRegistry, type PermissionManifest } from '@packages/rbac';
 import { AppLoggerService } from '@packages/logger';
 import { EntityCoreModule } from './entity-core.module';
 import { EntityRegistryService } from './entity-registry.service';
 import { EntityService } from './entity.service';
+import { deriveSupportedScopes } from './helpers/derive-supported-scopes';
 import { FieldDefinitionService } from './services/field-definition.service';
 import { FieldTypeSaveHookRegistry } from './services/field-type-save-hook.registry';
 import { LookupResolverService } from './services/lookup-resolver.service';
@@ -76,6 +77,7 @@ export class EntityEngineModule implements OnApplicationBootstrap {
     private readonly eventRegistry: EventRegistryService,
     private readonly lookupResolver: LookupResolverService,
     private readonly fieldDefService: FieldDefinitionService,
+    private readonly scopeResolverRegistry: ScopeResolverRegistry,
     @Inject(WORKFLOW_EXTENSION) @Optional() private readonly workflowExt: WorkflowExtension | null,
     @Inject(AUTOMATIONS_EXTENSION) @Optional() private readonly automationsExt: AutomationsExtension | null,
     @Inject(AUDIT_EXTENSION) @Optional() private readonly auditExt: AuditExtension | null,
@@ -155,15 +157,29 @@ export class EntityEngineModule implements OnApplicationBootstrap {
       this.fieldDefService.populateFromRegistry(config);
     }
 
-    // 2. RBAC
-    const permissions = [
-      { action: 'create', description: `Create ${config.pluralName.toLowerCase()}` },
-      { action: 'read', description: `View ${config.pluralName.toLowerCase()}` },
-      { action: 'update', description: `Update ${config.pluralName.toLowerCase()}` },
-      { action: 'delete', description: `Delete ${config.pluralName.toLowerCase()}` },
-      ...(config.extraPermissions ?? []),
+    // 2. RBAC — register permission manifests. `supportedScopes` per permission
+    //    is derived from the entity's declared anchors + registered scope
+    //    resolvers (opt-in per entity) + inline entity scopes. extraPermissions
+    //    may override with a narrower subset (e.g. `pickup` only makes sense
+    //    on `unit` / `unassigned_in_unit`, not on `own`).
+    const derivedScopes = deriveSupportedScopes(config, this.scopeResolverRegistry.values());
+    const plural = config.pluralName.toLowerCase();
+    const singular = config.singularName.toLowerCase();
+    const crudManifests: PermissionManifest[] = [
+      { slug: `${config.slug}.create`, module: config.slug, action: 'create', label: `Create ${plural}`, description: `Create ${plural}`, supportedScopes: ['any'] },
+      { slug: `${config.slug}.read`,   module: config.slug, action: 'read',   label: `View ${plural}`,   description: `View ${plural}`,   supportedScopes: derivedScopes },
+      { slug: `${config.slug}.update`, module: config.slug, action: 'update', label: `Update ${singular}`, description: `Update ${plural}`, supportedScopes: derivedScopes },
+      { slug: `${config.slug}.delete`, module: config.slug, action: 'delete', label: `Delete ${singular}`, description: `Delete ${plural}`, supportedScopes: derivedScopes },
     ];
-    this.rbac.registerPermissions(config.slug, permissions);
+    const extraManifests: PermissionManifest[] = (config.extraPermissions ?? []).map((p) => ({
+      slug: `${config.slug}.${p.action}`,
+      module: config.slug,
+      action: p.action,
+      label: p.description,
+      description: p.description,
+      supportedScopes: p.supportedScopes ?? derivedScopes,
+    }));
+    this.rbac.registerManifests([...crudManifests, ...extraManifests]);
 
     // 3. Events
     const createdEvent = `${config.entityType}.Created`;

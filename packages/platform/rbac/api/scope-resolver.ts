@@ -38,6 +38,16 @@ export interface ScopeResolverContext {
  */
 export interface ScopeResolver<P = Record<string, unknown> | undefined> {
   readonly type: string;
+  /**
+   * Anchor roles the resolver consults. Used at entity-engine init to decide
+   * whether this resolver can contribute for a given entity and therefore
+   * belongs in the entity's auto-derived permission manifest `supportedScopes`.
+   *
+   * Semantics: the resolver's scope is offered if **at least one** of the
+   * declared anchors exists on the entity. Omit (or leave empty) for
+   * resolvers that don't consult anchors — they're offered for every entity.
+   */
+  readonly requiredAnchors?: readonly string[];
   resolve(
     ctx: ScopeResolverContext,
     params: P,
@@ -71,5 +81,9 @@ export class ScopeResolverRegistry {
 
   list(): string[] {
     return Array.from(this.resolvers.keys());
+  }
+
+  values(): ScopeResolver[] {
+    return Array.from(this.resolvers.values());
   }
 }

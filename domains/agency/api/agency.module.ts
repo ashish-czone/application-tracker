@@ -6,7 +6,7 @@ import { ContentModule } from '@packages/content-api';
 import { MenusModule } from '@packages/menus-api';
 import { MediaLibraryModule } from '@packages/media-library-api';
 
-import { AGENCY_PERMISSION_REGISTRATIONS } from './permissions';
+import { AGENCY_PERMISSION_MANIFESTS } from './permissions';
 import { SITE_SETTINGS } from './settings';
 import { SiteSettingsController } from './site-settings.controller';
 
@@ -21,16 +21,7 @@ export class AgencyDomainModule implements OnModuleInit {
   ) {}
 
   onModuleInit() {
-    const byModule = new Map<string, { action: string; description: string }[]>();
-    for (const { module, action, description } of AGENCY_PERMISSION_REGISTRATIONS) {
-      const list = byModule.get(module) ?? [];
-      list.push({ action, description });
-      byModule.set(module, list);
-    }
-    for (const [module, perms] of byModule) {
-      this.rbac.registerPermissions(module, perms);
-    }
-
+    this.rbac.registerManifests(AGENCY_PERMISSION_MANIFESTS);
     this.appConfig.register('site', SITE_SETTINGS);
   }
 }

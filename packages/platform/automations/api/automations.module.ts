@@ -81,9 +81,9 @@ export class AutomationsModule implements OnModuleInit {
 
   async onModuleInit() {
     // Register RBAC permissions
-    this.rbacService.registerPermissions('automations', [
-      { action: 'rules.read', description: 'View automation rules' },
-      { action: 'rules.manage', description: 'Create, update, and delete automation rules' },
+    this.rbacService.registerManifests([
+      { slug: 'automations.rules.read',   module: 'automations', action: 'rules.read',   label: 'View automation rules',   description: 'View automation rules', supportedScopes: ['any'] },
+      { slug: 'automations.rules.manage', module: 'automations', action: 'rules.manage', label: 'Manage automation rules', description: 'Create, update, and delete automation rules', supportedScopes: ['any'] },
     ]);
 
     // Register built-in user resolver strategies

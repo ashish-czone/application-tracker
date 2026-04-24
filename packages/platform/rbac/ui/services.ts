@@ -6,7 +6,7 @@ import type {
   CreateRoleRequest,
   UpdateRoleRequest,
   PermissionEntry,
-  PermissionRegistryEntry,
+  PermissionManifest,
   BooleanPermissions,
   ListRolesParams,
   ListRoleMembersParams,
@@ -52,8 +52,8 @@ export function createRbacApi(api: ApiFn) {
       return api.put<BooleanPermissions>(`/roles/${roleId}/permissions`, { permissions });
     },
 
-    getPermissionRegistry(): Promise<PermissionRegistryEntry[]> {
-      return api.get<PermissionRegistryEntry[]>('/permissions/registry');
+    listPermissionManifests(): Promise<PermissionManifest[]> {
+      return api.get<PermissionManifest[]>('/permission-manifests');
     },
 
     listRoleMembers(roleId: string, params: ListRoleMembersParams): Promise<PaginatedResponse<RoleMember>> {

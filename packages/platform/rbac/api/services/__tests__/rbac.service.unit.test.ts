@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { RbacService } from '../rbac.service';
-import { PermissionRegistryService } from '../permission-registry.service';
+import { PermissionManifestRegistry } from '../../permission-manifest';
 
 // Mock database helpers
 function createMockDb() {
@@ -35,14 +35,23 @@ function createMockDatabaseService(mockDb: ReturnType<typeof createMockDb>) {
 
 describe('RbacService', () => {
   let service: RbacService;
-  let permissionRegistry: PermissionRegistryService;
+  let manifestRegistry: PermissionManifestRegistry;
   let mockDb: ReturnType<typeof createMockDb>;
+
+  function seedManifests(slugs: string[]): void {
+    manifestRegistry.registerMany(
+      slugs.map((slug) => {
+        const [module, action] = slug.split('.');
+        return { slug, module, action, label: slug, supportedScopes: ['any'] };
+      }),
+    );
+  }
 
   beforeEach(() => {
     mockDb = createMockDb();
     const databaseService = createMockDatabaseService(mockDb);
-    permissionRegistry = new PermissionRegistryService();
-    service = new RbacService(databaseService, permissionRegistry);
+    manifestRegistry = new PermissionManifestRegistry();
+    service = new RbacService(databaseService, manifestRegistry);
   });
 
   describe('createRole', () => {
@@ -286,6 +295,10 @@ describe('RbacService', () => {
   });
 
   describe('setRolePermissions — system role protection', () => {
+    beforeEach(() => {
+      seedManifests(['users.read']);
+    });
+
     it('should block permission changes on system roles via API', async () => {
       const role = { id: 'admin-role', name: 'Admin', userType: 'client', isDefault: false, createdAt: new Date(), updatedAt: new Date() };
       vi.spyOn(service, 'findRoleById').mockResolvedValueOnce(role);
@@ -309,6 +322,10 @@ describe('RbacService', () => {
   });
 
   describe('setRolePermissions — grant only what you hold', () => {
+    beforeEach(() => {
+      seedManifests(['users.read', 'users.manage', 'orders.read', 'anything.do']);
+    });
+
     it('should allow setting permissions without actor check when actorPermissions not provided', async () => {
       const role = { id: 'role-1', name: 'manager', userType: 'client', isDefault: false, createdAt: new Date(), updatedAt: new Date() };
       vi.spyOn(service, 'findRoleById').mockResolvedValueOnce(role);
@@ -375,6 +392,10 @@ describe('RbacService', () => {
   });
 
   describe('setRolePermissions — lockout prevention', () => {
+    beforeEach(() => {
+      seedManifests(['users.read']);
+    });
+
     it('should block removing * when no other wildcard users exist', async () => {
       const role = { id: 'role-1', name: 'admin', userType: 'client', isDefault: false, createdAt: new Date(), updatedAt: new Date() };
       vi.spyOn(service, 'findRoleById').mockResolvedValueOnce(role);
@@ -414,21 +435,102 @@ describe('RbacService', () => {
     });
   });
 
-  describe('registerPermissions / getAllRegisteredPermissions', () => {
-    it('should delegate to permission registry', () => {
-      service.registerPermissions('candidates', [
-        { action: 'create', description: 'Create candidates' },
-        { action: 'read', description: 'View candidates' },
+  describe('registerManifests', () => {
+    it('registers manifests into the registry so they are visible to validation + discovery', () => {
+      service.registerManifests([
+        { slug: 'candidates.create', module: 'candidates', action: 'create', label: 'Create candidates', description: 'Create candidates', supportedScopes: ['any'] },
+        { slug: 'candidates.read',   module: 'candidates', action: 'read',   label: 'View candidates',   description: 'View candidates',   supportedScopes: ['any'] },
       ]);
 
-      const result = service.getAllRegisteredPermissions();
-
-      expect(result).toHaveLength(2);
-      expect(result[0]).toEqual({
+      expect(manifestRegistry.list()).toHaveLength(2);
+      expect(manifestRegistry.get('candidates.create')).toMatchObject({
         module: 'candidates',
         action: 'create',
-        description: 'Create candidates',
+        label: 'Create candidates',
       });
+    });
+  });
+
+  describe('setRolePermissions — manifest scope validation', () => {
+    const role = {
+      id: 'role-1',
+      name: 'preparer',
+      userType: null,
+      isDefault: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    beforeEach(() => {
+      (service as any).database.db.transaction = vi.fn().mockImplementation(async (fn: any) => fn(mockDb));
+      vi.spyOn(service, 'findRoleById').mockResolvedValue(role);
+      vi.spyOn(service, 'getRolePermissions').mockResolvedValue({});
+    });
+
+    it('allows scopes that are in the manifest supportedScopes', async () => {
+      service.registerManifests([
+        {
+          slug: 'filings.pickup',
+          module: 'filings',
+          action: 'pickup',
+          label: 'Pick up filing',
+          supportedScopes: ['unit', 'unassigned_in_unit'],
+        },
+      ]);
+
+      await expect(
+        service.setRolePermissions('role-1', [
+          { name: 'filings.pickup', scopes: [{ type: 'unit' }] },
+        ]),
+      ).resolves.toBeUndefined();
+    });
+
+    it('rejects a scope type not in supportedScopes', async () => {
+      service.registerManifests([
+        {
+          slug: 'filings.pickup',
+          module: 'filings',
+          action: 'pickup',
+          label: 'Pick up filing',
+          supportedScopes: ['unit', 'unassigned_in_unit'],
+        },
+      ]);
+
+      await expect(
+        service.setRolePermissions('role-1', [
+          { name: 'filings.pickup', scopes: [{ type: 'own' }] },
+        ]),
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it("rejects 'any' when the manifest doesn't list it", async () => {
+      service.registerManifests([
+        {
+          slug: 'filings.pickup',
+          module: 'filings',
+          action: 'pickup',
+          label: 'Pick up filing',
+          supportedScopes: ['unit'],
+        },
+      ]);
+
+      await expect(
+        service.setRolePermissions('role-1', ['filings.pickup']), // string form → scope 'any'
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it('rejects slugs that have no registered manifest', async () => {
+      await expect(
+        service.setRolePermissions('role-1', [
+          { name: 'not-yet-registered.read', scopes: [{ type: 'own' }] },
+        ]),
+      ).rejects.toThrow(/unknown permission/);
+    });
+
+    it("allows wildcard '*' regardless of manifest state", async () => {
+      await expect(
+        service.setRolePermissions('role-1', [{ name: '*' }]),
+      ).resolves.toBeUndefined();
     });
   });
 

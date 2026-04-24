@@ -277,19 +277,26 @@ describe('RbacController (integration)', () => {
     });
   });
 
-  // ── Permission Registry ──────────────────────────────────────────────
+  // ── Permission Manifests ──────────────────────────────────────────────
 
-  describe('GET /api/v1/permissions/registry', () => {
-    it('should list registered permissions', async () => {
+  describe('GET /api/v1/permission-manifests', () => {
+    it('should list registered permission manifests', async () => {
       const res = await request(ctx.httpServer)
-        .get('/api/v1/permissions/registry')
+        .get('/api/v1/permission-manifests')
         .set(withAuth(PERMS_READ))
         .expect(200);
 
-      // RbacModule registers its own permissions
-      expect(res.body).toEqual(expect.arrayContaining([
-        expect.objectContaining({ module: 'rbac' }),
-      ]));
+      expect(res.body).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            module: 'rbac',
+            slug: expect.stringMatching(/^rbac\./),
+            action: expect.any(String),
+            label: expect.any(String),
+            supportedScopes: expect.any(Array),
+          }),
+        ]),
+      );
     });
   });
 

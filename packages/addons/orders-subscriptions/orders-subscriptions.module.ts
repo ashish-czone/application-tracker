@@ -85,11 +85,11 @@ export class OrdersSubscriptionsModule implements OnModuleInit {
     });
 
     // 3. Register RBAC permissions (beyond auto-generated CRUD from entity engine)
-    this.rbacService.registerPermissions('subscriptions', [
-      { action: 'activate', description: 'Activate subscriptions' },
-      { action: 'renew', description: 'Renew subscriptions' },
-      { action: 'cancel', description: 'Cancel subscriptions' },
-      { action: 'pause', description: 'Pause subscriptions' },
+    this.rbacService.registerManifests([
+      { slug: 'subscriptions.activate', module: 'subscriptions', action: 'activate', label: 'Activate subscriptions', description: 'Activate subscriptions', supportedScopes: ['any'] },
+      { slug: 'subscriptions.renew',    module: 'subscriptions', action: 'renew',    label: 'Renew subscriptions',    description: 'Renew subscriptions',    supportedScopes: ['any'] },
+      { slug: 'subscriptions.cancel',   module: 'subscriptions', action: 'cancel',   label: 'Cancel subscriptions',   description: 'Cancel subscriptions',   supportedScopes: ['any'] },
+      { slug: 'subscriptions.pause',    module: 'subscriptions', action: 'pause',    label: 'Pause subscriptions',    description: 'Pause subscriptions',    supportedScopes: ['any'] },
     ]);
 
     // 4. Register expiry cron job (daily at 1:00 AM local time)

@@ -23,10 +23,10 @@ export class AttachmentsModule implements OnModuleInit {
 
   onModuleInit() {
     // Register RBAC permissions
-    this.rbacService.registerPermissions('attachments', [
-      { action: 'read', description: 'View attachments' },
-      { action: 'create', description: 'Upload attachments' },
-      { action: 'delete', description: 'Delete attachments' },
+    this.rbacService.registerManifests([
+      { slug: 'attachments.read',   module: 'attachments', action: 'read',   label: 'View attachments',   description: 'View attachments',   supportedScopes: ['any'] },
+      { slug: 'attachments.create', module: 'attachments', action: 'create', label: 'Upload attachments', description: 'Upload attachments', supportedScopes: ['any'] },
+      { slug: 'attachments.delete', module: 'attachments', action: 'delete', label: 'Delete attachments', description: 'Delete attachments', supportedScopes: ['any'] },
     ]);
 
     // Register audit events

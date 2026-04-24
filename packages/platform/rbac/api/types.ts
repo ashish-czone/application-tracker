@@ -53,12 +53,6 @@ export type PermissionScope = 'all' | 'team' | 'own' | `scope:${string}`;
  */
 export type BooleanPermissions = Record<string, true>;
 
-export interface PermissionRegistryEntry {
-  module: string;
-  action: string;
-  description: string;
-}
-
 /** Minimal interface for resolving entity metadata needed by field permissions. */
 export interface FieldPermissionEntityResolver {
   /** Get the slug and fieldMeta for an entity type. Returns undefined if not found. */

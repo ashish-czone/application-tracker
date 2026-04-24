@@ -10,9 +10,9 @@ export class QueueModule implements OnModuleInit {
   constructor(private readonly rbacService: RbacService) {}
 
   onModuleInit() {
-    this.rbacService.registerPermissions('queues', [
-      { action: 'read', description: 'View queue dashboard and job data' },
-      { action: 'manage', description: 'Pause, resume, retry, and clean queues' },
+    this.rbacService.registerManifests([
+      { slug: 'queues.read',   module: 'queues', action: 'read',   label: 'View queues',   description: 'View queue dashboard and job data',    supportedScopes: ['any'] },
+      { slug: 'queues.manage', module: 'queues', action: 'manage', label: 'Manage queues', description: 'Pause, resume, retry, and clean queues', supportedScopes: ['any'] },
     ]);
   }
 

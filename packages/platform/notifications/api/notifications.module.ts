@@ -51,9 +51,9 @@ export class NotificationsModule implements OnModuleInit {
 
   async onModuleInit() {
     // Register RBAC permissions
-    this.rbacService.registerPermissions('notifications', [
-      { action: 'templates.read', description: 'View notification templates' },
-      { action: 'templates.manage', description: 'Create, update, and delete notification templates' },
+    this.rbacService.registerManifests([
+      { slug: 'notifications.templates.read',   module: 'notifications', action: 'templates.read',   label: 'View notification templates',   description: 'View notification templates', supportedScopes: ['any'] },
+      { slug: 'notifications.templates.manage', module: 'notifications', action: 'templates.manage', label: 'Manage notification templates', description: 'Create, update, and delete notification templates', supportedScopes: ['any'] },
     ]);
 
     // Register inline channels

@@ -9,6 +9,7 @@ import type { ScopeResolver, ScopeResolverContext } from '../scope-resolver';
 @Injectable()
 export class AssignedScopeResolver implements ScopeResolver {
   readonly type = 'assigned';
+  readonly requiredAnchors = ['assignee'] as const;
 
   resolve(ctx: ScopeResolverContext): SQL | undefined {
     const assignee = ctx.anchors.assignee;

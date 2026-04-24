@@ -17,6 +17,7 @@ type HierarchyScopeType = 'unit' | 'descendants';
  */
 abstract class HierarchyScopeResolver implements ScopeResolver {
   abstract readonly type: HierarchyScopeType;
+  readonly requiredAnchors = ['creator', 'assignee', 'team'] as const;
 
   constructor(protected readonly positionScopeResolver: PositionScopeResolverService) {}
 

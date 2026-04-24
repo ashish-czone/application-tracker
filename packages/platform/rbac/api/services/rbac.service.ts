@@ -12,7 +12,7 @@ import { roles } from '../schema/roles';
 import { rolePermissions } from '../schema/role-permissions';
 import { rolePermissionScopes } from '../schema/role-permission-scopes';
 import { userRoles } from '../schema/user-roles';
-import { PermissionRegistryService } from './permission-registry.service';
+import { PermissionManifestRegistry, type PermissionManifest } from '../permission-manifest';
 import { normaliseScopes } from '../scope-types';
 import type { Role, RoleMember, RoleWithSystem, ScopedPermissions, BooleanPermissions, ScopeSpec } from '../types';
 
@@ -31,7 +31,7 @@ export class RbacService {
 
   constructor(
     private readonly database: DatabaseService,
-    private readonly permissionRegistry: PermissionRegistryService,
+    private readonly manifestRegistry: PermissionManifestRegistry,
   ) {}
 
   // --- Roles ---
@@ -229,6 +229,8 @@ export class RbacService {
         ? { name: e, scopes: [{ type: 'any' }] as ScopeSpec[] }
         : { name: e.name, scopes: normaliseScopes(e.scopes && e.scopes.length > 0 ? e.scopes : [{ type: 'any' }]) },
     );
+
+    this.validateGrantScopes(entries);
 
     // Load current permissions once for enforcement checks
     const currentPermissions = await this.getRolePermissions(roleId);
@@ -508,14 +510,44 @@ export class RbacService {
     return result;
   }
 
-  // --- Permission registry (delegates to internal service) ---
+  // --- Permission registry ---
 
-  registerPermissions(module: string, perms: { action: string; description: string }[]) {
-    this.permissionRegistry.register(module, perms);
+  /**
+   * Register permission manifests. Every module that introduces permissions
+   * calls this in `onModuleInit` (or has entity-engine do it via
+   * `defineEntity`). The manifest carries the scope types the permission
+   * supports, which the role-grant path uses to reject invalid scope types
+   * and the role editor UI uses to decide which scope pickers to offer.
+   */
+  registerManifests(manifests: PermissionManifest[]): void {
+    this.manifestRegistry.registerMany(manifests);
   }
 
-  getAllRegisteredPermissions() {
-    return this.permissionRegistry.getAll();
+  /**
+   * Reject grants whose permission slug is not registered, or whose scope
+   * types are not declared in the permission's manifest. Wildcard `*` is
+   * system-admin and has no manifest — always allowed.
+   */
+  private validateGrantScopes(entries: { name: string; scopes: ScopeSpec[] }[]): void {
+    const violations: string[] = [];
+    for (const entry of entries) {
+      if (entry.name === '*') continue;
+      const supported = this.manifestRegistry.getSupportedScopes(entry.name);
+      if (!supported) {
+        violations.push(`${entry.name}: unknown permission (no manifest registered)`);
+        continue;
+      }
+      for (const scope of entry.scopes) {
+        if (!supported.includes(scope.type)) {
+          violations.push(`${entry.name}: scope '${scope.type}' not in supportedScopes [${supported.join(', ')}]`);
+        }
+      }
+    }
+    if (violations.length > 0) {
+      throw new ConflictException(
+        `Unsupported scope types in grant:\n${violations.join('\n')}`,
+      );
+    }
   }
 
   // --- Private helpers ---

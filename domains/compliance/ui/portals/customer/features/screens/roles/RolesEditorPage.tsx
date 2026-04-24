@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { ScreenLayout } from '@packages/ui';
-import { useRolesList, usePermissionRegistry, type Role } from '@packages/rbac-ui';
+import { useRolesList, usePermissionManifests, type Role } from '@packages/rbac-ui';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 import { RoleListItem } from './components/RoleListItem';
 import { RoleDetailPanel } from './components/RoleDetailPanel';
@@ -11,7 +11,7 @@ import { groupPermissionsByModule } from './utils/permissions';
 
 export function RolesEditorPage() {
   const { data: rolesData, isLoading: rolesLoading } = useRolesList({ limit: 100 });
-  const { data: registry, isLoading: registryLoading } = usePermissionRegistry();
+  const { data: manifests, isLoading: manifestsLoading } = usePermissionManifests();
 
   const roles = rolesData?.data ?? [];
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
@@ -25,11 +25,11 @@ export function RolesEditorPage() {
   }, [roles, selectedRoleId]);
 
   const permissionGroups = useMemo(
-    () => groupPermissionsByModule(registry ?? []),
-    [registry],
+    () => groupPermissionsByModule(manifests ?? []),
+    [manifests],
   );
 
-  const totalPermissions = registry?.length ?? 0;
+  const totalPermissions = manifests?.length ?? 0;
 
   const [leftWidth, setLeftWidth] = useState(280);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -61,7 +61,7 @@ export function RolesEditorPage() {
       breadcrumb={['Settings', 'Roles & Permissions']}
       title="Roles & Permissions"
       subtitle={
-        rolesLoading || registryLoading ? (
+        rolesLoading || manifestsLoading ? (
           <>Loading…</>
         ) : (
           <>

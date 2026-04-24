@@ -7,7 +7,7 @@ import { PositionScopeResolverService } from './services/position-scope-resolver
 import { OrgUnitController } from './controllers/org-unit.controller';
 import { OrgUnitLevelController } from './controllers/org-unit-level.controller';
 import { OrgPositionController } from './controllers/org-position.controller';
-import { PermissionRegistryService, ScopeResolverRegistry } from '@packages/rbac';
+import { PermissionManifestRegistry, ScopeResolverRegistry } from '@packages/rbac';
 import { LookupResolverService } from '@packages/entity-engine';
 import { UserResolverRegistry, EntityResolverRegistry } from '@packages/automation-contracts';
 import { orgUnits } from './schema/org-units';
@@ -33,7 +33,7 @@ import { UnitScopeResolver, DescendantsScopeResolver } from './scope-resolvers/h
 })
 export class OrgUnitsModule implements OnModuleInit {
   constructor(
-    private readonly permissionRegistry: PermissionRegistryService,
+    private readonly manifestRegistry: PermissionManifestRegistry,
     private readonly lookupResolver: LookupResolverService,
     private readonly userResolverRegistry: UserResolverRegistry,
     private readonly entityResolverRegistry: EntityResolverRegistry,
@@ -44,9 +44,9 @@ export class OrgUnitsModule implements OnModuleInit {
   ) {}
 
   onModuleInit() {
-    this.permissionRegistry.register('org-units', [
-      { action: 'org-units.read', description: 'View org units' },
-      { action: 'org-units.manage', description: 'Create, update, and delete org units' },
+    this.manifestRegistry.registerMany([
+      { slug: 'org-units.read',   module: 'org-units', action: 'read',   label: 'View org units',   description: 'View org units',                         supportedScopes: ['any'] },
+      { slug: 'org-units.manage', module: 'org-units', action: 'manage', label: 'Manage org units', description: 'Create, update, and delete org units',   supportedScopes: ['any'] },
     ]);
 
     this.scopeResolverRegistry.register(this.unitScopeResolver);

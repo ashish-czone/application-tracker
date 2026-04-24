@@ -9,7 +9,7 @@ import { rolePermissions } from '../../schema/role-permissions';
 import { rolePermissionScopes } from '../../schema/role-permission-scopes';
 import { RbacModule } from '../../rbac.module';
 import { RbacService } from '../rbac.service';
-import { PermissionRegistryService } from '../permission-registry.service';
+import { PermissionManifestRegistry } from '../../permission-manifest';
 import type { DrizzleDB } from '@packages/database';
 import type { TestingModule } from '@nestjs/testing';
 
@@ -18,7 +18,7 @@ describe('RBAC (integration)', () => {
   let db: DrizzleDB;
   let cleanup: () => Promise<void>;
   let rbacService: RbacService;
-  let permissionRegistry: PermissionRegistryService;
+  let manifestRegistry: PermissionManifestRegistry;
 
   beforeAll(async () => {
     const ctx = await createIntegrationTestModule({
@@ -28,7 +28,24 @@ describe('RBAC (integration)', () => {
     db = ctx.db;
     cleanup = ctx.cleanup;
     rbacService = module.get(RbacService);
-    permissionRegistry = module.get(PermissionRegistryService);
+    manifestRegistry = module.get(PermissionManifestRegistry);
+
+    // Seed manifests for every permission slug the tests below exercise.
+    // Scope validation rejects grants whose slug has no registered manifest,
+    // and this suite boots only `RbacModule` so none of the app/module inits
+    // that normally populate the registry run.
+    const testSlugs = [
+      'things.read', 'things.create',
+      'users.read', 'users.update', 'users.create',
+      'tasks.update', 'tasks.read',
+      'reports.read',
+    ];
+    rbacService.registerManifests(
+      testSlugs.map((slug) => {
+        const [mod, action] = slug.split('.');
+        return { slug, module: mod, action, label: slug, supportedScopes: ['any', 'own', 'unit', 'assigned'] };
+      }),
+    );
   });
 
   afterEach(async () => {
@@ -387,17 +404,16 @@ describe('RBAC (integration)', () => {
     });
   });
 
-  describe('Permission registry', () => {
-    it('should register and retrieve permissions from modules', () => {
-      rbacService.registerPermissions('test_module', [
-        { action: 'read', description: 'Read test resources' },
-        { action: 'create', description: 'Create test resources' },
+  describe('Permission manifests', () => {
+    it('should register manifests and surface them via the manifest registry', () => {
+      rbacService.registerManifests([
+        { slug: 'test_module.read',   module: 'test_module', action: 'read',   label: 'Read test resources',   description: 'Read test resources',   supportedScopes: ['any'] },
+        { slug: 'test_module.create', module: 'test_module', action: 'create', label: 'Create test resources', description: 'Create test resources', supportedScopes: ['any'] },
       ]);
 
-      const all = rbacService.getAllRegisteredPermissions();
-      const testPerms = all.filter((p) => p.module === 'test_module');
+      const testPerms = manifestRegistry.listByModule('test_module');
       expect(testPerms).toHaveLength(2);
-      expect(testPerms.map((p) => p.action)).toContain('read');
+      expect(testPerms.map((m) => m.action).sort()).toEqual(['create', 'read']);
     });
   });
 

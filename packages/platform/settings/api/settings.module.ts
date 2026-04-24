@@ -14,9 +14,9 @@ export class SettingsModule implements OnModuleInit {
   constructor(private readonly rbacService: RbacService) {}
 
   onModuleInit() {
-    this.rbacService.registerPermissions('settings', [
-      { action: 'read', description: 'View settings' },
-      { action: 'manage', description: 'Update settings' },
+    this.rbacService.registerManifests([
+      { slug: 'settings.read',   module: 'settings', action: 'read',   label: 'View settings',   description: 'View settings',   supportedScopes: ['any'] },
+      { slug: 'settings.manage', module: 'settings', action: 'manage', label: 'Manage settings', description: 'Update settings', supportedScopes: ['any'] },
     ]);
   }
 }

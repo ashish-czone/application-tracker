@@ -1,4 +1,4 @@
-import type { PermissionRegistryEntry } from '@packages/rbac-ui';
+import type { PermissionManifest } from '@packages/rbac-ui';
 
 export interface PermissionItem {
   name: string;
@@ -10,21 +10,17 @@ export interface PermissionModuleGroup {
   permissions: PermissionItem[];
 }
 
-export function permissionName(entry: PermissionRegistryEntry): string {
-  return `${entry.module}.${entry.action}`;
-}
-
 export function groupPermissionsByModule(
-  registry: PermissionRegistryEntry[],
+  manifests: PermissionManifest[],
 ): PermissionModuleGroup[] {
   const map = new Map<string, PermissionItem[]>();
-  for (const entry of registry) {
-    const items = map.get(entry.module) ?? [];
+  for (const m of manifests) {
+    const items = map.get(m.module) ?? [];
     items.push({
-      name: permissionName(entry),
-      label: entry.description || entry.action,
+      name: m.slug,
+      label: m.label,
     });
-    map.set(entry.module, items);
+    map.set(m.module, items);
   }
   return Array.from(map.entries()).map(([module, permissions]) => ({
     module,
