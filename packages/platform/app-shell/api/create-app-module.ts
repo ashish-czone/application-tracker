@@ -29,7 +29,6 @@ import { UserPreferencesModule } from '@packages/user-preferences';
 import { HierarchyModule } from '@packages/hierarchy';
 import { OrderableModule } from '@packages/orderable';
 import { EntityLayoutModule } from '@packages/entity-layout';
-import { UsersModule } from '@packages/users';
 import { GlobalExceptionFilter } from './filters/global-exception.filter';
 import { ConfigurableThrottlerGuard } from './guards/configurable-throttler.guard';
 import { validate } from './env.validation';
@@ -51,9 +50,11 @@ export interface AppShellOptions {
    */
   appName: string;
   /**
-   * Extra modules to import. App-shell only knows about core/platform modules
-   * (per package tier rules). Apps pass any addon modules they need here:
-   * NotesModule, AttachmentsModule, OAuthModule, OrgUnitsModule, etc.
+   * Extra modules to import. App-shell ships core infra (auth, audit,
+   * notifications, entity-engine, etc.) but does NOT ship a UsersModule —
+   * each app owns its users entity and must pass an app-level UsersModule
+   * here alongside any addon modules it needs (NotesModule, AttachmentsModule,
+   * OAuthModule, OrgUnitsModule, etc.).
    */
   extraImports?: NonNullable<ModuleMetadata['imports']>;
 }
@@ -135,7 +136,6 @@ export function createAppModule(options: AppShellOptions): ModuleMetadata {
         }),
         inject: [ConfigService, AppConfigService],
       }),
-      UsersModule,
       ...(options.extraImports ?? []),
       ...options.domains.map((domain) => domain.module),
     ],
