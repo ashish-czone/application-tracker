@@ -6,7 +6,7 @@ import { organizations } from '../schema/organizations';
  * (and the "cannot delete" rule) lives in `OrganizationsService`, not in
  * engine hooks, since the entity has been fanned out to a dedicated
  * Controller + Service + Module and the engine is only used as a generic CRUD
- * library (`controller: 'none'`).
+ * library.
  */
 export const ORGANIZATIONS_CONFIG: EntityConfig<typeof organizations> = defineEntity({
   table: organizations,

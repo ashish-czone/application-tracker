@@ -6,7 +6,7 @@ import { ContactsService } from './contacts.service';
 
 @Module({
   imports: [
-    EntityEngineModule.forEntity(CONTACTS_CONFIG, { controller: 'none' }),
+    EntityEngineModule.forEntity(CONTACTS_CONFIG),
   ],
   controllers: [ContactsController],
   providers: [ContactsService],

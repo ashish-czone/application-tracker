@@ -6,7 +6,7 @@ import { ClientsService } from './clients.service';
 
 @Module({
   imports: [
-    EntityEngineModule.forEntity(CLIENTS_CONFIG, { controller: 'none' }),
+    EntityEngineModule.forEntity(CLIENTS_CONFIG),
   ],
   controllers: [ClientsController],
   providers: [ClientsService],

@@ -20,8 +20,8 @@ import { PagesPublicService } from './services/pages-public.service';
  */
 @Module({
   imports: [
-    EntityEngineModule.forEntity(PAGES_CONFIG, { controller: 'none' }),
-    EntityEngineModule.forEntity(SECTIONS_CONFIG, { controller: 'none' }),
+    EntityEngineModule.forEntity(PAGES_CONFIG),
+    EntityEngineModule.forEntity(SECTIONS_CONFIG),
   ],
   controllers: [PagesController, SectionsController, PagesPublicController],
   providers: [PagesService, SectionsService, PagesPublicService],

@@ -6,7 +6,7 @@ import { LawsService } from './laws.service';
 
 @Module({
   imports: [
-    EntityEngineModule.forEntity(LAWS_CONFIG, { controller: 'none' }),
+    EntityEngineModule.forEntity(LAWS_CONFIG),
   ],
   controllers: [LawsController],
   providers: [LawsService],

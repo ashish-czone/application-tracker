@@ -41,7 +41,7 @@ export class ClientResolver implements BillingClientResolver {
 }
 
 @Module({
-  imports: [EntityEngineModule.forEntity(CLIENTS_CONFIG, { controller: 'none' })],
+  imports: [EntityEngineModule.forEntity(CLIENTS_CONFIG)],
   controllers: [ClientsController],
   providers: [ClientResolver, ClientsService],
   exports: [ClientResolver, ClientsService],

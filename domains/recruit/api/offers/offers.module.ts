@@ -19,7 +19,7 @@ import { formatCurrency } from '@packages/common';
 
 @Module({
   imports: [
-    EntityEngineModule.forEntity(offersConfig, { controller: 'none' }),
+    EntityEngineModule.forEntity(offersConfig),
     NotificationChannelsModule,
   ],
   controllers: [OfferApprovalsController, OffersController],
