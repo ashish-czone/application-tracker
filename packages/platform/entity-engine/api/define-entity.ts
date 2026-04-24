@@ -232,7 +232,7 @@ export interface ModelDefinition<TTable extends PgTable = PgTable> {
   // --- RBAC ---
 
   /** Additional permissions beyond CRUD */
-  extraPermissions?: { action: string; description: string }[];
+  extraPermissions?: { action: string; description: string; supportedScopes?: string[] }[];
 
   // --- Events ---
 

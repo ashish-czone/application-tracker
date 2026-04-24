@@ -759,8 +759,15 @@ export interface EntityConfig<TTable extends PgTable = PgTable> {
 
   // --- RBAC ---
 
-  /** Additional permissions beyond CRUD (CRUD is auto-generated) */
-  extraPermissions?: { action: string; description: string }[];
+  /**
+   * Additional permissions beyond CRUD (CRUD is auto-generated).
+   *
+   * `supportedScopes` narrows which scope types a role may attach to this
+   * permission. Omit to inherit the entity's full derived set (CRUD default);
+   * pass an explicit list for verbs where only a subset makes sense (e.g.
+   * `pickup` — meaningful on `unit` / `unassigned_in_unit` but not `own`).
+   */
+  extraPermissions?: { action: string; description: string; supportedScopes?: string[] }[];
 
   // --- Events ---
 
