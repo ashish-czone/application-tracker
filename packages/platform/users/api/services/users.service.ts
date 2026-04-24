@@ -1,4 +1,4 @@
-import { Inject, Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, Optional, ConflictException, NotFoundException } from '@nestjs/common';
 import { AuthService, AUTH_INVITATION_SENT } from '@packages/auth';
 import { RbacService } from '@packages/rbac';
 import { DomainEventEmitter } from '@packages/events';
@@ -6,6 +6,8 @@ import { DatabaseService, users, eq, isNull } from '@packages/database';
 import { EntityService, type BaseListQuery } from '@packages/entity-engine';
 import type { DataAccessContext } from '@packages/rbac';
 import { withTenant, withTenantInsert } from '@packages/tenancy/helpers';
+import { deriveUserStatus, type UserPosition, type UsersPositionsReader } from '../users.config';
+import { USERS_POSITIONS_READER } from '../users-positions-reader.token';
 
 export interface InviteUserData {
   email: string;
@@ -36,6 +38,12 @@ export interface InvitedUser {
  * - `inviteUser(data)` — backs `POST /users/invite`; creates a user without a
  *   credentials row, mints an invitation token via auth, assigns roles, and
  *   emits AUTH_INVITATION_SENT so a notifications handler can deliver the email.
+ *
+ * `list` and `findOne` wrap the engine read calls so every user response is
+ * enriched with `roles` (from rbac), `positions` (from an app-supplied
+ * positions reader), and the read-side `status` derived from the timestamps
+ * on the row. Apps that don't wire up a positions reader still get
+ * `positions: []` on every row.
  */
 @Injectable()
 export class UsersService {
@@ -45,14 +53,43 @@ export class UsersService {
     private readonly authService: AuthService,
     private readonly rbacService: RbacService,
     private readonly domainEventEmitter: DomainEventEmitter,
+    @Optional()
+    @Inject(USERS_POSITIONS_READER)
+    private readonly positionsReader?: UsersPositionsReader,
   ) {}
 
-  list(query: BaseListQuery, accessCtx?: DataAccessContext) {
-    return this.entityService.list(query, accessCtx);
+  async list(query: BaseListQuery, accessCtx?: DataAccessContext) {
+    const result = await this.entityService.list(query, accessCtx);
+    result.data = await this.enrichUsers(result.data as Record<string, unknown>[]);
+    return result;
   }
 
-  findOne(id: string, accessCtx?: DataAccessContext) {
-    return this.entityService.findOneOrFail(id, accessCtx);
+  async findOne(id: string, accessCtx?: DataAccessContext) {
+    const row = await this.entityService.findOneOrFail(id, accessCtx);
+    const [enriched] = await this.enrichUsers([row]);
+    return enriched;
+  }
+
+  /**
+   * Batch-enriches user rows with `roles`, `positions`, and derived `status`.
+   * Runs one roles query and one positions query regardless of row count, so
+   * list pages stay O(1) in network round-trips. Apps with no positions
+   * reader wired get `positions: []` on every row.
+   */
+  private async enrichUsers(rows: Record<string, unknown>[]): Promise<Record<string, unknown>[]> {
+    if (rows.length === 0) return rows;
+    const ids = rows.map((r) => r.id as string);
+    const emptyPositions: Record<string, UserPosition[]> = {};
+    const [rolesByUser, positionsByUser] = await Promise.all([
+      this.rbacService.getRolesByUserIds(ids),
+      this.positionsReader ? this.positionsReader.getPositionsByUserIds(ids) : Promise.resolve(emptyPositions),
+    ]);
+    return rows.map((r) => ({
+      ...r,
+      roles: rolesByUser[r.id as string] ?? [],
+      positions: positionsByUser[r.id as string] ?? [],
+      status: deriveUserStatus(r),
+    }));
   }
 
   create(input: Record<string, unknown>, actorId: string) {

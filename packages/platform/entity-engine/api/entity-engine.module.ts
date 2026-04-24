@@ -279,10 +279,10 @@ export class EntityEngineModule implements OnApplicationBootstrap {
       });
     }
 
-    // 7. Register custom workflow guards from hooks (in-memory; DB workflow rows
-    //    are seeded by EntityEngineSeedService via the db:seed:system CLI).
-    if (this.workflowExt && config.hooks?.workflowGuards) {
-      for (const [name, fn] of Object.entries(config.hooks.workflowGuards)) {
+    // 7. Register custom workflow guards (in-memory; DB workflow rows are
+    //    seeded by EntityEngineSeedService via the db:seed:system CLI).
+    if (this.workflowExt && config.workflowGuards) {
+      for (const [name, fn] of Object.entries(config.workflowGuards)) {
         this.workflowExt.registerGuard(name, fn);
       }
     }

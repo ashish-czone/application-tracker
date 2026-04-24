@@ -62,6 +62,23 @@ function validateTarget(payload: Record<string, unknown>): void {
   }
 }
 
+/**
+ * Validates link type, target, and the 2-level nesting invariant for a
+ * menu-item create/update payload. Called from MenuItemsService so hook
+ * support in the platform isn't needed; on update, the parent-depth check
+ * only runs when `parentId` is present in the patch.
+ */
+export async function assertMenuItemPayload(
+  payload: Record<string, unknown>,
+  opts: { isUpdate: boolean },
+): Promise<void> {
+  validateLinkType(payload);
+  validateTarget(payload);
+  if (!opts.isUpdate || 'parentId' in payload) {
+    await assertParentWithinDepthCap(payload.parentId);
+  }
+}
+
 export const menuItemConfig = defineEntity({
   table: menuItems,
   slug: 'menu-items',
@@ -141,22 +158,5 @@ export const menuItemConfig = defineEntity({
 
   ui: {
     icon: 'List',
-  },
-
-  hooks: {
-    beforeCreate: async (payload) => {
-      validateLinkType(payload);
-      validateTarget(payload);
-      await assertParentWithinDepthCap(payload.parentId);
-      return payload;
-    },
-    beforeUpdate: async (_id, payload) => {
-      validateLinkType(payload);
-      validateTarget(payload);
-      if ('parentId' in payload) {
-        await assertParentWithinDepthCap(payload.parentId);
-      }
-      return payload;
-    },
   },
 });

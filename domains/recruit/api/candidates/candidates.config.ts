@@ -1,4 +1,4 @@
-import { eq, ilike, sql } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 import type { EntityConfig } from '@packages/entity-engine';
 import { candidates } from './schema/candidates';
 import { CANDIDATE_FIELD_META, CANDIDATE_SECTIONS } from './field-meta';
@@ -113,13 +113,4 @@ export const candidatesConfig: EntityConfig = {
     navOrder: 1,
   },
 
-  hooks: {
-    // source, country are handled by generic field filtering.
-    // qualification → highestQualification is a custom param mapping.
-    buildListFilters: (query) => {
-      const filters: any[] = [];
-      if (query.qualification) filters.push(eq(candidates.highestQualification, query.qualification as string));
-      return filters;
-    },
-  },
 };

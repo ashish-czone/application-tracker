@@ -15,7 +15,6 @@ export type { ModelDefinition, ModelField } from './define-entity';
 export type {
   CustomFieldsMode,
   EntityConfig,
-  EntityHooks,
   EntityRelationship,
   RelationHandler,
   RelationHandlerContext,

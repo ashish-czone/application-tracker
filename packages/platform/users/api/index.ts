@@ -6,7 +6,6 @@ export type {
   UsersEntityConfigDeps,
   UserStatus,
   UserPosition,
-  UsersRolesReader,
   UsersPositionsReader,
 } from './users.config';
 export { USERS_USER_DEACTIVATED } from './events/types';

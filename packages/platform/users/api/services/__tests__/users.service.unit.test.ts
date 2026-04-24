@@ -67,9 +67,11 @@ function createMockAuthService(overrides: Partial<Record<string, any>> = {}) {
   };
 }
 
-function createMockRbacService() {
+function createMockRbacService(overrides: Partial<Record<string, any>> = {}) {
   return {
     assignRoleToUser: vi.fn().mockResolvedValue(undefined),
+    getRolesByUserIds: vi.fn().mockResolvedValue({}),
+    ...overrides,
   };
 }
 
@@ -79,13 +81,19 @@ function createMockEventEmitter() {
   };
 }
 
-function buildService(dbOptions: Parameters<typeof createMockDb>[0] = {}) {
+type BuildServiceOptions = Parameters<typeof createMockDb>[0] & {
+  rbac?: Partial<Record<string, any>>;
+  positionsReader?: { getPositionsByUserIds: (ids: string[]) => Promise<Record<string, unknown[]>> };
+};
+
+function buildService(options: BuildServiceOptions = {}) {
+  const { rbac, positionsReader, ...dbOptions } = options;
   const mockDb = createMockDb(dbOptions);
   const authService = createMockAuthService();
-  const rbacService = createMockRbacService();
+  const rbacService = createMockRbacService(rbac);
   const eventEmitter = createMockEventEmitter();
   const entityService = {
-    list: vi.fn(),
+    list: vi.fn().mockResolvedValue({ data: [], meta: { page: 1, limit: 20, total: 0, pageCount: 0 } }),
     findOneOrFail: vi.fn(),
     create: vi.fn(),
     update: vi.fn(),
@@ -100,6 +108,7 @@ function buildService(dbOptions: Parameters<typeof createMockDb>[0] = {}) {
     authService as any,
     rbacService as any,
     eventEmitter as any,
+    positionsReader,
   );
   return { service, mockDb, authService, rbacService, eventEmitter, entityService };
 }
@@ -114,6 +123,7 @@ describe('UsersService (thin)', () => {
 
     it('findOne forwards id + accessCtx', async () => {
       const ctx = buildService();
+      ctx.entityService.findOneOrFail.mockResolvedValue({ id: 'u1' });
       await ctx.service.findOne('u1', { userId: 'admin' } as never);
       expect(ctx.entityService.findOneOrFail).toHaveBeenCalledWith('u1', { userId: 'admin' });
     });
@@ -383,6 +393,170 @@ describe('UsersService (thin)', () => {
       await expect(ctx.service.resendInvitation('u1'))
         .rejects.toThrow(ConflictException);
       expect(ctx.authService.createInvitationToken).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('read-side enrichment', () => {
+    it('list derives status for each row (active / invited / deactivated)', async () => {
+      const ctx = buildService();
+      ctx.entityService.list.mockResolvedValue({
+        data: [
+          { id: 'a', deletedAt: null, invitedAt: null, acceptedAt: null },
+          { id: 'b', deletedAt: null, invitedAt: new Date(), acceptedAt: null },
+          { id: 'c', deletedAt: null, invitedAt: new Date(), acceptedAt: new Date() },
+          { id: 'd', deletedAt: new Date(), invitedAt: null, acceptedAt: null },
+        ],
+        meta: {},
+      });
+
+      const result = await ctx.service.list({} as never);
+
+      expect(result.data[0]?.status).toBe('active');
+      expect(result.data[1]?.status).toBe('invited');
+      expect(result.data[2]?.status).toBe('active');
+      expect(result.data[3]?.status).toBe('deactivated');
+    });
+
+    it('findOne attaches status for the single row', async () => {
+      const ctx = buildService();
+      ctx.entityService.findOneOrFail.mockResolvedValue({ id: 'u1', deletedAt: null, invitedAt: new Date(), acceptedAt: null });
+      const enriched = await ctx.service.findOne('u1');
+      expect((enriched as any).status).toBe('invited');
+    });
+
+    it('list attaches roles per row via batch rbac reader', async () => {
+      const ctx = buildService({
+        rbac: {
+          getRolesByUserIds: vi.fn(async (ids: string[]) => ({
+            [ids[0]!]: [{ id: 'r1', name: 'Admin', userType: 'admin' }],
+            [ids[1]!]: [],
+          })),
+        },
+      });
+      ctx.entityService.list.mockResolvedValue({
+        data: [{ id: 'u1', email: 'a@b.com' }, { id: 'u2', email: 'c@d.com' }],
+        meta: {},
+      });
+
+      const result = await ctx.service.list({} as never);
+
+      expect(ctx.rbacService.getRolesByUserIds).toHaveBeenCalledOnce();
+      expect(ctx.rbacService.getRolesByUserIds).toHaveBeenCalledWith(['u1', 'u2']);
+      expect(result.data[0]?.roles).toEqual([{ id: 'r1', name: 'Admin', userType: 'admin' }]);
+      expect(result.data[1]?.roles).toEqual([]);
+    });
+
+    it('list short-circuits on empty page (no reader call)', async () => {
+      const ctx = buildService();
+      ctx.entityService.list.mockResolvedValue({ data: [], meta: {} });
+
+      const result = await ctx.service.list({} as never);
+
+      expect(result.data).toEqual([]);
+      expect(ctx.rbacService.getRolesByUserIds).not.toHaveBeenCalled();
+    });
+
+    it('findOne attaches roles for the single row via batch reader', async () => {
+      const ctx = buildService({
+        rbac: {
+          getRolesByUserIds: vi.fn(async (ids: string[]) => ({
+            [ids[0]!]: [{ id: 'r1', name: 'Editor', userType: 'admin' }],
+          })),
+        },
+      });
+      ctx.entityService.findOneOrFail.mockResolvedValue({ id: 'u1', email: 'x@y.com' });
+
+      const enriched = await ctx.service.findOne('u1');
+
+      expect(ctx.rbacService.getRolesByUserIds).toHaveBeenCalledWith(['u1']);
+      expect((enriched as any).roles).toEqual([{ id: 'r1', name: 'Editor', userType: 'admin' }]);
+    });
+
+    it('findOne returns empty roles array when the user has none', async () => {
+      const ctx = buildService();
+      ctx.entityService.findOneOrFail.mockResolvedValue({ id: 'u1' });
+      const enriched = await ctx.service.findOne('u1');
+      expect((enriched as any).roles).toEqual([]);
+    });
+
+    it('list attaches positions per row via batch positionsReader', async () => {
+      const positionsReader = {
+        getPositionsByUserIds: vi.fn(async (ids: string[]) => ({
+          [ids[0]!]: [{ unitId: 'ou1', unitName: 'Tax', positionId: 'p1', positionName: 'Head' }],
+          [ids[1]!]: [],
+        })),
+      };
+      const ctx = buildService({ positionsReader });
+      ctx.entityService.list.mockResolvedValue({
+        data: [{ id: 'u1' }, { id: 'u2' }],
+        meta: {},
+      });
+
+      const result = await ctx.service.list({} as never);
+
+      expect(positionsReader.getPositionsByUserIds).toHaveBeenCalledWith(['u1', 'u2']);
+      expect(result.data[0]?.positions).toEqual([
+        { unitId: 'ou1', unitName: 'Tax', positionId: 'p1', positionName: 'Head' },
+      ]);
+      expect(result.data[1]?.positions).toEqual([]);
+    });
+
+    it('list returns positions:[] on every row when no positionsReader is wired', async () => {
+      const ctx = buildService();
+      ctx.entityService.list.mockResolvedValue({
+        data: [{ id: 'u1' }, { id: 'u2' }],
+        meta: {},
+      });
+
+      const result = await ctx.service.list({} as never);
+
+      expect(result.data[0]?.positions).toEqual([]);
+      expect(result.data[1]?.positions).toEqual([]);
+    });
+
+    it('findOne attaches positions for the single row', async () => {
+      const positionsReader = {
+        getPositionsByUserIds: vi.fn(async (ids: string[]) => ({
+          [ids[0]!]: [{ unitId: 'ou1', unitName: 'Audit', positionId: null, positionName: null }],
+        })),
+      };
+      const ctx = buildService({ positionsReader });
+      ctx.entityService.findOneOrFail.mockResolvedValue({ id: 'u1' });
+
+      const enriched = await ctx.service.findOne('u1');
+
+      expect(positionsReader.getPositionsByUserIds).toHaveBeenCalledWith(['u1']);
+      expect((enriched as any).positions).toEqual([
+        { unitId: 'ou1', unitName: 'Audit', positionId: null, positionName: null },
+      ]);
+    });
+
+    it('list runs roles and positions readers in parallel and combines both', async () => {
+      const positionsReader = {
+        getPositionsByUserIds: vi.fn(async (ids: string[]) => ({
+          [ids[0]!]: [{ unitId: 'ou1', unitName: 'Tax', positionId: 'p1', positionName: 'Head' }],
+        })),
+      };
+      const ctx = buildService({
+        rbac: {
+          getRolesByUserIds: vi.fn(async (ids: string[]) => ({
+            [ids[0]!]: [{ id: 'r1', name: 'Admin', userType: 'admin' }],
+          })),
+        },
+        positionsReader,
+      });
+      ctx.entityService.list.mockResolvedValue({
+        data: [{ id: 'u1', deletedAt: null, invitedAt: null, acceptedAt: null }],
+        meta: {},
+      });
+
+      const result = await ctx.service.list({} as never);
+
+      expect(result.data[0]?.roles).toEqual([{ id: 'r1', name: 'Admin', userType: 'admin' }]);
+      expect(result.data[0]?.positions).toEqual([
+        { unitId: 'ou1', unitName: 'Tax', positionId: 'p1', positionName: 'Head' },
+      ]);
+      expect(result.data[0]?.status).toBe('active');
     });
   });
 });

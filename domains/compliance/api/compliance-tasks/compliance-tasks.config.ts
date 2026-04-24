@@ -1,5 +1,4 @@
 import { defineEntity } from '@packages/entity-engine';
-import { applyCompletedAt } from '@packages/tasks';
 import { complianceTasks } from '../schema/compliance-tasks';
 
 /** Natural key used for the tasks.external_key idempotency column. Mirrors
@@ -33,26 +32,6 @@ export const COMPLIANCE_TASKS_CONFIG = defineEntity({
     entity: 'tasks',
     foreignKey: 'taskId',
     parentDefaults: { relatedEntityType: 'compliance' },
-  },
-
-  hooks: {
-    // Derive the parent's `external_key` from the (rule, client, period)
-    // tuple on every create so the idempotency column stays deterministic
-    // under retries. Running in beforeCreate lets the hook mutate the
-    // payload before it splits across parent + child inserts.
-    beforeCreate: async (payload: Record<string, unknown>) => {
-      const ruleId = payload.ruleId as string | undefined;
-      const clientId = payload.clientId as string | undefined;
-      const periodStart = payload.periodStart as string | undefined;
-      const next: Record<string, unknown> = { ...payload };
-      if (ruleId && clientId && periodStart && next.externalKey == null) {
-        next.externalKey = buildComplianceExternalKey(ruleId, clientId, periodStart);
-      }
-      return applyCompletedAt(next);
-    },
-    beforeUpdate: async (_id: string, payload: Record<string, unknown>) => {
-      return applyCompletedAt(payload);
-    },
   },
 
   fields: {
