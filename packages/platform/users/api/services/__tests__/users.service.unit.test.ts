@@ -84,16 +84,77 @@ function buildService(dbOptions: Parameters<typeof createMockDb>[0] = {}) {
   const authService = createMockAuthService();
   const rbacService = createMockRbacService();
   const eventEmitter = createMockEventEmitter();
+  const entityService = {
+    list: vi.fn(),
+    findOneOrFail: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    softDelete: vi.fn(),
+    clone: vi.fn(),
+    restore: vi.fn(),
+    getListLayout: vi.fn(),
+  } as any;
   const service = new UsersService(
+    entityService,
     { db: mockDb.db } as any,
     authService as any,
     rbacService as any,
     eventEmitter as any,
   );
-  return { service, mockDb, authService, rbacService, eventEmitter };
+  return { service, mockDb, authService, rbacService, eventEmitter, entityService };
 }
 
 describe('UsersService (thin)', () => {
+  describe('CRUD delegates', () => {
+    it('list forwards query + accessCtx', async () => {
+      const ctx = buildService();
+      await ctx.service.list({ page: 1 } as never, { userId: 'u1' } as never);
+      expect(ctx.entityService.list).toHaveBeenCalledWith({ page: 1 }, { userId: 'u1' });
+    });
+
+    it('findOne forwards id + accessCtx', async () => {
+      const ctx = buildService();
+      await ctx.service.findOne('u1', { userId: 'admin' } as never);
+      expect(ctx.entityService.findOneOrFail).toHaveBeenCalledWith('u1', { userId: 'admin' });
+    });
+
+    it('create forwards input + actorId', async () => {
+      const ctx = buildService();
+      await ctx.service.create({ email: 'x@y.com' } as never, 'actor-1');
+      expect(ctx.entityService.create).toHaveBeenCalledWith({ email: 'x@y.com' }, 'actor-1');
+    });
+
+    it('update forwards id + input + actorId + accessCtx', async () => {
+      const ctx = buildService();
+      await ctx.service.update('u1', { firstName: 'X' } as never, 'actor-1', { userId: 'admin' } as never);
+      expect(ctx.entityService.update).toHaveBeenCalledWith('u1', { firstName: 'X' }, 'actor-1', { userId: 'admin' });
+    });
+
+    it('softDelete forwards id + actorId + accessCtx', async () => {
+      const ctx = buildService();
+      await ctx.service.softDelete('u1', 'actor-1', { userId: 'admin' } as never);
+      expect(ctx.entityService.softDelete).toHaveBeenCalledWith('u1', 'actor-1', { userId: 'admin' });
+    });
+
+    it('clone forwards id + actorId', async () => {
+      const ctx = buildService();
+      await ctx.service.clone('u1', 'actor-1');
+      expect(ctx.entityService.clone).toHaveBeenCalledWith('u1', 'actor-1');
+    });
+
+    it('restore forwards id', async () => {
+      const ctx = buildService();
+      await ctx.service.restore('u1');
+      expect(ctx.entityService.restore).toHaveBeenCalledWith('u1');
+    });
+
+    it('getListLayout forwards to entityService', async () => {
+      const ctx = buildService();
+      await ctx.service.getListLayout();
+      expect(ctx.entityService.getListLayout).toHaveBeenCalled();
+    });
+  });
+
   describe('getEmail', () => {
     it('returns the email for an active user', async () => {
       const ctx = buildService({ selectQueue: [[{ email: 'alice@example.com' }]] });

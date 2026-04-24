@@ -1,8 +1,10 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, ConflictException, NotFoundException } from '@nestjs/common';
 import { AuthService, AUTH_INVITATION_SENT } from '@packages/auth';
 import { RbacService } from '@packages/rbac';
 import { DomainEventEmitter } from '@packages/events';
 import { DatabaseService, users, eq, isNull } from '@packages/database';
+import { EntityService, type BaseListQuery } from '@packages/entity-engine';
+import type { DataAccessContext } from '@packages/rbac';
 import { withTenant, withTenantInsert } from '@packages/tenancy/helpers';
 
 export interface InviteUserData {
@@ -24,10 +26,8 @@ export interface InvitedUser {
 }
 
 /**
- * Thin users reader service. CRUD + search + list + events + audit for users
- * are owned by the generic entity-engine route stack (`forEntity(usersConfig)`).
- *
- * Surface kept here covers the slots the engine does not:
+ * Users service. CRUD delegates to the engine's ENTITY_SERVICE_users, plus
+ * hand-written slots the engine does not cover:
  *
  * - `getEmail(id)` / `getPhone(id)` — readers registered with the notifications
  *   `ContactResolverRegistry` for email/whatsapp dispatch.
@@ -36,17 +36,48 @@ export interface InvitedUser {
  * - `inviteUser(data)` — backs `POST /users/invite`; creates a user without a
  *   credentials row, mints an invitation token via auth, assigns roles, and
  *   emits AUTH_INVITATION_SENT so a notifications handler can deliver the email.
- *   Distinct from the engine-generated `POST /users` which expects a password
- *   in the nested credentials DTO.
  */
 @Injectable()
 export class UsersService {
   constructor(
+    @Inject('ENTITY_SERVICE_users') private readonly entityService: EntityService,
     private readonly database: DatabaseService,
     private readonly authService: AuthService,
     private readonly rbacService: RbacService,
     private readonly domainEventEmitter: DomainEventEmitter,
   ) {}
+
+  list(query: BaseListQuery, accessCtx?: DataAccessContext) {
+    return this.entityService.list(query, accessCtx);
+  }
+
+  findOne(id: string, accessCtx?: DataAccessContext) {
+    return this.entityService.findOneOrFail(id, accessCtx);
+  }
+
+  create(input: Record<string, unknown>, actorId: string) {
+    return this.entityService.create(input, actorId);
+  }
+
+  update(id: string, input: Record<string, unknown>, actorId: string, accessCtx?: DataAccessContext) {
+    return this.entityService.update(id, input, actorId, accessCtx);
+  }
+
+  softDelete(id: string, actorId: string, accessCtx?: DataAccessContext) {
+    return this.entityService.softDelete(id, actorId, accessCtx);
+  }
+
+  clone(id: string, actorId: string) {
+    return this.entityService.clone(id, actorId);
+  }
+
+  restore(id: string) {
+    return this.entityService.restore(id);
+  }
+
+  getListLayout() {
+    return this.entityService.getListLayout();
+  }
 
   async getEmail(id: string): Promise<string | null> {
     const [user] = await this.database.db
