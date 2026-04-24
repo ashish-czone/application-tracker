@@ -181,6 +181,52 @@ export class ComplianceRuleService {
     return rows.map((r) => this.toRule(r));
   }
 
+  /**
+   * Domain update path used by the compliance-rules custom controller. Runs
+   * the I14 guard, writes allowed fields, and returns the fresh row.
+   *
+   * Status is excluded — workflow transitions flow through the workflow
+   * engine (draft → active → deprecated), not PATCH. `deprecate()` is the
+   * dedicated endpoint for deprecation.
+   *
+   * The same guard is also wired as a `beforeUpdate` hook on the entity
+   * config (defense-in-depth) so callers hitting the generic CRUD path
+   * still get the 400. The custom controller is the preferred UI entry
+   * point because the UI needs a single mutation to invalidate together.
+   */
+  async update(
+    id: string,
+    input: Partial<Pick<CreateComplianceRuleInput, 'code' | 'name' | 'lawId' | 'frequency' | 'dueDayOfMonth' | 'dueMonthOffset' | 'gracePeriodDays' | 'description'>>,
+  ): Promise<ComplianceRule> {
+    const existing = await this.findById(id);
+    if (!existing) {
+      throw new NotFoundException(`Rule ${id} not found`);
+    }
+    if (input.frequency !== undefined) {
+      assertFrequency(input.frequency);
+    }
+    await this.assertUpdateAllowed(id, input as Record<string, unknown>);
+
+    const patch: Record<string, unknown> = {};
+    if (input.code !== undefined) patch.code = input.code;
+    if (input.name !== undefined) patch.name = input.name;
+    if (input.lawId !== undefined) patch.lawId = input.lawId;
+    if (input.frequency !== undefined) patch.frequency = input.frequency;
+    if (input.dueDayOfMonth !== undefined) patch.dueDayOfMonth = input.dueDayOfMonth;
+    if (input.dueMonthOffset !== undefined) patch.dueMonthOffset = input.dueMonthOffset;
+    if (input.gracePeriodDays !== undefined) patch.gracePeriodDays = input.gracePeriodDays;
+    if (input.description !== undefined) patch.description = input.description;
+
+    if (Object.keys(patch).length === 0) return existing;
+
+    const [row] = await this.database.db
+      .update(complianceRules)
+      .set(patch)
+      .where(eq(complianceRules.id, id))
+      .returning();
+    return this.toRule(row);
+  }
+
   async findById(id: string): Promise<ComplianceRule | null> {
     const rows = await this.database.db
       .select()

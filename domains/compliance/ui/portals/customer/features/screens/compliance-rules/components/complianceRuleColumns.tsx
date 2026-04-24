@@ -13,30 +13,46 @@ export const REQUIRED_COMPLIANCE_RULE_COLUMN_KEYS: string[] = ['code', 'name'];
 
 export interface ComplianceRuleColumnsOptions {
   onDeprecate: (rule: ComplianceRule) => void;
+  onEdit: (rule: ComplianceRule) => void;
 }
 
 export function makeComplianceRuleColumns({
   onDeprecate,
+  onEdit,
 }: ComplianceRuleColumnsOptions): DataTableColumn<ComplianceRule>[] {
   return [...BASE_COMPLIANCE_RULE_COLUMNS, {
     key: 'actions',
     header: '',
-    width: '110px',
+    width: '160px',
     align: 'right',
-    cell: (o) =>
-      o.status === 'deprecated' ? null : (
+    cell: (o) => (
+      <div className="flex items-center justify-end gap-1">
         <Button
           variant="ghost"
           size="sm"
-          className="h-6 text-xs text-ink-muted hover:text-signal"
+          className="h-6 text-xs text-ink-muted hover:text-ink"
           onClick={(e) => {
             e.stopPropagation();
-            onDeprecate(o);
+            onEdit(o);
           }}
         >
-          Deprecate
+          Edit
         </Button>
-      ),
+        {o.status !== 'deprecated' && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 text-xs text-ink-muted hover:text-signal"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDeprecate(o);
+            }}
+          >
+            Deprecate
+          </Button>
+        )}
+      </div>
+    ),
   }];
 }
 
