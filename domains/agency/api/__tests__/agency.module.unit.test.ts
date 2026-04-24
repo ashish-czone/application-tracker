@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { RbacService } from '@packages/rbac';
+import type { RbacService, PermissionManifest } from '@packages/rbac';
 import type { AppConfigService } from '@packages/settings';
 import { AgencyDomainModule } from '../agency.module';
-import { AGENCY_PERMISSION_REGISTRATIONS } from '../permissions';
+import { AGENCY_PERMISSION_MANIFESTS } from '../permissions';
 import { SITE_SETTINGS } from '../settings';
 
 function makeRbac() {
-  return { registerPermissions: vi.fn() } as unknown as RbacService;
+  return { registerManifests: vi.fn() } as unknown as RbacService;
 }
 
 function makeAppConfig() {
@@ -34,52 +34,41 @@ describe('AgencyDomainModule.onModuleInit', () => {
     expect(appConfig.register).toHaveBeenCalledWith('site', SITE_SETTINGS);
   });
 
-  it('registers permissions grouped by module', () => {
-    // Seed a local registration list to assert grouping behaviour independent
-    // of whether the current domain ships any permissions.
-    const original = AGENCY_PERMISSION_REGISTRATIONS.slice();
-    AGENCY_PERMISSION_REGISTRATIONS.length = 0;
-    AGENCY_PERMISSION_REGISTRATIONS.push(
-      { module: 'alpha', action: 'read', description: 'Read alpha' },
-      { module: 'alpha', action: 'write', description: 'Write alpha' },
-      { module: 'beta', action: 'manage', description: 'Manage beta' },
-    );
+  it('forwards declared permission manifests to rbac', () => {
+    const original = AGENCY_PERMISSION_MANIFESTS.slice();
+    AGENCY_PERMISSION_MANIFESTS.length = 0;
+    const sample: PermissionManifest[] = [
+      { slug: 'alpha.read',  module: 'alpha', action: 'read',   label: 'Read alpha',  description: 'Read alpha',  supportedScopes: ['any'] },
+      { slug: 'alpha.write', module: 'alpha', action: 'write',  label: 'Write alpha', description: 'Write alpha', supportedScopes: ['any'] },
+      { slug: 'beta.manage', module: 'beta',  action: 'manage', label: 'Manage beta', description: 'Manage beta', supportedScopes: ['any'] },
+    ];
+    AGENCY_PERMISSION_MANIFESTS.push(...sample);
 
     try {
       const { module, rbac } = newModule();
       module.onModuleInit();
 
-      const calls = (rbac.registerPermissions as ReturnType<typeof vi.fn>).mock.calls;
-      const byModule = new Map(calls.map(([mod, perms]) => [mod, perms]));
-      expect(byModule.get('alpha')).toEqual([
-        { action: 'read', description: 'Read alpha' },
-        { action: 'write', description: 'Write alpha' },
-      ]);
-      expect(byModule.get('beta')).toEqual([
-        { action: 'manage', description: 'Manage beta' },
-      ]);
+      expect(rbac.registerManifests).toHaveBeenCalledTimes(1);
+      expect(rbac.registerManifests).toHaveBeenCalledWith(sample);
     } finally {
-      AGENCY_PERMISSION_REGISTRATIONS.length = 0;
-      AGENCY_PERMISSION_REGISTRATIONS.push(...original);
+      AGENCY_PERMISSION_MANIFESTS.length = 0;
+      AGENCY_PERMISSION_MANIFESTS.push(...original);
     }
   });
 
-  it('skips permission registration when no permissions are declared', () => {
-    // Domain ships zero permissions today — verify the grouping loop tolerates
-    // an empty registration list without throwing.
-    const original = AGENCY_PERMISSION_REGISTRATIONS.slice();
-    AGENCY_PERMISSION_REGISTRATIONS.length = 0;
+  it('calls registerManifests with the empty list when the domain ships no permissions', () => {
+    const original = AGENCY_PERMISSION_MANIFESTS.slice();
+    AGENCY_PERMISSION_MANIFESTS.length = 0;
 
     try {
       const { module, rbac, appConfig } = newModule();
       module.onModuleInit();
 
-      expect(rbac.registerPermissions).not.toHaveBeenCalled();
-      // Settings registration still happens.
+      expect(rbac.registerManifests).toHaveBeenCalledWith([]);
       expect(appConfig.register).toHaveBeenCalledWith('site', SITE_SETTINGS);
     } finally {
-      AGENCY_PERMISSION_REGISTRATIONS.length = 0;
-      AGENCY_PERMISSION_REGISTRATIONS.push(...original);
+      AGENCY_PERMISSION_MANIFESTS.length = 0;
+      AGENCY_PERMISSION_MANIFESTS.push(...original);
     }
   });
 });

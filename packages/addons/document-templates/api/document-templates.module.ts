@@ -32,11 +32,11 @@ export class DocumentTemplatesModule implements OnModuleInit {
   }
 
   onModuleInit() {
-    this.rbacService.registerPermissions('document-templates', [
-      { action: 'read', description: 'View document templates' },
-      { action: 'create', description: 'Create document templates' },
-      { action: 'update', description: 'Update document templates' },
-      { action: 'delete', description: 'Delete document templates' },
+    this.rbacService.registerManifests([
+      { slug: 'document-templates.read',   module: 'document-templates', action: 'read',   label: 'View document templates',   description: 'View document templates',   supportedScopes: ['any'] },
+      { slug: 'document-templates.create', module: 'document-templates', action: 'create', label: 'Create document templates', description: 'Create document templates', supportedScopes: ['any'] },
+      { slug: 'document-templates.update', module: 'document-templates', action: 'update', label: 'Update document templates', description: 'Update document templates', supportedScopes: ['any'] },
+      { slug: 'document-templates.delete', module: 'document-templates', action: 'delete', label: 'Delete document templates', description: 'Delete document templates', supportedScopes: ['any'] },
     ]);
   }
 }

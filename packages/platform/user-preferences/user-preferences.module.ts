@@ -13,9 +13,9 @@ export class UserPreferencesModule implements OnModuleInit {
   constructor(private readonly rbacService: RbacService) {}
 
   onModuleInit() {
-    this.rbacService.registerPermissions('user-preferences', [
-      { action: 'read', description: 'Read own user preferences' },
-      { action: 'write', description: 'Create, update, and delete own user preferences' },
+    this.rbacService.registerManifests([
+      { slug: 'user-preferences.read',  module: 'user-preferences', action: 'read',  label: 'Read own preferences',  description: 'Read own user preferences',                   supportedScopes: ['any'] },
+      { slug: 'user-preferences.write', module: 'user-preferences', action: 'write', label: 'Write own preferences', description: 'Create, update, and delete own user preferences', supportedScopes: ['any'] },
     ]);
   }
 }

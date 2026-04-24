@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { RbacService } from '../rbac.service';
-import { PermissionRegistryService } from '../permission-registry.service';
 
 vi.mock('@packages/tenancy/helpers', () => ({
   withTenant: vi.fn((_table: unknown, ...conditions: unknown[]) => conditions[0]),
@@ -86,12 +85,6 @@ describe('RbacService — additional coverage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockDb = createMockDb();
-    const permissionRegistry = {
-      register: vi.fn(),
-      getAll: vi.fn(),
-      getByModule: vi.fn(),
-      has: vi.fn(),
-    } as any;
     const manifestRegistry = {
       register: vi.fn(),
       registerMany: vi.fn(),
@@ -101,7 +94,7 @@ describe('RbacService — additional coverage', () => {
       listByModule: vi.fn(() => []),
       getSupportedScopes: vi.fn(() => undefined),
     } as any;
-    service = new RbacService(mockDb as any, permissionRegistry, manifestRegistry);
+    service = new RbacService(mockDb as any, manifestRegistry);
   });
 
   // ----------------------------------------------------------------

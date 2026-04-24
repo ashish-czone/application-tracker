@@ -27,13 +27,13 @@ export class EvaluationsModule implements OnModuleInit {
 
   onModuleInit() {
     // Register RBAC permissions
-    this.rbacService.registerPermissions('evaluations', [
-      { action: 'templates.read', description: 'View evaluation templates' },
-      { action: 'templates.manage', description: 'Create, update, and delete evaluation templates' },
-      { action: 'read', description: 'View evaluations' },
-      { action: 'create', description: 'Create evaluations' },
-      { action: 'update', description: 'Update evaluations' },
-      { action: 'delete', description: 'Delete evaluations' },
+    this.rbacService.registerManifests([
+      { slug: 'evaluations.templates.read',   module: 'evaluations', action: 'templates.read',   label: 'View evaluation templates',   description: 'View evaluation templates',                        supportedScopes: ['any'] },
+      { slug: 'evaluations.templates.manage', module: 'evaluations', action: 'templates.manage', label: 'Manage evaluation templates', description: 'Create, update, and delete evaluation templates',  supportedScopes: ['any'] },
+      { slug: 'evaluations.read',             module: 'evaluations', action: 'read',             label: 'View evaluations',            description: 'View evaluations',                                 supportedScopes: ['any'] },
+      { slug: 'evaluations.create',           module: 'evaluations', action: 'create',           label: 'Create evaluations',          description: 'Create evaluations',                               supportedScopes: ['any'] },
+      { slug: 'evaluations.update',           module: 'evaluations', action: 'update',           label: 'Update evaluations',          description: 'Update evaluations',                               supportedScopes: ['any'] },
+      { slug: 'evaluations.delete',           module: 'evaluations', action: 'delete',           label: 'Delete evaluations',          description: 'Delete evaluations',                               supportedScopes: ['any'] },
     ]);
 
     // Register audit events

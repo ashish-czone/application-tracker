@@ -1,3 +1,5 @@
+import type { PermissionManifest } from '@packages/rbac';
+
 /**
  * Compliance domain permission constants.
  *
@@ -8,7 +10,6 @@
  * those become real entities, the auto-registered CRUD perms supersede these
  * and the constants can be removed.
  *
- * The string format mirrors the entity-engine convention: `<module>.<action>`.
  * Keep these in sync with the route-level permissions declared in
  * `domains/compliance/ui/index.tsx`.
  */
@@ -23,20 +24,15 @@ export const COMPLIANCE_PERMISSIONS = {
 export type CompliancePermission =
   (typeof COMPLIANCE_PERMISSIONS)[keyof typeof COMPLIANCE_PERMISSIONS];
 
-interface PermissionRegistration {
-  module: string;
-  action: string;
-  description: string;
-}
-
 /**
- * Registry payload consumed by `compliance.module.ts`'s `onModuleInit()`.
- * Grouped by module so each can be passed to `registerPermissions(module, ...)`.
+ * Permission manifests consumed by compliance.module.ts's onModuleInit().
+ * These are non-entity UI surfaces — entity CRUD perms come from the
+ * entity-engine's auto-derivation.
  */
-export const COMPLIANCE_PERMISSION_REGISTRATIONS: PermissionRegistration[] = [
-  { module: 'filings', action: 'read', description: 'View compliance filings' },
-  { module: 'filings', action: 'create', description: 'Create compliance filings' },
-  { module: 'filings', action: 'update', description: 'Update compliance filings' },
-  { module: 'filings', action: 'delete', description: 'Delete compliance filings' },
-  { module: 'reports', action: 'read', description: 'View compliance reports' },
+export const COMPLIANCE_PERMISSION_MANIFESTS: PermissionManifest[] = [
+  { slug: 'filings.read',   module: 'filings', action: 'read',   label: 'View filings',   description: 'View compliance filings',   supportedScopes: ['any'] },
+  { slug: 'filings.create', module: 'filings', action: 'create', label: 'Create filings', description: 'Create compliance filings', supportedScopes: ['any'] },
+  { slug: 'filings.update', module: 'filings', action: 'update', label: 'Update filings', description: 'Update compliance filings', supportedScopes: ['any'] },
+  { slug: 'filings.delete', module: 'filings', action: 'delete', label: 'Delete filings', description: 'Delete compliance filings', supportedScopes: ['any'] },
+  { slug: 'reports.read',   module: 'reports', action: 'read',   label: 'View reports',   description: 'View compliance reports',   supportedScopes: ['any'] },
 ];

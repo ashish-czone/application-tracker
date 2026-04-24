@@ -180,13 +180,6 @@ export class EntityEngineModule implements OnApplicationBootstrap {
       supportedScopes: p.supportedScopes ?? derivedScopes,
     }));
     this.rbac.registerManifests([...crudManifests, ...extraManifests]);
-    this.rbac.registerPermissions(config.slug, [
-      { action: 'create', description: `Create ${plural}` },
-      { action: 'read', description: `View ${plural}` },
-      { action: 'update', description: `Update ${plural}` },
-      { action: 'delete', description: `Delete ${plural}` },
-      ...(config.extraPermissions ?? []).map(({ action, description }) => ({ action, description })),
-    ]);
 
     // 3. Events
     const createdEvent = `${config.entityType}.Created`;

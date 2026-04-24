@@ -9,7 +9,6 @@ import { rolePermissions } from '../../schema/role-permissions';
 import { rolePermissionScopes } from '../../schema/role-permission-scopes';
 import { RbacModule } from '../../rbac.module';
 import { RbacService } from '../rbac.service';
-import { PermissionRegistryService } from '../permission-registry.service';
 import type { DrizzleDB } from '@packages/database';
 import type { TestingModule } from '@nestjs/testing';
 
@@ -18,7 +17,6 @@ describe('RBAC (integration)', () => {
   let db: DrizzleDB;
   let cleanup: () => Promise<void>;
   let rbacService: RbacService;
-  let permissionRegistry: PermissionRegistryService;
 
   beforeAll(async () => {
     const ctx = await createIntegrationTestModule({
@@ -28,7 +26,6 @@ describe('RBAC (integration)', () => {
     db = ctx.db;
     cleanup = ctx.cleanup;
     rbacService = module.get(RbacService);
-    permissionRegistry = module.get(PermissionRegistryService);
   });
 
   afterEach(async () => {
@@ -388,10 +385,10 @@ describe('RBAC (integration)', () => {
   });
 
   describe('Permission registry', () => {
-    it('should register and retrieve permissions from modules', () => {
-      rbacService.registerPermissions('test_module', [
-        { action: 'read', description: 'Read test resources' },
-        { action: 'create', description: 'Create test resources' },
+    it('should register manifests and surface them via the legacy read API', () => {
+      rbacService.registerManifests([
+        { slug: 'test_module.read',   module: 'test_module', action: 'read',   label: 'Read test resources',   description: 'Read test resources',   supportedScopes: ['any'] },
+        { slug: 'test_module.create', module: 'test_module', action: 'create', label: 'Create test resources', description: 'Create test resources', supportedScopes: ['any'] },
       ]);
 
       const all = rbacService.getAllRegisteredPermissions();

@@ -23,11 +23,11 @@ export class NotesModule implements OnModuleInit {
 
   onModuleInit() {
     // Register RBAC permissions
-    this.rbacService.registerPermissions('notes', [
-      { action: 'read', description: 'View notes' },
-      { action: 'create', description: 'Create notes' },
-      { action: 'update', description: 'Update notes' },
-      { action: 'delete', description: 'Delete notes' },
+    this.rbacService.registerManifests([
+      { slug: 'notes.read',   module: 'notes', action: 'read',   label: 'View notes',   description: 'View notes',   supportedScopes: ['any'] },
+      { slug: 'notes.create', module: 'notes', action: 'create', label: 'Create notes', description: 'Create notes', supportedScopes: ['any'] },
+      { slug: 'notes.update', module: 'notes', action: 'update', label: 'Update notes', description: 'Update notes', supportedScopes: ['any'] },
+      { slug: 'notes.delete', module: 'notes', action: 'delete', label: 'Delete notes', description: 'Delete notes', supportedScopes: ['any'] },
     ]);
 
     // Register audit events

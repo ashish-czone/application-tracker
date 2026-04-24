@@ -73,14 +73,14 @@ export class TaxonomyModule implements OnModuleInit {
 
     this.actionRegistry.register(this.tagEntityAction);
 
-    this.rbacService.registerPermissions('taxonomy', [
-      { action: 'tag-groups.read', description: 'View tag groups' },
-      { action: 'tag-groups.manage', description: 'Create, update, and delete tag groups' },
-      { action: 'tags.read', description: 'View tags' },
-      { action: 'tags.manage', description: 'Create, update, and delete tags' },
-      { action: 'entity-tags.manage', description: 'Attach and detach tags on entities' },
-      { action: 'categories.read', description: 'View categories' },
-      { action: 'categories.manage', description: 'Create, update, move, and delete categories' },
+    this.rbacService.registerManifests([
+      { slug: 'taxonomy.tag-groups.read',     module: 'taxonomy', action: 'tag-groups.read',     label: 'View tag groups',        description: 'View tag groups',                               supportedScopes: ['any'] },
+      { slug: 'taxonomy.tag-groups.manage',   module: 'taxonomy', action: 'tag-groups.manage',   label: 'Manage tag groups',      description: 'Create, update, and delete tag groups',         supportedScopes: ['any'] },
+      { slug: 'taxonomy.tags.read',           module: 'taxonomy', action: 'tags.read',           label: 'View tags',              description: 'View tags',                                     supportedScopes: ['any'] },
+      { slug: 'taxonomy.tags.manage',         module: 'taxonomy', action: 'tags.manage',         label: 'Manage tags',            description: 'Create, update, and delete tags',               supportedScopes: ['any'] },
+      { slug: 'taxonomy.entity-tags.manage',  module: 'taxonomy', action: 'entity-tags.manage',  label: 'Manage entity tags',     description: 'Attach and detach tags on entities',            supportedScopes: ['any'] },
+      { slug: 'taxonomy.categories.read',     module: 'taxonomy', action: 'categories.read',     label: 'View categories',        description: 'View categories',                               supportedScopes: ['any'] },
+      { slug: 'taxonomy.categories.manage',   module: 'taxonomy', action: 'categories.manage',   label: 'Manage categories',      description: 'Create, update, move, and delete categories',   supportedScopes: ['any'] },
     ]);
   }
 }

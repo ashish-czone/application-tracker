@@ -12,10 +12,9 @@ import { roles } from '../schema/roles';
 import { rolePermissions } from '../schema/role-permissions';
 import { rolePermissionScopes } from '../schema/role-permission-scopes';
 import { userRoles } from '../schema/user-roles';
-import { PermissionRegistryService } from './permission-registry.service';
 import { PermissionManifestRegistry, type PermissionManifest } from '../permission-manifest';
 import { normaliseScopes } from '../scope-types';
-import type { Role, RoleMember, RoleWithSystem, ScopedPermissions, BooleanPermissions, ScopeSpec } from '../types';
+import type { Role, RoleMember, RoleWithSystem, ScopedPermissions, BooleanPermissions, ScopeSpec, PermissionRegistryEntry } from '../types';
 
 @Injectable()
 export class RbacService {
@@ -32,7 +31,6 @@ export class RbacService {
 
   constructor(
     private readonly database: DatabaseService,
-    private readonly permissionRegistry: PermissionRegistryService,
     private readonly manifestRegistry: PermissionManifestRegistry,
   ) {}
 
@@ -512,24 +510,30 @@ export class RbacService {
     return result;
   }
 
-  // --- Permission registry (delegates to internal service) ---
-
-  registerPermissions(module: string, perms: { action: string; description: string }[]) {
-    this.permissionRegistry.register(module, perms);
-  }
+  // --- Permission registry ---
 
   /**
-   * Register permission manifests. Preferred over `registerPermissions`: the
-   * manifest carries the scope types the permission supports, which the
-   * role-grant path uses to reject invalid scope types and the role editor
-   * UI uses to decide which scope pickers to offer.
+   * Register permission manifests. Every module that introduces permissions
+   * calls this in `onModuleInit` (or has entity-engine do it via
+   * `defineEntity`). The manifest carries the scope types the permission
+   * supports, which the role-grant path uses to reject invalid scope types
+   * and the role editor UI uses to decide which scope pickers to offer.
    */
   registerManifests(manifests: PermissionManifest[]): void {
     this.manifestRegistry.registerMany(manifests);
   }
 
-  getAllRegisteredPermissions() {
-    return this.permissionRegistry.getAll();
+  /**
+   * Flat list of registered permissions in legacy `{module, action,
+   * description}` shape. Derived from PermissionManifestRegistry for
+   * backward-compat with the existing `/rbac/permissions/registry` endpoint.
+   */
+  getAllRegisteredPermissions(): PermissionRegistryEntry[] {
+    return this.manifestRegistry.list().map((m) => ({
+      module: m.module,
+      action: m.action,
+      description: m.description ?? m.label,
+    }));
   }
 
   /**

@@ -15,8 +15,8 @@ export class AuditModule implements OnModuleInit {
   constructor(private readonly rbacService: RbacService) {}
 
   onModuleInit() {
-    this.rbacService.registerPermissions('audit', [
-      { action: 'read_all', description: 'View firm-wide audit logs across every entity' },
+    this.rbacService.registerManifests([
+      { slug: 'audit.read_all', module: 'audit', action: 'read_all', label: 'View all audit logs', description: 'View firm-wide audit logs across every entity', supportedScopes: ['any'] },
     ]);
   }
 }

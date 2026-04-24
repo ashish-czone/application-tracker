@@ -35,7 +35,7 @@ import { ComplianceRulesController } from './rules/compliance-rules.controller';
 import { ComplianceFilingsLookupService } from './compliance-filings/compliance-filings-lookup.service';
 import { ComplianceFilingsCancellationService } from './compliance-filings/compliance-filings-cancellation.service';
 import { GenerateComplianceFilingsAction } from './automations/generate-compliance-filings.action';
-import { COMPLIANCE_PERMISSION_REGISTRATIONS } from './permissions';
+import { COMPLIANCE_PERMISSION_MANIFESTS } from './permissions';
 
 // Late-bound database handle: the organizations config references this via a
 // getter so singleton enforcement can query the DB at request time without
@@ -135,14 +135,6 @@ export class ComplianceDomainModule implements OnModuleInit {
     // Register permissions for compliance UI surfaces that don't yet have
     // backing entities. CRUD perms for entities (clients, laws, etc.) are
     // auto-registered by EntityEngineModule.forEntity() above.
-    const byModule = new Map<string, { action: string; description: string }[]>();
-    for (const { module, action, description } of COMPLIANCE_PERMISSION_REGISTRATIONS) {
-      const list = byModule.get(module) ?? [];
-      list.push({ action, description });
-      byModule.set(module, list);
-    }
-    for (const [module, perms] of byModule) {
-      this.rbac.registerPermissions(module, perms);
-    }
+    this.rbac.registerManifests(COMPLIANCE_PERMISSION_MANIFESTS);
   }
 }

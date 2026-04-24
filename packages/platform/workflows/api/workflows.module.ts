@@ -47,9 +47,9 @@ export class WorkflowsModule implements OnModuleInit {
       fieldTypeRegistry.registerPlugin(workflowFieldTypesPlugin);
     }
 
-    this.rbacService.registerPermissions('workflows', [
-      { action: 'read', description: 'View workflow definitions' },
-      { action: 'manage', description: 'Create, update, and delete workflow definitions, states, and transitions' },
+    this.rbacService.registerManifests([
+      { slug: 'workflows.read',   module: 'workflows', action: 'read',   label: 'View workflows',   description: 'View workflow definitions', supportedScopes: ['any'] },
+      { slug: 'workflows.manage', module: 'workflows', action: 'manage', label: 'Manage workflows', description: 'Create, update, and delete workflow definitions, states, and transitions', supportedScopes: ['any'] },
     ]);
 
     this.actionRegistry.register(this.transitionWorkflowAction);

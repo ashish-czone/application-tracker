@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { RbacService } from '../rbac.service';
-import { PermissionRegistryService } from '../permission-registry.service';
 import { PermissionManifestRegistry } from '../../permission-manifest';
 
 // Mock database helpers
@@ -36,16 +35,14 @@ function createMockDatabaseService(mockDb: ReturnType<typeof createMockDb>) {
 
 describe('RbacService', () => {
   let service: RbacService;
-  let permissionRegistry: PermissionRegistryService;
   let manifestRegistry: PermissionManifestRegistry;
   let mockDb: ReturnType<typeof createMockDb>;
 
   beforeEach(() => {
     mockDb = createMockDb();
     const databaseService = createMockDatabaseService(mockDb);
-    permissionRegistry = new PermissionRegistryService();
     manifestRegistry = new PermissionManifestRegistry();
-    service = new RbacService(databaseService, permissionRegistry, manifestRegistry);
+    service = new RbacService(databaseService, manifestRegistry);
   });
 
   describe('createRole', () => {
@@ -417,11 +414,11 @@ describe('RbacService', () => {
     });
   });
 
-  describe('registerPermissions / getAllRegisteredPermissions', () => {
-    it('should delegate to permission registry', () => {
-      service.registerPermissions('candidates', [
-        { action: 'create', description: 'Create candidates' },
-        { action: 'read', description: 'View candidates' },
+  describe('registerManifests / getAllRegisteredPermissions', () => {
+    it('maps manifests to the legacy {module, action, description} shape', () => {
+      service.registerManifests([
+        { slug: 'candidates.create', module: 'candidates', action: 'create', label: 'Create candidates', description: 'Create candidates', supportedScopes: ['any'] },
+        { slug: 'candidates.read',   module: 'candidates', action: 'read',   label: 'View candidates',   description: 'View candidates',   supportedScopes: ['any'] },
       ]);
 
       const result = service.getAllRegisteredPermissions();
@@ -432,6 +429,13 @@ describe('RbacService', () => {
         action: 'create',
         description: 'Create candidates',
       });
+    });
+
+    it('falls back to the label when description is omitted', () => {
+      service.registerManifests([
+        { slug: 'candidates.export', module: 'candidates', action: 'export', label: 'Export candidates', supportedScopes: ['any'] },
+      ]);
+      expect(service.getAllRegisteredPermissions()[0].description).toBe('Export candidates');
     });
   });
 

@@ -97,9 +97,9 @@ export class EntityCoreModule implements OnModuleInit {
       fieldTypeRegistry.registerPlugin(coreFieldTypesPlugin);
     }
 
-    this.rbac.registerPermissions('eav', [
-      { action: 'read', description: 'View field definitions and layouts' },
-      { action: 'manage', description: 'Create/update/delete custom fields and layouts' },
+    this.rbac.registerManifests([
+      { slug: 'eav.read',   module: 'eav', action: 'read',   label: 'View field definitions', description: 'View field definitions and layouts',            supportedScopes: ['any'] },
+      { slug: 'eav.manage', module: 'eav', action: 'manage', label: 'Manage fields',          description: 'Create/update/delete custom fields and layouts', supportedScopes: ['any'] },
     ]);
 
     if (this.automationsExt) {
