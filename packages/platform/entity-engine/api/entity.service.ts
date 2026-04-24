@@ -36,7 +36,7 @@ import { fieldTypeSaveHookRegistry, type FieldTypeSaveHookRegistry, type FieldTy
 import type { WorkflowExtension } from './extensions/workflow-extension.interface';
 import type { TaxonomyExtension } from './extensions/taxonomy-extension.interface';
 import type { PaginatedResponse } from '@packages/common';
-import type { EntityConfig, BaseListQuery, ListLayoutColumn } from './types';
+import type { EntityConfig, BaseListQuery, ListLayoutColumn, TransitionContext } from './types';
 import type { DataAccessContext, AccessScopeSpec } from '@packages/rbac';
 import type { SQL as DrizzleSQL } from 'drizzle-orm';
 import { EntityRegistryService } from './entity-registry.service';
@@ -1376,6 +1376,20 @@ export class EntityService {
   // WORKFLOW TRANSITION
   // ---------------------------------------------------------------------------
 
+  /**
+   * Split into three primitives (`validateTransition` → `applyTransition` →
+   * `emitTransitionEvent`) so domain services can compose atomic cascades
+   * inside the same transaction as the engine's status update + history
+   * write. The thin `transition()` bundler below is what entities without a
+   * cascade continue to use — it's one line of orchestration delegating to
+   * all three. Entities that need transactional side effects open their own
+   * tx, call `applyTransition(validated, tx)`, run their cascade on the same
+   * tx, then emit after commit via `emitTransitionEvent`.
+   *
+   * Don't skip `validateTransition`: permission checks, guard evaluation,
+   * reason/comment requirements, and workflow lookup all happen there.
+   * Bypassing it means bypassing RBAC.
+   */
   async transition(
     id: string,
     fieldKey: string,
@@ -1384,15 +1398,36 @@ export class EntityService {
     options?: { reason?: string; comment?: string },
     accessCtx?: DataAccessContext,
   ): Promise<Record<string, unknown>> {
+    const validated = await this.validateTransition(id, fieldKey, toState, actorId, options, accessCtx);
+    await this.database.db.transaction(async (tx) => {
+      await this.applyTransition(validated, tx);
+    });
+    this.emitTransitionEvent(validated);
+    return this.findOneOrFail(id);
+  }
+
+  /**
+   * Phase 1 of a transition: everything up to (but not including) the tx.
+   * Loads the entity (scope-checked), resolves the workflow assignment,
+   * validates the transition (permissions, guards, conditions), and enforces
+   * reason/comment constraints. Throws on any failure. Returns a frozen
+   * `TransitionContext` that downstream phases consume — never compute
+   * fromState/toState again from the entity, they might not match.
+   */
+  async validateTransition(
+    id: string,
+    fieldKey: string,
+    toState: string,
+    actorId: string,
+    options?: { reason?: string; comment?: string },
+    accessCtx?: DataAccessContext,
+  ): Promise<TransitionContext> {
     const { config } = this;
-    const table = config.table as any;
     const reason = options?.reason;
     const comment = options?.comment;
 
-    // 1. Get current entity (scope-checked)
     const entity = await this.findOneOrFail(id, accessCtx);
 
-    // 2. Look up workflow — check assignment first, fall back to default
     if (!this.workflowExt) {
       throw new BadRequestException(`Workflow extension is not loaded — cannot transition field '${fieldKey}'`);
     }
@@ -1406,7 +1441,6 @@ export class EntityService {
       throw new BadRequestException(`Entity has no current state for field '${fieldKey}'`);
     }
 
-    // 3. Validate transition (permissions, guards, conditions) — throws on failure
     const validated = await this.workflowExt.validateAndThrow({
       workflowSlug: workflow.slug,
       entityType: config.entityType,
@@ -1417,7 +1451,6 @@ export class EntityService {
       entityData: entity as Record<string, unknown>,
     });
 
-    // 3b. Validate reason/comment against transition definition
     const transitionDef = workflow.transitions.find((t) => t.id === validated.transitionId);
     if (transitionDef) {
       if (transitionDef.reasonRequired && !reason) {
@@ -1433,76 +1466,113 @@ export class EntityService {
       }
     }
 
-    // 4. Update entity field + record history in a single transaction
-    const col = table[fieldKey];
-    await this.database.db.transaction(async (tx) => {
-      if (col) {
-        await tx
-          .update(table)
-          .set({ [fieldKey]: toState })
-          .where(withTenant(table, eq(table.id, id)));
-      } else if (this.eavStorage) {
-        await this.eavStorage.setValues(config.entityType, id, { [fieldKey]: toState }, tx);
-      }
-
-      await this.workflowExt!.recordHistory({
-        workflowDefinitionId: validated.workflowDefinitionId,
-        entityType: config.entityType,
-        entityId: id,
-        fieldName: validated.fieldName,
-        fromState: currentState,
-        toState,
-        transitionId: validated.transitionId,
-        actorId,
-        reason,
-        comment,
-      }, tx);
-
-      // Domain-specific transactional side effects. Throws roll the whole
-      // transition back — callers use this for work that must atomically
-      // commit-or-not with the state change (e.g. bulk-cancelling children
-      // when the parent moves to a terminal state). For fire-and-forget
-      // cleanup, subscribe to `{entity}.{Field}Changed` instead.
-      if (config.hooks?.onTransition) {
-        await config.hooks.onTransition({
-          entityType: config.entityType,
-          entityId: id,
-          fieldKey,
-          fromState: currentState,
-          toState,
-          transitionId: validated.transitionId,
-          actorId,
-          reason,
-          comment,
-          entity: entity as Record<string, unknown>,
-        }, tx);
-      }
-    });
-
-    this.logger.log(`${config.singularName} transitioned`, {
-      entityId: id, fieldKey, from: currentState, to: toState, actorId,
-    });
-
-    // 5. Emit entity-specific event after transaction commits
-    // e.g. "applications.StageChanged", "tasks.StatusChanged"
-    const pascalField = fieldKey.charAt(0).toUpperCase() + fieldKey.slice(1);
-    this.domainEventEmitter.emitDynamic(`${config.entityType}.${pascalField}Changed`, {
+    return {
       entityType: config.entityType,
       entityId: id,
+      fieldKey,
+      fieldName: validated.fieldName,
+      fromState: currentState,
+      toState,
+      transitionId: validated.transitionId,
+      transitionName: validated.transitionName,
+      workflowDefinitionId: validated.workflowDefinitionId,
+      workflowSlug: workflow.slug,
       actorId,
-      payload: {
-        workflowSlug: workflow.slug,
-        fieldName: validated.fieldName,
-        fromState: currentState,
-        toState,
+      reason,
+      comment,
+      entity: entity as Record<string, unknown>,
+    };
+  }
+
+  /**
+   * Phase 2 of a transition: runs inside the caller-supplied tx. Updates the
+   * entity's workflow field and records workflow history on the same tx, then
+   * invokes the legacy `onTransition` hook (pending removal). Throwing rolls
+   * the whole transition back — the calling domain service can piggyback
+   * additional cascades on this tx and get the same atomicity.
+   */
+  async applyTransition(validated: TransitionContext, tx: any): Promise<void> {
+    const { config } = this;
+    const table = config.table as any;
+    const col = table[validated.fieldKey];
+    if (col) {
+      await tx
+        .update(table)
+        .set({ [validated.fieldKey]: validated.toState })
+        .where(withTenant(table, eq(table.id, validated.entityId)));
+    } else if (this.eavStorage) {
+      await this.eavStorage.setValues(
+        config.entityType,
+        validated.entityId,
+        { [validated.fieldKey]: validated.toState },
+        tx,
+      );
+    }
+
+    await this.workflowExt!.recordHistory({
+      workflowDefinitionId: validated.workflowDefinitionId,
+      entityType: config.entityType,
+      entityId: validated.entityId,
+      fieldName: validated.fieldName,
+      fromState: validated.fromState,
+      toState: validated.toState,
+      transitionId: validated.transitionId,
+      actorId: validated.actorId,
+      reason: validated.reason,
+      comment: validated.comment,
+    }, tx);
+
+    // Legacy onTransition hook — kept on the bundler path for backward compat
+    // while consumers migrate to composing primitives. Removed in a follow-up
+    // commit once no entity config declares one.
+    if (config.hooks?.onTransition) {
+      await config.hooks.onTransition({
+        entityType: config.entityType,
+        entityId: validated.entityId,
+        fieldKey: validated.fieldKey,
+        fromState: validated.fromState,
+        toState: validated.toState,
         transitionId: validated.transitionId,
-        transitionName: validated.transitionName,
-        reason,
-        comment,
-      },
+        actorId: validated.actorId,
+        reason: validated.reason,
+        comment: validated.comment,
+        entity: validated.entity,
+      }, tx);
+    }
+  }
+
+  /**
+   * Phase 3 of a transition: emit the post-commit dynamic event
+   * (`{entityType}.{Field}Changed`). Must run AFTER the tx commits — handlers
+   * assume the state change is durable. Callers that own the tx are
+   * responsible for invoking this after `db.transaction(...)` resolves.
+   */
+  emitTransitionEvent(validated: TransitionContext): void {
+    const { config } = this;
+    this.logger.log(`${config.singularName} transitioned`, {
+      entityId: validated.entityId,
+      fieldKey: validated.fieldKey,
+      from: validated.fromState,
+      to: validated.toState,
+      actorId: validated.actorId,
     });
 
-    return this.findOneOrFail(id);
+    const pascalField = validated.fieldKey.charAt(0).toUpperCase() + validated.fieldKey.slice(1);
+    this.domainEventEmitter.emitDynamic(`${config.entityType}.${pascalField}Changed`, {
+      entityType: config.entityType,
+      entityId: validated.entityId,
+      actorId: validated.actorId,
+      payload: {
+        workflowSlug: validated.workflowSlug,
+        fieldName: validated.fieldName,
+        fromState: validated.fromState,
+        toState: validated.toState,
+        transitionId: validated.transitionId,
+        transitionName: validated.transitionName,
+        reason: validated.reason,
+        comment: validated.comment,
+      },
+    });
   }
 
   // ---------------------------------------------------------------------------

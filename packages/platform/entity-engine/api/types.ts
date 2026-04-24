@@ -952,6 +952,31 @@ export interface TransitionHookContext {
   entity: Record<string, unknown>;
 }
 
+/**
+ * Result of `EntityService.validateTransition` — a frozen, validated
+ * transition ready to apply. Downstream phases (`applyTransition`,
+ * `emitTransitionEvent`) accept this shape. Domain services owning their
+ * own tx for a cascade pass the same object through all three phases so
+ * derived fields stay consistent (the entity snapshot, the transition
+ * definition lookup, etc.).
+ */
+export interface TransitionContext {
+  entityType: string;
+  entityId: string;
+  fieldKey: string;
+  fieldName: string;
+  fromState: string;
+  toState: string;
+  transitionId: string;
+  transitionName: string;
+  workflowDefinitionId: string;
+  workflowSlug: string;
+  actorId: string;
+  reason?: string;
+  comment?: string;
+  entity: Record<string, unknown>;
+}
+
 // ---------------------------------------------------------------------------
 // Base list query — common pagination/search/sort params for all entities
 // ---------------------------------------------------------------------------
