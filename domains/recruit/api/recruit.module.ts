@@ -4,7 +4,7 @@ import { TASKS_CONFIG, TasksModule } from '@packages/tasks';
 
 import { SharedModule } from './shared/shared.module';
 
-import { candidatesConfig } from './candidates/candidates.config';
+import { CandidatesModule } from './candidates/candidates.module';
 
 import { ClientsModule } from './clients/clients.module';
 
@@ -24,7 +24,7 @@ import { offersConfig } from './offers/offers.config';
   imports: [
     SharedModule,
 
-    EntityEngineModule.forEntity(candidatesConfig),
+    CandidatesModule,
 
     ClientsModule,
 
