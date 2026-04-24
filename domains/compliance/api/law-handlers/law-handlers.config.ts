@@ -3,7 +3,7 @@ import { complianceLawHandlers } from '../schema/law-handlers';
 
 export const LAW_HANDLERS_CONFIG = defineEntity({
   table: complianceLawHandlers,
-  slug: 'compliance_law_handlers',
+  slug: 'law-handlers',
   singularName: 'Law Handler',
   pluralName: 'Law Handlers',
   onDelete: { mode: 'hard' },

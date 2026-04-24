@@ -32,7 +32,7 @@ export interface CreateLawHandlerInput {
 @Injectable()
 export class LawHandlersService {
   constructor(
-    @Inject('ENTITY_SERVICE_compliance_law_handlers') private readonly entityService: EntityService,
+    @Inject('ENTITY_SERVICE_law-handlers') private readonly entityService: EntityService,
     private readonly database: DatabaseService,
   ) {}
 

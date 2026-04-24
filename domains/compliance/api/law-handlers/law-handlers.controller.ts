@@ -20,18 +20,18 @@ import {
 import { LawHandlersService } from './law-handlers.service';
 import { CreateLawHandlerSchema, UpdateLawHandlerSchema } from './law-handlers.dto';
 
-@Controller('compliance_law_handlers')
+@Controller('law-handlers')
 export class LawHandlersController {
   constructor(private readonly lawHandlers: LawHandlersService) {}
 
   @Get('layout/list')
-  @RequirePermission('compliance_law_handlers.read')
+  @RequirePermission('law-handlers.read')
   getListLayout() {
     return this.lawHandlers.getListLayout();
   }
 
   @Get()
-  @RequirePermission('compliance_law_handlers.read')
+  @RequirePermission('law-handlers.read')
   list(@Query() query: Record<string, unknown>, @AccessContext() accessCtx?: DataAccessContext) {
     const parsed = {
       ...query,
@@ -43,7 +43,7 @@ export class LawHandlersController {
   }
 
   @Get(':id')
-  @RequirePermission('compliance_law_handlers.read')
+  @RequirePermission('law-handlers.read')
   findOne(
     @Param('id', ParseUUIDPipe) id: string,
     @AccessContext() accessCtx?: DataAccessContext,
@@ -52,7 +52,7 @@ export class LawHandlersController {
   }
 
   @Post()
-  @RequirePermission('compliance_law_handlers.create')
+  @RequirePermission('law-handlers.create')
   @HttpCode(HttpStatus.CREATED)
   create(@Body() body: unknown, @CurrentUser() user: JwtPayload) {
     const input = CreateLawHandlerSchema.parse(body);
@@ -60,7 +60,7 @@ export class LawHandlersController {
   }
 
   @Patch(':id')
-  @RequirePermission('compliance_law_handlers.update')
+  @RequirePermission('law-handlers.update')
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: unknown,
@@ -72,7 +72,7 @@ export class LawHandlersController {
   }
 
   @Delete(':id')
-  @RequirePermission('compliance_law_handlers.delete')
+  @RequirePermission('law-handlers.delete')
   @HttpCode(HttpStatus.NO_CONTENT)
   async delete(
     @Param('id', ParseUUIDPipe) id: string,
@@ -83,14 +83,14 @@ export class LawHandlersController {
   }
 
   @Post(':id/clone')
-  @RequirePermission('compliance_law_handlers.create')
+  @RequirePermission('law-handlers.create')
   @HttpCode(HttpStatus.CREATED)
   clone(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: JwtPayload) {
     return this.lawHandlers.clone(id, user.userId);
   }
 
   @Post(':id/restore')
-  @RequirePermission('compliance_law_handlers.update')
+  @RequirePermission('law-handlers.update')
   restore(@Param('id', ParseUUIDPipe) id: string) {
     return this.lawHandlers.restore(id);
   }

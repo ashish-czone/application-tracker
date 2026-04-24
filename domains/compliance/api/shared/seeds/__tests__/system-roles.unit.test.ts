@@ -133,7 +133,7 @@ describe('COMPLIANCE_ROLES seed', () => {
         'client-registrations.delete',
         'laws.delete',
         'compliance_rules.delete',
-        'compliance_law_handlers.delete',
+        'law-handlers.delete',
       ]) {
         expect(granted).toContain(perm);
       }

@@ -14,7 +14,7 @@ import { roles, RbacService, type ScopeSpec } from '@packages/rbac';
  *  - Q15 uses a `compliance.` prefix; the engine does not.
  *  - Entity slug casing is mixed (hyphen for some, underscore for others):
  *      `client-contacts`, `client-registrations`, `compliance-filings` — hyphen
- *      `compliance_rules`, `compliance_law_handlers`                   — underscore
+ *      `compliance_rules`, `law-handlers`                   — underscore
  *    We seed against the slugs the engine actually registers.
  *
  * Roles are scoped to `userType: null` — they apply to any user type.
@@ -176,10 +176,10 @@ const FIRM_ADMIN_PERMISSIONS: GrantSpec[] = [
   { name: 'compliance_rules.create',       scopes: ANY },
   { name: 'compliance_rules.update',       scopes: ANY },
   { name: 'compliance_rules.delete',       scopes: ANY },
-  { name: 'compliance_law_handlers.read',   scopes: ANY },
-  { name: 'compliance_law_handlers.create', scopes: ANY },
-  { name: 'compliance_law_handlers.update', scopes: ANY },
-  { name: 'compliance_law_handlers.delete', scopes: ANY },
+  { name: 'law-handlers.read',   scopes: ANY },
+  { name: 'law-handlers.create', scopes: ANY },
+  { name: 'law-handlers.update', scopes: ANY },
+  { name: 'law-handlers.delete', scopes: ANY },
 ];
 
 export const COMPLIANCE_ROLES: RoleSpec[] = [
