@@ -20,6 +20,14 @@ function mockSelectRows(rows: unknown[]) {
   return chain;
 }
 
+function mockSelectRowsWithLimit(rows: unknown[]) {
+  const chain: AnyChain = {} as AnyChain;
+  chain.from = vi.fn().mockReturnValue(chain);
+  chain.where = vi.fn().mockReturnValue(chain);
+  chain.limit = vi.fn().mockResolvedValue(rows);
+  return chain;
+}
+
 function mockInsertReturning(row: unknown) {
   const chain: AnyChain = {} as AnyChain;
   chain.values = vi.fn().mockReturnValue(chain);
@@ -315,6 +323,29 @@ describe('ComplianceRuleService', () => {
     it('throws NoDefaultHandlerError when no handlers match at all', async () => {
       db.db.select.mockReturnValue(mockSelectRows([]));
       await expect(service.resolveAssignee('l1', 'c1')).rejects.toBeInstanceOf(NoDefaultHandlerError);
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // hasGeneratedFilings — I13
+  // --------------------------------------------------------------------------
+
+  describe('hasGeneratedFilings', () => {
+    it('returns true when at least one filing exists for the rule', async () => {
+      db.db.select.mockReturnValueOnce(mockSelectRowsWithLimit([{ id: 'f1' }]));
+      expect(await service.hasGeneratedFilings('r1')).toBe(true);
+    });
+
+    it('returns false when no filings exist for the rule', async () => {
+      db.db.select.mockReturnValueOnce(mockSelectRowsWithLimit([]));
+      expect(await service.hasGeneratedFilings('r1')).toBe(false);
+    });
+
+    it('treats cancelled filings as generated — identity stays baked in', async () => {
+      // Even if every filing for this rule is cancelled, the rule has
+      // "generated" filings and its identity fields must remain immutable.
+      db.db.select.mockReturnValueOnce(mockSelectRowsWithLimit([{ id: 'f-cancelled' }]));
+      expect(await service.hasGeneratedFilings('r1')).toBe(true);
     });
   });
 

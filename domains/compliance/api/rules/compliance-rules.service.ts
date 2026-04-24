@@ -164,6 +164,26 @@ export class ComplianceRuleService {
   }
 
   /**
+   * I13: does this rule have at least one filing materialised against it?
+   * Used by the I14 update guard to lock identity fields (`code`, `frequency`,
+   * `lawId`) and by the I15 UI to render forward-only copy on due-date math
+   * edits. Single-row existence check — `LIMIT 1`, no full count scan.
+   *
+   * Cancelled filings count: once a filing has been generated, the rule's
+   * identity is baked into historical data. Whether the filing is still open,
+   * completed, or cancelled is irrelevant — renaming the rule would still
+   * rewrite what those rows mean.
+   */
+  async hasGeneratedFilings(ruleId: string): Promise<boolean> {
+    const rows = await this.database.db
+      .select({ id: complianceFilings.id })
+      .from(complianceFilings)
+      .where(eq(complianceFilings.ruleId, ruleId))
+      .limit(1);
+    return rows.length > 0;
+  }
+
+  /**
    * Dry-run of deprecation for the UI dialog (I10). Returns the count of
    * non-terminal filings for this rule across all clients. No writes.
    * Feeds the "Also cancel N in-flight filings from this rule" checkbox —

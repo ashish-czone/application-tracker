@@ -44,6 +44,8 @@ describe('GenerateComplianceFilingsAction', () => {
   let filingsService: {
     findByRuleClientPeriod: Mock;
     create: Mock;
+    update: Mock;
+    delete: Mock;
   };
   let events: { emitDynamic: Mock };
   let logger: {
@@ -65,6 +67,10 @@ describe('GenerateComplianceFilingsAction', () => {
     filingsService = {
       findByRuleClientPeriod: vi.fn().mockResolvedValue(null),
       create: vi.fn().mockResolvedValue({ id: 'filing-new' }),
+      // I16: `update`/`delete` exist on the stub so a negative assertion can
+      // catch any future regression that tries to mutate existing rows.
+      update: vi.fn().mockResolvedValue({ id: 'filing-updated' }),
+      delete: vi.fn().mockResolvedValue(undefined),
     };
     events = { emitDynamic: vi.fn() };
 
@@ -188,6 +194,34 @@ describe('GenerateComplianceFilingsAction', () => {
       periodEnd: '2026-04-30',
       dueDate: '2026-05-20',
     });
+  });
+
+  it('I16: on (ruleId, clientId, periodStart) conflict the generator is a pure no-op — no create, no update, no delete, no event', async () => {
+    // Rule has been edited after a filing was already materialised — the due-
+    // date math says 2026-05-25, but the existing filing was generated under
+    // the old math (2026-05-20). Q9 is strict forward-only on due-date math:
+    // already-generated filings keep their original dueDate. The generator
+    // must NOT rewrite the existing row.
+    ruleService.findById.mockResolvedValue(makeRule({ dueDayOfMonth: 25 }));
+    clientRegistrationService.getRegistrationsForLaw.mockResolvedValue([
+      { id: 'reg1', clientId: 'c1', lawId: 'l1', registeredAt: new Date(), deactivatedAt: null },
+    ]);
+    ruleService.expandRule.mockReturnValue([
+      { periodStart: utc(2026, 4, 1), periodEnd: utc(2026, 4, 30), dueDate: utc(2026, 5, 25) },
+    ]);
+    filingsService.findByRuleClientPeriod.mockResolvedValue({
+      id: 'existing',
+      dueDate: '2026-05-20',
+      status: 'pending',
+    });
+
+    await action.execute(ctxFor('r1'));
+
+    expect(filingsService.create).not.toHaveBeenCalled();
+    expect(filingsService.update).not.toHaveBeenCalled();
+    expect(filingsService.delete).not.toHaveBeenCalled();
+    expect(events.emitDynamic).not.toHaveBeenCalled();
+    // resolveAssignee is cost-free on conflict; don't overfit.
   });
 
   it('is idempotent — existing filing by (rule, client, period) is skipped', async () => {
