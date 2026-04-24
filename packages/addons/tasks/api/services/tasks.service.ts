@@ -1,16 +1,48 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { DatabaseService, and, eq } from '@packages/database';
+import { EntityService, type BaseListQuery } from '@packages/entity-engine';
+import type { DataAccessContext } from '@packages/rbac';
 import { tasks } from '../schema/tasks';
+import type { CreateTaskDto, UpdateTaskDto } from '../dto/tasks.dto';
 
-/**
- * Thin query-side service over the tasks table. CRUD flows through the
- * generic EntityService; this service exposes only platform-level lookups
- * that cross-cutting callers need — currently an idempotency lookup used
- * by automation actions that generate polymorphic tasks.
- */
 @Injectable()
 export class TasksService {
-  constructor(private readonly database: DatabaseService) {}
+  constructor(
+    @Inject('ENTITY_SERVICE_tasks') private readonly entityService: EntityService,
+    private readonly database: DatabaseService,
+  ) {}
+
+  list(query: BaseListQuery, accessCtx?: DataAccessContext) {
+    return this.entityService.list(query, accessCtx);
+  }
+
+  findOne(id: string, accessCtx?: DataAccessContext) {
+    return this.entityService.findOneOrFail(id, accessCtx);
+  }
+
+  create(input: CreateTaskDto, actorId: string) {
+    return this.entityService.create(input, actorId);
+  }
+
+  update(id: string, input: UpdateTaskDto, actorId: string, accessCtx?: DataAccessContext) {
+    return this.entityService.update(id, input, actorId, accessCtx);
+  }
+
+  softDelete(id: string, actorId: string, accessCtx?: DataAccessContext) {
+    return this.entityService.softDelete(id, actorId, accessCtx);
+  }
+
+  clone(id: string, actorId: string) {
+    return this.entityService.clone(id, actorId);
+  }
+
+  restore(id: string) {
+    return this.entityService.restore(id);
+  }
+
+  getListLayout() {
+    return this.entityService.getListLayout();
+  }
 
   /**
    * Idempotency lookup for automation-generated tasks. Callers pass the
