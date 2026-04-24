@@ -5,31 +5,28 @@ import { PagesModule } from '@packages/pages-api';
 import { MENU_CONFIG } from './menus.config';
 import { menuItemConfig, registerMenuItemDepthLookup } from './menu-items.config';
 import { menuItems } from './schema/menu-items';
+import { MenusController } from './controllers/menus.controller';
+import { MenuItemsController } from './controllers/menu-items.controller';
 import { MenusPublicController } from './controllers/menus-public.controller';
+import { MenusService } from './services/menus.service';
+import { MenuItemsService } from './services/menu-items.service';
 import { MenusPublicService } from './services/menus-public.service';
 
 /**
- * MenusModule registers two entities with the entity-engine:
- *   - `menus` — flat containers, queried by slug from the customer portal.
- *   - `menu_items` — hierarchy + orderable entries, 2-level deep.
- *
- * CRUD controllers, permissions, audit events, field definitions, and the
- * auto-generated /move endpoint all come from the engine. The one non-
- * generated route is GET /public/menus/:slug on MenusPublicController.
- *
- * The config hooks call back into the DB to enforce the 2-level cap on
- * create/update. The callback is populated here at module init because
+ * Hand-written CRUD controllers for menus + menu_items; forEntity skips the
+ * auto-mounted controller. The public controller exposes GET /public/menus/:slug
+ * alongside the admin CRUD. The depth-lookup callback stays wired here because
  * entity-engine hooks are plain functions with no DI access.
  */
 @Module({
   imports: [
-    EntityEngineModule.forEntity(MENU_CONFIG),
-    EntityEngineModule.forEntity(menuItemConfig),
+    EntityEngineModule.forEntity(MENU_CONFIG, { controller: 'none' }),
+    EntityEngineModule.forEntity(menuItemConfig, { controller: 'none' }),
     PagesModule,
   ],
-  controllers: [MenusPublicController],
-  providers: [MenusPublicService],
-  exports: [MenusPublicService],
+  controllers: [MenusController, MenuItemsController, MenusPublicController],
+  providers: [MenusService, MenuItemsService, MenusPublicService],
+  exports: [MenusService, MenuItemsService, MenusPublicService],
 })
 export class MenusModule implements OnModuleInit, OnModuleDestroy {
   constructor(private readonly database: DatabaseService) {}
