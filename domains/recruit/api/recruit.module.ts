@@ -18,7 +18,6 @@ import { ApplicationsModule } from './applications/applications.module';
 import { InterviewsModule } from './interviews/interviews.module';
 
 import { OffersModule } from './offers/offers.module';
-import { offersConfig } from './offers/offers.config';
 
 @Module({
   imports: [
@@ -37,7 +36,6 @@ import { offersConfig } from './offers/offers.config';
 
     InterviewsModule,
 
-    EntityEngineModule.forEntity(offersConfig),
     OffersModule,
 
     EntityEngineModule.forEntity(TASKS_CONFIG),

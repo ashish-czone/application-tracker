@@ -4,6 +4,10 @@ import { TemplateProviderRegistry } from '@packages/document-templates';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { NotificationChannelsModule } from '@packages/notification-channels';
 import { DatabaseService, eq } from '@packages/database';
+import { EntityEngineModule } from '@packages/entity-engine';
+import { offersConfig } from './offers.config';
+import { OffersController } from './offers.controller';
+import { OffersService } from './offers.service';
 import { OfferApprovalsService } from './services/offer-approvals.service';
 import { OfferLetterService } from './services/offer-letter.service';
 import { OfferApprovalsController } from './controllers/offer-approvals.controller';
@@ -14,9 +18,12 @@ import { jobOpenings } from '../job-openings/schema/job-openings';
 import { formatCurrency } from '@packages/common';
 
 @Module({
-  imports: [NotificationChannelsModule],
-  controllers: [OfferApprovalsController],
-  providers: [OfferApprovalsService, OfferLetterService],
+  imports: [
+    EntityEngineModule.forEntity(offersConfig, { controller: 'none' }),
+    NotificationChannelsModule,
+  ],
+  controllers: [OfferApprovalsController, OffersController],
+  providers: [OfferApprovalsService, OfferLetterService, OffersService],
 })
 export class OffersModule implements OnModuleInit {
   private readonly logger: ContextLogger;
