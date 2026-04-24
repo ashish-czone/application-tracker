@@ -22,7 +22,9 @@
     "@packages/pages-api": "workspace:*",
     "@packages/rbac": "workspace:*",
     "@packages/soft-delete": "workspace:*",
-    "drizzle-orm": "^0.45.1"
+    "drizzle-orm": "^0.45.1",
+    "drizzle-zod": "^0.7.0",
+    "zod": "^3.25.0"
   },
   "devDependencies": {
     "@packages/platform-testing": "workspace:*",
