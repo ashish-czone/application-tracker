@@ -391,7 +391,7 @@ export class ComplianceRulesService {
         transitionId: ruleTransitionId,
         actorId: params.actorId,
         reason: REASON_RULE_DEPRECATED,
-        comment: params.comment ?? null,
+        comment: params.comment,
       }, tx);
 
       if (!alsoCancelInFlight) return [];

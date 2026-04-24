@@ -3,12 +3,12 @@ import request from 'supertest';
 import { withAuth, type PackageTestApp } from '@packages/platform-testing';
 import { createComplianceTestApp, resetComplianceTestDb } from './setup/app';
 
-const READ = ['organization.read'];
+const READ = ['organizations.read'];
 const MANAGE = [
-  'organization.read',
-  'organization.create',
-  'organization.update',
-  'organization.delete',
+  'organizations.read',
+  'organizations.create',
+  'organizations.update',
+  'organizations.delete',
 ];
 
 describe('Organizations singleton (integration)', () => {
@@ -26,10 +26,10 @@ describe('Organizations singleton (integration)', () => {
     await resetComplianceTestDb(ctx);
   });
 
-  describe('POST /api/v1/organization', () => {
+  describe('POST /api/v1/organizations', () => {
     it('creates the singleton organization', async () => {
       const res = await request(ctx.httpServer)
-        .post('/api/v1/organization')
+        .post('/api/v1/organizations')
         .set(withAuth(MANAGE))
         .send({ name: 'Acme HQ', legalName: 'Acme Corporation' })
         .expect(201);
@@ -39,13 +39,13 @@ describe('Organizations singleton (integration)', () => {
 
     it('rejects a second row (singleton enforcement)', async () => {
       await request(ctx.httpServer)
-        .post('/api/v1/organization')
+        .post('/api/v1/organizations')
         .set(withAuth(MANAGE))
         .send({ name: 'First' })
         .expect(201);
 
       await request(ctx.httpServer)
-        .post('/api/v1/organization')
+        .post('/api/v1/organizations')
         .set(withAuth(MANAGE))
         .send({ name: 'Second' })
         .expect(400);
@@ -53,30 +53,30 @@ describe('Organizations singleton (integration)', () => {
 
     it('returns 401 without auth', async () => {
       await request(ctx.httpServer)
-        .post('/api/v1/organization')
+        .post('/api/v1/organizations')
         .send({ name: 'X' })
         .expect(401);
     });
 
     it('returns 403 with read-only perms', async () => {
       await request(ctx.httpServer)
-        .post('/api/v1/organization')
+        .post('/api/v1/organizations')
         .set(withAuth(READ))
         .send({ name: 'X' })
         .expect(403);
     });
   });
 
-  describe('PATCH /api/v1/organization/:id', () => {
+  describe('PATCH /api/v1/organizations/:id', () => {
     it('updates the singleton', async () => {
       const created = await request(ctx.httpServer)
-        .post('/api/v1/organization')
+        .post('/api/v1/organizations')
         .set(withAuth(MANAGE))
         .send({ name: 'Old Name' })
         .expect(201);
 
       const res = await request(ctx.httpServer)
-        .patch(`/api/v1/organization/${created.body.id}`)
+        .patch(`/api/v1/organizations/${created.body.id}`)
         .set(withAuth(MANAGE))
         .send({ name: 'New Name' })
         .expect(200);
@@ -85,32 +85,33 @@ describe('Organizations singleton (integration)', () => {
     });
   });
 
-  describe('DELETE /api/v1/organization/:id', () => {
+  describe('DELETE /api/v1/organizations/:id', () => {
     it('rejects deletion of the organization', async () => {
       const created = await request(ctx.httpServer)
-        .post('/api/v1/organization')
+        .post('/api/v1/organizations')
         .set(withAuth(MANAGE))
         .send({ name: 'Undeletable' })
         .expect(201);
 
-      // beforeDelete hook throws BadRequestException with a fixed message.
+      // OrganizationsService.softDelete throws BadRequestException with a
+      // fixed message — delete is hard-blocked regardless of access context.
       await request(ctx.httpServer)
-        .delete(`/api/v1/organization/${created.body.id}`)
+        .delete(`/api/v1/organizations/${created.body.id}`)
         .set(withAuth(MANAGE))
         .expect(400);
     });
   });
 
-  describe('GET /api/v1/organization/:id', () => {
+  describe('GET /api/v1/organizations/:id', () => {
     it('returns the singleton', async () => {
       const created = await request(ctx.httpServer)
-        .post('/api/v1/organization')
+        .post('/api/v1/organizations')
         .set(withAuth(MANAGE))
         .send({ name: 'Acme' })
         .expect(201);
 
       const res = await request(ctx.httpServer)
-        .get(`/api/v1/organization/${created.body.id}`)
+        .get(`/api/v1/organizations/${created.body.id}`)
         .set(withAuth(READ))
         .expect(200);
 
