@@ -1,14 +1,25 @@
 import { Module, type OnModuleInit } from '@nestjs/common';
 import { UserResolverRegistry } from '@packages/automations';
+import { EntityEngineModule } from '@packages/entity-engine';
+import { APPLICATIONS_CONFIG } from './applications.config';
+import { ApplicationsController } from './applications.controller';
+import { ApplicationsService } from './applications.service';
 import { ApplicationInterviewersStrategy } from './strategies/application-interviewers.strategy';
 
 /**
  * Applications domain module.
- * CRUD/routing/RBAC/events handled by EntityEngineModule.forEntity(APPLICATIONS_CONFIG).
- * This module registers domain-specific automation strategies.
+ *
+ * Owns HTTP routing + service-layer delegation, and registers the
+ * applicationInterviewers automation strategy used by notification rules.
+ * The engine is still wired in (layout, RBAC manifests, events, audit)
+ * but with controller: 'none' — routing lives on ApplicationsController.
  */
 @Module({
-  providers: [ApplicationInterviewersStrategy],
+  imports: [
+    EntityEngineModule.forEntity(APPLICATIONS_CONFIG, { controller: 'none' }),
+  ],
+  controllers: [ApplicationsController],
+  providers: [ApplicationsService, ApplicationInterviewersStrategy],
 })
 export class ApplicationsModule implements OnModuleInit {
   constructor(

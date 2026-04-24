@@ -14,7 +14,6 @@ import { VendorsModule } from './vendors/vendors.module';
 import { JobOpeningsModule } from './job-openings/job-openings.module';
 
 import { ApplicationsModule } from './applications/applications.module';
-import { APPLICATIONS_CONFIG } from './applications/applications.config';
 
 import { InterviewsModule } from './interviews/interviews.module';
 
@@ -34,7 +33,6 @@ import { offersConfig } from './offers/offers.config';
 
     JobOpeningsModule,
 
-    EntityEngineModule.forEntity(APPLICATIONS_CONFIG),
     ApplicationsModule,
 
     InterviewsModule,
