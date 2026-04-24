@@ -10,7 +10,9 @@
   "dependencies": {
     "@nestjs/common": "^11.0.0",
     "@nestjs/core": "^11.0.0",
+    "@nestjs/swagger": "^11.0.0",
     "@packages/audit": "workspace:*",
+    "@packages/auth": "workspace:*",
     "@packages/database": "workspace:*",
     "@packages/entity-engine": "workspace:*",
     "@packages/events": "workspace:*",
@@ -18,7 +20,9 @@
     "@packages/rbac": "workspace:*",
     "@packages/soft-delete": "workspace:*",
     "@packages/tenancy": "workspace:*",
-    "drizzle-orm": "^0.45.1"
+    "drizzle-orm": "^0.45.1",
+    "drizzle-zod": "^0.7.0",
+    "zod": "^3.25.0"
   },
   "devDependencies": {
     "drizzle-kit": "^0.31.9",

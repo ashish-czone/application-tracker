@@ -26,11 +26,10 @@ import { RbacGuard } from '@packages/rbac';
 import { AppConfigService } from '@packages/settings';
 import { UsersModule } from '@packages/users';
 import { ServiceAuthModule } from '@packages/service-auth';
-import { OrdersBillingModule, ORDERS_CONFIG } from '@packages/orders-billing';
-import { OrdersSubscriptionsModule, SUBSCRIPTION_PLANS_CONFIG, SUBSCRIPTIONS_CONFIG } from '@packages/orders-subscriptions';
+import { OrdersBillingModule } from '@packages/orders-billing';
+import { OrdersSubscriptionsModule } from '@packages/orders-subscriptions';
 import { TenantsModule } from './modules/tenants/tenants.module';
 import { ClientsModule } from './modules/clients/clients.module';
-import { CLIENTS_CONFIG } from './modules/clients/clients.config';
 import { validate } from './config/env.validation';
 
 @Module({
@@ -88,10 +87,6 @@ import { validate } from './config/env.validation';
     // Billing + Subscriptions
     OrdersBillingModule,
     OrdersSubscriptionsModule,
-    EntityEngineModule.forEntity(CLIENTS_CONFIG),
-    EntityEngineModule.forEntity(ORDERS_CONFIG),
-    EntityEngineModule.forEntity(SUBSCRIPTION_PLANS_CONFIG),
-    EntityEngineModule.forEntity(SUBSCRIPTIONS_CONFIG),
     ClientsModule,
     // Tenant management
     TenantsModule,

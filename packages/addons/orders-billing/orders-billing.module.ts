@@ -1,5 +1,9 @@
 import { Global, Module, type OnModuleInit } from '@nestjs/common';
 import { EventRegistryService } from '@packages/events';
+import { EntityEngineModule } from '@packages/entity-engine';
+import { ORDERS_CONFIG } from './orders.config';
+import { OrdersController } from './controllers/orders.controller';
+import { OrdersService } from './services/orders.service';
 import { ProductResolverRegistry } from './services/product-resolver-registry';
 import { BillingClientResolverRegistry } from './services/billing-client-resolver-registry';
 import { OrderLifecycleHookRegistry } from './services/order-lifecycle-hook-registry';
@@ -9,12 +13,15 @@ import { ORDERS_ORDER_CREATED } from './types';
 
 @Global()
 @Module({
+  imports: [EntityEngineModule.forEntity(ORDERS_CONFIG, { controller: 'none' })],
+  controllers: [OrdersController],
   providers: [
     ProductResolverRegistry,
     BillingClientResolverRegistry,
     OrderLifecycleHookRegistry,
     OrderLineItemsService,
     OrderLifecycleService,
+    OrdersService,
   ],
   exports: [
     ProductResolverRegistry,
@@ -22,6 +29,7 @@ import { ORDERS_ORDER_CREATED } from './types';
     OrderLifecycleHookRegistry,
     OrderLineItemsService,
     OrderLifecycleService,
+    OrdersService,
   ],
 })
 export class OrdersBillingModule implements OnModuleInit {
