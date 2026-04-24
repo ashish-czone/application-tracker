@@ -560,7 +560,7 @@ importers:
     devDependencies:
       '@nestjs/cli':
         specifier: ^11.0.0
-        version: 11.0.16(@swc/core@1.15.18)(@types/node@22.19.15)(esbuild@0.25.12)
+        version: 11.0.16(@swc/core@1.15.18)(@types/node@22.19.15)
       '@nestjs/schematics':
         specifier: ^11.0.0
         version: 11.0.9(chokidar@4.0.3)(typescript@5.9.3)
@@ -605,7 +605,7 @@ importers:
         version: 7.2.2
       ts-loader:
         specifier: ^9.5.4
-        version: 9.5.4(typescript@5.9.3)(webpack@5.105.4(@swc/core@1.15.18)(esbuild@0.25.12))
+        version: 9.5.4(typescript@5.9.3)(webpack@5.105.4(@swc/core@1.15.18))
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -614,7 +614,7 @@ importers:
         version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0)
       webpack:
         specifier: ^5.105.4
-        version: 5.105.4(@swc/core@1.15.18)(esbuild@0.25.12)
+        version: 5.105.4(@swc/core@1.15.18)
       webpack-node-externals:
         specifier: ^3.0.0
         version: 3.0.0
@@ -1058,6 +1058,9 @@ importers:
       cookie-parser:
         specifier: ^1.4.7
         version: 1.4.7
+      drizzle-zod:
+        specifier: ^0.7.0
+        version: 0.7.1(drizzle-orm@0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3)))(zod@3.25.76)
       helmet:
         specifier: ^8.1.0
         version: 8.1.0
@@ -1073,10 +1076,13 @@ importers:
       rxjs:
         specifier: ^7.8.1
         version: 7.8.2
+      zod:
+        specifier: ^3.25.0
+        version: 3.25.76
     devDependencies:
       '@nestjs/cli':
         specifier: ^11.0.0
-        version: 11.0.16(@swc/core@1.15.18)(@types/node@22.19.15)
+        version: 11.0.16(@swc/core@1.15.18)(@types/node@22.19.15)(esbuild@0.25.12)
       '@nestjs/schematics':
         specifier: ^11.0.0
         version: 11.0.9(chokidar@4.0.3)(typescript@5.9.3)
@@ -1100,7 +1106,7 @@ importers:
         version: 8.20.0
       ts-loader:
         specifier: ^9.5.1
-        version: 9.5.4(typescript@5.9.3)(webpack@5.105.4(@swc/core@1.15.18))
+        version: 9.5.4(typescript@5.9.3)(webpack@5.105.4(@swc/core@1.15.18)(esbuild@0.25.12))
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -1109,7 +1115,7 @@ importers:
         version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0)
       webpack:
         specifier: ^5.97.0
-        version: 5.105.4(@swc/core@1.15.18)
+        version: 5.105.4(@swc/core@1.15.18)(esbuild@0.25.12)
       webpack-node-externals:
         specifier: ^3.0.0
         version: 3.0.0
@@ -3046,9 +3052,15 @@ importers:
       '@nestjs/core':
         specifier: ^11.0.0
         version: 11.1.16(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@11.1.16)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/swagger':
+        specifier: ^11.0.0
+        version: 11.2.6(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)
       '@packages/audit':
         specifier: workspace:*
         version: link:../../platform/audit/api
+      '@packages/auth':
+        specifier: workspace:*
+        version: link:../../platform/auth/api
       '@packages/database':
         specifier: workspace:*
         version: link:../../core/database
@@ -3073,6 +3085,12 @@ importers:
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3))
+      drizzle-zod:
+        specifier: ^0.7.0
+        version: 0.7.1(drizzle-orm@0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3)))(zod@3.25.76)
+      zod:
+        specifier: ^3.25.0
+        version: 3.25.76
     devDependencies:
       drizzle-kit:
         specifier: ^0.31.9
@@ -3092,9 +3110,15 @@ importers:
       '@nestjs/core':
         specifier: ^11.0.0
         version: 11.1.16(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@11.1.16)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/swagger':
+        specifier: ^11.0.0
+        version: 11.2.6(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)
       '@packages/audit':
         specifier: workspace:*
         version: link:../../platform/audit/api
+      '@packages/auth':
+        specifier: workspace:*
+        version: link:../../platform/auth/api
       '@packages/common':
         specifier: workspace:*
         version: link:../../core/common
@@ -3134,6 +3158,12 @@ importers:
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3))
+      drizzle-zod:
+        specifier: ^0.7.0
+        version: 0.7.1(drizzle-orm@0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3)))(zod@3.25.76)
+      zod:
+        specifier: ^3.25.0
+        version: 3.25.76
     devDependencies:
       drizzle-kit:
         specifier: ^0.31.9

@@ -1,12 +1,16 @@
 import { Module, Injectable, type OnModuleInit } from '@nestjs/common';
 import { DatabaseService, eq, isNull } from '@packages/database';
 import { withTenant } from '@packages/tenancy/helpers';
+import { EntityEngineModule } from '@packages/entity-engine';
 import {
   BillingClientResolverRegistry,
   type BillingClient,
   type BillingClientResolver,
 } from '@packages/orders-billing';
 import { clients } from './schema/clients';
+import { CLIENTS_CONFIG } from './clients.config';
+import { ClientsController } from './clients.controller';
+import { ClientsService } from './clients.service';
 
 @Injectable()
 export class ClientResolver implements BillingClientResolver {
@@ -37,8 +41,10 @@ export class ClientResolver implements BillingClientResolver {
 }
 
 @Module({
-  providers: [ClientResolver],
-  exports: [ClientResolver],
+  imports: [EntityEngineModule.forEntity(CLIENTS_CONFIG, { controller: 'none' })],
+  controllers: [ClientsController],
+  providers: [ClientResolver, ClientsService],
+  exports: [ClientResolver, ClientsService],
 })
 export class ClientsModule implements OnModuleInit {
   constructor(
