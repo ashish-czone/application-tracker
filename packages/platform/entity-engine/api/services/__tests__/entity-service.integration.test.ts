@@ -77,7 +77,7 @@ function buildTestConfig(
       nameField: 'name',
     },
     dataAccess: {
-      ownerField: 'createdBy',
+      anchors: { creator: 'createdBy' },
     },
     hooks,
     relationships,

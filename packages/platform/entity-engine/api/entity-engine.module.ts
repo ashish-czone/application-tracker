@@ -3,7 +3,7 @@ import { DatabaseService } from '@packages/database';
 import { DomainEventEmitter, EventRegistryService } from '@packages/events';
 import { HierarchyService } from '@packages/hierarchy';
 import { OrderableService } from '@packages/orderable';
-import { RbacService } from '@packages/rbac';
+import { RbacService, ScopeResolverRegistry } from '@packages/rbac';
 import { AppLoggerService } from '@packages/logger';
 import { EntityCoreModule } from './entity-core.module';
 import { EntityRegistryService } from './entity-registry.service';
@@ -20,8 +20,7 @@ import { WORKFLOW_EXTENSION, type WorkflowExtension } from './extensions/workflo
 import { AUTOMATIONS_EXTENSION, type AutomationsExtension, type EntityResolverFieldConfig } from './extensions/automations-extension.interface';
 import { AUDIT_EXTENSION, type AuditExtension } from './extensions/audit-extension.interface';
 import { TAXONOMY_EXTENSION, type TaxonomyExtension } from './extensions/taxonomy-extension.interface';
-import { POSITION_SCOPE_PROVIDER } from './types';
-import type { EntityConfig, FieldType, PositionScopeProvider } from './types';
+import type { EntityConfig, FieldType } from './types';
 
 /** Map entity-engine FieldType → EntityResolverFieldConfig type for the resolver registry */
 type ResolverFieldType = EntityResolverFieldConfig['type'];
@@ -111,7 +110,7 @@ export class EntityEngineModule implements OnApplicationBootstrap {
             workflowExt: WorkflowExtension | null,
             entityRegistry: EntityRegistryService,
             appLogger: AppLoggerService,
-            positionScopeProvider: PositionScopeProvider | null,
+            scopeResolverRegistry: ScopeResolverRegistry,
             hierarchyService: HierarchyService | null,
             orderableService: OrderableService | null,
           ) => {
@@ -126,9 +125,9 @@ export class EntityEngineModule implements OnApplicationBootstrap {
             } else if (config.customFields === true) {
               storage = jsonbStorage;
             }
-            return new EntityService(config, database, domainEventEmitter, storage, multiValueExtension, fieldDefinitionService, lookupResolver, taxonomyExt, hookRegistry, workflowExt, entityRegistry, appLogger, positionScopeProvider, hierarchyService, orderableService);
+            return new EntityService(config, database, domainEventEmitter, storage, multiValueExtension, fieldDefinitionService, lookupResolver, taxonomyExt, hookRegistry, workflowExt, entityRegistry, appLogger, scopeResolverRegistry, hierarchyService, orderableService);
           },
-          inject: [DatabaseService, DomainEventEmitter, { token: EAV_STORAGE_EXTENSION, optional: true }, JsonbStorageAdapter, { token: MULTI_VALUE_EXTENSION, optional: true }, FieldDefinitionService, LookupResolverService, { token: TAXONOMY_EXTENSION, optional: true }, FieldTypeSaveHookRegistry, { token: WORKFLOW_EXTENSION, optional: true }, EntityRegistryService, AppLoggerService, { token: POSITION_SCOPE_PROVIDER, optional: true }, { token: HierarchyService, optional: true }, { token: OrderableService, optional: true }],
+          inject: [DatabaseService, DomainEventEmitter, { token: EAV_STORAGE_EXTENSION, optional: true }, JsonbStorageAdapter, { token: MULTI_VALUE_EXTENSION, optional: true }, FieldDefinitionService, LookupResolverService, { token: TAXONOMY_EXTENSION, optional: true }, FieldTypeSaveHookRegistry, { token: WORKFLOW_EXTENSION, optional: true }, EntityRegistryService, AppLoggerService, ScopeResolverRegistry, { token: HierarchyService, optional: true }, { token: OrderableService, optional: true }],
         },
       ],
       exports: [serviceToken],

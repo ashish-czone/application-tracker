@@ -36,14 +36,11 @@ export type {
   WorkflowTransitionDef,
   WorkflowTargetDef,
   TransitionHookContext,
-  ScopeResolver,
+  EntityScopeResolver,
   DataAccessConfig,
   DataAccessContext,
   AccessScopeSpec,
-  PositionScopeProvider,
 } from './types';
-
-export { POSITION_SCOPE_PROVIDER } from './types';
 
 // --- Types and constants moved from eav-attributes ---
 

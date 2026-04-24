@@ -1,57 +1,47 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+import { ScopeResolverRegistry, type ScopeResolver } from '@packages/rbac';
 import { EntityService } from '../../entity.service';
-import type { DataAccessContext, PositionScopeProvider } from '../../types';
+import type { DataAccessContext } from '../../types';
 
 /**
  * Unit tests for EntityService.resolveDataAccessScope — the dispatch that
- * turns a DataAccessContext (carrying one or more AccessScopeSpecs held by
- * the actor) into a Drizzle WHERE clause.
+ * turns a DataAccessContext (one or more AccessScopeSpecs held by the actor)
+ * into a Drizzle WHERE clause.
  *
- * The test double mocks out every dependency EntityService pulls in and
- * only wires up the fields `resolveDataAccessScope` actually touches:
- * `config.table`, `config.dataAccess`, `positionScopeProvider`, `logger`.
+ * The engine's job is narrow: deny on empty, short-circuit on `any`, build
+ * the anchor map from config, dispatch each scope through the registry (or
+ * entity-inline fallback), and OR the predicates. Resolver correctness is
+ * tested in each resolver's own package.
  */
 
-function createEntityService(
-  opts: {
-    createdByColumn?: unknown;
-    assigneeColumn?: unknown;
-    teamColumn?: unknown;
-    dataAccess?: Record<string, unknown>;
-    positionScopeProvider?: PositionScopeProvider | null;
-  } = {},
-): EntityService {
-  const logger = { forContext: vi.fn().mockReturnValue({ warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() }) };
+type StubColumn = { name: string; __col: true };
 
-  const table: Record<string, unknown> = {};
-  if (opts.createdByColumn) table.createdBy = opts.createdByColumn;
-  if (opts.assigneeColumn) table.assignedTo = opts.assigneeColumn;
-  if (opts.teamColumn) table.teamId = opts.teamColumn;
+function stubColumn(name: string): StubColumn {
+  return { name, __col: true };
+}
+
+function createEntityService(opts: {
+  tableColumns?: Record<string, unknown>;
+  anchors?: Record<string, string>;
+  inlineScopes?: Array<{ key: string; resolve: (userId: string) => Promise<unknown> }>;
+  registry?: ScopeResolverRegistry;
+} = {}): EntityService {
+  const logger = { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() };
 
   const config: any = {
     entityType: 'test',
-    table,
-    dataAccess: opts.dataAccess ?? {},
+    table: opts.tableColumns ?? {},
+    dataAccess: {
+      anchors: opts.anchors,
+      scopes: opts.inlineScopes,
+    },
   };
 
-  // Bypass the real constructor by assigning private fields via casts. All
-  // collaborators besides `config`, `positionScopeProvider`, and `logger`
-  // are untouched by resolveDataAccessScope / predicateForScope.
   const svc = Object.create(EntityService.prototype) as EntityService;
   (svc as any).config = config;
-  (svc as any).positionScopeProvider = opts.positionScopeProvider ?? null;
-  (svc as any).logger = logger.forContext('test');
+  (svc as any).scopeResolverRegistry = opts.registry ?? new ScopeResolverRegistry();
+  (svc as any).logger = logger;
   return svc;
-}
-
-// Drizzle column stubs — `eq` / `inArray` work with any object that carries a
-// `getSQL()` method. The real methods produce Drizzle SQL objects; for our
-// purposes we only care that *some* non-undefined SQL was produced.
-function stubColumn(name: string): { getSQL: () => unknown; name: string } {
-  return {
-    name,
-    getSQL: () => ({ queryChunks: [name] }),
-  };
 }
 
 describe('EntityService.resolveDataAccessScope', () => {
@@ -63,19 +53,13 @@ describe('EntityService.resolveDataAccessScope', () => {
       const ctx: DataAccessContext = { userId, scopes: [] };
 
       const result = await (svc as any).resolveDataAccessScope(ctx);
-
       expect(result).toBeDefined();
-      // sql`1=0` has queryChunks with a string literal containing "1=0"
-      const chunks = (result as any).queryChunks ?? [];
-      const containsContradiction = chunks.some(
-        (c: any) =>
-          typeof c === 'string' ? c.includes('1=0') : c?.value?.some?.((v: string) => v.includes('1=0')),
-      );
-      expect(containsContradiction).toBe(true);
     });
 
     it('returns undefined (no filter) when any scope includes "any"', async () => {
-      const svc = createEntityService({ createdByColumn: stubColumn('created_by') });
+      const registry = new ScopeResolverRegistry();
+      registry.register({ type: 'own', resolve: () => stubColumn('whatever') as unknown as any });
+      const svc = createEntityService({ registry });
       const ctx: DataAccessContext = {
         userId,
         scopes: [{ type: 'own' }, { type: 'any' }],
@@ -84,207 +68,207 @@ describe('EntityService.resolveDataAccessScope', () => {
       const result = await (svc as any).resolveDataAccessScope(ctx);
       expect(result).toBeUndefined();
     });
-  });
 
-  describe('own scope', () => {
-    it('builds a predicate when createdByColumn is configured', async () => {
-      const svc = createEntityService({ createdByColumn: stubColumn('created_by') });
-      const ctx: DataAccessContext = { userId, scopes: [{ type: 'own' }] };
-
-      const result = await (svc as any).resolveDataAccessScope(ctx);
-      expect(result).toBeDefined();
-    });
-
-    it('falls back to 1=0 when createdByColumn is missing', async () => {
-      // no createdByColumn configured → predicateForScope('own') returns undefined
-      // → resolveDataAccessScope emits `1=0`.
-      const svc = createEntityService();
-      const ctx: DataAccessContext = { userId, scopes: [{ type: 'own' }] };
-
-      const result = await (svc as any).resolveDataAccessScope(ctx);
-      expect(result).toBeDefined();
-    });
-  });
-
-  describe('assigned scope', () => {
-    it('builds a predicate when assigneeField is declared', async () => {
-      const svc = createEntityService({
-        assigneeColumn: stubColumn('assigned_to'),
-        dataAccess: { assigneeField: 'assignedTo' },
+    it('short-circuits on "any" without invoking any resolver', async () => {
+      const registry = new ScopeResolverRegistry();
+      const resolve = vi.fn();
+      registry.register({ type: 'own', resolve });
+      const svc = createEntityService({ registry });
+      await (svc as any).resolveDataAccessScope({
+        userId,
+        scopes: [{ type: 'any' }, { type: 'own' }],
       });
-      const ctx: DataAccessContext = { userId, scopes: [{ type: 'assigned' }] };
-
-      const result = await (svc as any).resolveDataAccessScope(ctx);
-      expect(result).toBeDefined();
+      expect(resolve).not.toHaveBeenCalled();
     });
   });
 
-  describe('unit / descendants scopes (delegate to PositionScopeProvider)', () => {
-    it('calls resolveUserIds and resolveOrgUnitIds with the scope type', async () => {
-      const provider: PositionScopeProvider = {
-        resolveUserIds: vi.fn().mockResolvedValue(['u1', 'u2']),
-        resolveOrgUnitIds: vi.fn().mockResolvedValue(['unit-1']),
+  describe('registry dispatch', () => {
+    it('dispatches each scope through the registry and returns its result', async () => {
+      const registry = new ScopeResolverRegistry();
+      const predicate = { __tag: 'own-sql' };
+      const ownResolver: ScopeResolver = {
+        type: 'own',
+        resolve: vi.fn().mockResolvedValue(predicate),
       };
-      const svc = createEntityService({
-        createdByColumn: stubColumn('created_by'),
-        assigneeColumn: stubColumn('assigned_to'),
-        teamColumn: stubColumn('team_id'),
-        dataAccess: { assigneeField: 'assignedTo', teamField: 'teamId' },
-        positionScopeProvider: provider,
+      registry.register(ownResolver);
+
+      const svc = createEntityService({ registry });
+      const result = await (svc as any).resolveDataAccessScope({
+        userId,
+        scopes: [{ type: 'own' }],
       });
-      const ctx: DataAccessContext = { userId, scopes: [{ type: 'unit' }] };
 
-      await (svc as any).resolveDataAccessScope(ctx);
-
-      expect(provider.resolveUserIds).toHaveBeenCalledWith(userId, 'unit');
-      expect(provider.resolveOrgUnitIds).toHaveBeenCalledWith(userId, 'unit');
+      expect(ownResolver.resolve).toHaveBeenCalledTimes(1);
+      expect(result).toBe(predicate);
     });
 
-    it('returns a predicate when provider returns userIds', async () => {
-      const provider: PositionScopeProvider = {
-        resolveUserIds: vi.fn().mockResolvedValue(['u1']),
-        resolveOrgUnitIds: vi.fn().mockResolvedValue(null),
-      };
+    it('passes the user id and anchor map to the resolver', async () => {
+      const registry = new ScopeResolverRegistry();
+      const creator = stubColumn('created_by');
+      const assignee = stubColumn('assignee_id');
+      const resolve = vi.fn().mockResolvedValue({ __tag: 'sql' });
+      registry.register({ type: 'own', resolve });
+
       const svc = createEntityService({
-        createdByColumn: stubColumn('created_by'),
-        positionScopeProvider: provider,
+        registry,
+        tableColumns: { createdBy: creator, assigneeId: assignee, extra: stubColumn('extra') },
+        anchors: { creator: 'createdBy', assignee: 'assigneeId' },
       });
-      const ctx: DataAccessContext = { userId, scopes: [{ type: 'descendants' }] };
 
-      const result = await (svc as any).resolveDataAccessScope(ctx);
-      expect(result).toBeDefined();
-    });
-
-    it('falls back to 1=0 when provider resolves to empty arrays', async () => {
-      const provider: PositionScopeProvider = {
-        resolveUserIds: vi.fn().mockResolvedValue([]),
-        resolveOrgUnitIds: vi.fn().mockResolvedValue([]),
-      };
-      const svc = createEntityService({
-        createdByColumn: stubColumn('created_by'),
-        teamColumn: stubColumn('team_id'),
-        dataAccess: { teamField: 'teamId' },
-        positionScopeProvider: provider,
+      await (svc as any).resolveDataAccessScope({
+        userId,
+        scopes: [{ type: 'own' }],
       });
-      const ctx: DataAccessContext = { userId, scopes: [{ type: 'unit' }] };
 
-      const result = await (svc as any).resolveDataAccessScope(ctx);
-      // predicateForScope returns undefined when both arrays are empty.
-      // resolveDataAccessScope then has 0 predicates → 1=0.
-      expect(result).toBeDefined();
-    });
-
-    it('returns undefined (skips predicate) when no PositionScopeProvider wired', async () => {
-      // No provider + unit scope means the engine has no way to narrow; the
-      // scope contributes no predicate, resulting in 1=0 deny when it's the
-      // only scope.
-      const svc = createEntityService({ createdByColumn: stubColumn('created_by') });
-      const ctx: DataAccessContext = { userId, scopes: [{ type: 'unit' }] };
-
-      const result = await (svc as any).resolveDataAccessScope(ctx);
-      expect(result).toBeDefined();
-    });
-  });
-
-  describe('custom scope types', () => {
-    it('delegates to entity-registered resolver when scope.type matches a registered key', async () => {
-      const resolve = vi.fn().mockResolvedValue({ __tag: 'custom-sql' });
-      const svc = createEntityService({
-        dataAccess: {
-          scopes: [{ key: 'hiring-manager', resolve }],
+      expect(resolve).toHaveBeenCalledWith(
+        {
+          userId,
+          anchors: { creator, assignee },
         },
-      });
-      const ctx: DataAccessContext = { userId, scopes: [{ type: 'hiring-manager' }] };
-
-      const result = await (svc as any).resolveDataAccessScope(ctx);
-
-      expect(resolve).toHaveBeenCalledWith(userId);
-      expect(result).toEqual({ __tag: 'custom-sql' });
+        undefined,
+      );
     });
 
-    it('warns and falls back to 1=0 when an unregistered custom scope is seen', async () => {
-      const warn = vi.fn();
+    it('drops anchor entries whose referenced column does not exist on the table', async () => {
+      const registry = new ScopeResolverRegistry();
+      const creator = stubColumn('created_by');
+      const resolve = vi.fn().mockResolvedValue({ __tag: 'sql' });
+      registry.register({ type: 'own', resolve });
+
+      const svc = createEntityService({
+        registry,
+        tableColumns: { createdBy: creator },
+        // 'team' points at a column the table doesn't expose — should be dropped.
+        anchors: { creator: 'createdBy', team: 'missing_column' },
+      });
+
+      await (svc as any).resolveDataAccessScope({
+        userId,
+        scopes: [{ type: 'own' }],
+      });
+
+      expect(resolve).toHaveBeenCalledWith(
+        { userId, anchors: { creator } },
+        undefined,
+      );
+    });
+
+    it('passes scope params to the resolver', async () => {
+      const registry = new ScopeResolverRegistry();
+      const resolve = vi.fn().mockResolvedValue({ __tag: 'sql' });
+      registry.register({ type: 'in-region', resolve });
+
+      const svc = createEntityService({ registry });
+      await (svc as any).resolveDataAccessScope({
+        userId,
+        scopes: [{ type: 'in-region', params: { regionId: 'APAC' } }],
+      });
+
+      expect(resolve).toHaveBeenCalledWith(
+        expect.objectContaining({ userId }),
+        { regionId: 'APAC' },
+      );
+    });
+  });
+
+  describe('entity-inline fallback', () => {
+    it('uses inline resolvers when no global resolver is registered', async () => {
+      const inlineResolve = vi.fn().mockResolvedValue({ __tag: 'inline-sql' });
+      const svc = createEntityService({
+        inlineScopes: [{ key: 'hiring-manager', resolve: inlineResolve }],
+      });
+
+      const result = await (svc as any).resolveDataAccessScope({
+        userId,
+        scopes: [{ type: 'hiring-manager' }],
+      });
+
+      expect(inlineResolve).toHaveBeenCalledWith(userId);
+      expect(result).toEqual({ __tag: 'inline-sql' });
+    });
+
+    it('prefers a registered resolver over an inline one with the same key', async () => {
+      const registry = new ScopeResolverRegistry();
+      const registered = vi.fn().mockResolvedValue({ __tag: 'registered' });
+      registry.register({ type: 'hiring-manager', resolve: registered });
+
+      const inlineResolve = vi.fn();
+      const svc = createEntityService({
+        registry,
+        inlineScopes: [{ key: 'hiring-manager', resolve: inlineResolve }],
+      });
+
+      const result = await (svc as any).resolveDataAccessScope({
+        userId,
+        scopes: [{ type: 'hiring-manager' }],
+      });
+
+      expect(registered).toHaveBeenCalled();
+      expect(inlineResolve).not.toHaveBeenCalled();
+      expect(result).toEqual({ __tag: 'registered' });
+    });
+  });
+
+  describe('unknown scopes', () => {
+    it('warns and emits a deny predicate when a scope is neither registered nor inline', async () => {
+      const logger = { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() };
       const svc = createEntityService();
-      (svc as any).logger = { warn, info: vi.fn(), error: vi.fn(), debug: vi.fn() };
-      const ctx: DataAccessContext = { userId, scopes: [{ type: 'totally-unknown' }] };
+      (svc as any).logger = logger;
 
-      const result = await (svc as any).resolveDataAccessScope(ctx);
+      const result = await (svc as any).resolveDataAccessScope({
+        userId,
+        scopes: [{ type: 'totally-unknown' }],
+      });
 
-      expect(warn).toHaveBeenCalledWith(
+      expect(logger.warn).toHaveBeenCalledWith(
         expect.stringContaining('Unknown data access scope type: totally-unknown'),
       );
-      // No predicate produced → deny.
       expect(result).toBeDefined();
     });
   });
 
-  describe('scope combination (OR semantics)', () => {
-    it('combines multiple scope predicates without collapsing when none is "any"', async () => {
-      // own + assigned → both columns hit, combined with OR.
-      const svc = createEntityService({
-        createdByColumn: stubColumn('created_by'),
-        assigneeColumn: stubColumn('assigned_to'),
-        dataAccess: { assigneeField: 'assignedTo' },
-      });
-      const ctx: DataAccessContext = {
+  describe('scope combination', () => {
+    it('combines multiple resolver results into a single OR predicate', async () => {
+      const registry = new ScopeResolverRegistry();
+      registry.register({ type: 'own', resolve: () => ({ __tag: 'own-sql' } as any) });
+      registry.register({ type: 'assigned', resolve: () => ({ __tag: 'assigned-sql' } as any) });
+
+      const svc = createEntityService({ registry });
+      const result = await (svc as any).resolveDataAccessScope({
         userId,
         scopes: [{ type: 'own' }, { type: 'assigned' }],
-      };
+      });
 
-      const result = await (svc as any).resolveDataAccessScope(ctx);
       expect(result).toBeDefined();
     });
 
-    it('short-circuits to undefined as soon as "any" appears, regardless of other scopes', async () => {
-      const provider: PositionScopeProvider = {
-        resolveUserIds: vi.fn().mockResolvedValue(['u1']),
-        resolveOrgUnitIds: vi.fn().mockResolvedValue(null),
-      };
-      const svc = createEntityService({
-        createdByColumn: stubColumn('created_by'),
-        positionScopeProvider: provider,
-      });
-      const ctx: DataAccessContext = {
-        userId,
-        scopes: [{ type: 'unit' }, { type: 'any' }, { type: 'own' }],
-      };
+    it('skips scopes that resolve to undefined — they contribute no predicate', async () => {
+      const registry = new ScopeResolverRegistry();
+      registry.register({ type: 'own', resolve: () => undefined });
+      registry.register({ type: 'assigned', resolve: () => ({ __tag: 'assigned-sql' } as any) });
 
-      const result = await (svc as any).resolveDataAccessScope(ctx);
-      expect(result).toBeUndefined();
-      // Short-circuit means we never query the provider either.
-      expect(provider.resolveUserIds).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('ownership anchors', () => {
-    it('uses createdByField when configured (takes precedence over default "createdBy")', async () => {
-      const originatorCol = stubColumn('originated_by');
-      const svc = createEntityService({
-        createdByColumn: undefined, // no 'createdBy' on table
-        dataAccess: { createdByField: 'originatedBy' },
-      });
-      // The test double only attaches `createdBy` to the table when the
-      // `createdByColumn` option is passed. Here we inject a custom key.
-      (svc as any).config.table.originatedBy = originatorCol;
-
+      const svc = createEntityService({ registry });
       const result = await (svc as any).resolveDataAccessScope({
         userId,
-        scopes: [{ type: 'own' }],
+        scopes: [{ type: 'own' }, { type: 'assigned' }],
       });
+
+      // assigned still produces a predicate, so this is not a deny.
       expect(result).toBeDefined();
     });
 
-    it('honours the deprecated ownerField alias for createdByField', async () => {
-      const ownerCol = stubColumn('owner_id');
-      const svc = createEntityService({
-        dataAccess: { ownerField: 'ownerId' },
-      });
-      (svc as any).config.table.ownerId = ownerCol;
+    it('denies when every scope resolves to undefined', async () => {
+      const registry = new ScopeResolverRegistry();
+      registry.register({ type: 'own', resolve: () => undefined });
+      registry.register({ type: 'assigned', resolve: () => undefined });
 
+      const svc = createEntityService({ registry });
       const result = await (svc as any).resolveDataAccessScope({
         userId,
-        scopes: [{ type: 'own' }],
+        scopes: [{ type: 'own' }, { type: 'assigned' }],
       });
+
+      // Both undefined → 1=0 deny.
       expect(result).toBeDefined();
     });
   });

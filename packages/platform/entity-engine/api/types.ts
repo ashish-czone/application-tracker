@@ -561,11 +561,18 @@ export interface EntityUIHints {
 // ---------------------------------------------------------------------------
 
 /**
- * A scope resolver provides a SQL condition that filters entity records
- * based on the user's data access scope. Domain-specific resolvers
- * return SQL directly — the platform never builds queries on behalf of the domain.
+ * Inline, entity-specific scope resolver. Use this for scope kinds whose
+ * SQL is bound to a specific table and can't be expressed through the
+ * generic anchor map (e.g. "applications for job openings I manage" has
+ * to join through `jobOpenings`).
+ *
+ * Reusable scope kinds (`own`, `assigned`, `unit`, `descendants`, or any
+ * domain-level primitive) should be registered into the global
+ * `ScopeResolverRegistry` (@packages/rbac) by their owning module instead —
+ * they get picked up automatically for every entity that declares the
+ * matching anchors.
  */
-export interface ScopeResolver {
+export interface EntityScopeResolver {
   /** Unique key referenced by RBAC permission scopes (e.g. 'hiring-manager') */
   key: string;
   /** Human-readable label shown in RBAC admin UI */
@@ -576,47 +583,32 @@ export interface ScopeResolver {
 
 /**
  * Data access configuration for an entity.
- * Controls how row-level visibility is enforced based on RBAC permission scopes.
  *
- * Ownership anchors are separate concepts:
- *   - createdByField: who created the record (defaults to 'createdBy')
- *   - assigneeField:  who the record is currently assigned to (if applicable)
- *   - teamField:      which org unit the record belongs to (if applicable)
+ * `anchors` maps semantic column roles (`creator`, `assignee`, `team`, or
+ * any custom role a resolver declares) to the actual column names on this
+ * entity's table. Registered scope resolvers (@packages/rbac) consume these
+ * anchors at query time. Omit a role an entity doesn't support — resolvers
+ * that need it will simply return no predicate for this entity.
  *
- * Scope types consume anchors: 'own' → createdByField, 'assigned' → assigneeField,
- * 'unit'/'descendants' → teamField + org tree traversal on assignees/creators.
+ * `scopes` holds entity-specific inline resolvers for scope kinds that
+ * can't be expressed through anchors (table-specific joins, etc.).
  */
 export interface DataAccessConfig {
   /**
-   * The field that identifies the record's creator.
-   * Used by the built-in 'own' scope. Defaults to 'createdBy'.
+   * Semantic column roles for this entity. Keys are open-ended and match
+   * the anchor roles that registered resolvers look up. Common keys:
+   *   - creator   — user who created the row (anchor for `own`)
+   *   - assignee  — user the row is currently assigned to (anchor for `assigned`)
+   *   - team      — org unit the row belongs to (anchor for `unit`/`descendants`)
    */
-  createdByField?: string;
+  anchors?: Record<string, string>;
 
   /**
-   * The field that identifies the current assignee (user).
-   * Used by the built-in 'assigned' scope.
+   * Entity-specific inline scope resolvers. Used when a role grant references
+   * a scope type that isn't registered globally and whose SQL is specific
+   * to this entity's table.
    */
-  assigneeField?: string;
-
-  /**
-   * Optional field referencing an org unit (team).
-   * Used by 'unit' and 'descendants' scopes for team-based filtering.
-   */
-  teamField?: string;
-
-  /**
-   * @deprecated Use createdByField + assigneeField. `ownerField` is retained as
-   * an alias for createdByField during migration; new code should not set it.
-   */
-  ownerField?: string;
-
-  /**
-   * Entity-specific scope resolvers for custom scope types.
-   * Registered type → SQL condition. Used when a role grant references
-   * a scope type not in the built-in vocabulary.
-   */
-  scopes?: ScopeResolver[];
+  scopes?: EntityScopeResolver[];
 }
 
 /** A single scope value attached to a permission grant. Mirrors @packages/rbac ScopeSpec. */
@@ -636,24 +628,6 @@ export interface DataAccessContext {
   scopes: AccessScopeSpec[];
 }
 
-
-/**
- * Optional provider that expands hierarchical access scopes ("unit",
- * "descendants") into the set of user-ids and org-unit-ids they cover for
- * the acting user. The entity-engine asks the provider at query time; the
- * provider supplies tree-shape data so the engine can emit WHERE IN clauses.
- *
- * This provider does not decide *which* scopes apply — that lives on
- * role-permission grants. It only answers "what does this hierarchical scope
- * expand to for this user right now?".
- */
-export interface PositionScopeProvider {
-  resolveUserIds(userId: string, scope: string): Promise<string[] | null>;
-  resolveOrgUnitIds(userId: string, scope: string): Promise<string[] | null>;
-}
-
-/** Injection token for the optional PositionScopeProvider */
-export const POSITION_SCOPE_PROVIDER = 'POSITION_SCOPE_PROVIDER';
 
 // ---------------------------------------------------------------------------
 // Extension-of — 1-1 extension entities that share a primary key with a parent

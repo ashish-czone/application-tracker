@@ -15,6 +15,4 @@ export type {
   OrgUnitWithDetails,
   OrgUnitMemberDetail,
   OrgPosition,
-  PositionScopeProvider,
 } from './types';
-export { POSITION_SCOPE_PROVIDER } from './types';

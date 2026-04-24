@@ -1,11 +1,6 @@
 import { NotFoundException } from '@nestjs/common';
 import type { ModuleRef } from '@nestjs/core';
-import {
-  EntityService,
-  POSITION_SCOPE_PROVIDER,
-  buildAccessContext,
-  type PositionScopeProvider,
-} from '@packages/entity-engine';
+import { EntityService, buildAccessContext } from '@packages/entity-engine';
 import type { AuditModuleRegistration, AuditRegistryService } from '@packages/audit';
 import type { JwtPayload } from '@packages/auth-core';
 
@@ -73,14 +68,8 @@ async function canReadEntity(
   const entityService = safeGet<EntityService>(moduleRef, `ENTITY_SERVICE_${entityType}`);
   if (!entityService) return false;
 
-  const positionScopeProvider = safeGet<PositionScopeProvider>(moduleRef, POSITION_SCOPE_PROVIDER);
   const readPermission = `${entityType}.read`;
-  const accessCtx = buildAccessContext(
-    user,
-    readPermission,
-    entityType,
-    positionScopeProvider ?? null,
-  );
+  const accessCtx = buildAccessContext(user, readPermission);
   if (!accessCtx) return false;
 
   try {
