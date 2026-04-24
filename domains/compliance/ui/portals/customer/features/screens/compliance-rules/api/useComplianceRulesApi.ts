@@ -40,7 +40,7 @@ type LawsListResult = Omit<ReturnType<ReturnType<typeof useEntityHooks>['useList
 };
 
 export function useComplianceRulesList(params: Record<string, unknown> = {}): ComplianceRulesListResult {
-  const hooks = useEntityHooks('compliance_rules');
+  const hooks = useEntityHooks('compliance-rules');
   return hooks.useList(params) as unknown as ComplianceRulesListResult;
 }
 
@@ -101,7 +101,7 @@ export function useDeprecateRule(options?: {
     onSuccess: (result) => {
       // Rules list tabs depend on status counts; filings may have been
       // cancelled; audit timeline should show the new transition.
-      queryClient.invalidateQueries({ queryKey: ['compliance_rules'] });
+      queryClient.invalidateQueries({ queryKey: ['compliance-rules'] });
       queryClient.invalidateQueries({ queryKey: ['compliance-filings'] });
       queryClient.invalidateQueries({ queryKey: ['audit'] });
       toast.success('Rule deprecated');
@@ -162,7 +162,7 @@ export function useUpdateComplianceRule(options?: {
     mutationFn: ({ ruleId, data }: UpdateComplianceRulePayload) =>
       apiFn.patch<ComplianceRuleRecord>(`/compliance-rules/${ruleId}`, data),
     onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ['compliance_rules'] });
+      queryClient.invalidateQueries({ queryKey: ['compliance-rules'] });
       queryClient.invalidateQueries({ queryKey: ['rule-edit-constraints', result.id] });
       queryClient.invalidateQueries({ queryKey: ['audit'] });
       toast.success('Rule updated');

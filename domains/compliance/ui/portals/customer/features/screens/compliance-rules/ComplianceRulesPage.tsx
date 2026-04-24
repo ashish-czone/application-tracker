@@ -57,7 +57,7 @@ export function ComplianceRulesPage() {
   const { data: rulesPage, isLoading, isError } = useComplianceRulesList({ limit: 200 });
   const { data: lawsPage } = useLawsLookup();
 
-  const rulesHooks = useEntityHooks('compliance_rules');
+  const rulesHooks = useEntityHooks('compliance-rules');
   const createRule = rulesHooks.useCreate({ onSuccess: () => setDrawerOpen(false) });
 
   const lawById = useMemo(() => {

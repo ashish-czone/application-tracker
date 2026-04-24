@@ -119,7 +119,7 @@ const OrganizationPage = lazy(() =>
  *
  * Permission strings on each route are interpreted by AppRouter, which
  * wraps the element in `<PermissionGuard>` when present. Permission keys
- * for entities (clients, laws, compliance_rules, compliance-filings, etc.)
+ * for entities (clients, laws, compliance-rules, compliance-filings, etc.)
  * are auto-registered by EntityEngine; UI-only screens (reports) come from
  * `domains/compliance/api/permissions.ts`. Dashboard is auth-only — its
  * blocks are gated component-level via `<Can>`.
@@ -133,8 +133,8 @@ const routes: DomainRouteObject[] = [
   { path: '/clients', element: <ClientsPage />, permission: 'clients.read', bareLayout: true },
   { path: '/clients/:clientId', element: <ClientDetailPage />, permission: 'clients.read', bareLayout: true },
   { path: '/filings', element: <FilingsPage />, permission: 'compliance-filings.read', bareLayout: true },
-  { path: '/compliance-rules', element: <ComplianceRulesPage />, permission: 'compliance_rules.read', bareLayout: true },
-  { path: '/compliance-rules/:id/edit', element: <RuleEditPage />, permission: 'compliance_rules.update' },
+  { path: '/compliance-rules', element: <ComplianceRulesPage />, permission: 'compliance-rules.read', bareLayout: true },
+  { path: '/compliance-rules/:id/edit', element: <RuleEditPage />, permission: 'compliance-rules.update' },
   { path: '/laws', element: <LawsLibraryPage />, permission: 'laws.read', bareLayout: true },
   { path: '/reports', element: <ReportsPage />, permission: 'reports.read', bareLayout: true },
   { path: '/compliance-users', element: <UsersPage />, permission: 'users.read', bareLayout: true },
@@ -150,7 +150,7 @@ const menuItems: MenuItem[] = [
   { path: '/dashboard', label: 'Dashboard', icon: Gauge, position: 'before' },
   { path: '/clients', label: 'Clients', icon: Building2, permission: 'clients.read', position: 'before' },
   { path: '/filings', label: 'Filings', icon: CalendarClock, permission: 'compliance-filings.read', position: 'before' },
-  { path: '/compliance-rules', label: 'Compliance Rules', icon: ListChecks, permission: 'compliance_rules.read', position: 'before' },
+  { path: '/compliance-rules', label: 'Compliance Rules', icon: ListChecks, permission: 'compliance-rules.read', position: 'before' },
   { path: '/laws', label: 'Laws', icon: Scale, permission: 'laws.read', position: 'before' },
   { path: '/reports', label: 'Reports', icon: BarChart3, permission: 'reports.read', position: 'before' },
   {

@@ -4,14 +4,14 @@ import { withAuth, type PackageTestApp } from '@packages/platform-testing';
 import { createComplianceTestApp, resetComplianceTestDb } from './setup/app';
 import { createLaw, createOrgUnit, createOrgUnitLevel } from './setup/fixtures';
 
-// Note: slug is `compliance_law_handlers` (underscore), not a dash. The
+// Note: slug is `law-handlers` (underscore), not a dash. The
 // generic CRUD routes inherit the slug verbatim.
-const READ = ['compliance_law_handlers.read'];
+const READ = ['law-handlers.read'];
 const MANAGE = [
-  'compliance_law_handlers.read',
-  'compliance_law_handlers.create',
-  'compliance_law_handlers.update',
-  'compliance_law_handlers.delete',
+  'law-handlers.read',
+  'law-handlers.create',
+  'law-handlers.update',
+  'law-handlers.delete',
 ];
 
 describe('Law Handlers (integration)', () => {
@@ -36,12 +36,12 @@ describe('Law Handlers (integration)', () => {
     return { lawId, orgEntityId };
   }
 
-  describe('POST /api/v1/compliance_law_handlers', () => {
+  describe('POST /api/v1/law-handlers', () => {
     it('creates a law handler', async () => {
       const { lawId, orgEntityId } = await prereqs();
 
       const res = await request(ctx.httpServer)
-        .post('/api/v1/compliance_law_handlers')
+        .post('/api/v1/law-handlers')
         .set(withAuth(MANAGE))
         .send({ lawId, orgEntityId, isPrimary: true })
         .expect(201);
@@ -57,7 +57,7 @@ describe('Law Handlers (integration)', () => {
     it('rejects missing lawId', async () => {
       const { orgEntityId } = await prereqs();
       await request(ctx.httpServer)
-        .post('/api/v1/compliance_law_handlers')
+        .post('/api/v1/law-handlers')
         .set(withAuth(MANAGE))
         .send({ orgEntityId, isPrimary: true })
         .expect(400);
@@ -66,7 +66,7 @@ describe('Law Handlers (integration)', () => {
     it('rejects missing orgEntityId', async () => {
       const { lawId } = await prereqs();
       await request(ctx.httpServer)
-        .post('/api/v1/compliance_law_handlers')
+        .post('/api/v1/law-handlers')
         .set(withAuth(MANAGE))
         .send({ lawId, isPrimary: true })
         .expect(400);
@@ -74,7 +74,7 @@ describe('Law Handlers (integration)', () => {
 
     it('returns 401 without auth', async () => {
       await request(ctx.httpServer)
-        .post('/api/v1/compliance_law_handlers')
+        .post('/api/v1/law-handlers')
         .send({})
         .expect(401);
     });
@@ -82,31 +82,31 @@ describe('Law Handlers (integration)', () => {
     it('returns 403 with read-only perms', async () => {
       const { lawId, orgEntityId } = await prereqs();
       await request(ctx.httpServer)
-        .post('/api/v1/compliance_law_handlers')
+        .post('/api/v1/law-handlers')
         .set(withAuth(READ))
         .send({ lawId, orgEntityId, isPrimary: true })
         .expect(403);
     });
   });
 
-  describe('GET /api/v1/compliance_law_handlers', () => {
+  describe('GET /api/v1/law-handlers', () => {
     it('lists handlers', async () => {
       const { lawId, orgEntityId } = await prereqs();
       const { id: lawB } = await createLaw(ctx.db);
 
       await request(ctx.httpServer)
-        .post('/api/v1/compliance_law_handlers')
+        .post('/api/v1/law-handlers')
         .set(withAuth(MANAGE))
         .send({ lawId, orgEntityId, isPrimary: true })
         .expect(201);
       await request(ctx.httpServer)
-        .post('/api/v1/compliance_law_handlers')
+        .post('/api/v1/law-handlers')
         .set(withAuth(MANAGE))
         .send({ lawId: lawB, orgEntityId, isPrimary: true })
         .expect(201);
 
       const res = await request(ctx.httpServer)
-        .get('/api/v1/compliance_law_handlers')
+        .get('/api/v1/law-handlers')
         .set(withAuth(READ))
         .expect(200);
 
@@ -114,17 +114,17 @@ describe('Law Handlers (integration)', () => {
     });
   });
 
-  describe('PATCH /api/v1/compliance_law_handlers/:id', () => {
+  describe('PATCH /api/v1/law-handlers/:id', () => {
     it('updates a handler', async () => {
       const { lawId, orgEntityId } = await prereqs();
       const created = await request(ctx.httpServer)
-        .post('/api/v1/compliance_law_handlers')
+        .post('/api/v1/law-handlers')
         .set(withAuth(MANAGE))
         .send({ lawId, orgEntityId, isPrimary: false })
         .expect(201);
 
       const res = await request(ctx.httpServer)
-        .patch(`/api/v1/compliance_law_handlers/${created.body.id}`)
+        .patch(`/api/v1/law-handlers/${created.body.id}`)
         .set(withAuth(MANAGE))
         .send({ isPrimary: true })
         .expect(200);
@@ -133,17 +133,17 @@ describe('Law Handlers (integration)', () => {
     });
   });
 
-  describe('DELETE /api/v1/compliance_law_handlers/:id', () => {
+  describe('DELETE /api/v1/law-handlers/:id', () => {
     it('accepts the delete request', async () => {
       const { lawId, orgEntityId } = await prereqs();
       const created = await request(ctx.httpServer)
-        .post('/api/v1/compliance_law_handlers')
+        .post('/api/v1/law-handlers')
         .set(withAuth(MANAGE))
         .send({ lawId, orgEntityId, isPrimary: true })
         .expect(201);
 
       await request(ctx.httpServer)
-        .delete(`/api/v1/compliance_law_handlers/${created.body.id}`)
+        .delete(`/api/v1/law-handlers/${created.body.id}`)
         .set(withAuth(MANAGE))
         .expect(204);
     });

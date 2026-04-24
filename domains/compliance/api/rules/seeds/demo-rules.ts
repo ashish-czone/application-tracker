@@ -2,7 +2,7 @@ import type { INestApplicationContext } from '@nestjs/common';
 import { DatabaseService, inArray } from '@packages/database';
 import { complianceLaws } from '../../schema/laws';
 import { complianceRules } from '../../schema/rules';
-import { ComplianceRuleService } from '../compliance-rules.service';
+import { ComplianceRulesService } from '../compliance-rules.service';
 
 interface DemoRule {
   code: string;
@@ -113,7 +113,7 @@ const LAW_CODES = Array.from(new Set(DEMO_RULES.map((r) => r.lawCode)));
 
 export const seedDemoRules = async (ctx: INestApplicationContext): Promise<void> => {
   const database = ctx.get(DatabaseService);
-  const ruleService = ctx.get(ComplianceRuleService);
+  const ruleService = ctx.get(ComplianceRulesService);
 
   const [existing] = await database.db
     .select({ id: complianceRules.id })
@@ -132,16 +132,19 @@ export const seedDemoRules = async (ctx: INestApplicationContext): Promise<void>
     const lawId = lawIdByCode.get(rule.lawCode);
     if (!lawId) continue;
 
-    await ruleService.create({
-      code: rule.code,
-      name: rule.name,
-      lawId,
-      frequency: rule.frequency,
-      status: 'active',
-      dueDayOfMonth: rule.dueDayOfMonth,
-      dueMonthOffset: rule.dueMonthOffset,
-      gracePeriodDays: rule.gracePeriodDays,
-      description: rule.description,
-    });
+    await ruleService.create(
+      {
+        code: rule.code,
+        name: rule.name,
+        lawId,
+        frequency: rule.frequency,
+        status: 'active',
+        dueDayOfMonth: rule.dueDayOfMonth,
+        dueMonthOffset: rule.dueMonthOffset,
+        gracePeriodDays: rule.gracePeriodDays,
+        description: rule.description,
+      },
+      'system',
+    );
   }
 };

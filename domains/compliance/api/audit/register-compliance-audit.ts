@@ -22,9 +22,9 @@ const COMPLIANCE_ENTITY_REGISTRATIONS: { slug: string; sensitiveFields?: string[
   { slug: 'client-contacts' },
   { slug: 'client-registrations', sensitiveFields: ['registrationNumber'] },
   { slug: 'laws' },
-  { slug: 'compliance_rules' },
+  { slug: 'compliance-rules' },
   { slug: 'compliance-filings' },
-  { slug: 'compliance_law_handlers' },
+  { slug: 'law-handlers' },
   { slug: 'organization' },
 ];
 

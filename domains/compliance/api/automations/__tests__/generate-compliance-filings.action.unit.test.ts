@@ -29,7 +29,7 @@ function makeRule(overrides: Partial<ComplianceRule> = {}): ComplianceRule {
 
 function ctxFor(ruleId: string | undefined): never {
   return {
-    event: ruleId ? { entityId: ruleId, entityType: 'compliance_rules', eventName: '', actorId: null, correlationId: '', payload: {} } : undefined,
+    event: ruleId ? { entityId: ruleId, entityType: 'compliance-rules', eventName: '', actorId: null, correlationId: '', payload: {} } : undefined,
     resolvedUsers: {},
   } as never;
 }
@@ -183,7 +183,7 @@ describe('GenerateComplianceFilingsAction', () => {
     expect(events.emitDynamic).toHaveBeenCalledTimes(1);
     const [eventName, envelope] = events.emitDynamic.mock.calls[0]!;
     expect(eventName).toBe('compliance.ComplianceFilingGenerated');
-    expect(envelope.entityType).toBe('compliance_rules');
+    expect(envelope.entityType).toBe('compliance-rules');
     expect(envelope.payload).toMatchObject({
       ruleId: 'r1',
       clientId: 'c1',

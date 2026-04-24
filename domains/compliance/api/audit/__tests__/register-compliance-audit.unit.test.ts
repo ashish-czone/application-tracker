@@ -9,9 +9,9 @@ const EXPECTED_SLUGS = [
   'client-contacts',
   'client-registrations',
   'laws',
-  'compliance_rules',
+  'compliance-rules',
   'compliance-filings',
-  'compliance_law_handlers',
+  'law-handlers',
   'organization',
 ];
 
@@ -48,7 +48,7 @@ describe('registerComplianceAudit', () => {
   it('non-PII-bearing modules have no sensitive fields configured', () => {
     registerComplianceAudit(registry, moduleRef as never);
 
-    for (const slug of ['client-contacts', 'laws', 'compliance_rules', 'compliance-filings', 'compliance_law_handlers', 'organization']) {
+    for (const slug of ['client-contacts', 'laws', 'compliance-rules', 'compliance-filings', 'law-handlers', 'organization']) {
       const reg = registry.findRegistrationByEntityType(slug)!.registration;
       expect(reg.sensitiveFields ?? []).toEqual([]);
     }

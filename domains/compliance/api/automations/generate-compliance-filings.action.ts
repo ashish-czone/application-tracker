@@ -9,7 +9,7 @@ import type {
   UserSlotDefinition,
 } from '@packages/automation-contracts';
 
-import { ComplianceRuleService, type Occurrence } from '../rules/compliance-rules.service';
+import { ComplianceRulesService, type Occurrence } from '../rules/compliance-rules.service';
 import { ClientRegistrationsService } from '../client-registrations/client-registrations.service';
 import { ComplianceFilingsLookupService } from '../compliance-filings/compliance-filings-lookup.service';
 import { buildFilingExternalKey } from '../compliance-filings/compliance-filings.config';
@@ -41,7 +41,7 @@ export class GenerateComplianceFilingsAction implements ActionHandler {
   private readonly logger: ContextLogger;
 
   constructor(
-    private readonly ruleService: ComplianceRuleService,
+    private readonly ruleService: ComplianceRulesService,
     private readonly clientRegistrationService: ClientRegistrationsService,
     private readonly lookup: ComplianceFilingsLookupService,
     @Inject('ENTITY_SERVICE_compliance-filings')
@@ -110,7 +110,7 @@ export class GenerateComplianceFilingsAction implements ActionHandler {
         );
 
         this.events.emitDynamic(COMPLIANCE_FILING_GENERATED, {
-          entityType: 'compliance_rules',
+          entityType: 'compliance-rules',
           entityId: rule.id,
           actorId: null,
           payload: {

@@ -8,12 +8,12 @@ import {
   createFilingPrereqs,
 } from './setup/fixtures';
 
-const READ = ['compliance_rules.read'];
+const READ = ['compliance-rules.read'];
 const MANAGE = [
-  'compliance_rules.read',
-  'compliance_rules.create',
-  'compliance_rules.update',
-  'compliance_rules.delete',
+  'compliance-rules.read',
+  'compliance-rules.create',
+  'compliance-rules.update',
+  'compliance-rules.delete',
 ];
 
 describe('Compliance Rules (integration)', () => {
@@ -51,19 +51,19 @@ describe('Compliance Rules (integration)', () => {
       ...overrides,
     };
     const res = await request(ctx.httpServer)
-      .post('/api/v1/compliance_rules')
+      .post('/api/v1/compliance-rules')
       .set(withAuth(MANAGE))
       .send(body)
       .expect(201);
     return res.body;
   }
 
-  describe('POST /api/v1/compliance_rules', () => {
+  describe('POST /api/v1/compliance-rules', () => {
     it('creates a rule', async () => {
       const { id: lawId } = await createLaw(ctx.db);
       const code = unique('RULE');
       const res = await request(ctx.httpServer)
-        .post('/api/v1/compliance_rules')
+        .post('/api/v1/compliance-rules')
         .set(withAuth(MANAGE))
         .send({
           code,
@@ -84,7 +84,7 @@ describe('Compliance Rules (integration)', () => {
       const { code } = await createRule();
       const { id: lawId } = await createLaw(ctx.db);
       await request(ctx.httpServer)
-        .post('/api/v1/compliance_rules')
+        .post('/api/v1/compliance-rules')
         .set(withAuth(MANAGE))
         .send({
           code,
@@ -101,7 +101,7 @@ describe('Compliance Rules (integration)', () => {
 
     it('rejects missing lawId', async () => {
       await request(ctx.httpServer)
-        .post('/api/v1/compliance_rules')
+        .post('/api/v1/compliance-rules')
         .set(withAuth(MANAGE))
         .send({
           code: unique('X'),
@@ -116,27 +116,27 @@ describe('Compliance Rules (integration)', () => {
 
     it('returns 401 without auth', async () => {
       await request(ctx.httpServer)
-        .post('/api/v1/compliance_rules')
+        .post('/api/v1/compliance-rules')
         .send({ code: unique('X'), name: 'X' })
         .expect(401);
     });
 
     it('returns 403 with read-only perms', async () => {
       await request(ctx.httpServer)
-        .post('/api/v1/compliance_rules')
+        .post('/api/v1/compliance-rules')
         .set(withAuth(READ))
         .send({ code: unique('X'), name: 'X' })
         .expect(403);
     });
   });
 
-  describe('GET /api/v1/compliance_rules', () => {
+  describe('GET /api/v1/compliance-rules', () => {
     it('lists rules', async () => {
       await createRule({ code: unique('A') });
       await createRule({ code: unique('B') });
 
       const res = await request(ctx.httpServer)
-        .get('/api/v1/compliance_rules')
+        .get('/api/v1/compliance-rules')
         .set(withAuth(READ))
         .expect(200);
 
@@ -144,11 +144,11 @@ describe('Compliance Rules (integration)', () => {
     });
   });
 
-  describe('GET /api/v1/compliance_rules/:id', () => {
+  describe('GET /api/v1/compliance-rules/:id', () => {
     it('returns a rule', async () => {
       const rule = await createRule();
       const res = await request(ctx.httpServer)
-        .get(`/api/v1/compliance_rules/${rule.id}`)
+        .get(`/api/v1/compliance-rules/${rule.id}`)
         .set(withAuth(READ))
         .expect(200);
       expect(res.body.id).toBe(rule.id);
@@ -156,17 +156,17 @@ describe('Compliance Rules (integration)', () => {
 
     it('returns 404 for unknown id', async () => {
       await request(ctx.httpServer)
-        .get('/api/v1/compliance_rules/00000000-0000-0000-0000-000000000000')
+        .get('/api/v1/compliance-rules/00000000-0000-0000-0000-000000000000')
         .set(withAuth(READ))
         .expect(404);
     });
   });
 
-  describe('PATCH /api/v1/compliance_rules/:id', () => {
+  describe('PATCH /api/v1/compliance-rules/:id', () => {
     it('updates a rule', async () => {
       const rule = await createRule();
       const res = await request(ctx.httpServer)
-        .patch(`/api/v1/compliance_rules/${rule.id}`)
+        .patch(`/api/v1/compliance-rules/${rule.id}`)
         .set(withAuth(MANAGE))
         .send({ frequency: 'quarterly' })
         .expect(200);
@@ -189,7 +189,7 @@ describe('Compliance Rules (integration)', () => {
       it('blocks a code change with 400 RULE_FIELD_IMMUTABLE', async () => {
         const { ruleId } = await seedRuleWithFiling();
         const res = await request(ctx.httpServer)
-          .patch(`/api/v1/compliance_rules/${ruleId}`)
+          .patch(`/api/v1/compliance-rules/${ruleId}`)
           .set(withAuth(MANAGE))
           .send({ code: 'NEW-CODE' })
           .expect(400);
@@ -202,7 +202,7 @@ describe('Compliance Rules (integration)', () => {
       it('blocks a frequency change with 400 and lists only the changed field', async () => {
         const { ruleId } = await seedRuleWithFiling();
         const res = await request(ctx.httpServer)
-          .patch(`/api/v1/compliance_rules/${ruleId}`)
+          .patch(`/api/v1/compliance-rules/${ruleId}`)
           .set(withAuth(MANAGE))
           .send({ frequency: 'quarterly' })
           .expect(400);
@@ -213,7 +213,7 @@ describe('Compliance Rules (integration)', () => {
         const { ruleId } = await seedRuleWithFiling();
         const { id: otherLawId } = await createLaw(ctx.db);
         const res = await request(ctx.httpServer)
-          .patch(`/api/v1/compliance_rules/${ruleId}`)
+          .patch(`/api/v1/compliance-rules/${ruleId}`)
           .set(withAuth(MANAGE))
           .send({ lawId: otherLawId })
           .expect(400);
@@ -223,7 +223,7 @@ describe('Compliance Rules (integration)', () => {
       it('allows cosmetic + forward-only edits on a rule that already has filings', async () => {
         const { ruleId } = await seedRuleWithFiling();
         const res = await request(ctx.httpServer)
-          .patch(`/api/v1/compliance_rules/${ruleId}`)
+          .patch(`/api/v1/compliance-rules/${ruleId}`)
           .set(withAuth(MANAGE))
           .send({
             name: 'Updated name',
@@ -245,7 +245,7 @@ describe('Compliance Rules (integration)', () => {
         // No filing seeded — guard passes through even for identity fields.
         const rule = await createRule();
         await request(ctx.httpServer)
-          .patch(`/api/v1/compliance_rules/${rule.id}`)
+          .patch(`/api/v1/compliance-rules/${rule.id}`)
           .set(withAuth(MANAGE))
           .send({ code: 'NEW-CODE' })
           .expect(200);
@@ -312,7 +312,7 @@ describe('Compliance Rules (integration)', () => {
     it('transitions draft → active', async () => {
       const rule = await createRule();
       await request(ctx.httpServer)
-        .post(`/api/v1/compliance_rules/${rule.id}/transition`)
+        .post(`/api/v1/compliance-rules/${rule.id}/transition`)
         .set(withAuth(MANAGE))
         .send({ fieldKey: 'status', to: 'active' })
         .expect(201);
@@ -321,7 +321,7 @@ describe('Compliance Rules (integration)', () => {
     it('rejects invalid transition (draft → bogus)', async () => {
       const rule = await createRule();
       const res = await request(ctx.httpServer)
-        .post(`/api/v1/compliance_rules/${rule.id}/transition`)
+        .post(`/api/v1/compliance-rules/${rule.id}/transition`)
         .set(withAuth(MANAGE))
         .send({ fieldKey: 'status', to: 'bogus' });
       // Platform surfaces invalid targets as 422 (workflow engine) or 400
