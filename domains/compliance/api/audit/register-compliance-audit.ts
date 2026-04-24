@@ -1,6 +1,7 @@
 import { NotFoundException } from '@nestjs/common';
 import type { ModuleRef } from '@nestjs/core';
-import { EntityService, buildAccessContext } from '@packages/entity-engine';
+import { EntityService } from '@packages/entity-engine';
+import { buildAccessContext } from '@packages/rbac';
 import type { AuditModuleRegistration, AuditRegistryService } from '@packages/audit';
 import type { JwtPayload } from '@packages/auth-core';
 
