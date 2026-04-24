@@ -22,7 +22,7 @@ import { COMPLIANCE_RULES_CONFIG, setRuleUpdateGuard } from './rules/rules.confi
 import { LawHandlersModule } from './law-handlers/law-handlers.module';
 // compliance-tasks/ is the pre-filings implementation — retained for reference
 // while the filings migration is in-flight. New work goes to compliance-filings/.
-import { COMPLIANCE_FILINGS_CONFIG } from './compliance-filings/compliance-filings.config';
+import { ComplianceFilingsModule } from './compliance-filings/compliance-filings.module';
 import { createOrganizationsEntityConfig } from './organizations/organizations.config';
 
 import { ClientsService } from './clients/clients.service';
@@ -30,8 +30,6 @@ import { ClientContactsService } from './client-contacts/client-contacts.service
 import { ClientsController } from './clients/clients.controller';
 import { ComplianceRuleService } from './rules/compliance-rules.service';
 import { ComplianceRulesController } from './rules/compliance-rules.controller';
-import { ComplianceFilingsLookupService } from './compliance-filings/compliance-filings-lookup.service';
-import { ComplianceFilingsCancellationService } from './compliance-filings/compliance-filings-cancellation.service';
 import { GenerateComplianceFilingsAction } from './automations/generate-compliance-filings.action';
 import { COMPLIANCE_PERMISSION_MANIFESTS } from './permissions';
 
@@ -58,15 +56,13 @@ const ORGANIZATIONS_CONFIG = createOrganizationsEntityConfig({
     ClientRegistrationsModule,
     EntityEngineModule.forEntity(COMPLIANCE_RULES_CONFIG),
     LawHandlersModule,
-    EntityEngineModule.forEntity(COMPLIANCE_FILINGS_CONFIG),
+    ComplianceFilingsModule,
     EntityEngineModule.forEntity(ORGANIZATIONS_CONFIG),
   ],
   controllers: [ClientsController, ComplianceRulesController],
   providers: [
     ClientsService,
     ComplianceRuleService,
-    ComplianceFilingsLookupService,
-    ComplianceFilingsCancellationService,
     GenerateComplianceFilingsAction,
     ClientDormancyService,
     ComplianceUsersPositionsReader,
