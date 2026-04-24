@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
-import { EntityEngineModule } from '@packages/entity-engine';
-import { TASKS_CONFIG, TasksModule } from '@packages/tasks';
+import { TasksModule } from '@packages/tasks';
 
 import { SharedModule } from './shared/shared.module';
 
@@ -38,7 +37,6 @@ import { OffersModule } from './offers/offers.module';
 
     OffersModule,
 
-    EntityEngineModule.forEntity(TASKS_CONFIG),
     TasksModule,
   ],
 })

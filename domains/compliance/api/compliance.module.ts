@@ -1,10 +1,9 @@
 import { Module, type OnModuleInit } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
 import { AuditRegistryService } from '@packages/audit';
-import { EntityEngineModule } from '@packages/entity-engine';
 import { ActionRegistry } from '@packages/automation-contracts';
 import { RbacService } from '@packages/rbac';
-import { TASKS_CONFIG, TasksModule } from '@packages/tasks';
+import { TasksModule } from '@packages/tasks';
 import { USERS_POSITIONS_READER } from '@packages/users';
 import { WorkflowGuardRegistry, allow, allowWithWarning, block } from '@packages/workflows';
 import { ClientDormancyService } from './clients/client-dormancy.service';
@@ -31,7 +30,6 @@ import { COMPLIANCE_PERMISSION_MANIFESTS } from './permissions';
 @Module({
   imports: [
     TasksModule,
-    EntityEngineModule.forEntity(TASKS_CONFIG),
     LawsModule,
     ClientsModule,
     ClientContactsModule,
@@ -96,7 +94,7 @@ export class ComplianceDomainModule implements OnModuleInit {
 
     // Register permissions for compliance UI surfaces that don't yet have
     // backing entities. CRUD perms for entities (clients, laws, etc.) are
-    // auto-registered by EntityEngineModule.forEntity() above.
+    // auto-registered by EntityEngineModule.forEntity() inside each entity's module.
     this.rbac.registerManifests(COMPLIANCE_PERMISSION_MANIFESTS);
   }
 }
