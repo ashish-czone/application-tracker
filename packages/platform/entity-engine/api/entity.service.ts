@@ -1486,10 +1486,9 @@ export class EntityService {
 
   /**
    * Phase 2 of a transition: runs inside the caller-supplied tx. Updates the
-   * entity's workflow field and records workflow history on the same tx, then
-   * invokes the legacy `onTransition` hook (pending removal). Throwing rolls
-   * the whole transition back — the calling domain service can piggyback
-   * additional cascades on this tx and get the same atomicity.
+   * entity's workflow field and records workflow history on the same tx.
+   * Throwing rolls the whole transition back — the calling domain service
+   * can piggyback additional cascades on this tx and get the same atomicity.
    */
   async applyTransition(validated: TransitionContext, tx: any): Promise<void> {
     const { config } = this;
@@ -1521,24 +1520,6 @@ export class EntityService {
       reason: validated.reason,
       comment: validated.comment,
     }, tx);
-
-    // Legacy onTransition hook — kept on the bundler path for backward compat
-    // while consumers migrate to composing primitives. Removed in a follow-up
-    // commit once no entity config declares one.
-    if (config.hooks?.onTransition) {
-      await config.hooks.onTransition({
-        entityType: config.entityType,
-        entityId: validated.entityId,
-        fieldKey: validated.fieldKey,
-        fromState: validated.fromState,
-        toState: validated.toState,
-        transitionId: validated.transitionId,
-        actorId: validated.actorId,
-        reason: validated.reason,
-        comment: validated.comment,
-        entity: validated.entity,
-      }, tx);
-    }
   }
 
   /**
