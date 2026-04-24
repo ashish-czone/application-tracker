@@ -7,7 +7,7 @@ import { PositionScopeResolverService } from './services/position-scope-resolver
 import { OrgUnitController } from './controllers/org-unit.controller';
 import { OrgUnitLevelController } from './controllers/org-unit-level.controller';
 import { OrgPositionController } from './controllers/org-position.controller';
-import { PermissionRegistryService } from '@packages/rbac';
+import { PermissionRegistryService, ScopeResolverRegistry } from '@packages/rbac';
 import { LookupResolverService, POSITION_SCOPE_PROVIDER } from '@packages/entity-engine';
 import { UserResolverRegistry, EntityResolverRegistry } from '@packages/automation-contracts';
 import { orgUnits } from './schema/org-units';
@@ -15,6 +15,7 @@ import { OrgUnitHeadStrategy } from './automation-resolvers/org-unit-head.strate
 import { ParentUnitHeadStrategy } from './automation-resolvers/parent-unit-head.strategy';
 import { OrgUnitMembersStrategy } from './automation-resolvers/org-unit-members.strategy';
 import { OrgUnitsUserLifecycleListener } from './listeners/org-units-user-lifecycle.listener';
+import { UnitScopeResolver, DescendantsScopeResolver } from './scope-resolvers/hierarchy.resolver';
 
 @Global()
 @Module({
@@ -25,6 +26,8 @@ import { OrgUnitsUserLifecycleListener } from './listeners/org-units-user-lifecy
     OrgPositionService,
     PositionScopeResolverService,
     OrgUnitsUserLifecycleListener,
+    UnitScopeResolver,
+    DescendantsScopeResolver,
     {
       provide: POSITION_SCOPE_PROVIDER,
       useExisting: PositionScopeResolverService,
@@ -39,6 +42,9 @@ export class OrgUnitsModule implements OnModuleInit {
     private readonly userResolverRegistry: UserResolverRegistry,
     private readonly entityResolverRegistry: EntityResolverRegistry,
     private readonly database: DatabaseService,
+    private readonly scopeResolverRegistry: ScopeResolverRegistry,
+    private readonly unitScopeResolver: UnitScopeResolver,
+    private readonly descendantsScopeResolver: DescendantsScopeResolver,
   ) {}
 
   onModuleInit() {
@@ -46,6 +52,9 @@ export class OrgUnitsModule implements OnModuleInit {
       { action: 'org-units.read', description: 'View org units' },
       { action: 'org-units.manage', description: 'Create, update, and delete org units' },
     ]);
+
+    this.scopeResolverRegistry.register(this.unitScopeResolver);
+    this.scopeResolverRegistry.register(this.descendantsScopeResolver);
 
     this.lookupResolver.register({
       entity: 'org-units',
