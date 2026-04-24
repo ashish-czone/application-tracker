@@ -29,6 +29,23 @@ describe('RBAC (integration)', () => {
     cleanup = ctx.cleanup;
     rbacService = module.get(RbacService);
     manifestRegistry = module.get(PermissionManifestRegistry);
+
+    // Seed manifests for every permission slug the tests below exercise.
+    // Scope validation rejects grants whose slug has no registered manifest,
+    // and this suite boots only `RbacModule` so none of the app/module inits
+    // that normally populate the registry run.
+    const testSlugs = [
+      'things.read', 'things.create',
+      'users.read', 'users.update', 'users.create',
+      'tasks.update', 'tasks.read',
+      'reports.read',
+    ];
+    rbacService.registerManifests(
+      testSlugs.map((slug) => {
+        const [mod, action] = slug.split('.');
+        return { slug, module: mod, action, label: slug, supportedScopes: ['any', 'own', 'unit', 'assigned'] };
+      }),
+    );
   });
 
   afterEach(async () => {

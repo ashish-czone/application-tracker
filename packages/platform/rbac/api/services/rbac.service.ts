@@ -524,18 +524,19 @@ export class RbacService {
   }
 
   /**
-   * Reject grants whose scope types are not declared in the permission's
-   * manifest. Wildcard `*` is system-admin and has no manifest — always
-   * allowed. Slugs with no registered manifest are currently permissive
-   * (manifests are being rolled out module-by-module); once every call site
-   * has migrated this branch tightens to reject unknown slugs.
+   * Reject grants whose permission slug is not registered, or whose scope
+   * types are not declared in the permission's manifest. Wildcard `*` is
+   * system-admin and has no manifest — always allowed.
    */
   private validateGrantScopes(entries: { name: string; scopes: ScopeSpec[] }[]): void {
     const violations: string[] = [];
     for (const entry of entries) {
       if (entry.name === '*') continue;
       const supported = this.manifestRegistry.getSupportedScopes(entry.name);
-      if (!supported) continue;
+      if (!supported) {
+        violations.push(`${entry.name}: unknown permission (no manifest registered)`);
+        continue;
+      }
       for (const scope of entry.scopes) {
         if (!supported.includes(scope.type)) {
           violations.push(`${entry.name}: scope '${scope.type}' not in supportedScopes [${supported.join(', ')}]`);

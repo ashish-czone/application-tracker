@@ -38,6 +38,15 @@ describe('RbacService', () => {
   let manifestRegistry: PermissionManifestRegistry;
   let mockDb: ReturnType<typeof createMockDb>;
 
+  function seedManifests(slugs: string[]): void {
+    manifestRegistry.registerMany(
+      slugs.map((slug) => {
+        const [module, action] = slug.split('.');
+        return { slug, module, action, label: slug, supportedScopes: ['any'] };
+      }),
+    );
+  }
+
   beforeEach(() => {
     mockDb = createMockDb();
     const databaseService = createMockDatabaseService(mockDb);
@@ -286,6 +295,10 @@ describe('RbacService', () => {
   });
 
   describe('setRolePermissions — system role protection', () => {
+    beforeEach(() => {
+      seedManifests(['users.read']);
+    });
+
     it('should block permission changes on system roles via API', async () => {
       const role = { id: 'admin-role', name: 'Admin', userType: 'client', isDefault: false, createdAt: new Date(), updatedAt: new Date() };
       vi.spyOn(service, 'findRoleById').mockResolvedValueOnce(role);
@@ -309,6 +322,10 @@ describe('RbacService', () => {
   });
 
   describe('setRolePermissions — grant only what you hold', () => {
+    beforeEach(() => {
+      seedManifests(['users.read', 'users.manage', 'orders.read', 'anything.do']);
+    });
+
     it('should allow setting permissions without actor check when actorPermissions not provided', async () => {
       const role = { id: 'role-1', name: 'manager', userType: 'client', isDefault: false, createdAt: new Date(), updatedAt: new Date() };
       vi.spyOn(service, 'findRoleById').mockResolvedValueOnce(role);
@@ -375,6 +392,10 @@ describe('RbacService', () => {
   });
 
   describe('setRolePermissions — lockout prevention', () => {
+    beforeEach(() => {
+      seedManifests(['users.read']);
+    });
+
     it('should block removing * when no other wildcard users exist', async () => {
       const role = { id: 'role-1', name: 'admin', userType: 'client', isDefault: false, createdAt: new Date(), updatedAt: new Date() };
       vi.spyOn(service, 'findRoleById').mockResolvedValueOnce(role);
@@ -498,12 +519,12 @@ describe('RbacService', () => {
       ).rejects.toThrow(ConflictException);
     });
 
-    it('allows unregistered slugs (permissive while manifests are rolled out)', async () => {
+    it('rejects slugs that have no registered manifest', async () => {
       await expect(
         service.setRolePermissions('role-1', [
           { name: 'not-yet-registered.read', scopes: [{ type: 'own' }] },
         ]),
-      ).resolves.toBeUndefined();
+      ).rejects.toThrow(/unknown permission/);
     });
 
     it("allows wildcard '*' regardless of manifest state", async () => {
