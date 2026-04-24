@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { LawHandlerService } from '../law-handlers.service';
+import { LawHandlersService } from '../law-handlers.service';
 
 type AnyChain = Record<string, ReturnType<typeof vi.fn>>;
 
@@ -30,9 +30,9 @@ function mockSelectRows(rows: unknown[]) {
   return chain;
 }
 
-describe('LawHandlerService', () => {
+describe('LawHandlersService', () => {
   let db: { db: Record<string, ReturnType<typeof vi.fn>> };
-  let service: LawHandlerService;
+  let service: LawHandlersService;
 
   beforeEach(() => {
     db = {
@@ -42,10 +42,12 @@ describe('LawHandlerService', () => {
         select: vi.fn(),
       },
     };
-    service = new LawHandlerService(db as never);
+    // Entity service isn't exercised by the programmatic methods under test.
+    const entityService = {} as never;
+    service = new LawHandlersService(entityService, db as never);
   });
 
-  describe('create', () => {
+  describe('createHandler', () => {
     it('inserts with defaults when isPrimary and clientId omitted', async () => {
       const insertChain = mockInsertReturning({
         id: 'h1',
@@ -56,7 +58,7 @@ describe('LawHandlerService', () => {
       });
       db.db.insert.mockReturnValue(insertChain);
 
-      const result = await service.create({ lawId: 'l1', orgEntityId: 'o1' });
+      const result = await service.createHandler({ lawId: 'l1', orgEntityId: 'o1' });
 
       expect(insertChain.values).toHaveBeenCalledWith({
         lawId: 'l1',
@@ -78,7 +80,7 @@ describe('LawHandlerService', () => {
       });
       db.db.insert.mockReturnValue(insertChain);
 
-      await service.create({ lawId: 'l1', orgEntityId: 'o1', clientId: 'c1', isPrimary: true });
+      await service.createHandler({ lawId: 'l1', orgEntityId: 'o1', clientId: 'c1', isPrimary: true });
 
       expect(insertChain.values).toHaveBeenCalledWith({
         lawId: 'l1',
@@ -89,12 +91,12 @@ describe('LawHandlerService', () => {
     });
   });
 
-  describe('delete', () => {
+  describe('deleteHandler', () => {
     it('calls delete with eq on id', async () => {
       const deleteChain = mockDeleteWhere();
       db.db.delete.mockReturnValue(deleteChain);
 
-      await service.delete('h1');
+      await service.deleteHandler('h1');
 
       expect(db.db.delete).toHaveBeenCalledTimes(1);
       expect(deleteChain.where).toHaveBeenCalledTimes(1);

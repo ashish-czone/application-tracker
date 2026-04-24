@@ -1,6 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { DatabaseService, and, eq, isNull, sql } from '@packages/database';
+import { EntityService, type BaseListQuery } from '@packages/entity-engine';
+import type { DataAccessContext } from '@packages/rbac';
 import { complianceLawHandlers } from '../schema/law-handlers';
+import type { CreateLawHandlerDto, UpdateLawHandlerDto } from './law-handlers.dto';
 
 export interface LawHandler {
   id: string;
@@ -17,11 +20,59 @@ export interface CreateLawHandlerInput {
   isPrimary?: boolean;
 }
 
+/**
+ * Merged service: CRUD delegates for the entity engine + the programmatic
+ * query/insert helpers used by seeds and by the rules service (for default-
+ * handler checks).
+ *
+ * CRUD methods go through the engine (events + audit fire). The
+ * `createHandler` / `deleteHandler` programmatic methods skip those side
+ * effects — they're for deterministic seeding and structural pivot edits.
+ */
 @Injectable()
-export class LawHandlerService {
-  constructor(private readonly database: DatabaseService) {}
+export class LawHandlersService {
+  constructor(
+    @Inject('ENTITY_SERVICE_compliance_law_handlers') private readonly entityService: EntityService,
+    private readonly database: DatabaseService,
+  ) {}
 
-  async create(input: CreateLawHandlerInput): Promise<LawHandler> {
+  // ---- CRUD delegates (vendors template) -----------------------------------
+
+  list(query: BaseListQuery, accessCtx?: DataAccessContext) {
+    return this.entityService.list(query, accessCtx);
+  }
+
+  findOne(id: string, accessCtx?: DataAccessContext) {
+    return this.entityService.findOneOrFail(id, accessCtx);
+  }
+
+  create(input: CreateLawHandlerDto, actorId: string) {
+    return this.entityService.create(input, actorId);
+  }
+
+  update(id: string, input: UpdateLawHandlerDto, actorId: string, accessCtx?: DataAccessContext) {
+    return this.entityService.update(id, input, actorId, accessCtx);
+  }
+
+  softDelete(id: string, actorId: string, accessCtx?: DataAccessContext) {
+    return this.entityService.softDelete(id, actorId, accessCtx);
+  }
+
+  clone(id: string, actorId: string) {
+    return this.entityService.clone(id, actorId);
+  }
+
+  restore(id: string) {
+    return this.entityService.restore(id);
+  }
+
+  getListLayout() {
+    return this.entityService.getListLayout();
+  }
+
+  // ---- Programmatic / specialized ------------------------------------------
+
+  async createHandler(input: CreateLawHandlerInput): Promise<LawHandler> {
     const [row] = await this.database.db
       .insert(complianceLawHandlers)
       .values({
@@ -34,7 +85,7 @@ export class LawHandlerService {
     return this.toHandler(row);
   }
 
-  async delete(id: string): Promise<void> {
+  async deleteHandler(id: string): Promise<void> {
     await this.database.db.delete(complianceLawHandlers).where(eq(complianceLawHandlers.id, id));
   }
 

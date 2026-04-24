@@ -6,7 +6,7 @@ import { FREQUENCIES, type ComplianceFrequency } from '@domains/compliance-contr
 import { complianceRules } from '../schema/rules';
 import { complianceLawHandlers } from '../schema/law-handlers';
 import { complianceFilings } from '../schema/compliance-filings';
-import { LawHandlerService } from '../law-handlers/law-handlers.service';
+import { LawHandlersService } from '../law-handlers/law-handlers.service';
 import { ComplianceFilingsCancellationService } from '../compliance-filings/compliance-filings-cancellation.service';
 
 const RULE_WORKFLOW_SLUG = 'compliance-rule-status';
@@ -141,7 +141,7 @@ export class ComplianceRuleService {
 
   constructor(
     private readonly database: DatabaseService,
-    private readonly lawHandlers: LawHandlerService,
+    private readonly lawHandlers: LawHandlersService,
     private readonly workflowEngine: WorkflowEngineService,
     private readonly workflowRegistry: WorkflowRegistryService,
     private readonly filingsCancellation: ComplianceFilingsCancellationService,
