@@ -6,7 +6,7 @@ import { SharedModule } from './shared/shared.module';
 
 import { candidatesConfig } from './candidates/candidates.config';
 
-import { CLIENTS_CONFIG } from './clients/clients.config';
+import { ClientsModule } from './clients/clients.module';
 
 import { ContactsModule } from './contacts/contacts.module';
 import { VendorsModule } from './vendors/vendors.module';
@@ -27,7 +27,7 @@ import { offersConfig } from './offers/offers.config';
 
     EntityEngineModule.forEntity(candidatesConfig),
 
-    EntityEngineModule.forEntity(CLIENTS_CONFIG),
+    ClientsModule,
 
     ContactsModule,
     VendorsModule,
