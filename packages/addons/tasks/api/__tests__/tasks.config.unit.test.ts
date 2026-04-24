@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { TASKS_CONFIG } from '../tasks.config';
+import { TASKS_CONFIG, applyCompletedAt } from '../tasks.config';
 
 describe('TASKS_CONFIG', () => {
   describe('polymorphic relation fields', () => {
@@ -99,10 +99,7 @@ describe('TASKS_CONFIG', () => {
     });
   });
 
-  describe('completedAt stamping', () => {
-    const beforeCreate = TASKS_CONFIG.hooks!.beforeCreate!;
-    const beforeUpdate = TASKS_CONFIG.hooks!.beforeUpdate!;
-
+  describe('applyCompletedAt', () => {
     it('declares completedAt as a system readonly datetime field', () => {
       const field = TASKS_CONFIG.fieldMeta.completedAt;
       expect(field).toBeDefined();
@@ -112,33 +109,18 @@ describe('TASKS_CONFIG', () => {
       expect(field.excludeFromList).toBe(true);
     });
 
-    it('beforeCreate stamps completedAt when created in completed state', async () => {
-      const out = await beforeCreate({ title: 't', status: 'completed' }, 'actor');
+    it('stamps completedAt when payload transitions to completed', () => {
+      const out = applyCompletedAt({ title: 't', status: 'completed' });
       expect(out.completedAt).toBeInstanceOf(Date);
     });
 
-    it('beforeCreate does not stamp completedAt for non-completed status', async () => {
-      const out = await beforeCreate({ title: 't', status: 'pending' }, 'actor');
+    it('clears completedAt when payload moves away from completed', () => {
+      const out = applyCompletedAt({ title: 't', status: 'pending' });
       expect(out.completedAt).toBeNull();
     });
 
-    it('beforeCreate leaves completedAt absent when status is not in payload', async () => {
-      const out = await beforeCreate({ title: 't' }, 'actor');
-      expect('completedAt' in out).toBe(false);
-    });
-
-    it('beforeUpdate stamps completedAt when transitioning to completed', async () => {
-      const out = await beforeUpdate('id', { status: 'completed' }, 'actor');
-      expect(out.completedAt).toBeInstanceOf(Date);
-    });
-
-    it('beforeUpdate clears completedAt when transitioning away from completed', async () => {
-      const out = await beforeUpdate('id', { status: 'pending' }, 'actor');
-      expect(out.completedAt).toBeNull();
-    });
-
-    it('beforeUpdate does not touch completedAt when status is not in payload', async () => {
-      const out = await beforeUpdate('id', { title: 'new title' }, 'actor');
+    it('leaves completedAt absent when status is not in payload', () => {
+      const out = applyCompletedAt({ title: 't' });
       expect('completedAt' in out).toBe(false);
     });
   });

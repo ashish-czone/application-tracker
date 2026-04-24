@@ -15,16 +15,6 @@ export function deriveUserStatus(row: Record<string, unknown>): UserStatus {
   return 'active';
 }
 
-/** Minimal reader surface the users config needs from rbac for list/detail role
- *  enrichment. Keeping this a structural type (not `RbacService`) keeps
- *  `@packages/users` free of an rbac dependency at the config layer — rbac is
- *  still required by the owning module at wiring time. */
-export interface UsersRolesReader {
-  getRolesByUserIds(
-    userIds: string[],
-  ): Promise<Record<string, Array<{ id: string; name: string; userType: string | null }>>>;
-}
-
 /** A single org-unit membership expressed as a user position. Kept as a plain
  *  structural type so `@packages/users` doesn't pick up an org-units dependency. */
 export interface UserPosition {
@@ -46,12 +36,6 @@ export interface UsersEntityConfigDeps {
   credentialsHandler: RelationHandler;
   /** Owns the users.roles manyToMany write path. Supplied by @packages/rbac. */
   rolesHandler: RelationHandler;
-  /** Batch reader for list/detail role enrichment. Supplied by @packages/rbac.
-   *  Optional so unit tests that don't exercise reads can omit it. */
-  rolesReader?: UsersRolesReader;
-  /** Batch reader for list/detail position enrichment. Optional — apps without
-   *  an org-units equivalent skip this and every row gets `positions: []`. */
-  positionsReader?: UsersPositionsReader;
 }
 
 /**
@@ -75,14 +59,11 @@ export interface UsersEntityConfigDeps {
  * UserRolesRelationHandler. See @packages/entity-engine/entity.service for
  * the write-path orchestration.
  *
- * Read-side enrichment: afterList / afterFindOne hooks batch-load roles via
- * the supplied reader so list rows and the detail response carry a `roles`
- * array without an N+1 per row.
+ * Read-side enrichment (roles, positions, derived status) is applied by
+ * `UsersService.list` / `UsersService.findOne` after the engine returns —
+ * see that service for the enrichment wiring.
  */
 export function createUsersEntityConfig(deps: UsersEntityConfigDeps): EntityConfig<typeof users> {
-  const rolesReader = deps.rolesReader;
-  const positionsReader = deps.positionsReader;
-
   return defineEntity({
     table: users,
     slug: 'users',
@@ -173,44 +154,6 @@ export function createUsersEntityConfig(deps: UsersEntityConfigDeps): EntityConf
         handler: deps.rolesHandler,
       },
     ],
-
-    hooks: {
-      afterList: async (rows) => {
-        if (rows.length === 0) return rows;
-        const ids = rows.map((r) => r.id as string);
-        type RolesMap = Awaited<ReturnType<UsersRolesReader['getRolesByUserIds']>>;
-        type PositionsMap = Record<string, UserPosition[]>;
-        const [rolesByUser, positionsByUser] = await Promise.all([
-          rolesReader ? rolesReader.getRolesByUserIds(ids) : Promise.resolve({} as RolesMap),
-          positionsReader
-            ? positionsReader.getPositionsByUserIds(ids)
-            : Promise.resolve({} as PositionsMap),
-        ]);
-        return rows.map((r) => ({
-          ...r,
-          roles: rolesByUser[r.id as string] ?? [],
-          positions: positionsByUser[r.id as string] ?? [],
-          status: deriveUserStatus(r),
-        }));
-      },
-      afterFindOne: async (row) => {
-        const id = row.id as string;
-        type RolesMap = Awaited<ReturnType<UsersRolesReader['getRolesByUserIds']>>;
-        type PositionsMap = Record<string, UserPosition[]>;
-        const [rolesByUser, positionsByUser] = await Promise.all([
-          rolesReader ? rolesReader.getRolesByUserIds([id]) : Promise.resolve({} as RolesMap),
-          positionsReader
-            ? positionsReader.getPositionsByUserIds([id])
-            : Promise.resolve({} as PositionsMap),
-        ]);
-        return {
-          ...row,
-          roles: rolesByUser[id] ?? [],
-          positions: positionsByUser[id] ?? [],
-          status: deriveUserStatus(row),
-        };
-      },
-    },
 
     ui: {
       icon: 'User',

@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { EntityService, type BaseListQuery } from '@packages/entity-engine';
 import type { DataAccessContext } from '@packages/rbac';
 import type { CreateMenuItemDto, UpdateMenuItemDto } from '../dto/menu-items.dto';
+import { assertMenuItemPayload } from '../menu-items.config';
 
 @Injectable()
 export class MenuItemsService {
@@ -17,11 +18,13 @@ export class MenuItemsService {
     return this.entityService.findOneOrFail(id, accessCtx);
   }
 
-  create(input: CreateMenuItemDto, actorId: string) {
+  async create(input: CreateMenuItemDto, actorId: string) {
+    await assertMenuItemPayload(input as Record<string, unknown>, { isUpdate: false });
     return this.entityService.create(input, actorId);
   }
 
-  update(id: string, input: UpdateMenuItemDto, actorId: string, accessCtx?: DataAccessContext) {
+  async update(id: string, input: UpdateMenuItemDto, actorId: string, accessCtx?: DataAccessContext) {
+    await assertMenuItemPayload(input as Record<string, unknown>, { isUpdate: true });
     return this.entityService.update(id, input, actorId, accessCtx);
   }
 

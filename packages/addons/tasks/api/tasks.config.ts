@@ -23,11 +23,6 @@ export const TASKS_CONFIG = defineEntity({
   table: tasks,
   fields: TASKS_FIELDS,
 
-  hooks: {
-    beforeCreate: async (payload: Record<string, unknown>) => applyCompletedAt(payload),
-    beforeUpdate: async (_id: string, payload: Record<string, unknown>) => applyCompletedAt(payload),
-  },
-
   dataAccess: {
     // Tasks are anchored on the current assignee / assignee's team rather
     // than the creator — `own` on a task means "assigned to me," not

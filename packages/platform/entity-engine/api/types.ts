@@ -445,7 +445,7 @@ export interface WorkflowTargetDef {
   state: string;
   /** Additional permissions required for this transition */
   requiredPermissions?: string[];
-  /** Named guard functions to execute (registered in hooks.workflowGuards) */
+  /** Named guard functions to execute (registered in EntityConfig.workflowGuards) */
   guardNames?: string[];
   /** Declarative conditions evaluated against entity field values */
   conditions?: Condition[];
@@ -868,56 +868,15 @@ export interface EntityConfig<TTable extends PgTable = PgTable> {
   /** Row-level data access configuration. Controls which records users can see based on their RBAC scope. */
   dataAccess?: DataAccessConfig;
 
-  // --- Lifecycle hooks ---
+  // --- Workflow extension ---
 
-  hooks?: EntityHooks;
-}
-
-// ---------------------------------------------------------------------------
-// Lifecycle hooks — domain-specific logic injected into the generic engine
-// ---------------------------------------------------------------------------
-
-export interface EntityHooks {
-  /** Called before inserting a new entity. Can modify the payload. */
-  beforeCreate?: (payload: Record<string, unknown>, actorId: string, tx?: any) => Promise<Record<string, unknown>>;
   /**
-   * Called inside the create transaction, after the entity row has been inserted.
-   * Receives the tx handle so side-writes (credentials, related rows) are atomic
-   * with the entity insert. Throw to roll the whole create back.
+   * Named workflow guard functions, keyed by name. Referenced by
+   * `guardNames` on transition targets. Registered into the workflow guard
+   * registry at module init. Pure predicates — no payload mutation or side
+   * effects. For domain behaviour on create/update/delete, put the logic
+   * in the hand-written service that owns the entity, not here.
    */
-  inCreateTx?: (entityId: string, payload: Record<string, unknown>, actorId: string, tx: any) => Promise<void>;
-  /** Called after a new entity is inserted (after transaction commits). */
-  afterCreate?: (entity: Record<string, unknown>, actorId: string) => Promise<void>;
-  /** Called before updating an entity. Can modify the payload. */
-  beforeUpdate?: (id: string, payload: Record<string, unknown>, actorId: string, tx?: any) => Promise<Record<string, unknown>>;
-  /** Called after an entity is updated. */
-  afterUpdate?: (entity: Record<string, unknown>, actorId: string) => Promise<void>;
-  /** Called before soft-deleting an entity. Can throw to prevent deletion. */
-  beforeDelete?: (id: string, actorId: string) => Promise<void>;
-  /** Build additional WHERE conditions for list queries from the raw query params. */
-  buildListFilters?: (query: Record<string, unknown>) => SQL[];
-  /** Custom response transformation (merge DB row + EAV values). Overrides default merge. */
-  toResponse?: (dbRow: Record<string, unknown>, eavValues: Record<string, unknown>) => Record<string, unknown>;
-  /**
-   * Called after list rows are loaded and lookup labels resolved, before the
-   * response is returned. Receives the whole page so batched enrichment (e.g.
-   * fetching related rows in a single query) stays O(1). Runs outside any
-   * transaction. Return the enriched rows.
-   */
-  afterList?: (
-    rows: Record<string, unknown>[],
-    ctx: { actorId: string },
-  ) => Promise<Record<string, unknown>[]>;
-  /**
-   * Called after a single entity is loaded (findOne / detail) and lookup
-   * labels are resolved, before the response is returned. Runs outside any
-   * transaction. Return the enriched row.
-   */
-  afterFindOne?: (
-    row: Record<string, unknown>,
-    ctx: { actorId: string },
-  ) => Promise<Record<string, unknown>>;
-  /** Custom workflow guard functions, keyed by name. Referenced by guardNames in transition config. */
   workflowGuards?: Record<string, WorkflowGuardFn>;
 }
 
@@ -959,7 +918,7 @@ export interface BaseListQuery {
   includeDeleted?: boolean;
   /** Structured filters as JSON string: [{"field":"status","operator":"eq","value":"active"}] */
   filters?: string;
-  /** Additional filter params (entity-specific, passed to hooks.buildListFilters) */
+  /** Additional entity-specific query params — hand-written services may translate these into `filters` before calling the engine. */
   [key: string]: unknown;
 }
 

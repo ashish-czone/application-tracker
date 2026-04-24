@@ -563,12 +563,6 @@ export class EntityService {
     const filterConditions = await this.buildAllFilters(query, config, ext);
     conditions.push(...filterConditions);
 
-    // Custom filters from hooks (for anything not covered by generic filtering)
-    if (config.hooks?.buildListFilters) {
-      const extraFilters = config.hooks.buildListFilters(query);
-      conditions.push(...extraFilters);
-    }
-
     const whereClause = conditions.length > 0
       ? withTenant(scopeTable, and(...conditions))
       : withTenant(scopeTable);
@@ -630,12 +624,8 @@ export class EntityService {
     // Hydrate relational fields (tags → tag objects with name/color)
     await this.hydrateRelationalFields(data);
 
-    const enriched = config.hooks?.afterList
-      ? await config.hooks.afterList(data, { actorId: accessCtx?.userId ?? '' })
-      : data;
-
     return {
-      data: enriched,
+      data,
       meta: computePaginationMeta(Number(total), page, limit),
     };
   }
@@ -686,9 +676,7 @@ export class EntityService {
       const response = await this.toResponse(row);
       await this.resolveLookupLabels([response]);
       await this.hydrateRelationalFields([response]);
-      return config.hooks?.afterFindOne
-        ? await config.hooks.afterFindOne(response, { actorId: accessCtx?.userId ?? '' })
-        : response;
+      return response;
     }
 
     const [row] = await this.database.db
@@ -715,9 +703,7 @@ export class EntityService {
     const response = await this.toResponse(row);
     await this.resolveLookupLabels([response]);
     await this.hydrateRelationalFields([response]);
-    return config.hooks?.afterFindOne
-      ? await config.hooks.afterFindOne(response, { actorId: accessCtx?.userId ?? '' })
-      : response;
+    return response;
   }
 
   /**
@@ -910,12 +896,7 @@ export class EntityService {
 
   async create(payload: Record<string, unknown>, actorId: string): Promise<Record<string, unknown>> {
     const { config } = this;
-    let data = { ...payload };
-
-    // Hook: beforeCreate
-    if (config.hooks?.beforeCreate) {
-      data = await config.hooks.beforeCreate(data, actorId);
-    }
+    const data = { ...payload };
 
     // Load field definitions — for extensions this includes the child's own
     // defs plus the parent's defs for every projected column, so a write to a
@@ -1062,10 +1043,6 @@ export class EntityService {
         await rel.handler.onCreate(tx, entityId, relationshipInputs[rel.name], actorId, relationCtx);
       }
 
-      if (config.hooks?.inCreateTx) {
-        await config.hooks.inCreateTx(entityId, data, actorId, tx);
-      }
-
       return inserted;
     });
 
@@ -1128,11 +1105,6 @@ export class EntityService {
 
     this.logger.log(`${config.singularName} created`, { entityId: row.id, actorId });
 
-    // Hook: afterCreate
-    if (config.hooks?.afterCreate) {
-      await config.hooks.afterCreate(row, actorId);
-    }
-
     // Emit event (with resolved lookup labels for audit readability)
     const snapshot = await this.buildEntitySnapshot(row);
     await this.resolveLookupLabels([snapshot]);
@@ -1159,12 +1131,7 @@ export class EntityService {
     // Ensure entity exists and is within the actor's scope
     await this.findOneOrFail(id, accessCtx);
 
-    let data = { ...payload };
-
-    // Hook: beforeUpdate
-    if (config.hooks?.beforeUpdate) {
-      data = await config.hooks.beforeUpdate(id, data, actorId);
-    }
+    const data = { ...payload };
 
     // Load effective field definitions (own + projected parent for extensions)
     const defs = this.getEffectiveFieldDefs();
@@ -1351,11 +1318,6 @@ export class EntityService {
     }
 
     this.logger.log(`${config.singularName} updated`, { entityId: id, actorId });
-
-    // Hook: afterUpdate
-    if (config.hooks?.afterUpdate) {
-      await config.hooks.afterUpdate(updated, actorId);
-    }
 
     // Emit event after transaction (with resolved lookup labels for audit readability)
     if (eventPayload != null) {
@@ -1585,11 +1547,6 @@ export class EntityService {
   async softDelete(id: string, actorId: string, accessCtx?: DataAccessContext): Promise<void> {
     const { config } = this;
     const entity = await this.findOneOrFail(id, accessCtx);
-
-    // Hook: beforeDelete
-    if (config.hooks?.beforeDelete) {
-      await config.hooks.beforeDelete(id, actorId);
-    }
 
     // Extensions scope reads through the parent's deletedAt — the child
     // usually has no deletedAt of its own. Soft-delete therefore flips the
@@ -2202,17 +2159,12 @@ export class EntityService {
     return buildSnapshot(this.rowToSnapshot(row), eavValues);
   }
 
-  /** Merge DB row + EAV values into API response. Custom hook can override. */
+  /** Merge DB row + EAV values into API response. */
   private async toResponse(
     row: Record<string, unknown>,
     preloadedEavValues?: Record<string, unknown>,
   ): Promise<Record<string, unknown>> {
     const eavValues = preloadedEavValues ?? (this.eavStorage ? await this.eavStorage.getValues(this.config.entityType, row.id as string) : {});
-
-    // Allow hooks to customize response
-    if (this.config.hooks?.toResponse) {
-      return this.config.hooks.toResponse(row, eavValues);
-    }
 
     const standardFields = this.rowToSnapshot(row);
 

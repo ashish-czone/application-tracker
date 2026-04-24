@@ -3,6 +3,7 @@ import { DatabaseService, and, eq } from '@packages/database';
 import { EntityService, type BaseListQuery } from '@packages/entity-engine';
 import type { DataAccessContext } from '@packages/rbac';
 import { tasks } from '../schema/tasks';
+import { applyCompletedAt } from '../tasks.config';
 import type { CreateTaskDto, UpdateTaskDto } from '../dto/tasks.dto';
 
 @Injectable()
@@ -21,11 +22,11 @@ export class TasksService {
   }
 
   create(input: CreateTaskDto, actorId: string) {
-    return this.entityService.create(input, actorId);
+    return this.entityService.create(applyCompletedAt(input as Record<string, unknown>), actorId);
   }
 
   update(id: string, input: UpdateTaskDto, actorId: string, accessCtx?: DataAccessContext) {
-    return this.entityService.update(id, input, actorId, accessCtx);
+    return this.entityService.update(id, applyCompletedAt(input as Record<string, unknown>), actorId, accessCtx);
   }
 
   softDelete(id: string, actorId: string, accessCtx?: DataAccessContext) {

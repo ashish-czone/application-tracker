@@ -10,7 +10,7 @@ export class CandidatesService {
   ) {}
 
   list(query: BaseListQuery, accessCtx?: DataAccessContext) {
-    return this.entityService.list(query, accessCtx);
+    return this.entityService.list(mapCandidatesQuery(query), accessCtx);
   }
 
   findOne(id: string, accessCtx?: DataAccessContext) {
@@ -40,4 +40,15 @@ export class CandidatesService {
   getListLayout() {
     return this.entityService.getListLayout();
   }
+}
+
+type StructuredFilter = { field: string; operator: string; value: unknown };
+
+function mapCandidatesQuery(query: BaseListQuery): BaseListQuery {
+  const { qualification, ...rest } = query as BaseListQuery & { qualification?: unknown };
+  if (qualification == null || qualification === '') return query;
+
+  const existing: StructuredFilter[] = rest.filters ? JSON.parse(rest.filters as string) : [];
+  existing.push({ field: 'highestQualification', operator: 'eq', value: qualification });
+  return { ...rest, filters: JSON.stringify(existing) };
 }
