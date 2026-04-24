@@ -14,26 +14,22 @@ import { registerComplianceAudit } from './audit/register-compliance-audit';
 
 import { ComplianceUsersPositionsReader } from './users/compliance-users-positions.reader';
 
-import { LAWS_CONFIG } from './laws/laws.config';
+import { LawsModule } from './laws/laws.module';
 import { CLIENTS_CONFIG, setClientDormancyHandler } from './clients/clients.config';
-import { CLIENT_CONTACTS_CONFIG } from './client-contacts/client-contacts.config';
-import { CLIENT_REGISTRATIONS_CONFIG } from './client-registrations/client-registrations.config';
+import { ClientContactsModule } from './client-contacts/client-contacts.module';
+import { ClientRegistrationsModule } from './client-registrations/client-registrations.module';
 import { COMPLIANCE_RULES_CONFIG, setRuleUpdateGuard } from './rules/rules.config';
-import { LAW_HANDLERS_CONFIG } from './law-handlers/law-handlers.config';
+import { LawHandlersModule } from './law-handlers/law-handlers.module';
 // compliance-tasks/ is the pre-filings implementation — retained for reference
 // while the filings migration is in-flight. New work goes to compliance-filings/.
-import { COMPLIANCE_FILINGS_CONFIG } from './compliance-filings/compliance-filings.config';
+import { ComplianceFilingsModule } from './compliance-filings/compliance-filings.module';
 import { createOrganizationsEntityConfig } from './organizations/organizations.config';
 
-import { LawHandlerService } from './law-handlers/law-handlers.service';
-import { ClientRegistrationService } from './client-registrations/client-registrations.service';
 import { ClientsService } from './clients/clients.service';
 import { ClientContactsService } from './client-contacts/client-contacts.service';
 import { ClientsController } from './clients/clients.controller';
 import { ComplianceRuleService } from './rules/compliance-rules.service';
 import { ComplianceRulesController } from './rules/compliance-rules.controller';
-import { ComplianceFilingsLookupService } from './compliance-filings/compliance-filings-lookup.service';
-import { ComplianceFilingsCancellationService } from './compliance-filings/compliance-filings-cancellation.service';
 import { GenerateComplianceFilingsAction } from './automations/generate-compliance-filings.action';
 import { COMPLIANCE_PERMISSION_MANIFESTS } from './permissions';
 
@@ -54,24 +50,19 @@ const ORGANIZATIONS_CONFIG = createOrganizationsEntityConfig({
   imports: [
     TasksModule,
     EntityEngineModule.forEntity(TASKS_CONFIG),
-    EntityEngineModule.forEntity(LAWS_CONFIG),
+    LawsModule,
     EntityEngineModule.forEntity(CLIENTS_CONFIG),
-    EntityEngineModule.forEntity(CLIENT_CONTACTS_CONFIG),
-    EntityEngineModule.forEntity(CLIENT_REGISTRATIONS_CONFIG),
+    ClientContactsModule,
+    ClientRegistrationsModule,
     EntityEngineModule.forEntity(COMPLIANCE_RULES_CONFIG),
-    EntityEngineModule.forEntity(LAW_HANDLERS_CONFIG),
-    EntityEngineModule.forEntity(COMPLIANCE_FILINGS_CONFIG),
+    LawHandlersModule,
+    ComplianceFilingsModule,
     EntityEngineModule.forEntity(ORGANIZATIONS_CONFIG),
   ],
   controllers: [ClientsController, ComplianceRulesController],
   providers: [
-    LawHandlerService,
-    ClientRegistrationService,
     ClientsService,
-    ClientContactsService,
     ComplianceRuleService,
-    ComplianceFilingsLookupService,
-    ComplianceFilingsCancellationService,
     GenerateComplianceFilingsAction,
     ClientDormancyService,
     ComplianceUsersPositionsReader,

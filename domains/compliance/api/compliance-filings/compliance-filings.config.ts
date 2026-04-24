@@ -8,22 +8,14 @@ import {
 } from '../constants';
 
 /** Natural key used for the compliance_filings.external_key idempotency column.
- *  The generate action reuses this format across retries — keep the shape stable. */
+ *  The generate action reuses this format across retries — keep the shape stable.
+ *
+ *  Callers of the HTTP API don't need to supply this directly — the filings
+ *  service derives it automatically at create-time when ruleId/clientId/
+ *  periodStart are present. Exposed for the automation and seeds which pre-
+ *  compute the key to dedupe before insert. */
 export function buildFilingExternalKey(ruleId: string, clientId: string, periodStart: string): string {
   return `${ruleId}:${clientId}:${periodStart}`;
-}
-
-/**
- * Stamps / clears `completedAt` based on the `status` transition in the
- * payload: moving TO `completed` stamps now(), moving AWAY clears it.
- * Payloads that don't touch status are returned unchanged.
- */
-function applyCompletedAt(payload: Record<string, unknown>): Record<string, unknown> {
-  if (!('status' in payload)) return payload;
-  return {
-    ...payload,
-    completedAt: payload.status === 'completed' ? new Date() : null,
-  };
 }
 
 /**
@@ -72,22 +64,6 @@ export const COMPLIANCE_FILINGS_CONFIG = defineEntity({
     { action: 'reopen', description: 'Reopen completed or cancelled filings' },
     { action: 'close', description: 'Cancel a non-terminal filing' },
   ],
-
-  hooks: {
-    beforeCreate: async (payload: Record<string, unknown>) => {
-      const ruleId = payload.ruleId as string | undefined;
-      const clientId = payload.clientId as string | undefined;
-      const periodStart = payload.periodStart as string | undefined;
-      const next: Record<string, unknown> = { ...payload };
-      if (ruleId && clientId && periodStart && next.externalKey == null) {
-        next.externalKey = buildFilingExternalKey(ruleId, clientId, periodStart);
-      }
-      return applyCompletedAt(next);
-    },
-    beforeUpdate: async (_id: string, payload: Record<string, unknown>) => {
-      return applyCompletedAt(payload);
-    },
-  },
 
   dataAccess: {
     // Anchors drive the registered scope resolvers:

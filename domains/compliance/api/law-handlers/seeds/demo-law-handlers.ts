@@ -8,7 +8,7 @@ import {
 } from '@packages/org-units';
 import { complianceLaws } from '../../schema/laws';
 import { complianceLawHandlers } from '../../schema/law-handlers';
-import { LawHandlerService } from '../law-handlers.service';
+import { LawHandlersService } from '../law-handlers.service';
 import { DEMO_USER_EMAILS } from '../../users/seeds/demo-users';
 
 const COMPANY_NAME = 'Demo Compliance Practice';
@@ -23,7 +23,7 @@ export const seedDemoLawHandlers = async (ctx: INestApplicationContext): Promise
   const orgUnitService = ctx.get(OrgUnitService);
   const orgUnitLevelService = ctx.get(OrgUnitLevelService);
   const orgPositionService = ctx.get(OrgPositionService);
-  const lawHandlerService = ctx.get(LawHandlerService);
+  const lawHandlersService = ctx.get(LawHandlersService);
 
   const [existing] = await database.db
     .select({ id: complianceLawHandlers.id })
@@ -40,7 +40,7 @@ export const seedDemoLawHandlers = async (ctx: INestApplicationContext): Promise
     .where(inArray(complianceLaws.code, HANDLED_LAW_CODES));
 
   for (const law of laws) {
-    await lawHandlerService.create({
+    await lawHandlersService.createHandler({
       lawId: law.id,
       orgEntityId: teamId,
       clientId: null,

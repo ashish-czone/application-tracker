@@ -32,7 +32,7 @@ describe('ClientContactsService', () => {
   beforeEach(() => {
     db = { db: { transaction: vi.fn() } };
     events = { emitDynamic: vi.fn() };
-    service = new ClientContactsService(db as never, events as never);
+    service = new ClientContactsService({} as never, db as never, events as never);
   });
 
   describe('setPrimary', () => {
@@ -139,7 +139,7 @@ describe('ClientContactsService', () => {
       const fromChain = { where: vi.fn().mockReturnValue(whereChain) };
       const selectChain = { from: vi.fn().mockReturnValue(fromChain) };
       const dbMock = { select: vi.fn().mockReturnValue(selectChain) };
-      const s = new ClientContactsService({ db: dbMock } as never, events as never);
+      const s = new ClientContactsService({} as never, { db: dbMock } as never, events as never);
       void limitChain;
 
       await expect(s.hasPrimaryContact('cid-1')).resolves.toBe(true);
@@ -150,7 +150,7 @@ describe('ClientContactsService', () => {
       const fromChain = { where: vi.fn().mockReturnValue(whereChain) };
       const selectChain = { from: vi.fn().mockReturnValue(fromChain) };
       const dbMock = { select: vi.fn().mockReturnValue(selectChain) };
-      const s = new ClientContactsService({ db: dbMock } as never, events as never);
+      const s = new ClientContactsService({} as never, { db: dbMock } as never, events as never);
 
       await expect(s.hasPrimaryContact('cid-1')).resolves.toBe(false);
     });

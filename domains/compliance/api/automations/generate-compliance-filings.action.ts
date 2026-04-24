@@ -10,7 +10,7 @@ import type {
 } from '@packages/automation-contracts';
 
 import { ComplianceRuleService, type Occurrence } from '../rules/compliance-rules.service';
-import { ClientRegistrationService } from '../client-registrations/client-registrations.service';
+import { ClientRegistrationsService } from '../client-registrations/client-registrations.service';
 import { ComplianceFilingsLookupService } from '../compliance-filings/compliance-filings-lookup.service';
 import { buildFilingExternalKey } from '../compliance-filings/compliance-filings.config';
 import { COMPLIANCE_FILING_GENERATED } from '../events/types';
@@ -42,7 +42,7 @@ export class GenerateComplianceFilingsAction implements ActionHandler {
 
   constructor(
     private readonly ruleService: ComplianceRuleService,
-    private readonly clientRegistrationService: ClientRegistrationService,
+    private readonly clientRegistrationService: ClientRegistrationsService,
     private readonly lookup: ComplianceFilingsLookupService,
     @Inject('ENTITY_SERVICE_compliance-filings')
     private readonly filings: EntityService,

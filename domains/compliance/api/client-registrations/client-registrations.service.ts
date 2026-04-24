@@ -1,4 +1,5 @@
 import {
+  Inject,
   Injectable,
   ConflictException,
   NotFoundException,
@@ -6,6 +7,8 @@ import {
 } from '@nestjs/common';
 import { DatabaseService, and, count, eq, gt, inArray, isNull, lte, not } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
+import { EntityService, type BaseListQuery } from '@packages/entity-engine';
+import type { DataAccessContext } from '@packages/rbac';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { complianceClientRegistrations } from '../schema/client-registrations';
 import { complianceLaws } from '../schema/laws';
@@ -16,6 +19,7 @@ import {
   CLIENT_REGISTRATIONS_CREATED,
   COMPLIANCE_REGISTRATION_DEACTIVATED,
 } from '../events/types';
+import type { CreateClientRegistrationDto, UpdateClientRegistrationDto } from './client-registrations.dto';
 
 const TERMINAL_FILING_STATUSES = ['completed', 'cancelled'];
 
@@ -62,17 +66,54 @@ export interface DeactivationResult {
 }
 
 @Injectable()
-export class ClientRegistrationService {
+export class ClientRegistrationsService {
   private readonly logger: ContextLogger;
 
   constructor(
+    @Inject('ENTITY_SERVICE_client-registrations') private readonly entityService: EntityService,
     private readonly database: DatabaseService,
     private readonly events: DomainEventEmitter,
     private readonly filingsCancellation: ComplianceFilingsCancellationService,
     appLogger: AppLoggerService,
   ) {
-    this.logger = appLogger.forContext(ClientRegistrationService.name);
+    this.logger = appLogger.forContext(ClientRegistrationsService.name);
   }
+
+  // ---- CRUD delegates (vendors template) -----------------------------------
+
+  list(query: BaseListQuery, accessCtx?: DataAccessContext) {
+    return this.entityService.list(query, accessCtx);
+  }
+
+  findOne(id: string, accessCtx?: DataAccessContext) {
+    return this.entityService.findOneOrFail(id, accessCtx);
+  }
+
+  create(input: CreateClientRegistrationDto, actorId: string) {
+    return this.entityService.create(input, actorId);
+  }
+
+  update(id: string, input: UpdateClientRegistrationDto, actorId: string, accessCtx?: DataAccessContext) {
+    return this.entityService.update(id, input, actorId, accessCtx);
+  }
+
+  softDelete(id: string, actorId: string, accessCtx?: DataAccessContext) {
+    return this.entityService.softDelete(id, actorId, accessCtx);
+  }
+
+  clone(id: string, actorId: string) {
+    return this.entityService.clone(id, actorId);
+  }
+
+  restore(id: string) {
+    return this.entityService.restore(id);
+  }
+
+  getListLayout() {
+    return this.entityService.getListLayout();
+  }
+
+  // ---- Domain verbs --------------------------------------------------------
 
   async register(clientId: string, lawId: string): Promise<ClientRegistration> {
     const existing = await this.findActive(clientId, lawId);
