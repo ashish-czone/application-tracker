@@ -14,3 +14,5 @@ export { ScopeResolverRegistry } from './scope-resolver';
 export type { ScopeResolver, ScopeResolverContext, ScopeAnchorMap } from './scope-resolver';
 export { OwnScopeResolver } from './scope-resolvers/own.resolver';
 export { AssignedScopeResolver } from './scope-resolvers/assigned.resolver';
+export { PermissionManifestRegistry } from './permission-manifest';
+export type { PermissionManifest } from './permission-manifest';

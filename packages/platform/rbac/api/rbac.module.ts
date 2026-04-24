@@ -8,6 +8,7 @@ import { UserRolesRelationHandler } from './relation-handlers/user-roles-relatio
 import { ScopeResolverRegistry } from './scope-resolver';
 import { OwnScopeResolver } from './scope-resolvers/own.resolver';
 import { AssignedScopeResolver } from './scope-resolvers/assigned.resolver';
+import { PermissionManifestRegistry } from './permission-manifest';
 import { roles } from './schema/roles';
 
 @Global()
@@ -15,6 +16,7 @@ import { roles } from './schema/roles';
   controllers: [RbacController],
   providers: [
     PermissionRegistryService,
+    PermissionManifestRegistry,
     RbacService,
     RbacGuard,
     UserRolesRelationHandler,
@@ -25,6 +27,7 @@ import { roles } from './schema/roles';
   exports: [
     RbacService,
     PermissionRegistryService,
+    PermissionManifestRegistry,
     RbacGuard,
     UserRolesRelationHandler,
     ScopeResolverRegistry,
