@@ -9,7 +9,7 @@ import { candidatesConfig } from './candidates/candidates.config';
 import { CLIENTS_CONFIG } from './clients/clients.config';
 
 import { CONTACTS_CONFIG } from './contacts/contacts.config';
-import { VENDORS_CONFIG } from './vendors/vendors.config';
+import { VendorsModule } from './vendors/vendors.module';
 
 import { JOB_OPENINGS_CONFIG } from './job-openings/job-openings.config';
 
@@ -30,7 +30,7 @@ import { offersConfig } from './offers/offers.config';
     EntityEngineModule.forEntity(CLIENTS_CONFIG),
 
     EntityEngineModule.forEntity(CONTACTS_CONFIG),
-    EntityEngineModule.forEntity(VENDORS_CONFIG),
+    VendorsModule,
 
     EntityEngineModule.forEntity(JOB_OPENINGS_CONFIG),
 

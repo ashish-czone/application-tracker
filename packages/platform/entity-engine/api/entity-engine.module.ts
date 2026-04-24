@@ -85,17 +85,32 @@ export class EntityEngineModule implements OnApplicationBootstrap {
 
   /**
    * Register a single entity with the engine.
+   *
+   * `options.controller`:
+   * - `'auto'` (default) — mount the generic CRUD controller at `/{slug}`.
+   *   Backwards-compatible behaviour for entities that want the engine to
+   *   own their REST surface.
+   * - `'none'` — skip the generic controller. Register the metadata, the
+   *   `ENTITY_SERVICE_<entityType>` provider, and the bootstrap pipeline
+   *   (RBAC manifests, event registry, seeding) exactly as for `'auto'`,
+   *   but leave the HTTP layer to a hand-written controller in the domain
+   *   module. The domain module imports this dynamic module and adds its
+   *   own `@Controller()` class that injects `ENTITY_SERVICE_<entityType>`.
    */
-  static forEntity(config: EntityConfig): DynamicModule {
+  static forEntity(
+    config: EntityConfig,
+    options: { controller?: 'auto' | 'none' } = {},
+  ): DynamicModule {
     const serviceToken = `ENTITY_SERVICE_${config.entityType}`;
-    const ControllerClass = createEntityController(config, serviceToken);
+    const mountController = options.controller !== 'none';
+    const controllers = mountController ? [createEntityController(config, serviceToken)] : [];
 
     // Queue config for initialization (happens in onApplicationBootstrap)
     pendingConfigs.push(config);
 
     return {
       module: EntityEngineModule,
-      controllers: [ControllerClass],
+      controllers,
       providers: [
         {
           provide: serviceToken,
