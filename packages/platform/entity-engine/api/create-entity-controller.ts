@@ -11,7 +11,6 @@ import {
   HttpStatus,
   ParseUUIDPipe,
   Inject,
-  Optional,
   UseInterceptors,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
@@ -19,7 +18,7 @@ import { CurrentUser, type JwtPayload } from '@packages/auth';
 import { RequirePermission } from '@packages/rbac';
 import { EntityService } from './entity.service';
 import { createFieldPermissionInterceptor } from './interceptors/field-permission.interceptor';
-import type { EntityConfig, ListLayoutResponse, EntityActions, DataAccessContext, AccessScopeSpec, PositionScopeProvider } from './types';
+import type { EntityConfig, ListLayoutResponse, EntityActions, DataAccessContext, AccessScopeSpec } from './types';
 
 type JwtPermissionValue = AccessScopeSpec[] | true;
 
@@ -31,15 +30,10 @@ type JwtPermissionValue = AccessScopeSpec[] | true;
  * Returns `undefined` when the user holds no grant for the permission — the
  * upstream @RequirePermission guard rejects that case first, so the access
  * context is only built for authorised callers.
- *
- * `entityType` and `positionScopeProvider` are retained in the signature for
- * call-site stability; they are no longer used to resolve scope.
  */
 export function buildAccessContext(
   user: JwtPayload,
   permission: string,
-  _entityType: string,
-  _positionScopeProvider: PositionScopeProvider | null,
 ): DataAccessContext | undefined {
   const permissions = (user as { permissions?: Record<string, JwtPermissionValue> }).permissions;
   if (!permissions) return undefined;
@@ -79,20 +73,13 @@ export function createEntityController(config: EntityConfig, serviceToken: strin
 
   const FieldPermissionInterceptor = createFieldPermissionInterceptor(config);
 
-  const POSITION_SCOPE_TOKEN = 'POSITION_SCOPE_PROVIDER';
-
   @ApiTags(config.slug)
   @Controller(config.slug)
   @UseInterceptors(FieldPermissionInterceptor)
   class DynamicEntityController {
-    private readonly positionScopeProvider: PositionScopeProvider | null;
-
     constructor(
       @Inject(serviceToken) private readonly entityService: EntityService,
-      @Inject(POSITION_SCOPE_TOKEN) @Optional() positionScopeProvider: PositionScopeProvider | null,
-    ) {
-      this.positionScopeProvider = positionScopeProvider ?? null;
-    }
+    ) {}
 
     @Get('layout/list')
     @RequirePermission(readPermission)
@@ -112,7 +99,7 @@ export function createEntityController(config: EntityConfig, serviceToken: strin
         limit: query.limit ? Number(query.limit) : undefined,
         includeDeleted: query.includeDeleted === 'true',
       };
-      const accessCtx = buildAccessContext(user, readPermission, config.entityType, this.positionScopeProvider);
+      const accessCtx = buildAccessContext(user, readPermission);
       return this.entityService.list(parsed, accessCtx);
     }
 
@@ -120,7 +107,7 @@ export function createEntityController(config: EntityConfig, serviceToken: strin
     @RequirePermission(readPermission)
     @ApiOperation({ summary: `Get a single ${config.singularName.toLowerCase()} by ID` })
     async findOne(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: JwtPayload) {
-      const accessCtx = buildAccessContext(user, readPermission, config.entityType, this.positionScopeProvider);
+      const accessCtx = buildAccessContext(user, readPermission);
       return this.entityService.findOneOrFail(id, accessCtx);
     }
 
@@ -140,7 +127,7 @@ export function createEntityController(config: EntityConfig, serviceToken: strin
       @Body() body: Record<string, unknown>,
       @CurrentUser() user: JwtPayload,
     ) {
-      const accessCtx = buildAccessContext(user, updatePermission, config.entityType, this.positionScopeProvider);
+      const accessCtx = buildAccessContext(user, updatePermission);
       return this.entityService.update(id, body, user.userId, accessCtx);
     }
 
@@ -149,7 +136,7 @@ export function createEntityController(config: EntityConfig, serviceToken: strin
     @HttpCode(HttpStatus.NO_CONTENT)
     @ApiOperation({ summary: `Soft delete a ${config.singularName.toLowerCase()}` })
     async delete(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: JwtPayload) {
-      const accessCtx = buildAccessContext(user, deletePermission, config.entityType, this.positionScopeProvider);
+      const accessCtx = buildAccessContext(user, deletePermission);
       await this.entityService.softDelete(id, user.userId, accessCtx);
     }
 
@@ -161,7 +148,7 @@ export function createEntityController(config: EntityConfig, serviceToken: strin
       @Body() body: { fieldKey: string; to: string; reason?: string; comment?: string },
       @CurrentUser() user: JwtPayload,
     ) {
-      const accessCtx = buildAccessContext(user, updatePermission, config.entityType, this.positionScopeProvider);
+      const accessCtx = buildAccessContext(user, updatePermission);
       return this.entityService.transition(id, body.fieldKey, body.to, user.userId, { reason: body.reason, comment: body.comment }, accessCtx);
     }
 
@@ -192,7 +179,7 @@ export function createEntityController(config: EntityConfig, serviceToken: strin
       @Body() body: { parentId: string | null },
       @CurrentUser() user: JwtPayload,
     ) {
-      const accessCtx = buildAccessContext(user, updatePermission, config.entityType, this.positionScopeProvider);
+      const accessCtx = buildAccessContext(user, updatePermission);
       return this.entityService.reparent(id, body.parentId ?? null, user.userId, accessCtx);
     }
 
@@ -200,7 +187,7 @@ export function createEntityController(config: EntityConfig, serviceToken: strin
     @RequirePermission(readPermission)
     @ApiOperation({ summary: `Get the ancestor chain of a ${config.singularName.toLowerCase()}` })
     async getAncestors(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: JwtPayload) {
-      const accessCtx = buildAccessContext(user, readPermission, config.entityType, this.positionScopeProvider);
+      const accessCtx = buildAccessContext(user, readPermission);
       return this.entityService.getAncestors(id, accessCtx);
     }
 
@@ -208,7 +195,7 @@ export function createEntityController(config: EntityConfig, serviceToken: strin
     @RequirePermission(readPermission)
     @ApiOperation({ summary: `Get all descendants of a ${config.singularName.toLowerCase()}` })
     async getDescendants(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: JwtPayload) {
-      const accessCtx = buildAccessContext(user, readPermission, config.entityType, this.positionScopeProvider);
+      const accessCtx = buildAccessContext(user, readPermission);
       return this.entityService.getDescendants(id, accessCtx);
     }
 
@@ -226,7 +213,7 @@ export function createEntityController(config: EntityConfig, serviceToken: strin
       @Body() body: { parentId?: string | null; sortOrder?: number },
       @CurrentUser() user: JwtPayload,
     ) {
-      const accessCtx = buildAccessContext(user, updatePermission, config.entityType, this.positionScopeProvider);
+      const accessCtx = buildAccessContext(user, updatePermission);
       return this.entityService.move(id, body, user.userId, accessCtx);
     }
   }

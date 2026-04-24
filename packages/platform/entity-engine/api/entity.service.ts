@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
-import { eq, and, or, isNull, ilike, asc, desc, count, sql, getTableName, getTableColumns, inArray } from 'drizzle-orm';
+import { and, or, isNull, ilike, asc, desc, count, sql, getTableName, getTableColumns } from 'drizzle-orm';
 import type { PgColumn } from 'drizzle-orm/pg-core';
 import { withTenant, withTenantInsert, tenantCondition } from '@packages/tenancy/helpers';
 import {
@@ -16,6 +16,7 @@ import {
 import { buildSoftDeleteCondition } from '@packages/soft-delete';
 import { fieldTypeRegistry } from '@packages/field-types';
 import { DatabaseService } from '@packages/database';
+import { ScopeResolverRegistry, type ScopeAnchorMap } from '@packages/rbac';
 import { DomainEventEmitter } from '@packages/events';
 import { HierarchyService } from '@packages/hierarchy';
 import { OrderableService } from '@packages/orderable';
@@ -35,7 +36,7 @@ import { fieldTypeSaveHookRegistry, type FieldTypeSaveHookRegistry, type FieldTy
 import type { WorkflowExtension } from './extensions/workflow-extension.interface';
 import type { TaxonomyExtension } from './extensions/taxonomy-extension.interface';
 import type { PaginatedResponse } from '@packages/common';
-import type { EntityConfig, BaseListQuery, ListLayoutColumn, DataAccessContext, PositionScopeProvider } from './types';
+import type { EntityConfig, BaseListQuery, ListLayoutColumn, DataAccessContext } from './types';
 import type { SQL as DrizzleSQL } from 'drizzle-orm';
 import { EntityRegistryService } from './entity-registry.service';
 
@@ -86,7 +87,7 @@ export class EntityService {
     private readonly workflowExt: WorkflowExtension | null,
     private readonly entityRegistry: EntityRegistryService,
     appLogger: AppLoggerService,
-    private readonly positionScopeProvider: PositionScopeProvider | null = null,
+    private readonly scopeResolverRegistry: ScopeResolverRegistry,
     private readonly hierarchyService: HierarchyService | null = null,
     private readonly orderableService: OrderableService | null = null,
   ) {
@@ -164,45 +165,35 @@ export class EntityService {
 
   /**
    * Resolves a set of access scopes into a single SQL WHERE condition by
-   * OR-ing the predicate of each scope. `any` short-circuits to no filter.
+   * OR-ing the predicate produced by each scope.
    *
-   * Built-in types handled here:
-   *   - any:         no filter
-   *   - own:         createdByField = actor
-   *   - assigned:    assigneeField = actor
-   *   - unit:        team/assignee/creator within actor's direct units
-   *   - descendants: team/assignee/creator within actor's unit subtree
+   * Every scope is dispatched in the same way:
+   *   1. Look up the scope type in the global `ScopeResolverRegistry`.
+   *   2. If not found, fall back to an entity-local resolver declared in
+   *      `dataAccess.scopes[]` (used for scope kinds whose SQL can't be
+   *      expressed through the generic anchor map).
    *
-   * Custom types fall through to entity-registered scope resolvers.
+   * `any` is the only scope the engine itself understands — it short-circuits
+   * to "no filter." Every other scope type lands as a registered resolver,
+   * so adding a new scope kind does not require a platform edit.
+   *
    * If the scope array is empty (user holds no scopes for this verb), the
    * result is a `1=0` condition that matches no rows — i.e. no access.
    */
   private async resolveDataAccessScope(ctx: DataAccessContext): Promise<DrizzleSQL | undefined> {
-    const { config } = this;
-    const table = config.table as any;
-    const createdByKey = config.dataAccess?.createdByField ?? config.dataAccess?.ownerField ?? 'createdBy';
-    const createdByColumn = table[createdByKey] as PgColumn | undefined;
-    const assigneeKey = config.dataAccess?.assigneeField;
-    const assigneeColumn = assigneeKey ? (table[assigneeKey] as PgColumn | undefined) : undefined;
-    const teamKey = config.dataAccess?.teamField;
-    const teamColumn = teamKey ? (table[teamKey] as PgColumn | undefined) : undefined;
-
     if (ctx.scopes.length === 0) {
       // No scopes held → deny. Use a contradiction so callers compose with AND safely.
       return sql`1=0`;
     }
 
-    // Short-circuit on 'any' — most permissive scope wins.
+    // `any` is the most permissive scope — wins over every other scope in the array.
     if (ctx.scopes.some((s) => s.type === 'any')) return undefined;
 
+    const anchors = this.buildAnchors();
     const predicates: DrizzleSQL[] = [];
 
     for (const scope of ctx.scopes) {
-      const predicate = await this.predicateForScope(scope, {
-        createdByColumn,
-        assigneeColumn,
-        teamColumn,
-      }, ctx.userId);
+      const predicate = await this.resolveScope(scope, ctx.userId, anchors);
       if (predicate) predicates.push(predicate);
     }
 
@@ -211,50 +202,44 @@ export class EntityService {
     return or(...predicates)!;
   }
 
-  /** Build the SQL predicate for a single scope value. */
-  private async predicateForScope(
+  /**
+   * Resolve one scope to a predicate — registry first, then entity-inline
+   * resolvers, otherwise a warning + no-op. Warn (rather than throw) so a
+   * stale scope sitting on an old role grant degrades gracefully.
+   */
+  private async resolveScope(
     scope: import('./types').AccessScopeSpec,
-    cols: {
-      createdByColumn?: PgColumn;
-      assigneeColumn?: PgColumn;
-      teamColumn?: PgColumn;
-    },
     userId: string,
+    anchors: ScopeAnchorMap,
   ): Promise<DrizzleSQL | undefined> {
-    switch (scope.type) {
-      case 'own':
-        return cols.createdByColumn ? eq(cols.createdByColumn, userId) : undefined;
-
-      case 'assigned':
-        return cols.assigneeColumn ? eq(cols.assigneeColumn, userId) : undefined;
-
-      case 'unit':
-      case 'descendants': {
-        if (!this.positionScopeProvider) return undefined;
-        const orConds: DrizzleSQL[] = [];
-        const userIds = await this.positionScopeProvider.resolveUserIds(userId, scope.type);
-        const unitIds = await this.positionScopeProvider.resolveOrgUnitIds(userId, scope.type);
-
-        if (userIds && userIds.length > 0) {
-          if (cols.createdByColumn) orConds.push(inArray(cols.createdByColumn, userIds));
-          if (cols.assigneeColumn) orConds.push(inArray(cols.assigneeColumn, userIds));
-        }
-        if (unitIds && unitIds.length > 0 && cols.teamColumn) {
-          orConds.push(inArray(cols.teamColumn, unitIds));
-        }
-        if (orConds.length === 0) return undefined;
-        if (orConds.length === 1) return orConds[0];
-        return or(...orConds)!;
-      }
-
-      default: {
-        // Delegate to entity-registered custom scope resolver.
-        const resolver = this.config.dataAccess?.scopes?.find((s) => s.key === scope.type);
-        if (resolver) return resolver.resolve(userId);
-        this.logger.warn(`Unknown data access scope type: ${scope.type}`);
-        return undefined;
-      }
+    const registered = this.scopeResolverRegistry.get(scope.type);
+    if (registered) {
+      const result = await registered.resolve({ userId, anchors }, scope.params);
+      return result ?? undefined;
     }
+
+    const inline = this.config.dataAccess?.scopes?.find((s) => s.key === scope.type);
+    if (inline) return inline.resolve(userId);
+
+    this.logger.warn(`Unknown data access scope type: ${scope.type}`);
+    return undefined;
+  }
+
+  /**
+   * Build the semantic anchor map for this entity from `dataAccess.anchors`.
+   * Each entry maps a role ('creator', 'assignee', 'team', ...) to the
+   * corresponding Drizzle column. Anchors referencing non-existent columns
+   * are dropped (defence-in-depth against config typos).
+   */
+  private buildAnchors(): ScopeAnchorMap {
+    const table = this.config.table as Record<string, PgColumn | undefined>;
+    const declared = this.config.dataAccess?.anchors ?? {};
+    const anchors: ScopeAnchorMap = {};
+    for (const [role, columnName] of Object.entries(declared)) {
+      const col = table[columnName];
+      if (col) anchors[role] = col;
+    }
+    return anchors;
   }
 
   // ---------------------------------------------------------------------------

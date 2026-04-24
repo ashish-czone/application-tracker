@@ -8,7 +8,7 @@ import { OrgUnitController } from './controllers/org-unit.controller';
 import { OrgUnitLevelController } from './controllers/org-unit-level.controller';
 import { OrgPositionController } from './controllers/org-position.controller';
 import { PermissionRegistryService, ScopeResolverRegistry } from '@packages/rbac';
-import { LookupResolverService, POSITION_SCOPE_PROVIDER } from '@packages/entity-engine';
+import { LookupResolverService } from '@packages/entity-engine';
 import { UserResolverRegistry, EntityResolverRegistry } from '@packages/automation-contracts';
 import { orgUnits } from './schema/org-units';
 import { OrgUnitHeadStrategy } from './automation-resolvers/org-unit-head.strategy';
@@ -28,12 +28,8 @@ import { UnitScopeResolver, DescendantsScopeResolver } from './scope-resolvers/h
     OrgUnitsUserLifecycleListener,
     UnitScopeResolver,
     DescendantsScopeResolver,
-    {
-      provide: POSITION_SCOPE_PROVIDER,
-      useExisting: PositionScopeResolverService,
-    },
   ],
-  exports: [OrgUnitService, OrgUnitLevelService, OrgPositionService, PositionScopeResolverService, POSITION_SCOPE_PROVIDER],
+  exports: [OrgUnitService, OrgUnitLevelService, OrgPositionService, PositionScopeResolverService],
 })
 export class OrgUnitsModule implements OnModuleInit {
   constructor(

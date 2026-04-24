@@ -1,20 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService, eq, inArray, sql } from '@packages/database';
 import { orgUnitMembers } from '../schema/org-unit-members';
-import type { PositionScopeProvider } from '../types';
 
 /**
- * Org-tree traversal utility used by hierarchical scopes (`unit`,
- * `descendants`) in the entity-engine access pipeline. Given an actor and a
- * scope level, it expands to the set of user IDs and org-unit IDs the actor
- * "covers" through the position tree.
+ * Org-tree traversal utility used by hierarchical scope resolvers (`unit`,
+ * `descendants`). Given an actor and a scope level, it expands to the set of
+ * user IDs and org-unit IDs the actor "covers" through the position tree.
  *
  * Scope authorisation rules live on role-permission grants; this service
- * supplies the raw tree expansion the enforcement layer needs to translate
+ * supplies the raw tree expansion the scope resolver needs to translate
  * `unit` / `descendants` into concrete WHERE IN lists.
  */
 @Injectable()
-export class PositionScopeResolverService implements PositionScopeProvider {
+export class PositionScopeResolverService {
   constructor(private readonly database: DatabaseService) {}
 
   /**
