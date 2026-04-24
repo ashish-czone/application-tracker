@@ -4,7 +4,7 @@ import { DomainEventEmitter } from '@packages/events';
 import { EntityService } from '@packages/entity-engine';
 import { complianceFilings } from '../../schema/compliance-filings';
 import { ComplianceRuleService } from '../../rules/compliance-rules.service';
-import { ClientRegistrationService } from '../../client-registrations/client-registrations.service';
+import { ClientRegistrationsService } from '../../client-registrations/client-registrations.service';
 import { ComplianceFilingsLookupService } from '../compliance-filings-lookup.service';
 import { buildFilingExternalKey } from '../compliance-filings.config';
 import { COMPLIANCE_FILING_GENERATED } from '../../events/types';
@@ -24,7 +24,7 @@ const HORIZON_MONTHS = 6;
 export const seedDemoFilings = async (ctx: INestApplicationContext): Promise<void> => {
   const database = ctx.get(DatabaseService);
   const ruleService = ctx.get(ComplianceRuleService);
-  const registrationService = ctx.get(ClientRegistrationService);
+  const registrationService = ctx.get(ClientRegistrationsService);
   const lookup = ctx.get(ComplianceFilingsLookupService);
   const entityService = ctx.get<EntityService>('ENTITY_SERVICE_compliance-filings');
   const events = ctx.get(DomainEventEmitter);

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
-import { ClientRegistrationService } from '../client-registrations.service';
+import { ClientRegistrationsService } from '../client-registrations.service';
 import type { DomainEventEmitter } from '@packages/events';
 import type { AppLoggerService } from '@packages/logger';
 import type { ComplianceFilingsCancellationService } from '../../compliance-filings/compliance-filings-cancellation.service';
@@ -30,11 +30,11 @@ function mockUpdate() {
   return chain;
 }
 
-describe('ClientRegistrationService', () => {
+describe('ClientRegistrationsService', () => {
   let db: { db: Record<string, ReturnType<typeof vi.fn>> };
   let events: { emitDynamic: ReturnType<typeof vi.fn> };
   let filingsCancellation: { cancelFilings: ReturnType<typeof vi.fn> };
-  let service: ClientRegistrationService;
+  let service: ClientRegistrationsService;
 
   const activeRow = {
     id: 'reg1',
@@ -61,7 +61,8 @@ describe('ClientRegistrationService', () => {
     };
     events = { emitDynamic: vi.fn() };
     filingsCancellation = { cancelFilings: vi.fn().mockResolvedValue(undefined) };
-    service = new ClientRegistrationService(
+    service = new ClientRegistrationsService(
+      {} as never,
       db as never,
       events as unknown as DomainEventEmitter,
       filingsCancellation as unknown as ComplianceFilingsCancellationService,

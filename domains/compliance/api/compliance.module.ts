@@ -17,7 +17,7 @@ import { ComplianceUsersPositionsReader } from './users/compliance-users-positio
 import { LawsModule } from './laws/laws.module';
 import { CLIENTS_CONFIG, setClientDormancyHandler } from './clients/clients.config';
 import { ClientContactsModule } from './client-contacts/client-contacts.module';
-import { CLIENT_REGISTRATIONS_CONFIG } from './client-registrations/client-registrations.config';
+import { ClientRegistrationsModule } from './client-registrations/client-registrations.module';
 import { COMPLIANCE_RULES_CONFIG, setRuleUpdateGuard } from './rules/rules.config';
 import { LawHandlersModule } from './law-handlers/law-handlers.module';
 // compliance-tasks/ is the pre-filings implementation — retained for reference
@@ -25,7 +25,6 @@ import { LawHandlersModule } from './law-handlers/law-handlers.module';
 import { COMPLIANCE_FILINGS_CONFIG } from './compliance-filings/compliance-filings.config';
 import { createOrganizationsEntityConfig } from './organizations/organizations.config';
 
-import { ClientRegistrationService } from './client-registrations/client-registrations.service';
 import { ClientsService } from './clients/clients.service';
 import { ClientContactsService } from './client-contacts/client-contacts.service';
 import { ClientsController } from './clients/clients.controller';
@@ -56,7 +55,7 @@ const ORGANIZATIONS_CONFIG = createOrganizationsEntityConfig({
     LawsModule,
     EntityEngineModule.forEntity(CLIENTS_CONFIG),
     ClientContactsModule,
-    EntityEngineModule.forEntity(CLIENT_REGISTRATIONS_CONFIG),
+    ClientRegistrationsModule,
     EntityEngineModule.forEntity(COMPLIANCE_RULES_CONFIG),
     LawHandlersModule,
     EntityEngineModule.forEntity(COMPLIANCE_FILINGS_CONFIG),
@@ -64,7 +63,6 @@ const ORGANIZATIONS_CONFIG = createOrganizationsEntityConfig({
   ],
   controllers: [ClientsController, ComplianceRulesController],
   providers: [
-    ClientRegistrationService,
     ClientsService,
     ComplianceRuleService,
     ComplianceFilingsLookupService,

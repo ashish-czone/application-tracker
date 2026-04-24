@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ClientsController } from '../clients.controller';
 import type { ClientsService } from '../clients.service';
 import type { ClientContactsService } from '../../client-contacts/client-contacts.service';
-import type { ClientRegistrationService } from '../../client-registrations/client-registrations.service';
+import type { ClientRegistrationsService } from '../../client-registrations/client-registrations.service';
 
 describe('ClientsController', () => {
   let clientsService: { createWithContacts: ReturnType<typeof vi.fn> };
@@ -25,7 +25,7 @@ describe('ClientsController', () => {
     controller = new ClientsController(
       clientsService as unknown as ClientsService,
       contactsService as unknown as ClientContactsService,
-      registrationsService as unknown as ClientRegistrationService,
+      registrationsService as unknown as ClientRegistrationsService,
     );
   });
 
@@ -81,7 +81,7 @@ describe('ClientsController', () => {
   });
 
   describe('createRegistrations', () => {
-    it('delegates to ClientRegistrationService.registerMany with the actor id', async () => {
+    it('delegates to ClientRegistrationsService.registerMany with the actor id', async () => {
       registrationsService.registerMany.mockResolvedValue([
         { id: 'r1', clientId: 'cid-1', lawId: 'l1', registeredAt: new Date(), deactivatedAt: null },
       ]);

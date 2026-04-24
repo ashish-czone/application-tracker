@@ -2,7 +2,7 @@ import type { INestApplicationContext } from '@nestjs/common';
 import { DatabaseService } from '@packages/database';
 import { clients } from '../../schema/clients';
 import { complianceClientRegistrations } from '../../schema/client-registrations';
-import { ClientRegistrationService } from '../client-registrations.service';
+import { ClientRegistrationsService } from '../client-registrations.service';
 
 /**
  * Each demo client registers against a curated mix of laws so the
@@ -28,7 +28,7 @@ export const seedDemoClientRegistrations = async (
   ctx: INestApplicationContext,
 ): Promise<void> => {
   const database = ctx.get(DatabaseService);
-  const registrationService = ctx.get(ClientRegistrationService);
+  const registrationService = ctx.get(ClientRegistrationsService);
 
   const [existing] = await database.db
     .select({ id: complianceClientRegistrations.id })

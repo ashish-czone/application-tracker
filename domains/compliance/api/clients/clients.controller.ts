@@ -3,7 +3,7 @@ import { RequirePermission } from '@packages/rbac';
 import { CurrentUser, type JwtPayload } from '@packages/auth';
 import { ClientsService } from './clients.service';
 import { ClientContactsService } from '../client-contacts/client-contacts.service';
-import { ClientRegistrationService } from '../client-registrations/client-registrations.service';
+import { ClientRegistrationsService } from '../client-registrations/client-registrations.service';
 import { CreateClientWithContactsDto } from './dto/create-with-contacts.dto';
 import { RegisterLawsDto } from './dto/register-laws.dto';
 import { DeactivateRegistrationDto } from './dto/deactivate-registration.dto';
@@ -19,7 +19,7 @@ export class ClientsController {
   constructor(
     private readonly clientsService: ClientsService,
     private readonly contactsService: ClientContactsService,
-    private readonly registrationsService: ClientRegistrationService,
+    private readonly registrationsService: ClientRegistrationsService,
   ) {}
 
   @Post('with-contacts')

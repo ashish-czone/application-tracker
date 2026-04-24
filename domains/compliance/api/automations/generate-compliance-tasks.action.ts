@@ -10,7 +10,7 @@ import type {
 } from '@packages/automation-contracts';
 
 import { ComplianceRuleService, type Occurrence } from '../rules/compliance-rules.service';
-import { ClientRegistrationService } from '../client-registrations/client-registrations.service';
+import { ClientRegistrationsService } from '../client-registrations/client-registrations.service';
 import { ComplianceTasksLookupService } from '../compliance-tasks/compliance-tasks-lookup.service';
 import { buildComplianceExternalKey } from '../compliance-tasks/compliance-tasks.config';
 import { COMPLIANCE_TASK_GENERATED } from '../events/types';
@@ -41,7 +41,7 @@ export class GenerateComplianceTasksAction implements ActionHandler {
 
   constructor(
     private readonly ruleService: ComplianceRuleService,
-    private readonly clientRegistrationService: ClientRegistrationService,
+    private readonly clientRegistrationService: ClientRegistrationsService,
     private readonly lookup: ComplianceTasksLookupService,
     @Inject('ENTITY_SERVICE_compliance-tasks')
     private readonly complianceTasks: EntityService,
