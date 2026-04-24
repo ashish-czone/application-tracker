@@ -1,5 +1,7 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { DatabaseService, and, count, eq, inArray, ne, not } from '@packages/database';
+import { EntityService, type BaseListQuery } from '@packages/entity-engine';
+import type { DataAccessContext } from '@packages/rbac';
 import { WorkflowEngineService, WorkflowRegistryService } from '@packages/workflows';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { FREQUENCIES, type ComplianceFrequency } from '@domains/compliance-contract';
@@ -8,6 +10,7 @@ import { complianceLawHandlers } from '../schema/law-handlers';
 import { complianceFilings } from '../schema/compliance-filings';
 import { LawHandlersService } from '../law-handlers/law-handlers.service';
 import { ComplianceFilingsCancellationService } from '../compliance-filings/compliance-filings-cancellation.service';
+import type { CreateComplianceRuleDto, UpdateComplianceRuleDto } from './compliance-rules.dto';
 
 const RULE_WORKFLOW_SLUG = 'compliance-rule-status';
 const TERMINAL_FILING_STATUSES = ['completed', 'cancelled'];
@@ -31,10 +34,10 @@ export class InvalidFrequencyError extends BadRequestException {
 }
 
 /**
- * I14: raised by the rule update guard when the caller tries to change a
- * rule-identity field (`code`, `frequency`, `lawId`) on a rule that has
- * already materialised at least one filing. The UI uses `fields` to mark the
- * offending inputs; message is the human-readable one-liner.
+ * I14: raised when the caller tries to change a rule-identity field
+ * (`code`, `frequency`, `lawId`) on a rule that has already materialised at
+ * least one filing. The UI uses `fields` to mark the offending inputs;
+ * message is the human-readable one-liner.
  *
  * Forward-only fields (`dueDayOfMonth`, `dueMonthOffset`, `gracePeriodDays`)
  * stay editable — they never raise this error. See Q9 for the per-field
@@ -75,18 +78,6 @@ export interface ComplianceRule {
   dueMonthOffset: number;
   gracePeriodDays: number;
   description: string | null;
-}
-
-export interface CreateComplianceRuleInput {
-  code: string;
-  name: string;
-  lawId: string;
-  frequency: ComplianceFrequency;
-  status?: ComplianceRuleStatus;
-  dueDayOfMonth: number;
-  dueMonthOffset?: number;
-  gracePeriodDays?: number;
-  description?: string | null;
 }
 
 export interface Occurrence {
@@ -135,11 +126,22 @@ function addMonths(year: number, month: number, n: number): { year: number; mont
   return { year: Math.floor(total / 12), month: (total % 12) + 1 };
 }
 
+/**
+ * Merged service: CRUD delegates for the entity engine + the programmatic
+ * domain helpers (expandRule, resolveAssignee, deprecate, I14/I15 edit
+ * guards) used by automations, seeds, and the custom controller.
+ *
+ * Create/update route through the engine (events + audit fire), gated by
+ * domain pre-checks: `create` verifies a default law handler exists, and
+ * `update` runs the I14 identity-field immutability guard once filings have
+ * been generated.
+ */
 @Injectable()
-export class ComplianceRuleService {
+export class ComplianceRulesService {
   private readonly logger: ContextLogger;
 
   constructor(
+    @Inject('ENTITY_SERVICE_compliance-rules') private readonly entityService: EntityService,
     private readonly database: DatabaseService,
     private readonly lawHandlers: LawHandlersService,
     private readonly workflowEngine: WorkflowEngineService,
@@ -147,31 +149,60 @@ export class ComplianceRuleService {
     private readonly filingsCancellation: ComplianceFilingsCancellationService,
     appLogger: AppLoggerService,
   ) {
-    this.logger = appLogger.forContext(ComplianceRuleService.name);
+    this.logger = appLogger.forContext(ComplianceRulesService.name);
   }
 
-  async create(input: CreateComplianceRuleInput): Promise<ComplianceRule> {
-    assertFrequency(input.frequency);
-    const hasHandler = await this.lawHandlers.hasDefaultHandler(input.lawId);
-    if (!hasHandler) {
-      throw new NoDefaultHandlerError(input.lawId);
-    }
-    const [row] = await this.database.db
-      .insert(complianceRules)
-      .values({
-        code: input.code,
-        name: input.name,
-        lawId: input.lawId,
-        frequency: input.frequency,
-        status: input.status ?? 'draft',
-        dueDayOfMonth: input.dueDayOfMonth,
-        dueMonthOffset: input.dueMonthOffset ?? 0,
-        gracePeriodDays: input.gracePeriodDays ?? 0,
-        description: input.description ?? null,
-      })
-      .returning();
-    return this.toRule(row);
+  // ---- CRUD delegates (vendors template) -----------------------------------
+
+  list(query: BaseListQuery, accessCtx?: DataAccessContext) {
+    return this.entityService.list(query, accessCtx);
   }
+
+  findOne(id: string, accessCtx?: DataAccessContext) {
+    return this.entityService.findOneOrFail(id, accessCtx);
+  }
+
+  async create(input: CreateComplianceRuleDto, actorId: string) {
+    if (input.frequency !== undefined) {
+      assertFrequency(input.frequency as string);
+    }
+    const hasHandler = await this.lawHandlers.hasDefaultHandler(input.lawId as string);
+    if (!hasHandler) {
+      throw new NoDefaultHandlerError(input.lawId as string);
+    }
+    return this.entityService.create(input, actorId);
+  }
+
+  async update(
+    id: string,
+    input: UpdateComplianceRuleDto,
+    actorId: string,
+    accessCtx?: DataAccessContext,
+  ) {
+    if (input.frequency !== undefined) {
+      assertFrequency(input.frequency as string);
+    }
+    await this.assertUpdateAllowed(id, input as Record<string, unknown>);
+    return this.entityService.update(id, input, actorId, accessCtx);
+  }
+
+  softDelete(id: string, actorId: string, accessCtx?: DataAccessContext) {
+    return this.entityService.softDelete(id, actorId, accessCtx);
+  }
+
+  clone(id: string, actorId: string) {
+    return this.entityService.clone(id, actorId);
+  }
+
+  restore(id: string) {
+    return this.entityService.restore(id);
+  }
+
+  getListLayout() {
+    return this.entityService.getListLayout();
+  }
+
+  // ---- Domain queries & lifecycle ------------------------------------------
 
   async findActive(): Promise<ComplianceRule[]> {
     const rows = await this.database.db
@@ -179,52 +210,6 @@ export class ComplianceRuleService {
       .from(complianceRules)
       .where(ne(complianceRules.status, 'deprecated'));
     return rows.map((r) => this.toRule(r));
-  }
-
-  /**
-   * Domain update path used by the compliance-rules custom controller. Runs
-   * the I14 guard, writes allowed fields, and returns the fresh row.
-   *
-   * Status is excluded — workflow transitions flow through the workflow
-   * engine (draft → active → deprecated), not PATCH. `deprecate()` is the
-   * dedicated endpoint for deprecation.
-   *
-   * The same guard is also wired as a `beforeUpdate` hook on the entity
-   * config (defense-in-depth) so callers hitting the generic CRUD path
-   * still get the 400. The custom controller is the preferred UI entry
-   * point because the UI needs a single mutation to invalidate together.
-   */
-  async update(
-    id: string,
-    input: Partial<Pick<CreateComplianceRuleInput, 'code' | 'name' | 'lawId' | 'frequency' | 'dueDayOfMonth' | 'dueMonthOffset' | 'gracePeriodDays' | 'description'>>,
-  ): Promise<ComplianceRule> {
-    const existing = await this.findById(id);
-    if (!existing) {
-      throw new NotFoundException(`Rule ${id} not found`);
-    }
-    if (input.frequency !== undefined) {
-      assertFrequency(input.frequency);
-    }
-    await this.assertUpdateAllowed(id, input as Record<string, unknown>);
-
-    const patch: Record<string, unknown> = {};
-    if (input.code !== undefined) patch.code = input.code;
-    if (input.name !== undefined) patch.name = input.name;
-    if (input.lawId !== undefined) patch.lawId = input.lawId;
-    if (input.frequency !== undefined) patch.frequency = input.frequency;
-    if (input.dueDayOfMonth !== undefined) patch.dueDayOfMonth = input.dueDayOfMonth;
-    if (input.dueMonthOffset !== undefined) patch.dueMonthOffset = input.dueMonthOffset;
-    if (input.gracePeriodDays !== undefined) patch.gracePeriodDays = input.gracePeriodDays;
-    if (input.description !== undefined) patch.description = input.description;
-
-    if (Object.keys(patch).length === 0) return existing;
-
-    const [row] = await this.database.db
-      .update(complianceRules)
-      .set(patch)
-      .where(eq(complianceRules.id, id))
-      .returning();
-    return this.toRule(row);
   }
 
   async findById(id: string): Promise<ComplianceRule | null> {
@@ -256,9 +241,9 @@ export class ComplianceRuleService {
   }
 
   /**
-   * I13 + I15: what the edit form needs to know before rendering. Boolean +
-   * count pair — the boolean drives the identity-field disable state; the
-   * count is displayed in the forward-only save dialog ("N filings already
+   * I13 + I15: what the edit form needs to know before rendering.
+   * `hasGeneratedFilings` drives the identity-field disable state; the count
+   * is displayed in the forward-only save dialog ("N filings already
    * generated will keep their current due dates").
    */
   async getEditConstraints(ruleId: string): Promise<{
@@ -283,16 +268,16 @@ export class ComplianceRuleService {
   }
 
   /**
-   * I14: guard invoked from the `beforeUpdate` hook on `COMPLIANCE_RULES_CONFIG`.
-   * When the payload touches an identity field (`code`, `frequency`, `lawId`)
-   * AND the rule already has filings AND the new value is actually different
-   * from the current value, throw ImmutableRuleFieldError. Same-value writes
-   * pass through so idempotent PATCHes don't 400 spuriously.
+   * I14 identity-field guard. When the payload touches an identity field
+   * (`code`, `frequency`, `lawId`) AND the rule already has filings AND the
+   * new value is actually different from the current value, throw
+   * ImmutableRuleFieldError. Same-value writes pass through so idempotent
+   * PATCHes don't 400 spuriously.
    *
    * Forward-only fields (`dueDayOfMonth`, `dueMonthOffset`, `gracePeriodDays`)
-   * are explicitly allowed by this guard — Q9 keeps them editable and relies
-   * on the generator being a pure no-op on conflict (I16) to hold the
-   * forward-only invariant without needing a server-side shift.
+   * are explicitly allowed — Q9 keeps them editable and relies on the
+   * generator being a pure no-op on conflict (I16) to hold the forward-only
+   * invariant without needing a server-side shift.
    */
   async assertUpdateAllowed(id: string, payload: Record<string, unknown>): Promise<void> {
     const touched = IMMUTABLE_RULE_IDENTITY_FIELDS.filter((k) => k in payload);
@@ -398,7 +383,7 @@ export class ComplianceRuleService {
 
       await this.workflowEngine.recordHistory({
         workflowDefinitionId: definition.id,
-        entityType: 'compliance_rules',
+        entityType: 'compliance-rules',
         entityId: ruleId,
         fieldName: 'status',
         fromState: rule.status,

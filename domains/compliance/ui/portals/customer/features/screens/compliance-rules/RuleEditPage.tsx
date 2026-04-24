@@ -26,7 +26,7 @@ import {
   useUpdateComplianceRule,
 } from './api/useComplianceRulesApi';
 
-const ENTITY_TYPE = 'compliance_rules';
+const ENTITY_TYPE = 'compliance-rules';
 const IMMUTABLE_IDENTITY_FIELDS = ['code', 'frequency', 'lawId'] as const;
 const FORWARD_ONLY_MATH_FIELDS = ['dueDayOfMonth', 'dueMonthOffset', 'gracePeriodDays'] as const;
 

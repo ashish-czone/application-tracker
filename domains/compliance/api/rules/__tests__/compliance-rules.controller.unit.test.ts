@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ComplianceRulesController } from '../compliance-rules.controller';
-import type { ComplianceRuleService } from '../compliance-rules.service';
+import type { ComplianceRulesService } from '../compliance-rules.service';
 
 describe('ComplianceRulesController', () => {
   let rules: {
@@ -14,22 +14,22 @@ describe('ComplianceRulesController', () => {
       previewDeprecation: vi.fn().mockResolvedValue({ ruleId: 'r1', inFlightFilingCount: 3 }),
       deprecate: vi.fn().mockResolvedValue({ ruleId: 'r1', cancelledFilingIds: [] }),
     };
-    controller = new ComplianceRulesController(rules as unknown as ComplianceRuleService);
+    controller = new ComplianceRulesController(rules as unknown as ComplianceRulesService);
   });
 
   describe('previewDeprecation', () => {
-    it('delegates to ComplianceRuleService.previewDeprecation', async () => {
+    it('delegates to ComplianceRulesService.previewDeprecation', async () => {
       const result = await controller.previewDeprecation('r1');
       expect(rules.previewDeprecation).toHaveBeenCalledWith('r1');
       expect(result.inFlightFilingCount).toBe(3);
     });
 
-    it('requires compliance_rules.update permission', () => {
+    it('requires compliance-rules.update permission', () => {
       const permission = Reflect.getMetadata(
         'requiredPermission',
         ComplianceRulesController.prototype.previewDeprecation,
       );
-      expect(permission).toBe('compliance_rules.update');
+      expect(permission).toBe('compliance-rules.update');
     });
   });
 
@@ -56,12 +56,12 @@ describe('ComplianceRulesController', () => {
       });
     });
 
-    it('requires compliance_rules.update permission', () => {
+    it('requires compliance-rules.update permission', () => {
       const permission = Reflect.getMetadata(
         'requiredPermission',
         ComplianceRulesController.prototype.deprecate,
       );
-      expect(permission).toBe('compliance_rules.update');
+      expect(permission).toBe('compliance-rules.update');
     });
   });
 });

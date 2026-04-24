@@ -115,7 +115,7 @@ export interface ComplianceFilingsResult {
 
 export function useComplianceFilingRows(): ComplianceFilingsResult {
   const { apiFn } = useEntityEngine();
-  const rulesHooks = useEntityHooks('compliance_rules');
+  const rulesHooks = useEntityHooks('compliance-rules');
   const lawsHooks = useEntityHooks('laws');
   const clientsHooks = useEntityHooks('clients');
 

@@ -29,7 +29,7 @@ function makeRule(overrides: Partial<ComplianceRule> = {}): ComplianceRule {
 
 function ctxFor(ruleId: string | undefined): never {
   return {
-    event: ruleId ? { entityId: ruleId, entityType: 'compliance_rules', eventName: '', actorId: null, correlationId: '', payload: {} } : undefined,
+    event: ruleId ? { entityId: ruleId, entityType: 'compliance-rules', eventName: '', actorId: null, correlationId: '', payload: {} } : undefined,
     resolvedUsers: {},
   } as never;
 }

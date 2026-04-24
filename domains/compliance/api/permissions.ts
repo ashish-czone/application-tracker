@@ -4,7 +4,7 @@ import type { PermissionManifest } from '@packages/rbac';
  * Compliance domain permission constants.
  *
  * The entity-engine auto-registers CRUD permissions for every declared entity
- * (clients, client-contacts, client-registrations, laws, compliance_rules,
+ * (clients, client-contacts, client-registrations, laws, compliance-rules,
  * law-handlers — see compliance.module.ts). The constants below cover the UI
  * surfaces that don't yet have backing entities (filings, reports). Once
  * those become real entities, the auto-registered CRUD perms supersede these

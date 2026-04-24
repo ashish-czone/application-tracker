@@ -12,10 +12,10 @@ import { roles, RbacService, type ScopeSpec } from '@packages/rbac';
  * Slug alignment notes (diverges from Q15's doc wording):
  *  - Q15 uses `view` everywhere; the engine registers `read`.
  *  - Q15 uses a `compliance.` prefix; the engine does not.
- *  - Entity slug casing is mixed (hyphen for some, underscore for others):
- *      `client-contacts`, `client-registrations`, `compliance-filings` — hyphen
- *      `compliance_rules`, `law-handlers`                   — underscore
- *    We seed against the slugs the engine actually registers.
+ *  - Every compliance entity slug is hyphenated (`client-contacts`,
+ *    `client-registrations`, `compliance-filings`, `compliance-rules`,
+ *    `law-handlers`) — we seed against the slugs the engine actually
+ *    registers.
  *
  * Roles are scoped to `userType: null` — they apply to any user type.
  *
@@ -80,7 +80,7 @@ const REFERENCE_READS: GrantSpec[] = [
   { name: 'client-contacts.read',      scopes: ANY },
   { name: 'client-registrations.read', scopes: ANY },
   { name: 'laws.read',                 scopes: ANY },
-  { name: 'compliance_rules.read',     scopes: ANY },
+  { name: 'compliance-rules.read',     scopes: ANY },
 ];
 
 // ── Preparer ───────────────────────────────────────────────────────────────
@@ -112,7 +112,7 @@ const REVIEWER_PERMISSIONS: GrantSpec[] = [
 // Full filing lifecycle inside their unit(s): read/create/update/delete and
 // every workflow transition. Outside filings, they manage the firm-wide
 // reference data used by their team (clients + contacts + registrations and
-// compliance_rules). They don't cross legal-entity boundaries — but at the
+// compliance-rules). They don't cross legal-entity boundaries — but at the
 // data model level that's still `any`; unit-scoped reference data would be
 // a separate feature.
 const TEAM_LEAD_PERMISSIONS: GrantSpec[] = [
@@ -137,9 +137,9 @@ const TEAM_LEAD_PERMISSIONS: GrantSpec[] = [
   { name: 'client-registrations.create', scopes: ANY },
   { name: 'client-registrations.update', scopes: ANY },
   { name: 'laws.read',                   scopes: ANY },
-  { name: 'compliance_rules.read',       scopes: ANY },
-  { name: 'compliance_rules.create',     scopes: ANY },
-  { name: 'compliance_rules.update',     scopes: ANY },
+  { name: 'compliance-rules.read',       scopes: ANY },
+  { name: 'compliance-rules.create',     scopes: ANY },
+  { name: 'compliance-rules.update',     scopes: ANY },
 ];
 
 // ── Firm Admin ─────────────────────────────────────────────────────────────
@@ -172,10 +172,10 @@ const FIRM_ADMIN_PERMISSIONS: GrantSpec[] = [
   { name: 'laws.create',                   scopes: ANY },
   { name: 'laws.update',                   scopes: ANY },
   { name: 'laws.delete',                   scopes: ANY },
-  { name: 'compliance_rules.read',         scopes: ANY },
-  { name: 'compliance_rules.create',       scopes: ANY },
-  { name: 'compliance_rules.update',       scopes: ANY },
-  { name: 'compliance_rules.delete',       scopes: ANY },
+  { name: 'compliance-rules.read',         scopes: ANY },
+  { name: 'compliance-rules.create',       scopes: ANY },
+  { name: 'compliance-rules.update',       scopes: ANY },
+  { name: 'compliance-rules.delete',       scopes: ANY },
   { name: 'law-handlers.read',   scopes: ANY },
   { name: 'law-handlers.create', scopes: ANY },
   { name: 'law-handlers.update', scopes: ANY },

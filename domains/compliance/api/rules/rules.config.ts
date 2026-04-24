@@ -1,29 +1,9 @@
 import { defineEntity } from '@packages/entity-engine';
 import { complianceRules } from '../schema/rules';
 
-/**
- * Late-bound update guard (I14). `COMPLIANCE_RULES_CONFIG` is evaluated at
- * module-load time — before Nest can DI the service in — so the hook
- * reaches through this indirection, identical to the pattern used by
- * `setClientDormancyHandler` in clients.config.ts. Wired in
- * `ComplianceDomainModule.onModuleInit` via `setRuleUpdateGuard()`.
- *
- * Leaving the guard unset is fine: the hook short-circuits to a pass-through,
- * matching platform pre-I14 behaviour. This keeps unit tests on the config
- * trivial and lets other apps that import the config run without the guard
- * wired, if they ever want to.
- */
-export interface RuleUpdateGuard {
-  assertUpdateAllowed(id: string, payload: Record<string, unknown>): Promise<void>;
-}
-let ruleUpdateGuardRef: RuleUpdateGuard | null = null;
-export function setRuleUpdateGuard(g: RuleUpdateGuard): void {
-  ruleUpdateGuardRef = g;
-}
-
 export const COMPLIANCE_RULES_CONFIG = defineEntity({
   table: complianceRules,
-  slug: 'compliance_rules',
+  slug: 'compliance-rules',
   singularName: 'Compliance Rule',
   pluralName: 'Compliance Rules',
   onDelete: { mode: 'hard' },
@@ -130,17 +110,5 @@ export const COMPLIANCE_RULES_CONFIG = defineEntity({
     navGroup: 'compliance',
     navOrder: 3,
     createMode: 'modal',
-  },
-
-  hooks: {
-    // I14: block identity-field edits once filings have been generated.
-    // Returns the payload unchanged on pass-through; throws
-    // `ImmutableRuleFieldError` (400) when the guard fires.
-    beforeUpdate: async (id, payload) => {
-      if (ruleUpdateGuardRef) {
-        await ruleUpdateGuardRef.assertUpdateAllowed(id, payload);
-      }
-      return payload;
-    },
   },
 });

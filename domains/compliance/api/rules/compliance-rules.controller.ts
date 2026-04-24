@@ -1,24 +1,50 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Patch, Post } from '@nestjs/common';
-import { RequirePermission } from '@packages/rbac';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { CurrentUser, type JwtPayload } from '@packages/auth';
-import { ComplianceRuleService } from './compliance-rules.service';
-import { DeprecateRuleDto } from './dto/deprecate-rule.dto';
-import { UpdateComplianceRuleDto } from './dto/update-rule.dto';
+import {
+  AccessContext,
+  RequirePermission,
+  type DataAccessContext,
+} from '@packages/rbac';
+import { ComplianceRulesService } from './compliance-rules.service';
+import {
+  CreateComplianceRuleSchema,
+  DeprecateComplianceRuleSchema,
+  UpdateComplianceRuleSchema,
+} from './compliance-rules.dto';
 
-/**
- * Rule-level lifecycle endpoints that layer on top of the generic
- * entity-engine controller auto-registered for `compliance_rules`. The
- * preview + deprecate cascade (I8-I10) cannot be expressed through the
- * generic workflow-transition endpoint because it carries a domain-specific
- * opt-in flag (`alsoCancelInFlight`) and needs atomic fan-out to filings.
- *
- * URL slug intentionally mirrors the entity slug (`compliance-rules`) with
- * hyphens; generic CRUD lives at `/compliance_rules` underscore-path via
- * the entity engine.
- */
 @Controller('compliance-rules')
 export class ComplianceRulesController {
-  constructor(private readonly rules: ComplianceRuleService) {}
+  constructor(private readonly rules: ComplianceRulesService) {}
+
+  @Get('layout/list')
+  @RequirePermission('compliance-rules.read')
+  getListLayout() {
+    return this.rules.getListLayout();
+  }
+
+  @Get()
+  @RequirePermission('compliance-rules.read')
+  list(@Query() query: Record<string, unknown>, @AccessContext() accessCtx?: DataAccessContext) {
+    const parsed = {
+      ...query,
+      page: query.page ? Number(query.page) : undefined,
+      limit: query.limit ? Number(query.limit) : undefined,
+      includeDeleted: query.includeDeleted === 'true',
+    };
+    return this.rules.list(parsed, accessCtx);
+  }
 
   /**
    * Preview what would happen if the rule were deprecated right now. Feeds
@@ -28,8 +54,8 @@ export class ComplianceRulesController {
    * endpoint so preview counts don't leak to users who can't actually act.
    */
   @Get(':id/deprecation-preview')
-  @RequirePermission('compliance_rules.update')
-  async previewDeprecation(@Param('id', ParseUUIDPipe) id: string) {
+  @RequirePermission('compliance-rules.update')
+  previewDeprecation(@Param('id', ParseUUIDPipe) id: string) {
     return this.rules.previewDeprecation(id);
   }
 
@@ -41,43 +67,77 @@ export class ComplianceRulesController {
    * since a user who can't update shouldn't be computing edit constraints.
    */
   @Get(':id/edit-constraints')
-  @RequirePermission('compliance_rules.update')
-  async getEditConstraints(@Param('id', ParseUUIDPipe) id: string) {
+  @RequirePermission('compliance-rules.update')
+  getEditConstraints(@Param('id', ParseUUIDPipe) id: string) {
     return this.rules.getEditConstraints(id);
+  }
+
+  @Get(':id')
+  @RequirePermission('compliance-rules.read')
+  findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+    @AccessContext() accessCtx?: DataAccessContext,
+  ) {
+    return this.rules.findOne(id, accessCtx);
+  }
+
+  @Post()
+  @RequirePermission('compliance-rules.create')
+  @HttpCode(HttpStatus.CREATED)
+  create(@Body() body: unknown, @CurrentUser() user: JwtPayload) {
+    const input = CreateComplianceRuleSchema.parse(body);
+    return this.rules.create(input, user.userId);
+  }
+
+  @Patch(':id')
+  @RequirePermission('compliance-rules.update')
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: unknown,
+    @CurrentUser() user: JwtPayload,
+    @AccessContext() accessCtx?: DataAccessContext,
+  ) {
+    const input = UpdateComplianceRuleSchema.parse(body);
+    return this.rules.update(id, input, user.userId, accessCtx);
+  }
+
+  @Delete(':id')
+  @RequirePermission('compliance-rules.delete')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async delete(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: JwtPayload,
+    @AccessContext() accessCtx?: DataAccessContext,
+  ) {
+    await this.rules.softDelete(id, user.userId, accessCtx);
+  }
+
+  @Post(':id/clone')
+  @RequirePermission('compliance-rules.create')
+  @HttpCode(HttpStatus.CREATED)
+  clone(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: JwtPayload) {
+    return this.rules.clone(id, user.userId);
+  }
+
+  @Post(':id/restore')
+  @RequirePermission('compliance-rules.update')
+  restore(@Param('id', ParseUUIDPipe) id: string) {
+    return this.rules.restore(id);
   }
 
   @Post(':id/deprecate')
   @HttpCode(HttpStatus.OK)
-  @RequirePermission('compliance_rules.update')
-  async deprecate(
+  @RequirePermission('compliance-rules.update')
+  deprecate(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: DeprecateRuleDto,
+    @Body() body: unknown,
     @CurrentUser() user: JwtPayload,
   ) {
+    const dto = DeprecateComplianceRuleSchema.parse(body);
     return this.rules.deprecate(id, {
       alsoCancelInFlight: dto.alsoCancelInFlight,
       actorId: user.userId,
       comment: dto.comment,
     });
-  }
-
-  /**
-   * Domain PATCH route used by the custom rule edit form. Runs the I14
-   * identity-field guard in the service and returns the updated rule.
-   * Mirrors the generic `/compliance_rules/:id` controller path but keeps
-   * the rule-specific surface (preview / deprecate / constraints / update)
-   * on one URL root so the UI invalidates a single query family.
-   *
-   * The same guard is also wired as `beforeUpdate` on the entity config so
-   * callers hitting the generic route still get blocked — this endpoint is
-   * a convenience, not the sole enforcement point.
-   */
-  @Patch(':id')
-  @RequirePermission('compliance_rules.update')
-  async update(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: UpdateComplianceRuleDto,
-  ) {
-    return this.rules.update(id, dto);
   }
 }

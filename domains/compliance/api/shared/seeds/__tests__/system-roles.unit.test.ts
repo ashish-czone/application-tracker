@@ -48,7 +48,7 @@ describe('COMPLIANCE_ROLES seed', () => {
     });
 
     it('reads firm-wide reference data (clients, laws, rules) with any scope', () => {
-      for (const perm of ['clients.read', 'laws.read', 'compliance_rules.read']) {
+      for (const perm of ['clients.read', 'laws.read', 'compliance-rules.read']) {
         expect(scopeTypesFor('Preparer', perm)).toEqual(['any']);
       }
     });
@@ -99,7 +99,7 @@ describe('COMPLIANCE_ROLES seed', () => {
       for (const perm of [
         'clients.read', 'clients.create', 'clients.update',
         'client-contacts.create', 'client-contacts.update', 'client-contacts.delete',
-        'compliance_rules.create', 'compliance_rules.update',
+        'compliance-rules.create', 'compliance-rules.update',
       ]) {
         expect(scopeTypesFor('Team Lead', perm)).toEqual(['any']);
       }
@@ -107,7 +107,7 @@ describe('COMPLIANCE_ROLES seed', () => {
 
     it('does not grant client/registration/law delete (Firm Admin only)', () => {
       const granted = grants('Team Lead').map((p) => p.name);
-      for (const perm of ['clients.delete', 'laws.delete', 'compliance_rules.delete']) {
+      for (const perm of ['clients.delete', 'laws.delete', 'compliance-rules.delete']) {
         expect(granted).not.toContain(perm);
       }
     });
@@ -132,7 +132,7 @@ describe('COMPLIANCE_ROLES seed', () => {
         'client-contacts.delete',
         'client-registrations.delete',
         'laws.delete',
-        'compliance_rules.delete',
+        'compliance-rules.delete',
         'law-handlers.delete',
       ]) {
         expect(granted).toContain(perm);

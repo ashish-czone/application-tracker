@@ -4,7 +4,7 @@ import { DomainEventEmitter } from '@packages/events';
 import { EntityService } from '@packages/entity-engine';
 import { tasks } from '@packages/tasks';
 import { complianceTasks } from '../../schema/compliance-tasks';
-import { ComplianceRuleService } from '../../rules/compliance-rules.service';
+import { ComplianceRulesService } from '../../rules/compliance-rules.service';
 import { ClientRegistrationsService } from '../../client-registrations/client-registrations.service';
 import { ComplianceTasksLookupService } from '../../compliance-tasks/compliance-tasks-lookup.service';
 import { buildComplianceExternalKey } from '../../compliance-tasks/compliance-tasks.config';
@@ -21,7 +21,7 @@ const HORIZON_MONTHS = 6;
 
 export const seedDemoTasks = async (ctx: INestApplicationContext): Promise<void> => {
   const database = ctx.get(DatabaseService);
-  const ruleService = ctx.get(ComplianceRuleService);
+  const ruleService = ctx.get(ComplianceRulesService);
   const registrationService = ctx.get(ClientRegistrationsService);
   const lookup = ctx.get(ComplianceTasksLookupService);
   const entityService = ctx.get<EntityService>('ENTITY_SERVICE_compliance-tasks');
@@ -86,7 +86,7 @@ export const seedDemoTasks = async (ctx: INestApplicationContext): Promise<void>
         );
 
         events.emitDynamic(COMPLIANCE_TASK_GENERATED, {
-          entityType: 'compliance_rules',
+          entityType: 'compliance-rules',
           entityId: rule.id,
           actorId: null,
           payload: {

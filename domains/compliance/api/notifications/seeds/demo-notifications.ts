@@ -154,7 +154,7 @@ export const seedDemoNotifications = async (ctx: INestApplicationContext): Promi
       body: 'TDS Section 194Q (High-Value Purchases) added to the rule library by Deepak Iyer.',
       isRead: true,
       eventName: 'compliance-rules.created',
-      entityType: 'compliance_rules',
+      entityType: 'compliance-rules',
       entityId: null,
       createdAt: daysAgo(2.8),
     },

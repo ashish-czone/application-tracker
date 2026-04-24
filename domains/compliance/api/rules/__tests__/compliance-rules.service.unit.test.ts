@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { NotFoundException } from '@nestjs/common';
 import {
-  ComplianceRuleService,
+  ComplianceRulesService,
   NoDefaultHandlerError,
   AmbiguousHandlerError,
   InvalidFrequencyError,
@@ -56,13 +56,23 @@ function makeRule(overrides: Partial<ComplianceRule> = {}): ComplianceRule {
   };
 }
 
-describe('ComplianceRuleService', () => {
+describe('ComplianceRulesService', () => {
+  let entityService: {
+    list: ReturnType<typeof vi.fn>;
+    findOneOrFail: ReturnType<typeof vi.fn>;
+    create: ReturnType<typeof vi.fn>;
+    update: ReturnType<typeof vi.fn>;
+    softDelete: ReturnType<typeof vi.fn>;
+    clone: ReturnType<typeof vi.fn>;
+    restore: ReturnType<typeof vi.fn>;
+    getListLayout: ReturnType<typeof vi.fn>;
+  };
   let db: { db: Record<string, ReturnType<typeof vi.fn>> };
   let lawHandlers: { hasDefaultHandler: ReturnType<typeof vi.fn> };
   let workflowEngine: { recordHistory: ReturnType<typeof vi.fn> };
   let workflowRegistry: { getBySlug: ReturnType<typeof vi.fn> };
   let filingsCancellation: { cancelFilings: ReturnType<typeof vi.fn> };
-  let service: ComplianceRuleService;
+  let service: ComplianceRulesService;
 
   const ruleWorkflowDef = {
     id: 'wf-def-rule-status',
@@ -80,6 +90,16 @@ describe('ComplianceRuleService', () => {
   } as unknown as AppLoggerService;
 
   beforeEach(() => {
+    entityService = {
+      list: vi.fn(),
+      findOneOrFail: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      softDelete: vi.fn(),
+      clone: vi.fn(),
+      restore: vi.fn(),
+      getListLayout: vi.fn(),
+    };
     db = {
       db: {
         select: vi.fn(),
@@ -92,7 +112,8 @@ describe('ComplianceRuleService', () => {
     workflowEngine = { recordHistory: vi.fn().mockResolvedValue({ historyId: 'h', recordedAt: '' }) };
     workflowRegistry = { getBySlug: vi.fn().mockReturnValue(ruleWorkflowDef) };
     filingsCancellation = { cancelFilings: vi.fn().mockResolvedValue(undefined) };
-    service = new ComplianceRuleService(
+    service = new ComplianceRulesService(
+      entityService as never,
       db as never,
       lawHandlers as never,
       workflowEngine as unknown as WorkflowEngineService,
@@ -110,44 +131,46 @@ describe('ComplianceRuleService', () => {
     it('throws NoDefaultHandlerError when the law has no global handler', async () => {
       lawHandlers.hasDefaultHandler.mockResolvedValue(false);
       await expect(
-        service.create({
-          code: 'X', name: 'x', lawId: 'l1', frequency: 'monthly', dueDayOfMonth: 20,
-        }),
+        service.create(
+          { code: 'X', name: 'x', lawId: 'l1', frequency: 'monthly', dueDayOfMonth: 20 } as never,
+          'u1',
+        ),
       ).rejects.toBeInstanceOf(NoDefaultHandlerError);
-      expect(db.db.insert).not.toHaveBeenCalled();
+      expect(entityService.create).not.toHaveBeenCalled();
     });
 
     it('throws InvalidFrequencyError when frequency is not in the FREQUENCIES enum', async () => {
       lawHandlers.hasDefaultHandler.mockResolvedValue(true);
       await expect(
-        service.create({
-          code: 'X',
-          name: 'x',
-          lawId: 'l1',
-          frequency: 'biweekly' as never,
-          dueDayOfMonth: 20,
-        }),
+        service.create(
+          {
+            code: 'X',
+            name: 'x',
+            lawId: 'l1',
+            frequency: 'biweekly',
+            dueDayOfMonth: 20,
+          } as never,
+          'u1',
+        ),
       ).rejects.toBeInstanceOf(InvalidFrequencyError);
-      expect(db.db.insert).not.toHaveBeenCalled();
+      expect(entityService.create).not.toHaveBeenCalled();
       expect(lawHandlers.hasDefaultHandler).not.toHaveBeenCalled();
     });
 
-    it('inserts when a default handler exists', async () => {
+    it('delegates to entityService.create when a default handler exists', async () => {
       lawHandlers.hasDefaultHandler.mockResolvedValue(true);
-      const insertChain = mockInsertReturning({
-        id: 'r1', code: 'X', name: 'x', lawId: 'l1', frequency: 'monthly',
-        status: 'draft',
-        dueDayOfMonth: 20, dueMonthOffset: 1, gracePeriodDays: 0,
-        description: null,
-      });
-      db.db.insert.mockReturnValue(insertChain);
+      entityService.create.mockResolvedValue({ id: 'r1', code: 'X', status: 'draft' });
 
-      const result = await service.create({
-        code: 'X', name: 'x', lawId: 'l1', frequency: 'monthly', dueDayOfMonth: 20, dueMonthOffset: 1,
-      });
+      const result = await service.create(
+        { code: 'X', name: 'x', lawId: 'l1', frequency: 'monthly', dueDayOfMonth: 20, dueMonthOffset: 1 } as never,
+        'u1',
+      );
 
-      expect(result.id).toBe('r1');
-      expect(result.status).toBe('draft');
+      expect(entityService.create).toHaveBeenCalledWith(
+        expect.objectContaining({ code: 'X', lawId: 'l1', frequency: 'monthly' }),
+        'u1',
+      );
+      expect((result as { id: string }).id).toBe('r1');
     });
   });
 
@@ -577,7 +600,7 @@ describe('ComplianceRuleService', () => {
       expect(workflowEngine.recordHistory).toHaveBeenCalledTimes(1);
       expect(workflowEngine.recordHistory).toHaveBeenCalledWith(
         expect.objectContaining({
-          entityType: 'compliance_rules',
+          entityType: 'compliance-rules',
           entityId: 'r1',
           fromState: 'active',
           toState: 'deprecated',
