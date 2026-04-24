@@ -146,6 +146,28 @@ describe('UsersService (thin)', () => {
       expect(ctx.entityService.softDelete).toHaveBeenCalledWith('u1', 'actor-1', { userId: 'admin' });
     });
 
+    it('softDelete calls cleanupOnSoftDelete before stamping the user row', async () => {
+      const ctx = buildService();
+      const order: string[] = [];
+      (ctx.service as any).cleanupOnSoftDelete = async () => {
+        order.push('cleanup');
+      };
+      ctx.entityService.softDelete.mockImplementation(async () => {
+        order.push('softDelete');
+      });
+      await ctx.service.softDelete('u1', 'actor-1');
+      expect(order).toEqual(['cleanup', 'softDelete']);
+    });
+
+    it('softDelete aborts if cleanupOnSoftDelete throws — user row is not stamped', async () => {
+      const ctx = buildService();
+      (ctx.service as any).cleanupOnSoftDelete = async () => {
+        throw new Error('cleanup failed');
+      };
+      await expect(ctx.service.softDelete('u1', 'actor-1')).rejects.toThrow('cleanup failed');
+      expect(ctx.entityService.softDelete).not.toHaveBeenCalled();
+    });
+
     it('clone forwards id + actorId', async () => {
       const ctx = buildService();
       await ctx.service.clone('u1', 'actor-1');

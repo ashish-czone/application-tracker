@@ -100,8 +100,24 @@ export class UsersService {
     return this.entityService.update(id, input, actorId, accessCtx);
   }
 
-  softDelete(id: string, actorId: string, accessCtx?: DataAccessContext) {
+  async softDelete(id: string, actorId: string, accessCtx?: DataAccessContext) {
+    await this.cleanupOnSoftDelete(id);
     return this.entityService.softDelete(id, actorId, accessCtx);
+  }
+
+  /**
+   * Called synchronously before the user row's `deletedAt` is stamped. Apps
+   * subclass this service and override this method to null cross-module FK
+   * references (tasks.assigneeId, org_unit_members rows, domain-specific
+   * assignees) via the owning module's service API. Default is a no-op.
+   *
+   * Throwing aborts the deactivation — the user row is not soft-deleted.
+   * Run everything here inside a DB transaction if atomicity with the user
+   * row update matters; otherwise cleanup runs first and the row stamp is
+   * a separate statement.
+   */
+  protected async cleanupOnSoftDelete(_userId: string): Promise<void> {
+    // no-op in base; overridden per-app.
   }
 
   clone(id: string, actorId: string) {

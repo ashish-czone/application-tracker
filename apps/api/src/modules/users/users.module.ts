@@ -4,11 +4,14 @@ import { UserRolesRelationHandler } from '@packages/rbac';
 import { CredentialsRelationHandler } from '@packages/auth';
 import { users, isNull } from '@packages/database';
 import { ContactResolverRegistry } from '@packages/notifications';
+import { TasksModule } from '@packages/tasks';
+import { OrgUnitsModule } from '@packages/org-units';
 import {
   UsersService,
   UsersController,
   createUsersEntityConfig,
 } from '@packages/users';
+import { AppUsersService } from './app-users.service';
 import { UniqueCheckService } from '../shared/services/unique-check.service';
 
 /**
@@ -31,9 +34,9 @@ const USERS_CONFIG = createUsersEntityConfig({
 });
 
 @Module({
-  imports: [EntityEngineModule.forEntity(USERS_CONFIG)],
+  imports: [EntityEngineModule.forEntity(USERS_CONFIG), TasksModule, OrgUnitsModule],
   controllers: [UsersController],
-  providers: [UsersService],
+  providers: [{ provide: UsersService, useClass: AppUsersService }],
   exports: [UsersService],
 })
 export class UsersModule implements OnModuleInit {

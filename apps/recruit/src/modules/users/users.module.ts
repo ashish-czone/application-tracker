@@ -4,11 +4,13 @@ import { UserRolesRelationHandler } from '@packages/rbac';
 import { CredentialsRelationHandler } from '@packages/auth';
 import { users } from '@packages/database';
 import { ContactResolverRegistry } from '@packages/notifications';
+import { OrgUnitsModule } from '@packages/org-units';
 import {
   UsersService,
   UsersController,
   createUsersEntityConfig,
 } from '@packages/users';
+import { AppUsersService } from './app-users.service';
 
 /**
  * App-level users module for apps/recruit. Wires the users entity library
@@ -22,9 +24,9 @@ const USERS_CONFIG = createUsersEntityConfig({
 });
 
 @Module({
-  imports: [EntityEngineModule.forEntity(USERS_CONFIG)],
+  imports: [EntityEngineModule.forEntity(USERS_CONFIG), OrgUnitsModule],
   controllers: [UsersController],
-  providers: [UsersService],
+  providers: [{ provide: UsersService, useClass: AppUsersService }],
   exports: [UsersService],
 })
 export class UsersModule implements OnModuleInit {
