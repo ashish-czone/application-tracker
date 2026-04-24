@@ -13,7 +13,7 @@ import { VendorsService } from './vendors.service';
  */
 @Module({
   imports: [
-    EntityEngineModule.forEntity(VENDORS_CONFIG, { controller: 'none' }),
+    EntityEngineModule.forEntity(VENDORS_CONFIG),
   ],
   controllers: [VendorsController],
   providers: [VendorsService],

@@ -10,16 +10,16 @@ import { MediaAssetsResolverService } from './services/media-assets-resolver.ser
 import { mediaLibraryFieldTypesPlugin } from './field-types';
 
 /**
- * Registers the MediaAsset entity with { controller: 'none' }; the hand-
- * written MediaAssetsController owns CRUD, and MediaAssetsUploadController
- * covers the composite POST /media-assets/upload (file storage + dimension
- * extraction + row insert in one round-trip).
+ * Registers the MediaAsset entity. The hand-written MediaAssetsController
+ * owns CRUD, and MediaAssetsUploadController covers the composite
+ * POST /media-assets/upload (file storage + dimension extraction + row
+ * insert in one round-trip).
  *
  * Registers the `media` field type so any entity can reference a MediaAsset
  * via a single UUID column/attribute.
  */
 @Module({
-  imports: [EntityEngineModule.forEntity(MEDIA_ASSETS_CONFIG, { controller: 'none' })],
+  imports: [EntityEngineModule.forEntity(MEDIA_ASSETS_CONFIG)],
   controllers: [MediaAssetsController, MediaAssetsUploadController],
   providers: [MediaAssetsService, MediaAssetsUploadService, MediaAssetsResolverService],
   exports: [MediaAssetsService, MediaAssetsUploadService, MediaAssetsResolverService],

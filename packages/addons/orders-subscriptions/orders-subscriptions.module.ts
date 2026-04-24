@@ -29,8 +29,8 @@ export const SUBSCRIPTION_EXPIRY_QUEUE = 'subscriptions.expiry-check';
 @Global()
 @Module({
   imports: [
-    EntityEngineModule.forEntity(SUBSCRIPTION_PLANS_CONFIG, { controller: 'none' }),
-    EntityEngineModule.forEntity(SUBSCRIPTIONS_CONFIG, { controller: 'none' }),
+    EntityEngineModule.forEntity(SUBSCRIPTION_PLANS_CONFIG),
+    EntityEngineModule.forEntity(SUBSCRIPTIONS_CONFIG),
   ],
   controllers: [SubscriptionPlansController, SubscriptionsController],
   providers: [

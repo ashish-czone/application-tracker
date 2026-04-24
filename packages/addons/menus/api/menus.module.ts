@@ -20,8 +20,8 @@ import { MenusPublicService } from './services/menus-public.service';
  */
 @Module({
   imports: [
-    EntityEngineModule.forEntity(MENU_CONFIG, { controller: 'none' }),
-    EntityEngineModule.forEntity(menuItemConfig, { controller: 'none' }),
+    EntityEngineModule.forEntity(MENU_CONFIG),
+    EntityEngineModule.forEntity(menuItemConfig),
     PagesModule,
   ],
   controllers: [MenusController, MenuItemsController, MenusPublicController],

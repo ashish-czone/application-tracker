@@ -24,7 +24,7 @@ import { ComplianceFilingsCancellationService } from './compliance-filings-cance
  */
 @Module({
   imports: [
-    EntityEngineModule.forEntity(COMPLIANCE_FILINGS_CONFIG, { controller: 'none' }),
+    EntityEngineModule.forEntity(COMPLIANCE_FILINGS_CONFIG),
   ],
   controllers: [ComplianceFilingsController],
   providers: [

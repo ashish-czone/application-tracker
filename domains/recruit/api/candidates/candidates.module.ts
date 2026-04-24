@@ -13,7 +13,7 @@ import { CandidatesService } from './candidates.service';
  */
 @Module({
   imports: [
-    EntityEngineModule.forEntity(candidatesConfig, { controller: 'none' }),
+    EntityEngineModule.forEntity(candidatesConfig),
   ],
   controllers: [CandidatesController],
   providers: [CandidatesService],

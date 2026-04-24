@@ -8,7 +8,7 @@ import { ComplianceRulesService } from './compliance-rules.service';
 
 @Module({
   imports: [
-    EntityEngineModule.forEntity(COMPLIANCE_RULES_CONFIG, { controller: 'none' }),
+    EntityEngineModule.forEntity(COMPLIANCE_RULES_CONFIG),
     LawHandlersModule,
     ComplianceFilingsModule,
   ],

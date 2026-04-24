@@ -5,7 +5,7 @@ import { OrganizationsController } from './organizations.controller';
 import { OrganizationsService } from './organizations.service';
 
 @Module({
-  imports: [EntityEngineModule.forEntity(ORGANIZATIONS_CONFIG, { controller: 'none' })],
+  imports: [EntityEngineModule.forEntity(ORGANIZATIONS_CONFIG)],
   controllers: [OrganizationsController],
   providers: [OrganizationsService],
   exports: [OrganizationsService],

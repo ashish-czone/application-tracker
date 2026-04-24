@@ -13,7 +13,7 @@ import { ORDERS_ORDER_CREATED } from './types';
 
 @Global()
 @Module({
-  imports: [EntityEngineModule.forEntity(ORDERS_CONFIG, { controller: 'none' })],
+  imports: [EntityEngineModule.forEntity(ORDERS_CONFIG)],
   controllers: [OrdersController],
   providers: [
     ProductResolverRegistry,

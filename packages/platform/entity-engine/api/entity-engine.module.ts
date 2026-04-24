@@ -13,7 +13,6 @@ import { FieldDefinitionService } from './services/field-definition.service';
 import { FieldTypeSaveHookRegistry } from './services/field-type-save-hook.registry';
 import { LookupResolverService } from './services/lookup-resolver.service';
 
-import { createEntityController } from './create-entity-controller';
 import { JsonbStorageAdapter } from './storage/jsonb-storage.adapter';
 import { EAV_STORAGE_EXTENSION, type EavStorageExtension } from './extensions/eav-storage.interface';
 import { MULTI_VALUE_EXTENSION, type MultiValueExtension } from './extensions/multi-value-extension.interface';
@@ -50,9 +49,10 @@ const pendingConfigs: EntityConfig[] = [];
  *
  * Imports `EntityCoreModule` for the singleton state services (registry,
  * field defs, lookup resolver, seed service). Each `forEntity()` call adds
- * a per-entity controller and service token to the dynamic module — the
- * shared singletons stay singletons because Nest deduplicates the
- * `EntityCoreModule` import across all ModuleRefs.
+ * a per-entity service token to the dynamic module — the shared singletons
+ * stay singletons because Nest deduplicates the `EntityCoreModule` import
+ * across all ModuleRefs. HTTP surface is owned by a hand-written controller
+ * in the consuming module that injects `ENTITY_SERVICE_<entityType>`.
  *
  * Usage:
  * ```
@@ -86,31 +86,20 @@ export class EntityEngineModule implements OnApplicationBootstrap {
   /**
    * Register a single entity with the engine.
    *
-   * `options.controller`:
-   * - `'auto'` (default) — mount the generic CRUD controller at `/{slug}`.
-   *   Backwards-compatible behaviour for entities that want the engine to
-   *   own their REST surface.
-   * - `'none'` — skip the generic controller. Register the metadata, the
-   *   `ENTITY_SERVICE_<entityType>` provider, and the bootstrap pipeline
-   *   (RBAC manifests, event registry, seeding) exactly as for `'auto'`,
-   *   but leave the HTTP layer to a hand-written controller in the domain
-   *   module. The domain module imports this dynamic module and adds its
-   *   own `@Controller()` class that injects `ENTITY_SERVICE_<entityType>`.
+   * Produces the `ENTITY_SERVICE_<entityType>` provider, queues the config
+   * for bootstrap (RBAC manifests, event registry, seeding), and exports
+   * the service token. The HTTP surface is always owned by a hand-written
+   * controller in the consuming module — import the dynamic module and add
+   * a `@Controller()` class that injects `ENTITY_SERVICE_<entityType>`.
    */
-  static forEntity(
-    config: EntityConfig,
-    options: { controller?: 'auto' | 'none' } = {},
-  ): DynamicModule {
+  static forEntity(config: EntityConfig): DynamicModule {
     const serviceToken = `ENTITY_SERVICE_${config.entityType}`;
-    const mountController = options.controller !== 'none';
-    const controllers = mountController ? [createEntityController(config, serviceToken)] : [];
 
     // Queue config for initialization (happens in onApplicationBootstrap)
     pendingConfigs.push(config);
 
     return {
       module: EntityEngineModule,
-      controllers,
       providers: [
         {
           provide: serviceToken,

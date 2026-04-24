@@ -12,7 +12,7 @@ import { TasksUserLifecycleListener } from './listeners/tasks-user-lifecycle.lis
 
 @Module({
   imports: [
-    EntityEngineModule.forEntity(TASKS_CONFIG, { controller: 'none' }),
+    EntityEngineModule.forEntity(TASKS_CONFIG),
     OrgUnitsModule,
   ],
   controllers: [TasksController, TaskClaimController],

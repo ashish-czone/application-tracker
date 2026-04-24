@@ -6,7 +6,7 @@ import { JobOpeningsService } from './job-openings.service';
 
 @Module({
   imports: [
-    EntityEngineModule.forEntity(JOB_OPENINGS_CONFIG, { controller: 'none' }),
+    EntityEngineModule.forEntity(JOB_OPENINGS_CONFIG),
   ],
   controllers: [JobOpeningsController],
   providers: [JobOpeningsService],

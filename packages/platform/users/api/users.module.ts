@@ -53,7 +53,7 @@ const USERS_CONFIG = createUsersEntityConfig({
 });
 
 @Module({
-  imports: [EntityEngineModule.forEntity(USERS_CONFIG, { controller: 'none' })],
+  imports: [EntityEngineModule.forEntity(USERS_CONFIG)],
   controllers: [UsersController],
   providers: [UsersService],
   exports: [UsersService],

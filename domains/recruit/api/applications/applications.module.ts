@@ -11,12 +11,12 @@ import { ApplicationInterviewersStrategy } from './strategies/application-interv
  *
  * Owns HTTP routing + service-layer delegation, and registers the
  * applicationInterviewers automation strategy used by notification rules.
- * The engine is still wired in (layout, RBAC manifests, events, audit)
- * but with controller: 'none' — routing lives on ApplicationsController.
+ * The engine is still wired in (layout, RBAC manifests, events, audit) —
+ * routing lives on ApplicationsController.
  */
 @Module({
   imports: [
-    EntityEngineModule.forEntity(APPLICATIONS_CONFIG, { controller: 'none' }),
+    EntityEngineModule.forEntity(APPLICATIONS_CONFIG),
   ],
   controllers: [ApplicationsController],
   providers: [ApplicationsService, ApplicationInterviewersStrategy],

@@ -1,21 +1,25 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
-import request from 'supertest';
-import { pgTable, text, timestamp, uuid, integer } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
-import { createPackageTestApp, withAuth, type PackageTestApp } from '@packages/platform-testing';
+import { createPackageTestApp, type PackageTestApp } from '@packages/platform-testing';
 import { hierarchyColumns, HierarchyModule } from '@packages/hierarchy';
 import { orderableColumns, OrderableModule } from '@packages/orderable';
 import { DatabaseService } from '@packages/database';
 import { EntityEngineModule } from '../../entity-engine.module';
 import { EntityEngineSeedService } from '../../services/entity-engine-seed.service';
+import { EntityService } from '../../entity.service';
 import { defineEntity } from '../../define-entity';
 
 // ---------------------------------------------------------------------------
-// Test tables — three shapes covering the flag combinations:
-//   - orderable only       (navItems)
-//   - hierarchy + orderable (menuItems)
-//   - neither              (folders from hierarchy-routes already covers this
-//                           side; omitted here)
+// Test tables cover the two `move()` flag combinations whose behaviour
+// branches inside EntityService:
+//   - orderable only        (navItems)       — sort-order updates, no parent
+//   - hierarchy + orderable (menuItems)      — combined reparent + reorder
+//
+// HTTP-level wiring for the /move route is covered by every fanned-out
+// hierarchical/orderable entity controller (e.g. MenuItemsController in the
+// menus addon); this test exercises the engine mechanics via EntityService
+// directly.
 // ---------------------------------------------------------------------------
 
 const navItems = pgTable('move_test_nav_items', {
@@ -68,11 +72,12 @@ const menuConfig = defineEntity({
   ui: { icon: 'Menu' },
 });
 
-const NAV_UPDATE = ['move-test-nav-items.read', 'move-test-nav-items.update'];
-const MENU_UPDATE = ['move-test-menu-items.read', 'move-test-menu-items.update'];
+const ACTOR_ID = '00000000-0000-0000-0000-00000000b001';
 
-describe('Move routes (integration)', () => {
+describe('Move operations (integration)', () => {
   let ctx: PackageTestApp;
+  let navService: EntityService;
+  let menuService: EntityService;
 
   beforeAll(async () => {
     ctx = await createPackageTestApp({
@@ -115,6 +120,9 @@ describe('Move routes (integration)', () => {
         deleted_by UUID
       )
     `);
+
+    navService = ctx.module.get<EntityService>('ENTITY_SERVICE_move-test-nav-items');
+    menuService = ctx.module.get<EntityService>('ENTITY_SERVICE_move-test-menu-items');
   });
 
   beforeEach(async () => {
@@ -131,83 +139,34 @@ describe('Move routes (integration)', () => {
   });
 
   async function createNav(name: string): Promise<string> {
-    const res = await request(ctx.httpServer)
-      .post('/api/v1/move-test-nav-items')
-      .set(withAuth(['move-test-nav-items.create']))
-      .send({ name })
-      .expect(201);
-    return res.body.id;
+    const row = await navService.create({ name }, ACTOR_ID);
+    return row.id as string;
   }
 
   async function createMenu(name: string, parentId: string | null = null): Promise<string> {
-    const body: Record<string, unknown> = { name };
-    if (parentId) body.parentId = parentId;
-    const res = await request(ctx.httpServer)
-      .post('/api/v1/move-test-menu-items')
-      .set(withAuth(['move-test-menu-items.create']))
-      .send(body)
-      .expect(201);
-    return res.body.id;
+    const payload: Record<string, unknown> = { name };
+    if (parentId) payload.parentId = parentId;
+    const row = await menuService.create(payload, ACTOR_ID);
+    return row.id as string;
   }
-
-  // ── Auth ────────────────────────────────────────────────────
-
-  describe('401 without auth', () => {
-    it('rejects POST :id/move', async () => {
-      await request(ctx.httpServer)
-        .post('/api/v1/move-test-nav-items/00000000-0000-0000-0000-000000000000/move')
-        .send({ sortOrder: 1 })
-        .expect(401);
-    });
-  });
-
-  describe('403 with wrong permission', () => {
-    it('rejects POST :id/move with read-only permission', async () => {
-      await request(ctx.httpServer)
-        .post('/api/v1/move-test-nav-items/00000000-0000-0000-0000-000000000000/move')
-        .set(withAuth(['move-test-nav-items.read']))
-        .send({ sortOrder: 1 })
-        .expect(403);
-    });
-  });
-
-  // ── Reorder-only on an orderable-only entity ────────────────
 
   describe('Reorder only (orderable entity)', () => {
     it('updates sort_order to an absolute value', async () => {
       const id = await createNav('First');
-
-      const res = await request(ctx.httpServer)
-        .post(`/api/v1/move-test-nav-items/${id}/move`)
-        .set(withAuth(NAV_UPDATE))
-        .send({ sortOrder: 2048 })
-        .expect(201);
-
-      expect(res.body.sortOrder).toBe(2048);
+      const updated = await navService.move(id, { sortOrder: 2048 }, ACTOR_ID);
+      expect(updated.sortOrder).toBe(2048);
     });
 
     it('rejects parentId on a non-hierarchical entity', async () => {
       const id = await createNav('First');
-
-      await request(ctx.httpServer)
-        .post(`/api/v1/move-test-nav-items/${id}/move`)
-        .set(withAuth(NAV_UPDATE))
-        .send({ parentId: null })
-        .expect(400);
+      await expect(navService.move(id, { parentId: null }, ACTOR_ID)).rejects.toThrow();
     });
 
     it('rejects empty body', async () => {
       const id = await createNav('First');
-
-      await request(ctx.httpServer)
-        .post(`/api/v1/move-test-nav-items/${id}/move`)
-        .set(withAuth(NAV_UPDATE))
-        .send({})
-        .expect(400);
+      await expect(navService.move(id, {}, ACTOR_ID)).rejects.toThrow();
     });
   });
-
-  // ── Combined reparent + reorder (hierarchy + orderable) ─────
 
   describe('Reparent + reorder (hierarchical orderable entity)', () => {
     it('reparents and reorders in a single call', async () => {
@@ -215,29 +174,21 @@ describe('Move routes (integration)', () => {
       const rootB = await createMenu('Root B');
       const child = await createMenu('Child', rootA);
 
-      const res = await request(ctx.httpServer)
-        .post(`/api/v1/move-test-menu-items/${child}/move`)
-        .set(withAuth(MENU_UPDATE))
-        .send({ parentId: rootB, sortOrder: 512 })
-        .expect(201);
+      const updated = await menuService.move(child, { parentId: rootB, sortOrder: 512 }, ACTOR_ID);
 
-      expect(res.body.parentId).toBe(rootB);
-      expect(res.body.depth).toBe(1);
-      expect(res.body.sortOrder).toBe(512);
+      expect(updated.parentId).toBe(rootB);
+      expect(updated.depth).toBe(1);
+      expect(updated.sortOrder).toBe(512);
     });
 
     it('reorders within the same parent when only sortOrder is passed', async () => {
       const root = await createMenu('Root');
       const a = await createMenu('A', root);
 
-      const res = await request(ctx.httpServer)
-        .post(`/api/v1/move-test-menu-items/${a}/move`)
-        .set(withAuth(MENU_UPDATE))
-        .send({ sortOrder: 100 })
-        .expect(201);
+      const updated = await menuService.move(a, { sortOrder: 100 }, ACTOR_ID);
 
-      expect(res.body.parentId).toBe(root);
-      expect(res.body.sortOrder).toBe(100);
+      expect(updated.parentId).toBe(root);
+      expect(updated.sortOrder).toBe(100);
     });
   });
 });

@@ -36,13 +36,13 @@ import { StatsService } from './services/stats.service';
  */
 @Module({
   imports: [
-    EntityEngineModule.forEntity(TESTIMONIALS_CONFIG, { controller: 'none' }),
-    EntityEngineModule.forEntity(FAQ_ITEMS_CONFIG, { controller: 'none' }),
-    EntityEngineModule.forEntity(TEAM_MEMBERS_CONFIG, { controller: 'none' }),
-    EntityEngineModule.forEntity(SERVICES_CONFIG, { controller: 'none' }),
-    EntityEngineModule.forEntity(CLIENT_LOGOS_CONFIG, { controller: 'none' }),
-    EntityEngineModule.forEntity(VALUE_PROPS_CONFIG, { controller: 'none' }),
-    EntityEngineModule.forEntity(STATS_CONFIG, { controller: 'none' }),
+    EntityEngineModule.forEntity(TESTIMONIALS_CONFIG),
+    EntityEngineModule.forEntity(FAQ_ITEMS_CONFIG),
+    EntityEngineModule.forEntity(TEAM_MEMBERS_CONFIG),
+    EntityEngineModule.forEntity(SERVICES_CONFIG),
+    EntityEngineModule.forEntity(CLIENT_LOGOS_CONFIG),
+    EntityEngineModule.forEntity(VALUE_PROPS_CONFIG),
+    EntityEngineModule.forEntity(STATS_CONFIG),
   ],
   controllers: [
     TestimonialsController,

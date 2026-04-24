@@ -9,7 +9,7 @@ import { ClientRegistrationsModule } from '../client-registrations/client-regist
 
 @Module({
   imports: [
-    EntityEngineModule.forEntity(CLIENTS_CONFIG, { controller: 'none' }),
+    EntityEngineModule.forEntity(CLIENTS_CONFIG),
     ClientContactsModule,
     ClientRegistrationsModule,
   ],

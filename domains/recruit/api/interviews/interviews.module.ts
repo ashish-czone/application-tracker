@@ -6,7 +6,7 @@ import { InterviewsService } from './interviews.service';
 
 @Module({
   imports: [
-    EntityEngineModule.forEntity(INTERVIEWS_CONFIG, { controller: 'none' }),
+    EntityEngineModule.forEntity(INTERVIEWS_CONFIG),
   ],
   controllers: [InterviewsController],
   providers: [InterviewsService],

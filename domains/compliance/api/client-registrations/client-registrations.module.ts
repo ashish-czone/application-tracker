@@ -6,7 +6,7 @@ import { ClientRegistrationsService } from './client-registrations.service';
 
 @Module({
   imports: [
-    EntityEngineModule.forEntity(CLIENT_REGISTRATIONS_CONFIG, { controller: 'none' }),
+    EntityEngineModule.forEntity(CLIENT_REGISTRATIONS_CONFIG),
   ],
   controllers: [ClientRegistrationsController],
   providers: [ClientRegistrationsService],
