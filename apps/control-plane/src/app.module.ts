@@ -24,7 +24,7 @@ import { AuthModule, AuthGuard } from '@packages/auth';
 import { OAuthModule } from '@packages/oauth';
 import { RbacGuard } from '@packages/rbac';
 import { AppConfigService } from '@packages/settings';
-import { UsersModule } from '@packages/users';
+import { UsersModule } from './modules/users/users.module';
 import { ServiceAuthModule } from '@packages/service-auth';
 import { OrdersBillingModule } from '@packages/orders-billing';
 import { OrdersSubscriptionsModule } from '@packages/orders-subscriptions';
