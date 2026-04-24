@@ -16,7 +16,7 @@ import { ComplianceUsersPositionsReader } from './users/compliance-users-positio
 
 import { LawsModule } from './laws/laws.module';
 import { CLIENTS_CONFIG, setClientDormancyHandler } from './clients/clients.config';
-import { CLIENT_CONTACTS_CONFIG } from './client-contacts/client-contacts.config';
+import { ClientContactsModule } from './client-contacts/client-contacts.module';
 import { CLIENT_REGISTRATIONS_CONFIG } from './client-registrations/client-registrations.config';
 import { COMPLIANCE_RULES_CONFIG, setRuleUpdateGuard } from './rules/rules.config';
 import { LawHandlersModule } from './law-handlers/law-handlers.module';
@@ -55,7 +55,7 @@ const ORGANIZATIONS_CONFIG = createOrganizationsEntityConfig({
     EntityEngineModule.forEntity(TASKS_CONFIG),
     LawsModule,
     EntityEngineModule.forEntity(CLIENTS_CONFIG),
-    EntityEngineModule.forEntity(CLIENT_CONTACTS_CONFIG),
+    ClientContactsModule,
     EntityEngineModule.forEntity(CLIENT_REGISTRATIONS_CONFIG),
     EntityEngineModule.forEntity(COMPLIANCE_RULES_CONFIG),
     LawHandlersModule,
@@ -66,7 +66,6 @@ const ORGANIZATIONS_CONFIG = createOrganizationsEntityConfig({
   providers: [
     ClientRegistrationService,
     ClientsService,
-    ClientContactsService,
     ComplianceRuleService,
     ComplianceFilingsLookupService,
     ComplianceFilingsCancellationService,

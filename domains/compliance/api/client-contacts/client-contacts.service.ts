@@ -1,22 +1,63 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DatabaseService, and, eq } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
+import { EntityService, type BaseListQuery } from '@packages/entity-engine';
+import type { DataAccessContext } from '@packages/rbac';
 import { clientContacts } from '../schema/client-contacts';
 import { CLIENT_CONTACTS_UPDATED } from '../events/types';
+import type { CreateClientContactDto, UpdateClientContactDto } from './client-contacts.dto';
 
 type ContactRow = typeof clientContacts.$inferSelect;
 
 /**
- * Contact-specific operations. CRUD is handled by the generic entity-engine
- * controller (POST/GET/PATCH/DELETE /client-contacts), so this service only
- * owns behavior that needs multi-row coordination.
+ * Merged service: baseline CRUD delegates for the entity engine + the
+ * domain-specific primary-contact operations (hasPrimaryContact used by the
+ * workflow guard on client onboarding → active; setPrimary called from the
+ * clients controller to flip the primary flag atomically).
  */
 @Injectable()
 export class ClientContactsService {
   constructor(
+    @Inject('ENTITY_SERVICE_client-contacts') private readonly entityService: EntityService,
     private readonly database: DatabaseService,
     private readonly events: DomainEventEmitter,
   ) {}
+
+  // ---- CRUD delegates (vendors template) -----------------------------------
+
+  list(query: BaseListQuery, accessCtx?: DataAccessContext) {
+    return this.entityService.list(query, accessCtx);
+  }
+
+  findOne(id: string, accessCtx?: DataAccessContext) {
+    return this.entityService.findOneOrFail(id, accessCtx);
+  }
+
+  create(input: CreateClientContactDto, actorId: string) {
+    return this.entityService.create(input, actorId);
+  }
+
+  update(id: string, input: UpdateClientContactDto, actorId: string, accessCtx?: DataAccessContext) {
+    return this.entityService.update(id, input, actorId, accessCtx);
+  }
+
+  softDelete(id: string, actorId: string, accessCtx?: DataAccessContext) {
+    return this.entityService.softDelete(id, actorId, accessCtx);
+  }
+
+  clone(id: string, actorId: string) {
+    return this.entityService.clone(id, actorId);
+  }
+
+  restore(id: string) {
+    return this.entityService.restore(id);
+  }
+
+  getListLayout() {
+    return this.entityService.getListLayout();
+  }
+
+  // ---- Domain-specific primary-contact handling ----------------------------
 
   /**
    * True when the client has at least one contact flagged as primary.
