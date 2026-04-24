@@ -8,6 +8,6 @@ export const complianceBackend: DomainBackendManifest = {
 };
 
 export { ComplianceDomainModule };
-export { COMPLIANCE_PERMISSIONS, COMPLIANCE_PERMISSION_REGISTRATIONS } from './permissions';
+export { COMPLIANCE_PERMISSIONS, COMPLIANCE_PERMISSION_MANIFESTS } from './permissions';
 export type { CompliancePermission } from './permissions';
 export * from './schema';
