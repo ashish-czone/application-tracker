@@ -22,7 +22,9 @@
     "@packages/soft-delete": "workspace:*",
     "class-validator": "^0.14.1",
     "drizzle-orm": "^0.45.1",
-    "sharp": "^0.33.5"
+    "drizzle-zod": "^0.7.0",
+    "sharp": "^0.33.5",
+    "zod": "^3.25.0"
   },
   "devDependencies": {
     "@packages/platform-testing": "workspace:*",
