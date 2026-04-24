@@ -1,6 +1,5 @@
 import { pgTable, text, boolean, timestamp, index } from 'drizzle-orm/pg-core';
 import { randomUUID } from 'crypto';
-import { users } from '@packages/database/schema';
 
 export const vendors = pgTable('vendors', {
   id: text('id').primaryKey().$defaultFn(() => randomUUID()),
@@ -17,7 +16,7 @@ export const vendors = pgTable('vendors', {
   postalCode: text('postal_code'),
   country: text('country'),
   // Audit
-  createdBy: text('created_by').notNull().references(() => users.id),
+  createdBy: text('created_by').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }).notNull().$defaultFn(() => new Date()).$onUpdate(() => new Date()),
   deletedAt: timestamp('deleted_at', { withTimezone: true, mode: 'date' }),

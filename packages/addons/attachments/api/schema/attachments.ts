@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto';
 import { pgTable, text, integer, timestamp, index } from 'drizzle-orm/pg-core';
-import { users } from '@packages/database/schema';
 
 export const attachments = pgTable('attachments', {
   id: text('id').primaryKey().$defaultFn(() => randomUUID()),
@@ -10,7 +9,7 @@ export const attachments = pgTable('attachments', {
   originalName: text('original_name').notNull(),
   mimeType: text('mime_type').notNull(),
   size: integer('size').notNull(),
-  uploadedBy: text('uploaded_by').notNull().references(() => users.id),
+  uploadedBy: text('uploaded_by').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
   deletedAt: timestamp('deleted_at', { withTimezone: true, mode: 'date' }),
   deletedBy: text('deleted_by'),

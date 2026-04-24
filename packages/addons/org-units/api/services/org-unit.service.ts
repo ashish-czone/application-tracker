@@ -272,4 +272,18 @@ export class OrgUnitService {
     userIds.add(userId);
     return Array.from(userIds);
   }
+
+  /**
+   * Remove every `org_unit_members` row the user participated in. Called
+   * synchronously from the app's UsersService.softDelete override. The
+   * resolvers (`org_unit_head`, `parent_unit_head`, `org_unit_members`)
+   * already filter on `users.deletedAt IS NULL`, so correctness holds even
+   * if this is deferred — this keeps the join table tidy. Idempotent —
+   * second call deletes zero rows.
+   */
+  async handleUserDeactivated(userId: string): Promise<void> {
+    await this.database.db
+      .delete(orgUnitMembers)
+      .where(eq(orgUnitMembers.userId, userId));
+  }
 }

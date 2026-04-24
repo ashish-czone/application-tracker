@@ -1,10 +1,9 @@
 import { pgTable, text, timestamp, index, uniqueIndex } from 'drizzle-orm/pg-core';
 import { randomUUID } from 'crypto';
-import { users } from '@packages/database/schema';
 
 export const authTokens = pgTable('auth_tokens', {
   id: text('id').primaryKey().$defaultFn(() => randomUUID()),
-  userId: text('user_id').notNull().references(() => users.id),
+  userId: text('user_id').notNull(),
   type: text('type').notNull(),
   tokenHash: text('token_hash').notNull(),
   expiresAt: timestamp('expires_at', { withTimezone: true, mode: 'date' }).notNull(),

@@ -14,7 +14,6 @@ import { orgUnits } from './schema/org-units';
 import { OrgUnitHeadStrategy } from './automation-resolvers/org-unit-head.strategy';
 import { ParentUnitHeadStrategy } from './automation-resolvers/parent-unit-head.strategy';
 import { OrgUnitMembersStrategy } from './automation-resolvers/org-unit-members.strategy';
-import { OrgUnitsUserLifecycleListener } from './listeners/org-units-user-lifecycle.listener';
 import { UnitScopeResolver, DescendantsScopeResolver } from './scope-resolvers/hierarchy.resolver';
 
 @Global()
@@ -25,7 +24,6 @@ import { UnitScopeResolver, DescendantsScopeResolver } from './scope-resolvers/h
     OrgUnitLevelService,
     OrgPositionService,
     PositionScopeResolverService,
-    OrgUnitsUserLifecycleListener,
     UnitScopeResolver,
     DescendantsScopeResolver,
   ],

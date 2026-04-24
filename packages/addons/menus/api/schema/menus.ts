@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto';
 import { pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
-import { users } from '@packages/database/schema';
 import { softDeleteColumns } from '@packages/soft-delete';
 
 /**
@@ -13,7 +12,7 @@ export const menus = pgTable('menus', {
   name: text('name').notNull(),
   slug: text('slug').notNull(),
   description: text('description'),
-  createdBy: text('created_by').notNull().references(() => users.id),
+  createdBy: text('created_by').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' })
     .notNull()

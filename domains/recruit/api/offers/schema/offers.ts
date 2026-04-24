@@ -1,6 +1,5 @@
 import { pgTable, text, integer, date, timestamp, index } from 'drizzle-orm/pg-core';
 import { randomUUID } from 'crypto';
-import { users } from '@packages/database/schema';
 
 export const offers = pgTable('offers', {
   id: text('id').primaryKey().$defaultFn(() => randomUUID()),
@@ -20,11 +19,11 @@ export const offers = pgTable('offers', {
   // Status
   status: text('status').default('draft'),
   // Approval
-  approvedBy: text('approved_by').references(() => users.id),
+  approvedBy: text('approved_by'),
   // Details
   notes: text('notes'),
   // Audit
-  createdBy: text('created_by').notNull().references(() => users.id),
+  createdBy: text('created_by').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }).notNull().$defaultFn(() => new Date()).$onUpdate(() => new Date()),
   deletedAt: timestamp('deleted_at', { withTimezone: true, mode: 'date' }),

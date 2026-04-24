@@ -538,4 +538,19 @@ describe('OrgUnitService', () => {
       expect(result).toEqual({});
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // handleUserDeactivated
+  // ---------------------------------------------------------------------------
+
+  describe('handleUserDeactivated', () => {
+    it('issues a DELETE against org_unit_members filtered by userId', async () => {
+      _chain._enqueue(undefined);
+
+      await service.handleUserDeactivated('user-1');
+
+      expect(db.delete).toHaveBeenCalled();
+      expect(db.where).toHaveBeenCalled();
+    });
+  });
 });

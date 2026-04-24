@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto';
 import { pgTable, text, boolean, timestamp, index } from 'drizzle-orm/pg-core';
-import { users } from '@packages/database/schema';
 
 export const notes = pgTable('notes', {
   id: text('id').primaryKey().$defaultFn(() => randomUUID()),
@@ -8,7 +7,7 @@ export const notes = pgTable('notes', {
   entityId: text('entity_id').notNull(),
   content: text('content').notNull(),
   isInternal: boolean('is_internal').notNull().default(true),
-  authorId: text('author_id').notNull().references(() => users.id),
+  authorId: text('author_id').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }).notNull().$defaultFn(() => new Date()).$onUpdate(() => new Date()),
   deletedAt: timestamp('deleted_at', { withTimezone: true, mode: 'date' }),

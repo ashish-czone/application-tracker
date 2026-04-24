@@ -1,6 +1,5 @@
 import { pgTable, text, integer, boolean, date, timestamp, index } from 'drizzle-orm/pg-core';
 import { randomUUID } from 'crypto';
-import { users } from '@packages/database/schema';
 
 export const jobOpenings = pgTable('job_openings', {
   id: text('id').primaryKey().$defaultFn(() => randomUUID()),
@@ -12,7 +11,7 @@ export const jobOpenings = pgTable('job_openings', {
   targetDate: date('target_date', { mode: 'string' }),
   employmentType: text('employment_type').default('full-time'),
   status: text('status').default('in-progress'),
-  hiringManager: text('hiring_manager').references(() => users.id),
+  hiringManager: text('hiring_manager'),
   experience: text('experience'),
   industry: text('industry'),
   jobFunction: text('job_function'),
@@ -38,7 +37,7 @@ export const jobOpenings = pgTable('job_openings', {
   publishedAt: date('published_at', { mode: 'string' }),
   closingDate: date('closing_date', { mode: 'string' }),
   // Audit
-  createdBy: text('created_by').notNull().references(() => users.id),
+  createdBy: text('created_by').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }).notNull().$defaultFn(() => new Date()).$onUpdate(() => new Date()),
   deletedAt: timestamp('deleted_at', { withTimezone: true, mode: 'date' }),

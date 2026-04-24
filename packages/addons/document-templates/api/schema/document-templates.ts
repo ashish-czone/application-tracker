@@ -1,6 +1,5 @@
 import { pgTable, text, boolean, jsonb, timestamp, index } from 'drizzle-orm/pg-core';
 import { randomUUID } from 'crypto';
-import { users } from '@packages/database/schema';
 
 export const documentTemplates = pgTable('document_templates', {
   id: text('id').primaryKey().$defaultFn(() => randomUUID()),
@@ -10,7 +9,7 @@ export const documentTemplates = pgTable('document_templates', {
   htmlBody: text('html_body').notNull(),
   isDefault: boolean('is_default').notNull().default(false),
   metadata: jsonb('metadata'),
-  createdBy: text('created_by').notNull().references(() => users.id),
+  createdBy: text('created_by').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }).notNull().$defaultFn(() => new Date()).$onUpdate(() => new Date()),
 }, (table) => [

@@ -1,10 +1,9 @@
 import { pgTable, text, boolean, timestamp } from 'drizzle-orm/pg-core';
-import { users } from '@packages/database/schema';
 import { randomUUID } from 'crypto';
 
 export const notifications = pgTable('notifications', {
   id: text('id').primaryKey().$defaultFn(() => randomUUID()),
-  userId: text('user_id').notNull().references(() => users.id),
+  userId: text('user_id').notNull(),
   title: text('title').notNull(),
   body: text('body').notNull(),
   isRead: boolean('is_read').notNull().default(false),

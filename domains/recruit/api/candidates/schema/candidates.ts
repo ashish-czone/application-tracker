@@ -1,7 +1,6 @@
 import { pgTable, text, integer, numeric, date, boolean, timestamp, index, uniqueIndex, jsonb } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
-import { users } from '@packages/database/schema';
 
 export const candidates = pgTable('candidates', {
   id: text('id').primaryKey().$defaultFn(() => randomUUID()),
@@ -48,7 +47,7 @@ export const candidates = pgTable('candidates', {
   notes: text('notes'),
   resumeFile: jsonb('resume_file'),
   // Audit
-  createdBy: text('created_by').notNull().references(() => users.id),
+  createdBy: text('created_by').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }).notNull().$defaultFn(() => new Date()).$onUpdate(() => new Date()),
   deletedAt: timestamp('deleted_at', { withTimezone: true, mode: 'date' }),

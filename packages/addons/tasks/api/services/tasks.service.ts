@@ -1,10 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { DatabaseService, and, eq } from '@packages/database';
+import { DatabaseService, and, eq, inArray, not } from '@packages/database';
 import { EntityService, type BaseListQuery } from '@packages/entity-engine';
 import type { DataAccessContext } from '@packages/rbac';
 import { tasks } from '../schema/tasks';
 import { applyCompletedAt } from '../tasks.config';
 import type { CreateTaskDto, UpdateTaskDto } from '../dto/tasks.dto';
+
+const TERMINAL_STATUSES = ['completed', 'cancelled'];
 
 @Injectable()
 export class TasksService {
@@ -59,5 +61,25 @@ export class TasksService {
       .where(and(eq(tasks.relatedEntityType, relatedEntityType), eq(tasks.externalKey, externalKey)))
       .limit(1);
     return rows[0] ?? null;
+  }
+
+  /**
+   * Null `assigneeId` on every open task owned by the given user. Called
+   * synchronously from the app's UsersService.softDelete override so the
+   * cleanup runs in the same flow as the user deactivation. Terminal-state
+   * tasks (completed, cancelled) keep their original assignee for audit.
+   * `assigneeTeamId` stays intact so the task falls back to team-level
+   * pickup. Idempotent — second call updates zero rows.
+   */
+  async handleUserDeactivated(userId: string): Promise<{ clearedCount: number }> {
+    const cleared = await this.database.db
+      .update(tasks)
+      .set({ assigneeId: null })
+      .where(and(
+        eq(tasks.assigneeId, userId),
+        not(inArray(tasks.status, TERMINAL_STATUSES)),
+      ))
+      .returning({ id: tasks.id });
+    return { clearedCount: cleared.length };
   }
 }
