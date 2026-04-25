@@ -190,6 +190,24 @@ export class ComplianceRulesService {
     return this.entityService.softDelete(id, actorId, accessCtx);
   }
 
+  /**
+   * Generic workflow transition. Delegates to the engine, which handles
+   * permission checks, guard evaluation, and history-row writes. Domain-
+   * specific cascades (e.g. rule deprecation cancelling in-flight filings)
+   * stay on dedicated endpoints; this one drives plain status moves like
+   * draft → active.
+   */
+  transition(
+    id: string,
+    fieldKey: string,
+    toState: string,
+    actorId: string,
+    options?: { reason?: string; comment?: string },
+    accessCtx?: DataAccessContext,
+  ) {
+    return this.entityService.transition(id, fieldKey, toState, actorId, options, accessCtx);
+  }
+
   clone(id: string, actorId: string) {
     return this.entityService.clone(id, actorId);
   }

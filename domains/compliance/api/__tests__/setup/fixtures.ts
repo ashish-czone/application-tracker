@@ -170,6 +170,24 @@ export async function createLawHandler(
   return { id };
 }
 
+/**
+ * Creates a law plus a global default handler against a fresh org unit.
+ * `compliance-rules.service.ts:create` rejects rules whose law has no
+ * default handler with `NO_DEFAULT_HANDLER`, so any test that creates rules
+ * via the API needs this prereq wired up. Returns the law id and the
+ * underlying org-unit id in case the test needs them separately.
+ */
+export async function createLawWithHandler(
+  db: DrizzleDB,
+  overrides: Partial<typeof complianceLaws.$inferInsert> = {},
+): Promise<{ id: string; code: string; orgEntityId: string; handlerId: string }> {
+  const law = await createLaw(db, overrides);
+  const { id: levelId } = await createOrgUnitLevel(db);
+  const { id: orgEntityId } = await createOrgUnit(db, levelId);
+  const { id: handlerId } = await createLawHandler(db, law.id, orgEntityId);
+  return { ...law, orgEntityId, handlerId };
+}
+
 export async function createFiling(
   db: DrizzleDB,
   params: {

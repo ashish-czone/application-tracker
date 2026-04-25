@@ -62,6 +62,23 @@ export class ComplianceFilingsService {
     return this.entityService.restore(id);
   }
 
+  /**
+   * Generic workflow transition. The filing workflow has many transitions
+   * (pending → in_progress, in_progress → review, review → completed/rejected,
+   * etc.); the engine carries permission checks and history rows so this
+   * service stays a thin pass-through.
+   */
+  transition(
+    id: string,
+    fieldKey: string,
+    toState: string,
+    actorId: string,
+    options?: { reason?: string; comment?: string },
+    accessCtx?: DataAccessContext,
+  ) {
+    return this.entityService.transition(id, fieldKey, toState, actorId, options, accessCtx);
+  }
+
   getListLayout() {
     return this.entityService.getListLayout();
   }

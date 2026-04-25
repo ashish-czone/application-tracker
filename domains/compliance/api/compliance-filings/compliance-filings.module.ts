@@ -6,6 +6,8 @@ import { ComplianceFilingsService } from './compliance-filings.service';
 import { ComplianceFilingsLookupService } from './compliance-filings-lookup.service';
 import { ComplianceFilingsCancellationService } from './compliance-filings-cancellation.service';
 
+const filingsEntityEngineModule = EntityEngineModule.forEntity(COMPLIANCE_FILINGS_CONFIG);
+
 /**
  * Compliance filings module.
  *
@@ -23,9 +25,7 @@ import { ComplianceFilingsCancellationService } from './compliance-filings-cance
  * them into cross-entity services (rules, dormancy).
  */
 @Module({
-  imports: [
-    EntityEngineModule.forEntity(COMPLIANCE_FILINGS_CONFIG),
-  ],
+  imports: [filingsEntityEngineModule],
   controllers: [ComplianceFilingsController],
   providers: [
     ComplianceFilingsService,
@@ -33,6 +33,7 @@ import { ComplianceFilingsCancellationService } from './compliance-filings-cance
     ComplianceFilingsCancellationService,
   ],
   exports: [
+    filingsEntityEngineModule,
     ComplianceFilingsService,
     ComplianceFilingsLookupService,
     ComplianceFilingsCancellationService,

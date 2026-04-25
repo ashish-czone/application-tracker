@@ -11,6 +11,7 @@ describe('Entity Layout (integration)', () => {
   let cleanup: () => Promise<void>;
   let layoutService: LayoutService;
   let fieldDefService: FieldDefinitionService;
+  let entityRegistry: EntityRegistryService;
 
   beforeAll(async () => {
     const ctx = await createPlatformTestModule({
@@ -28,6 +29,7 @@ describe('Entity Layout (integration)', () => {
     cleanup = ctx.cleanup;
     layoutService = module.get(LayoutService);
     fieldDefService = module.get(FieldDefinitionService);
+    entityRegistry = module.get(EntityRegistryService);
   });
 
   afterEach(async () => {
@@ -39,7 +41,30 @@ describe('Entity Layout (integration)', () => {
     await cleanup();
   });
 
+  /**
+   * Registers a minimal entity config so `LayoutService.getLayout` takes
+   * the DB-backed path (`isAdminConfigurable === true`) instead of the
+   * registry-only path that returns an empty layout. Without this,
+   * `getLayout` returns `{ sections: [] }` for every test entity, which
+   * makes layout/seed assertions fail with "expected [] to ...".
+   */
+  function registerAdminConfigurable(entityType: string) {
+    if (entityRegistry.get(entityType)) return;
+    entityRegistry.register({
+      entityType,
+      singularName: entityType,
+      pluralName: entityType,
+      slug: entityType,
+      table: {} as any,
+      fieldMeta: {},
+      sections: [],
+      onDelete: { mode: 'soft' as const },
+      adminConfigurable: true,
+    } as any);
+  }
+
   async function seedFields(entityType: string, fieldKeys: string[]) {
+    registerAdminConfigurable(entityType);
     await fieldDefService.registerStandardFields(
       entityType,
       fieldKeys.map((key, i) => ({
@@ -112,6 +137,7 @@ describe('Entity Layout (integration)', () => {
     });
 
     it('should reorder sections', async () => {
+      registerAdminConfigurable('reorder_entity');
       const s1 = await layoutService.createSection('reorder_entity', 'Standard', { name: 'A' });
       const s2 = await layoutService.createSection('reorder_entity', 'Standard', { name: 'B' });
       const s3 = await layoutService.createSection('reorder_entity', 'Standard', { name: 'C' });
@@ -208,6 +234,7 @@ describe('Entity Layout (integration)', () => {
     });
 
     it('should include quickCreateFields', async () => {
+      registerAdminConfigurable('quick_create');
       await fieldDefService.registerStandardFields('quick_create', [
         { fieldKey: 'name', label: 'Name', fieldType: 'text', isQuickCreate: true },
         { fieldKey: 'email', label: 'Email', fieldType: 'email', isQuickCreate: true },

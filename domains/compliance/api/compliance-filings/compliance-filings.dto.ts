@@ -17,6 +17,19 @@ export const CreateComplianceFilingSchema = createInsertSchema(complianceFilings
 
 export const UpdateComplianceFilingSchema = CreateComplianceFilingSchema.partial();
 
+/**
+ * Body shape for POST /compliance-filings/:id/transition. Drives the filing
+ * workflow (pending → in_progress → review → completed/rejected etc.) via
+ * the engine. The same shape is used across compliance entities so client
+ * code can target every transition endpoint with one helper.
+ */
+export const TransitionComplianceFilingSchema = z.object({
+  fieldKey: z.string().min(1),
+  to: z.string().min(1),
+  reason: z.string().max(200).optional(),
+  comment: z.string().max(2000).optional(),
+});
+
 export type CreateComplianceFilingDto = z.infer<typeof CreateComplianceFilingSchema>;
 export type UpdateComplianceFilingDto = z.infer<typeof UpdateComplianceFilingSchema>;
 export type ComplianceFilingRow = z.infer<typeof ComplianceFilingRowSchema>;

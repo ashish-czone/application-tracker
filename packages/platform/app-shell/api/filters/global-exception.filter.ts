@@ -14,6 +14,31 @@ interface ErrorResponseBody {
   error: string;
   message: string;
   details?: { field: string; message: string }[];
+  /** Extra fields passed through from `HttpException` response objects. */
+  [key: string]: unknown;
+}
+
+/** Keys the filter owns; everything else on a custom exception body is preserved. */
+const RESERVED_KEYS = new Set(['statusCode', 'error', 'message', 'details']);
+
+/**
+ * Detects a Zod validation error without importing zod into app-shell.
+ * `ZodError` instances expose `.issues` (array of `{ code, path, message }`)
+ * and identify themselves via `.name === 'ZodError'`. We treat any error
+ * matching that shape as a 400.
+ */
+function asZodError(
+  exception: unknown,
+): { issues: { path: (string | number)[]; message: string }[] } | undefined {
+  if (
+    exception !== null &&
+    typeof exception === 'object' &&
+    (exception as { name?: string }).name === 'ZodError' &&
+    Array.isArray((exception as { issues?: unknown }).issues)
+  ) {
+    return exception as { issues: { path: (string | number)[]; message: string }[] };
+  }
+  return undefined;
 }
 
 const STATUS_CODE_TO_ERROR: Record<number, string> = {
@@ -66,6 +91,22 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const method = request?.method;
     const url = request?.url;
 
+    const zodError = asZodError(exception);
+    if (zodError) {
+      const status = HttpStatus.BAD_REQUEST;
+      const body: ErrorResponseBody = {
+        statusCode: status,
+        error: errorCodeFromStatus(status),
+        message: 'Validation failed',
+        details: zodError.issues.map((issue) => ({
+          field: issue.path.join('.') || 'body',
+          message: issue.message,
+        })),
+      };
+      response.status(status).json(body);
+      return;
+    }
+
     if (exception instanceof HttpException) {
       const status = exception.getStatus();
       const exceptionResponse = exception.getResponse();
@@ -85,6 +126,12 @@ export class GlobalExceptionFilter implements ExceptionFilter {
           body.details = parseValidationMessages(res.message as string[]);
         } else {
           body.message = (res.message as string) ?? exception.message;
+        }
+        // Preserve any extra metadata callers attach to the exception body
+        // (e.g. domain error code, affected fields). The reserved keys are
+        // already handled above.
+        for (const [key, value] of Object.entries(res)) {
+          if (!RESERVED_KEYS.has(key)) body[key] = value;
         }
       }
 

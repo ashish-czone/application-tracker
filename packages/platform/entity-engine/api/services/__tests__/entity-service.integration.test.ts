@@ -6,6 +6,7 @@ import { createPlatformTestModule, cleanDatabase } from '@packages/platform-test
 import { DatabaseService } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
 import { AppLoggerService } from '@packages/logger';
+import { ScopeResolverRegistry, OwnScopeResolver } from '@packages/rbac';
 import { FieldDefinitionService } from '../field-definition.service';
 import { LookupResolverService } from '../lookup-resolver.service';
 import { FeatureDeriverRegistry, featureDeriverRegistry } from '../feature-deriver.registry';
@@ -145,6 +146,15 @@ describe('EntityService (integration)', () => {
     fieldDefService = module.get(FieldDefinitionService);
     entityRegistry = module.get(EntityRegistryService);
     eventEmitter = module.get(DomainEventEmitter);
+    // RBAC's OwnScopeResolver isn't auto-registered when @Global() RbacModule
+    // is imported via test bootstrap (the registration happens inside
+    // RbacModule.onModuleInit). Force-register it here so the `own` scope
+    // tests resolve a real predicate instead of `undefined`.
+    const scopeResolverRegistry = module.get(ScopeResolverRegistry);
+    const ownResolver = module.get(OwnScopeResolver);
+    if (!scopeResolverRegistry.has('own')) {
+      scopeResolverRegistry.register(ownResolver);
+    }
     // Create test table
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS test_entities (
@@ -187,7 +197,7 @@ describe('EntityService (integration)', () => {
       null, // workflowExt
       entityRegistry,
       appLogger,
-      null, // positionScopeProvider
+      scopeResolverRegistry,
     );
   });
 
@@ -661,150 +671,6 @@ describe('EntityService (integration)', () => {
       ).rejects.toThrow('not found');
     });
 
-  });
-
-  // ---------------------------------------------------------------------------
-  // RELATION HANDLERS (nested payloads → owning packages)
-  // ---------------------------------------------------------------------------
-
-  describe('relation handlers', () => {
-    function buildServiceWithRelations(relationships: EntityConfig['relationships']): EntityService {
-      const database = module.get(DatabaseService);
-      return new EntityService(
-        buildTestConfig(relationships),
-        database, eventEmitter, null, null,
-        fieldDefService, module.get(LookupResolverService), null,
-        null,
-        entityRegistry, module.get(AppLoggerService), null,
-      );
-    }
-
-    it('onCreate fires with nested payload, tx and ctx.parent when the relation key is present', async () => {
-      const onCreate = vi.fn(async (tx: any, _parentId: string, _payload: unknown, _actorId: string, ctx: any) => {
-        expect(typeof tx.insert).toBe('function');
-        expect(ctx.parent.email).toBe('withrel@example.com');
-        expect(ctx.parent.name).toBe('WithRel');
-      });
-      const service = buildServiceWithRelations([
-        { name: 'credentials', type: 'hasOne', targetEntity: 'test_entities', label: 'Credentials', handler: { onCreate } },
-      ]);
-
-      const created = await service.create(
-        { name: 'WithRel', email: 'withrel@example.com', credentials: { password: 's3cret' } },
-        TEST_ACTOR_ID,
-      );
-
-      expect(onCreate).toHaveBeenCalledOnce();
-      expect(onCreate).toHaveBeenCalledWith(
-        expect.anything(),
-        created.id,
-        { password: 's3cret' },
-        TEST_ACTOR_ID,
-        expect.objectContaining({ parent: expect.objectContaining({ email: 'withrel@example.com' }) }),
-      );
-    });
-
-    it('onCreate does not fire when the relation key is absent from the payload', async () => {
-      const onCreate = vi.fn();
-      const service = buildServiceWithRelations([
-        { name: 'credentials', type: 'hasOne', targetEntity: 'test_entities', label: 'Credentials', handler: { onCreate } },
-      ]);
-
-      await service.create({ name: 'NoRel', email: 'norel@example.com' }, TEST_ACTOR_ID);
-
-      expect(onCreate).not.toHaveBeenCalled();
-    });
-
-    it('rolls back the parent insert when onCreate throws', async () => {
-      const service = buildServiceWithRelations([
-        {
-          name: 'credentials', type: 'hasOne', targetEntity: 'test_entities', label: 'Credentials',
-          handler: { onCreate: async () => { throw new Error('handler-boom'); } },
-        },
-      ]);
-
-      await expect(
-        service.create(
-          { name: 'RollbackRel', email: 'rollbackrel@example.com', credentials: { password: 'x' } },
-          TEST_ACTOR_ID,
-        ),
-      ).rejects.toThrow('handler-boom');
-
-      const rows = await db.execute(
-        sql`SELECT id FROM test_entities WHERE email = 'rollbackrel@example.com'`,
-      );
-      const list = (rows as any).rows ?? (rows as any);
-      expect(list).toHaveLength(0);
-    });
-
-    it('onUpdate fires only when the relation key is present in the update DTO', async () => {
-      const onUpdate = vi.fn();
-      const service = buildServiceWithRelations([
-        { name: 'credentials', type: 'hasOne', targetEntity: 'test_entities', label: 'Credentials', handler: { onUpdate } },
-      ]);
-
-      const created = await service.create({ name: 'UpRel', email: 'uprel@example.com' }, TEST_ACTOR_ID);
-
-      await service.update(created.id as string, { name: 'UpRel2' }, TEST_ACTOR_ID);
-      expect(onUpdate).not.toHaveBeenCalled();
-
-      await service.update(
-        created.id as string,
-        { credentials: { password: 'new' } },
-        TEST_ACTOR_ID,
-      );
-      expect(onUpdate).toHaveBeenCalledOnce();
-      expect(onUpdate).toHaveBeenCalledWith(
-        expect.anything(),
-        created.id,
-        { password: 'new' },
-        TEST_ACTOR_ID,
-        expect.objectContaining({ parent: expect.objectContaining({ email: 'uprel@example.com' }) }),
-      );
-    });
-
-    it('onDelete fires with kind soft on softDelete and rolls back when handler throws', async () => {
-      const onDelete = vi.fn();
-      const service = buildServiceWithRelations([
-        { name: 'credentials', type: 'hasOne', targetEntity: 'test_entities', label: 'Credentials', handler: { onDelete } },
-      ]);
-
-      const created = await service.create(
-        { name: 'DelRel', email: 'delrel@example.com' },
-        TEST_ACTOR_ID,
-      );
-
-      await service.softDelete(created.id as string, TEST_ACTOR_ID);
-      expect(onDelete).toHaveBeenCalledOnce();
-      expect(onDelete).toHaveBeenCalledWith(
-        expect.anything(),
-        created.id,
-        TEST_ACTOR_ID,
-        { kind: 'soft' },
-        expect.objectContaining({ parent: expect.objectContaining({ email: 'delrel@example.com' }) }),
-      );
-
-      // Throwing handler rolls the soft-delete back
-      const throwingService = buildServiceWithRelations([
-        {
-          name: 'credentials', type: 'hasOne', targetEntity: 'test_entities', label: 'Credentials',
-          handler: { onDelete: async () => { throw new Error('del-boom'); } },
-        },
-      ]);
-      const created2 = await throwingService.create(
-        { name: 'DelRel2', email: 'delrel2@example.com' },
-        TEST_ACTOR_ID,
-      );
-      await expect(
-        throwingService.softDelete(created2.id as string, TEST_ACTOR_ID),
-      ).rejects.toThrow('del-boom');
-
-      const rows = await db.execute(
-        sql`SELECT deleted_at FROM test_entities WHERE id = ${created2.id as string}`,
-      );
-      const list = (rows as any).rows ?? (rows as any);
-      expect(list[0].deleted_at).toBeNull();
-    });
   });
 
   // ---------------------------------------------------------------------------

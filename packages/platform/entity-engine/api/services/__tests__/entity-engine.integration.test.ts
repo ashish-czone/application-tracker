@@ -290,18 +290,25 @@ describe('Entity Engine (integration)', () => {
   // ---------------------------------------------------------------------------
 
   describe('EntityRegistryService', () => {
+    // Minimal valid config — `onDelete` is required for `getRegistryEntries`
+    // to derive the `softDelete` / `restore` features without throwing.
+    const baseConfig = (overrides: Record<string, unknown>) => ({
+      table: {} as any,
+      fieldMeta: {},
+      sections: [],
+      onDelete: { mode: 'soft' as const },
+      ...overrides,
+    });
+
     it('should register and retrieve entity configs', () => {
-      const config = {
+      const config = baseConfig({
         entityType: 'test_type',
         singularName: 'Test',
         pluralName: 'Tests',
         slug: 'tests',
-        table: {} as any,
-        fieldMeta: {},
-        sections: [],
-      };
+      });
 
-      entityRegistry.register(config);
+      entityRegistry.register(config as any);
 
       expect(entityRegistry.get('test_type')).toBeDefined();
       expect(entityRegistry.get('test_type')!.singularName).toBe('Test');
@@ -315,33 +322,27 @@ describe('Entity Engine (integration)', () => {
     });
 
     it('should throw on duplicate registration', () => {
-      const config = {
+      const config = baseConfig({
         entityType: 'dup_type',
         singularName: 'Dup',
         pluralName: 'Dups',
         slug: 'dups',
-        table: {} as any,
-        fieldMeta: {},
-        sections: [],
-      };
+      });
 
-      entityRegistry.register(config);
-      expect(() => entityRegistry.register(config)).toThrow();
+      entityRegistry.register(config as any);
+      expect(() => entityRegistry.register(config as any)).toThrow();
     });
 
     it('should list all registered entries', () => {
-      const config = {
+      const config = baseConfig({
         entityType: 'list_type',
         singularName: 'ListItem',
         pluralName: 'ListItems',
         slug: 'list-items',
-        table: {} as any,
-        fieldMeta: {},
-        sections: [],
         ui: { boardFields: [] },
-      };
+      });
 
-      entityRegistry.register(config);
+      entityRegistry.register(config as any);
       const entries = entityRegistry.getRegistryEntries();
       expect(entries.some(e => e.entityType === 'list_type')).toBe(true);
     });
