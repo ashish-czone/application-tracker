@@ -12,7 +12,9 @@ test.describe('Users', () => {
     await authedPage.goto('/compliance-users');
     await expect(authedPage.getByRole('heading', { name: 'Users' }).first()).toBeVisible();
     await expect(authedPage.getByRole('button', { name: /Invite user/i })).toBeVisible();
-    // Demo user.
+    // Filter by name so the assertion isn't sensitive to pagination, default
+    // tab selection, or test users created earlier in the run.
+    await authedPage.getByPlaceholder(/search users/i).fill('Priya');
     await expect(authedPage.getByText(/Priya Sharma/i).first()).toBeVisible();
   });
 
