@@ -6,7 +6,7 @@ import type {
   HeaderPlugin,
   RightSidebarPanel,
 } from '@packages/entity-engine-ui';
-import type { MenuItem } from '@packages/domains';
+import type { EntityConfigTab, EntityDetailRenderer, MenuItem } from '@packages/domains';
 import { Providers } from './Providers';
 import { AppRouter } from './AppRouter';
 import { platformMenuItems } from './menu';
@@ -102,6 +102,27 @@ export function WebShell({
     return [...fromFeatures, ...(extraRoutes ?? [])];
   }, [featureList, extraRoutes]);
 
+  // First feature that supplies a given detail renderer wins. Apps with
+  // overlapping features should order their `features` array deliberately.
+  const entityDetailRenderers = useMemo(() => {
+    let pipelineProgress: EntityDetailRenderer | undefined;
+    let workflowActions: EntityDetailRenderer | undefined;
+    for (const f of featureList) {
+      if (!pipelineProgress && f.entityDetailRenderers?.pipelineProgress) {
+        pipelineProgress = f.entityDetailRenderers.pipelineProgress;
+      }
+      if (!workflowActions && f.entityDetailRenderers?.workflowActions) {
+        workflowActions = f.entityDetailRenderers.workflowActions;
+      }
+    }
+    return { pipelineProgress, workflowActions };
+  }, [featureList]);
+
+  const entityConfigTabs = useMemo<EntityConfigTab[]>(
+    () => featureList.flatMap((f) => f.entityConfigTabs ?? []),
+    [featureList],
+  );
+
   return (
     <Providers
       apiFn={apiFn}
@@ -118,6 +139,8 @@ export function WebShell({
         menuItems={menuItems}
         extraRoutes={allExtraRoutes}
         detailHeaderActions={extraDetailHeaderActions}
+        entityDetailRenderers={entityDetailRenderers}
+        entityConfigTabs={entityConfigTabs}
       />
     </Providers>
   );

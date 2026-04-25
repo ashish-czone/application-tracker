@@ -1,19 +1,17 @@
-import { Suspense, lazy, useState, useMemo, type ReactNode } from 'react';
+import { Suspense, lazy, useMemo, type ReactNode } from 'react';
 import { Routes, Route, Navigate, type RouteObject } from 'react-router';
 import { AuthGuard } from '@packages/auth-ui/components/AuthGuard';
 import { PermissionGuard } from '@packages/auth-ui/components/PermissionGuard';
-import { EntityListPage, EntityDetailPage, EntityGroupPage, useEntityConfig, useEntityEngine, groupSlug } from '@packages/entity-engine-ui';
-import type { DomainWebManifest, DomainDetailPageComponent, DomainRouteObject, MenuItem } from '@packages/domains';
+import { EntityListPage, EntityDetailPage, EntityGroupPage, useEntityEngine, groupSlug } from '@packages/entity-engine-ui';
+import type {
+  DomainWebManifest,
+  DomainDetailPageComponent,
+  DomainRouteObject,
+  EntityConfigTab,
+  EntityDetailRenderer,
+  MenuItem,
+} from '@packages/domains';
 import type { DetailHeaderActionRenderer } from './types';
-import {
-  PipelineProgressBar,
-  TransitionConfirmDialog,
-  WorkflowTransitionButton,
-  useWorkflowForEntity,
-  useWorkflows,
-  useEntityTransition,
-  useTransitionPreflight,
-} from '@packages/workflows-ui';
 import { RolesListPage } from '@packages/rbac-ui';
 import { usersRoutes } from '@packages/users-ui';
 import { SettingsPage as AppSettingsPage } from '@packages/settings-ui';
@@ -30,190 +28,34 @@ interface AppRouterProps {
   extraRoutes?: RouteObject[];
   /** Per-entity header action renderers — keyed by entityType. */
   detailHeaderActions?: Record<string, DetailHeaderActionRenderer>;
-}
-
-interface PendingTransition {
-  toStateName: string;
-  transitionName: string;
-  toStateLabel: string;
-  reasonOptions?: string[] | null;
-  reasonRequired?: boolean;
-  commentRequired?: boolean;
-}
-
-function useResolvedWorkflow(entityType: string, entityId: string) {
-  const { data: allWorkflows } = useWorkflows();
-  const anyWorkflow = allWorkflows?.find((w) => w.entityType === entityType && w.isActive);
-  const fieldName = anyWorkflow?.fieldName ?? '';
-  const { data: resolvedWorkflow } = useWorkflowForEntity(entityType, entityId, fieldName);
-  return resolvedWorkflow;
-}
-
-/**
- * Shared dialog wrapper. Holds the preflight query so both entry points
- * (PipelineProgressForEntity / WorkflowActionsForEntity) get identical
- * warning/blocker handling without duplicating the hook wiring.
- */
-function PreflightedTransitionDialog({
-  workflowSlug,
-  entityType,
-  entityId,
-  fromState,
-  pending,
-  isPending,
-  onCancel,
-  onConfirm,
-}: {
-  workflowSlug: string;
-  entityType: string;
-  entityId: string;
-  fromState: string;
-  pending: PendingTransition | null;
-  isPending: boolean;
-  onCancel: () => void;
-  onConfirm: (data: { reason?: string; comment?: string }) => void;
-}) {
-  const preflightParams = pending
-    ? { workflowSlug, entityType, entityId, fromState, toState: pending.toStateName }
-    : null;
-  const { data: preflight, isFetching: preflightLoading } = useTransitionPreflight(preflightParams);
-
-  return (
-    <TransitionConfirmDialog
-      open={!!pending}
-      onOpenChange={(open) => { if (!open) onCancel(); }}
-      transitionName={pending?.transitionName ?? ''}
-      toStateLabel={pending?.toStateLabel ?? ''}
-      isPending={isPending}
-      reasonOptions={pending?.reasonOptions}
-      reasonRequired={pending?.reasonRequired}
-      commentRequired={pending?.commentRequired}
-      warnings={preflight?.warnings}
-      blockers={preflight?.blockers}
-      preflightLoading={preflightLoading}
-      onConfirm={onConfirm}
-    />
-  );
-}
-
-function PipelineProgressForEntity({ entityType, entityId, entity }: { entityType: string; entityId: string; entity: Record<string, unknown> }) {
-  const resolvedWorkflow = useResolvedWorkflow(entityType, entityId);
-  const entityConfig = useEntityConfig(entityType);
-  const transitionMutation = useEntityTransition(entityConfig.slug, entityType, entityConfig.singularName);
-  const [pending, setPending] = useState<PendingTransition | null>(null);
-
-  if (!resolvedWorkflow) return null;
-  const currentState = entity[resolvedWorkflow.fieldName] as string;
-  if (!currentState) return null;
-
-  const handleStageClick = (toStateName: string, transitionName: string, toStateLabel: string) => {
-    const transition = resolvedWorkflow.transitions.find(
-      (t) => t.fromStateName === currentState && t.toStateName === toStateName,
-    );
-    setPending({
-      toStateName, transitionName, toStateLabel,
-      reasonOptions: transition?.reasonOptions,
-      reasonRequired: transition?.reasonRequired,
-      commentRequired: transition?.commentRequired,
-    });
+  /**
+   * EntityDetailPage slot renderers contributed by `WebShell.features`.
+   * Picked first-feature-wins by `WebShell` and passed through here so
+   * the router has no direct dependency on any specific feature package.
+   */
+  entityDetailRenderers?: {
+    pipelineProgress?: EntityDetailRenderer;
+    workflowActions?: EntityDetailRenderer;
   };
-
-  const handleConfirm = ({ reason, comment }: { reason?: string; comment?: string }) => {
-    if (!pending) return;
-    transitionMutation.mutate(
-      { id: entityId, fieldKey: resolvedWorkflow.fieldName, to: pending.toStateName, reason, comment },
-      { onSuccess: () => setPending(null) },
-    );
-  };
-
-  return (
-    <>
-      <PipelineProgressBar
-        workflowSlug={resolvedWorkflow.slug}
-        entityType={entityType}
-        entityId={entityId}
-        currentState={currentState}
-        onStageClick={handleStageClick}
-      />
-      <PreflightedTransitionDialog
-        workflowSlug={resolvedWorkflow.slug}
-        entityType={entityType}
-        entityId={entityId}
-        fromState={currentState}
-        pending={pending}
-        isPending={transitionMutation.isPending}
-        onCancel={() => setPending(null)}
-        onConfirm={handleConfirm}
-      />
-    </>
-  );
-}
-
-function WorkflowActionsForEntity({ entityType, entityId, entity }: { entityType: string; entityId: string; entity: Record<string, unknown> }) {
-  const resolvedWorkflow = useResolvedWorkflow(entityType, entityId);
-  const entityConfig = useEntityConfig(entityType);
-  const transitionMutation = useEntityTransition(entityConfig.slug, entityType, entityConfig.singularName);
-  const [pending, setPending] = useState<PendingTransition | null>(null);
-
-  if (!resolvedWorkflow) return null;
-  const currentState = entity[resolvedWorkflow.fieldName] as string;
-  if (!currentState) return null;
-
-  const handleTransitionSelect = (toStateName: string, transitionName: string, toStateLabel: string) => {
-    const transition = resolvedWorkflow.transitions.find(
-      (t) => t.fromStateName === currentState && t.toStateName === toStateName,
-    );
-    setPending({
-      toStateName, transitionName, toStateLabel,
-      reasonOptions: transition?.reasonOptions,
-      reasonRequired: transition?.reasonRequired,
-      commentRequired: transition?.commentRequired,
-    });
-  };
-
-  const handleConfirm = ({ reason, comment }: { reason?: string; comment?: string }) => {
-    if (!pending) return;
-    transitionMutation.mutate(
-      { id: entityId, fieldKey: resolvedWorkflow.fieldName, to: pending.toStateName, reason, comment },
-      { onSuccess: () => setPending(null) },
-    );
-  };
-
-  return (
-    <>
-      <WorkflowTransitionButton
-        workflow={resolvedWorkflow}
-        currentState={currentState}
-        onTransitionSelect={handleTransitionSelect}
-      />
-      <PreflightedTransitionDialog
-        workflowSlug={resolvedWorkflow.slug}
-        entityType={entityType}
-        entityId={entityId}
-        fromState={currentState}
-        pending={pending}
-        isPending={transitionMutation.isPending}
-        onCancel={() => setPending(null)}
-        onConfirm={handleConfirm}
-      />
-    </>
-  );
-}
-
-function renderPipelineProgress(entityType: string, entityId: string, entity: Record<string, unknown>) {
-  return <PipelineProgressForEntity entityType={entityType} entityId={entityId} entity={entity} />;
-}
-
-function renderWorkflowActions(entityType: string, entityId: string, entity: Record<string, unknown>) {
-  return <WorkflowActionsForEntity entityType={entityType} entityId={entityId} entity={entity} />;
+  /**
+   * Sub-tabs to add to the entity-config admin page, contributed by
+   * features. Each tab decides which entities it applies to via its own
+   * `appliesTo` predicate; the router merely forwards the list.
+   */
+  entityConfigTabs?: EntityConfigTab[];
 }
 
 function AppEntityDetailPage({
   entityType,
   detailHeaderActions,
+  entityDetailRenderers,
 }: {
   entityType: string;
   detailHeaderActions?: Record<string, DetailHeaderActionRenderer>;
+  entityDetailRenderers?: {
+    pipelineProgress?: EntityDetailRenderer;
+    workflowActions?: EntityDetailRenderer;
+  };
 }) {
   const actionRenderer = detailHeaderActions?.[entityType];
   const renderHeaderActions = actionRenderer
@@ -224,8 +66,8 @@ function AppEntityDetailPage({
   return (
     <EntityDetailPage
       entityType={entityType}
-      renderPipelineProgress={renderPipelineProgress}
-      renderWorkflowActions={renderWorkflowActions}
+      renderPipelineProgress={entityDetailRenderers?.pipelineProgress}
+      renderWorkflowActions={entityDetailRenderers?.workflowActions}
       renderHeaderActions={renderHeaderActions}
     />
   );
@@ -284,7 +126,7 @@ function withPermission(element: ReactNode, permission?: string): ReactNode {
   return <PermissionGuard permission={permission}>{element}</PermissionGuard>;
 }
 
-export function AppRouter({ domains, brandLabel, menuItems, extraRoutes, detailHeaderActions }: AppRouterProps) {
+export function AppRouter({ domains, brandLabel, menuItems, extraRoutes, detailHeaderActions, entityDetailRenderers, entityConfigTabs }: AppRouterProps) {
   const { entities } = useEntityEngine();
   const detailOverrides = useMemo(() => mergeDetailOverrides(domains), [domains]);
   const domainRoutes = useMemo(() => mergeDomainRoutes(domains), [domains]);
@@ -402,7 +244,7 @@ export function AppRouter({ domains, brandLabel, menuItems, extraRoutes, detailH
               <Route
                 key={`${entity.entityType}-detail`}
                 path={`/${entity.slug}/:id`}
-                element={Override ? <Suspense fallback={<PageSkeleton />}><Override /></Suspense> : <AppEntityDetailPage entityType={entity.entityType} detailHeaderActions={detailHeaderActions} />}
+                element={Override ? <Suspense fallback={<PageSkeleton />}><Override /></Suspense> : <AppEntityDetailPage entityType={entity.entityType} detailHeaderActions={detailHeaderActions} entityDetailRenderers={entityDetailRenderers} />}
               />,
             ];
           })}
@@ -427,7 +269,7 @@ export function AppRouter({ domains, brandLabel, menuItems, extraRoutes, detailH
               <Route
                 key={`${entity.entityType}-detail`}
                 path={`/${gSlug}/${entity.slug}/:id`}
-                element={Override ? <Suspense fallback={<PageSkeleton />}><Override /></Suspense> : <AppEntityDetailPage entityType={entity.entityType} detailHeaderActions={detailHeaderActions} />}
+                element={Override ? <Suspense fallback={<PageSkeleton />}><Override /></Suspense> : <AppEntityDetailPage entityType={entity.entityType} detailHeaderActions={detailHeaderActions} entityDetailRenderers={entityDetailRenderers} />}
               />
             );
           })}
@@ -443,7 +285,7 @@ export function AppRouter({ domains, brandLabel, menuItems, extraRoutes, detailH
           {usersRoutes}
           <Route path="/roles" element={<Suspense fallback={<PageSkeleton />}><RolesListPage /></Suspense>} />
           <Route path="/settings/appearance" element={<Suspense fallback={<PageSkeleton />}><ThemingAppearancePage /></Suspense>} />
-          <Route path="/settings/:entityType?" element={<Suspense fallback={<PageSkeleton />}><EntityConfigPage /></Suspense>} />
+          <Route path="/settings/:entityType?" element={<Suspense fallback={<PageSkeleton />}><EntityConfigPage entityConfigTabs={entityConfigTabs} /></Suspense>} />
           <Route path="/app-settings" element={<Suspense fallback={<PageSkeleton />}><AppSettingsPage /></Suspense>} />
           <Route path="/queued-tasks" element={<Suspense fallback={<PageSkeleton />}><QueueDashboardPage /></Suspense>} />
         </Route>
