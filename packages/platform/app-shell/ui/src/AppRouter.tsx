@@ -14,9 +14,7 @@ import {
   useEntityTransition,
   useTransitionPreflight,
 } from '@packages/workflows-ui';
-import { TagGroupsListPage, CategoryGroupsListPage } from '@packages/taxonomy-ui';
 import { RolesListPage } from '@packages/rbac-ui';
-import { AutomationsPage, RuleBuilderPage } from '@packages/automations-ui';
 import { usersRoutes } from '@packages/users-ui';
 import { SettingsPage as AppSettingsPage } from '@packages/settings-ui';
 import { QueueDashboardPage } from '@packages/queue-ui';
@@ -444,15 +442,10 @@ export function AppRouter({ domains, brandLabel, menuItems, extraRoutes, detailH
 
           {usersRoutes}
           <Route path="/roles" element={<Suspense fallback={<PageSkeleton />}><RolesListPage /></Suspense>} />
-          <Route path="/tag-groups" element={<TagGroupsListPage />} />
-          <Route path="/categories" element={<CategoryGroupsListPage />} />
           <Route path="/settings/appearance" element={<Suspense fallback={<PageSkeleton />}><ThemingAppearancePage /></Suspense>} />
           <Route path="/settings/:entityType?" element={<Suspense fallback={<PageSkeleton />}><EntityConfigPage /></Suspense>} />
           <Route path="/app-settings" element={<Suspense fallback={<PageSkeleton />}><AppSettingsPage /></Suspense>} />
           <Route path="/queued-tasks" element={<Suspense fallback={<PageSkeleton />}><QueueDashboardPage /></Suspense>} />
-          <Route path="/automations" element={<Suspense fallback={<PageSkeleton />}><AutomationsPage /></Suspense>} />
-          <Route path="/automations/create" element={<Suspense fallback={<PageSkeleton />}><RuleBuilderPage /></Suspense>} />
-          <Route path="/automations/:id/edit" element={<Suspense fallback={<PageSkeleton />}><RuleBuilderPage /></Suspense>} />
         </Route>
       </Route>
 

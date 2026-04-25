@@ -10,8 +10,6 @@ import {
   type HeaderPlugin,
   type RightSidebarPanel,
 } from '@packages/entity-engine-ui';
-import { PipelineProgressInline } from '@packages/workflows-ui';
-import { TaxonomyProvider } from '@packages/taxonomy-ui';
 import { PlatformUIProvider } from '@packages/platform-ui';
 import { ThemeProvider } from '@packages/theming-ui';
 import { useAuth } from '@packages/auth-ui/hooks/useAuth';
@@ -86,15 +84,11 @@ export function Providers({
   headerPlugins,
   columnRenderers,
 }: ProvidersProps) {
-  const renderers: Record<string, ColumnRendererRegistration> = {
-    PipelineProgressRenderer: { component: PipelineProgressInline },
-    ...columnRenderers,
-  };
-
   // PlatformUIProvider's ApiFn is the canonical shape; other providers
-  // (taxonomy, theming, entity-engine) declare structurally identical but
-  // nominally different ApiFn types. Cast to any at provider boundaries —
-  // runtime contract is satisfied by createAuthenticatedApi from auth-ui.
+  // (theming, entity-engine, feature-contributed providers) declare
+  // structurally identical but nominally different ApiFn types. Cast to
+  // any at provider boundaries — runtime contract is satisfied by
+  // createAuthenticatedApi from auth-ui.
   const apiAny = apiFn as any;
 
   return (
@@ -108,13 +102,11 @@ export function Providers({
               detailTabs={detailTabs}
               rightSidebarPanels={rightSidebarPanels}
               headerPlugins={headerPlugins}
-              columnRenderers={renderers}
+              columnRenderers={columnRenderers}
             >
-              <TaxonomyProvider apiFn={apiAny}>
-                <ComposedFeatureProviders features={features} apiFn={apiAny}>
-                  {children}
-                </ComposedFeatureProviders>
-              </TaxonomyProvider>
+              <ComposedFeatureProviders features={features} apiFn={apiAny}>
+                {children}
+              </ComposedFeatureProviders>
             </EntityEngineProvider>
           </AuthGatedThemeProvider>
         </PlatformUIProvider>
