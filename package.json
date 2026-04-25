@@ -22,7 +22,8 @@
     "db:generate": "pnpm --filter @packages/database db:generate",
     "db:migrate": "pnpm --filter @packages/database db:migrate",
     "db:push": "pnpm --filter @packages/database db:push",
-    "db:studio": "pnpm --filter @packages/database db:studio"
+    "db:studio": "pnpm --filter @packages/database db:studio",
+    "gen:entity": "tsx --tsconfig tsconfig.base.json tools/gen-entity/index.ts"
   },
   "devDependencies": {
     "@faker-js/faker": "^10.3.0",
@@ -48,6 +49,7 @@
     "jsonwebtoken": "^9.0.2",
     "reflect-metadata": "^0.2.2",
     "supertest": "^7.0.0",
+    "tsx": "^4.20.0",
     "turbo": "^2.4.0",
     "typescript": "^5.7.0",
     "unplugin-swc": "^1.5.9",
