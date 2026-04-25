@@ -325,8 +325,7 @@ describe('defineEntity', () => {
     expect(config.systemColumns).not.toContain('createdBy');
   });
 
-  it('should pass through actions, extra permissions, extra events, and workflow guards', () => {
-    const myGuard = () => ({ decision: 'allow' as const });
+  it('should pass through actions, extra permissions, and extra events', () => {
     const config = defineEntity({
       table: testTable,
       onDelete: { mode: 'soft' },
@@ -335,12 +334,10 @@ describe('defineEntity', () => {
       ui: { icon: 'FileText' },
       extraPermissions: [{ action: 'export', description: 'Export' }],
       extraEvents: [{ name: 'test.custom', description: 'Custom' }],
-      workflowGuards: { myGuard },
     });
 
     expect(config.extraPermissions).toEqual([{ action: 'export', description: 'Export' }]);
     expect(config.extraEvents).toEqual([{ name: 'test.custom', description: 'Custom' }]);
-    expect(config.workflowGuards?.myGuard).toBe(myGuard);
   });
 
   it('should pass through sections for entity-layout', () => {

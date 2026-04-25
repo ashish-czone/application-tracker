@@ -72,7 +72,7 @@ describe('WorkflowRegistryService', () => {
       ];
 
       const mockTransitions = [
-        { id: 'trans-1', workflowDefinitionId: 'def-1', fromStateId: 'state-1', toStateId: 'state-2', name: 'Submit', requiredPermissions: ['tasks.submit'], guardNames: ['has-attachment'], sortOrder: 0, metadata: null, createdAt: new Date(), updatedAt: new Date() },
+        { id: 'trans-1', workflowDefinitionId: 'def-1', fromStateId: 'state-1', toStateId: 'state-2', name: 'Submit', requiredPermissions: ['tasks.submit'], sortOrder: 0, metadata: null, createdAt: new Date(), updatedAt: new Date() },
       ];
 
       mockLoadAll(mockDb, mockDefinitions, mockStates, mockTransitions);
@@ -89,7 +89,6 @@ describe('WorkflowRegistryService', () => {
       expect(cached!.transitions[0].fromStateName).toBe('draft');
       expect(cached!.transitions[0].toStateName).toBe('submitted');
       expect(cached!.transitions[0].requiredPermissions).toEqual(['tasks.submit']);
-      expect(cached!.transitions[0].guardNames).toEqual(['has-attachment']);
 
       // Also test getByEntityType and getByEntityField
       expect(service.getByEntityType('task')).toHaveLength(1);

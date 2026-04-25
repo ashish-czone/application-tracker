@@ -85,15 +85,16 @@ export class WorkflowsController {
   // --- Preflight ---
 
   /**
-   * Dry-run a proposed transition: runs guards in advisory mode so the UI
-   * can show warnings ("N filings will be cancelled") and blockers
-   * ("Add a primary contact first") before the user confirms in the
-   * transition dialog. No DB writes. Guards re-run on commit via
-   * validateAndThrow(), so preflight is advisory-only.
+   * Dry-run a proposed transition: returns whether the transition is legal
+   * in the workflow definition and which permissions the actor lacks. Does
+   * NOT run per-entity guards — those live in per-entity services. UI flows
+   * that need guard-aware previews (warnings, advisory blockers) call the
+   * per-entity service's preview endpoint (e.g. `GET /clients/:id/transition-preview`)
+   * and merge results client-side.
    */
   @Get('preflight')
   @RequirePermission(WORKFLOWS_PERMISSIONS.READ)
-  @ApiOperation({ summary: 'Preview warnings, blockers, and missing permissions for a proposed transition' })
+  @ApiOperation({ summary: 'Preview legality + missing permissions for a proposed transition' })
   async preflight(
     @Query('workflowSlug') workflowSlug: string,
     @Query('entityType') entityType: string,

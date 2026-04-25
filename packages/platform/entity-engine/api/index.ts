@@ -132,7 +132,7 @@ export type { FeatureDeriver } from './services/feature-deriver.registry';
 export type { LayoutExtension } from './extensions/layout-extension.interface';
 export { LAYOUT_EXTENSION } from './extensions/layout-extension.interface';
 
-export type { WorkflowExtension, WorkflowDefinitionRef, WorkflowTransitionRef, ValidatedTransition, WorkflowGuardContext, WorkflowGuardFn, GuardResult } from './extensions/workflow-extension.interface';
+export type { WorkflowExtension, WorkflowDefinitionRef, WorkflowTransitionRef, ValidatedTransition } from './extensions/workflow-extension.interface';
 export { WORKFLOW_EXTENSION } from './extensions/workflow-extension.interface';
 
 export type { AutomationsExtension, ActionHandlerDef, ActionExecutionContext, ActionExecutionResult, EntityResolverConfig, EntityResolverFieldConfig } from './extensions/automations-extension.interface';

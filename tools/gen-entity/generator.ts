@@ -27,16 +27,23 @@ export interface MultiValueFieldInfo {
   fieldType: 'multi_user' | 'multi_lookup';
 }
 
+export interface WorkflowFieldInfo {
+  key: string;          // e.g. 'status'
+  workflowSlug: string; // e.g. 'candidate-status'
+}
+
 export interface GeneratorContext {
   entitySlug: string;                  // e.g. 'candidates'
   domain: string;                      // e.g. 'recruit'
   targetDir: string;                   // absolute path to domains/<domain>/api/<entity>/
   singularPascal: string;              // 'Candidate' (from config.singularName) — used for schemas + DTOs
   pluralPascal: string;                // 'Candidates' (from config.pluralName) — used for Service/Controller/Module
+  pluralUpper: string;                 // 'CANDIDATES' — used as the GUARDS array prefix
   tableIdent: string;                  // 'candidates' (Drizzle table import name; matches slug)
   configIdent: string;                 // 'candidatesConfig' (the export name)
   tagFields: TagFieldInfo[];           // fields with fieldType === 'tags'
   multiValueFields: MultiValueFieldInfo[]; // fields with fieldType === 'multi_user' | 'multi_lookup'
+  workflowFields: WorkflowFieldInfo[]; // fields with fieldType === 'workflow'
 }
 
 interface FilePlanEntry {
@@ -144,10 +151,14 @@ async function buildContext(args: {
   const multiValueFields: MultiValueFieldInfo[] = Object.entries(fieldMeta)
     .filter(([, m]) => (m as any).fieldType === 'multi_user' || (m as any).fieldType === 'multi_lookup')
     .map(([key, m]) => ({ key, fieldType: (m as any).fieldType }));
+  const workflowFields: WorkflowFieldInfo[] = Object.entries(fieldMeta)
+    .filter(([, m]) => (m as any).fieldType === 'workflow')
+    .map(([key, m]) => ({ key, workflowSlug: (m as any).workflow?.slug ?? '' }));
 
   // Convention: kebab-case slug → camelCase identifier for the Drizzle table
   // (e.g. 'job-openings' → 'jobOpenings'). The schema FILE keeps kebab-case.
   const tableIdent = entitySlug.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+  const pluralUpper = pluralPascal.replace(/[A-Z]/g, (c, i) => (i === 0 ? c : '_' + c)).toUpperCase();
 
   return {
     entitySlug,
@@ -155,10 +166,12 @@ async function buildContext(args: {
     targetDir,
     singularPascal,
     pluralPascal,
+    pluralUpper,
     tableIdent,
     configIdent,
     tagFields,
     multiValueFields,
+    workflowFields,
   };
 }
 

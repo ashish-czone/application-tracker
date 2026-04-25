@@ -10,7 +10,6 @@ export const workflowTransitions = pgTable('workflow_transitions', {
   toStateId: text('to_state_id').notNull().references(() => workflowStates.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   requiredPermissions: jsonb('required_permissions'),
-  guardNames: jsonb('guard_names'),
   sortOrder: integer('sort_order').notNull().default(0),
   reasonOptions: jsonb('reason_options').$type<string[]>(),
   reasonRequired: boolean('reason_required').notNull().default(false),

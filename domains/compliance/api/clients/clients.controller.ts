@@ -119,6 +119,21 @@ export class ClientsController {
     );
   }
 
+  @Get(':id/transition-preview')
+  @RequirePermission('clients.update')
+  previewTransition(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('fieldKey') fieldKey: string,
+    @Query('to') to: string,
+    @CurrentUser() user: JwtPayload,
+    @AccessContext() accessCtx?: DataAccessContext,
+  ) {
+    if (!fieldKey || !to) {
+      throw new BadRequestException('Query params `fieldKey` and `to` are required');
+    }
+    return this.clientsService.previewTransition(id, fieldKey, to, user.userId, accessCtx);
+  }
+
   @Post(':id/clone')
   @RequirePermission('clients.create')
   @HttpCode(HttpStatus.CREATED)

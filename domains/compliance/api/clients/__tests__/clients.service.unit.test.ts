@@ -43,7 +43,9 @@ describe('ClientsService', () => {
   let dormancy: {
     cancelInFlightFilings: ReturnType<typeof vi.fn>;
     emitCascadeEvent: ReturnType<typeof vi.fn>;
+    countNonTerminalFilings: ReturnType<typeof vi.fn>;
   };
+  let contacts: { hasPrimaryContact: ReturnType<typeof vi.fn> };
   let service: ClientsService;
 
   beforeEach(() => {
@@ -65,12 +67,15 @@ describe('ClientsService', () => {
     dormancy = {
       cancelInFlightFilings: vi.fn().mockResolvedValue({ cancelledFilingIds: [] }),
       emitCascadeEvent: vi.fn(),
+      countNonTerminalFilings: vi.fn().mockResolvedValue(0),
     };
+    contacts = { hasPrimaryContact: vi.fn().mockResolvedValue(true) };
     service = new ClientsService(
       entityService as never,
       db as never,
       events as never,
       dormancy as never,
+      contacts as never,
     );
   });
 
@@ -142,6 +147,7 @@ describe('ClientsService', () => {
     };
 
     it('runs validate → tx(apply) → emit for a non-dormantisation transition', async () => {
+      entityService.findOneOrFail.mockResolvedValue({ id: 'cid-1', status: 'onboarding' });
       entityService.validateTransition.mockResolvedValue(baseCtx);
       db.db.transaction.mockImplementation(async (cb: (tx: unknown) => unknown) => cb({}));
 
@@ -156,6 +162,7 @@ describe('ClientsService', () => {
 
     it('runs dormancy cascade inside the same tx when active → dormant on status', async () => {
       const dormantCtx = { ...baseCtx, fromState: 'active', toState: 'dormant' };
+      entityService.findOneOrFail.mockResolvedValue({ id: 'cid-1', status: 'active' });
       entityService.validateTransition.mockResolvedValue(dormantCtx);
       dormancy.cancelInFlightFilings.mockResolvedValue({ cancelledFilingIds: ['f1', 'f2'] });
       let applyCalled = false;
@@ -184,6 +191,7 @@ describe('ClientsService', () => {
 
     it('does not run cascade on dormant → active', async () => {
       const reactivate = { ...baseCtx, fromState: 'dormant', toState: 'active' };
+      entityService.findOneOrFail.mockResolvedValue({ id: 'cid-1', status: 'dormant' });
       entityService.validateTransition.mockResolvedValue(reactivate);
       db.db.transaction.mockImplementation(async (cb: (tx: unknown) => unknown) => cb({}));
 

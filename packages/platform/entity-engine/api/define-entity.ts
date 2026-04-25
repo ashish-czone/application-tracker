@@ -16,7 +16,6 @@ import type {
   SetPicklistOptionInput,
   WorkflowFieldConfig,
 } from './types';
-import type { WorkflowGuardFn } from './extensions/workflow-extension.interface';
 import { hasCustomFieldsColumn } from './helpers/custom-fields-column';
 
 // ---------------------------------------------------------------------------
@@ -284,16 +283,6 @@ export interface ModelDefinition<TTable extends PgTable = PgTable> {
    * their own write paths in hand-written services.
    */
   relationships?: EntityRelationship[];
-
-  // --- Workflow extension ---
-
-  /**
-   * Named workflow guard functions, keyed by name. Referenced by `guardNames`
-   * on transition targets. Registered into the workflow guard registry at
-   * module init. Pure predicates — put domain behaviour in hand-written
-   * services, not here.
-   */
-  workflowGuards?: Record<string, WorkflowGuardFn>;
 }
 
 // ---------------------------------------------------------------------------
@@ -622,6 +611,5 @@ export function defineEntity<TTable extends PgTable>(model: ModelDefinition<TTab
       afterCreateRoute: model.ui.afterCreateRoute,
     },
     dataAccess: model.dataAccess,
-    workflowGuards: model.workflowGuards,
   };
 }

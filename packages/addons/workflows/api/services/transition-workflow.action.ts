@@ -86,7 +86,11 @@ export class TransitionWorkflowAction implements ActionHandler {
 
     const actorId = context.event?.actorId ?? 'system';
 
-    // Validate the transition (checks permissions, guards, conditions)
+    // Validate the transition: legality + permissions + declarative conditions.
+    // Per-entity guards (defined in per-entity services) are NOT run here —
+    // automation-triggered transitions bypass them by design. Domain services
+    // that need guard enforcement on automation paths should expose a domain
+    // method and have the rule call it instead of TransitionWorkflowAction.
     await this.workflowEngine.validateAndThrow({
       workflowSlug,
       entityType,

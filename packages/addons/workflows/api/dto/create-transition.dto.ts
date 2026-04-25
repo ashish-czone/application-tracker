@@ -22,12 +22,6 @@ export class CreateTransitionDto {
   @IsString({ each: true })
   requiredPermissions?: string[];
 
-  @ApiPropertyOptional({ example: ['not-same-actor'], description: 'Guard function names to check before transition' })
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  guardNames?: string[];
-
   @ApiPropertyOptional({ example: 0 })
   @IsOptional()
   @IsInt()

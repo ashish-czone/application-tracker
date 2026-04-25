@@ -74,7 +74,6 @@ export class WorkflowRegistryService implements OnModuleInit {
         toStateName: stateNameById.get(t.toStateId) ?? '',
         name: t.name,
         requiredPermissions: (t.requiredPermissions as string[] | null) ?? [],
-        guardNames: (t.guardNames as string[] | null) ?? [],
         sortOrder: t.sortOrder,
         reasonOptions: t.reasonOptions ?? null,
         reasonRequired: t.reasonRequired,
@@ -258,7 +257,6 @@ export class WorkflowRegistryService implements OnModuleInit {
     toStateId: string;
     name: string;
     requiredPermissions?: string[];
-    guardNames?: string[];
     sortOrder?: number;
     reasonOptions?: string[];
     reasonRequired?: boolean;
@@ -276,7 +274,6 @@ export class WorkflowRegistryService implements OnModuleInit {
   async updateTransition(id: string, data: Partial<{
     name: string;
     requiredPermissions: string[] | null;
-    guardNames: string[] | null;
     sortOrder: number;
     reasonOptions: string[] | null;
     reasonRequired: boolean;

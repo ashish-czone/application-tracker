@@ -1,10 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import type { WorkflowExtension, WorkflowDefinitionRef, ValidatedTransition } from '@packages/entity-engine/extensions';
-import type { WorkflowGuardFn } from '@packages/entity-engine/extensions';
 import { WorkflowRegistryService } from './services/workflow-registry.service';
 import { WorkflowEngineService } from './services/workflow-engine.service';
-import { WorkflowGuardRegistry } from './services/workflow-guard-registry.service';
 import { PipelineResolverService } from './services/pipeline-resolver.service';
+import type { TransitionPreflight } from './types';
 
 /**
  * Adapter that implements entity-engine's WorkflowExtension interface
@@ -15,7 +14,6 @@ export class WorkflowExtensionAdapter implements WorkflowExtension {
   constructor(
     private readonly registry: WorkflowRegistryService,
     private readonly engine: WorkflowEngineService,
-    private readonly guardRegistry: WorkflowGuardRegistry,
     private readonly pipelineResolver: PipelineResolverService,
   ) {}
 
@@ -47,7 +45,6 @@ export class WorkflowExtensionAdapter implements WorkflowExtension {
     toStateId: string;
     name: string;
     requiredPermissions?: string[];
-    guardNames?: string[];
     sortOrder: number;
     metadata?: Record<string, unknown>;
     reasonRequired?: boolean;
@@ -55,10 +52,6 @@ export class WorkflowExtensionAdapter implements WorkflowExtension {
     reasonOptions?: string[];
   }) {
     return this.registry.createTransition(definitionId, data);
-  }
-
-  registerGuard(name: string, fn: WorkflowGuardFn): void {
-    this.guardRegistry.register(name, fn);
   }
 
   async resolveForTransition(entityType: string, entityId: string, fieldName: string) {
@@ -79,6 +72,17 @@ export class WorkflowExtensionAdapter implements WorkflowExtension {
     entityData?: Record<string, unknown>;
   }): Promise<ValidatedTransition> {
     return this.engine.validateAndThrow(params);
+  }
+
+  async preflightTransition(params: {
+    workflowSlug: string;
+    entityType: string;
+    entityId: string;
+    fromState: string;
+    toState: string;
+    actorId: string | null;
+  }): Promise<TransitionPreflight> {
+    return this.engine.preflightTransition(params);
   }
 
   async recordHistory(data: {

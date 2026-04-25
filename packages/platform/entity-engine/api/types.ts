@@ -2,7 +2,6 @@ import type { PgTable, PgColumn } from 'drizzle-orm/pg-core';
 import type { SQL } from 'drizzle-orm';
 import type { Condition } from '@packages/common';
 import type { SoftDeleteMode, DependentStrategy } from '@packages/soft-delete';
-import type { WorkflowGuardFn } from './extensions/workflow-extension.interface';
 
 // ---------------------------------------------------------------------------
 // Deletion policy
@@ -435,7 +434,7 @@ export interface WorkflowStateDef {
 export interface WorkflowTransitionDef {
   /** Source state name */
   from: string;
-  /** Possible target states — plain string (no conditions) or object (with conditions/permissions/guards) */
+  /** Possible target states — plain string (no conditions) or object (with conditions/permissions) */
   to: (string | WorkflowTargetDef)[];
 }
 
@@ -444,8 +443,6 @@ export interface WorkflowTargetDef {
   state: string;
   /** Additional permissions required for this transition */
   requiredPermissions?: string[];
-  /** Named guard functions to execute (registered in EntityConfig.workflowGuards) */
-  guardNames?: string[];
   /** Declarative conditions evaluated against entity field values */
   conditions?: Condition[];
   /** Require the actor to supply a reason (validated against `reasonOptions` if set). */
@@ -834,17 +831,6 @@ export interface EntityConfig<TTable extends PgTable = PgTable> {
 
   /** Row-level data access configuration. Controls which records users can see based on their RBAC scope. */
   dataAccess?: DataAccessConfig;
-
-  // --- Workflow extension ---
-
-  /**
-   * Named workflow guard functions, keyed by name. Referenced by
-   * `guardNames` on transition targets. Registered into the workflow guard
-   * registry at module init. Pure predicates — no payload mutation or side
-   * effects. For domain behaviour on create/update/delete, put the logic
-   * in the hand-written service that owns the entity, not here.
-   */
-  workflowGuards?: Record<string, WorkflowGuardFn>;
 }
 
 /**

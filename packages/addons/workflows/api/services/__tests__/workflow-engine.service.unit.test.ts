@@ -2,21 +2,8 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { NotFoundException, UnprocessableEntityException, ForbiddenException } from '@nestjs/common';
 import { WorkflowEngineService } from '../workflow-engine.service';
 import { WorkflowRegistryService } from '../workflow-registry.service';
-import { WorkflowGuardRegistry } from '../workflow-guard-registry.service';
 import type { RbacService } from '@packages/rbac';
-import { allow, allowWithWarning, block } from '../../types';
 import type { CachedWorkflowDefinition } from '../../types';
-
-const mockContextLogger = {
-  log: vi.fn(),
-  warn: vi.fn(),
-  error: vi.fn(),
-  debug: vi.fn(),
-};
-
-const mockAppLogger = {
-  forContext: vi.fn().mockReturnValue(mockContextLogger),
-} as any;
 
 const mockDefinition: CachedWorkflowDefinition = {
   id: 'def-1',
@@ -26,6 +13,9 @@ const mockDefinition: CachedWorkflowDefinition = {
   fieldName: 'status',
   initialState: 'draft',
   isActive: true,
+  discriminatorKey: null,
+  discriminatorValue: null,
+  isDefault: true,
   states: [
     { id: 'state-1', name: 'draft', label: 'Draft', color: '#gray', sortOrder: 0, metadata: null },
     { id: 'state-2', name: 'submitted', label: 'Submitted', color: '#blue', sortOrder: 1, metadata: null },
@@ -39,8 +29,10 @@ const mockDefinition: CachedWorkflowDefinition = {
       toStateName: 'submitted',
       name: 'Submit',
       requiredPermissions: [],
-      guardNames: [],
       sortOrder: 0,
+      reasonOptions: null,
+      reasonRequired: false,
+      commentRequired: false,
       metadata: null,
     },
     {
@@ -49,8 +41,10 @@ const mockDefinition: CachedWorkflowDefinition = {
       toStateName: 'approved',
       name: 'Approve',
       requiredPermissions: ['tasks.approve'],
-      guardNames: ['not-same-actor'],
       sortOrder: 0,
+      reasonOptions: null,
+      reasonRequired: false,
+      commentRequired: false,
       metadata: null,
     },
     {
@@ -59,8 +53,10 @@ const mockDefinition: CachedWorkflowDefinition = {
       toStateName: 'rejected',
       name: 'Reject',
       requiredPermissions: ['tasks.approve'],
-      guardNames: [],
       sortOrder: 1,
+      reasonOptions: null,
+      reasonRequired: false,
+      commentRequired: false,
       metadata: null,
     },
   ],
@@ -69,7 +65,6 @@ const mockDefinition: CachedWorkflowDefinition = {
 describe('WorkflowEngineService', () => {
   let engine: WorkflowEngineService;
   let registryMock: { getBySlug: ReturnType<typeof vi.fn> };
-  let guardRegistryMock: WorkflowGuardRegistry;
   let mockDb: any;
   let rbacServiceMock: { getPermissionsForUser: ReturnType<typeof vi.fn> };
 
@@ -77,8 +72,6 @@ describe('WorkflowEngineService', () => {
     registryMock = {
       getBySlug: vi.fn().mockReturnValue(mockDefinition),
     };
-
-    guardRegistryMock = new WorkflowGuardRegistry(mockAppLogger);
 
     mockDb = {
       select: vi.fn().mockReturnValue({
@@ -103,7 +96,6 @@ describe('WorkflowEngineService', () => {
 
     engine = new WorkflowEngineService(
       registryMock as unknown as WorkflowRegistryService,
-      guardRegistryMock,
       { db: mockDb } as any,
       rbacServiceMock as unknown as RbacService,
     );
@@ -133,7 +125,7 @@ describe('WorkflowEngineService', () => {
   });
 
   describe('validateTransition', () => {
-    it('should return valid for allowed transition without guards', async () => {
+    it('should return valid for allowed transition without permission requirements', async () => {
       const result = await engine.validateTransition('task-status', 'draft', 'submitted');
       expect(result).toEqual({ valid: true, transitionId: 'trans-1' });
     });
@@ -157,35 +149,6 @@ describe('WorkflowEngineService', () => {
     });
 
     it('should pass when actor has required permissions', async () => {
-      guardRegistryMock.register('not-same-actor', async () => allow());
-
-      const result = await engine.validateTransition('task-status', 'submitted', 'approved', {
-        entityId: 'entity-1',
-        entityType: 'task',
-        actorId: 'user-1',
-      });
-
-      expect(result.valid).toBe(true);
-      expect(result.transitionId).toBe('trans-2');
-    });
-
-    it('should return failed guard name and message when guard blocks', async () => {
-      guardRegistryMock.register('not-same-actor', async () => block('Actor cannot approve their own submission.'));
-
-      const result = await engine.validateTransition('task-status', 'submitted', 'approved', {
-        entityId: 'entity-1',
-        entityType: 'task',
-        actorId: 'user-1',
-      });
-
-      expect(result.valid).toBe(false);
-      expect(result.failedGuard).toBe('not-same-actor');
-      expect(result.blockerMessage).toBe('Actor cannot approve their own submission.');
-    });
-
-    it('should allow transition when guard returns allow_with_warning', async () => {
-      guardRegistryMock.register('not-same-actor', async () => allowWithWarning('heads up'));
-
       const result = await engine.validateTransition('task-status', 'submitted', 'approved', {
         entityId: 'entity-1',
         entityType: 'task',
@@ -243,35 +206,6 @@ describe('WorkflowEngineService', () => {
       ).rejects.toThrow(ForbiddenException);
     });
 
-    it('should throw with the guard message when a guard blocks', async () => {
-      guardRegistryMock.register('not-same-actor', async () => block('Actor cannot approve their own submission.'));
-
-      await expect(
-        engine.validateAndThrow({
-          workflowSlug: 'task-status',
-          entityType: 'task',
-          entityId: 'entity-1',
-          fromState: 'submitted',
-          toState: 'approved',
-          actorId: 'user-1',
-        }),
-      ).rejects.toThrow(/Actor cannot approve their own submission\./);
-    });
-
-    it('should execute additionalGuards and throw on failure', async () => {
-      await expect(
-        engine.validateAndThrow({
-          workflowSlug: 'task-status',
-          entityType: 'task',
-          entityId: 'entity-1',
-          fromState: 'draft',
-          toState: 'submitted',
-          actorId: 'user-1',
-          additionalGuards: [async () => block('inline guard says no')],
-        }),
-      ).rejects.toThrow(UnprocessableEntityException);
-    });
-
     it('should throw NotFoundException for unknown workflow', async () => {
       registryMock.getBySlug.mockReturnValue(undefined);
 
@@ -298,7 +232,7 @@ describe('WorkflowEngineService', () => {
       actorId: 'user-1',
     };
 
-    it('returns empty warnings/blockers for an allowed transition with no guards', async () => {
+    it('returns empty warnings/blockers for an allowed transition', async () => {
       const result = await engine.preflightTransition({ ...baseParams, fromState: 'draft', toState: 'submitted' });
       expect(result.transitionId).toBe('trans-1');
       expect(result.warnings).toEqual([]);
@@ -315,31 +249,13 @@ describe('WorkflowEngineService', () => {
 
     it('reports missing permissions without blocking the endpoint', async () => {
       rbacServiceMock.getPermissionsForUser.mockResolvedValue({});
-      guardRegistryMock.register('not-same-actor', async () => allow());
 
       const result = await engine.preflightTransition(baseParams);
 
       expect(result.transitionId).toBe('trans-2');
       expect(result.missingPermissions).toEqual(['tasks.approve']);
       expect(result.blockers).toEqual([]);
-    });
-
-    it('surfaces advisory warnings from guards', async () => {
-      guardRegistryMock.register('not-same-actor', async () => allowWithWarning('heads up, 3 items will change'));
-
-      const result = await engine.preflightTransition(baseParams);
-
-      expect(result.warnings).toEqual(['heads up, 3 items will change']);
-      expect(result.blockers).toEqual([]);
-    });
-
-    it('surfaces blocker messages from guards without throwing', async () => {
-      guardRegistryMock.register('not-same-actor', async () => block('not allowed right now'));
-
-      const result = await engine.preflightTransition(baseParams);
-
       expect(result.warnings).toEqual([]);
-      expect(result.blockers).toEqual(['not allowed right now']);
     });
 
     it('throws NotFoundException for unknown workflow', async () => {
