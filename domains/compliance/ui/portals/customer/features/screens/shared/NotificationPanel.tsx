@@ -39,7 +39,6 @@ function categoryFor(n: Notification): Category {
       return 'filing';
     case 'clients':
       return 'client';
-    case 'compliance-tasks':
     case 'tasks':
       return 'assignment';
     default:
