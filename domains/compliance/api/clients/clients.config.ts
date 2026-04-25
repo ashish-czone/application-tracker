@@ -80,9 +80,13 @@ export const CLIENTS_CONFIG = defineEntity({
         slug: 'client-status',
         initialState: 'onboarding',
         states: [
-          { name: 'onboarding', label: 'Onboarding', color: '#F59E0B' },
-          { name: 'active', label: 'Active', color: '#10B981' },
-          { name: 'dormant', label: 'Dormant', color: '#6B7280' },
+          // All three states are code-load-bearing: ClientsService.CLIENT_GUARDS
+          // and client-registrations.service filter on these names. Renaming
+          // any of them silently breaks domain logic, so isSystem locks the
+          // identifier in the admin UI (label/color stay editable).
+          { name: 'onboarding', label: 'Onboarding', color: '#F59E0B', isSystem: true },
+          { name: 'active', label: 'Active', color: '#10B981', isSystem: true },
+          { name: 'dormant', label: 'Dormant', color: '#6B7280', isSystem: true },
         ],
         transitions: [
           // Guards (require-primary-contact, compliance-client-dormancy-warning)

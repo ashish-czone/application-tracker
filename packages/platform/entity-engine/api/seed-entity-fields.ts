@@ -178,6 +178,7 @@ export async function seedWorkflows(
         label: s.label,
         color: s.color,
         sortOrder: i,
+        isSystem: s.isSystem ?? false,
       });
       stateIdByName.set(s.name, state.id);
     }

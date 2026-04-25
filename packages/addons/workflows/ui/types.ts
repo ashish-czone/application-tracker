@@ -4,6 +4,8 @@ export interface WorkflowState {
   label: string;
   color: string | null;
   sortOrder: number;
+  /** Code-load-bearing — admin UI must block rename/delete. */
+  isSystem: boolean;
   metadata: Record<string, unknown> | null;
 }
 

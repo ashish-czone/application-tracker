@@ -72,9 +72,13 @@ export const offersConfig: EntityConfig = {
         slug: 'offer-status',
         initialState: 'draft',
         states: [
-          { name: 'draft', label: 'Draft', color: '#6B7280' },
-          { name: 'pending-approval', label: 'Pending Approval', color: '#F59E0B' },
-          { name: 'approved', label: 'Approved', color: '#3B82F6' },
+          // draft, pending-approval, approved are code-load-bearing:
+          // - 'draft' is the offers.status column default
+          // - OfferApprovalsService gates submission on status === 'pending-approval'
+          // - OFFER_GUARDS branches on the pending-approval → approved transition
+          { name: 'draft', label: 'Draft', color: '#6B7280', isSystem: true },
+          { name: 'pending-approval', label: 'Pending Approval', color: '#F59E0B', isSystem: true },
+          { name: 'approved', label: 'Approved', color: '#3B82F6', isSystem: true },
           { name: 'sent', label: 'Sent', color: '#8B5CF6' },
           { name: 'accepted', label: 'Accepted', color: '#10B981' },
           { name: 'declined', label: 'Declined', color: '#EF4444' },

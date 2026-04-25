@@ -67,8 +67,8 @@ describe('WorkflowRegistryService', () => {
       ];
 
       const mockStates = [
-        { id: 'state-1', workflowDefinitionId: 'def-1', name: 'draft', label: 'Draft', color: '#gray', sortOrder: 0, metadata: null, createdAt: new Date(), updatedAt: new Date() },
-        { id: 'state-2', workflowDefinitionId: 'def-1', name: 'submitted', label: 'Submitted', color: '#blue', sortOrder: 1, metadata: null, createdAt: new Date(), updatedAt: new Date() },
+        { id: 'state-1', workflowDefinitionId: 'def-1', name: 'draft', label: 'Draft', color: '#gray', sortOrder: 0, isSystem: true, metadata: null, createdAt: new Date(), updatedAt: new Date() },
+        { id: 'state-2', workflowDefinitionId: 'def-1', name: 'submitted', label: 'Submitted', color: '#blue', sortOrder: 1, isSystem: false, metadata: null, createdAt: new Date(), updatedAt: new Date() },
       ];
 
       const mockTransitions = [
@@ -85,6 +85,8 @@ describe('WorkflowRegistryService', () => {
       expect(cached!.entityType).toBe('task');
       expect(cached!.fieldName).toBe('status');
       expect(cached!.states).toHaveLength(2);
+      expect(cached!.states[0].isSystem).toBe(true);
+      expect(cached!.states[1].isSystem).toBe(false);
       expect(cached!.transitions).toHaveLength(1);
       expect(cached!.transitions[0].fromStateName).toBe('draft');
       expect(cached!.transitions[0].toStateName).toBe('submitted');

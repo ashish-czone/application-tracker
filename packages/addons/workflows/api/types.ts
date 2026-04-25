@@ -32,6 +32,8 @@ export interface CachedWorkflowState {
   label: string;
   color: string | null;
   sortOrder: number;
+  /** Code-load-bearing state — admin UI must block rename/delete. */
+  isSystem: boolean;
   metadata: Record<string, unknown> | null;
 }
 

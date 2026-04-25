@@ -59,7 +59,11 @@ export const APPLICATIONS_CONFIG: EntityConfig = {
         slug: 'application-stage',
         initialState: 'new',
         states: [
-          { name: 'new', label: 'New', color: '#6B7280' },
+          // 'new' is the applications.stage column default — code-load-bearing.
+          // Other states are admin-renameable; demo-automations seeds reference
+          // 'phone-screen'/'technical'/'on-site'/'final'/'offer'/'hired' but
+          // those are seed-time data, not runtime branching.
+          { name: 'new', label: 'New', color: '#6B7280', isSystem: true },
           { name: 'phone-screen', label: 'Phone Screen', color: '#3B82F6' },
           { name: 'technical', label: 'Technical', color: '#8B5CF6' },
           { name: 'on-site', label: 'On-site', color: '#F59E0B' },

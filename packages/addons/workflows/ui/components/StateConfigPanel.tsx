@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Trash2 } from 'lucide-react';
+import { X, Trash2, Lock } from 'lucide-react';
 import { Button, Badge } from '@packages/ui';
 import { useUpdateState, useDeleteState } from '../hooks';
 import type { WorkflowState } from '../types';
@@ -54,6 +54,12 @@ export function StateConfigPanel({ state, isInitial, slug, onClose }: StateConfi
           {isInitial && (
             <Badge variant="outline" className="text-[9px] px-1.5 py-0">Initial</Badge>
           )}
+          {state.isSystem && (
+            <Badge variant="outline" className="text-[9px] px-1.5 py-0 gap-1" title="Code-load-bearing — name and existence are locked">
+              <Lock className="h-2.5 w-2.5" />
+              System
+            </Badge>
+          )}
         </div>
         <button
           type="button"
@@ -71,8 +77,14 @@ export function StateConfigPanel({ state, isInitial, slug, onClose }: StateConfi
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            disabled={state.isSystem}
+            className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
           />
+          {state.isSystem && (
+            <p className="text-[11px] text-muted-foreground">
+              This state is referenced by code. Renaming would break domain logic.
+            </p>
+          )}
         </div>
 
         <div className="space-y-1.5">
@@ -120,10 +132,14 @@ export function StateConfigPanel({ state, isInitial, slug, onClose }: StateConfi
           size="sm"
           variant="destructive"
           onClick={handleDelete}
-          disabled={deleteMutation.isPending || isInitial}
+          disabled={deleteMutation.isPending || isInitial || state.isSystem}
         >
           <Trash2 className="h-3.5 w-3.5 mr-1" />
-          {isInitial ? 'Cannot delete initial' : 'Delete'}
+          {isInitial
+            ? 'Cannot delete initial'
+            : state.isSystem
+              ? 'Cannot delete system'
+              : 'Delete'}
         </Button>
         <Button
           size="sm"

@@ -1,4 +1,4 @@
-import { pgTable, text, integer, timestamp, jsonb, uniqueIndex, index } from 'drizzle-orm/pg-core';
+import { pgTable, text, integer, timestamp, jsonb, boolean, uniqueIndex, index } from 'drizzle-orm/pg-core';
 import { randomUUID } from 'crypto';
 import { workflowDefinitions } from './workflow-definitions';
 
@@ -9,6 +9,13 @@ export const workflowStates = pgTable('workflow_states', {
   label: text('label').notNull(),
   color: text('color'),
   sortOrder: integer('sort_order').notNull().default(0),
+  /**
+   * Code-load-bearing states: domain logic branches on these state names.
+   * Admin UIs must block rename/delete on these states. Set via
+   * `WorkflowStateDef.isSystem` on the entity config; admins can still add or
+   * reorder non-system states around them.
+   */
+  isSystem: boolean('is_system').notNull().default(false),
   metadata: jsonb('metadata'),
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }).notNull().$defaultFn(() => new Date()).$onUpdate(() => new Date()),

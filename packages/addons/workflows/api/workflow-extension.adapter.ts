@@ -36,6 +36,7 @@ export class WorkflowExtensionAdapter implements WorkflowExtension {
     label: string;
     color?: string;
     sortOrder: number;
+    isSystem?: boolean;
   }) {
     return this.registry.createState(definitionId, data);
   }

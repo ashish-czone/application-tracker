@@ -65,6 +65,7 @@ export class WorkflowRegistryService implements OnModuleInit {
         label: s.label,
         color: s.color,
         sortOrder: s.sortOrder,
+        isSystem: s.isSystem,
         metadata: s.metadata as Record<string, unknown> | null,
       }));
 
@@ -214,6 +215,7 @@ export class WorkflowRegistryService implements OnModuleInit {
     label: string;
     color?: string;
     sortOrder?: number;
+    isSystem?: boolean;
     metadata?: Record<string, unknown>;
   }) {
     const [row] = await this.database.db
