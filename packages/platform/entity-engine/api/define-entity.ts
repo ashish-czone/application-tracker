@@ -281,10 +281,10 @@ export interface ModelDefinition<TTable extends PgTable = PgTable> {
    * Declared at the top level, not inside `fields`. Field-level shortcuts
    * inside `fields` are deprecated and will be removed in a future change.
    *
-   * Each relationship can carry an optional `handler` that the engine invokes
-   * in the same transaction as the parent entity on create/update/delete. This
-   * is how side tables like `credentials` and `user_roles` are populated from
-   * nested sub-payloads on the owning entity's DTO.
+   * The engine surfaces relationships in layout responses and registry
+   * entries but does not run hooks for them on the write path. Modules
+   * that compose with side tables (credentials, user_roles, etc.) own
+   * their own write paths in hand-written services.
    */
   relationships?: EntityRelationship[];
 

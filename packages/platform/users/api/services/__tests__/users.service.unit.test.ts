@@ -62,6 +62,7 @@ function createMockDb(options: { selectQueue?: unknown[][]; insertReturning?: un
 function createMockAuthService(overrides: Partial<Record<string, any>> = {}) {
   return {
     changePasswordDirect: vi.fn().mockResolvedValue(undefined),
+    createPasswordCredential: vi.fn().mockResolvedValue({ id: 'cred-1' }),
     createInvitationToken: vi.fn().mockResolvedValue({ token: 'invite-token', expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) }),
     ...overrides,
   };
@@ -70,6 +71,9 @@ function createMockAuthService(overrides: Partial<Record<string, any>> = {}) {
 function createMockRbacService(overrides: Partial<Record<string, any>> = {}) {
   return {
     assignRoleToUser: vi.fn().mockResolvedValue(undefined),
+    assignRolesInTx: vi.fn().mockResolvedValue(undefined),
+    unassignRolesInTx: vi.fn().mockResolvedValue(undefined),
+    readRoleIdsInTx: vi.fn().mockResolvedValue(new Set<string>()),
     getRolesByUserIds: vi.fn().mockResolvedValue({}),
     ...overrides,
   };
@@ -78,6 +82,7 @@ function createMockRbacService(overrides: Partial<Record<string, any>> = {}) {
 function createMockEventEmitter() {
   return {
     emit: vi.fn(),
+    emitDynamic: vi.fn(),
   };
 }
 
@@ -113,8 +118,8 @@ function buildService(options: BuildServiceOptions = {}) {
   return { service, mockDb, authService, rbacService, eventEmitter, entityService };
 }
 
-describe('UsersService (thin)', () => {
-  describe('CRUD delegates', () => {
+describe('UsersService', () => {
+  describe('reads + clone/restore/layout still delegate to engine', () => {
     it('list forwards query + accessCtx', async () => {
       const ctx = buildService();
       await ctx.service.list({ page: 1 } as never, { userId: 'u1' } as never);
@@ -126,46 +131,6 @@ describe('UsersService (thin)', () => {
       ctx.entityService.findOneOrFail.mockResolvedValue({ id: 'u1' });
       await ctx.service.findOne('u1', { userId: 'admin' } as never);
       expect(ctx.entityService.findOneOrFail).toHaveBeenCalledWith('u1', { userId: 'admin' });
-    });
-
-    it('create forwards input + actorId', async () => {
-      const ctx = buildService();
-      await ctx.service.create({ email: 'x@y.com' } as never, 'actor-1');
-      expect(ctx.entityService.create).toHaveBeenCalledWith({ email: 'x@y.com' }, 'actor-1');
-    });
-
-    it('update forwards id + input + actorId + accessCtx', async () => {
-      const ctx = buildService();
-      await ctx.service.update('u1', { firstName: 'X' } as never, 'actor-1', { userId: 'admin' } as never);
-      expect(ctx.entityService.update).toHaveBeenCalledWith('u1', { firstName: 'X' }, 'actor-1', { userId: 'admin' });
-    });
-
-    it('softDelete forwards id + actorId + accessCtx', async () => {
-      const ctx = buildService();
-      await ctx.service.softDelete('u1', 'actor-1', { userId: 'admin' } as never);
-      expect(ctx.entityService.softDelete).toHaveBeenCalledWith('u1', 'actor-1', { userId: 'admin' });
-    });
-
-    it('softDelete calls cleanupOnSoftDelete before stamping the user row', async () => {
-      const ctx = buildService();
-      const order: string[] = [];
-      (ctx.service as any).cleanupOnSoftDelete = async () => {
-        order.push('cleanup');
-      };
-      ctx.entityService.softDelete.mockImplementation(async () => {
-        order.push('softDelete');
-      });
-      await ctx.service.softDelete('u1', 'actor-1');
-      expect(order).toEqual(['cleanup', 'softDelete']);
-    });
-
-    it('softDelete aborts if cleanupOnSoftDelete throws — user row is not stamped', async () => {
-      const ctx = buildService();
-      (ctx.service as any).cleanupOnSoftDelete = async () => {
-        throw new Error('cleanup failed');
-      };
-      await expect(ctx.service.softDelete('u1', 'actor-1')).rejects.toThrow('cleanup failed');
-      expect(ctx.entityService.softDelete).not.toHaveBeenCalled();
     });
 
     it('clone forwards id + actorId', async () => {
@@ -184,6 +149,202 @@ describe('UsersService (thin)', () => {
       const ctx = buildService();
       await ctx.service.getListLayout();
       expect(ctx.entityService.getListLayout).toHaveBeenCalled();
+    });
+  });
+
+  describe('create — composed write path', () => {
+    function buildCreateCtx(roleIds?: string[]) {
+      const ctx = buildService({
+        // 1st select: uniqueness check finds nothing
+        selectQueue: [[]],
+        insertReturning: [{
+          id: 'new-user-1',
+          email: 'new@test.com',
+          firstName: 'New',
+          lastName: 'User',
+          userType: 'admin',
+          phone: null,
+        }],
+      });
+      const input: Record<string, unknown> = {
+        email: 'New@Test.com',
+        firstName: 'New',
+        lastName: 'User',
+        userType: 'admin',
+        credentials: { password: 'Pass!2345' },
+      };
+      if (roleIds) input.roles = roleIds;
+      return { ctx, input };
+    }
+
+    it('inserts the user, creates the password credential, assigns roles, and emits users.Created', async () => {
+      const { ctx, input } = buildCreateCtx(['role-1', 'role-2']);
+
+      const created = await ctx.service.create(input, 'actor-1');
+
+      expect(ctx.mockDb.db.transaction).toHaveBeenCalled();
+      expect(ctx.mockDb._tx.insert).toHaveBeenCalled();
+      const inserted = ctx.mockDb._insertChain.values.mock.calls[0][0];
+      expect(inserted.email).toBe('new@test.com'); // lowercased
+
+      expect(ctx.authService.createPasswordCredential).toHaveBeenCalledWith(
+        'new-user-1', 'new@test.com', 'Pass!2345', ctx.mockDb._tx,
+      );
+      expect(ctx.rbacService.assignRolesInTx).toHaveBeenCalledWith(
+        ctx.mockDb._tx, 'new-user-1', ['role-1', 'role-2'], 'admin',
+      );
+
+      expect(ctx.eventEmitter.emitDynamic).toHaveBeenCalledWith('users.Created', expect.objectContaining({
+        entityType: 'users',
+        entityId: 'new-user-1',
+        actorId: 'actor-1',
+      }));
+      expect(created).toMatchObject({ id: 'new-user-1', email: 'new@test.com' });
+    });
+
+    it('skips credential creation when no password is supplied (invitation flow)', async () => {
+      const { ctx, input } = buildCreateCtx();
+      delete (input as Record<string, unknown>).credentials;
+
+      await ctx.service.create(input, 'actor-1');
+
+      expect(ctx.authService.createPasswordCredential).not.toHaveBeenCalled();
+      expect(ctx.eventEmitter.emitDynamic).toHaveBeenCalledWith('users.Created', expect.anything());
+    });
+
+    it('skips role assignment when roles is omitted', async () => {
+      const { ctx, input } = buildCreateCtx();
+
+      await ctx.service.create(input, 'actor-1');
+
+      expect(ctx.rbacService.assignRolesInTx).not.toHaveBeenCalled();
+    });
+
+    it('throws ConflictException when an active user already has the email', async () => {
+      const ctx = buildService({ selectQueue: [[{ id: 'existing' }]] });
+
+      await expect(ctx.service.create({
+        email: 'existing@test.com',
+        firstName: 'X', lastName: 'Y', userType: 'client',
+      }, 'actor-1')).rejects.toThrow(ConflictException);
+
+      expect(ctx.mockDb.db.transaction).not.toHaveBeenCalled();
+      expect(ctx.eventEmitter.emitDynamic).not.toHaveBeenCalled();
+    });
+
+    it('rejects missing required fields with BadRequestException', async () => {
+      const ctx = buildService({ selectQueue: [[]] });
+
+      await expect(ctx.service.create({ firstName: 'X' }, 'actor-1'))
+        .rejects.toThrow(/'email' is required/);
+    });
+  });
+
+  describe('update — composed write path', () => {
+    function buildUpdateCtx(currentRoles: string[] = []) {
+      const ctx = buildService({
+        // findOneOrFail is mocked separately; the only db.select that runs is
+        // the email-uniqueness check (only when email is being changed).
+        selectQueue: [[]],
+      });
+      ctx.entityService.findOneOrFail.mockResolvedValue({
+        id: 'u1', email: 'before@test.com', firstName: 'Before', lastName: 'User', userType: 'admin', phone: null,
+      });
+      ctx.rbacService.readRoleIdsInTx = vi.fn().mockResolvedValue(new Set(currentRoles));
+      return ctx;
+    }
+
+    it('patches standard fields inside the tx and emits users.Updated', async () => {
+      const ctx = buildUpdateCtx();
+      // mock the tx update returning shape
+      ctx.mockDb._tx.update = vi.fn().mockReturnValue({
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            returning: vi.fn().mockResolvedValue([{ id: 'u1', firstName: 'After' }]),
+          }),
+        }),
+      });
+
+      await ctx.service.update('u1', { firstName: 'After' }, 'actor-1');
+
+      expect(ctx.mockDb.db.transaction).toHaveBeenCalled();
+      expect(ctx.mockDb._tx.update).toHaveBeenCalled();
+      expect(ctx.eventEmitter.emitDynamic).toHaveBeenCalledWith('users.Updated', expect.anything());
+    });
+
+    it('rotates the password via authService when credentials.password is supplied', async () => {
+      const ctx = buildUpdateCtx();
+      ctx.mockDb._tx.update = vi.fn().mockReturnValue({
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({ returning: vi.fn().mockResolvedValue([{ id: 'u1' }]) }),
+        }),
+      });
+
+      await ctx.service.update('u1', { credentials: { password: 'NewPass!2345' } }, 'actor-1');
+
+      expect(ctx.authService.changePasswordDirect).toHaveBeenCalledWith('u1', 'NewPass!2345', ctx.mockDb._tx);
+    });
+
+    it('diff-applies role assignments — adds new, removes missing', async () => {
+      const ctx = buildUpdateCtx(['r1', 'r2']);
+
+      await ctx.service.update('u1', { roles: ['r2', 'r3'] }, 'actor-1');
+
+      expect(ctx.rbacService.assignRolesInTx).toHaveBeenCalledWith(ctx.mockDb._tx, 'u1', ['r3'], 'admin');
+      expect(ctx.rbacService.unassignRolesInTx).toHaveBeenCalledWith(ctx.mockDb._tx, 'u1', ['r1']);
+    });
+
+    it('does not touch credentials or roles when those keys are absent (silent no-op)', async () => {
+      const ctx = buildUpdateCtx(['r1']);
+      ctx.mockDb._tx.update = vi.fn().mockReturnValue({
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({ returning: vi.fn().mockResolvedValue([{ id: 'u1' }]) }),
+        }),
+      });
+
+      await ctx.service.update('u1', { firstName: 'After' }, 'actor-1');
+
+      expect(ctx.authService.changePasswordDirect).not.toHaveBeenCalled();
+      expect(ctx.rbacService.assignRolesInTx).not.toHaveBeenCalled();
+      expect(ctx.rbacService.unassignRolesInTx).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('softDelete — composed write path', () => {
+    function buildDeleteCtx() {
+      const ctx = buildService();
+      ctx.entityService.findOneOrFail.mockResolvedValue({ id: 'u1', email: 'a@b.com' });
+      return ctx;
+    }
+
+    it('runs cleanupOnSoftDelete before stamping the user row', async () => {
+      const ctx = buildDeleteCtx();
+      const order: string[] = [];
+      (ctx.service as any).cleanupOnSoftDelete = async () => { order.push('cleanup'); };
+      // Capture the moment update() is called on the db
+      const origUpdate = ctx.mockDb.db.update;
+      ctx.mockDb.db.update = vi.fn((...args: unknown[]) => {
+        order.push('stamp');
+        return (origUpdate as any)(...args);
+      });
+
+      await ctx.service.softDelete('u1', 'actor-1');
+
+      expect(order).toEqual(['cleanup', 'stamp']);
+      expect(ctx.eventEmitter.emitDynamic).toHaveBeenCalledWith('users.Deleted', expect.objectContaining({
+        entityType: 'users',
+        entityId: 'u1',
+        actorId: 'actor-1',
+      }));
+    });
+
+    it('aborts if cleanupOnSoftDelete throws — user row is not stamped, no event emitted', async () => {
+      const ctx = buildDeleteCtx();
+      (ctx.service as any).cleanupOnSoftDelete = async () => { throw new Error('cleanup failed'); };
+
+      await expect(ctx.service.softDelete('u1', 'actor-1')).rejects.toThrow('cleanup failed');
+      expect(ctx.mockDb.db.update).not.toHaveBeenCalled();
+      expect(ctx.eventEmitter.emitDynamic).not.toHaveBeenCalled();
     });
   });
 

@@ -1,6 +1,5 @@
 export { RbacModule } from './rbac.module';
 export { RbacService } from './services/rbac.service';
-export { UserRolesRelationHandler } from './relation-handlers/user-roles-relation-handler';
 export { RbacGuard } from './guards/rbac.guard';
 export { RequirePermission } from './decorators/require-permission.decorator';
 export { AccessContext } from './decorators/access-context.decorator';

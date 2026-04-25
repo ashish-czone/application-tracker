@@ -10,13 +10,14 @@ import { RbacService } from '@packages/rbac';
 import { AuthService } from '@packages/auth';
 
 /**
- * End-to-end tests for the dynamic users entity routes mounted by
- * EntityEngineModule.forEntity(usersConfig). Exercises:
+ * End-to-end tests for the users routes owned by UsersController +
+ * UsersService. Exercises:
  *
- * - Nested DTO write path (credentials.password → CredentialsRelationHandler,
- *   roles: [ids] → UserRolesRelationHandler), run inside the entity create tx.
- * - afterList / afterFindOne read-side role enrichment hooks.
- * - Thin UsersController's POST /:id/reset-password endpoint.
+ * - Nested DTO write path (`credentials.password`, `roles: [ids]`) — the
+ *   service composes credentials + role assignments with the users row
+ *   insert in a single tx.
+ * - List / detail role enrichment via the read-side service.
+ * - POST /:id/reset-password admin endpoint.
  * - RBAC gating on every route (401 unauthenticated, 403 insufficient perms).
  */
 describe('Users Security', () => {

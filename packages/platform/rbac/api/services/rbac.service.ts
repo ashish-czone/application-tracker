@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
-import { DatabaseService, eq, and, or, isNull, ilike, asc, desc, count, inArray, users, type SQL } from '@packages/database';
+import { DatabaseService, eq, and, or, isNull, ilike, asc, desc, count, inArray, users, type SQL, type DrizzleDB } from '@packages/database';
 import type { PaginatedResponse } from '@packages/common';
 import { withTenant, withTenantInsert } from '@packages/tenancy/helpers';
 import {
@@ -371,6 +371,64 @@ export class RbacService {
     await this.database.db
       .delete(userRoles)
       .where(withTenant(userRoles, eq(userRoles.userId, userId), eq(userRoles.roleId, roleId)));
+  }
+
+  /**
+   * Assign roles to a user inside the caller's transaction. Validates each
+   * role exists and that user-typed roles match the supplied `expectedUserType`
+   * (the caller passes the userType the user is being created/updated with so
+   * we don't need a SELECT against an uncommitted users row). Insert is
+   * `onConflictDoNothing` so re-issuing the same set of role IDs is idempotent.
+   *
+   * Used by UsersService.create / update to compose role assignments with the
+   * users row insert in a single tx.
+   */
+  async assignRolesInTx(
+    tx: DrizzleDB,
+    userId: string,
+    roleIds: string[],
+    expectedUserType: string | null,
+  ): Promise<void> {
+    if (roleIds.length === 0) return;
+    for (const roleId of roleIds) {
+      const role = await this.findRoleById(roleId);
+      if (!role) throw new NotFoundException(`Role ${roleId} not found`);
+      if (role.userType !== null && role.userType !== expectedUserType) {
+        throw new ConflictException(
+          `Cannot assign role scoped to '${role.userType}' — user type is '${expectedUserType ?? 'null'}'`,
+        );
+      }
+    }
+    for (const roleId of roleIds) {
+      await tx
+        .insert(userRoles)
+        .values(withTenantInsert(userRoles, { userId, roleId }))
+        .onConflictDoNothing();
+    }
+  }
+
+  /**
+   * Remove a set of role assignments from a user inside the caller's tx.
+   * No-op when `roleIds` is empty. Used by UsersService.update to apply the
+   * "remove" half of a desired-vs-current role diff atomically with the user
+   * row update.
+   */
+  async unassignRolesInTx(tx: DrizzleDB, userId: string, roleIds: string[]): Promise<void> {
+    if (roleIds.length === 0) return;
+    await tx
+      .delete(userRoles)
+      .where(withTenant(userRoles, eq(userRoles.userId, userId), inArray(userRoles.roleId, roleIds)));
+  }
+
+  /** Read the current role IDs for a user inside the caller's tx. Used by
+   *  UsersService.update to compute the assign/unassign diff against an
+   *  uncommitted users row. */
+  async readRoleIdsInTx(tx: DrizzleDB, userId: string): Promise<Set<string>> {
+    const rows = await tx
+      .select({ roleId: userRoles.roleId })
+      .from(userRoles)
+      .where(withTenant(userRoles, eq(userRoles.userId, userId)));
+    return new Set(rows.map((r) => r.roleId));
   }
 
   // --- Role members (users assigned to a role) ---

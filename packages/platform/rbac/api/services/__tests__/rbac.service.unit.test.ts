@@ -294,6 +294,63 @@ describe('RbacService', () => {
     });
   });
 
+  describe('assignRolesInTx', () => {
+    it('is a no-op when roleIds is empty', async () => {
+      await service.assignRolesInTx(mockDb as any, 'user-1', [], 'admin');
+      expect(mockDb.insert).not.toHaveBeenCalled();
+    });
+
+    it('throws NotFoundException when a role does not exist', async () => {
+      vi.spyOn(service, 'findRoleById').mockResolvedValueOnce(null);
+      await expect(service.assignRolesInTx(mockDb as any, 'user-1', ['ghost'], 'admin'))
+        .rejects.toThrow(NotFoundException);
+      expect(mockDb.insert).not.toHaveBeenCalled();
+    });
+
+    it('throws ConflictException when role userType does not match expectedUserType', async () => {
+      const role = { id: 'role-1', name: 'admin', userType: 'admin', createdAt: new Date(), updatedAt: new Date() };
+      vi.spyOn(service, 'findRoleById').mockResolvedValueOnce(role);
+      await expect(service.assignRolesInTx(mockDb as any, 'user-1', ['role-1'], 'client'))
+        .rejects.toThrow(ConflictException);
+      expect(mockDb.insert).not.toHaveBeenCalled();
+    });
+
+    it('inserts each role assignment when validation passes', async () => {
+      const r1 = { id: 'role-1', name: 'admin', userType: 'admin', createdAt: new Date(), updatedAt: new Date() };
+      const r2 = { id: 'role-2', name: 'support', userType: null, createdAt: new Date(), updatedAt: new Date() };
+      vi.spyOn(service, 'findRoleById').mockResolvedValueOnce(r1).mockResolvedValueOnce(r2);
+      await service.assignRolesInTx(mockDb as any, 'user-1', ['role-1', 'role-2'], 'admin');
+      expect(mockDb.insert).toHaveBeenCalledTimes(2);
+      expect(mockDb._chain.onConflictDoNothing).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('unassignRolesInTx', () => {
+    it('is a no-op when roleIds is empty', async () => {
+      await service.unassignRolesInTx(mockDb as any, 'user-1', []);
+      expect(mockDb.delete).not.toHaveBeenCalled();
+    });
+
+    it('issues a single delete with inArray when roleIds is non-empty', async () => {
+      await service.unassignRolesInTx(mockDb as any, 'user-1', ['r1', 'r2']);
+      expect(mockDb.delete).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('readRoleIdsInTx', () => {
+    it('returns the set of role IDs currently assigned to the user', async () => {
+      mockDb._chain.where.mockResolvedValueOnce([{ roleId: 'r1' }, { roleId: 'r2' }, { roleId: 'r1' }]);
+      const result = await service.readRoleIdsInTx(mockDb as any, 'user-1');
+      expect(result).toEqual(new Set(['r1', 'r2']));
+    });
+
+    it('returns an empty set when the user has no roles', async () => {
+      mockDb._chain.where.mockResolvedValueOnce([]);
+      const result = await service.readRoleIdsInTx(mockDb as any, 'user-1');
+      expect(result.size).toBe(0);
+    });
+  });
+
   describe('setRolePermissions — system role protection', () => {
     beforeEach(() => {
       seedManifests(['users.read']);

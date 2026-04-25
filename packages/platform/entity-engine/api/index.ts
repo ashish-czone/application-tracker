@@ -16,8 +16,6 @@ export type {
   CustomFieldsMode,
   EntityConfig,
   EntityRelationship,
-  RelationHandler,
-  RelationHandlerContext,
   ExtensionOfConfig,
   ResolvedExtension,
   EntityUIHints,

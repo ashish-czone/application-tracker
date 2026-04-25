@@ -3,7 +3,6 @@ import { LOOKUP_RESOLVER_TOKEN, type LookupResolver } from '@packages/entity-eng
 import { RbacService } from './services/rbac.service';
 import { RbacGuard } from './guards/rbac.guard';
 import { RbacController } from './controllers/rbac.controller';
-import { UserRolesRelationHandler } from './relation-handlers/user-roles-relation-handler';
 import { ScopeResolverRegistry } from './scope-resolver';
 import { OwnScopeResolver } from './scope-resolvers/own.resolver';
 import { AssignedScopeResolver } from './scope-resolvers/assigned.resolver';
@@ -17,7 +16,6 @@ import { roles } from './schema/roles';
     PermissionManifestRegistry,
     RbacService,
     RbacGuard,
-    UserRolesRelationHandler,
     ScopeResolverRegistry,
     OwnScopeResolver,
     AssignedScopeResolver,
@@ -26,7 +24,6 @@ import { roles } from './schema/roles';
     RbacService,
     PermissionManifestRegistry,
     RbacGuard,
-    UserRolesRelationHandler,
     ScopeResolverRegistry,
   ],
 })
