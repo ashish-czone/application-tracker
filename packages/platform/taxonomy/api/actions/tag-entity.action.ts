@@ -2,8 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { DatabaseService } from '@packages/database';
 import { withTenant } from '@packages/tenancy/helpers';
-import { EntityResolverRegistry } from '@packages/automation-contracts';
-import { buildConditions } from '@packages/automations';
+import { EntityResolverRegistry, buildConditions } from '@packages/automation-contracts';
 import type {
   ActionHandler,
   ActionContext,

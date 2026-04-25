@@ -2,11 +2,11 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { TransitionWorkflowAction } from '../transition-workflow.action';
 import type { ActionContext } from '@packages/automation-contracts';
 
-vi.mock('@packages/automations', () => ({
+vi.mock('@packages/automation-contracts', () => ({
   interpolateValues: vi.fn((obj, _ctx) => obj),
 }));
 
-import { interpolateValues } from '@packages/automations';
+import { interpolateValues } from '@packages/automation-contracts';
 
 const mockWorkflowEngine = {
   getEntityState: vi.fn(),
