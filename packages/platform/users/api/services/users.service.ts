@@ -1,4 +1,4 @@
-import { Inject, Injectable, Optional, ConflictException, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, Optional, BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { AuthService, AUTH_INVITATION_SENT } from '@packages/auth';
 import { RbacService } from '@packages/rbac';
 import { DomainEventEmitter } from '@packages/events';
@@ -8,6 +8,18 @@ import type { DataAccessContext } from '@packages/rbac';
 import { withTenant, withTenantInsert } from '@packages/tenancy/helpers';
 import { deriveUserStatus, type UserPosition, type UsersPositionsReader } from '../users.config';
 import { USERS_POSITIONS_READER } from '../users-positions-reader.token';
+
+interface UserWriteInput {
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string | null;
+  userType?: string;
+  credentials?: { password?: string };
+  roles?: string[];
+}
+
+const STANDARD_FIELDS = ['email', 'firstName', 'lastName', 'phone', 'userType'] as const;
 
 export interface InviteUserData {
   email: string;
@@ -28,9 +40,20 @@ export interface InvitedUser {
 }
 
 /**
- * Users service. CRUD delegates to the engine's ENTITY_SERVICE_users, plus
- * hand-written slots the engine does not cover:
+ * Users service. Owns the full write path for the users entity — create,
+ * update, and softDelete compose the users row with credentials and role
+ * assignments inside a single tx, without going through the entity-engine's
+ * generated CRUD. Reads (list, findOne) still wrap the engine for
+ * pagination/filtering plus app-side enrichment.
  *
+ * - `create(input, actorId)` — inserts the users row, creates the password
+ *   credential when one is supplied, and assigns roles, all inside one tx.
+ *   Emits `users.Created` after commit.
+ * - `update(id, input, actorId)` — patches standard fields, optionally rotates
+ *   the password, and diff-applies role assignments inside one tx.
+ * - `softDelete(id, actorId)` — runs the subclass `cleanupOnSoftDelete` hook,
+ *   then stamps `deletedAt` + `deletedBy`. Credentials and `user_roles` are
+ *   left in place so a restore is a clean reverse.
  * - `getEmail(id)` / `getPhone(id)` — readers registered with the notifications
  *   `ContactResolverRegistry` for email/whatsapp dispatch.
  * - `resetPassword(id, newPassword)` — backs the admin-only
@@ -92,17 +115,206 @@ export class UsersService {
     }));
   }
 
-  create(input: Record<string, unknown>, actorId: string) {
-    return this.entityService.create(input, actorId);
+  /**
+   * Insert a user, the password credential, and the role assignments inside
+   * a single transaction. Either the whole composition lands or none of it
+   * does — atomic with the user row, so a caller never observes a user that
+   * exists without their credentials or roles. Emits `users.Created` after
+   * the tx commits.
+   */
+  async create(input: Record<string, unknown>, actorId: string): Promise<Record<string, unknown>> {
+    const parsed = this.parseWriteInput(input);
+    this.requireFields(parsed, ['email', 'firstName', 'lastName', 'userType']);
+    const email = parsed.email!.toLowerCase();
+
+    await this.requireEmailAvailable(email);
+
+    const user = await this.database.db.transaction(async (tx) => {
+      const [created] = await tx
+        .insert(users)
+        .values(withTenantInsert(users, {
+          email,
+          firstName: parsed.firstName!,
+          lastName: parsed.lastName!,
+          userType: parsed.userType!,
+          phone: parsed.phone ?? null,
+        }))
+        .returning();
+
+      const password = parsed.credentials?.password;
+      if (password !== undefined && password !== '') {
+        await this.authService.createPasswordCredential(created.id, email, password, tx);
+      }
+
+      const roleIds = parsed.roles ?? [];
+      if (roleIds.length > 0) {
+        await this.rbacService.assignRolesInTx(tx, created.id, roleIds, parsed.userType!);
+      }
+
+      return created;
+    });
+
+    this.domainEventEmitter.emitDynamic('users.Created', {
+      entityType: 'users',
+      entityId: user.id,
+      actorId,
+      payload: { after: user as Record<string, unknown> },
+    });
+
+    return user as Record<string, unknown>;
   }
 
-  update(id: string, input: Record<string, unknown>, actorId: string, accessCtx?: DataAccessContext) {
-    return this.entityService.update(id, input, actorId, accessCtx);
+  /**
+   * Patch a user's standard fields, optionally rotate the password, and
+   * diff-apply the role set inside one transaction. Standard fields and
+   * relationships are silently skipped when the corresponding key is not
+   * present on the DTO — matching the prior engine semantics so partial
+   * updates remain a tolerable shape.
+   */
+  async update(
+    id: string,
+    input: Record<string, unknown>,
+    actorId: string,
+    accessCtx?: DataAccessContext,
+  ): Promise<Record<string, unknown>> {
+    const before = await this.entityService.findOneOrFail(id, accessCtx);
+    const parsed = this.parseWriteInput(input);
+
+    const standardPatch: Record<string, unknown> = {};
+    if (parsed.email !== undefined) standardPatch.email = parsed.email.toLowerCase();
+    if (parsed.firstName !== undefined) standardPatch.firstName = parsed.firstName;
+    if (parsed.lastName !== undefined) standardPatch.lastName = parsed.lastName;
+    if (parsed.userType !== undefined) standardPatch.userType = parsed.userType;
+    if ('phone' in input) standardPatch.phone = parsed.phone ?? null;
+
+    if (typeof standardPatch.email === 'string' && standardPatch.email !== before.email) {
+      await this.requireEmailAvailable(standardPatch.email, id);
+    }
+
+    const expectedUserType = (standardPatch.userType ?? before.userType) as string;
+
+    const updated = await this.database.db.transaction(async (tx) => {
+      let row: Record<string, unknown> = before;
+      if (Object.keys(standardPatch).length > 0) {
+        const [patched] = await tx
+          .update(users)
+          .set(standardPatch as any)
+          .where(withTenant(users, eq(users.id, id)))
+          .returning();
+        row = patched as unknown as Record<string, unknown>;
+      }
+
+      const password = parsed.credentials?.password;
+      if (password !== undefined && password !== '') {
+        await this.authService.changePasswordDirect(id, password, tx);
+      }
+
+      if (parsed.roles !== undefined) {
+        const desired = new Set(parsed.roles);
+        const current = await this.rbacService.readRoleIdsInTx(tx, id);
+        const toAdd = [...desired].filter((rid) => !current.has(rid));
+        const toRemove = [...current].filter((rid) => !desired.has(rid));
+        await this.rbacService.assignRolesInTx(tx, id, toAdd, expectedUserType);
+        await this.rbacService.unassignRolesInTx(tx, id, toRemove);
+      }
+
+      return row;
+    });
+
+    this.domainEventEmitter.emitDynamic('users.Updated', {
+      entityType: 'users',
+      entityId: id,
+      actorId,
+      payload: { before, after: updated },
+    });
+
+    return updated;
   }
 
-  async softDelete(id: string, actorId: string, accessCtx?: DataAccessContext) {
+  /**
+   * Soft-delete the user: run the subclass cleanup hook, then stamp deletedAt
+   * + deletedBy on the row. Credentials and `user_roles` are intentionally
+   * left in place so a restore brings them back; cascade-on-hard-delete is
+   * handled at the FK level.
+   */
+  async softDelete(id: string, actorId: string, accessCtx?: DataAccessContext): Promise<void> {
+    const before = await this.entityService.findOneOrFail(id, accessCtx);
     await this.cleanupOnSoftDelete(id);
-    return this.entityService.softDelete(id, actorId, accessCtx);
+
+    await this.database.db
+      .update(users)
+      .set({ deletedAt: new Date(), deletedBy: actorId })
+      .where(withTenant(users, eq(users.id, id), isNull(users.deletedAt)));
+
+    this.domainEventEmitter.emitDynamic('users.Deleted', {
+      entityType: 'users',
+      entityId: id,
+      actorId,
+      payload: { before },
+    });
+  }
+
+  private parseWriteInput(input: Record<string, unknown>): UserWriteInput {
+    const out: UserWriteInput = {};
+    for (const key of STANDARD_FIELDS) {
+      if (!(key in input)) continue;
+      const value = input[key];
+      if (key === 'phone') {
+        if (value === null || value === undefined) { out.phone = null; continue; }
+        if (typeof value !== 'string') throw new BadRequestException(`'phone' must be a string`);
+        out.phone = value;
+        continue;
+      }
+      if (typeof value !== 'string') {
+        throw new BadRequestException(`'${key}' must be a string`);
+      }
+      out[key] = value;
+    }
+    if ('credentials' in input) {
+      const v = input.credentials;
+      if (v !== null && typeof v === 'object') {
+        const password = (v as Record<string, unknown>).password;
+        if (password !== undefined && typeof password !== 'string') {
+          throw new BadRequestException(`'credentials.password' must be a string`);
+        }
+        out.credentials = { password: password as string | undefined };
+      }
+    }
+    if ('roles' in input) {
+      const v = input.roles;
+      if (!Array.isArray(v)) {
+        throw new BadRequestException(`'roles' must be an array of role IDs`);
+      }
+      const ids: string[] = [];
+      for (const rid of v) {
+        if (typeof rid !== 'string' || rid.length === 0) {
+          throw new BadRequestException(`'roles' must be an array of non-empty strings`);
+        }
+        ids.push(rid);
+      }
+      out.roles = Array.from(new Set(ids));
+    }
+    return out;
+  }
+
+  private requireFields(parsed: UserWriteInput, fields: Array<keyof UserWriteInput>): void {
+    for (const f of fields) {
+      const v = parsed[f];
+      if (v === undefined || v === null || v === '') {
+        throw new BadRequestException(`'${String(f)}' is required`);
+      }
+    }
+  }
+
+  private async requireEmailAvailable(email: string, excludeId?: string): Promise<void> {
+    const [existing] = await this.database.db
+      .select({ id: users.id })
+      .from(users)
+      .where(withTenant(users, eq(users.email, email), isNull(users.deletedAt)))
+      .limit(1);
+    if (existing && existing.id !== excludeId) {
+      throw new ConflictException('A user with this email already exists');
+    }
   }
 
   /**

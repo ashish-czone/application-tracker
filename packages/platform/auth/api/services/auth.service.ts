@@ -103,8 +103,8 @@ export class AuthService {
     };
   }
 
-  async changePasswordDirect(userId: string, newPassword: string): Promise<void> {
-    await this.credentialsService.updateSecretHash(userId, 'password', newPassword);
+  async changePasswordDirect(userId: string, newPassword: string, tx?: DrizzleDB): Promise<void> {
+    await this.credentialsService.updateSecretHash(userId, 'password', newPassword, tx);
   }
 
   async changePassword(userId: string, oldPassword: string, newPassword: string): Promise<void> {
