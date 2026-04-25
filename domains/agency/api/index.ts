@@ -8,7 +8,7 @@ export const agencyBackend: DomainBackendManifest = {
 };
 
 export { AgencyDomainModule };
-export { AGENCY_PERMISSIONS, AGENCY_PERMISSION_REGISTRATIONS } from './permissions';
+export { AGENCY_PERMISSIONS } from './permissions';
 export type { AgencyPermission } from './permissions';
 
 export { pages, sections } from './pages/schema';
