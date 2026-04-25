@@ -15,7 +15,7 @@ A fast, mobile-friendly, visually-bold marketing site for an agency, authored th
 
 - **Out-of-the-box beautiful** — no designer required. Pre-configured palettes, modern typography, tasteful motion. Set up in minutes.
 - **WordPress-familiar authoring** — author picks a page, reorders sections, swaps block variants, edits section content, changes data source. Menus are trees with 2 levels. Posts are rich-text articles.
-- **Platform-consistent** — reuse `@packages/pages`, `@packages/menus`, `@packages/blocks-ui`, `@packages/theming-ui`, `defineEntity()`, the block registry. No forks; extend through hooks and new blocks.
+- **Platform-consistent** — pages, menus, and blocks live inside this domain (`@domains/agency-{api,ui,contract}`); reuse `@packages/theming-ui`, `defineEntity()`, and the block registry from there. No forks; extend through hooks and new blocks.
 - **Mobile-first** — designed from 360px up. 44px tap targets, no horizontal scroll, drawer nav.
 - **Design-forward** — borrow cues from Work & Co, Instrument, Ueno, AKQA, Huge, Ragged Edge, Wolff Olins. Bold type, editorial grids, subtle motion, sticky headers, decisive use of space.
 
@@ -157,14 +157,14 @@ Blog-specific blocks (`blog-featured`, `blog-list`, `blog-cta`, `post-body`) are
 
 | Area                           | Artifact                                                                                           | Notes                                      |
 | ------------------------------ | -------------------------------------------------------------------------------------------------- | ------------------------------------------ |
-| Pages backend                  | `@packages/pages-api` (entities `pages` + `sections`)                                              | PR #917                                    |
-| Pages admin (Puck)             | `@packages/pages-ui-admin`                                                                         | PR #919                                    |
+| Pages backend                  | `@domains/agency-api` → `pages/` (entities `pages` + `sections`)                                   | PR #917; relocated from `@packages/pages-api` |
+| Pages admin (Puck)             | `@domains/agency-ui` → `pages/`                                                                    | PR #919; relocated from `@packages/pages-ui-admin` |
 | Public page renderer           | `apps/agency/ui/portals/customer/src/app/[slug]/page.tsx`                                          | ISR 60s + `/api/revalidate` webhook        |
-| Block contract + registry      | `packages/platform/blocks/{contract,ui}`                                                           | `defineBlock`, `blockRegistry`             |
+| Block contract + registry      | `@domains/agency-contract` → `blocks/` and `@domains/agency-ui` → `blocks/`                        | `defineBlock`, `blockRegistry`; relocated from `packages/platform/blocks/{contract,ui}` |
 | Starter blocks                 | Hero, Text, Image, FeatureList, CTA                                                                | **Hero + CTA redesigned with 3 variants each in F4** |
 | Content blocks (7)             | testimonials-grid, faq-accordion, team-grid, services-grid, client-logos-row, value-props-grid, stats-row | Testimonials/Stats/Logos redesigned in F4  |
 | Data-source picker integration | `DataSourcePicker` + resolution in public-page API                                                 | PR #947                                    |
-| Menus backend + admin + renderer | `@packages/menus-*`                                                                              | PR #939                                    |
+| Menus backend + admin + renderer | `@domains/agency-api` → `menus/` and `@domains/agency-ui` → `menus/{admin,frontend}/`            | PR #939; relocated from `@packages/menus-*` |
 | Orderable primitive            | `@packages/orderable`                                                                              | PR #936                                    |
 | **F0** Publish + SEO on pages  | `publishedAt`, `status`, `seo` jsonb on pages; public endpoint filters drafts; admin publish panel | PR #959                                    |
 | **F1** Site settings           | `site` settings module (18 keys), `GET /public/site-settings`, portal wiring (layout, header, footer, org JSON-LD) | PR #975                                    |
