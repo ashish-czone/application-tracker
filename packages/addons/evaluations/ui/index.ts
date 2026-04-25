@@ -26,3 +26,8 @@ export type {
   CreateEvaluationRequest,
   UpdateEvaluationRequest,
 } from './types';
+
+// Feature contract + plugin descriptors
+export { EVALUATIONS_FEATURE_KEY, readEvaluationsFeature } from './feature';
+export type { EvaluationsFeatureValue } from './feature';
+export { evaluationsDetailTab, evaluationsSidebarPanel } from './plugins';

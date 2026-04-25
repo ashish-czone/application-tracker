@@ -1,4 +1,6 @@
 export { EvaluationsModule } from './evaluations.module';
+export { EVALUATIONS_FEATURE_KEY, evaluationsFeature, readEvaluationsFeature } from './feature';
+export type { EvaluationsFeatureConfig, EvaluationsFeatureValue } from './feature';
 export { EvaluationTemplatesService } from './services/evaluation-templates.service';
 export { EvaluationsService } from './services/evaluations.service';
 export { EVALUATIONS_PERMISSIONS } from './permissions';

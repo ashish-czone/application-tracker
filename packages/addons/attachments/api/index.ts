@@ -1,4 +1,6 @@
 export { AttachmentsModule } from './attachments.module';
+export { ATTACHMENTS_FEATURE_KEY, attachmentsFeature, readAttachmentsFeature } from './feature';
+export type { AttachmentsFeatureConfig, AttachmentsFeatureValue } from './feature';
 export { AttachmentsService } from './services/attachments.service';
 export { ATTACHMENTS_PERMISSIONS } from './permissions';
 export type { Attachment, AttachmentWithUploader, AttachmentUploader, AttachmentConfig } from './types';

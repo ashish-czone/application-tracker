@@ -6,6 +6,7 @@ import { CurrentUser, type JwtPayload } from '@packages/auth-core';
 import { EntityRegistryService } from '@packages/entity-engine';
 import type { UploadedFile } from '@packages/media';
 import { ATTACHMENTS_PERMISSIONS } from '../permissions';
+import { readAttachmentsFeature } from '../feature';
 import { AttachmentsService } from '../services/attachments.service';
 import { UploadAttachmentDto } from '../dto/upload-attachment.dto';
 import { ListAttachmentsQueryDto } from '../dto/list-attachments-query.dto';
@@ -49,14 +50,18 @@ export class AttachmentsController {
     @Body() dto: UploadAttachmentDto,
   ) {
     const entityConfig = this.entityRegistry.get(dto.entityType);
-    const attachmentConfig = entityConfig?.attachmentConfig;
+    const feature = readAttachmentsFeature(entityConfig?.features);
 
     return this.attachmentsService.upload({
       entityType: dto.entityType,
       entityId: dto.entityId,
       file,
       uploadedBy: user.userId,
-      config: attachmentConfig,
+      config: feature && {
+        maxFileSize: feature.maxFileSize,
+        acceptedMimeTypes: feature.acceptedMimeTypes,
+        deleteMode: feature.deleteMode,
+      },
     });
   }
 
@@ -68,7 +73,7 @@ export class AttachmentsController {
     // Look up the attachment to find its entity type, then check entity config for deleteMode
     const attachment = await this.attachmentsService.findByIdOrFail(id);
     const entityConfig = this.entityRegistry.get(attachment.entityType);
-    const deleteMode = entityConfig?.attachmentConfig?.deleteMode ?? 'soft';
+    const deleteMode = readAttachmentsFeature(entityConfig?.features)?.deleteMode ?? 'soft';
 
     await this.attachmentsService.deleteByMode(id, user.userId, deleteMode);
   }

@@ -2614,6 +2614,9 @@ importers:
       '@packages/common':
         specifier: workspace:*
         version: link:../../../core/common
+      '@packages/entity-engine-ui':
+        specifier: workspace:*
+        version: link:../../../platform/entity-engine/ui
       '@packages/field-types':
         specifier: workspace:*
         version: link:../../../platform/field-types
@@ -2960,6 +2963,9 @@ importers:
       '@packages/common':
         specifier: workspace:*
         version: link:../../../core/common
+      '@packages/entity-engine-ui':
+        specifier: workspace:*
+        version: link:../../../platform/entity-engine/ui
       '@packages/platform-ui':
         specifier: workspace:*
         version: link:../../../platform/platform-ui
@@ -5756,6 +5762,9 @@ importers:
       '@packages/conditions-ui':
         specifier: workspace:*
         version: link:../../conditions-ui
+      '@packages/entity-engine-ui':
+        specifier: workspace:*
+        version: link:../../entity-engine/ui
       '@packages/ui':
         specifier: workspace:*
         version: link:../../../core/ui
