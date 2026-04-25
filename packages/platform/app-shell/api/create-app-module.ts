@@ -24,10 +24,7 @@ import { AUDIT_EXTENSION, EntityEngineModule } from '@packages/entity-engine';
 import { MediaModule } from '@packages/media';
 import { AuthModule, AuthGuard } from '@packages/auth';
 import { RbacGuard } from '@packages/rbac';
-import { TaxonomyModule } from '@packages/taxonomy';
 import { UserPreferencesModule } from '@packages/user-preferences';
-import { HierarchyModule } from '@packages/hierarchy';
-import { OrderableModule } from '@packages/orderable';
 import { EntityLayoutModule } from '@packages/entity-layout';
 import { GlobalExceptionFilter } from './filters/global-exception.filter';
 import { ConfigurableThrottlerGuard } from './guards/configurable-throttler.guard';
@@ -51,10 +48,12 @@ export interface AppShellOptions {
   appName: string;
   /**
    * Extra modules to import. App-shell ships core infra (auth, audit,
-   * notifications, entity-engine, etc.) but does NOT ship a UsersModule —
-   * each app owns its users entity and must pass an app-level UsersModule
-   * here alongside any addon modules it needs (NotesModule, AttachmentsModule,
-   * OAuthModule, OrgUnitsModule, etc.).
+   * notifications, entity-engine, workflows, automations, media) but does NOT
+   * ship a UsersModule — each app owns its users entity and must pass an
+   * app-level UsersModule here alongside any addon modules it needs:
+   * NotesModule, AttachmentsModule, OAuthModule, OrgUnitsModule,
+   * HierarchyModule, OrderableModule, TaxonomyModule, etc. Wire only the
+   * addons the app actually uses.
    */
   extraImports?: NonNullable<ModuleMetadata['imports']>;
 }
@@ -121,9 +120,6 @@ export function createAppModule(options: AppShellOptions): ModuleMetadata {
       NotificationsModule,
       AuditModule,
       WorkflowsModule,
-      HierarchyModule,
-      OrderableModule,
-      TaxonomyModule,
       UserPreferencesModule,
       EntityLayoutModule,
       EntityEngineModule,

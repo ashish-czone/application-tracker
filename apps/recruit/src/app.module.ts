@@ -14,6 +14,7 @@ import { OAuthModule } from '@packages/oauth';
 import { OrgUnitsModule } from '@packages/org-units';
 import { PdfGeneratorModule } from '@packages/pdf-generator';
 import { PuppeteerPdfProvider } from '@packages/pdf-generator/providers/puppeteer.provider';
+import { TaxonomyModule } from '@packages/taxonomy';
 import { recruitBackend } from '@domains/recruit-api';
 import { UsersModule } from './modules/users/users.module';
 
@@ -54,6 +55,7 @@ const tenancyImports = process.env.TENANCY_MODE
       NotesModule,
       OAuthModule.register(),
       OrgUnitsModule,
+      TaxonomyModule,
       DocumentTemplatesModule.register(),
       PdfGeneratorModule.register({ provider: new PuppeteerPdfProvider() }),
     ],
