@@ -35,13 +35,6 @@ export type OnBeforeSaveHook = (
   ctx: FieldTypeSaveHookContext,
 ) => Promise<FieldTypeSaveHookResult>;
 
-/** Runs INSIDE the transaction. Receives the Drizzle tx handle. */
-export type OnTransactionalSaveHook = (
-  value: unknown,
-  ctx: FieldTypeSaveHookContext,
-  tx: any,
-) => Promise<void>;
-
 /** Runs AFTER the transaction commits. Failures are logged, never block. */
 export type OnAfterSaveHook = (
   value: unknown,
@@ -51,10 +44,16 @@ export type OnAfterSaveHook = (
 // ---------------------------------------------------------------------------
 // Hook bundle per field type
 // ---------------------------------------------------------------------------
+//
+// `onTransactionalSave` was removed in favour of explicit per-entity
+// composition (per-entity services open their own tx and call
+// taxonomy/multi-value services directly). `onBeforeSave` stays for
+// pure value transformations like media's tmp→entity file move; it
+// runs outside the engine's transaction and does not write to side
+// tables.
 
 export interface FieldTypeSaveHooks {
   onBeforeSave?: OnBeforeSaveHook;
-  onTransactionalSave?: OnTransactionalSaveHook;
   onAfterSave?: OnAfterSaveHook;
 }
 

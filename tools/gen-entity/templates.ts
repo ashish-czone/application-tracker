@@ -21,16 +21,17 @@ const HEADER = (entity: string, file: string) =>
 
 export function dtoGeneratedTemplate(ctx: GeneratorContext): string {
   const { entitySlug, singularPascal, tableIdent } = ctx;
-  const featureLines = ctx.tagFields.map(
-    (f) => `  ${f.key}: z.array(z.string().uuid()).optional(),`,
-  );
+  const featureLines = [
+    ...ctx.tagFields.map((f) => `  ${f.key}: z.array(z.string().uuid()).optional(),`),
+    ...ctx.multiValueFields.map((f) => `  ${f.key}: z.array(z.string().uuid()).optional(),`),
+  ];
   const featureBlock = featureLines.length > 0
     ? `\nconst FeatureFields = z.object({\n${featureLines.join('\n')}\n});\n\nexport const GeneratedCreate${singularPascal}Schema = RowFields.merge(FeatureFields);`
     : `\nexport const GeneratedCreate${singularPascal}Schema = RowFields;`;
 
   return `import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 import { z } from 'zod';
-import { ${tableIdent} } from './schema/${tableIdent}';
+import { ${tableIdent} } from './schema/${entitySlug}';
 
 ${HEADER(entitySlug, `${entitySlug}.dto.ts`)}
 
@@ -103,11 +104,16 @@ export function serviceTemplate(ctx: GeneratorContext): string {
     }
   }
 
+  if (ctx.multiValueFields.length > 0) {
+    imports.push(`import { MultiValueService } from '@packages/entity-relations';`);
+    ctorParams.push(`private readonly multiValue: MultiValueService,`);
+  }
+
   imports.push(
     `import type { Create${singularPascal}Dto, Update${singularPascal}Dto } from './${entitySlug}.dto';`,
   );
 
-  // Build create/update tag composition lines
+  // Build create/update composition lines (tags + multi-value)
   const tagCreateLines = ctx.tagFields.map((f) => {
     const upper = f.key.replace(/[a-z]+/g, (s) => s.toUpperCase());
     return `      if (${f.key}?.length) {
@@ -125,9 +131,23 @@ export function serviceTemplate(ctx: GeneratorContext): string {
       }`;
   });
 
-  const destructured = ctx.tagFields.length > 0
-    ? `{ ${ctx.tagFields.map((f) => f.key).join(', ')}, ...row }`
+  const multiValueCreateLines = ctx.multiValueFields.map((f) => `      if (${f.key}?.length) {
+        await this.multiValue.setValues(ENTITY_TYPE, created.id as string, '${f.key}', ${f.key}, tx);
+      }`);
+  const multiValueUpdateLines = ctx.multiValueFields.map((f) => `      if (${f.key} !== undefined) {
+        await this.multiValue.setValues(ENTITY_TYPE, id, '${f.key}', ${f.key}, tx);
+      }`);
+
+  const allKeys = [
+    ...ctx.tagFields.map((f) => f.key),
+    ...ctx.multiValueFields.map((f) => f.key),
+  ];
+  const destructured = allKeys.length > 0
+    ? `{ ${allKeys.join(', ')}, ...row }`
     : 'row';
+
+  const allCreateLines = [...tagCreateLines, ...multiValueCreateLines];
+  const allUpdateLines = [...tagUpdateLines, ...multiValueUpdateLines];
 
   return `${imports.join('\n')}
 
@@ -152,7 +172,7 @@ export class ${pluralPascal}Service {
 
     return this.database.db.transaction(async (tx) => {
       const created = await this.entities.create(row, actorId, tx);
-${tagCreateLines.join('\n')}
+${allCreateLines.join('\n')}
       return created;
     });
   }
@@ -167,7 +187,7 @@ ${tagCreateLines.join('\n')}
 
     return this.database.db.transaction(async (tx) => {
       const updated = await this.entities.update(id, row, actorId, accessCtx, tx);
-${tagUpdateLines.join('\n')}
+${allUpdateLines.join('\n')}
       return updated;
     });
   }

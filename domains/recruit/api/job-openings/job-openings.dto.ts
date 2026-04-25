@@ -1,21 +1,18 @@
-import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 import { z } from 'zod';
-import { jobOpenings } from './schema/job-openings';
+import {
+  GeneratedJobOpeningRowSchema,
+  GeneratedCreateJobOpeningSchema,
+} from './job-openings.dto.generated';
 
-export const JobOpeningRowSchema = createSelectSchema(jobOpenings);
+// User-owned. Add field-level validators, `.refine()` cross-field rules,
+// and custom transforms here. The generator will not overwrite this file.
 
-export const CreateJobOpeningSchema = createInsertSchema(jobOpenings, {
-  title: (s) => s.min(1),
-}).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-  deletedAt: true,
-  deletedBy: true,
-  createdBy: true,
+export const CreateJobOpeningSchema = GeneratedCreateJobOpeningSchema.extend({
+  title: z.string().min(1),
 });
 
 export const UpdateJobOpeningSchema = CreateJobOpeningSchema.partial();
+export const JobOpeningRowSchema = GeneratedJobOpeningRowSchema;
 
 export type CreateJobOpeningDto = z.infer<typeof CreateJobOpeningSchema>;
 export type UpdateJobOpeningDto = z.infer<typeof UpdateJobOpeningSchema>;

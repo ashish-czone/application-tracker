@@ -22,15 +22,21 @@ export interface TagFieldInfo {
   tagGroupSlug?: string;
 }
 
+export interface MultiValueFieldInfo {
+  key: string;
+  fieldType: 'multi_user' | 'multi_lookup';
+}
+
 export interface GeneratorContext {
-  entitySlug: string;        // e.g. 'candidates'
-  domain: string;            // e.g. 'recruit'
-  targetDir: string;         // absolute path to domains/<domain>/api/<entity>/
-  singularPascal: string;    // 'Candidate' (from config.singularName) — used for schemas + DTOs
-  pluralPascal: string;      // 'Candidates' (from config.pluralName) — used for Service/Controller/Module
-  tableIdent: string;        // 'candidates' (Drizzle table import name; matches slug)
-  configIdent: string;       // 'candidatesConfig' (the export name)
-  tagFields: TagFieldInfo[]; // fields with fieldType === 'tags'
+  entitySlug: string;                  // e.g. 'candidates'
+  domain: string;                      // e.g. 'recruit'
+  targetDir: string;                   // absolute path to domains/<domain>/api/<entity>/
+  singularPascal: string;              // 'Candidate' (from config.singularName) — used for schemas + DTOs
+  pluralPascal: string;                // 'Candidates' (from config.pluralName) — used for Service/Controller/Module
+  tableIdent: string;                  // 'candidates' (Drizzle table import name; matches slug)
+  configIdent: string;                 // 'candidatesConfig' (the export name)
+  tagFields: TagFieldInfo[];           // fields with fieldType === 'tags'
+  multiValueFields: MultiValueFieldInfo[]; // fields with fieldType === 'multi_user' | 'multi_lookup'
 }
 
 interface FilePlanEntry {
@@ -135,6 +141,13 @@ async function buildContext(args: {
   const tagFields: TagFieldInfo[] = Object.entries(fieldMeta)
     .filter(([, m]) => (m as any).fieldType === 'tags')
     .map(([key, m]) => ({ key, tagGroupSlug: (m as any).tagGroupSlug }));
+  const multiValueFields: MultiValueFieldInfo[] = Object.entries(fieldMeta)
+    .filter(([, m]) => (m as any).fieldType === 'multi_user' || (m as any).fieldType === 'multi_lookup')
+    .map(([key, m]) => ({ key, fieldType: (m as any).fieldType }));
+
+  // Convention: kebab-case slug → camelCase identifier for the Drizzle table
+  // (e.g. 'job-openings' → 'jobOpenings'). The schema FILE keeps kebab-case.
+  const tableIdent = entitySlug.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
 
   return {
     entitySlug,
@@ -142,9 +155,10 @@ async function buildContext(args: {
     targetDir,
     singularPascal,
     pluralPascal,
-    tableIdent: entitySlug,    // convention: drizzle table identifier matches slug
+    tableIdent,
     configIdent,
     tagFields,
+    multiValueFields,
   };
 }
 

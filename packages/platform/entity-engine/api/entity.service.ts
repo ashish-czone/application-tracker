@@ -833,20 +833,6 @@ export class EntityService {
         await this.eavStorage.setValues(config.entityType, entityId, customFields, tx);
       }
 
-      // Relational writes inside the transaction
-      for (const [key, value] of Object.entries(relationalFields)) {
-        const def = defMap.get(key);
-        if (!def) continue;
-        const hooks = fieldTypeSaveHookRegistry.get(def.fieldType);
-        if (hooks?.onTransactionalSave) {
-          const ctx: FieldTypeSaveHookContext = {
-            entityType: config.entityType, entityId, fieldKey: key,
-            fieldType: def.fieldType, mode: 'create', actorId,
-          };
-          await hooks.onTransactionalSave(value, ctx, tx);
-        }
-      }
-
       return inserted;
     };
 
@@ -1068,22 +1054,6 @@ export class EntityService {
       if (hasCustomChanges && this.eavStorage) {
         const eavResult = await this.eavStorage.setValues(config.entityType, id, customFields, tx);
         eavAfter = eavResult.after;
-      }
-
-      // Relational writes inside the transaction
-      if (hasRelationalChanges) {
-        for (const [key, value] of Object.entries(relationalFields)) {
-          const def = updateDefMap.get(key);
-          if (!def) continue;
-          const hooks = fieldTypeSaveHookRegistry.get(def.fieldType);
-          if (hooks?.onTransactionalSave) {
-            const ctx: FieldTypeSaveHookContext = {
-              entityType: config.entityType, entityId: id, fieldKey: key,
-              fieldType: def.fieldType, mode: 'update', actorId,
-            };
-            await hooks.onTransactionalSave(value, ctx, tx);
-          }
-        }
       }
 
       const after = buildSnapshot(this.rowToSnapshot(row), eavAfter);

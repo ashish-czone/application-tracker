@@ -1,21 +1,18 @@
-import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 import { z } from 'zod';
-import { interviews } from './schema/interviews';
+import {
+  GeneratedInterviewRowSchema,
+  GeneratedCreateInterviewSchema,
+} from './interviews.dto.generated';
 
-export const InterviewRowSchema = createSelectSchema(interviews);
+// User-owned. Add field-level validators, `.refine()` cross-field rules,
+// and custom transforms here. The generator will not overwrite this file.
 
-export const CreateInterviewSchema = createInsertSchema(interviews, {
-  videoLink: (s) => s.url().optional(),
-}).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-  deletedAt: true,
-  deletedBy: true,
-  createdBy: true,
+export const CreateInterviewSchema = GeneratedCreateInterviewSchema.extend({
+  videoLink: z.string().url().optional(),
 });
 
 export const UpdateInterviewSchema = CreateInterviewSchema.partial();
+export const InterviewRowSchema = GeneratedInterviewRowSchema;
 
 export type CreateInterviewDto = z.infer<typeof CreateInterviewSchema>;
 export type UpdateInterviewDto = z.infer<typeof UpdateInterviewSchema>;
