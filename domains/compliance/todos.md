@@ -14,6 +14,19 @@ Keep this file up to date as we work. Append new questions at the bottom of §2.
 
 Running log so the next session can pick up without archaeology. Newest at top.
 
+### 2026-04-25 — Compliance E2E suite landed; 4 backend bugs filed as Stream K
+
+**Shipped:** Playwright UI E2E suite at `e2e-compliance/` — 13 specs / 48 tests covering CRUD + cross-entity flows + RBAC, all green against a real `compliance-api` (3012) + `compliance-web` (5176). Three PRs: #1055 (infrastructure), #1058 (entity CRUD), #1059 (cross-entity flows + RBAC). Auth via dedicated seeded `e2e-admin@compliance.test` user; state isolation via per-test unique names + per-spec `CleanupTracker.afterAll`; serial workers (workers:1) since DB state is shared. See memory note `project_e2e_compliance.md` for harness details.
+
+**Backend bugs surfaced (now §3 Stream K, K1–K4):** suite works around each so it ships, but the underlying APIs need fixing:
+
+- **K1.** `POST /client-registrations` rejects every JSON request — drizzle-zod requires `Date` instances on timestamp columns.
+- **K2.** `POST /compliance-filings` 500s when optional `completedAt` is omitted (undefined coerced to `""`).
+- **K3.** `compliance-filings` workflow registered under slug `compliance_rules` (underscore) but engine resolves `compliance-rules` (dash) — transitions never find a workflow.
+- **K4.** `POST /users/invite` rejects `sendInvite`, now requires `userType` — payload contract drifted from docs.
+
+Pick these up next; they're each one-task, one-commit, plus an integration test apiece.
+
 ### 2026-04-24 — Stream I sub-PR 4 shipped (I13-I16)
 
 **Shipped (rule parameter edit guards, Q9):**
@@ -1421,6 +1434,15 @@ Ensures the generator runs at the right times and produces the right horizon. Bu
 - [ ] **J3.** Event subscriber on rule activation (`status → active`): trigger the generator for that rule × all its active registrations, full horizon. (Q12)
 - [ ] **J4.** Event subscriber on registration creation: trigger the generator for that registration × all active rules on its law, full horizon. (Q12)
 - [ ] **J5.** Event subscriber on client reactivation (`status → active`): trigger the generator for that client's active registrations × active rules. Previously cancelled dormancy tasks remain cancelled per Q6. (Q12)
+
+### Stream K — Backend bugs surfaced by E2E suite
+
+Surfaced by the Playwright UI E2E suite at `e2e-compliance/` (PRs #1055/#1058/#1059, 13 specs / 48 tests). Each is a real backend bug; the tests work around them so the suite ships. Each item is one task ≈ one commit.
+
+- [ ] **K1.** `POST /client-registrations` rejects every JSON request because `drizzle-zod`'s `createInsertSchema` infers `effectiveFrom` / `effectiveTo` (and likely `deactivatedAt`) as `z.date()` — a JS `Date` instance, unreachable over JSON. Override the timestamp columns in the request schema with `z.string().datetime().transform((s) => new Date(s))` (or equivalent), so ISO-string bodies parse. Add an integration test that POSTs an ISO string and expects 201. Workaround in tests: `e2e-compliance/flows-registration-filing.spec.ts` uses seeded registrations only.
+- [ ] **K2.** `POST /compliance-filings` 500s when `completedAt` is omitted from the body. Optional fields shouldn't reach the timestamp column as `""`; trace the controller/service path that coerces `undefined` to `""` and treat it as `null`/`undefined`. Add an integration test for filing creation without `completedAt`. Workaround: same flow spec skips creating filings.
+- [ ] **K3.** `compliance-filings` workflow is registered under entity slug `compliance_rules` (underscore) but the engine looks up by `compliance-rules` (dash), so transitions on filings never resolve a workflow ("no workflow registered"). Fix the registration key to match the entity slug used at runtime, or normalise slug lookups to be hyphen-tolerant. Add an integration test that drives a filing through `submit → review → complete`. Workaround: `flows-workflow.spec.ts` retargets to clients (wired correctly).
+- [ ] **K4.** `POST /users/invite` payload contract drift: rejects `sendInvite` (no longer recognised) and now requires `userType`. Either restore the documented body shape (with `sendInvite` defaulting to true and `userType` defaulting to the inviting user's type) or update the API docs/clients. Workaround: `flows-rbac.spec.ts` uses `POST /users` with `credentials: { password }` directly.
 
 ### Stream Z — Finalisation
 
