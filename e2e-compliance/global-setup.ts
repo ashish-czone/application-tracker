@@ -8,17 +8,30 @@ const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'E2eAdmin1234';
 const AUTH_DIR = path.join(__dirname, '.auth');
 const AUTH_FILE = path.join(AUTH_DIR, 'admin.json');
 
-/**
- * Logs in once before the suite, persists tokens for spec fixtures to read.
- * Surfacing failure here (instead of in each test) makes "API down" / "bad
- * credentials" obvious.
- */
-export default async function globalSetup(): Promise<void> {
-  const res = await fetch(`${API_URL}/api/v1/auth/client/login`, {
+async function login(): Promise<Response> {
+  return fetch(`${API_URL}/api/v1/auth/client/login`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ identifier: ADMIN_EMAIL, password: ADMIN_PASSWORD }),
   });
+}
+
+/**
+ * Logs in once before the suite, persists tokens for spec fixtures to read.
+ * Retries on 429 (auth has a 5-per-minute throttle that can trip during
+ * back-to-back suite runs). Surfaces other failures upfront so "API down" /
+ * "bad credentials" is obvious instead of failing every test.
+ */
+export default async function globalSetup(): Promise<void> {
+  let res = await login();
+
+  if (res.status === 429) {
+    // ThrottlerException — wait out the 60s window once and retry.
+    const waitMs = 65_000;
+    console.log(`[e2e-compliance globalSetup] 429 throttled; waiting ${waitMs / 1000}s then retrying.`);
+    await new Promise((r) => setTimeout(r, waitMs));
+    res = await login();
+  }
 
   if (!res.ok) {
     const body = await res.text();
