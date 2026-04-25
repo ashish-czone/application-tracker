@@ -8,7 +8,7 @@ import { DatabaseModule, DatabaseService } from '@packages/database';
 import { LoggerModule } from '@packages/logger';
 import { EventsModule } from '@packages/events';
 import { RbacModule } from '@packages/rbac';
-import { GlobalExceptionFilter } from '@packages/app-shell';
+import { TestExceptionFilter } from './test-exception.filter';
 import { MockQueueModule } from './mock-queue.module';
 import { MockAutomationsModule } from './mock-automations.module';
 import { MockAuthGuard } from './mock-auth.guard';
@@ -80,7 +80,7 @@ export async function createPackageTestApp(options: PackageTestAppOptions = {}):
       ...(options.providers ?? []),
       { provide: APP_GUARD, useClass: MockAuthGuard },
       { provide: APP_GUARD, useClass: MockRbacGuard },
-      { provide: APP_FILTER, useClass: GlobalExceptionFilter },
+      { provide: APP_FILTER, useClass: TestExceptionFilter },
     ],
   }).compile();
 
