@@ -27,6 +27,10 @@ export type {
 } from './types';
 export { allow, allowWithWarning, block } from './types';
 
+// Transition guard helper for per-entity service composition
+export { runTransitionGuards } from './transition-guard';
+export type { TransitionGuard, GuardCtx } from './transition-guard';
+
 // Schema tables
 export {
   workflowDefinitions,
