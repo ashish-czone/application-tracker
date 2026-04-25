@@ -4,8 +4,7 @@
  *
  * Lives in `@packages/entity-engine-contract` (not `@packages/entity-engine`)
  * so owning packages like `@packages/rbac` can register their tables without
- * forming a circular dep on entity-engine itself — same pattern as
- * `RelationHandler`.
+ * forming a circular dep on entity-engine itself.
  */
 export interface LookupConfig {
   entity: string;

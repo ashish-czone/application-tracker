@@ -1,7 +1,6 @@
 import type { PgTable, PgColumn } from 'drizzle-orm/pg-core';
 import type { SQL } from 'drizzle-orm';
 import type { Condition } from '@packages/common';
-import type { RelationHandler } from '@packages/entity-engine-contract';
 import type { SoftDeleteMode, DependentStrategy } from '@packages/soft-delete';
 import type { WorkflowGuardFn } from './extensions/workflow-extension.interface';
 
@@ -489,19 +488,11 @@ export interface EntityRelationship {
    * them with a `nestedPath` hint so the form knows how to reshape values
    * before POSTing to the parent endpoint.
    *
-   * Validation and storage of these fields are the handler's responsibility
-   * — the engine never writes them to the parent table.
+   * Layout-only hint: the engine does not read this on the write path —
+   * the owning module's hand-written service is responsible for validating
+   * and storing these fields against its own table.
    */
   nestedFields?: NestedRelationshipField[];
-  /**
-   * Optional write-side handler invoked by the engine when a matching nested
-   * payload key is present in a create/update DTO. The handler owns the child
-   * table (e.g. credentials, user_roles) — the engine never touches it.
-   *
-   * Handler methods run inside the same transaction as the parent entity
-   * insert/update. Throwing from a handler rolls back the parent operation.
-   */
-  handler?: RelationHandler;
 }
 
 /**
@@ -524,12 +515,6 @@ export interface NestedRelationshipField {
   lookupSearchFields?: string[];
   sortOrder?: number;
 }
-
-// RelationHandler + RelationHandlerContext live in @packages/entity-engine-contract
-// so owning packages (auth, rbac) can implement handlers without a circular dep
-// on entity-engine itself. Re-exported here for ergonomic access from inside the
-// engine.
-export type { RelationHandler, RelationHandlerContext } from '@packages/entity-engine-contract';
 
 // ---------------------------------------------------------------------------
 // UI hints — serialized to frontend via registry API
@@ -1041,5 +1026,5 @@ export interface EntityRegistryEntry {
     } | null;
     [key: string]: unknown;
   };
-  relationships: Omit<EntityRelationship, 'junctionEntity' | 'handler'>[];
+  relationships: Omit<EntityRelationship, 'junctionEntity'>[];
 }

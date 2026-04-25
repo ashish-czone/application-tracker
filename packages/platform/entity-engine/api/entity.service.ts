@@ -1029,20 +1029,6 @@ export class EntityService {
         }
       }
 
-      // Relationship handlers: hand each nested payload to the owning
-      // relationship's RelationHandler.onCreate inside this tx. Throwing
-      // from a handler rolls the parent insert back.
-      //
-      // `ctx.parent` is a snapshot of the just-inserted row so handlers can
-      // derive values (e.g. credentials.identifier = parent.email) without
-      // the DTO having to duplicate them into the nested payload.
-      const relationCtx = { parent: { ...(inserted as Record<string, unknown>) } };
-      for (const rel of config.relationships ?? []) {
-        if (!rel.handler?.onCreate) continue;
-        if (!(rel.name in relationshipInputs)) continue;
-        await rel.handler.onCreate(tx, entityId, relationshipInputs[rel.name], actorId, relationCtx);
-      }
-
       return inserted;
     });
 
@@ -1275,20 +1261,6 @@ export class EntityService {
             await hooks.onTransactionalSave(value, ctx, tx);
           }
         }
-      }
-
-      // Relationship handlers: only fire when the caller actually sent a
-      // payload for this relation — updating other fields shouldn't touch
-      // credentials or role assignments.
-      //
-      // `ctx.parent` reflects the row post-update so the handler sees the
-      // latest values (e.g. a password rotation after an email change reads
-      // the new email).
-      const relationCtx = { parent: { ...(row as Record<string, unknown>) } };
-      for (const rel of config.relationships ?? []) {
-        if (!rel.handler?.onUpdate) continue;
-        if (!(rel.name in relationshipInputs)) continue;
-        await rel.handler.onUpdate(tx, id, relationshipInputs[rel.name], actorId, relationCtx);
       }
 
       const after = buildSnapshot(this.rowToSnapshot(row), eavAfter);
@@ -1552,29 +1524,18 @@ export class EntityService {
     // usually has no deletedAt of its own. Soft-delete therefore flips the
     // parent's columns; the child row is left as-is so a restore is a clean
     // reverse.
-    //
-    // Wrapped in a transaction so RelationHandler.onDelete runs atomically
-    // with the parent flip — a handler throwing keeps the parent alive.
     const ext = this.getExtensionMeta();
-    await this.database.db.transaction(async (tx) => {
-      if (ext) {
-        await tx
-          .update(ext.parentTable as any)
-          .set({ deletedAt: new Date(), deletedBy: actorId } as any)
-          .where(withTenant(ext.parentTable as any, eq(ext.parentIdColumn, id)));
-      } else {
-        await tx
-          .update(config.table as any)
-          .set({ deletedAt: new Date(), deletedBy: actorId } as any)
-          .where(withTenant(config.table as any, eq((config.table as any).id, id)));
-      }
-
-      const relationCtx = { parent: { ...(entity as Record<string, unknown>) } };
-      for (const rel of config.relationships ?? []) {
-        if (!rel.handler?.onDelete) continue;
-        await rel.handler.onDelete(tx, id, actorId, { kind: 'soft' }, relationCtx);
-      }
-    });
+    if (ext) {
+      await this.database.db
+        .update(ext.parentTable as any)
+        .set({ deletedAt: new Date(), deletedBy: actorId } as any)
+        .where(withTenant(ext.parentTable as any, eq(ext.parentIdColumn, id)));
+    } else {
+      await this.database.db
+        .update(config.table as any)
+        .set({ deletedAt: new Date(), deletedBy: actorId } as any)
+        .where(withTenant(config.table as any, eq((config.table as any).id, id)));
+    }
 
     this.logger.log(`${config.singularName} deleted`, { entityId: id, actorId });
 

@@ -9,10 +9,11 @@ export interface SplitResult {
   /** Relational fields (tags, file, category) — handled separately by EntityService */
   relationalFields: Record<string, unknown>;
   /**
-   * Nested payloads keyed by declared EntityRelationship name. For hasOne this
-   * is an object (e.g. `credentials: { password }`); for hasMany / manyToMany
-   * it is an array of target IDs or target payloads. The engine forwards each
-   * bucket to the relationship's `handler.onCreate / onUpdate` inside the tx.
+   * Nested payloads keyed by declared EntityRelationship name. The engine
+   * does not consume this bucket — it exists to keep relationship keys out
+   * of `standardFields` / `customFields`, so an entity that ships a nested
+   * relationship payload (e.g. credentials, roles) doesn't trip validation.
+   * Modules that need those payloads parse them in their own service layer.
    */
   relationshipInputs: Record<string, unknown>;
 }
@@ -22,9 +23,8 @@ export interface SplitResult {
  * field-level relational buckets, and relationship-level inputs.
  *
  * Keys matching a declared EntityRelationship name are routed to
- * `relationshipInputs` so the engine can hand them to the relationship's
- * RelationHandler. Other unknown keys continue to be dropped (already
- * validated upstream).
+ * `relationshipInputs` and otherwise dropped from the engine write path —
+ * the owning module's hand-written service is responsible for handling them.
  *
  * Standard field keys are camelCase Drizzle property names, so the result
  * can be passed directly to Drizzle `.set()` without key transformation.
