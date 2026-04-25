@@ -1,5 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
-import { runTransitionGuards, type TransitionGuard, type GuardCtx } from '../transition-guard';
+import {
+  runTransitionGuards,
+  previewTransitionGuards,
+  type TransitionGuard,
+  type GuardCtx,
+} from '../transition-guard';
 
 interface TestEntity {
   id: string;
@@ -80,5 +85,35 @@ describe('runTransitionGuards', () => {
       runTransitionGuards(guards, { id: 'e1', status: 'draft' }, ctx()),
     ).rejects.toThrow('halt');
     expect(second).not.toHaveBeenCalled();
+  });
+});
+
+describe('previewTransitionGuards', () => {
+  it('collects warnings and blockers without short-circuiting', async () => {
+    const guards: TransitionGuard<TestEntity, TestDeps>[] = [
+      { name: 'g1', from: 'draft', to: 'submitted', check: async () => { throw new Error('first blocker'); } },
+      { name: 'g2', from: 'draft', to: 'submitted', check: async () => 'a warning' },
+      { name: 'g3', from: 'draft', to: 'submitted', check: async () => { throw new Error('second blocker'); } },
+      { name: 'g4', from: 'draft', to: 'submitted', check: async () => undefined },
+    ];
+    const result = await previewTransitionGuards(guards, { id: 'e1', status: 'draft' }, ctx());
+    expect(result.blockers).toEqual(['first blocker', 'second blocker']);
+    expect(result.warnings).toEqual(['a warning']);
+  });
+
+  it('coerces non-Error throws into string blockers', async () => {
+    const guards: TransitionGuard<TestEntity, TestDeps>[] = [
+      { name: 'g1', from: 'draft', to: 'submitted', check: async () => { throw 'plain string'; } },
+    ];
+    const result = await previewTransitionGuards(guards, { id: 'e1', status: 'draft' }, ctx());
+    expect(result.blockers).toEqual(['plain string']);
+  });
+
+  it('returns empty arrays when no guards match', async () => {
+    const guards: TransitionGuard<TestEntity, TestDeps>[] = [
+      { name: 'g1', from: 'submitted', to: 'approved', check: async () => 'never' },
+    ];
+    const result = await previewTransitionGuards(guards, { id: 'e1', status: 'draft' }, ctx());
+    expect(result).toEqual({ warnings: [], blockers: [] });
   });
 });

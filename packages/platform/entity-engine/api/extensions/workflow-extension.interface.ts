@@ -32,16 +32,12 @@ export interface WorkflowExtension {
     toStateId: string;
     name: string;
     requiredPermissions?: string[];
-    guardNames?: string[];
     sortOrder: number;
     metadata?: Record<string, unknown>;
     reasonRequired?: boolean;
     commentRequired?: boolean;
     reasonOptions?: string[];
   }): Promise<{ id: string }>;
-
-  /** Register a custom workflow guard function. */
-  registerGuard(name: string, fn: WorkflowGuardFn): void;
 
   // --- Runtime ---
 
@@ -51,7 +47,9 @@ export interface WorkflowExtension {
   /** Resolve and assign a pipeline to an entity (used on create). */
   resolveAndAssign(entityType: string, entityId: string, fieldName: string, discriminatorValue?: string): Promise<WorkflowDefinitionRef | undefined>;
 
-  /** Validate a transition and throw on failure. Returns transition metadata. */
+  /** Validate a transition and throw on failure. Returns transition metadata.
+   * Validates state-machine legality, permissions, and conditions only —
+   * per-entity guards run before this is called, in the per-entity service. */
   validateAndThrow(params: {
     workflowSlug: string;
     entityType: string;
@@ -61,6 +59,23 @@ export interface WorkflowExtension {
     actorId: string | null;
     entityData?: Record<string, unknown>;
   }): Promise<ValidatedTransition>;
+
+  /** Dry-run a transition: returns legality + missing permissions without
+   * touching the database. Per-entity services call this from their own
+   * preview methods, then merge in their own guard preview results. */
+  preflightTransition(params: {
+    workflowSlug: string;
+    entityType: string;
+    entityId: string;
+    fromState: string;
+    toState: string;
+    actorId: string | null;
+  }): Promise<{
+    transitionId: string | null;
+    warnings: string[];
+    blockers: string[];
+    missingPermissions: string[];
+  }>;
 
   /** Record a transition in the history table. */
   recordHistory(data: {
@@ -100,29 +115,6 @@ export interface ValidatedTransition {
   workflowDefinitionId: string;
   fieldName: string;
 }
-
-/**
- * Guard function signature — receives context, returns a GuardResult.
- * See `@packages/workflows` for full semantics; entity-engine re-declares
- * the minimal shape here to avoid a dependency cycle.
- */
-export interface WorkflowGuardContext {
-  workflowSlug: string;
-  entityType: string;
-  entityId: string;
-  fieldName: string;
-  fromState: string;
-  toState: string;
-  actorId: string | null;
-  metadata?: Record<string, unknown>;
-}
-
-export type GuardResult =
-  | { decision: 'allow' }
-  | { decision: 'allow_with_warning'; message: string }
-  | { decision: 'block'; message: string };
-
-export type WorkflowGuardFn = (context: WorkflowGuardContext) => Promise<GuardResult>;
 
 /** NestJS injection token for the workflow extension. */
 export const WORKFLOW_EXTENSION = 'WORKFLOW_EXTENSION';

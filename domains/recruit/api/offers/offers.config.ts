@@ -82,7 +82,8 @@ export const offersConfig: EntityConfig = {
         ],
         transitions: [
           { from: 'draft', to: ['pending-approval'] },
-          { from: 'pending-approval', to: [{ state: 'approved', guardNames: ['require-offer-approvals'] }, 'draft'] },
+          // Guard (require-offer-approvals) lives in OffersService.OFFER_GUARDS.
+          { from: 'pending-approval', to: ['approved', 'draft'] },
           { from: 'approved', to: ['sent'] },
           { from: 'sent', to: ['accepted', 'declined', 'expired'] },
         ],

@@ -1,12 +1,57 @@
-import { Inject, Injectable, BadRequestException } from '@nestjs/common';
+import { Inject, Injectable, BadRequestException, UnprocessableEntityException } from '@nestjs/common';
 import { DatabaseService } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
 import { EntityService, type BaseListQuery } from '@packages/entity-engine';
 import type { DataAccessContext } from '@packages/rbac';
+import {
+  runTransitionGuards,
+  previewTransitionGuards,
+  type TransitionGuard,
+} from '@packages/workflows';
 import { clients } from '../schema/clients';
 import { clientContacts } from '../schema/client-contacts';
 import { CLIENTS_CREATED, CLIENT_CONTACTS_CREATED } from '../events/types';
 import { ClientDormancyService } from './client-dormancy.service';
+import { ClientContactsService } from '../client-contacts/client-contacts.service';
+
+interface ClientGuardDeps {
+  contacts: ClientContactsService;
+  dormancy: ClientDormancyService;
+}
+
+type ClientRow = Record<string, unknown> & { id: string };
+
+/**
+ * Declarative guards for client transitions. Each row describes exactly when
+ * it fires (`from` → `to`) and what it checks. Throw to block, return a
+ * string to surface a warning, return void to allow.
+ */
+const CLIENT_GUARDS: TransitionGuard<ClientRow, ClientGuardDeps>[] = [
+  {
+    name: 'require-primary-contact',
+    from: 'onboarding',
+    to: 'active',
+    check: async (client, { deps }) => {
+      const hasPrimary = await deps.contacts.hasPrimaryContact(client.id);
+      if (!hasPrimary) {
+        throw new UnprocessableEntityException(
+          'Add a primary contact before activating this client.',
+        );
+      }
+    },
+  },
+  {
+    name: 'warn-dormant-cascade',
+    from: 'active',
+    to: 'dormant',
+    check: async (client, { deps }) => {
+      const count = await deps.dormancy.countNonTerminalFilings(client.id);
+      if (count === 0) return;
+      const noun = count === 1 ? 'filing' : 'filings';
+      return `${count} non-terminal ${noun} will be cancelled when this client is dormantised.`;
+    },
+  },
+];
 
 export interface ClientInput {
   name: string;
@@ -78,7 +123,12 @@ export class ClientsService {
     private readonly database: DatabaseService,
     private readonly events: DomainEventEmitter,
     private readonly dormancy: ClientDormancyService,
+    private readonly contacts: ClientContactsService,
   ) {}
+
+  private guardDeps(): ClientGuardDeps {
+    return { contacts: this.contacts, dormancy: this.dormancy };
+  }
 
   // ---- CRUD delegates (vendors template) -----------------------------------
 
@@ -139,13 +189,22 @@ export class ClientsService {
     options?: { reason?: string; comment?: string },
     accessCtx?: DataAccessContext,
   ): Promise<Record<string, unknown>> {
+    // Per-entity guards run before the engine. Other field flips skip the
+    // guard step entirely — only `status` has gating logic on this entity.
+    let warnings: string[] = [];
+    if (fieldKey === 'status') {
+      const entity = await this.entityService.findOneOrFail(id, accessCtx);
+      const fromState = entity[fieldKey] as string | null;
+      if (!fromState) {
+        throw new BadRequestException(`Entity has no current state for field '${fieldKey}'`);
+      }
+      warnings = await runTransitionGuards(CLIENT_GUARDS, entity as ClientRow, {
+        fromState, toState, actor: actorId, deps: this.guardDeps(),
+      });
+    }
+
     const ctx = await this.entityService.validateTransition(
-      id,
-      fieldKey,
-      toState,
-      actorId,
-      options,
-      accessCtx,
+      id, fieldKey, toState, actorId, options, accessCtx,
     );
 
     const isDormantisation =
@@ -168,7 +227,30 @@ export class ClientsService {
       this.dormancy.emitCascadeEvent(ctx, cancelledFilingIds);
     }
 
-    return this.entityService.findOneOrFail(id);
+    const fresh = await this.entityService.findOneOrFail(id);
+    return warnings.length > 0 ? { ...fresh, warnings } : fresh;
+  }
+
+  /**
+   * Preview a proposed transition: runs per-entity guards in collect-mode
+   * (advisory). UI confirm dialog calls this to populate warning + blocker
+   * banners before committing. Does NOT touch the database. The legality +
+   * permissions check stays on `/workflows/preflight` — UI merges results.
+   */
+  async previewTransition(
+    id: string,
+    fieldKey: string,
+    toState: string,
+    actorId: string,
+    accessCtx?: DataAccessContext,
+  ): Promise<{ warnings: string[]; blockers: string[] }> {
+    if (fieldKey !== 'status') return { warnings: [], blockers: [] };
+    const entity = await this.entityService.findOneOrFail(id, accessCtx);
+    const fromState = entity[fieldKey] as string | null;
+    if (!fromState) return { warnings: [], blockers: [] };
+    return previewTransitionGuards(CLIENT_GUARDS, entity as ClientRow, {
+      fromState, toState, actor: actorId, deps: this.guardDeps(),
+    });
   }
 
   // ---- Composite create-with-contacts --------------------------------------

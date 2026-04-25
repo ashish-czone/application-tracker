@@ -30,7 +30,9 @@ function useResolvedWorkflow(entityType: string, entityId: string) {
 function PreflightedTransitionDialog({
   workflowSlug,
   entityType,
+  entitySlug,
   entityId,
+  fieldKey,
   fromState,
   pending,
   isPending,
@@ -39,7 +41,9 @@ function PreflightedTransitionDialog({
 }: {
   workflowSlug: string;
   entityType: string;
+  entitySlug: string;
   entityId: string;
+  fieldKey: string;
   fromState: string;
   pending: PendingTransition | null;
   isPending: boolean;
@@ -47,7 +51,7 @@ function PreflightedTransitionDialog({
   onConfirm: (data: { reason?: string; comment?: string }) => void;
 }) {
   const preflightParams = pending
-    ? { workflowSlug, entityType, entityId, fromState, toState: pending.toStateName }
+    ? { workflowSlug, entityType, entitySlug, entityId, fieldKey, fromState, toState: pending.toStateName }
     : null;
   const { data: preflight, isFetching: preflightLoading } = useTransitionPreflight(preflightParams);
 
@@ -111,7 +115,9 @@ function PipelineProgressForEntity({ entityType, entityId, entity }: { entityTyp
       <PreflightedTransitionDialog
         workflowSlug={resolvedWorkflow.slug}
         entityType={entityType}
+        entitySlug={entityConfig.slug}
         entityId={entityId}
+        fieldKey={resolvedWorkflow.fieldName}
         fromState={currentState}
         pending={pending}
         isPending={transitionMutation.isPending}
@@ -162,7 +168,9 @@ function WorkflowActionsForEntity({ entityType, entityId, entity }: { entityType
       <PreflightedTransitionDialog
         workflowSlug={resolvedWorkflow.slug}
         entityType={entityType}
+        entitySlug={entityConfig.slug}
         entityId={entityId}
+        fieldKey={resolvedWorkflow.fieldName}
         fromState={currentState}
         pending={pending}
         isPending={transitionMutation.isPending}

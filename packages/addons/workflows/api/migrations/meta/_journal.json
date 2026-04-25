@@ -8,6 +8,13 @@
       "when": 1776155752062,
       "tag": "0000_powerful_vulture",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1777116142576,
+      "tag": "0001_blushing_richard_fisk",
+      "breakpoints": true
     }
   ]
 }

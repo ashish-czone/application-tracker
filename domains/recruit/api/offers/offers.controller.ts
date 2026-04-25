@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -92,6 +93,41 @@ export class OffersController {
     @AccessContext() accessCtx?: DataAccessContext,
   ) {
     await this.offers.softDelete(id, user.userId, accessCtx);
+  }
+
+  @Post(':id/transition')
+  @RequirePermission('offers.update')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Transition the offer workflow status' })
+  transition(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: { fieldKey?: string; to?: string; reason?: string; comment?: string },
+    @CurrentUser() user: JwtPayload,
+    @AccessContext() accessCtx?: DataAccessContext,
+  ) {
+    if (!body?.fieldKey || !body?.to) {
+      throw new BadRequestException('Body must include `fieldKey` and `to`');
+    }
+    return this.offers.transition(
+      id, body.fieldKey, body.to, user.userId,
+      { reason: body.reason, comment: body.comment }, accessCtx,
+    );
+  }
+
+  @Get(':id/transition-preview')
+  @RequirePermission('offers.update')
+  @ApiOperation({ summary: 'Preview a proposed offer transition (advisory guards only)' })
+  previewTransition(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('fieldKey') fieldKey: string,
+    @Query('to') to: string,
+    @CurrentUser() user: JwtPayload,
+    @AccessContext() accessCtx?: DataAccessContext,
+  ) {
+    if (!fieldKey || !to) {
+      throw new BadRequestException('Query params `fieldKey` and `to` are required');
+    }
+    return this.offers.previewTransition(id, fieldKey, to, user.userId, accessCtx);
   }
 
   @Post(':id/clone')

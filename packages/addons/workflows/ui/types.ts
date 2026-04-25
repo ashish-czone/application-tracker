@@ -13,7 +13,6 @@ export interface WorkflowTransition {
   toStateName: string;
   name: string;
   requiredPermissions: string[];
-  guardNames: string[];
   sortOrder: number;
   reasonOptions: string[] | null;
   reasonRequired: boolean;
@@ -74,7 +73,6 @@ export interface CreateTransitionRequest {
   toStateId: string;
   name: string;
   requiredPermissions?: string[];
-  guardNames?: string[];
   sortOrder?: number;
   reasonOptions?: string[];
   reasonRequired?: boolean;
@@ -84,7 +82,6 @@ export interface CreateTransitionRequest {
 export interface UpdateTransitionRequest {
   name?: string;
   requiredPermissions?: string[] | null;
-  guardNames?: string[] | null;
   sortOrder?: number;
   reasonOptions?: string[] | null;
   reasonRequired?: boolean;

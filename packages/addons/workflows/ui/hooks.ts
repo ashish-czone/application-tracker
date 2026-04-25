@@ -199,13 +199,21 @@ export function useTransitionHistory(entityType: string, entityId: string) {
 }
 
 // Preflight — run on demand when the transition dialog opens so banners
-// appear before the user types a reason/comment. `enabled` is driven by
-// the dialog's open state.
+// appear before the user types a reason/comment. Merges two sources:
+//
+//   1. `/workflows/preflight`: legality + missing permissions (kernel)
+//   2. `/{entitySlug}/{id}/transition-preview`: per-entity guard warnings +
+//      blockers (per-entity service composition)
+//
+// Entities without a per-entity preview route return empty arrays from a
+// caught fetch error, so the dialog still renders without warnings.
 export function useTransitionPreflight(
   params: {
     workflowSlug: string;
     entityType: string;
+    entitySlug: string;
     entityId: string;
+    fieldKey: string;
     fromState: string;
     toState: string;
   } | null,
@@ -216,15 +224,37 @@ export function useTransitionPreflight(
       'workflow-preflight',
       params?.workflowSlug,
       params?.entityType,
+      params?.entitySlug,
       params?.entityId,
+      params?.fieldKey,
       params?.fromState,
       params?.toState,
     ],
-    queryFn: () => api.preflightTransition(params!),
+    queryFn: async () => {
+      if (!params) throw new Error('no params');
+      const [enginePart, entityPart] = await Promise.all([
+        api.preflightTransition({
+          workflowSlug: params.workflowSlug,
+          entityType: params.entityType,
+          entityId: params.entityId,
+          fromState: params.fromState,
+          toState: params.toState,
+        }),
+        api
+          .previewEntityTransition(params.entitySlug, params.entityId, {
+            fieldKey: params.fieldKey,
+            to: params.toState,
+          })
+          .catch(() => ({ warnings: [] as string[], blockers: [] as string[] })),
+      ]);
+      return {
+        transitionId: enginePart.transitionId,
+        missingPermissions: enginePart.missingPermissions,
+        warnings: [...enginePart.warnings, ...entityPart.warnings],
+        blockers: [...enginePart.blockers, ...entityPart.blockers],
+      };
+    },
     enabled: !!params,
-    // Preflight is cheap and state-dependent — always refetch when the
-    // dialog reopens. Staying stale would mean a user sees a cached count
-    // even after another admin has changed the underlying data.
     staleTime: 0,
     gcTime: 0,
   });

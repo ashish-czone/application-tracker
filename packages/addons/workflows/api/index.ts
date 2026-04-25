@@ -6,15 +6,10 @@ export { WORKFLOWS_PERMISSIONS } from './permissions';
 export { WorkflowEngineService } from './services/workflow-engine.service';
 export { TransitionWorkflowAction } from './services/transition-workflow.action';
 export { WorkflowRegistryService } from './services/workflow-registry.service';
-export { WorkflowGuardRegistry } from './services/workflow-guard-registry.service';
 export { PipelineResolverService } from './services/pipeline-resolver.service';
 
 // Types
 export type {
-  WorkflowGuardContext,
-  WorkflowGuardFn,
-  GuardResult,
-  GuardExecutionResult,
   TransitionPreflight,
   CachedWorkflowDefinition,
   CachedWorkflowState,
@@ -25,11 +20,6 @@ export type {
   TransitionHistoryEntry,
   ValidationResult,
 } from './types';
-export { allow, allowWithWarning, block } from './types';
-
-// Transition guard helper for per-entity service composition
-export { runTransitionGuards } from './transition-guard';
-export type { TransitionGuard, GuardCtx } from './transition-guard';
 
 // Schema tables
 export {
@@ -47,3 +37,7 @@ export {
   readWorkflowFeature,
   type WorkflowFeatureBag,
 } from './feature';
+
+// Transition guard helper for per-entity service composition
+export { runTransitionGuards, previewTransitionGuards } from './transition-guard';
+export type { TransitionGuard, GuardCtx, GuardOutcome } from './transition-guard';

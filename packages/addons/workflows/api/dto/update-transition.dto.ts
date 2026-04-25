@@ -15,12 +15,6 @@ export class UpdateTransitionDto {
   @IsString({ each: true })
   requiredPermissions?: string[] | null;
 
-  @ApiPropertyOptional({ example: ['not-same-actor'] })
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  guardNames?: string[] | null;
-
   @ApiPropertyOptional({ example: 0 })
   @IsOptional()
   @IsInt()

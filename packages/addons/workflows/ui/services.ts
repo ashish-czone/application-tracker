@@ -64,7 +64,9 @@ export function createWorkflowsApi(api: ApiFn) {
       return api.get<TransitionHistoryEntry[]>(`/workflows/history/${entityType}/${entityId}`);
     },
 
-    // Preflight (advisory guard run)
+    // Preflight: legality + missing permissions only (no guards). Per-entity
+    // guard preview lives on per-entity controllers (`/{slug}/{id}/transition-preview`)
+    // and the hook merges results client-side.
     preflightTransition(params: {
       workflowSlug: string;
       entityType: string;
@@ -74,6 +76,22 @@ export function createWorkflowsApi(api: ApiFn) {
     }): Promise<TransitionPreflight> {
       const qs = new URLSearchParams(params).toString();
       return api.get<TransitionPreflight>(`/workflows/preflight?${qs}`);
+    },
+
+    // Per-entity transition preview — calls the entity controller's
+    // `:id/transition-preview` route to collect per-entity guard warnings
+    // and blockers. Returns empty arrays if the entity exposes no preview
+    // route (404 surfaces as a network error; callers swallow it via the
+    // preview hook below).
+    previewEntityTransition(
+      entitySlug: string,
+      entityId: string,
+      params: { fieldKey: string; to: string },
+    ): Promise<{ warnings: string[]; blockers: string[] }> {
+      const qs = new URLSearchParams(params).toString();
+      return api.get<{ warnings: string[]; blockers: string[] }>(
+        `/${entitySlug}/${entityId}/transition-preview?${qs}`,
+      );
     },
 
     // Entity transition execution

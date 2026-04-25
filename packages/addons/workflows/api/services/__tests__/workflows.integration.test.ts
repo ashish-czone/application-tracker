@@ -15,7 +15,6 @@ import { WorkflowsModule } from '../../workflows.module';
 class MockEntityCoreModule {}
 import { WorkflowRegistryService } from '../workflow-registry.service';
 import { WorkflowEngineService } from '../workflow-engine.service';
-import { WorkflowGuardRegistry } from '../workflow-guard-registry.service';
 import { PipelineResolverService } from '../pipeline-resolver.service';
 import type { DrizzleDB } from '@packages/database';
 import type { TestingModule } from '@nestjs/testing';
@@ -26,7 +25,6 @@ describe('Workflows (integration)', () => {
   let cleanup: () => Promise<void>;
   let registry: WorkflowRegistryService;
   let engine: WorkflowEngineService;
-  let guardRegistry: WorkflowGuardRegistry;
   let pipelineResolver: PipelineResolverService;
 
   beforeAll(async () => {
@@ -38,7 +36,6 @@ describe('Workflows (integration)', () => {
     cleanup = ctx.cleanup;
     registry = module.get(WorkflowRegistryService);
     engine = module.get(WorkflowEngineService);
-    guardRegistry = module.get(WorkflowGuardRegistry);
     pipelineResolver = module.get(PipelineResolverService);
   });
 
@@ -224,30 +221,6 @@ describe('Workflows (integration)', () => {
       expect(history[0].toState).toBe('published');
       expect(history[0].reason).toBe('Ready to publish');
       expect(history[0].comment).toBe('Looks good');
-    });
-  });
-
-  describe('WorkflowGuardRegistry', () => {
-    it('should register and execute guards', async () => {
-      guardRegistry.register('always_allow', async () => true);
-      guardRegistry.register('always_deny', async () => false);
-
-      const context = {
-        workflowSlug: 'test',
-        entityType: 'test_entity',
-        entityId: randomUUID(),
-        fieldName: 'status',
-        fromState: 'draft',
-        toState: 'published',
-        actorId: null,
-      };
-
-      const allowResult = await guardRegistry.executeGuards(['always_allow'], context);
-      expect(allowResult.passed).toBe(true);
-
-      const denyResult = await guardRegistry.executeGuards(['always_deny'], context);
-      expect(denyResult.passed).toBe(false);
-      expect(denyResult.failedGuard).toBe('always_deny');
     });
   });
 

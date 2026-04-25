@@ -5,8 +5,6 @@ import { ActionRegistry } from '@packages/automation-contracts';
 import { RbacService } from '@packages/rbac';
 import { TasksModule } from '@packages/tasks';
 import { USERS_POSITIONS_READER } from '@packages/users';
-import { WorkflowGuardRegistry, allow, allowWithWarning, block } from '@packages/workflows';
-import { ClientDormancyService } from './clients/client-dormancy.service';
 
 import { registerComplianceAudit } from './audit/register-compliance-audit';
 
@@ -21,7 +19,6 @@ import { LawHandlersModule } from './law-handlers/law-handlers.module';
 import { ComplianceFilingsModule } from './compliance-filings/compliance-filings.module';
 import { OrganizationsModule } from './organizations/organizations.module';
 
-import { ClientContactsService } from './client-contacts/client-contacts.service';
 import { GenerateComplianceFilingsAction } from './automations/generate-compliance-filings.action';
 import { COMPLIANCE_PERMISSION_MANIFESTS } from './permissions';
 
@@ -50,9 +47,6 @@ export class ComplianceDomainModule implements OnModuleInit {
   constructor(
     private readonly actionRegistry: ActionRegistry,
     private readonly generateFilingsAction: GenerateComplianceFilingsAction,
-    private readonly guardRegistry: WorkflowGuardRegistry,
-    private readonly contactsService: ClientContactsService,
-    private readonly clientDormancyService: ClientDormancyService,
     private readonly rbac: RbacService,
     private readonly auditRegistry: AuditRegistryService,
     private readonly moduleRef: ModuleRef,
@@ -62,33 +56,6 @@ export class ComplianceDomainModule implements OnModuleInit {
     this.actionRegistry.register(this.generateFilingsAction);
 
     registerComplianceAudit(this.auditRegistry, this.moduleRef);
-
-    // Blocks onboarding → active on the clients workflow unless the client
-    // has at least one primary contact. Referenced by `guardNames` on the
-    // transition in clients.config.ts.
-    this.guardRegistry.register('require-primary-contact', async (ctx) => {
-      if (ctx.entityType !== 'clients') return allow();
-      const hasPrimary = await this.contactsService.hasPrimaryContact(ctx.entityId);
-      return hasPrimary
-        ? allow()
-        : block('Add a primary contact before activating this client.');
-    });
-
-    // Advisory guard on clients active → dormant: surfaces the count of
-    // non-terminal filings that will be auto-cancelled, so the admin
-    // confirms knowingly. Cascade itself runs in ClientsService.transition
-    // inside its own tx via ClientDormancyService — this guard is
-    // preflight-only.
-    this.guardRegistry.register('compliance-client-dormancy-warning', async (ctx) => {
-      if (ctx.entityType !== 'clients') return allow();
-      if (ctx.toState !== 'dormant') return allow();
-      const count = await this.clientDormancyService.countNonTerminalFilings(ctx.entityId);
-      if (count === 0) return allow();
-      const noun = count === 1 ? 'filing' : 'filings';
-      return allowWithWarning(
-        `${count} non-terminal ${noun} will be cancelled when this client is dormantised.`,
-      );
-    });
 
     // Register permissions for compliance UI surfaces that don't yet have
     // backing entities. CRUD perms for entities (clients, laws, etc.) are
