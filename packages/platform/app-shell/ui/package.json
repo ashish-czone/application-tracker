@@ -9,7 +9,6 @@
   "dependencies": {
     "@packages/audit-ui": "workspace:*",
     "@packages/auth-ui": "workspace:*",
-    "@packages/automations-ui": "workspace:*",
     "@packages/domains": "workspace:*",
     "@packages/entity-engine-ui": "workspace:*",
     "@packages/entity-layout-ui": "workspace:*",
@@ -18,7 +17,6 @@
     "@packages/queue-ui": "workspace:*",
     "@packages/rbac-ui": "workspace:*",
     "@packages/settings-ui": "workspace:*",
-    "@packages/taxonomy-ui": "workspace:*",
     "@packages/theming-ui": "workspace:*",
     "@packages/ui": "workspace:*",
     "@packages/users-ui": "workspace:*",

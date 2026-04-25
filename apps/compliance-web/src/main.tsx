@@ -33,7 +33,9 @@ import { OrgUnitsPage, OrgPositionsPage } from '@packages/org-units-ui';
 import { notesDetailTab, notesSidebarPanel } from '@packages/notes-ui';
 import { attachmentsDetailTab, attachmentsSidebarPanel } from '@packages/attachments-ui';
 import { evaluationsDetailTab, evaluationsSidebarPanel } from '@packages/evaluations-ui';
-import { tagsHeaderPlugin } from '@packages/taxonomy-ui';
+import { taxonomyWeb } from '@packages/taxonomy-ui';
+import { workflowsWeb } from '@packages/workflows-ui';
+import { automationsWeb } from '@packages/automations-ui';
 import { AuditTimeline } from '@packages/audit-ui';
 import { AvatarNameCell, Toaster } from '@packages/ui';
 import { CheckSquare, Building2, UserCog } from 'lucide-react';
@@ -70,7 +72,7 @@ const rightSidebarPanels = [
   evaluationsSidebarPanel,
 ];
 
-const headerPlugins = [tagsHeaderPlugin];
+const features = [taxonomyWeb, workflowsWeb, automationsWeb];
 
 const columnRenderers = {
   AvatarNameCell: { component: AvatarNameCell },
@@ -121,12 +123,12 @@ createRoot(document.getElementById('root')!).render(
         domains={[complianceWeb]}
         apiFn={api}
         brandLabel="Compliance"
+        features={features}
         extraMenuItems={addonMenuItems}
         extraRoutes={addonRoutes}
         extraEntityUIConfigs={[TASKS_UI_CONFIG]}
         extraDetailTabs={detailTabs}
         extraRightSidebarPanels={rightSidebarPanels}
-        extraHeaderPlugins={headerPlugins}
         extraColumnRenderers={columnRenderers}
       />
     )}

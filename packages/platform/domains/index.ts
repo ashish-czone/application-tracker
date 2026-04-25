@@ -1,5 +1,5 @@
 import type { Type } from '@nestjs/common';
-import type { ComponentType } from 'react';
+import type { ComponentType, ReactNode } from 'react';
 import type { RouteObject } from 'react-router';
 import type { LucideIcon } from 'lucide-react';
 
@@ -35,6 +35,12 @@ export type DomainDetailPageComponent = ComponentType<Record<string, never>>;
  * Sidebar menu entry contributed by a domain (or the platform shell).
  * Position controls whether the item renders before or after auto-generated
  * entity nav items. Children render as a collapsible group.
+ *
+ * Set `parent: '/some-path'` to nest this item as a child of an existing
+ * top-level item (typically the platform's `/management` group). The shell
+ * merges child entries into the matching parent's children array. If no
+ * parent matches, the item is rendered at top level. Parent items
+ * themselves should not set `parent`.
  */
 export interface MenuItem {
   path: string;
@@ -42,6 +48,7 @@ export interface MenuItem {
   icon: LucideIcon;
   permission?: string;
   position?: 'before' | 'after';
+  parent?: string;
   children?: MenuItem[];
 }
 
@@ -80,4 +87,68 @@ export interface DomainWebManifest {
    * across all enabled domains.
    */
   entityUIConfigs?: DomainEntityUIConfig[];
+}
+
+/**
+ * Provider component contributed by a frontend feature manifest. Receives
+ * `apiFn` so the provider can wire its own data fetching, and renders
+ * `children` underneath. Apps stack these via `WebShell.features` rather
+ * than hand-composing a provider tree per app.
+ */
+export type WebFeatureProvider = ComponentType<{
+  children: ReactNode;
+  apiFn: unknown;
+}>;
+
+/**
+ * A frontend contribution from a `*-ui` package. Mirrors `DomainWebManifest`
+ * for addon packages: an addon exports one of these so the app passes it via
+ * `WebShell.features` rather than wiring each piece (provider, routes,
+ * menu items, plugins) by hand.
+ *
+ * Concrete plugin types (DetailTabPlugin, HeaderPlugin, etc.) live in
+ * `@packages/entity-engine-ui` and are kept loose here as `unknown[]` /
+ * `Record<string, unknown>` to avoid pulling that package into this
+ * lightweight type module — the shell casts at the EntityEngineProvider
+ * boundary.
+ */
+export interface WebFeatureManifest {
+  /**
+   * Identifier used for debugging / dedup. Should match the addon's package
+   * suffix without the `-ui` (e.g. `taxonomy`, `workflows`, `automations`).
+   */
+  name: string;
+  /**
+   * Optional context provider. The shell wraps `children` with each enabled
+   * feature's provider, innermost-first in registration order. Earlier
+   * features therefore appear deeper in the tree (closer to children).
+   */
+  provider?: WebFeatureProvider;
+  /**
+   * Routes mounted under the authenticated app shell, same shape as
+   * `DomainWebManifest.routes`.
+   */
+  routes?: DomainRouteObject[];
+  /**
+   * Sidebar menu items contributed by this feature. Concatenated after
+   * domain items + platform items, before app-level extras.
+   */
+  menuItems?: MenuItem[];
+  /**
+   * Entity UI configs the feature contributes (e.g. cell renderers tied to
+   * a specific entity type). Concatenated with domain + app configs.
+   */
+  entityUIConfigs?: DomainEntityUIConfig[];
+  /** EntityDetailPage tabs. Cast to `DetailTabPlugin[]` at the boundary. */
+  detailTabs?: unknown[];
+  /** EntityDetailPage right-sidebar panels. Cast to `RightSidebarPanel[]`. */
+  rightSidebarPanels?: unknown[];
+  /** EntityDetailPage header plugins. Cast to `HeaderPlugin[]`. */
+  headerPlugins?: unknown[];
+  /**
+   * Column renderers contributed by name. Merged into the EntityEngine
+   * column-renderer registry; on key conflict, app-level extras win over
+   * features (which win over domain-supplied defaults).
+   */
+  columnRenderers?: Record<string, unknown>;
 }

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import type { RouteObject } from 'react-router';
-import type { DomainWebManifest, MenuItem } from '@packages/domains';
+import type { DomainWebManifest, MenuItem, WebFeatureManifest } from '@packages/domains';
 import type {
   ColumnRendererRegistration,
   DetailTabPlugin,
@@ -37,9 +37,17 @@ export interface WebShellOptions {
    */
   brandLabel: string;
   /**
-   * Addon-provided sidebar menu items. App-shell-ui only ships platform
-   * default menu items (Users, Roles, Automations, Management group, etc.);
-   * apps pass addon entries (Tasks, Org Units, ...) via this slot.
+   * Frontend addon manifests this app should mount. Each contributes a
+   * provider, routes, menu items, plugins, and column renderers in one
+   * object — same posture as `domains`. Use this for `*-ui` addon packages
+   * (taxonomy-ui, workflows-ui, automations-ui, ...) that need to
+   * contribute UI without app-shell-ui importing them directly.
+   */
+  features?: WebFeatureManifest[];
+  /**
+   * App-level extra sidebar menu items. Use this for one-off entries that
+   * don't belong in any reusable manifest. Addon-packaged menu entries
+   * should ride on `features` instead.
    */
   extraMenuItems?: MenuItem[];
   /**

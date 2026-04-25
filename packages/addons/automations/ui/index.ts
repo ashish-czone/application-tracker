@@ -20,3 +20,6 @@ export type {
   ActionTypeMetadata, UserStrategyMetadata, UserResolutionStrategy,
   TriggerType, Condition, EventMetadata, EntityMetadata,
 } from './types';
+
+// WebFeatureManifest entry — apps pass to WebShell.features
+export { automationsWeb } from './manifest';

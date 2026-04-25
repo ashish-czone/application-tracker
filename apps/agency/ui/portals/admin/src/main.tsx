@@ -21,6 +21,9 @@ registerEntityRelationsFieldTypes();
 registerMediaLibraryFieldTypes();
 
 import { WebShell } from '@packages/app-shell-ui';
+import { taxonomyWeb } from '@packages/taxonomy-ui';
+import { workflowsWeb } from '@packages/workflows-ui';
+import { automationsWeb } from '@packages/automations-ui';
 import { registerStarterBlocks, registerContentBlocks } from '@domains/agency-ui';
 import { PageEditorPage } from '@domains/agency-ui';
 import { MenuEditorPage } from '@domains/agency-ui';
@@ -75,6 +78,7 @@ createRoot(document.getElementById('root')!).render(
       domains={[]}
       apiFn={api}
       brandLabel="Agency Admin"
+      features={[taxonomyWeb, workflowsWeb, automationsWeb]}
       extraRoutes={contentRoutes}
       extraMenuItems={extraMenuItems}
       extraDetailTabs={detailTabs}
