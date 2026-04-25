@@ -40,7 +40,7 @@ export function platformMigrationSources(
     at('packages/platform/notifications/api', '@packages/notifications'),
     at('packages/addons/automations/api', '@packages/automations'),
     at('packages/addons/workflows/api', '@packages/workflows'),
-    at('packages/platform/taxonomy/api', '@packages/taxonomy'),
+    at('packages/addons/taxonomy/api', '@packages/taxonomy'),
     at('packages/platform/user-preferences', '@packages/user-preferences'),
     at('packages/platform/entity-engine/api', '@packages/entity-engine'),
     at('packages/platform/entity-layout/api', '@packages/entity-layout'),
