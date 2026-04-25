@@ -588,7 +588,7 @@ describe('defineEntity', () => {
           },
           ui: { icon: 'FileText' },
         }),
-      ).toThrow(/hierarchyColumns.*parentId, path, depth/);
+      ).toThrow(/hierarchy: true.*parentId, path, depth/);
     });
 
     it('should throw and list only the missing hierarchy columns', () => {
@@ -916,7 +916,7 @@ describe('defineEntity', () => {
           fields: { title: { type: 'text', label: 'Title' } },
           ui: { icon: 'FileText' },
         }),
-      ).toThrow(/orderableColumns.*sortOrder/);
+      ).toThrow(/orderable: true.*sortOrder/);
     });
 
     it('supports combining hierarchy and orderable on one entity', () => {

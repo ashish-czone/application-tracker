@@ -18,8 +18,6 @@ import { fieldTypeRegistry } from '@packages/field-types';
 import { DatabaseService } from '@packages/database';
 import { ScopeResolverRegistry, type ScopeAnchorMap } from '@packages/rbac';
 import { DomainEventEmitter } from '@packages/events';
-import { HierarchyService } from '@packages/hierarchy';
-import { OrderableService } from '@packages/orderable';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { FieldDefinitionService } from './services/field-definition.service';
 import { LookupResolverService } from './services/lookup-resolver.service';
@@ -89,8 +87,6 @@ export class EntityService {
     private readonly entityRegistry: EntityRegistryService,
     appLogger: AppLoggerService,
     private readonly scopeResolverRegistry: ScopeResolverRegistry,
-    private readonly hierarchyService: HierarchyService | null = null,
-    private readonly orderableService: OrderableService | null = null,
   ) {
     this.logger = appLogger.forContext(`EntityService[${config.entityType}]`);
   }
@@ -734,163 +730,6 @@ export class EntityService {
   }
 
   // ---------------------------------------------------------------------------
-  // HIERARCHY
-  // ---------------------------------------------------------------------------
-
-  private assertHierarchyEnabled(): HierarchyService {
-    if (!this.config.hierarchy || !this.hierarchyService) {
-      throw new BadRequestException(
-        `${this.config.singularName} does not support hierarchy operations`,
-      );
-    }
-    return this.hierarchyService;
-  }
-
-  /**
-   * Move a node (and its entire subtree) under a new parent.
-   * Pass `newParentId: null` to make the node a root.
-   * Delegates cycle detection and path updates to HierarchyService.
-   */
-  async reparent(
-    id: string,
-    newParentId: string | null,
-    actorId: string,
-    accessCtx?: DataAccessContext,
-  ): Promise<Record<string, unknown>> {
-    const hierarchy = this.assertHierarchyEnabled();
-    const { config } = this;
-    const table = config.table as any;
-
-    // Scope check + fetch current row for its path
-    await this.findOneOrFail(id, accessCtx);
-    const [node] = await this.database.db
-      .select()
-      .from(table)
-      .where(withTenant(table, eq(table.id, id)))
-      .limit(1) as any[];
-
-    let newParentPath: string | null = null;
-    if (newParentId) {
-      const [parent] = await this.database.db
-        .select()
-        .from(table)
-        .where(withTenant(table, eq(table.id, newParentId)))
-        .limit(1) as any[];
-      if (!parent) {
-        throw new NotFoundException(`Parent ${config.singularName} not found: ${newParentId}`);
-      }
-      newParentPath = parent.path as string;
-    }
-
-    await hierarchy.move(
-      table,
-      table.id,
-      table.parentId,
-      table.path,
-      table.depth,
-      id,
-      node.path as string,
-      newParentId,
-      newParentPath,
-    );
-
-    this.logger.log(`${config.singularName} reparented`, { entityId: id, newParentId, actorId });
-    return this.findOneOrFail(id, accessCtx);
-  }
-
-  /**
-   * Get all ancestors of a node (root first, parent last). Excludes the node itself.
-   */
-  async getAncestors(id: string, accessCtx?: DataAccessContext): Promise<Record<string, unknown>[]> {
-    const hierarchy = this.assertHierarchyEnabled();
-    const { config } = this;
-    const table = config.table as any;
-
-    const node = await this.findOneOrFail(id, accessCtx);
-    const rows = await hierarchy.getAncestors(table, table.id, table.path, node.path as string);
-    return Promise.all(rows.map((r) => this.toResponse(r)));
-  }
-
-  /**
-   * Get all descendants of a node. Excludes the node itself.
-   */
-  async getDescendants(id: string, accessCtx?: DataAccessContext): Promise<Record<string, unknown>[]> {
-    const hierarchy = this.assertHierarchyEnabled();
-    const { config } = this;
-    const table = config.table as any;
-
-    const node = await this.findOneOrFail(id, accessCtx);
-    const rows = await hierarchy.getDescendants(table, table.path, node.path as string);
-    return Promise.all(rows.map((r) => this.toResponse(r)));
-  }
-
-  // ---------------------------------------------------------------------------
-  // ORDERABLE
-  // ---------------------------------------------------------------------------
-
-  /**
-   * Unified move: reparent and/or reorder a row in a single call.
-   *
-   * At least one of `parentId` or `sortOrder` must be provided. The pieces are
-   * applied in order — reparent first (which recomputes path/depth and the
-   * subtree), then the sort_order write on the row itself. They are not bundled
-   * in a single transaction: the reparent is already transactional on its own,
-   * and a later sort_order failure leaves the node correctly reparented with
-   * stale ordering rather than a corrupt path.
-   *
-   * Typed conditionals per flag:
-   * - `parentId` requires `hierarchy: true`
-   * - `sortOrder` requires `orderable: true`
-   *
-   * @param id - Node id being moved
-   * @param opts - At least one of parentId / sortOrder
-   * @param actorId - User performing the action (for audit logs)
-   * @param accessCtx - Data access scope
-   */
-  async move(
-    id: string,
-    opts: { parentId?: string | null; sortOrder?: number },
-    actorId: string,
-    accessCtx?: DataAccessContext,
-  ): Promise<Record<string, unknown>> {
-    const { config } = this;
-
-    const hasParentIdChange = Object.prototype.hasOwnProperty.call(opts, 'parentId');
-    const hasSortOrderChange = Object.prototype.hasOwnProperty.call(opts, 'sortOrder');
-
-    if (!hasParentIdChange && !hasSortOrderChange) {
-      throw new BadRequestException('move() requires at least one of parentId or sortOrder');
-    }
-
-    if (hasParentIdChange && !config.hierarchy) {
-      throw new BadRequestException(`${config.singularName} is not hierarchical`);
-    }
-
-    if (hasSortOrderChange && !config.orderable) {
-      throw new BadRequestException(`${config.singularName} is not orderable`);
-    }
-
-    // Enforce scope / existence once up front with a proper 404 on a missing id.
-    await this.findOneOrFail(id, accessCtx);
-
-    if (hasParentIdChange) {
-      await this.reparent(id, opts.parentId ?? null, actorId, accessCtx);
-    }
-
-    if (hasSortOrderChange) {
-      const orderable = this.orderableService;
-      if (!orderable) {
-        throw new BadRequestException(`OrderableService not available for ${config.singularName}`);
-      }
-      const table = config.table as any;
-      await orderable.setSortOrder(table, table.id, table.sortOrder, id, opts.sortOrder as number);
-      this.logger.log(`${config.singularName} reordered`, { entityId: id, sortOrder: opts.sortOrder, actorId });
-    }
-
-    return this.findOneOrFail(id, accessCtx);
-  }
-
-  // ---------------------------------------------------------------------------
   // CREATE
   // ---------------------------------------------------------------------------
 
@@ -926,29 +765,6 @@ export class EntityService {
 
     // Pre-generate entity ID so onBeforeSave hooks can use it (e.g. file paths)
     const entityId = crypto.randomUUID();
-
-    // Hierarchy: compute path + depth from the parent's path before insert.
-    // Must happen after splitPayload (so parentId is in standardFields) and
-    // before the insert so path/depth land on the inserted row.
-    if (config.hierarchy && this.hierarchyService) {
-      const parentId = standardFields.parentId as string | null | undefined;
-      let parentPath: string | null = null;
-      if (parentId) {
-        const table = config.table as any;
-        const [parent] = await this.database.db
-          .select()
-          .from(table)
-          .where(withTenant(table, eq(table.id, parentId)))
-          .limit(1) as any[];
-        if (!parent) {
-          throw new BadRequestException(`Parent ${config.singularName} not found: ${parentId}`);
-        }
-        parentPath = parent.path as string;
-      }
-      const { path, depth } = this.hierarchyService.computeInsertValues(parentPath, entityId);
-      standardFields.path = path;
-      standardFields.depth = depth;
-    }
 
     // Phase 1: onBeforeSave hooks (pre-transaction, can throw to abort)
     const allFields = { ...customFields, ...relationalFields };
