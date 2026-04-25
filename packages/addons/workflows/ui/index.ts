@@ -36,3 +36,6 @@ export {
   readWorkflowFeature,
   type WorkflowFeatureBag,
 } from './feature';
+
+// WebFeatureManifest entry — apps pass to WebShell.features
+export { workflowsWeb } from './manifest';
