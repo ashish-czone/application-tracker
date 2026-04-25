@@ -5,8 +5,9 @@
  *
  *   apps/*              →  packages/{core,platform,addons}/* + domains/*
  *   domains/*           →  packages/{core,platform,addons}/*  (never domains, never apps)
- *   packages/addons/*   →  packages/{core,platform}/*          (never other addons, never domains)
- *   packages/platform/* →  packages/core/* + platform          (never addons, never domains)
+ *   packages/addons/*   →  packages/{core,platform,addons}/*  (addon → addon allowed)
+ *   packages/platform/* →  packages/core/* + platform          (never addons)
+ *   platform/app-shell  →  packages/{core,platform,addons}/*  (integrator exception)
  *   packages/core/*     →  core only                           (never platform, addons, domains, apps)
  *
  * Invoked by `pnpm lint`. Runs independently of the main ESLint config so
@@ -61,11 +62,15 @@ export default [
         'domains/**/*',
       ],
       'boundaries/elements': [
-        { type: 'core',     pattern: 'packages/core/*',     mode: 'folder' },
-        { type: 'platform', pattern: 'packages/platform/*', mode: 'folder' },
-        { type: 'addon',    pattern: 'packages/addons/*',   mode: 'folder' },
-        { type: 'domain',   pattern: 'domains/*/*',         mode: 'folder' },
-        { type: 'app',      pattern: 'apps/*',              mode: 'folder' },
+        { type: 'core',              pattern: 'packages/core/*',              mode: 'folder' },
+        // app-shell is the integrator — declared before the generic platform
+        // pattern so files inside it match this type and pick up the broader
+        // allow list below.
+        { type: 'platform-app-shell', pattern: 'packages/platform/app-shell',  mode: 'folder' },
+        { type: 'platform',          pattern: 'packages/platform/*',          mode: 'folder' },
+        { type: 'addon',             pattern: 'packages/addons/*',            mode: 'folder' },
+        { type: 'domain',            pattern: 'domains/*/*',                  mode: 'folder' },
+        { type: 'app',               pattern: 'apps/*',                       mode: 'folder' },
       ],
     },
     rules: {
@@ -77,11 +82,12 @@ export default [
         {
           default: 'disallow',
           rules: [
-            { from: ['core'],     allow: ['core'] },
-            { from: ['platform'], allow: ['core', 'platform'] },
-            { from: ['addon'],    allow: ['core', 'platform'] },
-            { from: ['domain'],   allow: ['core', 'platform', 'addon'] },
-            { from: ['app'],      allow: ['core', 'platform', 'addon', 'domain'] },
+            { from: ['core'],              allow: ['core'] },
+            { from: ['platform'],          allow: ['core', 'platform'] },
+            { from: ['platform-app-shell'], allow: ['core', 'platform', 'addon'] },
+            { from: ['addon'],             allow: ['core', 'platform', 'addon'] },
+            { from: ['domain'],            allow: ['core', 'platform', 'addon'] },
+            { from: ['app'],               allow: ['core', 'platform', 'platform-app-shell', 'addon', 'domain'] },
           ],
         },
       ],
