@@ -12,7 +12,7 @@ export interface PageRecord {
   updatedAt: string;
 }
 
-import type { DataSource } from '@packages/blocks-contract';
+import type { DataSource } from '@domains/agency-contract';
 
 export interface SectionRecord {
   id: string;

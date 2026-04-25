@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { transitionKind } from '../DataSourcePicker';
-import type { DataSource } from '@packages/blocks-contract';
+import type { DataSource } from '@domains/agency-contract';
 
 const entities = [{ slug: 'testimonials' }, { slug: 'team' }];
 

@@ -3,7 +3,7 @@ import { renderToString } from 'react-dom/server';
 import { createElement } from 'react';
 import { blockRegistry } from '../registry';
 import { PageRenderer } from '../PageRenderer';
-import type { SectionData } from '@packages/blocks-contract';
+import type { SectionData } from '@domains/agency-contract';
 import {
   contentBlocks,
   registerContentBlocks,
@@ -14,7 +14,7 @@ import {
   clientLogosRowBlock,
   valuePropsGridBlock,
   statsRowBlock,
-} from '../blocks/content';
+} from '../components/content';
 
 function section(overrides: Partial<SectionData> & Pick<SectionData, 'blockKind'>): SectionData {
   return {

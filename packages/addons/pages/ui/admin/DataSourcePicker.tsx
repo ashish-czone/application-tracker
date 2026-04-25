@@ -1,6 +1,6 @@
 import { useId, useMemo } from 'react';
 import { Combobox, Input, RadioGroup, RadioGroupItem, Label } from '@packages/ui';
-import type { DataSource } from '@packages/blocks-contract';
+import type { DataSource } from '@domains/agency-contract';
 
 export interface DataSourcePickerEntity {
   /** Entity slug (matches `defineEntity` slug). Used as `dataSource.entity`. */

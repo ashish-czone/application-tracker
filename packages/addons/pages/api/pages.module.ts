@@ -1,7 +1,7 @@
 import { Module, type OnModuleInit } from '@nestjs/common';
 import { EntityEngineModule } from '@packages/entity-engine';
 import { fieldTypeRegistry } from '@packages/field-types';
-import { dataSourceFieldTypePlugin } from '@packages/blocks-contract';
+import { dataSourceFieldTypePlugin } from '@domains/agency-contract';
 import { PAGES_CONFIG } from './pages.config';
 import { SECTIONS_CONFIG } from './sections.config';
 import { PagesController } from './controllers/pages.controller';

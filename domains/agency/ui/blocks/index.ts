@@ -18,7 +18,7 @@ export {
   imageBlock,
   featureListBlock,
   ctaBlock,
-} from './blocks';
+} from './components';
 
 export {
   contentBlocks,
@@ -30,7 +30,7 @@ export {
   clientLogosRowBlock,
   valuePropsGridBlock,
   statsRowBlock,
-} from './blocks/content';
+} from './components/content';
 
 // Re-export contract shapes consumers typically need alongside the UI bits.
-export type { DataSource, SectionData, MapperDefinition } from '@packages/blocks-contract';
+export type { DataSource, SectionData, MapperDefinition } from '@domains/agency-contract';

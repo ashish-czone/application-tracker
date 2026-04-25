@@ -104,6 +104,9 @@ importers:
       '@domains/agency-api':
         specifier: workspace:*
         version: link:../../domains/agency/api
+      '@domains/agency-contract':
+        specifier: workspace:*
+        version: link:../../domains/agency/contract
       '@nestjs/common':
         specifier: ^11.0.0
         version: 11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -137,9 +140,6 @@ importers:
       '@packages/automations':
         specifier: workspace:*
         version: link:../../packages/platform/automations/api
-      '@packages/blocks-contract':
-        specifier: workspace:*
-        version: link:../../packages/platform/blocks/contract
       '@packages/common':
         specifier: workspace:*
         version: link:../../packages/core/common
@@ -288,6 +288,9 @@ importers:
       '@domains/agency-contract':
         specifier: workspace:*
         version: link:../../../../../domains/agency/contract
+      '@domains/agency-ui':
+        specifier: workspace:*
+        version: link:../../../../../domains/agency/ui
       '@hookform/resolvers':
         specifier: ^5.0.0
         version: 5.2.2(react-hook-form@7.71.2(react@19.2.4))
@@ -303,12 +306,6 @@ importers:
       '@packages/automations-ui':
         specifier: workspace:*
         version: link:../../../../../packages/platform/automations/ui
-      '@packages/blocks-contract':
-        specifier: workspace:*
-        version: link:../../../../../packages/platform/blocks/contract
-      '@packages/blocks-ui':
-        specifier: workspace:*
-        version: link:../../../../../packages/platform/blocks/ui
       '@packages/debug-profiler-ui':
         specifier: workspace:*
         version: link:../../../../../packages/core/debug-profiler/ui
@@ -409,12 +406,9 @@ importers:
       '@domains/agency-contract':
         specifier: workspace:*
         version: link:../../../../../domains/agency/contract
-      '@packages/blocks-contract':
+      '@domains/agency-ui':
         specifier: workspace:*
-        version: link:../../../../../packages/platform/blocks/contract
-      '@packages/blocks-ui':
-        specifier: workspace:*
-        version: link:../../../../../packages/platform/blocks/ui
+        version: link:../../../../../domains/agency/ui
       '@packages/menus-ui-frontend':
         specifier: workspace:*
         version: link:../../../../../packages/addons/menus/ui/frontend
@@ -3360,6 +3354,9 @@ importers:
 
   packages/addons/pages/api:
     dependencies:
+      '@domains/agency-contract':
+        specifier: workspace:*
+        version: link:../../../../domains/agency/contract
       '@nestjs/common':
         specifier: ^11.0.0
         version: 11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -3372,9 +3369,6 @@ importers:
       '@packages/auth-core':
         specifier: workspace:*
         version: link:../../../platform/auth-core
-      '@packages/blocks-contract':
-        specifier: workspace:*
-        version: link:../../../platform/blocks/contract
       '@packages/database':
         specifier: workspace:*
         version: link:../../../core/database
@@ -3430,15 +3424,15 @@ importers:
 
   packages/addons/pages/ui/admin:
     dependencies:
+      '@domains/agency-contract':
+        specifier: workspace:*
+        version: link:../../../../../domains/agency/contract
+      '@domains/agency-ui':
+        specifier: workspace:*
+        version: link:../../../../../domains/agency/ui
       '@measured/puck':
         specifier: ^0.19.0
         version: 0.19.3(@types/react@19.2.14)(immer@11.1.4)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(use-sync-external-store@1.6.0(react@19.2.4))
-      '@packages/blocks-contract':
-        specifier: workspace:*
-        version: link:../../../../platform/blocks/contract
-      '@packages/blocks-ui':
-        specifier: workspace:*
-        version: link:../../../../platform/blocks/ui
       '@packages/platform-ui':
         specifier: workspace:*
         version: link:../../../../platform/platform-ui
@@ -4670,44 +4664,6 @@ importers:
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
-
-  packages/platform/blocks/contract:
-    dependencies:
-      '@packages/field-types':
-        specifier: workspace:*
-        version: link:../../field-types
-    devDependencies:
-      typescript:
-        specifier: ^5.7.0
-        version: 5.9.3
-      vitest:
-        specifier: ^3.0.0
-        version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0)
-
-  packages/platform/blocks/ui:
-    dependencies:
-      '@packages/blocks-contract':
-        specifier: workspace:*
-        version: link:../contract
-      react:
-        specifier: ^19.0.0
-        version: 19.2.4
-    devDependencies:
-      '@types/react':
-        specifier: ^19.2.14
-        version: 19.2.14
-      '@types/react-dom':
-        specifier: ^19.0.0
-        version: 19.2.3(@types/react@19.2.14)
-      react-dom:
-        specifier: ^19.0.0
-        version: 19.2.4(react@19.2.4)
-      typescript:
-        specifier: ^5.7.0
-        version: 5.9.3
-      vitest:
-        specifier: ^3.0.0
-        version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0)
 
   packages/platform/conditions-ui:
     dependencies:

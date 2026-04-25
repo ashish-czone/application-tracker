@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createElement, type ReactNode } from 'react';
-import type { SectionData } from '@packages/blocks-contract';
+import type { SectionData } from '@domains/agency-contract';
 import { defineBlock, blockRegistry } from '../registry';
 import { PageRenderer } from '../PageRenderer';
 

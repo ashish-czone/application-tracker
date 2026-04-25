@@ -21,7 +21,7 @@ registerEntityRelationsFieldTypes();
 registerMediaLibraryFieldTypes();
 
 import { WebShell } from '@packages/app-shell-ui';
-import { registerStarterBlocks, registerContentBlocks } from '@packages/blocks-ui';
+import { registerStarterBlocks, registerContentBlocks } from '@domains/agency-ui';
 import { PageEditorPage } from '@packages/pages-ui-admin';
 import { MenuEditorPage } from '@packages/menus-ui-admin';
 import { MediaLibraryPage } from '@packages/media-library-ui-admin';

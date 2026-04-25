@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { pgTable, text, integer, timestamp, jsonb, index } from 'drizzle-orm/pg-core';
 import { customFieldsColumn } from '@packages/entity-engine/helpers/custom-fields-column';
-import type { DataSource } from '@packages/blocks-contract';
+import type { DataSource } from '@domains/agency-contract';
 import { pages } from './pages';
 
 export const sections = pgTable('sections', {

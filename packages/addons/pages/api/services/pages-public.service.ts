@@ -3,7 +3,7 @@ import { ModuleRef } from '@nestjs/core';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { DatabaseService, and, asc, eq, isNull, inArray, lte } from '@packages/database';
 import { EntityRegistryService, type EntityService } from '@packages/entity-engine';
-import { mapperRegistry, type DataSource } from '@packages/blocks-contract';
+import { mapperRegistry, type DataSource } from '@domains/agency-contract';
 import { pages } from '../schema/pages';
 import { sections } from '../schema/sections';
 

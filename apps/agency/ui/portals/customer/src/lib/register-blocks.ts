@@ -1,4 +1,4 @@
-import { registerStarterBlocks, registerContentBlocks } from '@packages/blocks-ui';
+import { registerStarterBlocks, registerContentBlocks } from '@domains/agency-ui';
 
 // Runs exactly once at import time. Imported by the root layout so that
 // every SSR/SSG render has the registry populated before PageRenderer

@@ -1,4 +1,4 @@
-import type { SectionData } from '@packages/blocks-contract';
+import type { SectionData } from '@domains/agency-contract';
 import type { PublicMenuResponse } from '@packages/menus-ui-frontend';
 import { DEFAULT_SITE_THEME, type SiteTheme } from '@domains/agency-contract';
 

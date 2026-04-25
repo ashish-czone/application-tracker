@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import type { ServicesGridFields } from '@packages/blocks-contract';
+import type { ServicesGridFields } from '@domains/agency-contract';
 import { defineBlock } from '../../registry';
 import type { BlockRenderProps } from '../../types';
 

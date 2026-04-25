@@ -107,10 +107,10 @@
       "@packages/orderable/*": ["./packages/platform/orderable/api/*"],
       "@packages/menus-api": ["./packages/addons/menus/api"],
       "@packages/menus-api/*": ["./packages/addons/menus/api/*"],
-      "@packages/blocks-contract": ["./packages/platform/blocks/contract"],
-      "@packages/blocks-contract/*": ["./packages/platform/blocks/contract/*"],
-      "@packages/blocks-ui": ["./packages/platform/blocks/ui"],
-      "@packages/blocks-ui/*": ["./packages/platform/blocks/ui/*"],
+      "@domains/agency-contract": ["./domains/agency/contract"],
+      "@domains/agency-contract/*": ["./domains/agency/contract/*"],
+      "@domains/agency-ui": ["./domains/agency/ui"],
+      "@domains/agency-ui/*": ["./domains/agency/ui/*"],
       "@packages/*": ["./packages/core/*", "./packages/platform/*", "./packages/addons/*"],
       "@domains/*": ["./domains/*"]
     }

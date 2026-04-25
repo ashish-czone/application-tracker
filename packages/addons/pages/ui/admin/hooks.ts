@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { usePlatformAPI } from '@packages/platform-ui';
-import type { DataSource } from '@packages/blocks-contract';
+import type { DataSource } from '@domains/agency-contract';
 import { createPagesApi } from './services';
 import type { CreatePageInput, UpdatePageInput } from './types';
 

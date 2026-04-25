@@ -3,8 +3,8 @@ import type {
   BlockDefinition,
   BlockFieldSpec,
   BlockFieldType,
-} from '@packages/blocks-ui';
-import type { DataSource } from '@packages/blocks-contract';
+} from '@domains/agency-ui';
+import type { DataSource } from '@domains/agency-contract';
 import { DataSourcePicker } from './DataSourcePicker';
 
 /**

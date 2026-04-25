@@ -3,7 +3,7 @@ import { NotFoundException, BadRequestException } from '@nestjs/common';
 import type { DatabaseService } from '@packages/database';
 import type { ModuleRef } from '@nestjs/core';
 import type { EntityRegistryService } from '@packages/entity-engine';
-import { mapperRegistry, defineMapper } from '@packages/blocks-contract';
+import { mapperRegistry, defineMapper } from '@domains/agency-contract';
 import { PagesPublicService } from '../services/pages-public.service';
 
 function buildDbMock(responses: any[][]) {

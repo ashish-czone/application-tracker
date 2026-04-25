@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { Puck, type Config, type Data } from '@measured/puck';
 import '@measured/puck/puck.css';
-import { blockRegistry, type BlockDefinition } from '@packages/blocks-ui';
+import { blockRegistry, type BlockDefinition } from '@domains/agency-ui';
 import {
   buildPuckConfig,
   puckDataToSections,

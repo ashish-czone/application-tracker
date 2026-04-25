@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { createElement } from 'react';
-import { defineBlock } from '@packages/blocks-ui';
+import { defineBlock } from '@domains/agency-ui';
 import {
   buildPuckConfig,
   filterBlocksBySupports,

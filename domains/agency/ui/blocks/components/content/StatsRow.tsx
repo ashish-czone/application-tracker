@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import type { StatsRowFields } from '@packages/blocks-contract';
+import type { StatsRowFields } from '@domains/agency-contract';
 import { defineBlock } from '../../registry';
 import type { BlockRenderProps } from '../../types';
 
