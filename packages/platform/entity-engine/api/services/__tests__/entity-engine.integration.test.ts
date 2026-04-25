@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest';
 import { createPlatformTestModule, cleanDatabase } from '@packages/platform-testing';
 import { FieldDefinitionService } from '../field-definition.service';
 import { LookupResolverService } from '../lookup-resolver.service';
+import { FeatureDeriverRegistry, featureDeriverRegistry } from '../feature-deriver.registry';
 import { EntityRegistryService } from '../../entity-registry.service';
 import type { DrizzleDB } from '@packages/database';
 import type { TestingModule } from '@nestjs/testing';
@@ -17,6 +18,7 @@ describe('Entity Engine (integration)', () => {
   beforeAll(async () => {
     const ctx = await createPlatformTestModule({
       providers: [
+        { provide: FeatureDeriverRegistry, useValue: featureDeriverRegistry },
         FieldDefinitionService,
         EntityRegistryService,
         LookupResolverService,
