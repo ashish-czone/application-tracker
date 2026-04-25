@@ -43,7 +43,6 @@ const TEST_ACTOR_ID = crypto.randomUUID();
 const OTHER_ACTOR_ID = crypto.randomUUID();
 
 function buildTestConfig(
-  hooks?: EntityConfig['hooks'],
   relationships?: EntityConfig['relationships'],
 ): EntityConfig {
   return {
@@ -78,7 +77,6 @@ function buildTestConfig(
     dataAccess: {
       anchors: { creator: 'createdBy' },
     },
-    hooks,
     relationships,
   } as EntityConfig;
 }
@@ -301,109 +299,6 @@ describe('EntityService (integration)', () => {
       );
     });
 
-    it('should run beforeCreate hook', async () => {
-      const hookConfig = buildTestConfig({
-        beforeCreate: async (payload, _actorId) => {
-          return { ...payload, priority: 'high' };
-        },
-      });
-
-      const database = module.get(DatabaseService);
-      const hookService = new EntityService(
-        hookConfig, database, eventEmitter, null, null,
-        fieldDefService, module.get(LookupResolverService), null,
-        null,
-        entityRegistry, module.get(AppLoggerService), null,
-      );
-
-      const result = await hookService.create(
-        { name: 'Hook Test', email: 'hook@example.com' },
-        TEST_ACTOR_ID,
-      );
-
-      expect(result.priority).toBe('high');
-    });
-
-    it('should run afterCreate hook', async () => {
-      const afterCreateSpy = vi.fn();
-      const hookConfig = buildTestConfig({
-        afterCreate: afterCreateSpy,
-      });
-
-      const database = module.get(DatabaseService);
-      const hookService = new EntityService(
-        hookConfig, database, eventEmitter, null, null,
-        fieldDefService, module.get(LookupResolverService), null,
-        null,
-        entityRegistry, module.get(AppLoggerService), null,
-      );
-
-      await hookService.create(
-        { name: 'After Hook', email: 'afterhook@example.com' },
-        TEST_ACTOR_ID,
-      );
-
-      expect(afterCreateSpy).toHaveBeenCalledOnce();
-      expect(afterCreateSpy).toHaveBeenCalledWith(
-        expect.objectContaining({ name: 'After Hook' }),
-        TEST_ACTOR_ID,
-      );
-    });
-
-    it('should run inCreateTx hook with tx handle and roll back on throw', async () => {
-      const txHookSpy = vi.fn(async (_id: string, _payload: any, _actor: string, tx: any) => {
-        expect(tx).toBeDefined();
-        expect(typeof tx.insert).toBe('function');
-      });
-      const hookConfig = buildTestConfig({ inCreateTx: txHookSpy });
-
-      const database = module.get(DatabaseService);
-      const hookService = new EntityService(
-        hookConfig, database, eventEmitter, null, null,
-        fieldDefService, module.get(LookupResolverService), null,
-        null,
-        entityRegistry, module.get(AppLoggerService), null,
-      );
-
-      const created = await hookService.create(
-        { name: 'Tx Hook', email: 'txhook@example.com' },
-        TEST_ACTOR_ID,
-      );
-      expect(txHookSpy).toHaveBeenCalledOnce();
-      expect(txHookSpy).toHaveBeenCalledWith(
-        created.id,
-        expect.objectContaining({ name: 'Tx Hook' }),
-        TEST_ACTOR_ID,
-        expect.anything(),
-      );
-    });
-
-    it('should roll back the entity insert when inCreateTx throws', async () => {
-      const hookConfig = buildTestConfig({
-        inCreateTx: async () => {
-          throw new Error('boom');
-        },
-      });
-
-      const database = module.get(DatabaseService);
-      const hookService = new EntityService(
-        hookConfig, database, eventEmitter, null, null,
-        fieldDefService, module.get(LookupResolverService), null,
-        null,
-        entityRegistry, module.get(AppLoggerService), null,
-      );
-
-      await expect(
-        hookService.create(
-          { name: 'Rollback Test', email: 'rollback@example.com' },
-          TEST_ACTOR_ID,
-        ),
-      ).rejects.toThrow('boom');
-
-      const result = await entityService.list({ search: 'rollback@example.com' });
-      expect(result.data).toHaveLength(0);
-    });
-
     it('should reject unknown fields', async () => {
       await expect(
         entityService.create(
@@ -609,117 +504,6 @@ describe('EntityService (integration)', () => {
   });
 
   // ---------------------------------------------------------------------------
-  // READ HOOKS (afterList / afterFindOne)
-  // ---------------------------------------------------------------------------
-
-  describe('read hooks', () => {
-    it('should run afterList hook once per page with the full row set', async () => {
-      await createEntity({ name: 'AL-1' });
-      await createEntity({ name: 'AL-2' });
-      await createEntity({ name: 'AL-3' });
-
-      const afterListSpy = vi.fn(async (rows: Record<string, unknown>[]) =>
-        rows.map((r) => ({ ...r, enriched: true })),
-      );
-      const hookConfig = buildTestConfig({ afterList: afterListSpy });
-      const database = module.get(DatabaseService);
-      const hookService = new EntityService(
-        hookConfig, database, eventEmitter, null, null,
-        fieldDefService, module.get(LookupResolverService), null,
-        null,
-        entityRegistry, module.get(AppLoggerService), null,
-      );
-
-      const result = await hookService.list({}, { userId: TEST_ACTOR_ID, scopes: [{ type: 'any' }] });
-
-      expect(afterListSpy).toHaveBeenCalledOnce();
-      expect(afterListSpy.mock.calls[0]?.[0]).toHaveLength(3);
-      expect(afterListSpy.mock.calls[0]?.[1]).toEqual({ actorId: TEST_ACTOR_ID });
-      expect(result.data.every((r) => r.enriched === true)).toBe(true);
-    });
-
-    it('should let afterList override row shape (add relation data)', async () => {
-      const created = await createEntity({ name: 'AL-Rel' });
-
-      const hookConfig = buildTestConfig({
-        afterList: async (rows) =>
-          rows.map((r) => ({ ...r, relations: ['x', 'y'] })),
-      });
-      const database = module.get(DatabaseService);
-      const hookService = new EntityService(
-        hookConfig, database, eventEmitter, null, null,
-        fieldDefService, module.get(LookupResolverService), null,
-        null,
-        entityRegistry, module.get(AppLoggerService), null,
-      );
-
-      const result = await hookService.list({ search: 'AL-Rel' });
-
-      expect(result.data).toHaveLength(1);
-      expect(result.data[0]?.id).toBe(created.id);
-      expect(result.data[0]?.relations).toEqual(['x', 'y']);
-    });
-
-    it('should skip afterList when not defined (no behavior change)', async () => {
-      await createEntity({ name: 'No-Hook' });
-      const result = await entityService.list({ search: 'No-Hook' });
-      expect(result.data).toHaveLength(1);
-      expect(result.data[0]?.relations).toBeUndefined();
-    });
-
-    it('should run afterFindOne with the loaded row and actorId', async () => {
-      const created = await createEntity({ name: 'AFO-1' });
-
-      const afterFindOneSpy = vi.fn(async (row: Record<string, unknown>) => ({
-        ...row,
-        detailEnriched: true,
-      }));
-      const hookConfig = buildTestConfig({ afterFindOne: afterFindOneSpy });
-      const database = module.get(DatabaseService);
-      const hookService = new EntityService(
-        hookConfig, database, eventEmitter, null, null,
-        fieldDefService, module.get(LookupResolverService), null,
-        null,
-        entityRegistry, module.get(AppLoggerService), null,
-      );
-
-      const result = await hookService.findOneOrFail(created.id as string, {
-        userId: TEST_ACTOR_ID,
-        scopes: [{ type: 'any' }],
-      });
-
-      expect(afterFindOneSpy).toHaveBeenCalledOnce();
-      expect(afterFindOneSpy.mock.calls[0]?.[0]?.id).toBe(created.id);
-      expect(afterFindOneSpy.mock.calls[0]?.[1]).toEqual({ actorId: TEST_ACTOR_ID });
-      expect(result.detailEnriched).toBe(true);
-    });
-
-    it('should skip afterFindOne when not defined', async () => {
-      const created = await createEntity({ name: 'AFO-No-Hook' });
-      const result = await entityService.findOneOrFail(created.id as string);
-      expect(result.detailEnriched).toBeUndefined();
-    });
-
-    it('should pass empty actorId when accessCtx is not provided', async () => {
-      await createEntity({ name: 'AL-No-Ctx' });
-
-      const afterListSpy = vi.fn(async (rows: Record<string, unknown>[]) => rows);
-      const hookConfig = buildTestConfig({ afterList: afterListSpy });
-      const database = module.get(DatabaseService);
-      const hookService = new EntityService(
-        hookConfig, database, eventEmitter, null, null,
-        fieldDefService, module.get(LookupResolverService), null,
-        null,
-        entityRegistry, module.get(AppLoggerService), null,
-      );
-
-      await hookService.list({ search: 'AL-No-Ctx' });
-
-      expect(afterListSpy.mock.calls[0]?.[1]).toEqual({ actorId: '' });
-    });
-  });
-
-  // ---------------------------------------------------------------------------
   // UPDATE
   // ---------------------------------------------------------------------------
 
@@ -820,35 +604,6 @@ describe('EntityService (integration)', () => {
       expect(updated.email).toBe('self@example.com');
     });
 
-    it('should run beforeUpdate hook', async () => {
-      const hookConfig = buildTestConfig({
-        beforeUpdate: async (_id, payload, _actorId) => {
-          return { ...payload, priority: 'low' };
-        },
-      });
-
-      const database = module.get(DatabaseService);
-      const hookService = new EntityService(
-        hookConfig, database, eventEmitter, null, null,
-        fieldDefService, module.get(LookupResolverService), null,
-        null,
-        entityRegistry, module.get(AppLoggerService), null,
-      );
-
-      const created = await hookService.create(
-        { name: 'HookUpdate', email: 'hookupdate@example.com' },
-        TEST_ACTOR_ID,
-      );
-
-      const updated = await hookService.update(
-        created.id as string,
-        { name: 'Changed' },
-        TEST_ACTOR_ID,
-      );
-
-      expect(updated.priority).toBe('low');
-    });
-
     it('should return unchanged entity when payload is empty', async () => {
       const created = await createEntity({ name: 'Unchanged', status: 'active' });
 
@@ -904,29 +659,6 @@ describe('EntityService (integration)', () => {
       ).rejects.toThrow('not found');
     });
 
-    it('should run beforeDelete hook', async () => {
-      const beforeDeleteSpy = vi.fn();
-      const hookConfig = buildTestConfig({
-        beforeDelete: beforeDeleteSpy,
-      });
-
-      const database = module.get(DatabaseService);
-      const hookService = new EntityService(
-        hookConfig, database, eventEmitter, null, null,
-        fieldDefService, module.get(LookupResolverService), null,
-        null,
-        entityRegistry, module.get(AppLoggerService), null,
-      );
-
-      const created = await hookService.create(
-        { name: 'DeleteHook', email: 'deletehook@example.com' },
-        TEST_ACTOR_ID,
-      );
-
-      await hookService.softDelete(created.id as string, TEST_ACTOR_ID);
-
-      expect(beforeDeleteSpy).toHaveBeenCalledWith(created.id, TEST_ACTOR_ID);
-    });
   });
 
   // ---------------------------------------------------------------------------
@@ -937,7 +669,7 @@ describe('EntityService (integration)', () => {
     function buildServiceWithRelations(relationships: EntityConfig['relationships']): EntityService {
       const database = module.get(DatabaseService);
       return new EntityService(
-        buildTestConfig(undefined, relationships),
+        buildTestConfig(relationships),
         database, eventEmitter, null, null,
         fieldDefService, module.get(LookupResolverService), null,
         null,
