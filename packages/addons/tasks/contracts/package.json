@@ -7,7 +7,10 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@packages/entity-engine-contract": "workspace:*"
+    "@packages/attachments": "workspace:*",
+    "@packages/entity-engine-contract": "workspace:*",
+    "@packages/notes": "workspace:*",
+    "@packages/taxonomy": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.7.0",

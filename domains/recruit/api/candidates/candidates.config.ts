@@ -1,5 +1,7 @@
 import { sql } from 'drizzle-orm';
 import type { EntityConfig } from '@packages/entity-engine';
+import { notesFeature } from '@packages/notes';
+import { attachmentsFeature } from '@packages/attachments';
 import { candidates } from './schema/candidates';
 import { CANDIDATE_FIELD_META, CANDIDATE_SECTIONS } from './field-meta';
 
@@ -19,8 +21,10 @@ export const candidatesConfig: EntityConfig = {
 
   table: candidates,
   customFields: 'eav',
-  hasNotes: true,
-  hasAttachments: true,
+  features: {
+    ...notesFeature(),
+    ...attachmentsFeature(),
+  },
   systemColumns: ['id', 'createdAt', 'updatedAt', 'deletedAt', 'deletedBy', 'createdBy', 'resumeFile'],
 
   searchColumns: [candidates.firstName, candidates.lastName, candidates.email],

@@ -1,6 +1,8 @@
 import { defineEntity } from '@packages/entity-engine';
 import { and, isNull, sql } from 'drizzle-orm';
 import { orgUnitMembers } from '@packages/org-units';
+import { notesFeature } from '@packages/notes';
+import { attachmentsFeature } from '@packages/attachments';
 import { complianceFilings } from '../schema/compliance-filings';
 import {
   COMPLIANCE_ATTACHMENT_MIME_TYPES,
@@ -47,14 +49,14 @@ export const COMPLIANCE_FILINGS_CONFIG = defineEntity({
   onDelete: { mode: 'soft' },
   timestamps: true,
 
-  hasAttachments: true,
-  attachmentConfig: {
-    acceptedMimeTypes: [...COMPLIANCE_ATTACHMENT_MIME_TYPES],
-    maxFileSize: COMPLIANCE_MAX_ATTACHMENT_BYTES,
-    deleteMode: 'soft',
+  features: {
+    ...attachmentsFeature({
+      acceptedMimeTypes: [...COMPLIANCE_ATTACHMENT_MIME_TYPES],
+      maxFileSize: COMPLIANCE_MAX_ATTACHMENT_BYTES,
+      deleteMode: 'soft',
+    }),
+    ...notesFeature(),
   },
-
-  hasNotes: true,
 
   extraPermissions: [
     { action: 'pickup', description: 'Pick up a pending filing and move it to in-progress' },

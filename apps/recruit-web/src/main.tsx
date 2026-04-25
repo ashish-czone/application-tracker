@@ -21,9 +21,10 @@ import { WebShell } from '@packages/app-shell-ui';
 import { DebugProfilerBar, DebugProfilerProvider } from '@packages/debug-profiler-ui';
 import { TASKS_UI_CONFIG, TaskAssigneeCell } from '@packages/tasks-ui';
 import { OrgUnitsPage, OrgPositionsPage } from '@packages/org-units-ui';
-import { NotesSection } from '@packages/notes-ui';
-import { AttachmentsSection } from '@packages/attachments-ui';
-import { EvaluationsSection } from '@packages/evaluations-ui';
+import { notesDetailTab, notesSidebarPanel } from '@packages/notes-ui';
+import { attachmentsDetailTab, attachmentsSidebarPanel } from '@packages/attachments-ui';
+import { evaluationsDetailTab, evaluationsSidebarPanel } from '@packages/evaluations-ui';
+import { tagsHeaderPlugin } from '@packages/taxonomy-ui';
 import { AuditTimeline } from '@packages/audit-ui';
 import { AvatarNameCell, createStatusBadgeCell, type StatusColors } from '@packages/ui';
 import { CheckSquare, Building2, UserCog } from 'lucide-react';
@@ -87,17 +88,19 @@ const addonRoutes = [
 ];
 
 const detailTabs = [
-  { key: 'notes', label: 'Notes', order: 100, component: NotesSection, featureFlag: 'hasNotes' },
-  { key: 'attachments', label: 'Attachments', order: 200, component: AttachmentsSection, featureFlag: 'hasAttachments' },
-  { key: 'evaluations', label: 'Evaluations', order: 300, component: EvaluationsSection, featureFlag: 'hasEvaluations' },
+  notesDetailTab,
+  attachmentsDetailTab,
+  evaluationsDetailTab,
   { key: 'audit-trail', label: 'Audit Trail', order: 1000, component: AuditTimeline },
 ];
 
 const rightSidebarPanels = [
-  { key: 'notes', label: 'Notes', order: 100, component: NotesSection, featureFlag: 'hasNotes' },
-  { key: 'files', label: 'Files', order: 200, component: AttachmentsSection, featureFlag: 'hasAttachments' },
-  { key: 'evaluations', label: 'Evaluations', order: 300, component: EvaluationsSection, featureFlag: 'hasEvaluations' },
+  notesSidebarPanel,
+  attachmentsSidebarPanel,
+  evaluationsSidebarPanel,
 ];
+
+const headerPlugins = [tagsHeaderPlugin];
 
 const columnRenderers = {
   StatusBadge: { component: RecruitStatusBadge },
@@ -123,6 +126,7 @@ createRoot(document.getElementById('root')!).render(
       extraEntityUIConfigs={[TASKS_UI_CONFIG]}
       extraDetailTabs={detailTabs}
       extraRightSidebarPanels={rightSidebarPanels}
+      extraHeaderPlugins={headerPlugins}
       extraColumnRenderers={columnRenderers}
     />
   </StrictMode>,

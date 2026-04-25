@@ -10,6 +10,7 @@
   "dependencies": {
     "@nestjs/common": "^11.0.0",
     "@nestjs/swagger": "^11.0.0",
+    "@packages/attachments": "workspace:*",
     "@packages/auth": "workspace:*",
     "@packages/automations": "workspace:*",
     "@packages/common": "workspace:*",
@@ -24,6 +25,7 @@
     "@packages/events": "workspace:*",
     "@packages/logger": "workspace:*",
     "@packages/media": "workspace:*",
+    "@packages/notes": "workspace:*",
     "@packages/notification-channels": "workspace:*",
     "@packages/notifications": "workspace:*",
     "@packages/org-units": "workspace:*",

@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import { readNotesFeature } from '@packages/notes';
+import { readAttachmentsFeature } from '@packages/attachments';
 import { COMPLIANCE_FILINGS_CONFIG, buildFilingExternalKey } from '../compliance-filings.config';
 
 type TargetObject = { state: string; requiredPermissions?: string[]; reasonRequired?: boolean; commentRequired?: boolean };
@@ -25,19 +27,21 @@ describe('COMPLIANCE_FILINGS_CONFIG', () => {
   });
 
   it('enables notes on the filing entity (Stream G / Q29)', () => {
-    // Compliance comments = notes addon attached to compliance-filings. Setting
-    // hasNotes: true surfaces the Notes tab on the auto-rendered detail page
-    // via compliance-web's extraDetailTabs.
-    expect(COMPLIANCE_FILINGS_CONFIG.hasNotes).toBe(true);
+    // Compliance comments = notes addon attached to compliance-filings via
+    // notesFeature() — surfaces the Notes tab on the auto-rendered detail
+    // page via compliance-web's extraDetailTabs.
+    expect(readNotesFeature(COMPLIANCE_FILINGS_CONFIG.features)?.enabled).toBe(true);
   });
 
   describe('attachments (Stream F / Q26 + Q27 + Q28)', () => {
+    const attachmentsValue = readAttachmentsFeature(COMPLIANCE_FILINGS_CONFIG.features);
+
     it('enables attachments on the filing entity', () => {
-      expect(COMPLIANCE_FILINGS_CONFIG.hasAttachments).toBe(true);
+      expect(attachmentsValue?.enabled).toBe(true);
     });
 
     it('pins the MIME whitelist to the compliance-domain list (Q26)', () => {
-      const accepted = COMPLIANCE_FILINGS_CONFIG.attachmentConfig?.acceptedMimeTypes ?? [];
+      const accepted = attachmentsValue?.acceptedMimeTypes ?? [];
       // ZIPs and executables are excluded by the whitelist — the test exists to
       // catch any accidental relaxation of this constraint.
       expect(accepted).toContain('application/pdf');
@@ -48,11 +52,11 @@ describe('COMPLIANCE_FILINGS_CONFIG', () => {
     });
 
     it('caps per-file upload at 25 MB (Q27)', () => {
-      expect(COMPLIANCE_FILINGS_CONFIG.attachmentConfig?.maxFileSize).toBe(25 * 1024 * 1024);
+      expect(attachmentsValue?.maxFileSize).toBe(25 * 1024 * 1024);
     });
 
     it('soft-deletes attachments so evidence is recoverable (Q28)', () => {
-      expect(COMPLIANCE_FILINGS_CONFIG.attachmentConfig?.deleteMode).toBe('soft');
+      expect(attachmentsValue?.deleteMode).toBe('soft');
     });
   });
 

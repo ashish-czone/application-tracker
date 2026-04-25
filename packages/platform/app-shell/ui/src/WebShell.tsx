@@ -18,6 +18,7 @@ export function WebShell({
   extraEntityUIConfigs,
   extraDetailTabs,
   extraRightSidebarPanels,
+  extraHeaderPlugins,
   extraColumnRenderers,
   extraDetailHeaderActions,
 }: WebShellOptions) {
@@ -33,6 +34,7 @@ export function WebShell({
 
   const detailTabs = useMemo(() => extraDetailTabs ?? [], [extraDetailTabs]);
   const rightSidebarPanels = useMemo(() => extraRightSidebarPanels ?? [], [extraRightSidebarPanels]);
+  const headerPlugins = useMemo(() => extraHeaderPlugins ?? [], [extraHeaderPlugins]);
   const columnRenderers = useMemo(() => extraColumnRenderers ?? {}, [extraColumnRenderers]);
 
   return (
@@ -41,6 +43,7 @@ export function WebShell({
       entityUIConfigs={entityUIConfigs}
       detailTabs={detailTabs}
       rightSidebarPanels={rightSidebarPanels}
+      headerPlugins={headerPlugins}
       columnRenderers={columnRenderers}
     >
       <AppRouter

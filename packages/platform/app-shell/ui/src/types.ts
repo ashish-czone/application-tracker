@@ -4,6 +4,7 @@ import type { DomainWebManifest, MenuItem } from '@packages/domains';
 import type {
   ColumnRendererRegistration,
   DetailTabPlugin,
+  HeaderPlugin,
   RightSidebarPanel,
 } from '@packages/entity-engine-ui';
 import type { ApiFn } from '@packages/platform-ui';
@@ -59,6 +60,11 @@ export interface WebShellOptions {
    * Addon-provided right sidebar panels.
    */
   extraRightSidebarPanels?: RightSidebarPanel[];
+  /**
+   * Addon-provided detail-page header plugins (tag chip rows, status banners,
+   * etc.) rendered between the title block and the tabs.
+   */
+  extraHeaderPlugins?: HeaderPlugin[];
   /**
    * Extra column renderers (status badges, avatars, etc.). Merged into the
    * EntityEngineProvider column renderer registry.
