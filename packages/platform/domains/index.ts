@@ -59,6 +59,34 @@ export interface MenuItem {
  */
 export type DomainEntityUIConfig = unknown;
 
+/**
+ * Renderer for an EntityDetailPage slot. Receives the entity record from
+ * `EntityDetailPage` and may return null to skip the slot for this entity.
+ * Matches the callback signatures `EntityDetailPage` already accepts as
+ * props, so a feature's renderer drops in without adapter wrapping.
+ */
+export type EntityDetailRenderer = (
+  entityType: string,
+  entityId: string,
+  entity: Record<string, unknown>,
+) => ReactNode;
+
+/**
+ * Sub-tab contributed to the entity-config admin page (`/settings/:entityType`)
+ * by a feature. The page always renders its native "Fields & Layout" tab;
+ * features add additional tabs by registering one of these.
+ *
+ * `appliesTo` is called with the entity-engine config object (kept loose as
+ * `unknown` here — the registering feature narrows it). Return `false` to
+ * hide the tab for entities that don't have the feature enabled.
+ */
+export interface EntityConfigTab {
+  key: string;
+  label: string;
+  component: ComponentType<{ entityType: string }>;
+  appliesTo: (entity: unknown) => boolean;
+}
+
 export interface DomainWebManifest {
   name: string;
   displayName: string;
@@ -151,4 +179,19 @@ export interface WebFeatureManifest {
    * features (which win over domain-supplied defaults).
    */
   columnRenderers?: Record<string, unknown>;
+  /**
+   * Per-slot renderers passed through to `EntityDetailPage`. The shell
+   * picks the first feature that supplies each slot (same first-wins
+   * posture as `detailPageOverrides`); apps with conflicting features
+   * should order their `features` array deliberately.
+   */
+  entityDetailRenderers?: {
+    pipelineProgress?: EntityDetailRenderer;
+    workflowActions?: EntityDetailRenderer;
+  };
+  /**
+   * Sub-tabs added to the entity-config admin page. Each tab is shown
+   * only for entities whose `appliesTo` predicate returns true.
+   */
+  entityConfigTabs?: EntityConfigTab[];
 }
