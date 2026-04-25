@@ -9,7 +9,6 @@
     "@packages/eav-attributes-ui": "workspace:*",
     "@packages/entity-engine-ui": "workspace:*",
     "@packages/conditions-ui": "workspace:*",
-    "@packages/taxonomy-ui": "workspace:*",
     "@packages/field-types": "workspace:*",
     "@packages/platform-ui": "workspace:*",
     "@packages/ui": "workspace:*",
