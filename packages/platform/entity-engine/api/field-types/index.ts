@@ -141,16 +141,12 @@ const autoNumber = defineFieldType({
   filterable: true,
 });
 
-const file = defineFieldType({
-  type: 'file', label: 'File', family: 'special',
-  icon: 'Paperclip', color: 'bg-gray-100 text-gray-800', sortOrder: 20,
-  creatable: true,
-  excludeFromList: true,
-});
-
 // ---------------------------------------------------------------------------
 // Plugin export
 // ---------------------------------------------------------------------------
+// Note: the `file` field type is owned by `@packages/media`. Apps that need
+// file uploads install MediaModule, which registers its own plugin including
+// the media-aware `transformValueBeforeSave` behavior.
 
 export const coreFieldTypesPlugin: FieldTypePlugin = {
   name: 'entity-engine',
@@ -160,6 +156,6 @@ export const coreFieldTypesPlugin: FieldTypePlugin = {
     date, datetime,
     boolean,
     lookup, multiLookup, user, multiUser,
-    autoNumber, file,
+    autoNumber,
   ],
 };

@@ -1,9 +1,31 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { FieldTypeRegistry } from '../registry';
+import { defineFieldType } from '../define';
+import type { FieldTypePlugin } from '../types';
 import { coreFieldTypesPlugin } from '@packages/entity-engine/field-types';
 import { eavFieldTypesPlugin } from '@packages/eav-attributes/field-types';
 import { taxonomyFieldTypesPlugin } from '@packages/taxonomy/field-types';
 import { workflowFieldTypesPlugin } from '@packages/workflows/field-types';
+
+// `file` is owned by `@packages/media` (which holds MediaService and the
+// tmp→entity transform). Re-create its registration here so this snapshot
+// covers the standard set of types apps see when media is installed,
+// without the test having to construct a real MediaService.
+const fileSnapshotPlugin: FieldTypePlugin = {
+  name: 'media-snapshot',
+  fieldTypes: [
+    defineFieldType({
+      type: 'file',
+      label: 'File',
+      family: 'special',
+      icon: 'Paperclip',
+      color: 'bg-gray-100 text-gray-800',
+      sortOrder: 20,
+      creatable: true,
+      excludeFromList: true,
+    }),
+  ],
+};
 
 /** Expected maps from the existing codebase (eav-attributes/types.ts and query-builder/types.ts) */
 const EXPECTED_VALUE_COLUMN_MAP: Record<string, string> = {
@@ -63,6 +85,7 @@ describe('field type plugins produce correct derived maps', () => {
     registry.registerPlugin(eavFieldTypesPlugin);
     registry.registerPlugin(taxonomyFieldTypesPlugin);
     registry.registerPlugin(workflowFieldTypesPlugin);
+    registry.registerPlugin(fileSnapshotPlugin);
     registry.freeze();
   });
 

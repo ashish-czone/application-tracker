@@ -3,6 +3,9 @@ export { MediaModule } from './media.module';
 export { MediaService } from './services/media.service';
 export { MediaUploadController } from './controllers/media-upload.controller';
 
+// Field type
+export { createFileFieldType, createMediaFieldTypesPlugin } from './file-field-type';
+
 // Types
 export type {
   MediaFile,

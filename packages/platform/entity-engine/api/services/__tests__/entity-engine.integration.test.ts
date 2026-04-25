@@ -2,7 +2,6 @@ import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest';
 import { createPlatformTestModule, cleanDatabase } from '@packages/platform-testing';
 import { FieldDefinitionService } from '../field-definition.service';
 import { LookupResolverService } from '../lookup-resolver.service';
-import { FieldTypeSaveHookRegistry } from '../field-type-save-hook.registry';
 import { EntityRegistryService } from '../../entity-registry.service';
 import type { DrizzleDB } from '@packages/database';
 import type { TestingModule } from '@nestjs/testing';
@@ -21,7 +20,6 @@ describe('Entity Engine (integration)', () => {
         FieldDefinitionService,
         EntityRegistryService,
         LookupResolverService,
-        FieldTypeSaveHookRegistry,
       ],
       mocks: { automations: false },
     });
@@ -347,37 +345,4 @@ describe('Entity Engine (integration)', () => {
     });
   });
 
-  // ---------------------------------------------------------------------------
-  // FieldTypeSaveHookRegistry
-  // ---------------------------------------------------------------------------
-
-  describe('FieldTypeSaveHookRegistry', () => {
-    let hookRegistry: FieldTypeSaveHookRegistry;
-
-    beforeAll(() => {
-      hookRegistry = new FieldTypeSaveHookRegistry();
-    });
-
-    it('should register and retrieve hooks', () => {
-      const hooks = {
-        onBeforeSave: async () => ({}),
-      };
-
-      hookRegistry.register('test_type', hooks);
-      expect(hookRegistry.has('test_type')).toBe(true);
-      expect(hookRegistry.get('test_type')).toBe(hooks);
-    });
-
-    it('should return undefined for unregistered types', () => {
-      expect(hookRegistry.has('unknown')).toBe(false);
-      expect(hookRegistry.get('unknown')).toBeUndefined();
-    });
-
-    it('should throw on duplicate registration', () => {
-      hookRegistry.register('dup_type', { onBeforeSave: async () => ({}) });
-      expect(() =>
-        hookRegistry.register('dup_type', { onBeforeSave: async () => ({}) }),
-      ).toThrow();
-    });
-  });
 });

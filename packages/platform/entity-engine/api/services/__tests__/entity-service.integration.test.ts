@@ -8,7 +8,6 @@ import { DomainEventEmitter } from '@packages/events';
 import { AppLoggerService } from '@packages/logger';
 import { FieldDefinitionService } from '../field-definition.service';
 import { LookupResolverService } from '../lookup-resolver.service';
-import { FieldTypeSaveHookRegistry } from '../field-type-save-hook.registry';
 import { EntityRegistryService } from '../../entity-registry.service';
 import { EntityService } from '../../entity.service';
 import { fieldTypeRegistry } from '@packages/field-types';
@@ -136,7 +135,6 @@ describe('EntityService (integration)', () => {
         FieldDefinitionService,
         EntityRegistryService,
         LookupResolverService,
-        FieldTypeSaveHookRegistry,
       ],
       mocks: { automations: false },
     });
@@ -147,7 +145,6 @@ describe('EntityService (integration)', () => {
     fieldDefService = module.get(FieldDefinitionService);
     entityRegistry = module.get(EntityRegistryService);
     eventEmitter = module.get(DomainEventEmitter);
-
     // Create test table
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS test_entities (
@@ -176,7 +173,6 @@ describe('EntityService (integration)', () => {
     // Build the EntityService manually (same wiring as forEntity factory)
     const database = module.get(DatabaseService);
     const lookupResolver = module.get(LookupResolverService);
-    const hookRegistry = module.get(FieldTypeSaveHookRegistry);
     const appLogger = module.get(AppLoggerService);
 
     entityService = new EntityService(
@@ -188,7 +184,6 @@ describe('EntityService (integration)', () => {
       fieldDefService,
       lookupResolver,
       null, // taxonomyExt
-      hookRegistry,
       null, // workflowExt
       entityRegistry,
       appLogger,
@@ -317,7 +312,7 @@ describe('EntityService (integration)', () => {
       const hookService = new EntityService(
         hookConfig, database, eventEmitter, null, null,
         fieldDefService, module.get(LookupResolverService), null,
-        module.get(FieldTypeSaveHookRegistry), null,
+        null,
         entityRegistry, module.get(AppLoggerService), null,
       );
 
@@ -339,7 +334,7 @@ describe('EntityService (integration)', () => {
       const hookService = new EntityService(
         hookConfig, database, eventEmitter, null, null,
         fieldDefService, module.get(LookupResolverService), null,
-        module.get(FieldTypeSaveHookRegistry), null,
+        null,
         entityRegistry, module.get(AppLoggerService), null,
       );
 
@@ -366,7 +361,7 @@ describe('EntityService (integration)', () => {
       const hookService = new EntityService(
         hookConfig, database, eventEmitter, null, null,
         fieldDefService, module.get(LookupResolverService), null,
-        module.get(FieldTypeSaveHookRegistry), null,
+        null,
         entityRegistry, module.get(AppLoggerService), null,
       );
 
@@ -394,7 +389,7 @@ describe('EntityService (integration)', () => {
       const hookService = new EntityService(
         hookConfig, database, eventEmitter, null, null,
         fieldDefService, module.get(LookupResolverService), null,
-        module.get(FieldTypeSaveHookRegistry), null,
+        null,
         entityRegistry, module.get(AppLoggerService), null,
       );
 
@@ -631,7 +626,7 @@ describe('EntityService (integration)', () => {
       const hookService = new EntityService(
         hookConfig, database, eventEmitter, null, null,
         fieldDefService, module.get(LookupResolverService), null,
-        module.get(FieldTypeSaveHookRegistry), null,
+        null,
         entityRegistry, module.get(AppLoggerService), null,
       );
 
@@ -654,7 +649,7 @@ describe('EntityService (integration)', () => {
       const hookService = new EntityService(
         hookConfig, database, eventEmitter, null, null,
         fieldDefService, module.get(LookupResolverService), null,
-        module.get(FieldTypeSaveHookRegistry), null,
+        null,
         entityRegistry, module.get(AppLoggerService), null,
       );
 
@@ -684,7 +679,7 @@ describe('EntityService (integration)', () => {
       const hookService = new EntityService(
         hookConfig, database, eventEmitter, null, null,
         fieldDefService, module.get(LookupResolverService), null,
-        module.get(FieldTypeSaveHookRegistry), null,
+        null,
         entityRegistry, module.get(AppLoggerService), null,
       );
 
@@ -714,7 +709,7 @@ describe('EntityService (integration)', () => {
       const hookService = new EntityService(
         hookConfig, database, eventEmitter, null, null,
         fieldDefService, module.get(LookupResolverService), null,
-        module.get(FieldTypeSaveHookRegistry), null,
+        null,
         entityRegistry, module.get(AppLoggerService), null,
       );
 
@@ -836,7 +831,7 @@ describe('EntityService (integration)', () => {
       const hookService = new EntityService(
         hookConfig, database, eventEmitter, null, null,
         fieldDefService, module.get(LookupResolverService), null,
-        module.get(FieldTypeSaveHookRegistry), null,
+        null,
         entityRegistry, module.get(AppLoggerService), null,
       );
 
@@ -919,7 +914,7 @@ describe('EntityService (integration)', () => {
       const hookService = new EntityService(
         hookConfig, database, eventEmitter, null, null,
         fieldDefService, module.get(LookupResolverService), null,
-        module.get(FieldTypeSaveHookRegistry), null,
+        null,
         entityRegistry, module.get(AppLoggerService), null,
       );
 
@@ -945,7 +940,7 @@ describe('EntityService (integration)', () => {
         buildTestConfig(undefined, relationships),
         database, eventEmitter, null, null,
         fieldDefService, module.get(LookupResolverService), null,
-        module.get(FieldTypeSaveHookRegistry), null,
+        null,
         entityRegistry, module.get(AppLoggerService), null,
       );
     }
