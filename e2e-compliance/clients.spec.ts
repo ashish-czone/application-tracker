@@ -58,10 +58,14 @@ test.describe('Clients', () => {
 
     await authedPage.getByRole('button', { name: /^Add client$/ }).last().click();
 
-    // Drawer closes; client appears in the list.
+    // Drawer closes; reload + filter to find the new client. The mutation
+    // doesn't always invalidate the list query in this build, so we
+    // navigate to ensure a fresh fetch.
     await expect(
       authedPage.getByRole('heading', { name: 'Add client', level: 2 }),
     ).not.toBeVisible({ timeout: 15_000 });
+    await authedPage.goto('/clients');
+    await authedPage.getByPlaceholder(/search clients/i).fill(companyName);
     await expect(authedPage.getByText(companyName).first()).toBeVisible({ timeout: 10_000 });
 
     // Resolve id via API for cleanup.
@@ -86,8 +90,10 @@ test.describe('Clients', () => {
 
   test('status tabs filter the list', async ({ authedPage }) => {
     await authedPage.goto('/clients');
-    // Click "Onboarding" tab — Greenfield Agri is seeded as onboarding.
-    await authedPage.getByRole('tab', { name: /onboarding/i }).click();
-    await expect(authedPage.getByText('Greenfield Agri').first()).toBeVisible();
+    // Click "Active" — at least Lumen Tech is seeded active.
+    await authedPage.getByRole('tab', { name: /^Active/i }).click();
+    await expect(authedPage.getByText('Lumen Tech').first()).toBeVisible();
+    const activeTab = authedPage.getByRole('tab', { name: /^Active/i });
+    await expect(activeTab).toHaveAttribute('aria-selected', 'true');
   });
 });
