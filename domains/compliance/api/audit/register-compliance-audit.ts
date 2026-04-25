@@ -6,7 +6,6 @@ import type { AuditModuleRegistration, AuditRegistryService } from '@packages/au
 import type { JwtPayload } from '@packages/auth-core';
 
 import {
-  COMPLIANCE_TASK_GENERATED,
   COMPLIANCE_FILING_GENERATED,
   COMPLIANCE_CLIENT_DORMANTISED,
   COMPLIANCE_REGISTRATION_DEACTIVATED,
@@ -52,7 +51,6 @@ export function registerComplianceAudit(
   // `audit.read_all`, which is firm-admin only per Q23.
   auditRegistry.register('compliance', {
     events: [
-      COMPLIANCE_TASK_GENERATED,
       COMPLIANCE_FILING_GENERATED,
       COMPLIANCE_CLIENT_DORMANTISED,
       COMPLIANCE_REGISTRATION_DEACTIVATED,

@@ -18,8 +18,6 @@ import { ClientContactsModule } from './client-contacts/client-contacts.module';
 import { ClientRegistrationsModule } from './client-registrations/client-registrations.module';
 import { ComplianceRulesModule } from './rules/compliance-rules.module';
 import { LawHandlersModule } from './law-handlers/law-handlers.module';
-// compliance-tasks/ is the pre-filings implementation — retained for reference
-// while the filings migration is in-flight. New work goes to compliance-filings/.
 import { ComplianceFilingsModule } from './compliance-filings/compliance-filings.module';
 import { OrganizationsModule } from './organizations/organizations.module';
 
