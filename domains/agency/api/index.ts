@@ -23,3 +23,13 @@ export type {
   PublicPageIndexEntry,
   PublicPagesIndexResponse,
 } from './pages/services/pages-public.service';
+
+export { menus, menuItems } from './menus/schema';
+export { MENU_CONFIG } from './menus/menus.config';
+export { menuItemConfig } from './menus/menu-items.config';
+export { MenusModule } from './menus/menus.module';
+export { MenusPublicService, buildMenuTree } from './menus/services/menus-public.service';
+export type {
+  PublicMenuResponse,
+  PublicMenuItemDto,
+} from './menus/services/menus-public.service';

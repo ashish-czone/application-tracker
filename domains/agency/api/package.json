@@ -6,7 +6,8 @@
   "scripts": {
     "test": "vitest run --passWithNoTests",
     "test:integration": "vitest run --config vitest.integration.ts",
-    "db:generate:pages": "drizzle-kit generate --config ./pages/drizzle.config.ts"
+    "db:generate:pages": "drizzle-kit generate --config ./pages/drizzle.config.ts",
+    "db:generate:menus": "drizzle-kit generate --config ./menus/drizzle.config.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
@@ -21,10 +22,11 @@
     "@packages/entity-engine": "workspace:*",
     "@packages/events": "workspace:*",
     "@packages/field-types": "workspace:*",
+    "@packages/hierarchy": "workspace:*",
     "@packages/logger": "workspace:*",
     "@packages/content-api": "workspace:*",
     "@packages/media-library-api": "workspace:*",
-    "@packages/menus-api": "workspace:*",
+    "@packages/orderable": "workspace:*",
     "@packages/rbac": "workspace:*",
     "@packages/settings": "workspace:*",
     "@packages/soft-delete": "workspace:*",

@@ -105,8 +105,6 @@
       "@packages/hierarchy-ui/*": ["./packages/platform/hierarchy/ui/*"],
       "@packages/orderable": ["./packages/platform/orderable/api"],
       "@packages/orderable/*": ["./packages/platform/orderable/api/*"],
-      "@packages/menus-api": ["./packages/addons/menus/api"],
-      "@packages/menus-api/*": ["./packages/addons/menus/api/*"],
       "@domains/agency-contract": ["./domains/agency/contract"],
       "@domains/agency-contract/*": ["./domains/agency/contract/*"],
       "@domains/agency-ui": ["./domains/agency/ui"],

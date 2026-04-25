@@ -44,8 +44,6 @@
       "@packages/orderable/*": ["../../packages/platform/orderable/api/*"],
       "@packages/content-api": ["../../packages/addons/content/api"],
       "@packages/content-api/*": ["../../packages/addons/content/api/*"],
-      "@packages/menus-api": ["../../packages/addons/menus/api"],
-      "@packages/menus-api/*": ["../../packages/addons/menus/api/*"],
       "@packages/*": ["../../packages/core/*", "../../packages/platform/*", "../../packages/addons/*"],
       "@domains/agency-api": ["../../domains/agency/api"],
       "@domains/agency-api/*": ["../../domains/agency/api/*"],

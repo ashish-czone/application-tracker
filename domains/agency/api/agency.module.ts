@@ -2,9 +2,9 @@ import { Module, type OnModuleInit } from '@nestjs/common';
 import { RbacService } from '@packages/rbac';
 import { AppConfigService } from '@packages/settings';
 import { ContentModule } from '@packages/content-api';
-import { MenusModule } from '@packages/menus-api';
 import { MediaLibraryModule } from '@packages/media-library-api';
 import { PagesModule } from './pages/pages.module';
+import { MenusModule } from './menus/menus.module';
 
 import { AGENCY_PERMISSION_MANIFESTS } from './permissions';
 import { SITE_SETTINGS } from './settings';

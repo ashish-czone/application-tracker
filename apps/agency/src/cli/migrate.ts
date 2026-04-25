@@ -21,8 +21,8 @@ async function main() {
       migrationsFolder: path.join(workspaceRoot, 'packages/addons/content/api/migrations'),
     },
     {
-      name: '@packages/menus-api',
-      migrationsFolder: path.join(workspaceRoot, 'packages/addons/menus/api/migrations'),
+      name: '@domains/agency-api/menus',
+      migrationsFolder: path.join(workspaceRoot, 'domains/agency/api/menus/migrations'),
     },
     {
       name: '@packages/media-library-api',

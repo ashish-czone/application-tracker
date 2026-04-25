@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { DatabaseService, and, asc, eq, isNull } from '@packages/database';
-import { PagesPublicService } from '@domains/agency-api';
+import { PagesPublicService } from '../../pages';
 import { menus } from '../schema/menus';
 import { menuItems } from '../schema/menu-items';
 

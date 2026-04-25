@@ -38,8 +38,8 @@ const config: Config = {
     '../../../../../domains/agency/ui/pages/*.{ts,tsx}',
     '../../../../../domains/agency/ui/blocks/*.{ts,tsx}',
     '../../../../../domains/agency/ui/blocks/components/**/*.{ts,tsx}',
-    '../../../../../packages/addons/menus/ui/admin/**/*.{ts,tsx}',
-    '../../../../../packages/addons/menus/ui/frontend/**/*.{ts,tsx}',
+    '../../../../../domains/agency/ui/menus/admin/**/*.{ts,tsx}',
+    '../../../../../domains/agency/ui/menus/frontend/**/*.{ts,tsx}',
     '../../../../../packages/addons/media-library/ui/admin/**/*.{ts,tsx}',
   ],
 };

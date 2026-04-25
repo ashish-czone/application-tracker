@@ -40,7 +40,6 @@
     "@packages/notification-channels": "workspace:*",
     "@packages/notifications": "workspace:*",
     "@packages/content-api": "workspace:*",
-    "@packages/menus-api": "workspace:*",
     "@packages/queue": "workspace:*",
     "@packages/rbac": "workspace:*",
     "@packages/settings": "workspace:*",
