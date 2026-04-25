@@ -2420,6 +2420,9 @@ importers:
       '@packages/conditions-ui':
         specifier: workspace:*
         version: link:../../../platform/conditions-ui
+      '@packages/domains':
+        specifier: workspace:*
+        version: link:../../../platform/domains
       '@packages/eav-attributes-ui':
         specifier: workspace:*
         version: link:../../../platform/eav-attributes-ui
