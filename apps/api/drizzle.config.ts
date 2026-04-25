@@ -10,7 +10,7 @@ export default defineConfig({
     '../../packages/platform/audit/api/schema/index.ts',
     // Platform packages
     '../../packages/platform/notification-channels/schema/notifications.ts',
-    '../../packages/platform/automations/api/schema/index.ts',
+    '../../packages/addons/automations/api/schema/index.ts',
     '../../packages/platform/notifications/api/schema/index.ts',
     '../../packages/addons/workflows/api/schema/index.ts',
     '../../packages/platform/taxonomy/api/schema/index.ts',

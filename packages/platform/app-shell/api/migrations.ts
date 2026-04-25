@@ -38,7 +38,7 @@ export function platformMigrationSources(
     at('packages/platform/audit/api', '@packages/audit'),
     at('packages/platform/notification-channels/api', '@packages/notification-channels'),
     at('packages/platform/notifications/api', '@packages/notifications'),
-    at('packages/platform/automations/api', '@packages/automations'),
+    at('packages/addons/automations/api', '@packages/automations'),
     at('packages/addons/workflows/api', '@packages/workflows'),
     at('packages/platform/taxonomy/api', '@packages/taxonomy'),
     at('packages/platform/user-preferences', '@packages/user-preferences'),
