@@ -37,6 +37,7 @@
     "@packages/entity-layout": "workspace:*",
     "@packages/entity-relations": "workspace:*",
     "@packages/events": "workspace:*",
+    "@packages/hierarchy": "workspace:*",
     "@packages/logger": "workspace:*",
     "@packages/media": "workspace:*",
     "@packages/notes": "workspace:*",

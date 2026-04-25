@@ -173,6 +173,9 @@ importers:
       '@packages/notifications':
         specifier: workspace:*
         version: link:../../packages/platform/notifications/api
+      '@packages/orderable':
+        specifier: workspace:*
+        version: link:../../packages/addons/orderable/api
       '@packages/queue':
         specifier: workspace:*
         version: link:../../packages/platform/queue/api
@@ -666,6 +669,9 @@ importers:
       '@packages/events':
         specifier: workspace:*
         version: link:../../packages/core/events
+      '@packages/hierarchy':
+        specifier: workspace:*
+        version: link:../../packages/addons/hierarchy/api
       '@packages/logger':
         specifier: workspace:*
         version: link:../../packages/core/logger
@@ -4356,9 +4362,6 @@ importers:
       '@packages/events':
         specifier: workspace:*
         version: link:../../../core/events
-      '@packages/hierarchy':
-        specifier: workspace:*
-        version: link:../../../addons/hierarchy/api
       '@packages/logger':
         specifier: workspace:*
         version: link:../../../core/logger
@@ -4371,9 +4374,6 @@ importers:
       '@packages/notifications':
         specifier: workspace:*
         version: link:../../notifications/api
-      '@packages/orderable':
-        specifier: workspace:*
-        version: link:../../../addons/orderable/api
       '@packages/queue':
         specifier: workspace:*
         version: link:../../queue/api
@@ -4383,9 +4383,6 @@ importers:
       '@packages/settings':
         specifier: workspace:*
         version: link:../../settings/api
-      '@packages/taxonomy':
-        specifier: workspace:*
-        version: link:../../../addons/taxonomy/api
       '@packages/user-preferences':
         specifier: workspace:*
         version: link:../../user-preferences
