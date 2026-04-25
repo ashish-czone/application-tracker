@@ -1,28 +1,21 @@
 import { Module, type OnModuleInit } from '@nestjs/common';
 import { EntityEngineModule, LookupResolverService } from '@packages/entity-engine';
-import { UserRolesRelationHandler } from '@packages/rbac';
-import { CredentialsRelationHandler } from '@packages/auth';
 import { users } from '@packages/database';
 import { ContactResolverRegistry } from '@packages/notifications';
 import { OrgUnitsModule } from '@packages/org-units';
 import {
+  USERS_CONFIG,
   UsersService,
   UsersController,
-  createUsersEntityConfig,
 } from '@packages/users';
 import { AppUsersService } from './app-users.service';
 
 /**
- * App-level users module for apps/recruit. Wires the users entity library
- * with the app's auth and rbac relation handlers and registers the notification
- * contact resolvers and lookup target. No UniqueCheckService — recruit relies
- * on the DB-level partial unique index on users.email WHERE deleted_at IS NULL.
+ * App-level users module for apps/recruit. Registers the platform users
+ * config with the entity-engine and wires the notifications contact
+ * resolvers + lookup target. UsersService owns the full write path —
+ * no per-app handler injection.
  */
-const USERS_CONFIG = createUsersEntityConfig({
-  credentialsHandler: {} as any,
-  rolesHandler: {} as any,
-});
-
 @Module({
   imports: [EntityEngineModule.forEntity(USERS_CONFIG), OrgUnitsModule],
   controllers: [UsersController],
@@ -34,16 +27,9 @@ export class UsersModule implements OnModuleInit {
     private readonly contactResolverRegistry: ContactResolverRegistry,
     private readonly usersService: UsersService,
     private readonly lookupResolver: LookupResolverService,
-    private readonly credentialsHandler: CredentialsRelationHandler,
-    private readonly rolesHandler: UserRolesRelationHandler,
   ) {}
 
   onModuleInit() {
-    const credsRel = USERS_CONFIG.relationships!.find((r) => r.name === 'credentials')!;
-    credsRel.handler = this.credentialsHandler;
-    const rolesRel = USERS_CONFIG.relationships!.find((r) => r.name === 'roles')!;
-    rolesRel.handler = this.rolesHandler;
-
     this.contactResolverRegistry.register('email', (userId) => this.usersService.getEmail(userId));
     this.contactResolverRegistry.register('whatsapp', (userId) => this.usersService.getPhone(userId));
 
