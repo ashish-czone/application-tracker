@@ -24,6 +24,7 @@ export interface WorkflowExtension {
     label: string;
     color?: string;
     sortOrder: number;
+    isSystem?: boolean;
   }): Promise<{ id: string }>;
 
   /** Create a transition between states. */

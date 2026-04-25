@@ -15,6 +15,13 @@
       "when": 1777116142576,
       "tag": "0001_blushing_richard_fisk",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1777124207286,
+      "tag": "0002_wooden_lady_bullseye",
+      "breakpoints": true
     }
   ]
 }
