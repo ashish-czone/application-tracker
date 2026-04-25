@@ -31,7 +31,7 @@ export function dtoGeneratedTemplate(ctx: GeneratorContext): string {
 
   return `import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 import { z } from 'zod';
-import { ${tableIdent} } from './schema/${tableIdent}';
+import { ${tableIdent} } from './schema/${entitySlug}';
 
 ${HEADER(entitySlug, `${entitySlug}.dto.ts`)}
 

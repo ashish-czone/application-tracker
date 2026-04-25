@@ -145,13 +145,17 @@ async function buildContext(args: {
     .filter(([, m]) => (m as any).fieldType === 'multi_user' || (m as any).fieldType === 'multi_lookup')
     .map(([key, m]) => ({ key, fieldType: (m as any).fieldType }));
 
+  // Convention: kebab-case slug → camelCase identifier for the Drizzle table
+  // (e.g. 'job-openings' → 'jobOpenings'). The schema FILE keeps kebab-case.
+  const tableIdent = entitySlug.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+
   return {
     entitySlug,
     domain,
     targetDir,
     singularPascal,
     pluralPascal,
-    tableIdent: entitySlug,    // convention: drizzle table identifier matches slug
+    tableIdent,
     configIdent,
     tagFields,
     multiValueFields,
