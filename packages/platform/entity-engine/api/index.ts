@@ -137,7 +137,6 @@ export type {
   FieldTypeSaveHookResult,
   FieldTypeSaveHooks,
   OnBeforeSaveHook,
-  OnTransactionalSaveHook,
   OnAfterSaveHook,
 } from './services/field-type-save-hook.registry';
 
