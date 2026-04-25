@@ -1,6 +1,6 @@
 import { sql, isNull } from 'drizzle-orm';
 import type { EntityConfig } from '@packages/entity-engine';
-import { evaluationAvgExpr, evaluationCountExpr } from '@packages/evaluations';
+import { evaluationAvgExpr, evaluationCountExpr, evaluationsFeature } from '@packages/evaluations';
 import { applications } from './schema/applications';
 import { jobOpenings } from '../job-openings/schema/job-openings';
 
@@ -11,7 +11,9 @@ export const APPLICATIONS_CONFIG: EntityConfig = {
   slug: 'applications',
 
   table: applications,
-  hasEvaluations: true,
+  features: {
+    ...evaluationsFeature(),
+  },
   systemColumns: ['id', 'createdAt', 'updatedAt', 'deletedAt', 'deletedBy', 'createdBy'],
 
   searchColumns: [],

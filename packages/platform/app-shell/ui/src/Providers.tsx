@@ -7,6 +7,7 @@ import {
   type ColumnRendererRegistration,
   type DetailTabPlugin,
   type EntityUIConfig,
+  type HeaderPlugin,
   type RightSidebarPanel,
 } from '@packages/entity-engine-ui';
 import { PipelineProgressInline } from '@packages/workflows-ui';
@@ -23,6 +24,7 @@ interface ProvidersProps {
   entityUIConfigs: unknown[];
   detailTabs: DetailTabPlugin[];
   rightSidebarPanels: RightSidebarPanel[];
+  headerPlugins: HeaderPlugin[];
   columnRenderers: Record<string, ColumnRendererRegistration>;
 }
 
@@ -54,6 +56,7 @@ export function Providers({
   entityUIConfigs,
   detailTabs,
   rightSidebarPanels,
+  headerPlugins,
   columnRenderers,
 }: ProvidersProps) {
   const renderers: Record<string, ColumnRendererRegistration> = {
@@ -77,6 +80,7 @@ export function Providers({
               entityUIConfigs={entityUIConfigs as EntityUIConfig[]}
               detailTabs={detailTabs}
               rightSidebarPanels={rightSidebarPanels}
+              headerPlugins={headerPlugins}
               columnRenderers={renderers}
             >
               <TaxonomyProvider apiFn={apiAny}>

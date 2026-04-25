@@ -1852,6 +1852,9 @@ importers:
       '@packages/address':
         specifier: workspace:*
         version: link:../../../packages/platform/address/api
+      '@packages/attachments':
+        specifier: workspace:*
+        version: link:../../../packages/addons/attachments/api
       '@packages/audit':
         specifier: workspace:*
         version: link:../../../packages/platform/audit/api
@@ -1882,6 +1885,9 @@ importers:
       '@packages/logger':
         specifier: workspace:*
         version: link:../../../packages/core/logger
+      '@packages/notes':
+        specifier: workspace:*
+        version: link:../../../packages/addons/notes/api
       '@packages/notification-channels':
         specifier: workspace:*
         version: link:../../../packages/platform/notification-channels/api
@@ -2058,6 +2064,9 @@ importers:
       '@nestjs/swagger':
         specifier: ^11.0.0
         version: 11.2.6(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)
+      '@packages/attachments':
+        specifier: workspace:*
+        version: link:../../../packages/addons/attachments/api
       '@packages/auth':
         specifier: workspace:*
         version: link:../../../packages/platform/auth/api
@@ -2100,6 +2109,9 @@ importers:
       '@packages/media':
         specifier: workspace:*
         version: link:../../../packages/platform/media
+      '@packages/notes':
+        specifier: workspace:*
+        version: link:../../../packages/addons/notes/api
       '@packages/notification-channels':
         specifier: workspace:*
         version: link:../../../packages/platform/notification-channels/api
@@ -2661,6 +2673,9 @@ importers:
       '@packages/common':
         specifier: workspace:*
         version: link:../../../core/common
+      '@packages/entity-engine-ui':
+        specifier: workspace:*
+        version: link:../../../platform/entity-engine/ui
       '@packages/field-types':
         specifier: workspace:*
         version: link:../../../platform/field-types
@@ -2878,6 +2893,9 @@ importers:
       '@packages/common':
         specifier: workspace:*
         version: link:../../../core/common
+      '@packages/entity-engine-ui':
+        specifier: workspace:*
+        version: link:../../../platform/entity-engine/ui
       '@packages/platform-ui':
         specifier: workspace:*
         version: link:../../../platform/platform-ui
@@ -3361,9 +3379,18 @@ importers:
 
   packages/addons/tasks/contracts:
     dependencies:
+      '@packages/attachments':
+        specifier: workspace:*
+        version: link:../../attachments/api
       '@packages/entity-engine-contract':
         specifier: workspace:*
         version: link:../../../platform/entity-engine/contracts
+      '@packages/notes':
+        specifier: workspace:*
+        version: link:../../notes/api
+      '@packages/taxonomy':
+        specifier: workspace:*
+        version: link:../../../platform/taxonomy/api
     devDependencies:
       typescript:
         specifier: ^5.7.0
@@ -4636,9 +4663,6 @@ importers:
       '@packages/eav-attributes-ui':
         specifier: workspace:*
         version: link:../../eav-attributes-ui
-      '@packages/taxonomy-ui':
-        specifier: workspace:*
-        version: link:../../taxonomy/ui
       '@packages/ui':
         specifier: workspace:*
         version: link:../../../core/ui
@@ -5523,6 +5547,9 @@ importers:
       '@packages/conditions-ui':
         specifier: workspace:*
         version: link:../../conditions-ui
+      '@packages/entity-engine-ui':
+        specifier: workspace:*
+        version: link:../../entity-engine/ui
       '@packages/ui':
         specifier: workspace:*
         version: link:../../../core/ui

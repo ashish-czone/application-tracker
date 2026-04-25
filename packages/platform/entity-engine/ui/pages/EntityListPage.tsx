@@ -51,10 +51,10 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Plugin views registered via EntityEngineProvider (calendar, map, timeline, etc.)
-  // Filtered by featureFlag against entity.features.
+  // Filtered by enabledFor against the entity registry entry.
   const pluginListViews = useMemo(() => {
-    return getListViews(entityType).filter((p) => !p.featureFlag || (entity.features as Record<string, unknown>)[p.featureFlag]);
-  }, [getListViews, entityType, entity.features]);
+    return getListViews(entityType).filter((p) => p.enabledFor?.(entity) ?? true);
+  }, [getListViews, entityType, entity]);
 
   // Active view: 'table' | 'board' | <plugin-key>. URL param ?view= drives it.
   const rawView = searchParams.get('view') ?? '';

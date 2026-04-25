@@ -1,4 +1,6 @@
 export { NotesModule } from './notes.module';
+export { NOTES_FEATURE_KEY, notesFeature, readNotesFeature } from './feature';
+export type { NotesFeatureConfig, NotesFeatureValue } from './feature';
 export { NotesService } from './services/notes.service';
 export { NOTES_PERMISSIONS } from './permissions';
 export type { Note, NoteMention, NoteAuthor, NoteWithAuthor } from './types';

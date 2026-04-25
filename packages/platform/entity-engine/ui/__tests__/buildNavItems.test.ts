@@ -25,9 +25,6 @@ function mk(
       hasTaxonomy: false,
       hasWorkflow: false,
       hasMedia: false,
-      hasNotes: false,
-      hasAttachments: false,
-      hasEvaluations: false,
     } as EntityRegistryEntry['features'],
   } as EntityRegistryEntry;
 }

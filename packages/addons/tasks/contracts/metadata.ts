@@ -1,3 +1,7 @@
+import { notesFeature } from '@packages/notes';
+import { attachmentsFeature } from '@packages/attachments';
+import { tagsFeature } from '@packages/taxonomy';
+
 /**
  * Task entity metadata — everything from defineEntity() that is pure data
  * (no Drizzle table, no lifecycle hooks, no SQL-bearing dataAccess scopes).
@@ -9,9 +13,11 @@ export const TASKS_METADATA = {
   pluralName: 'Tasks',
   onDelete: { mode: 'soft' } as const,
   timestamps: true,
-  hasNotes: true,
-  hasAttachments: true,
-  hasTags: { groupSlug: 'task-tags' },
+  features: {
+    ...notesFeature(),
+    ...attachmentsFeature(),
+    ...tagsFeature({ groupSlug: 'task-tags' }),
+  },
 
   extraPermissions: [
     { action: 'pickup', description: 'Pick up a pending task and move it to in-progress' },

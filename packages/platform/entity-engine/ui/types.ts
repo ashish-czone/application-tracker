@@ -18,6 +18,11 @@ export interface EntityRegistryEntry {
     boardFields?: string[];
     afterCreateRoute?: string;
   };
+  /**
+   * Engine-derived flags merged with the entity's opaque addon `features` bag.
+   * Engine keys are typed below; addon keys come from `EntityConfig.features`
+   * verbatim and are read by the addons that own them via their own readers.
+   */
   features: {
     softDelete: boolean;
     restore: boolean;
@@ -26,16 +31,13 @@ export interface EntityRegistryEntry {
     hasTaxonomy: boolean;
     hasWorkflow: boolean;
     hasMedia: boolean;
-    hasNotes: boolean;
-    hasAttachments: boolean;
-    hasEvaluations: boolean;
-    hasTags?: { groupSlug: string };
     workflowDiscriminator?: {
       key: string;
       label: string;
       options: { value: string; label: string }[];
       fieldName: string;
     } | null;
+    [key: string]: unknown;
   };
   relationships: {
     name: string;
@@ -75,8 +77,12 @@ export interface DetailTabPlugin {
   order: number;
   /** Component rendered when this tab is active */
   component: ComponentType<{ entityType: string; entityId: string }>;
-  /** If set, tab only shows when entity.features[featureFlag] is truthy */
-  featureFlag?: string;
+  /**
+   * Predicate that decides whether this tab applies to a given entity. Read
+   * the entity's opaque `features` bag (via the owning addon's reader) and
+   * return true to show the tab. Omit to show on every entity.
+   */
+  enabledFor?: (entity: EntityRegistryEntry) => boolean;
 }
 
 /** Custom view mode for entity list pages (e.g. calendar, map, timeline) */
@@ -91,8 +97,12 @@ export interface ListViewPlugin {
   order: number;
   /** Component rendered when this view is active. Receives the entity type; should fetch records via useEntityHooks. */
   component: ComponentType<{ entityType: string }>;
-  /** If set, view only shows when entity.features[featureFlag] is truthy */
-  featureFlag?: string;
+  /**
+   * Predicate that decides whether this view applies to a given entity.
+   * Read the entity's opaque `features` bag (via the owning addon's reader)
+   * and return true to show the view. Omit to show on every entity.
+   */
+  enabledFor?: (entity: EntityRegistryEntry) => boolean;
 }
 
 /** Panel rendered in the right sidebar of entity detail pages */
@@ -105,10 +115,34 @@ export interface RightSidebarPanel {
   component: ComponentType<{ entityType: string; entityId: string }>;
   /** Sort order (lower = higher on page) */
   order: number;
-  /** If set, panel only shows when entity.features[featureFlag] is truthy */
-  featureFlag?: string;
+  /**
+   * Predicate that decides whether this panel applies to a given entity.
+   * Read the entity's opaque `features` bag (via the owning addon's reader)
+   * and return true to show the panel. Omit to show on every entity.
+   */
+  enabledFor?: (entity: EntityRegistryEntry) => boolean;
   /** Whether the panel starts collapsed */
   defaultCollapsed?: boolean;
+}
+
+/**
+ * Plugin rendered in the entity detail-page header (e.g. tag chip rows,
+ * status banners, ownership ribbons). Sits between the title block and the
+ * tabs. Plugins read the entity row + opaque feature bag and decide whether
+ * to render via `enabledFor`.
+ */
+export interface HeaderPlugin {
+  /** Unique plugin key */
+  key: string;
+  /** Component rendered. Receives the entity type, id, and the loaded row. */
+  component: ComponentType<{ entityType: string; entityId: string; entity: Record<string, unknown> }>;
+  /** Sort order (lower = first) */
+  order: number;
+  /**
+   * Predicate that decides whether this header plugin applies to the entity.
+   * Omit to render on every entity.
+   */
+  enabledFor?: (entity: EntityRegistryEntry) => boolean;
 }
 
 /** Frontend-side entity UI config (supplements the backend registry) */
@@ -119,6 +153,8 @@ export interface EntityUIConfig {
   detailTabs?: DetailTabPlugin[];
   /** Panels rendered in the right sidebar of the detail page */
   rightSidebarPanels?: RightSidebarPanel[];
+  /** Header plugins rendered between the title block and the detail tabs */
+  headerPlugins?: HeaderPlugin[];
   /** Entity-specific list view modes (merged with global list views from provider) */
   listViews?: ListViewPlugin[];
 }

@@ -1,4 +1,7 @@
 import { describe, it, expect, expectTypeOf } from 'vitest';
+import { readNotesFeature } from '@packages/notes';
+import { readAttachmentsFeature } from '@packages/attachments';
+import { readTagsFeature } from '@packages/taxonomy';
 import { TASKS_FIELDS, TASKS_METADATA, tasksRoutes } from '../index';
 import type { Task, TaskCreateInput, TaskUpdateInput, TaskStatus, TaskPriority } from '../index';
 
@@ -19,7 +22,12 @@ describe('TASKS_METADATA', () => {
   it('declares the slug and soft-delete behavior the api relies on', () => {
     expect(TASKS_METADATA.slug).toBe('tasks');
     expect(TASKS_METADATA.onDelete).toEqual({ mode: 'soft' });
-    expect(TASKS_METADATA.hasTags).toEqual({ groupSlug: 'task-tags' });
+  });
+
+  it('opts in to notes, attachments, and tags via the addon feature helpers', () => {
+    expect(readNotesFeature(TASKS_METADATA.features)?.enabled).toBe(true);
+    expect(readAttachmentsFeature(TASKS_METADATA.features)?.enabled).toBe(true);
+    expect(readTagsFeature(TASKS_METADATA.features)?.groupSlug).toBe('task-tags');
   });
 
   it('exposes the six extra action permissions matching the workflow transitions', () => {

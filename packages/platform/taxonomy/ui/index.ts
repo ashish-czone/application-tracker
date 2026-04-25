@@ -43,6 +43,11 @@ export { useEntityTags, useSetEntityTags } from './hooks';
 export { createEntityTaxonomyApi, type EntityTaxonomyApi } from './services';
 export type { EntityTag, TagOption, ApiFn } from './types';
 
+// Feature contract + header plugin
+export { TAGS_FEATURE_KEY, readTagsFeature } from './feature';
+export type { TagsFeatureValue } from './feature';
+export { tagsHeaderPlugin } from './plugins';
+
 export type {
   TaxonomyApiFn,
   TagGroup,

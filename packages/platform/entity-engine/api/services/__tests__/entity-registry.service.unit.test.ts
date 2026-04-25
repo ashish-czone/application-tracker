@@ -162,71 +162,6 @@ describe('EntityRegistryService', () => {
     expect(entries[0].features.customFields).toBe(false);
   });
 
-  it('exposes hasNotes flag in features', () => {
-    registry.register(mockConfig({
-      entityType: 'with_notes',
-      slug: 'with-notes',
-      hasNotes: true,
-    }));
-
-    const entries = registry.getRegistryEntries();
-    expect(entries[0].features.hasNotes).toBe(true);
-  });
-
-  it('hasNotes defaults to false in features', () => {
-    registry.register(mockConfig());
-
-    const entries = registry.getRegistryEntries();
-    expect(entries[0].features.hasNotes).toBe(false);
-  });
-
-  it('exposes hasAttachments flag and config in features', () => {
-    registry.register(mockConfig({
-      entityType: 'with_attachments',
-      slug: 'with-attachments',
-      hasAttachments: true,
-      attachmentConfig: {
-        maxFileSize: 5 * 1024 * 1024,
-        acceptedMimeTypes: ['image/*', 'application/pdf'],
-        deleteMode: 'hard',
-      },
-    }));
-
-    const entries = registry.getRegistryEntries();
-    expect(entries[0].features.hasAttachments).toBe(true);
-    expect(entries[0].features.attachmentConfig).toEqual({
-      maxFileSize: 5 * 1024 * 1024,
-      acceptedMimeTypes: ['image/*', 'application/pdf'],
-      deleteMode: 'hard',
-    });
-  });
-
-  it('hasAttachments defaults to false in features', () => {
-    registry.register(mockConfig());
-
-    const entries = registry.getRegistryEntries();
-    expect(entries[0].features.hasAttachments).toBe(false);
-    expect(entries[0].features.attachmentConfig).toBeUndefined();
-  });
-
-  it('exposes hasEvaluations flag in features', () => {
-    registry.register(mockConfig({
-      entityType: 'with_evaluations',
-      slug: 'with-evaluations',
-      hasEvaluations: true,
-    }));
-
-    const entries = registry.getRegistryEntries();
-    expect(entries[0].features.hasEvaluations).toBe(true);
-  });
-
-  it('hasEvaluations defaults to false in features', () => {
-    registry.register(mockConfig());
-
-    const entries = registry.getRegistryEntries();
-    expect(entries[0].features.hasEvaluations).toBe(false);
-  });
-
   it('exposes adminConfigurable flag in features', () => {
     registry.register(mockConfig({
       entityType: 'with_admin',
@@ -245,22 +180,34 @@ describe('EntityRegistryService', () => {
     expect(entries[0].features.adminConfigurable).toBe(false);
   });
 
-  it('exposes hasTags groupSlug in features when set', () => {
+  it('forwards opaque addon features bag verbatim', () => {
     registry.register(mockConfig({
-      entityType: 'with_tags',
-      slug: 'with-tags',
-      hasTags: { groupSlug: 'task-tags' },
+      entityType: 'with_addons',
+      slug: 'with-addons',
+      features: {
+        notes: { enabled: true },
+        attachments: { enabled: true, maxFileSize: 5 * 1024 * 1024, deleteMode: 'hard' },
+        tags: { groupSlug: 'task-tags' },
+      },
     }));
 
     const entries = registry.getRegistryEntries();
-    expect(entries[0].features.hasTags).toEqual({ groupSlug: 'task-tags' });
+    expect(entries[0].features.notes).toEqual({ enabled: true });
+    expect(entries[0].features.attachments).toEqual({
+      enabled: true,
+      maxFileSize: 5 * 1024 * 1024,
+      deleteMode: 'hard',
+    });
+    expect(entries[0].features.tags).toEqual({ groupSlug: 'task-tags' });
   });
 
-  it('hasTags defaults to undefined in features', () => {
+  it('addon feature keys default to undefined when bag is empty', () => {
     registry.register(mockConfig());
 
     const entries = registry.getRegistryEntries();
-    expect(entries[0].features.hasTags).toBeUndefined();
+    expect(entries[0].features.notes).toBeUndefined();
+    expect(entries[0].features.attachments).toBeUndefined();
+    expect(entries[0].features.tags).toBeUndefined();
   });
 
   // ---------------------------------------------------------------------------
