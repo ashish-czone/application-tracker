@@ -3747,6 +3747,9 @@ importers:
       '@packages/conditions-ui':
         specifier: workspace:*
         version: link:../../../platform/conditions-ui
+      '@packages/domains':
+        specifier: workspace:*
+        version: link:../../../platform/domains
       '@packages/entity-engine-ui':
         specifier: workspace:*
         version: link:../../../platform/entity-engine/ui

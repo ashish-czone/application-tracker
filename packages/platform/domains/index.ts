@@ -35,6 +35,12 @@ export type DomainDetailPageComponent = ComponentType<Record<string, never>>;
  * Sidebar menu entry contributed by a domain (or the platform shell).
  * Position controls whether the item renders before or after auto-generated
  * entity nav items. Children render as a collapsible group.
+ *
+ * Set `parent: '/some-path'` to nest this item as a child of an existing
+ * top-level item (typically the platform's `/management` group). The shell
+ * merges child entries into the matching parent's children array. If no
+ * parent matches, the item is rendered at top level. Parent items
+ * themselves should not set `parent`.
  */
 export interface MenuItem {
   path: string;
@@ -42,6 +48,7 @@ export interface MenuItem {
   icon: LucideIcon;
   permission?: string;
   position?: 'before' | 'after';
+  parent?: string;
   children?: MenuItem[];
 }
 

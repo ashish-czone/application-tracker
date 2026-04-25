@@ -48,6 +48,9 @@ export { TAGS_FEATURE_KEY, readTagsFeature } from './feature';
 export type { TagsFeatureValue } from './feature';
 export { tagsHeaderPlugin } from './plugins';
 
+// WebFeatureManifest entry — apps pass to WebShell.features
+export { taxonomyWeb } from './manifest';
+
 export type {
   TaxonomyApiFn,
   TagGroup,

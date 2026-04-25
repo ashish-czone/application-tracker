@@ -6,10 +6,38 @@ import type {
   HeaderPlugin,
   RightSidebarPanel,
 } from '@packages/entity-engine-ui';
+import type { MenuItem } from '@packages/domains';
 import { Providers } from './Providers';
 import { AppRouter } from './AppRouter';
 import { platformMenuItems } from './menu';
 import type { WebShellOptions } from './types';
+
+/**
+ * Merge entries that target an existing parent (via `parent: '/some-path'`)
+ * into that parent's children. Items without a matching parent fall through
+ * as top-level entries. Stable: parents preserve their original ordering;
+ * orphaned `parent`-keyed items append after the parent's existing children.
+ */
+function nestMenuItems(items: MenuItem[]): MenuItem[] {
+  const topLevel: MenuItem[] = [];
+  const orphaned: MenuItem[] = [];
+  for (const item of items) {
+    if (item.parent) orphaned.push(item);
+    else topLevel.push(item);
+  }
+  if (orphaned.length === 0) return topLevel;
+  return topLevel.map((parent) => {
+    const adopted = orphaned.filter((o) => o.parent === parent.path);
+    if (adopted.length === 0) return parent;
+    return {
+      ...parent,
+      children: [
+        ...(parent.children ?? []),
+        ...adopted.map(({ parent: _p, ...rest }) => rest),
+      ],
+    };
+  });
+}
 
 /**
  * Top-level component that composes the app shell from a list of domain
@@ -41,7 +69,8 @@ export function WebShell({
   const menuItems = useMemo(() => {
     const fromDomains = domains.flatMap((d) => d.menuItems ?? []);
     const fromFeatures = featureList.flatMap((f) => f.menuItems ?? []);
-    return [...fromDomains, ...platformMenuItems, ...fromFeatures, ...(extraMenuItems ?? [])];
+    const flat = [...fromDomains, ...platformMenuItems, ...fromFeatures, ...(extraMenuItems ?? [])];
+    return nestMenuItems(flat);
   }, [domains, featureList, extraMenuItems]);
 
   const detailTabs = useMemo<DetailTabPlugin[]>(() => {
