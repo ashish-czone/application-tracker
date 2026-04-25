@@ -4,6 +4,7 @@ import { Pool } from 'pg';
 import * as schema from './schema';
 
 export type DrizzleDB = NodePgDatabase<typeof schema>;
+export type DrizzleTx = Parameters<Parameters<DrizzleDB['transaction']>[0]>[0];
 
 @Injectable()
 export class DatabaseService implements OnModuleDestroy {

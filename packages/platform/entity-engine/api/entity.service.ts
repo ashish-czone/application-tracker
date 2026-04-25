@@ -15,7 +15,7 @@ import {
 } from '@packages/query-builder';
 import { buildSoftDeleteCondition } from '@packages/soft-delete';
 import { fieldTypeRegistry } from '@packages/field-types';
-import { DatabaseService } from '@packages/database';
+import { DatabaseService, type DrizzleTx } from '@packages/database';
 import { ScopeResolverRegistry, type ScopeAnchorMap } from '@packages/rbac';
 import { DomainEventEmitter } from '@packages/events';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
@@ -733,7 +733,7 @@ export class EntityService {
   // CREATE
   // ---------------------------------------------------------------------------
 
-  async create(payload: Record<string, unknown>, actorId: string): Promise<Record<string, unknown>> {
+  async create(payload: Record<string, unknown>, actorId: string, externalTx?: DrizzleTx): Promise<Record<string, unknown>> {
     const { config } = this;
     const data = { ...payload };
 
@@ -790,8 +790,10 @@ export class EntityService {
     // Extension entities (`extensionOf`) insert the parent row first, then the
     // child using the same `entityId` as its FK-also-PK. Both in one tx so a
     // failure on either side rolls back cleanly.
+    // If `externalTx` is passed, reuse it so caller-side composition (tags, multi-value
+    // writes done by per-entity services) commits atomically with the entity row.
     const ext = this.getExtensionMeta();
-    let row = await this.database.db.transaction(async (tx) => {
+    const createTxBody = async (tx: DrizzleTx) => {
       let inserted: any;
 
       if (ext) {
@@ -846,7 +848,11 @@ export class EntityService {
       }
 
       return inserted;
-    });
+    };
+
+    let row = externalTx
+      ? await createTxBody(externalTx)
+      : await this.database.db.transaction(createTxBody);
 
     // For extension entities the child row on its own is only half the entity.
     // Re-read via the joined findOneOrFail so snapshot/event/response see the
@@ -926,7 +932,7 @@ export class EntityService {
   // UPDATE
   // ---------------------------------------------------------------------------
 
-  async update(id: string, payload: Record<string, unknown>, actorId: string, accessCtx?: DataAccessContext): Promise<Record<string, unknown>> {
+  async update(id: string, payload: Record<string, unknown>, actorId: string, accessCtx?: DataAccessContext, externalTx?: DrizzleTx): Promise<Record<string, unknown>> {
     const { config } = this;
     const table = config.table as any;
 
@@ -1000,9 +1006,10 @@ export class EntityService {
 
     let eventPayload: { changes: string[]; before: Record<string, unknown>; after: Record<string, unknown> } | null = null;
 
-    // Phase 2: Transaction (entity row + EAV + relational writes)
+    // Phase 2: Transaction (entity row + EAV + relational writes).
+    // If `externalTx` is passed, reuse it so caller-side composition commits atomically.
     const ext = this.getExtensionMeta();
-    const updated = await this.database.db.transaction(async (tx) => {
+    const updateTxBody = async (tx: DrizzleTx) => {
       // Read before snapshot inside tx for consistency. For extensions the
       // child row alone is only half the entity — read the joined shape so
       // the snapshot includes projected parent columns.
@@ -1087,7 +1094,11 @@ export class EntityService {
       }
 
       return row;
-    });
+    };
+
+    const updated = externalTx
+      ? await updateTxBody(externalTx)
+      : await this.database.db.transaction(updateTxBody);
 
     // Phase 3: onAfterSave hooks (fire-and-forget)
     for (const [key, value] of Object.entries(allUpdateFields)) {
@@ -1332,7 +1343,7 @@ export class EntityService {
   // SOFT DELETE
   // ---------------------------------------------------------------------------
 
-  async softDelete(id: string, actorId: string, accessCtx?: DataAccessContext): Promise<void> {
+  async softDelete(id: string, actorId: string, accessCtx?: DataAccessContext, externalTx?: DrizzleTx): Promise<void> {
     const { config } = this;
     const entity = await this.findOneOrFail(id, accessCtx);
 
@@ -1340,14 +1351,15 @@ export class EntityService {
     // usually has no deletedAt of its own. Soft-delete therefore flips the
     // parent's columns; the child row is left as-is so a restore is a clean
     // reverse.
+    const exec = externalTx ?? this.database.db;
     const ext = this.getExtensionMeta();
     if (ext) {
-      await this.database.db
+      await exec
         .update(ext.parentTable as any)
         .set({ deletedAt: new Date(), deletedBy: actorId } as any)
         .where(withTenant(ext.parentTable as any, eq(ext.parentIdColumn, id)));
     } else {
-      await this.database.db
+      await exec
         .update(config.table as any)
         .set({ deletedAt: new Date(), deletedBy: actorId } as any)
         .where(withTenant(config.table as any, eq((config.table as any).id, id)));
