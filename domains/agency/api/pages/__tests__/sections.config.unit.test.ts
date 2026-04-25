@@ -4,7 +4,6 @@ import { SECTIONS_CONFIG } from '../sections.config';
 describe('SECTIONS_CONFIG', () => {
   it('declares the expected entity shape', () => {
     expect(SECTIONS_CONFIG.entityType).toBe('sections');
-    expect(SECTIONS_CONFIG.onDelete.mode).toBe('hard');
     expect(SECTIONS_CONFIG.defaultSort).toBe('order');
   });
 

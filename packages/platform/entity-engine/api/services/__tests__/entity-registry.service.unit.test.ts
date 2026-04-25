@@ -1,8 +1,18 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { pgTable, text, timestamp } from 'drizzle-orm/pg-core';
+import { softDeleteColumns } from '@packages/soft-delete';
 import { EntityRegistryService } from '../../entity-registry.service';
 import { FeatureDeriverRegistry } from '../feature-deriver.registry';
 import type { EntityConfig } from '../../types';
+
+const softTable = pgTable('test_soft', {
+  id: text('id').primaryKey(),
+  ...softDeleteColumns(),
+});
+
+const hardTable = pgTable('test_hard', {
+  id: text('id').primaryKey(),
+});
 
 function mockConfig(overrides: Partial<EntityConfig> = {}): EntityConfig {
   return {
@@ -10,9 +20,8 @@ function mockConfig(overrides: Partial<EntityConfig> = {}): EntityConfig {
     singularName: 'Test Entity',
     pluralName: 'Test Entities',
     slug: 'test-entities',
-    table: {} as any,
+    table: softTable as any,
     systemColumns: ['id', 'deletedAt', 'deletedBy'],
-    onDelete: { mode: 'soft' },
     searchColumns: [],
     defaultSort: 'createdAt',
     sortableColumns: {},
@@ -87,7 +96,7 @@ describe('EntityRegistryService', () => {
       singularName: 'Candidate',
       pluralName: 'Candidates',
       slug: 'candidates',
-      table: { deletedAt: {} } as any,
+      table: softTable as any,
       ui: { icon: 'users', nameField: ['firstName', 'lastName'] },
       fieldMeta: {
         skills: { label: 'Skills', section: 'details', sortOrder: 0, fieldType: 'tags', tagGroupSlug: 'candidate-skills' },
@@ -119,16 +128,16 @@ describe('EntityRegistryService', () => {
     expect(entry.relationships[0].foreignKey).toBe('candidateId');
   });
 
-  it('derives softDelete feature from onDelete.mode', () => {
-    registry.register(mockConfig({ onDelete: { mode: 'soft' } }));
+  it('derives softDelete feature from schema (table has softDeleteColumns)', () => {
+    registry.register(mockConfig({ table: softTable as any }));
 
     const entries = registry.getRegistryEntries();
     expect(entries[0].features.softDelete).toBe(true);
     expect(entries[0].features.restore).toBe(true);
   });
 
-  it('softDelete feature is false when onDelete.mode is not soft', () => {
-    registry.register(mockConfig({ onDelete: { mode: 'hard' } }));
+  it('softDelete feature is false when schema lacks softDeleteColumns', () => {
+    registry.register(mockConfig({ table: hardTable as any }));
 
     const entries = registry.getRegistryEntries();
     expect(entries[0].features.softDelete).toBe(false);

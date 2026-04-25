@@ -296,7 +296,6 @@ describe('Entity Engine (integration)', () => {
       table: {} as any,
       fieldMeta: {},
       sections: [],
-      onDelete: { mode: 'soft' as const },
       ...overrides,
     });
 

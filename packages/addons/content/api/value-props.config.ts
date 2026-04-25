@@ -6,7 +6,6 @@ export const VALUE_PROPS_CONFIG = defineEntity({
   slug: 'value-props',
   singularName: 'Value Proposition',
   pluralName: 'Value Propositions',
-  onDelete: { mode: 'soft' },
   timestamps: true,
   adminConfigurable: true,
 

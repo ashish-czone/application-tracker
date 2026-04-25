@@ -27,7 +27,6 @@ describe('USERS_CONFIG', () => {
     expect(USERS_CONFIG.slug).toBe('users');
     expect(USERS_CONFIG.singularName).toBe('User');
     expect(USERS_CONFIG.pluralName).toBe('Users');
-    expect(USERS_CONFIG.onDelete.mode).toBe('soft');
   });
 
   it('declares email, firstName, lastName, phone, userType as code-defined fields', () => {

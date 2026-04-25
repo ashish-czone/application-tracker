@@ -6,7 +6,6 @@ export const SERVICES_CONFIG = defineEntity({
   slug: 'services',
   singularName: 'Service',
   pluralName: 'Services',
-  onDelete: { mode: 'soft' },
   timestamps: true,
   adminConfigurable: true,
 

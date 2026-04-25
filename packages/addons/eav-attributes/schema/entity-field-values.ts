@@ -1,8 +1,7 @@
 import { pgTable, text, timestamp, boolean, numeric, date, uniqueIndex, index } from 'drizzle-orm/pg-core';
-import { randomUUID } from 'crypto';
 
 export const entityFieldValues = pgTable('entity_field_values', {
-  id: text('id').primaryKey().$defaultFn(() => randomUUID()),
+  id: text('id').primaryKey().$defaultFn(() => globalThis.crypto.randomUUID()),
   entityType: text('entity_type').notNull(),
   entityId: text('entity_id').notNull(),
   fieldKey: text('field_key').notNull(),

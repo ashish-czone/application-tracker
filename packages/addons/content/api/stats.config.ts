@@ -6,7 +6,6 @@ export const STATS_CONFIG = defineEntity({
   slug: 'stats',
   singularName: 'Stat',
   pluralName: 'Stats',
-  onDelete: { mode: 'soft' },
   timestamps: true,
   adminConfigurable: true,
 

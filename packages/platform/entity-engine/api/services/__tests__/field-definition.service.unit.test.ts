@@ -24,7 +24,6 @@ describe('FieldDefinitionService.populateFromRegistry', () => {
   it('mirrors code-defined fields into the cache so existing readers serve them transparently', () => {
     const config = defineEntity({
       table: tbl,
-      onDelete: { mode: 'hard' },
       slug: 'widgets',
       fields: {
         name: { type: 'text', label: 'Name' },
@@ -53,7 +52,6 @@ describe('FieldDefinitionService.populateFromRegistry', () => {
   it('wires picklist options so listByEntityWithOptions / getPicklistOptions work', () => {
     const config = defineEntity({
       table: tbl,
-      onDelete: { mode: 'hard' },
       slug: 'widgets',
       fields: {
         status: {
@@ -79,7 +77,6 @@ describe('FieldDefinitionService.populateFromRegistry', () => {
   it('is a no-op when the cache already holds entries for the entity — DB rows win', () => {
     const config = defineEntity({
       table: tbl,
-      onDelete: { mode: 'hard' },
       slug: 'widgets',
       fields: { name: { type: 'text', label: 'Name (code)' } },
       ui: { icon: 'Box' },
@@ -92,7 +89,6 @@ describe('FieldDefinitionService.populateFromRegistry', () => {
 
     const configB = defineEntity({
       table: tbl,
-      onDelete: { mode: 'hard' },
       slug: 'widgets',
       fields: { name: { type: 'text', label: 'Name (DB)' } },
       ui: { icon: 'Box' },
@@ -106,7 +102,6 @@ describe('FieldDefinitionService.populateFromRegistry', () => {
   it('does not cross-pollute entities — each entityType has its own bucket', () => {
     const widgets = defineEntity({
       table: tbl,
-      onDelete: { mode: 'hard' },
       slug: 'widgets',
       fields: { name: { type: 'text', label: 'Name' } },
       ui: { icon: 'Box' },
@@ -116,7 +111,6 @@ describe('FieldDefinitionService.populateFromRegistry', () => {
         id: text('id').primaryKey(),
         title: text('title').notNull(),
       }),
-      onDelete: { mode: 'hard' },
       slug: 'gizmos',
       fields: { title: { type: 'text', label: 'Title' } },
       ui: { icon: 'Box' },
@@ -145,7 +139,6 @@ describe('FieldDefinitionService.countByCategoryGroupSlug', () => {
   it('counts fieldType=category fields grouped by categoryGroupSlug', () => {
     const widgets = defineEntity({
       table: tbl,
-      onDelete: { mode: 'hard' },
       slug: 'widgets',
       fields: {
         name: { type: 'text', label: 'Name' },
@@ -156,7 +149,6 @@ describe('FieldDefinitionService.countByCategoryGroupSlug', () => {
     });
     const gizmos = defineEntity({
       table: pgTable('gizmos', { id: text('id').primaryKey(), title: text('title').notNull() }),
-      onDelete: { mode: 'hard' },
       slug: 'gizmos',
       fields: {
         homeCountry: { type: 'category', label: 'Home Country', categoryGroupSlug: 'countries' },
@@ -175,7 +167,6 @@ describe('FieldDefinitionService.countByCategoryGroupSlug', () => {
   it('ignores non-category fields and category fields with no slug', () => {
     const widgets = defineEntity({
       table: tbl,
-      onDelete: { mode: 'hard' },
       slug: 'widgets',
       fields: {
         name: { type: 'text', label: 'Name' },

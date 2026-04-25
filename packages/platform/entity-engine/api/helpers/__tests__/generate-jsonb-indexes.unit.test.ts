@@ -20,7 +20,6 @@ function mockConfig(overrides: Partial<EntityConfig> = {}): EntityConfig {
     slug: 'widgets',
     table: testTable as any,
     systemColumns: ['id', 'customFields'],
-    onDelete: { mode: 'soft' },
     searchColumns: [],
     defaultSort: 'createdAt',
     sortableColumns: {},

@@ -6,7 +6,6 @@ export const CLIENT_REGISTRATIONS_CONFIG = defineEntity({
   slug: 'client-registrations',
   singularName: 'Registration',
   pluralName: 'Registrations',
-  onDelete: { mode: 'hard' },
   timestamps: true,
 
   fields: {

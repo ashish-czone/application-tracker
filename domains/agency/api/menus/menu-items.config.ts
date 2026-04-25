@@ -84,7 +84,6 @@ export const menuItemConfig = defineEntity({
   slug: 'menu-items',
   singularName: 'Menu Item',
   pluralName: 'Menu Items',
-  onDelete: { mode: 'soft' },
   timestamps: true,
   hierarchy: true,
   orderable: true,

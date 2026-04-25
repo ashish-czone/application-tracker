@@ -6,7 +6,6 @@ export const CLIENT_CONTACTS_CONFIG = defineEntity({
   slug: 'client-contacts',
   singularName: 'Contact',
   pluralName: 'Contacts',
-  onDelete: { mode: 'hard' },
   timestamps: true,
 
   fields: {

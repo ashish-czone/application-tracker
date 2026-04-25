@@ -1,8 +1,7 @@
 import { pgTable, text, timestamp, jsonb, uniqueIndex, index } from 'drizzle-orm/pg-core';
-import { randomUUID } from 'crypto';
 
 export const userPreferences = pgTable('user_preferences', {
-  id: text('id').primaryKey().$defaultFn(() => randomUUID()),
+  id: text('id').primaryKey().$defaultFn(() => globalThis.crypto.randomUUID()),
   userId: text('user_id').notNull(),
   namespace: text('namespace').notNull(),
   key: text('key').notNull(),

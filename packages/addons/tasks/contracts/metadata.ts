@@ -11,7 +11,6 @@ export const TASKS_METADATA = {
   slug: 'tasks',
   singularName: 'Task',
   pluralName: 'Tasks',
-  onDelete: { mode: 'soft' } as const,
   timestamps: true,
   features: {
     ...notesFeature(),

@@ -1,10 +1,9 @@
 import { pgTable, text, integer, jsonb, timestamp, boolean, index } from 'drizzle-orm/pg-core';
-import { randomUUID } from 'crypto';
 import { softDeleteColumns } from '@packages/soft-delete';
 import { subscriptionPlans } from './subscription-plans';
 
 export const subscriptions = pgTable('subscriptions', {
-  id: text('id').primaryKey().$defaultFn(() => randomUUID()),
+  id: text('id').primaryKey().$defaultFn(() => globalThis.crypto.randomUUID()),
   clientId: text('client_id').notNull(),
   clientType: text('client_type'),
   planId: text('plan_id').notNull().references(() => subscriptionPlans.id),

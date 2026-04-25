@@ -6,7 +6,6 @@ export const SUBSCRIPTIONS_CONFIG = defineEntity({
   slug: 'subscriptions',
   singularName: 'Subscription',
   pluralName: 'Subscriptions',
-  onDelete: { mode: 'soft' },
   timestamps: true,
 
   fields: {

@@ -1,10 +1,9 @@
 import { pgTable, text, integer, jsonb, timestamp, index, uniqueIndex } from 'drizzle-orm/pg-core';
-import { randomUUID } from 'crypto';
 import { sql } from 'drizzle-orm';
 import { softDeleteColumns } from '@packages/soft-delete';
 
 export const orders = pgTable('orders', {
-  id: text('id').primaryKey().$defaultFn(() => randomUUID()),
+  id: text('id').primaryKey().$defaultFn(() => globalThis.crypto.randomUUID()),
   orderNumber: text('order_number').notNull(),
   status: text('status').notNull().default('draft'),
   clientId: text('client_id').notNull(),

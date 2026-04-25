@@ -13,8 +13,4 @@ describe('ORGANIZATIONS_CONFIG', () => {
   it('exposes the name field as the entity label', () => {
     expect(ORGANIZATIONS_CONFIG.lookup?.labelField).toBe('name');
   });
-
-  it('uses onDelete: restrict so engine-level deletes are rejected', () => {
-    expect(ORGANIZATIONS_CONFIG.onDelete.mode).toBe('restrict');
-  });
 });

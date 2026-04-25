@@ -46,7 +46,6 @@ export const COMPLIANCE_FILINGS_CONFIG = defineEntity({
   slug: 'compliance-filings',
   singularName: 'Compliance Filing',
   pluralName: 'Compliance Filings',
-  onDelete: { mode: 'soft' },
   timestamps: true,
 
   features: {

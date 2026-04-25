@@ -15,8 +15,10 @@ describe('COMPLIANCE_FILINGS_CONFIG', () => {
     expect(COMPLIANCE_FILINGS_CONFIG.slug).toBe('compliance-filings');
   });
 
-  it('soft-deletes filings rather than hard-deleting them', () => {
-    expect(COMPLIANCE_FILINGS_CONFIG.onDelete.mode).toBe('soft');
+  it('soft-deletes filings (schema includes deletedAt/deletedBy)', () => {
+    expect(COMPLIANCE_FILINGS_CONFIG.systemColumns).toEqual(
+      expect.arrayContaining(['deletedAt', 'deletedBy']),
+    );
   });
 
   it('exposes the pickup/submit/complete/reject/reopen/close extra permissions', () => {

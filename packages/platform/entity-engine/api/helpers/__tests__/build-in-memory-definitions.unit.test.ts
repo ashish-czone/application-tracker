@@ -20,7 +20,6 @@ const testTable = pgTable('widgets', {
 function makeConfig() {
   return defineEntity({
     table: testTable,
-    onDelete: { mode: 'soft' },
     slug: 'widgets',
     fields: {
       name: { type: 'text', label: 'Name', required: true, isLabel: true, quickCreate: true },
@@ -95,7 +94,6 @@ describe('buildInMemoryFields', () => {
   it('returns an empty list when the config has no fieldMeta entries', () => {
     const emptyConfig = defineEntity({
       table: pgTable('empty', { id: text('id').primaryKey() }),
-      onDelete: { mode: 'hard' },
       slug: 'empty',
       fields: {},
       ui: { icon: 'Box' },
@@ -106,7 +104,6 @@ describe('buildInMemoryFields', () => {
   it('honours computedColumns as additional skip entries', () => {
     const config = defineEntity({
       table: testTable,
-      onDelete: { mode: 'soft' },
       slug: 'widgets',
       fields: {
         name: { type: 'text', label: 'Name' },
@@ -147,7 +144,6 @@ describe('buildInMemoryLayout', () => {
         id: text('id').primaryKey(),
         name: text('name').notNull(),
       }),
-      onDelete: { mode: 'hard' },
       slug: 'small',
       fields: {
         name: { type: 'text', label: 'Name' },
@@ -283,7 +279,6 @@ describe('extensionOf support', () => {
   function makeParentConfig() {
     return defineEntity({
       table: parentTable,
-      onDelete: { mode: 'hard' },
       slug: 'parent-items',
       fields: {
         title: { type: 'text', label: 'Title', required: true },
@@ -297,7 +292,6 @@ describe('extensionOf support', () => {
   function makeChildConfig() {
     return defineEntity({
       table: childTable,
-      onDelete: { mode: 'hard' },
       slug: 'child-items',
       fields: {
         ruleId: { type: 'text', label: 'Rule' },
@@ -324,7 +318,6 @@ describe('extensionOf support', () => {
   it('retains parent field metadata (picklist options, label, fieldType)', () => {
     const parentWithPicklist = defineEntity({
       table: parentTable,
-      onDelete: { mode: 'hard' },
       slug: 'parent-items',
       fields: {
         title: { type: 'text', label: 'Title' },
@@ -353,7 +346,6 @@ describe('extensionOf support', () => {
   it('child field with the same fieldKey shadows the parent projection', () => {
     const childWithOverride = defineEntity({
       table: childTable,
-      onDelete: { mode: 'hard' },
       slug: 'child-items',
       fields: {
         // Child re-declares status with a different label
@@ -388,7 +380,6 @@ describe('extensionOf support', () => {
   it('allows child sections to reference parent projected fields by fieldKey', () => {
     const childWithSections = defineEntity({
       table: childTable,
-      onDelete: { mode: 'hard' },
       slug: 'child-items',
       fields: {
         ruleId: { type: 'text', label: 'Rule' },
