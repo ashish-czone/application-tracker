@@ -44,7 +44,7 @@ export function platformMigrationSources(
     at('packages/platform/user-preferences', '@packages/user-preferences'),
     at('packages/platform/entity-engine/api', '@packages/entity-engine'),
     at('packages/platform/entity-layout/api', '@packages/entity-layout'),
-    at('packages/platform/hierarchy/api', '@packages/hierarchy'),
+    at('packages/addons/hierarchy/api', '@packages/hierarchy'),
 
     // Addons — depend on core + platform.
     at('packages/addons/tenancy', '@packages/tenancy'),
