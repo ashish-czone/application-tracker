@@ -6,7 +6,6 @@ export const CLIENT_LOGOS_CONFIG = defineEntity({
   slug: 'client-logos',
   singularName: 'Client Logo',
   pluralName: 'Client Logos',
-  onDelete: { mode: 'soft' },
   timestamps: true,
   adminConfigurable: true,
 

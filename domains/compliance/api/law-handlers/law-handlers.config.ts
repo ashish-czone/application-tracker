@@ -6,7 +6,6 @@ export const LAW_HANDLERS_CONFIG = defineEntity({
   slug: 'law-handlers',
   singularName: 'Law Handler',
   pluralName: 'Law Handlers',
-  onDelete: { mode: 'hard' },
   timestamps: true,
 
   fields: {

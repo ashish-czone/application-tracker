@@ -54,7 +54,6 @@ export const USERS_CONFIG: EntityConfig<typeof users> = defineEntity({
   slug: 'users',
   singularName: 'User',
   pluralName: 'Users',
-  onDelete: { mode: 'soft' },
   timestamps: true,
 
   fields: {

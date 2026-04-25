@@ -16,7 +16,6 @@ export const SECTIONS_CONFIG = defineEntity({
   slug: 'sections',
   singularName: 'Section',
   pluralName: 'Sections',
-  onDelete: { mode: 'hard' },
   timestamps: true,
   customFields: true,
 

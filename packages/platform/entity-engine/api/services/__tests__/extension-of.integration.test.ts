@@ -56,7 +56,6 @@ function buildParentConfig(): EntityConfig {
     slug: 'ext-tasks',
     table: parentTasks,
     systemColumns: ['id', 'createdAt', 'updatedAt', 'deletedAt', 'deletedBy', 'createdBy'],
-    onDelete: { mode: 'soft' },
     searchColumns: [parentTasks.title],
     defaultSort: 'createdAt',
     sortableColumns: {
@@ -84,7 +83,6 @@ function buildChildConfig(): EntityConfig {
     slug: 'ext-compliance-tasks',
     table: extChildTable,
     systemColumns: ['id', 'createdAt', 'updatedAt', 'taskId'],
-    onDelete: { mode: 'hard' },
     searchColumns: [],
     defaultSort: 'createdAt',
     sortableColumns: {

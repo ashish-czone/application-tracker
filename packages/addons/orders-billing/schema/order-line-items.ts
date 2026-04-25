@@ -1,9 +1,8 @@
 import { pgTable, text, integer, jsonb, timestamp, index } from 'drizzle-orm/pg-core';
-import { randomUUID } from 'crypto';
 import { orders } from './orders';
 
 export const orderLineItems = pgTable('order_line_items', {
-  id: text('id').primaryKey().$defaultFn(() => randomUUID()),
+  id: text('id').primaryKey().$defaultFn(() => globalThis.crypto.randomUUID()),
   orderId: text('order_id').notNull().references(() => orders.id, { onDelete: 'cascade' }),
   productId: text('product_id').notNull(),
   productType: text('product_type').notNull(),

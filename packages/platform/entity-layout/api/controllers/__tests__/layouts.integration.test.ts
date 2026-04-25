@@ -30,7 +30,6 @@ describe('LayoutsController (integration)', () => {
         table: {} as any,
         fieldMeta: {},
         sections: [],
-        onDelete: { mode: 'soft' as const },
         adminConfigurable: true,
       } as any);
     }

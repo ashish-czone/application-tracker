@@ -6,7 +6,6 @@ export const PAGES_CONFIG = defineEntity({
   slug: 'pages',
   singularName: 'Page',
   pluralName: 'Pages',
-  onDelete: { mode: 'soft' },
   timestamps: true,
 
   fields: {

@@ -6,7 +6,6 @@ export const TESTIMONIALS_CONFIG = defineEntity({
   slug: 'testimonials',
   singularName: 'Testimonial',
   pluralName: 'Testimonials',
-  onDelete: { mode: 'soft' },
   timestamps: true,
   adminConfigurable: true,
 

@@ -1,8 +1,7 @@
 import { pgTable, text, timestamp } from 'drizzle-orm/pg-core';
-import { randomUUID } from 'crypto';
 
 export const tenants = pgTable('tenants', {
-  id: text('id').primaryKey().$defaultFn(() => randomUUID()),
+  id: text('id').primaryKey().$defaultFn(() => globalThis.crypto.randomUUID()),
   slug: text('slug').notNull().unique(),
   name: text('name').notNull(),
   databaseUrl: text('database_url').notNull(),

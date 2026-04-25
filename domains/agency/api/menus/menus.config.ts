@@ -6,7 +6,6 @@ export const MENU_CONFIG = defineEntity({
   slug: 'menus',
   singularName: 'Menu',
   pluralName: 'Menus',
-  onDelete: { mode: 'soft' },
   timestamps: true,
   adminConfigurable: true,
 

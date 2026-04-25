@@ -6,7 +6,6 @@ describe('PAGES_CONFIG', () => {
     expect(PAGES_CONFIG.entityType).toBe('pages');
     expect(PAGES_CONFIG.singularName).toBe('Page');
     expect(PAGES_CONFIG.pluralName).toBe('Pages');
-    expect(PAGES_CONFIG.onDelete.mode).toBe('soft');
     expect(PAGES_CONFIG.defaultSort).toBe('createdAt');
   });
 

@@ -16,9 +16,10 @@ import { text, timestamp } from 'drizzle-orm/pg-core';
  * - `deleted_at` — timestamptz, nullable. NULL means the row is live.
  * - `deleted_by` — text, nullable. Actor id that performed the soft-delete.
  *
- * Entity-engine's `defineEntity({ onDelete: { mode: 'soft' } })` requires these
- * columns. Services that wrap `createSoftDeleteExecutor()` manually also need
- * them. For `mode: 'hard'` or `mode: 'restrict'` entities, do NOT spread this.
+ * Entity-engine's `defineEntity()` treats any table that spreads these as
+ * soft-deletable — schema is the source of truth, no config flag. Services
+ * that wrap `createSoftDeleteExecutor()` manually also need them. Tables
+ * that should hard-delete (or be undeletable) simply don't spread this.
  */
 export function softDeleteColumns() {
   return {

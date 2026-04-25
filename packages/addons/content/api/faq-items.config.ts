@@ -6,7 +6,6 @@ export const FAQ_ITEMS_CONFIG = defineEntity({
   slug: 'faq-items',
   singularName: 'FAQ Item',
   pluralName: 'FAQ Items',
-  onDelete: { mode: 'soft' },
   timestamps: true,
   adminConfigurable: true,
 

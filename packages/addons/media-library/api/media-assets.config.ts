@@ -17,7 +17,6 @@ export const MEDIA_ASSETS_CONFIG = defineEntity({
   slug: 'media-assets',
   singularName: 'Media asset',
   pluralName: 'Media library',
-  onDelete: { mode: 'soft' },
   timestamps: true,
 
   fields: {

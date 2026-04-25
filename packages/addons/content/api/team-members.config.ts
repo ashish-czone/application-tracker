@@ -6,7 +6,6 @@ export const TEAM_MEMBERS_CONFIG = defineEntity({
   slug: 'team-members',
   singularName: 'Team Member',
   pluralName: 'Team Members',
-  onDelete: { mode: 'soft' },
   timestamps: true,
   adminConfigurable: true,
 

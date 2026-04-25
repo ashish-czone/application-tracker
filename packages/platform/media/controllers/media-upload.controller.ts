@@ -16,6 +16,18 @@ import { MediaService } from '../services/media.service';
 import type { MediaFile } from '../types';
 
 /**
+ * Subset of Express.Multer.File we actually use. Defined locally to avoid
+ * pulling `@types/multer` into transitive consumers (frontend tsc -b paths
+ * resolve into this file even though no frontend code imports it).
+ */
+interface UploadedFileInfo {
+  buffer: Buffer;
+  originalname: string;
+  mimetype: string;
+  size: number;
+}
+
+/**
  * Generic media upload controller.
  *
  * Uploads files to temporary storage (tmp/) with validation
@@ -39,7 +51,7 @@ export class MediaUploadController {
     @Param('entityType') entityType: string,
     @Param('fieldName') fieldName: string,
     @Query('entityId') entityId: string | undefined,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile() file: UploadedFileInfo,
     @CurrentUser() user: JwtPayload,
   ): Promise<MediaFile> {
     if (!file) {

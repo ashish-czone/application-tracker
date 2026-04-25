@@ -14,6 +14,17 @@ import {
   type MediaAssetRecord,
 } from '../services/media-assets-upload.service';
 
+/**
+ * Subset of Express.Multer.File we actually use. Defined locally to avoid
+ * pulling `@types/multer` into transitive consumers.
+ */
+interface UploadedFileInfo {
+  buffer: Buffer;
+  originalname: string;
+  mimetype: string;
+  size: number;
+}
+
 @ApiTags('media-assets')
 @Controller('media-assets')
 export class MediaAssetsUploadController {
@@ -28,7 +39,7 @@ export class MediaAssetsUploadController {
       'Upload one file + create a MediaAsset row. Returns the asset including resolved URL and image dimensions.',
   })
   async upload(
-    @UploadedFile() file: Express.Multer.File | undefined,
+    @UploadedFile() file: UploadedFileInfo | undefined,
     @Body('altText') altText: string | undefined,
     @Body('caption') caption: string | undefined,
     @CurrentUser() user: JwtPayload,

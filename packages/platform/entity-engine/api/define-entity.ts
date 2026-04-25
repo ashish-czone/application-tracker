@@ -11,7 +11,6 @@ import type {
   DataAccessConfig,
   FieldMeta,
   FieldType,
-  OnDeleteConfig,
   SeedSectionInput,
   SetPicklistOptionInput,
   WorkflowFieldConfig,
@@ -135,15 +134,6 @@ export interface ModelDefinition<TTable extends PgTable = PgTable> {
 
   // --- Model behaviors ---
 
-  /**
-   * Deletion policy. Required on every entity — forces an explicit hard/soft/
-   * restrict choice rather than inferring from schema. See `OnDeleteConfig`.
-   *
-   * `mode: 'soft'` requires the Drizzle table to spread `...softDeleteColumns()`
-   * from `@packages/soft-delete`. `mode: 'hard' | 'restrict'` forbids those
-   * columns. Mismatches fail at defineEntity() time with a clear message.
-   */
-  onDelete: OnDeleteConfig;
   /** Enable timestamp tracking (createdAt/updatedAt columns) */
   timestamps?: boolean;
   /**
@@ -297,7 +287,6 @@ export interface ModelDefinition<TTable extends PgTable = PgTable> {
  * const candidateModel = defineEntity({
  *   table: candidates,
  *   slug: 'candidates',
- *   onDelete: { mode: 'soft' },
  *   fields: {
  *     firstName: { type: 'text', label: 'First Name', required: true, isLabel: true, searchable: true },
  *     email: { type: 'email', label: 'Email', unique: true, searchable: true },
@@ -332,30 +321,17 @@ export function defineEntity<TTable extends PgTable>(model: ModelDefinition<TTab
   // via an explicit defaultSort.
   let defaultSort = model.defaultSort ?? (model.orderable ? 'sortOrder' : 'createdAt');
 
-  // Validate onDelete policy against table shape + register soft-delete columns
-  // as system columns when the entity is soft-deletable.
+  // Soft-delete capability is derived from the table shape: any table that
+  // spreads `...softDeleteColumns()` from @packages/soft-delete is treated as
+  // soft-deletable. No EntityConfig flag — schema is the single source of
+  // truth, mirroring how Django infers behavior from the model fields.
   //
-  // Extension entities (`extensionOf`) are exempt from the table-shape check:
-  // soft-delete columns live on the parent table and the entity-service
-  // soft-delete / restore paths flip the parent's columns, not the child's.
-  // Requiring the child to spread softDeleteColumns would duplicate state the
-  // parent already owns (and nothing writes to).
+  // Extension entities (`extensionOf`) inherit soft-delete from the parent
+  // table; their own table doesn't carry the columns. Listing them as system
+  // columns here keeps the parent's surfaced deletedAt/deletedBy out of
+  // snapshots and forms.
   const softCols = hasSoftDeleteColumns(model.table);
-  if (!model.extensionOf) {
-    if (model.onDelete.mode === 'soft' && !softCols) {
-      throw new Error(
-        `defineEntity({ onDelete: { mode: 'soft' } }) for '${model.slug}' requires the table to spread ` +
-          `...softDeleteColumns() from @packages/soft-delete. Missing deletedAt / deletedBy columns.`,
-      );
-    }
-    if (model.onDelete.mode !== 'soft' && softCols) {
-      throw new Error(
-        `defineEntity({ onDelete: { mode: '${model.onDelete.mode}' } }) for '${model.slug}' is incompatible ` +
-          `with a table that spreads ...softDeleteColumns(). Either switch to mode 'soft' or remove the columns.`,
-      );
-    }
-  }
-  if (model.onDelete.mode === 'soft') {
+  if (softCols || model.extensionOf) {
     systemColumns.push('deletedAt', 'deletedBy');
   }
 
@@ -579,7 +555,6 @@ export function defineEntity<TTable extends PgTable>(model: ModelDefinition<TTab
     slug: model.slug,
     table: model.table,
     systemColumns,
-    onDelete: model.onDelete,
     searchColumns,
     defaultSort,
     sortableColumns,

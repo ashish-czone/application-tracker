@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { getTableColumns } from 'drizzle-orm';
 import type { PgColumn } from 'drizzle-orm/pg-core';
+import { hasSoftDeleteColumns } from '@packages/soft-delete';
 import type { EntityConfig, EntityRegistryEntry, ResolvedExtension } from './types';
 import { FeatureDeriverRegistry } from './services/feature-deriver.registry';
 
@@ -76,8 +77,10 @@ export class EntityRegistryService {
       ui: { ...config.ui, boardFields: uniqueBoardFields.length > 0 ? uniqueBoardFields : undefined },
       features: {
         // Engine-derived flags. Addons must not register keys with these names.
-        softDelete: config.onDelete.mode === 'soft',
-        restore: config.onDelete.mode === 'soft',
+        // Soft-delete capability comes from the schema (presence of
+        // softDeleteColumns) — schema is the source of truth, no config flag.
+        softDelete: hasSoftDeleteColumns(config.table),
+        restore: hasSoftDeleteColumns(config.table),
         customFields: !!config.customFields,
         adminConfigurable: !!config.adminConfigurable,
         hasTaxonomy: Object.values(config.fieldMeta).some(f => f.fieldType === 'tags'),

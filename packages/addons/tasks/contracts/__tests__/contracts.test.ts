@@ -19,9 +19,8 @@ describe('tasksRoutes', () => {
 });
 
 describe('TASKS_METADATA', () => {
-  it('declares the slug and soft-delete behavior the api relies on', () => {
+  it('declares the slug the api relies on', () => {
     expect(TASKS_METADATA.slug).toBe('tasks');
-    expect(TASKS_METADATA.onDelete).toEqual({ mode: 'soft' });
   });
 
   it('opts in to notes, attachments, and tags via the addon feature helpers', () => {

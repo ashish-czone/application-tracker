@@ -13,7 +13,6 @@ export const ORGANIZATIONS_CONFIG: EntityConfig<typeof organizations> = defineEn
   slug: 'organizations',
   singularName: 'Organization',
   pluralName: 'Organizations',
-  onDelete: { mode: 'restrict' },
   timestamps: true,
 
   fields: {
