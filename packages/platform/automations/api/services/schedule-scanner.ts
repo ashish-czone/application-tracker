@@ -11,8 +11,7 @@ import { AUTOMATION_EXECUTION_QUEUE } from '../automations.module';
 import { automationScheduled } from '../schema/automation-scheduled';
 import { automationSentLog } from '../schema/automation-sent-log';
 import { AutomationRuleService } from './automation-rule.service';
-import { EntityResolverRegistry } from '@packages/automation-contracts';
-import { buildConditions } from '../helpers/condition-builder';
+import { EntityResolverRegistry, buildConditions } from '@packages/automation-contracts';
 import type { AutomationRule, ScheduleDateOperator, ScheduleUnit } from '@packages/automation-contracts';
 
 /**
