@@ -21,7 +21,6 @@ function getTransitionConditions(transition: WorkflowTransition): Condition[] {
 export function TransitionConfigPanel({ transition, slug, onClose, entityFields = {} }: TransitionConfigPanelProps) {
   const [name, setName] = useState(transition.name);
   const [permissions, setPermissions] = useState(transition.requiredPermissions.join(', '));
-  const [guards, setGuards] = useState(transition.guardNames.join(', '));
   const [conditions, setConditions] = useState<Condition[]>(getTransitionConditions(transition));
   const [reasonOptions, setReasonOptions] = useState<string[]>(transition.reasonOptions ?? []);
   const [reasonRequired, setReasonRequired] = useState(transition.reasonRequired);
@@ -34,7 +33,6 @@ export function TransitionConfigPanel({ transition, slug, onClose, entityFields 
   useEffect(() => {
     setName(transition.name);
     setPermissions(transition.requiredPermissions.join(', '));
-    setGuards(transition.guardNames.join(', '));
     setConditions(getTransitionConditions(transition));
     setReasonOptions(transition.reasonOptions ?? []);
     setReasonRequired(transition.reasonRequired);
@@ -47,10 +45,6 @@ export function TransitionConfigPanel({ transition, slug, onClose, entityFields 
       .split(',')
       .map((p) => p.trim())
       .filter(Boolean);
-    const guardNames = guards
-      .split(',')
-      .map((g) => g.trim())
-      .filter(Boolean);
 
     const existingMeta = (transition.metadata as Record<string, unknown> | null) ?? {};
     const metadata = { ...existingMeta, conditions: conditions.length > 0 ? conditions : undefined };
@@ -60,7 +54,6 @@ export function TransitionConfigPanel({ transition, slug, onClose, entityFields 
       data: {
         name,
         requiredPermissions: requiredPermissions.length > 0 ? requiredPermissions : null,
-        guardNames: guardNames.length > 0 ? guardNames : null,
         reasonOptions: reasonOptions.length > 0 ? reasonOptions : null,
         reasonRequired,
         commentRequired,
@@ -78,7 +71,6 @@ export function TransitionConfigPanel({ transition, slug, onClose, entityFields 
   const hasChanges =
     name !== transition.name ||
     permissions !== transition.requiredPermissions.join(', ') ||
-    guards !== transition.guardNames.join(', ') ||
     JSON.stringify(conditions) !== JSON.stringify(getTransitionConditions(transition)) ||
     JSON.stringify(reasonOptions) !== JSON.stringify(transition.reasonOptions ?? []) ||
     reasonRequired !== transition.reasonRequired ||
@@ -137,18 +129,6 @@ export function TransitionConfigPanel({ transition, slug, onClose, entityFields 
             placeholder="Comma-separated, e.g., tasks.transition"
           />
           <p className="text-[10px] text-muted-foreground">Comma-separated permission names</p>
-        </div>
-
-        <div className="space-y-1.5">
-          <label className="text-xs font-medium text-muted-foreground">Guards</label>
-          <input
-            type="text"
-            value={guards}
-            onChange={(e) => setGuards(e.target.value)}
-            className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            placeholder="Comma-separated, e.g., not-same-actor"
-          />
-          <p className="text-[10px] text-muted-foreground">Comma-separated guard function names</p>
         </div>
 
         {/* Transition Reason */}

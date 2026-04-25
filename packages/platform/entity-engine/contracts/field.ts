@@ -49,7 +49,6 @@ export interface WorkflowStateDef {
 export interface WorkflowTargetDef {
   state: string;
   requiredPermissions?: string[];
-  guardNames?: string[];
   conditions?: Condition[];
   /** Require the actor to supply a reason (validated against `reasonOptions` if set). */
   reasonRequired?: boolean;

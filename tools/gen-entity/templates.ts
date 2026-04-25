@@ -80,18 +80,24 @@ export type ${singularPascal}Row = z.infer<typeof ${singularPascal}RowSchema>;
 // -----------------------------------------------------------------------------
 
 export function serviceTemplate(ctx: GeneratorContext): string {
-  const { entitySlug, singularPascal, pluralPascal } = ctx;
+  const { entitySlug, singularPascal, pluralPascal, pluralUpper, workflowFields } = ctx;
   const constLines: string[] = [`const ENTITY_TYPE = '${entitySlug}';`];
   const ctorParams: string[] = [
     `@Inject('ENTITY_SERVICE_${entitySlug}') private readonly entities: EntityService,`,
     `private readonly database: DatabaseService,`,
   ];
   const imports: string[] = [
-    `import { Inject, Injectable } from '@nestjs/common';`,
+    `import { BadRequestException, Inject, Injectable } from '@nestjs/common';`,
     `import { DatabaseService } from '@packages/database';`,
     `import { EntityService, type BaseListQuery } from '@packages/entity-engine';`,
     `import type { DataAccessContext } from '@packages/rbac';`,
   ];
+
+  if (workflowFields.length > 0) {
+    imports.push(
+      `import { runTransitionGuards, previewTransitionGuards, type TransitionGuard } from '@packages/workflows';`,
+    );
+  }
 
   if (ctx.tagFields.length > 0) {
     imports.push(`import { TaxonomyService } from '@packages/taxonomy';`);
@@ -149,10 +155,96 @@ export function serviceTemplate(ctx: GeneratorContext): string {
   const allCreateLines = [...tagCreateLines, ...multiValueCreateLines];
   const allUpdateLines = [...tagUpdateLines, ...multiValueUpdateLines];
 
+  // Scaffold workflow guards + transition/preview methods when entity has
+  // workflow fields. Generated empty so devs fill in domain logic — no
+  // platform-side dispatch (see @packages/workflows transition-guard).
+  const guardsBlock = workflowFields.length > 0 ? `
+
+interface ${singularPascal}GuardDeps {
+  // Add domain services that guards need: contacts, approvals, etc.
+}
+
+type ${singularPascal}Row = Record<string, unknown> & { id: string };
+
+/**
+ * Declarative guards. Each row matches an exact (from, to) pair. Throw to
+ * block (typically UnprocessableEntityException), return a string to
+ * surface a UI warning, return void to allow.
+ */
+const ${pluralUpper}_GUARDS: TransitionGuard<${singularPascal}Row, ${singularPascal}GuardDeps>[] = [
+  // Example:
+  // {
+  //   name: 'require-something',
+  //   from: 'draft',
+  //   to: 'submitted',
+  //   check: async (entity, { deps }) => {
+  //     // throw new UnprocessableEntityException('Reason') to block
+  //     // return 'Warning message' to surface in UI preflight banner
+  //   },
+  // },
+];
+` : '';
+
+  const workflowFieldKey = workflowFields[0]?.key;
+  const guardMethods = workflowFields.length > 0 ? `
+
+  private guardDeps(): ${singularPascal}GuardDeps {
+    return {};
+  }
+
+  async transition(
+    id: string,
+    fieldKey: string,
+    toState: string,
+    actorId: string,
+    options?: { reason?: string; comment?: string },
+    accessCtx?: DataAccessContext,
+  ): Promise<Record<string, unknown>> {
+    let warnings: string[] = [];
+    if (fieldKey === '${workflowFieldKey}') {
+      const entity = await this.entities.findOneOrFail(id, accessCtx);
+      const fromState = entity[fieldKey] as string | null;
+      if (!fromState) {
+        throw new BadRequestException(\`Entity has no current state for field '\${fieldKey}'\`);
+      }
+      warnings = await runTransitionGuards(${pluralUpper}_GUARDS, entity as ${singularPascal}Row, {
+        fromState, toState, actor: actorId, deps: this.guardDeps(),
+      });
+    }
+
+    const ctx = await this.entities.validateTransition(
+      id, fieldKey, toState, actorId, options, accessCtx,
+    );
+    await this.database.db.transaction(async (tx) => {
+      await this.entities.applyTransition(ctx, tx);
+    });
+    this.entities.emitTransitionEvent(ctx);
+
+    const fresh = await this.entities.findOneOrFail(id);
+    return warnings.length > 0 ? { ...fresh, warnings } : fresh;
+  }
+
+  async previewTransition(
+    id: string,
+    fieldKey: string,
+    toState: string,
+    actorId: string,
+    accessCtx?: DataAccessContext,
+  ): Promise<{ warnings: string[]; blockers: string[] }> {
+    if (fieldKey !== '${workflowFieldKey}') return { warnings: [], blockers: [] };
+    const entity = await this.entities.findOneOrFail(id, accessCtx);
+    const fromState = entity[fieldKey] as string | null;
+    if (!fromState) return { warnings: [], blockers: [] };
+    return previewTransitionGuards(${pluralUpper}_GUARDS, entity as ${singularPascal}Row, {
+      fromState, toState, actor: actorId, deps: this.guardDeps(),
+    });
+  }
+` : '';
+
   return `${imports.join('\n')}
 
 ${constLines.join('\n')}
-
+${guardsBlock}
 @Injectable()
 export class ${pluralPascal}Service {
   constructor(
@@ -207,7 +299,7 @@ ${allUpdateLines.join('\n')}
   getListLayout() {
     return this.entities.getListLayout();
   }
-}
+${guardMethods}}
 `;
 }
 
@@ -216,9 +308,11 @@ ${allUpdateLines.join('\n')}
 // -----------------------------------------------------------------------------
 
 export function controllerTemplate(ctx: GeneratorContext): string {
-  const { entitySlug, singularPascal, pluralPascal } = ctx;
+  const { entitySlug, singularPascal, pluralPascal, workflowFields } = ctx;
+  const hasWorkflow = workflowFields.length > 0;
+  const extraImports = hasWorkflow ? ', BadRequestException' : '';
   return `import {
-  Body, Controller, Delete, Get, HttpCode, HttpStatus,
+  Body${extraImports}, Controller, Delete, Get, HttpCode, HttpStatus,
   Param, ParseUUIDPipe, Patch, Post, Query,
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -286,7 +380,42 @@ export class ${pluralPascal}Controller {
   ) {
     await this.${entitySlug}.softDelete(id, user.userId, accessCtx);
   }
-}
+${hasWorkflow ? `
+  @Post(':id/transition')
+  @RequirePermission('${entitySlug}.update')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Transition the workflow status' })
+  transition(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: { fieldKey?: string; to?: string; reason?: string; comment?: string },
+    @CurrentUser() user: JwtPayload,
+    @AccessContext() accessCtx?: DataAccessContext,
+  ) {
+    if (!body?.fieldKey || !body?.to) {
+      throw new BadRequestException('Body must include \`fieldKey\` and \`to\`');
+    }
+    return this.${entitySlug}.transition(
+      id, body.fieldKey, body.to, user.userId,
+      { reason: body.reason, comment: body.comment }, accessCtx,
+    );
+  }
+
+  @Get(':id/transition-preview')
+  @RequirePermission('${entitySlug}.update')
+  @ApiOperation({ summary: 'Preview a proposed transition (advisory guards only)' })
+  previewTransition(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('fieldKey') fieldKey: string,
+    @Query('to') to: string,
+    @CurrentUser() user: JwtPayload,
+    @AccessContext() accessCtx?: DataAccessContext,
+  ) {
+    if (!fieldKey || !to) {
+      throw new BadRequestException('Query params \`fieldKey\` and \`to\` are required');
+    }
+    return this.${entitySlug}.previewTransition(id, fieldKey, to, user.userId, accessCtx);
+  }
+` : ''}}
 `;
 }
 

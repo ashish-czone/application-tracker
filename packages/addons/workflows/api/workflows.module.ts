@@ -6,7 +6,6 @@ import { FeatureDeriverRegistry } from '@packages/entity-engine';
 import { fieldTypeRegistry } from '@packages/field-types';
 import { workflowFieldTypesPlugin } from './field-types';
 import { workflowFeatureDeriver } from './feature';
-import { WorkflowGuardRegistry } from './services/workflow-guard-registry.service';
 import { WorkflowRegistryService } from './services/workflow-registry.service';
 import { WorkflowEngineService } from './services/workflow-engine.service';
 import { PipelineResolverService } from './services/pipeline-resolver.service';
@@ -18,7 +17,6 @@ import { WorkflowsController } from './controllers/workflows.controller';
 @Module({
   controllers: [WorkflowsController],
   providers: [
-    WorkflowGuardRegistry,
     WorkflowRegistryService,
     WorkflowEngineService,
     PipelineResolverService,
@@ -30,7 +28,6 @@ import { WorkflowsController } from './controllers/workflows.controller';
     },
   ],
   exports: [
-    WorkflowGuardRegistry,
     WorkflowRegistryService,
     WorkflowEngineService,
     PipelineResolverService,

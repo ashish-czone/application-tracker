@@ -85,28 +85,21 @@ export const CLIENTS_CONFIG = defineEntity({
           { name: 'dormant', label: 'Dormant', color: '#6B7280' },
         ],
         transitions: [
-          // Guarded: a client can only leave onboarding once at least one
-          // primary contact exists. Schema enforces exactly-one-primary at
-          // create time, but contacts can be deleted afterwards — the guard
-          // keeps "active" meaningful even in that degraded state.
-          {
-            from: 'onboarding',
-            to: [{ state: 'active', guardNames: ['require-primary-contact'] }],
-          },
+          // Guards (require-primary-contact, compliance-client-dormancy-warning)
+          // live in ClientsService.CLIENT_GUARDS — the workflow definition only
+          // describes legal transitions and which require reason/comment.
+          { from: 'onboarding', to: ['active'] },
           // Dormancy is destructive per Q6: it cascades `cancelled` across
           // every non-terminal filing for this client inside the transition
           // tx. Forcing a reason + comment makes the admin articulate *why*
           // and that explanation propagates into each filing's workflow
           // history so the audit trail reads standalone on every row.
-          // The advisory guard surfaces the exact count of filings that
-          // will be cancelled in the preflight banner before confirm.
           {
             from: 'active',
             to: [{
               state: 'dormant',
               reasonRequired: true,
               commentRequired: true,
-              guardNames: ['compliance-client-dormancy-warning'],
             }],
           },
           { from: 'dormant', to: ['active'] },

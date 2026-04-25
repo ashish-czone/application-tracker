@@ -205,7 +205,6 @@ export async function seedWorkflows(
           toStateId,
           name,
           requiredPermissions: targetDef?.requiredPermissions,
-          guardNames: targetDef?.guardNames,
           sortOrder: i,
           metadata: targetDef?.conditions ? { conditions: targetDef.conditions } : undefined,
           reasonRequired: targetDef?.reasonRequired,
