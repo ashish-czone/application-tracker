@@ -3,7 +3,7 @@ import request from 'supertest';
 import { randomUUID } from 'crypto';
 import { sql } from 'drizzle-orm';
 import { createPackageTestApp, withAuth, cleanDatabase, type PackageTestApp } from '@packages/platform-testing';
-import { EntityEngineModule, FieldDefinitionService } from '@packages/entity-engine';
+import { EntityEngineModule, EntityRegistryService, FieldDefinitionService } from '@packages/entity-engine';
 import { EntityLayoutModule } from '../../entity-layout.module';
 import { EAV_PERMISSIONS } from '@packages/entity-engine/permissions';
 
@@ -18,6 +18,22 @@ describe('LayoutsController (integration)', () => {
     ctx = await createPackageTestApp({
       imports: [EntityEngineModule, EntityLayoutModule],
     });
+    // Register the test entity as admin-configurable so LayoutService.getLayout
+    // takes the DB path instead of returning an empty registry layout.
+    const registry = ctx.module.get(EntityRegistryService);
+    if (!registry.get(entityType)) {
+      registry.register({
+        entityType,
+        singularName: entityType,
+        pluralName: entityType,
+        slug: entityType,
+        table: {} as any,
+        fieldMeta: {},
+        sections: [],
+        onDelete: { mode: 'soft' as const },
+        adminConfigurable: true,
+      } as any);
+    }
   });
 
   afterAll(async () => {
@@ -45,11 +61,15 @@ describe('LayoutsController (integration)', () => {
     return res.body;
   }
 
+  let fieldSeq = 0;
   async function seedFieldDefinition() {
     const id = randomUUID();
+    // The unique key is `(entity_type, field_key)`. Date.now() collides when
+    // two seeds run inside the same millisecond, so combine with a counter.
+    const fieldKey = `field_${Date.now()}_${++fieldSeq}`;
     await ctx.db.execute(
       sql`INSERT INTO field_definitions (id, entity_type, field_key, label, field_type, is_system, is_required, sort_order, updated_at)
-          VALUES (${id}, ${entityType}, ${'field_' + Date.now()}, ${'Test Field'}, ${'text'}, ${false}, ${false}, ${0}, NOW())`,
+          VALUES (${id}, ${entityType}, ${fieldKey}, ${'Test Field'}, ${'text'}, ${false}, ${false}, ${0}, NOW())`,
     );
     return id;
   }

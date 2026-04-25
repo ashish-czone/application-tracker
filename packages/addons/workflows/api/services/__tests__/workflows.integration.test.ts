@@ -228,9 +228,10 @@ describe('Workflows (integration)', () => {
   });
 
   describe('WorkflowGuardRegistry', () => {
-    it('should register and execute guards', async () => {
-      guardRegistry.register('always_allow', async () => true);
-      guardRegistry.register('always_deny', async () => false);
+    it('should register and run guards, surfacing blockers from the deny path', async () => {
+      const { allow, block } = await import('../../types');
+      guardRegistry.register('always_allow', async () => allow());
+      guardRegistry.register('always_deny', async () => block('not allowed'));
 
       const context = {
         workflowSlug: 'test',
@@ -242,12 +243,12 @@ describe('Workflows (integration)', () => {
         actorId: null,
       };
 
-      const allowResult = await guardRegistry.executeGuards(['always_allow'], context);
-      expect(allowResult.passed).toBe(true);
+      const allowResult = await guardRegistry.runGuards(['always_allow'], context);
+      expect(allowResult.blockers).toEqual([]);
+      expect(allowResult.warnings).toEqual([]);
 
-      const denyResult = await guardRegistry.executeGuards(['always_deny'], context);
-      expect(denyResult.passed).toBe(false);
-      expect(denyResult.failedGuard).toBe('always_deny');
+      const denyResult = await guardRegistry.runGuards(['always_deny'], context);
+      expect(denyResult.blockers).toEqual([{ guardName: 'always_deny', message: 'not allowed' }]);
     });
   });
 
