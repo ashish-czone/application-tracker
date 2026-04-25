@@ -239,20 +239,22 @@ describe('RbacController (integration)', () => {
     it('should set permissions on a role', async () => {
       const role = await createRole();
 
-      // Use superadmin — the endpoint checks that the actor has the permissions being granted
+      // Use superadmin — the endpoint checks that the actor has the permissions being granted.
+      // Use rbac permissions (registered by RbacModule) since the test app only loads RbacModule;
+      // arbitrary permissions like users.read would fail manifest validation.
       const res = await request(ctx.httpServer)
         .put(`/api/v1/roles/${role.id}/permissions`)
         .set(withAuth(['*']))
         .send({
           permissions: [
-            { name: 'users.read' },
-            { name: 'users.create' },
+            { name: RBAC_PERMISSIONS.ROLES_READ },
+            { name: RBAC_PERMISSIONS.ROLES_MANAGE },
           ],
         })
         .expect(200);
 
-      expect(res.body).toHaveProperty('users.read');
-      expect(res.body).toHaveProperty('users.create');
+      expect(res.body).toHaveProperty(RBAC_PERMISSIONS.ROLES_READ);
+      expect(res.body).toHaveProperty(RBAC_PERMISSIONS.ROLES_MANAGE);
     });
 
     it('should replace permissions on a role', async () => {
@@ -262,18 +264,23 @@ describe('RbacController (integration)', () => {
       await request(ctx.httpServer)
         .put(`/api/v1/roles/${role.id}/permissions`)
         .set(withAuth(['*']))
-        .send({ permissions: [{ name: 'users.read' }, { name: 'users.create' }] })
+        .send({
+          permissions: [
+            { name: RBAC_PERMISSIONS.ROLES_READ },
+            { name: RBAC_PERMISSIONS.ROLES_MANAGE },
+          ],
+        })
         .expect(200);
 
       // Replace
       const res = await request(ctx.httpServer)
         .put(`/api/v1/roles/${role.id}/permissions`)
         .set(withAuth(['*']))
-        .send({ permissions: [{ name: 'settings.read' }] })
+        .send({ permissions: [{ name: RBAC_PERMISSIONS.PERMISSIONS_READ }] })
         .expect(200);
 
-      expect(res.body).toHaveProperty('settings.read');
-      expect(res.body).not.toHaveProperty('users.read');
+      expect(res.body).toHaveProperty(RBAC_PERMISSIONS.PERMISSIONS_READ);
+      expect(res.body).not.toHaveProperty(RBAC_PERMISSIONS.ROLES_READ);
     });
   });
 
