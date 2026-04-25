@@ -3,7 +3,7 @@ import { useParams, useNavigate, useLocation, useSearchParams } from 'react-rout
 import { ArrowLeft } from 'lucide-react';
 import { Button, Badge } from '@packages/ui';
 import { useEntityEngine, useEntityConfig } from '@packages/entity-engine-ui';
-import { useWorkflows, useCreateWorkflow, PipelineStageManager } from '@packages/workflows-ui';
+import { useWorkflows, useCreateWorkflow, PipelineStageManager, readWorkflowFeature } from '@packages/workflows-ui';
 
 const FieldManagementPage = lazy(
   () => import('@packages/entity-layout-ui').then((m) => ({ default: m.FieldManagementPage })),
@@ -20,8 +20,9 @@ function EntitySettingsContent({ entityType, initialSubTab }: { entityType: stri
     [workflows, entityType],
   );
 
-  const hasWorkflow = entity.features.hasWorkflow && entityWorkflows.length > 0;
-  const discriminator = entity.features.workflowDiscriminator;
+  const workflowFeature = readWorkflowFeature(entity.features);
+  const hasWorkflow = !!workflowFeature && entityWorkflows.length > 0;
+  const discriminator = workflowFeature?.discriminator ?? null;
 
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
   const activeWorkflow = selectedSlug
@@ -161,7 +162,7 @@ export function EntityConfigPage() {
       [...entities]
         .filter((e) => e.features.adminConfigurable)
         .sort((a, b) => (a.ui.navOrder ?? 99) - (b.ui.navOrder ?? 99))
-        .map((e) => ({ key: e.entityType, label: e.pluralName, slug: e.slug, hasWorkflow: e.features.hasWorkflow })),
+        .map((e) => ({ key: e.entityType, label: e.pluralName, slug: e.slug, hasWorkflow: !!readWorkflowFeature(e.features) })),
     [entities],
   );
 

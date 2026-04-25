@@ -795,9 +795,9 @@ export interface EntityConfig<TTable extends PgTable = PgTable> {
    * Each addon owns one or more keys and ships a typed helper that returns
    * its fragment (e.g. `notesFeature()`, `attachmentsFeature({ ... })`).
    *
-   * Engine-derived flags (`softDelete`, `hasWorkflow`, `hasMedia`, etc.) are
-   * computed by the registry and merged into the same bag downstream — addon
-   * keys must not collide with those well-known names.
+   * Engine-derived flags (`softDelete`, `hasMedia`, ...) and feature-package
+   * keys registered via `FeatureDeriverRegistry` (e.g. `workflow`) are merged
+   * into the same bag downstream — addon keys must not collide with those.
    */
   features?: Record<string, unknown>;
 
@@ -1004,11 +1004,11 @@ export interface EntityRegistryEntry {
   slug: string;
   ui: EntityUIHints;
   /**
-   * Engine-derived feature flags merged with the entity's opaque addon
-   * `features` bag. Engine keys (`softDelete`, `hasWorkflow`, etc.) are
-   * computed from the entity config; addon keys come from
-   * `EntityConfig.features` verbatim and are read by the addons that own
-   * them. Unknown keys are returned as-is.
+   * Engine-derived feature flags merged with feature-package-derived keys
+   * and the entity's opaque addon `features` bag. Engine keys are typed
+   * below; feature-package keys (workflows, ...) and addon keys come from
+   * registered derivers / `EntityConfig.features` verbatim and are read
+   * by the package that owns them via its own reader.
    */
   features: {
     softDelete: boolean;
@@ -1016,14 +1016,7 @@ export interface EntityRegistryEntry {
     customFields: boolean;
     adminConfigurable: boolean;
     hasTaxonomy: boolean;
-    hasWorkflow: boolean;
     hasMedia: boolean;
-    workflowDiscriminator: {
-      key: string;
-      label: string;
-      options: { value: string; label: string }[];
-      fieldName: string;
-    } | null;
     [key: string]: unknown;
   };
   relationships: Omit<EntityRelationship, 'junctionEntity'>[];

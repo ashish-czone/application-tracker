@@ -31,7 +31,12 @@ export const applicationEntity: MockEntity = {
   slug: 'applications',
   icon: 'file-text',
   nameField: ['candidateId', 'jobOpeningId'],
-  features: { hasWorkflow: true, hasEvaluations: true, softDelete: true, restore: true },
+  features: {
+    hasEvaluations: true,
+    softDelete: true,
+    restore: true,
+    workflow: { hasWorkflow: true, discriminator: null },
+  },
 };
 
 export const applicationListColumns: ListColumn[] = [

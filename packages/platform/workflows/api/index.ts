@@ -35,3 +35,11 @@ export {
   workflowTransitionHistory,
   entityPipelineAssignments,
 } from './schema';
+
+// Feature deriver + reader
+export {
+  WORKFLOW_FEATURE_KEY,
+  workflowFeatureDeriver,
+  readWorkflowFeature,
+  type WorkflowFeatureBag,
+} from './feature';

@@ -13,6 +13,7 @@ import { LookupResolverService } from './services/lookup-resolver.service';
 import { EntityEngineSeedService } from './services/entity-engine-seed.service';
 import { EntityDefinitionService } from './services/entity-definition.service';
 import { FieldTypeSaveHookRegistry, fieldTypeSaveHookRegistry } from './services/field-type-save-hook.registry';
+import { FeatureDeriverRegistry, featureDeriverRegistry } from './services/feature-deriver.registry';
 import { CreateEntityAction } from './actions/create-entity.action';
 import { UpdateEntityAction } from './actions/update-entity.action';
 import { DeleteEntityAction } from './actions/delete-entity.action';
@@ -51,6 +52,7 @@ import { AUTOMATIONS_EXTENSION, type AutomationsExtension } from './extensions/a
     { provide: LOOKUP_RESOLVER_TOKEN, useExisting: LookupResolverService },
     EntityEngineSeedService,
     { provide: FieldTypeSaveHookRegistry, useValue: fieldTypeSaveHookRegistry },
+    { provide: FeatureDeriverRegistry, useValue: featureDeriverRegistry },
     {
       provide: FIELD_PERMISSION_ENTITY_RESOLVER,
       useFactory: (registry: EntityRegistryService): FieldPermissionEntityResolver => ({
@@ -76,6 +78,7 @@ import { AUTOMATIONS_EXTENSION, type AutomationsExtension } from './extensions/a
     LOOKUP_RESOLVER_TOKEN,
     EntityEngineSeedService,
     FieldTypeSaveHookRegistry,
+    FeatureDeriverRegistry,
     FIELD_PERMISSION_ENTITY_RESOLVER,
     JsonbStorageAdapter,
     'FIELD_DEFINITION_SERVICE',

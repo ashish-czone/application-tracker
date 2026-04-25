@@ -17,12 +17,21 @@ export interface MockEntity {
     softDelete: boolean;
     restore: boolean;
     hasTaxonomy: boolean;
-    hasWorkflow: boolean;
     hasMedia: boolean;
     hasNotes: boolean;
     hasAttachments: boolean;
     hasEvaluations: boolean;
-  }>;
+  }> & {
+    workflow?: {
+      hasWorkflow: true;
+      discriminator: {
+        key: string;
+        label: string;
+        options: { value: string; label: string }[];
+        fieldName: string;
+      } | null;
+    };
+  };
   relationships?: {
     name: string;
     type: 'hasMany' | 'belongsTo';
@@ -116,12 +125,10 @@ function buildRegistryEntry(entity: MockEntity) {
       softDelete: true,
       restore: true,
       hasTaxonomy: false,
-      hasWorkflow: false,
       hasMedia: false,
       hasNotes: false,
       hasAttachments: false,
       hasEvaluations: false,
-      workflowDiscriminator: null,
       ...entity.features,
     },
     relationships: entity.relationships ?? [],

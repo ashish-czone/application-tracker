@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { pgTable, text, timestamp } from 'drizzle-orm/pg-core';
 import { EntityRegistryService } from '../../entity-registry.service';
+import { FeatureDeriverRegistry } from '../feature-deriver.registry';
 import { EntityDefinitionService } from '../entity-definition.service';
 import { defineEntity } from '../../define-entity';
 
@@ -17,7 +18,7 @@ describe('EntityDefinitionService', () => {
   let service: EntityDefinitionService;
 
   beforeEach(() => {
-    registry = new EntityRegistryService();
+    registry = new EntityRegistryService(new FeatureDeriverRegistry());
     service = new EntityDefinitionService(registry);
   });
 

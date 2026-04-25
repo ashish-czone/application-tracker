@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { pgTable, text, timestamp } from 'drizzle-orm/pg-core';
 import { EntityRegistryService } from '../../entity-registry.service';
+import { FeatureDeriverRegistry } from '../feature-deriver.registry';
 import type { EntityConfig } from '../../types';
 
 function mockConfig(overrides: Partial<EntityConfig> = {}): EntityConfig {
@@ -27,9 +28,11 @@ function mockConfig(overrides: Partial<EntityConfig> = {}): EntityConfig {
 
 describe('EntityRegistryService', () => {
   let registry: EntityRegistryService;
+  let featureDerivers: FeatureDeriverRegistry;
 
   beforeEach(() => {
-    registry = new EntityRegistryService();
+    featureDerivers = new FeatureDeriverRegistry();
+    registry = new EntityRegistryService(featureDerivers);
   });
 
   it('registers and retrieves an entity config', () => {
@@ -110,7 +113,6 @@ describe('EntityRegistryService', () => {
     expect(entry.ui.icon).toBe('users');
     expect(entry.features.softDelete).toBe(true);
     expect(entry.features.hasTaxonomy).toBe(true);
-    expect(entry.features.hasWorkflow).toBe(false);
     expect(entry.relationships).toHaveLength(1);
     expect(entry.relationships[0].name).toBe('applications');
     // foreignKey IS serialized (needed for related list filtering)
@@ -208,6 +210,22 @@ describe('EntityRegistryService', () => {
     expect(entries[0].features.notes).toBeUndefined();
     expect(entries[0].features.attachments).toBeUndefined();
     expect(entries[0].features.tags).toBeUndefined();
+  });
+
+  it('merges feature-deriver output into the features bag', () => {
+    featureDerivers.register((config) => ({ marker: { entity: config.entityType } }));
+    registry.register(mockConfig({ entityType: 'derived_entity', slug: 'derived-entity' }));
+
+    const entries = registry.getRegistryEntries();
+    expect(entries[0].features.marker).toEqual({ entity: 'derived_entity' });
+  });
+
+  it('config.features overrides deriver output for the same key', () => {
+    featureDerivers.register(() => ({ shared: { from: 'deriver' } }));
+    registry.register(mockConfig({ features: { shared: { from: 'config' } } }));
+
+    const entries = registry.getRegistryEntries();
+    expect(entries[0].features.shared).toEqual({ from: 'config' });
   });
 
   // ---------------------------------------------------------------------------

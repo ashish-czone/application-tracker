@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { pgTable, text } from 'drizzle-orm/pg-core';
 import { EntityEngineSeedService } from '../entity-engine-seed.service';
 import { EntityRegistryService } from '../../entity-registry.service';
+import { FeatureDeriverRegistry } from '../feature-deriver.registry';
 import { defineEntity } from '../../define-entity';
 
 // `seedEntityFields` and `seedWorkflows` hit a live DB via the injected services;
@@ -28,7 +29,7 @@ describe('EntityEngineSeedService', () => {
   beforeEach(() => {
     vi.mocked(seedEntityFields).mockClear();
     vi.mocked(seedWorkflows).mockClear();
-    registry = new EntityRegistryService();
+    registry = new EntityRegistryService(new FeatureDeriverRegistry());
     service = new EntityEngineSeedService(registry, fieldDefService, layoutExt, workflowExt);
   });
 

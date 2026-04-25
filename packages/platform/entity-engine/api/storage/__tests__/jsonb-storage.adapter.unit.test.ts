@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { pgTable, uuid, jsonb, text } from 'drizzle-orm/pg-core';
 import { JsonbStorageAdapter } from '../jsonb-storage.adapter';
 import { EntityRegistryService } from '../../entity-registry.service';
+import { FeatureDeriverRegistry } from '../../services/feature-deriver.registry';
 import type { EntityConfig } from '../../types';
 import type { DatabaseService } from '@packages/database';
 
@@ -56,13 +57,13 @@ describe('JsonbStorageAdapter', () => {
   let registry: EntityRegistryService;
 
   beforeEach(() => {
-    registry = new EntityRegistryService();
+    registry = new EntityRegistryService(new FeatureDeriverRegistry());
     registry.register(mockConfig());
   });
 
   describe('resolveTable', () => {
     it('throws when the entity table lacks a customFields column', async () => {
-      const reg = new EntityRegistryService();
+      const reg = new EntityRegistryService(new FeatureDeriverRegistry());
       reg.register(mockConfig({
         entityType: 'no_cf',
         slug: 'no-cf',
