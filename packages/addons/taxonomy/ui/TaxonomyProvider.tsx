@@ -9,12 +9,14 @@ const TaxonomyContext = createContext<TaxonomyContextValue | null>(null);
 
 interface TaxonomyProviderProps {
   children: ReactNode;
-  apiFn: TaxonomyApiFn;
+  // Loose at the manifest boundary (WebFeatureProvider hands `unknown`); the
+  // shell guarantees a TaxonomyApiFn-shaped fn at runtime.
+  apiFn: unknown;
 }
 
 export function TaxonomyProvider({ children, apiFn }: TaxonomyProviderProps) {
   return (
-    <TaxonomyContext.Provider value={{ apiFn }}>
+    <TaxonomyContext.Provider value={{ apiFn: apiFn as TaxonomyApiFn }}>
       {children}
     </TaxonomyContext.Provider>
   );
