@@ -1,6 +1,6 @@
-import { notesFeature } from '@packages/notes';
-import { attachmentsFeature } from '@packages/attachments';
-import { tagsFeature } from '@packages/taxonomy';
+import { notesFeature } from '@packages/notes/feature';
+import { attachmentsFeature } from '@packages/attachments/feature';
+import { tagsFeature } from '@packages/taxonomy/feature';
 
 /**
  * Task entity metadata — everything from defineEntity() that is pure data
