@@ -4,7 +4,7 @@ import { createPlatformTestModule, cleanDatabase } from '@packages/platform-test
 import { sql } from '@packages/database';
 import { HierarchyModule } from '../../hierarchy.module';
 import { HierarchyService } from '../hierarchy.service';
-import { pgTable, text, integer } from 'drizzle-orm/pg-core';
+import { pgTable, text, integer, timestamp } from 'drizzle-orm/pg-core';
 
 /**
  * Inline Drizzle table references matching the taxonomy migration schema.
@@ -15,6 +15,7 @@ const categoryGroups = pgTable('category_groups', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
   slug: text('slug').notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }).notNull().$defaultFn(() => new Date()),
 });
 
 const categories = pgTable('categories', {
@@ -25,6 +26,7 @@ const categories = pgTable('categories', {
   depth: integer('depth').notNull().default(0),
   name: text('name').notNull(),
   slug: text('slug').notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }).notNull().$defaultFn(() => new Date()),
 });
 import type { DrizzleDB } from '@packages/database';
 import type { TestingModule } from '@nestjs/testing';
