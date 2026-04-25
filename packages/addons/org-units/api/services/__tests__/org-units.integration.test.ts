@@ -1,9 +1,10 @@
-import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, afterEach, beforeEach } from 'vitest';
 import { randomUUID } from 'crypto';
 import { createPlatformTestModule, cleanDatabase } from '@packages/platform-testing';
 import { users } from '@packages/database/schema';
 import { OrgUnitService } from '../org-unit.service';
 import { OrgPositionService } from '../org-position.service';
+import { orgUnitLevels } from '../../schema/org-unit-levels';
 import type { DrizzleDB } from '@packages/database';
 import type { TestingModule } from '@nestjs/testing';
 
@@ -13,6 +14,7 @@ describe('OrgUnit Services (integration)', () => {
   let cleanup: () => Promise<void>;
   let orgUnitService: OrgUnitService;
   let positionService: OrgPositionService;
+  let defaultLevelId: string;
 
   beforeAll(async () => {
     const ctx = await createPlatformTestModule({
@@ -25,6 +27,17 @@ describe('OrgUnit Services (integration)', () => {
     positionService = module.get(OrgPositionService);
   });
 
+  beforeEach(async () => {
+    // org_units.level_id is NOT NULL FK to org_unit_levels — seed one per test
+    // (cleanDatabase truncates everything in afterEach).
+    defaultLevelId = randomUUID();
+    await db.insert(orgUnitLevels).values({
+      id: defaultLevelId,
+      name: 'Team',
+      sortOrder: 0,
+    });
+  });
+
   afterEach(async () => {
     await cleanDatabase(db);
   });
@@ -32,6 +45,15 @@ describe('OrgUnit Services (integration)', () => {
   afterAll(async () => {
     await cleanup();
   });
+
+  /** Create an org unit with the seeded default level. */
+  async function createUnit(opts: { name: string; parentId?: string }) {
+    return orgUnitService.create({
+      name: opts.name,
+      parentId: opts.parentId,
+      levelId: defaultLevelId,
+    });
+  }
 
   async function createUser(firstName = 'Test'): Promise<string> {
     const id = randomUUID();
@@ -50,17 +72,17 @@ describe('OrgUnit Services (integration)', () => {
   describe('OrgUnitService', () => {
     describe('create', () => {
       it('should create an org unit', async () => {
-        const unit = await orgUnitService.create({ name: 'Engineering' });
+        const unit = await createUnit({ name: 'Engineering' });
 
         expect(unit.id).toBeDefined();
         expect(unit.name).toBe('Engineering');
-        expect(unit.type).toBe('team');
+        expect(unit.levelId).toBe(defaultLevelId);
         expect(unit.parentId).toBeNull();
       });
 
       it('should create a child org unit', async () => {
-        const parent = await orgUnitService.create({ name: 'Engineering' });
-        const child = await orgUnitService.create({ name: 'Frontend', parentId: parent.id });
+        const parent = await createUnit({ name: 'Engineering' });
+        const child = await createUnit({ name: 'Frontend', parentId: parent.id });
 
         expect(child.parentId).toBe(parent.id);
       });
@@ -68,7 +90,7 @@ describe('OrgUnit Services (integration)', () => {
 
     describe('findAll', () => {
       it('should return all org units with member counts', async () => {
-        const unit = await orgUnitService.create({ name: 'Team A' });
+        const unit = await createUnit({ name: 'Team A' });
         const userId = await createUser();
         await orgUnitService.addMember(unit.id, userId);
 
@@ -83,7 +105,7 @@ describe('OrgUnit Services (integration)', () => {
 
     describe('findOneOrFail', () => {
       it('should return org unit by ID', async () => {
-        const unit = await orgUnitService.create({ name: 'Find Me' });
+        const unit = await createUnit({ name: 'Find Me' });
         const found = await orgUnitService.findOneOrFail(unit.id);
         expect(found.name).toBe('Find Me');
       });
@@ -96,17 +118,17 @@ describe('OrgUnit Services (integration)', () => {
 
     describe('update', () => {
       it('should update org unit fields', async () => {
-        const unit = await orgUnitService.create({ name: 'Old Name' });
-        const updated = await orgUnitService.update(unit.id, { name: 'New Name', type: 'department' });
+        const unit = await createUnit({ name: 'Old Name' });
+        const updated = await orgUnitService.update(unit.id, { name: 'New Name', sortOrder: 5 });
 
         expect(updated.name).toBe('New Name');
-        expect(updated.type).toBe('department');
+        expect(updated.sortOrder).toBe(5);
       });
     });
 
     describe('delete', () => {
       it('should delete org unit and cascade members', async () => {
-        const unit = await orgUnitService.create({ name: 'Delete Me' });
+        const unit = await createUnit({ name: 'Delete Me' });
         const userId = await createUser();
         await orgUnitService.addMember(unit.id, userId);
 
@@ -119,7 +141,7 @@ describe('OrgUnit Services (integration)', () => {
 
     describe('members', () => {
       it('should add a member to an org unit', async () => {
-        const unit = await orgUnitService.create({ name: 'Team' });
+        const unit = await createUnit({ name: 'Team' });
         const userId = await createUser();
 
         await orgUnitService.addMember(unit.id, userId);
@@ -129,7 +151,7 @@ describe('OrgUnit Services (integration)', () => {
       });
 
       it('should add member with position', async () => {
-        const unit = await orgUnitService.create({ name: 'Team' });
+        const unit = await createUnit({ name: 'Team' });
         const userId = await createUser();
         const position = await positionService.create({ name: 'Lead' });
 
@@ -140,7 +162,7 @@ describe('OrgUnit Services (integration)', () => {
       });
 
       it('should not duplicate members (upsert)', async () => {
-        const unit = await orgUnitService.create({ name: 'Team' });
+        const unit = await createUnit({ name: 'Team' });
         const userId = await createUser();
 
         await orgUnitService.addMember(unit.id, userId);
@@ -151,7 +173,7 @@ describe('OrgUnit Services (integration)', () => {
       });
 
       it('should update member position', async () => {
-        const unit = await orgUnitService.create({ name: 'Team' });
+        const unit = await createUnit({ name: 'Team' });
         const userId = await createUser();
         const pos1 = await positionService.create({ name: 'Member' });
         const pos2 = await positionService.create({ name: 'Lead' });
@@ -165,7 +187,7 @@ describe('OrgUnit Services (integration)', () => {
       });
 
       it('should remove member', async () => {
-        const unit = await orgUnitService.create({ name: 'Team' });
+        const unit = await createUnit({ name: 'Team' });
         const userId = await createUser();
 
         await orgUnitService.addMember(unit.id, userId);
@@ -176,7 +198,7 @@ describe('OrgUnit Services (integration)', () => {
       });
 
       it('should return empty array for unit with no members', async () => {
-        const unit = await orgUnitService.create({ name: 'Empty' });
+        const unit = await createUnit({ name: 'Empty' });
         const memberIds = await orgUnitService.getMemberIds(unit.id);
         expect(memberIds).toEqual([]);
       });
@@ -184,9 +206,9 @@ describe('OrgUnit Services (integration)', () => {
 
     describe('getVisibleOrgUnitIds', () => {
       it('should return unit and descendant IDs for a user', async () => {
-        const parent = await orgUnitService.create({ name: 'Engineering' });
-        const child = await orgUnitService.create({ name: 'Frontend', parentId: parent.id });
-        const grandchild = await orgUnitService.create({ name: 'React', parentId: child.id });
+        const parent = await createUnit({ name: 'Engineering' });
+        const child = await createUnit({ name: 'Frontend', parentId: parent.id });
+        const grandchild = await createUnit({ name: 'React', parentId: child.id });
         const userId = await createUser();
 
         await orgUnitService.addMember(parent.id, userId);
@@ -206,7 +228,7 @@ describe('OrgUnit Services (integration)', () => {
 
     describe('getTeamMemberIds', () => {
       it('should return user + team members', async () => {
-        const unit = await orgUnitService.create({ name: 'Team' });
+        const unit = await createUnit({ name: 'Team' });
         const user1 = await createUser('User1');
         const user2 = await createUser('User2');
 
@@ -267,7 +289,7 @@ describe('OrgUnit Services (integration)', () => {
 
       it('should throw ConflictException when position has assigned members', async () => {
         const pos = await positionService.create({ name: 'In Use' });
-        const unit = await orgUnitService.create({ name: 'Team' });
+        const unit = await createUnit({ name: 'Team' });
         const userId = await createUser();
         await orgUnitService.addMember(unit.id, userId, pos.id);
 
