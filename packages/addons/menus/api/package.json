@@ -19,7 +19,7 @@
     "@packages/hierarchy": "workspace:*",
     "@packages/logger": "workspace:*",
     "@packages/orderable": "workspace:*",
-    "@packages/pages-api": "workspace:*",
+    "@domains/agency-api": "workspace:*",
     "@packages/rbac": "workspace:*",
     "@packages/soft-delete": "workspace:*",
     "drizzle-orm": "^0.45.1",

@@ -24,7 +24,6 @@
     "@packages/notification-channels-ui": "workspace:*",
     "@packages/media-library-ui-admin": "workspace:*",
     "@packages/menus-ui-admin": "workspace:*",
-    "@packages/pages-ui-admin": "workspace:*",
     "@packages/platform-ui": "workspace:*",
     "@packages/queue-ui": "workspace:*",
     "@packages/rbac-ui": "workspace:*",

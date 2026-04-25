@@ -1,6 +1,6 @@
 import type { INestApplicationContext } from '@nestjs/common';
 import { DatabaseService, users } from '@packages/database';
-import { pages, sections } from '@packages/pages-api';
+import { pages, sections } from '../pages/schema';
 import { eq } from 'drizzle-orm';
 
 const DEMO_SLUG = 'home-content';

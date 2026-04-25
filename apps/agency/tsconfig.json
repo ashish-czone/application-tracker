@@ -42,8 +42,6 @@
       "@packages/hierarchy/*": ["../../packages/platform/hierarchy/api/*"],
       "@packages/orderable": ["../../packages/platform/orderable/api"],
       "@packages/orderable/*": ["../../packages/platform/orderable/api/*"],
-      "@packages/pages-api": ["../../packages/addons/pages/api"],
-      "@packages/pages-api/*": ["../../packages/addons/pages/api/*"],
       "@packages/content-api": ["../../packages/addons/content/api"],
       "@packages/content-api/*": ["../../packages/addons/content/api/*"],
       "@packages/menus-api": ["../../packages/addons/menus/api"],

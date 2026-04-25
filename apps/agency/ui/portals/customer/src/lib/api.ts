@@ -5,7 +5,7 @@ import { DEFAULT_SITE_THEME, type SiteTheme } from '@domains/agency-contract';
 /**
  * Shape the public-page API returns at `GET /api/v1/public/pages/:slug`.
  * Defined locally per the frontend-owns-its-types convention — the backend
- * DTO (`PublicPageResponse` in `@packages/pages-api`) is the authoritative
+ * DTO (`PublicPageResponse` in `@domains/agency-api`) is the authoritative
  * source; this mirror keeps NestJS out of the Next.js bundle.
  */
 export interface PageData {

@@ -35,7 +35,7 @@ const config: Config = {
     '../../../../../packages/platform/platform-ui/taxonomy/pages/**/*.{ts,tsx}',
     '../../../../../packages/platform/platform-ui/users/**/*.{ts,tsx}',
     '../../../../../packages/platform/platform-ui/workflows/**/*.{ts,tsx}',
-    '../../../../../packages/addons/pages/ui/admin/*.{ts,tsx}',
+    '../../../../../domains/agency/ui/pages/*.{ts,tsx}',
     '../../../../../domains/agency/ui/blocks/*.{ts,tsx}',
     '../../../../../domains/agency/ui/blocks/components/**/*.{ts,tsx}',
     '../../../../../packages/addons/menus/ui/admin/**/*.{ts,tsx}',

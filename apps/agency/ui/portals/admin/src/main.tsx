@@ -22,7 +22,7 @@ registerMediaLibraryFieldTypes();
 
 import { WebShell } from '@packages/app-shell-ui';
 import { registerStarterBlocks, registerContentBlocks } from '@domains/agency-ui';
-import { PageEditorPage } from '@packages/pages-ui-admin';
+import { PageEditorPage } from '@domains/agency-ui';
 import { MenuEditorPage } from '@packages/menus-ui-admin';
 import { MediaLibraryPage } from '@packages/media-library-ui-admin';
 import { AuditTimeline } from '@packages/audit-ui';

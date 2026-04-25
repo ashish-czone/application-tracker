@@ -13,8 +13,8 @@ async function main() {
   const packages: PackageMigrationSource[] = [
     ...platformMigrationSources(workspaceRoot),
     {
-      name: '@packages/pages-api',
-      migrationsFolder: path.join(workspaceRoot, 'packages/addons/pages/api/migrations'),
+      name: '@domains/agency-api/pages',
+      migrationsFolder: path.join(workspaceRoot, 'domains/agency/api/pages/migrations'),
     },
     {
       name: '@packages/content-api',

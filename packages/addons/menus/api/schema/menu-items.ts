@@ -3,7 +3,7 @@ import { pgTable, text, timestamp, index } from 'drizzle-orm/pg-core';
 import { softDeleteColumns } from '@packages/soft-delete';
 import { hierarchyColumns } from '@packages/hierarchy/schema';
 import { orderableColumns } from '@packages/orderable/schema';
-import { pages } from '@packages/pages-api/schema';
+import { pages } from '@domains/agency-api/pages/schema';
 import { menus } from './menus';
 
 /**

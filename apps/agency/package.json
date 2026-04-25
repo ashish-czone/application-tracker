@@ -41,7 +41,6 @@
     "@packages/notifications": "workspace:*",
     "@packages/content-api": "workspace:*",
     "@packages/menus-api": "workspace:*",
-    "@packages/pages-api": "workspace:*",
     "@packages/queue": "workspace:*",
     "@packages/rbac": "workspace:*",
     "@packages/settings": "workspace:*",

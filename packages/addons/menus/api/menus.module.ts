@@ -1,7 +1,7 @@
 import { Module, type OnModuleInit, type OnModuleDestroy } from '@nestjs/common';
 import { DatabaseService, eq, and, isNull } from '@packages/database';
 import { EntityEngineModule } from '@packages/entity-engine';
-import { PagesModule } from '@packages/pages-api';
+import { PagesModule } from '@domains/agency-api';
 import { MENU_CONFIG } from './menus.config';
 import { menuItemConfig, registerMenuItemDepthLookup } from './menu-items.config';
 import { menuItems } from './schema/menu-items';
