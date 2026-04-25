@@ -6,6 +6,8 @@ import {
   FieldDefinitionService,
   EntityRegistryService,
   EntityDefinitionService,
+  FeatureDeriverRegistry,
+  featureDeriverRegistry,
 } from '@packages/entity-engine';
 import type { EntityConfig } from '@packages/entity-engine/types';
 import { LayoutService } from '../layout.service';
@@ -92,7 +94,13 @@ describe('extensionOf layout (integration)', () => {
 
   beforeAll(async () => {
     const ctx = await createPlatformTestModule({
-      providers: [LayoutService, FieldDefinitionService, EntityRegistryService, EntityDefinitionService],
+      providers: [
+        { provide: FeatureDeriverRegistry, useValue: featureDeriverRegistry },
+        LayoutService,
+        FieldDefinitionService,
+        EntityRegistryService,
+        EntityDefinitionService,
+      ],
       mocks: { automations: false },
     });
     module = ctx.module;
