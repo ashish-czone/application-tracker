@@ -4,6 +4,8 @@ export { MockQueueModule } from './mock-queue.module';
 export { MockAutomationsModule } from './mock-automations.module';
 export { MockAuthGuard } from './mock-auth.guard';
 export { MockRbacGuard } from './mock-rbac.guard';
-
-// Re-export core testing utilities for convenience
-export { cleanDatabase } from '@packages/testing';
+export {
+  DEFAULT_TEST_USER_ID,
+  seedDefaultTestUser,
+  cleanDatabase,
+} from './default-test-user';

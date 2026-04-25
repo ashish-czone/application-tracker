@@ -13,7 +13,7 @@ import { MockQueueModule } from './mock-queue.module';
 import { MockAutomationsModule } from './mock-automations.module';
 import { MockAuthGuard } from './mock-auth.guard';
 import { MockRbacGuard } from './mock-rbac.guard';
-import { randomUUID } from 'crypto';
+import { DEFAULT_TEST_USER_ID, seedDefaultTestUser } from './default-test-user';
 
 export interface PackageTestAppOptions {
   /** NestJS modules to import (the module under test + any extra deps) */
@@ -97,6 +97,8 @@ export async function createPackageTestApp(options: PackageTestAppOptions = {}):
 
   const database = module.get(DatabaseService);
 
+  await seedDefaultTestUser(database.db);
+
   return {
     app,
     module,
@@ -110,6 +112,12 @@ export async function createPackageTestApp(options: PackageTestAppOptions = {}):
 
 /**
  * Returns headers that MockAuthGuard reads to authenticate a request.
+ *
+ * Defaults to `DEFAULT_TEST_USER_ID` so the actor is a real row in `users`
+ * (seeded by `createPackageTestApp` and the platform-testing
+ * `cleanDatabase`). This keeps audit_logs.actor_id FK happy for events
+ * emitted by the request. Pass `overrides.userId` to act as a different,
+ * pre-inserted user.
  *
  * Usage:
  *   request(httpServer).get('/api/v1/tags').set(withAuth(['taxonomy.tags.read']))
@@ -125,7 +133,7 @@ export function withAuth(
 
   return {
     'x-test-user': JSON.stringify({
-      userId: overrides?.userId ?? randomUUID(),
+      userId: overrides?.userId ?? DEFAULT_TEST_USER_ID,
       userType: overrides?.userType ?? 'admin',
       permissions: permMap,
     }),
