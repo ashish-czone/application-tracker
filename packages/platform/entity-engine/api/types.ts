@@ -774,17 +774,18 @@ export interface EntityConfig<TTable extends PgTable = PgTable> {
    *  Independent of `customFields` — either flag can be enabled on its own. */
   adminConfigurable?: boolean;
 
-  /** Mark this entity as hierarchical. Requires the table to spread `...hierarchyColumns()`
-   *  from `@packages/hierarchy`. Enables parent/child relations, path/depth maintenance,
-   *  and HierarchyService-backed reparent/ancestor/descendant operations on the entity
-   *  service (wired in EntityEngineModule). Default: false. */
+  /** Mark this entity as hierarchical. Requires the table to expose `parentId`,
+   *  `path`, and `depth` columns. Registers `path` and `depth` as system columns
+   *  and auto-seeds `parentId` as a self-lookup field. Tree operations are not
+   *  provided by the engine — call the hierarchy library directly from the
+   *  owning module's service layer. Default: false. */
   hierarchy?: boolean;
 
-  /** Mark this entity as orderable. Requires the table to spread `...orderableColumns()`
-   *  from `@packages/orderable`. Registers `sortOrder` as a system column, defaults
-   *  list sort to `sortOrder ASC, id ASC`, and exposes a unified move endpoint that
-   *  accepts `{ parentId?, sortOrder? }`. When combined with `hierarchy: true`, a
-   *  single move call can reparent and reorder. Default: false. */
+  /** Mark this entity as orderable. Requires the table to expose a `sortOrder`
+   *  integer column. Registers `sortOrder` as a system column and defaults the
+   *  list sort to `sortOrder ASC, id ASC`. Sort-order writes are not provided
+   *  by the engine — call the orderable library directly from the owning
+   *  module's service layer. Default: false. */
   orderable?: boolean;
 
   // --- Addon features ---

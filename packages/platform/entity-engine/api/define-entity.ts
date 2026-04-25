@@ -166,26 +166,23 @@ export interface ModelDefinition<TTable extends PgTable = PgTable> {
    */
   adminConfigurable?: boolean;
   /**
-   * Mark this entity as hierarchical. Requires the Drizzle table to spread
-   * `...hierarchyColumns(selfRef)` from `@packages/hierarchy` (providing
-   * `parentId`, `path`, `depth` columns). When enabled: the three columns are
-   * registered as system columns, and downstream service wiring (Task 2)
-   * injects `HierarchyService` so the entity service gains `reparent()`,
-   * `getAncestors()`, `getDescendants()` plus auto-maintained `path`/`depth`
-   * on create. Default: false.
+   * Mark this entity as hierarchical. Requires the Drizzle table to expose
+   * `parentId`, `path`, `depth` columns. When enabled: the three columns are
+   * registered as system columns (hidden from forms and layout seeds), and
+   * `parentId` is auto-seeded as a self-lookup field. Tree operations
+   * (move, ancestors, descendants) are not provided by the engine — call
+   * the hierarchy library directly from the owning module's service layer.
+   * Default: false.
    */
   hierarchy?: boolean;
 
   /**
-   * Mark this entity as orderable. Requires the Drizzle table to spread
-   * `...orderableColumns()` from `@packages/orderable` (providing a single
-   * `sortOrder` integer). When enabled: the column is registered as a system
-   * column (hidden from forms and layout seeds), the default list sort is
-   * `sortOrder ASC, id ASC` unless overridden, and the entity service
-   * exposes a unified `move()` method plus a generated `POST /:slug/:id/move`
-   * endpoint that accepts `{ parentId?, sortOrder? }`. When combined with
-   * `hierarchy: true`, a single move call can reparent and reorder atomically.
-   * Default: false.
+   * Mark this entity as orderable. Requires the Drizzle table to expose a
+   * `sortOrder` integer column. When enabled: the column is registered as a
+   * system column (hidden from forms and layout seeds), and the default list
+   * sort is `sortOrder ASC, id ASC` unless overridden. Sort-order writes are
+   * not provided by the engine — call the orderable library directly from
+   * the owning module's service layer. Default: false.
    */
   orderable?: boolean;
 
@@ -438,15 +435,16 @@ export function defineEntity<TTable extends PgTable>(model: ModelDefinition<TTab
     }
   }
 
-  // Hierarchy: validate the table spreads hierarchyColumns() and register
-  // parent_id / path / depth as system columns. Fails fast with a clear
-  // message if the consumer enabled the flag but forgot the mixin.
+  // Hierarchy: validate the required columns exist and register path/depth
+  // as system columns. The column shape is library-defined; the kernel only
+  // checks the names so misconfigured entities fail fast at boot instead of
+  // at first tree operation.
   if (model.hierarchy) {
     const missing = (['parentId', 'path', 'depth'] as const).filter((k) => !columns[k]);
     if (missing.length > 0) {
       throw new Error(
-        `defineEntity({ hierarchy: true }) for '${model.slug}' requires the table to spread ` +
-          `...hierarchyColumns() from @packages/hierarchy. Missing columns: ${missing.join(', ')}.`,
+        `defineEntity({ hierarchy: true }) for '${model.slug}' requires the table to expose ` +
+          `parentId, path, depth columns. Missing columns: ${missing.join(', ')}.`,
       );
     }
     // parentId is user-editable (seeded as a lookup field below); only
@@ -454,15 +452,14 @@ export function defineEntity<TTable extends PgTable>(model: ModelDefinition<TTab
     systemColumns.push('path', 'depth');
   }
 
-  // Orderable: validate the table spreads orderableColumns() and register
-  // sort_order as a system column. The column is maintained exclusively via
-  // the unified move() endpoint, never through form submits, so it stays
-  // out of field seeds and form layouts.
+  // Orderable: validate sort_order exists and register it as a system
+  // column. The column shape is library-defined; the kernel only checks the
+  // name so misconfigured entities fail fast at boot.
   if (model.orderable) {
     if (!columns.sortOrder) {
       throw new Error(
-        `defineEntity({ orderable: true }) for '${model.slug}' requires the table to spread ` +
-          `...orderableColumns() from @packages/orderable. Missing column: sortOrder.`,
+        `defineEntity({ orderable: true }) for '${model.slug}' requires the table to expose ` +
+          `a sortOrder column.`,
       );
     }
     systemColumns.push('sortOrder');
