@@ -9,7 +9,6 @@
   },
   "scripts": {
     "test": "vitest run",
-    "test:integration": "vitest run --config vitest.integration.ts",
     "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
