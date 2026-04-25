@@ -57,9 +57,13 @@ export const COMPLIANCE_RULES_CONFIG = defineEntity({
         slug: 'compliance-rule-status',
         initialState: 'draft',
         states: [
-          { name: 'draft', label: 'Draft', color: '#6B7280' },
-          { name: 'active', label: 'Active', color: '#10B981' },
-          { name: 'deprecated', label: 'Deprecated', color: '#9CA3AF' },
+          // All three names are code-load-bearing: ComplianceRuleStatus is a
+          // TS literal union, and ComplianceRulesService branches on
+          // 'deprecated' (cascade) and the 'active' default. Lock the
+          // identifiers in the admin UI.
+          { name: 'draft', label: 'Draft', color: '#6B7280', isSystem: true },
+          { name: 'active', label: 'Active', color: '#10B981', isSystem: true },
+          { name: 'deprecated', label: 'Deprecated', color: '#9CA3AF', isSystem: true },
         ],
         transitions: [
           { from: 'draft', to: ['active', 'deprecated'] },
