@@ -4,6 +4,7 @@ import { EventsModule } from '@packages/events';
 import { RbacModule } from '@packages/rbac';
 import { MockQueueModule } from './mock-queue.module';
 import { MockAutomationsModule } from './mock-automations.module';
+import { seedDefaultTestUser } from './default-test-user';
 
 export interface PlatformTestModuleOptions {
   /** Additional NestJS modules to import (the module under test + any extra deps) */
@@ -43,7 +44,7 @@ export async function createPlatformTestModule(options: PlatformTestModuleOption
   if (includeQueue) mockImports.push(MockQueueModule);
   if (includeAutomations) mockImports.push(MockAutomationsModule);
 
-  return createIntegrationTestModule({
+  const ctx = await createIntegrationTestModule({
     imports: [
       EventsModule,
       RbacModule,
@@ -52,4 +53,8 @@ export async function createPlatformTestModule(options: PlatformTestModuleOption
     ],
     providers: options.providers ?? [],
   });
+
+  await seedDefaultTestUser(ctx.db);
+
+  return ctx;
 }
