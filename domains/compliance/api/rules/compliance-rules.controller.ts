@@ -21,6 +21,7 @@ import { ComplianceRulesService } from './compliance-rules.service';
 import {
   CreateComplianceRuleSchema,
   DeprecateComplianceRuleSchema,
+  TransitionComplianceRuleSchema,
   UpdateComplianceRuleSchema,
 } from './compliance-rules.dto';
 
@@ -123,6 +124,26 @@ export class ComplianceRulesController {
   @RequirePermission('compliance-rules.update')
   restore(@Param('id', ParseUUIDPipe) id: string) {
     return this.rules.restore(id);
+  }
+
+  @Post(':id/transition')
+  @HttpCode(HttpStatus.CREATED)
+  @RequirePermission('compliance-rules.update')
+  transition(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: unknown,
+    @CurrentUser() user: JwtPayload,
+    @AccessContext() accessCtx?: DataAccessContext,
+  ) {
+    const input = TransitionComplianceRuleSchema.parse(body);
+    return this.rules.transition(
+      id,
+      input.fieldKey,
+      input.to,
+      user.userId,
+      { reason: input.reason, comment: input.comment },
+      accessCtx,
+    );
   }
 
   @Post(':id/deprecate')

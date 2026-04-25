@@ -20,6 +20,7 @@ import {
 import { ComplianceFilingsService } from './compliance-filings.service';
 import {
   CreateComplianceFilingSchema,
+  TransitionComplianceFilingSchema,
   UpdateComplianceFilingSchema,
 } from './compliance-filings.dto';
 
@@ -96,5 +97,25 @@ export class ComplianceFilingsController {
   @RequirePermission('compliance-filings.update')
   restore(@Param('id', ParseUUIDPipe) id: string) {
     return this.filings.restore(id);
+  }
+
+  @Post(':id/transition')
+  @HttpCode(HttpStatus.CREATED)
+  @RequirePermission('compliance-filings.update')
+  transition(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: unknown,
+    @CurrentUser() user: JwtPayload,
+    @AccessContext() accessCtx?: DataAccessContext,
+  ) {
+    const input = TransitionComplianceFilingSchema.parse(body);
+    return this.filings.transition(
+      id,
+      input.fieldKey,
+      input.to,
+      user.userId,
+      { reason: input.reason, comment: input.comment },
+      accessCtx,
+    );
   }
 }

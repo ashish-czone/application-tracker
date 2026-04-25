@@ -45,10 +45,16 @@ abstract class HierarchyScopeResolver implements ScopeResolver {
 @Injectable()
 export class UnitScopeResolver extends HierarchyScopeResolver {
   readonly type = 'unit' as const;
+  constructor(positionScopeResolver: PositionScopeResolverService) {
+    super(positionScopeResolver);
+  }
 }
 
 /** `descendants` — rows tied to the actor's unit subtree. */
 @Injectable()
 export class DescendantsScopeResolver extends HierarchyScopeResolver {
   readonly type = 'descendants' as const;
+  constructor(positionScopeResolver: PositionScopeResolverService) {
+    super(positionScopeResolver);
+  }
 }

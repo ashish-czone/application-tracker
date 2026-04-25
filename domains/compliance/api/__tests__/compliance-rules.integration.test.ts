@@ -4,6 +4,7 @@ import { withAuth, type PackageTestApp } from '@packages/platform-testing';
 import { createComplianceTestApp, resetComplianceTestDb } from './setup/app';
 import {
   createLaw,
+  createLawWithHandler,
   createFiling,
   createFilingPrereqs,
 } from './setup/fixtures';
@@ -38,7 +39,7 @@ describe('Compliance Rules (integration)', () => {
   // a defaultValue is declared on the config — keep the full shape here so
   // each test doesn't have to repeat the workaround.
   async function createRule(overrides: Record<string, unknown> = {}) {
-    const { id: lawId } = await createLaw(ctx.db);
+    const { id: lawId } = await createLawWithHandler(ctx.db);
     const body = {
       code: unique('RULE'),
       name: 'Test Rule',
@@ -60,7 +61,7 @@ describe('Compliance Rules (integration)', () => {
 
   describe('POST /api/v1/compliance-rules', () => {
     it('creates a rule', async () => {
-      const { id: lawId } = await createLaw(ctx.db);
+      const { id: lawId } = await createLawWithHandler(ctx.db);
       const code = unique('RULE');
       const res = await request(ctx.httpServer)
         .post('/api/v1/compliance-rules')
@@ -82,7 +83,7 @@ describe('Compliance Rules (integration)', () => {
 
     it('rejects duplicate code', async () => {
       const { code } = await createRule();
-      const { id: lawId } = await createLaw(ctx.db);
+      const { id: lawId } = await createLawWithHandler(ctx.db);
       await request(ctx.httpServer)
         .post('/api/v1/compliance-rules')
         .set(withAuth(MANAGE))
@@ -270,10 +271,11 @@ describe('Compliance Rules (integration)', () => {
     it('reports hasGeneratedFilings=true with the exact count once filings exist', async () => {
       const { userId, teamId, lawId, ruleId, clientId } = await createFilingPrereqs(ctx.db);
       await createFiling(ctx.db, { ruleId, clientId, lawId, assigneeTeamId: teamId, createdBy: userId });
-      await createFiling(ctx.db, {
-        ruleId, clientId, lawId, assigneeTeamId: teamId, createdBy: userId,
-        periodStart: '2026-04-01', periodEnd: '2026-04-30',
-      });
+      await createFiling(
+        ctx.db,
+        { ruleId, clientId, lawId, assigneeTeamId: teamId, createdBy: userId },
+        { periodStart: '2026-04-01', periodEnd: '2026-04-30' },
+      );
       const res = await request(ctx.httpServer)
         .get(`/api/v1/compliance-rules/${ruleId}/edit-constraints`)
         .set(withAuth(MANAGE))

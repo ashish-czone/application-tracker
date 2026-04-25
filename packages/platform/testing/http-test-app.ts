@@ -1,5 +1,5 @@
 import { ValidationPipe, type Type, type DynamicModule } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import type { INestApplication } from '@nestjs/common';
 import type { TestingModule } from '@nestjs/testing';
 import type { DrizzleDB } from '@packages/database';
@@ -8,6 +8,7 @@ import { DatabaseModule, DatabaseService } from '@packages/database';
 import { LoggerModule } from '@packages/logger';
 import { EventsModule } from '@packages/events';
 import { RbacModule } from '@packages/rbac';
+import { GlobalExceptionFilter } from '@packages/app-shell';
 import { MockQueueModule } from './mock-queue.module';
 import { MockAutomationsModule } from './mock-automations.module';
 import { MockAuthGuard } from './mock-auth.guard';
@@ -79,6 +80,7 @@ export async function createPackageTestApp(options: PackageTestAppOptions = {}):
       ...(options.providers ?? []),
       { provide: APP_GUARD, useClass: MockAuthGuard },
       { provide: APP_GUARD, useClass: MockRbacGuard },
+      { provide: APP_FILTER, useClass: GlobalExceptionFilter },
     ],
   }).compile();
 
