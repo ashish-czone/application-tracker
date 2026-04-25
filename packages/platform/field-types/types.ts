@@ -49,6 +49,30 @@ export type ValidateFn = (
 export type FieldTypeFamily = 'text' | 'numeric' | 'date' | 'reference' | 'selection' | 'taxonomy' | 'special';
 
 // ---------------------------------------------------------------------------
+// Save lifecycle — context passed to a field type's save hooks
+// ---------------------------------------------------------------------------
+
+export interface FieldTypeSaveContext {
+  entityType: string;
+  entityId: string;
+  fieldKey: string;
+  mode: 'create' | 'update';
+  actorId: string;
+  /** For updates: the previous value of this field (if available). */
+  previousValue?: unknown;
+}
+
+export type TransformValueBeforeSaveFn = (
+  value: unknown,
+  ctx: FieldTypeSaveContext,
+) => Promise<unknown>;
+
+export type OnAfterSaveFn = (
+  value: unknown,
+  ctx: FieldTypeSaveContext,
+) => Promise<void>;
+
+// ---------------------------------------------------------------------------
 // Field type definition — the complete description of a field type
 // ---------------------------------------------------------------------------
 
@@ -83,6 +107,13 @@ export interface FieldTypeDefinition {
   isArray: boolean;
   isReference: boolean;
   defaultLookupEntity?: string;
+
+  // --- Save lifecycle ---
+  // Pre-tx value transformation (e.g. media tmp→entity move). Throwing aborts
+  // the save. Returns the value to persist.
+  transformValueBeforeSave?: TransformValueBeforeSaveFn;
+  // Post-tx side effect. Failures are logged, never block the save.
+  onAfterSave?: OnAfterSaveFn;
 }
 
 // ---------------------------------------------------------------------------

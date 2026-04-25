@@ -8,7 +8,6 @@ import { EntityRegistryService } from './entity-registry.service';
 import { EntityService } from './entity.service';
 import { deriveSupportedScopes } from './helpers/derive-supported-scopes';
 import { FieldDefinitionService } from './services/field-definition.service';
-import { FieldTypeSaveHookRegistry } from './services/field-type-save-hook.registry';
 import { LookupResolverService } from './services/lookup-resolver.service';
 
 import { JsonbStorageAdapter } from './storage/jsonb-storage.adapter';
@@ -110,7 +109,6 @@ export class EntityEngineModule implements OnApplicationBootstrap {
             fieldDefinitionService: FieldDefinitionService,
             lookupResolver: LookupResolverService,
             taxonomyExt: TaxonomyExtension | null,
-            hookRegistry: FieldTypeSaveHookRegistry,
             workflowExt: WorkflowExtension | null,
             entityRegistry: EntityRegistryService,
             appLogger: AppLoggerService,
@@ -127,9 +125,9 @@ export class EntityEngineModule implements OnApplicationBootstrap {
             } else if (config.customFields === true) {
               storage = jsonbStorage;
             }
-            return new EntityService(config, database, domainEventEmitter, storage, multiValueExtension, fieldDefinitionService, lookupResolver, taxonomyExt, hookRegistry, workflowExt, entityRegistry, appLogger, scopeResolverRegistry);
+            return new EntityService(config, database, domainEventEmitter, storage, multiValueExtension, fieldDefinitionService, lookupResolver, taxonomyExt, workflowExt, entityRegistry, appLogger, scopeResolverRegistry);
           },
-          inject: [DatabaseService, DomainEventEmitter, { token: EAV_STORAGE_EXTENSION, optional: true }, JsonbStorageAdapter, { token: MULTI_VALUE_EXTENSION, optional: true }, FieldDefinitionService, LookupResolverService, { token: TAXONOMY_EXTENSION, optional: true }, FieldTypeSaveHookRegistry, { token: WORKFLOW_EXTENSION, optional: true }, EntityRegistryService, AppLoggerService, ScopeResolverRegistry],
+          inject: [DatabaseService, DomainEventEmitter, { token: EAV_STORAGE_EXTENSION, optional: true }, JsonbStorageAdapter, { token: MULTI_VALUE_EXTENSION, optional: true }, FieldDefinitionService, LookupResolverService, { token: TAXONOMY_EXTENSION, optional: true }, { token: WORKFLOW_EXTENSION, optional: true }, EntityRegistryService, AppLoggerService, ScopeResolverRegistry],
         },
       ],
       exports: [serviceToken],

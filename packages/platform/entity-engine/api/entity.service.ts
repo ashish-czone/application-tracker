@@ -14,7 +14,7 @@ import {
   mergeFilters,
 } from '@packages/query-builder';
 import { buildSoftDeleteCondition } from '@packages/soft-delete';
-import { fieldTypeRegistry } from '@packages/field-types';
+import { fieldTypeRegistry, type FieldTypeSaveContext } from '@packages/field-types';
 import { DatabaseService, type DrizzleTx } from '@packages/database';
 import { ScopeResolverRegistry, type ScopeAnchorMap } from '@packages/rbac';
 import { DomainEventEmitter } from '@packages/events';
@@ -30,7 +30,6 @@ import { splitPayload } from './helpers/split-payload';
 import { splitExtensionPayload } from './helpers/split-extension-payload';
 import { buildClonePayload } from './helpers/build-clone-payload';
 import { infrastructureSelectKeys } from './helpers/infrastructure-select-keys';
-import { fieldTypeSaveHookRegistry, type FieldTypeSaveHookRegistry, type FieldTypeSaveHookContext } from './services/field-type-save-hook.registry';
 import type { WorkflowExtension } from './extensions/workflow-extension.interface';
 import type { TaxonomyExtension } from './extensions/taxonomy-extension.interface';
 import type { PaginatedResponse } from '@packages/common';
@@ -82,7 +81,6 @@ export class EntityService {
     private readonly fieldDefinitionService: FieldDefinitionService,
     private readonly lookupResolver: LookupResolverService,
     private readonly taxonomyExt: TaxonomyExtension | null,
-    _hookRegistry: FieldTypeSaveHookRegistry, // kept for backward-compat factory signature; use singleton directly
     private readonly workflowExt: WorkflowExtension | null,
     private readonly entityRegistry: EntityRegistryService,
     appLogger: AppLoggerService,
@@ -763,27 +761,22 @@ export class EntityService {
     // Check uniqueness for custom EAV unique fields
     await this.checkEavUniqueness(defs, customFields);
 
-    // Pre-generate entity ID so onBeforeSave hooks can use it (e.g. file paths)
+    // Pre-generate entity ID so transformValueBeforeSave can use it (e.g. file paths)
     const entityId = crypto.randomUUID();
 
-    // Phase 1: onBeforeSave hooks (pre-transaction, can throw to abort)
+    // Phase 1: transformValueBeforeSave (pre-transaction, can throw to abort)
     const allFields = { ...customFields, ...relationalFields };
     const defMap = new Map(defs.map(d => [d.fieldKey, d]));
     for (const [key, value] of Object.entries(allFields)) {
       const def = defMap.get(key);
-      if (!def) continue;
-      const hooks = fieldTypeSaveHookRegistry.get(def.fieldType);
-      if (hooks?.onBeforeSave) {
-        const ctx: FieldTypeSaveHookContext = {
-          entityType: config.entityType, entityId, fieldKey: key,
-          fieldType: def.fieldType, mode: 'create', actorId,
-        };
-        const result = await hooks.onBeforeSave(value, ctx);
-        if (result.transformedValue !== undefined) {
-          if (key in customFields) customFields[key] = result.transformedValue;
-          if (key in relationalFields) relationalFields[key] = result.transformedValue;
-        }
-      }
+      const ft = def && fieldTypeRegistry.get(def.fieldType);
+      if (!ft?.transformValueBeforeSave) continue;
+      const ctx: FieldTypeSaveContext = {
+        entityType: config.entityType, entityId, fieldKey: key, mode: 'create', actorId,
+      };
+      const next = await ft.transformValueBeforeSave(value, ctx);
+      if (key in customFields) customFields[key] = next;
+      if (key in relationalFields) relationalFields[key] = next;
     }
 
     // Phase 2: Transaction (entity row + EAV + relational writes).
@@ -847,20 +840,17 @@ export class EntityService {
       row = await this.findOneOrFail(entityId);
     }
 
-    // Phase 3: onAfterSave hooks (fire-and-forget)
+    // Phase 3: onAfterSave (fire-and-forget)
     for (const [key, value] of Object.entries(allFields)) {
       const def = defMap.get(key);
-      if (!def) continue;
-      const hooks = fieldTypeSaveHookRegistry.get(def.fieldType);
-      if (hooks?.onAfterSave) {
-        const ctx: FieldTypeSaveHookContext = {
-          entityType: config.entityType, entityId: row.id, fieldKey: key,
-          fieldType: def.fieldType, mode: 'create', actorId,
-        };
-        hooks.onAfterSave(value, ctx).catch(err =>
-          this.logger.warn(`onAfterSave hook failed for ${def.fieldType}/${key}: ${err}`),
-        );
-      }
+      const ft = def && fieldTypeRegistry.get(def.fieldType);
+      if (!ft?.onAfterSave) continue;
+      const ctx: FieldTypeSaveContext = {
+        entityType: config.entityType, entityId: row.id, fieldKey: key, mode: 'create', actorId,
+      };
+      ft.onAfterSave(value, ctx).catch(err =>
+        this.logger.warn(`onAfterSave failed for ${def!.fieldType}/${key}: ${err}`),
+      );
     }
 
     // Auto-assign pipeline for entities with workflow discriminators
@@ -970,24 +960,19 @@ export class EntityService {
     await this.checkStandardUniqueness(defs, updateValues, id);
     await this.checkEavUniqueness(defs, customFields, id);
 
-    // Phase 1: onBeforeSave hooks (pre-transaction, can throw to abort)
+    // Phase 1: transformValueBeforeSave (pre-transaction, can throw to abort)
     const allUpdateFields = { ...customFields, ...relationalFields };
     const updateDefMap = new Map(defs.map(d => [d.fieldKey, d]));
     for (const [key, value] of Object.entries(allUpdateFields)) {
       const def = updateDefMap.get(key);
-      if (!def) continue;
-      const hooks = fieldTypeSaveHookRegistry.get(def.fieldType);
-      if (hooks?.onBeforeSave) {
-        const ctx: FieldTypeSaveHookContext = {
-          entityType: config.entityType, entityId: id, fieldKey: key,
-          fieldType: def.fieldType, mode: 'update', actorId,
-        };
-        const result = await hooks.onBeforeSave(value, ctx);
-        if (result.transformedValue !== undefined) {
-          if (key in customFields) customFields[key] = result.transformedValue;
-          if (key in relationalFields) relationalFields[key] = result.transformedValue;
-        }
-      }
+      const ft = def && fieldTypeRegistry.get(def.fieldType);
+      if (!ft?.transformValueBeforeSave) continue;
+      const ctx: FieldTypeSaveContext = {
+        entityType: config.entityType, entityId: id, fieldKey: key, mode: 'update', actorId,
+      };
+      const next = await ft.transformValueBeforeSave(value, ctx);
+      if (key in customFields) customFields[key] = next;
+      if (key in relationalFields) relationalFields[key] = next;
     }
 
     let eventPayload: { changes: string[]; before: Record<string, unknown>; after: Record<string, unknown> } | null = null;
@@ -1070,20 +1055,17 @@ export class EntityService {
       ? await updateTxBody(externalTx)
       : await this.database.db.transaction(updateTxBody);
 
-    // Phase 3: onAfterSave hooks (fire-and-forget)
+    // Phase 3: onAfterSave (fire-and-forget)
     for (const [key, value] of Object.entries(allUpdateFields)) {
       const def = updateDefMap.get(key);
-      if (!def) continue;
-      const hooks = fieldTypeSaveHookRegistry.get(def.fieldType);
-      if (hooks?.onAfterSave) {
-        const ctx: FieldTypeSaveHookContext = {
-          entityType: config.entityType, entityId: id, fieldKey: key,
-          fieldType: def.fieldType, mode: 'update', actorId,
-        };
-        hooks.onAfterSave(value, ctx).catch(err =>
-          this.logger.warn(`onAfterSave hook failed for ${def.fieldType}/${key}: ${err}`),
-        );
-      }
+      const ft = def && fieldTypeRegistry.get(def.fieldType);
+      if (!ft?.onAfterSave) continue;
+      const ctx: FieldTypeSaveContext = {
+        entityType: config.entityType, entityId: id, fieldKey: key, mode: 'update', actorId,
+      };
+      ft.onAfterSave(value, ctx).catch(err =>
+        this.logger.warn(`onAfterSave failed for ${def!.fieldType}/${key}: ${err}`),
+      );
     }
 
     this.logger.log(`${config.singularName} updated`, { entityId: id, actorId });
@@ -1660,18 +1642,6 @@ export class EntityService {
         return null;
     }
   }
-
-  // ---------------------------------------------------------------------------
-  // RELATIONAL FIELD HELPERS (tags, category, multi)
-  // ---------------------------------------------------------------------------
-
-  /**
-   * After creating an entity, handle relational fields:
-   * - tags: attach each tag ID via TaxonomyService
-   * - category: stored as standard/EAV field (handled by splitPayload)
-   */
-  // handleRelationalCreate/Update and processFileFields have been replaced by
-  // FieldTypeSaveHookRegistry lifecycle hooks (onBeforeSave, onTransactionalSave)
 
   /**
    * Parse file field EAV values from JSON strings back to objects in response rows.

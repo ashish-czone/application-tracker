@@ -129,17 +129,6 @@ export { MULTI_VALUE_EXTENSION } from './extensions/multi-value-extension.interf
 export { FeatureDeriverRegistry, featureDeriverRegistry } from './services/feature-deriver.registry';
 export type { FeatureDeriver } from './services/feature-deriver.registry';
 
-// --- Field type save hooks ---
-
-export { FieldTypeSaveHookRegistry, fieldTypeSaveHookRegistry } from './services/field-type-save-hook.registry';
-export type {
-  FieldTypeSaveHookContext,
-  FieldTypeSaveHookResult,
-  FieldTypeSaveHooks,
-  OnBeforeSaveHook,
-  OnAfterSaveHook,
-} from './services/field-type-save-hook.registry';
-
 export type { LayoutExtension } from './extensions/layout-extension.interface';
 export { LAYOUT_EXTENSION } from './extensions/layout-extension.interface';
 

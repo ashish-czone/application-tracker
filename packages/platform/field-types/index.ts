@@ -9,6 +9,9 @@ export type {
   FieldTypeFamily,
   FieldTypeDefinition,
   FieldTypePlugin,
+  FieldTypeSaveContext,
+  TransformValueBeforeSaveFn,
+  OnAfterSaveFn,
 } from './types';
 
 // Registry

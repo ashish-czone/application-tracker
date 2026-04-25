@@ -35,6 +35,6 @@ export class FeatureDeriverRegistry {
 
 /**
  * Module-level singleton — guarantees a single instance regardless of
- * NestJS module scoping. Mirrors `fieldTypeSaveHookRegistry`.
+ * NestJS module scoping or webpack deduplication quirks.
  */
 export const featureDeriverRegistry = new FeatureDeriverRegistry();

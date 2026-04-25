@@ -8,7 +8,6 @@ import { DomainEventEmitter } from '@packages/events';
 import { AppLoggerService } from '@packages/logger';
 import { FieldDefinitionService } from '../field-definition.service';
 import { LookupResolverService } from '../lookup-resolver.service';
-import { FieldTypeSaveHookRegistry } from '../field-type-save-hook.registry';
 import { EntityRegistryService } from '../../entity-registry.service';
 import { EntityService } from '../../entity.service';
 import { fieldTypeRegistry } from '@packages/field-types';
@@ -148,7 +147,6 @@ describe('EntityService extensionOf (integration)', () => {
         FieldDefinitionService,
         EntityRegistryService,
         LookupResolverService,
-        FieldTypeSaveHookRegistry,
       ],
       mocks: { automations: false },
     });
@@ -195,7 +193,6 @@ describe('EntityService extensionOf (integration)', () => {
 
     const database = module.get(DatabaseService);
     const lookupResolver = module.get(LookupResolverService);
-    const hookRegistry = module.get(FieldTypeSaveHookRegistry);
     const appLogger = module.get(AppLoggerService);
 
     childService = new EntityService(
@@ -207,7 +204,6 @@ describe('EntityService extensionOf (integration)', () => {
       fieldDefService,
       lookupResolver,
       null,
-      hookRegistry,
       null,
       entityRegistry,
       appLogger,

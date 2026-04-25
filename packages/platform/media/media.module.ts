@@ -1,42 +1,18 @@
-import { Module, type DynamicModule, type OnModuleInit, Optional, Inject } from '@nestjs/common';
-import { FieldTypeSaveHookRegistry } from '@packages/entity-engine';
+import { Module, type DynamicModule, type OnModuleInit } from '@nestjs/common';
+import { fieldTypeRegistry } from '@packages/field-types';
 import { MediaService } from './services/media.service';
 import { MediaUploadController } from './controllers/media-upload.controller';
-import { MEDIA_MODULE_CONFIG, type MediaModuleConfig, type MediaModuleAsyncOptions, type MediaFile } from './types';
-
-function isMediaFile(value: unknown): value is MediaFile {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    typeof (value as any).key === 'string' &&
-    typeof (value as any).originalName === 'string'
-  );
-}
+import { createMediaFieldTypesPlugin } from './file-field-type';
+import { MEDIA_MODULE_CONFIG, type MediaModuleConfig, type MediaModuleAsyncOptions } from './types';
 
 @Module({})
 export class MediaModule implements OnModuleInit {
-  constructor(
-    private readonly mediaService: MediaService,
-    @Optional() @Inject(FieldTypeSaveHookRegistry) private readonly hookRegistry?: FieldTypeSaveHookRegistry,
-  ) {}
+  constructor(private readonly mediaService: MediaService) {}
 
   onModuleInit() {
-    if (!this.hookRegistry) return;
-
-    this.hookRegistry.register('file', {
-      onBeforeSave: async (value, ctx) => {
-        if (isMediaFile(value) && value.key.startsWith('tmp/')) {
-          const moved = await this.mediaService.moveFromTmp(
-            value,
-            ctx.entityType,
-            ctx.entityId,
-            ctx.fieldKey,
-          );
-          return { transformedValue: moved };
-        }
-        return {};
-      },
-    });
+    if (!fieldTypeRegistry.has('file')) {
+      fieldTypeRegistry.registerPlugin(createMediaFieldTypesPlugin(this.mediaService));
+    }
   }
 
   static register(config: MediaModuleConfig): DynamicModule {
