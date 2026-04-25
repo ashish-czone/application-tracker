@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest';
 import { randomUUID } from 'crypto';
 import { createPlatformTestModule, cleanDatabase } from '@packages/platform-testing';
 import { sql } from '@packages/database';
+import { FieldDefinitionService } from '@packages/entity-engine';
 import { FieldValueService } from '../field-value.service';
 import { entityFieldValues } from '../../schema/entity-field-values';
 import { fieldDefinitions } from '../../schema/field-definitions';
@@ -15,15 +16,17 @@ describe('FieldValueService (integration)', () => {
   let db: DrizzleDB;
   let cleanup: () => Promise<void>;
   let fieldValueService: FieldValueService;
+  let fieldDefService: FieldDefinitionService;
 
   beforeAll(async () => {
     const ctx = await createPlatformTestModule({
-      providers: [FieldValueService],
+      providers: [FieldDefinitionService, FieldValueService],
     });
     module = ctx.module;
     db = ctx.db;
     cleanup = ctx.cleanup;
     fieldValueService = module.get(FieldValueService);
+    fieldDefService = module.get(FieldDefinitionService);
   });
 
   afterEach(async () => {
@@ -49,6 +52,9 @@ describe('FieldValueService (integration)', () => {
       fieldType: opts.fieldType,
       isUnique: opts.isUnique ?? false,
     });
+    // FieldDefinitionService keeps an in-memory cache populated at bootstrap.
+    // Tests insert directly via Drizzle, so the cache must be reloaded.
+    await fieldDefService.reloadCache();
     return id;
   }
 

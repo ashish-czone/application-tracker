@@ -8,6 +8,7 @@ import { DomainEventEmitter } from '@packages/events';
 import { AppLoggerService } from '@packages/logger';
 import { FieldDefinitionService } from '../field-definition.service';
 import { LookupResolverService } from '../lookup-resolver.service';
+import { FeatureDeriverRegistry, featureDeriverRegistry } from '../feature-deriver.registry';
 import { EntityRegistryService } from '../../entity-registry.service';
 import { EntityService } from '../../entity.service';
 import { fieldTypeRegistry } from '@packages/field-types';
@@ -130,6 +131,7 @@ describe('EntityService (integration)', () => {
 
     const ctx = await createPlatformTestModule({
       providers: [
+        { provide: FeatureDeriverRegistry, useValue: featureDeriverRegistry },
         FieldDefinitionService,
         EntityRegistryService,
         LookupResolverService,
