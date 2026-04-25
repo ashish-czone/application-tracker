@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Menu, X, ChevronDown } from 'lucide-react';
-import type { PublicMenuItemDto } from '@packages/menus-ui-frontend';
+import type { PublicMenuItemDto } from '@domains/agency-ui/menus/frontend';
 import { cn } from '@/lib/cn';
 import { ThemeToggle } from './ThemeToggle';
 

@@ -1,0 +1,61 @@
+export type PageStatus = 'draft' | 'scheduled' | 'published' | 'archived';
+
+export interface PageRecord {
+  id: string;
+  slug: string;
+  title: string;
+  metaDescription: string | null;
+  ogImage: string | null;
+  status: PageStatus;
+  publishedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+import type { DataSource } from '@domains/agency-contract';
+
+export interface SectionRecord {
+  id: string;
+  pageId: string;
+  order: number;
+  blockKind: string;
+  variant: string | null;
+  title: string | null;
+  dataSource: DataSource | null;
+  customFields: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreatePageInput {
+  slug: string;
+  title: string;
+  metaDescription?: string;
+  ogImage?: string;
+}
+
+export interface UpdatePageInput {
+  slug?: string;
+  title?: string;
+  metaDescription?: string | null;
+  ogImage?: string | null;
+  status?: PageStatus;
+  publishedAt?: string | null;
+}
+
+export interface CreateSectionInput {
+  pageId: string;
+  order: number;
+  blockKind: string;
+  variant?: string | null;
+  title?: string | null;
+  dataSource?: DataSource | null;
+  customFields?: Record<string, unknown>;
+}
+
+export interface Paginated<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+}

@@ -1,11 +1,11 @@
-import type { SectionData } from '@packages/blocks-contract';
-import type { PublicMenuResponse } from '@packages/menus-ui-frontend';
+import type { SectionData } from '@domains/agency-contract';
+import type { PublicMenuResponse } from '@domains/agency-ui/menus/frontend';
 import { DEFAULT_SITE_THEME, type SiteTheme } from '@domains/agency-contract';
 
 /**
  * Shape the public-page API returns at `GET /api/v1/public/pages/:slug`.
  * Defined locally per the frontend-owns-its-types convention — the backend
- * DTO (`PublicPageResponse` in `@packages/pages-api`) is the authoritative
+ * DTO (`PublicPageResponse` in `@domains/agency-api`) is the authoritative
  * source; this mirror keeps NestJS out of the Next.js bundle.
  */
 export interface PageData {

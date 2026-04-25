@@ -2,7 +2,7 @@ import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { correlationIdMiddleware } from '@packages/logger';
-import { registerContentMappers } from '@packages/blocks-contract';
+import { registerContentMappers } from '@domains/agency-contract';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';

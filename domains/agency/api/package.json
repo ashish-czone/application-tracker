@@ -5,12 +5,15 @@
   "main": "index.ts",
   "scripts": {
     "test": "vitest run --passWithNoTests",
-    "test:integration": "vitest run --config vitest.integration.ts"
+    "test:integration": "vitest run --config vitest.integration.ts",
+    "db:generate:pages": "drizzle-kit generate --config ./pages/drizzle.config.ts",
+    "db:generate:menus": "drizzle-kit generate --config ./menus/drizzle.config.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
     "@nestjs/core": "^11.0.0",
     "@nestjs/swagger": "^11.0.0",
+    "@packages/auth": "workspace:*",
     "@packages/auth-core": "workspace:*",
     "@domains/agency-contract": "workspace:*",
     "@packages/common": "workspace:*",
@@ -18,20 +21,26 @@
     "@packages/domains": "workspace:*",
     "@packages/entity-engine": "workspace:*",
     "@packages/events": "workspace:*",
+    "@packages/field-types": "workspace:*",
+    "@packages/hierarchy": "workspace:*",
     "@packages/logger": "workspace:*",
     "@packages/content-api": "workspace:*",
     "@packages/media-library-api": "workspace:*",
-    "@packages/menus-api": "workspace:*",
-    "@packages/pages-api": "workspace:*",
+    "@packages/orderable": "workspace:*",
     "@packages/rbac": "workspace:*",
     "@packages/settings": "workspace:*",
-    "drizzle-orm": "^0.45.1"
+    "@packages/soft-delete": "workspace:*",
+    "class-validator": "^0.14.1",
+    "drizzle-orm": "^0.45.1",
+    "drizzle-zod": "^0.7.0",
+    "zod": "^3.25.0"
   },
   "devDependencies": {
     "@packages/app-shell": "workspace:*",
     "@packages/platform-testing": "workspace:*",
     "@packages/testing": "workspace:*",
     "@types/supertest": "^6.0.2",
+    "drizzle-kit": "^0.31.9",
     "supertest": "^7.0.0",
     "typescript": "^5.7.0",
     "vitest": "^3.0.0"

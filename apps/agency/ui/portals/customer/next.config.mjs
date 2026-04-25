@@ -5,8 +5,7 @@ const nextConfig = {
   // PAGES_API_URL is the source of truth; the fetch calls in app/[slug]/
   // page.tsx set their own revalidate windows.
   transpilePackages: [
-    '@packages/blocks-ui',
-    '@packages/blocks-contract',
+    '@domains/agency-ui',
     '@domains/agency-contract',
   ],
   images: {

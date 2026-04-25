@@ -45,3 +45,5 @@ export {
   isSiteThemeDark,
 } from './presets';
 export type { AgencyPreset, AgencyPalette, TypographyScale } from './presets';
+
+export * from './blocks';

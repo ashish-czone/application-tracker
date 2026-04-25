@@ -104,6 +104,9 @@ importers:
       '@domains/agency-api':
         specifier: workspace:*
         version: link:../../domains/agency/api
+      '@domains/agency-contract':
+        specifier: workspace:*
+        version: link:../../domains/agency/contract
       '@nestjs/common':
         specifier: ^11.0.0
         version: 11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -137,9 +140,6 @@ importers:
       '@packages/automations':
         specifier: workspace:*
         version: link:../../packages/platform/automations/api
-      '@packages/blocks-contract':
-        specifier: workspace:*
-        version: link:../../packages/platform/blocks/contract
       '@packages/common':
         specifier: workspace:*
         version: link:../../packages/core/common
@@ -167,18 +167,12 @@ importers:
       '@packages/media':
         specifier: workspace:*
         version: link:../../packages/platform/media
-      '@packages/menus-api':
-        specifier: workspace:*
-        version: link:../../packages/addons/menus/api
       '@packages/notification-channels':
         specifier: workspace:*
         version: link:../../packages/platform/notification-channels/api
       '@packages/notifications':
         specifier: workspace:*
         version: link:../../packages/platform/notifications/api
-      '@packages/pages-api':
-        specifier: workspace:*
-        version: link:../../packages/addons/pages/api
       '@packages/queue':
         specifier: workspace:*
         version: link:../../packages/platform/queue/api
@@ -288,6 +282,9 @@ importers:
       '@domains/agency-contract':
         specifier: workspace:*
         version: link:../../../../../domains/agency/contract
+      '@domains/agency-ui':
+        specifier: workspace:*
+        version: link:../../../../../domains/agency/ui
       '@hookform/resolvers':
         specifier: ^5.0.0
         version: 5.2.2(react-hook-form@7.71.2(react@19.2.4))
@@ -303,12 +300,6 @@ importers:
       '@packages/automations-ui':
         specifier: workspace:*
         version: link:../../../../../packages/platform/automations/ui
-      '@packages/blocks-contract':
-        specifier: workspace:*
-        version: link:../../../../../packages/platform/blocks/contract
-      '@packages/blocks-ui':
-        specifier: workspace:*
-        version: link:../../../../../packages/platform/blocks/ui
       '@packages/debug-profiler-ui':
         specifier: workspace:*
         version: link:../../../../../packages/core/debug-profiler/ui
@@ -327,15 +318,9 @@ importers:
       '@packages/media-library-ui-admin':
         specifier: workspace:*
         version: link:../../../../../packages/addons/media-library/ui/admin
-      '@packages/menus-ui-admin':
-        specifier: workspace:*
-        version: link:../../../../../packages/addons/menus/ui/admin
       '@packages/notification-channels-ui':
         specifier: workspace:*
         version: link:../../../../../packages/platform/notification-channels/ui
-      '@packages/pages-ui-admin':
-        specifier: workspace:*
-        version: link:../../../../../packages/addons/pages/ui/admin
       '@packages/platform-ui':
         specifier: workspace:*
         version: link:../../../../../packages/platform/platform-ui
@@ -387,7 +372,7 @@ importers:
         version: 19.2.3(@types/react@19.2.14)
       '@vitejs/plugin-react':
         specifier: ^4.6.0
-        version: 4.7.0(vite@6.4.1(@types/node@22.19.15)(jiti@1.21.7)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0))
+        version: 4.7.0(vite@6.4.1(@types/node@22.19.15)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0))
       autoprefixer:
         specifier: ^10.4.20
         version: 10.4.27(postcss@8.5.8)
@@ -402,22 +387,16 @@ importers:
         version: 5.9.3
       vite:
         specifier: ^6.4.0
-        version: 6.4.1(@types/node@22.19.15)(jiti@1.21.7)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0)
+        version: 6.4.1(@types/node@22.19.15)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0)
 
   apps/agency/ui/portals/customer:
     dependencies:
       '@domains/agency-contract':
         specifier: workspace:*
         version: link:../../../../../domains/agency/contract
-      '@packages/blocks-contract':
+      '@domains/agency-ui':
         specifier: workspace:*
-        version: link:../../../../../packages/platform/blocks/contract
-      '@packages/blocks-ui':
-        specifier: workspace:*
-        version: link:../../../../../packages/platform/blocks/ui
-      '@packages/menus-ui-frontend':
-        specifier: workspace:*
-        version: link:../../../../../packages/addons/menus/ui/frontend
+        version: link:../../../../../domains/agency/ui
       framer-motion:
         specifier: ^12.38.0
         version: 12.38.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -560,7 +539,7 @@ importers:
     devDependencies:
       '@nestjs/cli':
         specifier: ^11.0.0
-        version: 11.0.16(@swc/core@1.15.18)(@types/node@22.19.15)
+        version: 11.0.16(@swc/core@1.15.18)(@types/node@22.19.15)(esbuild@0.25.12)
       '@nestjs/schematics':
         specifier: ^11.0.0
         version: 11.0.9(chokidar@4.0.3)(typescript@5.9.3)
@@ -605,7 +584,7 @@ importers:
         version: 7.2.2
       ts-loader:
         specifier: ^9.5.4
-        version: 9.5.4(typescript@5.9.3)(webpack@5.105.4(@swc/core@1.15.18))
+        version: 9.5.4(typescript@5.9.3)(webpack@5.105.4(@swc/core@1.15.18)(esbuild@0.25.12))
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -614,7 +593,7 @@ importers:
         version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0)
       webpack:
         specifier: ^5.105.4
-        version: 5.105.4(@swc/core@1.15.18)
+        version: 5.105.4(@swc/core@1.15.18)(esbuild@0.25.12)
       webpack-node-externals:
         specifier: ^3.0.0
         version: 3.0.0
@@ -934,7 +913,7 @@ importers:
         version: 19.2.3(@types/react@19.2.14)
       '@vitejs/plugin-react':
         specifier: ^4.6.0
-        version: 4.7.0(vite@6.4.1(@types/node@22.19.15)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0))
+        version: 4.7.0(vite@6.4.1(@types/node@22.19.15)(jiti@1.21.7)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0))
       autoprefixer:
         specifier: ^10.4.20
         version: 10.4.27(postcss@8.5.8)
@@ -949,7 +928,7 @@ importers:
         version: 5.9.3
       vite:
         specifier: ^6.4.0
-        version: 6.4.1(@types/node@22.19.15)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0)
+        version: 6.4.1(@types/node@22.19.15)(jiti@1.21.7)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0)
 
   apps/control-plane:
     dependencies:
@@ -1082,7 +1061,7 @@ importers:
     devDependencies:
       '@nestjs/cli':
         specifier: ^11.0.0
-        version: 11.0.16(@swc/core@1.15.18)(@types/node@22.19.15)(esbuild@0.25.12)
+        version: 11.0.16(@swc/core@1.15.18)(@types/node@22.19.15)
       '@nestjs/schematics':
         specifier: ^11.0.0
         version: 11.0.9(chokidar@4.0.3)(typescript@5.9.3)
@@ -1106,7 +1085,7 @@ importers:
         version: 8.20.0
       ts-loader:
         specifier: ^9.5.1
-        version: 9.5.4(typescript@5.9.3)(webpack@5.105.4(@swc/core@1.15.18)(esbuild@0.25.12))
+        version: 9.5.4(typescript@5.9.3)(webpack@5.105.4(@swc/core@1.15.18))
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -1115,7 +1094,7 @@ importers:
         version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0)
       webpack:
         specifier: ^5.97.0
-        version: 5.105.4(@swc/core@1.15.18)(esbuild@0.25.12)
+        version: 5.105.4(@swc/core@1.15.18)
       webpack-node-externals:
         specifier: ^3.0.0
         version: 3.0.0
@@ -1717,6 +1696,9 @@ importers:
       '@nestjs/swagger':
         specifier: ^11.0.0
         version: 11.2.6(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)
+      '@packages/auth':
+        specifier: workspace:*
+        version: link:../../../packages/platform/auth/api
       '@packages/auth-core':
         specifier: workspace:*
         version: link:../../../packages/platform/auth-core
@@ -1738,27 +1720,42 @@ importers:
       '@packages/events':
         specifier: workspace:*
         version: link:../../../packages/core/events
+      '@packages/field-types':
+        specifier: workspace:*
+        version: link:../../../packages/platform/field-types
+      '@packages/hierarchy':
+        specifier: workspace:*
+        version: link:../../../packages/platform/hierarchy/api
       '@packages/logger':
         specifier: workspace:*
         version: link:../../../packages/core/logger
       '@packages/media-library-api':
         specifier: workspace:*
         version: link:../../../packages/addons/media-library/api
-      '@packages/menus-api':
+      '@packages/orderable':
         specifier: workspace:*
-        version: link:../../../packages/addons/menus/api
-      '@packages/pages-api':
-        specifier: workspace:*
-        version: link:../../../packages/addons/pages/api
+        version: link:../../../packages/platform/orderable/api
       '@packages/rbac':
         specifier: workspace:*
         version: link:../../../packages/platform/rbac/api
       '@packages/settings':
         specifier: workspace:*
         version: link:../../../packages/platform/settings/api
+      '@packages/soft-delete':
+        specifier: workspace:*
+        version: link:../../../packages/core/soft-delete
+      class-validator:
+        specifier: ^0.14.1
+        version: 0.14.4
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3))
+      drizzle-zod:
+        specifier: ^0.7.0
+        version: 0.7.1(drizzle-orm@0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3)))(zod@3.25.76)
+      zod:
+        specifier: ^3.25.0
+        version: 3.25.76
     devDependencies:
       '@packages/app-shell':
         specifier: workspace:*
@@ -1772,6 +1769,9 @@ importers:
       '@types/supertest':
         specifier: ^6.0.2
         version: 6.0.3
+      drizzle-kit:
+        specifier: ^0.31.9
+        version: 0.31.9
       supertest:
         specifier: ^7.0.0
         version: 7.2.2
@@ -1783,7 +1783,54 @@ importers:
         version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0)
 
   domains/agency/contract:
+    dependencies:
+      '@packages/field-types':
+        specifier: workspace:*
+        version: link:../../../packages/platform/field-types
     devDependencies:
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0)
+
+  domains/agency/ui:
+    dependencies:
+      '@domains/agency-contract':
+        specifier: workspace:*
+        version: link:../contract
+      '@measured/puck':
+        specifier: ^0.19.0
+        version: 0.19.3(@types/react@19.2.14)(immer@11.1.4)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(use-sync-external-store@1.6.0(react@19.2.4))
+      '@packages/platform-ui':
+        specifier: workspace:*
+        version: link:../../../packages/platform/platform-ui
+      '@packages/ui':
+        specifier: workspace:*
+        version: link:../../../packages/core/ui
+      '@tanstack/react-query':
+        specifier: ^5.0.0
+        version: 5.90.21(react@19.2.4)
+      lucide-react:
+        specifier: ^0.500.0
+        version: 0.500.0(react@19.2.4)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.4
+      react-dom:
+        specifier: ^19.0.0
+        version: 19.2.4(react@19.2.4)
+      react-router:
+        specifier: ^7.0.0
+        version: 7.13.1(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+    devDependencies:
+      '@types/react':
+        specifier: ^19.2.14
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: ^19.0.0
+        version: 19.2.3(@types/react@19.2.14)
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -2765,135 +2812,6 @@ importers:
         specifier: ^3.0.0
         version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0)
 
-  packages/addons/menus/api:
-    dependencies:
-      '@nestjs/common':
-        specifier: ^11.0.0
-        version: 11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
-      '@nestjs/swagger':
-        specifier: ^11.0.0
-        version: 11.2.6(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)
-      '@packages/auth':
-        specifier: workspace:*
-        version: link:../../../platform/auth/api
-      '@packages/auth-core':
-        specifier: workspace:*
-        version: link:../../../platform/auth-core
-      '@packages/database':
-        specifier: workspace:*
-        version: link:../../../core/database
-      '@packages/entity-engine':
-        specifier: workspace:*
-        version: link:../../../platform/entity-engine/api
-      '@packages/events':
-        specifier: workspace:*
-        version: link:../../../core/events
-      '@packages/hierarchy':
-        specifier: workspace:*
-        version: link:../../../platform/hierarchy/api
-      '@packages/logger':
-        specifier: workspace:*
-        version: link:../../../core/logger
-      '@packages/orderable':
-        specifier: workspace:*
-        version: link:../../../platform/orderable/api
-      '@packages/pages-api':
-        specifier: workspace:*
-        version: link:../../pages/api
-      '@packages/rbac':
-        specifier: workspace:*
-        version: link:../../../platform/rbac/api
-      '@packages/soft-delete':
-        specifier: workspace:*
-        version: link:../../../core/soft-delete
-      drizzle-orm:
-        specifier: ^0.45.1
-        version: 0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3))
-      drizzle-zod:
-        specifier: ^0.7.0
-        version: 0.7.1(drizzle-orm@0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3)))(zod@3.25.76)
-      zod:
-        specifier: ^3.25.0
-        version: 3.25.76
-    devDependencies:
-      '@packages/platform-testing':
-        specifier: workspace:*
-        version: link:../../../platform/testing
-      '@types/supertest':
-        specifier: ^6.0.2
-        version: 6.0.3
-      drizzle-kit:
-        specifier: ^0.31.9
-        version: 0.31.9
-      supertest:
-        specifier: ^7.0.0
-        version: 7.2.2
-      typescript:
-        specifier: ^5.7.0
-        version: 5.9.3
-      vitest:
-        specifier: ^3.0.0
-        version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0)
-
-  packages/addons/menus/ui/admin:
-    dependencies:
-      '@packages/platform-ui':
-        specifier: workspace:*
-        version: link:../../../../platform/platform-ui
-      '@packages/ui':
-        specifier: workspace:*
-        version: link:../../../../core/ui
-      '@tanstack/react-query':
-        specifier: ^5.0.0
-        version: 5.90.21(react@19.2.4)
-      lucide-react:
-        specifier: ^0.500.0
-        version: 0.500.0(react@19.2.4)
-      react:
-        specifier: ^19.0.0
-        version: 19.2.4
-      react-dom:
-        specifier: ^19.0.0
-        version: 19.2.4(react@19.2.4)
-      react-router:
-        specifier: ^7.0.0
-        version: 7.13.1(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
-    devDependencies:
-      '@types/react':
-        specifier: ^19.2.14
-        version: 19.2.14
-      '@types/react-dom':
-        specifier: ^19.0.0
-        version: 19.2.3(@types/react@19.2.14)
-      typescript:
-        specifier: ^5.7.0
-        version: 5.9.3
-      vitest:
-        specifier: ^3.0.0
-        version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0)
-
-  packages/addons/menus/ui/frontend:
-    dependencies:
-      react:
-        specifier: ^19.0.0
-        version: 19.2.4
-    devDependencies:
-      '@types/react':
-        specifier: ^19.2.14
-        version: 19.2.14
-      '@types/react-dom':
-        specifier: ^19.0.0
-        version: 19.2.3(@types/react@19.2.14)
-      react-dom:
-        specifier: ^19.0.0
-        version: 19.2.4(react@19.2.4)
-      typescript:
-        specifier: ^5.7.0
-        version: 5.9.3
-      vitest:
-        specifier: ^3.0.0
-        version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0)
-
   packages/addons/notes/api:
     dependencies:
       '@nestjs/common':
@@ -3314,122 +3232,6 @@ importers:
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
-
-  packages/addons/pages/api:
-    dependencies:
-      '@nestjs/common':
-        specifier: ^11.0.0
-        version: 11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
-      '@nestjs/swagger':
-        specifier: ^11.0.0
-        version: 11.2.6(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)
-      '@packages/auth':
-        specifier: workspace:*
-        version: link:../../../platform/auth/api
-      '@packages/auth-core':
-        specifier: workspace:*
-        version: link:../../../platform/auth-core
-      '@packages/blocks-contract':
-        specifier: workspace:*
-        version: link:../../../platform/blocks/contract
-      '@packages/database':
-        specifier: workspace:*
-        version: link:../../../core/database
-      '@packages/entity-engine':
-        specifier: workspace:*
-        version: link:../../../platform/entity-engine/api
-      '@packages/events':
-        specifier: workspace:*
-        version: link:../../../core/events
-      '@packages/field-types':
-        specifier: workspace:*
-        version: link:../../../platform/field-types
-      '@packages/logger':
-        specifier: workspace:*
-        version: link:../../../core/logger
-      '@packages/rbac':
-        specifier: workspace:*
-        version: link:../../../platform/rbac/api
-      '@packages/soft-delete':
-        specifier: workspace:*
-        version: link:../../../core/soft-delete
-      class-validator:
-        specifier: ^0.14.1
-        version: 0.14.4
-      drizzle-orm:
-        specifier: ^0.45.1
-        version: 0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3))
-      drizzle-zod:
-        specifier: ^0.7.0
-        version: 0.7.1(drizzle-orm@0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3)))(zod@3.25.76)
-      zod:
-        specifier: ^3.25.0
-        version: 3.25.76
-    devDependencies:
-      '@packages/platform-testing':
-        specifier: workspace:*
-        version: link:../../../platform/testing
-      '@types/supertest':
-        specifier: ^6.0.2
-        version: 6.0.3
-      drizzle-kit:
-        specifier: ^0.31.9
-        version: 0.31.9
-      supertest:
-        specifier: ^7.0.0
-        version: 7.2.2
-      typescript:
-        specifier: ^5.7.0
-        version: 5.9.3
-      vitest:
-        specifier: ^3.0.0
-        version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0)
-
-  packages/addons/pages/ui/admin:
-    dependencies:
-      '@measured/puck':
-        specifier: ^0.19.0
-        version: 0.19.3(@types/react@19.2.14)(immer@11.1.4)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(use-sync-external-store@1.6.0(react@19.2.4))
-      '@packages/blocks-contract':
-        specifier: workspace:*
-        version: link:../../../../platform/blocks/contract
-      '@packages/blocks-ui':
-        specifier: workspace:*
-        version: link:../../../../platform/blocks/ui
-      '@packages/platform-ui':
-        specifier: workspace:*
-        version: link:../../../../platform/platform-ui
-      '@packages/ui':
-        specifier: workspace:*
-        version: link:../../../../core/ui
-      '@tanstack/react-query':
-        specifier: ^5.0.0
-        version: 5.90.21(react@19.2.4)
-      lucide-react:
-        specifier: ^0.500.0
-        version: 0.500.0(react@19.2.4)
-      react:
-        specifier: ^19.0.0
-        version: 19.2.4
-      react-dom:
-        specifier: ^19.0.0
-        version: 19.2.4(react@19.2.4)
-      react-router:
-        specifier: ^7.0.0
-        version: 7.13.1(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
-    devDependencies:
-      '@types/react':
-        specifier: ^19.2.14
-        version: 19.2.14
-      '@types/react-dom':
-        specifier: ^19.0.0
-        version: 19.2.3(@types/react@19.2.14)
-      typescript:
-        specifier: ^5.7.0
-        version: 5.9.3
-      vitest:
-        specifier: ^3.0.0
-        version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0)
 
   packages/addons/pdf-generator:
     dependencies:
@@ -4627,44 +4429,6 @@ importers:
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
-
-  packages/platform/blocks/contract:
-    dependencies:
-      '@packages/field-types':
-        specifier: workspace:*
-        version: link:../../field-types
-    devDependencies:
-      typescript:
-        specifier: ^5.7.0
-        version: 5.9.3
-      vitest:
-        specifier: ^3.0.0
-        version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0)
-
-  packages/platform/blocks/ui:
-    dependencies:
-      '@packages/blocks-contract':
-        specifier: workspace:*
-        version: link:../contract
-      react:
-        specifier: ^19.0.0
-        version: 19.2.4
-    devDependencies:
-      '@types/react':
-        specifier: ^19.2.14
-        version: 19.2.14
-      '@types/react-dom':
-        specifier: ^19.0.0
-        version: 19.2.3(@types/react@19.2.14)
-      react-dom:
-        specifier: ^19.0.0
-        version: 19.2.4(react@19.2.4)
-      typescript:
-        specifier: ^5.7.0
-        version: 5.9.3
-      vitest:
-        specifier: ^3.0.0
-        version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0)
 
   packages/platform/conditions-ui:
     dependencies:
