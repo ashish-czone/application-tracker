@@ -29,7 +29,11 @@ export const offerEntity: MockEntity = {
   slug: 'offers',
   icon: 'file-signature',
   nameField: 'applicationId',
-  features: { hasWorkflow: true, softDelete: true, restore: true },
+  features: {
+    softDelete: true,
+    restore: true,
+    workflow: { hasWorkflow: true, discriminator: null },
+  },
 };
 
 export const offerListColumns: ListColumn[] = [

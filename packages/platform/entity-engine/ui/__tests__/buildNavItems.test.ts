@@ -23,7 +23,6 @@ function mk(
       restore: false,
       adminConfigurable: false,
       hasTaxonomy: false,
-      hasWorkflow: false,
       hasMedia: false,
     } as EntityRegistryEntry['features'],
   } as EntityRegistryEntry;

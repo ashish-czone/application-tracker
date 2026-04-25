@@ -19,9 +19,11 @@ export interface EntityRegistryEntry {
     afterCreateRoute?: string;
   };
   /**
-   * Engine-derived flags merged with the entity's opaque addon `features` bag.
-   * Engine keys are typed below; addon keys come from `EntityConfig.features`
-   * verbatim and are read by the addons that own them via their own readers.
+   * Engine-derived flags merged with feature-package-derived keys and the
+   * entity's opaque addon `features` bag. Engine keys are typed below;
+   * feature-package keys (workflows, ...) and addon keys come from
+   * registered derivers / `EntityConfig.features` verbatim and are read
+   * by the package that owns them via its own reader.
    */
   features: {
     softDelete: boolean;
@@ -29,14 +31,7 @@ export interface EntityRegistryEntry {
     /** Entity exposes DB-backed definitions that admins can customize via the admin UI. */
     adminConfigurable: boolean;
     hasTaxonomy: boolean;
-    hasWorkflow: boolean;
     hasMedia: boolean;
-    workflowDiscriminator?: {
-      key: string;
-      label: string;
-      options: { value: string; label: string }[];
-      fieldName: string;
-    } | null;
     [key: string]: unknown;
   };
   relationships: {

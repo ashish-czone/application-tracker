@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { getTableColumns } from 'drizzle-orm';
 import type { PgColumn } from 'drizzle-orm/pg-core';
 import type { EntityConfig, EntityRegistryEntry, ResolvedExtension } from './types';
+import { FeatureDeriverRegistry } from './services/feature-deriver.registry';
 
 /**
  * Central registry of all entity types.
@@ -14,6 +15,8 @@ export class EntityRegistryService {
   private readonly resolvedExtensions = new Map<string, ResolvedExtension>();
   private finalized = false;
   private readonly logger = new Logger(EntityRegistryService.name);
+
+  constructor(private readonly featureDerivers: FeatureDeriverRegistry) {}
 
   /**
    * Register an entity config. Called by EntityEngineModule.forEntity() during init.
@@ -78,17 +81,11 @@ export class EntityRegistryService {
         customFields: !!config.customFields,
         adminConfigurable: !!config.adminConfigurable,
         hasTaxonomy: Object.values(config.fieldMeta).some(f => f.fieldType === 'tags'),
-        hasWorkflow: Object.values(config.fieldMeta).some(f => f.fieldType === 'workflow'),
         hasMedia: Object.values(config.fieldMeta).some(f => f.fieldType === 'file'),
-        workflowDiscriminator: (() => {
-          for (const [fieldKey, meta] of Object.entries(config.fieldMeta)) {
-            if (meta.fieldType === 'workflow' && meta.workflow?.discriminator) {
-              const d = meta.workflow.discriminator;
-              return { key: d.key, label: d.label, options: d.options, fieldName: fieldKey };
-            }
-          }
-          return null;
-        })(),
+        // Feature-package-derived keys (workflows, ...). Each feature package
+        // registers a deriver in onModuleInit; the engine merges results
+        // verbatim and never inspects the keys.
+        ...this.featureDerivers.derive(config),
         // Opaque addon-owned bag. Forwarded verbatim; the engine does not
         // inspect these keys. Each addon ships a reader for its own key.
         ...(config.features ?? {}),

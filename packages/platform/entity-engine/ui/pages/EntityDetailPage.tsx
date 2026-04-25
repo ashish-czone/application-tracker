@@ -257,10 +257,8 @@ export function EntityDetailPage({ entityType, renderPipelineProgress, renderWor
       {/* Custom header actions */}
       {renderHeaderActions && renderHeaderActions(entityType, item.id as string, item)}
 
-      {/* Workflow transition actions */}
-      {renderWorkflowActions && entity.features.hasWorkflow && (
-        renderWorkflowActions(entityType, item.id as string, item)
-      )}
+      {/* Workflow transition actions — renderer self-gates and returns null when no workflow is bound. */}
+      {renderWorkflowActions && renderWorkflowActions(entityType, item.id as string, item)}
 
       {/* Primary action button (first picker action) */}
       {primaryAction && (
@@ -544,9 +542,7 @@ function OverviewTab({
 
   return (
     <div className="space-y-4">
-      {renderPipelineProgress && entity.features.hasWorkflow && (
-        renderPipelineProgress(entityType, item.id as string, item)
-      )}
+      {renderPipelineProgress && renderPipelineProgress(entityType, item.id as string, item)}
 
       {sectionsToRender.map((section: any) => (
         <DynamicSection

@@ -2,8 +2,10 @@ import { Global, Module, type OnModuleInit } from '@nestjs/common';
 import { RbacService } from '@packages/rbac';
 import { ActionRegistry } from '@packages/automation-contracts';
 import { WORKFLOW_EXTENSION } from '@packages/entity-engine/extensions';
+import { FeatureDeriverRegistry } from '@packages/entity-engine';
 import { fieldTypeRegistry } from '@packages/field-types';
 import { workflowFieldTypesPlugin } from './field-types';
+import { workflowFeatureDeriver } from './feature';
 import { WorkflowGuardRegistry } from './services/workflow-guard-registry.service';
 import { WorkflowRegistryService } from './services/workflow-registry.service';
 import { WorkflowEngineService } from './services/workflow-engine.service';
@@ -39,6 +41,7 @@ export class WorkflowsModule implements OnModuleInit {
   constructor(
     private readonly rbacService: RbacService,
     private readonly actionRegistry: ActionRegistry,
+    private readonly featureDerivers: FeatureDeriverRegistry,
     private readonly transitionWorkflowAction: TransitionWorkflowAction,
   ) {}
 
@@ -53,5 +56,6 @@ export class WorkflowsModule implements OnModuleInit {
     ]);
 
     this.actionRegistry.register(this.transitionWorkflowAction);
+    this.featureDerivers.register(workflowFeatureDeriver);
   }
 }

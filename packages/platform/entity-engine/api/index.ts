@@ -124,6 +124,11 @@ export { EAV_STORAGE_EXTENSION } from './extensions/eav-storage.interface';
 export type { MultiValueExtension } from './extensions/multi-value-extension.interface';
 export { MULTI_VALUE_EXTENSION } from './extensions/multi-value-extension.interface';
 
+// --- Feature deriver registry ---
+
+export { FeatureDeriverRegistry, featureDeriverRegistry } from './services/feature-deriver.registry';
+export type { FeatureDeriver } from './services/feature-deriver.registry';
+
 // --- Field type save hooks ---
 
 export { FieldTypeSaveHookRegistry, fieldTypeSaveHookRegistry } from './services/field-type-save-hook.registry';

@@ -31,3 +31,8 @@ export type {
   TransitionHistoryEntry,
   TransitionPreflight,
 } from './types';
+export {
+  WORKFLOW_FEATURE_KEY,
+  readWorkflowFeature,
+  type WorkflowFeatureBag,
+} from './feature';
