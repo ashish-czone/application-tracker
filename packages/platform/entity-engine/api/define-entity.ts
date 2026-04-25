@@ -244,35 +244,15 @@ export interface ModelDefinition<TTable extends PgTable = PgTable> {
   /** Configurable actions for list pages */
   actions?: EntityActions;
 
-  // --- Notes ---
-
-  /** Enable the notes tab on the entity detail page. Default: false. */
-  hasNotes?: boolean;
-
-  // --- Attachments ---
-
-  /** Enable the attachments tab on the entity detail page. Default: false. */
-  hasAttachments?: boolean;
-
-  // --- Evaluations ---
-
-  /** Enable the evaluations tab on the entity detail page. Default: false. */
-  hasEvaluations?: boolean;
-
-  // --- Tags ---
+  // --- Addon features ---
 
   /**
-   * Enable inline tagging on the entity detail page without declaring a `tags` field.
-   * Renders an editable chip row in the detail header bound to the given tag group.
+   * Opaque bag of per-entity addon configuration. Forwarded verbatim to the
+   * registry; the engine never inspects keys. Compose with addon-supplied
+   * helpers, e.g.
+   * `features: { ...notesFeature(), ...attachmentsFeature({ maxFileSize: ... }) }`.
    */
-  hasTags?: { groupSlug: string };
-
-  /** Per-entity attachment configuration. Only relevant when hasAttachments is true. */
-  attachmentConfig?: {
-    maxFileSize?: number;
-    acceptedMimeTypes?: string[];
-    deleteMode?: 'soft' | 'hard';
-  };
+  features?: Record<string, unknown>;
 
   // --- Computed columns ---
 
@@ -627,11 +607,7 @@ export function defineEntity<TTable extends PgTable>(model: ModelDefinition<TTab
     adminConfigurable: model.adminConfigurable,
     hierarchy: model.hierarchy,
     orderable: model.orderable,
-    hasNotes: model.hasNotes,
-    hasAttachments: model.hasAttachments,
-    hasEvaluations: model.hasEvaluations,
-    hasTags: model.hasTags,
-    attachmentConfig: model.attachmentConfig,
+    features: model.features,
     computedColumns: model.computedColumns,
     extensionColumns: model.extensionColumns,
     extensionOf: model.extensionOf,

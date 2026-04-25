@@ -72,6 +72,7 @@ export class EntityRegistryService {
       slug: config.slug,
       ui: { ...config.ui, boardFields: uniqueBoardFields.length > 0 ? uniqueBoardFields : undefined },
       features: {
+        // Engine-derived flags. Addons must not register keys with these names.
         softDelete: config.onDelete.mode === 'soft',
         restore: config.onDelete.mode === 'soft',
         customFields: !!config.customFields,
@@ -79,15 +80,6 @@ export class EntityRegistryService {
         hasTaxonomy: Object.values(config.fieldMeta).some(f => f.fieldType === 'tags'),
         hasWorkflow: Object.values(config.fieldMeta).some(f => f.fieldType === 'workflow'),
         hasMedia: Object.values(config.fieldMeta).some(f => f.fieldType === 'file'),
-        hasNotes: !!config.hasNotes,
-        hasAttachments: !!config.hasAttachments,
-        hasEvaluations: !!config.hasEvaluations,
-        hasTags: config.hasTags ? { groupSlug: config.hasTags.groupSlug } : undefined,
-        attachmentConfig: config.attachmentConfig ? {
-          maxFileSize: config.attachmentConfig.maxFileSize,
-          acceptedMimeTypes: config.attachmentConfig.acceptedMimeTypes,
-          deleteMode: config.attachmentConfig.deleteMode,
-        } : undefined,
         workflowDiscriminator: (() => {
           for (const [fieldKey, meta] of Object.entries(config.fieldMeta)) {
             if (meta.fieldType === 'workflow' && meta.workflow?.discriminator) {
@@ -97,6 +89,9 @@ export class EntityRegistryService {
           }
           return null;
         })(),
+        // Opaque addon-owned bag. Forwarded verbatim; the engine does not
+        // inspect these keys. Each addon ships a reader for its own key.
+        ...(config.features ?? {}),
       },
       relationships: (config.relationships ?? []).map(({ name, type, targetEntity, foreignKey, label, displayFields }) => ({
         name,

@@ -802,38 +802,19 @@ export interface EntityConfig<TTable extends PgTable = PgTable> {
    *  single move call can reparent and reorder. Default: false. */
   orderable?: boolean;
 
-  // --- Notes ---
-
-  /** Enable the notes tab on the entity detail page. Default: false. */
-  hasNotes?: boolean;
-
-  // --- Attachments ---
-
-  /** Enable the attachments tab on the entity detail page. Default: false. */
-  hasAttachments?: boolean;
-
-  // --- Evaluations ---
-
-  /** Enable the evaluations tab on the entity detail page. Default: false. */
-  hasEvaluations?: boolean;
-
-  // --- Tags ---
+  // --- Addon features ---
 
   /**
-   * Enable inline tagging on the entity detail page without declaring a `tags` field.
-   * Renders an editable chip row in the detail header bound to the given tag group.
+   * Opaque bag of per-entity addon configuration. The engine forwards this
+   * verbatim to `EntityRegistryEntry.features` and never inspects the keys.
+   * Each addon owns one or more keys and ships a typed helper that returns
+   * its fragment (e.g. `notesFeature()`, `attachmentsFeature({ ... })`).
+   *
+   * Engine-derived flags (`softDelete`, `hasWorkflow`, `hasMedia`, etc.) are
+   * computed by the registry and merged into the same bag downstream — addon
+   * keys must not collide with those well-known names.
    */
-  hasTags?: { groupSlug: string };
-
-  /** Per-entity attachment configuration. Only relevant when hasAttachments is true. */
-  attachmentConfig?: {
-    /** Maximum file size in bytes. Default: 10MB (from media module). */
-    maxFileSize?: number;
-    /** Accepted MIME types. Default: all types. e.g., ['image/*', 'application/pdf'] */
-    acceptedMimeTypes?: string[];
-    /** How individual attachments are deleted. 'soft' marks deletedAt, 'hard' removes blob + row. Default: 'soft'. */
-    deleteMode?: 'soft' | 'hard';
-  };
+  features?: Record<string, unknown>;
 
   // --- Computed columns ---
 
@@ -1037,6 +1018,13 @@ export interface EntityRegistryEntry {
   pluralName: string;
   slug: string;
   ui: EntityUIHints;
+  /**
+   * Engine-derived feature flags merged with the entity's opaque addon
+   * `features` bag. Engine keys (`softDelete`, `hasWorkflow`, etc.) are
+   * computed from the entity config; addon keys come from
+   * `EntityConfig.features` verbatim and are read by the addons that own
+   * them. Unknown keys are returned as-is.
+   */
   features: {
     softDelete: boolean;
     restore: boolean;
@@ -1045,21 +1033,13 @@ export interface EntityRegistryEntry {
     hasTaxonomy: boolean;
     hasWorkflow: boolean;
     hasMedia: boolean;
-    hasNotes: boolean;
-    hasAttachments: boolean;
-    hasEvaluations: boolean;
-    hasTags?: { groupSlug: string };
-    attachmentConfig?: {
-      maxFileSize?: number;
-      acceptedMimeTypes?: string[];
-      deleteMode?: 'soft' | 'hard';
-    };
     workflowDiscriminator: {
       key: string;
       label: string;
       options: { value: string; label: string }[];
       fieldName: string;
     } | null;
+    [key: string]: unknown;
   };
   relationships: Omit<EntityRelationship, 'junctionEntity' | 'handler'>[];
 }
