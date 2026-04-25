@@ -16,16 +16,42 @@ import { PlatformUIProvider } from '@packages/platform-ui';
 import { ThemeProvider } from '@packages/theming-ui';
 import { useAuth } from '@packages/auth-ui/hooks/useAuth';
 import { SessionExpiredModal } from '@packages/auth-ui/components/SessionExpiredModal';
+import type { WebFeatureManifest } from '@packages/domains';
 import type { ApiFn } from './types';
 
 interface ProvidersProps {
   children: ReactNode;
   apiFn: ApiFn;
+  features: WebFeatureManifest[];
   entityUIConfigs: unknown[];
   detailTabs: DetailTabPlugin[];
   rightSidebarPanels: RightSidebarPanel[];
   headerPlugins: HeaderPlugin[];
   columnRenderers: Record<string, ColumnRendererRegistration>;
+}
+
+/**
+ * Wraps children in each feature manifest's provider, innermost-first in
+ * registration order. The first feature in the list ends up closest to
+ * children, so later features can read context from earlier ones.
+ */
+function ComposedFeatureProviders({
+  features,
+  apiFn,
+  children,
+}: {
+  features: WebFeatureManifest[];
+  apiFn: unknown;
+  children: ReactNode;
+}) {
+  let result: ReactNode = children;
+  for (let i = features.length - 1; i >= 0; i--) {
+    const Provider = features[i].provider;
+    if (Provider) {
+      result = <Provider apiFn={apiFn}>{result}</Provider>;
+    }
+  }
+  return <>{result}</>;
 }
 
 const queryClient = new QueryClient({
@@ -53,6 +79,7 @@ function AuthGatedThemeProvider({ apiFn, children }: { apiFn: any; children: Rea
 export function Providers({
   children,
   apiFn,
+  features,
   entityUIConfigs,
   detailTabs,
   rightSidebarPanels,
@@ -84,7 +111,9 @@ export function Providers({
               columnRenderers={renderers}
             >
               <TaxonomyProvider apiFn={apiAny}>
-                {children}
+                <ComposedFeatureProviders features={features} apiFn={apiAny}>
+                  {children}
+                </ComposedFeatureProviders>
               </TaxonomyProvider>
             </EntityEngineProvider>
           </AuthGatedThemeProvider>
