@@ -20,7 +20,6 @@ import {
 import type { EntityAction } from '@packages/entity-engine';
 import type { DetailTabPlugin } from '../types';
 import { DynamicSection, isFieldEmpty } from '@packages/eav-attributes-ui';
-import { EntityTagsChipRow } from '@packages/taxonomy-ui';
 import { useEntityEngine, useEntityHooks, useEntityConfig } from '../EntityEngineProvider';
 import { useEntityLayout } from '../helpers/useEntityLayout';
 import { useListLayout } from '../helpers/useListLayout';
@@ -53,7 +52,7 @@ export function EntityDetailPage({ entityType, renderPipelineProgress, renderWor
   const location = useLocation();
   const entity = useEntityConfig(entityType);
   const hooks = useEntityHooks(entityType);
-  const { getDetailPlugins, getDetailTabs, getRightSidebarPanels, apiFn } = useEntityEngine();
+  const { getDetailPlugins, getDetailTabs, getRightSidebarPanels, getHeaderPlugins, apiFn } = useEntityEngine();
   const queryClient = useQueryClient();
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -171,16 +170,13 @@ export function EntityDetailPage({ entityType, renderPipelineProgress, renderWor
   const primaryAction = detailActions.find((a) => a.picker);
   const dropdownActions = detailActions.filter((a) => a !== primaryAction);
 
-  // Build visible tabs: Overview (built-in) + registered tab plugins filtered by feature flags
+  // Build visible tabs: Overview (built-in) + registered tab plugins filtered by enabledFor
   // Must be above early returns to satisfy Rules of Hooks
   const visibleTabs = useMemo(() => {
     const registeredTabs = getDetailTabs(entityType);
-    const features = entity.features as Record<string, unknown>;
-    const filtered = registeredTabs.filter(
-      (tab) => !tab.featureFlag || features[tab.featureFlag],
-    );
+    const filtered = registeredTabs.filter((tab) => tab.enabledFor?.(entity) ?? true);
     return [{ key: 'overview', label: 'Overview', order: 0 } as DetailTabPlugin, ...filtered];
-  }, [getDetailTabs, entityType, entity.features]);
+  }, [getDetailTabs, entityType, entity]);
 
   const getDisplayName = (row: Record<string, unknown>): string => {
     const { nameField } = entity.ui;
@@ -246,11 +242,14 @@ export function EntityDetailPage({ entityType, renderPipelineProgress, renderWor
   const subtitle = getSubtitle(item);
   const plugins = getDetailPlugins(entityType).sort((a, b) => a.order - b.order);
 
-  // Right sidebar panels — filtered by feature flags
-  const allSidebarPanels = getRightSidebarPanels(entityType);
-  const features = entity.features as Record<string, unknown>;
-  const sidebarPanels = allSidebarPanels.filter(
-    (panel) => !panel.featureFlag || features[panel.featureFlag],
+  // Right sidebar panels — filtered by enabledFor
+  const sidebarPanels = getRightSidebarPanels(entityType).filter(
+    (panel) => panel.enabledFor?.(entity) ?? true,
+  );
+
+  // Header plugins — rendered between the title block and the tabs
+  const headerPlugins = getHeaderPlugins(entityType).filter(
+    (plugin) => plugin.enabledFor?.(entity) ?? true,
   );
 
   const headerActions = (
@@ -360,14 +359,16 @@ export function EntityDetailPage({ entityType, renderPipelineProgress, renderWor
           {headerActions}
         </div>
 
-        {entity.features.hasTags && (
-          <div className="mt-3">
-            <EntityTagsChipRow
-              apiFn={apiFn}
-              entityType={entityType}
-              entityId={item.id as string}
-              groupSlug={entity.features.hasTags.groupSlug}
-            />
+        {headerPlugins.length > 0 && (
+          <div className="mt-3 space-y-3">
+            {headerPlugins.map((plugin) => (
+              <plugin.component
+                key={plugin.key}
+                entityType={entityType}
+                entityId={item.id as string}
+                entity={item}
+              />
+            ))}
           </div>
         )}
       </div>

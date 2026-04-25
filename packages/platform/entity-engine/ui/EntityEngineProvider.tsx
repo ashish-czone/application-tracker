@@ -2,7 +2,7 @@ import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { createEntityApi } from './helpers/createEntityApi';
 import { createEntityHooks, type EntityHooks } from './helpers/createEntityHooks';
-import type { EntityRegistryEntry, EntityApi, EntityUIConfig, EntityDetailPlugin, DetailTabPlugin, ListViewPlugin, RightSidebarPanel, ColumnRendererRegistration } from './types';
+import type { EntityRegistryEntry, EntityApi, EntityUIConfig, EntityDetailPlugin, DetailTabPlugin, ListViewPlugin, RightSidebarPanel, HeaderPlugin, ColumnRendererRegistration } from './types';
 
 interface EntityEngineContextValue {
   /** All registered entities from the backend */
@@ -25,6 +25,8 @@ interface EntityEngineContextValue {
   getListViews: (entityType: string) => ListViewPlugin[];
   /** Get right sidebar panels for an entity type (sorted by order) */
   getRightSidebarPanels: (entityType: string) => RightSidebarPanel[];
+  /** Get header plugins for an entity type (global + entity-specific, sorted by order) */
+  getHeaderPlugins: (entityType: string) => HeaderPlugin[];
   /** Get a named column renderer registration */
   getColumnRenderer: (name: string) => ColumnRendererRegistration | undefined;
   /** Raw API client (for layout and other non-entity endpoints) */
@@ -45,17 +47,19 @@ interface EntityEngineProviderProps {
   };
   /** Frontend-side entity UI configs (detail plugins, etc.) */
   entityUIConfigs?: EntityUIConfig[];
-  /** Global detail tab plugins (applied to all entity detail pages) */
+  /** Global detail tab plugins (applied to all entity detail pages, filtered by enabledFor) */
   detailTabs?: DetailTabPlugin[];
-  /** Global list view plugins (applied to all entity list pages, filtered by featureFlag) */
+  /** Global list view plugins (applied to all entity list pages, filtered by enabledFor) */
   listViews?: ListViewPlugin[];
   /** Named column renderer registrations (keyed by renderer name) */
   columnRenderers?: Record<string, ColumnRendererRegistration>;
-  /** Global right sidebar panels (applied to all entity detail pages, filtered by featureFlag) */
+  /** Global right sidebar panels (applied to all entity detail pages, filtered by enabledFor) */
   rightSidebarPanels?: RightSidebarPanel[];
+  /** Global detail-page header plugins (applied to all entity detail pages, filtered by enabledFor) */
+  headerPlugins?: HeaderPlugin[];
 }
 
-export function EntityEngineProvider({ children, apiFn, entityUIConfigs = [], detailTabs: globalDetailTabs = [], listViews: globalListViews = [], rightSidebarPanels: globalSidebarPanels = [], columnRenderers = {} }: EntityEngineProviderProps) {
+export function EntityEngineProvider({ children, apiFn, entityUIConfigs = [], detailTabs: globalDetailTabs = [], listViews: globalListViews = [], rightSidebarPanels: globalSidebarPanels = [], headerPlugins: globalHeaderPlugins = [], columnRenderers = {} }: EntityEngineProviderProps) {
   // Fetch entity registry from backend
   const { data: entities = [], isLoading } = useQuery({
     queryKey: ['entity-engine', 'registry'],
@@ -119,6 +123,17 @@ export function EntityEngineProvider({ children, apiFn, entityUIConfigs = [], de
     return map;
   }, [entityUIConfigs]);
 
+  // Index header plugins by entity type
+  const headerPluginMap = useMemo(() => {
+    const map = new Map<string, HeaderPlugin[]>();
+    for (const config of entityUIConfigs) {
+      if (config.headerPlugins?.length) {
+        map.set(config.entityType, [...config.headerPlugins].sort((a, b) => a.order - b.order));
+      }
+    }
+    return map;
+  }, [entityUIConfigs]);
+
   const value = useMemo<EntityEngineContextValue>(() => ({
     entities,
     isLoading,
@@ -139,9 +154,13 @@ export function EntityEngineProvider({ children, apiFn, entityUIConfigs = [], de
       const entityPanels = sidebarPanelMap.get(entityType) ?? [];
       return [...globalSidebarPanels, ...entityPanels].sort((a, b) => a.order - b.order);
     },
+    getHeaderPlugins: (entityType: string) => {
+      const entityPlugins = headerPluginMap.get(entityType) ?? [];
+      return [...globalHeaderPlugins, ...entityPlugins].sort((a, b) => a.order - b.order);
+    },
     getColumnRenderer: (name: string) => columnRenderers[name],
     apiFn,
-  }), [entities, isLoading, apiMap, hooksMap, pluginMap, tabMap, listViewMap, sidebarPanelMap, globalDetailTabs, globalListViews, globalSidebarPanels, columnRenderers, apiFn]);
+  }), [entities, isLoading, apiMap, hooksMap, pluginMap, tabMap, listViewMap, sidebarPanelMap, headerPluginMap, globalDetailTabs, globalListViews, globalSidebarPanels, globalHeaderPlugins, columnRenderers, apiFn]);
 
   if (isLoading) return null;
 

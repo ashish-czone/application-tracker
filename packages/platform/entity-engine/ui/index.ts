@@ -31,6 +31,7 @@ export type {
   DetailTabPlugin,
   ListViewPlugin,
   RightSidebarPanel,
+  HeaderPlugin,
   EntityUIConfig,
   ColumnRendererRegistration,
 } from './types';
