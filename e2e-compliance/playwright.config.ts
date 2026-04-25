@@ -6,6 +6,7 @@ const API_URL = process.env.E2E_API_URL ?? 'http://localhost:3012';
 export default defineConfig({
   testDir: '.',
   testMatch: '**/*.spec.ts',
+  globalSetup: './global-setup.ts',
   timeout: 60_000,
   expect: { timeout: 5_000 },
   // Real backend with shared DB state — must run serially.
