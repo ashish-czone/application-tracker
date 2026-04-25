@@ -6,7 +6,7 @@ import type {
   HeaderPlugin,
   RightSidebarPanel,
 } from '@packages/entity-engine-ui';
-import type { EntityDetailRenderer, MenuItem } from '@packages/domains';
+import type { EntityConfigTab, EntityDetailRenderer, MenuItem } from '@packages/domains';
 import { Providers } from './Providers';
 import { AppRouter } from './AppRouter';
 import { platformMenuItems } from './menu';
@@ -118,6 +118,11 @@ export function WebShell({
     return { pipelineProgress, workflowActions };
   }, [featureList]);
 
+  const entityConfigTabs = useMemo<EntityConfigTab[]>(
+    () => featureList.flatMap((f) => f.entityConfigTabs ?? []),
+    [featureList],
+  );
+
   return (
     <Providers
       apiFn={apiFn}
@@ -135,6 +140,7 @@ export function WebShell({
         extraRoutes={allExtraRoutes}
         detailHeaderActions={extraDetailHeaderActions}
         entityDetailRenderers={entityDetailRenderers}
+        entityConfigTabs={entityConfigTabs}
       />
     </Providers>
   );

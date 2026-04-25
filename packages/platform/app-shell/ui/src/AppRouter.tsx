@@ -7,6 +7,7 @@ import type {
   DomainWebManifest,
   DomainDetailPageComponent,
   DomainRouteObject,
+  EntityConfigTab,
   EntityDetailRenderer,
   MenuItem,
 } from '@packages/domains';
@@ -36,6 +37,12 @@ interface AppRouterProps {
     pipelineProgress?: EntityDetailRenderer;
     workflowActions?: EntityDetailRenderer;
   };
+  /**
+   * Sub-tabs to add to the entity-config admin page, contributed by
+   * features. Each tab decides which entities it applies to via its own
+   * `appliesTo` predicate; the router merely forwards the list.
+   */
+  entityConfigTabs?: EntityConfigTab[];
 }
 
 function AppEntityDetailPage({
@@ -119,7 +126,7 @@ function withPermission(element: ReactNode, permission?: string): ReactNode {
   return <PermissionGuard permission={permission}>{element}</PermissionGuard>;
 }
 
-export function AppRouter({ domains, brandLabel, menuItems, extraRoutes, detailHeaderActions, entityDetailRenderers }: AppRouterProps) {
+export function AppRouter({ domains, brandLabel, menuItems, extraRoutes, detailHeaderActions, entityDetailRenderers, entityConfigTabs }: AppRouterProps) {
   const { entities } = useEntityEngine();
   const detailOverrides = useMemo(() => mergeDetailOverrides(domains), [domains]);
   const domainRoutes = useMemo(() => mergeDomainRoutes(domains), [domains]);
@@ -278,7 +285,7 @@ export function AppRouter({ domains, brandLabel, menuItems, extraRoutes, detailH
           {usersRoutes}
           <Route path="/roles" element={<Suspense fallback={<PageSkeleton />}><RolesListPage /></Suspense>} />
           <Route path="/settings/appearance" element={<Suspense fallback={<PageSkeleton />}><ThemingAppearancePage /></Suspense>} />
-          <Route path="/settings/:entityType?" element={<Suspense fallback={<PageSkeleton />}><EntityConfigPage /></Suspense>} />
+          <Route path="/settings/:entityType?" element={<Suspense fallback={<PageSkeleton />}><EntityConfigPage entityConfigTabs={entityConfigTabs} /></Suspense>} />
           <Route path="/app-settings" element={<Suspense fallback={<PageSkeleton />}><AppSettingsPage /></Suspense>} />
           <Route path="/queued-tasks" element={<Suspense fallback={<PageSkeleton />}><QueueDashboardPage /></Suspense>} />
         </Route>

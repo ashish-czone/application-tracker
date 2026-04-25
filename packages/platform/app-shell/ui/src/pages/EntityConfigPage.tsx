@@ -1,90 +1,75 @@
 import { lazy, Suspense, useMemo, useState } from 'react';
 import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router';
 import { ArrowLeft } from 'lucide-react';
-import { Button, Badge } from '@packages/ui';
+import { Button } from '@packages/ui';
 import { useEntityEngine, useEntityConfig } from '@packages/entity-engine-ui';
-import { useWorkflows, useCreateWorkflow, PipelineStageManager, readWorkflowFeature } from '@packages/workflows-ui';
+import type { EntityConfigTab } from '@packages/domains';
 
 const FieldManagementPage = lazy(
   () => import('@packages/entity-layout-ui').then((m) => ({ default: m.FieldManagementPage })),
 );
 
-function EntitySettingsContent({ entityType, initialSubTab }: { entityType: string; initialSubTab?: string }) {
+const FIELDS_TAB_KEY = 'fields';
+
+function EntitySettingsContent({
+  entityType,
+  initialSubTab,
+  featureTabs,
+}: {
+  entityType: string;
+  initialSubTab?: string;
+  featureTabs: EntityConfigTab[];
+}) {
   const entity = useEntityConfig(entityType);
-  const { data: workflows } = useWorkflows();
-  const createWorkflow = useCreateWorkflow();
-  const [subTab, setSubTab] = useState<'fields' | 'pipeline'>(initialSubTab === 'pipeline' ? 'pipeline' : 'fields');
 
-  const entityWorkflows = useMemo(
-    () => (workflows ?? []).filter((w) => w.entityType === entityType && w.isActive),
-    [workflows, entityType],
+  const applicableFeatureTabs = useMemo(
+    () => featureTabs.filter((t) => t.appliesTo(entity)),
+    [featureTabs, entity],
   );
 
-  const workflowFeature = readWorkflowFeature(entity.features);
-  const hasWorkflow = !!workflowFeature && entityWorkflows.length > 0;
-  const discriminator = workflowFeature?.discriminator ?? null;
+  const [subTab, setSubTab] = useState<string>(() => {
+    if (initialSubTab && applicableFeatureTabs.some((t) => t.key === initialSubTab)) {
+      return initialSubTab;
+    }
+    return FIELDS_TAB_KEY;
+  });
 
-  const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
-  const activeWorkflow = selectedSlug
-    ? entityWorkflows.find((w) => w.slug === selectedSlug) ?? entityWorkflows[0]
-    : entityWorkflows[0];
-
-  function handleCreatePipeline(discriminatorValue: string) {
-    if (!activeWorkflow || !discriminator) return;
-    const option = discriminator.options.find((o) => o.value === discriminatorValue);
-    const slug = `${activeWorkflow.slug}-${discriminatorValue.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
-    createWorkflow.mutate({
-      slug,
-      name: `${option?.label ?? discriminatorValue} Pipeline`,
-      entityType,
-      fieldName: discriminator.fieldName,
-      initialState: activeWorkflow.initialState,
-      discriminatorKey: discriminator.key,
-      discriminatorValue,
-      isDefault: false,
-    });
-  }
-
-  const usedDiscriminatorValues = useMemo(
-    () => new Set(entityWorkflows.map((w) => w.discriminatorValue).filter(Boolean)),
-    [entityWorkflows],
-  );
-
-  const availableDiscriminatorOptions = useMemo(
-    () => discriminator?.options.filter((o) => !usedDiscriminatorValues.has(o.value)) ?? [],
-    [discriminator, usedDiscriminatorValues],
-  );
+  const showStrip = applicableFeatureTabs.length > 0;
+  const ActiveFeatureTab = applicableFeatureTabs.find((t) => t.key === subTab)?.component;
 
   return (
     <div>
-      {hasWorkflow && (
+      {showStrip && (
         <div className="flex gap-4 mb-5">
           <button
             type="button"
-            onClick={() => setSubTab('fields')}
+            onClick={() => setSubTab(FIELDS_TAB_KEY)}
             className={`text-sm font-medium pb-1 border-b-2 transition-colors ${
-              subTab === 'fields'
+              subTab === FIELDS_TAB_KEY
                 ? 'border-foreground text-foreground'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
             Fields & Layout
           </button>
-          <button
-            type="button"
-            onClick={() => setSubTab('pipeline')}
-            className={`text-sm font-medium pb-1 border-b-2 transition-colors ${
-              subTab === 'pipeline'
-                ? 'border-foreground text-foreground'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            Pipeline
-          </button>
+          {applicableFeatureTabs.map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setSubTab(tab.key)}
+              className={`text-sm font-medium pb-1 border-b-2 transition-colors ${
+                subTab === tab.key
+                  ? 'border-foreground text-foreground'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
       )}
 
-      {subTab === 'fields' && (
+      {subTab === FIELDS_TAB_KEY && (
         <Suspense
           fallback={
             <div className="space-y-4">
@@ -97,58 +82,19 @@ function EntitySettingsContent({ entityType, initialSubTab }: { entityType: stri
         </Suspense>
       )}
 
-      {subTab === 'pipeline' && activeWorkflow && (
-        <div>
-          {discriminator && entityWorkflows.length > 0 && (
-            <div className="flex items-center gap-2 mb-4 flex-wrap">
-              {entityWorkflows.map((w) => (
-                <button
-                  key={w.slug}
-                  type="button"
-                  onClick={() => setSelectedSlug(w.slug)}
-                  className={`px-3 py-1.5 rounded-md text-sm border transition-colors ${
-                    (activeWorkflow.slug === w.slug)
-                      ? 'border-primary bg-primary/5 text-primary font-medium'
-                      : 'border-border text-muted-foreground hover:text-foreground hover:border-foreground/30'
-                  }`}
-                >
-                  {w.name}
-                  {w.isDefault && (
-                    <Badge variant="outline" className="ml-1.5 text-[10px] px-1 py-0">Default</Badge>
-                  )}
-                  {w.discriminatorValue && (
-                    <Badge variant="secondary" className="ml-1.5 text-[10px] px-1 py-0">{w.discriminatorValue}</Badge>
-                  )}
-                </button>
-              ))}
-
-              {availableDiscriminatorOptions.length > 0 && (
-                <select
-                  onChange={(e) => {
-                    if (e.target.value) handleCreatePipeline(e.target.value);
-                    e.target.value = '';
-                  }}
-                  className="h-8 px-2 text-xs rounded-md border border-dashed border-border bg-transparent text-muted-foreground"
-                  defaultValue=""
-                  disabled={createWorkflow.isPending}
-                >
-                  <option value="" disabled>+ Add pipeline for {discriminator.label}...</option>
-                  {availableDiscriminatorOptions.map((o) => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
-                  ))}
-                </select>
-              )}
-            </div>
-          )}
-
-          <PipelineStageManager workflowSlug={activeWorkflow.slug} />
-        </div>
+      {ActiveFeatureTab && subTab !== FIELDS_TAB_KEY && (
+        <ActiveFeatureTab entityType={entityType} />
       )}
     </div>
   );
 }
 
-export function EntityConfigPage() {
+interface EntityConfigPageProps {
+  /** Sub-tabs contributed by features. Empty array if none registered. */
+  entityConfigTabs?: EntityConfigTab[];
+}
+
+export function EntityConfigPage({ entityConfigTabs = [] }: EntityConfigPageProps) {
   const { entityType: paramEntityType } = useParams<{ entityType: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -162,16 +108,24 @@ export function EntityConfigPage() {
       [...entities]
         .filter((e) => e.features.adminConfigurable)
         .sort((a, b) => (a.ui.navOrder ?? 99) - (b.ui.navOrder ?? 99))
-        .map((e) => ({ key: e.entityType, label: e.pluralName, slug: e.slug, hasWorkflow: !!readWorkflowFeature(e.features) })),
+        .map((e) => ({ key: e.entityType, label: e.pluralName, slug: e.slug, entity: e })),
     [entities],
   );
 
+  // If the URL carries `?tab=<featureTabKey>`, preferentially open the
+  // first entity that has that feature tab applicable. Falls back to the
+  // first entity tab. Same posture as the old hard-coded `?tab=pipeline`
+  // behavior, generalized over feature tabs.
   const defaultTab = useMemo(() => {
-    if (tabParam === 'pipeline') {
-      return entityTabs.find((t) => t.hasWorkflow)?.key ?? entityTabs[0]?.key ?? '';
+    if (tabParam) {
+      const featureTab = entityConfigTabs.find((t) => t.key === tabParam);
+      if (featureTab) {
+        const match = entityTabs.find((t) => featureTab.appliesTo(t.entity));
+        if (match) return match.key;
+      }
     }
     return entityTabs[0]?.key ?? '';
-  }, [tabParam, entityTabs]);
+  }, [tabParam, entityTabs, entityConfigTabs]);
 
   // Fall back to default when the URL points at an entity that isn't
   // admin-configurable (or is unknown) — we never render the config UI for those.
@@ -229,7 +183,12 @@ export function EntityConfigPage() {
         </nav>
       </div>
 
-      <EntitySettingsContent key={activeTab} entityType={activeTab} initialSubTab={tabParam ?? undefined} />
+      <EntitySettingsContent
+        key={activeTab}
+        entityType={activeTab}
+        initialSubTab={tabParam ?? undefined}
+        featureTabs={entityConfigTabs}
+      />
     </div>
   );
 }

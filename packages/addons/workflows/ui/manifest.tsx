@@ -4,6 +4,8 @@ import {
   renderPipelineProgress,
   renderWorkflowActions,
 } from './components/EntityDetailIntegration';
+import { WorkflowPipelineTab } from './components/WorkflowPipelineTab';
+import { readWorkflowFeature } from './feature';
 
 /**
  * Frontend manifest for the workflows addon. Contributes:
@@ -14,10 +16,9 @@ import {
  *   transition confirm dialog inside `EntityDetailPage`.
  * - `entityDetailRenderers.workflowActions` — transition button +
  *   transition confirm dialog inside `EntityDetailPage`.
- *
- * The entity-config admin page's Pipeline sub-tab is contributed via
- * `entityConfigTabs` in the same manifest after the EntityConfigPage
- * extraction lands; this manifest is updated again at that step.
+ * - `entityConfigTabs[].pipeline` — Pipeline sub-tab on the entity-config
+ *   admin page, shown for entities that have the workflow feature
+ *   configured. Tab content lives in `WorkflowPipelineTab`.
  */
 export const workflowsWeb: WebFeatureManifest = {
   name: 'workflows',
@@ -28,4 +29,15 @@ export const workflowsWeb: WebFeatureManifest = {
     pipelineProgress: renderPipelineProgress,
     workflowActions: renderWorkflowActions,
   },
+  entityConfigTabs: [
+    {
+      key: 'pipeline',
+      label: 'Pipeline',
+      component: WorkflowPipelineTab,
+      appliesTo: (entity) => {
+        const features = (entity as { features?: Record<string, unknown> } | null | undefined)?.features;
+        return !!features && !!readWorkflowFeature(features);
+      },
+    },
+  ],
 };
