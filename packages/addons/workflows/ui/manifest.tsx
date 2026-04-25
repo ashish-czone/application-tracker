@@ -1,21 +1,31 @@
 import type { WebFeatureManifest } from '@packages/domains';
 import { PipelineProgressInline } from './components/PipelineProgressInline';
+import {
+  renderPipelineProgress,
+  renderWorkflowActions,
+} from './components/EntityDetailIntegration';
 
 /**
- * Frontend manifest for the workflows addon. Currently contributes only the
- * pipeline-progress column renderer, registered under the canonical
- * `PipelineProgressRenderer` key so entity configs can reference it from
- * column metadata.
+ * Frontend manifest for the workflows addon. Contributes:
  *
- * Workflows has additional integrations with the platform shell — transition
- * buttons inside EntityDetailPage and the workflow editor inside
- * EntityConfigPage — that are still wired directly in app-shell-ui rather
- * than via this manifest. Extracting those requires the entity detail page
- * to expose a plugin slot for header actions; that is a separate refactor.
+ * - `PipelineProgressRenderer` column renderer (canonical key referenced
+ *   from entity column metadata).
+ * - `entityDetailRenderers.pipelineProgress` — pipeline progress bar +
+ *   transition confirm dialog inside `EntityDetailPage`.
+ * - `entityDetailRenderers.workflowActions` — transition button +
+ *   transition confirm dialog inside `EntityDetailPage`.
+ *
+ * The entity-config admin page's Pipeline sub-tab is contributed via
+ * `entityConfigTabs` in the same manifest after the EntityConfigPage
+ * extraction lands; this manifest is updated again at that step.
  */
 export const workflowsWeb: WebFeatureManifest = {
   name: 'workflows',
   columnRenderers: {
     PipelineProgressRenderer: { component: PipelineProgressInline },
+  },
+  entityDetailRenderers: {
+    pipelineProgress: renderPipelineProgress,
+    workflowActions: renderWorkflowActions,
   },
 };
