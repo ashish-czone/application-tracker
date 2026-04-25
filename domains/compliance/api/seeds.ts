@@ -60,6 +60,9 @@ export function complianceDemoSeedSources(): SeedSource[] {
     demo('@domains/compliance-api/demo-users', () =>
       import('./users/seeds/demo-users').then((m) => m.seedDemoUsers),
     ),
+    demo('@domains/compliance-api/demo-e2e-admin', () =>
+      import('./users/seeds/demo-e2e-admin').then((m) => m.seedDemoE2eAdmin),
+    ),
     demo('@domains/compliance-api/demo-user-roles', () =>
       import('./users/seeds/demo-user-roles').then((m) => m.seedDemoUserRoles),
     ),
