@@ -17,16 +17,8 @@ interface Filing {
  * Cross-entity flow: reads the seeded chain client → registration → rule
  * → filing and asserts the join holds end-to-end. Then drives the UI to
  * confirm the same record is reachable via search on /clients and
- * /filings.
- *
- * Why no creates here:
- * - `POST /client-registrations` rejects ISO date strings (drizzle-zod
- *   inferred schema requires a Date instance — unreachable over JSON).
- * - `POST /compliance-filings` 500s when `completedAt` is omitted (the
- *   undefined value gets coerced to `""` and fails timestamp parsing).
- *
- * Both are real backend bugs surfaced by this test pass; tracked
- * separately so the cross-entity flow spec doesn't block on them.
+ * /filings. Stays read-only against seeded fixtures so this spec doesn't
+ * race with parallel tests that mutate the same chain.
  */
 test.describe('Flow: client + law + rule + filing chain', () => {
   test('seeded data joins cleanly client → rule → law → filing', async () => {

@@ -5,17 +5,10 @@ import { createComplianceTestApp, resetComplianceTestDb } from './setup/app';
 import { createClient, createLaw, createRegistration } from './setup/fixtures';
 
 /**
- * Client-registration POSTs are covered by `clients.integration.test.ts`
- * via the custom `POST /clients/:id/registrations` endpoint. The generic
- * entity-engine CRUD endpoint can't create registrations today because the
- * platform doesn't convert ISO-string datetime payloads into Date instances
- * before handing them to drizzle (schema uses `mode: 'date'`), so a direct
- * POST to /api/v1/client-registrations with `registeredAt` fails with
- * `value.toISOString is not a function`, and omitting it trips the
- * required-field validator.
- *
- * This file pins the read/auth surface and uses the fixtures helper to seed
- * rows directly — exercising what the production read paths do.
+ * Covers both the custom `POST /clients/:id/registrations` flow (also exercised
+ * by `clients.integration.test.ts`) and the generic entity-engine CRUD
+ * endpoint. The DTO coerces ISO-string timestamps into `Date` instances so
+ * direct POSTs of JSON bodies parse cleanly.
  */
 
 const READ = ['client-registrations.read'];
@@ -118,6 +111,42 @@ describe('Client Registrations (integration)', () => {
         .post('/api/v1/client-registrations')
         .set(withAuth(MANAGE))
         .send({ clientId })
+        .expect(400);
+    });
+
+    it('accepts an ISO 8601 string for registeredAt', async () => {
+      const { clientId, lawId } = await prereqs();
+      const registeredAt = '2026-04-01T09:00:00.000Z';
+
+      const res = await request(ctx.httpServer)
+        .post('/api/v1/client-registrations')
+        .set(withAuth(MANAGE))
+        .send({ clientId, lawId, registeredAt })
+        .expect(201);
+
+      expect(res.body).toMatchObject({ clientId, lawId });
+      expect(new Date(res.body.registeredAt).toISOString()).toBe(registeredAt);
+    });
+
+    it('defaults registeredAt to now when omitted', async () => {
+      const { clientId, lawId } = await prereqs();
+
+      const res = await request(ctx.httpServer)
+        .post('/api/v1/client-registrations')
+        .set(withAuth(MANAGE))
+        .send({ clientId, lawId })
+        .expect(201);
+
+      expect(res.body).toMatchObject({ clientId, lawId });
+      expect(typeof res.body.registeredAt).toBe('string');
+    });
+
+    it('rejects an unparseable registeredAt value', async () => {
+      const { clientId, lawId } = await prereqs();
+      await request(ctx.httpServer)
+        .post('/api/v1/client-registrations')
+        .set(withAuth(MANAGE))
+        .send({ clientId, lawId, registeredAt: 'not-a-date' })
         .expect(400);
     });
   });

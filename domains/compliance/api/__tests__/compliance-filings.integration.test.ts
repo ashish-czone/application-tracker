@@ -118,6 +118,75 @@ describe('Compliance Filings (integration)', () => {
         .send({ title: 'X' })
         .expect(403);
     });
+
+    it('accepts an ISO 8601 string for completedAt', async () => {
+      const { userId, teamId, lawId, ruleId, clientId } = await createFilingPrereqs(ctx.db);
+      const completedAt = '2026-03-31T18:00:00.000Z';
+
+      const res = await request(ctx.httpServer)
+        .post('/api/v1/compliance-filings')
+        .set(withAuth(BASE_WRITE, { userId }))
+        .send({
+          title: 'Already-filed Q1',
+          priority: 'medium',
+          status: 'completed',
+          ruleId,
+          clientId,
+          lawId,
+          assigneeTeamId: teamId,
+          periodStart: '2026-03-01',
+          periodEnd: '2026-03-31',
+          completedAt,
+        })
+        .expect(201);
+
+      expect(res.body).toMatchObject({ status: 'completed' });
+      // Service overrides client-supplied completedAt to now() when status is
+      // completed — assert it's a parseable date, not the literal input.
+      expect(new Date(res.body.completedAt).toString()).not.toBe('Invalid Date');
+    });
+
+    it('treats empty-string completedAt as null', async () => {
+      const { userId, teamId, lawId, ruleId, clientId } = await createFilingPrereqs(ctx.db);
+
+      const res = await request(ctx.httpServer)
+        .post('/api/v1/compliance-filings')
+        .set(withAuth(BASE_WRITE, { userId }))
+        .send({
+          title: 'Pending Q2',
+          priority: 'medium',
+          ruleId,
+          clientId,
+          lawId,
+          assigneeTeamId: teamId,
+          periodStart: '2026-04-01',
+          periodEnd: '2026-04-30',
+          completedAt: '',
+        })
+        .expect(201);
+
+      expect(res.body.completedAt).toBeNull();
+    });
+
+    it('rejects a malformed completedAt with 400', async () => {
+      const { userId, teamId, lawId, ruleId, clientId } = await createFilingPrereqs(ctx.db);
+
+      await request(ctx.httpServer)
+        .post('/api/v1/compliance-filings')
+        .set(withAuth(BASE_WRITE, { userId }))
+        .send({
+          title: 'Bad Date',
+          priority: 'medium',
+          ruleId,
+          clientId,
+          lawId,
+          assigneeTeamId: teamId,
+          periodStart: '2026-05-01',
+          periodEnd: '2026-05-31',
+          completedAt: 'not-a-date',
+        })
+        .expect(400);
+    });
   });
 
   describe('workflow transitions', () => {

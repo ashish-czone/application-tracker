@@ -18,6 +18,20 @@ export interface WorkflowExtension {
     initialState: string;
   }): Promise<{ id: string }>;
 
+  /**
+   * Update an existing workflow definition. Used by `seedWorkflows` to
+   * re-sync a definition row's `entityType`/`fieldName`/`name`/`initialState`
+   * to the current config when an entity slug or workflow shape changes —
+   * without this, dev DBs seeded under an older slug would silently keep
+   * pointing transitions at the wrong entity.
+   */
+  updateDefinition(id: string, data: Partial<{
+    name: string;
+    entityType: string;
+    fieldName: string;
+    initialState: string;
+  }>): Promise<{ id: string }>;
+
   /** Create a state on a workflow definition. */
   createState(definitionId: string, data: {
     name: string;
