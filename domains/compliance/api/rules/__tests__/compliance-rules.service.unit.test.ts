@@ -351,6 +351,70 @@ describe('ComplianceRulesService', () => {
   });
 
   // --------------------------------------------------------------------------
+  // canResolveAssignee — I19
+  // --------------------------------------------------------------------------
+
+  describe('canResolveAssignee', () => {
+    const base = { id: 'h?', lawId: 'l1', isPrimary: false };
+
+    it('returns true when a global handler exists (no clientId)', async () => {
+      db.db.select.mockReturnValue(mockSelectRows([
+        { ...base, id: 'h1', orgEntityId: 'org-global', clientId: null, isPrimary: true },
+      ]));
+      expect(await service.canResolveAssignee('l1')).toBe(true);
+    });
+
+    it('returns false when only client-specific handlers exist (no clientId)', async () => {
+      db.db.select.mockReturnValue(mockSelectRows([
+        { ...base, id: 'h1', orgEntityId: 'org-c1', clientId: 'c1' },
+      ]));
+      expect(await service.canResolveAssignee('l1')).toBe(false);
+    });
+
+    it('returns true when a client-specific handler exists for the given clientId', async () => {
+      db.db.select.mockReturnValue(mockSelectRows([
+        { ...base, id: 'h1', orgEntityId: 'org-c1', clientId: 'c1' },
+      ]));
+      expect(await service.canResolveAssignee('l1', 'c1')).toBe(true);
+    });
+
+    it('returns false on ambiguity (two competing primaries)', async () => {
+      db.db.select.mockReturnValue(mockSelectRows([
+        { ...base, id: 'h1', orgEntityId: 'org-a', clientId: null, isPrimary: true },
+        { ...base, id: 'h2', orgEntityId: 'org-b', clientId: null, isPrimary: true },
+      ]));
+      expect(await service.canResolveAssignee('l1')).toBe(false);
+    });
+
+    it('returns false when no handlers exist for the law', async () => {
+      db.db.select.mockReturnValue(mockSelectRows([]));
+      expect(await service.canResolveAssignee('l1', 'c1')).toBe(false);
+    });
+
+    it('honours excludeHandlerId — simulates deletion of one handler', async () => {
+      db.db.select.mockReturnValue(mockSelectRows([
+        { ...base, id: 'h1', orgEntityId: 'org-a', clientId: null, isPrimary: true },
+      ]));
+      // Without exclusion: resolves cleanly
+      expect(await service.canResolveAssignee('l1', 'c1')).toBe(true);
+      // Excluding the only handler: nothing left to resolve
+      db.db.select.mockReturnValue(mockSelectRows([
+        { ...base, id: 'h1', orgEntityId: 'org-a', clientId: null, isPrimary: true },
+      ]));
+      expect(await service.canResolveAssignee('l1', 'c1', 'h1')).toBe(false);
+    });
+
+    it('excludeHandlerId leaves remaining handlers in place', async () => {
+      db.db.select.mockReturnValue(mockSelectRows([
+        { ...base, id: 'h1', orgEntityId: 'org-a', clientId: null, isPrimary: true },
+        { ...base, id: 'h2', orgEntityId: 'org-b', clientId: null },
+      ]));
+      // Excluding h1 leaves h2 (global-any) → resolves
+      expect(await service.canResolveAssignee('l1', 'c1', 'h1')).toBe(true);
+    });
+  });
+
+  // --------------------------------------------------------------------------
   // hasGeneratedFilings — I13
   // --------------------------------------------------------------------------
 
