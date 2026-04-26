@@ -14,6 +14,13 @@ Keep this file up to date as we work. Append new questions at the bottom of §2.
 
 Running log so the next session can pick up without archaeology. Newest at top.
 
+### 2026-04-26 — Stream K shipped (4 backend bugs from the E2E suite)
+
+`fix/compliance-stream-k` lands all four:
+- **K1** + **K2.** Same root cause in two specs — drizzle-zod infers `z.date()` on timestamptz columns, unreachable over JSON. Both DTOs now override with `z.coerce.date()` (and a `'' → null` preprocess on the filings side, since browser date inputs emit empty strings when blank). Garbage strings still 400 cleanly through the global ZodError filter; ISO strings, nulls, omits all 201.
+- **K3.** `seedWorkflows` was skip-if-exists keyed by workflow slug, so a row first written under an old entity slug stayed pinned to that stale `entityType` and the registry's exact-match lookup never resolved transitions. Now the seed re-syncs `name`/`entityType`/`fieldName`/`initialState` every boot. States/transitions still create-only on first seed (re-seed isn't diff-aware yet — a future task if shapes start drifting).
+- **K4.** No code change. `sendInvite` was a phantom field — never existed. Documented the actual `/users/invite` body shape in `PROMPT-AUTH.md §7a` plus the `POST /users` direct-create path the RBAC e2e uses.
+
 ### 2026-04-25 — Compliance E2E suite landed; 4 backend bugs filed as Stream K
 
 **Shipped:** Playwright UI E2E suite at `e2e-compliance/` — 13 specs / 48 tests covering CRUD + cross-entity flows + RBAC, all green against a real `compliance-api` (3012) + `compliance-web` (5176). Three PRs: #1055 (infrastructure), #1058 (entity CRUD), #1059 (cross-entity flows + RBAC). Auth via dedicated seeded `e2e-admin@compliance.test` user; state isolation via per-test unique names + per-spec `CleanupTracker.afterAll`; serial workers (workers:1) since DB state is shared. See memory note `project_e2e_compliance.md` for harness details.
@@ -1437,12 +1444,12 @@ Ensures the generator runs at the right times and produces the right horizon. Bu
 
 ### Stream K — Backend bugs surfaced by E2E suite
 
-Surfaced by the Playwright UI E2E suite at `e2e-compliance/` (PRs #1055/#1058/#1059, 13 specs / 48 tests). Each is a real backend bug; the tests work around them so the suite ships. Each item is one task ≈ one commit.
+Surfaced by the Playwright UI E2E suite at `e2e-compliance/` (PRs #1055/#1058/#1059, 13 specs / 48 tests). Shipped as `fix/compliance-stream-k`.
 
-- [ ] **K1.** `POST /client-registrations` rejects every JSON request because `drizzle-zod`'s `createInsertSchema` infers `effectiveFrom` / `effectiveTo` (and likely `deactivatedAt`) as `z.date()` — a JS `Date` instance, unreachable over JSON. Override the timestamp columns in the request schema with `z.string().datetime().transform((s) => new Date(s))` (or equivalent), so ISO-string bodies parse. Add an integration test that POSTs an ISO string and expects 201. Workaround in tests: `e2e-compliance/flows-registration-filing.spec.ts` uses seeded registrations only.
-- [ ] **K2.** `POST /compliance-filings` 500s when `completedAt` is omitted from the body. Optional fields shouldn't reach the timestamp column as `""`; trace the controller/service path that coerces `undefined` to `""` and treat it as `null`/`undefined`. Add an integration test for filing creation without `completedAt`. Workaround: same flow spec skips creating filings.
-- [ ] **K3.** `compliance-filings` workflow is registered under entity slug `compliance_rules` (underscore) but the engine looks up by `compliance-rules` (dash), so transitions on filings never resolve a workflow ("no workflow registered"). Fix the registration key to match the entity slug used at runtime, or normalise slug lookups to be hyphen-tolerant. Add an integration test that drives a filing through `submit → review → complete`. Workaround: `flows-workflow.spec.ts` retargets to clients (wired correctly).
-- [ ] **K4.** `POST /users/invite` payload contract drift: rejects `sendInvite` (no longer recognised) and now requires `userType`. Either restore the documented body shape (with `sendInvite` defaulting to true and `userType` defaulting to the inviting user's type) or update the API docs/clients. Workaround: `flows-rbac.spec.ts` uses `POST /users` with `credentials: { password }` directly.
+- [x] **K1.** Override `registeredAt`/`deactivatedAt` in `CreateClientRegistrationSchema` with `z.coerce.date()` so JSON ISO strings parse cleanly. Note: original report named `effectiveFrom`/`effectiveTo` but those columns don't exist on this table — the actual offenders were the two registration timestamps.
+- [x] **K2.** Override `completedAt` in `CreateComplianceFilingSchema` with `z.preprocess('' → null, z.coerce.date().nullable().optional())` so omitted / null / ISO-string / Date / empty-string all parse without 500. Reframe in todo from "500 when omitted" to "drizzle-zod inferred z.date() rejected JSON" — same root cause as K1.
+- [x] **K3.** Resync workflow definitions to config on every boot. `seedWorkflows` now calls `updateDefinition(existing.id, { name, entityType, fieldName, initialState })` when a row with the same slug already exists, so dev DBs seeded under an older entity slug converge instead of staying stale. States/transitions stay create-only on first seed for now (no diff-aware re-seed yet).
+- [x] **K4.** Documented the actual `/users/invite` shape in `PROMPT-AUTH.md §7a` (required: email, firstName, lastName, userType; optional: phone, roleIds). The `sendInvite` flag never existed in the codebase — the original report was a misdiagnosis. Kept `userType` required because nothing depends on the legacy shape; the e2e workaround using `POST /users` with `credentials.password` is now documented as a first-class admin direct-create path alongside invite.
 
 ### Stream Z — Finalisation
 

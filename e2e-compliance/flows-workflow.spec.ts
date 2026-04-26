@@ -7,15 +7,10 @@ interface Client { id: string; status: string }
  * Cross-entity flow: drive a client through its workflow states
  * (onboarding → active → dormant → active) via the transition endpoint
  * and verify the persisted status changes plus the workflow rejects
- * illegal moves.
- *
- * Originally targeted compliance-filings, but that entity's workflow is
- * not registered in the dev DB (the row's stored entityType
- * `compliance_rules` / missing for filings doesn't match the current
- * entity slug `compliance-rules` / `compliance-filings`). That gap is a
- * stale-seed issue tracked separately. Clients' workflow is registered
- * with the matching slug `clients` and works end-to-end, so this spec
- * exercises the platform's transition mechanism where it's reachable.
+ * illegal moves. Filings transitions are covered separately by the
+ * compliance-filings integration tests; this spec stays focused on
+ * clients because their state graph is the richest of the compliance
+ * entities.
  */
 test.describe('Flow: client workflow transitions', () => {
   const cleanup = new CleanupTracker();

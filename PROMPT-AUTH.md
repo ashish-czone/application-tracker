@@ -99,6 +99,61 @@ Admin-created users (`POST /users`) require explicit `roleId`.
 
 ---
 
+## 7a. Admin Invite & Direct-Create Endpoints
+
+Two admin paths exist for adding users; pick by what the inviter needs:
+
+### `POST /users/invite`
+
+Creates a deferred account and mints an invitation token (the user finishes
+sign-up via email link). Permission: `users.create`.
+
+Request body:
+
+```json
+{
+  "email": "alice@example.com",
+  "firstName": "Alice",
+  "lastName": "Doe",
+  "userType": "client",
+  "phone": "+15551234567",
+  "roleIds": ["..."]
+}
+```
+
+| Field | Required | Notes |
+|---|---|---|
+| `email` | yes | Lowercased before storage; conflicts with active users → 409. |
+| `firstName` / `lastName` | yes | 1–100 chars each. |
+| `userType` | yes | One of `'admin'` or `'client'`. Determines default-role lookup and login portal. |
+| `phone` | no | Free-form string (validated downstream); nullable. |
+| `roleIds` | no | Array of role ids to assign on accept. Empty = default role for `userType`. |
+
+There is no `sendInvite` flag — the endpoint always mints a token.
+
+### `POST /users`
+
+Creates an active user immediately. Use this when the admin wants to set the
+password directly (e.g. RBAC integration tests, importing users from another
+system) instead of going through the email invite handshake. Permission:
+`users.create`.
+
+```json
+{
+  "firstName": "Alice",
+  "lastName": "Doe",
+  "email": "alice@example.com",
+  "userType": "client",
+  "credentials": { "password": "Secret123!" }
+}
+```
+
+The `credentials.password` field is the discriminator: with it, the user can
+log in immediately; without it, the account is deferred just like
+`/users/invite`.
+
+---
+
 ## 8. Token Strategy
 
 | Token | Storage | Lifetime | Contains |
