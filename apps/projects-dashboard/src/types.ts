@@ -36,12 +36,18 @@ export interface ProjectStats {
 }
 
 export function computeStats(project: Project): ProjectStats {
-  const leafTasks = project.tasks.filter((t) => t.type !== 'feature');
-  const total = leafTasks.length;
-  const done = leafTasks.filter((t) => t.status === 'done').length;
-  const inProgress = leafTasks.filter((t) => t.status === 'in_progress').length;
-  const todo = leafTasks.filter((t) => t.status === 'todo').length;
-  const blocked = leafTasks.filter((t) => t.status === 'blocked').length;
+  // Leaves = items with no children. A feature with no sub-tasks is itself a
+  // unit of work; a feature with children is a container, and its children
+  // are the leaves.
+  const parentIds = new Set(
+    project.tasks.map((t) => t.parentId).filter((p): p is string => p !== null),
+  );
+  const leaves = project.tasks.filter((t) => !parentIds.has(t.id));
+  const total = leaves.length;
+  const done = leaves.filter((t) => t.status === 'done').length;
+  const inProgress = leaves.filter((t) => t.status === 'in_progress').length;
+  const todo = leaves.filter((t) => t.status === 'todo').length;
+  const blocked = leaves.filter((t) => t.status === 'blocked').length;
   return {
     total,
     done,
