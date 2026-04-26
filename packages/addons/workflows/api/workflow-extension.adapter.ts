@@ -31,6 +31,15 @@ export class WorkflowExtensionAdapter implements WorkflowExtension {
     return this.registry.createDefinition(data);
   }
 
+  async updateDefinition(id: string, data: Partial<{
+    name: string;
+    entityType: string;
+    fieldName: string;
+    initialState: string;
+  }>) {
+    return this.registry.updateDefinition(id, data);
+  }
+
   async createState(definitionId: string, data: {
     name: string;
     label: string;

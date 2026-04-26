@@ -145,7 +145,16 @@ export async function seedEntityFields(
 
 /**
  * Seeds workflow definitions, states, and transitions from fieldMeta.
- * Idempotent — skips workflows that already exist (by slug).
+ *
+ * Idempotent on the definition row: when a workflow with the same slug
+ * already exists, its `name`/`entityType`/`fieldName`/`initialState` are
+ * re-synced to the current config. This matters for entities whose slug or
+ * workflow field shape changed after the row was first seeded — without the
+ * resync, an old DB would keep the original (stale) `entityType` and the
+ * registry's exact-match lookup would never find the workflow at runtime.
+ *
+ * States and transitions are still seeded only on first create (no diffing
+ * yet) — schema changes there require a migration today.
  */
 export async function seedWorkflows(
   config: EntityConfig,
@@ -155,18 +164,26 @@ export async function seedWorkflows(
     if (meta.fieldType !== 'workflow' || !meta.workflow) continue;
 
     const wf = meta.workflow;
-
-    // Skip if already seeded
-    const existing = workflowExt.getBySlug(wf.slug);
-    if (existing) continue;
-
-    // Create definition
-    const definition = await workflowExt.createDefinition({
-      slug: wf.slug,
+    const desired = {
       name: `${meta.label} Workflow`,
       entityType: config.entityType,
       fieldName: fieldKey,
       initialState: wf.initialState,
+    };
+
+    // Resync existing row to config and skip the states/transitions seed —
+    // those are append-only today, so re-running on every boot would create
+    // duplicates.
+    const existing = workflowExt.getBySlug(wf.slug);
+    if (existing) {
+      await workflowExt.updateDefinition(existing.id, desired);
+      continue;
+    }
+
+    // First-time seed: create definition + states + transitions.
+    const definition = await workflowExt.createDefinition({
+      slug: wf.slug,
+      ...desired,
     });
 
     // Create states
