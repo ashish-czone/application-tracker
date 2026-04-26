@@ -149,6 +149,27 @@ export function useCreateClientWithContacts(options?: {
   });
 }
 
+/**
+ * I20 error code raised by the backend when no team can be resolved as the
+ * assignee for a (law, client) tuple. Drawers consuming this hook can branch
+ * on it to render the inline "Configure handler" prompt (I23) instead of a
+ * generic toast.
+ */
+export const NO_RESOLVABLE_ASSIGNEE = 'NO_RESOLVABLE_ASSIGNEE';
+
+export interface NoResolvableAssigneeBody {
+  code: typeof NO_RESOLVABLE_ASSIGNEE;
+  message: string;
+  lawId: string;
+}
+
+export function isNoResolvableAssigneeError(
+  error: unknown,
+): error is { body: NoResolvableAssigneeBody } {
+  const body = (error as { body?: { code?: string } })?.body;
+  return body?.code === NO_RESOLVABLE_ASSIGNEE;
+}
+
 export function useCreateClientRegistrations(options?: {
   onSuccess?: (result: ClientRegistrationRecord[]) => void;
 }) {
@@ -163,6 +184,10 @@ export function useCreateClientRegistrations(options?: {
       options?.onSuccess?.(result);
     },
     onError: (error: unknown) => {
+      // I23: the NO_RESOLVABLE_ASSIGNEE rejection is rendered inline by the
+      // consumer (NewClientDrawer) so the admin can act on it without losing
+      // form state. Don't double-surface as a toast.
+      if (isNoResolvableAssigneeError(error)) return;
       const message =
         (error as { body?: { message?: string } })?.body?.message ??
         'Failed to save law registrations';
