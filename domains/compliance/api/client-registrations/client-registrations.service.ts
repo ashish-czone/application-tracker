@@ -15,11 +15,34 @@ import { complianceLaws } from '../schema/laws';
 import { clients } from '../schema/clients';
 import { complianceFilings } from '../schema/compliance-filings';
 import { ComplianceFilingsCancellationService } from '../compliance-filings/compliance-filings-cancellation.service';
+import { ComplianceRulesService } from '../rules/compliance-rules.service';
 import {
   CLIENT_REGISTRATIONS_CREATED,
   COMPLIANCE_REGISTRATION_DEACTIVATED,
 } from '../events/types';
 import type { CreateClientRegistrationDto, UpdateClientRegistrationDto } from './client-registrations.dto';
+
+/**
+ * I20: raised when registration creation would produce a client/law tuple
+ * for which no team can be resolved as the assignee — the four-tier walk
+ * over `complianceLawHandlers` either matches nothing or matches multiple
+ * rows at the same tier (ambiguous). In either case, filing generation
+ * would later throw at assignment time, so we reject up front.
+ *
+ * UI hooks the `lawId` to deep-link the user to the law's handler config
+ * page where the missing or duplicate row can be fixed.
+ */
+export class NoResolvableAssigneeError extends BadRequestException {
+  constructor(lawId: string) {
+    super({
+      code: 'NO_RESOLVABLE_ASSIGNEE',
+      message:
+        'No team is configured to handle this law. ' +
+        'Configure a handler for this law before registering clients.',
+      lawId,
+    });
+  }
+}
 
 const TERMINAL_FILING_STATUSES = ['completed', 'cancelled'];
 
@@ -74,6 +97,7 @@ export class ClientRegistrationsService {
     private readonly database: DatabaseService,
     private readonly events: DomainEventEmitter,
     private readonly filingsCancellation: ComplianceFilingsCancellationService,
+    private readonly rules: ComplianceRulesService,
     appLogger: AppLoggerService,
   ) {
     this.logger = appLogger.forContext(ClientRegistrationsService.name);
@@ -89,7 +113,8 @@ export class ClientRegistrationsService {
     return this.entityService.findOneOrFail(id, accessCtx);
   }
 
-  create(input: CreateClientRegistrationDto, actorId: string) {
+  async create(input: CreateClientRegistrationDto, actorId: string) {
+    await this.assertHandlerResolvable(input.lawId, input.clientId);
     return this.entityService.create(input, actorId);
   }
 
@@ -116,6 +141,7 @@ export class ClientRegistrationsService {
   // ---- Domain verbs --------------------------------------------------------
 
   async register(clientId: string, lawId: string): Promise<ClientRegistration> {
+    await this.assertHandlerResolvable(lawId, clientId);
     const existing = await this.findActive(clientId, lawId);
     if (existing) {
       throw new ConflictException(`Client ${clientId} is already registered for law ${lawId}`);
@@ -154,6 +180,10 @@ export class ClientRegistrationsService {
     const unknown = uniqueCodes.filter((c) => !foundCodes.has(c));
     if (unknown.length > 0) {
       throw new BadRequestException(`Unknown law code(s): ${unknown.join(', ')}`);
+    }
+
+    for (const law of laws) {
+      await this.assertHandlerResolvable(law.id, clientId);
     }
 
     const outcomes = await this.database.db.transaction(async (tx) => {
@@ -440,6 +470,24 @@ export class ClientRegistrationsService {
         ),
       );
     return rows.map((r) => this.toRegistration(r));
+  }
+
+  /**
+   * I20 guard: rejects registration creation when no team can be resolved as
+   * the assignee for the given (law, client). Runs upstream of every create
+   * path — `create()`, `register()`, and `registerMany()` — so the rejection
+   * surfaces consistently regardless of whether the request hits the generic
+   * CRUD endpoint or a domain verb.
+   *
+   * Passes `clientId` so client-specific handlers (tier 1/2) can satisfy the
+   * predicate even when no global default is configured. The opposite flow —
+   * where a global handler exists but the client-specific tier is ambiguous —
+   * is also caught: `canResolveAssignee` treats ambiguity as not-resolvable
+   * because filing generation would otherwise throw at assignment time.
+   */
+  private async assertHandlerResolvable(lawId: string, clientId: string): Promise<void> {
+    const ok = await this.rules.canResolveAssignee(lawId, clientId);
+    if (!ok) throw new NoResolvableAssigneeError(lawId);
   }
 
   private async findActive(clientId: string, lawId: string): Promise<ClientRegistration | null> {
