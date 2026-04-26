@@ -4,8 +4,19 @@ import { complianceFilings } from '../schema/compliance-filings';
 
 export const ComplianceFilingRowSchema = createSelectSchema(complianceFilings);
 
+// drizzle-zod infers `z.date()` for the timestamptz `completedAt` column, so
+// any JSON caller has to send a Date instance — unreachable. The preprocess
+// step turns `''` (what browser date inputs emit when blank) into null so the
+// request isn't rejected as `Expected date, received string`; accepted
+// writeable shapes are then: omitted, null, Date, ISO 8601 string.
+const completedAtSchema = z.preprocess(
+  (v) => (v === '' ? null : v),
+  z.coerce.date().nullable().optional(),
+);
+
 export const CreateComplianceFilingSchema = createInsertSchema(complianceFilings, {
   title: (s) => s.min(1),
+  completedAt: completedAtSchema,
 }).omit({
   id: true,
   createdAt: true,
