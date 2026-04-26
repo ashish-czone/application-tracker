@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { EntityEngineModule } from '@packages/entity-engine';
 import { LawHandlersModule } from '../law-handlers/law-handlers.module';
 import { ComplianceFilingsModule } from '../compliance-filings/compliance-filings.module';
@@ -9,7 +9,7 @@ import { ComplianceRulesService } from './compliance-rules.service';
 @Module({
   imports: [
     EntityEngineModule.forEntity(COMPLIANCE_RULES_CONFIG),
-    LawHandlersModule,
+    forwardRef(() => LawHandlersModule),
     ComplianceFilingsModule,
   ],
   controllers: [ComplianceRulesController],

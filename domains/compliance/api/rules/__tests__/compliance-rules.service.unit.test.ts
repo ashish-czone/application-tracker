@@ -6,6 +6,7 @@ import {
   AmbiguousHandlerError,
   InvalidFrequencyError,
   ImmutableRuleFieldError,
+  LawHandlerRequiredError,
   type ComplianceRule,
 } from '../compliance-rules.service';
 import type { WorkflowEngineService, WorkflowRegistryService } from '@packages/workflows';
@@ -347,6 +348,144 @@ describe('ComplianceRulesService', () => {
     it('throws NoDefaultHandlerError when no handlers match at all', async () => {
       db.db.select.mockReturnValue(mockSelectRows([]));
       await expect(service.resolveAssignee('l1', 'c1')).rejects.toBeInstanceOf(NoDefaultHandlerError);
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // canResolveAssignee — I19
+  // --------------------------------------------------------------------------
+
+  describe('canResolveAssignee', () => {
+    const base = { id: 'h?', lawId: 'l1', isPrimary: false };
+
+    it('returns true when a global handler exists (no clientId)', async () => {
+      db.db.select.mockReturnValue(mockSelectRows([
+        { ...base, id: 'h1', orgEntityId: 'org-global', clientId: null, isPrimary: true },
+      ]));
+      expect(await service.canResolveAssignee('l1')).toBe(true);
+    });
+
+    it('returns false when only client-specific handlers exist (no clientId)', async () => {
+      db.db.select.mockReturnValue(mockSelectRows([
+        { ...base, id: 'h1', orgEntityId: 'org-c1', clientId: 'c1' },
+      ]));
+      expect(await service.canResolveAssignee('l1')).toBe(false);
+    });
+
+    it('returns true when a client-specific handler exists for the given clientId', async () => {
+      db.db.select.mockReturnValue(mockSelectRows([
+        { ...base, id: 'h1', orgEntityId: 'org-c1', clientId: 'c1' },
+      ]));
+      expect(await service.canResolveAssignee('l1', 'c1')).toBe(true);
+    });
+
+    it('returns false on ambiguity (two competing primaries)', async () => {
+      db.db.select.mockReturnValue(mockSelectRows([
+        { ...base, id: 'h1', orgEntityId: 'org-a', clientId: null, isPrimary: true },
+        { ...base, id: 'h2', orgEntityId: 'org-b', clientId: null, isPrimary: true },
+      ]));
+      expect(await service.canResolveAssignee('l1')).toBe(false);
+    });
+
+    it('returns false when no handlers exist for the law', async () => {
+      db.db.select.mockReturnValue(mockSelectRows([]));
+      expect(await service.canResolveAssignee('l1', 'c1')).toBe(false);
+    });
+
+    it('honours excludeHandlerId — simulates deletion of one handler', async () => {
+      db.db.select.mockReturnValue(mockSelectRows([
+        { ...base, id: 'h1', orgEntityId: 'org-a', clientId: null, isPrimary: true },
+      ]));
+      // Without exclusion: resolves cleanly
+      expect(await service.canResolveAssignee('l1', 'c1')).toBe(true);
+      // Excluding the only handler: nothing left to resolve
+      db.db.select.mockReturnValue(mockSelectRows([
+        { ...base, id: 'h1', orgEntityId: 'org-a', clientId: null, isPrimary: true },
+      ]));
+      expect(await service.canResolveAssignee('l1', 'c1', 'h1')).toBe(false);
+    });
+
+    it('excludeHandlerId leaves remaining handlers in place', async () => {
+      db.db.select.mockReturnValue(mockSelectRows([
+        { ...base, id: 'h1', orgEntityId: 'org-a', clientId: null, isPrimary: true },
+        { ...base, id: 'h2', orgEntityId: 'org-b', clientId: null },
+      ]));
+      // Excluding h1 leaves h2 (global-any) → resolves
+      expect(await service.canResolveAssignee('l1', 'c1', 'h1')).toBe(true);
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // assertHandlerCanBeDeleted — I21
+  // --------------------------------------------------------------------------
+
+  describe('assertHandlerCanBeDeleted', () => {
+    const handlerRow = {
+      id: 'h1',
+      lawId: 'l1',
+      orgEntityId: 'org-1',
+      clientId: null,
+      isPrimary: true,
+    };
+
+    it('throws NotFoundException when the handler does not exist', async () => {
+      db.db.select.mockReturnValueOnce(mockSelectRowsWithLimit([]));
+      await expect(service.assertHandlerCanBeDeleted('h1')).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('passes when no active registrations reference the law', async () => {
+      // 1) handler lookup
+      db.db.select.mockReturnValueOnce(mockSelectRowsWithLimit([handlerRow]));
+      // 2) active registrations on the law (none)
+      db.db.select.mockReturnValueOnce(mockSelectRows([]));
+      await expect(service.assertHandlerCanBeDeleted('h1')).resolves.toBeUndefined();
+    });
+
+    it('passes when remaining handlers still resolve every active registration', async () => {
+      // 1) handler lookup
+      db.db.select.mockReturnValueOnce(mockSelectRowsWithLimit([handlerRow]));
+      // 2) one active registration on the law
+      db.db.select.mockReturnValueOnce(mockSelectRows([{ clientId: 'c1', lawId: 'l1' }]));
+      // 3) canResolveAssignee → findResolvedHandler reads handlers excluding h1
+      db.db.select.mockReturnValueOnce(mockSelectRows([
+        handlerRow,
+        { ...handlerRow, id: 'h2', orgEntityId: 'org-2', isPrimary: false },
+      ]));
+      await expect(service.assertHandlerCanBeDeleted('h1')).resolves.toBeUndefined();
+    });
+
+    it('throws LawHandlerRequiredError when the deletion would orphan a registration', async () => {
+      // 1) handler lookup
+      db.db.select.mockReturnValueOnce(mockSelectRowsWithLimit([handlerRow]));
+      // 2) one active registration
+      db.db.select.mockReturnValueOnce(mockSelectRows([{ clientId: 'c1', lawId: 'l1' }]));
+      // 3) the only handler is h1 — excluding it leaves nothing
+      db.db.select.mockReturnValueOnce(mockSelectRows([handlerRow]));
+
+      await expect(service.assertHandlerCanBeDeleted('h1')).rejects.toBeInstanceOf(LawHandlerRequiredError);
+    });
+
+    it('reports the affected count correctly for multiple orphaned registrations', async () => {
+      // 1) handler lookup
+      db.db.select.mockReturnValueOnce(mockSelectRowsWithLimit([handlerRow]));
+      // 2) two active registrations
+      db.db.select.mockReturnValueOnce(mockSelectRows([
+        { clientId: 'c1', lawId: 'l1' },
+        { clientId: 'c2', lawId: 'l1' },
+      ]));
+      // 3) and 4) per-registration resolver lookup — both miss after exclusion
+      db.db.select.mockReturnValueOnce(mockSelectRows([handlerRow]));
+      db.db.select.mockReturnValueOnce(mockSelectRows([handlerRow]));
+
+      try {
+        await service.assertHandlerCanBeDeleted('h1');
+        throw new Error('expected to throw');
+      } catch (err) {
+        expect(err).toBeInstanceOf(LawHandlerRequiredError);
+        const body = (err as LawHandlerRequiredError & { response?: Record<string, unknown> }).response;
+        expect(body?.code).toBe('LAW_HANDLER_REQUIRED');
+        expect(body?.affectedRegistrationCount).toBe(2);
+      }
     });
   });
 

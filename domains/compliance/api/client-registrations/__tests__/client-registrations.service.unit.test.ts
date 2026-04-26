@@ -1,9 +1,13 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
-import { ClientRegistrationsService } from '../client-registrations.service';
+import {
+  ClientRegistrationsService,
+  NoResolvableAssigneeError,
+} from '../client-registrations.service';
 import type { DomainEventEmitter } from '@packages/events';
 import type { AppLoggerService } from '@packages/logger';
 import type { ComplianceFilingsCancellationService } from '../../compliance-filings/compliance-filings-cancellation.service';
+import type { ComplianceRulesService } from '../../rules/compliance-rules.service';
 
 type AnyChain = Record<string, ReturnType<typeof vi.fn>>;
 
@@ -34,6 +38,7 @@ describe('ClientRegistrationsService', () => {
   let db: { db: Record<string, ReturnType<typeof vi.fn>> };
   let events: { emitDynamic: ReturnType<typeof vi.fn> };
   let filingsCancellation: { cancelFilings: ReturnType<typeof vi.fn> };
+  let rules: { canResolveAssignee: ReturnType<typeof vi.fn> };
   let service: ClientRegistrationsService;
 
   const activeRow = {
@@ -61,11 +66,13 @@ describe('ClientRegistrationsService', () => {
     };
     events = { emitDynamic: vi.fn() };
     filingsCancellation = { cancelFilings: vi.fn().mockResolvedValue(undefined) };
+    rules = { canResolveAssignee: vi.fn().mockResolvedValue(true) };
     service = new ClientRegistrationsService(
       {} as never,
       db as never,
       events as unknown as DomainEventEmitter,
       filingsCancellation as unknown as ComplianceFilingsCancellationService,
+      rules as unknown as ComplianceRulesService,
       appLogger,
     );
   });
@@ -87,6 +94,68 @@ describe('ClientRegistrationsService', () => {
       db.db.select.mockReturnValueOnce(mockSelectRows([activeRow]));
       await expect(service.register('c1', 'l1')).rejects.toBeInstanceOf(ConflictException);
       expect(db.db.insert).not.toHaveBeenCalled();
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // I20 — handler-resolvable guard on registration creation
+  // --------------------------------------------------------------------------
+
+  describe('I20: assertHandlerResolvable', () => {
+    it('register() throws NoResolvableAssigneeError when no handler resolves', async () => {
+      rules.canResolveAssignee.mockResolvedValueOnce(false);
+      await expect(service.register('c1', 'l1')).rejects.toBeInstanceOf(NoResolvableAssigneeError);
+      expect(db.db.select).not.toHaveBeenCalled();
+      expect(db.db.insert).not.toHaveBeenCalled();
+    });
+
+    it('register() passes the lawId on the error so UI can deep-link', async () => {
+      rules.canResolveAssignee.mockResolvedValueOnce(false);
+      await expect(service.register('c1', 'l-gst')).rejects.toMatchObject({
+        response: expect.objectContaining({
+          code: 'NO_RESOLVABLE_ASSIGNEE',
+          lawId: 'l-gst',
+        }),
+      });
+    });
+
+    it('registerMany() rejects the whole batch when any law has no resolvable handler', async () => {
+      db.db.select.mockReturnValueOnce(
+        mockSelectRows([
+          { id: 'l1', code: 'GST' },
+          { id: 'l2', code: 'ITR' },
+        ]),
+      );
+      // l1 ok, l2 not — entire batch must reject
+      rules.canResolveAssignee
+        .mockResolvedValueOnce(true)
+        .mockResolvedValueOnce(false);
+
+      await expect(
+        service.registerMany('c1', ['GST', 'ITR'], 'user-1'),
+      ).rejects.toBeInstanceOf(NoResolvableAssigneeError);
+
+      expect(db.db.transaction).not.toHaveBeenCalled();
+      expect(events.emitDynamic).not.toHaveBeenCalled();
+    });
+
+    it('create() throws NoResolvableAssigneeError without invoking the entity service', async () => {
+      const entityService = { create: vi.fn() };
+      const guardedService = new ClientRegistrationsService(
+        entityService as never,
+        db as never,
+        events as unknown as DomainEventEmitter,
+        filingsCancellation as unknown as ComplianceFilingsCancellationService,
+        rules as unknown as ComplianceRulesService,
+        appLogger,
+      );
+      rules.canResolveAssignee.mockResolvedValueOnce(false);
+
+      await expect(
+        guardedService.create({ clientId: 'c1', lawId: 'l1' } as never, 'user-1'),
+      ).rejects.toBeInstanceOf(NoResolvableAssigneeError);
+
+      expect(entityService.create).not.toHaveBeenCalled();
     });
   });
 

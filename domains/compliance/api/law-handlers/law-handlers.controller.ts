@@ -2,9 +2,11 @@ import {
   Body,
   Controller,
   Delete,
+  forwardRef,
   Get,
   HttpCode,
   HttpStatus,
+  Inject,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -18,11 +20,16 @@ import {
   type DataAccessContext,
 } from '@packages/rbac';
 import { LawHandlersService } from './law-handlers.service';
+import { ComplianceRulesService } from '../rules/compliance-rules.service';
 import { CreateLawHandlerSchema, UpdateLawHandlerSchema } from './law-handlers.dto';
 
 @Controller('law-handlers')
 export class LawHandlersController {
-  constructor(private readonly lawHandlers: LawHandlersService) {}
+  constructor(
+    private readonly lawHandlers: LawHandlersService,
+    @Inject(forwardRef(() => ComplianceRulesService))
+    private readonly rules: ComplianceRulesService,
+  ) {}
 
   @Get('layout/list')
   @RequirePermission('law-handlers.read')
@@ -79,6 +86,8 @@ export class LawHandlersController {
     @CurrentUser() user: JwtPayload,
     @AccessContext() accessCtx?: DataAccessContext,
   ) {
+    // I21: prevent removal that would orphan active registrations.
+    await this.rules.assertHandlerCanBeDeleted(id);
     await this.lawHandlers.softDelete(id, user.userId, accessCtx);
   }
 

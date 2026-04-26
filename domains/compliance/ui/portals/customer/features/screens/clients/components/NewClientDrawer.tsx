@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ChevronRight, Building2 } from 'lucide-react';
+import { Link } from 'react-router';
+import { ChevronRight, Building2, AlertTriangle } from 'lucide-react';
 import {
   DrawerShell,
   DrawerHeader,
@@ -16,6 +17,7 @@ import {
   FormTextarea,
 } from '@packages/ui';
 import {
+  isNoResolvableAssigneeError,
   useCreateClientRegistrations,
   useCreateClientWithContacts,
 } from '../api/useClientsApi';
@@ -70,6 +72,13 @@ export function NewClientDrawer({ onClose, onCreated }: NewClientDrawerProps) {
   const [selectedLaws, setSelectedLaws] = useState<string[]>([]);
   const [lawsOpen, setLawsOpen] = useState(true);
 
+  // I23: surfaces the "no resolvable handler" rejection inline above the law
+  // selection so the admin can fix the offending law's handler config before
+  // retrying. Cleared on every submit so a successful retry doesn't leave a
+  // stale banner. Stays a one-shot for now — the backend rejects on the first
+  // missing-handler law, so we only ever know about one at a time.
+  const [missingHandlerMessage, setMissingHandlerMessage] = useState<string | null>(null);
+
   const createClient = useCreateClientWithContacts();
   const createRegistrations = useCreateClientRegistrations();
   const isPending = createClient.isPending || createRegistrations.isPending;
@@ -81,6 +90,7 @@ export function NewClientDrawer({ onClose, onCreated }: NewClientDrawerProps) {
   }
 
   const onSubmit = async (values: ClientFormValues) => {
+    setMissingHandlerMessage(null);
     try {
       const result = await createClient.mutateAsync({
         client: {
@@ -110,9 +120,14 @@ export function NewClientDrawer({ onClose, onCreated }: NewClientDrawerProps) {
 
       onCreated?.();
       onClose?.();
-    } catch {
-      // Both mutations surface their own error toasts; keep the drawer open
-      // so the user can retry without losing form state.
+    } catch (err) {
+      // I23: bubble the backend's NO_RESOLVABLE_ASSIGNEE rejection into an
+      // inline banner instead of a toast so the admin sees the deep-link to
+      // fix the offending law without dismissing the drawer or losing form
+      // state. Other errors fall through to the per-mutation toasts.
+      if (isNoResolvableAssigneeError(err)) {
+        setMissingHandlerMessage(err.body.message);
+      }
     }
   };
 
@@ -185,6 +200,28 @@ export function NewClientDrawer({ onClose, onCreated }: NewClientDrawerProps) {
 
               {/* Law registrations — collapsible */}
               <div>
+                {missingHandlerMessage && (
+                  <div
+                    role="alert"
+                    className="mb-3 flex items-start gap-2 px-3 py-2.5 border border-rule bg-paper-sunken/60"
+                  >
+                    <AlertTriangle
+                      className="w-3.5 h-3.5 text-ink-muted flex-none mt-0.5"
+                      strokeWidth={1.5}
+                    />
+                    <div className="flex-1 space-y-1.5">
+                      <p className="text-[11px] font-sans text-ink leading-relaxed">
+                        {missingHandlerMessage}
+                      </p>
+                      <Link
+                        to="/laws"
+                        className="text-[11px] font-mono text-ink underline underline-offset-2 hover:no-underline"
+                      >
+                        Configure law handlers →
+                      </Link>
+                    </div>
+                  </div>
+                )}
                 <button
                   type="button"
                   onClick={() => setLawsOpen(!lawsOpen)}

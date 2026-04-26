@@ -1,5 +1,5 @@
-import { Inject, Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
-import { DatabaseService, and, count, eq, inArray, ne, not } from '@packages/database';
+import { forwardRef, Inject, Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { DatabaseService, and, count, eq, inArray, isNull, ne, not } from '@packages/database';
 import { EntityService, type BaseListQuery } from '@packages/entity-engine';
 import type { DataAccessContext } from '@packages/rbac';
 import { WorkflowEngineService, WorkflowRegistryService } from '@packages/workflows';
@@ -8,6 +8,7 @@ import { FREQUENCIES, type ComplianceFrequency } from '@domains/compliance-contr
 import { complianceRules } from '../schema/rules';
 import { complianceLawHandlers } from '../schema/law-handlers';
 import { complianceFilings } from '../schema/compliance-filings';
+import { complianceClientRegistrations } from '../schema/client-registrations';
 import { LawHandlersService } from '../law-handlers/law-handlers.service';
 import { ComplianceFilingsCancellationService } from '../compliance-filings/compliance-filings-cancellation.service';
 import type { CreateComplianceRuleDto, UpdateComplianceRuleDto } from './compliance-rules.dto';
@@ -112,6 +113,27 @@ export class AmbiguousHandlerError extends BadRequestException {
 }
 
 /**
+ * I21: raised when deleting a `law_handlers` row would leave at least one
+ * active `client_registration` for that law without a resolvable assignee.
+ * The simulation walks the resolver with the row excluded and counts the
+ * registrations whose resolution would break — `affectedRegistrationCount`
+ * goes back to the UI so the admin can decide whether to reassign.
+ */
+export class LawHandlerRequiredError extends BadRequestException {
+  constructor(handlerId: string, affectedRegistrationCount: number) {
+    super({
+      code: 'LAW_HANDLER_REQUIRED',
+      message:
+        `Cannot delete this handler: ${affectedRegistrationCount} active ` +
+        `client registration(s) would be left without a resolvable assignee. ` +
+        `Configure another handler for the law before removing this one.`,
+      handlerId,
+      affectedRegistrationCount,
+    });
+  }
+}
+
+/**
  * Build a UTC date from Y/M/D without locale drift. Month is 1-indexed.
  * Clamps day to the last day of the month if day > daysInMonth.
  */
@@ -143,6 +165,7 @@ export class ComplianceRulesService {
   constructor(
     @Inject('ENTITY_SERVICE_compliance-rules') private readonly entityService: EntityService,
     private readonly database: DatabaseService,
+    @Inject(forwardRef(() => LawHandlersService))
     private readonly lawHandlers: LawHandlersService,
     private readonly workflowEngine: WorkflowEngineService,
     private readonly workflowRegistry: WorkflowRegistryService,
@@ -474,34 +497,128 @@ export class ComplianceRulesService {
    * No fallback to unassigned — missing global handler is caller's bug (guarded at create time).
    */
   async resolveAssignee(lawId: string, clientId: string): Promise<string> {
+    const result = await this.findResolvedHandler(lawId, clientId);
+    if (result.kind === 'resolved') return result.orgEntityId;
+    if (result.kind === 'ambiguous') {
+      throw new AmbiguousHandlerError(lawId, clientId, result.tier);
+    }
+    throw new NoDefaultHandlerError(lawId);
+  }
+
+  /**
+   * I19: boolean predicate twin of `resolveAssignee`. Returns true iff the
+   * 4-tier walk would yield exactly one handler — i.e., `resolveAssignee`
+   * would return a value rather than throw.
+   *
+   * Ambiguous tiers count as NOT resolvable: a registration whose generation
+   * would later throw on ambiguity is just as broken as one with no handler
+   * at all, so the precondition guard rejects both. The remediation differs
+   * (admin disambiguates vs admin configures), but the user-facing UX —
+   * "fix the law's handler config before registering" — is the same.
+   *
+   * `clientId` optional: when provided, walks all 4 tiers (client-specific
+   * rows take precedence over globals, matching `resolveAssignee`). When
+   * omitted, only checks global handlers (tier 3/4) — useful for "does this
+   * law have a default handler at all?" checks at registration-create time
+   * before a specific client is bound.
+   *
+   * `excludeHandlerId` simulates removing a row before resolving — used by
+   * the I21 delete guard to ask "if I delete this handler, will the
+   * remaining set still resolve cleanly for each affected registration?".
+   */
+  async canResolveAssignee(
+    lawId: string,
+    clientId?: string,
+    excludeHandlerId?: string,
+  ): Promise<boolean> {
+    const result = await this.findResolvedHandler(lawId, clientId, excludeHandlerId);
+    return result.kind === 'resolved';
+  }
+
+  /**
+   * I21: simulate deleting a handler and check whether every active
+   * registration for that law would still resolve to an assignee. Throws
+   * `LawHandlerRequiredError` with the affected count if any registration
+   * would break.
+   *
+   * Reads `complianceClientRegistrations` directly because asking
+   * `ClientRegistrationsService` would create a circular module dependency
+   * (it already injects `ComplianceRulesService` for the I20 guard). Direct
+   * schema access stays inside the compliance domain — same pattern this
+   * service already uses for `complianceFilings`.
+   *
+   * The simulation runs `canResolveAssignee` per registration with the
+   * handler excluded; ambiguous-after-removal also counts as "broken"
+   * (matches the precondition semantics in I19/I20).
+   */
+  async assertHandlerCanBeDeleted(handlerId: string): Promise<void> {
+    const [handler] = await this.database.db
+      .select()
+      .from(complianceLawHandlers)
+      .where(eq(complianceLawHandlers.id, handlerId))
+      .limit(1);
+    if (!handler) {
+      throw new NotFoundException(`Law handler ${handlerId} not found`);
+    }
+
+    const activeRegistrations = await this.database.db
+      .select({
+        clientId: complianceClientRegistrations.clientId,
+        lawId: complianceClientRegistrations.lawId,
+      })
+      .from(complianceClientRegistrations)
+      .where(
+        and(
+          eq(complianceClientRegistrations.lawId, handler.lawId),
+          isNull(complianceClientRegistrations.deactivatedAt),
+        ),
+      );
+
+    let brokenCount = 0;
+    for (const reg of activeRegistrations) {
+      const ok = await this.canResolveAssignee(reg.lawId, reg.clientId, handlerId);
+      if (!ok) brokenCount += 1;
+    }
+
+    if (brokenCount > 0) {
+      throw new LawHandlerRequiredError(handlerId, brokenCount);
+    }
+  }
+
+  private async findResolvedHandler(
+    lawId: string,
+    clientId?: string,
+    excludeHandlerId?: string,
+  ): Promise<
+    | { kind: 'resolved'; orgEntityId: string }
+    | { kind: 'ambiguous'; tier: string }
+    | { kind: 'none' }
+  > {
     const allRows = await this.database.db
       .select()
       .from(complianceLawHandlers)
       .where(eq(complianceLawHandlers.lawId, lawId));
+    const rows = excludeHandlerId
+      ? allRows.filter((r) => r.id !== excludeHandlerId)
+      : allRows;
 
-    const clientRows = allRows.filter((r) => r.clientId === clientId);
-    const clientPrimary = clientRows.filter((r) => r.isPrimary);
-    if (clientPrimary.length === 1) return clientPrimary[0]!.orgEntityId;
-    if (clientPrimary.length > 1) {
-      throw new AmbiguousHandlerError(lawId, clientId, 'client-primary');
-    }
-    if (clientRows.length === 1) return clientRows[0]!.orgEntityId;
-    if (clientRows.length > 1) {
-      throw new AmbiguousHandlerError(lawId, clientId, 'client-any');
+    if (clientId !== undefined) {
+      const clientRows = rows.filter((r) => r.clientId === clientId);
+      const clientPrimary = clientRows.filter((r) => r.isPrimary);
+      if (clientPrimary.length === 1) return { kind: 'resolved', orgEntityId: clientPrimary[0]!.orgEntityId };
+      if (clientPrimary.length > 1) return { kind: 'ambiguous', tier: 'client-primary' };
+      if (clientRows.length === 1) return { kind: 'resolved', orgEntityId: clientRows[0]!.orgEntityId };
+      if (clientRows.length > 1) return { kind: 'ambiguous', tier: 'client-any' };
     }
 
-    const globalRows = allRows.filter((r) => r.clientId === null);
+    const globalRows = rows.filter((r) => r.clientId === null);
     const globalPrimary = globalRows.filter((r) => r.isPrimary);
-    if (globalPrimary.length === 1) return globalPrimary[0]!.orgEntityId;
-    if (globalPrimary.length > 1) {
-      throw new AmbiguousHandlerError(lawId, clientId, 'global-primary');
-    }
-    if (globalRows.length === 1) return globalRows[0]!.orgEntityId;
-    if (globalRows.length > 1) {
-      throw new AmbiguousHandlerError(lawId, clientId, 'global-any');
-    }
+    if (globalPrimary.length === 1) return { kind: 'resolved', orgEntityId: globalPrimary[0]!.orgEntityId };
+    if (globalPrimary.length > 1) return { kind: 'ambiguous', tier: 'global-primary' };
+    if (globalRows.length === 1) return { kind: 'resolved', orgEntityId: globalRows[0]!.orgEntityId };
+    if (globalRows.length > 1) return { kind: 'ambiguous', tier: 'global-any' };
 
-    throw new NoDefaultHandlerError(lawId);
+    return { kind: 'none' };
   }
 
   // -------------------------------------------------------------------------
