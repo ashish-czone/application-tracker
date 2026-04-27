@@ -74,6 +74,7 @@ export class EntityRegistryService {
       singularName: config.singularName,
       pluralName: config.pluralName,
       slug: config.slug,
+      nameField: config.nameField,
       ui: { ...config.ui, boardFields: uniqueBoardFields.length > 0 ? uniqueBoardFields : undefined },
       features: {
         // Engine-derived flags. Addons must not register keys with these names.

@@ -45,7 +45,7 @@ export function EntityBoardView({ entityType, groupByField }: EntityBoardViewPro
 
   // Get display name from entity config
   const getDisplayName = (card: KanbanCardData): string => {
-    const { nameField } = entity.ui;
+    const { nameField } = entity;
     if (Array.isArray(nameField)) {
       return nameField.map((f) => card[f] ?? '').filter(Boolean).join(' ');
     }

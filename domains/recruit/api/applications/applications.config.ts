@@ -137,9 +137,10 @@ export const APPLICATIONS_CONFIG: EntityConfig = {
     createdBy: { label: 'Created By' },
   },
 
+  nameField: ['candidateId', 'jobOpeningId'],
+
   ui: {
     icon: 'file-text',
-    nameField: ['candidateId', 'jobOpeningId'],
     navGroup: 'recruit',
     navOrder: 3,
   },

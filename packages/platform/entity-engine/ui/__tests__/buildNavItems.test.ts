@@ -13,9 +13,9 @@ function mk(
     singularName: pluralName.replace(/s$/, ''),
     pluralName,
     slug,
+    nameField: 'name',
     ui: {
       icon: 'Database',
-      nameField: 'name',
       ...ui,
     },
     features: {

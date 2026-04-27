@@ -3,13 +3,18 @@ import { hydrateEntities } from '../helpers/hydrate';
 import { buildEntityUIIndex } from '../helpers/buildEntityUIIndex';
 import type { EntityRegistryEntry, EntityUIConfig } from '../types';
 
-function mk(entityType: string, ui: Partial<EntityRegistryEntry['ui']> = {}): EntityRegistryEntry {
+function mk(
+  entityType: string,
+  ui: Partial<EntityRegistryEntry['ui']> = {},
+  nameField: string | string[] = 'name',
+): EntityRegistryEntry {
   return {
     entityType,
     singularName: entityType,
     pluralName: `${entityType}s`,
     slug: entityType,
-    ui: { icon: 'Database', nameField: 'name', ...ui },
+    nameField,
+    ui: { icon: 'Database', ...ui },
     features: { softDelete: false, restore: false, adminConfigurable: false, hasTaxonomy: false, hasMedia: false },
   } as EntityRegistryEntry;
 }
@@ -32,13 +37,13 @@ describe('hydrateEntities', () => {
     expect(result[0].ui.navOrder).toBe(1);
   });
 
-  it('preserves backend fields not in presentation (e.g. nameField stays)', () => {
-    const entities = [mk('candidates', { nameField: 'fullName' })];
+  it('preserves top-level nameField alongside hydrated presentation', () => {
+    const entities = [mk('candidates', {}, 'fullName')];
     const configs: EntityUIConfig[] = [
       { entityType: 'candidates', presentation: { icon: 'NewIcon' } },
     ];
     const result = hydrateEntities(entities, buildEntityUIIndex(configs));
-    expect(result[0].ui.nameField).toBe('fullName');
+    expect(result[0].nameField).toBe('fullName');
     expect(result[0].ui.icon).toBe('NewIcon');
   });
 

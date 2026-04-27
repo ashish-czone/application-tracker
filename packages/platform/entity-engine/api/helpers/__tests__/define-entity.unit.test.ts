@@ -74,7 +74,7 @@ describe('defineEntity', () => {
     expect(config.pluralName).toBe('Test-entities');
     expect(config.table).toBe(testTable);
     expect(config.ui.icon).toBe('FileText');
-    expect(config.ui.nameField).toBe('title');
+    expect(config.nameField).toBe('title');
     expect(config.fieldMeta.title).toBeDefined();
     expect(config.fieldMeta.title.label).toBe('Title');
   });
@@ -135,7 +135,7 @@ describe('defineEntity', () => {
       ui: { icon: 'FileText' },
     });
 
-    expect(config.ui.nameField).toBe('title');
+    expect(config.nameField).toBe('title');
     expect(config.lookup?.labelField).toBe('title');
   });
 
@@ -150,7 +150,7 @@ describe('defineEntity', () => {
       ui: { icon: 'FileText' },
     });
 
-    expect(config.ui.nameField).toEqual(['title', 'email']);
+    expect(config.nameField).toEqual(['title', 'email']);
   });
 
   it('should pass top-level relationships through to EntityConfig', () => {

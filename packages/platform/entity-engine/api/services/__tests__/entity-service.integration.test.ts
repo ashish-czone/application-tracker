@@ -72,9 +72,9 @@ function buildTestConfig(
     sections: [
       { name: 'Basic Info', fields: ['name', 'email', 'status', 'priority', 'amount', 'isActive'] },
     ],
+    nameField: 'name',
     ui: {
       icon: 'box',
-      nameField: 'name',
     },
     dataAccess: {
       anchors: { creator: 'createdBy' },

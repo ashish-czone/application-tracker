@@ -179,7 +179,7 @@ export function EntityDetailPage({ entityType, renderPipelineProgress, renderWor
   }, [getDetailTabs, entityType, entity]);
 
   const getDisplayName = (row: Record<string, unknown>): string => {
-    const { nameField } = entity.ui;
+    const { nameField } = entity;
     const resolve = (f: string) => row[`${f}__label`] ?? row[f] ?? '';
     if (Array.isArray(nameField)) {
       return nameField.map(resolve).filter(Boolean).join(' — ');

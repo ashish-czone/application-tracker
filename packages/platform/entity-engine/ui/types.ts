@@ -7,9 +7,18 @@ export interface EntityRegistryEntry {
   singularName: string;
   pluralName: string;
   slug: string;
+  /**
+   * Field key (or composite key array) used as the canonical display name
+   * for records. Lifted out of `ui` so it stays independent of presentation.
+   */
+  nameField: string | string[];
   ui: {
     icon: string;
-    nameField: string | string[];
+    /**
+     * @deprecated Read top-level `nameField` instead. This mirror is retained
+     * transitionally and will be removed once the api stops emitting it.
+     */
+    nameField?: string | string[];
     subtitleField?: string;
     navGroup?: string;
     navOrder?: number;

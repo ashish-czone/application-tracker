@@ -269,9 +269,10 @@ export const JOB_OPENINGS_CONFIG: EntityConfig = {
     hiringManager: { label: 'Hiring Manager' },
   },
 
+  nameField: 'title',
+
   ui: {
     icon: 'briefcase',
-    nameField: 'title',
     subtitleField: 'department',
     navGroup: 'recruit',
     navOrder: 1,
