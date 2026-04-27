@@ -173,6 +173,9 @@ importers:
       '@packages/media':
         specifier: workspace:*
         version: link:../../packages/platform/media
+      '@packages/media-library-api':
+        specifier: workspace:*
+        version: link:../../packages/addons/media-library/api
       '@packages/notification-channels':
         specifier: workspace:*
         version: link:../../packages/platform/notification-channels/api
@@ -4566,6 +4569,9 @@ importers:
       class-validator:
         specifier: ^0.14.1
         version: 0.14.4
+      dotenv:
+        specifier: ^16.4.0
+        version: 16.6.1
     devDependencies:
       '@types/express':
         specifier: ^5.0.0

@@ -1,8 +1,8 @@
 // Module
-import { OrdersBillingModule } from './orders-billing.module';
-export { OrdersBillingModule };
+export { OrdersBillingModule } from './orders-billing.module';
+
 export const ordersBillingAddon = {
-  module: OrdersBillingModule,
+  module: () => require('./orders-billing.module').OrdersBillingModule,
   migration: '@packages/orders-billing',
 } as const;
 

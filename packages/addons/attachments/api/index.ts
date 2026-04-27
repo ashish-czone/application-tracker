@@ -1,8 +1,7 @@
-import { AttachmentsModule } from './attachments.module';
+export { AttachmentsModule } from './attachments.module';
 
-export { AttachmentsModule };
 export const attachmentsAddon = {
-  module: AttachmentsModule,
+  module: () => require('./attachments.module').AttachmentsModule,
   migration: '@packages/attachments',
 } as const;
 export { ATTACHMENTS_FEATURE_KEY, attachmentsFeature, readAttachmentsFeature } from './feature';

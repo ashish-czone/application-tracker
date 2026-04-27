@@ -1,8 +1,7 @@
-import { HierarchyModule } from './hierarchy.module';
+export { HierarchyModule } from './hierarchy.module';
 
-export { HierarchyModule };
 export const hierarchyAddon = {
-  module: HierarchyModule,
+  module: () => require('./hierarchy.module').HierarchyModule,
   migration: '@packages/hierarchy',
 } as const;
 export { HierarchyService } from './services/hierarchy.service';

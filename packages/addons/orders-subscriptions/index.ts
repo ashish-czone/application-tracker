@@ -1,8 +1,8 @@
 // Module
-import { OrdersSubscriptionsModule, SUBSCRIPTION_EXPIRY_QUEUE } from './orders-subscriptions.module';
-export { OrdersSubscriptionsModule, SUBSCRIPTION_EXPIRY_QUEUE };
+export { OrdersSubscriptionsModule, SUBSCRIPTION_EXPIRY_QUEUE } from './orders-subscriptions.module';
+
 export const ordersSubscriptionsAddon = {
-  module: OrdersSubscriptionsModule,
+  module: () => require('./orders-subscriptions.module').OrdersSubscriptionsModule,
   migration: '@packages/orders-subscriptions',
 } as const;
 

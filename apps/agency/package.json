@@ -9,7 +9,7 @@
     "start": "node dist/main",
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
-    "db:migrate": "tsx src/cli/migrate.ts",
+    "db:migrate": "nest build && node --env-file=.env dist/cli/migrate.js",
     "db:seed:system": "nest build && node --env-file=.env dist/cli/seed.js --kind=system",
     "db:seed:demo": "nest build && node --env-file=.env dist/cli/seed.js --kind=demo"
   },
@@ -38,6 +38,7 @@
     "@packages/orderable": "workspace:*",
     "@packages/logger": "workspace:*",
     "@packages/media": "workspace:*",
+    "@packages/media-library-api": "workspace:*",
     "@packages/notification-channels": "workspace:*",
     "@packages/notifications": "workspace:*",
     "@packages/content-api": "workspace:*",

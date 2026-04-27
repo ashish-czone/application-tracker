@@ -1,8 +1,7 @@
-import { NotesModule } from './notes.module';
+export { NotesModule } from './notes.module';
 
-export { NotesModule };
 export const notesAddon = {
-  module: NotesModule,
+  module: () => require('./notes.module').NotesModule,
   migration: '@packages/notes',
 } as const;
 export { NOTES_FEATURE_KEY, notesFeature, readNotesFeature } from './feature';

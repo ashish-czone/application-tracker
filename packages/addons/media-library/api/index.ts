@@ -1,10 +1,9 @@
-import { MediaLibraryModule } from './media-library.module';
-
 export { mediaAssets } from './schema';
 export { MEDIA_ASSETS_CONFIG } from './media-assets.config';
-export { MediaLibraryModule };
+export { MediaLibraryModule } from './media-library.module';
+
 export const mediaLibraryAddon = {
-  module: MediaLibraryModule,
+  module: () => require('./media-library.module').MediaLibraryModule,
   migration: '@packages/media-library-api',
 } as const;
 export { MediaAssetsUploadService } from './services/media-assets-upload.service';

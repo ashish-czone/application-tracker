@@ -1,8 +1,7 @@
-import { EvaluationsModule } from './evaluations.module';
+export { EvaluationsModule } from './evaluations.module';
 
-export { EvaluationsModule };
 export const evaluationsAddon = {
-  module: EvaluationsModule,
+  module: () => require('./evaluations.module').EvaluationsModule,
   migration: '@packages/evaluations',
 } as const;
 export { EVALUATIONS_FEATURE_KEY, evaluationsFeature, readEvaluationsFeature } from './feature';
