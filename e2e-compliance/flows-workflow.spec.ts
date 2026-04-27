@@ -1,7 +1,11 @@
 import { test, expect } from './fixtures/auth';
-import { uniqueName, uniqueEmail, apiClient, CleanupTracker } from './helpers';
+import { resetState, uniqueName, uniqueEmail, apiClient } from './helpers';
+import { createClientContact } from './fixtures/client-contacts';
 
-interface Client { id: string; status: string }
+interface Client {
+  id: string;
+  status: string;
+}
 
 /**
  * Cross-entity flow: drive a client through its workflow states
@@ -13,10 +17,8 @@ interface Client { id: string; status: string }
  * entities.
  */
 test.describe('Flow: client workflow transitions', () => {
-  const cleanup = new CleanupTracker();
-
-  test.afterAll(async () => {
-    await cleanup.flush();
+  test.beforeAll(async () => {
+    await resetState();
   });
 
   async function createOnboardingClient(): Promise<Client> {
@@ -28,17 +30,9 @@ test.describe('Flow: client workflow transitions', () => {
       taxId: `27AAAAA${Date.now().toString().slice(-5)}1Z5`,
       status: 'onboarding',
     });
-    cleanup.track('client', client.id);
 
     // Workflow guard requires a primary contact before onboarding → active.
-    const contact = await apiClient.post<{ id: string }>('/client-contacts', {
-      clientId: client.id,
-      name: 'E2E Primary',
-      email: uniqueEmail('contact'),
-      phone: '+919876543210',
-      isPrimary: true,
-    });
-    cleanup.track('client-contact', contact.id);
+    await createClientContact(client.id, { isPrimary: true });
 
     return client;
   }

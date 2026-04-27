@@ -1,11 +1,9 @@
 import { test, expect } from './fixtures/auth';
-import { uniqueName, uniqueSlug, apiClient, CleanupTracker } from './helpers';
+import { resetState, uniqueName, uniqueSlug, apiClient } from './helpers';
 
 test.describe('Laws', () => {
-  const cleanup = new CleanupTracker();
-
-  test.afterAll(async () => {
-    await cleanup.flush();
+  test.beforeAll(async () => {
+    await resetState();
   });
 
   test('list page renders header, KPI tiles, and seeded laws', async ({ authedPage }) => {
@@ -15,7 +13,7 @@ test.describe('Laws', () => {
     // KPI tiles
     await expect(authedPage.getByText('Acts').first()).toBeVisible();
     await expect(authedPage.getByText('Central').first()).toBeVisible();
-    // At least the always-seeded TDS / GST / ROC codes appear.
+    // System-seeded laws — survive resetState.
     await expect(authedPage.getByText('TDS').first()).toBeVisible();
     await expect(authedPage.getByText('GST').first()).toBeVisible();
     await expect(authedPage.getByText('ROC').first()).toBeVisible();
@@ -36,9 +34,7 @@ test.describe('Laws', () => {
     ).toBeVisible();
   });
 
-  test('create a new law via the drawer, see it in the list, then delete it', async ({
-    authedPage,
-  }) => {
+  test('create a new law via the drawer, see it in the list', async ({ authedPage }) => {
     const code = `E2E-${uniqueSlug('law').slice(-8).toUpperCase()}`;
     const name = uniqueName('Law');
 
@@ -59,14 +55,12 @@ test.describe('Laws', () => {
     ).not.toBeVisible({ timeout: 10_000 });
     await expect(authedPage.getByText(code).first()).toBeVisible({ timeout: 10_000 });
 
-    // Resolve the new id via the API and queue cleanup.
+    // Sanity-check via API.
     const list = await apiClient.get<{ data: Array<{ id: string; code: string }> }>(
       '/laws',
       { query: { limit: 200 } },
     );
-    const created = list.data.find((law) => law.code === code);
-    expect(created, `law ${code} should exist via API`).toBeTruthy();
-    if (created) cleanup.track('law', created.id);
+    expect(list.data.find((law) => law.code === code), `law ${code} should exist via API`).toBeTruthy();
   });
 
   test('drawer rejects submission when required fields are empty', async ({ authedPage }) => {

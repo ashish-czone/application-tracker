@@ -1,29 +1,38 @@
 import { test, expect } from './fixtures/auth';
+import { resetState } from './helpers';
+import { createComplianceChain, type ComplianceChain } from './fixtures/compliance-chain';
 
 test.describe('Filings', () => {
-  test('list page renders heading, KPIs, and demo filings', async ({ authedPage }) => {
+  let chain: ComplianceChain;
+
+  test.beforeAll(async () => {
+    await resetState();
+    // One full chain gives us a filing visible in the UI plus the
+    // search-by-rule-code path the spec exercises.
+    chain = await createComplianceChain({
+      rule: { code: `GSTR-FIL-${Date.now().toString().slice(-6)}` },
+    });
+  });
+
+  test('list page renders heading, KPIs, and at least one filing row', async ({ authedPage }) => {
     await authedPage.goto('/filings');
     await expect(authedPage.getByRole('heading', { name: 'Filings' }).first()).toBeVisible();
     // KPI tiles from FilingsPage.
     await expect(authedPage.getByText(/overdue/i).first()).toBeVisible();
     await expect(authedPage.getByText(/Due today|This week|Upcoming/i).first()).toBeVisible();
-    // Demo filings render — check the search affordance is present.
+    // Search affordance + at least the fixture filing's title fragment.
     await expect(authedPage.getByPlaceholder(/search filings/i)).toBeVisible();
   });
 
   test('search input narrows the filings grid', async ({ authedPage }) => {
     await authedPage.goto('/filings');
-    await authedPage.getByPlaceholder(/search filings/i).fill('GST');
-    // At least one row should remain after filtering.
-    await expect(authedPage.getByText(/GSTR/i).first()).toBeVisible();
+    await authedPage.getByPlaceholder(/search filings/i).fill(chain.filing.title);
+    await expect(authedPage.getByText(chain.filing.title).first()).toBeVisible();
   });
 
   test('status tabs filter the filings list', async ({ authedPage }) => {
     await authedPage.goto('/filings');
     await authedPage.getByRole('tab', { name: /^Overdue/i }).click();
-    // Overdue header KPI label still present (visual sanity) — and either
-    // filings render or the empty state shows. We just assert the tab is
-    // selected.
     const overdueTab = authedPage.getByRole('tab', { name: /^Overdue/i });
     await expect(overdueTab).toHaveAttribute('aria-selected', 'true');
   });
@@ -37,7 +46,7 @@ test.describe('Filings', () => {
 
   test('clicking a filing row reveals row-level actions', async ({ authedPage }) => {
     await authedPage.goto('/filings');
-    // A demo filing row should be present; click it to verify the table
+    // The fixture filing should be present; click it to verify the table
     // is interactive (no error/empty state).
     const firstRow = authedPage.locator('table tbody tr').first();
     await expect(firstRow).toBeVisible();

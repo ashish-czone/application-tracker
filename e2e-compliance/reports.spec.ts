@@ -1,6 +1,11 @@
 import { test, expect } from './fixtures/auth';
+import { resetState } from './helpers';
 
 test.describe('Reports', () => {
+  test.beforeAll(async () => {
+    await resetState();
+  });
+
   test('page renders heading and KPI strip', async ({ authedPage }) => {
     await authedPage.goto('/reports');
     await expect(authedPage.getByRole('heading', { name: /Reports/i }).first()).toBeVisible();
