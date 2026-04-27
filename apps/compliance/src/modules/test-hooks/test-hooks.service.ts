@@ -7,7 +7,8 @@ import { orgUnitsSystemSeedSources } from '@packages/org-units/seeds/system';
 import { tasksSystemSeedSources } from '@packages/tasks/seeds/system';
 import { notesSystemSeedSources } from '@packages/notes/seeds/system';
 import { ScheduleScanner, automationSentLog } from '@packages/automations';
-import { gt } from '@packages/database';
+import { notifications } from '@packages/notification-channels';
+import { eq, gt, desc } from '@packages/database';
 import {
   complianceE2eAdminSeedSource,
   complianceSystemSeedSources,
@@ -88,6 +89,45 @@ export class TestHooksService {
       .from(automationSentLog)
       .where(gt(automationSentLog.sentAt, boundary));
     return { fired: rows };
+  }
+
+  /**
+   * Cross-user notification listing for e2e assertions. The production
+   * `GET /notifications` endpoint scopes rows to `CurrentUser.userId` so a
+   * spec authenticated as the e2e admin can only see its own notifications;
+   * named US-8.1/8.2 coverage needs to assert that *Alice* and *Bob* (digest
+   * + escalation recipients, not the calling user) received the right rows.
+   *
+   * Gated by `ENABLE_TEST_HOOKS=true` like the rest of this controller and
+   * super-admin-permission-checked at the controller; never mounted in prod.
+   */
+  async listNotifications(userId: string): Promise<{
+    notifications: Array<{
+      id: string;
+      title: string;
+      body: string;
+      eventName: string | null;
+      entityType: string | null;
+      entityId: string | null;
+      isRead: boolean;
+      createdAt: Date;
+    }>;
+  }> {
+    const rows = await this.database.db
+      .select({
+        id: notifications.id,
+        title: notifications.title,
+        body: notifications.body,
+        eventName: notifications.eventName,
+        entityType: notifications.entityType,
+        entityId: notifications.entityId,
+        isRead: notifications.isRead,
+        createdAt: notifications.createdAt,
+      })
+      .from(notifications)
+      .where(eq(notifications.userId, userId))
+      .orderBy(desc(notifications.createdAt));
+    return { notifications: rows };
   }
 
   private async truncateAllTables(): Promise<number> {

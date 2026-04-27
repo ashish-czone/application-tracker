@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, HttpCode, HttpStatus, Post, Query } from '@nestjs/common';
 import { RequirePermission } from '@packages/rbac';
 import { TestHooksService } from './test-hooks.service';
 
@@ -50,6 +50,23 @@ export class TestHooksController {
     const asOf = parseAsOf(body?.asOf);
     const result = await this.testHooksService.runScheduler(asOf);
     return { ok: true, asOf: asOf.toISOString(), ...result };
+  }
+
+  /**
+   * List notifications for any user — bypasses the user-scope filter the
+   * production `GET /notifications` endpoint applies. Named US-8.1/8.2 e2e
+   * specs use this to assert per-recipient outcome (Alice received digest,
+   * Bob received T+0 escalation, etc.) while authenticated as a single
+   * e2e admin user.
+   */
+  @Get('notifications')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission('*')
+  async listNotifications(@Query('userId') userId: string | undefined) {
+    if (!userId) {
+      throw new BadRequestException('userId query param is required');
+    }
+    return this.testHooksService.listNotifications(userId);
   }
 }
 

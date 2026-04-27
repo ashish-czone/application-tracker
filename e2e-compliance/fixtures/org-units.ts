@@ -47,6 +47,32 @@ export async function createOrgUnit(overrides: CreateOrgUnitOverrides = {}): Pro
   });
 }
 
-export async function addUserToOrgUnit(unitId: string, userId: string): Promise<void> {
-  await apiClient.post(`/org-units/${unitId}/members/${userId}`, {});
+export async function addUserToOrgUnit(
+  unitId: string,
+  userId: string,
+  options: { positionId?: string } = {},
+): Promise<void> {
+  await apiClient.post(`/org-units/${unitId}/members/${userId}`, options.positionId ? { positionId: options.positionId } : {});
+}
+
+export interface OrgPosition {
+  id: string;
+  name: string;
+  sortOrder: number;
+}
+
+/**
+ * Look up a seeded position by name. The system seeds ship five canonical
+ * positions — `Firm Admin` (sortOrder -1), `Head` and `Division Head`
+ * (sortOrder 0), `Lead` (1), `Member` (2). The `org_unit_head` resolver
+ * picks the lowest-sortOrder member as "head" of a unit, so adding a user
+ * with `Head` (or `Firm Admin`) makes them the resolver-resolved head.
+ */
+export async function getOrgPosition(name: string): Promise<OrgPosition> {
+  const positions = await apiClient.get<OrgPosition[]>('/org-positions');
+  const position = positions.find((p) => p.name === name);
+  if (!position) {
+    throw new Error(`Org position "${name}" not found. Has resetState() run?`);
+  }
+  return position;
 }
