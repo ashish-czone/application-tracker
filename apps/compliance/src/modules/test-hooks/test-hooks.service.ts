@@ -10,6 +10,14 @@ import { ScheduleScanner, automationSentLog } from '@packages/automations';
 import { notifications } from '@packages/notification-channels';
 import { eq, gt, desc } from '@packages/database';
 import {
+  EntityRegistryService,
+  FieldDefinitionService,
+  WORKFLOW_EXTENSION,
+  seedWorkflows,
+  type EntityConfig,
+} from '@packages/entity-engine';
+import { WorkflowRegistryService } from '@packages/workflows';
+import {
   complianceE2eAdminSeedSource,
   complianceSystemSeedSources,
 } from '@domains/compliance-api/seeds';
@@ -36,12 +44,42 @@ export class TestHooksService {
   async resetState(): Promise<{ durationMs: number; tablesTruncated: number; seedsRun: number }> {
     const startedAt = Date.now();
     const tablesTruncated = await this.truncateAllTables();
+    // Reload caches against the now-empty DB BEFORE re-seeding. The platform's
+    // FieldDefinitionService and WorkflowRegistryService cache rows in memory;
+    // after a TRUNCATE the rows are gone but the cache still holds the old
+    // UUIDs. The seed pipeline then issues `setPicklistOptions` which looks up
+    // the field via cache, gets a stale ID, and fails with a FK violation
+    // when inserting picklist_options. Reloading first clears the cache; the
+    // seed re-inserts with new IDs; we reload again so the live request path
+    // sees the new IDs.
+    await this.reloadCaches();
     const seedsRun = await this.runResetSeeds();
+    // Workflow definitions for non-adminConfigurable entities are NOT covered
+    // by the system seed pipeline (EntityEngineSeedService skips them). Seed
+    // them directly here so transition endpoints have the rows they read at
+    // request time. Mirrors `seedAllWorkflows` in the integration-test setup.
+    await this.seedAllWorkflows();
+    await this.reloadCaches();
     const durationMs = Date.now() - startedAt;
     this.logger.log(
       `reset complete: ${tablesTruncated} tables truncated, ${seedsRun} seeds run, ${durationMs}ms`,
     );
     return { durationMs, tablesTruncated, seedsRun };
+  }
+
+  private async reloadCaches(): Promise<void> {
+    const fieldDefService = this.moduleRef.get(FieldDefinitionService, { strict: false });
+    const workflowRegistry = this.moduleRef.get(WorkflowRegistryService, { strict: false });
+    await fieldDefService.reloadCache();
+    await workflowRegistry.loadAll();
+  }
+
+  private async seedAllWorkflows(): Promise<void> {
+    const registry = this.moduleRef.get(EntityRegistryService, { strict: false });
+    const workflowExt = this.moduleRef.get(WORKFLOW_EXTENSION, { strict: false });
+    for (const entry of registry.getAll() as EntityConfig[]) {
+      await seedWorkflows(entry, workflowExt);
+    }
   }
 
   /**
