@@ -575,9 +575,9 @@ export function defineEntity<TTable extends PgTable>(model: ModelDefinition<TTab
     extraPermissions: model.extraPermissions,
     extraEvents: model.extraEvents,
     actions: model.actions,
+    nameField,
     ui: {
       icon: model.ui.icon,
-      nameField,
       subtitleField: model.ui.subtitleField,
       navGroup: model.ui.navGroup,
       navOrder: model.ui.navOrder,

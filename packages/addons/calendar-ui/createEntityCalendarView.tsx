@@ -57,19 +57,19 @@ export function createEntityCalendarView(
 
     const events = useMemo<CalendarEvent[]>(() => {
       const records = (data?.data ?? []) as Record<string, unknown>[];
-      const titleKey = titleField ?? resolveLabelFieldKey(entity.ui.nameField);
+      const titleKey = titleField ?? resolveLabelFieldKey(entity.nameField);
       return records
         .filter((r) => r[dateField] != null && r[dateField] !== '')
         .map((r) => ({
           id: String(r.id),
           title: titleField
             ? String(r[titleField] ?? '(untitled)')
-            : formatRecordLabel(r, entity.ui.nameField),
+            : formatRecordLabel(r, entity.nameField),
           start: r[dateField] as string,
           allDay: true,
           extendedProps: { record: r, titleKey },
         }));
-    }, [data, entity.ui.nameField]);
+    }, [data, entity.nameField]);
 
     if (isLoading) {
       return <div className="p-8 text-center text-sm text-muted-foreground">Loading calendar…</div>;

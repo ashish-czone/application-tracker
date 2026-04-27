@@ -103,9 +103,10 @@ export const INTERVIEWS_CONFIG: EntityConfig = {
     createdBy: { label: 'Created By' },
   },
 
+  nameField: 'interviewName',
+
   ui: {
     icon: 'calendar-check',
-    nameField: 'interviewName',
     navGroup: 'recruit',
     navOrder: 3,
   },

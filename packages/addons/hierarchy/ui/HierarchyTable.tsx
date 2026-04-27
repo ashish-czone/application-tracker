@@ -51,7 +51,7 @@ export function HierarchyTable({ entityType, onRowClick }: HierarchyTableProps) 
   });
 
   const getLabel = (item: Record<string, unknown>): string => {
-    const { nameField } = entity.ui;
+    const { nameField } = entity;
     const key = Array.isArray(nameField) ? nameField[0] : nameField;
     const resolved = item[`${key}__label`] ?? item[key];
     return String(resolved ?? item.id ?? '');

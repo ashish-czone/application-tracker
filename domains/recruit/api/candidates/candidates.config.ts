@@ -109,9 +109,10 @@ export const candidatesConfig: EntityConfig = {
     anchors: { creator: 'createdBy' },
   },
 
+  nameField: 'fullName',
+
   ui: {
     icon: 'users',
-    nameField: 'fullName',
     subtitleField: 'currentTitle',
     navGroup: 'recruit',
     navOrder: 1,

@@ -212,7 +212,7 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
   // Get entity display name from a row
   // For lookup fields, prefer the resolved __label over the raw UUID
   const getDisplayName = (row: Row): string => {
-    const { nameField } = entity.ui;
+    const { nameField } = entity;
     const resolve = (f: string) => row[`${f}__label`] ?? row[f] ?? '';
     if (Array.isArray(nameField)) {
       return nameField.map(resolve).filter(Boolean).join(' — ');
@@ -235,7 +235,7 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
     if (!listLayout) return [];
 
     // Determine which column is the navigation link (matches nameField)
-    const { nameField } = entity.ui;
+    const { nameField } = entity;
     const linkFieldKey = Array.isArray(nameField) ? nameField[0] : nameField;
     const hasLinkColumn = listLayout.columns.some((c) => c.fieldKey === linkFieldKey);
 

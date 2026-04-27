@@ -56,7 +56,8 @@ function buildParentConfig(): EntityConfig {
     sections: [],
     extensionColumns: ['title', 'status', 'priority'],
     adminConfigurable: true,
-    ui: { icon: 'check', nameField: 'title' },
+    nameField: 'title',
+    ui: { icon: 'check' },
   } as EntityConfig;
 }
 
@@ -78,7 +79,8 @@ function buildChildConfig(): EntityConfig {
       foreignKey: 'taskId',
     },
     adminConfigurable: true,
-    ui: { icon: 'check', nameField: 'ruleId' },
+    nameField: 'ruleId',
+    ui: { icon: 'check' },
   } as EntityConfig;
 }
 

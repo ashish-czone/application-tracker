@@ -493,8 +493,12 @@ export interface NestedRelationshipField {
 export interface EntityUIHints {
   /** Lucide icon name */
   icon: string;
-  /** Field key(s) for display name on detail page header */
-  nameField: string | string[];
+  /**
+   * @deprecated Read from {@link EntityConfig.nameField} instead. This mirror
+   * is retained transitionally so existing readers keep compiling; it will be
+   * removed in a follow-up PR that strips the `ui` block entirely.
+   */
+  nameField?: string | string[];
   /** Field key for subtitle */
   subtitleField?: string;
   /** Sidebar nav group. When multiple entities share a navGroup and set `groupRenderMode: 'tabs'`, the platform collapses them into a single nav link and renders a tabbed page. The URL slug is derived from the group label. */
@@ -792,6 +796,16 @@ export interface EntityConfig<TTable extends PgTable = PgTable> {
    *  the parent's projected columns transparently. */
   extensionOf?: ExtensionOfConfig;
 
+  // --- Display ---
+
+  /**
+   * Field key (or composite key array) used as the canonical display name
+   * for records of this entity. Used by the platform for detail page
+   * headers, lookup labels, audit logs, and notifications. Always present —
+   * defaults to `'id'` if no `isLabel: true` field is declared.
+   */
+  nameField: string | string[];
+
   // --- UI ---
 
   /** Frontend rendering hints (serialized to registry API) */
@@ -959,6 +973,12 @@ export interface EntityRegistryEntry {
   singularName: string;
   pluralName: string;
   slug: string;
+  /**
+   * Field key (or composite key array) used for display name. Lifted out of
+   * the `ui` block so it is independent of presentation hints — see
+   * {@link EntityConfig.nameField}.
+   */
+  nameField: string | string[];
   ui: EntityUIHints;
   /**
    * Engine-derived feature flags merged with feature-package-derived keys

@@ -119,9 +119,10 @@ export const offersConfig: EntityConfig = {
     createdBy: { label: 'Created By' },
   },
 
+  nameField: 'status',
+
   ui: {
     icon: 'file-signature',
-    nameField: 'status',
     navGroup: 'recruit',
     navOrder: 4,
   },

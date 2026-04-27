@@ -51,9 +51,10 @@ export const VENDORS_CONFIG: EntityConfig = {
     createdBy: { label: 'Created By' },
   },
 
+  nameField: 'vendorName',
+
   ui: {
     icon: 'store',
-    nameField: 'vendorName',
     subtitleField: 'email',
     navGroup: 'recruit',
     navOrder: 6,

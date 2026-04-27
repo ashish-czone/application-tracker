@@ -324,7 +324,8 @@ export class EntityService {
     }
 
     // Always include nameField and subtitleField (needed for display even if system/hidden)
-    const { nameField, subtitleField } = this.config.ui;
+    const { nameField } = this.config;
+    const { subtitleField } = this.config.ui;
     const displayFields = Array.isArray(nameField) ? [...nameField] : [nameField];
     if (subtitleField) displayFields.push(subtitleField);
     for (const key of displayFields) {
@@ -1283,7 +1284,7 @@ export class EntityService {
     const defs = await this.fieldDefinitionService.listByEntityWithOptions(config.entityType);
 
     // 3. Build clone payload (pure function — skips auto/readonly/workflow, transforms relational fields)
-    const nameField = config.ui.nameField;
+    const nameField = config.nameField;
     const primaryNameField = Array.isArray(nameField) ? nameField[0] : nameField;
     const clonePayload = buildClonePayload(source, defs, primaryNameField);
 

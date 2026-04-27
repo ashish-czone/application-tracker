@@ -10,7 +10,7 @@ describe('PAGES_CONFIG', () => {
   });
 
   it('marks title as the label field and required', () => {
-    expect(PAGES_CONFIG.ui.nameField).toBe('title');
+    expect(PAGES_CONFIG.nameField).toBe('title');
     expect(PAGES_CONFIG.fieldMeta.title).toBeDefined();
     expect(PAGES_CONFIG.fieldMeta.title.fieldType).toBe('text');
   });
