@@ -20,6 +20,8 @@ export interface ClientLaw {
   onTimePct: number;
   handler: Handler;
   registeredAt: string; // ISO date
+  /** ISO date the registration was deactivated. Null/undefined when active. */
+  deactivatedAt?: string | null;
 }
 
 // ─── Filing row for the client detail Filings tab ──────────────────

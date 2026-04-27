@@ -1,5 +1,11 @@
 import { Button, type DataTableColumn } from '@packages/ui';
-import { HealthBar, OrdinalDate, HandlerPill, JurisdictionTag } from '../../../../../../components';
+import {
+  HealthBar,
+  OrdinalDate,
+  HandlerPill,
+  JurisdictionTag,
+  InactiveSourceMarker,
+} from '../../../../../../components';
 import type { ClientLaw } from '../data/clientDetailMock';
 
 interface ColumnsOptions {
@@ -17,6 +23,7 @@ export function makeClientDetailLawColumns({ onDeactivate }: ColumnsOptions): Da
           <div className="flex items-center gap-2">
             <span className="font-mono text-xs font-medium text-ink tracking-wide">{l.code}</span>
             <JurisdictionTag jurisdiction={l.jurisdiction} variant="muted" />
+            {l.deactivatedAt && <InactiveSourceMarker kind="deactivated" />}
           </div>
           <span className="text-[11px] font-sans text-ink-muted mt-0.5 block truncate">
             {l.name}
@@ -85,19 +92,20 @@ export function makeClientDetailLawColumns({ onDeactivate }: ColumnsOptions): Da
       header: '',
       width: '110px',
       align: 'right',
-      cell: (l) => (
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={(e) => {
-            e.stopPropagation();
-            onDeactivate(l);
-          }}
-          className="text-[11px] text-ink-muted hover:text-destructive"
-        >
-          Deactivate
-        </Button>
-      ),
+      cell: (l) =>
+        l.deactivatedAt ? null : (
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDeactivate(l);
+            }}
+            className="text-[11px] text-ink-muted hover:text-destructive"
+          >
+            Deactivate
+          </Button>
+        ),
     },
   ];
 }

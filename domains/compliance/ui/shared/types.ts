@@ -41,4 +41,10 @@ export interface Filing {
   handler?: Handler;
   jurisdiction: Law['jurisdiction'];
   status: 'overdue' | 'due-today' | 'due-this-week' | 'upcoming' | 'filed' | 'draft';
+  /** ISO date the source registration was deactivated. Set when the filing's source registration is no longer active. */
+  registrationDeactivatedAt?: string | null;
+  /** Status of the source rule. `deprecated` means the rule was retired after this filing was generated. */
+  ruleStatus?: 'active' | 'draft' | 'deprecated';
+  /** Status of the source client. `dormant` means the client was put on hold after this filing was generated. */
+  clientStatus?: 'active' | 'onboarding' | 'dormant';
 }

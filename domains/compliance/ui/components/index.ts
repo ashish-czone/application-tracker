@@ -26,6 +26,15 @@ export { UrgencyBadge, type UrgencyBadgeProps, type Urgency } from './badges/Urg
 export { StampMark, type StampMarkProps, type StampKind } from './badges/StampMark';
 export { HealthBar, type HealthBarProps } from './badges/HealthBar';
 export { HandlerPill, type HandlerPillProps } from './badges/HandlerPill';
+export {
+  InactiveStateBanner,
+  type InactiveStateBannerProps,
+  type InactiveKind,
+} from './badges/InactiveStateBanner';
+export {
+  InactiveSourceMarker,
+  type InactiveSourceMarkerProps,
+} from './badges/InactiveSourceMarker';
 
 // Editorial — opinionated date formatting + due-date display.
 export { OrdinalDate, type OrdinalDateProps } from './editorial/OrdinalDate';

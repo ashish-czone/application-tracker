@@ -35,7 +35,13 @@ import {
   DetailRow,
   type TimelineIconConfig,
 } from '@packages/ui';
-import { JurisdictionTag, UrgencyBadge, OrdinalDate } from '../../../../../../components';
+import {
+  JurisdictionTag,
+  UrgencyBadge,
+  OrdinalDate,
+  InactiveSourceMarker,
+  type InactiveKind,
+} from '../../../../../../components';
 import type { FilingRow } from '../data/filingTypes';
 import { MOCK_HANDLERS } from '../../../console-preview/mockData';
 import type { Filing, Handler } from '../../../../../../shared/types';
@@ -84,11 +90,19 @@ export interface FilingDetailDrawerProps {
 
 // ─── Component ───────────────────────────────────────────────────────
 
+function inactiveKindForFiling(filing: FilingRow): InactiveKind | null {
+  if (filing.clientStatus === 'dormant') return 'dormant';
+  if (filing.registrationDeactivatedAt) return 'deactivated';
+  if (filing.ruleStatus === 'deprecated') return 'deprecated';
+  return null;
+}
+
 export function FilingDetailDrawer({ filing, onClose, onStatusChange }: FilingDetailDrawerProps) {
   const [mode, setMode] = useState<DrawerMode>('overview');
 
   const isFiled = filing.status === 'filed';
   const transitions = getTransitions(filing.status);
+  const inactiveKind = inactiveKindForFiling(filing);
 
   return (
     <DrawerShell onClose={() => onClose?.()} width="xl">
@@ -98,6 +112,7 @@ export function FilingDetailDrawer({ filing, onClose, onStatusChange }: FilingDe
             <div className="flex items-center gap-2">
               <Eyebrow tone="muted" mark="§">Filing detail</Eyebrow>
               <UrgencyBadge urgency={filing.status} />
+              {inactiveKind && <InactiveSourceMarker kind={inactiveKind} />}
             </div>
           }
           title={
