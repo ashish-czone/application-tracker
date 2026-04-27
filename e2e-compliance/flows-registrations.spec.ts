@@ -6,7 +6,7 @@ import { createOrgUnit, type OrgUnit } from './fixtures/org-units';
 import { getSystemLaw, type Law } from './fixtures/laws';
 import { createLawHandler } from './fixtures/law-handlers';
 import { createComplianceRule } from './fixtures/rules';
-import { createClientRegistration } from './fixtures/registrations';
+import { createClientRegistration, getClientRegistration } from './fixtures/registrations';
 import { runGenerator } from './fixtures/cron';
 
 interface FilingRow {
@@ -22,7 +22,7 @@ interface FilingRow {
  * §2 client registrations — named coverage:
  *
  *   US-2.2 Reject registration without a resolvable handler (I20/I21)
- *   US-2.3 Capture registration metadata — SKIPPED (V1 schema gap, see below)
+ *   US-2.3 Capture registration metadata (registrationNumber, effectiveFrom)
  *   US-2.4 Deactivate registration (forward-only) — past filings preserved,
  *          no new filings for periods after `deactivatedAt`
  *
@@ -49,10 +49,41 @@ test.describe('Flow: client registrations (US-2.x)', () => {
     expect(rejected, 'registration without handler must be rejected').toBe(true);
   });
 
-  test.skip('US-2.3 registration captures registrationNumber and effectiveFrom metadata', async () => {
-    // V1 schema gap — `compliance_client_registrations` carries `registeredAt`
-    // and `deactivatedAt` only, not `registrationNumber` / `effectiveFrom`.
-    // Unblock by adding those columns + DTO fields, then unskip this test.
+  test('US-2.3 registration captures registrationNumber and effectiveFrom metadata', async () => {
+    const team = await createOrgUnit({ level: 'Team' });
+    const law = await getSystemLaw('GST');
+    await createLawHandler({ lawId: law.id, orgEntityId: team.id });
+    const client = await createClient();
+
+    const registrationNumber = 'GSTIN-29ABCDE1234F1Z5';
+    const effectiveFrom = '2026-01-15';
+    const created = await createClientRegistration(client.id, law.id, {
+      registrationNumber,
+      effectiveFrom,
+    });
+
+    expect(created.registrationNumber).toBe(registrationNumber);
+    expect(created.effectiveFrom).toBe(effectiveFrom);
+
+    // Round-trip via GET — confirms the columns persist, not just echo on POST.
+    const fetched = await getClientRegistration(created.id);
+    expect(fetched.registrationNumber).toBe(registrationNumber);
+    expect(fetched.effectiveFrom).toBe(effectiveFrom);
+  });
+
+  test('US-2.3 effectiveFrom defaults to today when omitted on create', async () => {
+    const team = await createOrgUnit({ level: 'Team' });
+    const law = await getSystemLaw('GST');
+    await createLawHandler({ lawId: law.id, orgEntityId: team.id });
+    const client = await createClient();
+
+    const created = await createClientRegistration(client.id, law.id);
+
+    // YYYY-MM-DD shape; we don't pin the exact day to avoid timezone-edge
+    // flakes around midnight. Default-today is the contract; the regex
+    // confirms we got a calendar date, not null.
+    expect(created.effectiveFrom).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(created.registrationNumber).toBeNull();
   });
 
   test('US-2.4 deactivating a registration is forward-only', async () => {

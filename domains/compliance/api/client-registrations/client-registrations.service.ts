@@ -10,6 +10,7 @@ import { DomainEventEmitter } from '@packages/events';
 import { EntityService, type BaseListQuery } from '@packages/entity-engine';
 import type { DataAccessContext } from '@packages/rbac';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
+import { todayInTimezone } from '@packages/common';
 import { complianceClientRegistrations } from '../schema/client-registrations';
 import { complianceLaws } from '../schema/laws';
 import { clients } from '../schema/clients';
@@ -70,6 +71,8 @@ export interface ClientRegistration {
   id: string;
   clientId: string;
   lawId: string;
+  registrationNumber: string | null;
+  effectiveFrom: string | null;
   registeredAt: Date;
   deactivatedAt: Date | null;
 }
@@ -91,6 +94,7 @@ export interface DeactivationResult {
 @Injectable()
 export class ClientRegistrationsService {
   private readonly logger: ContextLogger;
+  private readonly appTimezone: string;
 
   constructor(
     @Inject('ENTITY_SERVICE_client-registrations') private readonly entityService: EntityService,
@@ -101,6 +105,7 @@ export class ClientRegistrationsService {
     appLogger: AppLoggerService,
   ) {
     this.logger = appLogger.forContext(ClientRegistrationsService.name);
+    this.appTimezone = process.env.APP_TIMEZONE ?? 'UTC';
   }
 
   // ---- CRUD delegates (vendors template) -----------------------------------
@@ -115,7 +120,14 @@ export class ClientRegistrationsService {
 
   async create(input: CreateClientRegistrationDto, actorId: string) {
     await this.assertHandlerResolvable(input.lawId, input.clientId);
-    return this.entityService.create(input, actorId);
+    // effectiveFrom defaults to today (in app timezone) when omitted — admins
+    // creating a registration today shouldn't have to fill in the obvious
+    // value. They can still pass an explicit past or future date.
+    const normalised: CreateClientRegistrationDto = {
+      ...input,
+      effectiveFrom: input.effectiveFrom ?? todayInTimezone(this.appTimezone),
+    };
+    return this.entityService.create(normalised, actorId);
   }
 
   update(id: string, input: UpdateClientRegistrationDto, actorId: string, accessCtx?: DataAccessContext) {
@@ -509,6 +521,8 @@ export class ClientRegistrationsService {
       id: row.id,
       clientId: row.clientId,
       lawId: row.lawId,
+      registrationNumber: row.registrationNumber,
+      effectiveFrom: row.effectiveFrom,
       registeredAt: row.registeredAt,
       deactivatedAt: row.deactivatedAt,
     };
