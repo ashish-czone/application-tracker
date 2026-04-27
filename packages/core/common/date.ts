@@ -3,18 +3,27 @@ import { getHours, addDays } from 'date-fns';
 
 /**
  * Get today's date as YYYY-MM-DD in the given IANA timezone.
+ *
+ * Pass `now` to override the reference instant — used by tests that fire the
+ * schedule scanner with a deterministic `asOf` instead of wall-clock time.
+ * Production callers omit it and pick up the live clock.
  */
-export function todayInTimezone(timezone: string): string {
-  return formatInTimeZone(new Date(), timezone, 'yyyy-MM-dd');
+export function todayInTimezone(timezone: string, now: Date = new Date()): string {
+  return formatInTimeZone(now, timezone, 'yyyy-MM-dd');
 }
 
 /**
  * Get the current time formatted in the given timezone.
  * @param timezone IANA timezone string (e.g., 'Asia/Dubai')
  * @param format date-fns format string (e.g., 'yyyy-MM-dd HH:mm:ss')
+ * @param now Optional override of the reference instant (see todayInTimezone).
  */
-export function nowInTimezone(timezone: string, format: string = 'yyyy-MM-dd HH:mm:ss'): string {
-  return formatInTimeZone(new Date(), timezone, format);
+export function nowInTimezone(
+  timezone: string,
+  format: string = 'yyyy-MM-dd HH:mm:ss',
+  now: Date = new Date(),
+): string {
+  return formatInTimeZone(now, timezone, format);
 }
 
 /**

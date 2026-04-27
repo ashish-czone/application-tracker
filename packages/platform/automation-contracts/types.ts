@@ -55,6 +55,14 @@ export interface ActionContext {
   entityId?: string;
   entityData?: Record<string, unknown>;
   resolvedUsers: Record<string, string[]>;
+  /**
+   * Reference instant for time-dependent action work. Production callers
+   * pass `new Date()` (live clock); tests can pass a deterministic `asOf`
+   * to make scheduled rules fire as if at that point in time. Action
+   * handlers that read the clock should always read it through this field
+   * (`ctx.now ?? new Date()`) rather than calling `new Date()` directly.
+   */
+  now?: Date;
 }
 
 export interface ActionResult {

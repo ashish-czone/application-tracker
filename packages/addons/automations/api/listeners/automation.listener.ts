@@ -100,7 +100,7 @@ export class AutomationListener {
     return true;
   }
 
-  async executeActions(rule: AutomationRule, event: DomainEvent): Promise<void> {
+  async executeActions(rule: AutomationRule, event: DomainEvent, now?: Date): Promise<void> {
     for (let i = 0; i < rule.actions.length; i++) {
       const actionConfig = rule.actions[i];
       const handler = this.actionRegistry.get(actionConfig.type);
@@ -136,6 +136,7 @@ export class AutomationListener {
             payload: event.payload as Record<string, unknown>,
           },
           resolvedUsers,
+          now,
         });
 
         // Log execution audit
