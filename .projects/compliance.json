@@ -323,12 +323,12 @@
       "type": "feature",
       "parentId": null,
       "title": "Stream Z — Finalisation audit",
-      "status": "todo",
+      "status": "done",
       "priority": "medium",
       "createdAt": "2026-04-23",
-      "completedAt": null,
+      "completedAt": "2026-04-27",
       "acceptanceCriteria": "Cross-stream audit: naming consistency, domain boundaries, type safety, test coverage, doc drift.",
-      "notes": "Run after all I/J streams ship."
+      "notes": "PR #1069"
     },
     {
       "id": "F-014",
