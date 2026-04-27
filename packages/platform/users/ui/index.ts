@@ -1,3 +1,4 @@
+export { USERS_UI_CONFIG } from './entity-configs/users.ui';
 export { UsersListPage } from './pages/UsersListPage';
 export { usersRoutes } from './routes';
 export { ResetPasswordForm } from './components/ResetPasswordForm';

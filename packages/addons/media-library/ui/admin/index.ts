@@ -1,3 +1,4 @@
+export { MEDIA_ASSETS_UI_CONFIG } from './entity-configs/media-assets.ui';
 export { MediaLibraryPage } from './MediaLibraryPage';
 export { MediaAssetCard } from './MediaAssetCard';
 export { MediaAssetDrawer } from './MediaAssetDrawer';

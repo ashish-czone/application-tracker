@@ -29,6 +29,7 @@ import '@domains/compliance-ui/register-widgets';
 import { WebShell } from '@packages/app-shell-ui';
 import { DebugProfilerBar, DebugProfilerProvider } from '@packages/debug-profiler-ui';
 import { TASKS_UI_CONFIG, TaskAssigneeCell } from '@packages/tasks-ui';
+import { USERS_UI_CONFIG } from '@packages/users-ui';
 import { OrgUnitsPage, OrgPositionsPage } from '@packages/org-units-ui';
 import { notesDetailTab, notesSidebarPanel } from '@packages/notes-ui';
 import { attachmentsDetailTab, attachmentsSidebarPanel } from '@packages/attachments-ui';
@@ -126,7 +127,7 @@ createRoot(document.getElementById('root')!).render(
         features={features}
         extraMenuItems={addonMenuItems}
         extraRoutes={addonRoutes}
-        extraEntityUIConfigs={[TASKS_UI_CONFIG]}
+        extraEntityUIConfigs={[TASKS_UI_CONFIG, USERS_UI_CONFIG]}
         extraDetailTabs={detailTabs}
         extraRightSidebarPanels={rightSidebarPanels}
         extraColumnRenderers={columnRenderers}
