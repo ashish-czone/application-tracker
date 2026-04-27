@@ -165,3 +165,27 @@ Via `@nestjs/swagger`. Every endpoint: `@ApiOperation`, `@ApiResponse`. Every DT
 ## 14. Bulk Operations
 
 `POST/PATCH/DELETE /candidates/bulk` — max batch 100, per-item results with `summary.succeeded/failed`. Not all-or-nothing by default.
+
+---
+
+## 15. api ↔ ui Boundary
+
+api packages ship **zero presentation**. No icons, no nav metadata, no field renderers, no kanban hints, no labels, no React. Presentation lives on the frontend `EntityUIConfig` — see PROMPT-UI.md §16.
+
+**What an `EntityConfig` may carry:**
+
+| Concern | On `EntityConfig` | Why |
+|---|---|---|
+| `entityType`, `singularName`, `pluralName`, `slug` | ✅ | Identity. |
+| `nameField: string \| string[]` | ✅ | Data-shape — which column(s) label a record. The api needs this to ensure the field is always selected in LIST queries. |
+| `subtitleField?: string` | ✅ | Same — secondary label column included in select maps. |
+| `fields`, `relationships`, `features`, `actions`, `dataAccess` | ✅ | Schema, behavior, RBAC. |
+| `icon`, `navGroup`, `navOrder`, `createMode`, `groupRenderMode`, `boardFields`, `afterCreateRoute` | ❌ | Pure presentation. Lives on `EntityUIConfig.presentation`. |
+| `uiType`, `cellRenderer` per field | ❌ | Per-field UI. Lives on `EntityUIConfig.fieldUI[fieldKey]`. |
+| `label`, `icon`, `variant` per action | ❌ | Per-action UI. Lives on `EntityUIConfig.actionUI[actionKey]`. |
+
+**Enforcement:** `eslint.boundaries.config.mjs` blocks `@packages/ui` and `@packages/*-ui` imports anywhere under `packages/*/*/api/**` and `domains/*/api/**`. CI fails on violation.
+
+**Wire shape:** `GET /entity-engine/registry` returns `EntityRegistryEntry` carrying only the api-side fields above. The frontend hydrates `entity.ui` client-side from the registered `EntityUIConfig.presentation` via `EntityEngineProvider`.
+
+**`pnpm gen:entity` scaffold** generates only the api-side `EntityConfig`. The matching `EntityUIConfig` is added by hand in `domains/<x>/ui/entity-configs/<entity>.ui.ts`.

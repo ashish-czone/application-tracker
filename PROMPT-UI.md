@@ -238,3 +238,72 @@ Frontend-specific notes:
 - Tables → card/list on mobile. Modals → full-screen sheets.
 - Sidebar → hamburger on small screens.
 - Touch targets: min 44x44px. No horizontal scrolling.
+
+---
+
+## 16. EntityUIConfig — Where Presentation Lives
+
+The api ships zero presentation (see PROMPT-API.md §15). All UI shape for an entity lives on a frontend `EntityUIConfig`, registered with `EntityEngineProvider` and hydrated onto `entity.ui` client-side.
+
+### Shape
+
+```ts
+defineEntityUI({
+  entityType: 'candidate',
+  presentation: {
+    icon: 'user-round',         // lucide-react name
+    navGroup: 'Talent',         // nav grouping
+    navOrder: 10,               // nav sort
+    createMode: 'modal',        // 'modal' | 'page'
+    afterCreateRoute: '/candidates/:id',
+    groupRenderMode: 'tabs',    // 'tabs' | 'list'
+    boardFields: ['stage'],     // explicit kanban-grouping fields
+  },
+  fieldUI: {
+    resume: { uiType: 'file' },
+    stage: { cellRenderer: 'pipelineStage' },
+  },
+  actionUI: {
+    submitToClient: { label: 'Submit', icon: 'send', variant: 'default' },
+  },
+  detailPlugins: [/* ... */],
+  listViews: [/* ... */],
+});
+```
+
+### Where it lives
+
+`domains/<x>/ui/entity-configs/<entity>.ui.ts` — one file per entity. Apps that include the domain pick up the config automatically when the domain's `WebManifest` registers it.
+
+### Hydration model
+
+`EntityRegistryEntry` over the wire has no `ui` block. On the frontend, `EntityEngineProvider` runs `hydrateEntities` which composes:
+
+```ts
+entity.ui = { ...EntityUIConfig.presentation }
+```
+
+Reader code stays idiomatic (`entity.ui?.icon`, `entity.ui?.navGroup`) because hydration restores the same shape — the change is that the presentation source is now the registered UI config, not the api response.
+
+### Field & action UI hydration
+
+`useEntityLayout` and `useListLayout` merge `fieldUI[fieldKey]` and `actionUI[actionKey]` into their results, so per-field and per-action UI surface where rendering happens — the api layout response carries only the schema.
+
+### Workflow → board derivation
+
+Kanban grouping fields are derived client-side, not declared on the api:
+
+```ts
+const boardFields = [
+  ...new Set([
+    ...listLayout.columns.filter((c) => c.fieldType === 'workflow').map((c) => c.fieldKey),
+    ...(entity.ui?.boardFields ?? []),
+  ]),
+];
+```
+
+The api decides nothing about kanban — it just exposes the workflow column type via the layout response.
+
+### Boundary enforcement
+
+`eslint.boundaries.config.mjs` blocks `@packages/ui` and `@packages/*-ui` imports from anywhere under `packages/*/*/api/**` and `domains/*/api/**`. CI fails on violation. There is no symmetric ban on ui → api — UI may consume api types via `@packages/entity-engine-contract`.
