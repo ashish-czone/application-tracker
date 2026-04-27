@@ -1,6 +1,6 @@
 import { type DataTableColumn } from '@packages/ui';
 import { OrdinalDate } from '../../../../../components';
-import type { ActivityEntry } from '../data/settingsMock';
+import type { ActivityEntry } from '../placeholders';
 
 export const ACTIVITY_COLUMNS: DataTableColumn<ActivityEntry>[] = [
   {

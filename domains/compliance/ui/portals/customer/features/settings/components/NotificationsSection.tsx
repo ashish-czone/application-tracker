@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Button } from '@packages/ui';
-import { NOTIFICATION_CATEGORIES, type NotificationCategory } from '../data/settingsMock';
+import { NOTIFICATION_CATEGORIES, type NotificationCategory } from '../placeholders';
 import { Toggle } from './settingsFormPrimitives';
 
 export function NotificationsSection() {

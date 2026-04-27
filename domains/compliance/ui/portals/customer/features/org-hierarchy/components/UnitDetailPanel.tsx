@@ -9,8 +9,8 @@ import {
   getInitials,
   levelTagClass,
 } from '../helpers';
-import type { ComplianceLawAssignment } from '../data/orgHierarchyMock';
-import { getUnitLawAssignments } from '../data/orgHierarchyMock';
+import type { ComplianceLawAssignment } from '../placeholders';
+import { getUnitLawAssignments } from '../placeholders';
 
 type DetailTab = 'members' | 'sub-units' | 'compliance';
 

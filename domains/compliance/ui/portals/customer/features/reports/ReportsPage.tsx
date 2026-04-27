@@ -18,7 +18,7 @@ import {
   OVERDUE_ROWS,
   WORKLOAD_ROWS,
   type ReportTab,
-} from './data/reportsMock';
+} from './placeholders';
 import { ReportsKpiStrip } from './components/ReportsKpiStrip';
 import { ComplianceTrendChart } from './components/ComplianceTrendChart';
 import { AgingBarChart } from './components/AgingBarChart';

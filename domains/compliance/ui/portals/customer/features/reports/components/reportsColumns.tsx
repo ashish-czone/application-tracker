@@ -1,6 +1,6 @@
 import { type DataTableColumn } from '@packages/ui';
 import { HealthBar, OrdinalDate, HandlerPill, ColoredInitialsAvatar } from '../../../../../components';
-import type { ComplianceRow, OverdueRow, WorkloadRow } from '../data/reportsMock';
+import type { ComplianceRow, OverdueRow, WorkloadRow } from '../placeholders';
 import { PriorityPill } from './PriorityPill';
 
 export const COMPLIANCE_COLUMNS: DataTableColumn<ComplianceRow>[] = [

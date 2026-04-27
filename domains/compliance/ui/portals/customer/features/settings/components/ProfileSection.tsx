@@ -1,7 +1,7 @@
 import { Camera } from 'lucide-react';
 import { Button, Eyebrow } from '@packages/ui';
 import { OrdinalDate, ColoredInitialsAvatar } from '../../../../../components';
-import { CURRENT_USER } from '../data/settingsMock';
+import { CURRENT_USER } from '../placeholders';
 import { FieldGroup, TextInput, SectionDivider } from './settingsFormPrimitives';
 
 export function ProfileSection() {

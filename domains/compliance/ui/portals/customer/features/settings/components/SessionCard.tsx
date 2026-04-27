@@ -1,6 +1,6 @@
 import { Smartphone, Monitor, Globe } from 'lucide-react';
 import { OrdinalDate } from '../../../../../components';
-import type { ActiveSession } from '../data/settingsMock';
+import type { ActiveSession } from '../placeholders';
 
 export interface SessionCardProps {
   session: ActiveSession;

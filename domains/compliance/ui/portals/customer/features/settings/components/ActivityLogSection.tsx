@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { DataGridShell, SearchInput } from '@packages/ui';
-import { ACTIVITY_LOG } from '../data/settingsMock';
+import { ACTIVITY_LOG } from '../placeholders';
 import { ACTIVITY_COLUMNS } from './activityColumns';
 
 export function ActivityLogSection() {
