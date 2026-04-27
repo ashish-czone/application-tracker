@@ -7,7 +7,6 @@ export {
   kernelMigrationSources,
   packageMigration,
   allMigrationSources,
-  platformMigrationSources,
   type PackageMigrationName,
 } from './migrations';
 export { platformSystemSeedSources } from './seeds';

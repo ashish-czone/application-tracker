@@ -138,12 +138,3 @@ export function allMigrationSources(workspaceRoot: string): PackageMigrationSour
   ];
 }
 
-/**
- * @deprecated Use `kernelMigrationSources()` plus `packageMigration()` for
- * each opt-in package the app actually imports. This wrapper preserves the
- * legacy behavior of including every package's tables in every app and will
- * be removed once all callers are migrated.
- */
-export function platformMigrationSources(workspaceRoot: string): PackageMigrationSource[] {
-  return allMigrationSources(workspaceRoot);
-}
