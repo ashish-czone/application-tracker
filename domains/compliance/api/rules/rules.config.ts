@@ -107,11 +107,4 @@ export const COMPLIANCE_RULES_CONFIG = defineEntity({
       fields: ['code', 'name', 'lawId', 'frequency', 'status', 'dueDayOfMonth', 'dueMonthOffset', 'gracePeriodDays', 'description'],
     },
   ],
-
-  ui: {
-    icon: 'Calendar',
-    navGroup: 'compliance',
-    navOrder: 3,
-    createMode: 'modal',
-  },
 });

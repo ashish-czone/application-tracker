@@ -83,10 +83,4 @@ export const SUBSCRIPTION_PLANS_CONFIG = defineEntity({
       fields: ['name', 'slug', 'description', 'price', 'currency', 'interval', 'intervalCount', 'isActive', 'sortOrder'],
     },
   ],
-
-  ui: {
-    icon: 'CreditCard',
-    navGroup: 'billing',
-    createMode: 'page',
-  },
 });

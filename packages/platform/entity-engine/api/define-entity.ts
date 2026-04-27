@@ -192,26 +192,19 @@ export interface ModelDefinition<TTable extends PgTable = PgTable> {
 
   // --- UI ---
 
-  ui: {
-    /** Lucide icon name */
-    icon: string;
-    /** Sidebar nav group. When multiple entities share a navGroup and set `groupRenderMode: 'tabs'`, they're collapsed into one nav link and rendered as a tabbed page. */
+  /**
+   * @deprecated Presentation hints (icon, navGroup, etc.) now live on the
+   * frontend `EntityUIConfig.presentation`. The api no longer reads them.
+   * Field retained transitionally for configs that haven't been migrated.
+   */
+  ui?: {
+    icon?: string;
     navGroup?: string;
-    /** Sidebar ordering within group. Also drives tab order when grouped. */
     navOrder?: number;
-    /** Collapses all entities sharing this `navGroup` into a single tabbed page. Omit for the default flat-link behavior. */
     groupRenderMode?: 'tabs';
-    /** How the "Add" button works */
     createMode?: 'modal' | 'page' | 'wizard';
-    /** Picklist field keys for board/kanban view */
     boardFields?: string[];
-    /** Field key for subtitle display */
     subtitleField?: string;
-    /**
-     * Route template used by the list page after a successful quick-create,
-     * instead of the default detail page. Supports `:id` placeholder —
-     * e.g. `/pages/:id/edit` to drop the user straight into an editor.
-     */
     afterCreateRoute?: string;
   };
 
@@ -576,15 +569,7 @@ export function defineEntity<TTable extends PgTable>(model: ModelDefinition<TTab
     extraEvents: model.extraEvents,
     actions: model.actions,
     nameField,
-    ui: {
-      icon: model.ui.icon,
-      subtitleField: model.ui.subtitleField,
-      navGroup: model.ui.navGroup,
-      navOrder: model.ui.navOrder,
-      createMode: model.ui.createMode,
-      boardFields: model.ui.boardFields,
-      afterCreateRoute: model.ui.afterCreateRoute,
-    },
+    ui: model.ui,
     dataAccess: model.dataAccess,
   };
 }

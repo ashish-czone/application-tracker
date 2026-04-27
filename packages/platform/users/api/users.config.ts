@@ -136,12 +136,4 @@ export const USERS_CONFIG: EntityConfig<typeof users> = defineEntity({
       label: 'Roles',
     },
   ],
-
-  ui: {
-    icon: 'User',
-    navGroup: 'admin',
-    navOrder: 10,
-    createMode: 'page',
-    subtitleField: 'email',
-  },
 });

@@ -270,12 +270,4 @@ export const JOB_OPENINGS_CONFIG: EntityConfig = {
   },
 
   nameField: 'title',
-
-  ui: {
-    icon: 'briefcase',
-    subtitleField: 'department',
-    navGroup: 'recruit',
-    navOrder: 1,
-    createMode: 'page',
-  },
 };

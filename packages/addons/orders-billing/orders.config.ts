@@ -101,10 +101,4 @@ export const ORDERS_CONFIG = defineEntity({
       fields: ['orderNumber', 'status', 'clientId', 'clientType', 'totalAmount', 'currency', 'notes', 'expiresAt'],
     },
   ],
-
-  ui: {
-    icon: 'ShoppingCart',
-    navGroup: 'main',
-    createMode: 'page',
-  },
 });

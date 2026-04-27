@@ -154,8 +154,4 @@ export const menuItemConfig = defineEntity({
       sortable: true,
     },
   },
-
-  ui: {
-    icon: 'List',
-  },
 });

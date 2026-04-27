@@ -55,11 +55,4 @@ export const MENU_CONFIG = defineEntity({
   },
 
   defaultSort: 'createdAt',
-
-  ui: {
-    icon: 'Menu',
-    navGroup: 'Content',
-    createMode: 'modal',
-    afterCreateRoute: '/menus/:id/edit',
-  },
 });

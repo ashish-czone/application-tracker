@@ -61,11 +61,4 @@ export const LAW_HANDLERS_CONFIG = defineEntity({
       fields: ['lawId', 'orgEntityId', 'clientId', 'isPrimary'],
     },
   ],
-
-  ui: {
-    icon: 'Users',
-    navGroup: 'compliance',
-    navOrder: 4,
-    createMode: 'modal',
-  },
 });

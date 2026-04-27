@@ -110,9 +110,4 @@ export const ORGANIZATIONS_CONFIG: EntityConfig<typeof organizations> = defineEn
       fields: ['addressLine1', 'addressLine2', 'city', 'state', 'postalCode', 'countryId'],
     },
   ],
-
-  ui: {
-    icon: 'Building',
-    createMode: 'page',
-  },
 });

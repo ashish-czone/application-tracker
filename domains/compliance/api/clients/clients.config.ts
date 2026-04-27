@@ -161,12 +161,4 @@ export const CLIENTS_CONFIG = defineEntity({
       fields: ['notes'],
     },
   ],
-
-  ui: {
-    icon: 'Building2',
-    navGroup: 'compliance',
-    navOrder: 2,
-    createMode: 'modal',
-    subtitleField: 'legalName',
-  },
 });

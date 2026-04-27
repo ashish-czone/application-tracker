@@ -139,10 +139,4 @@ export const APPLICATIONS_CONFIG: EntityConfig = {
 
   nameField: ['candidateId', 'jobOpeningId'],
 
-  ui: {
-    icon: 'file-text',
-    navGroup: 'recruit',
-    navOrder: 3,
-  },
-
 };

@@ -64,11 +64,4 @@ export const CLIENT_CONTACTS_CONFIG = defineEntity({
       fields: ['clientId', 'name', 'email', 'phone', 'designation', 'isPrimary', 'notes'],
     },
   ],
-
-  ui: {
-    icon: 'User',
-    // Contacts are managed within the client detail page; not shown in
-    // top-level navigation. navGroup is intentionally omitted.
-    createMode: 'modal',
-  },
 });

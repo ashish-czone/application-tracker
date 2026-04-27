@@ -52,12 +52,4 @@ export const FAQ_ITEMS_CONFIG = defineEntity({
   },
 
   defaultSort: 'displayOrder',
-
-  ui: {
-    icon: 'HelpCircle',
-    navGroup: 'Content',
-    groupRenderMode: 'tabs',
-    navOrder: 20,
-    createMode: 'modal',
-  },
 });

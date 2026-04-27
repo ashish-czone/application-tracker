@@ -120,10 +120,4 @@ export const offersConfig: EntityConfig = {
   },
 
   nameField: 'status',
-
-  ui: {
-    icon: 'file-signature',
-    navGroup: 'recruit',
-    navOrder: 4,
-  },
 };
