@@ -28,6 +28,10 @@ async function main() {
       name: '@packages/media-library-api',
       migrationsFolder: path.join(workspaceRoot, 'packages/addons/media-library/api/migrations'),
     },
+    {
+      name: '@domains/projects-api',
+      migrationsFolder: path.join(workspaceRoot, 'domains/projects/api/migrations'),
+    },
   ];
 
   await runMigrations({ packages });

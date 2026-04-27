@@ -15,6 +15,22 @@ export function agencySystemSeedSources(): SeedSource[] {
   return [];
 }
 
+/**
+ * Single seed source for the e2e-admin user. Consumed by the agency
+ * app's test-hooks reset endpoint, which reseeds a minimal "system +
+ * e2e-admin" set rather than the full demo set. Lives outside
+ * `agencyDemoSeedSources()` so the test-hooks caller doesn't pull in
+ * opinionated demo content (pages, menus) that would conflict with
+ * test-created entities.
+ */
+export function agencyE2eAdminSeedSource(): SeedSource {
+  return {
+    name: '@domains/agency-api/demo-e2e-admin',
+    kind: 'demo',
+    load: () => import('./seeds/demo-e2e-admin').then((m) => m.seedDemoE2eAdmin),
+  };
+}
+
 export function agencyDemoSeedSources(): SeedSource[] {
   const demo = (name: string, load: () => Promise<SeedFn>): SeedSource => ({
     name,

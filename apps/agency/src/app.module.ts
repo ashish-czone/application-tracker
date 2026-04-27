@@ -5,11 +5,13 @@ import { HierarchyModule } from '@packages/hierarchy';
 import { OrderableModule } from '@packages/orderable';
 import { TaxonomyModule } from '@packages/taxonomy';
 import { agencyBackend } from '@domains/agency-api';
+import { projectsBackend } from '@domains/projects-api';
 import { UsersModule } from './modules/users/users.module';
+import { TestHooksModule } from './modules/test-hooks/test-hooks.module';
 
 @Module(
   createAppModule({
-    domains: [agencyBackend],
+    domains: [agencyBackend, projectsBackend],
     appName: 'agency',
     envFilePath: path.resolve(__dirname, '../.env'),
     extraImports: [
@@ -17,6 +19,7 @@ import { UsersModule } from './modules/users/users.module';
       HierarchyModule,
       OrderableModule,
       TaxonomyModule,
+      TestHooksModule.register(),
     ],
   }),
 )

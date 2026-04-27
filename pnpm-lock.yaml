@@ -110,6 +110,9 @@ importers:
       '@domains/agency-contract':
         specifier: workspace:*
         version: link:../../domains/agency/contract
+      '@domains/projects-api':
+        specifier: workspace:*
+        version: link:../../domains/projects/api
       '@nestjs/common':
         specifier: ^11.0.0
         version: 11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -291,6 +294,9 @@ importers:
       '@domains/agency-ui':
         specifier: workspace:*
         version: link:../../../../../domains/agency/ui
+      '@domains/projects-ui':
+        specifier: workspace:*
+        version: link:../../../../../domains/projects/ui
       '@hookform/resolvers':
         specifier: ^5.0.0
         version: 5.2.2(react-hook-form@7.71.2(react@19.2.4))
@@ -2104,6 +2110,110 @@ importers:
       '@types/react':
         specifier: ^19.2.14
         version: 19.2.14
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0)
+
+  domains/projects/api:
+    dependencies:
+      '@nestjs/common':
+        specifier: ^11.0.0
+        version: 11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/core':
+        specifier: ^11.0.0
+        version: 11.1.16(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@11.1.16)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@packages/auth-core':
+        specifier: workspace:*
+        version: link:../../../packages/platform/auth-core
+      '@packages/common':
+        specifier: workspace:*
+        version: link:../../../packages/core/common
+      '@packages/database':
+        specifier: workspace:*
+        version: link:../../../packages/core/database
+      '@packages/domains':
+        specifier: workspace:*
+        version: link:../../../packages/platform/domains
+      '@packages/entity-engine':
+        specifier: workspace:*
+        version: link:../../../packages/platform/entity-engine/api
+      '@packages/events':
+        specifier: workspace:*
+        version: link:../../../packages/core/events
+      '@packages/logger':
+        specifier: workspace:*
+        version: link:../../../packages/core/logger
+      '@packages/orderable':
+        specifier: workspace:*
+        version: link:../../../packages/addons/orderable/api
+      '@packages/rbac':
+        specifier: workspace:*
+        version: link:../../../packages/platform/rbac/api
+      '@packages/soft-delete':
+        specifier: workspace:*
+        version: link:../../../packages/core/soft-delete
+      '@packages/users':
+        specifier: workspace:*
+        version: link:../../../packages/platform/users/api
+      '@packages/workflows':
+        specifier: workspace:*
+        version: link:../../../packages/addons/workflows/api
+      drizzle-orm:
+        specifier: ^0.45.1
+        version: 0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3))
+      drizzle-zod:
+        specifier: ^0.7.0
+        version: 0.7.1(drizzle-orm@0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3)))(zod@3.25.76)
+      zod:
+        specifier: ^3.25.0
+        version: 3.25.76
+    devDependencies:
+      drizzle-kit:
+        specifier: ^0.31.9
+        version: 0.31.9
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0)
+
+  domains/projects/ui:
+    dependencies:
+      '@packages/entity-engine-ui':
+        specifier: workspace:*
+        version: link:../../../packages/platform/entity-engine/ui
+      '@packages/platform-ui':
+        specifier: workspace:*
+        version: link:../../../packages/platform/platform-ui
+      '@packages/ui':
+        specifier: workspace:*
+        version: link:../../../packages/core/ui
+      '@tanstack/react-query':
+        specifier: ^5.0.0
+        version: 5.90.21(react@19.2.4)
+      lucide-react:
+        specifier: ^0.500.0
+        version: 0.500.0(react@19.2.4)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.4
+      react-dom:
+        specifier: ^19.0.0
+        version: 19.2.4(react@19.2.4)
+      react-router:
+        specifier: ^7.0.0
+        version: 7.13.1(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+    devDependencies:
+      '@types/react':
+        specifier: ^19.2.14
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: ^19.0.0
+        version: 19.2.3(@types/react@19.2.14)
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
