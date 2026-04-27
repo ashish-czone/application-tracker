@@ -60,6 +60,9 @@ export function complianceSystemSeedSources(): SeedSource[] {
     system('@domains/compliance-api/system-generator-cron', () =>
       import('./automations/seeds/system-generator-cron').then((m) => m.seedComplianceGeneratorCron),
     ),
+    system('@domains/compliance-api/system-automations', () =>
+      import('./automations/seeds/system-automations').then((m) => m.seedComplianceSystemAutomations),
+    ),
   ];
 }
 
