@@ -20,6 +20,7 @@ import { ComplianceFilingsModule } from './compliance-filings/compliance-filings
 import { OrganizationsModule } from './organizations/organizations.module';
 
 import { GenerateComplianceFilingsAction } from './automations/generate-compliance-filings.action';
+import { SendComplianceFilingDigestAction } from './automations/send-compliance-filing-digest.action';
 import { ComplianceFilingsGeneratorService } from './automations/compliance-filings-generator.service';
 import { ComplianceFilingsGeneratorListener } from './automations/compliance-filings-generator.listener';
 import { COMPLIANCE_PERMISSION_MANIFESTS } from './permissions';
@@ -40,6 +41,7 @@ import { COMPLIANCE_PERMISSION_MANIFESTS } from './permissions';
     ComplianceFilingsGeneratorService,
     ComplianceFilingsGeneratorListener,
     GenerateComplianceFilingsAction,
+    SendComplianceFilingDigestAction,
     ComplianceUsersPositionsReader,
     {
       provide: USERS_POSITIONS_READER,
@@ -51,6 +53,7 @@ export class ComplianceDomainModule implements OnModuleInit {
   constructor(
     private readonly actionRegistry: ActionRegistry,
     private readonly generateFilingsAction: GenerateComplianceFilingsAction,
+    private readonly sendDigestAction: SendComplianceFilingDigestAction,
     private readonly rbac: RbacService,
     private readonly auditRegistry: AuditRegistryService,
     private readonly moduleRef: ModuleRef,
@@ -58,6 +61,7 @@ export class ComplianceDomainModule implements OnModuleInit {
 
   onModuleInit() {
     this.actionRegistry.register(this.generateFilingsAction);
+    this.actionRegistry.register(this.sendDigestAction);
 
     registerComplianceAudit(this.auditRegistry, this.moduleRef);
 
