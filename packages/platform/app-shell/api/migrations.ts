@@ -13,50 +13,128 @@ export function findWorkspaceRoot(start: string): string {
   throw new Error(`Could not find pnpm-workspace.yaml above ${start}`);
 }
 
+const KERNEL_PACKAGE_FOLDERS = {
+  '@packages/database': 'packages/core/database',
+  '@packages/rbac': 'packages/platform/rbac/api',
+  '@packages/auth': 'packages/platform/auth/api',
+  '@packages/settings': 'packages/platform/settings/api',
+  '@packages/audit': 'packages/platform/audit/api',
+  '@packages/notification-channels': 'packages/platform/notification-channels/api',
+  '@packages/notifications': 'packages/platform/notifications/api',
+  '@packages/automations': 'packages/addons/automations/api',
+  '@packages/workflows': 'packages/addons/workflows/api',
+  '@packages/user-preferences': 'packages/platform/user-preferences',
+  '@packages/entity-engine': 'packages/platform/entity-engine/api',
+  '@packages/entity-layout': 'packages/platform/entity-layout/api',
+} as const satisfies Record<string, string>;
+
+const OPT_IN_PACKAGE_FOLDERS = {
+  '@packages/taxonomy': 'packages/addons/taxonomy/api',
+  '@packages/hierarchy': 'packages/addons/hierarchy/api',
+  '@packages/tenancy': 'packages/addons/tenancy',
+  '@packages/eav-attributes': 'packages/addons/eav-attributes',
+  '@packages/entity-relations': 'packages/addons/entity-relations/api',
+  '@packages/org-units': 'packages/addons/org-units/api',
+  '@packages/tasks': 'packages/addons/tasks/api',
+  '@packages/notes': 'packages/addons/notes/api',
+  '@packages/attachments': 'packages/addons/attachments/api',
+  '@packages/evaluations': 'packages/addons/evaluations/api',
+  '@packages/document-templates': 'packages/addons/document-templates/api',
+  '@packages/orders-billing': 'packages/addons/orders-billing',
+  '@packages/orders-subscriptions': 'packages/addons/orders-subscriptions',
+  '@packages/media-library-api': 'packages/addons/media-library/api',
+  '@packages/content-api': 'packages/addons/content/api',
+} as const satisfies Record<string, string>;
+
+type KernelPackageName = keyof typeof KERNEL_PACKAGE_FOLDERS;
+
 /**
- * Ordered list of platform/core/addon packages whose migrations must run
- * before any domain migrations. Order reflects cross-package FK dependencies:
- * @packages/database (users) first, then everything that references users,
- * then addons that reference platform tables, etc.
+ * Names of opt-in addon/platform packages whose migrations an app may include.
+ * Pass these to `packageMigration()` — only modules the app actually imports
+ * should appear, so the database has no orphan tables.
  */
-export function platformMigrationSources(
+export type PackageMigrationName = keyof typeof OPT_IN_PACKAGE_FOLDERS;
+
+function pkg(
   workspaceRoot: string,
-): PackageMigrationSource[] {
-  const at = (rel: string, name: string): PackageMigrationSource => ({
+  name: KernelPackageName | PackageMigrationName,
+): PackageMigrationSource {
+  const folder =
+    (KERNEL_PACKAGE_FOLDERS as Record<string, string>)[name] ??
+    (OPT_IN_PACKAGE_FOLDERS as Record<string, string>)[name];
+  if (!folder) {
+    throw new Error(`Unknown migration package: ${name}`);
+  }
+  return {
     name,
-    migrationsFolder: path.join(workspaceRoot, rel, 'migrations'),
-  });
+    migrationsFolder: path.join(workspaceRoot, folder, 'migrations'),
+  };
+}
 
+/**
+ * Packages that are loaded by `createAppModule` for every app, regardless of
+ * whether the app explicitly imports them. Their migrations must run on every
+ * app's database. Order reflects cross-package FK dependencies.
+ *
+ * `@packages/automations` and `@packages/workflows` live under addons/ but are
+ * hardcoded into the shell, so they're kernel here for parity. A follow-up
+ * will make them opt-in modules and move them to the opt-in list.
+ */
+export function kernelMigrationSources(workspaceRoot: string): PackageMigrationSource[] {
   return [
-    // Core — owns users; everything else FK-references it.
-    at('packages/core/database', '@packages/database'),
-
-    // Platform — base infra that other tiers depend on.
-    at('packages/platform/rbac/api', '@packages/rbac'),
-    at('packages/platform/auth/api', '@packages/auth'),
-    at('packages/platform/settings/api', '@packages/settings'),
-    at('packages/platform/audit/api', '@packages/audit'),
-    at('packages/platform/notification-channels/api', '@packages/notification-channels'),
-    at('packages/platform/notifications/api', '@packages/notifications'),
-    at('packages/addons/automations/api', '@packages/automations'),
-    at('packages/addons/workflows/api', '@packages/workflows'),
-    at('packages/addons/taxonomy/api', '@packages/taxonomy'),
-    at('packages/platform/user-preferences', '@packages/user-preferences'),
-    at('packages/platform/entity-engine/api', '@packages/entity-engine'),
-    at('packages/platform/entity-layout/api', '@packages/entity-layout'),
-    at('packages/addons/hierarchy/api', '@packages/hierarchy'),
-
-    // Addons — depend on core + platform.
-    at('packages/addons/tenancy', '@packages/tenancy'),
-    at('packages/addons/eav-attributes', '@packages/eav-attributes'),
-    at('packages/addons/entity-relations/api', '@packages/entity-relations'),
-    at('packages/addons/org-units/api', '@packages/org-units'),
-    at('packages/addons/tasks/api', '@packages/tasks'),
-    at('packages/addons/notes/api', '@packages/notes'),
-    at('packages/addons/attachments/api', '@packages/attachments'),
-    at('packages/addons/evaluations/api', '@packages/evaluations'),
-    at('packages/addons/document-templates/api', '@packages/document-templates'),
-    at('packages/addons/orders-billing', '@packages/orders-billing'),
-    at('packages/addons/orders-subscriptions', '@packages/orders-subscriptions'),
+    pkg(workspaceRoot, '@packages/database'),
+    pkg(workspaceRoot, '@packages/rbac'),
+    pkg(workspaceRoot, '@packages/auth'),
+    pkg(workspaceRoot, '@packages/settings'),
+    pkg(workspaceRoot, '@packages/audit'),
+    pkg(workspaceRoot, '@packages/notification-channels'),
+    pkg(workspaceRoot, '@packages/notifications'),
+    pkg(workspaceRoot, '@packages/automations'),
+    pkg(workspaceRoot, '@packages/workflows'),
+    pkg(workspaceRoot, '@packages/user-preferences'),
+    pkg(workspaceRoot, '@packages/entity-engine'),
+    pkg(workspaceRoot, '@packages/entity-layout'),
   ];
 }
+
+/**
+ * Resolves an opt-in package's migration folder. Use in an app's `migrate.ts`
+ * after spreading `kernelMigrationSources()`. Order matters when one opt-in
+ * package FK-references another — e.g. `@packages/tasks` references
+ * `org_units`, so list `@packages/org-units` first.
+ */
+export function packageMigration(
+  workspaceRoot: string,
+  name: PackageMigrationName,
+): PackageMigrationSource {
+  return pkg(workspaceRoot, name);
+}
+
+/**
+ * Convenience for test environments that genuinely need every package's
+ * migrations (e.g. an integration-test app that exercises every addon).
+ * Production apps should NOT use this — declare only what they import via
+ * `packageMigration()`.
+ */
+export function allMigrationSources(workspaceRoot: string): PackageMigrationSource[] {
+  return [
+    ...kernelMigrationSources(workspaceRoot),
+    // Order chosen to satisfy FK dependencies between opt-in packages.
+    pkg(workspaceRoot, '@packages/taxonomy'),
+    pkg(workspaceRoot, '@packages/hierarchy'),
+    pkg(workspaceRoot, '@packages/tenancy'),
+    pkg(workspaceRoot, '@packages/eav-attributes'),
+    pkg(workspaceRoot, '@packages/entity-relations'),
+    pkg(workspaceRoot, '@packages/org-units'),
+    pkg(workspaceRoot, '@packages/tasks'),
+    pkg(workspaceRoot, '@packages/notes'),
+    pkg(workspaceRoot, '@packages/attachments'),
+    pkg(workspaceRoot, '@packages/evaluations'),
+    pkg(workspaceRoot, '@packages/document-templates'),
+    pkg(workspaceRoot, '@packages/orders-billing'),
+    pkg(workspaceRoot, '@packages/orders-subscriptions'),
+    pkg(workspaceRoot, '@packages/media-library-api'),
+    pkg(workspaceRoot, '@packages/content-api'),
+  ];
+}
+
