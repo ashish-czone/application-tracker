@@ -1,4 +1,4 @@
-import { Global, Module, type OnModuleInit } from '@nestjs/common';
+import { Module, type OnModuleInit } from '@nestjs/common';
 import { RbacService } from '@packages/rbac';
 import { AuditRegistryService } from '@packages/audit';
 import { EventRegistryService } from '@packages/events';
@@ -7,7 +7,6 @@ import { AttachmentsController } from './controllers/attachments.controller';
 import { AttachmentsCleanupListener } from './listeners/attachments-cleanup.listener';
 import { ATTACHMENTS_ATTACHMENT_UPLOADED, ATTACHMENTS_ATTACHMENT_DELETED } from './events/types';
 
-@Global()
 @Module({
   controllers: [AttachmentsController],
   providers: [AttachmentsService, AttachmentsCleanupListener],

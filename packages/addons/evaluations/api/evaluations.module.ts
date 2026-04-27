@@ -1,4 +1,4 @@
-import { Global, Module, type OnModuleInit } from '@nestjs/common';
+import { Module, type OnModuleInit } from '@nestjs/common';
 import { RbacService } from '@packages/rbac';
 import { AuditRegistryService } from '@packages/audit';
 import { EventRegistryService } from '@packages/events';
@@ -12,7 +12,6 @@ import {
   EVALUATIONS_EVALUATION_DELETED,
 } from './events/types';
 
-@Global()
 @Module({
   controllers: [EvaluationTemplatesController, EvaluationsController],
   providers: [EvaluationTemplatesService, EvaluationsService],

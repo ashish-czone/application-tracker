@@ -1,9 +1,8 @@
-import { Global, Module, type OnModuleInit } from '@nestjs/common';
+import { Module, type OnModuleInit } from '@nestjs/common';
 import { RbacService } from '@packages/rbac';
 import { UserPreferencesService } from './services/user-preferences.service';
 import { UserPreferencesController } from './controllers/user-preferences.controller';
 
-@Global()
 @Module({
   controllers: [UserPreferencesController],
   providers: [UserPreferencesService],

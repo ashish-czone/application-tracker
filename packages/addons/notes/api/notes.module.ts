@@ -1,4 +1,4 @@
-import { Global, Module, type OnModuleInit } from '@nestjs/common';
+import { Module, type OnModuleInit } from '@nestjs/common';
 import { RbacService } from '@packages/rbac';
 import { AuditRegistryService } from '@packages/audit';
 import { EventRegistryService } from '@packages/events';
@@ -7,7 +7,6 @@ import { NotesController } from './controllers/notes.controller';
 import { NotesCleanupListener } from './listeners/notes-cleanup.listener';
 import { NOTES_NOTE_CREATED, NOTES_NOTE_UPDATED, NOTES_NOTE_DELETED } from './events/types';
 
-@Global()
 @Module({
   controllers: [NotesController],
   providers: [NotesService, NotesCleanupListener],
