@@ -17,3 +17,11 @@ export { ProjectsService } from './projects/projects.service';
 export { MilestonesService } from './milestones/milestones.service';
 export { FeaturesService } from './features/features.service';
 export { TasksService, type MyTaskRow } from './tasks/tasks.service';
+export {
+  DashboardService,
+  type ProjectDashboardCard,
+  type ProjectSummary,
+  type ProjectSummaryMilestone,
+  type ProjectSummaryFeature,
+  type ProjectSummaryTask,
+} from './dashboard/dashboard.service';

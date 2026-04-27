@@ -5,6 +5,7 @@ import { ProjectsModule } from './projects/projects.module';
 import { MilestonesModule } from './milestones/milestones.module';
 import { FeaturesModule } from './features/features.module';
 import { TasksModule } from './tasks/tasks.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 import { PROJECTS_PERMISSION_MANIFESTS } from './permissions';
 
@@ -14,6 +15,7 @@ import { PROJECTS_PERMISSION_MANIFESTS } from './permissions';
     MilestonesModule,
     FeaturesModule,
     TasksModule,
+    DashboardModule,
   ],
 })
 export class ProjectsDomainModule implements OnModuleInit {
