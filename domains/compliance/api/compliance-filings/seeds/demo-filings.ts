@@ -19,7 +19,7 @@ import { COMPLIANCE_FILING_GENERATED } from '../../events/types';
  * due-date/assignment range so dashboard widgets have data in the
  * overdue / due-today / due-this-week / upcoming buckets on a fresh seed.
  */
-const HORIZON_MONTHS = 6;
+const HORIZON_MONTHS = 12;
 
 export const seedDemoFilings = async (ctx: INestApplicationContext): Promise<void> => {
   const database = ctx.get(DatabaseService);

@@ -43,6 +43,9 @@ export function complianceSystemSeedSources(): SeedSource[] {
     system('@domains/compliance-api/system-positions', () =>
       import('./shared/seeds/system-positions').then((m) => m.seedSystemPositions),
     ),
+    system('@domains/compliance-api/system-generator-cron', () =>
+      import('./automations/seeds/system-generator-cron').then((m) => m.seedComplianceGeneratorCron),
+    ),
   ];
 }
 
