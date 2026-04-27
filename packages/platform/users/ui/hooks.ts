@@ -66,11 +66,11 @@ export function useDeleteUser(options?: { onSuccess?: () => void }) {
     mutationFn: (id: string) => api.deleteUser(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
-      toast.success('User deleted');
+      toast.success('User deactivated');
       options?.onSuccess?.();
     },
     onError: (error: any) => {
-      toast.error(error?.body?.message || 'Failed to delete user');
+      toast.error(error?.body?.message || 'Failed to deactivate user');
     },
   });
 }
