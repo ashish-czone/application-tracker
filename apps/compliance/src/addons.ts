@@ -1,5 +1,6 @@
 import { ConfigService } from '@nestjs/config';
 import { attachmentsAddon } from '@packages/attachments';
+import { automationsAddon } from '@packages/automations';
 import { documentTemplatesAddon } from '@packages/document-templates';
 import { eavAttributesAddon } from '@packages/eav-attributes';
 import { entityRelationsAddon } from '@packages/entity-relations';
@@ -10,6 +11,7 @@ import { orgUnitsAddon } from '@packages/org-units';
 import { tasksAddon } from '@packages/tasks';
 import { taxonomyAddon } from '@packages/taxonomy';
 import { tenancyAddon, type TenancyMode, type TenantResolver } from '@packages/tenancy';
+import { workflowsAddon } from '@packages/workflows';
 import type { Addon } from '@packages/app-shell';
 
 /**
@@ -40,6 +42,10 @@ const tenancyAddons: readonly Addon[] = process.env.TENANCY_MODE
   : [];
 
 export const complianceAddons: readonly Addon[] = [
+  // automations + workflows first — compliance domain entities (rules,
+  // filings) attach workflows and FK to workflow_definitions.
+  automationsAddon,
+  workflowsAddon,
   ...tenancyAddons,
   attachmentsAddon,
   documentTemplatesAddon(),

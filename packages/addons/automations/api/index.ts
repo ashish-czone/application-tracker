@@ -1,4 +1,9 @@
 export { AutomationsModule, AUTOMATION_EXECUTION_QUEUE } from './automations.module';
+
+export const automationsAddon = {
+  module: () => require('./automations.module').AutomationsModule,
+  migration: '@packages/automations',
+} as const;
 export { AUTOMATION_PERMISSIONS } from './permissions';
 export { ActorStrategy } from './services/strategies/actor.strategy';
 export { EntityFieldStrategy } from './services/strategies/entity-field.strategy';

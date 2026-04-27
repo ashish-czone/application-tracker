@@ -4527,9 +4527,6 @@ importers:
       '@packages/auth':
         specifier: workspace:*
         version: link:../../auth/api
-      '@packages/automations':
-        specifier: workspace:*
-        version: link:../../../addons/automations/api
       '@packages/database':
         specifier: workspace:*
         version: link:../../../core/database
@@ -4575,9 +4572,6 @@ importers:
       '@packages/users':
         specifier: workspace:*
         version: link:../../users/api
-      '@packages/workflows':
-        specifier: workspace:*
-        version: link:../../../addons/workflows/api
       class-transformer:
         specifier: ^0.5.1
         version: 0.5.1

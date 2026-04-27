@@ -1,7 +1,9 @@
+import { automationsAddon } from '@packages/automations';
 import { contentAddon } from '@packages/content-api';
 import { hierarchyAddon } from '@packages/hierarchy';
 import { mediaLibraryAddon } from '@packages/media-library-api';
 import { taxonomyAddon } from '@packages/taxonomy';
+import { workflowsAddon } from '@packages/workflows';
 import type { Addon } from '@packages/app-shell';
 
 /**
@@ -14,6 +16,11 @@ import type { Addon } from '@packages/app-shell';
  * the whole point of the Addon shape.
  */
 export const agencyAddons: readonly Addon[] = [
+  // Order: workflows + automations first — addons that attach a workflow
+  // to their entity (e.g. tasks status fields in projects domain) reference
+  // workflow_definitions, so those tables must exist first.
+  automationsAddon,
+  workflowsAddon,
   taxonomyAddon,
   hierarchyAddon,
   contentAddon,

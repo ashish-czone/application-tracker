@@ -15,10 +15,8 @@ import {
 import { EventsModule } from '@packages/events';
 import { SettingsModule, AppConfigService } from '@packages/settings';
 import { QueueModule } from '@packages/queue';
-import { AutomationsModule } from '@packages/automations';
 import { NotificationsModule } from '@packages/notifications';
 import { NotificationChannelsModule } from '@packages/notification-channels';
-import { WorkflowsModule } from '@packages/workflows';
 import { AuditModule, AuditRegistryService } from '@packages/audit';
 import { AUDIT_EXTENSION, EntityEngineModule } from '@packages/entity-engine';
 import { MediaModule } from '@packages/media';
@@ -122,11 +120,9 @@ export function createAppModule(options: AppShellOptions): ModuleMetadata {
         }),
         inject: [ConfigService],
       }),
-      AutomationsModule,
       NotificationChannelsModule,
       NotificationsModule,
       AuditModule,
-      WorkflowsModule,
       UserPreferencesModule,
       EntityLayoutModule,
       EntityEngineModule,
