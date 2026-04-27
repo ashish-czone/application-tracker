@@ -5752,27 +5752,54 @@ importers:
       '@nestjs/testing':
         specifier: ^11.0.0
         version: 11.1.16(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(@nestjs/platform-express@11.1.16)
+      '@packages/audit':
+        specifier: workspace:*
+        version: link:../audit/api
       '@packages/automation-contracts':
         specifier: workspace:*
         version: link:../automation-contracts
       '@packages/database':
         specifier: workspace:*
         version: link:../../core/database
+      '@packages/domains':
+        specifier: workspace:*
+        version: link:../domains
+      '@packages/entity-engine':
+        specifier: workspace:*
+        version: link:../entity-engine/api
+      '@packages/entity-layout':
+        specifier: workspace:*
+        version: link:../entity-layout/api
       '@packages/events':
         specifier: workspace:*
         version: link:../../core/events
       '@packages/logger':
         specifier: workspace:*
         version: link:../../core/logger
+      '@packages/notification-channels':
+        specifier: workspace:*
+        version: link:../notification-channels/api
+      '@packages/notifications':
+        specifier: workspace:*
+        version: link:../notifications/api
       '@packages/queue':
         specifier: workspace:*
         version: link:../queue/api
       '@packages/rbac':
         specifier: workspace:*
         version: link:../rbac/api
+      '@packages/settings':
+        specifier: workspace:*
+        version: link:../settings/api
       '@packages/testing':
         specifier: workspace:*
         version: link:../../core/testing
+      '@packages/user-preferences':
+        specifier: workspace:*
+        version: link:../user-preferences
+      '@packages/workflows':
+        specifier: workspace:*
+        version: link:../../addons/workflows/api
 
   packages/platform/theming-ui:
     dependencies:
