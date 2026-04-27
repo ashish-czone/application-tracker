@@ -15,7 +15,11 @@ import { ComplianceFilingsLookupService } from '../compliance-filings/compliance
 import { buildFilingExternalKey } from '../compliance-filings/compliance-filings.config';
 import { COMPLIANCE_FILING_GENERATED } from '../events/types';
 
-const HORIZON_MONTHS = 6;
+/**
+ * Stream J / Q11: filings auto-materialise 12 months ahead per active rule.
+ * Daily cron + event-triggered top-ups (Stream J listeners) keep this rolling.
+ */
+const HORIZON_MONTHS = 12;
 
 /**
  * Generates compliance filings for active rules and their registered clients
