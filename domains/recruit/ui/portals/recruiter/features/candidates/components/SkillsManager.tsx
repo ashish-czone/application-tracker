@@ -1,38 +1,8 @@
 import { useState } from 'react';
 import { Plus, X } from 'lucide-react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { toast, Badge, Button } from '@packages/ui';
-import { attachSkill, detachSkill } from '../services';
-import { api } from '../../../../../lib/api';
-
-interface TagGroup {
-  id: string;
-  name: string;
-  slug: string;
-}
-
-interface Tag {
-  id: string;
-  name: string;
-  slug: string;
-  color: string | null;
-}
-
-function useSkillTagGroup() {
-  return useQuery({
-    queryKey: ['tag-groups'],
-    queryFn: () => api.get<{ data: TagGroup[] }>('/tag-groups'),
-    select: (response) => response.data.find((g) => g.slug === 'candidate-skills'),
-  });
-}
-
-function useTagsByGroup(groupId: string | undefined) {
-  return useQuery({
-    queryKey: ['tags', groupId],
-    queryFn: () => api.get<Tag[]>(`/tag-groups/${groupId}/tags`),
-    enabled: !!groupId,
-  });
-}
+import { Badge, Button } from '@packages/ui';
+import { useTagGroupBySlug, useTagsByGroup } from '@domains/recruit-ui/hooks/useTagsApi';
+import { useAttachSkill, useDetachSkill } from '@domains/recruit-ui/hooks/useCandidatesApi';
 
 interface SkillsManagerProps {
   entity: Record<string, unknown>;
@@ -40,31 +10,15 @@ interface SkillsManagerProps {
 
 export function SkillsManager({ entity: candidate }: SkillsManagerProps) {
   const [showPicker, setShowPicker] = useState(false);
-  const queryClient = useQueryClient();
 
-  const { data: skillGroup } = useSkillTagGroup();
+  const { data: skillGroup } = useTagGroupBySlug('candidate-skills');
   const { data: allTags } = useTagsByGroup(skillGroup?.id);
 
   const id = candidate.id as string;
   const skills = (candidate.skills ?? []) as { id: string; name: string; slug: string }[];
 
-  const attachMutation = useMutation({
-    mutationFn: (tagId: string) => attachSkill(id, tagId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['candidates', 'detail', id] });
-      toast.success('Skill added');
-    },
-    onError: () => toast.error('Failed to add skill'),
-  });
-
-  const detachMutation = useMutation({
-    mutationFn: (tagId: string) => detachSkill(id, tagId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['candidates', 'detail', id] });
-      toast.success('Skill removed');
-    },
-    onError: () => toast.error('Failed to remove skill'),
-  });
+  const attachMutation = useAttachSkill(id);
+  const detachMutation = useDetachSkill(id);
 
   const currentSkillIds = new Set(skills.map((s) => s.id));
   const availableTags = allTags?.filter((t) => !currentSkillIds.has(t.id)) ?? [];

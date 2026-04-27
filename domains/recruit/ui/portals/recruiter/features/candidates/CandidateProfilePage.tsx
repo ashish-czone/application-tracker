@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft, Mail, Phone, MapPin, Building2, Briefcase,
   Calendar, Globe, Linkedin, ExternalLink, MoreHorizontal,
@@ -29,7 +29,7 @@ import {
 import { EntityPickerPanel } from '@packages/entity-engine-ui/components/EntityPickerPanel';
 import { formatLabel, formatDate } from '@packages/common';
 import { ScheduleInterviewDialog } from '@domains/recruit-ui/components/composites/ScheduleInterviewDialog';
-import { api } from '../../../../lib/api';
+import { useApplicationsByCandidate } from '@domains/recruit-ui/hooks/useApplicationsApi';
 
 type TabKey = 'overview' | 'applications' | 'notes' | 'attachments' | 'activity';
 
@@ -75,14 +75,6 @@ function getAvatarColor(name: string): string {
   return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
 }
 
-interface Application {
-  id: string;
-  jobOpeningId: string;
-  jobOpeningId__label: string;
-  stage: string;
-  createdAt: string;
-}
-
 export function CandidateProfilePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -103,11 +95,7 @@ export function CandidateProfilePage() {
   const updateMutation = hooks.useUpdate();
 
   // Fetch applications for this candidate
-  const { data: applicationsData } = useQuery({
-    queryKey: ['candidates', id, 'applications'],
-    queryFn: () => apiFn.get<{ data: Application[] }>(`/applications?candidateId=${id}&limit=50`),
-    enabled: !!id,
-  });
+  const { data: applicationsData } = useApplicationsByCandidate(id);
   const applications = applicationsData?.data ?? [];
 
   // Search callbacks for inline editing

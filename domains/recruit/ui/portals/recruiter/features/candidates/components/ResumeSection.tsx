@@ -1,8 +1,7 @@
 import { useRef } from 'react';
 import { Upload, Download, FileText } from 'lucide-react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast, Button } from '@packages/ui';
-import { uploadResume } from '../services';
+import { Button } from '@packages/ui';
+import { useUploadResume } from '@domains/recruit-ui/hooks/useCandidatesApi';
 
 interface ResumeFile {
   key: string;
@@ -18,18 +17,10 @@ interface ResumeSectionProps {
 
 export function ResumeSection({ entity: candidate }: ResumeSectionProps) {
   const fileRef = useRef<HTMLInputElement>(null);
-  const queryClient = useQueryClient();
   const id = candidate.id as string;
   const resumeFile = candidate.resumeFile as ResumeFile | null;
 
-  const uploadMutation = useMutation({
-    mutationFn: (file: File) => uploadResume(id, file),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['candidates', 'detail', id] });
-      toast.success('Resume uploaded');
-    },
-    onError: () => toast.error('Failed to upload resume'),
-  });
+  const uploadMutation = useUploadResume(id);
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];

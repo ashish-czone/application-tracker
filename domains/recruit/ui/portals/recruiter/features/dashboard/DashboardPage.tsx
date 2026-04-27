@@ -1,5 +1,4 @@
 import { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
@@ -9,9 +8,12 @@ import {
   Briefcase, Users, CalendarCheck, FileText,
   ArrowUpRight, Clock, TrendingUp, Filter,
 } from 'lucide-react';
-import { api } from '../../../../lib/api';
 import { useAuth } from '@packages/auth-ui/hooks/useAuth';
 import { formatLabel, formatDateShort } from '@packages/common';
+import { useJobOpeningsCount } from '@domains/recruit-ui/hooks/useJobOpeningsApi';
+import { useCandidatesCount } from '@domains/recruit-ui/hooks/useCandidatesApi';
+import { useInterviewsCount, useUpcomingInterviews } from '@domains/recruit-ui/hooks/useInterviewsApi';
+import { useAllApplications } from '@domains/recruit-ui/hooks/useApplicationsApi';
 
 interface MetricCardProps {
   label: string;
@@ -72,39 +74,16 @@ const PIPELINE_STAGE_ORDER = ['new', 'phone-screen', 'technical', 'on-site', 'fi
 
 const SOURCE_COLORS = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ec4899', '#06b6d4', '#f97316', '#6366f1'];
 
-interface Application {
-  id: string;
-  candidateId__label: string;
-  jobOpeningId__label: string;
-  stage: string;
-  source: string;
-  createdAt: string;
-}
-
 export function DashboardPage() {
   const { user } = useAuth();
 
   // Fetch counts
-  const { data: jobsData } = useQuery({
-    queryKey: ['dashboard', 'jobs'],
-    queryFn: () => api.get<{ meta: { total: number } }>('/job-openings?limit=1'),
-  });
-
-  const { data: candidatesData } = useQuery({
-    queryKey: ['dashboard', 'candidates'],
-    queryFn: () => api.get<{ meta: { total: number } }>('/candidates?limit=1'),
-  });
-
-  const { data: interviewsData } = useQuery({
-    queryKey: ['dashboard', 'interviews'],
-    queryFn: () => api.get<{ meta: { total: number } }>('/interviews?limit=1'),
-  });
+  const { data: jobsData } = useJobOpeningsCount();
+  const { data: candidatesData } = useCandidatesCount();
+  const { data: interviewsData } = useInterviewsCount();
 
   // Fetch all applications for charts
-  const { data: allApplicationsData } = useQuery({
-    queryKey: ['dashboard', 'all-applications'],
-    queryFn: () => api.get<{ data: Application[]; meta: { total: number } }>('/applications?limit=500'),
-  });
+  const { data: allApplicationsData } = useAllApplications();
 
   const applications = allApplicationsData?.data ?? [];
   const applicationCount = allApplicationsData?.meta?.total ?? 0;
@@ -148,10 +127,7 @@ export function DashboardPage() {
   }, [applications]);
 
   // Fetch upcoming interviews
-  const { data: upcomingInterviews } = useQuery({
-    queryKey: ['dashboard', 'upcoming-interviews'],
-    queryFn: () => api.get<{ data: { id: string; interviewName: string; candidateId__label: string; jobOpeningId__label: string; interviewFrom: string; status: string }[] }>('/interviews?limit=5&sort=interviewFrom&order=asc&status=scheduled'),
-  });
+  const { data: upcomingInterviews } = useUpcomingInterviews();
 
   const jobCount = jobsData?.meta?.total ?? 0;
   const candidateCount = candidatesData?.meta?.total ?? 0;

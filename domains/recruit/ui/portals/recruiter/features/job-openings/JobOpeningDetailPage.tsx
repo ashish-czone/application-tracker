@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft, Building2, MapPin, Briefcase, Calendar, Users2, User,
   Clock, MoreHorizontal, Copy, Trash2, UserPlus, FileText,
@@ -23,7 +23,13 @@ import { ScheduleInterviewDialog } from '@domains/recruit-ui/components/composit
 import { CreateOfferDialog } from '@domains/recruit-ui/components/composites/CreateOfferDialog';
 import { ApplicationPreviewPanel } from '../applications/ApplicationPreviewPanel';
 import { formatLabel, formatDate } from '@packages/common';
-import { api } from '../../../../lib/api';
+import {
+  useApplicationsByJobOpening,
+  useCrossJobApplications,
+  type ApplicationListItem,
+} from '@domains/recruit-ui/hooks/useApplicationsApi';
+import { useInterviewsByJobOpening, type JobInterview } from '@domains/recruit-ui/hooks/useInterviewsApi';
+import { useOffersForJob } from '@domains/recruit-ui/hooks/useOffersApi';
 
 type TabKey = 'overview' | 'applications' | 'audit';
 
@@ -53,26 +59,8 @@ function daysSince(dateStr: string): number {
   return Math.floor((Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24));
 }
 
-interface Application {
-  id: string;
-  candidateId: string;
-  candidateId__label: string;
-  stage: string;
-  source: string;
-  averageRating: number | null;
-  evaluationsCount: number | null;
-  referredBy: string | null;
-  referredBy__label: string | null;
-  createdAt: string;
-}
-
-interface Interview {
-  id: string;
-  candidateId: string;
-  jobOpeningId: string;
-  status: string;
-  interviewFrom: string;
-}
+type Application = ApplicationListItem;
+type Interview = JobInterview;
 
 type CardActionStatus = 'red' | 'amber' | 'none';
 
@@ -160,19 +148,11 @@ export function JobOpeningDetailPage() {
   const updateMutation = hooks.useUpdate();
 
   // Fetch applications for this job
-  const { data: applicationsData } = useQuery({
-    queryKey: ['job_openings', id, 'applications'],
-    queryFn: () => apiFn.get<{ data: Application[] }>(`/applications?jobOpeningId=${id}&limit=100`),
-    enabled: !!id,
-  });
+  const { data: applicationsData } = useApplicationsByJobOpening(id);
   const applications = applicationsData?.data ?? [];
 
   // Fetch offers for this job's applications to show offer status on kanban cards
-  const { data: offersData } = useQuery({
-    queryKey: ['job_openings', id, 'offers'],
-    queryFn: () => apiFn.get<{ data: { id: string; applicationId: string; status: string }[] }>('/offers?limit=100'),
-    enabled: !!id,
-  });
+  const { data: offersData } = useOffersForJob(id);
   const offersByAppId = useMemo(() => {
     const map = new Map<string, { id: string; status: string }>();
     for (const offer of offersData?.data ?? []) {
@@ -182,11 +162,7 @@ export function JobOpeningDetailPage() {
   }, [offersData]);
 
   // Fetch interviews for this job to determine action status on kanban cards
-  const { data: interviewsData } = useQuery({
-    queryKey: ['job_openings', id, 'interviews'],
-    queryFn: () => apiFn.get<{ data: Interview[] }>(`/interviews?jobOpeningId=${id}&limit=200`),
-    enabled: !!id,
-  });
+  const { data: interviewsData } = useInterviewsByJobOpening(id);
   const interviewsByCandidate = useMemo(() => {
     const map = new Map<string, Interview[]>();
     for (const interview of interviewsData?.data ?? []) {
@@ -199,12 +175,7 @@ export function JobOpeningDetailPage() {
 
   // Fetch cross-job applications to show candidate awareness on cards
   const candidateIds = useMemo(() => [...new Set(applications.map((a) => a.candidateId))], [applications]);
-  const { data: allAppsData } = useQuery({
-    queryKey: ['cross-job-applications', candidateIds.sort().join(',')],
-    queryFn: () => apiFn.get<{ data: { candidateId: string; jobOpeningId: string; stage: string }[] }>('/applications?limit=500'),
-    enabled: candidateIds.length > 0,
-    staleTime: 60_000,
-  });
+  const { data: allAppsData } = useCrossJobApplications(candidateIds);
   const otherJobCounts = useMemo(() => {
     const counts = new Map<string, number>();
     if (!allAppsData?.data) return counts;
