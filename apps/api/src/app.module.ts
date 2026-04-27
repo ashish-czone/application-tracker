@@ -26,6 +26,7 @@ import { RbacGuard } from '@packages/rbac';
 import { AppConfigService } from '@packages/settings';
 import { UsersModule } from './modules/users/users.module';
 import { OrgUnitsModule } from './modules/org-units/org-units.module';
+import { OrgUnitService } from '@packages/org-units';
 import { EntityEngineModule } from '@packages/entity-engine';
 import { TasksModule } from '@packages/tasks';
 import { TaxonomyModule } from '@packages/taxonomy';
@@ -106,7 +107,10 @@ import { validate } from './config/env.validation';
     OAuthModule.register(),
     UsersModule,
     OrgUnitsModule,
-    TasksModule,
+    TasksModule.forRoot({
+      imports: [OrgUnitsModule],
+      teamMembersReader: { useExisting: OrgUnitService },
+    }),
   ],
   providers: [
     {

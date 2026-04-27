@@ -1,4 +1,4 @@
-import { Global, Module, type OnModuleInit } from '@nestjs/common';
+import { Module, type OnModuleInit } from '@nestjs/common';
 import {
   cleanDatabase,
   createTestApp,
@@ -20,7 +20,6 @@ import {
   OrgUnitMembersStrategy,
   orgUnits,
 } from '@packages/org-units';
-import { TASK_TEAM_MEMBERS_READER } from '@packages/tasks';
 import { DatabaseService } from '@packages/database';
 import { PermissionManifestRegistry, ScopeResolverRegistry } from '@packages/rbac';
 import { LookupResolverService } from '@packages/entity-engine';
@@ -35,14 +34,11 @@ import {
 import { complianceBackend } from '../../index';
 
 /**
- * `@Global()` so providers exported here — notably `TASK_TEAM_MEMBERS_READER` —
- * are visible to `TasksModule` (nested inside `ComplianceDomainModule`)
- * without each consumer module having to `imports: [TestOrgUnitsModule]`. The
- * runtime per-app `OrgUnitsModule` (e.g. `apps/compliance/src/modules/org-units`)
- * is wired into the apps' root `AppModule` next to the global platform modules,
- * which has the same effect at runtime; in tests we make it explicit.
+ * Test-side mirror of `apps/compliance/src/modules/org-units/org-units.module.ts`.
+ * No `@Global()` and no `TASK_TEAM_MEMBERS_READER` binding: TasksModule is no
+ * longer loaded in compliance (the domain doesn't inject `TasksService`), so
+ * the token isn't needed in this test app.
  */
-@Global()
 @Module({
   controllers: [OrgUnitController, OrgUnitLevelController, OrgPositionController],
   providers: [
@@ -52,14 +48,12 @@ import { complianceBackend } from '../../index';
     PositionScopeResolverService,
     UnitScopeResolver,
     DescendantsScopeResolver,
-    { provide: TASK_TEAM_MEMBERS_READER, useExisting: OrgUnitService },
   ],
   exports: [
     OrgUnitService,
     OrgUnitLevelService,
     OrgPositionService,
     PositionScopeResolverService,
-    TASK_TEAM_MEMBERS_READER,
   ],
 })
 class TestOrgUnitsModule implements OnModuleInit {
@@ -106,8 +100,7 @@ class TestOrgUnitsModule implements OnModuleInit {
  * `createAppModule`, scoped down to what compliance integration tests
  * actually exercise:
  *  - `HierarchyModule` for laws (laws are hierarchical via the platform flag)
- *  - `TestOrgUnitsModule` for assigneeTeamId, escalation resolvers, and the
- *    `TASK_TEAM_MEMBERS_READER` token compliance's task-claim path needs.
+ *  - `TestOrgUnitsModule` for assigneeTeamId and escalation resolvers.
  *    UsersModule is intentionally omitted — compliance only uses the
  *    `USERS_POSITIONS_READER` token, which it provides itself.
  */
