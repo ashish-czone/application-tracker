@@ -14,15 +14,8 @@ import {
 } from '@packages/ui';
 import { useEntityHooks } from '@packages/entity-engine-ui';
 import { type ComplianceFrequency } from '@domains/compliance-contract';
-import {
-  LAW_GROUPS,
-  type LawGroupKey,
-  type ComplianceRule,
-} from './data/complianceRulesMock';
-import {
-  JURISDICTION_OPTIONS,
-  type JurisdictionKey,
-} from './data/complianceRuleFilterOptions';
+import { LAW_GROUPS, JURISDICTION_OPTIONS, type JurisdictionKey } from './filterOptions';
+import { type LawGroupKey, type ComplianceRule } from './types';
 import { FREQUENCY_LABEL, FREQUENCY_OPTIONS } from './components/FrequencyPill';
 import {
   makeComplianceRuleColumns,
