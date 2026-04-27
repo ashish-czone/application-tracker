@@ -28,7 +28,7 @@ import {
 } from '@packages/workflows-ui';
 import { EntityPickerPanel } from '@packages/entity-engine-ui/components/EntityPickerPanel';
 import { formatLabel, formatDate } from '@packages/common';
-import { ScheduleInterviewDialog } from '../shared/ScheduleInterviewDialog';
+import { ScheduleInterviewDialog } from '@domains/recruit-ui/components/composites/ScheduleInterviewDialog';
 import { api } from '../../../../lib/api';
 
 type TabKey = 'overview' | 'applications' | 'notes' | 'attachments' | 'activity';
