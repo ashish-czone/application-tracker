@@ -7,8 +7,14 @@ import type {
   MenuItem,
 } from '@packages/domains';
 import { EntityCreatePage } from '@packages/entity-engine-ui';
-import { CANDIDATES_UI_CONFIG } from './entities/candidates.config';
-import { OFFERS_UI_CONFIG } from './entities/offers.config';
+import { APPLICATIONS_UI_CONFIG } from './entity-configs/applications.ui';
+import { CANDIDATES_UI_CONFIG } from './entity-configs/candidates.ui';
+import { CLIENTS_UI_CONFIG } from './entity-configs/clients.ui';
+import { CONTACTS_UI_CONFIG } from './entity-configs/contacts.ui';
+import { INTERVIEWS_UI_CONFIG } from './entity-configs/interviews.ui';
+import { JOB_OPENINGS_UI_CONFIG } from './entity-configs/job-openings.ui';
+import { OFFERS_UI_CONFIG } from './entity-configs/offers.ui';
+import { VENDORS_UI_CONFIG } from './entity-configs/vendors.ui';
 
 const DashboardPage = lazy(() =>
   import('./portals/recruiter/features/dashboard/DashboardPage').then((m) => ({ default: m.DashboardPage })),
@@ -46,7 +52,16 @@ const menuItems: MenuItem[] = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard, position: 'before' },
 ];
 
-const entityUIConfigs = [CANDIDATES_UI_CONFIG, OFFERS_UI_CONFIG];
+const entityUIConfigs = [
+  APPLICATIONS_UI_CONFIG,
+  CANDIDATES_UI_CONFIG,
+  CLIENTS_UI_CONFIG,
+  CONTACTS_UI_CONFIG,
+  INTERVIEWS_UI_CONFIG,
+  JOB_OPENINGS_UI_CONFIG,
+  OFFERS_UI_CONFIG,
+  VENDORS_UI_CONFIG,
+];
 
 export const recruitWeb: DomainWebManifest = {
   name: 'recruit',
