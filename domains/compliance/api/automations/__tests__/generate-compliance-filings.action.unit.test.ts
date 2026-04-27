@@ -44,6 +44,13 @@ describe('GenerateComplianceFilingsAction (delegator)', () => {
 
   it('passes the rule id from context.event.entityId to the generator', async () => {
     await action.execute(ctxFor('r1'));
-    expect(generator.generateForRule).toHaveBeenCalledWith('r1');
+    expect(generator.generateForRule).toHaveBeenCalledWith('r1', expect.any(Date));
+  });
+
+  it('forwards context.now to the generator when present', async () => {
+    const asOf = new Date('2026-05-15T09:00:00Z');
+    const ctx = { ...ctxFor('r1'), now: asOf };
+    await action.execute(ctx as never);
+    expect(generator.generateForRule).toHaveBeenCalledWith('r1', asOf);
   });
 });
