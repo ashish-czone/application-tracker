@@ -3,7 +3,7 @@ import type {
   DomainWebManifest,
   MenuItem,
 } from '@packages/domains';
-import type { EntityUIConfig } from '@packages/entity-engine-ui';
+import type { ColumnRendererRegistration, EntityUIConfig } from '@packages/entity-engine-ui';
 import { FolderKanban, CheckSquare } from 'lucide-react';
 
 import { PROJECTS_UI_CONFIG } from './entity-configs/projects.ui';
@@ -14,6 +14,7 @@ import { TASKS_UI_CONFIG } from './entity-configs/tasks.ui';
 import { ProjectsDashboardPage } from './pages/ProjectsDashboardPage';
 import { ProjectDetailPage } from './pages/ProjectDetailPage';
 import { MyTasksPage } from './pages/MyTasksPage';
+import { taskStatusInlineRenderer } from './components/TaskStatusInlineRenderer';
 
 export const projectsEntityUIConfigs: EntityUIConfig[] = [
   PROJECTS_UI_CONFIG,
@@ -21,6 +22,14 @@ export const projectsEntityUIConfigs: EntityUIConfig[] = [
   FEATURES_UI_CONFIG,
   TASKS_UI_CONFIG,
 ];
+
+/**
+ * Cell renderers contributed by this domain. Pass via
+ * `<WebShell extraColumnRenderers={projectsColumnRenderers} />`.
+ */
+export const projectsColumnRenderers: Record<string, ColumnRendererRegistration> = {
+  TaskStatusInline: taskStatusInlineRenderer,
+};
 
 const routes: DomainRouteObject[] = [
   // /projects claims the `projects` slug, replacing the auto-generated entity

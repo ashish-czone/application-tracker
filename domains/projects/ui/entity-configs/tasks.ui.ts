@@ -9,6 +9,9 @@ export const TASKS_UI_CONFIG: EntityUIConfig = {
     createMode: 'modal',
   },
   fieldUI: {
-    status: { cellRenderer: 'PipelineProgressRenderer' },
+    // Custom renderer registered by domains/projects-ui via WebShell.
+    // Replaces the default pipeline visual with a clickable status badge
+    // whose dropdown commits a workflow transition inline.
+    status: { cellRenderer: 'TaskStatusInline' },
   },
 };

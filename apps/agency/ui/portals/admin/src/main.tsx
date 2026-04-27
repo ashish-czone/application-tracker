@@ -27,7 +27,7 @@ import { automationsWeb } from '@packages/automations-ui';
 import { registerStarterBlocks, registerContentBlocks, agencyEntityUIConfigs } from '@domains/agency-ui';
 import { PageEditorPage } from '@domains/agency-ui';
 import { MenuEditorPage } from '@domains/agency-ui';
-import { projectsWeb } from '@domains/projects-ui';
+import { projectsWeb, projectsColumnRenderers } from '@domains/projects-ui';
 import { MediaLibraryPage, MEDIA_ASSETS_UI_CONFIG } from '@packages/media-library-ui-admin';
 import { USERS_UI_CONFIG } from '@packages/users-ui';
 import { contentEntityUIConfigs } from './entity-configs/content.ui';
@@ -92,6 +92,7 @@ createRoot(document.getElementById('root')!).render(
         USERS_UI_CONFIG,
         MEDIA_ASSETS_UI_CONFIG,
       ]}
+      extraColumnRenderers={projectsColumnRenderers}
     />
     <Toaster />
   </StrictMode>,
