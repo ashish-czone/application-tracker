@@ -1,6 +1,20 @@
 import { type DataTableColumn } from '@packages/ui';
-import { OrdinalDate, UrgencyBadge, JurisdictionTag, HandlerPill } from '../../../../../../components';
+import {
+  OrdinalDate,
+  UrgencyBadge,
+  JurisdictionTag,
+  HandlerPill,
+  InactiveSourceMarker,
+  type InactiveKind,
+} from '../../../../../../components';
 import type { FilingRow } from '../data/filingTypes';
+
+function inactiveKindForFiling(f: FilingRow): InactiveKind | null {
+  if (f.clientStatus === 'dormant') return 'dormant';
+  if (f.registrationDeactivatedAt) return 'deactivated';
+  if (f.ruleStatus === 'deprecated') return 'deprecated';
+  return null;
+}
 
 const PRIORITY_TONE: Record<string, string> = {
   critical: 'text-signal',
@@ -13,19 +27,23 @@ export const FILING_COLUMNS: DataTableColumn<FilingRow>[] = [
   {
     key: 'filing',
     header: 'Filing',
-    cell: (f) => (
-      <div className="min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="font-mono text-[11px] tracking-tabular uppercase text-ink font-medium">
-            {f.lawCode}
+    cell: (f) => {
+      const inactiveKind = inactiveKindForFiling(f);
+      return (
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-[11px] tracking-tabular uppercase text-ink font-medium">
+              {f.lawCode}
+            </span>
+            <JurisdictionTag jurisdiction={f.jurisdiction} />
+            {inactiveKind && <InactiveSourceMarker kind={inactiveKind} />}
+          </div>
+          <span className="text-sm text-ink font-sans leading-snug truncate block mt-0.5">
+            {f.ruleName}
           </span>
-          <JurisdictionTag jurisdiction={f.jurisdiction} />
         </div>
-        <span className="text-sm text-ink font-sans leading-snug truncate block mt-0.5">
-          {f.ruleName}
-        </span>
-      </div>
-    ),
+      );
+    },
   },
   {
     key: 'client',

@@ -31,6 +31,10 @@ export {
   type InactiveStateBannerProps,
   type InactiveKind,
 } from './badges/InactiveStateBanner';
+export {
+  InactiveSourceMarker,
+  type InactiveSourceMarkerProps,
+} from './badges/InactiveSourceMarker';
 
 // Editorial — opinionated date formatting + due-date display.
 export { OrdinalDate, type OrdinalDateProps } from './editorial/OrdinalDate';
