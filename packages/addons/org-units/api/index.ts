@@ -1,3 +1,13 @@
+/**
+ * Library-shape package: ships classes/configs only, no NestJS module.
+ * The app composes its own OrgUnitsModule (mirrors users-as-library) and
+ * places it in `extraImports`. The addon below carries the migration name
+ * so the schema runs alongside the app's wrapper.
+ */
+export const orgUnitsAddon = {
+  migration: '@packages/org-units',
+} as const;
+
 export { OrgUnitService } from './services/org-unit.service';
 export { OrgUnitLevelService } from './services/org-unit-level.service';
 export { OrgPositionService } from './services/org-position.service';

@@ -1,5 +1,10 @@
 // Module
-export { OrdersSubscriptionsModule, SUBSCRIPTION_EXPIRY_QUEUE } from './orders-subscriptions.module';
+import { OrdersSubscriptionsModule, SUBSCRIPTION_EXPIRY_QUEUE } from './orders-subscriptions.module';
+export { OrdersSubscriptionsModule, SUBSCRIPTION_EXPIRY_QUEUE };
+export const ordersSubscriptionsAddon = {
+  module: OrdersSubscriptionsModule,
+  migration: '@packages/orders-subscriptions',
+} as const;
 
 // Entity configs
 export { SUBSCRIPTION_PLANS_CONFIG } from './subscription-plans.config';

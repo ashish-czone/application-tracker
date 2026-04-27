@@ -1,5 +1,10 @@
 // Module
-export { OrdersBillingModule } from './orders-billing.module';
+import { OrdersBillingModule } from './orders-billing.module';
+export { OrdersBillingModule };
+export const ordersBillingAddon = {
+  module: OrdersBillingModule,
+  migration: '@packages/orders-billing',
+} as const;
 
 // Entity config
 export { ORDERS_CONFIG } from './orders.config';

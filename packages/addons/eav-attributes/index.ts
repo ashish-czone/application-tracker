@@ -1,7 +1,13 @@
 // EAV Attributes — optional dynamic field storage extension
 // Core types, helpers, field definitions, and layout are in @packages/entity-engine and @packages/entity-layout
 
-export { EavAttributesModule } from './eav-attributes.module';
+import { EavAttributesModule } from './eav-attributes.module';
+
+export { EavAttributesModule };
+export const eavAttributesAddon = {
+  module: EavAttributesModule,
+  migration: '@packages/eav-attributes',
+} as const;
 export { FieldValueService } from './services/field-value.service';
 
 // EAV-specific schemas

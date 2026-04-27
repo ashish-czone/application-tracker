@@ -1,4 +1,10 @@
-export { ContentModule } from './content.module';
+import { ContentModule } from './content.module';
+
+export { ContentModule };
+export const contentAddon = {
+  module: ContentModule,
+  migration: '@packages/content-api',
+} as const;
 export { testimonials, faqItems, teamMembers, services, clientLogos, valueProps, stats } from './schema';
 export { TESTIMONIALS_CONFIG } from './testimonials.config';
 export { FAQ_ITEMS_CONFIG } from './faq-items.config';

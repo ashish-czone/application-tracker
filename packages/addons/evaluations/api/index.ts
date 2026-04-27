@@ -1,4 +1,10 @@
-export { EvaluationsModule } from './evaluations.module';
+import { EvaluationsModule } from './evaluations.module';
+
+export { EvaluationsModule };
+export const evaluationsAddon = {
+  module: EvaluationsModule,
+  migration: '@packages/evaluations',
+} as const;
 export { EVALUATIONS_FEATURE_KEY, evaluationsFeature, readEvaluationsFeature } from './feature';
 export type { EvaluationsFeatureConfig, EvaluationsFeatureValue } from './feature';
 export { EvaluationTemplatesService } from './services/evaluation-templates.service';
