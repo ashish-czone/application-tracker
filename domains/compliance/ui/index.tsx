@@ -15,6 +15,14 @@ import {
   Users,
 } from 'lucide-react';
 import type { DomainRouteObject, DomainWebManifest, MenuItem } from '@packages/domains';
+import { CLIENT_CONTACTS_UI_CONFIG } from './entity-configs/client-contacts.ui';
+import { CLIENT_REGISTRATIONS_UI_CONFIG } from './entity-configs/client-registrations.ui';
+import { CLIENTS_UI_CONFIG } from './entity-configs/clients.ui';
+import { COMPLIANCE_FILINGS_UI_CONFIG } from './entity-configs/compliance-filings.ui';
+import { COMPLIANCE_RULES_UI_CONFIG } from './entity-configs/rules.ui';
+import { LAW_HANDLERS_UI_CONFIG } from './entity-configs/law-handlers.ui';
+import { LAWS_UI_CONFIG } from './entity-configs/laws.ui';
+import { ORGANIZATIONS_UI_CONFIG } from './entity-configs/organizations.ui';
 
 const ConsolePreviewPage = lazy(() =>
   import('./portals/customer/features/console-preview').then((m) => ({
@@ -176,5 +184,14 @@ export const complianceWeb: DomainWebManifest = {
   routes,
   detailPageOverrides: {},
   menuItems,
-  entityUIConfigs: [],
+  entityUIConfigs: [
+    CLIENT_CONTACTS_UI_CONFIG,
+    CLIENT_REGISTRATIONS_UI_CONFIG,
+    CLIENTS_UI_CONFIG,
+    COMPLIANCE_FILINGS_UI_CONFIG,
+    COMPLIANCE_RULES_UI_CONFIG,
+    LAW_HANDLERS_UI_CONFIG,
+    LAWS_UI_CONFIG,
+    ORGANIZATIONS_UI_CONFIG,
+  ],
 };
