@@ -164,10 +164,10 @@ export class EntityEngineModule implements OnApplicationBootstrap {
     const plural = config.pluralName.toLowerCase();
     const singular = config.singularName.toLowerCase();
     const crudManifests: PermissionManifest[] = [
-      { slug: `${config.slug}.create`, module: config.slug, action: 'create', label: `Create ${plural}`, description: `Create ${plural}`, supportedScopes: ['any'] },
-      { slug: `${config.slug}.read`,   module: config.slug, action: 'read',   label: `View ${plural}`,   description: `View ${plural}`,   supportedScopes: derivedScopes },
-      { slug: `${config.slug}.update`, module: config.slug, action: 'update', label: `Update ${singular}`, description: `Update ${plural}`, supportedScopes: derivedScopes },
-      { slug: `${config.slug}.delete`, module: config.slug, action: 'delete', label: `Delete ${singular}`, description: `Delete ${plural}`, supportedScopes: derivedScopes },
+      { slug: `${config.slug}.create`, module: config.slug, action: 'create', label: `Create ${plural}`,   description: `Create ${plural}`,   supportedScopes: derivedScopes },
+      { slug: `${config.slug}.read`,   module: config.slug, action: 'read',   label: `View ${plural}`,     description: `View ${plural}`,     supportedScopes: derivedScopes },
+      { slug: `${config.slug}.update`, module: config.slug, action: 'update', label: `Update ${singular}`, description: `Update ${plural}`,   supportedScopes: derivedScopes },
+      { slug: `${config.slug}.delete`, module: config.slug, action: 'delete', label: `Delete ${singular}`, description: `Delete ${plural}`,   supportedScopes: derivedScopes },
     ];
     const extraManifests: PermissionManifest[] = (config.extraPermissions ?? []).map((p) => ({
       slug: `${config.slug}.${p.action}`,
