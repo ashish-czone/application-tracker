@@ -48,8 +48,8 @@ export class TestHooksController {
   @RequirePermission('*')
   async runScheduler(@Body() body: { asOf?: string }) {
     const asOf = parseAsOf(body?.asOf);
-    await this.testHooksService.runScheduler(asOf);
-    return { ok: true, asOf: asOf.toISOString() };
+    const result = await this.testHooksService.runScheduler(asOf);
+    return { ok: true, asOf: asOf.toISOString(), ...result };
   }
 }
 
