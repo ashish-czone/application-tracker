@@ -24,7 +24,7 @@ import { WebShell } from '@packages/app-shell-ui';
 import { taxonomyWeb } from '@packages/taxonomy-ui';
 import { workflowsWeb } from '@packages/workflows-ui';
 import { automationsWeb } from '@packages/automations-ui';
-import { registerStarterBlocks, registerContentBlocks } from '@domains/agency-ui';
+import { registerStarterBlocks, registerContentBlocks, agencyEntityUIConfigs } from '@domains/agency-ui';
 import { PageEditorPage } from '@domains/agency-ui';
 import { MenuEditorPage } from '@domains/agency-ui';
 import { MediaLibraryPage } from '@packages/media-library-ui-admin';
@@ -83,6 +83,7 @@ createRoot(document.getElementById('root')!).render(
       extraMenuItems={extraMenuItems}
       extraDetailTabs={detailTabs}
       extraDetailHeaderActions={detailHeaderActions}
+      extraEntityUIConfigs={agencyEntityUIConfigs}
     />
     <Toaster />
   </StrictMode>,
