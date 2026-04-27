@@ -18,6 +18,7 @@ import { HierarchyModule } from '@packages/hierarchy';
 import { TaxonomyModule } from '@packages/taxonomy';
 import { complianceBackend } from '@domains/compliance-api';
 import { UsersModule } from './modules/users/users.module';
+import { TestHooksModule } from './modules/test-hooks/test-hooks.module';
 
 const tenancyImports = process.env.TENANCY_MODE
   ? [
@@ -60,6 +61,7 @@ const tenancyImports = process.env.TENANCY_MODE
       TaxonomyModule,
       DocumentTemplatesModule.register(),
       PdfGeneratorModule.register({ provider: new PuppeteerPdfProvider() }),
+      TestHooksModule.register(),
     ],
   }),
 )
