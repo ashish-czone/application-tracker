@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import request from 'supertest';
 import { withAuth, type PackageTestApp } from '@packages/platform-testing';
 import { createComplianceTestApp, resetComplianceTestDb } from './setup/app';
-import { createLaw } from './setup/fixtures';
+import { createLaw, createLawWithHandler } from './setup/fixtures';
 
 const READ = ['clients.read'];
 const MANAGE = [
@@ -129,8 +129,11 @@ describe('Clients (integration)', () => {
   describe('POST /api/v1/clients/:id/registrations', () => {
     it('batch-registers a client against laws by code', async () => {
       const client = await createClient();
-      const { code: code1 } = await createLaw(ctx.db, { code: unique('LAW-A') });
-      const { code: code2 } = await createLaw(ctx.db, { code: unique('LAW-B') });
+      // Both laws need a default handler — POST /clients/:id/registrations
+      // calls the same `assertHandlerResolvable` guard as the generic CRUD
+      // endpoint (PR #1064).
+      const { code: code1 } = await createLawWithHandler(ctx.db, { code: unique('LAW-A') });
+      const { code: code2 } = await createLawWithHandler(ctx.db, { code: unique('LAW-B') });
 
       const res = await request(ctx.httpServer)
         .post(`/api/v1/clients/${client.id}/registrations`)

@@ -7,12 +7,21 @@
     "@nestjs/common": "^11.0.0",
     "@nestjs/core": "^11.0.0",
     "@nestjs/testing": "^11.0.0",
+    "@packages/audit": "workspace:*",
+    "@packages/automation-contracts": "workspace:*",
     "@packages/database": "workspace:*",
-    "@packages/logger": "workspace:*",
-    "@packages/testing": "workspace:*",
+    "@packages/domains": "workspace:*",
+    "@packages/entity-engine": "workspace:*",
+    "@packages/entity-layout": "workspace:*",
     "@packages/events": "workspace:*",
-    "@packages/rbac": "workspace:*",
+    "@packages/logger": "workspace:*",
+    "@packages/notification-channels": "workspace:*",
+    "@packages/notifications": "workspace:*",
     "@packages/queue": "workspace:*",
-    "@packages/automation-contracts": "workspace:*"
+    "@packages/rbac": "workspace:*",
+    "@packages/settings": "workspace:*",
+    "@packages/testing": "workspace:*",
+    "@packages/user-preferences": "workspace:*",
+    "@packages/workflows": "workspace:*"
   }
 }

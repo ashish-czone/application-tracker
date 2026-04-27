@@ -71,7 +71,12 @@ export async function seedEntityFields(
       label: meta.label,
       fieldType: meta.fieldType ?? (col ? mapDrizzleType(col.dataType) : 'text'),
       columnName: col?.name ?? undefined, // undefined for virtual/EAV-only fields
-      isRequired: col?.notNull ?? false,
+      // A column is required on write only when it's `notNull` AND has no
+      // default. `defaultNow()` / `default(...)` / `$defaultFn()` all set
+      // `hasDefault`; in those cases callers may legitimately omit the field
+      // and let the DB / drizzle supply the value. Treating `notNull` alone
+      // as required would reject every omitted-but-defaulted column.
+      isRequired: (col?.notNull ?? false) && !col?.hasDefault,
       isSystem: meta.isSystem ?? false,
       isUnique: meta.isUnique ?? false,
       isQuickCreate: meta.isQuickCreate ?? false,

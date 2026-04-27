@@ -86,8 +86,19 @@ export const date: ValidateFn = (value, ctx) => {
   return null;
 };
 
-/** Validates: string parseable as ISO date-time */
+/**
+ * Validates: a value that represents a moment in time — either a `Date`
+ * instance or an ISO date-time string. Encoding-agnostic by design: the
+ * platform sees Date instances on rows hydrated by drizzle (`mode: 'date'`,
+ * the default for `timestamptz`) and ISO strings on rows arriving over JSON
+ * or coerced through `z.coerce.date()`. Either is a valid datetime; the
+ * validator's job is to assert the value parses, not to mandate a wire form.
+ */
 export const datetime: ValidateFn = (value, ctx) => {
+  if (value instanceof Date) {
+    if (isNaN(value.getTime())) return { message: `${ctx.label} must be a valid ISO date-time`, code: 'format' };
+    return null;
+  }
   const err = checkString(value, ctx.label);
   if (err) return err;
   if (isNaN(Date.parse(value as string))) return { message: `${ctx.label} must be a valid ISO date-time`, code: 'format' };

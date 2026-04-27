@@ -94,7 +94,7 @@ export function buildInMemoryFields(
     if (skipSet.has(key)) continue;
     seenKeys.add(key);
 
-    const col = columnMap.get(key) as { name?: string; notNull?: boolean; dataType?: string } | undefined;
+    const col = columnMap.get(key) as { name?: string; notNull?: boolean; dataType?: string; hasDefault?: boolean } | undefined;
     const fieldType: FieldType = meta.fieldType ?? (col ? mapDrizzleType(col.dataType ?? 'string') : 'text');
 
     const field: FieldDefinition = {
@@ -104,7 +104,11 @@ export function buildInMemoryFields(
       label: meta.label,
       fieldType,
       uiType: meta.uiType ?? null,
-      isRequired: col?.notNull ?? false,
+      // A column is required on write only when it's `notNull` AND has no
+      // default. `defaultNow()` / `default(...)` / `$defaultFn()` all set
+      // `hasDefault`; in those cases callers may legitimately omit the field.
+      // Mirrors the same derivation in `seed-entity-fields.ts`.
+      isRequired: (col?.notNull ?? false) && !col?.hasDefault,
       isSystem: meta.isSystem ?? false,
       isCustom: false,
       isUnique: meta.isUnique ?? false,

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import request from 'supertest';
 import { withAuth, type PackageTestApp } from '@packages/platform-testing';
 import { createComplianceTestApp, resetComplianceTestDb } from './setup/app';
-import { createClient, createLaw, createRegistration } from './setup/fixtures';
+import { createClient, createLaw, createLawWithHandler, createRegistration } from './setup/fixtures';
 
 /**
  * Covers both the custom `POST /clients/:id/registrations` flow (also exercised
@@ -36,7 +36,17 @@ describe('Client Registrations (integration)', () => {
 
   async function prereqs() {
     const { id: clientId } = await createClient(ctx.db);
+    // Use createLaw (no handler) for read-only fixtures and create-failure
+    // assertions; tests that POST a successful registration call
+    // `createLawWithHandler` via `writeablePrereqs()` so the service's
+    // `assertHandlerResolvable` guard (PR #1064) passes.
     const { id: lawId } = await createLaw(ctx.db);
+    return { clientId, lawId };
+  }
+
+  async function writeablePrereqs() {
+    const { id: clientId } = await createClient(ctx.db);
+    const { id: lawId } = await createLawWithHandler(ctx.db);
     return { clientId, lawId };
   }
 
@@ -115,7 +125,7 @@ describe('Client Registrations (integration)', () => {
     });
 
     it('accepts an ISO 8601 string for registeredAt', async () => {
-      const { clientId, lawId } = await prereqs();
+      const { clientId, lawId } = await writeablePrereqs();
       const registeredAt = '2026-04-01T09:00:00.000Z';
 
       const res = await request(ctx.httpServer)
@@ -129,7 +139,7 @@ describe('Client Registrations (integration)', () => {
     });
 
     it('defaults registeredAt to now when omitted', async () => {
-      const { clientId, lawId } = await prereqs();
+      const { clientId, lawId } = await writeablePrereqs();
 
       const res = await request(ctx.httpServer)
         .post('/api/v1/client-registrations')
