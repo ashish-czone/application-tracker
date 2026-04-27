@@ -91,4 +91,5 @@ export const CLIENTS_CONFIG: EntityConfig = {
   recipientFields: { createdBy: { label: 'Created By' } },
 
   nameField: 'clientName',
+  subtitleField: 'industry',
 };

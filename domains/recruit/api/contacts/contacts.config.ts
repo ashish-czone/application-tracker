@@ -94,4 +94,5 @@ export const CONTACTS_CONFIG: EntityConfig = {
   recipientFields: { createdBy: { label: 'Created By' } },
 
   nameField: 'fullName',
+  subtitleField: 'jobTitle',
 };

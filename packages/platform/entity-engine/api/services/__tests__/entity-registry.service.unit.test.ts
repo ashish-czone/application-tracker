@@ -28,9 +28,6 @@ function mockConfig(overrides: Partial<EntityConfig> = {}): EntityConfig {
     fieldMeta: {},
     sections: [],
     nameField: 'name',
-    ui: {
-      icon: 'box',
-    },
     ...overrides,
   };
 }
@@ -98,7 +95,6 @@ describe('EntityRegistryService', () => {
       slug: 'candidates',
       table: softTable as any,
       nameField: ['firstName', 'lastName'],
-      ui: { icon: 'users' },
       fieldMeta: {
         skills: { label: 'Skills', section: 'details', sortOrder: 0, fieldType: 'tags', tagGroupSlug: 'candidate-skills' },
       },
@@ -121,7 +117,6 @@ describe('EntityRegistryService', () => {
     expect(entry.entityType).toBe('candidates');
     expect(entry.slug).toBe('candidates');
     expect(entry.nameField).toEqual(['firstName', 'lastName']);
-    expect(entry.ui.icon).toBe('users');
     expect(entry.features.softDelete).toBe(true);
     expect(entry.features.hasTaxonomy).toBe(true);
     expect(entry.relationships).toHaveLength(1);

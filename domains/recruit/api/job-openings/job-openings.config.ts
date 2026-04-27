@@ -270,4 +270,5 @@ export const JOB_OPENINGS_CONFIG: EntityConfig = {
   },
 
   nameField: 'title',
+  subtitleField: 'department',
 };

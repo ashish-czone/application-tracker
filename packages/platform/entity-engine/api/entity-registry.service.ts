@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { getTableColumns } from 'drizzle-orm';
 import type { PgColumn } from 'drizzle-orm/pg-core';
 import { hasSoftDeleteColumns } from '@packages/soft-delete';
-import type { EntityConfig, EntityRegistryEntry, EntityUIHints, ResolvedExtension } from './types';
+import type { EntityConfig, EntityRegistryEntry, ResolvedExtension } from './types';
 import { FeatureDeriverRegistry } from './services/feature-deriver.registry';
 
 /**
@@ -61,23 +61,13 @@ export class EntityRegistryService {
   /** Get all entity types as serializable registry entries (for frontend consumption). */
   getRegistryEntries(): EntityRegistryEntry[] {
     return this.getAll().map((config) => {
-      // Derive boardFields: workflow fields automatically qualify as board grouping fields
-      const workflowFields = Object.entries(config.fieldMeta)
-        .filter(([, meta]) => meta.fieldType === 'workflow')
-        .map(([key]) => key);
-      const boardFields = [...workflowFields, ...(config.ui?.boardFields ?? [])];
-      // Deduplicate in case a workflow field is also explicitly listed
-      const uniqueBoardFields = [...new Set(boardFields)];
-
-      const ui: EntityUIHints = { ...(config.ui ?? {}) };
-      if (uniqueBoardFields.length > 0) ui.boardFields = uniqueBoardFields;
       return {
       entityType: config.entityType,
       singularName: config.singularName,
       pluralName: config.pluralName,
       slug: config.slug,
       nameField: config.nameField,
-      ui,
+      subtitleField: config.subtitleField,
       features: {
         // Engine-derived flags. Addons must not register keys with these names.
         // Soft-delete capability comes from the schema (presence of

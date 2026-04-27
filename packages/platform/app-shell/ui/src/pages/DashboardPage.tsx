@@ -9,7 +9,8 @@ interface DashboardPageProps {
   brandLabel: string;
 }
 
-function resolveIcon(name: string): LucideIcon {
+function resolveIcon(name: string | undefined): LucideIcon {
+  if (!name) return Icons.Database;
   const pascal = name
     .split(/[-_]/)
     .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
@@ -24,8 +25,8 @@ export function DashboardPage({ brandLabel }: DashboardPageProps) {
   const sortedEntities = useMemo(
     () =>
       [...entities].sort((a, b) => {
-        const orderA = a.ui.navOrder ?? 99;
-        const orderB = b.ui.navOrder ?? 99;
+        const orderA = a.ui?.navOrder ?? 99;
+        const orderB = b.ui?.navOrder ?? 99;
         if (orderA !== orderB) return orderA - orderB;
         return a.pluralName.localeCompare(b.pluralName);
       }),
@@ -58,7 +59,7 @@ export function DashboardPage({ brandLabel }: DashboardPageProps) {
           </h2>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {sortedEntities.map((entity) => {
-              const Icon = resolveIcon(entity.ui.icon);
+              const Icon = resolveIcon(entity.ui?.icon);
               return (
                 <NavLink
                   key={entity.entityType}

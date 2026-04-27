@@ -36,7 +36,6 @@ describe('FieldDefinitionService.populateFromRegistry', () => {
           ],
         },
       },
-      ui: { icon: 'Box' },
     });
 
     service.populateFromRegistry(config);
@@ -63,7 +62,6 @@ describe('FieldDefinitionService.populateFromRegistry', () => {
           ],
         },
       },
-      ui: { icon: 'Box' },
     });
 
     service.populateFromRegistry(config);
@@ -79,7 +77,6 @@ describe('FieldDefinitionService.populateFromRegistry', () => {
       table: tbl,
       slug: 'widgets',
       fields: { name: { type: 'text', label: 'Name (code)' } },
-      ui: { icon: 'Box' },
     });
 
     // Pretend DB rows were loaded at bootstrap for the same entityType by
@@ -91,7 +88,6 @@ describe('FieldDefinitionService.populateFromRegistry', () => {
       table: tbl,
       slug: 'widgets',
       fields: { name: { type: 'text', label: 'Name (DB)' } },
-      ui: { icon: 'Box' },
     });
     service.populateFromRegistry(configB);
 
@@ -104,7 +100,6 @@ describe('FieldDefinitionService.populateFromRegistry', () => {
       table: tbl,
       slug: 'widgets',
       fields: { name: { type: 'text', label: 'Name' } },
-      ui: { icon: 'Box' },
     });
     const gizmos = defineEntity({
       table: pgTable('gizmos', {
@@ -113,7 +108,6 @@ describe('FieldDefinitionService.populateFromRegistry', () => {
       }),
       slug: 'gizmos',
       fields: { title: { type: 'text', label: 'Title' } },
-      ui: { icon: 'Box' },
     });
 
     service.populateFromRegistry(widgets);
@@ -145,7 +139,6 @@ describe('FieldDefinitionService.countByCategoryGroupSlug', () => {
         country: { type: 'category', label: 'Country', categoryGroupSlug: 'countries' },
         currency: { type: 'category', label: 'Currency', categoryGroupSlug: 'currencies' },
       },
-      ui: { icon: 'Box' },
     });
     const gizmos = defineEntity({
       table: pgTable('gizmos', { id: text('id').primaryKey(), title: text('title').notNull() }),
@@ -153,7 +146,6 @@ describe('FieldDefinitionService.countByCategoryGroupSlug', () => {
       fields: {
         homeCountry: { type: 'category', label: 'Home Country', categoryGroupSlug: 'countries' },
       },
-      ui: { icon: 'Box' },
     });
 
     service.populateFromRegistry(widgets);
@@ -172,7 +164,6 @@ describe('FieldDefinitionService.countByCategoryGroupSlug', () => {
         name: { type: 'text', label: 'Name' },
         country: { type: 'category', label: 'Country', categoryGroupSlug: 'countries' },
       },
-      ui: { icon: 'Box' },
     });
 
     service.populateFromRegistry(widgets);

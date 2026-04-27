@@ -65,7 +65,6 @@ describe('defineEntity', () => {
       fields: {
         title: { type: 'text', label: 'Title', required: true, isLabel: true },
       },
-      ui: { icon: 'FileText' },
     });
 
     expect(config.entityType).toBe('test-entities');
@@ -73,7 +72,6 @@ describe('defineEntity', () => {
     expect(config.singularName).toBe('Test-entitie');
     expect(config.pluralName).toBe('Test-entities');
     expect(config.table).toBe(testTable);
-    expect(config.ui.icon).toBe('FileText');
     expect(config.nameField).toBe('title');
     expect(config.fieldMeta.title).toBeDefined();
     expect(config.fieldMeta.title.label).toBe('Title');
@@ -88,7 +86,6 @@ describe('defineEntity', () => {
       fields: {
         title: { type: 'text', label: 'Title' },
       },
-      ui: { icon: 'FileText' },
     });
 
     expect(config.singularName).toBe('Test Entity');
@@ -104,7 +101,6 @@ describe('defineEntity', () => {
         email: { type: 'email', label: 'Email', searchable: true },
         status: { type: 'text', label: 'Status' },
       },
-      ui: { icon: 'FileText' },
     });
 
     expect(config.searchColumns).toHaveLength(2);
@@ -118,7 +114,6 @@ describe('defineEntity', () => {
         title: { type: 'text', label: 'Title', sortable: true },
         email: { type: 'email', label: 'Email', sortable: true },
       },
-      ui: { icon: 'FileText' },
     });
 
     expect(Object.keys(config.sortableColumns)).toContain('title');
@@ -132,7 +127,6 @@ describe('defineEntity', () => {
       fields: {
         title: { type: 'text', label: 'Title', isLabel: true },
       },
-      ui: { icon: 'FileText' },
     });
 
     expect(config.nameField).toBe('title');
@@ -147,7 +141,6 @@ describe('defineEntity', () => {
         title: { type: 'text', label: 'Title', isLabel: true },
         email: { type: 'email', label: 'Email', isLabel: true },
       },
-      ui: { icon: 'FileText' },
     });
 
     expect(config.nameField).toEqual(['title', 'email']);
@@ -178,7 +171,6 @@ describe('defineEntity', () => {
           displayFields: ['name', 'status'],
         },
       ],
-      ui: { icon: 'FileText' },
     });
 
     expect(config.relationships).toHaveLength(2);
@@ -204,7 +196,6 @@ describe('defineEntity', () => {
           lookupSearchFields: ['firstName', 'lastName'],
         },
       },
-      ui: { icon: 'FileText' },
     });
 
     expect(config.fieldMeta.assigneeId.fieldType).toBe('lookup');
@@ -220,7 +211,6 @@ describe('defineEntity', () => {
         assigneeId: { type: 'user', label: 'Assignee', isRecipient: true },
         createdBy: { type: 'user', label: 'Creator', isRecipient: true, system: true },
       },
-      ui: { icon: 'FileText' },
     });
 
     expect(config.recipientFields).toEqual({
@@ -238,7 +228,6 @@ describe('defineEntity', () => {
         email: { type: 'email', label: 'Email', listVisible: true },
         status: { type: 'text', label: 'Status' },
       },
-      ui: { icon: 'FileText' },
     });
 
     expect(config.listFields).toEqual(['title', 'email']);
@@ -258,7 +247,6 @@ describe('defineEntity', () => {
           ],
         },
       },
-      ui: { icon: 'FileText' },
     });
 
     expect(config.fieldMeta.priority.picklistOptions).toEqual([
@@ -273,7 +261,6 @@ describe('defineEntity', () => {
       slug: 'test-entities',
       timestamps: true,
       fields: {},
-      ui: { icon: 'FileText' },
     });
 
     // Only pure infrastructure columns — id and soft-delete
@@ -292,7 +279,6 @@ describe('defineEntity', () => {
       table: testTable,
       slug: 'test-entities',
       fields: {},
-      ui: { icon: 'FileText' },
       extraPermissions: [{ action: 'export', description: 'Export' }],
       extraEvents: [{ name: 'test.custom', description: 'Custom' }],
     });
@@ -311,7 +297,6 @@ describe('defineEntity', () => {
       sections: [
         { name: 'Basic Info', fields: ['title'] },
       ],
-      ui: { icon: 'FileText' },
     });
 
     expect(config.sections).toHaveLength(1);
@@ -325,8 +310,7 @@ describe('defineEntity', () => {
         slug: 'test-entities',
         customFields: true,
         fields: { title: { type: 'text', label: 'Title' } },
-        ui: { icon: 'FileText' },
-      });
+        });
       expect(config.customFields).toBe(true);
     });
 
@@ -336,8 +320,7 @@ describe('defineEntity', () => {
         slug: 'test-entities',
         customFields: true,
         fields: { title: { type: 'text', label: 'Title' } },
-        ui: { icon: 'FileText' },
-      });
+        });
       expect(config.systemColumns).toContain('customFields');
     });
 
@@ -347,8 +330,7 @@ describe('defineEntity', () => {
         slug: 'eav-entities',
         customFields: 'eav',
         fields: { title: { type: 'text', label: 'Title' } },
-        ui: { icon: 'FileText' },
-      });
+        });
       expect(config.customFields).toBe('eav');
       expect(config.systemColumns).not.toContain('customFields');
     });
@@ -358,8 +340,7 @@ describe('defineEntity', () => {
         table: testTable,
         slug: 'test-entities',
         fields: { title: { type: 'text', label: 'Title' } },
-        ui: { icon: 'FileText' },
-      });
+        });
       expect(config.customFields).toBeUndefined();
       expect(config.systemColumns).not.toContain('customFields');
     });
@@ -370,8 +351,7 @@ describe('defineEntity', () => {
         slug: 'no-custom',
         customFields: false,
         fields: { title: { type: 'text', label: 'Title' } },
-        ui: { icon: 'FileText' },
-      });
+        });
       expect(config.customFields).toBe(false);
       expect(config.systemColumns).not.toContain('customFields');
     });
@@ -383,8 +363,7 @@ describe('defineEntity', () => {
           slug: 'missing-jsonb',
           customFields: true,
           fields: { title: { type: 'text', label: 'Title' } },
-          ui: { icon: 'FileText' },
-        }),
+            }),
       ).toThrow(/customFieldsColumn.*Missing customFields column/);
     });
   });
@@ -395,7 +374,6 @@ describe('defineEntity', () => {
       slug: 'test-entities',
       adminConfigurable: true,
       fields: { title: { type: 'text', label: 'Title' } },
-      ui: { icon: 'FileText' },
     });
     expect(withFlag.adminConfigurable).toBe(true);
 
@@ -403,7 +381,6 @@ describe('defineEntity', () => {
       table: testTable,
       slug: 'test-entities',
       fields: { title: { type: 'text', label: 'Title' } },
-      ui: { icon: 'FileText' },
     });
     expect(withoutFlag.adminConfigurable).toBeUndefined();
   });
@@ -416,7 +393,6 @@ describe('defineEntity', () => {
       fields: {
         title: { type: 'text', label: 'Title' },
       },
-      ui: { icon: 'FileText' },
     });
 
     expect(config.defaultSort).toBe('title');
@@ -432,7 +408,6 @@ describe('defineEntity', () => {
         fields: {
           name: { type: 'text', label: 'Name', required: true, isLabel: true },
         },
-        ui: { icon: 'Folder' },
       });
 
       expect(config.hierarchy).toBe(true);
@@ -445,8 +420,7 @@ describe('defineEntity', () => {
         fields: {
           title: { type: 'text', label: 'Title' },
         },
-        ui: { icon: 'FileText' },
-      });
+        });
 
       expect(config.hierarchy).toBeUndefined();
     });
@@ -459,7 +433,6 @@ describe('defineEntity', () => {
         fields: {
           name: { type: 'text', label: 'Name' },
         },
-        ui: { icon: 'Folder' },
       });
 
       expect(config.systemColumns).toContain('path');
@@ -478,7 +451,6 @@ describe('defineEntity', () => {
         fields: {
           name: { type: 'text', label: 'Name', isLabel: true },
         },
-        ui: { icon: 'Folder' },
       });
 
       expect(config.fieldMeta.parentId).toBeDefined();
@@ -498,7 +470,6 @@ describe('defineEntity', () => {
           name: { type: 'text', label: 'Name' },
           parentId: { type: 'lookup', label: 'Custom Parent', entity: 'hierarchical-entities' },
         },
-        ui: { icon: 'Folder' },
       });
 
       expect(config.fieldMeta.parentId.label).toBe('Custom Parent');
@@ -512,7 +483,6 @@ describe('defineEntity', () => {
         fields: {
           name: { type: 'text', label: 'Name' },
         },
-        ui: { icon: 'Folder' },
       });
 
       expect(config.fieldMeta.parentId).toBeUndefined();
@@ -527,8 +497,7 @@ describe('defineEntity', () => {
           fields: {
             title: { type: 'text', label: 'Title' },
           },
-          ui: { icon: 'FileText' },
-        }),
+            }),
       ).toThrow(/hierarchy: true.*parentId, path, depth/);
     });
 
@@ -548,8 +517,7 @@ describe('defineEntity', () => {
           fields: {
             name: { type: 'text', label: 'Name' },
           },
-          ui: { icon: 'Folder' },
-        }),
+          }),
       ).toThrow(/Missing columns: path, depth/);
     });
 
@@ -561,7 +529,6 @@ describe('defineEntity', () => {
         fields: {
           name: { type: 'text', label: 'Name' },
         },
-        ui: { icon: 'Folder' },
       });
 
       expect(config.systemColumns).not.toContain('parentId');
@@ -601,8 +568,7 @@ describe('defineEntity', () => {
           status: { type: 'text', label: 'Status' },
           priority: { type: 'text', label: 'Priority' },
         },
-        ui: { icon: 'FileText' },
-      });
+        });
 
       expect(config.extensionColumns).toEqual(['title', 'status', 'priority']);
     });
@@ -621,8 +587,7 @@ describe('defineEntity', () => {
         fields: {
           ruleId: { type: 'text', label: 'Rule' },
         },
-        ui: { icon: 'FileText' },
-      });
+        });
 
       expect(config.extensionOf).toEqual({
         entity: 'test-entities',
@@ -638,8 +603,7 @@ describe('defineEntity', () => {
         table: testTable,
         slug: 'test-entities',
         fields: { title: { type: 'text', label: 'Title' } },
-        ui: { icon: 'FileText' },
-      });
+        });
 
       expect(config.extensionColumns).toBeUndefined();
       expect(config.extensionOf).toBeUndefined();
@@ -653,8 +617,7 @@ describe('defineEntity', () => {
           extensionColumns: ['ruleId'],
           extensionOf: { entity: 'test-entities', foreignKey: 'taskId' },
           fields: { ruleId: { type: 'text', label: 'Rule' } },
-          ui: { icon: 'FileText' },
-        }),
+            }),
       ).toThrow(/both 'extensionOf' and 'extensionColumns'/);
     });
 
@@ -665,8 +628,7 @@ describe('defineEntity', () => {
           slug: 'ext-entities',
           extensionOf: { entity: 'test-entities', foreignKey: '' },
           fields: { ruleId: { type: 'text', label: 'Rule' } },
-          ui: { icon: 'FileText' },
-        }),
+            }),
       ).toThrow(/extensionOf\.foreignKey must be a non-empty string/);
     });
 
@@ -677,8 +639,7 @@ describe('defineEntity', () => {
           slug: 'ext-entities',
           extensionOf: { entity: 'test-entities', foreignKey: 'nope' },
           fields: { ruleId: { type: 'text', label: 'Rule' } },
-          ui: { icon: 'FileText' },
-        }),
+            }),
       ).toThrow(/foreignKey 'nope' is not a column/);
     });
 
@@ -689,8 +650,7 @@ describe('defineEntity', () => {
           slug: 'ext-entities-nonpk',
           extensionOf: { entity: 'test-entities', foreignKey: 'taskId' },
           fields: { ruleId: { type: 'text', label: 'Rule' } },
-          ui: { icon: 'FileText' },
-        }),
+            }),
       ).toThrow(/must be the primary key/);
     });
 
@@ -701,8 +661,7 @@ describe('defineEntity', () => {
           slug: 'ext-entities-nullable',
           extensionOf: { entity: 'test-entities', foreignKey: 'taskId' },
           fields: { ruleId: { type: 'text', label: 'Rule' } },
-          ui: { icon: 'FileText' },
-        }),
+            }),
       ).toThrow(/must be the primary key|must be NOT NULL/);
     });
 
@@ -713,8 +672,7 @@ describe('defineEntity', () => {
           slug: 'test-entities',
           extensionColumns: ['title', 'nope'],
           fields: { title: { type: 'text', label: 'Title' } },
-          ui: { icon: 'FileText' },
-        }),
+            }),
       ).toThrow(/extensionColumns includes 'nope'/);
     });
 
@@ -729,8 +687,7 @@ describe('defineEntity', () => {
             parentDefaults: ['oops'] as unknown as Record<string, unknown>,
           },
           fields: { ruleId: { type: 'text', label: 'Rule' } },
-          ui: { icon: 'FileText' },
-        }),
+            }),
       ).toThrow(/parentDefaults must be a plain object/);
     });
 
@@ -743,8 +700,7 @@ describe('defineEntity', () => {
         slug: 'ext-entities',
         extensionOf: { entity: 'test-entities', foreignKey: 'taskId' },
         fields: { ruleId: { type: 'text', label: 'Rule' } },
-        ui: { icon: 'FileText' },
-      });
+        });
 
       expect(config.systemColumns).toContain('deletedAt');
       expect(config.systemColumns).toContain('deletedBy');
@@ -760,7 +716,6 @@ describe('defineEntity', () => {
         fields: {
           name: { type: 'text', label: 'Name', isLabel: true },
         },
-        ui: { icon: 'List' },
       });
 
       expect(config.orderable).toBe(true);
@@ -771,8 +726,7 @@ describe('defineEntity', () => {
         table: testTable,
         slug: 'test-entities',
         fields: { title: { type: 'text', label: 'Title' } },
-        ui: { icon: 'FileText' },
-      });
+        });
 
       expect(config.orderable).toBeUndefined();
     });
@@ -783,7 +737,6 @@ describe('defineEntity', () => {
         slug: 'orderable-entities',
         orderable: true,
         fields: { name: { type: 'text', label: 'Name' } },
-        ui: { icon: 'List' },
       });
 
       expect(config.systemColumns).toContain('sortOrder');
@@ -795,7 +748,6 @@ describe('defineEntity', () => {
         slug: 'orderable-entities',
         orderable: true,
         fields: { name: { type: 'text', label: 'Name' } },
-        ui: { icon: 'List' },
       });
 
       expect(config.defaultSort).toBe('sortOrder');
@@ -809,7 +761,6 @@ describe('defineEntity', () => {
         orderable: true,
         defaultSort: 'name',
         fields: { name: { type: 'text', label: 'Name', sortable: true } },
-        ui: { icon: 'List' },
       });
 
       expect(config.defaultSort).toBe('name');
@@ -822,8 +773,7 @@ describe('defineEntity', () => {
           slug: 'test-entities',
           orderable: true,
           fields: { title: { type: 'text', label: 'Title' } },
-          ui: { icon: 'FileText' },
-        }),
+            }),
       ).toThrow(/orderable: true.*sortOrder/);
     });
 
@@ -834,7 +784,6 @@ describe('defineEntity', () => {
         hierarchy: true,
         orderable: true,
         fields: { name: { type: 'text', label: 'Name', isLabel: true } },
-        ui: { icon: 'Menu' },
       });
 
       expect(config.hierarchy).toBe(true);

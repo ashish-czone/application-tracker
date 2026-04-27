@@ -4,7 +4,6 @@ export const JOB_OPENINGS_UI_CONFIG: EntityUIConfig = {
   entityType: 'job_openings',
   presentation: {
     icon: 'briefcase',
-    subtitleField: 'department',
     navGroup: 'recruit',
     navOrder: 1,
     createMode: 'page',

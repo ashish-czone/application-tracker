@@ -53,7 +53,7 @@ export function EntityBoardView({ entityType, groupByField }: EntityBoardViewPro
   };
 
   const getSubtitle = (card: KanbanCardData): string | null => {
-    const { subtitleField } = entity.ui;
+    const { subtitleField } = entity;
     if (!subtitleField) return null;
     const val = card[subtitleField];
     return val ? String(val) : null;

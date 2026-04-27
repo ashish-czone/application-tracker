@@ -190,23 +190,10 @@ export interface ModelDefinition<TTable extends PgTable = PgTable> {
   /** Default layout sections with field assignments. Only used when entity-layout is installed. */
   sections?: SeedSectionInput[];
 
-  // --- UI ---
+  // --- Display ---
 
-  /**
-   * @deprecated Presentation hints (icon, navGroup, etc.) now live on the
-   * frontend `EntityUIConfig.presentation`. The api no longer reads them.
-   * Field retained transitionally for configs that haven't been migrated.
-   */
-  ui?: {
-    icon?: string;
-    navGroup?: string;
-    navOrder?: number;
-    groupRenderMode?: 'tabs';
-    createMode?: 'modal' | 'page' | 'wizard';
-    boardFields?: string[];
-    subtitleField?: string;
-    afterCreateRoute?: string;
-  };
+  /** Field key used as record subtitle on detail headers and list cards. */
+  subtitleField?: string;
 
   // --- RBAC ---
 
@@ -569,7 +556,7 @@ export function defineEntity<TTable extends PgTable>(model: ModelDefinition<TTab
     extraEvents: model.extraEvents,
     actions: model.actions,
     nameField,
-    ui: model.ui,
+    subtitleField: model.subtitleField,
     dataAccess: model.dataAccess,
   };
 }

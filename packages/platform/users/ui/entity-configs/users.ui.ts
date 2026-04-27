@@ -4,7 +4,6 @@ export const USERS_UI_CONFIG: EntityUIConfig = {
   entityType: 'users',
   presentation: {
     icon: 'User',
-    subtitleField: 'email',
     navGroup: 'admin',
     navOrder: 10,
     createMode: 'page',

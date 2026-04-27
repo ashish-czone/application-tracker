@@ -4,7 +4,6 @@ export const VENDORS_UI_CONFIG: EntityUIConfig = {
   entityType: 'vendors',
   presentation: {
     icon: 'store',
-    subtitleField: 'email',
     navGroup: 'recruit',
     navOrder: 6,
   },

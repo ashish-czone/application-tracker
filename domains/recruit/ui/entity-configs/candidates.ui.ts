@@ -6,7 +6,6 @@ export const CANDIDATES_UI_CONFIG: EntityUIConfig = {
   entityType: 'candidates',
   presentation: {
     icon: 'users',
-    subtitleField: 'currentTitle',
     navGroup: 'recruit',
     navOrder: 1,
   },

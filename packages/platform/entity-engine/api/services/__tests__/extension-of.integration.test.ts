@@ -72,7 +72,6 @@ function buildParentConfig(): EntityConfig {
     sections: [],
     extensionColumns: ['title', 'status', 'priority'],
     nameField: 'title',
-    ui: { icon: 'check' },
   } as EntityConfig;
 }
 
@@ -101,7 +100,6 @@ function buildChildConfig(): EntityConfig {
       parentDefaults: { kind: 'compliance' },
     },
     nameField: 'title',
-    ui: { icon: 'check' },
   } as EntityConfig;
 }
 

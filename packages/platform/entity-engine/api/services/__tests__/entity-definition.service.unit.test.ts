@@ -28,7 +28,6 @@ describe('EntityDefinitionService', () => {
         table: tbl,
         slug: 'things',
         fields: { name: { type: 'text', label: 'Name' } },
-        ui: { icon: 'Box' },
       }));
       expect(service.isAdminConfigurable('things')).toBe(false);
     });
@@ -39,7 +38,6 @@ describe('EntityDefinitionService', () => {
         slug: 'things',
         adminConfigurable: true,
         fields: { name: { type: 'text', label: 'Name' } },
-        ui: { icon: 'Box' },
       }));
       expect(service.isAdminConfigurable('things')).toBe(true);
     });
@@ -55,7 +53,6 @@ describe('EntityDefinitionService', () => {
         table: tbl,
         slug: 'things',
         fields: { name: { type: 'text', label: 'Name', isLabel: true } },
-        ui: { icon: 'Box' },
       }));
       const fields = service.resolveFieldsFromRegistry('things');
       const keys = fields.map((f) => f.fieldKey);
@@ -77,7 +74,6 @@ describe('EntityDefinitionService', () => {
         slug: 'things',
         fields: { name: { type: 'text', label: 'Name', quickCreate: true } },
         sections: [{ name: 'Basics', columns: 1, fields: ['name'] }],
-        ui: { icon: 'Box' },
       }));
       const layout = service.resolveLayoutFromRegistry('things');
       expect(layout.entityType).toBe('things');
@@ -102,7 +98,6 @@ describe('EntityDefinitionService', () => {
         table: tbl,
         slug: 'things',
         fields: { name: { type: 'text', label: 'Name' } },
-        ui: { icon: 'Box' },
       }));
       const layout = service.resolveLayoutFromRegistry('things', 'Mobile');
       expect(layout.layoutName).toBe('Mobile');
@@ -133,14 +128,12 @@ describe('EntityDefinitionService', () => {
           status: { type: 'text', label: 'Status' },
         },
         extensionColumns: ['title', 'status'],
-        ui: { icon: 'Box' },
       }));
       registry.register(defineEntity({
         table: childTbl,
         slug: 'compliance-tasks',
         fields: { ruleId: { type: 'text', label: 'Rule' } },
         extensionOf: { entity: 'parent-tasks', foreignKey: 'id' },
-        ui: { icon: 'Box' },
       }));
       registry.finalize();
     }
@@ -168,7 +161,6 @@ describe('EntityDefinitionService', () => {
         table: tbl,
         slug: 'things',
         fields: { name: { type: 'text', label: 'Name' } },
-        ui: { icon: 'Box' },
       }));
       registry.finalize();
       const fields = service.resolveFieldsFromRegistry('things');

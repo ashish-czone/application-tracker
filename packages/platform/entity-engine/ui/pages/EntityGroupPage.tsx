@@ -35,13 +35,13 @@ export function EntityGroupPage({ groupSlugPath }: EntityGroupPageProps) {
     return [...entities]
       .filter(
         (e) =>
-          e.ui.groupRenderMode === 'tabs' &&
-          e.ui.navGroup !== undefined &&
+          e.ui?.groupRenderMode === 'tabs' &&
+          e.ui?.navGroup !== undefined &&
           groupSlug(e.ui.navGroup) === groupSlugPath,
       )
       .sort((a, b) => {
-        const orderA = a.ui.navOrder ?? 99;
-        const orderB = b.ui.navOrder ?? 99;
+        const orderA = a.ui?.navOrder ?? 99;
+        const orderB = b.ui?.navOrder ?? 99;
         if (orderA !== orderB) return orderA - orderB;
         return a.pluralName.localeCompare(b.pluralName);
       });
@@ -73,7 +73,7 @@ export function EntityGroupPage({ groupSlugPath }: EntityGroupPageProps) {
   }
 
   const current = activeEntity ?? grouped[0];
-  const groupLabel = current.ui.navGroup ?? groupSlugPath;
+  const groupLabel = current.ui?.navGroup ?? groupSlugPath;
 
   return (
     <div className="flex flex-col h-full">

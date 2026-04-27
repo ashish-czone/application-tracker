@@ -45,8 +45,15 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
     label: string;
   } | null>(null);
 
-  // Board view state
-  const boardFields = entity.ui.boardFields ?? [];
+  // Board view state. Workflow fields automatically qualify as board grouping
+  // candidates; explicit `presentation.boardFields` adds non-workflow picklists.
+  const boardFields = useMemo(() => {
+    const fromPresentation = entity.ui?.boardFields ?? [];
+    const fromWorkflow = (listLayout?.columns ?? [])
+      .filter((c) => c.fieldType === 'workflow')
+      .map((c) => c.fieldKey);
+    return [...new Set([...fromWorkflow, ...fromPresentation])];
+  }, [entity.ui, listLayout]);
   const hasBoardView = boardFields.length > 0;
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -438,7 +445,7 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
           <p className="text-sm text-muted-foreground">Manage {entity.pluralName.toLowerCase()}</p>
         </div>
         <Button size="sm" onClick={() => {
-          if (entity.ui.createMode === 'page' || entity.ui.createMode === 'wizard') {
+          if (entity.ui?.createMode === 'page' || entity.ui?.createMode === 'wizard') {
             navigate(`/${entity.slug}/new`);
           } else {
             setAddModalOpen(true);
@@ -545,7 +552,7 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
           title: `No ${entity.pluralName.toLowerCase()} yet`,
           description: `Add your first ${entity.singularName.toLowerCase()} to get started.`,
           action: { label: `Add ${entity.singularName}`, onClick: () => {
-            if (entity.ui.createMode === 'page' || entity.ui.createMode === 'wizard') {
+            if (entity.ui?.createMode === 'page' || entity.ui?.createMode === 'wizard') {
               navigate(`/${entity.slug}/new`);
             } else {
               setAddModalOpen(true);
@@ -578,7 +585,7 @@ export function EntityListPage({ entityType }: EntityListPageProps) {
             singularName={entity.singularName}
             onClose={() => setAddModalOpen(false)}
             onSuccess={(created) => {
-              const template = entity.ui.afterCreateRoute;
+              const template = entity.ui?.afterCreateRoute;
               const target = template
                 ? template.replace(':id', String(created.id))
                 : `/${entity.slug}/${created.id}`;

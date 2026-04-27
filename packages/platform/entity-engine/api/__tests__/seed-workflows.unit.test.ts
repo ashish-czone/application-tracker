@@ -13,7 +13,6 @@ const tbl = pgTable('widgets', {
 const config = defineEntity({
   table: tbl,
   slug: 'widgets',
-  ui: { icon: 'Box' },
   fields: {
     name: { type: 'text', label: 'Name' },
     status: {
@@ -96,8 +95,7 @@ describe('seedWorkflows', () => {
     const noWorkflowConfig = defineEntity({
       table: tbl,
       slug: 'widgets',
-      ui: { icon: 'Box' },
-      fields: { name: { type: 'text', label: 'Name' } },
+          fields: { name: { type: 'text', label: 'Name' } },
     });
     const ext = makeExt({ getBySlug: vi.fn() });
 

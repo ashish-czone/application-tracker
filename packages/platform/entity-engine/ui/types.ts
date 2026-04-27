@@ -9,17 +9,18 @@ export interface EntityRegistryEntry {
   slug: string;
   /**
    * Field key (or composite key array) used as the canonical display name
-   * for records. Lifted out of `ui` so it stays independent of presentation.
+   * for records. Independent of presentation — owned by the api so it can
+   * include the column in LIST select maps.
    */
   nameField: string | string[];
-  ui: {
-    icon: string;
-    /**
-     * @deprecated Read top-level `nameField` instead. This mirror is retained
-     * transitionally and will be removed once the api stops emitting it.
-     */
-    nameField?: string | string[];
-    subtitleField?: string;
+  /** Field key used as record subtitle on detail headers and list cards. */
+  subtitleField?: string;
+  /**
+   * Presentation hints — populated client-side by hydration from the
+   * registered `EntityUIConfig.presentation`. Not present on the wire.
+   */
+  ui?: {
+    icon?: string;
     navGroup?: string;
     navOrder?: number;
     groupRenderMode?: 'tabs';
@@ -158,8 +159,6 @@ export interface HeaderPlugin {
 export interface EntityUIPresentation {
   /** Lucide icon name */
   icon?: string;
-  /** Field key for subtitle on the detail page header */
-  subtitleField?: string;
   /** Sidebar nav group. When multiple entities share a navGroup and set `groupRenderMode: 'tabs'`, the platform collapses them into a single nav link and renders a tabbed page. */
   navGroup?: string;
   /** Sidebar ordering within group. When grouped via `groupRenderMode: 'tabs'`, also drives tab order. */

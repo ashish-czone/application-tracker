@@ -37,7 +37,6 @@ function makeConfig() {
     sections: [
       { name: 'Basics', columns: 2, fields: ['name', 'status'] },
     ],
-    ui: { icon: 'Box' },
   });
 }
 
@@ -96,7 +95,6 @@ describe('buildInMemoryFields', () => {
       table: pgTable('empty', { id: text('id').primaryKey() }),
       slug: 'empty',
       fields: {},
-      ui: { icon: 'Box' },
     });
     expect(buildInMemoryFields(emptyConfig)).toEqual([]);
   });
@@ -109,7 +107,6 @@ describe('buildInMemoryFields', () => {
         name: { type: 'text', label: 'Name' },
       },
       computedColumns: [{ name: 'status', expression: {} as never }],
-      ui: { icon: 'Box' },
     });
     const keys = buildInMemoryFields(config).map((f) => f.fieldKey);
     expect(keys).not.toContain('status');
@@ -149,7 +146,6 @@ describe('buildInMemoryLayout', () => {
         name: { type: 'text', label: 'Name' },
       },
       sections: [{ name: 'Only', columns: 1, fields: ['name'] }],
-      ui: { icon: 'Box' },
     });
     const layout = buildInMemoryLayout(config);
     expect(layout.sections.map((s) => s.name)).toEqual(['Only']);
@@ -285,7 +281,6 @@ describe('extensionOf support', () => {
         status: { type: 'text', label: 'Status' },
         priority: { type: 'number', label: 'Priority' },
       },
-      ui: { icon: 'Box' },
     });
   }
 
@@ -297,7 +292,6 @@ describe('extensionOf support', () => {
         ruleId: { type: 'text', label: 'Rule' },
         severity: { type: 'text', label: 'Severity' },
       },
-      ui: { icon: 'Box' },
     });
   }
 
@@ -330,7 +324,6 @@ describe('extensionOf support', () => {
           ],
         },
       },
-      ui: { icon: 'Box' },
     });
 
     const fields = buildInMemoryFields(makeChildConfig(), {
@@ -351,7 +344,6 @@ describe('extensionOf support', () => {
         // Child re-declares status with a different label
         status: { type: 'text', label: 'Child Status' },
       },
-      ui: { icon: 'Box' },
     });
 
     const fields = buildInMemoryFields(childWithOverride, {
@@ -388,7 +380,6 @@ describe('extensionOf support', () => {
       sections: [
         { name: 'Overview', columns: 2, fields: ['title', 'status', 'ruleId'] },
       ],
-      ui: { icon: 'Box' },
     });
 
     const layout = buildInMemoryLayout(childWithSections, 'Standard', {
