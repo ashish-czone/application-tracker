@@ -96,7 +96,7 @@ export function UsersListPage() {
   const bulkActions = useMemo<DataGridBulkAction[]>(
     () => [
       {
-        label: 'Delete',
+        label: 'Deactivate',
         icon: Trash2,
         variant: 'destructive',
         onClick: (selectedIds) => {
@@ -235,7 +235,8 @@ export function UsersListPage() {
                 type="button"
                 onClick={() => setDeletingUser(row.original)}
                 className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                aria-label={`Delete ${row.original.firstName}`}
+                aria-label={`Deactivate ${row.original.firstName}`}
+                title="Deactivate user"
               >
                 <Trash2 className="h-4 w-4" />
               </button>
@@ -336,7 +337,8 @@ export function UsersListPage() {
                   type="button"
                   onClick={() => setDeletingUser(user)}
                   className="p-1 text-muted-foreground hover:text-destructive"
-                  aria-label="Delete"
+                  aria-label="Deactivate user"
+                  title="Deactivate user"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
@@ -362,20 +364,27 @@ export function UsersListPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation */}
+      {/* Deactivate Confirmation */}
       <ConfirmDialog
         open={!!deletingUser}
         onOpenChange={(open) => !open && setDeletingUser(null)}
-        title="Delete user"
+        title="Deactivate user"
         description={
           deletingUser
-            ? `This will permanently delete ${deletingUser.firstName} ${deletingUser.lastName} and all associated data.`
+            ? `Mark ${deletingUser.firstName} ${deletingUser.lastName} as deactivated. This is reversible — restore from the "Include deleted" filter.`
             : ''
         }
-        confirmLabel="Delete user"
+        confirmLabel="Deactivate user"
+        pendingLabel="Deactivating..."
         isPending={deleteMutation.isPending}
         onConfirm={() => deletingUser && deleteMutation.mutate(deletingUser.id)}
-      />
+      >
+        <ul className="text-sm text-muted-foreground list-disc pl-5 space-y-1">
+          <li>Removed from all team memberships</li>
+          <li>Active task assignments cleared (tasks remain on their teams)</li>
+          <li>Cannot sign in to any app</li>
+        </ul>
+      </ConfirmDialog>
     </div>
   );
 }
