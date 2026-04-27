@@ -1,7 +1,7 @@
 import { Plus } from 'lucide-react';
 import { Button } from '@packages/ui';
 import { DashboardShell } from '@packages/dashboard-ui';
-import { ScreenPreviewTopBar } from '../screens/shared/ScreenPreviewTopBar';
+import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 
 // Widget order tuned for the 12-col grid at xl:
 //   overdue (lg, 8 cols) + notifications (sm, 3 cols) → row 1
