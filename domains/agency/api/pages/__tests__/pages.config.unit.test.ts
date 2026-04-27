@@ -38,10 +38,6 @@ describe('PAGES_CONFIG', () => {
     expect(PAGES_CONFIG.fieldMeta.ogImage.isQuickCreate).toBeFalsy();
   });
 
-  it('routes the quick-create success into the page editor', () => {
-    expect(PAGES_CONFIG.ui.afterCreateRoute).toBe('/pages/:id/edit');
-  });
-
   it('registers status as a picklist with the four lifecycle values, defaulting to draft', () => {
     const status = PAGES_CONFIG.fieldMeta.status;
     expect(status).toBeDefined();

@@ -52,11 +52,4 @@ export const VENDORS_CONFIG: EntityConfig = {
   },
 
   nameField: 'vendorName',
-
-  ui: {
-    icon: 'store',
-    subtitleField: 'email',
-    navGroup: 'recruit',
-    navOrder: 6,
-  },
 };

@@ -111,11 +111,4 @@ export const candidatesConfig: EntityConfig = {
 
   nameField: 'fullName',
 
-  ui: {
-    icon: 'users',
-    subtitleField: 'currentTitle',
-    navGroup: 'recruit',
-    navOrder: 1,
-  },
-
 };

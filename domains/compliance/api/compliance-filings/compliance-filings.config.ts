@@ -288,10 +288,4 @@ export const COMPLIANCE_FILINGS_CONFIG = defineEntity({
   ],
 
   defaultSort: 'dueDate',
-
-  ui: {
-    icon: 'ClipboardCheck',
-    navGroup: 'compliance',
-    navOrder: 4,
-  },
 });

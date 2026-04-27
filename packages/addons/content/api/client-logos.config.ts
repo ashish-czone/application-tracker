@@ -45,12 +45,4 @@ export const CLIENT_LOGOS_CONFIG = defineEntity({
   },
 
   defaultSort: 'displayOrder',
-
-  ui: {
-    icon: 'Building2',
-    navGroup: 'Content',
-    groupRenderMode: 'tabs',
-    navOrder: 50,
-    createMode: 'modal',
-  },
 });

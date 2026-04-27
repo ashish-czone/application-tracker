@@ -47,11 +47,4 @@ export const CLIENT_REGISTRATIONS_CONFIG = defineEntity({
       fields: ['clientId', 'lawId', 'registeredAt', 'deactivatedAt'],
     },
   ],
-
-  ui: {
-    icon: 'FileBadge',
-    // Registrations are managed within the client detail page; not shown
-    // in top-level navigation. navGroup is intentionally omitted.
-    createMode: 'modal',
-  },
 });

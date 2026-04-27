@@ -80,11 +80,4 @@ export const PAGES_CONFIG = defineEntity({
   },
 
   defaultSort: 'createdAt',
-
-  ui: {
-    icon: 'FileText',
-    navGroup: 'Content',
-    createMode: 'modal',
-    afterCreateRoute: '/pages/:id/edit',
-  },
 });

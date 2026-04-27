@@ -67,11 +67,4 @@ export const LAWS_CONFIG = defineEntity({
       fields: ['name', 'code', 'issuingAuthority', 'jurisdiction', 'effectiveFrom', 'description'],
     },
   ],
-
-  ui: {
-    icon: 'Scale',
-    navGroup: 'compliance',
-    navOrder: 1,
-    createMode: 'modal',
-  },
 });

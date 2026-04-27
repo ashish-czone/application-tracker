@@ -36,10 +36,4 @@ export const CLIENTS_CONFIG = defineEntity({
       fields: ['name', 'email'],
     },
   ],
-
-  ui: {
-    icon: 'Building2',
-    navGroup: 'billing',
-    createMode: 'modal',
-  },
 });

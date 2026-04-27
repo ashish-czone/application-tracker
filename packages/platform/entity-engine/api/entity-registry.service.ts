@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { getTableColumns } from 'drizzle-orm';
 import type { PgColumn } from 'drizzle-orm/pg-core';
 import { hasSoftDeleteColumns } from '@packages/soft-delete';
-import type { EntityConfig, EntityRegistryEntry, ResolvedExtension } from './types';
+import type { EntityConfig, EntityRegistryEntry, EntityUIHints, ResolvedExtension } from './types';
 import { FeatureDeriverRegistry } from './services/feature-deriver.registry';
 
 /**
@@ -69,13 +69,15 @@ export class EntityRegistryService {
       // Deduplicate in case a workflow field is also explicitly listed
       const uniqueBoardFields = [...new Set(boardFields)];
 
+      const ui: EntityUIHints = { ...(config.ui ?? {}) };
+      if (uniqueBoardFields.length > 0) ui.boardFields = uniqueBoardFields;
       return {
       entityType: config.entityType,
       singularName: config.singularName,
       pluralName: config.pluralName,
       slug: config.slug,
       nameField: config.nameField,
-      ui: { ...config.ui, boardFields: uniqueBoardFields.length > 0 ? uniqueBoardFields : undefined },
+      ui,
       features: {
         // Engine-derived flags. Addons must not register keys with these names.
         // Soft-delete capability comes from the schema (presence of

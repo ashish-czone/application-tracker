@@ -56,8 +56,4 @@ export const SECTIONS_CONFIG = defineEntity({
   },
 
   defaultSort: 'order',
-
-  ui: {
-    icon: 'LayoutGrid',
-  },
 });

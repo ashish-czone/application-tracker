@@ -69,12 +69,4 @@ export const TESTIMONIALS_CONFIG = defineEntity({
   },
 
   defaultSort: 'displayOrder',
-
-  ui: {
-    icon: 'MessageSquareQuote',
-    navGroup: 'Content',
-    groupRenderMode: 'tabs',
-    navOrder: 10,
-    createMode: 'modal',
-  },
 });

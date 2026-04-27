@@ -56,12 +56,4 @@ export const SERVICES_CONFIG = defineEntity({
   },
 
   defaultSort: 'displayOrder',
-
-  ui: {
-    icon: 'Briefcase',
-    navGroup: 'Content',
-    groupRenderMode: 'tabs',
-    navOrder: 40,
-    createMode: 'modal',
-  },
 });

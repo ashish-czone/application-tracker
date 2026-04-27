@@ -104,10 +104,4 @@ export const INTERVIEWS_CONFIG: EntityConfig = {
   },
 
   nameField: 'interviewName',
-
-  ui: {
-    icon: 'calendar-check',
-    navGroup: 'recruit',
-    navOrder: 3,
-  },
 };

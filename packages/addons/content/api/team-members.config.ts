@@ -62,12 +62,4 @@ export const TEAM_MEMBERS_CONFIG = defineEntity({
   },
 
   defaultSort: 'displayOrder',
-
-  ui: {
-    icon: 'Users',
-    navGroup: 'Content',
-    groupRenderMode: 'tabs',
-    navOrder: 30,
-    createMode: 'modal',
-  },
 });

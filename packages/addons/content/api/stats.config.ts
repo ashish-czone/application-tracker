@@ -50,12 +50,4 @@ export const STATS_CONFIG = defineEntity({
   },
 
   defaultSort: 'displayOrder',
-
-  ui: {
-    icon: 'BarChart3',
-    navGroup: 'Content',
-    groupRenderMode: 'tabs',
-    navOrder: 70,
-    createMode: 'modal',
-  },
 });

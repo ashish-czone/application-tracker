@@ -492,7 +492,7 @@ export interface NestedRelationshipField {
 
 export interface EntityUIHints {
   /** Lucide icon name */
-  icon: string;
+  icon?: string;
   /**
    * @deprecated Read from {@link EntityConfig.nameField} instead. This mirror
    * is retained transitionally so existing readers keep compiling; it will be
@@ -808,8 +808,14 @@ export interface EntityConfig<TTable extends PgTable = PgTable> {
 
   // --- UI ---
 
-  /** Frontend rendering hints (serialized to registry API) */
-  ui: EntityUIHints;
+  /**
+   * @deprecated Frontend rendering hints have moved to the UI-side
+   * `EntityUIConfig.presentation`. The api no longer reads any field on
+   * this block; it survives only for entity configs that haven't been
+   * fully migrated. Will be removed once the registry/layout response
+   * shape is updated to drop `ui` entirely.
+   */
+  ui?: EntityUIHints;
 
   // --- Data access ---
 

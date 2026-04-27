@@ -108,9 +108,4 @@ export const MEDIA_ASSETS_CONFIG = defineEntity({
   },
 
   defaultSort: 'createdAt',
-
-  ui: {
-    icon: 'Image',
-    navGroup: 'Content',
-  },
 });

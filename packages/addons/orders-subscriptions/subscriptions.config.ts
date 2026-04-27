@@ -87,10 +87,4 @@ export const SUBSCRIPTIONS_CONFIG = defineEntity({
       fields: ['clientId', 'clientType', 'planId', 'status', 'currentPeriodStart', 'currentPeriodEnd', 'autoRenew', 'cancelledAt'],
     },
   ],
-
-  ui: {
-    icon: 'RefreshCw',
-    navGroup: 'billing',
-    createMode: 'page',
-  },
 });
