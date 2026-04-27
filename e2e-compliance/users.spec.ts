@@ -1,28 +1,33 @@
 import { test, expect } from './fixtures/auth';
-import { uniqueEmail, apiClient, CleanupTracker } from './helpers';
+import { resetState, uniqueEmail, apiClient } from './helpers';
+import { createUser, type CreatedUser } from './fixtures/users';
 
 test.describe('Users', () => {
-  const cleanup = new CleanupTracker();
+  let alice: CreatedUser;
+  let bob: CreatedUser;
 
-  test.afterAll(async () => {
-    await cleanup.flush();
+  test.beforeAll(async () => {
+    await resetState();
+    // Two fixtures with distinguishable names so the search test can
+    // verify filtering removes non-matches.
+    alice = await createUser({ firstName: 'Alice', lastName: 'Anderson', email: uniqueEmail('alice') });
+    bob = await createUser({ firstName: 'Bob', lastName: 'Brown', email: uniqueEmail('bob') });
   });
 
-  test('list page renders heading, KPIs, and demo users', async ({ authedPage }) => {
+  test('list page renders heading, KPIs, and a fixture user', async ({ authedPage }) => {
     await authedPage.goto('/compliance-users');
     await expect(authedPage.getByRole('heading', { name: 'Users' }).first()).toBeVisible();
     await expect(authedPage.getByRole('button', { name: /Invite user/i })).toBeVisible();
-    // Filter by name so the assertion isn't sensitive to pagination, default
-    // tab selection, or test users created earlier in the run.
-    await authedPage.getByPlaceholder(/search users/i).fill('Priya');
-    await expect(authedPage.getByText(/Priya Sharma/i).first()).toBeVisible();
+    // Filter by name so the assertion isn't sensitive to pagination or default tab.
+    await authedPage.getByPlaceholder(/search users/i).fill(alice.firstName);
+    await expect(authedPage.getByText(new RegExp(`${alice.firstName}\\s+${alice.lastName}`, 'i')).first()).toBeVisible();
   });
 
   test('search input narrows the user list', async ({ authedPage }) => {
     await authedPage.goto('/compliance-users');
-    await authedPage.getByPlaceholder(/search users/i).fill('Priya');
-    await expect(authedPage.getByText('Priya Sharma').first()).toBeVisible();
-    await expect(authedPage.getByText('Vikram Patel')).toHaveCount(0);
+    await authedPage.getByPlaceholder(/search users/i).fill(alice.firstName);
+    await expect(authedPage.getByText(alice.firstName).first()).toBeVisible();
+    await expect(authedPage.getByText(bob.firstName)).toHaveCount(0);
   });
 
   test('status tabs filter the user list', async ({ authedPage }) => {
@@ -45,20 +50,17 @@ test.describe('Users', () => {
     await authedPage.getByLabel('Work email').fill(email);
     await authedPage.getByRole('button', { name: /Send invitation/i }).click();
 
-    // Drawer closes on success; the new user appears in the list when we
-    // refresh-via-search.
+    // Drawer closes on success.
     await expect(
       authedPage.getByRole('heading', { name: /Invite a team member/i }),
     ).not.toBeVisible({ timeout: 15_000 });
 
-    // Resolve the new id via API and queue cleanup.
+    // Sanity-check via API.
     const list = await apiClient.get<{ data: Array<{ id: string; email: string }> }>(
       '/users',
       { query: { limit: 500 } },
     );
-    const created = list.data.find((u) => u.email === email);
-    expect(created, `user ${email} should exist via API`).toBeTruthy();
-    if (created) cleanup.track('user', created.id);
+    expect(list.data.find((u) => u.email === email), `user ${email} should exist via API`).toBeTruthy();
   });
 
   test('invite drawer rejects empty submission', async ({ authedPage }) => {

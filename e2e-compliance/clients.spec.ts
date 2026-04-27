@@ -1,11 +1,18 @@
 import { test, expect } from './fixtures/auth';
-import { uniqueName, uniqueEmail, apiClient, CleanupTracker } from './helpers';
+import { createClient, type CreatedClient } from './fixtures/clients';
+import { resetState, uniqueName, uniqueEmail, apiClient } from './helpers';
 
 test.describe('Clients', () => {
-  const cleanup = new CleanupTracker();
+  let anchorClient: CreatedClient;
+  let secondaryClient: CreatedClient;
 
-  test.afterAll(async () => {
-    await cleanup.flush();
+  test.beforeAll(async () => {
+    await resetState();
+    // Two fixtures so the search test can verify filtering removes
+    // non-matches. Names share no substring so a search for one cannot
+    // accidentally match the other.
+    anchorClient = await createClient({ name: uniqueName('Anchor'), status: 'active' });
+    secondaryClient = await createClient({ name: uniqueName('Secondary'), status: 'active' });
   });
 
   test('list page renders heading, KPIs, status tabs, and a row', async ({ authedPage }) => {
@@ -16,31 +23,29 @@ test.describe('Clients', () => {
     await expect(authedPage.getByText('Total clients')).toBeVisible();
     await expect(authedPage.getByText('Registrations').first()).toBeVisible();
     await expect(authedPage.getByText('Overdue filings')).toBeVisible();
-    // Demo seed includes "Lumen Tech".
-    await expect(authedPage.getByText('Lumen Tech').first()).toBeVisible();
+    await expect(authedPage.getByText(anchorClient.name).first()).toBeVisible();
   });
 
   test('search input narrows the visible client rows', async ({ authedPage }) => {
     await authedPage.goto('/clients');
-    await authedPage.getByPlaceholder(/search clients/i).fill('Lumen');
-    // Lumen Tech remains, an unrelated demo client (Greenfield Agri) drops.
-    await expect(authedPage.getByText('Lumen Tech').first()).toBeVisible();
-    await expect(authedPage.getByText('Greenfield Agri')).toHaveCount(0);
+    await authedPage.getByPlaceholder(/search clients/i).fill(anchorClient.name);
+    await expect(authedPage.getByText(anchorClient.name).first()).toBeVisible();
+    await expect(authedPage.getByText(secondaryClient.name)).toHaveCount(0);
   });
 
   test('row click navigates to detail page', async ({ authedPage }) => {
     await authedPage.goto('/clients');
-    await authedPage.getByText('Lumen Tech').first().click();
+    await authedPage.getByText(anchorClient.name).first().click();
     await authedPage.waitForURL(/\/clients\/[0-9a-f-]+/);
-    await expect(authedPage.getByRole('heading', { name: /Lumen Tech/i }).first()).toBeVisible();
+    await expect(
+      authedPage.getByRole('heading', { name: new RegExp(anchorClient.name, 'i') }).first(),
+    ).toBeVisible();
   });
 
-  test('add client drawer creates a record, list shows it, then cleanup deletes', async ({
-    authedPage,
-  }) => {
-    const companyName = uniqueName('Client');
+  test('add client drawer creates a record, list shows it', async ({ authedPage }) => {
+    const companyName = uniqueName('Created');
     const legalName = `${companyName} Pvt. Ltd.`;
-    const taxId = `27AAAAA${Date.now().toString().slice(-5)}1Z5`;
+    const taxId = `27CCCCC${Date.now().toString().slice(-5)}1Z5`;
     const contactEmail = uniqueEmail('contact');
 
     await authedPage.goto('/clients');
@@ -68,14 +73,13 @@ test.describe('Clients', () => {
     await authedPage.getByPlaceholder(/search clients/i).fill(companyName);
     await expect(authedPage.getByText(companyName).first()).toBeVisible({ timeout: 10_000 });
 
-    // Resolve id via API for cleanup.
+    // Sanity-check the API saw it too.
     const list = await apiClient.get<{ data: Array<{ id: string; name: string }> }>(
       '/clients',
-      { query: { limit: 200 } },
+      { query: { limit: 200, search: companyName } },
     );
     const created = list.data.find((c) => c.name === companyName);
     expect(created, `client ${companyName} should exist via API`).toBeTruthy();
-    if (created) cleanup.track('client', created.id);
   });
 
   test('drawer rejects empty submission with validation errors', async ({ authedPage }) => {
@@ -90,9 +94,8 @@ test.describe('Clients', () => {
 
   test('status tabs filter the list', async ({ authedPage }) => {
     await authedPage.goto('/clients');
-    // Click "Active" — at least Lumen Tech is seeded active.
     await authedPage.getByRole('tab', { name: /^Active/i }).click();
-    await expect(authedPage.getByText('Lumen Tech').first()).toBeVisible();
+    await expect(authedPage.getByText(anchorClient.name).first()).toBeVisible();
     const activeTab = authedPage.getByRole('tab', { name: /^Active/i });
     await expect(activeTab).toHaveAttribute('aria-selected', 'true');
   });

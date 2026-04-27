@@ -1,6 +1,11 @@
 import { test, expect } from './fixtures/auth';
+import { resetState } from './helpers';
 
 test.describe('Dashboard', () => {
+  test.beforeAll(async () => {
+    await resetState();
+  });
+
   test('page renders heading and at least the four configured widgets', async ({
     authedPage,
   }) => {

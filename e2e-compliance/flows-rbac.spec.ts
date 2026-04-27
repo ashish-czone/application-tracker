@@ -1,26 +1,30 @@
 import { test, expect } from './fixtures/auth';
-import { uniqueEmail, apiClient, CleanupTracker } from './helpers';
+import { resetState, uniqueEmail, apiClient } from './helpers';
+import { createClient } from './fixtures/clients';
+import { createUser } from './fixtures/users';
 
 const API_URL = process.env.E2E_API_URL ?? 'http://localhost:3012';
 
-interface User { id: string; email: string }
+interface User {
+  id: string;
+  email: string;
+}
 
 /**
  * RBAC flow: verify the API auth/permission boundary.
  *
- * Combines:
  * - Unauthenticated request → 401.
  * - Invalid-token request → 401.
  * - Newly invited user (default 'Client' role with no granted permissions)
  *   gets 403 on `/clients` while the seeded e2e-admin can list freely.
- * - The admin can fetch the admin user-management endpoint (`/users`)
- *   while a default-role user is denied.
  */
 test.describe('Flow: RBAC permission enforcement', () => {
-  const cleanup = new CleanupTracker();
-
-  test.afterAll(async () => {
-    await cleanup.flush();
+  test.beforeAll(async () => {
+    await resetState();
+    // The "admin can list clients" test asserts length > 0 — seed at least
+    // one row so the assertion is meaningful regardless of filing/registration
+    // setup elsewhere.
+    await createClient();
   });
 
   test('unauthenticated request returns 401', async () => {
@@ -44,19 +48,10 @@ test.describe('Flow: RBAC permission enforcement', () => {
     // 65s allowance for the auth-throttle retry.
     test.setTimeout(120_000);
 
-    // Create a fresh user with a password so we can log in directly.
-    // POST /users supports `credentials.password` for this admin path.
     const email = uniqueEmail('rbac');
     const password = 'RbacTest1234';
 
-    const created = await apiClient.post<User>('/users', {
-      firstName: 'RBAC',
-      lastName: 'Tester',
-      email,
-      userType: 'client',
-      credentials: { password },
-    });
-    cleanup.track('user', created.id);
+    await createUser({ firstName: 'RBAC', lastName: 'Tester', email, password });
 
     // Log in as the new user (retry once on 429 — auth has 5/min throttle).
     async function login(): Promise<Response> {

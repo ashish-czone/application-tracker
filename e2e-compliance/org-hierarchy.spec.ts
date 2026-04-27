@@ -1,25 +1,23 @@
 import { test, expect } from './fixtures/auth';
-import { uniqueName, apiClient, CleanupTracker } from './helpers';
-
-interface OrgUnit {
-  id: string;
-  name: string;
-  parentId: string | null;
-}
+import { resetState, uniqueName, apiClient } from './helpers';
+import { createOrgUnit, getOrgUnitLevel, type OrgUnit } from './fixtures/org-units';
 
 test.describe('Org Hierarchy', () => {
-  const cleanup = new CleanupTracker();
+  let rootUnit: OrgUnit;
+  let teamUnit: OrgUnit;
 
-  test.afterAll(async () => {
-    await cleanup.flush();
+  test.beforeAll(async () => {
+    await resetState();
+    // Build a 2-level tree so the spec can verify both root and child rendering.
+    rootUnit = await createOrgUnit({ level: 'Company', name: uniqueName('Company') });
+    teamUnit = await createOrgUnit({ level: 'Team', name: uniqueName('Team'), parentId: rootUnit.id });
   });
 
   test('page renders heading, tree, and detail panel', async ({ authedPage }) => {
     await authedPage.goto('/org-hierarchy');
     await expect(authedPage.getByRole('heading', { name: /Organisation/i })).toBeVisible();
     await expect(authedPage.getByRole('button', { name: /Add Unit/i })).toBeVisible();
-    // Demo seed includes a Compliance Team unit.
-    await expect(authedPage.getByText(/Compliance Team/).first()).toBeVisible();
+    await expect(authedPage.getByText(rootUnit.name).first()).toBeVisible();
   });
 
   test('add-unit drawer opens with name + parent fields', async ({ authedPage }) => {
@@ -31,30 +29,24 @@ test.describe('Org Hierarchy', () => {
   });
 
   test('create unit via API and verify it appears in the tree', async ({ authedPage }) => {
-    // Find an existing parent unit (the root-level one seeded by demo).
-    const list = await apiClient.get<OrgUnit[]>('/org-units');
-    const root = list.find((u) => u.parentId === null) ?? list[0];
-    expect(root, 'should have at least one seeded org-unit').toBeTruthy();
-    if (!root) return;
-
-    // Find a level the parent allows. The simplest path is to find any
-    // existing child of root and copy its levelId.
-    const sibling = list.find((u) => u.parentId === root.id);
-    if (!sibling) {
-      test.skip(true, 'no demo child unit to derive levelId from');
-      return;
-    }
-    const levelId = (sibling as OrgUnit & { levelId: string }).levelId;
-
+    const teamLevel = await getOrgUnitLevel('Team');
     const name = uniqueName('Unit');
-    const created = await apiClient.post<OrgUnit>('/org-units', {
+    await apiClient.post('/org-units', {
       name,
-      parentId: root.id,
-      levelId,
+      parentId: rootUnit.id,
+      levelId: teamLevel.id,
     });
-    cleanup.track('org-unit', created.id);
 
     await authedPage.goto('/org-hierarchy');
     await expect(authedPage.getByText(name).first()).toBeVisible({ timeout: 10_000 });
+  });
+
+  // Reference teamUnit so the unused-var lint stays satisfied; the fixture is
+  // useful even when the spec doesn't navigate to it (it's part of the seeded
+  // tree and proves nesting works).
+  test('child team is reachable in the API tree', async () => {
+    const list = await apiClient.get<OrgUnit[]>('/org-units');
+    const child = list.find((u) => u.id === teamUnit.id);
+    expect(child?.parentId).toBe(rootUnit.id);
   });
 });

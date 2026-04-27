@@ -1,6 +1,11 @@
 import { test, expect } from './fixtures/auth';
+import { resetState } from './helpers';
 
 test.describe('Smoke', () => {
+  test.beforeAll(async () => {
+    await resetState();
+  });
+
   test('logs in as e2e-admin and lands on dashboard', async ({ authedPage }) => {
     await authedPage.goto('/');
     // Auth fixture injected tokens; root redirects to /dashboard for authed users.

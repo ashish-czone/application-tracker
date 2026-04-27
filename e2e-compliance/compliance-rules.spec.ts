@@ -1,25 +1,32 @@
 import { test, expect } from './fixtures/auth';
-import { uniqueName, apiClient, CleanupTracker } from './helpers';
+import { resetState, randomSuffix } from './helpers';
+import { getSystemLaw } from './fixtures/laws';
+import { createComplianceRule, type ComplianceRule } from './fixtures/rules';
 
 test.describe('Compliance Rules', () => {
-  const cleanup = new CleanupTracker();
+  let anchorRule: ComplianceRule;
 
-  test.afterAll(async () => {
-    await cleanup.flush();
+  test.beforeAll(async () => {
+    await resetState();
+    const gst = await getSystemLaw('GST');
+    anchorRule = await createComplianceRule({
+      lawId: gst.id,
+      code: `GSTR-3B-${randomSuffix(4).toUpperCase()}`,
+      name: 'GSTR-3B — Summary Return',
+    });
   });
 
-  test('list page renders heading, KPIs, and at least one seeded rule', async ({ authedPage }) => {
+  test('list page renders heading, KPIs, and at least one rule', async ({ authedPage }) => {
     await authedPage.goto('/compliance-rules');
     await expect(authedPage.getByRole('heading', { name: /compliance rules/i }).first()).toBeVisible();
     await expect(authedPage.getByRole('button', { name: /New rule/i })).toBeVisible();
-    // Demo seed includes GSTR-3B / TDS24Q etc.
-    await expect(authedPage.getByText(/GSTR/).first()).toBeVisible();
+    await expect(authedPage.getByText(anchorRule.code).first()).toBeVisible();
   });
 
   test('search input narrows the rule grid', async ({ authedPage }) => {
     await authedPage.goto('/compliance-rules');
-    await authedPage.getByPlaceholder(/search/i).first().fill('GSTR');
-    await expect(authedPage.getByText('GSTR-3B').first()).toBeVisible();
+    await authedPage.getByPlaceholder(/search/i).first().fill(anchorRule.code);
+    await expect(authedPage.getByText(anchorRule.code).first()).toBeVisible();
   });
 
   test('drawer opens in pick mode with template + scratch options', async ({ authedPage }) => {
@@ -44,35 +51,15 @@ test.describe('Compliance Rules', () => {
     await expect(authedPage.getByPlaceholder(/short title/i)).toBeVisible();
   });
 
-  test('rule created via API shows up in the list, then cleanup deletes', async ({
-    authedPage,
-  }) => {
-    // Pick the first GST law to attach the rule to.
-    const laws = await apiClient.get<{ data: Array<{ id: string; code: string }> }>(
-      '/laws',
-      { query: { limit: 50 } },
-    );
-    const gst = laws.data.find((l) => l.code === 'GST');
-    expect(gst, 'GST law should be seeded').toBeTruthy();
-    if (!gst) return;
-
-    const code = `E2E-${Date.now()}`;
-    const name = uniqueName('Rule');
-
-    const created = await apiClient.post<{ id: string }>('/compliance-rules', {
-      code,
-      name,
+  test('rule created via API shows up in the list', async ({ authedPage }) => {
+    const gst = await getSystemLaw('GST');
+    const created = await createComplianceRule({
       lawId: gst.id,
-      frequency: 'monthly',
-      dueDayOfMonth: 20,
-      dueMonthOffset: 1,
-      gracePeriodDays: 0,
-      status: 'active',
+      code: `E2E-${randomSuffix(6).toUpperCase()}`,
     });
-    cleanup.track('rule', created.id);
 
     await authedPage.goto('/compliance-rules');
-    await authedPage.getByPlaceholder(/search/i).first().fill(code);
-    await expect(authedPage.getByText(code).first()).toBeVisible();
+    await authedPage.getByPlaceholder(/search/i).first().fill(created.code);
+    await expect(authedPage.getByText(created.code).first()).toBeVisible();
   });
 });
