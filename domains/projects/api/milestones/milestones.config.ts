@@ -8,6 +8,9 @@ export const MILESTONES_CONFIG = defineEntity({
   pluralName: 'Milestones',
   timestamps: true,
   orderable: true,
+  // See PROJECTS_CONFIG — flag is required so the workflow seed service
+  // writes the status workflow rows the transition endpoint needs.
+  adminConfigurable: true,
 
   fields: {
     projectId: {
