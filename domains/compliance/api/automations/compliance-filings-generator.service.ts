@@ -52,8 +52,13 @@ export class ComplianceFilingsGeneratorService {
    * Generate filings for a single rule across every active registration on
    * its law. Used by the automation action and by the J3 listener (rule
    * status flipped to active).
+   *
+   * @param now Reference instant for horizon math + period filtering. Defaults
+   *   to wall-clock; tests pass a deterministic asOf via the test-hooks cron
+   *   endpoint so the rolling 12-month horizon and the I6 forward-only filter
+   *   are reproducible.
    */
-  async generateForRule(ruleId: string): Promise<{ created: number }> {
+  async generateForRule(ruleId: string, now: Date = new Date()): Promise<{ created: number }> {
     const rule = await this.ruleService.findById(ruleId);
     if (!rule || rule.status === 'deprecated') {
       this.logger.debug('Rule not found or deprecated — skipping', { ruleId });
@@ -73,7 +78,7 @@ export class ComplianceFilingsGeneratorService {
       return { created: 0 };
     }
 
-    const created = await this.generateForPairs(rule, registrations);
+    const created = await this.generateForPairs(rule, registrations, now);
     this.logger.log('Compliance filing generation complete (per-rule)', { ruleId, created });
     return { created };
   }
@@ -82,7 +87,11 @@ export class ComplianceFilingsGeneratorService {
    * Generate filings for a single new registration across every active rule
    * on its law. Used by the J4 listener (registration created).
    */
-  async generateForRegistration(clientId: string, lawId: string): Promise<{ created: number }> {
+  async generateForRegistration(
+    clientId: string,
+    lawId: string,
+    now: Date = new Date(),
+  ): Promise<{ created: number }> {
     const registrations = await this.registrationService.getRegistrationsForLaw(lawId);
     const target = registrations.find((r) => r.clientId === clientId && !r.deactivatedAt);
     if (!target) {
@@ -99,7 +108,7 @@ export class ComplianceFilingsGeneratorService {
 
     let created = 0;
     for (const rule of rules) {
-      created += await this.generateForPairs(rule, [target]);
+      created += await this.generateForPairs(rule, [target], now);
     }
     this.logger.log('Compliance filing generation complete (per-registration)', {
       clientId,
@@ -116,7 +125,7 @@ export class ComplianceFilingsGeneratorService {
    * they are not regenerated because the per-occurrence idempotency guard
    * matches on (rule, client, periodStart) regardless of status.
    */
-  async generateForClient(clientId: string): Promise<{ created: number }> {
+  async generateForClient(clientId: string, now: Date = new Date()): Promise<{ created: number }> {
     const registrations = await this.registrationService.getRegisteredLaws(clientId);
     if (registrations.length === 0) {
       this.logger.debug('No active registrations for client — skipping', { clientId });
@@ -136,7 +145,7 @@ export class ComplianceFilingsGeneratorService {
     for (const reg of registrations) {
       const rules = rulesByLaw.get(reg.lawId) ?? [];
       for (const rule of rules) {
-        created += await this.generateForPairs(rule, [reg]);
+        created += await this.generateForPairs(rule, [reg], now);
       }
     }
     this.logger.log('Compliance filing generation complete (per-client)', { clientId, created });
@@ -144,16 +153,36 @@ export class ComplianceFilingsGeneratorService {
   }
 
   /**
-   * Inner loop shared by the three public entrypoints. Expands the rule
-   * across the horizon, applies the per-occurrence `deactivatedAt` filter,
-   * and creates filings via the entity service. Returns the number of new
-   * rows written.
+   * Generate filings across every active rule × every active registration
+   * for the horizon. Used by the test-hooks cron endpoint to drive a full
+   * generator pass at a deterministic asOf without going through the
+   * automations rule scanner.
+   */
+  async generateAll(now: Date = new Date()): Promise<{ created: number }> {
+    const allRules = await this.ruleService.findActive();
+    const activeRules = allRules.filter((r) => r.status === 'active');
+    if (activeRules.length === 0) return { created: 0 };
+
+    let created = 0;
+    for (const rule of activeRules) {
+      const registrations = await this.registrationService.getRegistrationsForLaw(rule.lawId);
+      if (registrations.length === 0) continue;
+      created += await this.generateForPairs(rule, registrations, now);
+    }
+    this.logger.log('Compliance filing generation complete (full pass)', { created });
+    return { created };
+  }
+
+  /**
+   * Inner loop shared by the public entrypoints. Expands the rule across the
+   * horizon, applies the per-occurrence `deactivatedAt` filter, and creates
+   * filings via the entity service. Returns the number of new rows written.
    */
   private async generateForPairs(
     rule: ComplianceRule,
     registrations: ClientRegistration[],
+    now: Date,
   ): Promise<number> {
-    const now = new Date();
     const horizonEnd = this.addMonths(now, HORIZON_MONTHS);
     const occurrences = this.ruleService.expandRule(rule, now, horizonEnd);
 

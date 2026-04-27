@@ -37,7 +37,7 @@ export class GenerateComplianceFilingsAction implements ActionHandler {
       this.logger.warn('No rule id in action context — skipping');
       return {};
     }
-    await this.generator.generateForRule(ruleId);
+    await this.generator.generateForRule(ruleId, context.now ?? new Date());
     return {};
   }
 }

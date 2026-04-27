@@ -37,25 +37,35 @@ export class ScheduleScanner {
     this.appTimezone = process.env.APP_TIMEZONE ?? 'UTC';
   }
 
-  private currentHourInAppTimezone(): number {
+  private currentHourInAppTimezone(now: Date): number {
     const formatter = new Intl.DateTimeFormat('en-US', {
       hour: 'numeric',
       hour12: false,
       timeZone: this.appTimezone,
     });
-    const parts = formatter.formatToParts(new Date());
+    const parts = formatter.formatToParts(now);
     const hourPart = parts.find((p) => p.type === 'hour')?.value;
     const parsed = hourPart !== undefined ? Number.parseInt(hourPart, 10) : Number.NaN;
     // Intl returns "24" for midnight in some locales; normalise.
-    return Number.isFinite(parsed) ? parsed % 24 : new Date().getUTCHours();
+    return Number.isFinite(parsed) ? parsed % 24 : now.getUTCHours();
   }
 
-  async scan(): Promise<void> {
+  /**
+   * Run a scan pass.
+   *
+   * @param now Reference instant. Production cron passes `new Date()`; tests
+   *   pass a deterministic `asOf` so schedule_recurring rules fire as if at
+   *   that point in time. Threaded through every internal time-read so the
+   *   scan is reproducible end-to-end (hour-of-day check, day-of-week check,
+   *   per-rule date-condition SQL, synthetic event timestamp, downstream
+   *   action handlers via ActionContext.now).
+   */
+  async scan(now: Date = new Date()): Promise<void> {
     this.logger.log('Starting automation schedule scan');
 
     try {
-      await this.processDelayedEvents();
-      await this.processScheduleRules();
+      await this.processDelayedEvents(now);
+      await this.processScheduleRules(now);
     } catch (error) {
       this.logger.error('Schedule scan error', {
         error: error instanceof Error ? error.message : String(error),
@@ -69,13 +79,13 @@ export class ScheduleScanner {
    * Process automation_scheduled rows where scheduled_for <= now AND sent_at IS NULL.
    * These are delayed event-triggered automations.
    */
-  private async processDelayedEvents(): Promise<void> {
+  private async processDelayedEvents(now: Date): Promise<void> {
     const pending = await this.database.db
       .select()
       .from(automationScheduled)
       .where(withTenant(
         automationScheduled,
-        lte(automationScheduled.scheduledFor, new Date()),
+        lte(automationScheduled.scheduledFor, now),
         isNull(automationScheduled.sentAt),
       ));
 
@@ -112,6 +122,7 @@ export class ScheduleScanner {
         await this.queueService.enqueue(AUTOMATION_EXECUTION_QUEUE, {
           ruleId: rule.id,
           event,
+          now: now.toISOString(),
         });
         await this.markSent(scheduled.id);
       } catch (error) {
@@ -127,13 +138,13 @@ export class ScheduleScanner {
    * Evaluate schedule_once and schedule_recurring rules against live entity data.
    * For each matching entity, fire the rule's actions.
    */
-  private async processScheduleRules(): Promise<void> {
+  private async processScheduleRules(now: Date): Promise<void> {
     const rules = await this.ruleService.findActiveScheduleRules();
     if (rules.length === 0) return;
 
     for (const rule of rules) {
       try {
-        await this.evaluateScheduleRule(rule);
+        await this.evaluateScheduleRule(rule, now);
       } catch (error) {
         this.logger.error('Error evaluating schedule rule', {
           ruleId: rule.id,
@@ -143,7 +154,7 @@ export class ScheduleScanner {
     }
   }
 
-  private async evaluateScheduleRule(rule: AutomationRule): Promise<void> {
+  private async evaluateScheduleRule(rule: AutomationRule, now: Date): Promise<void> {
     if (!rule.scheduleEntityType) return;
 
     // Hour-of-day filter. The scanner runs hourly; rules fire only during the
@@ -151,14 +162,14 @@ export class ScheduleScanner {
     // so rules that predate the column keep firing once-daily at the historic
     // scanner time.
     const ruleHour = rule.scheduleHour ?? DEFAULT_SCHEDULE_HOUR;
-    if (this.currentHourInAppTimezone() !== ruleHour) return;
+    if (this.currentHourInAppTimezone(now) !== ruleHour) return;
 
     // Check day-of-week filter for recurring rules
     if (rule.scheduleDaysOfWeek && rule.scheduleDaysOfWeek.length > 0) {
       const formatter = new Intl.DateTimeFormat('en-US', { weekday: 'short', timeZone: this.appTimezone });
-      const dayName = formatter.format(new Date());
+      const dayName = formatter.format(now);
       const dayMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
-      const currentDay = dayMap[dayName] ?? new Date().getDay();
+      const currentDay = dayMap[dayName] ?? now.getDay();
 
       if (!rule.scheduleDaysOfWeek.includes(currentDay)) return;
     }
@@ -191,7 +202,7 @@ export class ScheduleScanner {
       baseConditions.push(...buildConditions(entityResolver.table, sqlConditions, Object.keys(entityResolver.fields)));
     }
 
-    const today = todayInTimezone(this.appTimezone);
+    const today = todayInTimezone(this.appTimezone, now);
     const targetDate = rule.triggerType === 'schedule_once' ? '9999-12-31' : today;
 
     // Query entities for each offset, dedup, and fire actions
@@ -210,6 +221,7 @@ export class ScheduleScanner {
           amount,
           rule.scheduleDateUnit as ScheduleUnit,
           rule.triggerType === 'schedule_once',
+          now,
         );
         if (dateCondition) conditions.push(dateCondition);
       }
@@ -241,13 +253,14 @@ export class ScheduleScanner {
         entityId: entity.id,
         actorId: null,
         correlationId: `schedule-${rule.id}-${entity.id}`,
-        occurredAt: new Date().toISOString(),
+        occurredAt: now.toISOString(),
         payload: entity as Record<string, unknown>,
       };
 
       await this.queueService.enqueue(AUTOMATION_EXECUTION_QUEUE, {
         ruleId: rule.id,
         event: syntheticEvent,
+        now: now.toISOString(),
       });
       await this.logSent(rule.id, rule.scheduleEntityType!, entity.id, targetDate);
     }
@@ -282,24 +295,30 @@ export class ScheduleScanner {
     amount: number,
     unit: ScheduleUnit,
     exactMatch: boolean,
+    now: Date,
   ) {
     const column = (table as Record<string, any>)[dateField];
     if (!column) return undefined;
 
     const interval = this.makeInterval(amount, unit);
     const tz = this.appTimezone;
+    // Parameterised reference instant — drives off `now` rather than SQL NOW()
+    // so deterministic-clock callers (tests, replays) compare against the
+    // injected `asOf`. Production passes the live clock and the behaviour
+    // matches the original `NOW() AT TIME ZONE tz` expression.
+    const reference = sql`(${now}::timestamptz AT TIME ZONE ${tz})`;
 
     if (operator === 'before') {
       if (exactMatch) {
-        return sql`DATE(${column} - ${interval}) = (NOW() AT TIME ZONE ${tz})::date`;
+        return sql`DATE(${column} - ${interval}) = ${reference}::date`;
       }
-      return sql`${column} - ${interval} <= (NOW() AT TIME ZONE ${tz})`;
+      return sql`${column} - ${interval} <= ${reference}`;
     }
 
     if (exactMatch) {
-      return sql`DATE(${column} + ${interval}) = (NOW() AT TIME ZONE ${tz})::date`;
+      return sql`DATE(${column} + ${interval}) = ${reference}::date`;
     }
-    return sql`${column} + ${interval} <= (NOW() AT TIME ZONE ${tz})`;
+    return sql`${column} + ${interval} <= ${reference}`;
   }
 
   private makeInterval(amount: number, unit: ScheduleUnit) {

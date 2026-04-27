@@ -161,7 +161,7 @@ These stories are the acceptance surface for V1. Each story has a stable ID (`US
 - Periods beyond the horizon are not pre-generated.
 
 **US-6.3 Generator is invokable on demand with an explicit `asOf`.** As a developer, I want to run the generator at a chosen date for testing, so time-dependent behaviour is verifiable.
-- `POST /admin/cron/generator/run` with `{ asOf: ISO8601 }` produces the same filings the scheduled cron would on that date.
+- `POST /admin/test/cron/generator/run` with `{ asOf: ISO8601 }` calls `ComplianceFilingsGeneratorService.generateAll(asOf)` and produces the same filings the scheduled cron would emit on that date.
 - The endpoint is registered only when `ENABLE_TEST_HOOKS=true`.
 
 **US-6.4 Generator triggered by registration / rule activation.** As a firm administrator, I want immediate filings when I activate a rule or register a new client, so I don't have to wait for the next nightly run.
@@ -188,16 +188,16 @@ These stories are the acceptance surface for V1. Each story has a stable ID (`US
 ### 8. Email notifications
 
 **US-8.1 Daily digest at 9am local time.** As a team member, I want a daily digest of my work, so I start the day with one email instead of many.
-- `POST /admin/cron/daily-digest/run` with `{ asOf: <date> }` produces one email per recipient with three sections: **Overdue** (period in past, status non-terminal), **Due this week** (next 7 days), **Due next week** (8–14 days).
+- `POST /admin/test/cron/scheduler/run` with `{ asOf: <date>T09:00:00Z }` fires the digest rule (its `scheduleHour` is 9) and produces one email per recipient with three sections: **Overdue** (period in past, status non-terminal), **Due this week** (next 7 days), **Due next week** (8–14 days).
 - Recipients: each user with non-terminal individual assignments, and each team's head for unassigned team filings.
 - A recipient with no qualifying filings receives no email.
-- The cron is registered with `cronForLocalHour(9, APP_TIMEZONE)` (asserted in a separate integration test).
+- The digest rule's `scheduleHour` is 9 in `APP_TIMEZONE` (asserted in a separate integration test against the seeded automation rule).
 
 **US-8.2 Overdue escalation T+0 / T+3 / T+7.** As a firm administrator, I want overdue filings to escalate on a fixed cadence, so slippage stays visible to leadership.
-- `POST /admin/cron/escalations/run` with `asOf: <due+0>` emits a T+0 notification to the assignee and team head.
+- `POST /admin/test/cron/scheduler/run` with `asOf: <due+0>` (matching the escalation rule's `scheduleHour`) emits a T+0 notification to the assignee and team head.
 - `asOf: <due+3>` adds the parent team's head as a recipient.
 - `asOf: <due+7>` adds the grandparent team's head.
-- Each level fires at most once per filing across the cadence (idempotent on re-runs).
+- Each level fires at most once per filing across the cadence (idempotent on re-runs — guarded by `automation_sent_log`).
 - `completed` and `cancelled` filings produce no escalation regardless of `asOf`.
 
 **US-8.3 Due-soon visibility.** As a team member, I want a heads-up for filings due in the next 7 days, so I can plan the week.

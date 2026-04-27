@@ -94,8 +94,10 @@ export class SendTaskDigestAction implements ActionHandler {
       correlationId: context.event?.correlationId ?? '',
     };
 
+    const now = context.now ?? new Date();
+
     for (const userId of recipients) {
-      const sections = await this.buildSections(userId);
+      const sections = await this.buildSections(userId, now);
       if (
         sections.overdue.length === 0 &&
         sections.today.length === 0 &&
@@ -132,8 +134,8 @@ export class SendTaskDigestAction implements ActionHandler {
     return {};
   }
 
-  private async buildSections(userId: string): Promise<DigestSections> {
-    const today = todayInTimezone(this.appTimezone);
+  private async buildSections(userId: string, now: Date): Promise<DigestSections> {
+    const today = todayInTimezone(this.appTimezone, now);
     const in7Days = this.addIsoDays(today, 7);
 
     const rows = await this.database.db

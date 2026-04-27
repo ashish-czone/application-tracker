@@ -152,7 +152,11 @@ export class AutomationsModule implements OnModuleInit {
     this.queueService.registerProcessor({
       name: AUTOMATION_EXECUTION_QUEUE,
       handler: async (data) => {
-        const { ruleId, event } = data as { ruleId: string; event: DomainEvent };
+        const { ruleId, event, now } = data as {
+          ruleId: string;
+          event: DomainEvent;
+          now?: string;
+        };
 
         const rule = await this.ruleService.findByIdOrFail(ruleId).catch(() => null);
         if (!rule || !rule.isActive) {
@@ -160,7 +164,11 @@ export class AutomationsModule implements OnModuleInit {
           return;
         }
 
-        await this.automationListener.executeActions(rule, event);
+        await this.automationListener.executeActions(
+          rule,
+          event,
+          now ? new Date(now) : undefined,
+        );
       },
     });
 

@@ -6,10 +6,12 @@ import { platformSystemSeedSources } from '@packages/app-shell/seeds';
 import { orgUnitsSystemSeedSources } from '@packages/org-units/seeds/system';
 import { tasksSystemSeedSources } from '@packages/tasks/seeds/system';
 import { notesSystemSeedSources } from '@packages/notes/seeds/system';
+import { ScheduleScanner } from '@packages/automations';
 import {
   complianceE2eAdminSeedSource,
   complianceSystemSeedSources,
 } from '@domains/compliance-api/seeds';
+import { ComplianceFilingsGeneratorService } from '@domains/compliance-api/automations/compliance-filings-generator.service';
 
 /**
  * Truncates every data table in the public schema and reruns the
@@ -38,6 +40,29 @@ export class TestHooksService {
       `reset complete: ${tablesTruncated} tables truncated, ${seedsRun} seeds run, ${durationMs}ms`,
     );
     return { durationMs, tablesTruncated, seedsRun };
+  }
+
+  /**
+   * Run the compliance generator across every active rule with `now=asOf`
+   * so the rolling-horizon math, the I6 forward-only filter, and the
+   * per-occurrence idempotency guard all evaluate against the injected
+   * instant. Returns the count of rows written.
+   */
+  async runGenerator(asOf: Date): Promise<{ created: number }> {
+    const generator = this.moduleRef.get(ComplianceFilingsGeneratorService, { strict: false });
+    return generator.generateAll(asOf);
+  }
+
+  /**
+   * Run the automations schedule scanner with `now=asOf`. Drives every
+   * schedule_recurring rule whose `scheduleHour` matches the asOf hour,
+   * with date-condition SQL parameterised against asOf rather than wall-
+   * clock NOW(). Used to assert escalation (T+0/T+3/T+7) and daily-digest
+   * stories deterministically.
+   */
+  async runScheduler(asOf: Date): Promise<void> {
+    const scanner = this.moduleRef.get(ScheduleScanner, { strict: false });
+    await scanner.scan(asOf);
   }
 
   private async truncateAllTables(): Promise<number> {
