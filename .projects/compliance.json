@@ -239,84 +239,84 @@
       "type": "feature",
       "parentId": null,
       "title": "Stream I24-I25 — Inactive-state UI",
-      "status": "todo",
+      "status": "done",
       "priority": "low",
       "createdAt": "2026-04-27",
-      "completedAt": null,
+      "completedAt": "2026-04-27",
       "acceptanceCriteria": "Banners on client/registration/rule detail pages reflect dormant/deactivated/deprecated state. Subtle marker on task rows whose source is inactive.",
-      "notes": ""
+      "notes": "PR #1067. Reusable InactiveStateBanner + InactiveSourceMarker primitives in domains/compliance/ui/components/badges/."
     },
     {
       "id": "T-016-1",
       "type": "task",
       "parentId": "F-016",
       "title": "Inactive-state banners on detail pages",
-      "status": "todo",
+      "status": "done",
       "priority": "low",
       "createdAt": "2026-04-27",
-      "completedAt": null,
+      "completedAt": "2026-04-27",
       "acceptanceCriteria": "Client/registration/rule detail pages show banner when entity is dormant/deactivated/deprecated.",
-      "notes": ""
+      "notes": "Wired on ClientDetailPage (status=dormant) and RuleEditPage (status=deprecated). Registrations don't have a standalone detail page in V1 — covered by T-016-2's row marker."
     },
     {
       "id": "T-016-2",
       "type": "task",
       "parentId": "F-016",
-      "title": "Inactive-source marker on task rows",
-      "status": "todo",
+      "title": "Inactive-source marker on filing/registration rows",
+      "status": "done",
       "priority": "low",
       "createdAt": "2026-04-27",
-      "completedAt": null,
-      "acceptanceCriteria": "Subtle marker on task rows whose source registration or rule is inactive.",
-      "notes": ""
+      "completedAt": "2026-04-27",
+      "acceptanceCriteria": "Subtle marker on filing rows / drawer / Laws-tab rows whose source client/registration/rule is inactive.",
+      "notes": "Filing type extended with optional clientStatus/ruleStatus/registrationDeactivatedAt. Laws tab hides Deactivate action on already-deactivated registrations."
     },
     {
       "id": "F-012",
       "type": "feature",
       "parentId": null,
       "title": "Stream J — Generator cadence",
-      "status": "todo",
+      "status": "done",
       "priority": "urgent",
       "createdAt": "2026-04-23",
-      "completedAt": null,
+      "completedAt": "2026-04-27",
       "acceptanceCriteria": "Filings auto-materialise 12 months ahead, daily cron + event-triggered top-ups.",
-      "notes": ""
+      "notes": "PR #1068. ComplianceFilingsGeneratorService extracts iteration; listener subscribes to rule.Status/Created, registration.Created, client.StatusChanged for J3-J5; daily cron via system seed."
     },
     {
       "id": "T-012-1",
       "type": "task",
       "parentId": "F-012",
       "title": "12-month horizon",
-      "status": "todo",
+      "status": "done",
       "priority": "high",
       "createdAt": "2026-04-23",
-      "completedAt": null,
+      "completedAt": "2026-04-27",
       "acceptanceCriteria": "Generator produces filings up to 12 months ahead per active registration.",
-      "notes": ""
+      "notes": "HORIZON_MONTHS bumped from 6 to 12 in both action and demo seed."
     },
     {
       "id": "T-012-2",
       "type": "task",
       "parentId": "F-012",
       "title": "Daily cron",
-      "status": "todo",
+      "status": "done",
       "priority": "high",
       "createdAt": "2026-04-23",
-      "completedAt": null,
+      "completedAt": "2026-04-27",
       "acceptanceCriteria": "Cron fires daily at low-traffic hour (cronForLocalHour); idempotent across runs.",
-      "notes": ""
+      "notes": "System-seeded automation rule: schedule_recurring on compliance-rules @ 2am APP_TIMEZONE with status=active condition."
     },
     {
       "id": "T-012-3",
       "type": "task",
       "parentId": "F-012",
       "title": "Event-triggered top-ups",
-      "status": "todo",
+      "status": "done",
       "priority": "medium",
       "createdAt": "2026-04-23",
-      "completedAt": null,
-      "acceptanceCriteria": "Generator runs on registration.Created and rule.Updated to backfill missing periods immediately.",
-      "notes": ""
+      "completedAt": "2026-04-27",
+      "acceptanceCriteria": "Generator runs on rule activation, registration creation, and client reactivation to backfill missing periods immediately.",
+      "notes": "ComplianceFilingsGeneratorListener routes 4 events: compliance-rules.Created/StatusChanged (J3), client-registrations.Created (J4), clients.StatusChanged (J5). Idempotency keeps overlap with cron safe."
     },
     {
       "id": "F-013",
