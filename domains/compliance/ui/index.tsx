@@ -138,7 +138,7 @@ const routes: DomainRouteObject[] = [
   { path: '/laws', element: <LawsLibraryPage />, permission: 'laws.read', bareLayout: true },
   { path: '/reports', element: <ReportsPage />, permission: 'reports.read', bareLayout: true },
   { path: '/compliance-users', element: <UsersPage />, permission: 'users.read', bareLayout: true },
-  { path: '/compliance-roles', element: <RolesEditorPage />, permission: 'rbac.roles-read', bareLayout: true },
+  { path: '/compliance-roles', element: <RolesEditorPage />, permission: 'rbac.roles.read', bareLayout: true },
   { path: '/compliance-settings', element: <SettingsPage />, permission: 'settings.read', bareLayout: true },
   { path: '/admin-settings', element: <AdminSettingsPage />, permission: 'settings.manage', bareLayout: true },
   { path: '/organization', element: <OrganizationPage />, permission: 'organizations.update', bareLayout: true },
@@ -160,7 +160,7 @@ const menuItems: MenuItem[] = [
     position: 'after',
     children: [
       { path: '/compliance-users', label: 'Users', icon: Users, permission: 'users.read' },
-      { path: '/compliance-roles', label: 'Roles', icon: Shield, permission: 'rbac.roles-read' },
+      { path: '/compliance-roles', label: 'Roles', icon: Shield, permission: 'rbac.roles.read' },
       { path: '/global-sets', label: 'Global Sets', icon: Layers, permission: 'taxonomy.categories.read' },
       { path: '/compliance-settings', label: 'Settings', icon: Settings, permission: 'settings.read' },
       { path: '/organization', label: 'Organization', icon: Building2, permission: 'organizations.update' },
