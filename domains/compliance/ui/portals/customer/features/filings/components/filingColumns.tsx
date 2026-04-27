@@ -7,7 +7,7 @@ import {
   InactiveSourceMarker,
   type InactiveKind,
 } from '../../../../../components';
-import type { FilingRow } from '../data/filingTypes';
+import type { FilingRow } from '../types';
 
 function inactiveKindForFiling(f: FilingRow): InactiveKind | null {
   if (f.clientStatus === 'dormant') return 'dormant';

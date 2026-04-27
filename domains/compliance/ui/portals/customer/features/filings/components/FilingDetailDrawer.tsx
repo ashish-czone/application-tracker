@@ -42,7 +42,7 @@ import {
   InactiveSourceMarker,
   type InactiveKind,
 } from '../../../../../components';
-import type { FilingRow } from '../data/filingTypes';
+import type { FilingRow } from '../types';
 import { MOCK_HANDLERS } from '../../console-preview/mockData';
 import type { Filing, Handler } from '../../../../../shared/types';
 

@@ -18,7 +18,7 @@ import {
   type KanbanCardData,
 } from '@packages/ui';
 import { ComplianceCalendar } from '../../../../shared';
-import type { FilingRow } from './data/filingTypes';
+import type { FilingRow } from './types';
 import { FilingDetailDrawer } from './components/FilingDetailDrawer';
 import {
   BulkReassignDialog,

@@ -1,6 +1,6 @@
 import { AvatarBadge } from '@packages/ui';
 import { OrdinalDate, JurisdictionTag } from '../../../../../components';
-import type { FilingRow } from '../data/filingTypes';
+import type { FilingRow } from '../types';
 
 export interface FilingKanbanCardProps {
   filing: FilingRow;
