@@ -4,7 +4,10 @@ import { orderableColumns } from '@packages/orderable/schema';
 import { softDeleteColumns } from '@packages/soft-delete';
 import { features } from './features';
 
-export const tasks = pgTable('tasks', {
+// SQL table is `project_tasks` to avoid colliding with @packages/tasks
+// (a platform addon that owns the unprefixed `tasks` table). The TS
+// symbol stays `tasks` so service/controller/UI code reads naturally.
+export const tasks = pgTable('project_tasks', {
   id: text('id').primaryKey().$defaultFn(() => randomUUID()),
   featureId: text('feature_id').notNull().references(() => features.id, { onDelete: 'cascade' }),
   title: text('title').notNull(),
@@ -22,9 +25,9 @@ export const tasks = pgTable('tasks', {
   ...orderableColumns(),
   ...softDeleteColumns(),
 }, (table) => [
-  index('tasks_feature_id_idx').on(table.featureId),
-  index('tasks_assignee_id_idx').on(table.assigneeId),
-  index('tasks_status_idx').on(table.status),
-  index('tasks_due_date_idx').on(table.dueDate),
-  index('tasks_feature_sort_idx').on(table.featureId, table.sortOrder),
+  index('project_tasks_feature_id_idx').on(table.featureId),
+  index('project_tasks_assignee_id_idx').on(table.assigneeId),
+  index('project_tasks_status_idx').on(table.status),
+  index('project_tasks_due_date_idx').on(table.dueDate),
+  index('project_tasks_feature_sort_idx').on(table.featureId, table.sortOrder),
 ]);

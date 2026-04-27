@@ -1,5 +1,5 @@
 {
-  "id": "898efa2b-417c-4a9b-be23-eeda4b92b5a0",
+  "id": "9d9f0f26-95e3-4c1e-86ba-7d441d6b02cf",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -534,8 +534,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.tasks": {
-      "name": "tasks",
+    "public.project_tasks": {
+      "name": "project_tasks",
       "schema": "",
       "columns": {
         "id": {
@@ -627,8 +627,8 @@
         }
       },
       "indexes": {
-        "tasks_feature_id_idx": {
-          "name": "tasks_feature_id_idx",
+        "project_tasks_feature_id_idx": {
+          "name": "project_tasks_feature_id_idx",
           "columns": [
             {
               "expression": "feature_id",
@@ -642,8 +642,8 @@
           "method": "btree",
           "with": {}
         },
-        "tasks_assignee_id_idx": {
-          "name": "tasks_assignee_id_idx",
+        "project_tasks_assignee_id_idx": {
+          "name": "project_tasks_assignee_id_idx",
           "columns": [
             {
               "expression": "assignee_id",
@@ -657,8 +657,8 @@
           "method": "btree",
           "with": {}
         },
-        "tasks_status_idx": {
-          "name": "tasks_status_idx",
+        "project_tasks_status_idx": {
+          "name": "project_tasks_status_idx",
           "columns": [
             {
               "expression": "status",
@@ -672,8 +672,8 @@
           "method": "btree",
           "with": {}
         },
-        "tasks_due_date_idx": {
-          "name": "tasks_due_date_idx",
+        "project_tasks_due_date_idx": {
+          "name": "project_tasks_due_date_idx",
           "columns": [
             {
               "expression": "due_date",
@@ -687,8 +687,8 @@
           "method": "btree",
           "with": {}
         },
-        "tasks_feature_sort_idx": {
-          "name": "tasks_feature_sort_idx",
+        "project_tasks_feature_sort_idx": {
+          "name": "project_tasks_feature_sort_idx",
           "columns": [
             {
               "expression": "feature_id",
@@ -710,9 +710,9 @@
         }
       },
       "foreignKeys": {
-        "tasks_feature_id_features_id_fk": {
-          "name": "tasks_feature_id_features_id_fk",
-          "tableFrom": "tasks",
+        "project_tasks_feature_id_features_id_fk": {
+          "name": "project_tasks_feature_id_features_id_fk",
+          "tableFrom": "project_tasks",
           "tableTo": "features",
           "columnsFrom": [
             "feature_id"
