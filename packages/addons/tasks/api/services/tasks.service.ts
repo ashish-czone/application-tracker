@@ -5,6 +5,11 @@ import type { DataAccessContext } from '@packages/rbac';
 import { tasks } from '../schema/tasks';
 import { applyCompletedAt } from '../tasks.config';
 import type { CreateTaskDto, UpdateTaskDto } from '../dto/tasks.dto';
+import {
+  TaskActionsService,
+  type TaskActionsUser,
+  type TaskRowForActions,
+} from './task-actions.service';
 
 const TERMINAL_STATUSES = ['completed', 'cancelled'];
 
@@ -13,14 +18,33 @@ export class TasksService {
   constructor(
     @Inject('ENTITY_SERVICE_tasks') private readonly entityService: EntityService,
     private readonly database: DatabaseService,
+    private readonly taskActions: TaskActionsService,
   ) {}
 
-  list(query: BaseListQuery, accessCtx?: DataAccessContext) {
-    return this.entityService.list(query, accessCtx);
+  async list(query: BaseListQuery, accessCtx?: DataAccessContext, user?: TaskActionsUser) {
+    const page = await this.entityService.list(query, accessCtx);
+    if (!user) return page;
+    const annotated = await this.taskActions.computeAllowedActionsForMany(
+      page.data as unknown as TaskRowForActions[],
+      user,
+    );
+    return {
+      ...page,
+      data: page.data.map((row) => ({
+        ...row,
+        allowedActions: annotated.get((row as { id: string }).id) ?? [],
+      })),
+    };
   }
 
-  findOne(id: string, accessCtx?: DataAccessContext) {
-    return this.entityService.findOneOrFail(id, accessCtx);
+  async findOne(id: string, accessCtx?: DataAccessContext, user?: TaskActionsUser) {
+    const row = await this.entityService.findOneOrFail(id, accessCtx);
+    if (!user) return row;
+    const allowedActions = await this.taskActions.computeAllowedActions(
+      row as unknown as TaskRowForActions,
+      user,
+    );
+    return { ...row, allowedActions };
   }
 
   create(input: CreateTaskDto, actorId: string) {
