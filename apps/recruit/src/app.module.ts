@@ -9,6 +9,7 @@ import { DocumentTemplatesModule } from '@packages/document-templates';
 import { EavAttributesModule } from '@packages/eav-attributes';
 import { EntityRelationsModule } from '@packages/entity-relations';
 import { EvaluationsModule } from '@packages/evaluations';
+import { HierarchyModule } from '@packages/hierarchy';
 import { NotesModule } from '@packages/notes';
 import { OAuthModule } from '@packages/oauth';
 import { OrgUnitsModule } from './modules/org-units/org-units.module';
@@ -52,6 +53,7 @@ const tenancyImports = process.env.TENANCY_MODE
       EavAttributesModule,
       EntityRelationsModule,
       EvaluationsModule,
+      HierarchyModule,
       NotesModule,
       OAuthModule.register(),
       OrgUnitsModule,

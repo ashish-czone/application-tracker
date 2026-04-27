@@ -1,6 +1,7 @@
 import { Module, type OnModuleInit, type OnModuleDestroy } from '@nestjs/common';
 import { DatabaseService, eq, and, isNull } from '@packages/database';
 import { EntityEngineModule } from '@packages/entity-engine';
+import { HierarchyModule } from '@packages/hierarchy';
 import { PagesModule } from '../pages/pages.module';
 import { MENU_CONFIG } from './menus.config';
 import { menuItemConfig, registerMenuItemDepthLookup } from './menu-items.config';
@@ -22,6 +23,7 @@ import { MenusPublicService } from './services/menus-public.service';
   imports: [
     EntityEngineModule.forEntity(MENU_CONFIG),
     EntityEngineModule.forEntity(menuItemConfig),
+    HierarchyModule,
     PagesModule,
   ],
   controllers: [MenusController, MenuItemsController, MenusPublicController],

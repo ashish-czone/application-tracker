@@ -3,7 +3,6 @@ import { ModuleRef } from '@nestjs/core';
 import { AuditRegistryService } from '@packages/audit';
 import { ActionRegistry } from '@packages/automation-contracts';
 import { RbacService } from '@packages/rbac';
-import { TasksModule } from '@packages/tasks';
 import { USERS_POSITIONS_READER } from '@packages/users';
 
 import { registerComplianceAudit } from './audit/register-compliance-audit';
@@ -27,7 +26,6 @@ import { COMPLIANCE_PERMISSION_MANIFESTS } from './permissions';
 
 @Module({
   imports: [
-    TasksModule,
     LawsModule,
     ClientsModule,
     ClientContactsModule,

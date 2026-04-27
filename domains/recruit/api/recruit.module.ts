@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { TasksModule } from '@packages/tasks';
 
 import { SharedModule } from './shared/shared.module';
 
@@ -36,8 +35,6 @@ import { OffersModule } from './offers/offers.module';
     InterviewsModule,
 
     OffersModule,
-
-    TasksModule,
   ],
 })
 export class RecruitDomainModule {}

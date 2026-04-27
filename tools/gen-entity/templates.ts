@@ -425,16 +425,34 @@ ${hasWorkflow ? `
 
 export function moduleTemplate(ctx: GeneratorContext): string {
   const { entitySlug, pluralPascal, configIdent } = ctx;
+  const needsTaxonomy = ctx.tagFields.length > 0;
+  const needsMultiValue = ctx.multiValueFields.length > 0;
+  const extraImportLines = [
+    needsTaxonomy ? `import { TaxonomyModule } from '@packages/taxonomy';` : '',
+    needsMultiValue ? `import { EntityRelationsModule } from '@packages/entity-relations';` : '',
+  ]
+    .filter(Boolean)
+    .join('\n');
+  const extraModuleEntries = [
+    needsTaxonomy ? 'TaxonomyModule' : '',
+    needsMultiValue ? 'EntityRelationsModule' : '',
+  ]
+    .filter(Boolean)
+    .join(', ');
+  const importsLine = extraModuleEntries
+    ? `imports: [EntityEngineModule.forEntity(${configIdent}), ${extraModuleEntries}],`
+    : `imports: [EntityEngineModule.forEntity(${configIdent})],`;
+
   return `import { Module } from '@nestjs/common';
 import { EntityEngineModule } from '@packages/entity-engine';
-import { ${configIdent} } from './${entitySlug}.config';
+${extraImportLines ? `${extraImportLines}\n` : ''}import { ${configIdent} } from './${entitySlug}.config';
 import { ${pluralPascal}Controller } from './${entitySlug}.controller';
 import { ${pluralPascal}Service } from './${entitySlug}.service';
 
 ${HEADER(entitySlug, `${entitySlug}.service.ts (composition) or ${entitySlug}.controller.ts (routes)`)}
 
 @Module({
-  imports: [EntityEngineModule.forEntity(${configIdent})],
+  ${importsLine}
   controllers: [${pluralPascal}Controller],
   providers: [${pluralPascal}Service],
   exports: [${pluralPascal}Service],

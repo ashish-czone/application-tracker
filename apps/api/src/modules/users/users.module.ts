@@ -4,6 +4,7 @@ import { users, isNull } from '@packages/database';
 import { ContactResolverRegistry } from '@packages/notifications';
 import { TasksModule } from '@packages/tasks';
 import { OrgUnitsModule } from '../org-units/org-units.module';
+import { OrgUnitService } from '@packages/org-units';
 import {
   USERS_CONFIG,
   UsersService,
@@ -19,7 +20,14 @@ import { UniqueCheckService } from '../shared/services/unique-check.service';
  * UsersService owns the full write path; no per-app handler injection.
  */
 @Module({
-  imports: [EntityEngineModule.forEntity(USERS_CONFIG), TasksModule, OrgUnitsModule],
+  imports: [
+    EntityEngineModule.forEntity(USERS_CONFIG),
+    OrgUnitsModule,
+    TasksModule.forRoot({
+      imports: [OrgUnitsModule],
+      teamMembersReader: { useExisting: OrgUnitService },
+    }),
+  ],
   controllers: [UsersController],
   providers: [{ provide: UsersService, useClass: AppUsersService }],
   exports: [UsersService],
