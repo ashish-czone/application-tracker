@@ -14,54 +14,104 @@ Frontend stack, component rules, form behavior, and UX conventions. Core fronten
 
 ## Frontend Architecture
 
-### Shared package: `packages/core/ui`
+UI is layered the same way the backend is. Each layer exists because it has a distinct dependency boundary — collapsing layers forces something to live in the wrong place.
 
-Reusable toolkit — components, hooks, services, types. Nothing imports from `apps/`.
-
-```
-packages/core/ui/
- ├ components/
- │   ├ form/         — FormInput, FormSelect, FormDatePicker, etc.
- │   ├ feedback/     — Toast, Alert
- │   ├ layout/       — Card, Stack
- │   └ data-grid/    — DataGrid, Toolbar, Pagination
- ├ hooks/            — useDebounce, useDataGridParams
- ├ services/         — apiClient, tokenStore
- └ types.ts          — PaginatedResponse, ApiError
-```
-
-### Feature UI packages: `packages/*-ui`
-
-Reusable pages, components, hooks for their backend package. Domain-agnostic — work with any entity type.
+### Five layers, top of the stack downward
 
 ```
-packages/<feature>-ui/
- ├ components/  ├ pages/  ├ hooks/  ├ helpers/  └ index.ts
+apps/<app>-web/src           composition + screens + routes + portals + cross-domain glue
+        ▲ depends on
+domains/<x>/ui               entity-bound components, EntityUIConfig registrations, domain hooks
+        ▲ depends on
+packages/addons/*-ui         opt-in feature plugins (notes, attachments, …) registered via providers
+        ▲ depends on
+packages/platform/*-ui       generic data widgets (entity-engine pages, generic forms, layout primitives)
+        ▲ depends on
+packages/core/ui             pure UI primitives — no domain or platform knowledge
 ```
 
-Examples: `entity-engine-ui` (EntityListPage, useEntityLayout), `eav-attributes-ui` (LayoutCanvas, DynamicField)
+Each layer ships only the artifacts whose dependencies it can actually own. Drop down to a wrong layer and you create either duplication (in apps) or forced inheritance (in domains).
 
-May import from `packages/core/ui` and their backend package types. Never from `apps/`.
+### What belongs where
 
-### App structure: `apps/web/src/`
+| Artifact | Layer | Why |
+|---|---|---|
+| Pure primitives (Button, Avatar, Modal) | `packages/core/ui` | No business knowledge |
+| Generic data widgets (DataGrid, EntityListPage, EntityDetailPage, generic Form-from-schema) | `packages/platform/*-ui` | Entity-engine-aware, but not entity-specific |
+| Opt-in feature plugins (NotesTab, AttachmentsPanel) | `packages/addons/*-ui` | Cross-app, registered via provider, opt-in per app |
+| EntityUIConfig registrations (presentation, fieldUI, actionUI, detailPlugins) | `domains/<x>/ui/entity-configs/` | One source of truth per entity, domain-wide |
+| Entity-bound components (Resume tab on candidate, custom inputs, status badge for one entity) | `domains/<x>/ui/components/<entity>/` | Tied to exactly one entity; reusable across every app that includes the domain |
+| Entity-bound data hooks (`useCandidateById`) | `domains/<x>/ui/hooks/` | Same — domain owns the data shape |
+| Screens / pages (with layout, tabs, header, navigation) | `apps/<app>-web/src/portals/<portal>/features/` | Routing-aware; each app composes its own |
+| Cross-domain widgets (compliance status panel on candidate) | `apps/<app>-web/src/cross-domain/` | Spans domains — only meaningful where multiple domains are composed |
+| Routes, navigation, portals, layouts | `apps/<app>-web/src/portals/<portal>/` | App owns its navigation map and audiences |
+
+### Domain UI shape
+
+Domains ship **components**, never **pages**. The hard rule:
 
 ```
-apps/web/src/
- ├ shared/                     — Cross-cutting (auth components, hooks, services)
+domains/<x>/ui/
+ ├ entity-configs/<entity>.ui.ts      — EntityUIConfig export (presentation, fieldUI, actionUI, detailPlugins, listViews)
+ ├ components/<entity>/...            — entity-bound: tab plugins, custom inputs, status badges, formatters
+ ├ hooks/                             — entity-aware data hooks (useCandidateById, …)
+ ├ services.ts                        — typed wrappers over the entity-engine API
+ ├ types/                             — domain types
+ └ index.ts                           — exports for apps to consume
+```
+
+Forbidden in `domains/<x>/ui`:
+
+- Pages, screens, route tables, portals, layouts, navigation menus
+- Calls to `useParams()` or `useNavigate()` (anything route-aware)
+- Imports from another domain's UI (cross-domain composition belongs in apps)
+- `lib/`, `entities/` folder names (legacy — the canonical names are `services.ts` / `entity-configs/`)
+
+### Why domain components don't get tied to routes
+
+The two principles that keep them route-free:
+
+1. **Identity comes via props, not URL.** A domain component takes its target as a prop:
+   - ✅ `<CandidateDetail candidateId={id} onClose={fn} />` — the host (a route, a modal, a slide-over) supplies the id
+   - ❌ `<CandidateDetailPage />` reading `useParams()` — that's a page, lives in apps
+
+2. **Components fetch their own data via hooks.** No prop-drilling of data shapes:
+   - ✅ `<CandidateDetail candidateId={id} />` internally calls `useCandidateById(id)` (TanStack Query → shared cache, no double-fetch)
+   - Apps don't need to know the candidate's columns
+   - Pure presentational primitives (badges, formatters) stay prop-driven; entity-aware components are hook-driven
+
+This is what makes the same domain genuinely composable across multiple apps with different navigation, layouts, and audiences.
+
+### App structure
+
+```
+apps/<app>-web/src/
  ├ portals/
- │   └ customer/               — Single portal
- │       ├ features/           — Feature-based grouping (users/, orders/, etc.)
+ │   └ <portal-name>/                 — one folder per audience (recruiter, admin, customer, public, …)
+ │       ├ features/                  — one folder per navigation unit (entity feature OR custom screen)
  │       │   └ <feature>/
- │       │       ├ components/ ├ hooks/ ├ services/ ├ types/ └ pages/
- │       ├ routes.tsx
- │       └ menu.ts
+ │       │       ├ Page.tsx           — the screen (routing-aware)
+ │       │       ├ components/        — feature-only components (no cross-feature imports)
+ │       │       ├ hooks/             — feature-only hooks
+ │       │       └ services.ts        — feature-only API helpers
+ │       ├ shared/                    — cross-feature inside this portal
+ │       └ routes.tsx                 — portal route table
+ ├ cross-domain/                      — widgets/plugins that span domains, registered with the entity-engine provider
+ ├ shared/                            — cross-portal app-level (rare)
+ ├ globals.css
+ └ main.tsx                           — composition root: wires WebShell + domains + addons + plugins
 ```
 
-### Dependency direction
+### Dependency direction (enforced)
 
 ```
-packages/core/ui  <-  packages/*-ui  <-  shared/  <-  portals/customer/features/
+packages/core/ui      ←  packages/{platform,addons}/*-ui  ←  domains/<x>/ui  ←  apps/<app>-web/src
 ```
+
+- `packages/*` cannot import from `domains/*` or `apps/*`.
+- `domains/<x>/ui` cannot import from another `domains/<y>/ui` — cross-domain composition belongs in apps.
+- `domains/<x>/ui` cannot import from `apps/*`.
+- Inside an app: feature folders cannot import from each other. Cross-feature reuse goes through portal-level `shared/` (or, rarely, app-level `shared/`). Never through entity-engine — entity-engine is for cross-entity *data*, not cross-feature *UI sharing*.
 
 ---
 

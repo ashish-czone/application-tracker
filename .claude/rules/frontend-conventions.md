@@ -14,11 +14,14 @@ Frontend code does NOT use barrel exports (`index.ts`). Use direct file imports 
 
 ### Architecture layers
 ```
-packages/core/ui  <-  packages/{platform,addons}/*-ui  <-  shared/  <-  portals/customer/features/
+packages/core/ui  ←  packages/{platform,addons}/*-ui  ←  domains/<x>/ui  ←  apps/<app>-web/src
 ```
-- Single portal (`customer`), feature-based grouping under `features/`.
-- `shared/` for cross-cutting concerns (auth, notifications). Full-stack folders with components, hooks, services.
-- Domain types live in the feature that owns them (`features/users/types/`), not shared.
+- **`packages/core/ui`** — pure primitives. **`packages/{platform,addons}/*-ui`** — generic data widgets and opt-in plugins.
+- **`domains/<x>/ui`** ships components, never pages. Allowed: `entity-configs/<entity>.ui.ts`, `components/<entity>/...`, `hooks/`, `services.ts`, `types/`. Forbidden: pages, routes, portals, layouts, navigation, `useParams`/`useNavigate`, imports from another domain or from `apps/*`.
+- **`apps/<app>-web/src`** owns routing, screens, portals, cross-domain composition. Layout: `portals/<portal>/features/<feature>/`, `cross-domain/`, `shared/`, `main.tsx`.
+- **Domain components take identity via props (`<CandidateDetail candidateId={id} />`), fetch data via hooks** — never via URL. That's how the same domain composes into multiple apps with different navigation.
+- **Inside an app: features cannot import from each other.** Cross-feature reuse goes through portal-level `shared/`. Entity-engine is for cross-entity data, not cross-feature UI sharing.
+- Full reference: `PROMPT-UI.md`.
 
 ### Routing
 - Tabs as nested routes (`/candidates/123/overview`), not query params.
