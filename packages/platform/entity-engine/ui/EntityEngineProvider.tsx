@@ -2,7 +2,8 @@ import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { createEntityApi } from './helpers/createEntityApi';
 import { createEntityHooks, type EntityHooks } from './helpers/createEntityHooks';
-import type { EntityRegistryEntry, EntityApi, EntityUIConfig, EntityDetailPlugin, DetailTabPlugin, ListViewPlugin, RightSidebarPanel, HeaderPlugin, ColumnRendererRegistration } from './types';
+import { buildEntityUIIndex } from './helpers/buildEntityUIIndex';
+import type { EntityRegistryEntry, EntityApi, EntityUIConfig, EntityDetailPlugin, DetailTabPlugin, ListViewPlugin, RightSidebarPanel, HeaderPlugin, ColumnRendererRegistration, EntityUIPresentation, FieldUI, ActionUI } from './types';
 
 interface EntityEngineContextValue {
   /** All registered entities from the backend */
@@ -29,6 +30,12 @@ interface EntityEngineContextValue {
   getHeaderPlugins: (entityType: string) => HeaderPlugin[];
   /** Get a named column renderer registration */
   getColumnRenderer: (name: string) => ColumnRendererRegistration | undefined;
+  /** Get entity-level presentation hints (icon, navGroup, createMode, ...) sourced from the UI configs registered on the provider. */
+  getEntityPresentation: (entityType: string) => EntityUIPresentation | undefined;
+  /** Get per-field UI overrides (uiType, cellRenderer) sourced from the UI configs registered on the provider. */
+  getFieldUI: (entityType: string, fieldKey: string) => FieldUI | undefined;
+  /** Get per-action UI overrides (label, icon, variant) sourced from the UI configs registered on the provider. */
+  getActionUI: (entityType: string, actionKey: string) => ActionUI | undefined;
   /** Raw API client (for layout and other non-entity endpoints) */
   apiFn: EntityEngineProviderProps['apiFn'];
 }
@@ -134,6 +141,9 @@ export function EntityEngineProvider({ children, apiFn, entityUIConfigs = [], de
     return map;
   }, [entityUIConfigs]);
 
+  // Index presentation/fieldUI/actionUI from UI configs (replaces api-side EntityConfig.ui block, FieldMeta.uiType/cellRenderer, EntityAction.label/icon/variant).
+  const uiIndex = useMemo(() => buildEntityUIIndex(entityUIConfigs), [entityUIConfigs]);
+
   const value = useMemo<EntityEngineContextValue>(() => ({
     entities,
     isLoading,
@@ -159,8 +169,11 @@ export function EntityEngineProvider({ children, apiFn, entityUIConfigs = [], de
       return [...globalHeaderPlugins, ...entityPlugins].sort((a, b) => a.order - b.order);
     },
     getColumnRenderer: (name: string) => columnRenderers[name],
+    getEntityPresentation: (entityType: string) => uiIndex.presentation.get(entityType),
+    getFieldUI: (entityType: string, fieldKey: string) => uiIndex.fieldUI.get(entityType)?.get(fieldKey),
+    getActionUI: (entityType: string, actionKey: string) => uiIndex.actionUI.get(entityType)?.get(actionKey),
     apiFn,
-  }), [entities, isLoading, apiMap, hooksMap, pluginMap, tabMap, listViewMap, sidebarPanelMap, headerPluginMap, globalDetailTabs, globalListViews, globalSidebarPanels, globalHeaderPlugins, columnRenderers, apiFn]);
+  }), [entities, isLoading, apiMap, hooksMap, pluginMap, tabMap, listViewMap, sidebarPanelMap, headerPluginMap, uiIndex, globalDetailTabs, globalListViews, globalSidebarPanels, globalHeaderPlugins, columnRenderers, apiFn]);
 
   if (isLoading) return null;
 
