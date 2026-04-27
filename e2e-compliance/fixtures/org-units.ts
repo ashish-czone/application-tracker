@@ -76,3 +76,36 @@ export async function getOrgPosition(name: string): Promise<OrgPosition> {
   }
   return position;
 }
+
+/** Read the membership rows of a unit, including the position resolved
+ *  via `org_unit_members.position_id`. Used by US-4.3's named test to
+ *  confirm the position assigned at add-time round-trips through the
+ *  API. */
+export async function listOrgUnitMembers(
+  unitId: string,
+): Promise<Array<{ userId: string; userName: string; positionId: string | null; positionName: string | null }>> {
+  const result = await apiClient.get<Array<{
+    userId: string;
+    userName: string;
+    positionId: string | null;
+    positionName: string | null;
+  }>>(`/org-units/${unitId}/members`);
+  return result;
+}
+
+/** Create a new position via the platform API. Tests for US-4.4
+ *  customise the canonical seed list at runtime. */
+export async function createOrgPosition(
+  name: string,
+  sortOrder: number,
+): Promise<OrgPosition> {
+  return apiClient.post<OrgPosition>('/org-positions', { name, sortOrder });
+}
+
+/** Rename / reorder an existing position. */
+export async function updateOrgPosition(
+  id: string,
+  patch: Partial<{ name: string; sortOrder: number }>,
+): Promise<OrgPosition> {
+  return apiClient.patch<OrgPosition>(`/org-positions/${id}`, patch);
+}
