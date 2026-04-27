@@ -10,6 +10,7 @@ export const CreateProjectSchema = createInsertSchema(projects).omit({
   updatedAt: true,
   deletedAt: true,
   deletedBy: true,
+  createdBy: true,
 });
 
 export const UpdateProjectSchema = CreateProjectSchema.partial();

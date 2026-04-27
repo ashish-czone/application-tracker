@@ -10,6 +10,7 @@ export const CreateMilestoneSchema = createInsertSchema(milestones).omit({
   updatedAt: true,
   deletedAt: true,
   deletedBy: true,
+  createdBy: true,
 });
 
 export const UpdateMilestoneSchema = CreateMilestoneSchema.partial();

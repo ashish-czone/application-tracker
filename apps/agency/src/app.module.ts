@@ -7,6 +7,7 @@ import { TaxonomyModule } from '@packages/taxonomy';
 import { agencyBackend } from '@domains/agency-api';
 import { projectsBackend } from '@domains/projects-api';
 import { UsersModule } from './modules/users/users.module';
+import { TestHooksModule } from './modules/test-hooks/test-hooks.module';
 
 @Module(
   createAppModule({
@@ -18,6 +19,7 @@ import { UsersModule } from './modules/users/users.module';
       HierarchyModule,
       OrderableModule,
       TaxonomyModule,
+      TestHooksModule.register(),
     ],
   }),
 )

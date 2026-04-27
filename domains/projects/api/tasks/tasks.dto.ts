@@ -10,6 +10,7 @@ export const CreateTaskSchema = createInsertSchema(tasks).omit({
   updatedAt: true,
   deletedAt: true,
   deletedBy: true,
+  createdBy: true,
 });
 
 export const UpdateTaskSchema = CreateTaskSchema.partial();

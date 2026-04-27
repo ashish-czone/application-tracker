@@ -10,6 +10,7 @@ export const CreateFeatureSchema = createInsertSchema(features).omit({
   updatedAt: true,
   deletedAt: true,
   deletedBy: true,
+  createdBy: true,
 });
 
 export const UpdateFeatureSchema = CreateFeatureSchema.partial();
