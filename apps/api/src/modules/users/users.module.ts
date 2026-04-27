@@ -11,6 +11,7 @@ import {
   UsersController,
 } from '@packages/users';
 import { AppUsersService } from './app-users.service';
+import { SharedModule } from '../shared/shared.module';
 import { UniqueCheckService } from '../shared/services/unique-check.service';
 
 /**
@@ -23,6 +24,7 @@ import { UniqueCheckService } from '../shared/services/unique-check.service';
   imports: [
     EntityEngineModule.forEntity(USERS_CONFIG),
     OrgUnitsModule,
+    SharedModule,
     TasksModule.forRoot({
       imports: [OrgUnitsModule],
       teamMembersReader: { useExisting: OrgUnitService },

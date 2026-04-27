@@ -1,4 +1,4 @@
-import { Global, Module, type DynamicModule, type FactoryProvider, type InjectionToken } from '@nestjs/common';
+import { Module, type DynamicModule, type FactoryProvider, type InjectionToken } from '@nestjs/common';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { DebugProfilerInterceptor } from './debug-profiler.interceptor';
 import { ProfilingContextStore } from './profiling-context';
@@ -11,7 +11,6 @@ export interface DebugProfilerAsyncOptions {
   inject?: FactoryProvider['inject'];
 }
 
-@Global()
 @Module({})
 export class DebugProfilerModule {
   static forRootAsync(asyncOptions: DebugProfilerAsyncOptions): DynamicModule {

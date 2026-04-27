@@ -1,10 +1,10 @@
-import { Global, Module, type OnModuleInit } from '@nestjs/common';
+import { Module, type OnModuleInit } from '@nestjs/common';
 import { EventRegistryService } from '@packages/events';
 import { EntityEngineModule } from '@packages/entity-engine';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { RbacService } from '@packages/rbac';
 import { QueueService } from '@packages/queue';
-import { ProductResolverRegistry } from '@packages/orders-billing';
+import { OrdersBillingModule, ProductResolverRegistry } from '@packages/orders-billing';
 import { cronForLocalHour } from '@packages/common';
 import { SUBSCRIPTION_PLANS_CONFIG } from './subscription-plans.config';
 import { SUBSCRIPTIONS_CONFIG } from './subscriptions.config';
@@ -26,11 +26,11 @@ import {
 
 export const SUBSCRIPTION_EXPIRY_QUEUE = 'subscriptions.expiry-check';
 
-@Global()
 @Module({
   imports: [
     EntityEngineModule.forEntity(SUBSCRIPTION_PLANS_CONFIG),
     EntityEngineModule.forEntity(SUBSCRIPTIONS_CONFIG),
+    OrdersBillingModule,
   ],
   controllers: [SubscriptionPlansController, SubscriptionsController],
   providers: [

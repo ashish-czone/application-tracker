@@ -1,4 +1,4 @@
-import { Global, Module, type OnModuleInit } from '@nestjs/common';
+import { Module, type OnModuleInit } from '@nestjs/common';
 import { EventRegistryService } from '@packages/events';
 import { EntityEngineModule } from '@packages/entity-engine';
 import { ORDERS_CONFIG } from './orders.config';
@@ -11,7 +11,6 @@ import { OrderLineItemsService } from './services/order-line-items.service';
 import { OrderLifecycleService } from './services/order-lifecycle.service';
 import { ORDERS_ORDER_CREATED } from './types';
 
-@Global()
 @Module({
   imports: [EntityEngineModule.forEntity(ORDERS_CONFIG)],
   controllers: [OrdersController],
