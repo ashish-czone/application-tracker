@@ -232,6 +232,11 @@ describe('validators', () => {
     expect(validators.datetime('not-a-date', ctx())).toMatchObject({ code: 'format' });
   });
 
+  it('datetime accepts Date instances', () => {
+    expect(validators.datetime(new Date('2026-03-31T10:00:00Z'), ctx())).toBeNull();
+    expect(validators.datetime(new Date('invalid'), ctx())).toMatchObject({ code: 'format' });
+  });
+
   it('boolean validates booleans', () => {
     expect(validators.boolean(true, ctx())).toBeNull();
     expect(validators.boolean('true', ctx())).toMatchObject({ code: 'type' });
