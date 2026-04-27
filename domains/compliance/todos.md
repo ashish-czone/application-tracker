@@ -14,6 +14,16 @@ Keep this file up to date as we work. Append new questions at the bottom of §2.
 
 Running log so the next session can pick up without archaeology. Newest at top.
 
+### 2026-04-27 — Streams J + I24/I25 shipped; finalisation audit pass underway
+
+`feat/compliance-inactive-state-ui` (PR #1067) and `feat/compliance-stream-j` (PR #1068) close the last two compliance V1 streams.
+
+**Stream J — generator cadence (J1-J5).** The generator now runs on a 12-month horizon (J1, one-line bump in `HORIZON_MONTHS`), ticks daily on a system-seeded cron (J2, `schedule_recurring` automation rule iterating active rules at 2am APP_TIMEZONE), and tops up immediately on rule activation (J3), registration creation (J4), and client reactivation (J5). The action's iteration logic was extracted into a standalone `ComplianceFilingsGeneratorService` so the four entrypoints (cron + three listeners) share idempotency, deactivatedAt filter, and event emission. The action becomes a thin pull-side adapter (~15 lines). `ComplianceFilingsGeneratorListener` uses the codebase wildcard-+-switch convention (one `@OnEvent('**')` subscription, dispatch by name) and swallows generator errors so a single bad event can't poison the listener. Routes 4 events: `compliance-rules.Created` (J3 first activation case), `.StatusChanged` (J3 transition case), `client-registrations.Created` (J4), `clients.StatusChanged` (J5). Clients and rules both have workflow-bound status, so transitions emit `StatusChanged` not `Updated`. 17 new unit tests (`compliance-filings-generator.service.unit.test.ts`) + 12 listener tests + 2 action delegator tests; 234 total compliance unit tests now green. New dep: `@nestjs/event-emitter` added to `domains/compliance/api/package.json` — first compliance listener; the package was already present elsewhere in the workspace.
+
+**Stream I24/I25 — inactive-state UI.** Two reusable primitives in `domains/compliance/ui/components/badges/`: `InactiveStateBanner` (paper-raised, ink-muted, mb-6 below header) for I24, and `InactiveSourceMarker` (muted archive-icon chip) for I25. Wired on `ClientDetailPage` (when `client.status === 'dormant'`) and `RuleEditPage` (when `rule.status === 'deprecated'`, sits above the existing locked-state banner). Markers ride on `filingColumns` (filing rows), `FilingDetailDrawer` (drawer header), and `clientDetailLawColumns` (Laws tab rows). `Filing` shared type extended with optional `clientStatus`/`ruleStatus`/`registrationDeactivatedAt`; `ClientLaw` extended with `deactivatedAt`. Laws-tab also hides the Deactivate action button on already-deactivated rows. Spec named "registration detail page" but V1 has no standalone registration detail page — the row marker on the Laws tab covers that case. V1 doesn't materialise compliance-tasks (Stream F), so I25 markers ride on filings, the user-facing work unit.
+
+**I22 still deferred.** Org-units-as-library stream is the prerequisite (mirrors users-as-library PRs #1027/#1028). Tracked in memory `project_org_units_as_library.md`.
+
 ### 2026-04-26 — Stream I sub-PR 5 shipped (handler integrity guards I19/I20/I21/I23)
 
 `feat/compliance-handler-integrity-guards` lands the four guards. Three architectural calls locked during the PR:
@@ -1442,18 +1452,20 @@ Hooks that fire when a client, registration, or rule changes state in a way that
 
 **Cross-cutting UI:**
 
-- [ ] **I24.** Banners on client / registration / rule detail pages reflecting their inactive state ("Deactivated on YYYY-MM-DD", "Deprecated", "Dormant"). (Q6, Q8)
-- [ ] **I25.** Subtle marker on task rows whose source registration or rule is inactive, so users viewing a task queue understand why an unfamiliar task is there. (Q8)
+- [x] **I24.** Banners on client / rule detail pages reflecting their inactive state. PR #1067 (2026-04-27). Reusable `InactiveStateBanner` in `domains/compliance/ui/components/badges/`; renders below the page header when `client.status === 'dormant'` (ClientDetailPage) or `rule.status === 'deprecated'` (RuleEditPage). Registrations don't have a standalone detail page in V1; that case is covered by I25's row marker on the Laws tab. Component takes optional `effectiveAt`/`reason` for future audit-log wiring. (Q6, Q8)
+- [x] **I25.** Subtle marker on filing rows / drawer / Laws-tab rows whose source client / registration / rule is inactive. PR #1067. `InactiveSourceMarker` is a muted archive-icon chip that never competes with the row's primary status badge. Shared `Filing` type extended with optional `clientStatus` / `ruleStatus` / `registrationDeactivatedAt`; `ClientLaw` extended with `deactivatedAt`. Laws tab also hides the "Deactivate" action button on already-deactivated registrations. V1 doesn't materialise compliance-tasks (Stream F note), so the marker rides on filings — the user-facing work unit. (Q8)
 
-### Stream J — Task generation cadence
+### Stream J — Filing generation cadence
 
-Ensures the generator runs at the right times and produces the right horizon. Builds on the existing `GenerateComplianceTasksAction`.
+Keeps the rolling materialisation horizon current via a daily cron + four event-triggered top-ups, all routed through a single idempotent service.
 
-- [ ] **J1.** Extend the generator horizon from 6 months to **12 months** based on `periodStart`. (Q11)
-- [ ] **J2.** Daily cron / scheduled trigger that invokes the generator across every `(active rule × active registration)` pair. Idempotent — per Q9 the generator is a pure no-op on key conflict. (Q12)
-- [ ] **J3.** Event subscriber on rule activation (`status → active`): trigger the generator for that rule × all its active registrations, full horizon. (Q12)
-- [ ] **J4.** Event subscriber on registration creation: trigger the generator for that registration × all active rules on its law, full horizon. (Q12)
-- [ ] **J5.** Event subscriber on client reactivation (`status → active`): trigger the generator for that client's active registrations × active rules. Previously cancelled dormancy tasks remain cancelled per Q6. (Q12)
+- [x] **J1.** Generator horizon extended from 6 months to 12 months. PR #1068 (2026-04-27). One-line bump on `HORIZON_MONTHS` in both the action and the demo seed; existing per-occurrence `findByRuleClientPeriod` guard makes the bump a no-op against periods already materialised under the 6-month run. (Q11)
+- [x] **J2.** Daily cron via system-seeded automation rule. PR #1068. `triggerType: 'schedule_recurring'`, `scheduleEntityType: 'compliance-rules'`, `scheduleHour: 2` (APP_TIMEZONE), condition `status === 'active'`, action `generate_compliance_filings`. Reuses the automations addon's schedule-scanner machinery — same code path that ships the daily task digest. (Q12)
+- [x] **J3.** Event-triggered top-up on rule activation. PR #1068. `ComplianceFilingsGeneratorListener` handles both `compliance-rules.Created` (status=active on create) and `compliance-rules.StatusChanged` (toState=active, fromState!==active) since rules use a workflow on `status`. (Q12)
+- [x] **J4.** Event-triggered top-up on registration creation. PR #1068. Listener handles `client-registrations.Created`; reads `clientId` + `lawId` off the after-snapshot in the event payload and calls `generateForRegistration(clientId, lawId)` which iterates active rules on that law. (Q12)
+- [x] **J5.** Event-triggered top-up on client reactivation. PR #1068. Listener handles `clients.StatusChanged` (toState=active, fromState!==active) and calls `generateForClient(clientId)` which iterates active registrations × active rules. Q6 cancellations stay cancelled — the per-occurrence `findByRuleClientPeriod` guard never resurrects them. (Q12)
+
+**Architectural note.** The action's iteration was extracted into `ComplianceFilingsGeneratorService` so the listener can reuse it without going through `ActionContext`. The action is now a thin pull-side adapter (~15 lines) that hands off to `service.generateForRule(ruleId)`. All four entrypoints (cron, J3, J4, J5) share the same idempotency, deactivatedAt filter, and event emission.
 
 ### Stream K — Backend bugs surfaced by E2E suite
 
@@ -1466,8 +1478,8 @@ Surfaced by the Playwright UI E2E suite at `e2e-compliance/` (PRs #1055/#1058/#1
 
 ### Stream Z — Finalisation
 
-- [ ] **Z1.** Update `specs.md` and `todos.md` as decisions evolve — keep in sync.
-- [ ] **Z2.** Audit pass (supervisor agent) after all streams merged: naming consistency, no domain logic leaked into packages, no addon → addon imports, test coverage, docs drift.
+- [x] **Z1.** Audit pass complete; `specs.md` / `todos.md` sync verified 2026-04-27. `specs.md` "compliance task" terminology vs V1 `compliance_filings` implementation noted as out-of-scope follow-up (todos.md is the implementation contract; specs.md cleanup deferred to a separate docs PR).
+- [x] **Z2.** Supervisor audit complete 2026-04-27 — naming clean (zero hits on `hasResolvableHandler`, `client_laws`, `compliance_rules.active`); no compliance domain logic leaked into `packages/`; no new addon → addon cycles introduced; Stream J generator wiring correct (service registered, listener uses `@OnEvent('**')` per codebase convention, system cron seed mounted via `complianceSystemSeedSources()`); contract exports clean; todos.md current with PR #1067 (I24/I25) and PR #1068 (J1-J5).
 
 ---
 
