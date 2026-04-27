@@ -8,9 +8,13 @@ export const ClientRegistrationRowSchema = createSelectSchema(complianceClientRe
 // over JSON. Override the writable timestamp columns so callers can POST ISO
 // 8601 strings (or already-parsed Date objects); coerce.date() accepts both
 // and rejects anything that doesn't parse to a valid Date.
+//
+// Both `registeredAt` (`notNull().defaultNow()`) and `deactivatedAt`
+// (nullable) are optional on insert — preserve that or the override turns
+// what should be optional fields into required ones.
 export const CreateClientRegistrationSchema = createInsertSchema(complianceClientRegistrations, {
-  registeredAt: z.coerce.date(),
-  deactivatedAt: z.coerce.date().nullable(),
+  registeredAt: z.coerce.date().optional(),
+  deactivatedAt: z.coerce.date().nullable().optional(),
 }).omit({
   id: true,
   createdAt: true,
