@@ -36,14 +36,18 @@ export class TasksController {
   @Get()
   @RequirePermission('tasks.read')
   @ApiOperation({ summary: 'List tasks' })
-  list(@Query() query: Record<string, unknown>, @AccessContext() accessCtx?: DataAccessContext) {
+  list(
+    @Query() query: Record<string, unknown>,
+    @CurrentUser() user: JwtPayload,
+    @AccessContext() accessCtx?: DataAccessContext,
+  ) {
     const parsed = {
       ...query,
       page: query.page ? Number(query.page) : undefined,
       limit: query.limit ? Number(query.limit) : undefined,
       includeDeleted: query.includeDeleted === 'true',
     };
-    return this.tasks.list(parsed, accessCtx);
+    return this.tasks.list(parsed, accessCtx, user);
   }
 
   @Get(':id')
@@ -51,9 +55,10 @@ export class TasksController {
   @ApiOperation({ summary: 'Get a single task by ID' })
   findOne(
     @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: JwtPayload,
     @AccessContext() accessCtx?: DataAccessContext,
   ) {
-    return this.tasks.findOne(id, accessCtx);
+    return this.tasks.findOne(id, accessCtx, user);
   }
 
   @Post()

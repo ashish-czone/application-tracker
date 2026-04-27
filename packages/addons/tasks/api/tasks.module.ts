@@ -4,6 +4,7 @@ import { ActionRegistry } from '@packages/automation-contracts';
 import { TASKS_CONFIG } from './tasks.config';
 import { TasksService } from './services/tasks.service';
 import { TaskClaimService } from './services/task-claim.service';
+import { TaskActionsService } from './services/task-actions.service';
 import { SendTaskDigestAction } from './services/send-task-digest.action';
 import { TasksController } from './controllers/tasks.controller';
 import { TaskClaimController } from './controllers/task-claim.controller';
@@ -13,7 +14,7 @@ import { TaskClaimController } from './controllers/task-claim.controller';
     EntityEngineModule.forEntity(TASKS_CONFIG),
   ],
   controllers: [TasksController, TaskClaimController],
-  providers: [TasksService, TaskClaimService, SendTaskDigestAction],
+  providers: [TasksService, TaskClaimService, TaskActionsService, SendTaskDigestAction],
   exports: [TasksService],
 })
 export class TasksModule implements OnModuleInit {

@@ -29,18 +29,21 @@ describe('TasksController', () => {
     controller = new TasksController(service as unknown as TasksService);
   });
 
-  it('list parses page/limit/includeDeleted', async () => {
-    await controller.list({ page: '2', limit: '50', includeDeleted: 'true' });
+  it('list parses page/limit/includeDeleted and passes user', async () => {
+    const user = { userId: 'u1' } as never;
+    await controller.list({ page: '2', limit: '50', includeDeleted: 'true' }, user);
     expect(service.list).toHaveBeenCalledWith(
       { page: 2, limit: 50, includeDeleted: true },
       undefined,
+      user,
     );
   });
 
-  it('findOne delegates with access context', async () => {
+  it('findOne delegates with access context and user', async () => {
+    const user = { userId: 'u1' } as never;
     const ctx = { userId: 'u1' } as never;
-    await controller.findOne('t1', ctx);
-    expect(service.findOne).toHaveBeenCalledWith('t1', ctx);
+    await controller.findOne('t1', user, ctx);
+    expect(service.findOne).toHaveBeenCalledWith('t1', ctx, user);
   });
 
   it('create parses body and forwards actor id', async () => {
