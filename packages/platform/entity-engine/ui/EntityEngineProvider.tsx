@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { createEntityApi } from './helpers/createEntityApi';
 import { createEntityHooks, type EntityHooks } from './helpers/createEntityHooks';
 import { buildEntityUIIndex } from './helpers/buildEntityUIIndex';
+import { hydrateEntities } from './helpers/hydrate';
 import type { EntityRegistryEntry, EntityApi, EntityUIConfig, EntityDetailPlugin, DetailTabPlugin, ListViewPlugin, RightSidebarPanel, HeaderPlugin, ColumnRendererRegistration, EntityUIPresentation, FieldUI, ActionUI } from './types';
 
 interface EntityEngineContextValue {
@@ -144,13 +145,20 @@ export function EntityEngineProvider({ children, apiFn, entityUIConfigs = [], de
   // Index presentation/fieldUI/actionUI from UI configs (replaces api-side EntityConfig.ui block, FieldMeta.uiType/cellRenderer, EntityAction.label/icon/variant).
   const uiIndex = useMemo(() => buildEntityUIIndex(entityUIConfigs), [entityUIConfigs]);
 
+  // Hydrate entities with presentation from registered EntityUIConfigs.
+  // The frontend EntityUIConfig is now the source of truth for entity-level
+  // UI metadata; backend `ui` is merged in as a fallback for entries that
+  // haven't been migrated yet. Once PR C2 strips the backend ui block,
+  // `entity.ui` here will be entirely frontend-derived.
+  const entitiesHydrated = useMemo(() => hydrateEntities(entities, uiIndex), [entities, uiIndex]);
+
   const value = useMemo<EntityEngineContextValue>(() => ({
-    entities,
+    entities: entitiesHydrated,
     isLoading,
     getApi: (entityType: string) => apiMap.get(entityType),
     getHooks: (entityType: string) => hooksMap.get(entityType),
-    getEntity: (entityType: string) => entities.find((e) => e.entityType === entityType),
-    getEntityBySlug: (slug: string) => entities.find((e) => e.slug === slug),
+    getEntity: (entityType: string) => entitiesHydrated.find((e) => e.entityType === entityType),
+    getEntityBySlug: (slug: string) => entitiesHydrated.find((e) => e.slug === slug),
     getDetailPlugins: (entityType: string) => pluginMap.get(entityType) ?? [],
     getDetailTabs: (entityType: string) => {
       const entityTabs = tabMap.get(entityType) ?? [];
@@ -173,7 +181,7 @@ export function EntityEngineProvider({ children, apiFn, entityUIConfigs = [], de
     getFieldUI: (entityType: string, fieldKey: string) => uiIndex.fieldUI.get(entityType)?.get(fieldKey),
     getActionUI: (entityType: string, actionKey: string) => uiIndex.actionUI.get(entityType)?.get(actionKey),
     apiFn,
-  }), [entities, isLoading, apiMap, hooksMap, pluginMap, tabMap, listViewMap, sidebarPanelMap, headerPluginMap, uiIndex, globalDetailTabs, globalListViews, globalSidebarPanels, globalHeaderPlugins, columnRenderers, apiFn]);
+  }), [entitiesHydrated, isLoading, apiMap, hooksMap, pluginMap, tabMap, listViewMap, sidebarPanelMap, headerPluginMap, uiIndex, globalDetailTabs, globalListViews, globalSidebarPanels, globalHeaderPlugins, columnRenderers, apiFn]);
 
   if (isLoading) return null;
 
