@@ -107,7 +107,7 @@ export function EntityConfigPage({ entityConfigTabs = [] }: EntityConfigPageProp
     () =>
       [...entities]
         .filter((e) => e.features.adminConfigurable)
-        .sort((a, b) => (a.ui.navOrder ?? 99) - (b.ui.navOrder ?? 99))
+        .sort((a, b) => (a.ui?.navOrder ?? 99) - (b.ui?.navOrder ?? 99))
         .map((e) => ({ key: e.entityType, label: e.pluralName, slug: e.slug, entity: e })),
     [entities],
   );

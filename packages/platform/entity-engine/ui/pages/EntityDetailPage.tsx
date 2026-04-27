@@ -188,8 +188,8 @@ export function EntityDetailPage({ entityType, renderPipelineProgress, renderWor
   };
 
   const getSubtitle = (row: Record<string, unknown>): string | null => {
-    if (!entity.ui.subtitleField) return null;
-    const val = row[entity.ui.subtitleField];
+    if (!entity.subtitleField) return null;
+    const val = row[entity.subtitleField];
     return val ? String(val) : null;
   };
 

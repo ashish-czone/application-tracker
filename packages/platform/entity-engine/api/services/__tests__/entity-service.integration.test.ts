@@ -73,9 +73,6 @@ function buildTestConfig(
       { name: 'Basic Info', fields: ['name', 'email', 'status', 'priority', 'amount', 'isActive'] },
     ],
     nameField: 'name',
-    ui: {
-      icon: 'box',
-    },
     dataAccess: {
       anchors: { creator: 'createdBy' },
     },

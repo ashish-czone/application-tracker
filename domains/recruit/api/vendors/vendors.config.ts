@@ -52,4 +52,5 @@ export const VENDORS_CONFIG: EntityConfig = {
   },
 
   nameField: 'vendorName',
+  subtitleField: 'email',
 };

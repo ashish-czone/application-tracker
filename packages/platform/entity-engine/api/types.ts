@@ -487,35 +487,6 @@ export interface NestedRelationshipField {
 }
 
 // ---------------------------------------------------------------------------
-// UI hints — serialized to frontend via registry API
-// ---------------------------------------------------------------------------
-
-export interface EntityUIHints {
-  /** Lucide icon name */
-  icon?: string;
-  /**
-   * @deprecated Read from {@link EntityConfig.nameField} instead. This mirror
-   * is retained transitionally so existing readers keep compiling; it will be
-   * removed in a follow-up PR that strips the `ui` block entirely.
-   */
-  nameField?: string | string[];
-  /** Field key for subtitle */
-  subtitleField?: string;
-  /** Sidebar nav group. When multiple entities share a navGroup and set `groupRenderMode: 'tabs'`, the platform collapses them into a single nav link and renders a tabbed page. The URL slug is derived from the group label. */
-  navGroup?: string;
-  /** Sidebar ordering within group. When grouped via `groupRenderMode: 'tabs'`, also drives tab order. */
-  navOrder?: number;
-  /** How entities in the same `navGroup` are presented. `'tabs'` collapses all grouped entities into one nav link routed to a tabbed group page. Omit to render each entity as an individual sidebar link (current behavior). */
-  groupRenderMode?: 'tabs';
-  /** How the "Add" button works: 'modal' = quick-create dialog, 'page' = full create form page, 'wizard' = multi-step (one section per step). Default: 'modal' */
-  createMode?: 'modal' | 'page' | 'wizard';
-  /** Picklist field keys that can be used as board/kanban grouping. Enables board view toggle on list page. */
-  boardFields?: string[];
-  /** Route template used by the list page after a successful quick-create, instead of the default detail page. `:id` is interpolated with the created entity id — e.g. `/pages/:id/edit`. */
-  afterCreateRoute?: string;
-}
-
-// ---------------------------------------------------------------------------
 // Data access scopes — control which records a user can see
 // ---------------------------------------------------------------------------
 
@@ -806,16 +777,13 @@ export interface EntityConfig<TTable extends PgTable = PgTable> {
    */
   nameField: string | string[];
 
-  // --- UI ---
-
   /**
-   * @deprecated Frontend rendering hints have moved to the UI-side
-   * `EntityUIConfig.presentation`. The api no longer reads any field on
-   * this block; it survives only for entity configs that haven't been
-   * fully migrated. Will be removed once the registry/layout response
-   * shape is updated to drop `ui` entirely.
+   * Field key used as the subtitle for records on detail page headers and
+   * list/board cards. The api includes this column in LIST select maps so
+   * the frontend always has the data, even if the field is not otherwise
+   * `listVisible`. Pure data-shape hint — no presentation concerns.
    */
-  ui?: EntityUIHints;
+  subtitleField?: string;
 
   // --- Data access ---
 
@@ -985,7 +953,8 @@ export interface EntityRegistryEntry {
    * {@link EntityConfig.nameField}.
    */
   nameField: string | string[];
-  ui: EntityUIHints;
+  /** Field key used as the subtitle. Mirrors {@link EntityConfig.subtitleField}. */
+  subtitleField?: string;
   /**
    * Engine-derived feature flags merged with feature-package-derived keys
    * and the entity's opaque addon `features` bag. Engine keys are typed

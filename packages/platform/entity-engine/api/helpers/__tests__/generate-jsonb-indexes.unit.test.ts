@@ -26,7 +26,6 @@ function mockConfig(overrides: Partial<EntityConfig> = {}): EntityConfig {
     fieldMeta: {},
     sections: [],
     nameField: 'name',
-    ui: { icon: 'box' },
     customFields: true,
     ...overrides,
   };

@@ -124,7 +124,7 @@ export function FieldPermissionsTab({ roleId, disabled }: FieldPermissionsTabPro
           className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
         >
           {entities
-            .sort((a, b) => (a.ui.navOrder ?? 99) - (b.ui.navOrder ?? 99))
+            .sort((a, b) => (a.ui?.navOrder ?? 99) - (b.ui?.navOrder ?? 99))
             .map((e) => (
               <option key={e.entityType} value={e.entityType}>
                 {e.pluralName}

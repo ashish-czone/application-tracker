@@ -170,7 +170,7 @@ export function AppRouter({ domains, brandLabel, menuItems, extraRoutes, detailH
 
     for (const entity of entities) {
       if (domainOwnedSlugs.has(entity.slug)) continue;
-      if (entity.ui.groupRenderMode === 'tabs' && entity.ui.navGroup) {
+      if (entity.ui?.groupRenderMode === 'tabs' && entity.ui?.navGroup) {
         const slug = groupSlug(entity.ui.navGroup);
         if (domainOwnedSlugs.has(slug)) {
           standalone.push(entity);
@@ -263,7 +263,7 @@ export function AppRouter({ domains, brandLabel, menuItems, extraRoutes, detailH
           ])}
 
           {groupedEntities.map((entity) => {
-            const gSlug = groupSlug(entity.ui.navGroup!);
+            const gSlug = groupSlug(entity.ui!.navGroup!);
             const Override = detailOverrides[entity.entityType];
             return (
               <Route

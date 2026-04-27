@@ -338,7 +338,6 @@ describe('Entity Engine (integration)', () => {
         singularName: 'ListItem',
         pluralName: 'ListItems',
         slug: 'list-items',
-        ui: { boardFields: [] },
       });
 
       entityRegistry.register(config as any);

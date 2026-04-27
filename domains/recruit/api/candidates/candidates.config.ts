@@ -110,5 +110,6 @@ export const candidatesConfig: EntityConfig = {
   },
 
   nameField: 'fullName',
+  subtitleField: 'currentTitle',
 
 };

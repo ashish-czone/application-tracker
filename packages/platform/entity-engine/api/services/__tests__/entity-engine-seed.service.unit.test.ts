@@ -38,7 +38,6 @@ describe('EntityEngineSeedService', () => {
       table: tbl,
       slug: 'things',
       fields: { name: { type: 'text', label: 'Name' } },
-      ui: { icon: 'Box' },
     });
 
     await service.seedEntity(config);
@@ -53,7 +52,6 @@ describe('EntityEngineSeedService', () => {
       slug: 'things',
       adminConfigurable: true,
       fields: { name: { type: 'text', label: 'Name' } },
-      ui: { icon: 'Box' },
     });
 
     await service.seedEntity(config);
@@ -67,14 +65,12 @@ describe('EntityEngineSeedService', () => {
       table: tbl,
       slug: 'skipped',
       fields: { name: { type: 'text', label: 'Name' } },
-      ui: { icon: 'Box' },
     }));
     registry.register(defineEntity({
       table: pgTable('admined', { id: text('id').primaryKey(), name: text('name').notNull() }),
       slug: 'admined',
       adminConfigurable: true,
       fields: { name: { type: 'text', label: 'Name' } },
-      ui: { icon: 'Box' },
     }));
 
     await service.seedAll();

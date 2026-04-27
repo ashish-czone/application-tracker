@@ -12,6 +12,7 @@ export const CLIENTS_CONFIG = defineEntity({
   singularName: 'Client',
   pluralName: 'Clients',
   timestamps: true,
+  subtitleField: 'legalName',
 
   fields: {
     name: {

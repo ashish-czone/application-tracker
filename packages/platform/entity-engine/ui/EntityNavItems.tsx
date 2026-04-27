@@ -25,14 +25,15 @@ type NavItem =
       kind: 'group';
       navGroup: string;
       slug: string;
-      icon: string;
+      icon: string | undefined;
       firstSlug: string;
       order: number;
       entityCount: number;
     };
 
 /** Resolve a lucide icon name (e.g. 'users') to its component */
-function resolveIcon(name: string): LucideIcon {
+function resolveIcon(name: string | undefined): LucideIcon {
+  if (!name) return Icons.Database;
   // Convert kebab-case/lowercase to PascalCase (e.g. 'users' → 'Users', 'file-text' → 'FileText')
   const pascalCase = name
     .split(/[-_]/)
@@ -60,7 +61,7 @@ export function buildNavItems(entities: EntityRegistryEntry[]): NavItem[] {
   const singles: NavItem[] = [];
 
   for (const entity of entities) {
-    if (entity.ui.groupRenderMode === 'tabs' && entity.ui.navGroup) {
+    if (entity.ui?.groupRenderMode === 'tabs' && entity.ui?.navGroup) {
       const slug = groupSlug(entity.ui.navGroup);
       const existing = groups.get(slug);
       if (existing) {
@@ -72,15 +73,15 @@ export function buildNavItems(entities: EntityRegistryEntry[]): NavItem[] {
       singles.push({
         kind: 'entity',
         entity,
-        order: entity.ui.navOrder ?? 99,
+        order: entity.ui?.navOrder ?? 99,
       });
     }
   }
 
   const groupItems: NavItem[] = Array.from(groups.values()).map((group) => {
     const sortedMembers = [...group.members].sort((a, b) => {
-      const orderA = a.ui.navOrder ?? 99;
-      const orderB = b.ui.navOrder ?? 99;
+      const orderA = a.ui?.navOrder ?? 99;
+      const orderB = b.ui?.navOrder ?? 99;
       if (orderA !== orderB) return orderA - orderB;
       return a.pluralName.localeCompare(b.pluralName);
     });
@@ -89,9 +90,9 @@ export function buildNavItems(entities: EntityRegistryEntry[]): NavItem[] {
       kind: 'group',
       navGroup: group.navGroup,
       slug: group.slug,
-      icon: first.ui.icon,
+      icon: first.ui?.icon,
       firstSlug: first.slug,
-      order: first.ui.navOrder ?? 99,
+      order: first.ui?.navOrder ?? 99,
       entityCount: sortedMembers.length,
     };
   });
@@ -135,7 +136,7 @@ export function EntityNavItems({ collapsed, className, iconClassName, labelClass
         : 'text-sidebar-muted hover:text-sidebar-foreground hover:bg-black/[0.03]'
     }`;
 
-  const renderLink = (key: string, to: string, icon: string, label: string) => {
+  const renderLink = (key: string, to: string, icon: string | undefined, label: string) => {
     const Icon = resolveIcon(icon);
     return (
       <NavLink
@@ -163,7 +164,7 @@ export function EntityNavItems({ collapsed, className, iconClassName, labelClass
           return renderLink(
             item.entity.entityType,
             `/${item.entity.slug}`,
-            item.entity.ui.icon,
+            item.entity.ui?.icon,
             item.entity.pluralName,
           );
         }

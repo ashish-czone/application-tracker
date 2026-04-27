@@ -55,6 +55,7 @@ export const USERS_CONFIG: EntityConfig<typeof users> = defineEntity({
   singularName: 'User',
   pluralName: 'Users',
   timestamps: true,
+  subtitleField: 'email',
 
   fields: {
     email: {

@@ -4,7 +4,6 @@ export const CLIENTS_UI_CONFIG: EntityUIConfig = {
   entityType: 'clients',
   presentation: {
     icon: 'building-2',
-    subtitleField: 'industry',
     navGroup: 'recruit',
     navOrder: 4,
   },

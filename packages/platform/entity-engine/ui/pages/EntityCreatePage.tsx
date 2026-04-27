@@ -25,7 +25,7 @@ export function EntityCreatePage({ entityType }: EntityCreatePageProps) {
   const { apiFn } = useEntityEngine();
   const { data: layout, isLoading: layoutLoading } = useEntityLayout(entityType);
 
-  const isWizard = entity.ui.createMode === 'wizard';
+  const isWizard = entity.ui?.createMode === 'wizard';
   const [currentStep, setCurrentStep] = useState(0);
 
   // Synthesize a FieldDefinition per collection relationship so the form

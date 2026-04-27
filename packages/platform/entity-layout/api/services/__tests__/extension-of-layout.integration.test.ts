@@ -57,7 +57,6 @@ function buildParentConfig(): EntityConfig {
     extensionColumns: ['title', 'status', 'priority'],
     adminConfigurable: true,
     nameField: 'title',
-    ui: { icon: 'check' },
   } as EntityConfig;
 }
 
@@ -80,7 +79,6 @@ function buildChildConfig(): EntityConfig {
     },
     adminConfigurable: true,
     nameField: 'ruleId',
-    ui: { icon: 'check' },
   } as EntityConfig;
 }
 

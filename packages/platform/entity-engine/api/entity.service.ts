@@ -324,8 +324,7 @@ export class EntityService {
     }
 
     // Always include nameField and subtitleField (needed for display even if system/hidden)
-    const { nameField } = this.config;
-    const subtitleField = this.config.ui?.subtitleField;
+    const { nameField, subtitleField } = this.config;
     const displayFields = Array.isArray(nameField) ? [...nameField] : [nameField];
     if (subtitleField) displayFields.push(subtitleField);
     for (const key of displayFields) {
