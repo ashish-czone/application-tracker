@@ -2,9 +2,11 @@ import { Module, type OnModuleInit } from '@nestjs/common';
 import { EntityEngineModule, LookupResolverService } from '@packages/entity-engine';
 import { users } from '@packages/database';
 import { ContactResolverRegistry } from '@packages/notifications';
+import { OrgUnitService } from '@packages/org-units';
 import { OrgUnitsModule } from '../org-units/org-units.module';
 import {
   USERS_CONFIG,
+  USERS_POSITIONS_READER,
   UsersService,
   UsersController,
 } from '@packages/users';
@@ -27,7 +29,10 @@ import { AppUsersService } from './app-users.service';
     ComplianceFilingsModule,
   ],
   controllers: [UsersController],
-  providers: [{ provide: UsersService, useClass: AppUsersService }],
+  providers: [
+    { provide: UsersService, useClass: AppUsersService },
+    { provide: USERS_POSITIONS_READER, useExisting: OrgUnitService },
+  ],
   exports: [UsersService],
 })
 export class UsersModule implements OnModuleInit {

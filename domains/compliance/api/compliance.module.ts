@@ -3,11 +3,8 @@ import { ModuleRef } from '@nestjs/core';
 import { AuditRegistryService } from '@packages/audit';
 import { ActionRegistry } from '@packages/automation-contracts';
 import { RbacService } from '@packages/rbac';
-import { USERS_POSITIONS_READER } from '@packages/users';
 
 import { registerComplianceAudit } from './audit/register-compliance-audit';
-
-import { ComplianceUsersPositionsReader } from './users/compliance-users-positions.reader';
 
 import { LawsModule } from './laws/laws.module';
 import { ClientsModule } from './clients/clients.module';
@@ -40,11 +37,6 @@ import { COMPLIANCE_PERMISSION_MANIFESTS } from './permissions';
     ComplianceFilingsGeneratorListener,
     GenerateComplianceFilingsAction,
     SendComplianceFilingDigestAction,
-    ComplianceUsersPositionsReader,
-    {
-      provide: USERS_POSITIONS_READER,
-      useExisting: ComplianceUsersPositionsReader,
-    },
   ],
 })
 export class ComplianceDomainModule implements OnModuleInit {
