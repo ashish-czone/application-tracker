@@ -1,4 +1,9 @@
 export { NotesModule } from './notes.module';
+
+export const notesAddon = {
+  module: () => require('./notes.module').NotesModule,
+  migration: '@packages/notes',
+} as const;
 export { NOTES_FEATURE_KEY, notesFeature, readNotesFeature } from './feature';
 export type { NotesFeatureConfig, NotesFeatureValue } from './feature';
 export { NotesService } from './services/notes.service';

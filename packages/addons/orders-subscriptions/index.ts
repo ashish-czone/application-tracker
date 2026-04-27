@@ -1,6 +1,11 @@
 // Module
 export { OrdersSubscriptionsModule, SUBSCRIPTION_EXPIRY_QUEUE } from './orders-subscriptions.module';
 
+export const ordersSubscriptionsAddon = {
+  module: () => require('./orders-subscriptions.module').OrdersSubscriptionsModule,
+  migration: '@packages/orders-subscriptions',
+} as const;
+
 // Entity configs
 export { SUBSCRIPTION_PLANS_CONFIG } from './subscription-plans.config';
 export { SUBSCRIPTIONS_CONFIG } from './subscriptions.config';

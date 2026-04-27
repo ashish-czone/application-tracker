@@ -2,6 +2,11 @@
 // Core types, helpers, field definitions, and layout are in @packages/entity-engine and @packages/entity-layout
 
 export { EavAttributesModule } from './eav-attributes.module';
+
+export const eavAttributesAddon = {
+  module: () => require('./eav-attributes.module').EavAttributesModule,
+  migration: '@packages/eav-attributes',
+} as const;
 export { FieldValueService } from './services/field-value.service';
 
 // EAV-specific schemas

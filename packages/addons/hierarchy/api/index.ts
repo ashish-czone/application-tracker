@@ -1,4 +1,9 @@
 export { HierarchyModule } from './hierarchy.module';
+
+export const hierarchyAddon = {
+  module: () => require('./hierarchy.module').HierarchyModule,
+  migration: '@packages/hierarchy',
+} as const;
 export { HierarchyService } from './services/hierarchy.service';
 export { hierarchyColumns } from './schema';
 export { buildTree, flattenTree } from './helpers/tree';

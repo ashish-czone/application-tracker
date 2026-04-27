@@ -30,6 +30,7 @@ import { GlobalExceptionFilter } from './filters/global-exception.filter';
 import { ConfigurableThrottlerGuard } from './guards/configurable-throttler.guard';
 import { validate } from './env.validation';
 import { AppDefaultsModule } from './modules/app-defaults.module';
+import type { Addon } from './addon';
 
 export interface AppShellOptions {
   /**
@@ -47,13 +48,19 @@ export interface AppShellOptions {
    */
   appName: string;
   /**
-   * Extra modules to import. App-shell ships core infra (auth, audit,
-   * notifications, entity-engine, workflows, automations, media) but does NOT
-   * ship a UsersModule or an OrgUnitsModule — each app owns those entities
-   * and must pass app-level modules here alongside any addon modules it
-   * needs: NotesModule, AttachmentsModule, OAuthModule, HierarchyModule,
-   * OrderableModule, TaxonomyModule, etc. Wire only the addons the app
-   * actually uses.
+   * Opt-in addon packages this app uses. Each addon bundles a NestJS module
+   * (when the package ships one) with its migration name. Pass the SAME
+   * array to `runAppMigrations({ addons })` in the app's migrate.ts so
+   * module loading and migration application stay in lockstep — that's the
+   * whole point of the Addon shape.
+   */
+  addons?: readonly Addon[];
+  /**
+   * Extra modules to import for this specific app. Use this for app-local
+   * modules (UsersModule, the app's wrapper around OrgUnitsModule, etc.) and
+   * for addon packages that don't have a migration (oauth, pdf-generator,
+   * service-auth). Addon packages that DO have a migration belong in
+   * `addons` so the migration travels with the module import.
    */
   extraImports?: NonNullable<ModuleMetadata['imports']>;
 }
@@ -132,6 +139,9 @@ export function createAppModule(options: AppShellOptions): ModuleMetadata {
         }),
         inject: [ConfigService, AppConfigService],
       }),
+      ...(options.addons ?? [])
+        .map((addon) => addon.module?.())
+        .filter((mod): mod is NonNullable<typeof mod> => mod !== undefined),
       ...(options.extraImports ?? []),
       ...options.domains.map((domain) => domain.module),
     ],

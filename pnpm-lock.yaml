@@ -173,6 +173,9 @@ importers:
       '@packages/media':
         specifier: workspace:*
         version: link:../../packages/platform/media
+      '@packages/media-library-api':
+        specifier: workspace:*
+        version: link:../../packages/addons/media-library/api
       '@packages/notification-channels':
         specifier: workspace:*
         version: link:../../packages/platform/notification-channels/api
@@ -1274,6 +1277,9 @@ importers:
       '@packages/app-shell':
         specifier: workspace:*
         version: link:../../packages/platform/app-shell/api
+      '@packages/attachments':
+        specifier: workspace:*
+        version: link:../../packages/addons/attachments/api
       '@packages/audit':
         specifier: workspace:*
         version: link:../../packages/platform/audit/api
@@ -1304,21 +1310,33 @@ importers:
       '@packages/entity-relations':
         specifier: workspace:*
         version: link:../../packages/addons/entity-relations/api
+      '@packages/evaluations':
+        specifier: workspace:*
+        version: link:../../packages/addons/evaluations/api
       '@packages/events':
         specifier: workspace:*
         version: link:../../packages/core/events
+      '@packages/hierarchy':
+        specifier: workspace:*
+        version: link:../../packages/addons/hierarchy/api
       '@packages/logger':
         specifier: workspace:*
         version: link:../../packages/core/logger
       '@packages/media':
         specifier: workspace:*
         version: link:../../packages/platform/media
+      '@packages/notes':
+        specifier: workspace:*
+        version: link:../../packages/addons/notes/api
       '@packages/notification-channels':
         specifier: workspace:*
         version: link:../../packages/platform/notification-channels/api
       '@packages/notifications':
         specifier: workspace:*
         version: link:../../packages/platform/notifications/api
+      '@packages/oauth':
+        specifier: workspace:*
+        version: link:../../packages/addons/oauth
       '@packages/org-units':
         specifier: workspace:*
         version: link:../../packages/addons/org-units/api
@@ -4566,6 +4584,9 @@ importers:
       class-validator:
         specifier: ^0.14.1
         version: 0.14.4
+      dotenv:
+        specifier: ^16.4.0
+        version: 16.6.1
     devDependencies:
       '@types/express':
         specifier: ^5.0.0

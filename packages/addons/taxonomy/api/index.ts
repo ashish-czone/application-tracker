@@ -1,4 +1,9 @@
 export { TaxonomyModule } from './taxonomy.module';
+
+export const taxonomyAddon = {
+  module: () => require('./taxonomy.module').TaxonomyModule,
+  migration: '@packages/taxonomy',
+} as const;
 export { TAGS_FEATURE_KEY, tagsFeature, readTagsFeature } from './feature';
 export type { TagsFeatureConfig, TagsFeatureValue } from './feature';
 export { TaxonomyService } from './services/taxonomy.service';

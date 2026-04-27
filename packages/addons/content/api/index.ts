@@ -1,4 +1,9 @@
 export { ContentModule } from './content.module';
+
+export const contentAddon = {
+  module: () => require('./content.module').ContentModule,
+  migration: '@packages/content-api',
+} as const;
 export { testimonials, faqItems, teamMembers, services, clientLogos, valueProps, stats } from './schema';
 export { TESTIMONIALS_CONFIG } from './testimonials.config';
 export { FAQ_ITEMS_CONFIG } from './faq-items.config';
