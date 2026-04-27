@@ -1,9 +1,11 @@
 import path from 'node:path';
 import { runAppMigrations, type Addon } from '@packages/app-shell';
+import { automationsAddon } from '@packages/automations';
 import { contentAddon } from '@packages/content-api';
 import { hierarchyAddon } from '@packages/hierarchy';
 import { mediaLibraryAddon } from '@packages/media-library-api';
 import { taxonomyAddon } from '@packages/taxonomy';
+import { workflowsAddon } from '@packages/workflows';
 
 /**
  * Vitest globalSetup for @domains/agency-api integration tests.
@@ -20,6 +22,8 @@ import { taxonomyAddon } from '@packages/taxonomy';
  * a clear "relation does not exist" — same diagnostic as before.
  */
 const testAddons: readonly Addon[] = [
+  automationsAddon,
+  workflowsAddon,
   taxonomyAddon,
   hierarchyAddon,
   contentAddon,

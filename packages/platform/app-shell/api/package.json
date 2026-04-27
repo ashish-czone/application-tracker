@@ -13,7 +13,6 @@
     "@nestjs/throttler": "^6.4.0",
     "@packages/audit": "workspace:*",
     "@packages/auth": "workspace:*",
-    "@packages/automations": "workspace:*",
     "@packages/database": "workspace:*",
     "@packages/debug-profiler": "workspace:*",
     "@packages/domains": "workspace:*",
@@ -29,7 +28,6 @@
     "@packages/settings": "workspace:*",
     "@packages/user-preferences": "workspace:*",
     "@packages/users": "workspace:*",
-    "@packages/workflows": "workspace:*",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "dotenv": "^16.4.0"

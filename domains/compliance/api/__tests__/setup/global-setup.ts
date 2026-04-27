@@ -2,6 +2,7 @@ import path from 'node:path';
 import { Pool } from 'pg';
 import { runAppMigrations, type Addon } from '@packages/app-shell';
 import { attachmentsAddon } from '@packages/attachments';
+import { automationsAddon } from '@packages/automations';
 import { documentTemplatesAddon } from '@packages/document-templates';
 import { eavAttributesAddon } from '@packages/eav-attributes';
 import { entityRelationsAddon } from '@packages/entity-relations';
@@ -11,6 +12,7 @@ import { notesAddon } from '@packages/notes';
 import { orgUnitsAddon } from '@packages/org-units';
 import { tasksAddon } from '@packages/tasks';
 import { taxonomyAddon } from '@packages/taxonomy';
+import { workflowsAddon } from '@packages/workflows';
 
 /**
  * Vitest `globalSetup` for compliance integration tests. Resets the public
@@ -35,6 +37,8 @@ import { taxonomyAddon } from '@packages/taxonomy';
  * the default matches `docker-compose.yml` (postgresql://dev:dev@localhost:5432/starter).
  */
 const testAddons: readonly Addon[] = [
+  automationsAddon,
+  workflowsAddon,
   attachmentsAddon,
   documentTemplatesAddon(),
   eavAttributesAddon,

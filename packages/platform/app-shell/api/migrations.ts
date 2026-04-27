@@ -21,14 +21,14 @@ const KERNEL_PACKAGE_FOLDERS = {
   '@packages/audit': 'packages/platform/audit/api',
   '@packages/notification-channels': 'packages/platform/notification-channels/api',
   '@packages/notifications': 'packages/platform/notifications/api',
-  '@packages/automations': 'packages/addons/automations/api',
-  '@packages/workflows': 'packages/addons/workflows/api',
   '@packages/user-preferences': 'packages/platform/user-preferences',
   '@packages/entity-engine': 'packages/platform/entity-engine/api',
   '@packages/entity-layout': 'packages/platform/entity-layout/api',
 } as const satisfies Record<string, string>;
 
 const OPT_IN_PACKAGE_FOLDERS = {
+  '@packages/automations': 'packages/addons/automations/api',
+  '@packages/workflows': 'packages/addons/workflows/api',
   '@packages/taxonomy': 'packages/addons/taxonomy/api',
   '@packages/hierarchy': 'packages/addons/hierarchy/api',
   '@packages/tenancy': 'packages/addons/tenancy',
@@ -76,9 +76,9 @@ function pkg(
  * whether the app explicitly imports them. Their migrations must run on every
  * app's database. Order reflects cross-package FK dependencies.
  *
- * `@packages/automations` and `@packages/workflows` live under addons/ but are
- * hardcoded into the shell, so they're kernel here for parity. A follow-up
- * will make them opt-in modules and move them to the opt-in list.
+ * `@packages/automations` and `@packages/workflows` are addons — they're
+ * opt-in here even though apps that use them must add the corresponding
+ * addon to their addons array.
  */
 export function kernelMigrationSources(workspaceRoot: string): PackageMigrationSource[] {
   return [
@@ -89,8 +89,6 @@ export function kernelMigrationSources(workspaceRoot: string): PackageMigrationS
     pkg(workspaceRoot, '@packages/audit'),
     pkg(workspaceRoot, '@packages/notification-channels'),
     pkg(workspaceRoot, '@packages/notifications'),
-    pkg(workspaceRoot, '@packages/automations'),
-    pkg(workspaceRoot, '@packages/workflows'),
     pkg(workspaceRoot, '@packages/user-preferences'),
     pkg(workspaceRoot, '@packages/entity-engine'),
     pkg(workspaceRoot, '@packages/entity-layout'),
@@ -120,6 +118,11 @@ export function allMigrationSources(workspaceRoot: string): PackageMigrationSour
   return [
     ...kernelMigrationSources(workspaceRoot),
     // Order chosen to satisfy FK dependencies between opt-in packages.
+    // automations + workflows must come before any addon whose schema
+    // references workflow_definitions (e.g. tasks, notes, evaluations all
+    // can attach a workflow to their entity).
+    pkg(workspaceRoot, '@packages/automations'),
+    pkg(workspaceRoot, '@packages/workflows'),
     pkg(workspaceRoot, '@packages/taxonomy'),
     pkg(workspaceRoot, '@packages/hierarchy'),
     pkg(workspaceRoot, '@packages/tenancy'),
