@@ -53,3 +53,27 @@ export async function createComplianceFiling(opts: CreateFilingOptions): Promise
     dueDate,
   });
 }
+
+/** Patch a filing field directly. Used for assignee changes (pickup,
+ *  reassign) — not for status, which goes through `transitionFiling`. */
+export async function updateFiling(
+  filingId: string,
+  patch: Partial<{ assigneeId: string | null; title: string; dueDate: string }>,
+): Promise<ComplianceFiling> {
+  return apiClient.patch<ComplianceFiling>(`/compliance-filings/${filingId}`, patch);
+}
+
+/** Run a workflow transition on a filing (pending→in_progress for
+ *  pickup, in_progress→review for submit, etc.). */
+export async function transitionFiling(
+  filingId: string,
+  to: FilingStatus,
+  options: { reason?: string; comment?: string } = {},
+): Promise<ComplianceFiling> {
+  return apiClient.post<ComplianceFiling>(`/compliance-filings/${filingId}/transition`, {
+    fieldKey: 'status',
+    to,
+    ...(options.reason ? { reason: options.reason } : {}),
+    ...(options.comment ? { comment: options.comment } : {}),
+  });
+}
