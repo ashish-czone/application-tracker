@@ -3,7 +3,8 @@ import { config as loadEnv } from 'dotenv';
 import { runMigrations, type PackageMigrationSource } from '@packages/database/migrator';
 import {
   findWorkspaceRoot,
-  platformMigrationSources,
+  kernelMigrationSources,
+  packageMigration,
 } from '@packages/app-shell/migrations';
 
 async function main() {
@@ -11,23 +12,19 @@ async function main() {
   loadEnv({ path: path.resolve(__dirname, '../../.env') });
 
   const packages: PackageMigrationSource[] = [
-    ...platformMigrationSources(workspaceRoot),
+    ...kernelMigrationSources(workspaceRoot),
+    packageMigration(workspaceRoot, '@packages/taxonomy'),
+    packageMigration(workspaceRoot, '@packages/hierarchy'),
     {
       name: '@domains/agency-api/pages',
       migrationsFolder: path.join(workspaceRoot, 'domains/agency/api/pages/migrations'),
     },
-    {
-      name: '@packages/content-api',
-      migrationsFolder: path.join(workspaceRoot, 'packages/addons/content/api/migrations'),
-    },
+    packageMigration(workspaceRoot, '@packages/content-api'),
     {
       name: '@domains/agency-api/menus',
       migrationsFolder: path.join(workspaceRoot, 'domains/agency/api/menus/migrations'),
     },
-    {
-      name: '@packages/media-library-api',
-      migrationsFolder: path.join(workspaceRoot, 'packages/addons/media-library/api/migrations'),
-    },
+    packageMigration(workspaceRoot, '@packages/media-library-api'),
     {
       name: '@domains/projects-api',
       migrationsFolder: path.join(workspaceRoot, 'domains/projects/api/migrations'),
