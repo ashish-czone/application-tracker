@@ -48,5 +48,10 @@ export function agencyDemoSeedSources(): SeedSource[] {
     demo('@domains/agency-api/demo-pages', () =>
       import('./seeds/demo-pages').then((m) => m.seedDemoPages),
     ),
+    // Bootstraps the e2e-admin user so the e2e suite's globalSetup can
+    // log in on a freshly-seeded DB. The same source is also reseeded by
+    // the test-hooks reset endpoint, so the pinned-id user survives
+    // truncate-and-reseed cycles within a suite run.
+    agencyE2eAdminSeedSource(),
   ];
 }
