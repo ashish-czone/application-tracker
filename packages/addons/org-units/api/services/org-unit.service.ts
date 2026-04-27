@@ -10,7 +10,7 @@ import type { OrgUnit, OrgUnitWithDetails, OrgUnitMemberDetail } from '../types'
 
 @Injectable()
 export class OrgUnitService {
-  constructor(private readonly database: DatabaseService) {}
+  constructor(protected readonly database: DatabaseService) {}
 
   // ---------------------------------------------------------------------------
   // CRUD
@@ -139,8 +139,20 @@ export class OrgUnitService {
 
   async delete(id: string): Promise<void> {
     await this.findOneOrFail(id);
+    await this.assertCanDelete(id);
     await this.database.db.delete(orgUnitMembers).where(eq(orgUnitMembers.orgUnitId, id));
     await this.database.db.delete(orgUnits).where(withTenant(orgUnits, eq(orgUnits.id, id)));
+  }
+
+  /**
+   * Domain hook called immediately before a unit is deleted. Apps that need
+   * to reject deletes with cross-domain references (e.g. compliance rejecting
+   * a unit referenced by `law_handlers`) override this in a subclass and
+   * throw a `BadRequestException`. Default no-op preserves the platform's
+   * domain-agnostic baseline.
+   */
+  protected async assertCanDelete(_id: string): Promise<void> {
+    // no-op
   }
 
   // ---------------------------------------------------------------------------

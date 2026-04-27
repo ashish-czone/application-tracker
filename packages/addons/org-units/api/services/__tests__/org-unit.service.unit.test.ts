@@ -323,6 +323,29 @@ describe('OrgUnitService', () => {
 
       expect(result).toBeUndefined();
     });
+
+    it('should call assertCanDelete before deleting (subclass hook)', async () => {
+      const unit = makeOrgUnit();
+      _chain._enqueue([unit]);
+      _chain._enqueue(undefined);
+      _chain._enqueue(undefined);
+
+      const spy = vi.spyOn(service as any, 'assertCanDelete');
+      await service.delete('ou-1');
+
+      expect(spy).toHaveBeenCalledWith('ou-1');
+      expect(spy.mock.invocationCallOrder[0]).toBeLessThan(db.delete.mock.invocationCallOrder[0]);
+    });
+
+    it('should propagate assertCanDelete errors and skip deletion', async () => {
+      const unit = makeOrgUnit();
+      _chain._enqueue([unit]);
+
+      vi.spyOn(service as any, 'assertCanDelete').mockRejectedValueOnce(new Error('blocked'));
+
+      await expect(service.delete('ou-1')).rejects.toThrow('blocked');
+      expect(db.delete).not.toHaveBeenCalled();
+    });
   });
 
   // ---------------------------------------------------------------------------

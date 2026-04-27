@@ -19,6 +19,7 @@ import { TASK_TEAM_MEMBERS_READER } from '@packages/tasks';
 import { PermissionManifestRegistry, ScopeResolverRegistry } from '@packages/rbac';
 import { LookupResolverService } from '@packages/entity-engine';
 import { UserResolverRegistry, EntityResolverRegistry } from '@packages/automation-contracts';
+import { ComplianceOrgUnitService } from './compliance-org-unit.service';
 
 /**
  * App-level org-units module. Wires the library classes into NestJS DI and
@@ -29,7 +30,7 @@ import { UserResolverRegistry, EntityResolverRegistry } from '@packages/automati
 @Module({
   controllers: [OrgUnitController, OrgUnitLevelController, OrgPositionController],
   providers: [
-    OrgUnitService,
+    { provide: OrgUnitService, useClass: ComplianceOrgUnitService },
     OrgUnitLevelService,
     OrgPositionService,
     PositionScopeResolverService,
