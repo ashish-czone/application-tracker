@@ -20,7 +20,7 @@ import type { MenuItem } from '@packages/domains';
  */
 export const platformMenuItems: MenuItem[] = [
   { path: '/users', label: 'Users', icon: Users, permission: 'users.read', position: 'after' },
-  { path: '/roles', label: 'Roles', icon: Shield, permission: 'rbac.roles-read', position: 'after' },
+  { path: '/roles', label: 'Roles', icon: Shield, permission: 'rbac.roles.read', position: 'after' },
   {
     path: '/management',
     label: 'Management',

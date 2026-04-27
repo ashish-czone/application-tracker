@@ -52,7 +52,7 @@ export class FieldPermissionsController {
   ) {}
 
   @Get('roles/:roleId/entities/:entityType')
-  @RequirePermission('rbac.roles-read')
+  @RequirePermission('rbac.roles.read')
   @ApiOperation({ summary: 'Get field permissions for a role + entity' })
   async getFieldPermissions(
     @Param('roleId', ParseUUIDPipe) roleId: string,
