@@ -89,13 +89,54 @@ export class DashboardService {
   constructor(private readonly database: DatabaseService) {}
 
   /**
-   * One row per live project with rolled-up task counts. Computed live in a
-   * single query with two LEFT JOIN aggregations — no materialized columns.
+   * One row per live project with rolled-up task counts. Computed live with
+   * two pre-aggregated subqueries LEFT JOINed onto projects — no materialized
+   * columns. We avoid correlated subqueries because Drizzle's tagged-template
+   * `${projects.id}` produces an unqualified `"id"` reference, which becomes
+   * ambiguous when the inner subquery joins tables that also have an `id`
+   * column. The pre-aggregate-then-join shape sidesteps that entirely.
+   *
    * `overdueTaskCount` excludes done tasks; due-date comparison uses the DB
    * server's current date, which is fine for an approximate dashboard chip.
    */
   async listDashboard(): Promise<ProjectDashboardCard[]> {
-    const todayInDb = sql`CURRENT_DATE`;
+    const milestoneAgg = this.database.db
+      .select({
+        projectId: milestones.projectId,
+        milestoneCount: sql<number>`COUNT(*)::int`.as('milestone_count'),
+      })
+      .from(milestones)
+      .where(isNull(milestones.deletedAt))
+      .groupBy(milestones.projectId)
+      .as('milestone_agg');
+
+    const taskAgg = this.database.db
+      .select({
+        projectId: milestones.projectId,
+        taskCount: sql<number>`COUNT(*)::int`.as('task_count'),
+        doneTaskCount: sql<number>`
+          COUNT(*) FILTER (WHERE ${tasks.status} = ${TASK_DONE})::int
+        `.as('done_task_count'),
+        overdueTaskCount: sql<number>`
+          COUNT(*) FILTER (
+            WHERE ${tasks.status} <> ${TASK_DONE}
+              AND ${tasks.dueDate} IS NOT NULL
+              AND ${tasks.dueDate} < CURRENT_DATE
+          )::int
+        `.as('overdue_task_count'),
+      })
+      .from(tasks)
+      .innerJoin(features, eq(features.id, tasks.featureId))
+      .innerJoin(milestones, eq(milestones.id, features.milestoneId))
+      .where(
+        and(
+          isNull(tasks.deletedAt),
+          isNull(features.deletedAt),
+          isNull(milestones.deletedAt),
+        ),
+      )
+      .groupBy(milestones.projectId)
+      .as('task_agg');
 
     const rows = await this.database.db
       .select({
@@ -110,44 +151,14 @@ export class DashboardService {
         icon: projects.icon,
         startDate: projects.startDate,
         targetDate: projects.targetDate,
-        milestoneCount: sql<number>`(
-          SELECT COUNT(*)::int FROM ${milestones}
-          WHERE ${milestones.projectId} = ${projects.id}
-            AND ${milestones.deletedAt} IS NULL
-        )`,
-        taskCount: sql<number>`(
-          SELECT COUNT(*)::int FROM ${tasks}
-          INNER JOIN ${features} ON ${features.id} = ${tasks.featureId}
-          INNER JOIN ${milestones} ON ${milestones.id} = ${features.milestoneId}
-          WHERE ${milestones.projectId} = ${projects.id}
-            AND ${tasks.deletedAt} IS NULL
-            AND ${features.deletedAt} IS NULL
-            AND ${milestones.deletedAt} IS NULL
-        )`,
-        doneTaskCount: sql<number>`(
-          SELECT COUNT(*)::int FROM ${tasks}
-          INNER JOIN ${features} ON ${features.id} = ${tasks.featureId}
-          INNER JOIN ${milestones} ON ${milestones.id} = ${features.milestoneId}
-          WHERE ${milestones.projectId} = ${projects.id}
-            AND ${tasks.deletedAt} IS NULL
-            AND ${features.deletedAt} IS NULL
-            AND ${milestones.deletedAt} IS NULL
-            AND ${tasks.status} = ${TASK_DONE}
-        )`,
-        overdueTaskCount: sql<number>`(
-          SELECT COUNT(*)::int FROM ${tasks}
-          INNER JOIN ${features} ON ${features.id} = ${tasks.featureId}
-          INNER JOIN ${milestones} ON ${milestones.id} = ${features.milestoneId}
-          WHERE ${milestones.projectId} = ${projects.id}
-            AND ${tasks.deletedAt} IS NULL
-            AND ${features.deletedAt} IS NULL
-            AND ${milestones.deletedAt} IS NULL
-            AND ${tasks.status} <> ${TASK_DONE}
-            AND ${tasks.dueDate} IS NOT NULL
-            AND ${tasks.dueDate} < ${todayInDb}
-        )`,
+        milestoneCount: sql<number>`COALESCE(${milestoneAgg.milestoneCount}, 0)`,
+        taskCount: sql<number>`COALESCE(${taskAgg.taskCount}, 0)`,
+        doneTaskCount: sql<number>`COALESCE(${taskAgg.doneTaskCount}, 0)`,
+        overdueTaskCount: sql<number>`COALESCE(${taskAgg.overdueTaskCount}, 0)`,
       })
       .from(projects)
+      .leftJoin(milestoneAgg, eq(milestoneAgg.projectId, projects.id))
+      .leftJoin(taskAgg, eq(taskAgg.projectId, projects.id))
       .where(isNull(projects.deletedAt))
       .orderBy(sql`${projects.targetDate} ASC NULLS LAST`, sql`${projects.name} ASC`);
 

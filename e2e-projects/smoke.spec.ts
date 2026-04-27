@@ -8,9 +8,12 @@ test.describe('Smoke', () => {
 
   test('logs in as e2e-admin and lands on dashboard', async ({ authedPage }) => {
     await authedPage.goto('/');
-    // Auth fixture injected tokens; root redirects to /dashboard for authed users.
+    // Auth fixture injected tokens; root redirects to /dashboard for authed
+    // users. The dashboard page itself doesn't render a literal "Dashboard"
+    // heading — its widgets carry their own titles — so we assert on the URL
+    // and on a sidebar element to prove the shell mounted authed.
     await authedPage.waitForURL(/\/dashboard/);
-    await expect(authedPage.getByRole('heading', { name: /dashboard/i }).first()).toBeVisible();
+    await expect(authedPage.getByRole('link', { name: /^Projects$/ }).first()).toBeVisible();
   });
 
   test('main nav exposes the projects domain sections', async ({ authedPage }) => {
