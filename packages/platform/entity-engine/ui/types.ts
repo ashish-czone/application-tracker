@@ -140,6 +140,55 @@ export interface HeaderPlugin {
   enabledFor?: (entity: EntityRegistryEntry) => boolean;
 }
 
+/**
+ * Entity-level presentation hints. These are pure UI concerns (icon, nav,
+ * createMode, etc.) that previously lived on the api-side `EntityConfig.ui`
+ * block. They belong here in the UI package; the api package is moving to
+ * have zero awareness of UI shape.
+ */
+export interface EntityUIPresentation {
+  /** Lucide icon name */
+  icon?: string;
+  /** Field key for subtitle on the detail page header */
+  subtitleField?: string;
+  /** Sidebar nav group. When multiple entities share a navGroup and set `groupRenderMode: 'tabs'`, the platform collapses them into a single nav link and renders a tabbed page. */
+  navGroup?: string;
+  /** Sidebar ordering within group. When grouped via `groupRenderMode: 'tabs'`, also drives tab order. */
+  navOrder?: number;
+  /** How entities in the same `navGroup` are presented. `'tabs'` collapses all grouped entities into one nav link routed to a tabbed group page. */
+  groupRenderMode?: 'tabs';
+  /** How the "Add" button works. Default: 'modal' */
+  createMode?: 'modal' | 'page' | 'wizard';
+  /** Picklist field keys that can be used as board/kanban grouping. */
+  boardFields?: string[];
+  /** Route template used by the list page after a successful quick-create. `:id` is interpolated with the created entity id. */
+  afterCreateRoute?: string;
+}
+
+/**
+ * Per-field UI overrides. Keyed by field key (camelCase, matches Drizzle
+ * property name). Previously lived on `FieldMeta` in the api package.
+ */
+export interface FieldUI {
+  /** Custom UI widget type (e.g. 'color-picker') */
+  uiType?: string;
+  /** Named cell renderer for the list view (looked up in EntityEngineProvider columnRenderers registry) */
+  cellRenderer?: string;
+}
+
+/**
+ * Per-action UI overrides. Keyed by action key. Previously lived on
+ * `EntityAction` in the api package.
+ */
+export interface ActionUI {
+  /** Display label */
+  label?: string;
+  /** Lucide icon name */
+  icon?: string;
+  /** Visual variant */
+  variant?: 'default' | 'destructive';
+}
+
 /** Frontend-side entity UI config (supplements the backend registry) */
 export interface EntityUIConfig {
   entityType: string;
@@ -152,6 +201,12 @@ export interface EntityUIConfig {
   headerPlugins?: HeaderPlugin[];
   /** Entity-specific list view modes (merged with global list views from provider) */
   listViews?: ListViewPlugin[];
+  /** Entity-level presentation hints (icon, nav group, createMode, ...). */
+  presentation?: EntityUIPresentation;
+  /** Per-field UI overrides (uiType, cellRenderer). Keyed by field key. */
+  fieldUI?: Record<string, FieldUI>;
+  /** Per-action UI overrides (label, icon, variant). Keyed by action key. */
+  actionUI?: Record<string, ActionUI>;
 }
 
 /** Registration for a named cell renderer used in list view columns */

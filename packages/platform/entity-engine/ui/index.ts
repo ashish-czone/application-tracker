@@ -33,5 +33,11 @@ export type {
   RightSidebarPanel,
   HeaderPlugin,
   EntityUIConfig,
+  EntityUIPresentation,
+  FieldUI,
+  ActionUI,
   ColumnRendererRegistration,
 } from './types';
+
+export { buildEntityUIIndex } from './helpers/buildEntityUIIndex';
+export type { EntityUIIndex } from './helpers/buildEntityUIIndex';
