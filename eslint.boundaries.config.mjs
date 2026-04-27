@@ -93,4 +93,29 @@ export default [
       ],
     },
   },
+  // api ↔ ui boundary: api packages must not import from ui packages.
+  // The api layer ships zero presentation; UI metadata lives only on the
+  // frontend `EntityUIConfig`. See PROMPT-API.md §15 and PROMPT-UI.md §16.
+  {
+    files: ['packages/*/*/api/**/*.{ts,tsx}', 'domains/*/api/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@packages/ui', '@packages/ui/**'],
+              message:
+                'api packages must not import from @packages/ui — UI primitives belong on the frontend only.',
+            },
+            {
+              group: ['@packages/*-ui', '@packages/*-ui/**'],
+              message:
+                'api packages must not import from any @packages/*-ui package — presentation lives on the frontend `EntityUIConfig`.',
+            },
+          ],
+        },
+      ],
+    },
+  },
 ];
