@@ -51,3 +51,7 @@ export {
   type ConsoleHeaderBarUser,
   type ConsoleHeaderBarNavItem,
 } from './layout/ConsoleHeaderBar';
+
+// Composite widgets — larger compositions over primitives that know the
+// compliance vocabulary (laws, filings, clients, handlers).
+export * from './composites';

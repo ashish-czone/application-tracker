@@ -1,5 +1,5 @@
 import { FREQUENCIES, type ComplianceFrequency } from '@domains/compliance-contract';
-import type { Handler } from '../../../../../shared/types';
+import type { Handler } from '../../../../../types';
 import type { ComplianceRule, ComplianceRuleStatus, LawGroupKey } from '../types';
 import type { ComplianceRuleRecord, LawRecord } from '../../../../../hooks/useComplianceRulesApi';
 

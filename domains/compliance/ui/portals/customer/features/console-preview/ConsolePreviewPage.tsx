@@ -140,7 +140,7 @@ import {
   HandlerWorkloadList,
   BulkFilingDrawer,
   type Filing,
-} from '../../../../shared';
+} from '../../../../components/composites';
 import {
   PREVIEW_TODAY,
   MOCK_FILINGS,

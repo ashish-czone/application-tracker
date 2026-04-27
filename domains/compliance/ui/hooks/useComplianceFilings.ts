@@ -5,7 +5,7 @@ import { useEntityEngine, useEntityHooks } from '@packages/entity-engine-ui';
 import { useOrgUnits } from '@packages/org-units-ui';
 import type { OrgUnit } from '@packages/org-units-ui';
 import type { FilingRow } from '../portals/customer/features/filings/types';
-import type { Handler, Filing } from '../shared/types';
+import type { Handler, Filing } from '../types';
 
 interface PaginatedResponse<T> {
   data: T[];

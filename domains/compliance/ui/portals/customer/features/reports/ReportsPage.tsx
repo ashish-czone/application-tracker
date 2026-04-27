@@ -9,7 +9,7 @@ import {
   SearchInput,
   ScreenLayout,
 } from '@packages/ui';
-import { DateRangePopover, type DateRangeValue } from '../../../../shared';
+import { DateRangePopover, type DateRangeValue } from '../../../../components/composites';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 import {
   COMPLIANCE_TREND,

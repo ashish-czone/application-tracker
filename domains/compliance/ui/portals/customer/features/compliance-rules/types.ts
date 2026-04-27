@@ -1,5 +1,5 @@
 import type { ComplianceFrequency } from '@domains/compliance-contract';
-import type { Handler } from '../../../../shared/types';
+import type { Handler } from '../../../../types';
 
 // A ComplianceRule is the canonical filing requirement for a law / form /
 // cadence combination. Concrete filings (the instances on the dashboard)

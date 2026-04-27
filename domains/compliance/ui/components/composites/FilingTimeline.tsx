@@ -1,6 +1,6 @@
 import { useMemo, type HTMLAttributes } from 'react';
 import { Eyebrow } from '@packages/ui';
-import type { Filing } from './types';
+import type { Filing } from '../../types';
 
 export interface FilingTimelineProps extends HTMLAttributes<HTMLDivElement> {
   filings: Filing[];

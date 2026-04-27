@@ -1,8 +1,8 @@
 import { type HTMLAttributes } from 'react';
 import { DrawerShell, DrawerHeader, Eyebrow, SectionRule } from '@packages/ui';
-import { OrdinalDate, FieldLabel } from '../components';
+import { OrdinalDate, FieldLabel } from '..';
 import { FilingTaskCard } from './FilingTaskCard';
-import type { Filing } from './types';
+import type { Filing } from '../../types';
 
 export interface BulkFilingDrawerProps extends HTMLAttributes<HTMLDivElement> {
   filings: Filing[];

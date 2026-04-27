@@ -1,6 +1,6 @@
-import type { Filing, Client, Law, Handler } from '../../../../shared/types';
-import type { HandlerWorkload } from '../../../../shared/HandlerWorkloadBar';
-import type { MatrixCellState } from '../../../../shared/ClientLawMatrix';
+import type { Filing, Client, Law, Handler } from '../../../../types';
+import type { HandlerWorkload } from '../../../../components/composites/HandlerWorkloadBar';
+import type { MatrixCellState } from '../../../../components/composites/ClientLawMatrix';
 
 // Static mock data for the design preview — hand-tuned so that every
 // widget renders with a plausible, visually-interesting shape.

@@ -1,4 +1,4 @@
-import type { Filing, Handler } from '../../../../shared/types';
+import type { Filing, Handler } from '../../../../types';
 
 export interface FilingNote {
   id: string;

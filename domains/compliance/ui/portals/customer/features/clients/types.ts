@@ -1,4 +1,4 @@
-import type { Handler } from '../../../../shared/types';
+import type { Handler } from '../../../../types';
 
 // Status + risk taxonomy — the workflow vocabulary the clients screen renders.
 export type ClientStatus = 'active' | 'onboarding' | 'dormant';

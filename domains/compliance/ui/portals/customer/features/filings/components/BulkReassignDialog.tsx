@@ -18,7 +18,7 @@ import {
   RadioGroupItem,
   AvatarBadge,
 } from '@packages/ui';
-import type { Handler } from '../../../../../shared/types';
+import type { Handler } from '../../../../../types';
 import type { FilingRow } from '../types';
 
 export interface BulkReassignSubmitPayload {

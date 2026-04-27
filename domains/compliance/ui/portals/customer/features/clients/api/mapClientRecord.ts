@@ -1,4 +1,4 @@
-import type { Handler } from '../../../../../shared/types';
+import type { Handler } from '../../../../../types';
 import type { ClientRow, ClientStatus, ClientRiskLevel } from '../types';
 import type { ClientDetail } from '../types';
 import type { ClientRecord } from '../../../../../hooks/useClientsApi';

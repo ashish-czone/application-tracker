@@ -1,6 +1,6 @@
 import { type HTMLAttributes } from 'react';
 import { AvatarBadge, Eyebrow } from '@packages/ui';
-import type { Handler } from './types';
+import type { Handler } from '../../types';
 
 export interface HandlerWorkload {
   handler: Handler;

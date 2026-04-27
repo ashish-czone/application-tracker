@@ -2,7 +2,7 @@ import { useState, useMemo, type HTMLAttributes } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Eyebrow, useSlidingHighlight } from '@packages/ui';
-import type { Filing } from './types';
+import type { Filing } from '../../types';
 
 export interface ComplianceCalendarProps extends HTMLAttributes<HTMLDivElement> {
   filings: Filing[];

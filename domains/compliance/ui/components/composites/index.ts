@@ -24,6 +24,9 @@ export {
   DateRangePopover,
   type DateRangePopoverProps,
   type DateRangeValue,
-} from './components/DateRangePopover';
+} from './DateRangePopover';
 
-export type { Law, Client, Handler, Filing, LawCode } from './types';
+// Shared compliance vocabulary types live at the domain root. Re-exported
+// here so existing `@domains/compliance-ui/components/composites` consumers
+// pick them up without a separate import.
+export type { Law, Client, Handler, Filing, LawCode } from '../../types';
