@@ -8,6 +8,9 @@ export const TASKS_CONFIG = defineEntity({
   pluralName: 'Tasks',
   timestamps: true,
   orderable: true,
+  // See PROJECTS_CONFIG — flag is required so the workflow seed service
+  // writes the status workflow rows the transition endpoint needs.
+  adminConfigurable: true,
 
   fields: {
     featureId: {

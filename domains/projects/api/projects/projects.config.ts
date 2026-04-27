@@ -8,6 +8,11 @@ export const PROJECTS_CONFIG = defineEntity({
   pluralName: 'Projects',
   timestamps: true,
   subtitleField: 'description',
+  // Required for the platform's seed service to write workflow rows to the
+  // workflow_definitions / workflow_states / workflow_transitions tables.
+  // resolveForTransition() looks them up there at request time, so without
+  // this flag the status transition endpoint 400s with "no workflow found".
+  adminConfigurable: true,
 
   fields: {
     name: {
