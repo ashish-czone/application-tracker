@@ -1,5 +1,9 @@
-import { Module, type OnModuleInit } from '@nestjs/common';
-import { cleanDatabase, createPackageTestApp, type PackageTestApp } from '@packages/platform-testing';
+import { Global, Module, type OnModuleInit } from '@nestjs/common';
+import {
+  cleanDatabase,
+  createTestApp,
+  type TestAppContext,
+} from '@packages/platform-testing';
 import { HierarchyModule } from '@packages/hierarchy';
 import {
   OrgUnitService,
@@ -21,19 +25,24 @@ import { DatabaseService } from '@packages/database';
 import { PermissionManifestRegistry, ScopeResolverRegistry } from '@packages/rbac';
 import { LookupResolverService } from '@packages/entity-engine';
 import { UserResolverRegistry, EntityResolverRegistry } from '@packages/automation-contracts';
-import { WorkflowsModule, WorkflowRegistryService } from '@packages/workflows';
-import { AuditModule } from '@packages/audit';
-import { SettingsModule } from '@packages/settings';
-import { NotificationChannelsModule } from '@packages/notification-channels';
-import { NotificationsModule } from '@packages/notifications';
+import { WorkflowRegistryService } from '@packages/workflows';
 import {
   EntityRegistryService,
   WORKFLOW_EXTENSION,
   seedWorkflows,
   type EntityConfig,
 } from '@packages/entity-engine';
-import { ComplianceDomainModule } from '../../compliance.module';
+import { complianceBackend } from '../../index';
 
+/**
+ * `@Global()` so providers exported here — notably `TASK_TEAM_MEMBERS_READER` —
+ * are visible to `TasksModule` (nested inside `ComplianceDomainModule`)
+ * without each consumer module having to `imports: [TestOrgUnitsModule]`. The
+ * runtime per-app `OrgUnitsModule` (e.g. `apps/compliance/src/modules/org-units`)
+ * is wired into the apps' root `AppModule` next to the global platform modules,
+ * which has the same effect at runtime; in tests we make it explicit.
+ */
+@Global()
 @Module({
   controllers: [OrgUnitController, OrgUnitLevelController, OrgPositionController],
   providers: [
@@ -88,28 +97,24 @@ class TestOrgUnitsModule implements OnModuleInit {
 
 /**
  * Boots a NestJS HTTP test app with the compliance domain wired up against
- * real Postgres. Imports the transitive platform deps that ComplianceDomainModule
- * expects (hierarchy for laws, org-units for assigneeTeamId, workflows for
- * filing transitions, notifications for task-digest action, etc).
+ * real Postgres. Uses `createTestApp` from `@packages/platform-testing` which
+ * mirrors the shell composition `apps/compliance` uses at runtime — same
+ * EntityEngineModule, WorkflowsModule, AuditModule, etc. — so domain code
+ * resolves the same DI graph in tests as in production.
  *
- * UsersModule is intentionally omitted — compliance only uses the
- * USERS_POSITIONS_READER token, which it provides itself; importing the full
- * UsersModule pulls in AuthModule (JWT config, throttling, etc.) which the
- * test harness doesn't need. Tests that need auth use `withAuth([...])`
- * from `@packages/platform-testing` to inject a mock user.
+ * `extraImports` mirrors what `apps/compliance/src/app.module.ts` passes to
+ * `createAppModule`, scoped down to what compliance integration tests
+ * actually exercise:
+ *  - `HierarchyModule` for laws (laws are hierarchical via the platform flag)
+ *  - `TestOrgUnitsModule` for assigneeTeamId, escalation resolvers, and the
+ *    `TASK_TEAM_MEMBERS_READER` token compliance's task-claim path needs.
+ *    UsersModule is intentionally omitted — compliance only uses the
+ *    `USERS_POSITIONS_READER` token, which it provides itself.
  */
-export async function createComplianceTestApp(): Promise<PackageTestApp> {
-  const ctx = await createPackageTestApp({
-    imports: [
-      HierarchyModule,
-      WorkflowsModule,
-      TestOrgUnitsModule,
-      AuditModule,
-      SettingsModule,
-      NotificationChannelsModule,
-      NotificationsModule,
-      ComplianceDomainModule,
-    ],
+export async function createComplianceTestApp(): Promise<TestAppContext> {
+  const ctx = await createTestApp({
+    domains: [complianceBackend],
+    extraImports: [HierarchyModule, TestOrgUnitsModule],
   });
 
   await seedAllWorkflows(ctx);
@@ -124,7 +129,7 @@ export async function createComplianceTestApp(): Promise<PackageTestApp> {
  * Calling `seedWorkflows` directly gives transition endpoints the DB rows
  * they read at request time.
  */
-async function seedAllWorkflows(ctx: PackageTestApp): Promise<void> {
+async function seedAllWorkflows(ctx: TestAppContext): Promise<void> {
   const registry = ctx.module.get(EntityRegistryService);
   const workflowExt = ctx.module.get(WORKFLOW_EXTENSION);
   for (const entry of registry.getAll() as EntityConfig[]) {
@@ -142,7 +147,7 @@ async function seedAllWorkflows(ctx: PackageTestApp): Promise<void> {
  * `workflow_transition_history.workflow_definition_id` FK checks against
  * stale cached IDs.
  */
-export async function resetComplianceTestDb(ctx: PackageTestApp): Promise<void> {
+export async function resetComplianceTestDb(ctx: TestAppContext): Promise<void> {
   await cleanDatabase(ctx.db);
   // Reload registry BEFORE seeding: seedWorkflows' "already seeded?" check
   // consults the in-memory cache (`workflowExt.getBySlug`), which still
