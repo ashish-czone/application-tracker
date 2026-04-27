@@ -14,14 +14,14 @@ The firm administrator / accounting team should be able to:
 2. **Client registrations** — register a client against one or more laws (GST, Income Tax, TDS, PT, ROC, etc.). A client's registrations determine which compliance obligations apply to them.
 3. **Compliance rule catalogue** — define recurring compliance rules for each law / sub-law (e.g., "GSTR-1, monthly, due on the 11th"), including frequency, due-date math, and grace period.
 4. **Org structure** — create teams (org units), put employees in one or more teams, each with a **position** (Head / Lead / Member or admin-defined equivalents). Teams can nest via a parent–child hierarchy (division → sub-division → team).
-5. **Default team assignment** — assign a default team (and optionally per-client overrides) that is responsible for every compliance rule or law. Used when tasks are generated automatically.
-6. **Automatic task generation** — for every (active rule × registered client × period), the system generates a compliance task on a rolling horizon. Each task carries its rule, client, law, period start/end, and due date.
-7. **Team + individual assignment** — every task is owned by a team (`assigneeTeamId`, never null). An individual (`assigneeId`) may also be assigned or may pick it up themselves; if the individual leaves or goes on leave, their individual assignment is cleared and the team retains continuous visibility.
-8. **Email notifications** — the responsible team / individual receives email notifications for tasks that are **overdue** and for tasks **due within the next 7 days**. Driven by the platform's automations + notifications packages.
-9. **Audit trail** — every write action on compliance entities (clients, registrations, rules, tasks, assignments, attachments, comments, status changes) is recorded with actor, timestamp, and before/after field-level diff.
-10. **Files and comments on every compliance task** — any user with task access can upload supporting documents (challans, acknowledgements, computations) and add comments on a task.
-11. **Escalation matrix** — every task that slips is automatically re-surfaced to higher levels of the org tree on a fixed cadence, so that no task stays invisible. Escalation **adds visibility** (notification + listing); it does not reassign ownership.
-12. **Continued visibility through employee churn** — because every task is team-owned, leave, reassignment, and termination never orphan a task. Team members and team leadership always see it.
+5. **Default team assignment** — assign a default team (and optionally per-client overrides) that is responsible for every compliance rule or law. Used when filings are generated automatically.
+6. **Automatic filing generation** — for every (active rule × registered client × period), the system generates a compliance filing on a rolling horizon. Each filing carries its rule, client, law, period start/end, and due date.
+7. **Team + individual assignment** — every filing is owned by a team (`assigneeTeamId`, never null). An individual (`assigneeId`) may also be assigned or may pick it up themselves; if the individual leaves or goes on leave, their individual assignment is cleared and the team retains continuous visibility.
+8. **Email notifications** — the responsible team / individual receives email notifications for filings that are **overdue** and for filings **due within the next 7 days**. Driven by the platform's automations + notifications packages.
+9. **Audit trail** — every write action on compliance entities (clients, registrations, rules, filings, assignments, attachments, comments, status changes) is recorded with actor, timestamp, and before/after field-level diff.
+10. **Files and comments on every compliance filing** — any user with filing access can upload supporting documents (challans, acknowledgements, computations) and add comments on a filing.
+11. **Escalation matrix** — every filing that slips is automatically re-surfaced to higher levels of the org tree on a fixed cadence, so that no filing stays invisible. Escalation **adds visibility** (notification + listing); it does not reassign ownership.
+12. **Continued visibility through employee churn** — because every filing is team-owned, leave, reassignment, and termination never orphan a filing. Team members and team leadership always see it.
 
 ## Out of scope for V1
 
@@ -31,8 +31,8 @@ These are explicitly deferred:
 - **Client portal** (client-facing document intake, approval, self-service).
 - **Statutory integrations** — no direct calls to ITD, GSTN, TRACES, MCA, challan gateways, or PAN/TAN validation APIs.
 - **Indian tax primitives** beyond what's needed to run the rule engine — no FY/AY typing, no statutory section references, no tax-audit-specific forms (3CA/3CB/3CD, 15CA/CB), no penalty/interest computation (234A/B/C/F), no notice tracking.
-- **Maker–checker / multi-step approval workflow** on tasks.
-- **Sub-task decomposition** (collect → reconcile → prepare → review → file → acknowledge).
+- **Maker–checker / multi-step approval workflow** on filings.
+- **Sub-filing decomposition** (collect → reconcile → prepare → review → file → acknowledge).
 - **Revision tracking** (original vs revised return).
 - **Capacity planning** — leave-aware reassignment, workload forecasting.
 - **Holiday calendar** — due dates use their calendar date as-is; weekend / gazetted-holiday rolling is not applied.
@@ -42,9 +42,9 @@ These are explicitly deferred:
 
 ## Cross-cutting principles
 
-- **Domain-agnostic primitives stay in packages.** Task action permissions, scope logic, org-hierarchy resolution, audit infrastructure, attachments, comments, notifications — all belong to `packages/*` and are consumed by the compliance domain. The domain only defines what is domain-specific: clients, laws, rules, task generation logic, and its own seeded roles.
+- **Domain-agnostic primitives stay in packages.** Task action permissions (the generic `@packages/addons/tasks` primitive), scope logic, org-hierarchy resolution, audit infrastructure, attachments, comments, notifications — all belong to `packages/*` and are consumed by the compliance domain. The domain only defines what is domain-specific: clients, laws, rules, filing generation logic, and its own seeded roles.
 - **Configuration over code.** Positions, roles, escalation cadence, rule parameters, notification templates — all expressed as data / settings, not hard-coded strings.
-- **Forward-only semantics on deactivation.** Deactivating a registration, deprecating a rule, or dormantizing a client never retroactively cancels tasks that have already been generated; it only stops future generation. (Exact behaviour per field locked in `todos.md`.)
+- **Forward-only semantics on deactivation.** Deactivating a registration, deprecating a rule, or dormantizing a client never retroactively cancels filings that have already been generated; it only stops future generation. (Exact behaviour per field locked in `todos.md`.)
 - **No domain logic leaks into packages.** Any capability that a non-compliance domain (e.g., a future deals / projects module) could reasonably want stays in a package. This is the single most important rule when deciding placement.
 
 ---
@@ -53,7 +53,7 @@ These are explicitly deferred:
 
 These stories are the acceptance surface for V1. Each story has a stable ID (`US-<capability>.<n>`) so end-to-end tests can reference it: a Playwright test titled `US-1.3 dormantising a client cancels open filings` declares the story it covers, and a grep on story IDs surfaces uncovered ones.
 
-**Terminology.** Stories use **filing** as the canonical work-unit name (the `compliance_filings` entity, post-Stream F refactor). The in-scope list above uses *task* synonymously — they refer to the same record.
+**Terminology.** **Filing** is the canonical work-unit name throughout this document, materialised as the `compliance_filings` entity. Earlier drafts used "task" interchangeably; the rename was finalised pre–Stream F. Where this doc references the generic `@packages/addons/tasks` primitive (e.g., "task action permissions"), "task" still means the platform primitive, not the domain work unit.
 
 **Time-driven stories.** Stories that depend on time (generator, escalation, daily digest) are written against an explicit run trigger with an `asOf` date — they exercise the handler body and date math. The scheduler-registration line is covered by a separate one-line integration test, not by these stories.
 
@@ -260,7 +260,7 @@ These items have no V1 user story by design — see `## Out of scope for V1` abo
 - Statutory integrations (ITD, GSTN, TRACES, MCA) — would otherwise sit at US-6.x and US-10.x.
 - Indian tax primitives (FY/AY typing, 234A/B/C, 3CA/3CB/3CD, 15CA/CB).
 - Maker–checker / multi-step approval workflow on filings.
-- Sub-task decomposition (collect → reconcile → prepare → review → file → acknowledge).
+- Sub-filing decomposition (collect → reconcile → prepare → review → file → acknowledge).
 - Revision tracking (original vs revised return).
 - Capacity planning — leave-aware reassignment, workload forecasting.
 - Holiday calendar (Q10) — calendar dates are stored and rendered as-is.
