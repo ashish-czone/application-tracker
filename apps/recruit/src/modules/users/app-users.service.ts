@@ -6,7 +6,7 @@ import { OrgUnitService } from '@packages/org-units';
 export class AppUsersService extends UsersService {
   @Inject(OrgUnitService) private readonly orgUnitService!: OrgUnitService;
 
-  protected async cleanupOnSoftDelete(userId: string): Promise<void> {
+  protected async cleanupOnSoftDelete(userId: string, _actorId: string): Promise<void> {
     await this.orgUnitService.handleUserDeactivated(userId);
   }
 }

@@ -65,3 +65,23 @@ export interface ComplianceRegistrationDeactivatedPayload extends Record<string,
   autoCancelledFilingIds: string[];
   manuallyCancelledFilingIds: string[];
 }
+
+/**
+ * Emitted once per user soft-delete (US-7.4 / US-12.2 / US-12.3) carrying
+ * every non-terminal filing whose `assigneeId` was cleared because the
+ * user was deactivated. Batched (not per-filing) so a single deactivation
+ * touching N filings produces one audit entry — reviewers see "23 filings
+ * unassigned because user X was deactivated", not 23 rows.
+ *
+ * Cleared on the compliance side via the AppUsersService.cleanupOnSoftDelete
+ * hook → ComplianceFilingsService.clearAssigneeForDeactivatedUser, in the
+ * same call site as the user deactivation (not via an event listener) so
+ * failures abort the deactivation cleanly.
+ */
+export const COMPLIANCE_FILINGS_ASSIGNEE_CLEARED = 'compliance.FilingsAssigneeCleared' as const;
+
+export interface ComplianceFilingsAssigneeClearedPayload extends Record<string, unknown> {
+  deactivatedUserId: string;
+  filingIds: string[];
+  count: number;
+}
