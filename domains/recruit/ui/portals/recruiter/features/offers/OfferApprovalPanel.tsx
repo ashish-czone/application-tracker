@@ -1,20 +1,9 @@
 import { useMemo, useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, XCircle, Clock, MessageSquare } from 'lucide-react';
-import { Button, ConfirmDialog, cn, toast } from '@packages/ui';
-import { useEntityEngine } from '@packages/entity-engine-ui';
+import { Button, ConfirmDialog, cn } from '@packages/ui';
 import { useAuth } from '@packages/auth-ui';
 import { formatDateTime } from '@packages/common';
-
-interface Approval {
-  id: string;
-  offerId: string;
-  approverId: string;
-  decision: string;
-  comment: string | null;
-  decidedAt: string | null;
-  createdAt: string;
-}
+import { useOfferApprovals, useSubmitOfferDecision } from '@domains/recruit-ui/hooks/useOffersApi';
 
 interface OfferApprovalPanelProps {
   entity: Record<string, unknown>;
@@ -31,28 +20,11 @@ export function OfferApprovalPanel({ entity }: OfferApprovalPanelProps) {
   const offerStatus = entity.status as string;
   const { user } = useAuth();
   const currentUserId = user?.userId ?? '';
-  const { apiFn } = useEntityEngine();
-  const queryClient = useQueryClient();
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectComment, setRejectComment] = useState('');
 
-  const { data: approvals = [], isLoading } = useQuery({
-    queryKey: ['offers', offerId, 'approvals'],
-    queryFn: () => apiFn.get<Approval[]>(`/offers/${offerId}/approvals`),
-  });
-
-  const submitMutation = useMutation({
-    mutationFn: (params: { decision: 'approved' | 'rejected'; comment?: string }) =>
-      apiFn.post(`/offers/${offerId}/approvals`, params),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['offers', offerId, 'approvals'] });
-      queryClient.invalidateQueries({ queryKey: ['offers'] });
-      toast.success('Decision submitted');
-    },
-    onError: (err: Error) => {
-      toast.error(err?.message ?? 'Failed to submit decision');
-    },
-  });
+  const { data: approvals = [], isLoading } = useOfferApprovals(offerId);
+  const submitMutation = useSubmitOfferDecision(offerId);
 
   const currentUserApproval = useMemo(
     () => approvals.find((a) => a.approverId === currentUserId),

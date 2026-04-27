@@ -1,16 +1,15 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router';
 import { CalendarPlus, FileSignature } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
 import { Button } from '@packages/ui';
-import { EntityDetailPage, useEntityHooks, useEntityEngine } from '@packages/entity-engine-ui';
-import { ScheduleInterviewDialog } from '@domains/recruit-ui/portals/recruiter/features/shared/ScheduleInterviewDialog';
-import { CreateOfferDialog } from '@domains/recruit-ui/portals/recruiter/features/shared/CreateOfferDialog';
+import { EntityDetailPage, useEntityHooks } from '@packages/entity-engine-ui';
+import { ScheduleInterviewDialog } from '@domains/recruit-ui/components/composites/ScheduleInterviewDialog';
+import { CreateOfferDialog } from '@domains/recruit-ui/components/composites/CreateOfferDialog';
+import { useOffersByApplication } from '@domains/recruit-ui/hooks/useOffersApi';
 
 export function ApplicationDetailPage() {
   const { id } = useParams<{ id: string }>();
   const hooks = useEntityHooks('applications');
-  const { apiFn } = useEntityEngine();
   const { data: item } = hooks.useDetail(id ?? null);
   const [showSchedule, setShowSchedule] = useState(false);
   const [showCreateOffer, setShowCreateOffer] = useState(false);
@@ -21,11 +20,7 @@ export function ApplicationDetailPage() {
   const stage = item?.stage as string | undefined;
 
   // Check if an offer already exists for this application
-  const { data: existingOffer } = useQuery({
-    queryKey: ['applications', id, 'offer'],
-    queryFn: () => apiFn.get<{ data: { id: string; status: string }[] }>(`/offers?applicationId=${id}&limit=1`),
-    enabled: !!id && stage === 'offer',
-  });
+  const { data: existingOffer } = useOffersByApplication(id, { enabled: stage === 'offer' });
   const offer = existingOffer?.data?.[0];
   const showOfferButton = stage === 'offer' && !offer;
 

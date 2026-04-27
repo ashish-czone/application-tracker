@@ -1,10 +1,9 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router';
-import { useQuery } from '@tanstack/react-query';
 import { AlertCircle, CalendarDays } from 'lucide-react';
 import { Button } from '@packages/ui';
 import { EventCalendar, type CalendarEvent } from '@packages/calendar-ui';
-import { useEntityEngine } from '@packages/entity-engine-ui';
+import { useInterviewsCalendar } from '@domains/recruit-ui/hooks/useInterviewsApi';
 import '@packages/calendar-ui/styles.css';
 
 const STATUS_COLORS: Record<string, string> = {
@@ -29,27 +28,9 @@ const DEFAULT_EVENT_COLOR = 'hsl(220, 9%, 46%)';
 
 export function InterviewsCalendarPage() {
   const navigate = useNavigate();
-  const { apiFn } = useEntityEngine();
   const [dateRange, setDateRange] = useState<{ start: Date; end: Date } | null>(null);
 
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['interviews', 'calendar', dateRange?.start?.toISOString(), dateRange?.end?.toISOString()],
-    queryFn: async () => {
-      const params = new URLSearchParams({
-        limit: '200',
-        sort: 'interviewFrom',
-        order: 'asc',
-      });
-      if (dateRange) {
-        params.set('filters', JSON.stringify([
-          { field: 'interviewFrom', operator: 'gte', value: dateRange.start.toISOString() },
-          { field: 'interviewFrom', operator: 'lte', value: dateRange.end.toISOString() },
-        ]));
-      }
-      return apiFn.get<{ data: Record<string, unknown>[] }>(`/interviews?${params}`);
-    },
-    enabled: !!dateRange,
-  });
+  const { data, isLoading, error } = useInterviewsCalendar(dateRange);
 
   const events = useMemo<CalendarEvent[]>(() => {
     if (!data?.data) return [];

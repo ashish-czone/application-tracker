@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react';
 import { Link } from 'react-router';
-import { useQueryClient, useQuery } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   ExternalLink, CalendarPlus, ClipboardCheck, FileSignature,
   AlertCircle, Clock4, CheckCircle2, XCircle,
@@ -21,8 +21,9 @@ import {
   useEntityTransition,
 } from '@packages/workflows-ui';
 import { useState } from 'react';
-import { ScheduleInterviewDialog } from '@domains/recruit-ui/portals/recruiter/features/shared/ScheduleInterviewDialog';
-import { CreateOfferDialog } from '@domains/recruit-ui/portals/recruiter/features/shared/CreateOfferDialog';
+import { ScheduleInterviewDialog } from '@domains/recruit-ui/components/composites/ScheduleInterviewDialog';
+import { CreateOfferDialog } from '@domains/recruit-ui/components/composites/CreateOfferDialog';
+import { useOffersByApplication } from '@domains/recruit-ui/hooks/useOffersApi';
 
 const TERMINAL_STAGES = new Set(['hired', 'rejected', 'withdrawn']);
 
@@ -137,10 +138,8 @@ export function ApplicationPreviewPanel({
   const stageHint = stage ? getStageHint(stage) : null;
 
   // Check for existing offer in offer stage
-  const { data: existingOffer } = useQuery({
-    queryKey: ['applications', applicationId, 'offer'],
-    queryFn: () => apiFn.get<{ data: { id: string; status: string }[] }>(`/offers?applicationId=${applicationId}&limit=1`),
-    enabled: !!applicationId && stage === 'offer',
+  const { data: existingOffer } = useOffersByApplication(applicationId, {
+    enabled: stage === 'offer',
   });
   const offer = existingOffer?.data?.[0];
 
