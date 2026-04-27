@@ -4,7 +4,7 @@ import { SearchInput, toast } from '@packages/ui';
 import { useRolesList, useAddRoleMember } from '@packages/rbac-ui';
 import { useOrgPositions } from '@packages/org-units-ui';
 import { useQueryClient } from '@tanstack/react-query';
-import type { UserPosition } from '../data/usersMock';
+import type { UserPosition } from '../types';
 
 // Compliance-seeded roles whose capability is team- or firm-level leadership.
 // Matching by display name is intentionally soft — admins can rename roles,

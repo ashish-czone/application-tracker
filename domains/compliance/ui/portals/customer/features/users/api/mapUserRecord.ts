@@ -1,5 +1,5 @@
 import type { User } from '@packages/users-ui';
-import type { UserRow, UserStatus, UserRole, UserPosition } from '../data/usersMock';
+import type { UserRow, UserStatus, UserRole, UserPosition } from '../types';
 
 const AVATAR_PALETTE = [
   '#1D3461',

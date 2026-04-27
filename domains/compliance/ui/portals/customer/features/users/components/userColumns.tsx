@@ -1,6 +1,6 @@
 import { type DataTableColumn } from '@packages/ui';
 import { OrdinalDate, ColoredInitialsAvatar } from '../../../../../components';
-import type { UserRow } from '../data/usersMock';
+import type { UserRow } from '../types';
 import { StatusPill } from './StatusPill';
 import { RoleBadge } from './RoleBadge';
 
