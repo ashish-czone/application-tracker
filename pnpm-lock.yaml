@@ -2178,6 +2178,46 @@ importers:
         specifier: ^3.0.0
         version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0)
 
+  domains/projects/ui:
+    dependencies:
+      '@packages/entity-engine-ui':
+        specifier: workspace:*
+        version: link:../../../packages/platform/entity-engine/ui
+      '@packages/platform-ui':
+        specifier: workspace:*
+        version: link:../../../packages/platform/platform-ui
+      '@packages/ui':
+        specifier: workspace:*
+        version: link:../../../packages/core/ui
+      '@tanstack/react-query':
+        specifier: ^5.0.0
+        version: 5.90.21(react@19.2.4)
+      lucide-react:
+        specifier: ^0.500.0
+        version: 0.500.0(react@19.2.4)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.4
+      react-dom:
+        specifier: ^19.0.0
+        version: 19.2.4(react@19.2.4)
+      react-router:
+        specifier: ^7.0.0
+        version: 7.13.1(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+    devDependencies:
+      '@types/react':
+        specifier: ^19.2.14
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: ^19.0.0
+        version: 19.2.3(@types/react@19.2.14)
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0)
+
   domains/recruit/api:
     dependencies:
       '@nestjs/common':
