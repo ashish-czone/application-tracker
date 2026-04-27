@@ -58,3 +58,40 @@ export async function createClient(overrides: CreateClientOverrides = {}): Promi
     status: overrides.status ?? 'active',
   });
 }
+
+/** Workflow transition on a client. The platform's transition endpoint
+ *  validates the move against the client status workflow (onboarding →
+ *  active → dormant → active) and rejects illegal targets. */
+export async function transitionClient(
+  clientId: string,
+  to: ClientStatus,
+  options: { reason?: string; comment?: string } = {},
+): Promise<CreatedClient> {
+  return apiClient.post<CreatedClient>(`/clients/${clientId}/transition`, {
+    fieldKey: 'status',
+    to,
+    ...(options.reason ? { reason: options.reason } : {}),
+    ...(options.comment ? { comment: options.comment } : {}),
+  });
+}
+
+/** Patch arbitrary client fields. The service strips `status` defensively;
+ *  use `transitionClient` for workflow moves. */
+export async function updateClient(
+  clientId: string,
+  patch: Partial<{ name: string; legalName: string; taxId: string; email: string | null; phone: string | null }>,
+): Promise<CreatedClient> {
+  return apiClient.patch<CreatedClient>(`/clients/${clientId}`, patch);
+}
+
+/** Deactivate a (client, law) registration with a forward-only effective
+ *  date. Past filings are preserved by default; pass `alsoCancelEarlier`
+ *  to additionally cancel non-terminal filings whose periodEnd is before
+ *  the deactivation date. */
+export async function deactivateRegistration(
+  clientId: string,
+  lawId: string,
+  options: { deactivatedAt: string; alsoCancelEarlier?: boolean; comment?: string },
+): Promise<unknown> {
+  return apiClient.post(`/clients/${clientId}/registrations/${lawId}/deactivate`, options);
+}
