@@ -1,22 +1,31 @@
-import { Global, Module, type OnModuleInit } from '@nestjs/common';
+import { Module, type OnModuleInit } from '@nestjs/common';
 import { DatabaseService } from '@packages/database';
-import { OrgUnitService } from './services/org-unit.service';
-import { OrgUnitLevelService } from './services/org-unit-level.service';
-import { OrgPositionService } from './services/org-position.service';
-import { PositionScopeResolverService } from './services/position-scope-resolver.service';
-import { OrgUnitController } from './controllers/org-unit.controller';
-import { OrgUnitLevelController } from './controllers/org-unit-level.controller';
-import { OrgPositionController } from './controllers/org-position.controller';
+import {
+  OrgUnitService,
+  OrgUnitLevelService,
+  OrgPositionService,
+  PositionScopeResolverService,
+  OrgUnitController,
+  OrgUnitLevelController,
+  OrgPositionController,
+  UnitScopeResolver,
+  DescendantsScopeResolver,
+  OrgUnitHeadStrategy,
+  ParentUnitHeadStrategy,
+  OrgUnitMembersStrategy,
+  orgUnits,
+} from '@packages/org-units';
+import { TASK_TEAM_MEMBERS_READER } from '@packages/tasks';
 import { PermissionManifestRegistry, ScopeResolverRegistry } from '@packages/rbac';
 import { LookupResolverService } from '@packages/entity-engine';
 import { UserResolverRegistry, EntityResolverRegistry } from '@packages/automation-contracts';
-import { orgUnits } from './schema/org-units';
-import { OrgUnitHeadStrategy } from './automation-resolvers/org-unit-head.strategy';
-import { ParentUnitHeadStrategy } from './automation-resolvers/parent-unit-head.strategy';
-import { OrgUnitMembersStrategy } from './automation-resolvers/org-unit-members.strategy';
-import { UnitScopeResolver, DescendantsScopeResolver } from './scope-resolvers/hierarchy.resolver';
 
-@Global()
+/**
+ * App-level org-units module. Wires the library classes into NestJS DI and
+ * registers the cross-cutting bindings (permissions, scope resolvers, lookup,
+ * automation strategies) the app participates in. Mirrors the users-as-library
+ * pattern — `@packages/org-units` ships only classes/configs.
+ */
 @Module({
   controllers: [OrgUnitController, OrgUnitLevelController, OrgPositionController],
   providers: [
@@ -26,8 +35,15 @@ import { UnitScopeResolver, DescendantsScopeResolver } from './scope-resolvers/h
     PositionScopeResolverService,
     UnitScopeResolver,
     DescendantsScopeResolver,
+    { provide: TASK_TEAM_MEMBERS_READER, useExisting: OrgUnitService },
   ],
-  exports: [OrgUnitService, OrgUnitLevelService, OrgPositionService, PositionScopeResolverService],
+  exports: [
+    OrgUnitService,
+    OrgUnitLevelService,
+    OrgPositionService,
+    PositionScopeResolverService,
+    TASK_TEAM_MEMBERS_READER,
+  ],
 })
 export class OrgUnitsModule implements OnModuleInit {
   constructor(
@@ -43,8 +59,8 @@ export class OrgUnitsModule implements OnModuleInit {
 
   onModuleInit() {
     this.manifestRegistry.registerMany([
-      { slug: 'org-units.read',   module: 'org-units', action: 'read',   label: 'View org units',   description: 'View org units',                         supportedScopes: ['any'] },
-      { slug: 'org-units.manage', module: 'org-units', action: 'manage', label: 'Manage org units', description: 'Create, update, and delete org units',   supportedScopes: ['any'] },
+      { slug: 'org-units.read',   module: 'org-units', action: 'read',   label: 'View org units',   description: 'View org units',                       supportedScopes: ['any'] },
+      { slug: 'org-units.manage', module: 'org-units', action: 'manage', label: 'Manage org units', description: 'Create, update, and delete org units', supportedScopes: ['any'] },
     ]);
 
     this.scopeResolverRegistry.register(this.unitScopeResolver);
@@ -58,9 +74,6 @@ export class OrgUnitsModule implements OnModuleInit {
       searchFields: ['name'],
     });
 
-    // User-resolution strategies for automations. Any entity with an
-    // org-unit FK column (e.g. `assigneeTeamId` on tasks) can drive its
-    // notification recipients through these.
     const getResolver = (entityType: string) => this.entityResolverRegistry.get(entityType);
     this.userResolverRegistry.registerStrategy(new OrgUnitHeadStrategy(this.database, getResolver));
     this.userResolverRegistry.registerStrategy(new ParentUnitHeadStrategy(this.database, getResolver));

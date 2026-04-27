@@ -49,11 +49,11 @@ export interface AppShellOptions {
   /**
    * Extra modules to import. App-shell ships core infra (auth, audit,
    * notifications, entity-engine, workflows, automations, media) but does NOT
-   * ship a UsersModule — each app owns its users entity and must pass an
-   * app-level UsersModule here alongside any addon modules it needs:
-   * NotesModule, AttachmentsModule, OAuthModule, OrgUnitsModule,
-   * HierarchyModule, OrderableModule, TaxonomyModule, etc. Wire only the
-   * addons the app actually uses.
+   * ship a UsersModule or an OrgUnitsModule — each app owns those entities
+   * and must pass app-level modules here alongside any addon modules it
+   * needs: NotesModule, AttachmentsModule, OAuthModule, HierarchyModule,
+   * OrderableModule, TaxonomyModule, etc. Wire only the addons the app
+   * actually uses.
    */
   extraImports?: NonNullable<ModuleMetadata['imports']>;
 }

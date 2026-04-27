@@ -25,7 +25,7 @@ function createMockDatabaseService(mockDb: ReturnType<typeof createMockDb>) {
   return { db: mockDb } as any;
 }
 
-function createMockOrgUnitService(memberIds: string[] = []) {
+function createMockTeamMembersReader(memberIds: string[] = []) {
   return {
     getMemberIds: vi.fn().mockResolvedValue(memberIds),
   } as any;
@@ -34,12 +34,12 @@ function createMockOrgUnitService(memberIds: string[] = []) {
 describe('TaskClaimService', () => {
   let service: TaskClaimService;
   let mockDb: ReturnType<typeof createMockDb>;
-  let mockOrgUnits: ReturnType<typeof createMockOrgUnitService>;
+  let mockTeamMembersReader: ReturnType<typeof createMockTeamMembersReader>;
 
   beforeEach(() => {
     mockDb = createMockDb();
-    mockOrgUnits = createMockOrgUnitService();
-    service = new TaskClaimService(createMockDatabaseService(mockDb), mockOrgUnits);
+    mockTeamMembersReader = createMockTeamMembersReader();
+    service = new TaskClaimService(createMockDatabaseService(mockDb), mockTeamMembersReader);
   });
 
   describe('pickup', () => {
@@ -66,7 +66,7 @@ describe('TaskClaimService', () => {
       mockDb._select.where.mockResolvedValueOnce([
         { id: 'task-1', status: 'pending', assigneeId: null, assigneeTeamId: 'team-1' },
       ]);
-      mockOrgUnits.getMemberIds.mockResolvedValueOnce(['other-user']);
+      mockTeamMembersReader.getMemberIds.mockResolvedValueOnce(['other-user']);
       await expect(service.pickup('task-1', 'user-1')).rejects.toThrow(ForbiddenException);
     });
 
@@ -74,7 +74,7 @@ describe('TaskClaimService', () => {
       mockDb._select.where.mockResolvedValueOnce([
         { id: 'task-1', status: 'pending', assigneeId: null, assigneeTeamId: 'team-1' },
       ]);
-      mockOrgUnits.getMemberIds.mockResolvedValueOnce(['user-1']);
+      mockTeamMembersReader.getMemberIds.mockResolvedValueOnce(['user-1']);
       mockDb._update.returning.mockResolvedValueOnce([]);
       await expect(service.pickup('task-1', 'user-1')).rejects.toThrow(ConflictException);
     });
@@ -83,7 +83,7 @@ describe('TaskClaimService', () => {
       mockDb._select.where.mockResolvedValueOnce([
         { id: 'task-1', status: 'pending', assigneeId: null, assigneeTeamId: 'team-1' },
       ]);
-      mockOrgUnits.getMemberIds.mockResolvedValueOnce(['user-1']);
+      mockTeamMembersReader.getMemberIds.mockResolvedValueOnce(['user-1']);
       mockDb._update.returning.mockResolvedValueOnce([
         { id: 'task-1', assigneeId: 'user-1', status: 'in_progress' },
       ]);

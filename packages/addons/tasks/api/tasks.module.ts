@@ -1,6 +1,5 @@
 import { Module, type OnModuleInit } from '@nestjs/common';
 import { EntityEngineModule } from '@packages/entity-engine';
-import { OrgUnitsModule } from '@packages/org-units';
 import { ActionRegistry } from '@packages/automation-contracts';
 import { TASKS_CONFIG } from './tasks.config';
 import { TasksService } from './services/tasks.service';
@@ -12,7 +11,6 @@ import { TaskClaimController } from './controllers/task-claim.controller';
 @Module({
   imports: [
     EntityEngineModule.forEntity(TASKS_CONFIG),
-    OrgUnitsModule,
   ],
   controllers: [TasksController, TaskClaimController],
   providers: [TasksService, TaskClaimService, SendTaskDigestAction],
