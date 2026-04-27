@@ -70,7 +70,18 @@ export class TestHooksService {
   private async reloadCaches(): Promise<void> {
     const fieldDefService = this.moduleRef.get(FieldDefinitionService, { strict: false });
     const workflowRegistry = this.moduleRef.get(WorkflowRegistryService, { strict: false });
+    const registry = this.moduleRef.get(EntityRegistryService, { strict: false });
     await fieldDefService.reloadCache();
+    // reloadCache() only loads from DB; non-adminConfigurable entities have no
+    // rows in field_definitions, so their in-memory cache entries (installed
+    // at boot via populateFromRegistry) are wiped. Without this restore step
+    // every write to a code-defined entity 400s with "Unknown field" because
+    // the validator sees an empty fields list.
+    for (const entry of registry.getAll() as EntityConfig[]) {
+      if (!entry.adminConfigurable) {
+        fieldDefService.populateFromRegistry(entry);
+      }
+    }
     await workflowRegistry.loadAll();
   }
 
