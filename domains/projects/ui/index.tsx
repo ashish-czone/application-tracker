@@ -1,8 +1,19 @@
+import type {
+  DomainRouteObject,
+  DomainWebManifest,
+  MenuItem,
+} from '@packages/domains';
 import type { EntityUIConfig } from '@packages/entity-engine-ui';
+import { FolderKanban, CheckSquare } from 'lucide-react';
+
 import { PROJECTS_UI_CONFIG } from './entity-configs/projects.ui';
 import { MILESTONES_UI_CONFIG } from './entity-configs/milestones.ui';
 import { FEATURES_UI_CONFIG } from './entity-configs/features.ui';
 import { TASKS_UI_CONFIG } from './entity-configs/tasks.ui';
+
+import { ProjectsDashboardPage } from './pages/ProjectsDashboardPage';
+import { ProjectDetailPage } from './pages/ProjectDetailPage';
+import { MyTasksPage } from './pages/MyTasksPage';
 
 export const projectsEntityUIConfigs: EntityUIConfig[] = [
   PROJECTS_UI_CONFIG,
@@ -10,6 +21,28 @@ export const projectsEntityUIConfigs: EntityUIConfig[] = [
   FEATURES_UI_CONFIG,
   TASKS_UI_CONFIG,
 ];
+
+const routes: DomainRouteObject[] = [
+  // /projects claims the `projects` slug, replacing the auto-generated entity
+  // list with the dashboard. Milestones/features/tasks slugs are unclaimed,
+  // so their auto-generated CRUD pages remain available.
+  { path: '/projects',      element: <ProjectsDashboardPage />, permission: 'projects.read' },
+  { path: '/projects/:id',  element: <ProjectDetailPage />,     permission: 'projects.read' },
+  { path: '/my-tasks',      element: <MyTasksPage />,           permission: 'my-tasks.read' },
+];
+
+const menuItems: MenuItem[] = [
+  { path: '/projects',  label: 'Projects',  icon: FolderKanban, permission: 'projects.read', position: 'before' },
+  { path: '/my-tasks',  label: 'My Tasks',  icon: CheckSquare,  permission: 'my-tasks.read', position: 'before' },
+];
+
+export const projectsWeb: DomainWebManifest = {
+  name: 'projects',
+  displayName: 'Projects',
+  routes,
+  menuItems,
+  entityUIConfigs: projectsEntityUIConfigs,
+};
 
 export {
   PROJECTS_UI_CONFIG,
@@ -72,7 +105,5 @@ export type {
   CreateTaskInput,
 } from './types';
 
-// Pages — exported here so the host app's main.tsx can mount them as routes.
-export { ProjectsDashboardPage } from './pages/ProjectsDashboardPage';
-export { ProjectDetailPage } from './pages/ProjectDetailPage';
-export { MyTasksPage } from './pages/MyTasksPage';
+// Pages — exported for consumers that need to embed them outside the manifest.
+export { ProjectsDashboardPage, ProjectDetailPage, MyTasksPage };

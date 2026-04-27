@@ -15,6 +15,7 @@
     "@packages/auth-ui": "workspace:*",
     "@domains/agency-contract": "workspace:*",
     "@domains/agency-ui": "workspace:*",
+    "@domains/projects-ui": "workspace:*",
     "@packages/automations-ui": "workspace:*",
     "@packages/debug-profiler-ui": "workspace:*",
     "@packages/eav-attributes-ui": "workspace:*",
