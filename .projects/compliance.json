@@ -171,8 +171,8 @@
       "priority": "high",
       "createdAt": "2026-04-23",
       "completedAt": "2026-04-26",
-      "acceptanceCriteria": "Prevent registration/law_handler changes that would orphan filings; surface 'Configure handler' prompts. I22 (org_units delete) deferred to org-units-as-library follow-up.",
-      "notes": "PR #1064. I22 tracked separately — needs org-units library reshape first (mirrors users-as-library PRs #1027/#1028)."
+      "acceptanceCriteria": "Prevent registration/law_handler changes that would orphan filings; surface 'Configure handler' prompts.",
+      "notes": "PR #1064 (I19/I20/I21/I23) + PR #1071 (I22) on top of org-units-as-library reshape #1070."
     },
     {
       "id": "T-011-1",
@@ -215,12 +215,12 @@
       "type": "task",
       "parentId": "F-011",
       "title": "Guard on org_units delete",
-      "status": "blocked",
+      "status": "done",
       "priority": "medium",
       "createdAt": "2026-04-23",
-      "completedAt": null,
+      "completedAt": "2026-04-27",
       "acceptanceCriteria": "Block deleting org unit referenced by active law_handlers.",
-      "notes": "Blocked on org-units-as-library refactor (mirrors users-as-library PRs #1027/#1028). Tracked in memory project_org_units_as_library.md."
+      "notes": "PR #1071 (I22 subclass on top of #1070 org-units-as-library reshape). ComplianceOrgUnitService overrides assertCanDelete() to count law_handlers referencing the unit; throws BadRequestException with code HANDLERS_REFERENCE_UNIT when > 0."
     },
     {
       "id": "T-011-5",
