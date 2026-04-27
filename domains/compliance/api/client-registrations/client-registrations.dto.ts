@@ -12,9 +12,16 @@ export const ClientRegistrationRowSchema = createSelectSchema(complianceClientRe
 // Both `registeredAt` (`notNull().defaultNow()`) and `deactivatedAt`
 // (nullable) are optional on insert — preserve that or the override turns
 // what should be optional fields into required ones.
+//
+// `effectiveFrom` is a calendar DATE (YYYY-MM-DD string per data-formatting
+// rules); narrow with a regex so we reject malformed values at the boundary.
+const calendarDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'effectiveFrom must be YYYY-MM-DD');
+
 export const CreateClientRegistrationSchema = createInsertSchema(complianceClientRegistrations, {
   registeredAt: z.coerce.date().optional(),
   deactivatedAt: z.coerce.date().nullable().optional(),
+  registrationNumber: z.string().min(1).max(100).nullable().optional(),
+  effectiveFrom: calendarDate.nullable().optional(),
 }).omit({
   id: true,
   createdAt: true,

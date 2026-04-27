@@ -25,17 +25,29 @@ export const CLIENT_REGISTRATIONS_CONFIG = defineEntity({
       listVisible: true,
       listOrder: 2,
     },
+    registrationNumber: {
+      type: 'text',
+      label: 'Registration Number',
+      listVisible: true,
+      listOrder: 3,
+    },
+    effectiveFrom: {
+      type: 'date',
+      label: 'Effective From',
+      listVisible: true,
+      listOrder: 4,
+    },
     registeredAt: {
       type: 'datetime',
       label: 'Registered At',
       listVisible: true,
-      listOrder: 3,
+      listOrder: 5,
     },
     deactivatedAt: {
       type: 'datetime',
       label: 'Deactivated At',
       listVisible: true,
-      listOrder: 4,
+      listOrder: 6,
     },
   },
 
@@ -44,7 +56,7 @@ export const CLIENT_REGISTRATIONS_CONFIG = defineEntity({
   sections: [
     {
       name: 'Registration',
-      fields: ['clientId', 'lawId', 'registeredAt', 'deactivatedAt'],
+      fields: ['clientId', 'lawId', 'registrationNumber', 'effectiveFrom', 'registeredAt', 'deactivatedAt'],
     },
   ],
 });
