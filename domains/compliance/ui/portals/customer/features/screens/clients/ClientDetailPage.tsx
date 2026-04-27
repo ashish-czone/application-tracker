@@ -9,6 +9,7 @@ import {
   type ClientLaw,
 } from './data/clientDetailMock';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
+import { InactiveStateBanner } from '../../../../../components';
 import { ClientDetailHeader } from './components/ClientDetailHeader';
 import { ClientDetailOverview } from './components/ClientDetailOverview';
 import { CLIENT_DETAIL_FILING_COLUMNS } from './components/clientDetailFilingColumns';
@@ -128,6 +129,8 @@ export function ClientDetailPage() {
         </div>
 
         <ClientDetailHeader client={client} />
+
+        {client.status === 'dormant' && <InactiveStateBanner kind="dormant" />}
 
         <CoarseTabs animated tabs={detailTabs} value={activeTab} onChange={setActiveTab} />
 

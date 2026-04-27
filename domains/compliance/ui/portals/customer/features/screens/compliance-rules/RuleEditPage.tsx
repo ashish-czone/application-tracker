@@ -21,6 +21,7 @@ import {
   useEntityConfig,
   useEntityLayout,
 } from '@packages/entity-engine-ui';
+import { InactiveStateBanner } from '../../../../../components';
 import {
   useRuleEditConstraints,
   useUpdateComplianceRule,
@@ -215,6 +216,8 @@ export function RuleEditPage() {
           </p>
         </div>
       </div>
+
+      {row?.status === 'deprecated' && <InactiveStateBanner kind="deprecated" />}
 
       {locked && (
         <div className="mb-4 flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
