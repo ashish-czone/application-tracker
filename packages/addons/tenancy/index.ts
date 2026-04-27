@@ -1,16 +1,15 @@
 // Module
-export { TenancyModule, type TenancyModuleAsyncOptions } from './tenancy.module';
-import type { TenancyModuleAsyncOptions } from './tenancy.module';
+import { TenancyModule, type TenancyModuleAsyncOptions } from './tenancy.module';
+export { TenancyModule, type TenancyModuleAsyncOptions };
 
 /**
  * Configurable addon — apps must pass their tenancy mode/resolver/etc.
  * via async factory. Pairs with @packages/service-auth (no migration)
- * which apps add to extraImports separately. The module is loaded lazily
- * so this export can be imported by lightweight CLIs.
+ * which apps add to extraImports separately.
  */
 export function tenancyAddon(opts: TenancyModuleAsyncOptions) {
   return {
-    module: () => require('./tenancy.module').TenancyModule.registerAsync(opts),
+    module: TenancyModule.registerAsync(opts),
     migration: '@packages/tenancy',
   } as const;
 }

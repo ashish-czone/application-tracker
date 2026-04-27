@@ -1,7 +1,8 @@
-export { AutomationsModule, AUTOMATION_EXECUTION_QUEUE } from './automations.module';
+import { AutomationsModule, AUTOMATION_EXECUTION_QUEUE } from './automations.module';
+export { AutomationsModule, AUTOMATION_EXECUTION_QUEUE };
 
 export const automationsAddon = {
-  module: () => require('./automations.module').AutomationsModule,
+  module: AutomationsModule,
   migration: '@packages/automations',
 } as const;
 export { AUTOMATION_PERMISSIONS } from './permissions';

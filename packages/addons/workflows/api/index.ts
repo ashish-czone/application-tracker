@@ -1,8 +1,9 @@
 // Module
-export { WorkflowsModule } from './workflows.module';
+import { WorkflowsModule } from './workflows.module';
+export { WorkflowsModule };
 
 export const workflowsAddon = {
-  module: () => require('./workflows.module').WorkflowsModule,
+  module: WorkflowsModule,
   migration: '@packages/workflows',
 } as const;
 export { WORKFLOWS_PERMISSIONS } from './permissions';

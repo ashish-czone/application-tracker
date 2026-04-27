@@ -4,7 +4,8 @@ import {
   createTestApp,
   type TestAppContext,
 } from '@packages/platform-testing';
-import { HierarchyModule } from '@packages/hierarchy';
+import { hierarchyAddon, HierarchyModule } from '@packages/hierarchy';
+import { workflowsAddon } from '@packages/workflows';
 import {
   OrgUnitService,
   OrgUnitLevelService,
@@ -107,7 +108,8 @@ class TestOrgUnitsModule implements OnModuleInit {
 export async function createComplianceTestApp(): Promise<TestAppContext> {
   const ctx = await createTestApp({
     domains: [complianceBackend],
-    extraImports: [HierarchyModule, TestOrgUnitsModule],
+    addons: [workflowsAddon, hierarchyAddon],
+    extraImports: [TestOrgUnitsModule],
   });
 
   await seedAllWorkflows(ctx);

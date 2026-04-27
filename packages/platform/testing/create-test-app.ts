@@ -16,11 +16,11 @@ import { SettingsModule } from '@packages/settings';
 import { NotificationChannelsModule } from '@packages/notification-channels';
 import { NotificationsModule } from '@packages/notifications';
 import { AuditModule, AuditRegistryService } from '@packages/audit';
-import { WorkflowsModule } from '@packages/workflows';
 import { UserPreferencesModule } from '@packages/user-preferences';
 import { EntityLayoutModule } from '@packages/entity-layout';
 import { AUDIT_EXTENSION, EntityEngineModule } from '@packages/entity-engine';
 import type { DomainBackendManifest } from '@packages/domains';
+import type { Addon } from '@packages/app-shell';
 import { TestExceptionFilter } from './test-exception.filter';
 import { MockQueueModule } from './mock-queue.module';
 import { MockAutomationsModule } from './mock-automations.module';
@@ -31,6 +31,14 @@ import { seedDefaultTestUser } from './default-test-user';
 export interface TestAppOptions {
   /** Domain manifests to host. Same shape `createAppModule` accepts. */
   domains: DomainBackendManifest[];
+  /**
+   * Opt-in addons this test app uses. Mirrors `createAppModule`'s `addons`
+   * option — pass `workflowsAddon` if the test exercises workflow features,
+   * `taxonomyAddon` for tags/categories, etc. Mocks for queue and automations
+   * are still applied via the `mocks` toggle below; the `automationsAddon`
+   * does not replace the mock.
+   */
+  addons?: readonly Addon[];
   /**
    * Extra modules to import alongside the shell baseline. Apps pass app-level
    * modules here (UsersModule, OrgUnitsModule composition, NotesModule, etc.)
@@ -58,11 +66,11 @@ export interface TestAppContext {
 
 /**
  * Test-mode counterpart of `createAppModule` from `@packages/app-shell`. Composes
- * the same shell modules (DatabaseModule, EventsModule, SettingsModule, RbacModule,
- * NotificationChannels/Notifications, AuditModule, WorkflowsModule,
- * UserPreferencesModule, EntityLayoutModule, EntityEngineModule) plus the
- * caller's domains + `extraImports`, with mocks for queue and automations and the
- * standard mock auth/rbac guards.
+ * the kernel shell modules (DatabaseModule, EventsModule, SettingsModule, RbacModule,
+ * NotificationChannels/Notifications, AuditModule, UserPreferencesModule,
+ * EntityLayoutModule, EntityEngineModule) plus the caller's `addons`, `domains`,
+ * and `extraImports`, with mocks for queue and automations and the standard
+ * mock auth/rbac guards.
  *
  * Differences from runtime composition:
  *  - No `ConfigModule` — env vars (DATABASE_URL etc.) are read raw
@@ -70,6 +78,7 @@ export interface TestAppContext {
  *  - No `MediaModule`, `DebugProfilerModule` — opt-in via extraImports
  *  - No real `AuthModule` — `MockAuthGuard` reads `x-test-user` (use `withAuth`)
  *  - `GlobalExceptionFilter` → `TestExceptionFilter` (mirrors error envelope)
+ *  - `MockAutomationsModule` replaces the real one (still toggleable via mocks)
  *
  * Use this when an integration test needs the full shell DI graph (entity-engine
  * tokens, workflow registry, audit pipeline). For testing a single package in
@@ -89,13 +98,15 @@ export function createTestAppModule(options: TestAppOptions): ModuleMetadata {
     NotificationChannelsModule,
     NotificationsModule,
     AuditModule,
-    WorkflowsModule,
     UserPreferencesModule,
     EntityLayoutModule,
     EntityEngineModule,
   ];
   if (includeQueue) imports.push(MockQueueModule);
   if (includeAutomations) imports.push(MockAutomationsModule);
+  for (const addon of options.addons ?? []) {
+    if (addon.module) imports.push(addon.module);
+  }
   for (const extra of options.extraImports ?? []) imports.push(extra as Type | DynamicModule);
   for (const domain of options.domains) imports.push(domain.module);
 

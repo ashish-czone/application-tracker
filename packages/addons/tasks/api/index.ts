@@ -1,7 +1,8 @@
+import { TasksModule, type TasksModuleOptions } from './tasks.module';
+
 export { tasks } from './schema/tasks';
 export { TASKS_CONFIG, applyCompletedAt } from './tasks.config';
-export { TasksModule, type TasksModuleOptions } from './tasks.module';
-import type { TasksModuleOptions } from './tasks.module';
+export { TasksModule, type TasksModuleOptions };
 
 /**
  * Migration-only addon: include this when the app uses the `tasks` schema
@@ -16,12 +17,11 @@ export const tasksAddon = {
 /**
  * Full-bundle factory for apps that want both the table AND the configured
  * module. Pass the `teamMembersReader` binding as you would to
- * `TasksModule.forRoot`. Loaded lazily so importing this export from a
- * CLI doesn't pull in NestJS decorators.
+ * `TasksModule.forRoot`.
  */
 export function tasksModuleAddon(opts: TasksModuleOptions) {
   return {
-    module: () => require('./tasks.module').TasksModule.forRoot(opts),
+    module: TasksModule.forRoot(opts),
     migration: '@packages/tasks',
   } as const;
 }
