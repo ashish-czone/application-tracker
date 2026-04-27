@@ -1,5 +1,5 @@
 import { Pill } from '../../../../../components';
-import type { ClientRiskLevel } from '../data/clientsMock';
+import type { ClientRiskLevel } from '../types';
 
 export const RISK_LABEL: Record<ClientRiskLevel, string> = {
   healthy: 'Healthy',

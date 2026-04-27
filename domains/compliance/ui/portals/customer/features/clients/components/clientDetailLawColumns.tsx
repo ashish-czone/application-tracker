@@ -6,7 +6,7 @@ import {
   JurisdictionTag,
   InactiveSourceMarker,
 } from '../../../../../components';
-import type { ClientLaw } from '../data/clientDetailMock';
+import type { ClientLaw } from '../types';
 
 interface ColumnsOptions {
   /** Opens the deactivation dialog for the clicked row. */

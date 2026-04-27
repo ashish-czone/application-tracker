@@ -1,6 +1,6 @@
 import { type DataTableColumn } from '@packages/ui';
 import { OrdinalDate, HealthBar, HandlerPill, ColoredInitialsAvatar } from '../../../../../components';
-import type { ClientRow } from '../data/clientsMock';
+import type { ClientRow } from '../types';
 import { RiskPill } from './RiskPill';
 
 export const CLIENT_COLUMNS: DataTableColumn<ClientRow>[] = [

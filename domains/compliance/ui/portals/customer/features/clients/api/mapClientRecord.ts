@@ -1,6 +1,6 @@
 import type { Handler } from '../../../../../shared/types';
-import type { ClientRow, ClientStatus, ClientRiskLevel } from '../data/clientsMock';
-import type { ClientDetail } from '../data/clientDetailMock';
+import type { ClientRow, ClientStatus, ClientRiskLevel } from '../types';
+import type { ClientDetail } from '../types';
 import type { ClientRecord } from '../../../../../hooks/useClientsApi';
 
 const UNASSIGNED_HANDLER: Handler = {

@@ -1,4 +1,4 @@
-import type { ClientRiskLevel } from './clientsMock';
+import type { ClientRiskLevel } from './types';
 
 export const HANDLER_OPTIONS: { value: string; label: string }[] = [
   { value: 'h1', label: 'Priya Shankar' },

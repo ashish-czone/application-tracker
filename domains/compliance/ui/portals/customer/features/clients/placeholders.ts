@@ -1,83 +1,12 @@
-import type { Handler } from '../../../../../shared/types';
-import { MOCK_HANDLERS } from '../../console-preview/mockData';
-import type { ClientRow, ClientRiskLevel } from './clientsMock';
+import { MOCK_HANDLERS } from '../console-preview/mockData';
+import type { ClientDetail, ClientRiskLevel } from './types';
 
-// ─── Registered law for the client detail Laws tab ─────────────────
-
-export interface ClientLaw {
-  id: string;
-  /** UUID of the law — used by deactivation + future registration mutations. */
-  lawId: string;
-  /** UUID of the client this registration belongs to. */
-  clientId: string;
-  code: string;
-  name: string;
-  jurisdiction: 'central' | 'state' | 'municipal' | 'international';
-  cadence: string;
-  nextDue: string; // ISO date
-  openFilings: number;
-  overdueFilings: number;
-  onTimePct: number;
-  handler: Handler;
-  registeredAt: string; // ISO date
-  /** ISO date the registration was deactivated. Null/undefined when active. */
-  deactivatedAt?: string | null;
-}
-
-// ─── Filing row for the client detail Filings tab ──────────────────
-
-export type ClientFilingStatus = 'overdue' | 'due-today' | 'due-this-week' | 'upcoming' | 'filed';
-
-export interface ClientFiling {
-  id: string;
-  lawCode: string;
-  ruleName: string;
-  period: string;
-  dueDate: string;
-  filedDate?: string;
-  status: ClientFilingStatus;
-  priority: 'critical' | 'high' | 'normal' | 'low';
-  handler: Handler;
-  jurisdiction: 'central' | 'state';
-}
-
-// ─── Activity event for the overview ───────────────────────────────
-
-export interface ClientActivity {
-  id: string;
-  type: 'filing-submitted' | 'handler-changed' | 'law-added' | 'status-change' | 'note-added';
-  actor: Handler;
-  timestamp: string;
-  detail: string;
-}
-
-// ─── Contact info ──────────────────────────────────────────────────
-
-export interface ClientContact {
-  name: string;
-  email: string;
-  phone: string;
-  designation: string;
-}
-
-// ─── Full client detail ────────────────────────────────────────────
-
-export interface ClientDetail extends ClientRow {
-  primaryContact: ClientContact;
-  secondaryContact?: ClientContact;
-  address: string;
-  industry: string;
-  registeredLawDetails: ClientLaw[];
-  recentFilings: ClientFiling[];
-  recentActivity: ClientActivity[];
-  totalFilings: number;
-  filedThisMonth: number;
-  filedOnTime: number;
-}
-
-// ─── Mock data for client c1 (Aarav Industries) ────────────────────
-
-export const MOCK_CLIENT_DETAIL: ClientDetail = {
+// Runtime placeholder used by `ClientDetailPage` to fill detail-page fields
+// the API doesn't supply yet (registeredLawDetails, recentFilings,
+// recentActivity, totalFilings, etc.). The page's mergeClientDetail() overlays
+// real API record fields on top of this. Drop this file (and the merge) once
+// the corresponding endpoints exist.
+export const CLIENT_DETAIL_PLACEHOLDER: ClientDetail = {
   id: 'c1',
   name: 'Aarav Industries',
   legalName: 'Aarav Industries Pvt. Ltd.',

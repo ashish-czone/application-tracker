@@ -1,6 +1,6 @@
 import { type DataTableColumn } from '@packages/ui';
 import { OrdinalDate, HandlerPill, JurisdictionTag } from '../../../../../components';
-import type { ClientFiling } from '../data/clientDetailMock';
+import type { ClientFiling } from '../types';
 import { ClientFilingStatusBadge } from './ClientFilingStatusBadge';
 
 export const CLIENT_DETAIL_FILING_COLUMNS: DataTableColumn<ClientFiling>[] = [
