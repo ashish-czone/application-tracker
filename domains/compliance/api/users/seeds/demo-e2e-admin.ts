@@ -5,6 +5,10 @@ import { RbacService, rolePermissions } from '@packages/rbac';
 
 const E2E_ADMIN_EMAIL = 'e2e-admin@compliance.test';
 const E2E_ADMIN_PASSWORD = 'E2eAdmin1234';
+// Pinned id so JWTs minted for the e2e-admin survive truncate-and-reseed
+// cycles run by the test-hooks reset endpoint. Without a stable id, every
+// reset would mint a new userId and invalidate the suite's auth token.
+const E2E_ADMIN_USER_ID = 'e2ea0000-0000-4000-8000-000000000000';
 
 export const seedDemoE2eAdmin = async (ctx: INestApplicationContext): Promise<void> => {
   const database = ctx.get(DatabaseService);
@@ -24,6 +28,7 @@ export const seedDemoE2eAdmin = async (ctx: INestApplicationContext): Promise<vo
   const [user] = await database.db
     .insert(users)
     .values({
+      id: E2E_ADMIN_USER_ID,
       email: E2E_ADMIN_EMAIL,
       firstName: 'E2E',
       lastName: 'Admin',

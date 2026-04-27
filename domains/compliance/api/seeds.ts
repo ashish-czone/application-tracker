@@ -29,6 +29,20 @@ const demo = (name: string, load: () => Promise<SeedFn>): SeedSource => ({
   load,
 });
 
+/**
+ * Single seed source for the e2e-admin user. Consumed by the
+ * compliance app's test-hooks reset endpoint, which reseeds a
+ * minimal "system + e2e-admin" set rather than the full demo set.
+ * Lives outside `complianceDemoSeedSources()` so the test-hooks
+ * caller doesn't pull in opinionated demo content (clients, rules,
+ * filings) that would conflict with test-created entities.
+ */
+export function complianceE2eAdminSeedSource(): SeedSource {
+  return demo('@domains/compliance-api/demo-e2e-admin', () =>
+    import('./users/seeds/demo-e2e-admin').then((m) => m.seedDemoE2eAdmin),
+  );
+}
+
 export function complianceSystemSeedSources(): SeedSource[] {
   return [
     system('@domains/compliance-api/system-laws', () =>
