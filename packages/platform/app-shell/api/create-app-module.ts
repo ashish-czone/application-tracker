@@ -136,7 +136,7 @@ export function createAppModule(options: AppShellOptions): ModuleMetadata {
         inject: [ConfigService, AppConfigService],
       }),
       ...(options.addons ?? [])
-        .map((addon) => addon.module?.())
+        .map((addon) => addon.module)
         .filter((mod): mod is NonNullable<typeof mod> => mod !== undefined),
       ...(options.extraImports ?? []),
       ...options.domains.map((domain) => domain.module),

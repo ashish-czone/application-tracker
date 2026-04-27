@@ -7,6 +7,7 @@
     "@nestjs/common": "^11.0.0",
     "@nestjs/core": "^11.0.0",
     "@nestjs/testing": "^11.0.0",
+    "@packages/app-shell": "workspace:*",
     "@packages/audit": "workspace:*",
     "@packages/automation-contracts": "workspace:*",
     "@packages/database": "workspace:*",
@@ -21,7 +22,6 @@
     "@packages/rbac": "workspace:*",
     "@packages/settings": "workspace:*",
     "@packages/testing": "workspace:*",
-    "@packages/user-preferences": "workspace:*",
-    "@packages/workflows": "workspace:*"
+    "@packages/user-preferences": "workspace:*"
   }
 }

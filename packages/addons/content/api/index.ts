@@ -1,7 +1,8 @@
-export { ContentModule } from './content.module';
+import { ContentModule } from './content.module';
+export { ContentModule };
 
 export const contentAddon = {
-  module: () => require('./content.module').ContentModule,
+  module: ContentModule,
   migration: '@packages/content-api',
 } as const;
 export { testimonials, faqItems, teamMembers, services, clientLogos, valueProps, stats } from './schema';

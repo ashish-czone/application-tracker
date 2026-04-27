@@ -1,8 +1,9 @@
-export { EntityRelationsModule } from './entity-relations.module';
+import { EntityRelationsModule } from './entity-relations.module';
+export { EntityRelationsModule };
 export { MultiValueService } from './services/multi-value.service';
 export { entityMultiValues } from './schema/entity-multi-values';
 
 export const entityRelationsAddon = {
-  module: () => require('./entity-relations.module').EntityRelationsModule,
+  module: EntityRelationsModule,
   migration: '@packages/entity-relations',
 } as const;

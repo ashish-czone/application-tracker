@@ -1,14 +1,14 @@
-export { DocumentTemplatesModule } from './document-templates.module';
+import { DocumentTemplatesModule } from './document-templates.module';
 import type { DocumentTemplatesModuleOptions } from './types';
+export { DocumentTemplatesModule };
 
 /**
  * Configurable addon — pass options (e.g. a custom pdfRenderer) or call
- * with no args for defaults. The module is loaded lazily so this export can
- * be imported by lightweight CLIs without pulling in NestJS decorators.
+ * with no args for defaults.
  */
 export function documentTemplatesAddon(opts?: DocumentTemplatesModuleOptions) {
   return {
-    module: () => require('./document-templates.module').DocumentTemplatesModule.register(opts),
+    module: DocumentTemplatesModule.register(opts),
     migration: '@packages/document-templates',
   } as const;
 }
