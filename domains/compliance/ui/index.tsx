@@ -37,85 +37,85 @@ const DashboardPage = lazy(() =>
 );
 
 const ClientsPage = lazy(() =>
-  import('./portals/customer/features/screens/clients').then((m) => ({
+  import('./portals/customer/features/clients').then((m) => ({
     default: m.ClientsPage,
   })),
 );
 
 const ClientDetailPage = lazy(() =>
-  import('./portals/customer/features/screens/clients').then((m) => ({
+  import('./portals/customer/features/clients').then((m) => ({
     default: m.ClientDetailPage,
   })),
 );
 
 const FilingsPage = lazy(() =>
-  import('./portals/customer/features/screens/filings').then((m) => ({
+  import('./portals/customer/features/filings').then((m) => ({
     default: m.FilingsPage,
   })),
 );
 
 const ComplianceRulesPage = lazy(() =>
-  import('./portals/customer/features/screens/compliance-rules').then((m) => ({
+  import('./portals/customer/features/compliance-rules').then((m) => ({
     default: m.ComplianceRulesPage,
   })),
 );
 
 const RuleEditPage = lazy(() =>
-  import('./portals/customer/features/screens/compliance-rules/RuleEditPage').then((m) => ({
+  import('./portals/customer/features/compliance-rules/RuleEditPage').then((m) => ({
     default: m.RuleEditPage,
   })),
 );
 
 const LawsLibraryPage = lazy(() =>
-  import('./portals/customer/features/screens/laws').then((m) => ({
+  import('./portals/customer/features/laws').then((m) => ({
     default: m.LawsLibraryPage,
   })),
 );
 
 const ReportsPage = lazy(() =>
-  import('./portals/customer/features/screens/reports').then((m) => ({
+  import('./portals/customer/features/reports').then((m) => ({
     default: m.ReportsPage,
   })),
 );
 
 const UsersPage = lazy(() =>
-  import('./portals/customer/features/screens/users').then((m) => ({
+  import('./portals/customer/features/users').then((m) => ({
     default: m.UsersPage,
   })),
 );
 
 const RolesEditorPage = lazy(() =>
-  import('./portals/customer/features/screens/roles').then((m) => ({
+  import('./portals/customer/features/roles').then((m) => ({
     default: m.RolesEditorPage,
   })),
 );
 
 const SettingsPage = lazy(() =>
-  import('./portals/customer/features/screens/settings').then((m) => ({
+  import('./portals/customer/features/settings').then((m) => ({
     default: m.SettingsPage,
   })),
 );
 
 const AdminSettingsPage = lazy(() =>
-  import('./portals/customer/features/screens/admin-settings').then((m) => ({
+  import('./portals/customer/features/admin-settings').then((m) => ({
     default: m.AdminSettingsPage,
   })),
 );
 
 const GlobalSetsPage = lazy(() =>
-  import('./portals/customer/features/screens/global-sets').then((m) => ({
+  import('./portals/customer/features/global-sets').then((m) => ({
     default: m.GlobalSetsPage,
   })),
 );
 
 const OrgHierarchyPage = lazy(() =>
-  import('./portals/customer/features/screens/org-hierarchy').then((m) => ({
+  import('./portals/customer/features/org-hierarchy').then((m) => ({
     default: m.OrgHierarchyPage,
   })),
 );
 
 const OrganizationPage = lazy(() =>
-  import('./portals/customer/features/screens/organization').then((m) => ({
+  import('./portals/customer/features/organization').then((m) => ({
     default: m.OrganizationPage,
   })),
 );

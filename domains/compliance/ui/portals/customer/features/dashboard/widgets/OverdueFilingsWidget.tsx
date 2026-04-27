@@ -3,7 +3,7 @@ import { Link } from 'react-router';
 import { AlertTriangle } from 'lucide-react';
 import { Skeleton } from '@packages/ui';
 import { JurisdictionTag } from '../../../../../components';
-import { useComplianceFilingRows } from '../../screens/filings/api/useComplianceFilings';
+import { useComplianceFilingRows } from '../../../../../hooks/useComplianceFilings';
 
 function daysOverdue(dueDate: string): number {
   if (!dueDate) return 0;
