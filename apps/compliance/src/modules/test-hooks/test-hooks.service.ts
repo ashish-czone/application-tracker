@@ -6,7 +6,8 @@ import { platformSystemSeedSources } from '@packages/app-shell/seeds';
 import { orgUnitsSystemSeedSources } from '@packages/org-units/seeds/system';
 import { tasksSystemSeedSources } from '@packages/tasks/seeds/system';
 import { notesSystemSeedSources } from '@packages/notes/seeds/system';
-import { ScheduleScanner } from '@packages/automations';
+import { ScheduleScanner, automationSentLog } from '@packages/automations';
+import { gt } from '@packages/database';
 import {
   complianceE2eAdminSeedSource,
   complianceSystemSeedSources,
@@ -59,10 +60,34 @@ export class TestHooksService {
    * with date-condition SQL parameterised against asOf rather than wall-
    * clock NOW(). Used to assert escalation (T+0/T+3/T+7) and daily-digest
    * stories deterministically.
+   *
+   * Returns rows added to `automation_sent_log` during the scan. The log
+   * is written synchronously by the scanner (before the action enqueue)
+   * so the response is observable without waiting on the queue worker.
+   * Each entry proves a (ruleId × entity × targetDate) tuple was matched
+   * and queued — the action's side effects (notification dispatch etc.)
+   * follow asynchronously and are out of scope for this response.
    */
-  async runScheduler(asOf: Date): Promise<void> {
+  async runScheduler(asOf: Date): Promise<{
+    fired: Array<{ ruleId: string; entityType: string; entityId: string; targetDate: string }>;
+  }> {
     const scanner = this.moduleRef.get(ScheduleScanner, { strict: false });
+    // Capture the boundary by sentAt so concurrent test runs don't
+    // pollute each other's "fired" list. The unique index on
+    // (ruleId, entityType, entityId, targetDate) keeps the row count
+    // stable across re-runs of the same scan.
+    const boundary = new Date();
     await scanner.scan(asOf);
+    const rows = await this.database.db
+      .select({
+        ruleId: automationSentLog.ruleId,
+        entityType: automationSentLog.entityType,
+        entityId: automationSentLog.entityId,
+        targetDate: automationSentLog.targetDate,
+      })
+      .from(automationSentLog)
+      .where(gt(automationSentLog.sentAt, boundary));
+    return { fired: rows };
   }
 
   private async truncateAllTables(): Promise<number> {
