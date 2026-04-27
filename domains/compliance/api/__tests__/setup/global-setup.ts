@@ -1,15 +1,27 @@
 import path from 'node:path';
 import { Pool } from 'pg';
-import { runMigrations } from '@packages/database/migrator';
-import {
-  kernelMigrationSources,
-  packageMigration,
-} from '@packages/app-shell/migrations';
+import { runAppMigrations, type Addon } from '@packages/app-shell';
+import { attachmentsAddon } from '@packages/attachments';
+import { documentTemplatesAddon } from '@packages/document-templates';
+import { eavAttributesAddon } from '@packages/eav-attributes';
+import { entityRelationsAddon } from '@packages/entity-relations';
+import { evaluationsAddon } from '@packages/evaluations';
+import { hierarchyAddon } from '@packages/hierarchy';
+import { notesAddon } from '@packages/notes';
+import { orgUnitsAddon } from '@packages/org-units';
+import { tasksAddon } from '@packages/tasks';
+import { taxonomyAddon } from '@packages/taxonomy';
 
 /**
  * Vitest `globalSetup` for compliance integration tests. Resets the public
- * schema, then runs the full platform + compliance migration chain once
- * before any test file.
+ * schema, then runs the platform + compliance migration chain once before
+ * any test file.
+ *
+ * Mirrors the addon list in apps/compliance/src/addons.ts (omitting tenancy,
+ * which is conditional in the app and not exercised by integration tests).
+ * Duplicated here rather than imported to preserve the rule that domains
+ * never depend on apps; drift between the two surfaces as a "relation does
+ * not exist" failure in the suite.
  *
  * Why reset first: local dev DBs can contain state from a previous
  * `drizzle-kit migrate` (shared global-setup), which tracks applied
@@ -19,14 +31,22 @@ import {
  * throws "relation already exists". The reset is safe: integration tests
  * already truncate everything between tests via `cleanDatabase()`.
  *
- * The shared `@packages/testing` global-setup only migrates `apps/api` +
- * `apps/recruit`; it doesn't know about compliance. We replicate the
- * migration list from `apps/compliance/src/cli/migrate.ts` here so the test
- * DB has every table the ComplianceDomainModule touches at boot.
- *
  * DATABASE_URL must point at a Postgres instance the tests can reset;
  * the default matches `docker-compose.yml` (postgresql://dev:dev@localhost:5432/starter).
  */
+const testAddons: readonly Addon[] = [
+  attachmentsAddon,
+  documentTemplatesAddon(),
+  eavAttributesAddon,
+  entityRelationsAddon,
+  evaluationsAddon,
+  hierarchyAddon,
+  notesAddon,
+  orgUnitsAddon,
+  taxonomyAddon,
+  tasksAddon,
+];
+
 export default async function setup(): Promise<void> {
   if (!process.env.DATABASE_URL) {
     process.env.DATABASE_URL = 'postgresql://dev:dev@localhost:5432/starter';
@@ -41,25 +61,14 @@ export default async function setup(): Promise<void> {
     await pool.end();
   }
 
-  const workspaceRoot = path.resolve(__dirname, '../../../../..');
-  const packages = [
-    ...kernelMigrationSources(workspaceRoot),
-    packageMigration(workspaceRoot, '@packages/taxonomy'),
-    packageMigration(workspaceRoot, '@packages/hierarchy'),
-    packageMigration(workspaceRoot, '@packages/tenancy'),
-    packageMigration(workspaceRoot, '@packages/eav-attributes'),
-    packageMigration(workspaceRoot, '@packages/entity-relations'),
-    packageMigration(workspaceRoot, '@packages/org-units'),
-    packageMigration(workspaceRoot, '@packages/tasks'),
-    packageMigration(workspaceRoot, '@packages/notes'),
-    packageMigration(workspaceRoot, '@packages/attachments'),
-    packageMigration(workspaceRoot, '@packages/evaluations'),
-    packageMigration(workspaceRoot, '@packages/document-templates'),
-    {
-      name: '@domains/compliance-api',
-      migrationsFolder: path.join(workspaceRoot, 'domains/compliance/api/migrations'),
-    },
-  ];
-
-  await runMigrations({ packages, logger: () => {} });
+  await runAppMigrations({
+    callerDir: __dirname,
+    addons: testAddons,
+    domainMigrations: (workspaceRoot) => [
+      {
+        name: '@domains/compliance-api',
+        migrationsFolder: path.join(workspaceRoot, 'domains/compliance/api/migrations'),
+      },
+    ],
+  });
 }

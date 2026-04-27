@@ -9,7 +9,7 @@
     "start": "node dist/main",
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
-    "db:migrate": "tsx src/cli/migrate.ts",
+    "db:migrate": "nest build && node --env-file=.env dist/cli/migrate.js",
     "db:seed:system": "nest build && node --env-file=.env dist/cli/seed.js --kind=system",
     "db:seed:demo": "nest build && node --env-file=.env dist/cli/seed.js --kind=demo"
   },

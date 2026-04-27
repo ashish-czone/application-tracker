@@ -2,35 +2,18 @@ import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import path from 'path';
 import { createAppModule } from '@packages/app-shell';
-import { TenancyModule, type TenancyMode, type TenantResolver } from '@packages/tenancy';
 import { ServiceAuthModule } from '@packages/service-auth';
-import { AttachmentsModule } from '@packages/attachments';
-import { DocumentTemplatesModule } from '@packages/document-templates';
-import { EavAttributesModule } from '@packages/eav-attributes';
-import { EntityRelationsModule } from '@packages/entity-relations';
-import { EvaluationsModule } from '@packages/evaluations';
-import { NotesModule } from '@packages/notes';
 import { OAuthModule } from '@packages/oauth';
-import { OrgUnitsModule } from './modules/org-units/org-units.module';
 import { PdfGeneratorModule } from '@packages/pdf-generator';
 import { PuppeteerPdfProvider } from '@packages/pdf-generator/providers/puppeteer.provider';
-import { HierarchyModule } from '@packages/hierarchy';
-import { TaxonomyModule } from '@packages/taxonomy';
 import { complianceBackend } from '@domains/compliance-api';
+import { complianceAddons } from './addons';
+import { OrgUnitsModule } from './modules/org-units/org-units.module';
 import { UsersModule } from './modules/users/users.module';
 import { TestHooksModule } from './modules/test-hooks/test-hooks.module';
 
-const tenancyImports = process.env.TENANCY_MODE
+const serviceAuthImports = process.env.TENANCY_MODE
   ? [
-      TenancyModule.registerAsync({
-        useFactory: (config: ConfigService) => ({
-          mode: config.get<string>('TENANCY_MODE') as TenancyMode,
-          resolver: (config.get<string>('TENANCY_RESOLVER') ?? 'header') as TenantResolver,
-          headerName: config.get<string>('TENANCY_HEADER'),
-          controlPlaneUrl: config.get<string>('CONTROL_PLANE_URL'),
-        }),
-        inject: [ConfigService],
-      }),
       ServiceAuthModule.registerAsync({
         useFactory: (config: ConfigService) => ({
           serviceId: 'compliance-app',
@@ -47,19 +30,12 @@ const tenancyImports = process.env.TENANCY_MODE
     domains: [complianceBackend],
     appName: 'compliance',
     envFilePath: path.resolve(__dirname, '../.env'),
+    addons: complianceAddons,
     extraImports: [
-      ...tenancyImports,
+      ...serviceAuthImports,
       UsersModule,
-      AttachmentsModule,
-      EavAttributesModule,
-      EntityRelationsModule,
-      EvaluationsModule,
-      NotesModule,
       OAuthModule.register(),
       OrgUnitsModule,
-      HierarchyModule,
-      TaxonomyModule,
-      DocumentTemplatesModule.register(),
       PdfGeneratorModule.register({ provider: new PuppeteerPdfProvider() }),
       TestHooksModule.register(),
     ],

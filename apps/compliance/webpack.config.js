@@ -8,6 +8,7 @@ module.exports = function (options) {
     entry: {
       main: './src/main.ts',
       'cli/seed': './src/cli/seed.ts',
+      'cli/migrate': './src/cli/migrate.ts',
     },
     output: {
       ...options.output,
