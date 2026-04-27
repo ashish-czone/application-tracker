@@ -4,7 +4,7 @@ import { CalendarCheck } from 'lucide-react';
 import { Skeleton } from '@packages/ui';
 import { JurisdictionTag } from '../../../../../components';
 import type { Filing } from '../../../../../shared';
-import { useComplianceFilingRows } from '../../screens/filings/api/useComplianceFilings';
+import { useComplianceFilingRows } from '../../../../../hooks/useComplianceFilings';
 
 type DueBucket = 'Due today' | 'This week';
 

@@ -34,7 +34,7 @@ import { FilingKanbanCard } from './components/FilingKanbanCard';
 import { OverdueAlert } from './components/OverdueAlert';
 import type { Filing } from '../../../../../shared/types';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
-import { useComplianceFilingRows, useUpdateComplianceFiling } from './api/useComplianceFilings';
+import { useComplianceFilingRows, useUpdateComplianceFiling } from '../../../../../hooks/useComplianceFilings';
 
 type StatusTab = 'all' | Filing['status'];
 type ViewMode = 'list' | 'kanban' | 'calendar';

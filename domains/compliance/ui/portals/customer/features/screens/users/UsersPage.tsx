@@ -23,7 +23,7 @@ import {
   useDeactivateUser,
   useRestoreUser,
   useBulkDeactivate,
-} from './api/useUsersApi';
+} from '../../../../../hooks/useUsersApi';
 import { mapUserRecordToRow } from './api/mapUserRecord';
 
 type StatusTab = 'all' | UserStatus;

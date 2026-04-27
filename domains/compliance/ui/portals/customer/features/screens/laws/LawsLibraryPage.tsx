@@ -8,7 +8,7 @@ import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 import { type LawNode, type LawJurisdiction } from './data/lawsMock';
 import { LawTreeRow } from './components/LawTreeRow';
 import { NewLawDrawer, type NewLawValues } from './components/NewLawDrawer';
-import { useLawsList } from './api/useLawsApi';
+import { useLawsList } from '../../../../../hooks/useLawsApi';
 import { buildLawTree, flattenLawTree } from './api/mapLawRecord';
 
 function formatDate(iso?: string): string {

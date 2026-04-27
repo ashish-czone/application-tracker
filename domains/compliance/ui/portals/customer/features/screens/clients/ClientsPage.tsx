@@ -22,7 +22,7 @@ import { NewClientDrawer } from './components/NewClientDrawer';
 import { ClientPreviewPopover } from './components/ClientPreviewPopover';
 import { RISK_LABEL } from './components/RiskPill';
 import { CLIENT_COLUMNS, REQUIRED_CLIENT_COLUMN_KEYS } from './components/clientColumns';
-import { useClientsList } from './api/useClientsApi';
+import { useClientsList } from '../../../../../hooks/useClientsApi';
 import { mapClientRecordToRow } from './api/mapClientRecord';
 
 type StatusTab = 'all' | ClientStatus;

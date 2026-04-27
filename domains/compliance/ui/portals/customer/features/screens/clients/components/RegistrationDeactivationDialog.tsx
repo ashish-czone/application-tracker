@@ -15,7 +15,7 @@ import { AlertTriangle, Loader2 } from 'lucide-react';
 import {
   useDeactivateRegistration,
   useRegistrationDeactivationPreview,
-} from '../api/useClientsApi';
+} from '../../../../../../hooks/useClientsApi';
 
 interface RegistrationDeactivationDialogProps {
   open: boolean;

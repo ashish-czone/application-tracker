@@ -38,7 +38,7 @@ import {
   useComplianceRulesList,
   useLawsLookup,
   type LawRecord,
-} from './api/useComplianceRulesApi';
+} from '../../../../../hooks/useComplianceRulesApi';
 import { mapComplianceRuleRecord } from './api/mapComplianceRuleRecord';
 
 type StatusTab = 'all' | ComplianceRule['status'];

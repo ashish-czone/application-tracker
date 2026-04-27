@@ -12,7 +12,7 @@ import {
   FormTextarea,
   FormDatePicker,
 } from '@packages/ui';
-import type { LawApiRecord } from '../api/useLawsApi';
+import type { LawApiRecord } from '../../../../../../hooks/useLawsApi';
 
 const JURISDICTION_OPTIONS = [
   { value: 'central', label: 'Central' },

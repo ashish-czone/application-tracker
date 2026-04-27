@@ -15,7 +15,7 @@ import { ClientDetailOverview } from './components/ClientDetailOverview';
 import { CLIENT_DETAIL_FILING_COLUMNS } from './components/clientDetailFilingColumns';
 import { makeClientDetailLawColumns } from './components/clientDetailLawColumns';
 import { RegistrationDeactivationDialog } from './components/RegistrationDeactivationDialog';
-import { useClientDetail } from './api/useClientsApi';
+import { useClientDetail } from '../../../../../hooks/useClientsApi';
 import { mergeClientDetail } from './api/mapClientRecord';
 
 type DetailTab = 'overview' | 'filings' | 'laws' | 'audit-trail';

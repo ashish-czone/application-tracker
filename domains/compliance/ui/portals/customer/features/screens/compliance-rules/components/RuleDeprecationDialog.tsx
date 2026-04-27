@@ -14,7 +14,7 @@ import { AlertTriangle, Loader2 } from 'lucide-react';
 import {
   useDeprecateRule,
   useRuleDeprecationPreview,
-} from '../api/useComplianceRulesApi';
+} from '../../../../../../hooks/useComplianceRulesApi';
 
 interface RuleDeprecationDialogProps {
   open: boolean;

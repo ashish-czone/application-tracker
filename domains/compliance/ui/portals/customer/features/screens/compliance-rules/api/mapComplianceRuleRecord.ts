@@ -5,7 +5,7 @@ import type {
   ComplianceRuleStatus,
   LawGroupKey,
 } from '../data/complianceRulesMock';
-import type { ComplianceRuleRecord, LawRecord } from './useComplianceRulesApi';
+import type { ComplianceRuleRecord, LawRecord } from '../../../../../../hooks/useComplianceRulesApi';
 
 const UNASSIGNED_HANDLER: Handler = {
   id: 'unassigned',

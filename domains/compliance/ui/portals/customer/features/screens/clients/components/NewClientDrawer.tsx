@@ -20,7 +20,7 @@ import {
   isNoResolvableAssigneeError,
   useCreateClientRegistrations,
   useCreateClientWithContacts,
-} from '../api/useClientsApi';
+} from '../../../../../../hooks/useClientsApi';
 
 // ─── Schema ──────────────────────────────────────────────────────────
 

@@ -25,7 +25,7 @@ import { InactiveStateBanner } from '../../../../../components';
 import {
   useRuleEditConstraints,
   useUpdateComplianceRule,
-} from './api/useComplianceRulesApi';
+} from '../../../../../hooks/useComplianceRulesApi';
 
 const ENTITY_TYPE = 'compliance-rules';
 const IMMUTABLE_IDENTITY_FIELDS = ['code', 'frequency', 'lawId'] as const;

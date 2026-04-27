@@ -14,7 +14,7 @@ import {
   FormEmailInput,
   FormPhoneInput,
 } from '@packages/ui';
-import { useInviteUser } from '../api/useUsersApi';
+import { useInviteUser } from '../../../../../../hooks/useUsersApi';
 import { useRoles } from '@packages/users-ui';
 
 const inviteSchema = z.object({
