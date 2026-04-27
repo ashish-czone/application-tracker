@@ -20,6 +20,7 @@ import { ComplianceFilingsModule } from './compliance-filings/compliance-filings
 import { OrganizationsModule } from './organizations/organizations.module';
 
 import { GenerateComplianceFilingsAction } from './automations/generate-compliance-filings.action';
+import { ComplianceFilingsGeneratorService } from './automations/compliance-filings-generator.service';
 import { COMPLIANCE_PERMISSION_MANIFESTS } from './permissions';
 
 @Module({
@@ -35,6 +36,7 @@ import { COMPLIANCE_PERMISSION_MANIFESTS } from './permissions';
     OrganizationsModule,
   ],
   providers: [
+    ComplianceFilingsGeneratorService,
     GenerateComplianceFilingsAction,
     ComplianceUsersPositionsReader,
     {
