@@ -17,8 +17,8 @@ import {
   type KanbanColumnDef,
   type KanbanCardData,
 } from '@packages/ui';
-import { ComplianceCalendar } from '../../../../shared';
-import type { FilingRow } from './data/filingTypes';
+import { ComplianceCalendar } from '../../../../components/composites';
+import type { FilingRow } from './types';
 import { FilingDetailDrawer } from './components/FilingDetailDrawer';
 import {
   BulkReassignDialog,
@@ -32,7 +32,7 @@ import {
 import { ViewModeSwitcher, type ViewModeOption } from './components/ViewModeSwitcher';
 import { FilingKanbanCard } from './components/FilingKanbanCard';
 import { OverdueAlert } from './components/OverdueAlert';
-import type { Filing } from '../../../../shared/types';
+import type { Filing } from '../../../../types';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 import { useComplianceFilingRows, useUpdateComplianceFiling } from '../../../../hooks/useComplianceFilings';
 

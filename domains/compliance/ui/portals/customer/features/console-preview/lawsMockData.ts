@@ -1,14 +1,8 @@
-export type LawJurisdiction = 'central' | 'state' | 'municipal' | 'international';
+import type { LawNode } from '../laws/types';
 
-export interface LawNode {
-  id: string;
-  citation: string;
-  title: string;
-  jurisdiction: LawJurisdiction;
-  effectiveFrom?: string;
-  obligationCount?: number;
-  children?: LawNode[];
-}
+// Demo fixture for the laws library tree — used only by the design
+// preview. Real screens fetch laws via `useLawsList` and compose the
+// tree client-side.
 
 export const LAWS: LawNode[] = [
   {

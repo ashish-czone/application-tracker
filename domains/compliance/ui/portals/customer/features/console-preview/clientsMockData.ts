@@ -1,32 +1,8 @@
-import type { Handler } from '../../../../../shared/types';
-import { MOCK_HANDLERS } from '../../console-preview/mockData';
+import type { ClientRow } from '../clients/types';
+import { MOCK_HANDLERS } from './mockData';
 
-// A compliance client — the entity a firm manages filings on behalf of.
-// Each client is registered under one or more laws and has filings generated
-// per period. This mock enriches the base Client type with list-level
-// aggregate stats so the table is information-dense without drill-down.
-
-export type ClientStatus = 'active' | 'onboarding' | 'dormant';
-export type ClientRiskLevel = 'healthy' | 'at-risk' | 'critical';
-
-export interface ClientRow {
-  id: string;
-  name: string;
-  legalName: string;
-  taxIdentifier: string;
-  initials: string;
-  color: string;
-  status: ClientStatus;
-  risk: ClientRiskLevel;
-  registeredLaws: number;
-  openFilings: number;
-  overdueFilings: number;
-  onTimePct: number; // trailing 12-month on-time rate
-  primaryHandler: Handler;
-  primaryContactEmail: string;
-  onboardedDate: string; // ISO date
-  lastFilingDate: string; // ISO date
-}
+// Demo fixture for the clients list — used by the design preview surface
+// at `/console-preview*`. Real screens fetch from `useClientsList`.
 
 export const CLIENTS_TODAY = '2026-04-15';
 

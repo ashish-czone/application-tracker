@@ -21,7 +21,7 @@ import { AuditTimeline } from '@packages/audit-ui';
 import { useRemoveRoleMember } from '@packages/rbac-ui';
 import { useRemoveOrgUnitMember } from '@packages/org-units-ui';
 import { OrdinalDate } from '../../../../../components';
-import type { UserRow, UserRole, UserPosition } from '../data/usersMock';
+import type { UserRow, UserRole, UserPosition } from '../types';
 import { StatusPill } from './StatusPill';
 import { RoleAssignEditor } from './RoleAssignEditor';
 import { PositionAssignEditor } from './PositionAssignEditor';

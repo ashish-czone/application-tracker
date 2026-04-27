@@ -1,4 +1,4 @@
-import type { LawNode, LawJurisdiction } from '../data/lawsMock';
+import type { LawNode, LawJurisdiction } from '../types';
 import type { LawApiRecord } from '../../../../../hooks/useLawsApi';
 
 const JURISDICTIONS: LawJurisdiction[] = ['central', 'state', 'municipal', 'international'];

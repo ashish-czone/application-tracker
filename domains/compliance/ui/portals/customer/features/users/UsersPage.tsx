@@ -13,7 +13,7 @@ import {
   type ActiveFilter,
 } from '@packages/ui';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
-import type { UserRow, UserStatus } from './data/usersMock';
+import type { UserRow, UserStatus } from './types';
 import { UserDetailDrawer } from './components/UserDetailDrawer';
 import { InviteUserDrawer } from './components/InviteUserDrawer';
 import { USER_COLUMNS, REQUIRED_USER_COLUMN_KEYS } from './components/userColumns';

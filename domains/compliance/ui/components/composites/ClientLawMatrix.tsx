@@ -1,7 +1,7 @@
 import { type HTMLAttributes } from 'react';
 import { Eyebrow } from '@packages/ui';
-import { ColoredInitialsAvatar } from '../components';
-import type { Client, Law } from './types';
+import { ColoredInitialsAvatar } from '..';
+import type { Client, Law } from '../../types';
 
 export type MatrixCellState = 'none' | 'overdue' | 'due-this-week' | 'filed' | 'upcoming' | 'pending';
 

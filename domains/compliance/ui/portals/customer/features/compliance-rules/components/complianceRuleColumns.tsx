@@ -1,6 +1,6 @@
 import { Button, type DataTableColumn } from '@packages/ui';
 import { HealthBar, JurisdictionTag, HandlerPill } from '../../../../../components';
-import type { ComplianceRule } from '../data/complianceRulesMock';
+import type { ComplianceRule } from '../types';
 import { FrequencyPill } from './FrequencyPill';
 
 const STATUS_TONE: Record<ComplianceRule['status'], string> = {

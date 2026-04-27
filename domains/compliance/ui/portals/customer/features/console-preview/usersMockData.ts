@@ -1,33 +1,7 @@
-// ─── Types ──────────────────────────────────────────────────────────
+import type { UserRow, UserStatus } from '../users/types';
 
-export type UserStatus = 'active' | 'invited' | 'deactivated';
-
-export interface UserRole {
-  id: string;
-  name: string;
-}
-
-export interface UserPosition {
-  id: string;
-  unitName: string; // org unit
-  title: string; // position within that unit
-}
-
-export interface UserRow {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  initials: string;
-  color: string; // avatar bg
-  status: UserStatus;
-  roles: UserRole[];
-  positions: UserPosition[];
-  lastActiveAt: string | null; // ISO
-  createdAt: string; // ISO
-}
-
-// ─── Mock data ──────────────────────────────────────────────────────
+// Demo fixture for the users list — used by the design preview surface.
+// Real screens fetch from `useUsersList` (entity-engine).
 
 export const MOCK_USERS: UserRow[] = [
   {

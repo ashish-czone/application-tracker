@@ -1,5 +1,5 @@
 import { Pill } from '../../../../../components';
-import type { ClientFilingStatus } from '../data/clientDetailMock';
+import type { ClientFilingStatus } from '../types';
 
 export const CLIENT_FILING_STATUS_LABEL: Record<ClientFilingStatus, string> = {
   overdue: 'Overdue',

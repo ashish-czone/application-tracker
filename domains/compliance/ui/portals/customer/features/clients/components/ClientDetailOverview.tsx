@@ -1,11 +1,9 @@
 import { Mail, Phone, MapPin, AlertTriangle, FileText, Plus, UserPlus } from 'lucide-react';
 import { ActivityTimeline, AvatarBadge } from '@packages/ui';
 import { OrdinalDate } from '../../../../../components';
-import type { MOCK_CLIENT_DETAIL } from '../data/clientDetailMock';
+import type { ClientDetail } from '../types';
 import { InfoRow } from './InfoRow';
 import { CLIENT_ACTIVITY_ICONS } from './clientActivityIcons';
-
-type ClientDetail = typeof MOCK_CLIENT_DETAIL;
 
 export interface ClientDetailOverviewProps {
   client: ClientDetail;

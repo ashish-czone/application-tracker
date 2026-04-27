@@ -3,7 +3,7 @@ import { Link } from 'react-router';
 import { CalendarCheck } from 'lucide-react';
 import { Skeleton } from '@packages/ui';
 import { JurisdictionTag } from '../../../../../components';
-import type { Filing } from '../../../../../shared';
+import type { Filing } from '../../../../../components/composites';
 import { useComplianceFilingRows } from '../../../../../hooks/useComplianceFilings';
 
 type DueBucket = 'Due today' | 'This week';

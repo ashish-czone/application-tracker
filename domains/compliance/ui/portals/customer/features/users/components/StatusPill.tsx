@@ -1,5 +1,5 @@
 import { Pill } from '../../../../../components';
-import type { UserStatus } from '../data/usersMock';
+import type { UserStatus } from '../types';
 
 export const STATUS_DOT: Record<UserStatus, string> = {
   active: 'bg-filed',

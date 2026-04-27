@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { LogOut } from 'lucide-react';
 import { Button, Eyebrow } from '@packages/ui';
-import { ACTIVE_SESSIONS } from '../data/settingsMock';
+import { ACTIVE_SESSIONS } from '../placeholders';
 import { FieldGroup, PasswordInput, Toggle, SectionDivider } from './settingsFormPrimitives';
 import { SessionCard } from './SessionCard';
 

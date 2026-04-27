@@ -1,6 +1,6 @@
 import { AvatarBadge } from '@packages/ui';
 import { ColoredInitialsAvatar } from '../../../../../components';
-import type { ClientRow } from '../data/clientsMock';
+import type { ClientRow } from '../types';
 import { RiskPill } from './RiskPill';
 
 export interface ClientPreviewPopoverProps {

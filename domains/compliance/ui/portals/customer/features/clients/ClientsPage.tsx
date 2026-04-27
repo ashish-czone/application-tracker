@@ -16,8 +16,8 @@ import {
   type ClientRow,
   type ClientStatus,
   type ClientRiskLevel,
-} from './data/clientsMock';
-import { HANDLER_OPTIONS, RISK_OPTIONS } from './data/clientFilterOptions';
+} from './types';
+import { HANDLER_OPTIONS, RISK_OPTIONS } from './filterOptions';
 import { NewClientDrawer } from './components/NewClientDrawer';
 import { ClientPreviewPopover } from './components/ClientPreviewPopover';
 import { RISK_LABEL } from './components/RiskPill';

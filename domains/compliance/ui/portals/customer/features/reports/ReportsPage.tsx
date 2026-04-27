@@ -9,7 +9,7 @@ import {
   SearchInput,
   ScreenLayout,
 } from '@packages/ui';
-import { DateRangePopover, type DateRangeValue } from '../../../../shared';
+import { DateRangePopover, type DateRangeValue } from '../../../../components/composites';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 import {
   COMPLIANCE_TREND,
@@ -18,7 +18,7 @@ import {
   OVERDUE_ROWS,
   WORKLOAD_ROWS,
   type ReportTab,
-} from './data/reportsMock';
+} from './placeholders';
 import { ReportsKpiStrip } from './components/ReportsKpiStrip';
 import { ComplianceTrendChart } from './components/ComplianceTrendChart';
 import { AgingBarChart } from './components/AgingBarChart';

@@ -8,7 +8,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { Eyebrow } from '@packages/ui';
-import type { ThemeMode, Density } from '../data/settingsMock';
+import type { ThemeMode, Density } from '../placeholders';
 import { SectionDivider } from './settingsFormPrimitives';
 
 interface ThemeOption {

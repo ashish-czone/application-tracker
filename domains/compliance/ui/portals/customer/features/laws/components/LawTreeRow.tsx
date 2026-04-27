@@ -1,5 +1,5 @@
 import { ChevronRight, ChevronDown } from 'lucide-react';
-import type { LawNode } from '../data/lawsMock';
+import type { LawNode } from '../types';
 
 export function countAll(node: LawNode): number {
   const own = node.obligationCount ?? 0;

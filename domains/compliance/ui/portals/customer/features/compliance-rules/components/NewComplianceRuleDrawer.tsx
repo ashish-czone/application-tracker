@@ -24,12 +24,9 @@ import {
 } from '@packages/ui';
 import { FREQUENCIES, type ComplianceFrequency } from '@domains/compliance-contract';
 import { JurisdictionTag } from '../../../../../components';
-import {
-  MOCK_RULE_TEMPLATES,
-  LAW_GROUPS,
-  type RuleTemplate,
-  type LawGroupKey,
-} from '../data/complianceRulesMock';
+import { RULE_TEMPLATES } from '../templates';
+import { LAW_GROUPS } from '../filterOptions';
+import type { RuleTemplate, LawGroupKey } from '../types';
 import { FREQUENCY_LABEL, FREQUENCY_OPTIONS } from './FrequencyPill';
 
 // ─── Types ───────────────────────────────────────────────────────────
@@ -151,7 +148,7 @@ export function NewComplianceRuleDrawer({
 
   const filteredTemplates = useMemo(() => {
     const q = templateSearch.trim().toLowerCase();
-    return MOCK_RULE_TEMPLATES.filter((t) => {
+    return RULE_TEMPLATES.filter((t) => {
       if (templateLawFilter && t.lawGroup !== templateLawFilter) return false;
       if (q && !`${t.code} ${t.name} ${t.lawName}`.toLowerCase().includes(q)) return false;
       return true;
@@ -281,7 +278,7 @@ export function NewComplianceRuleDrawer({
                       setTemplateLawFilter={setTemplateLawFilter}
                       groupedTemplates={groupedTemplates}
                       filteredCount={filteredTemplates.length}
-                      totalCount={MOCK_RULE_TEMPLATES.length}
+                      totalCount={RULE_TEMPLATES.length}
                       onPickTemplate={pickTemplate}
                       onStartScratch={startScratch}
                     />

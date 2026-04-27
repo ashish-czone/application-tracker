@@ -5,7 +5,7 @@ import { Eyebrow, toast } from '@packages/ui';
 import { useEntityHooks } from '@packages/entity-engine-ui';
 import { JurisdictionTag } from '../../../../components';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
-import { type LawNode, type LawJurisdiction } from './data/lawsMock';
+import { type LawNode, type LawJurisdiction } from './types';
 import { LawTreeRow } from './components/LawTreeRow';
 import { NewLawDrawer, type NewLawValues } from './components/NewLawDrawer';
 import { useLawsList } from '../../../../hooks/useLawsApi';

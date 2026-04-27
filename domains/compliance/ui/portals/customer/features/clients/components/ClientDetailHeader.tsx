@@ -1,9 +1,7 @@
 import { Building2, Calendar } from 'lucide-react';
 import { OrdinalDate, Pill, ColoredInitialsAvatar } from '../../../../../components';
-import type { MOCK_CLIENT_DETAIL } from '../data/clientDetailMock';
+import type { ClientDetail } from '../types';
 import { RiskPill } from './RiskPill';
-
-type ClientDetail = typeof MOCK_CLIENT_DETAIL;
 
 export interface ClientDetailHeaderProps {
   client: ClientDetail;

@@ -3,11 +3,8 @@ import { Link, useParams } from 'react-router';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
 import { DataTable, Pagination, CoarseTabs } from '@packages/ui';
 import { AuditTimeline } from '@packages/audit-ui';
-import {
-  MOCK_CLIENT_DETAIL,
-  type ClientFilingStatus,
-  type ClientLaw,
-} from './data/clientDetailMock';
+import { CLIENT_DETAIL_PLACEHOLDER } from './placeholders';
+import type { ClientFilingStatus, ClientLaw } from './types';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 import { InactiveStateBanner } from '../../../../components';
 import { ClientDetailHeader } from './components/ClientDetailHeader';
@@ -68,7 +65,7 @@ export function ClientDetailPage() {
     );
   }
 
-  const client = mergeClientDetail(record, MOCK_CLIENT_DETAIL);
+  const client = mergeClientDetail(record, CLIENT_DETAIL_PLACEHOLDER);
 
   const filingsPageCount = Math.max(1, Math.ceil(client.recentFilings.length / filingsPageSize));
   const paginatedFilings = client.recentFilings.slice(
