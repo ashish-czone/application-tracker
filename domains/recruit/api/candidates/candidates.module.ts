@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { EntityEngineModule } from '@packages/entity-engine';
+import { TaxonomyModule } from '@packages/taxonomy';
 import { candidatesConfig } from './candidates.config';
 import { CandidatesController } from './candidates.controller';
 import { CandidatesService } from './candidates.service';
@@ -10,7 +11,7 @@ import { CandidatesService } from './candidates.service';
 // ============================================================================
 
 @Module({
-  imports: [EntityEngineModule.forEntity(candidatesConfig)],
+  imports: [EntityEngineModule.forEntity(candidatesConfig), TaxonomyModule],
   controllers: [CandidatesController],
   providers: [CandidatesService],
   exports: [CandidatesService],

@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { EntityEngineModule } from '@packages/entity-engine';
+import { TaxonomyModule } from '@packages/taxonomy';
 import { JOB_OPENINGS_CONFIG } from './job-openings.config';
 import { JobOpeningsController } from './job-openings.controller';
 import { JobOpeningsService } from './job-openings.service';
@@ -10,7 +11,7 @@ import { JobOpeningsService } from './job-openings.service';
 // ============================================================================
 
 @Module({
-  imports: [EntityEngineModule.forEntity(JOB_OPENINGS_CONFIG)],
+  imports: [EntityEngineModule.forEntity(JOB_OPENINGS_CONFIG), TaxonomyModule],
   controllers: [JobOpeningsController],
   providers: [JobOpeningsService],
   exports: [JobOpeningsService],

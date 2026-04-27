@@ -1,8 +1,9 @@
-import { Global, Module, type OnModuleInit } from '@nestjs/common';
+import { Module, type OnModuleInit } from '@nestjs/common';
 import { RbacService } from '@packages/rbac';
 import { fieldTypeRegistry } from '@packages/field-types';
 import { TAXONOMY_EXTENSION } from '@packages/entity-engine';
 import { ActionRegistry } from '@packages/automation-contracts';
+import { HierarchyModule } from '@packages/hierarchy';
 import { taxonomyFieldTypesPlugin } from './field-types';
 import { TaxonomyService } from './services/taxonomy.service';
 import { CategoryService } from './services/category.service';
@@ -11,8 +12,8 @@ import { TaxonomyExtensionAdapter } from './taxonomy-extension.adapter';
 import { TagsController } from './controllers/tags.controller';
 import { CategoriesController } from './controllers/categories.controller';
 
-@Global()
 @Module({
+  imports: [HierarchyModule],
   controllers: [TagsController, CategoriesController],
   providers: [
     TaxonomyService,
