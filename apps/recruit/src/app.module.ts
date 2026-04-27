@@ -11,7 +11,7 @@ import { EntityRelationsModule } from '@packages/entity-relations';
 import { EvaluationsModule } from '@packages/evaluations';
 import { NotesModule } from '@packages/notes';
 import { OAuthModule } from '@packages/oauth';
-import { OrgUnitsModule } from '@packages/org-units';
+import { OrgUnitsModule } from './modules/org-units/org-units.module';
 import { PdfGeneratorModule } from '@packages/pdf-generator';
 import { PuppeteerPdfProvider } from '@packages/pdf-generator/providers/puppeteer.provider';
 import { TaxonomyModule } from '@packages/taxonomy';

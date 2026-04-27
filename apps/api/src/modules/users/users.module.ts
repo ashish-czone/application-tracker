@@ -3,7 +3,7 @@ import { EntityEngineModule, LookupResolverService } from '@packages/entity-engi
 import { users, isNull } from '@packages/database';
 import { ContactResolverRegistry } from '@packages/notifications';
 import { TasksModule } from '@packages/tasks';
-import { OrgUnitsModule } from '@packages/org-units';
+import { OrgUnitsModule } from '../org-units/org-units.module';
 import {
   USERS_CONFIG,
   UsersService,

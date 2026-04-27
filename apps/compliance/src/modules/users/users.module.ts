@@ -2,7 +2,7 @@ import { Module, type OnModuleInit } from '@nestjs/common';
 import { EntityEngineModule, LookupResolverService } from '@packages/entity-engine';
 import { users } from '@packages/database';
 import { ContactResolverRegistry } from '@packages/notifications';
-import { OrgUnitsModule } from '@packages/org-units';
+import { OrgUnitsModule } from '../org-units/org-units.module';
 import {
   USERS_CONFIG,
   UsersService,

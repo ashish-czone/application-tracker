@@ -5,7 +5,7 @@ import { sql } from 'drizzle-orm';
 import { createPackageTestApp, withAuth, cleanDatabase, type PackageTestApp } from '@packages/platform-testing';
 import { EntityEngineModule } from '@packages/entity-engine';
 import { HierarchyModule } from '@packages/hierarchy';
-import { OrgUnitsModule } from '../../org-units.module';
+import { TestOrgUnitsModule } from './helpers/test-org-units.module';
 import { ORG_UNIT_PERMISSIONS } from '../../permissions';
 
 const READ = [ORG_UNIT_PERMISSIONS.READ];
@@ -16,7 +16,7 @@ describe('OrgUnitController (integration)', () => {
 
   beforeAll(async () => {
     ctx = await createPackageTestApp({
-      imports: [EntityEngineModule, HierarchyModule, OrgUnitsModule],
+      imports: [EntityEngineModule, HierarchyModule, TestOrgUnitsModule],
     });
   });
 

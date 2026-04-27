@@ -1,6 +1,6 @@
-import { Injectable, BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
+import { Injectable, Inject, BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { DatabaseService, eq, and, isNull, isNotNull } from '@packages/database';
-import { OrgUnitService } from '@packages/org-units';
+import { TASK_TEAM_MEMBERS_READER, type TaskTeamMembersReader } from '../task-team-members-reader.token';
 import { tasks } from '../schema/tasks';
 
 // Reassign is only valid while the task is still actionable. Terminal states
@@ -12,7 +12,8 @@ const REASSIGN_ALLOWED_STATUSES = new Set(['pending', 'in_progress', 'blocked'])
 export class TaskClaimService {
   constructor(
     private readonly database: DatabaseService,
-    private readonly orgUnitService: OrgUnitService,
+    @Inject(TASK_TEAM_MEMBERS_READER)
+    private readonly teamMembersReader: TaskTeamMembersReader,
   ) {}
 
   async pickup(taskId: string, userId: string): Promise<{ id: string; assigneeId: string; status: string }> {
@@ -32,7 +33,7 @@ export class TaskClaimService {
     }
     if (task.assigneeId) throw new ConflictException('Task is already picked up');
 
-    const memberIds = await this.orgUnitService.getMemberIds(task.assigneeTeamId);
+    const memberIds = await this.teamMembersReader.getMemberIds(task.assigneeTeamId);
     if (!memberIds.includes(userId)) {
       throw new ForbiddenException('You are not a member of the assigned team');
     }

@@ -84,7 +84,7 @@ export class OrgPositionService {
 
   /**
    * Seeds default positions (Head, Lead, Member) if none exist.
-   * Called from OrgUnitsModule.onModuleInit.
+   * Called from `seedSystem` (db:seed CLI), not at boot.
    */
   async seedDefaults(): Promise<void> {
     const existing = await this.database.db

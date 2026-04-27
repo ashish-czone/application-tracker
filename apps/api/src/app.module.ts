@@ -25,7 +25,7 @@ import { OAuthModule } from '@packages/oauth';
 import { RbacGuard } from '@packages/rbac';
 import { AppConfigService } from '@packages/settings';
 import { UsersModule } from './modules/users/users.module';
-import { OrgUnitsModule } from '@packages/org-units';
+import { OrgUnitsModule } from './modules/org-units/org-units.module';
 import { EntityEngineModule } from '@packages/entity-engine';
 import { TasksModule } from '@packages/tasks';
 import { TaxonomyModule } from '@packages/taxonomy';
