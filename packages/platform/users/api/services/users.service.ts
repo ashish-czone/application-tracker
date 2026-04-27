@@ -239,7 +239,7 @@ export class UsersService {
    */
   async softDelete(id: string, actorId: string, accessCtx?: DataAccessContext): Promise<void> {
     const before = await this.entityService.findOneOrFail(id, accessCtx);
-    await this.cleanupOnSoftDelete(id);
+    await this.cleanupOnSoftDelete(id, actorId);
 
     await this.database.db
       .update(users)
@@ -323,12 +323,18 @@ export class UsersService {
    * references (tasks.assigneeId, org_unit_members rows, domain-specific
    * assignees) via the owning module's service API. Default is a no-op.
    *
+   * `actorId` is the user performing the deactivation — forward it to any
+   * cascade events emitted by the override so audit attribution stays clean
+   * (the same actor that deactivated the user is recorded against the
+   * downstream cleanup events, instead of having the events show actorId=null
+   * and forcing reviewers to correlate via correlationId).
+   *
    * Throwing aborts the deactivation — the user row is not soft-deleted.
    * Run everything here inside a DB transaction if atomicity with the user
    * row update matters; otherwise cleanup runs first and the row stamp is
    * a separate statement.
    */
-  protected async cleanupOnSoftDelete(_userId: string): Promise<void> {
+  protected async cleanupOnSoftDelete(_userId: string, _actorId: string): Promise<void> {
     // no-op in base; overridden per-app.
   }
 

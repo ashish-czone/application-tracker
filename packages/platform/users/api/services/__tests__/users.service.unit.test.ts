@@ -317,10 +317,14 @@ describe('UsersService', () => {
       return ctx;
     }
 
-    it('runs cleanupOnSoftDelete before stamping the user row', async () => {
+    it('runs cleanupOnSoftDelete before stamping the user row, forwarding actorId', async () => {
       const ctx = buildDeleteCtx();
       const order: string[] = [];
-      (ctx.service as any).cleanupOnSoftDelete = async () => { order.push('cleanup'); };
+      const cleanupCalls: Array<[string, string]> = [];
+      (ctx.service as any).cleanupOnSoftDelete = async (userId: string, actorId: string) => {
+        cleanupCalls.push([userId, actorId]);
+        order.push('cleanup');
+      };
       // Capture the moment update() is called on the db
       const origUpdate = ctx.mockDb.db.update;
       ctx.mockDb.db.update = vi.fn((...args: unknown[]) => {
@@ -331,6 +335,7 @@ describe('UsersService', () => {
       await ctx.service.softDelete('u1', 'actor-1');
 
       expect(order).toEqual(['cleanup', 'stamp']);
+      expect(cleanupCalls).toEqual([['u1', 'actor-1']]);
       expect(ctx.eventEmitter.emitDynamic).toHaveBeenCalledWith('users.Deleted', expect.objectContaining({
         entityType: 'users',
         entityId: 'u1',

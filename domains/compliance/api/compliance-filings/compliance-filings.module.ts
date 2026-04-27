@@ -5,13 +5,14 @@ import { ComplianceFilingsController } from './compliance-filings.controller';
 import { ComplianceFilingsService } from './compliance-filings.service';
 import { ComplianceFilingsLookupService } from './compliance-filings-lookup.service';
 import { ComplianceFilingsCancellationService } from './compliance-filings-cancellation.service';
+import { ComplianceFilingsAssigneeCleanupService } from './compliance-filings-assignee-cleanup.service';
 
 const filingsEntityEngineModule = EntityEngineModule.forEntity(COMPLIANCE_FILINGS_CONFIG);
 
 /**
  * Compliance filings module.
  *
- * Three services co-exist here because they serve genuinely distinct
+ * Four services co-exist here because they serve genuinely distinct
  * concerns:
  *  - ComplianceFilingsService — CRUD + create-time externalKey derivation
  *    and completedAt stamping (moved out of beforeCreate/beforeUpdate
@@ -20,9 +21,12 @@ const filingsEntityEngineModule = EntityEngineModule.forEntity(COMPLIANCE_FILING
  *    generate-compliance-filings automation to dedupe before insert
  *  - ComplianceFilingsCancellationService — batch-cancellation called
  *    from the dormancy cascade and from registration deactivation
+ *  - ComplianceFilingsAssigneeCleanupService — clears assigneeId on
+ *    non-terminal filings when the assigned user is deactivated
+ *    (US-7.4 / US-12.2 / US-12.3)
  *
- * Lookup + cancellation are exported so compliance.module.ts can inject
- * them into cross-entity services (rules, dormancy).
+ * Lookup + cancellation + assignee-cleanup are exported so consumers
+ * (rules, dormancy, AppUsersService) can inject them.
  */
 @Module({
   imports: [filingsEntityEngineModule],
@@ -31,12 +35,14 @@ const filingsEntityEngineModule = EntityEngineModule.forEntity(COMPLIANCE_FILING
     ComplianceFilingsService,
     ComplianceFilingsLookupService,
     ComplianceFilingsCancellationService,
+    ComplianceFilingsAssigneeCleanupService,
   ],
   exports: [
     filingsEntityEngineModule,
     ComplianceFilingsService,
     ComplianceFilingsLookupService,
     ComplianceFilingsCancellationService,
+    ComplianceFilingsAssigneeCleanupService,
   ],
 })
 export class ComplianceFilingsModule {}

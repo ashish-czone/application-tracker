@@ -8,7 +8,7 @@ import { createComplianceRule } from './fixtures/rules';
 import { createClientRegistration } from './fixtures/registrations';
 import { runGenerator } from './fixtures/cron';
 import { transitionFiling, updateFiling } from './fixtures/filings';
-import { createUser, type CreatedUser } from './fixtures/users';
+import { createUser, deactivateUser, type CreatedUser } from './fixtures/users';
 
 interface FilingRow {
   id: string;
@@ -33,12 +33,13 @@ interface FilingRow {
  *   US-12.1 Reassignment leaves the team unchanged — same test as US-7.3,
  *          additionally asserts assigneeTeamId is untouched.
  *
- * US-7.4, US-12.2, and US-12.3 cover the user-deactivation cascade and
- * are recorded as a single `test.skip` block — V1 has no compliance-side
- * listener for `users.Deleted` (the platform's USERS_USER_DEACTIVATED
- * event), so marking a user inactive currently leaves their assigneeId
- * stale on every non-terminal filing. Unblocks by adding a listener in
- * `domains/compliance/api/compliance-filings/`.
+ *   US-7.4 / US-12.2 / US-12.3 User deactivation cascades: assigneeId is
+ *          cleared on every non-terminal filing the user owned;
+ *          assigneeTeamId is preserved (so the team can pick the work back
+ *          up); terminal filings (completed / cancelled) are left
+ *          untouched. Driven from `AppUsersService.cleanupOnSoftDelete`,
+ *          not via an event listener — so failures abort the deactivation
+ *          atomically. One batched audit entry is emitted.
  */
 test.describe('Flow: filing assignment + continuity (US-7.x / US-12.x)', () => {
   let team: OrgUnit;
@@ -116,22 +117,80 @@ test.describe('Flow: filing assignment + continuity (US-7.x / US-12.x)', () => {
     ).toBe(team.id);
   });
 
-  test.skip('US-7.4 / US-12.2 / US-12.3 user deactivation clears individual but preserves team assignments', async () => {
-    // V1 gap — there is no compliance-side listener for the users.Deleted
-    // (USERS_USER_DEACTIVATED) event, so marking a user inactive currently
-    // leaves their `assigneeId` stale on every non-terminal filing. To
-    // unblock this test:
-    //
-    //   1. Add a listener (likely in domains/compliance/api/compliance-filings/)
-    //      that null-outs `assigneeId` on non-terminal filings whose
-    //      assignee = userId.
-    //   2. Confirm `assigneeTeamId` is left intact by that listener.
-    //   3. Unskip and assert the cascade end-to-end.
-    //
-    // The behaviour spec calls for is:
-    //   - Mark Alice inactive (DELETE /users/:id stamps users.deletedAt).
-    //   - Every non-terminal filing where assigneeId = alice gets cleared.
-    //   - assigneeTeamId on those filings is unchanged.
-    //   - Completed / cancelled filings are not modified.
+  test('US-7.4 / US-12.2 / US-12.3 user deactivation clears individual but preserves team assignments', async () => {
+    // Bring up an isolated state for this test: a fresh team / user / law /
+    // client / rule, and a sweep that materialises several filings. We
+    // can't reuse the suite-level fixture because earlier tests have
+    // already mutated the assignees on those filings.
+    await resetState();
+    const isolatedTeam = await createOrgUnit({ level: 'Team' });
+    const carol = await createUser({ firstName: 'Carol', lastName: 'Deactivate' });
+    const dave = await createUser({ firstName: 'Dave', lastName: 'Bystander' });
+
+    const isolatedLaw = await getSystemLaw('GST');
+    await createLawHandler({ lawId: isolatedLaw.id, orgEntityId: isolatedTeam.id });
+    const isolatedClient = await createClient();
+    const isolatedRule = await createComplianceRule({ lawId: isolatedLaw.id });
+    await createClientRegistration(isolatedClient.id, isolatedLaw.id);
+    await runGenerator('2026-06-15T02:00:00Z');
+
+    const all = await apiClient.get<{ data: FilingRow[] }>(`/compliance-filings?limit=200`);
+    const ours = all.data.filter(
+      (f) => f.ruleId === isolatedRule.id && f.clientId === isolatedClient.id,
+    );
+    expect(ours.length, 'sweep should produce filings to assign').toBeGreaterThanOrEqual(3);
+
+    // Assign Carol to two filings, Dave to one. One of Carol's filings is
+    // then transitioned to `completed` so we can verify terminal filings
+    // are untouched by the cascade.
+    const [carolNonTerminal, carolToComplete, daveFiling] = ours;
+
+    await updateFiling(carolNonTerminal.id, { assigneeId: carol.id });
+    await updateFiling(carolToComplete.id, { assigneeId: carol.id });
+    await updateFiling(daveFiling.id, { assigneeId: dave.id });
+
+    // Drive the second Carol filing to a terminal state.
+    await transitionFiling(carolToComplete.id, 'in_progress');
+    await transitionFiling(carolToComplete.id, 'review');
+    await transitionFiling(carolToComplete.id, 'completed');
+
+    // Sanity: pre-deactivation state matches what we set up.
+    const beforeRow = (await apiClient.get<{ data: FilingRow[] }>(
+      `/compliance-filings?limit=200`,
+    )).data;
+    const carolNonTerminalBefore = beforeRow.find((f) => f.id === carolNonTerminal.id)!;
+    const carolCompletedBefore = beforeRow.find((f) => f.id === carolToComplete.id)!;
+    const daveBefore = beforeRow.find((f) => f.id === daveFiling.id)!;
+    expect(carolNonTerminalBefore.assigneeId).toBe(carol.id);
+    expect(carolCompletedBefore.assigneeId).toBe(carol.id);
+    expect(carolCompletedBefore.status).toBe('completed');
+    expect(daveBefore.assigneeId).toBe(dave.id);
+
+    // Trigger the cascade: deactivate Carol.
+    await deactivateUser(carol.id);
+
+    const after = (await apiClient.get<{ data: FilingRow[] }>(
+      `/compliance-filings?limit=200`,
+    )).data;
+    const carolNonTerminalAfter = after.find((f) => f.id === carolNonTerminal.id)!;
+    const carolCompletedAfter = after.find((f) => f.id === carolToComplete.id)!;
+    const daveAfter = after.find((f) => f.id === daveFiling.id)!;
+
+    // US-7.4 / US-12.2: non-terminal filing assigned to Carol has assigneeId
+    // cleared, but assigneeTeamId is preserved so the team can pick it up.
+    expect(carolNonTerminalAfter.assigneeId, 'Carol non-terminal assigneeId cleared').toBeNull();
+    expect(carolNonTerminalAfter.assigneeTeamId, 'team preserved on non-terminal filing').toBe(
+      isolatedTeam.id,
+    );
+
+    // US-12.3: terminal filings (completed / cancelled) are not modified —
+    // Carol's completed filing keeps her assigneeId because that's the
+    // historical record of who closed it.
+    expect(carolCompletedAfter.assigneeId, 'completed filing keeps original assignee').toBe(
+      carol.id,
+    );
+
+    // Dave's filing is unrelated and must not be touched.
+    expect(daveAfter.assigneeId, "another user's filing is not affected").toBe(dave.id);
   });
 });

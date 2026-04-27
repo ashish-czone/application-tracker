@@ -8,15 +8,24 @@ import {
   UsersService,
   UsersController,
 } from '@packages/users';
+import { ComplianceFilingsModule } from '@domains/compliance-api/compliance-filings/compliance-filings.module';
 import { AppUsersService } from './app-users.service';
 
 /**
  * App-level users module for apps/compliance. Registers the platform users
  * config with the entity-engine and wires the notifications contact
  * resolvers + lookup target. UsersService owns the full write path.
+ *
+ * ComplianceFilingsModule is imported so AppUsersService can call into
+ * the filings assignee-cleanup cascade when a user is soft-deleted
+ * (US-7.4 / US-12.2 / US-12.3).
  */
 @Module({
-  imports: [EntityEngineModule.forEntity(USERS_CONFIG), OrgUnitsModule],
+  imports: [
+    EntityEngineModule.forEntity(USERS_CONFIG),
+    OrgUnitsModule,
+    ComplianceFilingsModule,
+  ],
   controllers: [UsersController],
   providers: [{ provide: UsersService, useClass: AppUsersService }],
   exports: [UsersService],

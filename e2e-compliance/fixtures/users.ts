@@ -34,3 +34,13 @@ export async function createUser(overrides: CreateUserOverrides = {}): Promise<C
   }
   return apiClient.post<CreatedUser>('/users', body);
 }
+
+/**
+ * Soft-deletes a user via the admin path. Stamps `deletedAt` on the user
+ * row, runs the platform's `cleanupOnSoftDelete` hook (which clears
+ * compliance filing assignees on non-terminal filings, US-7.4), and emits
+ * the `users.Deleted` domain event.
+ */
+export async function deactivateUser(userId: string): Promise<void> {
+  await apiClient.delete(`/users/${userId}`);
+}

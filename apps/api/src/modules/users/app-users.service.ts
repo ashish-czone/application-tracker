@@ -19,7 +19,7 @@ export class AppUsersService extends UsersService {
   @Inject(TasksService) private readonly tasksService!: TasksService;
   @Inject(OrgUnitService) private readonly orgUnitService!: OrgUnitService;
 
-  protected async cleanupOnSoftDelete(userId: string): Promise<void> {
+  protected async cleanupOnSoftDelete(userId: string, _actorId: string): Promise<void> {
     await this.tasksService.handleUserDeactivated(userId);
     await this.orgUnitService.handleUserDeactivated(userId);
   }
