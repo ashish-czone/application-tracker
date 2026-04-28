@@ -57,7 +57,7 @@ test.describe('Flow: audit trail (US-9.x)', () => {
       .toBeGreaterThan(0);
 
     const logs = await listClientAuditLogs(client.id);
-    const createRow = logs.find((l) => l.action === 'create');
+    const createRow = logs.find((l) => l.action === 'created');
     expect(createRow, 'a CREATE audit row should exist for the new client').toBeTruthy();
     expect(createRow!.entityType).toBe('clients');
     expect(createRow!.entityId).toBe(client.id);
@@ -78,12 +78,12 @@ test.describe('Flow: audit trail (US-9.x)', () => {
     await expect
       .poll(async () => {
         const all = await listClientAuditLogs(client.id);
-        return all.filter((l) => l.action === 'update').length;
+        return all.filter((l) => l.action === 'updated').length;
       }, { timeout: 5_000, intervals: [100, 250, 500, 1000] })
       .toBeGreaterThan(0);
 
     const logs = await listClientAuditLogs(client.id);
-    const updateRow = logs.find((l) => l.action === 'update');
+    const updateRow = logs.find((l) => l.action === 'updated');
     expect(updateRow, 'an UPDATE audit row should exist').toBeTruthy();
     expect(updateRow!.changes, 'changes payload should be populated for an update').toBeTruthy();
 
