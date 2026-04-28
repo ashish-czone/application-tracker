@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -43,7 +43,12 @@ import {
   type InactiveKind,
 } from '../../../../../components';
 import type { FilingRow } from '../types';
-import { MOCK_HANDLERS } from '../../console-preview/mockData';
+import { useUsersList } from '../../../../../hooks/useUsersApi';
+import {
+  formatUserDisplayName,
+  formatUserInitials,
+  formatUserPositionLabel,
+} from '../../clients/handlerUtils';
 import type { Filing, Handler } from '../../../../../types';
 
 // ─── Status workflow ─────────────────────────────────────────────────
@@ -256,7 +261,30 @@ function OverviewBody({ filing }: { filing: FilingRow }) {
     noteForm.reset({ note: '' });
   };
 
-  const handlerOptions = MOCK_HANDLERS.map((h) => ({ value: h.id, label: h.name }));
+  // Live handler list — active platform users. The selected handler stays in
+  // local component state so the inline dropdown can change optimistically;
+  // persisting the change to the filing is wired up by the consumer.
+  const { data: usersData } = useUsersList({ limit: 500 });
+  const handlerById = useMemo(() => {
+    const map = new Map<string, Handler>();
+    for (const u of usersData?.data ?? []) {
+      if (u.status !== 'active') continue;
+      map.set(u.id, {
+        id: u.id,
+        name: formatUserDisplayName(u),
+        initials: formatUserInitials(u),
+        role: formatUserPositionLabel(u) || undefined,
+      });
+    }
+    return map;
+  }, [usersData]);
+  const handlerOptions = useMemo(
+    () =>
+      Array.from(handlerById.values())
+        .map((h) => ({ value: h.id, label: h.name }))
+        .sort((a, b) => a.label.localeCompare(b.label)),
+    [handlerById],
+  );
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -299,11 +327,11 @@ function OverviewBody({ filing }: { filing: FilingRow }) {
                 value={handler.id}
                 options={handlerOptions}
                 onChange={(id) => {
-                  const h = MOCK_HANDLERS.find((m) => m.id === id);
+                  const h = handlerById.get(id);
                   if (h) setHandler(h);
                 }}
                 renderValue={(v) => {
-                  const h = MOCK_HANDLERS.find((m) => m.id === v);
+                  const h = handlerById.get(v) ?? handler;
                   if (!h) return null;
                   return (
                     <div className="flex items-center gap-2">
@@ -313,7 +341,7 @@ function OverviewBody({ filing }: { filing: FilingRow }) {
                   );
                 }}
                 renderOption={(opt, isSelected) => {
-                  const h = MOCK_HANDLERS.find((m) => m.id === opt.value);
+                  const h = handlerById.get(opt.value);
                   return (
                     <>
                       <AvatarBadge initials={h?.initials ?? ''} size="xs" />
