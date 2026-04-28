@@ -2,6 +2,8 @@ import type { ReactNode } from 'react';
 import type { ServicesGridFields } from '@domains/agency-contract';
 import { defineBlock } from '../registry';
 import type { BlockRenderProps } from '../types';
+import { Reveal } from '../../motion/Reveal';
+import { Stagger } from '../../motion/Stagger';
 
 interface Fields extends Record<string, unknown> {
   heading?: string;
@@ -26,18 +28,20 @@ function ServicesGrid({ fields }: BlockRenderProps<Fields>): ReactNode {
     <section className="w-full py-20 md:py-28">
       <div className="mx-auto max-w-6xl px-6 md:px-10 flex flex-col gap-14">
         {(heading || subheading) && (
-          <div className="flex flex-col gap-3 max-w-2xl">
-            {heading && (
-              <h2 className="text-4xl md:text-5xl font-semibold tracking-[-0.02em] leading-[1.05]">
-                {heading}
-              </h2>
-            )}
-            {subheading && (
-              <p className="text-lg text-[hsl(var(--muted-foreground))]">{subheading}</p>
-            )}
-          </div>
+          <Reveal>
+            <div className="flex flex-col gap-3 max-w-2xl">
+              {heading && (
+                <h2 className="text-4xl md:text-5xl font-semibold tracking-[-0.02em] leading-[1.05]">
+                  {heading}
+                </h2>
+              )}
+              {subheading && (
+                <p className="text-lg text-[hsl(var(--muted-foreground))]">{subheading}</p>
+              )}
+            </div>
+          </Reveal>
         )}
-        <div className="grid gap-x-10 gap-y-12 md:grid-cols-2 lg:grid-cols-3">
+        <Stagger className="grid gap-x-10 gap-y-12 md:grid-cols-2 lg:grid-cols-3" step={0.06}>
           {services.map((s, i) => (
             <article
               key={s.id}
@@ -70,7 +74,7 @@ function ServicesGrid({ fields }: BlockRenderProps<Fields>): ReactNode {
               )}
             </article>
           ))}
-        </div>
+        </Stagger>
       </div>
     </section>
   );
