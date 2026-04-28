@@ -1,6 +1,8 @@
 import { test, expect } from './fixtures/auth';
 import { resetState, randomSuffix } from './helpers';
 import { getSystemLaw } from './fixtures/laws';
+import { createOrgUnit } from './fixtures/org-units';
+import { createLawHandler } from './fixtures/law-handlers';
 import { createComplianceRule, type ComplianceRule } from './fixtures/rules';
 
 test.describe('Compliance Rules', () => {
@@ -8,7 +10,9 @@ test.describe('Compliance Rules', () => {
 
   test.beforeAll(async () => {
     await resetState();
+    const team = await createOrgUnit({ level: 'Team' });
     const gst = await getSystemLaw('GST');
+    await createLawHandler({ lawId: gst.id, orgEntityId: team.id });
     anchorRule = await createComplianceRule({
       lawId: gst.id,
       code: `GSTR-3B-${randomSuffix(4).toUpperCase()}`,
