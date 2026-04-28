@@ -6,11 +6,12 @@ import { Reveal } from '../../motion/Reveal';
 import { Stagger } from '../../motion/Stagger';
 
 interface Fields extends Record<string, unknown> {
-  number?: string;
   eyebrow?: string;
   heading?: string;
   subheading?: string;
   stats?: StatsRowFields['stats'];
+  /** Retained for content compatibility; unused. */
+  number?: string;
 }
 
 function formatStat(value: number, suffix: string | null): string {
@@ -18,108 +19,49 @@ function formatStat(value: number, suffix: string | null): string {
   return suffix ? `${formatted}${suffix}` : formatted;
 }
 
+const COLS_CLASS: Record<number, string> = {
+  1: 'sm:grid-cols-1',
+  2: 'sm:grid-cols-2',
+  3: 'sm:grid-cols-2 lg:grid-cols-3',
+  4: 'sm:grid-cols-2 lg:grid-cols-4',
+};
+
 /**
- * Oversized editorial numerals — full-width strip with a hairline above
- * each number, label below. Section uses an inverse (deep ink) tone by
- * default to break the page rhythm. Numbers scale up to the .text-mega
- * size (clamp ~6rem → 14rem).
+ * Mono-spaced numerals on a muted strip with hairline dividers between
+ * cells. Restrained, technical — the agency equivalent of a dashboard
+ * stat block.
  */
-function StatsRow({ fields, variant }: BlockRenderProps<Fields>): ReactNode {
-  const { number, eyebrow, heading, subheading, stats = [] } = fields;
-  const inverse = variant !== 'paper';
+function StatsRow({ fields }: BlockRenderProps<Fields>): ReactNode {
+  const { eyebrow, heading, subheading, stats = [] } = fields;
+  const colsKey = Math.max(1, Math.min(4, stats.length || 4)) as 1 | 2 | 3 | 4;
+  const cols = COLS_CLASS[colsKey];
 
   return (
-    <section
-      className={
-        'w-full py-20 md:py-28 ' +
-        (inverse
-          ? 'bg-[hsl(var(--surface-inverse))] text-[hsl(var(--surface-inverse-foreground))]'
-          : '')
-      }
-    >
-      <div className="mx-auto max-w-7xl px-6 md:px-10 flex flex-col gap-14 md:gap-20">
+    <section className="w-full bg-[hsl(var(--muted))] py-20 md:py-28 border-y border-[hsl(var(--border))]">
+      <div className="mx-auto max-w-6xl px-6 md:px-10 flex flex-col gap-12">
         {(heading || eyebrow) && (
           <Reveal>
-            <header className="grid grid-cols-12 gap-6 items-end">
-              <div className="col-span-12 md:col-span-7 flex flex-col gap-4">
-                {eyebrow && (
-                  <span
-                    className={
-                      'text-xs font-semibold tracking-[0.22em] uppercase ' +
-                      (inverse
-                        ? 'text-[hsl(var(--surface-inverse-foreground))]/60'
-                        : 'text-[hsl(var(--muted-foreground))]')
-                    }
-                  >
-                    <span className="text-[hsl(var(--accent))]">{number ?? '04'}</span>
-                    <span
-                      className={
-                        'mx-3 inline-block h-px w-8 align-middle ' +
-                        (inverse
-                          ? 'bg-[hsl(var(--surface-inverse-foreground))]/30'
-                          : 'bg-[hsl(var(--hairline))]')
-                      }
-                    />
-                    {eyebrow}
-                  </span>
-                )}
-                {heading && (
-                  <h2 className="text-4xl md:text-6xl font-semibold tracking-[-0.025em] leading-[0.98]">
-                    {heading}
-                  </h2>
-                )}
-              </div>
-              {subheading && (
-                <p
-                  className={
-                    'hidden md:block md:col-span-4 md:col-start-9 text-base leading-[1.55] ' +
-                    (inverse
-                      ? 'text-[hsl(var(--surface-inverse-foreground))]/70'
-                      : 'text-[hsl(var(--muted-foreground))]')
-                  }
-                >
-                  {subheading}
-                </p>
-              )}
+            <header className="flex flex-col gap-4 max-w-3xl">
+              {eyebrow && <span className="text-eyebrow">[ {eyebrow} ]</span>}
+              {heading && <h2 className="text-headline">{heading}</h2>}
+              {subheading && <p className="text-lead max-w-2xl">{subheading}</p>}
             </header>
           </Reveal>
         )}
 
         <Stagger
-          className={
-            'grid grid-cols-1 md:grid-cols-2 ' +
-            (stats.length === 3
-              ? 'lg:grid-cols-3'
-              : stats.length >= 4
-                ? 'lg:grid-cols-4'
-                : 'lg:grid-cols-2')
-          }
-          step={0.06}
+          className={`grid grid-cols-1 ${cols} divide-y divide-[hsl(var(--border))] sm:divide-y-0 sm:divide-x rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))]`}
+          step={0.05}
         >
           {stats.map((s) => (
-            <div
-              key={s.id}
-              className={
-                'flex flex-col gap-4 py-8 md:py-10 px-1 md:px-6 ' +
-                'border-t ' +
-                (inverse
-                  ? 'border-[hsl(var(--surface-inverse-foreground))]/20'
-                  : 'border-[hsl(var(--hairline))]')
-              }
-            >
-              <span className="text-mega leading-none tracking-[-0.045em]">
+            <div key={s.id} className="flex flex-col gap-1 p-6 md:p-8">
+              <span
+                className="font-semibold tracking-[-0.03em] leading-none text-[clamp(2.25rem,1.5rem+2vw,3rem)]"
+                style={{ fontFamily: 'var(--font-mono)' }}
+              >
                 {formatStat(s.value, s.suffix)}
               </span>
-              <span
-                className={
-                  'text-xs font-semibold tracking-[0.22em] uppercase ' +
-                  (inverse
-                    ? 'text-[hsl(var(--surface-inverse-foreground))]/60'
-                    : 'text-[hsl(var(--muted-foreground))]')
-                }
-              >
-                {s.label}
-              </span>
+              <span className="text-sm text-[hsl(var(--muted-foreground))]">{s.label}</span>
             </div>
           ))}
         </Stagger>
@@ -134,16 +76,13 @@ export const statsRowBlock = defineBlock<Fields>({
   category: 'Content',
   icon: 'BarChart3',
   supports: ['stats'],
-  variants: [
-    { key: 'inverse', label: 'Ink (default)' },
-    { key: 'paper', label: 'Paper' },
-  ],
-  defaultVariant: 'inverse',
+  variants: [{ key: 'default', label: 'Default' }],
+  defaultVariant: 'default',
   fields: {
-    number: { type: 'text', label: 'Section number', maxLength: 4 },
     eyebrow: { type: 'text', label: 'Eyebrow', maxLength: 60 },
     heading: { type: 'text', label: 'Heading', maxLength: 120 },
     subheading: { type: 'textarea', label: 'Subheading', maxLength: 240 },
+    number: { type: 'text', label: 'Section number (legacy)', maxLength: 4 },
   },
   component: StatsRow,
 });

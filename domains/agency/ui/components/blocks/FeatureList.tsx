@@ -6,11 +6,10 @@ import { Stagger } from '../motion/Stagger';
 
 interface FeatureListFields extends Record<string, unknown> {
   heading?: string;
-  /** Optional eyebrow shown above the heading. */
   eyebrow?: string;
-  /** Two-digit chapter number for the editorial variant. */
-  number?: string;
   items?: string;
+  /** Retained for content compatibility; unused by the default variant. */
+  number?: string;
 }
 
 interface ParsedItem {
@@ -20,8 +19,7 @@ interface ParsedItem {
 
 /**
  * Items are stored as newline-delimited "Title :: Description" rows in the
- * JSONB custom_fields column. A structured array field type would be nicer
- * but requires new storage semantics — deferred to a follow-up.
+ * JSONB custom_fields column.
  */
 function parseItems(raw: string | undefined): ParsedItem[] {
   if (!raw) return [];
@@ -35,87 +33,47 @@ function parseItems(raw: string | undefined): ParsedItem[] {
     });
 }
 
-function pad(n: number): string {
-  return String(n).padStart(2, '0');
-}
-
-function EditorialRows({ items }: { items: ParsedItem[] }) {
+/** Single mark drawn in monospace, faintly tinted with the accent. */
+function CardIcon({ index }: { index: number }) {
   return (
-    <Stagger className="flex flex-col" step={0.05}>
-      {items.map((item, i) => (
-        <article
-          key={i}
-          className="grid grid-cols-12 gap-6 md:gap-8 py-8 md:py-12 border-t border-[hsl(var(--hairline))] group"
-        >
-          <div className="col-span-2 md:col-span-1">
-            <span className="text-xs md:text-sm font-semibold tracking-[0.18em] text-[hsl(var(--accent))]">
-              {pad(i + 1)}
-            </span>
-          </div>
-          <h3 className="col-span-10 md:col-span-5 text-2xl md:text-4xl font-semibold tracking-[-0.02em] leading-[1.05]">
-            {item.title}
-          </h3>
-          {item.description && (
-            <p className="col-span-12 md:col-span-6 text-base md:text-lg text-[hsl(var(--muted-foreground))] leading-[1.55] md:pt-2">
-              {item.description}
-            </p>
-          )}
-        </article>
-      ))}
-      <div className="border-t border-[hsl(var(--hairline))]" aria-hidden />
-    </Stagger>
+    <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--muted))] text-mono text-[hsl(var(--accent))]">
+      {String(index + 1).padStart(2, '0')}
+    </span>
   );
 }
 
-function CardsGrid({ items }: { items: ParsedItem[] }) {
-  return (
-    <Stagger className="grid gap-6 md:grid-cols-2 lg:grid-cols-3" step={0.05}>
-      {items.map((item, i) => (
-        <li
-          key={i}
-          className="rounded-lg border border-[hsl(var(--border))] p-6 flex flex-col gap-2 list-none"
-        >
-          <h3 className="font-semibold">{item.title}</h3>
-          {item.description && (
-            <p className="text-sm text-[hsl(var(--muted-foreground))]">{item.description}</p>
-          )}
-        </li>
-      ))}
-    </Stagger>
-  );
-}
-
-function FeatureList({ fields, variant }: BlockRenderProps<FeatureListFields>): ReactNode {
+function FeatureList({ fields }: BlockRenderProps<FeatureListFields>): ReactNode {
   const items = parseItems(fields.items);
-  const isCards = variant === 'cards';
 
   return (
-    <section className="w-full py-20 md:py-28">
-      <div className="mx-auto max-w-7xl px-6 md:px-10 flex flex-col gap-12 md:gap-16">
+    <section className="w-full py-20 md:py-28 border-b border-[hsl(var(--border))]">
+      <div className="mx-auto max-w-6xl px-6 md:px-10 flex flex-col gap-12">
         {(fields.heading || fields.eyebrow) && (
           <Reveal>
-            <header className="grid grid-cols-12 gap-6 items-end">
-              <div className="col-span-12 md:col-span-7 flex flex-col gap-4">
-                {fields.eyebrow && (
-                  <span className="text-xs font-semibold tracking-[0.22em] uppercase text-[hsl(var(--muted-foreground))]">
-                    <span className="text-[hsl(var(--accent))]">{fields.number ?? '02'}</span>
-                    <span className="mx-3 inline-block h-px w-8 align-middle bg-[hsl(var(--hairline))]" />
-                    {fields.eyebrow}
-                  </span>
-                )}
-                {fields.heading && (
-                  <h2 className="text-4xl md:text-6xl font-semibold tracking-[-0.025em] leading-[0.98]">
-                    {fields.heading}
-                  </h2>
-                )}
-              </div>
-              <p className="hidden md:block md:col-span-4 md:col-start-9 text-sm text-[hsl(var(--muted-foreground))]">
-                {items.length} practices · scoped to outcomes, not titles
-              </p>
+            <header className="flex flex-col gap-4 max-w-3xl">
+              {fields.eyebrow && (
+                <span className="text-eyebrow">[ {fields.eyebrow} ]</span>
+              )}
+              {fields.heading && <h2 className="text-headline">{fields.heading}</h2>}
             </header>
           </Reveal>
         )}
-        {isCards ? <CardsGrid items={items} /> : <EditorialRows items={items} />}
+        <Stagger className="grid gap-px bg-[hsl(var(--border))] rounded-xl overflow-hidden border border-[hsl(var(--border))] sm:grid-cols-2 lg:grid-cols-3" step={0.04}>
+          {items.map((item, i) => (
+            <li
+              key={i}
+              className="bg-[hsl(var(--background))] p-6 md:p-8 flex flex-col gap-3 list-none"
+            >
+              <CardIcon index={i} />
+              <h3 className="text-base font-semibold tracking-[-0.01em]">{item.title}</h3>
+              {item.description && (
+                <p className="text-sm text-[hsl(var(--muted-foreground))] leading-relaxed">
+                  {item.description}
+                </p>
+              )}
+            </li>
+          ))}
+        </Stagger>
       </div>
     </section>
   );
@@ -126,18 +84,9 @@ export const featureListBlock = defineBlock<FeatureListFields>({
   name: 'Feature List',
   category: 'Content',
   icon: 'List',
-  variants: [
-    { key: 'editorial', label: 'Editorial rows (default)' },
-    { key: 'cards', label: 'Card grid' },
-  ],
-  defaultVariant: 'editorial',
+  variants: [{ key: 'default', label: 'Default' }],
+  defaultVariant: 'default',
   fields: {
-    number: {
-      type: 'text',
-      label: 'Section number',
-      maxLength: 4,
-      description: 'Two-digit chapter number for the editorial variant.',
-    },
     eyebrow: { type: 'text', label: 'Eyebrow', maxLength: 60 },
     heading: { type: 'text', label: 'Heading', maxLength: 120 },
     items: {
@@ -145,6 +94,7 @@ export const featureListBlock = defineBlock<FeatureListFields>({
       label: 'Features',
       description: 'One per line. Use "Title :: Description" to separate.',
     },
+    number: { type: 'text', label: 'Section number (legacy)', maxLength: 4 },
   },
   component: FeatureList,
 });
