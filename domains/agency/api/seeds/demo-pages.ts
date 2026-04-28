@@ -68,15 +68,13 @@ const HOME: PageSeed = {
     {
       order: 0,
       blockKind: 'hero',
-      variant: 'editorial',
+      variant: 'default',
       title: 'Hero',
       customFields: {
-        number: '01',
-        eyebrow: 'Studio',
-        meta: 'Brooklyn · Est. 2019',
-        headline: 'Ambitious products for what comes next.',
+        eyebrow: `Available for new work · ${new Date().getFullYear()}`,
+        headline: 'Ship the product. Skip the agency theatrics.',
         subheadline:
-          'A compact team of senior engineers and designers, shipping web, mobile, and AI products end-to-end — from first sketch to production at scale.',
+          'A compact team of senior engineers and designers shipping web, mobile, and AI products end-to-end — from first sketch to production at scale.',
         ctaText: 'Start a project',
         ctaHref: '/contact',
         ctaSecondaryText: 'See our work',
@@ -163,7 +161,7 @@ const HOME: PageSeed = {
     {
       order: 5,
       blockKind: 'cta',
-      variant: 'sign-off',
+      variant: 'default',
       title: 'Sign-off',
       customFields: {
         heading: "Let's build something that matters.",
