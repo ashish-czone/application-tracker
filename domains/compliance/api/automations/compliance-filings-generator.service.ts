@@ -207,19 +207,41 @@ export class ComplianceFilingsGeneratorService {
         const periodEnd = this.toIsoDate(occ.periodEnd);
         const dueDate = this.toIsoDate(occ.dueDate);
 
-        const row = await this.filings.create(
-          {
-            title: this.buildTitle(rule.name, occ),
-            dueDate,
-            ruleId: rule.id,
-            clientId: reg.clientId,
-            lawId: rule.lawId,
-            periodStart,
-            periodEnd,
-            assigneeTeamId: assigneeOrgId,
-          },
-          'system',
-        );
+        let row: Record<string, unknown>;
+        try {
+          row = await this.filings.create(
+            {
+              title: this.buildTitle(rule.name, occ),
+              dueDate,
+              ruleId: rule.id,
+              clientId: reg.clientId,
+              lawId: rule.lawId,
+              periodStart,
+              periodEnd,
+              assigneeTeamId: assigneeOrgId,
+            },
+            'system',
+          );
+        } catch (error) {
+          // The check-then-insert above (`findByRuleClientPeriod`) is not safe
+          // under concurrency: when the cron run and an event-listener top-up
+          // (`generateForRule` / `generateForRegistration` / `generateForClient`)
+          // overlap, both transactions can read "no existing row" and race to
+          // insert. The unique index on (rule_id, client_id, period_start)
+          // serialises the race at the DB layer — the loser sees `23505`. Treat
+          // that loser as "raced — already created by the winning path", skip
+          // the row, and continue. Any other error (FK violation, NULL
+          // violation, different unique index) re-throws.
+          if (isRuleClientPeriodRace(error)) {
+            this.logger.debug('Filing already created by concurrent path — skipping', {
+              ruleId: rule.id,
+              clientId: reg.clientId,
+              periodStart,
+            });
+            continue;
+          }
+          throw error;
+        }
 
         this.events.emitDynamic(COMPLIANCE_FILING_GENERATED, {
           entityType: 'compliance-rules',
@@ -261,4 +283,25 @@ export class ComplianceFilingsGeneratorService {
     const d = from.getUTCDate();
     return new Date(Date.UTC(y, m + n, d));
   }
+}
+
+const FILING_RACE_CONSTRAINT = 'compliance_filings_rule_client_period_key';
+const PG_UNIQUE_VIOLATION = '23505';
+
+/**
+ * True iff `error` (or any wrapped cause) is the specific Postgres unique
+ * violation on the (rule_id, client_id, period_start) index. Drizzle wraps
+ * pg's `DatabaseError` inside its own `DrizzleQueryError`, so we walk the
+ * `cause` chain rather than only inspecting the top-level error.
+ */
+function isRuleClientPeriodRace(error: unknown): boolean {
+  let cursor: unknown = error;
+  while (cursor) {
+    const e = cursor as { code?: string; constraint?: string; cause?: unknown };
+    if (e.code === PG_UNIQUE_VIOLATION && e.constraint === FILING_RACE_CONSTRAINT) {
+      return true;
+    }
+    cursor = e.cause;
+  }
+  return false;
 }

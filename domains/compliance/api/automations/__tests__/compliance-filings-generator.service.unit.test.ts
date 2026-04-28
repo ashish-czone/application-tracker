@@ -300,6 +300,70 @@ describe('ComplianceFilingsGeneratorService', () => {
       expect(filingsService.create).not.toHaveBeenCalled();
     });
 
+    it('swallows the (rule_id, client_id, period_start) unique violation as a concurrent-path race', async () => {
+      // The cron run and a J3/J4/J5 listener can race: both pass the
+      // findByRuleClientPeriod check, both INSERT, the loser hits the
+      // unique index. Treat that loser as a no-op — the winner's row is
+      // already in place and its event already fired.
+      ruleService.findById.mockResolvedValue(makeRule());
+      registrationService.getRegistrationsForLaw.mockResolvedValue([
+        { id: 'reg1', clientId: 'c1', lawId: 'l1', registeredAt: new Date(), deactivatedAt: null },
+      ]);
+      ruleService.expandRule.mockReturnValue([
+        { periodStart: utc(2026, 4, 1), periodEnd: utc(2026, 4, 30), dueDate: utc(2026, 5, 20) },
+      ]);
+      const raceError = Object.assign(new Error('Failed query: insert into compliance_filings'), {
+        cause: Object.assign(new Error('duplicate key'), {
+          code: '23505',
+          constraint: 'compliance_filings_rule_client_period_key',
+        }),
+      });
+      filingsService.create.mockRejectedValueOnce(raceError);
+
+      const result = await service.generateForRule('r1');
+
+      expect(result.created).toBe(0);
+      expect(events.emitDynamic).not.toHaveBeenCalled();
+    });
+
+    it('re-throws unique violations on other constraints — those are real bugs, not races', async () => {
+      ruleService.findById.mockResolvedValue(makeRule());
+      registrationService.getRegistrationsForLaw.mockResolvedValue([
+        { id: 'reg1', clientId: 'c1', lawId: 'l1', registeredAt: new Date(), deactivatedAt: null },
+      ]);
+      ruleService.expandRule.mockReturnValue([
+        { periodStart: utc(2026, 4, 1), periodEnd: utc(2026, 4, 30), dueDate: utc(2026, 5, 20) },
+      ]);
+      const otherUniqueError = Object.assign(new Error('Failed query'), {
+        cause: Object.assign(new Error('duplicate key'), {
+          code: '23505',
+          constraint: 'compliance_filings_external_key_unique',
+        }),
+      });
+      filingsService.create.mockRejectedValueOnce(otherUniqueError);
+
+      await expect(service.generateForRule('r1')).rejects.toBe(otherUniqueError);
+    });
+
+    it('re-throws non-unique-violation errors (FK, NULL, etc.)', async () => {
+      ruleService.findById.mockResolvedValue(makeRule());
+      registrationService.getRegistrationsForLaw.mockResolvedValue([
+        { id: 'reg1', clientId: 'c1', lawId: 'l1', registeredAt: new Date(), deactivatedAt: null },
+      ]);
+      ruleService.expandRule.mockReturnValue([
+        { periodStart: utc(2026, 4, 1), periodEnd: utc(2026, 4, 30), dueDate: utc(2026, 5, 20) },
+      ]);
+      const fkError = Object.assign(new Error('Failed query'), {
+        cause: Object.assign(new Error('FK violation'), {
+          code: '23503',
+          constraint: 'compliance_filings_assignee_team_id_org_units_id_fk',
+        }),
+      });
+      filingsService.create.mockRejectedValueOnce(fkError);
+
+      await expect(service.generateForRule('r1')).rejects.toBe(fkError);
+    });
+
     it('repeat firings do not create duplicates — natural-key guard protects retries', async () => {
       const rule = makeRule();
       ruleService.findById.mockResolvedValue(rule);
