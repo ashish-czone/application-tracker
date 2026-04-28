@@ -82,7 +82,10 @@ test.describe('Projects domain (smoke)', () => {
 
   test('dashboard renders empty state when there are no projects', async ({ authedPage }) => {
     await authedPage.goto('/projects');
-    await expect(authedPage.getByRole('heading', { name: 'Projects' })).toBeVisible();
+    // Scope to <main> — WebShell's top banner also renders an <h1> with the page title.
+    await expect(
+      authedPage.getByRole('main').getByRole('heading', { name: 'Projects' }),
+    ).toBeVisible();
     // Empty-state quote rendered by EmptyState.
     await expect(
       authedPage.getByText(/A project is just a list of intentions/i),
@@ -118,7 +121,9 @@ test.describe('Projects domain (smoke)', () => {
     });
 
     await authedPage.goto(`/projects/${project.id}`);
-    await expect(authedPage.getByRole('heading', { name: projectName })).toBeVisible();
+    await expect(
+      authedPage.getByRole('main').getByRole('heading', { name: projectName }),
+    ).toBeVisible();
     // Milestones tab is the default; accordion should expose the seeded names.
     await expect(authedPage.getByText('Discovery').first()).toBeVisible();
   });
@@ -134,7 +139,9 @@ test.describe('Projects domain (smoke)', () => {
     });
 
     await authedPage.goto('/my-tasks');
-    await expect(authedPage.getByRole('heading', { name: 'My Tasks' })).toBeVisible();
+    await expect(
+      authedPage.getByRole('main').getByRole('heading', { name: 'My Tasks' }),
+    ).toBeVisible();
     // Project group card renders the project name and at least one task title.
     await expect(authedPage.getByText(projectName).first()).toBeVisible();
     await expect(authedPage.getByText('Task 1').first()).toBeVisible();
