@@ -16,9 +16,6 @@ interface ParsedEntry {
 interface CaseStudyGridFields extends Record<string, unknown> {
   heading?: string;
   subheading?: string;
-  /** Two-digit chapter number for the section label. */
-  number?: string;
-  /** Eyebrow shown next to the section number. */
   eyebrow?: string;
   /**
    * Either a newline-delimited string (hand-authored: "Client :: Title :: Href :: ImageUrl"
@@ -27,6 +24,8 @@ interface CaseStudyGridFields extends Record<string, unknown> {
    * wins since it represents structured live data.
    */
   entries?: string | ParsedEntry[];
+  /** Retained for content compatibility; unused. */
+  number?: string;
 }
 
 function parseEntries(raw: CaseStudyGridFields['entries']): ParsedEntry[] {
@@ -48,23 +47,18 @@ function parseEntries(raw: CaseStudyGridFields['entries']): ParsedEntry[] {
     .filter((e) => e.client.length > 0 && e.title.length > 0);
 }
 
-function pad(n: number): string {
-  return String(n).padStart(2, '0');
-}
-
-function CaseStudyTile({
-  entry,
-  index,
-  totalLabel,
-}: {
-  entry: ParsedEntry;
-  index: number;
-  totalLabel: string;
-}) {
+function CaseStudyTile({ entry }: { entry: ParsedEntry }) {
   const Wrapper: 'a' | 'article' = entry.href ? 'a' : 'article';
   const wrapperProps = entry.href
-    ? { href: entry.href, className: 'group flex flex-col gap-6 cursor-pointer' }
-    : { className: 'flex flex-col gap-6' };
+    ? {
+        href: entry.href,
+        className:
+          'group flex flex-col overflow-hidden rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] hover:shadow-md hover:-translate-y-0.5 transition-all duration-300',
+      }
+    : {
+        className:
+          'flex flex-col overflow-hidden rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))]',
+      };
 
   const meta: string[] = [];
   if (entry.industry) meta.push(entry.industry);
@@ -72,49 +66,38 @@ function CaseStudyTile({
 
   return (
     <Wrapper {...wrapperProps}>
-      <div className="relative aspect-[5/6] w-full overflow-hidden rounded-sm bg-[hsl(var(--muted))]">
-        <span className="absolute top-5 left-5 z-10 text-xs font-semibold tracking-[0.18em] text-white mix-blend-difference">
-          {pad(index + 1)} / {totalLabel}
-        </span>
+      <div className="relative aspect-[16/10] w-full overflow-hidden bg-[hsl(var(--muted))] border-b border-[hsl(var(--border))]">
         {entry.imageUrl ? (
           <img
             src={entry.imageUrl}
             alt=""
-            className="h-full w-full object-cover grayscale-[20%] transition-all duration-700 ease-out group-hover:grayscale-0 group-hover:scale-[1.03]"
+            className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.02]"
           />
         ) : (
           <div aria-hidden className="h-full w-full bg-[hsl(var(--muted))]" />
         )}
-        <div
-          aria-hidden
-          className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-        />
       </div>
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center gap-3 flex-wrap">
-          <span className="text-xs font-semibold tracking-[0.22em] uppercase text-[hsl(var(--foreground))]">
-            {entry.client}
-          </span>
+      <div className="flex flex-col gap-3 p-6 md:p-7">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-mono text-[hsl(var(--accent))]">{entry.client}</span>
           {meta.length > 0 && (
             <>
-              <span className="h-px w-6 bg-[hsl(var(--hairline))]" aria-hidden />
-              <span className="text-xs font-medium tracking-[0.18em] uppercase text-[hsl(var(--muted-foreground))]">
+              <span aria-hidden className="text-mono text-[hsl(var(--border))]">·</span>
+              <span className="text-mono text-[hsl(var(--muted-foreground))]">
                 {meta.join(' · ')}
               </span>
             </>
           )}
         </div>
-        <h3 className="text-2xl md:text-4xl font-semibold tracking-[-0.02em] leading-[1.05] max-w-[16ch]">
+        <h3 className="text-xl md:text-2xl font-semibold tracking-[-0.02em] leading-snug">
           {entry.title}
         </h3>
         {entry.href && (
           <span
             aria-hidden
-            className="mt-1 inline-flex items-center gap-2 text-sm font-medium text-[hsl(var(--foreground))]"
+            className="mt-1 inline-flex items-center gap-1.5 text-sm font-medium text-[hsl(var(--foreground))] transition-colors"
           >
-            <span className="border-b border-[hsl(var(--hairline))] group-hover:border-[hsl(var(--foreground))] transition-colors pb-0.5">
-              Read case study
-            </span>
+            Read case study
             <span className="transition-transform duration-300 group-hover:translate-x-1">→</span>
           </span>
         )}
@@ -124,41 +107,24 @@ function CaseStudyTile({
 }
 
 function CaseStudyGrid({ fields }: BlockRenderProps<CaseStudyGridFields>): ReactNode {
-  const { heading, subheading, entries: raw, number, eyebrow } = fields;
+  const { heading, subheading, entries: raw, eyebrow } = fields;
   const entries = parseEntries(raw);
-  const totalLabel = pad(entries.length);
 
   return (
-    <section className="w-full py-20 md:py-28">
-      <div className="mx-auto max-w-7xl px-6 md:px-10 flex flex-col gap-14 md:gap-20">
+    <section className="w-full py-20 md:py-28 border-b border-[hsl(var(--border))]">
+      <div className="mx-auto max-w-6xl px-6 md:px-10 flex flex-col gap-12">
         {(heading || subheading || eyebrow) && (
           <Reveal>
-            <header className="grid grid-cols-12 gap-6 items-end">
-              <div className="col-span-12 md:col-span-7 flex flex-col gap-4">
-                {eyebrow && (
-                  <span className="text-xs font-semibold tracking-[0.22em] uppercase text-[hsl(var(--muted-foreground))]">
-                    <span className="text-[hsl(var(--accent))]">{number ?? '03'}</span>
-                    <span className="mx-3 inline-block h-px w-8 align-middle bg-[hsl(var(--hairline))]" />
-                    {eyebrow}
-                  </span>
-                )}
-                {heading && (
-                  <h2 className="text-4xl md:text-6xl font-semibold tracking-[-0.025em] leading-[0.98]">
-                    {heading}
-                  </h2>
-                )}
-              </div>
-              {subheading && (
-                <p className="hidden md:block md:col-span-4 md:col-start-9 text-base text-[hsl(var(--muted-foreground))] leading-[1.55]">
-                  {subheading}
-                </p>
-              )}
+            <header className="flex flex-col gap-4 max-w-3xl">
+              {eyebrow && <span className="text-eyebrow">[ {eyebrow} ]</span>}
+              {heading && <h2 className="text-headline">{heading}</h2>}
+              {subheading && <p className="text-lead max-w-2xl">{subheading}</p>}
             </header>
           </Reveal>
         )}
-        <Stagger className="grid gap-x-8 gap-y-20 md:grid-cols-2" step={0.08}>
+        <Stagger className="grid gap-6 md:gap-8 sm:grid-cols-2" step={0.06}>
           {entries.map((e, i) => (
-            <CaseStudyTile key={i} entry={e} index={i} totalLabel={totalLabel} />
+            <CaseStudyTile key={i} entry={e} />
           ))}
         </Stagger>
       </div>
@@ -173,7 +139,6 @@ export const caseStudyGridBlock = defineBlock<CaseStudyGridFields>({
   icon: 'FolderKanban',
   supports: ['case-studies'],
   fields: {
-    number: { type: 'text', label: 'Section number', maxLength: 4 },
     eyebrow: { type: 'text', label: 'Eyebrow', maxLength: 60 },
     heading: { type: 'text', label: 'Heading', maxLength: 120 },
     subheading: { type: 'textarea', label: 'Subheading', maxLength: 240 },
@@ -183,6 +148,7 @@ export const caseStudyGridBlock = defineBlock<CaseStudyGridFields>({
       description:
         'Used when no data source is selected. One per line: "Client :: Title :: Href :: ImageUrl".',
     },
+    number: { type: 'text', label: 'Section number (legacy)', maxLength: 4 },
   },
   component: CaseStudyGrid,
 });

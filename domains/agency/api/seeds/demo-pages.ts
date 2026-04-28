@@ -129,7 +129,6 @@ const HOME: PageSeed = {
         limit: 4,
       },
       customFields: {
-        number: '03',
         eyebrow: 'Selected work',
         heading: 'Recent projects, shipped.',
         subheading:
