@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { DatabaseService, and, count, eq, inArray, not } from '@packages/database';
+import { DatabaseService, and, count, eq, inArray, not, sql } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
 import { WorkflowEngineService, WorkflowRegistryService } from '@packages/workflows';
 import type { TransitionContext } from '@packages/entity-engine';
@@ -138,6 +138,84 @@ export class ClientDormancyService {
     });
 
     return { cancelledFilingIds: cancelledIds };
+  }
+
+  /**
+   * Post-commit settle pass that catches filings INSERTed by an event-driven
+   * generator (J3 / J4 / J5) whose tx interleaved with the dormancy tx.
+   *
+   * The race: while the dormancy tx is open it has flipped clients.status to
+   * 'dormant' but not committed. `cancelInFlightFilings` SELECTs the current
+   * non-terminal filing set under that tx. Any J4 listener reading
+   * `clients.status` from a different connection still sees 'active' (READ
+   * COMMITTED hides our uncommitted UPDATE), passes its own per-occurrence
+   * `isClientActive` guard, and INSERTs a new filing. If that INSERT commits
+   * AFTER our cascade SELECT but BEFORE our cascade UPDATE COMMIT, the
+   * UPDATE misses it — the filing survives as 'pending' under a now-dormant
+   * client.
+   *
+   * This sweep runs after the dormancy tx commits (so 'dormant' is visible
+   * everywhere). It re-queries for non-terminal filings, cancels any it
+   * finds, then briefly settles before retrying — the settle window lets a
+   * still-iterating generator observe the committed status and abort via
+   * its per-occurrence `isClientActive` guard. Stops as soon as a sweep
+   * round finds nothing, or after `maxAttempts` so we don't spin
+   * indefinitely on a pathological generator loop.
+   *
+   * Caveats: cancellations done here bypass the workflow engine — a direct
+   * UPDATE on `compliance_filings.status` so the sweep stays cheap and
+   * never raises a workflow guard error mid-loop. The audit trail for the
+   * straggler filings shows them flipping straight to 'cancelled' without
+   * a workflow_transition_history row; the dormantisation event itself
+   * carries the user-supplied reason and is the authoritative record of
+   * "why these are cancelled".
+   */
+  async sweepLateFilings(
+    clientId: string,
+    options: { maxAttempts?: number; settleDelayMs?: number } = {},
+  ): Promise<{ cancelledFilingIds: string[] }> {
+    const maxAttempts = options.maxAttempts ?? 5;
+    const settleDelayMs = options.settleDelayMs ?? 50;
+    const cancelled: string[] = [];
+
+    // Sleep at the start of every iteration (including the first). The
+    // straggler we are racing against is a J4 generator whose INSERT
+    // statement issued before our cascade SELECT but whose tx has not yet
+    // committed when the cascade's outer tx commits — a 0-row first SELECT
+    // here would simply mean that tx is still open and we'd exit early. The
+    // settle window lets it land before we look. Subsequent iterations also
+    // sleep so a fresh straggler created during our UPDATE has time to
+    // commit and be picked up by the next pass; we only break once an
+    // iteration finds nothing AFTER waiting.
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      await new Promise((resolve) => setTimeout(resolve, settleDelayMs));
+
+      const rows = await this.database.db
+        .select({ id: complianceFilings.id })
+        .from(complianceFilings)
+        .where(and(
+          eq(complianceFilings.clientId, clientId),
+          not(inArray(complianceFilings.status, TERMINAL_FILING_STATUSES)),
+        ));
+
+      if (rows.length === 0) break;
+
+      const ids = rows.map((r: { id: string }) => r.id);
+      await this.database.db
+        .update(complianceFilings)
+        .set({ status: sql`'cancelled'` })
+        .where(inArray(complianceFilings.id, ids));
+      cancelled.push(...ids);
+    }
+
+    if (cancelled.length > 0) {
+      this.logger.log('Client dormantised — late filing sweep cancelled stragglers', {
+        clientId,
+        cancelledCount: cancelled.length,
+      });
+    }
+
+    return { cancelledFilingIds: cancelled };
   }
 
   /**

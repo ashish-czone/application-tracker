@@ -224,6 +224,16 @@ export class ClientsService {
 
     this.entityService.emitTransitionEvent(ctx);
     if (isDormantisation) {
+      // The in-tx cascade only catches filings that existed when its SELECT
+      // ran. An event-driven generator (J3/J4/J5) on a different connection
+      // can INSERT after that SELECT but before our COMMIT — its read of
+      // clients.status sees the pre-commit 'active' value, so its own
+      // isClientActive guard passes. Sweep those stragglers now that the
+      // dormantisation is committed and the new status is visible.
+      const lateResult = await this.dormancy.sweepLateFilings(ctx.entityId);
+      if (lateResult.cancelledFilingIds.length > 0) {
+        cancelledFilingIds = [...cancelledFilingIds, ...lateResult.cancelledFilingIds];
+      }
       this.dormancy.emitCascadeEvent(ctx, cancelledFilingIds);
     }
 

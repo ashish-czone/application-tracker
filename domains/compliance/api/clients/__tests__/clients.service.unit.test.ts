@@ -42,6 +42,7 @@ describe('ClientsService', () => {
   let events: { emitDynamic: ReturnType<typeof vi.fn> };
   let dormancy: {
     cancelInFlightFilings: ReturnType<typeof vi.fn>;
+    sweepLateFilings: ReturnType<typeof vi.fn>;
     emitCascadeEvent: ReturnType<typeof vi.fn>;
     countNonTerminalFilings: ReturnType<typeof vi.fn>;
   };
@@ -66,6 +67,7 @@ describe('ClientsService', () => {
     events = { emitDynamic: vi.fn() };
     dormancy = {
       cancelInFlightFilings: vi.fn().mockResolvedValue({ cancelledFilingIds: [] }),
+      sweepLateFilings: vi.fn().mockResolvedValue({ cancelledFilingIds: [] }),
       emitCascadeEvent: vi.fn(),
       countNonTerminalFilings: vi.fn().mockResolvedValue(0),
     };
@@ -186,7 +188,32 @@ describe('ClientsService', () => {
 
       expect(applyCalled).toBe(true);
       expect(cascadeCalled).toBe(true);
+      expect(dormancy.sweepLateFilings).toHaveBeenCalledWith('cid-1');
       expect(dormancy.emitCascadeEvent).toHaveBeenCalledWith(dormantCtx, ['f1', 'f2']);
+    });
+
+    it('post-commit late-filing sweep folds straggler IDs into the cascade event', async () => {
+      const dormantCtx = { ...baseCtx, fromState: 'active', toState: 'dormant' };
+      entityService.findOneOrFail.mockResolvedValue({ id: 'cid-1', status: 'active' });
+      entityService.validateTransition.mockResolvedValue(dormantCtx);
+      dormancy.cancelInFlightFilings.mockResolvedValue({ cancelledFilingIds: ['f1'] });
+      dormancy.sweepLateFilings.mockResolvedValue({ cancelledFilingIds: ['f-late-1', 'f-late-2'] });
+      db.db.transaction.mockImplementation(async (cb: (tx: unknown) => unknown) => cb({}));
+
+      await service.transition('cid-1', 'status', 'dormant', 'user-1');
+
+      // The sweep runs AFTER the tx commits — assert ordering by call index.
+      const cascadeCallOrder = dormancy.cancelInFlightFilings.mock.invocationCallOrder[0];
+      const sweepCallOrder = dormancy.sweepLateFilings.mock.invocationCallOrder[0];
+      const emitCallOrder = dormancy.emitCascadeEvent.mock.invocationCallOrder[0];
+      expect(cascadeCallOrder).toBeLessThan(sweepCallOrder);
+      expect(sweepCallOrder).toBeLessThan(emitCallOrder);
+
+      // Late stragglers concatenated onto the cascade event payload.
+      expect(dormancy.emitCascadeEvent).toHaveBeenCalledWith(
+        dormantCtx,
+        ['f1', 'f-late-1', 'f-late-2'],
+      );
     });
 
     it('does not run cascade on dormant → active', async () => {
