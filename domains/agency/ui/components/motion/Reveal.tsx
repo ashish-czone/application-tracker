@@ -15,10 +15,12 @@ export interface RevealProps {
 }
 
 /**
- * Scroll-triggered fade + slide-up. Runs once per element after it
- * crosses ~20% into the viewport. Falls back to a plain visible div
- * during SSR / before hydration / when reduced-motion is on, so
- * content is never hidden if JS hasn't taken over yet.
+ * One-shot fade + slide-up that runs once on mount. Renders a plain
+ * visible div during SSR/before hydration/with reduced-motion so the
+ * content is never hidden if JS hasn't taken over yet. We intentionally
+ * do not use `whileInView` — it leaves below-the-fold sections
+ * opacity-0 until scrolled, which breaks fast scrollers, anchor jumps,
+ * and full-page screenshots.
  */
 export function Reveal({ children, className, delay = 0, distance = 24 }: RevealProps) {
   const reduced = useReducedMotion();
@@ -33,8 +35,7 @@ export function Reveal({ children, className, delay = 0, distance = 24 }: Reveal
     <motion.div
       className={className}
       initial={{ opacity: 0, y: distance }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.2 }}
+      animate={{ opacity: 1, y: 0 }}
       transition={{ duration: MOTION_DURATION.base, ease: MOTION_EASE, delay }}
     >
       {children}

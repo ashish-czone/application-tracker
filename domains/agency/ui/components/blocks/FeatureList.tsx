@@ -33,15 +33,6 @@ function parseItems(raw: string | undefined): ParsedItem[] {
     });
 }
 
-/** Single mark drawn in monospace, faintly tinted with the accent. */
-function CardIcon({ index }: { index: number }) {
-  return (
-    <span className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--muted))] text-mono text-[hsl(var(--accent))]">
-      {String(index + 1).padStart(2, '0')}
-    </span>
-  );
-}
-
 function FeatureList({ fields }: BlockRenderProps<FeatureListFields>): ReactNode {
   const items = parseItems(fields.items);
 
@@ -58,13 +49,21 @@ function FeatureList({ fields }: BlockRenderProps<FeatureListFields>): ReactNode
             </header>
           </Reveal>
         )}
-        <Stagger className="grid gap-px bg-[hsl(var(--border))] rounded-xl overflow-hidden border border-[hsl(var(--border))] sm:grid-cols-2 lg:grid-cols-3" step={0.04}>
+        <Stagger
+          className="grid gap-4 md:gap-5 sm:grid-cols-2 lg:grid-cols-3"
+          step={0.04}
+        >
           {items.map((item, i) => (
             <li
               key={i}
-              className="bg-[hsl(var(--background))] p-6 md:p-8 flex flex-col gap-3 list-none"
+              className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] p-6 md:p-8 flex flex-col gap-3 list-none transition-colors hover:border-[hsl(var(--foreground))]/30"
             >
-              <CardIcon index={i} />
+              <span
+                className="text-xs font-medium tracking-[0.02em] text-[hsl(var(--accent))]"
+                style={{ fontFamily: 'var(--font-mono)' }}
+              >
+                {String(i + 1).padStart(2, '0')}
+              </span>
               <h3 className="text-base font-semibold tracking-[-0.01em]">{item.title}</h3>
               {item.description && (
                 <p className="text-sm text-[hsl(var(--muted-foreground))] leading-relaxed">
