@@ -1,6 +1,7 @@
 import { test, expect } from './fixtures/auth';
 import { resetState, uniqueName, uniqueEmail, apiClient } from './helpers';
 import { createClientContact } from './fixtures/client-contacts';
+import { transitionClient } from './fixtures/clients';
 
 interface Client {
   id: string;
@@ -69,13 +70,14 @@ test.describe('Flow: client workflow transitions', () => {
   test('full path onboarding → active → dormant', async () => {
     const client = await createOnboardingClient();
 
-    await apiClient.post(`/clients/${client.id}/transition`, {
-      fieldKey: 'status',
-      to: 'active',
-    });
-    await apiClient.post(`/clients/${client.id}/transition`, {
-      fieldKey: 'status',
-      to: 'dormant',
+    await transitionClient(client.id, 'active');
+    // active → dormant is reasonRequired + commentRequired (clients.config.ts):
+    // dormancy cascades cancellation across non-terminal filings, so the
+    // workflow forces a reason + comment that propagates into each
+    // affected filing's history.
+    await transitionClient(client.id, 'dormant', {
+      reason: 'no longer engaged',
+      comment: 'E2E flow: full path to dormant',
     });
 
     const final = await apiClient.get<Client>(`/clients/${client.id}`);
@@ -84,18 +86,12 @@ test.describe('Flow: client workflow transitions', () => {
 
   test('dormant → active is allowed (reactivation)', async () => {
     const client = await createOnboardingClient();
-    await apiClient.post(`/clients/${client.id}/transition`, {
-      fieldKey: 'status',
-      to: 'active',
+    await transitionClient(client.id, 'active');
+    await transitionClient(client.id, 'dormant', {
+      reason: 'temporary pause',
+      comment: 'E2E flow: round-trip to active',
     });
-    await apiClient.post(`/clients/${client.id}/transition`, {
-      fieldKey: 'status',
-      to: 'dormant',
-    });
-    await apiClient.post(`/clients/${client.id}/transition`, {
-      fieldKey: 'status',
-      to: 'active',
-    });
+    await transitionClient(client.id, 'active');
 
     const after = await apiClient.get<Client>(`/clients/${client.id}`);
     expect(after.status).toBe('active');

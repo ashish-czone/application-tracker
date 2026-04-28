@@ -65,8 +65,14 @@ test.describe('Flow: client lifecycle (US-1.x)', () => {
     const activeClient = await createClient({ status: 'active' });
     await createClientRegistration(activeClient.id, law.id);
 
-    // Active → dormant. The transition endpoint runs the workflow guards.
-    await transitionClient(dormantClient.id, 'dormant');
+    // Active → dormant. The transition is reasonRequired + commentRequired
+    // (clients.config.ts) — dormancy cascades cancellation across non-terminal
+    // filings, so the workflow forces an explanation that propagates into
+    // each affected filing's history.
+    await transitionClient(dormantClient.id, 'dormant', {
+      reason: 'no longer engaged',
+      comment: 'E2E US-1.3: client moved to dormant for generator exclusion check',
+    });
 
     // Run the generator. Active client should get filings, dormant should not.
     await runGenerator('2026-06-15T02:00:00Z');
