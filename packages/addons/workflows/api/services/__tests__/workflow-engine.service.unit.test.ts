@@ -158,6 +158,25 @@ describe('WorkflowEngineService', () => {
       expect(result.valid).toBe(true);
       expect(result.transitionId).toBe('trans-2');
     });
+
+    it('honors the * wildcard — Super Admin holding only `*` passes named permission gates', async () => {
+      // RbacGuard's superadmin bypass: a holder of `*` passes every check
+      // across the platform. Without honoring it here, a Super Admin whose
+      // role grants only `*` would fail any transition with
+      // requiredPermissions because the map has no entry for the named
+      // permission. Verified live in bucket D triage.
+      rbacServiceMock.getPermissionsForUser.mockResolvedValue({ '*': [{ type: 'any' }] });
+
+      const result = await engine.validateTransition('task-status', 'submitted', 'approved', {
+        entityId: 'entity-1',
+        entityType: 'task',
+        actorId: 'super-admin',
+      });
+
+      expect(result.valid).toBe(true);
+      expect(result.transitionId).toBe('trans-2');
+      expect(result.missingPermissions).toBeUndefined();
+    });
   });
 
   describe('validateAndThrow', () => {
@@ -256,6 +275,15 @@ describe('WorkflowEngineService', () => {
       expect(result.missingPermissions).toEqual(['tasks.approve']);
       expect(result.blockers).toEqual([]);
       expect(result.warnings).toEqual([]);
+    });
+
+    it('honors the * wildcard — preflight reports no missing permissions for a Super Admin', async () => {
+      rbacServiceMock.getPermissionsForUser.mockResolvedValue({ '*': [{ type: 'any' }] });
+
+      const result = await engine.preflightTransition(baseParams);
+
+      expect(result.missingPermissions).toEqual([]);
+      expect(result.blockers).toEqual([]);
     });
 
     it('throws NotFoundException for unknown workflow', async () => {
