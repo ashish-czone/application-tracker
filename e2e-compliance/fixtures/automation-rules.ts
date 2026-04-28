@@ -28,7 +28,6 @@ export interface CreateScheduleRuleOptions {
   scheduleDateUnit?: 'days' | 'hours' | 'minutes';
   conditions?: Array<Record<string, unknown>>;
   actions?: ActionConfig[];
-  isActive?: boolean;
 }
 
 /**
@@ -56,7 +55,6 @@ export async function createScheduleRule(
     actions: opts.actions ?? [
       { type: 'webhook', config: { url: 'http://localhost:9999/e2e-noop' } },
     ],
-    isActive: opts.isActive ?? true,
   });
 }
 
@@ -130,7 +128,6 @@ export async function createComplianceDigestRule(opts: {
         },
       },
     ],
-    isActive: true,
   });
 
   return { rule, template };
@@ -196,7 +193,6 @@ export async function createComplianceEscalationRule(opts: {
         },
       },
     ],
-    isActive: true,
   });
 
   return { rule, template };
