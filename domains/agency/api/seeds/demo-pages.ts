@@ -481,7 +481,240 @@ const SERVICES_AI: PageSeed = {
   ],
 };
 
-const AGENCY_PAGES: PageSeed[] = [HOME, ABOUT, SERVICES, WORK, CONTACT, SERVICES_AI];
+const SERVICE_IMPLEMENTATION: PageSeed = {
+  slug: 'services/implementation',
+  title: 'Implementation',
+  metaDescription:
+    'White-glove implementation: dedicated migration specialist, weekly demos, fixed bid, code you own.',
+  sections: [
+    {
+      order: 0,
+      blockKind: 'hero',
+      variant: 'centered',
+      title: 'Hero',
+      customFields: {
+        eyebrow: 'Services / Implementation',
+        headline: 'Implementation that ends with a working product, not a deck.',
+        subheadline:
+          'A dedicated specialist owns your migration end-to-end — discovery, data mapping, configuration workshops, cutover, and handover. You see staging from week one and production at the end.',
+        ctaText: 'Book a kickoff',
+        ctaHref: '/contact',
+        ctaSecondaryText: 'See all services',
+        ctaSecondaryHref: '/services',
+      },
+    },
+    {
+      order: 1,
+      blockKind: 'feature-list',
+      title: 'What we do',
+      customFields: {
+        heading: "What's in an implementation engagement",
+        items: [
+          'Discovery :: One to two weeks of interviews, audits, and architecture. You leave with a written plan and a fixed bid.',
+          'Data migration :: Field mapping, validation, dry runs, and a documented cutover. Reversible until go-live.',
+          'Configuration :: Workflows, permissions, integrations — set up live with your team in working sessions, not handed over in a doc.',
+          'Build & customize :: Anything the platform doesn\'t do out of the box. Built into your repo, owned by you.',
+          'Cutover & training :: Zero-downtime cutover, hands-on training, and a runbook for the first 90 days.',
+          'Handover :: Architecture doc, runbook, written recommendations. Either keep us on retainer or take it home.',
+        ].join('\n'),
+      },
+    },
+    {
+      order: 2,
+      blockKind: 'process-timeline',
+      title: 'Implementation timeline',
+      customFields: {
+        heading: 'How an implementation runs',
+        subheading: 'Eight to twelve weeks for most teams. Compressed if you have urgency, extended only when scope warrants it.',
+        steps: [
+          'Week 1–2 :: Discovery, scoping, written plan, fixed bid.',
+          'Week 3–5 :: Data mapping + first migration dry run on staging.',
+          'Week 6–8 :: Configuration workshops, integrations, custom build.',
+          'Week 9–10 :: Cutover dress rehearsal, then production cutover.',
+          'Week 11–12 :: Training, hand-holding, runbook handover.',
+        ].join('\n'),
+      },
+    },
+    {
+      order: 3,
+      blockKind: 'cta',
+      variant: 'banner',
+      title: 'CTA',
+      customFields: {
+        heading: 'Ready to plan your implementation?',
+        body: 'A 30-minute call is enough for us to scope the engagement and tell you what a good outcome looks like.',
+        primaryText: 'Book a kickoff',
+        primaryHref: '/contact',
+        secondaryText: 'See all services',
+        secondaryHref: '/services',
+      },
+    },
+  ],
+};
+
+const SERVICE_MANAGED_OPS: PageSeed = {
+  slug: 'services/managed-operations',
+  title: 'Managed Operations',
+  metaDescription:
+    'Ongoing operations support — monitoring, incident response, and continuous optimization on a fixed-fee retainer.',
+  sections: [
+    {
+      order: 0,
+      blockKind: 'hero',
+      variant: 'centered',
+      title: 'Hero',
+      customFields: {
+        eyebrow: 'Services / Managed Operations',
+        headline: 'Operations on autopilot. Without losing the steering wheel.',
+        subheadline:
+          'A senior operator embedded with your team — running the platform day-to-day, owning the on-call rotation, and shipping continuous improvements every month.',
+        ctaText: 'Talk to operations',
+        ctaHref: '/contact',
+        ctaSecondaryText: 'See all services',
+        ctaSecondaryHref: '/services',
+      },
+    },
+    {
+      order: 1,
+      blockKind: 'feature-list',
+      title: 'What\'s included',
+      customFields: {
+        heading: "What's in the retainer",
+        items: [
+          '24/7 monitoring :: Alerting, dashboards, and a documented incident response playbook tuned to your business.',
+          'On-call rotation :: A senior operator on call. SLO-backed response times. We carry the pager.',
+          'Continuous improvement :: A monthly improvement budget. We close one class of toil per cycle and report on it.',
+          'Quarterly review :: A written health report — uptime, MTTR, cost, what changed, what we recommend next.',
+          'Slack-first communication :: Same-day responses for non-urgent items. No tickets. No portals.',
+          'Code you own :: Everything we ship lives in your repo. Cancel any month and it stays yours.',
+        ].join('\n'),
+      },
+    },
+    {
+      order: 2,
+      blockKind: 'pricing',
+      title: 'Pricing',
+      customFields: {
+        heading: 'Retainer tiers',
+        subheading: 'Sized to the surface area of your platform, not the calendar.',
+        tiers: `Standby
+From $4.5k/mo
+Monitoring + on-call
+Same-day non-urgent response
+Monthly health report
+Cancel monthly :: /contact
+
+Operate
+From $12k/mo
+Everything in Standby
+Continuous improvement budget
+Quarterly review + roadmap
+Recommended for production teams :: /contact
+
+Embed
+From $24k/mo
+Everything in Operate
+Senior operator embedded 50%
+Architecture + capacity planning
+For teams running mission-critical platforms :: /contact`,
+      },
+    },
+    {
+      order: 3,
+      blockKind: 'cta',
+      variant: 'banner',
+      title: 'CTA',
+      customFields: {
+        heading: 'Stop carrying the pager.',
+        body: "We pick it up. You ship the next thing. Let's talk about what your stack actually needs.",
+        primaryText: 'Talk to operations',
+        primaryHref: '/contact',
+        secondaryText: 'See all services',
+        secondaryHref: '/services',
+      },
+    },
+  ],
+};
+
+const SERVICE_ADVISORY: PageSeed = {
+  slug: 'services/advisory',
+  title: 'Advisory',
+  metaDescription:
+    'Strategic guidance from senior practitioners — quarterly reviews, embedded support, or anything in between.',
+  sections: [
+    {
+      order: 0,
+      blockKind: 'hero',
+      variant: 'centered',
+      title: 'Hero',
+      customFields: {
+        eyebrow: 'Services / Advisory',
+        headline: 'Senior brain on tap, without the senior hire.',
+        subheadline:
+          'For founders and operators wrestling with architecture, hiring, vendor selection, or the next-12-months roadmap. Light touch when that\'s right; embedded when the stakes warrant it.',
+        ctaText: 'Explore advisory',
+        ctaHref: '/contact',
+        ctaSecondaryText: 'See all services',
+        ctaSecondaryHref: '/services',
+      },
+    },
+    {
+      order: 1,
+      blockKind: 'feature-list',
+      title: 'Engagements',
+      customFields: {
+        heading: 'What we advise on',
+        items: [
+          'Architecture review :: An outside set of eyes on your stack. We exit with written recommendations, prioritized.',
+          'Hiring :: Job ladders, interview loops, scorecards. We sit on a few panels until your bar is set.',
+          'Vendor selection :: We\'ve evaluated more tools than you have. RFP shape, demo questions, total-cost math.',
+          'Roadmap planning :: Quarterly off-sites, written plans, executive presentations. We help you say no.',
+          'Founder coaching :: 1:1 monthly with a senior practitioner. Bring the hard problem; leave with a path.',
+          'Board prep :: We\'ve walked many boards through tech updates. We can help you prepare and rehearse.',
+        ].join('\n'),
+      },
+    },
+    {
+      order: 2,
+      blockKind: 'feature-list',
+      title: 'Shape',
+      customFields: {
+        heading: 'Engagement shape',
+        items: [
+          'Sprint :: One to four weeks, fixed-bid, scoped to a specific question.',
+          'Quarterly :: A standing relationship — monthly 1:1, written quarterly review, ad hoc Slack access.',
+          'Embedded :: Two to three days a week, embedded with the team. For founders without a senior tech leader yet.',
+        ].join('\n'),
+      },
+    },
+    {
+      order: 3,
+      blockKind: 'cta',
+      variant: 'banner',
+      title: 'CTA',
+      customFields: {
+        heading: 'Got a hard call ahead?',
+        body: 'Book a free 30-minute call. We\'ll tell you whether you need an advisor or just a fresh coffee.',
+        primaryText: 'Explore advisory',
+        primaryHref: '/contact',
+        secondaryText: 'See all services',
+        secondaryHref: '/services',
+      },
+    },
+  ],
+};
+
+const AGENCY_PAGES: PageSeed[] = [
+  HOME,
+  ABOUT,
+  SERVICES,
+  WORK,
+  CONTACT,
+  SERVICES_AI,
+  SERVICE_IMPLEMENTATION,
+  SERVICE_MANAGED_OPS,
+  SERVICE_ADVISORY,
+];
 
 export const seedDemoPages = async (ctx: INestApplicationContext): Promise<void> => {
   const database = ctx.get(DatabaseService);

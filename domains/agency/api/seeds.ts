@@ -48,6 +48,11 @@ export function agencyDemoSeedSources(): SeedSource[] {
     demo('@domains/agency-api/demo-pages', () =>
       import('./seeds/demo-pages').then((m) => m.seedDemoPages),
     ),
+    // Menus depend on pages existing (linkType:'page' resolves by slug),
+    // so order matters — keep menus after pages.
+    demo('@domains/agency-api/demo-menus', () =>
+      import('./seeds/demo-menus').then((m) => m.seedDemoMenus),
+    ),
     // Bootstraps the e2e-admin user so the e2e suite's globalSetup can
     // log in on a freshly-seeded DB. The same source is also reseeded by
     // the test-hooks reset endpoint, so the pinned-id user survives
