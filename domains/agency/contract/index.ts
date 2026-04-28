@@ -29,7 +29,7 @@ export interface SiteTheme {
 export const DEFAULT_SITE_THEME: SiteTheme = {
   presetId: 'minimal',
   neutralId: 'auto',
-  mode: 'system',
+  mode: 'light',
   fontFamily: 'plus-jakarta-sans',
   typography: 'standard',
   radius: 0.625,
