@@ -1882,6 +1882,9 @@ importers:
       '@tanstack/react-query':
         specifier: ^5.0.0
         version: 5.90.21(react@19.2.4)
+      framer-motion:
+        specifier: ^12.38.0
+        version: 12.38.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       lucide-react:
         specifier: ^0.500.0
         version: 0.500.0(react@19.2.4)

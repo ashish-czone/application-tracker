@@ -47,3 +47,26 @@ export {
 } from '../../components/blocks/content';
 
 export type { DataSource, SectionData, MapperDefinition } from '@domains/agency-contract';
+
+// Motion primitives — used by blocks and by the customer Next.js app
+// (header shrink, 404 reveal, etc.). Lives here so admin-portal Puck
+// previews and the public site share one motion vocabulary.
+export {
+  Reveal,
+  HoverLift,
+  Stagger,
+  HoverScale,
+  HeaderShrink,
+  Parallax,
+  useReducedMotion,
+  MOTION_DURATION,
+  MOTION_EASE,
+} from '../../components/motion';
+export type {
+  RevealProps,
+  HoverLiftProps,
+  StaggerProps,
+  HoverScaleProps,
+  HeaderShrinkProps,
+  ParallaxProps,
+} from '../../components/motion';

@@ -2,7 +2,8 @@
 
 import type { ReactNode } from 'react';
 import { motion } from 'framer-motion';
-import { MOTION_DURATION, MOTION_EASE, useReducedMotion } from '@/lib/motion';
+import { MOTION_DURATION, MOTION_EASE } from './constants';
+import { useReducedMotion } from './useReducedMotion';
 
 export interface RevealProps {
   children: ReactNode;
@@ -16,8 +17,7 @@ export interface RevealProps {
 /**
  * Scroll-triggered fade + slide-up. Runs once per element, once it
  * crosses ~20% into the viewport. Skips all motion when the user has
- * `prefers-reduced-motion: reduce` — the child still renders, just
- * without the entrance effect.
+ * `prefers-reduced-motion: reduce`.
  */
 export function Reveal({ children, className, delay = 0, distance = 24 }: RevealProps) {
   const reduced = useReducedMotion();

@@ -2,7 +2,8 @@
 
 import type { ReactNode } from 'react';
 import { motion } from 'framer-motion';
-import { MOTION_DURATION, MOTION_EASE, useReducedMotion } from '@/lib/motion';
+import { MOTION_DURATION, MOTION_EASE } from './constants';
+import { useReducedMotion } from './useReducedMotion';
 
 export interface HoverLiftProps {
   children: ReactNode;
@@ -12,8 +13,8 @@ export interface HoverLiftProps {
 }
 
 /**
- * A thin wrapper that lifts the child on hover/focus. Falls back to
- * a plain div for users who prefer reduced motion.
+ * Lifts the child on hover/focus. Falls back to a plain div for users
+ * who prefer reduced motion.
  */
 export function HoverLift({ children, className, distance = 4 }: HoverLiftProps) {
   const reduced = useReducedMotion();
