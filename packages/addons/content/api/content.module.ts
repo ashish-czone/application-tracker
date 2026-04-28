@@ -16,6 +16,7 @@ import { ClientLogosController } from './controllers/client-logos.controller';
 import { ValuePropsController } from './controllers/value-props.controller';
 import { StatsController } from './controllers/stats.controller';
 import { CaseStudiesController } from './controllers/case-studies.controller';
+import { CaseStudiesPublicController } from './controllers/case-studies-public.controller';
 import { TestimonialsService } from './services/testimonials.service';
 import { FaqItemsService } from './services/faq-items.service';
 import { TeamMembersService } from './services/team-members.service';
@@ -57,6 +58,7 @@ import { CaseStudiesService } from './services/case-studies.service';
     ValuePropsController,
     StatsController,
     CaseStudiesController,
+    CaseStudiesPublicController,
   ],
   providers: [
     TestimonialsService,

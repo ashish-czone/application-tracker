@@ -14,3 +14,4 @@ export { CLIENT_LOGOS_CONFIG } from './client-logos.config';
 export { VALUE_PROPS_CONFIG } from './value-props.config';
 export { STATS_CONFIG } from './stats.config';
 export { CASE_STUDIES_CONFIG } from './case-studies.config';
+export type { PublicCaseStudy } from './controllers/case-studies-public.controller';

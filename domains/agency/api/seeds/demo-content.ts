@@ -9,6 +9,7 @@ import {
   clientLogos,
   valueProps,
   stats,
+  caseStudies,
 } from '@packages/content-api';
 import type { EntityService } from '@packages/entity-engine';
 
@@ -243,6 +244,89 @@ const STATS = [
   { label: 'Average time-to-value', value: 14, suffix: ' days', displayOrder: 40, isActive: true },
 ];
 
+const CASE_STUDIES = [
+  {
+    title: 'A compliance dashboard that replaced six spreadsheets',
+    slug: 'halston-compliance-dashboard',
+    client: 'Halston Financial Group',
+    industry: 'Financial Services',
+    year: 2025,
+    summary:
+      'Audit prep went from a month-long scramble to a morning. Trail, attestations, controls — all live, all auditable, none in spreadsheets.',
+    body:
+      "Halston's compliance team was running annual audits out of a maze of spreadsheets, shared inboxes, and screenshots. Every quarter they lost a week reconciling versions before they could even start gathering evidence.\n\nWe rebuilt the workflow on a single platform — typed controls, attestations with timestamps, evidence attachments, and an audit trail that never sleeps. The first audit on the new platform finished four weeks ahead of schedule.\n\nThe team now closes the books on Monday morning, runs the audit pull on Tuesday, and spends the rest of the week on actual risk work.",
+    results:
+      '87% reduction in audit-prep time\nSingle source of truth for 240+ controls\nFour-week audit closure (was 8 weeks)',
+    heroImageUrl:
+      'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1600&auto=format&fit=crop&q=80',
+    ctaText: 'Read the full story',
+    ctaHref: '/contact',
+    displayOrder: 10,
+    isActive: true,
+    publishedAt: new Date('2025-08-15'),
+  },
+  {
+    title: 'Driver app for a 2,000-strong last-mile fleet',
+    slug: 'northshore-driver-app',
+    client: 'Northshore Logistics',
+    industry: 'Logistics',
+    year: 2025,
+    summary:
+      'A native mobile app for drivers, dispatchers, and ops — replacing three legacy tools with one. Adoption hit 95% in the first month.',
+    body:
+      "Northshore's drivers were juggling three apps to do their job — one for routes, one for proof-of-delivery, and one for time tracking. Each one logged out daily, none of them talked to each other, and the dispatch team was the human integration layer.\n\nWe shipped a single React Native app — routes, POD with photo + signature capture, time tracking, and on-shift chat — backed by a TypeScript service that finally had one source of truth. Dispatch's role shrank from 'data router' to 'exception handler'.\n\nAdoption hit 95% in the first month. Driver satisfaction (measured by NPS) jumped 28 points by quarter's end.",
+    results:
+      '95% driver adoption in the first month\n+28 NPS among drivers\n3 legacy apps decommissioned',
+    heroImageUrl:
+      'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=1600&auto=format&fit=crop&q=80',
+    ctaText: 'Read the full story',
+    ctaHref: '/contact',
+    displayOrder: 20,
+    isActive: true,
+    publishedAt: new Date('2025-10-04'),
+  },
+  {
+    title: 'RAG system for clinical policy lookup',
+    slug: 'brightline-rag-policy-lookup',
+    client: 'Brightline Health',
+    industry: 'Healthcare',
+    year: 2026,
+    summary:
+      'Care coordinators get grounded answers from 11,000 pages of policy in under two seconds — with citations they can defend in an audit.',
+    body:
+      "Brightline's care coordinators were spending 12 minutes per call looking up policy. A wrong answer didn't just slow the call — it created downstream payment exceptions and patient escalations.\n\nWe built a retrieval-augmented system over their full policy corpus: hybrid search, reranking, structured extraction, and a UI tuned to coordinators rather than ML researchers. Every answer cites the policy section it came from. Coverage and accuracy are tracked weekly against a held-out eval set.\n\nLookup time fell from 12 minutes to under 30 seconds. Audit-rejected guidance fell to zero in the first 90 days.",
+    results:
+      '12 min → 30 sec lookup time\n0 audit rejections in first 90 days\n96% coordinator satisfaction',
+    heroImageUrl:
+      'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=1600&auto=format&fit=crop&q=80',
+    ctaText: 'Read the full story',
+    ctaHref: '/contact',
+    displayOrder: 30,
+    isActive: true,
+    publishedAt: new Date('2026-02-12'),
+  },
+  {
+    title: 'Headless Shopify storefront + fulfilment integration',
+    slug: 'maven-headless-shopify',
+    client: 'Maven Atelier',
+    industry: 'Retail',
+    year: 2026,
+    summary:
+      'A headless Hydrogen storefront on a typed schema, with real-time fulfilment from a 3PL. Page speed +40% and inventory truth across both warehouses.',
+    body:
+      "Maven was outgrowing their Shopify theme — checkout speed was hurting conversion, and the manual sync between their e-com platform and the 3PL was producing daily inventory drift.\n\nWe rebuilt the storefront on Hydrogen with a typed catalog schema, then wired live two-way sync between Shopify and the 3PL via a typed integration layer with retry, backpressure, and explicit reconciliation jobs. Inventory drift went to zero. Page-load time on PDPs improved 40%.\n\nNew product launches that used to take a release cycle now happen on the same day the merchandiser uploads.",
+    results:
+      '+40% PDP page speed\nZero daily inventory drift\nSame-day product launch (was 2 weeks)',
+    heroImageUrl:
+      'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=1600&auto=format&fit=crop&q=80',
+    ctaText: 'Read the full story',
+    ctaHref: '/contact',
+    displayOrder: 40,
+    isActive: true,
+    publishedAt: new Date('2026-03-20'),
+  },
+];
+
 async function hasAnyRow(database: DatabaseService, table: PgTable): Promise<boolean> {
   const [existing] = await database.db.select().from(table).limit(1);
   return Boolean(existing);
@@ -282,4 +366,5 @@ export const seedDemoContent = async (ctx: INestApplicationContext): Promise<voi
   await seedIfEmpty(ctx, database, admin.id, 'ENTITY_SERVICE_client-logos', clientLogos, CLIENT_LOGOS);
   await seedIfEmpty(ctx, database, admin.id, 'ENTITY_SERVICE_value-props', valueProps, VALUE_PROPS);
   await seedIfEmpty(ctx, database, admin.id, 'ENTITY_SERVICE_stats', stats, STATS);
+  await seedIfEmpty(ctx, database, admin.id, 'ENTITY_SERVICE_case-studies', caseStudies, CASE_STUDIES);
 };
