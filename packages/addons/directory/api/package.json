@@ -1,0 +1,29 @@
+{
+  "name": "@packages/directory",
+  "version": "0.0.1",
+  "private": true,
+  "main": "index.ts",
+  "scripts": {
+    "test": "vitest run --passWithNoTests",
+    "db:generate": "drizzle-kit generate"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.0.0",
+    "@packages/audit": "workspace:*",
+    "@packages/auth-core": "workspace:*",
+    "@packages/database": "workspace:*",
+    "@packages/events": "workspace:*",
+    "@packages/logger": "workspace:*",
+    "@packages/rbac": "workspace:*",
+    "drizzle-orm": "^0.45.1",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@packages/platform-testing": "workspace:*",
+    "@types/supertest": "^6.0.2",
+    "drizzle-kit": "^0.31.9",
+    "supertest": "^7.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}
