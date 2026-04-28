@@ -17,13 +17,15 @@ import {
   type ClientStatus,
   type ClientRiskLevel,
 } from './types';
-import { HANDLER_OPTIONS, RISK_OPTIONS } from './filterOptions';
+import { RISK_OPTIONS } from './filterOptions';
 import { NewClientDrawer } from './components/NewClientDrawer';
 import { ClientPreviewPopover } from './components/ClientPreviewPopover';
 import { RISK_LABEL } from './components/RiskPill';
 import { CLIENT_COLUMNS, REQUIRED_CLIENT_COLUMN_KEYS } from './components/clientColumns';
 import { useClientsList } from '../../../../hooks/useClientsApi';
+import { useUsersList } from '../../../../hooks/useUsersApi';
 import { mapClientRecordToRow } from './api/mapClientRecord';
+import { formatUserDisplayName } from './handlerUtils';
 
 type StatusTab = 'all' | ClientStatus;
 
@@ -61,11 +63,21 @@ export function ClientsPage() {
   const [handlerFilter, setHandlerFilter] = useState<string[]>([]);
 
   const { data, isLoading, isError } = useClientsList({ limit: 100 });
+  const { data: usersData } = useUsersList({ limit: 500 });
 
   const rows = useMemo<ClientRow[]>(() => {
     if (!data?.data) return [];
     return data.data.map(mapClientRecordToRow);
   }, [data]);
+
+  const userById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const u of usersData?.data ?? []) {
+      if (u.status !== 'active') continue;
+      map.set(u.id, formatUserDisplayName(u));
+    }
+    return map;
+  }, [usersData]);
 
   const statusCounts = useMemo(
     () => ({
@@ -108,16 +120,15 @@ export function ClientsPage() {
       });
     }
     for (const key of handlerFilter) {
-      const handler = HANDLER_OPTIONS.find((h) => h.value === key);
       chips.push({
         key: `handler:${key}`,
         group: 'Handler',
-        value: handler?.label ?? key,
+        value: userById.get(key) ?? key,
         onRemove: () => setHandlerFilter((prev) => prev.filter((k) => k !== key)),
       });
     }
     return chips;
-  }, [riskFilter, handlerFilter]);
+  }, [riskFilter, handlerFilter, userById]);
 
   const clearAll = () => {
     setRiskFilter([]);
@@ -141,11 +152,17 @@ export function ClientsPage() {
     count: rows.filter((c) => c.risk === r.value && c.status === 'active').length,
   }));
 
-  const handlerOptions = HANDLER_OPTIONS.map((h) => ({
-    value: h.value,
-    label: h.label,
-    count: rows.filter((c) => c.primaryHandler.id === h.value).length,
-  }));
+  const handlerOptions = useMemo(
+    () =>
+      Array.from(userById.entries())
+        .map(([id, label]) => ({
+          value: id,
+          label,
+          count: rows.filter((c) => c.primaryHandler.id === id).length,
+        }))
+        .sort((a, b) => a.label.localeCompare(b.label)),
+    [userById, rows],
+  );
 
   const statusTabs = [
     { value: 'all' as const, label: 'All', count: totalClients },
