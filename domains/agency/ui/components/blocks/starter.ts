@@ -1,4 +1,4 @@
-import { blockRegistry } from '../registry';
+import { blockRegistry } from './registry';
 import { heroBlock } from './Hero';
 import { textBlock } from './TextBlock';
 import { imageBlock } from './ImageBlock';

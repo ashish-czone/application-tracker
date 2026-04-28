@@ -1,3 +1,4 @@
+export * from './components/blocks';
 export * from './blocks';
 export * from './pages';
 // Re-export menus, omitting `Paginated` (also exported from `./pages` —

@@ -3,7 +3,7 @@ import type {
   BlockDefinition,
   BlockFieldSpec,
   BlockFieldType,
-} from '../blocks';
+} from '../components/blocks';
 import type { DataSource } from '@domains/agency-contract';
 import { DataSourcePicker } from './DataSourcePicker';
 

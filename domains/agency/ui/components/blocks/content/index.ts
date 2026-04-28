@@ -1,4 +1,4 @@
-import { blockRegistry } from '../../registry';
+import { blockRegistry } from '../registry';
 import { testimonialsGridBlock } from './TestimonialsGrid';
 import { faqAccordionBlock } from './FaqAccordion';
 import { teamGridBlock } from './TeamGrid';

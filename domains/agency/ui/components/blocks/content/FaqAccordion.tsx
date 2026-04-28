@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import type { FaqAccordionFields } from '@domains/agency-contract';
-import { defineBlock } from '../../registry';
-import type { BlockRenderProps } from '../../types';
+import { defineBlock } from '../registry';
+import type { BlockRenderProps } from '../types';
 
 interface Fields extends Record<string, unknown> {
   heading?: string;

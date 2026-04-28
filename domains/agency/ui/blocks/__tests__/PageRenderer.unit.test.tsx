@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createElement, type ReactNode } from 'react';
 import type { SectionData } from '@domains/agency-contract';
-import { defineBlock, blockRegistry } from '../registry';
+import { defineBlock, blockRegistry } from '../../components/blocks/registry';
 import { PageRenderer } from '../PageRenderer';
 
 function section(partial: Partial<SectionData> & Pick<SectionData, 'id' | 'order' | 'blockKind'>): SectionData {

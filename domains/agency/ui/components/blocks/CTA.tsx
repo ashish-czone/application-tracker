@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
-import { defineBlock } from '../registry';
-import type { BlockRenderProps } from '../types';
+import { defineBlock } from './registry';
+import type { BlockRenderProps } from './types';
 
 interface CTAFields extends Record<string, unknown> {
   heading?: string;
