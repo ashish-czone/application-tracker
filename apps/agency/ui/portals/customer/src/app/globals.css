@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+/* Tailwind v4 only scans relative source files by default. The Puck block
+   components shipped from @domains/agency-ui live outside this app's tree,
+   so their utility classes aren't generated unless we point Tailwind at
+   them explicitly. */
+@source "../../../../../../../domains/agency/ui";
+
 /* ──────────────────────────────────────────────────────────────
    Design tokens — semantic names, HSL triplets so shades can be
    composed (`hsl(var(--foreground) / 0.6)`). Kept in :root so the
