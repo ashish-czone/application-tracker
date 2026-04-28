@@ -72,8 +72,11 @@ test.describe('Flow: client + law + rule + filing chain', () => {
   });
 
   test('the fixture filing is reachable via /filings search', async ({ authedPage }) => {
+    // FilingsPage search matches `lawCode + ruleName + clientName + periodLabel`
+    // — NOT the filing's auto-generated title. Search by rule name (which the
+    // grid renders) to verify the chain is reachable from the filings page.
     await authedPage.goto('/filings');
-    await authedPage.getByPlaceholder(/search filings/i).fill(chain.filing.title);
-    await expect(authedPage.getByText(chain.filing.title).first()).toBeVisible();
+    await authedPage.getByPlaceholder(/search filings/i).fill(chain.rule.name);
+    await expect(authedPage.getByText(chain.rule.name).first()).toBeVisible();
   });
 });

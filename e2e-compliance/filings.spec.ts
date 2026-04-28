@@ -25,9 +25,12 @@ test.describe('Filings', () => {
   });
 
   test('search input narrows the filings grid', async ({ authedPage }) => {
+    // FilingsPage search matches `lawCode + ruleName + clientName + periodLabel`
+    // — NOT the filing's auto-generated title. Search by rule name (which the
+    // grid renders) so the assertion has something to verify.
     await authedPage.goto('/filings');
-    await authedPage.getByPlaceholder(/search filings/i).fill(chain.filing.title);
-    await expect(authedPage.getByText(chain.filing.title).first()).toBeVisible();
+    await authedPage.getByPlaceholder(/search filings/i).fill(chain.rule.name);
+    await expect(authedPage.getByText(chain.rule.name).first()).toBeVisible();
   });
 
   test('status tabs filter the filings list', async ({ authedPage }) => {
