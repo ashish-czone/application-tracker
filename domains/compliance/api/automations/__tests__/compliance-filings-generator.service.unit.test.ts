@@ -37,6 +37,7 @@ describe('ComplianceFilingsGeneratorService', () => {
   let registrationService: {
     getRegistrationsForLaw: Mock;
     getRegisteredLaws: Mock;
+    isClientActive: Mock;
   };
   let filingsService: {
     findByRuleClientPeriod: Mock;
@@ -64,6 +65,7 @@ describe('ComplianceFilingsGeneratorService', () => {
     registrationService = {
       getRegistrationsForLaw: vi.fn().mockResolvedValue([]),
       getRegisteredLaws: vi.fn().mockResolvedValue([]),
+      isClientActive: vi.fn().mockResolvedValue(true),
     };
     filingsService = {
       findByRuleClientPeriod: vi.fn().mockResolvedValue(null),
@@ -474,6 +476,40 @@ describe('ComplianceFilingsGeneratorService', () => {
       expect(filingsService.create).toHaveBeenCalledTimes(2);
       const ruleIdsCreated = filingsService.create.mock.calls.map((c) => c[0].ruleId);
       expect(ruleIdsCreated.sort()).toEqual(['r1', 'r2']);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Q6 race guard — the inner per-occurrence client-status check.
+  // Async generator paths (J4 registration-created, in particular) snapshot
+  // the registration list at entry. If the client transitions to dormant
+  // mid-flight, the dormancy cascade only cancels filings that exist at
+  // transition time; without an inner check the loop keeps creating fresh
+  // pending rows for the now-dormant client. The check stops the loop the
+  // moment the next iteration sees the new status.
+  // ---------------------------------------------------------------------------
+
+  describe('Q6 race guard: client transitions to dormant mid-flight', () => {
+    it('stops creating filings the moment the client is no longer active', async () => {
+      ruleService.findActive.mockResolvedValue([
+        makeRule({ id: 'r1', lawId: 'l1', status: 'active' }),
+      ]);
+      registrationService.getRegistrationsForLaw.mockResolvedValue([
+        { id: 'reg1', clientId: 'c1', lawId: 'l1', registeredAt: new Date(), deactivatedAt: null },
+      ]);
+      ruleService.expandRule.mockReturnValue([
+        { periodStart: utc(2026, 4, 1), periodEnd: utc(2026, 4, 30), dueDate: utc(2026, 5, 20) },
+        { periodStart: utc(2026, 5, 1), periodEnd: utc(2026, 5, 31), dueDate: utc(2026, 6, 20) },
+        { periodStart: utc(2026, 6, 1), periodEnd: utc(2026, 6, 30), dueDate: utc(2026, 7, 20) },
+      ]);
+      // Active for the first occurrence, dormant from the second onwards.
+      registrationService.isClientActive
+        .mockResolvedValueOnce(true)
+        .mockResolvedValue(false);
+
+      await service.generateForRegistration('c1', 'l1');
+
+      expect(filingsService.create).toHaveBeenCalledTimes(1);
     });
   });
 });

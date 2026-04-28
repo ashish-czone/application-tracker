@@ -724,7 +724,7 @@ describe('ComplianceRulesService', () => {
     it('is a no-op when rule is already deprecated', async () => {
       db.db.select.mockReturnValueOnce(mockSelectRows([{ ...ruleRow, status: 'deprecated' }]));
       const result = await service.deprecate('r1', { actorId: 'u1' });
-      expect(result).toEqual({ ruleId: 'r1', cancelledFilingIds: [] });
+      expect(result).toEqual({ ruleId: 'r1', status: 'deprecated', cancelledFilingIds: [] });
       expect(db.db.transaction).not.toHaveBeenCalled();
     });
 

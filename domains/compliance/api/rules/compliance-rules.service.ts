@@ -100,6 +100,7 @@ export interface DeprecationPreview {
 
 export interface DeprecationResult {
   ruleId: string;
+  status: 'deprecated';
   cancelledFilingIds: string[];
 }
 
@@ -396,7 +397,7 @@ export class ComplianceRulesService {
       throw new NotFoundException(`Rule ${ruleId} not found`);
     }
     if (rule.status === 'deprecated') {
-      return { ruleId, cancelledFilingIds: [] };
+      return { ruleId, status: 'deprecated', cancelledFilingIds: [] };
     }
 
     const definition = this.workflowRegistry.getBySlug(RULE_WORKFLOW_SLUG);
@@ -461,7 +462,7 @@ export class ComplianceRulesService {
       alsoCancelInFlight,
     });
 
-    return { ruleId, cancelledFilingIds: cancelledIds };
+    return { ruleId, status: 'deprecated', cancelledFilingIds: cancelledIds };
   }
 
   private buildCascadeComment(ruleCode: string, adminComment: string | undefined): string {

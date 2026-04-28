@@ -470,6 +470,24 @@ export class ClientRegistrationsService {
     return rows.map((r) => this.toRegistration(r.registration));
   }
 
+  /**
+   * Live check: is the client currently `active`? Used by the filings
+   * generator inside its inner per-occurrence loop to close the race where
+   * the client transitions to `dormant` while an async listener
+   * (J4 registration-created → generateForRegistration) is mid-flight
+   * creating filings. Without this, the listener would keep creating
+   * non-terminal filings for a now-dormant client because its initial
+   * `getRegistrationsForLaw` snapshot is stale.
+   */
+  async isClientActive(clientId: string): Promise<boolean> {
+    const [row] = await this.database.db
+      .select({ status: clients.status })
+      .from(clients)
+      .where(eq(clients.id, clientId))
+      .limit(1);
+    return row?.status === 'active';
+  }
+
   /** Active registrations only. */
   async getRegisteredLaws(clientId: string): Promise<ClientRegistration[]> {
     const rows = await this.database.db
