@@ -1,5 +1,13 @@
 export interface QueueModuleConfig {
   redisUrl: string;
+  /**
+   * BullMQ keyspace prefix. Falls back to BullMQ's default (`bull`) when
+   * unset. Set per app whenever multiple apps share a single Redis
+   * instance — without it, every app's Worker registers against the same
+   * `bull:<queueName>` keys and races for jobs, silently consuming each
+   * other's payloads.
+   */
+  prefix?: string;
 }
 
 export interface JobDefinition<T = unknown> {

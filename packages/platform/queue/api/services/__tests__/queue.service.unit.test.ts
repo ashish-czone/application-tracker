@@ -6,14 +6,20 @@ const mockQueueClose = vi.fn().mockResolvedValue(undefined);
 const mockWorkerClose = vi.fn().mockResolvedValue(undefined);
 const mockWorkerOn = vi.fn();
 let workerConstructorCalls = 0;
+const queueConstructorOpts: unknown[] = [];
+const workerConstructorOpts: unknown[] = [];
 
 vi.mock('bullmq', () => ({
-  Queue: vi.fn().mockImplementation(() => ({
-    add: mockQueueAdd,
-    close: mockQueueClose,
-  })),
-  Worker: vi.fn().mockImplementation((_name: string, _processor: unknown, _opts: unknown) => {
+  Queue: vi.fn().mockImplementation((_name: string, opts: unknown) => {
+    queueConstructorOpts.push(opts);
+    return {
+      add: mockQueueAdd,
+      close: mockQueueClose,
+    };
+  }),
+  Worker: vi.fn().mockImplementation((_name: string, _processor: unknown, opts: unknown) => {
     workerConstructorCalls++;
+    workerConstructorOpts.push(opts);
     return {
       close: mockWorkerClose,
       on: mockWorkerOn,
@@ -34,12 +40,12 @@ const mockAppLogger = {
   forContext: vi.fn().mockReturnValue(mockContextLogger),
 } as any;
 
-function createQueueService(workerEnabled = 'true') {
+function createQueueService(workerEnabled = 'true', prefix?: string) {
   const originalEnv = process.env.WORKER_ENABLED;
   process.env.WORKER_ENABLED = workerEnabled;
 
   const service = new QueueService(
-    { redisUrl: 'redis://localhost:6379' },
+    { redisUrl: 'redis://localhost:6379', prefix },
     mockAppLogger,
   );
 
@@ -51,6 +57,8 @@ describe('QueueService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     workerConstructorCalls = 0;
+    queueConstructorOpts.length = 0;
+    workerConstructorOpts.length = 0;
   });
 
   describe('registerProcessor', () => {
@@ -79,6 +87,24 @@ describe('QueueService', () => {
 
       // Only one queue created — calling getQueue still works
       expect(service.getQueue('test.job')).toBeDefined();
+    });
+
+    it('should not pass a prefix to Queue/Worker when config.prefix is unset', () => {
+      const service = createQueueService('true');
+      service.registerProcessor({ name: 'test.job', handler: vi.fn() });
+
+      expect(queueConstructorOpts).toHaveLength(1);
+      expect(queueConstructorOpts[0]).not.toHaveProperty('prefix');
+      expect(workerConstructorOpts).toHaveLength(1);
+      expect(workerConstructorOpts[0]).not.toHaveProperty('prefix');
+    });
+
+    it('should forward config.prefix to Queue and Worker when set', () => {
+      const service = createQueueService('true', 'bull:compliance');
+      service.registerProcessor({ name: 'test.job', handler: vi.fn() });
+
+      expect(queueConstructorOpts[0]).toMatchObject({ prefix: 'bull:compliance' });
+      expect(workerConstructorOpts[0]).toMatchObject({ prefix: 'bull:compliance' });
     });
   });
 
