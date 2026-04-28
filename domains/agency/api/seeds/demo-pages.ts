@@ -74,7 +74,7 @@ const HOME: PageSeed = {
         number: '01',
         eyebrow: 'Studio',
         meta: 'Brooklyn · Est. 2019',
-        headline: 'We build ambitious products for the companies shaping what comes next.',
+        headline: 'Ambitious products for what comes next.',
         subheadline:
           'A compact team of senior engineers and designers, shipping web, mobile, and AI products end-to-end — from first sketch to production at scale.',
         ctaText: 'Start a project',
