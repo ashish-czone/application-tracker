@@ -5,6 +5,10 @@ import {
   agencyDemoSeedSources,
   agencySystemSeedSources,
 } from '@domains/agency-api/seeds';
+import {
+  projectsDemoSeedSources,
+  projectsSystemSeedSources,
+} from '@domains/projects-api/seeds';
 import { AppModule } from '../app.module';
 
 function parseKind(argv: string[]): SeedKind {
@@ -20,9 +24,13 @@ function parseKind(argv: string[]): SeedKind {
 
 function collectSources(kind: SeedKind): SeedSource[] {
   if (kind === 'system') {
-    return [...platformSystemSeedSources(), ...agencySystemSeedSources()];
+    return [
+      ...platformSystemSeedSources(),
+      ...agencySystemSeedSources(),
+      ...projectsSystemSeedSources(),
+    ];
   }
-  return [...agencyDemoSeedSources()];
+  return [...agencyDemoSeedSources(), ...projectsDemoSeedSources()];
 }
 
 async function main() {
