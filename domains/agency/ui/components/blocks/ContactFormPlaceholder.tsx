@@ -40,7 +40,8 @@ function ContactFormPlaceholder({ fields }: BlockRenderProps<ContactFormPlacehol
         )}
         <form
           aria-disabled
-          onSubmit={(e) => e.preventDefault()}
+          method="post"
+          action="#"
           className="flex flex-col gap-5 rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--surface))] p-8 md:p-10"
         >
           <PlaceholderField label="Name" placeholder="Your full name" />

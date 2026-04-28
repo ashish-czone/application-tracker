@@ -104,10 +104,16 @@ export default async function CaseStudyDetailPage({ params }: RouteParams) {
               <span className="text-eyebrow">[ outcomes ]</span>
               <h2 className="text-headline">Results</h2>
             </header>
-            <ul className="grid gap-px bg-[hsl(var(--border))] rounded-xl overflow-hidden border border-[hsl(var(--border))] sm:grid-cols-2">
+            <ul className="grid gap-4 md:gap-5 sm:grid-cols-2">
               {splitResults(study.results).map((line, i) => (
-                <li key={i} className="bg-[hsl(var(--background))] p-6 md:p-7 flex flex-col gap-2">
-                  <span className="text-mono text-[hsl(var(--accent))]">
+                <li
+                  key={i}
+                  className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] p-6 md:p-7 flex flex-col gap-2"
+                >
+                  <span
+                    className="text-xs font-medium tracking-[0.02em] text-[hsl(var(--accent))]"
+                    style={{ fontFamily: 'var(--font-mono)' }}
+                  >
                     {String(i + 1).padStart(2, '0')}
                   </span>
                   <p className="text-base text-[hsl(var(--foreground))] leading-relaxed">{line}</p>

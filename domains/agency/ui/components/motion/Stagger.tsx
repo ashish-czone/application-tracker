@@ -17,13 +17,12 @@ export interface StaggerProps {
 }
 
 /**
- * Reveals each direct child with a staggered fade + slide-up. Use for
- * grids, lists, hero text rows — anywhere a row of equally-weighted
- * elements should land in sequence.
- *
- * The trigger fires once when the parent crosses 15% into the viewport,
- * and every child shares the same `whileInView` listener so the cascade
- * stays in lockstep regardless of layout.
+ * Reveals each direct child with a staggered fade + slide-up on mount.
+ * Renders a plain visible div during SSR/before hydration/with reduced
+ * motion so children are never hidden waiting for JS or scroll. We do
+ * not use `whileInView` — it leaves below-the-fold sections invisible
+ * until scrolled into view, which breaks fast scrollers and full-page
+ * screenshots.
  */
 export function Stagger({
   children,
@@ -46,8 +45,7 @@ export function Stagger({
     <motion.div
       className={className}
       initial="hidden"
-      whileInView="show"
-      viewport={{ once: true, amount: 0.15 }}
+      animate="show"
       variants={{
         hidden: {},
         show: {
