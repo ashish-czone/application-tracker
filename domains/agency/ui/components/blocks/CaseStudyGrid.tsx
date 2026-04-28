@@ -4,12 +4,6 @@ import type { BlockRenderProps } from './types';
 import { Reveal } from '../motion/Reveal';
 import { Stagger } from '../motion/Stagger';
 
-interface CaseStudyGridFields extends Record<string, unknown> {
-  heading?: string;
-  subheading?: string;
-  entries?: string;
-}
-
 interface ParsedEntry {
   client: string;
   title: string;
@@ -17,13 +11,20 @@ interface ParsedEntry {
   imageUrl: string;
 }
 
-/**
- * Entries are stored as newline-delimited
- * "Client :: Title :: Href :: ImageUrl" rows. Rows with < 2 parts are
- * skipped; missing Href just removes the link, missing ImageUrl falls
- * back to a muted placeholder tile.
- */
-function parseEntries(raw: string | undefined): ParsedEntry[] {
+interface CaseStudyGridFields extends Record<string, unknown> {
+  heading?: string;
+  subheading?: string;
+  /**
+   * Either a newline-delimited string (hand-authored: "Client :: Title :: Href :: ImageUrl"
+   * per row) or an already-mapped array (delivered by the case-study-grid
+   * mapper when the section has a case-studies data source). Array form
+   * wins since it represents structured live data.
+   */
+  entries?: string | ParsedEntry[];
+}
+
+function parseEntries(raw: CaseStudyGridFields['entries']): ParsedEntry[] {
+  if (Array.isArray(raw)) return raw.filter((e) => e.client && e.title);
   if (!raw) return [];
   return raw
     .split('\n')
@@ -116,14 +117,15 @@ export const caseStudyGridBlock = defineBlock<CaseStudyGridFields>({
   name: 'Case Studies',
   category: 'Content',
   icon: 'FolderKanban',
+  supports: ['case-studies'],
   fields: {
     heading: { type: 'text', label: 'Heading', maxLength: 120 },
     subheading: { type: 'textarea', label: 'Subheading', maxLength: 240 },
     entries: {
       type: 'textarea',
-      label: 'Case studies',
+      label: 'Case studies (hand-authored fallback)',
       description:
-        'One per line. Use "Client :: Title :: Href :: ImageUrl" (Href and ImageUrl optional).',
+        'Used when no data source is selected. One per line: "Client :: Title :: Href :: ImageUrl".',
     },
   },
   component: CaseStudyGrid,

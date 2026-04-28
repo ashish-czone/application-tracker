@@ -7,6 +7,7 @@ import { SERVICES_CONFIG } from './services.config';
 import { CLIENT_LOGOS_CONFIG } from './client-logos.config';
 import { VALUE_PROPS_CONFIG } from './value-props.config';
 import { STATS_CONFIG } from './stats.config';
+import { CASE_STUDIES_CONFIG } from './case-studies.config';
 import { TestimonialsController } from './controllers/testimonials.controller';
 import { FaqItemsController } from './controllers/faq-items.controller';
 import { TeamMembersController } from './controllers/team-members.controller';
@@ -14,6 +15,8 @@ import { ServicesController } from './controllers/services.controller';
 import { ClientLogosController } from './controllers/client-logos.controller';
 import { ValuePropsController } from './controllers/value-props.controller';
 import { StatsController } from './controllers/stats.controller';
+import { CaseStudiesController } from './controllers/case-studies.controller';
+import { CaseStudiesPublicController } from './controllers/case-studies-public.controller';
 import { TestimonialsService } from './services/testimonials.service';
 import { FaqItemsService } from './services/faq-items.service';
 import { TeamMembersService } from './services/team-members.service';
@@ -21,6 +24,7 @@ import { ServicesService } from './services/services.service';
 import { ClientLogosService } from './services/client-logos.service';
 import { ValuePropsService } from './services/value-props.service';
 import { StatsService } from './services/stats.service';
+import { CaseStudiesService } from './services/case-studies.service';
 
 /**
  * ContentModule registers seven content primitives (testimonials, FAQ items,
@@ -43,6 +47,7 @@ import { StatsService } from './services/stats.service';
     EntityEngineModule.forEntity(CLIENT_LOGOS_CONFIG),
     EntityEngineModule.forEntity(VALUE_PROPS_CONFIG),
     EntityEngineModule.forEntity(STATS_CONFIG),
+    EntityEngineModule.forEntity(CASE_STUDIES_CONFIG),
   ],
   controllers: [
     TestimonialsController,
@@ -52,6 +57,8 @@ import { StatsService } from './services/stats.service';
     ClientLogosController,
     ValuePropsController,
     StatsController,
+    CaseStudiesController,
+    CaseStudiesPublicController,
   ],
   providers: [
     TestimonialsService,
@@ -61,6 +68,7 @@ import { StatsService } from './services/stats.service';
     ClientLogosService,
     ValuePropsService,
     StatsService,
+    CaseStudiesService,
   ],
   exports: [
     TestimonialsService,
@@ -70,6 +78,7 @@ import { StatsService } from './services/stats.service';
     ClientLogosService,
     ValuePropsService,
     StatsService,
+    CaseStudiesService,
   ],
 })
 export class ContentModule {}

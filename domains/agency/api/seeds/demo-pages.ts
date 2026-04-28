@@ -1,6 +1,7 @@
 import type { INestApplicationContext } from '@nestjs/common';
 import { DatabaseService, users } from '@packages/database';
 import { pages, sections } from '../pages/schema';
+import type { DataSource } from '@domains/agency-contract';
 import { eq } from 'drizzle-orm';
 
 /**
@@ -27,6 +28,10 @@ interface SectionSeed {
   variant?: string;
   title?: string | null;
   customFields: Record<string, unknown>;
+  /** Optional server-resolved data source. When present, the public pages
+   * service runs the query and a registered mapper turns the result rows
+   * into block-shaped fields before render. */
+  dataSource?: DataSource;
 }
 
 interface PageSeed {
@@ -97,15 +102,18 @@ const HOME: PageSeed = {
       order: 2,
       blockKind: 'case-study-grid',
       title: 'Recent work',
+      // Live data source — the home page's case-study tiles render from the
+      // case_studies entity. Author can pin overrides via customFields,
+      // but the entries themselves come from the seeded case studies.
+      dataSource: {
+        kind: 'entity-query',
+        entity: 'case-studies',
+        sort: 'displayOrder',
+        limit: 4,
+      },
       customFields: {
         heading: 'Recent work',
         subheading: "A sample of what we've shipped in the last twelve months.",
-        entries: [
-          `Halston Financial :: A compliance dashboard that replaced six spreadsheets :: /work :: ${CASE_CORPORATE}`,
-          `Northshore Logistics :: Driver app for a 2,000-strong last-mile fleet :: /work :: ${CASE_MOBILE_UI}`,
-          `Brightline Health :: RAG system for clinical policy lookup :: /work :: ${CASE_AI_DASH}`,
-          `Maven Atelier :: Headless Shopify storefront + fulfilment integration :: /work :: ${CASE_ECOM}`,
-        ].join('\n'),
       },
     },
     {
@@ -750,6 +758,7 @@ export const seedDemoPages = async (ctx: INestApplicationContext): Promise<void>
         variant: s.variant ?? null,
         title: s.title ?? null,
         customFields: s.customFields,
+        dataSource: s.dataSource ?? null,
       });
     }
   }

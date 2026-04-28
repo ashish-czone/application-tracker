@@ -7,6 +7,7 @@ import { servicesGridMapper } from './services-grid';
 import { clientLogosRowMapper } from './client-logos-row';
 import { valuePropsGridMapper } from './value-props-grid';
 import { statsRowMapper } from './stats-row';
+import { caseStudyGridMapper } from './case-study-grid';
 
 export { testimonialsGridMapper } from './testimonials-grid';
 export { faqAccordionMapper } from './faq-accordion';
@@ -15,6 +16,7 @@ export { servicesGridMapper } from './services-grid';
 export { clientLogosRowMapper } from './client-logos-row';
 export { valuePropsGridMapper } from './value-props-grid';
 export { statsRowMapper } from './stats-row';
+export { caseStudyGridMapper } from './case-study-grid';
 
 export type {
   TestimonialRecord,
@@ -26,6 +28,7 @@ export type { ServiceRecord, ServicesGridFields } from './services-grid';
 export type { ClientLogoRecord, ClientLogosRowFields } from './client-logos-row';
 export type { ValuePropRecord, ValuePropsGridFields } from './value-props-grid';
 export type { StatRecord, StatsRowFields } from './stats-row';
+export type { CaseStudyRecord, CaseStudyGridEntries } from './case-study-grid';
 
 /**
  * All content-block mappers that ship with the platform, in a stable order.
@@ -40,6 +43,7 @@ export const contentMappers: MapperDefinition[] = [
   clientLogosRowMapper as MapperDefinition,
   valuePropsGridMapper as MapperDefinition,
   statsRowMapper as MapperDefinition,
+  caseStudyGridMapper as MapperDefinition,
 ];
 
 /**
