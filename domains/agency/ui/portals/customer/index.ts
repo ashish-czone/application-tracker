@@ -44,6 +44,7 @@ export {
   clientLogosRowBlock,
   valuePropsGridBlock,
   statsRowBlock,
+  awardsStripBlock,
 } from '../../components/blocks/content';
 
 export type { DataSource, SectionData, MapperDefinition } from '@domains/agency-contract';
