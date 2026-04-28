@@ -1,6 +1,6 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { MOTION_DURATION, MOTION_EASE } from './constants';
 import { useReducedMotion } from './useReducedMotion';
@@ -15,14 +15,17 @@ export interface RevealProps {
 }
 
 /**
- * Scroll-triggered fade + slide-up. Runs once per element, once it
- * crosses ~20% into the viewport. Skips all motion when the user has
- * `prefers-reduced-motion: reduce`.
+ * Scroll-triggered fade + slide-up. Runs once per element after it
+ * crosses ~20% into the viewport. Falls back to a plain visible div
+ * during SSR / before hydration / when reduced-motion is on, so
+ * content is never hidden if JS hasn't taken over yet.
  */
 export function Reveal({ children, className, delay = 0, distance = 24 }: RevealProps) {
   const reduced = useReducedMotion();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
-  if (reduced) {
+  if (reduced || !mounted) {
     return <div className={className}>{children}</div>;
   }
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { Children, isValidElement, cloneElement, type ReactNode } from 'react';
+import { Children, isValidElement, cloneElement, useEffect, useState, type ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { MOTION_DURATION, MOTION_EASE } from './constants';
 import { useReducedMotion } from './useReducedMotion';
@@ -33,8 +33,10 @@ export function Stagger({
   distance = 24,
 }: StaggerProps) {
   const reduced = useReducedMotion();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
-  if (reduced) {
+  if (reduced || !mounted) {
     return <div className={className}>{children}</div>;
   }
 
