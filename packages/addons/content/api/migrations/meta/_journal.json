@@ -50,6 +50,13 @@
       "when": 1776768121306,
       "tag": "0006_glamorous_thena",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1777372630466,
+      "tag": "0007_bored_makkari",
+      "breakpoints": true
     }
   ]
 }

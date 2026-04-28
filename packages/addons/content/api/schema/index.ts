@@ -5,3 +5,4 @@ export { services } from './services';
 export { clientLogos } from './client-logos';
 export { valueProps } from './value-props';
 export { stats } from './stats';
+export { caseStudies } from './case-studies';
