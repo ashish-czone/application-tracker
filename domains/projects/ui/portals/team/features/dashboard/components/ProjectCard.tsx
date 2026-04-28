@@ -7,7 +7,7 @@ import {
   Progress,
 } from '@packages/ui';
 import { CalendarDays, ListChecks, Flag, AlertCircle } from 'lucide-react';
-import type { ProjectDashboardCard } from '../types';
+import type { ProjectDashboardCard } from '../../../../../types';
 
 const STATUS_TONE: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
   planning:  'outline',

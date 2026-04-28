@@ -1,6 +1,6 @@
 import { Badge, Progress } from '@packages/ui';
 import { CalendarDays } from 'lucide-react';
-import type { ProjectSummary } from '../types';
+import type { ProjectSummary } from '../../../../../types';
 
 const STATUS_LABEL: Record<string, string> = {
   planning:  'Planning',

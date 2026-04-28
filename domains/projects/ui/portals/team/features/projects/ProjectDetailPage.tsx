@@ -9,10 +9,10 @@ import {
   TabsTrigger,
 } from '@packages/ui';
 import { ChevronLeft } from 'lucide-react';
-import { useProjectSummary } from '../api/hooks';
-import { ProjectHeaderStrip } from '../components/ProjectHeaderStrip';
-import { ProjectOverview } from '../components/ProjectOverview';
-import { MilestonesAccordion } from '../components/MilestonesAccordion';
+import { useProjectSummary } from '../../../../api/hooks';
+import { ProjectHeaderStrip } from './components/ProjectHeaderStrip';
+import { ProjectOverview } from './components/ProjectOverview';
+import { MilestonesAccordion } from './components/MilestonesAccordion';
 
 export function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();

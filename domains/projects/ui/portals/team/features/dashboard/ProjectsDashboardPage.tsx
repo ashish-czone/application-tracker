@@ -7,10 +7,10 @@ import {
   Skeleton,
 } from '@packages/ui';
 import { Plus } from 'lucide-react';
-import { useProjectsDashboard } from '../api/hooks';
-import { ProjectCard } from '../components/ProjectCard';
-import { QuickCreateDialog } from '../components/QuickCreateDialog';
-import type { ProjectStatus } from '../types';
+import { useProjectsDashboard } from '../../../../api/hooks';
+import { ProjectCard } from './components/ProjectCard';
+import { QuickCreateDialog } from './components/QuickCreateDialog';
+import type { ProjectStatus } from '../../../../types';
 
 const STATUS_FILTERS: { value: ProjectStatus | 'all'; label: string }[] = [
   { value: 'all',       label: 'All' },

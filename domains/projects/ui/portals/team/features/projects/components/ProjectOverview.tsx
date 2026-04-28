@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle, Progress } from '@packages/ui';
 import { Flag, ListChecks, CheckCircle2 } from 'lucide-react';
-import type { ProjectSummary } from '../types';
+import type { ProjectSummary } from '../../../../../types';
 
 function Stat({ icon: Icon, label, value }: { icon: typeof Flag; label: string; value: string | number }) {
   return (

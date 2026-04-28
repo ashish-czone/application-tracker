@@ -10,9 +10,9 @@ import {
   Skeleton,
 } from '@packages/ui';
 import { CalendarDays, ChevronRight } from 'lucide-react';
-import { useMyTasks, useTransitionTaskFromMyList } from '../api/hooks';
-import { TaskStatusCell } from '../components/TaskStatusCell';
-import type { MyTaskRow, TaskStatus } from '../types';
+import { useMyTasks, useTransitionTaskFromMyList } from '../../../../api/hooks';
+import { TaskStatusCell } from '../../../../components/TaskStatusCell';
+import type { MyTaskRow, TaskStatus } from '../../../../types';
 
 interface ProjectGroup {
   projectId: string;

@@ -11,9 +11,9 @@ import { MILESTONES_UI_CONFIG } from './entity-configs/milestones.ui';
 import { FEATURES_UI_CONFIG } from './entity-configs/features.ui';
 import { TASKS_UI_CONFIG } from './entity-configs/tasks.ui';
 
-import { ProjectsDashboardPage } from './pages/ProjectsDashboardPage';
-import { ProjectDetailPage } from './pages/ProjectDetailPage';
-import { MyTasksPage } from './pages/MyTasksPage';
+import { ProjectsDashboardPage } from './portals/team/features/dashboard/ProjectsDashboardPage';
+import { ProjectDetailPage } from './portals/team/features/projects/ProjectDetailPage';
+import { MyTasksPage } from './portals/team/features/my-tasks/MyTasksPage';
 import { taskStatusInlineRenderer } from './components/TaskStatusInlineRenderer';
 
 export const projectsEntityUIConfigs: EntityUIConfig[] = [

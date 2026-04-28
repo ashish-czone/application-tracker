@@ -18,15 +18,15 @@ import {
   useDeleteFeature,
   useDeleteTask,
   useTransitionTask,
-} from '../api/hooks';
-import { TaskStatusCell } from './TaskStatusCell';
+} from '../../../../../api/hooks';
+import { TaskStatusCell } from '../../../../../components/TaskStatusCell';
 import type {
   ProjectSummary,
   ProjectSummaryFeature,
   ProjectSummaryMilestone,
   ProjectSummaryTask,
   TaskStatus,
-} from '../types';
+} from '../../../../../types';
 
 const FEATURE_STATUS_LABEL: Record<string, string> = {
   backlog:     'Backlog',
