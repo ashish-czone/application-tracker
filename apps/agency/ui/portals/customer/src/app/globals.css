@@ -57,14 +57,6 @@
   --radius: 0.5rem;
   --radius-lg: 0.75rem;
   --radius-xl: 1rem;
-
-  /* Compat aliases — kept while remaining blocks/footer migrate off the
-     old editorial tokens. The cleanup commit at the end of this redesign
-     removes them along with .text-mega and the marquee keyframes. */
-  --surface-inverse: 240 6% 10%;
-  --surface-inverse-foreground: 0 0% 100%;
-  --hairline: 240 6% 90%;
-  --font-display: var(--font-sans);
 }
 
 @theme inline {
@@ -81,7 +73,6 @@
 
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
-  --font-display: var(--font-display);
 
   --radius-sm: var(--radius-sm);
   --radius: var(--radius);
@@ -160,27 +151,6 @@ body {
   letter-spacing: 0;
   text-transform: none;
   color: hsl(var(--muted-foreground));
-}
-
-/* Compat — kept while StatsRow/Hero migrate off editorial styling.
-   Removed in the cleanup commit at the end of this redesign. */
-.text-mega {
-  font-family: var(--font-sans);
-  font-size: var(--font-size-6xl);
-  line-height: 1;
-  letter-spacing: -0.04em;
-  font-weight: 600;
-}
-
-/* Marquee keyframes kept while AwardsStrip and SiteFooter migrate off
-   the editorial Marquee component. Removed in cleanup. */
-@keyframes agency-marquee-left {
-  from { transform: translateX(0); }
-  to { transform: translateX(-100%); }
-}
-@keyframes agency-marquee-right {
-  from { transform: translateX(-100%); }
-  to { transform: translateX(0); }
 }
 
 /* Subtle radial gradient used behind hero. Indigo bloom centred top,
