@@ -68,8 +68,7 @@ export class WorkflowEngineService {
     }
 
     if (transition.requiredPermissions.length > 0 && context?.actorId) {
-      const userPermissions = await this.rbacService.getPermissionsForUser(context.actorId, 'admin');
-      const missing = transition.requiredPermissions.filter((p) => !userPermissions[p]);
+      const missing = await this.findMissingPermissions(context.actorId, transition.requiredPermissions);
       if (missing.length > 0) {
         return { valid: false, transitionId: transition.id, missingPermissions: missing };
       }
@@ -113,8 +112,7 @@ export class WorkflowEngineService {
 
     let missingPermissions: string[] = [];
     if (transition.requiredPermissions.length > 0 && params.actorId) {
-      const userPermissions = await this.rbacService.getPermissionsForUser(params.actorId, 'admin');
-      missingPermissions = transition.requiredPermissions.filter((p) => !userPermissions[p]);
+      missingPermissions = await this.findMissingPermissions(params.actorId, transition.requiredPermissions);
     }
 
     return {
@@ -291,5 +289,19 @@ export class WorkflowEngineService {
       .limit(1);
 
     return latest?.toState ?? null;
+  }
+
+  /**
+   * Returns the subset of `required` that the actor does not hold. Honors
+   * the `*` wildcard the same way `RbacGuard` does — a holder of `*` passes
+   * every permission check across the platform, including transition gates.
+   * Without this, a Super Admin (whose role grants only `*`) would fail the
+   * transition's `requiredPermissions` lookup because the map has no entry
+   * for the named permission.
+   */
+  private async findMissingPermissions(actorId: string, required: string[]): Promise<string[]> {
+    const userPermissions = await this.rbacService.getPermissionsForUser(actorId, 'admin');
+    if ('*' in userPermissions) return [];
+    return required.filter((p) => !userPermissions[p]);
   }
 }
