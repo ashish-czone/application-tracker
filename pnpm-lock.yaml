@@ -1295,6 +1295,9 @@ importers:
       '@packages/database':
         specifier: workspace:*
         version: link:../../packages/core/database
+      '@packages/directory':
+        specifier: workspace:*
+        version: link:../../packages/addons/directory/api
       '@packages/document-templates':
         specifier: workspace:*
         version: link:../../packages/addons/document-templates/api
@@ -2811,6 +2814,9 @@ importers:
       '@nestjs/common':
         specifier: ^11.0.0
         version: 11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/swagger':
+        specifier: ^11.0.0
+        version: 11.2.6(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)
       '@packages/audit':
         specifier: workspace:*
         version: link:../../../platform/audit/api

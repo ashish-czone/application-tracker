@@ -21,11 +21,6 @@ export const CLIENTS_CONFIG: EntityConfig = {
 
   fieldMeta: {
     clientName: { label: 'Client Name', section: 'basic', sortOrder: 0, isQuickCreate: true, isSystem: true, maxLength: 255, cellRenderer: 'AvatarNameCell' },
-    parentClientId: {
-      label: 'Parent Client', section: 'basic', sortOrder: 1,
-      fieldType: 'lookup', lookupEntity: 'clients', lookupLabelField: 'clientName',
-      lookupSearchFields: ['clientName'],
-    },
     contactNumber: { label: 'Contact Number', section: 'basic', sortOrder: 2, isQuickCreate: true, fieldType: 'phone' },
     website: { label: 'Website', section: 'basic', sortOrder: 4, isQuickCreate: true, fieldType: 'url' },
     industry: {
@@ -71,7 +66,7 @@ export const CLIENTS_CONFIG: EntityConfig = {
   listFields: ['clientName', 'industry', 'contactsCount', 'jobOpeningsCount'],
 
   sections: [
-    { name: 'Client Information', fields: ['clientName', 'parentClientId', 'contactNumber', 'website', 'industry', 'about', 'source'] },
+    { name: 'Client Information', fields: ['clientName', 'contactNumber', 'website', 'industry', 'about', 'source'] },
     { name: 'Billing Address', fields: ['billingStreet', 'billingCity', 'billingProvince', 'billingCode', 'billingCountry'] },
     { name: 'Shipping Address', fields: ['shippingStreet', 'shippingCity', 'shippingProvince', 'shippingCode', 'shippingCountry'] },
   ],

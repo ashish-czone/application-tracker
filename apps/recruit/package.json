@@ -45,6 +45,7 @@
     "@packages/media": "workspace:*",
     "@packages/notification-channels": "workspace:*",
     "@packages/automations": "workspace:*",
+    "@packages/directory": "workspace:*",
     "@packages/notifications": "workspace:*",
     "@packages/queue": "workspace:*",
     "@packages/rbac": "workspace:*",

@@ -1,9 +1,15 @@
 import { pgTable, text, boolean, timestamp, index } from 'drizzle-orm/pg-core';
 import { randomUUID } from 'crypto';
 
-export const contacts = pgTable('contacts', {
+export const contacts = pgTable('recruit_contacts', {
   id: text('id').primaryKey().$defaultFn(() => randomUUID()),
-  // Contact Information
+  // Identity FK to directory.people. Nullable until R-3 backfill is complete
+  // and old identity columns are dropped.
+  personId: text('person_id'),
+  // Legacy identity columns — read by services until R-2 rewires to directory,
+  // dropped in R-3 when this table is renamed to recruit_contact_extras and
+  // collapses to recruit-only overflow (mobile, secondary email, addresses,
+  // social, opt-out).
   firstName: text('first_name'),
   lastName: text('last_name').notNull(),
   clientId: text('client_id'),
@@ -40,8 +46,9 @@ export const contacts = pgTable('contacts', {
   deletedAt: timestamp('deleted_at', { withTimezone: true, mode: 'date' }),
   deletedBy: text('deleted_by'),
 }, (table) => [
-  index('contacts_client_id_idx').on(table.clientId),
-  index('contacts_email_idx').on(table.email),
-  index('contacts_last_name_idx').on(table.lastName),
-  index('contacts_created_by_idx').on(table.createdBy),
+  index('recruit_contacts_client_id_idx').on(table.clientId),
+  index('recruit_contacts_email_idx').on(table.email),
+  index('recruit_contacts_last_name_idx').on(table.lastName),
+  index('recruit_contacts_created_by_idx').on(table.createdBy),
+  index('recruit_contacts_person_id_idx').on(table.personId),
 ]);

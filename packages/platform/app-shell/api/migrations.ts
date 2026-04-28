@@ -38,6 +38,7 @@ const OPT_IN_PACKAGE_FOLDERS = {
   '@packages/tasks': 'packages/addons/tasks/api',
   '@packages/notes': 'packages/addons/notes/api',
   '@packages/attachments': 'packages/addons/attachments/api',
+  '@packages/directory': 'packages/addons/directory/api',
   '@packages/evaluations': 'packages/addons/evaluations/api',
   '@packages/document-templates': 'packages/addons/document-templates/api',
   '@packages/orders-billing': 'packages/addons/orders-billing',
