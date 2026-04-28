@@ -27,7 +27,11 @@ export async function fetchPageBySlug(
   slug: string,
   options: { revalidate?: number } = {},
 ): Promise<PublicPageResponse | null> {
-  const res = await fetch(`${API_BASE}/api/v1/public/pages/${encodeURIComponent(slug)}`, {
+  // Encode each segment so slashes stay structural — `services/implementation`
+  // hits the API as `/services/implementation`, not `/services%2Fimplementation`.
+  // The backend routes 2-segment paths to the nested-slug handler.
+  const path = slug.split('/').map(encodeURIComponent).join('/');
+  const res = await fetch(`${API_BASE}/api/v1/public/pages/${path}`, {
     next: { revalidate: options.revalidate ?? 60, tags: [`page:${slug}`] },
   });
   if (res.status === 404) return null;

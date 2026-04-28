@@ -28,6 +28,23 @@ export class PagesPublicController {
     return this.service.getBySlug(slug);
   }
 
+  /**
+   * Two-segment slugs (e.g. `services/implementation`). Stored in the
+   * pages table as a single slug `parent/child`; this route stitches
+   * the URL segments back into that shape so the customer site can
+   * use natural URLs like `/services/implementation`. Limited to two
+   * levels by design — deeper hierarchies are an entity-engine job.
+   */
+  @Public()
+  @Get('public/pages/:parentSlug/:childSlug')
+  @ApiOperation({ summary: 'Fetch a published nested landing page (unauthenticated)' })
+  getByNestedSlug(
+    @Param('parentSlug') parent: string,
+    @Param('childSlug') child: string,
+  ): Promise<PublicPageResponse> {
+    return this.service.getBySlug(`${parent}/${child}`);
+  }
+
   @Put('pages/:pageId/sections\\:reorder')
   @RequirePermission('pages.update')
   @HttpCode(HttpStatus.NO_CONTENT)

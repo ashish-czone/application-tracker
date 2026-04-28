@@ -7,11 +7,15 @@ import { JsonLd } from '@/components/JsonLd';
 const SITE_URL = process.env.SITE_URL ?? 'http://localhost:3100';
 
 interface RouteParams {
-  params: Promise<{ slug: string }>;
+  // Catch-all: `/services/implementation` → ['services', 'implementation'].
+  // Joined back into a path-style slug ('services/implementation') so the
+  // pages table stores the full path as a single string.
+  params: Promise<{ slug: string[] }>;
 }
 
 export async function generateMetadata({ params }: RouteParams): Promise<Metadata> {
-  const { slug } = await params;
+  const { slug: parts } = await params;
+  const slug = parts.join('/');
   const result = await fetchPageBySlug(slug);
   if (!result) return { title: 'Not found' };
   const { page } = result;
@@ -36,7 +40,8 @@ export async function generateMetadata({ params }: RouteParams): Promise<Metadat
 }
 
 export default async function SlugPage({ params }: RouteParams) {
-  const { slug } = await params;
+  const { slug: parts } = await params;
+  const slug = parts.join('/');
   const result = await fetchPageBySlug(slug);
   if (!result) notFound();
 
