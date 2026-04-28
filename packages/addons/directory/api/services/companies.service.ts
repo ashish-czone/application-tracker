@@ -217,6 +217,22 @@ export class CompaniesService {
         .limit(1);
       if (row) return row;
     }
+    // Name fallback. Excludes merged rows so a loser doesn't shadow the winner;
+    // orders deleted last so a live "Acme Corp" beats a soft-deleted one of
+    // the same name (caller revives the deleted match if that's all we find).
+    // Guarded at the DB level by companies_name_lower_uniq partial index.
+    const trimmedName = input.name.trim();
+    if (trimmedName) {
+      const [row] = await db
+        .select()
+        .from(companies)
+        .where(
+          sql`lower(trim(${companies.name})) = lower(${trimmedName}) AND ${companies.mergedIntoId} IS NULL`,
+        )
+        .orderBy(sql`${companies.deletedAt} ASC NULLS FIRST`)
+        .limit(1);
+      if (row) return row;
+    }
     return null;
   }
 
