@@ -1,5 +1,5 @@
 import type { SectionData } from '@domains/agency-contract';
-import type { PublicMenuResponse } from '@domains/agency-ui/menus/frontend';
+import type { PublicMenuResponse } from '@domains/agency-ui/portals/customer';
 import { DEFAULT_SITE_THEME, type SiteTheme } from '@domains/agency-contract';
 
 /**

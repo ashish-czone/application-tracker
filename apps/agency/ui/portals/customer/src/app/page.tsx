@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { PageRenderer } from '@domains/agency-ui/blocks';
+import { PageRenderer } from '@domains/agency-ui/portals/customer';
 import { fetchPageBySlug } from '../lib/api';
 
 /**

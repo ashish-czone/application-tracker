@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { Container } from './layout/Container';
 import { fetchMenuBySlug, fetchSiteSettings, type SiteSettings } from '@/lib/api';
-import type { PublicMenuItemDto } from '@domains/agency-ui/menus/frontend';
+import type { PublicMenuItemDto } from '@domains/agency-ui/portals/customer';
 
 /**
  * Site footer. Branding, contact, and social are read from public

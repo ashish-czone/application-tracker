@@ -11,9 +11,9 @@ import { MILESTONES_UI_CONFIG } from './entity-configs/milestones.ui';
 import { FEATURES_UI_CONFIG } from './entity-configs/features.ui';
 import { TASKS_UI_CONFIG } from './entity-configs/tasks.ui';
 
-import { ProjectsDashboardPage } from './pages/ProjectsDashboardPage';
-import { ProjectDetailPage } from './pages/ProjectDetailPage';
-import { MyTasksPage } from './pages/MyTasksPage';
+import { ProjectsDashboardPage } from './portals/team/features/dashboard/ProjectsDashboardPage';
+import { ProjectDetailPage } from './portals/team/features/projects/ProjectDetailPage';
+import { MyTasksPage } from './portals/team/features/my-tasks/MyTasksPage';
 import { taskStatusInlineRenderer } from './components/TaskStatusInlineRenderer';
 
 export const projectsEntityUIConfigs: EntityUIConfig[] = [
@@ -71,24 +71,29 @@ export {
   useUpdateProject,
   useDeleteProject,
   useTransitionProject,
+} from './hooks/useProjectsApi';
+export {
   useMilestones,
   useCreateMilestone,
   useUpdateMilestone,
   useDeleteMilestone,
   useTransitionMilestone,
+} from './hooks/useMilestonesApi';
+export {
   useFeatures,
   useCreateFeature,
   useUpdateFeature,
   useDeleteFeature,
   useTransitionFeature,
+} from './hooks/useFeaturesApi';
+export {
   useTasks,
-  useMyTasks,
   useCreateTask,
   useUpdateTask,
   useDeleteTask,
   useTransitionTask,
-  useTransitionTaskFromMyList,
-} from './api/hooks';
+} from './hooks/useTasksApi';
+export { useMyTasks, useTransitionTaskFromMyList } from './hooks/useMyTasksApi';
 
 // Types
 export type {

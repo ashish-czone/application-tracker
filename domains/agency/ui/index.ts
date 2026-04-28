@@ -1,8 +1,11 @@
-export * from './blocks';
-export * from './pages';
-// Re-export menus, omitting `Paginated` (also exported from `./pages` —
-// the two list shapes are structurally identical; consumers can grab
-// `Paginated` from either side via the explicit sub-path if they need to).
+export * from './components/blocks';
+export * from './portals/admin/features/pages';
+export * from './portals/customer/features/pages';
+
+// Menus split between admin (editor) and customer (public renderer); we
+// re-export both halves explicitly here. `Paginated` is omitted because
+// pages already exports a structurally identical type — consumers can
+// grab it from the explicit pages sub-path if they need it.
 export {
   createMenusApi,
   type MenusUiApi,
@@ -29,6 +32,9 @@ export {
   type UpdateMenuItemInput,
   type MoveMenuItemInput,
   type PageLite,
+} from './portals/admin/features/menus';
+
+export {
   MenuRenderer,
   type MenuRendererProps,
   type MenuLinkComponent,
@@ -36,7 +42,7 @@ export {
   type PublicMenuItemDto,
   type PublicLinkType,
   type PublicTarget,
-} from './menus';
+} from './portals/customer/features/menus';
 
 import type { EntityUIConfig } from '@packages/entity-engine-ui';
 import { MENUS_UI_CONFIG } from './entity-configs/menus.ui';
