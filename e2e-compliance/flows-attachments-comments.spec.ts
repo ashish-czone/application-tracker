@@ -17,6 +17,7 @@ import { createFilingComment, listFilingComments } from './fixtures/notes';
 interface AuditLogRow {
   id: string;
   action: string;
+  eventName: string;
   entityType: string;
   entityId: string;
 }
@@ -71,10 +72,10 @@ test.describe('Flow: attachments + comments on filings (US-10.x)', () => {
     });
     expect(uploaded.entityType).toBe('compliance-filings');
     expect(uploaded.entityId).toBe(filing.id);
-    expect(uploaded.fileName).toBe('challan-q1.csv');
-    expect(uploaded.fileSize).toBe(new TextEncoder().encode(csv).byteLength);
+    expect(uploaded.originalName).toBe('challan-q1.csv');
+    expect(uploaded.size).toBe(new TextEncoder().encode(csv).byteLength);
     expect(uploaded.mimeType).toBe('text/csv');
-    expect(uploaded.uploadedById, 'uploader stamped from JWT').toBeTruthy();
+    expect(uploaded.uploadedBy, 'uploader stamped from JWT').toBeTruthy();
 
     const list = await listFilingAttachments(filing.id);
     expect(list.data.some((a) => a.id === uploaded.id), 'attachment in listing').toBe(true);
@@ -94,17 +95,17 @@ test.describe('Flow: attachments + comments on filings (US-10.x)', () => {
     const after = await listFilingAttachments(filing.id);
     expect(after.data.some((a) => a.id === uploaded.id), 'deleted attachment removed from listing').toBe(false);
 
-    // The attachments addon emits an event the audit listener subscribes
-    // to. Poll the filing's audit trail for a delete-shaped row.
+    // The attachments addon writes audit rows keyed on the attachment
+    // itself (entityType='attachments', entityId=<attachment-id>) with
+    // targetEntityType/targetEntityId pointing at the parent filing —
+    // poll the attachment's audit trail for a delete-shaped row.
     await expect
       .poll(async () => {
         const audit = await apiClient.get<AuditList>(
-          `/audit-logs?entityType=compliance-filings&entityId=${filing.id}`,
+          `/audit-logs?entityType=attachments&entityId=${uploaded.id}`,
         );
-        return audit.data.some((row) =>
-          /attachment/i.test(row.eventName ?? '') ||
-          /delete|remove/i.test(row.action ?? '') ||
-          (row as { targetEntityId?: string }).targetEntityId === uploaded.id,
+        return audit.data.some(
+          (row) => /delete|remove/i.test(row.action ?? '') || /deleted/i.test(row.eventName ?? ''),
         );
       }, { timeout: 5_000, intervals: [200, 400, 800] })
       .toBe(true);
