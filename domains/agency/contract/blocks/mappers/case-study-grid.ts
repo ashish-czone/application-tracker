@@ -6,6 +6,7 @@ export interface CaseStudyRecord {
   slug: string;
   client: string;
   industry: string | null;
+  year: number | null;
   summary: string;
   heroImageUrl: string | null;
 }
@@ -23,6 +24,8 @@ export interface CaseStudyGridEntries extends Record<string, unknown> {
     title: string;
     href: string;
     imageUrl: string;
+    industry: string | null;
+    year: number | null;
   }>;
 }
 
@@ -37,6 +40,8 @@ export const caseStudyGridMapper = defineMapper<CaseStudyRecord, CaseStudyGridEn
       // mapper owns URL shape — entities stay UI-agnostic.
       href: `/work/${r.slug}`,
       imageUrl: r.heroImageUrl ?? '',
+      industry: r.industry,
+      year: r.year,
     })),
   }),
 });
