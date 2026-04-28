@@ -2806,6 +2806,55 @@ importers:
         specifier: ^3.0.0
         version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0)
 
+  packages/addons/directory/api:
+    dependencies:
+      '@nestjs/common':
+        specifier: ^11.0.0
+        version: 11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@packages/audit':
+        specifier: workspace:*
+        version: link:../../../platform/audit/api
+      '@packages/auth-core':
+        specifier: workspace:*
+        version: link:../../../platform/auth-core
+      '@packages/database':
+        specifier: workspace:*
+        version: link:../../../core/database
+      '@packages/events':
+        specifier: workspace:*
+        version: link:../../../core/events
+      '@packages/logger':
+        specifier: workspace:*
+        version: link:../../../core/logger
+      '@packages/rbac':
+        specifier: workspace:*
+        version: link:../../../platform/rbac/api
+      drizzle-orm:
+        specifier: ^0.45.1
+        version: 0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3))
+      zod:
+        specifier: ^3.25.0
+        version: 3.25.76
+    devDependencies:
+      '@packages/platform-testing':
+        specifier: workspace:*
+        version: link:../../../platform/testing
+      '@types/supertest':
+        specifier: ^6.0.2
+        version: 6.0.3
+      drizzle-kit:
+        specifier: ^0.31.9
+        version: 0.31.9
+      supertest:
+        specifier: ^7.0.0
+        version: 7.2.2
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0)
+
   packages/addons/document-templates/api:
     dependencies:
       '@nestjs/common':
