@@ -4,7 +4,6 @@ import { DatabaseService, sql } from '@packages/database';
 import type { SeedSource } from '@packages/database/seeder';
 import { platformSystemSeedSources } from '@packages/app-shell/seeds';
 import { orgUnitsSystemSeedSources } from '@packages/org-units/seeds/system';
-import { tasksSystemSeedSources } from '@packages/tasks/seeds/system';
 import { notesSystemSeedSources } from '@packages/notes/seeds/system';
 import { ScheduleScanner, automationSentLog } from '@packages/automations';
 import { notifications } from '@packages/notification-channels';
@@ -195,7 +194,6 @@ export class TestHooksService {
     const sources: SeedSource[] = [
       ...platformSystemSeedSources(),
       ...orgUnitsSystemSeedSources(),
-      ...tasksSystemSeedSources(),
       ...notesSystemSeedSources(),
       ...complianceSystemSeedSources(),
       complianceE2eAdminSeedSource(),

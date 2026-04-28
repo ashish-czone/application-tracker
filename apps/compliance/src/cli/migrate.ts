@@ -19,7 +19,6 @@ async function main() {
     packageMigration(workspaceRoot, '@packages/eav-attributes'),
     packageMigration(workspaceRoot, '@packages/entity-relations'),
     packageMigration(workspaceRoot, '@packages/org-units'),
-    packageMigration(workspaceRoot, '@packages/tasks'),
     packageMigration(workspaceRoot, '@packages/notes'),
     packageMigration(workspaceRoot, '@packages/attachments'),
     packageMigration(workspaceRoot, '@packages/evaluations'),
