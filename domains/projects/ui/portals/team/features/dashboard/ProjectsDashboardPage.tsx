@@ -7,7 +7,7 @@ import {
   Skeleton,
 } from '@packages/ui';
 import { Plus } from 'lucide-react';
-import { useProjectsDashboard } from '../../../../api/hooks';
+import { useProjectsDashboard } from '../../../../hooks/useProjectsApi';
 import { ProjectCard } from './components/ProjectCard';
 import { QuickCreateDialog } from './components/QuickCreateDialog';
 import type { ProjectStatus } from '../../../../types';

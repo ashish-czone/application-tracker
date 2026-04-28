@@ -10,15 +10,9 @@ import {
   Progress,
 } from '@packages/ui';
 import { CalendarDays, ChevronRight, Plus, Trash2 } from 'lucide-react';
-import {
-  useCreateMilestone,
-  useCreateFeature,
-  useCreateTask,
-  useDeleteMilestone,
-  useDeleteFeature,
-  useDeleteTask,
-  useTransitionTask,
-} from '../../../../../api/hooks';
+import { useCreateMilestone, useDeleteMilestone } from '../../../../../hooks/useMilestonesApi';
+import { useCreateFeature, useDeleteFeature } from '../../../../../hooks/useFeaturesApi';
+import { useCreateTask, useDeleteTask, useTransitionTask } from '../../../../../hooks/useTasksApi';
 import { TaskStatusCell } from '../../../../../components/TaskStatusCell';
 import type {
   ProjectSummary,

@@ -9,7 +9,7 @@ import {
   TabsTrigger,
 } from '@packages/ui';
 import { ChevronLeft } from 'lucide-react';
-import { useProjectSummary } from '../../../../api/hooks';
+import { useProjectSummary } from '../../../../hooks/useProjectsApi';
 import { ProjectHeaderStrip } from './components/ProjectHeaderStrip';
 import { ProjectOverview } from './components/ProjectOverview';
 import { MilestonesAccordion } from './components/MilestonesAccordion';

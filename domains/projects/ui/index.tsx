@@ -71,24 +71,29 @@ export {
   useUpdateProject,
   useDeleteProject,
   useTransitionProject,
+} from './hooks/useProjectsApi';
+export {
   useMilestones,
   useCreateMilestone,
   useUpdateMilestone,
   useDeleteMilestone,
   useTransitionMilestone,
+} from './hooks/useMilestonesApi';
+export {
   useFeatures,
   useCreateFeature,
   useUpdateFeature,
   useDeleteFeature,
   useTransitionFeature,
+} from './hooks/useFeaturesApi';
+export {
   useTasks,
-  useMyTasks,
   useCreateTask,
   useUpdateTask,
   useDeleteTask,
   useTransitionTask,
-  useTransitionTaskFromMyList,
-} from './api/hooks';
+} from './hooks/useTasksApi';
+export { useMyTasks, useTransitionTaskFromMyList } from './hooks/useMyTasksApi';
 
 // Types
 export type {

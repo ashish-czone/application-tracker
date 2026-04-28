@@ -1,5 +1,5 @@
 import type { ColumnRendererRegistration } from '@packages/entity-engine-ui';
-import { useTransitionTaskFromMyList } from '../api/hooks';
+import { useTransitionTaskFromMyList } from '../hooks/useMyTasksApi';
 import { TaskStatusCell } from './TaskStatusCell';
 import type { TaskStatus } from '../types';
 
