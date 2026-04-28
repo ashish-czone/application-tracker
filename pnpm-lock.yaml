@@ -2305,6 +2305,9 @@ importers:
       '@packages/database':
         specifier: workspace:*
         version: link:../../../packages/core/database
+      '@packages/directory':
+        specifier: workspace:*
+        version: link:../../../packages/addons/directory/api
       '@packages/document-templates':
         specifier: workspace:*
         version: link:../../../packages/addons/document-templates/api
