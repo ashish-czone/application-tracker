@@ -90,7 +90,7 @@ export function HeaderShell({ siteName, menuItems }: HeaderShellProps) {
       >
         <Link
           href="/"
-          className="font-display text-xl font-semibold tracking-tight"
+          className="text-base md:text-lg font-semibold tracking-[-0.02em]"
           aria-label={`${siteName} home`}
         >
           {siteName}
