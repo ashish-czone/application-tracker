@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { eq, and, isNull, sql } from 'drizzle-orm';
+import { eq, and, isNull, inArray, sql } from 'drizzle-orm';
 import { DatabaseService } from '@packages/database';
 import { projects } from '../schema/projects';
 import { milestones } from '../schema/milestones';
@@ -202,7 +202,7 @@ export class DashboardService {
           .where(
             and(
               isNull(features.deletedAt),
-              sql`${features.milestoneId} = ANY(${milestoneIds})`,
+              inArray(features.milestoneId, milestoneIds),
             ),
           )
           .orderBy(features.sortOrder, features.id);
@@ -217,7 +217,7 @@ export class DashboardService {
           .where(
             and(
               isNull(tasks.deletedAt),
-              sql`${tasks.featureId} = ANY(${featureIds})`,
+              inArray(tasks.featureId, featureIds),
             ),
           )
           .orderBy(tasks.sortOrder, tasks.id);
