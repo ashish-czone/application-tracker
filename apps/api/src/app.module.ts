@@ -61,6 +61,7 @@ import { validate } from './config/env.validation';
     QueueModule.registerAsync({
       useFactory: (config: ConfigService) => ({
         redisUrl: config.get<string>('REDIS_URL')!,
+        prefix: config.get<string>('BULL_QUEUE_PREFIX'),
       }),
       inject: [ConfigService],
     }),

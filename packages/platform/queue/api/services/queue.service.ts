@@ -10,6 +10,7 @@ export class QueueService implements OnModuleDestroy {
   private readonly queues = new Map<string, Queue>();
   private readonly workers = new Map<string, Worker>();
   private readonly connection: Record<string, unknown>;
+  private readonly prefix: string | undefined;
   private workerEnabled: boolean;
 
   constructor(
@@ -25,6 +26,7 @@ export class QueueService implements OnModuleDestroy {
       ...(url.username && { username: decodeURIComponent(url.username) }),
       ...(url.pathname && url.pathname.length > 1 && { db: Number(url.pathname.slice(1)) }),
     };
+    this.prefix = this.config.prefix;
     this.workerEnabled = process.env.WORKER_ENABLED !== 'false';
   }
 
@@ -41,7 +43,7 @@ export class QueueService implements OnModuleDestroy {
       return;
     }
 
-    const queue = new Queue(name, { connection: this.connection });
+    const queue = new Queue(name, { connection: this.connection, ...(this.prefix && { prefix: this.prefix }) });
     this.queues.set(name, queue);
 
     if (this.workerEnabled) {
@@ -73,7 +75,7 @@ export class QueueService implements OnModuleDestroy {
             throw error;
           }
         },
-        { connection: this.connection },
+        { connection: this.connection, ...(this.prefix && { prefix: this.prefix }) },
       );
 
       worker.on('error', (err) => {
