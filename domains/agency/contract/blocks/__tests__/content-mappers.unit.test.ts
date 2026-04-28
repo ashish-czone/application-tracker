@@ -26,7 +26,8 @@ describe('content mappers', () => {
     expect(mapperRegistry.has('client-logos', 'client-logos-row')).toBe(true);
     expect(mapperRegistry.has('value-props', 'value-props-grid')).toBe(true);
     expect(mapperRegistry.has('stats', 'stats-row')).toBe(true);
-    expect(contentMappers).toHaveLength(7);
+    expect(mapperRegistry.has('case-studies', 'case-study-grid')).toBe(true);
+    expect(contentMappers).toHaveLength(8);
   });
 
   it('testimonialsGridMapper reshapes records into { items }', () => {
