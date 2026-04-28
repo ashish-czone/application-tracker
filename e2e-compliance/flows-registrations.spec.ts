@@ -30,7 +30,12 @@ interface FilingRow {
  * spec via `createClientRegistration`.
  */
 test.describe('Flow: client registrations (US-2.x)', () => {
-  test.beforeAll(async () => {
+  // Each test creates its own team + handler against the system-seeded GST law.
+  // Without a per-test reset, handler rows accumulate across tests; the
+  // I19 resolver treats two global-primary handlers for the same law as
+  // ambiguous, which surfaces as NO_RESOLVABLE_ASSIGNEE on subsequent
+  // registration creates. `reset-state.ts` documents this exact pattern.
+  test.beforeEach(async () => {
     await resetState();
   });
 
@@ -92,12 +97,15 @@ test.describe('Flow: client registrations (US-2.x)', () => {
     await createLawHandler({ lawId: law.id, orgEntityId: team.id });
     const client = await createClient();
     const rule = await createComplianceRule({ lawId: law.id });
-    await createClientRegistration(client.id, law.id);
+    // Pin registration's effectiveFrom in the past so generator runs with
+    // past asOf (below) see the registration as active. Date literals here
+    // must all be past-or-today — `deactivatedAt` is validated as such.
+    await createClientRegistration(client.id, law.id, { effectiveFrom: '2025-01-01' });
 
-    // First sweep: rolling-12-month materialisation as of 2026-04-15
-    // produces filings whose periodStart spans roughly 2026-04 through
-    // 2027-03 (12-month horizon).
-    await runGenerator('2026-04-15T02:00:00Z');
+    // First sweep: rolling-12-month materialisation as of 2025-04-15
+    // produces filings whose periodStart spans roughly 2025-04 through
+    // 2026-03 (12-month horizon).
+    await runGenerator('2025-04-15T02:00:00Z');
     const beforeDeactivation = await apiClient.get<{ data: FilingRow[] }>(`/compliance-filings?limit=200`);
     const ourBefore = beforeDeactivation.data.filter(
       (f) => f.clientId === client.id && f.ruleId === rule.id,
@@ -106,17 +114,19 @@ test.describe('Flow: client registrations (US-2.x)', () => {
 
     const periodStartsBefore = new Set(ourBefore.map((f) => f.periodStart));
 
-    // Deactivate as of 2026-07-01. Past filings (period < 2026-07-01)
-    // remain non-terminal; no new filings should be emitted for periods
-    // starting 2026-07-01 or later on subsequent generator runs.
+    // Deactivate at end of June 2025. Implementation uses strict
+    // `periodStart > deactivatedAt` for auto-cancellation, so picking a date
+    // BETWEEN periods (not on a period boundary) keeps the test intent clear:
+    // June period stays active (it started <= cutoff), July onwards are
+    // cancelled. Past filings (period <= 2025-06-30) remain non-terminal.
     await deactivateRegistration(client.id, law.id, {
-      deactivatedAt: '2026-07-01',
+      deactivatedAt: '2025-06-30',
     });
 
     // Subsequent generator run at a later asOf — horizon would normally
     // advance the materialisation forward. With the registration
     // deactivated, no new filings should be added for post-cutoff periods.
-    await runGenerator('2026-08-15T02:00:00Z');
+    await runGenerator('2025-08-15T02:00:00Z');
     const afterDeactivation = await apiClient.get<{ data: FilingRow[] }>(`/compliance-filings?limit=200`);
     const ourAfter = afterDeactivation.data.filter(
       (f) => f.clientId === client.id && f.ruleId === rule.id,
@@ -130,8 +140,14 @@ test.describe('Flow: client registrations (US-2.x)', () => {
       ).toBe(true);
     }
 
-    // No new post-cutoff filings.
-    const postCutoff = ourAfter.filter((f) => f.periodStart >= '2026-07-01');
+    // No new non-terminal post-cutoff filings. Pre-existing post-cutoff
+    // filings from the first sweep are cancelled by deactivation (terminal),
+    // which is the correct outcome — they're no longer actionable. Filter
+    // those out; what we're asserting is "the second sweep didn't materialise
+    // any fresh, actionable filings for periods after the cutoff".
+    const postCutoff = ourAfter.filter(
+      (f) => f.periodStart > '2025-06-30' && f.status !== 'cancelled',
+    );
     expect(
       postCutoff,
       'no filings should generate for periods after deactivatedAt',
