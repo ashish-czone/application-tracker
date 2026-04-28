@@ -5,10 +5,10 @@ export interface Attachment {
   id: string;
   entityType: string;
   entityId: string;
-  fileName: string;
-  fileSize: number;
+  originalName: string;
+  size: number;
   mimeType: string;
-  uploadedById: string;
+  uploadedBy: string;
   createdAt: string;
 }
 
