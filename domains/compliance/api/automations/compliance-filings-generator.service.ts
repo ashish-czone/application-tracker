@@ -196,6 +196,22 @@ export class ComplianceFilingsGeneratorService {
         // further obligation for this period.
         if (reg.deactivatedAt && this.toIsoDate(reg.deactivatedAt) <= periodStart) continue;
 
+        // Q6 race guard: callers (the J4 registration-created listener in
+        // particular) snapshot `getRegistrationsForLaw` at entry, but the
+        // client may transition `active → dormant` mid-flight. Re-check the
+        // current status before each create so the dormancy cascade cannot
+        // miss filings that this loop is about to materialise. Without this,
+        // the cascade only cancels what already exists at transition time
+        // and the in-flight loop keeps adding pending rows for the now-
+        // dormant client.
+        if (!(await this.registrationService.isClientActive(reg.clientId))) {
+          this.logger.debug('Client no longer active — skipping further generation', {
+            ruleId: rule.id,
+            clientId: reg.clientId,
+          });
+          break;
+        }
+
         const existing = await this.lookup.findByRuleClientPeriod(
           rule.id,
           reg.clientId,

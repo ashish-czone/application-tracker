@@ -15,6 +15,7 @@ import { runGenerator } from './fixtures/cron';
 interface FilingRow {
   id: string;
   clientId: string;
+  status: string;
 }
 
 /**
@@ -82,6 +83,14 @@ test.describe('Flow: client lifecycle (US-1.x)', () => {
     const activeFilings = all.data.filter((f) => f.clientId === activeClient.id);
 
     expect(activeFilings.length).toBeGreaterThan(0);
-    expect(dormantFilings, 'dormant client should produce no filings').toHaveLength(0);
+    // Dormant clients can carry `cancelled` filings — the J4 listener that fires
+    // on registration creation may have materialised some before the dormancy
+    // cascade ran (the cascade then flipped them to cancelled). What must hold
+    // is that none remain in a non-terminal state: no pending / in-progress /
+    // review filings for a client the firm has stopped serving.
+    const dormantNonTerminal = dormantFilings.filter(
+      (f) => !['cancelled', 'completed'].includes(f.status),
+    );
+    expect(dormantNonTerminal, 'dormant client should have no non-terminal filings').toHaveLength(0);
   });
 });
