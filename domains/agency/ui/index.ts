@@ -1,6 +1,6 @@
 export * from './components/blocks';
 export * from './blocks';
-export * from './pages';
+export * from './portals/admin/features/pages';
 // Re-export menus, omitting `Paginated` (also exported from `./pages` —
 // the two list shapes are structurally identical; consumers can grab
 // `Paginated` from either side via the explicit sub-path if they need to).
