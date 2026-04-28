@@ -127,6 +127,53 @@ const SITE_SETTINGS_FALLBACK: SiteSettings = {
   theme: DEFAULT_SITE_THEME,
 };
 
+export interface PublicCaseStudy {
+  id: string;
+  title: string;
+  slug: string;
+  client: string;
+  industry: string | null;
+  year: number | null;
+  summary: string;
+  body: string | null;
+  results: string | null;
+  heroImageUrl: string | null;
+  ctaText: string | null;
+  ctaHref: string | null;
+  displayOrder: number;
+  publishedAt: string | null;
+}
+
+export async function fetchCaseStudies(
+  options: { industry?: string; revalidate?: number } = {},
+): Promise<PublicCaseStudy[]> {
+  const url = new URL(`${API_BASE}/api/v1/public/case-studies`);
+  if (options.industry) url.searchParams.set('industry', options.industry);
+  const res = await fetch(url.toString(), {
+    next: { revalidate: options.revalidate ?? 60, tags: ['case-studies:list'] },
+  });
+  if (!res.ok) {
+    throw new Error(`fetchCaseStudies failed: ${res.status} ${res.statusText}`);
+  }
+  const body = (await res.json()) as { items: PublicCaseStudy[] };
+  return body.items ?? [];
+}
+
+export async function fetchCaseStudyBySlug(
+  slug: string,
+  options: { revalidate?: number } = {},
+): Promise<PublicCaseStudy | null> {
+  const res = await fetch(
+    `${API_BASE}/api/v1/public/case-studies/${encodeURIComponent(slug)}`,
+    { next: { revalidate: options.revalidate ?? 60, tags: [`case-study:${slug}`] } },
+  );
+  if (res.status === 404) return null;
+  if (!res.ok) {
+    throw new Error(`fetchCaseStudyBySlug(${slug}) failed: ${res.status} ${res.statusText}`);
+  }
+  return (await res.json()) as PublicCaseStudy;
+}
+
 export async function fetchSiteSettings(
   options: { revalidate?: number } = {},
 ): Promise<SiteSettings> {
