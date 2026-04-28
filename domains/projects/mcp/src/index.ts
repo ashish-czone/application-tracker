@@ -4,6 +4,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { createApiClient } from './apiClient';
 import { loadConfig } from './config';
 import { registerLookupTools } from './tools/lookups';
+import { registerMutationTools } from './tools/mutations';
 
 async function main(): Promise<void> {
   const config = loadConfig();
@@ -15,6 +16,7 @@ async function main(): Promise<void> {
   });
 
   registerLookupTools(server, api);
+  registerMutationTools(server, api);
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
