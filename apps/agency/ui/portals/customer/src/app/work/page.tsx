@@ -131,7 +131,6 @@ function CaseStudyCard({ study }: { study: PublicCaseStudy }) {
     <Link href={`/work/${study.slug}`} className="group flex flex-col gap-5">
       <div className="relative aspect-[4/5] w-full overflow-hidden rounded-2xl bg-[hsl(var(--muted))]">
         {study.heroImageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={study.heroImageUrl}
             alt=""

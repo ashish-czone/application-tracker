@@ -79,7 +79,6 @@ export default async function CaseStudyDetailPage({ params }: RouteParams) {
         <div className="mx-auto w-full max-w-7xl px-6 md:px-10">
           <Reveal>
             <div className="relative aspect-[16/9] w-full overflow-hidden rounded-3xl bg-[hsl(var(--muted))]">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={study.heroImageUrl}
                 alt=""
