@@ -7,6 +7,11 @@ export const directoryAddon = {
   migration: '@packages/directory',
 } as const;
 
+export { CompaniesService } from './services/companies.service';
+export type { FindOrCreateCompanyInput, UpdateCompanyInput } from './services/companies.service';
+export { PeopleService } from './services/people.service';
+export type { FindOrCreatePersonInput, UpdatePersonInput } from './services/people.service';
+
 export { DIRECTORY_PERMISSIONS } from './permissions';
 export type { DirectoryPermission } from './permissions';
 

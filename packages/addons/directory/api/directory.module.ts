@@ -2,6 +2,8 @@ import { Module, type OnModuleInit } from '@nestjs/common';
 import { RbacService } from '@packages/rbac';
 import { AuditRegistryService } from '@packages/audit';
 import { EventRegistryService } from '@packages/events';
+import { CompaniesService } from './services/companies.service';
+import { PeopleService } from './services/people.service';
 import {
   DIRECTORY_COMPANY_CREATED,
   DIRECTORY_COMPANY_UPDATED,
@@ -11,7 +13,10 @@ import {
   DIRECTORY_PERSON_MERGED,
 } from './events/types';
 
-@Module({})
+@Module({
+  providers: [CompaniesService, PeopleService],
+  exports: [CompaniesService, PeopleService],
+})
 export class DirectoryModule implements OnModuleInit {
   constructor(
     private readonly rbac: RbacService,
