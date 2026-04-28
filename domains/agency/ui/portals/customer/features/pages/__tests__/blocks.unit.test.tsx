@@ -2,8 +2,8 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createElement } from 'react';
 import type { SectionData } from '@domains/agency-contract';
-import { blockRegistry } from '../../components/blocks/registry';
-import { registerStarterBlocks, starterBlocks } from '../../components/blocks/starter';
+import { blockRegistry } from '../../../../../components/blocks/registry';
+import { registerStarterBlocks, starterBlocks } from '../../../../../components/blocks/starter';
 import { PageRenderer } from '../PageRenderer';
 
 function section(partial: Partial<SectionData> & Pick<SectionData, 'id' | 'order' | 'blockKind'>): SectionData {

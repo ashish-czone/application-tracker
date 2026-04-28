@@ -1,6 +1,6 @@
 import { createElement, Fragment, type ReactNode } from 'react';
 import type { SectionData } from '@domains/agency-contract';
-import { blockRegistry } from '../components/blocks/registry';
+import { blockRegistry } from '../../../../components/blocks/registry';
 
 export interface PageRendererProps {
   sections: SectionData[];

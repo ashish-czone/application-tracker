@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { renderToString } from 'react-dom/server';
 import { createElement } from 'react';
-import { blockRegistry } from '../../components/blocks/registry';
+import { blockRegistry } from '../../../../../components/blocks/registry';
 import { PageRenderer } from '../PageRenderer';
 import type { SectionData } from '@domains/agency-contract';
 import {
@@ -14,7 +14,7 @@ import {
   clientLogosRowBlock,
   valuePropsGridBlock,
   statsRowBlock,
-} from '../../components/blocks/content';
+} from '../../../../../components/blocks/content';
 
 function section(overrides: Partial<SectionData> & Pick<SectionData, 'blockKind'>): SectionData {
   return {
