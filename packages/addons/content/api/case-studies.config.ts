@@ -66,7 +66,6 @@ export const CASE_STUDIES_CONFIG = defineEntity({
     results: {
       type: 'textarea',
       label: 'Results',
-      description: 'One per line: e.g. "Reduced reconciliation time by 87%"',
     },
     heroImageUrl: {
       type: 'url',
