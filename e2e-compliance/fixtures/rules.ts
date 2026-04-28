@@ -61,6 +61,12 @@ export async function updateComplianceRule(
   return apiClient.patch<ComplianceRule>(`/compliance-rules/${ruleId}`, patch);
 }
 
+export interface DeprecationResult {
+  ruleId: string;
+  status: 'deprecated';
+  cancelledFilingIds: string[];
+}
+
 /** Deprecate a rule via the dedicated endpoint (rather than transition).
  *  Passes `alsoCancelInFlight` to indicate whether non-terminal filings
  *  generated under this rule should be cancelled — by default they are
@@ -68,6 +74,6 @@ export async function updateComplianceRule(
 export async function deprecateComplianceRule(
   ruleId: string,
   options: { alsoCancelInFlight?: boolean; comment?: string } = {},
-): Promise<ComplianceRule> {
-  return apiClient.post<ComplianceRule>(`/compliance-rules/${ruleId}/deprecate`, options);
+): Promise<DeprecationResult> {
+  return apiClient.post<DeprecationResult>(`/compliance-rules/${ruleId}/deprecate`, options);
 }
