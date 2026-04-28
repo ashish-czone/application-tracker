@@ -42,7 +42,8 @@ describe('content blocks', () => {
     expect(blockRegistry.get('client-logos-row')?.supports).toEqual(['client-logos']);
     expect(blockRegistry.get('value-props-grid')?.supports).toEqual(['value-props']);
     expect(blockRegistry.get('stats-row')?.supports).toEqual(['stats']);
-    expect(contentBlocks).toHaveLength(7);
+    expect(blockRegistry.get('awards-strip')).toBeDefined();
+    expect(contentBlocks).toHaveLength(8);
   });
 
   it('every content block declares a category of "Content"', () => {
@@ -50,15 +51,18 @@ describe('content blocks', () => {
   });
 
   it('every block exposes a stable kind (snapshot for migration detection)', () => {
-    expect(contentBlocks.map((b) => b.kind)).toEqual([
-      'testimonials-grid',
-      'faq-accordion',
-      'team-grid',
-      'services-grid',
-      'client-logos-row',
-      'value-props-grid',
-      'stats-row',
-    ]);
+    expect(contentBlocks.map((b) => b.kind).sort()).toEqual(
+      [
+        'testimonials-grid',
+        'faq-accordion',
+        'team-grid',
+        'services-grid',
+        'client-logos-row',
+        'value-props-grid',
+        'stats-row',
+        'awards-strip',
+      ].sort(),
+    );
   });
 
   it('TestimonialsGrid renders one card per item with author + quote visible', () => {

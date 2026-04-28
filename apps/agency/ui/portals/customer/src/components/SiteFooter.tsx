@@ -2,14 +2,11 @@ import Link from 'next/link';
 import { Container } from './layout/Container';
 import { fetchMenuBySlug, fetchSiteSettings, type SiteSettings } from '@/lib/api';
 import type { PublicMenuItemDto } from '@domains/agency-ui/portals/customer';
-import { Marquee } from '@domains/agency-ui/portals/customer';
 
 /**
- * Site footer. Two slabs:
- *  1. A continuously scrolling display-scale "let's talk" marquee that
- *     reads as the page sign-off — links straight to the contact email.
- *  2. The compact info row: brand + tagline, footer menu (or contact
- *     fallback), social, copyright. Lives on the deep-ink panel.
+ * Site footer — vercel-light. Hairline top border on a near-white panel,
+ * 4-column link grid (brand + up to 3 menu columns), mono labels, social
+ * as text links, copyright row in mono. Quiet engineering aesthetic.
  */
 export async function SiteFooter() {
   const [menu, settings] = await Promise.all([
@@ -21,79 +18,61 @@ export async function SiteFooter() {
   const copyrightName = settings.companyName || settings.siteName;
   const contactEmail = settings.contactEmail || 'hello@example.com';
 
-  // Sign-off marquee — repeats the same call so the strip reads as one
-  // continuous statement rather than a list of items.
-  const signOffItems: string[] = [
-    "Let's build something",
-    contactEmail,
-    'Available for new work',
-    String(year),
-  ];
-
   return (
-    <footer className="mt-24 flex flex-col">
-      <Link
-        href={`mailto:${contactEmail}`}
-        aria-label={`Email ${contactEmail}`}
-        className="block hover:opacity-90 transition-opacity"
-      >
-        <Marquee
-          items={signOffItems}
-          tone="accent"
-          size="xl"
-          durationSec={42}
-          separator="✦"
-        />
-      </Link>
-
-      <div className="bg-[hsl(var(--surface-inverse))] text-[hsl(var(--surface-inverse-foreground))]">
-        <Container className="py-20">
-          <div className="grid grid-cols-1 gap-12 md:grid-cols-[1.4fr_2fr] md:gap-16">
-            <div className="space-y-6">
-              <Link
-                href="/"
-                className="font-display text-3xl md:text-4xl font-semibold tracking-[-0.02em] leading-none"
-              >
-                {settings.siteName}
-              </Link>
-              {settings.tagline && (
-                <p className="max-w-sm text-base text-[hsl(var(--surface-inverse-foreground))]/70 leading-[1.55]">
-                  {settings.tagline}
-                </p>
-              )}
-              {socialLinks.length > 0 && (
-                <ul className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
-                  {socialLinks.map((link) => (
-                    <li key={link.label}>
-                      <a
-                        href={link.href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[hsl(var(--surface-inverse-foreground))]/70 hover:text-[hsl(var(--surface-inverse-foreground))] transition-colors border-b border-transparent hover:border-[hsl(var(--surface-inverse-foreground))]/40 pb-0.5"
-                      >
-                        {link.label}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-
-            {menu && menu.items.length > 0 ? (
-              <FooterColumns items={menu.items} />
-            ) : (
-              <FooterContactFallback settings={settings} />
+    <footer className="border-t border-[hsl(var(--border))] bg-[hsl(var(--background))]">
+      <Container className="py-16 md:py-20">
+        <div className="grid gap-12 md:grid-cols-[1.4fr_2fr] md:gap-16">
+          <div className="flex flex-col gap-5">
+            <Link
+              href="/"
+              className="text-2xl font-semibold tracking-[-0.02em] leading-none text-[hsl(var(--foreground))]"
+            >
+              {settings.siteName}
+            </Link>
+            {settings.tagline && (
+              <p className="max-w-sm text-sm text-[hsl(var(--muted-foreground))] leading-relaxed">
+                {settings.tagline}
+              </p>
+            )}
+            <Link
+              href={`mailto:${contactEmail}`}
+              className="inline-flex items-center gap-2 text-sm font-medium text-[hsl(var(--foreground))] hover:text-[hsl(var(--accent))] transition-colors w-fit"
+            >
+              <span aria-hidden className="text-mono text-[hsl(var(--accent))]">{'>'}</span>
+              {contactEmail}
+            </Link>
+            {socialLinks.length > 0 && (
+              <ul className="flex flex-wrap items-center gap-x-4 gap-y-2 text-mono text-[hsl(var(--muted-foreground))] mt-2">
+                {socialLinks.map((link) => (
+                  <li key={link.label}>
+                    <a
+                      href={link.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:text-[hsl(var(--foreground))] transition-colors"
+                    >
+                      {link.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
 
-          <div className="mt-16 pt-8 border-t border-[hsl(var(--surface-inverse-foreground))]/15 flex flex-col md:flex-row md:items-center md:justify-between gap-3 text-xs tracking-[0.14em] uppercase text-[hsl(var(--surface-inverse-foreground))]/50">
-            <span>
-              © {year} {copyrightName}
-            </span>
-            <span>Built with the starter-template platform</span>
-          </div>
-        </Container>
-      </div>
+          {menu && menu.items.length > 0 ? (
+            <FooterColumns items={menu.items} />
+          ) : (
+            <FooterContactFallback settings={settings} />
+          )}
+        </div>
+
+        <div className="mt-12 pt-6 border-t border-[hsl(var(--border))] flex flex-col md:flex-row md:items-center md:justify-between gap-3 text-mono text-[hsl(var(--muted-foreground))]">
+          <span>
+            © {year} {copyrightName}
+          </span>
+          <span>Built with the starter-template platform</span>
+        </div>
+      </Container>
     </footer>
   );
 }
@@ -113,17 +92,15 @@ function FooterColumns({ items }: { items: PublicMenuItemDto[] }) {
   return (
     <div className="grid grid-cols-2 gap-8 md:grid-cols-3 md:gap-10">
       {items.map((item) => (
-        <div key={item.id} className="space-y-4">
-          <h3 className="text-xs font-semibold tracking-[0.18em] uppercase text-[hsl(var(--surface-inverse-foreground))]/45">
-            {item.label}
-          </h3>
+        <div key={item.id} className="flex flex-col gap-3">
+          <h3 className="text-eyebrow">{item.label}</h3>
           {item.children.length > 0 && (
-            <ul className="space-y-2 text-base">
+            <ul className="flex flex-col gap-2 text-sm">
               {item.children.map((child) => {
                 const href = child.href ?? '#';
                 const isExternal = /^https?:\/\//.test(href) || child.target === '_blank';
                 const linkClasses =
-                  'text-[hsl(var(--surface-inverse-foreground))]/85 hover:text-[hsl(var(--surface-inverse-foreground))] transition-colors';
+                  'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors';
                 return (
                   <li key={child.id}>
                     {isExternal ? (
@@ -158,16 +135,14 @@ function FooterContactFallback({ settings }: { settings: SiteSettings }) {
   return (
     <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 md:grid-cols-3 md:gap-10">
       {(settings.contactEmail || settings.contactPhone) && (
-        <div className="space-y-4">
-          <h3 className="text-xs font-semibold tracking-[0.18em] uppercase text-[hsl(var(--surface-inverse-foreground))]/45">
-            Contact
-          </h3>
-          <ul className="space-y-2 text-base text-[hsl(var(--surface-inverse-foreground))]/85">
+        <div className="flex flex-col gap-3">
+          <h3 className="text-eyebrow">Contact</h3>
+          <ul className="flex flex-col gap-2 text-sm text-[hsl(var(--muted-foreground))]">
             {settings.contactEmail && (
               <li>
                 <a
                   href={`mailto:${settings.contactEmail}`}
-                  className="hover:text-[hsl(var(--surface-inverse-foreground))] transition-colors"
+                  className="hover:text-[hsl(var(--foreground))] transition-colors"
                 >
                   {settings.contactEmail}
                 </a>
@@ -177,7 +152,7 @@ function FooterContactFallback({ settings }: { settings: SiteSettings }) {
               <li>
                 <a
                   href={`tel:${settings.contactPhone.replace(/\s+/g, '')}`}
-                  className="hover:text-[hsl(var(--surface-inverse-foreground))] transition-colors"
+                  className="hover:text-[hsl(var(--foreground))] transition-colors"
                 >
                   {settings.contactPhone}
                 </a>
@@ -187,11 +162,9 @@ function FooterContactFallback({ settings }: { settings: SiteSettings }) {
         </div>
       )}
       {settings.address && (
-        <div className="space-y-4">
-          <h3 className="text-xs font-semibold tracking-[0.18em] uppercase text-[hsl(var(--surface-inverse-foreground))]/45">
-            Studio
-          </h3>
-          <p className="whitespace-pre-line text-base text-[hsl(var(--surface-inverse-foreground))]/85 leading-[1.55]">
+        <div className="flex flex-col gap-3">
+          <h3 className="text-eyebrow">Studio</h3>
+          <p className="whitespace-pre-line text-sm text-[hsl(var(--muted-foreground))] leading-relaxed">
             {settings.address}
           </p>
         </div>

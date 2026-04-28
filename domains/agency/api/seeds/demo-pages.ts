@@ -68,15 +68,13 @@ const HOME: PageSeed = {
     {
       order: 0,
       blockKind: 'hero',
-      variant: 'editorial',
+      variant: 'default',
       title: 'Hero',
       customFields: {
-        number: '01',
-        eyebrow: 'Studio',
-        meta: 'Brooklyn · Est. 2019',
-        headline: 'Ambitious products for what comes next.',
+        eyebrow: `Available for new work · ${new Date().getFullYear()}`,
+        headline: 'Ship the product. Skip the agency theatrics.',
         subheadline:
-          'A compact team of senior engineers and designers, shipping web, mobile, and AI products end-to-end — from first sketch to production at scale.',
+          'A compact team of senior engineers and designers shipping web, mobile, and AI products end-to-end — from first sketch to production at scale.',
         ctaText: 'Start a project',
         ctaHref: '/contact',
         ctaSecondaryText: 'See our work',
@@ -86,7 +84,7 @@ const HOME: PageSeed = {
     {
       order: 1,
       blockKind: 'awards-strip',
-      variant: 'inverse',
+      variant: 'default',
       title: 'Recognitions',
       customFields: {
         items: [
@@ -102,10 +100,9 @@ const HOME: PageSeed = {
     {
       order: 2,
       blockKind: 'feature-list',
-      variant: 'editorial',
+      variant: 'default',
       title: 'What we build',
       customFields: {
-        number: '02',
         eyebrow: 'Practices',
         heading: 'Six practices, one team.',
         items: [
@@ -132,7 +129,6 @@ const HOME: PageSeed = {
         limit: 4,
       },
       customFields: {
-        number: '03',
         eyebrow: 'Selected work',
         heading: 'Recent projects, shipped.',
         subheading:
@@ -142,7 +138,7 @@ const HOME: PageSeed = {
     {
       order: 4,
       blockKind: 'stats-row',
-      variant: 'inverse',
+      variant: 'default',
       title: 'Studio stats',
       // Live numbers come from the stats entity. Layout owner is the seed —
       // the section header below is what the visitor reads.
@@ -153,9 +149,8 @@ const HOME: PageSeed = {
         limit: 4,
       },
       customFields: {
-        number: '04',
         eyebrow: 'By the numbers',
-        heading: 'Five years, kept small on purpose.',
+        heading: 'Six years, kept small on purpose.',
         subheading:
           'No juniors to supervise, no hand-offs, no account managers in the middle. The person who writes the code is the person you talk to.',
       },
@@ -163,7 +158,7 @@ const HOME: PageSeed = {
     {
       order: 5,
       blockKind: 'cta',
-      variant: 'sign-off',
+      variant: 'default',
       title: 'Sign-off',
       customFields: {
         heading: "Let's build something that matters.",

@@ -7,64 +7,56 @@
 @source "../../../../../../../domains/agency/ui";
 
 /* ──────────────────────────────────────────────────────────────
-   Design tokens — semantic names, HSL triplets so shades can be
-   composed (`hsl(var(--foreground) / 0.6)`). Kept in :root so the
-   tokens can be overridden per-tenant later without forking the
-   sheet. Dark-mode values ship dormant — flipped by adding
-   `data-theme="dark"` to <html> in F2.
+   Design tokens — white base, zinc neutrals, indigo accent.
+   Inspired by vercel.com on light: pure white surface, subtle
+   hairline borders, calm gradients used sparingly, monospace for
+   labels and numerals. Tokens stay in :root so a tenant can fork
+   the palette without forking the sheet.
    ────────────────────────────────────────────────────────────── */
 :root {
-  /* Editorial palette — warm cream paper, deep ink, single rust accent.
-     The cream surface (vs pure white) gives the site a magazine feel; the
-     rust accent reads warmer than the typical agency cyan/purple and
-     pairs with the foreground without ever competing with it. */
-  --background: 35 30% 96%;
-  --foreground: 220 22% 11%;
-  --muted: 35 20% 92%;
-  --muted-foreground: 220 8% 38%;
-  --surface: 35 30% 96%;
-  --surface-muted: 35 25% 92%;
-  --surface-inverse: 220 22% 11%;
-  --surface-inverse-foreground: 35 30% 96%;
-  --border: 35 14% 84%;
-  --hairline: 220 22% 11%;
-  --ring: 220 22% 11%;
+  --background: 0 0% 100%;
+  --foreground: 240 6% 10%;
+  --muted: 0 0% 98%;
+  --muted-foreground: 240 4% 46%;
+  --surface: 0 0% 100%;
+  --surface-muted: 240 5% 96%;
+  --border: 240 6% 90%;
+  --ring: 240 6% 10%;
 
-  /* Accent — warm terracotta. Used sparingly: highlights, CTA buttons,
-     section number labels. Never as a wash. */
-  --accent: 14 70% 50%;
-  --accent-foreground: 35 30% 96%;
+  /* Indigo accent — used for links, highlights, gradient washes.
+     Picked to read calm rather than loud against the zinc grid. */
+  --accent: 234 89% 60%;
+  --accent-foreground: 0 0% 100%;
 
-  /* Body / display fonts are wired via next/font in layout.tsx and
-     exposed as --font-sans / --font-display on <html>. */
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system,
+  /* Body / mono fonts wired via next/font in layout.tsx. */
+  --font-sans: var(--font-geist), ui-sans-serif, system-ui, -apple-system,
     "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-display: var(--font-display-face), var(--font-sans);
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular,
+    "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
 
-  /* Fluid type scale — clamp(min, preferred-with-vw, max). Each step
-     is roughly one typographic size apart, tuned for hero-driven
-     agency layouts. */
+  /* Fluid type scale — measured. No mega/editorial step; the tallest
+     headline tops out around ~5rem so the page reads engineered, not
+     theatrical. */
   --font-size-xs: clamp(0.75rem, 0.73rem + 0.1vw, 0.8125rem);
   --font-size-sm: clamp(0.875rem, 0.85rem + 0.15vw, 0.9375rem);
-  --font-size-base: clamp(1rem, 0.97rem + 0.2vw, 1.0625rem);
-  --font-size-lg: clamp(1.125rem, 1.08rem + 0.3vw, 1.25rem);
-  --font-size-xl: clamp(1.25rem, 1.18rem + 0.45vw, 1.5rem);
-  --font-size-2xl: clamp(1.5rem, 1.4rem + 0.7vw, 1.875rem);
-  --font-size-3xl: clamp(1.875rem, 1.7rem + 1vw, 2.5rem);
-  --font-size-4xl: clamp(2.5rem, 2.2rem + 2vw, 4rem);
-  --font-size-5xl: clamp(3.5rem, 3rem + 3vw, 6rem);
-  --font-size-6xl: clamp(4.5rem, 3.5rem + 5vw, 8rem);
-  --font-size-7xl: clamp(4rem, 2.5rem + 7vw, 9rem);
-  --font-size-8xl: clamp(4.5rem, 2.5rem + 9vw, 10.5rem);
+  --font-size-base: clamp(0.9375rem, 0.92rem + 0.15vw, 1rem);
+  --font-size-lg: clamp(1.0625rem, 1.03rem + 0.2vw, 1.125rem);
+  --font-size-xl: clamp(1.1875rem, 1.13rem + 0.3vw, 1.3125rem);
+  --font-size-2xl: clamp(1.375rem, 1.3rem + 0.4vw, 1.5rem);
+  --font-size-3xl: clamp(1.625rem, 1.5rem + 0.6vw, 1.875rem);
+  --font-size-4xl: clamp(2rem, 1.75rem + 1.2vw, 2.625rem);
+  --font-size-5xl: clamp(2.5rem, 2rem + 2vw, 3.5rem);
+  --font-size-6xl: clamp(3rem, 2.25rem + 3vw, 4.5rem);
 
-  /* Line heights — tight for display, generous for body. */
-  --leading-tight: 1.05;
-  --leading-snug: 1.2;
-  --leading-normal: 1.5;
+  --leading-tight: 1.1;
+  --leading-snug: 1.25;
+  --leading-normal: 1.55;
   --leading-relaxed: 1.7;
 
+  --radius-sm: 0.375rem;
   --radius: 0.5rem;
-  --radius-lg: 0.875rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
 }
 
 @theme inline {
@@ -74,19 +66,18 @@
   --color-muted-foreground: hsl(var(--muted-foreground));
   --color-surface: hsl(var(--surface));
   --color-surface-muted: hsl(var(--surface-muted));
-  --color-surface-inverse: hsl(var(--surface-inverse));
-  --color-surface-inverse-foreground: hsl(var(--surface-inverse-foreground));
   --color-border: hsl(var(--border));
-  --color-hairline: hsl(var(--hairline));
   --color-ring: hsl(var(--ring));
   --color-accent: hsl(var(--accent));
   --color-accent-foreground: hsl(var(--accent-foreground));
 
   --font-sans: var(--font-sans);
-  --font-display: var(--font-display);
+  --font-mono: var(--font-mono);
 
+  --radius-sm: var(--radius-sm);
   --radius: var(--radius);
   --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
 }
 
 html,
@@ -102,40 +93,34 @@ body {
 }
 
 /* ──────────────────────────────────────────────────────────────
-   Typography utility classes. Used by hand in layout + by blocks
-   via a shared <Heading>/<Lead> primitive. Kept here so the scale
-   lives in one place and any block can adopt it.
+   Typography utilities. Display text uses the sans (Geist), not a
+   serif — Vercel-style aesthetics rely on a single typeface family
+   carrying both UI and headlines, distinguished only by size and
+   tracking.
    ────────────────────────────────────────────────────────────── */
-.text-mega {
-  font-family: var(--font-display);
-  font-size: var(--font-size-8xl);
-  line-height: 0.92;
-  letter-spacing: -0.045em;
-  font-weight: 600;
-}
 .text-display {
-  font-family: var(--font-display);
-  font-size: var(--font-size-7xl);
-  line-height: 0.95;
-  letter-spacing: -0.04em;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-6xl);
+  line-height: 1;
+  letter-spacing: -0.035em;
   font-weight: 600;
 }
 .text-hero {
-  font-family: var(--font-display);
-  font-size: var(--font-size-6xl);
-  line-height: var(--leading-tight);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-5xl);
+  line-height: 1.05;
   letter-spacing: -0.03em;
   font-weight: 600;
 }
 .text-headline {
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
   font-size: var(--font-size-4xl);
   line-height: var(--leading-tight);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.025em;
   font-weight: 600;
 }
 .text-title {
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
   font-size: var(--font-size-3xl);
   line-height: var(--leading-snug);
   letter-spacing: -0.015em;
@@ -148,16 +133,42 @@ body {
   font-weight: 500;
 }
 .text-lead {
-  font-size: var(--font-size-xl);
+  font-size: var(--font-size-lg);
   line-height: var(--leading-relaxed);
   color: hsl(var(--muted-foreground));
 }
-.text-eyebrow {
+.text-mono {
+  font-family: var(--font-mono);
   font-size: var(--font-size-xs);
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
+  font-feature-settings: "ss01", "ss02", "cv01";
+}
+.text-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
   color: hsl(var(--muted-foreground));
+}
+
+/* Subtle radial gradient used behind hero. Indigo bloom centred top,
+   washing out to the page surface — gives depth without color noise. */
+.bg-hero-gradient {
+  background:
+    radial-gradient(
+      60% 80% at 50% 0%,
+      hsl(var(--accent) / 0.08) 0%,
+      hsl(var(--accent) / 0.03) 35%,
+      transparent 70%
+    ),
+    hsl(var(--background));
+}
+
+/* Section divider — hairline horizontal rule used between sections. */
+.section-divider {
+  border-top: 1px solid hsl(var(--border));
 }
 
 /* Keyboard focus — visible but tasteful. */
@@ -165,26 +176,6 @@ body {
   outline: 2px solid hsl(var(--ring));
   outline-offset: 3px;
   border-radius: 2px;
-}
-
-/* Marquee keyframes — used by <Marquee>. Two tracks each hold the full
-   item list; the first translates -50% over `durationSec` and the second
-   sits flush behind it, giving a seamless infinite loop. */
-@keyframes agency-marquee-left {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(-100%);
-  }
-}
-@keyframes agency-marquee-right {
-  from {
-    transform: translateX(-100%);
-  }
-  to {
-    transform: translateX(0);
-  }
 }
 
 /* Respect reduced-motion globally in case a third-party component

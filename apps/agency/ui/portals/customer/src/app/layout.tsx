@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Inter, Fraunces } from 'next/font/google';
+import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import '../lib/register-blocks';
 import { SiteHeader } from '@/components/SiteHeader';
@@ -11,20 +11,16 @@ import { buildThemeStyleCss, NO_FLASH_SCRIPT } from '@/lib/theme';
 
 const SITE_URL = process.env.SITE_URL ?? 'http://localhost:3100';
 
-const inter = Inter({
+const geist = Geist({
   subsets: ['latin'],
-  variable: '--font-inter',
+  variable: '--font-geist',
   display: 'swap',
 });
 
-// Fraunces — a contemporary serif with optical-size and a soft
-// geometric feel. Reads editorial without being old-fashioned and
-// pairs cleanly with Inter for body copy.
-const display = Fraunces({
+const geistMono = Geist_Mono({
   subsets: ['latin'],
-  variable: '--font-display-face',
+  variable: '--font-geist-mono',
   display: 'swap',
-  axes: ['opsz', 'SOFT'],
 });
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -60,7 +56,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const themeCss = buildThemeStyleCss(settings.theme);
 
   return (
-    <html lang="en" className={`${inter.variable} ${display.variable}`}>
+    <html lang="en" className={`${geist.variable} ${geistMono.variable}`}>
       <head>
         <style dangerouslySetInnerHTML={{ __html: themeCss }} />
         <script dangerouslySetInnerHTML={{ __html: NO_FLASH_SCRIPT }} />
