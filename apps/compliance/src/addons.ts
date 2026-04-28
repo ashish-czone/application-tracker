@@ -8,7 +8,6 @@ import { evaluationsAddon } from '@packages/evaluations';
 import { hierarchyAddon } from '@packages/hierarchy';
 import { notesAddon } from '@packages/notes';
 import { orgUnitsAddon } from '@packages/org-units';
-import { tasksAddon } from '@packages/tasks';
 import { taxonomyAddon } from '@packages/taxonomy';
 import { tenancyAddon, type TenancyMode, type TenantResolver } from '@packages/tenancy';
 import { workflowsAddon } from '@packages/workflows';
@@ -22,9 +21,6 @@ import type { Addon } from '@packages/app-shell';
  *
  * Notes on this app's specifics:
  * - tenancy is conditional on TENANCY_MODE
- * - tasks ships migration-only — compliance has an FK from
- *   `compliance_tasks` to `tasks(id)` (migration 0002), but the app
- *   does not load TasksModule itself
  * - org-units is library-shape: the app's wrapper lives in extraImports
  */
 const tenancyAddons: readonly Addon[] = process.env.TENANCY_MODE
@@ -56,5 +52,4 @@ export const complianceAddons: readonly Addon[] = [
   notesAddon,
   orgUnitsAddon,
   taxonomyAddon,
-  tasksAddon,
 ];

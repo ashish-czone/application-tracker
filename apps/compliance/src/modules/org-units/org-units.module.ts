@@ -15,7 +15,6 @@ import {
   OrgUnitMembersStrategy,
   orgUnits,
 } from '@packages/org-units';
-import { TASK_TEAM_MEMBERS_READER } from '@packages/tasks';
 import { PermissionManifestRegistry, ScopeResolverRegistry } from '@packages/rbac';
 import { LookupResolverService } from '@packages/entity-engine';
 import { UserResolverRegistry, EntityResolverRegistry } from '@packages/automation-contracts';
@@ -36,14 +35,12 @@ import { ComplianceOrgUnitService } from './compliance-org-unit.service';
     PositionScopeResolverService,
     UnitScopeResolver,
     DescendantsScopeResolver,
-    { provide: TASK_TEAM_MEMBERS_READER, useExisting: OrgUnitService },
   ],
   exports: [
     OrgUnitService,
     OrgUnitLevelService,
     OrgPositionService,
     PositionScopeResolverService,
-    TASK_TEAM_MEMBERS_READER,
   ],
 })
 export class OrgUnitsModule implements OnModuleInit {
