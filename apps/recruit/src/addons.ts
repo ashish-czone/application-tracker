@@ -1,6 +1,7 @@
 import { ConfigService } from '@nestjs/config';
 import { attachmentsAddon } from '@packages/attachments';
 import { automationsAddon } from '@packages/automations';
+import { directoryAddon } from '@packages/directory';
 import { documentTemplatesAddon } from '@packages/document-templates';
 import { eavAttributesAddon } from '@packages/eav-attributes';
 import { entityRelationsAddon } from '@packages/entity-relations';
@@ -49,6 +50,9 @@ export const recruitAddons: readonly Addon[] = [
   automationsAddon,
   workflowsAddon,
   ...tenancyAddons,
+  // directory is the canonical companies + people identity registry — recruit's
+  // clients/contacts FK to it after R-1.
+  directoryAddon,
   attachmentsAddon,
   documentTemplatesAddon(),
   eavAttributesAddon,
