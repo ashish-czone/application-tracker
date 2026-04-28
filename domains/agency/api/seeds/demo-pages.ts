@@ -68,26 +68,46 @@ const HOME: PageSeed = {
     {
       order: 0,
       blockKind: 'hero',
-      variant: 'full-bleed',
+      variant: 'editorial',
       title: 'Hero',
       customFields: {
-        eyebrow: 'Web · Mobile · AI',
-        headline: "We build ambitious products for the companies shaping what's next.",
+        number: '01',
+        eyebrow: 'Studio',
+        meta: 'Brooklyn · Est. 2019',
+        headline: 'Ambitious products for what comes next.',
         subheadline:
-          'A compact team of senior engineers and designers, shipping web, mobile, and AI products end-to-end. From first sketch to production at scale.',
+          'A compact team of senior engineers and designers, shipping web, mobile, and AI products end-to-end — from first sketch to production at scale.',
         ctaText: 'Start a project',
         ctaHref: '/contact',
         ctaSecondaryText: 'See our work',
         ctaSecondaryHref: '/work',
-        imageUrl: HERO_IMAGE,
       },
     },
     {
       order: 1,
+      blockKind: 'awards-strip',
+      variant: 'inverse',
+      title: 'Recognitions',
+      customFields: {
+        items: [
+          'Awwwards · Site of the Day',
+          'FWA · Mobile of the Day',
+          'CSS Design Awards · Special Kudos',
+          'Communication Arts · Webpick',
+          'Webby Awards · Honoree',
+          'TYPE01 · Featured',
+        ].join('\n'),
+      },
+    },
+    {
+      order: 2,
       blockKind: 'feature-list',
+      variant: 'editorial',
       title: 'What we build',
       customFields: {
-        heading: 'What we build',
+        number: '02',
+        eyebrow: 'Practices',
+        heading: 'Six practices, one team.',
         items: [
           'Web platforms :: Marketing sites, dashboards, and internal tools built on modern TypeScript stacks.',
           'Mobile apps :: Native iOS and Android apps and cross-platform React Native builds.',
@@ -99,7 +119,7 @@ const HOME: PageSeed = {
       },
     },
     {
-      order: 2,
+      order: 3,
       blockKind: 'case-study-grid',
       title: 'Recent work',
       // Live data source — the home page's case-study tiles render from the
@@ -112,18 +132,42 @@ const HOME: PageSeed = {
         limit: 4,
       },
       customFields: {
-        heading: 'Recent work',
-        subheading: "A sample of what we've shipped in the last twelve months.",
+        number: '03',
+        eyebrow: 'Selected work',
+        heading: 'Recent projects, shipped.',
+        subheading:
+          'A small sample of work from the last twelve months — every one of these started with a 30-minute call.',
       },
     },
     {
-      order: 3,
-      blockKind: 'cta',
-      variant: 'split',
-      title: 'Closing CTA',
+      order: 4,
+      blockKind: 'stats-row',
+      variant: 'inverse',
+      title: 'Studio stats',
+      // Live numbers come from the stats entity. Layout owner is the seed —
+      // the section header below is what the visitor reads.
+      dataSource: {
+        kind: 'entity-query',
+        entity: 'stats',
+        sort: 'displayOrder',
+        limit: 4,
+      },
       customFields: {
-        heading: 'Have a project in mind?',
-        body: 'We take on a handful of new engagements each quarter. Start with a 30-minute call.',
+        number: '04',
+        eyebrow: 'By the numbers',
+        heading: 'Five years, kept small on purpose.',
+        subheading:
+          'No juniors to supervise, no hand-offs, no account managers in the middle. The person who writes the code is the person you talk to.',
+      },
+    },
+    {
+      order: 5,
+      blockKind: 'cta',
+      variant: 'sign-off',
+      title: 'Sign-off',
+      customFields: {
+        heading: "Let's build something that matters.",
+        body: 'We take on a handful of new engagements each quarter. The good ones start with a 30-minute call — no slides, no salespeople, just a conversation about what you need.',
         primaryText: 'Schedule a call',
         primaryHref: '/contact',
         secondaryText: 'See all services',

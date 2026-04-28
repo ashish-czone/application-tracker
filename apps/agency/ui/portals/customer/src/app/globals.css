@@ -14,20 +14,26 @@
    `data-theme="dark"` to <html> in F2.
    ────────────────────────────────────────────────────────────── */
 :root {
-  /* Neutrals — crisp, high-contrast palette. */
-  --background: 0 0% 100%;
-  --foreground: 222 24% 10%;
-  --muted: 220 14% 96%;
-  --muted-foreground: 220 9% 42%;
-  --surface: 0 0% 100%;
-  --surface-muted: 220 18% 98%;
-  --border: 220 14% 90%;
-  --ring: 222 24% 10%;
+  /* Editorial palette — warm cream paper, deep ink, single rust accent.
+     The cream surface (vs pure white) gives the site a magazine feel; the
+     rust accent reads warmer than the typical agency cyan/purple and
+     pairs with the foreground without ever competing with it. */
+  --background: 35 30% 96%;
+  --foreground: 220 22% 11%;
+  --muted: 35 20% 92%;
+  --muted-foreground: 220 8% 38%;
+  --surface: 35 30% 96%;
+  --surface-muted: 35 25% 92%;
+  --surface-inverse: 220 22% 11%;
+  --surface-inverse-foreground: 35 30% 96%;
+  --border: 35 14% 84%;
+  --hairline: 220 22% 11%;
+  --ring: 220 22% 11%;
 
-  /* Accent — swap per-palette later. Default is a single ink colour
-     so the site reads editorial, not techy. */
-  --accent: 260 95% 62%;
-  --accent-foreground: 0 0% 100%;
+  /* Accent — warm terracotta. Used sparingly: highlights, CTA buttons,
+     section number labels. Never as a wash. */
+  --accent: 14 70% 50%;
+  --accent-foreground: 35 30% 96%;
 
   /* Body / display fonts are wired via next/font in layout.tsx and
      exposed as --font-sans / --font-display on <html>. */
@@ -48,6 +54,8 @@
   --font-size-4xl: clamp(2.5rem, 2.2rem + 2vw, 4rem);
   --font-size-5xl: clamp(3.5rem, 3rem + 3vw, 6rem);
   --font-size-6xl: clamp(4.5rem, 3.5rem + 5vw, 8rem);
+  --font-size-7xl: clamp(4rem, 2.5rem + 7vw, 9rem);
+  --font-size-8xl: clamp(4.5rem, 2.5rem + 9vw, 10.5rem);
 
   /* Line heights — tight for display, generous for body. */
   --leading-tight: 1.05;
@@ -66,7 +74,10 @@
   --color-muted-foreground: hsl(var(--muted-foreground));
   --color-surface: hsl(var(--surface));
   --color-surface-muted: hsl(var(--surface-muted));
+  --color-surface-inverse: hsl(var(--surface-inverse));
+  --color-surface-inverse-foreground: hsl(var(--surface-inverse-foreground));
   --color-border: hsl(var(--border));
+  --color-hairline: hsl(var(--hairline));
   --color-ring: hsl(var(--ring));
   --color-accent: hsl(var(--accent));
   --color-accent-foreground: hsl(var(--accent-foreground));
@@ -95,18 +106,25 @@ body {
    via a shared <Heading>/<Lead> primitive. Kept here so the scale
    lives in one place and any block can adopt it.
    ────────────────────────────────────────────────────────────── */
+.text-mega {
+  font-family: var(--font-display);
+  font-size: var(--font-size-8xl);
+  line-height: 0.92;
+  letter-spacing: -0.045em;
+  font-weight: 600;
+}
 .text-display {
   font-family: var(--font-display);
-  font-size: var(--font-size-6xl);
-  line-height: var(--leading-tight);
-  letter-spacing: -0.03em;
+  font-size: var(--font-size-7xl);
+  line-height: 0.95;
+  letter-spacing: -0.04em;
   font-weight: 600;
 }
 .text-hero {
   font-family: var(--font-display);
-  font-size: var(--font-size-5xl);
+  font-size: var(--font-size-6xl);
   line-height: var(--leading-tight);
-  letter-spacing: -0.025em;
+  letter-spacing: -0.03em;
   font-weight: 600;
 }
 .text-headline {
@@ -147,6 +165,26 @@ body {
   outline: 2px solid hsl(var(--ring));
   outline-offset: 3px;
   border-radius: 2px;
+}
+
+/* Marquee keyframes — used by <Marquee>. Two tracks each hold the full
+   item list; the first translates -50% over `durationSec` and the second
+   sits flush behind it, giving a seamless infinite loop. */
+@keyframes agency-marquee-left {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+@keyframes agency-marquee-right {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
 }
 
 /* Respect reduced-motion globally in case a third-party component

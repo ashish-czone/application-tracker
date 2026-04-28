@@ -238,10 +238,10 @@ const VALUE_PROPS = [
 ];
 
 const STATS = [
-  { label: 'Customers', value: 2400, suffix: '+', displayOrder: 10, isActive: true },
-  { label: 'Uptime', value: 99, suffix: '.98%', displayOrder: 20, isActive: true },
-  { label: 'Countries', value: 38, suffix: '', displayOrder: 30, isActive: true },
-  { label: 'Average time-to-value', value: 14, suffix: ' days', displayOrder: 40, isActive: true },
+  { label: 'Years shipping', value: 6, suffix: '', displayOrder: 10, isActive: true },
+  { label: 'Projects shipped', value: 180, suffix: '+', displayOrder: 20, isActive: true },
+  { label: 'Senior engineers', value: 11, suffix: '', displayOrder: 30, isActive: true },
+  { label: 'NPS this year', value: 76, suffix: '', displayOrder: 40, isActive: true },
 ];
 
 const CASE_STUDIES = [

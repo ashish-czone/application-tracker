@@ -6,6 +6,7 @@ import { servicesGridBlock } from './ServicesGrid';
 import { clientLogosRowBlock } from './ClientLogosRow';
 import { valuePropsGridBlock } from './ValuePropsGrid';
 import { statsRowBlock } from './StatsRow';
+import { awardsStripBlock } from './AwardsStrip';
 
 export { testimonialsGridBlock } from './TestimonialsGrid';
 export { faqAccordionBlock } from './FaqAccordion';
@@ -14,6 +15,7 @@ export { servicesGridBlock } from './ServicesGrid';
 export { clientLogosRowBlock } from './ClientLogosRow';
 export { valuePropsGridBlock } from './ValuePropsGrid';
 export { statsRowBlock } from './StatsRow';
+export { awardsStripBlock } from './AwardsStrip';
 
 export const contentBlocks = [
   testimonialsGridBlock,
@@ -23,6 +25,7 @@ export const contentBlocks = [
   clientLogosRowBlock,
   valuePropsGridBlock,
   statsRowBlock,
+  awardsStripBlock,
 ];
 
 /**

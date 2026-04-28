@@ -44,6 +44,7 @@ export {
   clientLogosRowBlock,
   valuePropsGridBlock,
   statsRowBlock,
+  awardsStripBlock,
 } from '../../components/blocks/content';
 
 export type { DataSource, SectionData, MapperDefinition } from '@domains/agency-contract';
@@ -70,3 +71,9 @@ export type {
   HeaderShrinkProps,
   ParallaxProps,
 } from '../../components/motion';
+
+// Editorial primitives — numbered section labels and CSS-only marquees.
+// Used by hero, service rows, awards strip; exposed for the public site
+// to compose hand-built routes (e.g. /work index, sign-off blocks).
+export { SectionLabel, Marquee } from '../../components/editorial';
+export type { SectionLabelProps, MarqueeProps } from '../../components/editorial';
