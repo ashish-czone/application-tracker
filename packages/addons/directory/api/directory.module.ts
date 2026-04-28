@@ -4,6 +4,8 @@ import { AuditRegistryService } from '@packages/audit';
 import { EventRegistryService } from '@packages/events';
 import { CompaniesService } from './services/companies.service';
 import { PeopleService } from './services/people.service';
+import { CompaniesController } from './controllers/companies.controller';
+import { PeopleController } from './controllers/people.controller';
 import {
   DIRECTORY_COMPANY_CREATED,
   DIRECTORY_COMPANY_UPDATED,
@@ -14,6 +16,7 @@ import {
 } from './events/types';
 
 @Module({
+  controllers: [CompaniesController, PeopleController],
   providers: [CompaniesService, PeopleService],
   exports: [CompaniesService, PeopleService],
 })
