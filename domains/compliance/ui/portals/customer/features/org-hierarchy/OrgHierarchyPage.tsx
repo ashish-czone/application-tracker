@@ -7,7 +7,6 @@ import { OrgTree } from './components/OrgTree';
 import { UnitDetailPanel } from './components/UnitDetailPanel';
 import { AddUnitDrawer } from './components/AddUnitDrawer';
 import { AddMemberDrawer } from './components/AddMemberDrawer';
-import { MOCK_LAW_ASSIGNMENTS } from './placeholders';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 
 export function OrgHierarchyPage() {
@@ -99,7 +98,6 @@ export function OrgHierarchyPage() {
                 key={selectedUnit.id}
                 unit={selectedUnit}
                 allUnits={unitList}
-                allAssignments={MOCK_LAW_ASSIGNMENTS}
                 onAddMember={() => setAddMemberUnit(selectedUnit)}
               />
             ) : (

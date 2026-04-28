@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Building2, ChevronRight, Plus, MoreHorizontal, Shield, Users, AlertTriangle } from 'lucide-react';
+import { Building2, ChevronRight, Plus, MoreHorizontal, Shield, Users } from 'lucide-react';
 import { Eyebrow, CoarseTabs, type CoarseTabItem } from '@packages/ui';
 import type { OrgUnit, OrgUnitMemberDetail } from '@packages/org-units-ui';
 import { useOrgUnitMembers } from '@packages/org-units-ui';
@@ -9,8 +9,10 @@ import {
   getInitials,
   levelTagClass,
 } from '../helpers';
-import type { ComplianceLawAssignment } from '../placeholders';
-import { getUnitLawAssignments } from '../placeholders';
+import {
+  useLawHandlersByOrgUnit,
+  type OrgUnitLawAssignment,
+} from '../../../../../hooks/useLawHandlersByOrgUnit';
 
 type DetailTab = 'members' | 'sub-units' | 'compliance';
 
@@ -23,14 +25,12 @@ const TABS: CoarseTabItem<DetailTab>[] = [
 interface UnitDetailPanelProps {
   unit: OrgUnit;
   allUnits: OrgUnit[];
-  allAssignments: ComplianceLawAssignment[];
   onAddMember?: () => void;
 }
 
 export function UnitDetailPanel({
   unit,
   allUnits,
-  allAssignments,
   onAddMember,
 }: UnitDetailPanelProps) {
   const [tab, setTab] = useState<DetailTab>('members');
@@ -39,9 +39,8 @@ export function UnitDetailPanel({
 
   const breadcrumb = useMemo(() => buildBreadcrumb(allUnits, unit.id), [allUnits, unit.id]);
   const children = useMemo(() => getUnitChildren(allUnits, unit.id), [allUnits, unit.id]);
-  const lawAssignments = useMemo(
-    () => getUnitLawAssignments(allAssignments, unit.id),
-    [allAssignments, unit.id],
+  const { data: lawAssignments, isLoading: lawAssignmentsLoading } = useLawHandlersByOrgUnit(
+    unit.id,
   );
 
   const head = unit.head;
@@ -138,7 +137,7 @@ export function UnitDetailPanel({
           <MembersTab members={members} isLoading={membersLoading} onAddMember={onAddMember} />
         )}
         {tab === 'compliance' && (
-          <ComplianceTab assignments={lawAssignments} />
+          <ComplianceTab assignments={lawAssignments} isLoading={lawAssignmentsLoading} />
         )}
       </div>
     </div>
@@ -271,7 +270,13 @@ function MembersTab({
   );
 }
 
-function ComplianceTab({ assignments }: { assignments: ComplianceLawAssignment[] }) {
+function ComplianceTab({
+  assignments,
+  isLoading,
+}: {
+  assignments: OrgUnitLawAssignment[];
+  isLoading: boolean;
+}) {
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
@@ -285,7 +290,13 @@ function ComplianceTab({ assignments }: { assignments: ComplianceLawAssignment[]
         </button>
       </div>
 
-      {assignments.length === 0 ? (
+      {isLoading ? (
+        <div className="space-y-1">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="h-12 bg-paper-sunken/30 border border-rule" />
+          ))}
+        </div>
+      ) : assignments.length === 0 ? (
         <div className="py-12 text-center">
           <Shield className="w-8 h-8 text-ink-muted/40 mx-auto mb-3" strokeWidth={1} />
           <p className="font-serif italic text-ink-muted text-sm">No laws assigned</p>
@@ -295,47 +306,25 @@ function ComplianceTab({ assignments }: { assignments: ComplianceLawAssignment[]
         </div>
       ) : (
         <div className="border border-rule divide-y divide-rule">
-          {assignments.map((a) => {
-            const pct = a.totalObligations > 0
-              ? Math.round((a.compliant / a.totalObligations) * 100)
-              : 0;
-            const hasOverdue = a.overdue > 0;
-            return (
-              <div
-                key={a.id}
-                className="flex items-center gap-4 px-4 py-3 hover:bg-paper-sunken/30 transition-colors"
-              >
-                <span className="font-mono text-[11px] tracking-wider text-ink-muted w-10 shrink-0">
-                  {a.lawCode}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <div className="text-[13px] font-sans text-ink leading-none truncate">{a.lawName}</div>
-                  <div className="text-[10px] text-ink-muted font-sans mt-1">
-                    {a.totalObligations} obligations · {a.compliant} compliant
-                  </div>
+          {assignments.map((a) => (
+            <div
+              key={a.id}
+              className="flex items-center gap-4 px-4 py-3 hover:bg-paper-sunken/30 transition-colors"
+            >
+              <span className="font-mono text-[11px] tracking-wider text-ink-muted w-10 shrink-0">
+                {a.lawCode}
+              </span>
+              <div className="flex-1 min-w-0">
+                <div className="text-[13px] font-sans text-ink leading-none truncate">
+                  {a.lawName}
                 </div>
-
-                <div className="w-20 h-1.5 bg-paper-sunken rounded-full overflow-hidden">
-                  <div
-                    className={`h-full ${hasOverdue ? 'bg-signal' : 'bg-filed'}`}
-                    style={{ width: `${pct}%` }}
-                  />
+                <div className="text-[10px] text-ink-muted font-sans mt-1">
+                  {a.isGlobal ? 'Default handler' : 'Client override'}
+                  {a.isPrimary ? ' · Primary' : ''}
                 </div>
-                <span className={`font-mono tabular-nums text-[11px] w-10 text-right ${
-                  hasOverdue ? 'text-signal font-medium' : 'text-ink-muted'
-                }`}>
-                  {pct}%
-                </span>
-
-                {hasOverdue && (
-                  <span className="flex items-center gap-1 text-[10px] text-signal font-sans">
-                    <AlertTriangle className="w-3 h-3" strokeWidth={2} />
-                    {a.overdue}
-                  </span>
-                )}
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
       )}
     </div>
