@@ -82,7 +82,12 @@ export function HeaderShell({ siteName, menuItems }: HeaderShellProps) {
           : 'bg-transparent',
       )}
     >
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 md:px-10 h-16 md:h-20">
+      <div
+        className={cn(
+          'mx-auto flex max-w-6xl items-center justify-between px-6 md:px-10 transition-[height] duration-300',
+          scrolled ? 'h-14 md:h-16' : 'h-16 md:h-20',
+        )}
+      >
         <Link
           href="/"
           className="font-display text-xl font-semibold tracking-tight"

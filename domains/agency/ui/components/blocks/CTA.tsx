@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
 import { defineBlock } from './registry';
 import type { BlockRenderProps } from './types';
+import { Reveal } from '../motion/Reveal';
+import { HoverLift } from '../motion/HoverLift';
 
 interface CTAFields extends Record<string, unknown> {
   heading?: string;
@@ -26,21 +28,25 @@ function CTA({ fields, variant }: BlockRenderProps<CTAFields>): ReactNode {
   const actions = (primaryText || secondaryText) ? (
     <div className="flex flex-wrap gap-3">
       {primaryText && primaryHref && (
-        <a
-          href={primaryHref}
-          className="inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-medium bg-[hsl(var(--foreground))] text-[hsl(var(--background))] hover:opacity-90 transition-opacity"
-        >
-          {primaryText}
-          <span aria-hidden>→</span>
-        </a>
+        <HoverLift>
+          <a
+            href={primaryHref}
+            className="inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-medium bg-[hsl(var(--foreground))] text-[hsl(var(--background))] hover:opacity-90 transition-opacity"
+          >
+            {primaryText}
+            <span aria-hidden>→</span>
+          </a>
+        </HoverLift>
       )}
       {secondaryText && secondaryHref && (
-        <a
-          href={secondaryHref}
-          className="inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-medium border border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))] transition-colors"
-        >
-          {secondaryText}
-        </a>
+        <HoverLift>
+          <a
+            href={secondaryHref}
+            className="inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-medium border border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))] transition-colors"
+          >
+            {secondaryText}
+          </a>
+        </HoverLift>
       )}
     </div>
   ) : null;
@@ -48,7 +54,7 @@ function CTA({ fields, variant }: BlockRenderProps<CTAFields>): ReactNode {
   if (variant === 'banner') {
     return (
       <section className="w-full py-20 md:py-24 bg-[hsl(var(--foreground))] text-[hsl(var(--background))]">
-        <div className="mx-auto max-w-6xl px-6 md:px-10 flex flex-col md:flex-row md:items-center md:justify-between gap-8">
+        <Reveal className="mx-auto max-w-6xl px-6 md:px-10 flex flex-col md:flex-row md:items-center md:justify-between gap-8">
           <div className="space-y-3 max-w-2xl">
             {heading && (
               <h2 className="text-3xl md:text-4xl font-semibold tracking-[-0.02em] leading-tight">
@@ -64,7 +70,7 @@ function CTA({ fields, variant }: BlockRenderProps<CTAFields>): ReactNode {
               {actions}
             </div>
           )}
-        </div>
+        </Reveal>
       </section>
     );
   }
@@ -72,7 +78,7 @@ function CTA({ fields, variant }: BlockRenderProps<CTAFields>): ReactNode {
   if (variant === 'split') {
     return (
       <section className="w-full py-20 md:py-28">
-        <div className="mx-auto max-w-6xl px-6 md:px-10 grid gap-8 md:grid-cols-2 md:gap-16 items-center">
+        <Reveal className="mx-auto max-w-6xl px-6 md:px-10 grid gap-8 md:grid-cols-2 md:gap-16 items-center">
           <div className="space-y-4">
             {heading && (
               <h2 className="text-3xl md:text-4xl font-semibold tracking-[-0.02em] leading-tight">
@@ -84,7 +90,7 @@ function CTA({ fields, variant }: BlockRenderProps<CTAFields>): ReactNode {
             )}
           </div>
           <div className="md:justify-self-end">{actions}</div>
-        </div>
+        </Reveal>
       </section>
     );
   }
@@ -92,7 +98,7 @@ function CTA({ fields, variant }: BlockRenderProps<CTAFields>): ReactNode {
   // centered (default)
   return (
     <section className="w-full py-20 md:py-28">
-      <div className="mx-auto max-w-4xl px-6 md:px-10">
+      <Reveal className="mx-auto max-w-4xl px-6 md:px-10">
         <div className="rounded-2xl bg-[hsl(var(--surface-muted))] p-10 md:p-16 text-center flex flex-col gap-5 items-center">
           {heading && (
             <h2 className="text-3xl md:text-4xl font-semibold tracking-[-0.02em] leading-tight">
@@ -106,7 +112,7 @@ function CTA({ fields, variant }: BlockRenderProps<CTAFields>): ReactNode {
           )}
           {actions && <div className="mt-2 justify-center flex flex-wrap gap-3">{actions}</div>}
         </div>
-      </div>
+      </Reveal>
     </section>
   );
 }

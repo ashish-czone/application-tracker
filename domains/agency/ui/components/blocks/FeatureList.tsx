@@ -1,6 +1,8 @@
-import { createElement, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { defineBlock } from './registry';
 import type { BlockRenderProps } from './types';
+import { Reveal } from '../motion/Reveal';
+import { Stagger } from '../motion/Stagger';
 
 interface FeatureListFields extends Record<string, unknown> {
   heading?: string;
@@ -26,30 +28,29 @@ function parseItems(raw: string | undefined): { title: string; description: stri
 
 function FeatureList({ fields }: BlockRenderProps<FeatureListFields>): ReactNode {
   const items = parseItems(fields.items);
-  return createElement(
-    'section',
-    { className: 'w-full py-16 px-6' },
-    createElement(
-      'div',
-      { className: 'mx-auto max-w-6xl flex flex-col gap-10' },
-      fields.heading
-        ? createElement('h2', { className: 'text-2xl md:text-3xl font-semibold text-center' }, fields.heading)
-        : null,
-      createElement(
-        'ul',
-        { className: 'grid gap-6 md:grid-cols-2 lg:grid-cols-3' },
-        ...items.map((item, i) =>
-          createElement(
-            'li',
-            { key: i, className: 'rounded-lg border border-border p-6 flex flex-col gap-2' },
-            createElement('h3', { className: 'font-semibold' }, item.title),
-            item.description
-              ? createElement('p', { className: 'text-sm text-muted-foreground' }, item.description)
-              : null,
-          ),
-        ),
-      ),
-    ),
+  return (
+    <section className="w-full py-16 px-6">
+      <div className="mx-auto max-w-6xl flex flex-col gap-10">
+        {fields.heading && (
+          <Reveal>
+            <h2 className="text-2xl md:text-3xl font-semibold text-center">{fields.heading}</h2>
+          </Reveal>
+        )}
+        <Stagger className="grid gap-6 md:grid-cols-2 lg:grid-cols-3" step={0.05}>
+          {items.map((item, i) => (
+            <li
+              key={i}
+              className="rounded-lg border border-border p-6 flex flex-col gap-2 list-none"
+            >
+              <h3 className="font-semibold">{item.title}</h3>
+              {item.description && (
+                <p className="text-sm text-muted-foreground">{item.description}</p>
+              )}
+            </li>
+          ))}
+        </Stagger>
+      </div>
+    </section>
   );
 }
 

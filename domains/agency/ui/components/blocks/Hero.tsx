@@ -1,6 +1,10 @@
 import type { ReactNode } from 'react';
 import { defineBlock } from './registry';
 import type { BlockRenderProps } from './types';
+import { Reveal } from '../motion/Reveal';
+import { Stagger } from '../motion/Stagger';
+import { HoverLift } from '../motion/HoverLift';
+import { Parallax } from '../motion/Parallax';
 
 interface HeroFields extends Record<string, unknown> {
   eyebrow?: string;
@@ -27,7 +31,7 @@ function Hero({ fields, variant }: BlockRenderProps<HeroFields>): ReactNode {
   const { eyebrow, headline, subheadline, ctaText, ctaHref, ctaSecondaryText, ctaSecondaryHref, imageUrl } = fields;
 
   const copy = (
-    <div className="flex flex-col gap-6">
+    <Stagger className="flex flex-col gap-6" step={0.07}>
       {eyebrow && (
         <span className="text-xs font-semibold tracking-[0.14em] uppercase text-[hsl(var(--muted-foreground))]">
           {eyebrow}
@@ -46,35 +50,41 @@ function Hero({ fields, variant }: BlockRenderProps<HeroFields>): ReactNode {
       {(ctaText || ctaSecondaryText) && (
         <div className="flex flex-wrap items-center gap-3 pt-2">
           {ctaText && ctaHref && (
-            <a
-              href={ctaHref}
-              className="inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-medium bg-[hsl(var(--foreground))] text-[hsl(var(--background))] hover:opacity-90 transition-opacity"
-            >
-              {ctaText}
-              <span aria-hidden>→</span>
-            </a>
+            <HoverLift>
+              <a
+                href={ctaHref}
+                className="inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-medium bg-[hsl(var(--foreground))] text-[hsl(var(--background))] hover:opacity-90 transition-opacity"
+              >
+                {ctaText}
+                <span aria-hidden>→</span>
+              </a>
+            </HoverLift>
           )}
           {ctaSecondaryText && ctaSecondaryHref && (
-            <a
-              href={ctaSecondaryHref}
-              className="inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-medium border border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))] transition-colors"
-            >
-              {ctaSecondaryText}
-            </a>
+            <HoverLift>
+              <a
+                href={ctaSecondaryHref}
+                className="inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-medium border border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))] transition-colors"
+              >
+                {ctaSecondaryText}
+              </a>
+            </HoverLift>
           )}
         </div>
       )}
-    </div>
+    </Stagger>
   );
 
   if (variant === 'full-bleed' && imageUrl) {
     return (
-      <section className="relative w-full min-h-[90vh] flex items-end">
-        <img
-          src={imageUrl}
-          alt=""
-          className="absolute inset-0 w-full h-full object-cover"
-        />
+      <section className="relative w-full min-h-[90vh] flex items-end overflow-hidden">
+        <Parallax className="absolute inset-0 w-full h-full" strength={0.25}>
+          <img
+            src={imageUrl}
+            alt=""
+            className="w-full h-[120%] object-cover"
+          />
+        </Parallax>
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" aria-hidden />
         <div className="relative mx-auto w-full max-w-6xl px-6 md:px-10 pb-20 md:pb-32 text-white">
           {copy}
@@ -88,11 +98,13 @@ function Hero({ fields, variant }: BlockRenderProps<HeroFields>): ReactNode {
       <section className="w-full py-20 md:py-28">
         <div className="mx-auto max-w-6xl px-6 md:px-10 grid gap-12 md:grid-cols-2 md:gap-16 items-center">
           {copy}
-          {imageUrl ? (
-            <img src={imageUrl} alt="" className="rounded-lg w-full h-auto object-cover aspect-[4/5]" />
-          ) : (
-            <div className="rounded-lg aspect-[4/5] bg-[hsl(var(--muted))]" aria-hidden />
-          )}
+          <Reveal delay={0.15}>
+            {imageUrl ? (
+              <img src={imageUrl} alt="" className="rounded-lg w-full h-auto object-cover aspect-[4/5]" />
+            ) : (
+              <div className="rounded-lg aspect-[4/5] bg-[hsl(var(--muted))]" aria-hidden />
+            )}
+          </Reveal>
         </div>
       </section>
     );

@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { Section } from '@/components/layout/Section';
-import { Reveal } from '@/components/motion/Reveal';
+import { Reveal } from '@domains/agency-ui/portals/customer';
 
 export default function NotFound() {
   return (
