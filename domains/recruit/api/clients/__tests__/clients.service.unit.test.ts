@@ -86,7 +86,8 @@ describe('ClientsService.create', () => {
   });
 
   it('finds-or-creates the company and inserts the client in one transaction', async () => {
-    mock.pushSelectResult([{ id: 'cl-1' }]); // tx.insert(clients).returning() inside the tx
+    mock.pushSelectResult([]);                                       // tx.update(companies) recruit_* canonical write
+    mock.pushSelectResult([{ id: 'cl-1' }]);                         // tx.insert(recruit_clients).returning() shadow
     mock.pushSelectResult([{ id: 'cl-1', clientName: 'Acme Corp' }]); // findOne(snapshot) after commit
 
     await service.create(
@@ -99,13 +100,15 @@ describe('ClientsService.create', () => {
       'user-1',
       expect.anything(),
     );
+    expect(mock.tx.update).toHaveBeenCalled();
     expect(mock.tx.insert).toHaveBeenCalled();
     expect(mock.database.db.transaction).toHaveBeenCalledTimes(1);
   });
 
   it('emits clients.Created with the post-commit snapshot', async () => {
-    mock.pushSelectResult([{ id: 'cl-1' }]);
-    mock.pushSelectResult([{ id: 'cl-1', clientName: 'Acme Corp' }]);
+    mock.pushSelectResult([]);                                       // tx.update(companies) recruit_*
+    mock.pushSelectResult([{ id: 'cl-1' }]);                         // tx.insert(recruit_clients).returning()
+    mock.pushSelectResult([{ id: 'cl-1', clientName: 'Acme Corp' }]); // findOne snapshot
 
     await service.create({ clientName: 'Acme Corp' } as any, 'user-1');
 
@@ -173,9 +176,10 @@ describe('ClientsService.update', () => {
   });
 
   it('skips company sync when input has no identity fields', async () => {
-    mock.pushSelectResult([{ id: 'cl-1', companyId: 'co-1', about: 'old' }]);
-    mock.pushSelectResult([{ id: 'cl-1' }]);
-    mock.pushSelectResult([{ id: 'cl-1', companyId: 'co-1', about: 'new' }]);
+    mock.pushSelectResult([{ id: 'cl-1', companyId: 'co-1', about: 'old' }]); // findOne(before)
+    mock.pushSelectResult([]);                                                // tx.update(companies) recruit_*
+    mock.pushSelectResult([{ id: 'cl-1' }]);                                  // tx.update(recruit_clients).returning
+    mock.pushSelectResult([{ id: 'cl-1', companyId: 'co-1', about: 'new' }]); // findOne(after)
 
     await service.update('cl-1', { about: 'new' } as any, 'user-1');
 
@@ -207,9 +211,10 @@ describe('ClientsService.update', () => {
   });
 
   it('emits no event when before/after are identical (no-op update)', async () => {
-    mock.pushSelectResult([{ id: 'cl-1', companyId: 'co-1', about: 'same' }]);
-    mock.pushSelectResult([{ id: 'cl-1' }]);
-    mock.pushSelectResult([{ id: 'cl-1', companyId: 'co-1', about: 'same' }]);
+    mock.pushSelectResult([{ id: 'cl-1', companyId: 'co-1', about: 'same' }]); // findOne(before)
+    mock.pushSelectResult([]);                                                 // tx.update(companies) recruit_*
+    mock.pushSelectResult([{ id: 'cl-1' }]);                                   // tx.update(recruit_clients).returning
+    mock.pushSelectResult([{ id: 'cl-1', companyId: 'co-1', about: 'same' }]); // findOne(after)
 
     await service.update('cl-1', { about: 'same' } as any, 'user-1');
 
@@ -217,9 +222,10 @@ describe('ClientsService.update', () => {
   });
 
   it('emits clients.Updated with diffed changes when before/after differ', async () => {
-    mock.pushSelectResult([{ id: 'cl-1', companyId: 'co-1', about: 'old' }]);
-    mock.pushSelectResult([{ id: 'cl-1' }]);
-    mock.pushSelectResult([{ id: 'cl-1', companyId: 'co-1', about: 'new' }]);
+    mock.pushSelectResult([{ id: 'cl-1', companyId: 'co-1', about: 'old' }]); // findOne(before)
+    mock.pushSelectResult([]);                                                // tx.update(companies) recruit_*
+    mock.pushSelectResult([{ id: 'cl-1' }]);                                  // tx.update(recruit_clients).returning
+    mock.pushSelectResult([{ id: 'cl-1', companyId: 'co-1', about: 'new' }]); // findOne(after)
 
     await service.update('cl-1', { about: 'new' } as any, 'user-1');
 
@@ -249,16 +255,18 @@ describe('ClientsService.softDelete', () => {
     ).rejects.toBeInstanceOf(NotFoundException);
   });
 
-  it('updates deletedAt+deletedBy and emits clients.Deleted with before snapshot', async () => {
-    mock.pushSelectResult([{ id: 'cl-1', clientName: 'Acme' }]);
+  it('updates recruit_archived_at + deletedAt and emits clients.Deleted with before snapshot', async () => {
+    mock.pushSelectResult([{ id: 'cl-1', companyId: 'co-1', clientName: 'Acme' }]); // findOne(before)
 
     await service.softDelete('cl-1', 'user-1');
 
-    expect(mock.database.db.update).toHaveBeenCalled();
+    // softDelete uses tx for both companies (recruit_archived_at) and recruit_clients (deletedAt).
+    expect(mock.database.db.transaction).toHaveBeenCalledTimes(1);
+    expect(mock.tx.update).toHaveBeenCalled();
     expect(events.emitDynamic).toHaveBeenCalledWith('clients.Deleted', expect.objectContaining({
       entityType: 'clients',
       entityId: 'cl-1',
-      payload: { before: { id: 'cl-1', clientName: 'Acme' } },
+      payload: { before: { id: 'cl-1', companyId: 'co-1', clientName: 'Acme' } },
     }));
   });
 });

@@ -19,7 +19,6 @@ import { computePagination, computePaginationMeta } from '@packages/query-builde
 import { buildSoftDeleteCondition } from '@packages/soft-delete';
 import {
   CompaniesService,
-  companies,
   type FindOrCreateCompanyInput,
   type UpdateCompanyInput,
 } from '@packages/directory';
@@ -29,6 +28,7 @@ import { LookupResolverService, type CustomLookupResolver, type LookupResult } f
 import type { PaginatedResponse } from '@packages/common';
 import type { CreateClientDto, UpdateClientDto } from './clients.dto';
 import { clients } from './schema/clients';
+import { companies, type RecruitAddress } from './companies-ref';
 
 /** Subset of `BaseListQuery` we read directly. Not imported from
  *  entity-engine so the service has no dep on the engine for read paths. */
@@ -61,8 +61,7 @@ export class ClientsService implements OnModuleInit {
   /**
    * Register a custom lookup resolver for `clients` so other entities
    * (contacts, job_openings, interviews) can search and resolve client labels
-   * via the canonical identity in `directory.companies`. Replaces any
-   * resolver the engine auto-registered from `EntityConfig.lookup`.
+   * via the canonical identity in `directory.companies`.
    */
   onModuleInit(): void {
     this.lookupResolver.registerResolver('clients', this.buildLookupResolver());
@@ -195,6 +194,24 @@ export class ClientsService implements OnModuleInit {
       );
       const id = randomUUID();
       const now = new Date();
+
+      // Canonical write: companies.recruit_*. The shared row is the recruit
+      // client when these fields are set.
+      await tx
+        .update(companies)
+        .set({
+          recruitAbout: input.about ?? null,
+          recruitContactNumber: input.contactNumber ?? null,
+          recruitSource: input.source ?? 'added-by-user',
+          recruitBillingAddress: toAddressJsonb(input, 'billing'),
+          recruitShippingAddress: toAddressJsonb(input, 'shipping'),
+          recruitBecameClientAt: now,
+          recruitArchivedAt: null,
+        })
+        .where(eq(companies.id, company.id));
+
+      // Shadow write to recruit_clients — keeps child-table FKs valid until
+      // the FK repoint PR. Same data, flat columns.
       const [row] = await tx
         .insert(clients)
         .values({
@@ -221,10 +238,6 @@ export class ClientsService implements OnModuleInit {
       return row;
     });
 
-    // Emit after commit. AuditListener picks this up via the registration
-    // entity-engine's defineEntity() set up; the snapshot uses findOne so
-    // identity fields are JOIN-projected from directory.companies — i.e.
-    // the canonical values, not local shadows.
     const snapshot = await this.findOne(inserted.id);
     this.events.emitDynamic('clients.Created', {
       entityType: 'clients',
@@ -242,14 +255,13 @@ export class ClientsService implements OnModuleInit {
     actorId: string,
     accessCtx?: DataAccessContext,
   ) {
-    // Scope-check + capture before snapshot. findOne throws NotFound if the
-    // row is outside the actor's scope or doesn't exist.
     const before = await this.findOne(id, accessCtx);
 
     const updated = await this.database.db.transaction(async (tx) => {
-      // Sync identity fields to directory.companies first, so a unique
-      // violation aborts the whole transaction before we touch recruit_clients.
       const currentCompanyId = (before.companyId as string | null) ?? null;
+
+      // Identity sync to directory.companies first — unique violation aborts
+      // before any sidecar writes.
       const companyPatch = toCompanyPatch(input);
       if (currentCompanyId && Object.keys(companyPatch).length > 0) {
         try {
@@ -266,6 +278,20 @@ export class ClientsService implements OnModuleInit {
         }
       }
 
+      // Canonical recruit-prefix write on companies. Address jsonb is rebuilt
+      // by merging the patch over the previous flat address fields read in
+      // `before`, so partial address updates don't clobber unrelated keys.
+      if (currentCompanyId) {
+        const recruitPatch = toCompanyRecruitPatch(input, before);
+        if (Object.keys(recruitPatch).length > 0) {
+          await tx
+            .update(companies)
+            .set(recruitPatch)
+            .where(eq(companies.id, currentCompanyId));
+        }
+      }
+
+      // Shadow write to recruit_clients — same fields, flat columns.
       const patch = toClientPatch(input);
       patch.updatedAt = new Date();
 
@@ -297,11 +323,21 @@ export class ClientsService implements OnModuleInit {
 
   async softDelete(id: string, actorId: string, accessCtx?: DataAccessContext) {
     const before = await this.findOne(id, accessCtx);
+    const currentCompanyId = (before.companyId as string | null) ?? null;
+    const now = new Date();
 
-    await this.database.db
-      .update(clients)
-      .set({ deletedAt: new Date(), deletedBy: actorId })
-      .where(eq(clients.id, id));
+    await this.database.db.transaction(async (tx) => {
+      if (currentCompanyId) {
+        await tx
+          .update(companies)
+          .set({ recruitArchivedAt: now })
+          .where(eq(companies.id, currentCompanyId));
+      }
+      await tx
+        .update(clients)
+        .set({ deletedAt: now, deletedBy: actorId })
+        .where(eq(clients.id, id));
+    });
 
     this.events.emitDynamic('clients.Deleted', {
       entityType: 'clients',
@@ -312,9 +348,6 @@ export class ClientsService implements OnModuleInit {
   }
 
   async clone(id: string, actorId: string) {
-    // Clone preserves the same companyId — same identity, new commercial
-    // relationship. Recruit-specific fields are copied; audit/system
-    // columns are regenerated by create().
     const source = await this.findOne(id);
     return this.create(
       {
@@ -341,7 +374,7 @@ export class ClientsService implements OnModuleInit {
 
   async restore(id: string) {
     const [row] = await this.database.db
-      .select({ id: clients.id })
+      .select({ id: clients.id, companyId: clients.companyId })
       .from(clients)
       .where(eq(clients.id, id))
       .limit(1);
@@ -349,10 +382,18 @@ export class ClientsService implements OnModuleInit {
       throw new NotFoundException('Client not found');
     }
 
-    await this.database.db
-      .update(clients)
-      .set({ deletedAt: null, deletedBy: null })
-      .where(eq(clients.id, id));
+    await this.database.db.transaction(async (tx) => {
+      if (row.companyId) {
+        await tx
+          .update(companies)
+          .set({ recruitArchivedAt: null })
+          .where(eq(companies.id, row.companyId));
+      }
+      await tx
+        .update(clients)
+        .set({ deletedAt: null, deletedBy: null })
+        .where(eq(clients.id, id));
+    });
 
     return this.findOne(id);
   }
@@ -360,10 +401,9 @@ export class ClientsService implements OnModuleInit {
   /**
    * Picker bridge for hand-written entities that show a companies picker
    * but persist a recruit_client.id FK. Returns the existing recruit_client
-   * for this company, or creates a minimal one (companyId only, no
-   * commercial sidecar yet) if none exists. Used by F-2c when contacts /
-   * job_openings / interviews route their clientId picker through
-   * companies search.
+   * for this company, or creates a minimal one if none exists. Stamps
+   * `companies.recruit_became_client_at` so the canonical lifecycle marker
+   * matches.
    */
   async findOrCreateForCompany(
     companyId: string,
@@ -389,6 +429,12 @@ export class ClientsService implements OnModuleInit {
 
     const id = randomUUID();
     const now = new Date();
+
+    await exec
+      .update(companies)
+      .set({ recruitBecameClientAt: now, recruitArchivedAt: null })
+      .where(eq(companies.id, companyId));
+
     await exec.insert(clients).values({
       id,
       companyId,
@@ -416,21 +462,21 @@ export class ClientsService implements OnModuleInit {
       id: clients.id,
       companyId: clients.companyId,
       clientName: companies.name,
-      contactNumber: clients.contactNumber,
+      contactNumber: companies.recruitContactNumber,
       website: companies.websiteDomain,
       industry: companies.industry,
-      about: clients.about,
-      source: clients.source,
-      billingStreet: clients.billingStreet,
-      billingCity: clients.billingCity,
-      billingProvince: clients.billingProvince,
-      billingCode: clients.billingCode,
-      billingCountry: clients.billingCountry,
-      shippingStreet: clients.shippingStreet,
-      shippingCity: clients.shippingCity,
-      shippingProvince: clients.shippingProvince,
-      shippingCode: clients.shippingCode,
-      shippingCountry: clients.shippingCountry,
+      about: companies.recruitAbout,
+      source: companies.recruitSource,
+      billingStreet: sql<string | null>`${companies.recruitBillingAddress}->>'street'`.as('billing_street'),
+      billingCity: sql<string | null>`${companies.recruitBillingAddress}->>'city'`.as('billing_city'),
+      billingProvince: sql<string | null>`${companies.recruitBillingAddress}->>'province'`.as('billing_province'),
+      billingCode: sql<string | null>`${companies.recruitBillingAddress}->>'postalCode'`.as('billing_code'),
+      billingCountry: sql<string | null>`${companies.recruitBillingAddress}->>'country'`.as('billing_country'),
+      shippingStreet: sql<string | null>`${companies.recruitShippingAddress}->>'street'`.as('shipping_street'),
+      shippingCity: sql<string | null>`${companies.recruitShippingAddress}->>'city'`.as('shipping_city'),
+      shippingProvince: sql<string | null>`${companies.recruitShippingAddress}->>'province'`.as('shipping_province'),
+      shippingCode: sql<string | null>`${companies.recruitShippingAddress}->>'postalCode'`.as('shipping_code'),
+      shippingCountry: sql<string | null>`${companies.recruitShippingAddress}->>'country'`.as('shipping_country'),
       createdBy: clients.createdBy,
       createdAt: clients.createdAt,
       updatedAt: clients.updatedAt,
@@ -492,9 +538,8 @@ function toCompanyPatch(input: UpdateClientDto): UpdateCompanyInput {
   return patch;
 }
 
-/** Project the patch onto recruit_clients columns. Identity fields
- *  (clientName/website/industry) are not in the patch — they're routed to
- *  directory.companies via toCompanyPatch. */
+/** Project the patch onto recruit_clients flat columns. Identity fields
+ *  are routed via `toCompanyPatch`. */
 function toClientPatch(input: UpdateClientDto): Record<string, unknown> {
   const patch: Record<string, unknown> = {};
   for (const key of [
@@ -507,6 +552,84 @@ function toClientPatch(input: UpdateClientDto): Record<string, unknown> {
     }
   }
   return patch;
+}
+
+const BILLING_KEYS = ['billingStreet', 'billingCity', 'billingProvince', 'billingCode', 'billingCountry'] as const;
+const SHIPPING_KEYS = ['shippingStreet', 'shippingCity', 'shippingProvince', 'shippingCode', 'shippingCountry'] as const;
+
+/** Build a recruit-prefix patch for the `companies` row from an UpdateClientDto.
+ *  Address jsonb is rebuilt by merging the patch over the previous flat address
+ *  values read in `before` — partial address updates don't clobber unrelated
+ *  keys; clearing all components produces NULL jsonb. */
+function toCompanyRecruitPatch(
+  input: UpdateClientDto,
+  before: Record<string, unknown>,
+): Record<string, unknown> {
+  const patch: Record<string, unknown> = {};
+  if (input.about !== undefined) patch.recruitAbout = normalizeNullable(input.about);
+  if (input.contactNumber !== undefined) patch.recruitContactNumber = normalizeNullable(input.contactNumber);
+  if (input.source !== undefined) patch.recruitSource = normalizeNullable(input.source);
+
+  if (BILLING_KEYS.some((k) => input[k] !== undefined)) {
+    patch.recruitBillingAddress = mergeAddress(input, before, 'billing');
+  }
+  if (SHIPPING_KEYS.some((k) => input[k] !== undefined)) {
+    patch.recruitShippingAddress = mergeAddress(input, before, 'shipping');
+  }
+
+  return patch;
+}
+
+/** Build a fresh recruit-address jsonb from a CreateClientDto. */
+function toAddressJsonb(
+  input: CreateClientDto,
+  variant: 'billing' | 'shipping',
+): RecruitAddress | null {
+  const keys = variant === 'billing' ? BILLING_KEYS : SHIPPING_KEYS;
+  const obj: RecruitAddress = {};
+  for (const key of keys) {
+    const value = input[key];
+    if (value !== undefined && value !== null && value !== '') {
+      obj[addressJsonbKeyFor(key)] = value;
+    }
+  }
+  return Object.keys(obj).length === 0 ? null : obj;
+}
+
+/** Merge a partial address patch over the previous flat address values from
+ *  `before`. Returns null if the merged jsonb has no non-empty keys. */
+function mergeAddress(
+  input: UpdateClientDto,
+  before: Record<string, unknown>,
+  variant: 'billing' | 'shipping',
+): RecruitAddress | null {
+  const keys = variant === 'billing' ? BILLING_KEYS : SHIPPING_KEYS;
+  const obj: RecruitAddress = {};
+  for (const key of keys) {
+    const incoming = input[key];
+    const value = incoming !== undefined
+      ? (incoming === null || incoming === '' ? null : incoming)
+      : ((before[key] as string | null | undefined) ?? null);
+    if (value != null && value !== '') {
+      obj[addressJsonbKeyFor(key)] = value;
+    }
+  }
+  return Object.keys(obj).length === 0 ? null : obj;
+}
+
+function addressJsonbKeyFor(
+  key: typeof BILLING_KEYS[number] | typeof SHIPPING_KEYS[number],
+): keyof RecruitAddress {
+  // billingStreet → "Street", billingCode → "Code" (mapped to "postalCode"),
+  // shippingProvince → "Province", etc.
+  const stripped = key.replace(/^(billing|shipping)/, '');
+  if (stripped === 'Code') return 'postalCode';
+  return (stripped.charAt(0).toLowerCase() + stripped.slice(1)) as keyof RecruitAddress;
+}
+
+function normalizeNullable(value: string | null | undefined): string | null {
+  if (value === undefined || value === null || value === '') return null;
+  return value;
 }
 
 function normalizeWebsiteDomain(raw: string | null | undefined): string | null {
