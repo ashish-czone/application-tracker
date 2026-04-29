@@ -58,8 +58,8 @@ export const CLIENTS_CONFIG: EntityConfig = {
   // column entirely.
 
   relationships: [
-    { name: 'contacts', type: 'hasMany', targetEntity: 'contacts', foreignKey: 'clientId', label: 'Contacts', displayFields: ['firstName', 'lastName', 'email', 'jobTitle'] },
-    { name: 'jobOpenings', type: 'hasMany', targetEntity: 'job_openings', foreignKey: 'clientId', label: 'Job Openings', displayFields: ['title', 'status', 'createdAt'] },
+    { name: 'contacts', type: 'hasMany', targetEntity: 'contacts', foreignKey: 'companyId', label: 'Contacts', displayFields: ['firstName', 'lastName', 'email', 'jobTitle'] },
+    { name: 'jobOpenings', type: 'hasMany', targetEntity: 'job_openings', foreignKey: 'companyId', label: 'Job Openings', displayFields: ['title', 'status', 'createdAt'] },
   ],
 
   dataAccess: { anchors: { creator: 'createdBy' } },

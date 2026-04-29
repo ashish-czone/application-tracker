@@ -399,11 +399,14 @@ export class ClientsService implements OnModuleInit {
   }
 
   /**
-   * Picker bridge for hand-written entities that show a companies picker
-   * but persist a recruit_client.id FK. Returns the existing recruit_client
-   * for this company, or creates a minimal one if none exists. Stamps
-   * `companies.recruit_became_client_at` so the canonical lifecycle marker
-   * matches.
+   * Picker bridge: marks a company as a recruit client by stamping
+   * `recruit_became_client_at`. Child tables (recruit_contacts,
+   * interviews, job_openings) now FK to companies.id directly, so the
+   * picker stores the company.id — this method just ensures the
+   * lifecycle marker is set. The shadow recruit_clients row is created
+   * for parity until the cleanup PR drops the table.
+   *
+   * Returns the company.id (the value the picker stores).
    */
   async findOrCreateForCompany(
     companyId: string,
@@ -416,7 +419,7 @@ export class ClientsService implements OnModuleInit {
       .from(clients)
       .where(and(eq(clients.companyId, companyId), isNull(clients.deletedAt)))
       .limit(1);
-    if (existing) return { id: existing.id, created: false };
+    if (existing) return { id: companyId, created: false };
 
     const [company] = await exec
       .select({ name: companies.name })
@@ -450,7 +453,7 @@ export class ClientsService implements OnModuleInit {
       payload: { after: { id, companyId, clientName: company.name, createdBy: actorId } },
     });
 
-    return { id, created: true };
+    return { id: companyId, created: true };
   }
 
   // ---------------------------------------------------------------------------
@@ -483,11 +486,11 @@ export class ClientsService implements OnModuleInit {
       deletedAt: clients.deletedAt,
       contactsCount: sql<number>`(
         SELECT COUNT(*)::integer FROM "recruit_contacts"
-        WHERE "client_id" = ${clients.id} AND "deleted_at" IS NULL
+        WHERE "company_id" = ${clients.companyId} AND "deleted_at" IS NULL
       )`.as('contactsCount'),
       jobOpeningsCount: sql<number>`(
         SELECT COUNT(*)::integer FROM "job_openings"
-        WHERE "client_id" = ${clients.id} AND "deleted_at" IS NULL
+        WHERE "company_id" = ${clients.companyId} AND "deleted_at" IS NULL
       )`.as('jobOpeningsCount'),
     };
   }

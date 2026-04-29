@@ -32,8 +32,7 @@ describe('ContactsService.create', () => {
     service = new ContactsService(entityService, mock.database, people);
   });
 
-  it('resolves companyId from clientId then finds-or-creates the person', async () => {
-    mock.pushSelectResult([{ companyId: 'co-1' }]); // clients lookup
+  it('passes companyId straight through to findOrCreate', async () => {
     await service.create(
       {
         firstName: 'Jane',
@@ -41,7 +40,7 @@ describe('ContactsService.create', () => {
         email: 'JANE@Example.com  ',
         mobile: '+15551234',
         jobTitle: 'PM',
-        clientId: 'cl-1',
+        companyId: 'co-1',
       } as any,
       'user-1',
     );
@@ -66,13 +65,12 @@ describe('ContactsService.create', () => {
   });
 
   it('falls back to workPhone when mobile is absent', async () => {
-    mock.pushSelectResult([{ companyId: 'co-1' }]);
     await service.create(
       {
         firstName: 'Jane',
         lastName: 'Doe',
         workPhone: '+15559999',
-        clientId: 'cl-1',
+        companyId: 'co-1',
       } as any,
       'user-1',
     );
@@ -84,7 +82,7 @@ describe('ContactsService.create', () => {
     );
   });
 
-  it('passes null companyId when clientId is omitted', async () => {
+  it('passes null companyId when companyId is omitted', async () => {
     await service.create({ firstName: 'X', lastName: 'Y' } as any, 'user-1');
     expect(people.findOrCreate).toHaveBeenCalledWith(
       expect.objectContaining({ companyId: null }),
@@ -116,7 +114,7 @@ describe('ContactsService.update', () => {
   });
 
   it('syncs name + email changes to people', async () => {
-    mock.pushSelectResult([{ personId: 'p-1', clientId: 'cl-1' }]);
+    mock.pushSelectResult([{ personId: 'p-1', companyId: 'co-1' }]);
     await service.update(
       'ct-1',
       { firstName: 'Janet', email: 'JANET@example.com' } as any,
@@ -131,7 +129,7 @@ describe('ContactsService.update', () => {
   });
 
   it('skips people write when only recruit-only fields change', async () => {
-    mock.pushSelectResult([{ personId: 'p-1', clientId: 'cl-1' }]);
+    mock.pushSelectResult([{ personId: 'p-1', companyId: 'co-1' }]);
     await service.update(
       'ct-1',
       { department: 'Engineering', mailingCity: 'NYC' } as any,
@@ -142,7 +140,7 @@ describe('ContactsService.update', () => {
   });
 
   it('translates 23505 from people.update to ConflictException (email collision)', async () => {
-    mock.pushSelectResult([{ personId: 'p-1', clientId: 'cl-1' }]);
+    mock.pushSelectResult([{ personId: 'p-1', companyId: 'co-1' }]);
     people.update.mockRejectedValueOnce(Object.assign(new Error('dup'), { code: '23505' }));
 
     await expect(
@@ -151,10 +149,9 @@ describe('ContactsService.update', () => {
     expect(entityService.update).not.toHaveBeenCalled();
   });
 
-  it('updates person.companyId when clientId changes', async () => {
-    mock.pushSelectResult([{ personId: 'p-1', clientId: 'cl-1' }]); // current contact
-    mock.pushSelectResult([{ companyId: 'co-2' }]);                  // resolve new client's company
-    await service.update('ct-1', { clientId: 'cl-2' } as any, 'user-1');
+  it('updates person.companyId when companyId changes', async () => {
+    mock.pushSelectResult([{ personId: 'p-1', companyId: 'co-1' }]); // current contact
+    await service.update('ct-1', { companyId: 'co-2' } as any, 'user-1');
 
     expect(people.update).toHaveBeenCalledWith(
       'p-1',
