@@ -91,6 +91,23 @@ export class ClientsController {
     return this.clients.clone(id, user.userId);
   }
 
+  /**
+   * Picker bridge for entities (contacts/job_openings/interviews) whose
+   * client picker shows directory.companies. The FE pre-submit hook resolves
+   * the picked companyId to a recruit_client.id by hitting this endpoint —
+   * findOrCreate semantics so picking the same company twice returns the
+   * same client.
+   */
+  @Post('find-or-create-for-company')
+  @RequirePermission('clients.create')
+  @ApiOperation({ summary: 'Resolve a directory.companies id to a recruit_clients.id (creates the wrapper if missing)' })
+  async findOrCreateForCompany(
+    @Body('companyId', ParseUUIDPipe) companyId: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.clients.findOrCreateForCompany(companyId, user.userId);
+  }
+
   @Post(':id/restore')
   @RequirePermission('clients.update')
   @ApiOperation({ summary: 'Restore a soft-deleted client' })

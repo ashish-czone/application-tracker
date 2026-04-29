@@ -1,4 +1,5 @@
 import type { EntityUIConfig } from '@packages/entity-engine-ui';
+import { searchCompaniesForClientPicker, resolveCompanyToClient } from './clientId-picker';
 
 export const CONTACTS_UI_CONFIG: EntityUIConfig = {
   entityType: 'contacts',
@@ -14,7 +15,11 @@ export const CONTACTS_UI_CONFIG: EntityUIConfig = {
     fullName: { label: 'Contact', cellRenderer: 'AvatarNameCell' },
     firstName: { label: 'First Name' },
     lastName: { label: 'Last Name' },
-    clientId: { label: 'Client Name' },
+    clientId: {
+      label: 'Client Name',
+      lookupSearch: searchCompaniesForClientPicker,
+      lookupResolveValue: resolveCompanyToClient,
+    },
     department: { label: 'Department' },
     email: { label: 'Email' },
     secondaryEmail: { label: 'Secondary Email' },

@@ -8,31 +8,17 @@ export const CLIENTS_CONFIG: EntityConfig = {
   table: clients,
   systemColumns: ['id', 'createdAt', 'updatedAt', 'deletedAt', 'deletedBy', 'createdBy'],
 
-  searchFields: ['clientName'],
+  // Identity fields (clientName/website/industry) are not on this entity's
+  // table — they live on directory.companies. ClientsService projects them
+  // into list/findOne responses via JOIN, and the FE form declares them as
+  // syntheticFields in clients.ui.ts so they still render in the form.
+  searchFields: [],
 
-  defaultSort: 'clientName',
-  sortableFields: ['clientName', 'industry', 'createdAt'],
+  defaultSort: 'createdAt',
+  sortableFields: ['createdAt'],
 
   fieldMeta: {
-    clientName: { label: 'Client Name', section: 'basic', sortOrder: 0, isQuickCreate: true, isSystem: true, maxLength: 255, cellRenderer: 'AvatarNameCell' },
     contactNumber: { label: 'Contact Number', section: 'basic', sortOrder: 2, isQuickCreate: true, fieldType: 'phone' },
-    website: { label: 'Website', section: 'basic', sortOrder: 4, isQuickCreate: true, fieldType: 'url' },
-    industry: {
-      label: 'Industry', section: 'basic', sortOrder: 5, isQuickCreate: true, fieldType: 'picklist',
-      picklistOptions: [
-        { label: 'Communications', value: 'communications' },
-        { label: 'Technology', value: 'technology' },
-        { label: 'Government/Military', value: 'government-military' },
-        { label: 'Manufacturing', value: 'manufacturing' },
-        { label: 'Financial Services', value: 'financial-services' },
-        { label: 'IT Services', value: 'it-services' },
-        { label: 'Education', value: 'education' },
-        { label: 'Pharma', value: 'pharma' },
-        { label: 'Real Estate', value: 'real-estate' },
-        { label: 'Consulting', value: 'consulting' },
-        { label: 'Health Care', value: 'health-care' },
-      ],
-    },
     about: { label: 'About', section: 'basic', sortOrder: 6, fieldType: 'textarea', maxLength: 32000 },
     source: {
       label: 'Source', section: 'basic', sortOrder: 7, fieldType: 'picklist',
@@ -57,10 +43,10 @@ export const CLIENTS_CONFIG: EntityConfig = {
     shippingCountry: { label: 'Shipping Country', section: 'shipping-address', sortOrder: 4, fieldType: 'category', categoryGroupSlug: 'countries' },
   },
 
-  listFields: ['clientName', 'industry', 'contactsCount', 'jobOpeningsCount'],
+  listFields: ['contactsCount', 'jobOpeningsCount'],
 
   sections: [
-    { name: 'Client Information', fields: ['clientName', 'contactNumber', 'website', 'industry', 'about', 'source'] },
+    { name: 'Client Information', fields: ['contactNumber', 'about', 'source'] },
     { name: 'Billing Address', fields: ['billingStreet', 'billingCity', 'billingProvince', 'billingCode', 'billingCountry'] },
     { name: 'Shipping Address', fields: ['shippingStreet', 'shippingCity', 'shippingProvince', 'shippingCode', 'shippingCountry'] },
   ],
@@ -80,6 +66,10 @@ export const CLIENTS_CONFIG: EntityConfig = {
 
   recipientFields: { createdBy: { label: 'Created By' } },
 
+  // nameField/subtitleField stay declared as projected aliases — list/findOne
+  // surface `clientName` and `industry` from companies via JOIN, and downstream
+  // consumers (avatar/name cell renderer, header subtitle) read them by these
+  // keys. The columns themselves no longer exist on `recruit_clients`.
   nameField: 'clientName',
   subtitleField: 'industry',
 };

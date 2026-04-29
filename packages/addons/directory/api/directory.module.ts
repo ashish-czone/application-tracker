@@ -30,6 +30,14 @@ export class DirectoryModule implements OnModuleInit {
   onModuleInit() {
     this.rbac.registerManifests([
       {
+        slug: 'directory.read',
+        module: 'directory',
+        action: 'read',
+        label: 'Read directory records',
+        description: 'Search and read companies / people in the identity directory (picker autocomplete)',
+        supportedScopes: ['any'],
+      },
+      {
         slug: 'directory.merge',
         module: 'directory',
         action: 'merge',

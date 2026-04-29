@@ -1,6 +1,7 @@
 import type { INestApplicationContext } from '@nestjs/common';
 import { DatabaseService, eq, sql, users } from '@packages/database';
 import { EntityService } from '@packages/entity-engine';
+import { ClientsService } from '../clients.service';
 import { clients } from '../schema/clients';
 import { contacts } from '../../contacts/schema/contacts';
 import { vendors } from '../../vendors/schema/vendors';
@@ -8,7 +9,6 @@ import { interviews } from '../../interviews/schema/interviews';
 import { candidates } from '../../candidates/schema/candidates';
 import { jobOpenings } from '../../job-openings/schema/job-openings';
 
-const CLIENTS_SERVICE_TOKEN = 'ENTITY_SERVICE_clients';
 const CONTACTS_SERVICE_TOKEN = 'ENTITY_SERVICE_contacts';
 const VENDORS_SERVICE_TOKEN = 'ENTITY_SERVICE_vendors';
 const INTERVIEWS_SERVICE_TOKEN = 'ENTITY_SERVICE_interviews';
@@ -71,7 +71,7 @@ const SAMPLE_VENDORS = [
 
 export const seedDemoClients = async (ctx: INestApplicationContext): Promise<void> => {
   const database = ctx.get(DatabaseService);
-  const clientService = ctx.get<EntityService>(CLIENTS_SERVICE_TOKEN);
+  const clientsService = ctx.get(ClientsService, { strict: false });
   const contactService = ctx.get<EntityService>(CONTACTS_SERVICE_TOKEN);
   const vendorService = ctx.get<EntityService>(VENDORS_SERVICE_TOKEN);
   const interviewService = ctx.get<EntityService>(INTERVIEWS_SERVICE_TOKEN);
@@ -88,7 +88,7 @@ export const seedDemoClients = async (ctx: INestApplicationContext): Promise<voi
     return row?.id;
   };
 
-  await ensureSampleClients(database, clientService, resolveCountryId);
+  await ensureSampleClients(database, clientsService, resolveCountryId);
   await ensureSampleContacts(database, contactService);
   await ensureSampleVendors(database, vendorService, resolveCountryId);
   await linkJobOpeningsToClients(database);
@@ -97,7 +97,7 @@ export const seedDemoClients = async (ctx: INestApplicationContext): Promise<voi
 
 async function ensureSampleClients(
   database: DatabaseService,
-  clientService: EntityService,
+  clientsService: ClientsService,
   resolveCountryId: (name: string) => Promise<string | undefined>,
 ): Promise<void> {
   const [existing] = await database.db.select({ id: clients.id }).from(clients).limit(1);
@@ -108,7 +108,7 @@ async function ensureSampleClients(
 
   for (const { _billingCountryName, ...data } of SAMPLE_CLIENTS) {
     const billingCountry = await resolveCountryId(_billingCountryName);
-    await clientService.create({ ...data, billingCountry }, admin.id);
+    await clientsService.create({ ...data, billingCountry } as any, admin.id);
   }
 }
 

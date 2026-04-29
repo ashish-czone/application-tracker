@@ -42,8 +42,8 @@ interface ClientsListQuery {
 }
 
 const SORTABLE = {
-  clientName: sql`coalesce(${companies.name}, ${clients.clientName})`,
-  industry: sql`coalesce(${companies.industry}, ${clients.industry})`,
+  clientName: companies.name,
+  industry: companies.industry,
   createdAt: clients.createdAt,
   updatedAt: clients.updatedAt,
 } as const;
@@ -61,8 +61,7 @@ export class ClientsService implements OnModuleInit {
   /**
    * Register a custom lookup resolver for `clients` so other entities
    * (contacts, job_openings, interviews) can search and resolve client labels
-   * via the canonical identity in `directory.companies` instead of the
-   * (now-shadow-only) `recruit_clients.client_name` column. Replaces any
+   * via the canonical identity in `directory.companies`. Replaces any
    * resolver the engine auto-registered from `EntityConfig.lookup`.
    */
   onModuleInit(): void {
@@ -70,23 +69,21 @@ export class ClientsService implements OnModuleInit {
   }
 
   private buildLookupResolver(): CustomLookupResolver {
-    const labelExpr = sql<string>`coalesce(${companies.name}, ${clients.clientName})`;
-
     return {
       search: async (query, limit): Promise<LookupResult[]> => {
         const term = `%${query}%`;
         const rows = await this.database.db
-          .select({ label: labelExpr, value: clients.id })
+          .select({ label: companies.name, value: clients.id })
           .from(clients)
           .leftJoin(companies, eq(clients.companyId, companies.id))
-          .where(and(isNull(clients.deletedAt), ilike(labelExpr, term)))
+          .where(and(isNull(clients.deletedAt), ilike(companies.name, term)))
           .limit(limit);
         return rows.map(r => ({ label: String(r.label ?? ''), value: String(r.value ?? '') }));
       },
 
       getLabel: async (value) => {
         const [row] = await this.database.db
-          .select({ label: labelExpr })
+          .select({ label: companies.name })
           .from(clients)
           .leftJoin(companies, eq(clients.companyId, companies.id))
           .where(eq(clients.id, value))
@@ -96,7 +93,7 @@ export class ClientsService implements OnModuleInit {
 
       getBatchLabels: async (values) => {
         const rows = await this.database.db
-          .select({ id: clients.id, label: labelExpr })
+          .select({ id: clients.id, label: companies.name })
           .from(clients)
           .leftJoin(companies, eq(clients.companyId, companies.id))
           .where(inArray(clients.id, values));
@@ -132,7 +129,7 @@ export class ClientsService implements OnModuleInit {
 
     if (query.search) {
       const term = `%${query.search}%`;
-      conditions.push(ilike(sql<string>`coalesce(${companies.name}, ${clients.clientName})`, term));
+      conditions.push(ilike(companies.name, term));
     }
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
@@ -203,12 +200,6 @@ export class ClientsService implements OnModuleInit {
         .values({
           id,
           companyId: company.id,
-          // Shadow columns retained until F-2c. Reads source clientName /
-          // website / industry from companies via JOIN; writes still
-          // populate the local copies so older readers see them.
-          clientName: input.clientName,
-          website: input.website ?? null,
-          industry: input.industry ?? null,
           contactNumber: input.contactNumber ?? null,
           about: input.about ?? null,
           source: input.source ?? 'added-by-user',
@@ -401,7 +392,6 @@ export class ClientsService implements OnModuleInit {
     await exec.insert(clients).values({
       id,
       companyId,
-      clientName: company.name,
       createdBy: actorId,
       createdAt: now,
       updatedAt: now,
@@ -425,10 +415,10 @@ export class ClientsService implements OnModuleInit {
     return {
       id: clients.id,
       companyId: clients.companyId,
-      clientName: sql<string>`coalesce(${companies.name}, ${clients.clientName})`.as('clientName'),
+      clientName: companies.name,
       contactNumber: clients.contactNumber,
-      website: sql<string | null>`coalesce(${companies.websiteDomain}, ${clients.website})`.as('website'),
-      industry: sql<string | null>`coalesce(${companies.industry}, ${clients.industry})`.as('industry'),
+      website: companies.websiteDomain,
+      industry: companies.industry,
       about: clients.about,
       source: clients.source,
       billingStreet: clients.billingStreet,
@@ -502,12 +492,12 @@ function toCompanyPatch(input: UpdateClientDto): UpdateCompanyInput {
   return patch;
 }
 
-/** Project the patch onto recruit_clients columns. Identity fields are
- *  written here too (shadow columns) until F-2c. */
+/** Project the patch onto recruit_clients columns. Identity fields
+ *  (clientName/website/industry) are not in the patch — they're routed to
+ *  directory.companies via toCompanyPatch. */
 function toClientPatch(input: UpdateClientDto): Record<string, unknown> {
   const patch: Record<string, unknown> = {};
   for (const key of [
-    'clientName', 'website', 'industry',
     'contactNumber', 'about', 'source',
     'billingStreet', 'billingCity', 'billingProvince', 'billingCode', 'billingCountry',
     'shippingStreet', 'shippingCity', 'shippingProvince', 'shippingCode', 'shippingCountry',
