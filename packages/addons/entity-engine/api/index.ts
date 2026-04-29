@@ -51,6 +51,8 @@ export type {
   FieldFilter,
   LookupConfig,
   LookupResult,
+  CustomLookupResolver,
+  LookupResolver,
   RegisterFieldInput,
   SeedSectionInput,
   SetPicklistOptionInput,

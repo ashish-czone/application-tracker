@@ -65,10 +65,11 @@ export const CLIENTS_CONFIG: EntityConfig = {
     { name: 'Shipping Address', fields: ['shippingStreet', 'shippingCity', 'shippingProvince', 'shippingCode', 'shippingCountry'] },
   ],
 
-  lookup: {
-    labelField: 'clientName',
-    searchFields: ['clientName'],
-  },
+  // Lookup resolution is owned by ClientsService.onModuleInit() — it
+  // registers a custom resolver that JOINs directory.companies so labels
+  // come from `companies.name` (the canonical identity) instead of the
+  // shadow `recruit_clients.client_name` column. F-2c will drop the shadow
+  // column entirely.
 
   relationships: [
     { name: 'contacts', type: 'hasMany', targetEntity: 'contacts', foreignKey: 'clientId', label: 'Contacts', displayFields: ['firstName', 'lastName', 'email', 'jobTitle'] },

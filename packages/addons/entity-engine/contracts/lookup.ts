@@ -19,8 +19,33 @@ export interface LookupConfig {
   searchFields: string[];
 }
 
+export interface LookupResult {
+  label: string;
+  value: string;
+}
+
+/**
+ * Custom resolver — entities provide their own search/label implementation
+ * instead of letting the resolver service build a generic table query. Used
+ * by hand-written entities whose displayable name lives in another table
+ * (e.g. recruit clients projecting `companies.name` via the `companyId` FK).
+ *
+ * The default resolver wired by `registerEntityLookup` from a `LookupConfig`
+ * is itself just a `CustomLookupResolver` built from the table+columns spec.
+ */
+export interface CustomLookupResolver {
+  search(query: string, limit: number): Promise<LookupResult[]>;
+  getLabel(value: string): Promise<string | null>;
+  getBatchLabels(values: string[]): Promise<Map<string, string>>;
+}
+
 export interface LookupResolver {
+  /** Register an entity using the default table-based resolver. */
   register(config: LookupConfig): void;
+  /** Register an entity with a custom resolver implementation. Use when the
+   *  entity's labels live elsewhere (e.g. JOIN to a different table) and the
+   *  generic table-based query can't express it. */
+  registerResolver(entity: string, resolver: CustomLookupResolver): void;
 }
 
 /** DI token owning packages use to inject the resolver without importing

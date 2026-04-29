@@ -241,12 +241,12 @@ export interface FieldFilter {
 // ---------------------------------------------------------------------------
 
 export { LOOKUP_RESOLVER_TOKEN } from '@packages/entity-engine-contract';
-export type { LookupConfig, LookupResolver } from '@packages/entity-engine-contract';
-
-export interface LookupResult {
-  label: string;
-  value: string;
-}
+export type {
+  CustomLookupResolver,
+  LookupConfig,
+  LookupResolver,
+  LookupResult,
+} from '@packages/entity-engine-contract';
 
 // ---------------------------------------------------------------------------
 // Registration input types — used for seeding field definitions
