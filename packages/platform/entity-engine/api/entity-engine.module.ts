@@ -1,13 +1,20 @@
 import { Module, type DynamicModule, Logger, Inject, Optional, type OnApplicationBootstrap } from '@nestjs/common';
 import { DatabaseService } from '@packages/database';
 import { DomainEventEmitter, EventRegistryService } from '@packages/events';
-import { RbacService, ScopeResolverRegistry, type PermissionManifest } from '@packages/rbac';
+import { RbacService, ScopeResolverRegistry } from '@packages/rbac';
 import { AppLoggerService } from '@packages/logger';
 import { EntityCoreModule } from './entity-core.module';
 import { EntityRegistryService, type RegisteredEntityConfig } from './entity-registry.service';
 import { EntityService } from './entity.service';
 import { deriveSupportedScopes } from './helpers/derive-supported-scopes';
 import { ensureRegisteredIdentity } from './helpers/registered-identity';
+import {
+  registerEntityCrudPermissions,
+  registerEntityCrudEvents,
+  registerWorkflowTransitionEvent,
+  registerEntityAudit,
+  registerEntityLookup,
+} from './helpers/entity-registrations';
 import { FieldDefinitionService } from './services/field-definition.service';
 import { LookupResolverService } from './services/lookup-resolver.service';
 
@@ -175,71 +182,38 @@ export class EntityEngineModule implements OnApplicationBootstrap {
     const derivedScopes = deriveSupportedScopes(config, this.scopeResolverRegistry.values());
     const plural = registered.pluralName.toLowerCase();
     const singular = registered.singularName.toLowerCase();
-    const crudManifests: PermissionManifest[] = [
-      { slug: `${config.slug}.create`, module: config.slug, action: 'create', label: `Create ${plural}`,   description: `Create ${plural}`,   supportedScopes: derivedScopes },
-      { slug: `${config.slug}.read`,   module: config.slug, action: 'read',   label: `View ${plural}`,     description: `View ${plural}`,     supportedScopes: derivedScopes },
-      { slug: `${config.slug}.update`, module: config.slug, action: 'update', label: `Update ${singular}`, description: `Update ${plural}`,   supportedScopes: derivedScopes },
-      { slug: `${config.slug}.delete`, module: config.slug, action: 'delete', label: `Delete ${singular}`, description: `Delete ${plural}`,   supportedScopes: derivedScopes },
-    ];
-    const extraManifests: PermissionManifest[] = (config.extraPermissions ?? []).map((p) => ({
-      slug: `${config.slug}.${p.action}`,
-      module: config.slug,
-      action: p.action,
-      label: p.description,
-      description: p.description,
-      supportedScopes: p.supportedScopes ?? derivedScopes,
-    }));
-    this.rbac.registerManifests([...crudManifests, ...extraManifests]);
-
-    // 3. Events
-    const createdEvent = `${config.entityType}.Created`;
-    const updatedEvent = `${config.entityType}.Updated`;
-    const deletedEvent = `${config.entityType}.Deleted`;
-
-    this.eventRegistry.register({
-      eventName: createdEvent,
-      group: config.entityType,
-      description: `Fired when a new ${registered.singularName.toLowerCase()} is created`,
-      payloadSchema: {},
-    });
-    this.eventRegistry.register({
-      eventName: updatedEvent,
-      group: config.entityType,
-      description: `Fired when a ${registered.singularName.toLowerCase()} is updated`,
-      payloadSchema: { changes: { type: 'string', label: 'Changed Fields' } },
-    });
-    this.eventRegistry.register({
-      eventName: deletedEvent,
-      group: config.entityType,
-      description: `Fired when a ${registered.singularName.toLowerCase()} is deleted`,
-      payloadSchema: {},
+    registerEntityCrudPermissions(this.rbac, {
+      slug: config.slug,
+      singular,
+      plural,
+      supportedScopes: derivedScopes,
+      extraPermissions: config.extraPermissions,
     });
 
-    // 3b. Workflow field transition events (e.g. "applications.StageChanged")
+    // 3. Events — standard CRUD + one event per workflow field.
+    const { created: createdEvent, updated: updatedEvent, deleted: deletedEvent } =
+      registerEntityCrudEvents(this.eventRegistry, {
+        entityType: config.entityType,
+        singular,
+      });
+
     const transitionEvents: string[] = [];
     for (const [fieldKey, meta] of Object.entries(config.fieldMeta)) {
       if (meta.fieldType !== 'workflow') continue;
-      const pascalField = fieldKey.charAt(0).toUpperCase() + fieldKey.slice(1);
-      const eventName = `${config.entityType}.${pascalField}Changed`;
-      transitionEvents.push(eventName);
-      this.eventRegistry.register({
-        eventName,
-        group: config.entityType,
-        description: `Fired when a ${registered.singularName.toLowerCase()}'s ${meta.label.toLowerCase()} changes`,
-        payloadSchema: {
-          fromState: { type: 'string', label: `Previous ${meta.label}` },
-          toState: { type: 'string', label: `New ${meta.label}` },
-          transitionName: { type: 'string', label: 'Transition' },
-        },
+      const eventName = registerWorkflowTransitionEvent(this.eventRegistry, {
+        entityType: config.entityType,
+        fieldKey,
+        singular,
+        fieldLabel: meta.label,
       });
+      transitionEvents.push(eventName);
     }
 
     // 4. Audit (if available)
-    if (this.auditExt) {
-      this.auditExt.register(config.entityType, {
-        events: [createdEvent, updatedEvent, deletedEvent, ...transitionEvents],
-      });
-    }
+    registerEntityAudit(this.auditExt, {
+      entityType: config.entityType,
+      eventNames: [createdEvent, updatedEvent, deletedEvent, ...transitionEvents],
+    });
 
     // 5. Entity resolver (automations — schedule triggers + condition builder)
     if (this.automationsExt) {
@@ -276,11 +250,10 @@ export class EntityEngineModule implements OnApplicationBootstrap {
 
     // 6. Lookup
     if (config.lookup) {
-      this.lookupResolver.register({
-        entity: config.entityType,
+      registerEntityLookup(this.lookupResolver, {
+        entityType: config.entityType,
         table: config.table,
         labelField: config.lookup.labelField,
-        valueField: 'id',
         searchFields: config.lookup.searchFields,
       });
     }

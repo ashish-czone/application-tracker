@@ -77,6 +77,25 @@ export { buildSnapshot, diffSnapshot } from './helpers/snapshot';
 export { validatePayload } from './helpers/validate-payload';
 export type { ValidationResult, ValidationError, ValidationOptions, FieldDefinitionWithOptions } from './helpers/validate-payload';
 
+// Standalone registration helpers — usable from hand-written domain services
+// that opt out of `defineEntity()` but still want platform discovery
+// (CRUD permissions, domain events, audit hookup, lookup resolver).
+export {
+  registerEntityCrudPermissions,
+  registerEntityCrudEvents,
+  registerWorkflowTransitionEvent,
+  registerEntityAudit,
+  registerEntityLookup,
+} from './helpers/entity-registrations';
+export type {
+  RegisterEntityCrudPermissionsInput,
+  RegisterEntityCrudEventsInput,
+  EntityCrudEventNames,
+  RegisterWorkflowTransitionEventInput,
+  RegisterEntityAuditInput,
+  RegisterEntityLookupInput,
+} from './helpers/entity-registrations';
+
 export { splitPayload } from './helpers/split-payload';
 export type { SplitResult } from './helpers/split-payload';
 
