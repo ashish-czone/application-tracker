@@ -5923,9 +5923,6 @@ importers:
       '@packages/eav-attributes-ui':
         specifier: workspace:*
         version: link:../../eav-attributes-ui
-      '@packages/entity-engine-ui':
-        specifier: workspace:*
-        version: link:../../entity-engine/ui
       '@packages/field-types':
         specifier: workspace:*
         version: link:../../field-types

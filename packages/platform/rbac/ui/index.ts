@@ -5,6 +5,8 @@ export { DeleteRoleDialog } from './components/DeleteRoleDialog';
 export { PermissionsModal } from './components/PermissionsModal';
 export { PermissionsPicker } from './components/PermissionsPicker';
 export { FieldPermissionsTab } from './components/FieldPermissionsTab';
+export type { RbacEntity } from './components/FieldPermissionsTab';
+export type { RolesListPageProps } from './pages/RolesListPage';
 export { useRolesList, useCreateRole, useUpdateRole, useDeleteRole, useRolePermissions, useSetRolePermissions, usePermissionManifests, useRoleMembers, useAddRoleMember, useRemoveRoleMember } from './hooks';
 export { createRbacApi } from './services';
 export type { Role, RoleMember, CreateRoleRequest, UpdateRoleRequest, PermissionEntry, PermissionManifest, ScopedPermissions, BooleanPermissions, ListRolesParams, ListRoleMembersParams } from './types';

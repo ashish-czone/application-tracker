@@ -2,8 +2,21 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ShieldCheck } from 'lucide-react';
 import { Button, Skeleton, toast } from '@packages/ui';
-import { useEntityEngine } from '@packages/entity-engine-ui';
 import { usePlatformAPI } from '@packages/platform-ui';
+
+/**
+ * Minimal entity shape this component needs to render the entity-picker
+ * dropdown. Apps adapt their entity registry (e.g. `useEntityEngine().entities`)
+ * to this shape and pass it in via the `entities` prop. Keeping the contract
+ * narrow lets `@packages/rbac-ui` stay independent of any specific entity-
+ * registry implementation — the prior `useEntityEngine` import created a
+ * platform→addon dependency once entity-engine moves out of platform/.
+ */
+export interface RbacEntity {
+  entityType: string;
+  pluralName: string;
+  navOrder?: number;
+}
 
 type FieldAccess = 'read_write' | 'read_only' | 'hidden';
 
@@ -57,11 +70,12 @@ const ACCESS_LABELS: Record<FieldAccess, string> = {
 
 interface FieldPermissionsTabProps {
   roleId: string;
+  /** Entities the admin can manage field-level permissions on. Apps wire this from their entity registry. */
+  entities: RbacEntity[];
   disabled?: boolean;
 }
 
-export function FieldPermissionsTab({ roleId, disabled }: FieldPermissionsTabProps) {
-  const { entities } = useEntityEngine();
+export function FieldPermissionsTab({ roleId, entities, disabled }: FieldPermissionsTabProps) {
   const [selectedEntity, setSelectedEntity] = useState('');
   const [localState, setLocalState] = useState<Record<string, FieldAccess>>({});
   const [isDirty, setIsDirty] = useState(false);
@@ -123,8 +137,8 @@ export function FieldPermissionsTab({ roleId, disabled }: FieldPermissionsTabPro
           onChange={(e) => handleEntityChange(e.target.value)}
           className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
         >
-          {entities
-            .sort((a, b) => (a.ui?.navOrder ?? 99) - (b.ui?.navOrder ?? 99))
+          {[...entities]
+            .sort((a, b) => (a.navOrder ?? 99) - (b.navOrder ?? 99))
             .map((e) => (
               <option key={e.entityType} value={e.entityType}>
                 {e.pluralName}
