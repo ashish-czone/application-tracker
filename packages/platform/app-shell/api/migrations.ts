@@ -22,8 +22,8 @@ const KERNEL_PACKAGE_FOLDERS = {
   '@packages/notification-channels': 'packages/platform/notification-channels/api',
   '@packages/notifications': 'packages/platform/notifications/api',
   '@packages/user-preferences': 'packages/platform/user-preferences',
-  '@packages/entity-engine': 'packages/platform/entity-engine/api',
-  '@packages/entity-layout': 'packages/platform/entity-layout/api',
+  '@packages/entity-engine': 'packages/addons/entity-engine/api',
+  '@packages/entity-layout': 'packages/addons/entity-layout/api',
 } as const satisfies Record<string, string>;
 
 const OPT_IN_PACKAGE_FOLDERS = {

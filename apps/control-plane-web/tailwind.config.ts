@@ -10,10 +10,10 @@ const config: Config = {
     '../../packages/core/ui/hooks/**/*.{ts,tsx}',
     '../../packages/core/ui/lib/**/*.{ts,tsx}',
     // @packages/entity-engine-ui (platform)
-    '../../packages/platform/entity-engine/ui/*.{ts,tsx}',
-    '../../packages/platform/entity-engine/ui/components/**/*.{ts,tsx}',
-    '../../packages/platform/entity-engine/ui/helpers/**/*.{ts,tsx}',
-    '../../packages/platform/entity-engine/ui/pages/**/*.{ts,tsx}',
+    '../../packages/addons/entity-engine/ui/*.{ts,tsx}',
+    '../../packages/addons/entity-engine/ui/components/**/*.{ts,tsx}',
+    '../../packages/addons/entity-engine/ui/helpers/**/*.{ts,tsx}',
+    '../../packages/addons/entity-engine/ui/pages/**/*.{ts,tsx}',
     // @packages/eav-attributes-ui (platform)
     '../../packages/platform/eav-attributes-ui/components/**/*.{ts,tsx}',
     '../../packages/platform/eav-attributes-ui/field-types/**/*.{ts,tsx}',

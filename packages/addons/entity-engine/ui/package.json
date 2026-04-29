@@ -10,6 +10,7 @@
     "@hookform/resolvers": "^5.0.0",
     "@packages/common": "workspace:*",
     "@packages/eav-attributes-ui": "workspace:*",
+    "@packages/entity-engine": "workspace:*",
     "@packages/conditions-ui": "workspace:*",
     "@packages/ui": "workspace:*",
     "@tanstack/react-query": "^5.0.0",
