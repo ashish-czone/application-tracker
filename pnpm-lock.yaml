@@ -4823,9 +4823,6 @@ importers:
       '@packages/eav-attributes-ui':
         specifier: workspace:*
         version: link:../../eav-attributes-ui
-      '@packages/entity-engine-ui':
-        specifier: workspace:*
-        version: link:../../entity-engine/ui
       '@packages/field-types':
         specifier: workspace:*
         version: link:../../field-types
@@ -4906,9 +4903,6 @@ importers:
       '@packages/database':
         specifier: workspace:*
         version: link:../../../core/database
-      '@packages/entity-engine-contract':
-        specifier: workspace:*
-        version: link:../../entity-engine/contracts
       '@packages/events':
         specifier: workspace:*
         version: link:../../../core/events
@@ -4970,9 +4964,6 @@ importers:
       '@packages/eav-attributes-ui':
         specifier: workspace:*
         version: link:../../eav-attributes-ui
-      '@packages/entity-engine-ui':
-        specifier: workspace:*
-        version: link:../../entity-engine/ui
       '@packages/field-types':
         specifier: workspace:*
         version: link:../../field-types
@@ -5583,9 +5574,6 @@ importers:
       '@packages/eav-attributes-ui':
         specifier: workspace:*
         version: link:../../eav-attributes-ui
-      '@packages/entity-engine-ui':
-        specifier: workspace:*
-        version: link:../../entity-engine/ui
       '@packages/field-types':
         specifier: workspace:*
         version: link:../../field-types
@@ -5691,9 +5679,6 @@ importers:
       '@packages/eav-attributes-ui':
         specifier: workspace:*
         version: link:../../eav-attributes-ui
-      '@packages/entity-engine-ui':
-        specifier: workspace:*
-        version: link:../../entity-engine/ui
       '@packages/field-types':
         specifier: workspace:*
         version: link:../../field-types
@@ -5917,9 +5902,6 @@ importers:
       '@packages/eav-attributes-ui':
         specifier: workspace:*
         version: link:../../eav-attributes-ui
-      '@packages/entity-engine-ui':
-        specifier: workspace:*
-        version: link:../../entity-engine/ui
       '@packages/field-types':
         specifier: workspace:*
         version: link:../../field-types

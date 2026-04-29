@@ -8,7 +8,6 @@
     "@packages/common": "workspace:*",
     "@packages/conditions-ui": "workspace:*",
     "@packages/eav-attributes-ui": "workspace:*",
-    "@packages/entity-engine-ui": "workspace:*",
     "@packages/field-types": "workspace:*",
     "@packages/platform-ui": "workspace:*",
     "@packages/ui": "workspace:*",
