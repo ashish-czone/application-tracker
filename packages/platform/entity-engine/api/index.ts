@@ -16,8 +16,6 @@ export type {
   CustomFieldsMode,
   EntityConfig,
   EntityRelationship,
-  ExtensionOfConfig,
-  ResolvedExtension,
   EntityRegistryEntry,
   EntityAction,
   EntityActions,

@@ -46,7 +46,7 @@ describe('LayoutService', () => {
   let mockDb: ReturnType<typeof createMockDb>;
   let mockFieldDefService: { listByEntityWithOptions: ReturnType<typeof vi.fn>; findByEntityAndKey: ReturnType<typeof vi.fn> };
   let mockEntityDefService: { isAdminConfigurable: ReturnType<typeof vi.fn>; resolveLayoutFromRegistry: ReturnType<typeof vi.fn> };
-  let mockEntityRegistry: { getResolvedExtension: ReturnType<typeof vi.fn> };
+  let mockEntityRegistry: { get: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     mockDb = createMockDb();
@@ -60,7 +60,6 @@ describe('LayoutService', () => {
       resolveLayoutFromRegistry: vi.fn(),
     };
     mockEntityRegistry = {
-      getResolvedExtension: vi.fn().mockReturnValue(undefined),
       get: vi.fn().mockReturnValue(undefined),
     };
     service = new LayoutService(
