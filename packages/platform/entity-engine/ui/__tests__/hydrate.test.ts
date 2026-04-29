@@ -65,4 +65,41 @@ describe('hydrateEntities', () => {
     hydrateEntities(entities, buildEntityUIIndex(configs));
     expect(entities[0].ui.icon).toBe('OldIcon');
   });
+
+  it('overrides singularName/pluralName/subtitleField from FE presentation', () => {
+    const entities = [mk('candidates')];
+    entities[0].subtitleField = 'apiSubtitle';
+    const configs: EntityUIConfig[] = [
+      {
+        entityType: 'candidates',
+        presentation: {
+          singularName: 'Talent',
+          pluralName: 'Talent Pool',
+          subtitleField: 'currentJobTitle',
+          icon: 'X',
+        },
+      },
+    ];
+    const result = hydrateEntities(entities, buildEntityUIIndex(configs));
+    expect(result[0].singularName).toBe('Talent');
+    expect(result[0].pluralName).toBe('Talent Pool');
+    expect(result[0].subtitleField).toBe('currentJobTitle');
+    expect(result[0].ui.icon).toBe('X');
+    // Name fields shouldn't appear in the ui block — they live at the entry root.
+    expect((result[0].ui as Record<string, unknown>).singularName).toBeUndefined();
+    expect((result[0].ui as Record<string, unknown>).pluralName).toBeUndefined();
+    expect((result[0].ui as Record<string, unknown>).subtitleField).toBeUndefined();
+  });
+
+  it('falls back to the api-shipped singularName/pluralName/subtitleField when FE omits them', () => {
+    const entities = [mk('candidates')];
+    entities[0].subtitleField = 'apiSubtitle';
+    const configs: EntityUIConfig[] = [
+      { entityType: 'candidates', presentation: { icon: 'X' } },
+    ];
+    const result = hydrateEntities(entities, buildEntityUIIndex(configs));
+    expect(result[0].singularName).toBe('candidates');
+    expect(result[0].pluralName).toBe('candidatess');
+    expect(result[0].subtitleField).toBe('apiSubtitle');
+  });
 });

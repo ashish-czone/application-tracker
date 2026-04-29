@@ -3,8 +3,9 @@ import type { EntityUIIndex } from './buildEntityUIIndex';
 
 /**
  * Populate each entity's client-side `ui` block from the registered
- * `EntityUIConfig.presentation`. The api never sends `ui` over the wire —
- * it is wholly owned by the frontend.
+ * `EntityUIConfig.presentation`, and override `singularName`/`pluralName`/
+ * `subtitleField` when an FE-side value is registered (FE is moving to the
+ * source of truth for these — Strip B-4 will drop them from the api wire).
  *
  * The same hydration philosophy applies to per-column `cellRenderer` and
  * per-action `label`/`icon`/`variant`, but those happen inside the
@@ -19,6 +20,13 @@ export function hydrateEntities(
   return entities.map((entity) => {
     const presentation = index.presentation.get(entity.entityType);
     if (!presentation) return entity;
-    return { ...entity, ui: { ...presentation } };
+    const { singularName, pluralName, subtitleField, ...uiOnly } = presentation;
+    return {
+      ...entity,
+      singularName: singularName ?? entity.singularName,
+      pluralName: pluralName ?? entity.pluralName,
+      subtitleField: subtitleField ?? entity.subtitleField,
+      ui: { ...uiOnly },
+    };
   });
 }
