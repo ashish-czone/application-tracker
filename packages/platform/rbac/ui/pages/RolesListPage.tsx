@@ -11,9 +11,15 @@ import { AddRoleForm } from '../components/AddRoleForm';
 import { EditRoleForm } from '../components/EditRoleForm';
 import { PermissionsModal } from '../components/PermissionsModal';
 import { DeleteRoleDialog } from '../components/DeleteRoleDialog';
+import type { RbacEntity } from '../components/FieldPermissionsTab';
 import type { Role } from '../types';
 
-export function RolesListPage() {
+export interface RolesListPageProps {
+  /** Entities the field-permissions tab can manage. Apps wire this from their entity registry. */
+  entities: RbacEntity[];
+}
+
+export function RolesListPage({ entities }: RolesListPageProps) {
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [deletingRole, setDeletingRole] = useState<Role | null>(null);
@@ -227,6 +233,7 @@ export function RolesListPage() {
       {/* Permissions Modal */}
       <PermissionsModal
         role={permissionsRole}
+        entities={entities}
         onClose={() => setPermissionsRole(null)}
       />
     </div>

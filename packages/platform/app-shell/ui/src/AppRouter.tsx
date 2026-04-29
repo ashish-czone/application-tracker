@@ -12,7 +12,7 @@ import type {
   MenuItem,
 } from '@packages/domains';
 import type { DetailHeaderActionRenderer } from './types';
-import { RolesListPage } from '@packages/rbac-ui';
+import { RolesListPage as BaseRolesListPage, type RbacEntity } from '@packages/rbac-ui';
 import { usersRoutes } from '@packages/users-ui';
 import { SettingsPage as AppSettingsPage } from '@packages/settings-ui';
 import { QueueDashboardPage } from '@packages/queue-ui';
@@ -124,6 +124,24 @@ function mergeDomainRoutes(domains: DomainWebManifest[]): DomainRouteObject[] {
 function withPermission(element: ReactNode, permission?: string): ReactNode {
   if (!permission) return element;
   return <PermissionGuard permission={permission}>{element}</PermissionGuard>;
+}
+
+/**
+ * Adapter that bridges app-shell's entity-engine registry into the
+ * implementation-agnostic shape `@packages/rbac-ui` expects, keeping rbac-ui
+ * free of any direct entity-engine dependency.
+ */
+function RolesListPageRoute() {
+  const { entities } = useEntityEngine();
+  const rbacEntities = useMemo<RbacEntity[]>(
+    () => entities.map((e) => ({
+      entityType: e.entityType,
+      pluralName: e.pluralName,
+      navOrder: e.ui?.navOrder,
+    })),
+    [entities],
+  );
+  return <BaseRolesListPage entities={rbacEntities} />;
 }
 
 export function AppRouter({ domains, brandLabel, menuItems, extraRoutes, detailHeaderActions, entityDetailRenderers, entityConfigTabs }: AppRouterProps) {
@@ -283,7 +301,7 @@ export function AppRouter({ domains, brandLabel, menuItems, extraRoutes, detailH
           ))}
 
           {usersRoutes}
-          <Route path="/roles" element={<Suspense fallback={<PageSkeleton />}><RolesListPage /></Suspense>} />
+          <Route path="/roles" element={<Suspense fallback={<PageSkeleton />}><RolesListPageRoute /></Suspense>} />
           <Route path="/settings/appearance" element={<Suspense fallback={<PageSkeleton />}><ThemingAppearancePage /></Suspense>} />
           <Route path="/settings/:entityType?" element={<Suspense fallback={<PageSkeleton />}><EntityConfigPage entityConfigTabs={entityConfigTabs} /></Suspense>} />
           <Route path="/app-settings" element={<Suspense fallback={<PageSkeleton />}><AppSettingsPage /></Suspense>} />

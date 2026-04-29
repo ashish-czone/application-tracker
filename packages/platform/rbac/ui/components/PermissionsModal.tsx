@@ -10,17 +10,19 @@ import {
 } from '@packages/ui';
 import { useRolePermissions, useSetRolePermissions } from '../hooks';
 import { PermissionsPicker } from './PermissionsPicker';
-import { FieldPermissionsTab } from './FieldPermissionsTab';
+import { FieldPermissionsTab, type RbacEntity } from './FieldPermissionsTab';
 import type { Role, PermissionEntry, BooleanPermissions } from '../types';
 
 type Tab = 'permissions' | 'fields';
 
 interface PermissionsModalProps {
   role: Role | null;
+  /** Entities the field-permissions tab can manage. Apps wire this from their entity registry. */
+  entities: RbacEntity[];
   onClose: () => void;
 }
 
-export function PermissionsModal({ role, onClose }: PermissionsModalProps) {
+export function PermissionsModal({ role, entities, onClose }: PermissionsModalProps) {
   const [tab, setTab] = useState<Tab>('permissions');
   const { data: currentPermissions, isLoading } = useRolePermissions(role?.id ?? null);
   const setPermissionsMutation = useSetRolePermissions({ onSuccess: onClose });
@@ -85,7 +87,7 @@ export function PermissionsModal({ role, onClose }: PermissionsModalProps) {
             <PermissionsPicker selected={selected} onChange={setSelected} disabled={role?.isSystem} />
           )}
           {tab === 'fields' && role && (
-            <FieldPermissionsTab roleId={role.id} disabled={role.isSystem} />
+            <FieldPermissionsTab roleId={role.id} entities={entities} disabled={role.isSystem} />
           )}
         </div>
 
