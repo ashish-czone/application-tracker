@@ -15,7 +15,7 @@ export type { FindOrCreatePersonInput, UpdatePersonInput } from './services/peop
 export { DIRECTORY_PERMISSIONS } from './permissions';
 export type { DirectoryPermission } from './permissions';
 
-export { companies, people } from './schema';
+export { companies, baseCompanyColumns, people } from './schema';
 export type { Company, NewCompany, Person, NewPerson } from './schema';
 
 export {
