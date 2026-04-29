@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -9,6 +9,8 @@ import {
 import { DynamicField, buildFormSchema } from '@packages/eav-attributes-ui';
 import { useEntityEngine, useEntityHooks } from '../EntityEngineProvider';
 import { useEntityLayout } from '../helpers/useEntityLayout';
+import { useLookupHandlers } from '../helpers/useLookupHandlers';
+import { resolveLookupValues } from '../helpers/resolveLookupValues';
 
 interface EntityQuickCreateFormProps {
   entityType: string;
@@ -26,8 +28,9 @@ interface EntityQuickCreateFormProps {
  */
 export function EntityQuickCreateForm({ entityType, singularName, onClose, onSuccess, initialValues }: EntityQuickCreateFormProps) {
   const { data: layout, isLoading: layoutLoading } = useEntityLayout(entityType);
-  const { apiFn } = useEntityEngine();
+  const { apiFn, getFieldUI } = useEntityEngine();
   const hooks = useEntityHooks(entityType);
+  const { onSearchFor, onChipSearchFor } = useLookupHandlers(entityType);
 
   // Fetch lookup options for all lookup fields
   const lookupEntities = useMemo(() => {
@@ -53,22 +56,6 @@ export function EntityQuickCreateForm({ entityType, singularName, onClose, onSuc
     },
     enabled: lookupEntities.length > 0,
   });
-
-  // Async search callbacks for chip fields
-  const searchUsers = useCallback(async (query: string) => {
-    const res = await apiFn.get<{ data: { id: string; firstName: string; lastName: string }[] }>(`/users?search=${encodeURIComponent(query)}&limit=20&sort=firstName&order=asc`);
-    return res.data.map((u) => ({ label: `${u.firstName} ${u.lastName}`.trim(), value: u.id }));
-  }, [apiFn]);
-
-  const searchLookupChip = useCallback(async (entity: string, query: string) => {
-    return apiFn.get<{ label: string; value: string }[]>(`/lookups/${entity}?search=${encodeURIComponent(query)}&limit=20`);
-  }, [apiFn]);
-
-  const searchTags = useCallback(async (groupSlug: string, query: string) => {
-    return apiFn.get<{ label: string; value: string; color?: string }[]>(
-      `/tags/group/${groupSlug}?search=${encodeURIComponent(query)}&limit=20`,
-    );
-  }, [apiFn]);
 
   const quickCreateFields = useMemo(
     () => layout?.quickCreateFields ?? [],
@@ -100,9 +87,10 @@ export function EntityQuickCreateForm({ entityType, singularName, onClose, onSuc
     },
   });
 
-  function onSubmit(data: Record<string, unknown>) {
+  async function onSubmit(data: Record<string, unknown>) {
+    const resolved = await resolveLookupValues(data, quickCreateFields, apiFn, getFieldUI, entityType);
     const cleaned: Record<string, unknown> = {};
-    for (const [key, val] of Object.entries(data)) {
+    for (const [key, val] of Object.entries(resolved)) {
       if (val !== '' && val !== undefined) {
         cleaned[key] = val;
       }
@@ -156,12 +144,8 @@ export function EntityQuickCreateForm({ entityType, singularName, onClose, onSuc
               field={field}
               mode="edit"
               lookupOptions={field.lookupEntity ? lookupOptionsMap?.[field.lookupEntity] : undefined}
-              onChipSearch={
-                field.fieldType === 'multi_user' ? searchUsers
-                : field.fieldType === 'multi_lookup' && field.lookupEntity ? (q: string) => searchLookupChip(field.lookupEntity!, q)
-                : field.fieldType === 'tags' && field.tagGroupSlug ? (q: string) => searchTags(field.tagGroupSlug!, q)
-                : undefined
-              }
+              onSearch={onSearchFor(field)}
+              onChipSearch={onChipSearchFor(field)}
             />
           ))}
         </div>

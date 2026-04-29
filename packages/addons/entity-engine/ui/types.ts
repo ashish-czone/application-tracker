@@ -189,6 +189,24 @@ export interface EntityUIPresentation {
  * configurable entities continue to source these from DB-backed
  * `field_definitions` rows that admins edit.
  */
+/** Async callback that returns picker options. Receives the provider's
+ *  `apiFn` so it doesn't have to import an app-specific fetcher. */
+export type LookupSearchFn = (
+  apiFn: { get: <T>(url: string) => Promise<T> },
+  query: string,
+) => Promise<Array<{ label: string; value: string }>>;
+
+/** Async transformation between user-pick and form-set. Use when the picker
+ *  shows one identity (e.g. companies) but the form must store a different
+ *  FK (e.g. recruit_clients.id) — the resolver bridges the two. */
+export type LookupResolveFn = (
+  apiFn: {
+    get: <T>(url: string) => Promise<T>;
+    post: <T>(url: string, body?: unknown) => Promise<T>;
+  },
+  option: { label: string; value: string },
+) => Promise<{ label: string; value: string }>;
+
 export interface FieldUI {
   /** Display label for the field (form label, list column header). */
   label?: string;
@@ -204,6 +222,17 @@ export interface FieldUI {
   uiType?: string;
   /** Named cell renderer for the list view (looked up in EntityEngineProvider columnRenderers registry) */
   cellRenderer?: string;
+  /** Override picker search for lookup/user fields. Replaces the default
+   *  `GET /lookups/{entityType}` call. Generic primitive — used by hand-
+   *  written entities (e.g. clients) that route the picker to a different
+   *  identity source (e.g. directory companies). */
+  lookupSearch?: LookupSearchFn;
+  /** Optional async transform applied between user-pick and form-set. When
+   *  the picker shows one identity but the FK stored is a different one,
+   *  this callback bridges them (e.g. resolve picked companyId → ensure
+   *  recruit_client exists → return clientId). When omitted, the picked
+   *  value is stored as-is. */
+  lookupResolveValue?: LookupResolveFn;
 }
 
 /**
@@ -226,6 +255,49 @@ export interface FormLayoutSection {
 }
 
 /**
+ * A field that does NOT exist on the api side (no DB column, not in the
+ * api's layout response) but should still render in the form. The classic
+ * use case is hand-written entities whose form collects values that get
+ * routed to a different table/service on save (e.g. clients's
+ * `clientName`/`website`/`industry` go to directory.companies, not
+ * recruit_clients).
+ *
+ * Synthetic fields fill in the FieldDefinition shape with sensible defaults
+ * for the metadata the api would normally provide (id, entityType,
+ * sortOrder, etc.) so the form-rendering layer treats them like any other
+ * field.
+ */
+export interface SyntheticFieldSpec {
+  /** Form section name to insert the field into (matches a section in `sections`). */
+  section: string;
+  /** Field key — the key the rendered input writes to in the form payload. */
+  fieldKey: string;
+  /** Display label. */
+  label: string;
+  /** Field type (drives the form component picked from the field type registry). */
+  fieldType: import('@packages/eav-attributes-ui').FieldType;
+  /** Optional UI widget override (passed through to the form component). */
+  uiType?: string | null;
+  /** Required-on-save flag (validates via Zod). */
+  isRequired?: boolean;
+  /** Read-only flag. */
+  isReadonly?: boolean;
+  /** Max-length for text-like fields. */
+  maxLength?: number | null;
+  /** Default value. */
+  defaultValue?: string | null;
+  /** Quick-create form inclusion. */
+  isQuickCreate?: boolean;
+  /** Lookup target — required for fieldType: 'lookup' / 'user'. */
+  lookupEntity?: string | null;
+  /** Picklist options — required for fieldType: 'picklist' / 'multi_select'. */
+  picklistOptions?: Array<{ label: string; value: string; isDefault?: boolean }>;
+  /** Tag/category group slug. */
+  tagGroupSlug?: string | null;
+  categoryGroupSlug?: string | null;
+}
+
+/**
  * Per-entity form layout config. When set, the FE form layout hook prefers
  * this over the api's `getLayout()` response. Admin-configurable entities
  * continue to source layout from DB.
@@ -234,6 +306,8 @@ export interface FormLayoutConfig {
   sections: FormLayoutSection[];
   /** Field keys that appear on the quick-create form. */
   quickCreateFields?: string[];
+  /** Fields that should render in the form but don't exist on the api side. */
+  syntheticFields?: SyntheticFieldSpec[];
 }
 
 /**

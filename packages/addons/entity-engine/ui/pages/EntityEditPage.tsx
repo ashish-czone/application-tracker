@@ -1,4 +1,4 @@
-import { useMemo, useEffect, useCallback } from 'react';
+import { useMemo, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -8,6 +8,8 @@ import { DynamicField, buildFormSchema, buildEntityPayload } from '@packages/eav
 import type { FieldDefinition } from '@packages/eav-attributes-ui';
 import { useEntityEngine, useEntityHooks, useEntityConfig } from '../EntityEngineProvider';
 import { useEntityLayout } from '../helpers/useEntityLayout';
+import { useLookupHandlers } from '../helpers/useLookupHandlers';
+import { resolveLookupValues } from '../helpers/resolveLookupValues';
 
 interface EntityEditPageProps {
   entityType: string;
@@ -36,9 +38,10 @@ export function EntityEditPage({ entityType, id: idProp }: EntityEditPageProps) 
   const id = idProp ?? params.id;
   const entity = useEntityConfig(entityType);
   const hooks = useEntityHooks(entityType);
-  const { apiFn } = useEntityEngine();
+  const { apiFn, getFieldUI } = useEntityEngine();
   const { data: layout, isLoading: layoutLoading } = useEntityLayout(entityType);
   const { data: row, isLoading: rowLoading } = hooks.useDetail(id);
+  const { onSearchFor, onChipSearchFor } = useLookupHandlers(entityType);
 
   // Synthesize a FieldDefinition per collection relationship — same as
   // EntityCreatePage, so the form registers a flat `[id,...]` array under
@@ -102,21 +105,6 @@ export function EntityEditPage({ entityType, id: idProp }: EntityEditPageProps) 
   }, [layout, relationFields]);
 
   const editableFields = useMemo(() => sections.flatMap((s) => s.editableFields), [sections]);
-
-  const searchUsers = useCallback(async (query: string) => {
-    const res = await apiFn.get<{ data: { id: string; firstName: string; lastName: string }[] }>(`/users?search=${encodeURIComponent(query)}&limit=20&sort=firstName&order=asc`);
-    return res.data.map((u) => ({ label: `${u.firstName} ${u.lastName}`.trim(), value: u.id }));
-  }, [apiFn]);
-
-  const searchLookup = useCallback(async (entityName: string, query: string) => {
-    return apiFn.get<{ label: string; value: string }[]>(`/lookups/${entityName}?search=${encodeURIComponent(query)}&limit=20`);
-  }, [apiFn]);
-
-  const searchTags = useCallback(async (groupSlug: string, query: string) => {
-    return apiFn.get<{ label: string; value: string; color?: string }[]>(
-      `/tags/group/${groupSlug}?search=${encodeURIComponent(query)}&limit=20`,
-    );
-  }, [apiFn]);
 
   const schema = useMemo(() => buildFormSchema(editableFields), [editableFields]);
 
@@ -189,9 +177,10 @@ export function EntityEditPage({ entityType, id: idProp }: EntityEditPageProps) 
     },
   });
 
-  function onSubmit(data: Record<string, unknown>) {
+  async function onSubmit(data: Record<string, unknown>) {
     if (!layout || !id) return;
-    const payload = buildEntityPayload(data, layout);
+    const resolved = await resolveLookupValues(data, editableFields, apiFn, getFieldUI, entityType);
+    const payload = buildEntityPayload(resolved, layout);
     updateMutation.mutate({ id, data: payload });
   }
 
@@ -227,17 +216,8 @@ export function EntityEditPage({ entityType, id: idProp }: EntityEditPageProps) 
               field={field}
               mode="edit"
               chipOptions={chipOptionsByField.get(field.fieldKey)}
-              onSearch={
-                field.fieldType === 'user' ? searchUsers
-                : field.fieldType === 'lookup' && field.lookupEntity ? (q: string) => searchLookup(field.lookupEntity!, q)
-                : undefined
-              }
-              onChipSearch={
-                field.fieldType === 'multi_user' ? searchUsers
-                : field.fieldType === 'multi_lookup' && field.lookupEntity ? (q: string) => searchLookup(field.lookupEntity!, q)
-                : field.fieldType === 'tags' && field.tagGroupSlug ? (q: string) => searchTags(field.tagGroupSlug!, q)
-                : undefined
-              }
+              onSearch={onSearchFor(field)}
+              onChipSearch={onChipSearchFor(field)}
             />
           ))}
         </div>
