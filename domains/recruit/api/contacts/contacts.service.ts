@@ -7,7 +7,6 @@ import {
 } from '@packages/directory';
 import { EntityService, type BaseListQuery } from '@packages/entity-engine';
 import type { DataAccessContext } from '@packages/rbac';
-import { clients } from '../clients/schema/clients';
 import type { CreateContactDto, UpdateContactDto } from './contacts.dto';
 import { contacts } from './schema/contacts';
 
@@ -29,9 +28,8 @@ export class ContactsService {
 
   async create(input: CreateContactDto, actorId: string) {
     return this.database.db.transaction(async (tx) => {
-      const companyId = await resolveCompanyIdFromClient(tx, input.clientId ?? null);
       const person = await this.people.findOrCreate(
-        toFindOrCreatePerson(input, companyId),
+        toFindOrCreatePerson(input, input.companyId ?? null),
         actorId,
         tx,
       );
@@ -47,7 +45,7 @@ export class ContactsService {
   ) {
     return this.database.db.transaction(async (tx) => {
       const [current] = await tx
-        .select({ personId: contacts.personId, clientId: contacts.clientId })
+        .select({ personId: contacts.personId, companyId: contacts.companyId })
         .from(contacts)
         .where(eq(contacts.id, id))
         .limit(1);
@@ -55,7 +53,7 @@ export class ContactsService {
         throw new NotFoundException(`Contact ${id} not found`);
       }
 
-      const personPatch = await toPersonPatch(tx, input, current.clientId);
+      const personPatch = toPersonPatch(input, current.companyId);
       if (current.personId && Object.keys(personPatch).length > 0) {
         try {
           await this.people.update(current.personId, personPatch, actorId, tx);
@@ -97,19 +95,6 @@ export class ContactsService {
   }
 }
 
-async function resolveCompanyIdFromClient(
-  tx: { select: any },
-  clientId: string | null,
-): Promise<string | null> {
-  if (!clientId) return null;
-  const [row] = await tx
-    .select({ companyId: clients.companyId })
-    .from(clients)
-    .where(eq(clients.id, clientId))
-    .limit(1);
-  return row?.companyId ?? null;
-}
-
 function toFindOrCreatePerson(
   input: CreateContactDto,
   companyId: string | null,
@@ -124,11 +109,10 @@ function toFindOrCreatePerson(
   };
 }
 
-async function toPersonPatch(
-  tx: { select: any },
+function toPersonPatch(
   input: UpdateContactDto,
-  currentClientId: string | null,
-): Promise<UpdatePersonInput> {
+  currentCompanyId: string | null,
+): UpdatePersonInput {
   const patch: UpdatePersonInput = {};
   if (input.firstName !== undefined || input.lastName !== undefined) {
     patch.fullName = composeFullName(input.firstName, input.lastName);
@@ -142,12 +126,12 @@ async function toPersonPatch(
   if (input.linkedinUrl !== undefined) patch.linkedinUrl = input.linkedinUrl ?? null;
   if (input.jobTitle !== undefined) patch.jobTitle = input.jobTitle ?? null;
 
-  // If clientId changed, update the person's companyId to track the new
-  // recruit_client's company. Last-writer-wins semantics: if multiple
-  // recruit_contacts share a person via dedup, the most recent clientId
-  // change determines the person's company.
-  if (input.clientId !== undefined && input.clientId !== currentClientId) {
-    patch.companyId = await resolveCompanyIdFromClient(tx, input.clientId ?? null);
+  // If companyId changed, update the person's companyId to track the new
+  // company. Last-writer-wins semantics: if multiple recruit_contacts share a
+  // person via dedup, the most recent companyId change determines the
+  // person's company.
+  if (input.companyId !== undefined && input.companyId !== currentCompanyId) {
+    patch.companyId = input.companyId ?? null;
   }
   return patch;
 }

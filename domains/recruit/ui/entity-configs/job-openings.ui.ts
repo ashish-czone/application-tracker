@@ -1,5 +1,5 @@
 import type { EntityUIConfig } from '@packages/entity-engine-ui';
-import { searchCompaniesForClientPicker, resolveCompanyToClient } from './clientId-picker';
+import { searchCompaniesForClientPicker, resolveCompanyToClient } from './companyId-picker';
 
 export const JOB_OPENINGS_UI_CONFIG: EntityUIConfig = {
   entityType: 'job_openings',
@@ -14,7 +14,7 @@ export const JOB_OPENINGS_UI_CONFIG: EntityUIConfig = {
   },
   fieldUI: {
     title: { label: 'Posting Title' },
-    clientId: {
+    companyId: {
       label: 'Client Name',
       lookupSearch: searchCompaniesForClientPicker,
       lookupResolveValue: resolveCompanyToClient,
@@ -52,7 +52,7 @@ export const JOB_OPENINGS_UI_CONFIG: EntityUIConfig = {
     sections: [
       {
         name: 'Job Opening Information', columns: 2,
-        fields: ['title', 'clientId', 'contactId', 'hiringManager', 'accountManager', 'assignedRecruiters', 'dateOpened', 'targetDate', 'employmentType', 'status', 'experience', 'industry', 'jobFunction', 'confidential', 'requiredSkills'],
+        fields: ['title', 'companyId', 'contactId', 'hiringManager', 'accountManager', 'assignedRecruiters', 'dateOpened', 'targetDate', 'employmentType', 'status', 'experience', 'industry', 'jobFunction', 'confidential', 'requiredSkills'],
       },
       {
         name: 'Address Information', columns: 2,
@@ -75,11 +75,11 @@ export const JOB_OPENINGS_UI_CONFIG: EntityUIConfig = {
         fields: ['jobSummary', 'otherAttachments'],
       },
     ],
-    quickCreateFields: ['title', 'clientId', 'assignedRecruiters', 'targetDate', 'requiredSkills'],
+    quickCreateFields: ['title', 'companyId', 'assignedRecruiters', 'targetDate', 'requiredSkills'],
   },
   listColumns: [
     { fieldKey: 'title', visible: true, order: 0 },
-    { fieldKey: 'clientId', visible: true, order: 1 },
+    { fieldKey: 'companyId', visible: true, order: 1 },
     { fieldKey: 'status', visible: true, order: 2 },
     { fieldKey: 'targetDate', visible: true, order: 3 },
     { fieldKey: 'applicationsCount', visible: true, order: 4 },

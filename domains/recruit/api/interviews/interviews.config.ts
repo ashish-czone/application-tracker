@@ -39,7 +39,7 @@ export const INTERVIEWS_CONFIG: EntityConfig = {
       fieldType: 'lookup', lookupEntity: 'candidates', lookupLabelField: 'firstName',
       lookupSearchFields: ['firstName', 'lastName', 'email'],
     },
-    clientId: {
+    companyId: {
       label: 'Client', section: 'basic', sortOrder: 4,
       fieldType: 'lookup', lookupEntity: 'clients',
     },
@@ -72,7 +72,7 @@ export const INTERVIEWS_CONFIG: EntityConfig = {
   listFields: ['interviewName', 'candidateId', 'interviewFrom', 'status'],
 
   sections: [
-    { name: 'Interview Information', fields: ['interviewName', 'interviewType', 'round', 'candidateId', 'clientId', 'jobOpeningId', 'status', 'interviewers'] },
+    { name: 'Interview Information', fields: ['interviewName', 'interviewType', 'round', 'candidateId', 'companyId', 'jobOpeningId', 'status', 'interviewers'] },
     { name: 'Schedule', fields: ['interviewFrom', 'interviewTo', 'duration', 'location', 'videoLink', 'scheduleComments'] },
   ],
 

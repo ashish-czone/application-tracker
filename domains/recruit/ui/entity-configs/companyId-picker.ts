@@ -2,11 +2,14 @@ import type { LookupSearchFn, LookupResolveFn } from '@packages/entity-engine-ui
 
 /**
  * Reusable picker overrides for any field whose stored value is a
- * `recruit_clients.id` but whose picker should search the canonical identity
- * registry (`directory.companies`) and bridge a picked company to a
- * recruit_client wrapper at submit time.
+ * `companies.id` (post FK repoint, all child tables FK companies directly).
+ * The picker searches the canonical identity registry (`directory.companies`).
  *
- * Used by contacts.clientId, job_openings.clientId, interviews.clientId.
+ * The resolve step calls `/clients/find-or-create-for-company` to stamp
+ * `companies.recruit_became_client_at` (so the picked company is marked as a
+ * recruit client) and returns the company.id as the stored value.
+ *
+ * Used by contacts.companyId, job_openings.companyId, interviews.companyId.
  */
 
 interface CompanyRow {
@@ -28,6 +31,9 @@ export const searchCompaniesForClientPicker: LookupSearchFn = async (apiFn, quer
 };
 
 export const resolveCompanyToClient: LookupResolveFn = async (apiFn, option) => {
+  // Stamp companies.recruit_became_client_at so the picked company shows up
+  // as a recruit client. The endpoint returns { id: companyId, created },
+  // so the stored value remains the company.id (which is what FK columns expect).
   const result = await apiFn.post<FindOrCreateForCompanyResult>(
     '/clients/find-or-create-for-company',
     { companyId: option.value },

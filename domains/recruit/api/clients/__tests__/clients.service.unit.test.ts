@@ -284,24 +284,23 @@ describe('ClientsService.findOrCreateForCompany', () => {
     service = new ClientsService(mock.database, companies, makeScopeResolvers(), events, makeLookupResolver());
   });
 
-  it('returns the existing recruit_client.id when one already exists for the company', async () => {
+  it('returns { id: companyId, created: false } when a recruit_client already exists', async () => {
     mock.pushSelectResult([{ id: 'existing-client' }]);
 
     const out = await service.findOrCreateForCompany('co-1', 'user-1');
 
-    expect(out).toEqual({ id: 'existing-client', created: false });
+    expect(out).toEqual({ id: 'co-1', created: false });
     expect(mock.database.db.insert).not.toHaveBeenCalled();
     expect(events.emitDynamic).not.toHaveBeenCalled();
   });
 
-  it('creates a minimal recruit_client when none exists, emits Created event', async () => {
+  it('returns { id: companyId, created: true } when one is freshly created, emits Created event', async () => {
     mock.pushSelectResult([]);                                // existing lookup
     mock.pushSelectResult([{ name: 'Acme Corp' }]);           // company lookup
 
     const out = await service.findOrCreateForCompany('co-1', 'user-1');
 
-    expect(out.created).toBe(true);
-    expect(out.id).toMatch(/^[0-9a-f-]{36}$/);
+    expect(out).toEqual({ id: 'co-1', created: true });
     expect(mock.database.db.insert).toHaveBeenCalled();
     expect(events.emitDynamic).toHaveBeenCalledWith('clients.Created', expect.objectContaining({
       entityType: 'clients',

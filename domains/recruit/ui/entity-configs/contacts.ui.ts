@@ -1,5 +1,5 @@
 import type { EntityUIConfig } from '@packages/entity-engine-ui';
-import { searchCompaniesForClientPicker, resolveCompanyToClient } from './clientId-picker';
+import { searchCompaniesForClientPicker, resolveCompanyToClient } from './companyId-picker';
 
 export const CONTACTS_UI_CONFIG: EntityUIConfig = {
   entityType: 'contacts',
@@ -15,7 +15,7 @@ export const CONTACTS_UI_CONFIG: EntityUIConfig = {
     fullName: { label: 'Contact', cellRenderer: 'AvatarNameCell' },
     firstName: { label: 'First Name' },
     lastName: { label: 'Last Name' },
-    clientId: {
+    companyId: {
       label: 'Client Name',
       lookupSearch: searchCompaniesForClientPicker,
       lookupResolveValue: resolveCompanyToClient,
@@ -45,17 +45,17 @@ export const CONTACTS_UI_CONFIG: EntityUIConfig = {
   },
   formLayout: {
     sections: [
-      { name: 'Contact Information', fields: ['firstName', 'lastName', 'clientId', 'department', 'email', 'secondaryEmail', 'jobTitle', 'workPhone', 'mobile'] },
+      { name: 'Contact Information', fields: ['firstName', 'lastName', 'companyId', 'department', 'email', 'secondaryEmail', 'jobTitle', 'workPhone', 'mobile'] },
       { name: 'Mailing Address', fields: ['mailingStreet', 'mailingCity', 'mailingProvince', 'mailingPostalCode', 'mailingCountry'] },
       { name: 'Other Address', fields: ['otherStreet', 'otherCity', 'otherProvince', 'otherPostalCode', 'otherCountry'] },
       { name: 'Social Links', fields: ['linkedinUrl', 'facebookUrl', 'twitterHandle'] },
       { name: 'Other Info', fields: ['source', 'isPrimaryContact', 'emailOptOut'] },
     ],
-    quickCreateFields: ['firstName', 'lastName', 'clientId', 'email', 'workPhone', 'mobile'],
+    quickCreateFields: ['firstName', 'lastName', 'companyId', 'email', 'workPhone', 'mobile'],
   },
   listColumns: [
     { fieldKey: 'fullName', visible: true, order: 0 },
-    { fieldKey: 'clientId', visible: true, order: 1 },
+    { fieldKey: 'companyId', visible: true, order: 1 },
     { fieldKey: 'email', visible: true, order: 2 },
     { fieldKey: 'mobile', visible: true, order: 3 },
     { fieldKey: 'jobTitle', visible: true, order: 4 },

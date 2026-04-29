@@ -122,12 +122,15 @@ async function ensureSampleContacts(
   const [admin] = await database.db.select({ id: users.id }).from(users).limit(1);
   if (!admin) return;
 
-  const clientRows = await database.db.select({ id: clients.id }).from(clients).limit(4);
+  const clientRows = await database.db
+    .select({ companyId: clients.companyId })
+    .from(clients)
+    .limit(4);
   if (clientRows.length === 0) return;
 
   const contactsWithClients = SAMPLE_CONTACTS.map((c, i) => ({
     ...c,
-    clientId: i < 2 ? clientRows[0]?.id : clientRows[Math.min(i - 1, clientRows.length - 1)]?.id,
+    companyId: i < 2 ? clientRows[0]?.companyId : clientRows[Math.min(i - 1, clientRows.length - 1)]?.companyId,
   }));
 
   for (const data of contactsWithClients) {
@@ -154,21 +157,24 @@ async function ensureSampleVendors(
 
 async function linkJobOpeningsToClients(database: DatabaseService): Promise<void> {
   const joRows = await database.db
-    .select({ id: jobOpenings.id, clientId: jobOpenings.clientId })
+    .select({ id: jobOpenings.id, companyId: jobOpenings.companyId })
     .from(jobOpenings)
     .limit(5);
 
-  if (joRows.length === 0 || joRows[0]?.clientId) return;
+  if (joRows.length === 0 || joRows[0]?.companyId) return;
 
-  const clientRows = await database.db.select({ id: clients.id }).from(clients).limit(4);
+  const clientRows = await database.db
+    .select({ companyId: clients.companyId })
+    .from(clients)
+    .limit(4);
   if (clientRows.length === 0) return;
 
   for (let i = 0; i < joRows.length; i++) {
-    const clientId = clientRows[i % clientRows.length]?.id;
-    if (clientId) {
+    const companyId = clientRows[i % clientRows.length]?.companyId;
+    if (companyId) {
       await database.db
         .update(jobOpenings)
-        .set({ clientId })
+        .set({ companyId })
         .where(eq(jobOpenings.id, joRows[i].id));
     }
   }
@@ -186,7 +192,7 @@ async function ensureSampleInterviews(
 
   const candidateRows = await database.db.select({ id: candidates.id }).from(candidates).limit(3);
   const joRows = await database.db
-    .select({ id: jobOpenings.id, clientId: jobOpenings.clientId })
+    .select({ id: jobOpenings.id, companyId: jobOpenings.companyId })
     .from(jobOpenings)
     .limit(3);
 
@@ -198,7 +204,7 @@ async function ensureSampleInterviews(
       interviewName: 'Phone Interview',
       candidateId: candidateRows[0]?.id,
       jobOpeningId: joRows[0]?.id,
-      clientId: joRows[0]?.clientId,
+      companyId: joRows[0]?.companyId,
       interviewFrom: new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000).toISOString(),
       interviewTo: new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000 + 60 * 60 * 1000).toISOString(),
       location: 'Phone',
@@ -208,7 +214,7 @@ async function ensureSampleInterviews(
       interviewName: 'Level 1 Interview',
       candidateId: candidateRows[1]?.id,
       jobOpeningId: joRows[0]?.id,
-      clientId: joRows[0]?.clientId,
+      companyId: joRows[0]?.companyId,
       interviewFrom: new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000).toISOString(),
       interviewTo: new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000 + 90 * 60 * 1000).toISOString(),
       location: 'Zoom Meeting',
@@ -218,7 +224,7 @@ async function ensureSampleInterviews(
       interviewName: 'Level 2 Interview',
       candidateId: candidateRows[0]?.id,
       jobOpeningId: joRows[1]?.id,
-      clientId: joRows[1]?.clientId,
+      companyId: joRows[1]?.companyId,
       interviewFrom: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000).toISOString(),
       interviewTo: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000 + 60 * 60 * 1000).toISOString(),
       location: 'On-site — San Francisco Office',
@@ -229,7 +235,7 @@ async function ensureSampleInterviews(
       interviewName: 'General Interview',
       candidateId: candidateRows[2]?.id,
       jobOpeningId: joRows[2]?.id,
-      clientId: joRows[2]?.clientId,
+      companyId: joRows[2]?.companyId,
       interviewFrom: new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000).toISOString(),
       interviewTo: new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000 + 45 * 60 * 1000).toISOString(),
       location: 'Google Meet',
