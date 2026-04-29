@@ -26,13 +26,6 @@ import { CreateClientSchema, UpdateClientSchema } from './clients.dto';
 export class ClientsController {
   constructor(private readonly clients: ClientsService) {}
 
-  @Get('layout/list')
-  @RequirePermission('clients.read')
-  @ApiOperation({ summary: 'Get list layout config for clients' })
-  getListLayout() {
-    return this.clients.getListLayout();
-  }
-
   @Get()
   @RequirePermission('clients.read')
   @ApiOperation({ summary: 'List clients' })
