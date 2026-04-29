@@ -27,15 +27,10 @@ export const candidatesConfig: EntityConfig = {
   },
   systemColumns: ['id', 'createdAt', 'updatedAt', 'deletedAt', 'deletedBy', 'createdBy', 'resumeFile'],
 
-  searchColumns: [candidates.firstName, candidates.lastName, candidates.email],
+  searchFields: ['firstName', 'lastName', 'email'],
 
   defaultSort: 'createdAt',
-  sortableColumns: {
-    firstName: candidates.firstName,
-    email: candidates.email,
-    createdAt: candidates.createdAt,
-    country: candidates.country,
-  },
+  sortableFields: ['firstName', 'email', 'createdAt', 'country'],
 
   fieldMeta: {
     ...CANDIDATE_FIELD_META,

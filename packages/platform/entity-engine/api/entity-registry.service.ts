@@ -6,6 +6,15 @@ import type { EntityConfig, EntityRegistryEntry, ResolvedExtension } from './typ
 import { FeatureDeriverRegistry } from './services/feature-deriver.registry';
 
 /**
+ * Resolved Drizzle column references for an entity's search/sort field keys.
+ * Cached at finalize() so the read path never re-walks getTableColumns().
+ */
+interface ResolvedReadColumns {
+  searchColumns: PgColumn[];
+  sortableColumns: Record<string, PgColumn>;
+}
+
+/**
  * Central registry of all entity types.
  * Each entity module registers its config here during module initialization.
  * The registry is the single source of truth for what entities exist in the system.
@@ -14,6 +23,7 @@ import { FeatureDeriverRegistry } from './services/feature-deriver.registry';
 export class EntityRegistryService {
   private readonly configs = new Map<string, EntityConfig>();
   private readonly resolvedExtensions = new Map<string, ResolvedExtension>();
+  private readonly resolvedReadColumns = new Map<string, ResolvedReadColumns>();
   private finalized = false;
   private readonly logger = new Logger(EntityRegistryService.name);
 
@@ -111,12 +121,18 @@ export class EntityRegistryService {
   // ---------------------------------------------------------------------------
 
   /**
-   * Resolve all `extensionOf` configs against their (now-registered) parents.
+   * Resolve all `extensionOf` configs against their (now-registered) parents,
+   * and resolve every entity's search/sort field keys to actual Drizzle columns.
    * Idempotent — calling again is a no-op. Throws on the first invalid
-   * extension so misconfigurations surface at boot, not at first request.
+   * extension or unknown field key so misconfigurations surface at boot, not
+   * at first request.
    */
   finalize(): void {
     if (this.finalized) return;
+
+    for (const config of this.configs.values()) {
+      this.resolvedReadColumns.set(config.entityType, this.resolveReadColumns(config));
+    }
 
     for (const child of this.configs.values()) {
       if (!child.extensionOf) continue;
@@ -127,6 +143,63 @@ export class EntityRegistryService {
     if (this.resolvedExtensions.size > 0) {
       this.logger.log(`Resolved ${this.resolvedExtensions.size} extension entities`);
     }
+  }
+
+  /**
+   * Look up the resolved Drizzle columns for an entity's `searchFields` and
+   * `sortableFields`. Throws if `finalize()` has not run, or if the entity is
+   * not registered. Always returns a frozen-shape object — callers may treat
+   * the maps as read-only.
+   */
+  getResolvedReadColumns(entityType: string): ResolvedReadColumns {
+    if (!this.finalized) {
+      throw new Error(
+        `EntityRegistryService.getResolvedReadColumns('${entityType}') called before finalize()`,
+      );
+    }
+    const resolved = this.resolvedReadColumns.get(entityType);
+    if (!resolved) {
+      throw new Error(`Entity '${entityType}' is not registered`);
+    }
+    return resolved;
+  }
+
+  private resolveReadColumns(config: EntityConfig): ResolvedReadColumns {
+    const tableColumns = getTableColumns(config.table) as Record<string, PgColumn>;
+
+    const searchColumns: PgColumn[] = [];
+    for (const key of config.searchFields ?? []) {
+      const col = tableColumns[key];
+      if (!col) {
+        throw new Error(
+          `Entity '${config.entityType}': searchFields includes '${key}', which is not a column on the table.`,
+        );
+      }
+      searchColumns.push(col);
+    }
+
+    const sortableColumns: Record<string, PgColumn> = {};
+    for (const key of config.sortableFields ?? []) {
+      const col = tableColumns[key];
+      if (!col) {
+        throw new Error(
+          `Entity '${config.entityType}': sortableFields includes '${key}', which is not a column on the table.`,
+        );
+      }
+      sortableColumns[key] = col;
+    }
+
+    // Mirror prior define-entity behavior: defaultSort is always sortable when
+    // it maps to a real column, even if the consumer forgot to list it.
+    if (
+      config.defaultSort
+      && tableColumns[config.defaultSort]
+      && !sortableColumns[config.defaultSort]
+    ) {
+      sortableColumns[config.defaultSort] = tableColumns[config.defaultSort];
+    }
+
+    return { searchColumns, sortableColumns };
   }
 
   /** Returns the resolved extension metadata for an entity, or undefined if

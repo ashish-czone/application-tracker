@@ -287,8 +287,8 @@ export function defineEntity<TTable extends PgTable>(model: ModelDefinition<TTab
 
   // Collect derived values from fields
   const fieldMeta: Record<string, FieldMeta> = {};
-  const searchColumns: PgColumn[] = [];
-  const sortableColumns: Record<string, PgColumn> = {};
+  const searchFields: string[] = [];
+  const sortableFields: string[] = [];
   const recipientFields: Record<string, { label: string }> = {};
   const listFields: string[] = [];
   // Infrastructure-only columns: excluded from field seeding and event snapshots.
@@ -458,14 +458,14 @@ export function defineEntity<TTable extends PgTable>(model: ModelDefinition<TTab
 
     fieldMeta[key] = meta;
 
-    // Collect searchable columns
+    // Collect searchable / sortable field keys. Resolution to Drizzle columns
+    // happens at registry-finalize time so the config stays loosely coupled
+    // to schema artifacts.
     if (field.searchable && columns[key]) {
-      searchColumns.push(columns[key] as PgColumn);
+      searchFields.push(key);
     }
-
-    // Collect sortable columns
     if (field.sortable && columns[key]) {
-      sortableColumns[key] = columns[key] as PgColumn;
+      sortableFields.push(key);
     }
 
     // Collect label fields
@@ -523,9 +523,10 @@ export function defineEntity<TTable extends PgTable>(model: ModelDefinition<TTab
       }
     : undefined;
 
-  // Always make default sort sortable
-  if (defaultSort && columns[defaultSort] && !sortableColumns[defaultSort]) {
-    sortableColumns[defaultSort] = columns[defaultSort] as PgColumn;
+  // Always make default sort sortable. Registry resolution will produce a
+  // PgColumn entry from this key.
+  if (defaultSort && columns[defaultSort] && !sortableFields.includes(defaultSort)) {
+    sortableFields.push(defaultSort);
   }
 
   return {
@@ -535,9 +536,9 @@ export function defineEntity<TTable extends PgTable>(model: ModelDefinition<TTab
     slug: model.slug,
     table: model.table,
     systemColumns,
-    searchColumns,
+    searchFields,
     defaultSort,
-    sortableColumns,
+    sortableFields,
     fieldMeta,
     sections: model.sections ?? [],
     listFields: listFields.length > 0 ? listFields : undefined,

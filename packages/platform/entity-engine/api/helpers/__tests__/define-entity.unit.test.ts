@@ -92,7 +92,7 @@ describe('defineEntity', () => {
     expect(config.pluralName).toBe('Test Entities');
   });
 
-  it('should collect searchable fields into searchColumns', () => {
+  it('should collect searchable fields into searchFields', () => {
     const config = defineEntity({
       table: testTable,
       slug: 'test-entities',
@@ -103,10 +103,10 @@ describe('defineEntity', () => {
       },
     });
 
-    expect(config.searchColumns).toHaveLength(2);
+    expect(config.searchFields).toEqual(['title', 'email']);
   });
 
-  it('should collect sortable fields into sortableColumns', () => {
+  it('should collect sortable fields into sortableFields', () => {
     const config = defineEntity({
       table: testTable,
       slug: 'test-entities',
@@ -116,8 +116,8 @@ describe('defineEntity', () => {
       },
     });
 
-    expect(Object.keys(config.sortableColumns)).toContain('title');
-    expect(Object.keys(config.sortableColumns)).toContain('email');
+    expect(config.sortableFields).toContain('title');
+    expect(config.sortableFields).toContain('email');
   });
 
   it('should derive nameField from isLabel', () => {
@@ -396,7 +396,7 @@ describe('defineEntity', () => {
     });
 
     expect(config.defaultSort).toBe('title');
-    expect(config.sortableColumns.title).toBeDefined();
+    expect(config.sortableFields).toContain('title');
   });
 
   describe('hierarchy flag', () => {
@@ -751,7 +751,7 @@ describe('defineEntity', () => {
       });
 
       expect(config.defaultSort).toBe('sortOrder');
-      expect(config.sortableColumns.sortOrder).toBeDefined();
+      expect(config.sortableFields).toContain('sortOrder');
     });
 
     it('honours an explicit defaultSort over the orderable default', () => {

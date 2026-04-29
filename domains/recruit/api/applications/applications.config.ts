@@ -16,14 +16,10 @@ export const APPLICATIONS_CONFIG: EntityConfig = {
   },
   systemColumns: ['id', 'createdAt', 'updatedAt', 'deletedAt', 'deletedBy', 'createdBy'],
 
-  searchColumns: [],
+  searchFields: [],
 
   defaultSort: 'createdAt',
-  sortableColumns: {
-    createdAt: applications.createdAt,
-    stage: applications.stage,
-    source: applications.source,
-  },
+  sortableFields: ['createdAt', 'stage', 'source'],
 
   fieldMeta: {
     candidateId: {

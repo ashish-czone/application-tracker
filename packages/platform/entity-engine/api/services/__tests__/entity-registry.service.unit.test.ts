@@ -22,9 +22,9 @@ function mockConfig(overrides: Partial<EntityConfig> = {}): EntityConfig {
     slug: 'test-entities',
     table: softTable as any,
     systemColumns: ['id', 'deletedAt', 'deletedBy'],
-    searchColumns: [],
+    searchFields: [],
     defaultSort: 'createdAt',
-    sortableColumns: {},
+    sortableFields: [],
     fieldMeta: {},
     sections: [],
     nameField: 'name',
@@ -232,6 +232,77 @@ describe('EntityRegistryService', () => {
 
     const entries = registry.getRegistryEntries();
     expect(entries[0].features.shared).toEqual({ from: 'config' });
+  });
+
+  // ---------------------------------------------------------------------------
+  // searchFields / sortableFields → PgColumn resolution at finalize
+  // ---------------------------------------------------------------------------
+
+  describe('read-column resolution', () => {
+    const readTable = pgTable('read_entities', {
+      id: text('id').primaryKey(),
+      title: text('title').notNull(),
+      slug: text('slug'),
+      createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull(),
+    });
+
+    function readConfig(overrides: Partial<EntityConfig> = {}): EntityConfig {
+      return mockConfig({
+        entityType: 'read_entities',
+        slug: 'read-entities',
+        table: readTable as unknown as EntityConfig['table'],
+        ...overrides,
+      });
+    }
+
+    it('resolves declared field keys to PgColumns', () => {
+      registry.register(readConfig({
+        searchFields: ['title', 'slug'],
+        sortableFields: ['title', 'createdAt'],
+      }));
+      registry.finalize();
+
+      const resolved = registry.getResolvedReadColumns('read_entities');
+      expect(resolved.searchColumns).toHaveLength(2);
+      expect(Object.keys(resolved.sortableColumns)).toEqual(
+        expect.arrayContaining(['title', 'createdAt']),
+      );
+    });
+
+    it('throws at finalize when searchFields names a missing column', () => {
+      registry.register(readConfig({ searchFields: ['ghost'] }));
+
+      expect(() => registry.finalize()).toThrow(
+        /searchFields includes 'ghost', which is not a column on the table/,
+      );
+    });
+
+    it('throws at finalize when sortableFields names a missing column', () => {
+      registry.register(readConfig({ sortableFields: ['ghost'] }));
+
+      expect(() => registry.finalize()).toThrow(
+        /sortableFields includes 'ghost', which is not a column on the table/,
+      );
+    });
+
+    it('always makes defaultSort sortable even if omitted from sortableFields', () => {
+      registry.register(readConfig({
+        defaultSort: 'createdAt',
+        sortableFields: ['title'],
+      }));
+      registry.finalize();
+
+      const resolved = registry.getResolvedReadColumns('read_entities');
+      expect(resolved.sortableColumns.createdAt).toBeDefined();
+    });
+
+    it('throws when getResolvedReadColumns is called before finalize', () => {
+      registry.register(readConfig());
+
+      expect(() => registry.getResolvedReadColumns('read_entities')).toThrow(
+        /called before finalize/,
+      );
+    });
   });
 
   // ---------------------------------------------------------------------------

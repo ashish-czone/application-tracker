@@ -129,11 +129,13 @@ export class EntityService {
    * by `priority` (a parent column) just works on the extension entity.
    */
   private getEffectiveSortableColumns(ext: import('./types').ResolvedExtension): Record<string, PgColumn> {
-    const merged: Record<string, PgColumn> = { ...this.config.sortableColumns };
+    const ownResolved = this.entityRegistry.getResolvedReadColumns(this.config.entityType);
+    const merged: Record<string, PgColumn> = { ...ownResolved.sortableColumns };
     const parent = this.entityRegistry.get(ext.parentEntityType);
     if (parent) {
+      const parentSortableSet = new Set(parent.sortableFields ?? []);
       for (const { fieldKey, column } of ext.projectedColumns) {
-        if (parent.sortableColumns[fieldKey]) merged[fieldKey] = column;
+        if (parentSortableSet.has(fieldKey)) merged[fieldKey] = column;
       }
     }
     return merged;
@@ -141,17 +143,17 @@ export class EntityService {
 
   /**
    * Searchable columns visible to the child — child's own + any projected
-   * parent columns the parent declared searchable. Drizzle column references
-   * are stable across getTableColumns() calls, so set membership checks work.
+   * parent columns the parent declared searchable.
    */
   private getEffectiveSearchColumns(ext: import('./types').ResolvedExtension): PgColumn[] {
+    const ownResolved = this.entityRegistry.getResolvedReadColumns(this.config.entityType);
     const parent = this.entityRegistry.get(ext.parentEntityType);
-    if (!parent) return this.config.searchColumns;
-    const parentSearchSet = new Set<PgColumn>(parent.searchColumns);
+    if (!parent) return ownResolved.searchColumns;
+    const parentSearchSet = new Set(parent.searchFields ?? []);
     const additional = ext.projectedColumns
-      .filter((p) => parentSearchSet.has(p.column))
+      .filter((p) => parentSearchSet.has(p.fieldKey))
       .map((p) => p.column);
-    return [...this.config.searchColumns, ...additional];
+    return [...ownResolved.searchColumns, ...additional];
   }
 
   // ---------------------------------------------------------------------------
@@ -400,6 +402,7 @@ export class EntityService {
     const listFieldOrder = config.listFields
       ? new Map(config.listFields.map((k, i) => [k, i]))
       : null;
+    const sortableFieldSet = new Set(config.sortableFields ?? []);
 
     // All entity fields as columns with visible/order flags (exclude long-text/file types)
     const columns: ListLayoutColumn[] = allDefs
@@ -416,7 +419,7 @@ export class EntityService {
         label: d.label,
         fieldType: d.fieldType,
         sortable:
-          !!config.sortableColumns[d.fieldKey]
+          sortableFieldSet.has(d.fieldKey)
           || (config.customFields === true && !d.columnName && !fieldTypeRegistry.isRelational(d.fieldType)),
         lookupEntity: d.lookupEntity ?? undefined,
         visible: listFieldSet ? listFieldSet.has(d.fieldKey) : !EntityService.shouldExcludeFromList(d.fieldType) && idx < 10,
@@ -540,7 +543,9 @@ export class EntityService {
     if (query.search) {
       const searchConditions: any[] = [];
 
-      const searchCols = ext ? this.getEffectiveSearchColumns(ext) : config.searchColumns;
+      const searchCols = ext
+        ? this.getEffectiveSearchColumns(ext)
+        : this.entityRegistry.getResolvedReadColumns(config.entityType).searchColumns;
       const stdSearch = buildSearchCondition(query.search, searchCols);
       if (stdSearch) searchConditions.push(stdSearch);
 
@@ -1477,7 +1482,7 @@ export class EntityService {
 
     const sortableColumns = ext
       ? this.getEffectiveSortableColumns(ext)
-      : config.sortableColumns;
+      : this.entityRegistry.getResolvedReadColumns(config.entityType).sortableColumns;
 
     // Standard column sort (delegated to query-builder)
     return qbBuildSortExpression(
