@@ -4,8 +4,6 @@ import { milestones } from '../schema/milestones';
 export const MILESTONES_CONFIG = defineEntity({
   table: milestones,
   slug: 'milestones',
-  singularName: 'Milestone',
-  pluralName: 'Milestones',
   timestamps: true,
   orderable: true,
   // See PROJECTS_CONFIG — flag is required so the workflow seed service

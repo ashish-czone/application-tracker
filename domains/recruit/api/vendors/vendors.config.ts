@@ -3,8 +3,6 @@ import { vendors } from './schema/vendors';
 
 export const VENDORS_CONFIG: EntityConfig = {
   entityType: 'vendors',
-  singularName: 'Vendor',
-  pluralName: 'Vendors',
   slug: 'vendors',
 
   table: vendors,

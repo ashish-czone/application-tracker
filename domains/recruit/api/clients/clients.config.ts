@@ -3,8 +3,6 @@ import { clients } from './schema/clients';
 
 export const CLIENTS_CONFIG: EntityConfig = {
   entityType: 'clients',
-  singularName: 'Client',
-  pluralName: 'Clients',
   slug: 'clients',
 
   table: clients,

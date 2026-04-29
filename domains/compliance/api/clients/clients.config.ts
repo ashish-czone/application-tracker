@@ -9,8 +9,6 @@ import { clients } from '../schema/clients';
 export const CLIENTS_CONFIG = defineEntity({
   table: clients,
   slug: 'clients',
-  singularName: 'Client',
-  pluralName: 'Clients',
   timestamps: true,
   subtitleField: 'legalName',
 

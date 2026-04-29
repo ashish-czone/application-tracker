@@ -34,6 +34,7 @@ import type { WorkflowExtension } from './extensions/workflow-extension.interfac
 import type { TaxonomyExtension } from './extensions/taxonomy-extension.interface';
 import type { PaginatedResponse } from '@packages/common';
 import type { EntityConfig, BaseListQuery, ListLayoutColumn, TransitionContext } from './types';
+import type { RegisteredEntityConfig } from './entity-registry.service';
 import type { DataAccessContext, AccessScopeSpec } from '@packages/rbac';
 import type { SQL as DrizzleSQL } from 'drizzle-orm';
 import { EntityRegistryService } from './entity-registry.service';
@@ -73,7 +74,7 @@ export class EntityService {
   private readonly logger: ContextLogger;
 
   constructor(
-    private readonly config: EntityConfig,
+    private readonly config: RegisteredEntityConfig,
     private readonly database: DatabaseService,
     private readonly domainEventEmitter: DomainEventEmitter,
     private readonly eavStorage: EavStorageExtension | null,

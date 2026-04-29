@@ -4,8 +4,6 @@ import { contacts } from './schema/contacts';
 
 export const CONTACTS_CONFIG: EntityConfig = {
   entityType: 'contacts',
-  singularName: 'Contact',
-  pluralName: 'Contacts',
   slug: 'contacts',
 
   table: contacts,

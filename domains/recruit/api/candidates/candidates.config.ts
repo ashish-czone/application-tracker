@@ -15,8 +15,6 @@ import { CANDIDATE_FIELD_META, CANDIDATE_SECTIONS } from './field-meta';
  */
 export const candidatesConfig: EntityConfig = {
   entityType: 'candidates',
-  singularName: 'Candidate',
-  pluralName: 'Candidates',
   slug: 'candidates',
 
   table: candidates,

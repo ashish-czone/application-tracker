@@ -4,9 +4,10 @@ import { DomainEventEmitter, EventRegistryService } from '@packages/events';
 import { RbacService, ScopeResolverRegistry, type PermissionManifest } from '@packages/rbac';
 import { AppLoggerService } from '@packages/logger';
 import { EntityCoreModule } from './entity-core.module';
-import { EntityRegistryService } from './entity-registry.service';
+import { EntityRegistryService, type RegisteredEntityConfig } from './entity-registry.service';
 import { EntityService } from './entity.service';
 import { deriveSupportedScopes } from './helpers/derive-supported-scopes';
+import { ensureRegisteredIdentity } from './helpers/registered-identity';
 import { FieldDefinitionService } from './services/field-definition.service';
 import { LookupResolverService } from './services/lookup-resolver.service';
 
@@ -125,7 +126,14 @@ export class EntityEngineModule implements OnApplicationBootstrap {
             } else if (config.customFields === true) {
               storage = jsonbStorage;
             }
-            return new EntityService(config, database, domainEventEmitter, storage, multiValueExtension, fieldDefinitionService, lookupResolver, taxonomyExt, workflowExt, entityRegistry, appLogger, scopeResolverRegistry);
+            // The forEntity factory runs at DI-resolution time, before
+            // onApplicationBootstrap registers entities. EntityService needs
+            // a populated identity (singularName / pluralName) for log and
+            // exception messages, so apply the same fallback here that the
+            // registry will apply on register(). Safe to mutate: the same
+            // object reference is passed to the registry later.
+            ensureRegisteredIdentity(config);
+            return new EntityService(config as RegisteredEntityConfig, database, domainEventEmitter, storage, multiValueExtension, fieldDefinitionService, lookupResolver, taxonomyExt, workflowExt, entityRegistry, appLogger, scopeResolverRegistry);
           },
           inject: [DatabaseService, DomainEventEmitter, { token: EAV_STORAGE_EXTENSION, optional: true }, JsonbStorageAdapter, { token: MULTI_VALUE_EXTENSION, optional: true }, FieldDefinitionService, LookupResolverService, { token: TAXONOMY_EXTENSION, optional: true }, { token: WORKFLOW_EXTENSION, optional: true }, EntityRegistryService, AppLoggerService, ScopeResolverRegistry],
         },
@@ -145,8 +153,12 @@ export class EntityEngineModule implements OnApplicationBootstrap {
   }
 
   private async initializeEntity(config: EntityConfig): Promise<void> {
-    // 1. Register in entity registry
+    // 1. Register in entity registry. After this call, the registry has
+    //    populated singularName / pluralName from a slug-derived fallback if
+    //    the input config omitted them — read the registered form back so
+    //    the rest of this method sees the populated identity strings.
     this.registry.register(config);
+    const registered = this.registry.getOrFail(config.entityType);
 
     // 1b. For non-admin-configurable entities, mirror code-defined fields into
     //     the FieldDefinitionService cache so readers don't have to branch on
@@ -161,8 +173,8 @@ export class EntityEngineModule implements OnApplicationBootstrap {
     //    may override with a narrower subset (e.g. `pickup` only makes sense
     //    on `unit` / `unassigned_in_unit`, not on `own`).
     const derivedScopes = deriveSupportedScopes(config, this.scopeResolverRegistry.values());
-    const plural = config.pluralName.toLowerCase();
-    const singular = config.singularName.toLowerCase();
+    const plural = registered.pluralName.toLowerCase();
+    const singular = registered.singularName.toLowerCase();
     const crudManifests: PermissionManifest[] = [
       { slug: `${config.slug}.create`, module: config.slug, action: 'create', label: `Create ${plural}`,   description: `Create ${plural}`,   supportedScopes: derivedScopes },
       { slug: `${config.slug}.read`,   module: config.slug, action: 'read',   label: `View ${plural}`,     description: `View ${plural}`,     supportedScopes: derivedScopes },
@@ -187,19 +199,19 @@ export class EntityEngineModule implements OnApplicationBootstrap {
     this.eventRegistry.register({
       eventName: createdEvent,
       group: config.entityType,
-      description: `Fired when a new ${config.singularName.toLowerCase()} is created`,
+      description: `Fired when a new ${registered.singularName.toLowerCase()} is created`,
       payloadSchema: {},
     });
     this.eventRegistry.register({
       eventName: updatedEvent,
       group: config.entityType,
-      description: `Fired when a ${config.singularName.toLowerCase()} is updated`,
+      description: `Fired when a ${registered.singularName.toLowerCase()} is updated`,
       payloadSchema: { changes: { type: 'string', label: 'Changed Fields' } },
     });
     this.eventRegistry.register({
       eventName: deletedEvent,
       group: config.entityType,
-      description: `Fired when a ${config.singularName.toLowerCase()} is deleted`,
+      description: `Fired when a ${registered.singularName.toLowerCase()} is deleted`,
       payloadSchema: {},
     });
 
@@ -213,7 +225,7 @@ export class EntityEngineModule implements OnApplicationBootstrap {
       this.eventRegistry.register({
         eventName,
         group: config.entityType,
-        description: `Fired when a ${config.singularName.toLowerCase()}'s ${meta.label.toLowerCase()} changes`,
+        description: `Fired when a ${registered.singularName.toLowerCase()}'s ${meta.label.toLowerCase()} changes`,
         payloadSchema: {
           fromState: { type: 'string', label: `Previous ${meta.label}` },
           toState: { type: 'string', label: `New ${meta.label}` },

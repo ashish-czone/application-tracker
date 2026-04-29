@@ -4,8 +4,6 @@ import { complianceLaws } from '../schema/laws';
 export const LAWS_CONFIG = defineEntity({
   table: complianceLaws,
   slug: 'laws',
-  singularName: 'Law',
-  pluralName: 'Laws',
   timestamps: true,
   hierarchy: true,
 

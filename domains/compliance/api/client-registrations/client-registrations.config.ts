@@ -4,8 +4,6 @@ import { complianceClientRegistrations } from '../schema/client-registrations';
 export const CLIENT_REGISTRATIONS_CONFIG = defineEntity({
   table: complianceClientRegistrations,
   slug: 'client-registrations',
-  singularName: 'Registration',
-  pluralName: 'Registrations',
   timestamps: true,
 
   fields: {

@@ -4,8 +4,6 @@ import { complianceRules } from '../schema/rules';
 export const COMPLIANCE_RULES_CONFIG = defineEntity({
   table: complianceRules,
   slug: 'compliance-rules',
-  singularName: 'Compliance Rule',
-  pluralName: 'Compliance Rules',
   timestamps: true,
 
   fields: {

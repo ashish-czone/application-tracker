@@ -82,8 +82,6 @@ export async function assertMenuItemPayload(
 export const menuItemConfig = defineEntity({
   table: menuItems,
   slug: 'menu-items',
-  singularName: 'Menu Item',
-  pluralName: 'Menu Items',
   timestamps: true,
   hierarchy: true,
   orderable: true,

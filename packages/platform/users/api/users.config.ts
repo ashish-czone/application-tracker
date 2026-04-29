@@ -52,8 +52,6 @@ export interface UsersPositionsReader {
 export const USERS_CONFIG: EntityConfig<typeof users> = defineEntity({
   table: users,
   slug: 'users',
-  singularName: 'User',
-  pluralName: 'Users',
   timestamps: true,
   subtitleField: 'email',
 

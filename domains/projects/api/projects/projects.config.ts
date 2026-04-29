@@ -4,8 +4,6 @@ import { projects } from '../schema/projects';
 export const PROJECTS_CONFIG = defineEntity({
   table: projects,
   slug: 'projects',
-  singularName: 'Project',
-  pluralName: 'Projects',
   timestamps: true,
   subtitleField: 'description',
   // Required for the platform's seed service to write workflow rows to the

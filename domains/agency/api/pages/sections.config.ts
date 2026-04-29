@@ -14,8 +14,6 @@ import { sections } from './schema/sections';
 export const SECTIONS_CONFIG = defineEntity({
   table: sections,
   slug: 'sections',
-  singularName: 'Section',
-  pluralName: 'Sections',
   timestamps: true,
   customFields: true,
 

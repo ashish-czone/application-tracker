@@ -57,6 +57,49 @@ describe('EntityRegistryService', () => {
     );
   });
 
+  describe('identity fallback', () => {
+    it('derives singularName / pluralName from slug when omitted', () => {
+      const config = mockConfig({
+        entityType: 'job_openings',
+        slug: 'job-openings',
+        singularName: undefined,
+        pluralName: undefined,
+      });
+      registry.register(config);
+
+      const registered = registry.getOrFail('job_openings');
+      expect(registered.singularName).toBe('Job opening');
+      expect(registered.pluralName).toBe('Job openings');
+    });
+
+    it('preserves explicit singularName / pluralName when provided', () => {
+      const config = mockConfig({
+        slug: 'widgets',
+        singularName: 'Widget',
+        pluralName: 'Widget Inventory',
+      });
+      registry.register(config);
+
+      const registered = registry.getOrFail('test_entity');
+      expect(registered.singularName).toBe('Widget');
+      expect(registered.pluralName).toBe('Widget Inventory');
+    });
+
+    it('handles snake_case slugs', () => {
+      const config = mockConfig({
+        entityType: 'audit_log',
+        slug: 'audit_log',
+        singularName: undefined,
+        pluralName: undefined,
+      });
+      registry.register(config);
+
+      const registered = registry.getOrFail('audit_log');
+      expect(registered.singularName).toBe('Audit log');
+      expect(registered.pluralName).toBe('Audit log');
+    });
+  });
+
   it('returns undefined for unknown entity type', () => {
     expect(registry.get('unknown')).toBeUndefined();
   });

@@ -4,8 +4,6 @@ import { pages } from './schema/pages';
 export const PAGES_CONFIG = defineEntity({
   table: pages,
   slug: 'pages',
-  singularName: 'Page',
-  pluralName: 'Pages',
   timestamps: true,
 
   fields: {
