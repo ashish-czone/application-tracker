@@ -13,10 +13,10 @@
     "noEmit": true,
     "baseUrl": ".",
     "paths": {
-      "@packages/entity-engine": ["../../../platform/entity-engine/api"],
-      "@packages/entity-engine/*": ["../../../platform/entity-engine/api/*"],
-      "@packages/entity-engine-ui": ["../../../platform/entity-engine/ui"],
-      "@packages/entity-engine-ui/*": ["../../../platform/entity-engine/ui/*"],
+      "@packages/entity-engine": ["../../../addons/entity-engine/api"],
+      "@packages/entity-engine/*": ["../../../addons/entity-engine/api/*"],
+      "@packages/entity-engine-ui": ["../../../addons/entity-engine/ui"],
+      "@packages/entity-engine-ui/*": ["../../../addons/entity-engine/ui/*"],
       "@packages/*": ["../../../core/*/", "../../../platform/*/", "../../../addons/*/"]
     }
   },

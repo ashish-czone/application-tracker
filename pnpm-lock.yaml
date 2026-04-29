@@ -157,10 +157,10 @@ importers:
         version: link:../../packages/core/database
       '@packages/entity-engine':
         specifier: workspace:*
-        version: link:../../packages/platform/entity-engine/api
+        version: link:../../packages/addons/entity-engine/api
       '@packages/entity-layout':
         specifier: workspace:*
-        version: link:../../packages/platform/entity-layout/api
+        version: link:../../packages/addons/entity-layout/api
       '@packages/events':
         specifier: workspace:*
         version: link:../../packages/core/events
@@ -323,10 +323,10 @@ importers:
         version: link:../../../../../packages/platform/eav-attributes-ui
       '@packages/entity-engine-ui':
         specifier: workspace:*
-        version: link:../../../../../packages/platform/entity-engine/ui
+        version: link:../../../../../packages/addons/entity-engine/ui
       '@packages/entity-layout-ui':
         specifier: workspace:*
-        version: link:../../../../../packages/platform/entity-layout/ui
+        version: link:../../../../../packages/addons/entity-layout/ui
       '@packages/entity-relations-ui':
         specifier: workspace:*
         version: link:../../../../../packages/addons/entity-relations/ui
@@ -487,7 +487,7 @@ importers:
         version: link:../../packages/core/database
       '@packages/entity-engine':
         specifier: workspace:*
-        version: link:../../packages/platform/entity-engine/api
+        version: link:../../packages/addons/entity-engine/api
       '@packages/events':
         specifier: workspace:*
         version: link:../../packages/core/events
@@ -671,10 +671,10 @@ importers:
         version: link:../../packages/addons/eav-attributes
       '@packages/entity-engine':
         specifier: workspace:*
-        version: link:../../packages/platform/entity-engine/api
+        version: link:../../packages/addons/entity-engine/api
       '@packages/entity-layout':
         specifier: workspace:*
-        version: link:../../packages/platform/entity-layout/api
+        version: link:../../packages/addons/entity-layout/api
       '@packages/entity-relations':
         specifier: workspace:*
         version: link:../../packages/addons/entity-relations/api
@@ -858,10 +858,10 @@ importers:
         version: link:../../packages/platform/eav-attributes-ui
       '@packages/entity-engine-ui':
         specifier: workspace:*
-        version: link:../../packages/platform/entity-engine/ui
+        version: link:../../packages/addons/entity-engine/ui
       '@packages/entity-layout-ui':
         specifier: workspace:*
-        version: link:../../packages/platform/entity-layout/ui
+        version: link:../../packages/addons/entity-layout/ui
       '@packages/entity-relations-ui':
         specifier: workspace:*
         version: link:../../packages/addons/entity-relations/ui
@@ -991,7 +991,7 @@ importers:
         version: link:../../packages/core/database
       '@packages/entity-engine':
         specifier: workspace:*
-        version: link:../../packages/platform/entity-engine/api
+        version: link:../../packages/addons/entity-engine/api
       '@packages/events':
         specifier: workspace:*
         version: link:../../packages/core/events
@@ -1133,7 +1133,7 @@ importers:
         version: link:../../packages/platform/eav-attributes-ui
       '@packages/entity-engine-ui':
         specifier: workspace:*
-        version: link:../../packages/platform/entity-engine/ui
+        version: link:../../packages/addons/entity-engine/ui
       '@packages/entity-relations-ui':
         specifier: workspace:*
         version: link:../../packages/addons/entity-relations/ui
@@ -1306,10 +1306,10 @@ importers:
         version: link:../../packages/addons/eav-attributes
       '@packages/entity-engine':
         specifier: workspace:*
-        version: link:../../packages/platform/entity-engine/api
+        version: link:../../packages/addons/entity-engine/api
       '@packages/entity-layout':
         specifier: workspace:*
-        version: link:../../packages/platform/entity-layout/api
+        version: link:../../packages/addons/entity-layout/api
       '@packages/entity-relations':
         specifier: workspace:*
         version: link:../../packages/addons/entity-relations/api
@@ -1520,10 +1520,10 @@ importers:
         version: link:../../packages/platform/eav-attributes-ui
       '@packages/entity-engine-ui':
         specifier: workspace:*
-        version: link:../../packages/platform/entity-engine/ui
+        version: link:../../packages/addons/entity-engine/ui
       '@packages/entity-layout-ui':
         specifier: workspace:*
-        version: link:../../packages/platform/entity-layout/ui
+        version: link:../../packages/addons/entity-layout/ui
       '@packages/entity-relations-ui':
         specifier: workspace:*
         version: link:../../packages/addons/entity-relations/ui
@@ -1656,7 +1656,7 @@ importers:
         version: link:../../packages/addons/automations/ui
       '@packages/entity-engine-ui':
         specifier: workspace:*
-        version: link:../../packages/platform/entity-engine/ui
+        version: link:../../packages/addons/entity-engine/ui
       '@packages/notification-channels-ui':
         specifier: workspace:*
         version: link:../../packages/platform/notification-channels/ui
@@ -1789,7 +1789,7 @@ importers:
         version: link:../../../packages/platform/domains
       '@packages/entity-engine':
         specifier: workspace:*
-        version: link:../../../packages/platform/entity-engine/api
+        version: link:../../../packages/addons/entity-engine/api
       '@packages/events':
         specifier: workspace:*
         version: link:../../../packages/core/events
@@ -1954,7 +1954,7 @@ importers:
         version: link:../../../packages/platform/domains
       '@packages/entity-engine':
         specifier: workspace:*
-        version: link:../../../packages/platform/entity-engine/api
+        version: link:../../../packages/addons/entity-engine/api
       '@packages/events':
         specifier: workspace:*
         version: link:../../../packages/core/events
@@ -2072,7 +2072,7 @@ importers:
         version: link:../../../packages/platform/eav-attributes-ui
       '@packages/entity-engine-ui':
         specifier: workspace:*
-        version: link:../../../packages/platform/entity-engine/ui
+        version: link:../../../packages/addons/entity-engine/ui
       '@packages/notification-channels-ui':
         specifier: workspace:*
         version: link:../../../packages/platform/notification-channels/ui
@@ -2163,7 +2163,7 @@ importers:
         version: link:../../../packages/platform/domains
       '@packages/entity-engine':
         specifier: workspace:*
-        version: link:../../../packages/platform/entity-engine/api
+        version: link:../../../packages/addons/entity-engine/api
       '@packages/events':
         specifier: workspace:*
         version: link:../../../packages/core/events
@@ -2246,7 +2246,7 @@ importers:
     dependencies:
       '@packages/entity-engine-ui':
         specifier: workspace:*
-        version: link:../../../packages/platform/entity-engine/ui
+        version: link:../../../packages/addons/entity-engine/ui
       '@packages/platform-ui':
         specifier: workspace:*
         version: link:../../../packages/platform/platform-ui
@@ -2319,10 +2319,10 @@ importers:
         version: link:../../../packages/addons/eav-attributes
       '@packages/entity-engine':
         specifier: workspace:*
-        version: link:../../../packages/platform/entity-engine/api
+        version: link:../../../packages/addons/entity-engine/api
       '@packages/entity-layout':
         specifier: workspace:*
-        version: link:../../../packages/platform/entity-layout/api
+        version: link:../../../packages/addons/entity-layout/api
       '@packages/entity-relations':
         specifier: workspace:*
         version: link:../../../packages/addons/entity-relations/api
@@ -2422,7 +2422,7 @@ importers:
         version: link:../../../packages/platform/eav-attributes-ui
       '@packages/entity-engine-ui':
         specifier: workspace:*
-        version: link:../../../packages/platform/entity-engine/ui
+        version: link:../../../packages/addons/entity-engine/ui
       '@packages/evaluations-ui':
         specifier: workspace:*
         version: link:../../../packages/addons/evaluations/ui
@@ -2489,7 +2489,7 @@ importers:
         version: link:../../../core/database
       '@packages/entity-engine':
         specifier: workspace:*
-        version: link:../../../platform/entity-engine/api
+        version: link:../../entity-engine/api
       '@packages/events':
         specifier: workspace:*
         version: link:../../../core/events
@@ -2538,7 +2538,7 @@ importers:
         version: link:../../../core/common
       '@packages/entity-engine-ui':
         specifier: workspace:*
-        version: link:../../../platform/entity-engine/ui
+        version: link:../../entity-engine/ui
       '@packages/platform-ui':
         specifier: workspace:*
         version: link:../../../platform/platform-ui
@@ -2584,7 +2584,7 @@ importers:
         version: link:../../../core/database
       '@packages/entity-engine':
         specifier: workspace:*
-        version: link:../../../platform/entity-engine/api
+        version: link:../../entity-engine/api
       '@packages/events':
         specifier: workspace:*
         version: link:../../../core/events
@@ -2651,7 +2651,7 @@ importers:
         version: link:../../../platform/eav-attributes-ui
       '@packages/entity-engine-ui':
         specifier: workspace:*
-        version: link:../../../platform/entity-engine/ui
+        version: link:../../entity-engine/ui
       '@packages/field-types':
         specifier: workspace:*
         version: link:../../../platform/field-types
@@ -2730,7 +2730,7 @@ importers:
         version: 6.1.20(@fullcalendar/core@6.1.20)
       '@packages/entity-engine-ui':
         specifier: workspace:*
-        version: link:../../platform/entity-engine/ui
+        version: link:../entity-engine/ui
       '@packages/ui':
         specifier: workspace:*
         version: link:../../core/ui
@@ -2767,7 +2767,7 @@ importers:
         version: link:../../../core/database
       '@packages/entity-engine':
         specifier: workspace:*
-        version: link:../../../platform/entity-engine/api
+        version: link:../../entity-engine/api
       '@packages/events':
         specifier: workspace:*
         version: link:../../../core/events
@@ -2951,10 +2951,10 @@ importers:
         version: link:../../core/database
       '@packages/entity-engine':
         specifier: workspace:*
-        version: link:../../platform/entity-engine/api
+        version: link:../entity-engine/api
       '@packages/entity-layout':
         specifier: workspace:*
-        version: link:../../platform/entity-layout/api
+        version: link:../entity-layout/api
       '@packages/logger':
         specifier: workspace:*
         version: link:../../core/logger
@@ -2984,6 +2984,215 @@ importers:
         specifier: ^3.0.0
         version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0)
 
+  packages/addons/entity-engine/api:
+    dependencies:
+      '@nestjs/common':
+        specifier: ^11.0.0
+        version: 11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/swagger':
+        specifier: ^11.0.0
+        version: 11.2.6(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)
+      '@packages/auth':
+        specifier: workspace:*
+        version: link:../../../platform/auth/api
+      '@packages/common':
+        specifier: workspace:*
+        version: link:../../../core/common
+      '@packages/database':
+        specifier: workspace:*
+        version: link:../../../core/database
+      '@packages/entity-engine-contract':
+        specifier: workspace:*
+        version: link:../contracts
+      '@packages/events':
+        specifier: workspace:*
+        version: link:../../../core/events
+      '@packages/logger':
+        specifier: workspace:*
+        version: link:../../../core/logger
+      '@packages/query-builder':
+        specifier: workspace:*
+        version: link:../../../core/query-builder
+      '@packages/rbac':
+        specifier: workspace:*
+        version: link:../../../platform/rbac/api
+      '@packages/soft-delete':
+        specifier: workspace:*
+        version: link:../../../core/soft-delete
+      mustache:
+        specifier: ^4.2.0
+        version: 4.2.0
+      rxjs:
+        specifier: ^7.0.0
+        version: 7.8.2
+    devDependencies:
+      '@packages/platform-testing':
+        specifier: workspace:*
+        version: link:../../../platform/testing
+      '@types/mustache':
+        specifier: ^4.2.0
+        version: 4.2.6
+      '@types/supertest':
+        specifier: ^6.0.2
+        version: 6.0.3
+      drizzle-kit:
+        specifier: ^0.31.9
+        version: 0.31.9
+      drizzle-orm:
+        specifier: ^0.45.1
+        version: 0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3))
+      supertest:
+        specifier: ^7.0.0
+        version: 7.2.2
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0)
+
+  packages/addons/entity-engine/contracts:
+    dependencies:
+      '@packages/common':
+        specifier: workspace:*
+        version: link:../../../core/common
+    devDependencies:
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0)
+
+  packages/addons/entity-engine/ui:
+    dependencies:
+      '@hookform/resolvers':
+        specifier: ^5.0.0
+        version: 5.2.2(react-hook-form@7.71.2(react@19.2.4))
+      '@packages/common':
+        specifier: workspace:*
+        version: link:../../../core/common
+      '@packages/conditions-ui':
+        specifier: workspace:*
+        version: link:../../../platform/conditions-ui
+      '@packages/eav-attributes-ui':
+        specifier: workspace:*
+        version: link:../../../platform/eav-attributes-ui
+      '@packages/entity-engine':
+        specifier: workspace:*
+        version: link:../api
+      '@packages/ui':
+        specifier: workspace:*
+        version: link:../../../core/ui
+      '@tanstack/react-query':
+        specifier: ^5.0.0
+        version: 5.90.21(react@19.2.4)
+      '@tanstack/react-table':
+        specifier: ^8.0.0
+        version: 8.21.3(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      lucide-react:
+        specifier: ^0.500.0
+        version: 0.500.0(react@19.2.4)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.4
+      react-hook-form:
+        specifier: ^7.54.0
+        version: 7.71.2(react@19.2.4)
+      react-router:
+        specifier: ^7.0.0
+        version: 7.13.1(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      react-router-dom:
+        specifier: ^7.0.0
+        version: 7.13.1(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      zod:
+        specifier: ^3.24.0
+        version: 3.25.76
+    devDependencies:
+      '@types/react':
+        specifier: ^19.2.14
+        version: 19.2.14
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0)
+
+  packages/addons/entity-layout/api:
+    dependencies:
+      '@nestjs/common':
+        specifier: ^11.0.0
+        version: 11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/swagger':
+        specifier: ^11.0.0
+        version: 11.2.6(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)
+      '@packages/database':
+        specifier: workspace:*
+        version: link:../../../core/database
+      '@packages/entity-engine':
+        specifier: workspace:*
+        version: link:../../entity-engine/api
+      '@packages/rbac':
+        specifier: workspace:*
+        version: link:../../../platform/rbac/api
+      class-transformer:
+        specifier: ^0.5.1
+        version: 0.5.1
+      class-validator:
+        specifier: ^0.14.1
+        version: 0.14.4
+      drizzle-orm:
+        specifier: ^0.45.1
+        version: 0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3))
+    devDependencies:
+      '@packages/platform-testing':
+        specifier: workspace:*
+        version: link:../../../platform/testing
+      '@types/supertest':
+        specifier: ^6.0.2
+        version: 6.0.3
+      drizzle-kit:
+        specifier: ^0.31.9
+        version: 0.31.9
+      mustache:
+        specifier: ^4.2.0
+        version: 4.2.0
+      supertest:
+        specifier: ^7.0.0
+        version: 7.2.2
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0)
+
+  packages/addons/entity-layout/ui:
+    dependencies:
+      '@packages/eav-attributes-ui':
+        specifier: workspace:*
+        version: link:../../../platform/eav-attributes-ui
+      '@packages/platform-ui':
+        specifier: workspace:*
+        version: link:../../../platform/platform-ui
+      '@packages/ui':
+        specifier: workspace:*
+        version: link:../../../core/ui
+      '@tanstack/react-query':
+        specifier: ^5.0.0
+        version: 5.90.21(react@19.2.4)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.4
+    devDependencies:
+      '@types/react':
+        specifier: ^19.2.14
+        version: 19.2.14
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+
   packages/addons/entity-relations/api:
     dependencies:
       '@nestjs/common':
@@ -2994,7 +3203,7 @@ importers:
         version: link:../../../core/database
       '@packages/entity-engine':
         specifier: workspace:*
-        version: link:../../../platform/entity-engine/api
+        version: link:../../entity-engine/api
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3))
@@ -3105,7 +3314,7 @@ importers:
         version: link:../../../core/common
       '@packages/entity-engine-ui':
         specifier: workspace:*
-        version: link:../../../platform/entity-engine/ui
+        version: link:../../entity-engine/ui
       '@packages/field-types':
         specifier: workspace:*
         version: link:../../../platform/field-types
@@ -3170,7 +3379,7 @@ importers:
     dependencies:
       '@packages/entity-engine-ui':
         specifier: workspace:*
-        version: link:../../../platform/entity-engine/ui
+        version: link:../../entity-engine/ui
       '@packages/hierarchy':
         specifier: workspace:*
         version: link:../api
@@ -3219,7 +3428,7 @@ importers:
         version: link:../../platform/auth/api
       '@packages/entity-engine':
         specifier: workspace:*
-        version: link:../../platform/entity-engine/api
+        version: link:../entity-engine/api
       '@packages/logger':
         specifier: workspace:*
         version: link:../../core/logger
@@ -3259,7 +3468,7 @@ importers:
         version: link:../../../core/database
       '@packages/entity-engine':
         specifier: workspace:*
-        version: link:../../../platform/entity-engine/api
+        version: link:../../entity-engine/api
       '@packages/events':
         specifier: workspace:*
         version: link:../../../core/events
@@ -3430,7 +3639,7 @@ importers:
         version: link:../../../core/common
       '@packages/entity-engine-ui':
         specifier: workspace:*
-        version: link:../../../platform/entity-engine/ui
+        version: link:../../entity-engine/ui
       '@packages/platform-ui':
         specifier: workspace:*
         version: link:../../../platform/platform-ui
@@ -3562,7 +3771,7 @@ importers:
         version: link:../../core/database
       '@packages/entity-engine':
         specifier: workspace:*
-        version: link:../../platform/entity-engine/api
+        version: link:../entity-engine/api
       '@packages/events':
         specifier: workspace:*
         version: link:../../core/events
@@ -3623,7 +3832,7 @@ importers:
         version: link:../../core/database
       '@packages/entity-engine':
         specifier: workspace:*
-        version: link:../../platform/entity-engine/api
+        version: link:../entity-engine/api
       '@packages/events':
         specifier: workspace:*
         version: link:../../core/events
@@ -3693,7 +3902,7 @@ importers:
         version: link:../../../core/database
       '@packages/entity-engine':
         specifier: workspace:*
-        version: link:../../../platform/entity-engine/api
+        version: link:../../entity-engine/api
       '@packages/logger':
         specifier: workspace:*
         version: link:../../../core/logger
@@ -3754,7 +3963,7 @@ importers:
         version: link:../../../platform/eav-attributes-ui
       '@packages/entity-engine-ui':
         specifier: workspace:*
-        version: link:../../../platform/entity-engine/ui
+        version: link:../../entity-engine/ui
       '@packages/field-types':
         specifier: workspace:*
         version: link:../../../platform/field-types
@@ -3880,7 +4089,7 @@ importers:
         version: link:../../../core/database
       '@packages/entity-engine':
         specifier: workspace:*
-        version: link:../../../platform/entity-engine/api
+        version: link:../../entity-engine/api
       '@packages/logger':
         specifier: workspace:*
         version: link:../../../core/logger
@@ -3944,7 +4153,7 @@ importers:
         version: link:../../attachments/api
       '@packages/entity-engine-contract':
         specifier: workspace:*
-        version: link:../../../platform/entity-engine/contracts
+        version: link:../../entity-engine/contracts
       '@packages/notes':
         specifier: workspace:*
         version: link:../../notes/api
@@ -3975,7 +4184,7 @@ importers:
         version: link:../../../platform/dashboard-ui
       '@packages/entity-engine-ui':
         specifier: workspace:*
-        version: link:../../../platform/entity-engine/ui
+        version: link:../../entity-engine/ui
       '@packages/platform-ui':
         specifier: workspace:*
         version: link:../../../platform/platform-ui
@@ -4021,7 +4230,7 @@ importers:
         version: link:../../../core/database
       '@packages/entity-engine':
         specifier: workspace:*
-        version: link:../../../platform/entity-engine/api
+        version: link:../../entity-engine/api
       '@packages/hierarchy':
         specifier: workspace:*
         version: link:../../hierarchy/api
@@ -4076,7 +4285,7 @@ importers:
         version: link:../../../platform/domains
       '@packages/entity-engine-ui':
         specifier: workspace:*
-        version: link:../../../platform/entity-engine/ui
+        version: link:../../entity-engine/ui
       '@packages/ui':
         specifier: workspace:*
         version: link:../../../core/ui
@@ -4171,10 +4380,10 @@ importers:
         version: link:../../../core/database
       '@packages/entity-engine':
         specifier: workspace:*
-        version: link:../../../platform/entity-engine/api
+        version: link:../../entity-engine/api
       '@packages/entity-engine-contract':
         specifier: workspace:*
-        version: link:../../../platform/entity-engine/contracts
+        version: link:../../entity-engine/contracts
       '@packages/events':
         specifier: workspace:*
         version: link:../../../core/events
@@ -4229,7 +4438,7 @@ importers:
         version: link:../../../platform/eav-attributes-ui
       '@packages/entity-engine-ui':
         specifier: workspace:*
-        version: link:../../../platform/entity-engine/ui
+        version: link:../../entity-engine/ui
       '@packages/field-types':
         specifier: workspace:*
         version: link:../../../platform/field-types
@@ -4308,7 +4517,7 @@ importers:
         version: link:../../../core/database
       '@packages/entity-engine':
         specifier: workspace:*
-        version: link:../../../platform/entity-engine/api
+        version: link:../../entity-engine/api
       '@packages/events':
         specifier: workspace:*
         version: link:../../../core/events
@@ -4363,7 +4572,7 @@ importers:
         version: link:../../../platform/eav-attributes-ui
       '@packages/entity-engine-ui':
         specifier: workspace:*
-        version: link:../../../platform/entity-engine/ui
+        version: link:../../entity-engine/ui
       '@packages/field-types':
         specifier: workspace:*
         version: link:../../../platform/field-types
@@ -4813,10 +5022,10 @@ importers:
         version: link:../../domains
       '@packages/entity-engine':
         specifier: workspace:*
-        version: link:../../entity-engine/api
+        version: link:../../../addons/entity-engine/api
       '@packages/entity-layout':
         specifier: workspace:*
-        version: link:../../entity-layout/api
+        version: link:../../../addons/entity-layout/api
       '@packages/events':
         specifier: workspace:*
         version: link:../../../core/events
@@ -4880,10 +5089,10 @@ importers:
         version: link:../../domains
       '@packages/entity-engine-ui':
         specifier: workspace:*
-        version: link:../../entity-engine/ui
+        version: link:../../../addons/entity-engine/ui
       '@packages/entity-layout-ui':
         specifier: workspace:*
-        version: link:../../entity-layout/ui
+        version: link:../../../addons/entity-layout/ui
       '@packages/notification-channels-ui':
         specifier: workspace:*
         version: link:../../notification-channels/ui
@@ -5325,212 +5534,6 @@ importers:
         specifier: ^3.0.0
         version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0)
 
-  packages/platform/entity-engine/api:
-    dependencies:
-      '@nestjs/common':
-        specifier: ^11.0.0
-        version: 11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
-      '@nestjs/swagger':
-        specifier: ^11.0.0
-        version: 11.2.6(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)
-      '@packages/auth':
-        specifier: workspace:*
-        version: link:../../auth/api
-      '@packages/common':
-        specifier: workspace:*
-        version: link:../../../core/common
-      '@packages/database':
-        specifier: workspace:*
-        version: link:../../../core/database
-      '@packages/entity-engine-contract':
-        specifier: workspace:*
-        version: link:../contracts
-      '@packages/events':
-        specifier: workspace:*
-        version: link:../../../core/events
-      '@packages/logger':
-        specifier: workspace:*
-        version: link:../../../core/logger
-      '@packages/query-builder':
-        specifier: workspace:*
-        version: link:../../../core/query-builder
-      '@packages/rbac':
-        specifier: workspace:*
-        version: link:../../rbac/api
-      '@packages/soft-delete':
-        specifier: workspace:*
-        version: link:../../../core/soft-delete
-      mustache:
-        specifier: ^4.2.0
-        version: 4.2.0
-      rxjs:
-        specifier: ^7.0.0
-        version: 7.8.2
-    devDependencies:
-      '@packages/platform-testing':
-        specifier: workspace:*
-        version: link:../../testing
-      '@types/mustache':
-        specifier: ^4.2.0
-        version: 4.2.6
-      '@types/supertest':
-        specifier: ^6.0.2
-        version: 6.0.3
-      drizzle-kit:
-        specifier: ^0.31.9
-        version: 0.31.9
-      drizzle-orm:
-        specifier: ^0.45.1
-        version: 0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3))
-      supertest:
-        specifier: ^7.0.0
-        version: 7.2.2
-      typescript:
-        specifier: ^5.7.0
-        version: 5.9.3
-      vitest:
-        specifier: ^3.0.0
-        version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0)
-
-  packages/platform/entity-engine/contracts:
-    dependencies:
-      '@packages/common':
-        specifier: workspace:*
-        version: link:../../../core/common
-    devDependencies:
-      typescript:
-        specifier: ^5.7.0
-        version: 5.9.3
-      vitest:
-        specifier: ^3.0.0
-        version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0)
-
-  packages/platform/entity-engine/ui:
-    dependencies:
-      '@hookform/resolvers':
-        specifier: ^5.0.0
-        version: 5.2.2(react-hook-form@7.71.2(react@19.2.4))
-      '@packages/common':
-        specifier: workspace:*
-        version: link:../../../core/common
-      '@packages/conditions-ui':
-        specifier: workspace:*
-        version: link:../../conditions-ui
-      '@packages/eav-attributes-ui':
-        specifier: workspace:*
-        version: link:../../eav-attributes-ui
-      '@packages/ui':
-        specifier: workspace:*
-        version: link:../../../core/ui
-      '@tanstack/react-query':
-        specifier: ^5.0.0
-        version: 5.90.21(react@19.2.4)
-      '@tanstack/react-table':
-        specifier: ^8.0.0
-        version: 8.21.3(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
-      lucide-react:
-        specifier: ^0.500.0
-        version: 0.500.0(react@19.2.4)
-      react:
-        specifier: ^19.0.0
-        version: 19.2.4
-      react-hook-form:
-        specifier: ^7.54.0
-        version: 7.71.2(react@19.2.4)
-      react-router:
-        specifier: ^7.0.0
-        version: 7.13.1(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
-      react-router-dom:
-        specifier: ^7.0.0
-        version: 7.13.1(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
-      zod:
-        specifier: ^3.24.0
-        version: 3.25.76
-    devDependencies:
-      '@types/react':
-        specifier: ^19.2.14
-        version: 19.2.14
-      typescript:
-        specifier: ^5.7.0
-        version: 5.9.3
-      vitest:
-        specifier: ^3.0.0
-        version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0)
-
-  packages/platform/entity-layout/api:
-    dependencies:
-      '@nestjs/common':
-        specifier: ^11.0.0
-        version: 11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
-      '@nestjs/swagger':
-        specifier: ^11.0.0
-        version: 11.2.6(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)
-      '@packages/database':
-        specifier: workspace:*
-        version: link:../../../core/database
-      '@packages/entity-engine':
-        specifier: workspace:*
-        version: link:../../entity-engine/api
-      '@packages/rbac':
-        specifier: workspace:*
-        version: link:../../rbac/api
-      class-transformer:
-        specifier: ^0.5.1
-        version: 0.5.1
-      class-validator:
-        specifier: ^0.14.1
-        version: 0.14.4
-      drizzle-orm:
-        specifier: ^0.45.1
-        version: 0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3))
-    devDependencies:
-      '@packages/platform-testing':
-        specifier: workspace:*
-        version: link:../../testing
-      '@types/supertest':
-        specifier: ^6.0.2
-        version: 6.0.3
-      drizzle-kit:
-        specifier: ^0.31.9
-        version: 0.31.9
-      mustache:
-        specifier: ^4.2.0
-        version: 4.2.0
-      supertest:
-        specifier: ^7.0.0
-        version: 7.2.2
-      typescript:
-        specifier: ^5.7.0
-        version: 5.9.3
-      vitest:
-        specifier: ^3.0.0
-        version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0)
-
-  packages/platform/entity-layout/ui:
-    dependencies:
-      '@packages/eav-attributes-ui':
-        specifier: workspace:*
-        version: link:../../eav-attributes-ui
-      '@packages/platform-ui':
-        specifier: workspace:*
-        version: link:../../platform-ui
-      '@packages/ui':
-        specifier: workspace:*
-        version: link:../../../core/ui
-      '@tanstack/react-query':
-        specifier: ^5.0.0
-        version: 5.90.21(react@19.2.4)
-      react:
-        specifier: ^19.0.0
-        version: 19.2.4
-    devDependencies:
-      '@types/react':
-        specifier: ^19.2.14
-        version: 19.2.14
-      typescript:
-        specifier: ^5.7.0
-        version: 5.9.3
-
   packages/platform/field-types:
     dependencies:
       react:
@@ -5876,7 +5879,7 @@ importers:
         version: link:../../../core/database
       '@packages/entity-engine-contract':
         specifier: workspace:*
-        version: link:../../entity-engine/contracts
+        version: link:../../../addons/entity-engine/contracts
       '@packages/soft-delete':
         specifier: workspace:*
         version: link:../../../core/soft-delete
@@ -6108,10 +6111,10 @@ importers:
         version: link:../domains
       '@packages/entity-engine':
         specifier: workspace:*
-        version: link:../entity-engine/api
+        version: link:../../addons/entity-engine/api
       '@packages/entity-layout':
         specifier: workspace:*
-        version: link:../entity-layout/api
+        version: link:../../addons/entity-layout/api
       '@packages/events':
         specifier: workspace:*
         version: link:../../core/events
