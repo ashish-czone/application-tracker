@@ -4,8 +4,6 @@ import { clientContacts } from '../schema/client-contacts';
 export const CLIENT_CONTACTS_CONFIG = defineEntity({
   table: clientContacts,
   slug: 'client-contacts',
-  singularName: 'Contact',
-  pluralName: 'Contacts',
   timestamps: true,
 
   fields: {

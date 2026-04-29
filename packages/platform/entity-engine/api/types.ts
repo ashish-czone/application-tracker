@@ -615,10 +615,25 @@ export interface EntityConfig<TTable extends PgTable = PgTable> {
 
   /** Entity type key — used in field_definitions.entity_type, events, RBAC, etc. */
   entityType: string;
-  /** Singular display name (e.g. 'Candidate') */
-  singularName: string;
-  /** Plural display name (e.g. 'Candidates') */
-  pluralName: string;
+  /**
+   * Singular display name (e.g. 'Candidate').
+   *
+   * Optional. If unset, the engine derives a humanized form from the slug
+   * (e.g. 'job-openings' → 'Job opening'). Override only when the FE-side
+   * `EntityUIConfig.presentation.singularName` is not registered AND the
+   * humanized slug is not acceptable. FE registry is the source of truth
+   * for code-defined entities; this field is only the fallback the api
+   * uses to populate `EntityRegistryEntry.singularName` on the wire.
+   */
+  singularName?: string;
+  /**
+   * Plural display name (e.g. 'Candidates').
+   *
+   * Optional. If unset, the engine derives a humanized form from the slug
+   * (e.g. 'job-openings' → 'Job openings'). FE registry is the source of
+   * truth — see `singularName` above.
+   */
+  pluralName?: string;
   /** URL slug + API route prefix (e.g. 'candidates') */
   slug: string;
 

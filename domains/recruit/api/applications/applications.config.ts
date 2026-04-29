@@ -6,8 +6,6 @@ import { jobOpenings } from '../job-openings/schema/job-openings';
 
 export const APPLICATIONS_CONFIG: EntityConfig = {
   entityType: 'applications',
-  singularName: 'Application',
-  pluralName: 'Applications',
   slug: 'applications',
 
   table: applications,

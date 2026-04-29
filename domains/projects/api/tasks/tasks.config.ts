@@ -4,8 +4,6 @@ import { tasks } from '../schema/tasks';
 export const TASKS_CONFIG = defineEntity({
   table: tasks,
   slug: 'tasks',
-  singularName: 'Task',
-  pluralName: 'Tasks',
   timestamps: true,
   orderable: true,
   // See PROJECTS_CONFIG — flag is required so the workflow seed service

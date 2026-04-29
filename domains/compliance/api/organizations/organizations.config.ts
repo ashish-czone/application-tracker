@@ -11,8 +11,6 @@ import { organizations } from '../schema/organizations';
 export const ORGANIZATIONS_CONFIG: EntityConfig<typeof organizations> = defineEntity({
   table: organizations,
   slug: 'organizations',
-  singularName: 'Organization',
-  pluralName: 'Organizations',
   timestamps: true,
 
   fields: {

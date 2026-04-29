@@ -3,8 +3,6 @@ import { offers } from './schema/offers';
 
 export const offersConfig: EntityConfig = {
   entityType: 'offers',
-  singularName: 'Offer',
-  pluralName: 'Offers',
   slug: 'offers',
 
   table: offers,

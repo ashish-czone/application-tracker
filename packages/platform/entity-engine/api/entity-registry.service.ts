@@ -4,6 +4,7 @@ import type { PgColumn } from 'drizzle-orm/pg-core';
 import { hasSoftDeleteColumns } from '@packages/soft-delete';
 import type { EntityConfig, EntityRegistryEntry, ResolvedExtension } from './types';
 import { FeatureDeriverRegistry } from './services/feature-deriver.registry';
+import { ensureRegisteredIdentity } from './helpers/registered-identity';
 
 /**
  * Resolved Drizzle column references for an entity's search/sort field keys.
@@ -15,13 +16,25 @@ interface ResolvedReadColumns {
 }
 
 /**
+ * Post-register form of `EntityConfig`. Identity strings the engine needs
+ * for log messages, error messages, and event descriptions are guaranteed
+ * to be present — the registry populates them from a humanized slug
+ * fallback when the input config omits them. Consumers that only ever
+ * read configs back from the registry can rely on these being defined.
+ */
+export type RegisteredEntityConfig = EntityConfig & {
+  singularName: string;
+  pluralName: string;
+};
+
+/**
  * Central registry of all entity types.
  * Each entity module registers its config here during module initialization.
  * The registry is the single source of truth for what entities exist in the system.
  */
 @Injectable()
 export class EntityRegistryService {
-  private readonly configs = new Map<string, EntityConfig>();
+  private readonly configs = new Map<string, RegisteredEntityConfig>();
   private readonly resolvedExtensions = new Map<string, ResolvedExtension>();
   private readonly resolvedReadColumns = new Map<string, ResolvedReadColumns>();
   private finalized = false;
@@ -32,22 +45,30 @@ export class EntityRegistryService {
   /**
    * Register an entity config. Called by EntityEngineModule.forEntity() during init.
    * Throws if the entity type is already registered (prevents duplicate registrations).
+   *
+   * If the config omits `singularName` / `pluralName`, the registry derives a
+   * humanized form from the slug so the engine's user-facing strings (logger
+   * messages, NotFoundException messages) always have something to render
+   * even when the FE-side `EntityUIConfig.presentation` carries the canonical
+   * names. The mutation happens on the same object the caller passed in —
+   * downstream readers see the populated names.
    */
   register(config: EntityConfig): void {
     if (this.configs.has(config.entityType)) {
       throw new Error(`Entity type "${config.entityType}" is already registered`);
     }
-    this.configs.set(config.entityType, config);
+    ensureRegisteredIdentity(config);
+    this.configs.set(config.entityType, config as RegisteredEntityConfig);
     this.logger.log(`Registered entity: ${config.entityType} (/${config.slug})`);
   }
 
   /** Get a config by entity type. Returns undefined if not registered. */
-  get(entityType: string): EntityConfig | undefined {
+  get(entityType: string): RegisteredEntityConfig | undefined {
     return this.configs.get(entityType);
   }
 
   /** Get a config by entity type. Throws if not registered. */
-  getOrFail(entityType: string): EntityConfig {
+  getOrFail(entityType: string): RegisteredEntityConfig {
     const config = this.configs.get(entityType);
     if (!config) {
       throw new Error(`Entity type "${entityType}" is not registered`);
@@ -56,7 +77,7 @@ export class EntityRegistryService {
   }
 
   /** Get a config by slug (URL path). */
-  getBySlug(slug: string): EntityConfig | undefined {
+  getBySlug(slug: string): RegisteredEntityConfig | undefined {
     for (const config of this.configs.values()) {
       if (config.slug === slug) return config;
     }
@@ -64,7 +85,7 @@ export class EntityRegistryService {
   }
 
   /** Get all registered configs. */
-  getAll(): EntityConfig[] {
+  getAll(): RegisteredEntityConfig[] {
     return Array.from(this.configs.values());
   }
 

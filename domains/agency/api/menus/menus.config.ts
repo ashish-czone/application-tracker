@@ -4,8 +4,6 @@ import { menus } from './schema/menus';
 export const MENU_CONFIG = defineEntity({
   table: menus,
   slug: 'menus',
-  singularName: 'Menu',
-  pluralName: 'Menus',
   timestamps: true,
   adminConfigurable: true,
 

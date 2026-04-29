@@ -15,8 +15,6 @@ import { mediaAssets } from './schema/media-assets';
 export const MEDIA_ASSETS_CONFIG = defineEntity({
   table: mediaAssets,
   slug: 'media-assets',
-  singularName: 'Media asset',
-  pluralName: 'Media library',
   timestamps: true,
 
   fields: {

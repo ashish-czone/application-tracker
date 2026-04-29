@@ -4,8 +4,6 @@ import { features } from '../schema/features';
 export const FEATURES_CONFIG = defineEntity({
   table: features,
   slug: 'features',
-  singularName: 'Feature',
-  pluralName: 'Features',
   timestamps: true,
   orderable: true,
   // See PROJECTS_CONFIG — flag is required so the workflow seed service

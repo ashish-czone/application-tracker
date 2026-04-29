@@ -44,8 +44,6 @@ export function buildFilingExternalKey(ruleId: string, clientId: string, periodS
 export const COMPLIANCE_FILINGS_CONFIG = defineEntity({
   table: complianceFilings,
   slug: 'compliance-filings',
-  singularName: 'Compliance Filing',
-  pluralName: 'Compliance Filings',
   timestamps: true,
 
   features: {
