@@ -4,7 +4,6 @@ export default defineConfig({
   schema: [
     './applications/schema',
     './candidates/schema',
-    './clients/schema',
     './contacts/schema',
     './interviews/schema',
     './job-openings/schema',

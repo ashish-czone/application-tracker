@@ -1,17 +1,20 @@
 import type { EntityConfig } from '@packages/entity-engine';
-import { clients } from './schema/clients';
+import { companies } from './companies-ref';
 
 export const CLIENTS_CONFIG: EntityConfig = {
   entityType: 'clients',
   slug: 'clients',
 
-  table: clients,
+  // The recruit "client" IS a directory.companies row with
+  // recruit_became_client_at set. ClientsService owns the actual CRUD —
+  // entity-engine only uses this config for metadata (lookup resolver
+  // registration, fieldMeta for form rendering, layouts).
+  table: companies,
   systemColumns: ['id', 'createdAt', 'updatedAt', 'deletedAt', 'deletedBy', 'createdBy'],
 
-  // Identity fields (clientName/website/industry) are not on this entity's
-  // table — they live on directory.companies. ClientsService projects them
-  // into list/findOne responses via JOIN, and the FE form declares them as
-  // syntheticFields in clients.ui.ts so they still render in the form.
+  // Identity fields (clientName/website/industry) are projected from companies
+  // base columns; commercial fields read from companies.recruit_*. The FE form
+  // declares the projected aliases as syntheticFields in clients.ui.ts.
   searchFields: [],
 
   defaultSort: 'createdAt',
@@ -52,10 +55,9 @@ export const CLIENTS_CONFIG: EntityConfig = {
   ],
 
   // Lookup resolution is owned by ClientsService.onModuleInit() — it
-  // registers a custom resolver that JOINs directory.companies so labels
-  // come from `companies.name` (the canonical identity) instead of the
-  // shadow `recruit_clients.client_name` column. F-2c will drop the shadow
-  // column entirely.
+  // registers a custom resolver that reads directly from companies, so labels
+  // are companies.name and values are companies.id. The picker's resolve step
+  // calls /clients/find-or-create-for-company to stamp recruit_became_client_at.
 
   relationships: [
     { name: 'contacts', type: 'hasMany', targetEntity: 'contacts', foreignKey: 'companyId', label: 'Contacts', displayFields: ['firstName', 'lastName', 'email', 'jobTitle'] },
@@ -66,10 +68,8 @@ export const CLIENTS_CONFIG: EntityConfig = {
 
   recipientFields: { createdBy: { label: 'Created By' } },
 
-  // nameField/subtitleField stay declared as projected aliases — list/findOne
-  // surface `clientName` and `industry` from companies via JOIN, and downstream
-  // consumers (avatar/name cell renderer, header subtitle) read them by these
-  // keys. The columns themselves no longer exist on `recruit_clients`.
+  // The row id IS companies.id; service projects clientName/industry from
+  // companies base columns into the response.
   nameField: 'clientName',
   subtitleField: 'industry',
 };

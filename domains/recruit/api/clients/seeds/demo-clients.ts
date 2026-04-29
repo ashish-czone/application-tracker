@@ -1,8 +1,8 @@
 import type { INestApplicationContext } from '@nestjs/common';
-import { DatabaseService, eq, sql, users } from '@packages/database';
+import { DatabaseService, eq, isNotNull, sql, users } from '@packages/database';
 import { EntityService } from '@packages/entity-engine';
 import { ClientsService } from '../clients.service';
-import { clients } from '../schema/clients';
+import { companies } from '../companies-ref';
 import { contacts } from '../../contacts/schema/contacts';
 import { vendors } from '../../vendors/schema/vendors';
 import { interviews } from '../../interviews/schema/interviews';
@@ -100,7 +100,11 @@ async function ensureSampleClients(
   clientsService: ClientsService,
   resolveCountryId: (name: string) => Promise<string | undefined>,
 ): Promise<void> {
-  const [existing] = await database.db.select({ id: clients.id }).from(clients).limit(1);
+  const [existing] = await database.db
+    .select({ id: companies.id })
+    .from(companies)
+    .where(isNotNull(companies.recruitBecameClientAt))
+    .limit(1);
   if (existing) return;
 
   const [admin] = await database.db.select({ id: users.id }).from(users).limit(1);
@@ -123,8 +127,9 @@ async function ensureSampleContacts(
   if (!admin) return;
 
   const clientRows = await database.db
-    .select({ companyId: clients.companyId })
-    .from(clients)
+    .select({ companyId: companies.id })
+    .from(companies)
+    .where(isNotNull(companies.recruitBecameClientAt))
     .limit(4);
   if (clientRows.length === 0) return;
 
@@ -164,8 +169,9 @@ async function linkJobOpeningsToClients(database: DatabaseService): Promise<void
   if (joRows.length === 0 || joRows[0]?.companyId) return;
 
   const clientRows = await database.db
-    .select({ companyId: clients.companyId })
-    .from(clients)
+    .select({ companyId: companies.id })
+    .from(companies)
+    .where(isNotNull(companies.recruitBecameClientAt))
     .limit(4);
   if (clientRows.length === 0) return;
 
