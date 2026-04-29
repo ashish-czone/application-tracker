@@ -1,5 +1,19 @@
 import type { EntityUIConfig } from '@packages/entity-engine-ui';
 
+const INDUSTRY_OPTIONS = [
+  { label: 'Communications', value: 'communications' },
+  { label: 'Technology', value: 'technology' },
+  { label: 'Government/Military', value: 'government-military' },
+  { label: 'Manufacturing', value: 'manufacturing' },
+  { label: 'Financial Services', value: 'financial-services' },
+  { label: 'IT Services', value: 'it-services' },
+  { label: 'Education', value: 'education' },
+  { label: 'Pharma', value: 'pharma' },
+  { label: 'Real Estate', value: 'real-estate' },
+  { label: 'Consulting', value: 'consulting' },
+  { label: 'Health Care', value: 'health-care' },
+];
+
 export const CLIENTS_UI_CONFIG: EntityUIConfig = {
   entityType: 'clients',
   presentation: {
@@ -11,10 +25,12 @@ export const CLIENTS_UI_CONFIG: EntityUIConfig = {
     navOrder: 4,
   },
   fieldUI: {
+    // Identity columns are projected from directory.companies via JOIN in
+    // ClientsService; the FE renders them by these keys on list/detail rows.
     clientName: { label: 'Client Name', cellRenderer: 'AvatarNameCell' },
-    contactNumber: { label: 'Contact Number' },
-    website: { label: 'Website' },
     industry: { label: 'Industry' },
+    website: { label: 'Website' },
+    contactNumber: { label: 'Contact Number' },
     about: { label: 'About' },
     source: { label: 'Source' },
     billingStreet: { label: 'Billing Street' },
@@ -30,11 +46,29 @@ export const CLIENTS_UI_CONFIG: EntityUIConfig = {
   },
   formLayout: {
     sections: [
-      { name: 'Client Information', fields: ['clientName', 'contactNumber', 'website', 'industry', 'about', 'source'] },
+      { name: 'Client Information', fields: ['clientName', 'website', 'industry', 'contactNumber', 'about', 'source'] },
       { name: 'Billing Address', fields: ['billingStreet', 'billingCity', 'billingProvince', 'billingCode', 'billingCountry'] },
       { name: 'Shipping Address', fields: ['shippingStreet', 'shippingCity', 'shippingProvince', 'shippingCode', 'shippingCountry'] },
     ],
-    quickCreateFields: ['clientName', 'contactNumber', 'website', 'industry'],
+    quickCreateFields: ['clientName', 'website', 'industry', 'contactNumber'],
+    // Identity fields don't exist on `recruit_clients` — they live on
+    // directory.companies. The form collects them as synthetic fields and the
+    // ClientsService routes them to the directory via findOrCreate / update.
+    syntheticFields: [
+      {
+        section: 'Client Information', fieldKey: 'clientName',
+        label: 'Client Name', fieldType: 'text', isRequired: true, maxLength: 255, isQuickCreate: true,
+      },
+      {
+        section: 'Client Information', fieldKey: 'website',
+        label: 'Website', fieldType: 'url', isQuickCreate: true,
+      },
+      {
+        section: 'Client Information', fieldKey: 'industry',
+        label: 'Industry', fieldType: 'picklist', isQuickCreate: true,
+        picklistOptions: INDUSTRY_OPTIONS,
+      },
+    ],
   },
   listColumns: [
     { fieldKey: 'clientName', visible: true, order: 0 },

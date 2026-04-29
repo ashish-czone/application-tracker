@@ -1,4 +1,5 @@
 import type { EntityUIConfig } from '@packages/entity-engine-ui';
+import { searchCompaniesForClientPicker, resolveCompanyToClient } from './clientId-picker';
 
 export const INTERVIEWS_UI_CONFIG: EntityUIConfig = {
   entityType: 'interviews',
@@ -14,7 +15,11 @@ export const INTERVIEWS_UI_CONFIG: EntityUIConfig = {
     interviewType: { label: 'Interview Type' },
     round: { label: 'Round' },
     candidateId: { label: 'Candidate' },
-    clientId: { label: 'Client' },
+    clientId: {
+      label: 'Client',
+      lookupSearch: searchCompaniesForClientPicker,
+      lookupResolveValue: resolveCompanyToClient,
+    },
     jobOpeningId: { label: 'Job Opening' },
     interviewers: { label: 'Interviewer(s)' },
     interviewFrom: { label: 'Interview From' },

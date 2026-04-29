@@ -20,8 +20,7 @@ export const JOB_OPENINGS_CONFIG: EntityConfig = {
     title: { label: 'Posting Title', section: 'jobOpeningInfo', sortOrder: 0, isQuickCreate: true, isSystem: true, maxLength: 250 },
     clientId: {
       label: 'Client Name', section: 'jobOpeningInfo', sortOrder: 1, isQuickCreate: true,
-      fieldType: 'lookup', lookupEntity: 'clients', lookupLabelField: 'clientName',
-      lookupSearchFields: ['clientName'],
+      fieldType: 'lookup', lookupEntity: 'clients',
     },
     contactId: {
       label: 'Contact Name', section: 'jobOpeningInfo', sortOrder: 2,

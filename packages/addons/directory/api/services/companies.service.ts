@@ -1,5 +1,5 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
-import { DatabaseService, eq, inArray, isNull, sql } from '@packages/database';
+import { DatabaseService, asc, eq, ilike, inArray, isNull, sql } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
 import { companies, type Company, type NewCompany } from '../schema/companies';
 import { people } from '../schema/people';
@@ -108,6 +108,24 @@ export class CompaniesService {
     if (ids.length === 0) return new Map();
     const rows = await db.select().from(companies).where(inArray(companies.id, ids));
     return new Map(rows.map((row) => [row.id, row]));
+  }
+
+  /**
+   * Search live (non-deleted, non-merged) companies by name. Used by
+   * domain-side pickers (recruit clients, future compliance clients) that
+   * route the picker through the canonical identity registry.
+   */
+  async searchByName(query: string, limit = 20, tx?: DbOrTx): Promise<Company[]> {
+    const db = tx ?? this.database.db;
+    const term = `%${query}%`;
+    return db
+      .select()
+      .from(companies)
+      .where(
+        sql`${ilike(companies.name, term)} AND ${isNull(companies.deletedAt)} AND ${isNull(companies.mergedIntoId)}`,
+      )
+      .orderBy(asc(companies.name))
+      .limit(limit);
   }
 
   async findByDomain(domain: string, tx?: DbOrTx): Promise<Company | null> {

@@ -37,6 +37,8 @@ export type {
   FieldUI,
   ActionUI,
   ColumnRendererRegistration,
+  LookupSearchFn,
+  LookupResolveFn,
 } from './types';
 
 export { buildEntityUIIndex } from './helpers/buildEntityUIIndex';

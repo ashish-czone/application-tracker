@@ -20,8 +20,7 @@ export const CONTACTS_CONFIG: EntityConfig = {
     lastName: { label: 'Last Name', section: 'basic', sortOrder: 1, isQuickCreate: true, isSystem: true, maxLength: 125 },
     clientId: {
       label: 'Client Name', section: 'basic', sortOrder: 2, isQuickCreate: true,
-      fieldType: 'lookup', lookupEntity: 'clients', lookupLabelField: 'clientName',
-      lookupSearchFields: ['clientName'],
+      fieldType: 'lookup', lookupEntity: 'clients',
     },
     department: { label: 'Department', section: 'basic', sortOrder: 3, maxLength: 50 },
     email: { label: 'Email', section: 'basic', sortOrder: 4, isQuickCreate: true, fieldType: 'email' },

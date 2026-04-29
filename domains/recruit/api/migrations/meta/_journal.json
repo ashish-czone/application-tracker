@@ -15,6 +15,13 @@
       "when": 1777356920401,
       "tag": "0001_directory_backfill",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1777469107161,
+      "tag": "0002_drop_recruit_clients_shadow_identity",
+      "breakpoints": true
     }
   ]
 }

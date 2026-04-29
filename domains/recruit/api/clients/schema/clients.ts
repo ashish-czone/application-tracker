@@ -3,24 +3,20 @@ import { randomUUID } from 'crypto';
 
 export const clients = pgTable('recruit_clients', {
   id: text('id').primaryKey().$defaultFn(() => randomUUID()),
-  // Identity FK to directory.companies. Nullable until R-3 backfill is complete
-  // and old identity columns are dropped.
+  // Identity FK to directory.companies — the canonical source for
+  // clientName/website/industry. ClientsService projects them via JOIN.
   companyId: text('company_id'),
-  // Legacy identity columns — read by services until R-2 rewires to directory,
-  // dropped in R-3.
-  clientName: text('client_name').notNull(),
+  // Recruit-specific commercial fields (no identity overlap with companies).
   contactNumber: text('contact_number'),
-  website: text('website'),
-  industry: text('industry'),
   about: text('about'),
   source: text('source').default('added-by-user'),
-  // Billing Address (recruit-specific commercial — stays here)
+  // Billing Address
   billingStreet: text('billing_street'),
   billingCity: text('billing_city'),
   billingProvince: text('billing_province'),
   billingCode: text('billing_code'),
   billingCountry: text('billing_country'),
-  // Shipping Address (recruit-specific commercial — stays here)
+  // Shipping Address
   shippingStreet: text('shipping_street'),
   shippingCity: text('shipping_city'),
   shippingProvince: text('shipping_province'),
@@ -33,8 +29,6 @@ export const clients = pgTable('recruit_clients', {
   deletedAt: timestamp('deleted_at', { withTimezone: true, mode: 'date' }),
   deletedBy: text('deleted_by'),
 }, (table) => [
-  index('recruit_clients_client_name_idx').on(table.clientName),
-  index('recruit_clients_industry_idx').on(table.industry),
   index('recruit_clients_created_by_idx').on(table.createdBy),
   index('recruit_clients_company_id_idx').on(table.companyId),
 ]);

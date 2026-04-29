@@ -41,8 +41,7 @@ export const INTERVIEWS_CONFIG: EntityConfig = {
     },
     clientId: {
       label: 'Client', section: 'basic', sortOrder: 4,
-      fieldType: 'lookup', lookupEntity: 'clients', lookupLabelField: 'clientName',
-      lookupSearchFields: ['clientName'],
+      fieldType: 'lookup', lookupEntity: 'clients',
     },
     jobOpeningId: {
       label: 'Job Opening', section: 'basic', sortOrder: 5, isQuickCreate: true,
