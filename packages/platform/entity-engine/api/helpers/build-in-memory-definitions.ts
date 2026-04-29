@@ -50,17 +50,6 @@ function toPicklistOption(
 }
 
 /**
- * Options that teach the in-memory builders about an `extensionOf` parent.
- * `parentConfig` is the parent entity's code definition; `projectedKeys` are
- * the fieldKeys that should be surfaced on the child. Both come from the
- * resolved extension metadata in `EntityRegistryService`.
- */
-export interface InMemoryExtensionContext {
-  parentConfig: EntityConfig;
-  projectedKeys: string[];
-}
-
-/**
  * Produce the full set of `FullLayoutField` entries for an entity purely from
  * its in-memory `EntityConfig`. Mirrors the iteration order of
  * `seedEntityFields` — explicit `fieldMeta` entries first, then the implicit
@@ -71,15 +60,8 @@ export interface InMemoryExtensionContext {
  * and the `createdAt`/`updatedAt` timestamps are the Unix epoch — both chosen
  * to make registry-sourced rows trivially distinguishable from rows that came
  * out of `field_definitions`.
- *
- * When `extension` is provided the parent's projected fields are appended
- * after the child's own fields. Projected keys that the child has already
- * re-declared in its own `fieldMeta` are skipped so child wins.
  */
-export function buildInMemoryFields(
-  config: EntityConfig,
-  extension?: InMemoryExtensionContext,
-): FullLayoutField[] {
+export function buildInMemoryFields(config: EntityConfig): FullLayoutField[] {
   const columns = getTableColumns(config.table);
   const columnMap = new Map(Object.entries(columns));
 
@@ -176,17 +158,6 @@ export function buildInMemoryFields(
     };
 
     result.push({ ...field, picklistOptions: [], columnIndex: 0 });
-  }
-
-  if (extension) {
-    const ownKeys = new Set(result.map((f) => f.fieldKey));
-    const projected = new Set(extension.projectedKeys);
-    const parentFields = buildInMemoryFields(extension.parentConfig);
-    for (const parentField of parentFields) {
-      if (!projected.has(parentField.fieldKey)) continue;
-      if (ownKeys.has(parentField.fieldKey)) continue;
-      result.push(parentField);
-    }
   }
 
   return result;
@@ -298,18 +269,12 @@ export function buildRelationshipLayoutSections(
  * "Unassigned Fields" section (system fields excluded, matching the DB-backed
  * `LayoutService.getLayout` behaviour). Fields marked `isQuickCreate` populate
  * `quickCreateFields`.
- *
- * When `extension` is provided the parent's projected fields appear in the
- * field set and can be placed in `config.sections` by fieldKey just like the
- * child's own fields. Projected fields that aren't placed land in "Unassigned
- * Fields" so the admin can slot them into sections later.
  */
 export function buildInMemoryLayout(
   config: EntityConfig,
   layoutName = 'Standard',
-  extension?: InMemoryExtensionContext,
 ): FullLayout {
-  const fields = buildInMemoryFields(config, extension);
+  const fields = buildInMemoryFields(config);
   const byKey = new Map(fields.map((f) => [f.fieldKey, f]));
   const placedKeys = new Set<string>();
 

@@ -200,13 +200,8 @@ export class LayoutService {
       .orderBy(asc(layoutSections.sortOrder));
 
     // Field definitions (with picklist options) come from FieldDefinitionService's
-    // in-memory cache — no DB read. For extensionOf entities we also pull the
-    // parent's projected field defs so forms render parent fields alongside
-    // the child's own.
-    const allFields = this.mergeExtensionFieldDefs(
-      entityType,
-      this.fieldDefService.listByEntityWithOptions(entityType),
-    );
+    // in-memory cache — no DB read.
+    const allFields = this.fieldDefService.listByEntityWithOptions(entityType);
 
     // Fetch all layout field assignments for these sections
     const sectionIds = sections.map(s => s.id);
@@ -353,24 +348,6 @@ export class LayoutService {
     }
 
     this.invalidateCache(entityType, layoutName);
-  }
-
-  /**
-   * When `entityType` is an extension entity, appends the parent's projected
-   * field defs after the child's own. Projected keys that the child already
-   * declares are skipped so child wins — same precedence rule as the
-   * in-memory builders. Non-extension entities are returned unchanged.
-   */
-  private mergeExtensionFieldDefs(entityType: string, ownFields: FullLayoutField[]): FullLayoutField[] {
-    const ext = this.entityRegistry.getResolvedExtension(entityType);
-    if (!ext) return ownFields;
-    const ownKeys = new Set(ownFields.map((f) => f.fieldKey));
-    const projected = new Set(ext.projectedColumns.map((c) => c.fieldKey));
-    const parentFields = this.fieldDefService.listByEntityWithOptions(ext.parentEntityType);
-    const extras = parentFields.filter(
-      (f) => projected.has(f.fieldKey) && !ownKeys.has(f.fieldKey),
-    );
-    return [...ownFields, ...extras];
   }
 
   // --- Private helpers ---

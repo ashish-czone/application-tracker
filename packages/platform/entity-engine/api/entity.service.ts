@@ -27,7 +27,6 @@ import type { FieldDefinition, FieldType } from './types';
 import { buildSnapshot, diffSnapshot } from './helpers/snapshot';
 import { validatePayload } from './helpers/validate-payload';
 import { splitPayload } from './helpers/split-payload';
-import { splitExtensionPayload } from './helpers/split-extension-payload';
 import { buildClonePayload } from './helpers/build-clone-payload';
 import { infrastructureSelectKeys } from './helpers/infrastructure-select-keys';
 import type { WorkflowExtension } from './extensions/workflow-extension.interface';
@@ -96,65 +95,12 @@ export class EntityService {
   }
 
   /**
-   * Resolved extension metadata for this entity (parent table, FK column,
-   * projected columns), or `undefined` for non-extension entities. Looked up
-   * from the registry on every call — the registry only finalizes after
-   * `onApplicationBootstrap`, so reading once in the constructor would race.
-   */
-  private getExtensionMeta(): import('./types').ResolvedExtension | undefined {
-    return this.entityRegistry.getResolvedExtension(this.config.entityType);
-  }
-
-  /**
-   * Field definitions visible to this entity. For extension entities, this
-   * surfaces the child's own field defs plus the parent's field defs for any
-   * projected column, so validation and payload-splitting recognise writes to
-   * parent-owned fields as legitimate. The child's own defs take precedence
-   * if a key happens to exist on both sides.
+   * Field definitions visible to this entity — read from the in-memory cache
+   * populated by `EntityEngineModule.initializeEntity()` for code-defined
+   * entities, or from the DB for admin-configurable entities.
    */
   private getEffectiveFieldDefs() {
-    const ownDefs = this.fieldDefinitionService.listByEntityWithOptions(this.config.entityType);
-    const ext = this.getExtensionMeta();
-    if (!ext) return ownDefs;
-
-    const ownKeys = new Set(ownDefs.map((d) => d.fieldKey));
-    const parentDefs = this.fieldDefinitionService.listByEntityWithOptions(ext.parentEntityType);
-    const projectedKeys = new Set(ext.projectedColumns.map((c) => c.fieldKey));
-    const extras = parentDefs.filter((d) => projectedKeys.has(d.fieldKey) && !ownKeys.has(d.fieldKey));
-    return [...ownDefs, ...extras];
-  }
-
-  /**
-   * Sortable columns visible to the child — child's own + any projected
-   * parent columns the parent declared sortable. The merge means a sort
-   * by `priority` (a parent column) just works on the extension entity.
-   */
-  private getEffectiveSortableColumns(ext: import('./types').ResolvedExtension): Record<string, PgColumn> {
-    const ownResolved = this.entityRegistry.getResolvedReadColumns(this.config.entityType);
-    const merged: Record<string, PgColumn> = { ...ownResolved.sortableColumns };
-    const parent = this.entityRegistry.get(ext.parentEntityType);
-    if (parent) {
-      const parentSortableSet = new Set(parent.sortableFields ?? []);
-      for (const { fieldKey, column } of ext.projectedColumns) {
-        if (parentSortableSet.has(fieldKey)) merged[fieldKey] = column;
-      }
-    }
-    return merged;
-  }
-
-  /**
-   * Searchable columns visible to the child — child's own + any projected
-   * parent columns the parent declared searchable.
-   */
-  private getEffectiveSearchColumns(ext: import('./types').ResolvedExtension): PgColumn[] {
-    const ownResolved = this.entityRegistry.getResolvedReadColumns(this.config.entityType);
-    const parent = this.entityRegistry.get(ext.parentEntityType);
-    if (!parent) return ownResolved.searchColumns;
-    const parentSearchSet = new Set(parent.searchFields ?? []);
-    const additional = ext.projectedColumns
-      .filter((p) => parentSearchSet.has(p.fieldKey))
-      .map((p) => p.column);
-    return [...ownResolved.searchColumns, ...additional];
+    return this.fieldDefinitionService.listByEntityWithOptions(this.config.entityType);
   }
 
   // ---------------------------------------------------------------------------
@@ -292,38 +238,13 @@ export class EntityService {
   /**
    * Build a Drizzle select map for list queries — only standard DB columns
    * that appear in the list layout + required system columns.
-   *
-   * For extension entities (`extensionOf`), the child table has no `id`
-   * column of its own — the FK column doubles as the PK and shares the
-   * parent's id value. We alias `child.fk → 'id'` so callers always see
-   * an `id` field, then layer in the projected parent columns. Per-key
-   * conflicts resolve in favor of the child (its own column wins).
    */
-  private buildListSelectMap(
-    listDefs: FieldDefinition[],
-    ext?: import('./types').ResolvedExtension,
-  ): Record<string, PgColumn> {
+  private buildListSelectMap(listDefs: FieldDefinition[]): Record<string, PgColumn> {
     const table = this.config.table as any;
     const selectMap: Record<string, PgColumn> = {};
 
-    const resolveColumn = (key: string): PgColumn | undefined => {
-      if (table[key]) return table[key] as PgColumn;
-      if (ext) {
-        const parentTable = ext.parentTable as any;
-        if (parentTable[key]) return parentTable[key] as PgColumn;
-      }
-      return undefined;
-    };
-
-    if (ext) {
-      // Extensions never have their own `id` column — alias the FK.
-      selectMap.id = ext.foreignKeyColumn;
-    }
-
     for (const key of EntityService.LIST_SYSTEM_COLUMNS) {
-      if (key === 'id' && ext) continue; // already aliased
-      const col = resolveColumn(key);
-      if (col) selectMap[key] = col;
+      if (table[key]) selectMap[key] = table[key] as PgColumn;
     }
 
     // Always include nameField and subtitleField (needed for display even if system/hidden)
@@ -331,8 +252,7 @@ export class EntityService {
     const displayFields = Array.isArray(nameField) ? [...nameField] : [nameField];
     if (subtitleField) displayFields.push(subtitleField);
     for (const key of displayFields) {
-      const col = resolveColumn(key);
-      if (col) selectMap[key] = col;
+      if (table[key]) selectMap[key] = table[key] as PgColumn;
     }
 
     // Hierarchy/orderable columns are infrastructure — not registered as
@@ -340,21 +260,12 @@ export class EntityService {
     // UIs) need them to decide parent/child relationships and nesting depth.
     // Include them unconditionally when the entity opts in.
     for (const key of infrastructureSelectKeys(this.config)) {
-      const col = resolveColumn(key);
-      if (col) selectMap[key] = col;
+      if (table[key]) selectMap[key] = table[key] as PgColumn;
     }
 
     for (const def of listDefs) {
       if (def.columnName !== null && table[def.fieldKey]) {
         selectMap[def.fieldKey] = table[def.fieldKey];
-      }
-    }
-
-    // Layer projected parent columns last — child fields with the same key
-    // already won via the loop above, so this is purely additive.
-    if (ext) {
-      for (const { fieldKey, column } of ext.projectedColumns) {
-        if (!(fieldKey in selectMap)) selectMap[fieldKey] = column;
       }
     }
 
@@ -520,11 +431,7 @@ export class EntityService {
       limit: query.limit ?? 25,
     });
     const { config } = this;
-    const ext = this.getExtensionMeta();
-    // For extension entities, soft-delete + tenant scope live on the parent
-    // table (the child has neither column). Compute the scope-target table
-    // once so every helper picks the right table.
-    const scopeTable = ext ? (ext.parentTable as any) : (config.table as any);
+    const table = config.table as any;
 
     const conditions: any[] = [];
 
@@ -535,18 +442,14 @@ export class EntityService {
     }
 
     // Soft delete filter (delegated to @packages/soft-delete)
-    const softDeleteCond = buildSoftDeleteCondition(scopeTable, query.includeDeleted ?? false);
+    const softDeleteCond = buildSoftDeleteCondition(table, query.includeDeleted ?? false);
     if (softDeleteCond) conditions.push(softDeleteCond);
 
     // Search across configured columns + lookup field labels.
-    // For extensions, projected parent columns marked searchable on the
-    // parent participate transparently.
     if (query.search) {
       const searchConditions: any[] = [];
 
-      const searchCols = ext
-        ? this.getEffectiveSearchColumns(ext)
-        : this.entityRegistry.getResolvedReadColumns(config.entityType).searchColumns;
+      const searchCols = this.entityRegistry.getResolvedReadColumns(config.entityType).searchColumns;
       const stdSearch = buildSearchCondition(query.search, searchCols);
       if (stdSearch) searchConditions.push(stdSearch);
 
@@ -560,12 +463,12 @@ export class EntityService {
     }
 
     // Generic field-level filters (delegated to query-builder + EAV routing)
-    const filterConditions = await this.buildAllFilters(query, config, ext);
+    const filterConditions = await this.buildAllFilters(query, config);
     conditions.push(...filterConditions);
 
     const whereClause = conditions.length > 0
-      ? withTenant(scopeTable, and(...conditions))
-      : withTenant(scopeTable);
+      ? withTenant(table, and(...conditions))
+      : withTenant(table);
 
     // Sort — check if the sort key is a lookup field, use label subquery if so
     const sortKey = query.sort ?? config.defaultSort;
@@ -578,31 +481,25 @@ export class EntityService {
     // because it applies only to list reads — single-column sorts elsewhere
     // (exports, snapshots) don't need paginated stability.
     const orderByClauses = (config.orderable && sortKey === 'sortOrder')
-      ? [orderByExpr, asc((config.table as any).id)]
+      ? [orderByExpr, asc(table.id)]
       : [orderByExpr];
 
     // Count
-    const countQuery = this.database.db
+    const [{ total }] = await this.database.db
       .select({ total: count() })
-      .from(config.table as any) as any;
-    if (ext) countQuery.innerJoin(ext.parentTable, eq(ext.parentIdColumn, ext.foreignKeyColumn));
-    const [{ total }] = await countQuery.where(whereClause) as any[];
+      .from(table)
+      .where(whereClause) as any[];
 
     // Fetch only list-relevant columns instead of SELECT *
     const listDefs = await this.getListFieldDefs();
-    const selectMap: Record<string, any> = this.buildListSelectMap(listDefs, ext);
+    const selectMap: Record<string, any> = this.buildListSelectMap(listDefs);
 
     // Add computed expressions (relationship counts + explicit computed columns).
-    // Skipped for extensions in PR 1: count subqueries reference `<child>.id`
-    // which doesn't exist on the child table. Revisit when an extension wants
-    // its own computed columns.
-    if (!ext) Object.assign(selectMap, this.buildComputedExpressions());
+    Object.assign(selectMap, this.buildComputedExpressions());
 
-    const baseSelect = this.database.db
+    const rows = await this.database.db
       .select(selectMap)
-      .from(config.table as any) as any;
-    if (ext) baseSelect.innerJoin(ext.parentTable, eq(ext.parentIdColumn, ext.foreignKeyColumn));
-    const rows = await baseSelect
+      .from(table)
       .where(whereClause)
       .orderBy(...orderByClauses)
       .limit(limit)
@@ -637,46 +534,16 @@ export class EntityService {
   async findOneOrFail(id: string, accessCtx?: DataAccessContext): Promise<Record<string, unknown>> {
     const { config } = this;
     const table = config.table as any;
-    const ext = this.getExtensionMeta();
-    const scopeTable = ext ? (ext.parentTable as any) : table;
-    // Identity column on the child — for extensions the FK is also the PK
-    // and shares the parent's id value, so `eq(fk, id)` is the right shape.
-    const idColumn = ext ? ext.foreignKeyColumn : (table.id as PgColumn);
 
-    const conditions: any[] = [eq(idColumn, id)];
+    const conditions: any[] = [eq(table.id, id)];
 
-    const softDeleteCond = buildSoftDeleteCondition(scopeTable);
+    const softDeleteCond = buildSoftDeleteCondition(table);
     if (softDeleteCond) conditions.push(softDeleteCond);
 
     // Data access scope filtering — ensures user can only view records within their scope
     if (accessCtx) {
       const scopeCondition = await this.resolveDataAccessScope(accessCtx);
       if (scopeCondition) conditions.push(scopeCondition);
-    }
-
-    if (ext) {
-      // Extension reads project parent columns into the response, so build a
-      // selectMap explicitly instead of `select()` (which returns child only).
-      const selectMap: Record<string, any> = this.buildListSelectMap([], ext);
-      // Detail reads want every child column too, not just system + projected.
-      for (const [k, col] of Object.entries(getTableColumns(config.table))) {
-        if (!(k in selectMap)) selectMap[k] = col as PgColumn;
-      }
-      const [row] = await this.database.db
-        .select(selectMap)
-        .from(table)
-        .innerJoin(ext.parentTable, eq(ext.parentIdColumn, ext.foreignKeyColumn))
-        .where(withTenant(scopeTable, ...conditions))
-        .limit(1) as any[];
-
-      if (!row) {
-        throw new NotFoundException(`${config.singularName} not found`);
-      }
-
-      const response = await this.toResponse(row);
-      await this.resolveLookupLabels([response]);
-      await this.hydrateRelationalFields([response]);
-      return response;
     }
 
     const [row] = await this.database.db
@@ -706,33 +573,6 @@ export class EntityService {
     return response;
   }
 
-  /**
-   * Read the joined child+parent row for an extension entity inside a given
-   * transaction. Used by the write path to capture consistent before/after
-   * snapshots across the two tables. Mirrors findOneOrFail's selectMap
-   * construction so both paths return the same shape.
-   *
-   * Bypasses soft-delete + scope filtering — callers in the write path have
-   * already verified visibility via findOneOrFail.
-   */
-  private async readJoinedRowInTx(
-    tx: any,
-    id: string,
-    ext: import('./types').ResolvedExtension,
-  ): Promise<Record<string, unknown>> {
-    const selectMap: Record<string, any> = this.buildListSelectMap([], ext);
-    for (const [k, col] of Object.entries(getTableColumns(this.config.table as any))) {
-      if (!(k in selectMap)) selectMap[k] = col as PgColumn;
-    }
-    const [row] = await tx
-      .select(selectMap)
-      .from(this.config.table as any)
-      .innerJoin(ext.parentTable as any, eq(ext.parentIdColumn, ext.foreignKeyColumn))
-      .where(eq(ext.foreignKeyColumn, id))
-      .limit(1) as any[];
-    return row;
-  }
-
   // ---------------------------------------------------------------------------
   // CREATE
   // ---------------------------------------------------------------------------
@@ -741,10 +581,6 @@ export class EntityService {
     const { config } = this;
     const data = { ...payload };
 
-    // Load field definitions — for extensions this includes the child's own
-    // defs plus the parent's defs for every projected column, so a write to a
-    // parent-owned field validates and splits correctly instead of being
-    // silently dropped as an unknown key.
     const defs = this.getEffectiveFieldDefs();
 
     // Validate
@@ -786,47 +622,14 @@ export class EntityService {
     }
 
     // Phase 2: Transaction (entity row + EAV + relational writes).
-    // Extension entities (`extensionOf`) insert the parent row first, then the
-    // child using the same `entityId` as its FK-also-PK. Both in one tx so a
-    // failure on either side rolls back cleanly.
     // If `externalTx` is passed, reuse it so caller-side composition (tags, multi-value
     // writes done by per-entity services) commits atomically with the entity row.
-    const ext = this.getExtensionMeta();
     const createTxBody = async (tx: DrizzleTx) => {
-      let inserted: any;
-
-      if (ext) {
-        const { parentFields, childFields } = splitExtensionPayload(standardFields, ext);
-
-        const parentTableCols = getTableColumns(ext.parentTable as any);
-        const parentRecord: Record<string, unknown> = {
-          id: entityId,
-          ...ext.parentDefaults,
-          ...parentFields,
-        };
-        if ('createdBy' in parentTableCols) parentRecord.createdBy = actorId;
-        await tx
-          .insert(ext.parentTable as any)
-          .values(withTenantInsert(ext.parentTable as any, parentRecord) as any);
-
-        const childTableCols = getTableColumns(config.table as any);
-        const childRecord: Record<string, unknown> = {
-          [ext.foreignKeyField]: entityId,
-          ...childFields,
-        };
-        if ('createdBy' in childTableCols) childRecord.createdBy = actorId;
-        const childResult = await tx
-          .insert(config.table as any)
-          .values(withTenantInsert(config.table as any, childRecord) as any)
-          .returning() as any[];
-        inserted = childResult[0];
-      } else {
-        const result = await tx
-          .insert(config.table as any)
-          .values(withTenantInsert(config.table as any, { id: entityId, ...standardFields, createdBy: actorId }) as any)
-          .returning() as any[];
-        inserted = result[0];
-      }
+      const result = await tx
+        .insert(config.table as any)
+        .values(withTenantInsert(config.table as any, { id: entityId, ...standardFields, createdBy: actorId }) as any)
+        .returning() as any[];
+      const inserted = result[0];
 
       if (Object.keys(customFields).length > 0 && this.eavStorage) {
         await this.eavStorage.setValues(config.entityType, entityId, customFields, tx);
@@ -835,16 +638,9 @@ export class EntityService {
       return inserted;
     };
 
-    let row = externalTx
+    const row = externalTx
       ? await createTxBody(externalTx)
       : await this.database.db.transaction(createTxBody);
-
-    // For extension entities the child row on its own is only half the entity.
-    // Re-read via the joined findOneOrFail so snapshot/event/response see the
-    // full shape (id aliased + projected parent columns included).
-    if (ext) {
-      row = await this.findOneOrFail(entityId);
-    }
 
     // Phase 3: onAfterSave (fire-and-forget)
     for (const [key, value] of Object.entries(allFields)) {
@@ -905,9 +701,7 @@ export class EntityService {
       payload: { after: snapshot },
     });
 
-    // For extensions, `row` was re-read via findOneOrFail above and is
-    // already in response shape; skip the second toResponse pass.
-    return ext ? row : this.toResponse(row);
+    return this.toResponse(row);
   }
 
   // ---------------------------------------------------------------------------
@@ -923,7 +717,6 @@ export class EntityService {
 
     const data = { ...payload };
 
-    // Load effective field definitions (own + projected parent for extensions)
     const defs = this.getEffectiveFieldDefs();
 
     // Reject workflow field changes in generic update
@@ -985,59 +778,21 @@ export class EntityService {
 
     // Phase 2: Transaction (entity row + EAV + relational writes).
     // If `externalTx` is passed, reuse it so caller-side composition commits atomically.
-    const ext = this.getExtensionMeta();
     const updateTxBody = async (tx: DrizzleTx) => {
-      // Read before snapshot inside tx for consistency. For extensions the
-      // child row alone is only half the entity — read the joined shape so
-      // the snapshot includes projected parent columns.
+      // Read before snapshot inside tx for consistency.
       const eavBefore = this.eavStorage ? await this.eavStorage.getValues(config.entityType, id, tx) : {};
-      const existingRow = ext
-        ? await this.readJoinedRowInTx(tx, id, ext)
-        : (await tx.select().from(table).where(withTenant(table, eq(table.id, id))).limit(1) as any[])[0];
+      const existingRow = (await tx.select().from(table).where(withTenant(table, eq(table.id, id))).limit(1) as any[])[0];
       const before = buildSnapshot(this.rowToSnapshot(existingRow), eavBefore);
 
-      // Update standard columns. Extensions split the bucket into parent and
-      // child slices; either side can be empty. When only the parent slice
-      // has changes, the child row still gets an updatedAt bump (if the column
-      // exists) so the extension entity's audit trail stays current.
+      // Update standard columns.
       let row = existingRow;
       if (hasStandardChanges) {
-        if (ext) {
-          const { parentFields, childFields } = splitExtensionPayload(updateValues, ext);
-          const hasParentChanges = Object.keys(parentFields).length > 0;
-          const hasChildChanges = Object.keys(childFields).length > 0;
-
-          if (hasParentChanges) {
-            await tx
-              .update(ext.parentTable as any)
-              .set(parentFields)
-              .where(withTenant(ext.parentTable as any, eq(ext.parentIdColumn, id)));
-          }
-
-          if (hasChildChanges) {
-            await tx
-              .update(config.table as any)
-              .set(childFields)
-              .where(withTenant(config.table as any, eq(ext.foreignKeyColumn, id)));
-          } else if (hasParentChanges) {
-            const childCols = getTableColumns(config.table as any);
-            if ('updatedAt' in childCols) {
-              await tx
-                .update(config.table as any)
-                .set({ updatedAt: new Date() } as any)
-                .where(withTenant(config.table as any, eq(ext.foreignKeyColumn, id)));
-            }
-          }
-
-          row = await this.readJoinedRowInTx(tx, id, ext);
-        } else {
-          const [updatedRow] = await tx
-            .update(table)
-            .set(updateValues)
-            .where(withTenant(table, eq(table.id, id)))
-            .returning() as any[];
-          row = updatedRow;
-        }
+        const [updatedRow] = await tx
+          .update(table)
+          .set(updateValues)
+          .where(withTenant(table, eq(table.id, id)))
+          .returning() as any[];
+        row = updatedRow;
       }
 
       // Update EAV values
@@ -1305,23 +1060,11 @@ export class EntityService {
     const { config } = this;
     const entity = await this.findOneOrFail(id, accessCtx);
 
-    // Extensions scope reads through the parent's deletedAt — the child
-    // usually has no deletedAt of its own. Soft-delete therefore flips the
-    // parent's columns; the child row is left as-is so a restore is a clean
-    // reverse.
     const exec = externalTx ?? this.database.db;
-    const ext = this.getExtensionMeta();
-    if (ext) {
-      await exec
-        .update(ext.parentTable as any)
-        .set({ deletedAt: new Date(), deletedBy: actorId } as any)
-        .where(withTenant(ext.parentTable as any, eq(ext.parentIdColumn, id)));
-    } else {
-      await exec
-        .update(config.table as any)
-        .set({ deletedAt: new Date(), deletedBy: actorId } as any)
-        .where(withTenant(config.table as any, eq((config.table as any).id, id)));
-    }
+    await exec
+      .update(config.table as any)
+      .set({ deletedAt: new Date(), deletedBy: actorId } as any)
+      .where(withTenant(config.table as any, eq((config.table as any).id, id)));
 
     this.logger.log(`${config.singularName} deleted`, { entityId: id, actorId });
 
@@ -1341,31 +1084,6 @@ export class EntityService {
   async restore(id: string): Promise<Record<string, unknown>> {
     const { config } = this;
     const table = config.table as any;
-
-    // Extensions: check the child row exists (may not have deletedAt of its
-    // own) and flip the parent's deletedAt columns back to null — the mirror
-    // of softDelete above. Return the joined response so the restored entity
-    // is indistinguishable from a fresh read.
-    const ext = this.getExtensionMeta();
-    if (ext) {
-      const [childRow] = await this.database.db
-        .select()
-        .from(table)
-        .where(eq(ext.foreignKeyColumn, id))
-        .limit(1) as any[];
-
-      if (!childRow) {
-        throw new NotFoundException(`${config.singularName} not found`);
-      }
-
-      await this.database.db
-        .update(ext.parentTable as any)
-        .set({ deletedAt: null, deletedBy: null } as any)
-        .where(withTenant(ext.parentTable as any, eq(ext.parentIdColumn, id)));
-
-      this.logger.log(`${config.singularName} restored`, { entityId: id });
-      return this.findOneOrFail(id);
-    }
 
     const [row] = await this.database.db
       .select()
@@ -1437,19 +1155,11 @@ export class EntityService {
    * Build the ORDER BY expression for list queries.
    * For lookup fields, uses a subquery to sort by the related entity's label.
    * For standard columns, delegates to query-builder.
-   * For extension entities, projected parent columns flagged sortable on
-   * the parent are merged into the sortable set so a sort by, say, `priority`
-   * (which lives on the parent) just works on the child.
    */
   private buildSortExpression(sortKey: string, direction: 'ASC' | 'DESC', config: EntityConfig): any {
-    const ext = this.getExtensionMeta();
-    // Computed expressions are skipped for extension entities (see note in
-    // list()); only consult them for non-extension entities.
-    if (!ext) {
-      const computedExprs = this.buildComputedExpressions();
-      if (computedExprs[sortKey]) {
-        return sql`${computedExprs[sortKey]} ${sql.raw(direction)}`;
-      }
+    const computedExprs = this.buildComputedExpressions();
+    if (computedExprs[sortKey]) {
+      return sql`${computedExprs[sortKey]} ${sql.raw(direction)}`;
     }
 
     // Check if the sort key is a lookup field (entity-specific logic)
@@ -1481,9 +1191,7 @@ export class EntityService {
       }
     }
 
-    const sortableColumns = ext
-      ? this.getEffectiveSortableColumns(ext)
-      : this.entityRegistry.getResolvedReadColumns(config.entityType).sortableColumns;
+    const sortableColumns = this.entityRegistry.getResolvedReadColumns(config.entityType).sortableColumns;
 
     // Standard column sort (delegated to query-builder)
     return qbBuildSortExpression(
@@ -1497,14 +1205,11 @@ export class EntityService {
   /**
    * Build all filter conditions from legacy query params.
    * Resolves standard DB columns via query-builder, routes custom-field filters
-   * (JSONB or EAV) to the configured storage adapter. For extension entities,
-   * projected parent columns are added to the column map so a filter like
-   * `?status=open` routes to `parent.status`.
+   * (JSONB or EAV) to the configured storage adapter.
    */
   private async buildAllFilters(
     query: BaseListQuery,
     config: EntityConfig,
-    ext?: import('./types').ResolvedExtension,
   ): Promise<any[]> {
     // Convert legacy ?field=value params to FilterExpressions
     const legacyFilters = parseLegacyFilters(query);
@@ -1527,14 +1232,6 @@ export class EntityService {
     for (const def of defs) {
       if (def.columnName && table[def.fieldKey]) {
         columnMap[def.fieldKey] = table[def.fieldKey];
-      }
-    }
-
-    // Layer projected parent columns. Child columns of the same name win
-    // (they were inserted above), so this is purely additive.
-    if (ext) {
-      for (const { fieldKey, column } of ext.projectedColumns) {
-        if (!(fieldKey in columnMap)) columnMap[fieldKey] = column;
       }
     }
 
