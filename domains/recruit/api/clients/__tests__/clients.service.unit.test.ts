@@ -58,6 +58,20 @@ function makeEvents() {
   return { emitDynamic: vi.fn() } as any;
 }
 
+function makeLookupResolver() {
+  return {
+    register: vi.fn(),
+    registerResolver: vi.fn(),
+    isRegistered: vi.fn(),
+    getRegisteredEntities: vi.fn(),
+    clearRegistry: vi.fn(),
+    getConfig: vi.fn(),
+    search: vi.fn(),
+    getLabel: vi.fn(),
+    getBatchLabels: vi.fn(),
+  } as any;
+}
+
 describe('ClientsService.create', () => {
   let companies: any;
   let mock: ReturnType<typeof createMockDb>;
@@ -68,7 +82,7 @@ describe('ClientsService.create', () => {
     companies = { findOrCreate: vi.fn().mockResolvedValue({ id: 'co-1' }) };
     mock = createMockDb();
     events = makeEvents();
-    service = new ClientsService(mock.database, companies, makeScopeResolvers(), events);
+    service = new ClientsService(mock.database, companies, makeScopeResolvers(), events, makeLookupResolver());
   });
 
   it('finds-or-creates the company and inserts the client in one transaction', async () => {
@@ -124,7 +138,7 @@ describe('ClientsService.update', () => {
     companies = { update: vi.fn().mockResolvedValue({ id: 'co-1' }) };
     mock = createMockDb();
     events = makeEvents();
-    service = new ClientsService(mock.database, companies, makeScopeResolvers(), events);
+    service = new ClientsService(mock.database, companies, makeScopeResolvers(), events, makeLookupResolver());
   });
 
   it('throws NotFoundException when findOne returns no row', async () => {
@@ -225,7 +239,7 @@ describe('ClientsService.softDelete', () => {
   beforeEach(() => {
     mock = createMockDb();
     events = makeEvents();
-    service = new ClientsService(mock.database, {} as any, makeScopeResolvers(), events);
+    service = new ClientsService(mock.database, {} as any, makeScopeResolvers(), events, makeLookupResolver());
   });
 
   it('throws NotFound when scope-denied (findOne returns empty)', async () => {
@@ -259,7 +273,7 @@ describe('ClientsService.findOrCreateForCompany', () => {
     companies = {};
     mock = createMockDb();
     events = makeEvents();
-    service = new ClientsService(mock.database, companies, makeScopeResolvers(), events);
+    service = new ClientsService(mock.database, companies, makeScopeResolvers(), events, makeLookupResolver());
   });
 
   it('returns the existing recruit_client.id when one already exists for the company', async () => {
@@ -302,7 +316,7 @@ describe('ClientsService.findOne', () => {
 
   beforeEach(() => {
     mock = createMockDb();
-    service = new ClientsService(mock.database, {} as any, makeScopeResolvers(), makeEvents());
+    service = new ClientsService(mock.database, {} as any, makeScopeResolvers(), makeEvents(), makeLookupResolver());
   });
 
   it('throws NotFoundException when the row is missing', async () => {
@@ -323,7 +337,7 @@ describe('ClientsService.list', () => {
 
   beforeEach(() => {
     mock = createMockDb();
-    service = new ClientsService(mock.database, {} as any, makeScopeResolvers(), makeEvents());
+    service = new ClientsService(mock.database, {} as any, makeScopeResolvers(), makeEvents(), makeLookupResolver());
   });
 
   it('returns { data, meta } envelope', async () => {
@@ -343,5 +357,71 @@ describe('ClientsService.list', () => {
     for (const c of calls) {
       expect(c.value.leftJoin).toHaveBeenCalled();
     }
+  });
+});
+
+describe('ClientsService.onModuleInit', () => {
+  it('registers a custom lookup resolver for "clients"', () => {
+    const mock = createMockDb();
+    const lookupResolver = makeLookupResolver();
+    const service = new ClientsService(
+      mock.database, {} as any, makeScopeResolvers(), makeEvents(), lookupResolver,
+    );
+    service.onModuleInit();
+    expect(lookupResolver.registerResolver).toHaveBeenCalledWith('clients', expect.objectContaining({
+      search: expect.any(Function),
+      getLabel: expect.any(Function),
+      getBatchLabels: expect.any(Function),
+    }));
+  });
+});
+
+describe('ClientsService custom lookup resolver', () => {
+  let mock: ReturnType<typeof createMockDb>;
+  let lookupResolver: ReturnType<typeof makeLookupResolver>;
+  let resolver: { search: Function; getLabel: Function; getBatchLabels: Function };
+
+  beforeEach(() => {
+    mock = createMockDb();
+    lookupResolver = makeLookupResolver();
+    const service = new ClientsService(
+      mock.database, {} as any, makeScopeResolvers(), makeEvents(), lookupResolver,
+    );
+    service.onModuleInit();
+    resolver = (lookupResolver.registerResolver as any).mock.calls[0][1];
+  });
+
+  it('search() JOINs companies, ilikes the coalesced label, returns {label,value}', async () => {
+    mock.pushSelectResult([
+      { label: 'Acme Corp', value: 'cl-1' },
+      { label: 'Acme Holdings', value: 'cl-2' },
+    ]);
+    const results = await resolver.search('acme', 20);
+    expect(results).toEqual([
+      { label: 'Acme Corp', value: 'cl-1' },
+      { label: 'Acme Holdings', value: 'cl-2' },
+    ]);
+    const selectCall = (mock.database.db.select as any).mock.results[0];
+    expect(selectCall.value.leftJoin).toHaveBeenCalled();
+    expect(selectCall.value.limit).toHaveBeenCalledWith(20);
+  });
+
+  it('getLabel() returns the coalesced label or null when no row', async () => {
+    mock.pushSelectResult([{ label: 'Acme Corp' }]);
+    expect(await resolver.getLabel('cl-1')).toBe('Acme Corp');
+
+    mock.pushSelectResult([]);
+    expect(await resolver.getLabel('missing')).toBeNull();
+  });
+
+  it('getBatchLabels() returns a Map keyed by client id', async () => {
+    mock.pushSelectResult([
+      { id: 'cl-1', label: 'Acme Corp' },
+      { id: 'cl-2', label: 'Globex' },
+    ]);
+    const labels = await resolver.getBatchLabels(['cl-1', 'cl-2', 'cl-3']);
+    expect(labels.get('cl-1')).toBe('Acme Corp');
+    expect(labels.get('cl-2')).toBe('Globex');
+    expect(labels.has('cl-3')).toBe(false);
   });
 });

@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException, type OnModuleInit } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import {
   DatabaseService,
@@ -8,6 +8,7 @@ import {
   desc,
   eq,
   ilike,
+  inArray,
   isNull,
   or,
   sql,
@@ -24,6 +25,7 @@ import {
 } from '@packages/directory';
 import { ScopeResolverRegistry, type DataAccessContext } from '@packages/rbac';
 import { DomainEventEmitter } from '@packages/events';
+import { LookupResolverService, type CustomLookupResolver, type LookupResult } from '@packages/entity-engine';
 import type { PaginatedResponse } from '@packages/common';
 import type { CreateClientDto, UpdateClientDto } from './clients.dto';
 import { clients } from './schema/clients';
@@ -47,13 +49,65 @@ const SORTABLE = {
 } as const;
 
 @Injectable()
-export class ClientsService {
+export class ClientsService implements OnModuleInit {
   constructor(
     private readonly database: DatabaseService,
     private readonly companies: CompaniesService,
     private readonly scopeResolvers: ScopeResolverRegistry,
     private readonly events: DomainEventEmitter,
+    private readonly lookupResolver: LookupResolverService,
   ) {}
+
+  /**
+   * Register a custom lookup resolver for `clients` so other entities
+   * (contacts, job_openings, interviews) can search and resolve client labels
+   * via the canonical identity in `directory.companies` instead of the
+   * (now-shadow-only) `recruit_clients.client_name` column. Replaces any
+   * resolver the engine auto-registered from `EntityConfig.lookup`.
+   */
+  onModuleInit(): void {
+    this.lookupResolver.registerResolver('clients', this.buildLookupResolver());
+  }
+
+  private buildLookupResolver(): CustomLookupResolver {
+    const labelExpr = sql<string>`coalesce(${companies.name}, ${clients.clientName})`;
+
+    return {
+      search: async (query, limit): Promise<LookupResult[]> => {
+        const term = `%${query}%`;
+        const rows = await this.database.db
+          .select({ label: labelExpr, value: clients.id })
+          .from(clients)
+          .leftJoin(companies, eq(clients.companyId, companies.id))
+          .where(and(isNull(clients.deletedAt), ilike(labelExpr, term)))
+          .limit(limit);
+        return rows.map(r => ({ label: String(r.label ?? ''), value: String(r.value ?? '') }));
+      },
+
+      getLabel: async (value) => {
+        const [row] = await this.database.db
+          .select({ label: labelExpr })
+          .from(clients)
+          .leftJoin(companies, eq(clients.companyId, companies.id))
+          .where(eq(clients.id, value))
+          .limit(1);
+        return row ? String(row.label ?? '') : null;
+      },
+
+      getBatchLabels: async (values) => {
+        const rows = await this.database.db
+          .select({ id: clients.id, label: labelExpr })
+          .from(clients)
+          .leftJoin(companies, eq(clients.companyId, companies.id))
+          .where(inArray(clients.id, values));
+        const result = new Map<string, string>();
+        for (const row of rows) {
+          result.set(String(row.id), String(row.label ?? ''));
+        }
+        return result;
+      },
+    };
+  }
 
   // ---------------------------------------------------------------------------
   // READS
