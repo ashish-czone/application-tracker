@@ -4,24 +4,19 @@ End-to-end Playwright tests for the compliance app, run against a real backend.
 
 ## Prerequisites
 
-Both servers must be running. The API must be started with
-`ENABLE_TEST_HOOKS=true` so the per-spec reset endpoint is mounted:
+A migrated compliance database with the system seed and the e2e-admin
+demo seed loaded. One-time setup:
 
 ```bash
-ENABLE_TEST_HOOKS=true pnpm --filter @apps/compliance dev   # API on :3012
-pnpm --filter @apps/compliance-web dev                       # Web on :5176
+pnpm --filter @apps/compliance db:migrate
+pnpm --filter @apps/compliance db:seed:system
+pnpm --filter @apps/compliance db:seed:demo
 ```
 
-The compliance demo seed must be loaded once:
-
-```bash
-pnpm --filter @apps/compliance db:seed -- --kind=system
-pnpm --filter @apps/compliance db:seed -- --kind=demo
-```
-
-If `ENABLE_TEST_HOOKS` is unset, `POST /admin/test/reset` is not
-registered and the `resetState` helper will fail with 404 — specs
-assume a clean DB at the start of each spec.
+Specs reset the database between groups via `POST /admin/test/reset` —
+the reset endpoint truncates every data table and reruns the seeds, so
+the seeds above only need to land once. Migrations are not re-applied on
+reset, so re-run `db:migrate` after schema changes.
 
 ## Run
 
@@ -29,6 +24,16 @@ From repo root:
 
 ```bash
 pnpm exec playwright test --config e2e-compliance/playwright.config.ts
+```
+
+The Playwright config owns the API + web server lifecycle, so a single
+invocation is enough — no manual pre-boot, no env flag to remember. With
+`reuseExistingServer: true` (off-CI), specs reuse a server already
+listening on `:3012` / `:5176` if you've started one for fast iteration:
+
+```bash
+pnpm --filter @apps/compliance dev:e2e   # API with ENABLE_TEST_HOOKS=true
+pnpm --filter @apps/compliance-web dev   # Web on :5176
 ```
 
 To run a single spec:

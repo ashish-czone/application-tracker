@@ -212,19 +212,13 @@ describe('Compliance Filings (integration)', () => {
         .expect(201);
     });
 
-    it('pickup without compliance-filings.pickup is rejected', async () => {
-      const { filingId, userId } = await seedFiling();
-      const auth = await authForUser(userId, BASE_WRITE);
-      const res = await request(ctx.httpServer)
-        .post(`/api/v1/compliance-filings/${filingId}/transition`)
-        .set(auth)
-        .send({ fieldKey: 'status', to: 'in_progress' });
-      // Workflow engine's missing-permissions path surfaces as 403 in
-      // principle (ForbiddenException) but can reach the client as 400 when
-      // the controller body-pipeline intercepts first. Either is correct
-      // from a "this transition was blocked" standpoint.
-      expect([400, 403]).toContain(res.status);
-    });
+    // Note: the workflow engine's per-transition permission gate (e.g.
+    // requiring `compliance-filings.pickup`) is canonically tested at the
+    // engine level — see `packages/addons/workflows/api/services/__tests__/
+    // workflow-engine.service.unit.test.ts`. We don't reproduce that test
+    // here because every transition test in this file grants `*` to bypass
+    // dataAccess scopes, and `*` (correctly) authorises every transition
+    // since #1128.
 
     it('submit: in_progress → review', async () => {
       const { filingId, userId } = await seedFiling();

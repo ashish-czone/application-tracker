@@ -6,6 +6,7 @@
     "build": "nest build",
     "dev": "nest start --watch",
     "dev:debug": "nest start --debug --watch",
+    "dev:e2e": "nest build && ENABLE_TEST_HOOKS=true node --env-file=.env dist/main",
     "start": "node dist/main",
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
