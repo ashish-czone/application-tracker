@@ -202,7 +202,7 @@ importers:
         version: link:../../packages/platform/user-preferences
       '@packages/users':
         specifier: workspace:*
-        version: link:../../packages/platform/users/api
+        version: link:../../packages/addons/users/api
       '@packages/workflows':
         specifier: workspace:*
         version: link:../../packages/addons/workflows/api
@@ -359,7 +359,7 @@ importers:
         version: link:../../../../../packages/core/ui
       '@packages/users-ui':
         specifier: workspace:*
-        version: link:../../../../../packages/platform/users/ui
+        version: link:../../../../../packages/addons/users/ui
       '@packages/workflows-ui':
         specifier: workspace:*
         version: link:../../../../../packages/addons/workflows/ui
@@ -526,7 +526,7 @@ importers:
         version: link:../../packages/addons/taxonomy/api
       '@packages/users':
         specifier: workspace:*
-        version: link:../../packages/platform/users/api
+        version: link:../../packages/addons/users/api
       class-transformer:
         specifier: ^0.5.1
         version: 0.5.1
@@ -734,7 +734,7 @@ importers:
         version: link:../../packages/platform/user-preferences
       '@packages/users':
         specifier: workspace:*
-        version: link:../../packages/platform/users/api
+        version: link:../../packages/addons/users/api
       '@packages/workflows':
         specifier: workspace:*
         version: link:../../packages/addons/workflows/api
@@ -903,7 +903,7 @@ importers:
         version: link:../../packages/core/ui
       '@packages/users-ui':
         specifier: workspace:*
-        version: link:../../packages/platform/users/ui
+        version: link:../../packages/addons/users/ui
       '@packages/workflows-ui':
         specifier: workspace:*
         version: link:../../packages/addons/workflows/ui
@@ -1042,7 +1042,7 @@ importers:
         version: link:../../packages/addons/tenancy
       '@packages/users':
         specifier: workspace:*
-        version: link:../../packages/platform/users/api
+        version: link:../../packages/addons/users/api
       '@packages/workflows':
         specifier: workspace:*
         version: link:../../packages/addons/workflows/api
@@ -1154,7 +1154,7 @@ importers:
         version: link:../../packages/core/ui
       '@packages/users-ui':
         specifier: workspace:*
-        version: link:../../packages/platform/users/ui
+        version: link:../../packages/addons/users/ui
       '@packages/workflows-ui':
         specifier: workspace:*
         version: link:../../packages/addons/workflows/ui
@@ -1372,7 +1372,7 @@ importers:
         version: link:../../packages/platform/user-preferences
       '@packages/users':
         specifier: workspace:*
-        version: link:../../packages/platform/users/api
+        version: link:../../packages/addons/users/api
       '@packages/workflows':
         specifier: workspace:*
         version: link:../../packages/addons/workflows/api
@@ -1568,7 +1568,7 @@ importers:
         version: link:../../packages/core/ui
       '@packages/users-ui':
         specifier: workspace:*
-        version: link:../../packages/platform/users/ui
+        version: link:../../packages/addons/users/ui
       '@packages/workflows-ui':
         specifier: workspace:*
         version: link:../../packages/addons/workflows/ui
@@ -1683,7 +1683,7 @@ importers:
         version: link:../../packages/core/ui
       '@packages/users-ui':
         specifier: workspace:*
-        version: link:../../packages/platform/users/ui
+        version: link:../../packages/addons/users/ui
       '@packages/workflows-ui':
         specifier: workspace:*
         version: link:../../packages/addons/workflows/ui
@@ -1987,7 +1987,7 @@ importers:
         version: link:../../../packages/addons/tasks/api
       '@packages/users':
         specifier: workspace:*
-        version: link:../../../packages/platform/users/api
+        version: link:../../../packages/addons/users/api
       '@packages/workflows':
         specifier: workspace:*
         version: link:../../../packages/addons/workflows/api
@@ -2093,7 +2093,7 @@ importers:
         version: link:../../../packages/core/ui
       '@packages/users-ui':
         specifier: workspace:*
-        version: link:../../../packages/platform/users/ui
+        version: link:../../../packages/addons/users/ui
       '@phosphor-icons/react':
         specifier: ^2.1.10
         version: 2.1.10(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -2181,7 +2181,7 @@ importers:
         version: link:../../../packages/core/soft-delete
       '@packages/users':
         specifier: workspace:*
-        version: link:../../../packages/platform/users/api
+        version: link:../../../packages/addons/users/api
       '@packages/workflows':
         specifier: workspace:*
         version: link:../../../packages/addons/workflows/api
@@ -3659,7 +3659,7 @@ importers:
         version: link:../../tenancy
       '@packages/users':
         specifier: workspace:*
-        version: link:../../../platform/users/api
+        version: link:../../users/api
       class-transformer:
         specifier: ^0.5.1
         version: 0.5.1
@@ -3723,7 +3723,7 @@ importers:
         version: link:../../../core/ui
       '@packages/users-ui':
         specifier: workspace:*
-        version: link:../../../platform/users/ui
+        version: link:../../users/ui
       '@tanstack/react-query':
         specifier: ^5.0.0
         version: 5.90.21(react@19.2.4)
@@ -3861,7 +3861,7 @@ importers:
         version: link:../../tenancy
       '@packages/users':
         specifier: workspace:*
-        version: link:../../../platform/users/api
+        version: link:../../users/api
       class-validator:
         specifier: ^0.14.1
         version: 0.14.4
@@ -4102,6 +4102,137 @@ importers:
       vitest:
         specifier: ^3.2.0
         version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0)
+
+  packages/addons/users/api:
+    dependencies:
+      '@nestjs/common':
+        specifier: ^11.0.0
+        version: 11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/swagger':
+        specifier: ^11.0.0
+        version: 11.2.6(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)
+      '@packages/audit':
+        specifier: workspace:*
+        version: link:../../../platform/audit/api
+      '@packages/auth':
+        specifier: workspace:*
+        version: link:../../../platform/auth/api
+      '@packages/common':
+        specifier: workspace:*
+        version: link:../../../core/common
+      '@packages/database':
+        specifier: workspace:*
+        version: link:../../../core/database
+      '@packages/entity-engine':
+        specifier: workspace:*
+        version: link:../../../platform/entity-engine/api
+      '@packages/entity-engine-contract':
+        specifier: workspace:*
+        version: link:../../../platform/entity-engine/contracts
+      '@packages/events':
+        specifier: workspace:*
+        version: link:../../../core/events
+      '@packages/logger':
+        specifier: workspace:*
+        version: link:../../../core/logger
+      '@packages/notifications':
+        specifier: workspace:*
+        version: link:../../../platform/notifications/api
+      '@packages/rbac':
+        specifier: workspace:*
+        version: link:../../../platform/rbac/api
+      class-transformer:
+        specifier: ^0.5.1
+        version: 0.5.1
+      class-validator:
+        specifier: ^0.14.1
+        version: 0.14.4
+      drizzle-orm:
+        specifier: ^0.45.1
+        version: 0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3))
+    devDependencies:
+      '@packages/testing':
+        specifier: workspace:*
+        version: link:../../../core/testing
+      '@types/supertest':
+        specifier: ^6.0.2
+        version: 6.0.3
+      supertest:
+        specifier: ^7.0.0
+        version: 7.2.2
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.2.0
+        version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0)
+
+  packages/addons/users/ui:
+    dependencies:
+      '@hookform/resolvers':
+        specifier: ^5.0.0
+        version: 5.2.2(react-hook-form@7.71.2(react@19.2.4))
+      '@packages/common':
+        specifier: workspace:*
+        version: link:../../../core/common
+      '@packages/conditions-ui':
+        specifier: workspace:*
+        version: link:../../../platform/conditions-ui
+      '@packages/eav-attributes-ui':
+        specifier: workspace:*
+        version: link:../../../platform/eav-attributes-ui
+      '@packages/entity-engine-ui':
+        specifier: workspace:*
+        version: link:../../../platform/entity-engine/ui
+      '@packages/field-types':
+        specifier: workspace:*
+        version: link:../../../platform/field-types
+      '@packages/platform-ui':
+        specifier: workspace:*
+        version: link:../../../platform/platform-ui
+      '@packages/ui':
+        specifier: workspace:*
+        version: link:../../../core/ui
+      '@tanstack/react-query':
+        specifier: ^5.0.0
+        version: 5.90.21(react@19.2.4)
+      '@tanstack/react-table':
+        specifier: ^8.0.0
+        version: 8.21.3(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      dagre:
+        specifier: ^0.8.5
+        version: 0.8.5
+      date-fns:
+        specifier: ^4.1.0
+        version: 4.1.0
+      lucide-react:
+        specifier: ^0.500.0
+        version: 0.500.0(react@19.2.4)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.4
+      react-hook-form:
+        specifier: ^7.54.0
+        version: 7.71.2(react@19.2.4)
+      react-router:
+        specifier: ^7.0.0
+        version: 7.13.1(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      reactflow:
+        specifier: ^11.0.0
+        version: 11.11.4(@types/react@19.2.14)(immer@11.1.4)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      zod:
+        specifier: ^3.24.0
+        version: 3.25.76
+    devDependencies:
+      '@types/dagre':
+        specifier: ^0.7.52
+        version: 0.7.54
+      '@types/react':
+        specifier: ^19.2.14
+        version: 19.2.14
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
 
   packages/addons/workflows/api:
     dependencies:
@@ -4669,7 +4800,7 @@ importers:
         version: link:../../user-preferences
       '@packages/users':
         specifier: workspace:*
-        version: link:../../users/api
+        version: link:../../../addons/users/api
       class-transformer:
         specifier: ^0.5.1
         version: 0.5.1
@@ -4730,7 +4861,7 @@ importers:
         version: link:../../../core/ui
       '@packages/users-ui':
         specifier: workspace:*
-        version: link:../../users/ui
+        version: link:../../../addons/users/ui
       '@tanstack/react-query':
         specifier: ^5.60.0
         version: 5.90.21(react@19.2.4)
@@ -6082,137 +6213,6 @@ importers:
       vitest:
         specifier: ^3.0.0
         version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0)
-
-  packages/platform/users/api:
-    dependencies:
-      '@nestjs/common':
-        specifier: ^11.0.0
-        version: 11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
-      '@nestjs/swagger':
-        specifier: ^11.0.0
-        version: 11.2.6(@nestjs/common@11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.16)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)
-      '@packages/audit':
-        specifier: workspace:*
-        version: link:../../audit/api
-      '@packages/auth':
-        specifier: workspace:*
-        version: link:../../auth/api
-      '@packages/common':
-        specifier: workspace:*
-        version: link:../../../core/common
-      '@packages/database':
-        specifier: workspace:*
-        version: link:../../../core/database
-      '@packages/entity-engine':
-        specifier: workspace:*
-        version: link:../../entity-engine/api
-      '@packages/entity-engine-contract':
-        specifier: workspace:*
-        version: link:../../entity-engine/contracts
-      '@packages/events':
-        specifier: workspace:*
-        version: link:../../../core/events
-      '@packages/logger':
-        specifier: workspace:*
-        version: link:../../../core/logger
-      '@packages/notifications':
-        specifier: workspace:*
-        version: link:../../notifications/api
-      '@packages/rbac':
-        specifier: workspace:*
-        version: link:../../rbac/api
-      class-transformer:
-        specifier: ^0.5.1
-        version: 0.5.1
-      class-validator:
-        specifier: ^0.14.1
-        version: 0.14.4
-      drizzle-orm:
-        specifier: ^0.45.1
-        version: 0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3))
-    devDependencies:
-      '@packages/testing':
-        specifier: workspace:*
-        version: link:../../../core/testing
-      '@types/supertest':
-        specifier: ^6.0.2
-        version: 6.0.3
-      supertest:
-        specifier: ^7.0.0
-        version: 7.2.2
-      typescript:
-        specifier: ^5.7.0
-        version: 5.9.3
-      vitest:
-        specifier: ^3.2.0
-        version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0)
-
-  packages/platform/users/ui:
-    dependencies:
-      '@hookform/resolvers':
-        specifier: ^5.0.0
-        version: 5.2.2(react-hook-form@7.71.2(react@19.2.4))
-      '@packages/common':
-        specifier: workspace:*
-        version: link:../../../core/common
-      '@packages/conditions-ui':
-        specifier: workspace:*
-        version: link:../../conditions-ui
-      '@packages/eav-attributes-ui':
-        specifier: workspace:*
-        version: link:../../eav-attributes-ui
-      '@packages/entity-engine-ui':
-        specifier: workspace:*
-        version: link:../../entity-engine/ui
-      '@packages/field-types':
-        specifier: workspace:*
-        version: link:../../field-types
-      '@packages/platform-ui':
-        specifier: workspace:*
-        version: link:../../platform-ui
-      '@packages/ui':
-        specifier: workspace:*
-        version: link:../../../core/ui
-      '@tanstack/react-query':
-        specifier: ^5.0.0
-        version: 5.90.21(react@19.2.4)
-      '@tanstack/react-table':
-        specifier: ^8.0.0
-        version: 8.21.3(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
-      dagre:
-        specifier: ^0.8.5
-        version: 0.8.5
-      date-fns:
-        specifier: ^4.1.0
-        version: 4.1.0
-      lucide-react:
-        specifier: ^0.500.0
-        version: 0.500.0(react@19.2.4)
-      react:
-        specifier: ^19.0.0
-        version: 19.2.4
-      react-hook-form:
-        specifier: ^7.54.0
-        version: 7.71.2(react@19.2.4)
-      react-router:
-        specifier: ^7.0.0
-        version: 7.13.1(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
-      reactflow:
-        specifier: ^11.0.0
-        version: 11.11.4(@types/react@19.2.14)(immer@11.1.4)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
-      zod:
-        specifier: ^3.24.0
-        version: 3.25.76
-    devDependencies:
-      '@types/dagre':
-        specifier: ^0.7.52
-        version: 0.7.54
-      '@types/react':
-        specifier: ^19.2.14
-        version: 19.2.14
-      typescript:
-        specifier: ^5.7.0
-        version: 5.9.3
 
 packages:
 
