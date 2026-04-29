@@ -1,7 +1,7 @@
 import { Global, Module, type OnModuleInit } from '@nestjs/common';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { QueueService } from '@packages/queue';
-import { RbacService } from '@packages/rbac';
+import { RbacIntegrationModule } from '@packages/rbac';
 import { ActionRegistry } from '@packages/automation-contracts';
 import { NotificationChannelsModule, EmailChannelService, WhatsAppChannelService, InAppChannel } from '@packages/notification-channels';
 import type { EmailPayload, WhatsAppPayload } from '@packages/notification-channels';
@@ -15,7 +15,15 @@ import { NotificationTemplatesController } from './controllers/notification-temp
 
 @Global()
 @Module({
-  imports: [NotificationChannelsModule],
+  imports: [
+    NotificationChannelsModule,
+    RbacIntegrationModule.forFeature({
+      manifests: [
+        { slug: 'notifications.templates.read',   module: 'notifications', action: 'templates.read',   label: 'View notification templates',   description: 'View notification templates',                                  supportedScopes: ['any'] },
+        { slug: 'notifications.templates.manage', module: 'notifications', action: 'templates.manage', label: 'Manage notification templates', description: 'Create, update, and delete notification templates',           supportedScopes: ['any'] },
+      ],
+    }),
+  ],
   controllers: [NotificationTemplatesController],
   providers: [
     NotificationTemplatesService,
@@ -41,7 +49,6 @@ export class NotificationsModule implements OnModuleInit {
     private readonly queueService: QueueService,
     private readonly emailChannelService: EmailChannelService,
     private readonly whatsAppChannelService: WhatsAppChannelService,
-    private readonly rbacService: RbacService,
     private readonly actionRegistry: ActionRegistry,
     private readonly sendNotificationAction: SendNotificationAction,
     appLogger: AppLoggerService,
@@ -50,12 +57,6 @@ export class NotificationsModule implements OnModuleInit {
   }
 
   async onModuleInit() {
-    // Register RBAC permissions
-    this.rbacService.registerManifests([
-      { slug: 'notifications.templates.read',   module: 'notifications', action: 'templates.read',   label: 'View notification templates',   description: 'View notification templates', supportedScopes: ['any'] },
-      { slug: 'notifications.templates.manage', module: 'notifications', action: 'templates.manage', label: 'Manage notification templates', description: 'Create, update, and delete notification templates', supportedScopes: ['any'] },
-    ]);
-
     // Register inline channels
     this.dispatcher.registerInlineChannel(this.inAppChannel);
 

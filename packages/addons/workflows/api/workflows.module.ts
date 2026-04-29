@@ -1,5 +1,5 @@
 import { Global, Module, type OnModuleInit } from '@nestjs/common';
-import { RbacService } from '@packages/rbac';
+import { RbacIntegrationModule } from '@packages/rbac';
 import { ActionRegistry } from '@packages/automation-contracts';
 import { WORKFLOW_EXTENSION } from '@packages/entity-engine/extensions';
 import { FeatureDeriverRegistry } from '@packages/entity-engine';
@@ -15,6 +15,14 @@ import { WorkflowsController } from './controllers/workflows.controller';
 
 @Global()
 @Module({
+  imports: [
+    RbacIntegrationModule.forFeature({
+      manifests: [
+        { slug: 'workflows.read',   module: 'workflows', action: 'read',   label: 'View workflows',   description: 'View workflow definitions', supportedScopes: ['any'] },
+        { slug: 'workflows.manage', module: 'workflows', action: 'manage', label: 'Manage workflows', description: 'Create, update, and delete workflow definitions, states, and transitions', supportedScopes: ['any'] },
+      ],
+    }),
+  ],
   controllers: [WorkflowsController],
   providers: [
     WorkflowRegistryService,
@@ -36,7 +44,6 @@ import { WorkflowsController } from './controllers/workflows.controller';
 })
 export class WorkflowsModule implements OnModuleInit {
   constructor(
-    private readonly rbacService: RbacService,
     private readonly actionRegistry: ActionRegistry,
     private readonly featureDerivers: FeatureDeriverRegistry,
     private readonly transitionWorkflowAction: TransitionWorkflowAction,
@@ -46,11 +53,6 @@ export class WorkflowsModule implements OnModuleInit {
     if (!fieldTypeRegistry.has('workflow')) {
       fieldTypeRegistry.registerPlugin(workflowFieldTypesPlugin);
     }
-
-    this.rbacService.registerManifests([
-      { slug: 'workflows.read',   module: 'workflows', action: 'read',   label: 'View workflows',   description: 'View workflow definitions', supportedScopes: ['any'] },
-      { slug: 'workflows.manage', module: 'workflows', action: 'manage', label: 'Manage workflows', description: 'Create, update, and delete workflow definitions, states, and transitions', supportedScopes: ['any'] },
-    ]);
 
     this.actionRegistry.register(this.transitionWorkflowAction);
     this.featureDerivers.register(workflowFeatureDeriver);

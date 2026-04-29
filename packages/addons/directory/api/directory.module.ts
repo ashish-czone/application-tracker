@@ -1,5 +1,5 @@
 import { Module, type OnModuleInit } from '@nestjs/common';
-import { RbacService } from '@packages/rbac';
+import { RbacIntegrationModule } from '@packages/rbac';
 import { AuditRegistryService } from '@packages/audit';
 import { EventRegistryService } from '@packages/events';
 import { CompaniesService } from './services/companies.service';
@@ -16,37 +16,39 @@ import {
 } from './events/types';
 
 @Module({
+  imports: [
+    RbacIntegrationModule.forFeature({
+      manifests: [
+        {
+          slug: 'directory.read',
+          module: 'directory',
+          action: 'read',
+          label: 'Read directory records',
+          description: 'Search and read companies / people in the identity directory (picker autocomplete)',
+          supportedScopes: ['any'],
+        },
+        {
+          slug: 'directory.merge',
+          module: 'directory',
+          action: 'merge',
+          label: 'Merge directory records',
+          description: 'Merge two companies or two people in the identity directory',
+          supportedScopes: ['any'],
+        },
+      ],
+    }),
+  ],
   controllers: [CompaniesController, PeopleController],
   providers: [CompaniesService, PeopleService],
   exports: [CompaniesService, PeopleService],
 })
 export class DirectoryModule implements OnModuleInit {
   constructor(
-    private readonly rbac: RbacService,
     private readonly auditRegistry: AuditRegistryService,
     private readonly eventRegistry: EventRegistryService,
   ) {}
 
   onModuleInit() {
-    this.rbac.registerManifests([
-      {
-        slug: 'directory.read',
-        module: 'directory',
-        action: 'read',
-        label: 'Read directory records',
-        description: 'Search and read companies / people in the identity directory (picker autocomplete)',
-        supportedScopes: ['any'],
-      },
-      {
-        slug: 'directory.merge',
-        module: 'directory',
-        action: 'merge',
-        label: 'Merge directory records',
-        description: 'Merge two companies or two people in the identity directory',
-        supportedScopes: ['any'],
-      },
-    ]);
-
     this.auditRegistry.register('directory', {
       events: [
         DIRECTORY_COMPANY_CREATED,

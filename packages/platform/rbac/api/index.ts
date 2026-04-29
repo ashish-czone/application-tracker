@@ -17,3 +17,5 @@ export { OwnScopeResolver } from './scope-resolvers/own.resolver';
 export { AssignedScopeResolver } from './scope-resolvers/assigned.resolver';
 export { PermissionManifestRegistry } from './permission-manifest';
 export type { PermissionManifest } from './permission-manifest';
+export { RbacIntegrationModule } from './integration/rbac-integration.module';
+export type { RbacFeatureConfig } from './integration/rbac-integration.module';

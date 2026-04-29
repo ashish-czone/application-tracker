@@ -2,7 +2,7 @@ import { Module, type OnModuleInit } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
 import { AuditRegistryService } from '@packages/audit';
 import { ActionRegistry } from '@packages/automation-contracts';
-import { RbacService } from '@packages/rbac';
+import { RbacIntegrationModule } from '@packages/rbac';
 
 import { registerComplianceAudit } from './audit/register-compliance-audit';
 
@@ -31,6 +31,10 @@ import { COMPLIANCE_PERMISSION_MANIFESTS } from './permissions';
     LawHandlersModule,
     ComplianceFilingsModule,
     OrganizationsModule,
+    // Permissions for compliance UI surfaces that don't yet have backing
+    // entities. CRUD perms for entities (clients, laws, etc.) are auto-
+    // registered by EntityEngineModule.forEntity() inside each entity's module.
+    RbacIntegrationModule.forFeature({ manifests: COMPLIANCE_PERMISSION_MANIFESTS }),
   ],
   providers: [
     ComplianceFilingsGeneratorService,
@@ -44,7 +48,6 @@ export class ComplianceDomainModule implements OnModuleInit {
     private readonly actionRegistry: ActionRegistry,
     private readonly generateFilingsAction: GenerateComplianceFilingsAction,
     private readonly sendDigestAction: SendComplianceFilingDigestAction,
-    private readonly rbac: RbacService,
     private readonly auditRegistry: AuditRegistryService,
     private readonly moduleRef: ModuleRef,
   ) {}
@@ -54,10 +57,5 @@ export class ComplianceDomainModule implements OnModuleInit {
     this.actionRegistry.register(this.sendDigestAction);
 
     registerComplianceAudit(this.auditRegistry, this.moduleRef);
-
-    // Register permissions for compliance UI surfaces that don't yet have
-    // backing entities. CRUD perms for entities (clients, laws, etc.) are
-    // auto-registered by EntityEngineModule.forEntity() inside each entity's module.
-    this.rbac.registerManifests(COMPLIANCE_PERMISSION_MANIFESTS);
   }
 }

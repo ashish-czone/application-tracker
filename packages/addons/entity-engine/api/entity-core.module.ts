@@ -1,5 +1,5 @@
 import { Module, Global, Logger, Inject, Optional, type OnModuleInit } from '@nestjs/common';
-import { RbacService, FIELD_PERMISSION_ENTITY_RESOLVER, FieldPermissionsController } from '@packages/rbac';
+import { RbacIntegrationModule, FIELD_PERMISSION_ENTITY_RESOLVER, FieldPermissionsController } from '@packages/rbac';
 import type { FieldPermissionEntityResolver } from '@packages/rbac';
 import { fieldTypeRegistry } from '@packages/field-types';
 import { LOOKUP_RESOLVER_TOKEN } from '@packages/entity-engine-contract';
@@ -37,6 +37,14 @@ import { AUTOMATIONS_EXTENSION, type AutomationsExtension } from './extensions/a
  */
 @Global()
 @Module({
+  imports: [
+    RbacIntegrationModule.forFeature({
+      manifests: [
+        { slug: 'eav.read',   module: 'eav', action: 'read',   label: 'View field definitions', description: 'View field definitions and layouts',            supportedScopes: ['any'] },
+        { slug: 'eav.manage', module: 'eav', action: 'manage', label: 'Manage fields',          description: 'Create/update/delete custom fields and layouts', supportedScopes: ['any'] },
+      ],
+    }),
+  ],
   controllers: [
     EntityEngineApiController,
     FieldPermissionsController,
@@ -85,7 +93,6 @@ export class EntityCoreModule implements OnModuleInit {
   private readonly logger = new Logger('EntityCoreModule');
 
   constructor(
-    private readonly rbac: RbacService,
     @Inject(AUTOMATIONS_EXTENSION) @Optional() private readonly automationsExt: AutomationsExtension | null,
     private readonly createEntityAction: CreateEntityAction,
     private readonly updateEntityAction: UpdateEntityAction,
@@ -96,11 +103,6 @@ export class EntityCoreModule implements OnModuleInit {
     if (!fieldTypeRegistry.has('text')) {
       fieldTypeRegistry.registerPlugin(coreFieldTypesPlugin);
     }
-
-    this.rbac.registerManifests([
-      { slug: 'eav.read',   module: 'eav', action: 'read',   label: 'View field definitions', description: 'View field definitions and layouts',            supportedScopes: ['any'] },
-      { slug: 'eav.manage', module: 'eav', action: 'manage', label: 'Manage fields',          description: 'Create/update/delete custom fields and layouts', supportedScopes: ['any'] },
-    ]);
 
     if (this.automationsExt) {
       this.automationsExt.registerAction(this.createEntityAction);
