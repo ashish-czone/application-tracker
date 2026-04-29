@@ -157,6 +157,12 @@ export interface HeaderPlugin {
  * have zero awareness of UI shape.
  */
 export interface EntityUIPresentation {
+  /** Singular display name (e.g. 'Candidate'). When set, FE prefers this over the api-shipped value. */
+  singularName?: string;
+  /** Plural display name (e.g. 'Candidates'). When set, FE prefers this over the api-shipped value. */
+  pluralName?: string;
+  /** Field key used as the subtitle on detail headers and list/board cards. When set, FE prefers this over the api-shipped value. */
+  subtitleField?: string;
   /** Lucide icon name */
   icon?: string;
   /** Sidebar nav group. When multiple entities share a navGroup and set `groupRenderMode: 'tabs'`, the platform collapses them into a single nav link and renders a tabbed page. */
@@ -176,12 +182,71 @@ export interface EntityUIPresentation {
 /**
  * Per-field UI overrides. Keyed by field key (camelCase, matches Drizzle
  * property name). Previously lived on `FieldMeta` in the api package.
+ *
+ * For each field below: when set, the FE-side value wins over the api's
+ * `FieldMeta` / `FieldDefinition` shipped value. Strip B-4 will drop the
+ * api-side counterparts entirely for code-defined entities — admin-
+ * configurable entities continue to source these from DB-backed
+ * `field_definitions` rows that admins edit.
  */
 export interface FieldUI {
+  /** Display label for the field (form label, list column header). */
+  label?: string;
+  /** Form-section name this field belongs to (matched by section name in `formLayout.sections`). */
+  section?: string;
+  /** Display order within the section, and within the quick-create form. */
+  sortOrder?: number;
+  /** Whether the field appears on the quick-create form. */
+  isQuickCreate?: boolean;
+  /** Hide from the list columns picker but still fetch its value (so a cellRenderer on another field can read it). */
+  listColumnHidden?: boolean;
   /** Custom UI widget type (e.g. 'color-picker') */
   uiType?: string;
   /** Named cell renderer for the list view (looked up in EntityEngineProvider columnRenderers registry) */
   cellRenderer?: string;
+}
+
+/**
+ * Form-section definition. Mirrors the shape of the api's `SeedSectionInput`
+ * but lives in the UI package so the FE owns form layout end-to-end.
+ */
+export interface FormLayoutSection {
+  /** Section display name. */
+  name: string;
+  /** Field keys in order. Use [key, columnIndex] tuples for explicit column assignment. */
+  fields: (string | [string, number])[];
+  /** Number of columns in the section grid. Default 1. */
+  columns?: number;
+  /** Whether the section is collapsible. */
+  isCollapsible?: boolean;
+  /** Render as a tabular section (rows of related records). */
+  isTabular?: boolean;
+  /** Cap on rows for tabular sections. */
+  tabularMaxRows?: number;
+}
+
+/**
+ * Per-entity form layout config. When set, the FE form layout hook prefers
+ * this over the api's `getLayout()` response. Admin-configurable entities
+ * continue to source layout from DB.
+ */
+export interface FormLayoutConfig {
+  sections: FormLayoutSection[];
+  /** Field keys that appear on the quick-create form. */
+  quickCreateFields?: string[];
+}
+
+/**
+ * Per-entity list-column config. Determines which fields are visible by
+ * default in the list view, and their display order. When set, FE prefers
+ * these visible/order flags over the api's `getListLayout()` defaults.
+ */
+export interface ListColumnConfig {
+  fieldKey: string;
+  /** Whether the column is visible by default. */
+  visible?: boolean;
+  /** Display order (lower = first). */
+  order?: number;
 }
 
 /**
@@ -211,10 +276,14 @@ export interface EntityUIConfig {
   listViews?: ListViewPlugin[];
   /** Entity-level presentation hints (icon, nav group, createMode, ...). */
   presentation?: EntityUIPresentation;
-  /** Per-field UI overrides (uiType, cellRenderer). Keyed by field key. */
+  /** Per-field UI overrides (label, section, sortOrder, isQuickCreate, listColumnHidden, uiType, cellRenderer). Keyed by field key. */
   fieldUI?: Record<string, FieldUI>;
   /** Per-action UI overrides (label, icon, variant). Keyed by action key. */
   actionUI?: Record<string, ActionUI>;
+  /** Form layout (sections + quick-create fields). FE-owned source of truth for code-defined entities. */
+  formLayout?: FormLayoutConfig;
+  /** List view default columns (visibility + order). FE-owned source of truth for code-defined entities. */
+  listColumns?: ListColumnConfig[];
 }
 
 /** Registration for a named cell renderer used in list view columns */

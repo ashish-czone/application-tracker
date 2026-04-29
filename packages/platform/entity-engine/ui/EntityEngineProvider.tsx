@@ -4,7 +4,7 @@ import { createEntityApi } from './helpers/createEntityApi';
 import { createEntityHooks, type EntityHooks } from './helpers/createEntityHooks';
 import { buildEntityUIIndex } from './helpers/buildEntityUIIndex';
 import { hydrateEntities } from './helpers/hydrate';
-import type { EntityRegistryEntry, EntityApi, EntityUIConfig, EntityDetailPlugin, DetailTabPlugin, ListViewPlugin, RightSidebarPanel, HeaderPlugin, ColumnRendererRegistration, EntityUIPresentation, FieldUI, ActionUI } from './types';
+import type { EntityRegistryEntry, EntityApi, EntityUIConfig, EntityDetailPlugin, DetailTabPlugin, ListViewPlugin, RightSidebarPanel, HeaderPlugin, ColumnRendererRegistration, EntityUIPresentation, FieldUI, ActionUI, FormLayoutConfig, ListColumnConfig } from './types';
 
 interface EntityEngineContextValue {
   /** All registered entities from the backend */
@@ -37,6 +37,10 @@ interface EntityEngineContextValue {
   getFieldUI: (entityType: string, fieldKey: string) => FieldUI | undefined;
   /** Get per-action UI overrides (label, icon, variant) sourced from the UI configs registered on the provider. */
   getActionUI: (entityType: string, actionKey: string) => ActionUI | undefined;
+  /** Get the FE-side form layout config (sections + quickCreateFields) for an entity, or undefined if none registered. */
+  getFormLayout: (entityType: string) => FormLayoutConfig | undefined;
+  /** Get the FE-side list column config (visibility + order overrides) for an entity, or undefined if none registered. */
+  getListColumns: (entityType: string) => ListColumnConfig[] | undefined;
   /** Raw API client (for layout and other non-entity endpoints) */
   apiFn: EntityEngineProviderProps['apiFn'];
 }
@@ -180,6 +184,8 @@ export function EntityEngineProvider({ children, apiFn, entityUIConfigs = [], de
     getEntityPresentation: (entityType: string) => uiIndex.presentation.get(entityType),
     getFieldUI: (entityType: string, fieldKey: string) => uiIndex.fieldUI.get(entityType)?.get(fieldKey),
     getActionUI: (entityType: string, actionKey: string) => uiIndex.actionUI.get(entityType)?.get(actionKey),
+    getFormLayout: (entityType: string) => uiIndex.formLayout.get(entityType),
+    getListColumns: (entityType: string) => uiIndex.listColumns.get(entityType),
     apiFn,
   }), [entitiesHydrated, isLoading, apiMap, hooksMap, pluginMap, tabMap, listViewMap, sidebarPanelMap, headerPluginMap, uiIndex, globalDetailTabs, globalListViews, globalSidebarPanels, globalHeaderPlugins, columnRenderers, apiFn]);
 
