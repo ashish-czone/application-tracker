@@ -1,7 +1,7 @@
 import { Global, Module, type OnModuleInit } from '@nestjs/common';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { QueueService } from '@packages/queue';
-import { RbacService } from '@packages/rbac';
+import { RbacIntegrationModule } from '@packages/rbac';
 import { DatabaseService } from '@packages/database';
 import { cronForLocalHour } from '@packages/common';
 import { AUTOMATIONS_EXTENSION } from '@packages/entity-engine/extensions';
@@ -30,6 +30,14 @@ export const AUTOMATION_EXECUTION_CLEANUP_QUEUE = 'automation.execution-cleanup'
 
 @Global()
 @Module({
+  imports: [
+    RbacIntegrationModule.forFeature({
+      manifests: [
+        { slug: 'automations.rules.read',   module: 'automations', action: 'rules.read',   label: 'View automation rules',   description: 'View automation rules', supportedScopes: ['any'] },
+        { slug: 'automations.rules.manage', module: 'automations', action: 'rules.manage', label: 'Manage automation rules', description: 'Create, update, and delete automation rules', supportedScopes: ['any'] },
+      ],
+    }),
+  ],
   controllers: [AutomationRulesController, AutomationExecutionsController, AutomationsMetadataController],
   providers: [
     AutomationRuleService,
@@ -68,7 +76,6 @@ export class AutomationsModule implements OnModuleInit {
     private readonly entityResolverRegistry: EntityResolverRegistry,
     private readonly queueService: QueueService,
     private readonly scheduleScanner: ScheduleScanner,
-    private readonly rbacService: RbacService,
     private readonly database: DatabaseService,
     private readonly webhookAction: WebhookAction,
     private readonly automationListener: AutomationListener,
@@ -80,12 +87,6 @@ export class AutomationsModule implements OnModuleInit {
   }
 
   async onModuleInit() {
-    // Register RBAC permissions
-    this.rbacService.registerManifests([
-      { slug: 'automations.rules.read',   module: 'automations', action: 'rules.read',   label: 'View automation rules',   description: 'View automation rules', supportedScopes: ['any'] },
-      { slug: 'automations.rules.manage', module: 'automations', action: 'rules.manage', label: 'Manage automation rules', description: 'Create, update, and delete automation rules', supportedScopes: ['any'] },
-    ]);
-
     // Register built-in user resolver strategies
     this.userResolverRegistry.registerStrategy(new ActorStrategy());
     this.userResolverRegistry.registerStrategy(

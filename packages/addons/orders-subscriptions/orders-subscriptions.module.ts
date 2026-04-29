@@ -2,7 +2,7 @@ import { Module, type OnModuleInit } from '@nestjs/common';
 import { EventRegistryService } from '@packages/events';
 import { EntityEngineModule } from '@packages/entity-engine';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
-import { RbacService } from '@packages/rbac';
+import { RbacIntegrationModule } from '@packages/rbac';
 import { QueueService } from '@packages/queue';
 import { OrdersBillingModule, ProductResolverRegistry } from '@packages/orders-billing';
 import { cronForLocalHour } from '@packages/common';
@@ -31,6 +31,14 @@ export const SUBSCRIPTION_EXPIRY_QUEUE = 'subscriptions.expiry-check';
     EntityEngineModule.forEntity(SUBSCRIPTION_PLANS_CONFIG),
     EntityEngineModule.forEntity(SUBSCRIPTIONS_CONFIG),
     OrdersBillingModule,
+    RbacIntegrationModule.forFeature({
+      manifests: [
+        { slug: 'subscriptions.activate', module: 'subscriptions', action: 'activate', label: 'Activate subscriptions', description: 'Activate subscriptions', supportedScopes: ['any'] },
+        { slug: 'subscriptions.renew',    module: 'subscriptions', action: 'renew',    label: 'Renew subscriptions',    description: 'Renew subscriptions',    supportedScopes: ['any'] },
+        { slug: 'subscriptions.cancel',   module: 'subscriptions', action: 'cancel',   label: 'Cancel subscriptions',   description: 'Cancel subscriptions',   supportedScopes: ['any'] },
+        { slug: 'subscriptions.pause',    module: 'subscriptions', action: 'pause',    label: 'Pause subscriptions',    description: 'Pause subscriptions',    supportedScopes: ['any'] },
+      ],
+    }),
   ],
   controllers: [SubscriptionPlansController, SubscriptionsController],
   providers: [
@@ -54,7 +62,6 @@ export class OrdersSubscriptionsModule implements OnModuleInit {
 
   constructor(
     private readonly eventRegistry: EventRegistryService,
-    private readonly rbacService: RbacService,
     private readonly productResolverRegistry: ProductResolverRegistry,
     private readonly planProductResolver: PlanProductResolver,
     private readonly queueService: QueueService,
@@ -100,15 +107,7 @@ export class OrdersSubscriptionsModule implements OnModuleInit {
       payloadSchema: {},
     });
 
-    // 3. Register RBAC permissions (beyond auto-generated CRUD from entity engine)
-    this.rbacService.registerManifests([
-      { slug: 'subscriptions.activate', module: 'subscriptions', action: 'activate', label: 'Activate subscriptions', description: 'Activate subscriptions', supportedScopes: ['any'] },
-      { slug: 'subscriptions.renew',    module: 'subscriptions', action: 'renew',    label: 'Renew subscriptions',    description: 'Renew subscriptions',    supportedScopes: ['any'] },
-      { slug: 'subscriptions.cancel',   module: 'subscriptions', action: 'cancel',   label: 'Cancel subscriptions',   description: 'Cancel subscriptions',   supportedScopes: ['any'] },
-      { slug: 'subscriptions.pause',    module: 'subscriptions', action: 'pause',    label: 'Pause subscriptions',    description: 'Pause subscriptions',    supportedScopes: ['any'] },
-    ]);
-
-    // 4. Register expiry cron job (daily at 1:00 AM local time)
+    // 3. Register expiry cron job (daily at 1:00 AM local time)
     this.queueService.registerProcessor({
       name: SUBSCRIPTION_EXPIRY_QUEUE,
       handler: async () => {

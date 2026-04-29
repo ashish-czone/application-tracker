@@ -1,5 +1,5 @@
 import { Module, type OnModuleInit } from '@nestjs/common';
-import { RbacService } from '@packages/rbac';
+import { RbacIntegrationModule } from '@packages/rbac';
 import { AuditRegistryService } from '@packages/audit';
 import { EventRegistryService } from '@packages/events';
 import { EvaluationTemplatesService } from './services/evaluation-templates.service';
@@ -13,28 +13,29 @@ import {
 } from './events/types';
 
 @Module({
+  imports: [
+    RbacIntegrationModule.forFeature({
+      manifests: [
+        { slug: 'evaluations.templates.read',   module: 'evaluations', action: 'templates.read',   label: 'View evaluation templates',   description: 'View evaluation templates',                        supportedScopes: ['any'] },
+        { slug: 'evaluations.templates.manage', module: 'evaluations', action: 'templates.manage', label: 'Manage evaluation templates', description: 'Create, update, and delete evaluation templates',  supportedScopes: ['any'] },
+        { slug: 'evaluations.read',             module: 'evaluations', action: 'read',             label: 'View evaluations',            description: 'View evaluations',                                 supportedScopes: ['any'] },
+        { slug: 'evaluations.create',           module: 'evaluations', action: 'create',           label: 'Create evaluations',          description: 'Create evaluations',                               supportedScopes: ['any'] },
+        { slug: 'evaluations.update',           module: 'evaluations', action: 'update',           label: 'Update evaluations',          description: 'Update evaluations',                               supportedScopes: ['any'] },
+        { slug: 'evaluations.delete',           module: 'evaluations', action: 'delete',           label: 'Delete evaluations',          description: 'Delete evaluations',                               supportedScopes: ['any'] },
+      ],
+    }),
+  ],
   controllers: [EvaluationTemplatesController, EvaluationsController],
   providers: [EvaluationTemplatesService, EvaluationsService],
   exports: [EvaluationTemplatesService, EvaluationsService],
 })
 export class EvaluationsModule implements OnModuleInit {
   constructor(
-    private readonly rbacService: RbacService,
     private readonly auditRegistry: AuditRegistryService,
     private readonly eventRegistry: EventRegistryService,
   ) {}
 
   onModuleInit() {
-    // Register RBAC permissions
-    this.rbacService.registerManifests([
-      { slug: 'evaluations.templates.read',   module: 'evaluations', action: 'templates.read',   label: 'View evaluation templates',   description: 'View evaluation templates',                        supportedScopes: ['any'] },
-      { slug: 'evaluations.templates.manage', module: 'evaluations', action: 'templates.manage', label: 'Manage evaluation templates', description: 'Create, update, and delete evaluation templates',  supportedScopes: ['any'] },
-      { slug: 'evaluations.read',             module: 'evaluations', action: 'read',             label: 'View evaluations',            description: 'View evaluations',                                 supportedScopes: ['any'] },
-      { slug: 'evaluations.create',           module: 'evaluations', action: 'create',           label: 'Create evaluations',          description: 'Create evaluations',                               supportedScopes: ['any'] },
-      { slug: 'evaluations.update',           module: 'evaluations', action: 'update',           label: 'Update evaluations',          description: 'Update evaluations',                               supportedScopes: ['any'] },
-      { slug: 'evaluations.delete',           module: 'evaluations', action: 'delete',           label: 'Delete evaluations',          description: 'Delete evaluations',                               supportedScopes: ['any'] },
-    ]);
-
     // Register audit events
     this.auditRegistry.register('evaluations', {
       events: [
