@@ -62,15 +62,16 @@ export default [
         'domains/**/*',
       ],
       'boundaries/elements': [
-        { type: 'core',              pattern: 'packages/core/*',              mode: 'folder' },
-        // app-shell is the integrator — declared before the generic platform
-        // pattern so files inside it match this type and pick up the broader
-        // allow list below.
-        { type: 'platform-app-shell', pattern: 'packages/platform/app-shell',  mode: 'folder' },
-        { type: 'platform',          pattern: 'packages/platform/*',          mode: 'folder' },
-        { type: 'addon',             pattern: 'packages/addons/*',            mode: 'folder' },
-        { type: 'domain',            pattern: 'domains/*/*',                  mode: 'folder' },
-        { type: 'app',               pattern: 'apps/*',                       mode: 'folder' },
+        { type: 'core',                pattern: 'packages/core/*',              mode: 'folder' },
+        // Integrator exceptions — declared before the generic platform pattern
+        // so files inside them match these specific types and pick up the
+        // broader allow list (core + platform + addon).
+        { type: 'platform-app-shell',  pattern: 'packages/platform/app-shell',  mode: 'folder' },
+        { type: 'platform-testing',    pattern: 'packages/platform/testing',    mode: 'folder' },
+        { type: 'platform',            pattern: 'packages/platform/*',          mode: 'folder' },
+        { type: 'addon',               pattern: 'packages/addons/*',            mode: 'folder' },
+        { type: 'domain',              pattern: 'domains/*/*',                  mode: 'folder' },
+        { type: 'app',                 pattern: 'apps/*',                       mode: 'folder' },
       ],
     },
     rules: {
@@ -82,12 +83,13 @@ export default [
         {
           default: 'disallow',
           rules: [
-            { from: ['core'],              allow: ['core'] },
-            { from: ['platform'],          allow: ['core', 'platform'] },
+            { from: ['core'],               allow: ['core'] },
+            { from: ['platform'],           allow: ['core', 'platform'] },
             { from: ['platform-app-shell'], allow: ['core', 'platform', 'addon'] },
-            { from: ['addon'],             allow: ['core', 'platform', 'addon'] },
-            { from: ['domain'],            allow: ['core', 'platform', 'addon'] },
-            { from: ['app'],               allow: ['core', 'platform', 'platform-app-shell', 'addon', 'domain'] },
+            { from: ['platform-testing'],   allow: ['core', 'platform', 'addon'] },
+            { from: ['addon'],              allow: ['core', 'platform', 'addon'] },
+            { from: ['domain'],             allow: ['core', 'platform', 'addon'] },
+            { from: ['app'],                allow: ['core', 'platform', 'platform-app-shell', 'platform-testing', 'addon', 'domain'] },
           ],
         },
       ],
