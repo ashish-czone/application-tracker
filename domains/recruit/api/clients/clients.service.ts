@@ -1,5 +1,4 @@
 import { ConflictException, Injectable, NotFoundException, type OnModuleInit } from '@nestjs/common';
-import { randomUUID } from 'crypto';
 import {
   DatabaseService,
   and,
@@ -9,6 +8,7 @@ import {
   eq,
   ilike,
   inArray,
+  isNotNull,
   isNull,
   or,
   sql,
@@ -16,7 +16,6 @@ import {
   type SQL,
 } from '@packages/database';
 import { computePagination, computePaginationMeta } from '@packages/query-builder';
-import { buildSoftDeleteCondition } from '@packages/soft-delete';
 import {
   CompaniesService,
   type FindOrCreateCompanyInput,
@@ -27,11 +26,9 @@ import { DomainEventEmitter } from '@packages/events';
 import { LookupResolverService, type CustomLookupResolver, type LookupResult } from '@packages/entity-engine';
 import type { PaginatedResponse } from '@packages/common';
 import type { CreateClientDto, UpdateClientDto } from './clients.dto';
-import { clients } from './schema/clients';
 import { companies, type RecruitAddress } from './companies-ref';
 
-/** Subset of `BaseListQuery` we read directly. Not imported from
- *  entity-engine so the service has no dep on the engine for read paths. */
+/** Subset of `BaseListQuery` we read directly. */
 interface ClientsListQuery {
   page?: number;
   limit?: number;
@@ -44,9 +41,12 @@ interface ClientsListQuery {
 const SORTABLE = {
   clientName: companies.name,
   industry: companies.industry,
-  createdAt: clients.createdAt,
-  updatedAt: clients.updatedAt,
+  createdAt: companies.recruitBecameClientAt,
+  updatedAt: companies.updatedAt,
 } as const;
+
+/** A company row IS a recruit client when this marker is set. */
+const IS_RECRUIT_CLIENT = isNotNull(companies.recruitBecameClientAt);
 
 @Injectable()
 export class ClientsService implements OnModuleInit {
@@ -58,11 +58,6 @@ export class ClientsService implements OnModuleInit {
     private readonly lookupResolver: LookupResolverService,
   ) {}
 
-  /**
-   * Register a custom lookup resolver for `clients` so other entities
-   * (contacts, job_openings, interviews) can search and resolve client labels
-   * via the canonical identity in `directory.companies`.
-   */
   onModuleInit(): void {
     this.lookupResolver.registerResolver('clients', this.buildLookupResolver());
   }
@@ -72,10 +67,9 @@ export class ClientsService implements OnModuleInit {
       search: async (query, limit): Promise<LookupResult[]> => {
         const term = `%${query}%`;
         const rows = await this.database.db
-          .select({ label: companies.name, value: clients.id })
-          .from(clients)
-          .leftJoin(companies, eq(clients.companyId, companies.id))
-          .where(and(isNull(clients.deletedAt), ilike(companies.name, term)))
+          .select({ label: companies.name, value: companies.id })
+          .from(companies)
+          .where(and(IS_RECRUIT_CLIENT, isNull(companies.recruitArchivedAt), ilike(companies.name, term)))
           .limit(limit);
         return rows.map(r => ({ label: String(r.label ?? ''), value: String(r.value ?? '') }));
       },
@@ -83,19 +77,17 @@ export class ClientsService implements OnModuleInit {
       getLabel: async (value) => {
         const [row] = await this.database.db
           .select({ label: companies.name })
-          .from(clients)
-          .leftJoin(companies, eq(clients.companyId, companies.id))
-          .where(eq(clients.id, value))
+          .from(companies)
+          .where(eq(companies.id, value))
           .limit(1);
         return row ? String(row.label ?? '') : null;
       },
 
       getBatchLabels: async (values) => {
         const rows = await this.database.db
-          .select({ id: clients.id, label: companies.name })
-          .from(clients)
-          .leftJoin(companies, eq(clients.companyId, companies.id))
-          .where(inArray(clients.id, values));
+          .select({ id: companies.id, label: companies.name })
+          .from(companies)
+          .where(inArray(companies.id, values));
         const result = new Map<string, string>();
         for (const row of rows) {
           result.set(String(row.id), String(row.label ?? ''));
@@ -118,32 +110,31 @@ export class ClientsService implements OnModuleInit {
       limit: query.limit ?? 25,
     });
 
-    const conditions: SQL[] = [];
+    const conditions: SQL[] = [IS_RECRUIT_CLIENT];
 
     const scopeCond = await this.resolveScope(accessCtx);
     if (scopeCond) conditions.push(scopeCond);
 
-    const softDeleteCond = buildSoftDeleteCondition(clients, query.includeDeleted ?? false);
-    if (softDeleteCond) conditions.push(softDeleteCond);
+    if (!query.includeDeleted) {
+      conditions.push(isNull(companies.recruitArchivedAt));
+    }
 
     if (query.search) {
       const term = `%${query.search}%`;
       conditions.push(ilike(companies.name, term));
     }
 
-    const where = conditions.length > 0 ? and(...conditions) : undefined;
+    const where = and(...conditions);
     const orderExpr = this.resolveSort(query);
 
     const [{ total }] = await this.database.db
       .select({ total: count() })
-      .from(clients)
-      .leftJoin(companies, eq(clients.companyId, companies.id))
+      .from(companies)
       .where(where);
 
     const rows = await this.database.db
       .select(this.buildSelectMap())
-      .from(clients)
-      .leftJoin(companies, eq(clients.companyId, companies.id))
+      .from(companies)
       .where(where)
       .orderBy(orderExpr)
       .limit(limit)
@@ -159,18 +150,14 @@ export class ClientsService implements OnModuleInit {
     id: string,
     accessCtx?: DataAccessContext,
   ): Promise<Record<string, unknown>> {
-    const conditions: SQL[] = [eq(clients.id, id)];
-
-    const softDeleteCond = buildSoftDeleteCondition(clients);
-    if (softDeleteCond) conditions.push(softDeleteCond);
+    const conditions: SQL[] = [eq(companies.id, id), IS_RECRUIT_CLIENT, isNull(companies.recruitArchivedAt)];
 
     const scopeCond = await this.resolveScope(accessCtx);
     if (scopeCond) conditions.push(scopeCond);
 
     const [row] = await this.database.db
       .select(this.buildSelectMap())
-      .from(clients)
-      .leftJoin(companies, eq(clients.companyId, companies.id))
+      .from(companies)
       .where(and(...conditions))
       .limit(1);
 
@@ -192,11 +179,8 @@ export class ClientsService implements OnModuleInit {
         actorId,
         tx,
       );
-      const id = randomUUID();
       const now = new Date();
 
-      // Canonical write: companies.recruit_*. The shared row is the recruit
-      // client when these fields are set.
       await tx
         .update(companies)
         .set({
@@ -210,32 +194,7 @@ export class ClientsService implements OnModuleInit {
         })
         .where(eq(companies.id, company.id));
 
-      // Shadow write to recruit_clients — keeps child-table FKs valid until
-      // the FK repoint PR. Same data, flat columns.
-      const [row] = await tx
-        .insert(clients)
-        .values({
-          id,
-          companyId: company.id,
-          contactNumber: input.contactNumber ?? null,
-          about: input.about ?? null,
-          source: input.source ?? 'added-by-user',
-          billingStreet: input.billingStreet ?? null,
-          billingCity: input.billingCity ?? null,
-          billingProvince: input.billingProvince ?? null,
-          billingCode: input.billingCode ?? null,
-          billingCountry: input.billingCountry ?? null,
-          shippingStreet: input.shippingStreet ?? null,
-          shippingCity: input.shippingCity ?? null,
-          shippingProvince: input.shippingProvince ?? null,
-          shippingCode: input.shippingCode ?? null,
-          shippingCountry: input.shippingCountry ?? null,
-          createdBy: actorId,
-          createdAt: now,
-          updatedAt: now,
-        })
-        .returning();
-      return row;
+      return { id: company.id };
     });
 
     const snapshot = await this.findOne(inserted.id);
@@ -257,15 +216,12 @@ export class ClientsService implements OnModuleInit {
   ) {
     const before = await this.findOne(id, accessCtx);
 
-    const updated = await this.database.db.transaction(async (tx) => {
-      const currentCompanyId = (before.companyId as string | null) ?? null;
-
-      // Identity sync to directory.companies first — unique violation aborts
-      // before any sidecar writes.
+    await this.database.db.transaction(async (tx) => {
+      // Identity sync — translate clientName/website/industry → company base columns.
       const companyPatch = toCompanyPatch(input);
-      if (currentCompanyId && Object.keys(companyPatch).length > 0) {
+      if (Object.keys(companyPatch).length > 0) {
         try {
-          await this.companies.update(currentCompanyId, companyPatch, actorId, tx);
+          await this.companies.update(id, companyPatch, actorId, tx);
         } catch (error) {
           if (isUniqueViolation(error)) {
             throw new ConflictException(
@@ -278,34 +234,16 @@ export class ClientsService implements OnModuleInit {
         }
       }
 
-      // Canonical recruit-prefix write on companies. Address jsonb is rebuilt
-      // by merging the patch over the previous flat address fields read in
-      // `before`, so partial address updates don't clobber unrelated keys.
-      if (currentCompanyId) {
-        const recruitPatch = toCompanyRecruitPatch(input, before);
-        if (Object.keys(recruitPatch).length > 0) {
-          await tx
-            .update(companies)
-            .set(recruitPatch)
-            .where(eq(companies.id, currentCompanyId));
-        }
+      // Recruit-prefix patch on the same company row. Address jsonb is rebuilt
+      // by merging the patch over previous flat values from `before`.
+      const recruitPatch = toCompanyRecruitPatch(input, before);
+      if (Object.keys(recruitPatch).length > 0) {
+        await tx
+          .update(companies)
+          .set(recruitPatch)
+          .where(eq(companies.id, id));
       }
-
-      // Shadow write to recruit_clients — same fields, flat columns.
-      const patch = toClientPatch(input);
-      patch.updatedAt = new Date();
-
-      const [row] = await tx
-        .update(clients)
-        .set(patch)
-        .where(eq(clients.id, id))
-        .returning();
-      return row;
     });
-
-    if (!updated) {
-      throw new NotFoundException(`Client ${id} not found`);
-    }
 
     const after = await this.findOne(id);
     const changes = diffSnapshots(before, after);
@@ -318,26 +256,17 @@ export class ClientsService implements OnModuleInit {
       });
     }
 
-    return updated;
+    return { id };
   }
 
   async softDelete(id: string, actorId: string, accessCtx?: DataAccessContext) {
     const before = await this.findOne(id, accessCtx);
-    const currentCompanyId = (before.companyId as string | null) ?? null;
     const now = new Date();
 
-    await this.database.db.transaction(async (tx) => {
-      if (currentCompanyId) {
-        await tx
-          .update(companies)
-          .set({ recruitArchivedAt: now })
-          .where(eq(companies.id, currentCompanyId));
-      }
-      await tx
-        .update(clients)
-        .set({ deletedAt: now, deletedBy: actorId })
-        .where(eq(clients.id, id));
-    });
+    await this.database.db
+      .update(companies)
+      .set({ recruitArchivedAt: now })
+      .where(eq(companies.id, id));
 
     this.events.emitDynamic('clients.Deleted', {
       entityType: 'clients',
@@ -374,39 +303,26 @@ export class ClientsService implements OnModuleInit {
 
   async restore(id: string) {
     const [row] = await this.database.db
-      .select({ id: clients.id, companyId: clients.companyId })
-      .from(clients)
-      .where(eq(clients.id, id))
+      .select({ id: companies.id })
+      .from(companies)
+      .where(and(eq(companies.id, id), IS_RECRUIT_CLIENT))
       .limit(1);
     if (!row) {
       throw new NotFoundException('Client not found');
     }
 
-    await this.database.db.transaction(async (tx) => {
-      if (row.companyId) {
-        await tx
-          .update(companies)
-          .set({ recruitArchivedAt: null })
-          .where(eq(companies.id, row.companyId));
-      }
-      await tx
-        .update(clients)
-        .set({ deletedAt: null, deletedBy: null })
-        .where(eq(clients.id, id));
-    });
+    await this.database.db
+      .update(companies)
+      .set({ recruitArchivedAt: null })
+      .where(eq(companies.id, id));
 
     return this.findOne(id);
   }
 
   /**
-   * Picker bridge: marks a company as a recruit client by stamping
-   * `recruit_became_client_at`. Child tables (recruit_contacts,
-   * interviews, job_openings) now FK to companies.id directly, so the
-   * picker stores the company.id — this method just ensures the
-   * lifecycle marker is set. The shadow recruit_clients row is created
-   * for parity until the cleanup PR drops the table.
-   *
-   * Returns the company.id (the value the picker stores).
+   * Picker bridge: stamp `companies.recruit_became_client_at` for the picked
+   * company so it shows up as a recruit client. Returns `{ id: companyId }`
+   * — child tables FK companies directly, so the picker stores the company.id.
    */
   async findOrCreateForCompany(
     companyId: string,
@@ -415,42 +331,29 @@ export class ClientsService implements OnModuleInit {
   ): Promise<{ id: string; created: boolean }> {
     const exec = externalTx ?? this.database.db;
     const [existing] = await exec
-      .select({ id: clients.id })
-      .from(clients)
-      .where(and(eq(clients.companyId, companyId), isNull(clients.deletedAt)))
-      .limit(1);
-    if (existing) return { id: companyId, created: false };
-
-    const [company] = await exec
-      .select({ name: companies.name })
+      .select({ id: companies.id, became: companies.recruitBecameClientAt })
       .from(companies)
       .where(eq(companies.id, companyId))
       .limit(1);
-    if (!company) {
+    if (!existing) {
       throw new NotFoundException('Company not found');
     }
+    if (existing.became) {
+      return { id: companyId, created: false };
+    }
 
-    const id = randomUUID();
     const now = new Date();
-
     await exec
       .update(companies)
       .set({ recruitBecameClientAt: now, recruitArchivedAt: null })
       .where(eq(companies.id, companyId));
 
-    await exec.insert(clients).values({
-      id,
-      companyId,
-      createdBy: actorId,
-      createdAt: now,
-      updatedAt: now,
-    });
-
+    const snapshot = await this.findOne(companyId);
     this.events.emitDynamic('clients.Created', {
       entityType: 'clients',
-      entityId: id,
+      entityId: companyId,
       actorId,
-      payload: { after: { id, companyId, clientName: company.name, createdBy: actorId } },
+      payload: { after: snapshot },
     });
 
     return { id: companyId, created: true };
@@ -462,8 +365,8 @@ export class ClientsService implements OnModuleInit {
 
   private buildSelectMap() {
     return {
-      id: clients.id,
-      companyId: clients.companyId,
+      id: companies.id,
+      companyId: companies.id, // alias for backward compat — the row id IS the company id
       clientName: companies.name,
       contactNumber: companies.recruitContactNumber,
       website: companies.websiteDomain,
@@ -480,17 +383,17 @@ export class ClientsService implements OnModuleInit {
       shippingProvince: sql<string | null>`${companies.recruitShippingAddress}->>'province'`.as('shipping_province'),
       shippingCode: sql<string | null>`${companies.recruitShippingAddress}->>'postalCode'`.as('shipping_code'),
       shippingCountry: sql<string | null>`${companies.recruitShippingAddress}->>'country'`.as('shipping_country'),
-      createdBy: clients.createdBy,
-      createdAt: clients.createdAt,
-      updatedAt: clients.updatedAt,
-      deletedAt: clients.deletedAt,
+      createdBy: companies.createdBy,
+      createdAt: companies.recruitBecameClientAt,
+      updatedAt: companies.updatedAt,
+      deletedAt: companies.recruitArchivedAt,
       contactsCount: sql<number>`(
         SELECT COUNT(*)::integer FROM "recruit_contacts"
-        WHERE "company_id" = ${clients.companyId} AND "deleted_at" IS NULL
+        WHERE "company_id" = ${companies.id} AND "deleted_at" IS NULL
       )`.as('contactsCount'),
       jobOpeningsCount: sql<number>`(
         SELECT COUNT(*)::integer FROM "job_openings"
-        WHERE "company_id" = ${clients.companyId} AND "deleted_at" IS NULL
+        WHERE "company_id" = ${companies.id} AND "deleted_at" IS NULL
       )`.as('jobOpeningsCount'),
     };
   }
@@ -506,7 +409,7 @@ export class ClientsService implements OnModuleInit {
     if (ctx.scopes.length === 0) return sql`1=0`;
     if (ctx.scopes.some((s) => s.type === 'any')) return undefined;
 
-    const anchors = { creator: clients.createdBy };
+    const anchors = { creator: companies.createdBy };
     const predicates: SQL[] = [];
     for (const scope of ctx.scopes) {
       const resolver = this.scopeResolvers.get(scope.type);
@@ -541,29 +444,9 @@ function toCompanyPatch(input: UpdateClientDto): UpdateCompanyInput {
   return patch;
 }
 
-/** Project the patch onto recruit_clients flat columns. Identity fields
- *  are routed via `toCompanyPatch`. */
-function toClientPatch(input: UpdateClientDto): Record<string, unknown> {
-  const patch: Record<string, unknown> = {};
-  for (const key of [
-    'contactNumber', 'about', 'source',
-    'billingStreet', 'billingCity', 'billingProvince', 'billingCode', 'billingCountry',
-    'shippingStreet', 'shippingCity', 'shippingProvince', 'shippingCode', 'shippingCountry',
-  ] as const) {
-    if (input[key] !== undefined) {
-      patch[key] = input[key] === null || input[key] === '' ? null : input[key];
-    }
-  }
-  return patch;
-}
-
 const BILLING_KEYS = ['billingStreet', 'billingCity', 'billingProvince', 'billingCode', 'billingCountry'] as const;
 const SHIPPING_KEYS = ['shippingStreet', 'shippingCity', 'shippingProvince', 'shippingCode', 'shippingCountry'] as const;
 
-/** Build a recruit-prefix patch for the `companies` row from an UpdateClientDto.
- *  Address jsonb is rebuilt by merging the patch over the previous flat address
- *  values read in `before` — partial address updates don't clobber unrelated
- *  keys; clearing all components produces NULL jsonb. */
 function toCompanyRecruitPatch(
   input: UpdateClientDto,
   before: Record<string, unknown>,
@@ -583,7 +466,6 @@ function toCompanyRecruitPatch(
   return patch;
 }
 
-/** Build a fresh recruit-address jsonb from a CreateClientDto. */
 function toAddressJsonb(
   input: CreateClientDto,
   variant: 'billing' | 'shipping',
@@ -599,8 +481,6 @@ function toAddressJsonb(
   return Object.keys(obj).length === 0 ? null : obj;
 }
 
-/** Merge a partial address patch over the previous flat address values from
- *  `before`. Returns null if the merged jsonb has no non-empty keys. */
 function mergeAddress(
   input: UpdateClientDto,
   before: Record<string, unknown>,
@@ -623,8 +503,6 @@ function mergeAddress(
 function addressJsonbKeyFor(
   key: typeof BILLING_KEYS[number] | typeof SHIPPING_KEYS[number],
 ): keyof RecruitAddress {
-  // billingStreet → "Street", billingCode → "Code" (mapped to "postalCode"),
-  // shippingProvince → "Province", etc.
   const stripped = key.replace(/^(billing|shipping)/, '');
   if (stripped === 'Code') return 'postalCode';
   return (stripped.charAt(0).toLowerCase() + stripped.slice(1)) as keyof RecruitAddress;

@@ -5,14 +5,9 @@ import { ClientsService } from '../clients.service';
 /**
  * Mocks the bits of DatabaseService.db that ClientsService touches.
  *
- * - `db.transaction(fn)` runs the callback with the same `tx` chain so
- *   nested writes execute and resolve as if a real tx were running.
- * - Each `db.select()` / `tx.select()` / `db.insert()` / `db.update()`
- *   call returns a fresh thenable chain. `.from/.leftJoin/.where/.orderBy/
- *   .limit/.offset/.returning/.values/.set` all chain back, and any await
- *   resolves to the next queued result row.
- *
- * Tests push results in the order the service consumes them.
+ * Post fold: the service operates on `companies` directly, so all queries
+ * are single-table (no recruit_clients table, no JOIN). The "is recruit
+ * client" filter is `recruit_became_client_at IS NOT NULL`.
  */
 function createMockDb() {
   const results: unknown[][] = [];
@@ -85,12 +80,11 @@ describe('ClientsService.create', () => {
     service = new ClientsService(mock.database, companies, makeScopeResolvers(), events, makeLookupResolver());
   });
 
-  it('finds-or-creates the company and inserts the client in one transaction', async () => {
-    mock.pushSelectResult([]);                                       // tx.update(companies) recruit_* canonical write
-    mock.pushSelectResult([{ id: 'cl-1' }]);                         // tx.insert(recruit_clients).returning() shadow
-    mock.pushSelectResult([{ id: 'cl-1', clientName: 'Acme Corp' }]); // findOne(snapshot) after commit
+  it('finds-or-creates the company and stamps companies.recruit_* in one transaction', async () => {
+    mock.pushSelectResult([]);                                                    // tx.update(companies) recruit_*
+    mock.pushSelectResult([{ id: 'co-1', clientName: 'Acme Corp' }]);             // findOne snapshot
 
-    await service.create(
+    const result = await service.create(
       { clientName: 'Acme Corp', website: 'https://www.acme.com', industry: 'technology' } as any,
       'user-1',
     );
@@ -101,32 +95,29 @@ describe('ClientsService.create', () => {
       expect.anything(),
     );
     expect(mock.tx.update).toHaveBeenCalled();
-    expect(mock.tx.insert).toHaveBeenCalled();
-    expect(mock.database.db.transaction).toHaveBeenCalledTimes(1);
+    expect(result.id).toBe('co-1');
   });
 
   it('emits clients.Created with the post-commit snapshot', async () => {
-    mock.pushSelectResult([]);                                       // tx.update(companies) recruit_*
-    mock.pushSelectResult([{ id: 'cl-1' }]);                         // tx.insert(recruit_clients).returning()
-    mock.pushSelectResult([{ id: 'cl-1', clientName: 'Acme Corp' }]); // findOne snapshot
+    mock.pushSelectResult([]);                                                    // tx.update(companies) recruit_*
+    mock.pushSelectResult([{ id: 'co-1', clientName: 'Acme Corp' }]);             // findOne snapshot
 
     await service.create({ clientName: 'Acme Corp' } as any, 'user-1');
 
     expect(events.emitDynamic).toHaveBeenCalledWith('clients.Created', expect.objectContaining({
       entityType: 'clients',
-      entityId: 'cl-1',
+      entityId: 'co-1',
       actorId: 'user-1',
-      payload: { after: { id: 'cl-1', clientName: 'Acme Corp' } },
+      payload: { after: { id: 'co-1', clientName: 'Acme Corp' } },
     }));
   });
 
-  it('rolls back when companies.findOrCreate fails (no insert, no event)', async () => {
+  it('rolls back when companies.findOrCreate fails (no event)', async () => {
     companies.findOrCreate.mockRejectedValueOnce(new Error('directory boom'));
 
     await expect(service.create({ clientName: 'Acme' } as any, 'user-1'))
       .rejects.toThrow('directory boom');
 
-    expect(mock.tx.insert).not.toHaveBeenCalled();
     expect(events.emitDynamic).not.toHaveBeenCalled();
   });
 });
@@ -152,16 +143,14 @@ describe('ClientsService.update', () => {
     ).rejects.toBeInstanceOf(NotFoundException);
 
     expect(companies.update).not.toHaveBeenCalled();
-    expect(mock.tx.update).not.toHaveBeenCalled();
   });
 
-  it('syncs identity changes to companies and updates recruit_clients in same tx', async () => {
-    mock.pushSelectResult([{ id: 'cl-1', companyId: 'co-1', clientName: 'Acme', industry: 'old' }]); // before
-    mock.pushSelectResult([{ id: 'cl-1' }]);                                                          // tx.update.returning
-    mock.pushSelectResult([{ id: 'cl-1', companyId: 'co-1', clientName: 'Acme Renamed', industry: 'financial-services' }]); // after
+  it('syncs identity changes to companies and updates recruit_* on the same row', async () => {
+    mock.pushSelectResult([{ id: 'co-1', clientName: 'Acme', industry: 'old' }]); // findOne(before)
+    mock.pushSelectResult([{ id: 'co-1', clientName: 'Acme Renamed', industry: 'financial-services' }]); // findOne(after)
 
     await service.update(
-      'cl-1',
+      'co-1',
       { clientName: 'Acme Renamed', industry: 'financial-services' } as any,
       'user-1',
     );
@@ -172,66 +161,50 @@ describe('ClientsService.update', () => {
       'user-1',
       expect.anything(),
     );
-    expect(mock.tx.update).toHaveBeenCalled();
   });
 
   it('skips company sync when input has no identity fields', async () => {
-    mock.pushSelectResult([{ id: 'cl-1', companyId: 'co-1', about: 'old' }]); // findOne(before)
-    mock.pushSelectResult([]);                                                // tx.update(companies) recruit_*
-    mock.pushSelectResult([{ id: 'cl-1' }]);                                  // tx.update(recruit_clients).returning
-    mock.pushSelectResult([{ id: 'cl-1', companyId: 'co-1', about: 'new' }]); // findOne(after)
+    mock.pushSelectResult([{ id: 'co-1', about: 'old' }]); // findOne(before)
+    mock.pushSelectResult([]);                              // tx.update(companies) recruit_*
+    mock.pushSelectResult([{ id: 'co-1', about: 'new' }]); // findOne(after)
 
-    await service.update('cl-1', { about: 'new' } as any, 'user-1');
-
-    expect(companies.update).not.toHaveBeenCalled();
-    expect(mock.tx.update).toHaveBeenCalled();
-  });
-
-  it('skips company sync when client has no companyId yet (legacy row)', async () => {
-    mock.pushSelectResult([{ id: 'cl-1', companyId: null, clientName: 'Old' }]);
-    mock.pushSelectResult([{ id: 'cl-1' }]);
-    mock.pushSelectResult([{ id: 'cl-1', companyId: null, clientName: 'New' }]);
-
-    await service.update('cl-1', { clientName: 'New' } as any, 'user-1');
+    await service.update('co-1', { about: 'new' } as any, 'user-1');
 
     expect(companies.update).not.toHaveBeenCalled();
     expect(mock.tx.update).toHaveBeenCalled();
   });
 
   it('translates a 23505 unique violation to ConflictException', async () => {
-    mock.pushSelectResult([{ id: 'cl-1', companyId: 'co-1', clientName: 'Acme' }]);
+    mock.pushSelectResult([{ id: 'co-1', clientName: 'Acme' }]);
     companies.update.mockRejectedValueOnce(Object.assign(new Error('dup'), { code: '23505' }));
 
     await expect(
-      service.update('cl-1', { clientName: 'Existing Co' } as any, 'user-1'),
+      service.update('co-1', { clientName: 'Existing Co' } as any, 'user-1'),
     ).rejects.toBeInstanceOf(ConflictException);
 
-    expect(mock.tx.update).not.toHaveBeenCalled();
     expect(events.emitDynamic).not.toHaveBeenCalled();
   });
 
   it('emits no event when before/after are identical (no-op update)', async () => {
-    mock.pushSelectResult([{ id: 'cl-1', companyId: 'co-1', about: 'same' }]); // findOne(before)
-    mock.pushSelectResult([]);                                                 // tx.update(companies) recruit_*
-    mock.pushSelectResult([{ id: 'cl-1' }]);                                   // tx.update(recruit_clients).returning
-    mock.pushSelectResult([{ id: 'cl-1', companyId: 'co-1', about: 'same' }]); // findOne(after)
+    mock.pushSelectResult([{ id: 'co-1', about: 'same' }]);
+    mock.pushSelectResult([]);
+    mock.pushSelectResult([{ id: 'co-1', about: 'same' }]);
 
-    await service.update('cl-1', { about: 'same' } as any, 'user-1');
+    await service.update('co-1', { about: 'same' } as any, 'user-1');
 
     expect(events.emitDynamic).not.toHaveBeenCalled();
   });
 
   it('emits clients.Updated with diffed changes when before/after differ', async () => {
-    mock.pushSelectResult([{ id: 'cl-1', companyId: 'co-1', about: 'old' }]); // findOne(before)
-    mock.pushSelectResult([]);                                                // tx.update(companies) recruit_*
-    mock.pushSelectResult([{ id: 'cl-1' }]);                                  // tx.update(recruit_clients).returning
-    mock.pushSelectResult([{ id: 'cl-1', companyId: 'co-1', about: 'new' }]); // findOne(after)
+    mock.pushSelectResult([{ id: 'co-1', about: 'old' }]);
+    mock.pushSelectResult([]);
+    mock.pushSelectResult([{ id: 'co-1', about: 'new' }]);
 
-    await service.update('cl-1', { about: 'new' } as any, 'user-1');
+    await service.update('co-1', { about: 'new' } as any, 'user-1');
 
     expect(events.emitDynamic).toHaveBeenCalledWith('clients.Updated', expect.objectContaining({
       entityType: 'clients',
-      entityId: 'cl-1',
+      entityId: 'co-1',
       payload: expect.objectContaining({ changes: ['about'] }),
     }));
   });
@@ -251,66 +224,62 @@ describe('ClientsService.softDelete', () => {
   it('throws NotFound when scope-denied (findOne returns empty)', async () => {
     mock.pushSelectResult([]);
     await expect(
-      service.softDelete('cl-1', 'user-1', { userId: 'user-1', scopes: [] }),
+      service.softDelete('co-1', 'user-1', { userId: 'user-1', scopes: [] }),
     ).rejects.toBeInstanceOf(NotFoundException);
   });
 
-  it('updates recruit_archived_at + deletedAt and emits clients.Deleted with before snapshot', async () => {
-    mock.pushSelectResult([{ id: 'cl-1', companyId: 'co-1', clientName: 'Acme' }]); // findOne(before)
+  it('sets recruit_archived_at on companies and emits clients.Deleted', async () => {
+    mock.pushSelectResult([{ id: 'co-1', clientName: 'Acme' }]); // findOne(before)
 
-    await service.softDelete('cl-1', 'user-1');
+    await service.softDelete('co-1', 'user-1');
 
-    // softDelete uses tx for both companies (recruit_archived_at) and recruit_clients (deletedAt).
-    expect(mock.database.db.transaction).toHaveBeenCalledTimes(1);
-    expect(mock.tx.update).toHaveBeenCalled();
+    expect(mock.database.db.update).toHaveBeenCalled();
     expect(events.emitDynamic).toHaveBeenCalledWith('clients.Deleted', expect.objectContaining({
       entityType: 'clients',
-      entityId: 'cl-1',
-      payload: { before: { id: 'cl-1', companyId: 'co-1', clientName: 'Acme' } },
+      entityId: 'co-1',
+      payload: { before: { id: 'co-1', clientName: 'Acme' } },
     }));
   });
 });
 
 describe('ClientsService.findOrCreateForCompany', () => {
-  let companies: any;
   let mock: ReturnType<typeof createMockDb>;
   let events: ReturnType<typeof makeEvents>;
   let service: ClientsService;
 
   beforeEach(() => {
-    companies = {};
     mock = createMockDb();
     events = makeEvents();
-    service = new ClientsService(mock.database, companies, makeScopeResolvers(), events, makeLookupResolver());
+    service = new ClientsService(mock.database, {} as any, makeScopeResolvers(), events, makeLookupResolver());
   });
 
-  it('returns { id: companyId, created: false } when a recruit_client already exists', async () => {
-    mock.pushSelectResult([{ id: 'existing-client' }]);
+  it('returns { id: companyId, created: false } when the company is already a recruit client', async () => {
+    mock.pushSelectResult([{ id: 'co-1', became: new Date() }]);
 
     const out = await service.findOrCreateForCompany('co-1', 'user-1');
 
     expect(out).toEqual({ id: 'co-1', created: false });
-    expect(mock.database.db.insert).not.toHaveBeenCalled();
     expect(events.emitDynamic).not.toHaveBeenCalled();
   });
 
-  it('returns { id: companyId, created: true } when one is freshly created, emits Created event', async () => {
-    mock.pushSelectResult([]);                                // existing lookup
-    mock.pushSelectResult([{ name: 'Acme Corp' }]);           // company lookup
+  it('stamps recruit_became_client_at + emits Created when the company exists but is not a client yet', async () => {
+    mock.pushSelectResult([{ id: 'co-1', became: null }]);                  // company exists, not a client
+    mock.pushSelectResult([]);                                              // db.update(companies) recruit_became_client_at
+    mock.pushSelectResult([{ id: 'co-1', clientName: 'Acme Corp' }]);       // findOne snapshot
 
     const out = await service.findOrCreateForCompany('co-1', 'user-1');
 
     expect(out).toEqual({ id: 'co-1', created: true });
-    expect(mock.database.db.insert).toHaveBeenCalled();
+    expect(mock.database.db.update).toHaveBeenCalled();
     expect(events.emitDynamic).toHaveBeenCalledWith('clients.Created', expect.objectContaining({
       entityType: 'clients',
+      entityId: 'co-1',
       actorId: 'user-1',
     }));
   });
 
   it('throws NotFound when the company id is not in the directory', async () => {
-    mock.pushSelectResult([]); // existing lookup
-    mock.pushSelectResult([]); // company lookup
+    mock.pushSelectResult([]); // company lookup empty
 
     await expect(service.findOrCreateForCompany('missing-co', 'user-1'))
       .rejects.toBeInstanceOf(NotFoundException);
@@ -332,9 +301,9 @@ describe('ClientsService.findOne', () => {
   });
 
   it('returns the row when found', async () => {
-    mock.pushSelectResult([{ id: 'cl-1', clientName: 'Acme (from directory)' }]);
-    const row = await service.findOne('cl-1');
-    expect(row).toMatchObject({ id: 'cl-1', clientName: 'Acme (from directory)' });
+    mock.pushSelectResult([{ id: 'co-1', clientName: 'Acme (from companies)' }]);
+    const row = await service.findOne('co-1');
+    expect(row).toMatchObject({ id: 'co-1', clientName: 'Acme (from companies)' });
   });
 });
 
@@ -349,20 +318,20 @@ describe('ClientsService.list', () => {
 
   it('returns { data, meta } envelope', async () => {
     mock.pushSelectResult([{ total: 7 }]);
-    mock.pushSelectResult([{ id: 'cl-1' }]);
+    mock.pushSelectResult([{ id: 'co-1' }]);
     const res = await service.list({ page: 2, limit: 5 });
     expect(res.meta).toEqual({ total: 7, page: 2, limit: 5, totalPages: 2 });
     expect(res.data).toHaveLength(1);
   });
 
-  it('JOINs directory.companies on every query', async () => {
+  it('queries companies directly (no JOIN to recruit_clients)', async () => {
     mock.pushSelectResult([{ total: 0 }]);
     mock.pushSelectResult([]);
     await service.list({});
     const calls = (mock.database.db.select as any).mock.results;
     expect(calls.length).toBeGreaterThanOrEqual(2);
     for (const c of calls) {
-      expect(c.value.leftJoin).toHaveBeenCalled();
+      expect(c.value.leftJoin).not.toHaveBeenCalled();
     }
   });
 });
@@ -398,37 +367,37 @@ describe('ClientsService custom lookup resolver', () => {
     resolver = (lookupResolver.registerResolver as any).mock.calls[0][1];
   });
 
-  it('search() JOINs companies, ilikes the coalesced label, returns {label,value}', async () => {
+  it('search() filters companies on recruit_became_client_at IS NOT NULL', async () => {
     mock.pushSelectResult([
-      { label: 'Acme Corp', value: 'cl-1' },
-      { label: 'Acme Holdings', value: 'cl-2' },
+      { label: 'Acme Corp', value: 'co-1' },
+      { label: 'Acme Holdings', value: 'co-2' },
     ]);
     const results = await resolver.search('acme', 20);
     expect(results).toEqual([
-      { label: 'Acme Corp', value: 'cl-1' },
-      { label: 'Acme Holdings', value: 'cl-2' },
+      { label: 'Acme Corp', value: 'co-1' },
+      { label: 'Acme Holdings', value: 'co-2' },
     ]);
     const selectCall = (mock.database.db.select as any).mock.results[0];
-    expect(selectCall.value.leftJoin).toHaveBeenCalled();
+    expect(selectCall.value.from).toHaveBeenCalled();
     expect(selectCall.value.limit).toHaveBeenCalledWith(20);
   });
 
-  it('getLabel() returns the coalesced label or null when no row', async () => {
+  it('getLabel() returns the company name or null when no row', async () => {
     mock.pushSelectResult([{ label: 'Acme Corp' }]);
-    expect(await resolver.getLabel('cl-1')).toBe('Acme Corp');
+    expect(await resolver.getLabel('co-1')).toBe('Acme Corp');
 
     mock.pushSelectResult([]);
     expect(await resolver.getLabel('missing')).toBeNull();
   });
 
-  it('getBatchLabels() returns a Map keyed by client id', async () => {
+  it('getBatchLabels() returns a Map keyed by companies.id', async () => {
     mock.pushSelectResult([
-      { id: 'cl-1', label: 'Acme Corp' },
-      { id: 'cl-2', label: 'Globex' },
+      { id: 'co-1', label: 'Acme Corp' },
+      { id: 'co-2', label: 'Globex' },
     ]);
-    const labels = await resolver.getBatchLabels(['cl-1', 'cl-2', 'cl-3']);
-    expect(labels.get('cl-1')).toBe('Acme Corp');
-    expect(labels.get('cl-2')).toBe('Globex');
-    expect(labels.has('cl-3')).toBe(false);
+    const labels = await resolver.getBatchLabels(['co-1', 'co-2', 'co-3']);
+    expect(labels.get('co-1')).toBe('Acme Corp');
+    expect(labels.get('co-2')).toBe('Globex');
+    expect(labels.has('co-3')).toBe(false);
   });
 });

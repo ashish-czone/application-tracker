@@ -1,36 +1,41 @@
-import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 import { z } from 'zod';
-import { clients } from './schema/clients';
-
-export const ClientRowSchema = createSelectSchema(clients);
 
 /**
- * Identity fields (`clientName` / `website` / `industry`) live on
- * `directory.companies`, not `recruit_clients`. The form collects them and
- * the service routes them to the directory via `findOrCreate` / `update`.
- * They're declared here directly because drizzle-zod can't infer them from
- * the table schema.
+ * The recruit "client" concept is a `directory.companies` row with
+ * `recruit_became_client_at` set. Identity fields (clientName/website/
+ * industry) route to `directory.companies` base columns; commercial
+ * fields route to `companies.recruit_*` (about, contactNumber, source,
+ * billing/shipping addresses, lifecycle markers).
+ *
+ * The DTO is hand-written rather than derived from a Drizzle table —
+ * it's the API surface; storage details (recruit_ prefixes, address
+ * jsonb shape) are an implementation detail of ClientsService.
  */
+
 const IdentityInput = z.object({
   clientName: z.string().min(1).max(255),
   website: z.string().url().optional(),
   industry: z.string().nullable().optional(),
 });
 
-const ClientCommercialInsert = createInsertSchema(clients).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-  deletedAt: true,
-  deletedBy: true,
-  createdBy: true,
-  companyId: true,
+const CommercialInput = z.object({
+  contactNumber: z.string().nullable().optional(),
+  about: z.string().nullable().optional(),
+  source: z.string().nullable().optional(),
+  billingStreet: z.string().nullable().optional(),
+  billingCity: z.string().nullable().optional(),
+  billingProvince: z.string().nullable().optional(),
+  billingCode: z.string().nullable().optional(),
+  billingCountry: z.string().nullable().optional(),
+  shippingStreet: z.string().nullable().optional(),
+  shippingCity: z.string().nullable().optional(),
+  shippingProvince: z.string().nullable().optional(),
+  shippingCode: z.string().nullable().optional(),
+  shippingCountry: z.string().nullable().optional(),
 });
 
-export const CreateClientSchema = ClientCommercialInsert.merge(IdentityInput);
-
+export const CreateClientSchema = IdentityInput.merge(CommercialInput);
 export const UpdateClientSchema = CreateClientSchema.partial();
 
 export type CreateClientDto = z.infer<typeof CreateClientSchema>;
 export type UpdateClientDto = z.infer<typeof UpdateClientSchema>;
-export type ClientRow = z.infer<typeof ClientRowSchema>;
