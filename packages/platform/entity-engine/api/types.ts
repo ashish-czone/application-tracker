@@ -631,15 +631,15 @@ export interface EntityConfig<TTable extends PgTable = PgTable> {
 
   // --- Search ---
 
-  /** Columns to ILIKE search across (standard DB columns only) */
-  searchColumns: PgColumn[];
+  /** Field keys to ILIKE search across (must match column property names on the table). */
+  searchFields: string[];
 
   // --- Sort ---
 
   /** Default sort field key */
   defaultSort: string;
-  /** Sortable columns mapped by field key */
-  sortableColumns: Record<string, PgColumn>;
+  /** Field keys that may be used as sort targets (must match column property names on the table). */
+  sortableFields: string[];
 
   // --- Field metadata ---
 

@@ -12,17 +12,10 @@ export const INTERVIEWS_CONFIG: EntityConfig = {
   table: interviews,
   systemColumns: ['id', 'createdAt', 'updatedAt', 'deletedAt', 'deletedBy', 'createdBy'],
 
-  searchColumns: [interviews.interviewName, interviews.location],
+  searchFields: ['interviewName', 'location'],
 
   defaultSort: 'interviewFrom',
-  sortableColumns: {
-    interviewName: interviews.interviewName,
-    interviewType: interviews.interviewType,
-    round: interviews.round,
-    interviewFrom: interviews.interviewFrom,
-    status: interviews.status,
-    createdAt: interviews.createdAt,
-  },
+  sortableFields: ['interviewName', 'interviewType', 'round', 'interviewFrom', 'status', 'createdAt'],
 
   fieldMeta: {
     interviewName: {

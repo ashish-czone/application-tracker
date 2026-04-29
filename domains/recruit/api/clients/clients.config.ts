@@ -10,14 +10,10 @@ export const CLIENTS_CONFIG: EntityConfig = {
   table: clients,
   systemColumns: ['id', 'createdAt', 'updatedAt', 'deletedAt', 'deletedBy', 'createdBy'],
 
-  searchColumns: [clients.clientName],
+  searchFields: ['clientName'],
 
   defaultSort: 'clientName',
-  sortableColumns: {
-    clientName: clients.clientName,
-    industry: clients.industry,
-    createdAt: clients.createdAt,
-  },
+  sortableFields: ['clientName', 'industry', 'createdAt'],
 
   fieldMeta: {
     clientName: { label: 'Client Name', section: 'basic', sortOrder: 0, isQuickCreate: true, isSystem: true, maxLength: 255, cellRenderer: 'AvatarNameCell' },

@@ -12,15 +12,10 @@ export const JOB_OPENINGS_CONFIG: EntityConfig = {
   customFields: 'eav',
   systemColumns: ['id', 'createdAt', 'updatedAt', 'deletedAt', 'deletedBy', 'createdBy'],
 
-  searchColumns: [jobOpenings.title, jobOpenings.department, jobOpenings.location],
+  searchFields: ['title', 'department', 'location'],
 
   defaultSort: 'createdAt',
-  sortableColumns: {
-    title: jobOpenings.title,
-    department: jobOpenings.department,
-    createdAt: jobOpenings.createdAt,
-    status: jobOpenings.status,
-  },
+  sortableFields: ['title', 'department', 'createdAt', 'status'],
 
   fieldMeta: {
     // ── Job Opening Information ──────────────────────────────────────────

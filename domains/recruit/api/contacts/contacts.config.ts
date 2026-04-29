@@ -11,14 +11,10 @@ export const CONTACTS_CONFIG: EntityConfig = {
   table: contacts,
   systemColumns: ['id', 'createdAt', 'updatedAt', 'deletedAt', 'deletedBy', 'createdBy'],
 
-  searchColumns: [contacts.firstName, contacts.lastName, contacts.email],
+  searchFields: ['firstName', 'lastName', 'email'],
 
   defaultSort: 'lastName',
-  sortableColumns: {
-    lastName: contacts.lastName,
-    email: contacts.email,
-    createdAt: contacts.createdAt,
-  },
+  sortableFields: ['lastName', 'email', 'createdAt'],
 
   fieldMeta: {
     fullName: { label: 'Contact', isSystem: true, cellRenderer: 'AvatarNameCell' },

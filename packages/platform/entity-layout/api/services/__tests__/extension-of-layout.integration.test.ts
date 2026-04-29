@@ -44,9 +44,9 @@ function buildParentConfig(): EntityConfig {
     slug: 'ext-layout-tasks',
     table: parentTasks,
     systemColumns: ['id', 'createdAt', 'updatedAt'],
-    searchColumns: [parentTasks.title],
+    searchFields: ['title'],
     defaultSort: 'createdAt',
-    sortableColumns: { title: parentTasks.title },
+    sortableFields: ['title'],
     fieldMeta: {
       title: { label: 'Title' },
       status: { label: 'Status', fieldType: 'picklist' },
@@ -68,9 +68,9 @@ function buildChildConfig(): EntityConfig {
     slug: 'ext-layout-compliance-tasks',
     table: childTable,
     systemColumns: ['taskId'],
-    searchColumns: [],
+    searchFields: [],
     defaultSort: 'ruleId',
-    sortableColumns: { ruleId: childTable.ruleId },
+    sortableFields: ['ruleId'],
     fieldMeta: { ruleId: { label: 'Rule' } },
     sections: [],
     extensionOf: {

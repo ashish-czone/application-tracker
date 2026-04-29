@@ -10,14 +10,10 @@ export const offersConfig: EntityConfig = {
   table: offers,
   systemColumns: ['id', 'createdAt', 'updatedAt', 'deletedAt', 'deletedBy', 'createdBy'],
 
-  searchColumns: [],
+  searchFields: [],
 
   defaultSort: 'createdAt',
-  sortableColumns: {
-    createdAt: offers.createdAt,
-    status: offers.status,
-    startDate: offers.startDate,
-  },
+  sortableFields: ['createdAt', 'status', 'startDate'],
 
   fieldMeta: {
     applicationId: {

@@ -10,14 +10,10 @@ export const VENDORS_CONFIG: EntityConfig = {
   table: vendors,
   systemColumns: ['id', 'createdAt', 'updatedAt', 'deletedAt', 'deletedBy', 'createdBy'],
 
-  searchColumns: [vendors.vendorName, vendors.email],
+  searchFields: ['vendorName', 'email'],
 
   defaultSort: 'vendorName',
-  sortableColumns: {
-    vendorName: vendors.vendorName,
-    email: vendors.email,
-    createdAt: vendors.createdAt,
-  },
+  sortableFields: ['vendorName', 'email', 'createdAt'],
 
   fieldMeta: {
     vendorName: { label: 'Vendor Name', section: 'basic', sortOrder: 0, isQuickCreate: true, isSystem: true, maxLength: 120, cellRenderer: 'AvatarNameCell' },

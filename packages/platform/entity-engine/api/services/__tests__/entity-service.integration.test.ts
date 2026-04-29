@@ -54,13 +54,9 @@ function buildTestConfig(
     slug: 'test-entities',
     table: testEntities,
     systemColumns: ['id', 'createdAt', 'updatedAt', 'deletedAt', 'deletedBy', 'createdBy'],
-    searchColumns: [testEntities.name, testEntities.email],
+    searchFields: ['name', 'email'],
     defaultSort: 'createdAt',
-    sortableColumns: {
-      name: testEntities.name,
-      createdAt: testEntities.createdAt,
-      amount: testEntities.amount,
-    },
+    sortableFields: ['name', 'createdAt', 'amount'],
     fieldMeta: {
       name: { label: 'Name', isQuickCreate: true },
       email: { label: 'Email', fieldType: 'email', isUnique: true },
@@ -173,6 +169,7 @@ describe('EntityService (integration)', () => {
     // Register the test entity config
     const config = buildTestConfig();
     entityRegistry.register(config);
+    entityRegistry.finalize();
 
     // Register field definitions
     await registerTestFields(fieldDefService);

@@ -56,13 +56,9 @@ function buildParentConfig(): EntityConfig {
     slug: 'ext-tasks',
     table: parentTasks,
     systemColumns: ['id', 'createdAt', 'updatedAt', 'deletedAt', 'deletedBy', 'createdBy'],
-    searchColumns: [parentTasks.title],
+    searchFields: ['title'],
     defaultSort: 'createdAt',
-    sortableColumns: {
-      title: parentTasks.title,
-      priority: parentTasks.priority,
-      createdAt: parentTasks.createdAt,
-    },
+    sortableFields: ['title', 'priority', 'createdAt'],
     fieldMeta: {
       title: { label: 'Title' },
       status: { label: 'Status', fieldType: 'picklist' },
@@ -83,12 +79,9 @@ function buildChildConfig(): EntityConfig {
     slug: 'ext-compliance-tasks',
     table: extChildTable,
     systemColumns: ['id', 'createdAt', 'updatedAt', 'taskId'],
-    searchColumns: [],
+    searchFields: [],
     defaultSort: 'createdAt',
-    sortableColumns: {
-      ruleId: extChildTable.ruleId,
-      createdAt: extChildTable.createdAt,
-    },
+    sortableFields: ['ruleId', 'createdAt'],
     fieldMeta: {
       ruleId: { label: 'Rule' },
       periodStart: { label: 'Period Start', fieldType: 'date' },
