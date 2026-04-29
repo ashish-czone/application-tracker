@@ -20,88 +20,59 @@ Never default to the simplest/easiest approach. Never decide unilaterally. Even 
 
 ## Project Vision
 
-This is a **domain-agnostic, configuration-based app builder** for developers. It enables rapid application development — ERPs, CRMs, marketplaces, HR systems, project management tools — where ~80% of requirements are met through core platform capabilities and configuration, and ~20% through customization hooks.
+This is a **modular library stack** for building enterprise TypeScript apps. It is **not** a framework that generates apps from configuration — it is a layered set of libraries that apps compose explicitly.
 
-**How it works:**
-- **Define entities declaratively** — `defineEntity()` takes a model definition (fields, relationships, workflows, permissions, layout, UI hints) and generates everything: CRUD API, validation, RBAC, events, audit logging, search, filtering, pagination.
-- **Customize with hooks** — Lifecycle hooks (`beforeCreate`, `afterCreate`, `beforeUpdate`, `buildListFilters`, `workflowGuards`, etc.) let developers inject domain-specific logic without touching the engine.
-- **Extend with field types** — The pluggable field type registry supports 23+ built-in types. New types can be added without modifying core.
-- **Configure at runtime** — Layouts, field visibility, workflow states, notification rules, and settings are all DB-driven and admin-editable.
+**The four layers, in dependency order:**
 
-**Core principles:**
-- **Configuration over code** — if something can be expressed as config, it should be. Code is for the exceptional cases.
-- **Domain agnosticism** — the platform has zero knowledge of "candidates", "orders", or any business entity. Packages must never reference domain concepts.
-- **Hookable, not forkable** — customization happens through well-defined extension points, not by modifying platform code.
-- **Enterprise-grade** — audit logging, RBAC with field-level permissions, event-driven side effects, multi-tenancy readiness.
+1. **Core** (`packages/core/` + `packages/platform/`) — the foundation: cross-cutting infrastructure every app depends on. Database, events, queue, audit, rbac, settings, auth, users, UI primitives, app-shell. Narrow, stable APIs. No domain knowledge. (`core/` and `platform/` are two folders for the same conceptual tier — see Package Tiers below.)
+2. **Addons** (`packages/addons/`) — opt-in capabilities that extend the foundation: entity-engine, entity-layout, field-types, workflows, automations, hierarchy, taxonomy, notifications, media, evaluations, tasks, attachments, oauth, tenancy, etc. Apps and domains import only the addons they actually use.
+3. **Domains** (`domains/`) — self-contained business verticals (recruit, compliance, agency, etc.). Each domain owns its entities, services, and UI components. May depend on core + addons. **Never depends on another domain** — shared concepts graduate into addons.
+4. **Apps** (`apps/`) — user-facing products that compose one or more domains, add app-specific entities/screens, and ship as deployable units.
 
-Every architectural decision should ask: "Does this keep the platform domain-agnostic? Could a developer building a CRM use this the same way as one building an ERP?" If the answer is no, the approach is too narrow.
+**Dependency direction:** `apps → domains → addons → core`. Addons may depend on other addons (acyclic). Domains never depend on other domains. Apps may depend on multiple domains.
 
-### Platform Capabilities
+**Design principles:**
+- **Library, not framework.** Public APIs are services and types you import and call. No magic config that generates code at startup. The library does not own the app's lifecycle — apps stay in control of their NestJS modules and React routes.
+- **Narrow, high-leverage core.** Cross-cutting concerns (rbac, events, audit, notifications, settings) are abstracted *away* — adding RBAC to a controller is a decorator, emitting an event is one line. The cost of using core stays small so domains don't accumulate framework tax.
+- **Opt-in addons.** Capabilities like entity-engine, workflows, automations are addons — apps that don't need them don't pay for them. `defineEntity()`-style generic CRUD is one optional way to build an entity, not the central platform contract. Hand-written services + controllers are equally first-class.
+- **Domain isolation.** A domain can be lifted into a different app without dragging another domain with it. Cross-domain wiring lives at the app layer (`apps/<app>/cross-domain/`), never inside a domain.
+- **Composition over configuration.** When a domain needs to react to another module's event, override a service method, or extend behaviour — it does so by importing the relevant service and calling it (or subclassing it). Hooks and registries exist only where cross-cutting demand is proven.
 
-**Core engine (built):**
-- **Entity engine** — `defineEntity()` API, generic CRUD service, auto-generated controllers
-- **Field type system** — pluggable registry with 23+ types (text, email, lookup, workflow, tags, file, etc.)
-- **Custom fields storage** — dynamic custom fields per entity. JSONB (default) via `customFields: true` (table must spread `...customFieldsColumn()`); legacy EAV via `customFields: 'eav'`.
-- **Layout system** — DB-driven form sections, field ordering, column layout — admin-editable
-- **Workflow engine** — state machines with transitions, guards, conditions, multi-pipeline support
-- **RBAC** — role-based permissions with field-level granularity, auto-registered per entity
-- **Audit logging** — event-driven, with before/after snapshots, sensitive field redaction
-- **Settings system** — typed per-module config with DB overrides, cached + invalidated via events
+**What this is not:** not a no-code or low-code platform, not a lifecycle-owning framework, not config-driven by default. Apps are real TypeScript codebases that compose libraries.
 
-**Platform services (built):**
-- **Taxonomy** — polymorphic tags + hierarchical categories, attachable to any entity
-- **Notifications** — templates, dispatcher, channel providers, user preferences
-- **Automations** — rule-based actions triggered by domain events or schedules. Pluggable action handlers, condition builder, user resolution strategies, provenance tracking, lifecycle bindings. **Action handler ownership pattern:** each package registers its own actions in `onModuleInit()` via `ActionRegistry` — `SendNotificationAction` in notifications, `WebhookAction` in automations, `CreateEntityAction`/`UpdateEntityAction` in entity-engine, `TransitionWorkflowAction` in workflows. Frontend UI: `platform-ui/automations/`.
-- **Media management** — upload, storage abstraction (local/S3), attachments on any entity
-- **Job queue** — background processing via Bull/BullMQ on Redis
-- **Event system** — domain events with correlation IDs, side-effect handlers
-
-**Form rendering system (built):**
-The platform has a fully built, registry-driven form rendering system. **Never build custom form inputs for entity fields — use the existing system.**
-
-- **Field type registries** — Two registries, populated at app startup:
-  - Core registry (`packages/platform/field-types/registry.ts`) — storage strategy, validation, filter operators. No UI concerns.
-  - UI registry (`packages/platform/field-types/ui/ui-registry.ts`) — `FormComponent`, `ViewComponent`, `CellFormatter`, `zodSchema` per field type.
-- **`DynamicField`** (`packages/platform/eav-attributes-ui/components/DynamicField.tsx`) — renders the correct form component for any field type based on UI registry lookup. Must be inside a `FormProvider` (React Hook Form).
-- **`buildFormSchema`** (`packages/platform/eav-attributes-ui/helpers/buildFormSchema.ts`) — dynamically builds a Zod validation schema from `FieldDefinition[]`.
-- **`useEntityLayout`** (`packages/platform/entity-engine-ui/helpers/useEntityLayout.ts`) — fetches layout (sections + `FieldDefinition[]` with picklist options, lookup entities, etc.) for any entity type via `GET /layouts/{entityType}`.
-- **Usage pattern** (see `EntityQuickCreateForm`, `EntityCreatePage`):
-  1. Fetch layout via `useEntityLayout(entityType)`
-  2. Build Zod schema via `buildFormSchema(fields)`
-  3. Create form via `useForm({ resolver: zodResolver(schema) })`
-  4. Wrap in `<FormProvider>`, render `<DynamicField>` per field
-- **23+ field types** registered: text, email, phone, url, textarea, rich_text, number, currency, decimal, date, datetime, boolean, picklist, multi_select, lookup, multi_lookup, user, multi_user, auto_number, tags, file, category, workflow. Each has a dedicated form component (picklist → combobox, lookup → async search select, tags → chip input, etc.).
-
-**Remaining work:**
-- **Admin UIs** — visual builders for field management, layout customization, workflow editor
-- **Dynamic navigation** — sidebar driven by entity registration + permissions (registry exists, UI needed)
-- **Multi-tenancy enforcement** — framework designed, not fully implemented
+Every architectural decision should ask: "Does this keep the foundation narrow and the addons opt-in? Could a domain or app skip this capability entirely without re-wiring the world?" If the answer is no, the abstraction is too eager.
 
 ### Package Tiers
 
-Packages are organized into three tiers under `packages/`:
+Packages are organized into two tiers under `packages/`. Today the foundation tier is split across two folders for historical reasons (`core/` and `platform/`); conceptually they are one tier — both contain foundation infrastructure that domains and addons depend on.
 
 ```
 packages/
-  core/       — Required by every app. Infrastructure + auth + base UI.
-  platform/   — Standard platform features. Depends only on core.
-  addons/     — Optional packages. Depend on core + optionally platform, never on other addons.
+  core/       — Foundation (subset 1): pure infra primitives with no NestJS surface
+                — common, database, events, logger, query-builder, soft-delete,
+                  ui, debug-profiler, testing
+  platform/   — Foundation (subset 2): the rest of the foundation, including
+                NestJS-bound infra (rbac, audit, auth, settings, queue,
+                notifications, users, app-shell, theming-ui, etc.) and a few
+                cross-cutting UI shells (platform-ui, dashboard-ui)
+  addons/     — Opt-in capabilities. May depend on core + platform + other addons.
+                Apps import only what they use.
 ```
 
-**`packages/core/`** (13 packages): common, database, logger, events, queue, query-builder, auth-core, rbac, auth, users, audit, settings, ui
-
-**`packages/platform/`** (13 packages): entity-engine, entity-layout, field-types, automations, workflows, notifications, notification-channels, taxonomy, hierarchy, media, platform-ui, entity-engine-ui, eav-attributes-ui
-
-**`packages/addons/`** (20 packages): eav-attributes, entity-relations, evaluations, tenancy, service-auth, oauth, orders-billing, orders-subscriptions, org-units, tasks, attachments, notes, drafts, document-templates, pdf-generator, and their UI counterparts
-
 **Dependency rules:**
-- Core packages may depend on other core packages only
-- Platform packages may depend on core + other platform packages
-- Addon packages may depend on core + platform, **never on other addons**
-- All packages use `@packages/*` scope regardless of tier (single namespace)
-- Package names do NOT encode the tier — the folder structure is the tier indicator
+- `core/` and `platform/` packages depend only on other foundation (`core/` + `platform/`) packages — never on `addons/`.
+- Addon packages may depend on foundation + other addons. Acyclic, no addon → addon cycles.
+- `domains/*` may depend on foundation + addons. Never on other domains.
+- `apps/*` may depend on foundation + addons + one or more domains.
+- All packages use the `@packages/*` scope regardless of folder. Package names do NOT encode the tier — the folder structure is the tier indicator.
 
-When creating a new package, place it in the correct tier based on these rules. If unsure, ask.
+**Documented exceptions** to "foundation never imports addons":
+- `packages/platform/app-shell` — the runtime integrator that wires every module (core + platform + addon + domain) into a runnable Nest/React app. It is allowed to import addons.
+- `packages/platform/testing` — the test integrator (`createPlatformTestModule` / `createTestApp`) that bootstraps a test app with relevant addons wired in.
+
+No other foundation package may import from addons.
+
+**On the `core/` vs `platform/` split:** the only meaningful distinction today is "framework-free primitives" (`core/`) vs "NestJS-aware infra" (`platform/`). Over time, packages may move between the two folders as their dependencies evolve, or the split may be flattened — but the *vision* is one foundation tier, not two. When creating a new foundation package, place it in `core/` if it has no NestJS surface and no UI shell, otherwise in `platform/`. If unsure, ask.
 
 ---
 
