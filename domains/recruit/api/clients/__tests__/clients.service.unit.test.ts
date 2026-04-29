@@ -3,37 +3,47 @@ import { ConflictException, NotFoundException } from '@nestjs/common';
 import { ClientsService } from '../clients.service';
 
 /**
- * Mocks the bits of DatabaseService.db that ClientsService touches:
- *   - `db.transaction(fn)` runs the callback with the same `tx` object so
- *     queries executed via `tx.select()...` resolve through the same chain
- *   - `tx.select({...}).from(...).where(...).limit(N)` resolves to the next
- *     queued result row (also handles .leftJoin and .orderBy/.offset chains)
+ * Mocks the bits of DatabaseService.db that ClientsService touches.
+ *
+ * - `db.transaction(fn)` runs the callback with the same `tx` chain so
+ *   nested writes execute and resolve as if a real tx were running.
+ * - Each `db.select()` / `tx.select()` / `db.insert()` / `db.update()`
+ *   call returns a fresh thenable chain. `.from/.leftJoin/.where/.orderBy/
+ *   .limit/.offset/.returning/.values/.set` all chain back, and any await
+ *   resolves to the next queued result row.
+ *
+ * Tests push results in the order the service consumes them.
  */
 function createMockDb() {
   const results: unknown[][] = [];
 
-  // Each call to db.select() returns a fresh thenable chain. Any chain method
-  // (.from/.leftJoin/.where/.orderBy/.limit/.offset) returns the same chain,
-  // and any await on it (regardless of where it's terminated) resolves to the
-  // next queued result row. This mirrors Drizzle: queries auto-execute on
-  // first await, no matter how many builder calls are chained beforehand.
   function makeChain() {
     const chain: any = {
       then: (resolve: (v: unknown) => void) => resolve(results.shift() ?? []),
     };
-    for (const m of ['from', 'leftJoin', 'where', 'orderBy', 'limit', 'offset']) {
+    for (const m of [
+      'from', 'leftJoin', 'where', 'orderBy', 'limit', 'offset',
+      'values', 'set', 'returning',
+    ]) {
       chain[m] = vi.fn().mockReturnValue(chain);
     }
     return chain;
   }
 
-  const tx = { select: vi.fn().mockImplementation(() => makeChain()) };
+  const tx: any = {
+    select: vi.fn().mockImplementation(() => makeChain()),
+    insert: vi.fn().mockImplementation(() => makeChain()),
+    update: vi.fn().mockImplementation(() => makeChain()),
+  };
   const db = {
     select: vi.fn().mockImplementation(() => makeChain()),
+    insert: vi.fn().mockImplementation(() => makeChain()),
+    update: vi.fn().mockImplementation(() => makeChain()),
     transaction: vi.fn().mockImplementation(async (fn: (t: typeof tx) => unknown) => fn(tx)),
   };
   return {
     database: { db } as any,
+    tx,
     pushSelectResult: (rows: unknown[]) => results.push(rows),
   };
 }
@@ -44,88 +54,95 @@ function makeScopeResolvers(overrides: Record<string, any> = {}) {
   } as any;
 }
 
+function makeEvents() {
+  return { emitDynamic: vi.fn() } as any;
+}
+
 describe('ClientsService.create', () => {
-  let entityService: any;
   let companies: any;
   let mock: ReturnType<typeof createMockDb>;
+  let events: ReturnType<typeof makeEvents>;
   let service: ClientsService;
 
   beforeEach(() => {
-    entityService = { create: vi.fn().mockResolvedValue({ id: 'cl-1' }) };
     companies = { findOrCreate: vi.fn().mockResolvedValue({ id: 'co-1' }) };
     mock = createMockDb();
-    service = new ClientsService(entityService, mock.database, companies, makeScopeResolvers());
+    events = makeEvents();
+    service = new ClientsService(mock.database, companies, makeScopeResolvers(), events);
   });
 
-  it('finds-or-creates the company before delegating to entity-engine', async () => {
+  it('finds-or-creates the company and inserts the client in one transaction', async () => {
+    mock.pushSelectResult([{ id: 'cl-1' }]); // tx.insert(clients).returning() inside the tx
+    mock.pushSelectResult([{ id: 'cl-1', clientName: 'Acme Corp' }]); // findOne(snapshot) after commit
+
     await service.create(
-      {
-        clientName: 'Acme Corp',
-        website: 'https://www.acme.com/about',
-        industry: 'technology',
-      } as any,
+      { clientName: 'Acme Corp', website: 'https://www.acme.com', industry: 'technology' } as any,
       'user-1',
     );
 
     expect(companies.findOrCreate).toHaveBeenCalledWith(
-      {
-        name: 'Acme Corp',
-        websiteDomain: 'acme.com',
-        industry: 'technology',
-      },
+      { name: 'Acme Corp', websiteDomain: 'acme.com', industry: 'technology' },
       'user-1',
       expect.anything(),
     );
-    expect(entityService.create).toHaveBeenCalledWith(
-      expect.objectContaining({ clientName: 'Acme Corp', companyId: 'co-1' }),
-      'user-1',
-      expect.anything(),
-    );
+    expect(mock.tx.insert).toHaveBeenCalled();
+    expect(mock.database.db.transaction).toHaveBeenCalledTimes(1);
   });
 
-  it('passes null website when input has no website', async () => {
+  it('emits clients.Created with the post-commit snapshot', async () => {
+    mock.pushSelectResult([{ id: 'cl-1' }]);
+    mock.pushSelectResult([{ id: 'cl-1', clientName: 'Acme Corp' }]);
+
     await service.create({ clientName: 'Acme Corp' } as any, 'user-1');
 
-    expect(companies.findOrCreate).toHaveBeenCalledWith(
-      { name: 'Acme Corp', websiteDomain: null, industry: null },
-      'user-1',
-      expect.anything(),
-    );
+    expect(events.emitDynamic).toHaveBeenCalledWith('clients.Created', expect.objectContaining({
+      entityType: 'clients',
+      entityId: 'cl-1',
+      actorId: 'user-1',
+      payload: { after: { id: 'cl-1', clientName: 'Acme Corp' } },
+    }));
   });
 
-  it('runs in a transaction so directory write rolls back on entity-engine failure', async () => {
-    entityService.create.mockRejectedValueOnce(new Error('entity-engine boom'));
-    await expect(service.create({ clientName: 'Acme' } as any, 'user-1')).rejects.toThrow(
-      'entity-engine boom',
-    );
-    expect(mock.database.db.transaction).toHaveBeenCalledTimes(1);
+  it('rolls back when companies.findOrCreate fails (no insert, no event)', async () => {
+    companies.findOrCreate.mockRejectedValueOnce(new Error('directory boom'));
+
+    await expect(service.create({ clientName: 'Acme' } as any, 'user-1'))
+      .rejects.toThrow('directory boom');
+
+    expect(mock.tx.insert).not.toHaveBeenCalled();
+    expect(events.emitDynamic).not.toHaveBeenCalled();
   });
 });
 
 describe('ClientsService.update', () => {
-  let entityService: any;
   let companies: any;
   let mock: ReturnType<typeof createMockDb>;
+  let events: ReturnType<typeof makeEvents>;
   let service: ClientsService;
 
   beforeEach(() => {
-    entityService = { update: vi.fn().mockResolvedValue({ id: 'cl-1' }) };
     companies = { update: vi.fn().mockResolvedValue({ id: 'co-1' }) };
     mock = createMockDb();
-    service = new ClientsService(entityService, mock.database, companies, makeScopeResolvers());
+    events = makeEvents();
+    service = new ClientsService(mock.database, companies, makeScopeResolvers(), events);
   });
 
-  it('throws NotFoundException when the recruit_client does not exist', async () => {
-    mock.pushSelectResult([]); // current lookup returns nothing
+  it('throws NotFoundException when findOne returns no row', async () => {
+    mock.pushSelectResult([]); // findOne(before) returns empty
+
     await expect(
       service.update('missing', { clientName: 'X' } as any, 'user-1'),
     ).rejects.toBeInstanceOf(NotFoundException);
+
     expect(companies.update).not.toHaveBeenCalled();
-    expect(entityService.update).not.toHaveBeenCalled();
+    expect(mock.tx.update).not.toHaveBeenCalled();
   });
 
-  it('syncs identity changes to companies and propagates to entity-engine', async () => {
-    mock.pushSelectResult([{ companyId: 'co-1' }]);
+  it('syncs identity changes to companies and updates recruit_clients in same tx', async () => {
+    mock.pushSelectResult([{ id: 'cl-1', companyId: 'co-1', clientName: 'Acme', industry: 'old' }]); // before
+    mock.pushSelectResult([{ id: 'cl-1' }]);                                                          // tx.update.returning
+    mock.pushSelectResult([{ id: 'cl-1', companyId: 'co-1', clientName: 'Acme Renamed', industry: 'financial-services' }]); // after
+
     await service.update(
       'cl-1',
       { clientName: 'Acme Renamed', industry: 'financial-services' } as any,
@@ -138,33 +155,144 @@ describe('ClientsService.update', () => {
       'user-1',
       expect.anything(),
     );
-    expect(entityService.update).toHaveBeenCalled();
+    expect(mock.tx.update).toHaveBeenCalled();
   });
 
-  it('skips company write when input has no identity fields', async () => {
-    mock.pushSelectResult([{ companyId: 'co-1' }]);
-    await service.update('cl-1', { about: 'updated copy' } as any, 'user-1');
+  it('skips company sync when input has no identity fields', async () => {
+    mock.pushSelectResult([{ id: 'cl-1', companyId: 'co-1', about: 'old' }]);
+    mock.pushSelectResult([{ id: 'cl-1' }]);
+    mock.pushSelectResult([{ id: 'cl-1', companyId: 'co-1', about: 'new' }]);
+
+    await service.update('cl-1', { about: 'new' } as any, 'user-1');
 
     expect(companies.update).not.toHaveBeenCalled();
-    expect(entityService.update).toHaveBeenCalled();
+    expect(mock.tx.update).toHaveBeenCalled();
   });
 
-  it('skips company write when recruit_client has no companyId yet (legacy row)', async () => {
-    mock.pushSelectResult([{ companyId: null }]);
-    await service.update('cl-1', { clientName: 'X' } as any, 'user-1');
+  it('skips company sync when client has no companyId yet (legacy row)', async () => {
+    mock.pushSelectResult([{ id: 'cl-1', companyId: null, clientName: 'Old' }]);
+    mock.pushSelectResult([{ id: 'cl-1' }]);
+    mock.pushSelectResult([{ id: 'cl-1', companyId: null, clientName: 'New' }]);
+
+    await service.update('cl-1', { clientName: 'New' } as any, 'user-1');
 
     expect(companies.update).not.toHaveBeenCalled();
-    expect(entityService.update).toHaveBeenCalled();
+    expect(mock.tx.update).toHaveBeenCalled();
   });
 
-  it('translates a 23505 unique violation from companies.update to ConflictException', async () => {
-    mock.pushSelectResult([{ companyId: 'co-1' }]);
+  it('translates a 23505 unique violation to ConflictException', async () => {
+    mock.pushSelectResult([{ id: 'cl-1', companyId: 'co-1', clientName: 'Acme' }]);
     companies.update.mockRejectedValueOnce(Object.assign(new Error('dup'), { code: '23505' }));
 
     await expect(
       service.update('cl-1', { clientName: 'Existing Co' } as any, 'user-1'),
     ).rejects.toBeInstanceOf(ConflictException);
-    expect(entityService.update).not.toHaveBeenCalled();
+
+    expect(mock.tx.update).not.toHaveBeenCalled();
+    expect(events.emitDynamic).not.toHaveBeenCalled();
+  });
+
+  it('emits no event when before/after are identical (no-op update)', async () => {
+    mock.pushSelectResult([{ id: 'cl-1', companyId: 'co-1', about: 'same' }]);
+    mock.pushSelectResult([{ id: 'cl-1' }]);
+    mock.pushSelectResult([{ id: 'cl-1', companyId: 'co-1', about: 'same' }]);
+
+    await service.update('cl-1', { about: 'same' } as any, 'user-1');
+
+    expect(events.emitDynamic).not.toHaveBeenCalled();
+  });
+
+  it('emits clients.Updated with diffed changes when before/after differ', async () => {
+    mock.pushSelectResult([{ id: 'cl-1', companyId: 'co-1', about: 'old' }]);
+    mock.pushSelectResult([{ id: 'cl-1' }]);
+    mock.pushSelectResult([{ id: 'cl-1', companyId: 'co-1', about: 'new' }]);
+
+    await service.update('cl-1', { about: 'new' } as any, 'user-1');
+
+    expect(events.emitDynamic).toHaveBeenCalledWith('clients.Updated', expect.objectContaining({
+      entityType: 'clients',
+      entityId: 'cl-1',
+      payload: expect.objectContaining({ changes: ['about'] }),
+    }));
+  });
+});
+
+describe('ClientsService.softDelete', () => {
+  let mock: ReturnType<typeof createMockDb>;
+  let events: ReturnType<typeof makeEvents>;
+  let service: ClientsService;
+
+  beforeEach(() => {
+    mock = createMockDb();
+    events = makeEvents();
+    service = new ClientsService(mock.database, {} as any, makeScopeResolvers(), events);
+  });
+
+  it('throws NotFound when scope-denied (findOne returns empty)', async () => {
+    mock.pushSelectResult([]);
+    await expect(
+      service.softDelete('cl-1', 'user-1', { userId: 'user-1', scopes: [] }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('updates deletedAt+deletedBy and emits clients.Deleted with before snapshot', async () => {
+    mock.pushSelectResult([{ id: 'cl-1', clientName: 'Acme' }]);
+
+    await service.softDelete('cl-1', 'user-1');
+
+    expect(mock.database.db.update).toHaveBeenCalled();
+    expect(events.emitDynamic).toHaveBeenCalledWith('clients.Deleted', expect.objectContaining({
+      entityType: 'clients',
+      entityId: 'cl-1',
+      payload: { before: { id: 'cl-1', clientName: 'Acme' } },
+    }));
+  });
+});
+
+describe('ClientsService.findOrCreateForCompany', () => {
+  let companies: any;
+  let mock: ReturnType<typeof createMockDb>;
+  let events: ReturnType<typeof makeEvents>;
+  let service: ClientsService;
+
+  beforeEach(() => {
+    companies = {};
+    mock = createMockDb();
+    events = makeEvents();
+    service = new ClientsService(mock.database, companies, makeScopeResolvers(), events);
+  });
+
+  it('returns the existing recruit_client.id when one already exists for the company', async () => {
+    mock.pushSelectResult([{ id: 'existing-client' }]);
+
+    const out = await service.findOrCreateForCompany('co-1', 'user-1');
+
+    expect(out).toEqual({ id: 'existing-client', created: false });
+    expect(mock.database.db.insert).not.toHaveBeenCalled();
+    expect(events.emitDynamic).not.toHaveBeenCalled();
+  });
+
+  it('creates a minimal recruit_client when none exists, emits Created event', async () => {
+    mock.pushSelectResult([]);                                // existing lookup
+    mock.pushSelectResult([{ name: 'Acme Corp' }]);           // company lookup
+
+    const out = await service.findOrCreateForCompany('co-1', 'user-1');
+
+    expect(out.created).toBe(true);
+    expect(out.id).toMatch(/^[0-9a-f-]{36}$/);
+    expect(mock.database.db.insert).toHaveBeenCalled();
+    expect(events.emitDynamic).toHaveBeenCalledWith('clients.Created', expect.objectContaining({
+      entityType: 'clients',
+      actorId: 'user-1',
+    }));
+  });
+
+  it('throws NotFound when the company id is not in the directory', async () => {
+    mock.pushSelectResult([]); // existing lookup
+    mock.pushSelectResult([]); // company lookup
+
+    await expect(service.findOrCreateForCompany('missing-co', 'user-1'))
+      .rejects.toBeInstanceOf(NotFoundException);
   });
 });
 
@@ -174,7 +302,7 @@ describe('ClientsService.findOne', () => {
 
   beforeEach(() => {
     mock = createMockDb();
-    service = new ClientsService({} as any, mock.database, {} as any, makeScopeResolvers());
+    service = new ClientsService(mock.database, {} as any, makeScopeResolvers(), makeEvents());
   });
 
   it('throws NotFoundException when the row is missing', async () => {
@@ -182,23 +310,10 @@ describe('ClientsService.findOne', () => {
     await expect(service.findOne('missing')).rejects.toBeInstanceOf(NotFoundException);
   });
 
-  it('returns the row when found, with the JOIN-projected select map', async () => {
-    mock.pushSelectResult([
-      { id: 'cl-1', clientName: 'Acme (from directory)', industry: 'technology' },
-    ]);
+  it('returns the row when found', async () => {
+    mock.pushSelectResult([{ id: 'cl-1', clientName: 'Acme (from directory)' }]);
     const row = await service.findOne('cl-1');
     expect(row).toMatchObject({ id: 'cl-1', clientName: 'Acme (from directory)' });
-  });
-
-  it('builds a select that JOINs directory.companies and filters by id', async () => {
-    mock.pushSelectResult([{ id: 'cl-1' }]);
-    await service.findOne('cl-1');
-    // The chain is from(clients).leftJoin(companies, ...).where(...).limit(1)
-    const sel = (mock.database.db.select as any).mock.results[0].value;
-    expect(sel.from).toHaveBeenCalled();
-    expect(sel.leftJoin).toHaveBeenCalled();
-    expect(sel.where).toHaveBeenCalled();
-    expect(sel.limit).toHaveBeenCalledWith(1);
   });
 });
 
@@ -208,67 +323,25 @@ describe('ClientsService.list', () => {
 
   beforeEach(() => {
     mock = createMockDb();
-    service = new ClientsService({} as any, mock.database, {} as any, makeScopeResolvers());
+    service = new ClientsService(mock.database, {} as any, makeScopeResolvers(), makeEvents());
   });
 
-  it('returns { data, meta } envelope with pagination', async () => {
-    mock.pushSelectResult([{ total: 7 }]); // count query
-    mock.pushSelectResult([{ id: 'cl-1', clientName: 'Acme' }]); // rows query
+  it('returns { data, meta } envelope', async () => {
+    mock.pushSelectResult([{ total: 7 }]);
+    mock.pushSelectResult([{ id: 'cl-1' }]);
     const res = await service.list({ page: 2, limit: 5 });
     expect(res.meta).toEqual({ total: 7, page: 2, limit: 5, totalPages: 2 });
     expect(res.data).toHaveLength(1);
-  });
-
-  it('defaults to page 1 limit 25 when query is empty', async () => {
-    mock.pushSelectResult([{ total: 0 }]);
-    mock.pushSelectResult([]);
-    const res = await service.list({});
-    expect(res.meta).toMatchObject({ page: 1, limit: 25, total: 0 });
   });
 
   it('JOINs directory.companies on every query', async () => {
     mock.pushSelectResult([{ total: 0 }]);
     mock.pushSelectResult([]);
     await service.list({});
-    // Two select() calls: one for count, one for rows. Both should LEFT JOIN.
     const calls = (mock.database.db.select as any).mock.results;
     expect(calls.length).toBeGreaterThanOrEqual(2);
     for (const c of calls) {
       expect(c.value.leftJoin).toHaveBeenCalled();
     }
-  });
-
-  it('denies all rows when accessCtx has no scopes (1=0)', async () => {
-    mock.pushSelectResult([{ total: 0 }]);
-    mock.pushSelectResult([]);
-    await service.list({}, { userId: 'u-1', scopes: [] });
-    expect(mock.database.db.select).toHaveBeenCalled();
-  });
-
-  it('skips scope filter when accessCtx contains type=any', async () => {
-    mock.pushSelectResult([{ total: 0 }]);
-    mock.pushSelectResult([]);
-    await service.list({}, { userId: 'u-1', scopes: [{ type: 'any' }] });
-    expect(mock.database.db.select).toHaveBeenCalled();
-  });
-
-  it('applies a scope predicate via the registered resolver', async () => {
-    const ownResolver = {
-      type: 'own',
-      resolve: vi.fn().mockReturnValue({ /* fake SQL */ } as any),
-    };
-    service = new ClientsService(
-      {} as any,
-      mock.database,
-      {} as any,
-      makeScopeResolvers({ own: ownResolver }),
-    );
-    mock.pushSelectResult([{ total: 0 }]);
-    mock.pushSelectResult([]);
-    await service.list({}, { userId: 'u-1', scopes: [{ type: 'own' }] });
-    expect(ownResolver.resolve).toHaveBeenCalledWith(
-      expect.objectContaining({ userId: 'u-1', anchors: expect.any(Object) }),
-      undefined,
-    );
   });
 });

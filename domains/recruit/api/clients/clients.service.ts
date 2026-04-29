@@ -1,4 +1,5 @@
-import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import {
   DatabaseService,
   and,
@@ -7,8 +8,10 @@ import {
   desc,
   eq,
   ilike,
+  isNull,
   or,
   sql,
+  type DrizzleTx,
   type SQL,
 } from '@packages/database';
 import { computePagination, computePaginationMeta } from '@packages/query-builder';
@@ -19,11 +22,22 @@ import {
   type FindOrCreateCompanyInput,
   type UpdateCompanyInput,
 } from '@packages/directory';
-import { EntityService, type BaseListQuery } from '@packages/entity-engine';
 import { ScopeResolverRegistry, type DataAccessContext } from '@packages/rbac';
+import { DomainEventEmitter } from '@packages/events';
 import type { PaginatedResponse } from '@packages/common';
 import type { CreateClientDto, UpdateClientDto } from './clients.dto';
 import { clients } from './schema/clients';
+
+/** Subset of `BaseListQuery` we read directly. Not imported from
+ *  entity-engine so the service has no dep on the engine for read paths. */
+interface ClientsListQuery {
+  page?: number;
+  limit?: number;
+  search?: string;
+  sort?: string;
+  order?: 'asc' | 'desc';
+  includeDeleted?: boolean;
+}
 
 const SORTABLE = {
   clientName: sql`coalesce(${companies.name}, ${clients.clientName})`,
@@ -35,14 +49,18 @@ const SORTABLE = {
 @Injectable()
 export class ClientsService {
   constructor(
-    @Inject('ENTITY_SERVICE_clients') private readonly entityService: EntityService,
     private readonly database: DatabaseService,
     private readonly companies: CompaniesService,
     private readonly scopeResolvers: ScopeResolverRegistry,
+    private readonly events: DomainEventEmitter,
   ) {}
 
+  // ---------------------------------------------------------------------------
+  // READS
+  // ---------------------------------------------------------------------------
+
   async list(
-    query: BaseListQuery,
+    query: ClientsListQuery,
     accessCtx?: DataAccessContext,
   ): Promise<PaginatedResponse<Record<string, unknown>>> {
     const { page, limit, offset } = computePagination({
@@ -113,15 +131,64 @@ export class ClientsService {
     return row;
   }
 
+  // ---------------------------------------------------------------------------
+  // WRITES
+  // ---------------------------------------------------------------------------
+
   async create(input: CreateClientDto, actorId: string) {
-    return this.database.db.transaction(async (tx) => {
+    const inserted = await this.database.db.transaction(async (tx) => {
       const company = await this.companies.findOrCreate(
         toFindOrCreateCompany(input),
         actorId,
         tx,
       );
-      return this.entityService.create({ ...input, companyId: company.id }, actorId, tx);
+      const id = randomUUID();
+      const now = new Date();
+      const [row] = await tx
+        .insert(clients)
+        .values({
+          id,
+          companyId: company.id,
+          // Shadow columns retained until F-2c. Reads source clientName /
+          // website / industry from companies via JOIN; writes still
+          // populate the local copies so older readers see them.
+          clientName: input.clientName,
+          website: input.website ?? null,
+          industry: input.industry ?? null,
+          contactNumber: input.contactNumber ?? null,
+          about: input.about ?? null,
+          source: input.source ?? 'added-by-user',
+          billingStreet: input.billingStreet ?? null,
+          billingCity: input.billingCity ?? null,
+          billingProvince: input.billingProvince ?? null,
+          billingCode: input.billingCode ?? null,
+          billingCountry: input.billingCountry ?? null,
+          shippingStreet: input.shippingStreet ?? null,
+          shippingCity: input.shippingCity ?? null,
+          shippingProvince: input.shippingProvince ?? null,
+          shippingCode: input.shippingCode ?? null,
+          shippingCountry: input.shippingCountry ?? null,
+          createdBy: actorId,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .returning();
+      return row;
     });
+
+    // Emit after commit. AuditListener picks this up via the registration
+    // entity-engine's defineEntity() set up; the snapshot uses findOne so
+    // identity fields are JOIN-projected from directory.companies — i.e.
+    // the canonical values, not local shadows.
+    const snapshot = await this.findOne(inserted.id);
+    this.events.emitDynamic('clients.Created', {
+      entityType: 'clients',
+      entityId: inserted.id,
+      actorId,
+      payload: { after: snapshot },
+    });
+
+    return inserted;
   }
 
   async update(
@@ -130,20 +197,18 @@ export class ClientsService {
     actorId: string,
     accessCtx?: DataAccessContext,
   ) {
-    return this.database.db.transaction(async (tx) => {
-      const [current] = await tx
-        .select({ companyId: clients.companyId })
-        .from(clients)
-        .where(eq(clients.id, id))
-        .limit(1);
-      if (!current) {
-        throw new NotFoundException(`Client ${id} not found`);
-      }
+    // Scope-check + capture before snapshot. findOne throws NotFound if the
+    // row is outside the actor's scope or doesn't exist.
+    const before = await this.findOne(id, accessCtx);
 
+    const updated = await this.database.db.transaction(async (tx) => {
+      // Sync identity fields to directory.companies first, so a unique
+      // violation aborts the whole transaction before we touch recruit_clients.
+      const currentCompanyId = (before.companyId as string | null) ?? null;
       const companyPatch = toCompanyPatch(input);
-      if (current.companyId && Object.keys(companyPatch).length > 0) {
+      if (currentCompanyId && Object.keys(companyPatch).length > 0) {
         try {
-          await this.companies.update(current.companyId, companyPatch, actorId, tx);
+          await this.companies.update(currentCompanyId, companyPatch, actorId, tx);
         } catch (error) {
           if (isUniqueViolation(error)) {
             throw new ConflictException(
@@ -156,36 +221,152 @@ export class ClientsService {
         }
       }
 
-      return this.entityService.update(id, input, actorId, accessCtx, tx);
+      const patch = toClientPatch(input);
+      patch.updatedAt = new Date();
+
+      const [row] = await tx
+        .update(clients)
+        .set(patch)
+        .where(eq(clients.id, id))
+        .returning();
+      return row;
+    });
+
+    if (!updated) {
+      throw new NotFoundException(`Client ${id} not found`);
+    }
+
+    const after = await this.findOne(id);
+    const changes = diffSnapshots(before, after);
+    if (changes.length > 0) {
+      this.events.emitDynamic('clients.Updated', {
+        entityType: 'clients',
+        entityId: id,
+        actorId,
+        payload: { before, after, changes },
+      });
+    }
+
+    return updated;
+  }
+
+  async softDelete(id: string, actorId: string, accessCtx?: DataAccessContext) {
+    const before = await this.findOne(id, accessCtx);
+
+    await this.database.db
+      .update(clients)
+      .set({ deletedAt: new Date(), deletedBy: actorId })
+      .where(eq(clients.id, id));
+
+    this.events.emitDynamic('clients.Deleted', {
+      entityType: 'clients',
+      entityId: id,
+      actorId,
+      payload: { before },
     });
   }
 
-  softDelete(id: string, actorId: string, accessCtx?: DataAccessContext) {
-    return this.entityService.softDelete(id, actorId, accessCtx);
+  async clone(id: string, actorId: string) {
+    // Clone preserves the same companyId — same identity, new commercial
+    // relationship. Recruit-specific fields are copied; audit/system
+    // columns are regenerated by create().
+    const source = await this.findOne(id);
+    return this.create(
+      {
+        clientName: source.clientName as string,
+        website: (source.website as string | null) ?? undefined,
+        industry: (source.industry as string | null) ?? undefined,
+        contactNumber: (source.contactNumber as string | null) ?? undefined,
+        about: (source.about as string | null) ?? undefined,
+        source: (source.source as string | null) ?? undefined,
+        billingStreet: (source.billingStreet as string | null) ?? undefined,
+        billingCity: (source.billingCity as string | null) ?? undefined,
+        billingProvince: (source.billingProvince as string | null) ?? undefined,
+        billingCode: (source.billingCode as string | null) ?? undefined,
+        billingCountry: (source.billingCountry as string | null) ?? undefined,
+        shippingStreet: (source.shippingStreet as string | null) ?? undefined,
+        shippingCity: (source.shippingCity as string | null) ?? undefined,
+        shippingProvince: (source.shippingProvince as string | null) ?? undefined,
+        shippingCode: (source.shippingCode as string | null) ?? undefined,
+        shippingCountry: (source.shippingCountry as string | null) ?? undefined,
+      } as CreateClientDto,
+      actorId,
+    );
   }
 
-  clone(id: string, actorId: string) {
-    return this.entityService.clone(id, actorId);
+  async restore(id: string) {
+    const [row] = await this.database.db
+      .select({ id: clients.id })
+      .from(clients)
+      .where(eq(clients.id, id))
+      .limit(1);
+    if (!row) {
+      throw new NotFoundException('Client not found');
+    }
+
+    await this.database.db
+      .update(clients)
+      .set({ deletedAt: null, deletedBy: null })
+      .where(eq(clients.id, id));
+
+    return this.findOne(id);
   }
 
-  restore(id: string) {
-    return this.entityService.restore(id);
-  }
+  /**
+   * Picker bridge for hand-written entities that show a companies picker
+   * but persist a recruit_client.id FK. Returns the existing recruit_client
+   * for this company, or creates a minimal one (companyId only, no
+   * commercial sidecar yet) if none exists. Used by F-2c when contacts /
+   * job_openings / interviews route their clientId picker through
+   * companies search.
+   */
+  async findOrCreateForCompany(
+    companyId: string,
+    actorId: string,
+    externalTx?: DrizzleTx,
+  ): Promise<{ id: string; created: boolean }> {
+    const exec = externalTx ?? this.database.db;
+    const [existing] = await exec
+      .select({ id: clients.id })
+      .from(clients)
+      .where(and(eq(clients.companyId, companyId), isNull(clients.deletedAt)))
+      .limit(1);
+    if (existing) return { id: existing.id, created: false };
 
-  getListLayout() {
-    return this.entityService.getListLayout();
+    const [company] = await exec
+      .select({ name: companies.name })
+      .from(companies)
+      .where(eq(companies.id, companyId))
+      .limit(1);
+    if (!company) {
+      throw new NotFoundException('Company not found');
+    }
+
+    const id = randomUUID();
+    const now = new Date();
+    await exec.insert(clients).values({
+      id,
+      companyId,
+      clientName: company.name,
+      createdBy: actorId,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    this.events.emitDynamic('clients.Created', {
+      entityType: 'clients',
+      entityId: id,
+      actorId,
+      payload: { after: { id, companyId, clientName: company.name, createdBy: actorId } },
+    });
+
+    return { id, created: true };
   }
 
   // ---------------------------------------------------------------------------
+  // PRIVATE HELPERS
+  // ---------------------------------------------------------------------------
 
-  /**
-   * Project clientName/website/industry from directory.companies (the canonical
-   * source after R-2 wired identity into the directory). Local shadow columns
-   * stay COALESCE'd in for rows not yet backfilled — they drop in F-2.
-   *
-   * `contactsCount` and `jobOpeningsCount` are correlated subqueries so the
-   * list endpoint stays a single round-trip.
-   */
   private buildSelectMap() {
     return {
       id: clients.id,
@@ -221,18 +402,12 @@ export class ClientsService {
     };
   }
 
-  private resolveSort(query: BaseListQuery) {
+  private resolveSort(query: ClientsListQuery) {
     const key = (query.sort as keyof typeof SORTABLE) ?? 'clientName';
     const expr = SORTABLE[key] ?? SORTABLE.clientName;
     return query.order === 'desc' ? desc(expr) : asc(expr);
   }
 
-  /**
-   * Hand-rolled scope resolution: dispatch each scope through
-   * `ScopeResolverRegistry` (same registry the engine uses) so 'own',
-   * 'assigned', and any future scope kinds work without re-implementing
-   * resolvers. Empty scopes deny; `any` short-circuits to unrestricted.
-   */
   private async resolveScope(ctx?: DataAccessContext): Promise<SQL | undefined> {
     if (!ctx) return undefined;
     if (ctx.scopes.length === 0) return sql`1=0`;
@@ -253,6 +428,10 @@ export class ClientsService {
   }
 }
 
+// ---------------------------------------------------------------------------
+// HELPERS
+// ---------------------------------------------------------------------------
+
 function toFindOrCreateCompany(input: CreateClientDto): FindOrCreateCompanyInput {
   return {
     name: input.clientName,
@@ -266,6 +445,23 @@ function toCompanyPatch(input: UpdateClientDto): UpdateCompanyInput {
   if (input.clientName !== undefined) patch.name = input.clientName;
   if (input.website !== undefined) patch.websiteDomain = normalizeWebsiteDomain(input.website);
   if (input.industry !== undefined) patch.industry = input.industry ?? null;
+  return patch;
+}
+
+/** Project the patch onto recruit_clients columns. Identity fields are
+ *  written here too (shadow columns) until F-2c. */
+function toClientPatch(input: UpdateClientDto): Record<string, unknown> {
+  const patch: Record<string, unknown> = {};
+  for (const key of [
+    'clientName', 'website', 'industry',
+    'contactNumber', 'about', 'source',
+    'billingStreet', 'billingCity', 'billingProvince', 'billingCode', 'billingCountry',
+    'shippingStreet', 'shippingCity', 'shippingProvince', 'shippingCode', 'shippingCountry',
+  ] as const) {
+    if (input[key] !== undefined) {
+      patch[key] = input[key] === null || input[key] === '' ? null : input[key];
+    }
+  }
   return patch;
 }
 
@@ -286,4 +482,21 @@ function isUniqueViolation(error: unknown): boolean {
     error !== null &&
     (error as { code?: unknown }).code === '23505'
   );
+}
+
+const DIFFABLE_KEYS = [
+  'clientName', 'website', 'industry', 'contactNumber', 'about', 'source',
+  'billingStreet', 'billingCity', 'billingProvince', 'billingCode', 'billingCountry',
+  'shippingStreet', 'shippingCity', 'shippingProvince', 'shippingCode', 'shippingCountry',
+] as const;
+
+function diffSnapshots(
+  before: Record<string, unknown>,
+  after: Record<string, unknown>,
+): string[] {
+  const changed: string[] = [];
+  for (const key of DIFFABLE_KEYS) {
+    if (before[key] !== after[key]) changed.push(key);
+  }
+  return changed;
 }
