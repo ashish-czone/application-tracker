@@ -50,6 +50,7 @@
     "@packages/users": "workspace:*",
     "@packages/workflows": "workspace:*",
     "@domains/agency-api": "workspace:*",
+    "@domains/marketing-api": "workspace:*",
     "@domains/projects-api": "workspace:*",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
