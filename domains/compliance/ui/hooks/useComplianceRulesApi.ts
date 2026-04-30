@@ -126,7 +126,6 @@ export function useRuleDeprecationPreview(ruleId: string | null) {
       ),
     enabled: !!ruleId,
     staleTime: 0,
-    gcTime: 0,
   });
 }
 
@@ -181,7 +180,6 @@ export function useRuleEditConstraints(ruleId: string | null | undefined) {
       ),
     enabled: !!ruleId,
     staleTime: 0,
-    gcTime: 0,
   });
 }
 
