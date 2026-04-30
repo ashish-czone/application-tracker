@@ -42,9 +42,11 @@ describe('LawHandlersService', () => {
         select: vi.fn(),
       },
     };
-    // Entity service isn't exercised by the programmatic methods under test.
+    // Entity service + LawsService aren't exercised by the programmatic
+    // methods under test (createHandler / deleteHandler / hasDefaultHandler).
     const entityService = {} as never;
-    service = new LawHandlersService(entityService, db as never);
+    const lawsService = {} as never;
+    service = new LawHandlersService(entityService, db as never, lawsService);
   });
 
   describe('createHandler', () => {
