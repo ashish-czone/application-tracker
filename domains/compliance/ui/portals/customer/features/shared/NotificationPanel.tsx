@@ -53,14 +53,21 @@ interface NotificationPanelProps {
   onClose: () => void;
 }
 
+// Page size for the inbox panel. The backing hook returns `meta.total`, so
+// when the inbox has more than this many notifications the panel surfaces a
+// "X older not shown" tail row instead of silently truncating.
+const PAGE_LIMIT = 50;
+
 // ─── Component ──────────────────────────────────────────────────────
 
 export function NotificationPanel({ open, onClose }: NotificationPanelProps) {
-  const { data, isLoading, isError } = useNotifications({ page: 1, limit: 50 });
+  const { data, isLoading, isError } = useNotifications({ page: 1, limit: PAGE_LIMIT });
   const markAsRead = useMarkAsRead();
   const markAllAsRead = useMarkAllAsRead();
 
   const notifications: Notification[] = data?.data ?? [];
+  const total = data?.meta?.total ?? notifications.length;
+  const olderHidden = Math.max(0, total - notifications.length);
   const unreadCount = notifications.filter((n) => !n.isRead).length;
   const groups = groupNotifications(notifications);
 
@@ -107,27 +114,36 @@ export function NotificationPanel({ open, onClose }: NotificationPanelProps) {
               ) : notifications.length === 0 ? (
                 <NotificationEmpty />
               ) : (
-                groups.map((group, gi) => (
-                  <div key={group.label}>
-                    {gi > 0 && (
-                      <div className="px-6">
-                        <SectionRule />
+                <>
+                  {groups.map((group, gi) => (
+                    <div key={group.label}>
+                      {gi > 0 && (
+                        <div className="px-6">
+                          <SectionRule />
+                        </div>
+                      )}
+                      <div className="px-6 pt-4 pb-2">
+                        <span className="text-[10px] uppercase tracking-eyebrow font-sans font-medium text-ink-muted">
+                          {group.label}
+                        </span>
                       </div>
-                    )}
-                    <div className="px-6 pt-4 pb-2">
-                      <span className="text-[10px] uppercase tracking-eyebrow font-sans font-medium text-ink-muted">
-                        {group.label}
-                      </span>
+                      {group.items.map((n) => (
+                        <NotificationRow
+                          key={n.id}
+                          notification={n}
+                          onMarkAsRead={(id) => markAsRead.mutate(id)}
+                        />
+                      ))}
                     </div>
-                    {group.items.map((n) => (
-                      <NotificationRow
-                        key={n.id}
-                        notification={n}
-                        onMarkAsRead={(id) => markAsRead.mutate(id)}
-                      />
-                    ))}
-                  </div>
-                ))
+                  ))}
+                  {olderHidden > 0 && (
+                    <NotificationTruncationFooter
+                      shown={notifications.length}
+                      total={total}
+                      olderHidden={olderHidden}
+                    />
+                  )}
+                </>
               )}
             </div>
         </DrawerShell>
@@ -191,6 +207,29 @@ function NotificationRow({
         </div>
       </div>
     </button>
+  );
+}
+
+// ─── Truncation footer ──────────────────────────────────────────────
+
+function NotificationTruncationFooter({
+  shown,
+  total,
+  olderHidden,
+}: {
+  shown: number;
+  total: number;
+  olderHidden: number;
+}) {
+  return (
+    <div className="px-6 py-3 border-t border-rule mt-2 text-center">
+      <p className="text-[11px] font-sans text-ink-muted tabular-nums">
+        Showing {shown} of {total}.{' '}
+        <span className="text-ink-muted/70">
+          {olderHidden} older notification{olderHidden === 1 ? '' : 's'} not shown.
+        </span>
+      </p>
+    </div>
   );
 }
 
