@@ -62,27 +62,29 @@ describe('ClientsController', () => {
   });
 
   describe('CRUD', () => {
-    it('list translates shorthand params and forwards to ClientsService.list', async () => {
-      await controller.list({ page: '2', limit: '50', status: 'active', q: 'acme' });
+    it('list translates shorthand params and forwards to ClientsService.list with the access context', async () => {
+      const accessCtx = { userId: 'u1', scopes: [{ type: 'any' }] } as never;
+      await controller.list({ page: '2', limit: '50', status: 'active', q: 'acme' }, accessCtx);
       expect(clientsService.list).toHaveBeenCalledWith(
         expect.objectContaining({ page: 2, limit: 50, status: 'active', q: 'acme' }),
+        accessCtx,
       );
     });
 
     it('list caps limit at 100 (data-fetching rule)', async () => {
-      await controller.list({ limit: '5000' });
+      await controller.list({ limit: '5000' }, undefined);
       const call = clientsService.list.mock.calls[0][0];
       expect(call.limit).toBe(100);
     });
 
     it('list rejects unknown status / risk values silently', async () => {
-      await controller.list({ status: 'bogus', risk: 'invalid' });
+      await controller.list({ status: 'bogus', risk: 'invalid' }, undefined);
       const call = clientsService.list.mock.calls[0][0];
       expect(call.status).toBeUndefined();
       expect(call.risk).toBeUndefined();
     });
 
-    it('summary endpoint delegates to ClientsService.getSummary', async () => {
+    it('summary endpoint forwards the access context to ClientsService.getSummary', async () => {
       clientsService.getSummary = vi.fn().mockResolvedValue({
         total: 0,
         byStatus: { active: 0, onboarding: 0, dormant: 0 },
@@ -90,14 +92,16 @@ describe('ClientsController', () => {
         totalOverdue: 0,
         clientsWithOverdue: 0,
       });
-      await controller.summary();
-      expect(clientsService.getSummary).toHaveBeenCalledOnce();
+      const accessCtx = { userId: 'u1', scopes: [{ type: 'unit' }] } as never;
+      await controller.summary(accessCtx);
+      expect(clientsService.getSummary).toHaveBeenCalledWith(accessCtx);
     });
 
-    it('handler-options endpoint delegates to ClientsService.getHandlerOptions', async () => {
+    it('handler-options endpoint forwards the access context to ClientsService.getHandlerOptions', async () => {
       clientsService.getHandlerOptions = vi.fn().mockResolvedValue([{ id: 'u1', name: 'Asha' }]);
-      await controller.handlerOptions();
-      expect(clientsService.getHandlerOptions).toHaveBeenCalledOnce();
+      const accessCtx = { userId: 'u1', scopes: [{ type: 'unit' }] } as never;
+      await controller.handlerOptions(accessCtx);
+      expect(clientsService.getHandlerOptions).toHaveBeenCalledWith(accessCtx);
     });
 
     it('findOne requires clients.read', () => {

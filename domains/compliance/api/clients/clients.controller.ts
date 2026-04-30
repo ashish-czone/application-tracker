@@ -50,20 +50,23 @@ export class ClientsController {
 
   @Get()
   @RequirePermission('clients.read')
-  list(@Query() query: Record<string, unknown>) {
-    return this.clientsService.list(translateClientsQuery(query));
+  list(
+    @Query() query: Record<string, unknown>,
+    @AccessContext() accessCtx?: DataAccessContext,
+  ) {
+    return this.clientsService.list(translateClientsQuery(query), accessCtx);
   }
 
   @Get('summary')
   @RequirePermission('clients.read')
-  summary() {
-    return this.clientsService.getSummary();
+  summary(@AccessContext() accessCtx?: DataAccessContext) {
+    return this.clientsService.getSummary(accessCtx);
   }
 
   @Get('handler-options')
   @RequirePermission('clients.read')
-  handlerOptions() {
-    return this.clientsService.getHandlerOptions();
+  handlerOptions(@AccessContext() accessCtx?: DataAccessContext) {
+    return this.clientsService.getHandlerOptions(accessCtx);
   }
 
   @Get(':id')

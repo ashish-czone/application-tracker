@@ -159,23 +159,35 @@ export class ClientsService {
    * filings, on-time %, last filing date, derived risk band) and the handler
    * display name. Custom Drizzle path; the entity engine's list pipeline
    * doesn't express the per-row aggregates.
+   *
+   * Row-level scope: the actor's `DataAccessContext` is translated to a
+   * SQL predicate via the engine and ANDed into the rollup CTE — same
+   * scope filter that `entityService.list(…, accessCtx)` would have applied
+   * if the engine pipeline could express the rollup.
    */
-  list(query: ClientsListParams) {
-    return this.rollup.list(query);
+  async list(query: ClientsListParams, accessCtx?: DataAccessContext) {
+    const scopePredicate = accessCtx ? await this.entityService.getScopePredicate(accessCtx) : undefined;
+    return this.rollup.list(query, scopePredicate);
   }
 
   /**
    * Page-level summary KPIs — total clients, byStatus, byRisk, totalOverdue,
-   * clientsWithOverdue. Single round-trip; respects the same compliance-only
-   * filter the list view uses.
+   * clientsWithOverdue. Single round-trip; counts apply the same actor scope
+   * as the list view so subtotals match.
    */
-  getSummary(): Promise<ClientsSummary> {
-    return this.rollup.getSummary();
+  async getSummary(accessCtx?: DataAccessContext): Promise<ClientsSummary> {
+    const scopePredicate = accessCtx ? await this.entityService.getScopePredicate(accessCtx) : undefined;
+    return this.rollup.getSummary(scopePredicate);
   }
 
-  /** Distinct account-manager users across compliance clients, for the filter dropdown. */
-  getHandlerOptions(): Promise<HandlerOption[]> {
-    return this.rollup.getHandlerOptions();
+  /**
+   * Distinct account-manager users across compliance clients the actor can
+   * read. Drives the filter dropdown — must mirror the list view's scope so
+   * picking a handler doesn't surface clients outside the actor's scope.
+   */
+  async getHandlerOptions(accessCtx?: DataAccessContext): Promise<HandlerOption[]> {
+    const scopePredicate = accessCtx ? await this.entityService.getScopePredicate(accessCtx) : undefined;
+    return this.rollup.getHandlerOptions(scopePredicate);
   }
 
   findOne(id: string, accessCtx?: DataAccessContext) {

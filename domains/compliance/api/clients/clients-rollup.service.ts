@@ -81,10 +81,12 @@ const SORTABLE_COLUMNS: Record<string, SQL> = {
  * `healthy`. Filtering by risk uses the same expression as a HAVING-style
  * predicate in the outer WHERE.
  *
- * RBAC scope: compliance clients have no `dataAccess.scopes` declared, so
- * the engine's scope filter is a no-op for this entity. Tenant scoping is
- * applied via `withTenant(clients, …)` and is itself a no-op when the
- * `clients` table has no tenantId column.
+ * Row-level scope: callers pass a `scopePredicate` derived from the actor's
+ * `DataAccessContext` (typically via `clientsEntityService.getScopePredicate(ctx)`).
+ * The predicate is applied at CTE level on the underlying `clients` table so
+ * the per-client aggregates run only over the rows the actor can read.
+ * `undefined` means "no scope filter" (the actor holds `any` scope or the
+ * caller is internal). Tenant scoping is applied alongside on the same CTE.
  */
 @Injectable()
 export class ClientsRollupService {
@@ -100,7 +102,10 @@ export class ClientsRollupService {
    * conditional aggregates which the entity engine's list pipeline doesn't
    * express.
    */
-  async list(params: ClientsListParams): Promise<{
+  async list(
+    params: ClientsListParams,
+    scopePredicate?: SQL,
+  ): Promise<{
     data: ClientRollupRow[];
     meta: { total: number; page: number; limit: number; totalPages: number };
   }> {
@@ -118,13 +123,13 @@ export class ClientsRollupService {
 
     const totalRows = await this.database.db.execute(sql`
       SELECT COUNT(*)::int AS total
-      FROM (${this.buildBaseQuery(today, sevenDays)}) c
+      FROM (${this.buildBaseQuery(today, sevenDays, scopePredicate)}) c
       WHERE TRUE ${whereSql}
     `);
     const total = Number((totalRows.rows[0] as { total: number }).total);
 
     const dataRows = await this.database.db.execute(sql`
-      SELECT * FROM (${this.buildBaseQuery(today, sevenDays)}) c
+      SELECT * FROM (${this.buildBaseQuery(today, sevenDays, scopePredicate)}) c
       WHERE TRUE ${whereSql}
       ORDER BY ${sortExpr} ${direction} NULLS LAST, c.id ASC
       LIMIT ${params.limit} OFFSET ${offset}
@@ -148,7 +153,7 @@ export class ClientsRollupService {
    * compliance-client filter, then aggregates byStatus + byRisk counts in a
    * single round-trip.
    */
-  async getSummary(): Promise<ClientsSummary> {
+  async getSummary(scopePredicate?: SQL): Promise<ClientsSummary> {
     const today = todayInTimezone(this.appTimezone);
     const sevenDays = addDays(today, 7);
 
@@ -168,7 +173,7 @@ export class ClientsRollupService {
         COUNT(*) FILTER (WHERE overdue_filings > 0)::int AS clients_with_overdue,
         COALESCE(SUM(registered_laws)::int, 0) AS total_registrations,
         COALESCE(ROUND(AVG(on_time_pct) FILTER (WHERE completed_filings > 0))::int, 0) AS avg_on_time_pct
-      FROM (${this.buildBaseQuery(today, sevenDays)}) c
+      FROM (${this.buildBaseQuery(today, sevenDays, scopePredicate)}) c
       WHERE TRUE ${whereSql}
     `);
 
@@ -198,17 +203,16 @@ export class ClientsRollupService {
    * at least one compliance client. Display name = "firstName lastName" or
    * email fallback.
    */
-  async getHandlerOptions(): Promise<HandlerOption[]> {
-    const tenantWhere = withTenant(clients);
-
+  async getHandlerOptions(scopePredicate?: SQL): Promise<HandlerOption[]> {
     const distinctIds = await this.database.db
       .selectDistinct({ id: clients.complianceAccountManagerId })
       .from(clients)
-      .where(
-        tenantWhere
-          ? sql`${tenantWhere} AND ${clients.complianceBecameClientAt} IS NOT NULL AND ${clients.deletedAt} IS NULL AND ${clients.complianceAccountManagerId} IS NOT NULL`
-          : sql`${clients.complianceBecameClientAt} IS NOT NULL AND ${clients.deletedAt} IS NULL AND ${clients.complianceAccountManagerId} IS NOT NULL`,
-      );
+      .where(withScope(
+        clients,
+        scopePredicate,
+        sql`${clients.complianceBecameClientAt} IS NOT NULL`,
+        sql`${clients.complianceAccountManagerId} IS NOT NULL`,
+      ));
 
     const ids = distinctIds
       .map((row) => row.id)
@@ -239,11 +243,26 @@ export class ClientsRollupService {
    * the rollup columns. Used as a subquery by both list() and getSummary()
    * so the risk computation stays in one place.
    */
-  private buildBaseQuery(today: string, sevenDays: string) {
+  private buildBaseQuery(today: string, sevenDays: string, scopePredicate?: SQL) {
     const notCompleted = sql.raw(
       NOT_COMPLETED_STATES.map((s) => `'${s}'`).join(', '),
     );
+    // The scope predicate (when present) references the underlying `clients`
+    // table directly via Drizzle column references — i.e. `"clients"."col"`.
+    // We pre-filter clients in a CTE that uses `FROM clients` (no alias) so
+    // those references resolve, then alias the CTE as `c` for the existing
+    // outer joins/aggregates. Tenant + soft-delete legs come from withScope.
+    const scopeAndDelete = withScope(
+      clients,
+      scopePredicate,
+      sql`${clients.complianceBecameClientAt} IS NOT NULL`,
+    );
+    const cteWhere = scopeAndDelete ? sql`WHERE ${scopeAndDelete}` : sql``;
     return sql`
+      WITH scoped_clients AS (
+        SELECT * FROM ${clients}
+        ${cteWhere}
+      )
       SELECT
         c.id,
         c.name,
@@ -275,7 +294,7 @@ export class ClientsRollupService {
           WHEN COALESCE(f.due_this_week, 0) > 0 THEN 'at-risk'
           ELSE 'healthy'
         END AS risk
-      FROM clients c
+      FROM scoped_clients c
       LEFT JOIN users u ON u.id = c.compliance_account_manager_id AND u.deleted_at IS NULL
       LEFT JOIN (
         SELECT client_id,
@@ -294,7 +313,6 @@ export class ClientsRollupService {
         FROM compliance_filings
         GROUP BY client_id
       ) f ON f.client_id = c.id
-      WHERE c.compliance_became_client_at IS NOT NULL AND c.deleted_at IS NULL
     `;
   }
 
