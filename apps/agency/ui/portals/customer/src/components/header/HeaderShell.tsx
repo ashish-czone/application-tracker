@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Menu, X, ChevronDown } from 'lucide-react';
 import type { PublicMenuItemDto } from '@domains/agency-ui/portals/customer';
+import { CzoneLogo } from '@domains/agency-ui/components/branding/CzoneLogo';
 import { cn } from '@/lib/cn';
 import { ThemeToggle } from './ThemeToggle';
 
@@ -90,10 +91,10 @@ export function HeaderShell({ siteName, menuItems }: HeaderShellProps) {
       >
         <Link
           href="/"
-          className="text-base md:text-lg font-semibold tracking-[-0.02em]"
+          className="inline-flex items-center transition-transform duration-200 hover:scale-[1.02]"
           aria-label={`${siteName} home`}
         >
-          {siteName}
+          <CzoneLogo size={scrolled ? 18 : 22} />
         </Link>
 
         <DesktopNav items={menuItems} pathname={pathname} />
