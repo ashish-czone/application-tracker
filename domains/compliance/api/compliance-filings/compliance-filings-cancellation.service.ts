@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { inArray } from '@packages/database';
+import { inArray, withScope } from '@packages/database';
 import { WorkflowEngineService, WorkflowRegistryService } from '@packages/workflows';
 import { complianceFilings } from '../schema/compliance-filings';
 
@@ -48,7 +48,7 @@ export class ComplianceFilingsCancellationService {
     await tx
       .update(complianceFilings)
       .set({ status: 'cancelled' })
-      .where(inArray(complianceFilings.id, ids));
+      .where(withScope(complianceFilings, inArray(complianceFilings.id, ids)));
 
     const historyRows = filings.map((filing) => {
       const transitionId = transitionIdByFromState.get(filing.status);

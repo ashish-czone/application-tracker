@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { and, eq, gte, lte, isNull, isNotNull, inArray, ilike, sql, count, notInArray } from 'drizzle-orm';
-import { DatabaseService } from '@packages/database';
+import { DatabaseService, withScope } from '@packages/database';
+import { notDeleted } from '@packages/soft-delete';
 import { clients } from '@packages/directory';
 import { OrgUnitService } from '@packages/org-units';
 import { withTenant } from '@packages/tenancy/helpers';
@@ -113,9 +114,11 @@ export class ComplianceReportsService {
     // module-boundaries.md → "Shared Identity Tables". Embeds the client
     // name on each row so the frontend doesn't need a side fetch.
     const baseConditions = [
-      isNull(complianceFilings.deletedAt),
       gte(complianceFilings.dueDate, range.from),
       lte(complianceFilings.dueDate, range.to),
+      // Joined soft-delete table: withScope only filters the driver
+      // (complianceFilings); clients needs its own predicate.
+      notDeleted(clients),
     ];
     if (options?.q && options.q.trim().length > 0) {
       baseConditions.push(ilike(clients.name, `%${options.q.trim()}%`));
@@ -132,7 +135,7 @@ export class ComplianceReportsService {
       })
       .from(complianceFilings)
       .leftJoin(clients, eq(clients.id, complianceFilings.clientId))
-      .where(withTenant(complianceFilings, and(...baseConditions)))
+      .where(withScope(complianceFilings, ...baseConditions))
       .groupBy(complianceFilings.clientId, clients.name)
       .orderBy(sql`COUNT(*) DESC`);
 

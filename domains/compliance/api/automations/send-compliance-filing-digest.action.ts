@@ -1,9 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import Mustache from 'mustache';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
-import { DatabaseService, sql } from '@packages/database';
+import { DatabaseService, sql, withScope } from '@packages/database';
 import { todayInTimezone } from '@packages/common';
-import { withTenant } from '@packages/tenancy/helpers';
 import type {
   ActionHandler,
   ActionContext,
@@ -157,7 +156,7 @@ export class SendComplianceFilingDigestAction implements ActionHandler {
     const rows = await this.database.db
       .select({ id: complianceFilings.id, title: complianceFilings.title, dueDate: complianceFilings.dueDate })
       .from(complianceFilings)
-      .where(withTenant(
+      .where(withScope(
         complianceFilings,
         sql`${complianceFilings.status} NOT IN ('completed', 'cancelled')`,
         sql`${complianceFilings.dueDate} IS NOT NULL`,
