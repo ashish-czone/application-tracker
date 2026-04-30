@@ -26,22 +26,31 @@ describe('translateClientsQuery', () => {
     });
   });
 
-  it('accepts only valid status / risk values', () => {
+  it('accepts only valid status values', () => {
     expect(translateClientsQuery({ status: 'active' }).status).toBe('active');
     expect(translateClientsQuery({ status: 'bogus' }).status).toBeUndefined();
-    expect(translateClientsQuery({ risk: 'critical' }).risk).toBe('critical');
-    expect(translateClientsQuery({ risk: 'invalid' }).risk).toBeUndefined();
   });
 
-  it('passes handlerId and q through as strings', () => {
-    const out = translateClientsQuery({ handlerId: 'u-1', q: 'acme' });
-    expect(out.handlerId).toBe('u-1');
-    expect(out.q).toBe('acme');
+  it('parses comma-separated risk and drops invalid entries', () => {
+    expect(translateClientsQuery({ risk: 'critical' }).risks).toEqual(['critical']);
+    expect(translateClientsQuery({ risk: 'critical,at-risk' }).risks).toEqual(['critical', 'at-risk']);
+    expect(translateClientsQuery({ risk: 'critical,bogus' }).risks).toEqual(['critical']);
+    expect(translateClientsQuery({ risk: 'bogus' }).risks).toBeUndefined();
+  });
+
+  it('parses comma-separated handlerId list', () => {
+    const out = translateClientsQuery({ handlerId: 'u-1,u-2,u-3' });
+    expect(out.handlerIds).toEqual(['u-1', 'u-2', 'u-3']);
+  });
+
+  it('passes q through as string', () => {
+    expect(translateClientsQuery({ q: 'acme' }).q).toBe('acme');
   });
 
   it('drops empty strings', () => {
-    const out = translateClientsQuery({ handlerId: '', q: '' });
-    expect(out.handlerId).toBeUndefined();
+    const out = translateClientsQuery({ handlerId: '', q: '', risk: '' });
+    expect(out.handlerIds).toBeUndefined();
     expect(out.q).toBeUndefined();
+    expect(out.risks).toBeUndefined();
   });
 });

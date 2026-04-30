@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router';
 import { AnimatePresence } from 'framer-motion';
 import { Plus, Upload, AlertTriangle } from 'lucide-react';
@@ -22,12 +22,17 @@ import { NewClientDrawer } from './components/NewClientDrawer';
 import { ClientPreviewPopover } from './components/ClientPreviewPopover';
 import { RISK_LABEL } from './components/RiskPill';
 import { CLIENT_COLUMNS, REQUIRED_CLIENT_COLUMN_KEYS } from './components/clientColumns';
-import { useClientsList } from '../../../../hooks/useClientsApi';
-import { useUsersList } from '../../../../hooks/useUsersApi';
+import {
+  useClientsList,
+  useClientsSummary,
+  useClientHandlerOptions,
+} from '../../../../hooks/useClientsApi';
+import { useDebouncedValue } from '../../../../hooks/useDebouncedValue';
 import { mapClientRecordToRow } from './api/mapClientRecord';
-import { formatUserDisplayName } from './handlerUtils';
 
 type StatusTab = 'all' | ClientStatus;
+
+const PAGE_LIMIT = 25;
 
 export function ClientsPage() {
   const navigate = useNavigate();
@@ -58,56 +63,59 @@ export function ClientsPage() {
   }, []);
 
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebouncedValue(search, 300);
   const [statusTab, setStatusTab] = useState<StatusTab>('all');
   const [riskFilter, setRiskFilter] = useState<ClientRiskLevel[]>([]);
   const [handlerFilter, setHandlerFilter] = useState<string[]>([]);
+  const [page, setPage] = useState(1);
 
-  const { data, isLoading, isError } = useClientsList({ limit: 100 });
-  const { data: usersData } = useUsersList({ limit: 500 });
+  // Reset to page 1 whenever filters change so page never lands past the
+  // available range. Without this, switching tabs leaves the page index
+  // pointing at empty pages and the user sees "no rows" until they navigate.
+  useEffect(() => {
+    setPage(1);
+  }, [statusTab, riskFilter, handlerFilter, debouncedSearch]);
 
-  const rows = useMemo<ClientRow[]>(() => {
-    if (!data?.data) return [];
-    return data.data.map(mapClientRecordToRow);
-  }, [data]);
+  const { data, isLoading, isError } = useClientsList({
+    page,
+    limit: PAGE_LIMIT,
+    status: statusTab === 'all' ? undefined : statusTab,
+    risk: riskFilter.length > 0 ? riskFilter.join(',') : undefined,
+    handlerId: handlerFilter.length > 0 ? handlerFilter.join(',') : undefined,
+    q: debouncedSearch || undefined,
+  });
+  const { data: summary } = useClientsSummary();
+  const { data: handlerOptionsRaw } = useClientHandlerOptions();
 
-  const userById = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const u of usersData?.data ?? []) {
-      if (u.status !== 'active') continue;
-      map.set(u.id, formatUserDisplayName(u));
-    }
-    return map;
-  }, [usersData]);
-
-  const statusCounts = useMemo(
-    () => ({
-      active: rows.filter((c) => c.status === 'active').length,
-      onboarding: rows.filter((c) => c.status === 'onboarding').length,
-      dormant: rows.filter((c) => c.status === 'dormant').length,
-    }),
-    [rows],
+  const rows = useMemo<ClientRow[]>(
+    () => data?.data?.map(mapClientRecordToRow) ?? [],
+    [data],
   );
+  const totalPages = data?.meta?.totalPages ?? 1;
+  const totalRows = data?.meta?.total ?? 0;
 
-  const riskCounts = useMemo(
-    () => ({
-      healthy: rows.filter((c) => c.status === 'active' && c.risk === 'healthy').length,
-      'at-risk': rows.filter((c) => c.status === 'active' && c.risk === 'at-risk').length,
-      critical: rows.filter((c) => c.status === 'active' && c.risk === 'critical').length,
-    }),
-    [rows],
+  const totalClients = summary?.total ?? 0;
+  const activeClients = summary?.byStatus.active ?? 0;
+  const onboardingClients = summary?.byStatus.onboarding ?? 0;
+  const dormantClients = summary?.byStatus.dormant ?? 0;
+  const riskCounts = summary?.byRisk ?? { healthy: 0, 'at-risk': 0, critical: 0 };
+  const totalOverdue = summary?.totalOverdue ?? 0;
+  const clientsWithOverdue = summary?.clientsWithOverdue ?? 0;
+  const totalRegistrations = summary?.totalRegistrations ?? 0;
+  const avgOnTime = summary?.avgOnTimePct ?? 0;
+
+  const riskOptions = RISK_OPTIONS.map((r) => ({
+    value: r.value,
+    label: r.label,
+  }));
+
+  const handlerOptions = useMemo(
+    () =>
+      (handlerOptionsRaw ?? [])
+        .map((h) => ({ value: h.id, label: h.name }))
+        .sort((a, b) => a.label.localeCompare(b.label)),
+    [handlerOptionsRaw],
   );
-
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return rows.filter((c) => {
-      if (statusTab !== 'all' && c.status !== statusTab) return false;
-      if (riskFilter.length > 0 && !riskFilter.includes(c.risk)) return false;
-      if (handlerFilter.length > 0 && !handlerFilter.includes(c.primaryHandler.id)) return false;
-      if (q && !`${c.name} ${c.legalName} ${c.taxIdentifier}`.toLowerCase().includes(q))
-        return false;
-      return true;
-    });
-  }, [rows, statusTab, riskFilter, handlerFilter, search]);
 
   const activeFilters: ActiveFilter[] = useMemo(() => {
     const chips: ActiveFilter[] = [];
@@ -120,55 +128,27 @@ export function ClientsPage() {
       });
     }
     for (const key of handlerFilter) {
+      const handler = handlerOptionsRaw?.find((h) => h.id === key);
       chips.push({
         key: `handler:${key}`,
         group: 'Handler',
-        value: userById.get(key) ?? key,
+        value: handler?.name ?? key,
         onRemove: () => setHandlerFilter((prev) => prev.filter((k) => k !== key)),
       });
     }
     return chips;
-  }, [riskFilter, handlerFilter, userById]);
+  }, [riskFilter, handlerFilter, handlerOptionsRaw]);
 
   const clearAll = () => {
     setRiskFilter([]);
     setHandlerFilter([]);
   };
 
-  const totalClients = rows.length;
-  const activeClients = statusCounts.active;
-  const totalOverdue = rows.reduce((acc, c) => acc + c.overdueFilings, 0);
-  const onTimeClients = rows.filter((c) => c.onTimePct > 0);
-  const avgOnTime =
-    onTimeClients.length > 0
-      ? Math.round(onTimeClients.reduce((acc, c) => acc + c.onTimePct, 0) / onTimeClients.length)
-      : 0;
-  const totalRegistrations = rows.reduce((acc, c) => acc + c.registeredLaws, 0);
-  const clientsWithOverdue = rows.filter((c) => c.overdueFilings > 0).length;
-
-  const riskOptions = RISK_OPTIONS.map((r) => ({
-    value: r.value,
-    label: r.label,
-    count: rows.filter((c) => c.risk === r.value && c.status === 'active').length,
-  }));
-
-  const handlerOptions = useMemo(
-    () =>
-      Array.from(userById.entries())
-        .map(([id, label]) => ({
-          value: id,
-          label,
-          count: rows.filter((c) => c.primaryHandler.id === id).length,
-        }))
-        .sort((a, b) => a.label.localeCompare(b.label)),
-    [userById, rows],
-  );
-
   const statusTabs = [
     { value: 'all' as const, label: 'All', count: totalClients },
-    { value: 'active' as const, label: 'Active', count: statusCounts.active },
-    { value: 'onboarding' as const, label: 'Onboarding', count: statusCounts.onboarding },
-    { value: 'dormant' as const, label: 'Dormant', count: statusCounts.dormant },
+    { value: 'active' as const, label: 'Active', count: activeClients },
+    { value: 'onboarding' as const, label: 'Onboarding', count: onboardingClients },
+    { value: 'dormant' as const, label: 'Dormant', count: dormantClients },
   ];
 
   return (
@@ -185,7 +165,7 @@ export function ClientsPage() {
           ) : (
             <>
               {totalClients} entities under management — {activeClients} active,{' '}
-              {statusCounts.onboarding} onboarding, {statusCounts.dormant} dormant.
+              {onboardingClients} onboarding, {dormantClients} dormant.
             </>
           )
         }
@@ -217,6 +197,7 @@ export function ClientsPage() {
               <button
                 type="button"
                 className="text-[11px] uppercase tracking-eyebrow font-sans font-medium text-signal hover:underline"
+                onClick={() => setRiskFilter(['critical'])}
               >
                 Review →
               </button>
@@ -228,12 +209,12 @@ export function ClientsPage() {
             label: 'Total clients',
             value: String(totalClients),
             unit: 'entities',
-            delta: '▲ 1 this month',
-            deltaTone: 'positive',
+            delta: `${activeClients} active`,
+            deltaTone: 'neutral',
             accent: 'authority',
-            sparklineData: [8, 9, 9, 10, 10, 11, totalClients],
+            sparklineData: [totalClients, totalClients, totalClients, totalClients, totalClients, totalClients, totalClients],
             sparklineTone: 'authority',
-            footnote: `${activeClients} active`,
+            footnote: `${onboardingClients} onboarding · ${dormantClients} dormant`,
           },
           {
             label: 'Registrations',
@@ -242,18 +223,21 @@ export function ClientsPage() {
             delta: `across ${activeClients} clients`,
             deltaTone: 'neutral',
             accent: 'filed',
-            sparklineData: [32, 35, 37, 40, 42, 44, totalRegistrations],
+            sparklineData: [totalRegistrations, totalRegistrations, totalRegistrations, totalRegistrations, totalRegistrations, totalRegistrations, totalRegistrations],
             sparklineTone: 'filed',
-            footnote: 'avg 3.8 per client',
+            footnote:
+              activeClients > 0
+                ? `avg ${(totalRegistrations / activeClients).toFixed(1)} per active client`
+                : '—',
           },
           {
             label: 'Overdue filings',
             value: String(totalOverdue),
             unit: 'filings',
             delta: `across ${clientsWithOverdue} clients`,
-            deltaTone: 'negative',
+            deltaTone: totalOverdue > 0 ? 'negative' : 'neutral',
             accent: 'signal',
-            sparklineData: [5, 7, 8, 9, 10, 11, totalOverdue],
+            sparklineData: [totalOverdue, totalOverdue, totalOverdue, totalOverdue, totalOverdue, totalOverdue, totalOverdue],
             sparklineTone: 'signal',
             footnote: `${riskCounts.critical} critical`,
           },
@@ -261,12 +245,12 @@ export function ClientsPage() {
             label: 'Avg. on-time rate',
             value: String(avgOnTime),
             unit: '%',
-            delta: '▲ 1.2 vs Q4',
-            deltaTone: 'positive',
+            delta: 'across completed filings',
+            deltaTone: 'neutral',
             accent: 'filed',
-            sparklineData: [84, 85, 86, 87, 88, 89, avgOnTime],
+            sparklineData: [avgOnTime, avgOnTime, avgOnTime, avgOnTime, avgOnTime, avgOnTime, avgOnTime],
             sparklineTone: 'filed',
-            footnote: 'trailing 12 months',
+            footnote: 'lifetime',
           },
         ]}
       >
@@ -275,10 +259,11 @@ export function ClientsPage() {
 
           <DataGridShell
             columns={CLIENT_COLUMNS}
-            rows={filtered}
+            rows={rows}
             getRowKey={(c) => c.id}
             requiredColumns={REQUIRED_CLIENT_COLUMN_KEYS}
-            totalRows={totalClients}
+            totalRows={totalRows}
+            defaultPageSize={PAGE_LIMIT}
             onRowClick={(client) => {
               navigate(`/clients/${client.id}`);
             }}
@@ -315,6 +300,31 @@ export function ClientsPage() {
               </>
             }
           />
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-3 py-3 border-t border-rule mt-2">
+              <span className="text-[11px] font-sans tabular-nums text-ink-soft">
+                Page {page} of {totalPages} · {totalRows} clients
+              </span>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  className="px-3 py-1 text-[11px] uppercase tracking-eyebrow font-sans font-medium border border-rule text-ink-muted hover:text-ink disabled:opacity-40 disabled:cursor-not-allowed"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page <= 1 || isLoading}
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  className="px-3 py-1 text-[11px] uppercase tracking-eyebrow font-sans font-medium border border-rule text-ink-muted hover:text-ink disabled:opacity-40 disabled:cursor-not-allowed"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page >= totalPages || isLoading}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </section>
       </ScreenLayout>
 

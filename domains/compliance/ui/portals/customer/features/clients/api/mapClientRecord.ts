@@ -9,6 +9,7 @@ const UNASSIGNED_HANDLER: Handler = {
 };
 
 const STATUS_VALUES: ClientStatus[] = ['active', 'onboarding', 'dormant'];
+const RISK_VALUES: ClientRiskLevel[] = ['healthy', 'at-risk', 'critical'];
 
 const AVATAR_PALETTE = [
   'hsl(218 56% 24%)',
@@ -52,8 +53,25 @@ function normalizeStatus(status: string | null | undefined): ClientStatus {
   return 'onboarding';
 }
 
+function normalizeRisk(risk: string | null | undefined): ClientRiskLevel {
+  if (risk && (RISK_VALUES as string[]).includes(risk)) {
+    return risk as ClientRiskLevel;
+  }
+  return 'healthy';
+}
+
+function buildHandler(record: ClientRecord): Handler {
+  const id = record.complianceAccountManagerId;
+  const name = record.complianceAccountManagerId__label;
+  if (!id || !name) return UNASSIGNED_HANDLER;
+  return {
+    id,
+    name,
+    initials: initialsFromName(name),
+  };
+}
+
 export function mapClientRecordToRow(record: ClientRecord): ClientRow {
-  const risk: ClientRiskLevel = 'healthy';
   return {
     id: record.id,
     name: record.name,
@@ -62,15 +80,14 @@ export function mapClientRecordToRow(record: ClientRecord): ClientRow {
     initials: initialsFromName(record.name),
     color: colorForClient(record.id, record.name),
     status: normalizeStatus(record.complianceStatus),
-    risk,
-    registeredLaws: 0,
-    openFilings: 0,
-    overdueFilings: 0,
-    onTimePct: 0,
-    primaryHandler: UNASSIGNED_HANDLER,
+    risk: normalizeRisk(record.risk),
+    registeredLaws: record.registeredLaws ?? 0,
+    openFilings: record.openFilings ?? 0,
+    overdueFilings: record.overdueFilings ?? 0,
+    onTimePct: record.onTimePct ?? 0,
+    primaryHandler: buildHandler(record),
     primaryContactEmail: record.email ?? '',
     onboardedDate: record.complianceOnboardedAt ? record.complianceOnboardedAt.slice(0, 10) : '',
-    lastFilingDate: '',
+    lastFilingDate: record.lastFilingDate ?? '',
   };
 }
-

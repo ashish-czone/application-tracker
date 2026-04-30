@@ -22,8 +22,8 @@ export function translateClientsQuery(raw: Record<string, unknown>): ClientsList
     sort,
     order,
     status: parseEnum(raw.status, VALID_STATUSES),
-    risk: parseEnum(raw.risk, VALID_RISKS),
-    handlerId: stringOrUndefined(raw.handlerId),
+    risks: parseEnumCsv(raw.risk, VALID_RISKS),
+    handlerIds: parseStringCsv(raw.handlerId),
     q: stringOrUndefined(raw.q),
   };
 }
@@ -59,6 +59,19 @@ function parseSort(rawSort: unknown, rawOrder: unknown): { sort?: string; order?
 function parseEnum<T extends string>(raw: unknown, allowed: ReadonlySet<T>): T | undefined {
   if (typeof raw !== 'string' || raw.length === 0) return undefined;
   return (allowed as ReadonlySet<string>).has(raw) ? (raw as T) : undefined;
+}
+
+function parseEnumCsv<T extends string>(raw: unknown, allowed: ReadonlySet<T>): T[] | undefined {
+  const parts = parseStringCsv(raw);
+  if (!parts) return undefined;
+  const filtered = parts.filter((p): p is T => (allowed as ReadonlySet<string>).has(p));
+  return filtered.length > 0 ? filtered : undefined;
+}
+
+function parseStringCsv(raw: unknown): string[] | undefined {
+  if (typeof raw !== 'string' || raw.length === 0) return undefined;
+  const parts = raw.split(',').map((s) => s.trim()).filter((s) => s.length > 0);
+  return parts.length > 0 ? parts : undefined;
 }
 
 function stringOrUndefined(v: unknown): string | undefined {

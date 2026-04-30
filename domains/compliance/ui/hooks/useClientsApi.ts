@@ -7,6 +7,9 @@ interface PaginatedResponse<T> {
   meta: { total: number; page: number; limit: number; totalPages: number };
 }
 
+export type ClientRiskLevel = 'healthy' | 'at-risk' | 'critical';
+export type ClientStatusKey = 'active' | 'onboarding' | 'dormant';
+
 export interface ClientRecord {
   id: string;
   name: string;
@@ -17,6 +20,7 @@ export interface ClientRecord {
   taxId?: string | null;
   industry?: string | null;
   complianceAccountManagerId?: string | null;
+  complianceAccountManagerId__label?: string | null;
   complianceStatus?: string | null;
   complianceOnboardedAt?: string | null;
   addressLine1?: string | null;
@@ -28,7 +32,43 @@ export interface ClientRecord {
   complianceNotes?: string | null;
   createdAt?: string;
   updatedAt?: string;
+  registeredLaws?: number;
+  openFilings?: number;
+  overdueFilings?: number;
+  dueThisWeek?: number;
+  completedFilings?: number;
+  onTimeFilings?: number;
+  onTimePct?: number;
+  lastFilingDate?: string | null;
+  risk?: ClientRiskLevel;
   [key: string]: unknown;
+}
+
+export interface ClientsSummary {
+  total: number;
+  byStatus: { active: number; onboarding: number; dormant: number };
+  byRisk: { healthy: number; 'at-risk': number; critical: number };
+  totalOverdue: number;
+  clientsWithOverdue: number;
+  totalRegistrations: number;
+  avgOnTimePct: number;
+}
+
+export interface HandlerOption {
+  id: string;
+  name: string;
+}
+
+export interface ClientsListParams {
+  page?: number;
+  limit?: number;
+  sort?: string;
+  status?: ClientStatusKey;
+  /** Comma-separated risk levels (e.g. `"critical,at-risk"`). */
+  risk?: string;
+  /** Comma-separated handler ids. */
+  handlerId?: string;
+  q?: string;
 }
 
 export interface ClientContactRecord {
@@ -113,11 +153,30 @@ export interface DeactivateRegistrationResult {
   manuallyCancelledFilingIds: string[];
 }
 
-export function useClientsList(params: Record<string, unknown> = {}) {
+export function useClientsList(params: ClientsListParams = {}) {
   const hooks = useEntityHooks('clients');
-  return hooks.useList(params) as ReturnType<typeof hooks.useList> & {
+  return hooks.useList(params as Record<string, unknown>) as ReturnType<typeof hooks.useList> & {
     data?: PaginatedResponse<ClientRecord>;
   };
+}
+
+/** Page-level KPI summary for the clients list view. */
+export function useClientsSummary() {
+  const { apiFn } = useEntityEngine();
+  return useQuery({
+    queryKey: ['clients', 'summary'],
+    queryFn: () => apiFn.get<ClientsSummary>('/clients/summary'),
+  });
+}
+
+/** Distinct account-manager users for the handler filter dropdown. */
+export function useClientHandlerOptions() {
+  const { apiFn } = useEntityEngine();
+  return useQuery({
+    queryKey: ['clients', 'handler-options'],
+    queryFn: () => apiFn.get<HandlerOption[]>('/clients/handler-options'),
+    staleTime: 60_000,
+  });
 }
 
 export function useClientDetail(id: string | null | undefined) {

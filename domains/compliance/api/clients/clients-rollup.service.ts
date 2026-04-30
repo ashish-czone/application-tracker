@@ -13,8 +13,8 @@ export interface ClientsListParams {
   sort?: string;
   order?: 'asc' | 'desc';
   status?: ClientStatusKey;
-  handlerId?: string;
-  risk?: ClientRiskLevel;
+  handlerIds?: string[];
+  risks?: ClientRiskLevel[];
   q?: string;
 }
 
@@ -47,6 +47,8 @@ export interface ClientsSummary {
   byRisk: { healthy: number; 'at-risk': number; critical: number };
   totalOverdue: number;
   clientsWithOverdue: number;
+  totalRegistrations: number;
+  avgOnTimePct: number;
 }
 
 export interface HandlerOption {
@@ -163,7 +165,9 @@ export class ClientsRollupService {
         COUNT(*) FILTER (WHERE risk = 'at-risk')::int AS at_risk_count,
         COUNT(*) FILTER (WHERE risk = 'healthy')::int AS healthy_count,
         COALESCE(SUM(overdue_filings)::int, 0) AS total_overdue,
-        COUNT(*) FILTER (WHERE overdue_filings > 0)::int AS clients_with_overdue
+        COUNT(*) FILTER (WHERE overdue_filings > 0)::int AS clients_with_overdue,
+        COALESCE(SUM(registered_laws)::int, 0) AS total_registrations,
+        COALESCE(ROUND(AVG(on_time_pct) FILTER (WHERE completed_filings > 0))::int, 0) AS avg_on_time_pct
       FROM (${this.buildBaseQuery(today, sevenDays)}) c
       WHERE TRUE ${whereSql}
     `);
@@ -183,6 +187,8 @@ export class ClientsRollupService {
       },
       totalOverdue: Number(row.total_overdue ?? 0),
       clientsWithOverdue: Number(row.clients_with_overdue ?? 0),
+      totalRegistrations: Number(row.total_registrations ?? 0),
+      avgOnTimePct: Number(row.avg_on_time_pct ?? 0),
     };
   }
 
@@ -299,8 +305,12 @@ export class ClientsRollupService {
   ): SQL[] {
     const conds: SQL[] = [];
     if (params.status) conds.push(sql`c.compliance_status = ${params.status}`);
-    if (params.handlerId) conds.push(sql`c.compliance_account_manager_id = ${params.handlerId}`);
-    if (params.risk) conds.push(sql`c.risk = ${params.risk}`);
+    if (params.handlerIds && params.handlerIds.length > 0) {
+      conds.push(sql`c.compliance_account_manager_id = ANY(${params.handlerIds}::text[])`);
+    }
+    if (params.risks && params.risks.length > 0) {
+      conds.push(sql`c.risk = ANY(${params.risks}::text[])`);
+    }
     if (params.q) {
       const term = `%${params.q}%`;
       conds.push(
