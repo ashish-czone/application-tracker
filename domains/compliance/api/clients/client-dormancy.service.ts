@@ -111,14 +111,14 @@ export class ClientDormancyService {
       ? `Auto-cancelled: client "${clientName}" dormantised. ${ctx.comment}`
       : `Auto-cancelled: client "${clientName}" dormantised.`;
 
-    for (const filing of filings as Array<{ id: string; status: string }>) {
+    const historyRows = (filings as Array<{ id: string; status: string }>).map((filing) => {
       const transitionId = transitionIdByFromState.get(filing.status);
       if (!transitionId) {
         throw new Error(
           `No configured transition from '${filing.status}' → 'cancelled' on workflow '${FILING_WORKFLOW_SLUG}'. Filing ${filing.id} cannot be auto-cancelled; fix the workflow definition or exclude this state from the dormancy cascade.`,
         );
       }
-      await this.workflowEngine.recordHistory({
+      return {
         workflowDefinitionId: definition.id,
         entityType: 'compliance-filings',
         entityId: filing.id,
@@ -129,8 +129,10 @@ export class ClientDormancyService {
         actorId: ctx.actorId,
         reason: historyReason,
         comment: historyComment,
-      }, tx);
-    }
+      };
+    });
+
+    await this.workflowEngine.recordHistoryBatch(historyRows, tx);
 
     this.logger.log('Client dormantised — cancelled non-terminal filings', {
       clientId,
