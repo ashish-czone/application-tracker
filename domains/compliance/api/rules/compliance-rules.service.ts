@@ -732,10 +732,22 @@ export class ComplianceRulesService {
         ),
       );
 
+    if (activeRegistrations.length === 0) return;
+
+    // Hoist the handler fetch out of the loop: every registration we're
+    // checking has the same lawId (= handler.lawId), so the underlying
+    // `findResolvedHandler` would re-SELECT the same handler set on every
+    // iteration. Load once, then resolve from memory per registration.
+    const handlersForLaw = await this.database.db
+      .select()
+      .from(complianceLawHandlers)
+      .where(eq(complianceLawHandlers.lawId, handler.lawId));
+    const remainingHandlers = handlersForLaw.filter((h) => h.id !== handlerId);
+
     let brokenCount = 0;
     for (const reg of activeRegistrations) {
-      const ok = await this.canResolveAssignee(reg.lawId, reg.clientId, handlerId);
-      if (!ok) brokenCount += 1;
+      const result = this.resolveFromHandlerList(remainingHandlers, reg.clientId);
+      if (result.kind !== 'resolved') brokenCount += 1;
     }
 
     if (brokenCount > 0) {
@@ -759,7 +771,22 @@ export class ComplianceRulesService {
     const rows = excludeHandlerId
       ? allRows.filter((r) => r.id !== excludeHandlerId)
       : allRows;
+    return this.resolveFromHandlerList(rows, clientId);
+  }
 
+  /**
+   * Pure four-tier resolution over a preloaded handler set. Extracted from
+   * `findResolvedHandler` so callers that already have the handler list in
+   * memory (e.g. `assertHandlerCanBeDeleted`'s per-registration loop) don't
+   * re-SELECT for every check.
+   */
+  private resolveFromHandlerList(
+    rows: typeof complianceLawHandlers.$inferSelect[],
+    clientId?: string,
+  ):
+    | { kind: 'resolved'; orgEntityId: string }
+    | { kind: 'ambiguous'; tier: string }
+    | { kind: 'none' } {
     if (clientId !== undefined) {
       const clientRows = rows.filter((r) => r.clientId === clientId);
       const clientPrimary = clientRows.filter((r) => r.isPrimary);

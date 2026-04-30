@@ -9,6 +9,7 @@ export interface FilingsSummary {
   upcoming: number;
   completed: number;
   cancelled: number;
+  overdueClientCount: number;
 }
 
 export interface UseFilingsSummaryResult {
@@ -25,6 +26,7 @@ const ZERO_SUMMARY: FilingsSummary = {
   upcoming: 0,
   completed: 0,
   cancelled: 0,
+  overdueClientCount: 0,
 };
 
 /**

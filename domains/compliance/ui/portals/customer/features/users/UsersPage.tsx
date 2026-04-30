@@ -24,6 +24,7 @@ import {
   useBulkDeactivate,
   type ListUsersParams,
 } from '../../../../hooks/useUsersApi';
+import { useDebouncedValue } from '../../../../hooks/useDebouncedValue';
 import { mapUserRecordToRow } from './api/mapUserRecord';
 
 type StatusTab = 'all' | UserStatus;
@@ -40,28 +41,30 @@ export function UsersPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebouncedValue(search, 300);
   const [statusTab, setStatusTab] = useState<StatusTab>('all');
   const [page, setPage] = useState(1);
 
   // Reset page + selection when the filter shape changes — the user shouldn't
-  // sit on page 5 of "active" after switching to "invited".
+  // sit on page 5 of "active" after switching to "invited". Driven by the
+  // debounced search so we don't reset (and refetch) on every keystroke.
   useEffect(() => {
     setPage(1);
     setSelectedIds(new Set());
-  }, [statusTab, search]);
+  }, [statusTab, debouncedSearch]);
 
   const listParams = useMemo<ListUsersParams>(() => {
     const status = statusTabToParam(statusTab);
     return {
       page,
       limit: PAGE_LIMIT,
-      search: search.trim() || undefined,
+      search: debouncedSearch.trim() || undefined,
       status,
       // The deactivated tab needs `includeDeleted=true` so soft-deleted rows
       // come through. Other tabs filter to non-deleted rows by default.
       includeDeleted: status === 'deactivated' ? true : false,
     };
-  }, [page, search, statusTab]);
+  }, [page, debouncedSearch, statusTab]);
 
   const { data, isLoading, isError } = useUsersList(listParams);
   const { data: summary } = useUsersSummary();

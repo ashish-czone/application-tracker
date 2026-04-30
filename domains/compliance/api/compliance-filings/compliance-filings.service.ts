@@ -1,6 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { DatabaseService, sql } from '@packages/database';
 import { EntityService, type BaseListQuery } from '@packages/entity-engine';
 import type { DataAccessContext } from '@packages/rbac';
+import { complianceFilings } from '../schema/compliance-filings';
 import { LawsService } from '../laws/laws.service';
 import { buildFilingExternalKey } from './compliance-filings.config';
 import type { CreateComplianceFilingDto, UpdateComplianceFilingDto } from './compliance-filings.dto';
@@ -37,6 +39,8 @@ export interface FilingsSummary {
   upcoming: number;
   completed: number;
   cancelled: number;
+  /** Distinct clients with at least one overdue filing — feeds the FilingsPage banner. */
+  overdueClientCount: number;
 }
 
 function addDays(calendarDate: string, days: number): string {
@@ -54,6 +58,7 @@ export class ComplianceFilingsService {
   constructor(
     @Inject('ENTITY_SERVICE_compliance-filings') private readonly entityService: EntityService,
     private readonly lawsService: LawsService,
+    private readonly database: DatabaseService,
   ) {}
 
   /**
@@ -168,7 +173,16 @@ export class ComplianceFilingsService {
       filters: JSON.stringify([...scopeFilter, ...extra]),
     });
 
-    const [total, overdue, dueToday, dueThisWeek, upcoming, completed, cancelled] = await Promise.all([
+    const [
+      total,
+      overdue,
+      dueToday,
+      dueThisWeek,
+      upcoming,
+      completed,
+      cancelled,
+      overdueClientCount,
+    ] = await Promise.all([
       this.entityService.list(buildQuery([]), accessCtx),
       this.entityService.list(
         buildQuery([
@@ -207,6 +221,7 @@ export class ComplianceFilingsService {
         buildQuery([{ field: 'status', operator: 'eq', value: 'cancelled' }]),
         accessCtx,
       ),
+      this.countOverdueDistinctClients(today, options?.clientId),
     ]);
 
     return {
@@ -217,7 +232,36 @@ export class ComplianceFilingsService {
       upcoming: upcoming.meta.total,
       completed: completed.meta.total,
       cancelled: cancelled.meta.total,
+      overdueClientCount,
     };
+  }
+
+  /**
+   * COUNT(DISTINCT client_id) for non-terminal filings whose due date has
+   * passed. Lives outside the entity-engine's `list` path because it asks a
+   * shape `entityService.list({limit:1}).meta.total` cannot answer.
+   *
+   * Scope: soft-delete + optional clientId only. There is no row-level RBAC
+   * scope on `compliance_filings` in this codebase today; if one ever lands,
+   * this query must migrate behind whatever scoped-aggregation primitive
+   * the entity engine grows. Tracked alongside the raw rollup pattern in
+   * `clients-rollup.service.ts`.
+   */
+  private async countOverdueDistinctClients(
+    today: string,
+    clientId: string | undefined,
+  ): Promise<number> {
+    const clientFilter = clientId ? sql`AND client_id = ${clientId}` : sql``;
+    const result = await this.database.db.execute(sql`
+      SELECT COUNT(DISTINCT client_id)::int AS count
+      FROM ${complianceFilings}
+      WHERE deleted_at IS NULL
+        AND status IN ('pending', 'in_progress', 'review', 'rejected')
+        AND due_date < ${today}::date
+        ${clientFilter}
+    `);
+    const row = result.rows[0] as { count: number | string } | undefined;
+    return Number(row?.count ?? 0);
   }
 
   private ensureExternalKey(payload: Record<string, unknown>): Record<string, unknown> {

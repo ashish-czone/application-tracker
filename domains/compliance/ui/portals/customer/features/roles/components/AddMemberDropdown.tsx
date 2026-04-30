@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { X } from 'lucide-react';
 import { AvatarBadge, SearchInput } from '@packages/ui';
 import { useUsers } from '@packages/users-ui';
+import { useDebouncedValue } from '../../../../../hooks/useDebouncedValue';
 
 export interface AddMemberDropdownProps {
   excludedUserIds: Set<string>;
@@ -17,7 +18,11 @@ export function AddMemberDropdown({
   disabled,
 }: AddMemberDropdownProps) {
   const [query, setQuery] = useState('');
-  const { data: users, isLoading } = useUsers({ limit: 100, search: query || undefined });
+  const debouncedQuery = useDebouncedValue(query, 300);
+  const { data: users, isLoading } = useUsers({
+    limit: 100,
+    search: debouncedQuery || undefined,
+  });
 
   const available = useMemo(() => {
     const list = users?.data ?? [];

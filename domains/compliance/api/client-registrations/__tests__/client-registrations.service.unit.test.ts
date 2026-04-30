@@ -160,38 +160,39 @@ describe('ClientRegistrationsService', () => {
   });
 
   describe('registerMany', () => {
+    /**
+     * Mock for the batched-SELECT + bulk-INSERT shape: registerMany now does
+     * exactly one SELECT (returning every active row whose lawId is in the
+     * batch) and at most one INSERT VALUES […] for the laws that don't yet
+     * have an active registration.
+     */
     function mockTx(opts: {
-      existing: Record<string, unknown[]>;
+      existing: unknown[];
       insertRow: (lawId: string) => unknown;
     }) {
+      const insertCalls: { values: { clientId: string; lawId: string }[] }[] = [];
       const tx = {
         select: vi.fn(() => {
           const chain: AnyChain = {} as AnyChain;
           chain.from = vi.fn().mockReturnValue(chain);
-          chain.where = vi.fn((..._args: unknown[]) => {
-            // Return the queued row set for the next (clientId, lawId) lookup
-            const lawId = txLawQueue.shift();
-            return Promise.resolve(opts.existing[lawId ?? ''] ?? []);
-          });
+          chain.where = vi.fn().mockResolvedValue(opts.existing);
           return chain;
         }),
         insert: vi.fn(() => {
           const chain: AnyChain = {} as AnyChain;
-          let captured: { clientId: string; lawId: string } | undefined;
-          chain.values = vi.fn((v: { clientId: string; lawId: string }) => {
+          let captured: { clientId: string; lawId: string }[] = [];
+          chain.values = vi.fn((v: { clientId: string; lawId: string }[]) => {
             captured = v;
+            insertCalls.push({ values: v });
             return chain;
           });
           chain.returning = vi.fn(() =>
-            Promise.resolve([opts.insertRow(captured?.lawId ?? '')]),
+            Promise.resolve(captured.map((r) => opts.insertRow(r.lawId))),
           );
           return chain;
         }),
       };
-      // Ordered queue of lawIds the select-chain .where calls will consume.
-      // The service walks laws[] in resolution order; tests set this up.
-      const txLawQueue: string[] = [];
-      return { tx, enqueueLawIds: (ids: string[]) => txLawQueue.push(...ids) };
+      return { tx, insertCalls };
     }
 
     it('returns empty array and emits nothing when lawCodes is empty', async () => {
@@ -222,8 +223,8 @@ describe('ClientRegistrationsService', () => {
       );
 
       const existingForL1 = { ...activeRow, id: 'reg-existing', lawId: 'l1' };
-      const { tx, enqueueLawIds } = mockTx({
-        existing: { l1: [existingForL1], l2: [] },
+      const { tx, insertCalls } = mockTx({
+        existing: [existingForL1],
         insertRow: (lawId) => ({
           id: `reg-${lawId}`,
           clientId: 'c1',
@@ -232,13 +233,15 @@ describe('ClientRegistrationsService', () => {
           deactivatedAt: null,
         }),
       });
-      enqueueLawIds(['l1', 'l2']);
       db.db.transaction.mockImplementation(async (fn: (t: typeof tx) => unknown) => fn(tx));
 
       const result = await service.registerMany('c1', ['GST', 'ITR'], 'user-1');
 
       expect(result).toHaveLength(2);
       expect(result.map((r) => r.lawId).sort()).toEqual(['l1', 'l2']);
+      // Bulk INSERT receives only the missing law
+      expect(insertCalls).toHaveLength(1);
+      expect(insertCalls[0]?.values).toEqual([{ clientId: 'c1', lawId: 'l2' }]);
       // Only the newly inserted l2 should emit
       expect(events.emitDynamic).toHaveBeenCalledTimes(1);
       expect(events.emitDynamic).toHaveBeenCalledWith(
@@ -254,26 +257,26 @@ describe('ClientRegistrationsService', () => {
     it('is idempotent when every code is already active', async () => {
       db.db.select.mockReturnValueOnce(mockSelectRows([{ id: 'l1', code: 'GST' }]));
 
-      const { tx, enqueueLawIds } = mockTx({
-        existing: { l1: [{ ...activeRow, lawId: 'l1' }] },
+      const { tx, insertCalls } = mockTx({
+        existing: [{ ...activeRow, lawId: 'l1' }],
         insertRow: () => {
           throw new Error('insert should not be called when active row exists');
         },
       });
-      enqueueLawIds(['l1']);
       db.db.transaction.mockImplementation(async (fn: (t: typeof tx) => unknown) => fn(tx));
 
       const result = await service.registerMany('c1', ['GST'], 'user-1');
 
       expect(result).toHaveLength(1);
+      expect(insertCalls).toHaveLength(0);
       expect(events.emitDynamic).not.toHaveBeenCalled();
     });
 
     it('deduplicates repeated codes in the input', async () => {
       db.db.select.mockReturnValueOnce(mockSelectRows([{ id: 'l1', code: 'GST' }]));
 
-      const { tx, enqueueLawIds } = mockTx({
-        existing: { l1: [] },
+      const { tx, insertCalls } = mockTx({
+        existing: [],
         insertRow: (lawId) => ({
           id: `reg-${lawId}`,
           clientId: 'c1',
@@ -282,13 +285,42 @@ describe('ClientRegistrationsService', () => {
           deactivatedAt: null,
         }),
       });
-      enqueueLawIds(['l1']);
       db.db.transaction.mockImplementation(async (fn: (t: typeof tx) => unknown) => fn(tx));
 
       const result = await service.registerMany('c1', ['GST', 'GST'], 'user-1');
 
       expect(result).toHaveLength(1);
+      expect(insertCalls).toHaveLength(1);
+      expect(insertCalls[0]?.values).toEqual([{ clientId: 'c1', lawId: 'l1' }]);
       expect(events.emitDynamic).toHaveBeenCalledTimes(1);
+    });
+
+    it('runs a single batched SELECT + single bulk INSERT', async () => {
+      db.db.select.mockReturnValueOnce(
+        mockSelectRows([
+          { id: 'l1', code: 'GST' },
+          { id: 'l2', code: 'ITR' },
+          { id: 'l3', code: 'TDS' },
+        ]),
+      );
+      const { tx, insertCalls } = mockTx({
+        existing: [],
+        insertRow: (lawId) => ({
+          id: `reg-${lawId}`,
+          clientId: 'c1',
+          lawId,
+          registeredAt: new Date(),
+          deactivatedAt: null,
+        }),
+      });
+      db.db.transaction.mockImplementation(async (fn: (t: typeof tx) => unknown) => fn(tx));
+
+      await service.registerMany('c1', ['GST', 'ITR', 'TDS'], 'user-1');
+
+      // ONE select for existing rows, ONE insert for the missing batch — no per-law fan-out.
+      expect(tx.select).toHaveBeenCalledTimes(1);
+      expect(insertCalls).toHaveLength(1);
+      expect(insertCalls[0]?.values).toHaveLength(3);
     });
   });
 
