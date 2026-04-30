@@ -36,7 +36,7 @@ export const seedDemoClientRegistrations = async (
     .limit(1);
   if (existing) return;
 
-  // Scope to compliance clients only — `clients` is the shared `companies`
+  // Scope to compliance clients only — `clients` is the shared identity
   // table, so a directory or recruit row by the same name must not match.
   const clientRows = await database.db
     .select({ id: clients.id, name: clients.name })

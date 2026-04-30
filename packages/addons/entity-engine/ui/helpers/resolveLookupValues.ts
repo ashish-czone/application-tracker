@@ -8,8 +8,8 @@ import type { FieldUI } from '../types';
  * passed through the resolver and the form payload is rewritten to carry
  * the resolved value.
  *
- * Generic primitive — used by clients (companies picker → recruit_clients.id
- * via findOrCreateForCompany) and by any future entity with the same shape.
+ * Generic primitive — used by hand-written entities whose form FK doesn't
+ * match the picker's identity source.
  */
 export async function resolveLookupValues(
   data: Record<string, unknown>,

@@ -3,8 +3,7 @@ import { randomUUID } from 'crypto';
 import { complianceLaws } from './laws';
 
 // `clientId` references the shared identity row (the directory `clients`
-// table — DB name `companies`). The FK constraint lives at the SQL
-// migration level (see `0010_fold_clients_into_shared.sql`); we don't
+// table). The FK constraint lives at the SQL migration level; we don't
 // declare it on the JS side because importing the shared ref here
 // transitively pulls `@packages/directory` index, which exports the
 // NestJS `DirectoryModule` whose decorators trip drizzle-kit's parser.

@@ -58,34 +58,9 @@ CREATE TABLE "candidates" (
 	"deleted_by" text
 );
 --> statement-breakpoint
-CREATE TABLE "clients" (
+CREATE TABLE "recruit_contacts" (
 	"id" text PRIMARY KEY NOT NULL,
-	"client_name" text NOT NULL,
-	"parent_client_id" text,
-	"contact_number" text,
-	"website" text,
-	"industry" text,
-	"about" text,
-	"source" text DEFAULT 'added-by-user',
-	"billing_street" text,
-	"billing_city" text,
-	"billing_province" text,
-	"billing_code" text,
-	"billing_country" text,
-	"shipping_street" text,
-	"shipping_city" text,
-	"shipping_province" text,
-	"shipping_code" text,
-	"shipping_country" text,
-	"created_by" text NOT NULL,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"updated_at" timestamp with time zone NOT NULL,
-	"deleted_at" timestamp with time zone,
-	"deleted_by" text
-);
---> statement-breakpoint
-CREATE TABLE "contacts" (
-	"id" text PRIMARY KEY NOT NULL,
+	"client_contact_id" text,
 	"first_name" text,
 	"last_name" text NOT NULL,
 	"client_id" text,
@@ -229,19 +204,7 @@ CREATE TABLE "vendors" (
 	"deleted_by" text
 );
 --> statement-breakpoint
-ALTER TABLE "applications" ADD CONSTRAINT "applications_referred_by_users_id_fk" FOREIGN KEY ("referred_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "applications" ADD CONSTRAINT "applications_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "candidates" ADD CONSTRAINT "candidates_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "clients" ADD CONSTRAINT "clients_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "contacts" ADD CONSTRAINT "contacts_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "interviews" ADD CONSTRAINT "interviews_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "job_openings" ADD CONSTRAINT "job_openings_hiring_manager_users_id_fk" FOREIGN KEY ("hiring_manager") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "job_openings" ADD CONSTRAINT "job_openings_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "offer_approvals" ADD CONSTRAINT "offer_approvals_offer_id_offers_id_fk" FOREIGN KEY ("offer_id") REFERENCES "public"."offers"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "offer_approvals" ADD CONSTRAINT "offer_approvals_approver_id_users_id_fk" FOREIGN KEY ("approver_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "offers" ADD CONSTRAINT "offers_approved_by_users_id_fk" FOREIGN KEY ("approved_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "offers" ADD CONSTRAINT "offers_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "vendors" ADD CONSTRAINT "vendors_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "applications_candidate_id_idx" ON "applications" USING btree ("candidate_id");--> statement-breakpoint
 CREATE INDEX "applications_job_opening_id_idx" ON "applications" USING btree ("job_opening_id");--> statement-breakpoint
 CREATE INDEX "applications_stage_idx" ON "applications" USING btree ("stage");--> statement-breakpoint
@@ -251,13 +214,11 @@ CREATE INDEX "candidates_source_idx" ON "candidates" USING btree ("source");--> 
 CREATE INDEX "candidates_candidate_status_idx" ON "candidates" USING btree ("candidate_status");--> statement-breakpoint
 CREATE INDEX "candidates_country_idx" ON "candidates" USING btree ("country");--> statement-breakpoint
 CREATE INDEX "candidates_created_by_idx" ON "candidates" USING btree ("created_by");--> statement-breakpoint
-CREATE INDEX "clients_client_name_idx" ON "clients" USING btree ("client_name");--> statement-breakpoint
-CREATE INDEX "clients_industry_idx" ON "clients" USING btree ("industry");--> statement-breakpoint
-CREATE INDEX "clients_created_by_idx" ON "clients" USING btree ("created_by");--> statement-breakpoint
-CREATE INDEX "contacts_client_id_idx" ON "contacts" USING btree ("client_id");--> statement-breakpoint
-CREATE INDEX "contacts_email_idx" ON "contacts" USING btree ("email");--> statement-breakpoint
-CREATE INDEX "contacts_last_name_idx" ON "contacts" USING btree ("last_name");--> statement-breakpoint
-CREATE INDEX "contacts_created_by_idx" ON "contacts" USING btree ("created_by");--> statement-breakpoint
+CREATE INDEX "recruit_contacts_client_id_idx" ON "recruit_contacts" USING btree ("client_id");--> statement-breakpoint
+CREATE INDEX "recruit_contacts_email_idx" ON "recruit_contacts" USING btree ("email");--> statement-breakpoint
+CREATE INDEX "recruit_contacts_last_name_idx" ON "recruit_contacts" USING btree ("last_name");--> statement-breakpoint
+CREATE INDEX "recruit_contacts_created_by_idx" ON "recruit_contacts" USING btree ("created_by");--> statement-breakpoint
+CREATE INDEX "recruit_contacts_client_contact_id_idx" ON "recruit_contacts" USING btree ("client_contact_id");--> statement-breakpoint
 CREATE INDEX "interviews_candidate_id_idx" ON "interviews" USING btree ("candidate_id");--> statement-breakpoint
 CREATE INDEX "interviews_job_opening_id_idx" ON "interviews" USING btree ("job_opening_id");--> statement-breakpoint
 CREATE INDEX "interviews_client_id_idx" ON "interviews" USING btree ("client_id");--> statement-breakpoint

@@ -6,14 +6,14 @@ export const contacts = pgTable('recruit_contacts', {
   // Identity FK to directory client_contacts (the shared contact-person
   // identity row). Nullable until R-3 backfill is complete and old identity
   // columns are dropped.
-  clientContactId: text('person_id'),
+  clientContactId: text('client_contact_id'),
   // Legacy identity columns — read by services until R-2 rewires to directory,
   // dropped in R-3 when this table is renamed to recruit_contact_extras and
   // collapses to recruit-only overflow (mobile, secondary email, addresses,
   // social, opt-out).
   firstName: text('first_name'),
   lastName: text('last_name').notNull(),
-  clientId: text('company_id'),
+  clientId: text('client_id'),
   department: text('department'),
   email: text('email'),
   secondaryEmail: text('secondary_email'),
@@ -47,9 +47,9 @@ export const contacts = pgTable('recruit_contacts', {
   deletedAt: timestamp('deleted_at', { withTimezone: true, mode: 'date' }),
   deletedBy: text('deleted_by'),
 }, (table) => [
-  index('recruit_contacts_company_id_idx').on(table.clientId),
+  index('recruit_contacts_client_id_idx').on(table.clientId),
   index('recruit_contacts_email_idx').on(table.email),
   index('recruit_contacts_last_name_idx').on(table.lastName),
   index('recruit_contacts_created_by_idx').on(table.createdBy),
-  index('recruit_contacts_person_id_idx').on(table.clientContactId),
+  index('recruit_contacts_client_contact_id_idx').on(table.clientContactId),
 ]);

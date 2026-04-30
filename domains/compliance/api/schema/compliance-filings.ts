@@ -6,9 +6,8 @@ import { softDeleteColumns } from '@packages/soft-delete';
 import { complianceLaws } from './laws';
 import { complianceRules } from './rules';
 
-// `clientId` references the shared identity `clients` row (DB name
-// `companies`). FK added at SQL migration level — see note in
-// client-registrations.ts.
+// `clientId` references the shared identity `clients` row. FK added at SQL
+// migration level — see note in client-registrations.ts.
 
 // Standalone compliance-filings table. Filings are first-class domain entities
 // (a compliance obligation that must be filed for a client within a period),

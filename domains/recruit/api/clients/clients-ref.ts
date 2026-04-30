@@ -9,7 +9,7 @@ import { baseClientColumns } from '@packages/directory';
 // IMPORTANT: this file is NOT included in `drizzle.config.ts` schema array —
 // drizzle-kit must not generate CREATE TABLE migrations for the shared
 // identity table from recruit's package. The recruit_* columns are added by
-// the hand-written migration `0003_companies_recruit_columns.sql`.
+// a hand-written migration that ALTERs the directory `clients` table.
 
 export const recruitClientColumns = {
   recruitAbout: text('recruit_about'),
@@ -21,7 +21,7 @@ export const recruitClientColumns = {
   recruitArchivedAt: timestamp('recruit_archived_at', { withTimezone: true, mode: 'date' }),
 } as const;
 
-export const clients = pgTable('companies', {
+export const clients = pgTable('clients', {
   ...baseClientColumns,
   ...recruitClientColumns,
 });

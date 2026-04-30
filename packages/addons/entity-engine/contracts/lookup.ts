@@ -28,7 +28,7 @@ export interface LookupResult {
  * Custom resolver — entities provide their own search/label implementation
  * instead of letting the resolver service build a generic table query. Used
  * by hand-written entities whose displayable name lives in another table
- * (e.g. recruit clients projecting `companies.name` via the `companyId` FK).
+ * (e.g. recruit clients projecting `clients.name` via the `clientId` FK).
  *
  * The default resolver wired by `registerEntityLookup` from a `LookupConfig`
  * is itself just a `CustomLookupResolver` built from the table+columns spec.

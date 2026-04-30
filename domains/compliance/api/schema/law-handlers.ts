@@ -7,9 +7,8 @@ import { complianceLaws } from './laws';
 // client_id set   → override for a specific client.
 // is_primary true → the preferred handler when multiple exist at the same tier.
 //
-// `clientId` references the shared identity `clients` row (DB name
-// `companies`). FK added at SQL migration level — see note in
-// client-registrations.ts.
+// `clientId` references the shared identity `clients` row. FK added at SQL
+// migration level — see note in client-registrations.ts.
 export const complianceLawHandlers = pgTable('compliance_law_handlers', {
   id: text('id').primaryKey().$defaultFn(() => randomUUID()),
   lawId: text('law_id').notNull().references(() => complianceLaws.id, { onDelete: 'cascade' }),

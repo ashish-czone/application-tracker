@@ -390,11 +390,11 @@ export class ClientsService implements OnModuleInit {
       deletedAt: clients.recruitArchivedAt,
       contactsCount: sql<number>`(
         SELECT COUNT(*)::integer FROM "recruit_contacts"
-        WHERE "company_id" = ${clients.id} AND "deleted_at" IS NULL
+        WHERE "client_id" = ${clients.id} AND "deleted_at" IS NULL
       )`.as('contactsCount'),
       jobOpeningsCount: sql<number>`(
         SELECT COUNT(*)::integer FROM "job_openings"
-        WHERE "company_id" = ${clients.id} AND "deleted_at" IS NULL
+        WHERE "client_id" = ${clients.id} AND "deleted_at" IS NULL
       )`.as('jobOpeningsCount'),
     };
   }
