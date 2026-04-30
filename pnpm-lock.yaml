@@ -2210,12 +2210,30 @@ importers:
         specifier: ^3.25.0
         version: 3.25.76
     devDependencies:
+      '@packages/app-shell':
+        specifier: workspace:*
+        version: link:../../../packages/platform/app-shell/api
+      '@packages/platform-testing':
+        specifier: workspace:*
+        version: link:../../../packages/platform/testing
+      '@types/pg':
+        specifier: ^8.11.10
+        version: 8.18.0
+      '@types/supertest':
+        specifier: ^6.0.2
+        version: 6.0.3
       drizzle-kit:
         specifier: ^0.31.9
         version: 0.31.9
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3))
+      pg:
+        specifier: ^8.13.1
+        version: 8.20.0
+      supertest:
+        specifier: ^7.0.0
+        version: 7.2.2
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
