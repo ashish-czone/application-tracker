@@ -1,0 +1,35 @@
+{
+  "name": "@domains/marketing-api",
+  "version": "0.0.1",
+  "private": true,
+  "main": "index.ts",
+  "scripts": {
+    "test": "vitest run --passWithNoTests",
+    "db:generate": "drizzle-kit generate"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/core": "^11.0.0",
+    "@nestjs/swagger": "^11.0.0",
+    "@packages/audit": "workspace:*",
+    "@packages/auth-core": "workspace:*",
+    "@packages/common": "workspace:*",
+    "@packages/database": "workspace:*",
+    "@packages/domains": "workspace:*",
+    "@packages/events": "workspace:*",
+    "@packages/logger": "workspace:*",
+    "@packages/notifications": "workspace:*",
+    "@packages/queue": "workspace:*",
+    "@packages/rbac": "workspace:*",
+    "@packages/soft-delete": "workspace:*",
+    "@packages/tenancy": "workspace:*",
+    "drizzle-zod": "^0.7.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.31.9",
+    "drizzle-orm": "^0.45.1",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}
