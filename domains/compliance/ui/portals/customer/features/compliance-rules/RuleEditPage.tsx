@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Info, Loader2 } from 'lucide-react';
 import {
   Form,
@@ -55,6 +56,7 @@ export function RuleEditPage() {
   const entity = useEntityConfig(ENTITY_TYPE);
   const hooks = useEntityHooks(ENTITY_TYPE);
   const { apiFn } = useEntityEngine();
+  const queryClient = useQueryClient();
   const { data: layout, isLoading: layoutLoading } = useEntityLayout(ENTITY_TYPE);
   const { data: row, isLoading: rowLoading } = hooks.useDetail(id);
   const { data: constraints, isLoading: constraintsLoading } = useRuleEditConstraints(id);
@@ -80,13 +82,24 @@ export function RuleEditPage() {
     [sections],
   );
 
+  // DynamicField fires `onSearch` per keystroke for every lookup field on the
+  // form. Routing through `queryClient.fetchQuery` gives us two wins for free:
+  // identical (entity, query) pairs are deduped while in flight, and recent
+  // results stay in cache for 30s — so backspacing or re-typing a previous
+  // value resolves instantly without another network round-trip. Per-keystroke
+  // debouncing belongs in the lookup field's input component (DynamicField),
+  // not here.
   const searchLookup = useCallback(
-    async (entityName: string, query: string) => {
-      return apiFn.get<{ label: string; value: string }[]>(
-        `/lookups/${entityName}?search=${encodeURIComponent(query)}&limit=20`,
-      );
-    },
-    [apiFn],
+    (entityName: string, query: string) =>
+      queryClient.fetchQuery({
+        queryKey: ['rule-edit-lookup', entityName, query],
+        queryFn: () =>
+          apiFn.get<{ label: string; value: string }[]>(
+            `/lookups/${entityName}?search=${encodeURIComponent(query)}&limit=20`,
+          ),
+        staleTime: 30_000,
+      }),
+    [apiFn, queryClient],
   );
 
   const schema = useMemo(() => buildFormSchema(editableFields), [editableFields]);
