@@ -38,10 +38,14 @@ export class ComplianceFilingsController {
 
   @Get('summary')
   @RequirePermission('compliance-filings.read')
-  getSummary(@Query('today') todayParam: string | undefined, @AccessContext() accessCtx?: DataAccessContext) {
+  getSummary(
+    @Query('today') todayParam: string | undefined,
+    @Query('clientId') clientId: string | undefined,
+    @AccessContext() accessCtx?: DataAccessContext,
+  ) {
     const tz = process.env.APP_TIMEZONE ?? 'UTC';
     const today = todayParam && /^\d{4}-\d{2}-\d{2}$/.test(todayParam) ? todayParam : todayInTimezone(tz);
-    return this.filings.getSummary(today, accessCtx);
+    return this.filings.getSummary(today, { clientId: clientId || undefined }, accessCtx);
   }
 
   @Get()
