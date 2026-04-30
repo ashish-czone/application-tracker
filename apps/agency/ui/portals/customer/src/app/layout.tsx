@@ -8,6 +8,8 @@ import { JsonLd } from '@/components/JsonLd';
 import { Analytics } from '@/components/Analytics';
 import { fetchSiteSettings, type SiteSettings } from '@/lib/api';
 import { buildThemeStyleCss, NO_FLASH_SCRIPT } from '@/lib/theme';
+import { SKIN_NO_FLASH_SCRIPT } from '@/lib/skin';
+import { SkinSwitcher } from '@/components/SkinSwitcher';
 
 const SITE_URL = process.env.SITE_URL ?? 'http://localhost:3100';
 
@@ -60,6 +62,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <head>
         <style dangerouslySetInnerHTML={{ __html: themeCss }} />
         <script dangerouslySetInnerHTML={{ __html: NO_FLASH_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: SKIN_NO_FLASH_SCRIPT }} />
       </head>
       <body className="min-h-screen flex flex-col">
         <JsonLd data={organization} />
@@ -74,6 +77,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           {children}
         </main>
         <SiteFooter />
+        <SkinSwitcher />
         <Analytics ga4={settings['analytics.ga4']} posthog={settings['analytics.posthog']} />
       </body>
     </html>
