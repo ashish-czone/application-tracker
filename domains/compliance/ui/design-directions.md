@@ -146,6 +146,8 @@ The primitives that every form-heavy screen needs. They live alongside the rest 
 
 ## 8. The static demo page — "The Compliance Console"
 
+> **Note:** The `/console-preview` route and its mock-data fixtures were retired once the live screens shipped. The kit widgets and design rationale below remain valid — they are now exercised by the real compliance pages, not by the static demo.
+
 One route, one page, showing every widget with hardcoded mock data. Route: `/console-preview` (hidden from nav; reachable by direct URL during review). The compliance-web `main.tsx` forks on this path and renders the page outside the normal `WebShell` so it owns its full-bleed editorial chrome.
 
 Everything is mock data. Goal: **design review**, not functional review.

@@ -24,12 +24,6 @@ import { LAW_HANDLERS_UI_CONFIG } from './entity-configs/law-handlers.ui';
 import { LAWS_UI_CONFIG } from './entity-configs/laws.ui';
 import { ORGANIZATIONS_UI_CONFIG } from './entity-configs/organizations.ui';
 
-const ConsolePreviewPage = lazy(() =>
-  import('./portals/customer/features/console-preview').then((m) => ({
-    default: m.ConsolePreviewPage,
-  })),
-);
-
 const DashboardPage = lazy(() =>
   import('./portals/customer/features/dashboard').then((m) => ({
     default: m.DashboardPage,
@@ -121,9 +115,7 @@ const OrganizationPage = lazy(() =>
 );
 
 /**
- * Compliance domain UI manifest. The `console-preview` route is a static
- * design-review surface showing the Instrument kit in context — not wired
- * to live data. See `design-directions.md` for the aesthetic rationale.
+ * Compliance domain UI manifest.
  *
  * Permission strings on each route are interpreted by AppRouter, which
  * wraps the element in `<PermissionGuard>` when present. Permission keys
@@ -136,7 +128,6 @@ const OrganizationPage = lazy(() =>
 // so they opt out of the platform `AppLayout` via `bareLayout: true`. Auth +
 // permission gating still apply.
 const routes: DomainRouteObject[] = [
-  { path: '/console-preview', element: <ConsolePreviewPage />, bareLayout: true },
   { path: '/dashboard', element: <DashboardPage />, bareLayout: true },
   { path: '/clients', element: <ClientsPage />, permission: 'clients.read', bareLayout: true },
   { path: '/clients/:clientId', element: <ClientDetailPage />, permission: 'clients.read', bareLayout: true },
