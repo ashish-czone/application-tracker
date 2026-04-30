@@ -1,6 +1,6 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { todayInTimezone } from '@packages/common';
-import { RequirePermission } from '@packages/rbac';
+import { AccessContext, RequirePermission, type DataAccessContext } from '@packages/rbac';
 import { ComplianceReportsService } from './reports.service';
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -33,12 +33,13 @@ export class ComplianceReportsController {
     @Query('from') fromParam: string | undefined,
     @Query('to') toParam: string | undefined,
     @Query('today') todayParam: string | undefined,
+    @AccessContext() accessCtx?: DataAccessContext,
   ) {
     const today = resolveCalendarDate(todayParam, resolveToday());
     const range = defaultRange(today);
     const from = resolveCalendarDate(fromParam, range.from);
     const to = resolveCalendarDate(toParam, range.to);
-    return this.reports.getTrend({ from, to }, today);
+    return this.reports.getTrend({ from, to }, today, accessCtx);
   }
 
   @Get('by-client')
@@ -48,26 +49,33 @@ export class ComplianceReportsController {
     @Query('to') toParam: string | undefined,
     @Query('today') todayParam: string | undefined,
     @Query('q') q: string | undefined,
+    @AccessContext() accessCtx?: DataAccessContext,
   ) {
     const today = resolveCalendarDate(todayParam, resolveToday());
     const range = defaultRange(today);
     const from = resolveCalendarDate(fromParam, range.from);
     const to = resolveCalendarDate(toParam, range.to);
-    return this.reports.getByClient({ from, to }, today, { q });
+    return this.reports.getByClient({ from, to }, today, { q }, accessCtx);
   }
 
   @Get('aging')
   @RequirePermission('reports.read')
-  getAging(@Query('today') todayParam: string | undefined) {
+  getAging(
+    @Query('today') todayParam: string | undefined,
+    @AccessContext() accessCtx?: DataAccessContext,
+  ) {
     const today = resolveCalendarDate(todayParam, resolveToday());
-    return this.reports.getOverdueAging(today);
+    return this.reports.getOverdueAging(today, accessCtx);
   }
 
   @Get('severity')
   @RequirePermission('reports.read')
-  getSeverity(@Query('today') todayParam: string | undefined) {
+  getSeverity(
+    @Query('today') todayParam: string | undefined,
+    @AccessContext() accessCtx?: DataAccessContext,
+  ) {
     const today = resolveCalendarDate(todayParam, resolveToday());
-    return this.reports.getOverdueSeverity(today);
+    return this.reports.getOverdueSeverity(today, accessCtx);
   }
 
   @Get('team-workload')
@@ -77,11 +85,12 @@ export class ComplianceReportsController {
     @Query('to') toParam: string | undefined,
     @Query('today') todayParam: string | undefined,
     @Query('q') q: string | undefined,
+    @AccessContext() accessCtx?: DataAccessContext,
   ) {
     const today = resolveCalendarDate(todayParam, resolveToday());
     const range = defaultRange(today);
     const from = resolveCalendarDate(fromParam, range.from);
     const to = resolveCalendarDate(toParam, range.to);
-    return this.reports.getTeamWorkload({ from, to }, today, { q });
+    return this.reports.getTeamWorkload({ from, to }, today, { q }, accessCtx);
   }
 }

@@ -16,7 +16,7 @@ import {
 import { buildSoftDeleteCondition } from '@packages/soft-delete';
 import { fieldTypeRegistry, type FieldTypeSaveContext } from '@packages/field-types';
 import { DatabaseService, type DrizzleTx } from '@packages/database';
-import { ScopeResolverRegistry, type ScopeAnchorMap } from '@packages/rbac';
+import { DataAccessScopeService, type ScopeAnchorMap } from '@packages/rbac';
 import { DomainEventEmitter } from '@packages/events';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { FieldDefinitionService } from './services/field-definition.service';
@@ -34,7 +34,7 @@ import type { TaxonomyExtension } from './extensions/taxonomy-extension.interfac
 import type { PaginatedResponse } from '@packages/common';
 import type { EntityConfig, BaseListQuery, ListLayoutColumn, TransitionContext } from './types';
 import type { RegisteredEntityConfig } from './entity-registry.service';
-import type { DataAccessContext, AccessScopeSpec } from '@packages/rbac';
+import type { DataAccessContext } from '@packages/rbac';
 import type { SQL as DrizzleSQL } from 'drizzle-orm';
 import { EntityRegistryService } from './entity-registry.service';
 
@@ -84,7 +84,7 @@ export class EntityService {
     private readonly workflowExt: WorkflowExtension | null,
     private readonly entityRegistry: EntityRegistryService,
     appLogger: AppLoggerService,
-    private readonly scopeResolverRegistry: ScopeResolverRegistry,
+    private readonly dataAccessScope: DataAccessScopeService,
   ) {
     this.logger = appLogger.forContext(`EntityService[${config.entityType}]`);
   }
@@ -108,65 +108,26 @@ export class EntityService {
   // ---------------------------------------------------------------------------
 
   /**
-   * Resolves a set of access scopes into a single SQL WHERE condition by
-   * OR-ing the predicate produced by each scope.
+   * Build a SQL WHERE predicate enforcing the actor's row-level RBAC scope
+   * for this entity. Returns `undefined` when the actor has unrestricted
+   * access (`any` scope) — callers AND it into their WHERE chain unchanged.
    *
-   * Every scope is dispatched in the same way:
-   *   1. Look up the scope type in the global `ScopeResolverRegistry`.
-   *   2. If not found, fall back to an entity-local resolver declared in
-   *      `dataAccess.scopes[]` (used for scope kinds whose SQL can't be
-   *      expressed through the generic anchor map).
+   * Public so domain services that hand-roll Drizzle/SQL queries on this
+   * entity's table can apply the same predicate the engine's CRUD path
+   * applies. Internally delegates to `DataAccessScopeService` — the
+   * primitive that lives next to `DataAccessContext` in the foundation
+   * tier and is callable without entity-engine.
    *
-   * `any` is the only scope the engine itself understands — it short-circuits
-   * to "no filter." Every other scope type lands as a registered resolver,
-   * so adding a new scope kind does not require a platform edit.
-   *
-   * If the scope array is empty (user holds no scopes for this verb), the
-   * result is a `1=0` condition that matches no rows — i.e. no access.
+   * @example
+   *   const scopePredicate = await entityService.getScopePredicate(ctx);
+   *   await db.select().from(table)
+   *     .where(withScope(table, scopePredicate, eq(table.status, 'active')));
    */
-  private async resolveDataAccessScope(ctx: DataAccessContext): Promise<DrizzleSQL | undefined> {
-    if (ctx.scopes.length === 0) {
-      // No scopes held → deny. Use a contradiction so callers compose with AND safely.
-      return sql`1=0`;
-    }
-
-    // `any` is the most permissive scope — wins over every other scope in the array.
-    if (ctx.scopes.some((s) => s.type === 'any')) return undefined;
-
-    const anchors = this.buildAnchors();
-    const predicates: DrizzleSQL[] = [];
-
-    for (const scope of ctx.scopes) {
-      const predicate = await this.resolveScope(scope, ctx.userId, anchors);
-      if (predicate) predicates.push(predicate);
-    }
-
-    if (predicates.length === 0) return sql`1=0`;
-    if (predicates.length === 1) return predicates[0];
-    return or(...predicates)!;
-  }
-
-  /**
-   * Resolve one scope to a predicate — registry first, then entity-inline
-   * resolvers, otherwise a warning + no-op. Warn (rather than throw) so a
-   * stale scope sitting on an old role grant degrades gracefully.
-   */
-  private async resolveScope(
-    scope: AccessScopeSpec,
-    userId: string,
-    anchors: ScopeAnchorMap,
-  ): Promise<DrizzleSQL | undefined> {
-    const registered = this.scopeResolverRegistry.get(scope.type);
-    if (registered) {
-      const result = await registered.resolve({ userId, anchors }, scope.params);
-      return result ?? undefined;
-    }
-
-    const inline = this.config.dataAccess?.scopes?.find((s) => s.key === scope.type);
-    if (inline) return inline.resolve(userId);
-
-    this.logger.warn(`Unknown data access scope type: ${scope.type}`);
-    return undefined;
+  async getScopePredicate(ctx: DataAccessContext): Promise<DrizzleSQL | undefined> {
+    return this.dataAccessScope.buildPredicate(ctx, {
+      anchors: this.buildAnchors(),
+      inlineResolvers: this.config.dataAccess?.scopes,
+    });
   }
 
   /**
@@ -437,7 +398,7 @@ export class EntityService {
 
     // Data access scope filtering
     if (accessCtx) {
-      const scopeCondition = await this.resolveDataAccessScope(accessCtx);
+      const scopeCondition = await this.getScopePredicate(accessCtx);
       if (scopeCondition) conditions.push(scopeCondition);
     }
 
@@ -542,7 +503,7 @@ export class EntityService {
 
     // Data access scope filtering — ensures user can only view records within their scope
     if (accessCtx) {
-      const scopeCondition = await this.resolveDataAccessScope(accessCtx);
+      const scopeCondition = await this.getScopePredicate(accessCtx);
       if (scopeCondition) conditions.push(scopeCondition);
     }
 

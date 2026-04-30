@@ -1,7 +1,7 @@
 import { Module, type DynamicModule, Logger, Inject, Optional, type OnApplicationBootstrap } from '@nestjs/common';
 import { DatabaseService } from '@packages/database';
 import { DomainEventEmitter, EventRegistryService } from '@packages/events';
-import { RbacService, ScopeResolverRegistry } from '@packages/rbac';
+import { RbacService, ScopeResolverRegistry, DataAccessScopeService } from '@packages/rbac';
 import { AppLoggerService } from '@packages/logger';
 import { EntityCoreModule } from './entity-core.module';
 import { EntityRegistryService, type RegisteredEntityConfig } from './entity-registry.service';
@@ -120,7 +120,7 @@ export class EntityEngineModule implements OnApplicationBootstrap {
             workflowExt: WorkflowExtension | null,
             entityRegistry: EntityRegistryService,
             appLogger: AppLoggerService,
-            scopeResolverRegistry: ScopeResolverRegistry,
+            dataAccessScope: DataAccessScopeService,
           ) => {
             let storage: EavStorageExtension | null = null;
             if (config.customFields === 'eav') {
@@ -140,9 +140,9 @@ export class EntityEngineModule implements OnApplicationBootstrap {
             // registry will apply on register(). Safe to mutate: the same
             // object reference is passed to the registry later.
             ensureRegisteredIdentity(config);
-            return new EntityService(config as RegisteredEntityConfig, database, domainEventEmitter, storage, multiValueExtension, fieldDefinitionService, lookupResolver, taxonomyExt, workflowExt, entityRegistry, appLogger, scopeResolverRegistry);
+            return new EntityService(config as RegisteredEntityConfig, database, domainEventEmitter, storage, multiValueExtension, fieldDefinitionService, lookupResolver, taxonomyExt, workflowExt, entityRegistry, appLogger, dataAccessScope);
           },
-          inject: [DatabaseService, DomainEventEmitter, { token: EAV_STORAGE_EXTENSION, optional: true }, JsonbStorageAdapter, { token: MULTI_VALUE_EXTENSION, optional: true }, FieldDefinitionService, LookupResolverService, { token: TAXONOMY_EXTENSION, optional: true }, { token: WORKFLOW_EXTENSION, optional: true }, EntityRegistryService, AppLoggerService, ScopeResolverRegistry],
+          inject: [DatabaseService, DomainEventEmitter, { token: EAV_STORAGE_EXTENSION, optional: true }, JsonbStorageAdapter, { token: MULTI_VALUE_EXTENSION, optional: true }, FieldDefinitionService, LookupResolverService, { token: TAXONOMY_EXTENSION, optional: true }, { token: WORKFLOW_EXTENSION, optional: true }, EntityRegistryService, AppLoggerService, DataAccessScopeService],
         },
       ],
       exports: [serviceToken],

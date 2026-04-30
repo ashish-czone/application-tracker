@@ -37,6 +37,7 @@ describe('ClientsService', () => {
     validateTransition: ReturnType<typeof vi.fn>;
     applyTransition: ReturnType<typeof vi.fn>;
     emitTransitionEvent: ReturnType<typeof vi.fn>;
+    getScopePredicate: ReturnType<typeof vi.fn>;
   };
   let db: { db: { transaction: ReturnType<typeof vi.fn> } };
   let events: { emitDynamic: ReturnType<typeof vi.fn> };
@@ -67,6 +68,7 @@ describe('ClientsService', () => {
       validateTransition: vi.fn(),
       applyTransition: vi.fn().mockResolvedValue(undefined),
       emitTransitionEvent: vi.fn(),
+      getScopePredicate: vi.fn().mockResolvedValue(undefined),
     };
     db = { db: { transaction: vi.fn() } };
     events = { emitDynamic: vi.fn() };
@@ -106,19 +108,34 @@ describe('ClientsService', () => {
   const secondaryContact: ContactInput = { fullName: 'Bob', complianceIsPrimary: false };
 
   describe('CRUD delegates', () => {
-    it('list delegates to ClientsRollupService.list with the translated params', () => {
-      service.list({ page: 1, limit: 25 } as never);
-      expect(rollup.list).toHaveBeenCalledWith({ page: 1, limit: 25 });
+    it('list delegates to ClientsRollupService.list with the translated params and no scope when no accessCtx', async () => {
+      await service.list({ page: 1, limit: 25 } as never);
+      expect(rollup.list).toHaveBeenCalledWith({ page: 1, limit: 25 }, undefined);
     });
 
-    it('getSummary delegates to ClientsRollupService.getSummary', async () => {
-      await service.getSummary();
-      expect(rollup.getSummary).toHaveBeenCalledOnce();
+    it('list passes the actor scope predicate from EntityService through to the rollup', async () => {
+      const scopePredicate = { __tag: 'scope-sql' };
+      entityService.getScopePredicate.mockResolvedValueOnce(scopePredicate);
+      const ctx = { userId: 'u1', scopes: [{ type: 'unit' }] } as never;
+      await service.list({ page: 1, limit: 25 } as never, ctx);
+      expect(entityService.getScopePredicate).toHaveBeenCalledWith(ctx);
+      expect(rollup.list).toHaveBeenCalledWith({ page: 1, limit: 25 }, scopePredicate);
     });
 
-    it('getHandlerOptions delegates to ClientsRollupService.getHandlerOptions', async () => {
-      await service.getHandlerOptions();
-      expect(rollup.getHandlerOptions).toHaveBeenCalledOnce();
+    it('getSummary delegates to ClientsRollupService.getSummary with the scope predicate', async () => {
+      const scopePredicate = { __tag: 'sum-sql' };
+      entityService.getScopePredicate.mockResolvedValueOnce(scopePredicate);
+      const ctx = { userId: 'u1', scopes: [{ type: 'any' }] } as never;
+      await service.getSummary(ctx);
+      expect(rollup.getSummary).toHaveBeenCalledWith(scopePredicate);
+    });
+
+    it('getHandlerOptions delegates to ClientsRollupService.getHandlerOptions with the scope predicate', async () => {
+      const scopePredicate = { __tag: 'handler-sql' };
+      entityService.getScopePredicate.mockResolvedValueOnce(scopePredicate);
+      const ctx = { userId: 'u1', scopes: [{ type: 'any' }] } as never;
+      await service.getHandlerOptions(ctx);
+      expect(rollup.getHandlerOptions).toHaveBeenCalledWith(scopePredicate);
     });
 
     it('findOne delegates to entityService.findOneOrFail', () => {

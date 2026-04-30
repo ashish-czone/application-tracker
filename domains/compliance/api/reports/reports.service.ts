@@ -1,10 +1,11 @@
-import { Injectable } from '@nestjs/common';
-import { and, eq, gte, lte, isNull, isNotNull, inArray, ilike, sql, count, notInArray } from 'drizzle-orm';
+import { Inject, Injectable } from '@nestjs/common';
+import { eq, gte, lte, isNotNull, inArray, ilike, sql, count, notInArray } from 'drizzle-orm';
 import { DatabaseService, withScope } from '@packages/database';
 import { notDeleted } from '@packages/soft-delete';
 import { clients } from '@packages/directory';
+import { EntityService } from '@packages/entity-engine';
 import { OrgUnitService } from '@packages/org-units';
-import { withTenant } from '@packages/tenancy/helpers';
+import type { DataAccessContext } from '@packages/rbac';
 import { complianceFilings } from '../schema/compliance-filings';
 
 const NOT_COMPLETED_STATES = ['pending', 'in_progress', 'review', 'rejected'];
@@ -57,6 +58,8 @@ export class ComplianceReportsService {
   constructor(
     private readonly database: DatabaseService,
     private readonly orgUnits: OrgUnitService,
+    @Inject('ENTITY_SERVICE_compliance-filings')
+    private readonly filingsEntity: EntityService,
   ) {}
 
   /**
@@ -66,7 +69,12 @@ export class ComplianceReportsService {
    * "overdue" = not yet completed/cancelled AND dueDate < today. One SQL
    * GROUP BY — no row-by-row JS aggregation, no client-side fetching.
    */
-  async getTrend(range: ReportRange, today: string): Promise<TrendBucket[]> {
+  async getTrend(
+    range: ReportRange,
+    today: string,
+    accessCtx?: DataAccessContext,
+  ): Promise<TrendBucket[]> {
+    const scopePredicate = accessCtx ? await this.filingsEntity.getScopePredicate(accessCtx) : undefined;
     const rows = await this.database.db
       .select({
         month: sql<string>`to_char(${complianceFilings.dueDate}::date, 'YYYY-MM')`,
@@ -75,16 +83,12 @@ export class ComplianceReportsService {
         overdue: sql<number>`SUM(CASE WHEN ${complianceFilings.status} = ANY(ARRAY['pending','in_progress','review','rejected']) AND ${complianceFilings.dueDate}::date < ${today}::date THEN 1 ELSE 0 END)::int`,
       })
       .from(complianceFilings)
-      .where(
-        withTenant(
-          complianceFilings,
-          and(
-            isNull(complianceFilings.deletedAt),
-            gte(complianceFilings.dueDate, range.from),
-            lte(complianceFilings.dueDate, range.to),
-          ),
-        ),
-      )
+      .where(withScope(
+        complianceFilings,
+        scopePredicate,
+        gte(complianceFilings.dueDate, range.from),
+        lte(complianceFilings.dueDate, range.to),
+      ))
       .groupBy(sql`to_char(${complianceFilings.dueDate}::date, 'YYYY-MM')`)
       .orderBy(sql`to_char(${complianceFilings.dueDate}::date, 'YYYY-MM')`);
 
@@ -109,11 +113,14 @@ export class ComplianceReportsService {
     range: ReportRange,
     today: string,
     options?: { q?: string },
+    accessCtx?: DataAccessContext,
   ): Promise<ClientBreakdownRow[]> {
     // Joining the shared identity `clients` table is allowed per
     // module-boundaries.md → "Shared Identity Tables". Embeds the client
     // name on each row so the frontend doesn't need a side fetch.
+    const scopePredicate = accessCtx ? await this.filingsEntity.getScopePredicate(accessCtx) : undefined;
     const baseConditions = [
+      scopePredicate,
       gte(complianceFilings.dueDate, range.from),
       lte(complianceFilings.dueDate, range.to),
       // Joined soft-delete table: withScope only filters the driver
@@ -160,7 +167,8 @@ export class ComplianceReportsService {
    * Aging buckets for currently-overdue filings (not completed, not
    * cancelled, dueDate < today). Single GROUP BY with CASE WHEN bands.
    */
-  async getOverdueAging(today: string): Promise<AgingBucket[]> {
+  async getOverdueAging(today: string, accessCtx?: DataAccessContext): Promise<AgingBucket[]> {
+    const scopePredicate = accessCtx ? await this.filingsEntity.getScopePredicate(accessCtx) : undefined;
     const rows = await this.database.db
       .select({
         range: sql<string>`CASE
@@ -172,17 +180,13 @@ export class ComplianceReportsService {
         count: count().mapWith(Number),
       })
       .from(complianceFilings)
-      .where(
-        withTenant(
-          complianceFilings,
-          and(
-            isNull(complianceFilings.deletedAt),
-            inArray(complianceFilings.status, NOT_COMPLETED_STATES),
-            isNotNull(complianceFilings.dueDate),
-            sql`${complianceFilings.dueDate}::date < ${today}::date`,
-          ),
-        ),
-      )
+      .where(withScope(
+        complianceFilings,
+        scopePredicate,
+        inArray(complianceFilings.status, NOT_COMPLETED_STATES),
+        isNotNull(complianceFilings.dueDate),
+        sql`${complianceFilings.dueDate}::date < ${today}::date`,
+      ))
       .groupBy(sql`CASE
         WHEN (${today}::date - ${complianceFilings.dueDate}::date) <= 7 THEN '1-7'
         WHEN (${today}::date - ${complianceFilings.dueDate}::date) <= 15 THEN '8-15'
@@ -198,24 +202,21 @@ export class ComplianceReportsService {
   /**
    * Severity breakdown of currently-overdue filings, grouped by priority.
    */
-  async getOverdueSeverity(today: string): Promise<SeverityBreakdownRow[]> {
+  async getOverdueSeverity(today: string, accessCtx?: DataAccessContext): Promise<SeverityBreakdownRow[]> {
+    const scopePredicate = accessCtx ? await this.filingsEntity.getScopePredicate(accessCtx) : undefined;
     const rows = await this.database.db
       .select({
         priority: complianceFilings.priority,
         count: count().mapWith(Number),
       })
       .from(complianceFilings)
-      .where(
-        withTenant(
-          complianceFilings,
-          and(
-            isNull(complianceFilings.deletedAt),
-            inArray(complianceFilings.status, NOT_COMPLETED_STATES),
-            isNotNull(complianceFilings.dueDate),
-            sql`${complianceFilings.dueDate}::date < ${today}::date`,
-          ),
-        ),
-      )
+      .where(withScope(
+        complianceFilings,
+        scopePredicate,
+        inArray(complianceFilings.status, NOT_COMPLETED_STATES),
+        isNotNull(complianceFilings.dueDate),
+        sql`${complianceFilings.dueDate}::date < ${today}::date`,
+      ))
       .groupBy(complianceFilings.priority);
 
     return rows.map((r) => ({
@@ -234,7 +235,9 @@ export class ComplianceReportsService {
     range: ReportRange,
     today: string,
     options?: { q?: string },
+    accessCtx?: DataAccessContext,
   ): Promise<TeamWorkloadRow[]> {
+    const scopePredicate = accessCtx ? await this.filingsEntity.getScopePredicate(accessCtx) : undefined;
     const rows = await this.database.db
       .select({
         assigneeTeamId: complianceFilings.assigneeTeamId,
@@ -246,17 +249,13 @@ export class ComplianceReportsService {
         late: sql<number>`SUM(CASE WHEN ${complianceFilings.status} = 'completed' AND ${complianceFilings.completedAt}::date > ${complianceFilings.dueDate}::date THEN 1 ELSE 0 END)::int`,
       })
       .from(complianceFilings)
-      .where(
-        withTenant(
-          complianceFilings,
-          and(
-            isNull(complianceFilings.deletedAt),
-            notInArray(complianceFilings.status, ['cancelled']),
-            gte(complianceFilings.dueDate, range.from),
-            lte(complianceFilings.dueDate, range.to),
-          ),
-        ),
-      )
+      .where(withScope(
+        complianceFilings,
+        scopePredicate,
+        notInArray(complianceFilings.status, ['cancelled']),
+        gte(complianceFilings.dueDate, range.from),
+        lte(complianceFilings.dueDate, range.to),
+      ))
       .groupBy(complianceFilings.assigneeTeamId)
       .orderBy(sql`COUNT(*) DESC`);
 

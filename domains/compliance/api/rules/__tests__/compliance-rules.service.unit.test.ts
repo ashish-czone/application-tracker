@@ -545,9 +545,8 @@ describe('ComplianceRulesService', () => {
     };
 
     it('returns hasGeneratedFilings=true and the count when filings exist', async () => {
-      db.db.select
-        .mockReturnValueOnce(mockSelectRows([ruleRow])) // findById
-        .mockReturnValueOnce(mockSelectRows([{ count: 12 }])); // count
+      entityService.findOneOrFail.mockResolvedValueOnce(ruleRow);
+      db.db.select.mockReturnValueOnce(mockSelectRows([{ count: 12 }]));
       expect(await service.getEditConstraints('r1')).toEqual({
         ruleId: 'r1',
         hasGeneratedFilings: true,
@@ -556,9 +555,8 @@ describe('ComplianceRulesService', () => {
     });
 
     it('returns hasGeneratedFilings=false when count is zero', async () => {
-      db.db.select
-        .mockReturnValueOnce(mockSelectRows([ruleRow]))
-        .mockReturnValueOnce(mockSelectRows([{ count: 0 }]));
+      entityService.findOneOrFail.mockResolvedValueOnce(ruleRow);
+      db.db.select.mockReturnValueOnce(mockSelectRows([{ count: 0 }]));
       expect(await service.getEditConstraints('r1')).toEqual({
         ruleId: 'r1',
         hasGeneratedFilings: false,
@@ -566,9 +564,17 @@ describe('ComplianceRulesService', () => {
       });
     });
 
-    it('throws NotFoundException when the rule does not exist', async () => {
-      db.db.select.mockReturnValueOnce(mockSelectRows([]));
+    it('throws when the rule is not visible to the actor', async () => {
+      entityService.findOneOrFail.mockRejectedValueOnce(new NotFoundException('not found'));
       await expect(service.getEditConstraints('missing')).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('forwards the access context to the engine for scope enforcement', async () => {
+      entityService.findOneOrFail.mockResolvedValueOnce(ruleRow);
+      db.db.select.mockReturnValueOnce(mockSelectRows([{ count: 0 }]));
+      const accessCtx = { userId: 'u1', scopes: [{ type: 'unit' }] } as never;
+      await service.getEditConstraints('r1', accessCtx);
+      expect(entityService.findOneOrFail).toHaveBeenCalledWith('r1', accessCtx);
     });
   });
 
@@ -687,9 +693,8 @@ describe('ComplianceRulesService', () => {
     };
 
     it('returns the non-terminal filing count for the rule', async () => {
-      db.db.select
-        .mockReturnValueOnce(mockSelectRows([ruleRow])) // findById
-        .mockReturnValueOnce(mockSelectRows([{ count: 7 }])); // count query
+      entityService.findOneOrFail.mockResolvedValueOnce(ruleRow);
+      db.db.select.mockReturnValueOnce(mockSelectRows([{ count: 7 }]));
 
       const result = await service.previewDeprecation('r1');
 
@@ -697,18 +702,25 @@ describe('ComplianceRulesService', () => {
     });
 
     it('returns zero when no in-flight filings exist', async () => {
-      db.db.select
-        .mockReturnValueOnce(mockSelectRows([ruleRow]))
-        .mockReturnValueOnce(mockSelectRows([{ count: 0 }]));
+      entityService.findOneOrFail.mockResolvedValueOnce(ruleRow);
+      db.db.select.mockReturnValueOnce(mockSelectRows([{ count: 0 }]));
 
       const result = await service.previewDeprecation('r1');
 
       expect(result.inFlightFilingCount).toBe(0);
     });
 
-    it('throws NotFoundException when the rule does not exist', async () => {
-      db.db.select.mockReturnValueOnce(mockSelectRows([]));
+    it('throws when the rule is not visible to the actor', async () => {
+      entityService.findOneOrFail.mockRejectedValueOnce(new NotFoundException('not found'));
       await expect(service.previewDeprecation('missing')).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('forwards the access context to the engine', async () => {
+      entityService.findOneOrFail.mockResolvedValueOnce(ruleRow);
+      db.db.select.mockReturnValueOnce(mockSelectRows([{ count: 0 }]));
+      const accessCtx = { userId: 'u1', scopes: [{ type: 'unit' }] } as never;
+      await service.previewDeprecation('r1', accessCtx);
+      expect(entityService.findOneOrFail).toHaveBeenCalledWith('r1', accessCtx);
     });
   });
 
@@ -736,21 +748,21 @@ describe('ComplianceRulesService', () => {
       return tx;
     }
 
-    it('throws NotFoundException when rule is missing', async () => {
-      db.db.select.mockReturnValueOnce(mockSelectRows([]));
+    it('throws when the rule is not visible to the actor', async () => {
+      entityService.findOneOrFail.mockRejectedValueOnce(new NotFoundException('not found'));
       await expect(service.deprecate('missing', { actorId: 'u1' })).rejects.toBeInstanceOf(NotFoundException);
       expect(db.db.transaction).not.toHaveBeenCalled();
     });
 
     it('is a no-op when rule is already deprecated', async () => {
-      db.db.select.mockReturnValueOnce(mockSelectRows([{ ...ruleRow, status: 'deprecated' }]));
+      entityService.findOneOrFail.mockResolvedValueOnce({ ...ruleRow, status: 'deprecated' });
       const result = await service.deprecate('r1', { actorId: 'u1' });
       expect(result).toEqual({ ruleId: 'r1', status: 'deprecated', cancelledFilingIds: [] });
       expect(db.db.transaction).not.toHaveBeenCalled();
     });
 
     it('flips status and writes the rule transition history row; no cascade by default', async () => {
-      db.db.select.mockReturnValueOnce(mockSelectRows([ruleRow]));
+      entityService.findOneOrFail.mockResolvedValueOnce(ruleRow);
       const tx = mockTx();
       db.db.transaction.mockImplementation(async (fn: (t: typeof tx) => unknown) => fn(tx));
 
@@ -775,7 +787,7 @@ describe('ComplianceRulesService', () => {
     });
 
     it('cascades cancellation when alsoCancelInFlight is true', async () => {
-      db.db.select.mockReturnValueOnce(mockSelectRows([ruleRow]));
+      entityService.findOneOrFail.mockResolvedValueOnce(ruleRow);
       const tx = mockTx({
         inFlight: [
           { id: 'f1', status: 'pending' },
@@ -802,7 +814,7 @@ describe('ComplianceRulesService', () => {
     });
 
     it('transitions a draft rule directly to deprecated', async () => {
-      db.db.select.mockReturnValueOnce(mockSelectRows([{ ...ruleRow, status: 'draft' }]));
+      entityService.findOneOrFail.mockResolvedValueOnce({ ...ruleRow, status: 'draft' });
       const tx = mockTx();
       db.db.transaction.mockImplementation(async (fn: (t: typeof tx) => unknown) => fn(tx));
 
@@ -815,6 +827,13 @@ describe('ComplianceRulesService', () => {
         }),
         tx,
       );
+    });
+
+    it('forwards the access context to the engine', async () => {
+      entityService.findOneOrFail.mockResolvedValueOnce({ ...ruleRow, status: 'deprecated' });
+      const accessCtx = { userId: 'u1', scopes: [{ type: 'unit' }] } as never;
+      await service.deprecate('r1', { actorId: 'u1' }, accessCtx);
+      expect(entityService.findOneOrFail).toHaveBeenCalledWith('r1', accessCtx);
     });
   });
 });

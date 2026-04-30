@@ -13,6 +13,8 @@ export { registerCustomScopeType, isKnownScopeType, listCustomScopeTypes, normal
 export { roles, rolePermissions, rolePermissionScopes, userRoles } from './schema';
 export { ScopeResolverRegistry } from './scope-resolver';
 export type { ScopeResolver, ScopeResolverContext, ScopeAnchorMap } from './scope-resolver';
+export { DataAccessScopeService } from './data-access-scope.service';
+export type { BuildScopePredicateOptions, InlineScopeResolver } from './data-access-scope.service';
 export { OwnScopeResolver } from './scope-resolvers/own.resolver';
 export { AssignedScopeResolver } from './scope-resolvers/assigned.resolver';
 export { PermissionManifestRegistry } from './permission-manifest';
