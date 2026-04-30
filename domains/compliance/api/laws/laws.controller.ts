@@ -42,6 +42,22 @@ export class LawsController {
     return this.laws.list(parsed, accessCtx);
   }
 
+  /**
+   * Returns the law hierarchy + per-jurisdiction counts in one round-trip,
+   * so the LawsLibraryPage doesn't need to fetch a flat `limit:500` page and
+   * stitch parents on the client. Optional `?jurisdiction=central|state|...`
+   * scopes the tree (counts always reflect the unfiltered set).
+   */
+  @Get('tree')
+  @RequirePermission('laws.read')
+  tree(@Query('jurisdiction') jurisdiction?: string) {
+    const j = jurisdiction === 'central' || jurisdiction === 'state'
+      || jurisdiction === 'municipal' || jurisdiction === 'international'
+      ? jurisdiction
+      : undefined;
+    return this.laws.getTree({ jurisdiction: j });
+  }
+
   @Get(':id')
   @RequirePermission('laws.read')
   findOne(

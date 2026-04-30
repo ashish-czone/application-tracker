@@ -1,5 +1,5 @@
 import type { LawNode, LawJurisdiction } from '../types';
-import type { LawApiRecord } from '../../../../../hooks/useLawsApi';
+import type { LawApiRecord, LawTreeApiNode } from '../../../../../hooks/useLawsApi';
 
 const JURISDICTIONS: LawJurisdiction[] = ['central', 'state', 'municipal', 'international'];
 
@@ -21,9 +21,32 @@ export function mapLawRecord(record: LawApiRecord): LawNode {
 }
 
 /**
+ * Convert a server-built tree node into the UI's `LawNode` shape. Field
+ * differences are presentation-only (`code`/`name` → `citation`/`title`);
+ * children are mapped recursively. Used by `useLawsTree`-driven views.
+ */
+export function mapTreeApiNode(node: LawTreeApiNode): LawNode {
+  return {
+    id: node.id,
+    citation: node.code,
+    title: node.name,
+    jurisdiction: node.jurisdiction,
+    effectiveFrom: node.effectiveFrom ?? undefined,
+    children: node.children?.map(mapTreeApiNode),
+  };
+}
+
+export function mapTreeApiNodes(nodes: LawTreeApiNode[]): LawNode[] {
+  return nodes.map(mapTreeApiNode);
+}
+
+/**
  * Builds a hierarchical tree from a flat list of law records using parentId.
  * Records whose parent is missing from the input are surfaced at the root so
  * nothing is lost.
+ *
+ * Kept for callers that still pass through `useLawsList` (a fading code
+ * path); new screens should consume `useLawsTree` and `mapTreeApiNodes`.
  */
 export function buildLawTree(records: LawApiRecord[]): LawNode[] {
   const byId = new Map<string, LawNode>();

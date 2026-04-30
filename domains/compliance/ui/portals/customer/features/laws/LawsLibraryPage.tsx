@@ -5,27 +5,32 @@ import { Eyebrow, toast } from '@packages/ui';
 import { useEntityHooks } from '@packages/entity-engine-ui';
 import { JurisdictionTag } from '../../../../components';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
-import { type LawNode, type LawJurisdiction } from './types';
+import { type LawNode } from './types';
 import { LawTreeRow } from './components/LawTreeRow';
 import { NewLawDrawer, type NewLawValues } from './components/NewLawDrawer';
-import { useLawsList } from '../../../../hooks/useLawsApi';
-import { buildLawTree, flattenLawTree } from './api/mapLawRecord';
+import { useLawsList, useLawsTree } from '../../../../hooks/useLawsApi';
+import { flattenLawTree, mapTreeApiNodes } from './api/mapLawRecord';
+
+// Limit for the new-law drawer's parent-law picker. Bounded reference data;
+// past this many laws the picker should switch to a debounced search.
+const DRAWER_PARENT_PICKER_LIMIT = 100;
 
 function formatDate(iso?: string): string {
-  if (!iso) return '\u2014';
+  if (!iso) return '—';
   const d = new Date(iso);
   return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 export function LawsLibraryPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const { data: lawsPage, isLoading, isError } = useLawsList({ limit: 500 });
+  const { data: treeData, isLoading, isError } = useLawsTree();
+  const { data: lawsPage } = useLawsList({ limit: DRAWER_PARENT_PICKER_LIMIT });
   const lawsHooks = useEntityHooks('laws');
   const createLaw = lawsHooks.useCreate({ onSuccess: () => setDrawerOpen(false) });
 
   const tree = useMemo<LawNode[]>(
-    () => buildLawTree(lawsPage?.data ?? []),
-    [lawsPage],
+    () => mapTreeApiNodes(treeData?.tree ?? []),
+    [treeData],
   );
 
   const flat = useMemo(() => flattenLawTree(tree), [tree]);
@@ -52,16 +57,12 @@ export function LawsLibraryPage() {
 
   const activeNode = flat.find((n) => n.id === activeId) ?? tree[0];
 
-  const jurisdictionCounts = useMemo(() => {
-    const counts: Record<LawJurisdiction, number> = {
-      central: 0,
-      state: 0,
-      municipal: 0,
-      international: 0,
-    };
-    for (const node of tree) counts[node.jurisdiction] += 1;
-    return counts;
-  }, [tree]);
+  const jurisdictionCounts = treeData?.counts ?? {
+    central: 0,
+    state: 0,
+    municipal: 0,
+    international: 0,
+  };
 
   return (
     <div className="min-h-screen bg-paper paper-grain">
