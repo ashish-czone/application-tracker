@@ -35,6 +35,9 @@ import { OverdueAlert } from './components/OverdueAlert';
 import type { Filing } from '../../../../types';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 import { useComplianceFilingRows, useUpdateComplianceFiling } from '../../../../hooks/useComplianceFilings';
+import { useFilingsList, type FilingsListBucket } from '../../../../hooks/useFilingsList';
+import { useFilingsSummary } from '../../../../hooks/useFilingsSummary';
+import type { FilingListRow } from '../../../../hooks/useFilingsByDueWindow';
 
 type StatusTab = 'all' | Filing['status'];
 type ViewMode = 'list' | 'kanban' | 'calendar';
@@ -53,39 +56,149 @@ const KANBAN_COLUMNS: KanbanColumnDef[] = [
   { id: 'filed', label: 'Filed', color: 'hsl(var(--filed))' },
 ];
 
+const LIST_PAGE_LIMIT = 25;
+
+function statusTabToBucket(tab: StatusTab): FilingsListBucket | undefined {
+  switch (tab) {
+    case 'all':
+      return undefined;
+    case 'overdue':
+      return 'overdue';
+    case 'due-today':
+      return 'due-today';
+    case 'due-this-week':
+      return 'due-this-week';
+    case 'upcoming':
+      return 'upcoming';
+    case 'filed':
+      return 'filed';
+    default:
+      return undefined;
+  }
+}
+
+function rowToFilingRow(row: FilingListRow): FilingRow {
+  const dueDate = row.dueDate ?? '';
+  return {
+    id: row.id,
+    clientId: row.clientId,
+    clientName: row.clientId__label ?? '—',
+    lawId: row.lawId,
+    lawCode: row.lawCode ?? '',
+    ruleName: row.ruleId__label ?? row.title,
+    dueDate,
+    periodLabel: formatPeriodLabel(row.periodStart),
+    handler: row.assigneeTeamId
+      ? {
+          id: row.assigneeTeamId,
+          name: row.assigneeTeamId__label ?? '—',
+          initials: initialsFromName(row.assigneeTeamId__label ?? ''),
+        }
+      : undefined,
+    jurisdiction: (row.lawJurisdiction as Filing['jurisdiction']) ?? 'central',
+    status: deriveBucketStatus(row),
+    priority: mapPriority(row.priority),
+    filedDate: row.completedAt ? row.completedAt.slice(0, 10) : undefined,
+    notes: [],
+    attachments: [],
+    activity: [],
+  };
+}
+
+function deriveBucketStatus(row: FilingListRow): Filing['status'] {
+  if (row.status === 'completed') return 'filed';
+  if (row.status === 'cancelled') return 'filed';
+  if (!row.dueDate) return 'upcoming';
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const due = new Date(row.dueDate);
+  due.setHours(0, 0, 0, 0);
+  const days = Math.round((due.getTime() - today.getTime()) / 86_400_000);
+  if (days < 0) return 'overdue';
+  if (days === 0) return 'due-today';
+  if (days <= 7) return 'due-this-week';
+  return 'upcoming';
+}
+
+function formatPeriodLabel(periodStart: string | null | undefined): string {
+  if (!periodStart) return '';
+  const d = new Date(periodStart);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleString('en-US', { month: 'short', year: 'numeric' });
+}
+
+function initialsFromName(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() ?? '')
+    .join('');
+}
+
+const PRIORITY_MAP: Record<string, FilingRow['priority']> = {
+  urgent: 'critical',
+  high: 'high',
+  medium: 'normal',
+  low: 'low',
+};
+
+function mapPriority(p: string): FilingRow['priority'] {
+  return PRIORITY_MAP[p] ?? 'normal';
+}
+
 export function FilingsPage() {
-  const { rows, loading, handlers, clientOptions, lawOptions } = useComplianceFilingRows();
-  const updateFiling = useUpdateComplianceFiling();
+  const { summary, loading: summaryLoading } = useFilingsSummary();
 
   const [viewMode, setViewMode] = useState<ViewMode>('list');
-
   const [search, setSearch] = useState('');
   const [statusTab, setStatusTab] = useState<StatusTab>('all');
   const [clientFilter, setClientFilter] = useState<string[]>([]);
   const [lawFilter, setLawFilter] = useState<string[]>([]);
   const [handlerFilter, setHandlerFilter] = useState<string[]>([]);
+  const [page, setPage] = useState(1);
 
   const [visibleColumns, setVisibleColumns] = useState<string[]>(ALL_FILING_COLUMN_KEYS);
   const [selectedFiling, setSelectedFiling] = useState<FilingRow | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [reassignOpen, setReassignOpen] = useState(false);
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return rows.filter((f) => {
-      if (statusTab !== 'all' && f.status !== statusTab) return false;
-      if (clientFilter.length > 0 && !clientFilter.includes(f.clientId)) return false;
-      if (lawFilter.length > 0 && !lawFilter.includes(f.lawId)) return false;
-      if (handlerFilter.length > 0 && (!f.handler || !handlerFilter.includes(f.handler.id)))
-        return false;
-      if (
-        q &&
-        !`${f.lawCode} ${f.ruleName} ${f.clientName} ${f.periodLabel}`.toLowerCase().includes(q)
-      )
-        return false;
-      return true;
-    });
-  }, [rows, statusTab, clientFilter, lawFilter, handlerFilter, search]);
+  // Reset to page 1 whenever the filter shape changes — otherwise a user
+  // who's on page 5 of "all" jumps to an empty page 5 of "overdue".
+  useEffect(() => {
+    setPage(1);
+    setSelectedIds(new Set());
+  }, [statusTab, search, clientFilter, lawFilter, handlerFilter]);
+
+  // Server-paginated list view query. Driven by the current filter+sort+page
+  // state. Bucket maps to dueBefore/dueAfter/notCompleted/status primitives;
+  // client/law/team filters become structured `in` filters on the engine.
+  const listQuery = useFilingsList({
+    page,
+    limit: LIST_PAGE_LIMIT,
+    sort: 'dueDate:asc',
+    search: search.trim() || undefined,
+    bucket: statusTabToBucket(statusTab),
+    clientIds: clientFilter.length > 0 ? clientFilter : undefined,
+    lawIds: lawFilter.length > 0 ? lawFilter : undefined,
+    assigneeTeamIds: handlerFilter.length > 0 ? handlerFilter : undefined,
+  });
+
+  const listRows = useMemo<FilingRow[]>(
+    () => listQuery.rows.map(rowToFilingRow),
+    [listQuery.rows],
+  );
+
+  // Kanban + calendar still depend on the legacy hook (PR-3b will migrate
+  // them and retire useComplianceFilingRows). Filter-dropdown options also
+  // come from this hook for now; option-source endpoints are a separate
+  // follow-up.
+  const legacy = useComplianceFilingRows();
+  const updateFiling = useUpdateComplianceFiling();
+
+  const clientOptions = legacy.clientOptions;
+  const lawOptions = legacy.lawOptions;
+  const handlers = legacy.handlers;
 
   const activeFilters: ActiveFilter[] = useMemo(() => {
     const chips: ActiveFilter[] = [];
@@ -125,11 +238,7 @@ export function FilingsPage() {
     setHandlerFilter([]);
   };
 
-  useEffect(() => {
-    setSelectedIds(new Set());
-  }, [statusTab, clientFilter, lawFilter, handlerFilter, search]);
-
-  const visibleIds = useMemo(() => new Set(filtered.map((f) => f.id)), [filtered]);
+  const visibleIds = useMemo(() => new Set(listRows.map((f) => f.id)), [listRows]);
   const effectiveSelectedIds = useMemo(() => {
     const next = new Set<string>();
     for (const id of selectedIds) if (visibleIds.has(id)) next.add(id);
@@ -137,8 +246,8 @@ export function FilingsPage() {
   }, [selectedIds, visibleIds]);
 
   const selectedFilings = useMemo(
-    () => rows.filter((f) => effectiveSelectedIds.has(f.id)),
-    [rows, effectiveSelectedIds],
+    () => listRows.filter((f) => effectiveSelectedIds.has(f.id)),
+    [listRows, effectiveSelectedIds],
   );
 
   function applyReassign({ newHandlerId, notify, note }: BulkReassignSubmitPayload) {
@@ -154,6 +263,7 @@ export function FilingsPage() {
       .then(() => {
         setSelectedIds(new Set());
         setReassignOpen(false);
+        listQuery.refetch();
         const count = targetIds.length;
         const noun = count === 1 ? 'filing' : 'filings';
         toast.success(`${count} ${noun} reassigned to ${newHandler.name}`, {
@@ -168,40 +278,11 @@ export function FilingsPage() {
       });
   }
 
-  const totalFilings = rows.length;
-  const statusCounts = useMemo(() => {
-    const counts = { overdue: 0, 'due-today': 0, 'due-this-week': 0, upcoming: 0, filed: 0 };
-    for (const r of rows) {
-      if (r.status in counts) counts[r.status as keyof typeof counts] += 1;
-    }
-    return counts;
-  }, [rows]);
-
-  const overdueCount = statusCounts.overdue;
-  const dueThisWeekCount = statusCounts['due-today'] + statusCounts['due-this-week'];
-  const filedCount = statusCounts.filed;
-  const onTimeRate = totalFilings > 0 ? Math.round((filedCount / totalFilings) * 100) : 0;
-
+  const onTimeRate = summary.total > 0 ? Math.round((summary.completed / summary.total) * 100) : 0;
   const overdueClientCount = useMemo(
-    () => new Set(rows.filter((f) => f.status === 'overdue').map((f) => f.clientId)).size,
-    [rows],
+    () => new Set(legacy.rows.filter((f) => f.status === 'overdue').map((f) => f.clientId)).size,
+    [legacy.rows],
   );
-
-  const clientOptionsWithCounts = clientOptions.map((c) => ({
-    ...c,
-    count: rows.filter((f) => f.clientId === c.value).length,
-  }));
-
-  const lawOptionsWithCounts = lawOptions.map((l) => ({
-    ...l,
-    count: rows.filter((f) => f.lawId === l.value).length,
-  }));
-
-  const handlerOptionsWithCounts = handlers.map((h) => ({
-    value: h.id,
-    label: h.name,
-    count: rows.filter((f) => f.handler?.id === h.id).length,
-  }));
 
   const columnChooserItems = FILING_COLUMNS.map((c) => ({
     key: c.key,
@@ -210,17 +291,19 @@ export function FilingsPage() {
   }));
 
   const statusTabs = [
-    { value: 'all' as const, label: 'All', count: totalFilings },
-    { value: 'overdue' as const, label: 'Overdue', count: statusCounts.overdue },
-    { value: 'due-today' as const, label: 'Due today', count: statusCounts['due-today'] },
-    { value: 'due-this-week' as const, label: 'This week', count: statusCounts['due-this-week'] },
-    { value: 'upcoming' as const, label: 'Upcoming', count: statusCounts.upcoming },
-    { value: 'filed' as const, label: 'Filed', count: statusCounts.filed },
+    { value: 'all' as const, label: 'All', count: summary.total },
+    { value: 'overdue' as const, label: 'Overdue', count: summary.overdue },
+    { value: 'due-today' as const, label: 'Due today', count: summary.dueToday },
+    { value: 'due-this-week' as const, label: 'This week', count: summary.dueThisWeek },
+    { value: 'upcoming' as const, label: 'Upcoming', count: summary.upcoming },
+    { value: 'filed' as const, label: 'Filed', count: summary.completed },
   ];
 
+  // Kanban + calendar both still derive from the legacy hook's full row set —
+  // see PR-3b for the per-column / per-month migration.
   const kanbanCards: KanbanCardData[] = useMemo(
-    () => filtered.map((f) => ({ ...f, id: f.id, columnId: f.status })),
-    [filtered],
+    () => legacy.rows.map((f) => ({ ...f, id: f.id, columnId: f.status })),
+    [legacy.rows],
   );
 
   function handleCardMove(event: {
@@ -239,7 +322,7 @@ export function FilingsPage() {
   }
 
   function handleCalendarClick(filing: Filing) {
-    const row = rows.find((f) => f.id === filing.id);
+    const row = legacy.rows.find((f) => f.id === filing.id);
     if (row) setSelectedFiling(row);
   }
 
@@ -249,6 +332,10 @@ export function FilingsPage() {
     return d;
   }, []);
 
+  const dueThisWeekCount = summary.dueToday + summary.dueThisWeek;
+  const showOverdueAlert = !summaryLoading && summary.overdue > 0;
+  const totalPages = listQuery.meta?.totalPages ?? 0;
+
   return (
     <>
       <ScreenLayout
@@ -256,20 +343,19 @@ export function FilingsPage() {
         breadcrumb={['Workspace', 'Filings']}
         title="Filings"
         subtitle={
-          loading ? (
+          summaryLoading ? (
             'Loading filings…'
           ) : (
             <>
-              {totalFilings} filings across {clientOptions.length} clients — {overdueCount} overdue,{' '}
-              {dueThisWeekCount} due this week.
+              {summary.total} filings — {summary.overdue} overdue, {dueThisWeekCount} due this week.
             </>
           )
         }
         actions={<ViewModeSwitcher modes={VIEW_MODES} value={viewMode} onChange={setViewMode} />}
         alert={
-          overdueCount > 0 && (
+          showOverdueAlert && (
             <OverdueAlert
-              count={overdueCount}
+              count={summary.overdue}
               clientCount={overdueClientCount}
               onShowOverdue={() => setStatusTab('overdue')}
             />
@@ -278,47 +364,43 @@ export function FilingsPage() {
         kpis={[
           {
             label: 'Overdue',
-            value: String(overdueCount),
+            value: String(summary.overdue),
             unit: 'filings',
-            delta: `${rows.filter((f) => f.status === 'overdue' && f.priority === 'critical').length} critical`,
+            delta: 'need action now',
             deltaTone: 'negative',
             accent: 'signal',
-            sparklineData: [2, 3, 3, 4, 3, 4, overdueCount],
+            sparklineData: [2, 3, 3, 4, 3, 4, summary.overdue],
             sparklineTone: 'signal',
-            footnote: 'need action now',
           },
           {
             label: 'Due this week',
             value: String(dueThisWeekCount),
             unit: 'filings',
-            delta: `${statusCounts['due-today']} due today`,
+            delta: `${summary.dueToday} due today`,
             deltaTone: 'neutral',
             accent: 'due-soon',
             sparklineData: [5, 6, 7, 6, 7, 8, dueThisWeekCount],
             sparklineTone: 'due-soon',
-            footnote: 'across all clients',
           },
           {
-            label: 'Filed this month',
-            value: String(filedCount),
+            label: 'Filed',
+            value: String(summary.completed),
             unit: 'completed',
             delta: `${onTimeRate}% on time`,
             deltaTone: 'positive',
             accent: 'filed',
-            sparklineData: [2, 3, 3, 4, 4, 5, filedCount],
+            sparklineData: [2, 3, 3, 4, 4, 5, summary.completed],
             sparklineTone: 'filed',
-            footnote: `${onTimeRate}% on time`,
           },
           {
             label: 'Total filings',
-            value: String(totalFilings),
+            value: String(summary.total),
             unit: 'this period',
-            delta: `${statusCounts.upcoming} upcoming`,
+            delta: `${summary.upcoming} upcoming`,
             deltaTone: 'neutral',
             accent: 'authority',
-            sparklineData: [18, 19, 20, 21, 22, 23, totalFilings],
+            sparklineData: [18, 19, 20, 21, 22, 23, summary.total],
             sparklineTone: 'authority',
-            footnote: `${clientOptions.length} clients`,
           },
         ]}
       >
@@ -338,19 +420,19 @@ export function FilingsPage() {
               <>
                 <FilterPopover
                   label="Client"
-                  options={clientOptionsWithCounts}
+                  options={clientOptions.map((c) => ({ value: c.value, label: c.label }))}
                   value={clientFilter}
                   onChange={(v) => setClientFilter(v as string[])}
                 />
                 <FilterPopover
                   label="Law"
-                  options={lawOptionsWithCounts}
+                  options={lawOptions.map((l) => ({ value: l.value, label: l.label }))}
                   value={lawFilter}
                   onChange={(v) => setLawFilter(v as string[])}
                 />
                 <FilterPopover
                   label="Handler"
-                  options={handlerOptionsWithCounts}
+                  options={handlers.map((h) => ({ value: h.id, label: h.name }))}
                   value={handlerFilter}
                   onChange={(v) => setHandlerFilter(v as string[])}
                 />
@@ -359,7 +441,9 @@ export function FilingsPage() {
             trailing={
               <>
                 <span className="font-mono text-[11px] tabular-nums text-ink-soft">
-                  {filtered.length} of {totalFilings}
+                  {listQuery.total > 0
+                    ? `${(page - 1) * LIST_PAGE_LIMIT + 1}–${Math.min(page * LIST_PAGE_LIMIT, listQuery.total)} of ${listQuery.total}`
+                    : '0 of 0'}
                 </span>
                 <button
                   type="button"
@@ -408,18 +492,45 @@ export function FilingsPage() {
           )}
 
           {viewMode === 'list' && (
-            <DataGridShell
-              columns={FILING_COLUMNS}
-              rows={filtered}
-              getRowKey={(f) => f.id}
-              onRowClick={(f) => setSelectedFiling(f)}
-              visibleColumns={visibleColumns}
-              onVisibleColumnsChange={setVisibleColumns}
-              hideToolbar
-              selectable
-              selectedKeys={effectiveSelectedIds}
-              onSelectionChange={setSelectedIds}
-            />
+            <>
+              <DataGridShell
+                columns={FILING_COLUMNS}
+                rows={listRows}
+                getRowKey={(f) => f.id}
+                onRowClick={(f) => setSelectedFiling(f)}
+                visibleColumns={visibleColumns}
+                onVisibleColumnsChange={setVisibleColumns}
+                hideToolbar
+                selectable
+                selectedKeys={effectiveSelectedIds}
+                onSelectionChange={setSelectedIds}
+              />
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between px-3 py-3 border-t border-rule mt-2">
+                  <span className="text-[11px] font-sans tabular-nums text-ink-soft">
+                    Page {page} of {totalPages}
+                  </span>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      className="px-3 py-1 text-[11px] uppercase tracking-eyebrow font-sans font-medium border border-rule text-ink-muted hover:text-ink disabled:opacity-40 disabled:cursor-not-allowed"
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      disabled={page <= 1 || listQuery.loading}
+                    >
+                      Previous
+                    </button>
+                    <button
+                      type="button"
+                      className="px-3 py-1 text-[11px] uppercase tracking-eyebrow font-sans font-medium border border-rule text-ink-muted hover:text-ink disabled:opacity-40 disabled:cursor-not-allowed"
+                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                      disabled={page >= totalPages || listQuery.loading}
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
 
           {viewMode === 'kanban' && (
@@ -434,7 +545,7 @@ export function FilingsPage() {
                     <FilingKanbanCard
                       filing={f}
                       onOpen={(row) =>
-                        setSelectedFiling(rows.find((r) => r.id === row.id) ?? null)
+                        setSelectedFiling(legacy.rows.find((r) => r.id === row.id) ?? null)
                       }
                     />
                   );
@@ -446,7 +557,7 @@ export function FilingsPage() {
           {viewMode === 'calendar' && (
             <div className="mt-4">
               <ComplianceCalendar
-                filings={filtered}
+                filings={legacy.rows}
                 month={monthAnchor}
                 onFilingClick={handleCalendarClick}
               />
