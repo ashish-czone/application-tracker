@@ -13,6 +13,12 @@ import { clientContacts } from './client-contacts-ref';
 import { CLIENTS_CREATED, CLIENT_CONTACTS_CREATED } from '../events/types';
 import { ClientDormancyService } from './client-dormancy.service';
 import { ClientContactsService } from '../client-contacts/client-contacts.service';
+import {
+  ClientsRollupService,
+  type ClientsListParams,
+  type ClientsSummary,
+  type HandlerOption,
+} from './clients-rollup.service';
 
 interface ClientGuardDeps {
   contacts: ClientContactsService;
@@ -138,6 +144,7 @@ export class ClientsService {
     private readonly events: DomainEventEmitter,
     private readonly dormancy: ClientDormancyService,
     private readonly contacts: ClientContactsService,
+    private readonly rollup: ClientsRollupService,
   ) {}
 
   private guardDeps(): ClientGuardDeps {
@@ -146,8 +153,29 @@ export class ClientsService {
 
   // ---- CRUD delegates (vendors template) -----------------------------------
 
-  list(query: BaseListQuery, accessCtx?: DataAccessContext) {
-    return this.entityService.list(query, accessCtx);
+  /**
+   * Compliance clients list goes through the rollup service so each row
+   * carries server-computed metrics (registered laws, open / overdue / due
+   * filings, on-time %, last filing date, derived risk band) and the handler
+   * display name. Custom Drizzle path; the entity engine's list pipeline
+   * doesn't express the per-row aggregates.
+   */
+  list(query: ClientsListParams) {
+    return this.rollup.list(query);
+  }
+
+  /**
+   * Page-level summary KPIs — total clients, byStatus, byRisk, totalOverdue,
+   * clientsWithOverdue. Single round-trip; respects the same compliance-only
+   * filter the list view uses.
+   */
+  getSummary(): Promise<ClientsSummary> {
+    return this.rollup.getSummary();
+  }
+
+  /** Distinct account-manager users across compliance clients, for the filter dropdown. */
+  getHandlerOptions(): Promise<HandlerOption[]> {
+    return this.rollup.getHandlerOptions();
   }
 
   findOne(id: string, accessCtx?: DataAccessContext) {

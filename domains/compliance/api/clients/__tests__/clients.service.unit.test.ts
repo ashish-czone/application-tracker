@@ -47,6 +47,11 @@ describe('ClientsService', () => {
     countNonTerminalFilings: ReturnType<typeof vi.fn>;
   };
   let contacts: { hasPrimaryContact: ReturnType<typeof vi.fn> };
+  let rollup: {
+    list: ReturnType<typeof vi.fn>;
+    getSummary: ReturnType<typeof vi.fn>;
+    getHandlerOptions: ReturnType<typeof vi.fn>;
+  };
   let service: ClientsService;
 
   beforeEach(() => {
@@ -72,12 +77,24 @@ describe('ClientsService', () => {
       countNonTerminalFilings: vi.fn().mockResolvedValue(0),
     };
     contacts = { hasPrimaryContact: vi.fn().mockResolvedValue(true) };
+    rollup = {
+      list: vi.fn().mockResolvedValue({ data: [], meta: { total: 0, page: 1, limit: 25, totalPages: 0 } }),
+      getSummary: vi.fn().mockResolvedValue({
+        total: 0,
+        byStatus: { active: 0, onboarding: 0, dormant: 0 },
+        byRisk: { healthy: 0, 'at-risk': 0, critical: 0 },
+        totalOverdue: 0,
+        clientsWithOverdue: 0,
+      }),
+      getHandlerOptions: vi.fn().mockResolvedValue([]),
+    };
     service = new ClientsService(
       entityService as never,
       db as never,
       events as never,
       dormancy as never,
       contacts as never,
+      rollup as never,
     );
   });
 
@@ -89,10 +106,19 @@ describe('ClientsService', () => {
   const secondaryContact: ContactInput = { fullName: 'Bob', complianceIsPrimary: false };
 
   describe('CRUD delegates', () => {
-    it('list delegates to entityService.list with the access context', () => {
-      const accessCtx = { userId: 'u1' } as never;
-      service.list({ page: 1 } as never, accessCtx);
-      expect(entityService.list).toHaveBeenCalledWith({ page: 1 }, accessCtx);
+    it('list delegates to ClientsRollupService.list with the translated params', () => {
+      service.list({ page: 1, limit: 25 } as never);
+      expect(rollup.list).toHaveBeenCalledWith({ page: 1, limit: 25 });
+    });
+
+    it('getSummary delegates to ClientsRollupService.getSummary', async () => {
+      await service.getSummary();
+      expect(rollup.getSummary).toHaveBeenCalledOnce();
+    });
+
+    it('getHandlerOptions delegates to ClientsRollupService.getHandlerOptions', async () => {
+      await service.getHandlerOptions();
+      expect(rollup.getHandlerOptions).toHaveBeenCalledOnce();
     });
 
     it('findOne delegates to entityService.findOneOrFail', () => {

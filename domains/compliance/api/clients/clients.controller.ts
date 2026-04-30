@@ -30,6 +30,7 @@ import {
 import { CreateClientWithContactsDto } from './dto/create-with-contacts.dto';
 import { RegisterLawsDto } from './dto/register-laws.dto';
 import { DeactivateRegistrationDto } from './dto/deactivate-registration.dto';
+import { translateClientsQuery } from './clients-query';
 
 @Controller('clients')
 export class ClientsController {
@@ -49,14 +50,20 @@ export class ClientsController {
 
   @Get()
   @RequirePermission('clients.read')
-  list(@Query() query: Record<string, unknown>, @AccessContext() accessCtx?: DataAccessContext) {
-    const parsed = {
-      ...query,
-      page: query.page ? Number(query.page) : undefined,
-      limit: query.limit ? Number(query.limit) : undefined,
-      includeDeleted: query.includeDeleted === 'true',
-    };
-    return this.clientsService.list(parsed, accessCtx);
+  list(@Query() query: Record<string, unknown>) {
+    return this.clientsService.list(translateClientsQuery(query));
+  }
+
+  @Get('summary')
+  @RequirePermission('clients.read')
+  summary() {
+    return this.clientsService.getSummary();
+  }
+
+  @Get('handler-options')
+  @RequirePermission('clients.read')
+  handlerOptions() {
+    return this.clientsService.getHandlerOptions();
   }
 
   @Get(':id')
