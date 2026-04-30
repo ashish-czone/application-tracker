@@ -16,6 +16,8 @@ describe('ClientsController', () => {
     restore: ReturnType<typeof vi.fn>;
     getListLayout: ReturnType<typeof vi.fn>;
     transition: ReturnType<typeof vi.fn>;
+    getSummary: ReturnType<typeof vi.fn>;
+    getHandlerOptions: ReturnType<typeof vi.fn>;
   };
   let contactsService: { setPrimary: ReturnType<typeof vi.fn> };
   let registrationsService: {
@@ -37,6 +39,14 @@ describe('ClientsController', () => {
       restore: vi.fn().mockResolvedValue({ id: 'cid-1' }),
       getListLayout: vi.fn().mockResolvedValue({ columns: [] }),
       transition: vi.fn().mockResolvedValue({ id: 'cid-1', status: 'active' }),
+      getSummary: vi.fn().mockResolvedValue({
+        total: 0,
+        byStatus: { active: 0, onboarding: 0, dormant: 0 },
+        byRisk: { healthy: 0, 'at-risk': 0, critical: 0 },
+        totalOverdue: 0,
+        clientsWithOverdue: 0,
+      }),
+      getHandlerOptions: vi.fn().mockResolvedValue([]),
     };
     contactsService = { setPrimary: vi.fn().mockResolvedValue(undefined) };
     registrationsService = {
@@ -52,12 +62,42 @@ describe('ClientsController', () => {
   });
 
   describe('CRUD', () => {
-    it('list delegates with parsed page/limit and includeDeleted flag', async () => {
-      await controller.list({ page: '2', limit: '50', includeDeleted: 'true' });
+    it('list translates shorthand params and forwards to ClientsService.list', async () => {
+      await controller.list({ page: '2', limit: '50', status: 'active', q: 'acme' });
       expect(clientsService.list).toHaveBeenCalledWith(
-        { page: 2, limit: 50, includeDeleted: true },
-        undefined,
+        expect.objectContaining({ page: 2, limit: 50, status: 'active', q: 'acme' }),
       );
+    });
+
+    it('list caps limit at 100 (data-fetching rule)', async () => {
+      await controller.list({ limit: '5000' });
+      const call = clientsService.list.mock.calls[0][0];
+      expect(call.limit).toBe(100);
+    });
+
+    it('list rejects unknown status / risk values silently', async () => {
+      await controller.list({ status: 'bogus', risk: 'invalid' });
+      const call = clientsService.list.mock.calls[0][0];
+      expect(call.status).toBeUndefined();
+      expect(call.risk).toBeUndefined();
+    });
+
+    it('summary endpoint delegates to ClientsService.getSummary', async () => {
+      clientsService.getSummary = vi.fn().mockResolvedValue({
+        total: 0,
+        byStatus: { active: 0, onboarding: 0, dormant: 0 },
+        byRisk: { healthy: 0, 'at-risk': 0, critical: 0 },
+        totalOverdue: 0,
+        clientsWithOverdue: 0,
+      });
+      await controller.summary();
+      expect(clientsService.getSummary).toHaveBeenCalledOnce();
+    });
+
+    it('handler-options endpoint delegates to ClientsService.getHandlerOptions', async () => {
+      clientsService.getHandlerOptions = vi.fn().mockResolvedValue([{ id: 'u1', name: 'Asha' }]);
+      await controller.handlerOptions();
+      expect(clientsService.getHandlerOptions).toHaveBeenCalledOnce();
     });
 
     it('findOne requires clients.read', () => {

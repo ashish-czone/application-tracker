@@ -3,6 +3,7 @@ import { Pool } from 'pg';
 import { runAppMigrations, type Addon } from '@packages/app-shell';
 import { attachmentsAddon } from '@packages/attachments';
 import { automationsAddon } from '@packages/automations';
+import { directoryAddon } from '@packages/directory';
 import { documentTemplatesAddon } from '@packages/document-templates';
 import { eavAttributesAddon } from '@packages/eav-attributes';
 import { entityRelationsAddon } from '@packages/entity-relations';
@@ -39,6 +40,9 @@ import { workflowsAddon } from '@packages/workflows';
 const testAddons: readonly Addon[] = [
   automationsAddon,
   workflowsAddon,
+  // directory must precede compliance migrations that ALTER `clients` /
+  // `client_contacts` (the shared identity tables directory creates).
+  directoryAddon,
   attachmentsAddon,
   documentTemplatesAddon(),
   eavAttributesAddon,

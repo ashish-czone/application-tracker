@@ -4,6 +4,7 @@ import { CLIENTS_CONFIG } from './clients.config';
 import { ClientsController } from './clients.controller';
 import { ClientsService } from './clients.service';
 import { ClientDormancyService } from './client-dormancy.service';
+import { ClientsRollupService } from './clients-rollup.service';
 import { ClientContactsModule } from '../client-contacts/client-contacts.module';
 import { ClientRegistrationsModule } from '../client-registrations/client-registrations.module';
 
@@ -14,7 +15,7 @@ import { ClientRegistrationsModule } from '../client-registrations/client-regist
     ClientRegistrationsModule,
   ],
   controllers: [ClientsController],
-  providers: [ClientsService, ClientDormancyService],
+  providers: [ClientsService, ClientDormancyService, ClientsRollupService],
   exports: [ClientsService, ClientDormancyService],
 })
 export class ClientsModule {}
