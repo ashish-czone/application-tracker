@@ -51,3 +51,6 @@ export {
   type PackageMigrationSource,
   type RunMigrationsOptions,
 } from './migrator';
+
+// Row-level scope helpers (mandatory per .claude/rules/data-scoping.md)
+export { withScope, withScopeIncludingDeleted, tenantSqlCondition } from './scope';
