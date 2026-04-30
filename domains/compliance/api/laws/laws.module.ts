@@ -10,5 +10,6 @@ import { LawsService } from './laws.service';
   ],
   controllers: [LawsController],
   providers: [LawsService],
+  exports: [LawsService],
 })
 export class LawsModule {}

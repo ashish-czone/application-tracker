@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { EntityService, type BaseListQuery } from '@packages/entity-engine';
 import type { DataAccessContext } from '@packages/rbac';
+import { LawsService } from '../laws/laws.service';
 import { buildFilingExternalKey } from './compliance-filings.config';
 import type { CreateComplianceFilingDto, UpdateComplianceFilingDto } from './compliance-filings.dto';
 
@@ -19,14 +20,53 @@ function applyCompletedAt(payload: Record<string, unknown>): Record<string, unkn
   };
 }
 
+function collectLawIds(rows: ReadonlyArray<Record<string, unknown>>): Set<string> {
+  const ids = new Set<string>();
+  for (const row of rows) {
+    const id = row.lawId;
+    if (typeof id === 'string' && id.length > 0) ids.add(id);
+  }
+  return ids;
+}
+
 @Injectable()
 export class ComplianceFilingsService {
   constructor(
     @Inject('ENTITY_SERVICE_compliance-filings') private readonly entityService: EntityService,
+    private readonly lawsService: LawsService,
   ) {}
 
-  list(query: BaseListQuery, accessCtx?: DataAccessContext) {
-    return this.entityService.list(query, accessCtx);
+  /**
+   * List filings with embedded law display fields (`lawCode`, `lawName`,
+   * `lawJurisdiction`) per row. The entity engine already injects `__label`
+   * fields for lookup columns (clientId, lawId, ruleId, assigneeTeamId,
+   * assigneeId), but lookup labels are single-valued; the dashboard widgets
+   * and list page need the law's code AND jurisdiction together. We resolve
+   * those via a single batched call to LawsService — service composition
+   * across modules, never a JOIN.
+   */
+  async list(query: BaseListQuery, accessCtx?: DataAccessContext) {
+    const result = await this.entityService.list(query, accessCtx);
+    const lawIds = collectLawIds(result.data);
+    if (lawIds.size === 0) return result;
+
+    const laws = await this.lawsService.findDisplayByIds([...lawIds]);
+    const byId = new Map(laws.map((l) => [l.id, l]));
+
+    return {
+      ...result,
+      data: result.data.map((row) => {
+        const lawId = typeof row.lawId === 'string' ? row.lawId : null;
+        const law = lawId ? byId.get(lawId) : undefined;
+        if (!law) return row;
+        return {
+          ...row,
+          lawCode: law.code,
+          lawName: law.name,
+          lawJurisdiction: law.jurisdiction,
+        };
+      }),
+    };
   }
 
   findOne(id: string, accessCtx?: DataAccessContext) {
