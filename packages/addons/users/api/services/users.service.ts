@@ -1,4 +1,5 @@
 import { Inject, Injectable, Optional, BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
+import { and, asc, count, desc, ilike, isNotNull, or, type SQL } from 'drizzle-orm';
 import { AuthService, AUTH_INVITATION_SENT } from '@packages/auth';
 import { RbacService } from '@packages/rbac';
 import { DomainEventEmitter } from '@packages/events';
@@ -6,8 +7,46 @@ import { DatabaseService, users, eq, isNull } from '@packages/database';
 import { EntityService, type BaseListQuery } from '@packages/entity-engine';
 import type { DataAccessContext } from '@packages/rbac';
 import { withTenant, withTenantInsert } from '@packages/tenancy/helpers';
-import { deriveUserStatus, type UserPosition, type UsersPositionsReader } from '../users.config';
+import { deriveUserStatus, type UserPosition, type UsersPositionsReader, type UserStatus } from '../users.config';
 import { USERS_POSITIONS_READER } from '../users-positions-reader.token';
+
+export interface UsersSummary {
+  total: number;
+  active: number;
+  invited: number;
+  deactivated: number;
+}
+
+const USER_STATUSES: readonly UserStatus[] = ['active', 'invited', 'deactivated'];
+
+function isUserStatus(v: unknown): v is UserStatus {
+  return typeof v === 'string' && (USER_STATUSES as readonly string[]).includes(v);
+}
+
+/**
+ * Translate the derived `status` filter into Drizzle predicates over the
+ * timestamp triple (deletedAt, invitedAt, acceptedAt). The "active" branch
+ * needs an OR — `acceptedAt IS NOT NULL` covers users who accepted an invite
+ * and `invitedAt IS NULL` covers users created directly (no invitation flow)
+ * and seeded system users. Both are "active" per `deriveUserStatus`.
+ */
+function statusPredicate(status: UserStatus): SQL {
+  switch (status) {
+    case 'active':
+      return and(
+        isNull(users.deletedAt),
+        or(isNotNull(users.acceptedAt), isNull(users.invitedAt))!,
+      )!;
+    case 'invited':
+      return and(
+        isNull(users.deletedAt),
+        isNotNull(users.invitedAt),
+        isNull(users.acceptedAt),
+      )!;
+    case 'deactivated':
+      return isNotNull(users.deletedAt);
+  }
+}
 
 interface UserWriteInput {
   email?: string;
@@ -82,9 +121,95 @@ export class UsersService {
   ) {}
 
   async list(query: BaseListQuery, accessCtx?: DataAccessContext) {
+    const status = query.status;
+    if (isUserStatus(status)) {
+      // The derived `status` field requires an OR over the timestamp triple,
+      // which the engine's AND-only filter pipeline can't express. Run a
+      // small custom Drizzle query path with the same tenant scope, search,
+      // sort, and pagination semantics, then re-use enrichUsers for the
+      // roles/positions/derived-status hydration.
+      return this.listByStatus(status, query);
+    }
     const result = await this.entityService.list(query, accessCtx);
     result.data = await this.enrichUsers(result.data as Record<string, unknown>[]);
     return result;
+  }
+
+  /**
+   * KPI counts for the users list page header. Single wire call; fans out
+   * internally to four small queries. RBAC scope and tenant filtering apply
+   * to each query path equally — `total` and `active`/`invited` go through
+   * `entityService.list({limit:1})`, `deactivated` and `active` use the
+   * Drizzle status path because their predicates aren't expressible as
+   * AND-only engine filters.
+   */
+  async getSummary(accessCtx?: DataAccessContext): Promise<UsersSummary> {
+    const [total, active, invited, deactivated] = await Promise.all([
+      this.entityService.list({ page: 1, limit: 1 }, accessCtx).then((r) => r.meta.total),
+      this.countByStatus('active'),
+      this.countByStatus('invited'),
+      this.countByStatus('deactivated'),
+    ]);
+    return { total, active, invited, deactivated };
+  }
+
+  private async listByStatus(status: UserStatus, query: BaseListQuery) {
+    const page = Math.max(1, Number(query.page ?? 1));
+    const limit = Math.max(1, Math.min(100, Number(query.limit ?? 25)));
+    const offset = (page - 1) * limit;
+
+    const conditions: SQL[] = [statusPredicate(status)];
+    const search = typeof query.search === 'string' ? query.search.trim() : '';
+    if (search.length > 0) {
+      const term = `%${search}%`;
+      conditions.push(
+        or(
+          ilike(users.email, term),
+          ilike(users.firstName, term),
+          ilike(users.lastName, term),
+        )!,
+      );
+    }
+    const where = withTenant(users, and(...conditions)!);
+
+    const sortKey = typeof query.sort === 'string' ? query.sort : 'createdAt';
+    const direction = query.order === 'asc' ? asc : desc;
+    const usersAsRecord = users as unknown as Record<string, unknown>;
+    const sortColumn = sortKey in usersAsRecord ? usersAsRecord[sortKey] : users.createdAt;
+    const orderByExpr = direction(sortColumn as never);
+
+    const [{ total }] = await this.database.db
+      .select({ total: count() })
+      .from(users)
+      .where(where) as Array<{ total: number }>;
+
+    const rows = await this.database.db
+      .select()
+      .from(users)
+      .where(where)
+      .orderBy(orderByExpr)
+      .limit(limit)
+      .offset(offset);
+
+    const enriched = await this.enrichUsers(rows as unknown as Record<string, unknown>[]);
+    return {
+      data: enriched,
+      meta: {
+        total: Number(total),
+        page,
+        limit,
+        totalPages: limit > 0 ? Math.ceil(Number(total) / limit) : 0,
+      },
+    };
+  }
+
+  private async countByStatus(status: UserStatus): Promise<number> {
+    const where = withTenant(users, statusPredicate(status));
+    const [{ total }] = await this.database.db
+      .select({ total: count() })
+      .from(users)
+      .where(where) as Array<{ total: number }>;
+    return Number(total);
   }
 
   async findOne(id: string, accessCtx?: DataAccessContext) {

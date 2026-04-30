@@ -16,6 +16,15 @@ export function useUsers(params: ListUsersParams, options?: { enabled?: boolean 
     queryKey: ['users', params],
     queryFn: () => api.listUsers(params),
     enabled: options?.enabled,
+    placeholderData: (prev) => prev,
+  });
+}
+
+export function useUsersSummary() {
+  const api = useUsersApi();
+  return useQuery({
+    queryKey: ['users', 'summary'],
+    queryFn: () => api.getUsersSummary(),
   });
 }
 

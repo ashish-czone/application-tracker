@@ -1,6 +1,6 @@
 import type { PaginatedResponse } from '@packages/common';
 import type { ApiFn } from '@packages/platform-ui';
-import type { User, Role, CreateUserRequest, UpdateUserRequest, ListUsersParams, InviteUserRequest, InvitedUserResponse } from './types';
+import type { User, Role, CreateUserRequest, UpdateUserRequest, ListUsersParams, InviteUserRequest, InvitedUserResponse, UsersSummary } from './types';
 
 export function createUsersApi(api: ApiFn) {
   return {
@@ -13,9 +13,14 @@ export function createUsersApi(api: ApiFn) {
       if (params.order) searchParams.set('order', params.order);
       if (params.userType) searchParams.set('userType', params.userType);
       if (params.roleId) searchParams.set('roleId', params.roleId);
+      if (params.status) searchParams.set('status', params.status);
+      if (params.filters) searchParams.set('filters', params.filters);
       if (params.includeDeleted) searchParams.set('includeDeleted', 'true');
       const qs = searchParams.toString();
       return api.get<PaginatedResponse<User>>(`/users${qs ? `?${qs}` : ''}`);
+    },
+    getUsersSummary(): Promise<UsersSummary> {
+      return api.get<UsersSummary>('/users/summary');
     },
     createUser(data: CreateUserRequest): Promise<User> {
       return api.post<User>('/users', data);

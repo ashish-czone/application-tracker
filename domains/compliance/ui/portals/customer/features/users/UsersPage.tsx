@@ -1,15 +1,13 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { UserPlus, Ban } from 'lucide-react';
 import {
   DataGridShell,
   BulkActionBar,
   Button,
-  FilterPopover,
   CoarseTabs,
   SearchInput,
   ScreenLayout,
-  toast,
   type ActiveFilter,
 } from '@packages/ui';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
@@ -19,14 +17,22 @@ import { InviteUserDrawer } from './components/InviteUserDrawer';
 import { USER_COLUMNS, REQUIRED_USER_COLUMN_KEYS } from './components/userColumns';
 import {
   useUsersList,
+  useUsersSummary,
   useResendInvitation,
   useDeactivateUser,
   useRestoreUser,
   useBulkDeactivate,
+  type ListUsersParams,
 } from '../../../../hooks/useUsersApi';
 import { mapUserRecordToRow } from './api/mapUserRecord';
 
 type StatusTab = 'all' | UserStatus;
+
+const PAGE_LIMIT = 25;
+
+function statusTabToParam(tab: StatusTab): UserStatus | undefined {
+  return tab === 'all' ? undefined : tab;
+}
 
 export function UsersPage() {
   const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
@@ -35,16 +41,37 @@ export function UsersPage() {
 
   const [search, setSearch] = useState('');
   const [statusTab, setStatusTab] = useState<StatusTab>('all');
-  const [roleFilter, setRoleFilter] = useState<string[]>([]);
+  const [page, setPage] = useState(1);
 
-  const { data, isLoading, isError } = useUsersList({
-    limit: 500,
-    includeDeleted: true,
-  });
+  // Reset page + selection when the filter shape changes — the user shouldn't
+  // sit on page 5 of "active" after switching to "invited".
+  useEffect(() => {
+    setPage(1);
+    setSelectedIds(new Set());
+  }, [statusTab, search]);
+
+  const listParams = useMemo<ListUsersParams>(() => {
+    const status = statusTabToParam(statusTab);
+    return {
+      page,
+      limit: PAGE_LIMIT,
+      search: search.trim() || undefined,
+      status,
+      // The deactivated tab needs `includeDeleted=true` so soft-deleted rows
+      // come through. Other tabs filter to non-deleted rows by default.
+      includeDeleted: status === 'deactivated' ? true : false,
+    };
+  }, [page, search, statusTab]);
+
+  const { data, isLoading, isError } = useUsersList(listParams);
+  const { data: summary } = useUsersSummary();
+
   const rows = useMemo<UserRow[]>(
     () => (data?.data ?? []).map(mapUserRecordToRow),
     [data],
   );
+  const meta = data?.meta;
+  const total = meta?.total ?? 0;
 
   const resendInvitation = useResendInvitation({
     onSuccess: () => setSelectedUser(null),
@@ -57,7 +84,7 @@ export function UsersPage() {
     onSuccess: () => setSelectedIds(new Set()),
   });
 
-  // When the filter set shrinks, prune selection to still-visible rows only.
+  // Prune selection to the currently-visible page.
   const visibleIds = useMemo(() => new Set(rows.map((u) => u.id)), [rows]);
   const effectiveSelectedIds = useMemo(() => {
     const next = new Set<string>();
@@ -65,80 +92,37 @@ export function UsersPage() {
     return next;
   }, [selectedIds, visibleIds]);
 
-  // Only active or invited users can be deactivated. Already-deactivated
-  // rows shouldn't be selectable for this bulk action.
   const isRowSelectable = useCallback(
     (user: UserRow) => user.status !== 'deactivated',
     [],
   );
 
-  const allRoleOptions = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const u of rows) {
-      for (const r of u.roles) map.set(r.id, r.name);
-    }
-    return Array.from(map.entries()).map(([value, label]) => ({ value, label }));
-  }, [rows]);
-
-  const statusCounts = useMemo(() => {
-    const counts = { all: rows.length, active: 0, invited: 0, deactivated: 0 };
-    for (const u of rows) counts[u.status] += 1;
-    return counts;
-  }, [rows]);
-
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return rows.filter((u) => {
-      if (statusTab !== 'all' && u.status !== statusTab) return false;
-      if (roleFilter.length > 0 && !u.roles.some((r) => roleFilter.includes(r.id))) return false;
-      if (q && !`${u.name} ${u.email}`.toLowerCase().includes(q)) return false;
-      return true;
-    });
-  }, [rows, statusTab, roleFilter, search]);
-
-  const activeFilters: ActiveFilter[] = useMemo(() => {
-    const chips: ActiveFilter[] = [];
-    for (const key of roleFilter) {
-      const role = allRoleOptions.find((r) => r.value === key);
-      chips.push({
-        key: `role:${key}`,
-        group: 'Role',
-        value: role?.label ?? key,
-        onRemove: () => setRoleFilter((prev) => prev.filter((k) => k !== key)),
-      });
-    }
-    return chips;
-  }, [roleFilter, allRoleOptions]);
-
-  const clearAll = useCallback(() => setRoleFilter([]), []);
-
-  const totalUsers = rows.length;
-  const activeUsers = statusCounts.active;
-  const invitedUsers = statusCounts.invited;
-
-  // "Active today" — users whose lastLoginAt is within today's UTC day. Kept
-  // UTC-based to match the rest of the compliance screens' KPI derivation;
-  // timezone-aware bucketing is a platform-wide concern, not a users screen one.
-  const activeToday = useMemo(() => {
-    const today = new Date().toISOString().slice(0, 10);
-    return rows.filter((u) => u.lastActiveAt?.startsWith(today) ?? false).length;
-  }, [rows]);
-
-  const roleOptions = allRoleOptions.map((r) => ({
-    ...r,
-    count: rows.filter((u) => u.roles.some((role) => role.id === r.value)).length,
-  }));
-
   const statusTabs = [
-    { value: 'all' as const, label: 'All', count: totalUsers },
-    { value: 'active' as const, label: 'Active', count: statusCounts.active },
-    { value: 'invited' as const, label: 'Invited', count: statusCounts.invited },
+    { value: 'all' as const, label: 'All', count: summary?.total ?? 0 },
+    { value: 'active' as const, label: 'Active', count: summary?.active ?? 0 },
+    { value: 'invited' as const, label: 'Invited', count: summary?.invited ?? 0 },
     {
       value: 'deactivated' as const,
       label: 'Deactivated',
-      count: statusCounts.deactivated,
+      count: summary?.deactivated ?? 0,
     },
   ];
+
+  const totalPages = meta?.totalPages ?? 0;
+  const subtitle = isLoading ? (
+    <>Loading users…</>
+  ) : isError ? (
+    <span className="text-signal">Failed to load users. Refresh to retry.</span>
+  ) : summary ? (
+    <>
+      {summary.total} team members — {summary.active} active, {summary.invited} pending
+      invitations.
+    </>
+  ) : (
+    <>{total} team members</>
+  );
+
+  const activeFilters: ActiveFilter[] = [];
 
   return (
     <>
@@ -146,67 +130,13 @@ export function UsersPage() {
         topBar={<ScreenPreviewTopBar active="users" />}
         breadcrumb={['Settings', 'Users']}
         title="Users"
-        subtitle={
-          isLoading ? (
-            <>Loading users…</>
-          ) : isError ? (
-            <span className="text-signal">Failed to load users. Refresh to retry.</span>
-          ) : (
-            <>
-              {totalUsers} team members — {activeUsers} active, {invitedUsers} pending invitations.
-            </>
-          )
-        }
+        subtitle={subtitle}
         actions={
           <Button size="sm" onClick={() => setInviteOpen(true)}>
             <UserPlus className="w-3.5 h-3.5 mr-1.5" strokeWidth={2} />
             Invite user
           </Button>
         }
-        kpis={[
-          {
-            label: 'Total users',
-            value: String(totalUsers),
-            unit: 'members',
-            deltaTone: 'neutral',
-            accent: 'authority',
-            sparklineData: [10, 11, 11, 12, 13, 14, totalUsers],
-            sparklineTone: 'authority',
-            footnote: `${activeUsers} active`,
-          },
-          {
-            label: 'Active today',
-            value: String(activeToday),
-            unit: 'users',
-            delta: `of ${activeUsers} active`,
-            deltaTone: 'neutral',
-            accent: 'filed',
-            sparklineData: [5, 7, 8, 6, 9, 7, activeToday],
-            sparklineTone: 'filed',
-            footnote: 'logged in today',
-          },
-          {
-            label: 'Pending invites',
-            value: String(invitedUsers),
-            unit: 'invitations',
-            deltaTone: 'neutral',
-            accent: 'due-soon',
-            sparklineData: [0, 1, 0, 1, 2, 1, invitedUsers],
-            sparklineTone: 'due-soon',
-            footnote: 'awaiting acceptance',
-          },
-          {
-            label: 'Roles in use',
-            value: String(allRoleOptions.length),
-            unit: 'roles',
-            delta: `across ${totalUsers} users`,
-            deltaTone: 'neutral',
-            accent: 'authority',
-            sparklineData: [3, 3, 4, 4, 5, 5, allRoleOptions.length],
-            sparklineTone: 'authority',
-            footnote: 'permission groups',
-          },
-        ]}
       >
         <section className="mt-10">
           <CoarseTabs tabs={statusTabs} value={statusTab} onChange={setStatusTab} animated />
@@ -233,13 +163,12 @@ export function UsersPage() {
 
           <DataGridShell
             columns={USER_COLUMNS}
-            rows={filtered}
+            rows={rows}
             getRowKey={(u) => u.id}
             requiredColumns={REQUIRED_USER_COLUMN_KEYS}
-            totalRows={totalUsers}
+            totalRows={total}
             onRowClick={(user) => setSelectedUser(user)}
             activeFilters={activeFilters}
-            onClearFilters={clearAll}
             selectable
             selectedKeys={effectiveSelectedIds}
             onSelectionChange={setSelectedIds}
@@ -254,33 +183,47 @@ export function UsersPage() {
               </div>
             }
             filters={
-              <>
-                <SearchInput
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search users…"
-                  wrapperClassName="min-w-[200px] max-w-xs flex-1"
-                />
-                <div className="flex items-center gap-2">
-                  <FilterPopover
-                    label="Role"
-                    options={roleOptions}
-                    value={roleFilter}
-                    onChange={(v) => setRoleFilter(v as string[])}
-                  />
-                </div>
-              </>
+              <SearchInput
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search users…"
+                wrapperClassName="min-w-[200px] max-w-xs flex-1"
+              />
             }
           />
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-3 py-3 border-t border-rule mt-2">
+              <span className="text-[11px] font-sans tabular-nums text-ink-soft">
+                {total > 0
+                  ? `${(page - 1) * PAGE_LIMIT + 1}–${Math.min(page * PAGE_LIMIT, total)} of ${total}`
+                  : '0 of 0'}
+              </span>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  className="px-3 py-1 text-[11px] uppercase tracking-eyebrow font-sans font-medium border border-rule text-ink-muted hover:text-ink disabled:opacity-40 disabled:cursor-not-allowed"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page <= 1 || isLoading}
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  className="px-3 py-1 text-[11px] uppercase tracking-eyebrow font-sans font-medium border border-rule text-ink-muted hover:text-ink disabled:opacity-40 disabled:cursor-not-allowed"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page >= totalPages || isLoading}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </section>
       </ScreenLayout>
 
       <AnimatePresence>
-        {inviteOpen && (
-          <InviteUserDrawer
-            onClose={() => setInviteOpen(false)}
-          />
-        )}
+        {inviteOpen && <InviteUserDrawer onClose={() => setInviteOpen(false)} />}
       </AnimatePresence>
 
       <AnimatePresence>

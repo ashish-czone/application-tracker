@@ -82,5 +82,19 @@ export interface ListUsersParams {
   order?: 'asc' | 'desc';
   userType?: string;
   roleId?: string;
+  /** Derived status filter (`active` / `invited` / `deactivated`). Server
+   *  translates this to predicates on the deletedAt/invitedAt/acceptedAt
+   *  timestamp triple — no client-side filtering. */
+  status?: UserStatus;
+  /** Engine-style structured filters JSON: `[{field,operator,value}, …]`.
+   *  Lets callers express filters that don't have first-class params. */
+  filters?: string;
   includeDeleted?: boolean;
+}
+
+export interface UsersSummary {
+  total: number;
+  active: number;
+  invited: number;
+  deactivated: number;
 }
