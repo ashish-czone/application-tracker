@@ -8,6 +8,7 @@ import {
 import type { CreateMonitoringSourceInput } from './dto/create-source.dto';
 import type { UpdateMonitoringSourceInput } from './dto/update-source.dto';
 import type { ListMonitoringSourcesQuery } from './dto/list-sources-query.dto';
+import { PollerSchedulerService } from './poller-scheduler.service';
 import {
   MARKETING_MONITORING_SOURCE_REGISTERED,
   MARKETING_MONITORING_SOURCE_UPDATED,
@@ -27,6 +28,7 @@ export class MonitoringSourcesService {
   constructor(
     private readonly database: DatabaseService,
     private readonly events: DomainEventEmitter,
+    private readonly scheduler: PollerSchedulerService,
   ) {}
 
   async list(query: ListMonitoringSourcesQuery): Promise<PaginatedResult<MarketingMonitoringSourceRow>> {
@@ -116,6 +118,8 @@ export class MonitoringSourcesService {
       } satisfies MarketingMonitoringSourceRegisteredPayload,
     });
 
+    await this.scheduler.upsertSchedule(row);
+
     return row;
   }
 
@@ -151,6 +155,9 @@ export class MonitoringSourcesService {
       } satisfies MarketingMonitoringSourceUpdatedPayload,
     });
 
+    // upsertSchedule is idempotent and routes inactive sources to remove.
+    await this.scheduler.upsertSchedule(row);
+
     return row;
   }
 
@@ -176,6 +183,8 @@ export class MonitoringSourcesService {
         label: existing.label,
       } satisfies MarketingMonitoringSourceRemovedPayload,
     });
+
+    await this.scheduler.removeSchedule(id, existing.kind);
   }
 
   /**
