@@ -64,6 +64,13 @@
       "when": 1777287603467,
       "tag": "0008_faithful_ulik",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1777967100000,
+      "tag": "0009_companies_compliance_columns",
+      "breakpoints": true
     }
   ]
 }
