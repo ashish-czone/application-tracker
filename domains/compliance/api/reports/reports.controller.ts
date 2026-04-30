@@ -47,12 +47,13 @@ export class ComplianceReportsController {
     @Query('from') fromParam: string | undefined,
     @Query('to') toParam: string | undefined,
     @Query('today') todayParam: string | undefined,
+    @Query('q') q: string | undefined,
   ) {
     const today = resolveCalendarDate(todayParam, resolveToday());
     const range = defaultRange(today);
     const from = resolveCalendarDate(fromParam, range.from);
     const to = resolveCalendarDate(toParam, range.to);
-    return this.reports.getByClient({ from, to }, today);
+    return this.reports.getByClient({ from, to }, today, { q });
   }
 
   @Get('aging')
@@ -75,11 +76,12 @@ export class ComplianceReportsController {
     @Query('from') fromParam: string | undefined,
     @Query('to') toParam: string | undefined,
     @Query('today') todayParam: string | undefined,
+    @Query('q') q: string | undefined,
   ) {
     const today = resolveCalendarDate(todayParam, resolveToday());
     const range = defaultRange(today);
     const from = resolveCalendarDate(fromParam, range.from);
     const to = resolveCalendarDate(toParam, range.to);
-    return this.reports.getTeamWorkload({ from, to }, today);
+    return this.reports.getTeamWorkload({ from, to }, today, { q });
   }
 }

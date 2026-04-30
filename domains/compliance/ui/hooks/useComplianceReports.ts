@@ -4,6 +4,8 @@ import { useEntityEngine } from '@packages/entity-engine-ui';
 export interface ReportRangeParams {
   from?: string;
   to?: string;
+  /** Optional server-side substring filter — applied per-endpoint (clientName for by-client, team name for team-workload). */
+  q?: string;
 }
 
 export interface TrendBucket {
@@ -47,6 +49,7 @@ function toQuery(params: ReportRangeParams): string {
   const search = new URLSearchParams();
   if (params.from) search.set('from', params.from);
   if (params.to) search.set('to', params.to);
+  if (params.q) search.set('q', params.q);
   return search.toString();
 }
 

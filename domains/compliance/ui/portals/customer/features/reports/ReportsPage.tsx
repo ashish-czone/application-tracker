@@ -31,6 +31,7 @@ import {
   type ClientBreakdownRow,
   type TeamWorkloadRow,
 } from '../../../../hooks/useComplianceReports';
+import { useDebouncedValue } from '../../../../hooks/useDebouncedValue';
 import { useFilingsList } from '../../../../hooks/useFilingsList';
 import { useFilingsSummary } from '../../../../hooks/useFilingsSummary';
 import { initialsFromName, colorForClient } from '../clients/api/mapClientRecord';
@@ -138,6 +139,7 @@ function mapAgingBuckets(rows: ApiAgingBucket[]): AgingBucketDisplay[] {
 export function ReportsPage() {
   const [activeTab, setActiveTab] = useState<ReportTab>('compliance');
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebouncedValue(search, 300);
   const [dateRange, setDateRange] = useState<DateRangeValue>(defaultRange());
 
   const range = useMemo(
@@ -148,15 +150,23 @@ export function ReportsPage() {
     [dateRange],
   );
 
+  // Trend doesn't take `q` (it aggregates by month, not by client name).
   const trend = useComplianceTrend(range);
-  const byClient = useComplianceByClient(range);
+  const byClient = useComplianceByClient({
+    ...range,
+    q: debouncedSearch || undefined,
+  });
   const aging = useOverdueAging();
-  const workload = useTeamWorkload(range);
+  const workload = useTeamWorkload({
+    ...range,
+    q: debouncedSearch || undefined,
+  });
   const overdueFilings = useFilingsList({
     page: 1,
     limit: 50,
     sort: 'dueDate:asc',
     bucket: 'overdue',
+    search: debouncedSearch || undefined,
   });
   const summary = useFilingsSummary();
 
@@ -176,28 +186,21 @@ export function ReportsPage() {
   const avgOnTimeRate = totalFilings > 0 ? Math.round((totalOnTime / totalFilings) * 100) : 0;
   const totalOverdue = summary.summary.overdue;
 
-  const complianceRows = useMemo(() => mapClientBreakdown(byClient.rows), [byClient.rows]);
-  const filteredCompliance = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return complianceRows;
-    return complianceRows.filter((r) => r.clientName.toLowerCase().includes(q));
-  }, [search, complianceRows]);
-
-  const overdueRows = useMemo(() => mapOverdueFilings(overdueFilings.rows), [overdueFilings.rows]);
-  const filteredOverdue = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return overdueRows;
-    return overdueRows.filter((r) =>
-      `${r.filingName} ${r.clientName} ${r.handler} ${r.lawCode}`.toLowerCase().includes(q),
-    );
-  }, [search, overdueRows]);
-
-  const workloadRows = useMemo(() => mapTeamWorkload(workload.rows), [workload.rows]);
-  const filteredWorkload = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return workloadRows;
-    return workloadRows.filter((r) => r.name.toLowerCase().includes(q));
-  }, [search, workloadRows]);
+  // Server applies the `q` filter via the underlying queries, so the rows
+  // returned here are already narrowed. No client-side .filter() — past the
+  // page's first 50 rows the JS filter would silently lose matches.
+  const filteredCompliance = useMemo(
+    () => mapClientBreakdown(byClient.rows),
+    [byClient.rows],
+  );
+  const filteredOverdue = useMemo(
+    () => mapOverdueFilings(overdueFilings.rows),
+    [overdueFilings.rows],
+  );
+  const filteredWorkload = useMemo(
+    () => mapTeamWorkload(workload.rows),
+    [workload.rows],
+  );
 
   const agingDisplay = useMemo(() => mapAgingBuckets(aging.rows), [aging.rows]);
 
@@ -300,7 +303,7 @@ export function ReportsPage() {
             rows={filteredCompliance}
             getRowKey={(r) => r.id}
             requiredColumns={['client']}
-            totalRows={complianceRows.length}
+            totalRows={filteredCompliance.length}
             filters={
               <SearchInput
                 value={search}
@@ -328,7 +331,7 @@ export function ReportsPage() {
               <p className="text-sm font-serif italic text-ink-soft mt-1 mb-4">
                 Impact assessment of overdue items
               </p>
-              <SeverityBreakdown rows={overdueRows} />
+              <SeverityBreakdown rows={filteredOverdue} />
             </div>
           </section>
 
@@ -337,7 +340,7 @@ export function ReportsPage() {
             rows={filteredOverdue}
             getRowKey={(r) => r.id}
             requiredColumns={['filing']}
-            totalRows={overdueRows.length}
+            totalRows={filteredOverdue.length}
             filters={
               <SearchInput
                 value={search}
@@ -372,7 +375,7 @@ export function ReportsPage() {
                 </span>
               </div>
             </div>
-            <WorkloadBarChart rows={workloadRows} />
+            <WorkloadBarChart rows={filteredWorkload} />
           </section>
 
           <DataGridShell
@@ -380,7 +383,7 @@ export function ReportsPage() {
             rows={filteredWorkload}
             getRowKey={(r) => r.id}
             requiredColumns={['name']}
-            totalRows={workloadRows.length}
+            totalRows={filteredWorkload.length}
             filters={
               <SearchInput
                 value={search}

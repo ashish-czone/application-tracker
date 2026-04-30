@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { and, eq, gte, lte, isNull, isNotNull, inArray, sql, count, notInArray } from 'drizzle-orm';
+import { and, eq, gte, lte, isNull, isNotNull, inArray, ilike, sql, count, notInArray } from 'drizzle-orm';
 import { DatabaseService } from '@packages/database';
 import { clients } from '@packages/directory';
 import { OrgUnitService } from '@packages/org-units';
@@ -99,11 +99,28 @@ export class ComplianceReportsService {
    * Per-client breakdown over a date range. Each row counts the filings whose
    * dueDate falls within the range, broken down by outcome. The on-time rate
    * is `onTime / (onTime + late + overdue)` rounded to integer percent.
+   *
+   * Optional `q` filters by client name (ILIKE %q%) — same field the frontend
+   * shows. Done server-side via the existing JOIN to `clients` so we don't
+   * fetch the full set and `.filter()` it in JS.
    */
-  async getByClient(range: ReportRange, today: string): Promise<ClientBreakdownRow[]> {
+  async getByClient(
+    range: ReportRange,
+    today: string,
+    options?: { q?: string },
+  ): Promise<ClientBreakdownRow[]> {
     // Joining the shared identity `clients` table is allowed per
     // module-boundaries.md → "Shared Identity Tables". Embeds the client
     // name on each row so the frontend doesn't need a side fetch.
+    const baseConditions = [
+      isNull(complianceFilings.deletedAt),
+      gte(complianceFilings.dueDate, range.from),
+      lte(complianceFilings.dueDate, range.to),
+    ];
+    if (options?.q && options.q.trim().length > 0) {
+      baseConditions.push(ilike(clients.name, `%${options.q.trim()}%`));
+    }
+
     const rows = await this.database.db
       .select({
         clientId: complianceFilings.clientId,
@@ -115,16 +132,7 @@ export class ComplianceReportsService {
       })
       .from(complianceFilings)
       .leftJoin(clients, eq(clients.id, complianceFilings.clientId))
-      .where(
-        withTenant(
-          complianceFilings,
-          and(
-            isNull(complianceFilings.deletedAt),
-            gte(complianceFilings.dueDate, range.from),
-            lte(complianceFilings.dueDate, range.to),
-          ),
-        ),
-      )
+      .where(withTenant(complianceFilings, and(...baseConditions)))
       .groupBy(complianceFilings.clientId, clients.name)
       .orderBy(sql`COUNT(*) DESC`);
 
@@ -219,7 +227,11 @@ export class ComplianceReportsService {
    * `completed / (completed + late)` — treats "in progress" as still
    * earnable.
    */
-  async getTeamWorkload(range: ReportRange, today: string): Promise<TeamWorkloadRow[]> {
+  async getTeamWorkload(
+    range: ReportRange,
+    today: string,
+    options?: { q?: string },
+  ): Promise<TeamWorkloadRow[]> {
     const rows = await this.database.db
       .select({
         assigneeTeamId: complianceFilings.assigneeTeamId,
@@ -250,19 +262,25 @@ export class ComplianceReportsService {
     const allUnits = await this.orgUnits.findAll();
     const nameById = new Map(allUnits.map((u) => [u.id, u.name]));
 
-    return rows.map((r) => {
+    const q = options?.q?.trim().toLowerCase() ?? '';
+    return rows.flatMap<TeamWorkloadRow>((r) => {
+      const teamName = nameById.get(r.assigneeTeamId) ?? '';
+      // Search filter is applied post-resolve because the team name lives in
+      // org-units, not in compliance_filings. Acceptable here because the
+      // workload result is bounded to one row per team (low-cardinality).
+      if (q.length > 0 && !teamName.toLowerCase().includes(q)) return [];
       const onTime = Number(r.onTime);
       const late = Number(r.late);
       const sum = onTime + late;
-      return {
+      return [{
         assigneeTeamId: r.assigneeTeamId,
-        assigneeTeamName: nameById.get(r.assigneeTeamId) ?? '',
+        assigneeTeamName: teamName,
         totalAssigned: Number(r.totalAssigned),
         completed: Number(r.completed),
         inProgress: Number(r.inProgress),
         overdue: Number(r.overdue),
         onTimeRate: sum > 0 ? Math.round((onTime / sum) * 100) : 0,
-      };
+      }];
     });
   }
 }
