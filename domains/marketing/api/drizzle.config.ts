@@ -1,7 +1,11 @@
 import { defineConfig } from 'drizzle-kit';
 
 export default defineConfig({
-  schema: ['./monitoring/sources/schema', './monitoring/keywords/schema'],
+  schema: [
+    './monitoring/sources/schema',
+    './monitoring/keywords/schema',
+    './monitoring/items/schema',
+  ],
   out: './migrations',
   dialect: 'postgresql',
   dbCredentials: {

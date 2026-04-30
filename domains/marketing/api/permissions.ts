@@ -12,6 +12,8 @@ export const MARKETING_PERMISSIONS = {
   MONITORING_SOURCES_MANAGE: 'marketing.monitoring-sources.manage',
   MONITORING_KEYWORDS_READ: 'marketing.monitoring-keywords.read',
   MONITORING_KEYWORDS_MANAGE: 'marketing.monitoring-keywords.manage',
+  MONITORING_ITEMS_READ: 'marketing.monitoring-items.read',
+  MONITORING_ITEMS_TRIAGE: 'marketing.monitoring-items.triage',
 } as const;
 
 export type MarketingPermission =
@@ -51,6 +53,25 @@ export const MONITORING_KEYWORDS_PERMISSION_MANIFESTS: PermissionManifest[] = [
     action: 'monitoring-keywords.manage',
     label: 'Manage monitoring keywords',
     description: 'Add, edit, enable, disable, or delete keyword watchers',
+    supportedScopes: ['any'],
+  },
+];
+
+export const MONITORING_ITEMS_PERMISSION_MANIFESTS: PermissionManifest[] = [
+  {
+    slug: 'marketing.monitoring-items.read',
+    module: 'marketing',
+    action: 'monitoring-items.read',
+    label: 'View inbox items',
+    description: 'View items ingested from monitoring sources',
+    supportedScopes: ['any'],
+  },
+  {
+    slug: 'marketing.monitoring-items.triage',
+    module: 'marketing',
+    action: 'monitoring-items.triage',
+    label: 'Triage inbox items',
+    description: 'Mark items engaged, dismissed, snoozed, or convert to a lead',
     supportedScopes: ['any'],
   },
 ];
