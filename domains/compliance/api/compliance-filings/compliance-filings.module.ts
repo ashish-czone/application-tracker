@@ -6,6 +6,7 @@ import { ComplianceFilingsService } from './compliance-filings.service';
 import { ComplianceFilingsLookupService } from './compliance-filings-lookup.service';
 import { ComplianceFilingsCancellationService } from './compliance-filings-cancellation.service';
 import { ComplianceFilingsAssigneeCleanupService } from './compliance-filings-assignee-cleanup.service';
+import { LawsModule } from '../laws/laws.module';
 
 const filingsEntityEngineModule = EntityEngineModule.forEntity(COMPLIANCE_FILINGS_CONFIG);
 
@@ -29,7 +30,7 @@ const filingsEntityEngineModule = EntityEngineModule.forEntity(COMPLIANCE_FILING
  * (rules, dormancy, AppUsersService) can inject them.
  */
 @Module({
-  imports: [filingsEntityEngineModule],
+  imports: [filingsEntityEngineModule, LawsModule],
   controllers: [ComplianceFilingsController],
   providers: [
     ComplianceFilingsService,

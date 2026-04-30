@@ -18,6 +18,7 @@ import {
   type DataAccessContext,
 } from '@packages/rbac';
 import { ComplianceFilingsService } from './compliance-filings.service';
+import { translateFilingsQuery } from './compliance-filings-query';
 import {
   CreateComplianceFilingSchema,
   TransitionComplianceFilingSchema,
@@ -37,13 +38,7 @@ export class ComplianceFilingsController {
   @Get()
   @RequirePermission('compliance-filings.read')
   list(@Query() query: Record<string, unknown>, @AccessContext() accessCtx?: DataAccessContext) {
-    const parsed = {
-      ...query,
-      page: query.page ? Number(query.page) : undefined,
-      limit: query.limit ? Number(query.limit) : undefined,
-      includeDeleted: query.includeDeleted === 'true',
-    };
-    return this.filings.list(parsed, accessCtx);
+    return this.filings.list(translateFilingsQuery(query), accessCtx);
   }
 
   @Get(':id')
