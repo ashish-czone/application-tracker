@@ -5,6 +5,8 @@ function row(overrides: Partial<Parameters<typeof buildMenuTree>[0][number]>) {
   return {
     id: overrides.id ?? 'x',
     label: overrides.label ?? 'Item',
+    description: overrides.description ?? null,
+    icon: overrides.icon ?? null,
     linkType: overrides.linkType ?? 'url',
     url: overrides.url ?? null,
     pageId: overrides.pageId ?? null,
@@ -105,5 +107,18 @@ describe('buildMenuTree', () => {
       () => null,
     );
     expect(tree[0].href).toBeNull();
+  });
+
+  it('surfaces description and icon on the public DTO', () => {
+    const tree = buildMenuTree([
+      row({
+        id: 'a',
+        label: 'Web platforms',
+        description: 'CMS-backed marketing sites and web apps',
+        icon: 'globe',
+      }),
+    ]);
+    expect(tree[0].description).toBe('CMS-backed marketing sites and web apps');
+    expect(tree[0].icon).toBe('globe');
   });
 });

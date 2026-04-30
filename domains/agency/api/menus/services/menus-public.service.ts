@@ -7,6 +7,8 @@ import { menuItems } from '../schema/menu-items';
 export interface PublicMenuItemDto {
   id: string;
   label: string;
+  description: string | null;
+  icon: string | null;
   linkType: 'url' | 'page';
   url: string | null;
   pageId: string | null;
@@ -62,6 +64,8 @@ export class MenusPublicService {
       .select({
         id: menuItems.id,
         label: menuItems.label,
+        description: menuItems.description,
+        icon: menuItems.icon,
         linkType: menuItems.linkType,
         url: menuItems.url,
         pageId: menuItems.pageId,
@@ -87,6 +91,8 @@ export class MenusPublicService {
 type RawRow = {
   id: string;
   label: string;
+  description: string | null;
+  icon: string | null;
   linkType: string;
   url: string | null;
   pageId: string | null;
@@ -123,6 +129,8 @@ export function buildMenuTree(
     byId.set(row.id, {
       id: row.id,
       label: row.label,
+      description: row.description,
+      icon: row.icon,
       linkType,
       url: row.url,
       pageId: row.pageId,

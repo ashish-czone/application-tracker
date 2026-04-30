@@ -106,6 +106,16 @@ export const menuItemConfig = defineEntity({
       listVisible: true,
       listOrder: 2,
     },
+    description: {
+      type: 'textarea',
+      label: 'Description',
+      maxLength: 240,
+    },
+    icon: {
+      type: 'text',
+      label: 'Icon',
+      maxLength: 64,
+    },
     linkType: {
       type: 'picklist',
       label: 'Link Type',

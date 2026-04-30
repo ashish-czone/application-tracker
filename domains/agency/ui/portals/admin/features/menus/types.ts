@@ -19,6 +19,8 @@ export interface MenuItemRecord {
   id: string;
   menuId: string;
   label: string;
+  description: string | null;
+  icon: string | null;
   linkType: LinkType;
   url: string | null;
   pageId: string | null;
@@ -32,6 +34,8 @@ export interface MenuItemRecord {
 export interface CreateMenuItemInput {
   menuId: string;
   label: string;
+  description?: string | null;
+  icon?: string | null;
   linkType: LinkType;
   url?: string | null;
   pageId?: string | null;
@@ -41,6 +45,8 @@ export interface CreateMenuItemInput {
 
 export interface UpdateMenuItemInput {
   label?: string;
+  description?: string | null;
+  icon?: string | null;
   linkType?: LinkType;
   url?: string | null;
   pageId?: string | null;
