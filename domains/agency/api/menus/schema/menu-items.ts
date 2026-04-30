@@ -18,6 +18,8 @@ export const menuItems = pgTable('menu_items', {
   id: text('id').primaryKey().$defaultFn(() => randomUUID()),
   menuId: text('menu_id').notNull().references(() => menus.id, { onDelete: 'cascade' }),
   label: text('label').notNull(),
+  description: text('description'),
+  icon: text('icon'),
   linkType: text('link_type').notNull(),
   url: text('url'),
   pageId: text('page_id').references(() => pages.id, { onDelete: 'set null' }),
