@@ -194,37 +194,49 @@ export class ClientRegistrationsService {
       throw new BadRequestException(`Unknown law code(s): ${unknown.join(', ')}`);
     }
 
-    for (const law of laws) {
-      await this.assertHandlerResolvable(law.id, clientId);
-    }
+    await Promise.all(
+      laws.map((law) => this.assertHandlerResolvable(law.id, clientId)),
+    );
 
+    const lawIds = laws.map((l) => l.id);
     const outcomes = await this.database.db.transaction(async (tx) => {
-      const results: Array<{
-        row: typeof complianceClientRegistrations.$inferSelect;
-        inserted: boolean;
-      }> = [];
-      for (const law of laws) {
-        const [existing] = await tx
-          .select()
-          .from(complianceClientRegistrations)
-          .where(
-            and(
-              eq(complianceClientRegistrations.clientId, clientId),
-              eq(complianceClientRegistrations.lawId, law.id),
-              isNull(complianceClientRegistrations.deactivatedAt),
-            ),
+      const existingRows = await tx
+        .select()
+        .from(complianceClientRegistrations)
+        .where(
+          and(
+            eq(complianceClientRegistrations.clientId, clientId),
+            inArray(complianceClientRegistrations.lawId, lawIds),
+            isNull(complianceClientRegistrations.deactivatedAt),
+          ),
+        );
+
+      const existingByLawId = new Map<string, typeof complianceClientRegistrations.$inferSelect>(
+        existingRows.map((r: typeof complianceClientRegistrations.$inferSelect) => [r.lawId, r]),
+      );
+
+      const lawsToInsert = laws.filter((law) => !existingByLawId.has(law.id));
+      const insertedRows = lawsToInsert.length
+        ? await tx
+            .insert(complianceClientRegistrations)
+            .values(lawsToInsert.map((law) => ({ clientId, lawId: law.id })))
+            .returning()
+        : [];
+      const insertedByLawId = new Map<string, typeof complianceClientRegistrations.$inferSelect>(
+        insertedRows.map((r: typeof complianceClientRegistrations.$inferSelect) => [r.lawId, r]),
+      );
+
+      return laws.map((law) => {
+        const existing = existingByLawId.get(law.id);
+        if (existing) return { row: existing, inserted: false };
+        const inserted = insertedByLawId.get(law.id);
+        if (!inserted) {
+          throw new Error(
+            `registerMany: expected inserted row for law ${law.id} not returned`,
           );
-        if (existing) {
-          results.push({ row: existing, inserted: false });
-          continue;
         }
-        const [inserted] = await tx
-          .insert(complianceClientRegistrations)
-          .values({ clientId, lawId: law.id })
-          .returning();
-        results.push({ row: inserted, inserted: true });
-      }
-      return results;
+        return { row: inserted, inserted: true };
+      });
     });
 
     for (const { row, inserted } of outcomes) {
