@@ -20,6 +20,10 @@ export interface ComplianceRuleRecord {
   description?: string | null;
   createdAt?: string;
   updatedAt?: string;
+  // Embedded by the server-side list path (joined from `compliance_laws`).
+  lawCode?: string | null;
+  lawName?: string | null;
+  lawJurisdiction?: string | null;
   [key: string]: unknown;
 }
 
@@ -31,6 +35,27 @@ export interface LawRecord {
   [key: string]: unknown;
 }
 
+export interface RulesSummary {
+  total: number;
+  byStatus: { active: number; draft: number; deprecated: number };
+}
+
+export interface ComplianceRulesListParams {
+  page?: number;
+  limit?: number;
+  sort?: string;
+  status?: 'active' | 'draft' | 'deprecated';
+  /** Comma-separated frequencies. */
+  frequency?: string;
+  /** Comma-separated jurisdictions. */
+  jurisdiction?: string;
+  /** Comma-separated law-group keys (gst / itr / tds / roc / pt / pf / labour). */
+  lawGroup?: string;
+  /** Comma-separated law ids. */
+  lawId?: string;
+  q?: string;
+}
+
 type ComplianceRulesListResult = Omit<ReturnType<ReturnType<typeof useEntityHooks>['useList']>, 'data'> & {
   data?: PaginatedResponse<ComplianceRuleRecord>;
 };
@@ -39,12 +64,31 @@ type LawsListResult = Omit<ReturnType<ReturnType<typeof useEntityHooks>['useList
   data?: PaginatedResponse<LawRecord>;
 };
 
-export function useComplianceRulesList(params: Record<string, unknown> = {}): ComplianceRulesListResult {
+export function useComplianceRulesList(params: ComplianceRulesListParams = {}): ComplianceRulesListResult {
   const hooks = useEntityHooks('compliance-rules');
-  return hooks.useList(params) as unknown as ComplianceRulesListResult;
+  return hooks.useList(params as Record<string, unknown>) as unknown as ComplianceRulesListResult;
 }
 
-export function useLawsLookup(params: Record<string, unknown> = { limit: 1000 }): LawsListResult {
+/**
+ * Status-bucket counts for the rules list page header. Single round-trip,
+ * server-aggregated; replaces the prior pattern of counting client-side over
+ * a `limit:200` page that would silently truncate past 200 rules.
+ */
+export function useComplianceRulesSummary() {
+  const { apiFn } = useEntityEngine();
+  return useQuery({
+    queryKey: ['compliance-rules', 'summary'],
+    queryFn: () => apiFn.get<RulesSummary>('/compliance-rules/summary'),
+  });
+}
+
+/**
+ * Generic laws lookup. Accepts the same params the entity-engine list
+ * endpoint takes (page / limit / search). The previous default `limit: 1000`
+ * was the data-fetching rule's hard prohibition — callers must now pass an
+ * explicit limit sized to the surface they're rendering.
+ */
+export function useLawsLookup(params: Record<string, unknown> = {}): LawsListResult {
   const hooks = useEntityHooks('laws');
   return hooks.useList(params) as unknown as LawsListResult;
 }

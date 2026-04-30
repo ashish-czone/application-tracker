@@ -1,17 +1,24 @@
 import { forwardRef, Inject, Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
-import { DatabaseService, and, count, eq, inArray, isNull, ne, not } from '@packages/database';
+import { DatabaseService, and, count, eq, inArray, isNull, ne, not, sql } from '@packages/database';
 import { EntityService, type BaseListQuery } from '@packages/entity-engine';
 import type { DataAccessContext } from '@packages/rbac';
+import { withTenant } from '@packages/tenancy/helpers';
 import { WorkflowEngineService, WorkflowRegistryService } from '@packages/workflows';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
-import { FREQUENCIES, type ComplianceFrequency } from '@domains/compliance-contract';
+import {
+  FREQUENCIES,
+  lawCodesForGroups,
+  type ComplianceFrequency,
+} from '@domains/compliance-contract';
 import { complianceRules } from '../schema/rules';
+import { complianceLaws } from '../schema/laws';
 import { complianceLawHandlers } from '../schema/law-handlers';
 import { complianceFilings } from '../schema/compliance-filings';
 import { complianceClientRegistrations } from '../schema/client-registrations';
 import { LawHandlersService } from '../law-handlers/law-handlers.service';
 import { ComplianceFilingsCancellationService } from '../compliance-filings/compliance-filings-cancellation.service';
 import type { CreateComplianceRuleDto, UpdateComplianceRuleDto } from './compliance-rules.dto';
+import type { ComplianceRulesListParams } from './compliance-rules-query';
 
 const RULE_WORKFLOW_SLUG = 'compliance-rule-status';
 const TERMINAL_FILING_STATUSES = ['completed', 'cancelled'];
@@ -67,6 +74,22 @@ function assertFrequency(value: string): asserts value is ComplianceFrequency {
 }
 
 export type ComplianceRuleStatus = 'draft' | 'active' | 'deprecated';
+
+export interface RulesSummary {
+  total: number;
+  byStatus: { active: number; draft: number; deprecated: number };
+}
+
+const SORTABLE_RULE_COLUMNS: Record<string, ReturnType<typeof sql>> = {
+  code: sql`r.code`,
+  name: sql`r.name`,
+  status: sql`r.status`,
+  frequency: sql`r.frequency`,
+  updatedAt: sql`r.updated_at`,
+  createdAt: sql`r.created_at`,
+  lawName: sql`l.name`,
+  lawCode: sql`l.code`,
+};
 
 export interface ComplianceRule {
   id: string;
@@ -178,8 +201,142 @@ export class ComplianceRulesService {
 
   // ---- CRUD delegates (vendors template) -----------------------------------
 
-  list(query: BaseListQuery, accessCtx?: DataAccessContext) {
-    return this.entityService.list(query, accessCtx);
+  /**
+   * List compliance rules with embedded law display fields (`lawCode`,
+   * `lawName`, `lawJurisdiction`) per row + status / frequency / lawGroup /
+   * jurisdiction / search / sort / pagination filters. Custom Drizzle path
+   * with a single LEFT JOIN to `compliance_laws` so the row-shape ships in
+   * one round-trip and the frontend doesn't have to fetch the laws lookup
+   * separately. Replaces the entity-engine list path so we can express the
+   * lawGroup / jurisdiction filters that traverse the laws table.
+   *
+   * RBAC scope is unused here (rules don't declare data-access scopes), so
+   * we lose nothing by dropping the engine path. Tenant scoping flows
+   * through `withTenant`, a no-op when `compliance_rules` has no tenantId.
+   */
+  async list(params: ComplianceRulesListParams): Promise<{
+    data: Record<string, unknown>[];
+    meta: { total: number; page: number; limit: number; totalPages: number };
+  }> {
+    const filterConditions = this.buildRulesFilters(params);
+    const where = withTenant(complianceRules, ...filterConditions);
+    const whereSql = where ? sql`AND ${where}` : sql``;
+
+    const sortKey = params.sort && SORTABLE_RULE_COLUMNS[params.sort] ? params.sort : 'name';
+    const sortExpr = SORTABLE_RULE_COLUMNS[sortKey];
+    const direction = params.order === 'desc' ? sql`DESC` : sql`ASC`;
+    const offset = (params.page - 1) * params.limit;
+
+    const totalRows = await this.database.db.execute(sql`
+      SELECT COUNT(*)::int AS total
+      FROM ${complianceRules} r
+      LEFT JOIN ${complianceLaws} l ON l.id = r.law_id
+      WHERE TRUE ${whereSql}
+    `);
+    const total = Number((totalRows.rows[0] as { total: number }).total);
+
+    const dataRows = await this.database.db.execute(sql`
+      SELECT
+        r.id, r.code, r.name, r.law_id, r.frequency, r.status,
+        r.due_day_of_month, r.due_month_offset, r.grace_period_days,
+        r.description, r.created_at, r.updated_at,
+        l.code AS law_code, l.name AS law_name, l.jurisdiction AS law_jurisdiction
+      FROM ${complianceRules} r
+      LEFT JOIN ${complianceLaws} l ON l.id = r.law_id
+      WHERE TRUE ${whereSql}
+      ORDER BY ${sortExpr} ${direction} NULLS LAST, r.id ASC
+      LIMIT ${params.limit} OFFSET ${offset}
+    `);
+
+    const data = dataRows.rows.map((row) => this.toRuleListRow(row as Record<string, unknown>));
+
+    return {
+      data,
+      meta: {
+        total,
+        page: params.page,
+        limit: params.limit,
+        totalPages: params.limit > 0 ? Math.ceil(total / params.limit) : 0,
+      },
+    };
+  }
+
+  /**
+   * Status-bucket counts for the rules list page header. Single round-trip;
+   * each bucket is a FILTER (WHERE …) over the same scan.
+   */
+  async getSummary(): Promise<RulesSummary> {
+    const where = withTenant(complianceRules);
+    const whereSql = where ? sql`WHERE ${where}` : sql``;
+
+    const result = await this.database.db.execute(sql`
+      SELECT
+        COUNT(*)::int AS total,
+        COUNT(*) FILTER (WHERE status = 'active')::int AS active_count,
+        COUNT(*) FILTER (WHERE status = 'draft')::int AS draft_count,
+        COUNT(*) FILTER (WHERE status = 'deprecated')::int AS deprecated_count
+      FROM ${complianceRules}
+      ${whereSql}
+    `);
+
+    const row = result.rows[0] as Record<string, number | string>;
+    return {
+      total: Number(row.total ?? 0),
+      byStatus: {
+        active: Number(row.active_count ?? 0),
+        draft: Number(row.draft_count ?? 0),
+        deprecated: Number(row.deprecated_count ?? 0),
+      },
+    };
+  }
+
+  private buildRulesFilters(params: ComplianceRulesListParams) {
+    const conds = [];
+    if (params.status) conds.push(sql`r.status = ${params.status}`);
+    if (params.frequencies && params.frequencies.length > 0) {
+      conds.push(sql`r.frequency = ANY(${params.frequencies}::text[])`);
+    }
+    if (params.jurisdictions && params.jurisdictions.length > 0) {
+      conds.push(sql`l.jurisdiction = ANY(${params.jurisdictions}::text[])`);
+    }
+    if (params.lawIds && params.lawIds.length > 0) {
+      conds.push(sql`r.law_id = ANY(${params.lawIds}::text[])`);
+    }
+    if (params.lawGroups && params.lawGroups.length > 0) {
+      const codes = lawCodesForGroups(params.lawGroups);
+      if (codes.length > 0) {
+        conds.push(sql`UPPER(l.code) = ANY(${codes}::text[])`);
+      } else {
+        // The selected groups have no mapped law codes — match nothing rather
+        // than every row.
+        conds.push(sql`FALSE`);
+      }
+    }
+    if (params.q) {
+      const term = `%${params.q}%`;
+      conds.push(sql`(r.code ILIKE ${term} OR r.name ILIKE ${term} OR l.name ILIKE ${term})`);
+    }
+    return conds;
+  }
+
+  private toRuleListRow(row: Record<string, unknown>): Record<string, unknown> {
+    return {
+      id: row.id,
+      code: row.code,
+      name: row.name,
+      lawId: row.law_id,
+      frequency: row.frequency,
+      status: row.status,
+      dueDayOfMonth: row.due_day_of_month,
+      dueMonthOffset: row.due_month_offset,
+      gracePeriodDays: row.grace_period_days,
+      description: row.description,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      lawCode: row.law_code ?? null,
+      lawName: row.law_name ?? null,
+      lawJurisdiction: row.law_jurisdiction ?? null,
+    };
   }
 
   findOne(id: string, accessCtx?: DataAccessContext) {
