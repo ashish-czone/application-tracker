@@ -1,5 +1,5 @@
 import { Pill } from '../../../../../components';
-import type { OverdueRow } from '../placeholders';
+import type { OverdueRow } from '../types';
 
 const PRIORITY_TONE: Record<OverdueRow['priority'], string> = {
   critical: 'bg-signal',

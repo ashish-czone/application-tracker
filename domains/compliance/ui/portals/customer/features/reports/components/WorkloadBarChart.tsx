@@ -1,5 +1,5 @@
 import { ColoredInitialsAvatar } from '../../../../../components';
-import type { WorkloadRow } from '../placeholders';
+import type { WorkloadRow } from '../types';
 
 export interface WorkloadBarChartProps {
   rows: WorkloadRow[];

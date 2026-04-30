@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { and, eq, gte, lte, isNull, isNotNull, inArray, sql, count, notInArray } from 'drizzle-orm';
 import { DatabaseService } from '@packages/database';
+import { clients } from '@packages/directory';
+import { OrgUnitService } from '@packages/org-units';
 import { withTenant } from '@packages/tenancy/helpers';
 import { complianceFilings } from '../schema/compliance-filings';
 
@@ -16,6 +18,7 @@ export interface TrendBucket {
 
 export interface ClientBreakdownRow {
   clientId: string;
+  clientName: string;
   totalFilings: number;
   onTime: number;
   late: number;
@@ -35,6 +38,7 @@ export interface SeverityBreakdownRow {
 
 export interface TeamWorkloadRow {
   assigneeTeamId: string;
+  assigneeTeamName: string;
   totalAssigned: number;
   completed: number;
   inProgress: number;
@@ -49,7 +53,10 @@ export interface ReportRange {
 
 @Injectable()
 export class ComplianceReportsService {
-  constructor(private readonly database: DatabaseService) {}
+  constructor(
+    private readonly database: DatabaseService,
+    private readonly orgUnits: OrgUnitService,
+  ) {}
 
   /**
    * Filing-outcome trend by month over a date range. The bucket is determined
@@ -94,15 +101,20 @@ export class ComplianceReportsService {
    * is `onTime / (onTime + late + overdue)` rounded to integer percent.
    */
   async getByClient(range: ReportRange, today: string): Promise<ClientBreakdownRow[]> {
+    // Joining the shared identity `clients` table is allowed per
+    // module-boundaries.md → "Shared Identity Tables". Embeds the client
+    // name on each row so the frontend doesn't need a side fetch.
     const rows = await this.database.db
       .select({
         clientId: complianceFilings.clientId,
+        clientName: clients.name,
         totalFilings: count().mapWith(Number),
         onTime: sql<number>`SUM(CASE WHEN ${complianceFilings.status} = 'completed' AND ${complianceFilings.completedAt}::date <= ${complianceFilings.dueDate}::date THEN 1 ELSE 0 END)::int`,
         late: sql<number>`SUM(CASE WHEN ${complianceFilings.status} = 'completed' AND ${complianceFilings.completedAt}::date > ${complianceFilings.dueDate}::date THEN 1 ELSE 0 END)::int`,
         overdue: sql<number>`SUM(CASE WHEN ${complianceFilings.status} = ANY(ARRAY['pending','in_progress','review','rejected']) AND ${complianceFilings.dueDate}::date < ${today}::date THEN 1 ELSE 0 END)::int`,
       })
       .from(complianceFilings)
+      .leftJoin(clients, eq(clients.id, complianceFilings.clientId))
       .where(
         withTenant(
           complianceFilings,
@@ -113,7 +125,7 @@ export class ComplianceReportsService {
           ),
         ),
       )
-      .groupBy(complianceFilings.clientId)
+      .groupBy(complianceFilings.clientId, clients.name)
       .orderBy(sql`COUNT(*) DESC`);
 
     return rows.map((r) => {
@@ -123,6 +135,7 @@ export class ComplianceReportsService {
       const sum = onTime + late + overdue;
       return {
         clientId: r.clientId,
+        clientName: r.clientName ?? '',
         totalFilings: Number(r.totalFilings),
         onTime,
         late,
@@ -232,12 +245,18 @@ export class ComplianceReportsService {
       .groupBy(complianceFilings.assigneeTeamId)
       .orderBy(sql`COUNT(*) DESC`);
 
+    // Resolve team names via OrgUnitService — never via JOIN, since org-units
+    // is a regular addon (not a shared identity table).
+    const allUnits = await this.orgUnits.findAll();
+    const nameById = new Map(allUnits.map((u) => [u.id, u.name]));
+
     return rows.map((r) => {
       const onTime = Number(r.onTime);
       const late = Number(r.late);
       const sum = onTime + late;
       return {
         assigneeTeamId: r.assigneeTeamId,
+        assigneeTeamName: nameById.get(r.assigneeTeamId) ?? '',
         totalAssigned: Number(r.totalAssigned),
         completed: Number(r.completed),
         inProgress: Number(r.inProgress),
