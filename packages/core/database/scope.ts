@@ -99,5 +99,5 @@ function composeScope(
 }
 
 function hasTenantColumn(table: PgTable): table is PgTable & { tenantId: SQL } {
-  return 'tenantId' in (table as Record<string, unknown>);
+  return 'tenantId' in (table as unknown as Record<string, unknown>);
 }
