@@ -1,21 +1,8 @@
-import { useMemo, useState } from 'react';
-import { DataGridShell, SearchInput } from '@packages/ui';
-import { ACTIVITY_LOG } from '../placeholders';
-import { ACTIVITY_COLUMNS } from './activityColumns';
+import { AuditTimeline } from '@packages/audit-ui';
+import { useAuth } from '@packages/auth-ui';
 
 export function ActivityLogSection() {
-  const [search, setSearch] = useState('');
-
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return ACTIVITY_LOG;
-    return ACTIVITY_LOG.filter(
-      (e) =>
-        e.action.toLowerCase().includes(q) ||
-        e.entity.toLowerCase().includes(q) ||
-        e.detail.toLowerCase().includes(q),
-    );
-  }, [search]);
+  const { user, isLoading } = useAuth();
 
   return (
     <div className="space-y-6">
@@ -26,22 +13,15 @@ export function ActivityLogSection() {
         </p>
       </div>
 
-      <DataGridShell
-        columns={ACTIVITY_COLUMNS}
-        rows={filtered}
-        getRowKey={(e) => e.id}
-        totalRows={ACTIVITY_LOG.length}
-        activeFilters={[]}
-        onClearFilters={() => {}}
-        filters={
-          <SearchInput
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search activity..."
-            wrapperClassName="min-w-[200px] max-w-xs flex-1"
-          />
-        }
-      />
+      {isLoading ? (
+        <p className="font-mono text-[11px] tracking-tabular text-ink-muted">Loading activity…</p>
+      ) : !user ? (
+        <p className="font-serif italic text-ink-soft text-sm">
+          Sign in to view your activity.
+        </p>
+      ) : (
+        <AuditTimeline actorId={user.userId} />
+      )}
     </div>
   );
 }

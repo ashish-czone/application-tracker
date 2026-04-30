@@ -1,11 +1,78 @@
+import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Camera } from 'lucide-react';
 import { Button, Eyebrow } from '@packages/ui';
+import { usePlatformAPI } from '@packages/platform-ui';
+import { useAuth } from '@packages/auth-ui';
+import type { User } from '@packages/users-ui';
 import { OrdinalDate, ColoredInitialsAvatar } from '../../../../../components';
-import { CURRENT_USER } from '../placeholders';
 import { FieldGroup, TextInput, SectionDivider } from './settingsFormPrimitives';
 
+const AVATAR_PALETTE = [
+  'hsl(218 56% 24%)',
+  'hsl(140 31% 33%)',
+  'hsl(19 75% 44%)',
+  'hsl(42 62% 45%)',
+  'hsl(218 40% 40%)',
+  'hsl(215 25% 35%)',
+];
+
+function hashToIndex(input: string, modulo: number): number {
+  let hash = 0;
+  for (let i = 0; i < input.length; i++) {
+    hash = (hash * 31 + input.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash) % modulo;
+}
+
+function initialsFor(first: string, last: string): string {
+  const f = first?.[0] ?? '';
+  const l = last?.[0] ?? '';
+  return `${f}${l}`.toUpperCase() || '—';
+}
+
+function colorFor(seed: string): string {
+  return AVATAR_PALETTE[hashToIndex(seed || 'user', AVATAR_PALETTE.length)];
+}
+
 export function ProfileSection() {
-  const user = CURRENT_USER;
+  const { user: authUser, isLoading: authLoading } = useAuth();
+  const apiFn = usePlatformAPI();
+
+  const userId = authUser?.userId ?? null;
+  const profileQuery = useQuery<User>({
+    queryKey: ['users', 'detail', userId],
+    queryFn: () => apiFn.get<User>(`/users/${userId}`),
+    enabled: !!userId,
+  });
+
+  const profile = profileQuery.data;
+  const initials = useMemo(
+    () => (profile ? initialsFor(profile.firstName, profile.lastName) : '—'),
+    [profile],
+  );
+  const color = useMemo(() => colorFor(profile?.id ?? ''), [profile]);
+
+  if (authLoading || profileQuery.isLoading) {
+    return (
+      <p className="font-mono text-[11px] tracking-tabular text-ink-muted">Loading profile…</p>
+    );
+  }
+  if (!profile) {
+    return (
+      <p className="font-serif italic text-ink-soft text-sm">
+        Could not load profile. Please refresh.
+      </p>
+    );
+  }
+
+  const positions = (profile.positions ?? []) as Array<{
+    unitName: string | null;
+    positionName: string | null;
+  }>;
+  const primaryPosition = positions[0];
+  const roles = (profile.roles ?? []) as Array<{ name: string }>;
+
   return (
     <div className="space-y-8">
       <div>
@@ -17,10 +84,11 @@ export function ProfileSection() {
 
       <div className="flex items-center gap-5">
         <div className="relative group">
-          <ColoredInitialsAvatar initials={user.initials} color={user.color} size="3xl" />
+          <ColoredInitialsAvatar initials={initials} color={color} size="3xl" />
           <button
             type="button"
             className="absolute inset-0 flex items-center justify-center bg-ink/0 group-hover:bg-ink/40 transition-colors"
+            disabled
           >
             <Camera
               className="w-4 h-4 text-paper-raised opacity-0 group-hover:opacity-100 transition-opacity"
@@ -30,17 +98,14 @@ export function ProfileSection() {
         </div>
         <div>
           <p className="text-sm font-sans text-ink">
-            {user.firstName} {user.lastName}
+            {profile.firstName} {profile.lastName}
           </p>
-          <p className="text-[11px] font-serif italic text-ink-muted mt-0.5">
-            {user.positions[0]?.title}, {user.positions[0]?.unit}
-          </p>
-          <button
-            type="button"
-            className="mt-1 text-[10px] uppercase tracking-eyebrow font-sans font-medium text-authority hover:text-authority-soft transition-colors"
-          >
-            Change photo
-          </button>
+          {primaryPosition && (
+            <p className="text-[11px] font-serif italic text-ink-muted mt-0.5">
+              {primaryPosition.positionName ?? 'Member'}
+              {primaryPosition.unitName ? `, ${primaryPosition.unitName}` : ''}
+            </p>
+          )}
         </div>
       </div>
 
@@ -48,19 +113,19 @@ export function ProfileSection() {
 
       <div className="grid grid-cols-2 gap-4">
         <FieldGroup label="First name">
-          <TextInput value={user.firstName} />
+          <TextInput value={profile.firstName ?? ''} readOnly />
         </FieldGroup>
         <FieldGroup label="Last name">
-          <TextInput value={user.lastName} />
+          <TextInput value={profile.lastName ?? ''} readOnly />
         </FieldGroup>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <FieldGroup label="Email address">
-          <TextInput value={user.email} readOnly />
+          <TextInput value={profile.email ?? ''} readOnly />
         </FieldGroup>
         <FieldGroup label="Phone number">
-          <TextInput value={user.phone} />
+          <TextInput value={profile.phone ?? ''} readOnly />
         </FieldGroup>
       </div>
 
@@ -75,55 +140,76 @@ export function ProfileSection() {
             <span className="block text-[10px] uppercase tracking-eyebrow font-sans font-medium text-ink-muted mb-1">
               Member since
             </span>
-            <OrdinalDate
-              date={user.memberSince}
-              variant="short"
-              className="text-sm font-sans text-ink"
-            />
+            {profile.createdAt ? (
+              <OrdinalDate
+                date={profile.createdAt}
+                variant="short"
+                className="text-sm font-sans text-ink"
+              />
+            ) : (
+              <span className="text-sm font-serif italic text-ink-muted">—</span>
+            )}
           </div>
           <div>
             <span className="block text-[10px] uppercase tracking-eyebrow font-sans font-medium text-ink-muted mb-1">
-              Last active
+              Last login
             </span>
-            <OrdinalDate
-              date={user.lastActiveAt}
-              variant="short"
-              className="text-sm font-sans text-ink"
-            />
+            {profile.lastLoginAt ? (
+              <OrdinalDate
+                date={profile.lastLoginAt}
+                variant="short"
+                className="text-sm font-sans text-ink"
+              />
+            ) : (
+              <span className="text-sm font-serif italic text-ink-muted">—</span>
+            )}
           </div>
           <div>
             <span className="block text-[10px] uppercase tracking-eyebrow font-sans font-medium text-ink-muted mb-1">
               Roles
             </span>
             <div className="flex flex-wrap gap-1.5">
-              {user.roles.map((r) => (
-                <span
-                  key={r}
-                  className="inline-flex items-center px-2 py-[2px] border border-rule text-[10px] font-sans font-medium text-ink-soft bg-paper"
-                >
-                  {r}
-                </span>
-              ))}
+              {roles.length === 0 ? (
+                <span className="text-[11px] font-serif italic text-ink-muted">No roles assigned</span>
+              ) : (
+                roles.map((r) => (
+                  <span
+                    key={r.name}
+                    className="inline-flex items-center px-2 py-[2px] border border-rule text-[10px] font-sans font-medium text-ink-soft bg-paper"
+                  >
+                    {r.name}
+                  </span>
+                ))
+              )}
             </div>
           </div>
           <div>
             <span className="block text-[10px] uppercase tracking-eyebrow font-sans font-medium text-ink-muted mb-1">
               Position
             </span>
-            {user.positions.map((p, i) => (
-              <div key={i} className="text-sm font-sans text-ink">
-                {p.title} <span className="font-serif italic text-ink-muted">{p.unit}</span>
-              </div>
-            ))}
+            {positions.length === 0 ? (
+              <span className="text-[11px] font-serif italic text-ink-muted">No position</span>
+            ) : (
+              positions.map((p, i) => (
+                <div key={i} className="text-sm font-sans text-ink">
+                  {p.positionName ?? 'Member'}{' '}
+                  {p.unitName ? (
+                    <span className="font-serif italic text-ink-muted">{p.unitName}</span>
+                  ) : null}
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>
 
       <div className="flex items-center gap-3 pt-2">
-        <Button size="sm">Save changes</Button>
-        <Button size="sm" variant="ghost">
-          Cancel
+        <Button size="sm" disabled>
+          Save changes
         </Button>
+        <p className="text-[11px] font-serif italic text-ink-muted">
+          Profile editing coming soon.
+        </p>
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 import { useState, type ComponentType } from 'react';
 import { ScreenLayout } from '@packages/ui';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
-import { SETTINGS_SECTIONS, type SettingsSection } from './placeholders';
+import { SETTINGS_SECTIONS, type SettingsSection } from './types';
 import { SETTINGS_SECTION_ICONS } from './components/settingsSectionIcons';
 import { ProfileSection } from './components/ProfileSection';
 import { SecuritySection } from './components/SecuritySection';
