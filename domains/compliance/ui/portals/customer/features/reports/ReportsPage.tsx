@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { startOfMonth, subMonths } from 'date-fns';
+import { format, startOfMonth, subMonths } from 'date-fns';
 import { Download, TrendingUp, Clock, Users } from 'lucide-react';
 import {
   DataGridShell,
@@ -11,14 +11,7 @@ import {
 } from '@packages/ui';
 import { DateRangePopover, type DateRangeValue } from '../../../../components/composites';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
-import {
-  COMPLIANCE_TREND,
-  COMPLIANCE_ROWS,
-  AGING_BUCKETS,
-  OVERDUE_ROWS,
-  WORKLOAD_ROWS,
-  type ReportTab,
-} from './placeholders';
+import type { ReportTab, ComplianceRow, OverdueRow, WorkloadRow, AgingBucket as AgingBucketDisplay } from './types';
 import { ReportsKpiStrip } from './components/ReportsKpiStrip';
 import { ComplianceTrendChart } from './components/ComplianceTrendChart';
 import { AgingBarChart } from './components/AgingBarChart';
@@ -29,42 +22,184 @@ import {
   OVERDUE_COLUMNS,
   WORKLOAD_COLUMNS,
 } from './components/reportsColumns';
+import {
+  useComplianceTrend,
+  useComplianceByClient,
+  useOverdueAging,
+  useTeamWorkload,
+  type AgingBucket as ApiAgingBucket,
+  type ClientBreakdownRow,
+  type TeamWorkloadRow,
+} from '../../../../hooks/useComplianceReports';
+import { useFilingsList } from '../../../../hooks/useFilingsList';
+import { useFilingsSummary } from '../../../../hooks/useFilingsSummary';
+import { initialsFromName, colorForClient } from '../clients/api/mapClientRecord';
 
-const TODAY = new Date('2026-04-17');
-const DEFAULT_RANGE: DateRangeValue = {
-  from: startOfMonth(subMonths(TODAY, 5)),
-  to: TODAY,
+function toCalendarDate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function defaultRange(): DateRangeValue {
+  const today = new Date();
+  return {
+    from: startOfMonth(subMonths(today, 5)),
+    to: today,
+  };
+}
+
+const AGING_BUCKET_LABELS: Record<ApiAgingBucket['range'], string> = {
+  '1-7': '1–7 days',
+  '8-15': '8–15 days',
+  '16-30': '16–30 days',
+  '30+': '30+ days',
 };
+const AGING_BUCKET_TONES: Record<ApiAgingBucket['range'], 'due-soon' | 'signal'> = {
+  '1-7': 'due-soon',
+  '8-15': 'signal',
+  '16-30': 'signal',
+  '30+': 'signal',
+};
+
+function mapClientBreakdown(rows: ClientBreakdownRow[]): ComplianceRow[] {
+  return rows.map((r) => ({
+    id: r.clientId,
+    clientName: r.clientName || '—',
+    initials: initialsFromName(r.clientName || '—'),
+    color: colorForClient(r.clientId, r.clientName || ''),
+    totalFilings: r.totalFilings,
+    onTime: r.onTime,
+    late: r.late,
+    overdue: r.overdue,
+    onTimeRate: r.onTimeRate,
+  }));
+}
+
+function mapTeamWorkload(rows: TeamWorkloadRow[]): WorkloadRow[] {
+  return rows.map((r) => ({
+    id: r.assigneeTeamId,
+    name: r.assigneeTeamName || '—',
+    initials: initialsFromName(r.assigneeTeamName || '—'),
+    color: colorForClient(r.assigneeTeamId, r.assigneeTeamName || ''),
+    role: '—',
+    totalAssigned: r.totalAssigned,
+    completed: r.completed,
+    inProgress: r.inProgress,
+    overdue: r.overdue,
+    onTimeRate: r.onTimeRate,
+    avgDaysToComplete: 0,
+  }));
+}
+
+const PRIORITY_MAP: Record<string, OverdueRow['priority']> = {
+  urgent: 'critical',
+  high: 'high',
+  medium: 'medium',
+  low: 'medium',
+};
+
+function mapOverdueFilings(rows: ReturnType<typeof useFilingsList>['rows']): OverdueRow[] {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return rows.map((r) => {
+    const dueDate = r.dueDate ?? '';
+    const daysOverdue = dueDate
+      ? Math.max(0, Math.round((today.getTime() - new Date(dueDate).getTime()) / 86_400_000))
+      : 0;
+    const clientName = r.clientId__label ?? '';
+    const handlerName = r.assigneeTeamId__label ?? '';
+    return {
+      id: r.id,
+      filingName: r.title,
+      lawCode: r.lawCode ?? '',
+      clientName,
+      clientInitials: initialsFromName(clientName || '—'),
+      clientColor: colorForClient(r.clientId, clientName),
+      dueDate,
+      daysOverdue,
+      handler: handlerName || '—',
+      handlerInitials: initialsFromName(handlerName || '—'),
+      priority: PRIORITY_MAP[r.priority] ?? 'medium',
+    };
+  });
+}
+
+function mapAgingBuckets(rows: ApiAgingBucket[]): AgingBucketDisplay[] {
+  return rows.map((r) => ({
+    range: r.range,
+    label: AGING_BUCKET_LABELS[r.range],
+    count: r.count,
+    tone: AGING_BUCKET_TONES[r.range],
+  }));
+}
 
 export function ReportsPage() {
   const [activeTab, setActiveTab] = useState<ReportTab>('compliance');
   const [search, setSearch] = useState('');
-  const [dateRange, setDateRange] = useState<DateRangeValue>(DEFAULT_RANGE);
+  const [dateRange, setDateRange] = useState<DateRangeValue>(defaultRange());
 
-  const totalFilings = COMPLIANCE_TREND.reduce((a, d) => a + d.onTime + d.late + d.overdue, 0);
-  const totalOnTime = COMPLIANCE_TREND.reduce((a, d) => a + d.onTime, 0);
-  const avgOnTimeRate = Math.round((totalOnTime / totalFilings) * 100);
-  const totalOverdue = OVERDUE_ROWS.length;
+  const range = useMemo(
+    () => ({
+      from: toCalendarDate(dateRange.from),
+      to: toCalendarDate(dateRange.to),
+    }),
+    [dateRange],
+  );
 
+  const trend = useComplianceTrend(range);
+  const byClient = useComplianceByClient(range);
+  const aging = useOverdueAging();
+  const workload = useTeamWorkload(range);
+  const overdueFilings = useFilingsList({
+    page: 1,
+    limit: 50,
+    sort: 'dueDate:asc',
+    bucket: 'overdue',
+  });
+  const summary = useFilingsSummary();
+
+  const trendForChart = useMemo(
+    () =>
+      trend.rows.map((r) => ({
+        month: format(new Date(`${r.month}-01T00:00:00Z`), 'MMM'),
+        onTime: r.onTime,
+        late: r.late,
+        overdue: r.overdue,
+      })),
+    [trend.rows],
+  );
+
+  const totalFilings = trend.rows.reduce((a, d) => a + d.onTime + d.late + d.overdue, 0);
+  const totalOnTime = trend.rows.reduce((a, d) => a + d.onTime, 0);
+  const avgOnTimeRate = totalFilings > 0 ? Math.round((totalOnTime / totalFilings) * 100) : 0;
+  const totalOverdue = summary.summary.overdue;
+
+  const complianceRows = useMemo(() => mapClientBreakdown(byClient.rows), [byClient.rows]);
   const filteredCompliance = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return COMPLIANCE_ROWS;
-    return COMPLIANCE_ROWS.filter((r) => r.clientName.toLowerCase().includes(q));
-  }, [search]);
+    if (!q) return complianceRows;
+    return complianceRows.filter((r) => r.clientName.toLowerCase().includes(q));
+  }, [search, complianceRows]);
 
+  const overdueRows = useMemo(() => mapOverdueFilings(overdueFilings.rows), [overdueFilings.rows]);
   const filteredOverdue = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return OVERDUE_ROWS;
-    return OVERDUE_ROWS.filter((r) =>
+    if (!q) return overdueRows;
+    return overdueRows.filter((r) =>
       `${r.filingName} ${r.clientName} ${r.handler} ${r.lawCode}`.toLowerCase().includes(q),
     );
-  }, [search]);
+  }, [search, overdueRows]);
 
+  const workloadRows = useMemo(() => mapTeamWorkload(workload.rows), [workload.rows]);
   const filteredWorkload = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return WORKLOAD_ROWS;
-    return WORKLOAD_ROWS.filter((r) => r.name.toLowerCase().includes(q));
-  }, [search]);
+    if (!q) return workloadRows;
+    return workloadRows.filter((r) => r.name.toLowerCase().includes(q));
+  }, [search, workloadRows]);
+
+  const agingDisplay = useMemo(() => mapAgingBuckets(aging.rows), [aging.rows]);
 
   const reportTabs = [
     {
@@ -109,7 +244,7 @@ export function ReportsPage() {
       }
       actions={
         <>
-          <DateRangePopover value={dateRange} onChange={setDateRange} today={TODAY} />
+          <DateRangePopover value={dateRange} onChange={setDateRange} today={new Date()} />
           <Button variant="outline" size="sm">
             <Download className="w-3.5 h-3.5 mr-1.5" strokeWidth={2} />
             Export PDF
@@ -121,7 +256,7 @@ export function ReportsPage() {
         totalFilings={totalFilings}
         avgOnTimeRate={avgOnTimeRate}
         totalOverdue={totalOverdue}
-        clientsTracked={COMPLIANCE_ROWS.length}
+        clientsTracked={byClient.rows.length}
       />
 
       <CoarseTabs
@@ -157,7 +292,7 @@ export function ReportsPage() {
                 </span>
               </div>
             </div>
-            <ComplianceTrendChart data={COMPLIANCE_TREND} />
+            <ComplianceTrendChart data={trendForChart} />
           </section>
 
           <DataGridShell
@@ -165,7 +300,7 @@ export function ReportsPage() {
             rows={filteredCompliance}
             getRowKey={(r) => r.id}
             requiredColumns={['client']}
-            totalRows={COMPLIANCE_ROWS.length}
+            totalRows={complianceRows.length}
             filters={
               <SearchInput
                 value={search}
@@ -186,14 +321,14 @@ export function ReportsPage() {
               <p className="text-sm font-serif italic text-ink-soft mt-1 mb-4">
                 Overdue filings by days past due
               </p>
-              <AgingBarChart buckets={AGING_BUCKETS} />
+              <AgingBarChart buckets={agingDisplay} />
             </div>
             <div className="bg-paper-raised p-6">
               <Eyebrow tone="muted">Severity breakdown</Eyebrow>
               <p className="text-sm font-serif italic text-ink-soft mt-1 mb-4">
                 Impact assessment of overdue items
               </p>
-              <SeverityBreakdown rows={OVERDUE_ROWS} />
+              <SeverityBreakdown rows={overdueRows} />
             </div>
           </section>
 
@@ -202,7 +337,7 @@ export function ReportsPage() {
             rows={filteredOverdue}
             getRowKey={(r) => r.id}
             requiredColumns={['filing']}
-            totalRows={OVERDUE_ROWS.length}
+            totalRows={overdueRows.length}
             filters={
               <SearchInput
                 value={search}
@@ -237,7 +372,7 @@ export function ReportsPage() {
                 </span>
               </div>
             </div>
-            <WorkloadBarChart rows={WORKLOAD_ROWS} />
+            <WorkloadBarChart rows={workloadRows} />
           </section>
 
           <DataGridShell
@@ -245,7 +380,7 @@ export function ReportsPage() {
             rows={filteredWorkload}
             getRowKey={(r) => r.id}
             requiredColumns={['name']}
-            totalRows={WORKLOAD_ROWS.length}
+            totalRows={workloadRows.length}
             filters={
               <SearchInput
                 value={search}

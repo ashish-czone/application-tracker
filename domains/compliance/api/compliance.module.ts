@@ -14,6 +14,7 @@ import { ComplianceRulesModule } from './rules/compliance-rules.module';
 import { LawHandlersModule } from './law-handlers/law-handlers.module';
 import { ComplianceFilingsModule } from './compliance-filings/compliance-filings.module';
 import { OrganizationsModule } from './organizations/organizations.module';
+import { ComplianceReportsModule } from './reports/reports.module';
 
 import { GenerateComplianceFilingsAction } from './automations/generate-compliance-filings.action';
 import { SendComplianceFilingDigestAction } from './automations/send-compliance-filing-digest.action';
@@ -31,6 +32,7 @@ import { COMPLIANCE_PERMISSION_MANIFESTS } from './permissions';
     LawHandlersModule,
     ComplianceFilingsModule,
     OrganizationsModule,
+    ComplianceReportsModule,
     // Permissions for compliance UI surfaces that don't yet have backing
     // entities. CRUD perms for entities (clients, laws, etc.) are auto-
     // registered by EntityEngineModule.forEntity() inside each entity's module.

@@ -1,5 +1,5 @@
 import { AlertTriangle, Clock } from 'lucide-react';
-import type { OverdueRow } from '../placeholders';
+import type { OverdueRow } from '../types';
 
 export interface SeverityBreakdownProps {
   rows: OverdueRow[];
