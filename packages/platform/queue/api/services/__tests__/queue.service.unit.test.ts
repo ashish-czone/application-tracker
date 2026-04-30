@@ -3,6 +3,8 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 // Mock bullmq before importing QueueService
 const mockQueueAdd = vi.fn().mockResolvedValue({ id: 'job-1' });
 const mockQueueClose = vi.fn().mockResolvedValue(undefined);
+const mockUpsertJobScheduler = vi.fn().mockResolvedValue(undefined);
+const mockRemoveJobScheduler = vi.fn().mockResolvedValue(true);
 const mockWorkerClose = vi.fn().mockResolvedValue(undefined);
 const mockWorkerOn = vi.fn();
 let workerConstructorCalls = 0;
@@ -15,6 +17,8 @@ vi.mock('bullmq', () => ({
     return {
       add: mockQueueAdd,
       close: mockQueueClose,
+      upsertJobScheduler: mockUpsertJobScheduler,
+      removeJobScheduler: mockRemoveJobScheduler,
     };
   }),
   Worker: vi.fn().mockImplementation((_name: string, _processor: unknown, opts: unknown) => {
@@ -186,6 +190,142 @@ describe('QueueService', () => {
           attempts: 5,
           jobId: 'custom-id',
         }),
+      );
+    });
+  });
+
+  describe('enqueueRecurring', () => {
+    it('upserts a recurring schedule with `every` cadence', async () => {
+      const service = createQueueService('false');
+      service.registerProcessor({ name: 'poll.reddit', handler: vi.fn() });
+
+      await service.enqueueRecurring(
+        'poll.reddit',
+        { sourceId: 'src-1' },
+        { schedulerId: 'marketing.poll.src-1', every: 15 * 60 * 1000 },
+      );
+
+      expect(mockUpsertJobScheduler).toHaveBeenCalledWith(
+        'marketing.poll.src-1',
+        { every: 15 * 60 * 1000 },
+        expect.objectContaining({
+          name: 'poll.reddit',
+          data: { sourceId: 'src-1' },
+          opts: expect.objectContaining({ attempts: 1 }),
+        }),
+      );
+    });
+
+    it('upserts a recurring schedule with cron `pattern` cadence', async () => {
+      const service = createQueueService('false');
+      service.registerProcessor({ name: 'digest.daily', handler: vi.fn() });
+
+      await service.enqueueRecurring(
+        'digest.daily',
+        { tz: 'UTC' },
+        { schedulerId: 'marketing.digest.daily', pattern: '0 8 * * *' },
+      );
+
+      expect(mockUpsertJobScheduler).toHaveBeenCalledWith(
+        'marketing.digest.daily',
+        { pattern: '0 8 * * *' },
+        expect.any(Object),
+      );
+    });
+
+    it('rejects when neither every nor pattern is provided', async () => {
+      const service = createQueueService('false');
+      service.registerProcessor({ name: 'q', handler: vi.fn() });
+
+      await expect(
+        service.enqueueRecurring('q', {}, { schedulerId: 's-1' } as any),
+      ).rejects.toThrow(/exactly one of 'every' or 'pattern'/);
+      expect(mockUpsertJobScheduler).not.toHaveBeenCalled();
+    });
+
+    it('rejects when both every and pattern are provided', async () => {
+      const service = createQueueService('false');
+      service.registerProcessor({ name: 'q', handler: vi.fn() });
+
+      await expect(
+        service.enqueueRecurring(
+          'q',
+          {},
+          { schedulerId: 's-1', every: 1000, pattern: '* * * * *' },
+        ),
+      ).rejects.toThrow(/exactly one of 'every' or 'pattern'/);
+      expect(mockUpsertJobScheduler).not.toHaveBeenCalled();
+    });
+
+    it('throws when the queue is not registered', async () => {
+      const service = createQueueService('false');
+
+      await expect(
+        service.enqueueRecurring(
+          'unknown',
+          {},
+          { schedulerId: 's-1', every: 1000 },
+        ),
+      ).rejects.toThrow('Queue "unknown" is not registered');
+    });
+
+    it('passes through custom job opts (attempts, backoff, retention)', async () => {
+      const service = createQueueService('false');
+      service.registerProcessor({ name: 'q', handler: vi.fn() });
+
+      await service.enqueueRecurring(
+        'q',
+        {},
+        {
+          schedulerId: 's-1',
+          every: 60000,
+          jobOptions: {
+            attempts: 3,
+            backoff: { type: 'exponential', delay: 2000 },
+            removeOnComplete: { age: 3600 },
+          },
+        },
+      );
+
+      expect(mockUpsertJobScheduler).toHaveBeenCalledWith(
+        's-1',
+        { every: 60000 },
+        expect.objectContaining({
+          opts: expect.objectContaining({
+            attempts: 3,
+            backoff: { type: 'exponential', delay: 2000 },
+            removeOnComplete: { age: 3600 },
+          }),
+        }),
+      );
+    });
+  });
+
+  describe('removeRecurring', () => {
+    it('removes a recurring schedule by ID and returns BullMQ result', async () => {
+      const service = createQueueService('false');
+      service.registerProcessor({ name: 'q', handler: vi.fn() });
+
+      const result = await service.removeRecurring('q', 'marketing.poll.src-1');
+
+      expect(result).toBe(true);
+      expect(mockRemoveJobScheduler).toHaveBeenCalledWith('marketing.poll.src-1');
+    });
+
+    it('returns false when no schedule exists for that ID', async () => {
+      mockRemoveJobScheduler.mockResolvedValueOnce(false);
+      const service = createQueueService('false');
+      service.registerProcessor({ name: 'q', handler: vi.fn() });
+
+      const result = await service.removeRecurring('q', 'nonexistent');
+      expect(result).toBe(false);
+    });
+
+    it('throws when the queue is not registered', async () => {
+      const service = createQueueService('false');
+
+      await expect(service.removeRecurring('unknown', 's-1')).rejects.toThrow(
+        'Queue "unknown" is not registered',
       );
     });
   });

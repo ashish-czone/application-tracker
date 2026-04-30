@@ -1,7 +1,12 @@
 import { Injectable, Inject, type OnModuleDestroy } from '@nestjs/common';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { Queue, Worker, type Job } from 'bullmq';
-import type { QueueModuleConfig, EnqueueOptions, JobDefinition } from '../types';
+import type {
+  QueueModuleConfig,
+  EnqueueOptions,
+  JobDefinition,
+  RecurringJobOptions,
+} from '../types';
 import { QUEUE_MODULE_CONFIG } from '../types';
 
 @Injectable()
@@ -117,6 +122,81 @@ export class QueueService implements OnModuleDestroy {
     });
 
     return job.id!;
+  }
+
+  /**
+   * Schedule a recurring job using a stable scheduler ID.
+   *
+   * Idempotent: calling this with the same `schedulerId` and identical
+   * cadence is a no-op; calling with a changed cadence updates the
+   * existing schedule (BullMQ `upsertJobScheduler` semantics).
+   *
+   * Provide exactly one of `every` (fixed ms interval) or `pattern` (cron
+   * expression). The `schedulerId` should be caller-namespaced
+   * (e.g. `marketing.poll.<sourceId>`) so multiple consumers don't
+   * collide.
+   */
+  async enqueueRecurring<T = unknown>(
+    queueName: string,
+    data: T,
+    options: RecurringJobOptions,
+  ): Promise<void> {
+    const queue = this.queues.get(queueName);
+    if (!queue) {
+      throw new Error(`Queue "${queueName}" is not registered. Call registerProcessor first.`);
+    }
+
+    const hasEvery = typeof options.every === 'number';
+    const hasPattern = typeof options.pattern === 'string' && options.pattern.length > 0;
+    if (hasEvery === hasPattern) {
+      throw new Error(
+        `enqueueRecurring requires exactly one of 'every' or 'pattern' (got every=${options.every}, pattern=${options.pattern})`,
+      );
+    }
+
+    const SEVEN_DAYS = 7 * 24 * 60 * 60;
+    const FIFTEEN_DAYS = 15 * 24 * 60 * 60;
+
+    await queue.upsertJobScheduler(
+      options.schedulerId,
+      hasEvery ? { every: options.every! } : { pattern: options.pattern! },
+      {
+        name: queueName,
+        data,
+        opts: {
+          attempts: options.jobOptions?.attempts ?? 1,
+          backoff: options.jobOptions?.backoff,
+          removeOnComplete: options.jobOptions?.removeOnComplete ?? { age: SEVEN_DAYS },
+          removeOnFail: options.jobOptions?.removeOnFail ?? { age: FIFTEEN_DAYS },
+        },
+      },
+    );
+
+    this.logger.log('Recurring job upserted', {
+      queueName,
+      schedulerId: options.schedulerId,
+      every: options.every,
+      pattern: options.pattern,
+    });
+  }
+
+  /**
+   * Remove a recurring job schedule by its scheduler ID. Returns true if
+   * a schedule was removed, false if no schedule existed for that ID.
+   */
+  async removeRecurring(queueName: string, schedulerId: string): Promise<boolean> {
+    const queue = this.queues.get(queueName);
+    if (!queue) {
+      throw new Error(`Queue "${queueName}" is not registered.`);
+    }
+
+    const removed = await queue.removeJobScheduler(schedulerId);
+    this.logger.log('Recurring job schedule removed', {
+      queueName,
+      schedulerId,
+      removed,
+    });
+    return removed;
   }
 
   /**
