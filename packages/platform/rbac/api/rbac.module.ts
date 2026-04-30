@@ -4,6 +4,7 @@ import { RbacService } from './services/rbac.service';
 import { RbacGuard } from './guards/rbac.guard';
 import { RbacController } from './controllers/rbac.controller';
 import { ScopeResolverRegistry } from './scope-resolver';
+import { DataAccessScopeService } from './data-access-scope.service';
 import { OwnScopeResolver } from './scope-resolvers/own.resolver';
 import { AssignedScopeResolver } from './scope-resolvers/assigned.resolver';
 import { PermissionManifestRegistry } from './permission-manifest';
@@ -17,6 +18,7 @@ import { roles } from './schema/roles';
     RbacService,
     RbacGuard,
     ScopeResolverRegistry,
+    DataAccessScopeService,
     OwnScopeResolver,
     AssignedScopeResolver,
   ],
@@ -25,6 +27,7 @@ import { roles } from './schema/roles';
     PermissionManifestRegistry,
     RbacGuard,
     ScopeResolverRegistry,
+    DataAccessScopeService,
   ],
 })
 export class RbacModule implements OnModuleInit {
