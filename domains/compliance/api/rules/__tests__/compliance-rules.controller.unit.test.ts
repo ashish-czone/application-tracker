@@ -18,9 +18,10 @@ describe('ComplianceRulesController', () => {
   });
 
   describe('previewDeprecation', () => {
-    it('delegates to ComplianceRulesService.previewDeprecation', async () => {
-      const result = await controller.previewDeprecation('r1');
-      expect(rules.previewDeprecation).toHaveBeenCalledWith('r1');
+    it('delegates to ComplianceRulesService.previewDeprecation with the access context', async () => {
+      const accessCtx = { userId: 'u1', scopes: [{ type: 'any' }] } as never;
+      const result = await controller.previewDeprecation('r1', accessCtx);
+      expect(rules.previewDeprecation).toHaveBeenCalledWith('r1', accessCtx);
       expect(result.inFlightFilingCount).toBe(3);
     });
 
@@ -34,26 +35,36 @@ describe('ComplianceRulesController', () => {
   });
 
   describe('deprecate', () => {
-    it('forwards dto and actor to the service', async () => {
+    it('forwards dto, actor, and access context to the service', async () => {
+      const accessCtx = { userId: 'u1', scopes: [{ type: 'unit' }] } as never;
       await controller.deprecate(
         'r1',
         { alsoCancelInFlight: true, comment: 'superseded' },
         { userId: 'u1' } as never,
+        accessCtx,
       );
-      expect(rules.deprecate).toHaveBeenCalledWith('r1', {
-        alsoCancelInFlight: true,
-        actorId: 'u1',
-        comment: 'superseded',
-      });
+      expect(rules.deprecate).toHaveBeenCalledWith(
+        'r1',
+        {
+          alsoCancelInFlight: true,
+          actorId: 'u1',
+          comment: 'superseded',
+        },
+        accessCtx,
+      );
     });
 
     it('defaults alsoCancelInFlight to undefined when omitted (service treats as false)', async () => {
-      await controller.deprecate('r1', {}, { userId: 'u1' } as never);
-      expect(rules.deprecate).toHaveBeenCalledWith('r1', {
-        alsoCancelInFlight: undefined,
-        actorId: 'u1',
-        comment: undefined,
-      });
+      await controller.deprecate('r1', {}, { userId: 'u1' } as never, undefined);
+      expect(rules.deprecate).toHaveBeenCalledWith(
+        'r1',
+        {
+          alsoCancelInFlight: undefined,
+          actorId: 'u1',
+          comment: undefined,
+        },
+        undefined,
+      );
     });
 
     it('requires compliance-rules.update permission', () => {

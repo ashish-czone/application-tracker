@@ -214,13 +214,24 @@ export class ComplianceRulesService {
    * we lose nothing by dropping the engine path. Tenant scoping flows
    * through `withTenant`, a no-op when `compliance_rules` has no tenantId.
    */
-  async list(params: ComplianceRulesListParams): Promise<{
+  async list(
+    params: ComplianceRulesListParams,
+    accessCtx?: DataAccessContext,
+  ): Promise<{
     data: Record<string, unknown>[];
     meta: { total: number; page: number; limit: number; totalPages: number };
   }> {
     const filterConditions = this.buildRulesFilters(params);
     const where = withTenant(complianceRules, ...filterConditions);
     const whereSql = where ? sql`AND ${where}` : sql``;
+
+    // Scope predicate (if any) is applied at CTE level — it references the
+    // `compliance_rules` table directly, so we pre-filter there before
+    // aliasing as `r` for the outer JOIN/filters.
+    const scopePredicate = accessCtx ? await this.entityService.getScopePredicate(accessCtx) : undefined;
+    const cteScope = withScope(complianceRules, scopePredicate);
+    const cteWhere = cteScope ? sql`WHERE ${cteScope}` : sql``;
+    const scopedRules = sql`(SELECT * FROM ${complianceRules} ${cteWhere})`;
 
     const sortKey = params.sort && SORTABLE_RULE_COLUMNS[params.sort] ? params.sort : 'name';
     const sortExpr = SORTABLE_RULE_COLUMNS[sortKey];
@@ -229,7 +240,7 @@ export class ComplianceRulesService {
 
     const totalRows = await this.database.db.execute(sql`
       SELECT COUNT(*)::int AS total
-      FROM ${complianceRules} r
+      FROM ${scopedRules} r
       LEFT JOIN ${complianceLaws} l ON l.id = r.law_id
       WHERE TRUE ${whereSql}
     `);
@@ -241,7 +252,7 @@ export class ComplianceRulesService {
         r.due_day_of_month, r.due_month_offset, r.grace_period_days,
         r.description, r.created_at, r.updated_at,
         l.code AS law_code, l.name AS law_name, l.jurisdiction AS law_jurisdiction
-      FROM ${complianceRules} r
+      FROM ${scopedRules} r
       LEFT JOIN ${complianceLaws} l ON l.id = r.law_id
       WHERE TRUE ${whereSql}
       ORDER BY ${sortExpr} ${direction} NULLS LAST, r.id ASC
@@ -265,8 +276,9 @@ export class ComplianceRulesService {
    * Status-bucket counts for the rules list page header. Single round-trip;
    * each bucket is a FILTER (WHERE …) over the same scan.
    */
-  async getSummary(): Promise<RulesSummary> {
-    const where = withTenant(complianceRules);
+  async getSummary(accessCtx?: DataAccessContext): Promise<RulesSummary> {
+    const scopePredicate = accessCtx ? await this.entityService.getScopePredicate(accessCtx) : undefined;
+    const where = withScope(complianceRules, scopePredicate);
     const whereSql = where ? sql`WHERE ${where}` : sql``;
 
     const result = await this.database.db.execute(sql`
@@ -445,15 +457,19 @@ export class ComplianceRulesService {
    * is displayed in the forward-only save dialog ("N filings already
    * generated will keep their current due dates").
    */
-  async getEditConstraints(ruleId: string): Promise<{
+  async getEditConstraints(
+    ruleId: string,
+    accessCtx?: DataAccessContext,
+  ): Promise<{
     ruleId: string;
     hasGeneratedFilings: boolean;
     generatedFilingCount: number;
   }> {
-    const rule = await this.findById(ruleId);
-    if (!rule) {
-      throw new NotFoundException(`Rule ${ruleId} not found`);
-    }
+    // Existence + scope check via the engine. If the actor can't read the
+    // rule, surfaces NotFoundException (404) — same shape as a missing row,
+    // which is the correct behaviour: the actor must not be able to detect
+    // existence outside their scope.
+    await this.entityService.findOneOrFail(ruleId, accessCtx);
     const [row] = await this.database.db
       .select({ count: count() })
       .from(complianceFilings)
@@ -504,11 +520,12 @@ export class ComplianceRulesService {
    * Feeds the "Also cancel N in-flight filings from this rule" checkbox —
    * when the count is zero we hide the checkbox entirely on the UI.
    */
-  async previewDeprecation(ruleId: string): Promise<DeprecationPreview> {
-    const rule = await this.findById(ruleId);
-    if (!rule) {
-      throw new NotFoundException(`Rule ${ruleId} not found`);
-    }
+  async previewDeprecation(
+    ruleId: string,
+    accessCtx?: DataAccessContext,
+  ): Promise<DeprecationPreview> {
+    // Existence + actor-scope check; same rationale as getEditConstraints.
+    await this.entityService.findOneOrFail(ruleId, accessCtx);
     const [row] = await this.database.db
       .select({ count: count() })
       .from(complianceFilings)
@@ -549,11 +566,12 @@ export class ComplianceRulesService {
       actorId: string | null;
       comment?: string;
     },
+    accessCtx?: DataAccessContext,
   ): Promise<DeprecationResult> {
-    const rule = await this.findById(ruleId);
-    if (!rule) {
-      throw new NotFoundException(`Rule ${ruleId} not found`);
-    }
+    // Existence + actor-scope check via the engine. Throws NotFoundException
+    // when the rule is invisible to the actor — keeps the destructive cascade
+    // gated by the same scope as the read view.
+    const rule = (await this.entityService.findOneOrFail(ruleId, accessCtx)) as ComplianceRule;
     if (rule.status === 'deprecated') {
       return { ruleId, status: 'deprecated', cancelledFilingIds: [] };
     }

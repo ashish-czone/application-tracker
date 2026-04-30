@@ -38,14 +38,17 @@ export class ComplianceRulesController {
 
   @Get()
   @RequirePermission('compliance-rules.read')
-  list(@Query() query: Record<string, unknown>) {
-    return this.rules.list(translateRulesQuery(query));
+  list(
+    @Query() query: Record<string, unknown>,
+    @AccessContext() accessCtx?: DataAccessContext,
+  ) {
+    return this.rules.list(translateRulesQuery(query), accessCtx);
   }
 
   @Get('summary')
   @RequirePermission('compliance-rules.read')
-  summary() {
-    return this.rules.getSummary();
+  summary(@AccessContext() accessCtx?: DataAccessContext) {
+    return this.rules.getSummary(accessCtx);
   }
 
   /**
@@ -57,8 +60,11 @@ export class ComplianceRulesController {
    */
   @Get(':id/deprecation-preview')
   @RequirePermission('compliance-rules.update')
-  previewDeprecation(@Param('id', ParseUUIDPipe) id: string) {
-    return this.rules.previewDeprecation(id);
+  previewDeprecation(
+    @Param('id', ParseUUIDPipe) id: string,
+    @AccessContext() accessCtx?: DataAccessContext,
+  ) {
+    return this.rules.previewDeprecation(id, accessCtx);
   }
 
   /**
@@ -70,8 +76,11 @@ export class ComplianceRulesController {
    */
   @Get(':id/edit-constraints')
   @RequirePermission('compliance-rules.update')
-  getEditConstraints(@Param('id', ParseUUIDPipe) id: string) {
-    return this.rules.getEditConstraints(id);
+  getEditConstraints(
+    @Param('id', ParseUUIDPipe) id: string,
+    @AccessContext() accessCtx?: DataAccessContext,
+  ) {
+    return this.rules.getEditConstraints(id, accessCtx);
   }
 
   @Get(':id')
@@ -154,12 +163,17 @@ export class ComplianceRulesController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: unknown,
     @CurrentUser() user: JwtPayload,
+    @AccessContext() accessCtx?: DataAccessContext,
   ) {
     const dto = DeprecateComplianceRuleSchema.parse(body);
-    return this.rules.deprecate(id, {
-      alsoCancelInFlight: dto.alsoCancelInFlight,
-      actorId: user.userId,
-      comment: dto.comment,
-    });
+    return this.rules.deprecate(
+      id,
+      {
+        alsoCancelInFlight: dto.alsoCancelInFlight,
+        actorId: user.userId,
+        comment: dto.comment,
+      },
+      accessCtx,
+    );
   }
 }
