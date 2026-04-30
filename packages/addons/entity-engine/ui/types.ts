@@ -197,8 +197,8 @@ export type LookupSearchFn = (
 ) => Promise<Array<{ label: string; value: string }>>;
 
 /** Async transformation between user-pick and form-set. Use when the picker
- *  shows one identity (e.g. companies) but the form must store a different
- *  FK (e.g. recruit_clients.id) — the resolver bridges the two. */
+ *  shows one identity (e.g. clients) but the form must store a different
+ *  FK — the resolver bridges the two. */
 export type LookupResolveFn = (
   apiFn: {
     get: <T>(url: string) => Promise<T>;
@@ -224,8 +224,8 @@ export interface FieldUI {
   cellRenderer?: string;
   /** Override picker search for lookup/user fields. Replaces the default
    *  `GET /lookups/{entityType}` call. Generic primitive — used by hand-
-   *  written entities (e.g. clients) that route the picker to a different
-   *  identity source (e.g. directory companies). */
+   *  written entities that route the picker to a different identity source
+   *  (e.g. directory clients). */
   lookupSearch?: LookupSearchFn;
   /** Optional async transform applied between user-pick and form-set. When
    *  the picker shows one identity but the FK stored is a different one,

@@ -24,7 +24,7 @@ type ClientRow = Record<string, unknown> & { id: string };
 /**
  * Internal field-key translation: the controller-side `fieldKey: 'status'`
  * (the UI-facing key admins know) maps to the underlying `complianceStatus`
- * column on the shared `companies` table after the C-2 fold. Keeping the
+ * column on the shared `clients` table after the C-2 fold. Keeping the
  * external API stable on `'status'` means UIs and integrations don't need
  * to follow the storage rename. Inside the service we use the column key
  * everywhere — entity-engine reads/writes go through that name.

@@ -17,8 +17,8 @@ import { baseClientContactColumns } from '@packages/directory';
 // officer at *that* client).
 //
 // IMPORTANT: this file is NOT included in `drizzle.config.ts` schema array —
-// the compliance_* columns are added by hand-written migration
-// `0009_companies_compliance_columns.sql`.
+// the compliance_* columns are added by a hand-written migration that ALTERs
+// the directory `client_contacts` table.
 
 export const complianceClientContactColumns = {
   // FK to the compliance client this contact works at. Different from base
@@ -32,7 +32,7 @@ export const complianceClientContactColumns = {
   complianceNotes: text('compliance_notes'),
 } as const;
 
-export const clientContacts = pgTable('people', {
+export const clientContacts = pgTable('client_contacts', {
   ...baseClientContactColumns,
   ...complianceClientContactColumns,
 });

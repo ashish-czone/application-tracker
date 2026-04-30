@@ -5,78 +5,15 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1776527477879,
-      "tag": "0000_remarkable_doomsday",
+      "when": 1777538867207,
+      "tag": "0000_organic_rogue",
       "breakpoints": true
     },
     {
       "idx": 1,
       "version": "7",
-      "when": 1776576388932,
-      "tag": "0001_solid_cable",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1776603305064,
-      "tag": "0002_fair_talos",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1776664030056,
-      "tag": "0003_drop_compliance_tasks_external_key",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1776860888184,
-      "tag": "0004_warm_maverick",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1776939822210,
-      "tag": "0005_compliance_filings",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1776960997982,
-      "tag": "0006_drop_rules_active",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "7",
-      "when": 1777088289665,
-      "tag": "0007_drop_compliance_tasks",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "7",
-      "when": 1777287603467,
-      "tag": "0008_faithful_ulik",
-      "breakpoints": true
-    },
-    {
-      "idx": 9,
-      "version": "7",
-      "when": 1777967100000,
-      "tag": "0009_companies_compliance_columns",
-      "breakpoints": true
-    },
-    {
-      "idx": 10,
-      "version": "7",
-      "when": 1777968000000,
-      "tag": "0010_fold_clients_into_shared",
+      "when": 1777538867208,
+      "tag": "0001_clients_compliance_columns",
       "breakpoints": true
     }
   ]

@@ -9,7 +9,7 @@ import { baseClientColumns } from '@packages/directory';
 // IMPORTANT: this file is NOT included in `drizzle.config.ts` schema array —
 // drizzle-kit must not generate CREATE TABLE migrations for the shared
 // identity table from compliance's package. The compliance_* columns are
-// added by hand-written migration `0009_companies_compliance_columns.sql`.
+// added by a hand-written migration that ALTERs the directory `clients` table.
 //
 // See .claude/rules/module-boundaries.md → "Shared Identity Tables".
 
@@ -22,7 +22,7 @@ export const complianceClientColumns = {
   complianceArchivedAt: timestamp('compliance_archived_at', { withTimezone: true, mode: 'date' }),
 } as const;
 
-export const clients = pgTable('companies', {
+export const clients = pgTable('clients', {
   ...baseClientColumns,
   ...complianceClientColumns,
 });

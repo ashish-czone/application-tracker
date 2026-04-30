@@ -5,43 +5,15 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1776155829751,
-      "tag": "0000_mighty_forgotten_one",
+      "when": 1777538788712,
+      "tag": "0000_sweet_marrow",
       "breakpoints": true
     },
     {
       "idx": 1,
       "version": "7",
-      "when": 1777356920401,
-      "tag": "0001_directory_backfill",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1777469107161,
-      "tag": "0002_drop_recruit_clients_shadow_identity",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1777557600000,
-      "tag": "0003_companies_recruit_columns",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1777644000000,
-      "tag": "0004_repoint_child_fks",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1777730400000,
-      "tag": "0005_drop_recruit_clients",
+      "when": 1777538788713,
+      "tag": "0001_clients_recruit_columns",
       "breakpoints": true
     }
   ]

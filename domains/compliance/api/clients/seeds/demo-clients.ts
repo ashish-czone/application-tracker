@@ -39,7 +39,7 @@ export const seedDemoClients = async (ctx: INestApplicationContext): Promise<voi
 
   // Idempotency: any compliance-client row in the shared table short-circuits
   // the seed. Filter on `complianceBecameClientAt IS NOT NULL` because the
-  // `companies` table is shared with directory + recruit, and a row that
+  // `clients` table is shared with directory + recruit, and a row that
   // belongs to recruit but not compliance must not block compliance seeds.
   const [existing] = await database.db
     .select({ id: clients.id })

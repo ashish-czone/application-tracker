@@ -30,8 +30,8 @@ export class LookupResolverService {
 
   /**
    * Register a custom resolver for an entity whose labels can't be expressed
-   * as a single-table query — e.g. clients projecting `companies.name` via
-   * the `companyId` FK. Replaces any previously registered resolver for the
+   * as a single-table query — e.g. clients projecting `clients.name` via
+   * the `clientId` FK. Replaces any previously registered resolver for the
    * same entity.
    */
   registerResolver(entity: string, resolver: CustomLookupResolver): void {

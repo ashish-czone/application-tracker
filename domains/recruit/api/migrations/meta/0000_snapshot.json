@@ -1,5 +1,5 @@
 {
-  "id": "6a850374-7420-4b23-bd32-412d3553daa5",
+  "id": "4ae657ee-3055-47a0-a087-666d12772142",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -151,34 +151,7 @@
           "with": {}
         }
       },
-      "foreignKeys": {
-        "applications_referred_by_users_id_fk": {
-          "name": "applications_referred_by_users_id_fk",
-          "tableFrom": "applications",
-          "tableTo": "users",
-          "columnsFrom": [
-            "referred_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "applications_created_by_users_id_fk": {
-          "name": "applications_created_by_users_id_fk",
-          "tableFrom": "applications",
-          "tableTo": "users",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -526,29 +499,15 @@
           "with": {}
         }
       },
-      "foreignKeys": {
-        "candidates_created_by_users_id_fk": {
-          "name": "candidates_created_by_users_id_fk",
-          "tableFrom": "candidates",
-          "tableTo": "users",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.clients": {
-      "name": "clients",
+    "public.recruit_contacts": {
+      "name": "recruit_contacts",
       "schema": "",
       "columns": {
         "id": {
@@ -557,218 +516,11 @@
           "primaryKey": true,
           "notNull": true
         },
-        "client_name": {
-          "name": "client_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "parent_client_id": {
-          "name": "parent_client_id",
+        "client_contact_id": {
+          "name": "client_contact_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false
-        },
-        "contact_number": {
-          "name": "contact_number",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "website": {
-          "name": "website",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "industry": {
-          "name": "industry",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "about": {
-          "name": "about",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "source": {
-          "name": "source",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'added-by-user'"
-        },
-        "billing_street": {
-          "name": "billing_street",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "billing_city": {
-          "name": "billing_city",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "billing_province": {
-          "name": "billing_province",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "billing_code": {
-          "name": "billing_code",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "billing_country": {
-          "name": "billing_country",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "shipping_street": {
-          "name": "shipping_street",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "shipping_city": {
-          "name": "shipping_city",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "shipping_province": {
-          "name": "shipping_province",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "shipping_code": {
-          "name": "shipping_code",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "shipping_country": {
-          "name": "shipping_country",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_by": {
-          "name": "created_by",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "deleted_at": {
-          "name": "deleted_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "deleted_by": {
-          "name": "deleted_by",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "clients_client_name_idx": {
-          "name": "clients_client_name_idx",
-          "columns": [
-            {
-              "expression": "client_name",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "clients_industry_idx": {
-          "name": "clients_industry_idx",
-          "columns": [
-            {
-              "expression": "industry",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "clients_created_by_idx": {
-          "name": "clients_created_by_idx",
-          "columns": [
-            {
-              "expression": "created_by",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "clients_created_by_users_id_fk": {
-          "name": "clients_created_by_users_id_fk",
-          "tableFrom": "clients",
-          "tableTo": "users",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.contacts": {
-      "name": "contacts",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
         },
         "first_name": {
           "name": "first_name",
@@ -956,8 +708,8 @@
         }
       },
       "indexes": {
-        "contacts_client_id_idx": {
-          "name": "contacts_client_id_idx",
+        "recruit_contacts_client_id_idx": {
+          "name": "recruit_contacts_client_id_idx",
           "columns": [
             {
               "expression": "client_id",
@@ -971,8 +723,8 @@
           "method": "btree",
           "with": {}
         },
-        "contacts_email_idx": {
-          "name": "contacts_email_idx",
+        "recruit_contacts_email_idx": {
+          "name": "recruit_contacts_email_idx",
           "columns": [
             {
               "expression": "email",
@@ -986,8 +738,8 @@
           "method": "btree",
           "with": {}
         },
-        "contacts_last_name_idx": {
-          "name": "contacts_last_name_idx",
+        "recruit_contacts_last_name_idx": {
+          "name": "recruit_contacts_last_name_idx",
           "columns": [
             {
               "expression": "last_name",
@@ -1001,8 +753,8 @@
           "method": "btree",
           "with": {}
         },
-        "contacts_created_by_idx": {
-          "name": "contacts_created_by_idx",
+        "recruit_contacts_created_by_idx": {
+          "name": "recruit_contacts_created_by_idx",
           "columns": [
             {
               "expression": "created_by",
@@ -1015,23 +767,24 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "recruit_contacts_client_contact_id_idx": {
+          "name": "recruit_contacts_client_contact_id_idx",
+          "columns": [
+            {
+              "expression": "client_contact_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
-      "foreignKeys": {
-        "contacts_created_by_users_id_fk": {
-          "name": "contacts_created_by_users_id_fk",
-          "tableFrom": "contacts",
-          "tableTo": "users",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -1251,21 +1004,7 @@
           "with": {}
         }
       },
-      "foreignKeys": {
-        "interviews_created_by_users_id_fk": {
-          "name": "interviews_created_by_users_id_fk",
-          "tableFrom": "interviews",
-          "tableTo": "users",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -1556,34 +1295,7 @@
           "with": {}
         }
       },
-      "foreignKeys": {
-        "job_openings_hiring_manager_users_id_fk": {
-          "name": "job_openings_hiring_manager_users_id_fk",
-          "tableFrom": "job_openings",
-          "tableTo": "users",
-          "columnsFrom": [
-            "hiring_manager"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "job_openings_created_by_users_id_fk": {
-          "name": "job_openings_created_by_users_id_fk",
-          "tableFrom": "job_openings",
-          "tableTo": "users",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -1704,19 +1416,6 @@
             "id"
           ],
           "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "offer_approvals_approver_id_users_id_fk": {
-          "name": "offer_approvals_approver_id_users_id_fk",
-          "tableFrom": "offer_approvals",
-          "tableTo": "users",
-          "columnsFrom": [
-            "approver_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
           "onUpdate": "no action"
         }
       },
@@ -1894,34 +1593,7 @@
           "with": {}
         }
       },
-      "foreignKeys": {
-        "offers_approved_by_users_id_fk": {
-          "name": "offers_approved_by_users_id_fk",
-          "tableFrom": "offers",
-          "tableTo": "users",
-          "columnsFrom": [
-            "approved_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "offers_created_by_users_id_fk": {
-          "name": "offers_created_by_users_id_fk",
-          "tableFrom": "offers",
-          "tableTo": "users",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -2078,21 +1750,7 @@
           "with": {}
         }
       },
-      "foreignKeys": {
-        "vendors_created_by_users_id_fk": {
-          "name": "vendors_created_by_users_id_fk",
-          "tableFrom": "vendors",
-          "tableTo": "users",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},

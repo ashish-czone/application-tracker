@@ -1,6 +1,7 @@
 import { ConfigService } from '@nestjs/config';
 import { attachmentsAddon } from '@packages/attachments';
 import { automationsAddon } from '@packages/automations';
+import { directoryAddon } from '@packages/directory';
 import { documentTemplatesAddon } from '@packages/document-templates';
 import { eavAttributesAddon } from '@packages/eav-attributes';
 import { entityRelationsAddon } from '@packages/entity-relations';
@@ -42,6 +43,9 @@ export const complianceAddons: readonly Addon[] = [
   // filings) attach workflows and FK to workflow_definitions.
   automationsAddon,
   workflowsAddon,
+  // directory before any compliance migration that ALTERs `clients` /
+  // `client_contacts` (the shared identity tables) — directory creates them.
+  directoryAddon,
   ...tenancyAddons,
   attachmentsAddon,
   documentTemplatesAddon(),
