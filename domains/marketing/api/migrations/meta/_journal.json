@@ -15,6 +15,13 @@
       "when": 1777563359360,
       "tag": "0001_greedy_sphinx",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1777563669100,
+      "tag": "0002_shocking_hedge_knight",
+      "breakpoints": true
     }
   ]
 }

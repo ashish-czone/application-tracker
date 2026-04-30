@@ -13,6 +13,7 @@ export {
   MARKETING_PERMISSIONS,
   MONITORING_SOURCES_PERMISSION_MANIFESTS,
   MONITORING_KEYWORDS_PERMISSION_MANIFESTS,
+  MONITORING_ITEMS_PERMISSION_MANIFESTS,
   type MarketingPermission,
 } from './permissions';
 
@@ -43,3 +44,23 @@ export {
   marketingMonitoringKeywords,
   type MarketingMonitoringKeywordRow,
 } from './monitoring/keywords';
+
+// Monitoring items
+export {
+  MonitoringItemsService,
+  type RawMonitoringItem,
+  MARKETING_MONITORING_ITEM_INGESTED,
+  MARKETING_MONITORING_ITEM_ENGAGED,
+  MARKETING_MONITORING_ITEM_DISMISSED,
+  MARKETING_MONITORING_ITEM_SNOOZED,
+  MARKETING_MONITORING_ITEM_CONVERTED_TO_LEAD,
+  type MarketingMonitoringItemIngestedPayload,
+  type MarketingMonitoringItemEngagedPayload,
+  type MarketingMonitoringItemDismissedPayload,
+  type MarketingMonitoringItemSnoozedPayload,
+  type MarketingMonitoringItemConvertedToLeadPayload,
+  marketingMonitoringItems,
+  MONITORING_ITEM_STATUSES,
+  type MarketingMonitoringItemRow,
+  type MonitoringItemStatus,
+} from './monitoring/items';
