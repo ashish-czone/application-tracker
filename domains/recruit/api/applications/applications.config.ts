@@ -86,12 +86,11 @@ export const APPLICATIONS_CONFIG: EntityConfig = {
             const jobOpeningId = entityData.jobOpeningId as string;
             if (!jobOpeningId) return '';
             const jobOpening = await findEntity('job_openings', jobOpeningId);
-            const companyId = jobOpening.companyId as string;
-            if (!companyId) return '';
-            // The shadow recruit_clients row is still readable via the
-            // `clients` entity until the cleanup PR drops it; the row is
-            // looked up by company_id for the billing country fallback.
-            const client = await findEntity('clients', companyId);
+            const clientId = jobOpening.clientId as string;
+            if (!clientId) return '';
+            // Look up the client via the `clients` entity to get the
+            // billing country fallback.
+            const client = await findEntity('clients', clientId);
             const categoryId = client?.billingCountry as string;
             if (!categoryId) return '';
             const category = await findCategory(categoryId);

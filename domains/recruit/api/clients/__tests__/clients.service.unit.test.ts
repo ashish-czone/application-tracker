@@ -5,9 +5,9 @@ import { ClientsService } from '../clients.service';
 /**
  * Mocks the bits of DatabaseService.db that ClientsService touches.
  *
- * Post fold: the service operates on `companies` directly, so all queries
- * are single-table (no recruit_clients table, no JOIN). The "is recruit
- * client" filter is `recruit_became_client_at IS NOT NULL`.
+ * Post fold: the service operates on the directory `clients` row directly,
+ * so all queries are single-table (no recruit_clients table, no JOIN). The
+ * "is recruit client" filter is `recruit_became_client_at IS NOT NULL`.
  */
 function createMockDb() {
   const results: unknown[][] = [];
@@ -68,20 +68,20 @@ function makeLookupResolver() {
 }
 
 describe('ClientsService.create', () => {
-  let companies: any;
+  let directoryClients: any;
   let mock: ReturnType<typeof createMockDb>;
   let events: ReturnType<typeof makeEvents>;
   let service: ClientsService;
 
   beforeEach(() => {
-    companies = { findOrCreate: vi.fn().mockResolvedValue({ id: 'co-1' }) };
+    directoryClients = { findOrCreate: vi.fn().mockResolvedValue({ id: 'co-1' }) };
     mock = createMockDb();
     events = makeEvents();
-    service = new ClientsService(mock.database, companies, makeScopeResolvers(), events, makeLookupResolver());
+    service = new ClientsService(mock.database, directoryClients, makeScopeResolvers(), events, makeLookupResolver());
   });
 
-  it('finds-or-creates the company and stamps companies.recruit_* in one transaction', async () => {
-    mock.pushSelectResult([]);                                                    // tx.update(companies) recruit_*
+  it('finds-or-creates the directory client and stamps recruit_* in one transaction', async () => {
+    mock.pushSelectResult([]);                                                    // tx.update recruit_*
     mock.pushSelectResult([{ id: 'co-1', clientName: 'Acme Corp' }]);             // findOne snapshot
 
     const result = await service.create(
@@ -89,7 +89,7 @@ describe('ClientsService.create', () => {
       'user-1',
     );
 
-    expect(companies.findOrCreate).toHaveBeenCalledWith(
+    expect(directoryClients.findOrCreate).toHaveBeenCalledWith(
       { name: 'Acme Corp', websiteDomain: 'acme.com', industry: 'technology' },
       'user-1',
       expect.anything(),
@@ -99,7 +99,7 @@ describe('ClientsService.create', () => {
   });
 
   it('emits clients.Created with the post-commit snapshot', async () => {
-    mock.pushSelectResult([]);                                                    // tx.update(companies) recruit_*
+    mock.pushSelectResult([]);                                                    // tx.update recruit_*
     mock.pushSelectResult([{ id: 'co-1', clientName: 'Acme Corp' }]);             // findOne snapshot
 
     await service.create({ clientName: 'Acme Corp' } as any, 'user-1');
@@ -112,8 +112,8 @@ describe('ClientsService.create', () => {
     }));
   });
 
-  it('rolls back when companies.findOrCreate fails (no event)', async () => {
-    companies.findOrCreate.mockRejectedValueOnce(new Error('directory boom'));
+  it('rolls back when directoryClients.findOrCreate fails (no event)', async () => {
+    directoryClients.findOrCreate.mockRejectedValueOnce(new Error('directory boom'));
 
     await expect(service.create({ clientName: 'Acme' } as any, 'user-1'))
       .rejects.toThrow('directory boom');
@@ -123,16 +123,16 @@ describe('ClientsService.create', () => {
 });
 
 describe('ClientsService.update', () => {
-  let companies: any;
+  let directoryClients: any;
   let mock: ReturnType<typeof createMockDb>;
   let events: ReturnType<typeof makeEvents>;
   let service: ClientsService;
 
   beforeEach(() => {
-    companies = { update: vi.fn().mockResolvedValue({ id: 'co-1' }) };
+    directoryClients = { update: vi.fn().mockResolvedValue({ id: 'co-1' }) };
     mock = createMockDb();
     events = makeEvents();
-    service = new ClientsService(mock.database, companies, makeScopeResolvers(), events, makeLookupResolver());
+    service = new ClientsService(mock.database, directoryClients, makeScopeResolvers(), events, makeLookupResolver());
   });
 
   it('throws NotFoundException when findOne returns no row', async () => {
@@ -142,10 +142,10 @@ describe('ClientsService.update', () => {
       service.update('missing', { clientName: 'X' } as any, 'user-1'),
     ).rejects.toBeInstanceOf(NotFoundException);
 
-    expect(companies.update).not.toHaveBeenCalled();
+    expect(directoryClients.update).not.toHaveBeenCalled();
   });
 
-  it('syncs identity changes to companies and updates recruit_* on the same row', async () => {
+  it('syncs identity changes to directory and updates recruit_* on the same row', async () => {
     mock.pushSelectResult([{ id: 'co-1', clientName: 'Acme', industry: 'old' }]); // findOne(before)
     mock.pushSelectResult([{ id: 'co-1', clientName: 'Acme Renamed', industry: 'financial-services' }]); // findOne(after)
 
@@ -155,7 +155,7 @@ describe('ClientsService.update', () => {
       'user-1',
     );
 
-    expect(companies.update).toHaveBeenCalledWith(
+    expect(directoryClients.update).toHaveBeenCalledWith(
       'co-1',
       { name: 'Acme Renamed', industry: 'financial-services' },
       'user-1',
@@ -163,20 +163,20 @@ describe('ClientsService.update', () => {
     );
   });
 
-  it('skips company sync when input has no identity fields', async () => {
+  it('skips directory sync when input has no identity fields', async () => {
     mock.pushSelectResult([{ id: 'co-1', about: 'old' }]); // findOne(before)
-    mock.pushSelectResult([]);                              // tx.update(companies) recruit_*
+    mock.pushSelectResult([]);                              // tx.update recruit_*
     mock.pushSelectResult([{ id: 'co-1', about: 'new' }]); // findOne(after)
 
     await service.update('co-1', { about: 'new' } as any, 'user-1');
 
-    expect(companies.update).not.toHaveBeenCalled();
+    expect(directoryClients.update).not.toHaveBeenCalled();
     expect(mock.tx.update).toHaveBeenCalled();
   });
 
   it('translates a 23505 unique violation to ConflictException', async () => {
     mock.pushSelectResult([{ id: 'co-1', clientName: 'Acme' }]);
-    companies.update.mockRejectedValueOnce(Object.assign(new Error('dup'), { code: '23505' }));
+    directoryClients.update.mockRejectedValueOnce(Object.assign(new Error('dup'), { code: '23505' }));
 
     await expect(
       service.update('co-1', { clientName: 'Existing Co' } as any, 'user-1'),
@@ -228,7 +228,7 @@ describe('ClientsService.softDelete', () => {
     ).rejects.toBeInstanceOf(NotFoundException);
   });
 
-  it('sets recruit_archived_at on companies and emits clients.Deleted', async () => {
+  it('sets recruit_archived_at on the directory client row and emits clients.Deleted', async () => {
     mock.pushSelectResult([{ id: 'co-1', clientName: 'Acme' }]); // findOne(before)
 
     await service.softDelete('co-1', 'user-1');
@@ -242,7 +242,7 @@ describe('ClientsService.softDelete', () => {
   });
 });
 
-describe('ClientsService.findOrCreateForCompany', () => {
+describe('ClientsService.findOrCreateForClient', () => {
   let mock: ReturnType<typeof createMockDb>;
   let events: ReturnType<typeof makeEvents>;
   let service: ClientsService;
@@ -253,21 +253,21 @@ describe('ClientsService.findOrCreateForCompany', () => {
     service = new ClientsService(mock.database, {} as any, makeScopeResolvers(), events, makeLookupResolver());
   });
 
-  it('returns { id: companyId, created: false } when the company is already a recruit client', async () => {
+  it('returns { id, created: false } when the directory client is already a recruit client', async () => {
     mock.pushSelectResult([{ id: 'co-1', became: new Date() }]);
 
-    const out = await service.findOrCreateForCompany('co-1', 'user-1');
+    const out = await service.findOrCreateForClient('co-1', 'user-1');
 
     expect(out).toEqual({ id: 'co-1', created: false });
     expect(events.emitDynamic).not.toHaveBeenCalled();
   });
 
-  it('stamps recruit_became_client_at + emits Created when the company exists but is not a client yet', async () => {
-    mock.pushSelectResult([{ id: 'co-1', became: null }]);                  // company exists, not a client
-    mock.pushSelectResult([]);                                              // db.update(companies) recruit_became_client_at
+  it('stamps recruit_became_client_at + emits Created when the row exists but is not a recruit client yet', async () => {
+    mock.pushSelectResult([{ id: 'co-1', became: null }]);                  // exists, not a recruit client
+    mock.pushSelectResult([]);                                              // db.update recruit_became_client_at
     mock.pushSelectResult([{ id: 'co-1', clientName: 'Acme Corp' }]);       // findOne snapshot
 
-    const out = await service.findOrCreateForCompany('co-1', 'user-1');
+    const out = await service.findOrCreateForClient('co-1', 'user-1');
 
     expect(out).toEqual({ id: 'co-1', created: true });
     expect(mock.database.db.update).toHaveBeenCalled();
@@ -278,10 +278,10 @@ describe('ClientsService.findOrCreateForCompany', () => {
     }));
   });
 
-  it('throws NotFound when the company id is not in the directory', async () => {
-    mock.pushSelectResult([]); // company lookup empty
+  it('throws NotFound when the client id is not in the directory', async () => {
+    mock.pushSelectResult([]); // lookup empty
 
-    await expect(service.findOrCreateForCompany('missing-co', 'user-1'))
+    await expect(service.findOrCreateForClient('missing-co', 'user-1'))
       .rejects.toBeInstanceOf(NotFoundException);
   });
 });
@@ -301,9 +301,9 @@ describe('ClientsService.findOne', () => {
   });
 
   it('returns the row when found', async () => {
-    mock.pushSelectResult([{ id: 'co-1', clientName: 'Acme (from companies)' }]);
+    mock.pushSelectResult([{ id: 'co-1', clientName: 'Acme' }]);
     const row = await service.findOne('co-1');
-    expect(row).toMatchObject({ id: 'co-1', clientName: 'Acme (from companies)' });
+    expect(row).toMatchObject({ id: 'co-1', clientName: 'Acme' });
   });
 });
 
@@ -324,7 +324,7 @@ describe('ClientsService.list', () => {
     expect(res.data).toHaveLength(1);
   });
 
-  it('queries companies directly (no JOIN to recruit_clients)', async () => {
+  it('queries the directory client row directly (no JOIN to recruit_clients)', async () => {
     mock.pushSelectResult([{ total: 0 }]);
     mock.pushSelectResult([]);
     await service.list({});
@@ -367,7 +367,7 @@ describe('ClientsService custom lookup resolver', () => {
     resolver = (lookupResolver.registerResolver as any).mock.calls[0][1];
   });
 
-  it('search() filters companies on recruit_became_client_at IS NOT NULL', async () => {
+  it('search() filters on recruit_became_client_at IS NOT NULL', async () => {
     mock.pushSelectResult([
       { label: 'Acme Corp', value: 'co-1' },
       { label: 'Acme Holdings', value: 'co-2' },
@@ -382,7 +382,7 @@ describe('ClientsService custom lookup resolver', () => {
     expect(selectCall.value.limit).toHaveBeenCalledWith(20);
   });
 
-  it('getLabel() returns the company name or null when no row', async () => {
+  it('getLabel() returns the client name or null when no row', async () => {
     mock.pushSelectResult([{ label: 'Acme Corp' }]);
     expect(await resolver.getLabel('co-1')).toBe('Acme Corp');
 
@@ -390,7 +390,7 @@ describe('ClientsService custom lookup resolver', () => {
     expect(await resolver.getLabel('missing')).toBeNull();
   });
 
-  it('getBatchLabels() returns a Map keyed by companies.id', async () => {
+  it('getBatchLabels() returns a Map keyed by client id', async () => {
     mock.pushSelectResult([
       { id: 'co-1', label: 'Acme Corp' },
       { id: 'co-2', label: 'Globex' },

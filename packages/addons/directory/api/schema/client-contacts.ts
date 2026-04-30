@@ -1,8 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import { pgTable, text, boolean, jsonb, timestamp, index } from 'drizzle-orm/pg-core';
-import { companies } from './companies';
+import { clients } from './clients';
 
-export const people = pgTable(
+// Shared identity table for contact people associated with clients.
+//
+// NOTE: the underlying DB table is still named `people` — the JS-side
+// rename to `client_contacts` ships ahead of the table rename, which is
+// deferred to a follow-up coordinated migration.
+export const clientContacts = pgTable(
   'people',
   {
     id: text('id').primaryKey().$defaultFn(() => randomUUID()),
@@ -11,7 +16,7 @@ export const people = pgTable(
     primaryPhone: text('primary_phone'),
     linkedinUrl: text('linkedin_url'),
     jobTitle: text('job_title'),
-    companyId: text('company_id').references(() => companies.id, { onDelete: 'set null' }),
+    clientId: text('company_id').references(() => clients.id, { onDelete: 'set null' }),
     doNotContact: boolean('do_not_contact').notNull().default(false),
     externalIds: jsonb('external_ids').notNull().default({}),
     mergedIntoId: text('merged_into_id'),
@@ -25,12 +30,12 @@ export const people = pgTable(
     deletedBy: text('deleted_by'),
   },
   (table) => [
-    index('people_company_id_idx').on(table.companyId),
+    index('people_company_id_idx').on(table.clientId),
     index('people_full_name_lower_idx').on(table.fullName),
     index('people_merged_into_idx').on(table.mergedIntoId),
     // Partial unique indexes for primary_email + linkedin_url come from migration SQL.
   ],
 );
 
-export type Person = typeof people.$inferSelect;
-export type NewPerson = typeof people.$inferInsert;
+export type ClientContact = typeof clientContacts.$inferSelect;
+export type NewClientContact = typeof clientContacts.$inferInsert;

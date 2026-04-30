@@ -1,11 +1,15 @@
 import { randomUUID } from 'node:crypto';
 import { pgTable, text, jsonb, timestamp, index, char } from 'drizzle-orm/pg-core';
 
-// Base columns for the shared identity table `companies`. Exported so that
+// Base columns for the shared identity table `clients`. Exported so that
 // domains can spread them into an extended `pgTable('companies', { ... })`
 // reference and add their own prefixed columns. See
 // .claude/rules/module-boundaries.md → "Shared Identity Tables".
-export const baseCompanyColumns = {
+//
+// NOTE: the underlying DB table is still named `companies` — the JS-side
+// rename to `clients` ships ahead of the table rename, which requires
+// coordinated migration work across domains and is deferred to a follow-up.
+export const baseClientColumns = {
   id: text('id').primaryKey().$defaultFn(() => randomUUID()),
   name: text('name').notNull(),
   websiteDomain: text('website_domain'),
@@ -26,9 +30,9 @@ export const baseCompanyColumns = {
   deletedBy: text('deleted_by'),
 } as const;
 
-export const companies = pgTable(
+export const clients = pgTable(
   'companies',
-  baseCompanyColumns,
+  baseClientColumns,
   (table) => [
     index('companies_name_lower_idx').on(table.name),
     index('companies_merged_into_idx').on(table.mergedIntoId),
@@ -37,5 +41,5 @@ export const companies = pgTable(
   ],
 );
 
-export type Company = typeof companies.$inferSelect;
-export type NewCompany = typeof companies.$inferInsert;
+export type Client = typeof clients.$inferSelect;
+export type NewClient = typeof clients.$inferInsert;

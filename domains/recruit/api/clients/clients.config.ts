@@ -1,19 +1,19 @@
 import type { EntityConfig } from '@packages/entity-engine';
-import { companies } from './companies-ref';
+import { clients } from './clients-ref';
 
 export const CLIENTS_CONFIG: EntityConfig = {
   entityType: 'clients',
   slug: 'clients',
 
-  // The recruit "client" IS a directory.companies row with
+  // The recruit "client" IS a directory `clients` row with
   // recruit_became_client_at set. ClientsService owns the actual CRUD —
   // entity-engine only uses this config for metadata (lookup resolver
   // registration, fieldMeta for form rendering, layouts).
-  table: companies,
+  table: clients,
   systemColumns: ['id', 'createdAt', 'updatedAt', 'deletedAt', 'deletedBy', 'createdBy'],
 
-  // Identity fields (clientName/website/industry) are projected from companies
-  // base columns; commercial fields read from companies.recruit_*. The FE form
+  // Identity fields (clientName/website/industry) are projected from base
+  // directory columns; commercial fields read from recruit_*. The FE form
   // declares the projected aliases as syntheticFields in clients.ui.ts.
   searchFields: [],
 
@@ -55,21 +55,21 @@ export const CLIENTS_CONFIG: EntityConfig = {
   ],
 
   // Lookup resolution is owned by ClientsService.onModuleInit() — it
-  // registers a custom resolver that reads directly from companies, so labels
-  // are companies.name and values are companies.id. The picker's resolve step
-  // calls /clients/find-or-create-for-company to stamp recruit_became_client_at.
+  // registers a custom resolver that reads directly from `clients`, so
+  // labels are clients.name and values are clients.id. The picker's resolve
+  // step calls /clients/find-or-create-for-client to stamp recruit_became_client_at.
 
   relationships: [
-    { name: 'contacts', type: 'hasMany', targetEntity: 'contacts', foreignKey: 'companyId', label: 'Contacts', displayFields: ['firstName', 'lastName', 'email', 'jobTitle'] },
-    { name: 'jobOpenings', type: 'hasMany', targetEntity: 'job_openings', foreignKey: 'companyId', label: 'Job Openings', displayFields: ['title', 'status', 'createdAt'] },
+    { name: 'contacts', type: 'hasMany', targetEntity: 'contacts', foreignKey: 'clientId', label: 'Contacts', displayFields: ['firstName', 'lastName', 'email', 'jobTitle'] },
+    { name: 'jobOpenings', type: 'hasMany', targetEntity: 'job_openings', foreignKey: 'clientId', label: 'Job Openings', displayFields: ['title', 'status', 'createdAt'] },
   ],
 
   dataAccess: { anchors: { creator: 'createdBy' } },
 
   recipientFields: { createdBy: { label: 'Created By' } },
 
-  // The row id IS companies.id; service projects clientName/industry from
-  // companies base columns into the response.
+  // The row id IS clients.id; service projects clientName/industry from
+  // base directory columns into the response.
   nameField: 'clientName',
   subtitleField: 'industry',
 };

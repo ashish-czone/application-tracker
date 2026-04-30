@@ -1,10 +1,10 @@
 import { z } from 'zod';
 
 /**
- * The recruit "client" concept is a `directory.companies` row with
+ * The recruit "client" concept is a directory `clients` row with
  * `recruit_became_client_at` set. Identity fields (clientName/website/
- * industry) route to `directory.companies` base columns; commercial
- * fields route to `companies.recruit_*` (about, contactNumber, source,
+ * industry) route to base directory columns; commercial fields route
+ * to recruit-prefixed columns (about, contactNumber, source,
  * billing/shipping addresses, lifecycle markers).
  *
  * The DTO is hand-written rather than derived from a Drizzle table —

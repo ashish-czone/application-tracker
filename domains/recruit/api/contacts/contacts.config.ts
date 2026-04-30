@@ -18,7 +18,7 @@ export const CONTACTS_CONFIG: EntityConfig = {
     fullName: { label: 'Contact', isSystem: true, cellRenderer: 'AvatarNameCell' },
     firstName: { label: 'First Name', section: 'basic', sortOrder: 0, isQuickCreate: true, maxLength: 125 },
     lastName: { label: 'Last Name', section: 'basic', sortOrder: 1, isQuickCreate: true, isSystem: true, maxLength: 125 },
-    companyId: {
+    clientId: {
       label: 'Client Name', section: 'basic', sortOrder: 2, isQuickCreate: true,
       fieldType: 'lookup', lookupEntity: 'clients',
     },
@@ -67,10 +67,10 @@ export const CONTACTS_CONFIG: EntityConfig = {
     { name: 'fullName', expression: sql`TRIM(COALESCE(${contacts.firstName}, '') || ' ' || COALESCE(${contacts.lastName}, ''))`, sourceFields: ['firstName', 'lastName'] },
   ],
 
-  listFields: ['fullName', 'companyId', 'email', 'mobile', 'jobTitle'],
+  listFields: ['fullName', 'clientId', 'email', 'mobile', 'jobTitle'],
 
   sections: [
-    { name: 'Contact Information', fields: ['firstName', 'lastName', 'companyId', 'department', 'email', 'secondaryEmail', 'jobTitle', 'workPhone', 'mobile'] },
+    { name: 'Contact Information', fields: ['firstName', 'lastName', 'clientId', 'department', 'email', 'secondaryEmail', 'jobTitle', 'workPhone', 'mobile'] },
     { name: 'Mailing Address', fields: ['mailingStreet', 'mailingCity', 'mailingProvince', 'mailingPostalCode', 'mailingCountry'] },
     { name: 'Other Address', fields: ['otherStreet', 'otherCity', 'otherProvince', 'otherPostalCode', 'otherCountry'] },
     { name: 'Social Links', fields: ['linkedinUrl', 'facebookUrl', 'twitterHandle'] },

@@ -259,8 +259,8 @@ export interface FormLayoutSection {
  * api's layout response) but should still render in the form. The classic
  * use case is hand-written entities whose form collects values that get
  * routed to a different table/service on save (e.g. clients's
- * `clientName`/`website`/`industry` go to directory.companies, not
- * recruit_clients).
+ * `clientName`/`website`/`industry` go to the directory clients row, not
+ * to a recruit-prefix column).
  *
  * Synthetic fields fill in the FieldDefinition shape with sensible defaults
  * for the metadata the api would normally provide (id, entityType,

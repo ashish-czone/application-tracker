@@ -7,36 +7,36 @@ export const directoryAddon = {
   migration: '@packages/directory',
 } as const;
 
-export { CompaniesService } from './services/companies.service';
-export type { FindOrCreateCompanyInput, UpdateCompanyInput } from './services/companies.service';
-export { PeopleService } from './services/people.service';
-export type { FindOrCreatePersonInput, UpdatePersonInput } from './services/people.service';
+export { ClientsService } from './services/clients.service';
+export type { FindOrCreateClientInput, UpdateClientInput } from './services/clients.service';
+export { ClientContactsService } from './services/client-contacts.service';
+export type { FindOrCreateClientContactInput, UpdateClientContactInput } from './services/client-contacts.service';
 
 export { DIRECTORY_PERMISSIONS } from './permissions';
 export type { DirectoryPermission } from './permissions';
 
-export { companies, baseCompanyColumns, people } from './schema';
-export type { Company, NewCompany, Person, NewPerson } from './schema';
+export { clients, baseClientColumns, clientContacts } from './schema';
+export type { Client, NewClient, ClientContact, NewClientContact } from './schema';
 
 export {
-  DIRECTORY_COMPANY_CREATED,
-  DIRECTORY_COMPANY_UPDATED,
-  DIRECTORY_COMPANY_MERGED,
-  DIRECTORY_PERSON_CREATED,
-  DIRECTORY_PERSON_UPDATED,
-  DIRECTORY_PERSON_MERGED,
+  DIRECTORY_CLIENT_CREATED,
+  DIRECTORY_CLIENT_UPDATED,
+  DIRECTORY_CLIENT_MERGED,
+  DIRECTORY_CLIENT_CONTACT_CREATED,
+  DIRECTORY_CLIENT_CONTACT_UPDATED,
+  DIRECTORY_CLIENT_CONTACT_MERGED,
 } from './events/types';
 export type {
-  CompanyCreatedPayload,
-  CompanyUpdatedPayload,
-  CompanyMergedPayload,
-  PersonCreatedPayload,
-  PersonUpdatedPayload,
-  PersonMergedPayload,
-  CompanyCreatedEvent,
-  CompanyUpdatedEvent,
-  CompanyMergedEvent,
-  PersonCreatedEvent,
-  PersonUpdatedEvent,
-  PersonMergedEvent,
+  ClientCreatedPayload,
+  ClientUpdatedPayload,
+  ClientMergedPayload,
+  ClientContactCreatedPayload,
+  ClientContactUpdatedPayload,
+  ClientContactMergedPayload,
+  ClientCreatedEvent,
+  ClientUpdatedEvent,
+  ClientMergedEvent,
+  ClientContactCreatedEvent,
+  ClientContactUpdatedEvent,
+  ClientContactMergedEvent,
 } from './events/types';
