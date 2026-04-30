@@ -93,19 +93,18 @@ export class ClientsController {
 
   /**
    * Picker bridge for entities (contacts/job_openings/interviews) whose
-   * client picker shows directory.companies. The FE pre-submit hook resolves
-   * the picked companyId to a recruit_client.id by hitting this endpoint —
-   * findOrCreate semantics so picking the same company twice returns the
-   * same client.
+   * client picker shows directory clients. The FE pre-submit hook resolves
+   * the picked clientId to a recruit-client marker by hitting this endpoint —
+   * findOrCreate semantics so picking the same client twice is idempotent.
    */
-  @Post('find-or-create-for-company')
+  @Post('find-or-create-for-client')
   @RequirePermission('clients.create')
-  @ApiOperation({ summary: 'Resolve a directory.companies id to a recruit_clients.id (creates the wrapper if missing)' })
-  async findOrCreateForCompany(
-    @Body('companyId', ParseUUIDPipe) companyId: string,
+  @ApiOperation({ summary: 'Stamp a directory client as a recruit client (idempotent)' })
+  async findOrCreateForClient(
+    @Body('clientId', ParseUUIDPipe) clientId: string,
     @CurrentUser() user: JwtPayload,
   ) {
-    return this.clients.findOrCreateForCompany(companyId, user.userId);
+    return this.clients.findOrCreateForClient(clientId, user.userId);
   }
 
   @Post(':id/restore')

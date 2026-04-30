@@ -2,7 +2,7 @@ import type { INestApplicationContext } from '@nestjs/common';
 import { DatabaseService, eq, isNotNull, sql, users } from '@packages/database';
 import { EntityService } from '@packages/entity-engine';
 import { ClientsService } from '../clients.service';
-import { companies } from '../companies-ref';
+import { clients } from '../clients-ref';
 import { contacts } from '../../contacts/schema/contacts';
 import { vendors } from '../../vendors/schema/vendors';
 import { interviews } from '../../interviews/schema/interviews';
@@ -101,9 +101,9 @@ async function ensureSampleClients(
   resolveCountryId: (name: string) => Promise<string | undefined>,
 ): Promise<void> {
   const [existing] = await database.db
-    .select({ id: companies.id })
-    .from(companies)
-    .where(isNotNull(companies.recruitBecameClientAt))
+    .select({ id: clients.id })
+    .from(clients)
+    .where(isNotNull(clients.recruitBecameClientAt))
     .limit(1);
   if (existing) return;
 
@@ -127,15 +127,15 @@ async function ensureSampleContacts(
   if (!admin) return;
 
   const clientRows = await database.db
-    .select({ companyId: companies.id })
-    .from(companies)
-    .where(isNotNull(companies.recruitBecameClientAt))
+    .select({ clientId: clients.id })
+    .from(clients)
+    .where(isNotNull(clients.recruitBecameClientAt))
     .limit(4);
   if (clientRows.length === 0) return;
 
   const contactsWithClients = SAMPLE_CONTACTS.map((c, i) => ({
     ...c,
-    companyId: i < 2 ? clientRows[0]?.companyId : clientRows[Math.min(i - 1, clientRows.length - 1)]?.companyId,
+    clientId: i < 2 ? clientRows[0]?.clientId : clientRows[Math.min(i - 1, clientRows.length - 1)]?.clientId,
   }));
 
   for (const data of contactsWithClients) {
@@ -162,25 +162,25 @@ async function ensureSampleVendors(
 
 async function linkJobOpeningsToClients(database: DatabaseService): Promise<void> {
   const joRows = await database.db
-    .select({ id: jobOpenings.id, companyId: jobOpenings.companyId })
+    .select({ id: jobOpenings.id, clientId: jobOpenings.clientId })
     .from(jobOpenings)
     .limit(5);
 
-  if (joRows.length === 0 || joRows[0]?.companyId) return;
+  if (joRows.length === 0 || joRows[0]?.clientId) return;
 
   const clientRows = await database.db
-    .select({ companyId: companies.id })
-    .from(companies)
-    .where(isNotNull(companies.recruitBecameClientAt))
+    .select({ clientId: clients.id })
+    .from(clients)
+    .where(isNotNull(clients.recruitBecameClientAt))
     .limit(4);
   if (clientRows.length === 0) return;
 
   for (let i = 0; i < joRows.length; i++) {
-    const companyId = clientRows[i % clientRows.length]?.companyId;
-    if (companyId) {
+    const clientId = clientRows[i % clientRows.length]?.clientId;
+    if (clientId) {
       await database.db
         .update(jobOpenings)
-        .set({ companyId })
+        .set({ clientId })
         .where(eq(jobOpenings.id, joRows[i].id));
     }
   }
@@ -198,7 +198,7 @@ async function ensureSampleInterviews(
 
   const candidateRows = await database.db.select({ id: candidates.id }).from(candidates).limit(3);
   const joRows = await database.db
-    .select({ id: jobOpenings.id, companyId: jobOpenings.companyId })
+    .select({ id: jobOpenings.id, clientId: jobOpenings.clientId })
     .from(jobOpenings)
     .limit(3);
 
@@ -210,7 +210,7 @@ async function ensureSampleInterviews(
       interviewName: 'Phone Interview',
       candidateId: candidateRows[0]?.id,
       jobOpeningId: joRows[0]?.id,
-      companyId: joRows[0]?.companyId,
+      clientId: joRows[0]?.clientId,
       interviewFrom: new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000).toISOString(),
       interviewTo: new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000 + 60 * 60 * 1000).toISOString(),
       location: 'Phone',
@@ -220,7 +220,7 @@ async function ensureSampleInterviews(
       interviewName: 'Level 1 Interview',
       candidateId: candidateRows[1]?.id,
       jobOpeningId: joRows[0]?.id,
-      companyId: joRows[0]?.companyId,
+      clientId: joRows[0]?.clientId,
       interviewFrom: new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000).toISOString(),
       interviewTo: new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000 + 90 * 60 * 1000).toISOString(),
       location: 'Zoom Meeting',
@@ -230,7 +230,7 @@ async function ensureSampleInterviews(
       interviewName: 'Level 2 Interview',
       candidateId: candidateRows[0]?.id,
       jobOpeningId: joRows[1]?.id,
-      companyId: joRows[1]?.companyId,
+      clientId: joRows[1]?.clientId,
       interviewFrom: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000).toISOString(),
       interviewTo: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000 + 60 * 60 * 1000).toISOString(),
       location: 'On-site — San Francisco Office',
@@ -241,7 +241,7 @@ async function ensureSampleInterviews(
       interviewName: 'General Interview',
       candidateId: candidateRows[2]?.id,
       jobOpeningId: joRows[2]?.id,
-      companyId: joRows[2]?.companyId,
+      clientId: joRows[2]?.clientId,
       interviewFrom: new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000).toISOString(),
       interviewTo: new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000 + 45 * 60 * 1000).toISOString(),
       location: 'Google Meet',

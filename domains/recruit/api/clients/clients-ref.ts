@@ -1,17 +1,17 @@
 import { jsonb, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
-import { baseCompanyColumns } from '@packages/directory';
+import { baseClientColumns } from '@packages/directory';
 
-// Extended `companies` reference for recruit queries. Spreads directory's
-// `baseCompanyColumns` and adds recruit-prefixed columns. The physical
-// table is the same `companies` row owned by directory; this reference
+// Extended `clients` reference for recruit queries. Spreads directory's
+// `baseClientColumns` and adds recruit-prefixed columns. The physical
+// table is the same shared identity row owned by directory; this reference
 // just gives recruit's queries the wider row type.
 //
 // IMPORTANT: this file is NOT included in `drizzle.config.ts` schema array —
-// drizzle-kit must not generate CREATE TABLE migrations for `companies`
-// from recruit's package. The recruit_* columns are added by hand-written
-// migration `0003_companies_recruit_columns.sql`.
+// drizzle-kit must not generate CREATE TABLE migrations for the shared
+// identity table from recruit's package. The recruit_* columns are added by
+// the hand-written migration `0003_companies_recruit_columns.sql`.
 
-export const recruitCompanyColumns = {
+export const recruitClientColumns = {
   recruitAbout: text('recruit_about'),
   recruitContactNumber: text('recruit_contact_number'),
   recruitSource: text('recruit_source'),
@@ -21,9 +21,9 @@ export const recruitCompanyColumns = {
   recruitArchivedAt: timestamp('recruit_archived_at', { withTimezone: true, mode: 'date' }),
 } as const;
 
-export const companies = pgTable('companies', {
-  ...baseCompanyColumns,
-  ...recruitCompanyColumns,
+export const clients = pgTable('companies', {
+  ...baseClientColumns,
+  ...recruitClientColumns,
 });
 
 export type RecruitAddress = {
@@ -34,5 +34,5 @@ export type RecruitAddress = {
   country?: string | null;
 };
 
-export type RecruitCompany = typeof companies.$inferSelect;
-export type NewRecruitCompany = typeof companies.$inferInsert;
+export type RecruitClient = typeof clients.$inferSelect;
+export type NewRecruitClient = typeof clients.$inferInsert;

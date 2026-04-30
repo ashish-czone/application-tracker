@@ -1,9 +1,9 @@
 import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DatabaseService, eq } from '@packages/database';
 import {
-  PeopleService,
-  type FindOrCreatePersonInput,
-  type UpdatePersonInput,
+  ClientContactsService,
+  type FindOrCreateClientContactInput,
+  type UpdateClientContactInput,
 } from '@packages/directory';
 import { EntityService, type BaseListQuery } from '@packages/entity-engine';
 import type { DataAccessContext } from '@packages/rbac';
@@ -15,7 +15,7 @@ export class ContactsService {
   constructor(
     @Inject('ENTITY_SERVICE_contacts') private readonly entityService: EntityService,
     private readonly database: DatabaseService,
-    private readonly people: PeopleService,
+    private readonly clientContacts: ClientContactsService,
   ) {}
 
   list(query: BaseListQuery, accessCtx?: DataAccessContext) {
@@ -28,12 +28,12 @@ export class ContactsService {
 
   async create(input: CreateContactDto, actorId: string) {
     return this.database.db.transaction(async (tx) => {
-      const person = await this.people.findOrCreate(
-        toFindOrCreatePerson(input, input.companyId ?? null),
+      const clientContact = await this.clientContacts.findOrCreate(
+        toFindOrCreateClientContact(input, input.clientId ?? null),
         actorId,
         tx,
       );
-      return this.entityService.create({ ...input, personId: person.id }, actorId, tx);
+      return this.entityService.create({ ...input, clientContactId: clientContact.id }, actorId, tx);
     });
   }
 
@@ -45,7 +45,7 @@ export class ContactsService {
   ) {
     return this.database.db.transaction(async (tx) => {
       const [current] = await tx
-        .select({ personId: contacts.personId, companyId: contacts.companyId })
+        .select({ clientContactId: contacts.clientContactId, clientId: contacts.clientId })
         .from(contacts)
         .where(eq(contacts.id, id))
         .limit(1);
@@ -53,15 +53,15 @@ export class ContactsService {
         throw new NotFoundException(`Contact ${id} not found`);
       }
 
-      const personPatch = toPersonPatch(input, current.companyId);
-      if (current.personId && Object.keys(personPatch).length > 0) {
+      const clientContactPatch = toClientContactPatch(input, current.clientId);
+      if (current.clientContactId && Object.keys(clientContactPatch).length > 0) {
         try {
-          await this.people.update(current.personId, personPatch, actorId, tx);
+          await this.clientContacts.update(current.clientContactId, clientContactPatch, actorId, tx);
         } catch (error) {
           if (isUniqueViolation(error)) {
             throw new ConflictException(
-              personPatch.primaryEmail
-                ? `A person with email "${personPatch.primaryEmail}" already exists in the directory. Use the Directory merge tool to combine identities.`
+              clientContactPatch.primaryEmail
+                ? `A contact with email "${clientContactPatch.primaryEmail}" already exists in the directory. Use the Directory merge tool to combine identities.`
                 : `Directory uniqueness conflict — use the Directory merge tool to resolve.`,
             );
           }
@@ -74,15 +74,15 @@ export class ContactsService {
   }
 
   softDelete(id: string, actorId: string, accessCtx?: DataAccessContext) {
-    // Soft-delete only the recruit_contacts row. The directory person stays —
-    // they may still be referenced by other domains. Identity-level deletion
-    // is an explicit admin action via directory.
+    // Soft-delete only the recruit_contacts row. The directory client contact
+    // stays — it may still be referenced by other domains. Identity-level
+    // deletion is an explicit admin action via directory.
     return this.entityService.softDelete(id, actorId, accessCtx);
   }
 
   clone(id: string, actorId: string) {
-    // Cloned contact points at the same directory person — same identity,
-    // different recruit-side commercial relationship.
+    // Cloned contact points at the same directory client contact — same
+    // identity, different recruit-side commercial relationship.
     return this.entityService.clone(id, actorId);
   }
 
@@ -95,25 +95,25 @@ export class ContactsService {
   }
 }
 
-function toFindOrCreatePerson(
+function toFindOrCreateClientContact(
   input: CreateContactDto,
-  companyId: string | null,
-): FindOrCreatePersonInput {
+  clientId: string | null,
+): FindOrCreateClientContactInput {
   return {
     fullName: composeFullName(input.firstName, input.lastName),
     primaryEmail: normalizeEmail(input.email),
     primaryPhone: input.mobile ?? input.workPhone ?? null,
     linkedinUrl: input.linkedinUrl ?? null,
     jobTitle: input.jobTitle ?? null,
-    companyId,
+    clientId,
   };
 }
 
-function toPersonPatch(
+function toClientContactPatch(
   input: UpdateContactDto,
-  currentCompanyId: string | null,
-): UpdatePersonInput {
-  const patch: UpdatePersonInput = {};
+  currentClientId: string | null,
+): UpdateClientContactInput {
+  const patch: UpdateClientContactInput = {};
   if (input.firstName !== undefined || input.lastName !== undefined) {
     patch.fullName = composeFullName(input.firstName, input.lastName);
   }
@@ -126,12 +126,12 @@ function toPersonPatch(
   if (input.linkedinUrl !== undefined) patch.linkedinUrl = input.linkedinUrl ?? null;
   if (input.jobTitle !== undefined) patch.jobTitle = input.jobTitle ?? null;
 
-  // If companyId changed, update the person's companyId to track the new
-  // company. Last-writer-wins semantics: if multiple recruit_contacts share a
-  // person via dedup, the most recent companyId change determines the
-  // person's company.
-  if (input.companyId !== undefined && input.companyId !== currentCompanyId) {
-    patch.companyId = input.companyId ?? null;
+  // If clientId changed, update the client contact's clientId to track the
+  // new client. Last-writer-wins semantics: if multiple recruit_contacts
+  // share an identity via dedup, the most recent clientId change determines
+  // the contact's client.
+  if (input.clientId !== undefined && input.clientId !== currentClientId) {
+    patch.clientId = input.clientId ?? null;
   }
   return patch;
 }

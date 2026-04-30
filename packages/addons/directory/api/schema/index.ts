@@ -1,4 +1,4 @@
-export { companies, baseCompanyColumns } from './companies';
-export type { Company, NewCompany } from './companies';
-export { people } from './people';
-export type { Person, NewPerson } from './people';
+export { clients, baseClientColumns } from './clients';
+export type { Client, NewClient } from './clients';
+export { clientContacts } from './client-contacts';
+export type { ClientContact, NewClientContact } from './client-contacts';

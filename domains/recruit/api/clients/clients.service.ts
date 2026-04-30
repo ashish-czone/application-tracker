@@ -17,16 +17,16 @@ import {
 } from '@packages/database';
 import { computePagination, computePaginationMeta } from '@packages/query-builder';
 import {
-  CompaniesService,
-  type FindOrCreateCompanyInput,
-  type UpdateCompanyInput,
+  ClientsService as DirectoryClientsService,
+  type FindOrCreateClientInput,
+  type UpdateClientInput,
 } from '@packages/directory';
 import { ScopeResolverRegistry, type DataAccessContext } from '@packages/rbac';
 import { DomainEventEmitter } from '@packages/events';
 import { LookupResolverService, type CustomLookupResolver, type LookupResult } from '@packages/entity-engine';
 import type { PaginatedResponse } from '@packages/common';
 import type { CreateClientDto, UpdateClientDto } from './clients.dto';
-import { companies, type RecruitAddress } from './companies-ref';
+import { clients, type RecruitAddress } from './clients-ref';
 
 /** Subset of `BaseListQuery` we read directly. */
 interface ClientsListQuery {
@@ -39,20 +39,20 @@ interface ClientsListQuery {
 }
 
 const SORTABLE = {
-  clientName: companies.name,
-  industry: companies.industry,
-  createdAt: companies.recruitBecameClientAt,
-  updatedAt: companies.updatedAt,
+  clientName: clients.name,
+  industry: clients.industry,
+  createdAt: clients.recruitBecameClientAt,
+  updatedAt: clients.updatedAt,
 } as const;
 
-/** A company row IS a recruit client when this marker is set. */
-const IS_RECRUIT_CLIENT = isNotNull(companies.recruitBecameClientAt);
+/** A directory client row IS a recruit client when this marker is set. */
+const IS_RECRUIT_CLIENT = isNotNull(clients.recruitBecameClientAt);
 
 @Injectable()
 export class ClientsService implements OnModuleInit {
   constructor(
     private readonly database: DatabaseService,
-    private readonly companies: CompaniesService,
+    private readonly directoryClients: DirectoryClientsService,
     private readonly scopeResolvers: ScopeResolverRegistry,
     private readonly events: DomainEventEmitter,
     private readonly lookupResolver: LookupResolverService,
@@ -67,27 +67,27 @@ export class ClientsService implements OnModuleInit {
       search: async (query, limit): Promise<LookupResult[]> => {
         const term = `%${query}%`;
         const rows = await this.database.db
-          .select({ label: companies.name, value: companies.id })
-          .from(companies)
-          .where(and(IS_RECRUIT_CLIENT, isNull(companies.recruitArchivedAt), ilike(companies.name, term)))
+          .select({ label: clients.name, value: clients.id })
+          .from(clients)
+          .where(and(IS_RECRUIT_CLIENT, isNull(clients.recruitArchivedAt), ilike(clients.name, term)))
           .limit(limit);
         return rows.map(r => ({ label: String(r.label ?? ''), value: String(r.value ?? '') }));
       },
 
       getLabel: async (value) => {
         const [row] = await this.database.db
-          .select({ label: companies.name })
-          .from(companies)
-          .where(eq(companies.id, value))
+          .select({ label: clients.name })
+          .from(clients)
+          .where(eq(clients.id, value))
           .limit(1);
         return row ? String(row.label ?? '') : null;
       },
 
       getBatchLabels: async (values) => {
         const rows = await this.database.db
-          .select({ id: companies.id, label: companies.name })
-          .from(companies)
-          .where(inArray(companies.id, values));
+          .select({ id: clients.id, label: clients.name })
+          .from(clients)
+          .where(inArray(clients.id, values));
         const result = new Map<string, string>();
         for (const row of rows) {
           result.set(String(row.id), String(row.label ?? ''));
@@ -116,12 +116,12 @@ export class ClientsService implements OnModuleInit {
     if (scopeCond) conditions.push(scopeCond);
 
     if (!query.includeDeleted) {
-      conditions.push(isNull(companies.recruitArchivedAt));
+      conditions.push(isNull(clients.recruitArchivedAt));
     }
 
     if (query.search) {
       const term = `%${query.search}%`;
-      conditions.push(ilike(companies.name, term));
+      conditions.push(ilike(clients.name, term));
     }
 
     const where = and(...conditions);
@@ -129,12 +129,12 @@ export class ClientsService implements OnModuleInit {
 
     const [{ total }] = await this.database.db
       .select({ total: count() })
-      .from(companies)
+      .from(clients)
       .where(where);
 
     const rows = await this.database.db
       .select(this.buildSelectMap())
-      .from(companies)
+      .from(clients)
       .where(where)
       .orderBy(orderExpr)
       .limit(limit)
@@ -150,14 +150,14 @@ export class ClientsService implements OnModuleInit {
     id: string,
     accessCtx?: DataAccessContext,
   ): Promise<Record<string, unknown>> {
-    const conditions: SQL[] = [eq(companies.id, id), IS_RECRUIT_CLIENT, isNull(companies.recruitArchivedAt)];
+    const conditions: SQL[] = [eq(clients.id, id), IS_RECRUIT_CLIENT, isNull(clients.recruitArchivedAt)];
 
     const scopeCond = await this.resolveScope(accessCtx);
     if (scopeCond) conditions.push(scopeCond);
 
     const [row] = await this.database.db
       .select(this.buildSelectMap())
-      .from(companies)
+      .from(clients)
       .where(and(...conditions))
       .limit(1);
 
@@ -174,15 +174,15 @@ export class ClientsService implements OnModuleInit {
 
   async create(input: CreateClientDto, actorId: string) {
     const inserted = await this.database.db.transaction(async (tx) => {
-      const company = await this.companies.findOrCreate(
-        toFindOrCreateCompany(input),
+      const client = await this.directoryClients.findOrCreate(
+        toFindOrCreateClient(input),
         actorId,
         tx,
       );
       const now = new Date();
 
       await tx
-        .update(companies)
+        .update(clients)
         .set({
           recruitAbout: input.about ?? null,
           recruitContactNumber: input.contactNumber ?? null,
@@ -192,9 +192,9 @@ export class ClientsService implements OnModuleInit {
           recruitBecameClientAt: now,
           recruitArchivedAt: null,
         })
-        .where(eq(companies.id, company.id));
+        .where(eq(clients.id, client.id));
 
-      return { id: company.id };
+      return { id: client.id };
     });
 
     const snapshot = await this.findOne(inserted.id);
@@ -217,16 +217,16 @@ export class ClientsService implements OnModuleInit {
     const before = await this.findOne(id, accessCtx);
 
     await this.database.db.transaction(async (tx) => {
-      // Identity sync — translate clientName/website/industry → company base columns.
-      const companyPatch = toCompanyPatch(input);
-      if (Object.keys(companyPatch).length > 0) {
+      // Identity sync — translate clientName/website/industry → directory base columns.
+      const clientPatch = toClientPatch(input);
+      if (Object.keys(clientPatch).length > 0) {
         try {
-          await this.companies.update(id, companyPatch, actorId, tx);
+          await this.directoryClients.update(id, clientPatch, actorId, tx);
         } catch (error) {
           if (isUniqueViolation(error)) {
             throw new ConflictException(
-              companyPatch.name
-                ? `A company named "${companyPatch.name}" already exists in the directory. Use the Directory merge tool to combine identities.`
+              clientPatch.name
+                ? `A client named "${clientPatch.name}" already exists in the directory. Use the Directory merge tool to combine identities.`
                 : `Directory uniqueness conflict — use the Directory merge tool to resolve.`,
             );
           }
@@ -234,14 +234,14 @@ export class ClientsService implements OnModuleInit {
         }
       }
 
-      // Recruit-prefix patch on the same company row. Address jsonb is rebuilt
+      // Recruit-prefix patch on the same client row. Address jsonb is rebuilt
       // by merging the patch over previous flat values from `before`.
-      const recruitPatch = toCompanyRecruitPatch(input, before);
+      const recruitPatch = toClientRecruitPatch(input, before);
       if (Object.keys(recruitPatch).length > 0) {
         await tx
-          .update(companies)
+          .update(clients)
           .set(recruitPatch)
-          .where(eq(companies.id, id));
+          .where(eq(clients.id, id));
       }
     });
 
@@ -264,9 +264,9 @@ export class ClientsService implements OnModuleInit {
     const now = new Date();
 
     await this.database.db
-      .update(companies)
+      .update(clients)
       .set({ recruitArchivedAt: now })
-      .where(eq(companies.id, id));
+      .where(eq(clients.id, id));
 
     this.events.emitDynamic('clients.Deleted', {
       entityType: 'clients',
@@ -303,60 +303,61 @@ export class ClientsService implements OnModuleInit {
 
   async restore(id: string) {
     const [row] = await this.database.db
-      .select({ id: companies.id })
-      .from(companies)
-      .where(and(eq(companies.id, id), IS_RECRUIT_CLIENT))
+      .select({ id: clients.id })
+      .from(clients)
+      .where(and(eq(clients.id, id), IS_RECRUIT_CLIENT))
       .limit(1);
     if (!row) {
       throw new NotFoundException('Client not found');
     }
 
     await this.database.db
-      .update(companies)
+      .update(clients)
       .set({ recruitArchivedAt: null })
-      .where(eq(companies.id, id));
+      .where(eq(clients.id, id));
 
     return this.findOne(id);
   }
 
   /**
-   * Picker bridge: stamp `companies.recruit_became_client_at` for the picked
-   * company so it shows up as a recruit client. Returns `{ id: companyId }`
-   * — child tables FK companies directly, so the picker stores the company.id.
+   * Picker bridge: stamp `clients.recruit_became_client_at` for the picked
+   * directory client so it shows up as a recruit client. Returns `{ id }` —
+   * child tables FK the shared identity row directly, so the picker stores
+   * the `clients.id`.
    */
-  async findOrCreateForCompany(
-    companyId: string,
+  async findOrCreateForClient(
+    clientId: string,
     actorId: string,
     externalTx?: DrizzleTx,
   ): Promise<{ id: string; created: boolean }> {
     const exec = externalTx ?? this.database.db;
     const [existing] = await exec
-      .select({ id: companies.id, became: companies.recruitBecameClientAt })
-      .from(companies)
-      .where(eq(companies.id, companyId))
+      .select({ id: clients.id, became: clients.recruitBecameClientAt })
+      .from(clients)
+      .where(eq(clients.id, clientId))
       .limit(1);
     if (!existing) {
-      throw new NotFoundException('Company not found');
+      throw new NotFoundException('Client not found');
     }
     if (existing.became) {
-      return { id: companyId, created: false };
+      return { id: clientId, created: false };
     }
 
     const now = new Date();
     await exec
-      .update(companies)
+      .update(clients)
       .set({ recruitBecameClientAt: now, recruitArchivedAt: null })
-      .where(eq(companies.id, companyId));
+      .where(eq(clients.id, clientId));
 
-    const snapshot = await this.findOne(companyId);
+    const snapshot = await this.findOne(clientId);
     this.events.emitDynamic('clients.Created', {
       entityType: 'clients',
-      entityId: companyId,
+      entityId: clientId,
       actorId,
       payload: { after: snapshot },
     });
 
-    return { id: companyId, created: true };
+    return { id: clientId, created: true };
   }
 
   // ---------------------------------------------------------------------------
@@ -365,35 +366,35 @@ export class ClientsService implements OnModuleInit {
 
   private buildSelectMap() {
     return {
-      id: companies.id,
-      companyId: companies.id, // alias for backward compat — the row id IS the company id
-      clientName: companies.name,
-      contactNumber: companies.recruitContactNumber,
-      website: companies.websiteDomain,
-      industry: companies.industry,
-      about: companies.recruitAbout,
-      source: companies.recruitSource,
-      billingStreet: sql<string | null>`${companies.recruitBillingAddress}->>'street'`.as('billing_street'),
-      billingCity: sql<string | null>`${companies.recruitBillingAddress}->>'city'`.as('billing_city'),
-      billingProvince: sql<string | null>`${companies.recruitBillingAddress}->>'province'`.as('billing_province'),
-      billingCode: sql<string | null>`${companies.recruitBillingAddress}->>'postalCode'`.as('billing_code'),
-      billingCountry: sql<string | null>`${companies.recruitBillingAddress}->>'country'`.as('billing_country'),
-      shippingStreet: sql<string | null>`${companies.recruitShippingAddress}->>'street'`.as('shipping_street'),
-      shippingCity: sql<string | null>`${companies.recruitShippingAddress}->>'city'`.as('shipping_city'),
-      shippingProvince: sql<string | null>`${companies.recruitShippingAddress}->>'province'`.as('shipping_province'),
-      shippingCode: sql<string | null>`${companies.recruitShippingAddress}->>'postalCode'`.as('shipping_code'),
-      shippingCountry: sql<string | null>`${companies.recruitShippingAddress}->>'country'`.as('shipping_country'),
-      createdBy: companies.createdBy,
-      createdAt: companies.recruitBecameClientAt,
-      updatedAt: companies.updatedAt,
-      deletedAt: companies.recruitArchivedAt,
+      id: clients.id,
+      clientId: clients.id, // alias — the row id IS the directory client id
+      clientName: clients.name,
+      contactNumber: clients.recruitContactNumber,
+      website: clients.websiteDomain,
+      industry: clients.industry,
+      about: clients.recruitAbout,
+      source: clients.recruitSource,
+      billingStreet: sql<string | null>`${clients.recruitBillingAddress}->>'street'`.as('billing_street'),
+      billingCity: sql<string | null>`${clients.recruitBillingAddress}->>'city'`.as('billing_city'),
+      billingProvince: sql<string | null>`${clients.recruitBillingAddress}->>'province'`.as('billing_province'),
+      billingCode: sql<string | null>`${clients.recruitBillingAddress}->>'postalCode'`.as('billing_code'),
+      billingCountry: sql<string | null>`${clients.recruitBillingAddress}->>'country'`.as('billing_country'),
+      shippingStreet: sql<string | null>`${clients.recruitShippingAddress}->>'street'`.as('shipping_street'),
+      shippingCity: sql<string | null>`${clients.recruitShippingAddress}->>'city'`.as('shipping_city'),
+      shippingProvince: sql<string | null>`${clients.recruitShippingAddress}->>'province'`.as('shipping_province'),
+      shippingCode: sql<string | null>`${clients.recruitShippingAddress}->>'postalCode'`.as('shipping_code'),
+      shippingCountry: sql<string | null>`${clients.recruitShippingAddress}->>'country'`.as('shipping_country'),
+      createdBy: clients.createdBy,
+      createdAt: clients.recruitBecameClientAt,
+      updatedAt: clients.updatedAt,
+      deletedAt: clients.recruitArchivedAt,
       contactsCount: sql<number>`(
         SELECT COUNT(*)::integer FROM "recruit_contacts"
-        WHERE "company_id" = ${companies.id} AND "deleted_at" IS NULL
+        WHERE "company_id" = ${clients.id} AND "deleted_at" IS NULL
       )`.as('contactsCount'),
       jobOpeningsCount: sql<number>`(
         SELECT COUNT(*)::integer FROM "job_openings"
-        WHERE "company_id" = ${companies.id} AND "deleted_at" IS NULL
+        WHERE "company_id" = ${clients.id} AND "deleted_at" IS NULL
       )`.as('jobOpeningsCount'),
     };
   }
@@ -409,7 +410,7 @@ export class ClientsService implements OnModuleInit {
     if (ctx.scopes.length === 0) return sql`1=0`;
     if (ctx.scopes.some((s) => s.type === 'any')) return undefined;
 
-    const anchors = { creator: companies.createdBy };
+    const anchors = { creator: clients.createdBy };
     const predicates: SQL[] = [];
     for (const scope of ctx.scopes) {
       const resolver = this.scopeResolvers.get(scope.type);
@@ -428,7 +429,7 @@ export class ClientsService implements OnModuleInit {
 // HELPERS
 // ---------------------------------------------------------------------------
 
-function toFindOrCreateCompany(input: CreateClientDto): FindOrCreateCompanyInput {
+function toFindOrCreateClient(input: CreateClientDto): FindOrCreateClientInput {
   return {
     name: input.clientName,
     websiteDomain: normalizeWebsiteDomain(input.website),
@@ -436,8 +437,8 @@ function toFindOrCreateCompany(input: CreateClientDto): FindOrCreateCompanyInput
   };
 }
 
-function toCompanyPatch(input: UpdateClientDto): UpdateCompanyInput {
-  const patch: UpdateCompanyInput = {};
+function toClientPatch(input: UpdateClientDto): UpdateClientInput {
+  const patch: UpdateClientInput = {};
   if (input.clientName !== undefined) patch.name = input.clientName;
   if (input.website !== undefined) patch.websiteDomain = normalizeWebsiteDomain(input.website);
   if (input.industry !== undefined) patch.industry = input.industry ?? null;
@@ -447,7 +448,7 @@ function toCompanyPatch(input: UpdateClientDto): UpdateCompanyInput {
 const BILLING_KEYS = ['billingStreet', 'billingCity', 'billingProvince', 'billingCode', 'billingCountry'] as const;
 const SHIPPING_KEYS = ['shippingStreet', 'shippingCity', 'shippingProvince', 'shippingCode', 'shippingCountry'] as const;
 
-function toCompanyRecruitPatch(
+function toClientRecruitPatch(
   input: UpdateClientDto,
   before: Record<string, unknown>,
 ): Record<string, unknown> {

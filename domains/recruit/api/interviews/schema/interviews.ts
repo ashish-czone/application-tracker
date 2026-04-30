@@ -8,7 +8,7 @@ export const interviews = pgTable('interviews', {
   interviewType: text('interview_type'),
   round: integer('round'),
   candidateId: text('candidate_id').notNull(),
-  companyId: text('company_id'),
+  clientId: text('company_id'),
   jobOpeningId: text('job_opening_id').notNull(),
   interviewFrom: timestamp('interview_from', { withTimezone: true, mode: 'string' }).notNull(),
   interviewTo: timestamp('interview_to', { withTimezone: true, mode: 'string' }).notNull(),
@@ -26,7 +26,7 @@ export const interviews = pgTable('interviews', {
 }, (table) => [
   index('interviews_candidate_id_idx').on(table.candidateId),
   index('interviews_job_opening_id_idx').on(table.jobOpeningId),
-  index('interviews_company_id_idx').on(table.companyId),
+  index('interviews_company_id_idx').on(table.clientId),
   index('interviews_status_idx').on(table.status),
   index('interviews_interview_from_idx').on(table.interviewFrom),
   index('interviews_created_by_idx').on(table.createdBy),

@@ -294,7 +294,7 @@ export function JobOpeningDetailPage() {
   const title = String(item.title ?? '');
   const status = String(item.status ?? 'in-progress');
   const statusStyle = STATUS_STYLES[status] ?? STATUS_STYLES['in-progress'];
-  const clientName = item.companyId__label as string;
+  const clientName = item.clientId__label as string;
   const dept = item.department as string;
   const loc = item.location as string;
   const positions = Number(item.numberOfPositions ?? 1);

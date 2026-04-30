@@ -18,7 +18,7 @@ export const JOB_OPENINGS_CONFIG: EntityConfig = {
   fieldMeta: {
     // ── Job Opening Information ──────────────────────────────────────────
     title: { label: 'Posting Title', section: 'jobOpeningInfo', sortOrder: 0, isQuickCreate: true, isSystem: true, maxLength: 250 },
-    companyId: {
+    clientId: {
       label: 'Client Name', section: 'jobOpeningInfo', sortOrder: 1, isQuickCreate: true,
       fieldType: 'lookup', lookupEntity: 'clients',
     },
@@ -173,7 +173,7 @@ export const JOB_OPENINGS_CONFIG: EntityConfig = {
   sections: [
     {
       name: 'Job Opening Information', columns: 2,
-      fields: ['title', 'companyId', 'contactId', 'hiringManager', 'accountManager', 'assignedRecruiters', 'dateOpened', 'targetDate', 'employmentType', 'status', 'experience', 'industry', 'jobFunction', 'confidential', 'requiredSkills'],
+      fields: ['title', 'clientId', 'contactId', 'hiringManager', 'accountManager', 'assignedRecruiters', 'dateOpened', 'targetDate', 'employmentType', 'status', 'experience', 'industry', 'jobFunction', 'confidential', 'requiredSkills'],
     },
     {
       name: 'Address Information', columns: 2,
@@ -197,7 +197,7 @@ export const JOB_OPENINGS_CONFIG: EntityConfig = {
     },
   ],
 
-  listFields: ['title', 'companyId', 'status', 'targetDate', 'applicationsCount'],
+  listFields: ['title', 'clientId', 'status', 'targetDate', 'applicationsCount'],
 
   lookup: {
     labelField: 'title',

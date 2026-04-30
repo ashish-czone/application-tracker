@@ -1,5 +1,5 @@
 import type { EntityUIConfig } from '@packages/entity-engine-ui';
-import { searchCompaniesForClientPicker, resolveCompanyToClient } from './companyId-picker';
+import { searchClientsForPicker, resolveClientForRecruit } from './clientId-picker';
 
 export const INTERVIEWS_UI_CONFIG: EntityUIConfig = {
   entityType: 'interviews',
@@ -15,10 +15,10 @@ export const INTERVIEWS_UI_CONFIG: EntityUIConfig = {
     interviewType: { label: 'Interview Type' },
     round: { label: 'Round' },
     candidateId: { label: 'Candidate' },
-    companyId: {
+    clientId: {
       label: 'Client',
-      lookupSearch: searchCompaniesForClientPicker,
-      lookupResolveValue: resolveCompanyToClient,
+      lookupSearch: searchClientsForPicker,
+      lookupResolveValue: resolveClientForRecruit,
     },
     jobOpeningId: { label: 'Job Opening' },
     interviewers: { label: 'Interviewer(s)' },
@@ -32,7 +32,7 @@ export const INTERVIEWS_UI_CONFIG: EntityUIConfig = {
   },
   formLayout: {
     sections: [
-      { name: 'Interview Information', fields: ['interviewName', 'interviewType', 'round', 'candidateId', 'companyId', 'jobOpeningId', 'status', 'interviewers'] },
+      { name: 'Interview Information', fields: ['interviewName', 'interviewType', 'round', 'candidateId', 'clientId', 'jobOpeningId', 'status', 'interviewers'] },
       { name: 'Schedule', fields: ['interviewFrom', 'interviewTo', 'duration', 'location', 'videoLink', 'scheduleComments'] },
     ],
     quickCreateFields: ['interviewName', 'interviewType', 'candidateId', 'jobOpeningId', 'interviewFrom', 'interviewTo'],

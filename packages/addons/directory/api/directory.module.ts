@@ -2,17 +2,17 @@ import { Module, type OnModuleInit } from '@nestjs/common';
 import { RbacIntegrationModule } from '@packages/rbac';
 import { AuditRegistryService } from '@packages/audit';
 import { EventRegistryService } from '@packages/events';
-import { CompaniesService } from './services/companies.service';
-import { PeopleService } from './services/people.service';
-import { CompaniesController } from './controllers/companies.controller';
-import { PeopleController } from './controllers/people.controller';
+import { ClientsService } from './services/clients.service';
+import { ClientContactsService } from './services/client-contacts.service';
+import { ClientsController } from './controllers/clients.controller';
+import { ClientContactsController } from './controllers/client-contacts.controller';
 import {
-  DIRECTORY_COMPANY_CREATED,
-  DIRECTORY_COMPANY_UPDATED,
-  DIRECTORY_COMPANY_MERGED,
-  DIRECTORY_PERSON_CREATED,
-  DIRECTORY_PERSON_UPDATED,
-  DIRECTORY_PERSON_MERGED,
+  DIRECTORY_CLIENT_CREATED,
+  DIRECTORY_CLIENT_UPDATED,
+  DIRECTORY_CLIENT_MERGED,
+  DIRECTORY_CLIENT_CONTACT_CREATED,
+  DIRECTORY_CLIENT_CONTACT_UPDATED,
+  DIRECTORY_CLIENT_CONTACT_MERGED,
 } from './events/types';
 
 @Module({
@@ -24,7 +24,7 @@ import {
           module: 'directory',
           action: 'read',
           label: 'Read directory records',
-          description: 'Search and read companies / people in the identity directory (picker autocomplete)',
+          description: 'Search and read clients / client_contacts in the identity directory (picker autocomplete)',
           supportedScopes: ['any'],
         },
         {
@@ -32,15 +32,15 @@ import {
           module: 'directory',
           action: 'merge',
           label: 'Merge directory records',
-          description: 'Merge two companies or two people in the identity directory',
+          description: 'Merge two clients or two client_contacts in the identity directory',
           supportedScopes: ['any'],
         },
       ],
     }),
   ],
-  controllers: [CompaniesController, PeopleController],
-  providers: [CompaniesService, PeopleService],
-  exports: [CompaniesService, PeopleService],
+  controllers: [ClientsController, ClientContactsController],
+  providers: [ClientsService, ClientContactsService],
+  exports: [ClientsService, ClientContactsService],
 })
 export class DirectoryModule implements OnModuleInit {
   constructor(
@@ -51,22 +51,22 @@ export class DirectoryModule implements OnModuleInit {
   onModuleInit() {
     this.auditRegistry.register('directory', {
       events: [
-        DIRECTORY_COMPANY_CREATED,
-        DIRECTORY_COMPANY_UPDATED,
-        DIRECTORY_COMPANY_MERGED,
-        DIRECTORY_PERSON_CREATED,
-        DIRECTORY_PERSON_UPDATED,
-        DIRECTORY_PERSON_MERGED,
+        DIRECTORY_CLIENT_CREATED,
+        DIRECTORY_CLIENT_UPDATED,
+        DIRECTORY_CLIENT_MERGED,
+        DIRECTORY_CLIENT_CONTACT_CREATED,
+        DIRECTORY_CLIENT_CONTACT_UPDATED,
+        DIRECTORY_CLIENT_CONTACT_MERGED,
       ],
     });
 
     for (const eventName of [
-      DIRECTORY_COMPANY_CREATED,
-      DIRECTORY_COMPANY_UPDATED,
-      DIRECTORY_COMPANY_MERGED,
-      DIRECTORY_PERSON_CREATED,
-      DIRECTORY_PERSON_UPDATED,
-      DIRECTORY_PERSON_MERGED,
+      DIRECTORY_CLIENT_CREATED,
+      DIRECTORY_CLIENT_UPDATED,
+      DIRECTORY_CLIENT_MERGED,
+      DIRECTORY_CLIENT_CONTACT_CREATED,
+      DIRECTORY_CLIENT_CONTACT_UPDATED,
+      DIRECTORY_CLIENT_CONTACT_MERGED,
     ] as const) {
       this.eventRegistry.register({
         eventName,

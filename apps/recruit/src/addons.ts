@@ -50,8 +50,8 @@ export const recruitAddons: readonly Addon[] = [
   automationsAddon,
   workflowsAddon,
   ...tenancyAddons,
-  // directory is the canonical companies + people identity registry — recruit's
-  // clients/contacts FK to it after R-1.
+  // directory is the canonical clients + client_contacts identity registry —
+  // recruit's clients/contacts FK to it after R-1.
   directoryAddon,
   attachmentsAddon,
   documentTemplatesAddon(),

@@ -25,7 +25,7 @@ export const CLIENTS_UI_CONFIG: EntityUIConfig = {
     navOrder: 4,
   },
   fieldUI: {
-    // Identity columns are projected from directory.companies via JOIN in
+    // Identity columns are projected from the directory clients row in
     // ClientsService; the FE renders them by these keys on list/detail rows.
     clientName: { label: 'Client Name', cellRenderer: 'AvatarNameCell' },
     industry: { label: 'Industry' },
@@ -51,9 +51,9 @@ export const CLIENTS_UI_CONFIG: EntityUIConfig = {
       { name: 'Shipping Address', fields: ['shippingStreet', 'shippingCity', 'shippingProvince', 'shippingCode', 'shippingCountry'] },
     ],
     quickCreateFields: ['clientName', 'website', 'industry', 'contactNumber'],
-    // Identity fields don't exist on `recruit_clients` — they live on
-    // directory.companies. The form collects them as synthetic fields and the
-    // ClientsService routes them to the directory via findOrCreate / update.
+    // Identity fields don't exist on `recruit_clients` — they live on the
+    // directory clients row. The form collects them as synthetic fields and
+    // the ClientsService routes them to the directory via findOrCreate / update.
     syntheticFields: [
       {
         section: 'Client Information', fieldKey: 'clientName',

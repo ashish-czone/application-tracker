@@ -5,7 +5,7 @@ export const jobOpenings = pgTable('job_openings', {
   id: text('id').primaryKey().$defaultFn(() => randomUUID()),
   // Job Opening Information
   title: text('title').notNull(),
-  companyId: text('company_id'),
+  clientId: text('company_id'),
   contactId: text('contact_id'),
   dateOpened: date('date_opened', { mode: 'string' }),
   targetDate: date('target_date', { mode: 'string' }),
@@ -45,6 +45,6 @@ export const jobOpenings = pgTable('job_openings', {
 }, (table) => [
   index('job_openings_status_idx').on(table.status),
   index('job_openings_department_idx').on(table.department),
-  index('job_openings_company_id_idx').on(table.companyId),
+  index('job_openings_company_id_idx').on(table.clientId),
   index('job_openings_created_by_idx').on(table.createdBy),
 ]);

@@ -1,7 +1,7 @@
 export const DIRECTORY_PERMISSIONS = {
-  /** Read directory records (search/list companies & people via picker). */
+  /** Read directory records (search/list clients & client_contacts via picker). */
   READ: 'directory.read',
-  /** Merge two records (companies or people) — ops only. */
+  /** Merge two records (clients or client_contacts) — ops only. */
   MERGE: 'directory.merge',
   /** Cross-tenant search across all directory records — ops only. Reserved for v2. */
   GLOBAL_SEARCH: 'directory.search.global',
