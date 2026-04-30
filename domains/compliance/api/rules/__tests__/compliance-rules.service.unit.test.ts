@@ -446,7 +446,7 @@ describe('ComplianceRulesService', () => {
       db.db.select.mockReturnValueOnce(mockSelectRowsWithLimit([handlerRow]));
       // 2) one active registration on the law
       db.db.select.mockReturnValueOnce(mockSelectRows([{ clientId: 'c1', lawId: 'l1' }]));
-      // 3) canResolveAssignee → findResolvedHandler reads handlers excluding h1
+      // 3) handlers-for-law lookup (hoisted outside the per-registration loop)
       db.db.select.mockReturnValueOnce(mockSelectRows([
         handlerRow,
         { ...handlerRow, id: 'h2', orgEntityId: 'org-2', isPrimary: false },
@@ -459,7 +459,7 @@ describe('ComplianceRulesService', () => {
       db.db.select.mockReturnValueOnce(mockSelectRowsWithLimit([handlerRow]));
       // 2) one active registration
       db.db.select.mockReturnValueOnce(mockSelectRows([{ clientId: 'c1', lawId: 'l1' }]));
-      // 3) the only handler is h1 — excluding it leaves nothing
+      // 3) handlers-for-law lookup — only h1 exists, so excluding it leaves nothing
       db.db.select.mockReturnValueOnce(mockSelectRows([handlerRow]));
 
       await expect(service.assertHandlerCanBeDeleted('h1')).rejects.toBeInstanceOf(LawHandlerRequiredError);
@@ -473,8 +473,7 @@ describe('ComplianceRulesService', () => {
         { clientId: 'c1', lawId: 'l1' },
         { clientId: 'c2', lawId: 'l1' },
       ]));
-      // 3) and 4) per-registration resolver lookup — both miss after exclusion
-      db.db.select.mockReturnValueOnce(mockSelectRows([handlerRow]));
+      // 3) ONE handlers-for-law lookup feeds in-memory resolution for both registrations
       db.db.select.mockReturnValueOnce(mockSelectRows([handlerRow]));
 
       try {
@@ -486,6 +485,28 @@ describe('ComplianceRulesService', () => {
         expect(body?.code).toBe('LAW_HANDLER_REQUIRED');
         expect(body?.affectedRegistrationCount).toBe(2);
       }
+    });
+
+    it('runs a single handlers-for-law SELECT regardless of registration count', async () => {
+      db.db.select.mockReturnValueOnce(mockSelectRowsWithLimit([handlerRow]));
+      db.db.select.mockReturnValueOnce(
+        mockSelectRows([
+          { clientId: 'c1', lawId: 'l1' },
+          { clientId: 'c2', lawId: 'l1' },
+          { clientId: 'c3', lawId: 'l1' },
+          { clientId: 'c4', lawId: 'l1' },
+        ]),
+      );
+      // Single handler-list SELECT — without the hoist this would be 4 selects.
+      db.db.select.mockReturnValueOnce(
+        mockSelectRows([
+          handlerRow,
+          { ...handlerRow, id: 'h2', orgEntityId: 'org-2', isPrimary: false },
+        ]),
+      );
+      await expect(service.assertHandlerCanBeDeleted('h1')).resolves.toBeUndefined();
+      // 1 handler row + 1 registrations + 1 handlers list = 3 SELECTs total.
+      expect(db.db.select).toHaveBeenCalledTimes(3);
     });
   });
 
