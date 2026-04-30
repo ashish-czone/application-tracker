@@ -2,36 +2,51 @@ import { useMemo } from 'react';
 import { Link } from 'react-router';
 import { CalendarCheck } from 'lucide-react';
 import { Skeleton } from '@packages/ui';
-import { JurisdictionTag } from '../../../../../components';
-import type { Filing } from '../../../../../components/composites';
-import { useComplianceFilingRows } from '../../../../../hooks/useComplianceFilings';
+import { JurisdictionTag, type Jurisdiction } from '../../../../../components';
+import { useUpcomingFilings, type FilingListRow } from '../../../../../hooks/useFilingsByDueWindow';
+
+const WIDGET_LIMIT = 8;
+const WINDOW_DAYS = 7;
 
 type DueBucket = 'Due today' | 'This week';
 
-function bucketFor(filing: Filing): DueBucket | null {
-  if (filing.status === 'due-today') return 'Due today';
-  if (filing.status === 'due-this-week') return 'This week';
+function bucketFor(dueDate: string | null, todayMs: number): DueBucket | null {
+  if (!dueDate) return null;
+  const due = new Date(dueDate);
+  due.setHours(0, 0, 0, 0);
+  const days = Math.round((due.getTime() - todayMs) / 86_400_000);
+  if (days === 0) return 'Due today';
+  if (days > 0 && days <= WINDOW_DAYS) return 'This week';
   return null;
 }
 
-function formatDueDay(dueDate: string): string {
+function formatDueDay(dueDate: string | null): string {
   if (!dueDate) return '';
   const due = new Date(dueDate);
   return due.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
+function jurisdictionFor(row: FilingListRow): Jurisdiction {
+  const j = row.lawJurisdiction;
+  if (j === 'central' || j === 'state' || j === 'municipal' || j === 'international') return j;
+  return 'central';
+}
+
 export function UpcomingFilingsWidget() {
-  const { rows, loading, error } = useComplianceFilingRows();
+  const { rows, loading, error } = useUpcomingFilings({
+    limit: WIDGET_LIMIT,
+    withinDays: WINDOW_DAYS,
+  });
 
   const grouped = useMemo(() => {
-    const upcoming = rows
-      .filter((r) => bucketFor(r) !== null)
-      .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
-      .slice(0, 8);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayMs = today.getTime();
 
-    const buckets = new Map<DueBucket, Filing[]>();
-    for (const filing of upcoming) {
-      const bucket = bucketFor(filing)!;
+    const buckets = new Map<DueBucket, FilingListRow[]>();
+    for (const filing of rows) {
+      const bucket = bucketFor(filing.dueDate, todayMs);
+      if (!bucket) continue;
       const list = buckets.get(bucket);
       if (list) list.push(filing);
       else buckets.set(bucket, [filing]);
@@ -87,17 +102,12 @@ export function UpcomingFilingsWidget() {
             {items.map((filing) => (
               <li key={filing.id} className="flex items-center gap-4 px-5 py-3">
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-ink truncate">{filing.clientName}</p>
+                  <p className="text-sm text-ink truncate">{filing.clientId__label ?? '—'}</p>
                   <p className="mt-0.5 flex items-center gap-2 text-[11px] text-ink-muted">
                     <span className="font-mono uppercase tracking-tabular">
-                      {filing.lawCode}
+                      {filing.lawCode ?? ''}
                     </span>
-                    <JurisdictionTag jurisdiction={filing.jurisdiction} />
-                    {filing.periodLabel ? (
-                      <span className="font-serif italic text-ink-soft">
-                        {filing.periodLabel}
-                      </span>
-                    ) : null}
+                    <JurisdictionTag jurisdiction={jurisdictionFor(filing)} />
                   </p>
                 </div>
                 <p className="text-[11px] text-ink-soft font-sans tabular-nums shrink-0">
