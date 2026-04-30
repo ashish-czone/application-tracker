@@ -57,6 +57,8 @@ export function MenuEditor({ menuId, onBack }: MenuEditorProps) {
       await createItem.mutateAsync({
         menuId,
         label: value.label,
+        description: value.description,
+        icon: value.icon,
         linkType: value.linkType,
         url: value.url,
         pageId: value.pageId,
