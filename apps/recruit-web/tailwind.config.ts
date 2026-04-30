@@ -11,7 +11,12 @@ const config: Config = {
     '../../packages/platform/app-shell-ui/index.tsx',
     '../../packages/platform/app-shell-ui/src/**/*.{ts,tsx}',
     // @domains/recruit-ui
-    '../../domains/recruit/ui/**/*.{ts,tsx}',
+    '../../domains/recruit/ui/index.tsx',
+    '../../domains/recruit/ui/components/**/*.{ts,tsx}',
+    '../../domains/recruit/ui/entity-configs/**/*.{ts,tsx}',
+    '../../domains/recruit/ui/hooks/**/*.{ts,tsx}',
+    '../../domains/recruit/ui/lib/**/*.{ts,tsx}',
+    '../../domains/recruit/ui/portals/**/*.{ts,tsx}',
     // @packages/ui (core)
     '../../packages/core/ui/components/**/*.{ts,tsx}',
     '../../packages/core/ui/hooks/**/*.{ts,tsx}',
