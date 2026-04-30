@@ -68,17 +68,23 @@ const HOME: PageSeed = {
     {
       order: 0,
       blockKind: 'hero',
-      variant: 'default',
+      variant: 'warm',
       title: 'Hero',
       customFields: {
         eyebrow: `Available for new work · ${new Date().getFullYear()}`,
         headline: 'Ship the product. Skip the agency theatrics.',
+        keyword: 'the product',
         subheadline:
           'A compact team of senior engineers and designers shipping web, mobile, and AI products end-to-end — from first sketch to production at scale.',
         ctaText: 'Start a project',
         ctaHref: '/contact',
         ctaSecondaryText: 'See our work',
         ctaSecondaryHref: '/work',
+        badges: [
+          '180+ :: Projects shipped :: rocket',
+          '11 :: Senior engineers :: users',
+          '76 :: NPS this year :: star',
+        ].join('\n'),
       },
     },
     {
@@ -111,7 +117,7 @@ const HOME: PageSeed = {
           'AI products :: LLM-native workflows, RAG pipelines, and agent systems in production.',
           'Shopify :: Headless storefronts on Hydrogen, custom themes, and app integrations.',
           'Digital marketing :: Technical SEO, paid acquisition, and analytics instrumentation.',
-          'Strategy & design :: Product discovery, UX, and brand systems that ship with the code.',
+          'Product design :: UX research, interface design, and design systems that ship with the code.',
         ].join('\n'),
       },
     },
@@ -247,7 +253,7 @@ const SERVICES: PageSeed = {
         eyebrow: 'Services',
         headline: 'Work we take on.',
         subheadline:
-          'Five practices, one team. Most engagements span more than one — we scope to the outcome, not the title.',
+          'Six practices, one team. Most engagements span more than one — we scope to the outcome, not the title.',
       },
     },
     {
@@ -262,6 +268,7 @@ const SERVICES: PageSeed = {
           'AI engineering :: LLM apps, RAG pipelines, agent systems, and fine-tuning. Production-grade, not demos.',
           'Shopify :: Headless storefronts on Hydrogen, Liquid theme builds, Shopify apps, and migration from legacy ecom stacks.',
           'Digital marketing :: Technical SEO, paid acquisition (Meta, Google, LinkedIn), analytics instrumentation, and conversion optimization.',
+          'Product design :: UX research, interface design, and design systems that ship with the code.',
         ].join('\n'),
       },
     },
