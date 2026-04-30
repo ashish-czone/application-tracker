@@ -36,7 +36,7 @@ class ClientPayloadDto {
   @IsOptional()
   @IsString()
   @MaxLength(512)
-  website?: string;
+  websiteDomain?: string;
 
   @IsOptional()
   @IsString()
@@ -45,7 +45,7 @@ class ClientPayloadDto {
 
   @IsOptional()
   @IsUUID()
-  industryId?: string;
+  industry?: string;
 
   @IsOptional()
   @IsString()
@@ -74,52 +74,52 @@ class ClientPayloadDto {
 
   @IsOptional()
   @IsUUID()
-  countryId?: string;
+  addressCountryId?: string;
 
   @IsOptional()
   @IsUUID()
-  accountManagerId?: string;
+  complianceAccountManagerId?: string;
 
   @IsOptional()
   @IsString()
-  status?: string;
+  complianceStatus?: string;
 
   @IsOptional()
   @IsISO8601()
-  onboardedAt?: string;
+  complianceOnboardedAt?: string;
 
   @IsOptional()
   @IsString()
-  notes?: string;
+  complianceNotes?: string;
 }
 
 class ContactPayloadDto {
   @IsString()
   @MinLength(1)
   @MaxLength(255)
-  name!: string;
+  fullName!: string;
 
   @IsOptional()
   @IsEmail()
-  email?: string;
+  primaryEmail?: string;
 
   @IsOptional()
   @IsString()
   @MaxLength(32)
-  phone?: string;
+  primaryPhone?: string;
 
   @IsOptional()
   @IsString()
   @MaxLength(128)
-  designation?: string;
+  complianceDesignation?: string;
 
   @IsOptional()
   @IsBoolean()
-  isPrimary?: boolean;
+  complianceIsPrimary?: boolean;
 
   @IsOptional()
   @IsString()
-  notes?: string;
+  complianceNotes?: string;
 }
 
 export class CreateClientWithContactsDto {

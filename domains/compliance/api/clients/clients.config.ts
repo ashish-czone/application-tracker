@@ -1,5 +1,5 @@
 import { defineEntity } from '@packages/entity-engine';
-import { clients } from '../schema/clients';
+import { clients } from './clients-ref';
 
 // Address fields are declared individually here rather than through a single
 // composite `address` field because the `FieldType` union in entity-engine
@@ -41,7 +41,7 @@ export const CLIENTS_CONFIG = defineEntity({
       type: 'phone',
       label: 'Phone',
     },
-    website: {
+    websiteDomain: {
       type: 'url',
       label: 'Website',
     },
@@ -53,21 +53,21 @@ export const CLIENTS_CONFIG = defineEntity({
       listVisible: true,
       listOrder: 4,
     },
-    industryId: {
+    industry: {
       type: 'category',
       label: 'Industry',
       categoryGroupSlug: 'industries',
       listVisible: true,
       listOrder: 5,
     },
-    accountManagerId: {
+    complianceAccountManagerId: {
       type: 'user',
       label: 'Account Manager',
       isRecipient: true,
       listVisible: true,
       listOrder: 6,
     },
-    status: {
+    complianceStatus: {
       type: 'workflow',
       label: 'Status',
       system: true,
@@ -108,7 +108,7 @@ export const CLIENTS_CONFIG = defineEntity({
         ],
       },
     },
-    onboardedAt: {
+    complianceOnboardedAt: {
       type: 'datetime',
       label: 'Onboarded At',
       sortable: true,
@@ -133,12 +133,12 @@ export const CLIENTS_CONFIG = defineEntity({
       type: 'text',
       label: 'Postal Code',
     },
-    countryId: {
+    addressCountryId: {
       type: 'category',
       label: 'Country',
       categoryGroupSlug: 'countries',
     },
-    notes: {
+    complianceNotes: {
       type: 'rich_text',
       label: 'Notes',
     },
@@ -149,15 +149,15 @@ export const CLIENTS_CONFIG = defineEntity({
   sections: [
     {
       name: 'Client',
-      fields: ['name', 'legalName', 'email', 'phone', 'website', 'taxId', 'industryId', 'accountManagerId', 'status', 'onboardedAt'],
+      fields: ['name', 'legalName', 'email', 'phone', 'websiteDomain', 'taxId', 'industry', 'complianceAccountManagerId', 'complianceStatus', 'complianceOnboardedAt'],
     },
     {
       name: 'Address',
-      fields: ['addressLine1', 'addressLine2', 'city', 'state', 'postalCode', 'countryId'],
+      fields: ['addressLine1', 'addressLine2', 'city', 'state', 'postalCode', 'addressCountryId'],
     },
     {
       name: 'Notes',
-      fields: ['notes'],
+      fields: ['complianceNotes'],
     },
   ],
 });

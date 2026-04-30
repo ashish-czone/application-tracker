@@ -95,6 +95,11 @@ export async function createClient(
     id,
     name: overrides.name ?? unique('Client'),
     legalName: overrides.legalName ?? 'Test Client Pvt Ltd',
+    createdBy: overrides.createdBy ?? 'system',
+    // Marker that flags this row as a compliance client (so filters that
+    // distinguish compliance rows from directory/recruit rows match it).
+    complianceBecameClientAt: overrides.complianceBecameClientAt ?? new Date(),
+    complianceStatus: overrides.complianceStatus ?? 'onboarding',
     ...overrides,
   });
   return { id };
@@ -108,9 +113,10 @@ export async function createContact(
   const id = overrides.id ?? randomUUID();
   await db.insert(clientContacts).values({
     id,
-    clientId,
-    name: overrides.name ?? unique('Contact'),
-    isPrimary: overrides.isPrimary ?? true,
+    complianceClientId: clientId,
+    fullName: overrides.fullName ?? unique('Contact'),
+    complianceIsPrimary: overrides.complianceIsPrimary ?? true,
+    createdBy: overrides.createdBy ?? 'system',
     ...overrides,
   });
   return { id };

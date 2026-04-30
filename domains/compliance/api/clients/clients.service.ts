@@ -8,8 +8,8 @@ import {
   previewTransitionGuards,
   type TransitionGuard,
 } from '@packages/workflows';
-import { clients } from '../schema/clients';
-import { clientContacts } from '../schema/client-contacts';
+import { clients } from './clients-ref';
+import { clientContacts } from './client-contacts-ref';
 import { CLIENTS_CREATED, CLIENT_CONTACTS_CREATED } from '../events/types';
 import { ClientDormancyService } from './client-dormancy.service';
 import { ClientContactsService } from '../client-contacts/client-contacts.service';
@@ -20,6 +20,20 @@ interface ClientGuardDeps {
 }
 
 type ClientRow = Record<string, unknown> & { id: string };
+
+/**
+ * Internal field-key translation: the controller-side `fieldKey: 'status'`
+ * (the UI-facing key admins know) maps to the underlying `complianceStatus`
+ * column on the shared `companies` table after the C-2 fold. Keeping the
+ * external API stable on `'status'` means UIs and integrations don't need
+ * to follow the storage rename. Inside the service we use the column key
+ * everywhere — entity-engine reads/writes go through that name.
+ */
+const STATUS_FIELD_ALIAS = 'status';
+const STATUS_COLUMN_KEY = 'complianceStatus';
+function resolveFieldKey(fieldKey: string): string {
+  return fieldKey === STATUS_FIELD_ALIAS ? STATUS_COLUMN_KEY : fieldKey;
+}
 
 /**
  * Declarative guards for client transitions. Each row describes exactly when
@@ -58,28 +72,28 @@ export interface ClientInput {
   legalName: string;
   email?: string | null;
   phone?: string | null;
-  website?: string | null;
+  websiteDomain?: string | null;
   taxId?: string | null;
-  industryId?: string | null;
+  industry?: string | null;
   addressLine1?: string | null;
   addressLine2?: string | null;
   city?: string | null;
   state?: string | null;
   postalCode?: string | null;
-  countryId?: string | null;
-  accountManagerId?: string | null;
-  status?: string;
-  onboardedAt?: Date | null;
-  notes?: string | null;
+  addressCountryId?: string | null;
+  complianceAccountManagerId?: string | null;
+  complianceStatus?: string;
+  complianceOnboardedAt?: Date | null;
+  complianceNotes?: string | null;
 }
 
 export interface ContactInput {
-  name: string;
-  email?: string | null;
-  phone?: string | null;
-  designation?: string | null;
-  isPrimary?: boolean;
-  notes?: string | null;
+  fullName: string;
+  primaryEmail?: string | null;
+  primaryPhone?: string | null;
+  complianceDesignation?: string | null;
+  complianceIsPrimary?: boolean;
+  complianceNotes?: string | null;
 }
 
 export interface CreateWithContactsInput {
@@ -90,15 +104,15 @@ export interface CreateWithContactsInput {
 export interface Client {
   id: string;
   name: string;
-  legalName: string;
-  status: string;
+  legalName: string | null;
+  status: string | null;
   createdAt: Date;
 }
 
 export interface Contact {
   id: string;
-  clientId: string;
-  name: string;
+  clientId: string | null;
+  fullName: string;
   isPrimary: boolean;
 }
 
@@ -180,6 +194,9 @@ export class ClientsService {
    * filing for the client is auto-cancelled (Q6). The cascade runs inside
    * the same tx as the status update + workflow history — throwing rolls
    * the whole transition back.
+   *
+   * The caller-facing `fieldKey` is `'status'` for back-compat; internally
+   * we translate to `'complianceStatus'` (the column key after C-2 fold).
    */
   async transition(
     id: string,
@@ -189,12 +206,14 @@ export class ClientsService {
     options?: { reason?: string; comment?: string },
     accessCtx?: DataAccessContext,
   ): Promise<Record<string, unknown>> {
+    const internalFieldKey = resolveFieldKey(fieldKey);
+
     // Per-entity guards run before the engine. Other field flips skip the
     // guard step entirely — only `status` has gating logic on this entity.
     let warnings: string[] = [];
-    if (fieldKey === 'status') {
+    if (fieldKey === STATUS_FIELD_ALIAS) {
       const entity = await this.entityService.findOneOrFail(id, accessCtx);
-      const fromState = entity[fieldKey] as string | null;
+      const fromState = entity[internalFieldKey] as string | null;
       if (!fromState) {
         throw new BadRequestException(`Entity has no current state for field '${fieldKey}'`);
       }
@@ -204,11 +223,11 @@ export class ClientsService {
     }
 
     const ctx = await this.entityService.validateTransition(
-      id, fieldKey, toState, actorId, options, accessCtx,
+      id, internalFieldKey, toState, actorId, options, accessCtx,
     );
 
     const isDormantisation =
-      ctx.fieldKey === 'status' &&
+      ctx.fieldKey === STATUS_COLUMN_KEY &&
       ctx.fromState === 'active' &&
       ctx.toState === 'dormant';
 
@@ -227,9 +246,9 @@ export class ClientsService {
       // The in-tx cascade only catches filings that existed when its SELECT
       // ran. An event-driven generator (J3/J4/J5) on a different connection
       // can INSERT after that SELECT but before our COMMIT — its read of
-      // clients.status sees the pre-commit 'active' value, so its own
-      // isClientActive guard passes. Sweep those stragglers now that the
-      // dormantisation is committed and the new status is visible.
+      // clients.complianceStatus sees the pre-commit 'active' value, so its
+      // own isClientActive guard passes. Sweep those stragglers now that
+      // the dormantisation is committed and the new status is visible.
       const lateResult = await this.dormancy.sweepLateFilings(ctx.entityId);
       if (lateResult.cancelledFilingIds.length > 0) {
         cancelledFilingIds = [...cancelledFilingIds, ...lateResult.cancelledFilingIds];
@@ -254,9 +273,10 @@ export class ClientsService {
     actorId: string,
     accessCtx?: DataAccessContext,
   ): Promise<{ warnings: string[]; blockers: string[] }> {
-    if (fieldKey !== 'status') return { warnings: [], blockers: [] };
+    if (fieldKey !== STATUS_FIELD_ALIAS) return { warnings: [], blockers: [] };
+    const internalFieldKey = resolveFieldKey(fieldKey);
     const entity = await this.entityService.findOneOrFail(id, accessCtx);
-    const fromState = entity[fieldKey] as string | null;
+    const fromState = entity[internalFieldKey] as string | null;
     if (!fromState) return { warnings: [], blockers: [] };
     return previewTransitionGuards(CLIENT_GUARDS, entity as ClientRow, {
       fromState, toState, actor: actorId, deps: this.guardDeps(),
@@ -268,8 +288,9 @@ export class ClientsService {
   /**
    * Create a client together with its contacts in a single transaction.
    * Exactly one contact must be flagged as primary — the partial unique
-   * index on (client_id) WHERE is_primary = true enforces this at the
-   * database level, but we validate up-front to return a readable error.
+   * index on (compliance_client_id) WHERE compliance_is_primary = true
+   * enforces this at the database level, but we validate up-front to return
+   * a readable error.
    *
    * Emits `clients.Created` and one `client-contacts.Created` per contact
    * after the transaction commits. Names mirror the entity-engine dynamic
@@ -282,45 +303,49 @@ export class ClientsService {
   ): Promise<CreateWithContactsResult> {
     this.validateContacts(input.contacts);
 
+    const createdAt = new Date();
+    const createdBy = actorId ?? 'system';
+
     const { clientRow, contactRows } = await this.database.db.transaction(async (tx) => {
-      // The address columns are mixed in via addressColumns() from
-      // @packages/address, which returns Record<string, PgColumn>, so Drizzle's
-      // $inferInsert doesn't currently surface their keys at the type level.
-      // Cast the value object to bypass the check — at runtime the columns
-      // exist on the table and Drizzle maps them correctly. A platform
-      // improvement to addressColumns() can remove this cast later.
-      const clientValues = {
+      const clientValues: typeof clients.$inferInsert = {
         name: input.client.name,
         legalName: input.client.legalName,
         email: input.client.email ?? null,
         phone: input.client.phone ?? null,
-        website: input.client.website ?? null,
+        websiteDomain: input.client.websiteDomain ?? null,
         taxId: input.client.taxId ?? null,
-        industryId: input.client.industryId ?? null,
+        industry: input.client.industry ?? null,
         addressLine1: input.client.addressLine1 ?? null,
         addressLine2: input.client.addressLine2 ?? null,
         city: input.client.city ?? null,
         state: input.client.state ?? null,
         postalCode: input.client.postalCode ?? null,
-        countryId: input.client.countryId ?? null,
-        accountManagerId: input.client.accountManagerId ?? null,
-        status: input.client.status ?? 'onboarding',
-        onboardedAt: input.client.onboardedAt ?? null,
-        notes: input.client.notes ?? null,
+        addressCountryId: input.client.addressCountryId ?? null,
+        complianceAccountManagerId: input.client.complianceAccountManagerId ?? null,
+        complianceStatus: input.client.complianceStatus ?? 'onboarding',
+        complianceOnboardedAt: input.client.complianceOnboardedAt ?? null,
+        complianceNotes: input.client.complianceNotes ?? null,
+        // Marker that flags this row as a compliance client. Queries that
+        // ask "is this company a compliance client?" filter on this column
+        // being non-null. Stamped at create time so it survives later
+        // updates that don't touch compliance fields.
+        complianceBecameClientAt: createdAt,
+        createdBy,
       };
       const [row] = await tx
         .insert(clients)
-        .values(clientValues as typeof clients.$inferInsert)
+        .values(clientValues)
         .returning();
 
       const contactValues = input.contacts.map((c) => ({
-        clientId: row.id,
-        name: c.name,
-        email: c.email ?? null,
-        phone: c.phone ?? null,
-        designation: c.designation ?? null,
-        isPrimary: c.isPrimary ?? false,
-        notes: c.notes ?? null,
+        fullName: c.fullName,
+        primaryEmail: c.primaryEmail ?? null,
+        primaryPhone: c.primaryPhone ?? null,
+        complianceClientId: row.id,
+        complianceDesignation: c.complianceDesignation ?? null,
+        complianceIsPrimary: c.complianceIsPrimary ?? false,
+        complianceNotes: c.complianceNotes ?? null,
+        createdBy,
       }));
 
       const contacts = await tx.insert(clientContacts).values(contactValues).returning();
@@ -352,7 +377,7 @@ export class ClientsService {
     if (!contacts || contacts.length < 1) {
       throw new BadRequestException('At least one contact is required');
     }
-    const primaryCount = contacts.filter((c) => c.isPrimary === true).length;
+    const primaryCount = contacts.filter((c) => c.complianceIsPrimary === true).length;
     if (primaryCount !== 1) {
       throw new BadRequestException(
         `Exactly one contact must be marked as primary (got ${primaryCount})`,
@@ -365,7 +390,7 @@ export class ClientsService {
       id: row.id,
       name: row.name,
       legalName: row.legalName,
-      status: row.status,
+      status: row.complianceStatus,
       createdAt: row.createdAt,
     };
   }
@@ -373,9 +398,9 @@ export class ClientsService {
   private toContact(row: typeof clientContacts.$inferSelect): Contact {
     return {
       id: row.id,
-      clientId: row.clientId,
-      name: row.name,
-      isPrimary: row.isPrimary,
+      clientId: row.complianceClientId,
+      fullName: row.fullName,
+      isPrimary: row.complianceIsPrimary,
     };
   }
 }

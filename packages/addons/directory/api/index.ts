@@ -15,7 +15,7 @@ export type { FindOrCreateClientContactInput, UpdateClientContactInput } from '.
 export { DIRECTORY_PERMISSIONS } from './permissions';
 export type { DirectoryPermission } from './permissions';
 
-export { clients, baseClientColumns, clientContacts } from './schema';
+export { clients, baseClientColumns, clientContacts, baseClientContactColumns } from './schema';
 export type { Client, NewClient, ClientContact, NewClientContact } from './schema';
 
 export {

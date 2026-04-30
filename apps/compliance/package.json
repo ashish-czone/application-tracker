@@ -32,6 +32,7 @@
     "@packages/automations": "workspace:*",
     "@packages/common": "workspace:*",
     "@packages/database": "workspace:*",
+    "@packages/directory": "workspace:*",
     "@packages/document-templates": "workspace:*",
     "@packages/eav-attributes": "workspace:*",
     "@packages/entity-engine": "workspace:*",

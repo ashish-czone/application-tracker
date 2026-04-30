@@ -13,7 +13,7 @@ import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { todayInTimezone } from '@packages/common';
 import { complianceClientRegistrations } from '../schema/client-registrations';
 import { complianceLaws } from '../schema/laws';
-import { clients } from '../schema/clients';
+import { clients } from '../clients/clients-ref';
 import { complianceFilings } from '../schema/compliance-filings';
 import { ComplianceFilingsCancellationService } from '../compliance-filings/compliance-filings-cancellation.service';
 import { ComplianceRulesService } from '../rules/compliance-rules.service';
@@ -441,7 +441,7 @@ export class ClientRegistrationsService {
       .where(
         and(
           eq(complianceClientRegistrations.lawId, lawId),
-          eq(clients.status, 'active'),
+          eq(clients.complianceStatus, 'active'),
         ),
       );
     return rows.map((r) => this.toRegistration(r.registration));
@@ -464,7 +464,7 @@ export class ClientRegistrationsService {
         and(
           eq(complianceClientRegistrations.lawId, lawId),
           isNull(complianceClientRegistrations.deactivatedAt),
-          eq(clients.status, 'active'),
+          eq(clients.complianceStatus, 'active'),
         ),
       );
     return rows.map((r) => this.toRegistration(r.registration));
@@ -481,7 +481,7 @@ export class ClientRegistrationsService {
    */
   async isClientActive(clientId: string): Promise<boolean> {
     const [row] = await this.database.db
-      .select({ status: clients.status })
+      .select({ status: clients.complianceStatus })
       .from(clients)
       .where(eq(clients.id, clientId))
       .limit(1);

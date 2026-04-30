@@ -1,7 +1,13 @@
 import { pgTable, text, timestamp, date, uniqueIndex, index } from 'drizzle-orm/pg-core';
 import { randomUUID } from 'crypto';
 import { complianceLaws } from './laws';
-import { clients } from './clients';
+
+// `clientId` references the shared identity row (the directory `clients`
+// table — DB name `companies`). The FK constraint lives at the SQL
+// migration level (see `0010_fold_clients_into_shared.sql`); we don't
+// declare it on the JS side because importing the shared ref here
+// transitively pulls `@packages/directory` index, which exports the
+// NestJS `DirectoryModule` whose decorators trip drizzle-kit's parser.
 
 // Registration pivot: which clients are filing under which laws.
 // Soft deactivation via deactivated_at — partial unique index on
@@ -18,7 +24,7 @@ import { clients } from './clients';
 // dates.
 export const complianceClientRegistrations = pgTable('compliance_client_registrations', {
   id: text('id').primaryKey().$defaultFn(() => randomUUID()),
-  clientId: text('client_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
+  clientId: text('client_id').notNull(),
   lawId: text('law_id').notNull().references(() => complianceLaws.id, { onDelete: 'cascade' }),
   registrationNumber: text('registration_number'),
   effectiveFrom: date('effective_from', { mode: 'string' }),

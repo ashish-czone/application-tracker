@@ -71,6 +71,13 @@
       "when": 1777967100000,
       "tag": "0009_companies_compliance_columns",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1777968000000,
+      "tag": "0010_fold_clients_into_shared",
+      "breakpoints": true
     }
   ]
 }

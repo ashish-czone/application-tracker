@@ -1,5 +1,5 @@
 import { defineEntity } from '@packages/entity-engine';
-import { clientContacts } from '../schema/client-contacts';
+import { clientContacts } from '../clients/client-contacts-ref';
 
 export const CLIENT_CONTACTS_CONFIG = defineEntity({
   table: clientContacts,
@@ -7,7 +7,7 @@ export const CLIENT_CONTACTS_CONFIG = defineEntity({
   timestamps: true,
 
   fields: {
-    clientId: {
+    complianceClientId: {
       type: 'lookup',
       label: 'Client',
       entity: 'clients',
@@ -15,7 +15,7 @@ export const CLIENT_CONTACTS_CONFIG = defineEntity({
       listVisible: true,
       listOrder: 1,
     },
-    name: {
+    fullName: {
       type: 'text',
       label: 'Name',
       required: true,
@@ -25,41 +25,41 @@ export const CLIENT_CONTACTS_CONFIG = defineEntity({
       listVisible: true,
       listOrder: 2,
     },
-    email: {
+    primaryEmail: {
       type: 'email',
       label: 'Email',
       listVisible: true,
       listOrder: 3,
     },
-    phone: {
+    primaryPhone: {
       type: 'phone',
       label: 'Phone',
     },
-    designation: {
+    complianceDesignation: {
       type: 'text',
       label: 'Designation',
       listVisible: true,
       listOrder: 4,
     },
-    isPrimary: {
+    complianceIsPrimary: {
       type: 'boolean',
       label: 'Primary Contact',
       defaultValue: 'false',
       listVisible: true,
       listOrder: 5,
     },
-    notes: {
+    complianceNotes: {
       type: 'textarea',
       label: 'Notes',
     },
   },
 
-  defaultSort: 'name',
+  defaultSort: 'fullName',
 
   sections: [
     {
       name: 'Contact',
-      fields: ['clientId', 'name', 'email', 'phone', 'designation', 'isPrimary', 'notes'],
+      fields: ['complianceClientId', 'fullName', 'primaryEmail', 'primaryPhone', 'complianceDesignation', 'complianceIsPrimary', 'complianceNotes'],
     },
   ],
 });

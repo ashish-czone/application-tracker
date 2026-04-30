@@ -10,22 +10,22 @@ interface PaginatedResponse<T> {
 export interface ClientRecord {
   id: string;
   name: string;
-  legalName: string;
+  legalName: string | null;
   email?: string | null;
   phone?: string | null;
-  website?: string | null;
+  websiteDomain?: string | null;
   taxId?: string | null;
-  industryId?: string | null;
-  accountManagerId?: string | null;
-  status?: string | null;
-  onboardedAt?: string | null;
+  industry?: string | null;
+  complianceAccountManagerId?: string | null;
+  complianceStatus?: string | null;
+  complianceOnboardedAt?: string | null;
   addressLine1?: string | null;
   addressLine2?: string | null;
   city?: string | null;
   state?: string | null;
   postalCode?: string | null;
-  countryId?: string | null;
-  notes?: string | null;
+  addressCountryId?: string | null;
+  complianceNotes?: string | null;
   createdAt?: string;
   updatedAt?: string;
   [key: string]: unknown;
@@ -33,13 +33,13 @@ export interface ClientRecord {
 
 export interface ClientContactRecord {
   id: string;
-  clientId: string;
-  name: string;
-  email?: string | null;
-  phone?: string | null;
-  designation?: string | null;
-  isPrimary: boolean;
-  notes?: string | null;
+  complianceClientId: string | null;
+  fullName: string;
+  primaryEmail?: string | null;
+  primaryPhone?: string | null;
+  complianceDesignation?: string | null;
+  complianceIsPrimary: boolean;
+  complianceNotes?: string | null;
   [key: string]: unknown;
 }
 
@@ -49,27 +49,27 @@ export interface CreateClientWithContactsPayload {
     legalName: string;
     email?: string;
     phone?: string;
-    website?: string;
+    websiteDomain?: string;
     taxId?: string;
-    industryId?: string;
+    industry?: string;
     addressLine1?: string;
     addressLine2?: string;
     city?: string;
     state?: string;
     postalCode?: string;
-    countryId?: string;
-    accountManagerId?: string;
-    status?: string;
-    onboardedAt?: string;
-    notes?: string;
+    addressCountryId?: string;
+    complianceAccountManagerId?: string;
+    complianceStatus?: string;
+    complianceOnboardedAt?: string;
+    complianceNotes?: string;
   };
   contacts: Array<{
-    name: string;
-    email?: string;
-    phone?: string;
-    designation?: string;
-    isPrimary?: boolean;
-    notes?: string;
+    fullName: string;
+    primaryEmail?: string;
+    primaryPhone?: string;
+    complianceDesignation?: string;
+    complianceIsPrimary?: boolean;
+    complianceNotes?: string;
   }>;
 }
 

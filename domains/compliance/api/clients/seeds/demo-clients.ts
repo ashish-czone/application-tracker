@@ -1,7 +1,8 @@
 import type { INestApplicationContext } from '@nestjs/common';
 import { DatabaseService } from '@packages/database';
+import { isNotNull } from '@packages/database';
 import { ClientsService } from '../clients.service';
-import { clients } from '../../schema/clients';
+import { clients } from '../clients-ref';
 
 interface DemoClient {
   name: string;
@@ -36,8 +37,15 @@ export const seedDemoClients = async (ctx: INestApplicationContext): Promise<voi
   const database = ctx.get(DatabaseService);
   const service = ctx.get(ClientsService);
 
-  // Idempotency: any row in the table short-circuits the seed.
-  const [existing] = await database.db.select({ id: clients.id }).from(clients).limit(1);
+  // Idempotency: any compliance-client row in the shared table short-circuits
+  // the seed. Filter on `complianceBecameClientAt IS NOT NULL` because the
+  // `companies` table is shared with directory + recruit, and a row that
+  // belongs to recruit but not compliance must not block compliance seeds.
+  const [existing] = await database.db
+    .select({ id: clients.id })
+    .from(clients)
+    .where(isNotNull(clients.complianceBecameClientAt))
+    .limit(1);
   if (existing) return;
 
   for (const row of DEMO_CLIENTS) {
@@ -47,14 +55,14 @@ export const seedDemoClients = async (ctx: INestApplicationContext): Promise<voi
         legalName: row.legalName,
         taxId: row.taxId,
         email: row.email,
-        status: row.status,
-        onboardedAt: new Date(`${row.onboardedAt}T00:00:00.000Z`),
+        complianceStatus: row.status,
+        complianceOnboardedAt: new Date(`${row.onboardedAt}T00:00:00.000Z`),
       },
       contacts: [
         {
-          name: contactNameFromEmail(row.email),
-          email: row.email,
-          isPrimary: true,
+          fullName: contactNameFromEmail(row.email),
+          primaryEmail: row.email,
+          complianceIsPrimary: true,
         },
       ],
     });

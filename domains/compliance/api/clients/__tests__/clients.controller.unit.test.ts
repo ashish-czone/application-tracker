@@ -115,28 +115,28 @@ describe('ClientsController', () => {
   describe('createWithContacts', () => {
     it('delegates to ClientsService.createWithContacts and parses onboardedAt', async () => {
       const dto = {
-        client: { name: 'Acme', legalName: 'Acme Pvt.', onboardedAt: '2026-04-01T00:00:00.000Z' },
-        contacts: [{ name: 'Alice', isPrimary: true }],
+        client: { name: 'Acme', legalName: 'Acme Pvt.', complianceOnboardedAt: '2026-04-01T00:00:00.000Z' },
+        contacts: [{ fullName: 'Alice', complianceIsPrimary: true }],
       } as never;
 
       await controller.createWithContacts(dto, { userId: 'user-1' } as never);
 
       const arg = clientsService.createWithContacts.mock.calls[0][0];
       expect(arg.client.name).toBe('Acme');
-      expect(arg.client.onboardedAt).toBeInstanceOf(Date);
-      expect((arg.client.onboardedAt as Date).toISOString()).toBe('2026-04-01T00:00:00.000Z');
+      expect(arg.client.complianceOnboardedAt).toBeInstanceOf(Date);
+      expect((arg.client.complianceOnboardedAt as Date).toISOString()).toBe('2026-04-01T00:00:00.000Z');
       expect(arg.contacts).toHaveLength(1);
     });
 
     it('passes onboardedAt as null when absent', async () => {
       const dto = {
         client: { name: 'Acme', legalName: 'Acme Pvt.' },
-        contacts: [{ name: 'Alice', isPrimary: true }],
+        contacts: [{ fullName: 'Alice', complianceIsPrimary: true }],
       } as never;
 
       await controller.createWithContacts(dto, { userId: 'user-1' } as never);
 
-      expect(clientsService.createWithContacts.mock.calls[0][0].client.onboardedAt).toBeNull();
+      expect(clientsService.createWithContacts.mock.calls[0][0].client.complianceOnboardedAt).toBeNull();
     });
 
     it('requires clients.create permission', () => {
