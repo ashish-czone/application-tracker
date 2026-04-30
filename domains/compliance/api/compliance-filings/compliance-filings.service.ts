@@ -29,6 +29,26 @@ function collectLawIds(rows: ReadonlyArray<Record<string, unknown>>): Set<string
   return ids;
 }
 
+export interface FilingsSummary {
+  total: number;
+  overdue: number;
+  dueToday: number;
+  dueThisWeek: number;
+  upcoming: number;
+  completed: number;
+  cancelled: number;
+}
+
+function addDays(calendarDate: string, days: number): string {
+  const [y, m, d] = calendarDate.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  dt.setUTCDate(dt.getUTCDate() + days);
+  const yy = dt.getUTCFullYear();
+  const mm = String(dt.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(dt.getUTCDate()).padStart(2, '0');
+  return `${yy}-${mm}-${dd}`;
+}
+
 @Injectable()
 export class ComplianceFilingsService {
   constructor(
@@ -121,6 +141,76 @@ export class ComplianceFilingsService {
 
   getListLayout() {
     return this.entityService.getListLayout();
+  }
+
+  /**
+   * Aggregated KPI counts for the filings list page header. Single wire call,
+   * fans out internally to 7 parallel `entityService.list({limit: 1})` queries
+   * — each computes COUNT under the same RBAC + tenant + soft-delete scope as
+   * the list endpoint, so users only see counts for filings they can read.
+   * `today` is a calendar date string in app-tz; caller (controller) resolves
+   * it from APP_TIMEZONE.
+   */
+  async getSummary(today: string, accessCtx?: DataAccessContext): Promise<FilingsSummary> {
+    const inSevenDays = addDays(today, 7);
+    const notCompletedStates = ['pending', 'in_progress', 'review', 'rejected'];
+
+    const buildQuery = (extra: Array<{ field: string; operator: string; value: unknown }>): BaseListQuery => ({
+      page: 1,
+      limit: 1,
+      filters: JSON.stringify(extra),
+    });
+
+    const [total, overdue, dueToday, dueThisWeek, upcoming, completed, cancelled] = await Promise.all([
+      this.entityService.list(buildQuery([]), accessCtx),
+      this.entityService.list(
+        buildQuery([
+          { field: 'status', operator: 'in', value: notCompletedStates },
+          { field: 'dueDate', operator: 'lt', value: today },
+        ]),
+        accessCtx,
+      ),
+      this.entityService.list(
+        buildQuery([
+          { field: 'status', operator: 'in', value: notCompletedStates },
+          { field: 'dueDate', operator: 'eq', value: today },
+        ]),
+        accessCtx,
+      ),
+      this.entityService.list(
+        buildQuery([
+          { field: 'status', operator: 'in', value: notCompletedStates },
+          { field: 'dueDate', operator: 'gt', value: today },
+          { field: 'dueDate', operator: 'lte', value: inSevenDays },
+        ]),
+        accessCtx,
+      ),
+      this.entityService.list(
+        buildQuery([
+          { field: 'status', operator: 'in', value: notCompletedStates },
+          { field: 'dueDate', operator: 'gt', value: inSevenDays },
+        ]),
+        accessCtx,
+      ),
+      this.entityService.list(
+        buildQuery([{ field: 'status', operator: 'eq', value: 'completed' }]),
+        accessCtx,
+      ),
+      this.entityService.list(
+        buildQuery([{ field: 'status', operator: 'eq', value: 'cancelled' }]),
+        accessCtx,
+      ),
+    ]);
+
+    return {
+      total: total.meta.total,
+      overdue: overdue.meta.total,
+      dueToday: dueToday.meta.total,
+      dueThisWeek: dueThisWeek.meta.total,
+      upcoming: upcoming.meta.total,
+      completed: completed.meta.total,
+      cancelled: cancelled.meta.total,
+    };
   }
 
   private ensureExternalKey(payload: Record<string, unknown>): Record<string, unknown> {

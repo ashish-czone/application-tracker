@@ -12,6 +12,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { CurrentUser, type JwtPayload } from '@packages/auth';
+import { todayInTimezone } from '@packages/common';
 import {
   AccessContext,
   RequirePermission,
@@ -33,6 +34,14 @@ export class ComplianceFilingsController {
   @RequirePermission('compliance-filings.read')
   getListLayout() {
     return this.filings.getListLayout();
+  }
+
+  @Get('summary')
+  @RequirePermission('compliance-filings.read')
+  getSummary(@Query('today') todayParam: string | undefined, @AccessContext() accessCtx?: DataAccessContext) {
+    const tz = process.env.APP_TIMEZONE ?? 'UTC';
+    const today = todayParam && /^\d{4}-\d{2}-\d{2}$/.test(todayParam) ? todayParam : todayInTimezone(tz);
+    return this.filings.getSummary(today, accessCtx);
   }
 
   @Get()
