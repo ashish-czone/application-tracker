@@ -37,9 +37,9 @@ describe('ClientContactsService', () => {
 
   describe('setPrimary', () => {
     it('unsets existing primary and sets new primary in one transaction', async () => {
-      const existing = { id: 'ct-2', clientId: 'cid-1', name: 'Bob', isPrimary: false };
-      const demotedRow = { id: 'ct-1', clientId: 'cid-1', name: 'Alice', isPrimary: false };
-      const promotedRow = { ...existing, isPrimary: true };
+      const existing = { id: 'ct-2', complianceClientId: 'cid-1', fullName: 'Bob', complianceIsPrimary: false };
+      const demotedRow = { id: 'ct-1', complianceClientId: 'cid-1', fullName: 'Alice', complianceIsPrimary: false };
+      const promotedRow = { ...existing, complianceIsPrimary: true };
 
       const selectChain = mockSelectReturning([existing]);
       const unsetChain = mockUpdateWhere([demotedRow]);
@@ -55,8 +55,8 @@ describe('ClientContactsService', () => {
 
       expect(db.db.transaction).toHaveBeenCalledTimes(1);
       expect(tx.update).toHaveBeenCalledTimes(2);
-      expect(unsetChain.set).toHaveBeenCalledWith({ isPrimary: false });
-      expect(setChain.set).toHaveBeenCalledWith({ isPrimary: true });
+      expect(unsetChain.set).toHaveBeenCalledWith({ complianceIsPrimary: false });
+      expect(setChain.set).toHaveBeenCalledWith({ complianceIsPrimary: true });
 
       expect(events.emitDynamic).toHaveBeenCalledTimes(2);
       expect(events.emitDynamic).toHaveBeenCalledWith('client-contacts.Updated', expect.objectContaining({
@@ -71,7 +71,7 @@ describe('ClientContactsService', () => {
 
     it('no-ops when target contact is already primary', async () => {
       const selectChain = mockSelectReturning([
-        { id: 'ct-1', clientId: 'cid-1', name: 'Alice', isPrimary: true },
+        { id: 'ct-1', complianceClientId: 'cid-1', fullName: 'Alice', complianceIsPrimary: true },
       ]);
       const tx: TxMock = {
         select: vi.fn().mockReturnValue(selectChain),
@@ -99,7 +99,7 @@ describe('ClientContactsService', () => {
     });
 
     it('emits nothing when the primary flip fails mid-transaction', async () => {
-      const existing = { id: 'ct-2', clientId: 'cid-1', name: 'Bob', isPrimary: false };
+      const existing = { id: 'ct-2', complianceClientId: 'cid-1', fullName: 'Bob', complianceIsPrimary: false };
       const selectChain = mockSelectReturning([existing]);
       const unsetChain = {
         set: vi.fn().mockReturnThis(),

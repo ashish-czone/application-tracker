@@ -85,8 +85,8 @@ describe('ClientsService', () => {
     name: 'Acme',
     legalName: 'Acme Pvt. Ltd.',
   };
-  const primaryContact: ContactInput = { name: 'Alice', isPrimary: true };
-  const secondaryContact: ContactInput = { name: 'Bob', isPrimary: false };
+  const primaryContact: ContactInput = { fullName: 'Alice', complianceIsPrimary: true };
+  const secondaryContact: ContactInput = { fullName: 'Bob', complianceIsPrimary: false };
 
   describe('CRUD delegates', () => {
     it('list delegates to entityService.list with the access context', () => {
@@ -133,11 +133,16 @@ describe('ClientsService', () => {
   });
 
   describe('transition', () => {
+    // After the C-2 fold, the service translates the controller-side
+    // `fieldKey: 'status'` to the column key `complianceStatus` before
+    // calling the entity engine. The TransitionContext returned by the
+    // engine therefore carries `complianceStatus` — that's what dormantisation
+    // detection compares against.
     const baseCtx = {
       entityType: 'clients',
       entityId: 'cid-1',
-      fieldKey: 'status',
-      fieldName: 'status',
+      fieldKey: 'complianceStatus',
+      fieldName: 'complianceStatus',
       fromState: 'onboarding',
       toState: 'active',
       transitionId: 't-1',
@@ -149,13 +154,14 @@ describe('ClientsService', () => {
     };
 
     it('runs validate → tx(apply) → emit for a non-dormantisation transition', async () => {
-      entityService.findOneOrFail.mockResolvedValue({ id: 'cid-1', status: 'onboarding' });
+      entityService.findOneOrFail.mockResolvedValue({ id: 'cid-1', complianceStatus: 'onboarding' });
       entityService.validateTransition.mockResolvedValue(baseCtx);
       db.db.transaction.mockImplementation(async (cb: (tx: unknown) => unknown) => cb({}));
 
       await service.transition('cid-1', 'status', 'active', 'user-1');
 
-      expect(entityService.validateTransition).toHaveBeenCalledWith('cid-1', 'status', 'active', 'user-1', undefined, undefined);
+      // Engine call uses the translated column key, not the caller-facing alias.
+      expect(entityService.validateTransition).toHaveBeenCalledWith('cid-1', 'complianceStatus', 'active', 'user-1', undefined, undefined);
       expect(entityService.applyTransition).toHaveBeenCalledWith(baseCtx, {});
       expect(dormancy.cancelInFlightFilings).not.toHaveBeenCalled();
       expect(entityService.emitTransitionEvent).toHaveBeenCalledWith(baseCtx);
@@ -164,7 +170,7 @@ describe('ClientsService', () => {
 
     it('runs dormancy cascade inside the same tx when active → dormant on status', async () => {
       const dormantCtx = { ...baseCtx, fromState: 'active', toState: 'dormant' };
-      entityService.findOneOrFail.mockResolvedValue({ id: 'cid-1', status: 'active' });
+      entityService.findOneOrFail.mockResolvedValue({ id: 'cid-1', complianceStatus: 'active' });
       entityService.validateTransition.mockResolvedValue(dormantCtx);
       dormancy.cancelInFlightFilings.mockResolvedValue({ cancelledFilingIds: ['f1', 'f2'] });
       let applyCalled = false;
@@ -194,7 +200,7 @@ describe('ClientsService', () => {
 
     it('post-commit late-filing sweep folds straggler IDs into the cascade event', async () => {
       const dormantCtx = { ...baseCtx, fromState: 'active', toState: 'dormant' };
-      entityService.findOneOrFail.mockResolvedValue({ id: 'cid-1', status: 'active' });
+      entityService.findOneOrFail.mockResolvedValue({ id: 'cid-1', complianceStatus: 'active' });
       entityService.validateTransition.mockResolvedValue(dormantCtx);
       dormancy.cancelInFlightFilings.mockResolvedValue({ cancelledFilingIds: ['f1'] });
       dormancy.sweepLateFilings.mockResolvedValue({ cancelledFilingIds: ['f-late-1', 'f-late-2'] });
@@ -218,7 +224,7 @@ describe('ClientsService', () => {
 
     it('does not run cascade on dormant → active', async () => {
       const reactivate = { ...baseCtx, fromState: 'dormant', toState: 'active' };
-      entityService.findOneOrFail.mockResolvedValue({ id: 'cid-1', status: 'dormant' });
+      entityService.findOneOrFail.mockResolvedValue({ id: 'cid-1', complianceStatus: 'dormant' });
       entityService.validateTransition.mockResolvedValue(reactivate);
       db.db.transaction.mockImplementation(async (cb: (tx: unknown) => unknown) => cb({}));
 
@@ -245,12 +251,12 @@ describe('ClientsService', () => {
         id: 'cid-1',
         name: 'Acme',
         legalName: 'Acme Pvt. Ltd.',
-        status: 'onboarding',
+        complianceStatus: 'onboarding',
         createdAt: new Date('2026-01-01'),
       };
       const contactRows = [
-        { id: 'ct-1', clientId: 'cid-1', name: 'Alice', isPrimary: true },
-        { id: 'ct-2', clientId: 'cid-1', name: 'Bob', isPrimary: false },
+        { id: 'ct-1', complianceClientId: 'cid-1', fullName: 'Alice', complianceIsPrimary: true },
+        { id: 'ct-2', complianceClientId: 'cid-1', fullName: 'Bob', complianceIsPrimary: false },
       ];
 
       const tx = makeTx(clientRow, contactRows);
@@ -269,14 +275,14 @@ describe('ClientsService', () => {
     });
 
     it('defaults status to onboarding when not provided', async () => {
-      const clientRow = { id: 'cid-1', name: 'Acme', legalName: 'Acme', status: 'onboarding', createdAt: new Date() };
-      const tx = makeTx(clientRow, [{ id: 'ct-1', clientId: 'cid-1', name: 'Alice', isPrimary: true }]);
+      const clientRow = { id: 'cid-1', name: 'Acme', legalName: 'Acme', complianceStatus: 'onboarding', createdAt: new Date() };
+      const tx = makeTx(clientRow, [{ id: 'ct-1', complianceClientId: 'cid-1', fullName: 'Alice', complianceIsPrimary: true }]);
       db.db.transaction.mockImplementation(async (cb: (tx: TxMock) => unknown) => cb(tx));
 
       await service.createWithContacts({ client: validClient, contacts: [primaryContact] });
 
       const clientInsertValues = (tx.insert.mock.results[0].value as AnyChain).values.mock.calls[0][0] as Record<string, unknown>;
-      expect(clientInsertValues.status).toBe('onboarding');
+      expect(clientInsertValues.complianceStatus).toBe('onboarding');
     });
 
     it('throws BadRequest when contacts is empty', async () => {
@@ -291,7 +297,7 @@ describe('ClientsService', () => {
       await expect(
         service.createWithContacts({
           client: validClient,
-          contacts: [{ name: 'Alice' }, { name: 'Bob' }],
+          contacts: [{ fullName: 'Alice' }, { fullName: 'Bob' }],
         }),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
@@ -301,30 +307,30 @@ describe('ClientsService', () => {
         service.createWithContacts({
           client: validClient,
           contacts: [
-            { name: 'Alice', isPrimary: true },
-            { name: 'Bob', isPrimary: true },
+            { fullName: 'Alice', complianceIsPrimary: true },
+            { fullName: 'Bob', complianceIsPrimary: true },
           ],
         }),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
 
     it('forwards the clientId from the inserted client row into each contact', async () => {
-      const clientRow = { id: 'cid-xyz', name: 'Acme', legalName: 'Acme', status: 'onboarding', createdAt: new Date() };
-      const tx = makeTx(clientRow, [{ id: 'ct-1', clientId: 'cid-xyz', name: 'Alice', isPrimary: true }]);
+      const clientRow = { id: 'cid-xyz', name: 'Acme', legalName: 'Acme', complianceStatus: 'onboarding', createdAt: new Date() };
+      const tx = makeTx(clientRow, [{ id: 'ct-1', complianceClientId: 'cid-xyz', fullName: 'Alice', complianceIsPrimary: true }]);
       db.db.transaction.mockImplementation(async (cb: (tx: TxMock) => unknown) => cb(tx));
 
       await service.createWithContacts({ client: validClient, contacts: [primaryContact] });
 
       const contactInsertValues = (tx.insert.mock.results[1].value as AnyChain).values.mock.calls[0][0] as Array<Record<string, unknown>>;
       expect(contactInsertValues).toHaveLength(1);
-      expect(contactInsertValues[0].clientId).toBe('cid-xyz');
+      expect(contactInsertValues[0].complianceClientId).toBe('cid-xyz');
     });
 
     it('emits clients.Created and one client-contacts.Created per contact', async () => {
-      const clientRow = { id: 'cid-1', name: 'Acme', legalName: 'Acme', status: 'onboarding', createdAt: new Date() };
+      const clientRow = { id: 'cid-1', name: 'Acme', legalName: 'Acme', complianceStatus: 'onboarding', createdAt: new Date() };
       const contactRows = [
-        { id: 'ct-1', clientId: 'cid-1', name: 'Alice', isPrimary: true },
-        { id: 'ct-2', clientId: 'cid-1', name: 'Bob', isPrimary: false },
+        { id: 'ct-1', complianceClientId: 'cid-1', fullName: 'Alice', complianceIsPrimary: true },
+        { id: 'ct-2', complianceClientId: 'cid-1', fullName: 'Bob', complianceIsPrimary: false },
       ];
       const tx = makeTx(clientRow, contactRows);
       db.db.transaction.mockImplementation(async (cb: (tx: TxMock) => unknown) => cb(tx));

@@ -160,7 +160,9 @@ export class ClientsController {
       {
         client: {
           ...dto.client,
-          onboardedAt: dto.client.onboardedAt ? new Date(dto.client.onboardedAt) : null,
+          complianceOnboardedAt: dto.client.complianceOnboardedAt
+            ? new Date(dto.client.complianceOnboardedAt)
+            : null,
         },
         contacts: dto.contacts,
       },

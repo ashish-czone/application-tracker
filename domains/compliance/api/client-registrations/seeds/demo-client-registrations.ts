@@ -1,6 +1,6 @@
 import type { INestApplicationContext } from '@nestjs/common';
-import { DatabaseService } from '@packages/database';
-import { clients } from '../../schema/clients';
+import { DatabaseService, isNotNull } from '@packages/database';
+import { clients } from '../../clients/clients-ref';
 import { complianceClientRegistrations } from '../../schema/client-registrations';
 import { ClientRegistrationsService } from '../client-registrations.service';
 
@@ -36,9 +36,12 @@ export const seedDemoClientRegistrations = async (
     .limit(1);
   if (existing) return;
 
+  // Scope to compliance clients only — `clients` is the shared `companies`
+  // table, so a directory or recruit row by the same name must not match.
   const clientRows = await database.db
     .select({ id: clients.id, name: clients.name })
-    .from(clients);
+    .from(clients)
+    .where(isNotNull(clients.complianceBecameClientAt));
   const clientIdByName = new Map(clientRows.map((c) => [c.name, c.id]));
 
   for (const [clientName, lawCodes] of Object.entries(REGISTRATIONS_BY_CLIENT_NAME)) {

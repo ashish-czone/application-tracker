@@ -58,11 +58,11 @@ export function mapClientRecordToRow(record: ClientRecord): ClientRow {
   return {
     id: record.id,
     name: record.name,
-    legalName: record.legalName,
+    legalName: record.legalName ?? '',
     taxIdentifier: record.taxId ?? '',
     initials: initialsFromName(record.name),
     color: colorForClient(record.id, record.name),
-    status: normalizeStatus(record.status),
+    status: normalizeStatus(record.complianceStatus),
     risk,
     registeredLaws: 0,
     openFilings: 0,
@@ -70,7 +70,7 @@ export function mapClientRecordToRow(record: ClientRecord): ClientRow {
     onTimePct: 0,
     primaryHandler: UNASSIGNED_HANDLER,
     primaryContactEmail: record.email ?? '',
-    onboardedDate: record.onboardedAt ? record.onboardedAt.slice(0, 10) : '',
+    onboardedDate: record.complianceOnboardedAt ? record.complianceOnboardedAt.slice(0, 10) : '',
     lastFilingDate: '',
   };
 }

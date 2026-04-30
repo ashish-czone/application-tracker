@@ -99,14 +99,14 @@ export function NewClientDrawer({ onClose, onCreated }: NewClientDrawerProps) {
           taxId: values.taxIdentifier,
           email: values.primaryContactEmail,
           phone: values.primaryContactPhone,
-          notes: values.notes || undefined,
+          complianceNotes: values.notes || undefined,
         },
         contacts: [
           {
-            name: values.primaryContactName,
-            email: values.primaryContactEmail,
-            phone: values.primaryContactPhone,
-            isPrimary: true,
+            fullName: values.primaryContactName,
+            primaryEmail: values.primaryContactEmail,
+            primaryPhone: values.primaryContactPhone,
+            complianceIsPrimary: true,
           },
         ],
       });

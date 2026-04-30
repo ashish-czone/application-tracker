@@ -35,9 +35,9 @@ describe('Client Contacts (integration)', () => {
     overrides: Record<string, unknown> = {},
   ) {
     const body = {
-      clientId,
-      name: unique('Contact'),
-      isPrimary: false,
+      complianceClientId: clientId,
+      fullName: unique('Contact'),
+      complianceIsPrimary: false,
       ...overrides,
     };
     const res = await request(ctx.httpServer)
@@ -54,15 +54,20 @@ describe('Client Contacts (integration)', () => {
       const res = await request(ctx.httpServer)
         .post('/api/v1/client-contacts')
         .set(withAuth(MANAGE))
-        .send({ clientId, name: 'Jane Doe', email: 'jane@example.com', isPrimary: true })
+        .send({
+          complianceClientId: clientId,
+          fullName: 'Jane Doe',
+          primaryEmail: 'jane@example.com',
+          complianceIsPrimary: true,
+        })
         .expect(201);
 
       expect(res.body).toMatchObject({
         id: expect.any(String),
-        clientId,
-        name: 'Jane Doe',
-        email: 'jane@example.com',
-        isPrimary: true,
+        complianceClientId: clientId,
+        fullName: 'Jane Doe',
+        primaryEmail: 'jane@example.com',
+        complianceIsPrimary: true,
       });
     });
 
@@ -70,7 +75,7 @@ describe('Client Contacts (integration)', () => {
       await request(ctx.httpServer)
         .post('/api/v1/client-contacts')
         .set(withAuth(MANAGE))
-        .send({ name: 'Jane' })
+        .send({ fullName: 'Jane' })
         .expect(400);
     });
 
@@ -79,7 +84,7 @@ describe('Client Contacts (integration)', () => {
       await request(ctx.httpServer)
         .post('/api/v1/client-contacts')
         .set(withAuth(MANAGE))
-        .send({ clientId })
+        .send({ complianceClientId: clientId })
         .expect(400);
     });
 
@@ -87,7 +92,7 @@ describe('Client Contacts (integration)', () => {
       const { id: clientId } = await createClient(ctx.db);
       await request(ctx.httpServer)
         .post('/api/v1/client-contacts')
-        .send({ clientId, name: 'X' })
+        .send({ complianceClientId: clientId, fullName: 'X' })
         .expect(401);
     });
 
@@ -96,7 +101,7 @@ describe('Client Contacts (integration)', () => {
       await request(ctx.httpServer)
         .post('/api/v1/client-contacts')
         .set(withAuth(READ))
-        .send({ clientId, name: 'X' })
+        .send({ complianceClientId: clientId, fullName: 'X' })
         .expect(403);
     });
   });
@@ -104,8 +109,8 @@ describe('Client Contacts (integration)', () => {
   describe('GET /api/v1/client-contacts', () => {
     it('lists contacts', async () => {
       const { id: clientId } = await createClient(ctx.db);
-      await createContactViaApi(clientId, { name: 'A' });
-      await createContactViaApi(clientId, { name: 'B' });
+      await createContactViaApi(clientId, { fullName: 'A' });
+      await createContactViaApi(clientId, { fullName: 'B' });
 
       const res = await request(ctx.httpServer)
         .get('/api/v1/client-contacts')
@@ -119,8 +124,8 @@ describe('Client Contacts (integration)', () => {
   describe('PUT /api/v1/clients/:id/contacts/:contactId/primary', () => {
     it('flips which contact is primary atomically', async () => {
       const { id: clientId } = await createClient(ctx.db);
-      const c1 = await createContactViaApi(clientId, { name: 'First', isPrimary: true });
-      const c2 = await createContactViaApi(clientId, { name: 'Second', isPrimary: false });
+      const c1 = await createContactViaApi(clientId, { fullName: 'First', complianceIsPrimary: true });
+      const c2 = await createContactViaApi(clientId, { fullName: 'Second', complianceIsPrimary: false });
 
       await request(ctx.httpServer)
         .put(`/api/v1/clients/${clientId}/contacts/${c2.id}/primary`)
@@ -136,14 +141,14 @@ describe('Client Contacts (integration)', () => {
         .set(withAuth(READ))
         .expect(200);
 
-      expect(demoted.body.isPrimary).toBe(false);
-      expect(promoted.body.isPrimary).toBe(true);
+      expect(demoted.body.complianceIsPrimary).toBe(false);
+      expect(promoted.body.complianceIsPrimary).toBe(true);
     });
 
     it('returns 404 when contact does not belong to the client', async () => {
       const { id: clientA } = await createClient(ctx.db);
       const { id: clientB } = await createClient(ctx.db);
-      const contact = await createContactViaApi(clientB, { name: 'Foreign' });
+      const contact = await createContactViaApi(clientB, { fullName: 'Foreign' });
 
       await request(ctx.httpServer)
         .put(`/api/v1/clients/${clientA}/contacts/${contact.id}/primary`)
@@ -153,7 +158,7 @@ describe('Client Contacts (integration)', () => {
 
     it('returns 403 without update permission', async () => {
       const { id: clientId } = await createClient(ctx.db);
-      const contact = await createContactViaApi(clientId, { name: 'X' });
+      const contact = await createContactViaApi(clientId, { fullName: 'X' });
       await request(ctx.httpServer)
         .put(`/api/v1/clients/${clientId}/contacts/${contact.id}/primary`)
         .set(withAuth(READ))
@@ -164,7 +169,7 @@ describe('Client Contacts (integration)', () => {
   describe('schema: one-primary-per-client invariant', () => {
     it('rejects creating a second primary contact for the same client', async () => {
       const { id: clientId } = await createClient(ctx.db);
-      await createContactViaApi(clientId, { name: 'First', isPrimary: true });
+      await createContactViaApi(clientId, { fullName: 'First', complianceIsPrimary: true });
       // The partial unique index rejects at the SQL layer. The entity-engine
       // generic controller surfaces it as a 500 today (no mapping for
       // constraint-violation → 409) — the test pins current behavior so a
@@ -172,7 +177,7 @@ describe('Client Contacts (integration)', () => {
       const res = await request(ctx.httpServer)
         .post('/api/v1/client-contacts')
         .set(withAuth(MANAGE))
-        .send({ clientId, name: 'Second', isPrimary: true });
+        .send({ complianceClientId: clientId, fullName: 'Second', complianceIsPrimary: true });
       expect([409, 500]).toContain(res.status);
     });
   });

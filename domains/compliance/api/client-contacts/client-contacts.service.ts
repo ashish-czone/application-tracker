@@ -3,7 +3,7 @@ import { DatabaseService, and, eq } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
 import { EntityService, type BaseListQuery } from '@packages/entity-engine';
 import type { DataAccessContext } from '@packages/rbac';
-import { clientContacts } from '../schema/client-contacts';
+import { clientContacts } from '../clients/client-contacts-ref';
 import { CLIENT_CONTACTS_UPDATED } from '../events/types';
 import type { CreateClientContactDto, UpdateClientContactDto } from './client-contacts.dto';
 
@@ -68,7 +68,10 @@ export class ClientContactsService {
     const rows = await this.database.db
       .select({ id: clientContacts.id })
       .from(clientContacts)
-      .where(and(eq(clientContacts.clientId, clientId), eq(clientContacts.isPrimary, true)))
+      .where(and(
+        eq(clientContacts.complianceClientId, clientId),
+        eq(clientContacts.complianceIsPrimary, true),
+      ))
       .limit(1);
     return rows.length > 0;
   }
@@ -92,7 +95,10 @@ export class ClientContactsService {
       const [existing] = await tx
         .select()
         .from(clientContacts)
-        .where(and(eq(clientContacts.id, contactId), eq(clientContacts.clientId, clientId)));
+        .where(and(
+          eq(clientContacts.id, contactId),
+          eq(clientContacts.complianceClientId, clientId),
+        ));
 
       if (!existing) {
         throw new NotFoundException(
@@ -100,17 +106,20 @@ export class ClientContactsService {
         );
       }
 
-      if (existing.isPrimary) return null;
+      if (existing.complianceIsPrimary) return null;
 
       const demoted = await tx
         .update(clientContacts)
-        .set({ isPrimary: false })
-        .where(and(eq(clientContacts.clientId, clientId), eq(clientContacts.isPrimary, true)))
+        .set({ complianceIsPrimary: false })
+        .where(and(
+          eq(clientContacts.complianceClientId, clientId),
+          eq(clientContacts.complianceIsPrimary, true),
+        ))
         .returning();
 
       const [promoted] = await tx
         .update(clientContacts)
-        .set({ isPrimary: true })
+        .set({ complianceIsPrimary: true })
         .where(eq(clientContacts.id, contactId))
         .returning();
 
@@ -125,7 +134,7 @@ export class ClientContactsService {
         entityId: row.id,
         actorId,
         payload: {
-          before: { ...row, isPrimary: true } as Record<string, unknown>,
+          before: { ...row, complianceIsPrimary: true } as Record<string, unknown>,
           after: row as unknown as Record<string, unknown>,
         },
       });

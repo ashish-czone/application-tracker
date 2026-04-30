@@ -91,7 +91,7 @@ describe('Clients (integration)', () => {
         .send({
           client: { name: unique('Client'), legalName: 'With Contacts Ltd' },
           contacts: [
-            { name: 'Jane Doe', email: 'jane@example.com', isPrimary: true },
+            { fullName: 'Jane Doe', primaryEmail: 'jane@example.com', complianceIsPrimary: true },
           ],
         })
         .expect(201);
@@ -120,7 +120,7 @@ describe('Clients (integration)', () => {
         .set(withAuth(READ))
         .send({
           client: { name: unique('X'), legalName: 'X' },
-          contacts: [{ name: 'Jane' }],
+          contacts: [{ fullName: 'Jane' }],
         })
         .expect(403);
     });
@@ -185,7 +185,7 @@ describe('Clients (integration)', () => {
         .set(withAuth(MANAGE))
         .send({
           client: { name: unique('Ready'), legalName: 'Ready Ltd' },
-          contacts: [{ name: 'Primary', isPrimary: true }],
+          contacts: [{ fullName: 'Primary', complianceIsPrimary: true }],
         })
         .expect(201);
       const clientId = res.body.client.id;

@@ -4,8 +4,11 @@ import { randomUUID } from 'crypto';
 import { orgUnits } from '@packages/org-units/schema/org-units';
 import { softDeleteColumns } from '@packages/soft-delete';
 import { complianceLaws } from './laws';
-import { clients } from './clients';
 import { complianceRules } from './rules';
+
+// `clientId` references the shared identity `clients` row (DB name
+// `companies`). FK added at SQL migration level — see note in
+// client-registrations.ts.
 
 // Standalone compliance-filings table. Filings are first-class domain entities
 // (a compliance obligation that must be filed for a client within a period),
@@ -38,7 +41,7 @@ export const complianceFilings = pgTable('compliance_filings', {
   completedAt: timestamp('completed_at', { withTimezone: true, mode: 'date' }),
 
   ruleId: text('rule_id').notNull().references(() => complianceRules.id, { onDelete: 'cascade' }),
-  clientId: text('client_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
+  clientId: text('client_id').notNull(),
   lawId: text('law_id').notNull().references(() => complianceLaws.id, { onDelete: 'cascade' }),
   periodStart: date('period_start', { mode: 'string' }).notNull(),
   periodEnd: date('period_end', { mode: 'string' }).notNull(),
