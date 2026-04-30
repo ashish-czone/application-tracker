@@ -162,4 +162,69 @@ describe('ComplianceFilingsService', () => {
       expect(result.meta).toEqual(meta);
     });
   });
+
+  describe('getSummary — KPI counts', () => {
+    function metaWith(total: number) {
+      return { data: [], meta: { total, page: 1, limit: 1, totalPages: total > 0 ? 1 : 0 } };
+    }
+
+    it('issues seven parallel filtered list queries and returns counts from meta.total', async () => {
+      entityService.list
+        .mockResolvedValueOnce(metaWith(100)) // total
+        .mockResolvedValueOnce(metaWith(12))  // overdue
+        .mockResolvedValueOnce(metaWith(3))   // dueToday
+        .mockResolvedValueOnce(metaWith(8))   // dueThisWeek
+        .mockResolvedValueOnce(metaWith(45))  // upcoming
+        .mockResolvedValueOnce(metaWith(28))  // completed
+        .mockResolvedValueOnce(metaWith(4));  // cancelled
+
+      const summary = await service.getSummary('2026-04-30');
+
+      expect(entityService.list).toHaveBeenCalledTimes(7);
+      expect(summary).toEqual({
+        total: 100,
+        overdue: 12,
+        dueToday: 3,
+        dueThisWeek: 8,
+        upcoming: 45,
+        completed: 28,
+        cancelled: 4,
+      });
+    });
+
+    it('passes the access context to every internal query so RBAC filtering applies to counts', async () => {
+      const accessCtx = { userId: 'u1' } as never;
+      entityService.list.mockResolvedValue(metaWith(0));
+
+      await service.getSummary('2026-04-30', accessCtx);
+
+      const ctxArgs = entityService.list.mock.calls.map((c) => c[1]);
+      expect(ctxArgs).toEqual(Array(7).fill(accessCtx));
+    });
+
+    it('builds the dueThisWeek window as today < dueDate <= today + 7', async () => {
+      entityService.list.mockResolvedValue(metaWith(0));
+
+      await service.getSummary('2026-04-30');
+
+      const dueThisWeekCall = entityService.list.mock.calls[3][0] as { filters: string };
+      const filters = JSON.parse(dueThisWeekCall.filters) as Array<{ field: string; operator: string; value: unknown }>;
+      expect(filters).toEqual([
+        { field: 'status', operator: 'in', value: ['pending', 'in_progress', 'review', 'rejected'] },
+        { field: 'dueDate', operator: 'gt', value: '2026-04-30' },
+        { field: 'dueDate', operator: 'lte', value: '2026-05-07' },
+      ]);
+    });
+
+    it('handles month/year rollover when computing today + 7', async () => {
+      entityService.list.mockResolvedValue(metaWith(0));
+
+      await service.getSummary('2026-12-28');
+
+      const upcomingCall = entityService.list.mock.calls[4][0] as { filters: string };
+      const filters = JSON.parse(upcomingCall.filters) as Array<{ field: string; operator: string; value: unknown }>;
+      const dueAfter = filters.find((f) => f.operator === 'gt');
+      expect(dueAfter?.value).toBe('2027-01-04');
+    });
+  });
 });
