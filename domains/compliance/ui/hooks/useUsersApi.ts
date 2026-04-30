@@ -4,6 +4,7 @@ import { toast } from '@packages/ui';
 import { usePlatformAPI } from '@packages/platform-ui';
 import {
   useUsers as usePackageUsers,
+  useUsersSummary as usePackageUsersSummary,
   useInviteUser as usePackageInviteUser,
   useResendInvitation as usePackageResendInvitation,
   useDeleteUser as usePackageDeleteUser,
@@ -11,9 +12,10 @@ import {
   createUsersApi,
   type ListUsersParams,
   type User,
+  type UsersSummary,
 } from '@packages/users-ui';
 
-export type { User, ListUsersParams };
+export type { User, ListUsersParams, UsersSummary };
 
 /**
  * Thin domain-side adapter around `@packages/users-ui`. Lives here (not in
@@ -22,8 +24,12 @@ export type { User, ListUsersParams };
  * apps that don't want the compliance-style screen import straight from
  * `@packages/users-ui`.
  */
-export function useUsersList(params: ListUsersParams = { limit: 500 }) {
+export function useUsersList(params: ListUsersParams) {
   return usePackageUsers(params);
+}
+
+export function useUsersSummary() {
+  return usePackageUsersSummary();
 }
 
 export function useInviteUser(options?: { onSuccess?: () => void }) {
