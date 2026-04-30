@@ -14,6 +14,22 @@ Keep this file up to date as we work. Append new questions at the bottom of §2.
 
 Running log so the next session can pick up without archaeology. Newest at top.
 
+### 2026-04-30 — Audit-driven cleanup: 12 PRs, all HIGH findings closed
+
+Five-lens audit (data-fetching, soft-delete + tenancy, security/RBAC, workflow guards, test coverage) ran end-to-end on the compliance domain. 33 HIGH items at audit start, 0 actionable HIGH items remaining. Twelve PRs shipped same day:
+
+- **#1202–#1207** — Phase-3 data-fetching HIGHs (server-side ClientsPage rollups, ComplianceRulesPage, `/laws/tree`, filings bucket alias, ReportsPage server search, generator batching).
+- **#1209** — MED batch (debounce, batched registerMany, hoist handlers, server overdueClientCount).
+- **#1210** — `recordHistoryBatch` on `WorkflowEngineService` + cascade adoption.
+- **#1212** — LOW batch (gcTime fix, cached entity-engine lookup, notification truncation indicator).
+- **#1216** — **`withScope(table, …)` in `@packages/database`** + `.claude/rules/data-scoping.md` rule + 23 soft-delete sweep sites in compliance.
+- **#1221** — **`DataAccessScopeService` in `@packages/platform/rbac`** + `accessCtx` plumbing through Phase-3 raw-SQL paths (closes 7 security MEDs).
+- **#1223** — Unit tests for `ClientDormancyService` (21), `ClientsRollupService` (12), `ComplianceReportsService` (17).
+
+**Architecture deltas:** new foundation-tier primitives (`withScope`, `DataAccessScopeService`) + auto-loaded scoping rule. `EntityService` refactored to delegate scope resolution. Bulk-insert variant on workflow engine.
+
+**Remaining work:** PR-M (destructive-transition perms — `clients.dormantise`, `compliance-rules.deprecate` — closes the workflow-guard HIGHs), PR-N (reason/comment polish), PR-O (401/403 sweep), PR-P (`withTenant` → `withScope` adoption sweep), plus a pre-existing integration-test DI fix that unblocks SQL-level coverage. Full inventory + PR-M scope spec in **`AUDIT.md`** (sibling file). That file is the resume-from-here doc — read it first next session.
+
 ### 2026-04-27 — Streams J + I24/I25 shipped; finalisation audit pass underway
 
 `feat/compliance-inactive-state-ui` (PR #1067) and `feat/compliance-stream-j` (PR #1068) close the last two compliance V1 streams.
