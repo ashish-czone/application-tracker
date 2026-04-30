@@ -1,5 +1,5 @@
 import { User, ShieldCheck, Bell, Palette, ScrollText, type LucideIcon } from 'lucide-react';
-import type { SettingsSection } from '../placeholders';
+import type { SettingsSection } from '../types';
 
 export const SETTINGS_SECTION_ICONS: Record<SettingsSection, LucideIcon> = {
   profile: User,

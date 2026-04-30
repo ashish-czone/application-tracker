@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Sun,
   Moon,
@@ -8,8 +8,30 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { Eyebrow } from '@packages/ui';
-import type { ThemeMode, Density } from '../placeholders';
+import type { ThemeMode, Density } from '../types';
 import { SectionDivider } from './settingsFormPrimitives';
+
+const THEME_STORAGE_KEY = 'compliance:appearance:theme';
+const DENSITY_STORAGE_KEY = 'compliance:appearance:density';
+
+function readPref<T extends string>(key: string, fallback: T, valid: ReadonlyArray<T>): T {
+  if (typeof window === 'undefined') return fallback;
+  try {
+    const v = window.localStorage.getItem(key);
+    return valid.includes(v as T) ? (v as T) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function writePref(key: string, value: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(key, value);
+  } catch {
+    // localStorage may be unavailable (private mode, quota); silently swallow.
+  }
+}
 
 interface ThemeOption {
   value: ThemeMode;
@@ -36,9 +58,24 @@ const DENSITIES: DensityOption[] = [
   { value: 'compact', label: 'Compact', icon: LayoutList, desc: 'Tighter spacing, more data' },
 ];
 
+const THEME_VALUES: ThemeMode[] = ['light', 'dark', 'system'];
+const DENSITY_VALUES: Density[] = ['comfortable', 'compact'];
+
 export function AppearanceSection() {
-  const [theme, setTheme] = useState<ThemeMode>('light');
-  const [density, setDensity] = useState<Density>('comfortable');
+  const [theme, setTheme] = useState<ThemeMode>(() =>
+    readPref<ThemeMode>(THEME_STORAGE_KEY, 'light', THEME_VALUES),
+  );
+  const [density, setDensity] = useState<Density>(() =>
+    readPref<Density>(DENSITY_STORAGE_KEY, 'comfortable', DENSITY_VALUES),
+  );
+
+  useEffect(() => {
+    writePref(THEME_STORAGE_KEY, theme);
+  }, [theme]);
+
+  useEffect(() => {
+    writePref(DENSITY_STORAGE_KEY, density);
+  }, [density]);
 
   return (
     <div className="space-y-8">
