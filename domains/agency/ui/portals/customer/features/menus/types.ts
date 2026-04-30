@@ -9,6 +9,8 @@ export type PublicTarget = '_self' | '_blank';
 export interface PublicMenuItemDto {
   id: string;
   label: string;
+  description: string | null;
+  icon: string | null;
   linkType: PublicLinkType;
   url: string | null;
   pageId: string | null;

@@ -7,6 +7,8 @@ function item(overrides: Partial<PublicMenuItemDto>): PublicMenuItemDto {
   return {
     id: overrides.id ?? 'x',
     label: overrides.label ?? 'Item',
+    description: overrides.description ?? null,
+    icon: overrides.icon ?? null,
     linkType: overrides.linkType ?? 'url',
     url: overrides.url ?? null,
     pageId: overrides.pageId ?? null,

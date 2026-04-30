@@ -3,11 +3,55 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, X, ChevronDown } from 'lucide-react';
+import {
+  ArrowRight,
+  Building,
+  ChevronDown,
+  Circle,
+  Globe,
+  Megaphone,
+  Menu,
+  Palette,
+  Rocket,
+  Shield,
+  ShoppingBag,
+  Smartphone,
+  Sparkles,
+  Users,
+  Wrench,
+  X,
+  Zap,
+  type LucideIcon,
+} from 'lucide-react';
 import type { PublicMenuItemDto } from '@domains/agency-ui/portals/customer';
 import { CzoneLogo } from '@domains/agency-ui/components/branding/CzoneLogo';
 import { cn } from '@/lib/cn';
 import { ThemeToggle } from './ThemeToggle';
+
+/**
+ * Curated icon name → component map. Names mirror the values offered in
+ * the admin's MenuItemDialog icon select. Unknown / null values fall
+ * back to a small dot so the layout doesn't shift between items.
+ */
+const ICON_MAP: Record<string, LucideIcon> = {
+  globe: Globe,
+  smartphone: Smartphone,
+  sparkles: Sparkles,
+  'shopping-bag': ShoppingBag,
+  megaphone: Megaphone,
+  palette: Palette,
+  rocket: Rocket,
+  zap: Zap,
+  wrench: Wrench,
+  shield: Shield,
+  users: Users,
+  building: Building,
+};
+
+function resolveIcon(name: string | null): LucideIcon {
+  if (!name) return Circle;
+  return ICON_MAP[name] ?? Circle;
+}
 
 /**
  * True when `pathname` matches (or is a child of) `href`. External
@@ -186,52 +230,132 @@ function DesktopItem({ item, pathname }: { item: PublicMenuItemDto; pathname: st
         {item.label}
         <ChevronDown className="h-3 w-3 transition-transform group-hover:rotate-180" />
       </button>
+      <MegaMenuPanel item={item} pathname={pathname} />
+    </li>
+  );
+}
+
+/**
+ * Wide flyout panel anchored to a parent menu item. Two-column grid of
+ * children (icon tile + label + description) plus a featured CTA card
+ * on the right rail. Centred under the trigger so a wide panel doesn't
+ * crash into the viewport edge for items late in the nav.
+ */
+function MegaMenuPanel({ item, pathname }: { item: PublicMenuItemDto; pathname: string }) {
+  const anyHasDescription = item.children.some((c) => c.description);
+  return (
+    <div
+      className={cn(
+        'absolute left-1/2 -translate-x-1/2 top-full pt-3',
+        'hidden group-hover:block group-focus-within:block',
+      )}
+    >
       <div
         className={cn(
-          'absolute left-0 top-full pt-2',
-          'hidden group-hover:block group-focus-within:block',
+          'w-[760px] rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--surface))] p-4',
+          'shadow-xl shadow-black/5',
+          'grid grid-cols-[minmax(0,1fr)_220px] gap-4',
         )}
       >
-        <ul
-          className={cn(
-            'min-w-[220px] rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--surface))] p-2',
-            'shadow-lg shadow-black/5',
-          )}
-        >
-          {item.children.map((child) => {
-            const childHref = child.href ?? '#';
-            const childExternal = /^https?:\/\//.test(childHref) || child.target === '_blank';
-            const childActive = isActivePath(pathname, child.href);
-            const childAriaCurrent = childActive ? ('page' as const) : undefined;
-            const childClasses = cn(
-              'block px-3 py-2 rounded-md text-sm',
-              childActive
-                ? 'bg-[hsl(var(--muted))] text-[hsl(var(--foreground))]'
-                : 'hover:bg-[hsl(var(--muted))]',
-            );
-            return (
-              <li key={child.id}>
-                {childExternal ? (
-                  <a
-                    href={childHref}
-                    target={child.target === '_blank' ? '_blank' : undefined}
-                    rel={child.target === '_blank' ? 'noopener noreferrer' : undefined}
-                    className={childClasses}
-                    aria-current={childAriaCurrent}
-                  >
-                    {child.label}
-                  </a>
-                ) : (
-                  <Link href={childHref} className={childClasses} aria-current={childAriaCurrent}>
-                    {child.label}
-                  </Link>
-                )}
-              </li>
-            );
-          })}
+        <ul className={cn('grid gap-1', anyHasDescription ? 'grid-cols-2' : 'grid-cols-1')}>
+          {item.children.map((child) => (
+            <MegaMenuItem key={child.id} child={child} pathname={pathname} />
+          ))}
         </ul>
+        <FeaturedCtaCard parentLabel={item.label} />
       </div>
+    </div>
+  );
+}
+
+function MegaMenuItem({
+  child,
+  pathname,
+}: {
+  child: PublicMenuItemDto;
+  pathname: string;
+}) {
+  const childHref = child.href ?? '#';
+  const isExternal = /^https?:\/\//.test(childHref) || child.target === '_blank';
+  const active = isActivePath(pathname, child.href);
+  const Icon = resolveIcon(child.icon);
+  const ariaCurrent = active ? ('page' as const) : undefined;
+
+  const content = (
+    <span className="flex items-start gap-3 rounded-lg p-3 transition-colors hover:bg-[hsl(var(--muted))]">
+      <span
+        className={cn(
+          'flex h-9 w-9 shrink-0 items-center justify-center rounded-md',
+          'bg-[hsl(var(--skin-anchor)/0.12)] text-[hsl(var(--skin-anchor))]',
+        )}
+        aria-hidden
+      >
+        <Icon className="h-4 w-4" />
+      </span>
+      <span className="flex flex-col gap-0.5 min-w-0">
+        <span className="text-sm font-medium text-[hsl(var(--foreground))]">{child.label}</span>
+        {child.description && (
+          <span className="text-xs text-[hsl(var(--muted-foreground))] line-clamp-2">
+            {child.description}
+          </span>
+        )}
+      </span>
+    </span>
+  );
+
+  return (
+    <li>
+      {isExternal ? (
+        <a
+          href={childHref}
+          target={child.target === '_blank' ? '_blank' : undefined}
+          rel={child.target === '_blank' ? 'noopener noreferrer' : undefined}
+          aria-current={ariaCurrent}
+          className={cn('block rounded-lg', active && 'bg-[hsl(var(--muted))]')}
+        >
+          {content}
+        </a>
+      ) : (
+        <Link
+          href={childHref}
+          aria-current={ariaCurrent}
+          className={cn('block rounded-lg', active && 'bg-[hsl(var(--muted))]')}
+        >
+          {content}
+        </Link>
+      )}
     </li>
+  );
+}
+
+function FeaturedCtaCard({ parentLabel }: { parentLabel: string }) {
+  return (
+    <aside
+      className={cn(
+        'flex flex-col justify-between gap-4 rounded-xl p-4',
+        'bg-[hsl(var(--skin-anchor)/0.08)] border border-[hsl(var(--skin-anchor)/0.18)]',
+      )}
+      aria-label={`Featured action for ${parentLabel}`}
+    >
+      <div className="flex flex-col gap-1.5">
+        <span className="text-xs font-medium uppercase tracking-wide text-[hsl(var(--skin-anchor))]">
+          Not sure where to start?
+        </span>
+        <p className="text-sm text-[hsl(var(--foreground))]">
+          Book a 30-minute call. We'll map your idea to the right practice.
+        </p>
+      </div>
+      <Link
+        href="/contact"
+        className={cn(
+          'inline-flex items-center gap-1.5 text-sm font-medium',
+          'text-[hsl(var(--skin-anchor))] hover:underline underline-offset-4',
+        )}
+      >
+        Book a call
+        <ArrowRight className="h-3.5 w-3.5" />
+      </Link>
+    </aside>
   );
 }
 
@@ -346,17 +470,38 @@ function MobileItem({
         <ChevronDown className={cn('h-4 w-4 transition-transform', expanded && 'rotate-180')} />
       </button>
       {expanded && (
-        <ul className="pl-4 pb-2 flex flex-col gap-1">
+        <ul className="pl-2 pb-2 flex flex-col gap-1">
           {item.children.map((child) => {
             const childHref = child.href ?? '#';
             const childExternal = /^https?:\/\//.test(childHref) || child.target === '_blank';
             const childActive = isActivePath(pathname, child.href);
             const childAriaCurrent = childActive ? ('page' as const) : undefined;
+            const Icon = resolveIcon(child.icon);
             const childClasses = cn(
-              'block px-4 py-3 text-base rounded-md',
+              'flex items-start gap-3 px-3 py-3 rounded-md',
               childActive
-                ? 'bg-[hsl(var(--muted))] text-[hsl(var(--foreground))]'
-                : 'text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))]',
+                ? 'bg-[hsl(var(--muted))]'
+                : 'hover:bg-[hsl(var(--muted))]',
+            );
+            const inner = (
+              <>
+                <span
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[hsl(var(--skin-anchor)/0.12)] text-[hsl(var(--skin-anchor))]"
+                  aria-hidden
+                >
+                  <Icon className="h-4 w-4" />
+                </span>
+                <span className="flex flex-col min-w-0">
+                  <span className="text-base font-medium text-[hsl(var(--foreground))]">
+                    {child.label}
+                  </span>
+                  {child.description && (
+                    <span className="text-sm text-[hsl(var(--muted-foreground))] mt-0.5">
+                      {child.description}
+                    </span>
+                  )}
+                </span>
+              </>
             );
             return (
               <li key={child.id}>
@@ -369,7 +514,7 @@ function MobileItem({
                     className={childClasses}
                     aria-current={childAriaCurrent}
                   >
-                    {child.label}
+                    {inner}
                   </a>
                 ) : (
                   <Link
@@ -378,7 +523,7 @@ function MobileItem({
                     className={childClasses}
                     aria-current={childAriaCurrent}
                   >
-                    {child.label}
+                    {inner}
                   </Link>
                 )}
               </li>
