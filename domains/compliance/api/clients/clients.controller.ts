@@ -204,7 +204,13 @@ export class ClientsController {
     @Param('id', ParseUUIDPipe) clientId: string,
     @Body() dto: RegisterLawsDto,
     @CurrentUser() user: JwtPayload,
+    @AccessContext() accessCtx?: DataAccessContext,
   ) {
+    // Scope-check the parent client before mutating registrations. Without
+    // this, a holder of `client-registrations.create` could attach laws to a
+    // client they have no read scope on. Engine throws NotFoundException on
+    // miss — same surface as a missing row, which keeps existence private.
+    await this.clientsService.findOne(clientId, accessCtx);
     return this.registrationsService.registerMany(clientId, dto.lawCodes, user.userId);
   }
 
@@ -222,6 +228,7 @@ export class ClientsController {
     @Param('id', ParseUUIDPipe) clientId: string,
     @Param('lawId', ParseUUIDPipe) lawId: string,
     @Query('date') date?: string,
+    @AccessContext() accessCtx?: DataAccessContext,
   ) {
     if (!date) {
       throw new BadRequestException('Query param `date` is required (ISO-8601)');
@@ -230,6 +237,8 @@ export class ClientsController {
     if (Number.isNaN(parsed.getTime())) {
       throw new BadRequestException('Query param `date` must be a valid ISO-8601 date');
     }
+    // Scope-check the parent client — see createRegistrations.
+    await this.clientsService.findOne(clientId, accessCtx);
     return this.registrationsService.previewDeactivation(clientId, lawId, parsed);
   }
 
@@ -241,7 +250,11 @@ export class ClientsController {
     @Param('lawId', ParseUUIDPipe) lawId: string,
     @Body() dto: DeactivateRegistrationDto,
     @CurrentUser() user: JwtPayload,
+    @AccessContext() accessCtx?: DataAccessContext,
   ) {
+    // Scope-check the parent client — destructive cascade gated by the same
+    // scope as the read view.
+    await this.clientsService.findOne(clientId, accessCtx);
     return this.registrationsService.deactivate(clientId, lawId, {
       deactivatedAt: new Date(dto.deactivatedAt),
       alsoCancelEarlier: dto.alsoCancelEarlier,
