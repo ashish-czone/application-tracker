@@ -9,13 +9,20 @@ import { pages } from '../pages/schema';
  * Demo seed for the `primary` site menu — the one rendered by the customer
  * SiteHeader. Two-level structure:
  *
- *   Services           ← parent (no link of its own)
- *     Implementation    → /services/implementation
- *     Managed Operations → /services/managed-operations
- *     Advisory          → /services/advisory
+ *   Services           ← parent (links to /services)
+ *     Web platforms     → /services
+ *     Mobile apps       → /services
+ *     AI products       → /services
+ *     Shopify           → /services
+ *     Digital marketing → /services
+ *     Product design    → /services
  *   Work               → /work
  *   About              → /about
  *   Contact            → /contact
+ *
+ * The dropdown mirrors the six practices listed on the home page.
+ * Until per-practice deep pages exist, every child links to the
+ * services page — visitors arrive at the right vocabulary.
  *
  * Idempotent: short-circuits if a menu with slug 'primary' already exists.
  * Anything below depth 1 is rejected by the menu-items config; this seed
@@ -60,20 +67,26 @@ export const seedDemoMenus = async (ctx: INestApplicationContext): Promise<void>
     })
     .returning({ id: menuItems.id });
 
-  // Service detail children. Path/depth follow the materialised-path
-  // convention: depth 1, path = `/${parentId}/`.
+  // Practice children. Mirror the six practices the home page advertises
+  // so the dropdown matches the body copy. Until per-practice deep pages
+  // exist, every child uses linkType='url' pointing at /services.
+  // Path/depth follow the materialised-path convention: depth 1, path =
+  // `/${parentId}/`.
   const childPath = `/${servicesNode.id}/`;
-  const childRows = [
-    { label: 'Implementation', slug: 'services/implementation', sortOrder: 10 },
-    { label: 'Managed Operations', slug: 'services/managed-operations', sortOrder: 20 },
-    { label: 'Advisory', slug: 'services/advisory', sortOrder: 30 },
+  const practiceChildren = [
+    { label: 'Web platforms', sortOrder: 10 },
+    { label: 'Mobile apps', sortOrder: 20 },
+    { label: 'AI products', sortOrder: 30 },
+    { label: 'Shopify', sortOrder: 40 },
+    { label: 'Digital marketing', sortOrder: 50 },
+    { label: 'Product design', sortOrder: 60 },
   ];
-  for (const c of childRows) {
+  for (const c of practiceChildren) {
     await database.db.insert(menuItems).values({
       menuId: menu.id,
       label: c.label,
-      linkType: 'page',
-      pageId: await pageIdBySlug(database, c.slug),
+      linkType: 'url',
+      url: '/services',
       sortOrder: c.sortOrder,
       depth: 1,
       path: childPath,

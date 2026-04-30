@@ -171,6 +171,143 @@ body {
   border-top: 1px solid hsl(var(--border));
 }
 
+/* ──────────────────────────────────────────────────────────────
+   Skin tokens — three swappable looks for the home page hero +
+   feature blocks. The skin is a layer on top of the existing
+   light/dark theme: it adds anchor color, per-section tints, and
+   six practice hues, leaving the base palette intact. Selected
+   via html[data-skin="warm|editorial|product"]. The default is
+   set by the no-flash script (warm) and can be overridden via
+   the dev-only ThemeSwitcher widget.
+   ────────────────────────────────────────────────────────────── */
+
+/* Default — warm. Mirrors html[data-skin="warm"] so the page renders
+   correctly even before the no-flash script runs. */
+:root {
+  --skin-anchor: 14 70% 53%;
+  --skin-anchor-soft: 14 80% 96%;
+  --skin-anchor-ink: 14 65% 38%;
+  --skin-page-bg: 30 60% 99%;
+  --skin-cream: 30 55% 97%;
+  --skin-section-1: 22 78% 96%;
+  --skin-section-2: 38 75% 96%;
+  --skin-section-3: 18 70% 95%;
+  --skin-ink: 24 18% 14%;
+  --skin-muted-ink: 24 10% 38%;
+  --skin-card-border: 22 30% 88%;
+  --skin-practice-1: 14 70% 53%;
+  --skin-practice-2: 36 78% 52%;
+  --skin-practice-3: 168 50% 42%;
+  --skin-practice-4: 232 60% 60%;
+  --skin-practice-5: 290 40% 55%;
+  --skin-practice-6: 196 65% 48%;
+  --skin-radius: 1rem;
+  --skin-card-radius: 1.25rem;
+}
+
+html[data-skin="warm"] {
+  --skin-anchor: 14 70% 53%;
+  --skin-anchor-soft: 14 80% 96%;
+  --skin-anchor-ink: 14 65% 38%;
+  --skin-page-bg: 30 60% 99%;
+  --skin-cream: 30 55% 97%;
+  --skin-section-1: 22 78% 96%;
+  --skin-section-2: 38 75% 96%;
+  --skin-section-3: 18 70% 95%;
+  --skin-ink: 24 18% 14%;
+  --skin-muted-ink: 24 10% 38%;
+  --skin-card-border: 22 30% 88%;
+  --skin-practice-1: 14 70% 53%;
+  --skin-practice-2: 36 78% 52%;
+  --skin-practice-3: 168 50% 42%;
+  --skin-practice-4: 232 60% 60%;
+  --skin-practice-5: 290 40% 55%;
+  --skin-practice-6: 196 65% 48%;
+}
+
+html[data-skin="editorial"] {
+  --skin-anchor: 38 70% 48%;
+  --skin-anchor-soft: 38 70% 95%;
+  --skin-anchor-ink: 38 70% 32%;
+  --skin-page-bg: 36 30% 97%;
+  --skin-cream: 36 28% 95%;
+  --skin-section-1: 36 25% 96%;
+  --skin-section-2: 30 18% 94%;
+  --skin-section-3: 36 35% 95%;
+  --skin-ink: 24 14% 12%;
+  --skin-muted-ink: 24 8% 36%;
+  --skin-card-border: 30 12% 86%;
+  --skin-practice-1: 38 70% 48%;
+  --skin-practice-2: 14 60% 48%;
+  --skin-practice-3: 200 40% 38%;
+  --skin-practice-4: 260 25% 45%;
+  --skin-practice-5: 90 30% 38%;
+  --skin-practice-6: 24 14% 25%;
+  --skin-radius: 0.625rem;
+  --skin-card-radius: 0.75rem;
+}
+
+html[data-skin="product"] {
+  --skin-anchor: 184 65% 32%;
+  --skin-anchor-soft: 184 50% 94%;
+  --skin-anchor-ink: 184 70% 22%;
+  --skin-page-bg: 200 30% 99%;
+  --skin-cream: 200 30% 97%;
+  --skin-section-1: 184 35% 95%;
+  --skin-section-2: 220 30% 96%;
+  --skin-section-3: 168 30% 95%;
+  --skin-ink: 210 30% 14%;
+  --skin-muted-ink: 210 12% 38%;
+  --skin-card-border: 200 20% 88%;
+  --skin-practice-1: 184 65% 32%;
+  --skin-practice-2: 232 60% 56%;
+  --skin-practice-3: 280 45% 52%;
+  --skin-practice-4: 14 65% 52%;
+  --skin-practice-5: 36 75% 50%;
+  --skin-practice-6: 168 50% 38%;
+  --skin-radius: 1.125rem;
+  --skin-card-radius: 1.5rem;
+}
+
+/* The home page opts into the skin look via this class on a wrapper — it
+   pulls page background and ink color from the skin tokens instead of the
+   base palette. Other pages keep the original neutral look. */
+.skin-surface {
+  background: hsl(var(--skin-page-bg));
+  color: hsl(var(--skin-ink));
+}
+
+.skin-section-1 {
+  background: hsl(var(--skin-section-1));
+}
+.skin-section-2 {
+  background: hsl(var(--skin-section-2));
+}
+.skin-section-3 {
+  background: hsl(var(--skin-section-3));
+}
+
+/* Hero gradient that pulls from skin anchor for the warm bloom. Falls
+   back gracefully if no skin is set. */
+.bg-skin-hero {
+  background:
+    radial-gradient(
+      80% 100% at 50% 0%,
+      hsl(var(--skin-anchor-soft)) 0%,
+      hsl(var(--skin-page-bg)) 60%,
+      hsl(var(--skin-page-bg)) 100%
+    );
+}
+
+/* Faint dot grid used as background ornament in skin sections. */
+.bg-skin-dots {
+  background-image: radial-gradient(
+    hsl(var(--skin-anchor) / 0.12) 1px,
+    transparent 1px
+  );
+  background-size: 22px 22px;
+}
+
 /* Keyboard focus — visible but tasteful. */
 :where(a, button, [role="button"]):focus-visible {
   outline: 2px solid hsl(var(--ring));

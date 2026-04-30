@@ -5,6 +5,9 @@ import { Reveal } from '../motion/Reveal';
 import { Stagger } from '../motion/Stagger';
 import { HoverLift } from '../motion/HoverLift';
 import { Parallax } from '../motion/Parallax';
+import { SkinHeroClient, type SkinHeroBadge } from './SkinHeroClient';
+
+type HeroBadge = SkinHeroBadge;
 
 interface HeroFields extends Record<string, unknown> {
   eyebrow?: string;
@@ -15,10 +18,32 @@ interface HeroFields extends Record<string, unknown> {
   ctaSecondaryText?: string;
   ctaSecondaryHref?: string;
   imageUrl?: string;
+  /** Substring inside `headline` to wrap with UnderlinedKeyword. */
+  keyword?: string;
+  /** Multi-line `primary :: secondary :: icon` for skin-variant orbiting pills. */
+  badges?: string;
   /** Retained for content compatibility; unused by the default variant. */
   number?: string;
   meta?: string;
 }
+
+function parseBadges(raw: string | undefined): HeroBadge[] {
+  if (!raw) return [];
+  return raw
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const parts = line.split('::').map((p) => p.trim());
+      return {
+        primary: parts[0] ?? '',
+        secondary: parts[1] ?? '',
+        icon: parts[2]?.toLowerCase(),
+      };
+    })
+    .filter((b) => b.primary);
+}
+
 
 /**
  * Primary hero. Variants:
@@ -39,7 +64,11 @@ function Hero({ fields, variant }: BlockRenderProps<HeroFields>): ReactNode {
     ctaSecondaryText,
     ctaSecondaryHref,
     imageUrl,
+    keyword,
+    badges: badgesRaw,
   } = fields;
+
+  const badges = parseBadges(badgesRaw);
 
   const primaryCta = ctaText && ctaHref && (
     <HoverLift>
@@ -63,6 +92,24 @@ function Hero({ fields, variant }: BlockRenderProps<HeroFields>): ReactNode {
       </a>
     </HoverLift>
   );
+
+  if (variant === 'warm' || variant === 'editorial' || variant === 'product-stack') {
+    return (
+      <SkinHero
+        eyebrow={eyebrow}
+        headline={headline}
+        subheadline={subheadline}
+        keyword={keyword}
+        badges={badges}
+        primaryCta={ctaText && ctaHref ? { text: ctaText, href: ctaHref } : null}
+        secondaryCta={
+          ctaSecondaryText && ctaSecondaryHref
+            ? { text: ctaSecondaryText, href: ctaSecondaryHref }
+            : null
+        }
+      />
+    );
+  }
 
   if (variant === 'full-bleed' && imageUrl) {
     return (
@@ -168,6 +215,20 @@ function Hero({ fields, variant }: BlockRenderProps<HeroFields>): ReactNode {
   );
 }
 
+interface SkinHeroProps {
+  eyebrow?: string;
+  headline?: string;
+  subheadline?: string;
+  keyword?: string;
+  badges: HeroBadge[];
+  primaryCta: { text: string; href: string } | null;
+  secondaryCta: { text: string; href: string } | null;
+}
+
+function SkinHero(props: SkinHeroProps): ReactNode {
+  return <SkinHeroClient {...props} />;
+}
+
 export const heroBlock = defineBlock<HeroFields>({
   kind: 'hero',
   name: 'Hero',
@@ -177,6 +238,9 @@ export const heroBlock = defineBlock<HeroFields>({
     { key: 'default', label: 'Default' },
     { key: 'split', label: 'Split (image)' },
     { key: 'full-bleed', label: 'Full-bleed image' },
+    { key: 'warm', label: 'Skin · Warm' },
+    { key: 'editorial', label: 'Skin · Editorial' },
+    { key: 'product-stack', label: 'Skin · Product stack' },
   ],
   defaultVariant: 'default',
   fields: {
@@ -196,6 +260,17 @@ export const heroBlock = defineBlock<HeroFields>({
       type: 'url',
       label: 'Image URL',
       description: 'Used by Split and Full-bleed variants only.',
+    },
+    keyword: {
+      type: 'text',
+      label: 'Underlined keyword',
+      maxLength: 40,
+      description: 'Substring of the headline to wrap with the skin-styled underline.',
+    },
+    badges: {
+      type: 'textarea',
+      label: 'Stat badges',
+      description: 'One per line: `Primary :: Secondary :: icon`. Icons: rocket/zap/users/award/star/shield.',
     },
     number: { type: 'text', label: 'Section number (legacy)', maxLength: 4 },
     meta: { type: 'text', label: 'Meta label (legacy)', maxLength: 60 },
