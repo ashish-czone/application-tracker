@@ -19,7 +19,7 @@ import {
   type DataAccessContext,
 } from '@packages/rbac';
 import { ComplianceFilingsService } from './compliance-filings.service';
-import { translateFilingsQuery } from './compliance-filings-query';
+import { expandBucketAlias, translateFilingsQuery } from './compliance-filings-query';
 import {
   CreateComplianceFilingSchema,
   TransitionComplianceFilingSchema,
@@ -51,7 +51,13 @@ export class ComplianceFilingsController {
   @Get()
   @RequirePermission('compliance-filings.read')
   list(@Query() query: Record<string, unknown>, @AccessContext() accessCtx?: DataAccessContext) {
-    return this.filings.list(translateFilingsQuery(query), accessCtx);
+    const tz = process.env.APP_TIMEZONE ?? 'UTC';
+    const today =
+      typeof query.today === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(query.today)
+        ? query.today
+        : todayInTimezone(tz);
+    const expanded = expandBucketAlias(query, today);
+    return this.filings.list(translateFilingsQuery(expanded), accessCtx);
   }
 
   @Get(':id')

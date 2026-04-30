@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { translateFilingsQuery, __test__ } from '../compliance-filings-query';
+import { expandBucketAlias, translateFilingsQuery, __test__ } from '../compliance-filings-query';
 
 const { FILINGS_LIST_DEFAULT_LIMIT, FILINGS_LIST_MAX_LIMIT, NOT_COMPLETED_STATES } = __test__;
 
@@ -166,5 +166,62 @@ describe('translateFilingsQuery — pagination + flags', () => {
     expect(translateFilingsQuery({ page: '3' }).page).toBe(3);
     expect(translateFilingsQuery({ page: 2 }).page).toBe(2);
     expect(translateFilingsQuery({}).page).toBeUndefined();
+  });
+});
+
+describe('expandBucketAlias', () => {
+  const TODAY = '2026-04-30';
+
+  it('passes raw through unchanged when bucket is missing', () => {
+    expect(expandBucketAlias({ clientId: 'c1' }, TODAY)).toEqual({ clientId: 'c1' });
+  });
+
+  it('drops an unrecognised bucket value but keeps everything else', () => {
+    expect(expandBucketAlias({ bucket: 'bogus', clientId: 'c1' }, TODAY)).toEqual({
+      clientId: 'c1',
+    });
+  });
+
+  it('overdue: notCompleted=true, dueBefore=yesterday (strict before today)', () => {
+    expect(expandBucketAlias({ bucket: 'overdue' }, TODAY)).toEqual({
+      notCompleted: 'true',
+      dueBefore: '2026-04-29',
+    });
+  });
+
+  it('due-today: notCompleted=true, dueBefore=today AND dueAfter=today', () => {
+    expect(expandBucketAlias({ bucket: 'due-today' }, TODAY)).toEqual({
+      notCompleted: 'true',
+      dueBefore: TODAY,
+      dueAfter: TODAY,
+    });
+  });
+
+  it('upcoming: notCompleted=true, dueAfter=tomorrow (strict after today)', () => {
+    expect(expandBucketAlias({ bucket: 'upcoming' }, TODAY)).toEqual({
+      notCompleted: 'true',
+      dueAfter: '2026-05-01',
+    });
+  });
+
+  it('filed: status=completed, no date constraints', () => {
+    expect(expandBucketAlias({ bucket: 'filed' }, TODAY)).toEqual({
+      status: 'completed',
+    });
+  });
+
+  it('preserves clientId / page / limit / sort alongside bucket expansion', () => {
+    const out = expandBucketAlias(
+      { bucket: 'overdue', clientId: 'c1', page: 2, limit: 10, sort: 'dueDate:asc' },
+      TODAY,
+    );
+    expect(out).toMatchObject({
+      clientId: 'c1',
+      page: 2,
+      limit: 10,
+      sort: 'dueDate:asc',
+      notCompleted: 'true',
+      dueBefore: '2026-04-29',
+    });
   });
 });

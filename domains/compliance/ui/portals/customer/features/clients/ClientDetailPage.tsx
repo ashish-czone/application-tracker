@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
 import { DataTable, Pagination, CoarseTabs } from '@packages/ui';
@@ -36,9 +36,23 @@ export function ClientDetailPage() {
   const [filingStatusTab, setFilingStatusTab] = useState<'all' | ClientFilingStatus>('all');
   const [deactivating, setDeactivating] = useState<ClientLaw | null>(null);
 
+  // Server-side bucket filter changes the result set; reset to page 1 so we
+  // don't land on an out-of-range page after switching tabs.
+  useEffect(() => {
+    setFilingsPage(1);
+  }, [filingStatusTab]);
+
+  const filingsBucket =
+    filingStatusTab === 'overdue' ||
+    filingStatusTab === 'due-today' ||
+    filingStatusTab === 'upcoming' ||
+    filingStatusTab === 'filed'
+      ? filingStatusTab
+      : undefined;
   const filingsQuery = useClientFilings(clientId, {
     page: filingsPage,
     limit: FILINGS_PAGE_LIMIT,
+    bucket: filingsBucket,
   });
 
   const lawColumns = useMemo(
@@ -89,10 +103,9 @@ export function ClientDetailPage() {
     contacts,
   });
 
-  const visibleFilings =
-    filingStatusTab === 'all'
-      ? client.recentFilings
-      : client.recentFilings.filter((f) => f.status === filingStatusTab);
+  // Server applies the bucket filter via `useClientFilings({ bucket })`, so the
+  // returned rows are already in the right state. No client-side .filter().
+  const visibleFilings = client.recentFilings;
 
   const filingStatusTabs = [
     { value: 'all' as const, label: 'All', count: filingsQuery.total },

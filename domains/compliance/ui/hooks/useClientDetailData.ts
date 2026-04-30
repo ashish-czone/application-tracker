@@ -42,16 +42,25 @@ export function useClientFilingsSummary(clientId: string | null | undefined) {
   };
 }
 
+export type ClientFilingBucket = 'overdue' | 'due-today' | 'upcoming' | 'filed';
+
 export interface UseClientFilingsOptions {
   page?: number;
   limit?: number;
+  /**
+   * Server-side bucket alias (overdue / due-today / upcoming / filed). When
+   * supplied, the page no longer needs to filter rows in JS — the server
+   * applies the corresponding date / status predicates and returns the
+   * exact set + correct pagination meta.
+   */
+  bucket?: ClientFilingBucket;
 }
 
 /**
  * Paginated list of a single client's filings, sorted by due date desc. Wraps
- * the global filings list endpoint with a `clientId=eq` filter. Each row has
- * `lawCode`, `lawName`, `lawJurisdiction`, `clientId__label` embedded via the
- * server-side composition done in PR-1.
+ * the global filings list endpoint with a `clientId=eq` filter and an optional
+ * `bucket` alias. Each row has `lawCode`, `lawName`, `lawJurisdiction`,
+ * `clientId__label` embedded via the server-side composition done in PR-1.
  */
 export function useClientFilings(
   clientId: string | null | undefined,
@@ -61,15 +70,17 @@ export function useClientFilings(
   const enabled = !!clientId;
   const page = options.page ?? 1;
   const limit = options.limit ?? 10;
+  const bucket = options.bucket;
 
   const search = new URLSearchParams();
   search.set('page', String(page));
   search.set('limit', String(limit));
   search.set('sort', 'dueDate:desc');
   if (clientId) search.set('clientId', clientId);
+  if (bucket) search.set('bucket', bucket);
 
   const query = useQuery<PaginatedResponse<FilingListRow>>({
-    queryKey: ['compliance-filings', 'list', 'by-client', { clientId, page, limit }],
+    queryKey: ['compliance-filings', 'list', 'by-client', { clientId, page, limit, bucket }],
     queryFn: () =>
       apiFn.get<PaginatedResponse<FilingListRow>>(`/compliance-filings?${search.toString()}`),
     enabled,
@@ -86,10 +97,14 @@ export function useClientFilings(
   };
 }
 
+const CONTACTS_DISPLAY_LIMIT = 10;
+
 /**
- * Contacts attached to a single compliance client. The client-contacts
- * endpoint accepts the legacy equality filter on `complianceClientId` via
- * the entity engine's parseLegacyFilters.
+ * Contacts attached to a single compliance client. The detail page only
+ * renders the primary + first secondary contact, so we cap at 10 (down from
+ * the prior 50) — past that, this fetch is unused. The proper fix when a
+ * client genuinely needs to surface every contact is a paginated contacts
+ * panel; deferred until that screen exists.
  */
 export function useClientContacts(clientId: string | null | undefined) {
   const { apiFn } = useEntityEngine();
@@ -98,7 +113,7 @@ export function useClientContacts(clientId: string | null | undefined) {
     queryKey: ['client-contacts', { clientId }],
     queryFn: () =>
       apiFn.get<PaginatedResponse<ClientContactRecord>>(
-        `/client-contacts?complianceClientId=${encodeURIComponent(clientId ?? '')}&limit=50`,
+        `/client-contacts?complianceClientId=${encodeURIComponent(clientId ?? '')}&limit=${CONTACTS_DISPLAY_LIMIT}`,
       ),
     enabled,
   });
