@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { DatabaseService, and, eq, isNull, sql } from '@packages/database';
 import { EntityService, type BaseListQuery } from '@packages/entity-engine';
 import type { DataAccessContext } from '@packages/rbac';
+import { LawsService } from '../laws/laws.service';
 import { complianceLawHandlers } from '../schema/law-handlers';
 import type { CreateLawHandlerDto, UpdateLawHandlerDto } from './law-handlers.dto';
 
@@ -34,12 +35,42 @@ export class LawHandlersService {
   constructor(
     @Inject('ENTITY_SERVICE_law-handlers') private readonly entityService: EntityService,
     private readonly database: DatabaseService,
+    private readonly lawsService: LawsService,
   ) {}
 
   // ---- CRUD delegates (vendors template) -----------------------------------
 
-  list(query: BaseListQuery, accessCtx?: DataAccessContext) {
-    return this.entityService.list(query, accessCtx);
+  /**
+   * List handlers with `lawCode` + `lawName` embedded per row. Service
+   * composition with LawsService.findDisplayByIds — same pattern as
+   * ComplianceFilingsService.list, never a JOIN.
+   */
+  async list(query: BaseListQuery, accessCtx?: DataAccessContext) {
+    const result = await this.entityService.list(query, accessCtx);
+    const lawIds = new Set<string>();
+    for (const row of result.data) {
+      const id = row.lawId;
+      if (typeof id === 'string' && id.length > 0) lawIds.add(id);
+    }
+    if (lawIds.size === 0) return result;
+
+    const laws = await this.lawsService.findDisplayByIds([...lawIds]);
+    const byId = new Map(laws.map((l) => [l.id, l]));
+
+    return {
+      ...result,
+      data: result.data.map((row) => {
+        const lawId = typeof row.lawId === 'string' ? row.lawId : null;
+        const law = lawId ? byId.get(lawId) : undefined;
+        if (!law) return row;
+        return {
+          ...row,
+          lawCode: law.code,
+          lawName: law.name,
+          lawJurisdiction: law.jurisdiction,
+        };
+      }),
+    };
   }
 
   findOne(id: string, accessCtx?: DataAccessContext) {

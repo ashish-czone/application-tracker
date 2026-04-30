@@ -1,6 +1,7 @@
 import { forwardRef, Module } from '@nestjs/common';
 import { EntityEngineModule } from '@packages/entity-engine';
 import { ComplianceRulesModule } from '../rules/compliance-rules.module';
+import { LawsModule } from '../laws/laws.module';
 import { LAW_HANDLERS_CONFIG } from './law-handlers.config';
 import { LawHandlersController } from './law-handlers.controller';
 import { LawHandlersService } from './law-handlers.service';
@@ -17,6 +18,7 @@ import { LawHandlersService } from './law-handlers.service';
   imports: [
     EntityEngineModule.forEntity(LAW_HANDLERS_CONFIG),
     forwardRef(() => ComplianceRulesModule),
+    LawsModule,
   ],
   controllers: [LawHandlersController],
   providers: [LawHandlersService],
