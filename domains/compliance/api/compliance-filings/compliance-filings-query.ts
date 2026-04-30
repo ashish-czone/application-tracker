@@ -12,12 +12,79 @@ const SHORTHAND_KEYS = new Set([
   'notCompleted',
   'status',
   'sort',
+  'bucket',
 ]);
 
 interface StructuredFilter {
   field: string;
   operator: string;
   value: unknown;
+}
+
+export type FilingBucket = 'overdue' | 'due-today' | 'upcoming' | 'filed';
+const VALID_BUCKETS: ReadonlySet<FilingBucket> = new Set([
+  'overdue',
+  'due-today',
+  'upcoming',
+  'filed',
+]);
+
+function addCalendarDays(date: string, days: number): string {
+  const [y, m, d] = date.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  dt.setUTCDate(dt.getUTCDate() + days);
+  const yy = dt.getUTCFullYear();
+  const mm = String(dt.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(dt.getUTCDate()).padStart(2, '0');
+  return `${yy}-${mm}-${dd}`;
+}
+
+/**
+ * Expand a `bucket` alias (overdue / due-today / upcoming / filed) into the
+ * primitive shorthand the translator already understands. Frontend passes a
+ * single `bucket=` param; the controller resolves `today` in APP_TIMEZONE
+ * before calling this so all the date-math stays on the server.
+ */
+export function expandBucketAlias(
+  raw: Record<string, unknown>,
+  today: string,
+): Record<string, unknown> {
+  const bucket = typeof raw.bucket === 'string' ? raw.bucket : undefined;
+  if (!bucket || !(VALID_BUCKETS as ReadonlySet<string>).has(bucket)) {
+    if (bucket) {
+      const out = { ...raw };
+      delete out.bucket;
+      return out;
+    }
+    return raw;
+  }
+
+  const yesterday = addCalendarDays(today, -1);
+  const tomorrow = addCalendarDays(today, 1);
+  const expansion: Record<string, unknown> = { ...raw };
+  delete expansion.bucket;
+
+  switch (bucket as FilingBucket) {
+    case 'overdue':
+      // dueDate < today, expressed via dueBefore (lte) on yesterday.
+      expansion.notCompleted = 'true';
+      expansion.dueBefore = yesterday;
+      break;
+    case 'due-today':
+      expansion.notCompleted = 'true';
+      expansion.dueBefore = today;
+      expansion.dueAfter = today;
+      break;
+    case 'upcoming':
+      // dueDate > today (everything future, dueThisWeek + later).
+      expansion.notCompleted = 'true';
+      expansion.dueAfter = tomorrow;
+      break;
+    case 'filed':
+      expansion.status = 'completed';
+      break;
+  }
+  return expansion;
 }
 
 /**
