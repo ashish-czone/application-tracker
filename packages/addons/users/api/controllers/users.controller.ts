@@ -43,6 +43,13 @@ export class UsersController {
     return this.usersService.getListLayout();
   }
 
+  @Get('summary')
+  @RequirePermission('users.read')
+  @ApiOperation({ summary: 'Aggregated user counts by derived status' })
+  getSummary(@AccessContext() accessCtx?: DataAccessContext) {
+    return this.usersService.getSummary(accessCtx);
+  }
+
   @Get()
   @RequirePermission('users.read')
   @ApiOperation({ summary: 'List users' })
