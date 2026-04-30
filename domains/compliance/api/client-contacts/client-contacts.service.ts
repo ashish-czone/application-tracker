@@ -1,5 +1,5 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { DatabaseService, and, eq } from '@packages/database';
+import { DatabaseService, eq, withScope } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
 import { EntityService, type BaseListQuery } from '@packages/entity-engine';
 import type { DataAccessContext } from '@packages/rbac';
@@ -68,7 +68,8 @@ export class ClientContactsService {
     const rows = await this.database.db
       .select({ id: clientContacts.id })
       .from(clientContacts)
-      .where(and(
+      .where(withScope(
+        clientContacts,
         eq(clientContacts.complianceClientId, clientId),
         eq(clientContacts.complianceIsPrimary, true),
       ))
@@ -95,7 +96,8 @@ export class ClientContactsService {
       const [existing] = await tx
         .select()
         .from(clientContacts)
-        .where(and(
+        .where(withScope(
+          clientContacts,
           eq(clientContacts.id, contactId),
           eq(clientContacts.complianceClientId, clientId),
         ));
@@ -111,7 +113,8 @@ export class ClientContactsService {
       const demoted = await tx
         .update(clientContacts)
         .set({ complianceIsPrimary: false })
-        .where(and(
+        .where(withScope(
+          clientContacts,
           eq(clientContacts.complianceClientId, clientId),
           eq(clientContacts.complianceIsPrimary, true),
         ))
@@ -120,7 +123,7 @@ export class ClientContactsService {
       const [promoted] = await tx
         .update(clientContacts)
         .set({ complianceIsPrimary: true })
-        .where(eq(clientContacts.id, contactId))
+        .where(withScope(clientContacts, eq(clientContacts.id, contactId)))
         .returning();
 
       return { demoted, promoted, previous: existing };

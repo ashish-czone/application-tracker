@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { DatabaseService, and, eq, inArray } from '@packages/database';
+import { DatabaseService, eq, inArray, withScope } from '@packages/database';
 import { complianceFilings } from '../schema/compliance-filings';
 
 /**
@@ -23,7 +23,8 @@ export class ComplianceFilingsLookupService {
       .select({ id: complianceFilings.id })
       .from(complianceFilings)
       .where(
-        and(
+        withScope(
+          complianceFilings,
           eq(complianceFilings.ruleId, ruleId),
           eq(complianceFilings.clientId, clientId),
           eq(complianceFilings.periodStart, periodStart),
@@ -57,7 +58,8 @@ export class ComplianceFilingsLookupService {
       })
       .from(complianceFilings)
       .where(
-        and(
+        withScope(
+          complianceFilings,
           eq(complianceFilings.ruleId, ruleId),
           inArray(complianceFilings.clientId, clientIds as string[]),
           inArray(complianceFilings.periodStart, periodStarts as string[]),

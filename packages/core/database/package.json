@@ -16,6 +16,8 @@
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
+    "@packages/logger": "workspace:*",
+    "@packages/soft-delete": "workspace:*",
     "drizzle-orm": "^0.45.1",
     "pg": "^8.20.0"
   },

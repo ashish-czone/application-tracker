@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { DatabaseService, and, count, eq, inArray, not, sql } from '@packages/database';
+import { DatabaseService, count, eq, inArray, not, sql, withScope } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
 import { WorkflowEngineService, WorkflowRegistryService } from '@packages/workflows';
 import type { TransitionContext } from '@packages/entity-engine';
@@ -45,7 +45,8 @@ export class ClientDormancyService {
     const [row] = await this.database.db
       .select({ count: count() })
       .from(complianceFilings)
-      .where(and(
+      .where(withScope(
+        complianceFilings,
         eq(complianceFilings.clientId, clientId),
         not(inArray(complianceFilings.status, TERMINAL_FILING_STATUSES)),
       ));
@@ -73,7 +74,8 @@ export class ClientDormancyService {
     const filings = await tx
       .select({ id: complianceFilings.id, status: complianceFilings.status })
       .from(complianceFilings)
-      .where(and(
+      .where(withScope(
+        complianceFilings,
         eq(complianceFilings.clientId, clientId),
         not(inArray(complianceFilings.status, TERMINAL_FILING_STATUSES)),
       ));
@@ -88,7 +90,7 @@ export class ClientDormancyService {
     await tx
       .update(complianceFilings)
       .set({ status: 'cancelled' })
-      .where(inArray(complianceFilings.id, cancelledIds));
+      .where(withScope(complianceFilings, inArray(complianceFilings.id, cancelledIds)));
 
     const definition = this.workflowRegistry.getBySlug(FILING_WORKFLOW_SLUG);
     if (!definition) {
@@ -195,7 +197,8 @@ export class ClientDormancyService {
       const rows = await this.database.db
         .select({ id: complianceFilings.id })
         .from(complianceFilings)
-        .where(and(
+        .where(withScope(
+          complianceFilings,
           eq(complianceFilings.clientId, clientId),
           not(inArray(complianceFilings.status, TERMINAL_FILING_STATUSES)),
         ));
@@ -206,7 +209,7 @@ export class ClientDormancyService {
       await this.database.db
         .update(complianceFilings)
         .set({ status: sql`'cancelled'` })
-        .where(inArray(complianceFilings.id, ids));
+        .where(withScope(complianceFilings, inArray(complianceFilings.id, ids)));
       cancelled.push(...ids);
     }
 

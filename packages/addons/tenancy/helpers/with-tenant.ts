@@ -10,7 +10,12 @@ function hasTenantColumn(table: PgTable): table is PgTable & { tenantId: any } {
 }
 
 /**
- * Wraps WHERE conditions with a tenant_id filter for SELECT/UPDATE/DELETE queries.
+ * Low-level tenant-only WHERE-clause helper. New code should prefer
+ * `withScope(table, ...conditions)` from `@packages/database`, which composes
+ * tenancy + soft-delete + (future) actor-scope through one call. This helper
+ * remains exported for the few places that genuinely want tenant scope WITHOUT
+ * the soft-delete leg (e.g. queries on tables that have no `deletedAt` column
+ * and won't grow one).
  *
  * When tenancy is active and the table has a tenantId column, the tenant filter
  * is ANDed with the provided conditions. Otherwise, returns conditions as-is.

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { DatabaseService, users, asc, desc, eq, sql, type SQL } from '@packages/database';
+import { DatabaseService, users, asc, desc, eq, sql, withScope, type SQL } from '@packages/database';
 import { withTenant } from '@packages/tenancy/helpers';
 import { todayInTimezone } from '@packages/common';
 import { clients } from './clients-ref';
@@ -224,7 +224,7 @@ export class ClientsRollupService {
         email: users.email,
       })
       .from(users)
-      .where(sql`${users.id} = ANY(${ids}::text[])`);
+      .where(withScope(users, sql`${users.id} = ANY(${ids}::text[])`));
 
     const options = userRows.map((u) => ({
       id: u.id,
@@ -276,7 +276,7 @@ export class ClientsRollupService {
           ELSE 'healthy'
         END AS risk
       FROM clients c
-      LEFT JOIN users u ON u.id = c.compliance_account_manager_id
+      LEFT JOIN users u ON u.id = c.compliance_account_manager_id AND u.deleted_at IS NULL
       LEFT JOIN (
         SELECT client_id,
           COUNT(DISTINCT law_id) FILTER (WHERE deactivated_at IS NULL)::int AS registered_laws

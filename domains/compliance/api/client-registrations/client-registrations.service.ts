@@ -5,7 +5,8 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-import { DatabaseService, and, count, eq, gt, inArray, isNull, lte, not } from '@packages/database';
+import { DatabaseService, and, count, eq, gt, inArray, isNull, lte, not, withScope } from '@packages/database';
+import { notDeleted } from '@packages/soft-delete';
 import { DomainEventEmitter } from '@packages/events';
 import { EntityService, type BaseListQuery } from '@packages/entity-engine';
 import type { DataAccessContext } from '@packages/rbac';
@@ -276,7 +277,8 @@ export class ClientRegistrationsService {
     const [afterRow] = await this.database.db
       .select({ count: count() })
       .from(complianceFilings)
-      .where(and(
+      .where(withScope(
+        complianceFilings,
         eq(complianceFilings.clientId, clientId),
         eq(complianceFilings.lawId, lawId),
         not(inArray(complianceFilings.status, TERMINAL_FILING_STATUSES)),
@@ -285,7 +287,8 @@ export class ClientRegistrationsService {
     const [beforeRow] = await this.database.db
       .select({ count: count() })
       .from(complianceFilings)
-      .where(and(
+      .where(withScope(
+        complianceFilings,
         eq(complianceFilings.clientId, clientId),
         eq(complianceFilings.lawId, lawId),
         not(inArray(complianceFilings.status, TERMINAL_FILING_STATUSES)),
@@ -349,7 +352,8 @@ export class ClientRegistrationsService {
       const afterFilings = await tx
         .select({ id: complianceFilings.id, status: complianceFilings.status })
         .from(complianceFilings)
-        .where(and(
+        .where(withScope(
+          complianceFilings,
           eq(complianceFilings.clientId, clientId),
           eq(complianceFilings.lawId, lawId),
           not(inArray(complianceFilings.status, TERMINAL_FILING_STATUSES)),
@@ -360,7 +364,8 @@ export class ClientRegistrationsService {
         ? await tx
             .select({ id: complianceFilings.id, status: complianceFilings.status })
             .from(complianceFilings)
-            .where(and(
+            .where(withScope(
+              complianceFilings,
               eq(complianceFilings.clientId, clientId),
               eq(complianceFilings.lawId, lawId),
               not(inArray(complianceFilings.status, TERMINAL_FILING_STATUSES)),
@@ -451,9 +456,13 @@ export class ClientRegistrationsService {
       .from(complianceClientRegistrations)
       .innerJoin(clients, eq(clients.id, complianceClientRegistrations.clientId))
       .where(
-        and(
+        withScope(
+          complianceClientRegistrations,
           eq(complianceClientRegistrations.lawId, lawId),
           eq(clients.complianceStatus, 'active'),
+          // Joined soft-delete table needs its own predicate; withScope only
+          // covers the driver table.
+          notDeleted(clients),
         ),
       );
     return rows.map((r) => this.toRegistration(r.registration));
@@ -473,10 +482,12 @@ export class ClientRegistrationsService {
       .from(complianceClientRegistrations)
       .innerJoin(clients, eq(clients.id, complianceClientRegistrations.clientId))
       .where(
-        and(
+        withScope(
+          complianceClientRegistrations,
           eq(complianceClientRegistrations.lawId, lawId),
           isNull(complianceClientRegistrations.deactivatedAt),
           eq(clients.complianceStatus, 'active'),
+          notDeleted(clients),
         ),
       );
     return rows.map((r) => this.toRegistration(r.registration));
@@ -495,7 +506,7 @@ export class ClientRegistrationsService {
     const [row] = await this.database.db
       .select({ status: clients.complianceStatus })
       .from(clients)
-      .where(eq(clients.id, clientId))
+      .where(withScope(clients, eq(clients.id, clientId)))
       .limit(1);
     return row?.status === 'active';
   }

@@ -1,5 +1,5 @@
 import { forwardRef, Inject, Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
-import { DatabaseService, and, count, eq, inArray, isNull, ne, not, sql } from '@packages/database';
+import { DatabaseService, and, count, eq, inArray, isNull, ne, not, sql, withScope } from '@packages/database';
 import { EntityService, type BaseListQuery } from '@packages/entity-engine';
 import type { DataAccessContext } from '@packages/rbac';
 import { withTenant } from '@packages/tenancy/helpers';
@@ -434,7 +434,7 @@ export class ComplianceRulesService {
     const rows = await this.database.db
       .select({ id: complianceFilings.id })
       .from(complianceFilings)
-      .where(eq(complianceFilings.ruleId, ruleId))
+      .where(withScope(complianceFilings, eq(complianceFilings.ruleId, ruleId)))
       .limit(1);
     return rows.length > 0;
   }
@@ -457,7 +457,7 @@ export class ComplianceRulesService {
     const [row] = await this.database.db
       .select({ count: count() })
       .from(complianceFilings)
-      .where(eq(complianceFilings.ruleId, ruleId));
+      .where(withScope(complianceFilings, eq(complianceFilings.ruleId, ruleId)));
     const generatedFilingCount = Number(row?.count ?? 0);
     return {
       ruleId,
@@ -512,7 +512,8 @@ export class ComplianceRulesService {
     const [row] = await this.database.db
       .select({ count: count() })
       .from(complianceFilings)
-      .where(and(
+      .where(withScope(
+        complianceFilings,
         eq(complianceFilings.ruleId, ruleId),
         not(inArray(complianceFilings.status, TERMINAL_FILING_STATUSES)),
       ));
@@ -598,7 +599,8 @@ export class ComplianceRulesService {
       const inFlight = await tx
         .select({ id: complianceFilings.id, status: complianceFilings.status })
         .from(complianceFilings)
-        .where(and(
+        .where(withScope(
+          complianceFilings,
           eq(complianceFilings.ruleId, ruleId),
           not(inArray(complianceFilings.status, TERMINAL_FILING_STATUSES)),
         ));
