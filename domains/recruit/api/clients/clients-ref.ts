@@ -11,9 +11,12 @@ import { baseClientColumns } from '@packages/directory';
 // identity table from recruit's package. The recruit_* columns are added by
 // a hand-written migration that ALTERs the directory `clients` table.
 
+// Note: contact number lives on the shared `clients.phone` base column —
+// it's an identity-shape field (1-per-client across domains), not a recruit-
+// specific overlay. Recruit's DTO field key remains `contactNumber` for API/
+// UI continuity; the service projects it from `clients.phone`.
 export const recruitClientColumns = {
   recruitAbout: text('recruit_about'),
-  recruitContactNumber: text('recruit_contact_number'),
   recruitSource: text('recruit_source'),
   recruitBillingAddress: jsonb('recruit_billing_address').$type<RecruitAddress | null>(),
   recruitShippingAddress: jsonb('recruit_shipping_address').$type<RecruitAddress | null>(),

@@ -8,7 +8,6 @@
 -- CREATE TABLE migrations for the shared identity row from recruit's package.
 
 ALTER TABLE "clients" ADD COLUMN "recruit_about" text;--> statement-breakpoint
-ALTER TABLE "clients" ADD COLUMN "recruit_contact_number" text;--> statement-breakpoint
 ALTER TABLE "clients" ADD COLUMN "recruit_source" text;--> statement-breakpoint
 ALTER TABLE "clients" ADD COLUMN "recruit_billing_address" jsonb;--> statement-breakpoint
 ALTER TABLE "clients" ADD COLUMN "recruit_shipping_address" jsonb;--> statement-breakpoint
