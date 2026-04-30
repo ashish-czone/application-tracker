@@ -324,6 +324,69 @@ describe('WorkflowEngineService', () => {
     });
   });
 
+  describe('recordHistoryBatch', () => {
+    function buildMockTx(returnedRows: Array<{ id: string; createdAt: Date }>) {
+      const valuesSpy = vi.fn();
+      const mockReturning = vi.fn().mockResolvedValue(returnedRows);
+      const mockTx = {
+        insert: vi.fn().mockReturnValue({
+          values: (v: unknown) => {
+            valuesSpy(v);
+            return { returning: mockReturning };
+          },
+        }),
+      };
+      return { mockTx, valuesSpy, mockReturning };
+    }
+
+    const baseRow = {
+      workflowDefinitionId: 'def-1',
+      entityType: 'compliance-filings',
+      fieldName: 'status',
+      fromState: 'pending',
+      toState: 'cancelled',
+      transitionId: 'trans-cancel',
+      actorId: 'user-1',
+      reason: 'Registration deactivated',
+      comment: null,
+    };
+
+    it('returns [] without touching the tx for an empty batch', async () => {
+      const { mockTx } = buildMockTx([]);
+      const result = await engine.recordHistoryBatch([], mockTx);
+      expect(result).toEqual([]);
+      expect(mockTx.insert).not.toHaveBeenCalled();
+    });
+
+    it('issues a single INSERT VALUES (…) for many rows and returns them in input order', async () => {
+      const { mockTx, valuesSpy, mockReturning } = buildMockTx([
+        { id: 'h-a', createdAt: new Date('2026-04-30T00:00:00Z') },
+        { id: 'h-b', createdAt: new Date('2026-04-30T00:00:01Z') },
+        { id: 'h-c', createdAt: new Date('2026-04-30T00:00:02Z') },
+      ]);
+
+      const rows = [
+        { ...baseRow, entityId: 'f-a' },
+        { ...baseRow, entityId: 'f-b' },
+        { ...baseRow, entityId: 'f-c' },
+      ];
+
+      const result = await engine.recordHistoryBatch(rows, mockTx);
+
+      // ONE insert + ONE values + ONE returning
+      expect(mockTx.insert).toHaveBeenCalledTimes(1);
+      expect(mockReturning).toHaveBeenCalledTimes(1);
+      // values() got the array of three rows in order
+      expect(valuesSpy).toHaveBeenCalledTimes(1);
+      const valuesArg = valuesSpy.mock.calls[0][0] as Array<{ entityId: string }>;
+      expect(valuesArg).toHaveLength(3);
+      expect(valuesArg.map((r) => r.entityId)).toEqual(['f-a', 'f-b', 'f-c']);
+      // result preserves order
+      expect(result.map((r) => r.historyId)).toEqual(['h-a', 'h-b', 'h-c']);
+      expect(result[0].recordedAt).toBe('2026-04-30T00:00:00.000Z');
+    });
+  });
+
   describe('getHistory', () => {
     it('should return history entries for an entity', async () => {
       const mockHistory = [

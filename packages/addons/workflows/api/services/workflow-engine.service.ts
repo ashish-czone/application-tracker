@@ -204,25 +204,57 @@ export class WorkflowEngineService {
   async recordHistory(params: RecordHistoryParams, tx: any): Promise<{ historyId: string; recordedAt: string }> {
     const [historyRow] = await tx
       .insert(workflowTransitionHistory)
-      .values(withTenantInsert(workflowTransitionHistory, {
-        workflowDefinitionId: params.workflowDefinitionId,
-        entityType: params.entityType,
-        entityId: params.entityId,
-        fieldName: params.fieldName,
-        fromState: params.fromState,
-        toState: params.toState,
-        transitionId: params.transitionId,
-        actorId: params.actorId,
-        reason: params.reason,
-        comment: params.comment,
-        metadata: params.metadata,
-      }))
+      .values(this.toHistoryInsertValues(params))
       .returning();
 
     return {
       historyId: historyRow.id,
       recordedAt: historyRow.createdAt.toISOString(),
     };
+  }
+
+  /**
+   * Bulk variant of `recordHistory` for cascade paths that flip many
+   * entities in one transaction (e.g. registration deactivation cancelling
+   * every in-flight filing). One INSERT VALUES (…), preserving input order
+   * in the returned IDs/timestamps.
+   *
+   * Empty input is a no-op — returns `[]` without touching the DB so callers
+   * don't need a guard. Each row is built through the same
+   * `withTenantInsert` path as `recordHistory`, so tenant scoping behaves
+   * identically.
+   */
+  async recordHistoryBatch(
+    rows: RecordHistoryParams[],
+    tx: any,
+  ): Promise<{ historyId: string; recordedAt: string }[]> {
+    if (rows.length === 0) return [];
+
+    const inserted = await tx
+      .insert(workflowTransitionHistory)
+      .values(rows.map((params) => this.toHistoryInsertValues(params)))
+      .returning();
+
+    return inserted.map((historyRow: { id: string; createdAt: Date }) => ({
+      historyId: historyRow.id,
+      recordedAt: historyRow.createdAt.toISOString(),
+    }));
+  }
+
+  private toHistoryInsertValues(params: RecordHistoryParams) {
+    return withTenantInsert(workflowTransitionHistory, {
+      workflowDefinitionId: params.workflowDefinitionId,
+      entityType: params.entityType,
+      entityId: params.entityId,
+      fieldName: params.fieldName,
+      fromState: params.fromState,
+      toState: params.toState,
+      transitionId: params.transitionId,
+      actorId: params.actorId,
+      reason: params.reason,
+      comment: params.comment,
+      metadata: params.metadata,
+    });
   }
 
   async getHistory(
