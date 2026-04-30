@@ -12,10 +12,11 @@ export { MarketingDomainModule };
 export {
   MARKETING_PERMISSIONS,
   MONITORING_SOURCES_PERMISSION_MANIFESTS,
+  MONITORING_KEYWORDS_PERMISSION_MANIFESTS,
   type MarketingPermission,
 } from './permissions';
 
-// Monitoring feature exports
+// Monitoring sources
 export {
   MonitoringSourcesService,
   MARKETING_MONITORING_SOURCE_REGISTERED,
@@ -29,3 +30,16 @@ export {
   type MarketingMonitoringSourceRow,
   type MonitoringSourceKind,
 } from './monitoring/sources';
+
+// Monitoring keywords
+export {
+  MonitoringKeywordsService,
+  MARKETING_MONITORING_KEYWORD_REGISTERED,
+  MARKETING_MONITORING_KEYWORD_UPDATED,
+  MARKETING_MONITORING_KEYWORD_REMOVED,
+  type MarketingMonitoringKeywordRegisteredPayload,
+  type MarketingMonitoringKeywordUpdatedPayload,
+  type MarketingMonitoringKeywordRemovedPayload,
+  marketingMonitoringKeywords,
+  type MarketingMonitoringKeywordRow,
+} from './monitoring/keywords';

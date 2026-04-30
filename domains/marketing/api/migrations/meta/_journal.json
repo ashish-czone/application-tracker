@@ -8,6 +8,13 @@
       "when": 1777562520876,
       "tag": "0000_hard_ulik",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1777563359360,
+      "tag": "0001_greedy_sphinx",
+      "breakpoints": true
     }
   ]
 }
