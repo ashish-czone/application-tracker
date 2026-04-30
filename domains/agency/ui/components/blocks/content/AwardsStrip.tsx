@@ -2,6 +2,16 @@ import type { ReactNode } from 'react';
 import { defineBlock } from '../registry';
 import type { BlockRenderProps } from '../types';
 import { Reveal } from '../../motion/Reveal';
+import { ColoredEyebrow } from '../../decoration/ColoredEyebrow';
+
+const PRACTICE_TONES = [
+  'hsl(var(--skin-practice-1))',
+  'hsl(var(--skin-practice-2))',
+  'hsl(var(--skin-practice-3))',
+  'hsl(var(--skin-practice-4))',
+  'hsl(var(--skin-practice-5))',
+  'hsl(var(--skin-practice-6))',
+] as const;
 
 interface AwardsStripFields extends Record<string, unknown> {
   /** Newline-delimited recognitions, e.g. "Awwwards · Site of the Day" per line. */
@@ -30,18 +40,35 @@ function AwardsStrip({ fields }: BlockRenderProps<AwardsStripFields>): ReactNode
   const eyebrow = fields.eyebrow ?? 'Recognitions';
 
   return (
-    <section className="w-full py-14 md:py-16 border-b border-[hsl(var(--border))]">
-      <Reveal className="mx-auto max-w-6xl px-6 md:px-10 flex flex-col gap-6">
-        <span className="text-eyebrow">[ {eyebrow} ]</span>
-        <ul className="flex flex-wrap items-center gap-x-8 gap-y-3 text-mono text-[hsl(var(--muted-foreground))]">
+    <section
+      className="relative w-full py-14 md:py-16 skin-surface"
+      style={{
+        background: 'hsl(var(--skin-cream))',
+        borderTop: '1px solid hsl(var(--skin-card-border) / 0.6)',
+        borderBottom: '1px solid hsl(var(--skin-card-border) / 0.6)',
+      }}
+    >
+      <Reveal className="mx-auto max-w-6xl px-6 md:px-10 flex flex-col gap-6 items-center text-center">
+        <ColoredEyebrow>{eyebrow}</ColoredEyebrow>
+        <ul className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-sm">
           {items.map((item, i) => (
             <li
               key={i}
-              className="flex items-center gap-3 text-sm hover:text-[hsl(var(--foreground))] transition-colors"
+              className="flex items-center gap-3"
+              style={{ color: 'hsl(var(--skin-muted-ink))' }}
             >
-              <span>{item}</span>
+              <span
+                className="font-medium"
+                style={{ color: 'hsl(var(--skin-ink))' }}
+              >
+                {item}
+              </span>
               {i < items.length - 1 && (
-                <span aria-hidden className="text-[hsl(var(--border))]">•</span>
+                <span
+                  aria-hidden
+                  className="inline-block h-1.5 w-1.5 rounded-full"
+                  style={{ background: PRACTICE_TONES[i % PRACTICE_TONES.length] }}
+                />
               )}
             </li>
           ))}
