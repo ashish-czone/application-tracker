@@ -279,10 +279,7 @@ export function FilingsPage() {
   }
 
   const onTimeRate = summary.total > 0 ? Math.round((summary.completed / summary.total) * 100) : 0;
-  const overdueClientCount = useMemo(
-    () => new Set(legacy.rows.filter((f) => f.status === 'overdue').map((f) => f.clientId)).size,
-    [legacy.rows],
-  );
+  const overdueClientCount = summary.overdueClientCount;
 
   const columnChooserItems = FILING_COLUMNS.map((c) => ({
     key: c.key,

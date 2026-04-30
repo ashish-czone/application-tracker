@@ -17,6 +17,7 @@ const ZERO_SUMMARY: FilingsSummary = {
   upcoming: 0,
   completed: 0,
   cancelled: 0,
+  overdueClientCount: 0,
 };
 
 /**

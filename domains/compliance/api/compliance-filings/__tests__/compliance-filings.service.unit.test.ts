@@ -8,6 +8,7 @@ describe('ComplianceFilingsService', () => {
     list: ReturnType<typeof vi.fn>;
   };
   let lawsService: { findDisplayByIds: ReturnType<typeof vi.fn> };
+  let database: { db: { execute: ReturnType<typeof vi.fn> } };
   let service: ComplianceFilingsService;
 
   beforeEach(() => {
@@ -19,7 +20,10 @@ describe('ComplianceFilingsService', () => {
     lawsService = {
       findDisplayByIds: vi.fn().mockResolvedValue([]),
     };
-    service = new ComplianceFilingsService(entityService as never, lawsService as never);
+    database = {
+      db: { execute: vi.fn().mockResolvedValue({ rows: [{ count: 0 }] }) },
+    };
+    service = new ComplianceFilingsService(entityService as never, lawsService as never, database as never);
   });
 
   describe('create — externalKey derivation', () => {
@@ -168,7 +172,7 @@ describe('ComplianceFilingsService', () => {
       return { data: [], meta: { total, page: 1, limit: 1, totalPages: total > 0 ? 1 : 0 } };
     }
 
-    it('issues seven parallel filtered list queries and returns counts from meta.total', async () => {
+    it('issues seven parallel filtered list queries plus a distinct-client aggregation and returns counts from meta.total', async () => {
       entityService.list
         .mockResolvedValueOnce(metaWith(100)) // total
         .mockResolvedValueOnce(metaWith(12))  // overdue
@@ -177,10 +181,12 @@ describe('ComplianceFilingsService', () => {
         .mockResolvedValueOnce(metaWith(45))  // upcoming
         .mockResolvedValueOnce(metaWith(28))  // completed
         .mockResolvedValueOnce(metaWith(4));  // cancelled
+      database.db.execute.mockResolvedValueOnce({ rows: [{ count: 7 }] });
 
       const summary = await service.getSummary('2026-04-30');
 
       expect(entityService.list).toHaveBeenCalledTimes(7);
+      expect(database.db.execute).toHaveBeenCalledTimes(1);
       expect(summary).toEqual({
         total: 100,
         overdue: 12,
@@ -189,10 +195,11 @@ describe('ComplianceFilingsService', () => {
         upcoming: 45,
         completed: 28,
         cancelled: 4,
+        overdueClientCount: 7,
       });
     });
 
-    it('passes the access context to every internal query so RBAC filtering applies to counts', async () => {
+    it('passes the access context to every internal list query so RBAC filtering applies to counts', async () => {
       const accessCtx = { userId: 'u1' } as never;
       entityService.list.mockResolvedValue(metaWith(0));
 
@@ -200,6 +207,15 @@ describe('ComplianceFilingsService', () => {
 
       const ctxArgs = entityService.list.mock.calls.map((c) => c[1]);
       expect(ctxArgs).toEqual(Array(7).fill(accessCtx));
+    });
+
+    it('returns 0 distinct overdue clients when the aggregation is empty', async () => {
+      entityService.list.mockResolvedValue(metaWith(0));
+      database.db.execute.mockResolvedValueOnce({ rows: [] });
+
+      const summary = await service.getSummary('2026-04-30');
+
+      expect(summary.overdueClientCount).toBe(0);
     });
 
     it('scopes every query to a specific clientId when provided', async () => {
