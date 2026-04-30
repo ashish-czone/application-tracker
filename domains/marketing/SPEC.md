@@ -1,12 +1,20 @@
 ---
 title: Marketing — Spec & Roadmap
-status: v1 scoping (created 2026-04-30)
+status: v1 architecture decisions locked (updated 2026-04-30); ready for task breakdown
 owners: product
 target_user: single-owner software-services founder (this codebase's primary operator)
 decisions:
   - 2026-04-30 — domain shape is a personal marketing OS, not a multi-tenant marketing automation platform. Solo-operator workflows beat enterprise feature parity.
   - 2026-04-30 — V1 = inbound monitoring + light CRM + case-study library. Outbound publishing automation deferred to V2; existing tools (Buffer/Typefully/Postiz) are good enough until the in-house composer is genuinely better.
   - 2026-04-30 — channels in scope skew B2B-software: LinkedIn, Twitter/X, Reddit, Hacker News, Dev.to, Hashnode, GitHub, Indie Hackers, Product Hunt, agency directories (Clutch / GoodFirms / DesignRush). Instagram, Facebook, TikTok, Shopify Forums explicitly out of scope.
+  - 2026-04-30 — one consolidated `marketing` domain. CRM and social are NOT split out preemptively. Internal feature folders (`monitoring/`, `leads/`, `case-studies/`, `templates/`, `digest/`, later `composer/`, `publishing/`) pre-figure where future splits would land if/when a real second consumer or sales-pipeline scope appears. `marketing_leads.source_item_id` stays as a real FK to `marketing_items` (no text-only attribution downgrade).
+  - 2026-04-30 — Q1 app layer = feature folder under `apps/agency/ui/portals/admin/features/marketing/`. No new app. No new portal.
+  - 2026-04-30 — Q2 service approach = all V1 services hand-written. No `defineEntity()` / entity-engine for V1; every V1 entity has non-trivial behaviour (status state machines, polling, template substitution, notes timelines) that wouldn't pay back through generic CRUD.
+  - 2026-04-30 — Q3 polling = queue-based recurring jobs via `packages/platform/queue`. Per-source repeat schedules. No in-process `@Cron`; survives crashes, distributable, retry/DLQ for free.
+  - 2026-04-30 — Q4 source credentials = environment variables for V1 read-only monitoring (Reddit client_id/secret, RSS user-agent). The `oauth` addon enters in V2 when publishing-as-user (LinkedIn / Twitter / Dev.to / Hashnode) needs user-context tokens.
+  - 2026-04-30 — Q5 form-to-lead = subclass composition, mirroring `users-as-library` (PR #1027/#1028). `apps/agency` subclasses landing-pages' `SubmissionsService` and overrides an `onSubmissionCreated(submission, tx)` hook to call `marketing.LeadsService.create()` in the same transaction. If the seam doesn't already exist on the addon, V1 includes a small platform task to add it. Atomic, no eventual-consistency window, no event-driven plumbing.
+  - 2026-04-30 — Q6 digest rendering = marketing owns rendering (bespoke layout, in-domain React/string components), `notifications` addon is delivery transport only. Digest is sent with `kind: 'marketing.digest'` so the notifications addon can track delivery / suppression / preferences specifically.
+  - 2026-04-30 — Q7 outreach send = copy-to-clipboard / open-in-tab. No direct LinkedIn DM API (doesn't exist for personal accounts). No SaaS-SMTP for outreach email (worse deliverability than personal Gmail send). Operator pastes + sends manually, then confirms with "I sent it" → records `marketing_lead_events.kind = 'message_sent'` and optionally bumps lead status `new → contacted`.
 ---
 
 # 1. Product vision
@@ -200,7 +208,7 @@ These columns are owned by `domains/marketing/`. Directory's `ClientContactsServ
 
 ## 6.3 UI surface (V1)
 
-Per frontend conventions: domain ships components only. Pages live in the consuming app (likely a new `apps/marketing` or extension of an existing admin app — TBD in §7).
+Per frontend conventions: domain ships components only. Pages live in `apps/agency/ui/portals/admin/features/marketing/` (Q1 → A).
 
 Components, in `domains/marketing/ui/`:
 
@@ -220,7 +228,9 @@ Components, in `domains/marketing/ui/`:
 | `notifications` | Sends the 08:00 digest email + ad-hoc follow-up reminders |
 | `landing-pages` | Public case study pages (`/case-studies/<slug>`) — V1 may stub this |
 | `categories/taxonomy` | Service tags (`web-app`, `saas-mvp`, `react-consulting`) used by templates and case studies |
-| `entity-engine` (opt-in) | Optional — keep services hand-written initially per `domain isolation` principle; revisit if entity-engine pays back |
+| `entity-engine` (opt-in) | NOT used in V1 (Q2 → A). All marketing services hand-written. Promote individual entities later only if they reduce to pure CRUD shapes. |
+| `packages/platform/queue` | Polling jobs run as queue-backed recurring jobs (Q3 → A). Per-source schedules, retries, DLQ. |
+| `oauth` addon | NOT used in V1. V1 source credentials are env vars (Q4 → A). The oauth addon enters in V2 for publishing-as-user flows. |
 | Shared identity (`clients`, `client_contacts`) | Lead → contact → client linkage, with prefixed `marketing_*` columns |
 
 ## 6.5 Data fetching — non-negotiables
@@ -232,17 +242,65 @@ Per `.claude/rules/data-fetching.md`:
 - Lead pipeline counts ("new: 12, contacted: 5") come from `meta.total` on filtered queries, never from a 1000-row fetch.
 - Source-attribution reports use a dedicated aggregation endpoint, not a client-side join across `marketing_leads` + `marketing_items`.
 
-# 7. Open questions (must be decided before implementation)
+# 7. Resolved architectural decisions
 
-These are the architectural calls per `CLAUDE.md` "Never Make Architectural Decisions Automatically". Each has a recommendation but needs explicit user sign-off.
+All seven V1 architectural questions resolved 2026-04-30. Decisions captured in the frontmatter `decisions:` block; reasoning summarised below for the next reader.
 
-1. **App layer** — does V1 ship as a feature inside an existing admin app, or as a new `apps/marketing-web`? *Recommendation: feature folder inside an existing admin app, since this is single-operator and doesn't need its own portal yet.*
-2. **Hand-written vs. entity-engine services** — keep marketing services hand-written, or use `defineEntity()` for CRUD entities (leads, case studies, templates)? *Recommendation: hand-written V1; the screens are bespoke enough that generic CRUD won't pay back.*
-3. **Polling vs. event-driven for monitoring** — use `workflows` addon scheduled cron, or a domain-level scheduler? *Recommendation: workflows addon's scheduled-job primitive — same pattern compliance + recruit already use.*
-4. **Reddit API auth** — Reddit's API now requires OAuth app credentials and rate-limits aggressively. Use the `oauth` addon or a marketing-domain-local credential store? *Recommendation: `oauth` addon if it supports Reddit's flow shape; otherwise a per-domain credentials table is acceptable for V1.*
-5. **Lead-from-form integration** — when the existing `landing-pages` addon captures a form submission, does it write directly to `marketing_leads`, or emit an event the marketing domain listens to? *Recommendation: event from landing-pages → handler in marketing/leads service that creates the lead. Per event-conventions: this is a side effect of the form submission, exactly the right shape for an event.*
-6. **Digest delivery** — does the digest email render server-side via the `notifications` addon's existing template support, or does marketing own the rendering? *Recommendation: marketing owns rendering (digest layout is bespoke); notifications addon handles delivery.*
-7. **Where does `outreach template send` actually go?** — for V1, the user copies-to-clipboard or opens-in-tab. We do not actually send LinkedIn DMs from V1. Confirm this is acceptable.
+### Q0 — Domain shape (one consolidated marketing, not split into marketing/social/crm)
+
+The two-domain (marketing + social) and three-domain (marketing + social + crm) splits were considered and rejected. Reasoning:
+
+- The natural seam isn't marketing-vs-social — it's **inbound vs outbound**. V1 is all inbound, V2 is all outbound. Splitting marketing/social cuts through the middle of a single user gesture (Reddit thread → lead → outreach template → case study).
+- The codebase rule "domains never depend on other domains" forces every cross-domain interaction up to the app layer. For tightly-coupled solo workflows with no second consumer, that's a tax for no benefit yet.
+- The lead → monitoring-item link benefits from a real FK; text-only attribution loses information.
+- Pre-emptive splits draw lines through unknown territory; the empirical track record of "split first" is poor.
+
+Internal feature folders pre-figure where future splits would land:
+
+```
+domains/marketing/
+  api/src/modules/
+    monitoring/      ← future domains/social/inbound/ if a real second consumer appears
+    publishing/      ← future domains/social/outbound/ (V2 only)
+    leads/           ← future domains/crm/leads/ when sales-pipeline scope appears
+    case-studies/
+    templates/
+    snippets/
+    digest/          ← composes monitoring + leads in-domain (no app-layer file needed)
+    follow-ups/
+```
+
+### Q1 — App layer → A (feature folder in `apps/agency`)
+
+Pages mounted at `apps/agency/ui/portals/admin/features/marketing/`. No new app, no new portal. Single login, single sidebar; marketing sits next to other admin features.
+
+### Q2 — Service approach → A (all hand-written)
+
+All V1 entities have non-trivial behaviour (state machines, polling, template substitution, follow-up reminders, notes timelines). Generic CRUD via `defineEntity()` doesn't pay back when every entity has custom flows. Promote individual entities to entity-engine later if they reduce to pure CRUD.
+
+### Q3 — Polling → A (queue-based recurring jobs via `packages/platform/queue`)
+
+Per-source repeat schedules. No in-process `@Cron`. Survives crashes, distributable across instances, retries + DLQ for free. Polling failure has consequences (missed lead-shaped conversations) — queue-based observability matters.
+
+### Q4 — Source credentials → A (env vars)
+
+V1 monitoring is read-only public-data (Reddit / HN / RSS). Doesn't need user-context OAuth. Env vars are the secure default — no DB-backup leakage, no encryption-at-rest work, no admin-UI rendering of secrets. The `oauth` addon enters V2 when publishing-as-user requires per-user OAuth flows.
+
+### Q5 — Form-to-lead → subclass composition (the `users-as-library` pattern)
+
+`apps/agency` provides `AppSubmissionsService extends SubmissionsService` (from `landing-pages`), overrides `onSubmissionCreated(submission, tx)` to call `marketing.LeadsService.create()` **in the same transaction**. Atomic, no eventual-consistency window, no event-driven plumbing.
+
+Mirrors the precedent set by users-as-library (PR #1027/#1028) and org-units extraction. If the `onSubmissionCreated` seam doesn't already exist on landing-pages, V1 includes a small platform task to add it (legitimate platform change because it generalises an existing seam pattern).
+
+Side effects of submission that *are* genuinely side-effects (audit, "thanks" autoresponder, analytics) still flow through events as normal.
+
+### Q6 — Digest rendering → A (marketing renders, notifications delivers)
+
+`marketing/digest/DigestService` composes the email HTML/text in-domain. Calls `notifications.send({ to, html, text, subject, kind: 'marketing.digest' })`. Notifications addon stays focused on delivery (provider abstraction, retries, suppression). React-email could be introduced later as a platform capability; not in V1 scope.
+
+### Q7 — Outreach send → A (copy-to-clipboard / open-in-tab)
+
+LinkedIn personal DMs have no API for non-Sales-Navigator accounts (the #1 channel can't be automated). For email, personal-Gmail send beats SaaS-SMTP for B2B deliverability — direct send would actively damage outcomes. Operator review-before-send catches templating errors. Operator confirms with "I sent it" → records `marketing_lead_events.kind = 'message_sent'` and optionally bumps lead status `new → contacted`.
 
 # 8. Success criteria
 
