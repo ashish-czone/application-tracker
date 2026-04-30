@@ -15,6 +15,13 @@
       "when": 1777392000000,
       "tag": "0001_company_name_dedup",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1777967000000,
+      "tag": "0002_promote_identity_columns",
+      "breakpoints": true
     }
   ]
 }
