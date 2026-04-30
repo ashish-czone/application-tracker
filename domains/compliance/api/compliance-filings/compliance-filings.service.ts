@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { DatabaseService, sql } from '@packages/database';
+import { DatabaseService, eq, inArray, sql, withScope } from '@packages/database';
 import { EntityService, type BaseListQuery } from '@packages/entity-engine';
 import type { DataAccessContext } from '@packages/rbac';
 import { complianceFilings } from '../schema/compliance-filings';
@@ -221,7 +221,7 @@ export class ComplianceFilingsService {
         buildQuery([{ field: 'status', operator: 'eq', value: 'cancelled' }]),
         accessCtx,
       ),
-      this.countOverdueDistinctClients(today, options?.clientId),
+      this.countOverdueDistinctClients(today, options?.clientId, accessCtx),
     ]);
 
     return {
@@ -241,24 +241,30 @@ export class ComplianceFilingsService {
    * passed. Lives outside the entity-engine's `list` path because it asks a
    * shape `entityService.list({limit:1}).meta.total` cannot answer.
    *
-   * Scope: soft-delete + optional clientId only. There is no row-level RBAC
-   * scope on `compliance_filings` in this codebase today; if one ever lands,
-   * this query must migrate behind whatever scoped-aggregation primitive
-   * the entity engine grows. Tracked alongside the raw rollup pattern in
-   * `clients-rollup.service.ts`.
+   * Scope: tenant + soft-delete via `withScope`, plus the actor's row-level
+   * RBAC predicate from `entityService.getScopePredicate(ctx)` interpolated
+   * into the WHERE — same scope `entityService.list({…}, accessCtx)` would
+   * apply if the engine could express DISTINCT count. The clientId option
+   * is the existing per-client scope filter from the summary endpoint.
    */
   private async countOverdueDistinctClients(
     today: string,
     clientId: string | undefined,
+    accessCtx?: DataAccessContext,
   ): Promise<number> {
-    const clientFilter = clientId ? sql`AND client_id = ${clientId}` : sql``;
+    const scopePredicate = accessCtx ? await this.entityService.getScopePredicate(accessCtx) : undefined;
+    const where = withScope(
+      complianceFilings,
+      scopePredicate,
+      inArray(complianceFilings.status, ['pending', 'in_progress', 'review', 'rejected']),
+      sql`${complianceFilings.dueDate}::date < ${today}::date`,
+      ...(clientId ? [eq(complianceFilings.clientId, clientId)] : []),
+    );
+    const whereSql = where ? sql`WHERE ${where}` : sql``;
     const result = await this.database.db.execute(sql`
       SELECT COUNT(DISTINCT client_id)::int AS count
       FROM ${complianceFilings}
-      WHERE deleted_at IS NULL
-        AND status IN ('pending', 'in_progress', 'review', 'rejected')
-        AND due_date < ${today}::date
-        ${clientFilter}
+      ${whereSql}
     `);
     const row = result.rows[0] as { count: number | string } | undefined;
     return Number(row?.count ?? 0);

@@ -6,6 +6,7 @@ describe('ComplianceFilingsService', () => {
     create: ReturnType<typeof vi.fn>;
     update: ReturnType<typeof vi.fn>;
     list: ReturnType<typeof vi.fn>;
+    getScopePredicate: ReturnType<typeof vi.fn>;
   };
   let lawsService: { findDisplayByIds: ReturnType<typeof vi.fn> };
   let database: { db: { execute: ReturnType<typeof vi.fn> } };
@@ -16,6 +17,7 @@ describe('ComplianceFilingsService', () => {
       create: vi.fn().mockResolvedValue({ id: 'filing-1' }),
       update: vi.fn().mockResolvedValue({ id: 'filing-1' }),
       list: vi.fn(),
+      getScopePredicate: vi.fn().mockResolvedValue(undefined),
     };
     lawsService = {
       findDisplayByIds: vi.fn().mockResolvedValue([]),
