@@ -24,6 +24,7 @@ import {
   TransitionComplianceRuleSchema,
   UpdateComplianceRuleSchema,
 } from './compliance-rules.dto';
+import { translateRulesQuery } from './compliance-rules-query';
 
 @Controller('compliance-rules')
 export class ComplianceRulesController {
@@ -37,14 +38,14 @@ export class ComplianceRulesController {
 
   @Get()
   @RequirePermission('compliance-rules.read')
-  list(@Query() query: Record<string, unknown>, @AccessContext() accessCtx?: DataAccessContext) {
-    const parsed = {
-      ...query,
-      page: query.page ? Number(query.page) : undefined,
-      limit: query.limit ? Number(query.limit) : undefined,
-      includeDeleted: query.includeDeleted === 'true',
-    };
-    return this.rules.list(parsed, accessCtx);
+  list(@Query() query: Record<string, unknown>) {
+    return this.rules.list(translateRulesQuery(query));
+  }
+
+  @Get('summary')
+  @RequirePermission('compliance-rules.read')
+  summary() {
+    return this.rules.getSummary();
   }
 
   /**

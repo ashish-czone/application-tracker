@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { AnimatePresence } from 'framer-motion';
 import { Plus, Upload } from 'lucide-react';
@@ -13,9 +13,12 @@ import {
   type ActiveFilter,
 } from '@packages/ui';
 import { useEntityHooks } from '@packages/entity-engine-ui';
-import { type ComplianceFrequency } from '@domains/compliance-contract';
+import {
+  type ComplianceFrequency,
+  type LawGroupKey,
+} from '@domains/compliance-contract';
 import { LAW_GROUPS, JURISDICTION_OPTIONS, type JurisdictionKey } from './filterOptions';
-import { type LawGroupKey, type ComplianceRule } from './types';
+import { type ComplianceRule } from './types';
 import { FREQUENCY_LABEL, FREQUENCY_OPTIONS } from './components/FrequencyPill';
 import {
   makeComplianceRuleColumns,
@@ -29,12 +32,33 @@ import {
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 import {
   useComplianceRulesList,
+  useComplianceRulesSummary,
   useLawsLookup,
-  type LawRecord,
 } from '../../../../hooks/useComplianceRulesApi';
+import { useDebouncedValue } from '../../../../hooks/useDebouncedValue';
 import { mapComplianceRuleRecord } from './api/mapComplianceRuleRecord';
 
 type StatusTab = 'all' | ComplianceRule['status'];
+
+const PAGE_LIMIT = 25;
+// Limit for the drawer's law-picker dropdown. Bounded reference data —
+// regulators don't add laws often. Past this many laws, the picker should
+// become a debounced search box (follow-up).
+const DRAWER_LAW_LIMIT = 100;
+
+function toCreatePayload(values: NewComplianceRuleValues): Record<string, unknown> | null {
+  if (!values.frequency) return null;
+  return {
+    code: values.code,
+    name: values.name,
+    lawId: values.lawId,
+    frequency: values.frequency,
+    description: values.description || undefined,
+    dueDayOfMonth: Number(values.dueDayOfMonth),
+    dueMonthOffset: Number(values.dueMonthOffset),
+    gracePeriodDays: Number(values.gracePeriodDays),
+  };
+}
 
 export function ComplianceRulesPage() {
   const navigate = useNavigate();
@@ -45,50 +69,57 @@ export function ComplianceRulesPage() {
   const [jurisdictionFilter, setJurisdictionFilter] = useState<JurisdictionKey[]>([]);
   const [frequencyFilter, setFrequencyFilter] = useState<ComplianceFrequency[]>([]);
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebouncedValue(search, 300);
   const [statusTab, setStatusTab] = useState<StatusTab>('all');
+  const [page, setPage] = useState(1);
 
-  const { data: rulesPage, isLoading, isError } = useComplianceRulesList({ limit: 200 });
-  const { data: lawsPage } = useLawsLookup();
+  useEffect(() => {
+    setPage(1);
+  }, [statusTab, lawFilter, jurisdictionFilter, frequencyFilter, debouncedSearch]);
+
+  const {
+    data: rulesPage,
+    isLoading,
+    isError,
+  } = useComplianceRulesList({
+    page,
+    limit: PAGE_LIMIT,
+    status: statusTab === 'all' ? undefined : statusTab,
+    lawGroup: lawFilter.length > 0 ? lawFilter.join(',') : undefined,
+    jurisdiction: jurisdictionFilter.length > 0 ? jurisdictionFilter.join(',') : undefined,
+    frequency: frequencyFilter.length > 0 ? frequencyFilter.join(',') : undefined,
+    q: debouncedSearch || undefined,
+  });
+  const { data: summary } = useComplianceRulesSummary();
+  const { data: lawsPage } = useLawsLookup({ limit: DRAWER_LAW_LIMIT });
 
   const rulesHooks = useEntityHooks('compliance-rules');
   const createRule = rulesHooks.useCreate({ onSuccess: () => setDrawerOpen(false) });
 
-  const lawById = useMemo(() => {
-    const map = new Map<string, LawRecord>();
-    for (const law of lawsPage?.data ?? []) map.set(law.id, law);
-    return map;
-  }, [lawsPage]);
-
-  const rows = useMemo<ComplianceRule[]>(() => {
-    const records = rulesPage?.data;
-    if (!records) return [];
-    return records.map((r) => mapComplianceRuleRecord(r, lawById.get(r.lawId)));
-  }, [rulesPage, lawById]);
-
-  const statusCounts = useMemo(
-    () => ({
-      active: rows.filter((r) => r.status === 'active').length,
-      draft: rows.filter((r) => r.status === 'draft').length,
-      deprecated: rows.filter((r) => r.status === 'deprecated').length,
-    }),
-    [rows],
+  const rows = useMemo<ComplianceRule[]>(
+    () => rulesPage?.data?.map((r) => mapComplianceRuleRecord(r)) ?? [],
+    [rulesPage],
   );
+  const totalRows = rulesPage?.meta?.total ?? 0;
+  const totalPages = rulesPage?.meta?.totalPages ?? 1;
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return rows.filter((o) => {
-      if (statusTab !== 'all' && o.status !== statusTab) return false;
-      if (lawFilter.length > 0 && !lawFilter.includes(o.lawGroup)) return false;
-      if (
-        jurisdictionFilter.length > 0 &&
-        !jurisdictionFilter.includes(o.jurisdiction as JurisdictionKey)
-      )
-        return false;
-      if (frequencyFilter.length > 0 && !frequencyFilter.includes(o.frequency)) return false;
-      if (q && !`${o.code} ${o.name} ${o.lawName}`.toLowerCase().includes(q)) return false;
-      return true;
-    });
-  }, [rows, statusTab, lawFilter, jurisdictionFilter, frequencyFilter, search]);
+  const totalRules = summary?.total ?? 0;
+  const statusCounts = summary?.byStatus ?? { active: 0, draft: 0, deprecated: 0 };
+
+  const lawOptions = LAW_GROUPS.map((g) => ({
+    value: g.key,
+    label: g.label,
+  }));
+
+  const jurisdictionOptions = JURISDICTION_OPTIONS.map((j) => ({
+    value: j.value,
+    label: j.label,
+  }));
+
+  const frequencyOptions = FREQUENCY_OPTIONS.map((f) => ({
+    value: f.value,
+    label: f.label,
+  }));
 
   const activeFilters: ActiveFilter[] = useMemo(() => {
     const chips: ActiveFilter[] = [];
@@ -126,42 +157,17 @@ export function ComplianceRulesPage() {
     setFrequencyFilter([]);
   };
 
-  const totalRows = rows.length;
-  const onTimeRows = rows.filter((o) => o.onTimePct > 0);
-  const totalCoverage =
-    onTimeRows.length > 0
-      ? Math.round(onTimeRows.reduce((acc, o) => acc + o.onTimePct, 0) / onTimeRows.length)
-      : 0;
-  const totalFilingsThisPeriod = rows.reduce((acc, o) => acc + o.filingsThisPeriod, 0);
-
-  const lawOptions = LAW_GROUPS.map((g) => ({
-    value: g.key,
-    label: g.label,
-    count: g.count,
-  }));
-
-  const jurisdictionOptions = JURISDICTION_OPTIONS.map((j) => ({
-    value: j.value,
-    label: j.label,
-    count: rows.filter((o) => o.jurisdiction === j.value).length,
-  }));
-
-  const frequencyOptions = FREQUENCY_OPTIONS.map((f) => ({
-    value: f.value,
-    label: f.label,
-    count: rows.filter((o) => o.frequency === f.value).length,
-  }));
-
   const ruleColumns = useMemo(
-    () => makeComplianceRuleColumns({
-      onDeprecate: setDeprecating,
-      onEdit: (rule) => navigate(`/compliance-rules/${rule.id}/edit`),
-    }),
+    () =>
+      makeComplianceRuleColumns({
+        onDeprecate: setDeprecating,
+        onEdit: (rule) => navigate(`/compliance-rules/${rule.id}/edit`),
+      }),
     [navigate],
   );
 
   const statusTabs = [
-    { value: 'all' as const, label: 'All', count: totalRows },
+    { value: 'all' as const, label: 'All', count: totalRules },
     { value: 'active' as const, label: 'Active', count: statusCounts.active },
     { value: 'draft' as const, label: 'Draft', count: statusCounts.draft },
     {
@@ -184,7 +190,7 @@ export function ComplianceRulesPage() {
             <span className="text-signal">Failed to load rules. Refresh to retry.</span>
           ) : (
             <>
-              {totalRows} rules across {LAW_GROUPS.length} law groups — the canonical catalog used
+              {totalRules} rules across {LAW_GROUPS.length} law groups — the canonical catalog used
               to generate filings for every client on roll-over.
             </>
           )
@@ -204,12 +210,12 @@ export function ComplianceRulesPage() {
         kpis={[
           {
             label: 'Total rules',
-            value: String(totalRows),
+            value: String(totalRules),
             unit: 'rules',
             delta: `${LAW_GROUPS.length} law groups`,
             deltaTone: 'neutral',
             accent: 'authority',
-            sparklineData: [72, 75, 78, 82, 83, 85, totalRows],
+            sparklineData: [totalRules, totalRules, totalRules, totalRules, totalRules, totalRules, totalRules],
             sparklineTone: 'authority',
             footnote: 'catalog size',
           },
@@ -217,12 +223,12 @@ export function ComplianceRulesPage() {
             label: 'Active',
             value: String(statusCounts.active),
             unit: 'rules',
-            delta: '▲ 2 since last review',
-            deltaTone: 'positive',
+            delta: `${Math.round((statusCounts.active / Math.max(totalRules, 1)) * 100)}% of catalog`,
+            deltaTone: 'neutral',
             accent: 'filed',
-            sparklineData: [68, 70, 71, 72, 73, 74, statusCounts.active],
+            sparklineData: [statusCounts.active, statusCounts.active, statusCounts.active, statusCounts.active, statusCounts.active, statusCounts.active, statusCounts.active],
             sparklineTone: 'filed',
-            footnote: `of ${totalRows} total`,
+            footnote: `of ${totalRules} total`,
           },
           {
             label: 'In draft',
@@ -231,20 +237,20 @@ export function ComplianceRulesPage() {
             delta: 'awaiting review',
             deltaTone: 'neutral',
             accent: 'due-soon',
-            sparklineData: [4, 6, 7, 8, 6, 5, statusCounts.draft],
+            sparklineData: [statusCounts.draft, statusCounts.draft, statusCounts.draft, statusCounts.draft, statusCounts.draft, statusCounts.draft, statusCounts.draft],
             sparklineTone: 'due-soon',
             footnote: 'open for edits',
           },
           {
-            label: 'Avg. on-time rate',
-            value: `${totalCoverage}`,
-            unit: '%',
-            delta: '▲ 2.1 vs Q4',
-            deltaTone: 'positive',
-            accent: 'filed',
-            sparklineData: [84, 86, 87, 88, 89, 90, totalCoverage],
-            sparklineTone: 'filed',
-            footnote: `${totalFilingsThisPeriod} filings this period`,
+            label: 'Deprecated',
+            value: String(statusCounts.deprecated),
+            unit: 'rules',
+            delta: 'historical only',
+            deltaTone: 'neutral',
+            accent: 'authority',
+            sparklineData: [statusCounts.deprecated, statusCounts.deprecated, statusCounts.deprecated, statusCounts.deprecated, statusCounts.deprecated, statusCounts.deprecated, statusCounts.deprecated],
+            sparklineTone: 'authority',
+            footnote: 'no new filings',
           },
         ]}
       >
@@ -253,10 +259,11 @@ export function ComplianceRulesPage() {
 
           <DataGridShell
             columns={ruleColumns}
-            rows={filtered}
+            rows={rows}
             getRowKey={(o) => o.id}
             requiredColumns={REQUIRED_COMPLIANCE_RULE_COLUMN_KEYS}
             totalRows={totalRows}
+            defaultPageSize={PAGE_LIMIT}
             activeFilters={activeFilters}
             onClearFilters={clearAll}
             filters={
@@ -290,6 +297,31 @@ export function ComplianceRulesPage() {
               </>
             }
           />
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-3 py-3 border-t border-rule mt-2">
+              <span className="text-[11px] font-sans tabular-nums text-ink-soft">
+                Page {page} of {totalPages} · {totalRows} rules
+              </span>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  className="px-3 py-1 text-[11px] uppercase tracking-eyebrow font-sans font-medium border border-rule text-ink-muted hover:text-ink disabled:opacity-40 disabled:cursor-not-allowed"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page <= 1 || isLoading}
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  className="px-3 py-1 text-[11px] uppercase tracking-eyebrow font-sans font-medium border border-rule text-ink-muted hover:text-ink disabled:opacity-40 disabled:cursor-not-allowed"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page >= totalPages || isLoading}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </section>
       </ScreenLayout>
 
@@ -321,25 +353,4 @@ export function ComplianceRulesPage() {
       )}
     </>
   );
-}
-
-function toCreatePayload(values: NewComplianceRuleValues): Record<string, unknown> | null {
-  if (!values.frequency) return null;
-  const dueDayOfMonth = Number(values.dueDayOfMonth);
-  const dueMonthOffset = Number(values.dueMonthOffset);
-  const gracePeriodDays = Number(values.gracePeriodDays);
-  if (!Number.isFinite(dueDayOfMonth) || dueDayOfMonth < 1 || dueDayOfMonth > 31) return null;
-  if (!Number.isFinite(dueMonthOffset)) return null;
-  if (!Number.isFinite(gracePeriodDays)) return null;
-  return {
-    code: values.code,
-    name: values.name,
-    lawId: values.lawId,
-    frequency: values.frequency,
-    status: 'draft',
-    dueDayOfMonth,
-    dueMonthOffset,
-    gracePeriodDays,
-    description: values.description || undefined,
-  };
 }
