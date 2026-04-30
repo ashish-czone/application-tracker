@@ -29,3 +29,13 @@ export interface MarketingMonitoringSourceRemovedPayload extends Record<string, 
   kind: string;
   label: string;
 }
+
+// --- Augment global EventPayloadMap for compile-time safety ---
+
+declare module '@packages/events' {
+  interface EventPayloadMap {
+    [MARKETING_MONITORING_SOURCE_REGISTERED]: MarketingMonitoringSourceRegisteredPayload;
+    [MARKETING_MONITORING_SOURCE_UPDATED]: MarketingMonitoringSourceUpdatedPayload;
+    [MARKETING_MONITORING_SOURCE_REMOVED]: MarketingMonitoringSourceRemovedPayload;
+  }
+}

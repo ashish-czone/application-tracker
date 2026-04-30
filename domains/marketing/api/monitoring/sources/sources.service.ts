@@ -105,11 +105,16 @@ export class MonitoringSourcesService {
       .returning();
 
     this.events.emit(MARKETING_MONITORING_SOURCE_REGISTERED, {
-      sourceId: row.id,
-      kind: row.kind,
-      label: row.label,
-      pollingCadenceMinutes: row.pollingCadenceMinutes,
-    } satisfies MarketingMonitoringSourceRegisteredPayload);
+      entityType: 'marketing.monitoring-sources',
+      entityId: row.id,
+      actorId,
+      payload: {
+        sourceId: row.id,
+        kind: row.kind,
+        label: row.label,
+        pollingCadenceMinutes: row.pollingCadenceMinutes,
+      } satisfies MarketingMonitoringSourceRegisteredPayload,
+    });
 
     return row;
   }
@@ -137,9 +142,14 @@ export class MonitoringSourcesService {
       .returning();
 
     this.events.emit(MARKETING_MONITORING_SOURCE_UPDATED, {
-      sourceId: row.id,
-      changes: diffShape(existing, row),
-    } satisfies MarketingMonitoringSourceUpdatedPayload);
+      entityType: 'marketing.monitoring-sources',
+      entityId: row.id,
+      actorId,
+      payload: {
+        sourceId: row.id,
+        changes: diffShape(existing, row),
+      } satisfies MarketingMonitoringSourceUpdatedPayload,
+    });
 
     return row;
   }
@@ -157,10 +167,15 @@ export class MonitoringSourcesService {
       .where(eq(marketingMonitoringSources.id, id));
 
     this.events.emit(MARKETING_MONITORING_SOURCE_REMOVED, {
-      sourceId: id,
-      kind: existing.kind,
-      label: existing.label,
-    } satisfies MarketingMonitoringSourceRemovedPayload);
+      entityType: 'marketing.monitoring-sources',
+      entityId: id,
+      actorId,
+      payload: {
+        sourceId: id,
+        kind: existing.kind,
+        label: existing.label,
+      } satisfies MarketingMonitoringSourceRemovedPayload,
+    });
   }
 
   /**
