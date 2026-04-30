@@ -1,6 +1,5 @@
 import type { Handler } from '../../../../../types';
 import type { ClientRow, ClientStatus, ClientRiskLevel } from '../types';
-import type { ClientDetail } from '../types';
 import type { ClientRecord } from '../../../../../hooks/useClientsApi';
 
 const UNASSIGNED_HANDLER: Handler = {
@@ -75,38 +74,3 @@ export function mapClientRecordToRow(record: ClientRecord): ClientRow {
   };
 }
 
-function formatAddress(record: ClientRecord): string | null {
-  const parts = [
-    record.addressLine1,
-    record.addressLine2,
-    [record.city, record.state].filter(Boolean).join(', '),
-    record.postalCode,
-  ]
-    .map((v) => (v ?? '').toString().trim())
-    .filter(Boolean);
-  return parts.length > 0 ? parts.join(' · ') : null;
-}
-
-/**
- * Merge a real API record into the mock detail template. Identity fields
- * (name, legalName, taxIdentifier, status, onboardedDate, address, notes)
- * come from the record; aggregate and related-entity fields (laws, filings,
- * activity, counts) remain mocked until the corresponding endpoints exist.
- */
-export function mergeClientDetail(record: ClientRecord, mock: ClientDetail): ClientDetail {
-  const row = mapClientRecordToRow(record);
-  const address = formatAddress(record);
-  return {
-    ...mock,
-    id: row.id,
-    name: row.name,
-    legalName: row.legalName,
-    taxIdentifier: row.taxIdentifier,
-    initials: row.initials,
-    color: row.color,
-    status: row.status,
-    primaryContactEmail: row.primaryContactEmail || mock.primaryContactEmail,
-    onboardedDate: row.onboardedDate || mock.onboardedDate,
-    address: address ?? mock.address,
-  };
-}

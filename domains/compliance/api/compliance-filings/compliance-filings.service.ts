@@ -151,14 +151,21 @@ export class ComplianceFilingsService {
    * `today` is a calendar date string in app-tz; caller (controller) resolves
    * it from APP_TIMEZONE.
    */
-  async getSummary(today: string, accessCtx?: DataAccessContext): Promise<FilingsSummary> {
+  async getSummary(
+    today: string,
+    options?: { clientId?: string },
+    accessCtx?: DataAccessContext,
+  ): Promise<FilingsSummary> {
     const inSevenDays = addDays(today, 7);
     const notCompletedStates = ['pending', 'in_progress', 'review', 'rejected'];
+    const scopeFilter: Array<{ field: string; operator: string; value: unknown }> = options?.clientId
+      ? [{ field: 'clientId', operator: 'eq', value: options.clientId }]
+      : [];
 
     const buildQuery = (extra: Array<{ field: string; operator: string; value: unknown }>): BaseListQuery => ({
       page: 1,
       limit: 1,
-      filters: JSON.stringify(extra),
+      filters: JSON.stringify([...scopeFilter, ...extra]),
     });
 
     const [total, overdue, dueToday, dueThisWeek, upcoming, completed, cancelled] = await Promise.all([

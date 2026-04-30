@@ -144,16 +144,18 @@ export function ClientDetailOverview({ client }: ClientDetailOverviewProps) {
           </div>
         )}
 
-        <section className="border border-rule bg-paper-raised p-5">
-          <h3 className="text-[11px] uppercase tracking-eyebrow font-sans font-semibold text-ink-muted mb-4">
-            Recent activity
-          </h3>
-          <ActivityTimeline
-            events={client.recentActivity}
-            iconConfig={CLIENT_ACTIVITY_ICONS}
-            variant="feed"
-          />
-        </section>
+        {client.recentActivity.length > 0 && (
+          <section className="border border-rule bg-paper-raised p-5">
+            <h3 className="text-[11px] uppercase tracking-eyebrow font-sans font-semibold text-ink-muted mb-4">
+              Recent activity
+            </h3>
+            <ActivityTimeline
+              events={client.recentActivity}
+              iconConfig={CLIENT_ACTIVITY_ICONS}
+              variant="feed"
+            />
+          </section>
+        )}
 
         <section className="border border-rule bg-paper-raised p-5">
           <h3 className="text-[11px] uppercase tracking-eyebrow font-sans font-semibold text-ink-muted mb-3">

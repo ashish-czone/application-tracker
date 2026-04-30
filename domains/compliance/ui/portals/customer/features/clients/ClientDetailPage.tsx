@@ -3,7 +3,6 @@ import { Link, useParams } from 'react-router';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
 import { DataTable, Pagination, CoarseTabs } from '@packages/ui';
 import { AuditTimeline } from '@packages/audit-ui';
-import { CLIENT_DETAIL_PLACEHOLDER } from './placeholders';
 import type { ClientFilingStatus, ClientLaw } from './types';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 import { InactiveStateBanner } from '../../../../components';
@@ -13,26 +12,43 @@ import { CLIENT_DETAIL_FILING_COLUMNS } from './components/clientDetailFilingCol
 import { makeClientDetailLawColumns } from './components/clientDetailLawColumns';
 import { RegistrationDeactivationDialog } from './components/RegistrationDeactivationDialog';
 import { useClientDetail } from '../../../../hooks/useClientsApi';
-import { mergeClientDetail } from './api/mapClientRecord';
+import {
+  useClientContacts,
+  useClientFilings,
+  useClientFilingsSummary,
+  useClientRegistrations,
+} from '../../../../hooks/useClientDetailData';
+import { buildClientDetail } from './api/buildClientDetail';
 
 type DetailTab = 'overview' | 'filings' | 'laws' | 'audit-trail';
 
+const FILINGS_PAGE_LIMIT = 10;
+
 export function ClientDetailPage() {
   const { clientId } = useParams<{ clientId: string }>();
-  const { data: record, isLoading, isError } = useClientDetail(clientId);
+  const { data: record, isLoading: recordLoading, isError } = useClientDetail(clientId);
+  const { summary, loading: summaryLoading } = useClientFilingsSummary(clientId);
+  const { registrations, loading: registrationsLoading } = useClientRegistrations(clientId);
+  const { contacts, loading: contactsLoading } = useClientContacts(clientId);
 
   const [activeTab, setActiveTab] = useState<DetailTab>('overview');
   const [filingsPage, setFilingsPage] = useState(1);
-  const [filingsPageSize, setFilingsPageSize] = useState(10);
   const [filingStatusTab, setFilingStatusTab] = useState<'all' | ClientFilingStatus>('all');
   const [deactivating, setDeactivating] = useState<ClientLaw | null>(null);
+
+  const filingsQuery = useClientFilings(clientId, {
+    page: filingsPage,
+    limit: FILINGS_PAGE_LIMIT,
+  });
 
   const lawColumns = useMemo(
     () => makeClientDetailLawColumns({ onDeactivate: setDeactivating }),
     [],
   );
 
-  if (isLoading) {
+  const baseLoading = recordLoading || summaryLoading || registrationsLoading || contactsLoading;
+
+  if (baseLoading) {
     return (
       <div className="min-h-screen bg-paper paper-grain">
         <ScreenPreviewTopBar active="clients" />
@@ -65,40 +81,25 @@ export function ClientDetailPage() {
     );
   }
 
-  const client = mergeClientDetail(record, CLIENT_DETAIL_PLACEHOLDER);
+  const client = buildClientDetail({
+    record,
+    summary,
+    registrations,
+    recentFilings: filingsQuery.rows,
+    contacts,
+  });
 
-  const filingsPageCount = Math.max(1, Math.ceil(client.recentFilings.length / filingsPageSize));
-  const paginatedFilings = client.recentFilings.slice(
-    (filingsPage - 1) * filingsPageSize,
-    filingsPage * filingsPageSize,
-  );
-  const filteredFilings =
+  const visibleFilings =
     filingStatusTab === 'all'
-      ? paginatedFilings
+      ? client.recentFilings
       : client.recentFilings.filter((f) => f.status === filingStatusTab);
 
   const filingStatusTabs = [
-    { value: 'all' as const, label: 'All', count: client.recentFilings.length },
-    {
-      value: 'overdue' as const,
-      label: 'Overdue',
-      count: client.recentFilings.filter((f) => f.status === 'overdue').length,
-    },
-    {
-      value: 'due-today' as const,
-      label: 'Due today',
-      count: client.recentFilings.filter((f) => f.status === 'due-today').length,
-    },
-    {
-      value: 'upcoming' as const,
-      label: 'Upcoming',
-      count: client.recentFilings.filter((f) => f.status === 'upcoming').length,
-    },
-    {
-      value: 'filed' as const,
-      label: 'Filed',
-      count: client.recentFilings.filter((f) => f.status === 'filed').length,
-    },
+    { value: 'all' as const, label: 'All', count: filingsQuery.total },
+    { value: 'overdue' as const, label: 'Overdue', count: summary.overdue },
+    { value: 'due-today' as const, label: 'Due today', count: summary.dueToday },
+    { value: 'upcoming' as const, label: 'Upcoming', count: summary.upcoming + summary.dueThisWeek },
+    { value: 'filed' as const, label: 'Filed', count: summary.completed },
   ];
 
   const detailTabs = [
@@ -146,19 +147,18 @@ export function ClientDetailPage() {
                 <DataTable
                   columns={CLIENT_DETAIL_FILING_COLUMNS}
                   visibleColumns={CLIENT_DETAIL_FILING_COLUMNS.map((c) => c.key)}
-                  rows={filingStatusTab === 'all' ? paginatedFilings : filteredFilings}
+                  rows={visibleFilings}
                   getRowKey={(f) => f.id}
                   onRowClick={() => {}}
                 />
-                {filingStatusTab === 'all' && (
+                {filingStatusTab === 'all' && filingsQuery.meta && (
                   <Pagination
                     page={filingsPage}
-                    pageSize={filingsPageSize}
-                    pageCount={filingsPageCount}
-                    totalRows={client.recentFilings.length}
+                    pageSize={FILINGS_PAGE_LIMIT}
+                    pageCount={filingsQuery.meta.totalPages}
+                    totalRows={filingsQuery.total}
                     onPageChange={setFilingsPage}
-                    onPageSizeChange={(size) => {
-                      setFilingsPageSize(size);
+                    onPageSizeChange={() => {
                       setFilingsPage(1);
                     }}
                   />

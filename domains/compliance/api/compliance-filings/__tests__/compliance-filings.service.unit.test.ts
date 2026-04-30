@@ -196,10 +196,21 @@ describe('ComplianceFilingsService', () => {
       const accessCtx = { userId: 'u1' } as never;
       entityService.list.mockResolvedValue(metaWith(0));
 
-      await service.getSummary('2026-04-30', accessCtx);
+      await service.getSummary('2026-04-30', undefined, accessCtx);
 
       const ctxArgs = entityService.list.mock.calls.map((c) => c[1]);
       expect(ctxArgs).toEqual(Array(7).fill(accessCtx));
+    });
+
+    it('scopes every query to a specific clientId when provided', async () => {
+      entityService.list.mockResolvedValue(metaWith(0));
+
+      await service.getSummary('2026-04-30', { clientId: 'client-1' });
+
+      for (const call of entityService.list.mock.calls) {
+        const filters = JSON.parse((call[0] as { filters: string }).filters) as Array<{ field: string; operator: string; value: unknown }>;
+        expect(filters[0]).toEqual({ field: 'clientId', operator: 'eq', value: 'client-1' });
+      }
     });
 
     it('builds the dueThisWeek window as today < dueDate <= today + 7', async () => {
