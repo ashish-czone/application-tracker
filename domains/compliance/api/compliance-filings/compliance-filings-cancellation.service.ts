@@ -50,28 +50,27 @@ export class ComplianceFilingsCancellationService {
       .set({ status: 'cancelled' })
       .where(inArray(complianceFilings.id, ids));
 
-    for (const filing of filings) {
+    const historyRows = filings.map((filing) => {
       const transitionId = transitionIdByFromState.get(filing.status);
       if (!transitionId) {
         throw new Error(
           `No configured transition from '${filing.status}' → 'cancelled' on workflow '${FILING_WORKFLOW_SLUG}'. Filing ${filing.id} cannot be auto-cancelled; fix the workflow definition or exclude this state from the cascade.`,
         );
       }
-      await this.workflowEngine.recordHistory(
-        {
-          workflowDefinitionId: definition.id,
-          entityType: 'compliance-filings',
-          entityId: filing.id,
-          fieldName: 'status',
-          fromState: filing.status,
-          toState: 'cancelled',
-          transitionId,
-          actorId: params.actorId,
-          reason: params.reason,
-          comment: params.comment,
-        },
-        tx,
-      );
-    }
+      return {
+        workflowDefinitionId: definition.id,
+        entityType: 'compliance-filings',
+        entityId: filing.id,
+        fieldName: 'status',
+        fromState: filing.status,
+        toState: 'cancelled',
+        transitionId,
+        actorId: params.actorId,
+        reason: params.reason,
+        comment: params.comment,
+      };
+    });
+
+    await this.workflowEngine.recordHistoryBatch(historyRows, tx);
   }
 }
