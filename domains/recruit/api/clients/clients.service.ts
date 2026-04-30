@@ -185,7 +185,7 @@ export class ClientsService implements OnModuleInit {
         .update(clients)
         .set({
           recruitAbout: input.about ?? null,
-          recruitContactNumber: input.contactNumber ?? null,
+          phone: input.contactNumber ?? null,
           recruitSource: input.source ?? 'added-by-user',
           recruitBillingAddress: toAddressJsonb(input, 'billing'),
           recruitShippingAddress: toAddressJsonb(input, 'shipping'),
@@ -369,7 +369,7 @@ export class ClientsService implements OnModuleInit {
       id: clients.id,
       clientId: clients.id, // alias — the row id IS the directory client id
       clientName: clients.name,
-      contactNumber: clients.recruitContactNumber,
+      contactNumber: clients.phone,
       website: clients.websiteDomain,
       industry: clients.industry,
       about: clients.recruitAbout,
@@ -454,7 +454,7 @@ function toClientRecruitPatch(
 ): Record<string, unknown> {
   const patch: Record<string, unknown> = {};
   if (input.about !== undefined) patch.recruitAbout = normalizeNullable(input.about);
-  if (input.contactNumber !== undefined) patch.recruitContactNumber = normalizeNullable(input.contactNumber);
+  if (input.contactNumber !== undefined) patch.phone = normalizeNullable(input.contactNumber);
   if (input.source !== undefined) patch.recruitSource = normalizeNullable(input.source);
 
   if (BILLING_KEYS.some((k) => input[k] !== undefined)) {
