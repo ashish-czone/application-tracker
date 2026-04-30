@@ -9,12 +9,13 @@ decisions:
   - 2026-04-30 — channels in scope skew B2B-software: LinkedIn, Twitter/X, Reddit, Hacker News, Dev.to, Hashnode, GitHub, Indie Hackers, Product Hunt, agency directories (Clutch / GoodFirms / DesignRush). Instagram, Facebook, TikTok, Shopify Forums explicitly out of scope.
   - 2026-04-30 — one consolidated `marketing` domain. CRM and social are NOT split out preemptively. Internal feature folders (`monitoring/`, `leads/`, `case-studies/`, `templates/`, `digest/`, later `composer/`, `publishing/`) pre-figure where future splits would land if/when a real second consumer or sales-pipeline scope appears. `marketing_leads.source_item_id` stays as a real FK to `marketing_items` (no text-only attribution downgrade).
   - 2026-04-30 — Q1 app layer = feature folder under `apps/agency/ui/portals/admin/features/marketing/`. No new app. No new portal.
-  - 2026-04-30 — Q2 service approach = all V1 services hand-written. No `defineEntity()` / entity-engine for V1; every V1 entity has non-trivial behaviour (status state machines, polling, template substitution, notes timelines) that wouldn't pay back through generic CRUD.
+  - 2026-04-30 — Q2 service approach = all V1 services hand-written, NOT using `entity-engine`. Domain wires platform integrations explicitly: `RbacIntegrationModule.forFeature({ manifests: [...] })` declares permissions, controllers carry `@RequirePermission('marketing.action')` decorators, services emit events via `domainEventEmitter.emit(EVENT_CONST, payload)` (audit/automations/notifications subscribe), polling lives in `<feature>/jobs/` files, side-effect listeners in `<feature>/listeners/`. Reference precedent: `packages/platform/settings`. Library-style composition; no framework auto-wiring. Common entity-list UI primitives are reused where sensible; add/update forms are hand-coded.
   - 2026-04-30 — Q3 polling = queue-based recurring jobs via `packages/platform/queue`. Per-source repeat schedules. No in-process `@Cron`; survives crashes, distributable, retry/DLQ for free.
   - 2026-04-30 — Q4 source credentials = environment variables for V1 read-only monitoring (Reddit client_id/secret, RSS user-agent). The `oauth` addon enters in V2 when publishing-as-user (LinkedIn / Twitter / Dev.to / Hashnode) needs user-context tokens.
-  - 2026-04-30 — Q5 form-to-lead = subclass composition, mirroring `users-as-library` (PR #1027/#1028). `apps/agency` subclasses landing-pages' `SubmissionsService` and overrides an `onSubmissionCreated(submission, tx)` hook to call `marketing.LeadsService.create()` in the same transaction. If the seam doesn't already exist on the addon, V1 includes a small platform task to add it. Atomic, no eventual-consistency window, no event-driven plumbing.
+  - 2026-04-30 — Q5 form-to-lead REVISED = events+listener (sub-option 5.2). Marketing owns its own form-capture: `marketing_form_submissions` table + public `POST /api/marketing/form-submissions` controller. Service emits `marketing.form_submission.created`; listener at `marketing/leads/listeners/create-lead-from-submission.listener.ts` reacts and creates the lead. Reasoning correction: lead creation is NOT an invariant-maintaining state mutation — the submission row is the durable source of truth, the lead is a downstream operator-side projection. Form submitter sees "thanks" confirmation; lead surfaces in operator inbox seconds later. Open-closed for future reactions (Slack notify operator, score lead, etc.) without changing form-submission code. The earlier subclass-composition framing was overcorrected — there is no `landing-pages` addon to subclass anyway. Mitigations: idempotent listener keyed on submission_id, DLQ + alerting, `marketing:backfill-leads-from-submissions` reconciliation job.
   - 2026-04-30 — Q6 digest rendering = marketing owns rendering (bespoke layout, in-domain React/string components), `notifications` addon is delivery transport only. Digest is sent with `kind: 'marketing.digest'` so the notifications addon can track delivery / suppression / preferences specifically.
   - 2026-04-30 — Q7 outreach send = copy-to-clipboard / open-in-tab. No direct LinkedIn DM API (doesn't exist for personal accounts). No SaaS-SMTP for outreach email (worse deliverability than personal Gmail send). Operator pastes + sends manually, then confirms with "I sent it" → records `marketing_lead_events.kind = 'message_sent'` and optionally bumps lead status `new → contacted`.
+  - 2026-04-30 — reactive/scheduled-work mechanism layering: (a) **automations addon** for end-user-configurable rules, (b) **queue jobs** in `<feature>/jobs/<name>.job.ts` for developer-defined scheduled work, (c) **events + listeners** in `<feature>/listeners/<name>.listener.ts` for code-defined side effects, (d) **subclass composition** for cross-domain state mutation that's part of the operation's purpose. Domain services NEVER import `queue` or `notifications` directly — only `jobs/` and `listeners/` files do. Listeners are stateless reactions; failure never rolls back the originating service call. Default: developer-defined for V1, promote to automation-addon rule when end-users need configurability.
 ---
 
 # 1. Product vision
@@ -274,9 +275,22 @@ domains/marketing/
 
 Pages mounted at `apps/agency/ui/portals/admin/features/marketing/`. No new app, no new portal. Single login, single sidebar; marketing sits next to other admin features.
 
-### Q2 — Service approach → A (all hand-written)
+### Q2 — Service approach → hand-written, NOT entity-engine
 
-All V1 entities have non-trivial behaviour (state machines, polling, template substitution, follow-up reminders, notes timelines). Generic CRUD via `defineEntity()` doesn't pay back when every entity has custom flows. Promote individual entities to entity-engine later if they reduce to pure CRUD.
+All V1 services are hand-written without `entity-engine`. Domain wires platform integrations explicitly via library-style composition:
+
+- Permissions: `RbacIntegrationModule.forFeature({ manifests: [...] })` declared in each module
+- Authorisation: `@RequirePermission('marketing.<action>')` decorator on every controller route
+- Events: `domainEventEmitter.emit(EVENT_CONST, payload)` from service methods after writes; audit/automations/notifications subscribe automatically
+- Polling: `<feature>/jobs/<name>.job.ts` files register processors on `QueueService` and enqueue recurring jobs
+- Side-effect reactions: `<feature>/listeners/<name>.listener.ts` files subscribe to events and run pure side-effects
+- Cross-domain state mutation that's part of the operation's purpose: subclass composition (the `users-as-library` pattern)
+
+Reference precedent: `packages/platform/settings/api/` — hand-written services, custom controllers, `RbacIntegrationModule.forFeature` for permissions.
+
+UI uses common entity-list primitives where sensible (the data-table / search / filter / pagination components from `@packages/*-ui`). Add/Update forms are hand-coded — templated form generators rarely fit the bespoke validation and layout these flows need.
+
+The reactive/scheduled-work layering (4 tiers: automations / queue jobs / events+listeners / subclass composition) is captured in the frontmatter and applies across all V1 features.
 
 ### Q3 — Polling → A (queue-based recurring jobs via `packages/platform/queue`)
 
@@ -286,13 +300,30 @@ Per-source repeat schedules. No in-process `@Cron`. Survives crashes, distributa
 
 V1 monitoring is read-only public-data (Reddit / HN / RSS). Doesn't need user-context OAuth. Env vars are the secure default — no DB-backup leakage, no encryption-at-rest work, no admin-UI rendering of secrets. The `oauth` addon enters V2 when publishing-as-user requires per-user OAuth flows.
 
-### Q5 — Form-to-lead → subclass composition (the `users-as-library` pattern)
+### Q5 — Form-to-lead REVISED → events+listener (sub-option 5.2: marketing owns form-capture)
 
-`apps/agency` provides `AppSubmissionsService extends SubmissionsService` (from `landing-pages`), overrides `onSubmissionCreated(submission, tx)` to call `marketing.LeadsService.create()` **in the same transaction**. Atomic, no eventual-consistency window, no event-driven plumbing.
+The earlier subclass-composition framing was overcorrected and rested on a non-existent landing-pages addon. Corrected pattern:
 
-Mirrors the precedent set by users-as-library (PR #1027/#1028) and org-units extraction. If the `onSubmissionCreated` seam doesn't already exist on landing-pages, V1 includes a small platform task to add it (legitimate platform change because it generalises an existing seam pattern).
+1. Marketing owns form-capture. New `marketing_form_submissions` table (id, kind, payload jsonb, submitter_email, submitter_name, ip, user_agent, source_url, created_at) plus a public `POST /api/marketing/form-submissions` controller (no auth required, anti-spam via rate-limit + honeypot field).
+2. `FormSubmissionsService.create()` writes the submission row and emits `marketing.form_submission.created` with the submission row + key extracted fields in the payload.
+3. `domains/marketing/api/leads/listeners/create-lead-from-submission.listener.ts` subscribes to that event, idempotent on `submission_id`, and calls `LeadsService.createFromSubmission()`.
+4. Form-submitter sees a "thanks" confirmation immediately. Lead surfaces in the operator inbox seconds later. Eventually-consistent window of seconds is acceptable here — the operator does not watch the inbox in real time.
 
-Side effects of submission that *are* genuinely side-effects (audit, "thanks" autoresponder, analytics) still flow through events as normal.
+Why this is not a "events for state mutation" rule violation:
+
+- The submission row is the durable source of truth — captured *before* the listener fires
+- The lead is a downstream operator-side projection, not an invariant the form submission must maintain
+- Failure modes are bounded: failed listener → DLQ → alert → backfill script reconciles
+
+Open-closed: future reactions (Slack-notify operator, score lead, stamp UTM source on contact) are added as additional listeners on the same event without touching form-submission code.
+
+Mitigations against silent failure:
+
+- Listener is idempotent, keyed on `submission_id`
+- Failed listener invocations land in queue DLQ with alerting
+- A `marketing:backfill-leads-from-submissions` cron job reconciles any submissions older than N minutes that lack a corresponding lead
+
+When this graduates to a generic `forms` addon (a second domain wants public forms), the listener pattern stays — it just subscribes to `forms.submission.created` instead of `marketing.form_submission.created`.
 
 ### Q6 — Digest rendering → A (marketing renders, notifications delivers)
 

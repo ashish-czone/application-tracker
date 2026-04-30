@@ -18,6 +18,10 @@ runAppMigrations({
       name: '@domains/projects-api',
       migrationsFolder: path.join(workspaceRoot, 'domains/projects/api/migrations'),
     },
+    {
+      name: '@domains/marketing-api',
+      migrationsFolder: path.join(workspaceRoot, 'domains/marketing/api/migrations'),
+    },
   ],
 }).catch((err) => {
   console.error('[db:migrate] failed:', err);
