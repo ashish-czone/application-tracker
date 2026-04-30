@@ -74,17 +74,49 @@ export const seedDemoMenus = async (ctx: INestApplicationContext): Promise<void>
   // `/${parentId}/`.
   const childPath = `/${servicesNode.id}/`;
   const practiceChildren = [
-    { label: 'Web platforms', sortOrder: 10 },
-    { label: 'Mobile apps', sortOrder: 20 },
-    { label: 'AI products', sortOrder: 30 },
-    { label: 'Shopify', sortOrder: 40 },
-    { label: 'Digital marketing', sortOrder: 50 },
-    { label: 'Product design', sortOrder: 60 },
+    {
+      label: 'Web platforms',
+      icon: 'globe',
+      description: 'CMS-backed marketing sites and content-heavy web apps.',
+      sortOrder: 10,
+    },
+    {
+      label: 'Mobile apps',
+      icon: 'smartphone',
+      description: 'iOS and Android products built for shipping cadence.',
+      sortOrder: 20,
+    },
+    {
+      label: 'AI products',
+      icon: 'sparkles',
+      description: 'LLM-powered tooling, agents, and retrieval pipelines.',
+      sortOrder: 30,
+    },
+    {
+      label: 'Shopify',
+      icon: 'shopping-bag',
+      description: 'Custom storefronts, headless commerce, and apps.',
+      sortOrder: 40,
+    },
+    {
+      label: 'Digital marketing',
+      icon: 'megaphone',
+      description: 'Paid, SEO, and lifecycle programmes that compound.',
+      sortOrder: 50,
+    },
+    {
+      label: 'Product design',
+      icon: 'palette',
+      description: 'Discovery, UX, and design systems for shipping teams.',
+      sortOrder: 60,
+    },
   ];
   for (const c of practiceChildren) {
     await database.db.insert(menuItems).values({
       menuId: menu.id,
       label: c.label,
+      description: c.description,
+      icon: c.icon,
       linkType: 'url',
       url: '/services',
       sortOrder: c.sortOrder,
