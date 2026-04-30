@@ -64,3 +64,17 @@ export {
   type MarketingMonitoringItemRow,
   type MonitoringItemStatus,
 } from './monitoring/items';
+
+// Monitoring pollers (queue-backed Reddit / HN / RSS pollers + scheduler)
+export { PollerSchedulerService } from './monitoring/sources/poller-scheduler.service';
+export {
+  RedditPoller,
+  HackernewsPoller,
+  RssPoller,
+  POLLER_QUEUES,
+  pollerSchedulerId,
+  MARKETING_MONITORING_SOURCE_POLL_FAILED,
+  type PollJobData,
+  type PollerQueueName,
+  type MarketingMonitoringSourcePollFailedPayload,
+} from './monitoring/pollers';

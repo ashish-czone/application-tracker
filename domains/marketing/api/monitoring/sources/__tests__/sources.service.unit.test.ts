@@ -57,11 +57,20 @@ describe('MonitoringSourcesService', () => {
   let service: MonitoringSourcesService;
   let mockDb: ReturnType<typeof createMockDb>;
   let events: { emit: ReturnType<typeof vi.fn> };
+  let scheduler: { upsertSchedule: ReturnType<typeof vi.fn>; removeSchedule: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     mockDb = createMockDb();
     events = { emit: vi.fn() };
-    service = new MonitoringSourcesService({ db: mockDb } as any, events as any);
+    scheduler = {
+      upsertSchedule: vi.fn().mockResolvedValue(undefined),
+      removeSchedule: vi.fn().mockResolvedValue(undefined),
+    };
+    service = new MonitoringSourcesService(
+      { db: mockDb } as any,
+      events as any,
+      scheduler as any,
+    );
   });
 
   describe('create', () => {
