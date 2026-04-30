@@ -41,6 +41,7 @@ describe('ComplianceFilingsGeneratorService', () => {
   };
   let filingsService: {
     findByRuleClientPeriod: Mock;
+    findExistingKeys: Mock;
     create: Mock;
     update: Mock;
     delete: Mock;
@@ -69,6 +70,7 @@ describe('ComplianceFilingsGeneratorService', () => {
     };
     filingsService = {
       findByRuleClientPeriod: vi.fn().mockResolvedValue(null),
+      findExistingKeys: vi.fn().mockResolvedValue(new Set<string>()),
       create: vi.fn().mockResolvedValue({ id: 'filing-new' }),
       // I16: `update`/`delete` exist on the stub so a negative assertion can
       // catch any future regression that tries to mutate existing rows.
@@ -210,11 +212,7 @@ describe('ComplianceFilingsGeneratorService', () => {
       ruleService.expandRule.mockReturnValue([
         { periodStart: utc(2026, 4, 1), periodEnd: utc(2026, 4, 30), dueDate: utc(2026, 5, 25) },
       ]);
-      filingsService.findByRuleClientPeriod.mockResolvedValue({
-        id: 'existing',
-        dueDate: '2026-05-20',
-        status: 'pending',
-      });
+      filingsService.findExistingKeys.mockResolvedValue(new Set(['c1:2026-04-01']));
 
       await service.generateForRule('r1');
 
@@ -233,7 +231,7 @@ describe('ComplianceFilingsGeneratorService', () => {
       ruleService.expandRule.mockReturnValue([
         { periodStart: utc(2026, 4, 1), periodEnd: utc(2026, 4, 30), dueDate: utc(2026, 5, 20) },
       ]);
-      filingsService.findByRuleClientPeriod.mockResolvedValue({ id: 'existing' });
+      filingsService.findExistingKeys.mockResolvedValue(new Set(['c1:2026-04-01']));
 
       await service.generateForRule('r1');
 
@@ -376,11 +374,11 @@ describe('ComplianceFilingsGeneratorService', () => {
         { periodStart: utc(2026, 4, 1), periodEnd: utc(2026, 4, 30), dueDate: utc(2026, 5, 20) },
       ]);
 
-      filingsService.findByRuleClientPeriod.mockResolvedValueOnce(null);
+      filingsService.findExistingKeys.mockResolvedValueOnce(new Set<string>());
       await service.generateForRule('r1');
       expect(filingsService.create).toHaveBeenCalledTimes(1);
 
-      filingsService.findByRuleClientPeriod.mockResolvedValueOnce({ id: 'filing-new' });
+      filingsService.findExistingKeys.mockResolvedValueOnce(new Set(['c1:2026-04-01']));
       await service.generateForRule('r1');
       expect(filingsService.create).toHaveBeenCalledTimes(1);
     });

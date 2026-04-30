@@ -177,6 +177,24 @@ export class ComplianceFilingsGeneratorService {
    * Inner loop shared by the public entrypoints. Expands the rule across the
    * horizon, applies the per-occurrence `deactivatedAt` filter, and creates
    * filings via the entity service. Returns the number of new rows written.
+   *
+   * Per-call work is batched to keep round-trips O(N+M) rather than O(N×M):
+   *   - One SELECT pulls every existing `(client, periodStart)` tuple this
+   *     pass might collide with — feeds the per-row idempotency check.
+   *   - Per-client `resolveAssignee` is memoised against `rule.lawId` since
+   *     the assignee is a function of `(law, client)` and doesn't drift
+   *     within a single generator run.
+   *
+   * `isClientActive` is intentionally NOT memoised: the Q6 race guard
+   * needs a fresh read each occurrence so a mid-loop `active → dormant`
+   * transition stops further generation as soon as it lands. The
+   * dormancy cascade's post-commit sweep (`sweepLateFilings`) is the
+   * fallback for any rows created in the gap, but the inner check is
+   * what makes that gap small.
+   *
+   * The 23505 race guard around `filings.create` is unchanged: under
+   * concurrency the batched lookup may be stale, and the unique index on
+   * `(rule_id, client_id, period_start)` is still the source of truth.
    */
   private async generateForPairs(
     rule: ComplianceRule,
@@ -185,6 +203,20 @@ export class ComplianceFilingsGeneratorService {
   ): Promise<number> {
     const horizonEnd = this.addMonths(now, HORIZON_MONTHS);
     const occurrences = this.ruleService.expandRule(rule, now, horizonEnd);
+    if (registrations.length === 0 || occurrences.length === 0) return 0;
+
+    const clientIds = [...new Set(registrations.map((r) => r.clientId))];
+    const periodStarts = occurrences.map((occ) => this.toIsoDate(occ.periodStart));
+    const existingKeys = await this.lookup.findExistingKeys(rule.id, clientIds, periodStarts);
+
+    const assigneeCache = new Map<string, string>();
+    const resolveAssignee = async (clientId: string): Promise<string> => {
+      const cached = assigneeCache.get(clientId);
+      if (cached !== undefined) return cached;
+      const fresh = await this.ruleService.resolveAssignee(rule.lawId, clientId);
+      assigneeCache.set(clientId, fresh);
+      return fresh;
+    };
 
     let created = 0;
     for (const reg of registrations) {
@@ -196,14 +228,12 @@ export class ComplianceFilingsGeneratorService {
         // further obligation for this period.
         if (reg.deactivatedAt && this.toIsoDate(reg.deactivatedAt) <= periodStart) continue;
 
-        // Q6 race guard: callers (the J4 registration-created listener in
-        // particular) snapshot `getRegistrationsForLaw` at entry, but the
-        // client may transition `active → dormant` mid-flight. Re-check the
-        // current status before each create so the dormancy cascade cannot
-        // miss filings that this loop is about to materialise. Without this,
-        // the cascade only cancels what already exists at transition time
-        // and the in-flight loop keeps adding pending rows for the now-
-        // dormant client.
+        // Q6 race guard: callers snapshot `getRegistrationsForLaw` at entry,
+        // but the client may transition `active → dormant` mid-flight. The
+        // dormancy cascade only cancels filings that already exist when its
+        // SELECT runs; without an inner check the loop keeps creating fresh
+        // pending rows for the now-dormant client. Per-occurrence to stop the
+        // moment the next iteration sees the new status — not memoised.
         if (!(await this.registrationService.isClientActive(reg.clientId))) {
           this.logger.debug('Client no longer active — skipping further generation', {
             ruleId: rule.id,
@@ -212,14 +242,9 @@ export class ComplianceFilingsGeneratorService {
           break;
         }
 
-        const existing = await this.lookup.findByRuleClientPeriod(
-          rule.id,
-          reg.clientId,
-          periodStart,
-        );
-        if (existing) continue;
+        if (existingKeys.has(`${reg.clientId}:${periodStart}`)) continue;
 
-        const assigneeOrgId = await this.ruleService.resolveAssignee(rule.lawId, reg.clientId);
+        const assigneeOrgId = await resolveAssignee(reg.clientId);
         const periodEnd = this.toIsoDate(occ.periodEnd);
         const dueDate = this.toIsoDate(occ.dueDate);
 
@@ -239,15 +264,15 @@ export class ComplianceFilingsGeneratorService {
             'system',
           );
         } catch (error) {
-          // The check-then-insert above (`findByRuleClientPeriod`) is not safe
-          // under concurrency: when the cron run and an event-listener top-up
+          // The batched `findExistingKeys` snapshot is not safe under
+          // concurrency: when the cron run and an event-listener top-up
           // (`generateForRule` / `generateForRegistration` / `generateForClient`)
-          // overlap, both transactions can read "no existing row" and race to
-          // insert. The unique index on (rule_id, client_id, period_start)
-          // serialises the race at the DB layer — the loser sees `23505`. Treat
-          // that loser as "raced — already created by the winning path", skip
-          // the row, and continue. Any other error (FK violation, NULL
-          // violation, different unique index) re-throws.
+          // overlap, both transactions can read "no existing row" and race
+          // to insert. The unique index on (rule_id, client_id, period_start)
+          // serialises the race at the DB layer — the loser sees `23505`.
+          // Treat that loser as "raced — already created by the winning
+          // path", skip the row, and continue. Any other error (FK
+          // violation, NULL violation, different unique index) re-throws.
           if (isRuleClientPeriodRace(error)) {
             this.logger.debug('Filing already created by concurrent path — skipping', {
               ruleId: rule.id,
