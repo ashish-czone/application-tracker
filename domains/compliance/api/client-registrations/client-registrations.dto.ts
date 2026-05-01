@@ -30,6 +30,30 @@ export const CreateClientRegistrationSchema = createInsertSchema(complianceClien
 
 export const UpdateClientRegistrationSchema = CreateClientRegistrationSchema.partial();
 
+// ---- List query schema ----------------------------------------------------
+// Replaces the controller's inline page/limit/includeDeleted coercion. Same
+// behaviour preserved: page/limit stay undefined when missing (engine
+// supplies defaults), includeDeleted only true on string "true". Engine
+// pass-through fields (clientId, lawId, sort, order, etc.) flow through
+// via `.passthrough()`.
+
+const optionalNumber = z.unknown().transform((raw) => {
+  if (raw == null || raw === '') return undefined;
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : undefined;
+});
+
+const booleanFromString = z.unknown().transform((raw) => raw === 'true' || raw === true);
+
+export const RegistrationsListQuerySchema = z
+  .object({
+    page: optionalNumber,
+    limit: optionalNumber,
+    includeDeleted: booleanFromString,
+  })
+  .passthrough();
+
 export type CreateClientRegistrationDto = z.infer<typeof CreateClientRegistrationSchema>;
 export type UpdateClientRegistrationDto = z.infer<typeof UpdateClientRegistrationSchema>;
 export type ClientRegistrationRow = z.infer<typeof ClientRegistrationRowSchema>;
+export type RegistrationsListQuery = z.infer<typeof RegistrationsListQuerySchema>;
