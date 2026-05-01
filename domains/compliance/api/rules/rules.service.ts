@@ -15,8 +15,11 @@ import { complianceFilings } from '../schema/compliance-filings';
 import { complianceClientRegistrations } from '../schema/client-registrations';
 import { LawHandlersService } from '../law-handlers/law-handlers.service';
 import { ComplianceFilingsCancellationService } from '../compliance-filings/compliance-filings-cancellation.service';
-import type { CreateComplianceRuleDto, UpdateComplianceRuleDto } from './rules.dto';
-import type { ComplianceRulesListParams } from './rules.types';
+import type {
+  CreateComplianceRuleDto,
+  RulesListQuery,
+  UpdateComplianceRuleDto,
+} from './rules.dto';
 
 const TERMINAL_FILING_STATUSES = ['completed', 'cancelled'];
 
@@ -211,7 +214,7 @@ export class ComplianceRulesService {
    * carries neither column.
    */
   async list(
-    params: ComplianceRulesListParams,
+    params: RulesListQuery,
     accessCtx?: DataAccessContext,
   ): Promise<{
     data: Record<string, unknown>[];
@@ -298,7 +301,7 @@ export class ComplianceRulesService {
     };
   }
 
-  private buildRulesFilters(params: ComplianceRulesListParams) {
+  private buildRulesFilters(params: RulesListQuery) {
     const conds = [];
     if (params.status) conds.push(sql`r.status = ${params.status}`);
     if (params.frequencies && params.frequencies.length > 0) {
