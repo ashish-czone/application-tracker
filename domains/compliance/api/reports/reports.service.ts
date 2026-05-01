@@ -5,7 +5,7 @@ import { clients } from '@packages/directory';
 import { EntityService } from '@packages/entity-engine';
 import { OrgUnitService } from '@packages/org-units';
 import type { DataAccessContext } from '@packages/rbac';
-import { complianceFilings } from '../schema/compliance-filings';
+import { complianceFilings } from '../compliance-filings/compliance-filings.schema';
 
 const NOT_COMPLETED_STATES = ['pending', 'in_progress', 'review', 'rejected'];
 

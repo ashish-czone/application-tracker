@@ -2,7 +2,7 @@ import type { INestApplicationContext } from '@nestjs/common';
 import { DatabaseService, asc, eq, users } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
 import { EntityService } from '@packages/entity-engine';
-import { complianceFilings } from '../../schema/compliance-filings';
+import { complianceFilings } from './compliance-filings.schema';
 import { ComplianceRulesService } from '../../rules';
 import { ClientRegistrationsService } from '../../client-registrations';
 import { ComplianceFilingsLookupService } from '../compliance-filings.lookup.service';

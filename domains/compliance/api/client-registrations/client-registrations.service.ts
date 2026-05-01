@@ -14,7 +14,7 @@ import { todayInTimezone } from '@packages/common';
 import { complianceClientRegistrations } from './client-registrations.schema';
 import { complianceLaws } from '../laws/laws.schema';
 import { clients } from '../clients/clients.schema';
-import { complianceFilings } from '../schema/compliance-filings';
+import { complianceFilings } from '../compliance-filings/compliance-filings.schema';
 import { ComplianceFilingsCancellationService } from '../compliance-filings';
 import { ComplianceRulesService } from '../rules';
 import {

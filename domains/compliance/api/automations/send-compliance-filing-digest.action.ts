@@ -17,7 +17,7 @@ import {
   type NotificationTemplate,
   type RenderedNotification,
 } from '@packages/notifications';
-import { complianceFilings } from '../schema/compliance-filings';
+import { complianceFilings } from '../compliance-filings/compliance-filings.schema';
 
 interface ChannelConfig {
   channel: NotificationChannel;

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService, eq, inArray, withScope } from '@packages/database';
-import { complianceFilings } from '../schema/compliance-filings';
+import { complianceFilings } from './compliance-filings.schema';
 
 /**
  * Domain-specific natural-key lookup for compliance filings. Lives outside
