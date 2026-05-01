@@ -67,12 +67,12 @@ describe('ComplianceRulesController', () => {
       );
     });
 
-    it('requires compliance-rules.update permission', () => {
+    it('requires compliance-rules.deprecate permission', () => {
       const permission = Reflect.getMetadata(
         'requiredPermission',
         ComplianceRulesController.prototype.deprecate,
       );
-      expect(permission).toBe('compliance-rules.update');
+      expect(permission).toBe('compliance-rules.deprecate');
     });
   });
 });

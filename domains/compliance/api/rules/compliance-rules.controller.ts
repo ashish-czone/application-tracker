@@ -158,7 +158,7 @@ export class ComplianceRulesController {
 
   @Post(':id/deprecate')
   @HttpCode(HttpStatus.OK)
-  @RequirePermission('compliance-rules.update')
+  @RequirePermission('compliance-rules.deprecate')
   deprecate(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: unknown,

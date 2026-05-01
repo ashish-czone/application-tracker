@@ -141,6 +141,7 @@ const TEAM_LEAD_PERMISSIONS: GrantSpec[] = [
   { name: 'compliance-rules.read',       scopes: ANY },
   { name: 'compliance-rules.create',     scopes: ANY },
   { name: 'compliance-rules.update',     scopes: ANY },
+  { name: 'compliance-rules.deprecate',  scopes: ANY },
 ];
 
 // ── Firm Admin ─────────────────────────────────────────────────────────────
@@ -178,6 +179,7 @@ const FIRM_ADMIN_PERMISSIONS: GrantSpec[] = [
   { name: 'compliance-rules.create',       scopes: ANY },
   { name: 'compliance-rules.update',       scopes: ANY },
   { name: 'compliance-rules.delete',       scopes: ANY },
+  { name: 'compliance-rules.deprecate',    scopes: ANY },
   { name: 'law-handlers.read',   scopes: ANY },
   { name: 'law-handlers.create', scopes: ANY },
   { name: 'law-handlers.update', scopes: ANY },

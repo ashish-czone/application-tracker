@@ -9,7 +9,6 @@ import {
   LawHandlerRequiredError,
   type ComplianceRule,
 } from '../compliance-rules.service';
-import type { WorkflowEngineService, WorkflowRegistryService } from '@packages/workflows';
 import type { AppLoggerService } from '@packages/logger';
 import type { ComplianceFilingsCancellationService } from '../../compliance-filings/compliance-filings-cancellation.service';
 
@@ -67,22 +66,14 @@ describe('ComplianceRulesService', () => {
     clone: ReturnType<typeof vi.fn>;
     restore: ReturnType<typeof vi.fn>;
     getListLayout: ReturnType<typeof vi.fn>;
+    validateTransition: ReturnType<typeof vi.fn>;
+    applyTransition: ReturnType<typeof vi.fn>;
+    emitTransitionEvent: ReturnType<typeof vi.fn>;
   };
   let db: { db: Record<string, ReturnType<typeof vi.fn>> };
   let lawHandlers: { hasDefaultHandler: ReturnType<typeof vi.fn> };
-  let workflowEngine: { recordHistory: ReturnType<typeof vi.fn> };
-  let workflowRegistry: { getBySlug: ReturnType<typeof vi.fn> };
   let filingsCancellation: { cancelFilings: ReturnType<typeof vi.fn> };
   let service: ComplianceRulesService;
-
-  const ruleWorkflowDef = {
-    id: 'wf-def-rule-status',
-    transitions: [
-      { id: 't-draft-deprecated', fromStateName: 'draft', toStateName: 'deprecated' },
-      { id: 't-active-deprecated', fromStateName: 'active', toStateName: 'deprecated' },
-      { id: 't-deprecated-active', fromStateName: 'deprecated', toStateName: 'active' },
-    ],
-  };
 
   const appLogger = {
     forContext: vi.fn().mockReturnValue({
@@ -100,6 +91,9 @@ describe('ComplianceRulesService', () => {
       clone: vi.fn(),
       restore: vi.fn(),
       getListLayout: vi.fn(),
+      validateTransition: vi.fn(),
+      applyTransition: vi.fn().mockResolvedValue(undefined),
+      emitTransitionEvent: vi.fn(),
     };
     db = {
       db: {
@@ -110,15 +104,11 @@ describe('ComplianceRulesService', () => {
       },
     };
     lawHandlers = { hasDefaultHandler: vi.fn() };
-    workflowEngine = { recordHistory: vi.fn().mockResolvedValue({ historyId: 'h', recordedAt: '' }) };
-    workflowRegistry = { getBySlug: vi.fn().mockReturnValue(ruleWorkflowDef) };
     filingsCancellation = { cancelFilings: vi.fn().mockResolvedValue(undefined) };
     service = new ComplianceRulesService(
       entityService as never,
       db as never,
       lawHandlers as never,
-      workflowEngine as unknown as WorkflowEngineService,
-      workflowRegistry as unknown as WorkflowRegistryService,
       filingsCancellation as unknown as ComplianceFilingsCancellationService,
       appLogger,
     );
@@ -748,9 +738,21 @@ describe('ComplianceRulesService', () => {
       return tx;
     }
 
+    function makeTransitionCtx(fromState: string, toState = 'deprecated') {
+      return {
+        entityType: 'compliance-rules',
+        entityId: 'r1',
+        fieldKey: 'status',
+        fromState,
+        toState,
+        actorId: 'u1',
+      };
+    }
+
     it('throws when the rule is not visible to the actor', async () => {
       entityService.findOneOrFail.mockRejectedValueOnce(new NotFoundException('not found'));
       await expect(service.deprecate('missing', { actorId: 'u1' })).rejects.toBeInstanceOf(NotFoundException);
+      expect(entityService.validateTransition).not.toHaveBeenCalled();
       expect(db.db.transaction).not.toHaveBeenCalled();
     });
 
@@ -758,36 +760,38 @@ describe('ComplianceRulesService', () => {
       entityService.findOneOrFail.mockResolvedValueOnce({ ...ruleRow, status: 'deprecated' });
       const result = await service.deprecate('r1', { actorId: 'u1' });
       expect(result).toEqual({ ruleId: 'r1', status: 'deprecated', cancelledFilingIds: [] });
+      expect(entityService.validateTransition).not.toHaveBeenCalled();
       expect(db.db.transaction).not.toHaveBeenCalled();
     });
 
-    it('flips status and writes the rule transition history row; no cascade by default', async () => {
+    it('routes the status flip through the engine so the perm gate fires; no cascade by default', async () => {
       entityService.findOneOrFail.mockResolvedValueOnce(ruleRow);
+      const ctx = makeTransitionCtx('active');
+      entityService.validateTransition.mockResolvedValueOnce(ctx);
       const tx = mockTx();
       db.db.transaction.mockImplementation(async (fn: (t: typeof tx) => unknown) => fn(tx));
 
       const result = await service.deprecate('r1', { actorId: 'u1', comment: 'replaced by GST-M-v2' });
 
       expect(result.cancelledFilingIds).toEqual([]);
-      expect(workflowEngine.recordHistory).toHaveBeenCalledTimes(1);
-      expect(workflowEngine.recordHistory).toHaveBeenCalledWith(
-        expect.objectContaining({
-          entityType: 'compliance-rules',
-          entityId: 'r1',
-          fromState: 'active',
-          toState: 'deprecated',
-          transitionId: 't-active-deprecated',
-          reason: 'Rule deprecated',
-          comment: 'replaced by GST-M-v2',
-          actorId: 'u1',
-        }),
-        tx,
+      // Engine validates the transition with the deprecate-specific reason +
+      // caller's comment so the perm check + history row both reflect intent.
+      expect(entityService.validateTransition).toHaveBeenCalledWith(
+        'r1',
+        'status',
+        'deprecated',
+        'u1',
+        { reason: 'Rule deprecated', comment: 'replaced by GST-M-v2' },
+        undefined,
       );
+      expect(entityService.applyTransition).toHaveBeenCalledWith(ctx, tx);
+      expect(entityService.emitTransitionEvent).toHaveBeenCalledWith(ctx);
       expect(filingsCancellation.cancelFilings).not.toHaveBeenCalled();
     });
 
     it('cascades cancellation when alsoCancelInFlight is true', async () => {
       entityService.findOneOrFail.mockResolvedValueOnce(ruleRow);
+      entityService.validateTransition.mockResolvedValueOnce(makeTransitionCtx('active'));
       const tx = mockTx({
         inFlight: [
           { id: 'f1', status: 'pending' },
@@ -815,25 +819,37 @@ describe('ComplianceRulesService', () => {
 
     it('transitions a draft rule directly to deprecated', async () => {
       entityService.findOneOrFail.mockResolvedValueOnce({ ...ruleRow, status: 'draft' });
+      entityService.validateTransition.mockResolvedValueOnce(makeTransitionCtx('draft'));
       const tx = mockTx();
       db.db.transaction.mockImplementation(async (fn: (t: typeof tx) => unknown) => fn(tx));
 
       await service.deprecate('r1', { actorId: 'u1' });
 
-      expect(workflowEngine.recordHistory).toHaveBeenCalledWith(
-        expect.objectContaining({
-          fromState: 'draft',
-          transitionId: 't-draft-deprecated',
-        }),
-        tx,
+      // The engine resolves the right transition row from `(fromState,
+      // toState)`; this service no longer hand-picks the transition id.
+      expect(entityService.validateTransition).toHaveBeenCalledWith(
+        'r1',
+        'status',
+        'deprecated',
+        'u1',
+        { reason: 'Rule deprecated', comment: undefined },
+        undefined,
       );
     });
 
-    it('forwards the access context to the engine', async () => {
-      entityService.findOneOrFail.mockResolvedValueOnce({ ...ruleRow, status: 'deprecated' });
+    it('forwards the access context to both findOneOrFail and validateTransition', async () => {
+      entityService.findOneOrFail.mockResolvedValueOnce(ruleRow);
+      entityService.validateTransition.mockResolvedValueOnce(makeTransitionCtx('active'));
+      const tx = mockTx();
+      db.db.transaction.mockImplementation(async (fn: (t: typeof tx) => unknown) => fn(tx));
       const accessCtx = { userId: 'u1', scopes: [{ type: 'unit' }] } as never;
+
       await service.deprecate('r1', { actorId: 'u1' }, accessCtx);
+
       expect(entityService.findOneOrFail).toHaveBeenCalledWith('r1', accessCtx);
+      expect(entityService.validateTransition).toHaveBeenCalledWith(
+        'r1', 'status', 'deprecated', 'u1', expect.any(Object), accessCtx,
+      );
     });
   });
 });
