@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { DatabaseService, eq, withScope } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
+import type { DataAccessContext } from '@packages/rbac';
 import type { PgTable, PgColumn } from 'drizzle-orm/pg-core';
 import type { BaseListQuery } from './types';
 
@@ -49,10 +50,12 @@ type TableWithId = PgTable & { id: PgColumn };
  *     read methods
  *   - **Permission checks** — controllers handle via `@RequirePermission`
  *   - **Validation** — controllers handle via `Schema.parse(body)`
- *   - **Actor-scope predicates** — apply manually via `DataAccessScopeService`
- *     when an entity needs row-level RBAC. (A future iteration may compose
- *     this in via `options.scoping: 'tenant+actor'` once the consumer pattern
- *     is established.)
+ *   - **Actor-scope predicates** — every method accepts `accessCtx?:
+ *     DataAccessContext` in its signature, but the base implementation
+ *     does NOT yet wire the context to a scope predicate. Subclasses with
+ *     row-level RBAC needs override the relevant methods and call
+ *     `DataAccessScopeService.buildPredicate(ctx)` themselves. A future
+ *     iteration will compose this in via `options.scoping`.
  *
  * @example
  *   // organizations.service.ts
@@ -111,7 +114,11 @@ export function BaseCrudService<TTable extends TableWithId>(
      * if needed). Search/sort/structured-filters are not implemented in the
      * shell — override `list` in the subclass to add them.
      */
-    async list(query: BaseListQuery = {}): Promise<{ data: Row[]; meta: { page: number; limit: number; total: number } }> {
+    async list(
+      query: BaseListQuery = {},
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      _accessCtx?: DataAccessContext,
+    ): Promise<{ data: Row[]; meta: { page: number; limit: number; total: number } }> {
       const limitRaw = query.limit ?? defaultLimit;
       const limit = Math.max(1, Math.min(limitRaw, maxLimit));
       const page = Math.max(1, query.page ?? 1);
@@ -131,7 +138,11 @@ export function BaseCrudService<TTable extends TableWithId>(
     }
 
     /** Returns the row by id, or null if not found / out of scope. */
-    async findOne(id: string): Promise<Row | null> {
+    async findOne(
+      id: string,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      _accessCtx?: DataAccessContext,
+    ): Promise<Row | null> {
       const rows = (await this.database.db
         .select()
         .from(table as PgTable)
@@ -141,8 +152,8 @@ export function BaseCrudService<TTable extends TableWithId>(
     }
 
     /** Returns the row by id; throws NotFoundException if not found / out of scope. */
-    async findOneOrFail(id: string): Promise<Row> {
-      const row = await this.findOne(id);
+    async findOneOrFail(id: string, accessCtx?: DataAccessContext): Promise<Row> {
+      const row = await this.findOne(id, accessCtx);
       if (!row) {
         throw new NotFoundException(`${options.slug} ${id} not found`);
       }
@@ -177,8 +188,13 @@ export function BaseCrudService<TTable extends TableWithId>(
      * applies the patch within scope. Emits `options.events.updated` (if
      * configured) carrying { before, after }.
      */
-    async update(id: string, patch: Update, actorId: string): Promise<Row> {
-      const before = await this.findOneOrFail(id);
+    async update(
+      id: string,
+      patch: Update,
+      actorId: string,
+      accessCtx?: DataAccessContext,
+    ): Promise<Row> {
+      const before = await this.findOneOrFail(id, accessCtx);
 
       const [updated] = (await this.database.db
         .update(table as PgTable)
@@ -210,8 +226,8 @@ export function BaseCrudService<TTable extends TableWithId>(
      * back out if they're missing). Emits `options.events.deleted` (if
      * configured).
      */
-    async softDelete(id: string, actorId: string): Promise<void> {
-      const before = await this.findOneOrFail(id);
+    async softDelete(id: string, actorId: string, accessCtx?: DataAccessContext): Promise<void> {
+      const before = await this.findOneOrFail(id, accessCtx);
 
       await this.database.db
         .update(table as PgTable)
