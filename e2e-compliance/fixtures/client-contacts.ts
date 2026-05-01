@@ -1,20 +1,30 @@
 import { apiClient } from '../helpers/api-client';
 import { uniqueEmail } from '../helpers/unique-name';
 
+/**
+ * Mirrors the directory `client_contacts` row shape after the C-2
+ * shared-identity fold (#1186). Base columns (`fullName`, `primaryEmail`,
+ * `primaryPhone`) come from `baseClientContactColumns` in @packages/directory;
+ * the `compliance_*` prefixed columns are owned by the compliance domain.
+ */
 export interface ClientContact {
   id: string;
-  clientId: string;
-  name: string;
-  email: string;
-  phone: string | null;
-  isPrimary: boolean;
+  fullName: string;
+  primaryEmail: string | null;
+  primaryPhone: string | null;
+  complianceClientId: string | null;
+  complianceDesignation: string | null;
+  complianceIsPrimary: boolean;
+  complianceNotes: string | null;
 }
 
 export interface CreateClientContactOverrides {
-  name?: string;
-  email?: string;
-  phone?: string;
-  isPrimary?: boolean;
+  fullName?: string;
+  primaryEmail?: string;
+  primaryPhone?: string;
+  complianceDesignation?: string;
+  complianceIsPrimary?: boolean;
+  complianceNotes?: string;
 }
 
 export async function createClientContact(
@@ -22,10 +32,16 @@ export async function createClientContact(
   overrides: CreateClientContactOverrides = {},
 ): Promise<ClientContact> {
   return apiClient.post<ClientContact>('/client-contacts', {
-    clientId,
-    name: overrides.name ?? 'E2E Contact',
-    email: overrides.email ?? uniqueEmail('contact'),
-    phone: overrides.phone ?? '+919876543210',
-    isPrimary: overrides.isPrimary ?? true,
+    complianceClientId: clientId,
+    fullName: overrides.fullName ?? 'E2E Contact',
+    primaryEmail: overrides.primaryEmail ?? uniqueEmail('contact'),
+    primaryPhone: overrides.primaryPhone ?? '+919876543210',
+    complianceIsPrimary: overrides.complianceIsPrimary ?? true,
+    ...(overrides.complianceDesignation !== undefined && {
+      complianceDesignation: overrides.complianceDesignation,
+    }),
+    ...(overrides.complianceNotes !== undefined && {
+      complianceNotes: overrides.complianceNotes,
+    }),
   });
 }

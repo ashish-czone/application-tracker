@@ -33,7 +33,7 @@ test.describe('Flow: client workflow transitions', () => {
     });
 
     // Workflow guard requires a primary contact before onboarding → active.
-    await createClientContact(client.id, { isPrimary: true });
+    await createClientContact(client.id, { complianceIsPrimary: true });
 
     return client;
   }
