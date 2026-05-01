@@ -11,7 +11,7 @@ import { EntityService, type BaseListQuery } from '@packages/entity-engine';
 import type { DataAccessContext } from '@packages/rbac';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { todayInTimezone } from '@packages/common';
-import { complianceClientRegistrations } from '../schema/client-registrations';
+import { complianceClientRegistrations } from './client-registrations.schema';
 import { complianceLaws } from '../schema/laws';
 import { clients } from '../clients/clients.schema';
 import { complianceFilings } from '../schema/compliance-filings';

@@ -1,6 +1,6 @@
 import { pgTable, text, timestamp, date, uniqueIndex, index } from 'drizzle-orm/pg-core';
 import { randomUUID } from 'crypto';
-import { complianceLaws } from './laws';
+import { complianceLaws } from '../schema/laws';
 
 // `clientId` references the shared identity row (the directory `clients`
 // table). The FK constraint lives at the SQL migration level; we don't
