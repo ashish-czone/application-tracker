@@ -10,7 +10,7 @@ import {
   type ComplianceRule,
 } from '../rules.service';
 import type { AppLoggerService } from '@packages/logger';
-import type { ComplianceFilingsCancellationService } from '../../compliance-filings/compliance-filings.cancellation.service';
+import type { ComplianceFilingsCancellationService } from '../../compliance-filings';
 
 type AnyChain = Record<string, ReturnType<typeof vi.fn>>;
 

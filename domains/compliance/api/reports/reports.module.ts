@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { ComplianceFilingsModule } from '../compliance-filings/compliance-filings.module';
+import { ComplianceFilingsModule } from '../compliance-filings';
 import { ComplianceReportsController } from './reports.controller';
 import { ComplianceReportsService } from './reports.service';
 

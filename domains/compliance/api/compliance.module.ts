@@ -12,7 +12,7 @@ import { ClientContactsModule } from './client-contacts/client-contacts.module';
 import { ClientRegistrationsModule } from './client-registrations/client-registrations.module';
 import { ComplianceRulesModule } from './rules';
 import { LawHandlersModule } from './law-handlers/law-handlers.module';
-import { ComplianceFilingsModule } from './compliance-filings/compliance-filings.module';
+import { ComplianceFilingsModule } from './compliance-filings';
 import { OrganizationsModule } from './organizations/organizations.module';
 import { ComplianceReportsModule } from './reports/reports.module';
 

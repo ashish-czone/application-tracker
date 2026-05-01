@@ -5,7 +5,7 @@ import { withAuth, type PackageTestApp } from '@packages/platform-testing';
 import { createComplianceTestApp, resetComplianceTestDb } from './setup/app';
 import { createFiling, createFilingPrereqs, grantPermissions } from './setup/fixtures';
 import { complianceFilings } from '../schema/compliance-filings';
-import { buildFilingExternalKey } from '../compliance-filings/compliance-filings.config';
+import { buildFilingExternalKey } from '../compliance-filings';
 
 // The filings config declares `dataAccess.scopes` (assignee/team) — every
 // list/get/transition filters by mock-user identity. Tests use the `*`

@@ -10,7 +10,7 @@ import {
   UsersService,
   UsersController,
 } from '@packages/users';
-import { ComplianceFilingsModule } from '@domains/compliance-api/compliance-filings/compliance-filings.module';
+import { ComplianceFilingsModule } from '@domains/compliance-api/compliance-filings';
 import { AppUsersService } from './app-users.service';
 
 /**

@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { UsersService } from '@packages/users';
 import { OrgUnitService } from '@packages/org-units';
-import { ComplianceFilingsAssigneeCleanupService } from '@domains/compliance-api/compliance-filings/compliance-filings.assignee-cleanup.service';
+import { ComplianceFilingsAssigneeCleanupService } from '@domains/compliance-api/compliance-filings';
 
 @Injectable()
 export class AppUsersService extends UsersService {

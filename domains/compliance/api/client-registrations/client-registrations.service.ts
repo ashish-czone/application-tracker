@@ -15,7 +15,7 @@ import { complianceClientRegistrations } from '../schema/client-registrations';
 import { complianceLaws } from '../schema/laws';
 import { clients } from '../clients/clients.schema';
 import { complianceFilings } from '../schema/compliance-filings';
-import { ComplianceFilingsCancellationService } from '../compliance-filings/compliance-filings.cancellation.service';
+import { ComplianceFilingsCancellationService } from '../compliance-filings';
 import { ComplianceRulesService } from '../rules';
 import {
   CLIENT_REGISTRATIONS_CREATED,
