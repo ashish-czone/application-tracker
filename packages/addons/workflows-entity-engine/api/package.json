@@ -1,0 +1,19 @@
+{
+  "name": "@packages/workflows-entity-engine",
+  "version": "0.0.1",
+  "private": true,
+  "main": "index.ts",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.0.0",
+    "@packages/entity-engine": "workspace:*",
+    "@packages/field-types": "workspace:*",
+    "@packages/workflows": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "vitest": "^3.2.0"
+  }
+}

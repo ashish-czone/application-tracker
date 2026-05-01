@@ -1,13 +1,19 @@
 import { Injectable } from '@nestjs/common';
 import type { WorkflowExtension, WorkflowDefinitionRef, ValidatedTransition } from '@packages/entity-engine/extensions';
-import { WorkflowRegistryService } from './services/workflow-registry.service';
-import { WorkflowEngineService } from './services/workflow-engine.service';
-import { PipelineResolverService } from './services/pipeline-resolver.service';
-import type { TransitionPreflight } from './types';
+import {
+  WorkflowRegistryService,
+  WorkflowEngineService,
+  PipelineResolverService,
+  type TransitionPreflight,
+} from '@packages/workflows';
 
 /**
  * Adapter that implements entity-engine's WorkflowExtension interface
  * by delegating to the real workflow services.
+ *
+ * Lives in `@packages/workflows-entity-engine` so the workflows package
+ * itself stays free of entity-engine imports — only consumers that wire
+ * entity-engine + workflows together pull this binding.
  */
 @Injectable()
 export class WorkflowExtensionAdapter implements WorkflowExtension {

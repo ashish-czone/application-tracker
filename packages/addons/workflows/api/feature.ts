@@ -1,5 +1,12 @@
-import type { EntityConfig } from '@packages/entity-engine';
-import type { FeatureDeriver } from '@packages/entity-engine';
+/**
+ * Pure feature-bag helpers for workflows. No entity-engine dependency —
+ * non-entity-engine consumers (e.g., the workflows-ui shell, ad-hoc
+ * domain code reading the bag) can import these without dragging
+ * entity-engine into their graph.
+ *
+ * The entity-engine-coupled deriver lives in
+ * `@packages/workflows-entity-engine`.
+ */
 
 /** Key under which workflow data is published in `EntityRegistryEntry.features`. */
 export const WORKFLOW_FEATURE_KEY = 'workflow';
@@ -14,30 +21,6 @@ export interface WorkflowFeatureBag {
     fieldName: string;
   } | null;
 }
-
-/**
- * Inspects an entity config for `workflow` field types and emits the
- * workflow feature bag when one is present. Registered with
- * `FeatureDeriverRegistry` by `WorkflowsModule`.
- */
-export const workflowFeatureDeriver: FeatureDeriver = (config: EntityConfig) => {
-  const workflowFields = Object.entries(config.fieldMeta)
-    .filter(([, meta]) => meta.fieldType === 'workflow');
-
-  if (workflowFields.length === 0) return {};
-
-  let discriminator: WorkflowFeatureBag['discriminator'] = null;
-  for (const [fieldKey, meta] of workflowFields) {
-    if (meta.workflow?.discriminator) {
-      const d = meta.workflow.discriminator;
-      discriminator = { key: d.key, label: d.label, options: d.options, fieldName: fieldKey };
-      break;
-    }
-  }
-
-  const bag: WorkflowFeatureBag = { hasWorkflow: true, discriminator };
-  return { [WORKFLOW_FEATURE_KEY]: bag };
-};
 
 /** Read the workflow feature bag from a registry entry's `features`. */
 export function readWorkflowFeature(features: Record<string, unknown>): WorkflowFeatureBag | null {

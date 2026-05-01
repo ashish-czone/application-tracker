@@ -1,18 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest';
 import { randomUUID } from 'crypto';
-import { Global, Module } from '@nestjs/common';
 import { createPlatformTestModule, cleanDatabase } from '@packages/platform-testing';
-import { FeatureDeriverRegistry, featureDeriverRegistry } from '@packages/entity-engine';
 import { WorkflowsModule } from '../../workflows.module';
-
-// Mirror EntityCoreModule's @Global FeatureDeriverRegistry binding so
-// WorkflowsModule (which depends on it) can resolve the provider.
-@Global()
-@Module({
-  providers: [{ provide: FeatureDeriverRegistry, useValue: featureDeriverRegistry }],
-  exports: [FeatureDeriverRegistry],
-})
-class MockEntityCoreModule {}
 import { WorkflowRegistryService } from '../workflow-registry.service';
 import { WorkflowEngineService } from '../workflow-engine.service';
 import { PipelineResolverService } from '../pipeline-resolver.service';
@@ -29,7 +18,7 @@ describe('Workflows (integration)', () => {
 
   beforeAll(async () => {
     const ctx = await createPlatformTestModule({
-      imports: [MockEntityCoreModule, WorkflowsModule],
+      imports: [WorkflowsModule],
     });
     module = ctx.module;
     db = ctx.db;

@@ -23,6 +23,7 @@
     "@packages/soft-delete": "workspace:*",
     "@packages/users": "workspace:*",
     "@packages/workflows": "workspace:*",
+    "@packages/workflows-entity-engine": "workspace:*",
     "drizzle-orm": "^0.45.1",
     "drizzle-zod": "^0.7.0",
     "zod": "^3.25.0"
