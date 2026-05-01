@@ -9,7 +9,7 @@ import {
   type TransitionGuard,
 } from '@packages/workflows';
 import { clients } from './clients-ref';
-import { clientContacts } from './client-contacts-ref';
+import { clientContacts } from '../client-contacts/client-contacts.schema';
 import { CLIENTS_CREATED, CLIENT_CONTACTS_CREATED } from '../events/types';
 import { ClientDormancyService } from './client-dormancy.service';
 import { ClientContactsService } from '../client-contacts/client-contacts.service';

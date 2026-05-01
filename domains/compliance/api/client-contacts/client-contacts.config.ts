@@ -1,5 +1,5 @@
 import { defineEntity } from '@packages/entity-engine';
-import { clientContacts } from '../clients/client-contacts-ref';
+import { clientContacts } from './client-contacts.schema';
 
 export const CLIENT_CONTACTS_CONFIG = defineEntity({
   table: clientContacts,
