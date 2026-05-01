@@ -21,10 +21,10 @@ import { ComplianceRulesService } from './rules.service';
 import {
   CreateComplianceRuleSchema,
   DeprecateComplianceRuleSchema,
+  RulesListQuerySchema,
   TransitionComplianceRuleSchema,
   UpdateComplianceRuleSchema,
 } from './rules.dto';
-import { translateRulesQuery } from './rules.query';
 
 @Controller('compliance-rules')
 export class ComplianceRulesController {
@@ -42,7 +42,7 @@ export class ComplianceRulesController {
     @Query() query: Record<string, unknown>,
     @AccessContext() accessCtx?: DataAccessContext,
   ) {
-    return this.rules.list(translateRulesQuery(query), accessCtx);
+    return this.rules.list(RulesListQuerySchema.parse(query), accessCtx);
   }
 
   @Get('summary')

@@ -7,8 +7,8 @@
  *
  * Internals NOT exported (intentionally):
  * - `RULES_WORKFLOW`     — entity-engine config, wired only by rules.module
- * - `rules.dto.*`        — request DTOs, internal to the controller
- * - `rules.query.*`      — URL query parser, internal to the controller
+ * - `rules.dto.*`        — request DTOs and the URL query schema, internal
+ *                          to the controller
  * - `rules.schema.*`     — Drizzle table; re-exported via the schema barrel
  *                          for drizzle-kit, not by this index
  */
@@ -31,9 +31,3 @@ export {
   IMMUTABLE_RULE_IDENTITY_FIELDS,
   type ImmutableRuleIdentityField,
 } from './rules.service';
-
-export type {
-  ComplianceRulesListParams,
-  RuleStatusKey,
-  RuleJurisdictionKey,
-} from './rules.types';
