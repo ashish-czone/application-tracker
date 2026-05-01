@@ -90,6 +90,21 @@ export function useOrgUnits() {
   });
 }
 
+/**
+ * Picker-shaped projection of {@link useOrgUnits}: returns
+ * `{value: id, label: name}` items ready to drop into a `Combobox` /
+ * `FormSelect`. Reuses the same TanStack Query cache as `useOrgUnits`,
+ * so swapping a list view + a picker on the same screen costs one fetch.
+ */
+export function useOrgUnitOptions() {
+  const query = useOrgUnits();
+  const options = useMemo(
+    () => (query.data ?? []).map((u) => ({ value: u.id, label: u.name })),
+    [query.data],
+  );
+  return { options, isLoading: query.isLoading, error: query.error };
+}
+
 export function useCreateOrgUnit(options?: { onSuccess?: () => void }) {
   const api = useOrgUnitsApi();
   const queryClient = useQueryClient();

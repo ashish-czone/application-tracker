@@ -1,8 +1,10 @@
 export { OrgUnitsPage } from './pages/OrgUnitsPage';
 export { MembersDialog } from './components/MembersDialog';
 export { LevelsSettingsDialog } from './components/LevelsSettingsDialog';
+export { OrgUnitCombobox, type OrgUnitComboboxProps } from './components/OrgUnitCombobox';
 export {
   useOrgUnits,
+  useOrgUnitOptions,
   useCreateOrgUnit,
   useUpdateOrgUnit,
   useDeleteOrgUnit,
