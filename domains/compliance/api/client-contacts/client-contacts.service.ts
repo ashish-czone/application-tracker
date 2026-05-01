@@ -1,63 +1,41 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { DatabaseService, eq, withScope } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
-import { EntityService, type BaseListQuery } from '@packages/entity-engine';
-import type { DataAccessContext } from '@packages/rbac';
+import { AppLoggerService } from '@packages/logger';
+import { BaseCrudService } from '@packages/entity-engine';
 import { clientContacts } from './client-contacts.schema';
 import { CLIENT_CONTACTS_UPDATED } from '../events/types';
-import type { CreateClientContactDto, UpdateClientContactDto } from './client-contacts.dto';
 
 type ContactRow = typeof clientContacts.$inferSelect;
 
 /**
- * Merged service: baseline CRUD delegates for the entity engine + the
- * domain-specific primary-contact operations (hasPrimaryContact used by the
- * workflow guard on client onboarding → active; setPrimary called from the
- * clients controller to flip the primary flag atomically).
+ * Client contacts service. Inherits standard CRUD from `BaseCrudService`
+ * (sprint 6 of the camp-B migration); adds the two domain-specific
+ * primary-contact operations.
+ *
+ * Custom methods:
+ *  - `hasPrimaryContact(clientId)` — read predicate consumed by the
+ *    `require-primary-contact` workflow guard on a client's
+ *    onboarding → active transition.
+ *  - `setPrimary(clientId, contactId, actorId)` — atomic flip of the
+ *    primary flag; the partial unique index on (client_id) WHERE
+ *    is_primary = true would reject the naive two-step approach if
+ *    it ran out-of-order, so the unset and set live inside one tx.
+ *    Emits `CLIENT_CONTACTS_UPDATED` for both the demoted and promoted
+ *    rows after commit.
  */
 @Injectable()
-export class ClientContactsService {
-  constructor(
-    @Inject('ENTITY_SERVICE_client-contacts') private readonly entityService: EntityService,
-    private readonly database: DatabaseService,
-    private readonly events: DomainEventEmitter,
-  ) {}
-
-  // ---- CRUD delegates (vendors template) -----------------------------------
-
-  list(query: BaseListQuery, accessCtx?: DataAccessContext) {
-    return this.entityService.list(query, accessCtx);
+export class ClientContactsService extends BaseCrudService(clientContacts, {
+  slug: 'client-contacts',
+  events: {
+    created: 'client-contacts.Created',
+    updated: 'client-contacts.Updated',
+    deleted: 'client-contacts.Deleted',
+  },
+}) {
+  constructor(database: DatabaseService, events: DomainEventEmitter, appLogger: AppLoggerService) {
+    super(database, events, appLogger);
   }
-
-  findOne(id: string, accessCtx?: DataAccessContext) {
-    return this.entityService.findOneOrFail(id, accessCtx);
-  }
-
-  create(input: CreateClientContactDto, actorId: string) {
-    return this.entityService.create(input, actorId);
-  }
-
-  update(id: string, input: UpdateClientContactDto, actorId: string, accessCtx?: DataAccessContext) {
-    return this.entityService.update(id, input, actorId, accessCtx);
-  }
-
-  softDelete(id: string, actorId: string, accessCtx?: DataAccessContext) {
-    return this.entityService.softDelete(id, actorId, accessCtx);
-  }
-
-  clone(id: string, actorId: string) {
-    return this.entityService.clone(id, actorId);
-  }
-
-  restore(id: string) {
-    return this.entityService.restore(id);
-  }
-
-  getListLayout() {
-    return this.entityService.getListLayout();
-  }
-
-  // ---- Domain-specific primary-contact handling ----------------------------
 
   /**
    * True when the client has at least one contact flagged as primary.
@@ -68,11 +46,13 @@ export class ClientContactsService {
     const rows = await this.database.db
       .select({ id: clientContacts.id })
       .from(clientContacts)
-      .where(withScope(
-        clientContacts,
-        eq(clientContacts.complianceClientId, clientId),
-        eq(clientContacts.complianceIsPrimary, true),
-      ))
+      .where(
+        withScope(
+          clientContacts,
+          eq(clientContacts.complianceClientId, clientId),
+          eq(clientContacts.complianceIsPrimary, true),
+        ),
+      )
       .limit(1);
     return rows.length > 0;
   }
@@ -80,12 +60,14 @@ export class ClientContactsService {
   /**
    * Flip the primary-contact flag atomically: unset whichever contact is
    * currently primary for the client, then set the target contact as primary.
+   *
    * The partial unique index on (client_id) WHERE is_primary = true would
    * reject the naive two-step approach if it ran out-of-order, so the unset
    * and set live inside a single transaction.
    *
-   * No-op if the target contact is already primary. Emits `client-contacts.Updated`
-   * after commit for both the demoted and the promoted row.
+   * No-op if the target contact is already primary. Emits
+   * `client-contacts.Updated` after commit for both the demoted and the
+   * promoted row.
    */
   async setPrimary(
     clientId: string,
@@ -96,11 +78,13 @@ export class ClientContactsService {
       const [existing] = await tx
         .select()
         .from(clientContacts)
-        .where(withScope(
-          clientContacts,
-          eq(clientContacts.id, contactId),
-          eq(clientContacts.complianceClientId, clientId),
-        ));
+        .where(
+          withScope(
+            clientContacts,
+            eq(clientContacts.id, contactId),
+            eq(clientContacts.complianceClientId, clientId),
+          ),
+        );
 
       if (!existing) {
         throw new NotFoundException(
@@ -113,11 +97,13 @@ export class ClientContactsService {
       const demoted = await tx
         .update(clientContacts)
         .set({ complianceIsPrimary: false })
-        .where(withScope(
-          clientContacts,
-          eq(clientContacts.complianceClientId, clientId),
-          eq(clientContacts.complianceIsPrimary, true),
-        ))
+        .where(
+          withScope(
+            clientContacts,
+            eq(clientContacts.complianceClientId, clientId),
+            eq(clientContacts.complianceIsPrimary, true),
+          ),
+        )
         .returning();
 
       const [promoted] = await tx
