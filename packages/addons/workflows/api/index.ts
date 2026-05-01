@@ -47,3 +47,12 @@ export {
 // Transition guard helper for per-entity service composition
 export { runTransitionGuards, previewTransitionGuards } from './transition-guard';
 export type { TransitionGuard, GuardCtx, GuardOutcome } from './transition-guard';
+
+// Per-module workflow declaration (replaces fields.status.workflow inside defineEntity)
+export { defineWorkflow } from './define-workflow';
+export type {
+  WorkflowDefinition,
+  WorkflowStateDefinition,
+  WorkflowTransitionDefinition,
+  WorkflowTransitionTarget,
+} from './define-workflow';
