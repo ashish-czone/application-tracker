@@ -24,6 +24,16 @@ export {
   type FilingsSummary,
 } from './compliance-filings.service';
 
+export {
+  ComplianceFilingsReportsService,
+  type TrendBucket,
+  type ClientBreakdownRow,
+  type AgingBucket,
+  type SeverityBreakdownRow,
+  type TeamFilingCounts,
+  type ReportRange,
+} from './compliance-filings.reports.service';
+
 export { ComplianceFilingsLookupService } from './compliance-filings.lookup.service';
 
 export { ComplianceFilingsCancellationService } from './compliance-filings.cancellation.service';

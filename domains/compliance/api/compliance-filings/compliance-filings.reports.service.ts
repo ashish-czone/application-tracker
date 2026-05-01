@@ -3,9 +3,8 @@ import { eq, gte, lte, isNotNull, inArray, ilike, sql, count, notInArray } from 
 import { DatabaseService, withScope } from '@packages/database';
 import { clients } from '@packages/directory';
 import { EntityService } from '@packages/entity-engine';
-import { OrgUnitService } from '@packages/org-units';
 import type { DataAccessContext } from '@packages/rbac';
-import { complianceFilings } from '../compliance-filings/compliance-filings.schema';
+import { complianceFilings } from './compliance-filings.schema';
 
 const NOT_COMPLETED_STATES = ['pending', 'in_progress', 'review', 'rejected'];
 
@@ -37,14 +36,19 @@ export interface SeverityBreakdownRow {
   count: number;
 }
 
-export interface TeamWorkloadRow {
+/**
+ * Per-team filing counts for the date range — IDs and counts only,
+ * no display fields. Consumed by the app-level OrgUnitsReportsService
+ * that joins team names from `OrgUnitService.findAll()`.
+ */
+export interface TeamFilingCounts {
   assigneeTeamId: string;
-  assigneeTeamName: string;
   totalAssigned: number;
   completed: number;
   inProgress: number;
   overdue: number;
-  onTimeRate: number;
+  onTime: number;
+  late: number;
 }
 
 export interface ReportRange {
@@ -52,11 +56,22 @@ export interface ReportRange {
   to: string;
 }
 
+/**
+ * Reports service for compliance-filings — single-domain aggregations
+ * over the `compliance_filings` table. Sibling to ComplianceFilingsService
+ * (CRUD), Lookup, Cancellation, and AssigneeCleanup; separated because
+ * reports are a distinct concern with its own surface (4 read endpoints
+ * under /compliance-filings/reports/* + 1 cross-domain primitive).
+ *
+ * Cross-domain reports (e.g. "team workload" — joining filings counts
+ * with team names from org-units) live at the app composition layer
+ * (apps/compliance/src/modules/org-units/org-units.reports.service.ts)
+ * and consume the `getCountsByTeam` primitive from this service.
+ */
 @Injectable()
-export class ComplianceReportsService {
+export class ComplianceFilingsReportsService {
   constructor(
     private readonly database: DatabaseService,
-    private readonly orgUnits: OrgUnitService,
     @Inject('ENTITY_SERVICE_compliance-filings')
     private readonly filingsEntity: EntityService,
   ) {}
@@ -226,17 +241,18 @@ export class ComplianceReportsService {
   }
 
   /**
-   * Per-team workload over a date range. Counts filings assigned to each
-   * team and breaks down by completed/in-progress/overdue. On-time rate is
-   * `completed / (completed + late)` — treats "in progress" as still
-   * earnable.
+   * Per-team filing counts for the date range — IDs and counts only.
+   * Cross-domain primitive: callers (e.g. the app's OrgUnitsReportsService)
+   * resolve team names from OrgUnitService and compose the user-facing
+   * `TeamWorkloadRow` shape there. Keeping this method free of any
+   * org-units dependency is what lets compliance-filings stay free of
+   * cross-module DI.
    */
-  async getTeamWorkload(
+  async getCountsByTeam(
     range: ReportRange,
     today: string,
-    options?: { q?: string },
     accessCtx?: DataAccessContext,
-  ): Promise<TeamWorkloadRow[]> {
+  ): Promise<TeamFilingCounts[]> {
     const scopePredicate = accessCtx ? await this.filingsEntity.getScopePredicate(accessCtx) : undefined;
     const rows = await this.database.db
       .select({
@@ -259,30 +275,14 @@ export class ComplianceReportsService {
       .groupBy(complianceFilings.assigneeTeamId)
       .orderBy(sql`COUNT(*) DESC`);
 
-    // Resolve team names via OrgUnitService — never via JOIN, since org-units
-    // is a regular addon (not a shared identity table).
-    const allUnits = await this.orgUnits.findAll();
-    const nameById = new Map(allUnits.map((u) => [u.id, u.name]));
-
-    const q = options?.q?.trim().toLowerCase() ?? '';
-    return rows.flatMap<TeamWorkloadRow>((r) => {
-      const teamName = nameById.get(r.assigneeTeamId) ?? '';
-      // Search filter is applied post-resolve because the team name lives in
-      // org-units, not in compliance_filings. Acceptable here because the
-      // workload result is bounded to one row per team (low-cardinality).
-      if (q.length > 0 && !teamName.toLowerCase().includes(q)) return [];
-      const onTime = Number(r.onTime);
-      const late = Number(r.late);
-      const sum = onTime + late;
-      return [{
-        assigneeTeamId: r.assigneeTeamId,
-        assigneeTeamName: teamName,
-        totalAssigned: Number(r.totalAssigned),
-        completed: Number(r.completed),
-        inProgress: Number(r.inProgress),
-        overdue: Number(r.overdue),
-        onTimeRate: sum > 0 ? Math.round((onTime / sum) * 100) : 0,
-      }];
-    });
+    return rows.map((r) => ({
+      assigneeTeamId: r.assigneeTeamId,
+      totalAssigned: Number(r.totalAssigned),
+      completed: Number(r.completed),
+      inProgress: Number(r.inProgress),
+      overdue: Number(r.overdue),
+      onTime: Number(r.onTime),
+      late: Number(r.late),
+    }));
   }
 }

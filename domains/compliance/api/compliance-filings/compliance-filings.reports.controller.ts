@@ -1,7 +1,7 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { todayInTimezone } from '@packages/common';
 import { AccessContext, RequirePermission, type DataAccessContext } from '@packages/rbac';
-import { ComplianceReportsService } from './reports.service';
+import { ComplianceFilingsReportsService } from './compliance-filings.reports.service';
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -23,9 +23,9 @@ function defaultRange(today: string): { from: string; to: string } {
   return { from, to: today };
 }
 
-@Controller('compliance-reports')
-export class ComplianceReportsController {
-  constructor(private readonly reports: ComplianceReportsService) {}
+@Controller('compliance-filings/reports')
+export class ComplianceFilingsReportsController {
+  constructor(private readonly reports: ComplianceFilingsReportsService) {}
 
   @Get('trend')
   @RequirePermission('reports.read')
@@ -76,21 +76,5 @@ export class ComplianceReportsController {
   ) {
     const today = resolveCalendarDate(todayParam, resolveToday());
     return this.reports.getOverdueSeverity(today, accessCtx);
-  }
-
-  @Get('team-workload')
-  @RequirePermission('reports.read')
-  getTeamWorkload(
-    @Query('from') fromParam: string | undefined,
-    @Query('to') toParam: string | undefined,
-    @Query('today') todayParam: string | undefined,
-    @Query('q') q: string | undefined,
-    @AccessContext() accessCtx?: DataAccessContext,
-  ) {
-    const today = resolveCalendarDate(todayParam, resolveToday());
-    const range = defaultRange(today);
-    const from = resolveCalendarDate(fromParam, range.from);
-    const to = resolveCalendarDate(toParam, range.to);
-    return this.reports.getTeamWorkload({ from, to }, today, { q }, accessCtx);
   }
 }

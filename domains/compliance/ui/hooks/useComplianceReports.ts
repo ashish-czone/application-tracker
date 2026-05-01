@@ -57,8 +57,8 @@ export function useComplianceTrend(range: ReportRangeParams = {}) {
   const { apiFn } = useEntityEngine();
   const qs = toQuery(range);
   const query = useQuery<TrendBucket[]>({
-    queryKey: ['compliance-reports', 'trend', range],
-    queryFn: () => apiFn.get<TrendBucket[]>(`/compliance-reports/trend${qs ? `?${qs}` : ''}`),
+    queryKey: ['compliance-filings', 'reports', 'trend', range],
+    queryFn: () => apiFn.get<TrendBucket[]>(`/compliance-filings/reports/trend${qs ? `?${qs}` : ''}`),
   });
   return {
     rows: query.data ?? [],
@@ -71,8 +71,8 @@ export function useComplianceByClient(range: ReportRangeParams = {}) {
   const { apiFn } = useEntityEngine();
   const qs = toQuery(range);
   const query = useQuery<ClientBreakdownRow[]>({
-    queryKey: ['compliance-reports', 'by-client', range],
-    queryFn: () => apiFn.get<ClientBreakdownRow[]>(`/compliance-reports/by-client${qs ? `?${qs}` : ''}`),
+    queryKey: ['compliance-filings', 'reports', 'by-client', range],
+    queryFn: () => apiFn.get<ClientBreakdownRow[]>(`/compliance-filings/reports/by-client${qs ? `?${qs}` : ''}`),
   });
   return {
     rows: query.data ?? [],
@@ -84,8 +84,8 @@ export function useComplianceByClient(range: ReportRangeParams = {}) {
 export function useOverdueAging() {
   const { apiFn } = useEntityEngine();
   const query = useQuery<AgingBucket[]>({
-    queryKey: ['compliance-reports', 'aging'],
-    queryFn: () => apiFn.get<AgingBucket[]>(`/compliance-reports/aging`),
+    queryKey: ['compliance-filings', 'reports', 'aging'],
+    queryFn: () => apiFn.get<AgingBucket[]>(`/compliance-filings/reports/aging`),
   });
   return {
     rows: query.data ?? [],
@@ -97,8 +97,8 @@ export function useOverdueAging() {
 export function useOverdueSeverity() {
   const { apiFn } = useEntityEngine();
   const query = useQuery<SeverityBreakdownRow[]>({
-    queryKey: ['compliance-reports', 'severity'],
-    queryFn: () => apiFn.get<SeverityBreakdownRow[]>(`/compliance-reports/severity`),
+    queryKey: ['compliance-filings', 'reports', 'severity'],
+    queryFn: () => apiFn.get<SeverityBreakdownRow[]>(`/compliance-filings/reports/severity`),
   });
   return {
     rows: query.data ?? [],
@@ -111,9 +111,9 @@ export function useTeamWorkload(range: ReportRangeParams = {}) {
   const { apiFn } = useEntityEngine();
   const qs = toQuery(range);
   const query = useQuery<TeamWorkloadRow[]>({
-    queryKey: ['compliance-reports', 'team-workload', range],
+    queryKey: ['org-units', 'reports', 'team-workload', range],
     queryFn: () =>
-      apiFn.get<TeamWorkloadRow[]>(`/compliance-reports/team-workload${qs ? `?${qs}` : ''}`),
+      apiFn.get<TeamWorkloadRow[]>(`/org-units/reports/team-workload${qs ? `?${qs}` : ''}`),
   });
   return {
     rows: query.data ?? [],

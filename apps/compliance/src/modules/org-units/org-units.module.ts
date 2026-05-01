@@ -18,7 +18,10 @@ import {
 import { PermissionManifestRegistry, ScopeResolverRegistry } from '@packages/rbac';
 import { LookupResolverService } from '@packages/entity-engine';
 import { UserResolverRegistry, EntityResolverRegistry } from '@packages/automation-contracts';
+import { ComplianceFilingsModule } from '@domains/compliance-api/compliance-filings';
 import { ComplianceOrgUnitService } from './compliance-org-unit.service';
+import { OrgUnitsReportsService } from './org-units.reports.service';
+import { OrgUnitsReportsController } from './org-units.reports.controller';
 
 /**
  * App-level org-units module. Wires the library classes into NestJS DI and
@@ -27,7 +30,13 @@ import { ComplianceOrgUnitService } from './compliance-org-unit.service';
  * pattern — `@packages/org-units` ships only classes/configs.
  */
 @Module({
-  controllers: [OrgUnitController, OrgUnitLevelController, OrgPositionController],
+  imports: [ComplianceFilingsModule],
+  controllers: [
+    OrgUnitController,
+    OrgUnitLevelController,
+    OrgPositionController,
+    OrgUnitsReportsController,
+  ],
   providers: [
     { provide: OrgUnitService, useClass: ComplianceOrgUnitService },
     OrgUnitLevelService,
@@ -35,6 +44,7 @@ import { ComplianceOrgUnitService } from './compliance-org-unit.service';
     PositionScopeResolverService,
     UnitScopeResolver,
     DescendantsScopeResolver,
+    OrgUnitsReportsService,
   ],
   exports: [
     OrgUnitService,

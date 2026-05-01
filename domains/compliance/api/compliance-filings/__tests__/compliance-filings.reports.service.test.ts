@@ -1,17 +1,15 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { ComplianceReportsService } from '../reports.service';
+import { ComplianceFilingsReportsService } from '../compliance-filings.reports.service';
 
 /**
- * Unit tests for the ComplianceReportsService — the hand-rolled
- * Drizzle-aggregation path for the five report endpoints (trend,
- * by-client, aging, severity, team-workload). Per the test-coverage
- * audit (HIGH #3), this service had zero unit AND zero integration
- * tests, despite each method building intricate CASE expressions for
- * on-time / late / overdue derivation.
+ * Unit tests for ComplianceFilingsReportsService — the hand-rolled
+ * Drizzle aggregation path for the four single-domain reports
+ * (trend, by-client, aging, severity) plus the cross-domain primitive
+ * `getCountsByTeam` (consumed by the app-level org-units reports
+ * composition that joins team names from OrgUnitService).
  *
- * Scope: row mapping, scope predicate forwarding, post-resolve
- * filters, on-time-rate maths. Actual SQL semantics belong in
- * integration tests against a real DB (separate follow-up).
+ * Scope: row mapping, scope predicate forwarding, on-time-rate maths.
+ * Actual SQL semantics belong in integration tests against a real DB.
  */
 
 type AnyChain = Record<string, ReturnType<typeof vi.fn>>;
@@ -37,21 +35,18 @@ function chainResolving<T>(rows: T[]): AnyChain {
   return chain;
 }
 
-describe('ComplianceReportsService', () => {
+describe('ComplianceFilingsReportsService', () => {
   let database: {
     db: { select: ReturnType<typeof vi.fn> };
   };
-  let orgUnits: { findAll: ReturnType<typeof vi.fn> };
   let filingsEntity: { getScopePredicate: ReturnType<typeof vi.fn> };
-  let service: ComplianceReportsService;
+  let service: ComplianceFilingsReportsService;
 
   beforeEach(() => {
     database = { db: { select: vi.fn() } };
-    orgUnits = { findAll: vi.fn().mockResolvedValue([]) };
     filingsEntity = { getScopePredicate: vi.fn().mockResolvedValue(undefined) };
-    service = new ComplianceReportsService(
+    service = new ComplianceFilingsReportsService(
       database as never,
-      orgUnits as never,
       filingsEntity as never,
     );
   });
@@ -154,8 +149,6 @@ describe('ComplianceReportsService', () => {
         { q: '  Acme  ' },
       );
 
-      // Only assertion at the unit level: the chain was invoked exactly once
-      // — semantic verification of the ILIKE predicate belongs in integration.
       expect(database.db.select).toHaveBeenCalledTimes(1);
     });
   });
@@ -226,8 +219,8 @@ describe('ComplianceReportsService', () => {
     });
   });
 
-  describe('getTeamWorkload', () => {
-    it('joins team names from OrgUnitService and maps onTimeRate from completed/(completed+late)', async () => {
+  describe('getCountsByTeam', () => {
+    it('returns IDs and counts only — no team-name resolution', async () => {
       database.db.select.mockReturnValueOnce(
         chainResolving([
           {
@@ -241,9 +234,8 @@ describe('ComplianceReportsService', () => {
           },
         ]),
       );
-      orgUnits.findAll.mockResolvedValueOnce([{ id: 't1', name: 'GST Team' }]);
 
-      const result = await service.getTeamWorkload(
+      const result = await service.getCountsByTeam(
         { from: '2026-01-01', to: '2026-04-30' },
         '2026-04-30',
       );
@@ -251,72 +243,54 @@ describe('ComplianceReportsService', () => {
       expect(result).toEqual([
         {
           assigneeTeamId: 't1',
-          assigneeTeamName: 'GST Team',
           totalAssigned: 10,
           completed: 7,
           inProgress: 1,
           overdue: 2,
-          // onTime / (onTime + late) → 6 / 7 → 86%
-          onTimeRate: 86,
+          onTime: 6,
+          late: 1,
         },
       ]);
     });
 
-    it('falls back to empty team name when the org unit is missing', async () => {
+    it('coerces all numeric fields with Number()', async () => {
       database.db.select.mockReturnValueOnce(
         chainResolving([
           {
-            assigneeTeamId: 'orphan',
-            totalAssigned: 1,
-            completed: 0,
-            inProgress: 1,
-            overdue: 0,
-            onTime: 0,
-            late: 0,
+            assigneeTeamId: 't1',
+            totalAssigned: '10',
+            completed: '7',
+            inProgress: '1',
+            overdue: '2',
+            onTime: '6',
+            late: '1',
           },
         ]),
       );
-      orgUnits.findAll.mockResolvedValueOnce([]);
 
-      const result = await service.getTeamWorkload(
+      const result = await service.getCountsByTeam(
         { from: '2026-01-01', to: '2026-04-30' },
         '2026-04-30',
       );
 
-      expect(result[0].assigneeTeamName).toBe('');
-      // No completions → onTimeRate is 0 (avoids divide-by-zero)
-      expect(result[0].onTimeRate).toBe(0);
-    });
-
-    it('post-resolve search filter: drops teams whose name does not contain q (case-insensitive)', async () => {
-      database.db.select.mockReturnValueOnce(
-        chainResolving([
-          { assigneeTeamId: 't1', totalAssigned: 1, completed: 0, inProgress: 0, overdue: 0, onTime: 0, late: 0 },
-          { assigneeTeamId: 't2', totalAssigned: 1, completed: 0, inProgress: 0, overdue: 0, onTime: 0, late: 0 },
-        ]),
-      );
-      orgUnits.findAll.mockResolvedValueOnce([
-        { id: 't1', name: 'GST Team' },
-        { id: 't2', name: 'TDS Squad' },
-      ]);
-
-      const result = await service.getTeamWorkload(
-        { from: '2026-01-01', to: '2026-04-30' },
-        '2026-04-30',
-        { q: 'gst' },
-      );
-
-      expect(result.map((r) => r.assigneeTeamName)).toEqual(['GST Team']);
+      expect(result[0]).toEqual({
+        assigneeTeamId: 't1',
+        totalAssigned: 10,
+        completed: 7,
+        inProgress: 1,
+        overdue: 2,
+        onTime: 6,
+        late: 1,
+      });
     });
 
     it('forwards accessCtx for scope resolution', async () => {
       database.db.select.mockReturnValueOnce(chainResolving([]));
       const accessCtx = { userId: 'u1', scopes: [{ type: 'unit' }] } as never;
 
-      await service.getTeamWorkload(
+      await service.getCountsByTeam(
         { from: '2026-01-01', to: '2026-04-30' },
         '2026-04-30',
-        undefined,
         accessCtx,
       );
 
