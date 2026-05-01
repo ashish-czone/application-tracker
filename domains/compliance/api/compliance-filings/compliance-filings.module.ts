@@ -6,7 +6,9 @@ import { COMPLIANCE_FILINGS_CONFIG } from './compliance-filings.config';
 import { COMPLIANCE_FILINGS_WORKFLOW } from './compliance-filings.workflow';
 import { COMPLIANCE_FILINGS_PERMISSION_MANIFESTS } from './compliance-filings.permissions';
 import { ComplianceFilingsController } from './compliance-filings.controller';
+import { ComplianceFilingsReportsController } from './compliance-filings.reports.controller';
 import { ComplianceFilingsService } from './compliance-filings.service';
+import { ComplianceFilingsReportsService } from './compliance-filings.reports.service';
 import { ComplianceFilingsLookupService } from './compliance-filings.lookup.service';
 import { ComplianceFilingsCancellationService } from './compliance-filings.cancellation.service';
 import { ComplianceFilingsAssigneeCleanupService } from './compliance-filings.assignee-cleanup.service';
@@ -17,11 +19,15 @@ const filingsEntityEngineModule = EntityEngineModule.forEntity(COMPLIANCE_FILING
 /**
  * Compliance filings module.
  *
- * Four services co-exist here because they serve genuinely distinct
+ * Five services co-exist here because they serve genuinely distinct
  * concerns:
  *  - ComplianceFilingsService — CRUD + create-time externalKey derivation
  *    and completedAt stamping (moved out of beforeCreate/beforeUpdate
  *    hooks so all create-time logic lives in one place)
+ *  - ComplianceFilingsReportsService — single-domain aggregations over
+ *    `compliance_filings` (trend, by-client, aging, severity) plus the
+ *    `getCountsByTeam` primitive consumed by the app-level org-units
+ *    reports composition
  *  - ComplianceFilingsLookupService — read-only lookups used by the
  *    generate-compliance-filings automation to dedupe before insert
  *  - ComplianceFilingsCancellationService — batch-cancellation called
@@ -30,8 +36,9 @@ const filingsEntityEngineModule = EntityEngineModule.forEntity(COMPLIANCE_FILING
  *    non-terminal filings when the assigned user is deactivated
  *    (US-7.4 / US-12.2 / US-12.3)
  *
- * Lookup + cancellation + assignee-cleanup are exported so consumers
- * (rules, dormancy, AppUsersService) can inject them.
+ * Reports + lookup + cancellation + assignee-cleanup are exported so
+ * consumers (rules, dormancy, AppUsersService, app-level org-units
+ * reports) can inject them.
  */
 @Module({
   imports: [
@@ -40,9 +47,10 @@ const filingsEntityEngineModule = EntityEngineModule.forEntity(COMPLIANCE_FILING
     RbacIntegrationModule.forFeature({ manifests: COMPLIANCE_FILINGS_PERMISSION_MANIFESTS }),
     LawsModule,
   ],
-  controllers: [ComplianceFilingsController],
+  controllers: [ComplianceFilingsController, ComplianceFilingsReportsController],
   providers: [
     ComplianceFilingsService,
+    ComplianceFilingsReportsService,
     ComplianceFilingsLookupService,
     ComplianceFilingsCancellationService,
     ComplianceFilingsAssigneeCleanupService,
@@ -50,6 +58,7 @@ const filingsEntityEngineModule = EntityEngineModule.forEntity(COMPLIANCE_FILING
   exports: [
     filingsEntityEngineModule,
     ComplianceFilingsService,
+    ComplianceFilingsReportsService,
     ComplianceFilingsLookupService,
     ComplianceFilingsCancellationService,
     ComplianceFilingsAssigneeCleanupService,
