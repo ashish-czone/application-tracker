@@ -63,7 +63,7 @@ export interface ListLayoutDefinition<TRow> {
  * unchanged (after type-checking). Pair with `<EntityListView>` to render.
  *
  * @example
- *   import { defineListLayout } from '@packages/entity-layout-ui';
+ *   import { defineListLayout } from '@packages/entity-views-ui';
  *   import type { ComplianceRule } from '@domains/compliance-contract';
  *
  *   export const RULES_LIST_LAYOUT = defineListLayout<ComplianceRule>({

@@ -1,5 +1,5 @@
 {
-  "name": "@packages/entity-layout-ui",
+  "name": "@packages/entity-views-ui",
   "version": "0.0.1",
   "private": true,
   "main": "index.ts",

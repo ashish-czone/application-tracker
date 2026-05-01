@@ -9,7 +9,7 @@ import { WorkflowCell } from './workflow';
 import type { CellRendererRegistry } from './types';
 
 /**
- * Default cell renderer registry shipped with @packages/entity-layout-ui.
+ * Default cell renderer registry shipped with @packages/entity-views-ui.
  * Apps spread this and add their own:
  *
  *   <EntityListViewProvider cellRenderers={{ ...defaultCellRenderers, currency: CurrencyCell }} />
