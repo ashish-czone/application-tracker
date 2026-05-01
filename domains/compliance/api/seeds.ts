@@ -93,7 +93,7 @@ export function complianceDemoSeedSources(): SeedSource[] {
       import('./rules/rules.seeds').then((m) => m.seedDemoRules),
     ),
     demo('@domains/compliance-api/demo-client-registrations', () =>
-      import('./client-registrations/seeds/demo-client-registrations').then(
+      import('./client-registrations/client-registrations.seeds').then(
         (m) => m.seedDemoClientRegistrations,
       ),
     ),
