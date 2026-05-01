@@ -148,18 +148,10 @@ describe('Organizations singleton (integration)', () => {
     });
   });
 
-  describe('GET /api/v1/organizations/layout/list', () => {
-    it('returns 401 without auth', async () => {
-      await request(ctx.httpServer).get('/api/v1/organizations/layout/list').expect(401);
-    });
-
-    it('returns 403 without organizations.read', async () => {
-      await request(ctx.httpServer)
-        .get('/api/v1/organizations/layout/list')
-        .set(withAuth(NO_PERMS))
-        .expect(403);
-    });
-  });
+  // GET /organizations/layout/list endpoint removed in sprint 4 — the
+  // organizations entity has a custom UI page and didn't consume the
+  // engine-generated layout shape. Auth-gating coverage for organizations
+  // remains via the GET / GET /:id / PATCH / DELETE tests below.
 
   describe('PATCH /api/v1/organizations/:id (auth)', () => {
     it('returns 401 without auth', async () => {

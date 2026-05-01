@@ -28,12 +28,6 @@ import {
 export class OrganizationsController {
   constructor(private readonly organizations: OrganizationsService) {}
 
-  @Get('layout/list')
-  @RequirePermission('organizations.read')
-  getListLayout() {
-    return this.organizations.getListLayout();
-  }
-
   @Get()
   @RequirePermission('organizations.read')
   list(@Query() query: Record<string, unknown>, @AccessContext() accessCtx?: DataAccessContext) {
@@ -46,7 +40,9 @@ export class OrganizationsController {
     @Param('id', ParseUUIDPipe) id: string,
     @AccessContext() accessCtx?: DataAccessContext,
   ) {
-    return this.organizations.findOne(id, accessCtx);
+    // findOneOrFail (not findOne) — BaseCrudService.findOne returns null on
+    // miss; the controller wants 404 to surface as NotFoundException.
+    return this.organizations.findOneOrFail(id, accessCtx);
   }
 
   @Post()
