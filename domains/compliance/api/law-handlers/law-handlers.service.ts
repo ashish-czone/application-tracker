@@ -3,7 +3,7 @@ import { DatabaseService, and, eq, isNull, sql } from '@packages/database';
 import { EntityService, type BaseListQuery } from '@packages/entity-engine';
 import type { DataAccessContext } from '@packages/rbac';
 import { LawsService } from '../laws';
-import { complianceLawHandlers } from '../schema/law-handlers';
+import { complianceLawHandlers } from './law-handlers.schema';
 import type { CreateLawHandlerDto, UpdateLawHandlerDto } from './law-handlers.dto';
 
 export interface LawHandler {

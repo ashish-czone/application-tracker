@@ -21,7 +21,11 @@ import {
 } from '@packages/rbac';
 import { LawHandlersService } from './law-handlers.service';
 import { ComplianceRulesService } from '../rules';
-import { CreateLawHandlerSchema, UpdateLawHandlerSchema } from './law-handlers.dto';
+import {
+  CreateLawHandlerSchema,
+  LawHandlersListQuerySchema,
+  UpdateLawHandlerSchema,
+} from './law-handlers.dto';
 
 @Controller('law-handlers')
 export class LawHandlersController {
@@ -40,13 +44,7 @@ export class LawHandlersController {
   @Get()
   @RequirePermission('law-handlers.read')
   list(@Query() query: Record<string, unknown>, @AccessContext() accessCtx?: DataAccessContext) {
-    const parsed = {
-      ...query,
-      page: query.page ? Number(query.page) : undefined,
-      limit: query.limit ? Number(query.limit) : undefined,
-      includeDeleted: query.includeDeleted === 'true',
-    };
-    return this.lawHandlers.list(parsed, accessCtx);
+    return this.lawHandlers.list(LawHandlersListQuerySchema.parse(query), accessCtx);
   }
 
   @Get(':id')

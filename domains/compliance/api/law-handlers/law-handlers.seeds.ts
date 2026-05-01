@@ -6,10 +6,10 @@ import {
   OrgPositionService,
   orgUnits,
 } from '@packages/org-units';
-import { complianceLaws } from '../../laws/laws.schema';
-import { complianceLawHandlers } from '../../schema/law-handlers';
-import { LawHandlersService } from '../law-handlers.service';
-import { DEMO_USER_EMAILS } from '../../users/seeds/demo-users';
+import { complianceLaws } from '../laws/laws.schema';
+import { complianceLawHandlers } from './law-handlers.schema';
+import { LawHandlersService } from './law-handlers.service';
+import { DEMO_USER_EMAILS } from '../users/seeds/demo-users';
 
 const COMPANY_NAME = 'Demo Compliance Practice';
 const TEAM_NAME = 'Compliance Team';

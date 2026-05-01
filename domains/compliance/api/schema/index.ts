@@ -1,6 +1,6 @@
 export { complianceLaws } from '../laws/laws.schema';
 export { complianceRules } from '../rules/rules.schema';
-export { complianceLawHandlers } from './law-handlers';
+export { complianceLawHandlers } from '../law-handlers/law-handlers.schema';
 export { complianceClientRegistrations } from '../client-registrations/client-registrations.schema';
 export { complianceFilings } from './compliance-filings';
 export { organizations } from './organizations';

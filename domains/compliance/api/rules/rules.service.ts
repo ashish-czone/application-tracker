@@ -10,10 +10,10 @@ import {
 } from '@domains/compliance-contract';
 import { complianceRules } from './rules.schema';
 import { complianceLaws } from '../laws/laws.schema';
-import { complianceLawHandlers } from '../schema/law-handlers';
+import { complianceLawHandlers } from '../law-handlers/law-handlers.schema';
 import { complianceFilings } from '../schema/compliance-filings';
 import { complianceClientRegistrations } from '../client-registrations/client-registrations.schema';
-import { LawHandlersService } from '../law-handlers/law-handlers.service';
+import { LawHandlersService } from '../law-handlers';
 import { ComplianceFilingsCancellationService } from '../compliance-filings';
 import type {
   CreateComplianceRuleDto,

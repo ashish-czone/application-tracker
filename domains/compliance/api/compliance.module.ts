@@ -11,7 +11,7 @@ import { ClientsModule } from './clients';
 import { ClientContactsModule } from './client-contacts/client-contacts.module';
 import { ClientRegistrationsModule } from './client-registrations';
 import { ComplianceRulesModule } from './rules';
-import { LawHandlersModule } from './law-handlers/law-handlers.module';
+import { LawHandlersModule } from './law-handlers';
 import { ComplianceFilingsModule } from './compliance-filings';
 import { OrganizationsModule } from './organizations/organizations.module';
 import { ComplianceReportsModule } from './reports/reports.module';

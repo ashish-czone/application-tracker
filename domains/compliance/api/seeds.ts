@@ -87,7 +87,7 @@ export function complianceDemoSeedSources(): SeedSource[] {
       import('./users/seeds/demo-user-roles').then((m) => m.seedDemoUserRoles),
     ),
     demo('@domains/compliance-api/demo-law-handlers', () =>
-      import('./law-handlers/seeds/demo-law-handlers').then((m) => m.seedDemoLawHandlers),
+      import('./law-handlers/law-handlers.seeds').then((m) => m.seedDemoLawHandlers),
     ),
     demo('@domains/compliance-api/demo-rules', () =>
       import('./rules/rules.seeds').then((m) => m.seedDemoRules),
