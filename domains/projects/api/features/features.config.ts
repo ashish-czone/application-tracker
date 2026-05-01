@@ -43,28 +43,14 @@ export const FEATURES_CONFIG = defineEntity({
       listOrder: 3,
     },
     status: {
-      type: 'workflow',
+      // Plain text from the engine's perspective; the workflow def lives in
+      // features.workflow.ts and is registered via WorkflowsModule.forFeature.
+      type: 'text',
       label: 'Status',
       sortable: true,
       listVisible: true,
       listOrder: 4,
       cellRenderer: 'PipelineProgressRenderer',
-      workflow: {
-        slug: 'feature-status',
-        initialState: 'backlog',
-        states: [
-          { name: 'backlog',     label: 'Backlog',     color: '#6B7280' },
-          { name: 'in_progress', label: 'In Progress', color: '#3B82F6' },
-          { name: 'in_review',   label: 'In Review',   color: '#F59E0B' },
-          { name: 'done',        label: 'Done',        color: '#10B981' },
-        ],
-        transitions: [
-          { from: 'backlog',     to: ['in_progress'] },
-          { from: 'in_progress', to: ['in_review', 'backlog'] },
-          { from: 'in_review',   to: ['done', 'in_progress'] },
-          { from: 'done',        to: ['in_progress'] },
-        ],
-      },
     },
     priority: {
       type: 'picklist',

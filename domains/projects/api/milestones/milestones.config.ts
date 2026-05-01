@@ -36,26 +36,14 @@ export const MILESTONES_CONFIG = defineEntity({
       label: 'Description',
     },
     status: {
-      type: 'workflow',
+      // Plain text from the engine's perspective; the workflow def lives in
+      // milestones.workflow.ts and is registered via WorkflowsModule.forFeature.
+      type: 'text',
       label: 'Status',
       sortable: true,
       listVisible: true,
       listOrder: 3,
       cellRenderer: 'PipelineProgressRenderer',
-      workflow: {
-        slug: 'milestone-status',
-        initialState: 'pending',
-        states: [
-          { name: 'pending',     label: 'Pending',     color: '#6B7280' },
-          { name: 'in_progress', label: 'In Progress', color: '#3B82F6' },
-          { name: 'completed',   label: 'Completed',   color: '#10B981' },
-        ],
-        transitions: [
-          { from: 'pending',     to: ['in_progress'] },
-          { from: 'in_progress', to: ['completed', 'pending'] },
-          { from: 'completed',   to: ['in_progress'] },
-        ],
-      },
     },
     dueDate: {
       type: 'date',

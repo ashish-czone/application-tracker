@@ -45,28 +45,14 @@ export const PROJECTS_CONFIG = defineEntity({
       listOrder: 3,
     },
     status: {
-      type: 'workflow',
+      // Plain text from the engine's perspective; the workflow def lives in
+      // projects.workflow.ts and is registered via WorkflowsModule.forFeature.
+      type: 'text',
       label: 'Status',
       sortable: true,
       listVisible: true,
       listOrder: 4,
       cellRenderer: 'PipelineProgressRenderer',
-      workflow: {
-        slug: 'project-status',
-        initialState: 'planning',
-        states: [
-          { name: 'planning',  label: 'Planning',  color: '#6B7280' },
-          { name: 'active',    label: 'Active',    color: '#10B981' },
-          { name: 'on_hold',   label: 'On Hold',   color: '#F59E0B' },
-          { name: 'completed', label: 'Completed', color: '#3B82F6' },
-        ],
-        transitions: [
-          { from: 'planning',  to: ['active'] },
-          { from: 'active',    to: ['on_hold', 'completed'] },
-          { from: 'on_hold',   to: ['active'] },
-          { from: 'completed', to: ['active'] },
-        ],
-      },
     },
     priority: {
       type: 'picklist',
