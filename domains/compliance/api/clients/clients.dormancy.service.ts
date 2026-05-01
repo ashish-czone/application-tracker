@@ -5,7 +5,7 @@ import { WorkflowEngineService, WorkflowRegistryService } from '@packages/workfl
 import type { TransitionContext } from '@packages/entity-engine';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
 
-import { complianceFilings } from '../schema/compliance-filings';
+import { complianceFilings } from '../compliance-filings/compliance-filings.schema';
 import { COMPLIANCE_CLIENT_DORMANTISED } from '../events/types';
 
 /**

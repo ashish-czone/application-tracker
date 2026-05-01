@@ -3,7 +3,7 @@ import { count } from 'drizzle-orm';
 import { DatabaseService } from '@packages/database';
 import { EntityService, type BaseListQuery } from '@packages/entity-engine';
 import type { DataAccessContext } from '@packages/rbac';
-import { organizations } from '../schema/organizations';
+import { organizations } from './organizations.schema';
 import type { CreateOrganizationDto, UpdateOrganizationDto } from './organizations.dto';
 
 /**

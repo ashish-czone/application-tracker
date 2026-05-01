@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { inArray, withScope } from '@packages/database';
 import { WorkflowEngineService, WorkflowRegistryService } from '@packages/workflows';
-import { complianceFilings } from '../schema/compliance-filings';
+import { complianceFilings } from './compliance-filings.schema';
 
 const FILING_WORKFLOW_SLUG = 'compliance-filing-status';
 

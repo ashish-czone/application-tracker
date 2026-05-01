@@ -1,7 +1,7 @@
 import { pgTable, text, integer, timestamp, index, uniqueIndex } from 'drizzle-orm/pg-core';
 import { randomUUID } from 'crypto';
 import type { ComplianceFrequency } from '@domains/compliance-contract';
-import { complianceLaws } from '../schema/laws';
+import { complianceLaws } from '../laws/laws.schema';
 
 export const complianceRules = pgTable('compliance_rules', {
   id: text('id').primaryKey().$defaultFn(() => randomUUID()),

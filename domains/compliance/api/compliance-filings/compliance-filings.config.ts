@@ -3,7 +3,7 @@ import { and, isNull, sql } from 'drizzle-orm';
 import { orgUnitMembers } from '@packages/org-units';
 import { notesFeature } from '@packages/notes';
 import { attachmentsFeature } from '@packages/attachments';
-import { complianceFilings } from '../schema/compliance-filings';
+import { complianceFilings } from './compliance-filings.schema';
 import {
   COMPLIANCE_ATTACHMENT_MIME_TYPES,
   COMPLIANCE_MAX_ATTACHMENT_BYTES,

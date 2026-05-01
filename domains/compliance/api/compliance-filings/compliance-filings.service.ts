@@ -2,8 +2,8 @@ import { Inject, Injectable } from '@nestjs/common';
 import { DatabaseService, eq, inArray, sql, withScope } from '@packages/database';
 import { EntityService, type BaseListQuery } from '@packages/entity-engine';
 import type { DataAccessContext } from '@packages/rbac';
-import { complianceFilings } from '../schema/compliance-filings';
-import { LawsService } from '../laws/laws.service';
+import { complianceFilings } from './compliance-filings.schema';
+import { LawsService } from '../laws';
 import { buildFilingExternalKey } from './compliance-filings.config';
 import type { CreateComplianceFilingDto, UpdateComplianceFilingDto } from './compliance-filings.dto';
 

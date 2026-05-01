@@ -20,6 +20,7 @@ import {
 import { OrganizationsService } from './organizations.service';
 import {
   CreateOrganizationSchema,
+  OrganizationsListQuerySchema,
   UpdateOrganizationSchema,
 } from './organizations.dto';
 
@@ -36,13 +37,7 @@ export class OrganizationsController {
   @Get()
   @RequirePermission('organizations.read')
   list(@Query() query: Record<string, unknown>, @AccessContext() accessCtx?: DataAccessContext) {
-    const parsed = {
-      ...query,
-      page: query.page ? Number(query.page) : undefined,
-      limit: query.limit ? Number(query.limit) : undefined,
-      includeDeleted: query.includeDeleted === 'true',
-    };
-    return this.organizations.list(parsed, accessCtx);
+    return this.organizations.list(OrganizationsListQuerySchema.parse(query), accessCtx);
   }
 
   @Get(':id')

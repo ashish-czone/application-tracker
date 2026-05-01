@@ -3,7 +3,7 @@ import { sql } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { orgUnits } from '@packages/org-units/schema/org-units';
 import { softDeleteColumns } from '@packages/soft-delete';
-import { complianceLaws } from './laws';
+import { complianceLaws } from '../laws/laws.schema';
 import { complianceRules } from '../rules/rules.schema';
 
 // `clientId` references the shared identity `clients` row. FK added at SQL

@@ -46,10 +46,10 @@ export function complianceE2eAdminSeedSource(): SeedSource {
 export function complianceSystemSeedSources(): SeedSource[] {
   return [
     system('@domains/compliance-api/system-laws', () =>
-      import('./laws/seeds/system-laws').then((m) => m.seedSystemLaws),
+      import('./laws/laws.system.seeds').then((m) => m.seedSystemLaws),
     ),
     system('@domains/compliance-api/system-organization', () =>
-      import('./organizations/seeds/system-organization').then((m) => m.seedSystemOrganization),
+      import('./organizations/organizations.seeds').then((m) => m.seedSystemOrganization),
     ),
     system('@domains/compliance-api/system-roles', () =>
       import('./shared/seeds/system-roles').then((m) => m.seedSystemRoles),
@@ -72,7 +72,7 @@ export function complianceDemoSeedSources(): SeedSource[] {
       import('./shared/seeds/global-sets').then((m) => m.seedGlobalSets),
     ),
     demo('@domains/compliance-api/demo-laws', () =>
-      import('./laws/seeds/demo-laws').then((m) => m.seedDemoLaws),
+      import('./laws/laws.demo.seeds').then((m) => m.seedDemoLaws),
     ),
     demo('@domains/compliance-api/demo-clients', () =>
       import('./clients/clients.seeds').then((m) => m.seedDemoClients),
@@ -87,7 +87,7 @@ export function complianceDemoSeedSources(): SeedSource[] {
       import('./users/seeds/demo-user-roles').then((m) => m.seedDemoUserRoles),
     ),
     demo('@domains/compliance-api/demo-law-handlers', () =>
-      import('./law-handlers/seeds/demo-law-handlers').then((m) => m.seedDemoLawHandlers),
+      import('./law-handlers/law-handlers.seeds').then((m) => m.seedDemoLawHandlers),
     ),
     demo('@domains/compliance-api/demo-rules', () =>
       import('./rules/rules.seeds').then((m) => m.seedDemoRules),

@@ -1,6 +1,6 @@
 import type { INestApplicationContext } from '@nestjs/common';
 import { DatabaseService } from '@packages/database';
-import { organizations } from '../../schema/organizations';
+import { organizations } from './organizations.schema';
 
 export const seedSystemOrganization = async (ctx: INestApplicationContext): Promise<void> => {
   const database = ctx.get(DatabaseService);

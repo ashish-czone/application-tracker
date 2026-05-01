@@ -1,6 +1,6 @@
 import { pgTable, text, boolean, timestamp, uniqueIndex, index } from 'drizzle-orm/pg-core';
 import { randomUUID } from 'crypto';
-import { complianceLaws } from './laws';
+import { complianceLaws } from '../laws/laws.schema';
 
 // Pivot: which org-unit handles a given law.
 // client_id NULL  → global default handler for the law.

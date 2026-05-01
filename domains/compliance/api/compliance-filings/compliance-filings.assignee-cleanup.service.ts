@@ -3,7 +3,7 @@ import { DatabaseService, and, eq, inArray, isNull, not } from '@packages/databa
 import { DomainEventEmitter } from '@packages/events';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
 
-import { complianceFilings } from '../schema/compliance-filings';
+import { complianceFilings } from './compliance-filings.schema';
 import {
   COMPLIANCE_FILINGS_ASSIGNEE_CLEARED,
   type ComplianceFilingsAssigneeClearedPayload,

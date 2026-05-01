@@ -14,7 +14,7 @@
  * - `compliance-filings.filters.*` — domain query translation, internal
  *                                       to the controller
  * - schema barrel — cross-module joins import the Drizzle table directly
- *                   from `../schema/compliance-filings`
+ *                   from `./compliance-filings.schema`
  */
 
 export { ComplianceFilingsModule } from './compliance-filings.module';

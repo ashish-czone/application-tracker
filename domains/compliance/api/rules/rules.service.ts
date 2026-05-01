@@ -9,11 +9,11 @@ import {
   type ComplianceFrequency,
 } from '@domains/compliance-contract';
 import { complianceRules } from './rules.schema';
-import { complianceLaws } from '../schema/laws';
-import { complianceLawHandlers } from '../schema/law-handlers';
-import { complianceFilings } from '../schema/compliance-filings';
+import { complianceLaws } from '../laws/laws.schema';
+import { complianceLawHandlers } from '../law-handlers/law-handlers.schema';
+import { complianceFilings } from '../compliance-filings/compliance-filings.schema';
 import { complianceClientRegistrations } from '../client-registrations/client-registrations.schema';
-import { LawHandlersService } from '../law-handlers/law-handlers.service';
+import { LawHandlersService } from '../law-handlers';
 import { ComplianceFilingsCancellationService } from '../compliance-filings';
 import type {
   CreateComplianceRuleDto,

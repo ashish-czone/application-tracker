@@ -1,6 +1,6 @@
 import type { INestApplicationContext } from '@nestjs/common';
 import { DatabaseService, inArray } from '@packages/database';
-import { complianceLaws } from '../schema/laws';
+import { complianceLaws } from '../laws/laws.schema';
 import { complianceRules } from './rules.schema';
 import { ComplianceRulesService } from './rules.service';
 
