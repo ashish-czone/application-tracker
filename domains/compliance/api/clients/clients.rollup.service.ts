@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { DatabaseService, users, asc, desc, eq, sql, withScope, type SQL } from '@packages/database';
+import { DatabaseService, users, and, asc, desc, eq, sql, withScope, type SQL } from '@packages/database';
 import { todayInTimezone } from '@packages/common';
 import { clients } from './clients.schema';
 import type { ClientRiskLevel, ClientsListQuery } from './clients.dto';
@@ -98,8 +98,14 @@ export class ClientsRollupService {
     const today = todayInTimezone(this.appTimezone);
     const sevenDays = addDays(today, 7);
 
+    // The CTE inside `buildBaseQuery` already applies soft-delete + tenant
+    // scope on `clients`; this outer WHERE only composes the user filters
+    // (which all reference the `c` alias of the CTE result). Using
+    // `withScope(clients, …)` here would produce `"clients"."deleted_at" IS
+    // NULL` predicates that resolve against the base `clients` table — but
+    // at this scope level only `c` is visible, so the query 500s.
     const filterConditions = this.buildFilterConditions(params, today, sevenDays);
-    const where = withScope(clients, ...filterConditions);
+    const where = filterConditions.length > 0 ? and(...filterConditions) : undefined;
     const whereSql = where ? sql`AND ${where}` : sql``;
 
     const sortKey = params.sort && SORTABLE_COLUMNS[params.sort] ? params.sort : 'name';
@@ -143,9 +149,11 @@ export class ClientsRollupService {
     const today = todayInTimezone(this.appTimezone);
     const sevenDays = addDays(today, 7);
 
-    const where = withScope(clients);
-    const whereSql = where ? sql`AND ${where}` : sql``;
-
+    // Soft-delete + tenant scope are applied inside `buildBaseQuery`'s CTE
+    // where `clients` is in scope. The outer aggregate only selects from
+    // the CTE alias `c`, so no additional WHERE is needed (and adding one
+    // via `withScope(clients)` would emit `"clients"."deleted_at" IS NULL`
+    // referencing a table that's out of scope at this level).
     const result = await this.database.db.execute(sql`
       SELECT
         COUNT(*)::int AS total,
@@ -160,7 +168,6 @@ export class ClientsRollupService {
         COALESCE(SUM(registered_laws)::int, 0) AS total_registrations,
         COALESCE(ROUND(AVG(on_time_pct) FILTER (WHERE completed_filings > 0))::int, 0) AS avg_on_time_pct
       FROM (${this.buildBaseQuery(today, sevenDays, scopePredicate)}) c
-      WHERE TRUE ${whereSql}
     `);
 
     const row = result.rows[0] as Record<string, number | string>;
