@@ -8,7 +8,7 @@ import {
   lawCodesForGroups,
   type ComplianceFrequency,
 } from '@domains/compliance-contract';
-import { complianceRules } from '../schema/rules';
+import { complianceRules } from './rules.schema';
 import { complianceLaws } from '../schema/laws';
 import { complianceLawHandlers } from '../schema/law-handlers';
 import { complianceFilings } from '../schema/compliance-filings';

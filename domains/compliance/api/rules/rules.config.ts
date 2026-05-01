@@ -1,5 +1,5 @@
 import { defineEntity } from '@packages/entity-engine';
-import { complianceRules } from '../schema/rules';
+import { complianceRules } from './rules.schema';
 
 export const COMPLIANCE_RULES_CONFIG = defineEntity({
   table: complianceRules,
