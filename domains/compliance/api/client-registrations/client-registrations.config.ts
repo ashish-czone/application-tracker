@@ -1,5 +1,5 @@
 import { defineEntity } from '@packages/entity-engine';
-import { complianceClientRegistrations } from '../schema/client-registrations';
+import { complianceClientRegistrations } from './client-registrations.schema';
 
 export const CLIENT_REGISTRATIONS_CONFIG = defineEntity({
   table: complianceClientRegistrations,

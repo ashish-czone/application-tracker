@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ClientsController } from '../clients.controller';
 import type { ClientsService } from '../clients.service';
 import type { ClientContactsService } from '../../client-contacts/client-contacts.service';
-import type { ClientRegistrationsService } from '../../client-registrations/client-registrations.service';
+import type { ClientRegistrationsService } from '../../client-registrations';
 
 describe('ClientsController', () => {
   let clientsService: {

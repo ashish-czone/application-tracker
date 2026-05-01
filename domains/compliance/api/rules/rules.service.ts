@@ -12,7 +12,7 @@ import { complianceRules } from './rules.schema';
 import { complianceLaws } from '../schema/laws';
 import { complianceLawHandlers } from '../schema/law-handlers';
 import { complianceFilings } from '../schema/compliance-filings';
-import { complianceClientRegistrations } from '../schema/client-registrations';
+import { complianceClientRegistrations } from '../client-registrations/client-registrations.schema';
 import { LawHandlersService } from '../law-handlers/law-handlers.service';
 import { ComplianceFilingsCancellationService } from '../compliance-filings';
 import type {

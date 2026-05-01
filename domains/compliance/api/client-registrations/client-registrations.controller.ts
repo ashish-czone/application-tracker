@@ -20,6 +20,7 @@ import {
 import { ClientRegistrationsService } from './client-registrations.service';
 import {
   CreateClientRegistrationSchema,
+  RegistrationsListQuerySchema,
   UpdateClientRegistrationSchema,
 } from './client-registrations.dto';
 
@@ -36,13 +37,7 @@ export class ClientRegistrationsController {
   @Get()
   @RequirePermission('client-registrations.read')
   list(@Query() query: Record<string, unknown>, @AccessContext() accessCtx?: DataAccessContext) {
-    const parsed = {
-      ...query,
-      page: query.page ? Number(query.page) : undefined,
-      limit: query.limit ? Number(query.limit) : undefined,
-      includeDeleted: query.includeDeleted === 'true',
-    };
-    return this.clientRegistrations.list(parsed, accessCtx);
+    return this.clientRegistrations.list(RegistrationsListQuerySchema.parse(query), accessCtx);
   }
 
   @Get(':id')

@@ -21,7 +21,7 @@ import {
 import { CurrentUser, type JwtPayload } from '@packages/auth';
 import { ClientsService } from './clients.service';
 import { ClientContactsService } from '../client-contacts/client-contacts.service';
-import { ClientRegistrationsService } from '../client-registrations/client-registrations.service';
+import { ClientRegistrationsService } from '../client-registrations';
 import {
   ClientsListQuerySchema,
   CreateClientSchema,
