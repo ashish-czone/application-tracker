@@ -16,6 +16,9 @@ const MANAGE = [
   'compliance-rules.update',
   'compliance-rules.delete',
 ];
+// Authenticated but holds zero compliance perms — drives 403 on the
+// pure-read endpoints whose only `@RequirePermission` is `*.read`.
+const NO_PERMS: string[] = [];
 
 describe('Compliance Rules (integration)', () => {
   let ctx: PackageTestApp;
@@ -407,6 +410,159 @@ describe('Compliance Rules (integration)', () => {
         .send({ comment: 'Superseded by RULE-v2' })
         .expect(200);
       expect(res.body).toMatchObject({ ruleId: rule.id, status: 'deprecated' });
+    });
+  });
+
+  // 401 (anon) + 403 (insufficient perm) coverage for the remaining
+  // compliance-rules endpoints. Positive paths and the dedicated
+  // deprecate / edit-constraints / POST coverage live above; this block
+  // is the mechanical sweep to close audit S8/T6.
+  describe('auth coverage', () => {
+    const NIL_UUID = '00000000-0000-0000-0000-000000000000';
+
+    describe('GET /api/v1/compliance-rules/layout/list', () => {
+      it('returns 401 without auth', async () => {
+        await request(ctx.httpServer).get('/api/v1/compliance-rules/layout/list').expect(401);
+      });
+      it('returns 403 without compliance-rules.read', async () => {
+        await request(ctx.httpServer)
+          .get('/api/v1/compliance-rules/layout/list')
+          .set(withAuth(NO_PERMS))
+          .expect(403);
+      });
+    });
+
+    describe('GET /api/v1/compliance-rules (list, auth)', () => {
+      it('returns 401 without auth', async () => {
+        await request(ctx.httpServer).get('/api/v1/compliance-rules').expect(401);
+      });
+      it('returns 403 without compliance-rules.read', async () => {
+        await request(ctx.httpServer)
+          .get('/api/v1/compliance-rules')
+          .set(withAuth(NO_PERMS))
+          .expect(403);
+      });
+    });
+
+    describe('GET /api/v1/compliance-rules/summary', () => {
+      it('returns 401 without auth', async () => {
+        await request(ctx.httpServer).get('/api/v1/compliance-rules/summary').expect(401);
+      });
+      it('returns 403 without compliance-rules.read', async () => {
+        await request(ctx.httpServer)
+          .get('/api/v1/compliance-rules/summary')
+          .set(withAuth(NO_PERMS))
+          .expect(403);
+      });
+    });
+
+    describe('GET /api/v1/compliance-rules/:id (auth)', () => {
+      it('returns 401 without auth', async () => {
+        await request(ctx.httpServer)
+          .get(`/api/v1/compliance-rules/${NIL_UUID}`)
+          .expect(401);
+      });
+      it('returns 403 without compliance-rules.read', async () => {
+        await request(ctx.httpServer)
+          .get(`/api/v1/compliance-rules/${NIL_UUID}`)
+          .set(withAuth(NO_PERMS))
+          .expect(403);
+      });
+    });
+
+    describe('GET /api/v1/compliance-rules/:id/deprecation-preview', () => {
+      it('returns 401 without auth', async () => {
+        await request(ctx.httpServer)
+          .get(`/api/v1/compliance-rules/${NIL_UUID}/deprecation-preview`)
+          .expect(401);
+      });
+      it('returns 403 without compliance-rules.update', async () => {
+        // Preview deliberately reuses the destructive perm so a read-only
+        // actor cannot probe the deprecation graph (audit S11 — same
+        // rationale as the clients/transition-preview pair).
+        await request(ctx.httpServer)
+          .get(`/api/v1/compliance-rules/${NIL_UUID}/deprecation-preview`)
+          .set(withAuth(READ))
+          .expect(403);
+      });
+    });
+
+    describe('PATCH /api/v1/compliance-rules/:id (auth)', () => {
+      it('returns 401 without auth', async () => {
+        await request(ctx.httpServer)
+          .patch(`/api/v1/compliance-rules/${NIL_UUID}`)
+          .send({})
+          .expect(401);
+      });
+      it('returns 403 with read-only perms', async () => {
+        await request(ctx.httpServer)
+          .patch(`/api/v1/compliance-rules/${NIL_UUID}`)
+          .set(withAuth(READ))
+          .send({})
+          .expect(403);
+      });
+    });
+
+    describe('DELETE /api/v1/compliance-rules/:id', () => {
+      it('returns 401 without auth', async () => {
+        await request(ctx.httpServer)
+          .delete(`/api/v1/compliance-rules/${NIL_UUID}`)
+          .expect(401);
+      });
+      it('returns 403 with read-only perms', async () => {
+        await request(ctx.httpServer)
+          .delete(`/api/v1/compliance-rules/${NIL_UUID}`)
+          .set(withAuth(READ))
+          .expect(403);
+      });
+    });
+
+    describe('POST /api/v1/compliance-rules/:id/clone', () => {
+      it('returns 401 without auth', async () => {
+        await request(ctx.httpServer)
+          .post(`/api/v1/compliance-rules/${NIL_UUID}/clone`)
+          .expect(401);
+      });
+      it('returns 403 without create permission', async () => {
+        await request(ctx.httpServer)
+          .post(`/api/v1/compliance-rules/${NIL_UUID}/clone`)
+          .set(withAuth(READ))
+          .expect(403);
+      });
+    });
+
+    describe('POST /api/v1/compliance-rules/:id/restore', () => {
+      it('returns 401 without auth', async () => {
+        await request(ctx.httpServer)
+          .post(`/api/v1/compliance-rules/${NIL_UUID}/restore`)
+          .expect(401);
+      });
+      it('returns 403 without update permission', async () => {
+        await request(ctx.httpServer)
+          .post(`/api/v1/compliance-rules/${NIL_UUID}/restore`)
+          .set(withAuth(READ))
+          .expect(403);
+      });
+    });
+
+    describe('POST /api/v1/compliance-rules/:id/transition (controller-level auth)', () => {
+      // The per-transition perm gate (`compliance-rules.deprecate` for
+      // `* → deprecated`) is exercised in the workflow block above. This
+      // pair only pins the coarse-grained `compliance-rules.update` gate
+      // at the controller decorator.
+      it('returns 401 without auth', async () => {
+        await request(ctx.httpServer)
+          .post(`/api/v1/compliance-rules/${NIL_UUID}/transition`)
+          .send({ fieldKey: 'status', to: 'active' })
+          .expect(401);
+      });
+      it('returns 403 with read-only perms', async () => {
+        await request(ctx.httpServer)
+          .post(`/api/v1/compliance-rules/${NIL_UUID}/transition`)
+          .set(withAuth(READ))
+          .send({ fieldKey: 'status', to: 'active' })
+          .expect(403);
+      });
     });
   });
 });

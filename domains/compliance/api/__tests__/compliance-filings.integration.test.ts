@@ -21,6 +21,9 @@ const BASE_WRITE = [
   'compliance-filings.update',
   'compliance-filings.delete',
 ];
+// Authenticated but holds zero compliance perms — drives 403 on the
+// pure-read endpoints whose only `@RequirePermission` is `*.read`.
+const NO_PERMS: string[] = [];
 const PICKUP = [...BASE_WRITE, 'compliance-filings.pickup'];
 const SUBMIT = [...PICKUP, 'compliance-filings.submit'];
 const COMPLETE = [...SUBMIT, 'compliance-filings.complete'];
@@ -382,6 +385,142 @@ describe('Compliance Filings (integration)', () => {
         .set(withAuth(['*']))
         .expect(200);
       expect(single.body.id).toBe(id);
+    });
+  });
+
+  // 401 (anon) + 403 (insufficient perm) coverage for every endpoint on
+  // the compliance-filings controller. Positive paths live above; this
+  // block is the mechanical sweep to satisfy the per-endpoint security-
+  // test mandate (audit S8/T6).
+  describe('auth coverage', () => {
+    const NIL_UUID = '00000000-0000-0000-0000-000000000000';
+
+    describe('GET /api/v1/compliance-filings/layout/list', () => {
+      it('returns 401 without auth', async () => {
+        await request(ctx.httpServer).get('/api/v1/compliance-filings/layout/list').expect(401);
+      });
+      it('returns 403 without compliance-filings.read', async () => {
+        await request(ctx.httpServer)
+          .get('/api/v1/compliance-filings/layout/list')
+          .set(withAuth(NO_PERMS))
+          .expect(403);
+      });
+    });
+
+    describe('GET /api/v1/compliance-filings/summary', () => {
+      it('returns 401 without auth', async () => {
+        await request(ctx.httpServer).get('/api/v1/compliance-filings/summary').expect(401);
+      });
+      it('returns 403 without compliance-filings.read', async () => {
+        await request(ctx.httpServer)
+          .get('/api/v1/compliance-filings/summary')
+          .set(withAuth(NO_PERMS))
+          .expect(403);
+      });
+    });
+
+    describe('GET /api/v1/compliance-filings (list)', () => {
+      it('returns 401 without auth', async () => {
+        await request(ctx.httpServer).get('/api/v1/compliance-filings').expect(401);
+      });
+      it('returns 403 without compliance-filings.read', async () => {
+        await request(ctx.httpServer)
+          .get('/api/v1/compliance-filings')
+          .set(withAuth(NO_PERMS))
+          .expect(403);
+      });
+    });
+
+    describe('GET /api/v1/compliance-filings/:id (auth)', () => {
+      it('returns 401 without auth', async () => {
+        await request(ctx.httpServer)
+          .get(`/api/v1/compliance-filings/${NIL_UUID}`)
+          .expect(401);
+      });
+      it('returns 403 without compliance-filings.read', async () => {
+        await request(ctx.httpServer)
+          .get(`/api/v1/compliance-filings/${NIL_UUID}`)
+          .set(withAuth(NO_PERMS))
+          .expect(403);
+      });
+    });
+
+    describe('PATCH /api/v1/compliance-filings/:id', () => {
+      it('returns 401 without auth', async () => {
+        await request(ctx.httpServer)
+          .patch(`/api/v1/compliance-filings/${NIL_UUID}`)
+          .send({})
+          .expect(401);
+      });
+      it('returns 403 with read-only perms', async () => {
+        await request(ctx.httpServer)
+          .patch(`/api/v1/compliance-filings/${NIL_UUID}`)
+          .set(withAuth(READ))
+          .send({})
+          .expect(403);
+      });
+    });
+
+    describe('DELETE /api/v1/compliance-filings/:id', () => {
+      it('returns 401 without auth', async () => {
+        await request(ctx.httpServer)
+          .delete(`/api/v1/compliance-filings/${NIL_UUID}`)
+          .expect(401);
+      });
+      it('returns 403 with read-only perms', async () => {
+        await request(ctx.httpServer)
+          .delete(`/api/v1/compliance-filings/${NIL_UUID}`)
+          .set(withAuth(READ))
+          .expect(403);
+      });
+    });
+
+    describe('POST /api/v1/compliance-filings/:id/clone', () => {
+      it('returns 401 without auth', async () => {
+        await request(ctx.httpServer)
+          .post(`/api/v1/compliance-filings/${NIL_UUID}/clone`)
+          .expect(401);
+      });
+      it('returns 403 without create permission', async () => {
+        await request(ctx.httpServer)
+          .post(`/api/v1/compliance-filings/${NIL_UUID}/clone`)
+          .set(withAuth(READ))
+          .expect(403);
+      });
+    });
+
+    describe('POST /api/v1/compliance-filings/:id/restore', () => {
+      it('returns 401 without auth', async () => {
+        await request(ctx.httpServer)
+          .post(`/api/v1/compliance-filings/${NIL_UUID}/restore`)
+          .expect(401);
+      });
+      it('returns 403 without update permission', async () => {
+        await request(ctx.httpServer)
+          .post(`/api/v1/compliance-filings/${NIL_UUID}/restore`)
+          .set(withAuth(READ))
+          .expect(403);
+      });
+    });
+
+    describe('POST /api/v1/compliance-filings/:id/transition (auth)', () => {
+      // Per-transition perm gates (pickup/submit/complete/etc.) are
+      // exercised in the workflow-transitions block above with real users.
+      // This pair only pins the coarse-grained `compliance-filings.update`
+      // gate at the controller decorator.
+      it('returns 401 without auth', async () => {
+        await request(ctx.httpServer)
+          .post(`/api/v1/compliance-filings/${NIL_UUID}/transition`)
+          .send({ fieldKey: 'status', to: 'in_progress' })
+          .expect(401);
+      });
+      it('returns 403 with read-only perms', async () => {
+        await request(ctx.httpServer)
+          .post(`/api/v1/compliance-filings/${NIL_UUID}/transition`)
+          .set(withAuth(READ))
+          .send({ fieldKey: 'status', to: 'in_progress' })
+          .expect(403);
+      });
     });
   });
 });
