@@ -13,7 +13,7 @@ import { ClientRegistrationsModule } from './client-registrations';
 import { ComplianceRulesModule } from './rules';
 import { LawHandlersModule } from './law-handlers';
 import { ComplianceFilingsModule } from './compliance-filings';
-import { OrganizationsModule } from './organizations/organizations.module';
+import { OrganizationsModule } from './organizations';
 import { ComplianceReportsModule } from './reports/reports.module';
 
 import { GenerateComplianceFilingsAction } from './automations/generate-compliance-filings.action';

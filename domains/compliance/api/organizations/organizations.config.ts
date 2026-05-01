@@ -1,5 +1,5 @@
 import { defineEntity, type EntityConfig } from '@packages/entity-engine';
-import { organizations } from '../schema/organizations';
+import { organizations } from './organizations.schema';
 
 /**
  * Singleton entity — exactly one row may exist. Enforcement of that invariant

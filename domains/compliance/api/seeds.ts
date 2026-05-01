@@ -49,7 +49,7 @@ export function complianceSystemSeedSources(): SeedSource[] {
       import('./laws/laws.system.seeds').then((m) => m.seedSystemLaws),
     ),
     system('@domains/compliance-api/system-organization', () =>
-      import('./organizations/seeds/system-organization').then((m) => m.seedSystemOrganization),
+      import('./organizations/organizations.seeds').then((m) => m.seedSystemOrganization),
     ),
     system('@domains/compliance-api/system-roles', () =>
       import('./shared/seeds/system-roles').then((m) => m.seedSystemRoles),

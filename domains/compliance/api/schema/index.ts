@@ -3,7 +3,7 @@ export { complianceRules } from '../rules/rules.schema';
 export { complianceLawHandlers } from '../law-handlers/law-handlers.schema';
 export { complianceClientRegistrations } from '../client-registrations/client-registrations.schema';
 export { complianceFilings } from './compliance-filings';
-export { organizations } from './organizations';
+export { organizations } from '../organizations/organizations.schema';
 
 // `clients` and `clientContacts` are NOT re-exported here. They live on
 // the shared identity tables owned by `@packages/directory` and compliance
