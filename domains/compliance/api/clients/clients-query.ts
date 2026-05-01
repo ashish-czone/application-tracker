@@ -1,4 +1,4 @@
-import type { ClientsListParams, ClientRiskLevel, ClientStatusKey } from './clients-rollup.service';
+import type { ClientsListParams, ClientRiskLevel, ClientStatusKey } from './clients.rollup.service';
 
 const CLIENTS_LIST_DEFAULT_LIMIT = 25;
 const CLIENTS_LIST_MAX_LIMIT = 100;

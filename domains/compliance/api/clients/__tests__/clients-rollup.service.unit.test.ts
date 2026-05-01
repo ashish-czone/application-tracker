@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { ClientsRollupService } from '../clients-rollup.service';
+import { ClientsRollupService } from '../clients.rollup.service';
 
 /**
  * Unit tests for the ClientsRollupService — the hand-rolled SQL path that

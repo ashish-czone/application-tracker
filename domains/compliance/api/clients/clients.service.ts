@@ -8,17 +8,17 @@ import {
   previewTransitionGuards,
   type TransitionGuard,
 } from '@packages/workflows';
-import { clients } from './clients-ref';
+import { clients } from './clients.schema';
 import { clientContacts } from '../client-contacts/client-contacts.schema';
 import { CLIENTS_CREATED, CLIENT_CONTACTS_CREATED } from '../events/types';
-import { ClientDormancyService } from './client-dormancy.service';
+import { ClientDormancyService } from './clients.dormancy.service';
 import { ClientContactsService } from '../client-contacts/client-contacts.service';
 import {
   ClientsRollupService,
   type ClientsListParams,
   type ClientsSummary,
   type HandlerOption,
-} from './clients-rollup.service';
+} from './clients.rollup.service';
 
 interface ClientGuardDeps {
   contacts: ClientContactsService;

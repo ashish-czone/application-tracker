@@ -1,5 +1,5 @@
 import { defineEntity } from '@packages/entity-engine';
-import { clients } from './clients-ref';
+import { clients } from './clients.schema';
 
 // Address fields are declared individually here rather than through a single
 // composite `address` field because the `FieldType` union in entity-engine

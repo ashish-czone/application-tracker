@@ -13,7 +13,7 @@ import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { todayInTimezone } from '@packages/common';
 import { complianceClientRegistrations } from '../schema/client-registrations';
 import { complianceLaws } from '../schema/laws';
-import { clients } from '../clients/clients-ref';
+import { clients } from '../clients/clients.schema';
 import { complianceFilings } from '../schema/compliance-filings';
 import { ComplianceFilingsCancellationService } from '../compliance-filings/compliance-filings-cancellation.service';
 import { ComplianceRulesService } from '../rules';

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService, users, asc, desc, eq, sql, withScope, type SQL } from '@packages/database';
 import { todayInTimezone } from '@packages/common';
-import { clients } from './clients-ref';
+import { clients } from './clients.schema';
 
 export type ClientRiskLevel = 'healthy' | 'at-risk' | 'critical';
 export type ClientStatusKey = 'active' | 'onboarding' | 'dormant';

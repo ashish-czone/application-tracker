@@ -1,6 +1,6 @@
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 import { z } from 'zod';
-import { clients } from './clients-ref';
+import { clients } from './clients.schema';
 
 export const ClientRowSchema = createSelectSchema(clients);
 
