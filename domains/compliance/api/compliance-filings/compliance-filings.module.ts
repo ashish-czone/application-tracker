@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { EntityEngineModule } from '@packages/entity-engine';
+import { WorkflowsModule } from '@packages/workflows';
 import { COMPLIANCE_FILINGS_CONFIG } from './compliance-filings.config';
+import { COMPLIANCE_FILINGS_WORKFLOW } from './compliance-filings.workflow';
 import { ComplianceFilingsController } from './compliance-filings.controller';
 import { ComplianceFilingsService } from './compliance-filings.service';
 import { ComplianceFilingsLookupService } from './compliance-filings.lookup.service';
@@ -30,7 +32,11 @@ const filingsEntityEngineModule = EntityEngineModule.forEntity(COMPLIANCE_FILING
  * (rules, dormancy, AppUsersService) can inject them.
  */
 @Module({
-  imports: [filingsEntityEngineModule, LawsModule],
+  imports: [
+    filingsEntityEngineModule,
+    WorkflowsModule.forFeature(COMPLIANCE_FILINGS_WORKFLOW),
+    LawsModule,
+  ],
   controllers: [ComplianceFilingsController],
   providers: [
     ComplianceFilingsService,

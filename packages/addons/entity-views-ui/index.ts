@@ -1,5 +1,5 @@
 /**
- * Public API for @packages/entity-layout-ui.
+ * Public API for @packages/entity-views-ui.
  *
  * Frontend layout package for the camp-B / decoupled entity path. Each list
  * page declares its own `defineListLayout(...)` config and renders via

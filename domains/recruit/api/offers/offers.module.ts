@@ -4,7 +4,9 @@ import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { NotificationChannelsModule } from '@packages/notification-channels';
 import { DatabaseService, eq } from '@packages/database';
 import { EntityEngineModule } from '@packages/entity-engine';
+import { WorkflowsModule } from '@packages/workflows';
 import { offersConfig } from './offers.config';
+import { OFFERS_WORKFLOW } from './offers.workflow';
 import { OffersController } from './offers.controller';
 import { OffersService } from './offers.service';
 import { OfferApprovalsService } from './services/offer-approvals.service';
@@ -19,6 +21,7 @@ import { formatCurrency } from '@packages/common';
 @Module({
   imports: [
     EntityEngineModule.forEntity(offersConfig),
+    WorkflowsModule.forFeature(OFFERS_WORKFLOW),
     NotificationChannelsModule,
   ],
   controllers: [OfferApprovalsController, OffersController],
