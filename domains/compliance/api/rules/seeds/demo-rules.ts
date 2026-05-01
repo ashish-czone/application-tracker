@@ -2,7 +2,7 @@ import type { INestApplicationContext } from '@nestjs/common';
 import { DatabaseService, inArray } from '@packages/database';
 import { complianceLaws } from '../../schema/laws';
 import { complianceRules } from '../rules.schema';
-import { ComplianceRulesService } from '../compliance-rules.service';
+import { ComplianceRulesService } from '../rules.service';
 
 interface DemoRule {
   code: string;

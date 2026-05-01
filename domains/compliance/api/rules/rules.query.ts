@@ -4,12 +4,14 @@ import {
   type ComplianceFrequency,
   type LawGroupKey,
 } from '@domains/compliance-contract';
+import type {
+  ComplianceRulesListParams,
+  RuleJurisdictionKey,
+  RuleStatusKey,
+} from './rules.types';
 
 const RULES_LIST_DEFAULT_LIMIT = 25;
 const RULES_LIST_MAX_LIMIT = 100;
-
-export type RuleStatusKey = 'draft' | 'active' | 'deprecated';
-export type RuleJurisdictionKey = 'central' | 'state' | 'municipal';
 
 const VALID_STATUSES: ReadonlySet<RuleStatusKey> = new Set(['draft', 'active', 'deprecated']);
 const VALID_JURISDICTIONS: ReadonlySet<RuleJurisdictionKey> = new Set([
@@ -19,19 +21,6 @@ const VALID_JURISDICTIONS: ReadonlySet<RuleJurisdictionKey> = new Set([
 ]);
 const VALID_FREQUENCIES: ReadonlySet<ComplianceFrequency> = new Set(FREQUENCIES);
 const VALID_LAW_GROUPS: ReadonlySet<LawGroupKey> = new Set(LAW_GROUP_KEYS);
-
-export interface ComplianceRulesListParams {
-  page: number;
-  limit: number;
-  sort?: string;
-  order?: 'asc' | 'desc';
-  status?: RuleStatusKey;
-  frequencies?: ComplianceFrequency[];
-  jurisdictions?: RuleJurisdictionKey[];
-  lawGroups?: LawGroupKey[];
-  lawIds?: string[];
-  q?: string;
-}
 
 /**
  * Translate compliance-rules shorthand URL params into the structured

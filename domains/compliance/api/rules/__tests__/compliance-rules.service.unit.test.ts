@@ -8,7 +8,7 @@ import {
   ImmutableRuleFieldError,
   LawHandlerRequiredError,
   type ComplianceRule,
-} from '../compliance-rules.service';
+} from '../rules.service';
 import type { AppLoggerService } from '@packages/logger';
 import type { ComplianceFilingsCancellationService } from '../../compliance-filings/compliance-filings-cancellation.service';
 
