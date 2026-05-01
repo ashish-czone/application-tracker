@@ -564,7 +564,11 @@ export class ComplianceRulesService {
     ruleId: string,
     params: {
       alsoCancelInFlight?: boolean;
-      actorId: string | null;
+      // Was `string | null` before the engine reroute; the engine's
+      // permission resolver requires a real user id, so this is now a
+      // hard requirement. Only call site (the controller) always passes
+      // `user.userId` from the auth-decoded JWT, so no caller is broken.
+      actorId: string;
       comment?: string;
     },
     accessCtx?: DataAccessContext,
@@ -572,7 +576,7 @@ export class ComplianceRulesService {
     // Existence + actor-scope check via the engine. Throws NotFoundException
     // when the rule is invisible to the actor — keeps the destructive cascade
     // gated by the same scope as the read view.
-    const rule = (await this.entityService.findOneOrFail(ruleId, accessCtx)) as ComplianceRule;
+    const rule = (await this.entityService.findOneOrFail(ruleId, accessCtx)) as unknown as ComplianceRule;
     if (rule.status === 'deprecated') {
       return { ruleId, status: 'deprecated', cancelledFilingIds: [] };
     }
