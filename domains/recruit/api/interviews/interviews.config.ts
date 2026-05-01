@@ -82,7 +82,7 @@ export const INTERVIEWS_CONFIG: EntityConfig = {
       {
         key: 'my-job-interviews',
         label: 'Interviews for my Job Openings',
-        resolve: async (userId) => sql`${interviews.jobOpeningId} IN (
+        resolve: (userId) => sql`${interviews.jobOpeningId} IN (
           SELECT ${jobOpenings.id} FROM ${jobOpenings} WHERE ${jobOpenings.hiringManager} = ${userId} AND ${jobOpenings.deletedAt} IS NULL
         )`,
       },
