@@ -1,17 +1,26 @@
 import { Module, type OnModuleInit } from '@nestjs/common';
 import { RbacIntegrationModule } from '@packages/rbac';
 import { fieldTypeRegistry } from '@packages/field-types';
-import { TAXONOMY_EXTENSION } from '@packages/entity-engine';
 import { ActionRegistry } from '@packages/automation-contracts';
 import { HierarchyModule } from '@packages/hierarchy';
 import { taxonomyFieldTypesPlugin } from './field-types';
 import { TaxonomyService } from './services/taxonomy.service';
 import { CategoryService } from './services/category.service';
 import { TagEntityAction } from './actions/tag-entity.action';
-import { TaxonomyExtensionAdapter } from './taxonomy-extension.adapter';
 import { TagsController } from './controllers/tags.controller';
 import { CategoriesController } from './controllers/categories.controller';
 
+/**
+ * Taxonomy runtime: tags + categories + REST surface + tag-entity action.
+ *
+ * This module is entity-engine-free. To bind taxonomy to entity-engine
+ * (so the per-entity factory's `getTagsForEntity` extension call resolves),
+ * import `@packages/taxonomy-entity-engine`'s `TaxonomyEntityEngineModule`
+ * alongside this one.
+ *
+ * Standalone consumers (e.g., domains calling `TaxonomyService` directly
+ * to manage tags) need only this module.
+ */
 @Module({
   imports: [
     HierarchyModule,
@@ -32,13 +41,8 @@ import { CategoriesController } from './controllers/categories.controller';
     TaxonomyService,
     CategoryService,
     TagEntityAction,
-    TaxonomyExtensionAdapter,
-    {
-      provide: TAXONOMY_EXTENSION,
-      useExisting: TaxonomyExtensionAdapter,
-    },
   ],
-  exports: [TaxonomyService, CategoryService, TAXONOMY_EXTENSION],
+  exports: [TaxonomyService, CategoryService],
 })
 export class TaxonomyModule implements OnModuleInit {
   constructor(
