@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { ClientDormancyService } from '../client-dormancy.service';
+import { ClientDormancyService } from '../clients.dormancy.service';
 import type { TransitionContext } from '@packages/entity-engine';
 import type { AppLoggerService } from '@packages/logger';
 

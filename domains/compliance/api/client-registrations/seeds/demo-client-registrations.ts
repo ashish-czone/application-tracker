@@ -1,6 +1,6 @@
 import type { INestApplicationContext } from '@nestjs/common';
 import { DatabaseService, isNotNull } from '@packages/database';
-import { clients } from '../../clients/clients-ref';
+import { clients } from '../../clients/clients.schema';
 import { complianceClientRegistrations } from '../../schema/client-registrations';
 import { ClientRegistrationsService } from '../client-registrations.service';
 

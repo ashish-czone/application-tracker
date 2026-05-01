@@ -2,7 +2,7 @@ import type { INestApplicationContext } from '@nestjs/common';
 import { DatabaseService } from '@packages/database';
 import { isNotNull } from '@packages/database';
 import { ClientsService } from '../clients.service';
-import { clients } from '../clients-ref';
+import { clients } from '../clients.schema';
 
 interface DemoClient {
   name: string;

@@ -23,14 +23,14 @@ import { ClientsService } from './clients.service';
 import { ClientContactsService } from '../client-contacts/client-contacts.service';
 import { ClientRegistrationsService } from '../client-registrations/client-registrations.service';
 import {
+  ClientsListQuerySchema,
   CreateClientSchema,
+  CreateClientWithContactsSchema,
+  DeactivateRegistrationSchema,
+  RegisterLawsSchema,
   TransitionClientSchema,
   UpdateClientSchema,
 } from './clients.dto';
-import { CreateClientWithContactsDto } from './dto/create-with-contacts.dto';
-import { RegisterLawsDto } from './dto/register-laws.dto';
-import { DeactivateRegistrationDto } from './dto/deactivate-registration.dto';
-import { translateClientsQuery } from './clients-query';
 
 @Controller('clients')
 export class ClientsController {
@@ -54,7 +54,7 @@ export class ClientsController {
     @Query() query: Record<string, unknown>,
     @AccessContext() accessCtx?: DataAccessContext,
   ) {
-    return this.clientsService.list(translateClientsQuery(query), accessCtx);
+    return this.clientsService.list(ClientsListQuerySchema.parse(query), accessCtx);
   }
 
   @Get('summary')
@@ -162,10 +162,8 @@ export class ClientsController {
   @Post('with-contacts')
   @HttpCode(HttpStatus.CREATED)
   @RequirePermission('clients.create')
-  async createWithContacts(
-    @Body() dto: CreateClientWithContactsDto,
-    @CurrentUser() user: JwtPayload,
-  ) {
+  async createWithContacts(@Body() body: unknown, @CurrentUser() user: JwtPayload) {
+    const dto = CreateClientWithContactsSchema.parse(body);
     return this.clientsService.createWithContacts(
       {
         client: {
@@ -202,10 +200,11 @@ export class ClientsController {
   @RequirePermission('client-registrations.create')
   async createRegistrations(
     @Param('id', ParseUUIDPipe) clientId: string,
-    @Body() dto: RegisterLawsDto,
+    @Body() body: unknown,
     @CurrentUser() user: JwtPayload,
     @AccessContext() accessCtx?: DataAccessContext,
   ) {
+    const dto = RegisterLawsSchema.parse(body);
     // Scope-check the parent client before mutating registrations. Without
     // this, a holder of `client-registrations.create` could attach laws to a
     // client they have no read scope on. Engine throws NotFoundException on
@@ -248,10 +247,11 @@ export class ClientsController {
   async deactivateRegistration(
     @Param('id', ParseUUIDPipe) clientId: string,
     @Param('lawId', ParseUUIDPipe) lawId: string,
-    @Body() dto: DeactivateRegistrationDto,
+    @Body() body: unknown,
     @CurrentUser() user: JwtPayload,
     @AccessContext() accessCtx?: DataAccessContext,
   ) {
+    const dto = DeactivateRegistrationSchema.parse(body);
     // Scope-check the parent client — destructive cascade gated by the same
     // scope as the read view.
     await this.clientsService.findOne(clientId, accessCtx);

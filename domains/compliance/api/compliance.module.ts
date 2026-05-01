@@ -7,7 +7,7 @@ import { RbacIntegrationModule } from '@packages/rbac';
 import { registerComplianceAudit } from './audit/register-compliance-audit';
 
 import { LawsModule } from './laws/laws.module';
-import { ClientsModule } from './clients/clients.module';
+import { ClientsModule } from './clients';
 import { ClientContactsModule } from './client-contacts/client-contacts.module';
 import { ClientRegistrationsModule } from './client-registrations/client-registrations.module';
 import { ComplianceRulesModule } from './rules';

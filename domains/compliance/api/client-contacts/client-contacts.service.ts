@@ -3,7 +3,7 @@ import { DatabaseService, eq, withScope } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
 import { EntityService, type BaseListQuery } from '@packages/entity-engine';
 import type { DataAccessContext } from '@packages/rbac';
-import { clientContacts } from '../clients/client-contacts-ref';
+import { clientContacts } from './client-contacts.schema';
 import { CLIENT_CONTACTS_UPDATED } from '../events/types';
 import type { CreateClientContactDto, UpdateClientContactDto } from './client-contacts.dto';
 
