@@ -10,6 +10,9 @@ const MANAGE = [
   'organizations.update',
   'organizations.delete',
 ];
+// Authenticated but holds zero compliance perms — drives 403 on the
+// pure-read endpoints whose only `@RequirePermission` is `*.read`.
+const NO_PERMS: string[] = [];
 
 describe('Organizations singleton (integration)', () => {
   let ctx: PackageTestApp;
@@ -116,6 +119,77 @@ describe('Organizations singleton (integration)', () => {
         .expect(200);
 
       expect(res.body.id).toBe(created.body.id);
+    });
+
+    it('returns 401 without auth', async () => {
+      await request(ctx.httpServer)
+        .get('/api/v1/organizations/00000000-0000-0000-0000-000000000000')
+        .expect(401);
+    });
+
+    it('returns 403 without organizations.read', async () => {
+      await request(ctx.httpServer)
+        .get('/api/v1/organizations/00000000-0000-0000-0000-000000000000')
+        .set(withAuth(NO_PERMS))
+        .expect(403);
+    });
+  });
+
+  describe('GET /api/v1/organizations (list)', () => {
+    it('returns 401 without auth', async () => {
+      await request(ctx.httpServer).get('/api/v1/organizations').expect(401);
+    });
+
+    it('returns 403 without organizations.read', async () => {
+      await request(ctx.httpServer)
+        .get('/api/v1/organizations')
+        .set(withAuth(NO_PERMS))
+        .expect(403);
+    });
+  });
+
+  describe('GET /api/v1/organizations/layout/list', () => {
+    it('returns 401 without auth', async () => {
+      await request(ctx.httpServer).get('/api/v1/organizations/layout/list').expect(401);
+    });
+
+    it('returns 403 without organizations.read', async () => {
+      await request(ctx.httpServer)
+        .get('/api/v1/organizations/layout/list')
+        .set(withAuth(NO_PERMS))
+        .expect(403);
+    });
+  });
+
+  describe('PATCH /api/v1/organizations/:id (auth)', () => {
+    it('returns 401 without auth', async () => {
+      await request(ctx.httpServer)
+        .patch('/api/v1/organizations/00000000-0000-0000-0000-000000000000')
+        .send({ name: 'X' })
+        .expect(401);
+    });
+
+    it('returns 403 with read-only perms', async () => {
+      await request(ctx.httpServer)
+        .patch('/api/v1/organizations/00000000-0000-0000-0000-000000000000')
+        .set(withAuth(READ))
+        .send({ name: 'X' })
+        .expect(403);
+    });
+  });
+
+  describe('DELETE /api/v1/organizations/:id (auth)', () => {
+    it('returns 401 without auth', async () => {
+      await request(ctx.httpServer)
+        .delete('/api/v1/organizations/00000000-0000-0000-0000-000000000000')
+        .expect(401);
+    });
+
+    it('returns 403 with read-only perms', async () => {
+      await request(ctx.httpServer)
+        .delete('/api/v1/organizations/00000000-0000-0000-0000-000000000000')
+        .set(withAuth(READ))
+        .expect(403);
     });
   });
 });

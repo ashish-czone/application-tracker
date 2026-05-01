@@ -5,6 +5,9 @@ import { createComplianceTestApp, resetComplianceTestDb } from './setup/app';
 
 const READ = ['laws.read'];
 const MANAGE = ['laws.read', 'laws.create', 'laws.update', 'laws.delete'];
+// Authenticated but holds zero compliance perms — drives 403 on the
+// pure-read endpoints whose only `@RequirePermission` is `*.read`.
+const NO_PERMS: string[] = [];
 
 describe('Laws (integration)', () => {
   let ctx: PackageTestApp;
@@ -106,6 +109,39 @@ describe('Laws (integration)', () => {
     it('returns 401 without auth', async () => {
       await request(ctx.httpServer).get('/api/v1/laws').expect(401);
     });
+
+    it('returns 403 without laws.read', async () => {
+      await request(ctx.httpServer)
+        .get('/api/v1/laws')
+        .set(withAuth(NO_PERMS))
+        .expect(403);
+    });
+  });
+
+  describe('GET /api/v1/laws/layout/list', () => {
+    it('returns 401 without auth', async () => {
+      await request(ctx.httpServer).get('/api/v1/laws/layout/list').expect(401);
+    });
+
+    it('returns 403 without laws.read', async () => {
+      await request(ctx.httpServer)
+        .get('/api/v1/laws/layout/list')
+        .set(withAuth(NO_PERMS))
+        .expect(403);
+    });
+  });
+
+  describe('GET /api/v1/laws/tree', () => {
+    it('returns 401 without auth', async () => {
+      await request(ctx.httpServer).get('/api/v1/laws/tree').expect(401);
+    });
+
+    it('returns 403 without laws.read', async () => {
+      await request(ctx.httpServer)
+        .get('/api/v1/laws/tree')
+        .set(withAuth(NO_PERMS))
+        .expect(403);
+    });
   });
 
   describe('GET /api/v1/laws/:id', () => {
@@ -125,6 +161,19 @@ describe('Laws (integration)', () => {
         .set(withAuth(READ))
         .expect(404);
     });
+
+    it('returns 401 without auth', async () => {
+      await request(ctx.httpServer)
+        .get('/api/v1/laws/00000000-0000-0000-0000-000000000000')
+        .expect(401);
+    });
+
+    it('returns 403 without laws.read', async () => {
+      await request(ctx.httpServer)
+        .get('/api/v1/laws/00000000-0000-0000-0000-000000000000')
+        .set(withAuth(NO_PERMS))
+        .expect(403);
+    });
   });
 
   describe('PATCH /api/v1/laws/:id', () => {
@@ -137,6 +186,13 @@ describe('Laws (integration)', () => {
         .expect(200);
 
       expect(res.body.issuingAuthority).toBe('MCA');
+    });
+
+    it('returns 401 without auth', async () => {
+      await request(ctx.httpServer)
+        .patch('/api/v1/laws/00000000-0000-0000-0000-000000000000')
+        .send({ issuingAuthority: 'MCA' })
+        .expect(401);
     });
 
     it('returns 403 without update permission', async () => {
@@ -158,10 +214,46 @@ describe('Laws (integration)', () => {
         .expect(204);
     });
 
+    it('returns 401 without auth', async () => {
+      await request(ctx.httpServer)
+        .delete('/api/v1/laws/00000000-0000-0000-0000-000000000000')
+        .expect(401);
+    });
+
     it('returns 403 without delete permission', async () => {
       const law = await createLaw();
       await request(ctx.httpServer)
         .delete(`/api/v1/laws/${law.id}`)
+        .set(withAuth(READ))
+        .expect(403);
+    });
+  });
+
+  describe('POST /api/v1/laws/:id/clone', () => {
+    it('returns 401 without auth', async () => {
+      await request(ctx.httpServer)
+        .post('/api/v1/laws/00000000-0000-0000-0000-000000000000/clone')
+        .expect(401);
+    });
+
+    it('returns 403 without create permission', async () => {
+      await request(ctx.httpServer)
+        .post('/api/v1/laws/00000000-0000-0000-0000-000000000000/clone')
+        .set(withAuth(READ))
+        .expect(403);
+    });
+  });
+
+  describe('POST /api/v1/laws/:id/restore', () => {
+    it('returns 401 without auth', async () => {
+      await request(ctx.httpServer)
+        .post('/api/v1/laws/00000000-0000-0000-0000-000000000000/restore')
+        .expect(401);
+    });
+
+    it('returns 403 without update permission', async () => {
+      await request(ctx.httpServer)
+        .post('/api/v1/laws/00000000-0000-0000-0000-000000000000/restore')
         .set(withAuth(READ))
         .expect(403);
     });
