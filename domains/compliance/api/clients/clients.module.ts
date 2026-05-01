@@ -6,7 +6,7 @@ import { ClientsService } from './clients.service';
 import { ClientDormancyService } from './clients.dormancy.service';
 import { ClientsRollupService } from './clients.rollup.service';
 import { ClientContactsModule } from '../client-contacts/client-contacts.module';
-import { ClientRegistrationsModule } from '../client-registrations/client-registrations.module';
+import { ClientRegistrationsModule } from '../client-registrations';
 
 @Module({
   imports: [

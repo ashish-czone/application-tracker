@@ -4,7 +4,7 @@ import { DomainEventEmitter } from '@packages/events';
 import { EntityService } from '@packages/entity-engine';
 import { complianceFilings } from '../../schema/compliance-filings';
 import { ComplianceRulesService } from '../../rules';
-import { ClientRegistrationsService } from '../../client-registrations/client-registrations.service';
+import { ClientRegistrationsService } from '../../client-registrations';
 import { ComplianceFilingsLookupService } from '../compliance-filings.lookup.service';
 import { buildFilingExternalKey } from '../compliance-filings.config';
 import { COMPLIANCE_FILING_GENERATED } from '../../events/types';

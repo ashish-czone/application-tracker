@@ -11,7 +11,7 @@ import {
 import {
   ClientRegistrationsService,
   type ClientRegistration,
-} from '../client-registrations/client-registrations.service';
+} from '../client-registrations';
 import {
   ComplianceFilingsLookupService,
   buildFilingExternalKey,

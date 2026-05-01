@@ -9,7 +9,7 @@ import { registerComplianceAudit } from './audit/register-compliance-audit';
 import { LawsModule } from './laws/laws.module';
 import { ClientsModule } from './clients';
 import { ClientContactsModule } from './client-contacts/client-contacts.module';
-import { ClientRegistrationsModule } from './client-registrations/client-registrations.module';
+import { ClientRegistrationsModule } from './client-registrations';
 import { ComplianceRulesModule } from './rules';
 import { LawHandlersModule } from './law-handlers/law-handlers.module';
 import { ComplianceFilingsModule } from './compliance-filings';
