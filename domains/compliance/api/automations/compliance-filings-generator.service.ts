@@ -7,7 +7,7 @@ import {
   ComplianceRulesService,
   type ComplianceRule,
   type Occurrence,
-} from '../rules/compliance-rules.service';
+} from '../rules';
 import {
   ClientRegistrationsService,
   type ClientRegistration,

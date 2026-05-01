@@ -20,7 +20,7 @@ import {
   type DataAccessContext,
 } from '@packages/rbac';
 import { LawHandlersService } from './law-handlers.service';
-import { ComplianceRulesService } from '../rules/compliance-rules.service';
+import { ComplianceRulesService } from '../rules';
 import { CreateLawHandlerSchema, UpdateLawHandlerSchema } from './law-handlers.dto';
 
 @Controller('law-handlers')

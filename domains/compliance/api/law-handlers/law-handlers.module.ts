@@ -1,6 +1,6 @@
 import { forwardRef, Module } from '@nestjs/common';
 import { EntityEngineModule } from '@packages/entity-engine';
-import { ComplianceRulesModule } from '../rules/compliance-rules.module';
+import { ComplianceRulesModule } from '../rules';
 import { LawsModule } from '../laws/laws.module';
 import { LAW_HANDLERS_CONFIG } from './law-handlers.config';
 import { LawHandlersController } from './law-handlers.controller';
